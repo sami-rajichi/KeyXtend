@@ -32,6 +32,10 @@ pub struct HarnessConfig {
     pub g3: G3,
     /// G4 settings.
     pub g4: G4,
+    /// Hold engine settings.
+    pub assist: AssistCfg,
+    /// G5 settings.
+    pub g5: G5,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -155,6 +159,42 @@ pub struct G3 {
 pub struct G4 {
     /// Clicks per run.
     pub clicks: usize,
+}
+
+/// Hold engine settings (spec §5.1).
+#[derive(Debug, Clone, Deserialize)]
+pub struct AssistCfg {
+    /// A still left hold fires after this, in ms.
+    pub hold_ms: u64,
+    /// Moves up to this many px count as still.
+    pub still_px: i32,
+    /// Longest wait for the hook thread to start or answer, in ms.
+    pub reply_ms: u64,
+    /// How long the owner's hand try runs, in seconds.
+    pub try_secs: u64,
+}
+
+/// G5 hold-engine settings; times in ms, distances in px.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G5 {
+    /// Pause between the simulated user's steps.
+    pub step_ms: u64,
+    /// How long a short click is held.
+    pub click_ms: u64,
+    /// A long hold lasts the hold time plus this.
+    pub hold_margin_ms: u64,
+    /// A drag while pressed.
+    pub drag_px: i32,
+    /// How far inside and outside the still radius the wiggle and the short move go.
+    pub still_margin_px: i32,
+    /// How many times the cases run.
+    pub rounds: usize,
+    /// Wait for the target log after each case.
+    pub settle_ms: u64,
+    /// How far a logged point may be from where we pressed.
+    pub point_slack_px: i32,
+    /// Budget for the hook callback's 99th percentile.
+    pub hook_p99_ms: f64,
 }
 
 /// A system surface to open over the face.

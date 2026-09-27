@@ -28,12 +28,12 @@ Prove on this PC that the mouse helpers of spec §4.4, §5.1 and §5.2 work with
   - `target-window` also runs as administrator through `admin::run_as`.
   - Notepad, Chrome and Word hold a known text; Explorer opens a fresh test folder.
 - **New settings:**
-  - `spike.toml [assist]`: `hold_ms = 1500`, `still_px = 7`.
+  - `harness.toml [assist]`: `hold_ms = 1500`, `still_px = 7` (the harness hosts the engine, so the faces' settings stay as they are).
   - `harness.toml [g5]`: case timings and `hook_p99_ms = 1.0`.
   - `harness.toml [g17]`, `[g18]`, `[g6]`: the move steps, test file names and scroll steps.
 
 ## Tasks
-1. **Hold engine.** *Files:* `core/src/hold.rs`, `lib.rs`, `spike.toml`.
+1. **Hold engine.** *Files:* `core/src/hold.rs`, `hold/tests.rs`, `lib.rs`.
    - *Test first:* each §5.1 transition gives the right pass/swallow and injections, including every edge case below.
    - *Implement:* modes Off, Right-click and Grab; states Idle, Pending, AwaitUp and Carrying.
    - *Verify:* `cargo test -p spike-core` is green.

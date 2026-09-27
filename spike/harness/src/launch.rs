@@ -83,15 +83,22 @@ fn launch(
     let exe = cfg.program(&app.exe);
     let args = app_args(app, input);
     // No stdio of ours, which main also makes non-inheritable, so an app left open holds no pipe.
-    let child = Command::new(&exe)
+    let mut child = Command::new(&exe)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("{}: {e}", exe.display()))?;
-    let hwnd = win::wait_for(&m, app.wait_ms, cfg.timing.poll_ms)
-        .ok_or_else(|| format!("no {} window after {} ms", kind.name(), app.wait_ms))?;
+    let Some(hwnd) = win::wait_for(&m, app.wait_ms, cfg.timing.poll_ms) else {
+        // No window in time: end what we started, so nothing is left behind.
+        let _ = child.kill();
+        return Err(format!(
+            "no {} window after {} ms",
+            kind.name(),
+            app.wait_ms
+        ));
+    };
     Ok((hwnd, child))
 }
 
@@ -110,15 +117,20 @@ fn opened(
     }
 }
 
-/// Closes old target windows, deletes the log, starts target-window and waits for it.
-pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
+/// Closes old target windows and deletes the log; returns target-window's program and title.
+fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
     let (t, title) = (&ctx.cfg.timing, ctx.spike.target.title.clone());
     for w in win::top_windows()
         .into_iter()
         .filter(|&w| win::title(w) == title)
     {
         let _ = win::close(w);
-        win::wait_gone(w, t.close_wait_ms, t.poll_ms);
+        if !win::wait_gone(w, t.close_wait_ms, t.poll_ms) {
+            return Err(format!(
+                "an old target window stays open: {}",
+                win::describe(w)
+            ));
+        }
     }
     let log = ctx.spike.resolve(&ctx.spike.target.log);
     match std::fs::remove_file(&log) {
@@ -135,9 +147,33 @@ pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
             exe.display()
         ));
     }
+    Ok((exe, title))
+}
+
+/// Closes old target windows, deletes the log, starts target-window and waits for it.
+pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
+    let (_, title) = prepare_target(ctx)?;
     let started = launch(ctx, AppKind::Target, "", Some(title))?;
-    sleep_ms(app.ready_ms);
+    sleep_ms(ctx.cfg.app(AppKind::Target.name())?.ready_ms);
     Ok(opened(AppKind::Target, started, None, None))
+}
+
+/// Like `start_target`, but as administrator; we hold no process handle, so the caller closes its window.
+pub fn start_target_admin(ctx: &Ctx) -> Result<Opened, String> {
+    let (exe, title) = prepare_target(ctx)?;
+    let app = ctx.cfg.app(AppKind::Target.name())?;
+    let m = window_match(app, Some(title));
+    admin::run_as(&exe, &[])?;
+    let hwnd = win::wait_for(&m, app.wait_ms, ctx.cfg.timing.poll_ms)
+        .ok_or_else(|| format!("no admin target window after {} ms", app.wait_ms))?;
+    sleep_ms(app.ready_ms);
+    Ok(Opened {
+        kind: AppKind::Target,
+        hwnd,
+        child: None,
+        file: None,
+        title_has: None,
+    })
 }
 
 /// Notepad on a fresh empty text file, spotted by the file name in its title.

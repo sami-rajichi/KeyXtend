@@ -4,8 +4,10 @@ use crate::tlog::Unit;
 
 /// Microseconds per millisecond.
 pub const US_PER_MS: f64 = 1000.0;
-/// Latency percentiles reported by G2: name in the results, and rank (0-100).
-pub const PERCENTILES: [(&str, f64); 3] = [("p50", 50.0), ("p95", 95.0), ("p99", 99.0)];
+/// The rank that budgets are checked against.
+pub const P99: f64 = 99.0;
+/// Percentiles reported by G2 and G5: name in the results, and rank (0-100).
+pub const PERCENTILES: [(&str, f64); 3] = [("p50", 50.0), ("p95", 95.0), ("p99", P99)];
 
 /// One injected click and the UTF-16 units it should produce.
 #[derive(Debug, Clone)]

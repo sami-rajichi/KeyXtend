@@ -160,6 +160,7 @@ dependencies = [
 name = "target-window"
 version = "0.0.0"
 dependencies = [
+ "embed-manifest",
  "spike-core",
  "windows",
 ]

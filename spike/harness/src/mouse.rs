@@ -82,7 +82,8 @@ pub fn normalise(v: i32, start: i32, size: i32) -> i32 {
     (f64::from(v - start) * ABS_MAX / f64::from((size - 1).max(1))).round() as i32
 }
 
-fn mouse(dx: i32, dy: i32, flags: MOUSE_EVENT_FLAGS) -> INPUT {
+/// A mouse input at absolute (`dx`, `dy`) with `flags`, marked `tag`.
+pub fn input(dx: i32, dy: i32, flags: MOUSE_EVENT_FLAGS, tag: usize) -> INPUT {
     INPUT {
         r#type: INPUT_MOUSE,
         Anonymous: INPUT_0 {
@@ -92,7 +93,7 @@ fn mouse(dx: i32, dy: i32, flags: MOUSE_EVENT_FLAGS) -> INPUT {
                 mouseData: 0,
                 dwFlags: flags,
                 time: 0,
-                dwExtraInfo: spike_core::inject::TAG,
+                dwExtraInfo: tag,
             },
         },
     }
@@ -112,7 +113,8 @@ fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
 pub fn click_at(p: POINT) -> Result<(), String> {
     let (x0, y0, w, h) = crate::win::desktop();
     let events = click_events(normalise(p.x, x0, w), normalise(p.y, y0, h));
-    spike_core::inject::send(&events.map(|(x, y, f)| mouse(x, y, f)))
+    let tag = spike_core::inject::TAG;
+    spike_core::inject::send(&events.map(|(x, y, f)| input(x, y, f, tag)))
 }
 
 #[cfg(test)]

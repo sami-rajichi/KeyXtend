@@ -1,6 +1,6 @@
 //! Reads the target-window log, whose format is in `spike_core::targetlog`, after the last start.
 
-use spike_core::targetlog::{COMMENT, FOCUS_LOST, SEP, START};
+use spike_core::targetlog::{COMMENT, FOCUS_LOST, MOUSE, Press, SEP, START};
 
 /// Radix of the logged UTF-16 units.
 const HEX: u32 = 16;
@@ -51,6 +51,41 @@ pub fn focus_lost(log: &str, since_us: i64) -> usize {
     lost
 }
 
+/// One logged mouse press.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Mouse {
+    /// What happened.
+    pub press: Press,
+    /// QPC time in microseconds.
+    pub us: i64,
+    /// Screen point in physical pixels: x.
+    pub x: i32,
+    /// Screen point in physical pixels: y.
+    pub y: i32,
+}
+
+/// The mouse presses logged since the last start; bad lines are skipped.
+pub fn mouse(log: &str) -> Vec<Mouse> {
+    let mut found = Vec::new();
+    for line in log.lines() {
+        if line.starts_with(START) {
+            found.clear();
+        } else if let Some(rest) = line.trim().strip_prefix(MOUSE) {
+            found.extend(mouse_fields(rest));
+        }
+    }
+    found
+}
+
+/// The fields after `# mouse`: press, µs, x and y.
+fn mouse_fields(rest: &str) -> Option<Mouse> {
+    let mut f = rest.strip_prefix(SEP)?.split(SEP);
+    let press = Press::parse(f.next()?)?;
+    let us = f.next()?.parse().ok()?;
+    let (x, y) = (f.next()?.parse().ok()?, f.next()?.parse().ok()?);
+    Some(Mouse { press, us, x, y })
+}
+
 /// The text the units spell; broken surrogates become U+FFFD.
 pub fn decode(units: &[Unit]) -> String {
     let raw: Vec<u16> = units.iter().map(|u| u.unit).collect();
@@ -87,6 +122,19 @@ mod tests {
         let units = parse(log);
         assert_eq!(units.len(), 3);
         assert_eq!(decode(&units), "\u{1F600}€");
+    }
+
+    #[test]
+    fn reads_mouse_presses_after_the_last_start() {
+        let log = "# start\t0\n# mouse\tldown\t5\t1\t2\n# start\t10\n\
+                   # mouse\trdown\t20\t-4\t8\n30\t0041\n# mouse\tmenu\t21\t-4\t8\r\n\
+                   # mouse\tzap\t22\t0\t0\n# mouse\tlup\t23\t1\n";
+        let got = mouse(log);
+        let at = |press, us, x, y| Mouse { press, us, x, y };
+        assert_eq!(
+            got,
+            vec![at(Press::RightDown, 20, -4, 8), at(Press::Menu, 21, -4, 8)]
+        );
     }
 
     #[test]

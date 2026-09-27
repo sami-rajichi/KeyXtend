@@ -19,9 +19,69 @@ pub fn mark(mark: &str, us: i64) -> String {
     format!("{mark}{SEP}{us}")
 }
 
+/// A mouse press: `# mouse\t<press>\t<µs>\t<x>\t<y>`, in screen pixels.
+pub const MOUSE: &str = "# mouse";
+
+/// The mouse events target-window logs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Press {
+    /// The left button went down.
+    LeftDown,
+    /// The left button came up.
+    LeftUp,
+    /// The right button went down.
+    RightDown,
+    /// The right button came up.
+    RightUp,
+    /// A context-menu request, which target-window swallows.
+    Menu,
+}
+
+impl Press {
+    /// Every press, for tests and parsing.
+    pub const ALL: [Press; 5] = [
+        Self::LeftDown,
+        Self::LeftUp,
+        Self::RightDown,
+        Self::RightUp,
+        Self::Menu,
+    ];
+
+    /// The name used in the log.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::LeftDown => "ldown",
+            Self::LeftUp => "lup",
+            Self::RightDown => "rdown",
+            Self::RightUp => "rup",
+            Self::Menu => "menu",
+        }
+    }
+
+    /// The press called `name`.
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|p| p.name() == name)
+    }
+}
+
+/// A mouse line for `press` at `us`, at screen point (`x`, `y`).
+pub fn mouse(press: Press, us: i64, x: i32, y: i32) -> String {
+    format!("{MOUSE}{SEP}{}{SEP}{us}{SEP}{x}{SEP}{y}", press.name())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mouse_lines_have_the_documented_shape_and_read_back() {
+        assert_eq!(mouse(Press::RightUp, 7, 10, -3), "# mouse\trup\t7\t10\t-3");
+        for p in Press::ALL {
+            assert_eq!(Press::parse(p.name()), Some(p));
+        }
+        assert_eq!(Press::parse("wheel"), None);
+        assert!(MOUSE.starts_with(COMMENT));
+    }
 
     #[test]
     fn lines_have_the_documented_shape() {

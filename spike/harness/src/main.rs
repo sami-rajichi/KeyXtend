@@ -1,9 +1,10 @@
-//! P1 spike harness: drives gates G1-G4 and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G5 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
 mod admin;
 mod apps;
+mod assist;
 mod clicks;
 mod clip;
 mod config;
@@ -12,6 +13,10 @@ mod g1;
 mod g2;
 mod g3;
 mod g4;
+mod g5;
+mod hand;
+mod hookhost;
+mod hookio;
 mod keys;
 mod launch;
 mod mouse;
@@ -42,10 +47,19 @@ fn usage() -> String {
        harness g2 <slint|qt|tauri> [--clicks N] [--seed S]
        harness g3 <slint|qt|tauri>
        harness g4 <slint|qt|tauri> [--clicks N] [--seed S]
+       harness g5 <{}|{}>
+       harness assist <{}|{}> [--secs N]
 --attach types into the app's window already open; --pause sets the gap between characters.",
-        apps.join("|")
+        apps.join("|"),
+        g5::PLAIN,
+        g5::ADMIN,
+        hand::RIGHT,
+        hand::GRAB
     )
 }
+
+/// Gates whose runs take a random seed.
+const SEEDED: [&str; 3] = ["g1", "g2", "g4"];
 
 /// Parsed command line.
 #[derive(Debug, PartialEq)]
@@ -71,7 +85,8 @@ fn parse(args: &[String]) -> Result<Args, String> {
     let count_flag = match gate.as_str() {
         "g1" => Some("--count"),
         "g2" | "g4" => Some("--clicks"),
-        "g3" => None,
+        "g3" | "g5" => None,
+        "assist" => Some("--secs"),
         _ => return Err(usage()),
     };
     let g1 = gate == "g1";
@@ -92,7 +107,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
         let value = it.next().ok_or_else(|| format!("{flag} needs a value"))?;
         match flag.as_str() {
             f if Some(f) == count_flag => out.count = Some(number(value)?),
-            "--seed" if count_flag.is_some() => out.seed = Some(number(value)?),
+            "--seed" if SEEDED.contains(&gate.as_str()) => out.seed = Some(number(value)?),
             "--pause" if g1 => out.pause_ms = Some(number(value)?),
             _ => return Err(format!("unknown option {flag}\n{}", usage())),
         }
@@ -125,6 +140,12 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
             &args.name,
             args.count.unwrap_or(ctx.cfg.g4.clicks),
             seed,
+        ),
+        "g5" => g5::run(ctx, &args.name),
+        "assist" => hand::run(
+            ctx,
+            &args.name,
+            args.count.map_or(ctx.cfg.assist.try_secs, |n| n as u64),
         ),
         _ => g3::run(ctx, &args.name),
     }
@@ -218,6 +239,9 @@ mod tests {
             Some(10)
         );
         assert_eq!(parse(&args("g3 slint")).expect("parses").count, None);
+        assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
+        let a = parse(&args("assist right --secs 30")).expect("parses");
+        assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
         let a = parse(&args("g4 qt --clicks 50 --seed 3")).expect("parses");
         assert_eq!(
             (a.gate.as_str(), a.count, a.seed),
@@ -241,6 +265,8 @@ mod tests {
             "g4 qt --attach",
             "g4 qt --count 5",
             "g4 qt --pause 5",
+            "g5 plain --seed 1",
+            "assist grab --seed 1",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }
