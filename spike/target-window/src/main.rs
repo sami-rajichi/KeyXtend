@@ -1,6 +1,6 @@
 //! P1 spike target: a text box that logs each character it receives with a microsecond timestamp.
 //!
-//! The log format is in `spike_core::targetlog`; focus losses are logged too, for G2.
+//! The log format is in `spike_core::targetlog`; focus losses (G2) and mouse presses (G5) are logged too.
 #![windows_subsystem = "windows"]
 
 use std::fs::{File, OpenOptions};
@@ -10,11 +10,11 @@ use std::sync::{Mutex, OnceLock};
 
 use spike_core::clock::now_us;
 use spike_core::config::TargetConfig;
-use spike_core::targetlog;
-use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM};
+use spike_core::targetlog::{self, Press};
+use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, CreateFontW, DEFAULT_CHARSET, FW_NORMAL,
-    OUT_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, ClientToScreen, CreateFontW, DEFAULT_CHARSET,
+    FW_NORMAL, OUT_DEFAULT_PRECIS,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
@@ -23,8 +23,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, ES_AUTOVSCROLL, ES_MULTILINE,
     ES_WANTRETURN, GetClientRect, GetMessageW, IDC_IBEAM, LoadCursorW, MSG, MoveWindow,
     PostQuitMessage, RegisterClassW, SendMessageW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE,
-    WM_CHAR, WM_DESTROY, WM_KILLFOCUS, WM_SETFOCUS, WM_SETFONT, WM_SIZE, WNDCLASSW, WS_CHILD,
-    WS_EX_CLIENTEDGE, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
+    WM_CHAR, WM_CONTEXTMENU, WM_DESTROY, WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SETFONT, WM_SIZE,
+    WNDCLASSW, WS_CHILD, WS_EX_CLIENTEDGE, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -38,6 +39,9 @@ const CLASS: PCWSTR = w!("KxsTargetWindow");
 const SUBCLASS_ID: usize = 1;
 /// `WM_SETFONT` flag: redraw with the new font now.
 const REDRAW: LPARAM = LPARAM(1);
+/// Low 16 bits of a mouse message's `lparam`, and how far up the y half sits.
+const WORD_MASK: isize = 0xFFFF;
+const WORD_BITS: u32 = 16;
 
 fn log_line(line: &str) {
     if let Some(file) = LOG.get()
@@ -46,6 +50,37 @@ fn log_line(line: &str) {
         let _ = writeln!(f, "{line}");
         let _ = f.flush();
     }
+}
+
+/// The signed x and y packed in a mouse message's `lparam`.
+fn point_of(lparam: isize) -> POINT {
+    let word = |v: isize| i32::from((v & WORD_MASK) as u16 as i16);
+    POINT {
+        x: word(lparam),
+        y: word(lparam >> WORD_BITS),
+    }
+}
+
+/// The press a mouse message means, and whether its point is already on screen.
+fn press_of(msg: u32) -> Option<(Press, bool)> {
+    match msg {
+        WM_LBUTTONDOWN | WM_LBUTTONDBLCLK => Some((Press::LeftDown, false)),
+        WM_LBUTTONUP => Some((Press::LeftUp, false)),
+        WM_RBUTTONDOWN | WM_RBUTTONDBLCLK => Some((Press::RightDown, false)),
+        WM_RBUTTONUP => Some((Press::RightUp, false)),
+        WM_CONTEXTMENU => Some((Press::Menu, true)),
+        _ => None,
+    }
+}
+
+/// Logs `press` at its screen point; client points of `hwnd` are converted first.
+fn log_press(hwnd: HWND, press: Press, on_screen: bool, lparam: LPARAM) {
+    let mut pt = point_of(lparam.0);
+    if !on_screen {
+        // SAFETY: plain conversion on our own edit box; a failure leaves the client point.
+        let _ = unsafe { ClientToScreen(hwnd, &mut pt) };
+    }
+    log_line(&targetlog::mouse(press, now_us(), pt.x, pt.y));
 }
 
 unsafe extern "system" fn edit_proc(
@@ -60,6 +95,13 @@ unsafe extern "system" fn edit_proc(
         WM_CHAR => log_line(&targetlog::data(now_us(), wparam.0 as u16)),
         WM_KILLFOCUS => log_line(&targetlog::mark(targetlog::FOCUS_LOST, now_us())),
         _ => {}
+    }
+    if let Some((press, on_screen)) = press_of(msg) {
+        log_press(hwnd, press, on_screen, lparam);
+        if press == Press::Menu {
+            // No menu: a test right-click must leave nothing open.
+            return LRESULT(0);
+        }
     }
     // SAFETY: forwards the same message to the edit box.
     unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) }
@@ -232,4 +274,26 @@ unsafe fn run(t: &TargetConfig) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn point_of_reads_signed_words() {
+        let pack = |x: i16, y: i16| ((y as u16 as isize) << WORD_BITS) | x as u16 as isize;
+        let p = point_of(pack(-5, 300));
+        assert_eq!((p.x, p.y), (-5, 300));
+        let p = point_of(pack(1200, -2));
+        assert_eq!((p.x, p.y), (1200, -2));
+    }
+
+    #[test]
+    fn press_of_maps_buttons_and_the_menu() {
+        assert_eq!(press_of(WM_LBUTTONDBLCLK), Some((Press::LeftDown, false)));
+        assert_eq!(press_of(WM_RBUTTONUP), Some((Press::RightUp, false)));
+        assert_eq!(press_of(WM_CONTEXTMENU), Some((Press::Menu, true)));
+        assert_eq!(press_of(WM_CHAR), None);
+    }
 }

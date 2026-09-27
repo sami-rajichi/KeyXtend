@@ -2,6 +2,7 @@
 
 pub mod clock;
 pub mod config;
+pub mod hold;
 pub mod inject;
 pub mod layout;
 pub mod place;

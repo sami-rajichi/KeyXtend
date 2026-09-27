@@ -9,3 +9,6 @@ license.workspace = true
 [dependencies]
 spike-core.workspace = true
 windows.workspace = true
+
+[build-dependencies]
+embed-manifest.workspace = true

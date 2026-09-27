@@ -138,6 +138,33 @@ name = "task_manager"
 open = [0x11, 0x10, 0x1B]
 close_class = "TaskManagerWindow"
 
+[assist]
+# A still left hold fires after this, in ms; moves up to still_px count as still (spec §5.1).
+hold_ms = 1500
+still_px = 7
+# Longest wait for the hook thread to start or answer, in ms.
+reply_ms = 2000
+# How long the owner's hand try runs, in seconds.
+try_secs = 90
+
+[g5]
+# Pause between the simulated user's steps, and how long a short click is held, in ms.
+step_ms = 50
+click_ms = 100
+# A long hold lasts hold_ms plus this, in ms.
+hold_margin_ms = 300
+# A drag while pressed, in px; a wiggle stays still_margin_px inside the still radius, another move that far past it.
+drag_px = 30
+still_margin_px = 2
+# How many times the five cases run, so the hook p99 rests on over 100 calls.
+rounds = 4
+# Wait for the target log after each case, in ms.
+settle_ms = 400
+# A logged point may be this far from where we pressed, in px.
+point_slack_px = 1
+# Budget for the hook callback: 99th percentile, in ms (spec §10).
+hook_p99_ms = 1.0
+
 [g4]
 # Clicks typed into the admin Terminal; pauses and failure limits come from [g2], the app from [apps.terminal].
 clicks = 200

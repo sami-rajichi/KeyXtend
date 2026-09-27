@@ -11,7 +11,8 @@ const EXTENDED_PREFIXES: [u32; 2] = [0xE0, 0xE1];
 /// Bits of the scan-code prefix byte.
 const PREFIX_SHIFT: u32 = 8;
 
-fn key(vk: u16, up: bool) -> INPUT {
+/// Virtual key `vk` pressed or released (`up`), marked `tag`.
+pub fn tagged(vk: u16, up: bool, tag: usize) -> INPUT {
     // SAFETY: plain table lookup.
     let scan = unsafe { MapVirtualKeyW(u32::from(vk), MAPVK_VK_TO_VSC_EX) };
     let mut flags = KEYBD_EVENT_FLAGS(0);
@@ -29,7 +30,7 @@ fn key(vk: u16, up: bool) -> INPUT {
                 wScan: spike_core::scan_byte(scan) as u16,
                 dwFlags: flags,
                 time: 0,
-                dwExtraInfo: spike_core::inject::TAG,
+                dwExtraInfo: tag,
             },
         },
     }
@@ -37,7 +38,8 @@ fn key(vk: u16, up: bool) -> INPUT {
 
 /// Presses `vks` in order, then releases them in reverse.
 pub fn combo(vks: &[u16]) -> Result<(), String> {
-    let downs = vks.iter().map(|&vk| key(vk, false));
-    let ups = vks.iter().rev().map(|&vk| key(vk, true));
+    let tag = spike_core::inject::TAG;
+    let downs = vks.iter().map(|&vk| tagged(vk, false, tag));
+    let ups = vks.iter().rev().map(|&vk| tagged(vk, true, tag));
     send(&downs.chain(ups).collect::<Vec<_>>())
 }

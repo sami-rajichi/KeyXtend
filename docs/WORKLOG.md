@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P1: hold-to-right-click engine and G5
+The hold engine turns a 1.5-second still press into a right-click, or into a grab in Grab mode, and passes normal clicks and drags through unchanged. It runs in low-level mouse and keyboard hooks on their own thread. G5 replays clicks, drags and holds into the test window, including one run as administrator: both passed 20/20, with the hook taking at most 0.1 ms. Two reviews found about 30 issues, all fixed.
+
 ## 2026-09-27 — P1: no-focus, top-band and admin tests
 Slint and Qt both passed G2: 1000 clicks each, the target kept focus every time, and keys typed in about 4 ms (13 ms at worst). Both stayed above Start, Search and Task Manager (G3). The new `harness g4` opens Terminal as administrator and clicks 200 keys into it: both typed into it with uiAccess alone, Qt 200/200 and Slint 199/200 (the owner touched the mouse then). Covered keys are now left out of G2 and G4, and the click code they share lives in `clicks.rs`.
 
