@@ -99,6 +99,24 @@ pub fn input(dx: i32, dy: i32, flags: MOUSE_EVENT_FLAGS, tag: usize) -> INPUT {
     }
 }
 
+/// A wheel turn of `delta` on the wheel `flags` names, marked `tag`; it acts where the pointer is.
+pub fn wheel(delta: i32, flags: MOUSE_EVENT_FLAGS, tag: usize) -> INPUT {
+    INPUT {
+        r#type: INPUT_MOUSE,
+        Anonymous: INPUT_0 {
+            mi: MOUSEINPUT {
+                dx: 0,
+                dy: 0,
+                // Windows reads the turn as a signed number in this unsigned field.
+                mouseData: delta as u32,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: tag,
+            },
+        },
+    }
+}
+
 /// Move, press and release at the absolute spot (x, y) of the 0..=65535 desktop range.
 fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
     let at = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;

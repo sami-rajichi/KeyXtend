@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use spike_core::config::settings_path;
 
+use crate::probecfg::{G6, Probes, Sim};
 use crate::text::Charsets;
 
 /// File name of the harness settings.
@@ -34,8 +35,14 @@ pub struct HarnessConfig {
     pub g4: G4,
     /// Hold engine settings.
     pub assist: AssistCfg,
+    /// The simulated user's timing.
+    pub sim: Sim,
     /// G5 settings.
     pub g5: G5,
+    /// G17, G18 and G6 documents and moves.
+    pub probes: Probes,
+    /// G6 settings.
+    pub g6: G6,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -172,17 +179,13 @@ pub struct AssistCfg {
     pub reply_ms: u64,
     /// How long the owner's hand try runs, in seconds.
     pub try_secs: u64,
+    /// How often the Grab hand try turns Grab back on after a drop, in ms.
+    pub rearm_ms: u64,
 }
 
 /// G5 hold-engine settings; times in ms, distances in px.
 #[derive(Debug, Clone, Deserialize)]
 pub struct G5 {
-    /// Pause between the simulated user's steps.
-    pub step_ms: u64,
-    /// How long a short click is held.
-    pub click_ms: u64,
-    /// A long hold lasts the hold time plus this.
-    pub hold_margin_ms: u64,
     /// A drag while pressed.
     pub drag_px: i32,
     /// How far inside and outside the still radius the wiggle and the short move go.
@@ -259,6 +262,11 @@ mod tests {
         }
         assert_eq!(cfg.g3.probe_codes.len(), 3);
         assert!(cfg.g4.clicks > 0);
+        assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < cfg.assist.hold_ms);
+        for app in ["explorer", "word_file"] {
+            assert!(cfg.app(app).is_ok(), "missing app {app}");
+        }
+        assert!(cfg.probes.move_steps > 0 && cfg.g6.notches > 0);
     }
 
     #[test]

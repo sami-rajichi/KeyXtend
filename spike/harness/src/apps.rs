@@ -14,7 +14,7 @@ use crate::win::{self, Match};
 /// Placeholder in app arguments for the prepared file or URL.
 pub const INPUT: &str = "{input}";
 
-/// The G1 apps.
+/// The apps the harness drives: G1's five, and Explorer for the probes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppKind {
     /// Our target-window, which logs each character it gets.
@@ -27,6 +27,8 @@ pub enum AppKind {
     Chrome,
     /// Windows Terminal, at a PowerShell prompt.
     Terminal,
+    /// File Explorer on a test folder: a probe app, so not in `ALL`.
+    Explorer,
 }
 
 impl AppKind {
@@ -47,6 +49,7 @@ impl AppKind {
             Self::Word => "word",
             Self::Chrome => "chrome",
             Self::Terminal => "terminal",
+            Self::Explorer => "explorer",
         }
     }
 
@@ -83,9 +86,9 @@ pub struct Opened {
     pub hwnd: HWND,
     /// The process we started; none when we use a window already open.
     pub child: Option<Child>,
-    /// Notepad's file, or Terminal's result file.
+    /// A prepared file: Notepad's text, Terminal's result, Word's RTF or Explorer's folder.
     pub file: Option<PathBuf>,
-    /// Title text that spots the window (Notepad's file name).
+    /// Title text that spots our window or tab: a file or folder name.
     pub title_has: Option<String>,
 }
 
@@ -132,44 +135,80 @@ pub fn attach(ctx: &Ctx, kind: AppKind) -> Result<Opened, String> {
 }
 
 /// Closes what we started and is safe to close; returns what is left open.
-pub fn clean_up(ctx: &Ctx, app: Opened) -> Vec<String> {
+pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
     // A window we did not open is never touched.
-    let Some(mut child) = app.child else {
+    let Some(mut child) = app.child.take() else {
         return Vec::new();
     };
-    let (t, k) = (&ctx.cfg.timing, &ctx.cfg.keys);
+    let t = &ctx.cfg.timing;
     let in_front = foreground() == app.hwnd;
     let mut left = Vec::new();
     match app.kind {
         AppKind::Target => left.extend(close_target(app.hwnd, &mut child, t)),
-        AppKind::Notepad => {
-            // Ctrl+W only while our file's tab is the one shown, never the owner's own tab.
-            let ours = app
-                .title_has
-                .as_deref()
-                .is_some_and(|t| win::title(app.hwnd).contains(t));
-            if in_front && ours {
-                let _ = keys::combo(&k.close_tab);
-            }
-            let m = Match {
-                title_has: app.title_has,
-                ..Default::default()
-            };
-            if let Some(w) = win::wait_no_match(&m, t.close_wait_ms, t.poll_ms) {
-                left.push(format!("notepad left open: {}", win::describe(w)));
-            }
-        }
-        AppKind::Chrome if in_front => {
-            let _ = keys::combo(&k.close_tab);
+        AppKind::Notepad | AppKind::Explorer => left.extend(close_tab(&app, in_front, ctx)),
+        AppKind::Word if app.file.is_some() => {
+            // Word gets a file only when it opens a prepared one; we only read it, so no save prompt.
+            let _ = win::close(app.hwnd);
             if !win::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) {
                 left.push(format!("left open: {}", win::describe(app.hwnd)));
             }
         }
+        AppKind::Chrome if in_front => left.extend(close_pages(&app, ctx)),
         AppKind::Terminal if win::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) => {}
         _ if win::exists(app.hwnd) => left.push(format!("left open: {}", win::describe(app.hwnd))),
         _ => {}
     }
     left
+}
+
+/// Closes our tab with Ctrl+W, only while it is the one shown, never the owner's own tab; notes one left open.
+fn close_tab(app: &Opened, in_front: bool, ctx: &Ctx) -> Option<String> {
+    let (t, k) = (&ctx.cfg.timing, &ctx.cfg.keys);
+    let ours = app
+        .title_has
+        .as_deref()
+        .is_some_and(|t| win::title(app.hwnd).contains(t));
+    if in_front && ours {
+        let _ = keys::combo(&k.close_tab);
+    }
+    let m = Match {
+        title_has: app.title_has.clone(),
+        ..Default::default()
+    };
+    let w = win::wait_no_match(&m, t.close_wait_ms, t.poll_ms)?;
+    Some(format!(
+        "{} left open: {}",
+        app.kind.name(),
+        win::describe(w)
+    ))
+}
+
+/// True when a window title starts with one of our test page titles; an empty one never counts.
+pub fn is_test_page(title: &str, pages: &[&str]) -> bool {
+    pages.iter().any(|p| !p.is_empty() && title.starts_with(p))
+}
+
+/// Closes Chrome tabs with Ctrl+W while the one in front is a test page of ours; notes the window if it stays.
+///
+/// Chrome may reopen an old test tab next to ours; any other tab stops the loop and is never closed.
+fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
+    let (t, k) = (&ctx.cfg.timing, &ctx.cfg.keys);
+    let pages = [
+        ctx.cfg.g1.page_title.as_str(),
+        ctx.cfg.probes.page_title.as_str(),
+    ];
+    while win::exists(app.hwnd) && foreground() == app.hwnd {
+        let before = win::title(app.hwnd);
+        if !is_test_page(&before, &pages) {
+            break;
+        }
+        let _ = keys::combo(&k.close_tab);
+        let changed = || (!win::exists(app.hwnd) || win::title(app.hwnd) != before).then_some(());
+        if win::poll_until(t.close_wait_ms, t.poll_ms, changed).is_none() {
+            break;
+        }
+    }
+    win::exists(app.hwnd).then(|| format!("left open: {}", win::describe(app.hwnd)))
 }
 
 /// Closes target-window and kills it if it does not end in time; returns a note if killed.
@@ -225,6 +264,18 @@ mod tests {
             .filter(|&n| attach_class(n, cfg.app(n).expect("app")).is_ok())
             .collect();
         assert_eq!(ok, [AppKind::Word.name()]);
+    }
+
+    #[test]
+    fn only_titles_that_start_with_a_test_page_count() {
+        let pages = ["KeyXtend probe page", ""];
+        assert!(is_test_page(
+            "KeyXtend probe page g6-x - Google Chrome",
+            &pages
+        ));
+        assert!(!is_test_page("News - KeyXtend probe page", &pages));
+        assert!(!is_test_page("Mail - Google Chrome", &pages));
+        assert!(!is_test_page("anything", &[""]));
     }
 
     #[test]

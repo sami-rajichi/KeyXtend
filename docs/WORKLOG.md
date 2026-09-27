@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P1: Grab, modifier+click and scroll probes (G17, G18, G6)
+The owner tried Right-click and Grab with their own mouse: both work. Automatic runs passed in Notepad, Chrome and Explorer: Grab selects text and moves a file (Esc cancels), latched Shift and Ctrl change the next click, and UI Automation, a posted wheel and a SendInput wheel all scroll a window the pointer is not on. Word was not tested: a fresh Word process shows a subscription-check dialog over the document. Two reviews found about 30 issues, all fixed.
+
 ## 2026-09-27 — P1: hold-to-right-click engine and G5
 The hold engine turns a 1.5-second still press into a right-click, or into a grab in Grab mode, and passes normal clicks and drags through unchanged. It runs in low-level mouse and keyboard hooks on their own thread. G5 replays clicks, drags and holds into the test window, including one run as administrator: both passed 20/20, with the hook taking at most 0.1 ms. Two reviews found about 30 issues, all fixed.
 

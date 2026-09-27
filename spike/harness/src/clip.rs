@@ -2,13 +2,13 @@
 
 use windows::Win32::Foundation::{GlobalFree, HANDLE, HGLOBAL};
 use windows::Win32::System::DataExchange::{
-    CloseClipboard, EmptyClipboard, GetClipboardData, GetClipboardSequenceNumber,
-    IsClipboardFormatAvailable, OpenClipboard, SetClipboardData,
+    CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
+    GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard, SetClipboardData,
 };
 use windows::Win32::System::Memory::{
     GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock,
 };
-use windows::Win32::System::Ole::CF_UNICODETEXT;
+use windows::Win32::System::Ole::{CF_LOCALE, CF_OEMTEXT, CF_TEXT, CF_UNICODETEXT};
 
 use crate::win::poll_until;
 
@@ -50,6 +50,23 @@ fn open(timeout_ms: u64, poll_ms: u64) -> Result<Open, String> {
         }
     };
     poll_until(timeout_ms, poll_ms, try_open).ok_or_else(|| format!("OpenClipboard: {last}"))
+}
+
+/// True when the clipboard is empty or holds only text, which `write_text` can put back whole.
+pub fn only_text(timeout_ms: u64, poll_ms: u64) -> Result<bool, String> {
+    let _open = open(timeout_ms, poll_ms)?;
+    let text = [CF_TEXT, CF_OEMTEXT, CF_UNICODETEXT, CF_LOCALE].map(|f| u32::from(f.0));
+    let mut format = 0;
+    loop {
+        // SAFETY: the clipboard is open; zero starts the list and ends it.
+        format = unsafe { EnumClipboardFormats(format) };
+        if format == 0 {
+            return Ok(true);
+        }
+        if !text.contains(&format) {
+            return Ok(false);
+        }
+    }
 }
 
 /// The text before the first NUL; `Err` past `max_chars` characters.

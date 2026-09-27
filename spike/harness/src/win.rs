@@ -3,15 +3,16 @@
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
-use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, WPARAM};
+use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
-    GetSystemMetrics, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindow,
-    IsWindowVisible, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-    SM_YVIRTUALSCREEN, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
+    GetSystemMetrics, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic,
+    IsWindow, IsWindowVisible, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE,
+    WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
 
@@ -221,6 +222,14 @@ pub fn wait_no_match(m: &Match, timeout_ms: u64, poll_ms: u64) -> Option<HWND> {
         Some(()) => None,
         None => find(m),
     }
+}
+
+/// The screen box of `hwnd`.
+pub fn rect(hwnd: HWND) -> Result<RECT, String> {
+    let mut r = RECT::default();
+    // SAFETY: plain query into a local.
+    unsafe { GetWindowRect(hwnd, &mut r) }.map_err(|e| format!("GetWindowRect: {e}"))?;
+    Ok(r)
 }
 
 /// Asks `hwnd` to close.

@@ -19,7 +19,7 @@ const PIXELS_AT: u32 = FILE_HEADER + INFO;
 /// Bits per pixel: blue, green, red and one unused byte.
 const BPP: u16 = 32;
 /// Bytes per pixel.
-const BYTES_PP: u32 = BPP as u32 / 8;
+pub const BYTES_PP: u32 = BPP as u32 / 8;
 /// Colour planes; BMP files always have one.
 const PLANES: u16 = 1;
 
@@ -61,7 +61,7 @@ fn header(w: i32, h: i32) -> Vec<u8> {
 }
 
 /// The pixels of the screen rectangle at (x, y), `w`×`h`, top row first; layered windows included.
-fn grab(x: i32, y: i32, w: i32, h: i32) -> Result<Vec<u8>, String> {
+pub fn grab(x: i32, y: i32, w: i32, h: i32) -> Result<Vec<u8>, String> {
     let mut info = BITMAPINFO {
         bmiHeader: info_header(w, h),
         ..Default::default()
