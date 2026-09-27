@@ -22,13 +22,13 @@ use crate::{keys, mouse};
 /// What probing one surface showed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Verdict {
-    /// The surface covered every probe and the face stayed on top.
+    /// The surface overlapped at least one probe and the face stayed on top at every probe.
     Pass,
     /// Something else was on top of the face at a probe.
     Fail,
     /// The surface did not come to the front, so nothing was tested.
     NotOpened,
-    /// The surface did not reach every probe, so the face was not fully tested.
+    /// The surface reached no probe, so nothing was tested.
     NotCovered,
 }
 
@@ -57,7 +57,7 @@ fn verdict(opened: bool, probes: &[(bool, bool)]) -> Verdict {
         Verdict::Fail
     } else if !opened {
         Verdict::NotOpened
-    } else if probes.is_empty() || probes.iter().any(|&(covered, _)| !covered) {
+    } else if !probes.iter().any(|&(covered, _)| covered) {
         Verdict::NotCovered
     } else {
         Verdict::Pass
@@ -220,12 +220,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_a_covered_face_on_top_everywhere_passes() {
+    fn a_face_on_top_where_the_surface_overlaps_passes() {
         let all = [(true, true), (true, true)];
         assert_eq!(verdict(true, &all), Verdict::Pass);
         assert_eq!(verdict(false, &all), Verdict::NotOpened);
         assert_eq!(
             verdict(true, &[(true, true), (false, true)]),
+            Verdict::Pass,
+            "a probe the surface does not reach tests nothing"
+        );
+        assert_eq!(
+            verdict(true, &[(false, true), (false, true)]),
             Verdict::NotCovered
         );
         assert_eq!(
