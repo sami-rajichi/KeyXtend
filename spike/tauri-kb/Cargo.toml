@@ -1,0 +1,26 @@
+# P1 spike: the Tauri 2 face (G2 no focus, G3 top band, G8 memory only). Throwaway.
+# Its own workspace, so it builds in parallel with the other faces.
+[package]
+name = "tauri-kb"
+description = "P1 spike: the test keyboard drawn in a Tauri 2 WebView2 window."
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+
+[[bin]]
+name = "tauri-kb"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+# `custom-protocol` embeds `ui/` in the exe, so a plain cargo build needs no dev server.
+tauri = { version = "=2.12.0", features = ["custom-protocol"] }
+serde = { version = "1", features = ["derive"] }
+spike-core = { path = "../core" }
+# Only to rebuild an HWND on the UI thread; same version as spike-core and Tauri.
+windows = { version = "0.62", features = ["Win32_Foundation"] }
+
+[workspace]

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P1: test keyboards and the typing test
+Slint and Qt test keyboards run with uiAccess; Tauri was dropped because WebView2 will not start under uiAccess. The harness typed 1000 random English, French, Arabic and AltGr characters into five apps: the test window, Chrome, Terminal and Word received every one (Word's AutoCorrect curls quotes), and Notepad drops a few only in fast bursts. The harness now checks where the keyboard focus really is, saves a screenshot when a pop-up blocks it, and moves on to the next app. A four-part review found about 65 issues in the spike code, all fixed or explained.
+
 ## 2026-09-27 — uiAccess dev tools
 `cargo xtask dev-cert` makes a test signing certificate and a launcher the owner opens to trust it. `dev-install` signs a build and copies it into Program Files, and `check-uiaccess` explains why uiAccess is missing. Every admin step checks its inputs before the Windows prompt and can only touch `Program Files\KeyXtend-dev`. Two review rounds found about 60 issues, all fixed; 225 tests pass.
 

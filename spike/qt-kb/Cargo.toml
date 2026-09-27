@@ -1,0 +1,21 @@
+# Throwaway P1 spike: the Qt 6 Quick + cxx-qt face. Deleted at the end of P1.
+[package]
+name = "qt-kb"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+
+# Its own workspace, so it builds in parallel with the other faces.
+[workspace]
+
+[dependencies]
+cxx = "1"
+cxx-qt = "=0.10.0"
+cxx-qt-lib = { version = "=0.10.0", features = ["qt_gui", "qt_qml"] }
+spike-core = { path = "../core" }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_Input_KeyboardAndMouse"] }
+
+[build-dependencies]
+cxx-qt-build = "=0.10.0"
+embed-manifest = "1.5"

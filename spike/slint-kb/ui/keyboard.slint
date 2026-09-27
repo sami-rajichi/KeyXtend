@@ -1,0 +1,78 @@
+// P1 spike: the stage-1 keyboard. Plain look, no theme, no focusable widgets.
+import { Palette } from "std-widgets.slint";
+
+// One key: its label, scan code and box from the client top-left, all from spike-core.
+export struct Key {
+    label: string,
+    code: int,
+    x: length,
+    y: length,
+    w: length,
+    h: length,
+}
+
+// The key block with a status line under it; sized to fit, never scrolled.
+export component Keyboard inherits Window {
+    in property <string> caption;
+    in property <[Key]> keys;
+    in property <string> status;
+    in property <length> block-width;
+    in property <length> block-height;
+    in property <length> gap-px;
+    in property <length> font-px;
+    // Key edge width; drawn in the text colour, so edges keep at least 3:1 contrast.
+    property <length> edge: 1px;
+    callback tapped(int);
+
+    title: caption;
+    always-on-top: true;
+    background: Palette.background;
+    width: block-width;
+    height: block-height + line.height + gap-px;
+
+    for key in keys: Rectangle {
+        x: key.x;
+        y: key.y;
+        width: key.w;
+        height: key.h;
+        background: touch.pressed ? Palette.accent-background : Palette.control-background;
+        border-width: edge;
+        border-color: Palette.foreground;
+        accessible-role: button;
+        accessible-label: key.label;
+        accessible-action-default => {
+            tapped(key.code);
+        }
+        Text {
+            // The key already carries the label; hide the text so readers say it once.
+            accessible-role: none;
+            width: parent.width;
+            height: parent.height;
+            text: key.label;
+            font-size: font-px;
+            color: touch.pressed ? Palette.accent-foreground : Palette.control-foreground;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+
+        touch := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => {
+                tapped(key.code);
+            }
+        }
+    }
+
+    line := Text {
+        x: gap-px;
+        y: block-height;
+        width: block-width - 2 * gap-px;
+        height: self.preferred-height;
+        text: status;
+        font-size: font-px;
+        color: Palette.foreground;
+        overflow: elide;
+    }
+}

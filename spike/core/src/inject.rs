@@ -5,14 +5,10 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE, SendInput, VIRTUAL_KEY,
 };
 
-use crate::EXTENDED;
+use crate::{is_extended, scan_byte};
 
 /// Marks input we injected, so our own hooks can skip it.
 pub const TAG: usize = 0x4B58_5350;
-/// Low byte of a scan code.
-const SCAN_MASK: u32 = 0xFF;
-/// Prefix byte of a scan code.
-const PREFIX_MASK: u32 = 0xFF00;
 
 fn key(scan: u16, flags: KEYBD_EVENT_FLAGS) -> INPUT {
     INPUT {
@@ -32,10 +28,10 @@ fn key(scan: u16, flags: KEYBD_EVENT_FLAGS) -> INPUT {
 /// Scan-code flags for `code`, adding the extended flag for `0xE0xx` codes.
 fn scan_flags(code: u32) -> (u16, KEYBD_EVENT_FLAGS) {
     let mut flags = KEYEVENTF_SCANCODE;
-    if code & PREFIX_MASK == EXTENDED {
+    if is_extended(code) {
         flags |= KEYEVENTF_EXTENDEDKEY;
     }
-    ((code & SCAN_MASK) as u16, flags)
+    (scan_byte(code) as u16, flags)
 }
 
 /// Presses `code` down, or releases it when `up`.
@@ -77,7 +73,8 @@ pub fn text(text: &str) -> Result<(), String> {
     send(&inputs)
 }
 
-fn send(inputs: &[INPUT]) -> Result<(), String> {
+/// Sends a batch of inputs in one call, which other input cannot split; all or an error.
+pub fn send(inputs: &[INPUT]) -> Result<(), String> {
     // SAFETY: `inputs` is a valid slice and the size argument matches `INPUT`.
     let sent = unsafe { SendInput(inputs, std::mem::size_of::<INPUT>() as i32) };
     if sent as usize == inputs.len() {

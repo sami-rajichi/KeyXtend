@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- P1 spike page: key boxes and sizes come from spike-core through the Rust commands. -->
+<style>
+  :root { --font: "Segoe UI", sans-serif; }
+  html, body { margin: 0; padding: 0; overflow: hidden; user-select: none; cursor: default;
+    background: Canvas; color: CanvasText; font-family: var(--font); }
+  .key { position: absolute; box-sizing: border-box; display: flex; align-items: center;
+    justify-content: center; overflow: hidden; white-space: nowrap;
+    border: 1px solid GrayText; background: ButtonFace; color: ButtonText; }
+  .key:active { background: Highlight; color: HighlightText; }
+  #status { position: absolute; left: 0; right: 0; white-space: nowrap; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="keys"></div>
+<div id="status" role="status"></div>
+<script>
+  const { invoke } = window.__TAURI__.core;
+  const keys = document.getElementById('keys');
+  const status = document.getElementById('status');
+
+  function place(el, x, y, w, h) {
+    Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  }
+
+  function tap(cap) { invoke('tap', { code: cap.code }).catch(show); }
+
+  // One key at the box spike-core gave it; a click with no pointer is an assistive-tech invoke.
+  function key(cap) {
+    const el = document.createElement('div');
+    el.className = 'key';
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', cap.label);
+    el.textContent = cap.label;
+    place(el, cap.x, cap.y, cap.w, cap.h);
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); tap(cap); });
+    el.addEventListener('click', (e) => { if (e.detail === 0) tap(cap); });
+    return el;
+  }
+
+  function draw(json) { keys.replaceChildren(...JSON.parse(json).flat().map(key)); }
+
+  function show(text) { status.textContent = String(text); }
+
+  async function tick() {
+    const next = await invoke('relabel');
+    if (next) draw(next);
+    show(await invoke('status'));
+  }
+
+  async function start() {
+    const size = await invoke('sizes');
+    document.body.style.fontSize = size.font + 'px';
+    Object.assign(status.style, { top: size.top + 'px', height: size.status + 'px',
+      lineHeight: size.status + 'px', paddingLeft: size.gap + 'px' });
+    draw(await invoke('rows'));
+    show(await invoke('status'));
+    const every = await invoke('relabel_ms');
+    setInterval(() => tick().catch(show), every);
+  }
+
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  start().catch(show);
+</script>
+</body>
+</html>
