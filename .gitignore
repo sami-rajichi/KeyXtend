@@ -1,0 +1,12 @@
+# Build output
+/target/
+
+# Local tools and generated files
+/.worktrees/
+/.superpowers/
+/graphify-out/
+.claude/settings.local.json
+
+# Personal notes for this machine and owner
+CLAUDE.local.md
+/docs/NEXT-SESSION.md
