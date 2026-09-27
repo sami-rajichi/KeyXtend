@@ -94,6 +94,26 @@ wait_ms = 15000
 ready_ms = 1000
 done_ms = 1000
 
+# Probe apps (G17, G18, G6): not G1 apps. Explorer may open our folder as a tab of a window already open.
+[apps.explorer]
+exe = "explorer.exe"
+args = ["{input}"]
+class = "CabinetWClass"
+new_window = false
+wait_ms = 15000
+ready_ms = 1500
+done_ms = 500
+
+# Word on a prepared file; it may open in a Word already running.
+[apps.word_file]
+exe = 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE'
+args = ["/q", "{input}"]
+class = "OpusApp"
+new_window = false
+wait_ms = 30000
+ready_ms = 3000
+done_ms = 1000
+
 [apps.terminal]
 exe = "wt.exe"
 args = ["-w", "new", "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]
@@ -146,13 +166,16 @@ still_px = 7
 reply_ms = 2000
 # How long the owner's hand try runs, in seconds.
 try_secs = 90
+# How often the Grab hand try turns Grab back on after a drop, in ms; keep it below hold_ms.
+rearm_ms = 250
 
-[g5]
-# Pause between the simulated user's steps, and how long a short click is held, in ms.
+[sim]
+# The simulated user (G5 and the probes): pause between steps, a short click, and how far past hold_ms a long hold lasts, in ms.
 step_ms = 50
 click_ms = 100
-# A long hold lasts hold_ms plus this, in ms.
 hold_margin_ms = 300
+
+[g5]
 # A drag while pressed, in px; a wiggle stays still_margin_px inside the still radius, another move that far past it.
 drag_px = 30
 still_margin_px = 2
@@ -168,3 +191,37 @@ hook_p99_ms = 1.0
 [g4]
 # Clicks typed into the admin Terminal; pauses and failure limits come from [g2], the app from [apps.terminal].
 clicks = 200
+
+[probes]
+# Known text for the selection and modifier cases (G17, G18); plain ASCII, so every app shows it alike.
+text = "Hold still to grab, move, then click once to drop the selection here."
+page_title = "KeyXtend probe page"
+# The scroll documents (G6): lines, characters per line, and files in the Explorer folder.
+scroll_lines = 300
+scroll_cols = 300
+scroll_files = 80
+scroll_prefix = "kx-scroll-"
+# The Explorer grab folder: a file to move, a file to keep (Esc), the drop folder, and the Ctrl+click pair.
+move_file = "kx-move"
+keep_file = "kx-keep"
+drop_dir = "kx-drop"
+ctrl_files = ["kx-one", "kx-two"]
+# How the probe documents look; the sizes decide whether the scroll documents overflow sideways.
+page_css = "font:20px monospace;margin:24px"
+rtf_font = "Calibri"
+rtf_half_points = 28
+# Moves from the grab point to the drop point.
+move_steps = 12
+# Wait after a drop, click or scroll before checking, in ms.
+settle_ms = 700
+# A text point sits this far inside a line's left edge, in px.
+inset_px = 3
+
+[g6]
+# One wheel notch (WHEEL_DELTA), and notches or UIA small steps per scroll.
+wheel_delta = 120
+notches = 3
+# The stand-in face: a square this big at the desktop's top-left corner, in px.
+face_px = 120
+# A window picture counts as changed when more than this share of its pixels changed.
+min_changed = 0.02

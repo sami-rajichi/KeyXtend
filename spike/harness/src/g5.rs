@@ -5,8 +5,7 @@ use spike_core::clock::now_us;
 use spike_core::hold::{Act, Button, Mode, Pt};
 use spike_core::targetlog::Press;
 use spike_core::uiaccess;
-use windows::Win32::Foundation::{HWND, POINT, RECT};
-use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
+use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{self, Ctx, Opened};
 use crate::assist::{self, Assist, Report, Setup};
@@ -69,9 +68,7 @@ fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32
 
 /// The centre of `hwnd` on screen, in physical pixels.
 fn centre(hwnd: HWND) -> Result<Pt, String> {
-    let mut r = RECT::default();
-    // SAFETY: plain query into a local.
-    unsafe { GetWindowRect(hwnd, &mut r) }.map_err(|e| format!("GetWindowRect: {e}"))?;
+    let r = win::rect(hwnd)?;
     Ok(Pt {
         x: (r.left + r.right) / 2,
         y: (r.top + r.bottom) / 2,
@@ -80,23 +77,23 @@ fn centre(hwnd: HWND) -> Result<Pt, String> {
 
 /// Plays `case` at `p` as the simulated user; once pressed, the button is always released.
 fn play(ctx: &Ctx, case: &Case, p: Pt) -> Result<(), String> {
-    let (g, hold_ms) = (&ctx.cfg.g5, ctx.cfg.assist.hold_ms);
+    let (g, sim, hold_ms) = (&ctx.cfg.g5, &ctx.cfg.sim, ctx.cfg.assist.hold_ms);
     let end = Pt {
         x: p.x + case.dx,
         y: p.y,
     };
     assist::as_user(&[Act::Move(p)])?;
-    sleep_ms(g.step_ms);
+    sleep_ms(sim.step_ms);
     assist::as_user(&[Act::Down(Button::Left, p)])?;
-    sleep_ms(g.step_ms);
+    sleep_ms(sim.step_ms);
     let moved = match case.dx {
         0 => Ok(()),
         _ => assist::as_user(&[Act::Move(end)]),
     };
     sleep_ms(if case.long {
-        hold_ms + g.hold_margin_ms
+        hold_ms + sim.hold_margin_ms
     } else {
-        g.click_ms
+        sim.click_ms
     });
     let released = assist::as_user(&[Act::Up(Button::Left, end)]);
     sleep_ms(g.settle_ms);

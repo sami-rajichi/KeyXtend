@@ -78,6 +78,11 @@ impl Assist {
         self.call(Cmd::Mode(mode))
     }
 
+    /// Holds modifier `vk` down until the next left click ends.
+    pub fn latch(&self, vk: u16) -> Result<(), String> {
+        self.call(Cmd::Latch(vk))
+    }
+
     /// The live values right now.
     pub fn live(&self) -> Live {
         self.live.lock().map(|l| *l).unwrap_or_default()

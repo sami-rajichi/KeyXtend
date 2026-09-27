@@ -38,6 +38,8 @@ const US_PER_MS: i64 = stats::US_PER_MS as i64;
 pub enum Cmd {
     /// Switch the engine's mode.
     Mode(Mode),
+    /// Hold a modifier key down until the next left click ends.
+    Latch(u16),
     /// Let go of everything and end the thread.
     Stop,
 }
@@ -240,6 +242,10 @@ impl Host {
                 Ok((Cmd::Mode(m), ack)) => {
                     acks.push(ack);
                     self.engine.set_mode(m)
+                }
+                Ok((Cmd::Latch(vk), ack)) => {
+                    acks.push(ack);
+                    self.engine.latch(vk)
                 }
                 Ok((Cmd::Stop, ack)) => {
                     acks.push(ack);

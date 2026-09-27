@@ -1,4 +1,4 @@
-//! P1 spike harness: drives gates G1-G5 and the hand try, and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G6, G17, G18 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
@@ -10,10 +10,13 @@ mod clip;
 mod config;
 mod diff;
 mod g1;
+mod g17;
+mod g18;
 mod g2;
 mod g3;
 mod g4;
 mod g5;
+mod g6;
 mod hand;
 mod hookhost;
 mod hookio;
@@ -21,12 +24,17 @@ mod keys;
 mod launch;
 mod mouse;
 mod out;
+mod probe;
+mod probecfg;
 mod readback;
 mod rng;
+mod scroll;
 mod shot;
+mod simuser;
 mod stats;
 mod text;
 mod tlog;
+mod uia;
 mod win;
 
 use std::process::ExitCode;
@@ -39,9 +47,13 @@ use windows::Win32::System::Console::{
 
 use apps::{AppKind, Ctx};
 
+/// App names joined for the usage text.
+fn names(apps: &[AppKind]) -> String {
+    apps.iter().map(|a| a.name()).collect::<Vec<_>>().join("|")
+}
+
 /// Command-line help; the G1 app list comes from `AppKind::ALL`.
 fn usage() -> String {
-    let apps: Vec<&str> = AppKind::ALL.iter().map(|a| a.name()).collect();
     format!(
         "usage: harness g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
        harness g2 <slint|qt|tauri> [--clicks N] [--seed S]
@@ -49,12 +61,18 @@ fn usage() -> String {
        harness g4 <slint|qt|tauri> [--clicks N] [--seed S]
        harness g5 <{}|{}>
        harness assist <{}|{}> [--secs N]
+       harness g17 <{}>
+       harness g18 <{}>
+       harness g6 <{}>
 --attach types into the app's window already open; --pause sets the gap between characters.",
-        apps.join("|"),
+        names(&AppKind::ALL),
         g5::PLAIN,
         g5::ADMIN,
         hand::RIGHT,
-        hand::GRAB
+        hand::GRAB,
+        names(&g17::APPS),
+        names(&g18::APPS),
+        names(&g6::APPS),
     )
 }
 
@@ -85,7 +103,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
     let count_flag = match gate.as_str() {
         "g1" => Some("--count"),
         "g2" | "g4" => Some("--clicks"),
-        "g3" | "g5" => None,
+        "g3" | "g5" | "g6" | "g17" | "g18" => None,
         "assist" => Some("--secs"),
         _ => return Err(usage()),
     };
@@ -142,6 +160,9 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
             seed,
         ),
         "g5" => g5::run(ctx, &args.name),
+        "g6" => g6::run(ctx, &args.name),
+        "g17" => g17::run(ctx, &args.name),
+        "g18" => g18::run(ctx, &args.name),
         "assist" => hand::run(
             ctx,
             &args.name,
@@ -240,6 +261,10 @@ mod tests {
         );
         assert_eq!(parse(&args("g3 slint")).expect("parses").count, None);
         assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
+        for probe in ["g6 chrome", "g17 explorer", "g18 notepad"] {
+            let a = parse(&args(probe)).expect("parses");
+            assert_eq!((a.count, a.seed), (None, None));
+        }
         let a = parse(&args("assist right --secs 30")).expect("parses");
         assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
         let a = parse(&args("g4 qt --clicks 50 --seed 3")).expect("parses");
@@ -267,6 +292,9 @@ mod tests {
             "g4 qt --pause 5",
             "g5 plain --seed 1",
             "assist grab --seed 1",
+            "g17 notepad --seed 1",
+            "g18 chrome --clicks 5",
+            "g6 word --count 2",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }
