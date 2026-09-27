@@ -53,14 +53,20 @@ pub fn installed_layouts() -> Vec<HKL> {
 /// The label for `code` in `hkl`: its character, or its key name for non-printing keys.
 pub fn label(code: u32, hkl: HKL) -> String {
     let printed = character(code, hkl);
-    if printed.chars().any(|c| !c.is_control() && !c.is_whitespace()) {
+    if is_printable(&printed) {
         printed
     } else {
         key_name(code)
     }
 }
 
-fn character(code: u32, hkl: HKL) -> String {
+/// True if `text` has a visible character (not only controls or spaces).
+pub fn is_printable(text: &str) -> bool {
+    text.chars().any(|c| !c.is_control() && !c.is_whitespace())
+}
+
+/// What `code` types in `hkl` with no modifiers; empty for non-printing keys.
+pub fn character(code: u32, hkl: HKL) -> String {
     let state = [0u8; 256];
     let mut buf = [0u16; LABEL_CAP];
     // SAFETY: all buffers are valid for their lengths; the flag keeps dead-key state untouched.
