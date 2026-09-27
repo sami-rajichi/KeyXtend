@@ -11,7 +11,7 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | # | What | Status |
 |---|---|---|
 | P0 | Foundation: repo, CI, rules, licence files | Done (v0.0.0) |
-| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G16, ADR-0011) | Ready |
+| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G26, ADR-0011) | In progress |
 | P2 | Kernel and module system | Waiting |
 | P3 | Keyboard core: typing EN/FR/AR, modifiers, Native theme, window | Waiting |
 | P4 | Mouse assist: Right-click hold, Grab, ring and sounds | Waiting |
@@ -29,7 +29,7 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 
 ## Part 2 — New features after v1.0
 
-All of these were chosen on 2026-09-26, to be added one by one after v1.0 works well. The product owner can reorder them or add F13 and beyond.
+F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27, to be added one by one after v1.0 works well. The product owner can reorder them or add F17 and beyond.
 
 | # | Feature | What it does | Needs | Size |
 |---|---|---|---|---|
@@ -45,5 +45,9 @@ All of these were chosen on 2026-09-26, to be added one by one after v1.0 works 
 | F10 | **Mouse grid** | Reach any point on screen by picking grid squares, useful when the pointer is hard to aim. | P4 | Medium |
 | F11 | **Voice dataset export** | Export your own voice and text pairs, with your consent, to improve recognition of your voice later. | P11 | Small |
 | F12 | **Plugins** | Other developers can add features safely through sandboxed WASM plugins with permissions. | v1.0 | Large |
+| F13 | **Hover to type** | A key types when the pointer rests on it for a set time, like osk.exe's hover mode. | P3, v1.0 | Small |
+| F14 | **Switch scanning** | A highlight moves through rows and keys; one switch or click picks the highlighted one. | P3, v1.0 | Medium |
+| F15 | **Number pad and navigation panel** | An optional panel with a number pad, Home, End, PgUp, PgDn, Insert and F-keys. | P3, v1.0 | Small |
+| F16 | **Chinese, Japanese and Korean input** | An IME mode that sends key presses instead of characters, so the Windows IME can build the text. | P3, v1.0 | Medium |
 
 **Adding your own idea:** say "add a feature: …". Claude adds it as the next F-number with a one-line description, its needs and its size.
