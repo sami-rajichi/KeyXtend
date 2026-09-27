@@ -1,4 +1,4 @@
-//! P1 spike harness: drives gates G1-G6, G17-G21, G25 and the hand try, and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G6, G17-G21, G23-G25 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
@@ -11,14 +11,18 @@ mod clipkeep;
 mod cliplisten;
 mod config;
 mod diff;
+mod facetools;
 mod featcfg;
 mod g1;
 mod g17;
 mod g18;
 mod g19;
+mod g19pill;
 mod g2;
 mod g20;
 mod g21;
+mod g23;
+mod g24;
 mod g25;
 mod g3;
 mod g4;
@@ -71,10 +75,13 @@ fn usage() -> String {
        harness g17 <{}>
        harness g18 <{}>
        harness g6 <{}>
-       harness g19 {}
+       harness g19 <{}|slint|qt>
        harness g20 <{}>
        harness g21 <{}>
+       harness g23 <slint|qt>
+       harness g24 <slint|qt>
        harness g25 <{}>
+       harness close <slint|qt>
 --attach types into the app's window already open; --pause sets the gap between characters.",
         names(&AppKind::ALL),
         g5::PLAIN,
@@ -153,7 +160,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
 /// Gates that take only a name: no count, no seed.
-const NAMED: [(&str, NamedRun); 8] = [
+const NAMED: [(&str, NamedRun); 11] = [
     ("g5", g5::run),
     ("g6", g6::run),
     ("g17", g17::run),
@@ -161,7 +168,10 @@ const NAMED: [(&str, NamedRun); 8] = [
     ("g19", g19::run),
     ("g20", g20::run),
     ("g21", g21::run),
+    ("g23", g23::run),
+    ("g24", g24::run),
     ("g25", g25::run),
+    ("close", facetools::close),
 ];
 
 /// The run of `gate` when it takes only a name.
@@ -314,7 +324,11 @@ mod tests {
             "g19 core",
             "g20 notepad",
             "g21 win32",
+            "g19 slint",
+            "g23 qt",
+            "g24 slint",
             "g25 notepad",
+            "close slint",
         ] {
             let a = parse(&args(probe)).expect("parses");
             assert_eq!((a.count, a.seed), (None, None));
@@ -347,6 +361,8 @@ mod tests {
             "g20 notepad --count 3",
             "g21 chrome --clicks 2",
             "g25 notepad --attach",
+            "g23 slint --seed 2",
+            "g24 qt --clicks 3",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }

@@ -11,7 +11,8 @@ license = "GPL-3.0-or-later"
 [workspace]
 
 [dependencies]
-slint = "=1.18.1"
+# The winit hook opens every window without taking focus; Slint has no stable way to do this.
+slint = { version = "=1.18.1", features = ["unstable-winit-030"] }
 spike-core = { path = "../core" }
 
 [build-dependencies]

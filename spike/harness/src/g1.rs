@@ -119,7 +119,7 @@ fn type_text(
 /// The app's pop-ups, what is in front, and a screenshot, for a blocked run.
 fn evidence(ctx: &Ctx, hwnd: HWND) -> Value {
     let file = ctx.file(SCREEN_FILE);
-    let screenshot = match shot::save(&file) {
+    let screenshot = match shot::save(&file, ctx.spike.tools.shot_cap()) {
         Ok(()) => json!(file),
         Err(e) => json!({ "error": e }),
     };

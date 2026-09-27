@@ -23,12 +23,26 @@ fn field(name: &str, want: bool, got: Result<bool, String>) -> Value {
     }
 }
 
-/// Clicks the web field called `name` and reads the password flag of the element that took the focus.
-fn web_field(ctx: &Ctx, uia: &Uia, app: &Opened, name: &str) -> Result<bool, String> {
+/// A web field called `name` of HTML type `kind`, with any `extra` attributes.
+pub(crate) fn input(ctx: &Ctx, name: &str, kind: &str, extra: &str) -> String {
+    let css = &ctx.cfg.g21.field_css;
+    format!(
+        "<input aria-label=\"{name}\" type=\"{kind}\" autocomplete=\"off\" style=\"{css}\" {extra}>"
+    )
+}
+
+/// Clicks the centre of the web field called `name`, once UI Automation shows it.
+pub(crate) fn click_field(ctx: &Ctx, uia: &Uia, app: &Opened, name: &str) -> Result<(), String> {
     let t = &ctx.cfg.timing;
     let el = win::poll_until(t.read_wait_ms, t.poll_ms, || uia.named(app.hwnd, name))
         .ok_or_else(|| format!("no field {name} through UI Automation"))?;
-    simuser::click(ctx, app, uia::centre(&uia::rect(&el)?))?;
+    simuser::click(ctx, app, uia::centre(&uia::rect(&el)?))
+}
+
+/// Clicks the web field called `name` and reads the password flag of the element that took the focus.
+fn web_field(ctx: &Ctx, uia: &Uia, app: &Opened, name: &str) -> Result<bool, String> {
+    let t = &ctx.cfg.timing;
+    click_field(ctx, uia, app, name)?;
     let has_focus = || uia.focused().ok().filter(|f| uia::name(f) == name);
     let focused = win::poll_until(t.read_wait_ms, t.poll_ms, has_focus)
         .ok_or_else(|| format!("{name} did not take the focus"))?;
@@ -38,13 +52,7 @@ fn web_field(ctx: &Ctx, uia: &Uia, app: &Opened, name: &str) -> Result<bool, Str
 /// Chrome on a page with a text field and a password field.
 fn chrome(ctx: &Ctx) -> Result<Value, String> {
     let g = &ctx.cfg.g21;
-    let input = |name: &str, kind: &str| {
-        format!(
-            "<input aria-label=\"{name}\" type=\"{kind}\" autocomplete=\"off\" style=\"{}\">",
-            g.field_css
-        )
-    };
-    let body = input(&g.user_name, "text") + &input(&g.pass_name, "password");
+    let body = input(ctx, &g.user_name, "text", "") + &input(ctx, &g.pass_name, "password", "");
     let doc = probe::open_page(ctx, &body)?;
     let (fields, notes) = probe::run_on(ctx, doc, |doc| {
         let uia = Uia::new()?;

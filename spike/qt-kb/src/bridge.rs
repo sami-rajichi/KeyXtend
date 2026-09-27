@@ -26,8 +26,8 @@ pub mod qobject {
     extern "RustQt" {
         #[qobject]
         #[qml_element]
-        #[qproperty(f32, block_width, READ, CONSTANT)]
-        #[qproperty(f32, block_height, READ, CONSTANT)]
+        #[qproperty(f32, face_width, READ, CONSTANT)]
+        #[qproperty(f32, face_height, READ, CONSTANT)]
         #[qproperty(f32, gap_px, READ, CONSTANT)]
         #[qproperty(f32, font_px, READ, CONSTANT)]
         #[qproperty(i32, guard_delay_ms, READ, CONSTANT)]
@@ -78,10 +78,20 @@ pub fn init(cfg: SpikeConfig, prev: HWND) {
     });
 }
 
+/// What `init` stored; `main` always calls it before QML makes any object.
+fn start() -> &'static Start {
+    START.get().expect("bridge::init runs before QML loads")
+}
+
+/// The settings `init` stored; QML objects read them when they are made.
+pub fn config() -> &'static SpikeConfig {
+    &start().cfg
+}
+
 /// Rust side of `Keyboard`.
 pub struct KeyboardRust {
-    block_width: f32,
-    block_height: f32,
+    face_width: f32,
+    face_height: f32,
     gap_px: f32,
     font_px: f32,
     guard_delay_ms: i32,
@@ -99,19 +109,19 @@ pub struct KeyboardRust {
 }
 
 /// Milliseconds as a QML `int`.
-fn ms(value: u64) -> i32 {
+pub(crate) fn ms(value: u64) -> i32 {
     i32::try_from(value).unwrap_or(i32::MAX)
 }
 
 impl Default for KeyboardRust {
     fn default() -> Self {
-        let start = START.get().expect("bridge::init runs before QML loads");
+        let start = start();
         let kb = &start.cfg.keyboard;
-        let (block_width, block_height) = place::block_size(kb);
+        let (face_width, face_height) = place::face_size(kb);
         let keys = kb.rows.iter().map(Vec::len).sum();
         Self {
-            block_width,
-            block_height,
+            face_width,
+            face_height,
             gap_px: kb.gap_px,
             font_px: kb.font_px,
             guard_delay_ms: ms(kb.guard_delay_ms),

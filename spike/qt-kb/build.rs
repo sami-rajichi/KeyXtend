@@ -8,8 +8,10 @@ use embed_manifest::{embed_manifest, new_manifest};
 const URI: &str = "KeyXtend.Spike";
 /// The window, as a file of the QML module.
 const MAIN_QML: &str = "qml/main.qml";
-/// The Rust file holding the cxx-qt bridge.
-const BRIDGE: &str = "src/bridge.rs";
+/// The other QML files: a clickable cap, the selection pill and the snip overlay.
+const PARTS_QML: [&str; 3] = ["qml/Cap.qml", "qml/Pill.qml", "qml/Overlay.qml"];
+/// The Rust files holding cxx-qt bridges.
+const BRIDGES: [&str; 2] = ["src/bridge.rs", "src/tools.rs"];
 /// Identity name in the manifest.
 const MANIFEST_NAME: &str = "KeyXtend.Spike.Qt";
 /// Only this profile asks for uiAccess; unsigned debug builds would be refused.
@@ -19,7 +21,8 @@ const UIACCESS_PROFILE: &str = "release";
 const UTF8_FLAG: &str = "/utf-8";
 
 fn main() {
-    let builder = CxxQtBuilder::new_qml_module(QmlModule::new(URI).qml_file(MAIN_QML)).file(BRIDGE);
+    let module = QmlModule::new(URI).qml_file(MAIN_QML).qml_files(PARTS_QML);
+    let builder = CxxQtBuilder::new_qml_module(module).files(BRIDGES);
     // SAFETY: only adds one compiler flag; the cc::Build is otherwise left as cxx-qt set it.
     let builder = unsafe {
         builder.cc_builder(|cc| {

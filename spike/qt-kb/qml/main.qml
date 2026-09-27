@@ -1,5 +1,5 @@
-// Qt face of the P1 spike: a plain key block that never takes focus.
-// Bound: the key delegate may use the window's ids, and gets its data only from `modelData`.
+// Qt face of the P1 spike: a plain key block and tools row that never take focus.
+// Bound: delegates may use the window's ids, and get their data only from `modelData` and `index`.
 pragma ComponentBehavior: Bound
 import QtQuick
 import KeyXtend.Spike
@@ -7,10 +7,10 @@ import KeyXtend.Spike
 Window {
     id: win
 
-    // Key edge width; drawn in the text colour, so edges keep at least 3:1 contrast.
-    readonly property int edge: 1
     // Every key with its box from spike-core, in one flat list.
     property var keys: []
+    // The tool buttons with their boxes.
+    property var tools: []
     // Last note shown at the end of the status line.
     property string note: kb.guardPending
 
@@ -18,10 +18,11 @@ Window {
     title: kb.title
     visible: true
     color: pal.window
-    width: kb.blockWidth
-    height: kb.blockHeight + line.implicitHeight + kb.gapPx
+    width: kb.faceWidth
+    height: kb.faceHeight + line.implicitHeight + kb.gapPx
 
     Keyboard { id: kb }
+    Tools { id: tl }
     SystemPalette { id: pal }
 
     // The keys of every row in one list.
@@ -33,54 +34,119 @@ Window {
         note = kb.tap(code);
     }
 
-    Component.onCompleted: keys = flat(kb.rowsJson())
+    // Shows `text` on the status line unless it is empty.
+    function say(text) {
+        if (text && text.length > 0)
+            note = text;
+    }
+
+    // Qt units for physical pixel (px, py), using the scale of the screen that holds it; Qt keeps each screen's corner unscaled.
+    function logical(px, py) {
+        const all = Qt.application.screens;
+        for (let i = 0; i < all.length; i++) {
+            const s = all[i];
+            const d = s.devicePixelRatio;
+            const inX = px >= s.virtualX && px < s.virtualX + s.width * d;
+            const inY = py >= s.virtualY && py < s.virtualY + s.height * d;
+            if (inX && inY)
+                return { x: s.virtualX + (px - s.virtualX) / d, y: s.virtualY + (py - s.virtualY) / d, dpr: d };
+        }
+        return { x: px, y: py, dpr: 1 };
+    }
+
+    function tool(i) {
+        const r = JSON.parse(tl.tool(i));
+        say(r.note);
+        if (r.snip) {
+            over.begin(logical(r.snip.x, r.snip.y), r.snip);
+            // The image loads at once, so the private copy on disk can go now.
+            say(tl.forgetFrozen());
+            say(tl.guard(tl.overlayTitle));
+        }
+    }
+
+    // Shows, moves or hides the pill, and shows any new fill note.
+    function tick() {
+        const r = JSON.parse(tl.tick());
+        say(r.note);
+        const at = r.show || r.move;
+        if (at)
+            pill.place(logical(at[0], at[1]));
+        if (r.show) {
+            pill.visible = true;
+            say(tl.guard(tl.pillTitle));
+        }
+        if (r.hide)
+            pill.visible = false;
+    }
+
+    Component.onCompleted: {
+        keys = flat(kb.rowsJson());
+        tools = JSON.parse(tl.buttonsJson());
+    }
 
     Repeater {
         model: win.keys
-        delegate: Rectangle {
-            id: cap
+        delegate: Cap {
             required property var modelData
             x: modelData.x
             y: modelData.y
             width: modelData.w
             height: modelData.h
-            color: area.pressed ? pal.highlight : pal.base
-            border.width: win.edge
-            border.color: pal.windowText
-            Accessible.role: Accessible.Button
-            Accessible.name: modelData.label
-            Accessible.onPressAction: win.tap(modelData.code)
-
-            Text {
-                width: parent.width
-                anchors.verticalCenter: parent.verticalCenter
-                horizontalAlignment: Text.AlignHCenter
-                elide: Text.ElideRight
-                text: cap.modelData.label
-                font.pixelSize: kb.fontPx
-                color: area.pressed ? pal.highlightedText : pal.text
-                // The key already carries the label; hide the text so readers say it once.
-                Accessible.ignored: true
-            }
-            MouseArea {
-                id: area
-                anchors.fill: parent
-                onClicked: win.tap(cap.modelData.code)
-            }
+            label: modelData.label
+            fontPx: kb.fontPx
+            onClicked: win.tap(modelData.code)
+        }
+    }
+    Repeater {
+        model: win.tools
+        delegate: Cap {
+            required property var modelData
+            required property int index
+            x: modelData.x
+            y: modelData.y
+            width: modelData.w
+            height: modelData.h
+            label: modelData.label
+            fontPx: kb.fontPx
+            onClicked: win.tool(index)
         }
     }
 
     Text {
         id: line
         x: kb.gapPx
-        y: kb.blockHeight
-        width: kb.blockWidth - 2 * kb.gapPx
+        y: kb.faceHeight
+        width: kb.faceWidth - 2 * kb.gapPx
         elide: Text.ElideRight
         font.pixelSize: kb.fontPx
         color: pal.windowText
         Accessible.role: Accessible.StaticText
         Accessible.name: text
         text: kb.line(win.note)
+    }
+
+    Pill {
+        id: pill
+        title: tl.pillTitle
+        width: tl.pillWidth
+        height: tl.pillHeight
+        label: tl.pillLabel
+        fontPx: kb.fontPx
+        onCopyClicked: win.say(tl.copy())
+    }
+    Overlay {
+        id: over
+        title: tl.overlayTitle
+        edge: tl.snipEdge
+        hint: tl.snipHint
+        onPicked: {
+            const n = tl.pick();
+            if (n.length > 0) {
+                over.end();
+                win.note = n;
+            }
+        }
     }
 
     // Guards our window; an empty result means no window was visible yet, so it tries again.
@@ -104,5 +170,11 @@ Window {
             if (json.length > 0)
                 win.keys = win.flat(json);
         }
+    }
+    Timer {
+        interval: tl.pollMs
+        running: true
+        repeat: true
+        onTriggered: win.tick()
     }
 }

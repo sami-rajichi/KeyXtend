@@ -1,5 +1,8 @@
 // P1 spike: the stage-1 keyboard. Plain look, no theme, no focusable widgets.
 import { Palette } from "std-widgets.slint";
+import { Cap } from "cap.slint";
+export { Pill } from "pill.slint";
+export { Overlay } from "overlay.slint";
 
 // One key: its label, scan code and box from the client top-left, all from spike-core.
 export struct Key {
@@ -11,64 +14,62 @@ export struct Key {
     h: length,
 }
 
-// The key block with a status line under it; sized to fit, never scrolled.
+// One tool button: its label and box; its index is what `tool` reports.
+export struct Tool {
+    label: string,
+    x: length,
+    y: length,
+    w: length,
+    h: length,
+}
+
+// The key block, a tools row and a status line under it; sized to fit, never scrolled.
 export component Keyboard inherits Window {
     in property <string> caption;
     in property <[Key]> keys;
+    in property <[Tool]> tools;
     in property <string> status;
-    in property <length> block-width;
-    in property <length> block-height;
+    in property <length> face-width;
+    in property <length> face-height;
     in property <length> gap-px;
     in property <length> font-px;
-    // Key edge width; drawn in the text colour, so edges keep at least 3:1 contrast.
-    property <length> edge: 1px;
     callback tapped(int);
+    callback tool(int);
 
     title: caption;
     always-on-top: true;
     background: Palette.background;
-    width: block-width;
-    height: block-height + line.height + gap-px;
+    width: face-width;
+    height: face-height + line.height + gap-px;
 
-    for key in keys: Rectangle {
+    for key in keys: Cap {
         x: key.x;
         y: key.y;
         width: key.w;
         height: key.h;
-        background: touch.pressed ? Palette.accent-background : Palette.control-background;
-        border-width: edge;
-        border-color: Palette.foreground;
-        accessible-role: button;
-        accessible-label: key.label;
-        accessible-action-default => {
+        label: key.label;
+        font-px: font-px;
+        clicked => {
             tapped(key.code);
         }
-        Text {
-            // The key already carries the label; hide the text so readers say it once.
-            accessible-role: none;
-            width: parent.width;
-            height: parent.height;
-            text: key.label;
-            font-size: font-px;
-            color: touch.pressed ? Palette.accent-foreground : Palette.control-foreground;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-            overflow: elide;
-        }
+    }
 
-        touch := TouchArea {
-            width: parent.width;
-            height: parent.height;
-            clicked => {
-                tapped(key.code);
-            }
+    for t[i] in tools: Cap {
+        x: t.x;
+        y: t.y;
+        width: t.w;
+        height: t.h;
+        label: t.label;
+        font-px: font-px;
+        clicked => {
+            tool(i);
         }
     }
 
     line := Text {
         x: gap-px;
-        y: block-height;
-        width: block-width - 2 * gap-px;
+        y: face-height;
+        width: face-width - 2 * gap-px;
         height: self.preferred-height;
         text: status;
         font-size: font-px;

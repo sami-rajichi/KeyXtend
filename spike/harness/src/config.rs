@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use spike_core::config::settings_path;
 
-use crate::featcfg::{self, EditKeys, G19, G20, G21, G25};
+use crate::featcfg::{self, EditKeys, G19, G20, G21, G23, G24, G25};
 use crate::probecfg::{G6, Probes, Sim};
 use crate::text::Charsets;
 
@@ -52,6 +52,10 @@ pub struct HarnessConfig {
     pub g20: G20,
     /// G21 settings.
     pub g21: G21,
+    /// G23 settings.
+    pub g23: G23,
+    /// G24 settings.
+    pub g24: G24,
     /// G25 settings.
     pub g25: G25,
     /// Folder the file was read from; relative paths start here.

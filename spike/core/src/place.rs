@@ -2,15 +2,19 @@
 
 use serde::Serialize;
 
-use crate::config::KeyboardConfig;
+use crate::config::{KeyboardConfig, SpikeConfig, ToolButton};
 use crate::layout::width;
 
 /// One key's box, from the top-left corner of the window's client area.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Place {
+    /// Left edge.
     pub x: f32,
+    /// Top edge.
     pub y: f32,
+    /// Width.
     pub w: f32,
+    /// Height.
     pub h: f32,
 }
 
@@ -47,6 +51,36 @@ pub fn block_size(cfg: &KeyboardConfig) -> (f32, f32) {
     let right = boxes.clone().map(|p| p.x + p.w).fold(0.0, f32::max);
     let bottom = boxes.map(|p| p.y + p.h).fold(0.0, f32::max);
     (right + cfg.gap_px, bottom + cfg.gap_px)
+}
+
+/// `n` tool buttons sharing one key-high row under the block, with a gap around each.
+pub fn tools(cfg: &KeyboardConfig, n: usize) -> Vec<Place> {
+    let ((block_w, block_h), gap) = (block_size(cfg), cfg.gap_px);
+    let w = (block_w - gap * (n as f32 + 1.0)) / n.max(1) as f32;
+    (0..n)
+        .map(|i| Place {
+            x: gap + i as f32 * (w + gap),
+            y: block_h,
+            w,
+            h: cfg.key_px,
+        })
+        .collect()
+}
+
+/// Each tool button's label and box, in row order.
+pub fn tool_row(cfg: &SpikeConfig) -> Vec<(String, Place)> {
+    let boxes = tools(&cfg.keyboard, ToolButton::ALL.len());
+    ToolButton::ALL
+        .iter()
+        .zip(boxes)
+        .map(|(&b, p)| (cfg.tools.labels.of(b).to_string(), p))
+        .collect()
+}
+
+/// Width and height of the keys plus the tools row, without the status line.
+pub fn face_size(cfg: &KeyboardConfig) -> (f32, f32) {
+    let (w, h) = block_size(cfg);
+    (w, h + cfg.key_px + cfg.gap_px)
 }
 
 #[cfg(test)]
@@ -86,5 +120,36 @@ mod tests {
             ]
         );
         assert_eq!(block_size(&kb()), (381.0, 160.0));
+    }
+
+    #[test]
+    fn tools_share_one_row_under_the_block() {
+        let t = tools(&kb(), 3);
+        let close = |a: f32, b: f32| (a - b).abs() < 0.01;
+        assert!(
+            t.iter()
+                .all(|p| p.y == 160.0 && p.h == 48.0 && close(p.w, t[0].w))
+        );
+        assert_eq!(t[0].x, 4.0);
+        assert!(close(t[1].x, t[0].x + t[0].w + 4.0));
+        let last = t[2];
+        assert!(
+            close(last.x + last.w + 4.0, 381.0),
+            "the row fills the block"
+        );
+        assert_eq!(face_size(&kb()), (381.0, 212.0));
+        assert!(tools(&kb(), 0).is_empty());
+    }
+
+    #[test]
+    fn the_tool_row_pairs_each_label_with_its_box() {
+        let cfg = crate::config::load().expect("spike.toml loads");
+        let row = tool_row(&cfg);
+        let boxes = tools(&cfg.keyboard, ToolButton::ALL.len());
+        for (i, (label, at)) in row.iter().enumerate() {
+            let b = ToolButton::at(i).expect("a button");
+            assert_eq!((label.as_str(), *at), (cfg.tools.labels.of(b), boxes[i]));
+        }
+        assert_eq!(row.len(), ToolButton::ALL.len());
     }
 }

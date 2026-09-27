@@ -18,6 +18,8 @@ pub struct SpikeConfig {
     pub keyboard: KeyboardConfig,
     /// The recording target window.
     pub target: TargetConfig,
+    /// The tools row, the selection pill, quick-fill and snip.
+    pub tools: ToolsConfig,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -65,6 +67,107 @@ pub struct TargetConfig {
     pub password_arg: String,
 }
 
+/// Bytes in one MiB.
+const MIB: usize = 1 << 20;
+
+/// The tools row, the selection pill, quick-fill and snip (stage 1b).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolsConfig {
+    /// Button labels.
+    pub labels: ToolLabels,
+    /// Title of the pill window, so the harness can find it.
+    pub pill_title: String,
+    /// Title of the snip overlay.
+    pub overlay_title: String,
+    /// How often the selection watcher looks at the focused text, in ms.
+    pub selection_poll_ms: u64,
+    /// Pill width, height and gap from the text, in logical pixels.
+    pub pill_px: [f32; 3],
+    /// Virtual keys the pill's Copy button presses, in order.
+    pub copy_keys: Vec<u16>,
+    /// Text of the Windows Hello prompt.
+    pub hello_message: String,
+    /// Fake user name that Fill types after Hello says yes.
+    pub test_user: String,
+    /// Fake password that Fill types after Hello says yes.
+    pub test_password: String,
+    /// Wait after giving the app in front its focus back, before typing, in ms.
+    pub fill_settle_ms: u64,
+    /// Folder under TEMP for snips and the frozen screen.
+    pub snip_folder: String,
+    /// Largest screen copy we make or read, in MiB.
+    pub shot_cap_mb: usize,
+    /// Width of the snip region's edge, in logical pixels.
+    pub snip_edge_px: f32,
+    /// What the snip overlay tells a screen reader to do.
+    pub snip_hint: String,
+}
+
+/// Labels of the tool buttons and the pill.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolLabels {
+    /// Types the test user name.
+    pub fill_user: String,
+    /// Types the test password.
+    pub fill_password: String,
+    /// Starts a snip.
+    pub snip: String,
+    /// The pill's copy button.
+    pub copy: String,
+}
+
+/// The tool buttons, in row order; the faces and the harness share this order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolButton {
+    /// Types the test user name after Hello.
+    FillUser,
+    /// Types the test password after Hello.
+    FillPassword,
+    /// Starts a snip.
+    Snip,
+}
+
+impl ToolButton {
+    /// Every button, in row order.
+    pub const ALL: [ToolButton; 3] = [Self::FillUser, Self::FillPassword, Self::Snip];
+
+    /// The button at row position `i`.
+    pub fn at(i: usize) -> Option<ToolButton> {
+        Self::ALL.get(i).copied()
+    }
+
+    /// Its row position.
+    pub fn index(self) -> usize {
+        Self::ALL
+            .iter()
+            .position(|&b| b == self)
+            .unwrap_or_default()
+    }
+}
+
+impl ToolLabels {
+    /// The label of button `b`.
+    pub fn of(&self, b: ToolButton) -> &str {
+        match b {
+            ToolButton::FillUser => &self.fill_user,
+            ToolButton::FillPassword => &self.fill_password,
+            ToolButton::Snip => &self.snip,
+        }
+    }
+}
+
+impl ToolsConfig {
+    /// The folder snips go to, under TEMP.
+    pub fn snip_dir(&self) -> PathBuf {
+        std::env::temp_dir().join(&self.snip_folder)
+    }
+
+    /// The screen copy cap in bytes.
+    pub fn shot_cap(&self) -> usize {
+        self.shot_cap_mb.saturating_mul(MIB)
+    }
+}
+
 impl SpikeConfig {
     /// The title for `face`, or the face name itself.
     pub fn title(&self, face: &str) -> String {
@@ -107,4 +210,35 @@ pub fn load() -> Result<SpikeConfig, String> {
         toml::from_str(&text).map_err(|e| format!("{}: {e}", file.display()))?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_buttons_keep_their_row_order() {
+        for (i, b) in ToolButton::ALL.iter().enumerate() {
+            assert_eq!(ToolButton::at(i), Some(*b));
+            assert_eq!(b.index(), i);
+        }
+        assert_eq!(ToolButton::at(ToolButton::ALL.len()), None);
+    }
+
+    #[test]
+    fn spike_toml_loads_the_tools() {
+        let cfg = load().expect("spike.toml loads");
+        assert_eq!(cfg.tools.labels.of(ToolButton::Snip), cfg.tools.labels.snip);
+        assert!(cfg.tools.selection_poll_ms > 0 && !cfg.tools.copy_keys.is_empty());
+        assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
+    }
+
+    #[test]
+    fn the_shot_cap_is_in_megabytes() {
+        let mut t = load().expect("spike.toml loads").tools;
+        t.shot_cap_mb = 2;
+        assert_eq!(t.shot_cap(), 2 * 1024 * 1024);
+        t.shot_cap_mb = usize::MAX;
+        assert_eq!(t.shot_cap(), usize::MAX, "a huge value saturates");
+    }
 }

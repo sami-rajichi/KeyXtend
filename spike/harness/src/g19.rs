@@ -1,8 +1,9 @@
 //! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
 
 use serde_json::{Value, json};
-use spike_core::screen::work_area;
-use spike_core::uia::{self, Pill, Sel, Uia};
+use spike_core::screen::{self, work_area};
+use spike_core::selwatch::PillPx;
+use spike_core::uia::{self, Sel, Uia};
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::probe::{self, Doc};
@@ -30,7 +31,7 @@ fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
 }
 
 /// The selection of the focused element in `app`'s program, once UI Automation shows its text and a box for the pill.
-fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
+pub(crate) fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
     let (t, max, (pid, _)) = (&ctx.cfg.timing, ctx.cfg.g19.max_chars, win::owner(app.hwnd));
     win::poll_until(t.read_wait_ms, t.poll_ms, || {
         let f = uia
@@ -66,18 +67,13 @@ fn why(uia: &Uia, max: usize, pid: u32) -> String {
 
 /// Selects and reads line `i`; its text is logged only when it is the expected test line.
 fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value {
-    let p = ctx.cfg.g19.pill;
     let sel = match select_line(ctx, app, i).and_then(|()| read_sel(ctx, uia, app)) {
         Ok(s) => s,
         Err(e) => return json!({ "line": i, "ok": false, "error": e }),
     };
     let text = line(&sel.text);
     let first = sel.boxes.first().copied().unwrap_or_default();
-    let pill = Pill {
-        w: p.w,
-        h: p.h,
-        gap: p.gap,
-    };
+    let pill = PillPx(ctx.spike.tools.pill_px).at(screen::dpi_of(&first));
     let pill = work_area(&first)
         .ok()
         .and_then(|screen| uia::anchor(&sel.boxes, &screen, pill));
@@ -152,10 +148,10 @@ fn one(ctx: &Ctx, kind: AppKind) -> Value {
     }
 }
 
-/// Runs G19 detection in Notepad, then Chrome.
+/// Runs G19 detection in Notepad, then Chrome; any other name is a face whose pill is checked.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name != CORE {
-        return Err(format!("G19 runs {CORE} until the pill exists, not {name}"));
+        return crate::g19pill::run(ctx, name);
     }
     let apps: Vec<Value> = APPS.iter().map(|&k| one(ctx, k)).collect();
     let pass = apps.iter().all(|a| a["ok"] == true);

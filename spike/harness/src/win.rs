@@ -10,9 +10,8 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
-    GetSystemMetrics, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic,
-    IsWindow, IsWindowVisible, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE,
+    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindow,
+    IsWindowVisible, PostMessageW, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE,
     WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
@@ -189,18 +188,7 @@ pub fn popups(hwnd: HWND) -> Vec<String> {
         .collect()
 }
 
-/// The virtual desktop: left, top, width and height in physical pixels.
-pub fn desktop() -> (i32, i32, i32, i32) {
-    // SAFETY: plain metric queries.
-    unsafe {
-        (
-            GetSystemMetrics(SM_XVIRTUALSCREEN),
-            GetSystemMetrics(SM_YVIRTUALSCREEN),
-            GetSystemMetrics(SM_CXVIRTUALSCREEN),
-            GetSystemMetrics(SM_CYVIRTUALSCREEN),
-        )
-    }
-}
+pub use spike_core::capture::desktop;
 
 /// What a wanted window looks like.
 #[derive(Debug, Clone, Default)]
