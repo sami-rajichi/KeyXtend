@@ -1,0 +1,40 @@
+# Every number and path the P1 spike uses. Staged next to each exe; else read from spike/.
+
+[keyboard]
+# Window titles, so the harness can find each face.
+titles = { slint = "KeyXtend spike - Slint", qt = "KeyXtend spike - Qt", tauri = "KeyXtend spike - Tauri" }
+# One key unit in logical pixels, and the gap between keys.
+key_px = 48.0
+gap_px = 4.0
+# Label font size in logical pixels.
+font_px = 16.0
+# Wait after the window appears before guarding it and handing focus back, in ms.
+guard_delay_ms = 300
+# How often labels follow the layout of the app in front, in ms.
+relabel_ms = 500
+# The 5-row block as scan codes; 0xE0xx marks an extended key.
+rows = [
+    [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E],
+    [0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B],
+    [0x3A, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x1C],
+    [0x2A, 0x56, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36],
+    [0x1D, 0xE05B, 0x38, 0x39, 0xE038, 0xE01D],
+]
+# Key widths in key units; keys not listed are 1.0.
+widths = [
+    [0x0E, 2.0], [0x0F, 1.5], [0x2B, 1.5], [0x3A, 1.75], [0x1C, 2.25],
+    [0x2A, 1.25], [0x36, 2.75], [0x1D, 1.5], [0xE05B, 1.25], [0x38, 1.25],
+    [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
+]
+
+[target]
+# Title of the recording window.
+title = "KeyXtend spike - target"
+# Log of every character it receives, relative to the spike folder.
+log = "../target/spike-logs/target-window.log"
+# Text font and its height in pixels; Segoe UI covers Latin and Arabic.
+font = "Segoe UI"
+font_px = 24
+# Window size in pixels.
+width_px = 900
+height_px = 500

@@ -1,0 +1,3 @@
+# Spike build output stays inside the project's ignored target folder.
+[build]
+target-dir = "../target/spike"
