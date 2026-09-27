@@ -1,0 +1,53 @@
+{
+  "packages": [
+    {
+      "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+      "name": "xtask",
+      "manifest_path": "D:\\Projects\\KeyXtend\\xtask\\Cargo.toml",
+      "dependencies": [
+        { "name": "serde", "kind": null },
+        { "name": "proptest", "kind": "dev" }
+      ],
+      "targets": [
+        { "kind": ["bin"], "src_path": "D:\\Projects\\KeyXtend\\xtask\\src\\main.rs" }
+      ]
+    }
+  ],
+  "workspace_members": ["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"],
+  "workspace_root": "D:\\Projects\\KeyXtend",
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+        "deps": [
+          {
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
+            "dep_kinds": [{ "kind": null }]
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "tidy": {
+      "max_file_lines": 400,
+      "warn_file_lines": 300,
+      "extensions": ["rs", "slint", "qml"],
+      "scan_dirs": ["apps", "crates", "xtask"],
+      "skip_dirs": ["target"],
+      "app_dir": "apps",
+      "module_prefix": "kx-mod-",
+      "platform_prefix": "kx-platform-",
+      "module_allowed": ["kx-module-api"],
+      "app": "keyxtend",
+      "banned_network": ["reqwest", "hyper", "ureq", "rustls", "native-tls"],
+      "banned_media": ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"],
+      "unsafe_attr": "#![forbid(unsafe_code)]",
+      "root_kinds": ["lib", "bin", "proc-macro"]
+    },
+    "dco": {
+      "trailer": "Signed-off-by",
+      "exempt_authors": ["dependabot[bot]"]
+    }
+  }
+}

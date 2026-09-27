@@ -1,0 +1,52 @@
+name: Bug report
+description: Something did not work the way it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: One or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Short numbered steps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: dropdown
+    id: windows-version
+    attributes:
+      label: Windows version
+      options:
+        - Windows 11
+        - Windows 10
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: keyxtend-version
+    attributes:
+      label: KeyXtend version
+      placeholder: "e.g. 0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How badly does this block one-click use?
+      options:
+        - Blocks typing or clicking entirely
+        - Forces a workaround with more than one click
+        - Annoying but usable
+        - Cosmetic only
+    validations:
+      required: true

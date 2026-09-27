@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest something KeyXtend should do.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: One or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: who-helps
+    attributes:
+      label: Who does this help?
+    validations:
+      required: true
+  - type: textarea
+    id: one-click
+    attributes:
+      label: How it works with short left clicks only
+      description: No keyboard, right-click, scroll or drag.
+    validations:
+      required: true
