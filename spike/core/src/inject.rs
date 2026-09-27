@@ -47,8 +47,18 @@ pub fn press(code: u32, up: bool) -> Result<(), String> {
     send(&[key(scan, flags)])
 }
 
-/// Taps `code` (down then up); the target app's layout decides the character.
+/// Taps `code` the ADR-0009 way: its character in the target's layout as Unicode, else the key itself.
 pub fn tap(code: u32) -> Result<(), String> {
+    let character = crate::layout::character(code, crate::layout::foreground_layout());
+    if crate::layout::is_printable(&character) {
+        text(&character)
+    } else {
+        tap_scan(code)
+    }
+}
+
+/// Taps `code` as a scan code (down then up); the target app's layout decides the result.
+pub fn tap_scan(code: u32) -> Result<(), String> {
     let (scan, flags) = scan_flags(code);
     send(&[key(scan, flags), key(scan, flags | KEYEVENTF_KEYUP)])
 }
