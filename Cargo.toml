@@ -1,0 +1,67 @@
+[workspace]
+# New crates are listed here by name when created (see kx-new-module).
+members = ["xtask"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+license = "GPL-3.0-or-later"
+publish = false
+repository = "https://github.com/sami-rajichi/KeyXtend"
+
+[workspace.lints.rust]
+# Deny, not forbid, so kx-platform-* can allow it; other crate roots forbid it (tidy F2).
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+print_stdout = "warn"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+proptest = "1"
+
+[workspace.metadata.tidy]
+# A source file over this many lines fails tidy.
+max_file_lines = 400
+# A source file over this many lines warns.
+warn_file_lines = 300
+# File extensions the size rule scans.
+extensions = ["rs", "slint", "qml"]
+# Directories tidy scans for source files.
+scan_dirs = ["apps", "crates", "xtask"]
+# Directories tidy never scans.
+skip_dirs = ["target"]
+# Packages whose manifest is under this folder are apps, not modules.
+app_dir = "apps"
+# Crate-name prefix for feature modules.
+module_prefix = "kx-mod-"
+# Crate-name prefix for platform adapters.
+platform_prefix = "kx-platform-"
+# The only workspace crates a module may depend on.
+module_allowed = ["kx-module-api"]
+# The uiAccess app that the network and media bans protect.
+app = "keyxtend"
+# Network crates banned from the app (ARCHITECTURE.md invariant 4).
+banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
+# Media-decoding crates banned from the app (ARCHITECTURE.md invariant 5).
+banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
+# Attribute every non-platform crate root must carry.
+unsafe_attr = "#![forbid(unsafe_code)]"
+# Target kinds counted as a crate root for the unsafe-attribute rule.
+root_kinds = ["lib", "bin", "proc-macro"]
+
+[workspace.metadata.dco]
+# Commit trailer that counts as a sign-off.
+trailer = "Signed-off-by"
+# Authors exempt from the DCO check.
+exempt_authors = ["dependabot[bot]"]

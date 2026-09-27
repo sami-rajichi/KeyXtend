@@ -1,0 +1,26 @@
+{
+  "packages": [
+    {
+      "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+      "name": "xtask",
+      "manifest_path": "D:\\Projects\\KeyXtend\\xtask\\Cargo.toml",
+      "dependencies": [],
+      "targets": [
+        { "src_path": "D:\\Projects\\KeyXtend\\xtask\\src\\main.rs" }
+      ]
+    }
+  ],
+  "workspace_members": ["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"],
+  "workspace_root": "D:\\Projects\\KeyXtend",
+  "resolve": {
+    "nodes": [
+      { "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0", "deps": [] }
+    ]
+  },
+  "metadata": {
+    "dco": {
+      "trailer": "Signed-off-by",
+      "exempt_authors": ["dependabot[bot]"]
+    }
+  }
+}

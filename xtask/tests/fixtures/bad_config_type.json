@@ -1,0 +1,42 @@
+{
+  "packages": [
+    {
+      "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+      "name": "xtask",
+      "manifest_path": "D:\\Projects\\KeyXtend\\xtask\\Cargo.toml",
+      "dependencies": [],
+      "targets": [
+        { "src_path": "D:\\Projects\\KeyXtend\\xtask\\src\\main.rs" }
+      ]
+    }
+  ],
+  "workspace_members": ["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"],
+  "workspace_root": "D:\\Projects\\KeyXtend",
+  "resolve": {
+    "nodes": [
+      { "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0", "deps": [] }
+    ]
+  },
+  "metadata": {
+    "tidy": {
+      "max_file_lines": "x",
+      "warn_file_lines": 300,
+      "extensions": ["rs"],
+      "scan_dirs": ["xtask"],
+      "skip_dirs": ["target"],
+      "app_dir": "apps",
+      "module_prefix": "kx-mod-",
+      "platform_prefix": "kx-platform-",
+      "module_allowed": ["kx-module-api"],
+      "app": "keyxtend",
+      "banned_network": ["reqwest"],
+      "banned_media": ["image"],
+      "unsafe_attr": "#![forbid(unsafe_code)]",
+      "root_kinds": ["lib", "bin", "proc-macro"]
+    },
+    "dco": {
+      "trailer": "Signed-off-by",
+      "exempt_authors": []
+    }
+  }
+}
