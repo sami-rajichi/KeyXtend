@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use spike_core::config::settings_path;
 
+use crate::featcfg::{self, EditKeys, G19, G20, G21, G25};
 use crate::probecfg::{G6, Probes, Sim};
 use crate::text::Charsets;
 
@@ -43,6 +44,16 @@ pub struct HarnessConfig {
     pub probes: Probes,
     /// G6 settings.
     pub g6: G6,
+    /// Editing shortcuts of the stage-1b probes.
+    pub edit_keys: EditKeys,
+    /// G19 settings.
+    pub g19: G19,
+    /// G20 settings.
+    pub g20: G20,
+    /// G21 settings.
+    pub g21: G21,
+    /// G25 settings.
+    pub g25: G25,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -247,6 +258,7 @@ pub fn load() -> Result<HarnessConfig, String> {
         toml::from_str(&text).map_err(|e| format!("{}: {e}", file.display()))?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     config.text.validate()?;
+    featcfg::check(&config)?;
     Ok(config)
 }
 
@@ -267,6 +279,7 @@ mod tests {
             assert!(cfg.app(app).is_ok(), "missing app {app}");
         }
         assert!(cfg.probes.move_steps > 0 && cfg.g6.notches > 0);
+        assert!(!cfg.g25.panel_classes.is_empty());
     }
 
     #[test]

@@ -91,10 +91,23 @@ pub fn launch(
     input: &str,
     title_has: Option<String>,
 ) -> Result<(HWND, Child), String> {
+    launch_with(ctx, name, input, title_has, &[])
+}
+
+/// Like `launch`, with `extra` arguments after the configured ones.
+fn launch_with(
+    ctx: &Ctx,
+    name: &str,
+    input: &str,
+    title_has: Option<String>,
+    extra: &[String],
+) -> Result<(HWND, Child), String> {
     let (cfg, app) = (ctx.cfg, ctx.cfg.app(name)?);
     let m = window_match(app, title_has);
     let exe = cfg.program(&app.exe);
-    let args = app_args(app, input);
+    let args = app_args(app, input)
+        .into_iter()
+        .chain(extra.iter().cloned());
     // No stdio of ours, which main also makes non-inheritable, so an app left open holds no pipe.
     let mut child = Command::new(&exe)
         .args(args)
@@ -162,9 +175,15 @@ fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
 
 /// Closes old target windows, deletes the log, starts target-window and waits for it.
 pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
+    start_target_with(ctx, &[])
+}
+
+/// Like `start_target`, with `extra` arguments, such as the ones that make a password box.
+pub fn start_target_with(ctx: &Ctx, extra: &[String]) -> Result<Opened, String> {
     let (_, title) = prepare_target(ctx)?;
-    let started = launch(ctx, AppKind::Target.name(), "", Some(title))?;
-    sleep_ms(ctx.cfg.app(AppKind::Target.name())?.ready_ms);
+    let name = AppKind::Target.name();
+    let started = launch_with(ctx, name, "", Some(title), extra)?;
+    sleep_ms(ctx.cfg.app(name)?.ready_ms);
     Ok(opened(AppKind::Target, started, None, None))
 }
 

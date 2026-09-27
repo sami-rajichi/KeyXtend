@@ -1,4 +1,4 @@
-//! P1 spike harness: drives gates G1-G6, G17, G18 and the hand try, and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G6, G17-G21, G25 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
@@ -7,12 +7,19 @@ mod apps;
 mod assist;
 mod clicks;
 mod clip;
+mod clipkeep;
+mod cliplisten;
 mod config;
 mod diff;
+mod featcfg;
 mod g1;
 mod g17;
 mod g18;
+mod g19;
 mod g2;
+mod g20;
+mod g21;
+mod g25;
 mod g3;
 mod g4;
 mod g5;
@@ -34,8 +41,8 @@ mod simuser;
 mod stats;
 mod text;
 mod tlog;
-mod uia;
 mod win;
+mod winclip;
 
 use std::process::ExitCode;
 
@@ -64,6 +71,10 @@ fn usage() -> String {
        harness g17 <{}>
        harness g18 <{}>
        harness g6 <{}>
+       harness g19 {}
+       harness g20 <{}>
+       harness g21 <{}>
+       harness g25 <{}>
 --attach types into the app's window already open; --pause sets the gap between characters.",
         names(&AppKind::ALL),
         g5::PLAIN,
@@ -73,6 +84,10 @@ fn usage() -> String {
         names(&g17::APPS),
         names(&g18::APPS),
         names(&g6::APPS),
+        g19::CORE,
+        names(&g20::APPS),
+        g21::NAMES.join("|"),
+        names(&g25::APPS),
     )
 }
 
@@ -103,8 +118,9 @@ fn parse(args: &[String]) -> Result<Args, String> {
     let count_flag = match gate.as_str() {
         "g1" => Some("--count"),
         "g2" | "g4" => Some("--clicks"),
-        "g3" | "g5" | "g6" | "g17" | "g18" => None,
         "assist" => Some("--secs"),
+        "g3" => None,
+        g if named(g).is_some() => None,
         _ => return Err(usage()),
     };
     let g1 = gate == "g1";
@@ -133,7 +149,30 @@ fn parse(args: &[String]) -> Result<Args, String> {
     Ok(out)
 }
 
+/// A gate run that takes only a name.
+type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
+
+/// Gates that take only a name: no count, no seed.
+const NAMED: [(&str, NamedRun); 8] = [
+    ("g5", g5::run),
+    ("g6", g6::run),
+    ("g17", g17::run),
+    ("g18", g18::run),
+    ("g19", g19::run),
+    ("g20", g20::run),
+    ("g21", g21::run),
+    ("g25", g25::run),
+];
+
+/// The run of `gate` when it takes only a name.
+fn named(gate: &str) -> Option<NamedRun> {
+    NAMED.iter().find(|(g, _)| *g == gate).map(|&(_, run)| run)
+}
+
 fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
+    if let Some(run) = named(&args.gate) {
+        return run(ctx, &args.name);
+    }
     let seed = args.seed.unwrap_or_else(out::clock_seed);
     match args.gate.as_str() {
         "g1" => {
@@ -159,10 +198,6 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
             args.count.unwrap_or(ctx.cfg.g4.clicks),
             seed,
         ),
-        "g5" => g5::run(ctx, &args.name),
-        "g6" => g6::run(ctx, &args.name),
-        "g17" => g17::run(ctx, &args.name),
-        "g18" => g18::run(ctx, &args.name),
         "assist" => hand::run(
             ctx,
             &args.name,
@@ -261,10 +296,6 @@ mod tests {
         );
         assert_eq!(parse(&args("g3 slint")).expect("parses").count, None);
         assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
-        for probe in ["g6 chrome", "g17 explorer", "g18 notepad"] {
-            let a = parse(&args(probe)).expect("parses");
-            assert_eq!((a.count, a.seed), (None, None));
-        }
         let a = parse(&args("assist right --secs 30")).expect("parses");
         assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
         let a = parse(&args("g4 qt --clicks 50 --seed 3")).expect("parses");
@@ -272,6 +303,23 @@ mod tests {
             (a.gate.as_str(), a.count, a.seed),
             ("g4", Some(50), Some(3))
         );
+    }
+
+    #[test]
+    fn parses_gates_that_take_only_a_name() {
+        for probe in [
+            "g6 chrome",
+            "g17 explorer",
+            "g18 notepad",
+            "g19 core",
+            "g20 notepad",
+            "g21 win32",
+            "g25 notepad",
+        ] {
+            let a = parse(&args(probe)).expect("parses");
+            assert_eq!((a.count, a.seed), (None, None));
+            assert!(named(&a.gate).is_some(), "{probe} has no run");
+        }
     }
 
     #[test]
@@ -295,6 +343,10 @@ mod tests {
             "g17 notepad --seed 1",
             "g18 chrome --clicks 5",
             "g6 word --count 2",
+            "g19 core --seed 1",
+            "g20 notepad --count 3",
+            "g21 chrome --clicks 2",
+            "g25 notepad --attach",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }

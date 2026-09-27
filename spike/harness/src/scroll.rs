@@ -2,6 +2,7 @@
 
 use spike_core::hold::{Act, Pt};
 use spike_core::inject::{self, TAG};
+use spike_core::uia;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::Accessibility::{
     IUIAutomationScrollPattern, ScrollAmount, ScrollAmount_NoAmount, ScrollAmount_SmallDecrement,
@@ -13,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::probecfg::G6;
-use crate::{hookio, mouse, shot, uia, win};
+use crate::{hookio, mouse, shot, win};
 
 /// Bytes per screen pixel in a picture.
 const PIXEL: usize = shot::BYTES_PP as usize;

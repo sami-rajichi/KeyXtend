@@ -1,6 +1,6 @@
 [package]
 name = "harness"
-description = "P1 spike: drives gates G1-G4 and prints the numbers."
+description = "P1 spike: drives gates G1-G6 and G17-G25 and prints the numbers."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
@@ -11,8 +11,11 @@ spike-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
-# Extra features stay here so the faces' spike-core build is not changed.
+# Features the harness code uses itself.
 windows = { workspace = true, features = [
+    "ApplicationModel_DataTransfer",
+    "Foundation",
+    "Win32_Graphics_Dwm",
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_DataExchange",

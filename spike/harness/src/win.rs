@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT, WPARAM};
+use windows::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
@@ -64,6 +65,20 @@ pub fn top_windows() -> Vec<HWND> {
     found
 }
 
+/// True when the compositor hides `hwnd` though it counts as visible, like a closed system panel.
+pub fn cloaked(hwnd: HWND) -> bool {
+    let mut v = 0u32;
+    let size = size_of::<u32>() as u32;
+    // SAFETY: `v` is a local of the size the attribute needs.
+    let got = unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut v).cast(), size) };
+    got.is_ok() && v != 0
+}
+
+/// Top-level windows a person can see now: visible and not cloaked.
+pub fn seen_windows() -> Vec<HWND> {
+    top_windows().into_iter().filter(|&w| !cloaked(w)).collect()
+}
+
 /// The windows that exist now, to spot new ones later.
 pub fn snapshot() -> HashSet<isize> {
     top_windows().into_iter().map(key).collect()
@@ -85,12 +100,21 @@ pub fn class(hwnd: HWND) -> String {
     String::from_utf16_lossy(&buf[..usize::try_from(n).unwrap_or(0)])
 }
 
-/// `"title" [class]`, for reports.
+/// `[class] of program`, for reports.
 pub fn describe(hwnd: HWND) -> String {
     if hwnd.is_invalid() {
         return "(none)".to_string();
     }
-    format!("{:?} [{}]", title(hwnd), class(hwnd))
+    // No title: it may name the owner's own document or page.
+    let program = program_name(hwnd).unwrap_or_default();
+    format!("[{}] of {program}", class(hwnd))
+}
+
+/// The file name of the program that owns `hwnd`, such as `notepad.exe`.
+pub fn program_name(hwnd: HWND) -> Option<String> {
+    let path = program(hwnd).ok()?;
+    let name = std::path::Path::new(&path).file_name()?;
+    Some(name.to_string_lossy().into_owned())
 }
 
 /// The process and thread that own `hwnd`.

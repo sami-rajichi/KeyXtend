@@ -1,27 +1,50 @@
-//! Reads and writes Unicode text on the clipboard, with a cap on how much is read.
+//! Reads and writes Unicode text on the clipboard, with a cap on how much is read, plus marker formats.
 
-use windows::Win32::Foundation::{GlobalFree, HANDLE, HGLOBAL};
+use std::marker::PhantomData;
+
+use windows::Win32::Foundation::{GlobalFree, HANDLE, HGLOBAL, HWND};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
-    GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard, SetClipboardData,
+    GetClipboardFormatNameW, GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
+    RegisterClipboardFormatW, SetClipboardData,
 };
 use windows::Win32::System::Memory::{
     GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock,
 };
-use windows::Win32::System::Ole::{CF_LOCALE, CF_OEMTEXT, CF_TEXT, CF_UNICODETEXT};
+use windows::Win32::System::Ole::CF_UNICODETEXT;
+use windows::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, DestroyWindow, HWND_MESSAGE, WINDOW_EX_STYLE, WINDOW_STYLE,
+};
+use windows::core::{HSTRING, w};
 
 use crate::win::poll_until;
 
 /// Most UTF-16 units one character takes.
 const UNITS_PER_CHAR: usize = 2;
+/// First id of a registered (named) clipboard format.
+pub const FIRST_NAMED: u32 = 0xC000;
+/// Longest format name read, in UTF-16 units.
+const NAME_MAX: usize = 256;
+/// Every harness write carries this format holding 0, so Windows never syncs test texts to the cloud.
+const CLOUD_OFF: &str = "CanUploadToCloudClipboard";
 
-/// Closes the clipboard when dropped.
-struct Open;
+/// The clipboard, open until dropped on the thread that opened it; the functions that need it open take it.
+pub struct Open {
+    /// Our own hidden owner window, destroyed after the clipboard closes.
+    temp: Option<HWND>,
+    /// Not `Send`: the clipboard must close on the thread that opened it.
+    _here: PhantomData<*const ()>,
+}
 
 impl Drop for Open {
     fn drop(&mut self) {
-        // SAFETY: only built after a successful `OpenClipboard`.
-        let _ = unsafe { CloseClipboard() };
+        // SAFETY: only built after a successful `OpenClipboard` on this thread; `temp` is ours.
+        unsafe {
+            let _ = CloseClipboard();
+            if let Some(w) = self.temp {
+                let _ = DestroyWindow(w);
+            }
+        }
     }
 }
 
@@ -36,36 +59,98 @@ pub fn wait_change(before: u32, timeout_ms: u64, poll_ms: u64) -> bool {
     poll_until(timeout_ms, poll_ms, || (sequence() != before).then_some(())).is_some()
 }
 
-/// Opens the clipboard, trying again while another app holds it.
-fn open(timeout_ms: u64, poll_ms: u64) -> Result<Open, String> {
+/// A hidden message-only window to own one clipboard open.
+fn temp_window() -> Result<HWND, String> {
+    let none = (WINDOW_EX_STYLE(0), WINDOW_STYLE(0));
+    // SAFETY: a plain call with a system class; the window is destroyed when the `Open` drops.
+    unsafe {
+        CreateWindowExW(
+            none.0,
+            w!("STATIC"),
+            w!(""),
+            none.1,
+            0,
+            0,
+            0,
+            0,
+            Some(HWND_MESSAGE),
+            None,
+            None,
+            None,
+        )
+    }
+    .map_err(|e| format!("clipboard owner window: {e}"))
+}
+
+/// Opens the clipboard with a fresh owner window, trying again while another app holds it.
+pub fn open(timeout_ms: u64, poll_ms: u64) -> Result<Open, String> {
+    // A NULL owner is not enough: two NULL opens were seen holding the clipboard at once.
+    let temp = temp_window()?;
+    open_with(temp, Some(temp), timeout_ms, poll_ms)
+}
+
+/// Opens the clipboard for `owner`, a window of this thread that outlives the open.
+pub fn open_for(owner: HWND, timeout_ms: u64, poll_ms: u64) -> Result<Open, String> {
+    open_with(owner, None, timeout_ms, poll_ms)
+}
+
+/// Opens for `owner`; `temp` is destroyed on drop, or at once when the open fails.
+fn open_with(
+    owner: HWND,
+    temp: Option<HWND>,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<Open, String> {
     let mut last = String::new();
     let try_open = || {
         // SAFETY: plain call; a busy clipboard gives an error and we retry.
-        match unsafe { OpenClipboard(None) } {
-            Ok(()) => Some(Open),
+        match unsafe { OpenClipboard(Some(owner)) } {
+            Ok(()) => Some(()),
             Err(e) => {
                 last = e.to_string();
                 None
             }
         }
     };
-    poll_until(timeout_ms, poll_ms, try_open).ok_or_else(|| format!("OpenClipboard: {last}"))
+    if poll_until(timeout_ms, poll_ms, try_open).is_none() {
+        if let Some(w) = temp {
+            // SAFETY: our own window, never used again.
+            let _ = unsafe { DestroyWindow(w) };
+        }
+        return Err(format!("OpenClipboard: {last}"));
+    }
+    Ok(Open {
+        temp,
+        _here: PhantomData,
+    })
 }
 
-/// True when the clipboard is empty or holds only text, which `write_text` can put back whole.
-pub fn only_text(timeout_ms: u64, poll_ms: u64) -> Result<bool, String> {
-    let _open = open(timeout_ms, poll_ms)?;
-    let text = [CF_TEXT, CF_OEMTEXT, CF_UNICODETEXT, CF_LOCALE].map(|f| u32::from(f.0));
-    let mut format = 0;
+/// The formats on the open clipboard, in its order.
+pub fn formats(_open: &Open) -> Vec<u32> {
+    let (mut out, mut format) = (Vec::new(), 0);
     loop {
         // SAFETY: the clipboard is open; zero starts the list and ends it.
         format = unsafe { EnumClipboardFormats(format) };
         if format == 0 {
-            return Ok(true);
+            return out;
         }
-        if !text.contains(&format) {
-            return Ok(false);
+        out.push(format);
+    }
+}
+
+/// Runs `f` on the memory of `format` while it is locked; `None` when it has no memory data.
+pub fn with_data<T>(_open: &Open, format: u32, f: impl FnOnce(&[u8]) -> T) -> Option<T> {
+    // SAFETY: the clipboard is open; the memory is locked only while `f` reads its `GlobalSize` bytes.
+    unsafe {
+        IsClipboardFormatAvailable(format).ok()?;
+        let mem = HGLOBAL(GetClipboardData(format).ok()?.0);
+        let ptr = GlobalLock(mem).cast::<u8>();
+        if ptr.is_null() {
+            return None;
         }
+        let got = f(std::slice::from_raw_parts(ptr, GlobalSize(mem)));
+        let _ = GlobalUnlock(mem);
+        Some(got)
     }
 }
 
@@ -89,48 +174,69 @@ pub fn read_text(
     poll_ms: u64,
     max_chars: usize,
 ) -> Result<Option<String>, String> {
-    let _open = open(timeout_ms, poll_ms)?;
-    let format = u32::from(CF_UNICODETEXT.0);
-    // SAFETY: the clipboard is open; the handle is locked only while we copy out of it,
-    // and we never read past `GlobalSize`.
-    unsafe {
-        if IsClipboardFormatAvailable(format).is_err() {
-            return Ok(None);
-        }
-        let handle = GetClipboardData(format).map_err(|e| format!("GetClipboardData: {e}"))?;
-        let mem = HGLOBAL(handle.0);
-        let ptr = GlobalLock(mem).cast::<u16>();
-        if ptr.is_null() {
-            return Err("GlobalLock failed".to_string());
-        }
-        let units = std::slice::from_raw_parts(ptr, GlobalSize(mem) / size_of::<u16>());
-        let text = text_of(units, max_chars);
-        let _ = GlobalUnlock(mem);
-        text.map(Some)
+    unicode(&open(timeout_ms, poll_ms)?, max_chars)
+}
+
+/// The text on the open clipboard, or `None` when it holds none; only the capped start is read.
+pub fn unicode(open: &Open, max_chars: usize) -> Result<Option<String>, String> {
+    let limit = max_chars.saturating_mul(UNITS_PER_CHAR).saturating_add(1);
+    with_data(open, u32::from(CF_UNICODETEXT.0), |bytes| {
+        let units: Vec<u16> = (bytes.as_chunks::<2>().0.iter().take(limit))
+            .map(|b| u16::from_ne_bytes(*b))
+            .collect();
+        text_of(&units, max_chars)
+    })
+    .transpose()
+}
+
+/// The names of the registered formats on the open clipboard, such as exclusion markers.
+pub fn names(open: &Open) -> Vec<String> {
+    let name = |format: u32| {
+        let mut buf = [0u16; NAME_MAX];
+        // SAFETY: the buffer is valid for its whole length.
+        let n = unsafe { GetClipboardFormatNameW(format, &mut buf) };
+        let n = usize::try_from(n).unwrap_or(0).min(NAME_MAX);
+        (n > 0).then(|| String::from_utf16_lossy(&buf[..n]))
+    };
+    formats(open)
+        .into_iter()
+        .filter(|&f| f >= FIRST_NAMED)
+        .filter_map(name)
+        .collect()
+}
+
+/// The 32-bit number held by format `name` on the open clipboard, if it holds one.
+pub fn dword(open: &Open, name: &str) -> Option<u32> {
+    let bytes = with_data(open, format_id(name).ok()?, |b| {
+        b.first_chunk::<4>().copied()
+    })??;
+    Some(u32::from_ne_bytes(bytes))
+}
+
+/// The id of the registered format `name`.
+fn format_id(name: &str) -> Result<u32, String> {
+    // SAFETY: a plain call with a live string.
+    match unsafe { RegisterClipboardFormatW(&HSTRING::from(name)) } {
+        0 => Err(format!("RegisterClipboardFormat {name} failed")),
+        id => Ok(id),
     }
 }
 
-/// Puts `text` on the clipboard, or leaves it empty for `None`.
-pub fn write_text(text: Option<&str>, timeout_ms: u64, poll_ms: u64) -> Result<(), String> {
-    let _open = open(timeout_ms, poll_ms)?;
-    // SAFETY: the clipboard is open; `mem` is sized for `units` and locked while we fill it;
+/// Puts `data` on the open, emptied clipboard as `format`.
+pub fn put(_open: &Open, format: u32, data: &[u8]) -> Result<(), String> {
+    // SAFETY: the clipboard is open; `mem` is sized for `data` and locked while we fill it;
     // the clipboard owns it once `SetClipboardData` succeeds, else we free it.
     unsafe {
-        EmptyClipboard().map_err(|e| format!("EmptyClipboard: {e}"))?;
-        let Some(text) = text else {
-            return Ok(());
-        };
-        let units: Vec<u16> = text.encode_utf16().chain([0]).collect();
-        let mem = GlobalAlloc(GMEM_MOVEABLE, units.len() * size_of::<u16>())
-            .map_err(|e| format!("GlobalAlloc: {e}"))?;
-        let ptr = GlobalLock(mem).cast::<u16>();
+        let mem =
+            GlobalAlloc(GMEM_MOVEABLE, data.len()).map_err(|e| format!("GlobalAlloc: {e}"))?;
+        let ptr = GlobalLock(mem).cast::<u8>();
         if ptr.is_null() {
             let _ = GlobalFree(Some(mem));
             return Err("GlobalLock failed".to_string());
         }
-        std::ptr::copy_nonoverlapping(units.as_ptr(), ptr, units.len());
+        std::ptr::copy_nonoverlapping(data.as_ptr(), ptr, data.len());
         let _ = GlobalUnlock(mem);
-        match SetClipboardData(u32::from(CF_UNICODETEXT.0), Some(HANDLE(mem.0))) {
+        match SetClipboardData(format, Some(HANDLE(mem.0))) {
             Ok(_) => Ok(()),
             Err(e) => {
                 let _ = GlobalFree(Some(mem));
@@ -138,6 +244,41 @@ pub fn write_text(text: Option<&str>, timeout_ms: u64, poll_ms: u64) -> Result<(
             }
         }
     }
+}
+
+/// Empties the open clipboard.
+pub fn empty(_open: &Open) -> Result<(), String> {
+    // SAFETY: the clipboard is open.
+    unsafe { EmptyClipboard() }.map_err(|e| format!("EmptyClipboard: {e}"))
+}
+
+/// Puts `text` on the clipboard, or leaves it empty for `None`.
+pub fn write_text(text: Option<&str>, timeout_ms: u64, poll_ms: u64) -> Result<(), String> {
+    write_marked(text, &[], timeout_ms, poll_ms)
+}
+
+/// Like `write_text`, plus each format in `marks` holding the number 0, in one clipboard change.
+pub fn write_marked(
+    text: Option<&str>,
+    marks: &[&str],
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<(), String> {
+    let open = open(timeout_ms, poll_ms)?;
+    empty(&open)?;
+    let Some(text) = text else {
+        return Ok(());
+    };
+    let units: Vec<u8> = text
+        .encode_utf16()
+        .chain([0])
+        .flat_map(u16::to_ne_bytes)
+        .collect();
+    put(&open, u32::from(CF_UNICODETEXT.0), &units)?;
+    for m in marks.iter().chain([&CLOUD_OFF]) {
+        put(&open, format_id(m)?, &0u32.to_ne_bytes())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
