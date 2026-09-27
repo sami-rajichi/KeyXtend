@@ -1,6 +1,6 @@
 [package]
 name = "harness"
-description = "P1 spike: drives gates G1-G3 and prints the numbers."
+description = "P1 spike: drives gates G1-G4 and prints the numbers."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
@@ -17,6 +17,7 @@ windows = { workspace = true, features = [
     "Win32_System_DataExchange",
     "Win32_System_Memory",
     "Win32_System_Ole",
+    "Win32_System_Registry",
     "Win32_UI_HiDpi",
 ] }
 

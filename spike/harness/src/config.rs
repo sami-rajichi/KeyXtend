@@ -30,6 +30,8 @@ pub struct HarnessConfig {
     pub g2: G2,
     /// G3 settings.
     pub g3: G3,
+    /// G4 settings.
+    pub g4: G4,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -148,6 +150,13 @@ pub struct G3 {
     pub surfaces: Vec<Surface>,
 }
 
+/// G4 admin-window settings; click pauses and failure limits come from G2.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G4 {
+    /// Clicks per run.
+    pub clicks: usize,
+}
+
 /// A system surface to open over the face.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Surface {
@@ -209,6 +218,7 @@ mod tests {
             assert!(cfg.app(app.name()).is_ok(), "missing app {}", app.name());
         }
         assert_eq!(cfg.g3.probe_codes.len(), 3);
+        assert!(cfg.g4.clicks > 0);
     }
 
     #[test]

@@ -74,7 +74,7 @@ fn ready(app: &Opened, want: Option<&str>) -> Result<(), String> {
 }
 
 /// Brings the app to the front, then waits for its text box to take the keyboard.
-fn wait_ready(ctx: &Ctx, app: &Opened, want: Option<&str>) -> Result<(), String> {
+pub fn wait_ready(ctx: &Ctx, app: &Opened, want: Option<&str>) -> Result<(), String> {
     let t = &ctx.cfg.timing;
     if !win::front(app.hwnd, t, &ctx.cfg.keys) {
         return Err(format!(
