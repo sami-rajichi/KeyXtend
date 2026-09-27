@@ -1,0 +1,1793 @@
+<meta charset="utf-8">
+<title>KeyXtend Style Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&family=Noto+Sans:wght@400;500;600&family=Rubik:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.48.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#E8EBEE; --surface:#FFFFFF; --surface-2:#F3F5F7; --ink:#14171B; --muted:#56606A; --line:#D2D7DD; --line-2:#E2E5E9;
+  --accent:#2D56C8; --accent-ink:#FFFFFF; --accent-soft:#E2E9FA; --good:#2C7A4B;
+  --wall-a:#66798A; --wall-b:#9CA9AE; --wall-c:#C9CEC7;
+  --win-bg:#FBFBFC; --win-ink:#1B1E22; --win-line:#D8DCE1; --win-muted:#5F6670; --win-sel:#CBDAF7;
+  --f-ui:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#1B1E22; --surface:#23272C; --surface-2:#2A2F35; --ink:#E3E6EA; --muted:#A0A8B2; --line:#353B42; --line-2:#2E343A;
+    --accent:#93AEFF; --accent-ink:#1B1E22; --accent-soft:#2A3350; --good:#7CC79B;
+    --wall-a:#26303A; --wall-b:#34414A; --wall-c:#46524F;
+    --win-bg:#2A2E33; --win-ink:#E3E6EA; --win-line:#3A4047; --win-muted:#A0A8B2; --win-sel:#35486F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#1B1E22; --surface:#23272C; --surface-2:#2A2F35; --ink:#E3E6EA; --muted:#A0A8B2; --line:#353B42; --line-2:#2E343A;
+  --accent:#93AEFF; --accent-ink:#1B1E22; --accent-soft:#2A3350; --good:#7CC79B;
+  --wall-a:#26303A; --wall-b:#34414A; --wall-c:#46524F;
+  --win-bg:#2A2E33; --win-ink:#E3E6EA; --win-line:#3A4047; --win-muted:#A0A8B2; --win-sel:#35486F;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font:14px/1.45 var(--f-ui); padding-inline:16px; padding-block:14px 28px}
+button{font:inherit; color:inherit}
+a{color:var(--accent)}
+code{font-family:var(--f-mono); font-size:.92em}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.wrap{max-width:1420px; margin:0 auto}
+
+.head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:10px 24px; margin-bottom:12px}
+.head h1{font-size:20px; line-height:1.2; font-weight:600; margin:0; letter-spacing:-.01em; text-wrap:balance}
+.head h1 small{font-size:12px; font-weight:500; color:var(--muted); margin-left:6px; letter-spacing:0}
+.head p{margin:3px 0 0; color:var(--muted); font-size:13px; max-width:76ch}
+.tabs{display:flex; gap:4px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:3px; flex-wrap:wrap}
+.tabs button{border:0; background:transparent; padding:7px 14px; border-radius:7px; cursor:pointer; font-weight:500; color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--ink); color:var(--bg)}
+.panel[hidden]{display:none!important}
+
+.lab{display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:14px; align-items:start}
+@media (max-width:1060px){ .lab{grid-template-columns:1fr} }
+.stage{position:relative; --ks:1; height:clamp(500px, calc(100vh - 150px), 620px); border-radius:12px; overflow:hidden;
+  background:linear-gradient(155deg,var(--wall-a),var(--wall-b) 62%,var(--wall-c)); border:1px solid var(--line);
+  user-select:none; -webkit-user-select:none; touch-action:none}
+.stage .doc{user-select:text; -webkit-user-select:text}
+.stage.holding .doc{user-select:none}
+
+.win{position:absolute; background:var(--win-bg); color:var(--win-ink); border:1px solid var(--win-line); border-radius:8px;
+  box-shadow:0 10px 28px rgba(0,0,0,.2); display:flex; flex-direction:column; overflow:hidden}
+.win-h{height:30px; flex:none; display:flex; align-items:center; gap:8px; padding:0 10px; font-size:12px; color:var(--win-muted); border-bottom:1px solid var(--win-line)}
+.win-h .i{width:14px; height:14px}
+.win-h .dots{margin-left:auto; display:flex; gap:10px}
+.win-h .dots span{width:9px; height:1.5px; background:currentColor; opacity:.6}
+.notes{left:14px; top:14px; width:calc(50% - 21px); height:176px}
+.field{position:relative; flex:1; padding:10px 12px; font:14.5px/1.5 "Noto Sans","Noto Sans Arabic",var(--f-ui); white-space:pre-wrap; unicode-bidi:plaintext; overflow:auto; word-break:break-word}
+.field .ph{color:var(--win-muted)}
+.field.all .txt{background:var(--win-sel)}
+.caret{display:inline-block; width:1.5px; height:1.2em; margin:0 -.75px; background:var(--accent); vertical-align:text-bottom; animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.attach{display:flex; gap:6px; flex-wrap:wrap; padding:0 12px 8px}
+.attach:empty{display:none}
+.att{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; padding:3px 8px; border-radius:6px; background:var(--surface-2); border:1px solid var(--win-line)}
+.att .i{width:13px; height:13px}
+.article{right:14px; top:14px; width:calc(50% - 21px); height:330px}
+.doc{flex:1; overflow:auto; padding:12px 16px 40px; font-size:13px; line-height:1.55}
+.doc h3{font-size:15px; margin:0 0 6px; line-height:1.3}
+.doc p{margin:0 0 9px; max-width:62ch}
+.doc table{border-collapse:collapse; min-width:760px; font-size:12px; margin-top:6px}
+.doc th,.doc td{border:1px solid var(--win-line); padding:5px 8px; text-align:left; vertical-align:top}
+.doc th{background:var(--surface-2); font-weight:600}
+.doc .me td{background:var(--win-sel)}
+.doc ::selection{background:var(--win-sel)}
+.scroll-target{outline:2px solid var(--ring); outline-offset:-2px}
+.photo{position:absolute; left:14px; top:204px; width:128px; padding:6px 6px 5px; border-radius:8px; background:var(--win-bg); color:var(--win-ink);
+  box-shadow:0 8px 20px rgba(0,0,0,.22); font-size:11.5px; z-index:4; transition:transform .18s, box-shadow .18s, opacity .25s}
+.photo .img{height:74px; border-radius:5px; background:
+  radial-gradient(circle at 72% 30%, #FFE7A8 0 9%, transparent 10%),
+  linear-gradient(180deg, transparent 58%, #2F5D6B 58% 70%, #3E7B78 70% 100%),
+  radial-gradient(120% 70% at 30% 110%, #6C8E5F 0 45%, transparent 46%),
+  linear-gradient(180deg,#F2B880,#E98B6D 45%,#B7697A 62%)}
+.photo .cap-t{display:flex; align-items:center; gap:4px; margin-top:4px}
+.photo .i{width:12px; height:12px}
+.photo.selected{box-shadow:0 8px 20px rgba(0,0,0,.22), 0 0 0 2px var(--accent)}
+.photo.carried{pointer-events:none; transform:rotate(-4deg) scale(.92); box-shadow:0 18px 36px rgba(0,0,0,.35); z-index:35; opacity:.92}
+.photo.gone{opacity:0; pointer-events:none}
+.folder{position:absolute; left:162px; top:206px; width:96px; padding:6px 0 4px; border-radius:8px; display:flex; flex-direction:column; align-items:center; gap:2px; color:#fff; font-size:12px; text-shadow:0 1px 2px rgba(0,0,0,.5); z-index:3; transition:transform .2s, background .2s}
+.folder .i{width:46px; height:46px; stroke-width:1.4; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.folder.hot{transform:scale(1.12)}
+.folder.selected{background:rgba(255,255,255,.22)}
+.folder .cnt{font-size:10.5px; opacity:.9}
+.hint{position:absolute; left:50%; top:10px; transform:translateX(-50%); z-index:5; background:rgba(15,18,22,.78); color:#fff; font-size:12px; padding:5px 12px; border-radius:999px; white-space:nowrap; max-width:calc(100% - 24px); overflow:hidden; text-overflow:ellipsis; pointer-events:none; transition:opacity .4s}
+.hint.off{opacity:0}
+
+/* ---------- keyboard themes (light + soft dark) ---------- */
+[data-style="native"]{--r-key:4px; --r-win:8px; --g:4; --fs:13px; --fs-mod:11px; --fw:400; --ar:1.12;
+  --f-latin:"Segoe UI Variable Text","Segoe UI","Noto Sans",system-ui,sans-serif; --f-arabic:"Segoe UI","Noto Sans Arabic",sans-serif; --f-label:var(--f-latin)}
+[data-style="native"][data-mode="light"]{--plate:#F3F3F3; --key:#FFFFFF; --key-mod:#EBEBEB; --key-act:#F7F7F7; --enter:#005FB8; --enter-ink:#FFFFFF; --danger:#EBEBEB; --danger-ink:#1B1B1B;
+  --legend:#1B1B1B; --legend-mod:#1B1B1B; --legend-2:#5F5F5F; --legend-act:#1B1B1B; --on:#005FB8; --on-ink:#FFFFFF; --lock:#005FB8; --lock-ink:#FFFFFF; --rec:#C42B1C; --rec-ink:#FFFFFF;
+  --led-off:transparent; --led-on:#005FB8; --ring:#005FB8; --badge-bg:#005FB8; --badge-ink:#FFFFFF; --key-shadow:inset 0 -1px 0 rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.045);
+  --pop-bg:#F9F9F9; --pop-ink:#1B1B1B; --pop-muted:#5F5F5F; --pop-line:rgba(0,0,0,.09); --pop-hover:rgba(0,0,0,.045); --pop-sel:#DCE9F7; --chip-bg:rgba(0,0,0,.055);
+  --win-shadow:0 12px 32px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.08)}
+[data-style="native"][data-mode="dark"]{--plate:#2C2F33; --key:#3B3E43; --key-mod:#34373C; --key-act:#373A3F; --enter:#7CB7F0; --enter-ink:#10202E; --danger:#34373C; --danger-ink:#E3E5E8;
+  --legend:#E3E5E8; --legend-mod:#E3E5E8; --legend-2:#A9AEB5; --legend-act:#E3E5E8; --on:#7CB7F0; --on-ink:#10202E; --lock:#7CB7F0; --lock-ink:#10202E; --rec:#E8848F; --rec-ink:#2A0E12;
+  --led-off:transparent; --led-on:#7CB7F0; --ring:#7CB7F0; --badge-bg:#7CB7F0; --badge-ink:#10202E; --key-shadow:inset 0 -1px 0 rgba(0,0,0,.28),0 0 0 1px rgba(255,255,255,.04);
+  --pop-bg:#33363B; --pop-ink:#E3E5E8; --pop-muted:#A9AEB5; --pop-line:rgba(255,255,255,.09); --pop-hover:rgba(255,255,255,.055); --pop-sel:#2E4760; --chip-bg:rgba(255,255,255,.07);
+  --win-shadow:0 14px 34px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.06)}
+
+[data-style="et66"]{--r-key:9px; --r-win:14px; --g:5; --fs:13px; --fs-mod:10.5px; --fw:500; --ar:1.14;
+  --f-latin:"IBM Plex Sans",system-ui,sans-serif; --f-arabic:"IBM Plex Sans Arabic","Noto Sans Arabic",sans-serif; --f-label:var(--f-latin)}
+[data-style="et66"][data-mode="light"]{--plate:#E4E1DA; --key:#F8F6F1; --key-mod:#CDBBA7; --key-act:#F8F6F1; --enter:#F2C400; --enter-ink:#1D1B18; --danger:#CDBBA7; --danger-ink:#1D1B18;
+  --legend:#1D1B18; --legend-mod:#1D1B18; --legend-2:#6B655C; --legend-act:#1D1B18; --on:#FFFFFF; --on-ink:#7A5E00; --lock:#B39C83; --lock-ink:#1D1B18; --rec:#FFFFFF; --rec-ink:#7A5E00;
+  --led-off:#D3CEC4; --led-on:#2F7A4C; --ring:#C29D00; --badge-bg:#1D1B18; --badge-ink:#F2C400; --key-shadow:0 1px 0 rgba(60,50,40,.28),inset 0 1px 0 rgba(255,255,255,.75);
+  --pop-bg:#FBFAF7; --pop-ink:#1D1B18; --pop-muted:#6B655C; --pop-line:rgba(0,0,0,.09); --pop-hover:rgba(0,0,0,.04); --pop-sel:#F3E7C0; --chip-bg:#F8F6F1;
+  --win-shadow:0 14px 34px rgba(40,30,20,.25),0 0 0 1px rgba(0,0,0,.06)}
+[data-style="et66"][data-mode="dark"]{--plate:#2A2826; --key:#3A3734; --key-mod:#6B5645; --key-act:#3A3734; --enter:#E6BE3A; --enter-ink:#2A2418; --danger:#6B5645; --danger-ink:#EDE8DF;
+  --legend:#EDE8DF; --legend-mod:#F3EEE6; --legend-2:#B3ACA2; --legend-act:#EDE8DF; --on:#44403C; --on-ink:#E6BE3A; --lock:#846B56; --lock-ink:#FFFFFF; --rec:#44403C; --rec-ink:#E6BE3A;
+  --led-off:#4A4642; --led-on:#6CC08A; --ring:#E6BE3A; --badge-bg:#2A2418; --badge-ink:#E6BE3A; --key-shadow:0 1px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
+  --pop-bg:#33302D; --pop-ink:#EDE8DF; --pop-muted:#B3ACA2; --pop-line:rgba(255,255,255,.08); --pop-hover:rgba(255,255,255,.05); --pop-sel:#4A4130; --chip-bg:#3A3734;
+  --win-shadow:0 14px 36px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.05)}
+
+[data-style="dolch"]{--r-key:5px; --r-win:10px; --g:3; --fs:13px; --fs-mod:10.5px; --fw:500; --ar:1.1;
+  --f-latin:"Rubik",system-ui,sans-serif; --f-arabic:"Rubik","Noto Sans Arabic",sans-serif; --f-label:var(--f-latin)}
+[data-style="dolch"][data-mode="light"]{--plate:#B9BBBE; --key:#E6E7E8; --key-sk:#C5C7CA; --key-mod:#5F6161; --mod-sk:#4A4C4C; --key-act:#5F6161; --enter:#00A4A9; --enter-sk:#00878B; --enter-ink:#F7F2EA; --danger:#B83262; --danger-sk:#952749; --danger-ink:#F7F2EA;
+  --legend:#393B3B; --legend-mod:#F7F2EA; --legend-2:#6B6D6F; --legend-act:#F7F2EA; --on:#00A4A9; --on-sk:#00878B; --on-ink:#FFFFFF; --lock:#00A4A9; --lock-ink:#FFFFFF; --rec:#B83262; --rec-sk:#952749; --rec-ink:#FFFFFF;
+  --led-off:transparent; --led-on:#7FF4F7; --ring:#00A4A9; --badge-bg:#393B3B; --badge-ink:#7FE6E9; --key-shadow:0 1px 1px rgba(0,0,0,.25);
+  --pop-bg:#E6E7E8; --pop-ink:#393B3B; --pop-muted:#5F6161; --pop-line:rgba(0,0,0,.12); --pop-hover:rgba(0,0,0,.05); --pop-sel:#CBEDEE; --chip-bg:#D4D6D8;
+  --win-shadow:0 14px 34px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.08)}
+[data-style="dolch"][data-mode="dark"]{--plate:#2A2C2E; --key:#4A4D4F; --key-sk:#3A3C3E; --key-mod:#35383B; --mod-sk:#2B2D30; --key-act:#35383B; --enter:#1A9EA3; --enter-sk:#13797D; --enter-ink:#F4F1EA; --danger:#A9405F; --danger-sk:#86314B; --danger-ink:#F4F1EA;
+  --legend:#EDEAE4; --legend-mod:#EDEAE4; --legend-2:#B0B3B6; --legend-act:#EDEAE4; --on:#1A9EA3; --on-sk:#13797D; --on-ink:#FFFFFF; --lock:#1A9EA3; --lock-ink:#FFFFFF; --rec:#A9405F; --rec-sk:#86314B; --rec-ink:#FFFFFF;
+  --led-off:transparent; --led-on:#8FF0F2; --ring:#3CC0C4; --badge-bg:#1A9EA3; --badge-ink:#FFFFFF; --key-shadow:0 1px 1px rgba(0,0,0,.35);
+  --pop-bg:#34373A; --pop-ink:#EDEAE4; --pop-muted:#B0B3B6; --pop-line:rgba(255,255,255,.08); --pop-hover:rgba(255,255,255,.05); --pop-sel:#1D4A4C; --chip-bg:#3E4144;
+  --win-shadow:0 14px 36px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.05)}
+
+/* ---------- keyboard structure ---------- */
+.kb{position:absolute; z-index:30; --s:1; --u:calc(33px * var(--s)); --h:calc(31px * var(--s)); --gp:calc(var(--g) * 1px * var(--s));
+  background:var(--plate); border-radius:var(--r-win); padding:calc(6px * var(--s)) calc(7px * var(--s)) calc(7px * var(--s));
+  box-shadow:var(--win-shadow); font-family:var(--f-latin); color:var(--legend); transition:opacity .35s, background .2s}
+.kb.faded{opacity:.32}
+.kb.moving{box-shadow:var(--win-shadow),0 0 0 2px var(--ring); cursor:move}
+[data-style="native"] .kb{background:color-mix(in srgb, var(--plate) 88%, transparent); backdrop-filter:blur(26px) saturate(1.3); -webkit-backdrop-filter:blur(26px) saturate(1.3)}
+.kb-top{display:flex; align-items:center; gap:calc(4px * var(--s)); height:calc(24px * var(--s)); margin-bottom:calc(4px * var(--s))}
+.tb{flex:none; width:calc(24px * var(--s)); height:calc(22px * var(--s)); border:0; background:transparent; color:var(--legend-2); border-radius:calc(var(--r-key) * .8); display:grid; place-items:center; cursor:pointer; padding:0}
+.tb:hover{background:var(--pop-hover); color:var(--legend)}
+.tb .i{width:calc(14px * var(--s)); height:calc(14px * var(--s))}
+.tb.grip{cursor:move}
+.tb.on{color:var(--ring)}
+.sugg{flex:1; min-width:0; display:flex; align-items:center; gap:calc(4px * var(--s)); overflow:hidden}
+.sugg .none{font-size:calc(10.5px * var(--s)); color:var(--legend-2); opacity:.75; white-space:nowrap}
+.chip{flex:none; height:calc(20px * var(--s)); padding:0 calc(9px * var(--s)); border:0; border-radius:calc(var(--r-key) * .8); background:var(--chip-bg); color:var(--legend);
+  font:500 calc(11.5px * var(--s))/1 var(--f-latin); white-space:nowrap; cursor:pointer; display:inline-flex; align-items:center; gap:calc(4px * var(--s))}
+.chip.ar{font-family:var(--f-arabic); font-size:calc(12.5px * var(--s))}
+.chip .i{width:calc(11px * var(--s)); height:calc(11px * var(--s)); color:var(--legend-2)}
+.chip:hover{filter:brightness(1.06)}
+.kb-body{display:flex; gap:calc(8px * var(--s))}
+.kb-main{width:calc(var(--u) * 16); display:grid; grid-template-rows:repeat(5, var(--h))}
+.row{display:grid; grid-template-columns:repeat(64, minmax(0,1fr)); grid-auto-rows:1fr; min-height:0}
+.kb-side{display:grid; grid-template-columns:repeat(3, calc(var(--u) * 1.22)); grid-template-rows:repeat(5, var(--h))}
+.key{grid-column:span var(--span,4); padding:calc(var(--gp) / 2); margin:0; border:0; background:none; min-width:0; min-height:0; cursor:pointer; color:inherit; position:relative;
+  --top:var(--key); --ink:var(--legend)}
+.key.mod,.key.lang{--top:var(--key-mod); --ink:var(--legend-mod)}
+.key.act{--top:var(--key-act); --ink:var(--legend-act)}
+.key.enter{--top:var(--enter); --ink:var(--enter-ink)}
+.key.danger{--top:var(--danger); --ink:var(--danger-ink)}
+.key.locked{--top:var(--lock); --ink:var(--lock-ink)}
+.key.on{--top:var(--on); --ink:var(--on-ink)}
+.key.rec{--top:var(--rec); --ink:var(--rec-ink)}
+.cap{position:relative; display:flex; align-items:center; justify-content:center; gap:calc(4px * var(--s)); width:100%; height:100%; overflow:hidden;
+  background:var(--top); color:var(--ink); border-radius:var(--r-key); box-shadow:var(--key-shadow);
+  transition:transform .09s ease, background-color .15s, color .15s, box-shadow .15s}
+.cap > *{position:relative; z-index:1}
+.key:hover .cap{filter:brightness(1.04)}
+.key.down .cap, .key.flash .cap{transform:translateY(calc(1px * var(--s))) scale(.97); filter:brightness(.94)}
+.lg{font-size:calc(var(--fs) * var(--s)); font-weight:var(--fw); line-height:1}
+.lg.ar{font-family:var(--f-arabic); font-size:calc(var(--fs) * var(--ar) * var(--s))}
+.lg2{position:absolute; top:calc(2px * var(--s)); left:calc(4px * var(--s)); font-size:calc(var(--fs) * .62 * var(--s)); line-height:1; color:var(--legend-2); font-weight:400}
+.lg2.ar{font-family:var(--f-arabic)}
+.lg3{position:absolute; bottom:calc(2px * var(--s)); right:calc(4px * var(--s)); font-size:calc(var(--fs) * .6 * var(--s)); line-height:1; color:var(--legend-2)}
+.lbl{font-family:var(--f-label); font-size:calc(var(--fs-mod) * var(--s)); line-height:1; white-space:nowrap}
+.ico{display:grid; place-items:center}
+.ico .i{width:calc(14px * var(--s)); height:calc(14px * var(--s))}
+.kb-side .ico .i{width:calc(15px * var(--s)); height:calc(15px * var(--s))}
+.sym{font-size:calc(14px * var(--s)); line-height:1}
+.sp{font-size:calc(10.5px * var(--s)); color:var(--legend-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px}
+.sp.ar{font-family:var(--f-arabic); font-size:calc(11.5px * var(--s))}
+.sub{display:none; font-family:var(--f-label); font-size:calc(8px * var(--s)); line-height:1; opacity:.8}
+.kb.big .sub{display:block}
+.kb.big .kb-side .cap{flex-direction:column; gap:calc(2px * var(--s))}
+.led{position:absolute; z-index:2; top:calc(3px * var(--s)); right:calc(3px * var(--s)); width:calc(4px * var(--s)); height:calc(4px * var(--s)); border-radius:50%; background:var(--led-off); transition:background .15s, box-shadow .15s}
+.key.locked .led,.key.on .led,.key.rec .led{background:var(--led-on); box-shadow:0 0 calc(5px * var(--s)) var(--led-on)}
+.key.rec .led{animation:pulse 1s ease-in-out infinite}
+.key.rec .cap{animation:recglow 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@keyframes recglow{50%{filter:brightness(1.12)}}
+[data-style="et66"] .cap{background:linear-gradient(180deg, color-mix(in srgb, var(--top) 93%, #fff) 0%, var(--top) 55%, color-mix(in srgb, var(--top) 93%, #000) 100%)}
+[data-style="et66"] .key.down .cap,[data-style="et66"] .key.flash .cap{background:linear-gradient(0deg, color-mix(in srgb, var(--top) 95%, #fff), var(--top) 50%, color-mix(in srgb, var(--top) 92%, #000))}
+[data-style="dolch"] .key{--sk:var(--key-sk)}
+[data-style="dolch"] .key.mod,[data-style="dolch"] .key.lang,[data-style="dolch"] .key.act{--sk:var(--mod-sk)}
+[data-style="dolch"] .key.enter{--sk:var(--enter-sk)}
+[data-style="dolch"] .key.danger{--sk:var(--danger-sk)}
+[data-style="dolch"] .key.locked,[data-style="dolch"] .key.on{--sk:var(--on-sk)}
+[data-style="dolch"] .key.rec{--sk:var(--rec-sk)}
+[data-style="dolch"] .cap{background:var(--sk)}
+[data-style="dolch"] .cap::before{content:""; position:absolute; z-index:0; inset:calc(1px * var(--s)) calc(3px * var(--s)) calc(4px * var(--s)); border-radius:calc(4px * var(--s));
+  background:linear-gradient(180deg, color-mix(in srgb, var(--top) 88%, #fff), var(--top) 70%); transition:inset .09s}
+[data-style="dolch"] .key.down .cap::before,[data-style="dolch"] .key.flash .cap::before{inset:calc(2px * var(--s)) calc(3px * var(--s)) calc(2px * var(--s))}
+[data-style="dolch"] .cap > *{top:calc(-1.5px * var(--s))}
+[data-style="dolch"] .key.locked .cap{box-shadow:var(--key-shadow), 0 0 calc(8px * var(--s)) color-mix(in srgb, var(--on) 55%, transparent)}
+
+.lk{display:flex; align-items:center; justify-content:center; width:100%; height:100%; gap:calc(3px * var(--s)); font-family:var(--f-label)}
+.lk .ar{font-family:var(--f-arabic)}
+.car{overflow:hidden; position:relative}
+.car-track{display:flex; align-items:center; justify-content:center; gap:calc(5px * var(--s))}
+.car-it{font-size:calc(9px * var(--s)); opacity:.45; line-height:1}
+.car-it.cur{font-size:calc(12.5px * var(--s)); opacity:1; font-weight:600}
+.car-it.ar.cur{font-size:calc(14px * var(--s))}
+.car-track.from-r{animation:carR .3s cubic-bezier(.2,.8,.2,1)}
+.car-track.from-l{animation:carL .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes carR{from{transform:translateX(28%)}}
+@keyframes carL{from{transform:translateX(-28%)}}
+.cyc .i{width:calc(12px * var(--s)); height:calc(12px * var(--s)); opacity:.75}
+.cyc-name{font-size:calc(12.5px * var(--s)); font-weight:600; line-height:1; animation:langIn .3s cubic-bezier(.2,.8,.2,1)}
+.cyc-name.ar{font-size:calc(14px * var(--s))}
+.dots{display:flex; flex-direction:column; gap:calc(2px * var(--s))}
+.dots i{width:calc(3px * var(--s)); height:calc(3px * var(--s)); border-radius:50%; background:currentColor; opacity:.3}
+.dots i.on{opacity:1}
+@keyframes langIn{from{transform:translateY(60%); opacity:0}}
+.lst .i{width:calc(11px * var(--s)); height:calc(11px * var(--s)); opacity:.7}
+.lst span{font-size:calc(12.5px * var(--s)); font-weight:600}
+.kb-main.swap .key:not(.mod):not(.enter):not(.danger) .lg,.kb-main.swap .sp{animation:langIn .28s cubic-bezier(.2,.8,.2,1)}
+
+.dpad-wrap{grid-column:1 / 3; grid-row:2 / 5; display:grid; place-items:center; padding:calc(var(--gp) / 2)}
+.dpad{position:relative; width:calc(min(var(--u) * 2.44, var(--h) * 3) - var(--gp)); aspect-ratio:1; border-radius:50%; background:var(--key-mod); box-shadow:var(--key-shadow)}
+.dp-rot{position:absolute; inset:0; border-radius:50%; overflow:hidden; transform:rotate(45deg); display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:calc(2px * var(--s)); background:var(--plate)}
+.dp{border:0; margin:0; padding:0; cursor:pointer; background:var(--key-act); color:var(--legend-act); display:flex; transition:background .15s, color .15s}
+[data-style="dolch"] .dp{background:var(--key-mod)}
+.dp:hover{filter:brightness(1.06)}
+.dp .i{width:calc(15px * var(--s)); height:calc(15px * var(--s)); transform:rotate(-45deg)}
+.dp[data-dir="up"]{align-items:flex-start; justify-content:flex-start; padding:22% 0 0 22%}
+.dp[data-dir="right"]{align-items:flex-start; justify-content:flex-end; padding:22% 22% 0 0}
+.dp[data-dir="left"]{align-items:flex-end; justify-content:flex-start; padding:0 0 22% 22%}
+.dp[data-dir="down"]{align-items:flex-end; justify-content:flex-end; padding:0 22% 22% 0}
+.dp.on{background:var(--on); color:var(--on-ink)}
+[data-style="et66"] .dp.on{background:var(--enter); color:var(--enter-ink)}
+.dp.down{filter:brightness(.92)}
+.dp-hub{position:absolute; inset:34%; border-radius:50%; background:var(--plate)}
+.dp-stop{position:absolute; inset:36%; border-radius:50%; border:0; padding:0; cursor:pointer; background:var(--rec); color:var(--rec-ink); display:grid; place-items:center; transform:scale(0); transition:transform .22s cubic-bezier(.3,1.5,.5,1)}
+[data-style="et66"] .dp-stop{background:var(--enter); color:var(--enter-ink)}
+.dp-stop .i{width:calc(10px * var(--s)); height:calc(10px * var(--s))}
+.dpad.scrolling .dp-stop{transform:scale(1)}
+.lv{position:absolute; bottom:calc(-7px * var(--s)); left:50%; transform:translateX(-50%); display:flex; gap:calc(2px * var(--s))}
+.lv i{width:calc(3px * var(--s)); height:calc(3px * var(--s)); border-radius:50%; background:var(--legend); opacity:.25}
+.lv i.on{opacity:1; background:var(--ring)}
+.kb-bubble{position:absolute; z-index:30; width:46px; height:46px; border-radius:50%; border:0; cursor:pointer; display:grid; place-items:center; background:var(--plate); color:var(--legend); box-shadow:var(--win-shadow)}
+.kb-bubble .i{width:20px; height:20px}
+
+/* ---------- pointer overlays ---------- */
+.ring{position:absolute; width:76px; height:76px; margin:-38px 0 0 -38px; pointer-events:none; z-index:60; display:none}
+.ring.run{display:block}
+.ring .w{position:absolute; inset:0; border-radius:50%; border:2.5px solid var(--ring); opacity:0}
+.ring .w2{border-width:1.5px}
+.ring .core{position:absolute; inset:45%; border-radius:50%; background:var(--ring); opacity:0}
+.ring.run .w1{animation:shrink var(--dur) cubic-bezier(.45,0,.55,1) forwards}
+.ring.run .w2{animation:shrink calc(var(--dur) * .8) cubic-bezier(.45,0,.55,1) calc(var(--dur) * .2) forwards}
+.ring.run .core{animation:core var(--dur) ease-in forwards}
+@keyframes shrink{0%{transform:scale(1); opacity:.15} 55%{opacity:.85} 100%{transform:scale(.13); opacity:1}}
+@keyframes core{0%{opacity:0; transform:scale(.4)} 100%{opacity:.9; transform:scale(1)}}
+.burst{position:absolute; pointer-events:none; z-index:61; width:0; height:0}
+.burst .b-ring{position:absolute; left:-30px; top:-30px; width:60px; height:60px; border-radius:50%; border:2px solid var(--ring); animation:burst .42s ease-out forwards}
+.burst .b-dot{position:absolute; left:-3px; top:-3px; width:6px; height:6px; border-radius:50%; background:var(--ring); animation:fly .42s ease-out forwards; transform:rotate(var(--a)) translateX(6px)}
+@keyframes burst{from{transform:scale(.15); opacity:1} to{transform:scale(1.25); opacity:0}}
+@keyframes fly{to{transform:rotate(var(--a)) translateX(30px) scale(.3); opacity:0}}
+.badge{position:absolute; z-index:62; pointer-events:none; display:none; align-items:center; gap:4px; padding:3px 7px; border-radius:999px; background:var(--badge-bg); color:var(--badge-ink);
+  font:600 10.5px/1 var(--f-mono); box-shadow:0 3px 10px rgba(0,0,0,.28); white-space:nowrap}
+.badge.show{display:flex}
+.badge .i{width:13px; height:13px}
+.badge .rec-dot{width:7px; height:7px; border-radius:50%; background:#E5484D; animation:pulse 1s infinite}
+
+/* ---------- panels (all scale with the keyboard size: --ks) ---------- */
+.pop{position:absolute; z-index:40; background:var(--pop-bg); color:var(--pop-ink); border-radius:calc(var(--r-win) * .9); box-shadow:var(--win-shadow);
+  font-family:var(--f-latin); font-size:calc(12.5px * var(--ks)); animation:popIn .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes popIn{from{opacity:0; transform:translateY(6px) scale(.98)}}
+.pop-h{display:flex; align-items:center; gap:calc(8px * var(--ks)); padding:calc(7px * var(--ks)) calc(8px * var(--ks)) calc(7px * var(--ks)) calc(12px * var(--ks)); border-bottom:1px solid var(--pop-line)}
+.pop-h .i{width:calc(15px * var(--ks)); height:calc(15px * var(--ks))}
+.pop-h b{font-weight:600; font-size:calc(13px * var(--ks))}
+.pop-h .x{margin-left:auto}
+.ib{border:0; background:transparent; color:var(--pop-muted); width:calc(28px * var(--ks)); height:calc(28px * var(--ks)); border-radius:calc(6px * var(--ks)); display:grid; place-items:center; cursor:pointer; padding:0; flex:none}
+.ib:hover{background:var(--pop-hover); color:var(--pop-ink)}
+.ib .i{width:calc(15px * var(--ks)); height:calc(15px * var(--ks))}
+.muted{color:var(--pop-muted)}
+.sm{font-size:calc(11px * var(--ks))}
+.btn{border:0; border-radius:calc(7px * var(--ks)); padding:calc(6px * var(--ks)) calc(11px * var(--ks)); font-weight:600; font-size:calc(12px * var(--ks)); cursor:pointer; background:var(--pop-ink); color:var(--pop-bg); display:inline-flex; align-items:center; gap:calc(6px * var(--ks)); white-space:nowrap}
+.btn[disabled]{opacity:.4; cursor:default}
+.btn.ghost{background:var(--pop-hover); color:var(--pop-ink)}
+.btn .i{width:calc(14px * var(--ks)); height:calc(14px * var(--ks))}
+.filters{display:flex; gap:calc(4px * var(--ks)); padding:calc(8px * var(--ks)) calc(10px * var(--ks)) calc(4px * var(--ks)); flex-wrap:wrap}
+.fl{border:1px solid var(--pop-line); background:transparent; color:var(--pop-muted); border-radius:999px; padding:calc(3px * var(--ks)) calc(10px * var(--ks)); font-size:calc(11.5px * var(--ks)); cursor:pointer}
+.fl[aria-pressed="true"]{background:var(--pop-ink); color:var(--pop-bg); border-color:var(--pop-ink)}
+.lbody{display:flex; gap:calc(6px * var(--ks)); padding:calc(4px * var(--ks)) calc(8px * var(--ks)) calc(8px * var(--ks))}
+.llist{--row:calc(46px * var(--ks)); position:relative; flex:1; min-width:0; height:calc(var(--row) * 5 + 10px * var(--ks)); overflow:auto; scrollbar-width:thin; display:flex; flex-direction:column; gap:calc(2px * var(--ks)); padding:1px}
+.lrow{flex:none; height:var(--row); display:grid; grid-template-columns:calc(24px * var(--ks)) calc(46px * var(--ks)) minmax(0,1fr) auto; gap:calc(9px * var(--ks)); align-items:center; padding:0 calc(8px * var(--ks)); border-radius:calc(8px * var(--ks)); cursor:pointer}
+.lrow.nock{grid-template-columns:calc(46px * var(--ks)) minmax(0,1fr) auto}
+.lrow:hover{background:var(--pop-hover)}
+.lrow.hi{box-shadow:inset 0 0 0 calc(2px * var(--ks)) var(--ring)}
+.lrow.sel{background:var(--pop-sel)}
+.ck{width:calc(22px * var(--ks)); height:calc(22px * var(--ks)); border-radius:calc(6px * var(--ks)); border:calc(1.5px * var(--ks)) solid var(--pop-muted); display:grid; place-items:center; font:600 calc(11px * var(--ks))/1 var(--f-mono); color:transparent; background:transparent; padding:0; cursor:pointer}
+.lrow.sel .ck{background:var(--ring); border-color:var(--ring); color:var(--pop-bg)}
+.th2{width:calc(46px * var(--ks)); height:calc(34px * var(--ks)); border-radius:calc(6px * var(--ks)); background:var(--pop-hover); color:var(--pop-muted); display:grid; place-items:center; overflow:hidden}
+.th2 .i{width:calc(17px * var(--ks)); height:calc(17px * var(--ks))}
+.th2.img1{background:linear-gradient(180deg,#F2B880,#E98B6D 45%,#2F5D6B 60%,#3E7B78)}
+.th2.img2{background:repeating-linear-gradient(90deg,#DCE3EA 0 6px,#C7D1DB 6px 7px),#DCE3EA}
+.th2.img3{background:radial-gradient(circle at 50% 45%,#2D56C8 0 30%,transparent 31%),#EEF1F7}
+.tt{min-width:0}
+.tt div{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tt .m{font-size:calc(10.5px * var(--ks)); color:var(--pop-muted); margin-top:1px}
+.tt .ar{font-family:var(--f-arabic); direction:rtl; text-align:right}
+.exp{font-size:calc(10px * var(--ks)); padding:calc(2px * var(--ks)) calc(7px * var(--ks)); border-radius:999px; background:var(--pop-hover); color:var(--pop-muted); white-space:nowrap}
+.pin .i{width:calc(13px * var(--ks)); height:calc(13px * var(--ks)); color:var(--ring)}
+.pager{display:flex; flex-direction:column; align-items:center; gap:calc(4px * var(--ks)); justify-content:center}
+.pg{width:calc(38px * var(--ks)); height:calc(46px * var(--ks)); border:1px solid var(--pop-line); background:var(--pop-hover); color:var(--pop-ink); border-radius:calc(9px * var(--ks)); display:grid; place-items:center; cursor:pointer; padding:0}
+.pg:hover{background:var(--pop-sel)}
+.pg[disabled]{opacity:.35; cursor:default}
+.pg .i{width:calc(18px * var(--ks)); height:calc(18px * var(--ks))}
+.pgn{font:600 calc(11px * var(--ks))/1.2 var(--f-mono); color:var(--pop-muted); text-align:center; font-variant-numeric:tabular-nums}
+.lfoot{display:flex; align-items:center; gap:calc(8px * var(--ks)); padding:calc(7px * var(--ks)) calc(12px * var(--ks)); border-top:1px solid var(--pop-line)}
+.kbd{font:600 calc(10.5px * var(--ks))/1 var(--f-mono); padding:calc(2px * var(--ks)) calc(5px * var(--ks)); border-radius:calc(4px * var(--ks)); background:var(--pop-hover); border:1px solid var(--pop-line)}
+.clip{width:min(calc(480px * var(--ks)), calc(100% - 16px))}
+.fill{width:min(calc(420px * var(--ks)), calc(100% - 16px))}
+.ftabs{display:flex; gap:calc(3px * var(--ks)); padding:calc(8px * var(--ks)) calc(10px * var(--ks)) calc(2px * var(--ks))}
+.ftabs button{flex:1; border:0; border-radius:calc(7px * var(--ks)); padding:calc(6px * var(--ks)); background:var(--pop-hover); color:var(--pop-muted); font-size:calc(12px * var(--ks)); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:calc(5px * var(--ks))}
+.ftabs button .i{width:calc(14px * var(--ks)); height:calc(14px * var(--ks))}
+.ftabs button[aria-selected="true"]{background:var(--pop-ink); color:var(--pop-bg)}
+.doms{display:flex; gap:calc(4px * var(--ks)); padding:calc(6px * var(--ks)) calc(10px * var(--ks)) 0; flex-wrap:wrap}
+.qc{border:1px solid var(--pop-line); background:transparent; color:var(--pop-ink); border-radius:calc(7px * var(--ks)); padding:calc(4px * var(--ks)) calc(8px * var(--ks)); font-size:calc(11.5px * var(--ks)); cursor:pointer}
+.qc:hover{background:var(--pop-hover)}
+.lrow .acts{display:flex; gap:calc(4px * var(--ks))}
+.lrow .acts .btn{padding:calc(5px * var(--ks)) calc(9px * var(--ks))}
+.masked{letter-spacing:.14em; color:var(--pop-muted)}
+.locked-box{height:calc(46px * 5 * var(--ks)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:calc(8px * var(--ks)); text-align:center; padding:0 calc(16px * var(--ks))}
+.locked-box > .i{width:calc(30px * var(--ks)); height:calc(30px * var(--ks)); color:var(--pop-muted)}
+.langs{width:calc(220px * var(--ks)); padding:calc(5px * var(--ks))}
+.lg-it{display:flex; align-items:center; gap:calc(10px * var(--ks)); width:100%; border:0; background:transparent; color:var(--pop-ink); padding:calc(7px * var(--ks)) calc(8px * var(--ks)); border-radius:calc(7px * var(--ks)); cursor:pointer; text-align:left}
+.lg-it:hover{background:var(--pop-hover)}
+.lg-it .bdg{width:calc(28px * var(--ks)); height:calc(22px * var(--ks)); border-radius:calc(5px * var(--ks)); display:grid; place-items:center; background:var(--pop-hover); font-weight:600; font-size:calc(12px * var(--ks))}
+.lg-it .bdg.ar{font-family:var(--f-arabic); font-size:calc(14px * var(--ks))}
+.lg-it .nm{font-size:calc(12.5px * var(--ks))}
+.lg-it .nm small{display:block; font-size:calc(10.5px * var(--ks)); color:var(--pop-muted)}
+.lg-it .i{margin-left:auto; width:calc(14px * var(--ks)); height:calc(14px * var(--ks)); color:var(--ring)}
+
+.ctx{position:absolute; z-index:50; min-width:200px; padding:4px; border-radius:8px; background:var(--win-bg); color:var(--win-ink); border:1px solid var(--win-line);
+  box-shadow:0 10px 30px rgba(0,0,0,.28); font:13px/1.2 "Segoe UI Variable Text","Segoe UI",var(--f-ui); transform-origin:0 0; animation:ctxIn .14s ease-out}
+@keyframes ctxIn{from{opacity:0; transform:scale(.96)}}
+.ctx button{display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; padding:7px 10px; border-radius:5px; cursor:pointer; text-align:left}
+.ctx button:hover{background:var(--win-sel)}
+.ctx .i{width:15px; height:15px; opacity:.8}
+.ctx hr{border:0; border-top:1px solid var(--win-line); margin:4px 2px}
+.ctx .t{font-size:10.5px; color:var(--win-muted); padding:4px 10px 2px}
+.selpill{position:absolute; z-index:52; display:flex; gap:2px; padding:calc(3px * var(--ks)); border-radius:999px; background:var(--badge-bg); color:var(--badge-ink); box-shadow:0 6px 18px rgba(0,0,0,.3); animation:popIn .18s ease-out}
+.selpill button{border:0; background:transparent; color:inherit; display:inline-flex; align-items:center; gap:calc(5px * var(--ks)); padding:calc(5px * var(--ks)) calc(11px * var(--ks)); border-radius:999px; font:600 calc(12px * var(--ks))/1 var(--f-ui); cursor:pointer}
+.selpill button:hover{background:rgba(127,127,127,.22)}
+.selpill .i{width:calc(13px * var(--ks)); height:calc(13px * var(--ks))}
+.capbar{position:absolute; z-index:45; left:50%; transform:translateX(-50%); width:min(calc(540px * var(--ks)), calc(100% - 24px)); background:var(--pop-bg); color:var(--pop-ink); border-radius:999px;
+  box-shadow:var(--win-shadow); display:flex; align-items:center; gap:calc(10px * var(--ks)); padding:calc(6px * var(--ks)) calc(8px * var(--ks)) calc(6px * var(--ks)) calc(14px * var(--ks)); font-family:var(--f-latin); font-size:calc(12.5px * var(--ks)); animation:popIn .2s ease-out}
+.capbar.done{border-radius:calc(14px * var(--ks)); align-items:flex-start; padding:calc(10px * var(--ks))}
+.capbar .i{width:calc(15px * var(--ks)); height:calc(15px * var(--ks))}
+.capbar .st{display:flex; align-items:center; gap:6px; font-weight:600; white-space:nowrap}
+.capbar .st .rec-dot{width:8px; height:8px; border-radius:50%; background:#E5484D; animation:pulse 1s infinite}
+.wave{flex:1; height:calc(26px * var(--ks)); display:flex; align-items:center; gap:2px; min-width:0}
+.wave i{flex:1; min-width:2px; border-radius:2px; background:var(--ring); height:3px; transition:height .08s linear}
+.tm{font:500 calc(11.5px * var(--ks)) var(--f-mono); color:var(--pop-muted)}
+.lc{border:1px solid var(--pop-line); background:transparent; color:var(--pop-ink); border-radius:999px; padding:calc(3px * var(--ks)) calc(9px * var(--ks)); font-size:calc(11px * var(--ks)); cursor:pointer; white-space:nowrap}
+.shimmer{flex:1; height:10px; border-radius:6px; background:linear-gradient(90deg, var(--pop-hover) 0%, var(--pop-line) 50%, var(--pop-hover) 100%); background-size:200% 100%; animation:sh 1s linear infinite}
+@keyframes sh{to{background-position:-200% 0}}
+.capbar .txt{flex:1; font-size:calc(14px * var(--ks)); line-height:1.45; unicode-bidi:plaintext}
+.capbar .txt.ar{font-family:var(--f-arabic); font-size:calc(15px * var(--ks))}
+.capbar .txt small{display:block; color:var(--pop-muted); font-size:calc(10.5px * var(--ks)); margin-top:3px; font-family:var(--f-ui)}
+.capbar .acts{display:flex; gap:4px}
+.snip-dim{position:absolute; inset:0; z-index:20; background:rgba(0,0,0,.42); cursor:crosshair}
+.snip-rect{position:absolute; z-index:21; border:1.5px solid #fff; box-shadow:0 0 0 9999px rgba(0,0,0,.42); pointer-events:none}
+.snip-rect .dims{position:absolute; left:0; top:-22px; font:500 11px var(--f-mono); color:#fff; background:rgba(0,0,0,.6); padding:2px 6px; border-radius:4px}
+.snip-bar,.snip-tools{position:absolute; z-index:44; display:flex; gap:calc(1px * var(--ks)); padding:calc(3px * var(--ks)); border-radius:calc(9px * var(--ks)); background:var(--pop-bg); color:var(--pop-ink); box-shadow:var(--win-shadow); align-items:center}
+.snip-bar{top:10px; left:50%; transform:translateX(-50%)}
+.hintx{font-size:calc(11px * var(--ks)); color:var(--pop-muted); padding:0 calc(6px * var(--ks)); white-space:nowrap}
+.sb{border:0; background:transparent; color:var(--pop-ink); display:inline-flex; align-items:center; gap:calc(4px * var(--ks)); height:calc(28px * var(--ks)); min-width:calc(28px * var(--ks)); justify-content:center; padding:0 calc(6px * var(--ks)); border-radius:calc(6px * var(--ks)); font-size:calc(11.5px * var(--ks)); cursor:pointer; white-space:nowrap}
+.sb:hover{background:var(--pop-hover)}
+.sb[aria-pressed="true"]{background:var(--pop-sel)}
+.sb .i{width:calc(15px * var(--ks)); height:calc(15px * var(--ks))}
+.sep{width:1px; align-self:stretch; background:var(--pop-line); margin:calc(4px * var(--ks)) calc(2px * var(--ks))}
+.toast{position:absolute; z-index:70; left:50%; top:46px; transform:translateX(-50%); background:rgba(15,18,22,.88); color:#fff; font-size:12.5px; padding:7px 14px; border-radius:999px;
+  display:flex; align-items:center; gap:7px; pointer-events:none; animation:toastIn .2s ease-out; max-width:calc(100% - 24px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.toast .i{width:14px; height:14px; flex:none}
+@keyframes toastIn{from{opacity:0; transform:translate(-50%,-6px)}}
+
+/* ---------- side panel ---------- */
+.side{background:var(--surface); border:1px solid var(--line); border-radius:12px; display:flex; flex-direction:column; min-height:0; height:clamp(500px, calc(100vh - 150px), 620px)}
+@media (max-width:1060px){ .side{height:auto} }
+.seg{display:flex; gap:3px; padding:3px; margin:10px 10px 0; background:var(--surface-2); border-radius:9px}
+.seg button{flex:1; border:0; background:transparent; padding:6px 6px; border-radius:7px; cursor:pointer; font-size:12.5px; font-weight:500; color:var(--muted)}
+.seg button[aria-selected="true"]{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line)}
+.sbody{flex:1; overflow:auto; padding:10px 12px; min-height:0}
+.stylelist{display:flex; flex-direction:column; gap:6px}
+.srow{display:grid; grid-template-columns:48px 1fr; gap:9px; align-items:center; width:100%; border:1px solid var(--line-2); background:transparent; border-radius:9px; padding:6px 7px; cursor:pointer; text-align:left}
+.srow:hover{border-color:var(--line)}
+.srow[aria-pressed="true"]{border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
+.srow .nm{font-weight:600; font-size:13px; line-height:1.2; display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+.srow .tg{font-size:11.5px; color:var(--muted); line-height:1.25}
+.rec-chip{font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:2px 6px; border-radius:999px; background:var(--accent-soft); color:var(--accent)}
+.minis{display:flex; flex-direction:column; gap:3px}
+.mini{display:flex; gap:2px; padding:3px; border-radius:5px; background:var(--plate); height:19px; align-items:stretch}
+.mini i{flex:1; border-radius:calc(var(--r-key) * .4); background:var(--key)}
+.mini i.m{background:var(--key-mod)} .mini i.e{background:var(--enter)}
+.heart{border:0; background:transparent; width:30px; height:30px; border-radius:7px; display:grid; place-items:center; cursor:pointer; color:var(--muted)}
+.heart:hover{background:var(--surface-2)}
+.heart .i{width:16px; height:16px}
+.heart[aria-pressed="true"]{color:#D6336C}
+.heart[aria-pressed="true"] .i{fill:currentColor}
+.info{font-size:12.5px}
+.info h3{font-size:14px; margin:0 0 4px}
+.info p{margin:0 0 8px; color:var(--ink); font-size:12px; line-height:1.42}
+.kv{display:grid; grid-template-columns:62px 1fr; gap:4px 8px; font-size:12px; margin-bottom:8px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+.sw{display:flex; gap:3px; flex-wrap:wrap}
+.sw i{width:18px; height:18px; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(127,127,127,.35)}
+.refs{margin:0; padding-left:16px; font-size:12px}
+.refs li{margin:2px 0}
+.ctl{display:flex; flex-direction:column; gap:11px}
+.ctl .lab2{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; margin-bottom:5px; display:flex; justify-content:space-between}
+.opts{display:flex; gap:3px; flex-wrap:wrap}
+.opts button{flex:1; min-width:0; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:6px 6px; border-radius:7px; cursor:pointer; font-size:12.5px; white-space:nowrap}
+.opts button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.stepper{display:flex; align-items:center; gap:6px}
+.stepper button{width:34px; height:30px; border:1px solid var(--line); background:var(--surface); border-radius:7px; cursor:pointer; display:grid; place-items:center}
+.stepper button .i{width:15px; height:15px}
+.stepper output{flex:1; text-align:center; font:600 13px var(--f-mono); font-variant-numeric:tabular-nums}
+.small{font-size:11.5px; color:var(--muted); line-height:1.4}
+.try{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px; font-size:12px; line-height:1.4}
+.try li{display:grid; grid-template-columns:22px 1fr; gap:8px; align-items:start}
+.try .i{width:16px; height:16px; color:var(--accent); margin-top:2px}
+.try b{font-weight:600}
+.savebox{border-top:1px solid var(--line); padding:10px 12px 12px; display:flex; flex-direction:column; gap:7px}
+.savebox .sum{font-size:12px; color:var(--muted)}
+.savebox .sum b{color:var(--ink); font-weight:600}
+.savebtn{border:0; border-radius:8px; padding:8px 12px; font-weight:600; background:var(--accent); color:var(--accent-ink); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px}
+.savebtn[disabled]{opacity:.45; cursor:default}
+.savebtn .i{width:15px; height:15px}
+.status{font-size:11.5px; color:var(--muted); min-height:1em}
+.status.ok{color:var(--good)}
+
+/* ---------- reading tabs ---------- */
+.read{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px 18px}
+.read .seg{margin:0 0 14px; max-width:100%; flex-wrap:wrap}
+.read .seg button{flex:0 1 auto}
+.cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px}
+.card{border:1px solid var(--line-2); border-radius:10px; padding:12px 14px; background:var(--surface)}
+.card h3{margin:0 0 6px; font-size:14px; display:flex; align-items:center; gap:7px}
+.card h3 .i{width:16px; height:16px; color:var(--accent)}
+.card ul{margin:0; padding-left:17px; font-size:13px}
+.card li{margin:3px 0}
+.card p{margin:0 0 6px; font-size:13px}
+.card.rec{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
+.card .pill{font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; padding:2px 7px; border-radius:999px; background:var(--accent-soft); color:var(--accent); margin-left:auto}
+.card .pill.no{background:var(--surface-2); color:var(--muted)}
+.card .new{font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; padding:1px 6px; border-radius:999px; background:var(--accent-soft); color:var(--accent)}
+.lead{font-size:13.5px; max-width:90ch; margin:0 0 12px}
+.lead b{font-weight:600}
+.mods{display:grid; grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:8px; margin-top:10px}
+.modc{border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:12px; background:var(--surface-2)}
+.modc b{display:flex; align-items:center; gap:6px; font-size:12.5px; margin-bottom:2px}
+.modc b .i{width:14px; height:14px; color:var(--accent)}
+.kernel{border:1.5px dashed var(--accent); border-radius:10px; padding:10px 12px; font-size:12.5px; background:var(--accent-soft)}
+.kernel b{font-size:13px}
+.srcs{columns:2 360px; column-gap:28px; font-size:12.5px}
+.srcs h4{break-after:avoid; margin:12px 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.srcs h4:first-child{margin-top:0}
+.srcs ul{margin:0; padding-left:16px; break-inside:avoid-column}
+.srcs li{margin:2px 0}
+.i{display:inline-block; flex:none}
+.i-fb{font:600 10px var(--f-mono)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important}
+  .ring.run .w1,.ring.run .w2,.ring.run .core{animation-duration:var(--dur)!important}
+}
+@media (max-width:640px){
+  .head h1{font-size:18px}
+  .notes,.article{width:calc(100% - 28px)}
+  .article{top:200px; height:200px}
+  .photo,.folder{display:none}
+}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <h1>KeyXtend · Keyboard Style Lab <small>v2</small></h1>
+      <p>Three themes, each in light and soft dark, on one working mock-up. Native Adaptive in light is the default. Click the keys to type, try Right-click, Grab, the scroll pad and the mic on the fake desktop.</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="lab">Styles</button>
+      <button role="tab" aria-selected="false" data-tab="notes">What we agreed</button>
+      <button role="tab" aria-selected="false" data-tab="tech">Tech choice</button>
+      <button role="tab" aria-selected="false" data-tab="src">Sources</button>
+    </nav>
+  </header>
+
+  <section class="panel" id="p-lab">
+    <div class="lab">
+      <div class="stage" id="stage" data-style="native" data-mode="light">
+        <div class="hint" id="hint">Tip: tap the mouse key at the top right of the keyboard. Short clicks stay normal; hold still 1.5 s to right-click</div>
+        <div class="win notes" id="notes">
+          <div class="win-h"><span data-i="FileText"></span>Notes — draft.txt<span class="dots"><span></span><span></span><span></span></span></div>
+          <div class="field" id="field" aria-live="polite"></div>
+          <div class="attach" id="attach"></div>
+        </div>
+        <div class="win article">
+          <div class="win-h"><span data-i="Globe"></span>Reading · on-screen keyboards compared<span class="dots"><span></span><span></span><span></span></span></div>
+          <div class="doc" id="doc">
+            <h3>Why build a new on-screen keyboard?</h3>
+            <p>Windows' On-Screen Keyboard has click, hover and scan modes, but users report keys that render tiny, and it has no themes. The Windows 11 touch keyboard has themes and a clipboard tab, but it is built for touch screens.</p>
+            <p>macOS already solves part of the mouse problem: its Dwell actions include right click, drag and drop, and a scroll menu, and the countdown is a circle around the pointer. OptiKey's Look to Scroll keeps scrolling by itself.</p>
+            <p>Arabic is the gap. Windows Voice Access and voice typing do not list Arabic. Whisper large-v3 reaches about 14.6% word errors on Arabic in the FLEURS test, against 4.1% for English and 5.8% for French.</p>
+            <p>Point at this page, then tap ▼ on the keyboard's round pad: tap once for slow, again for faster, a third time to stop. The table below is wider than the window, so ◀ ▶ scroll it sideways.</p>
+            <table>
+              <thead><tr><th>Tool</th><th>Right-click</th><th>Drag and drop</th><th>Scrolling</th><th>Arabic</th></tr></thead>
+              <tbody>
+                <tr><td>macOS Accessibility Keyboard + Dwell</td><td>Dwell action</td><td>Dwell to pick up, dwell again to drop</td><td>Scroll arrows at the content edges</td><td>Dictation (Saudi Arabia, UAE)</td></tr>
+                <tr><td>OptiKey</td><td>Pick the action, then the point</td><td>Two point selections</td><td>Look to Scroll, three speeds</td><td>Not in its 26 languages</td></tr>
+                <tr><td>Dwell Clicker 2</td><td>Dwell</td><td>One dwell to start, one to finish</td><td>—</td><td>—</td></tr>
+                <tr><td>GNOME Click Assist</td><td>Hold left until the pointer fills</td><td>Hover-click drag type</td><td>—</td><td>—</td></tr>
+                <tr><td>Windows ClickLock</td><td>—</td><td>Hold to latch, click to release</td><td>—</td><td>—</td></tr>
+                <tr class="me"><td>This project</td><td>Hold 1.5 s with Right-click on; short clicks stay normal</td><td>Hold 1.5 s to grab, one click to drop</td><td>Scroll pad, two speeds, third tap stops</td><td>Keyboard and Whisper voice typing</td></tr>
+              </tbody>
+            </table>
+            <p style="margin-top:12px">Text selection works like Grab: turn on Grab, hold 1.5 s on a word, move the pointer, then click once where the selection should end. A small Copy button appears next to the selection.</p>
+          </div>
+        </div>
+        <div class="photo" id="photo"><div class="img"></div><div class="cap-t"><span data-i="Image"></span>coast.jpg</div></div>
+        <div class="folder" id="folder"><span data-i="Folder"></span><span>Photos</span><span class="cnt" id="fcount">empty</span></div>
+        <div class="kb" id="kb" role="group" aria-label="On-screen keyboard"></div>
+        <div class="ring" id="ring"><div class="w w1"></div><div class="w w2"></div><div class="core"></div></div>
+        <div class="badge" id="badge"></div>
+      </div>
+
+      <aside class="side" aria-label="Style and settings">
+        <div class="seg" role="tablist">
+          <button role="tab" aria-selected="true" data-sub="style">Theme</button>
+          <button role="tab" aria-selected="false" data-sub="about">About</button>
+          <button role="tab" aria-selected="false" data-sub="set">Settings</button>
+          <button role="tab" aria-selected="false" data-sub="try">Try it</button>
+        </div>
+        <div class="sbody" id="sub-style">
+          <div class="stylelist" id="stylelist"></div>
+          <div class="ctl" style="margin-top:12px">
+            <div><div class="lab2">Light or dark</div><div class="opts" data-opt="theme"><button data-v="light">Light</button><button data-v="dark">Soft dark</button><button data-v="auto">Follow system</button></div></div>
+          </div>
+          <p class="small" style="margin:10px 2px 0">The sun and moon button on the keyboard's top bar switches light and dark too. Open <b>About</b> for the references, fonts and colours of each theme.</p>
+        </div>
+        <div class="sbody" id="sub-about" hidden><div class="info" id="info"></div></div>
+        <div class="sbody" id="sub-set" hidden>
+          <div class="ctl">
+            <div><div class="lab2">System</div><div class="opts" data-opt="os"><button data-v="win">Windows</button><button data-v="mac">macOS</button><button data-v="linux">Linux</button></div></div>
+            <div><div class="lab2">Size <span id="sizehint"></span></div>
+              <div class="opts" data-opt="size"><button data-v="1">S</button><button data-v="1.25">M</button><button data-v="1.5">L</button></div>
+              <div class="stepper" style="margin-top:6px"><button data-step="scale" data-d="-0.05" aria-label="Smaller"><span data-i="Minus"></span></button><output id="o-scale">1.00×</output><button data-step="scale" data-d="0.05" aria-label="Bigger"><span data-i="Plus"></span></button></div>
+            </div>
+            <div><div class="lab2">Language key</div><div class="opts" data-opt="langKey"><button data-v="carousel">Carousel</button><button data-v="cycle">Cycle</button><button data-v="list">List</button></div></div>
+            <div><div class="lab2">Shift, Ctrl, Alt, Win</div><div class="opts" data-opt="sticky"><button data-v="next">Release after next key</button><button data-v="hold">Stay held</button></div></div>
+            <div><div class="lab2">Hold time</div>
+              <div class="stepper"><button data-step="hold" data-d="-100" aria-label="Shorter"><span data-i="Minus"></span></button><output id="o-hold">1.5 s</output><button data-step="hold" data-d="100" aria-label="Longer"><span data-i="Plus"></span></button></div>
+            </div>
+            <div><div class="lab2">Sounds</div><div class="opts" data-opt="sounds"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+            <div><div class="lab2">Fade when idle</div><div class="opts" data-opt="fade"><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+            <button class="savebtn" id="reset" style="background:var(--surface-2); color:var(--ink); border:1px solid var(--line)"><span data-i="RotateCcw"></span>Reset the demo desktop</button>
+          </div>
+        </div>
+        <div class="sbody" id="sub-try" hidden>
+          <ul class="try">
+            <li><span data-i="MouseRight"></span><div><b>Right-click.</b> Tap Right-click. Short clicks still select the photo or folder; hold still 1.5 s to open the menu.</div></li>
+            <li><span data-i="HandGrab"></span><div><b>Drag and drop.</b> Tap Grab, hold 1.5 s on the photo, move, click once on Photos.</div></li>
+            <li><span data-i="TextSelect"></span><div><b>Select text.</b> Tap Grab, hold 1.5 s on a word, move, click once. Copy appears.</div></li>
+            <li><span data-i="ChevronsUp"></span><div><b>Scroll.</b> Point at Notes or the article, tap ▼: slow, again: faster, third tap: stop.</div></li>
+            <li><span data-i="Mic"></span><div><b>Voice.</b> Tap the mic, then again. Demo text is typed; no microphone is used.</div></li>
+            <li><span data-i="ClipboardClock"></span><div><b>Clipboard.</b> Use ↑ ↓ on the keyboard, Enter pastes, Space ticks, ▲ ▼ change page.</div></li>
+            <li><span data-i="KeyRound"></span><div><b>Quick-fill.</b> Emails, passwords (unlock first) and names, five per page.</div></li>
+            <li><span data-i="ArrowBigUp"></span><div><b>Shift, Ctrl.</b> One click holds it, the next click releases it.</div></li>
+            <li><span data-i="Maximize2"></span><div><b>Size.</b> Settings → L: every panel grows with the keyboard.</div></li>
+            <li><span data-i="Moon"></span><div><b>Dark.</b> The moon button on the keyboard's top bar.</div></li>
+          </ul>
+        </div>
+        <div class="savebox">
+          <div class="sum" id="sum"></div>
+          <button class="savebtn" id="save"><span data-i="Save"></span>Save my picks for Claude</button>
+          <div class="status" id="status">Connecting…</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="panel read" id="p-notes" hidden>
+    <div class="seg" role="tablist" data-group="n">
+      <button role="tab" aria-selected="true" data-show="n-kb">Keyboard &amp; themes</button>
+      <button role="tab" aria-selected="false" data-show="n-mouse">Mouse helpers</button>
+      <button role="tab" aria-selected="false" data-show="n-voice">Voice &amp; AI</button>
+      <button role="tab" aria-selected="false" data-show="n-clip">Clipboard &amp; quick-fill</button>
+      <button role="tab" aria-selected="false" data-show="n-snip">Snip, selection, power</button>
+      <button role="tab" aria-selected="false" data-show="n-arch">How we build it</button>
+    </div>
+    <div data-pane="n" id="n-kb" class="cards">
+      <div class="card"><h3><span data-i="Palette"></span>Themes <span class="new">updated</span></h3><ul>
+        <li>Three themes: Native Adaptive (the default, light), ET66, Modern Dolch.</li>
+        <li>Each one has a soft dark version: dark grey instead of black and off-white text, following Material Design's dark theme guidance and GitHub's Dark Dimmed theme.</li>
+        <li>Light and dark switch from the keyboard itself (sun and moon button) or follow the system.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="Keyboard"></span>Typing</h3><ul>
+        <li>Detects every input language installed on the system. Today: English (QWERTY), French (AZERTY), Arabic (101).</li>
+        <li>Keys show only the active language. Language key design still open: carousel, cycle or list.</li>
+        <li><b>Shift, Ctrl, Alt, Win work like osk.exe:</b> one click holds the key, the next click releases it, and it also releases after the next normal key. A setting keeps it held instead.</li>
+        <li>Every system shortcut works (Ctrl+A, Win+V, Alt+Tab…). Light word prediction, emails included.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="AppWindow"></span>Window and panels</h3><ul>
+        <li>Floating only, always on top of every window, never takes the focus.</li>
+        <li>Small by default and resizable. <b>Every panel grows and shrinks with the keyboard.</b></li>
+        <li><b>No panel ever needs scrolling:</b> lists show five items at a time, with big ▲ ▼ buttons, and the keyboard's arrows, Enter, Space and Esc work inside them.</li>
+        <li>Nav block removed; PrtScn becomes Snip; Help becomes Settings.</li>
+      </ul></div>
+    </div>
+    <div data-pane="n" id="n-mouse" class="cards" hidden>
+      <div class="card"><h3><span data-i="MouseRight"></span>Right-click key <span class="new">updated</span></h3><ul>
+        <li>An on/off key. <b>Normal left clicks keep working while it is on.</b></li>
+        <li>How the real app does it: it holds your press back for a moment. Release before 1.5 s: a normal click is sent at once. Move: a normal drag. Hold still 1.5 s: a right-click instead, and the left click is never sent.</li>
+        <li>So nothing gets clicked by accident, and selected text stays selected for the menu.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="HandGrab"></span>Grab key</h3><ul>
+        <li>For drag and drop and text selection. Turning it on switches Right-click off.</li>
+        <li>Hold 1.5 s: grabbed. Move freely. One click drops or ends the selection. Grab switches off and Right-click comes back.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="ChevronsUp"></span>Scroll pad <span class="new">updated</span></h3><ul>
+        <li>Tap a direction: slow. Tap it again: faster. Third tap: stop. The centre Stop button works too.</li>
+        <li>Scrolls whatever is under the pointer, including long text fields. While the pointer is on the keyboard, it keeps scrolling the last thing you pointed at, which is outlined.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="Sparkles"></span>Feedback</h3><ul>
+        <li>Wave ring into the pointer, burst, mode badge beside the pointer, soft bubble pop, soft key ticks. Each can be switched off.</li>
+      </ul></div>
+    </div>
+    <div data-pane="n" id="n-voice" class="cards" hidden>
+      <div class="card"><h3><span data-i="Mic"></span>Voice typing</h3><ul>
+        <li>Mic key: click to start, click to stop; pauses never cut you off.</li>
+        <li>Own start and stop sounds; live wave; caption bar at the bottom centre, never over the keyboard, with Copy and Undo.</li>
+        <li>Forced language setting (Auto, English, French, Arabic). Its own module.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="Cpu"></span>AI at zero cost <span class="new">new</span></h3><ul>
+        <li>Whisper on your PC by default (free, MIT licence). Cloud only if you add your own free key.</li>
+        <li>Word prediction without heavy AI: word lists plus what you type, kept on your PC.</li>
+        <li>Details in the Tech choice tab.</li>
+      </ul></div>
+    </div>
+    <div data-pane="n" id="n-clip" class="cards" hidden>
+      <div class="card"><h3><span data-i="ClipboardClock"></span>Clipboard history <span class="new">updated</span></h3><ul>
+        <li>One vertical list, newest first. Shows the last five, then ▲ ▼ for older pages.</li>
+        <li>Previews, file names, source and time. Filters: text, images, files, media.</li>
+        <li>↑ ↓ move, Enter pastes, Space ticks several, then Paste together.</li>
+        <li>Kept 1 week by default; video and audio 1 day; big files kept as references.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="KeyRound"></span>Quick-fill vault <span class="new">updated</span></h3><ul>
+        <li>Three tabs: Emails (with one-click domains), Passwords (locked until you unlock), Names.</li>
+        <li>Five rows per page, same keys as the clipboard. Fill the username or the password separately.</li>
+        <li>One encrypted file on your PC; export only when you ask.</li>
+      </ul></div>
+    </div>
+    <div data-pane="n" id="n-snip" class="cards" hidden>
+      <div class="card"><h3><span data-i="ScissorsLineDashed"></span>Snip tool <span class="new">updated</span></h3><ul>
+        <li>Smaller toolbars, icons first, labels only when the keyboard is large.</li>
+        <li>Region, window, full screen, scrolling page, timer. Click, move, click.</li>
+        <li>Arrow, box, text, highlighter, pen, steps, crop, undo; copy text (OCR), copy, save, pin.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="TextSelect"></span>Selection helper</h3><ul>
+        <li>Whenever text is selected anywhere, a small Copy button appears next to it (like PopClip, SnipDo).</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="Power"></span>Power key</h3><ul>
+        <li>Opens the system's own power dialog.</li>
+      </ul></div>
+    </div>
+    <div data-pane="n" id="n-arch" class="cards" hidden>
+      <div class="card"><h3><span data-i="Blocks"></span>Lego modules</h3><ul>
+        <li>Micro-kernel where every feature is a plugin, inspired by DeepSeek Harness.</li>
+        <li>One package per feature, with its own tests and permissions; built one by one, each fully tested before the next.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="GitBranch"></span>Open source on GitHub <span class="new">new</span></h3><ul>
+        <li>Anyone can download it, so every dependency's licence must fit, and releases must be signed and verifiable.</li>
+        <li>Code lives on your E: drive; I write the code, you are the product owner.</li>
+      </ul></div>
+      <div class="card"><h3><span data-i="ShieldCheck"></span>Security first</h3><ul>
+        <li>Least privilege per module; encrypted vault; sensitive clipboard entries skipped; nothing leaves the PC unless you choose a cloud engine.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="panel read" id="p-tech" hidden>
+    <div id="tech-body">
+      <p class="lead"><b>The short version.</b> The keyboard window is written in <b>Rust with Slint</b>, all the logic lives in plain Rust modules that do not depend on the UI, and every AI feature runs <b>free and on your PC by default</b>. Checked on 26 September 2026; items marked <i>unverified</i> still need a test on a real PC.</p>
+      <div class="cards">
+        <div class="card rec"><h3><span data-i="Layers"></span>Framework <span class="pill">Leading</span></h3>
+          <p><b>Rust + Slint 1.18</b> for the keyboard window. To stay above the Start menu and type into admin windows, Windows requires the "uiAccess" flag. Microsoft's WebView2, which Tauri and Electron-style apps rely on, fails with uiAccess (<a href="https://github.com/MicrosoftEdge/WebView2Feedback/issues/4884" target="_blank" rel="noopener">issue 4884</a>, closed "not planned"). Slint draws natively, so it avoids that.</p>
+          <p><b>Checked against Slint's own code and bug tracker:</b> nothing blocks Windows. About 20 MB of memory, built-in screen-reader support and a tray icon. Four known traps, each with a fix:</p>
+          <ul>
+            <li>The window library can quietly remove "never take focus". Fix: we guard the window and put it back.</li>
+            <li>Editing Arabic <i>inside our own</i> text boxes has a cursor bug. Typing Arabic into other apps and showing Arabic are fine. Fix: our settings use buttons, not text boxes.</li>
+            <li>See-through windows have drawing bugs. Fix: the ring around the pointer is drawn directly by Windows.</li>
+            <li>macOS and GNOME on Linux need extra work later. GNOME's Wayland session allows no always-on-top keyboard, for any app.</li>
+          </ul>
+          <p class="small">Fallback: Qt 6. Nobody has tested Slint with uiAccess yet, so that is test G3 in week one.</p></div>
+        <div class="card"><h3><span data-i="FlaskConical"></span>Week-one proof, pass or fail</h3><ul>
+          <li>Types into Notepad, Word, Chrome and Terminal without losing a character, in EN, FR and AR.</li>
+          <li>The signed build stays above the Start menu and types into an admin window.</li>
+          <li>Never steals the focus; Arabic letters join correctly.</li>
+          <li>Hold-to-right-click works through the mouse hook without delaying normal clicks.</li>
+          <li>Measure install size, memory and start time.</li>
+        </ul><p class="small">If Slint fails a gate, only the window layer changes. The modules stay.</p></div>
+        <div class="card"><h3><span data-i="Mic"></span>Voice, free</h3><ul>
+          <li><b>On your PC:</b> Whisper through whisper.cpp (MIT). Turbo model 574 MB, or "small" 190 MB for older PCs. Downloaded when you first turn voice on, not bundled.</li>
+          <li><b>Optional cloud, your own free key:</b> Groq allows 8 hours of audio a day for free. Azure's free tier gives 5 hours a month and lists 18 Arabic dialects, including Moroccan, Algerian and Tunisian.</li>
+          <li>Gemini's free tier may use your audio for training, so it would only be offered with a clear warning.</li>
+          <li>Rejected: NVIDIA Parakeet (no Arabic); Moonshine Arabic (licence limits).</li>
+        </ul></div>
+        <div class="card"><h3><span data-i="MessageSquareText"></span>Prediction, OCR, camera</h3><ul>
+          <li><b>Word prediction:</b> our own small engine, seeded from the wordfreq word lists (free to use with credit), learning from what you type, stored on your PC.</li>
+          <li><b>Copy text from a snip:</b> Windows' built-in OCR, then Tesseract (Apache-2.0: Arabic, French, English), then PaddleOCR for hard Arabic.</li>
+          <li><b>Camera control (later):</b> webcam and face-tracking through open ONNX models. Google's Project Gameface was archived in September 2025, and the MediaPipe runtime sends usage metrics to Google, so we avoid both.</li>
+        </ul></div>
+        <div class="card"><h3><span data-i="Scale"></span>Licence</h3><ul>
+          <li>Recommended: the app under <b>GPL-3.0-or-later</b>. Slint is free for GPLv3 projects, GPL meets the free signing service's rule, and every copy stays open source, as with OptiKey.</li>
+          <li>Also allowed by Slint: our code under MIT/Apache, with the finished app under GPLv3. Others could then reuse our code in closed products. You choose.</li>
+          <li>Reusable parts (prediction engine, voice wrapper): MIT or Apache-2.0.</li>
+          <li>Fonts (OFL) and icons (ISC) ship with their licence files; word lists (CC-BY-SA) stay separate files with credit.</li>
+        </ul></div>
+        <div class="card"><h3><span data-i="ShieldCheck"></span>Signing and safe releases</h3><ul>
+          <li><b>On your PC:</b> a self-signed test certificate plus install in Program Files. That is enough for uiAccess while developing.</li>
+          <li><b>Public releases:</b> apply to the <a href="https://signpath.org/" target="_blank" rel="noopener">SignPath Foundation</a>, which signs free for open-source projects built on GitHub. Fallbacks: a Certum open-source certificate (about €69), or the Microsoft Store (<i>unverified</i> whether it allows uiAccess).</li>
+          <li>Every release: licence and security checks on all dependencies, a list of every component included, GitHub build attestations, checksums.</li>
+          <li>Windows SmartScreen still warns about any new app until it has enough downloads.</li>
+        </ul></div>
+        <div class="card"><h3><span data-i="Blocks"></span>Architecture preview</h3><ul>
+          <li><b>A small trusted core.</b> Windows only lets a window sit above the Start menu when its own program holds uiAccess, so the keyboard program itself is the signed one. It keeps only the keys, the mouse helpers and sending input, and it never goes online.</li>
+          <li><b>Helpers with normal rights</b> do everything that touches outside data: voice and the internet, OCR, clipboard images and files. A bug in a helper cannot reach admin windows.</li>
+          <li><b>Micro-kernel.</b> Each feature is its own module and declares what it needs and what it may do. Modules never touch the OS directly.</li>
+          <li>The full design is the next thing we discuss.</li>
+        </ul></div>
+        <div class="card"><h3><span data-i="Monitor"></span>macOS and Linux</h3><ul>
+          <li>macOS: a non-activating panel window. Without a paid Apple account ($99 a year), users must allow the app once in Privacy &amp; Security.</li>
+          <li>Linux: X11 works like Windows. On Wayland, typing goes through the system's Remote Desktop permission, which asks the user once. GNOME does not allow global mouse hooks.</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel read" id="p-src" hidden>
+    <div class="srcs">
+      <h4>Keyboards built into the systems</h4><ul>
+        <li><a href="https://support.microsoft.com/en-us/windows/use-the-on-screen-keyboard-osk-to-type-ecbb5e08-5b4e-d8c8-f794-81dbf896267a" target="_blank" rel="noopener">Windows On-Screen Keyboard</a> · <a href="https://support.microsoft.com/en-us/windows/get-to-know-the-touch-keyboard-004f3d67-855b-27f0-6f7c-d5145f691181" target="_blank" rel="noopener">Windows touch keyboard</a></li>
+        <li><a href="https://support.microsoft.com/en-US/accessibility/windows/voice-access/voice-access-command-list" target="_blank" rel="noopener">Voice Access commands</a> · <a href="https://support.microsoft.com/en-us/accessibility/windows/use-voice-typing-to-talk-instead-of-type-on-your-pc" target="_blank" rel="noopener">Voice typing</a> · <a href="https://support.microsoft.com/en-us/windows/using-the-clipboard-30375039-ce71-9fe4-5b30-21b7aab6b13f" target="_blank" rel="noopener">Clipboard history</a></li>
+        <li><a href="https://support.apple.com/en-gb/guide/mac-help/mchl437b47b0/mac" target="_blank" rel="noopener">macOS Dwell actions</a> · <a href="https://support.apple.com/en-hk/guide/mac-help/change-keyboard-settings-for-accessibility-mchlae61a6de/mac" target="_blank" rel="noopener">Accessibility Keyboard options</a></li>
+        <li><a href="https://help.gnome.org/gnome-help/a11y-right-click.html" target="_blank" rel="noopener">GNOME simulated secondary click</a> · <a href="https://github.com/onboard-osk/onboard" target="_blank" rel="noopener">Onboard</a> · <a href="https://github.com/KDE/plasma-keyboard" target="_blank" rel="noopener">Plasma Keyboard</a></li>
+      </ul>
+      <h4>Assistive tools</h4><ul>
+        <li><a href="https://github.com/Optikey/Optikey/wiki/Simulate-a-mouse" target="_blank" rel="noopener">OptiKey mouse actions</a> · <a href="https://github.com/Optikey/Optikey/wiki/Look-to-scroll" target="_blank" rel="noopener">Look to Scroll</a> · <a href="https://abledata.acl.gov/product/dwell-clicker-2" target="_blank" rel="noopener">Dwell Clicker 2</a></li>
+        <li><a href="https://pilotmoon.com/dwellclick/help/prefs.html" target="_blank" rel="noopener">DwellClick settings</a> · <a href="https://hub.thinksmartbox.com/knowledgebase/computer-control/" target="_blank" rel="noopener">Grid 3 Computer Control</a> · <a href="https://learn.microsoft.com/en-us/windows/mixed-reality/design/gaze-and-dwell-eyes" target="_blank" rel="noopener">Microsoft: gaze and dwell timing</a></li>
+      </ul>
+      <h4>Clipboard, snip, voice</h4><ul>
+        <li><a href="https://sabrogden.github.io/Ditto/" target="_blank" rel="noopener">Ditto</a> · <a href="https://pasteapp.io/help/paste-on-mac" target="_blank" rel="noopener">Paste</a> · <a href="https://github.com/p0deje/Maccy" target="_blank" rel="noopener">Maccy</a> · <a href="https://getsharex.com/docs/image-editor.html" target="_blank" rel="noopener">ShareX editor</a> · <a href="https://flameshot.org/" target="_blank" rel="noopener">Flameshot</a></li>
+        <li><a href="https://github.com/cjpais/handy" target="_blank" rel="noopener">Handy</a> · <a href="https://github.com/savbell/whisper-writer" target="_blank" rel="noopener">WhisperWriter</a> · <a href="https://superwhisper.com/docs/common-issues/hallucinations" target="_blank" rel="noopener">Whisper and silence</a> · <a href="https://huggingface.co/ggerganov/whisper.cpp/tree/main" target="_blank" rel="noopener">whisper.cpp models</a></li>
+        <li><a href="https://vocova.app/blog/ai-transcription-accuracy-benchmark-2026" target="_blank" rel="noopener">Accuracy benchmark (FLEURS)</a> · <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3" target="_blank" rel="noopener">Parakeet v3</a></li>
+      </ul>
+      <h4>Frameworks and Windows internals</h4><ul>
+        <li><a href="https://github.com/slint-ui/slint/blob/master/CHANGELOG.md" target="_blank" rel="noopener">Slint changelog</a> · <a href="https://github.com/MicrosoftEdge/WebView2Feedback/issues/4884" target="_blank" rel="noopener">WebView2 fails with uiAccess</a> · <a href="https://blog.adeltax.com/window-z-order-in-windows-10/" target="_blank" rel="noopener">Window z-order bands</a></li>
+        <li><a href="https://devblogs.microsoft.com/oldnewthing/20240919-00/?p=110283" target="_blank" rel="noopener">Raymond Chen on WS_EX_NOACTIVATE</a> · <a href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-tounicodeex" target="_blank" rel="noopener">ToUnicodeEx</a> · <a href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput" target="_blank" rel="noopener">KEYBDINPUT (Unicode)</a></li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener">DeepSeek Harness</a> · <a href="https://thenewstack.io/deepseek-harness-open-source-plugins/" target="_blank" rel="noopener">The New Stack article</a></li>
+      </ul>
+      <h4>Design references</h4><ul>
+        <li><a href="https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/geometry" target="_blank" rel="noopener">Windows 11 geometry</a> · <a href="https://learn.microsoft.com/en-us/windows/apps/design/style/mica" target="_blank" rel="noopener">Mica</a> · <a href="https://fluent2.microsoft.design/shapes" target="_blank" rel="noopener">Fluent 2 shapes</a></li>
+        <li><a href="https://m2.material.io/design/color/dark-theme.html" target="_blank" rel="noopener">Material Design: dark theme</a> · <a href="https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-user-account-settings/managing-your-theme-settings" target="_blank" rel="noopener">GitHub theme settings (Dark Dimmed)</a></li>
+        <li><a href="https://collections.vam.ac.uk/item/O1360553/" target="_blank" rel="noopener">Braun ET66 (V&amp;A)</a> · <a href="https://www.counter-print.co.uk/blogs/spotlight-on-design/spotlight-on-design-braun-calculator" target="_blank" rel="noopener">Counter-Print on the ET66</a></li>
+        <li><a href="https://kbdfans.com/products/mtnu-modern-dolch" target="_blank" rel="noopener">Modern Dolch keycaps</a> · <a href="https://matrixzj.github.io/docs/gmk-keycaps/ColorCodes/" target="_blank" rel="noopener">GMK colour codes</a></li>
+      </ul>
+      <h4>Fonts and accessibility</h4><ul>
+        <li><a href="https://github.com/google/fonts/tree/main/ofl" target="_blank" rel="noopener">Google Fonts (SIL OFL)</a> · <a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html" target="_blank" rel="noopener">WCAG 2.2 target size</a> · <a href="https://en.wikipedia.org/wiki/ISO/IEC_9995" target="_blank" rel="noopener">ISO/IEC 9995 key legends</a></li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const LU = window.lucide || null;
+function ico(name, cls){
+  const node = LU && (LU[name] || (LU.icons && LU.icons[name]));
+  if(!node) return '<span class="i-fb">'+name.slice(0,1)+'</span>';
+  const draw = n => n.map(([t,a,c]) => '<'+t+' '+Object.entries(a).map(([k,v])=>k+'="'+v+'"').join(' ')+'>'+(c?draw(c):'')+'</'+t+'>').join('');
+  return '<svg class="i '+(cls||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+draw(node)+'</svg>';
+}
+function fillIcons(root){ (root||document).querySelectorAll('[data-i]').forEach(el=>{ el.outerHTML = ico(el.getAttribute('data-i')); }); }
+const WINLOGO = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.5 3.5h8v8h-8zM12.5 3.5h8v8h-8zM3.5 12.5h8v8h-8zM12.5 12.5h8v8h-8z"/></svg>';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+/* ---------------- data ---------------- */
+const up = a => a.map(c => c.toUpperCase());
+const LANGS = [
+  { id:'en', short:'EN', name:'English (US)', layout:'QWERTY', rtl:false,
+    rows:[['`','1','2','3','4','5','6','7','8','9','0','-','='],['q','w','e','r','t','y','u','i','o','p','[',']','\\'],['a','s','d','f','g','h','j','k','l',';',"'"],['z','x','c','v','b','n','m',',','.','/']],
+    shift:[['~','!','@','#','$','%','^','&','*','(',')','_','+'],up(['q','w','e','r','t','y','u','i','o','p']).concat(['{','}','|']),up(['a','s','d','f','g','h','j','k','l']).concat([':','"']),up(['z','x','c','v','b','n','m']).concat(['<','>','?'])] },
+  { id:'fr', short:'FR', name:'Français', layout:'AZERTY', rtl:false,
+    rows:[['²','&','é','"',"'",'(','-','è','_','ç','à',')','='],['a','z','e','r','t','y','u','i','o','p','^','$','*'],['q','s','d','f','g','h','j','k','l','m','ù'],['w','x','c','v','b','n',',',';',':','!']],
+    shift:[['²','1','2','3','4','5','6','7','8','9','0','°','+'],up(['a','z','e','r','t','y','u','i','o','p']).concat(['¨','£','µ']),up(['q','s','d','f','g','h','j','k','l','m']).concat(['%']),up(['w','x','c','v','b','n']).concat(['?','.','/','§'])],
+    altgr:[['','','~','#','{','[','|','`','\\','^','@',']','}'],['','','€','','','','','','','','','',''],[],[]] },
+  { id:'ar', short:'ع', name:'العربية', layout:'Arabic 101', rtl:true,
+    rows:[['ذ','1','2','3','4','5','6','7','8','9','0','-','='],['ض','ص','ث','ق','ف','غ','ع','ه','خ','ح','ج','د','\\'],['ش','س','ي','ب','ل','ا','ت','ن','م','ك','ط'],['ئ','ء','ؤ','ر','لا','ى','ة','و','ز','ظ']],
+    shift:[['\u0651','!','@','#','$','%','^','&','*',')','(','_','+'],['\u064E','\u064B','\u064F','\u064C','لإ','إ','\u2018','÷','×','؛','<','>','|'],['\u0650','\u064D',']','[','لأ','أ','ـ','،','/',':','"'],['~','\u0652','}','{','لآ','آ','\u2019',',','.','؟']] }
+];
+const WORDS = {
+  en:{ next:['I','the','Thanks','Hello'], all:['the','that','this','thank you','thanks','there','their','they','then','these','think','hello','have','how','help','please','meeting','message','morning','tomorrow','today','time','report','review','regards','keyboard','Friday','Monday','with','will','would','what','when','where','which','you','your','and','are','about','again','available','because','before','best','could','can','call','document','email','file','for','from','great','good','just','know','let','like','looking','make','more','need','next','not','now','okay','see','send','should','soon','sure','talk','update','very','week','work'] },
+  fr:{ next:['Bonjour','je','merci','le'], all:['le','la','les','de','des','du','et','est','en','je','vous','nous','merci','merci beaucoup','bonjour','bonsoir','bien','bonne','pour','par','pas','plus','peux','pouvez','avec','avant','après',"aujourd'hui",'demain','dans','document','rapport','réunion','rendez-vous','salut','semaine','très','toujours','cordialement','clavier','comment','ça',"c'est",'fichier','envoyer','voici','vendredi','lundi'] },
+  ar:{ next:['السلام عليكم','شكرًا','من','في'], all:['في','من','على','إلى','عن','أن','إن','هذا','هذه','ذلك','شكرًا','شكرًا جزيلًا','مرحبا','السلام عليكم','وعليكم السلام','كيف','كيف حالك','الحمد لله','إن شاء الله','اليوم','غدًا','الملف','التقرير','الاجتماع','أرسل','أرسلت','لوحة المفاتيح','صباح الخير','مساء الخير','يوم','الجمعة','الأسبوع','من فضلك','ممكن','نعم','كل','مع','بعد','قبل'] }
+};
+const DOMAINS = ['gmail.com','outlook.com','hotmail.com','yahoo.com','icloud.com'];
+const EMAILS = ['alex.work@example.com','hello@example.org','alex.r@example.net','contact@example.com','support@example.org','team@example.com'];
+const PASSWORDS = [['github.com','alex.work@example.com'],['gitlab.com','alex.r@example.net'],['mail.example.org','hello@example.org'],['forum.example.net','alex_r'],['school.example.edu','alex.r'],['shop.example.com','alex.work@example.com']];
+const NAMES = ['Alex R.','Alex (work)','Nadia K.','Support team'];
+const VOICE = {
+  en:'Hi Nadia, I finished the report and I will send it before Friday. Thank you for your patience.',
+  fr:"Bonjour Nadia, j'ai terminé le rapport et je vous l'envoie avant vendredi. Merci pour votre patience.",
+  ar:'مرحبًا نادية، انتهيت من التقرير وسأرسله قبل يوم الجمعة. شكرًا على صبرك.'
+};
+const NOTES0 = "Hi team,\n\nHere is the plan for the on-screen keyboard.\nWeek one: prove the risky parts on Windows: never stealing the focus, always on top, Arabic text, hold-to-right-click.\nThen we build one module at a time: keyboard core, mouse helpers, scroll pad, voice, clipboard, quick-fill, snip.\nEvery module ships with its own tests and security checks.\n\nThis text is longer than the box: point here, then tap ▼ on the keyboard's round pad.\n\nThanks,\nAlex";
+const STYLES = [
+  { id:'native', name:'Native Adaptive', tag:'Blends into Windows, macOS and Linux', rec:'Default',
+    why:'Looks like part of the operating system: Fluent corner radii (4 px keys inside an 8 px window), a Mica-like frosted plate, and the system accent colour. The real app reads the accent colour and system font from the OS.',
+    dark:'Soft dark: #2C2F33 plate and #3B3E43 keys instead of near-black, off-white #E3E5E8 legends (about 8:1 contrast), and a softer blue accent.',
+    fonts:'System font (Segoe UI Variable on Windows) + Noto Sans Arabic', suits:'Everyday use; the keyboard blends into the system.',
+    refs:[['Windows 11 geometry','https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/geometry'],['Mica material','https://learn.microsoft.com/en-us/windows/apps/design/style/mica'],['Material Design: dark theme','https://m2.material.io/design/color/dark-theme.html']] },
+  { id:'et66', name:'ET66 · Less but better', tag:'Braun calculator: colour marks function',
+    why:"From Braun's ET66 calculator (Dietrich Lubs and Dieter Rams, 1987), where colour marks function and nothing else. Brown keys are modifiers, yellow is Enter, and a green light shows that a key or mode is on. IBM Plex Sans Arabic was designed together with IBM Plex Sans, so EN, FR and ع read as one family.",
+    dark:'Soft dark: warm grey #2A2826 body and #3A3734 keys, a softened brown for modifiers, a less glaring yellow #E6BE3A, cream legends.',
+    fonts:'IBM Plex Sans + IBM Plex Sans Arabic', suits:'Long typing sessions; finding function keys at a glance.',
+    refs:[['Braun ET66 in the V&A collection','https://collections.vam.ac.uk/item/O1360553/'],['Counter-Print on the ET66','https://www.counter-print.co.uk/blogs/spotlight-on-design/spotlight-on-design-braun-calculator']] },
+  { id:'dolch', name:'Modern Dolch', tag:'Real keycap colourway, pressable feel',
+    why:'Real keycap colours from the GMK Modern Dolch set: grey letters, dark modifiers, a teal Enter and rose Esc and Backspace. The inset top suggests a physical keycap, so every key reads as something to press.',
+    dark:'Soft dark: #2A2C2E plate and #4A4D4F caps, with the teal and rose slightly muted so they do not glare.',
+    fonts:'Rubik (one family for Latin and Arabic)', suits:'People who like the feel of a real mechanical keyboard.',
+    refs:[['KBDfans Modern Dolch','https://kbdfans.com/products/mtnu-modern-dolch'],['GMK colour codes','https://matrixzj.github.io/docs/gmk-keycaps/ColorCodes/']] }
+];
+const CLIPS0 = [
+  { id:'c1', type:'text', title:'Meeting moved to Thursday 10:00, room B2', src:'Outlook', t:'16:32' },
+  { id:'c2', type:'image', title:'Screenshot 2026-09-26 163012.png', src:'Snip', t:'16:30', meta:'1920 × 1080', th:'img2' },
+  { id:'c3', type:'file', title:'Invoice_2026-09.pdf', src:'File Explorer', t:'15:58', meta:'248 KB' },
+  { id:'c4', type:'text', title:'السلام عليكم، أرسلت لك الملف', src:'WhatsApp', t:'15:10', ar:true },
+  { id:'c5', type:'video', title:'demo-recording.mp4', src:'File Explorer', t:'14:02', meta:'0:42', exp:'1 day' },
+  { id:'c6', type:'text', title:'Bonjour, merci pour votre retour rapide.', src:'Gmail', t:'Yesterday 18:21' },
+  { id:'c7', type:'link', title:'https://github.com/deepseek-ai/deepseek-harness', src:'Edge', t:'Yesterday 11:05' },
+  { id:'c8', type:'audio', title:'voice-note.m4a', src:'WhatsApp', t:'Yesterday 09:40', meta:'0:18', exp:'today' },
+  { id:'c9', type:'image', title:'logo-draft.png', src:'Figma', t:'Tue 14:12', meta:'512 × 512', th:'img3' },
+  { id:'c10', type:'text', title:'alex.work@example.com', src:'Quick-fill', t:'Mon 09:00', pin:true },
+  { id:'c11', type:'file', title:'keyboard-notes.docx', src:'File Explorer', t:'Mon 08:12', meta:'64 KB' },
+  { id:'c12', type:'text', title:'Ctrl, Shift and Esc together open Task Manager', src:'Notes', t:'Sun 21:40' }
+];
+const TYPEICON = { text:'FileText', image:'Image', file:'FileText', video:'Film', audio:'FileAudio', link:'Link' };
+const MODMAP = [['Keyboard','Keyboard core','Keys, modifiers, layers, themes'],['Languages','Layouts','Installed languages, key labels'],['MousePointerClick','Input broker','Separate signed process; sends keys and clicks'],['MouseRight','Mouse assist','Hold engine: Right-click, Grab'],['ChevronsUp','Scroll pad','Continuous scroll, two speeds'],['Mic','Voice','Recorder, Whisper local or cloud'],['MessageSquareText','Prediction','Word and email suggestions'],['ClipboardClock','Clipboard','History, previews, multi-paste'],['KeyRound','Quick-fill vault','Encrypted entries, export'],['TextSelect','Selection helper','Floating Copy button'],['ScissorsLineDashed','Snip','Capture, annotate, OCR'],['Power','Power','System power dialog']];
+
+/* ---------------- state ---------------- */
+const S = {
+  style:'native', theme:'light', os:'win', scale:1, langKey:'carousel', sticky:'next', holdMs:1500, sounds:true, fade:false, liked:['native'],
+  lang:0, mods:{shift:0,ctrl:0,alt:0,win:0,altr:0}, caps:false, layer:'main',
+  rclick:false, grab:false, restoreR:false, carry:null, anchor:null,
+  scroll:{dir:null,lvl:0}, mic:'idle', force:'auto',
+  text:NOTES0, caret:NOTES0.length, selAll:false, attach:[], undo:[],
+  pop:null, clipSel:[], clipFilter:'all', clipHi:0, clips:CLIPS0.slice(), vault:false, fillTab:'emails', fillHi:0,
+  kbX:null, kbY:null, moving:null, minimized:false, snip:null, inFolder:0, lastVoice:null
+};
+const stage = $('#stage'), kb = $('#kb'), field = $('#field'), attachEl = $('#attach'), doc = $('#doc');
+const ring = $('#ring'), badge = $('#badge'), photo = $('#photo'), folder = $('#folder');
+let db = null, bubbleEl = null, popEl = null, ctxEl = null, capEl = null, selPill = null, snipEls = [];
+const lang = () => LANGS[S.lang];
+
+/* ---------------- sound ---------------- */
+let AC = null;
+function ac(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ AC = null; } } if(AC && AC.state==='suspended'){ AC.resume().catch(()=>{}); } return AC; }
+function tone(o){
+  if(!S.sounds) return; const a = ac(); if(!a) return;
+  const t = a.currentTime + (o.delay||0), osc = a.createOscillator(), g = a.createGain();
+  osc.type = o.type||'sine'; osc.frequency.setValueAtTime(o.f0, t);
+  if(o.f1) osc.frequency.exponentialRampToValueAtTime(o.f1, t + o.dur*0.7);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.gain||0.06, t+0.006); g.gain.exponentialRampToValueAtTime(0.0001, t+o.dur);
+  osc.connect(g); g.connect(a.destination); osc.start(t); osc.stop(t+o.dur+0.03);
+}
+const sTick = () => tone({f0:1900,f1:1150,dur:.035,type:'triangle',gain:.02});
+const sPop = () => { tone({f0:330,f1:1300,dur:.1,gain:.09}); tone({f0:1600,f1:2400,dur:.04,gain:.015,delay:.05}); };
+const sDrop = () => tone({f0:950,f1:260,dur:.12,gain:.07});
+const sSoft = () => tone({f0:540,f1:430,dur:.07,gain:.035});
+const sMicOn = () => { tone({f0:587,dur:.16,type:'triangle',gain:.05}); tone({f0:880,dur:.22,type:'triangle',gain:.05,delay:.11}); };
+const sMicOff = () => { tone({f0:880,dur:.16,type:'triangle',gain:.05}); tone({f0:587,dur:.24,type:'triangle',gain:.05,delay:.11}); };
+
+/* ---------------- helpers ---------------- */
+let toastT = null;
+function toast(msg, icon){
+  $$('.toast', stage).forEach(t=>t.remove()); clearTimeout(toastT);
+  const t = document.createElement('div'); t.className='toast'; t.innerHTML = (icon?ico(icon):'') + '<span>'+esc(msg)+'</span>';
+  stage.appendChild(t); toastT = setTimeout(()=>t.remove(), 2600);
+}
+function stagePt(e){ const r = stage.getBoundingClientRect(); return { x:e.clientX - r.left, y:e.clientY - r.top }; }
+function isDark(){ const d = document.documentElement.getAttribute('data-theme'); if(d==='dark') return true; if(d==='light') return false; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+function mode(){ return S.theme==='auto' ? (isDark()?'dark':'light') : S.theme; }
+function keepVisible(box, el){ const t = el.offsetTop, b = t + el.offsetHeight; if(t < box.scrollTop) box.scrollTop = t - 4; else if(b > box.scrollTop + box.clientHeight) box.scrollTop = b - box.clientHeight + 4; }
+function hideHint(){ const h=$('#hint'); if(h) h.classList.add('off'); }
+
+/* ---------------- keyboard model ---------------- */
+const ch = (r) => LANGS[0].rows[r].map((_,i)=>({k:'c-'+r+'-'+i, w:1, t:'char', r, i}));
+const ROWS = [
+  [{k:'esc',w:1,t:'mod danger'}, ...ch(0), {k:'bksp',w:2,t:'mod danger'}],
+  [{k:'tab',w:1.5,t:'mod'}, ...ch(1), {k:'del',w:1.5,t:'mod'}],
+  [{k:'caps',w:1.75,t:'mod'}, ...ch(2), {k:'enter',w:3.25,t:'enter'}],
+  [{k:'shift',w:2.25,t:'mod'}, ...ch(3), {k:'shift',w:1.75,t:'mod'}, {k:'up',w:1,t:'mod'}, {k:'menu',w:1,t:'mod'}],
+  [{k:'ctrl',w:1.25,t:'mod'}, {k:'win',w:1,t:'mod'}, {k:'alt',w:1,t:'mod'}, {k:'lang',w:1.75,t:'lang'}, {k:'space',w:7,t:'space'}, {k:'altr',w:1,t:'mod'}, {k:'left',w:1,t:'mod'}, {k:'down',w:1,t:'mod'}, {k:'right',w:1,t:'mod'}]
+];
+const MARK = /^[\u064B-\u0652]$/;
+const disp = c => MARK.test(c) ? '\u25CC'+c : c;
+const isArabic = c => /[\u0600-\u06FF]/.test(c);
+const isLetter = c => c.length===1 && c.toLowerCase()!==c.toUpperCase();
+function charOf(r,i){
+  const L = lang(), base = L.rows[r][i], sh = (L.shift[r]||[])[i]||base, ag = L.altgr && L.altgr[r] ? (L.altgr[r][i]||'') : '';
+  if(S.mods.altr && L.altgr) return ag || base;
+  let useShift = S.mods.shift>0; if(S.caps && isLetter(base)) useShift = !useShift;
+  return useShift ? sh : base;
+}
+function keyTitle(k){
+  return ({esc:'Escape',bksp:'Backspace',del:'Delete',tab:'Tab',caps:'Caps Lock',enter:'Enter',shift:'Shift',up:'Up',down:'Down',left:'Left',right:'Right',menu:'Menu key (context menu)',
+    ctrl:'Control',win:S.os==='win'?'Windows key':S.os==='mac'?'Option':'Super',alt:S.os==='mac'?'Command':'Alt',altr:S.os==='mac'?'Command':(lang().altgr?'AltGr':'Alt'),lang:'Language',space:'Space'})[k]||k;
+}
+function modLabel(k){
+  const lbl = t => '<span class="lbl">'+t+'</span>';
+  const sym = (s,t) => '<span class="sym">'+s+'</span>'+(S.scale>=1.3?'<span class="lbl">'+t+'</span>':'');
+  if(k==='ctrl') return S.os==='mac' ? sym('⌃','control') : lbl('Ctrl');
+  if(k==='win') return S.os==='win' ? '<span class="ico">'+WINLOGO+'</span>' : S.os==='mac' ? sym('⌥','option') : lbl('Super');
+  if(k==='alt') return S.os==='mac' ? sym('⌘','cmd') : lbl('Alt');
+  if(k==='altr') return S.os==='mac' ? sym('⌘','cmd') : lbl(lang().altgr ? 'AltGr' : 'Alt');
+  return '';
+}
+function langInner(){
+  const n = LANGS.length, cur = lang(), prev = LANGS[(S.lang+n-1)%n], next = LANGS[(S.lang+1)%n];
+  if(S.langKey==='carousel') return '<span class="lk car"><span class="car-track'+(S._langAnim?' '+S._langAnim:'')+'">'+[prev,cur,next].map((l,j)=>'<span class="car-it'+(j===1?' cur':'')+(l.rtl?' ar':'')+'">'+l.short+'</span>').join('')+'</span></span>';
+  if(S.langKey==='cycle') return '<span class="lk cyc">'+ico('Globe')+'<span class="cyc-name'+(cur.rtl?' ar':'')+'">'+cur.short+'</span><span class="dots">'+LANGS.map((_,j)=>'<i class="'+(j===S.lang?'on':'')+'"></i>').join('')+'</span></span>';
+  return '<span class="lk lst"><span class="'+(cur.rtl?'ar':'')+'">'+cur.short+'</span>'+ico('ChevronUp')+'</span>';
+}
+function keyInner(d){
+  if(d.t==='char'){
+    const L = lang(), c = charOf(d.r,d.i), base = L.rows[d.r][d.i], sh = (L.shift[d.r]||[])[d.i]||'';
+    let sec = '';
+    if(d.r===0 || (!L.rtl && !isLetter(base))){ const alt = (c===base) ? sh : base; if(alt && alt!==c) sec = alt; }
+    let third = ''; if(L.altgr && !S.mods.altr){ const ag = (L.altgr[d.r]||[])[d.i]; if(ag) third = ag; }
+    return '<span class="lg'+(isArabic(c)?' ar':'')+'">'+esc(disp(c))+'</span>'+(sec?'<span class="lg2'+(isArabic(sec)?' ar':'')+'">'+esc(disp(sec))+'</span>':'')+(third?'<span class="lg3">'+esc(third)+'</span>':'');
+  }
+  const k = d.k, big = S.scale>=1.3;
+  const I = (n, label) => '<span class="ico">'+ico(n)+'</span>'+(big&&label?'<span class="lbl">'+label+'</span>':'');
+  switch(k){
+    case 'esc': return '<span class="lbl">Esc</span>';
+    case 'bksp': return I('Delete','Back');
+    case 'del': return '<span class="lbl">Del</span>';
+    case 'tab': return I('ArrowRightToLine','Tab');
+    case 'caps': return I('ArrowBigUpDash','Caps');
+    case 'enter': return I('CornerDownLeft','Enter');
+    case 'shift': return I('ArrowBigUp', big?'Shift':'');
+    case 'up': return I('ChevronUp'); case 'down': return I('ChevronDown'); case 'left': return I('ChevronLeft'); case 'right': return I('ChevronRight');
+    case 'menu': return I('SquareMenu');
+    case 'lang': return langInner();
+    case 'space': { const L=lang(); return '<span class="sp'+(L.rtl?' ar':'')+'">'+esc(L.name)+' · '+L.layout+'</span>'; }
+    default: return modLabel(k);
+  }
+}
+function keyState(k){ const c = []; if(k in S.mods && S.mods[k]) c.push('locked'); if(k==='caps' && S.caps) c.push('locked'); return c; }
+function keyHTML(d){
+  const cls = ['key'].concat(d.t.split(' ')).concat(keyState(d.k));
+  const title = d.t==='char' ? '' : ' title="'+esc(keyTitle(d.k))+'" aria-label="'+esc(keyTitle(d.k))+'"';
+  const pressed = (d.k in S.mods || d.k==='caps') ? ' aria-pressed="'+(keyState(d.k).length>0)+'"' : '';
+  return '<button class="'+cls.join(' ')+'" data-k="'+d.k+'" style="--span:'+Math.round(d.w*4)+'"'+title+pressed+'><span class="cap">'+keyInner(d)+'<i class="led"></i></span></button>';
+}
+function sideKey(k, icon, label, col, row){
+  const on = (k==='rclick'&&S.rclick) || (k==='grab'&&(S.grab||S.carry)) || (k==='clip'&&S.pop==='clip') || (k==='fill'&&S.pop==='fill') || (k==='snip'&&S.snip) || (k==='sc'&&S.layer==='shortcuts');
+  const rec = k==='mic' && S.mic!=='idle';
+  return '<button class="key act'+(on?' on':'')+(rec?' rec':'')+'" data-k="'+k+'" style="grid-column:'+col+';grid-row:'+row+'" title="'+esc(label)+'" aria-label="'+esc(label)+'" aria-pressed="'+(on||rec)+'"><span class="cap"><span class="ico">'+ico(icon)+'</span><span class="sub">'+esc(label.split(':')[0])+'</span><i class="led"></i></span></button>';
+}
+function sideMain(){
+  const sc = S.scroll, lv = [1,2].map(n=>'<i class="'+(sc.lvl>=n?'on':'')+'"></i>').join('');
+  const dp = d => '<button class="dp'+(sc.dir===d?' on':'')+'" data-dir="'+d+'" aria-label="Scroll '+d+'">'+ico({up:'ChevronUp',down:'ChevronDown',left:'ChevronLeft',right:'ChevronRight'}[d])+'</button>';
+  return sideKey('rclick','MouseRight','Right-click: hold 1.5 s',1,1) + sideKey('grab','HandGrab','Grab: drag and drop, select text',2,1) + sideKey('sc','Command','Shortcuts',3,1) +
+    '<div class="dpad-wrap"><div class="dpad'+(sc.dir?' scrolling':'')+'"><div class="dp-rot">'+dp('up')+dp('right')+dp('left')+dp('down')+'</div><div class="dp-hub"></div><button class="dp-stop" data-k="stop" aria-label="Stop scrolling">'+ico('Square')+'<span class="lv">'+lv+'</span></button></div></div>' +
+    sideKey('mic','Mic','Voice typing',3,2) + sideKey('clip','ClipboardClock','Clipboard history',3,3) + sideKey('snip','ScissorsLineDashed','Snip',3,4) +
+    sideKey('fill','KeyRound','Quick-fill',1,5) + sideKey('set','Settings2','Settings',2,5) + sideKey('power','Power','Power',3,5);
+}
+function sideShortcuts(){
+  const P = S.os==='mac' ? '⌘' : 'Ctrl';
+  const items = [['selall','TextSelect','Select all',P+'+A'],['copy','Copy','Copy',P+'+C'],['cut','Scissors','Cut',P+'+X'],['paste','ClipboardPaste','Paste',P+'+V'],['undo','Undo2','Undo',P+'+Z'],['redo','Redo2','Redo',S.os==='mac'?'⌘+⇧+Z':'Ctrl+Y'],
+    ['find','Search','Find',P+'+F'],['save','Save','Save',P+'+S'],['alttab','ArrowLeftRight','Switch app',S.os==='mac'?'⌘+Tab':'Alt+Tab'],['desk','MonitorDown','Show desktop',S.os==='mac'?'F11':'Win+D'],['newtab','Plus','New tab',P+'+T'],['closetab','X','Close tab',P+'+W'],['emoji','Smile','Emoji',S.os==='mac'?'⌃+⌘+Space':'Win+.'],['print','FileText','Print',P+'+P'],['back','ChevronLeft','Back to actions','']];
+  return items.map((it,n)=>'<button class="key act'+(it[0]==='back'?' on':'')+'" data-k="sc-'+it[0]+'" data-combo="'+esc(it[3])+'" style="grid-column:'+(n%3+1)+';grid-row:'+(Math.floor(n/3)+1)+'" title="'+esc(it[2]+(it[3]?' ('+it[3]+')':''))+'" aria-label="'+esc(it[2])+'"><span class="cap"><span class="ico">'+ico(it[1])+'</span><span class="sub">'+esc(it[2].split(' ')[0])+'</span></span></button>').join('');
+}
+function topBar(){
+  const dark = mode()==='dark';
+  return '<div class="kb-top"><button class="tb grip" data-k="grip" title="Move: click, move, click to place" aria-label="Move keyboard">'+ico('GripHorizontal')+'</button>'+
+    '<div class="sugg" id="sugg">'+suggHTML()+'</div>'+
+    '<button class="tb" data-k="theme" title="'+(dark?'Switch to light':'Switch to soft dark')+'" aria-label="Light or dark">'+ico(dark?'Sun':'Moon')+'</button>'+
+    '<button class="tb'+(S.fade?' on':'')+'" data-k="fade" title="Fade when idle" aria-label="Fade when idle">'+ico(S.fade?'EyeOff':'Eye')+'</button>'+
+    '<button class="tb" data-k="min" title="Shrink to a bubble" aria-label="Minimise">'+ico('Minus')+'</button>'+
+    '<button class="tb" data-k="close" title="Close" aria-label="Close">'+ico('X')+'</button></div>';
+}
+
+/* suggestions */
+function token(){ const b = S.text.slice(0,S.caret); const m = b.match(/[^\s]*$/); return m?m[0]:''; }
+function suggestions(){
+  const tok = token();
+  if(tok.includes('@')){
+    const at = tok.indexOf('@'), user = tok.slice(0,at), dom = tok.slice(at+1).toLowerCase();
+    const list = DOMAINS.filter(d=>d.startsWith(dom) && d!==dom).slice(0,4).map(d=>({label:'@'+d, value:user+'@'+d, email:true}));
+    const saved = EMAILS.filter(e=>user && e.startsWith(user.toLowerCase())).map(e=>({label:e, value:e, email:true, saved:true}));
+    return saved.concat(list).slice(0,4);
+  }
+  const W = WORDS[lang().id];
+  if(!tok) return W.next.map(w=>({label:w, value:w}));
+  const low = tok.toLowerCase();
+  const saved = EMAILS.filter(e=>low.length>1 && e.startsWith(low)).map(e=>({label:e, value:e, email:true, saved:true}));
+  const words = W.all.filter(w=>w.toLowerCase().startsWith(low) && w.toLowerCase()!==low).slice(0,4).map(w=>({label:w, value:w}));
+  return saved.concat(words).slice(0,4);
+}
+function suggHTML(){ const list = suggestions(); if(!list.length) return '<span class="none">No suggestions</span>'; return list.map((s,n)=>'<button class="chip'+(isArabic(s.label)?' ar':'')+'" data-sugg="'+n+'">'+(s.saved?ico('KeyRound'):s.email?ico('AtSign'):'')+esc(s.label)+'</button>').join(''); }
+function applySugg(n){
+  const s = suggestions()[n]; if(!s) return; const tok = token(); pushUndo();
+  S.text = S.text.slice(0, S.caret - tok.length) + s.value + (s.email?'':' ') + S.text.slice(S.caret);
+  S.caret = S.caret - tok.length + s.value.length + (s.email?0:1); renderField(); refreshSugg(); sTick();
+}
+function refreshSugg(){ const el = $('#sugg', kb); if(el) el.innerHTML = suggHTML(); }
+
+/* ---------------- render ---------------- */
+function applyTheme(){ stage.setAttribute('data-style', S.style); stage.setAttribute('data-mode', mode()); }
+function renderKb(swap){
+  kb.innerHTML = topBar() + '<div class="kb-body"><div class="kb-main'+(swap?' swap':'')+'">' + ROWS.map(r=>'<div class="row">'+r.map(keyHTML).join('')+'</div>').join('') + '</div><div class="kb-side">'+(S.layer==='main'?sideMain():sideShortcuts())+'</div></div>';
+  kb.classList.toggle('big', S.scale>=1.3); kb.classList.toggle('moving', !!S.moving); kb.hidden = S.minimized; S._langAnim = null; fitKb();
+}
+function effScale(){
+  kb.style.setProperty('--s', S.scale); stage.style.setProperty('--ks', S.scale);
+  const w = kb.offsetWidth, sw = stage.clientWidth - 16;
+  if(w > sw && w>0){ const s = (S.scale * sw / w).toFixed(3); kb.style.setProperty('--s', s); stage.style.setProperty('--ks', s); }
+}
+function fitKb(){
+  effScale();
+  const sw = stage.clientWidth, sh = stage.clientHeight, w = kb.offsetWidth, h = kb.offsetHeight;
+  if(S.kbX===null){ S.kbX = (sw - w)/2; S.kbY = sh - h - 14; }
+  S.kbX = clamp(S.kbX, 6, Math.max(6, sw - w - 6)); S.kbY = clamp(S.kbY, 6, Math.max(6, sh - h - 6));
+  kb.style.left = S.kbX+'px'; kb.style.top = S.kbY+'px';
+  if(capEl) placeCap(); if(popEl) placePop();
+}
+function renderField(){
+  if(!S.text) field.innerHTML = '<span class="caret"></span><span class="ph">Type with the keyboard below…</span>';
+  else field.innerHTML = '<span class="txt">'+esc(S.text.slice(0,S.caret))+'</span><span class="caret"></span><span class="txt">'+esc(S.text.slice(S.caret))+'</span>';
+  field.classList.toggle('all', S.selAll);
+  attachEl.innerHTML = S.attach.map(a=>'<span class="att">'+ico(TYPEICON[a.type]||'FileText')+esc(a.title)+'</span>').join('');
+  const c = $('.caret', field); if(c && !S._noAutoScroll) keepVisible(field, c);
+}
+function updateBadge(){
+  const parts = [];
+  if(S.moving) parts.push(ico('Move')+'Move');
+  else if(S.carry) parts.push(ico('HandGrab')+(S.carry.type==='text'?'Selecting':'Holding'));
+  else if(S.grab) parts.push(ico('HandGrab'));
+  if(S.rclick && !S.carry) parts.push(ico('MouseRight'));
+  if(S.scroll.dir) parts.push(ico({up:'ChevronUp',down:'ChevronDown',left:'ChevronLeft',right:'ChevronRight'}[S.scroll.dir])+(S.scroll.lvl===2?'fast':'slow'));
+  if(S.mic==='rec') parts.push('<span class="rec-dot"></span>'+ico('AudioLines'));
+  const html = parts.join('<span style="opacity:.4">·</span>');
+  if(html !== S._badgeHTML){ badge.innerHTML = html; S._badgeHTML = html; }
+  badge.classList.toggle('show', parts.length>0 && !!S._ptrIn);
+}
+
+/* ---------------- editing ---------------- */
+function pushUndo(){ S.undo.push({text:S.text, caret:S.caret, attach:S.attach.slice()}); if(S.undo.length>80) S.undo.shift(); }
+function insert(str){ if(S.selAll){ pushUndo(); S.text=''; S.caret=0; S.selAll=false; } pushUndo(); S.text = S.text.slice(0,S.caret) + str + S.text.slice(S.caret); S.caret += str.length; renderField(); refreshSugg(); }
+function backspace(){
+  if(S.selAll){ pushUndo(); S.text=''; S.caret=0; S.selAll=false; renderField(); refreshSugg(); return; }
+  if(S.caret>0){ pushUndo(); const b = Array.from(S.text.slice(0,S.caret)); b.pop(); const nb = b.join(''); S.text = nb + S.text.slice(S.caret); S.caret = nb.length; renderField(); refreshSugg(); }
+}
+function delFwd(){ if(S.caret < S.text.length){ pushUndo(); const a = Array.from(S.text.slice(S.caret)); a.shift(); S.text = S.text.slice(0,S.caret)+a.join(''); renderField(); refreshSugg(); } }
+function undo(){ const u = S.undo.pop(); if(u){ S.text=u.text; S.caret=u.caret; S.attach=u.attach; S.selAll=false; renderField(); refreshSugg(); } }
+function releaseHeld(){ if(S.sticky!=='next') return false; let c=false; for(const k in S.mods){ if(S.mods[k]){ S.mods[k]=0; c=true; } } return c; }
+function addClip(item){ S.clips.unshift(Object.assign({ id:'n'+Date.now(), t:'Just now', src:'Keyboard' }, item)); S.clipHi = 0; if(S.pop==='clip') openPop('clip', true); }
+function pasteLatestText(){ const c = S.clips.find(c=>c.type==='text'||c.type==='link'); if(c){ insert(c.title); toast('Pasted the newest text','ClipboardPaste'); } }
+function pasteItem(c){ if(c.type==='text' || c.type==='link') insert(c.title); else { pushUndo(); S.attach.push({type:c.type, title:c.title}); renderField(); } }
+
+/* ---------------- key actions ---------------- */
+function primaryOn(){ return S.os==='mac' ? S.mods.alt>0 || S.mods.altr>0 : S.mods.ctrl>0; }
+function comboNames(letter){
+  const n=[]; if(S.mods.ctrl) n.push(S.os==='mac'?'⌃':'Ctrl'); if(S.mods.win) n.push(S.os==='win'?'Win':S.os==='mac'?'⌥':'Super');
+  if(S.mods.alt || (S.mods.altr && (S.os==='mac' || !lang().altgr))) n.push(S.os==='mac'?'⌘':'Alt'); if(S.mods.shift) n.push('Shift'); n.push(letter); return n.join(' + ');
+}
+function runCombo(letter){
+  const L = letter.toLowerCase(), name = comboNames(letter.toUpperCase());
+  if(primaryOn() && !S.mods.win){
+    if(L==='a'){ S.selAll = true; renderField(); toast('Select all ('+name+')','TextSelect'); return; }
+    if(L==='c'){ const t = S.selAll ? S.text : (window.getSelection().toString() || ''); if(t){ addClip({type:'text', title:t.slice(0,160)}); toast('Copied ('+name+')','Copy'); } else toast('Nothing selected to copy','Copy'); return; }
+    if(L==='x'){ if(S.selAll && S.text){ addClip({type:'text', title:S.text.slice(0,160)}); pushUndo(); S.text=''; S.caret=0; S.selAll=false; renderField(); refreshSugg(); toast('Cut ('+name+')','Scissors'); } else toast('Select all first, then cut','Scissors'); return; }
+    if(L==='v'){ pasteLatestText(); return; }
+    if(L==='z'){ undo(); toast('Undo ('+name+')','Undo2'); return; }
+  }
+  if(S.mods.win && !primaryOn() && L==='v' && S.os==='win'){ openPop('clip'); toast('Win + V opens our clipboard history','ClipboardClock'); return; }
+  toast('Sent '+name,'Command');
+}
+function typeKey(r,i){
+  const L = lang();
+  if(S.mods.ctrl || S.mods.win || S.mods.alt || (S.mods.altr && (S.os==='mac' || !L.altgr))) runCombo(L.rtl ? LANGS[0].rows[r][i] : L.rows[r][i]);
+  else insert(charOf(r,i));
+  if(releaseHeld()) renderKb(); else refreshSugg();
+}
+function setLang(n, dir){
+  S.lang = (n + LANGS.length) % LANGS.length; S._langAnim = dir>0 ? 'from-r' : dir<0 ? 'from-l' : null;
+  if(S.mods.altr && !lang().altgr) S.mods.altr = 0;
+  renderKb(true); refreshSugg(); sSoft(); if(S.pop==='lang') closePop();
+}
+function toggleR(){ if(S.grab||S.carry){ cancelCarry(); S.grab=false; S.restoreR=false; } S.rclick = !S.rclick; sSoft(); hideHint(); toast(S.rclick?'Right-click is on. Short clicks still work; hold still 1.5 s to right-click.':'Right-click is off', 'MouseRight'); }
+function toggleGrab(){
+  if(S.carry){ cancelCarry(); finishGrab(); sSoft(); return; }
+  if(!S.grab){ S.restoreR = S.rclick; S.rclick=false; S.grab=true; toast('Grab is on. Hold 1.5 s on the photo or on text.','HandGrab'); }
+  else { S.grab=false; if(S.restoreR) S.rclick=true; S.restoreR=false; }
+  sSoft(); hideHint();
+}
+function finishGrab(){ S.grab=false; if(S.restoreR){ S.rclick=true; setTimeout(()=>toast('Right-click is back on','MouseRight'), 700); } S.restoreR=false; renderKb(); updateBadge(); }
+function escape(){
+  if(ctxEl){ closeCtx(); return; } if(S.snip){ endSnip(); return; } if(S.pop){ closePop(); return; }
+  if(S.carry){ cancelCarry(); finishGrab(); toast('Grab cancelled','X'); return; }
+  if(S.scroll.dir){ stopScroll(); return; } toast('Sent Esc');
+}
+/* keys typed while one of our own panels is open go to that panel */
+function panelKey(k){
+  if(S.pop==='clip'){
+    const list = clipList();
+    if(k==='up'){ S.clipHi = Math.max(0, S.clipHi-1); openPop('clip', true); return true; }
+    if(k==='down'){ S.clipHi = Math.min(list.length-1, S.clipHi+1); openPop('clip', true); return true; }
+    if(k==='enter'){ if(S.clipSel.length>1) pasteTogether(); else { const it = list[S.clipHi]; if(it){ pasteItem(it); toast('Pasted','ClipboardPaste'); closePop(); } } return true; }
+    if(k==='space'){ const it = list[S.clipHi]; if(it) tickClip(it.id); return true; }
+  }
+  if(S.pop==='fill'){
+    const rows = fillRows();
+    if(k==='up'){ S.fillHi = Math.max(0, S.fillHi-1); openPop('fill', true); return true; }
+    if(k==='down'){ S.fillHi = Math.min(rows.length-1, S.fillHi+1); openPop('fill', true); return true; }
+    if(k==='left' || k==='right'){ const t=['emails','passwords','names']; S.fillTab = t[(t.indexOf(S.fillTab)+(k==='right'?1:2))%3]; S.fillHi=0; openPop('fill', true); return true; }
+    if(k==='enter'){ const r = rows[S.fillHi]; if(r) fillAction(r, 'main'); return true; }
+  }
+  return false;
+}
+function onKey(k, btn, e){
+  if(S.pop && ['up','down','left','right','enter','space'].includes(k) && panelKey(k)){ flash(k); return; }
+  if(k.startsWith('c-')){ const p=k.split('-'); typeKey(+p[1], +p[2]); flash(k); return; }
+  if(k.startsWith('sc-')){ shortcut(k.slice(3)); return; }
+  switch(k){
+    case 'esc': escape(); break;
+    case 'bksp': backspace(); break;
+    case 'del': delFwd(); break;
+    case 'tab': insert('\t'); break;
+    case 'enter': insert('\n'); break;
+    case 'space': insert(' '); break;
+    case 'caps': S.caps=!S.caps; renderKb(); return;
+    case 'shift': case 'ctrl': case 'alt': case 'win': case 'altr': S.mods[k] = S.mods[k] ? 0 : 1; renderKb(); flash(k); return;
+    case 'left': S.caret=Math.max(0,S.caret-1); S.selAll=false; renderField(); refreshSugg(); break;
+    case 'right': S.caret=Math.min(S.text.length,S.caret+1); S.selAll=false; renderField(); refreshSugg(); break;
+    case 'up': case 'down': break;
+    case 'menu': { const r = field.getBoundingClientRect(), sr = stage.getBoundingClientRect(); openCtx(r.left - sr.left + 40, r.top - sr.top + 30, 'notes'); break; }
+    case 'lang': {
+      if(S.langKey==='carousel'){ const r = btn.getBoundingClientRect(); const x = e ? e.clientX - r.left : r.width; if(x < r.width/3) setLang(S.lang-1,-1); else setLang(S.lang+1,1); }
+      else if(S.langKey==='cycle') setLang(S.lang+1, 0);
+      else { if(S.pop==='lang') closePop(); else openPop('lang'); }
+      return;
+    }
+    case 'rclick': toggleR(); renderKb(); updateBadge(); return;
+    case 'grab': toggleGrab(); renderKb(); updateBadge(); return;
+    case 'sc': S.layer = S.layer==='main' ? 'shortcuts' : 'main'; renderKb(); return;
+    case 'mic': toggleMic(); return;
+    case 'clip': if(S.pop==='clip') closePop(); else openPop('clip'); return;
+    case 'fill': if(S.pop==='fill') closePop(); else openPop('fill'); return;
+    case 'snip': if(S.snip) endSnip(); else startSnip(); return;
+    case 'set': toast('Settings open in their own window. We design it in a later session.','Settings2'); return;
+    case 'power': toast(S.os==='win'?'Opens the system dialog "Shut Down Windows"':S.os==='mac'?'Opens the system dialog: Restart, Sleep, Shut Down':'Opens the system Power Off dialog','Power'); return;
+    case 'stop': stopScroll(); return;
+    case 'grip': startMove(e); return;
+    case 'theme': S.theme = mode()==='dark' ? 'light' : 'dark'; applyTheme(); renderKb(); renderStyleList(); syncControls(); sSoft(); return;
+    case 'fade': S.fade=!S.fade; syncControls(); renderKb(); toast(S.fade?'Fades after 3 s without the pointer':'Fade is off', S.fade?'EyeOff':'Eye'); return;
+    case 'min': minimize(); return;
+    case 'close': toast('In the real app, Close hides it to the tray','X'); return;
+  }
+  if(releaseHeld()) renderKb();
+  flash(k);
+}
+function shortcut(id){
+  const P = S.os==='mac' ? '⌘' : 'Ctrl';
+  switch(id){
+    case 'back': S.layer='main'; renderKb(); return;
+    case 'selall': S.selAll=true; renderField(); toast('Select all ('+P+'+A)','TextSelect'); break;
+    case 'copy': { const t = S.selAll ? S.text : window.getSelection().toString(); if(t){ addClip({type:'text', title:t.slice(0,160)}); toast('Copied','Copy'); } else toast('Nothing selected to copy','Copy'); break; }
+    case 'cut': if(S.selAll && S.text){ addClip({type:'text', title:S.text.slice(0,160)}); pushUndo(); S.text=''; S.caret=0; S.selAll=false; renderField(); refreshSugg(); toast('Cut','Scissors'); } else toast('Select all first, then cut','Scissors'); break;
+    case 'paste': pasteLatestText(); break;
+    case 'undo': undo(); toast('Undo','Undo2'); break;
+    default: { const b = kb.querySelector('[data-k="sc-'+id+'"]'); toast('Sent '+(b?b.dataset.combo:id),'Command'); }
+  }
+  flash('sc-'+id);
+}
+function flash(k){ kb.querySelectorAll('[data-k="'+k+'"]').forEach(b=>{ b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'), 130); }); }
+
+kb.addEventListener('mousedown', e => e.preventDefault());
+kb.addEventListener('pointerdown', e => { const b = e.target.closest('.key,.dp,.dp-stop,.tb,.chip'); if(!b) return; b.classList.add('down'); sTick(); ac(); });
+window.addEventListener('pointerup', () => { kb.querySelectorAll('.down').forEach(b=>b.classList.remove('down')); });
+kb.addEventListener('click', e => {
+  if(S.moving){ endMove(); return; }
+  hideHint();
+  const chip = e.target.closest('[data-sugg]'); if(chip){ applySugg(+chip.dataset.sugg); return; }
+  const dp = e.target.closest('[data-dir]'); if(dp){ scrollTap(dp.dataset.dir); return; }
+  const b = e.target.closest('[data-k]'); if(!b) return;
+  onKey(b.dataset.k, b, e);
+});
+kb.addEventListener('pointerenter', () => { kb.classList.remove('faded'); clearTimeout(S._fadeT); });
+kb.addEventListener('pointerleave', () => { clearTimeout(S._fadeT); if(S.fade) S._fadeT = setTimeout(()=>kb.classList.add('faded'), 3000); });
+
+/* ---------------- move / minimise ---------------- */
+function startMove(e){ const p = stagePt(e); S.moving = { dx:p.x - S.kbX, dy:p.y - S.kbY }; kb.classList.add('moving'); updateBadge(); toast('Move the pointer, then click to place the keyboard','Move'); }
+function endMove(){ S.moving=null; kb.classList.remove('moving'); updateBadge(); sDrop(); }
+function minimize(){
+  S.minimized = true; kb.hidden = true; closePop();
+  bubbleEl = document.createElement('button'); bubbleEl.className='kb-bubble'; bubbleEl.title='Show the keyboard'; bubbleEl.setAttribute('aria-label','Show the keyboard'); bubbleEl.innerHTML = ico('Keyboard');
+  bubbleEl.style.left = (S.kbX + kb.offsetWidth - 52)+'px'; bubbleEl.style.top = (S.kbY + kb.offsetHeight - 52)+'px';
+  bubbleEl.addEventListener('click', () => { S.minimized=false; bubbleEl.remove(); bubbleEl=null; kb.hidden=false; renderKb(); sSoft(); });
+  stage.appendChild(bubbleEl); sSoft();
+}
+
+/* ---------------- hold engine (Right-click / Grab) ---------------- */
+let hold = null;
+function targetType(t){ if(t.closest('#photo')) return 'photo'; if(t.closest('#doc')) return 'text'; if(t.closest('#notes')) return 'notes'; if(t.closest('#folder')) return 'folder'; return 'desktop'; }
+function startHold(e, m){
+  const p = stagePt(e), sel = window.getSelection();
+  hold = { x:p.x, y:p.y, cx:e.clientX, cy:e.clientY, mode:m, target:e.target, fired:false, range: sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0).cloneRange() : null };
+  if(m==='grab') stage.classList.add('holding');
+  hold.t1 = setTimeout(()=>{ ring.style.left=p.x+'px'; ring.style.top=p.y+'px'; ring.style.setProperty('--dur', (S.holdMs-150)+'ms'); ring.classList.remove('run'); void ring.offsetWidth; ring.classList.add('run'); }, 150);
+  hold.t2 = setTimeout(fireHold, S.holdMs);
+}
+function cancelHold(){ if(!hold) return; clearTimeout(hold.t1); clearTimeout(hold.t2); ring.classList.remove('run'); stage.classList.remove('holding'); hold=null; }
+function burst(x,y){
+  const b = document.createElement('div'); b.className='burst'; b.style.left=x+'px'; b.style.top=y+'px';
+  b.innerHTML = '<div class="b-ring"></div>' + [0,60,120,180,240,300].map(a=>'<div class="b-dot" style="--a:'+a+'deg"></div>').join('');
+  stage.appendChild(b); setTimeout(()=>b.remove(), 480);
+}
+function fireHold(){
+  if(!hold) return; hold.fired = true; S._noClick = true; ring.classList.remove('run'); burst(hold.x, hold.y); sPop();
+  const type = targetType(hold.target);
+  if(hold.mode==='rclick'){
+    if(hold.range){ const s = window.getSelection(); s.removeAllRanges(); s.addRange(hold.range); }
+    openCtx(hold.x, hold.y, type);
+  } else grabAt(hold, type);
+}
+function caretAt(x,y){
+  if(document.caretPositionFromPoint){ const p = document.caretPositionFromPoint(x,y); if(p && p.offsetNode) return {node:p.offsetNode, offset:p.offset}; }
+  if(document.caretRangeFromPoint){ const r = document.caretRangeFromPoint(x,y); if(r) return {node:r.startContainer, offset:r.startOffset}; }
+  return null;
+}
+function grabAt(h, type){
+  if(type==='photo'){
+    const r = photo.getBoundingClientRect();
+    S.carry = { type:'photo', ox:h.cx - r.left, oy:h.cy - r.top, from:{left:photo.style.left, top:photo.style.top} };
+    photo.classList.add('carried'); toast('Grabbed coast.jpg. Move, then click once to drop.','HandGrab');
+  } else if(type==='text'){
+    const c = caretAt(h.cx, h.cy);
+    if(!c || !doc.contains(c.node)){ toast('Hold on a word to start selecting','TextSelect'); return; }
+    S.anchor = c; window.getSelection().collapse(c.node, c.offset); S.carry = { type:'text' }; toast('Selecting. Move, then click once where it should end.','TextSelect');
+  } else { toast('Nothing to grab here. Hold on the photo or on the text.','HandGrab'); return; }
+  renderKb(); updateBadge();
+}
+function moveCarry(e){
+  if(!S.carry) return;
+  if(S.carry.type==='photo'){ const p = stagePt(e); photo.style.left = (p.x - S.carry.ox)+'px'; photo.style.top = (p.y - S.carry.oy)+'px';
+    const fr = folder.getBoundingClientRect(); folder.classList.toggle('hot', e.clientX>fr.left-10 && e.clientX<fr.right+10 && e.clientY>fr.top-10 && e.clientY<fr.bottom+10); }
+  else if(S.carry.type==='text' && S.anchor){ const c = caretAt(e.clientX, e.clientY); if(c && doc.contains(c.node)){ try{ window.getSelection().setBaseAndExtent(S.anchor.node, S.anchor.offset, c.node, c.offset); }catch(err){} } }
+}
+function drop(e){
+  const c = S.carry; S.carry = null;
+  if(c.type==='photo'){
+    photo.classList.remove('carried');
+    if(folder.classList.contains('hot')){ folder.classList.remove('hot'); photo.classList.add('gone'); S.inFolder++; $('#fcount').textContent = S.inFolder+' item'+(S.inFolder>1?'s':''); toast('Moved coast.jpg to Photos','FolderOpen'); }
+    else toast('Dropped here','HandGrab');
+  } else if(c.type==='text'){ if(window.getSelection().toString().trim()) showSelPill(); else toast('Nothing selected','TextSelect'); }
+  const p = stagePt(e); burst(p.x, p.y); sDrop(); finishGrab();
+}
+function cancelCarry(){
+  if(!S.carry) return;
+  if(S.carry.type==='photo'){ photo.classList.remove('carried'); photo.style.left = S.carry.from.left; photo.style.top = S.carry.from.top; folder.classList.remove('hot'); }
+  S.carry = null;
+}
+/* a normal short left click (works with or without Right-click mode) */
+function normalClick(t){
+  const onPhoto = !!t.closest('#photo'), onFolder = !!t.closest('#folder');
+  photo.classList.toggle('selected', onPhoto); folder.classList.toggle('selected', onFolder);
+}
+
+function openCtx(x, y, type){
+  closeCtx();
+  const sel = window.getSelection().toString().trim();
+  const M = {
+    desktop:[['Eye','View'],['ListFilter','Sort by'],['RotateCcw','Refresh'],'-',['Plus','New'],'-',['Monitor','Display settings'],['Sun','Personalize']],
+    photo:[['Eye','Open'],['Copy','Copy image','copyimg'],['Save','Save image as…'],['Link','Copy image link'],'-',['Search','Search image with…']],
+    text: sel ? [['Copy','Copy','copysel'],['Search','Search the web for “'+sel.slice(0,22)+(sel.length>22?'…':'')+'”'],['Languages','Translate selection']] : [['TextSelect','Select all','selectdoc'],['Search','Search the web'],['Languages','Translate page']],
+    notes:[['Undo2','Undo','undo'],'-',['Scissors','Cut','cut'],['Copy','Copy','copynotes'],['ClipboardPaste','Paste','paste'],'-',['TextSelect','Select all','selall']],
+    folder:[['FolderOpen','Open'],['Pin','Pin to Quick access'],['Copy','Copy as path']]
+  }[type];
+  ctxEl = document.createElement('div'); ctxEl.className='ctx'; ctxEl.setAttribute('role','menu');
+  ctxEl.innerHTML = '<div class="t">Context menu · '+({desktop:'desktop',photo:'image',text:sel?'selected text':'web page',notes:'text field',folder:'folder'})[type]+'</div>' +
+    M.map(it => it==='-' ? '<hr>' : '<button role="menuitem" data-act="'+(it[2]||'')+'">'+ico(it[0])+esc(it[1])+'</button>').join('');
+  stage.appendChild(ctxEl);
+  ctxEl.style.left = clamp(x+2, 6, stage.clientWidth - ctxEl.offsetWidth - 6)+'px'; ctxEl.style.top = clamp(y+2, 6, stage.clientHeight - ctxEl.offsetHeight - 6)+'px';
+  ctxEl.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if(!b) return; const a = b.dataset.act, label = b.textContent;
+    if(a==='copysel'){ addClip({type:'text', title:sel.slice(0,160), src:'Edge'}); toast('Copied','Copy'); }
+    else if(a==='copyimg'){ addClip({type:'image', title:'coast.jpg', th:'img1', meta:'1600 × 1000', src:'Desktop'}); toast('Image copied','Copy'); }
+    else if(a==='selectdoc'){ const r = document.createRange(); r.selectNodeContents(doc); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); showSelPill(); }
+    else if(a==='selall'){ S.selAll=true; renderField(); }
+    else if(a==='copynotes'){ if(S.text){ addClip({type:'text', title:S.text.slice(0,160)}); toast('Copied','Copy'); } }
+    else if(a==='cut'){ if(S.text){ addClip({type:'text', title:S.text.slice(0,160)}); pushUndo(); S.text=''; S.caret=0; renderField(); refreshSugg(); } }
+    else if(a==='paste'){ pasteLatestText(); }
+    else if(a==='undo'){ undo(); }
+    else toast(label+' (demo)');
+    closeCtx(); sTick();
+  });
+}
+function closeCtx(){ if(ctxEl){ ctxEl.remove(); ctxEl=null; } }
+function showSelPill(){
+  hideSelPill();
+  const sel = window.getSelection(); if(!sel.rangeCount) return;
+  const rects = sel.getRangeAt(0).getClientRects(); const last = rects[rects.length-1] || sel.getRangeAt(0).getBoundingClientRect();
+  const sr = stage.getBoundingClientRect();
+  selPill = document.createElement('div'); selPill.className='selpill';
+  selPill.innerHTML = '<button data-a="copy">'+ico('Copy')+'Copy</button><button data-a="search">'+ico('Search')+'Search</button>';
+  stage.appendChild(selPill);
+  selPill.style.left = clamp(last.right - sr.left - selPill.offsetWidth/2, 6, stage.clientWidth - selPill.offsetWidth - 6)+'px';
+  selPill.style.top = clamp(last.top - sr.top - selPill.offsetHeight - 8, 6, stage.clientHeight - 40)+'px';
+  selPill.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if(!b) return; const t = window.getSelection().toString();
+    if(b.dataset.a==='copy'){ addClip({type:'text', title:t.slice(0,160), src:'Selection helper'}); toast('Copied to the clipboard history','Copy'); } else toast('Search the web (demo)','Search');
+    sTick(); hideSelPill();
+  });
+}
+function hideSelPill(){ if(selPill){ selPill.remove(); selPill=null; } }
+
+/* stage pointer handling */
+const UI = '.kb,.pop,.ctx,.capbar,.selpill,.kb-bubble,.snip-bar,.snip-tools';
+stage.addEventListener('mousedown', e => {
+  if(e.target.closest(UI)){ S._eat=false; return; }
+  if(S._eat || S.grab || S.carry || S.snip || S.moving) e.preventDefault();
+  S._eat=false;
+});
+stage.addEventListener('mouseup', e => {
+  if(S.grab || S.carry || S.snip || !e.target.closest('#doc')) return;
+  setTimeout(() => { const s = window.getSelection(); if(s && s.toString().trim() && doc.contains(s.anchorNode) && !ctxEl) showSelPill(); }, 10);
+});
+stage.addEventListener('click', e => {
+  if(e.target.closest(UI)) return;
+  if(S._noClick){ S._noClick=false; return; }
+  normalClick(e.target);
+});
+stage.addEventListener('pointerdown', e => {
+  if(e.button!==0) return; ac();
+  if(e.target.closest(UI)) return;
+  hideHint();
+  if(S.moving){ S._eat=true; S._noClick=true; endMove(); return; }
+  if(S.snip){ S._eat=true; S._noClick=true; snipClick(e); return; }
+  if(ctxEl){ S._eat=true; S._noClick=true; closeCtx(); return; }
+  if(selPill && !S.carry) hideSelPill();
+  if(S.pop) closePop();
+  if(S.carry){ S._eat=true; S._noClick=true; drop(e); return; }
+  const m = S.grab ? 'grab' : S.rclick ? 'rclick' : null;
+  if(m){ if(m==='grab') S._eat=true; startHold(e, m); }
+});
+stage.addEventListener('pointermove', e => {
+  const p = stagePt(e); S._ptrIn = true;
+  if(!e.target.closest('.kb')) S._lastOut = { x:e.clientX, y:e.clientY };
+  badge.style.left = (p.x+16)+'px'; badge.style.top = (p.y+18)+'px'; updateBadge();
+  if(hold && !hold.fired && Math.hypot(e.clientX-hold.cx, e.clientY-hold.cy) > 7) cancelHold();
+  if(S.moving){ S.kbX = p.x - S.moving.dx; S.kbY = p.y - S.moving.dy; fitKb(); }
+  if(S.carry) moveCarry(e);
+  if(S.snip) snipMove(e);
+});
+stage.addEventListener('pointerleave', () => { S._ptrIn=false; updateBadge(); });
+window.addEventListener('pointerup', () => { if(hold){ const f = hold.fired; clearTimeout(hold.t1); clearTimeout(hold.t2); if(!f) ring.classList.remove('run'); stage.classList.remove('holding'); hold=null; } });
+
+/* ---------------- scroll pad: scrolls what is under the pointer ---------------- */
+const SPEED = [0, 60, 210];
+let scrollRAF = null, lastT = 0, scrollEl = null;
+function scrollableAt(pt, vertical){
+  if(!pt) return doc;
+  let n = document.elementFromPoint(pt.x, pt.y);
+  while(n && n !== stage){
+    if(n.nodeType===1){ const cs = getComputedStyle(n);
+      if(vertical ? (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight+1) : (/(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth+1)) return n; }
+    n = n.parentNode;
+  }
+  return doc;
+}
+function pickTarget(){
+  const d = S.scroll.dir, vertical = d==='up'||d==='down';
+  const cur = S._curPt, overKb = cur && document.elementFromPoint(cur.x, cur.y) && document.elementFromPoint(cur.x, cur.y).closest('.kb');
+  const el = scrollableAt(overKb || !cur ? S._lastOut : cur, vertical);
+  if(el !== scrollEl){ if(scrollEl) scrollEl.classList.remove('scroll-target'); scrollEl = el; scrollEl.classList.add('scroll-target'); }
+  return el;
+}
+document.addEventListener('pointermove', e => { S._curPt = {x:e.clientX, y:e.clientY}; });
+function scrollTap(d){
+  hideHint();
+  if(S.scroll.dir===d){ if(S.scroll.lvl>=2){ stopScroll(); return; } S.scroll.lvl = 2; toast('Faster. Tap again to stop.','ChevronsUp'); }
+  else { S.scroll.dir=d; S.scroll.lvl=1; }
+  sSoft(); renderKb(); updateBadge();
+  if(!scrollRAF){ lastT = performance.now(); scrollRAF = requestAnimationFrame(scrollLoop); }
+}
+function scrollLoop(t){
+  const dt = Math.min(.1, (t - lastT)/1000); lastT = t;
+  const d = S.scroll.dir; if(!d){ scrollRAF=null; return; }
+  const el = pickTarget(), v = SPEED[S.scroll.lvl]*dt*(d==='up'||d==='left' ? -1 : 1), vert = d==='up'||d==='down';
+  /* keep our own float position: at 125 % display scaling the browser rounds scrollTop */
+  if(S._posEl !== el){ S._posEl = el; S._pos = {t:el.scrollTop, l:el.scrollLeft}; }
+  if(vert){ if(Math.abs(el.scrollTop - S._pos.t) > 3) S._pos.t = el.scrollTop; S._pos.t = clamp(S._pos.t + v, 0, el.scrollHeight - el.clientHeight); el.scrollTop = S._pos.t; }
+  else { if(Math.abs(el.scrollLeft - S._pos.l) > 3) S._pos.l = el.scrollLeft; S._pos.l = clamp(S._pos.l + v, 0, el.scrollWidth - el.clientWidth); el.scrollLeft = S._pos.l; }
+  if(el.classList.contains('llist')) syncPager(el);
+  scrollRAF = requestAnimationFrame(scrollLoop);
+}
+function stopScroll(){ S.scroll={dir:null,lvl:0}; S._posEl=null; if(scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF=null; } if(scrollEl){ scrollEl.classList.remove('scroll-target'); scrollEl=null; } sSoft(); renderKb(); updateBadge(); }
+
+/* ---------------- voice (simulated) ---------------- */
+let waveRAF = null, recStart = 0, bars = [];
+function voiceLang(){ return S.force==='auto' ? lang().id : S.force; }
+function toggleMic(){
+  hideHint();
+  if(S.mic==='idle'){ S.mic='rec'; sMicOn(); recStart = performance.now(); showCap('rec'); }
+  else if(S.mic==='rec'){ S.mic='busy'; sMicOff(); showCap('busy');
+    setTimeout(()=>{ const txt = VOICE[voiceLang()]; S.lastVoice = { before:{text:S.text, caret:S.caret}, txt }; insert((S.text && !/\s$/.test(S.text.slice(0,S.caret))?' ':'')+txt); S.mic='idle'; showCap('done', txt); renderKb(); updateBadge(); }, 950); }
+  renderKb(); updateBadge();
+}
+function placeCap(){
+  if(!capEl) return;
+  const sh = stage.clientHeight, sw = stage.clientWidth, h = capEl.offsetHeight, w = capEl.offsetWidth, cl = (sw - w)/2, cr = cl + w;
+  /* stay clear of the keyboard and of any open panel: bottom centre, pushed up when something is in the way */
+  const blocks = [];
+  if(!S.minimized) blocks.push({l:S.kbX, r:S.kbX + kb.offsetWidth, t:S.kbY, b:S.kbY + kb.offsetHeight});
+  if(popEl) blocks.push({l:popEl.offsetLeft, r:popEl.offsetLeft + popEl.offsetWidth, t:popEl.offsetTop, b:popEl.offsetTop + popEl.offsetHeight});
+  let bottom = 14;
+  for(let pass = 0; pass < 2; pass++) blocks.forEach(k => { const top = sh - bottom - h; if(k.r > cl && k.l < cr && k.b > top - 6 && k.t < sh - bottom + 6) bottom = sh - k.t + 10; });
+  capEl.style.bottom = clamp(bottom, 8, sh - h - 8)+'px';
+}
+function showCap(state, txt){
+  cancelAnimationFrame(waveRAF); clearTimeout(S._capT);
+  if(!capEl){ capEl = document.createElement('div'); stage.appendChild(capEl);
+    capEl.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-c]'); if(!b) return; const a = b.dataset.c;
+      if(a==='stop') toggleMic();
+      else if(a==='lang'){ const o=['auto','en','fr','ar']; S.force = o[(o.indexOf(S.force)+1)%o.length]; showCap('rec'); }
+      else if(a==='copy'){ addClip({type:'text', title:S.lastVoice?S.lastVoice.txt:'', src:'Voice'}); toast('Copied','Copy'); }
+      else if(a==='undo'){ if(S.lastVoice){ pushUndo(); S.text=S.lastVoice.before.text; S.caret=S.lastVoice.before.caret; renderField(); refreshSugg(); toast('Insert undone','Undo2'); } closeCap(); }
+      else if(a==='x') closeCap();
+    });
+  }
+  const LN = {auto:'Auto', en:'English', fr:'Français', ar:'العربية'};
+  capEl.className = 'capbar'+(state==='done'?' done':'');
+  if(state==='rec'){
+    capEl.innerHTML = '<span class="st"><span class="rec-dot"></span>Listening</span><button class="lc" data-c="lang" title="Force the language">Lang: <b>'+LN[S.force]+'</b></button><div class="wave">'+'<i></i>'.repeat(32)+'</div><span class="tm" id="tm">0:00</span><button class="ib" data-c="stop" title="Stop and insert" aria-label="Stop and insert">'+ico('Square')+'</button>';
+    bars = $$('.wave i', capEl).map(()=>3);
+    const loop = t => { if(S.mic!=='rec') return;
+      const s = (t - recStart)/1000, env = .2 + .8*Math.abs(Math.sin(s*2.3))*Math.abs(Math.sin(s*.8+1));
+      $$('.wave i', capEl).forEach((b,n)=>{ bars[n] = bars[n]*.6 + (3 + Math.random()*22*env*(.5+.5*Math.sin(n*.5+s*6)))*.4; b.style.height = bars[n].toFixed(1)+'px'; });
+      const tm = $('#tm', capEl); if(tm){ const sec=Math.floor(s); tm.textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+      waveRAF = requestAnimationFrame(loop); };
+    waveRAF = requestAnimationFrame(loop);
+  } else if(state==='busy'){
+    capEl.innerHTML = '<span class="st">'+ico('AudioLines')+'Transcribing</span><div class="shimmer"></div><span class="tm">'+LN[S.force==='auto'?voiceLang():S.force]+'</span>';
+  } else {
+    capEl.innerHTML = '<span class="st" style="padding-top:2px">'+ico('Captions')+'</span><div class="txt'+(isArabic(txt)?' ar':'')+'">'+esc(txt)+'<small>Typed into Notes · demo text, no microphone used</small></div><div class="acts"><button class="ib" data-c="copy" title="Copy" aria-label="Copy">'+ico('Copy')+'</button><button class="ib" data-c="undo" title="Undo insert" aria-label="Undo insert">'+ico('Undo2')+'</button><button class="ib" data-c="x" title="Close" aria-label="Close">'+ico('X')+'</button></div>';
+    S._capT = setTimeout(closeCap, 9000);
+  }
+  placeCap();
+}
+function closeCap(){ if(capEl){ cancelAnimationFrame(waveRAF); capEl.remove(); capEl=null; } }
+
+/* ---------------- panels ---------------- */
+function placePop(){
+  if(!popEl) return;
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  /* panels grow with the keyboard, but shrink (never below size S) so they fit above or below it instead of covering it */
+  popEl.style.removeProperty('--ks');
+  if(S.pop!=='lang'){
+    const ks = parseFloat(getComputedStyle(stage).getPropertyValue('--ks')) || 1;
+    const avail = Math.max(S.kbY - 22, sh - (S.kbY + kb.offsetHeight) - 22), h0 = popEl.offsetHeight;
+    if(h0 > avail && ks > 0.8) popEl.style.setProperty('--ks', Math.max(0.8, ks * avail / h0).toFixed(3));
+  }
+  const w = popEl.offsetWidth, h = popEl.offsetHeight;
+  let left, top;
+  if(S.pop==='lang'){ const b = kb.querySelector('[data-k="lang"]'); const br = b.getBoundingClientRect(), sr = stage.getBoundingClientRect(); left = br.left - sr.left; top = br.top - sr.top - h - 8; }
+  else { left = S.kbX + (S.pop==='fill' ? kb.offsetWidth - w : 0); top = S.kbY - h - 10; }
+  if(top < 8){ const below = S.kbY + kb.offsetHeight + 10; top = below + h <= sh - 8 ? below : 8; }
+  popEl.style.left = clamp(left, 8, Math.max(8, sw - w - 8))+'px'; popEl.style.top = clamp(top, 8, Math.max(8, sh - h - 8))+'px';
+  if(capEl) placeCap();
+}
+function openPop(which, keep){
+  let scrollTop = 0;
+  if(keep && popEl){ const l = $('.llist', popEl); if(l) scrollTop = l.scrollTop; }
+  if(!keep){ S.clipSel = []; S.clipHi = 0; S.fillHi = 0; }
+  if(popEl) popEl.remove();
+  S.pop = which; popEl = document.createElement('div');
+  if(which==='clip') buildClip(); else if(which==='fill') buildFill(); else buildLangs();
+  stage.appendChild(popEl);
+  const l = $('.llist', popEl);
+  if(l){ const nr = l.querySelectorAll('.lrow').length, miss = Math.ceil(nr/5)*5 - nr; if(nr > 5 && miss > 0){ const pad = document.createElement('div'); pad.className = 'lpad'; pad.style.cssText = 'flex:none; height:'+(miss*stride(l) - 2)+'px'; l.appendChild(pad); }
+    l.scrollTop = scrollTop; const hi = $('.lrow.hi', l); if(hi){ const r = l.getBoundingClientRect(), h = hi.getBoundingClientRect(); if(h.top < r.top || h.bottom > r.bottom + 1) l.scrollTop = Math.floor(rowIndex(hi)/5) * 5 * stride(l); } l.addEventListener('scroll', ()=>syncPager(l)); syncPager(l); }
+  placePop(); if(!keep) renderKb();
+}
+function closePop(){ if(popEl){ popEl.remove(); popEl=null; } const was = S.pop; S.pop=null; if(was) renderKb(); if(capEl) placeCap(); }
+function stride(l){ const a = l.children[0], b = l.children[1]; return a ? (b ? b.offsetTop - a.offsetTop : a.offsetHeight) : 40; }
+function rowIndex(r){ return Array.prototype.indexOf.call(r.parentNode.children, r); }
+function syncPager(l){
+  const box = l.closest('.pop'); if(!box) return; const n = $('.pgn', box); if(!n) return;
+  const rows = l.querySelectorAll('.lrow').length, per = 5, pages = Math.max(1, Math.ceil(rows/per));
+  const page = clamp(Math.round(l.scrollTop / (stride(l)*per)) + 1, 1, pages);
+  n.innerHTML = page+'<br>of '+pages;
+  const [pu, pd] = $$('.pg', box); if(pu) pu.disabled = l.scrollTop <= 1; if(pd) pd.disabled = l.scrollTop + l.clientHeight >= l.scrollHeight - 1;
+}
+function pageList(dir){
+  const l = $('.llist', popEl); if(!l) return; const st = stride(l), nr = l.querySelectorAll('.lrow').length, pages = Math.max(1, Math.ceil(nr/5));
+  const page = clamp(Math.round(l.scrollTop / (st*5)) + dir, 0, pages-1);
+  l.scrollTop = page*5*st; syncPager(l);
+  const hi = Math.min(page*5, nr-1);
+  if(S.pop==='clip') S.clipHi = hi; else if(S.pop==='fill') S.fillHi = hi;
+  $$('.lrow', l).forEach((r,n)=>r.classList.toggle('hi', n===hi)); sTick();
+}
+function buildLangs(){
+  popEl.className='pop langs'; popEl.setAttribute('role','listbox');
+  popEl.innerHTML = LANGS.map((l,n)=>'<button class="lg-it" data-l="'+n+'"><span class="bdg'+(l.rtl?' ar':'')+'">'+l.short+'</span><span class="nm">'+esc(l.name)+'<small>'+l.layout+'</small></span>'+(n===S.lang?ico('Check'):'')+'</button>').join('');
+  popEl.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if(b){ S.pop=null; popEl.remove(); popEl=null; setLang(+b.dataset.l, 0); } });
+}
+function clipList(){
+  const f = S.clipFilter;
+  return S.clips.filter(c => f==='all' || (f==='media' ? (c.type==='video'||c.type==='audio') : f==='text' ? (c.type==='text'||c.type==='link') : c.type===f));
+}
+function tickClip(id){ const n = S.clipSel.indexOf(id); if(n>=0) S.clipSel.splice(n,1); else S.clipSel.push(id); sTick(); openPop('clip', true); }
+function pasteTogether(){
+  const items = S.clipSel.map(id=>S.clips.find(x=>x.id===id)).filter(Boolean);
+  const texts = items.filter(i=>i.type==='text'||i.type==='link').map(i=>i.title); if(texts.length) insert(texts.join('\n'));
+  items.filter(i=>!(i.type==='text'||i.type==='link')).forEach(i=>S.attach.push({type:i.type,title:i.title})); renderField();
+  toast('Pasted '+items.length+' items together','ClipboardPaste'); sPop(); closePop();
+}
+function pagerHTML(){ return '<div class="pager"><button class="pg" data-pg="-1" aria-label="Previous page">'+ico('ChevronUp')+'</button><div class="pgn">1<br>of 1</div><button class="pg" data-pg="1" aria-label="Next page">'+ico('ChevronDown')+'</button></div>'; }
+function buildClip(){
+  popEl.className='pop clip'; popEl.setAttribute('role','dialog'); popEl.setAttribute('aria-label','Clipboard history');
+  const F = [['all','All'],['text','Text'],['image','Images'],['file','Files'],['media','Media']];
+  const list = clipList(); S.clipHi = clamp(S.clipHi, 0, Math.max(0, list.length-1));
+  popEl.innerHTML =
+    '<div class="pop-h">'+ico('ClipboardClock')+'<b>Clipboard</b><span class="muted sm">newest first · kept 1 week</span><button class="ib x" data-c="close" aria-label="Close">'+ico('X')+'</button></div>'+
+    '<div class="filters">'+F.map(f=>'<button class="fl" data-f="'+f[0]+'" aria-pressed="'+(S.clipFilter===f[0])+'">'+f[1]+'</button>').join('')+'</div>'+
+    '<div class="lbody"><div class="llist">'+list.map((c,i)=>{
+      const n = S.clipSel.indexOf(c.id);
+      return '<div class="lrow'+(i===S.clipHi?' hi':'')+(n>=0?' sel':'')+'" data-paste="'+c.id+'"><button class="ck" data-tick="'+c.id+'" aria-label="Tick">'+(n>=0?(n+1):'')+'</button>'+
+        (c.th ? '<div class="th2 '+c.th+'"></div>' : '<div class="th2">'+ico(TYPEICON[c.type]||'FileText')+'</div>')+
+        '<div class="tt"><div'+(c.ar?' class="ar"':'')+'>'+esc(c.title)+'</div><div class="m">'+esc(c.src)+' · '+esc(c.t)+(c.meta?' · '+esc(c.meta):'')+'</div></div>'+
+        (c.exp?'<span class="exp">expires '+(c.exp==='today'?'today':'in '+c.exp)+'</span>':c.pin?'<span class="pin">'+ico('Pin')+'</span>':'<span></span>')+'</div>';
+    }).join('')+'</div>'+pagerHTML()+'</div>'+
+    '<div class="lfoot"><span class="sm muted"><span class="kbd">↑</span> <span class="kbd">↓</span> move · <span class="kbd">Enter</span> paste · <span class="kbd">Space</span> tick</span><span style="flex:1"></span><button class="btn" data-c="multi"'+(S.clipSel.length<2?' disabled':'')+'>'+ico('ClipboardPaste')+'Paste '+(S.clipSel.length>1?S.clipSel.length+' ':'')+'together</button></div>';
+  popEl.onclick = e => {
+    const tk = e.target.closest('[data-tick]'); if(tk){ tickClip(tk.dataset.tick); return; }
+    const f = e.target.closest('[data-f]'); if(f){ S.clipFilter = f.dataset.f; S.clipHi = 0; openPop('clip', true); return; }
+    const pg = e.target.closest('[data-pg]'); if(pg){ pageList(+pg.dataset.pg); return; }
+    const c = e.target.closest('[data-c]');
+    if(c && c.dataset.c==='close'){ closePop(); return; }
+    if(c && c.dataset.c==='multi'){ pasteTogether(); return; }
+    const p = e.target.closest('[data-paste]'); if(p){ const it = S.clips.find(x=>x.id===p.dataset.paste); if(it){ pasteItem(it); toast(it.type==='text'||it.type==='link'?'Pasted':'Attached '+it.title,'ClipboardPaste'); sTick(); } closePop(); }
+  };
+}
+function fillRows(){
+  if(S.fillTab==='emails') return EMAILS.map(e=>({kind:'email', a:e}));
+  if(S.fillTab==='names') return NAMES.map(n=>({kind:'name', a:n}));
+  return S.vault ? PASSWORDS.map(p=>({kind:'pw', a:p[0], b:p[1]})) : [];
+}
+function fillAction(r, which){
+  if(r.kind==='pw'){ if(which==='user'){ insert(r.b); toast('Username filled for '+r.a,'User'); } else toast('Password for '+r.a+' filled into the password field (demo)','KeyRound'); closePop(); return; }
+  insert(r.a); sTick(); toast('Inserted','KeyRound');
+}
+function buildFill(){
+  popEl.className='pop fill'; popEl.setAttribute('role','dialog'); popEl.setAttribute('aria-label','Quick-fill');
+  const unlock = S.os==='win' ? 'Windows Hello' : S.os==='mac' ? 'Touch ID' : 'password';
+  const T = [['emails','Mail','Emails'],['passwords','Lock','Passwords'],['names','User','Names']];
+  const rows = fillRows(); S.fillHi = clamp(S.fillHi, 0, Math.max(0, rows.length-1));
+  let body;
+  if(S.fillTab==='passwords' && !S.vault){
+    body = '<div class="lbody"><div class="locked-box" style="flex:1">'+ico('Lock')+'<div>Passwords are locked</div><button class="btn" data-c="unlock">'+ico('Fingerprint')+'Unlock</button><div class="sm muted">'+unlock+' or your PIN</div></div></div>';
+  } else {
+    body = (S.fillTab==='emails' ? '<div class="doms">'+DOMAINS.map(d=>'<button class="qc" data-ins="@'+d+'">@'+d+'</button>').join('')+'</div>' : '')+
+      '<div class="lbody"><div class="llist">'+rows.map((r,i)=>'<div class="lrow nock'+(i===S.fillHi?' hi':'')+'" data-row="'+i+'"><div class="th2">'+ico(r.kind==='pw'?'Globe':r.kind==='email'?'Mail':'User')+'</div>'+
+        '<div class="tt"><div>'+esc(r.a)+'</div>'+(r.kind==='pw'?'<div class="m">'+esc(r.b)+' · <span class="masked">••••••••</span></div>':'')+'</div>'+
+        (r.kind==='pw' ? '<div class="acts"><button class="btn ghost" data-fill="user" data-i2="'+i+'">User</button><button class="btn" data-fill="pw" data-i2="'+i+'">Password</button></div>' : '<div class="acts"><button class="btn ghost" data-fill="main" data-i2="'+i+'">Insert</button></div>')+'</div>').join('')+
+      '</div>'+pagerHTML()+'</div>';
+  }
+  popEl.innerHTML = '<div class="pop-h">'+ico('KeyRound')+'<b>Quick-fill</b><span class="muted sm">example data</span><button class="ib x" data-c="close" aria-label="Close">'+ico('X')+'</button></div>'+
+    '<div class="ftabs" role="tablist">'+T.map(t=>'<button role="tab" data-tab2="'+t[0]+'" aria-selected="'+(S.fillTab===t[0])+'">'+ico(t[1])+t[2]+'</button>').join('')+'</div>'+ body +
+    '<div class="lfoot"><span class="sm muted"><span class="kbd">↑</span> <span class="kbd">↓</span> move · <span class="kbd">←</span> <span class="kbd">→</span> tabs · <span class="kbd">Enter</span> insert</span><span style="flex:1"></span><span class="sm muted">Encrypted on this PC</span></div>';
+  popEl.onclick = e => {
+    const c = e.target.closest('[data-c]'); if(c && c.dataset.c==='close'){ closePop(); return; }
+    if(c && c.dataset.c==='unlock'){ S.vault=true; sPop(); openPop('fill', true); return; }
+    const t = e.target.closest('[data-tab2]'); if(t){ S.fillTab = t.dataset.tab2; S.fillHi = 0; sTick(); openPop('fill', true); return; }
+    const pg = e.target.closest('[data-pg]'); if(pg){ pageList(+pg.dataset.pg); return; }
+    const i = e.target.closest('[data-ins]'); if(i){ insert(i.dataset.ins); sTick(); return; }
+    const f = e.target.closest('[data-fill]'); if(f){ const r = fillRows()[+f.dataset.i2]; if(r) fillAction(r, f.dataset.fill); return; }
+    const row = e.target.closest('[data-row]'); if(row){ S.fillHi = +row.dataset.row; openPop('fill', true); }
+  };
+}
+
+/* ---------------- snip ---------------- */
+function startSnip(){
+  closePop(); closeCtx(); S.snip = { phase:'a' };
+  const dim = document.createElement('div'); dim.className='snip-dim';
+  const bar = document.createElement('div'); bar.className='snip-bar';
+  const big = S.scale>=1.3;
+  const modes = [['region','SquareDashed','Region'],['window','AppWindow','Window'],['full','Monitor','Full screen'],['scroll','ChevronsUp','Scrolling'],['timer','Timer','Timer']];
+  bar.innerHTML = modes.map(m=>'<button class="sb" data-m="'+m[0]+'" aria-pressed="'+(m[0]==='region')+'" title="'+m[2]+'" aria-label="'+m[2]+'">'+ico(m[1])+(big?m[2]:'')+'</button>').join('')+'<span class="sep"></span><span class="hintx">Click · move · click</span><button class="sb" data-m="close" title="Close" aria-label="Close">'+ico('X')+'</button>';
+  bar.addEventListener('click', e => { const b = e.target.closest('[data-m]'); if(!b) return; const m = b.dataset.m; sTick();
+    if(m==='close'){ endSnip(); return; } if(m==='region') return;
+    const W = stage.clientWidth, H = stage.clientHeight, sr = stage.getBoundingClientRect();
+    if(m==='full') setSnipRect(8,8,W-16,H-16);
+    else if(m==='window'){ const r = $('#notes').getBoundingClientRect(); setSnipRect(r.left-sr.left, r.top-sr.top, r.width, r.height); }
+    else if(m==='scroll'){ const r = $('.article').getBoundingClientRect(); setSnipRect(r.left-sr.left, r.top-sr.top, r.width, r.height); toast('Scrolling capture: the page scrolls by itself while it captures','ChevronsUp'); }
+    else if(m==='timer'){ let n=3; toast('Capturing in 3','Timer'); const iv = setInterval(()=>{ n--; if(n>0) toast('Capturing in '+n,'Timer'); else { clearInterval(iv); if(S.snip) setSnipRect(8,8,W-16,H-16); } }, 800); }
+  });
+  stage.appendChild(dim); stage.appendChild(bar); snipEls = [dim, bar]; renderKb();
+}
+function setSnipRect(x,y,w,h){ S.snip.a = {x,y}; S.snip.b = {x:x+w, y:y+h}; S.snip.phase='edit'; drawSnip(); showSnipTools(); sPop(); }
+function snipClick(e){
+  const p = stagePt(e);
+  if(S.snip.phase==='a'){ S.snip.a = p; S.snip.b = p; S.snip.phase='b'; drawSnip(); }
+  else if(S.snip.phase==='b'){ S.snip.b = p; if(Math.abs(p.x-S.snip.a.x)<12 || Math.abs(p.y-S.snip.a.y)<12){ toast('Make the box a bit bigger','SquareDashed'); return; } S.snip.phase='edit'; drawSnip(); showSnipTools(); sPop(); }
+}
+function snipMove(e){ if(S.snip && S.snip.phase==='b'){ S.snip.b = stagePt(e); drawSnip(); } }
+function drawSnip(){
+  let r = stage.querySelector('.snip-rect'); if(!r){ r = document.createElement('div'); r.className='snip-rect'; stage.appendChild(r); snipEls.push(r); const dim = stage.querySelector('.snip-dim'); if(dim) dim.style.background='transparent'; }
+  const a = S.snip.a, b = S.snip.b, x = Math.min(a.x,b.x), y = Math.min(a.y,b.y), w = Math.abs(b.x-a.x), h = Math.abs(b.y-a.y);
+  r.style.left=x+'px'; r.style.top=y+'px'; r.style.width=w+'px'; r.style.height=h+'px'; r.innerHTML = '<span class="dims">'+Math.round(w)+' × '+Math.round(h)+'</span>';
+}
+function showSnipTools(){
+  let t = stage.querySelector('.snip-tools'); if(t) t.remove();
+  t = document.createElement('div'); t.className='snip-tools';
+  const big = S.scale>=1.3;
+  const tools = [['arrow','ArrowUpRight','Arrow'],['box','Square','Box'],['text','Type','Text'],['hl','Highlighter','Highlight'],['pen','Pencil','Pen'],['steps','ListOrdered','Steps'],['crop','Crop','Crop']];
+  const b = (k,i,l,p) => '<button class="sb" data-t="'+k+'"'+(p!==undefined?' aria-pressed="'+p+'"':'')+' title="'+l+'" aria-label="'+l+'">'+ico(i)+(big?l:'')+'</button>';
+  t.innerHTML = tools.map((x,n)=>b(x[0],x[1],x[2],n===0)).join('')+'<span class="sep"></span>'+b('undo','Undo2','Undo')+b('redo','Redo2','Redo')+'<span class="sep"></span>'+
+    '<button class="sb" data-t="ocr" title="Copy the text in the image">'+ico('ScanText')+'Text</button>'+b('copy','Copy','Copy image')+b('save','Save','Save')+b('pin','Pin','Pin on screen')+b('close','X','Close');
+  stage.appendChild(t); snipEls.push(t);
+  const a = S.snip.a, bb = S.snip.b, x = Math.min(a.x,bb.x), y2 = Math.max(a.y,bb.y), y1 = Math.min(a.y,bb.y);
+  let top = y2 + 8; if(top + t.offsetHeight > stage.clientHeight - 8) top = Math.max(8, y1 - t.offsetHeight - 8);
+  if(top + t.offsetHeight > stage.clientHeight - 8) top = 56;
+  t.style.left = clamp(x, 8, stage.clientWidth - t.offsetWidth - 8)+'px'; t.style.top = top+'px';
+  t.addEventListener('click', e => { const bt = e.target.closest('[data-t]'); if(!bt) return; const k = bt.dataset.t; sTick();
+    if(['arrow','box','text','hl','pen','steps','crop'].includes(k)){ $$('[data-t]', t).forEach(z=>{ if(z.hasAttribute('aria-pressed')) z.setAttribute('aria-pressed', String(z===bt)); }); return; }
+    if(k==='ocr'){ addClip({type:'text', title:'Why build a new on-screen keyboard? (text from screenshot)', src:'Snip OCR'}); toast('Text copied from the image','ScanText'); }
+    else if(k==='copy'){ addClip({type:'image', title:'Snip '+new Date().toTimeString().slice(0,5)+'.png', th:'img2', src:'Snip'}); toast('Image copied','Copy'); endSnip(); }
+    else if(k==='save'){ toast('Saved to Pictures\\Screenshots (demo)','Save'); endSnip(); }
+    else if(k==='pin'){ toast('Pinned on screen (demo)','Pin'); endSnip(); }
+    else if(k==='close'){ endSnip(); }
+    else toast(k==='undo'?'Undo':'Redo');
+  });
+}
+function endSnip(){ snipEls.forEach(el=>el.remove()); snipEls=[]; S.snip=null; renderKb(); }
+
+/* ---------------- side panel ---------------- */
+function renderStyleList(){
+  $('#stylelist').innerHTML = STYLES.map(s =>
+    '<div style="display:flex; gap:4px; align-items:center"><button class="srow" data-style="'+s.id+'" aria-pressed="'+(s.id===S.style)+'">'+
+      '<span class="minis"><span class="mini" data-style="'+s.id+'" data-mode="light"><i class="m"></i><i></i><i></i><i class="e"></i></span><span class="mini" data-style="'+s.id+'" data-mode="dark"><i class="m"></i><i></i><i></i><i class="e"></i></span></span>'+
+      '<span><span class="nm">'+esc(s.name)+(s.rec?'<span class="rec-chip">'+s.rec+'</span>':'')+'</span><span class="tg">'+esc(s.tag)+'</span></span></button>'+
+      '<button class="heart" data-like="'+s.id+'" aria-pressed="'+S.liked.includes(s.id)+'" title="I like this one" aria-label="Like '+esc(s.name)+'">'+ico('Heart')+'</button></div>').join('');
+  const s = STYLES.find(x=>x.id===S.style), cs = getComputedStyle(stage);
+  const sw = ['--plate','--key','--key-mod','--enter','--legend','--legend-2','--ring'].map(v=>'<i style="background:'+cs.getPropertyValue(v).trim()+'" title="'+v.slice(2)+' '+cs.getPropertyValue(v).trim()+'"></i>').join('');
+  $('#info').innerHTML = '<h3>'+esc(s.name)+'</h3><p>'+esc(s.why)+'</p><p>'+esc(s.dark)+'</p><dl class="kv"><dt>Fonts</dt><dd>'+esc(s.fonts)+'</dd><dt>Suits</dt><dd>'+esc(s.suits)+'</dd><dt>Colours</dt><dd><span class="sw">'+sw+'</span> <span class="small">('+mode()+')</span></dd></dl>'+
+    '<div class="small" style="margin-bottom:3px">Real references</div><ul class="refs">'+s.refs.map(r=>'<li><a href="'+r[1]+'" target="_blank" rel="noopener">'+esc(r[0])+'</a></li>').join('')+'</ul>';
+  renderSum();
+}
+$('#stylelist').addEventListener('click', e => {
+  const like = e.target.closest('[data-like]');
+  if(like){ const id = like.dataset.like; const n = S.liked.indexOf(id); if(n>=0) S.liked.splice(n,1); else S.liked.push(id); renderStyleList(); return; }
+  const b = e.target.closest('.srow'); if(!b) return;
+  S.style = b.dataset.style; applyTheme(); renderKb(); renderStyleList(); if(popEl) openPop(S.pop, true);
+});
+function syncControls(){
+  $$('[data-opt]').forEach(g => {
+    const k = g.dataset.opt;
+    const val = k==='size' ? String(S.scale) : k==='sounds' ? (S.sounds?'on':'off') : k==='fade' ? (S.fade?'on':'off') : String(S[k]);
+    $$('button', g).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v===val)));
+  });
+  $('#o-scale').textContent = S.scale.toFixed(2)+'×'; $('#o-hold').textContent = (S.holdMs/1000).toFixed(1)+' s';
+  $('#sizehint').textContent = S.scale>=1.3 ? 'labels shown' : ''; renderSum();
+}
+function onOpt(k, v){
+  if(k==='size') S.scale = parseFloat(v); else if(k==='sounds') S.sounds = v==='on'; else if(k==='fade'){ S.fade = v==='on'; if(!S.fade) kb.classList.remove('faded'); } else S[k] = v;
+  if(k==='theme'){ applyTheme(); renderStyleList(); }
+  renderKb(); syncControls(); if(popEl) openPop(S.pop, true);
+}
+$('.side').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  const g = b.closest('[data-opt]'); if(g){ onOpt(g.dataset.opt, b.dataset.v); return; }
+  if(b.dataset.step==='scale'){ S.scale = Math.round(clamp(S.scale + parseFloat(b.dataset.d), .8, 1.8)*100)/100; renderKb(); syncControls(); if(popEl) openPop(S.pop, true); return; }
+  if(b.dataset.step==='hold'){ S.holdMs = clamp(S.holdMs + parseInt(b.dataset.d,10), 500, 3000); syncControls(); return; }
+  if(b.id==='reset') resetDemo();
+});
+function resetDemo(){
+  cancelCarry(); closePop(); closeCtx(); closeCap(); hideSelPill(); if(S.snip) endSnip(); if(S.scroll.dir) stopScroll();
+  photo.classList.remove('gone','carried','selected'); folder.classList.remove('selected'); photo.style.left=''; photo.style.top=''; S.inFolder=0; $('#fcount').textContent='empty';
+  S.text=NOTES0; S.caret=NOTES0.length; S.attach=[]; S.undo=[]; S.selAll=false; S.clips=CLIPS0.slice(); S.rclick=false; S.grab=false; S.restoreR=false; S.vault=false;
+  S.mods={shift:0,ctrl:0,alt:0,win:0,altr:0}; S.caps=false; S.layer='main'; S.kbX=null; S.kbY=null; S.minimized=false; if(bubbleEl){ bubbleEl.remove(); bubbleEl=null; }
+  doc.scrollTop=0; doc.scrollLeft=0; window.getSelection().removeAllRanges();
+  renderField(); renderKb(); updateBadge(); toast('Demo desktop reset','RotateCcw');
+}
+$$('.side .seg button').forEach(b => b.addEventListener('click', () => {
+  $$('.side .seg button').forEach(x=>x.setAttribute('aria-selected', String(x===b)));
+  ['style','about','set','try'].forEach(n => { $('#sub-'+n).hidden = n!==b.dataset.sub; });
+}));
+function renderSum(){
+  const s = STYLES.find(x=>x.id===S.style);
+  $('#sum').innerHTML = 'Your picks: <b>'+esc(s.name)+'</b> ('+mode()+') · language key <b>'+S.langKey+'</b> · modifiers <b>'+(S.sticky==='next'?'release after next key':'stay held')+'</b> · hold <b>'+(S.holdMs/1000).toFixed(1)+' s</b> · size <b>'+S.scale.toFixed(2)+'×</b>';
+}
+
+/* ---------------- page tabs ---------------- */
+$$('.tabs button').forEach(b => b.addEventListener('click', () => {
+  $$('.tabs button').forEach(x=>x.setAttribute('aria-selected', String(x===b)));
+  ['lab','notes','tech','src'].forEach(n => { $('#p-'+n).hidden = n!==b.dataset.tab; });
+  if(b.dataset.tab==='lab') requestAnimationFrame(fitKb);
+}));
+document.addEventListener('click', e => {
+  const b = e.target.closest('.read .seg [data-show]'); if(!b) return; const seg = b.closest('.seg');
+  $$('button', seg).forEach(x=>x.setAttribute('aria-selected', String(x===b)));
+  const g = seg.dataset.group; $$('[data-pane="'+g+'"]').forEach(p => { p.hidden = p.id!==b.dataset.show; });
+});
+const mm = $('#modmap'); if(mm) mm.innerHTML = MODMAP.map(m=>'<div class="modc"><b>'+ico(m[0])+esc(m[1])+'</b>'+esc(m[2])+'</div>').join('');
+
+/* ---------------- save picks ---------------- */
+const saveBtn = $('#save'), status = $('#status');
+function setStatus(t, ok){ status.textContent = t; status.classList.toggle('ok', !!ok); }
+function picks(){ return { version:2, style:S.style, liked:S.liked.slice(), theme:S.theme, os:S.os, scale:S.scale, langKey:S.langKey, sticky:S.sticky, holdMs:S.holdMs, sounds:S.sounds, fade:S.fade, savedAt:new Date().toISOString() }; }
+function applyPicks(p){
+  if(!p || p.version!==2) return false;
+  if(STYLES.some(s=>s.id===p.style)) S.style = p.style;
+  if(Array.isArray(p.liked)) S.liked = p.liked.filter(id=>STYLES.some(s=>s.id===id));
+  if(['auto','light','dark'].includes(p.theme)) S.theme = p.theme;
+  if(['win','mac','linux'].includes(p.os)) S.os = p.os;
+  if(typeof p.scale==='number') S.scale = clamp(p.scale,.8,1.8);
+  if(['carousel','cycle','list'].includes(p.langKey)) S.langKey = p.langKey;
+  if(['next','hold'].includes(p.sticky)) S.sticky = p.sticky;
+  if(typeof p.holdMs==='number') S.holdMs = clamp(p.holdMs,500,3000);
+  if(typeof p.sounds==='boolean') S.sounds = p.sounds;
+  if(typeof p.fade==='boolean') S.fade = p.fade;
+  applyTheme(); renderKb(); renderStyleList(); syncControls(); return true;
+}
+saveBtn.disabled = true;
+(async function initDb(){
+  try{ db = (window.claude && typeof window.claude.use==='function') ? await window.claude.use('db') : null; }catch(e){ db = null; }
+  if(!db){ setStatus('Saving is not available in this view. Tell Claude your pick in the chat.'); return; }
+  saveBtn.disabled = false; setStatus('Ready. Your picks save to this page for Claude to read.');
+  try{ const snap = await db.doc('picks/latest').get(); if(snap.exists){ const d = snap.data(); if(applyPicks(d)) setStatus('Loaded your saved picks from '+new Date(d.savedAt).toLocaleString()+'.', true); } }catch(e){}
+})();
+saveBtn.addEventListener('click', async () => {
+  if(!db) return; saveBtn.disabled = true; setStatus('Saving…');
+  try{ await db.doc('picks/latest').set(picks()); setStatus('Saved '+new Date().toLocaleTimeString()+'. Claude can read your picks now.', true); sPop(); }
+  catch(e){ setStatus(e && e.code==='invalid_argument' ? 'This view can only read. Tell Claude your pick in the chat.' : 'Could not save right now. Try again in a moment.'); }
+  saveBtn.disabled = false;
+});
+
+/* ---------------- boot ---------------- */
+function boot(){
+  fillIcons(document);
+  applyTheme(); S._noAutoScroll = true; renderField(); S._noAutoScroll = false; renderKb(); renderStyleList(); syncControls();
+  if(window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ applyTheme(); renderKb(); renderStyleList(); }); }
+  new MutationObserver(()=>{ applyTheme(); renderKb(); renderStyleList(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  window.addEventListener('resize', () => { if(!$('#p-lab').hidden) fitKb(); });
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>fitKb());
+}
+boot();
+})();
+</script>
