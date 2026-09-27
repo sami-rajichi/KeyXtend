@@ -132,9 +132,9 @@ pub(crate) enum LoadError {
     Json(serde_json::Error),
     /// The JSON has no `resolve` section.
     MissingResolve,
-    /// `workspace.metadata` has no section with this name (`tidy` or `dco`).
+    /// `workspace.metadata` has no section with this name.
     MissingSection(&'static str),
-    /// A tidy or DCO config value is invalid.
+    /// A `workspace.metadata` value is invalid.
     BadConfig(String),
     /// Running `cargo metadata` itself failed.
     Cargo(String),
@@ -156,10 +156,10 @@ impl fmt::Display for LoadError {
 pub(crate) fn load(json: &str) -> Result<Workspace, LoadError> {
     let output: raw::RawOutput = serde_json::from_str(json).map_err(LoadError::Json)?;
     let resolve = output.resolve.ok_or(LoadError::MissingResolve)?;
-    let meta = output.metadata.unwrap_or_default();
-    let tidy = load_section::<TidyConfig>(meta.tidy, "tidy")?;
+    let mut meta = output.metadata.unwrap_or_default();
+    let tidy = load_section::<TidyConfig>(meta.remove("tidy"), "tidy")?;
     tidy.validate().map_err(config_error)?;
-    let dco = load_section::<DcoConfig>(meta.dco, "dco")?;
+    let dco = load_section::<DcoConfig>(meta.remove("dco"), "dco")?;
 
     Ok(Workspace {
         root_dir: PathBuf::from(output.workspace_root),
@@ -169,6 +169,19 @@ pub(crate) fn load(json: &str) -> Result<Workspace, LoadError> {
         tidy,
         dco,
     })
+}
+
+/// The workspace root and one deserialized `workspace.metadata` section.
+pub(crate) fn root_and_section<T: serde::de::DeserializeOwned>(
+    json: &str,
+    name: &'static str,
+) -> Result<(PathBuf, T), LoadError> {
+    let raw: raw::RawSections = serde_json::from_str(json).map_err(LoadError::Json)?;
+    let value = raw.metadata.and_then(|mut m| m.remove(name));
+    Ok((
+        PathBuf::from(raw.workspace_root),
+        load_section(value, name)?,
+    ))
 }
 
 /// Deserializes one `workspace.metadata` section, naming it if missing.
@@ -181,7 +194,7 @@ fn load_section<T: serde::de::DeserializeOwned>(
 }
 
 /// Wraps a config validation failure as a [`LoadError`].
-fn config_error(err: ConfigError) -> LoadError {
+pub(crate) fn config_error(err: ConfigError) -> LoadError {
     LoadError::BadConfig(err.to_string())
 }
 
@@ -245,6 +258,13 @@ fn resolved_edges(dep: &raw::RawNodeDep) -> Vec<ResolvedDependency> {
 ///
 /// Kept tiny and not unit-tested: it spawns a process.
 pub(crate) fn from_cargo() -> Result<Workspace, LoadError> {
+    load(&metadata_json()?)
+}
+
+/// Runs `cargo metadata` and returns its JSON text.
+///
+/// Kept tiny and not unit-tested: it spawns a process.
+pub(crate) fn metadata_json() -> Result<String, LoadError> {
     let output = crate::cargo::command()
         .args(METADATA_ARGS)
         .output()
@@ -254,7 +274,7 @@ pub(crate) fn from_cargo() -> Result<Workspace, LoadError> {
             String::from_utf8_lossy(&output.stderr).into_owned(),
         ));
     }
-    load(&String::from_utf8_lossy(&output.stdout))
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 #[cfg(test)]

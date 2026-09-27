@@ -67,7 +67,8 @@ crates/
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20
   kx-test-support/      shared test helpers, golden files
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
-                         dist (stub until P14), sign (later), sbom (later)
+                         dist (stub until P14), dev-cert / dev-install / check-uiaccess
+                         (uiAccess test builds), sign (later), sbom (later)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs

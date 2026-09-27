@@ -7,6 +7,7 @@ mod cargo;
 mod cli;
 mod config;
 mod dco;
+mod devtools;
 mod dist;
 mod licences;
 #[cfg(test)]
@@ -44,6 +45,12 @@ fn run(command: &cli::Command) -> ExitCode {
         cli::Command::Dco { base, head } => run_dco(base, head),
         cli::Command::Licences => finish(licences::run()),
         cli::Command::Dist => finish(dist::run()),
+        cli::Command::DevCert { remove } => finish(devtools::cert::run(*remove)),
+        cli::Command::DevInstall { folder } => finish(devtools::install::run(folder)),
+        cli::Command::DevUninstall { name } => finish(devtools::install::remove(name)),
+        cli::Command::CheckUiAccess { exe } => {
+            devtools::check::run(exe).map_or_else(fail, exit_for)
+        }
     }
 }
 
@@ -68,8 +75,14 @@ fn finish(result: Result<(), impl Display>) -> ExitCode {
 }
 
 /// Runs `cargo xtask tidy`: loads the real workspace, runs every rule and prints the report.
+///
+/// It also validates the real dev-tools settings, so CI catches a bad value there.
 fn run_tidy() -> ExitCode {
-    match workspace::from_cargo() {
+    let loaded = workspace::metadata_json().and_then(|json| {
+        devtools::config::load(&json)?;
+        workspace::load(&json)
+    });
+    match loaded {
         Ok(ws) => report_tidy(&tidy::run(&ws)),
         Err(err) => fail(err),
     }

@@ -65,3 +65,61 @@ root_kinds = ["lib", "bin", "proc-macro"]
 trailer = "Signed-off-by"
 # Authors exempt from the DCO check.
 exempt_authors = ["dependabot[bot]"]
+
+[workspace.metadata.devtools]
+# Subject of the self-signed test certificate that signs uiAccess test builds.
+cert_subject = "CN=KeyXtend Dev Test"
+# Days the test certificate stays valid.
+cert_days = 90
+# A certificate with fewer days left is replaced, so signed test builds never expire mid-test.
+cert_min_days = 14
+# Current-user certificate store that holds the test key.
+user_store = "My"
+# Folder, under the workspace root, for the exported certificate, launchers and temp files.
+out_dir = "target/dev-tools"
+# Exported public certificate file name.
+cert_file = "keyxtend-dev.cer"
+# Launcher the owner opens to trust the certificate.
+trust_launcher = "trust-dev-cert.cmd"
+# Launcher the owner opens to stop trusting it.
+untrust_launcher = "untrust-dev-cert.cmd"
+# Manifest file extracted by `check-uiaccess`.
+manifest_file = "manifest.xml"
+# File where the admin window leaves its error message for the terminal.
+admin_error_file = "admin-error.txt"
+# Folder, under the workspace root, holding the PowerShell scripts.
+scripts_dir = "xtask/scripts"
+# User-level certificate script: find, create, export or delete.
+cert_script = "dev-cert.ps1"
+# Admin-level script: trust, untrust, install or uninstall.
+admin_script = "dev-admin.ps1"
+# Env var naming the Windows folder, so PowerShell is never picked up from another folder.
+shell_root_env = "SystemRoot"
+# PowerShell program, relative to that Windows folder.
+powershell = "System32/WindowsPowerShell/v1.0/powershell.exe"
+# Folder name for test installs under Program Files.
+install_dir = "KeyXtend-dev"
+# Largest build folder `dev-install` copies to C:, in MB.
+install_max_mb = 500
+# Env vars naming the folders Windows accepts for uiAccess; the first one receives installs.
+secure_env = ["ProgramFiles", "ProgramFiles(x86)"]
+# Windows SDK bin folder holding one folder per SDK version.
+sdk_bin = 'C:\Program Files (x86)\Windows Kits\10\bin'
+# SDK tool architecture folder.
+sdk_arch = "x64"
+# SDK signing tool.
+signtool = "signtool.exe"
+# SDK manifest tool.
+mt = "mt.exe"
+# Signature digest algorithm.
+digest = "SHA256"
+# Manifest element that holds the uiAccess attribute.
+ui_access_tag = "requestedExecutionLevel"
+# Manifest attribute that grants uiAccess.
+ui_access_attr = "uiAccess"
+# Attribute value that turns uiAccess on.
+ui_access_on = "true"
+# Exit code the admin script returns when the owner cancels the Windows prompt.
+cancel_code = 1223
+# Exit code the admin script returns for any other failure.
+fail_code = 1

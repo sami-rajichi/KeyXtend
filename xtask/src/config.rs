@@ -1,4 +1,4 @@
-//! Tidy and DCO config, deserialized from `[workspace.metadata]` in `Cargo.toml`.
+//! Tidy and DCO config, deserialized from `[workspace.metadata]` in `Cargo.toml`, and the shared config errors.
 
 use std::fmt;
 
@@ -64,20 +64,43 @@ pub(crate) struct DcoConfig {
     pub exempt_authors: Vec<String>,
 }
 
-/// A tidy or DCO config value that fails validation.
+/// A `workspace.metadata` value that fails validation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ConfigError {
     /// `warn_file_lines` is greater than `max_file_lines`.
     WarnExceedsMax,
     /// A required list is empty.
     EmptyList(&'static str),
+    /// A required text value is empty or blank.
+    EmptyValue(&'static str),
+    /// A count that must be non-zero is zero.
+    ZeroValue(&'static str),
+    /// An exit code is below 1.
+    NotPositive(&'static str),
+    /// A text holds a `"` or ends with `\`, which breaks command-line quoting.
+    NotQuotable(&'static str),
+    /// The first value must be smaller than the second.
+    NotBelow(&'static str, &'static str),
+    /// Two values that must differ are equal.
+    Same(&'static str, &'static str),
+    /// A value must be one plain file or folder name.
+    NotPlain(&'static str),
+    /// A value must be a relative `/`-separated path of plain names.
+    NotRelative(&'static str),
 }
 
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::WarnExceedsMax => write!(f, "warn_file_lines exceeds max_file_lines"),
-            Self::EmptyList(name) => write!(f, "{name} must not be empty"),
+            Self::EmptyList(name) | Self::EmptyValue(name) => write!(f, "{name} must not be empty"),
+            Self::ZeroValue(name) => write!(f, "{name} must not be zero"),
+            Self::NotPositive(name) => write!(f, "{name} must be at least 1"),
+            Self::NotQuotable(name) => write!(f, "{name} must not contain \" or end with \\"),
+            Self::NotBelow(name, limit) => write!(f, "{name} must be smaller than {limit}"),
+            Self::Same(a, b) => write!(f, "{a} and {b} must differ"),
+            Self::NotPlain(name) => write!(f, "{name} must be one plain name"),
+            Self::NotRelative(name) => write!(f, "{name} must be a relative path of plain names"),
         }
     }
 }
@@ -118,6 +141,30 @@ mod tests {
         let mut config = tidy();
         config.scan_dirs = vec![];
         assert_eq!(config.validate(), Err(ConfigError::EmptyList("scan_dirs")));
+    }
+
+    #[test]
+    fn error_messages_name_their_values() {
+        assert_eq!(
+            ConfigError::ZeroValue("x").to_string(),
+            "x must not be zero"
+        );
+        assert_eq!(
+            ConfigError::NotPositive("x").to_string(),
+            "x must be at least 1"
+        );
+        assert_eq!(
+            ConfigError::NotQuotable("x").to_string(),
+            "x must not contain \" or end with \\"
+        );
+        assert_eq!(
+            ConfigError::NotBelow("a", "b").to_string(),
+            "a must be smaller than b"
+        );
+        assert_eq!(
+            ConfigError::Same("a", "b").to_string(),
+            "a and b must differ"
+        );
     }
 
     #[test]
