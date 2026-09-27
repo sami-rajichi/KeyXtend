@@ -37,6 +37,14 @@ pub struct Probes {
     pub settle_ms: u64,
     /// A text point sits this far inside a line's left edge.
     pub inset_px: i32,
+    /// Largest clipboard content saved and put back around a probe, in bytes.
+    pub keep_max_bytes: usize,
+    /// Wait before removing test copies from Windows clipboard history, in ms.
+    pub history_settle_ms: u64,
+    /// A history entry that is the start of `text`, at least this long, is a test copy.
+    pub forget_min_chars: usize,
+    /// History entries longer than this, in characters, are never read.
+    pub forget_max_chars: usize,
 }
 
 /// The simulated user's timing, shared by G5 and the probes; in ms.

@@ -61,6 +61,8 @@ pub struct TargetConfig {
     pub width_px: i32,
     /// Window height in pixels.
     pub height_px: i32,
+    /// Command-line switch that makes the box a single-line password box.
+    pub password_arg: String,
 }
 
 impl SpikeConfig {

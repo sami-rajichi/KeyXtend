@@ -8,9 +8,9 @@ use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::simuser::{self, guard, keys_ours};
-use crate::uia::{self, Uia};
 use crate::win::{self, sleep_ms};
-use crate::{clip, keys, launch, out};
+use crate::{clip, keys, launch, out, winclip};
+use spike_core::uia::{self, Uia};
 
 /// Word's probe app, which opens a prepared file.
 const WORD_FILE: &str = "word_file";
@@ -86,20 +86,25 @@ pub fn open_text(ctx: &Ctx, kind: AppKind, text: &str) -> Result<Doc, String> {
             (Doc { app, path }, kind.name())
         }
         AppKind::Chrome => {
-            let body = format!(
-                "<pre style=\"{}\">{}</pre>",
-                pr.page_css,
-                launch::html_text(text)
+            let css = &pr.page_css;
+            return open_page(
+                ctx,
+                &format!("<pre style=\"{css}\">{}</pre>", launch::html_text(text)),
             );
-            let title = launch::page_title(ctx, &pr.page_title);
-            let (app, path) = launch::open_page(ctx, &title, &body)?;
-            (Doc { app, path }, kind.name())
         }
         AppKind::Word => (open_word(ctx, text)?, WORD_FILE),
         _ => return Err(format!("no text probe for {}", kind.name())),
     };
     sleep_ms(ctx.cfg.app(app)?.ready_ms);
     Ok(doc)
+}
+
+/// Chrome on a fresh probe page holding `body`, once it is ready.
+pub fn open_page(ctx: &Ctx, body: &str) -> Result<Doc, String> {
+    let title = launch::page_title(ctx, &ctx.cfg.probes.page_title);
+    let (app, path) = launch::open_page(ctx, &title, body)?;
+    sleep_ms(ctx.cfg.app(AppKind::Chrome.name())?.ready_ms);
+    Ok(Doc { app, path })
 }
 
 /// Word on a fresh RTF file holding `text`, spotted by the file name in its title.
@@ -204,21 +209,25 @@ pub fn copied(ctx: &Ctx, app: &Opened) -> (bool, Value) {
     }
 }
 
-/// Runs `f` with the owner's clipboard text saved first and put back after; refuses if it holds more than text.
-pub fn keep_clipboard<T>(ctx: &Ctx, f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    let t = &ctx.cfg.timing;
-    if !clip::only_text(t.read_wait_ms, t.poll_ms)? {
-        return Err(
-            "the clipboard holds more than plain text, which we could not put back".to_string(),
-        );
+/// Removes from Windows clipboard history the entries made since `since` whose text `is_test`; reports how many.
+pub fn forget_copies(ctx: &Ctx, since: i64, is_test: &(dyn Fn(&str) -> bool + Sync)) -> Value {
+    let pr = &ctx.cfg.probes;
+    sleep_ms(pr.history_settle_ms);
+    let scope = winclip::Scope {
+        since,
+        max_chars: pr.forget_max_chars,
+        is_ours: is_test,
+    };
+    match winclip::forget(&scope) {
+        Ok(n) => json!(n),
+        Err(e) => json!({ "error": e }),
     }
-    let saved = clip::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)
-        .map_err(|e| format!("could not save the clipboard first: {e}"))?;
-    let got = f();
-    if let Err(e) = clip::write_text(saved.as_deref(), t.read_wait_ms, t.poll_ms) {
-        println!("the clipboard was not put back: {e}");
-    }
-    got
+}
+
+/// True for a copy G17 or G18 made: a start of the probe text, at least `forget_min_chars` long.
+pub fn probe_copy(ctx: &Ctx, text: &str) -> bool {
+    let pr = &ctx.cfg.probes;
+    winclip::leads(text, &pr.text, pr.forget_min_chars)
 }
 
 /// True when `copied` is a non-empty part of `known`, ignoring spaces and line ends at its edges.

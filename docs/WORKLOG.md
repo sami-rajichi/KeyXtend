@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P1: selection, clipboard, password and language probes (G19, G20, G21, G25)
+A line selected in Notepad or a Chrome text box (English, French and Arabic) is read back through UI Automation without touching the clipboard, and a pill position is worked out from its screen box. A clipboard listener heard all 25 test copies, skipped the 5 marked as private and pasted an older one back, keeping the owner's clipboard and removing test copies from the Win+V list; one run in three saw the copies out of order. Password boxes are recognised in Chrome and in a Win32 box, the language key cycles English, French and Arabic in the app in front, and Ctrl+C/V/Z, Win+V and Alt+Tab work (Win+V only with uiAccess). Three reviews found about 50 issues, all fixed, including arrow-type keys now sent as extended keys and the listener opening the clipboard with its own window.
+
 ## 2026-09-27 — P1: Grab, modifier+click and scroll probes (G17, G18, G6)
 The owner tried Right-click and Grab with their own mouse: both work. Automatic runs passed in Notepad, Chrome and Explorer: Grab selects text and moves a file (Esc cancels), latched Shift and Ctrl change the next click, and UI Automation, a posted wheel and a SendInput wheel all scroll a window the pointer is not on. Word was not tested: a fresh Word process shows a subscription-check dialog over the document. Two reviews found about 30 issues, all fixed.
 

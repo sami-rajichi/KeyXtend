@@ -5,7 +5,7 @@
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use spike_core::clock::now_us;
@@ -20,12 +20,13 @@ use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, ES_AUTOVSCROLL, ES_MULTILINE,
-    ES_WANTRETURN, GetClientRect, GetMessageW, IDC_IBEAM, LoadCursorW, MSG, MoveWindow,
-    PostQuitMessage, RegisterClassW, SendMessageW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE,
-    WM_CHAR, WM_CONTEXTMENU, WM_DESTROY, WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SETFONT, WM_SIZE,
-    WNDCLASSW, WS_CHILD, WS_EX_CLIENTEDGE, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
+    CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, ES_AUTOHSCROLL,
+    ES_AUTOVSCROLL, ES_MULTILINE, ES_PASSWORD, ES_WANTRETURN, GetClientRect, GetMessageW,
+    IDC_IBEAM, LoadCursorW, MSG, MoveWindow, PostQuitMessage, RegisterClassW, SendMessageW,
+    TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CHAR, WM_CONTEXTMENU, WM_DESTROY,
+    WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_RBUTTONDBLCLK, WM_RBUTTONDOWN,
+    WM_RBUTTONUP, WM_SETFOCUS, WM_SETFONT, WM_SIZE, WNDCLASSW, WS_CHILD, WS_EX_CLIENTEDGE,
+    WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -33,6 +34,8 @@ use windows::core::{HSTRING, PCWSTR, w};
 static LOG: OnceLock<Mutex<File>> = OnceLock::new();
 /// The edit box, as a raw handle value.
 static EDIT: AtomicIsize = AtomicIsize::new(0);
+/// Set in password mode: typed characters are never logged.
+static PASSWORD: AtomicBool = AtomicBool::new(false);
 /// Window class of the main window; the harness finds the window by its title.
 const CLASS: PCWSTR = w!("KxsTargetWindow");
 /// Id of our subclass on the edit box.
@@ -92,7 +95,9 @@ unsafe extern "system" fn edit_proc(
     _data: usize,
 ) -> LRESULT {
     match msg {
-        WM_CHAR => log_line(&targetlog::data(now_us(), wparam.0 as u16)),
+        WM_CHAR if !PASSWORD.load(Ordering::Relaxed) => {
+            log_line(&targetlog::data(now_us(), wparam.0 as u16))
+        }
         WM_KILLFOCUS => log_line(&targetlog::mark(targetlog::FOCUS_LOST, now_us())),
         _ => {}
     }
@@ -159,8 +164,10 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let _ = LOG.set(Mutex::new(file));
     log_line(&targetlog::mark(targetlog::START, now_us()));
+    let password = std::env::args().any(|a| a == cfg.target.password_arg);
+    PASSWORD.store(password, Ordering::Relaxed);
     // SAFETY: standard Win32 window creation and message loop on this thread.
-    unsafe { run(&cfg.target) }
+    unsafe { run(&cfg.target, password) }
 }
 
 /// Registers the class and opens the main window.
@@ -196,12 +203,18 @@ unsafe fn create_main(t: &TargetConfig, inst: HINSTANCE) -> Result<HWND, String>
     }
 }
 
+/// The edit box style: multi-line, or a single-line password box (Windows ignores `ES_PASSWORD` on multi-line boxes).
+fn edit_style(password: bool) -> WINDOW_STYLE {
+    if password {
+        return WS_CHILD | WS_VISIBLE | WINDOW_STYLE((ES_PASSWORD | ES_AUTOHSCROLL) as u32);
+    }
+    let own = ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN;
+    WS_CHILD | WS_VISIBLE | WS_VSCROLL | WINDOW_STYLE(own as u32)
+}
+
 /// Creates the logging edit box inside `main`, sized to its client area.
-unsafe fn create_edit(main: HWND, inst: HINSTANCE) -> Result<HWND, String> {
-    let style = WS_CHILD
-        | WS_VISIBLE
-        | WS_VSCROLL
-        | WINDOW_STYLE((ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN) as u32);
+unsafe fn create_edit(main: HWND, inst: HINSTANCE, password: bool) -> Result<HWND, String> {
+    let style = edit_style(password);
     // SAFETY: the caller runs this on the UI thread; `main` is our live window.
     unsafe {
         let edit = CreateWindowExW(
@@ -259,12 +272,12 @@ unsafe fn set_font(edit: HWND, t: &TargetConfig) {
     }
 }
 
-unsafe fn run(t: &TargetConfig) -> Result<(), String> {
+unsafe fn run(t: &TargetConfig, password: bool) -> Result<(), String> {
     // SAFETY: the caller runs this on the UI thread; every handle comes from these calls.
     unsafe {
         let inst: HINSTANCE = GetModuleHandleW(None).map_err(|e| e.to_string())?.into();
         let main = create_main(t, inst)?;
-        let edit = create_edit(main, inst)?;
+        let edit = create_edit(main, inst, password)?;
         set_font(edit, t);
         let _ = SetFocus(Some(edit));
         let mut msg = MSG::default();
@@ -279,6 +292,15 @@ unsafe fn run(t: &TargetConfig) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_password_box_is_single_line_with_the_password_style() {
+        let has = |s: WINDOW_STYLE, bits: i32| s.0 & bits as u32 != 0;
+        assert!(has(edit_style(true), ES_PASSWORD));
+        assert!(!has(edit_style(true), ES_MULTILINE));
+        assert!(has(edit_style(false), ES_MULTILINE));
+        assert!(!has(edit_style(false), ES_PASSWORD));
+    }
 
     #[test]
     fn point_of_reads_signed_words() {

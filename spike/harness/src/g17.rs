@@ -8,8 +8,9 @@ use crate::apps::{AppKind, Ctx};
 use crate::assist::Assist;
 use crate::probe::{self, Doc};
 use crate::simuser::{self, is_up};
-use crate::uia::Uia;
 use crate::win::{self, sleep_ms};
+use crate::{clipkeep, winclip};
+use spike_core::uia::Uia;
 
 /// The apps G17 probes.
 pub const APPS: [AppKind; 4] = [
@@ -95,12 +96,17 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         _ => probe::open_text(ctx, kind, &pr.text)?,
     };
     println!("G17 {name}: {}", win::describe(doc.app.hwnd));
-    let run = |d: &Doc| probe::keep_clipboard(ctx, || drive(ctx, &uia, d));
-    let ((cases, errors), notes) = probe::run_on(ctx, doc, run)?;
+    let since = winclip::now();
+    let run = |d: &Doc| clipkeep::keep(ctx.cfg, || drive(ctx, &uia, d));
+    let result = probe::run_on(ctx, doc, run);
+    // Clean the history even when the run failed.
+    let history = probe::forget_copies(ctx, since, &|t| probe::probe_copy(ctx, t));
+    let ((cases, errors), notes) =
+        result.map_err(|e| format!("{e}; history removed: {history}"))?;
     let pass = cases.iter().all(|c| c["ok"] == json!(true)) && errors.is_empty();
     println!("G17 {name}: pass {pass}; {}", json!(cases));
     Ok(json!({
         "gate": "G17", "app": name, "pass": pass, "cases": cases,
-        "errors": errors, "clean_up": notes,
+        "errors": errors, "clean_up": notes, "history_removed": history,
     }))
 }

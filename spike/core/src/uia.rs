@@ -1,15 +1,11 @@
-//! UI Automation for the probes: items by name, text line boxes, selection, and ScrollPattern.
+//! UI Automation client: items by name, text documents, selection state and ScrollPattern.
 
-use std::ffi::c_void;
+mod geom;
+mod read;
 
-use spike_core::hold::Pt;
 use windows::Win32::Foundation::{HWND, POINT, RECT, RPC_E_CHANGED_MODE};
 use windows::Win32::System::Com::{
-    CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, SAFEARRAY,
-};
-use windows::Win32::System::Ole::{
-    SafeArrayAccessData, SafeArrayDestroy, SafeArrayGetDim, SafeArrayGetElemsize,
-    SafeArrayGetLBound, SafeArrayGetUBound, SafeArrayUnaccessData,
+    CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
 };
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
@@ -17,11 +13,18 @@ use windows::Win32::UI::Accessibility::{
     IUIAutomationScrollPattern, IUIAutomationSelectionItemPattern, IUIAutomationTextPattern,
     ScrollAmount, TreeScope_Descendants, UIA_ControlTypePropertyId, UIA_DocumentControlTypeId,
     UIA_IsTextPatternAvailablePropertyId, UIA_ListItemControlTypeId, UIA_NamePropertyId,
-    UIA_PROPERTY_ID, UIA_ScrollPatternId, UIA_SelectionItemPatternId, UIA_TextPatternId,
+    UIA_PATTERN_ID, UIA_PROPERTY_ID, UIA_ScrollPatternId, UIA_SelectionItemPatternId,
+    UIA_TextPatternId,
 };
+use windows::core::Interface;
 
-/// Numbers per box from `GetBoundingRectangles`: left, top, width, height.
-const BOX: usize = 4;
+pub use geom::{Pill, anchor, centre, line_points, rects_of};
+pub use read::{Sel, boxes, is_password, lines, password_flag, selection};
+
+use crate::hold::Pt;
+
+/// Most ancestors walked when looking for a pattern above an element.
+const MAX_DEPTH: usize = 32;
 
 /// A UI Automation client.
 pub struct Uia(IUIAutomation);
@@ -87,6 +90,12 @@ impl Uia {
         self.first(&self.window(hwnd).ok()?, props)
     }
 
+    /// The first element called `name` in window `hwnd`, such as a web field by its label.
+    pub fn named(&self, hwnd: HWND, name: &str) -> Option<IUIAutomationElement> {
+        let props = vec![(UIA_NamePropertyId, VARIANT::from(name))];
+        self.first(&self.window(hwnd).ok()?, props)
+    }
+
     /// Where to press `item`: the centre of its label called `name`, else of the item.
     pub fn grip(&self, item: &IUIAutomationElement, name: &str) -> Result<Pt, String> {
         let label = self.first(item, vec![(UIA_NamePropertyId, VARIANT::from(name))]);
@@ -103,19 +112,38 @@ impl Uia {
         self.first(&self.window(hwnd).ok()?, vec![has_text, doc])
     }
 
-    /// The ScrollPattern of the element at `p`, or of its nearest ancestor that has one.
-    pub fn scroller(&self, p: Pt) -> Option<IUIAutomationScrollPattern> {
+    /// The element that has the keyboard focus, in any app.
+    pub fn focused(&self) -> Result<IUIAutomationElement, String> {
+        // SAFETY: a plain call.
+        unsafe { self.0.GetFocusedElement() }.map_err(|e| format!("UIA focus: {e}"))
+    }
+
+    /// Pattern `id` of `el`, or of its nearest ancestor that has it, at most `MAX_DEPTH` up.
+    fn up<T: Interface>(&self, el: IUIAutomationElement, id: UIA_PATTERN_ID) -> Option<T> {
         // SAFETY: plain calls; each failure ends the walk.
         unsafe {
             let walker = self.0.ControlViewWalker().ok()?;
-            let mut el = self.0.ElementFromPoint(POINT { x: p.x, y: p.y }).ok()?;
-            loop {
-                if let Ok(sp) = el.GetCurrentPatternAs(UIA_ScrollPatternId) {
-                    return Some(sp);
+            let mut el = el;
+            for _ in 0..MAX_DEPTH {
+                if let Ok(p) = el.GetCurrentPatternAs(id) {
+                    return Some(p);
                 }
                 el = walker.GetParentElement(&el).ok()?;
             }
+            None
         }
+    }
+
+    /// The TextPattern of `el`, or of its nearest ancestor that has one.
+    pub fn text_of(&self, el: &IUIAutomationElement) -> Option<IUIAutomationTextPattern> {
+        self.up(el.clone(), UIA_TextPatternId)
+    }
+
+    /// The ScrollPattern of the element at `p`, or of its nearest ancestor that has one.
+    pub fn scroller(&self, p: Pt) -> Option<IUIAutomationScrollPattern> {
+        // SAFETY: a plain call.
+        let el = unsafe { self.0.ElementFromPoint(POINT { x: p.x, y: p.y }) }.ok()?;
+        self.up(el, UIA_ScrollPatternId)
     }
 }
 
@@ -123,6 +151,35 @@ impl Uia {
 pub fn rect(el: &IUIAutomationElement) -> Result<RECT, String> {
     // SAFETY: a plain property read.
     unsafe { el.CurrentBoundingRectangle() }.map_err(|e| format!("UIA box: {e}"))
+}
+
+/// The name of `el`, or empty.
+pub fn name(el: &IUIAutomationElement) -> String {
+    // SAFETY: a plain property read.
+    unsafe { el.CurrentName() }
+        .map(|b| b.to_string())
+        .unwrap_or_default()
+}
+
+/// The id of the process that shows `el`, or 0.
+pub fn pid(el: &IUIAutomationElement) -> u32 {
+    // SAFETY: a plain property read.
+    let id = unsafe { el.CurrentProcessId() }.unwrap_or_default();
+    u32::try_from(id).unwrap_or_default()
+}
+
+/// The class and control type of `el`, for error messages; never its name or text.
+pub fn kind(el: &IUIAutomationElement) -> String {
+    // SAFETY: plain property reads.
+    unsafe {
+        let class = el.CurrentClassName().map(|b| b.to_string());
+        let ty = el.CurrentControlType().map(|t| t.0);
+        format!(
+            "{} / type {}",
+            class.unwrap_or_default(),
+            ty.unwrap_or_default()
+        )
+    }
 }
 
 /// True when `el` is selected.
@@ -135,23 +192,6 @@ pub fn selected(el: &IUIAutomationElement) -> Result<bool, String> {
         sel.CurrentIsSelected()
             .map(|b| b.as_bool())
             .map_err(|e| format!("UIA selection: {e}"))
-    }
-}
-
-/// The boxes of the visible text lines of `el`, top first.
-pub fn lines(el: &IUIAutomationElement) -> Result<Vec<RECT>, String> {
-    // SAFETY: plain pattern calls; the array we get is ours to read and free.
-    unsafe {
-        let text: IUIAutomationTextPattern = el
-            .GetCurrentPatternAs(UIA_TextPatternId)
-            .map_err(|e| format!("UIA text: {e}"))?;
-        let range = text
-            .DocumentRange()
-            .map_err(|e| format!("UIA range: {e}"))?;
-        let sa = range
-            .GetBoundingRectangles()
-            .map_err(|e| format!("UIA line boxes: {e}"))?;
-        Ok(rects_of(&doubles(sa)?))
     }
 }
 
@@ -177,100 +217,5 @@ pub fn percent(sp: &IUIAutomationScrollPattern) -> Option<(f64, f64)> {
             sp.CurrentHorizontalScrollPercent().ok()?,
             sp.CurrentVerticalScrollPercent().ok()?,
         ))
-    }
-}
-
-/// Reads and frees a one-dimensional SAFEARRAY of doubles.
-///
-/// # Safety
-/// `sa` is null or a live array of VT_R8 that we own.
-unsafe fn doubles(sa: *mut SAFEARRAY) -> Result<Vec<f64>, String> {
-    if sa.is_null() {
-        return Ok(Vec::new());
-    }
-    // SAFETY: the caller hands us a live array; it is unlocked and freed on every path.
-    unsafe {
-        let read = || -> windows::core::Result<Vec<f64>> {
-            let shaped =
-                SafeArrayGetDim(sa) == 1 && SafeArrayGetElemsize(sa) as usize == size_of::<f64>();
-            if !shaped {
-                return Ok(Vec::new());
-            }
-            let n = usize::try_from(SafeArrayGetUBound(sa, 1)? - SafeArrayGetLBound(sa, 1)? + 1)
-                .unwrap_or(0);
-            if n == 0 {
-                return Ok(Vec::new());
-            }
-            let mut data: *mut c_void = std::ptr::null_mut();
-            SafeArrayAccessData(sa, &mut data)?;
-            let v = std::slice::from_raw_parts(data.cast::<f64>(), n).to_vec();
-            SafeArrayUnaccessData(sa)?;
-            Ok(v)
-        };
-        let got = read();
-        let _ = SafeArrayDestroy(sa);
-        got.map_err(|e| format!("UIA array: {e}"))
-    }
-}
-
-/// Boxes from `left, top, width, height` groups; empty boxes and a partial group are dropped.
-pub fn rects_of(v: &[f64]) -> Vec<RECT> {
-    v.as_chunks::<BOX>()
-        .0
-        .iter()
-        .filter(|b| b[2] > 0.0 && b[3] > 0.0)
-        .map(|b| RECT {
-            left: b[0].round() as i32,
-            top: b[1].round() as i32,
-            right: (b[0] + b[2]).round() as i32,
-            bottom: (b[1] + b[3]).round() as i32,
-        })
-        .collect()
-}
-
-/// The centre of `r`.
-pub fn centre(r: &RECT) -> Pt {
-    Pt {
-        x: (r.left + r.right) / 2,
-        y: (r.top + r.bottom) / 2,
-    }
-}
-
-/// Two points on text line `line`: `inset` px in from its start (never past its middle), and its middle.
-pub fn line_points(line: &RECT, inset: i32) -> (Pt, Pt) {
-    let mid = centre(line);
-    let start = Pt {
-        x: (line.left + inset).min(mid.x),
-        y: mid.y,
-    };
-    (start, mid)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn r(left: i32, top: i32, right: i32, bottom: i32) -> RECT {
-        RECT {
-            left,
-            top,
-            right,
-            bottom,
-        }
-    }
-
-    #[test]
-    fn line_boxes_come_from_groups_of_four_and_skip_empty_ones() {
-        let v = [10.0, 20.0, 100.4, 18.6, 5.0, 5.0, 0.0, 10.0, 1.0, 2.0];
-        assert_eq!(rects_of(&v), [r(10, 20, 110, 39)]);
-        assert!(rects_of(&[]).is_empty());
-    }
-
-    #[test]
-    fn line_points_start_inside_the_line_and_never_pass_its_middle() {
-        let (start, mid) = line_points(&r(100, 50, 300, 70), 3);
-        assert_eq!((start, mid), (Pt { x: 103, y: 60 }, Pt { x: 200, y: 60 }));
-        let (start, mid) = line_points(&r(100, 50, 104, 70), 3);
-        assert_eq!(start, mid);
     }
 }

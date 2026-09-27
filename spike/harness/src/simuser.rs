@@ -5,7 +5,7 @@ use spike_core::inject::{self, TAG};
 use spike_core::window::foreground;
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_SHIFT,
+    GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,
 };
 
 use crate::apps::{Ctx, Opened};
@@ -116,13 +116,13 @@ pub fn is_up(vk: u16) -> bool {
     state & KEY_DOWN == 0
 }
 
-/// A last safety net: lets go of the left button, Shift and Ctrl if one is still down; true if it had to.
+/// A last safety net: lets go of the left button, Shift, Ctrl, Alt and Win if one is still down; true if it had to.
 pub fn release_all() -> Result<bool, String> {
     let mut inputs = Vec::new();
     if !is_up(VK_LBUTTON.0) {
         inputs.push(mouse::input(0, 0, MOUSEEVENTF_LEFTUP, TAG));
     }
-    for vk in [VK_SHIFT.0, VK_CONTROL.0] {
+    for vk in [VK_SHIFT.0, VK_CONTROL.0, VK_MENU.0, VK_LWIN.0] {
         if !is_up(vk) {
             inputs.push(keys::tagged(vk, true, TAG));
         }

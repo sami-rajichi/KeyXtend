@@ -40,3 +40,5 @@ font_px = 24
 # Window size in pixels.
 width_px = 900
 height_px = 500
+# Switch that makes the box a single-line password box, where typed characters are never logged.
+password_arg = "--password"

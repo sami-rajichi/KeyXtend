@@ -10,8 +10,8 @@ use crate::assist;
 use crate::probe::{self, Doc};
 use crate::scroll::{self, Dir, Route};
 use crate::simuser::{self, guard};
-use crate::uia::{self, Uia};
 use crate::win::{self, sleep_ms};
+use spike_core::uia::{self, Uia};
 
 /// The apps G6 probes.
 pub const APPS: [AppKind; 4] = [

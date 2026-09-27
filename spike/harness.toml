@@ -216,6 +216,14 @@ move_steps = 12
 settle_ms = 700
 # A text point sits this far inside a line's left edge, in px.
 inset_px = 3
+# Largest clipboard content (every format) saved and put back around a probe, in bytes.
+keep_max_bytes = 16777216
+# Test copies are removed from Windows clipboard history after this wait, in ms.
+history_settle_ms = 1500
+# A history entry made during a run that is the start of the probe text, at least this long, is a test copy.
+forget_min_chars = 4
+# History entries longer than this, in characters, are never read.
+forget_max_chars = 200
 
 [g6]
 # One wheel notch (WHEEL_DELTA), and notches or UIA small steps per scroll.
@@ -225,3 +233,62 @@ notches = 3
 face_px = 120
 # A window picture counts as changed when more than this share of its pixels changed.
 min_changed = 0.02
+
+[edit_keys]
+# Shortcuts the stage-1b probes press: Ctrl+Home, Ctrl+End, Home, Shift+End, Down, Ctrl+V, Ctrl+Z.
+doc_start = [0x11, 0x24]
+doc_end = [0x11, 0x23]
+line_start = [0x24]
+select_line = [0x10, 0x23]
+next_line = [0x28]
+paste = [0x11, 0x56]
+undo = [0x11, 0x5A]
+
+[g19]
+# One line each in English, French and Arabic; each is selected to its end and read back through UI Automation.
+lines = [
+    "Select this whole line.",
+    "Sélectionnez toute cette ligne.",
+    "حدد هذا السطر كاملا.",
+]
+# Longest selection read, in characters, over all selected ranges.
+max_chars = 200
+# Chrome's text box: its name (aria-label) and style.
+box_name = "kx-select"
+box_css = "font:20px monospace;margin:24px;width:80%"
+# Stand-in pill: width, height and gap from the text, in px.
+pill = { w = 80, h = 30, gap = 8 }
+
+[g20]
+# Kept copies (half written by the harness, half copied in Notepad) and copies with an exclusion marker.
+copies = 20
+# Copies written with no wait between them; the listener must hear each one.
+burst = 2
+excluded = 5
+# Start of the kept and of the marked test texts; only these are removed from Win+V after.
+prefix = "kx-clip-"
+hidden_prefix = "kx-hidden-"
+# The entry pasted back, counted from the newest (1 to copies).
+paste_back = 5
+# Longest text the listener keeps, in characters.
+max_chars = 200
+# Longest wait for the listener to report one copy, in ms.
+event_wait_ms = 2000
+
+[g21]
+# The web page's field names (aria-label) and style; target-window's password switch is in spike.toml.
+user_name = "kx-user"
+pass_name = "kx-pass"
+field_css = "font:20px sans-serif;margin:24px;display:block"
+
+[g25]
+# Copied and pasted in Notepad; also the prefix removed from Windows clipboard history after.
+text = "kx-keys-alpha"
+# Longest wait for a layout change or a window switch, in ms.
+switch_wait_ms = 2000
+# Windows that appear while the Win+V panel is open (its window never takes the foreground).
+panel_classes = ["Shell_LightDismissOverlay", "ApplicationFrameWindow"]
+# Win+V, Esc, Alt+Tab.
+win_v = [0x5B, 0x56]
+esc = [0x1B]
+alt_tab = [0x12, 0x09]
