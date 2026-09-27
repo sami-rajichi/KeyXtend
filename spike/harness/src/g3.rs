@@ -10,13 +10,11 @@ use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUIAccess};
 use windows::Win32::System::Threading::{
     OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
 };
-use windows::Win32::UI::WindowsAndMessaging::{
-    GA_ROOT, GetAncestor, GetWindowRect, WindowFromPoint,
-};
+use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::apps::Ctx;
 use crate::config::Surface;
-use crate::win::{self, Match, sleep_ms};
+use crate::win::{self, Match, root_at, sleep_ms};
 use crate::{keys, mouse};
 
 /// What probing one surface showed.
@@ -95,12 +93,6 @@ fn ui_access(pid: u32) -> Result<bool, String> {
         read.map_err(|e| format!("GetTokenInformation: {e}"))?;
     }
     Ok(value != 0)
-}
-
-/// The top-level window under `p`.
-fn root_at(p: POINT) -> HWND {
-    // SAFETY: plain queries; a null result is handled by the caller's comparison.
-    unsafe { GetAncestor(WindowFromPoint(p), GA_ROOT) }
 }
 
 /// Closes what `s` opened: its close keys, or `WM_CLOSE` to a new window of its class.
