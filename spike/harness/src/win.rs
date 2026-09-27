@@ -3,15 +3,15 @@
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
-use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, WPARAM};
+use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GUITHREADINFO, GetClassNameW, GetGUIThreadInfo, GetSystemMetrics, GetWindowTextW,
-    GetWindowThreadProcessId, IsChild, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
-    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SW_RESTORE,
-    SetForegroundWindow, ShowWindow, WM_CLOSE,
+    EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
+    GetSystemMetrics, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindow,
+    IsWindowVisible, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    SM_YVIRTUALSCREEN, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
 
@@ -140,6 +140,12 @@ pub fn caret(thread: u32) -> HWND {
 /// The window with keyboard focus in the thread that owns `hwnd`, or a null handle.
 pub fn focus(hwnd: HWND) -> HWND {
     thread_info(owner(hwnd).1).hwndFocus
+}
+
+/// The top-level window under screen point `p`, or a null handle.
+pub fn root_at(p: POINT) -> HWND {
+    // SAFETY: plain queries; a null result is handled by the caller's comparison.
+    unsafe { GetAncestor(WindowFromPoint(p), GA_ROOT) }
 }
 
 /// True if `w` is `parent` itself or one of its child windows.
