@@ -49,8 +49,8 @@ Source: `docs/roadmap.md` Phase 1, ADR-0011, item P1 in `docs/FEATURES.md`.
 - **Weak mode:** the face runs in a Windows job: 2 cores, about 30 % speed, 4 GB, software drawing.
 - **Measuring:** memory from Windows counters; frames from PresentMon; click-to-character from `target-window`; size as a Deflate zip of the app folder (an upper bound for Inno Setup's LZMA2).
 - **Kept dev tools** (full rules), in `xtask/src/devtools/`: `config.rs`, `sdk.rs`, `cert.rs`, `install.rs`, `check.rs`.
-  - Settings in `[workspace.metadata.devtools]`: cert subject `CN=KeyXtend Dev Test`, cert days `90`, output dir `target/dev-cert`, install dir name `KeyXtend-dev`, SDK bin root, SDK arch `x64`, tool names `signtool.exe` and `mt.exe`, digest `SHA256`.
-  - `dev-cert`: creates a code-signing certificate with a non-exportable key in the user store, exports the public part, and writes the launcher the owner opens. `--remove` deletes it and writes the "untrust" launcher.
+  - Settings in `[workspace.metadata.devtools]`: cert subject `CN=KeyXtend Dev Test`, cert days `90`, output dir `target/dev-tools`, install dir name `KeyXtend-dev`, SDK bin root, SDK arch `x64`, tool names `signtool.exe` and `mt.exe`, digest `SHA256`.
+  - `dev-cert`: creates a code-signing certificate with a non-exportable key in the user store, exports the public part, and writes the launcher the owner opens. `--remove` writes the "untrust" launcher for those thumbprints, then deletes the certificate.
   - `dev-install <folder>`: signs every `.exe` and copies the folder to `Program Files\KeyXtend-dev\<name>` (Windows asks Yes). `--remove` deletes it.
   - `check-uiaccess <exe>`: checks the three Windows conditions: under Program Files, trusted signature, `uiAccess="true"` in the manifest.
   - The running-process token check lives in the spike core now and in `kx-platform-windows` from P3.
@@ -107,11 +107,11 @@ Source: `docs/roadmap.md` Phase 1, ADR-0011, item P1 in `docs/FEATURES.md`.
 9. The owner cancels the Windows prompt: exit code "check failed" with one line of explanation.
 
 ## Security
-- Kept tools: key theft (non-exportable key, user store, code-signing only, 90 days, removed at the end); launcher tampering (it imports one file by thumbprint); elevated copy (fixed source and target, no user text in the command).
+- Kept tools: key theft (non-exportable key, user store, code-signing only, 90 days, removed at the end); a swapped certificate file (the trust step imports it only by thumbprint; launcher edits by the same user are an accepted risk); elevated copy (fixed source and target, no user text in the command).
 - Spike: the faces have no network; the worker downloads nothing (model fetched by hand, checksum checked); only random or test text is typed; recordings deleted.
 
 ## Manual Windows check (owner)
-Open the trust launcher, Yes on each install prompt, look at the G3 screenshots, G7 Arabic, G10 listening, G11 scale changes, G13 side by side, G22 speaking, G23 Hello, G24 snip region, soak start.
+Open the trust launcher, Yes on each install prompt (and No once, which must report "cancelled; nothing was changed"), look at the G3 screenshots, G7 Arabic, G10 listening, G11 scale changes, G13 side by side, G22 speaking, G23 Hello, G24 snip region, soak start.
 Results go into the test report through Pass/Fail pop-ups.
 
 ## Done when
