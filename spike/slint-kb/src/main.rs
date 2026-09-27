@@ -3,6 +3,8 @@
 // Release builds open no console window; debug builds keep one for errors.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod tools;
+
 use std::fmt::Display;
 use std::rc::Rc;
 use std::time::Duration;
@@ -16,24 +18,31 @@ use spike_core::{inject, place, uiaccess, window};
 slint::include_modules!();
 
 /// Face name that picks this window's title in `spike.toml`.
-const FACE: &str = "slint";
+pub(crate) const FACE: &str = "slint";
 /// Number of the first guard try; `status::guard` counts from 1.
 const FIRST_TRY: u32 = 1;
 
 /// The status line: its fixed part and the window that shows it.
 #[derive(Clone)]
-struct Line {
+pub(crate) struct Line {
     ui: Weak<Keyboard>,
     base: Rc<str>,
 }
 
 impl Line {
     /// Shows `note` after the fixed part.
-    fn show(&self, note: &str) {
+    pub(crate) fn show(&self, note: &str) {
         if let Some(ui) = self.ui.upgrade() {
             ui.set_status(status::with(&self.base, note).into());
         }
     }
+}
+
+/// Makes winit open every window without taking focus; later shows are covered by the window guard.
+fn quiet_windows() -> Result<(), slint::PlatformError> {
+    slint::BackendSelector::new()
+        .with_winit_window_attributes_hook(|a| a.with_active(false))
+        .select()
 }
 
 /// Guard timing from spike.toml.
@@ -46,6 +55,7 @@ struct Tries {
 fn main() {
     let cfg = config::load().unwrap_or_else(|err| fail(err));
     let prev = window::foreground();
+    quiet_windows().unwrap_or_else(|err| fail(err));
     let ui = Keyboard::new().unwrap_or_else(|err| fail(err));
     let kb = &cfg.keyboard;
     ui.set_caption(cfg.title(FACE).into());
@@ -58,6 +68,7 @@ fn main() {
     };
     line.show(status::GUARD_PENDING);
     on_tap(&ui, line.clone());
+    let _tools = tools::start(&ui, &cfg, line.clone()).unwrap_or_else(|err| fail(err));
     let tries = Tries {
         delay: Duration::from_millis(kb.guard_delay_ms),
         max: kb.guard_tries,
@@ -72,11 +83,11 @@ fn fail(err: impl Display) -> ! {
     std::process::exit(1);
 }
 
-/// Gives the UI the key block size, gap and font size.
+/// Gives the UI the size of the keys and tools, the gap and the font size.
 fn set_sizes(ui: &Keyboard, kb: &KeyboardConfig) {
-    let (width, height) = place::block_size(kb);
-    ui.set_block_width(width);
-    ui.set_block_height(height);
+    let (width, height) = place::face_size(kb);
+    ui.set_face_width(width);
+    ui.set_face_height(height);
     ui.set_gap_px(kb.gap_px);
     ui.set_font_px(kb.font_px);
 }

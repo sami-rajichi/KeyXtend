@@ -169,6 +169,15 @@ pub fn front(ctx: &Ctx, app: &Opened) -> Result<(), String> {
     }
 }
 
+/// Lets go of any button or key a run left down; notes what it did.
+pub fn released() -> Vec<String> {
+    match simuser::release_all() {
+        Ok(true) => vec!["released a button or key left down".to_string()],
+        Ok(false) => Vec::new(),
+        Err(e) => vec![format!("could not release: {e}")],
+    }
+}
+
 /// Runs `drive` on `doc`, lets go of anything still held, then closes it; notes what was left.
 pub fn run_on<T>(
     ctx: &Ctx,
@@ -176,11 +185,7 @@ pub fn run_on<T>(
     drive: impl FnOnce(&Doc) -> Result<T, String>,
 ) -> Result<(T, Vec<String>), String> {
     let driven = drive(&doc);
-    let mut notes = match simuser::release_all() {
-        Ok(true) => vec!["released a button or key left down".to_string()],
-        Ok(false) => Vec::new(),
-        Err(e) => vec![format!("could not release: {e}")],
-    };
+    let mut notes = released();
     notes.extend(close(ctx, doc));
     driven
         .map(|got| (got, notes.clone()))

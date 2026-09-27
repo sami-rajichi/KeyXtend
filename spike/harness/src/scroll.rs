@@ -2,7 +2,7 @@
 
 use spike_core::hold::{Act, Pt};
 use spike_core::inject::{self, TAG};
-use spike_core::uia;
+use spike_core::{capture, uia};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::Accessibility::{
     IUIAutomationScrollPattern, ScrollAmount, ScrollAmount_NoAmount, ScrollAmount_SmallDecrement,
@@ -14,10 +14,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::probecfg::G6;
-use crate::{hookio, mouse, shot, win};
+use crate::{hookio, mouse, win};
 
 /// Bytes per screen pixel in a picture.
-const PIXEL: usize = shot::BYTES_PP as usize;
+const PIXEL: usize = capture::BYTES_PP as usize;
 /// Bits of the low word in a message parameter.
 const WORD_BITS: u32 = 16;
 
@@ -172,10 +172,10 @@ pub fn act(
     }
 }
 
-/// The pixels of window `hwnd` as the screen shows them.
-pub fn picture(hwnd: HWND) -> Result<Vec<u8>, String> {
+/// The pixels of window `hwnd` as the screen shows them, if they fit in `cap` bytes.
+pub fn picture(hwnd: HWND, cap: usize) -> Result<Vec<u8>, String> {
     let r = win::rect(hwnd)?;
-    shot::grab(r.left, r.top, r.right - r.left, r.bottom - r.top)
+    capture::grab(r.left, r.top, r.right - r.left, r.bottom - r.top, cap)
 }
 
 /// The share of pixels that differ between two pictures; `None` when their sizes differ.

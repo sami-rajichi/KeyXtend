@@ -73,6 +73,31 @@ pub fn text(text: &str) -> Result<(), String> {
     send(&inputs)
 }
 
+/// One virtual-key press or release, tagged as ours.
+fn vk(v: u16, up: bool) -> INPUT {
+    let mut i = key(
+        0,
+        if up {
+            KEYEVENTF_KEYUP
+        } else {
+            KEYBD_EVENT_FLAGS(0)
+        },
+    );
+    i.Anonymous.ki.wVk = VIRTUAL_KEY(v);
+    i
+}
+
+/// Presses virtual keys `vks` in order and releases them in reverse, such as Ctrl+C.
+fn combo_inputs(vks: &[u16]) -> Vec<INPUT> {
+    let down = vks.iter().map(|&v| vk(v, false));
+    down.chain(vks.iter().rev().map(|&v| vk(v, true))).collect()
+}
+
+/// Sends the shortcut `vks` in one batch; virtual keys work whatever the app's layout.
+pub fn combo(vks: &[u16]) -> Result<(), String> {
+    send(&combo_inputs(vks))
+}
+
 /// Sends a batch of inputs in one call, which other input cannot split; all or an error.
 pub fn send(inputs: &[INPUT]) -> Result<(), String> {
     // SAFETY: `inputs` is a valid slice and the size argument matches `INPUT`.
@@ -82,5 +107,28 @@ pub fn send(inputs: &[INPUT]) -> Result<(), String> {
     } else {
         let err = std::io::Error::last_os_error();
         Err(format!("SendInput sent {sent} of {}: {err}", inputs.len()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_combo_presses_in_order_and_releases_in_reverse() {
+        let got: Vec<(u16, bool)> = combo_inputs(&[0x11, 0x43])
+            .iter()
+            // SAFETY: every input built here is a keyboard input.
+            .map(|i| unsafe {
+                (
+                    i.Anonymous.ki.wVk.0,
+                    i.Anonymous.ki.dwFlags.contains(KEYEVENTF_KEYUP),
+                )
+            })
+            .collect();
+        assert_eq!(
+            got,
+            [(0x11, false), (0x43, false), (0x43, true), (0x11, true)]
+        );
     }
 }

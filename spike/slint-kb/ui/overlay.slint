@@ -1,0 +1,60 @@
+// The snip overlay: the frozen screen over everything; click a corner, move, click the other corner.
+import { Palette } from "std-widgets.slint";
+
+export component Overlay inherits Window {
+    in property <string> caption;
+    in property <image> frozen;
+    // Width of the region's two-tone edge, and what a screen reader is told.
+    in property <length> edge;
+    in property <string> hint;
+    // True once the first corner is set; the box then follows the pointer.
+    in-out property <bool> picking;
+    property <length> ax;
+    property <length> ay;
+    callback pick();
+
+    title: caption;
+    no-frame: true;
+    always-on-top: true;
+
+    Image {
+        width: parent.width;
+        height: parent.height;
+        source: frozen;
+        image-fit: fill;
+        accessible-role: none;
+    }
+
+    if picking: Rectangle {
+        x: min(ax, touch.mouse-x);
+        y: min(ay, touch.mouse-y);
+        width: abs(touch.mouse-x - ax);
+        height: abs(touch.mouse-y - ay);
+        // Two tones, so the edge shows on any screenshot.
+        border-width: edge;
+        border-color: Palette.foreground;
+        Rectangle {
+            x: edge;
+            y: edge;
+            width: max(0px, parent.width - 2 * edge);
+            height: max(0px, parent.height - 2 * edge);
+            border-width: edge;
+            border-color: Palette.background;
+        }
+    }
+
+    touch := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        accessible-role: button;
+        accessible-label: hint;
+        clicked => {
+            if !picking {
+                ax = self.mouse-x;
+                ay = self.mouse-y;
+            }
+            picking = !picking;
+            pick();
+        }
+    }
+}

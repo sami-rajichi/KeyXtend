@@ -3,24 +3,23 @@
 mod geom;
 mod read;
 
-use windows::Win32::Foundation::{HWND, POINT, RECT, RPC_E_CHANGED_MODE};
-use windows::Win32::System::Com::{
-    CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
-};
+use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
     IUIAutomationScrollPattern, IUIAutomationSelectionItemPattern, IUIAutomationTextPattern,
-    ScrollAmount, TreeScope_Descendants, UIA_ControlTypePropertyId, UIA_DocumentControlTypeId,
-    UIA_IsTextPatternAvailablePropertyId, UIA_ListItemControlTypeId, UIA_NamePropertyId,
-    UIA_PATTERN_ID, UIA_PROPERTY_ID, UIA_ScrollPatternId, UIA_SelectionItemPatternId,
-    UIA_TextPatternId,
+    IUIAutomationValuePattern, ScrollAmount, TreeScope_Descendants, UIA_ControlTypePropertyId,
+    UIA_DocumentControlTypeId, UIA_IsTextPatternAvailablePropertyId, UIA_ListItemControlTypeId,
+    UIA_NamePropertyId, UIA_PATTERN_ID, UIA_PROPERTY_ID, UIA_ScrollPatternId,
+    UIA_SelectionItemPatternId, UIA_TextPatternId, UIA_ValuePatternId,
 };
 use windows::core::Interface;
 
 pub use geom::{Pill, anchor, centre, line_points, rects_of};
 pub use read::{Sel, boxes, is_password, lines, password_flag, selection};
 
+use crate::com::Com;
 use crate::hold::Pt;
 
 /// Most ancestors walked when looking for a pattern above an element.
@@ -32,11 +31,8 @@ pub struct Uia(IUIAutomation);
 impl Uia {
     /// Starts COM on this thread and creates the client.
     pub fn new() -> Result<Self, String> {
-        // SAFETY: COM start-up for this thread; a thread already in another mode still works for UIA.
-        let hr = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
-        if hr.is_err() && hr != RPC_E_CHANGED_MODE {
-            return Err(format!("CoInitializeEx: {hr:?}"));
-        }
+        // Elements may outlive this client on the thread, so COM stays on.
+        Com::start()?.keep();
         // SAFETY: creates the system's UIA client object.
         let auto = unsafe { CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) }
             .map_err(|e| format!("UI Automation: {e}"))?;
@@ -217,5 +213,17 @@ pub fn percent(sp: &IUIAutomationScrollPattern) -> Option<(f64, f64)> {
             sp.CurrentHorizontalScrollPercent().ok()?,
             sp.CurrentVerticalScrollPercent().ok()?,
         ))
+    }
+}
+
+/// The value of a text field; `None` for a password box, whose value is never read.
+pub fn value(el: &IUIAutomationElement) -> Option<String> {
+    if is_password(el) {
+        return None;
+    }
+    // SAFETY: plain pattern and property reads.
+    unsafe {
+        let v: IUIAutomationValuePattern = el.GetCurrentPatternAs(UIA_ValuePatternId).ok()?;
+        v.CurrentValue().ok().map(|b| b.to_string())
     }
 }

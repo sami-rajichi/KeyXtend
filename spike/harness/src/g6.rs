@@ -68,10 +68,16 @@ fn try_one(
 ) -> Result<Try, String> {
     let (g, hwnd) = (&ctx.cfg.g6, doc.app.hwnd);
     guard(&doc.app, &[at.0])?;
-    let (pic, pct) = (scroll::picture(hwnd)?, sp.and_then(uia::percent));
+    let (pic, pct) = (
+        scroll::picture(hwnd, ctx.spike.tools.shot_cap())?,
+        sp.and_then(uia::percent),
+    );
     let done = scroll::act(hwnd, route, dir, at, sp, g);
     sleep_ms(ctx.cfg.probes.settle_ms);
-    let (pic2, pct2) = (scroll::picture(hwnd)?, sp.and_then(uia::percent));
+    let (pic2, pct2) = (
+        scroll::picture(hwnd, ctx.spike.tools.shot_cap())?,
+        sp.and_then(uia::percent),
+    );
     let share = scroll::changed_share(&pic, &pic2);
     let seen = share.is_some_and(|s| s > g.min_changed) || scroll::percent_moved(dir, pct, pct2);
     let error = match (done, share) {
@@ -91,11 +97,11 @@ fn try_one(
 
 /// A still window's picture change, so `min_changed` can be read against it.
 fn noise(ctx: &Ctx, doc: &Doc) -> Result<Option<f64>, String> {
-    let before = scroll::picture(doc.app.hwnd)?;
+    let before = scroll::picture(doc.app.hwnd, ctx.spike.tools.shot_cap())?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     Ok(scroll::changed_share(
         &before,
-        &scroll::picture(doc.app.hwnd)?,
+        &scroll::picture(doc.app.hwnd, ctx.spike.tools.shot_cap())?,
     ))
 }
 

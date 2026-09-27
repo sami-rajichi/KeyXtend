@@ -42,3 +42,31 @@ width_px = 900
 height_px = 500
 # Switch that makes the box a single-line password box, where typed characters are never logged.
 password_arg = "--password"
+
+# Stage 1b: the tools row under the keys, the selection pill, quick-fill and snip.
+[tools]
+labels = { fill_user = "Fill user", fill_password = "Fill password", snip = "Snip", copy = "Copy" }
+# Window titles, so the harness can find them.
+pill_title = "KeyXtend spike - pill"
+overlay_title = "KeyXtend spike - snip"
+# How often the selection watcher looks at the focused text, in ms.
+selection_poll_ms = 300
+# Pill width, height and gap from the selected text, in logical pixels.
+pill_px = [72.0, 32.0, 8.0]
+# The pill's Copy button presses Ctrl+C (virtual keys).
+copy_keys = [0x11, 0x43]
+# Windows Hello prompt; Fill types only after Hello says yes.
+hello_message = "KeyXtend spike: type the test value?"
+# Fake values only; never a real name or password.
+test_user = "kx-test-user"
+test_password = "kx-test-pass-42"
+# Wait after giving the app in front its focus back, before typing, in ms.
+fill_settle_ms = 300
+# Folder under TEMP for snips and the frozen screen; the harness deletes what it reads.
+snip_folder = "kx-spike-snips"
+# Largest screen copy made or read, in MiB; three 4K screens need about 100.
+shot_cap_mb = 256
+# Width of the snip region's two-tone edge, in logical pixels.
+snip_edge_px = 2.0
+# What the snip overlay tells a screen reader.
+snip_hint = "Snip: click two corners of the region. Click the same spot twice to cancel."

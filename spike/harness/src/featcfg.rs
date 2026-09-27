@@ -1,4 +1,4 @@
-//! Settings of the stage-1b probes G19, G20, G21 and G25, from `[edit_keys]` and `[g19]` to `[g25]`.
+//! Settings of the stage-1b probes G19 to G25, from `[edit_keys]` and `[g19]` to `[g25]`.
 
 use serde::Deserialize;
 
@@ -13,11 +13,17 @@ pub fn check(c: &HarnessConfig) -> Result<(), String> {
     if c.probes.forget_min_chars == 0 {
         return Err("probes.forget_min_chars must be above 0".to_string());
     }
-    if [&g.prefix, &g.hidden_prefix, &c.g25.text]
+    if [&g.prefix, &g.hidden_prefix, &c.g25.text, &c.g23.length_mark]
         .iter()
         .any(|p| p.is_empty())
     {
-        return Err("g20 prefixes and g25.text must not be empty".to_string());
+        return Err("g20 prefixes, g23.length_mark and g25.text must not be empty".to_string());
+    }
+    if c.g19.lines.is_empty() || c.g19.lines.iter().any(String::is_empty) {
+        return Err("g19.lines must hold at least one line, none empty".to_string());
+    }
+    if c.g23.prompt_programs.is_empty() {
+        return Err("g23.prompt_programs must name the Hello prompt".to_string());
     }
     Ok(())
 }
@@ -52,19 +58,10 @@ pub struct G19 {
     pub box_name: String,
     /// Style of Chrome's text box.
     pub box_css: String,
-    /// A stand-in pill whose anchor must land on screen.
-    pub pill: PillCfg,
-}
-
-/// The stand-in pill's size and its gap from the text, in px.
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub struct PillCfg {
-    /// Width.
-    pub w: i32,
-    /// Height.
-    pub h: i32,
-    /// Gap between the text and the pill.
-    pub gap: i32,
+    /// Longest wait for the face's pill to show or hide, in ms.
+    pub pill_wait_ms: u64,
+    /// How far the pill may sit from where the harness expects it, in physical px.
+    pub pill_slack_px: i32,
 }
 
 /// Clipboard history probe.
@@ -99,6 +96,32 @@ pub struct G21 {
     pub field_css: String,
 }
 
+/// Windows Hello quick-fill probe.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G23 {
+    /// Longest wait for the owner to answer Windows Hello, in ms.
+    pub hello_wait_ms: u64,
+    /// Programs that show the Hello prompt (adapter table).
+    pub prompt_programs: Vec<String>,
+    /// Without Hello, how long Fill gets to (wrongly) type or prompt before the fields are checked, in ms.
+    pub refuse_wait_ms: u64,
+    /// Put before the password length that the test page adds to its title.
+    pub length_mark: String,
+}
+
+/// Snip probe.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G24 {
+    /// Typed into target-window, so the snipped region holds a known pattern.
+    pub text: String,
+    /// The region from the text box's top-left: x, y, width and height in logical px.
+    pub region_px: [f32; 4],
+    /// Longest wait for the overlay to show or the snip file to appear, in ms.
+    pub wait_ms: u64,
+    /// Window class of the taskbar, which the overlay must cover (adapter table).
+    pub taskbar_class: String,
+}
+
 /// Language key and shortcut probe.
 #[derive(Debug, Clone, Deserialize)]
 pub struct G25 {
@@ -124,12 +147,16 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("harness.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut HarnessConfig); 5] = [
+        let bad: [fn(&mut HarnessConfig); 9] = [
+            |c| c.g19.lines.clear(),
+            |c| c.g19.lines[0].clear(),
             |c| c.g20.paste_back = 0,
             |c| c.g20.paste_back = c.g20.copies + 1,
             |c| c.probes.forget_min_chars = 0,
             |c| c.g20.prefix.clear(),
             |c| c.g25.text.clear(),
+            |c| c.g23.prompt_programs.clear(),
+            |c| c.g23.length_mark.clear(),
         ];
         for (i, spoil) in bad.iter().enumerate() {
             let mut c = good.clone();

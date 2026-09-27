@@ -3977,6 +3977,7 @@ dependencies = [
  "const-field-offset",
  "i-slint-backend-linuxkms",
  "i-slint-backend-selector",
+ "i-slint-backend-winit",
  "i-slint-common",
  "i-slint-core",
  "i-slint-core-macros",
@@ -4144,6 +4145,7 @@ dependencies = [
  "serde_json",
  "toml",
  "windows",
+ "windows-future",
 ]
 
 [[package]]

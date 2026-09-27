@@ -256,8 +256,10 @@ max_chars = 200
 # Chrome's text box: its name (aria-label) and style.
 box_name = "kx-select"
 box_css = "font:20px monospace;margin:24px;width:80%"
-# Stand-in pill: width, height and gap from the text, in px.
-pill = { w = 80, h = 30, gap = 8 }
+# The face's pill must show within this many ms of a selection, and hide as fast once it goes.
+pill_wait_ms = 1000
+# How far the pill may sit from where the harness expects it, in physical px.
+pill_slack_px = 4
 
 [g20]
 # Kept copies (half written by the harness, half copied in Notepad) and copies with an exclusion marker.
@@ -280,6 +282,26 @@ event_wait_ms = 2000
 user_name = "kx-user"
 pass_name = "kx-pass"
 field_css = "font:20px sans-serif;margin:24px;display:block"
+
+[g23]
+# Longest wait for the owner to confirm or cancel Windows Hello, in ms.
+hello_wait_ms = 120000
+# Programs that show the Hello prompt (adapter table).
+prompt_programs = ["CredentialUIBroker.exe"]
+# Without Hello set up, Fill gets this long to (wrongly) type or prompt before the fields are checked, in ms.
+refuse_wait_ms = 5000
+# The test page adds this and the password length to its title, since a password box is never read.
+length_mark = " #"
+
+[g24]
+# Typed into target-window so the snip holds a known pattern; the caret ends up right of the region.
+text = "KeyXtend snip 0123456789 ABCDEFGHIJ abcdefghij KeyXtend snip"
+# Region from the text box's top-left: x, y, width, height in logical px.
+region_px = [4.0, 4.0, 160.0, 28.0]
+# Longest wait for the overlay to show or the snip file to appear, in ms.
+wait_ms = 5000
+# Window class of the taskbar, which the overlay must cover.
+taskbar_class = "Shell_TrayWnd"
 
 [g25]
 # Copied and pasted in Notepad; also the prefix removed from Windows clipboard history after.

@@ -371,6 +371,7 @@ dependencies = [
  "cxx-qt-build",
  "cxx-qt-lib",
  "embed-manifest",
+ "serde_json",
  "spike-core",
  "windows",
 ]
@@ -474,6 +475,7 @@ dependencies = [
  "serde_json",
  "toml",
  "windows",
+ "windows-future",
 ]
 
 [[package]]

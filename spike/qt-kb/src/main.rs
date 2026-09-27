@@ -3,6 +3,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod bridge;
+mod tools;
 
 use std::pin::Pin;
 use std::sync::Arc;
