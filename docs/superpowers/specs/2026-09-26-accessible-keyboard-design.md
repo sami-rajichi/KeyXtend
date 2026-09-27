@@ -451,7 +451,7 @@ The full design is in `ARCHITECTURE.md`; the reasons are in `docs/adr/`.
 
 ## 13. Future features (not v1)
 
-All of these were chosen on 2026-09-26. They are numbered F1–F12 in `docs/FEATURES.md` and come after v1.0.
+F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27. They are numbered in `docs/FEATURES.md` and come after v1.0.
 
 
 - **Camera control:** head-tracking pointer and facial-gesture click. Webcam through `nokhwa`, face landmarks as ONNX models through `ort`. Not Google MediaPipe Tasks, which sends metrics to Google; Project Gameface was archived in September 2025.
@@ -461,6 +461,7 @@ All of these were chosen on 2026-09-26. They are numbered F1–F12 in `docs/FEAT
 - **Emoji, symbols and Arabic diacritics panel.**
 - **Quick system panel:** volume, brightness, night light, Wi-Fi; window snap, switch and minimise.
 - **Third-party plugins** (WASM sandbox, Zed-style capability grants). v1 has built-in modules only.
+- **More ways to type:** hover-to-type, switch scanning, a number pad and navigation panel, and an IME mode for Chinese, Japanese and Korean.
 
 ## 14. Open decisions (recommended default applied until the owner decides)
 

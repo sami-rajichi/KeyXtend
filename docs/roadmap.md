@@ -51,32 +51,53 @@ Versions are pre-1.0 until the Windows feature set is complete.
 - **Candidates.**
   - Qt 6 Quick with a Rust core (cxx-qt) and Slint 1.18 build the same small test keyboard.
   - Tauri runs only G2, G3 and the memory part of G8.
-- **Run once.** G1, G5 and G6 test the Rust core, so they run once. Every other gate runs per toolkit.
+- **Run once.** Gates marked "core" test the shared Rust core, so they run once. Every other gate runs per toolkit.
+- **Stages** (decided 2026-09-27), each ending with a Pass/Fail checkpoint:
+  - 0: tools and the dev certificate;
+  - 1: deal-breakers G1–G6, G17, G18;
+  - 1b: feature probes G19–G25;
+  - 2: looks, speed and accessibility G7–G13;
+  - 3: soak G14;
+  - 4: other systems G15, G16, G26;
+  - 5: results (ADR-0013) and cleanup.
+- **Early stop.** A toolkit that fails a must-pass gate stops there: G2–G4, G7–G16, and the window parts of G19, G22, G23 and G24.
+  - A failed core gate is a design finding for both toolkits; it never eliminates one.
+  - Known OS walls (GNOME Wayland) are recorded, not counted as a fail.
 - **Machines.**
-  - The development PC, normally and in weak mode (2 cores at a low CPU rate, 4 GB, software rendering).
-  - GitHub's macOS and Ubuntu machines, once the owner approves the repo.
+  - The development PC, normally and in **weak mode**: a cheap 4 GB laptop (Celeron N4020 class), imitated as 2 cores at about 30 % speed, 4 GB and software rendering.
+  - GitHub's macOS, Ubuntu and Windows machines.
   - A Linux virtual PC on D:.
 
 | Gate | Pass condition |
 |---|---|
-| G1 Typing | 1,000 random EN/FR/AR characters, including `لا`, harakat and AltGr symbols, arrive intact in Notepad, Word, Chrome, Windows Terminal, and our CI test window |
+| G1 Typing (core) | 1,000 random EN/FR/AR characters, including `لا`, harakat and AltGr symbols, arrive intact in Notepad, Word, Chrome, Windows Terminal, and our CI test window |
 | G2 No focus | 1,000 clicks on keys; the target app keeps focus and its caret every time |
 | G3 Top band | The signed, Program Files, uiAccess build, started by a standard user, stays above the Start menu, Search and Task Manager |
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
-| G5 Hold engine | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
-| G6 Scroll | Scrolls a long Notepad text, a Chrome page and an Explorer list, using the last point outside the keyboard as the target |
+| G5 Hold engine (core) | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
+| G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
 | G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Noto Sans Arabic for Dolch), a mirrored right-to-left panel, and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode. Frame times measured with PresentMon; a pressed key lights up on the next frame |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
 | G10 Screen readers | Narrator and NVDA read and activate every key |
-| G11 DPI | 100/150/200 %; moving between monitors with mixed DPI keeps the size |
+| G11 DPI | 100/150/200 % on the development PC's one screen keep the size and sharpness. The move between mixed-DPI monitors is checked in P3 |
 | G12 Overlay | The pointer ring runs at 60 Hz without dropping clicks underneath it |
-| G13 Themes | All three themes in light and dark match the mock-up side by side. Native Adaptive follows the system accent, dark mode and high contrast live. Two frosted-glass tricks are tried on the inactive window; otherwise the plate is solid |
-| G14 Soak | 8 hours running with regular typing: memory does not grow and nothing crashes |
+| G13 Themes | Native Adaptive in light and dark matches the mock-up side by side and follows the system accent, dark mode and high contrast live. Two frosted-glass tricks are tried on the inactive window; otherwise the plate is solid. A sampler row of ET66 and Dolch keys (colour marks, LED, pressed inset) matches the mock-up |
+| G14 Soak | 4 hours of automatic typing, both keyboards in the same session: memory does not grow and nothing crashes |
 | G15 macOS and Linux, automatic | On GitHub's macOS and Ubuntu machines the test keyboard builds, stays on top and never takes focus |
 | G16 Linux, hands-on | In the Linux virtual PC (GNOME and KDE, Wayland and X11): stays on top without focus, types, and scales at 125/150 % |
+| G17 Grab (core) | Click, move, click drags a file in Explorer and selects text in Notepad, Word and Chrome. Esc cancels, and the button is never left pressed |
+| G18 Modifier + click (core) | Shift+click extends a selection in Notepad and Chrome; Ctrl+click selects several files in Explorer |
+| G19 Selection helper | A selection in Notepad, Word and Chrome is noticed without copying it (core). The pill appears without taking focus, and its Copy button copies |
+| G20 Clipboard (core) | Every copy is seen; copies marked "exclude from history" are skipped; one click pastes an older entry into Notepad and Word |
+| G21 Password fields (core) | Focus in a password box is flagged in Chrome and in a Win32 password field; normal fields are not flagged |
+| G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
+| G23 Quick-fill | Windows Hello opens from the no-focus keyboard; after Yes, test User and Password values are typed into a login page; after Cancel nothing is typed |
+| G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
+| G25 Language and shortcuts (core) | The language key also switches the target app's input language; Ctrl+C/V/Z, Win+V and Alt+Tab work from the keyboard |
+| G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact; a Japanese IME fed key presses produces 日本 |
 
-**Decision rule:** ADR-0011. **No leftovers:** when the round ends, the spike code, screenshots, logs and the virtual PC are deleted. Only the numbers are kept, in ADR-0011 Results.
+**Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, merged by a normal pull request. **No leftovers:** when the round ends, the spike code, screenshots, logs, the test install, the certificate and the virtual PC are deleted. Only the numbers are kept, in ADR-0013.
 
 ## Phase 2 — Kernel and module API — v0.0.x
 
@@ -211,4 +232,4 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## After v1.0
 
-New features F1–F12 are listed and numbered in `docs/FEATURES.md`. Start one with `/kx-feature F<n>`.
+New features F1–F16 are listed and numbered in `docs/FEATURES.md`. Start one with `/kx-feature F<n>`.
