@@ -1,0 +1,139 @@
+# Every number and path the P1 spike harness uses. Read beside the exe first, else from spike/.
+# Relative paths start at this file's folder.
+
+[paths]
+# Sent and received texts, raw click data, screenshots of blocked runs, and results.jsonl.
+out = "../target/spike-logs"
+
+[timing]
+# How often we look again for a window, file or clipboard change, in ms.
+poll_ms = 50
+# Pause after the Alt tap, before SetForegroundWindow, in ms.
+alt_settle_ms = 50
+# Tries to bring a window to the front, and the wait after each try, in ms.
+front_tries = 5
+front_wait_ms = 200
+# Pause after a shortcut such as Ctrl+A or Enter, in ms.
+key_settle_ms = 300
+# Longest wait for a clipboard change or a saved file, in ms.
+read_wait_ms = 5000
+# Longest wait for a window we closed to go away, in ms.
+close_wait_ms = 3000
+# Longest wait for an app's text box to take the keyboard before typing, in ms.
+focus_wait_ms = 5000
+
+[keys]
+# Virtual-key combos: pressed in order, released in reverse.
+alt = [0x12]
+select_all = [0x11, 0x41]
+copy = [0x11, 0x43]
+save = [0x11, 0x53]
+close_tab = [0x11, 0x57]
+enter = [0x0D]
+
+[text]
+# G1 character groups; harakat only ever follow an Arabic letter.
+english = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;:!?'\"-()/"
+french = "éèêëàâäçùûüôöîïÿœæÉÈÊËÀÂÇÙÛÔÎÏŒÆ«»’"
+arabic = "ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإئةى"
+lam_alef = "لا"
+harakat = "\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652"
+altgr = '€@#{}[]|\^~`'
+# How often each group is picked, relative to the others.
+weights = { english = 4, french = 2, arabic = 3, lam_alef = 1, harakat = 2, altgr = 1 }
+
+[g1]
+count = 1000
+# Characters per SendInput call, and the pause between calls, in ms.
+chunk_chars = 1
+chunk_pause_ms = 20
+# Title of the Chrome test page, used to find its window.
+page_title = "KeyXtend G1 page"
+# Characters shown on each side of the first difference.
+context_chars = 10
+# Longest clipboard text we read back or save for the owner, in characters; more is an error.
+max_read_chars = 1000000
+
+# One table per G1 app; a pop-up that takes the keyboard from the app window blocks the run.
+[apps.target]
+exe = "../target/spike/debug/target-window.exe"  # A relative path with a folder starts here.
+args = []  # {input} becomes the prepared file or URL.
+focus_class = "Edit"  # The text box that must hold the keyboard, when the app has one.
+new_window = true  # Only a window that did not exist before counts.
+wait_ms = 10000  # Longest wait for the window, in ms.
+ready_ms = 300  # Pause before typing, in ms.
+done_ms = 500  # Pause before reading back, in ms.
+
+[apps.notepad]
+exe = "notepad.exe"
+args = ["{input}"]
+focus_class = "RichEditD2DPT"
+new_window = false
+wait_ms = 15000
+ready_ms = 1500
+done_ms = 1000
+
+[apps.word]
+exe = 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE'
+# /q: no splash screen; /w: a new instance with a blank document.
+args = ["/q", "/w"]
+class = "OpusApp"  # Window class that spots the window; --attach needs one and no {input}.
+focus_class = "_WwG"
+new_window = true
+wait_ms = 30000
+ready_ms = 3000
+done_ms = 2000
+
+[apps.chrome]
+exe = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+args = ["--new-window", "{input}"]
+class = "Chrome_WidgetWin_1"
+# No focus_class: Chrome keeps the keyboard on its own window, not on an inner box.
+new_window = true
+wait_ms = 15000
+ready_ms = 1000
+done_ms = 1000
+
+[apps.terminal]
+exe = "wt.exe"
+args = ["-w", "new", "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]
+class = "CASCADIA_HOSTING_WINDOW_CLASS"
+focus_class = "Windows.UI.Input.InputSite.WindowClass"
+new_window = true
+wait_ms = 15000
+ready_ms = 500
+done_ms = 1000
+
+[g2]
+clicks = 1000
+# Pause after each click before checking focus and caret, in ms.
+click_gap_ms = 100
+# A character belongs to a click if it arrives within this time, in ms.
+match_window_ms = 1000
+# Wait for the last characters to reach the log, in ms.
+drain_ms = 1000
+# Failures listed in the report, and failures that stop the run.
+failures_shown = 5
+max_failures = 20
+
+[g3]
+# Wait after opening a surface before probing, in ms.
+open_wait_ms = 1500
+# Keys whose centres are probed: first, middle and last of the block.
+probe_codes = [0x29, 0x22, 0xE01D]
+
+# Each surface: keys that open it, keys that close it, or a window class to send WM_CLOSE.
+[[g3.surfaces]]
+name = "start"
+open = [0x5B]
+close_keys = [0x1B]
+
+[[g3.surfaces]]
+name = "search"
+open = [0x5B, 0x53]
+close_keys = [0x1B]
+
+[[g3.surfaces]]
+name = "task_manager"
+open = [0x11, 0x10, 0x1B]
+close_class = "TaskManagerWindow"
