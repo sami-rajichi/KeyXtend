@@ -10,8 +10,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 
 | # | What | Status |
 |---|---|---|
-| P0 | Foundation: repo, CI, rules, licence files | Ready |
-| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G16, ADR-0011) | Waiting |
+| P0 | Foundation: repo, CI, rules, licence files | Done (v0.0.0) |
+| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G16, ADR-0011) | Ready |
 | P2 | Kernel and module system | Waiting |
 | P3 | Keyboard core: typing EN/FR/AR, modifiers, Native theme, window | Waiting |
 | P4 | Mouse assist: Right-click hold, Grab, ring and sounds | Waiting |

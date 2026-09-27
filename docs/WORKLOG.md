@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P0 Foundation done
+The Rust workspace, its strict lints and the `cargo xtask` checks (tidy, dco, licences, dist stub) are in place, with 97 tests. CI runs fmt, clippy, tests and tidy on Windows and Ubuntu, plus cargo-deny, cargo-audit and a DCO check; all four jobs passed on the first pull request. The public repo protects `main` with a ruleset, blocks pushed secrets and accepts private vulnerability reports.
+
 ## 2026-09-27 — Public docs describe the product
 The README, spec §1 and the project docs now describe KeyXtend and its target users, not one person. The GitHub username appears only in the repo address and CODEOWNERS. Personal notes for this PC and owner moved to the git-ignored `CLAUDE.local.md`, and `docs/NEXT-SESSION.md` is no longer tracked.
 
