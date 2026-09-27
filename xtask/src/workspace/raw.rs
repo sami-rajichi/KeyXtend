@@ -4,7 +4,7 @@
 //! only describe the wire shape, with no validation or conversion logic.
 
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// Top-level `cargo metadata` output, trimmed to the fields tidy and DCO use.
 #[derive(Deserialize)]
@@ -14,18 +14,9 @@ pub(super) struct RawOutput {
     pub(super) workspace_root: String,
     #[serde(default)]
     pub(super) resolve: Option<RawResolve>,
+    /// The `workspace.metadata` table, left as raw JSON so a bad section is reported by name.
     #[serde(default)]
-    pub(super) metadata: Option<RawWorkspaceMeta>,
-}
-
-/// The `workspace.metadata` table, with `tidy` and `dco` left as raw JSON so
-/// a bad value there is reported separately from a JSON syntax error.
-#[derive(Deserialize, Default)]
-pub(super) struct RawWorkspaceMeta {
-    #[serde(default)]
-    pub(super) tidy: Option<Value>,
-    #[serde(default)]
-    pub(super) dco: Option<Value>,
+    pub(super) metadata: Option<Map<String, Value>>,
 }
 
 /// One package entry, workspace member or dependency.
@@ -83,4 +74,12 @@ pub(super) struct RawNodeDep {
 pub(super) struct RawDepKind {
     #[serde(default)]
     pub(super) kind: Option<String>,
+}
+
+/// Just the workspace root and the raw `workspace.metadata` table, for loading one section.
+#[derive(Deserialize)]
+pub(super) struct RawSections {
+    pub(super) workspace_root: String,
+    #[serde(default)]
+    pub(super) metadata: Option<Map<String, Value>>,
 }

@@ -13,11 +13,29 @@ const SUB_TIDY: &str = "tidy";
 const SUB_DCO: &str = "dco";
 const SUB_LICENCES: &str = "licences";
 const SUB_DIST: &str = "dist";
+/// Creates or removes the uiAccess test certificate.
+pub(crate) const SUB_DEV_CERT: &str = "dev-cert";
+/// Installs or removes a signed test build under Program Files.
+const SUB_DEV_INSTALL: &str = "dev-install";
+/// Checks the Windows conditions for uiAccess.
+const SUB_CHECK_UIACCESS: &str = "check-uiaccess";
+/// Flag that turns `dev-cert` and `dev-install` into their undo.
+const FLAG_REMOVE: &str = "--remove";
 
 /// Builds the usage line from the subcommand-name constants, so each name is
 /// spelled exactly once.
 fn usage_line() -> String {
-    format!("usage: cargo xtask <{SUB_TIDY}|{SUB_DCO} <base> <head>|{SUB_LICENCES}|{SUB_DIST}>")
+    let forms = [
+        SUB_TIDY.to_string(),
+        format!("{SUB_DCO} <base> <head>"),
+        SUB_LICENCES.to_string(),
+        SUB_DIST.to_string(),
+        format!("{SUB_DEV_CERT} [{FLAG_REMOVE}]"),
+        format!("{SUB_DEV_INSTALL} <folder>"),
+        format!("{SUB_DEV_INSTALL} {FLAG_REMOVE} <name>"),
+        format!("{SUB_CHECK_UIACCESS} <exe>"),
+    ];
+    format!("usage: cargo xtask <{}>", forms.join("|"))
 }
 
 /// A parsed xtask subcommand.
@@ -36,6 +54,26 @@ pub(crate) enum Command {
     Licences,
     /// Build release distribution artifacts.
     Dist,
+    /// Create the test certificate, or remove it.
+    DevCert {
+        /// Remove instead of create.
+        remove: bool,
+    },
+    /// Sign a build folder and install it under Program Files.
+    DevInstall {
+        /// The build folder.
+        folder: String,
+    },
+    /// Delete an installed test build.
+    DevUninstall {
+        /// The install name.
+        name: String,
+    },
+    /// Check the three Windows conditions for uiAccess.
+    CheckUiAccess {
+        /// The installed program.
+        exe: String,
+    },
 }
 
 /// A command-line usage error. Its `Display` is the usage line.
@@ -58,6 +96,23 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, UsageError> {
             base: base.clone(),
             head: head.clone(),
         }),
+        [name] if name == SUB_DEV_CERT => Ok(Command::DevCert { remove: false }),
+        [name, flag] if name == SUB_DEV_CERT && flag == FLAG_REMOVE => {
+            Ok(Command::DevCert { remove: true })
+        }
+        [name, flag, target] if name == SUB_DEV_INSTALL && flag == FLAG_REMOVE => {
+            Ok(Command::DevUninstall {
+                name: target.clone(),
+            })
+        }
+        [name, folder] if name == SUB_DEV_INSTALL && folder != FLAG_REMOVE => {
+            Ok(Command::DevInstall {
+                folder: folder.clone(),
+            })
+        }
+        [name, exe] if name == SUB_CHECK_UIACCESS => {
+            Ok(Command::CheckUiAccess { exe: exe.clone() })
+        }
         _ => Err(UsageError),
     }
 }
@@ -125,9 +180,84 @@ mod tests {
     }
 
     #[test]
+    fn dev_cert_parses_with_and_without_remove() {
+        assert_eq!(
+            parse(&args(&["dev-cert"])),
+            Ok(Command::DevCert { remove: false })
+        );
+        assert_eq!(
+            parse(&args(&["dev-cert", "--remove"])),
+            Ok(Command::DevCert { remove: true })
+        );
+    }
+
+    #[test]
+    fn dev_cert_with_another_argument_is_a_usage_error() {
+        assert_eq!(parse(&args(&["dev-cert", "x"])), Err(UsageError));
+    }
+
+    #[test]
+    fn dev_cert_remove_with_an_extra_argument_is_a_usage_error() {
+        assert_eq!(
+            parse(&args(&["dev-cert", "--remove", "x"])),
+            Err(UsageError)
+        );
+    }
+
+    #[test]
+    fn dev_install_with_two_folders_is_a_usage_error() {
+        assert_eq!(parse(&args(&["dev-install", "a", "b"])), Err(UsageError));
+    }
+
+    #[test]
+    fn dev_install_parses_a_folder() {
+        assert_eq!(
+            parse(&args(&["dev-install", "out/kb"])),
+            Ok(Command::DevInstall {
+                folder: "out/kb".into()
+            })
+        );
+    }
+
+    #[test]
+    fn dev_install_remove_parses_a_name() {
+        assert_eq!(
+            parse(&args(&["dev-install", "--remove", "kb"])),
+            Ok(Command::DevUninstall { name: "kb".into() })
+        );
+    }
+
+    #[test]
+    fn dev_install_without_a_folder_is_a_usage_error() {
+        assert_eq!(parse(&args(&["dev-install"])), Err(UsageError));
+        assert_eq!(parse(&args(&["dev-install", "--remove"])), Err(UsageError));
+    }
+
+    #[test]
+    fn check_uiaccess_parses_an_exe() {
+        assert_eq!(
+            parse(&args(&["check-uiaccess", "kb.exe"])),
+            Ok(Command::CheckUiAccess {
+                exe: "kb.exe".into()
+            })
+        );
+        assert_eq!(parse(&args(&["check-uiaccess"])), Err(UsageError));
+    }
+
+    #[test]
     fn usage_error_message_mentions_every_subcommand() {
         let message = UsageError.to_string();
-        for name in [SUB_TIDY, SUB_DCO, SUB_LICENCES, SUB_DIST] {
+        let names = [
+            SUB_TIDY,
+            SUB_DCO,
+            SUB_LICENCES,
+            SUB_DIST,
+            SUB_DEV_CERT,
+            SUB_DEV_INSTALL,
+            SUB_CHECK_UIACCESS,
+            FLAG_REMOVE,
+        ];
+        for name in names {
             assert!(message.contains(name), "usage message missing {name}");
         }
     }

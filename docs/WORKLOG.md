@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — uiAccess dev tools
+`cargo xtask dev-cert` makes a test signing certificate and a launcher the owner opens to trust it. `dev-install` signs a build and copies it into Program Files, and `check-uiaccess` explains why uiAccess is missing. Every admin step checks its inputs before the Windows prompt and can only touch `Program Files\KeyXtend-dev`. Two review rounds found about 60 issues, all fixed; 225 tests pass.
+
 ## 2026-09-27 — P0 Foundation done
 The Rust workspace, its strict lints and the `cargo xtask` checks (tidy, dco, licences, dist stub) are in place, with 97 tests. CI runs fmt, clippy, tests and tidy on Windows and Ubuntu, plus cargo-deny, cargo-audit and a DCO check; all four jobs passed on the first pull request. The public repo protects `main` with a ruleset, blocks pushed secrets and accepts private vulnerability reports.
 

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use proptest::prelude::*;
 
 use super::*;
-use crate::test_support::{tidy_config, unique_temp_dir};
+use crate::test_support::{make_dir_link, tidy_config, unique_temp_dir};
 use crate::tidy::testkit::WorkspaceBuilder;
 
 // F1: file length thresholds (edge case 8). "Passes" means tidy exits 0, so 400 lines warns.
@@ -138,24 +138,6 @@ fn walker_skips_a_folder_link_that_loops_back() {
 
     assert_eq!(found, vec![file]);
     assert_eq!(violations, vec![]);
-}
-
-/// Links the folder `link` to `target` with a symlink, which Unix allows without admin rights.
-#[cfg(unix)]
-fn make_dir_link(link: &Path, target: &Path) {
-    std::os::unix::fs::symlink(target, link).unwrap();
-}
-
-/// Links the folder `link` to `target` with a junction, which Windows allows without admin rights.
-#[cfg(windows)]
-fn make_dir_link(link: &Path, target: &Path) {
-    let output = std::process::Command::new("cmd")
-        .args(["/C", "mklink", "/J"])
-        .arg(link)
-        .arg(target)
-        .output()
-        .unwrap();
-    assert!(output.status.success(), "mklink /J failed: {output:?}");
 }
 
 // F2: comment handling (edge case 10).
