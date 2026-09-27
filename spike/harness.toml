@@ -137,3 +137,7 @@ close_keys = [0x1B]
 name = "task_manager"
 open = [0x11, 0x10, 0x1B]
 close_class = "TaskManagerWindow"
+
+[g4]
+# Clicks typed into the admin Terminal; pauses and failure limits come from [g2], the app from [apps.terminal].
+clicks = 200

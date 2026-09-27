@@ -1,14 +1,17 @@
-//! P1 spike harness: drives gates G1-G3 and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G4 and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
+mod admin;
 mod apps;
+mod clicks;
 mod clip;
 mod config;
 mod diff;
 mod g1;
 mod g2;
 mod g3;
+mod g4;
 mod keys;
 mod launch;
 mod mouse;
@@ -38,6 +41,7 @@ fn usage() -> String {
         "usage: harness g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
        harness g2 <slint|qt|tauri> [--clicks N] [--seed S]
        harness g3 <slint|qt|tauri>
+       harness g4 <slint|qt|tauri> [--clicks N] [--seed S]
 --attach types into the app's window already open; --pause sets the gap between characters.",
         apps.join("|")
     )
@@ -66,7 +70,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
     };
     let count_flag = match gate.as_str() {
         "g1" => Some("--count"),
-        "g2" => Some("--clicks"),
+        "g2" | "g4" => Some("--clicks"),
         "g3" => None,
         _ => return Err(usage()),
     };
@@ -114,6 +118,12 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
             ctx,
             &args.name,
             args.count.unwrap_or(ctx.cfg.g2.clicks),
+            seed,
+        ),
+        "g4" => g4::run(
+            ctx,
+            &args.name,
+            args.count.unwrap_or(ctx.cfg.g4.clicks),
             seed,
         ),
         _ => g3::run(ctx, &args.name),
@@ -208,6 +218,11 @@ mod tests {
             Some(10)
         );
         assert_eq!(parse(&args("g3 slint")).expect("parses").count, None);
+        let a = parse(&args("g4 qt --clicks 50 --seed 3")).expect("parses");
+        assert_eq!(
+            (a.gate.as_str(), a.count, a.seed),
+            ("g4", Some(50), Some(3))
+        );
     }
 
     #[test]
@@ -223,6 +238,9 @@ mod tests {
             "g2 qt --attach",
             "g2 qt --pause 5",
             "g1 word --pause",
+            "g4 qt --attach",
+            "g4 qt --count 5",
+            "g4 qt --pause 5",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }

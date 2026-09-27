@@ -1,14 +1,12 @@
 //! G2 no focus: random clicks on face keys; the target keeps focus and caret; click-to-character time.
 
 use serde_json::{Map, Value, json};
-use spike_core::clock::now_us;
-use spike_core::window::foreground;
-use spike_core::{layout, place};
-use windows::Win32::Foundation::{HWND, POINT};
+use spike_core::place;
+use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, Ctx, Opened};
+use crate::clicks::{self, Key, Tally};
 use crate::mouse::{self, Face};
-use crate::rng::Rng;
 use crate::stats::{self, Click};
 use crate::tlog::{self, Unit};
 use crate::win::{self, sleep_ms};
@@ -18,38 +16,6 @@ use crate::{launch, out};
 const CLICKS_FILE: &str = "-clicks.tsv";
 /// First line of the raw click file.
 const TSV_HEADER: &str = "index\tcode\tclick_us\tlatency_us\n";
-
-/// A clickable key: scan code, the character it types in the target's layout, screen centre.
-struct Key {
-    code: u32,
-    text: String,
-    at: POINT,
-}
-
-/// Counts and records of one click run.
-#[derive(Default)]
-struct Tally {
-    clicks: Vec<Click>,
-    focus_kept: usize,
-    caret_kept: usize,
-    failures: Vec<Value>,
-    failed: usize,
-    stopped: Option<String>,
-    /// Clicks skipped because another window covered the key.
-    covered: usize,
-    /// The windows that covered keys, each named once.
-    covered_by: Vec<String>,
-}
-
-impl Tally {
-    /// Counts one click skipped because `who` covered the key; names at most `shown` windows.
-    fn skip(&mut self, who: String, shown: usize) {
-        self.covered += 1;
-        if self.covered_by.len() < shown && !self.covered_by.contains(&who) {
-            self.covered_by.push(who);
-        }
-    }
-}
 
 /// What the target log shows after the clicks.
 struct Logged {
@@ -63,106 +29,6 @@ struct Logged {
     error: Option<String>,
 }
 
-fn keys(ctx: &Ctx, face: &Face) -> Vec<Key> {
-    let hkl = layout::foreground_layout();
-    mouse::key_places(&ctx.spike.keyboard)
-        .into_iter()
-        .filter_map(|(code, place)| {
-            let text = layout::character(code, hkl);
-            layout::is_printable(&text).then(|| Key {
-                code,
-                text,
-                at: mouse::centre(&place, face.origin, face.dpi),
-            })
-        })
-        .collect()
-}
-
-/// Clicks one key; the character that arrives, not the cursor, shows where it landed.
-fn click(key: &Key, tally: &mut Tally) -> Result<(), String> {
-    let us = now_us();
-    mouse::click_at(key.at)?;
-    tally.clicks.push(Click {
-        code: key.code,
-        us,
-        expect: key.text.encode_utf16().collect(),
-    });
-    Ok(())
-}
-
-/// Checks focus and caret after a click; `Err` stops the run.
-fn check(
-    ctx: &Ctx,
-    target: &Opened,
-    caret0: HWND,
-    key: &Key,
-    tally: &mut Tally,
-) -> Result<(), String> {
-    let (cfg, g) = (ctx.cfg, &ctx.cfg.g2);
-    let front = foreground();
-    let caret = win::caret(win::owner(target.hwnd).1);
-    let (focus_ok, caret_ok) = (front == target.hwnd, caret == caret0);
-    tally.focus_kept += usize::from(focus_ok);
-    tally.caret_kept += usize::from(caret_ok);
-    if focus_ok && caret_ok {
-        return Ok(());
-    }
-    tally.failed += 1;
-    if tally.failures.len() < g.failures_shown {
-        tally.failures.push(json!({
-            "index": tally.clicks.len() - 1, "key": format!("{:#X}", key.code), "label": key.text,
-            "front": win::describe(front), "caret": win::describe(caret),
-        }));
-    }
-    if !focus_ok && !win::front(target.hwnd, &cfg.timing, &cfg.keys) {
-        return Err("target-window could not be brought back".to_string());
-    }
-    if tally.failed >= g.max_failures {
-        return Err(format!("{} failures", tally.failed));
-    }
-    Ok(())
-}
-
-/// Clicks random keys of the face `face`; a key another window covers is skipped, never clicked.
-fn click_loop(ctx: &Ctx, target: &Opened, face: HWND, keys: &[Key], run: (usize, u64)) -> Tally {
-    let g = &ctx.cfg.g2;
-    let caret0 = win::caret(win::owner(target.hwnd).1);
-    let mut rng = Rng::new(run.1);
-    let mut tally = Tally::default();
-    while tally.clicks.len() < run.0 {
-        let key = &keys[rng.below(keys.len())];
-        let top = win::root_at(key.at);
-        if top != face {
-            tally.skip(win::describe(top), g.failures_shown);
-            if tally.covered >= g.max_failures {
-                tally.stopped = Some(format!("{} keys covered by other windows", tally.covered));
-                break;
-            }
-            continue;
-        }
-        let step = click(key, &mut tally).and_then(|()| {
-            sleep_ms(g.click_gap_ms);
-            check(ctx, target, caret0, key, &mut tally)
-        });
-        if let Err(reason) = step {
-            tally.stopped = Some(reason);
-            break;
-        }
-    }
-    tally
-}
-
-/// Splits keys into those on top and those another window covers, named by that window.
-fn visible(keys: Vec<Key>, face: HWND) -> (Vec<Key>, Vec<String>) {
-    let (shown, hidden): (Vec<Key>, Vec<Key>) =
-        keys.into_iter().partition(|k| win::root_at(k.at) == face);
-    let hidden = hidden
-        .iter()
-        .map(|k| format!("{:#X} under {}", k.code, win::describe(win::root_at(k.at))))
-        .collect();
-    (shown, hidden)
-}
-
 /// Starts target-window in front and lists the uncovered keys it can type; cleans up on failure.
 fn setup(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
     let target = launch::start_target(ctx)?;
@@ -170,22 +36,13 @@ fn setup(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Opened, Vec<Key>, Vec<St
         apps::clean_up(ctx, target);
         return Err("could not bring target-window to the front".to_string());
     }
-    let (keys, hidden) = visible(keys(ctx, face), hwnd);
-    if keys.is_empty() {
-        apps::clean_up(ctx, target);
-        return Err(format!(
-            "no printable key on top; covered: {}",
-            hidden.join("; ")
-        ));
+    match clicks::usable(ctx, face, hwnd) {
+        Ok((keys, hidden)) => Ok((target, keys, hidden)),
+        Err(e) => {
+            apps::clean_up(ctx, target);
+            Err(e)
+        }
     }
-    if !hidden.is_empty() {
-        println!(
-            "left out {} covered keys: {}",
-            hidden.len(),
-            hidden.join("; ")
-        );
-    }
-    Ok((target, keys, hidden))
 }
 
 /// Reads the target log: latencies, and focus losses since the first click.
@@ -222,7 +79,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
         face.dpi,
         face.client
     );
-    let tally = click_loop(ctx, &target, face_hwnd, &keys, (count, seed));
+    let tally = clicks::click_loop(ctx, &target, face_hwnd, &keys, (count, seed));
     sleep_ms(ctx.cfg.g2.drain_ms);
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);
@@ -312,16 +169,6 @@ fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn covered_keys_are_counted_and_each_window_named_once() {
-        let mut t = Tally::default();
-        for who in ["osk", "osk", "menu", "tip"] {
-            t.skip(who.to_string(), 2);
-        }
-        assert_eq!(t.covered, 4);
-        assert_eq!(t.covered_by, vec!["osk".to_string(), "menu".to_string()]);
-    }
 
     #[test]
     fn tsv_has_a_header_and_one_line_per_click() {

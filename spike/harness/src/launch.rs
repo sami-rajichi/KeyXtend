@@ -1,4 +1,4 @@
-//! Starts G1 apps on fresh test files and waits until each can take text.
+//! Starts G1 apps and G4's admin Terminal on fresh test files, and waits until each can take text.
 
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -6,8 +6,9 @@ use std::process::{Child, Command, Stdio};
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{AppKind, Ctx, INPUT, Opened};
-use crate::out;
+use crate::config::AppConfig;
 use crate::win::{self, Match, sleep_ms};
+use crate::{admin, out};
 
 /// Placeholder in `PAGE` for the page title.
 const TITLE: &str = "{title}";
@@ -18,9 +19,13 @@ const RESULT: &str = "{result}";
 /// Chrome test page; `{title}` is the page title.
 const PAGE: &str = "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{title}</title></head>\n\
 <body><textarea autofocus spellcheck=\"false\" style=\"width:95vw;height:90vh\"></textarea></body></html>\n";
-/// Terminal script: signals ready, reads one line, saves it as UTF-8 without BOM.
-const PS1: &str = "\u{FEFF}[IO.File]::WriteAllText('{ready}', 'ready')\r\n$t = Read-Host\r\n\
+/// Terminal script: writes whether it runs as administrator, reads one line, saves it as UTF-8 without BOM.
+const PS1: &str = "\u{FEFF}$a = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::\
+GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)\r\n\
+[IO.File]::WriteAllText('{ready}', \"$a\")\r\n$t = Read-Host\r\n\
 [IO.File]::WriteAllText('{result}', $t, [Text.UTF8Encoding]::new($false))\r\n";
+/// What the script writes to the ready file when it runs as administrator.
+const ADMIN_ANSWER: &str = "True";
 /// Suffix of Notepad's test file.
 const NOTEPAD_FILE: &str = ".txt";
 /// Suffix of Chrome's test page.
@@ -39,9 +44,32 @@ fn html_text(text: &str) -> String {
         .replace('>', "&gt;")
 }
 
+/// True when the ready file says the script runs as administrator.
+fn is_admin(ready: &str) -> bool {
+    ready.trim() == ADMIN_ANSWER
+}
+
 /// `path` made safe inside a single-quoted PowerShell string.
 fn ps_quote(path: &Path) -> String {
     path.to_string_lossy().replace('\'', "''")
+}
+
+/// What spots the app's window; windows open now are skipped when it opens a new one.
+fn window_match(app: &AppConfig, title_has: Option<String>) -> Match {
+    Match {
+        title_has,
+        class: app.class.clone(),
+        skip: if app.new_window {
+            win::snapshot()
+        } else {
+            Default::default()
+        },
+    }
+}
+
+/// The app's arguments with `{input}` filled in.
+fn app_args(app: &AppConfig, input: &str) -> Vec<String> {
+    app.args.iter().map(|a| a.replace(INPUT, input)).collect()
 }
 
 fn launch(
@@ -51,17 +79,9 @@ fn launch(
     title_has: Option<String>,
 ) -> Result<(HWND, Child), String> {
     let (cfg, app) = (ctx.cfg, ctx.cfg.app(kind.name())?);
-    let m = Match {
-        title_has,
-        class: app.class.clone(),
-        skip: if app.new_window {
-            win::snapshot()
-        } else {
-            Default::default()
-        },
-    };
+    let m = window_match(app, title_has);
     let exe = cfg.program(&app.exe);
-    let args = app.args.iter().map(|a| a.replace(INPUT, input));
+    let args = app_args(app, input);
     // No stdio of ours, which main also makes non-inheritable, so an app left open holds no pipe.
     let child = Command::new(&exe)
         .args(args)
@@ -139,8 +159,8 @@ fn open_chrome(ctx: &Ctx) -> Result<Opened, String> {
     Ok(opened(kind, started, None, None))
 }
 
-/// Terminal running a script that saves one typed line; waits until the script is ready.
-fn open_terminal(ctx: &Ctx) -> Result<Opened, String> {
+/// Writes Terminal's script; returns it, the file it marks ready in, and the file it saves to.
+fn terminal_files(ctx: &Ctx) -> Result<(PathBuf, PathBuf, PathBuf), String> {
     let (script, ready, result) = (
         ctx.file(SCRIPT_FILE),
         ctx.file(READY_FILE),
@@ -150,11 +170,42 @@ fn open_terminal(ctx: &Ctx) -> Result<Opened, String> {
         .replace(READY, &ps_quote(&ready))
         .replace(RESULT, &ps_quote(&result));
     out::write(&script, &text)?;
+    Ok((script, ready, result))
+}
+
+/// Terminal running a script that saves one typed line; waits until the script is ready.
+fn open_terminal(ctx: &Ctx) -> Result<Opened, String> {
+    let (script, ready, result) = terminal_files(ctx)?;
     let kind = AppKind::Terminal;
     let (wait, poll) = (ctx.cfg.app(kind.name())?.wait_ms, ctx.cfg.timing.poll_ms);
     let started = launch(ctx, kind, &script.to_string_lossy(), None)?;
     out::wait_read(&ready, wait, poll).map_err(|e| format!("terminal not ready: {e}"))?;
     Ok(opened(kind, started, Some(result), None))
+}
+
+/// Terminal as administrator on the one-line script; also says whether the script runs as admin.
+pub fn open_admin(ctx: &Ctx) -> Result<(Opened, bool), String> {
+    let kind = AppKind::Terminal;
+    let (app, poll) = (ctx.cfg.app(kind.name())?, ctx.cfg.timing.poll_ms);
+    let (script, ready, result) = terminal_files(ctx)?;
+    let m = window_match(app, None);
+    let args = app_args(app, &script.to_string_lossy());
+    admin::run_as(&ctx.cfg.program(&app.exe), &args)?;
+    let hwnd = win::wait_for(&m, app.wait_ms, poll)
+        .ok_or_else(|| format!("no admin {} window after {} ms", kind.name(), app.wait_ms))?;
+    let answer = out::wait_read(&ready, app.wait_ms, poll).map_err(|e| {
+        let _ = win::close(hwnd);
+        format!("admin {} not ready: {e}", kind.name())
+    })?;
+    sleep_ms(app.ready_ms);
+    let opened = Opened {
+        kind,
+        hwnd,
+        child: None,
+        file: Some(result),
+        title_has: None,
+    };
+    Ok((opened, is_admin(&answer)))
 }
 
 /// Prepares a fresh document for `kind`, starts the app and waits until it can take text.
@@ -180,6 +231,24 @@ mod tests {
         assert_eq!(html_text("a&b<c>d"), "a&amp;b&lt;c&gt;d");
         assert_eq!(html_text("&lt;"), "&amp;lt;");
         assert_eq!(html_text("KeyXtend G1"), "KeyXtend G1");
+    }
+
+    #[test]
+    fn app_args_fill_the_input_in_every_argument() {
+        let cfg = crate::config::load().expect("harness.toml loads");
+        let app = AppConfig {
+            args: vec!["-File".into(), INPUT.into(), format!("x={INPUT}")],
+            ..cfg.app(AppKind::Terminal.name()).expect("terminal").clone()
+        };
+        assert_eq!(app_args(&app, "s.ps1"), ["-File", "s.ps1", "x=s.ps1"]);
+    }
+
+    #[test]
+    fn is_admin_reads_the_script_answer() {
+        assert!(is_admin("True"));
+        assert!(is_admin("True\r\n"));
+        assert!(!is_admin("False"));
+        assert!(!is_admin(""));
     }
 
     #[test]

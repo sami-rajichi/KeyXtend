@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-27 — P1: no-focus, top-band and admin tests
+Slint and Qt both passed G2: 1000 clicks each, the target kept focus every time, and keys typed in about 4 ms (13 ms at worst). Both stayed above Start, Search and Task Manager (G3). The new `harness g4` opens Terminal as administrator and clicks 200 keys into it: both typed into it with uiAccess alone, Qt 200/200 and Slint 199/200 (the owner touched the mouse then). Covered keys are now left out of G2 and G4, and the click code they share lives in `clicks.rs`.
+
 ## 2026-09-27 — P1: test keyboards and the typing test
 Slint and Qt test keyboards run with uiAccess; Tauri was dropped because WebView2 will not start under uiAccess. The harness typed 1000 random English, French, Arabic and AltGr characters into five apps: the test window, Chrome, Terminal and Word received every one (Word's AutoCorrect curls quotes), and Notepad drops a few only in fast bursts. The harness now checks where the keyboard focus really is, saves a screenshot when a pop-up blocks it, and moves on to the next app. A four-part review found about 65 issues in the spike code, all fixed or explained.
 
