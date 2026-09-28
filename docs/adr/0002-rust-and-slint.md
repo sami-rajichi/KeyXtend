@@ -1,7 +1,7 @@
 # 2. Rust for all code, Slint for all windows
 
 - **Date:** 2026-09-26
-- **Status:** Accepted. Must pass the week-one spike gates (roadmap Phase 1); if a gate fails, the fallback applies.
+- **Status:** Superseded by ADR-0013 (2026-09-29): Qt 6 Quick draws every window.
 
 ## Context
 

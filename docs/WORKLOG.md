@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-29 — P1 closed: Qt chosen, tested code kept
+The toolkit test round is closed: Qt 6 Quick with a Rust core draws every window (ADR-0013, with every gate's numbers), and Slint and Tauri are dropped. By the owner's decision about 29,000 lines of tested spike code are kept and moved into the product phase by phase, each part fitted to the architecture and rules as it moves (ADR-0014, `docs/spike-move-map.md`). The roadmap, spec, architecture map, skills and licence list now describe Qt, and the gates not run move to P3, P14 and P15 (G15 earlier once the Qt keyboard builds on macOS and Ubuntu). P2 is ready.
+
 ## 2026-09-29 — P1: the hold ring (G12), icons and darker ring colours
 A "Ring test" switch on the Qt face loops the mock-up's hold ring at the pointer in a click-through window, timed from the hold setting, and records its frame gaps. The G12 run passed: 200 of 200 clicks under the ring reached the app behind it, at 167 frames a second (slowest frame 7.9 ms); the G7 typing run also passed. The Copy pill, "Transcribing…" and the words bar now carry the mock-up's Lucide icons, and the ET66 and Dolch light rings are darker, reaching 3:1 on a plain window. Two review passes found about 40 issues, all fixed.
 

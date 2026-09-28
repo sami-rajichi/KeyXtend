@@ -1,4 +1,4 @@
-//! Shared core of the P1 spike faces. Throwaway: deleted at the end of P1.
+//! Shared core of the P1 spike faces; each phase moves its parts into the product (ADR-0014).
 
 pub mod backdrop;
 pub mod capture;

@@ -1,7 +1,7 @@
 # 9. Characters as Unicode, shortcuts as virtual keys
 
 - **Date:** 2026-09-26
-- **Status:** Accepted. The spike verifies it in Notepad, Word, Chrome and Terminal.
+- **Status:** Accepted. Verified by gate G1 in the test window, Notepad, Word, Chrome and Terminal; Notepad drops a few characters in fast bursts (ADR-0013).
 
 ## Context
 If we send virtual keys for characters, the result depends on the target's keyboard layout. For example, AZERTY versus QWERTY garbles letters, and Arabic breaks. On the other hand, Ctrl+C sent as a Unicode "c" does not work in most apps.

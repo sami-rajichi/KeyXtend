@@ -29,4 +29,4 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
 
 ## Rules
 - A module never talks to the OS. If it needs something new from the OS, add a **port** (a trait) to `kx-module-api`, implement it in `kx-platform-fake` first (with tests), and only then in `kx-platform-windows`.
-- UI for the module goes in `crates/kx-ui/ui/views/<name>.slint` with an `Adapter` global. Its lists are paged, 5 rows per page (ADR-0008).
+- UI for the module goes in `crates/kx-ui/qml/views/<Name>.qml`, with one cxx-qt bridge object in `crates/kx-ui/src/bridges/`. Its lists are paged, 5 rows per page (ADR-0008).

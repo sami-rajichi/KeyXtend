@@ -1,4 +1,4 @@
-# Throwaway P1 spike workspace: deleted at the end of P1 (see the plan).
+# P1 spike workspace: kept and moved into the product phase by phase (ADR-0014, docs/spike-move-map.md).
 # Each face (slint-kb, qt-kb, tauri-kb) is its own workspace, so they build in parallel.
 [workspace]
 members = ["core", "target-window", "harness", "worker"]

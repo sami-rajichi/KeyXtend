@@ -6,8 +6,8 @@ This file is a short map for anyone working on the code, human or agent. For *wh
 
 ```
 ┌──────────────────────────── keyxtend.exe (uiAccess, signed, Program Files) ───────────────────────┐
-│  Slint UI (keyboard, panels, overlays, settings)                                                   │
-│        ▲ adapters (ui/*.slint globals ⇄ Rust)                                                      │
+│  Qt Quick UI in QML (keyboard, panels, overlays, settings)                                         │
+│        ▲ cxx-qt bridge objects (QML ⇄ Rust)                                                        │
 │  ┌─────┴──────────────────────────── kx-kernel ───────────────────────────────┐                   │
 │  │ module registry · lifecycle · typed event bus · service registry ·           │                   │
 │  │ capability grants · settings + migrations · health monitor · tracing         │                   │
@@ -52,7 +52,8 @@ crates/
   kx-platform-macos/    later
   kx-platform-linux/    later (X11 + Wayland portals)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock)
-  kx-ui/                ui/theme.slint, ui/widgets/, ui/views/*.slint (Adapter globals), src/adapters/
+  kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
+  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), theme loader
   kx-mod-keyboard/      layout model, key state machine, modifiers, shortcuts layer
   kx-mod-layouts/       read OS layouts, label tables (EN/FR/AR + any installed)
   kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click
@@ -66,6 +67,10 @@ crates/
   kx-mod-power/         power dialog
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20
   kx-test-support/      shared test helpers, golden files
+tools/
+  kx-gates/              Windows gate runner (moved from the P1 harness; never shipped)
+  kx-target-window/      test window that logs every character it receives (CI)
+spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess
                          (uiAccess test builds), sign (later), sbom (later)
@@ -116,6 +121,8 @@ pub trait Module: Send + 'static {
 1. `kx-mod-*` crates depend only on `kx-module-api` and pure utility crates. They never depend on each other, on `kx-kernel`, or on any `kx-platform-*`.
 2. Only `apps/*` choose platform adapters and modules.
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
+   - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
+   - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`; tidy learns this in P2 (`tools/`) and P3 (`kx-ui`).
 4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
 6. No module logs typed text, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
@@ -123,7 +130,7 @@ pub trait Module: Send + 'static {
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.
-   - Colours, fonts and spacing live in theme tokens (`ui/theme.slint`).
+   - Colours, fonts, spacing and motion live in theme tokens (`themes.toml`, `shape.toml`, `motion.toml`).
    - User-visible text lives in translation files.
    - OS mappings live in adapter tables.
    - `kx-review` checks this.
@@ -131,34 +138,34 @@ pub trait Module: Send + 'static {
 
 ## Cross-cutting patterns
 
-- **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping Slint for another toolkit, or Windows for macOS, touches adapters only.
+- **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
 - **State machines as enums** with explicit transitions, for the keyboard, hold engine, scroll, vault lock and voice session. Time is always injected through a `Clock` trait, so tests are deterministic.
 - **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops. No cycles of bounded channels.
 - **No global mutable state.** The service registry is the only "global", and it is owned by the kernel.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
-- **UI binding (Slint):** each `ui/views/*.slint` exports a `global XxxAdapter` (properties and callbacks), and Rust `src/adapters/*` connects it to module handles, following Slint's `todo-mvc` example. Accessible roles and labels go on every control from day one.
+- **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
 - **IPC:**
   - The main process spawns each worker and hands it an inherited pipe handle. The worker connects to nothing else.
   - If a named pipe is ever needed: user-SID ACL, `first_pipe_instance`, `reject_remote_clients`, and a check of the client's image path and signature.
   - Messages have size limits, are validated and rate-limited, and are fuzzed.
 
-## Slint window rules (ADR-0002)
+## Qt window rules (ADR-0013)
 
-- Pin `slint = "=1.18.1"`. The `unstable-winit-030` API may change in any minor release.
-- Renderer: FemtoVG-OpenGL or Skia-OpenGL, never Skia-DX12.
-- The Windows adapter subclasses every Slint window we create:
+- Pin Qt 6.11.2 and cxx-qt 0.10.0; review every upgrade.
+- QML is compiled into the binary as a resource module; it is never loaded from disk.
+- Keyboard windows are `Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus`; click-through windows add `Qt.WindowTransparentForInput`.
+- The Windows adapter guards every window we create except Settings:
   - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`.
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
-  - Windows are created with `with_active(false)` and `with_skip_taskbar(true)`.
-- Never call `bring_to_front()`. Set size and position only through Slint's API.
-- Keyboard scale is a `.slint` global. Right-to-left mirroring for the Arabic UI is done by hand with a `Dir.rtl` global.
-- The pointer ring, burst and badge are **native** layered windows owned by the platform adapter, not Slint windows.
+- Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
+- Owned windows (shadows, bubble, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
+- Right-to-left layouts use `LayoutMirroring`; Arabic text uses the theme's Arabic font.
 
 ## Platform notes
 
 | Concern | Windows (v1) | macOS (later) | Linux (later) |
 |---|---|---|---|
-| Top-most, no focus | uiAccess + `WS_EX_NOACTIVATE/TOPMOST/TOOLWINDOW` (guarded) | `NSPanel` nonactivating via class swap until Slint moves to winit 0.31 | X11: `_NET_WM_STATE_ABOVE`; Wayland: layer-shell on KDE/wlroots (layer-shika); **not possible on GNOME Wayland** |
+| Top-most, no focus | uiAccess + `WS_EX_NOACTIVATE/TOPMOST/TOOLWINDOW` (guarded) | Qt `Tool` windows are non-activating `NSPanel`s | X11: `_NET_WM_STATE_ABOVE`; Wayland: LayerShellQt on KDE/wlroots; **not possible on GNOME Wayland** |
 | Type | `SendInput` Unicode + VK | `CGEventPost` (Accessibility permission) | X11 XTest; Wayland RemoteDesktop portal / libei (asks the user once) |
 | Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
 | Scroll | UIA ScrollPattern → posted wheel → SendInput | `CGEventCreateScrollWheelEvent` | XTest buttons 4–7 / portal |

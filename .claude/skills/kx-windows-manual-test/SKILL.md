@@ -1,6 +1,6 @@
 ---
 name: kx-windows-manual-test
-description: Use when a module or the Phase 1 test round needs verification on a real Windows 11 PC - things CI cannot test, like uiAccess z-order, admin windows, focus, real apps (Notepad, Word, Chrome, Terminal), DPI and Narrator. Produces docs/test-reports/<date>-<topic>.md.
+description: Use when a module or phase needs verification on a real Windows 11 PC - things CI cannot test, like uiAccess z-order, admin windows, focus, real apps (Notepad, Word, Chrome, Terminal), DPI and Narrator. Produces docs/test-reports/<date>-<topic>.md.
 ---
 
 # Manual Windows test

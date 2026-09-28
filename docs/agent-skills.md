@@ -35,7 +35,7 @@ Skills are instruction packs that Claude loads for a type of task. There are two
 | `kx-licence-check` | Before adding any crate, font, icon, word list or model; before a release |
 | `kx-windows-manual-test` | Verifying on a real Windows PC (uiAccess, admin windows, real apps) |
 | `kx-release` | Preparing a tagged release |
-| `kx-slint-theme` | Adding or changing a theme, colour, font or spacing token |
+| `kx-theme` | Adding or changing a theme, colour, font, spacing or motion token |
 
 ## Suggested later
 

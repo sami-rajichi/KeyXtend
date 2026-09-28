@@ -25,7 +25,7 @@ description: Use when preparing a tagged KeyXtend release - version bump, change
    - assets: installer, portable zip, SBOM, `SHA256SUMS`;
    - `actions/attest` build provenance;
    - release notes in plain language (EN; FR and AR if available);
-   - the "Made with Slint" badge.
+   - the Qt LGPL notice and where its source is (ADR-0013).
 7. **Ask the product owner** (AskUserQuestion) to approve publishing. Show the draft link and a summary.
 8. **After publishing:**
    - winget manifest PR (`wingetcreate`) and Scoop Extras manifest;

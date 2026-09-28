@@ -1,4 +1,4 @@
-# Throwaway P1 spike: the Qt 6 Quick + cxx-qt face. Deleted at the end of P1.
+# P1 spike: the Qt 6 Quick + cxx-qt face, moved into kx-ui phase by phase (ADR-0014).
 [package]
 name = "qt-kb"
 version = "0.0.0"

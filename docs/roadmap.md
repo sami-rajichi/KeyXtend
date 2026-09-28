@@ -13,7 +13,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 2. **Tests:**
    - unit tests for all logic;
    - property tests for every state machine or parser;
-   - Slint UI tests for every view (by accessible label);
+   - Qt Quick Test checks for every QML view (controls found by accessible name);
    - edge cases listed in the plan are all covered.
 3. **Security:** `docs/security/<module>.md` is filled in using the `kx-security-check` skill: threat list, capabilities, data classes, what is logged, IPC inputs. Findings are fixed or tracked.
 4. **Quality gates green:**
@@ -44,9 +44,11 @@ Versions are pre-1.0 until the Windows feature set is complete.
 - Files: `LICENSE` (after decision D2), `THIRD_PARTY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `.github/CODEOWNERS`, and issue/PR templates.
 - Choose the installer tool after a licence check (spec D8).
 
-## Phase 1 — Toolkit test round (throwaway branch `spike/toolkits`)
+## Phase 1 — Toolkit test round (branch `spike/toolkits`) — done 2026-09-29
 
 **Purpose:** prove the risky parts and choose the UI toolkit by measurement (ADR-0011).
+
+**Result:** Qt 6 Quick with a Rust core draws every window (ADR-0013, with every gate's numbers). The tested code is kept and moved into the product phase by phase (ADR-0014, `docs/spike-move-map.md`).
 
 - **Candidates.**
   - Qt 6 Quick with a Rust core (cxx-qt) and Slint 1.18 build the same small test keyboard.
@@ -97,11 +99,21 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G25 Language and shortcuts (core) | The language key also switches the target app's input language; Ctrl+C/V/Z, Win+V and Alt+Tab work from the keyboard |
 | G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact; a Japanese IME fed key presses produces 日本 |
 
-**Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, merged by a normal pull request. **No leftovers:** when the round ends, the spike code, screenshots, logs, the test install, the certificate and the virtual PC are deleted. Only the numbers are kept, in ADR-0013.
+**Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, and the spike code (ADR-0014). **Deleted:** screenshots, logs, scratch scripts and virtual PCs. The owner decides when the test certificate and the Program Files test install go.
+
+**Gates not run in the round** move to the phases that build their parts: G8, G9, G10, G11, G13 (live following, frosted glass) and G26 to P3; G14 to P14; G15 and G16 to P15, or G15 earlier once the Qt keyboard builds on macOS and Ubuntu (it needs the owner's yes to push).
+
+## Phases 2–13 — Move and harden
+
+- Each phase first moves its spike parts, listed in `docs/spike-move-map.md`, into the product crates.
+- Moving means fitting each part to the architecture, not copying it: ports, settings schema, theme tokens, translation files, and the full Definition of Done.
+- The move deletes the spike copy in the same commit, and the phase's gates in `tools/kx-gates` are aimed at the product app.
+- After the move, the phase hardens, optimises and completes the feature to the spec.
 
 ## Phase 2 — Kernel and module API — v0.0.x
 
 - Crates: `kx-module-api`, `kx-kernel`, `kx-settings`, `kx-platform`, `kx-platform-fake`, `kx-test-support`.
+- **Moves in:** the test tools (`tools/kx-gates`, `tools/kx-target-window`) and test helpers; the settings loader and clock serve as models; the Slint and Tauri faces are removed (move map, P2).
 - Covers: lifecycle state machine, event bus (notify and intercept), service registry, capability grants, settings migrations, `Redacted<T>`, tracing with a redaction layer.
 - **Edge cases:**
   - a module fails during start;
@@ -116,7 +128,9 @@ Versions are pre-1.0 until the Windows feature set is complete.
 - `kx-mod-layouts`: reads installed layouts, label tables for EN/FR/AR, `ToUnicodeEx` with flag 0x4.
 - `kx-mod-keyboard`: key model (§4.1), modifiers kx-style (§4.4), Caps, layers, language key (carousel, cycle or list), panel key routing.
 - `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the no-activate topmost window, per-monitor DPI v2.
-- `kx-ui`: the Native Adaptive theme (light + soft dark), keyboard view, top bar, move (click, move, click), minimise to bubble, size S/M/L plus steps.
+- `kx-ui` (Qt Quick, ADR-0013): all three themes' tokens from the spike, the Native Adaptive look first (light + soft dark), keyboard view, top bar, move (click, move, click), minimise to bubble, size S/M/L plus steps.
+- **Moves in:** the keyboard, layouts, window guard, theme and Qt face parts of the spike (move map, P3).
+- **Gates to pass here:** G8 budgets (development PC and weak mode), G9 window flags, G10 Narrator and NVDA, G11 DPI, G13 live following of accent, dark mode and high contrast plus the frosted-glass tries, G26 other languages.
 - **Remembers its state:** size, position, theme, light or dark and mode survive a restart or shutdown (`kx-settings`); the bubble sits in a bottom corner of the screen.
 - `kx-crypto` (needed later, but it is small and foundational).
 - **Edge cases:**
@@ -131,7 +145,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 4 — Mouse assist — v0.2
 
 - `kx-mod-mouse`: the hold engine (§5.1) with a fake clock; Right-click toggle; Grab for drag-drop and text selection; modifier+click.
-- Overlay window: ring, burst, badge. Sounds (CC0, generated).
+- Overlay: the ring and burst in a click-through Qt window (proven by G12), and the badge. Sounds (CC0, generated).
 - **Health monitor:** detects when Windows removes the hook and reinstalls it.
 - **Edge cases:**
   - press on our own window;
@@ -210,12 +224,14 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 13 — Themes, settings, i18n — v0.9
 
 - ET66 and Modern Dolch (light + soft dark).
-- The complete settings window (paged, steppers).
+- The complete settings window (paged, steppers): a separate window with its own icon, in the keyboard's language, carrying each theme's character as strongly as the keyboard does (owner, 2026-09-29).
+- The paged list panel rebuilt to the full mock-up design.
 - The quick settings strip (theme, light or dark, size), shown only when asked; "Reset size" and the bubble corner in Settings.
 - UI translations in EN/FR/AR, with an RTL settings window.
 
 ## Phase 14 — Release pipeline — v1.0 (Windows)
 
+- G14 soak: 4 hours of automatic typing; memory does not grow and nothing crashes.
 - A tag triggers CI:
   - deny, audit;
   - `cargo auditable build --release`;
@@ -230,7 +246,9 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 15+ — macOS, then Linux
 
 - macOS: `kx-platform-macos` (NSPanel, CGEventTap, CGEventPost, Keychain).
-- Linux: `kx-platform-linux` (X11 first; Wayland through the RemoteDesktop portal and layer-shell; GNOME's own secondary click).
+- Linux: `kx-platform-linux` (X11 first; Wayland through the RemoteDesktop portal and LayerShellQt; GNOME's own secondary click).
+- G15: on GitHub's macOS and Ubuntu machines the keyboard builds, stays on top and never takes focus.
+- G16: in a Linux virtual PC (GNOME and KDE, Wayland and X11) the keyboard stays on top without focus, types, and scales.
 
 ## After v1.0
 

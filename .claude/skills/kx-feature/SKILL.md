@@ -7,7 +7,7 @@ description: Use when the owner types /kx-feature P<n> or /kx-feature F<n>, or a
 
 - The argument is a roadmap phase (`P0`–`P15`, details in `docs/roadmap.md`) or a feature (`F1`, `F2`…).
 - If it is missing, show the `Ready` items from `docs/FEATURES.md` in an AskUserQuestion pop-up and ask which one.
-- **P1 is the throwaway toolkit test round.** It lives on the `spike/toolkits` branch and produces numbers in ADR-0011, not merged code.
+- **P1 is done** (ADR-0013). Phases P2–P13 first move their tested spike parts into the product, following `docs/spike-move-map.md` (ADR-0014), then harden and finish them.
 
 ## Preconditions
 - The feature's **status** in `docs/FEATURES.md` is `Ready` and its **needs** are done. If not, tell the product owner what blocks it, in 1–2 sentences, and stop.

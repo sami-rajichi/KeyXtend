@@ -19,7 +19,8 @@ Run everything below and **paste the real output**. If any step fails, the modul
 2. **Tests cover the plan:**
    - open the phase plan's "Edge cases" list and point to the test that covers each one;
    - every state machine has a property test;
-   - every Slint view has a UI test that finds its controls by accessible label.
+   - every QML view has a Qt Quick Test that finds its controls by accessible name;
+   - every spike part the phase moved (`docs/spike-move-map.md`) is gone from `spike/`, and its tests pass in the new crate.
 3. **Security:** `docs/security/<module>.md` is complete (run `kx-security-check` if not). No open "must fix" items.
 4. **Accessibility:**
    - go through every view and confirm each action works with short left clicks only (no scroll, drag or right-click);

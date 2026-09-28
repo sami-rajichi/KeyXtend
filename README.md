@@ -54,7 +54,7 @@ Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab
 
 ## Status
 
-Early development. The foundation (P0) is done; the UI toolkit test round (P1) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. The foundation (P0) and the UI toolkit test round (P1, Qt chosen) are done; the kernel and settings (P2) are next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
 ## Documents
 - Design spec: [accessible-keyboard-design.md](docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md)
