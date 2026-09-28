@@ -12,7 +12,7 @@ use spike_core::hold::Pt;
 use spike_core::place::Place;
 use spike_core::status::{self, Guard};
 use spike_core::theme::Themes;
-use spike_core::{kbgeom, screen, uiaccess, window};
+use spike_core::{kbgeom, legend, screen, uiaccess, window};
 use windows::Win32::Foundation::HWND;
 
 /// The cxx-qt bridge that makes `Keyboard` a QML type.
@@ -54,6 +54,10 @@ pub mod qobject {
         /// Where the bubble goes on the keyboard's screen, as JSON `{x, y}` in physical pixels, or `{note}`.
         #[qinvokable]
         fn bubble_at(&self) -> QString;
+
+        /// True when `text` has Arabic letters, so it takes the Arabic font.
+        #[qinvokable]
+        fn is_arabic(&self, text: &QString) -> bool;
     }
 }
 
@@ -177,10 +181,14 @@ impl qobject::Keyboard {
         let title = self.rust().title.to_string();
         spot(screen::bubble_for(&title, left, [d, inset]))
     }
+
+    fn is_arabic(&self, text: &QString) -> bool {
+        legend::is_arabic(&text.to_string())
+    }
 }
 
 /// A spot as JSON for QML: `{x, y}`, or `{note}` when Windows could not say.
-fn spot(r: Result<Pt, String>) -> QString {
+pub(crate) fn spot(r: Result<Pt, String>) -> QString {
     let v = match r {
         Ok(p) => serde_json::json!({ "x": p.x, "y": p.y }),
         Err(e) => serde_json::json!({ "note": e }),

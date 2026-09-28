@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use spike_core::config::settings_path;
 
-use crate::featcfg::{self, EditKeys, G19, G20, G21, G22, G23, G24, G25};
+use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G22, G23, G24, G25};
 use crate::probecfg::{G6, Probes, Sim};
 use crate::text::Charsets;
 
@@ -46,6 +46,8 @@ pub struct HarnessConfig {
     pub g6: G6,
     /// Editing shortcuts of the stage-1b probes.
     pub edit_keys: EditKeys,
+    /// G7 settings.
+    pub g7: G7,
     /// G19 settings.
     pub g19: G19,
     /// G20 settings.

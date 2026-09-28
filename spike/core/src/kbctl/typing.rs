@@ -44,6 +44,8 @@ pub enum Tapped {
     Note(String),
     /// Run this tool.
     Tool(ToolButton),
+    /// Open the Arabic test panel.
+    Panel,
 }
 
 impl Kb {
@@ -136,6 +138,7 @@ impl Kb {
             Action::Mic => Tapped::Tool(ToolButton::Mic),
             Action::Snip => Tapped::Tool(ToolButton::Snip),
             Action::Fill => Tapped::Tool(ToolButton::FillPassword),
+            Action::Panel => Tapped::Panel,
             Action::Note => Tapped::Note(
                 self.cfg
                     .keys

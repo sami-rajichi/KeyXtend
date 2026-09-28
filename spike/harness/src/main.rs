@@ -31,6 +31,7 @@ mod g3;
 mod g4;
 mod g5;
 mod g6;
+mod g7;
 mod hand;
 mod hookhost;
 mod hookio;
@@ -79,6 +80,7 @@ fn usage() -> String {
        harness g17 <{}>
        harness g18 <{}>
        harness g6 <{}>
+       harness g7 <qt>
        harness g19 <{}|slint|qt>
        harness g20 <{}>
        harness g21 <{}>
@@ -168,9 +170,10 @@ fn parse(args: &[String]) -> Result<Args, String> {
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
 /// Gates that take only a name: no count, no seed.
-const NAMED: [(&str, NamedRun); 12] = [
+const NAMED: [(&str, NamedRun); 13] = [
     ("g5", g5::run),
     ("g6", g6::run),
+    ("g7", g7::run),
     ("g17", g17::run),
     ("g18", g18::run),
     ("g19", g19::run),

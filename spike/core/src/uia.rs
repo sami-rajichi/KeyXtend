@@ -1,5 +1,6 @@
-//! UI Automation client: items by name, text documents, selection state and ScrollPattern.
+//! UI Automation client: items by name, text documents, selection state, ScrollPattern, buttons and the caret.
 
+mod act;
 mod geom;
 mod read;
 
@@ -16,6 +17,7 @@ use windows::Win32::UI::Accessibility::{
 };
 use windows::core::Interface;
 
+pub use act::{caret, focus, invoke};
 pub use geom::{Pill, anchor, centre, line_points, rects_of};
 pub use read::{Sel, boxes, is_password, lines, password_flag, selection};
 

@@ -4,6 +4,7 @@
 
 mod board;
 mod bridge;
+mod panel;
 mod tools;
 mod voice;
 

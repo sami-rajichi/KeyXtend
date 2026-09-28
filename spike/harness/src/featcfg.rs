@@ -1,14 +1,16 @@
-//! Settings of the stage-1b probes G19 to G25, from `[edit_keys]` and `[g19]` to `[g25]`.
+//! Settings of the probes G7 and G19 to G25, from `[edit_keys]`, `[g7]` and `[g19]` to `[g25]`.
 
 use std::collections::HashSet;
 
 use serde::Deserialize;
+use spike_core::legend::is_mark;
 use spike_core::voicecfg::VoiceConfig;
 
 use crate::config::HarnessConfig;
 
-/// Refuses stage-1b settings that could pick the wrong copy or clean up the owner's copies.
+/// Refuses probe settings that could pick the wrong copy, clean up the owner's copies or pass with nothing checked.
 pub fn check(c: &HarnessConfig) -> Result<(), String> {
+    check_g7(&c.g7)?;
     let g = &c.g20;
     if !(1..=g.copies).contains(&g.paste_back) {
         return Err(format!("g20.paste_back must be 1 to {}", g.copies));
@@ -38,6 +40,14 @@ pub fn check(c: &HarnessConfig) -> Result<(), String> {
             "g22 needs sentences with a 4-digit hex layout and text, a plain clips folder name and typing gaps"
                 .to_string(),
         );
+    }
+    Ok(())
+}
+
+/// Refuses a G7 run that would check nothing: no word, no keys, or a word that starts with a mark.
+fn check_g7(g: &G7) -> Result<(), String> {
+    if g.word.chars().next().is_none_or(is_mark) || g.keys.is_empty() {
+        return Err("g7 needs keys and a word that starts with a letter".to_string());
     }
     Ok(())
 }
@@ -186,6 +196,31 @@ pub struct G21 {
     pub field_css: String,
 }
 
+/// A caret key the G7 check presses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Move {
+    /// To the start of the text.
+    Home,
+    /// To the end of the text.
+    End,
+    /// One letter left, which is forward in right-to-left text.
+    Left,
+    /// One letter right, which is back in right-to-left text.
+    Right,
+}
+
+/// G7 Arabic panel check.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G7 {
+    /// The word typed into the panel's field, with harakat.
+    pub word: String,
+    /// Caret keys pressed after it, in order.
+    pub keys: Vec<Move>,
+    /// Longest wait for the panel to open, in ms.
+    pub open_ms: u64,
+}
+
 /// Windows Hello quick-fill probe.
 #[derive(Debug, Clone, Deserialize)]
 pub struct G23 {
@@ -237,7 +272,10 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("harness.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut HarnessConfig); 16] = [
+        let bad: [fn(&mut HarnessConfig); 19] = [
+            |c| c.g7.word.clear(),
+            |c| c.g7.keys.clear(),
+            |c| c.g7.word.insert(0, '\u{064E}'),
             |c| c.g22.type_gaps_ms.clear(),
             |c| c.g19.lines.clear(),
             |c| c.g19.lines[0].clear(),

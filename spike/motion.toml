@@ -6,7 +6,7 @@ ease = [0.25, 0.1, 0.25, 1.0]
 ease_out = [0.0, 0.0, 0.58, 1.0]
 ease_in_out = [0.42, 0.0, 0.58, 1.0]
 linear = [0.0, 0.0, 1.0, 1.0]
-# Fast start and a soft landing: the language carousel and the legends (mock-up cubic-bezier(.2,.8,.2,1)).
+# Fast start and a soft landing: the language carousel, the legends and panels (mock-up cubic-bezier(.2,.8,.2,1)).
 swift = [0.2, 0.8, 0.2, 1.0]
 # Overshoots a little, for the D-pad's Stop (mock-up .dp-stop).
 spring = [0.3, 1.5, 0.5, 1.0]
@@ -26,9 +26,10 @@ carousel = { ms = 300, curve = "swift" }
 legends = { ms = 280, curve = "swift" }
 # The D-pad's Stop popping in and out (.dp-stop).
 stop = { ms = 220, curve = "spring" }
-# The Copy pill and the caption bar popping in (.selpill, .capbar).
+# The Copy pill, the caption bar and a panel popping in (.selpill, .capbar, .pop).
 pill = { ms = 180, curve = "ease_out" }
 caption = { ms = 200, curve = "ease_out" }
+panel = { ms = 180, curve = "swift" }
 # One pass of the shimmer while the words are on their way (.shimmer).
 shimmer = { ms = 1000, curve = "linear" }
 

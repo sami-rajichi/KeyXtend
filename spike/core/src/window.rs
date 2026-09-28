@@ -1,4 +1,6 @@
-//! Keeps our windows on top and never focused, like osk.exe.
+//! Keeps our windows on top and never focused, like osk.exe; only a spared Settings window may take focus.
+
+use std::sync::OnceLock;
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
@@ -168,15 +170,36 @@ pub fn own_windows() -> Vec<HWND> {
     found
 }
 
+/// Our one window that may take focus, as Settings does; the guard leaves it alone.
+static SPARED: OnceLock<String> = OnceLock::new();
+
+/// Lets our window `title_is` take focus: no guard touches it. Only the first call counts.
+pub fn spare(title_is: &str) {
+    let _ = SPARED.set(title_is.to_string());
+}
+
+/// A window called `title_is` is left unguarded.
+fn spared_by(title_is: &str, spared: Option<&str>) -> bool {
+    spared == Some(title_is)
+}
+
+/// Our visible windows the guard may touch.
+fn guardable() -> Vec<HWND> {
+    let spared = SPARED.get().map(String::as_str);
+    let mut all = own_windows();
+    all.retain(|&w| !spared_by(&title(w), spared));
+    all
+}
+
 /// Guards every visible window of this process, keeping their order; returns how many.
 pub fn guard_own_windows() -> Result<usize, String> {
-    guard_all(guard_order(own_windows(), |_| false))
+    guard_all(guard_order(guardable(), |_| false))
 }
 
 /// Guards every visible window of this process and puts the one called `top` above the others.
 /// False when `top` is not visible yet: a toolkit may show a window a moment after it was asked to.
 pub fn guard_with_top(top: &str) -> Result<bool, String> {
-    let windows = own_windows();
+    let windows = guardable();
     let found = windows.iter().any(|&w| title(w) == top);
     guard_all(guard_order(windows, |&w| title(w) == top))?;
     Ok(found)
@@ -283,6 +306,13 @@ mod tests {
             wanted(),
             "transparent alone never makes a window layered"
         );
+    }
+
+    #[test]
+    fn only_the_spared_window_keeps_taking_focus() {
+        assert!(spared_by("Settings", Some("Settings")));
+        assert!(!spared_by("Keyboard", Some("Settings")));
+        assert!(!spared_by("Settings", None), "nothing spared");
     }
 
     #[test]

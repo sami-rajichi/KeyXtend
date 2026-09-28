@@ -338,3 +338,11 @@ worker_dir = "../target/spike-stage/slint-kb"
 answer_wait_ms = 120000
 # Gaps between typed characters the typing check tries, in ms; 0 types each sentence in one batch.
 type_gaps_ms = [0, 2, 10]
+
+[g7]
+# The Arabic panel check: marhaban with harakat is typed into the panel's field, then these caret keys are pressed.
+# They cross every letter both ways and push once past each end; timing.key_settle_ms follows each key.
+word = "مَرْحَبًا"
+keys = ["end", "right", "right", "right", "right", "right", "right", "home", "left", "left", "left", "left", "left", "left"]
+# Longest wait for the panel to open, in ms.
+open_ms = 3000

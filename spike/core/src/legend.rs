@@ -11,6 +11,28 @@ const HARAKAT: RangeInclusive<char> = '\u{064B}'..='\u{0652}';
 /// The Arabic block, which picks the Arabic font.
 const ARABIC: RangeInclusive<char> = '\u{0600}'..='\u{06FF}';
 
+/// True for an Arabic haraka, which sits on the letter before it.
+pub fn is_haraka(c: char) -> bool {
+    HARAKAT.contains(&c)
+}
+
+/// Arabic combining marks besides the harakat: Quranic signs, maddah and hamza marks, the superscript alef,
+/// and the small high and low signs (Unicode's Arabic nonspacing marks).
+const MORE_MARKS: [RangeInclusive<char>; 7] = [
+    '\u{0610}'..='\u{061A}',
+    '\u{0653}'..='\u{065F}',
+    '\u{0670}'..='\u{0670}',
+    '\u{06D6}'..='\u{06DC}',
+    '\u{06DF}'..='\u{06E4}',
+    '\u{06E7}'..='\u{06E8}',
+    '\u{06EA}'..='\u{06ED}',
+];
+
+/// True for any Arabic combining mark: a haraka or another mark that sits on the letter before it.
+pub fn is_mark(c: char) -> bool {
+    is_haraka(c) || MORE_MARKS.iter().any(|r| r.contains(&c))
+}
+
 /// A modifier state a key is read in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Slot {
@@ -118,7 +140,7 @@ pub fn is_arabic(s: &str) -> bool {
 pub fn shown(s: &str) -> String {
     let mut it = s.chars();
     match (it.next(), it.next()) {
-        (Some(c), None) if HARAKAT.contains(&c) => format!("{DOTTED_CIRCLE}{c}"),
+        (Some(c), None) if is_haraka(c) => format!("{DOTTED_CIRCLE}{c}"),
         _ => s.to_string(),
     }
 }
@@ -188,6 +210,26 @@ mod tests {
     use super::*;
 
     use super::testkeys::{letter, plain};
+
+    #[test]
+    fn every_arabic_combining_mark_is_a_mark_but_letters_are_not() {
+        let common = [
+            '\u{064E}', '\u{0652}', '\u{0653}', '\u{0654}', '\u{065F}', '\u{0670}',
+        ];
+        let quranic = [
+            '\u{0610}', '\u{061A}', '\u{06D6}', '\u{06DC}', '\u{06DF}', '\u{06E4}', '\u{06E7}',
+            '\u{06ED}',
+        ];
+        for c in common.into_iter().chain(quranic) {
+            assert!(is_mark(c), "{:04X}", c as u32);
+        }
+        let letters = [
+            '\u{0645}', '\u{0627}', '\u{0660}', '\u{06DD}', '\u{06E5}', '\u{06E9}', 'a',
+        ];
+        for c in letters {
+            assert!(!is_mark(c), "{:04X}", c as u32);
+        }
+    }
 
     fn keys(base: &str, shift: &str, altgr: &str) -> KeyChars {
         plain(base, shift, altgr)

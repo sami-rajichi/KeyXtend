@@ -37,6 +37,8 @@ pub struct SpikeConfig {
     pub assets: crate::facecfg::AssetsConfig,
     /// Short language names and the space bar's joiner.
     pub lang: crate::langinfo::LangConfig,
+    /// The Arabic test panel (gate G7).
+    pub panel: crate::panelcfg::PanelConfig,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -251,6 +253,8 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.size.check().map_err(at)?;
     config.look.check().map_err(at)?;
     config.voice.caption.check().map_err(at)?;
+    config.panel.check().map_err(at)?;
+    crate::panelcfg::check_title(&config).map_err(at)?;
     crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
     crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
