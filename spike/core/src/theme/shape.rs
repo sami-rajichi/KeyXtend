@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::FONT_WEIGHTS;
-use super::extras::{CaptionShape, PillShape, SnipShape};
+use super::extras::{CaptionShape, PanelShape, PillShape, SnipShape};
 use crate::config::read_settings;
 
 /// The shared sizes file, beside `spike.toml`.
@@ -181,6 +181,8 @@ pub struct Shape {
     pub caption: CaptionShape,
     /// The snip overlay.
     pub snip: SnipShape,
+    /// The Arabic test panel.
+    pub panel: PanelShape,
 }
 
 /// Hairlines in `pop_line`: panel and tooltip edges, the corner's rim and dividers.
@@ -192,8 +194,16 @@ pub struct LineShape {
 }
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1 and a shimmer span of 0 or less, naming the size.
+    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span of 0 or less and a panel gap
+    /// below 0, naming the size.
     pub fn check(&self) -> Result<(), String> {
+        self.check_weights()?;
+        self.check_sizes()?;
+        self.check_shares()
+    }
+
+    /// Font weights must be 100 to 900.
+    fn check_weights(&self) -> Result<(), String> {
         let weights = [
             ("bar.lit_weight", self.bar.lit_weight),
             ("chip.weight", self.chip.weight),
@@ -203,17 +213,39 @@ impl Shape {
             ("pill.weight", self.pill.weight),
             ("caption.status_weight", self.caption.status_weight),
             ("snip.tag_weight", self.snip.tag_weight),
+            ("panel.title_weight", self.panel.title_weight),
+            ("panel.count_weight", self.panel.count_weight),
         ];
-        if let Some((n, w)) = weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
-            let (lo, hi) = (FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
-            return Err(format!("shape: {n} {w} is not {lo} to {hi}"));
+        match weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
+            Some((n, w)) => {
+                let (lo, hi) = (FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
+                Err(format!("shape: {n} {w} is not {lo} to {hi}"))
+            }
+            None => Ok(()),
         }
+    }
+
+    /// The shimmer span must be above 0 and the panel gaps 0 or more, all finite.
+    fn check_sizes(&self) -> Result<(), String> {
         let span = self.caption.shimmer_span;
         if !(span.is_finite() && span > 0.0) {
             return Err(format!(
                 "shape: caption.shimmer_span {span} must be above 0"
             ));
         }
+        match self
+            .panel
+            .gap_px
+            .iter()
+            .find(|g| !(g.is_finite() && **g >= 0.0))
+        {
+            Some(g) => Err(format!("shape: panel.gap_px {g} must be 0 or more")),
+            None => Ok(()),
+        }
+    }
+
+    /// Shares must be 0 to 1.
+    fn check_shares(&self) -> Result<(), String> {
         let shares = [
             ("bar.radius_share", self.bar.radius_share),
             ("legend.corner_scale", self.legend.corner_scale[0]),
@@ -224,6 +256,8 @@ impl Shape {
             ("dpad.hub", self.dpad.hub),
             ("dpad.stop", self.dpad.stop),
             ("press.scale", self.press.scale),
+            ("panel.radius_share", self.panel.radius_share),
+            ("panel.off_share", self.panel.off_share),
         ];
         match shares.iter().find(|(_, v)| !(0.0..=1.0).contains(v)) {
             Some((n, v)) => Err(format!("shape: {n} {v} is not 0 to 1")),
@@ -269,6 +303,11 @@ mod tests {
         assert_eq!(s.snip.bar_radius_px, 9.0, ".snip-bar");
         assert_eq!(s.caption.shimmer_px, [10.0, 6.0], ".shimmer");
         assert_eq!(s.caption.shimmer_span, 2.0, ".shimmer background-size 200%");
+        assert_eq!(s.panel.row_px[0], 46.0, ".lrow");
+        assert_eq!(s.panel.head_gap_px, 8.0, ".pop-h");
+        assert_eq!(s.panel.off_share, 0.35, ".pg[disabled]");
+        assert_eq!(s.panel.page_px[..2], [38.0, 46.0], ".pg");
+        assert_eq!(s.panel.gap_px, [10.0, 8.0], "placePop");
         let heavy = text().replacen("status_weight = 600", "status_weight = 950", 1);
         assert!(
             parse(&heavy)
@@ -293,5 +332,17 @@ mod tests {
         assert!(parse(&side).expect_err("share").contains("lang.side"));
         let flat = text().replacen("shimmer_span = 2.0", "shimmer_span = 0.0", 1);
         assert!(parse(&flat).expect_err("span").contains("shimmer_span"));
+    }
+
+    #[test]
+    fn a_panel_gap_that_is_not_a_number_or_below_0_is_refused() {
+        for bad in ["nan", "-1.0", "inf"] {
+            let t = text().replacen(
+                "gap_px = [10.0, 8.0]",
+                &format!("gap_px = [10.0, {bad}]"),
+                1,
+            );
+            assert!(parse(&t).expect_err(bad).contains("panel.gap_px"), "{bad}");
+        }
     }
 }

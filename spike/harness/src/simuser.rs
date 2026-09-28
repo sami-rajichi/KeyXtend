@@ -3,7 +3,7 @@
 use spike_core::hold::{Act, Button, ESC, Pt};
 use spike_core::inject::{self, TAG};
 use spike_core::window::foreground;
-use windows::Win32::Foundation::{POINT, RECT};
+use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,
 };
@@ -35,14 +35,20 @@ pub fn guard(app: &Opened, pts: &[Pt]) -> Result<(), String> {
 
 /// Fails unless our window is in front with our tab shown, so keys reach only us.
 pub fn keys_ours(app: &Opened) -> Result<(), String> {
+    in_front(app.hwnd)?;
+    guard(app, &[])
+}
+
+/// Fails unless `hwnd` is the window in front, so keys reach only it.
+pub fn in_front(hwnd: HWND) -> Result<(), String> {
     let front = foreground();
-    if front != app.hwnd {
+    if front != hwnd {
         return Err(format!(
             "keys held back: {} is in front",
             win::describe(front)
         ));
     }
-    guard(app, &[])
+    Ok(())
 }
 
 /// Starts the engine on the simulated user's input; presses inside `own` are never held.

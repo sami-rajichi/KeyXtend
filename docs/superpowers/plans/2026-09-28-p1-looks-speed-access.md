@@ -99,6 +99,14 @@ The owner's decisions (2026-09-28):
 8. **G7 Arabic panel.** *Files:* `qt-kb/qml/`, `harness/src/g7.rs`.
    - An RTL panel (`LayoutMirroring`), a paged list and an Arabic text field.
    - *Verify:* the harness types an Arabic word with harakat and moves the caret with ←/→/Home/End; UIA reads back the caret, and the owner confirms by eye.
+   - *Design (2026-09-28):* the Settings side key (`action = "panel"`) opens it as a stand-in for Settings, the one window that takes focus.
+     - Core: `pager.rs` pages a list (edge case 9); `panelcfg.rs` checks `spike.toml [panel]` (Arabic texts, 5 rows, `{n}`/`{count}` page text); `Tapped::Panel`.
+     - Look: `shape.toml [panel]` from the mock-up `.pop`, `.pop-h`, `.lrow`, `.pg`, `.pgn`, `.lfoot`; a `panel` move (popIn .18s swift).
+     - Qt: `Panel.qml` (with `PanelList.qml`, `PopButton.qml`) mirrored with `LayoutMirroring`, over a `PanelData` bridge; a caret reader in `core/src/uia/act.rs`.
+     - Focus: the window guard spares only this window (`window::spare`); closing gives focus back to the app that had it.
+     - Place: above the keyboard at its start edge (the right edge in Arabic), else below, else at the top, inside the work area (`popspot.rs`, `screen::pop_for`).
+     - Left out: the mock-up's shrink-to-fit (a too-tall panel shrinks to size S); here it goes to the top of the screen instead.
+     - `harness/src/g7.rs`: types `مَرْحَبًا`, then End, →, →, ←, Home, ←, End; the caret must land on letter boundaries, never between a letter and its haraka. It runs only while the panel is in front, and only with the owner's yes.
 9. **G12 ring.** A click-through ring window at 60 Hz; 200 clicks underneath must all reach target-window.
 
 **Part D: measurements** (harness `g8`–`g13`, installed uiAccess build)

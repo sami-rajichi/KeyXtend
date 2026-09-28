@@ -48,7 +48,7 @@ pub mod qobject {
         #[qinvokable]
         fn chip(self: Pin<&mut Self>, i: i32) -> QString;
 
-        /// A click on key `id`; `back` is the language key's left third. JSON with any `note` and `tool`.
+        /// A click on key `id`; `back` is the language key's left third. JSON with any `note`, `tool` and `panel`.
         #[qinvokable]
         fn tap(self: Pin<&mut Self>, id: &QString, back: bool) -> QString;
 
@@ -210,6 +210,7 @@ impl qobject::Board {
             Ok(Tapped::Done) => json!({}),
             Ok(Tapped::Note(n)) => json!({ "note": n }),
             Ok(Tapped::Tool(t)) => json!({ "tool": t.index() }),
+            Ok(Tapped::Panel) => json!({ "panel": true }),
             Err(e) => json!({ "note": e }),
         })
     }

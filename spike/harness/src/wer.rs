@@ -1,9 +1,7 @@
 //! Word error rate of a transcript against the sentence read aloud, after the usual EN, FR and AR normalising.
 
-use std::ops::RangeInclusive;
+use spike_core::legend;
 
-/// Arabic short vowels, tanwin, shadda and sukun, then the superscript alef: marks, not letters.
-const ARABIC_MARKS: [RangeInclusive<char>; 2] = ['\u{064B}'..='\u{065F}', '\u{0670}'..='\u{0670}'];
 /// Tatweel only stretches a word.
 const TATWEEL: char = '\u{0640}';
 /// Arabic letter forms that transcripts write either way: hamza on alef, madda, alef maqsura, ta marbuta.
@@ -15,8 +13,9 @@ const FOLD: [(char, char); 5] = [
     ('\u{0629}', '\u{0647}'),
 ];
 
+/// Arabic marks and tatweel: not letters, so dropped before words are compared.
 fn is_mark(c: char) -> bool {
-    c == TATWEEL || ARABIC_MARKS.iter().any(|r| r.contains(&c))
+    c == TATWEEL || legend::is_mark(c)
 }
 
 fn fold(c: char) -> char {

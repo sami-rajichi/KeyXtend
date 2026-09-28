@@ -9,9 +9,9 @@ use crate::config::read_settings;
 /// The motion file, beside `spike.toml`.
 const FILE: &str = "motion.toml";
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 12] = [
+pub const MOVES: [&str; 13] = [
     "press", "colour", "plate", "led", "glow", "dot", "carousel", "legends", "stop", "pill",
-    "caption", "shimmer",
+    "caption", "panel", "shimmer",
 ];
 
 /// The file as written.

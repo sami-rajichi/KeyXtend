@@ -1,4 +1,4 @@
-//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar and the snip overlay.
+//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay and the Arabic panel.
 
 use serde::{Deserialize, Serialize};
 
@@ -66,4 +66,48 @@ pub struct SnipShape {
     pub bar_radius_px: f32,
     /// Hint text size.
     pub hint_px: f32,
+}
+
+/// The Arabic test panel (mock-up `.pop`, `.pop-h`, `.lrow`, `.pg`, `.lfoot`); it grows with the keyboard.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PanelShape {
+    /// Width.
+    pub width_px: f32,
+    /// Corner radius as a share of the window radius.
+    pub radius_share: f32,
+    /// Header padding: top, end, bottom, start.
+    pub head_pad_px: [f32; 4],
+    /// Gap between the header's icon, title and close button.
+    pub head_gap_px: f32,
+    /// Title size.
+    pub title_px: f32,
+    /// Title weight.
+    pub title_weight: u16,
+    /// Icon buttons (`.ib`): side, corner radius, icon size, which the header's icon shares.
+    pub button_px: [f32; 3],
+    /// Padding around the list: top, sides, bottom.
+    pub body_pad_px: [f32; 3],
+    /// Gap between the list and the pager.
+    pub body_gap_px: f32,
+    /// Rows (`.lrow`): height, gap, side padding, corner radius.
+    pub row_px: [f32; 4],
+    /// Row text size: Latin, Arabic.
+    pub row_text_px: [f32; 2],
+    /// Page buttons (`.pg`): width, height, corner radius, icon size.
+    pub page_px: [f32; 4],
+    /// Gap between the page buttons and the page number.
+    pub pager_gap_px: f32,
+    /// Opacity of a page button that cannot be used (`.pg[disabled]`).
+    pub off_share: f32,
+    /// Page number size (`.pgn`).
+    pub count_px: f32,
+    /// Page number weight.
+    pub count_weight: u16,
+    /// Footer padding (`.lfoot`): top and bottom, sides.
+    pub foot_pad_px: [f32; 2],
+    /// Text field: height, corner radius, side padding, text size.
+    pub field_px: [f32; 4],
+    /// Gap to the keyboard, and the least gap to the screen edge (mock-up `placePop`).
+    pub gap_px: [f32; 2],
 }

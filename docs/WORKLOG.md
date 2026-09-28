@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1: the Arabic test panel for G7
+The Settings key now opens a right-to-left Arabic panel on the Qt face, a stand-in for Settings: a header with a close button, five rows a page with page buttons, and an Arabic text field, in each theme's light and dark look and with system colours in high contrast. It is the only window that takes focus; it opens above the keyboard, lined up with its right edge, and hands focus back to the app when it closes. Tests pass (core 259, harness 116, Qt 8, 12 offline QML checks), and a live check through the accessibility API, with no typing into apps, confirmed the Arabic, the paging, the focus and the caret reader. Three review rounds found about 32 issues, all fixed; the G7 typing run waits for the owner's yes.
+
 ## 2026-09-28 — P1: the keyboard moves as in the mock-up
 Each mock-up animation the spike has a part for now plays on the Qt face, timed from one new `motion.toml`: key presses, colour fades, a red mic key whose light pulses while recording, legends rising and language names sliding the way the key stepped, the D-pad's Stop popping in, and the pill and caption bar popping in, with a shimmer while words are on their way. Reduced motion, from the keyboard setting or Windows' animation switch, makes every length 0, and no loop runs at 0 ms. 13 new core tests and a scratch QML test of the real files, with full and reduced timings, pass; a live start with theme switches logged no errors, and the microphone was never used. A review of every changed file found about 20 small issues: all are fixed except three kept on purpose, listed in the hand-off notes.
 

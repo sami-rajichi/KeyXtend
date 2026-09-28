@@ -228,7 +228,7 @@ mic = { icon = "mic", name = "Voice typing", action = "mic" }
 clip = { icon = "clipboard-clock", name = "Clipboard history", action = "toggle" }
 snip = { icon = "scissors-line-dashed", name = "Snip", action = "snip" }
 fill = { icon = "key-round", name = "Quick-fill", action = "fill" }
-settings = { icon = "settings-2", name = "Settings", action = "note", note = "Settings get their own window in a later phase." }
+settings = { icon = "settings-2", name = "Settings", action = "panel" }
 power = { icon = "power", name = "Power", action = "note", note = "Power opens the Windows shut-down dialog in the real app; the spike does nothing." }
 
 # The top bar (mock-up topBar) plus the owner's size buttons and resize corner; icon_on shows while a switch is on.
@@ -271,3 +271,17 @@ font_exts = ["ttf", "otf"]
 [lang]
 short = { ar = "ع" }
 joiner = " · "
+
+# The Arabic test panel for gate G7 (mock-up .pop): a right-to-left stand-in for Settings, opened by the Settings key.
+# Rows per page (ADR-0008), the page text with {n} and {count}, the field's screen-reader name, and each button's icon and name.
+[panel]
+title = "الإعدادات"
+icon = "settings-2"
+items = ["المظهر", "حجم لوحة المفاتيح", "اللغات والتخطيطات", "الكتابة الصوتية", "اقتراح الكلمات", "الحافظة", "التَّشْكِيل"]
+rows = 5
+page = "{n} من {count}"
+field = "حقل النص"
+hint = "اكتب هنا"
+close = { icon = "x", name = "إغلاق" }
+prev = { icon = "chevron-up", name = "الصفحة السابقة" }
+next = { icon = "chevron-down", name = "الصفحة التالية" }

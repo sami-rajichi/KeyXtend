@@ -22,6 +22,8 @@ pub enum Action {
     Toggle,
     /// Shows its `note` on the status line.
     Note,
+    /// Opens the Arabic test panel (gate G7).
+    Panel,
 }
 
 /// Which bottom corner of the screen the minimise bubble goes to; never the top.

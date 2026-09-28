@@ -69,6 +69,16 @@ Window {
             win.restate();
         }
     }
+    // The Settings key's Arabic test panel (gate G7).
+    Panel {
+        id: panel
+        lk: win.lk
+        res: win.res
+        s: win.s
+        logical: win.logical
+        onNote: text => win.say(text)
+        onTip: (name, at) => tip.hint(name, at)
+    }
     // Not owned by the keyboard: Qt shows no owned window while its owner is hidden, and the bubble needs tips too.
     Tip {
         id: tip
@@ -77,6 +87,7 @@ Window {
         res: win.res
         ms: win.bar.tipMs
         area: win.screenBox
+        arabic: text => kb.isArabic(text)
     }
     Instantiator {
         model: win.bar.fonts
@@ -150,6 +161,8 @@ Window {
         say(r.note);
         if (r.tool !== undefined)
             ex.tool(r.tool);
+        if (r.panel)
+            panel.toggle(view.plate);
         restate();
     }
 

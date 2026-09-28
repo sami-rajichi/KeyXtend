@@ -4,15 +4,18 @@ import QtQuick
 Window {
     id: tip
 
-    // The look, fonts, the hover time, and the keyboard's screen in Qt units.
+    // The look, fonts, the hover time, the keyboard's screen in Qt units, and a test for Arabic text.
     required property var lk
     required property var res
     required property int ms
     required property rect area
+    required property var arabic
 
     // The button under the pointer, and its name.
     property Item at: null
     property string name: ""
+    // The name is Arabic, so it takes the Arabic font.
+    property bool ar: false
 
     readonly property var sh: lk.shape.tip
 
@@ -29,6 +32,7 @@ Window {
         wait.stop();
         visible = false;
         name = text;
+        ar = text.length > 0 && arabic(text);
         at = text.length > 0 ? item : null;
         if (at)
             wait.start();
@@ -65,7 +69,7 @@ Window {
         anchors.centerIn: parent
         text: tip.name
         textFormat: Text.PlainText
-        font.family: tip.res.fam.latin
+        font.family: tip.ar ? tip.res.fam.arabic : tip.res.fam.latin
         font.pixelSize: tip.sh.font_px
         font.weight: tip.sh.weight
         color: tip.lk.palette.pop_ink

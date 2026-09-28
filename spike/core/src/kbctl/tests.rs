@@ -227,3 +227,13 @@ fn the_names_turn_the_way_the_key_stepped_and_only_once() {
         "a change made another way does not turn"
     );
 }
+
+#[test]
+fn the_settings_key_opens_the_arabic_panel() {
+    let mut k = kb(false);
+    assert_eq!(k.plan("settings", false, false), Plan::Side(Action::Panel));
+    assert_eq!(
+        k.run("settings", Plan::Side(Action::Panel)),
+        Ok(Tapped::Panel)
+    );
+}

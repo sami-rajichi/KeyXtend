@@ -4,7 +4,9 @@ use serde::Serialize;
 
 use crate::lookcfg::{LookConfig, ModeChoice};
 use crate::sysui::{self, SystemLook};
-use crate::theme::{Common, Dpad, Look, Mode, Motion, Palette, Shadow, Shape, Themes, with_accent};
+use crate::theme::{
+    Common, Dpad, Look, Mode, Motion, Palette, Rgba, Shadow, Shape, Themes, with_accent,
+};
 
 /// Everything a face needs to paint one frame of the look.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -25,6 +27,8 @@ pub struct LookView<'a> {
     pub dark: bool,
     /// High contrast is on, so effects and glows are off.
     pub contrast: bool,
+    /// Text on `pop_sel` and `pop_hover`: `pop_ink`, or HighlightText in high contrast, where both fills are Highlight.
+    pub sel_ink: Rgba,
     /// Room the window shadow needs around the plate, at size 1.
     pub margin: f32,
 }
@@ -76,8 +80,13 @@ pub fn look_view<'a>(
         Some(c) => sysui::contrast_common(c, &t.common),
         None => t.common,
     };
+    let sel_ink = sys
+        .contrast
+        .as_ref()
+        .map_or(palette.pop_ink, |c| c.highlight_text);
     Some(LookView {
         margin: reach(&palette.window_shadow),
+        sel_ink,
         palette,
         common,
         look,
@@ -174,8 +183,13 @@ mod tests {
             "Dolch's grey arrows become the button colour"
         );
         assert_eq!(v.common.snip_edge, colours.highlight, "shared colours too");
+        assert_eq!(
+            v.sel_ink, colours.highlight_text,
+            "text on a Highlight fill"
+        );
         let plain = look_view(&t, 2, ModeChoice::Light, &teal(), &cfg).expect("dolch");
         assert_eq!(plain.common, t.common);
+        assert_eq!(plain.sel_ink, plain.palette.pop_ink);
     }
 
     #[test]
