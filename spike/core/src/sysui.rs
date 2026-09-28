@@ -154,6 +154,9 @@ pub fn contrast_palette(s: &SysColors) -> Palette {
         pop_hover: sel,
         pop_sel: sel,
         chip_bg: face,
+        // A tint is not a system colour, so high contrast shows no hover or press tint yet.
+        hover: Rgba { a: 0, ..face },
+        press: Rgba { a: 0, ..face },
         key_shadow: vec![outline(ink)],
         window_shadow: Vec::new(),
         skirt: None,
@@ -303,7 +306,15 @@ mod tests {
             s.button_text,
             s.gray_text,
         ];
-        assert!(p.named().iter().all(|(_, c)| allowed.contains(c)), "{p:?}");
+        // Only the see-through hover and press change alpha, so compare the colour alone.
+        let rgb = |c: &Rgba| (c.r, c.g, c.b);
+        let system = |c: &Rgba| allowed.iter().any(|a| rgb(a) == rgb(c));
+        assert!(p.named().iter().all(|(_, c)| system(c)), "{p:?}");
+        assert_eq!(
+            (p.hover.a, p.press.a),
+            (0, 0),
+            "no tints in high contrast yet"
+        );
         assert!(p.skirt.is_none() && p.window_shadow.is_empty());
         assert_eq!(
             p.key_shadow.len(),

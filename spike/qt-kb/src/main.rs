@@ -1,7 +1,8 @@
-//! Qt 6 Quick face of the P1 spike: a QML key block driven by spike-core.
+//! Qt 6 Quick face of the P1 spike: the stage-2 keyboard in QML, driven by spike-core.
 // Release builds open no console window, which would take the foreground.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod board;
 mod bridge;
 mod tools;
 mod voice;
@@ -11,7 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
-use spike_core::{config, window};
+use spike_core::{config, theme, window};
 
 /// Resource URL of `main.qml`, set once by `build.rs`.
 const MAIN_QML: &str = env!("QT_KB_MAIN_QML");
@@ -20,8 +21,12 @@ const NO_ROOT: &str = "main.qml created no root object";
 
 fn main() {
     let cfg = config::load().unwrap_or_else(|err| fail(&err));
+    let themes = theme::load().unwrap_or_else(|err| fail(&err));
+    cfg.look
+        .check_themes(&themes.list)
+        .unwrap_or_else(|err| fail(&err));
     // Taken before our window exists, so `guard` can hand focus back to it.
-    bridge::init(cfg, window::foreground());
+    bridge::init(cfg, themes, window::foreground());
 
     let mut app = QGuiApplication::new();
     let mut engine = QQmlApplicationEngine::new();

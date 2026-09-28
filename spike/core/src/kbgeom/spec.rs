@@ -1,9 +1,9 @@
 //! `spike.toml [layout]` as written: main rows, side keys and the D-pad cells, with the check run at load.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// What a key is, which sets its colours.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum KeyKind {
     /// A character key.

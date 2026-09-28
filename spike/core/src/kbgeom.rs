@@ -14,6 +14,8 @@ pub struct KeyBox {
     pub kind: KeyKind,
     /// Scan code, if it sends one.
     pub sc: Option<u32>,
+    /// Its row, from 0 at the top.
+    pub row: usize,
     /// The grid cell.
     pub cell: Place,
     /// The cap: the cell less half a gap on each side.
@@ -29,6 +31,8 @@ pub struct Board {
     pub keys: Vec<KeyBox>,
     /// The D-pad's round face.
     pub dpad: Place,
+    /// The top bar.
+    pub bar: Place,
 }
 
 /// Where the blocks start, at size 1.
@@ -74,15 +78,54 @@ fn scale(p: Place, s: f32) -> Place {
     }
 }
 
-/// A key in `cell`, with its cap half a gap inside.
-fn key(id: String, kind: KeyKind, sc: Option<u32>, cell: Place, gap: f32) -> KeyBox {
+/// What a key is before it has a place: id, kind, scan code and row.
+struct Named {
+    id: String,
+    kind: KeyKind,
+    sc: Option<u32>,
+    row: usize,
+}
+
+/// Key `n` in `cell`, with its cap half a gap inside.
+fn key(n: Named, cell: Place, gap: f32) -> KeyBox {
     let cap = grow(cell, -gap / 2.0);
+    let Named { id, kind, sc, row } = n;
     KeyBox {
         id,
         kind,
         sc,
+        row,
         cell,
         cap,
+    }
+}
+
+/// Row `r`'s `item` as named keys, each with its width in columns.
+fn item_keys(l: &LayoutConfig, r: usize, item: &RowItem) -> Vec<(Named, u32)> {
+    match item {
+        RowItem::Key(k) => {
+            let n = Named {
+                id: k.id.clone(),
+                kind: k.kind,
+                sc: k.sc,
+                row: r,
+            };
+            vec![(n, l.columns(k.w).unwrap_or(l.columns_per_unit))]
+        }
+        RowItem::Chars(c) => c
+            .chars
+            .iter()
+            .enumerate()
+            .map(|(i, &sc)| {
+                let n = Named {
+                    id: format!("c-{r}-{i}"),
+                    kind: KeyKind::Char,
+                    sc: Some(sc),
+                    row: r,
+                };
+                (n, l.columns_per_unit)
+            })
+            .collect(),
     }
 }
 
@@ -91,7 +134,7 @@ fn main_keys(l: &LayoutConfig, f: &Frame, gap: f32) -> Vec<KeyBox> {
     let mut keys = Vec::new();
     for (r, row) in l.rows.iter().enumerate() {
         let (mut col, y) = (0u32, f.top + r as f32 * l.row_px);
-        let mut cell = |span: u32| {
+        for (n, span) in row.iter().flat_map(|item| item_keys(l, r, item)) {
             let p = Place {
                 x: f.main_x + col as f32 * f.col_w,
                 y,
@@ -99,27 +142,7 @@ fn main_keys(l: &LayoutConfig, f: &Frame, gap: f32) -> Vec<KeyBox> {
                 h: l.row_px,
             };
             col += span;
-            p
-        };
-        for item in row {
-            match item {
-                RowItem::Key(k) => {
-                    let span = l.columns(k.w).unwrap_or(l.columns_per_unit);
-                    keys.push(key(k.id.clone(), k.kind, k.sc, cell(span), gap));
-                }
-                RowItem::Chars(c) => {
-                    for (i, &sc) in c.chars.iter().enumerate() {
-                        let id = format!("c-{r}-{i}");
-                        keys.push(key(
-                            id,
-                            KeyKind::Char,
-                            Some(sc),
-                            cell(l.columns_per_unit),
-                            gap,
-                        ));
-                    }
-                }
-            }
+            keys.push(key(n, p, gap));
         }
     }
     keys
@@ -133,7 +156,15 @@ fn side_keys(l: &LayoutConfig, f: &Frame, gap: f32) -> Vec<KeyBox> {
         w: f.side_w,
         h: l.row_px,
     };
-    let at = |s: &SideSpec| key(s.id.clone(), KeyKind::Act, None, cell(s.col, s.row), gap);
+    let at = |s: &SideSpec| {
+        let n = Named {
+            id: s.id.clone(),
+            kind: KeyKind::Act,
+            sc: None,
+            row: (s.row as usize).saturating_sub(1),
+        };
+        key(n, cell(s.col, s.row), gap)
+    };
     l.side.iter().map(at).collect()
 }
 
@@ -166,6 +197,13 @@ pub fn board(l: &LayoutConfig, gap_px: f32, size: f32) -> Board {
         w: f.side_x + l.side_columns as f32 * f.side_w + pad_right,
         h: f.top + l.rows.len() as f32 * l.row_px + pad_bottom,
     };
+    let [pad_top, _, _, pad_left] = l.plate_pad_px;
+    let bar = Place {
+        x: pad_left,
+        y: pad_top,
+        w: plate.w - pad_left - pad_right,
+        h: l.top_bar_px,
+    };
     let mut keys = main_keys(l, &f, gap_px);
     keys.extend(side_keys(l, &f, gap_px));
     for k in &mut keys {
@@ -176,6 +214,7 @@ pub fn board(l: &LayoutConfig, gap_px: f32, size: f32) -> Board {
         plate: scale(plate, size),
         keys,
         dpad: scale(dpad(l, &f, gap_px), size),
+        bar: scale(bar, size),
     }
 }
 
@@ -257,6 +296,7 @@ mod tests {
                     "{gap} {size}"
                 );
                 assert!(inside(&b.plate, &b.dpad), "{gap} {size}");
+                assert!(inside(&b.plate, &b.bar), "top bar {gap} {size}");
                 assert!(b.keys.iter().all(|k| inside(&k.cell, &k.cap)));
             }
         }

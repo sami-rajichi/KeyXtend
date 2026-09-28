@@ -117,6 +117,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 - `kx-mod-keyboard`: key model (§4.1), modifiers kx-style (§4.4), Caps, layers, language key (carousel, cycle or list), panel key routing.
 - `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the no-activate topmost window, per-monitor DPI v2.
 - `kx-ui`: the Native Adaptive theme (light + soft dark), keyboard view, top bar, move (click, move, click), minimise to bubble, size S/M/L plus steps.
+- **Remembers its state:** size, position, theme, light or dark and mode survive a restart or shutdown (`kx-settings`); the bubble sits in a bottom corner of the screen.
 - `kx-crypto` (needed later, but it is small and foundational).
 - **Edge cases:**
   - modifiers + AltGr on AZERTY;
@@ -210,6 +211,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 - ET66 and Modern Dolch (light + soft dark).
 - The complete settings window (paged, steppers).
+- The quick settings strip (theme, light or dark, size), shown only when asked; "Reset size" and the bubble corner in Settings.
 - UI translations in EN/FR/AR, with an RTL settings window.
 
 ## Phase 14 — Release pipeline — v1.0 (Windows)

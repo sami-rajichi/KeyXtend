@@ -8,8 +8,18 @@ $EnvScript = 'D:\dev\env.ps1'
 # The spike folder (this file's folder) and the repository root.
 $SpikeDir = $PSScriptRoot
 $RootDir = Split-Path $SpikeDir -Parent
-# Settings staged next to each exe.
+# Settings and themes staged next to each exe.
 $SettingsFile = Join-Path $SpikeDir 'spike.toml'
+$ThemesFile = Join-Path $SpikeDir 'themes.toml'
+$ShapeFile = Join-Path $SpikeDir 'shape.toml'
+# Fonts and icons stay out of git in D:\dev; the spike's own icons are in spike\assets\icons.
+$AssetsSource = 'D:\dev\assets'
+$LucideDir = 'icons\lucide-1.48.0'
+$FontsDir = 'fonts'
+$OwnIcons = Join-Path $SpikeDir 'assets\icons'
+# Where spike.toml [assets] puts fonts and icons, read from that one source.
+$FontsPattern = '^fonts\s*=\s*"([^"]+)"'
+$IconsPattern = '^icons\s*=\s*"([^"]+)"'
 # Stage folders live in target\<this>\<face>.
 $StageDir = 'spike-stage'
 # The dev-install size cap, read from its one source in the root Cargo.toml.
@@ -51,21 +61,38 @@ function Build-Face([string] $Dir) {
     }
 }
 
-# A fresh stage folder holding the face exe and spike.toml; returns its path.
+# A fresh stage folder holding the face exe and its settings files; returns its path.
 function New-Stage([string] $Face) {
     $stage = Join-Path $RootDir "target\$StageDir\$Face"
     if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
     New-Item -ItemType Directory -Path $stage | Out-Null
     Copy-Item (Join-Path $env:CARGO_TARGET_DIR "release\$Face.exe") $stage
     Copy-Item $SettingsFile $stage
+    Copy-Item $ThemesFile $stage
+    Copy-Item $ShapeFile $stage
     $stage
+}
+
+# The value of $Pattern's group in spike.toml.
+function Get-Setting([string] $Pattern) {
+    $hit = Select-String -Path $SettingsFile -Pattern $Pattern
+    if (-not $hit) { throw "$Pattern not found in $SettingsFile" }
+    $hit[0].Matches[0].Groups[1].Value
+}
+
+# Copies the fonts and icons into $Stage where spike.toml [assets] says the faces look.
+function Add-Assets([string] $Stage) {
+    $fonts = Join-Path $Stage (Get-Setting $FontsPattern)
+    $icons = Join-Path $Stage (Get-Setting $IconsPattern)
+    New-Item -ItemType Directory -Path $fonts, $icons -Force | Out-Null
+    Get-ChildItem -LiteralPath (Join-Path $AssetsSource $FontsDir) | Copy-Item -Destination $fonts -Recurse
+    Get-ChildItem -LiteralPath (Join-Path $AssetsSource $LucideDir) | Copy-Item -Destination $icons
+    Get-ChildItem -LiteralPath $OwnIcons | Copy-Item -Destination $icons
 }
 
 # Builds the voice worker in release and copies it into $Stage, next to the face.
 function Add-Worker([string] $Stage) {
-    $hit = Select-String -Path $SettingsFile -Pattern $WorkerPattern
-    if (-not $hit) { throw "worker not found in $SettingsFile" }
-    $exe = $hit[0].Matches[0].Groups[1].Value
+    $exe = Get-Setting $WorkerPattern
     Push-Location $SpikeDir
     try {
         Invoke-Tool 'cargo build worker' { cargo build --release -p ([IO.Path]::GetFileNameWithoutExtension($exe)) }
@@ -110,6 +137,7 @@ function Invoke-Stage {
         }
         Build-Face (Join-Path $SpikeDir $Face)
         $stage = New-Stage $Face
+        Add-Assets $stage
         Add-Worker $stage
         & $Extra $stage
         Write-StageSize $stage

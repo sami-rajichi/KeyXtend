@@ -1,6 +1,10 @@
 //! Keeps our windows on top and never focused, like osk.exe.
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Graphics::Gdi::{
+    CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
+};
+use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -49,6 +53,46 @@ pub fn click_through(title_is: &str) -> Result<bool, String> {
     Ok(true)
 }
 
+/// Cuts our visible window `title_is` down to `rects` (left, top, right, bottom in physical pixels), so a click
+/// anywhere else reaches the app below; false when it is not visible yet.
+pub fn shape(title_is: &str, rects: &[[i32; 4]]) -> Result<bool, String> {
+    let Some(hwnd) = own_titled(title_is) else {
+        return Ok(false);
+    };
+    let all = joined(rects)?;
+    // SAFETY: `all` is ours until `SetWindowRgn` takes it; `hwnd` is one of our live windows.
+    unsafe {
+        if SetWindowRgn(hwnd, Some(all), true) == 0 {
+            let _ = DeleteObject(all.into());
+            return Err("Windows refused the window shape".into());
+        }
+    }
+    Ok(true)
+}
+
+/// One region covering every rect; the caller owns it.
+fn joined(rects: &[[i32; 4]]) -> Result<HRGN, String> {
+    const FAILED: &str = "Windows could not build the window shape";
+    // SAFETY: every region made here is deleted here, except `all`, which is returned to the caller.
+    unsafe {
+        let all = CreateRectRgn(0, 0, 0, 0);
+        if all.is_invalid() {
+            return Err(FAILED.into());
+        }
+        for &[l, t, r, b] in rects {
+            let one = CreateRectRgn(l, t, r, b);
+            let ok = !one.is_invalid()
+                && CombineRgn(Some(all), Some(all), Some(one), RGN_OR) != RGN_ERROR;
+            let _ = DeleteObject(one.into());
+            if !ok {
+                let _ = DeleteObject(all.into());
+                return Err(FAILED.into());
+            }
+        }
+        Ok(all)
+    }
+}
+
 /// Makes `hwnd` non-activating and topmost, and keeps it that way.
 pub fn guard(hwnd: HWND) -> Result<(), String> {
     // SAFETY: `hwnd` is one of our own live windows; the subclass proc is `'static`.
@@ -94,10 +138,17 @@ unsafe extern "system" fn guard_proc(
 pub fn is_ours(hwnd: HWND) -> bool {
     let mut pid = 0;
     // SAFETY: plain queries.
-    unsafe {
+    let (me, console) = unsafe {
         GetWindowThreadProcessId(hwnd, Some(&mut pid));
-        pid == GetCurrentProcessId()
-    }
+        (GetCurrentProcessId(), GetConsoleWindow())
+    };
+    ours_by(hwnd, pid, me, console)
+}
+
+/// True if `hwnd`, which reports process `pid`, is ours (`me`); a console build's `console` window reports
+/// our process but belongs to the console host.
+fn ours_by(hwnd: HWND, pid: u32, me: u32, console: HWND) -> bool {
+    pid == me && hwnd != console
 }
 
 /// The visible top-level windows of this process.
@@ -196,6 +247,21 @@ pub fn give_back(previous: HWND) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_console_window_windows_attaches_is_not_ours_to_guard() {
+        let (kb, console) = (HWND(1 as _), HWND(2 as _));
+        assert!(ours_by(kb, 7, 7, console));
+        assert!(
+            !ours_by(console, 7, 7, console),
+            "the console host's window"
+        );
+        assert!(!ours_by(kb, 8, 7, console), "another process");
+        assert!(
+            ours_by(kb, 7, 7, HWND::default()),
+            "a build with no console"
+        );
+    }
 
     #[test]
     fn guarding_goes_back_to_front_so_the_front_window_stays_in_front() {

@@ -19,7 +19,7 @@ The owner's decisions (2026-09-28):
     - a corner handle to resize by click, move, click (no drag, ADR-0008).
   - The keyboard starts small, at S.
   - A theme bar: Native Adaptive, ET66 and Modern Dolch, each light, dark or auto, one click each.
-  - Motion: key press, hold ring with 6-dot burst, panel pop-in, fade when idle, LED pulse, language swap, D-pad Stop pop.
+  - Motion: key press, hold ring with 6-dot burst, panel pop-in, LED pulse, language swap, D-pad Stop pop.
   - One mirrored Arabic panel: a 5-row paged list and an Arabic text field.
   - The pointer ring overlay, and Native's frosted plate tries.
   - Live following of the system accent, dark mode and high contrast.
@@ -57,7 +57,7 @@ The owner's decisions (2026-09-28):
   - it uses Qt's `software` backend, which lacks shader effects, so the look in weak mode is recorded per theme;
   - it is measured on the default D3D11 backend too.
 - **New settings:**
-  - `spike.toml [look]`: theme, mode, `idle_fade_ms = 3000`, `reduced_motion = false`, the theme-bar labels;
+  - `spike.toml [look]`: theme, mode, `tip_ms = 500`, `reduced_motion = false`, the theme-bar labels;
   - `spike.toml [size]`: `presets = [1.00, 1.25, 1.50]`, `step = 0.05`, `min = 0.80`, `max = 1.80`, start at S;
   - `harness.toml [g7]`–`[g13]`: counts, waits and thresholds.
 - **Downloads (a yes each, SHA-256, `kx-licence-check`, `D:\dev\assets`):**
@@ -71,7 +71,7 @@ The owner's decisions (2026-09-28):
    - *Implement:* load, check, flatten.
    - *Verify:* `cargo test -p spike-core theme`.
 2. **Geometry and size.** *Files:* `core/src/kbgeom.rs`, `core/src/sizer.rs`, `spike.toml [layout]`, `[size]`.
-   - *Test first:* each row spans 64 columns; keys stay inside the plate at 0.80× and 1.80×; labels appear at ≥ 1.3×; steps and the resize clamp to the limits.
+   - *Test first:* each row spans 64 columns; keys stay inside the plate at 0.80× and 1.80×; steps and the resize clamp to the limits.
 3. **System look.** *Files:* `core/src/sysui.rs`, `core/src/backdrop.rs`.
    - *Test first:* registry and SPI values map to light/dark/high-contrast, and a refused backdrop falls back to solid.
 4. **Installs**, after a yes for each: fonts and icons, with `THIRD_PARTY.md` rows.
@@ -85,6 +85,14 @@ The owner's decisions (2026-09-28):
    - The built-in browser captures the mock-up at the same size.
    - One local side-by-side page is shown in the browser pane.
    - A pop-up asks per theme whether it matches, and what to fix.
+
+**Look-check changes (owner, 2026-09-28)**
+- Native light uses the mock-up's colours (plate #E9EBEB, Enter #005FB8); following the Windows accent is an option, off.
+- No labels under icons: every icon button shows a hover tooltip, and keys get a hover tint.
+- Caps shows "Caps"; − minimises to a bubble in a bottom corner of the screen; the size buttons use lens icons; the fade is dropped.
+- Esc no longer undoes a resize: Esc belongs to the app, and Settings will reset the size.
+- Shadows are separate click-through windows, so the space around the keyboard never blocks a click.
+- The Copy pill, voice caption and snip overlay take each theme's look, light and dark.
 
 **Part C: motion, Arabic, overlay**
 7. **Motion.** All mock-up animations timed from `[motion]`, and a reduced-motion switch.
@@ -117,9 +125,9 @@ The owner's decisions (2026-09-28):
 1. A palette missing a token is refused, naming the theme and the token.
 2. A legend/key pair under 4.5:1 is reported by name.
 3. A layout row that does not span 64 columns is refused.
-4. Size 0.80× and 1.80× keep every key inside the plate; labels appear only at ≥ 1.3×.
+4. Size 0.80× and 1.80× keep every key inside the plate.
 5. − at 0.80× and + at 1.80× do nothing; a resize past a limit stops at it.
-6. A second click on the corner handle ends the resize; Esc restores the size it started from.
+6. A second click ends a move or resize, even on the keyboard itself or at a screen edge; there is no Esc undo (owner).
 7. Auto mode follows the system; a change while a panel is open recolours the panel too.
 8. High contrast replaces theme colours with system colours.
 9. A 7-row list gives 2 pages, and the last one is padded to 5 rows.

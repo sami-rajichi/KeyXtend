@@ -76,14 +76,19 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 
 - **Floating only.** The keyboard is **always on top of every window**, including the Start menu, Search and Task Manager. This is a mandatory priority and needs Windows uiAccess (ADR-0003).
 - **Never takes focus.** Clicking a key never activates our window; the target app keeps the caret. Windows: `WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW`, with `WM_MOUSEACTIVATE` returning `MA_NOACTIVATE`. macOS: non-activating `NSPanel`.
-- **Size:** small by default. Presets S = 1.00×, M = 1.25×, L = 1.50×, plus fine steps of 0.05× between 0.80× and 1.80×. At L and above, keys also show text labels under their icons.
+- **Clicks pass around it.** The shadow and any empty space around the keyboard never block a click on the app behind.
+- **Size:** small by default. Presets S = 1.00×, M = 1.25×, L = 1.50×, plus fine steps of 0.05× between 0.80× and 1.80×. Icon keys never show labels under the icon; at every size, hovering any icon button shows its name in a small tooltip.
 - **Move** without dragging: click the grip, move the pointer, click to place.
-- **Top bar:** grip, suggestion chips, light/dark toggle (sun/moon), fade-when-idle toggle, minimise-to-bubble, close-to-tray.
-- **Fade when idle** (optional): after 3 s without the pointer, the keyboard fades to 32 % opacity and returns instantly on hover.
+- **Resize** the same way with the corner handle. There is no Esc to undo: Esc belongs to the app, so Settings has "Reset size" (owner, 2026-09-28).
+- **Minimise** puts a bubble in a bottom corner of the keyboard's screen, above the taskbar, wherever the keyboard was: right by default, left as a setting, never the top (owner, 2026-09-28).
+- **Remembers its state:** size, position, theme, mode and every setting survive a restart or shutdown.
+- **Top bar:** grip, suggestion chips, light/dark toggle (sun/moon), size buttons (lens −/+ and S/M/L), minimise-to-bubble (−), close-to-tray.
+- **Fade when idle** was dropped (owner, 2026-09-28): minimise-to-bubble does the job better.
 
 ### 3.2 Feedback
 
 - **Wave ring:** during a hold, a ring appears after 150 ms and shrinks into the pointer over the rest of the hold time. When the hold fires, a burst of 6 dots appears.
+- **Hover:** a key under the pointer turns a little darker in light mode and lighter in dark mode.
 - **Mode badge** next to the pointer: Right-click on, Grab/Holding/Selecting, scroll direction and speed, recording.
 - **Sounds**, soft and never harsh:
   - a bubble "pop" when a hold fires;
@@ -118,7 +123,7 @@ References: Material dark-theme guidance, GitHub "Dark dimmed".
 
 | Theme | Idea | Fonts (all OFL) |
 |---|---|---|
-| **Native Adaptive (default, light)** | Looks like part of the OS: Fluent geometry (4 px keys in an 8 px window), Mica-like plate, system accent colour | System UI font + Noto Sans Arabic |
+| **Native Adaptive (default, light)** | Looks like part of the OS: Fluent geometry (4 px keys in an 8 px window), Mica-like plate, its own blue (system accent as an option) | System UI font + Noto Sans Arabic |
 | ET66 | Braun ET66: colour marks function. Brown = modifiers, yellow = Enter, a green LED = on/locked | IBM Plex Sans + IBM Plex Sans Arabic |
 | Modern Dolch | GMK Modern Dolch keycaps: grey letters, dark modifiers, teal Enter, rose Esc/Backspace, pressable inset | Rubik |
 
@@ -186,7 +191,7 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - Shift, Ctrl, Alt, Win and AltGr: **one click = held**, shown filled with the LED on. **Click again = released.**
 - **Release after next key** (default): a held modifier releases automatically after the next non-modifier key. Setting **"Stay held"**: it stays down until clicked again.
 - There is no third "lock" state; the owner found it confusing.
-- **Caps Lock** is a simple toggle.
+- **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift.
 - **Modifier + mouse:** while a modifier is held, the next mouse click is sent with that modifier down, so Shift+click extends a selection and Ctrl+click multi-selects. This is essential for one-button users.
 - Keys pressed while one of our panels is open go to that panel (§3.3), not to the target app.
 
@@ -360,11 +365,15 @@ Opens the **system's own** power dialog; it never shuts down directly.
 
 ### 8.6 Settings window
 
+- **Quick settings first** (owner's idea, 2026-09-28):
+  - the Settings key opens a small strip under the keyboard with theme, mode and size, like the P1 test strip;
+  - the strip never takes focus; its "All settings" button opens the full window below;
+  - it shows only when asked, never all the time.
 - A normal window, not on top of everything, and never needing scrolling: tabbed pages with paged lists and −/+ steppers.
 - **Contains:**
-  - theme and mode, size;
+  - theme and mode, size and "Reset size", bubble corner;
   - language key design, modifier behaviour;
-  - hold time, sounds, fade;
+  - hold time, sounds;
   - clipboard retention;
   - voice engine, model, forced language and keys;
   - vault export and import;
@@ -476,5 +485,5 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27. They are numbere
 | D7 | Which §13 features to schedule, and in what order | **Decided:** all, after v1.0, one by one from `docs/FEATURES.md` |
 | D8 | Installer technology | **Decided:** Inno Setup 7 (ADR-0012) |
 | D9 | UI toolkit | The Phase 1 test round decides (ADR-0011). Qt 6 Quick recommended; Tauri rejected on evidence |
-| D10 | Native Adaptive accent colour | **Decided:** follows the system accent colour |
+| D10 | Native Adaptive accent colour | **Decided (changed 2026-09-28):** the theme's own blue; following the system accent is a setting, off by default |
 | D11 | Linux Wayland limits | **Decided:** desktop built-ins first; the GNOME extension and the mouse helper are opt-in |
