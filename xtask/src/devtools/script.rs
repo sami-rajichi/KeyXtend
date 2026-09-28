@@ -34,8 +34,8 @@ pub(crate) const MIN_DAYS: &str = "MinDays";
 pub(crate) const LIST_SEP: &str = ",";
 /// Switch: show the result in a message box.
 pub(crate) const NOTIFY: &str = "-Notify";
-/// Switch: check the parameters, change nothing and exit; the script tests use it.
-#[cfg(test)]
+/// Switch: check the parameters, change nothing and exit; the Windows script tests use it.
+#[cfg(all(test, windows))]
 pub(crate) const VALIDATE_ONLY: &str = "-ValidateOnly";
 
 /// `dev-cert.ps1` action: print the thumbprint of a valid certificate, if any.

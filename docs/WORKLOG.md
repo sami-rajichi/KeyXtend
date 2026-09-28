@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-29 — CI fix for pull request #2
+The Windows check failed because GitHub starts our PowerShell scripts from PowerShell 7, whose module path hides the certificate drive from Windows PowerShell; the dev tools now clear that path for every script they run. The Ubuntu check failed on a test-only constant that only the Windows tests use, so it now exists only there. The Windows failure was reproduced on this PC with the same error and passes after the fix, and a new test checks that the path is cleared.
+
 ## 2026-09-29 — P1 closed: Qt chosen, tested code kept
 The toolkit test round is closed: Qt 6 Quick with a Rust core draws every window (ADR-0013, with every gate's numbers), and Slint and Tauri are dropped. By the owner's decision about 29,000 lines of tested spike code are kept and moved into the product phase by phase, each part fitted to the architecture and rules as it moves (ADR-0014, `docs/spike-move-map.md`). The roadmap, spec, architecture map, skills and licence list now describe Qt, and the gates not run move to P3, P14 and P15 (G15 earlier once the Qt keyboard builds on macOS and Ubuntu). P2 is ready.
 
