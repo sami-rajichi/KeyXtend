@@ -1,5 +1,6 @@
 # How the keyboard moves: each animation's length (ms) and curve, from the mock-up's transitions and keyframes.
-# Curves are CSS cubic-bezier points [x1, y1, x2, y2]; reduced motion, or Windows' animation effects off, makes every length 0.
+# Curves are CSS cubic-bezier points [x1, y1, x2, y2]; reduced motion, or Windows' animation effects off, makes every length 0
+# except the hold ring's waves, which show the hold's time.
 
 [curves]
 ease = [0.25, 0.1, 0.25, 1.0]
@@ -10,6 +11,9 @@ linear = [0.0, 0.0, 1.0, 1.0]
 swift = [0.2, 0.8, 0.2, 1.0]
 # Overshoots a little, for the D-pad's Stop (mock-up .dp-stop).
 spring = [0.3, 1.5, 0.5, 1.0]
+# The hold ring's waves (mock-up .ring.run .w1, .w2) and its core fading in (ease-in).
+wave = [0.45, 0.0, 0.55, 1.0]
+ease_in = [0.42, 0.0, 1.0, 1.0]
 
 [moves]
 # A cap sinking when pressed (.cap transform), and colours changing on keys, lights and the D-pad (.cap, .led, .dp).
@@ -32,6 +36,8 @@ caption = { ms = 200, curve = "ease_out" }
 panel = { ms = 180, curve = "swift" }
 # One pass of the shimmer while the words are on their way (.shimmer).
 shimmer = { ms = 1000, curve = "linear" }
+# The burst when a hold fires (.burst .b-ring, .b-dot).
+burst = { ms = 420, curve = "ease_out" }
 
 [amount]
 # A pulse dims to this opacity halfway; a recording cap brightens by this factor halfway (.key.rec).
@@ -43,3 +49,23 @@ rise = 0.6
 # A pop-in starts this far down (px) and at this scale (@keyframes popIn).
 pop_rise_px = 6.0
 pop_scale = 0.98
+
+[ring]
+# The hold ring (mock-up .ring): its waves shrink on wave_curve over the hold less spike.toml [hold] ring_after_ms, even with
+# reduced motion, and its core fades in on core_curve.
+wave_curve = "wave"
+core_curve = "ease_in"
+
+[ring.amount]
+# A wave's opacity at its start, turn and end, the turn's share of its time, and its end scale (@keyframes shrink).
+wave_fade = [0.15, 0.85, 1.0]
+wave_turn = 0.55
+wave_end = 0.13
+# The second wave runs this share of the time, starting once the rest has passed (.ring.run .w2).
+wave2_share = 0.8
+# The core's starting scale and end opacity (@keyframes core).
+core_from = 0.4
+core_to = 0.9
+# The burst ring's start and end scale, and the dots' end scale (@keyframes burst, fly).
+burst_scale = [0.15, 1.25]
+dot_end = 0.3

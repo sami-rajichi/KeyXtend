@@ -92,6 +92,13 @@ pub fn decode(units: &[Unit]) -> String {
     String::from_utf16_lossy(&raw)
 }
 
+/// Target-window's mouse presses logged at or after `since` (µs).
+pub fn mouse_since(ctx: &crate::apps::Ctx, since: i64) -> Result<Vec<Mouse>, String> {
+    let path = ctx.spike.resolve(&ctx.spike.target.log);
+    let log = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(mouse(&log).into_iter().filter(|m| m.us >= since).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

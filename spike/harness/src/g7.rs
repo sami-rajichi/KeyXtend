@@ -16,7 +16,7 @@ use crate::apps::Ctx;
 use crate::featcfg::Move;
 use crate::simuser::in_front;
 use crate::win::{self, sleep_ms};
-use crate::{keys, mouse};
+use crate::{facetools, keys, mouse};
 
 /// The side key that opens and closes the panel.
 const OPENER: &str = "settings";
@@ -95,12 +95,9 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     Ok(v)
 }
 
-/// The face's visible window with the panel's title; windows of other programs never count.
+/// The face's visible panel.
 fn shown(ctx: &Ctx, pid: u32) -> Option<HWND> {
-    let title = &ctx.spike.panel.title;
-    win::seen_windows()
-        .into_iter()
-        .find(|&w| win::owner(w).0 == pid && win::title(w) == *title)
+    facetools::shown_by(pid, &ctx.spike.panel.title)
 }
 
 /// Types the word into the panel's field, then presses each caret key and reads where the caret went.

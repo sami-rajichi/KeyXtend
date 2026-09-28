@@ -125,6 +125,10 @@ pub struct CaptionConfig {
     pub transcribing: String,
     /// Shown when the engine heard no words.
     pub nothing_heard: String,
+    /// Icon beside "Transcribing…".
+    pub busy_icon: String,
+    /// Icon beside the words heard.
+    pub words_icon: String,
     /// How long the text stays after it arrives, in ms.
     pub hide_ms: u64,
 }

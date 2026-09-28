@@ -1,4 +1,5 @@
-//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay and the Arabic panel.
+//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel
+//! and the hold ring.
 
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +15,10 @@ pub struct PillShape {
     pub font_px: f32,
     /// Text weight.
     pub weight: u16,
+    /// The Copy icon's size.
+    pub icon_px: f32,
+    /// Gap between the icon and the text.
+    pub gap_px: f32,
 }
 
 /// The caption bar (mock-up `.capbar`).
@@ -34,6 +39,8 @@ pub struct CaptionShape {
     pub words_px: [f32; 2],
     /// The recording dot's diameter.
     pub dot_px: f32,
+    /// The status and words icons' size.
+    pub icon_px: f32,
     /// Height of the bar while it shows a status.
     pub bar_px: f32,
     /// Corner radius around the words heard (mock-up `.capbar.done`).
@@ -110,4 +117,24 @@ pub struct PanelShape {
     pub field_px: [f32; 4],
     /// Gap to the keyboard, and the least gap to the screen edge (mock-up `placePop`).
     pub gap_px: [f32; 2],
+}
+
+/// The hold ring around the pointer and its burst (mock-up `.ring`, `.burst`); it does not grow with the keyboard.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RingShape {
+    /// Side of the ring and of its window.
+    pub box_px: f32,
+    /// Border of the first and the second wave.
+    pub wave_px: [f32; 2],
+    /// The core's side as a share of the ring's.
+    pub core_share: f32,
+    /// The burst ring's side and border.
+    pub burst_px: [f32; 2],
+    /// A burst dot's side.
+    pub dot_px: f32,
+    /// How many dots fly out, evenly round.
+    pub dots: u16,
+    /// How far from the centre the dots start and end.
+    pub fly_px: [f32; 2],
 }

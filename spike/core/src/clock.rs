@@ -4,6 +4,8 @@ use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerforma
 
 /// Microseconds per second.
 const US: i128 = 1_000_000;
+/// Microseconds per millisecond.
+pub const US_PER_MS: f64 = 1000.0;
 
 /// `count` ticks at `freq` ticks per second, in microseconds.
 fn to_us(count: i64, freq: i64) -> i64 {

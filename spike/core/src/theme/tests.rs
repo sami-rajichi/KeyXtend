@@ -4,6 +4,10 @@ use super::*;
 
 /// The spec's minimum legend contrast, used only to exercise the check.
 const MIN: f32 = 4.5;
+/// WCAG 1.4.11's minimum for shapes, such as the hold ring.
+const SHAPE_MIN: f32 = 3.0;
+/// Plain Windows 11 app backgrounds in light and dark mode, which the ring is drawn over.
+const WINDOW_BG: [&str; 2] = ["#F3F3F3", "#202020"];
 /// Pairs under the minimum exactly as the mock-up has them; the owner kept them at the look check (2026-09-28).
 const KNOWN_LOW: [&str; 11] = [
     "et66.light: legend_2 on plate",
@@ -130,6 +134,16 @@ fn every_theme_shares_one_set_of_mock_up_colours() {
 fn a_missing_shared_colour_is_refused() {
     let gone = text().replacen("snip_tag = ", "snip_tagg = ", 1);
     assert!(parse(&gone).expect_err("a typo").contains("snip_tagg"));
+}
+
+#[test]
+fn every_ring_stands_out_on_a_plain_window_of_its_mode() {
+    let bg = WINDOW_BG.map(|c| Rgba::parse(c).expect("window colour"));
+    for t in load().expect("themes.toml loads").list {
+        let id = &t.look.id;
+        assert!(contrast(t.light.ring, bg[0]) >= SHAPE_MIN, "{id} light");
+        assert!(contrast(t.dark.ring, bg[1]) >= SHAPE_MIN, "{id} dark");
+    }
 }
 
 #[test]

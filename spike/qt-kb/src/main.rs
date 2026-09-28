@@ -5,6 +5,7 @@
 mod board;
 mod bridge;
 mod panel;
+mod ring;
 mod tools;
 mod voice;
 

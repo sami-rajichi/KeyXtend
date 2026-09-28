@@ -9,8 +9,8 @@ const URI: &str = "KeyXtend.Spike";
 /// The window, as a file of the QML module.
 const MAIN_QML: &str = "qml/main.qml";
 /// The other QML files: the keyboard window, its shadow, bubble, mover and parts; the extras (pill, snip overlay, caption bar);
-/// the G7 panel; then the animation helpers.
-const PARTS_QML: [&str; 27] = [
+/// the G7 panel; the G12 ring; then the animation helpers.
+const PARTS_QML: [&str; 29] = [
     "qml/KbWindow.qml",
     "qml/Glow.qml",
     "qml/Bubble.qml",
@@ -34,18 +34,21 @@ const PARTS_QML: [&str; 27] = [
     "qml/Panel.qml",
     "qml/PanelList.qml",
     "qml/PopButton.qml",
+    "qml/Ring.qml",
+    "qml/RingFace.qml",
     "qml/Tween.qml",
     "qml/ColourTween.qml",
     "qml/PopIn.qml",
     "qml/Shimmer.qml",
 ];
 /// The Rust files holding cxx-qt bridges.
-const BRIDGES: [&str; 5] = [
+const BRIDGES: [&str; 6] = [
     "src/bridge.rs",
     "src/board.rs",
     "src/tools.rs",
     "src/voice.rs",
     "src/panel.rs",
+    "src/ring.rs",
 ];
 /// Identity name in the manifest.
 const MANIFEST_NAME: &str = "KeyXtend.Spike.Qt";

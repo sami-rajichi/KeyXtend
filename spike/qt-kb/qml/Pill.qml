@@ -1,13 +1,15 @@
-// The selection pill (mock-up .selpill): one Copy button next to selected text, in the theme's badge colours; it never takes focus.
+// The selection pill (mock-up .selpill): one Copy button with its icon next to selected text, in the theme's badge colours;
+// it never takes focus.
 import QtQuick
 
 Window {
     id: pill
 
-    // The look and fonts, the button's text, and the narrowest the pill may be (Qt units).
+    // The look and fonts, the button's text and icon, and the narrowest the pill may be (Qt units).
     required property var lk
     required property var res
     required property string label
+    required property string icon
     required property real least
 
     signal copyClicked
@@ -19,7 +21,7 @@ Window {
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     visible: false
-    width: Math.max(least, text.implicitWidth + 2 * (sh.button_side_px + sh.pad_px))
+    width: Math.max(least, content.implicitWidth + 2 * (sh.button_side_px + sh.pad_px))
 
     // It pops in each time it shows (mock-up .selpill).
     onVisibleChanged: if (visible) pop.restart()
@@ -55,17 +57,30 @@ Window {
             Accessible.name: pill.label
             Accessible.onPressAction: pill.copyClicked()
 
-            Text {
-                id: text
+            Row {
+                id: content
                 anchors.centerIn: parent
-                text: pill.label
-                textFormat: Text.PlainText
-                font.family: pill.res.fam.latin
-                font.pixelSize: pill.sh.font_px
-                font.weight: pill.sh.weight
-                color: pill.lk.palette.badge_ink
-                // The button already carries the label; hide the text so readers say it once.
-                Accessible.ignored: true
+                spacing: pill.sh.gap_px
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: pill.icon
+                    base: pill.res.icons
+                    ext: pill.res.ext
+                    px: pill.sh.icon_px
+                    tint: pill.lk.palette.badge_ink
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: pill.label
+                    textFormat: Text.PlainText
+                    font.family: pill.res.fam.latin
+                    font.pixelSize: pill.sh.font_px
+                    font.weight: pill.sh.weight
+                    color: pill.lk.palette.badge_ink
+                    // The button already carries the label; hide the text so readers say it once.
+                    Accessible.ignored: true
+                }
             }
             MouseArea {
                 id: area

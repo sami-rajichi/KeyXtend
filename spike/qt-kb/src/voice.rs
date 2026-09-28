@@ -26,6 +26,8 @@ pub mod qobject {
         #[qproperty(QString, bar_title, READ, CONSTANT)]
         #[qproperty(f32, bar_width, READ, CONSTANT)]
         #[qproperty(f32, bar_height, READ, CONSTANT)]
+        #[qproperty(QString, busy_icon, READ, CONSTANT)]
+        #[qproperty(QString, words_icon, READ, CONSTANT)]
         #[qproperty(bool, recording, READ, NOTIFY)]
         type Voice = super::VoiceRust;
 
@@ -48,6 +50,8 @@ pub struct VoiceRust {
     bar_title: QString,
     bar_width: f32,
     bar_height: f32,
+    busy_icon: QString,
+    words_icon: QString,
     /// The bar's width, height and bottom gap, for placing it.
     px: [f32; 3],
     /// The mic records, so its key turns red.
@@ -63,6 +67,8 @@ impl Default for VoiceRust {
             bar_title: QString::from(&c.title),
             bar_width: c.px[0],
             bar_height: c.px[1],
+            busy_icon: QString::from(&c.busy_icon),
+            words_icon: QString::from(&c.words_icon),
             px: c.px,
             recording: false,
             session: None,

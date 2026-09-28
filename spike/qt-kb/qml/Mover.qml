@@ -32,7 +32,7 @@ Item {
     // The pointer in Qt units, or null when Windows could not say.
     function pointer() {
         const c = JSON.parse(board.cursor());
-        return c ? logical(c[0], c[1]) : null;
+        return c.note ? null : logical(c.x, c.y);
     }
 
     // The first click on the grip: the window follows the pointer, held where it was grabbed.

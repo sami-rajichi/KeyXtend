@@ -12,7 +12,8 @@ serde_json.workspace = true
 toml.workspace = true
 windows-future.workspace = true
 # UI Automation for the pill and probes, DPI, Windows Hello for quick-fill, job objects for the voice server,
-# the system look: accent (UISettings), dark mode (registry), DWM backdrops, and locale names for the language key.
+# the system look: accent (UISettings), dark mode (registry), DWM backdrops, locale names for the language key,
+# and known folders for files the harness reads.
 windows = { workspace = true, features = [
     "Foundation",
     "Security_Credentials_UI",
@@ -30,4 +31,5 @@ windows = { workspace = true, features = [
     "Win32_System_WinRT",
     "Win32_UI_Accessibility",
     "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
 ] }

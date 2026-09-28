@@ -1,13 +1,12 @@
-//! Click-to-character matching and percentiles for G2.
+//! Click-to-character matching for G2, and the percentiles G2 and G5 report.
 
 use crate::tlog::Unit;
 
-/// Microseconds per millisecond.
-pub const US_PER_MS: f64 = 1000.0;
-/// The rank that budgets are checked against.
-pub const P99: f64 = 99.0;
+pub use spike_core::clock::US_PER_MS;
+pub use spike_core::pct::{P50, P99, percentile};
+
 /// Percentiles reported by G2 and G5: name in the results, and rank (0-100).
-pub const PERCENTILES: [(&str, f64); 3] = [("p50", 50.0), ("p95", 95.0), ("p99", P99)];
+pub const PERCENTILES: [(&str, f64); 3] = [("p50", P50), ("p95", 95.0), ("p99", P99)];
 
 /// One injected click and the UTF-16 units it should produce.
 #[derive(Debug, Clone)]
@@ -18,15 +17,6 @@ pub struct Click {
     pub us: i64,
     /// Expected UTF-16 units.
     pub expect: Vec<u16>,
-}
-
-/// Nearest-rank percentile `p` (0-100) of sorted values; `None` when empty.
-pub fn percentile(sorted: &[f64], p: f64) -> Option<f64> {
-    if sorted.is_empty() {
-        return None;
-    }
-    let rank = (p / 100.0 * sorted.len() as f64).ceil() as usize;
-    Some(sorted[rank.clamp(1, sorted.len()) - 1])
 }
 
 /// Latency in µs per click: the first matching units, in order, logged within `window_us` after it.
@@ -98,18 +88,6 @@ mod tests {
             us,
             expect: expect.to_vec(),
         }
-    }
-
-    #[test]
-    fn nearest_rank_percentiles() {
-        let v: Vec<f64> = (1..=100).map(f64::from).collect();
-        assert_eq!(percentile(&v, 50.0), Some(50.0));
-        assert_eq!(percentile(&v, 95.0), Some(95.0));
-        assert_eq!(percentile(&v, 99.0), Some(99.0));
-        assert_eq!(percentile(&v, 0.0), Some(1.0));
-        assert_eq!(percentile(&[7.0], 99.0), Some(7.0));
-        assert_eq!(percentile(&[], 50.0), None);
-        assert_eq!(percentile(&[1.0, 2.0, 3.0, 4.0], 50.0), Some(2.0));
     }
 
     #[test]

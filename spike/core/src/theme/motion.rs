@@ -4,14 +4,16 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::ringmove::{RingFile, RingMotion};
+use super::{bez, outside_unit};
 use crate::config::read_settings;
 
 /// The motion file, beside `spike.toml`.
-const FILE: &str = "motion.toml";
+pub(super) const FILE: &str = "motion.toml";
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 13] = [
+pub const MOVES: [&str; 14] = [
     "press", "colour", "plate", "led", "glow", "dot", "carousel", "legends", "stop", "pill",
-    "caption", "panel", "shimmer",
+    "caption", "panel", "shimmer", "burst",
 ];
 
 /// The file as written.
@@ -21,6 +23,7 @@ struct MotionFile {
     curves: BTreeMap<String, [f32; 4]>,
     moves: BTreeMap<String, Move>,
     amount: Amounts,
+    ring: RingFile,
 }
 
 /// One animation as written: its length and its curve's name.
@@ -65,6 +68,8 @@ pub struct Motion {
     pub moves: BTreeMap<String, Timed>,
     /// How far they go.
     pub amount: Amounts,
+    /// The hold ring, the same with reduced motion since its waves show the hold's time.
+    pub ring: RingMotion,
 }
 
 /// The animations as timed, and the same with reduced motion.
@@ -96,6 +101,7 @@ pub fn parse(text: &str) -> Result<Motions, String> {
         check_curve(name, c)?;
     }
     f.amount.check()?;
+    let ring = f.ring.ready(&f.curves)?;
     let ready = |(name, m): (&String, &Move)| Ok((name.clone(), timed(name, m, &f.curves)?));
     let moves = f
         .moves
@@ -106,10 +112,12 @@ pub fn parse(text: &str) -> Result<Motions, String> {
     let reduced = Motion {
         moves: moves.iter().map(still).collect(),
         amount: f.amount,
+        ring,
     };
     let full = Motion {
         moves,
         amount: f.amount,
+        ring,
     };
     Ok(Motions { full, reduced })
 }
@@ -137,13 +145,12 @@ fn check_curve(name: &str, [x1, y1, x2, y2]: &[f32; 4]) -> Result<(), String> {
     Ok(())
 }
 
-/// Move `m` with its curve from `curves`, ending at (1, 1) as Qt wants.
+/// Move `m` with its curve from `curves`.
 fn timed(name: &str, m: &Move, curves: &BTreeMap<String, [f32; 4]>) -> Result<Timed, String> {
     let no_curve = || format!("moves.{name}: no curve {:?}", m.curve);
-    let [x1, y1, x2, y2] = *curves.get(&m.curve).ok_or_else(no_curve)?;
     Ok(Timed {
         ms: m.ms,
-        bez: [x1, y1, x2, y2, 1.0, 1.0],
+        bez: bez(curves, &m.curve).ok_or_else(no_curve)?,
     })
 }
 
@@ -156,7 +163,7 @@ impl Amounts {
             ("rise", self.rise),
             ("pop_scale", self.pop_scale),
         ];
-        if let Some((n, _)) = shares.iter().find(|(_, v)| !(0.0..=1.0).contains(v)) {
+        if let Some((n, _)) = outside_unit(&shares) {
             return Err(format!("amount.{n} must be 0 to 1"));
         }
         if !(self.glow_lift.is_finite() && self.glow_lift >= 1.0) {

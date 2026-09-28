@@ -39,6 +39,10 @@ pub struct SpikeConfig {
     pub lang: crate::langinfo::LangConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
+    /// The hold a still press waits for, and when its ring shows.
+    pub hold: crate::holdcfg::HoldConfig,
+    /// Gate G12's ring test.
+    pub ring: crate::holdcfg::RingTest,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -105,6 +109,8 @@ pub struct ToolsConfig {
     pub selection_poll_ms: u64,
     /// Pill width, height and gap from the text, in logical pixels.
     pub pill_px: [f32; 3],
+    /// The pill's Copy icon.
+    pub pill_icon: String,
     /// Virtual keys the pill's Copy button presses, in order.
     pub copy_keys: Vec<u16>,
     /// Text of the Windows Hello prompt.
@@ -254,7 +260,9 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.look.check().map_err(at)?;
     config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
-    crate::panelcfg::check_title(&config).map_err(at)?;
+    crate::panelcfg::check_titles(&config).map_err(at)?;
+    config.hold.check().map_err(at)?;
+    config.ring.check().map_err(at)?;
     crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
     crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -288,6 +296,17 @@ mod tests {
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
         let size = &cfg.tools.snip_size;
         assert!(size.contains("{w}") && size.contains("{h}"), "{size}");
+    }
+
+    #[test]
+    fn the_pill_and_caption_use_the_mock_ups_icons() {
+        let cfg = load().expect("spike.toml loads");
+        let c = &cfg.voice.caption;
+        assert_eq!(cfg.tools.pill_icon, "copy", ".selpill");
+        assert_eq!(
+            (c.busy_icon.as_str(), c.words_icon.as_str()),
+            ("audio-lines", "captions")
+        );
     }
 
     #[test]
