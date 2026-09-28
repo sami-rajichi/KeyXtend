@@ -1,14 +1,15 @@
 // Stage-1 extras: the Copy pill, the voice caption and the snip overlay, with the tools and voice worker behind them.
+// They take the keyboard's theme, light or dark, like the mock-up's .selpill, .capbar and .snip-*.
 import QtQuick
 import KeyXtend.Spike
 
 Item {
     id: ex
 
-    // Qt units for a physical point (the keyboard's `logical`), and the text size and padding of the small windows.
+    // Qt units for a physical point (the keyboard's `logical`), and the look and fonts.
     required property var logical
-    required property real fontPx
-    required property real pad
+    required property var lk
+    required property var res
 
     // A note for the status line.
     signal note(string text)
@@ -64,35 +65,50 @@ Item {
         if (at)
             pill.place(logical(at[0], at[1]));
         if (r.show) {
+            // The shadow owns the pill, so it is shown first.
+            pillGlow.visible = true;
             pill.visible = true;
             say(tl.guard(tl.pillTitle));
         }
-        if (r.hide)
+        if (r.hide) {
             pill.visible = false;
+            pillGlow.visible = false;
+        }
     }
 
-    Pill {
-        id: pill
-        title: tl.pillTitle
-        width: tl.pillWidth
-        height: tl.pillHeight
-        label: tl.pillLabel
-        fontPx: ex.fontPx
-        onCopyClicked: ex.say(tl.copy())
+    Glow {
+        id: pillGlow
+        lk: ex.lk
+        box: Qt.rect(pill.x, pill.y, pill.width, pill.height)
+        radius: pill.height / 2
+
+        Pill {
+            id: pill
+            title: tl.pillTitle
+            least: tl.pillWidth
+            height: tl.pillHeight
+            label: tl.pillLabel
+            lk: ex.lk
+            res: ex.res
+            onCopyClicked: ex.say(tl.copy())
+        }
     }
     Caption {
         id: cap
         title: vc.barTitle
-        width: vc.barWidth
-        height: vc.barHeight
-        fontPx: ex.fontPx
-        pad: ex.pad
+        barWidth: vc.barWidth
+        barHeight: vc.barHeight
+        lk: ex.lk
+        res: ex.res
     }
     Overlay {
         id: over
         title: tl.overlayTitle
+        lk: ex.lk
+        res: ex.res
         edge: tl.snipEdge
         hint: tl.snipHint
+        sizeText: tl.snipSize
         onPicked: {
             const n = tl.pick();
             if (n.length > 0) {

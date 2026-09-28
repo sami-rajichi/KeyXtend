@@ -58,14 +58,15 @@ fn a_misspelt_token_is_refused() {
 
 #[test]
 fn an_empty_or_twice_used_theme_list_is_refused() {
-    let empty = parse("theme = []");
+    let all = text();
+    let mut parts = all.split("\n[[theme]]");
+    let (head, first) = (
+        parts.next().expect("the shared table"),
+        parts.next().expect("a theme"),
+    );
+    let empty = parse(&format!("theme = []\n{head}"));
     assert!(empty.expect_err("no themes").contains("no [[theme]]"));
-    let first = text()
-        .split("\n[[theme]]")
-        .nth(1)
-        .expect("a first theme")
-        .to_string();
-    let twice = format!("[[theme]]{first}\n[[theme]]{first}");
+    let twice = format!("{head}\n[[theme]]{first}\n[[theme]]{first}");
     let e = parse(&twice).expect_err("the same id twice");
     assert!(e.contains("\"native\""), "{e}");
 }
@@ -116,14 +117,19 @@ fn hover_darkens_light_keys_and_lightens_dark_ones() {
 }
 
 #[test]
-fn a_pressed_key_darkens_in_both_modes() {
-    for t in &load().expect("themes.toml loads").list {
-        for p in [&t.light, &t.dark] {
-            let c = p.get("press").expect("a press token");
-            assert_eq!((c.r, c.g, c.b), (0, 0, 0), "{}", t.look.id);
-            assert!(c.a > 0, "{} press shows", t.look.id);
-        }
-    }
+fn every_theme_shares_one_set_of_mock_up_colours() {
+    let c = load().expect("themes.toml loads").common;
+    let rgb = |c: Rgba| (c.r, c.g, c.b);
+    assert_eq!(rgb(c.press), (0, 0, 0), "brightness(.94)");
+    assert!(c.press.a > 0 && c.snip_dim.a > 0 && c.snip_tag.a > 0);
+    assert_eq!(rgb(c.snip_edge), (255, 255, 255), ".snip-rect edge");
+    assert_eq!(c.rec_dot, Rgba::parse("#E5484D").expect("red"), ".rec-dot");
+}
+
+#[test]
+fn a_missing_shared_colour_is_refused() {
+    let gone = text().replacen("snip_tag = ", "snip_tagg = ", 1);
+    assert!(parse(&gone).expect_err("a typo").contains("snip_tagg"));
 }
 
 #[test]

@@ -119,8 +119,10 @@ pub struct ToolsConfig {
     pub shot_cap_mb: usize,
     /// Width of the snip region's edge, in logical pixels.
     pub snip_edge_px: f32,
-    /// What the snip overlay tells a screen reader to do.
+    /// What the snip overlay tells a screen reader to do; it is also shown at the top.
     pub snip_hint: String,
+    /// The region's size tag, with `{w}` and `{h}` in physical pixels.
+    pub snip_size: String,
 }
 
 /// Labels of the tool buttons and the pill.
@@ -237,6 +239,7 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.layout.check().map_err(at)?;
     config.size.check().map_err(at)?;
     config.look.check().map_err(at)?;
+    config.voice.caption.check().map_err(at)?;
     crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
     crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -268,6 +271,8 @@ mod tests {
         );
         assert!(cfg.tools.selection_poll_ms > 0 && !cfg.tools.copy_keys.is_empty());
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
+        let size = &cfg.tools.snip_size;
+        assert!(size.contains("{w}") && size.contains("{h}"), "{size}");
     }
 
     #[test]

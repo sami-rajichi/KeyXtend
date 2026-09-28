@@ -6,6 +6,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use serde_json::{Value, json};
 use spike_core::hold::Pt;
+use spike_core::legend::is_arabic;
 use spike_core::voice::{self, Caption, Event, Session, Update};
 
 /// The cxx-qt bridge that makes `Voice` a QML type.
@@ -31,7 +32,7 @@ pub mod qobject {
         #[qinvokable]
         fn click(self: Pin<&mut Self>);
 
-        /// A caption to show: JSON with `text`, `hide_ms` (null keeps it up), the physical point `at`, and any `note`.
+        /// A caption to show: JSON with `text`, `hide_ms` (null keeps it up), `rec` (red dot), `ar` (Arabic font), the physical point `at`, and any `note`.
         /// A note alone comes as JSON with only `note`.
         #[qsignal]
         fn caption(self: Pin<&mut Self>, json: QString);
@@ -76,9 +77,10 @@ impl cxx_qt::Initialize for qobject::Voice {
     }
 }
 
-/// A caption as JSON for QML, placed at `at` (physical pixels), with an optional status `note`.
+/// A caption as JSON for QML, placed at `at` (physical pixels), with an optional status `note`; `ar` picks the Arabic font.
 fn caption_json(c: &Caption, at: Pt, note: Option<String>) -> Value {
-    json!({ "text": c.text, "hide_ms": c.hide_ms, "at": [at.x, at.y], "note": note })
+    let ar = is_arabic(&c.text);
+    json!({ "text": c.text, "hide_ms": c.hide_ms, "rec": c.rec, "ar": ar, "at": [at.x, at.y], "note": note })
 }
 
 impl qobject::Voice {
@@ -134,16 +136,19 @@ mod tests {
         let c = Caption {
             text: "مرحبا".into(),
             hide_ms: Some(4000),
+            rec: false,
         };
         let v = caption_json(&c, Pt { x: 5, y: 7 }, None);
         assert_eq!(
             v,
-            json!({ "text": "مرحبا", "hide_ms": 4000, "at": [5, 7], "note": null })
+            json!({ "text": "مرحبا", "hide_ms": 4000, "rec": false, "ar": true, "at": [5, 7], "note": null })
         );
         let stay = Caption {
             text: "…".into(),
             hide_ms: None,
+            rec: true,
         };
+        assert_eq!(caption_json(&stay, Pt { x: 0, y: 0 }, None)["ar"], false);
         assert_eq!(
             caption_json(&stay, Pt { x: 0, y: 0 }, None)["hide_ms"],
             Value::Null

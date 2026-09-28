@@ -34,6 +34,7 @@ pub mod qobject {
         #[qproperty(QString, pill_label, READ, CONSTANT)]
         #[qproperty(QString, overlay_title, READ, CONSTANT)]
         #[qproperty(QString, snip_hint, READ, CONSTANT)]
+        #[qproperty(QString, snip_size, READ, CONSTANT)]
         #[qproperty(f32, snip_edge, READ, CONSTANT)]
         #[qproperty(f32, pill_width, READ, CONSTANT)]
         #[qproperty(f32, pill_height, READ, CONSTANT)]
@@ -76,6 +77,7 @@ pub struct ToolsRust {
     pill_label: QString,
     overlay_title: QString,
     snip_hint: QString,
+    snip_size: QString,
     snip_edge: f32,
     pill_width: f32,
     pill_height: f32,
@@ -105,6 +107,7 @@ impl Default for ToolsRust {
             pill_label: QString::from(&t.labels.copy),
             overlay_title: QString::from(&t.overlay_title),
             snip_hint: QString::from(&t.snip_hint),
+            snip_size: QString::from(&t.snip_size),
             snip_edge: t.snip_edge_px,
             pill_width: t.pill_px[0],
             pill_height: t.pill_px[1],

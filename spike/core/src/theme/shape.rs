@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::FONT_WEIGHTS;
+use super::extras::{CaptionShape, PillShape, SnipShape};
 use crate::config::settings_path;
 
 /// The shared sizes file, beside `spike.toml`.
@@ -174,6 +175,12 @@ pub struct Shape {
     pub extra: ExtraShape,
     /// Hairline borders.
     pub line: LineShape,
+    /// The Copy pill.
+    pub pill: PillShape,
+    /// The caption bar.
+    pub caption: CaptionShape,
+    /// The snip overlay.
+    pub snip: SnipShape,
 }
 
 /// Hairlines in `pop_line`: panel and tooltip edges, the corner's rim and dividers.
@@ -193,6 +200,9 @@ impl Shape {
             ("legend.corner_weight", self.legend.corner_weight),
             ("lang.weight", self.lang.weight),
             ("tip.weight", self.tip.weight),
+            ("pill.weight", self.pill.weight),
+            ("caption.status_weight", self.caption.status_weight),
+            ("snip.tag_weight", self.snip.tag_weight),
         ];
         if let Some((n, w)) = weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
             let (lo, hi) = (FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
@@ -244,6 +254,21 @@ mod tests {
         assert_eq!(s.bar.button_px, [24.0, 22.0], "mock-up .tb");
         assert!(s.tip.font_px > 0.0 && s.tip.gap_px > 0.0, "tooltips");
         assert_eq!(s.line.px, 1.0, "mock-up 1px pop-line borders");
+    }
+
+    #[test]
+    fn the_extra_windows_take_the_mock_up_sizes() {
+        let s = load().expect("shape.toml loads");
+        assert_eq!(s.pill.button_side_px, 11.0, ".selpill button");
+        assert_eq!(s.caption.gap_px, 6.0, ".capbar .st gap");
+        assert_eq!(s.caption.bar_px, 38.0, ".capbar with its 26 px wave");
+        assert_eq!(s.snip.bar_radius_px, 9.0, ".snip-bar");
+        let heavy = text().replacen("status_weight = 600", "status_weight = 950", 1);
+        assert!(
+            parse(&heavy)
+                .expect_err("weight")
+                .contains("caption.status_weight")
+        );
     }
 
     #[test]

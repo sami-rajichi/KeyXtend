@@ -1,5 +1,7 @@
 //! The keyboard themes from `themes.toml`: three looks, each light and soft dark.
 
+mod common;
+mod extras;
 mod look;
 mod palette;
 mod shape;
@@ -7,6 +9,7 @@ mod shape;
 use serde::Deserialize;
 
 use crate::config::settings_path;
+pub use common::Common;
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use palette::{Palette, Rgba, Shadow, Skirt, contrast};
 pub use shape::Shape;
@@ -59,18 +62,21 @@ impl Theme {
     }
 }
 
-/// The file as written: a list of theme tables.
+/// The file as written: a list of theme tables and the colours they share.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ThemeFile {
     theme: Vec<toml::Table>,
+    common: Common,
 }
 
-/// Every theme, in file order, and the sizes they share.
+/// Every theme, in file order, and the colours and sizes they share.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Themes {
     /// The themes, as the theme bar lists them.
     pub list: Vec<Theme>,
+    /// Shared colours.
+    pub common: Common,
     /// Shared sizes.
     pub shape: Shape,
 }
@@ -79,16 +85,20 @@ pub struct Themes {
 pub fn load() -> Result<Themes, String> {
     let file = settings_path(FILE);
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
-    let list = parse(&text).map_err(|e| format!("{}: {e}", file.display()))?;
+    let (list, common) = parse(&text).map_err(|e| format!("{}: {e}", file.display()))?;
     Ok(Themes {
         list,
+        common,
         shape: shape::load()?,
     })
 }
 
-/// The themes in `text`, in file order; an error names the theme and mode at fault.
-pub fn parse(text: &str) -> Result<Vec<Theme>, String> {
-    let ThemeFile { theme: tables } = toml::from_str(text).map_err(|e| e.to_string())?;
+/// The themes in `text`, in file order, and their shared colours; an error names the theme and mode at fault.
+pub fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
+    let ThemeFile {
+        theme: tables,
+        common,
+    } = toml::from_str(text).map_err(|e| e.to_string())?;
     let themes = tables
         .into_iter()
         .map(theme)
@@ -101,7 +111,7 @@ pub fn parse(text: &str) -> Result<Vec<Theme>, String> {
             return Err(format!("theme id {:?} is used twice", t.look.id));
         }
     }
-    Ok(themes)
+    Ok((themes, common))
 }
 
 /// One theme table: its two mode tables, then its look.

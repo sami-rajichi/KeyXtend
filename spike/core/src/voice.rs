@@ -37,6 +37,8 @@ pub struct Caption {
     pub text: String,
     /// Hide it after this many ms; `None` keeps it up.
     pub hide_ms: Option<u64>,
+    /// The mic is recording, so the bar shows its red dot.
+    pub rec: bool,
 }
 
 impl Caption {
@@ -44,13 +46,21 @@ impl Caption {
         Caption {
             text: text.into(),
             hide_ms: None,
+            rec: false,
+        }
+    }
+
+    fn recording(text: &str) -> Caption {
+        Caption {
+            rec: true,
+            ..Caption::stay(text)
         }
     }
 
     fn brief(text: &str, hide_ms: u64) -> Caption {
         Caption {
-            text: text.into(),
             hide_ms: Some(hide_ms),
+            ..Caption::stay(text)
         }
     }
 }
@@ -95,7 +105,11 @@ impl MicButton {
         let (c, hide) = (&v.caption, v.caption.hide_ms);
         let (phase, caption, typed) = match e {
             Event::Ready { .. } => return Step::default(),
-            Event::Listening => (Some(Phase::Recording), Caption::stay(&c.listening), None),
+            Event::Listening => (
+                Some(Phase::Recording),
+                Caption::recording(&c.listening),
+                None,
+            ),
             Event::Transcribing { .. } => (Some(Phase::Busy), Caption::stay(&c.transcribing), None),
             Event::Text { text, .. } if text.trim().is_empty() => (
                 Some(Phase::Idle),
@@ -240,8 +254,13 @@ mod tests {
         let (v, mut b) = (voice(), MicButton::default());
         let shown = |s: Step| s.caption.map(|c| (c.text, c.hide_ms));
         let listening = b.on_event(&Event::Listening, &v);
+        assert!(
+            listening.caption.as_ref().is_some_and(|c| c.rec),
+            "the red dot"
+        );
         assert_eq!(shown(listening), Some((v.caption.listening.clone(), None)));
         let busy = b.on_event(&Event::Transcribing { audio_ms: 9 }, &v);
+        assert!(busy.caption.as_ref().is_some_and(|c| !c.rec));
         assert_eq!(shown(busy), Some((v.caption.transcribing.clone(), None)));
         assert_eq!(
             b.click("en"),

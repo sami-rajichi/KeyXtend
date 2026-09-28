@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1: the Copy pill, voice caption and snip overlay follow the theme
+The three small windows beside the keyboard now take each theme's look, light and dark, as in the mock-up: a badge-coloured Copy pill with a shadow, a caption bar with a red recording dot and the Arabic font for Arabic words, and a snip overlay that dims outside the region, with a size tag and a hint bar. Colours the mock-up writes once for all themes live in one shared `[common]` table, with system colours in high contrast, and their sizes in `shape.toml`. A preview of all six looks and live runs (pill on a real selection, overlay open and cancelled with no file left) passed; the microphone was never used. A review found 4 small issues, all fixed.
+
 ## 2026-09-28 — P1 stage 2 part B: the full keyboard on Qt
 The Qt face now draws the designed keyboard in all three themes, light and dark, with tooltips, hover and press tints, sticky modifiers, the language carousel, click-move-click moving and resizing, and minimise to a bubble in a bottom screen corner. The owner's look check passed after colour fixes; their decisions (no labels under icons, no Esc undo, a remembered state, the settings strip only when asked) are in the spec and roadmap. Dead keys now reach the app as key presses so Windows adds the accent (the owner typed ê), Caps Lock results come from the layout, and a live bug where a move never ended at a screen edge was fixed. Three review rounds found about 45 issues, all fixed, including latches an accent key ignores and arrows that must keep an accent waiting.
 
