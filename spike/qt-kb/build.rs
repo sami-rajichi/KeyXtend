@@ -8,8 +8,8 @@ use embed_manifest::{embed_manifest, new_manifest};
 const URI: &str = "KeyXtend.Spike";
 /// The window, as a file of the QML module.
 const MAIN_QML: &str = "qml/main.qml";
-/// The other QML files: the keyboard window, its shadow, bubble, mover and parts, then the extras: pill, snip overlay and caption bar.
-const PARTS_QML: [&str; 20] = [
+/// The other QML files: the keyboard window, its shadow, bubble, mover and parts; the extras (pill, snip overlay, caption bar); then the animation helpers.
+const PARTS_QML: [&str; 24] = [
     "qml/KbWindow.qml",
     "qml/Glow.qml",
     "qml/Bubble.qml",
@@ -30,6 +30,10 @@ const PARTS_QML: [&str; 20] = [
     "qml/Pill.qml",
     "qml/Overlay.qml",
     "qml/Caption.qml",
+    "qml/Tween.qml",
+    "qml/ColourTween.qml",
+    "qml/PopIn.qml",
+    "qml/Shimmer.qml",
 ];
 /// The Rust files holding cxx-qt bridges.
 const BRIDGES: [&str; 4] = [

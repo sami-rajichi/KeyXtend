@@ -60,6 +60,10 @@ pub mod qobject {
         #[qinvokable]
         fn set_mode(self: Pin<&mut Self>, i: i32);
 
+        /// The mic started or stopped recording; its key follows.
+        #[qinvokable]
+        fn set_rec(self: Pin<&mut Self>, on: bool);
+
         /// The top bar's light or dark switch.
         #[qinvokable]
         fn flip_mode(self: Pin<&mut Self>);
@@ -219,6 +223,10 @@ impl qobject::Board {
         if let Some(&m) = usize::try_from(i).ok().and_then(|i| MODES.get(i)) {
             self.as_mut().rust_mut().kb.set_mode(m);
         }
+    }
+
+    fn set_rec(mut self: Pin<&mut Self>, on: bool) {
+        self.as_mut().rust_mut().kb.set_rec(on);
     }
 
     fn chip(mut self: Pin<&mut Self>, i: i32) -> QString {

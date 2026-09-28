@@ -4,20 +4,21 @@ import QtQuick
 Item {
     id: face
 
-    // How caps are built (themes.toml [theme.cap]); the key's colour and skirt colour; radius, size and press.
+    // How caps are built (themes.toml [theme.cap]); the key's colour and skirt colour; radius, size, press and sink (0 to 1).
     required property var cap
     required property color topColour
     required property color skirt
     required property real radius
     required property real s
     required property bool pressed
+    required property real sink
 
     readonly property bool convex: cap.kind === "convex"
     readonly property bool sculpted: cap.kind === "skirt"
     // The gradient in use, if any.
     readonly property var grad: convex ? (pressed ? cap.pressed : cap.rest) : (sculpted ? cap.top : null)
-    // The top's inset while sculpted: top, right, bottom, left.
-    readonly property var inset: sculpted ? (pressed ? cap.pressed_inset_px : cap.top_inset_px) : [0, 0, 0, 0]
+    // The top's inset while sculpted, top, right, bottom, left; it moves with the sink (mock-up .cap::before transition).
+    readonly property var inset: sculpted ? cap.top_inset_px.map((v, i) => v + (cap.pressed_inset_px[i] - v) * sink) : [0, 0, 0, 0]
 
     // A rounded box in `base`, shaded by gradient `g` when there is one; the gradient is made once.
     component Fill: Rectangle {

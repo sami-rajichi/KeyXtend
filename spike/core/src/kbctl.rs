@@ -37,6 +37,12 @@ pub struct Kb {
     langs: BTreeMap<isize, LangInfo>,
     /// A dead key was sent, so the next character goes as a key press for the app to add the accent.
     dead: bool,
+    /// The mic is recording, so its key turns red.
+    rec: bool,
+    /// Which way the language key last stepped, until the layout changes: -1 back, 1 on.
+    asked: i8,
+    /// Which way the language names turn after the last change; 0 when it came another way.
+    turn: i8,
 }
 
 impl Kb {
@@ -57,6 +63,9 @@ impl Kb {
             chars: BTreeMap::new(),
             langs: BTreeMap::new(),
             dead: false,
+            rec: false,
+            asked: 0,
+            turn: 0,
             cfg,
             themes,
         }
@@ -226,6 +235,11 @@ impl Kb {
             .clone()
     }
 
+    /// Whether the mic records, which turns its key red.
+    pub fn set_rec(&mut self, rec: bool) {
+        self.rec = rec;
+    }
+
     /// Legends, lights and the language key now.
     pub fn state(&mut self) -> StateView {
         let (prev, next) = langkey::neighbours(&langkey::installed(), self.hkl);
@@ -244,14 +258,22 @@ impl Kb {
             toggled: &self.toggled,
             chars: self.chars_here(),
             lang: [&lang[0], &lang[1], &lang[2]],
+            rec: self.rec,
+            turn: self.turn,
         })
+    }
+
+    /// The layout is now `h`; the names turn the way the last step asked, and only once.
+    fn switched(&mut self, h: isize) {
+        self.hkl = h;
+        self.turn = std::mem::take(&mut self.asked);
     }
 
     /// True when the app in front switched layout since the last look.
     pub fn relabel(&mut self) -> bool {
         match self.follow.changed() {
             Some(h) => {
-                self.hkl = h.0 as isize;
+                self.switched(h.0 as isize);
                 true
             }
             None => false,

@@ -26,13 +26,14 @@ pub mod qobject {
         #[qproperty(QString, bar_title, READ, CONSTANT)]
         #[qproperty(f32, bar_width, READ, CONSTANT)]
         #[qproperty(f32, bar_height, READ, CONSTANT)]
+        #[qproperty(bool, recording, READ, NOTIFY)]
         type Voice = super::VoiceRust;
 
         /// The Mic button: starts or stops recording in the language of the app in front.
         #[qinvokable]
         fn click(self: Pin<&mut Self>);
 
-        /// A caption to show: JSON with `text`, `hide_ms` (null keeps it up), `rec` (red dot), `ar` (Arabic font), the physical point `at`, and any `note`.
+        /// A caption to show: JSON with `text`, `hide_ms` (null keeps it up), `rec` (red dot), `busy` (shimmer), `ar` (Arabic font), the physical point `at`, and any `note`.
         /// A note alone comes as JSON with only `note`.
         #[qsignal]
         fn caption(self: Pin<&mut Self>, json: QString);
@@ -49,6 +50,8 @@ pub struct VoiceRust {
     bar_height: f32,
     /// The bar's width, height and bottom gap, for placing it.
     px: [f32; 3],
+    /// The mic records, so its key turns red.
+    recording: bool,
     /// Voice for this face, started once QML made the object.
     session: Option<Session>,
 }
@@ -61,6 +64,7 @@ impl Default for VoiceRust {
             bar_width: c.px[0],
             bar_height: c.px[1],
             px: c.px,
+            recording: false,
             session: None,
         }
     }
@@ -80,7 +84,7 @@ impl cxx_qt::Initialize for qobject::Voice {
 /// A caption as JSON for QML, placed at `at` (physical pixels), with an optional status `note`; `ar` picks the Arabic font.
 fn caption_json(c: &Caption, at: Pt, note: Option<String>) -> Value {
     let ar = is_arabic(&c.text);
-    json!({ "text": c.text, "hide_ms": c.hide_ms, "rec": c.rec, "ar": ar, "at": [at.x, at.y], "note": note })
+    json!({ "text": c.text, "hide_ms": c.hide_ms, "rec": c.rec, "busy": c.busy, "ar": ar, "at": [at.x, at.y], "note": note })
 }
 
 impl qobject::Voice {
@@ -91,6 +95,7 @@ impl qobject::Voice {
             .session
             .as_mut()
             .map(Session::click);
+        self.as_mut().follow_mic();
         self.show(u.unwrap_or_default());
     }
 
@@ -102,7 +107,17 @@ impl qobject::Voice {
             .session
             .as_mut()
             .map(|s| s.on_event(e));
+        self.as_mut().follow_mic();
         self.show(u.unwrap_or_default());
+    }
+
+    /// Tells QML when the mic starts or stops recording.
+    fn follow_mic(mut self: Pin<&mut Self>) {
+        let on = self.rust().session.as_ref().is_some_and(Session::recording);
+        if on != self.rust().recording {
+            self.as_mut().rust_mut().recording = on;
+            self.as_mut().recording_changed();
+        }
     }
 
     /// Sends the caption, placed on the screen in front, or a lone note to QML.
@@ -137,16 +152,18 @@ mod tests {
             text: "مرحبا".into(),
             hide_ms: Some(4000),
             rec: false,
+            busy: false,
         };
         let v = caption_json(&c, Pt { x: 5, y: 7 }, None);
         assert_eq!(
             v,
-            json!({ "text": "مرحبا", "hide_ms": 4000, "rec": false, "ar": true, "at": [5, 7], "note": null })
+            json!({ "text": "مرحبا", "hide_ms": 4000, "rec": false, "busy": false, "ar": true, "at": [5, 7], "note": null })
         );
         let stay = Caption {
             text: "…".into(),
             hide_ms: None,
             rec: true,
+            busy: false,
         };
         assert_eq!(caption_json(&stay, Pt { x: 0, y: 0 }, None)["ar"], false);
         assert_eq!(

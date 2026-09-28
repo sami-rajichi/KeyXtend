@@ -55,7 +55,7 @@ Window {
     Keyboard { id: kb }
     Board {
         id: board
-        onLookChanged: win.lk = JSON.parse(board.lookJson())
+        onLookChanged: win.relook()
     }
     Extras {
         id: ex
@@ -63,6 +63,11 @@ Window {
         lk: win.lk
         res: win.res
         onNote: text => win.say(text)
+        // The mic key turns red while the mic records.
+        onRecordingChanged: {
+            board.setRec(ex.recording);
+            win.restate();
+        }
     }
     // Not owned by the keyboard: Qt shows no owned window while its owner is hidden, and the bubble needs tips too.
     Tip {
@@ -145,7 +150,17 @@ Window {
         say(r.note);
         if (r.tool !== undefined)
             ex.tool(r.tool);
+        restate();
+    }
+
+    // Reads the legends and lights again.
+    function restate() {
         st = JSON.parse(board.stateJson());
+    }
+
+    // Reads the look again.
+    function relook() {
+        lk = JSON.parse(board.lookJson());
     }
 
     function resized(changed) {
@@ -156,7 +171,7 @@ Window {
     // The top bar's light or dark switch.
     function flip() {
         board.flipMode();
-        lk = JSON.parse(board.lookJson());
+        relook();
     }
 
     // Starts at the bottom centre of the primary screen's work area.
@@ -181,6 +196,12 @@ Window {
                 anchors.fill: parent
                 radius: win.lk.look.window_radius_px
                 color: win.lk.palette.plate
+                // A new theme or mode fades in (mock-up .kb transition).
+                Behavior on color {
+                    ColourTween {
+                        move: win.lk.motion.moves.plate
+                    }
+                }
             }
             // The ring while moving or resizing (mock-up .kb.moving), inside the edge since the window ends there.
             Rectangle {
@@ -257,12 +278,12 @@ Window {
             status: kb.line(win.note)
             onPickTheme: i => {
                 board.setTheme(i);
-                win.lk = JSON.parse(board.lookJson());
+                win.relook();
                 win.view = JSON.parse(board.viewJson());
             }
             onPickMode: i => {
                 board.setMode(i);
-                win.lk = JSON.parse(board.lookJson());
+                win.relook();
             }
         }
         Mover {
@@ -296,6 +317,6 @@ Window {
         interval: kb.relabelMs
         running: true
         repeat: true
-        onTriggered: if (board.relabel()) win.st = JSON.parse(board.stateJson())
+        onTriggered: if (board.relabel()) win.restate()
     }
 }

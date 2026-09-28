@@ -1,5 +1,5 @@
 # The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217); CSS rgba() is #RRGGBBAA.
-# The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml.
+# The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml, timings in motion.toml.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).

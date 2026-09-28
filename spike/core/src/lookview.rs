@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::lookcfg::{LookConfig, ModeChoice};
 use crate::sysui::{self, SystemLook};
-use crate::theme::{Common, Dpad, Look, Mode, Palette, Shadow, Shape, Themes, with_accent};
+use crate::theme::{Common, Dpad, Look, Mode, Motion, Palette, Shadow, Shape, Themes, with_accent};
 
 /// Everything a face needs to paint one frame of the look.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -17,6 +17,8 @@ pub struct LookView<'a> {
     pub look: &'a Look,
     /// Sizes all themes share.
     pub shape: &'a Shape,
+    /// Animations; every length is 0 with reduced motion.
+    pub motion: &'a Motion,
     /// The D-pad's colours.
     pub dpad: Dpad,
     /// The mode shown.
@@ -80,6 +82,7 @@ pub fn look_view<'a>(
         common,
         look,
         shape: &t.shape,
+        motion: t.motion.pick(cfg.reduced_motion || sys.anim_off),
         dpad,
         dark: mode == Mode::Dark,
         contrast: sys.contrast.is_some(),
@@ -173,6 +176,28 @@ mod tests {
         assert_eq!(v.common.snip_edge, colours.highlight, "shared colours too");
         let plain = look_view(&t, 2, ModeChoice::Light, &teal(), &cfg).expect("dolch");
         assert_eq!(plain.common, t.common);
+    }
+
+    #[test]
+    fn reduced_motion_or_windows_animations_off_zero_every_duration() {
+        let (t, mut cfg) = setup();
+        let off = SystemLook {
+            anim_off: true,
+            ..SystemLook::default()
+        };
+        let press = |sys: &SystemLook, cfg: &LookConfig| {
+            let v = look_view(&t, 0, ModeChoice::Light, sys, cfg).expect("native");
+            v.motion.moves["press"].ms
+        };
+        let full = t.motion.full.moves["press"].ms;
+        assert!(full > 0 && press(&SystemLook::default(), &cfg) == full);
+        assert_eq!(press(&off, &cfg), 0, "Windows' animation effects are off");
+        cfg.reduced_motion = true;
+        assert_eq!(
+            press(&SystemLook::default(), &cfg),
+            0,
+            "the reduced motion setting"
+        );
     }
 
     #[test]

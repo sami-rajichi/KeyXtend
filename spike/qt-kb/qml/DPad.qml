@@ -21,6 +21,7 @@ Item {
 
     readonly property var d: lk.dpad
     readonly property var sh: lk.shape.dpad
+    readonly property var mv: lk.motion.moves
     readonly property real r: width / 2
     readonly property real g: sh.gap_px * s / 2
     readonly property real h: Math.sqrt(Math.max(0, r * r - g * g))
@@ -45,6 +46,11 @@ Item {
         anchors.fill: parent
         radius: pad.r
         color: pad.lk.palette.plate
+        Behavior on color {
+            ColourTween {
+                move: pad.mv.plate
+            }
+        }
     }
 
     Item {
@@ -57,7 +63,9 @@ Item {
                 required property int index
                 readonly property var q: pad.quarters[index]
                 readonly property bool lit: pad.dir === index
-                readonly property color base: lit ? pad.d.on : pad.d.face
+                // Colours ease like the keys' (mock-up .dp transition).
+                property color base: lit ? pad.d.on : pad.d.face
+                property color ink: lit ? pad.d.on_ink : pad.d.ink
                 readonly property real cell: pad.r - pad.g
                 readonly property real icon: pad.sh.icon_px * pad.s
                 readonly property real reach: pad.r - pad.sh.icon_pad * cell - icon / 2
@@ -66,6 +74,17 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: pad.buttons[index].name
                 Accessible.onPressAction: pad.dir = arrow.lit ? -1 : arrow.index
+
+                Behavior on base {
+                    ColourTween {
+                        move: pad.mv.colour
+                    }
+                }
+                Behavior on ink {
+                    ColourTween {
+                        move: pad.mv.colour
+                    }
+                }
 
                 ShapePath {
                     strokeWidth: -1
@@ -98,7 +117,7 @@ Item {
                     base: pad.res.icons
                     ext: pad.res.ext
                     px: arrow.icon
-                    tint: arrow.lit ? pad.d.on_ink : pad.d.ink
+                    tint: arrow.ink
                 }
                 MouseArea {
                     id: hit
@@ -122,6 +141,11 @@ Item {
         anchors.margins: pad.width * pad.sh.hub
         radius: width / 2
         color: pad.lk.palette.plate
+        Behavior on color {
+            ColourTween {
+                move: pad.mv.plate
+            }
+        }
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
@@ -132,10 +156,11 @@ Item {
             }
         }
     }
-    // Stop, shown while an arrow scrolls.
+    // Stop pops in while an arrow scrolls and out after (mock-up .dp-stop); a spring curve overshoots a little.
     Rectangle {
         id: stop
-        visible: pad.dir >= 0
+        scale: pad.dir >= 0 ? 1 : 0
+        visible: scale > 0
         anchors.fill: parent
         anchors.margins: pad.width * pad.sh.stop
         radius: width / 2
@@ -143,6 +168,11 @@ Item {
         Accessible.role: Accessible.Button
         Accessible.name: pad.buttons[4].name
         Accessible.onPressAction: pad.dir = -1
+        Behavior on scale {
+            Tween {
+                move: pad.mv.stop
+            }
+        }
         Icon {
             anchors.centerIn: parent
             icon: pad.buttons[4].icon

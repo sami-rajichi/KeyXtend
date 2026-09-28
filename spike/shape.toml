@@ -93,6 +93,9 @@ words_px = [14.0, 15.0]
 dot_px = 8.0
 bar_px = 38.0
 words_radius_px = 14.0
+# The shimmer while the words are on their way (.shimmer): height and radius, and how many bar widths its band spans.
+shimmer_px = [10.0, 6.0]
+shimmer_span = 2.0
 
 [snip]
 # The snip overlay (mock-up .snip-rect .dims, .snip-bar, .hintx): size tag text size, weight, padding, radius and

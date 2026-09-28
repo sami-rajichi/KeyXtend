@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1: the keyboard moves as in the mock-up
+Each mock-up animation the spike has a part for now plays on the Qt face, timed from one new `motion.toml`: key presses, colour fades, a red mic key whose light pulses while recording, legends rising and language names sliding the way the key stepped, the D-pad's Stop popping in, and the pill and caption bar popping in, with a shimmer while words are on their way. Reduced motion, from the keyboard setting or Windows' animation switch, makes every length 0, and no loop runs at 0 ms. 13 new core tests and a scratch QML test of the real files, with full and reduced timings, pass; a live start with theme switches logged no errors, and the microphone was never used. A review of every changed file found about 20 small issues: all are fixed except three kept on purpose, listed in the hand-off notes.
+
 ## 2026-09-28 — P1: the Copy pill, voice caption and snip overlay follow the theme
 The three small windows beside the keyboard now take each theme's look, light and dark, as in the mock-up: a badge-coloured Copy pill with a shadow, a caption bar with a red recording dot and the Arabic font for Arabic words, and a snip overlay that dims outside the region, with a size tag and a hint bar. Colours the mock-up writes once for all themes live in one shared `[common]` table, with system colours in high contrast, and their sizes in `shape.toml`. A preview of all six looks and live runs (pill on a real selection, overlay open and cancelled with no file left) passed; the microphone was never used. A review found 4 small issues, all fixed.
 

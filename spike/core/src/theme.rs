@@ -3,14 +3,16 @@
 mod common;
 mod extras;
 mod look;
+mod motion;
 mod palette;
 mod shape;
 
 use serde::Deserialize;
 
-use crate::config::settings_path;
+use crate::config::read_settings;
 pub use common::Common;
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
+pub use motion::{Amounts, Motion, Motions, Timed};
 pub use palette::{Palette, Rgba, Shadow, Skirt, contrast};
 pub use shape::Shape;
 
@@ -79,17 +81,18 @@ pub struct Themes {
     pub common: Common,
     /// Shared sizes.
     pub shape: Shape,
+    /// Animations, full and reduced.
+    pub motion: Motions,
 }
 
-/// Loads `themes.toml` and `shape.toml` from beside the exe or the spike folder.
+/// Loads `themes.toml`, `shape.toml` and `motion.toml` from beside the exe or the spike folder.
 pub fn load() -> Result<Themes, String> {
-    let file = settings_path(FILE);
-    let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
-    let (list, common) = parse(&text).map_err(|e| format!("{}: {e}", file.display()))?;
+    let (list, common) = read_settings(FILE, parse)?;
     Ok(Themes {
         list,
         common,
         shape: shape::load()?,
+        motion: motion::load()?,
     })
 }
 

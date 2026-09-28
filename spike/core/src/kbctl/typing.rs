@@ -113,7 +113,10 @@ impl Kb {
                 self.latches.toggle(l, sc);
                 Ok(Tapped::Done)
             }
-            Plan::Lang(back) => langkey::ask_step(window::foreground(), back).map(|_| Tapped::Done),
+            Plan::Lang(back) => langkey::ask_step(window::foreground(), back).map(|_| {
+                self.asked = if back { -1 } else { 1 };
+                Tapped::Done
+            }),
             Plan::Side(a) => Ok(self.side(id, a)),
             Plan::Nothing => Ok(Tapped::Done),
         }

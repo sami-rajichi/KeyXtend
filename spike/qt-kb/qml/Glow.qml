@@ -10,6 +10,9 @@ Window {
     required property rect box
     required property real radius
 
+    // An item whose fade, rise and scale the shadow copies, so they pop in together; null keeps it still.
+    property Item follow: null
+
     readonly property real m: lk.margin
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
@@ -22,7 +25,9 @@ Window {
 
     Item {
         x: glow.m
-        y: glow.m
+        y: glow.m + (glow.follow ? glow.follow.y : 0)
+        opacity: glow.follow ? glow.follow.opacity : 1
+        scale: glow.follow ? glow.follow.scale : 1
         width: glow.box.width
         height: glow.box.height
         Repeater {

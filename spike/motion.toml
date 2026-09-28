@@ -1,0 +1,44 @@
+# How the keyboard moves: each animation's length (ms) and curve, from the mock-up's transitions and keyframes.
+# Curves are CSS cubic-bezier points [x1, y1, x2, y2]; reduced motion, or Windows' animation effects off, makes every length 0.
+
+[curves]
+ease = [0.25, 0.1, 0.25, 1.0]
+ease_out = [0.0, 0.0, 0.58, 1.0]
+ease_in_out = [0.42, 0.0, 0.58, 1.0]
+linear = [0.0, 0.0, 1.0, 1.0]
+# Fast start and a soft landing: the language carousel and the legends (mock-up cubic-bezier(.2,.8,.2,1)).
+swift = [0.2, 0.8, 0.2, 1.0]
+# Overshoots a little, for the D-pad's Stop (mock-up .dp-stop).
+spring = [0.3, 1.5, 0.5, 1.0]
+
+[moves]
+# A cap sinking when pressed (.cap transform), and colours changing on keys, lights and the D-pad (.cap, .led, .dp).
+press = { ms = 90, curve = "ease" }
+colour = { ms = 150, curve = "ease" }
+# The plate's colour on a theme or mode change (.kb background).
+plate = { ms = 200, curve = "ease" }
+# One pulse of a recording key's light, one glow of its cap (.key.rec), and one pulse of the caption's red dot (.rec-dot).
+led = { ms = 1000, curve = "ease_in_out" }
+glow = { ms = 1400, curve = "ease_in_out" }
+dot = { ms = 1000, curve = "ease" }
+# After a language change, the language key's names slide in (.car-track) and the legends rise in (.kb-main.swap).
+carousel = { ms = 300, curve = "swift" }
+legends = { ms = 280, curve = "swift" }
+# The D-pad's Stop popping in and out (.dp-stop).
+stop = { ms = 220, curve = "spring" }
+# The Copy pill and the caption bar popping in (.selpill, .capbar).
+pill = { ms = 180, curve = "ease_out" }
+caption = { ms = 200, curve = "ease_out" }
+# One pass of the shimmer while the words are on their way (.shimmer).
+shimmer = { ms = 1000, curve = "linear" }
+
+[amount]
+# A pulse dims to this opacity halfway; a recording cap brightens by this factor halfway (.key.rec).
+pulse_low = 0.35
+glow_lift = 1.12
+# Language names slide in from this share of their width; legends rise in from this share of their height.
+carousel_shift = 0.28
+rise = 0.6
+# A pop-in starts this far down (px) and at this scale (@keyframes popIn).
+pop_rise_px = 6.0
+pop_scale = 0.98
