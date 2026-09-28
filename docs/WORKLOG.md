@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1 stage 2 part B: the full keyboard on Qt
+The Qt face now draws the designed keyboard in all three themes, light and dark, with tooltips, hover and press tints, sticky modifiers, the language carousel, click-move-click moving and resizing, and minimise to a bubble in a bottom screen corner. The owner's look check passed after colour fixes; their decisions (no labels under icons, no Esc undo, a remembered state, the settings strip only when asked) are in the spec and roadmap. Dead keys now reach the app as key presses so Windows adds the accent (the owner typed ê), Caps Lock results come from the layout, and a live bug where a move never ended at a screen edge was fixed. Three review rounds found about 45 issues, all fixed, including latches an accent key ignores and arrows that must keep an accent waiting.
+
 ## 2026-09-28 — P1 stage 2 part A: look tokens, geometry, size and system look
 All three themes, each light and dark, now live in `spike/themes.toml`, and a review checked every value against the mock-up. spike-core gained toolkit-free parts that load and check those tokens, lay out the keyboard at any size, handle −/+, S/M/L and click-move-click resizing, and read Windows' dark mode, accent colour and high contrast. The fonts (IBM Plex, Rubik, Noto Sans Arabic) and 31 Lucide icons were downloaded with their hashes recorded. Eleven text colours in the mock-up are under 4.5:1 (ten in Dolch, one in ET66 light); a test pins that list until the owner decides at the look check.
 

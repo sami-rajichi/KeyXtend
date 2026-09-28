@@ -1,0 +1,81 @@
+# Sizes all three themes share, from the mock-up's structure CSS (design/keyboard-style-lab.html lines 151-262), in pixels at size 1.
+# Lists follow the order their comment gives.
+[bar]
+# Top-bar buttons: width and height, icon, S/M/L text and its weight while lit, radius as a share of the key radius, gap.
+button_px = [24.0, 22.0]
+icon_px = 14.0
+label_px = 11.0
+lit_weight = 600
+radius_share = 0.8
+gap_px = 4.0
+
+[chip]
+# Suggestion chips: height, side padding, text size (Latin, Arabic), weight, icon size, icon gap.
+height_px = 20.0
+pad_px = 9.0
+font_px = [11.5, 12.5]
+weight = 500
+icon_px = 11.0
+gap_px = 4.0
+
+[legend]
+# Corner legends: sizes as shares of the main one (second, third), distance (top or bottom, side), weight.
+corner_scale = [0.62, 0.6]
+corner_px = [2.0, 4.0]
+corner_weight = 400
+# Icons (main keys, side keys) and the gap to a text beside them.
+icon_px = [14.0, 15.0]
+gap_px = 4.0
+# Space bar text size (Latin, Arabic) and side padding.
+space_px = [10.5, 11.5]
+space_pad_px = 6.0
+
+[led]
+# The LED dot: diameter, and distance from the cap's top and right edges.
+size_px = 4.0
+inset_px = 3.0
+
+[lang]
+# Language carousel: gap, side names (size, opacity), current name (Latin size, Arabic size), weight;
+# a click on the left third goes back a layout.
+gap_px = 5.0
+side = [9.0, 0.45]
+font_px = [12.5, 14.0]
+weight = 600
+back_share = 0.3333
+
+[dpad]
+# D-pad: gap between arrows, arrow icon, icon padding, hub and Stop insets (shares of the pad), Stop icon, grid turn.
+gap_px = 2.0
+icon_px = 15.0
+icon_pad = 0.22
+hub = 0.34
+stop = 0.36
+stop_icon_px = 10.0
+turn_deg = 45.0
+
+[press]
+# A pressed cap sinks and shrinks (the theme's `press` colour darkens it); the ring while moving or resizing.
+sink_px = 1.0
+scale = 0.97
+ring_px = 2.0
+
+[tip]
+# Tooltips with a button's name (WinUI ToolTip: 12 px text, 9/6 px padding): text size and weight,
+# padding (top and bottom, sides), radius, and gap to the button.
+font_px = 12.0
+weight = 400
+pad_px = [6.0, 9.0]
+radius_px = 4.0
+gap_px = 6.0
+
+[line]
+# Hairlines in pop_line (mock-up 1px borders): panel and tooltip edges, the corner's rim, dividers; not scaled.
+px = 1.0
+
+[extra]
+# The resize corner (diameter, icon; not in the mock-up), the bubble (diameter, icon, inset from the screen corner; mock-up .kb-bubble),
+# and the test strip (height, gap above, padding, text size).
+corner_px = [20.0, 12.0]
+bubble_px = [46.0, 20.0, 12.0]
+strip_px = [28.0, 6.0, 8.0, 12.0]

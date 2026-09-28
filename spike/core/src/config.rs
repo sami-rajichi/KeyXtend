@@ -13,6 +13,7 @@ const FACE: &str = "{face}";
 
 /// All spike settings.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SpikeConfig {
     /// Keyboard block and sizes.
     pub keyboard: KeyboardConfig,
@@ -26,8 +27,16 @@ pub struct SpikeConfig {
     pub layout: crate::kbgeom::LayoutConfig,
     /// Keyboard size steps, presets and limits.
     pub size: crate::sizer::SizeConfig,
-    /// Theme, mode, frosted plate and fading.
+    /// Theme, mode, frosted plate and tooltip delay.
     pub look: crate::lookcfg::LookConfig,
+    /// How each named key looks and what side keys do.
+    pub keys: crate::facecfg::KeysConfig,
+    /// The top bar and the test strip.
+    pub bar: crate::facecfg::BarConfig,
+    /// Where fonts and icons are.
+    pub assets: crate::facecfg::AssetsConfig,
+    /// Short language names and the space bar's joiner.
+    pub lang: crate::langinfo::LangConfig,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -35,6 +44,7 @@ pub struct SpikeConfig {
 
 /// Keyboard block and sizes.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct KeyboardConfig {
     /// Window title per face (`slint`, `qt`, `tauri`).
     pub titles: std::collections::BTreeMap<String, String>,
@@ -58,6 +68,7 @@ pub struct KeyboardConfig {
 
 /// The recording target window.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TargetConfig {
     /// Window title.
     pub title: String,
@@ -80,6 +91,7 @@ pub const MIB: usize = 1 << 20;
 
 /// The tools row, the selection pill, quick-fill and snip (stage 1b).
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ToolsConfig {
     /// Button labels.
     pub labels: ToolLabels,
@@ -113,6 +125,7 @@ pub struct ToolsConfig {
 
 /// Labels of the tool buttons and the pill.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ToolLabels {
     /// Types the test user name.
     pub fill_user: String,
@@ -224,6 +237,8 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.layout.check().map_err(at)?;
     config.size.check().map_err(at)?;
     config.look.check().map_err(at)?;
+    crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
+    crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     Ok(config)
 }

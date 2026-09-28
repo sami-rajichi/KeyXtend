@@ -1,14 +1,12 @@
 //! A theme's shape and type, shared by both modes: radii, gaps, fonts, glows, how caps are built and the D-pad's colours.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use super::FONT_WEIGHTS;
 use super::palette::{Palette, Rgba};
 
-/// Legend weights run from thin to black.
-const WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
-
 /// A two-way cap gradient: `lighten` mixes in white at the start, `darken` black at the end.
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Gradient {
     /// Share of white at the start, 0 to 1.
@@ -31,7 +29,7 @@ impl Gradient {
 }
 
 /// How a key cap is built.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase", deny_unknown_fields)]
 pub enum Cap {
     /// One flat colour; braces so that stray fields are refused too.
@@ -70,7 +68,7 @@ impl Cap {
 }
 
 /// The D-pad's colours, as names of palette tokens.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct DpadRefs {
     /// The four arrows.
@@ -88,7 +86,7 @@ pub struct DpadRefs {
 }
 
 /// The D-pad's colours in one palette.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Dpad {
     /// The four arrows.
     pub face: Rgba,
@@ -120,7 +118,7 @@ impl DpadRefs {
 }
 
 /// A theme's shape and type, shared by both modes.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Look {
     /// Short id, such as `native`.
@@ -160,11 +158,9 @@ pub struct Look {
 impl Look {
     /// Refuses shares outside 0 to 1, an odd weight, and D-pad names that `p` lacks.
     pub fn check(&self, p: &Palette) -> Result<(), String> {
-        if !WEIGHTS.contains(&self.legend_weight) {
-            return Err(format!(
-                "legend_weight {} is not 100 to 900",
-                self.legend_weight
-            ));
+        if !FONT_WEIGHTS.contains(&self.legend_weight) {
+            let (w, lo, hi) = (self.legend_weight, FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
+            return Err(format!("legend_weight {w} is not {lo} to {hi}"));
         }
         let share = (0.0..=1.0).contains(&self.lock_glow_mix);
         if !share || !self.cap.gradients().iter().all(Gradient::is_valid) {

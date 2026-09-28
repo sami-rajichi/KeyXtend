@@ -14,19 +14,19 @@ pub struct SizeConfig {
     pub min: f32,
     /// Largest size.
     pub max: f32,
-    /// Keys show text labels from this size.
-    pub labels_from: f32,
+    /// How often the pointer is read while moving or resizing, in ms.
+    pub poll_ms: u64,
 }
 
 impl SizeConfig {
     /// Refuses a table whose limits, step or presets make no sense.
     pub fn check(&self) -> Result<(), String> {
-        if !(self.step > 0.0 && self.min > 0.0 && self.min <= self.max) {
-            return Err("size: step and min must be above 0, and min at most max".into());
+        if !(self.step > 0.0 && self.min > 0.0 && self.min <= self.max) || self.poll_ms == 0 {
+            return Err("size: step, min and poll_ms must be above 0, and min at most max".into());
         }
         let off = |p: &f32| !(self.min..=self.max).contains(p);
-        if self.presets.is_empty() || self.presets.iter().any(off) || off(&self.labels_from) {
-            return Err("size: presets and labels_from must sit between min and max".into());
+        if self.presets.is_empty() || self.presets.iter().any(off) {
+            return Err("size: presets must sit between min and max".into());
         }
         Ok(())
     }
@@ -50,11 +50,6 @@ pub fn step_up(size: f32, c: &SizeConfig) -> f32 {
 /// One step smaller, stopping at the smallest size.
 pub fn step_down(size: f32, c: &SizeConfig) -> f32 {
     snap(size - c.step, c)
-}
-
-/// True when keys at `size` show text labels, compared in whole steps.
-pub fn shows_labels(size: f32, c: &SizeConfig) -> bool {
-    (size / c.step).round() >= (c.labels_from / c.step).round()
 }
 
 /// A resize in progress: the first click on the corner handle starts it, the second ends it.
@@ -81,11 +76,6 @@ impl Resize {
         let ry = (p.1 - self.anchor.1) / self.plate.1.max(1.0);
         let grow = if rx.abs() >= ry.abs() { rx } else { ry };
         snap(self.start * (1.0 + grow), c)
-    }
-
-    /// The size before the resize, for Esc.
-    pub fn cancel(&self) -> f32 {
-        self.start
     }
 }
 
@@ -121,14 +111,8 @@ mod tests {
     }
 
     #[test]
-    fn presets_are_s_m_l_and_labels_start_at_their_size() {
-        let c = cfg();
-        assert_eq!(c.presets, [1.0, 1.25, 1.5]);
-        assert!(!shows_labels(1.25, &c) && shows_labels(1.3, &c) && shows_labels(1.5, &c));
-        assert!(
-            shows_labels(step_up(1.25, &c), &c),
-            "1.25 + one step reaches 1.3"
-        );
+    fn presets_are_s_m_and_l() {
+        assert_eq!(cfg().presets, [1.0, 1.25, 1.5]);
     }
 
     #[test]
@@ -149,7 +133,6 @@ mod tests {
             (r.at((103.0, 100.0), &c) - 1.0).abs() < EPS,
             "snapped to a step"
         );
-        assert!((r.cancel() - 1.0).abs() < EPS, "Esc goes back");
     }
 
     #[test]
@@ -162,7 +145,10 @@ mod tests {
         c.presets.push(3.0);
         assert!(c.check().is_err(), "a preset past the limits");
         let mut c = cfg();
-        c.labels_from = c.max + c.step;
-        assert!(c.check().is_err(), "labels that could never show");
+        c.poll_ms = 0;
+        assert!(
+            c.check().is_err(),
+            "the resize would never follow the pointer"
+        );
     }
 }

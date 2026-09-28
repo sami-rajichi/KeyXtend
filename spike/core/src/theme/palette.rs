@@ -1,6 +1,6 @@
 //! One theme's colours in one mode, and the WCAG contrast between two colours.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 
 /// Hex digits in `#RRGGBB`.
 const RGB_DIGITS: usize = 6;
@@ -15,7 +15,7 @@ const CURVE_OFFSET: f32 = 0.055;
 /// Exponent of the sRGB curve.
 const CURVE_EXP: f32 = 2.4;
 /// Red, green and blue weights of relative luminance.
-const WEIGHTS: [f32; 3] = [0.2126, 0.7152, 0.0722];
+const LUMA_WEIGHTS: [f32; 3] = [0.2126, 0.7152, 0.0722];
 /// Flare added to both luminances in the contrast ratio.
 const FLARE: f32 = 0.05;
 
@@ -57,6 +57,16 @@ impl Rgba {
     }
 }
 
+impl Serialize for Rgba {
+    /// Written as Qt reads colours: `#AARRGGBB`.
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&format!(
+            "#{:02X}{:02X}{:02X}{:02X}",
+            self.a, self.r, self.g, self.b
+        ))
+    }
+}
+
 impl TryFrom<String> for Rgba {
     type Error = String;
 
@@ -77,7 +87,7 @@ fn linear(c: u8) -> f32 {
 
 /// Relative luminance, ignoring alpha.
 fn luminance(c: Rgba) -> f32 {
-    let [r, g, b] = WEIGHTS;
+    let [r, g, b] = LUMA_WEIGHTS;
     r * linear(c.r) + g * linear(c.g) + b * linear(c.b)
 }
 
@@ -88,7 +98,7 @@ pub fn contrast(a: Rgba, b: Rgba) -> f32 {
 }
 
 /// One shadow layer, as in CSS `box-shadow`.
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Shadow {
     /// Drawn inside the shape.
@@ -107,7 +117,7 @@ pub struct Shadow {
 }
 
 /// The skirt colours of a sculpted cap, by key type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Skirt {
     /// Letter keys.
@@ -125,7 +135,7 @@ pub struct Skirt {
 }
 
 /// Every colour of one theme in one mode; the names follow the mock-up's CSS tokens.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Palette {
     /// The plate behind the keys.
@@ -188,6 +198,10 @@ pub struct Palette {
     pub pop_sel: Rgba,
     /// Suggestion chips.
     pub chip_bg: Rgba,
+    /// Laid over a key under the pointer: darker on light, lighter on dark.
+    pub hover: Rgba,
+    /// Laid over a pressed key (mock-up `brightness(.94)`).
+    pub press: Rgba,
     /// Layers under each key.
     pub key_shadow: Vec<Shadow>,
     /// Layers under the keyboard and panels.
@@ -199,7 +213,7 @@ pub struct Palette {
 
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
-    pub fn named(&self) -> [(&'static str, Rgba); 30] {
+    pub fn named(&self) -> [(&'static str, Rgba); 32] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -231,6 +245,8 @@ impl Palette {
             ("pop_hover", self.pop_hover),
             ("pop_sel", self.pop_sel),
             ("chip_bg", self.chip_bg),
+            ("hover", self.hover),
+            ("press", self.press),
         ]
     }
 

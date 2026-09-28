@@ -59,6 +59,23 @@ pub fn tap_scan(code: u32) -> Result<(), String> {
     send(&[key(scan, flags), key(scan, flags | KEYEVENTF_KEYUP)])
 }
 
+/// Holds the keys `held` around a tap of `code`, all as scan codes in one batch, such as Ctrl+Shift+T.
+pub fn chord(held: &[u32], code: u32) -> Result<(), String> {
+    send(&chord_inputs(held, code))
+}
+
+/// The inputs of `chord`: `held` down in order, `code` down and up, then `held` up in reverse.
+fn chord_inputs(held: &[u32], code: u32) -> Vec<INPUT> {
+    let hit = |c: u32, up: bool| {
+        let (scan, flags) = scan_flags(c);
+        key(scan, if up { flags | KEYEVENTF_KEYUP } else { flags })
+    };
+    let down = held.iter().map(|&c| hit(c, false));
+    let tap = [hit(code, false), hit(code, true)];
+    let up = held.iter().rev().map(|&c| hit(c, true));
+    down.chain(tap).chain(up).collect()
+}
+
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
 pub fn text(text: &str) -> Result<(), String> {
     send(&unicode(text.encode_utf16()))
@@ -164,5 +181,27 @@ mod tests {
             got,
             [(0x11, false), (0x43, false), (0x43, true), (0x11, true)]
         );
+    }
+
+    #[test]
+    fn a_chord_holds_its_keys_around_the_tap_as_scan_codes() {
+        let got: Vec<(u16, bool, bool)> = chord_inputs(&[0x1D, 0xE038], 0x14)
+            .iter()
+            // SAFETY: every input built here is a keyboard input.
+            .map(|i| unsafe {
+                let f = i.Anonymous.ki.dwFlags;
+                let up = f.contains(KEYEVENTF_KEYUP);
+                (i.Anonymous.ki.wScan, up, f.contains(KEYEVENTF_EXTENDEDKEY))
+            })
+            .collect();
+        let want = [
+            (0x1D, false, false),
+            (0x38, false, true),
+            (0x14, false, false),
+            (0x14, true, false),
+            (0x38, true, true),
+            (0x1D, true, false),
+        ];
+        assert_eq!(got, want, "right Alt stays extended");
     }
 }

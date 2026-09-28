@@ -9,6 +9,13 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::layout::{installed_layouts, lang_id};
 
+/// Error when the window in front closed.
+const GONE: &str = "the window is gone";
+/// Error when there is no other layout to switch to.
+const ONLY_ONE: &str = "only one layout is installed";
+/// Error prefix when Windows refuses the layout request.
+const REFUSED: &str = "layout request";
+
 /// The layout after `cur` in `list`, wrapping and skipping copies of `cur`; `None` when there is none.
 pub fn next_layout(list: &[isize], cur: isize) -> Option<isize> {
     let start = list.iter().position(|&l| l == cur).map_or(0, |i| i + 1);
@@ -22,8 +29,15 @@ pub fn layout_for(list: &[isize], id: u16) -> Option<isize> {
     list.iter().copied().find(|&h| lang_id(h) == id)
 }
 
+/// The layouts before and after `cur` in `list`, wrapping; `cur` itself when nothing else is installed.
+pub fn neighbours(list: &[isize], cur: isize) -> (isize, isize) {
+    let back: Vec<isize> = list.iter().rev().copied().collect();
+    let prev = next_layout(&back, cur).unwrap_or(cur);
+    (prev, next_layout(list, cur).unwrap_or(cur))
+}
+
 /// The installed layouts as raw values, in the system's order.
-fn installed() -> Vec<isize> {
+pub fn installed() -> Vec<isize> {
     installed_layouts().iter().map(|h| h.0 as isize).collect()
 }
 
@@ -61,15 +75,24 @@ pub fn layout_of(hwnd: HWND) -> Option<isize> {
 
 /// Asks `hwnd` to switch to the next installed layout; returns the layout asked for.
 pub fn ask_next(hwnd: HWND) -> Result<isize, String> {
-    let cur = layout_of(hwnd).ok_or("the window is gone")?;
-    let next = next_layout(&installed(), cur).ok_or("only one layout is installed")?;
-    ask(hwnd, next)?;
-    Ok(next)
+    ask_step(hwnd, false)
+}
+
+/// Asks `hwnd` to switch to the layout after its current one, or before it when `back`; returns the layout asked for.
+pub fn ask_step(hwnd: HWND, back: bool) -> Result<isize, String> {
+    let cur = layout_of(hwnd).ok_or(GONE)?;
+    let (prev, next) = neighbours(&installed(), cur);
+    let to = if back { prev } else { next };
+    if to == cur {
+        return Err(ONLY_ONE.into());
+    }
+    ask(hwnd, to)?;
+    Ok(to)
 }
 
 /// Asks `hwnd`'s focus window to switch to `layout`, the way the system language hotkey does.
 pub fn ask(hwnd: HWND, layout: isize) -> Result<(), String> {
-    let focus = focus_of(hwnd).ok_or("the window is gone")?;
+    let focus = focus_of(hwnd).ok_or(GONE)?;
     // SAFETY: a plain post; the window checks and applies the request itself.
     unsafe {
         PostMessageW(
@@ -79,7 +102,7 @@ pub fn ask(hwnd: HWND, layout: isize) -> Result<(), String> {
             LPARAM(layout),
         )
     }
-    .map_err(|e| format!("layout request: {e}"))
+    .map_err(|e| format!("{REFUSED}: {e}"))
 }
 
 #[cfg(test)]
@@ -88,7 +111,15 @@ mod tests {
 
     const EN: isize = 0x0409_0409;
     const FR: isize = 0x040C_040C;
+    /// Arabic (Tunisia).
     const AR: isize = 0x1C01_1C01;
+
+    #[test]
+    fn neighbours_wrap_both_ways_and_a_lone_layout_is_its_own() {
+        assert_eq!(neighbours(&[EN, FR, AR], EN), (AR, FR));
+        assert_eq!(neighbours(&[EN, FR, AR], AR), (FR, EN));
+        assert_eq!(neighbours(&[EN], EN), (EN, EN));
+    }
 
     #[test]
     fn next_layout_follows_the_list_and_wraps_to_the_first() {

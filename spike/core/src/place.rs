@@ -1,12 +1,12 @@
 //! Where each key sits, in logical pixels: one calculation shared by every face and the harness.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::{KeyboardConfig, SpikeConfig, ToolButton};
 use crate::layout::width;
 
 /// One key's box, from the top-left corner of the window's client area.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Place {
     /// Left edge.
     pub x: f32,
@@ -16,6 +16,18 @@ pub struct Place {
     pub w: f32,
     /// Height.
     pub h: f32,
+}
+
+impl Place {
+    /// Left, top, right and bottom in physical pixels at scale `dpr`, rounded outwards so the box is covered.
+    pub fn outward(&self, dpr: f32) -> [i32; 4] {
+        [
+            (self.x * dpr).floor() as i32,
+            (self.y * dpr).floor() as i32,
+            ((self.x + self.w) * dpr).ceil() as i32,
+            ((self.y + self.h) * dpr).ceil() as i32,
+        ]
+    }
 }
 
 /// Every key's box, row by row: the block starts at (gap, gap); a key `u` units wide takes `u` pitches.
@@ -86,6 +98,24 @@ pub fn face_size(cfg: &KeyboardConfig) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn outward_covers_the_box_in_whole_physical_pixels() {
+        let p = Place {
+            x: 0.5,
+            y: 1.0,
+            w: 10.0,
+            h: 2.0,
+        };
+        assert_eq!(p.outward(1.25), [0, 1, 14, 4]);
+        assert_eq!(p.outward(1.0), [0, 1, 11, 3]);
+    }
+
+    #[test]
+    fn places_arrive_from_qml_as_json() {
+        let all: Vec<Place> = serde_json::from_str(r#"[{"x":1,"y":2,"w":3,"h":4}]"#).expect("json");
+        assert_eq!(all[0].outward(2.0), [2, 4, 8, 12]);
+    }
 
     fn kb() -> KeyboardConfig {
         KeyboardConfig {

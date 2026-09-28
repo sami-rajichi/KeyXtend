@@ -23,7 +23,7 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P10 | Selection helper | Waiting |
 | P11 | Voice typing (local Whisper) | Waiting |
 | P12 | Snip + OCR | Waiting |
-| P13 | ET66 and Dolch themes, settings window, EN/FR/AR interface | Waiting |
+| P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Waiting |
 | P14 | Release pipeline and v1.0 | Waiting |
 | P15 | macOS, then Linux | Waiting |
 

@@ -19,6 +19,7 @@ pub enum Engine {
 
 /// Voice settings.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct VoiceConfig {
     /// The worker program, next to the face.
     pub worker: String,
@@ -58,6 +59,7 @@ pub struct VoiceConfig {
 
 /// whisper.cpp's server, started once with the worker.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalConfig {
     /// Server program.
     pub server: String,
@@ -83,6 +85,7 @@ pub struct LocalConfig {
 
 /// The opt-in cloud engine (OpenAI-style transcription API).
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CloudConfig {
     /// Host, reached over HTTPS.
     pub host: String,
@@ -98,6 +101,7 @@ pub struct CloudConfig {
 
 /// Weak mode: the local server runs in a job with these caps.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct WeakConfig {
     /// Cores it may use.
     pub cores: u32,
@@ -109,6 +113,7 @@ pub struct WeakConfig {
 
 /// The caption bar at the bottom centre of the screen.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CaptionConfig {
     /// Window title, so the harness can find it.
     pub title: String,
