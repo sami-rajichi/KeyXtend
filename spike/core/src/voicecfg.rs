@@ -129,6 +129,16 @@ pub struct CaptionConfig {
     pub hide_ms: u64,
 }
 
+impl CaptionConfig {
+    /// Refuses a caption that would never hide.
+    pub fn check(&self) -> Result<(), String> {
+        if self.hide_ms == 0 {
+            return Err("voice.caption.hide_ms must be above 0".into());
+        }
+        Ok(())
+    }
+}
+
 impl VoiceConfig {
     /// The spoken language for keyboard layout language `lang_id`; regional layouts share their language.
     pub fn language(&self, lang_id: u16) -> &str {
@@ -152,6 +162,17 @@ mod tests {
         );
         assert!(!v.cloud_on, "cloud is off unless turned on");
         assert!(v.record_max_s > 0 && v.rate_hz > 0);
+    }
+
+    #[test]
+    fn a_caption_must_stay_up_for_some_time() {
+        let mut c = crate::config::load()
+            .expect("spike.toml loads")
+            .voice
+            .caption;
+        assert!(c.check().is_ok());
+        c.hide_ms = 0;
+        assert!(c.check().expect_err("zero").contains("hide_ms"));
     }
 
     #[test]

@@ -200,8 +200,6 @@ pub struct Palette {
     pub chip_bg: Rgba,
     /// Laid over a key under the pointer: darker on light, lighter on dark.
     pub hover: Rgba,
-    /// Laid over a pressed key (mock-up `brightness(.94)`).
-    pub press: Rgba,
     /// Layers under each key.
     pub key_shadow: Vec<Shadow>,
     /// Layers under the keyboard and panels.
@@ -213,7 +211,7 @@ pub struct Palette {
 
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
-    pub fn named(&self) -> [(&'static str, Rgba); 32] {
+    pub fn named(&self) -> [(&'static str, Rgba); 31] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -246,7 +244,6 @@ impl Palette {
             ("pop_sel", self.pop_sel),
             ("chip_bg", self.chip_bg),
             ("hover", self.hover),
-            ("press", self.press),
         ]
     }
 

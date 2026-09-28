@@ -4,13 +4,15 @@ use serde::Serialize;
 
 use crate::lookcfg::{LookConfig, ModeChoice};
 use crate::sysui::{self, SystemLook};
-use crate::theme::{Dpad, Look, Mode, Palette, Shadow, Shape, Themes, with_accent};
+use crate::theme::{Common, Dpad, Look, Mode, Palette, Shadow, Shape, Themes, with_accent};
 
 /// Everything a face needs to paint one frame of the look.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LookView<'a> {
     /// Colours, after the accent or high contrast.
     pub palette: Palette,
+    /// Colours every theme shares, as system colours in high contrast.
+    pub common: Common,
     /// Shape and type of the theme.
     pub look: &'a Look,
     /// Sizes all themes share.
@@ -68,9 +70,14 @@ pub fn look_view<'a>(
     let palette = palette(t, i, mode, sys, cfg)?;
     let look = &t.list.get(i)?.look;
     let dpad = look.dpad.resolve(&palette).ok()?;
+    let common = match &sys.contrast {
+        Some(c) => sysui::contrast_common(c, &t.common),
+        None => t.common,
+    };
     Some(LookView {
         margin: reach(&palette.window_shadow),
         palette,
+        common,
         look,
         shape: &t.shape,
         dpad,
@@ -163,6 +170,9 @@ mod tests {
             v.dpad.face, black,
             "Dolch's grey arrows become the button colour"
         );
+        assert_eq!(v.common.snip_edge, colours.highlight, "shared colours too");
+        let plain = look_view(&t, 2, ModeChoice::Light, &teal(), &cfg).expect("dolch");
+        assert_eq!(plain.common, t.common);
     }
 
     #[test]

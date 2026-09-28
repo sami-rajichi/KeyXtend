@@ -1,27 +1,36 @@
-// The caption bar: what the mic hears, then the words it typed; it never takes focus and lets clicks pass.
+// The caption bar (mock-up .capbar): what the mic hears, then the words it typed; it never takes focus and lets clicks pass.
+// Its window reaches past the bar by the shadow's room, which is safe since clicks pass through.
+pragma ComponentBehavior: Bound
 import QtQuick
 
 Window {
     id: bar
 
-    required property real fontPx
-    required property real pad
-    property string text: ""
-    // Edge width; drawn in the text colour, like the keys.
-    readonly property int edge: 1
+    // The look and fonts, and the bar's largest size in Qt units.
+    required property var lk
+    required property var res
+    required property real barWidth
+    required property real barHeight
+    // The caption shown: text, rec, ar and hide_ms, as the voice worker sends it.
+    property var cap: ({ text: "", rec: false, ar: false, hide_ms: null })
+
+    readonly property var sh: lk.shape.caption
+    readonly property real m: lk.margin
+    // A status such as "Listening…" stays up and is a short pill; words and notes fill the box.
+    readonly property bool status: cap.hide_ms === null || cap.hide_ms === undefined
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     visible: false
-    color: pal.button
+    color: "transparent"
+    width: barWidth + 2 * m
+    height: barHeight + 2 * m
 
-    SystemPalette { id: pal }
-
-    // Shows caption `r` with its top-left at `at` (Qt units); hides it after `r.hide_ms` when set.
+    // Shows caption `r` with the bar's top-left at `at` (Qt units); hides it after `r.hide_ms` when set.
     function say(r, at) {
-        bar.text = r.text;
-        bar.x = at.x;
-        bar.y = at.y;
+        bar.cap = r;
+        bar.x = at.x - m;
+        bar.y = at.y - m;
         bar.visible = true;
         if (r.hide_ms) {
             hide.interval = r.hide_ms;
@@ -35,23 +44,65 @@ Window {
         id: hide
         onTriggered: bar.visible = false
     }
-    Rectangle {
-        anchors.fill: parent
-        color: "transparent"
-        border.width: bar.edge
-        border.color: pal.windowText
-    }
-    Text {
-        anchors.fill: parent
-        anchors.margins: bar.pad
-        text: bar.text
-        font.pixelSize: bar.fontPx
-        color: pal.buttonText
-        wrapMode: Text.Wrap
-        elide: Text.ElideRight
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        Accessible.role: Accessible.StaticText
-        Accessible.name: text
+    // The bar sits on the bottom of its box, like the mock-up's bar above the keyboard.
+    Item {
+        id: body
+        readonly property real radius: bar.status ? height / 2 : bar.sh.words_radius_px
+        x: bar.m
+        width: bar.barWidth
+        height: bar.status ? bar.sh.bar_px : bar.barHeight
+        y: bar.m + bar.barHeight - height
+
+        Repeater {
+            model: bar.lk.palette.window_shadow.filter(l => !l.inset)
+            delegate: Shade {
+                required property var modelData
+                anchors.fill: parent
+                shadow: modelData
+                radius: body.radius
+            }
+        }
+        // High contrast has no shadow, so the bar gets an edge instead.
+        Rectangle {
+            anchors.fill: parent
+            radius: body.radius
+            color: bar.lk.palette.pop_bg
+            border.width: bar.lk.contrast ? bar.lk.shape.line.px : 0
+            border.color: bar.lk.palette.pop_line
+        }
+        Row {
+            readonly property var pad: bar.status ? bar.sh.pad_px : Array(3).fill(bar.sh.words_pad_px)
+            anchors.fill: parent
+            anchors.topMargin: pad[0]
+            anchors.bottomMargin: pad[0]
+            anchors.leftMargin: pad[1]
+            anchors.rightMargin: pad[2]
+            spacing: bar.sh.gap_px
+
+            Rectangle {
+                id: dot
+                visible: bar.cap.rec
+                anchors.verticalCenter: parent.verticalCenter
+                width: bar.sh.dot_px
+                height: width
+                radius: width / 2
+                color: bar.lk.common.rec_dot
+            }
+            Text {
+                width: parent.width - (dot.visible ? dot.width + parent.spacing : 0)
+                height: parent.height
+                text: bar.cap.text
+                textFormat: Text.PlainText
+                font.family: bar.cap.ar ? bar.res.fam.arabic : bar.res.fam.latin
+                font.pixelSize: bar.status ? bar.sh.status_px : bar.sh.words_px[bar.cap.ar ? 1 : 0]
+                font.weight: bar.status ? bar.sh.status_weight : Font.Normal
+                color: bar.lk.palette.pop_ink
+                wrapMode: Text.Wrap
+                elide: Text.ElideRight
+                verticalAlignment: Text.AlignVCenter
+                Accessible.role: Accessible.StaticText
+                Accessible.name: text
+            }
+        }
     }
 }

@@ -16,7 +16,7 @@ use windows::core::{PCWSTR, w};
 
 use crate::com::Com;
 use crate::lookcfg::ModeChoice;
-use crate::theme::{Mode, Palette, Rgba, Shadow};
+use crate::theme::{Common, Mode, Palette, Rgba, Shadow};
 pub use watch::{Watch, watch};
 
 /// Registry key holding the app mode.
@@ -120,7 +120,7 @@ fn outline(ink: Rgba) -> Shadow {
     }
 }
 
-/// A palette made only of system colours, with one outline per key.
+/// A palette made only of system colours, with one outline per key; a tint is not a system colour, so hover shows nothing yet.
 pub fn contrast_palette(s: &SysColors) -> Palette {
     let (face, ink, sel, sel_ink) = (s.button, s.button_text, s.highlight, s.highlight_text);
     Palette {
@@ -154,12 +154,29 @@ pub fn contrast_palette(s: &SysColors) -> Palette {
         pop_hover: sel,
         pop_sel: sel,
         chip_bg: face,
-        // A tint is not a system colour, so high contrast shows no hover or press tint yet.
         hover: Rgba { a: 0, ..face },
-        press: Rgba { a: 0, ..face },
         key_shadow: vec![outline(ink)],
         window_shadow: Vec::new(),
         skirt: None,
+    }
+}
+
+/// The shared colours in system colours, keeping the see-through share of the snip layers from `common`.
+pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
+    let clear = Rgba { a: 0, ..s.button };
+    Common {
+        press: clear,
+        rec_dot: s.highlight,
+        pill_hover: clear,
+        snip_dim: Rgba {
+            a: common.snip_dim.a,
+            ..s.window
+        },
+        snip_edge: s.highlight,
+        snip_tag: Rgba {
+            a: common.snip_tag.a,
+            ..s.window
+        },
     }
 }
 
@@ -306,15 +323,11 @@ mod tests {
             s.button_text,
             s.gray_text,
         ];
-        // Only the see-through hover and press change alpha, so compare the colour alone.
+        // Only the see-through hover changes alpha, so compare the colour alone.
         let rgb = |c: &Rgba| (c.r, c.g, c.b);
         let system = |c: &Rgba| allowed.iter().any(|a| rgb(a) == rgb(c));
         assert!(p.named().iter().all(|(_, c)| system(c)), "{p:?}");
-        assert_eq!(
-            (p.hover.a, p.press.a),
-            (0, 0),
-            "no tints in high contrast yet"
-        );
+        assert_eq!(p.hover.a, 0, "no tints in high contrast yet");
         assert!(p.skirt.is_none() && p.window_shadow.is_empty());
         assert_eq!(
             p.key_shadow.len(),
@@ -322,5 +335,22 @@ mod tests {
             "one outline, as high contrast needs edges"
         );
         assert_eq!(p.key_shadow[0].color, s.button_text);
+    }
+
+    #[test]
+    fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
+        let s = sys();
+        let base = crate::theme::load().expect("themes.toml loads").common;
+        let c = contrast_common(&s, &base);
+        let allowed = [s.window, s.highlight, s.button];
+        let rgb = |c: &Rgba| (c.r, c.g, c.b);
+        for (n, v) in c.named() {
+            assert!(allowed.iter().any(|a| rgb(a) == rgb(&v)), "{n}");
+        }
+        assert_eq!((c.press.a, c.pill_hover.a), (0, 0), "no tints");
+        assert_eq!(
+            (c.snip_dim.a, c.snip_tag.a),
+            (base.snip_dim.a, base.snip_tag.a)
+        );
     }
 }

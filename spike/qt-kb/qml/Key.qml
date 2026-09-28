@@ -132,7 +132,7 @@ Item {
             anchors.fill: parent
             radius: key.radius
             visible: area.containsMouse || key.down
-            color: key.down ? key.p.press : key.p.hover
+            color: key.down ? key.lk.common.press : key.p.hover
         }
         KeyText {
             anchors.fill: parent

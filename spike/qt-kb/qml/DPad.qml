@@ -69,7 +69,7 @@ Item {
 
                 ShapePath {
                     strokeWidth: -1
-                    fillColor: hit.pressed ? Qt.tint(arrow.base, pad.lk.palette.press)
+                    fillColor: hit.pressed ? Qt.tint(arrow.base, pad.lk.common.press)
                         : hit.containsMouse ? Qt.tint(arrow.base, pad.lk.palette.hover) : arrow.base
                     startX: pad.r + arrow.q[0] * pad.g
                     startY: pad.r + arrow.q[1] * pad.g

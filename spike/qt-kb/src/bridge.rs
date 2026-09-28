@@ -29,8 +29,6 @@ pub mod qobject {
     extern "RustQt" {
         #[qobject]
         #[qml_element]
-        #[qproperty(f32, gap_px, READ, CONSTANT)]
-        #[qproperty(f32, font_px, READ, CONSTANT)]
         #[qproperty(i32, guard_delay_ms, READ, CONSTANT)]
         #[qproperty(i32, relabel_ms, READ, CONSTANT)]
         #[qproperty(QString, title, READ, CONSTANT)]
@@ -100,8 +98,6 @@ pub fn themes() -> &'static Themes {
 
 /// Rust side of `Keyboard`.
 pub struct KeyboardRust {
-    gap_px: f32,
-    font_px: f32,
     guard_delay_ms: i32,
     relabel_ms: i32,
     title: QString,
@@ -126,8 +122,6 @@ impl Default for KeyboardRust {
         let kb = &start.cfg.keyboard;
         let keys = kbgeom::board(&start.cfg.layout, 0.0, 1.0).keys.len();
         Self {
-            gap_px: kb.gap_px,
-            font_px: kb.font_px,
             guard_delay_ms: ms(kb.guard_delay_ms),
             relabel_ms: ms(kb.relabel_ms),
             title: QString::from(&start.cfg.title(FACE)),

@@ -60,8 +60,8 @@ Window {
     Extras {
         id: ex
         logical: win.logical
-        fontPx: kb.fontPx
-        pad: kb.gapPx
+        lk: win.lk
+        res: win.res
         onNote: text => win.say(text)
     }
     // Not owned by the keyboard: Qt shows no owned window while its owner is hidden, and the bubble needs tips too.

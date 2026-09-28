@@ -9,7 +9,7 @@ const URI: &str = "KeyXtend.Spike";
 /// The window, as a file of the QML module.
 const MAIN_QML: &str = "qml/main.qml";
 /// The other QML files: the keyboard window, its shadow, bubble, mover and parts, then the extras: pill, snip overlay and caption bar.
-const PARTS_QML: [&str; 21] = [
+const PARTS_QML: [&str; 20] = [
     "qml/KbWindow.qml",
     "qml/Glow.qml",
     "qml/Bubble.qml",
@@ -27,7 +27,6 @@ const PARTS_QML: [&str; 21] = [
     "qml/ThemeStrip.qml",
     "qml/Tip.qml",
     "qml/Extras.qml",
-    "qml/Cap.qml",
     "qml/Pill.qml",
     "qml/Overlay.qml",
     "qml/Caption.qml",

@@ -73,6 +73,40 @@ gap_px = 6.0
 # Hairlines in pop_line (mock-up 1px borders): panel and tooltip edges, the corner's rim, dividers; not scaled.
 px = 1.0
 
+[pill]
+# The Copy pill (mock-up .selpill): padding, button side padding, text size and weight; its height is tools.pill_px.
+pad_px = 3.0
+button_side_px = 11.0
+font_px = 12.0
+weight = 600
+
+[caption]
+# The caption bar (mock-up .capbar): status padding (top and bottom, left, right), padding around words (.done),
+# dot-to-status gap (.st), status text size and weight, words size (Latin, Arabic), recording dot,
+# status bar height (6 + the 26 px wave + 6), radius around words (.done).
+pad_px = [6.0, 14.0, 8.0]
+words_pad_px = 10.0
+gap_px = 6.0
+status_px = 12.5
+status_weight = 600
+words_px = [14.0, 15.0]
+dot_px = 8.0
+bar_px = 38.0
+words_radius_px = 14.0
+
+[snip]
+# The snip overlay (mock-up .snip-rect .dims, .snip-bar, .hintx): size tag text size, weight, padding, radius and
+# gap above the region; hint bar gap from the top, padding (3 around 28 px buttons, here text only), radius, text size.
+tag_px = 11.0
+tag_weight = 500
+tag_pad_px = [2.0, 6.0]
+tag_radius_px = 4.0
+tag_gap_px = 22.0
+bar_top_px = 10.0
+bar_pad_px = [8.0, 9.0]
+bar_radius_px = 9.0
+hint_px = 11.0
+
 [extra]
 # The resize corner (diameter, icon; not in the mock-up), the bubble (diameter, icon, inset from the screen corner; mock-up .kb-bubble),
 # and the test strip (height, gap above, padding, text size).
