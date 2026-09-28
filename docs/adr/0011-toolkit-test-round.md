@@ -1,7 +1,7 @@
 # 11. Choose the UI toolkit by a measured test round
 
 - **Date:** 2026-09-26
-- **Status:** Accepted (the process). The winner is recorded under Results. If Qt wins, ADR-0012 supersedes ADR-0002.
+- **Status:** Accepted (the process). Result in ADR-0013 (Qt). The "No leftovers" rule for code is superseded by ADR-0014.
 
 ## Context
 

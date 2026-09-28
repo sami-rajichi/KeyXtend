@@ -36,7 +36,7 @@ max_file_lines = 400
 # A source file over this many lines warns.
 warn_file_lines = 300
 # File extensions the size rule scans.
-extensions = ["rs", "slint", "qml"]
+extensions = ["rs", "qml"]
 # Directories tidy scans for source files.
 scan_dirs = ["apps", "crates", "xtask"]
 # Directories tidy never scans.

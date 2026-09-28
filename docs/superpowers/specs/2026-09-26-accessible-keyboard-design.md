@@ -129,14 +129,14 @@ References: Material dark-theme guidance, GitHub "Dark dimmed".
 
 - Light, dark, or **follow system** can be chosen in Settings or from the keyboard's sun/moon button.
 - Icons: **Lucide** (ISC). The icons are platform-specific: the Windows logo on Windows, ⌘⌥⌃ on macOS, "Super" on Linux.
-- Exact colour tokens live in the mock-up file (`design/keyboard-style-lab.html`, CSS `[data-style][data-mode]` blocks) and move to `ui/theme.slint`.
+- Exact colour tokens come from the mock-up file (`design/keyboard-style-lab.html`, CSS `[data-style][data-mode]` blocks) and live in `themes.toml`, with shared sizes in `shape.toml` and motion in `motion.toml` (ADR-0013).
 
 ### 3.6 Languages of the UI
 
-- The keyboard's own UI text (settings, tooltips) is translatable from day one (Slint `@tr`).
+- The keyboard's own UI text (settings, tooltips) is translatable from day one, from one translation file per language.
 - v1 ships EN, FR and AR, including right-to-left layout of the settings window for Arabic.
-- Slint has no automatic RTL mirroring (#2294), so we mirror by hand with a `Dir.rtl` global.
-- Slint's in-app Arabic text *editing* has a known caret bug (#7841). Our UI therefore prefers pickers and steppers over text fields. Typing into *other* apps is unaffected.
+- Qt mirrors layouts for right-to-left (`LayoutMirroring`) and edits Arabic text with a correct caret (gate G7, ADR-0013).
+- Our UI still prefers pickers and steppers over text fields, since they need fewer clicks.
 
 ---
 
@@ -245,15 +245,15 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two level dots show the current speed.
 - Tapping another direction switches direction at slow speed.
 - **Target:** the scrollable thing under the pointer, including long text fields and our own panel lists. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**. The target gets a subtle outline.
-- **Windows mechanism, in priority order** (to be proven in the spike):
+- **Windows mechanism, in priority order** (proven by gate G6, ADR-0013):
   1. UI Automation `ScrollPattern` on the element at the target point.
   2. `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` posted to the window at the target point.
   3. `SendInput` wheel events, when the pointer itself is on the target.
 
 ### 5.3 Overlays
 
-- The ring, burst and mode badge are drawn in **one native click-through overlay window**: `WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOPMOST`.
-- It is painted with tiny-skia and `UpdateLayeredWindow` by the platform adapter, not by Slint, whose transparent and click-through windows have open bugs (ADR-0002).
+- The ring, burst and mode badge are drawn in **one click-through Qt window** that never takes focus (`Qt.WindowTransparentForInput`, guarded by the Windows adapter).
+- Gate G12 proved it: 200 of 200 clicks under the ring reached the app, at the screen's full rate (ADR-0013).
 - It is updated only while something is animating.
 
 ---
@@ -370,6 +370,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
   - the strip never takes focus; its "All settings" button opens the full window below;
   - it shows only when asked, never all the time.
 - A normal window, not on top of everything, and never needing scrolling: tabbed pages with paged lists and −/+ steppers.
+- It has its own icon, speaks the keyboard's language, and carries each theme's character (colours, shadows, motion) as strongly as the keyboard does (owner, 2026-09-29).
 - **Contains:**
   - theme and mode, size and "Reset size", bubble corner;
   - language key design, modifier behaviour;
@@ -417,7 +418,7 @@ uiAccess is used only for genuine accessibility features, as Microsoft's rules r
 
 ---
 
-## 10. Performance budgets (targets; measured in the Phase 1 test round, then enforced in CI where possible)
+## 10. Performance budgets (targets; measured from P3 on as gate G8, then enforced in CI where possible)
 
 Measured on the development PC and in weak mode (2 cores at a low CPU rate, 4 GB, software rendering). Weak mode must meet every target except cold start, which may take up to 1 s there.
 
@@ -439,9 +440,9 @@ Measured on the development PC and in weak mode (2 cores at a low CPU rate, 4 GB
 
 The full design is in `ARCHITECTURE.md`; the reasons are in `docs/adr/`.
 
-- **Rust** core. The UI toolkit is chosen by the Phase 1 test round: Qt 6 Quick (recommended) or Slint (ADR-0011; ADR-0002 applies until then).
+- **Rust** core; every window is drawn with **Qt 6 Quick** (QML) through cxx-qt (ADR-0013).
 - **Main process `keyxtend` (uiAccess, signed, installed in Program Files):**
-  - Slint UI, kernel and trusted modules: keyboard, layouts, input, mouse assist, scroll, prediction, overlays, vault UI.
+  - Qt UI, kernel and trusted modules: keyboard, layouts, input, mouse assist, scroll, prediction, overlays, vault UI.
   - **No network. No parsing of untrusted media.** (ADR-0003)
 - **Worker processes (normal rights):** voice (mic + network), OCR, media thumbnails, and the update check. They talk to the main process over an authenticated local pipe with a versioned schema (ADR-0004).
 - **Micro-kernel with "Lego" modules** (ADR-0005), inspired by DeepSeek Harness/Cordis:
@@ -453,7 +454,7 @@ The full design is in `ARCHITECTURE.md`; the reasons are in `docs/adr/`.
 ## 12. Testing strategy (summary; details in CONTRIBUTING.md)
 
 - **Pure logic:** unit tests plus property tests (proptest) for the keyboard state machine, hold engine, scroll controller, prediction and retention policy. A fake clock is injected for all timers.
-- **UI:** the Slint testing backend (finds elements by accessible label; pin its version exactly).
+- **UI:** Qt Quick Test (`qmltestrunner`), finding controls by accessible name; the Windows gate runner (`tools/kx-gates`) drives the real app.
 - **Platform:** a fake adapter for integration tests. On Windows CI, a tiny **test target window** records every character it receives, to prove no lost or garbled characters in EN/FR/AR.
 - **Fuzzing (cargo-fuzz):** IPC message decoding, vault file parsing, clipboard format parsing.
 - **Manual:** a Windows checklist for things CI cannot do (uiAccess z-order, admin windows, real apps), recorded in `docs/test-reports/`.
@@ -478,12 +479,12 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27. They are numbere
 |---|---|---|
 | D1 | Product name and crate prefix | **Decided:** KeyXtend, crates `kx-*`, binaries `keyxtend.exe` / `keyxtend-worker.exe` |
 | D2 | Licence | **Decided for now:** open source, GPL-3.0-or-later; revisit before v1.0 (ADR-0006) |
-| D3 | Type into admin/elevated windows | Yes, like osk.exe. The spike verifies that uiAccess allows it |
+| D3 | Type into admin/elevated windows | **Decided:** yes, like osk.exe; gate G4 showed uiAccess is enough (ADR-0013) |
 | D4 | Vault unlock | OS verification (Windows Hello/PIN), with an optional master password |
 | D5 | Updates | Notify only, never auto-install; the user downloads a signed release |
 | D6 | Plugins | Built-in modules only in v1 |
 | D7 | Which §13 features to schedule, and in what order | **Decided:** all, after v1.0, one by one from `docs/FEATURES.md` |
 | D8 | Installer technology | **Decided:** Inno Setup 7 (ADR-0012) |
-| D9 | UI toolkit | The Phase 1 test round decides (ADR-0011). Qt 6 Quick recommended; Tauri rejected on evidence |
+| D9 | UI toolkit | **Decided:** Qt 6 Quick with a Rust core (ADR-0013); Slint dropped, Tauri rejected on evidence |
 | D10 | Native Adaptive accent colour | **Decided (changed 2026-09-28):** the theme's own blue; following the system accent is a setting, off by default |
 | D11 | Linux Wayland limits | **Decided:** desktop built-ins first; the GNOME extension and the mouse helper are opt-in |

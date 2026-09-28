@@ -14,3 +14,5 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - ADR-0012, recording the Inno Setup 7 installer decision.
 - A README that describes the product, who it is for and how it differs.
 - `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, for signed uiAccess test builds.
+- ADR-0013: Qt 6 Quick with a Rust core draws every window, with the toolkit test round's results.
+- ADR-0014 and `docs/spike-move-map.md`: the tested test-round code moves into the product, phase by phase.

@@ -1,7 +1,7 @@
 # 6. Licence: GPL-3.0-or-later for the app
 
 - **Date:** 2026-09-26
-- **Status:** Accepted for now (2026-09-26). Revisit before v1.0.
+- **Status:** Accepted for now (2026-09-26). Revisit before v1.0. Its Slint notes are superseded by ADR-0013 (Qt, LGPL-3.0 DLLs).
 
 ## Context
 - The project is published on GitHub for anyone to use.

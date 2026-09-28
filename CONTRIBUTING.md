@@ -10,10 +10,10 @@ We welcome issues, ideas and test reports. Until the long-term licence is final 
 - For a new feature, open an issue first. Large changes need an ADR (`docs/adr/`).
 
 ## Rules
-- **Tests first.** Logic is tested without the OS, using `kx-platform-fake` and an injected clock. UI is tested with Slint's testing backend.
+- **Tests first.** Logic is tested without the OS, using `kx-platform-fake` and an injected clock. UI is tested with Qt Quick Test (`qmltestrunner`), finding controls by accessible name.
 - The required checks are the jobs in `.github/workflows/ci.yml`; run the same commands locally before you push.
 - `cargo xtask dco <base> <head>` checks every commit in that range carries a DCO sign-off.
-- No `unsafe` outside `crates/kx-platform-*`.
+- No `unsafe` outside `crates/kx-platform-*`, except cxx-qt bridge blocks in `kx-ui/src/bridges/` and the test tools in `tools/` (ADR-0013, ADR-0014).
 - Never log typed text, clipboard data, passwords or transcripts.
 - UI never needs scrolling, dragging or right-click. Lists are paged, 5 rows per page.
 - New dependencies must have a licence compatible with GPL-3.0-or-later (see `deny.toml`). Data, fonts and models go in `THIRD_PARTY.md`.

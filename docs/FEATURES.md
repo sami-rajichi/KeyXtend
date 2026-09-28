@@ -11,8 +11,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | # | What | Status |
 |---|---|---|
 | P0 | Foundation: repo, CI, rules, licence files | Done (v0.0.0) |
-| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G26, ADR-0011) | In progress |
-| P2 | Kernel and module system | Waiting |
+| P1 | Toolkit test round: Qt vs Slint, quick Tauri check; prove the risky parts (gates G1–G26). Qt chosen (ADR-0013); the tested code moves into P2–P13 (ADR-0014) | Done (2026-09-29) |
+| P2 | Kernel and module system; moves in the test tools and helpers, with the settings loader and clock as models | Ready |
 | P3 | Keyboard core: typing EN/FR/AR, modifiers, Native theme, window | Waiting |
 | P4 | Mouse assist: Right-click hold, Grab, ring and sounds | Waiting |
 | P5 | Scroll pad | Waiting |

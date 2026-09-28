@@ -16,7 +16,7 @@
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
-| Test certificate private key | Secret | Windows user key store, non-exportable | By Windows | 90 days, or until `dev-cert --remove` at the end of P1 |
+| Test certificate private key | Secret | Windows user key store, non-exportable | By Windows | 90 days, or until `dev-cert --remove` when the owner decides (ADR-0014) |
 | Exported certificate, launchers, admin error file | Public | `target/dev-tools/` | No | Until `target/` is cleaned |
 | Extracted manifest | Public | `target/dev-tools/` | No | Deleted after each check |
 
@@ -40,7 +40,7 @@
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
   - An elevated folder delete could hit the wrong folder. Mitigation: `dev-admin.ps1` checks every argument before the Windows prompt, and only touches a direct child of `Program Files\<install dir>`; `install_dir` must be a plain name.
   - Untrust could remove someone else's root. Mitigation: it removes only roots with our subject **and** a thumbprint from our own list.
-  - Program files signed with the test key would show a verified publisher on this PC. Mitigation: the trust is removed at the end of P1 (`dev-cert --remove` plus the untrust launcher).
+  - Program files signed with the test key would show a verified publisher on this PC. Mitigation: the trust is removed when the owner decides, at the latest when the certificate expires (`dev-cert --remove` plus the untrust launcher; ADR-0014).
 
 ## Findings
 ### Must fix (blocks Definition of Done)

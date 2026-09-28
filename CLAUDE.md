@@ -1,6 +1,6 @@
 # Project rules for agents
 
-This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, written in Rust, Windows first. The UI toolkit (Qt 6 or Slint) is chosen by the Phase 1 test round (ADR-0011). Read these before doing anything:
+This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, written in Rust, Windows first. Every window is Qt 6 Quick (QML) over a Rust core through cxx-qt (ADR-0013). The tested P1 code moves into the product phase by phase (ADR-0014, `docs/spike-move-map.md`). Read these before doing anything:
 
 1. `docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md`: what we build.
 2. `ARCHITECTURE.md`: where things are, and the invariants.
@@ -54,12 +54,12 @@ This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, w
 
 ## Never do this (invariants; `cargo xtask tidy` enforces most of them)
 
-- Add `unsafe` outside `kx-platform-*`. Every `unsafe` block needs a `// SAFETY:` comment.
+- Add `unsafe` outside `kx-platform-*`, except cxx-qt bridge blocks in `kx-ui/src/bridges/` and the test tools in `tools/` (ADR-0013, ADR-0014). Every `unsafe` block needs a `// SAFETY:` comment.
 - Let a `kx-mod-*` crate depend on another module, on the kernel or on a platform crate.
 - Add network, TLS or media-decoding crates to the `keyxtend` app. They belong in `keyxtend-worker` only (ADR-0004).
 - Log typed text, clipboard content, secrets or transcripts. Use `Redacted<T>`.
 - Build UI that needs scrolling, dragging, sliders or right-click (ADR-0008). Lists are paged, 5 rows per page.
-- Call Slint `bring_to_front()`, or set window size and position outside Slint's API (ADR-0002).
+- Call `requestActivate()` on a no-focus window, or drop the window guard or the `Qt.WindowDoesNotAcceptFocus` flag (ADR-0013).
 - Take focus from the target app. Every window we own is non-activating, except Settings.
 - Send dictated text, clipboard data or anything else to the network unless the user turned that feature on.
 - Ship API keys, or add telemetry.
