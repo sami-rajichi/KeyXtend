@@ -244,6 +244,25 @@ pub fn rect(hwnd: HWND) -> Result<RECT, String> {
     Ok(r)
 }
 
+/// The seen window on top over `w`'s box, going by z-order; it finds click-through windows, which `root_at` skips.
+pub fn over(w: HWND) -> Option<HWND> {
+    let r = rect(w).ok()?;
+    let boxes = seen_windows()
+        .into_iter()
+        .filter_map(|h| rect(h).ok().map(|b| (key(h), b)));
+    first_over(boxes, &r).map(spike_core::window::from_raw)
+}
+
+/// The first window in `front_first` whose box overlaps `r`.
+fn first_over(front_first: impl IntoIterator<Item = (isize, RECT)>, r: &RECT) -> Option<isize> {
+    let overlaps =
+        |b: &RECT| b.left < r.right && r.left < b.right && b.top < r.bottom && r.top < b.bottom;
+    front_first
+        .into_iter()
+        .find(|(_, b)| overlaps(b))
+        .map(|(k, _)| k)
+}
+
 /// Asks `hwnd` to close.
 pub fn close(hwnd: HWND) -> Result<(), String> {
     // SAFETY: posting a message to any window handle is allowed; bad handles give an error.
@@ -275,6 +294,29 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_first_window_over_a_box_is_the_one_on_top_there() {
+        let bx = |left, top, right, bottom| RECT {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        let target = bx(100, 100, 200, 150);
+        let list = [
+            (1, bx(0, 0, 50, 50)),
+            (2, bx(150, 140, 300, 300)),
+            (3, target),
+        ];
+        assert_eq!(first_over(list, &target), Some(2), "a corner is enough");
+        let beside = [(1, bx(200, 100, 300, 150)), (3, target)];
+        assert_eq!(
+            first_over(beside, &target),
+            Some(3),
+            "touching edges do not overlap"
+        );
+    }
 
     #[test]
     fn poll_until_returns_the_first_value_at_once() {

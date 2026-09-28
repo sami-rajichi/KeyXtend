@@ -1,14 +1,12 @@
 //! Quick-fill: after Windows Hello says yes, types a fake test value into the app that was in front.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::com::Com;
 use crate::config::SpikeConfig;
 use crate::hello::{self, Answer};
+use crate::note::{self, Note};
 use crate::{inject, window};
-
-/// The latest fill note, for the UI to show on its next tick.
-pub type Note = Arc<Mutex<Option<String>>>;
 
 /// Starts every fill note that carries an error.
 const NOTE_PREFIX: &str = "fill: ";
@@ -42,13 +40,8 @@ struct Fill {
 }
 
 /// Runs `f` on its own thread, so the UI never waits for Hello; the result lands in `note`.
-fn spawn(f: Fill, note: Note) {
-    std::thread::spawn(move || {
-        let said = run(&f);
-        if let Ok(mut n) = note.lock() {
-            *n = Some(said);
-        }
-    });
+fn spawn(f: Fill, slot: Note) {
+    std::thread::spawn(move || note::put(&slot, run(&f)));
 }
 
 /// Starts a fill of `value` into the app in front, with Hello's prompt owned by `face`'s window; returns the note to show now.
@@ -65,11 +58,6 @@ pub fn start(cfg: &SpikeConfig, face: &str, value: String, note: &Note) -> &'sta
     };
     spawn(f, Arc::clone(note));
     ASKING
-}
-
-/// Takes the latest note, if there is one.
-pub fn take(note: &Note) -> Option<String> {
-    note.lock().ok().and_then(|mut n| n.take())
 }
 
 /// Ok means type now; otherwise the note says why not. `back` runs only after Verified.
@@ -123,13 +111,5 @@ mod tests {
         assert_eq!(decide(Answer::Canceled, back), Err(CANCELED));
         assert_eq!(decide(Answer::Unavailable, back), Err(UNAVAILABLE));
         assert!(!asked.get(), "focus is only moved after Verified");
-    }
-
-    #[test]
-    fn a_note_is_taken_once() {
-        let note: Note = Arc::default();
-        *note.lock().expect("lock") = Some("x".into());
-        assert_eq!(take(&note).as_deref(), Some("x"));
-        assert_eq!(take(&note), None);
     }
 }

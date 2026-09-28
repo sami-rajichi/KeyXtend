@@ -8,10 +8,15 @@ use embed_manifest::{embed_manifest, new_manifest};
 const URI: &str = "KeyXtend.Spike";
 /// The window, as a file of the QML module.
 const MAIN_QML: &str = "qml/main.qml";
-/// The other QML files: a clickable cap, the selection pill and the snip overlay.
-const PARTS_QML: [&str; 3] = ["qml/Cap.qml", "qml/Pill.qml", "qml/Overlay.qml"];
+/// The other QML files: a clickable cap, the selection pill, the snip overlay and the caption bar.
+const PARTS_QML: [&str; 4] = [
+    "qml/Cap.qml",
+    "qml/Pill.qml",
+    "qml/Overlay.qml",
+    "qml/Caption.qml",
+];
 /// The Rust files holding cxx-qt bridges.
-const BRIDGES: [&str; 2] = ["src/bridge.rs", "src/tools.rs"];
+const BRIDGES: [&str; 3] = ["src/bridge.rs", "src/tools.rs", "src/voice.rs"];
 /// Identity name in the manifest.
 const MANIFEST_NAME: &str = "KeyXtend.Spike.Qt";
 /// Only this profile asks for uiAccess; unsigned debug builds would be refused.

@@ -1,23 +1,52 @@
 //! Keeps our windows on top and never focused, like osk.exe.
 
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GWL_EXSTYLE, GetForegroundWindow, GetWindowLongPtrW, GetWindowTextW,
-    GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, MA_NOACTIVATE, STYLESTRUCT,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos,
-    WINDOWPOS, WM_MOUSEACTIVATE, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, LWA_ALPHA, MA_NOACTIVATE, STYLESTRUCT,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetForegroundWindow, SetLayeredWindowAttributes,
+    SetWindowLongPtrW, SetWindowPos, WINDOWPOS, WM_MOUSEACTIVATE, WM_STYLECHANGING,
+    WM_WINDOWPOSCHANGING, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    WS_EX_TRANSPARENT,
 };
 use windows::core::BOOL;
 
 /// Our subclass id on each guarded window.
 const GUARD_ID: usize = 0x4B58;
+/// Alpha of a fully opaque layered window.
+const OPAQUE: u8 = u8::MAX;
 
 /// Extended styles every keyboard window keeps.
 fn wanted() -> u32 {
     (WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW).0
+}
+
+/// Extended styles that let clicks pass through a window to the app below.
+fn through() -> u32 {
+    (WS_EX_LAYERED | WS_EX_TRANSPARENT).0
+}
+
+/// The extended style a guarded window may take: ours always, and click-through once it was set.
+fn kept_ex(old: u32, new: u32) -> u32 {
+    let keep = old & through() == through();
+    new | wanted() | if keep { through() } else { 0 }
+}
+
+/// Lets clicks pass through our visible window `title_is`; false when it is not visible yet.
+pub fn click_through(title_is: &str) -> Result<bool, String> {
+    let Some(hwnd) = own_titled(title_is) else {
+        return Ok(false);
+    };
+    // SAFETY: `hwnd` is one of our own live windows; a layered window shows only once its alpha is set.
+    unsafe {
+        let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | through() as isize);
+        SetLayeredWindowAttributes(hwnd, COLORREF(0), OPAQUE, LWA_ALPHA)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(true)
 }
 
 /// Makes `hwnd` non-activating and topmost, and keeps it that way.
@@ -52,7 +81,8 @@ unsafe extern "system" fn guard_proc(
         }
         WM_STYLECHANGING if wparam.0 as i32 == GWL_EXSTYLE.0 => {
             // SAFETY: for WM_STYLECHANGING, lparam points to a live STYLESTRUCT.
-            unsafe { (*(lparam.0 as *mut STYLESTRUCT)).styleNew |= wanted() };
+            let s = unsafe { &mut *(lparam.0 as *mut STYLESTRUCT) };
+            s.styleNew = kept_ex(s.styleOld, s.styleNew);
         }
         _ => {}
     }
@@ -170,6 +200,23 @@ mod tests {
     #[test]
     fn guarding_goes_back_to_front_so_the_front_window_stays_in_front() {
         assert_eq!(guard_order(vec![3, 2, 1], |_| false), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn a_click_through_window_stays_click_through() {
+        let through = through();
+        assert_eq!(kept_ex(through, 0), wanted() | through);
+        assert_eq!(kept_ex(0, 0), wanted(), "other windows keep taking clicks");
+        assert_eq!(
+            kept_ex(WS_EX_LAYERED.0, 0),
+            wanted(),
+            "layered alone is not click-through"
+        );
+        assert_eq!(
+            kept_ex(WS_EX_TRANSPARENT.0, 0),
+            wanted(),
+            "transparent alone never makes a window layered"
+        );
     }
 
     #[test]

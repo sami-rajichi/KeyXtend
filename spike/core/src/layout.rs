@@ -38,6 +38,14 @@ pub struct KeyCap {
     pub place: Place,
 }
 
+/// Bits of a layout handle that hold its language id.
+const LANG_MASK: isize = 0xFFFF;
+
+/// The language id (LANGID) of layout handle `hkl`: its low word.
+pub fn lang_id(hkl: isize) -> u16 {
+    (hkl & LANG_MASK) as u16
+}
+
 /// The layout of the app in front, which is where our keys go.
 pub fn foreground_layout() -> HKL {
     // SAFETY: plain queries; a null window gives thread 0, which means the calling thread.
@@ -170,6 +178,12 @@ pub fn width(cfg: &KeyboardConfig, code: u32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_language_id_is_the_low_word_of_a_layout() {
+        assert_eq!(lang_id(0x0409_0409), 0x0409);
+        assert_eq!(lang_id(0xF0A8_1C01_u32 as i32 as isize), 0x1C01);
+    }
 
     #[test]
     fn printable_means_a_visible_character() {

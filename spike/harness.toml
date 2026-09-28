@@ -314,3 +314,27 @@ panel_classes = ["Shell_LightDismissOverlay", "ApplicationFrameWindow"]
 win_v = [0x5B, 0x56]
 esc = [0x1B]
 alt_tab = [0x12, 0x09]
+
+[g22]
+# Read aloud, one per Mic press, in this order; Notepad switches to each layout (LANGID) first.
+sentences = [
+    { layout = "0409", text = "Please open the file and send it to me tomorrow." },
+    { layout = "040C", text = "Merci d'ouvrir le fichier et de me l'envoyer demain." },
+    { layout = "1C01", text = "من فضلك افتح الملف وأرسله لي غدًا." },
+]
+# How long the Mic stays on for each sentence, the longest wait for the words, and the pause between sentences, in ms.
+record_ms = 8000
+text_wait_ms = 90000
+pause_ms = 3000
+# How long a failed Mic stop click is retried, in ms; record_ms plus this must stay below voice.record_max_s.
+stop_wait_ms = 5000
+# Longest document text read back, in characters.
+max_chars = 4000
+# Folder under TEMP where the face's worker keeps the clips: start the face with its keep switch and this folder.
+clips = "kx-spike-clips"
+# Folder of the staged worker the bench starts, relative to this file; the exe name and spike.toml come from there.
+worker_dir = "../target/spike-stage/slint-kb"
+# Longest wait for the bench worker to load or answer, in ms.
+answer_wait_ms = 120000
+# Gaps between typed characters the typing check tries, in ms; 0 types each sentence in one batch.
+type_gaps_ms = [0, 2, 10]

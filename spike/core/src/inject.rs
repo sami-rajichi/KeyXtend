@@ -59,18 +59,43 @@ pub fn tap_scan(code: u32) -> Result<(), String> {
     send(&[key(scan, flags), key(scan, flags | KEYEVENTF_KEYUP)])
 }
 
-/// Types `text` as Unicode characters, whatever the target's layout.
+/// Types `text` as Unicode characters in one batch, whatever the target's layout.
 pub fn text(text: &str) -> Result<(), String> {
-    let inputs: Vec<INPUT> = text
-        .encode_utf16()
+    send(&unicode(text.encode_utf16()))
+}
+
+/// Types `text` one character at a time, `gap_ms` apart, for apps that drop a fast batch; 0 types one batch.
+/// It blocks for about `gap_ms` per character, so call it off the UI thread.
+pub fn text_paced(text: &str, gap_ms: u64) -> Result<(), String> {
+    if gap_ms == 0 {
+        return self::text(text);
+    }
+    for units in char_units(text) {
+        send(&unicode(units))?;
+        std::thread::sleep(std::time::Duration::from_millis(gap_ms));
+    }
+    Ok(())
+}
+
+/// The UTF-16 units of each character, so a surrogate pair is never split.
+fn char_units(text: &str) -> Vec<Vec<u16>> {
+    let mut buf = [0u16; 2];
+    text.chars()
+        .map(|c| c.encode_utf16(&mut buf).to_vec())
+        .collect()
+}
+
+/// A press and a release for each UTF-16 unit.
+fn unicode(units: impl IntoIterator<Item = u16>) -> Vec<INPUT> {
+    units
+        .into_iter()
         .flat_map(|unit| {
             [
                 key(unit, KEYEVENTF_UNICODE),
                 key(unit, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
             ]
         })
-        .collect();
-    send(&inputs)
+        .collect()
 }
 
 /// One virtual-key press or release, tagged as ours.
@@ -113,6 +138,15 @@ pub fn send(inputs: &[INPUT]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paced_typing_keeps_each_character_whole() {
+        assert_eq!(
+            char_units("aب😀"),
+            vec![vec![0x61], vec![0x0628], vec![0xD83D, 0xDE00]]
+        );
+        assert!(char_units("").is_empty());
+    }
 
     #[test]
     fn a_combo_presses_in_order_and_releases_in_reverse() {

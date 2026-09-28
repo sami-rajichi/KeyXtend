@@ -20,6 +20,8 @@ pub struct SpikeConfig {
     pub target: TargetConfig,
     /// The tools row, the selection pill, quick-fill and snip.
     pub tools: ToolsConfig,
+    /// Voice: the worker, its engines and the caption bar.
+    pub voice: crate::voicecfg::VoiceConfig,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -68,7 +70,7 @@ pub struct TargetConfig {
 }
 
 /// Bytes in one MiB.
-const MIB: usize = 1 << 20;
+pub const MIB: usize = 1 << 20;
 
 /// The tools row, the selection pill, quick-fill and snip (stage 1b).
 #[derive(Debug, Clone, Deserialize)]
@@ -112,6 +114,8 @@ pub struct ToolLabels {
     pub fill_password: String,
     /// Starts a snip.
     pub snip: String,
+    /// Starts and stops recording.
+    pub mic: String,
     /// The pill's copy button.
     pub copy: String,
 }
@@ -125,11 +129,13 @@ pub enum ToolButton {
     FillPassword,
     /// Starts a snip.
     Snip,
+    /// Starts and stops recording.
+    Mic,
 }
 
 impl ToolButton {
     /// Every button, in row order.
-    pub const ALL: [ToolButton; 3] = [Self::FillUser, Self::FillPassword, Self::Snip];
+    pub const ALL: [ToolButton; 4] = [Self::FillUser, Self::FillPassword, Self::Snip, Self::Mic];
 
     /// The button at row position `i`.
     pub fn at(i: usize) -> Option<ToolButton> {
@@ -152,6 +158,7 @@ impl ToolLabels {
             ToolButton::FillUser => &self.fill_user,
             ToolButton::FillPassword => &self.fill_password,
             ToolButton::Snip => &self.snip,
+            ToolButton::Mic => &self.mic,
         }
     }
 }
@@ -229,6 +236,12 @@ mod tests {
     fn spike_toml_loads_the_tools() {
         let cfg = load().expect("spike.toml loads");
         assert_eq!(cfg.tools.labels.of(ToolButton::Snip), cfg.tools.labels.snip);
+        assert_eq!(cfg.tools.labels.of(ToolButton::Mic), cfg.tools.labels.mic);
+        assert_eq!(
+            ToolButton::Mic.index(),
+            ToolButton::ALL.len() - 1,
+            "Mic is last"
+        );
         assert!(cfg.tools.selection_poll_ms > 0 && !cfg.tools.copy_keys.is_empty());
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
     }

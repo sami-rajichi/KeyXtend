@@ -15,6 +15,8 @@ $StageDir = 'spike-stage'
 # The dev-install size cap, read from its one source in the root Cargo.toml.
 $LimitFile = Join-Path $RootDir 'Cargo.toml'
 $LimitPattern = '^install_max_mb\s*=\s*(\d+)'
+# The voice worker's exe name, read from its one source in spike.toml; its crate has the same stem.
+$WorkerPattern = '^worker\s*=\s*"([^"]+)"'
 
 # Runs a native tool; throws when it exits non-zero, since cargo logs progress to stderr.
 function Invoke-Tool([string] $What, [scriptblock] $Run) {
@@ -59,6 +61,20 @@ function New-Stage([string] $Face) {
     $stage
 }
 
+# Builds the voice worker in release and copies it into $Stage, next to the face.
+function Add-Worker([string] $Stage) {
+    $hit = Select-String -Path $SettingsFile -Pattern $WorkerPattern
+    if (-not $hit) { throw "worker not found in $SettingsFile" }
+    $exe = $hit[0].Matches[0].Groups[1].Value
+    Push-Location $SpikeDir
+    try {
+        Invoke-Tool 'cargo build worker' { cargo build --release -p ([IO.Path]::GetFileNameWithoutExtension($exe)) }
+    } finally {
+        Pop-Location
+    }
+    Copy-Item (Join-Path $env:CARGO_TARGET_DIR "release\$exe") $Stage
+}
+
 # The dev-install size cap in MB.
 function Get-LimitMb {
     $hit = Select-String -Path $LimitFile -Pattern $LimitPattern
@@ -94,6 +110,7 @@ function Invoke-Stage {
         }
         Build-Face (Join-Path $SpikeDir $Face)
         $stage = New-Stage $Face
+        Add-Worker $stage
         & $Extra $stage
         Write-StageSize $stage
     } finally {

@@ -23,6 +23,10 @@ Window {
 
     Keyboard { id: kb }
     Tools { id: tl }
+    Voice {
+        id: vc
+        onCaption: json => win.caption(json)
+    }
     SystemPalette { id: pal }
 
     // The keys of every row in one list.
@@ -63,6 +67,20 @@ Window {
             say(tl.forgetFrozen());
             say(tl.guard(tl.overlayTitle));
         }
+        if (r.mic)
+            vc.click();
+    }
+
+    // Shows a caption from the voice worker on top of every window, and any note it carries; a note may come alone.
+    function caption(json) {
+        const r = JSON.parse(json);
+        say(r.note);
+        if (r.text === undefined)
+            return;
+        const shown = bar.visible;
+        bar.say(r, logical(r.at[0], r.at[1]));
+        if (!shown)
+            say(tl.guard(bar.title));
     }
 
     // Shows, moves or hides the pill, and shows any new fill note.
@@ -134,6 +152,14 @@ Window {
         label: tl.pillLabel
         fontPx: kb.fontPx
         onCopyClicked: win.say(tl.copy())
+    }
+    Caption {
+        id: bar
+        title: vc.barTitle
+        width: vc.barWidth
+        height: vc.barHeight
+        fontPx: kb.fontPx
+        pad: kb.gapPx
     }
     Overlay {
         id: over

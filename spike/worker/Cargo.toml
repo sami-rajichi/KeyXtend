@@ -1,0 +1,16 @@
+[package]
+name = "worker"
+description = "P1 spike worker: the only process that opens the mic; sends each clip to the local or cloud speech engine."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+spike-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# Microphone capture (WASAPI); Apache-2.0.
+cpal = "0.18"
+# WinHTTP for the local server and the opt-in cloud engine.
+windows = { workspace = true, features = ["Win32_Networking_WinHttp"] }

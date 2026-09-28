@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1: voice probe (G22)
+A worker process now owns the mic, runs whisper.cpp's server once at start (base model, 0.8 s load) and can send clips to Groq whisper-large-v3 when cloud is turned on; both faces got a Mic button and a click-through caption bar. On both faces the bar stayed on top, Notepad kept focus, the words arrived 0.8–1.3 s after Mic stop, and the worker does not inherit uiAccess. Notepad lost most of a sentence typed in one batch, so dictated text is typed 10 ms per character on its own thread; speed against clip length was local 0.14, weak mode 0.36 and cloud 0.08, and base is weak for French and Arabic. A five-part review found about 35 issues, all fixed but two accepted, among them a loopback-only server address and length-capped worker messages.
+
 ## 2026-09-27 — P1: tools row, Copy pill, quick-fill and snip probes (G19 pill, G23, G24)
 Both faces got a tools row (Fill user, Fill password, Snip), a Copy pill beside a selection, Windows Hello quick-fill and a full-screen snip overlay, built on shared spike-core code. On both faces the pill sat within 1 px of its place, left the app's focus alone even right after a click on the keyboard, and copied the line. The snip saved the picked region with 0 differing pixels, and with Hello not set up, Fill typed nothing. Slint needed its unstable winit hook to open windows without focus and a retry to lift a new window above the keyboard (Qt did both itself); a five-part review found about 40 issues, all fixed.
 

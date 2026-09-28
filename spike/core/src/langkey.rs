@@ -7,7 +7,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_INPUTLANGCHANGEREQUEST,
 };
 
-use crate::layout::installed_layouts;
+use crate::layout::{installed_layouts, lang_id};
 
 /// The layout after `cur` in `list`, wrapping and skipping copies of `cur`; `None` when there is none.
 pub fn next_layout(list: &[isize], cur: isize) -> Option<isize> {
@@ -15,6 +15,21 @@ pub fn next_layout(list: &[isize], cur: isize) -> Option<isize> {
     (0..list.len())
         .map(|k| list[(start + k) % list.len()])
         .find(|&l| l != cur)
+}
+
+/// The first layout in `list` for language `id`.
+pub fn layout_for(list: &[isize], id: u16) -> Option<isize> {
+    list.iter().copied().find(|&h| lang_id(h) == id)
+}
+
+/// The installed layouts as raw values, in the system's order.
+fn installed() -> Vec<isize> {
+    installed_layouts().iter().map(|h| h.0 as isize).collect()
+}
+
+/// The installed layout for language `id`, such as 0x040C for French (France).
+pub fn installed_for(id: u16) -> Option<isize> {
+    layout_for(&installed(), id)
 }
 
 /// The window that gets `hwnd`'s keys: the focus of its input queue, which may sit on another thread.
@@ -46,9 +61,8 @@ pub fn layout_of(hwnd: HWND) -> Option<isize> {
 
 /// Asks `hwnd` to switch to the next installed layout; returns the layout asked for.
 pub fn ask_next(hwnd: HWND) -> Result<isize, String> {
-    let list: Vec<isize> = installed_layouts().iter().map(|h| h.0 as isize).collect();
     let cur = layout_of(hwnd).ok_or("the window is gone")?;
-    let next = next_layout(&list, cur).ok_or("only one layout is installed")?;
+    let next = next_layout(&installed(), cur).ok_or("only one layout is installed")?;
     ask(hwnd, next)?;
     Ok(next)
 }
@@ -93,6 +107,12 @@ mod tests {
     fn a_duplicate_of_the_current_layout_is_skipped() {
         assert_eq!(next_layout(&[EN, EN, FR], EN), Some(FR));
         assert_eq!(next_layout(&[EN, EN], EN), None);
+    }
+
+    #[test]
+    fn the_layout_for_a_language_is_found_by_its_id() {
+        assert_eq!(layout_for(&[EN, FR, AR], 0x040C), Some(FR));
+        assert_eq!(layout_for(&[EN, AR], 0x040C), None);
     }
 
     #[test]

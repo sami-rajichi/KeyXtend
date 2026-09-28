@@ -86,21 +86,27 @@ This is the detail of tasks 14–16 of `2026-09-27-phase-1-toolkit-test-round.md
    - *Verify:* `harness g24 <face>` snips a known pattern in target-window, and the saved image equals the harness's own capture at 125 %.
    - **Checkpoint B**, then commit.
 
-**Part C — voice**
-10. **Installs**, each with a yes, `kx-licence-check`, and the C: and D: space noted in `D:\dev\INSTALLED.md`:
-    - crates `cpal` and `whisper-rs`;
-    - the `base` model.
-11. **Worker.** *Files:* `spike/worker`.
-    - *Test first:* the WAV header, resampling to 16 kHz mono, and the JSON line format.
-    - *Implement:* `record` runs until stop or `record_max_s`; `transcribe <lang>` follows.
+**Part C — voice** (revised 2026-09-27 after checkpoint B, with the owner)
+- *Why revised:* `whisper-rs` is Unlicense (not on the allow-list) and needs LLVM on MSVC.
+- *Local engine:* whisper.cpp's own `whisper-server` (build b5130, MIT) runs as the worker's child on 127.0.0.1. It loads the model once at worker start (owner's rule); each clip is one local request.
+- *Cloud engine:* Groq `whisper-large-v3` (OpenAI-style API), off by default, turned on only for the test. The key comes from an environment variable, never from a file in the repo.
+- *HTTP:* WinHTTP through the `windows` crate, in the worker only; no new crates.
+10. **Installs** (done after a yes, SHA-256 checked, in `D:\dev`): crate `cpal`, `whisper-bin-x64.zip` b5130, model `ggml-base.bin`.
+11. **Worker.** *Files:* `spike/worker` (`wav`, `resample`, `proto`, `mic`, `http`, `local`, `cloud`), `core/src/weak.rs`.
+    - *Test first:* the WAV header, downmix and resampling to 16 kHz mono, the JSON line format, the multipart body, the engine choice.
+    - *Implement:* at start the worker launches the server and says `ready`; `record` runs until `stop` or `record_max_s`; the clip goes to the chosen engine; `text` carries the words and the time.
+    - *Weak mode:* the server runs in a job capped by `[g22]` cores, CPU rate and memory.
 12. **Mic and caption bar** in both faces.
-    - Mic starts and stops the worker.
+    - The face starts the worker at launch, so the model is ready before the first click.
+    - Mic starts and stops recording; the language follows the keyboard layout of the app in front (adapter table).
     - The caption bar sits at the bottom centre, never takes focus, and shows Listening, Transcribing, then the text.
     - The text is typed into the field in front.
 13. **G22.** `harness g22 <face>` works with the owner, who speaks one sentence each in English, French and Arabic into Notepad.
-    - Checks: the caption bar never took focus, and the time to text.
-    - `harness g22 bench` re-runs the saved clips in normal and weak mode and reports speed against real time.
+    - Checks: the caption bar never took focus, text arrived, and the time from stop to text.
+    - `harness g22 bench` sends the saved clips to local (normal and weak) and cloud, and reports speed against real time.
     - The clips are deleted after.
+    - *Added in the run:* `harness g22 typing` types the sentences into Notepad at each `type_gaps_ms`; one batch lost most letters, so the faces type at `voice.type_gap_ms` on a typing thread.
+    - *Accuracy:* the owner spoke free words, so base is scored against the cloud text, not the sentences.
     - **Checkpoint C**, then commit and record the numbers.
 
 ## Edge cases (each maps to a test)
@@ -114,6 +120,8 @@ This is the detail of tasks 14–16 of `2026-09-27-phase-1-toolkit-test-round.md
 8. A snip region picked right-to-left or bottom-to-top gives the same box.
 9. A recording longer than `record_max_s` stops by itself; a missing model gives a clear error.
 10. A failed weak-mode job setup is reported, never ignored.
+11. With cloud off, or no key in the environment, the cloud engine is refused before any network call.
+12. A local server that does not become ready, or dies, gives a clear error instead of a hang.
 
 ## Security
 - **Capabilities:**

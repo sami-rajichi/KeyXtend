@@ -4,6 +4,7 @@
 
 mod bridge;
 mod tools;
+mod voice;
 
 use std::pin::Pin;
 use std::sync::Arc;

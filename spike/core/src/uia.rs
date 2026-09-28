@@ -108,6 +108,13 @@ impl Uia {
         self.first(&self.window(hwnd).ok()?, vec![has_text, doc])
     }
 
+    /// The text of the document in window `hwnd`, at most `max` characters; `None` when it cannot be read.
+    pub fn doc_text(&self, hwnd: HWND, max: i32) -> Option<String> {
+        let tp = self.text_of(&self.text(hwnd)?)?;
+        // SAFETY: plain COM calls on live UI Automation objects.
+        unsafe { tp.DocumentRange().ok()?.GetText(max).ok() }.map(|b| b.to_string())
+    }
+
     /// The element that has the keyboard focus, in any app.
     pub fn focused(&self) -> Result<IUIAutomationElement, String> {
         // SAFETY: a plain call.

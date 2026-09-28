@@ -45,6 +45,14 @@ pub fn physical(px: f32, dpi: u32) -> i32 {
     (px * dpi as f32 / USER_DEFAULT_SCREEN_DPI as f32).round() as i32
 }
 
+/// Top-left of a box of `size` centred `gap` above the bottom of `work`; a box wider than `work` starts at its left edge.
+pub fn bottom_centre(work: &RECT, size: (i32, i32), gap: i32) -> Pt {
+    Pt {
+        x: work.left + ((work.right - work.left - size.0) / 2).max(0),
+        y: work.bottom - size.1 - gap,
+    }
+}
+
 /// Where the mouse pointer is, in physical pixels.
 pub fn cursor() -> Result<Pt, String> {
     let mut p = POINT::default();
@@ -56,6 +64,25 @@ pub fn cursor() -> Result<Pt, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_box_sits_centred_above_the_bottom_of_the_work_area() {
+        let work = |left, right, bottom| RECT {
+            left,
+            top: 0,
+            right,
+            bottom,
+        };
+        assert_eq!(
+            bottom_centre(&work(0, 1920, 1040), (900, 70), 30),
+            Pt { x: 510, y: 940 }
+        );
+        let wide = bottom_centre(&work(100, 500, 800), (600, 50), 10);
+        assert_eq!(
+            wide.x, 100,
+            "a box wider than the screen starts at its left edge"
+        );
+    }
 
     #[test]
     fn logical_pixels_scale_with_the_dpi() {

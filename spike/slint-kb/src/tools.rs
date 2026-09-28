@@ -6,25 +6,28 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use slint::{
-    ComponentHandle, Image, ModelRc, PhysicalPosition, PhysicalSize, Rgba8Pixel, SharedPixelBuffer,
-    Timer, TimerMode, VecModel,
+    CloseRequestResponse, ComponentHandle, Image, ModelRc, PhysicalPosition, PhysicalSize,
+    Rgba8Pixel, SharedPixelBuffer, Timer, TimerMode, VecModel,
 };
 use spike_core::config::{SpikeConfig, ToolButton};
-use spike_core::fill::{self, Note};
+use spike_core::fill;
 use spike_core::hold::Pt;
+use spike_core::note::{self, Note};
 use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::Snip;
 use spike_core::{inject, place, window};
 
-use crate::{FACE, Keyboard, Line, Overlay, Pill, Tool};
+use crate::{FACE, Keyboard, Line, Overlay, Pill, Tool, voice};
 
 /// Shown when a window we showed never became visible.
 const NOT_SHOWN: &str = "this window did not show: ";
 
 /// What the tools share between callbacks.
-struct State {
-    cfg: SpikeConfig,
-    line: Line,
+pub(crate) struct State {
+    /// The spike settings.
+    pub(crate) cfg: SpikeConfig,
+    /// The keyboard's status line.
+    pub(crate) line: Line,
     pill: Pill,
     overlay: Overlay,
     /// Where the pill is now, or `None` while it is hidden.
@@ -32,6 +35,8 @@ struct State {
     note: Note,
     /// The snip in progress and the window that was in front when it began.
     snip: RefCell<Option<(Snip, isize)>>,
+    /// The Mic button and the caption bar.
+    pub(crate) voice: voice::Parts,
 }
 
 /// Adds the tools row to `ui` and starts the pill; a watcher that cannot start is reported, not fatal.
@@ -45,9 +50,12 @@ pub fn start(ui: &Keyboard, cfg: &SpikeConfig, line: Line) -> Result<Timer, Stri
         shown: Cell::new(None),
         note: Arc::default(),
         snip: RefCell::new(None),
+        voice: voice::parts(cfg)?,
     });
+    voice::attach(&s);
     ui.set_tools(ModelRc::new(VecModel::from(buttons(cfg))));
     wire(ui, &s);
+    on_close(ui, &s);
     let t = &s.cfg.tools;
     let watch = Watch::start(t.selection_poll_ms, PillPx(t.pill_px))
         .inspect_err(|e| s.line.show(e))
@@ -98,6 +106,7 @@ fn overlay(cfg: &SpikeConfig) -> Result<Overlay, String> {
 }
 
 /// Connects the tool buttons, the pill's Copy and the overlay's clicks.
+/// The state owns the pill and the overlay, so their callbacks hold it weakly.
 fn wire(ui: &Keyboard, s: &Rc<State>) {
     let st = Rc::clone(s);
     ui.on_tool(move |i| {
@@ -106,17 +115,36 @@ fn wire(ui: &Keyboard, s: &Rc<State>) {
             Some(ToolButton::FillUser) => fill_with(&st, t.test_user.clone()),
             Some(ToolButton::FillPassword) => fill_with(&st, t.test_password.clone()),
             Some(ToolButton::Snip) => begin_snip(&st),
+            Some(ToolButton::Mic) => voice::click(&st),
             None => {}
         }
     });
-    let st = Rc::clone(s);
+    let st = Rc::downgrade(s);
     s.pill.on_copy(move || {
-        if let Err(e) = inject::combo(&st.cfg.tools.copy_keys) {
+        if let Some(st) = st.upgrade()
+            && let Err(e) = inject::combo(&st.cfg.tools.copy_keys)
+        {
             st.line.show(&e);
         }
     });
+    let st = Rc::downgrade(s);
+    s.overlay.on_pick(move || {
+        if let Some(st) = st.upgrade() {
+            pick(&st);
+        }
+    });
+}
+
+/// Closing the keyboard stops voice and ends the app, even while a tool window is up.
+fn on_close(ui: &Keyboard, s: &Rc<State>) {
     let st = Rc::clone(s);
-    s.overlay.on_pick(move || pick(&st));
+    ui.window().on_close_requested(move || {
+        voice::stop(&st);
+        if let Err(e) = slint::quit_event_loop() {
+            st.line.show(&e.to_string());
+        }
+        CloseRequestResponse::HideWindow
+    });
 }
 
 /// Moves, shows or hides the pill, and shows the latest fill note.
@@ -137,7 +165,7 @@ fn tick(s: &Rc<State>, watch: Option<&Watch>) {
         PillStep::Hide if done(&s.line, s.pill.hide()) => s.shown.set(None),
         PillStep::Hide | PillStep::Stay => {}
     }
-    if let Some(n) = fill::take(&s.note) {
+    if let Some(n) = note::take(&s.note) {
         s.line.show(&n);
     }
 }
@@ -150,22 +178,32 @@ fn move_pill(s: &State, p: Pt) {
 }
 
 /// True when a show or hide worked; a failure goes to the status line.
-fn done(line: &Line, r: Result<(), slint::PlatformError>) -> bool {
+pub(crate) fn done(line: &Line, r: Result<(), slint::PlatformError>) -> bool {
     r.map_err(|e| line.show(&e.to_string())).is_ok()
 }
 
 /// A window the tools show and must lift above the keyboard.
 #[derive(Clone, Copy)]
-enum Shown {
+pub(crate) enum Shown {
+    /// The selection pill.
     Pill,
+    /// The snip overlay.
     Overlay,
+    /// The voice caption bar.
+    Caption,
 }
 
 impl Shown {
+    /// True for a window that lets clicks through to the app below.
+    fn clicks_through(self) -> bool {
+        matches!(self, Shown::Caption)
+    }
+
     fn title(self, s: &State) -> &str {
         match self {
             Shown::Pill => &s.cfg.tools.pill_title,
             Shown::Overlay => &s.cfg.tools.overlay_title,
+            Shown::Caption => &s.cfg.voice.caption.title,
         }
     }
 
@@ -174,6 +212,7 @@ impl Shown {
         match self {
             Shown::Pill => s.shown.get().is_some(),
             Shown::Overlay => s.snip.borrow().is_some(),
+            Shown::Caption => s.voice.up.get(),
         }
     }
 
@@ -189,17 +228,23 @@ impl Shown {
                 end_snip(s);
                 done(&s.line, s.overlay.hide());
             }
+            Shown::Caption => voice::hide(s),
         }
     }
 }
 
 /// Guards our windows with the newly shown `w` above the others; none takes focus.
 /// winit shows a new window a moment after `show()`, so this retries up to `tries` times while `w` is still wanted.
-fn raise(s: &Rc<State>, w: Shown, tries: u32) {
+pub(crate) fn raise(s: &Rc<State>, w: Shown, tries: u32) {
     if !w.wanted(s) {
         return;
     }
     match window::guard_with_top(w.title(s)) {
+        Ok(true) if w.clicks_through() => {
+            if let Err(e) = window::click_through(w.title(s)) {
+                s.line.show(&e);
+            }
+        }
         Ok(true) => {}
         Ok(false) if tries > 1 => {
             let st = Rc::clone(s);

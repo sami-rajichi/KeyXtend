@@ -35,6 +35,11 @@ fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
     until(ctx, || langkey::layout_of(app.hwnd) == Some(layout))
 }
 
+/// Asks the app's focus for `layout`; true once it shows it within G25's switch wait.
+pub(crate) fn switch_to(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
+    langkey::ask(app.hwnd, layout).is_ok() && shows(ctx, app, layout)
+}
+
 /// One press of the language key: the layout asked for and whether the app took it, or the error.
 fn step(ctx: &Ctx, app: &Opened) -> Value {
     match keys_ours(app).and_then(|()| langkey::ask_next(app.hwnd)) {
@@ -54,7 +59,7 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     }
     let steps: Vec<Value> = (0..count).map(|_| step(ctx, app)).collect();
     let wrapped = langkey::layout_of(app.hwnd) == Some(start);
-    let restored = wrapped || (langkey::ask(app.hwnd, start).is_ok() && shows(ctx, app, start));
+    let restored = wrapped || switch_to(ctx, app, start);
     let all = steps.iter().all(|s| s["ok"] == true);
     json!({
         "from": lang(start), "steps": steps, "wrapped": wrapped, "restored": restored,

@@ -7,8 +7,9 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QUrl};
 use serde_json::{Value, json};
 use spike_core::config::{SpikeConfig, ToolButton};
-use spike_core::fill::{self, Note};
+use spike_core::fill;
 use spike_core::hold::Pt;
+use spike_core::note::{self, Note};
 use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::{self, Snip};
 use spike_core::{inject, place, window};
@@ -43,7 +44,7 @@ pub mod qobject {
         #[qinvokable]
         fn buttons_json(&self) -> QString;
 
-        /// Runs tool button `i`: JSON with a status `note`, or the `snip` to show.
+        /// Runs tool button `i`: JSON with a status `note`, the `snip` to show, or `mic` for QML's Voice.
         #[qinvokable]
         fn tool(self: Pin<&mut Self>, i: i32) -> QString;
 
@@ -154,6 +155,7 @@ impl qobject::Tools {
                 js(json!({ "note": self.fill_with(t.test_password) }))
             }
             Some(ToolButton::Snip) => js(self.as_mut().begin_snip()),
+            Some(ToolButton::Mic) => js(json!({ "mic": true })),
             None => js(json!({})),
         }
     }
@@ -187,7 +189,7 @@ impl qobject::Tools {
         let now = self.rust().watch.as_ref().ok().and_then(Watch::spot);
         let before = std::mem::replace(&mut self.as_mut().rust_mut().shown, now);
         let mut v = step_json(selwatch::step(before, now));
-        v["note"] = json!(fill::take(&self.rust().note));
+        v["note"] = json!(note::take(&self.rust().note));
         js(v)
     }
 
