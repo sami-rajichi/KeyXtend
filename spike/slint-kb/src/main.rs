@@ -4,6 +4,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod tools;
+mod voice;
 
 use std::fmt::Display;
 use std::rc::Rc;

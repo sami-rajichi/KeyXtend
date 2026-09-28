@@ -45,7 +45,7 @@ password_arg = "--password"
 
 # Stage 1b: the tools row under the keys, the selection pill, quick-fill and snip.
 [tools]
-labels = { fill_user = "Fill user", fill_password = "Fill password", snip = "Snip", copy = "Copy" }
+labels = { fill_user = "Fill user", fill_password = "Fill password", snip = "Snip", mic = "Mic", copy = "Copy" }
 # Window titles, so the harness can find them.
 pill_title = "KeyXtend spike - pill"
 overlay_title = "KeyXtend spike - snip"
@@ -70,3 +70,70 @@ shot_cap_mb = 256
 snip_edge_px = 2.0
 # What the snip overlay tells a screen reader.
 snip_hint = "Snip: click two corners of the region. Click the same spot twice to cancel."
+
+# Stage 1b part C: voice. Only the worker opens the mic; the face shows a caption bar.
+[voice]
+# The worker program, staged next to each face.
+worker = "worker.exe"
+# Worker switches: run the local server in weak mode; allow the cloud engine.
+weak_arg = "--weak"
+cloud_arg = "--cloud"
+# Engine for the Mic button: "local" or "cloud". Cloud also needs cloud_on and a key.
+engine = "local"
+# Nothing goes to the cloud unless this is true.
+cloud_on = false
+# Longest recording, in seconds, and the sample rate both engines take, in Hz.
+record_max_s = 30
+rate_hz = 16000
+# Primary language of the keyboard layout in front (low 10 bits of its LANGID) to the spoken language; covers regional layouts.
+languages = { "09" = "en", "0C" = "fr", "01" = "ar" }
+# Language for any other layout; "auto" lets the engine detect it.
+default_lang = "auto"
+# Typed after each transcript, so sentences do not run together.
+type_suffix = " "
+# Gap between typed characters, in ms: Notepad kept 10 ms exact but dropped most of a one-batch sentence (G22 typing check).
+type_gap_ms = 10
+# Face and worker switch, followed by a folder: keep each clip there for the bench.
+keep_arg = "--keep"
+# Longest JSON line between face and worker, in bytes; a 30 s transcript is far shorter.
+line_max_bytes = 16384
+
+# whisper.cpp's server, started once with the worker so the model loads once.
+[voice.local]
+server = "D:/dev/whisper/b5130/whisper-server.exe"
+model = "D:/dev/models/ggml-base.bin"
+host = "127.0.0.1"
+port = 8178
+threads = 4
+path = "/inference"
+# Answers 200 once the model is loaded.
+health_path = "/health"
+# Longest wait for the server to answer after start, the pause between checks, and the longest wait per clip, in ms.
+ready_wait_ms = 30000
+ready_poll_ms = 250
+timeout_ms = 60000
+
+# The opt-in cloud engine; the key is read from the environment, never from a file.
+[voice.cloud]
+host = "api.groq.com"
+path = "/openai/v1/audio/transcriptions"
+model = "whisper-large-v3"
+key_env = "GROQ_API_KEY"
+timeout_ms = 30000
+
+# Weak mode: the local server's job is capped to these cores, CPU share (percent) and memory (MiB).
+[voice.weak]
+cores = 2
+rate_pct = 30
+mem_mb = 4096
+
+# The caption bar at the bottom centre; it never takes focus.
+[voice.caption]
+title = "KeyXtend spike - caption"
+# Width, height and gap from the bottom of the work area, in logical pixels.
+px = [720.0, 56.0, 24.0]
+listening = "Listening…"
+transcribing = "Transcribing…"
+nothing_heard = "Nothing heard."
+# How long the text stays after it arrives, in ms.
+hide_ms = 4000

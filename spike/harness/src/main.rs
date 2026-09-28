@@ -1,4 +1,4 @@
-//! P1 spike harness: drives gates G1-G6, G17-G21, G23-G25 and the hand try, and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G6, G17-G25 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
@@ -21,6 +21,9 @@ mod g19pill;
 mod g2;
 mod g20;
 mod g21;
+mod g22;
+mod g22bench;
+mod g22type;
 mod g23;
 mod g24;
 mod g25;
@@ -45,6 +48,7 @@ mod simuser;
 mod stats;
 mod text;
 mod tlog;
+mod wer;
 mod win;
 mod winclip;
 
@@ -78,6 +82,7 @@ fn usage() -> String {
        harness g19 <{}|slint|qt>
        harness g20 <{}>
        harness g21 <{}>
+       harness g22 <slint|qt|{}|{}|{}>
        harness g23 <slint|qt>
        harness g24 <slint|qt>
        harness g25 <{}>
@@ -94,6 +99,9 @@ fn usage() -> String {
         g19::CORE,
         names(&g20::APPS),
         g21::NAMES.join("|"),
+        g22::BENCH,
+        g22bench::WITH_CLOUD,
+        g22type::TYPING,
         names(&g25::APPS),
     )
 }
@@ -160,7 +168,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
 /// Gates that take only a name: no count, no seed.
-const NAMED: [(&str, NamedRun); 11] = [
+const NAMED: [(&str, NamedRun); 12] = [
     ("g5", g5::run),
     ("g6", g6::run),
     ("g17", g17::run),
@@ -168,6 +176,7 @@ const NAMED: [(&str, NamedRun); 11] = [
     ("g19", g19::run),
     ("g20", g20::run),
     ("g21", g21::run),
+    ("g22", g22::run),
     ("g23", g23::run),
     ("g24", g24::run),
     ("g25", g25::run),
@@ -325,6 +334,10 @@ mod tests {
             "g20 notepad",
             "g21 win32",
             "g19 slint",
+            "g22 slint",
+            "g22 bench",
+            "g22 bench-cloud",
+            "g22 typing",
             "g23 qt",
             "g24 slint",
             "g25 notepad",
@@ -360,6 +373,9 @@ mod tests {
             "g19 core --seed 1",
             "g20 notepad --count 3",
             "g21 chrome --clicks 2",
+            "g22",
+            "g22 bench --seed 1",
+            "g22 typing --pause 10",
             "g25 notepad --attach",
             "g23 slint --seed 2",
             "g24 qt --clicks 3",

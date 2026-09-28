@@ -10,14 +10,22 @@ pub mod hold;
 pub mod inject;
 pub mod langkey;
 pub mod layout;
+pub mod lines;
+pub mod note;
 pub mod place;
 pub mod screen;
 pub mod selwatch;
 pub mod snip;
 pub mod status;
 pub mod targetlog;
+pub mod typer;
 pub mod uia;
 pub mod uiaccess;
+pub mod voice;
+pub mod voicecfg;
+pub mod voiceproto;
+pub mod voiceworker;
+pub mod weak;
 pub mod window;
 
 /// Scan-code prefix that marks an extended key (`0xE0xx`).

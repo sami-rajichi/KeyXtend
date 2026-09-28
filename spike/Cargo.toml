@@ -1,7 +1,7 @@
 # Throwaway P1 spike workspace: deleted at the end of P1 (see the plan).
 # Each face (slint-kb, qt-kb, tauri-kb) is its own workspace, so they build in parallel.
 [workspace]
-members = ["core", "target-window", "harness"]
+members = ["core", "target-window", "harness", "worker"]
 resolver = "3"
 
 [workspace.package]

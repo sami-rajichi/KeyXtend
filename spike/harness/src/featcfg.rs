@@ -1,6 +1,9 @@
 //! Settings of the stage-1b probes G19 to G25, from `[edit_keys]` and `[g19]` to `[g25]`.
 
+use std::collections::HashSet;
+
 use serde::Deserialize;
+use spike_core::voicecfg::VoiceConfig;
 
 use crate::config::HarnessConfig;
 
@@ -25,7 +28,94 @@ pub fn check(c: &HarnessConfig) -> Result<(), String> {
     if c.g23.prompt_programs.is_empty() {
         return Err("g23.prompt_programs must name the Hello prompt".to_string());
     }
+    let g = &c.g22;
+    let bad_layout = g
+        .sentences
+        .iter()
+        .any(|s| s.layout_id().is_none() || s.text.is_empty());
+    if g.sentences.is_empty() || bad_layout || !plain_name(&g.clips) || g.type_gaps_ms.is_empty() {
+        return Err(
+            "g22 needs sentences with a 4-digit hex layout and text, a plain clips folder name and typing gaps"
+                .to_string(),
+        );
+    }
     Ok(())
+}
+
+/// Refuses two G22 sentences in one voice language, since the bench scores each clip by its language.
+pub fn one_per_language(g: &G22, v: &VoiceConfig) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    let ids = g.sentences.iter().filter_map(Sentence::layout_id);
+    if ids.map(|id| v.language(id)).all(|lang| seen.insert(lang)) {
+        Ok(())
+    } else {
+        Err("g22.sentences must each be in a different voice language".to_string())
+    }
+}
+
+/// A single folder name: not empty, not a dot name, no drive or separator; the bench deletes in it.
+fn plain_name(n: &str) -> bool {
+    let mut parts = std::path::Path::new(n).components();
+    matches!(
+        (parts.next(), parts.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    ) && !n.contains(':')
+}
+
+/// One sentence the owner reads for G22.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Sentence {
+    /// Keyboard layout (LANGID, 4 hex digits) Notepad switches to first.
+    pub layout: String,
+    /// The words read aloud.
+    pub text: String,
+}
+
+/// Digits in a LANGID written in hex.
+const LAYOUT_DIGITS: usize = 4;
+/// Base of the LANGID digits.
+const HEX: u32 = 16;
+
+impl Sentence {
+    /// The layout as a LANGID; `None` unless it is 4 hex digits.
+    pub fn layout_id(&self) -> Option<u16> {
+        let l = &self.layout;
+        (l.len() == LAYOUT_DIGITS)
+            .then(|| u16::from_str_radix(l, HEX).ok())
+            .flatten()
+    }
+}
+
+/// Voice probe (G22) and its bench.
+#[derive(Debug, Clone, Deserialize)]
+pub struct G22 {
+    /// The sentences, read in this order.
+    pub sentences: Vec<Sentence>,
+    /// How long the Mic stays on for each sentence, in ms.
+    pub record_ms: u64,
+    /// Longest wait for the words after Mic is clicked again, in ms.
+    pub text_wait_ms: u64,
+    /// How long a failed Mic stop click is retried, in ms.
+    pub stop_wait_ms: u64,
+    /// Pause between sentences, in ms.
+    pub pause_ms: u64,
+    /// Longest document text read back, in characters.
+    pub max_chars: i32,
+    /// Folder under TEMP where the face's worker keeps the clips; a plain name.
+    pub clips: String,
+    /// Folder of the staged worker the bench starts, relative to the harness settings folder.
+    pub worker_dir: String,
+    /// Longest wait for the bench worker to load or answer, in ms.
+    pub answer_wait_ms: u64,
+    /// Gaps between typed characters the typing check tries, in ms; 0 types one batch.
+    pub type_gaps_ms: Vec<u64>,
+}
+
+impl G22 {
+    /// The clips folder.
+    pub fn clips_dir(&self) -> std::path::PathBuf {
+        std::env::temp_dir().join(&self.clips)
+    }
 }
 
 /// Editing shortcuts the probes press: virtual-key combos, pressed in order.
@@ -147,7 +237,8 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("harness.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut HarnessConfig); 9] = [
+        let bad: [fn(&mut HarnessConfig); 16] = [
+            |c| c.g22.type_gaps_ms.clear(),
             |c| c.g19.lines.clear(),
             |c| c.g19.lines[0].clear(),
             |c| c.g20.paste_back = 0,
@@ -157,11 +248,30 @@ mod tests {
             |c| c.g25.text.clear(),
             |c| c.g23.prompt_programs.clear(),
             |c| c.g23.length_mark.clear(),
+            |c| c.g22.sentences.clear(),
+            |c| c.g22.sentences[0].layout = "EN".into(),
+            |c| c.g22.clips.clear(),
+            |c| c.g22.clips = "..".into(),
+            |c| c.g22.clips = "a/b".into(),
+            |c| c.g22.clips = "C:\\x".into(),
         ];
         for (i, spoil) in bad.iter().enumerate() {
             let mut c = good.clone();
             spoil(&mut c);
             assert!(check(&c).is_err(), "case {i} passed");
         }
+    }
+
+    #[test]
+    fn each_sentence_needs_its_own_voice_language() {
+        let g = crate::config::load().expect("harness.toml loads").g22;
+        let v = spike_core::config::load().expect("spike.toml loads").voice;
+        assert!(one_per_language(&g, &v).is_ok());
+        let mut twice = g.clone();
+        twice.sentences.push(g.sentences[0].clone());
+        assert!(
+            one_per_language(&twice, &v).is_err(),
+            "a second sentence in one language would be scored against the first"
+        );
     }
 }
