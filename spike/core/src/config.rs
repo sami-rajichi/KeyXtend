@@ -22,6 +22,12 @@ pub struct SpikeConfig {
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
     pub voice: crate::voicecfg::VoiceConfig,
+    /// The stage-2 keyboard's geometry.
+    pub layout: crate::kbgeom::LayoutConfig,
+    /// Keyboard size steps, presets and limits.
+    pub size: crate::sizer::SizeConfig,
+    /// Theme, mode, frosted plate and fading.
+    pub look: crate::lookcfg::LookConfig,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -213,8 +219,11 @@ pub fn report_error(face: &str, err: &str) {
 pub fn load() -> Result<SpikeConfig, String> {
     let file = settings_path(FILE);
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
-    let mut config: SpikeConfig =
-        toml::from_str(&text).map_err(|e| format!("{}: {e}", file.display()))?;
+    let at = |e: String| format!("{}: {e}", file.display());
+    let mut config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
+    config.layout.check().map_err(at)?;
+    config.size.check().map_err(at)?;
+    config.look.check().map_err(at)?;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     Ok(config)
 }

@@ -29,6 +29,64 @@ widths = [
     [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
 ]
 
+# The stage-2 keyboard from design/keyboard-style-lab.html (lines 145-168, 241-242, 927-1006), in logical pixels at size 1.
+[layout]
+# One key unit wide, and one row high.
+unit_px = 33.0
+row_px = 31.0
+# The main block is this many units wide; a key w units wide spans w * columns_per_unit grid columns.
+main_units = 16.0
+columns_per_unit = 4
+# Side block: this many columns, each side_unit units wide.
+side_columns = 3
+side_unit = 1.22
+# Gap between the main and side blocks; plate padding (top, right, bottom, left); top bar height and the gap under it.
+body_gap_px = 8.0
+plate_pad_px = [6.0, 7.0, 7.0, 7.0]
+top_bar_px = 24.0
+top_gap_px = 4.0
+# D-pad cells as first col, first row, last col, last row (1-based, inclusive); it is min(dpad_units units, its rows) wide, less one gap.
+dpad_cell = [1, 2, 2, 4]
+dpad_units = 2.44
+# Main rows: named keys with their width in units, kind and scan code (0xE0xx is extended), and runs of 1-unit character keys.
+rows = [
+    [{ id = "esc", w = 1.0, kind = "danger", sc = 0x01 }, { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] }, { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E }],
+    [{ id = "tab", w = 1.5, kind = "mod", sc = 0x0F }, { chars = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B] }, { id = "del", w = 1.5, kind = "mod", sc = 0xE053 }],
+    [{ id = "caps", w = 1.75, kind = "mod", sc = 0x3A }, { chars = [0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28] }, { id = "enter", w = 3.25, kind = "enter", sc = 0x1C }],
+    [{ id = "shift", w = 2.25, kind = "mod", sc = 0x2A }, { chars = [0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] }, { id = "rshift", w = 1.75, kind = "mod", sc = 0x36 }, { id = "up", w = 1.0, kind = "mod", sc = 0xE048 }, { id = "menu", w = 1.0, kind = "mod", sc = 0xE05D }],
+    [{ id = "ctrl", w = 1.25, kind = "mod", sc = 0x1D }, { id = "win", w = 1.0, kind = "mod", sc = 0xE05B }, { id = "alt", w = 1.0, kind = "mod", sc = 0x38 }, { id = "lang", w = 1.75, kind = "lang" }, { id = "space", w = 7.0, kind = "space", sc = 0x39 }, { id = "altgr", w = 1.0, kind = "mod", sc = 0xE038 }, { id = "left", w = 1.0, kind = "mod", sc = 0xE04B }, { id = "down", w = 1.0, kind = "mod", sc = 0xE050 }, { id = "right", w = 1.0, kind = "mod", sc = 0xE04D }],
+]
+# Side keys by column and row (1-based).
+side = [
+    { id = "rclick", col = 1, row = 1 }, { id = "grab", col = 2, row = 1 }, { id = "shortcuts", col = 3, row = 1 },
+    { id = "mic", col = 3, row = 2 }, { id = "clip", col = 3, row = 3 }, { id = "snip", col = 3, row = 4 },
+    { id = "fill", col = 1, row = 5 }, { id = "settings", col = 2, row = 5 }, { id = "power", col = 3, row = 5 },
+]
+
+# The keyboard's look (spec 3.5): the starting theme (an id in themes.toml) and mode: "light", "dark" or "auto" to follow Windows.
+[look]
+theme = "native"
+mode = "auto"
+# Legends below this contrast with their background are reported; spec 3.5 asks for 4.5:1.
+min_contrast = 4.5
+# Native's frosted plate: "none", "mica" or "acrylic" (DWM backdrops) or "blur" (accent-policy blur); the plate keeps this share of its colour.
+backdrop = "acrylic"
+plate_alpha = 0.88
+# Fade when idle (spec 3.1): after this long without the pointer, down to this opacity.
+idle_fade_ms = 3000
+idle_opacity = 0.32
+# Turns every animation off except the hold ring.
+reduced_motion = false
+
+# Keyboard size (spec 3.1): presets S, M and L, the step of the - and + buttons, and the limits; the keyboard starts at S.
+[size]
+presets = [1.0, 1.25, 1.5]
+step = 0.05
+min = 0.8
+max = 1.8
+# Keys show text labels under their icons from this size.
+labels_from = 1.3
+
 [target]
 # Title of the recording window.
 title = "KeyXtend spike - target"
