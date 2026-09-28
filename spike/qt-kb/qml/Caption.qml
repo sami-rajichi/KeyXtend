@@ -11,6 +11,9 @@ Window {
     required property var res
     required property real barWidth
     required property real barHeight
+    // Icons beside "Transcribing…" and beside the words heard (mock-up .capbar .st).
+    required property string busyIcon
+    required property string wordsIcon
     // The caption shown: text, rec, busy, ar and hide_ms, as the voice worker sends it.
     property var cap: ({ text: "", rec: false, busy: false, ar: false, hide_ms: null })
 
@@ -88,6 +91,7 @@ Window {
                 border.color: bar.lk.palette.pop_line
             }
             Row {
+                id: line
                 readonly property var pad: bar.status ? bar.sh.pad_px : Array(3).fill(bar.sh.words_pad_px)
                 anchors.fill: parent
                 anchors.topMargin: pad[0]
@@ -123,9 +127,21 @@ Window {
                         }
                     }
                 }
+                // The busy icon takes the ring colour, like the mock-up's wave; the words icon takes the text colour.
+                Icon {
+                    id: mark
+                    visible: icon.length > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: !bar.status ? bar.wordsIcon : bar.busy ? bar.busyIcon : ""
+                    base: bar.res.icons
+                    ext: bar.res.ext
+                    px: bar.sh.icon_px
+                    tint: bar.status ? bar.lk.palette.ring : bar.lk.palette.pop_ink
+                }
                 Text {
                     id: words
-                    width: bar.busy ? Math.min(implicitWidth, parent.width) : parent.width - (dot.visible ? dot.width + parent.spacing : 0)
+                    readonly property real lead: (dot.visible ? dot.width + line.spacing : 0) + (mark.visible ? mark.width + line.spacing : 0)
+                    width: bar.busy ? Math.min(implicitWidth, parent.width - lead) : parent.width - lead
                     height: parent.height
                     text: bar.cap.text
                     textFormat: Text.PlainText
@@ -140,9 +156,9 @@ Window {
                     Accessible.name: text
                 }
                 Shimmer {
-                    visible: bar.busy && bar.visible && words.implicitWidth + parent.spacing < parent.width
+                    visible: bar.busy && bar.visible && words.lead + words.implicitWidth + parent.spacing < parent.width
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0, parent.width - words.width - parent.spacing)
+                    width: Math.max(0, parent.width - words.lead - words.width - parent.spacing)
                     height: bar.sh.shimmer_px[0]
                     radius: bar.sh.shimmer_px[1]
                     span: bar.sh.shimmer_span

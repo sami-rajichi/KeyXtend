@@ -5,6 +5,7 @@ mod extras;
 mod look;
 mod motion;
 mod palette;
+mod ringmove;
 mod shape;
 
 use serde::Deserialize;
@@ -14,6 +15,7 @@ pub use common::Common;
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use motion::{Amounts, Motion, Motions, Timed};
 pub use palette::{Palette, Rgba, Shadow, Skirt, contrast};
+pub use ringmove::{RingAmounts, RingMotion};
 pub use shape::Shape;
 
 /// The themes file, beside `spike.toml`.
@@ -88,12 +90,28 @@ pub struct Themes {
 /// Loads `themes.toml`, `shape.toml` and `motion.toml` from beside the exe or the spike folder.
 pub fn load() -> Result<Themes, String> {
     let (list, common) = read_settings(FILE, parse)?;
+    let (shape, motion) = (shape::load()?, motion::load()?);
+    ringmove::fits(&shape.ring, &motion.full.ring.amount)?;
     Ok(Themes {
         list,
         common,
-        shape: shape::load()?,
-        motion: motion::load()?,
+        shape,
+        motion,
     })
+}
+
+/// The first of `values` outside 0 to 1, NaN included, with its name.
+fn outside_unit<'a>(values: &[(&'a str, f32)]) -> Option<(&'a str, f32)> {
+    values
+        .iter()
+        .copied()
+        .find(|(_, v)| !(0.0..=1.0).contains(v))
+}
+
+/// Curve `name` from `curves` as Qt bezier points, ending at (1, 1) as Qt wants.
+fn bez(curves: &std::collections::BTreeMap<String, [f32; 4]>, name: &str) -> Option<[f32; 6]> {
+    let [x1, y1, x2, y2] = *curves.get(name)?;
+    Some([x1, y1, x2, y2, 1.0, 1.0])
 }
 
 /// The themes in `text`, in file order, and their shared colours; an error names the theme and mode at fault.

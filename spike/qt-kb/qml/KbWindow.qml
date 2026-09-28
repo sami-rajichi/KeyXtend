@@ -60,6 +60,7 @@ Window {
     Extras {
         id: ex
         logical: win.logical
+        cursor: () => JSON.parse(board.cursor())
         lk: win.lk
         res: win.res
         onNote: text => win.say(text)
@@ -289,6 +290,9 @@ Window {
             theme: win.lk.theme
             mode: win.lk.mode
             status: kb.line(win.note)
+            ringLabel: ex.ringLabel
+            ringOn: ex.ringOn
+            onFlipRing: ex.flipRing()
             onPickTheme: i => {
                 board.setTheme(i);
                 win.relook();

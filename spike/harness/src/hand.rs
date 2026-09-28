@@ -33,19 +33,19 @@ pub fn run(ctx: &Ctx, name: &str, secs: u64) -> Result<Value, String> {
         GRAB => Mode::Grab,
         _ => return Err(format!("the hand try runs {RIGHT} or {GRAB}, not {name}")),
     };
-    let a = &ctx.cfg.assist;
+    let (a, h) = (&ctx.cfg.assist, &ctx.spike.hold);
     let end = Instant::now()
         .checked_add(Duration::from_secs(secs))
         .ok_or_else(|| format!("--secs {secs} is too long"))?;
     let assist = Assist::start(Setup {
-        hold_ms: a.hold_ms,
-        still_px: a.still_px,
+        hold_ms: h.ms,
+        still_px: h.still_px,
         source: Source::Physical,
         own: face_rects(ctx),
         reply_ms: a.reply_ms,
     })?;
     assist.set_mode(mode)?;
-    println!("hand try: {name} for {secs} s; hold still {} ms", a.hold_ms);
+    println!("hand try: {name} for {secs} s; hold still {} ms", h.ms);
     while Instant::now() < end {
         sleep_ms(a.rearm_ms);
         if mode == Mode::Grab {

@@ -110,8 +110,11 @@ pill_title = "KeyXtend spike - pill"
 overlay_title = "KeyXtend spike - snip"
 # How often the selection watcher looks at the focused text, in ms.
 selection_poll_ms = 300
-# Pill width (it grows for a longer label), height (mock-up .selpill: 3 + 5 + 12 + 5 + 3) and gap from the selected text, in logical pixels.
-pill_px = [72.0, 28.0, 8.0]
+# Pill width (mock-up .selpill: 3 + 11 + 13 icon + 5 + Copy + 11 + 3; it grows for a longer label), height (3 + 5 + 12 + 5 + 3)
+# and gap from the selected text, in logical pixels.
+pill_px = [76.0, 28.0, 8.0]
+# The Copy button's Lucide icon (mock-up .selpill).
+pill_icon = "copy"
 # The pill's Copy button presses Ctrl+C (virtual keys).
 copy_keys = [0x11, 0x43]
 # Windows Hello prompt; Fill types only after Hello says yes.
@@ -196,6 +199,9 @@ px = [540.0, 56.0, 24.0]
 listening = "Listening…"
 transcribing = "Transcribing…"
 nothing_heard = "Nothing heard."
+# Lucide icons beside "Transcribing…" and beside the words heard (mock-up .capbar .st).
+busy_icon = "audio-lines"
+words_icon = "captions"
 # How long the text stays after it arrives, in ms.
 hide_ms = 4000
 
@@ -271,6 +277,25 @@ font_exts = ["ttf", "otf"]
 [lang]
 short = { ar = "ع" }
 joiner = " · "
+
+# A still left press fires after ms (spec §5.1; the owner may set min_ms to max_ms); moves up to still_px count as still.
+# The ring around the pointer shows ring_after_ms after the press (below min_ms) and shrinks over the rest of the hold (spec §3.2).
+[hold]
+ms = 1500
+min_ms = 500
+max_ms = 3000
+still_px = 7
+ring_after_ms = 150
+
+# Gate G12's ring test: the test strip's switch loops holds at the pointer, pausing gap_ms after each burst.
+# The ring window's title, the frame stats file under the user's local app-data folder (not TEMP, which shells may move),
+# written on every stop and deleted by harness g12 once read, and the most frame gaps kept.
+[ring]
+title = "KeyXtend spike - ring"
+label = "Ring test"
+stats = "KeyXtend-spike/ring-frames.json"
+max_frames = 36000
+gap_ms = 300
 
 # The Arabic test panel for gate G7 (mock-up .pop): a right-to-left stand-in for Settings, opened by the Settings key.
 # Rows per page (ADR-0008), the page text with {n} and {count}, the field's screen-reader name, and each button's icon and name.

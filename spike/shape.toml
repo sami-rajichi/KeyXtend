@@ -1,4 +1,5 @@
-# Sizes all three themes share, from the mock-up's structure CSS (design/keyboard-style-lab.html lines 151-262), in pixels at size 1.
+# Sizes all three themes share, from the mock-up's CSS (design/keyboard-style-lab.html), in pixels at size 1 unless a section says
+# otherwise.
 # Lists follow the order their comment gives.
 [bar]
 # Top-bar buttons: width and height, icon, S/M/L text and its weight while lit, radius as a share of the key radius, gap.
@@ -74,15 +75,18 @@ gap_px = 6.0
 px = 1.0
 
 [pill]
-# The Copy pill (mock-up .selpill): padding, button side padding, text size and weight; its height is tools.pill_px.
+# The Copy pill (mock-up .selpill): padding, button side padding, text size and weight, icon size and icon-to-text gap;
+# its height is tools.pill_px.
 pad_px = 3.0
 button_side_px = 11.0
 font_px = 12.0
 weight = 600
+icon_px = 13.0
+gap_px = 5.0
 
 [caption]
 # The caption bar (mock-up .capbar): status padding (top and bottom, left, right), padding around words (.done),
-# dot-to-status gap (.st), status text size and weight, words size (Latin, Arabic), recording dot,
+# dot-to-status gap (.st), status text size and weight, words size (Latin, Arabic), recording dot, icon size (.i),
 # status bar height (6 + the 26 px wave + 6), radius around words (.done).
 pad_px = [6.0, 14.0, 8.0]
 words_pad_px = 10.0
@@ -91,6 +95,7 @@ status_px = 12.5
 status_weight = 600
 words_px = [14.0, 15.0]
 dot_px = 8.0
+icon_px = 15.0
 bar_px = 38.0
 words_radius_px = 14.0
 # The shimmer while the words are on their way (.shimmer): height and radius, and how many bar widths its band spans.
@@ -137,6 +142,18 @@ foot_pad_px = [7.0, 12.0]
 # the keyboard, or below it when there is no room, and at least gap_px[1] inside the screen (placePop).
 field_px = [34.0, 7.0, 10.0, 14.5]
 gap_px = [10.0, 8.0]
+
+[ring]
+# The hold ring around the pointer (mock-up .ring, .burst), not scaled with the keyboard: side of the ring and its window,
+# wave borders (first, second), the core's share of the side, burst ring (side, border), burst dots (side, count), and how far
+# from the centre the dots start and end.
+box_px = 76.0
+wave_px = [2.5, 1.5]
+core_share = 0.1
+burst_px = [60.0, 2.0]
+dot_px = 6.0
+dots = 6
+fly_px = [6.0, 30.0]
 
 [extra]
 # The resize corner (diameter, icon; not in the mock-up), the bubble (diameter, icon, inset from the screen corner; mock-up .kb-bubble),

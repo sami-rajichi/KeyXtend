@@ -127,6 +127,13 @@ fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
     ]
 }
 
+/// Moves the pointer to `p` (physical pixels) without pressing: the first of a click's events.
+pub fn move_to(p: POINT) -> Result<(), String> {
+    let (x0, y0, w, h) = crate::win::desktop();
+    let (x, y, f) = click_events(normalise(p.x, x0, w), normalise(p.y, y0, h))[0];
+    spike_core::inject::send(&[input(x, y, f, spike_core::inject::TAG)])
+}
+
 /// Clicks at `p` (physical pixels) in one `SendInput` batch, which a hand on the mouse cannot split.
 pub fn click_at(p: POINT) -> Result<(), String> {
     let (x0, y0, w, h) = crate::win::desktop();

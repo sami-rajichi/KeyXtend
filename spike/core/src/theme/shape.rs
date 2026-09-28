@@ -3,11 +3,11 @@
 use serde::{Deserialize, Serialize};
 
 use super::FONT_WEIGHTS;
-use super::extras::{CaptionShape, PanelShape, PillShape, SnipShape};
+use super::extras::{CaptionShape, PanelShape, PillShape, RingShape, SnipShape};
 use crate::config::read_settings;
 
 /// The shared sizes file, beside `spike.toml`.
-const FILE: &str = "shape.toml";
+pub(super) const FILE: &str = "shape.toml";
 
 /// Top-bar buttons (`.tb`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -183,6 +183,8 @@ pub struct Shape {
     pub snip: SnipShape,
     /// The Arabic test panel.
     pub panel: PanelShape,
+    /// The hold ring.
+    pub ring: RingShape,
 }
 
 /// Hairlines in `pop_line`: panel and tooltip edges, the corner's rim and dividers.
@@ -258,8 +260,9 @@ impl Shape {
             ("press.scale", self.press.scale),
             ("panel.radius_share", self.panel.radius_share),
             ("panel.off_share", self.panel.off_share),
+            ("ring.core_share", self.ring.core_share),
         ];
-        match shares.iter().find(|(_, v)| !(0.0..=1.0).contains(v)) {
+        match super::outside_unit(&shares) {
             Some((n, v)) => Err(format!("shape: {n} {v} is not 0 to 1")),
             None => Ok(()),
         }
@@ -298,6 +301,12 @@ mod tests {
     fn the_extra_windows_take_the_mock_up_sizes() {
         let s = load().expect("shape.toml loads");
         assert_eq!(s.pill.button_side_px, 11.0, ".selpill button");
+        assert_eq!(
+            (s.pill.icon_px, s.pill.gap_px),
+            (13.0, 5.0),
+            ".selpill .i and gap"
+        );
+        assert_eq!(s.caption.icon_px, 15.0, ".capbar .i");
         assert_eq!(s.caption.gap_px, 6.0, ".capbar .st gap");
         assert_eq!(s.caption.bar_px, 38.0, ".capbar with its 26 px wave");
         assert_eq!(s.snip.bar_radius_px, 9.0, ".snip-bar");

@@ -53,13 +53,13 @@ pub fn in_front(hwnd: HWND) -> Result<(), String> {
 
 /// Starts the engine on the simulated user's input; presses inside `own` are never held.
 pub fn start_assist(ctx: &Ctx, own: Vec<RECT>) -> Result<Assist, String> {
-    let a = &ctx.cfg.assist;
+    let h = &ctx.spike.hold;
     Assist::start(Setup {
-        hold_ms: a.hold_ms,
-        still_px: a.still_px,
+        hold_ms: h.ms,
+        still_px: h.still_px,
         source: Source::Simulated,
         own,
-        reply_ms: a.reply_ms,
+        reply_ms: ctx.cfg.assist.reply_ms,
     })
 }
 
@@ -103,7 +103,7 @@ pub fn grab(ctx: &Ctx, app: &Opened, from: Pt, to: Pt) -> Result<(), String> {
     assist::as_user(&[Act::Move(from)])?;
     sleep_ms(sim.step_ms);
     assist::as_user(&[Act::Down(Button::Left, from)])?;
-    sleep_ms(ctx.cfg.assist.hold_ms + sim.hold_margin_ms);
+    sleep_ms(ctx.spike.hold.ms + sim.hold_margin_ms);
     assist::as_user(&[Act::Up(Button::Left, from)])?;
     sleep_ms(sim.step_ms);
     glide(ctx, from, to)

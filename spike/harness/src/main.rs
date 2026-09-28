@@ -1,4 +1,4 @@
-//! P1 spike harness: drives gates G1-G6, G17-G25 and the hand try, and prints one JSON line of results per run.
+//! P1 spike harness: drives gates G1-G7, G12, G17-G25 and the hand try, and prints one JSON line of results per run.
 //!
 //! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees.
 
@@ -14,6 +14,7 @@ mod diff;
 mod facetools;
 mod featcfg;
 mod g1;
+mod g12;
 mod g17;
 mod g18;
 mod g19;
@@ -49,6 +50,7 @@ mod simuser;
 mod stats;
 mod text;
 mod tlog;
+mod usage;
 mod wer;
 mod win;
 mod winclip;
@@ -62,51 +64,7 @@ use windows::Win32::System::Console::{
 };
 
 use apps::{AppKind, Ctx};
-
-/// App names joined for the usage text.
-fn names(apps: &[AppKind]) -> String {
-    apps.iter().map(|a| a.name()).collect::<Vec<_>>().join("|")
-}
-
-/// Command-line help; the G1 app list comes from `AppKind::ALL`.
-fn usage() -> String {
-    format!(
-        "usage: harness g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
-       harness g2 <slint|qt|tauri> [--clicks N] [--seed S]
-       harness g3 <slint|qt|tauri>
-       harness g4 <slint|qt|tauri> [--clicks N] [--seed S]
-       harness g5 <{}|{}>
-       harness assist <{}|{}> [--secs N]
-       harness g17 <{}>
-       harness g18 <{}>
-       harness g6 <{}>
-       harness g7 <qt>
-       harness g19 <{}|slint|qt>
-       harness g20 <{}>
-       harness g21 <{}>
-       harness g22 <slint|qt|{}|{}|{}>
-       harness g23 <slint|qt>
-       harness g24 <slint|qt>
-       harness g25 <{}>
-       harness close <slint|qt>
---attach types into the app's window already open; --pause sets the gap between characters.",
-        names(&AppKind::ALL),
-        g5::PLAIN,
-        g5::ADMIN,
-        hand::RIGHT,
-        hand::GRAB,
-        names(&g17::APPS),
-        names(&g18::APPS),
-        names(&g6::APPS),
-        g19::CORE,
-        names(&g20::APPS),
-        g21::NAMES.join("|"),
-        g22::BENCH,
-        g22bench::WITH_CLOUD,
-        g22type::TYPING,
-        names(&g25::APPS),
-    )
-}
+use usage::usage;
 
 /// Gates whose runs take a random seed.
 const SEEDED: [&str; 3] = ["g1", "g2", "g4"];
@@ -170,10 +128,11 @@ fn parse(args: &[String]) -> Result<Args, String> {
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
 /// Gates that take only a name: no count, no seed.
-const NAMED: [(&str, NamedRun); 13] = [
+const NAMED: [(&str, NamedRun); 14] = [
     ("g5", g5::run),
     ("g6", g6::run),
     ("g7", g7::run),
+    ("g12", g12::run),
     ("g17", g17::run),
     ("g18", g18::run),
     ("g19", g19::run),
@@ -331,6 +290,8 @@ mod tests {
     fn parses_gates_that_take_only_a_name() {
         for probe in [
             "g6 chrome",
+            "g7 qt",
+            "g12 qt",
             "g17 explorer",
             "g18 notepad",
             "g19 core",
@@ -382,6 +343,9 @@ mod tests {
             "g25 notepad --attach",
             "g23 slint --seed 2",
             "g24 qt --clicks 3",
+            "g7 qt --seed 1",
+            "g12 qt --seed 1",
+            "g12 qt --clicks 5",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }

@@ -7,7 +7,7 @@ use serde::Deserialize;
 use spike_core::config::settings_path;
 
 use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G22, G23, G24, G25};
-use crate::probecfg::{G6, Probes, Sim};
+use crate::probecfg::{G6, G12, Probes, Sim};
 use crate::text::Charsets;
 
 /// File name of the harness settings.
@@ -44,6 +44,8 @@ pub struct HarnessConfig {
     pub probes: Probes,
     /// G6 settings.
     pub g6: G6,
+    /// G12 settings.
+    pub g12: G12,
     /// Editing shortcuts of the stage-1b probes.
     pub edit_keys: EditKeys,
     /// G7 settings.
@@ -187,13 +189,9 @@ pub struct G4 {
     pub clicks: usize,
 }
 
-/// Hold engine settings (spec §5.1).
+/// How the harness runs the hold engine; the hold itself is `spike.toml [hold]` (spec §5.1).
 #[derive(Debug, Clone, Deserialize)]
 pub struct AssistCfg {
-    /// A still left hold fires after this, in ms.
-    pub hold_ms: u64,
-    /// Moves up to this many px count as still.
-    pub still_px: i32,
     /// Longest wait for the hook thread to start or answer, in ms.
     pub reply_ms: u64,
     /// How long the owner's hand try runs, in seconds.
@@ -267,6 +265,7 @@ pub fn load() -> Result<HarnessConfig, String> {
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     config.text.validate()?;
     featcfg::check(&config)?;
+    config.g12.check()?;
     Ok(config)
 }
 
@@ -282,7 +281,8 @@ mod tests {
         }
         assert_eq!(cfg.g3.probe_codes.len(), 3);
         assert!(cfg.g4.clicks > 0);
-        assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < cfg.assist.hold_ms);
+        let hold = spike_core::config::load().expect("spike.toml loads").hold;
+        assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < hold.ms);
         for app in ["explorer", "word_file"] {
             assert!(cfg.app(app).is_ok(), "missing app {app}");
         }

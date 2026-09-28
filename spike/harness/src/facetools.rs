@@ -122,6 +122,13 @@ pub fn shown(title: &str) -> Option<HWND> {
         .find(|&w| win::title(w) == title)
 }
 
+/// Process `pid`'s window called `title` while it shows; windows of other programs never count.
+pub fn shown_by(pid: u32, title: &str) -> Option<HWND> {
+    win::seen_windows()
+        .into_iter()
+        .find(|&w| win::owner(w).0 == pid && win::title(w) == title)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

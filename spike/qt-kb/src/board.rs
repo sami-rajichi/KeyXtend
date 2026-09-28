@@ -92,7 +92,7 @@ pub mod qobject {
         #[qinvokable]
         fn relabel(self: Pin<&mut Self>) -> bool;
 
-        /// The pointer in physical pixels, as JSON `[x, y]`.
+        /// The pointer in physical pixels: JSON `{x, y}`, or `{note}` when Windows could not say.
         #[qinvokable]
         fn cursor(&self) -> QString;
 
@@ -266,6 +266,6 @@ impl qobject::Board {
     }
 
     fn cursor(&self) -> QString {
-        js(&screen::cursor().map(|p| [p.x, p.y]).ok())
+        crate::bridge::spot(screen::cursor())
     }
 }

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-29 — P1: the hold ring (G12), icons and darker ring colours
+A "Ring test" switch on the Qt face loops the mock-up's hold ring at the pointer in a click-through window, timed from the hold setting, and records its frame gaps. The G12 run passed: 200 of 200 clicks under the ring reached the app behind it, at 167 frames a second (slowest frame 7.9 ms); the G7 typing run also passed. The Copy pill, "Transcribing…" and the words bar now carry the mock-up's Lucide icons, and the ET66 and Dolch light rings are darker, reaching 3:1 on a plain window. Two review passes found about 40 issues, all fixed.
+
 ## 2026-09-28 — P1: the Arabic test panel for G7
 The Settings key now opens a right-to-left Arabic panel on the Qt face, a stand-in for Settings: a header with a close button, five rows a page with page buttons, and an Arabic text field, in each theme's light and dark look and with system colours in high contrast. It is the only window that takes focus; it opens above the keyboard, lined up with its right edge, and hands focus back to the app when it closes. Tests pass (core 259, harness 116, Qt 8, 12 offline QML checks), and a live check through the accessibility API, with no typing into apps, confirmed the Arabic, the paging, the focus and the caret reader. Three review rounds found about 32 issues, all fixed; the G7 typing run waits for the owner's yes.
 

@@ -108,6 +108,14 @@ The owner's decisions (2026-09-28):
      - Left out: the mock-up's shrink-to-fit (a too-tall panel shrinks to size S); here it goes to the top of the screen instead.
      - `harness/src/g7.rs`: types `مَرْحَبًا`, then End, →, →, ←, Home, ←, End; the caret must land on letter boundaries, never between a letter and its haraka. It runs only while the panel is in front, and only with the owner's yes.
 9. **G12 ring.** A click-through ring window at 60 Hz; 200 clicks underneath must all reach target-window.
+   - *Design (2026-09-28):* the Qt face has no hold engine yet, so a "Ring test" choice in the test strip loops a hold at the pointer.
+     - Settings: `spike.toml [hold]` (1500 ms, 500–3000, still 7 px, ring after 150 ms) becomes the one source; the harness's `[assist]` reads it. `[ring]` holds the test's window title, strip label, stats file and frame cap.
+     - Look: `shape.toml [ring]` and `motion.toml` (curve `wave`, a `burst` move, ring amounts) from the mock-up `.ring`, `.burst`; the wave keeps the hold time under reduced motion, as the spec says.
+     - Core: `holdcfg.rs` checks the settings; `ringstats.rs` sums frame gaps (fps, p99, longest) and writes them on stop.
+     - Qt: `Ring.qml`, a click-through window that follows the pointer every frame (`FrameAnimation`), over a `RingData` bridge; `RingFace.qml` draws it, so a scratch QML test can check it without the bridge.
+     - Stats: frame gaps come from the clock, not Qt's animation clock; the file lives under the user's local app-data folder (`folders.rs`), since a tools shell moves TEMP.
+     - `harness/src/g12.rs`: turns the test on through UIA, then per click moves the pointer to a point in target-window, checks the ring covers it and that the point still belongs to target-window, and clicks; target-window's log must show all 200 presses there, and the stats must reach 60 Hz. It needs the owner's yes, since it moves the real mouse.
+     - `[g12]` in harness.toml: 200 clicks on a 20 × 10 grid, at least 57 fps and a p99 gap of 34 ms or less; points our keyboard covers are left out.
 
 **Part D: measurements** (harness `g8`–`g13`, installed uiAccess build)
 10. **G8 budgets**, normal and weak mode, per theme:

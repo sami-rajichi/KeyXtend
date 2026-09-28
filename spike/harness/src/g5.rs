@@ -77,7 +77,7 @@ fn centre(hwnd: HWND) -> Result<Pt, String> {
 
 /// Plays `case` at `p` as the simulated user; once pressed, the button is always released.
 fn play(ctx: &Ctx, case: &Case, p: Pt) -> Result<(), String> {
-    let (g, sim, hold_ms) = (&ctx.cfg.g5, &ctx.cfg.sim, ctx.cfg.assist.hold_ms);
+    let (g, sim, hold_ms) = (&ctx.cfg.g5, &ctx.cfg.sim, ctx.spike.hold.ms);
     let end = Pt {
         x: p.x + case.dx,
         y: p.y,
@@ -100,16 +100,6 @@ fn play(ctx: &Ctx, case: &Case, p: Pt) -> Result<(), String> {
     moved.and(released)
 }
 
-/// The mouse presses target-window logged at or after `since` (µs).
-fn presses(ctx: &Ctx, since: i64) -> Result<Vec<Mouse>, String> {
-    let path = ctx.spike.resolve(&ctx.spike.target.log);
-    let log = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    Ok(tlog::mouse(&log)
-        .into_iter()
-        .filter(|m| m.us >= since)
-        .collect())
-}
-
 /// `Err` naming the window over `p`, unless it is `target`.
 fn uncovered(target: HWND, p: Pt) -> Result<(), String> {
     let top = win::root_at(POINT { x: p.x, y: p.y });
@@ -125,11 +115,11 @@ fn play_all(ctx: &Ctx, target: HWND, p: Pt) -> Result<(Vec<Value>, bool), String
     let g = &ctx.cfg.g5;
     let (mut lines, mut passed) = (Vec::new(), true);
     for round in 0..g.rounds {
-        for case in cases(g, ctx.cfg.assist.still_px) {
+        for case in cases(g, ctx.spike.hold.still_px) {
             uncovered(target, p)?;
             let since = now_us();
             play(ctx, &case, p)?;
-            let got = presses(ctx, since)?;
+            let got = tlog::mouse_since(ctx, since)?;
             let ok = case_ok(case.want, case.long, &got, p, case.dx, g.point_slack_px);
             passed &= ok;
             let seen: Vec<String> = got
@@ -161,8 +151,8 @@ fn drive(ctx: &Ctx, target: &Opened) -> Result<Drive, String> {
     }
     let p = centre(target.hwnd)?;
     let assist = Assist::start(Setup {
-        hold_ms: a.hold_ms,
-        still_px: a.still_px,
+        hold_ms: ctx.spike.hold.ms,
+        still_px: ctx.spike.hold.still_px,
         source: Source::Simulated,
         own: Vec::new(),
         reply_ms: a.reply_ms,
@@ -233,7 +223,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let pass = d.passed && d.alive && fast && d.report.errors.is_empty();
     println!("hook ms {hook}; alive {}; pass {pass}", d.alive);
     Ok(json!({
-        "gate": "G5", "target": name, "hold_ms": ctx.cfg.assist.hold_ms, "pass": pass,
+        "gate": "G5", "target": name, "hold_ms": ctx.spike.hold.ms, "pass": pass,
         "cases": d.cases, "hook_ms": hook, "hook_alive": d.alive, "seen": d.report.seen,
         "max_wait_ms": d.report.max_wait_ms,
         "errors": d.report.errors, "left_open": left_open,
@@ -277,7 +267,11 @@ mod tests {
     #[test]
     fn the_cases_straddle_the_still_radius_by_more_than_the_slack() {
         let cfg = crate::config::load().expect("harness.toml loads");
-        let (g, still) = (&cfg.g5, cfg.assist.still_px);
+        let still = spike_core::config::load()
+            .expect("spike.toml loads")
+            .hold
+            .still_px;
+        let g = &cfg.g5;
         let [_, drag, _, wiggle, past] = cases(g, still);
         assert!(g.still_margin_px > g.point_slack_px);
         assert!(wiggle.dx > 0 && wiggle.dx < still);

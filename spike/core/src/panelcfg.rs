@@ -65,18 +65,22 @@ impl PanelConfig {
     }
 }
 
-/// Refuses a panel title that is empty or another window's: the focus guard spares the panel by its title.
-pub fn check_title(cfg: &SpikeConfig) -> Result<(), String> {
-    let (t, tools) = (&cfg.panel.title, &cfg.tools);
-    let ours = [
+/// Refuses an empty or shared window title: the focus guard spares the panel, and the harness finds our windows, by title.
+pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
+    let tools = &cfg.tools;
+    let named = [
+        &cfg.panel.title,
         &tools.pill_title,
         &tools.overlay_title,
         &cfg.voice.caption.title,
         &cfg.bar.bubble_title,
+        &cfg.ring.title,
+        &cfg.target.title,
     ];
-    let mut others = cfg.keyboard.titles.values().chain(ours);
-    if t.is_empty() || others.any(|o| o == t) {
-        return Err("panel: title must be set and differ from every other window's".into());
+    let all: Vec<&String> = cfg.keyboard.titles.values().chain(named).collect();
+    let shared = all.iter().enumerate().any(|(i, t)| all[..i].contains(t));
+    if shared || all.iter().any(|t| t.is_empty()) {
+        return Err("window titles must be set and differ from each other".into());
     }
     Ok(())
 }
@@ -126,18 +130,32 @@ mod tests {
 
     #[test]
     fn a_title_that_is_empty_or_another_windows_is_refused() {
-        let mut cfg = crate::config::load().expect("spike.toml loads");
-        assert_eq!(super::check_title(&cfg), Ok(()));
-        cfg.panel.title = cfg.tools.pill_title.clone();
+        let cfg = crate::config::load().expect("spike.toml loads");
+        assert_eq!(super::check_titles(&cfg), Ok(()));
+        let with = |f: &dyn Fn(&mut crate::config::SpikeConfig)| {
+            let mut c = cfg.clone();
+            f(&mut c);
+            super::check_titles(&c)
+        };
+        let pill = with(&|c| c.panel.title = c.tools.pill_title.clone());
+        assert!(pill.expect_err("pill").contains("title"));
         assert!(
-            super::check_title(&cfg)
-                .expect_err("pill")
-                .contains("title")
+            with(&|c| c.panel.title = c.title("qt")).is_err(),
+            "the keyboard's"
         );
-        cfg.panel.title = cfg.title("qt");
-        assert!(super::check_title(&cfg).is_err(), "the keyboard's");
-        cfg.panel.title.clear();
-        assert!(super::check_title(&cfg).is_err(), "untitled windows");
+        assert!(
+            with(&|c| c.panel.title = c.ring.title.clone()).is_err(),
+            "the ring's"
+        );
+        assert!(
+            with(&|c| c.ring.title = c.bar.bubble_title.clone()).is_err(),
+            "ring and bubble"
+        );
+        assert!(with(&|c| c.ring.title.clear()).is_err(), "untitled windows");
+        assert!(
+            with(&|c| c.target.title = c.panel.title.clone()).is_err(),
+            "the target's, which the harness closes by title"
+        );
     }
 
     #[test]
