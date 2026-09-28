@@ -15,6 +15,9 @@ const FLAGS: [&str; 5] = [
     "-File",
 ];
 
+/// Module path variable; PowerShell 7 sets it for its children, which hides the `Cert:` drive from Windows PowerShell.
+const MODULE_PATH: &str = "PSModulePath";
+
 /// Arguments that run `script` with `params`, each as `-Name value`.
 pub(crate) fn script_args(script: &Path, params: &[(&str, String)]) -> Vec<String> {
     let mut args: Vec<String> = FLAGS.iter().map(ToString::to_string).collect();
@@ -58,6 +61,13 @@ pub(crate) fn run(step: &str, program: &str, args: &[String]) -> Result<String, 
     exec(step, program, args, None)
 }
 
+/// A command for `program` that lets Windows PowerShell build its own module path.
+fn command(program: &str) -> Command {
+    let mut cmd = Command::new(program);
+    cmd.env_remove(MODULE_PATH);
+    cmd
+}
+
 /// Runs `program` with `args` and maps the result with [`outcome`].
 fn exec(
     step: &str,
@@ -65,7 +75,7 @@ fn exec(
     args: &[String],
     cancel: Option<i32>,
 ) -> Result<String, DevError> {
-    let output = Command::new(program)
+    let output = command(program)
         .args(args)
         .output()
         .map_err(|err| DevError::Spawn {
@@ -98,6 +108,15 @@ mod tests {
     use super::*;
 
     const CANCEL: Option<i32> = Some(1223);
+
+    #[test]
+    fn a_step_does_not_inherit_the_module_path() {
+        let cmd = command("powershell.exe");
+        let removed = cmd
+            .get_envs()
+            .any(|(key, value)| key == MODULE_PATH && value.is_none());
+        assert!(removed, "PowerShell 7's module path hides the Cert: drive");
+    }
 
     #[test]
     fn script_args_put_flags_then_script_then_params() {
