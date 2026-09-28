@@ -8,10 +8,10 @@ Everything we ship or bundle that we did not write ourselves. Updated by the `kx
 | Qt 6 (base, declarative, svg, shader tools) | 6.11.2 | LGPL-3.0-only or GPL-2.0/3.0, as separate DLLs; shader tools bundle glslang and SPIRV-Cross (BSD-3-Clause, Apache-2.0, MIT) | https://doc.qt.io/qt-6/licenses-used-in-qt.html | All windows (P1 candidate) | if it wins P1 |
 | cxx-qt | 0.10.0 | MIT OR Apache-2.0 | https://github.com/KDAB/cxx-qt | Rust bridge to Qt | if Qt wins P1 |
 | Mesa llvmpipe with LLVM (Qt's `opengl32sw.dll`) | from Qt 6.11.2 | MIT and BSL-1.0; LLVM under its own licence | https://doc.qt.io/qt-6/licenses-used-in-qt.html | Software drawing fallback | if Qt wins P1 |
-| Lucide icons | 1.48.0 (mock-up) | ISC (some MIT from Feather) | https://lucide.dev/license | Key and panel icons | yes |
-| IBM Plex Sans / Sans Arabic | – | OFL-1.1 | https://github.com/IBM/plex | ET66 theme | yes |
-| Noto Sans / Noto Sans Arabic | – | OFL-1.1 | https://github.com/notofonts | Native theme, Arabic | yes |
-| Rubik | – | OFL-1.1 | https://github.com/googlefonts/rubik | Dolch theme | yes |
+| Lucide icons (31 SVGs from `lucide-static`) | 1.48.0 | ISC (some MIT from Feather) | https://lucide.dev/license | Key and panel icons | yes |
+| IBM Plex Sans / Sans Arabic | 3.201 / 1.101 (Google Fonts) | OFL-1.1, Reserved Font Name "Plex" | https://github.com/IBM/plex | ET66 theme | yes, unmodified |
+| Noto Sans / Noto Sans Arabic | – / 2.012 (Google Fonts) | OFL-1.1 | https://github.com/notofonts | Native theme, Arabic fallback | yes |
+| Rubik | 2.300 (Google Fonts) | OFL-1.1 | https://github.com/googlefonts/rubik | Dolch theme (Latin only; its Arabic uses Noto Sans Arabic) | yes |
 | whisper.cpp + Whisper weights | – | MIT | https://github.com/ggml-org/whisper.cpp | Local voice typing | models downloaded on demand |
 | wordfreq data | – | CC-BY-SA-4.0 (data) | https://github.com/rspeer/wordfreq | Prediction seed lists | yes, separate files |
 | Tesseract + tessdata_fast | – | Apache-2.0 | https://github.com/tesseract-ocr | OCR fallback | on demand |

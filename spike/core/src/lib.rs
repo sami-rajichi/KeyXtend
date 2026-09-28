@@ -1,5 +1,6 @@
 //! Shared core of the P1 spike faces. Throwaway: deleted at the end of P1.
 
+pub mod backdrop;
 pub mod capture;
 pub mod clock;
 pub mod com;
@@ -8,16 +9,21 @@ pub mod fill;
 pub mod hello;
 pub mod hold;
 pub mod inject;
+pub mod kbgeom;
 pub mod langkey;
 pub mod layout;
 pub mod lines;
+pub mod lookcfg;
 pub mod note;
 pub mod place;
 pub mod screen;
 pub mod selwatch;
+pub mod sizer;
 pub mod snip;
 pub mod status;
+pub mod sysui;
 pub mod targetlog;
+pub mod theme;
 pub mod typer;
 pub mod uia;
 pub mod uiaccess;

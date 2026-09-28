@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-28 — P1 stage 2 part A: look tokens, geometry, size and system look
+All three themes, each light and dark, now live in `spike/themes.toml`, and a review checked every value against the mock-up. spike-core gained toolkit-free parts that load and check those tokens, lay out the keyboard at any size, handle −/+, S/M/L and click-move-click resizing, and read Windows' dark mode, accent colour and high contrast. The fonts (IBM Plex, Rubik, Noto Sans Arabic) and 31 Lucide icons were downloaded with their hashes recorded. Eleven text colours in the mock-up are under 4.5:1 (ten in Dolch, one in ET66 light); a test pins that list until the owner decides at the look check.
+
 ## 2026-09-28 — P1: voice probe (G22)
 A worker process now owns the mic, runs whisper.cpp's server once at start (base model, 0.8 s load) and can send clips to Groq whisper-large-v3 when cloud is turned on; both faces got a Mic button and a click-through caption bar. On both faces the bar stayed on top, Notepad kept focus, the words arrived 0.8–1.3 s after Mic stop, and the worker does not inherit uiAccess. Notepad lost most of a sentence typed in one batch, so dictated text is typed 10 ms per character on its own thread; speed against clip length was local 0.14, weak mode 0.36 and cloud 0.08, and base is weak for French and Arabic. A five-part review found about 35 issues, all fixed but two accepted, among them a loopback-only server address and length-capped worker messages.
 
