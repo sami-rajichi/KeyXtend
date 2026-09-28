@@ -12,6 +12,7 @@ $RootDir = Split-Path $SpikeDir -Parent
 $SettingsFile = Join-Path $SpikeDir 'spike.toml'
 $ThemesFile = Join-Path $SpikeDir 'themes.toml'
 $ShapeFile = Join-Path $SpikeDir 'shape.toml'
+$MotionFile = Join-Path $SpikeDir 'motion.toml'
 # Fonts and icons stay out of git in D:\dev; the spike's own icons are in spike\assets\icons.
 $AssetsSource = 'D:\dev\assets'
 $LucideDir = 'icons\lucide-1.48.0'
@@ -70,6 +71,7 @@ function New-Stage([string] $Face) {
     Copy-Item $SettingsFile $stage
     Copy-Item $ThemesFile $stage
     Copy-Item $ShapeFile $stage
+    Copy-Item $MotionFile $stage
     $stage
 }
 

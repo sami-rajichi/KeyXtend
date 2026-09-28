@@ -15,6 +15,13 @@ pub struct Paint {
     pub skirt: &'static str,
 }
 
+/// The paint of a recording key (mock-up `.key.rec`).
+pub const REC: Paint = Paint {
+    fill: "rec",
+    ink: "rec_ink",
+    skirt: "rec",
+};
+
 /// The paint of a key of `kind`: side keys turn `on` when toggled, other keys `lock` when latched.
 pub fn paint(kind: KeyKind, side: bool, on: bool) -> Paint {
     let (fill, ink, skirt) = match (on, side, kind) {
@@ -48,6 +55,8 @@ mod tests {
         for t in &crate::theme::load().expect("themes load").list {
             let p = &t.light;
             let skirt = serde_json::to_value(p.skirt.as_ref()).expect("skirt");
+            assert!(p.get(REC.fill).is_some() && p.get(REC.ink).is_some());
+            assert!(skirt.is_null() || skirt[REC.skirt].is_string(), "rec");
             for (kind, side, on) in KINDS.iter().flat_map(|&k| {
                 [
                     (k, false, false),

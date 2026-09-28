@@ -38,6 +38,10 @@ pub struct CaptionShape {
     pub bar_px: f32,
     /// Corner radius around the words heard (mock-up `.capbar.done`).
     pub words_radius_px: f32,
+    /// Shimmer bar height and corner radius (mock-up `.shimmer`).
+    pub shimmer_px: [f32; 2],
+    /// The shimmer's light band repeats every this many bar widths.
+    pub shimmer_span: f32,
 }
 
 /// The snip overlay (mock-up `.snip-rect .dims` and `.snip-bar`).

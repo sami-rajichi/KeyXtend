@@ -223,6 +223,17 @@ pub fn settings_path(name: &str) -> PathBuf {
     }
 }
 
+/// Reads settings file `name` and parses it with `parse`; an error starts with the file's path.
+pub fn read_settings<T>(
+    name: &str,
+    parse: impl FnOnce(&str) -> Result<T, String>,
+) -> Result<T, String> {
+    let file = settings_path(name);
+    let at = |e: String| format!("{}: {e}", file.display());
+    let text = std::fs::read_to_string(&file).map_err(|e| at(e.to_string()))?;
+    parse(&text).map_err(at)
+}
+
 /// Prints `err` and saves it in TEMP, since release faces have no console to show it.
 pub fn report_error(face: &str, err: &str) {
     eprintln!("{err}");

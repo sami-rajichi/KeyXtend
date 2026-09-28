@@ -11,6 +11,9 @@ Item {
     required property var lk
     required property var res
 
+    // The mic is recording.
+    readonly property bool recording: vc.recording
+
     // A note for the status line.
     signal note(string text)
 
@@ -81,6 +84,7 @@ Item {
         lk: ex.lk
         box: Qt.rect(pill.x, pill.y, pill.width, pill.height)
         radius: pill.height / 2
+        follow: pill.popped
 
         Pill {
             id: pill

@@ -13,11 +13,16 @@ Window {
     signal copyClicked
 
     readonly property var sh: lk.shape.pill
+    // What pops in; its shadow follows it.
+    readonly property Item popped: body
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
     visible: false
     width: Math.max(least, text.implicitWidth + 2 * (sh.button_side_px + sh.pad_px))
+
+    // It pops in each time it shows (mock-up .selpill).
+    onVisibleChanged: if (visible) pop.restart()
 
     // Moves to point `at`, in Qt units.
     function place(at) {
@@ -25,37 +30,49 @@ Window {
         pill.y = at.y;
     }
 
-    Rectangle {
-        anchors.fill: parent
-        radius: height / 2
-        color: pill.lk.palette.badge_bg
+    PopIn {
+        id: pop
+        target: body
+        move: pill.lk.motion.moves.pill
+        amount: pill.lk.motion.amount
     }
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: pill.sh.pad_px
-        radius: height / 2
-        color: area.containsMouse ? pill.lk.common.pill_hover : "transparent"
-        Accessible.role: Accessible.Button
-        Accessible.name: pill.label
-        Accessible.onPressAction: pill.copyClicked()
+    Item {
+        id: body
+        width: pill.width
+        height: pill.height
 
-        Text {
-            id: text
-            anchors.centerIn: parent
-            text: pill.label
-            textFormat: Text.PlainText
-            font.family: pill.res.fam.latin
-            font.pixelSize: pill.sh.font_px
-            font.weight: pill.sh.weight
-            color: pill.lk.palette.badge_ink
-            // The button already carries the label; hide the text so readers say it once.
-            Accessible.ignored: true
-        }
-        MouseArea {
-            id: area
+        Rectangle {
             anchors.fill: parent
-            hoverEnabled: true
-            onClicked: pill.copyClicked()
+            radius: height / 2
+            color: pill.lk.palette.badge_bg
+        }
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: pill.sh.pad_px
+            radius: height / 2
+            color: area.containsMouse ? pill.lk.common.pill_hover : "transparent"
+            Accessible.role: Accessible.Button
+            Accessible.name: pill.label
+            Accessible.onPressAction: pill.copyClicked()
+
+            Text {
+                id: text
+                anchors.centerIn: parent
+                text: pill.label
+                textFormat: Text.PlainText
+                font.family: pill.res.fam.latin
+                font.pixelSize: pill.sh.font_px
+                font.weight: pill.sh.weight
+                color: pill.lk.palette.badge_ink
+                // The button already carries the label; hide the text so readers say it once.
+                Accessible.ignored: true
+            }
+            MouseArea {
+                id: area
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: pill.copyClicked()
+            }
         }
     }
 }

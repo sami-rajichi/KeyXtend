@@ -204,3 +204,26 @@ fn the_mode_switch_flips_what_is_shown_and_themes_must_exist() {
     assert!(!k.look().expect("look").dark);
     assert!(k.set_theme(2) && !k.set_theme(9));
 }
+
+#[test]
+fn the_mic_key_shows_the_recording_until_it_stops() {
+    let mut k = kb(false);
+    k.set_rec(true);
+    assert!(k.state().keys["mic"].rec);
+    k.set_rec(false);
+    assert!(!k.state().keys["mic"].rec);
+}
+
+#[test]
+fn the_names_turn_the_way_the_key_stepped_and_only_once() {
+    let mut k = kb(false);
+    k.asked = -1;
+    k.switched(FAKE);
+    assert_eq!(k.state().lang.turn, -1);
+    k.switched(FAKE);
+    assert_eq!(
+        k.state().lang.turn,
+        0,
+        "a change made another way does not turn"
+    );
+}

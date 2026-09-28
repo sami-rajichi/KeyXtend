@@ -10,9 +10,10 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
 use windows::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW, HIGHCONTRASTW_FLAGS};
 use windows::Win32::UI::WindowsAndMessaging::{
-    SPI_GETHIGHCONTRAST, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+    SPI_GETCLIENTAREAANIMATION, SPI_GETHIGHCONTRAST, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+    SystemParametersInfoW,
 };
-use windows::core::{PCWSTR, w};
+use windows::core::{BOOL, PCWSTR, w};
 
 use crate::com::Com;
 use crate::lookcfg::ModeChoice;
@@ -73,6 +74,8 @@ pub struct SystemLook {
     pub accent: Option<Accent>,
     /// The system colours, while high contrast is on.
     pub contrast: Option<SysColors>,
+    /// Windows' animation effects are off.
+    pub anim_off: bool,
     /// Why a part could not be read, for the status line.
     pub note: Option<String>,
 }
@@ -212,6 +215,16 @@ fn high_contrast() -> bool {
     ok && contrast_on(hc.dwFlags)
 }
 
+/// True when Windows' animation effects are off; a failed read counts as on, Windows' default.
+fn animations_off() -> bool {
+    let mut on = BOOL(1);
+    let data = Some(std::ptr::from_mut(&mut on).cast());
+    let none = SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0);
+    // SAFETY: fills one BOOL, which is what this query writes.
+    let ok = unsafe { SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, data, none) }.is_ok();
+    ok && !on.as_bool()
+}
+
 /// The system colours now.
 fn sys_colors() -> SysColors {
     // SAFETY: plain query of a system colour.
@@ -254,6 +267,7 @@ pub fn read() -> SystemLook {
         note: accent.as_ref().err().map(|e| format!("accent: {e}")),
         accent: accent.ok(),
         contrast: high_contrast().then(sys_colors),
+        anim_off: animations_off(),
     }
 }
 

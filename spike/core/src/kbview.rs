@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
-use crate::facecfg::KeysConfig;
+use crate::facecfg::{Action, KeysConfig};
 use crate::kbgeom::{Board, KeyBox, KeyKind};
 use crate::langinfo::LangInfo;
 use crate::latch::{Latch, Latches};
 use crate::legend::{KeyChars, Legend, LegendMods, is_arabic, legend, typed};
-use crate::paint::{Paint, paint};
+use crate::paint::{Paint, REC, paint};
 use crate::place::Place;
 use crate::sizer::SizeConfig;
 
@@ -62,6 +62,8 @@ pub struct KeyState {
     pub name: String,
     /// Latched, locked or toggled on.
     pub on: bool,
+    /// The mic records: the key turns red, its light pulses and its cap glows.
+    pub rec: bool,
     /// Its colours now.
     pub paint: Paint,
 }
@@ -81,6 +83,8 @@ pub struct LangView {
     pub rtl: bool,
     /// The space bar text.
     pub space: String,
+    /// Which way the names turn after this change: -1 from the left, 1 from the right, 0 not at all.
+    pub turn: i8,
 }
 
 /// Everything that changes as keys are used.
@@ -137,6 +141,10 @@ pub struct StateInput<'a> {
     pub chars: &'a [(u32, KeyChars)],
     /// The current layout and its neighbours.
     pub lang: [&'a LangInfo; 3],
+    /// The mic is recording.
+    pub rec: bool,
+    /// Which way the language names turn: -1 from the left, 1 from the right, 0 not at all.
+    pub turn: i8,
 }
 
 /// The legend modifiers from `latches` and Caps Lock: AltGr counts only on layouts that have AltGr characters.
@@ -170,14 +178,17 @@ pub fn state_view(i: &StateInput) -> StateView {
                 legend: legend(c, m, k.row == 0, rtl),
                 name: typed(c, m).to_string(),
                 on: false,
+                rec: false,
                 paint: paint(k.kind, false, false),
             },
             None => {
-                let on = is_on(i, &k.id);
+                let rec = i.rec && is_mic(i, &k.id);
+                let on = rec || is_on(i, &k.id);
                 let side = k.kind == KeyKind::Act;
                 KeyState {
                     on,
-                    paint: paint(k.kind, side, on),
+                    rec,
+                    paint: if rec { REC } else { paint(k.kind, side, on) },
                     ..KeyState::default()
                 }
             }
@@ -186,12 +197,12 @@ pub fn state_view(i: &StateInput) -> StateView {
     }
     StateView {
         keys,
-        lang: lang_view(i.lang),
+        lang: lang_view(i.lang, i.turn),
     }
 }
 
-/// The language key's three names and the space bar text.
-fn lang_view([prev, cur, next]: [&LangInfo; 3]) -> LangView {
+/// The language key's three names, the space bar text and which way the names turn.
+fn lang_view([prev, cur, next]: [&LangInfo; 3], turn: i8) -> LangView {
     LangView {
         prev: prev.short.clone(),
         cur: cur.short.clone(),
@@ -199,7 +210,15 @@ fn lang_view([prev, cur, next]: [&LangInfo; 3]) -> LangView {
         ar: [&prev.short, &cur.short, &next.short].map(|s| is_arabic(s)),
         rtl: cur.rtl,
         space: cur.name.clone(),
+        turn,
     }
+}
+
+/// True when named key `id` starts and stops voice typing.
+fn is_mic(i: &StateInput, id: &str) -> bool {
+    i.looks
+        .get(id)
+        .is_some_and(|l| l.action == Some(Action::Mic))
 }
 
 /// True when named key `id` is latched, Caps Lock while it is on, or a toggled side key.
@@ -235,6 +254,10 @@ mod tests {
     }
 
     fn state(latches: &Latches, caps: bool) -> StateView {
+        state_with(latches, caps, false)
+    }
+
+    fn state_with(latches: &Latches, caps: bool, rec: bool) -> StateView {
         let c = cfg();
         let b = board(&c.layout, 4.0, 1.0);
         let lang = LangInfo {
@@ -257,6 +280,8 @@ mod tests {
             toggled: &toggled,
             chars: &chars,
             lang: [&lang, &lang, &lang],
+            rec,
+            turn: 0,
         };
         state_view(&i)
     }
@@ -290,6 +315,16 @@ mod tests {
         assert!(s.keys["caps"].on && s.keys["grab"].on);
         assert!(!s.keys["mic"].on);
         assert_eq!(s.keys["c-1-2"].legend.main, "E");
+    }
+
+    #[test]
+    fn the_mic_key_turns_red_and_lit_while_it_records() {
+        let s = state_with(&Latches::default(), false, true);
+        let mic = &s.keys["mic"];
+        assert!(mic.rec && mic.on, "its light is on and pulses");
+        assert_eq!(mic.paint, REC);
+        assert!(!s.keys["grab"].rec, "only the mic key");
+        assert!(!state(&Latches::default(), false).keys["mic"].rec);
     }
 
     #[test]

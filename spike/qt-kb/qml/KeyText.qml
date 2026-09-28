@@ -5,6 +5,7 @@ import QtQuick
 Item {
     id: t
 
+    // The key's box and look, its changing state, the look, the language key, fonts and icons, size and legend colour.
     required property var kv
     required property var ks
     required property var lk
@@ -15,12 +16,33 @@ Item {
 
     readonly property var look: lk.look
     readonly property var lg: lk.shape.legend
+    readonly property var mv: lk.motion.moves
+    readonly property var amt: lk.motion.amount
     readonly property color ink2: lk.palette.legend_2
     // Dolch lifts every legend a little (mock-up line 217).
     readonly property real lift: look.cap.kind === "skirt" ? look.cap.legend_lift_px * s : 0
     readonly property bool isChar: kv.kind === "char"
+    readonly property bool isSpace: kv.kind === "space"
+    readonly property bool isLang: kv.kind === "lang"
     readonly property bool mainAr: isChar && ks ? ks.main_ar : false
     readonly property bool secondAr: isChar && ks ? ks.second_ar : false
+    readonly property real spacePx: lg.space_px[lang.rtl ? 1 : 0] * s
+    readonly property real mainPx: look.legend_px * s * (mainAr ? look.arabic_scale : 1)
+    // The layout of the app in front.
+    readonly property string cur: lang.cur
+
+    // The cap hides what slides past its edge (mock-up .cap overflow); other keys clip only while their legend rises.
+    clip: isLang || swap.running
+
+    // After a language change the main legend rises in; the language key's names slide in the way the key stepped.
+    onCurChanged: {
+        if (isLang && lang.turn !== 0) {
+            turn.from = lang.turn * amt.carousel_shift * langRow.width;
+            turn.restart();
+        } else if (isChar || isSpace) {
+            swap.restart();
+        }
+    }
 
     // A single-line text in a theme font.
     component Line: Text {
@@ -30,17 +52,32 @@ Item {
         Accessible.ignored: true
     }
 
-    // Character keys: the main legend, the other case top left, and AltGr bottom right.
-    Line {
-        visible: t.isChar
-        anchors.centerIn: parent
-        anchors.verticalCenterOffset: -t.lift
-        ar: t.mainAr
-        text: t.ks ? t.ks.main : ""
-        font.pixelSize: t.look.legend_px * t.s * (t.mainAr ? t.look.arabic_scale : 1)
-        font.weight: t.look.legend_weight
-        color: t.ink
+    ParallelAnimation {
+        id: swap
+        Tween {
+            target: rise
+            property: "y"
+            from: t.amt.rise * (t.isSpace ? t.spacePx : t.mainPx)
+            to: 0
+            move: t.mv.legends
+        }
+        Tween {
+            target: legends
+            property: "opacity"
+            from: 0
+            to: 1
+            move: t.mv.legends
+        }
     }
+    Tween {
+        id: turn
+        target: slide
+        property: "x"
+        to: 0
+        move: t.mv.carousel
+    }
+
+    // Character keys: the other case top left, and AltGr bottom right; they change at once (mock-up .lg2, .lg3).
     Line {
         visible: t.isChar
         x: t.lg.corner_px[1] * t.s
@@ -62,9 +99,43 @@ Item {
         color: t.ink2
     }
 
+    // What rises in after a language change (mock-up .swap .lg, .sp): the main legend or the space bar text.
+    Item {
+        id: legends
+        anchors.fill: parent
+        transform: Translate {
+            id: rise
+        }
+
+        Line {
+            visible: t.isChar
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -t.lift
+            ar: t.mainAr
+            text: t.ks ? t.ks.main : ""
+            font.pixelSize: t.mainPx
+            font.weight: t.look.legend_weight
+            color: t.ink
+        }
+        // The space bar: language and layout.
+        Line {
+            visible: t.isSpace
+            anchors.fill: parent
+            anchors.leftMargin: t.lg.space_pad_px * t.s
+            anchors.rightMargin: t.lg.space_pad_px * t.s
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            ar: t.lang.rtl
+            text: t.lang.space || ""
+            font.pixelSize: t.spacePx
+            color: t.ink2
+        }
+    }
+
     // Named keys: an icon, a label, or both side by side; their names show as tooltips instead of text.
     Row {
-        visible: !t.isChar && t.kv.kind !== "space" && t.kv.kind !== "lang"
+        visible: !t.isChar && !t.isSpace && !t.isLang
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
@@ -86,29 +157,17 @@ Item {
         }
     }
 
-    // The space bar: language and layout.
-    Line {
-        visible: t.kv.kind === "space"
-        anchors.fill: parent
-        anchors.leftMargin: t.lg.space_pad_px * t.s
-        anchors.rightMargin: t.lg.space_pad_px * t.s
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
-        ar: t.lang.rtl
-        text: t.lang.space || ""
-        font.pixelSize: t.lg.space_px[t.lang.rtl ? 1 : 0] * t.s
-        color: t.ink2
-    }
-
     // The language key: previous, current and next layout, the current one large.
     Row {
         id: langRow
-        visible: t.kv.kind === "lang"
+        visible: t.isLang
         readonly property var sh: t.lk.shape.lang
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -t.lift
         spacing: sh.gap_px * t.s
+        transform: Translate {
+            id: slide
+        }
         Repeater {
             model: [t.lang.prev, t.lang.cur, t.lang.next]
             delegate: Line {
