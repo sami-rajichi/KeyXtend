@@ -143,8 +143,11 @@ mod tests {
             "-c",
             "user.email=test@example.com",
         ];
+        /// A git fsmonitor daemon once hung a test commit for 15 minutes, so tests turn it off.
+        const NO_FSMONITOR: [&str; 2] = ["-c", "core.fsmonitor=false"];
         let output = git_command(Some(dir))
             .args(IDENTITY)
+            .args(NO_FSMONITOR)
             .args(["-c", "commit.gpgsign=false", "-c", "core.hooksPath="])
             .args(args)
             .output()

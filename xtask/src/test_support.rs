@@ -62,9 +62,10 @@ pub(crate) fn tidy_config() -> TidyConfig {
         max_file_lines: 400,
         warn_file_lines: 300,
         extensions: vec!["rs".to_string()],
-        scan_dirs: vec!["xtask".to_string()],
+        scan_dirs: vec!["tools".to_string(), "xtask".to_string()],
         skip_dirs: vec!["target".to_string()],
         app_dir: "apps".to_string(),
+        tool_dir: "tools".to_string(),
         module_prefix: "kx-mod-".to_string(),
         platform_prefix: "kx-platform-".to_string(),
         module_allowed: vec!["kx-module-api".to_string()],
@@ -72,10 +73,15 @@ pub(crate) fn tidy_config() -> TidyConfig {
         banned_network: vec!["reqwest".to_string()],
         banned_media: vec!["image".to_string()],
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
+        tool_unsafe_attr: "#![deny(unsafe_code)]".to_string(),
         root_kinds: vec![
             "lib".to_string(),
             "bin".to_string(),
             "proc-macro".to_string(),
+        ],
+        test_only: vec![
+            "kx-test-support".to_string(),
+            "kx-platform-fake".to_string(),
         ],
     }
 }

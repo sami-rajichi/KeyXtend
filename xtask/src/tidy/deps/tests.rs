@@ -149,6 +149,23 @@ fn app_depending_on_platform_is_not_a_d2_violation() {
 }
 
 #[test]
+fn tool_depending_on_a_module_and_a_platform_adapter_is_not_a_d2_violation() {
+    let ws = WorkspaceBuilder::new()
+        .member(
+            "kx-tool",
+            "tools",
+            vec![
+                dep("kx-mod-a", DependencyKind::Normal),
+                dep("kx-platform-windows", DependencyKind::Normal),
+            ],
+        )
+        .member("kx-mod-a", "crates", vec![])
+        .member("kx-platform-windows", "crates", vec![])
+        .build();
+    assert_eq!(d2_app_only_platform_and_module(&ws), vec![]);
+}
+
+#[test]
 fn transitive_network_dependency_of_app_is_a_d3_error() {
     let ws = WorkspaceBuilder::new()
         .member("keyxtend", "apps", vec![])

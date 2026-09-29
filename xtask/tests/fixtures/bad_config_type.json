@@ -25,6 +25,7 @@
       "scan_dirs": ["xtask"],
       "skip_dirs": ["target"],
       "app_dir": "apps",
+      "tool_dir": "tools",
       "module_prefix": "kx-mod-",
       "platform_prefix": "kx-platform-",
       "module_allowed": ["kx-module-api"],
@@ -32,7 +33,9 @@
       "banned_network": ["reqwest"],
       "banned_media": ["image"],
       "unsafe_attr": "#![forbid(unsafe_code)]",
-      "root_kinds": ["lib", "bin", "proc-macro"]
+      "tool_unsafe_attr": "#![deny(unsafe_code)]",
+      "root_kinds": ["lib", "bin", "proc-macro"],
+      "test_only": ["kx-test-support", "kx-platform-fake"]
     },
     "dco": {
       "trailer": "Signed-off-by",

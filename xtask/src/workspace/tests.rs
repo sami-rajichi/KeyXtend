@@ -99,3 +99,21 @@ fn load_never_panics_on_empty_input() {
     assert!(load("null").is_err());
     assert!(load("{}").is_err());
 }
+
+#[test]
+fn app_and_tool_follow_the_manifest_folder() {
+    use crate::tidy::testkit::WorkspaceBuilder;
+
+    let ws = WorkspaceBuilder::new()
+        .member("keyxtend", "apps", vec![])
+        .member("kx-tool", "tools", vec![])
+        .member("kx-lib", "crates", vec![])
+        .build();
+    let flags = |name: &str| {
+        let package = ws.find_member(name).unwrap();
+        (ws.is_app(package), ws.is_tool(package))
+    };
+    assert_eq!(flags("keyxtend"), (true, false));
+    assert_eq!(flags("kx-tool"), (false, true));
+    assert_eq!(flags("kx-lib"), (false, false));
+}

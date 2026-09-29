@@ -148,12 +148,31 @@ fn has_scanned_extension(path: &Path, tidy: &TidyConfig) -> bool {
 }
 
 /// F2: every non-platform crate's `root_kinds` target must carry `unsafe_attr`.
+///
+/// A test tool may carry `tool_unsafe_attr` instead.
 pub(crate) fn f2_unsafe_attr(ws: &Workspace) -> Vec<Violation> {
     ws.members()
         .filter(|p| !p.name.starts_with(ws.tidy.platform_prefix.as_str()))
-        .flat_map(|p| root_targets(p, ws))
-        .filter_map(|target| check_unsafe_attr(target, ws))
+        .flat_map(|p| check_package(p, ws))
         .collect()
+}
+
+/// F2 violations in `package`'s crate roots.
+fn check_package(package: &Package, ws: &Workspace) -> Vec<Violation> {
+    let attrs = accepted_attrs(package, ws);
+    root_targets(package, ws)
+        .filter_map(|target| check_unsafe_attr(target, &attrs, ws))
+        .collect()
+}
+
+/// The attributes `package`'s crate roots may carry, the tool one first for a tool.
+fn accepted_attrs<'a>(package: &Package, ws: &'a Workspace) -> Vec<&'a str> {
+    let tidy = &ws.tidy;
+    if ws.is_tool(package) {
+        vec![&tidy.tool_unsafe_attr, &tidy.unsafe_attr]
+    } else {
+        vec![&tidy.unsafe_attr]
+    }
 }
 
 /// `package`'s targets whose kind is one of `tidy.root_kinds`.
@@ -164,19 +183,19 @@ fn root_targets<'a>(package: &'a Package, ws: &'a Workspace) -> impl Iterator<It
         .filter(|t| t.kinds.iter().any(|k| ws.tidy.root_kinds.contains(k)))
 }
 
-/// Reads one target's root file and reports a violation if `unsafe_attr` is missing.
-fn check_unsafe_attr(target: &Target, ws: &Workspace) -> Option<Violation> {
+/// Reads one target's root file and reports a violation if none of `attrs` is present.
+fn check_unsafe_attr(target: &Target, attrs: &[&str], ws: &Workspace) -> Option<Violation> {
     let place = relative_place(&target.src_path, &ws.root_dir);
     let text = match fs::read_to_string(&target.src_path) {
         Ok(text) => text,
         Err(err) => return Some(f2_violation(place, err.to_string())),
     };
-    if has_active_line(&text, &ws.tidy.unsafe_attr) {
+    if attrs.iter().any(|attr| has_active_line(&text, attr)) {
         None
     } else {
         Some(f2_violation(
             place,
-            format!("missing {}", ws.tidy.unsafe_attr),
+            format!("missing {}", attrs.join(" or ")),
         ))
     }
 }
@@ -237,3 +256,5 @@ fn relative_place(path: &Path, root: &Path) -> String {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tool_tests;

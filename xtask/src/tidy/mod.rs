@@ -10,15 +10,17 @@ use crate::workspace::Workspace;
 
 /// D1: a module depends on a workspace member outside `module_allowed`.
 pub(crate) const D1: &str = "D1";
-/// D2: a non-app package depends on a platform adapter or a feature module.
+/// D2: a package other than the app or a tool depends on a platform adapter or a module.
 pub(crate) const D2: &str = "D2";
 /// D3: a `banned_network` crate is reachable from the app.
 pub(crate) const D3: &str = "D3";
 /// D4: a `banned_media` crate is reachable from the app.
 pub(crate) const D4: &str = "D4";
+/// D5: a shipped crate depends on a test tool or a `test_only` crate.
+pub(crate) const D5: &str = "D5";
 /// F1: a source file is over `warn_file_lines` or `max_file_lines`.
 pub(crate) const F1: &str = "F1";
-/// F2: a crate root is missing `unsafe_attr`.
+/// F2: a crate root is missing `unsafe_attr` (or `tool_unsafe_attr`, for a tool).
 pub(crate) const F2: &str = "F2";
 
 /// How serious a tidy [`Violation`] is.
@@ -50,12 +52,13 @@ const WARNING: &str = "warning";
 /// The label [`summary`] prints its line under.
 const SUMMARY_LABEL: &str = "tidy";
 
-/// Runs every tidy rule against `ws`, in a fixed order: D1-D4, then F1-F2.
+/// Runs every tidy rule against `ws`, in a fixed order: D1-D5, then F1-F2.
 pub(crate) fn run(ws: &Workspace) -> Vec<Violation> {
     let mut violations = deps::d1_module_isolation(ws);
     violations.extend(deps::d2_app_only_platform_and_module(ws));
     violations.extend(deps::d3_no_network_in_app(ws));
     violations.extend(deps::d4_no_media_in_app(ws));
+    violations.extend(deps::testonly::d5_test_only_deps(ws));
     violations.extend(files::f1_file_length(ws));
     violations.extend(files::f2_unsafe_attr(ws));
     violations
