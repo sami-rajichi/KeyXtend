@@ -1,6 +1,7 @@
 //! Tests of the whole-file layer, on temp folders only.
 
 use super::*;
+use crate::names::MAX_FILE_BYTES;
 use kx_test_support::tempdir::TempDir;
 
 const GOOD: &str = "[keyboard]\nversion = 1\nsize = 3\n";

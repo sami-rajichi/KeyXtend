@@ -29,6 +29,8 @@ pub mod keys {
     pub const SETTINGS_NEWER: &str = "notice.settings-newer";
     /// Settings could not be saved and live in memory only.
     pub const SETTINGS_UNSAVED: &str = "notice.settings-unsaved";
+    /// Another program holds the settings file, so defaults run in memory and nothing is saved.
+    pub const SETTINGS_LOCKED: &str = "notice.settings-locked";
     /// A module failed while the rest keep running; it can be tried again.
     pub const MODULE_FAILED: &str = "notice.module-failed";
 }
@@ -63,7 +65,8 @@ impl Event for ModuleStateChanged {
     const NAME: &'static str = "module-state-changed";
 }
 
-/// A module's settings changed; the kernel restarts the module if it runs, so it reads them again.
+/// A module's settings changed; the kernel restarts the module if it runs, or tries it again if it
+/// failed, so it reads them again.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SettingsChanged {
     /// The module whose settings changed.
@@ -79,12 +82,13 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
-    const ALL_KEYS: [&str; 6] = [
+    const ALL_KEYS: [&str; 7] = [
         keys::SETTINGS_RESET,
         keys::SETTINGS_RESTORED,
         keys::SETTINGS_DEFAULTS,
         keys::SETTINGS_NEWER,
         keys::SETTINGS_UNSAVED,
+        keys::SETTINGS_LOCKED,
         keys::MODULE_FAILED,
     ];
 

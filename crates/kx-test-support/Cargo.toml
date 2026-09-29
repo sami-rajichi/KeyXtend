@@ -1,6 +1,6 @@
 [package]
 name = "kx-test-support"
-description = "Test-only helpers: golden files, temp folders, percentiles and frame stats."
+description = "Test-only helpers: golden files, temp folders, file locks, percentiles and frame stats."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

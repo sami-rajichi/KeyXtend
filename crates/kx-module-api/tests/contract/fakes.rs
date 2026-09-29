@@ -1,8 +1,8 @@
-//! Small fakes of the kernel side: a bus core and a host.
+//! Small fakes of the kernel side: a bus core, a settings sink and a host.
 
 use kx_module_api::{
-    Bus, BusCore, Capability, Clock, Flow, Host, InterceptFn, Manifest, Mono, NotifyFn,
-    ServiceError, ServiceId, Subscription, SubscriptionId,
+    Bus, BusCore, Capability, Clock, Flow, Host, InterceptFn, Manifest, ModuleId, Mono, NotifyFn,
+    ServiceError, ServiceId, SettingsSink, Subscription, SubscriptionId, WriteError,
 };
 use std::any::{Any, TypeId};
 use std::cell::Cell;
@@ -25,6 +25,39 @@ impl Clock for Fixed {
 /// A stored service and the capability that gates it.
 pub type Stored = (Option<Capability>, Box<dyn Any + Send + Sync>);
 
+/// One write a sink received: the module, the key and the value.
+pub type Written = (ModuleId, String, toml::Value);
+
+/// A settings sink that records every write and answers with its refusal, if one is set.
+#[derive(Default)]
+pub struct FakeSink {
+    writes: Mutex<Vec<Written>>,
+    refusal: Mutex<Option<WriteError>>,
+}
+
+impl FakeSink {
+    /// Every write so far, in order.
+    pub fn writes(&self) -> Vec<Written> {
+        lock(&self.writes).clone()
+    }
+
+    /// Refuses every later write with `error`.
+    pub fn refuse(&self, error: WriteError) {
+        *lock(&self.refusal) = Some(error);
+    }
+}
+
+impl SettingsSink for FakeSink {
+    fn write(&self, module: ModuleId, key: &str, value: toml::Value) -> Result<(), WriteError> {
+        lock(&self.writes).push((module, key.to_owned(), value));
+        lock(&self.refusal).clone().map_or(Ok(()), Err)
+    }
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 /// A host with a service map, a grant list and a fake bus; it counts service lookups.
 pub struct FakeHost {
     pub manifest: &'static Manifest,
@@ -33,6 +66,7 @@ pub struct FakeHost {
     pub lookups: Cell<usize>,
     pub settings: toml::Table,
     pub held: Vec<Subscription>,
+    pub sink: Arc<FakeSink>,
     core: Arc<FakeCore>,
 }
 
@@ -45,6 +79,7 @@ impl FakeHost {
             lookups: Cell::new(0),
             settings: toml::Table::new(),
             held: Vec::new(),
+            sink: Arc::default(),
             core: Arc::default(),
         }
     }
@@ -97,6 +132,11 @@ impl Host for FakeHost {
 
     fn settings(&self) -> &toml::Table {
         &self.settings
+    }
+
+    fn settings_sink(&self) -> Arc<dyn SettingsSink> {
+        let sink: Arc<FakeSink> = Arc::clone(&self.sink);
+        sink
     }
 
     fn hold(&mut self, guard: Subscription) {

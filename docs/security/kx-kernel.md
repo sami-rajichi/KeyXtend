@@ -30,7 +30,9 @@
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network in these crates. Module ids are fixed strings in the binary; a duplicate or reserved id is refused at `Kernel::add`.
 - **Tampering:** a hand-edited or damaged settings file.
-  - Each value is checked, and only a bad value resets. An unreadable or oversized file is set aside as the broken copy, and the last good copy comes back.
+  - Each value is checked, and only a bad value resets. A damaged or oversized file is set aside as the broken copy, and the last good copy comes back.
+  - A file another program holds (any open or read error except "not found") is not damage: the app runs on defaults in memory, says so once, and never writes the file that run.
+  - A module writes only through its `SettingsHandle`, which `ModuleCx` binds to the module's own id, so it can never change another section or `[kernel]`. Each value passes the module's validator before it is stored and saved.
   - Saving writes a temp file, copies the good file to the previous copy, then renames the temp file over it in one step, so a crash never leaves half a file and the settings file is never missing. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
   - The redacting formatter prints `‹redacted›` for any field whose name contains a `SENSITIVE` part (`text`, `typed`, `chars`, `clipboard`, `password`, `secret`, `api_key`, `token`, `transcript`), whatever its case or separators.
@@ -50,11 +52,11 @@
 - Done: sensitive field names matched only exactly; they now match by name part, ignoring case and separators.
 - Done: bidi controls and line separators are escaped in log lines.
 - Done: settings errors could quote a file value into the log; only the error kind is logged.
+- Done (P3): a settings file locked by another program counted as damaged and could be set aside; it now runs on defaults and is never written that run.
 
 ### Should fix (tracked issue)
 - A fuzz target for `Store::load` and the repair path (needs a nightly toolchain, so it waits for the owner's yes to install it). Until then, property tests cover repair and ordering.
 - Bus events have no capability gate: any module can subscribe to, intercept or publish any event. P3 decides it before any typed-text event exists (`docs/items/P3.md`).
-- A settings file that cannot be opened for a reason other than "not found" (for example another program's lock) counts as damaged. P3 treats it as "run on defaults in memory and do not save" (`docs/items/P3.md`).
 - The app must install a quiet panic hook, because caught panics still print their message through the default hook (`docs/items/P3.md`).
 - Redaction works by field name only, so text formatted into a log message prints in clear. P3 keeps typed text in `Redacted<T>` and adds a check for input modules (`docs/items/P3.md`).
 

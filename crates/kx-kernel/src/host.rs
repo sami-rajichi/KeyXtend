@@ -1,9 +1,10 @@
-//! The `Host` a module sees while it starts: services, bus, clock and settings.
+//! The `Host` a module sees while it starts: services, bus, clock, settings and the settings sink.
 
 use crate::grants::Grants;
 use crate::registry::{Owner, Registry, Service};
 use kx_module_api::{
-    Bus, Capability, Clock, Host, Manifest, ModuleId, ServiceError, ServiceId, Subscription,
+    Bus, Capability, Clock, Host, Manifest, ModuleId, ServiceError, ServiceId, SettingsSink,
+    Subscription,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -44,6 +45,7 @@ pub struct StartHost<'a> {
     bus: Bus,
     clock: Arc<dyn Clock>,
     settings: toml::Table,
+    sink: Arc<dyn SettingsSink>,
     held: Held,
 }
 
@@ -57,6 +59,7 @@ impl<'a> StartHost<'a> {
         bus: Bus,
         clock: Arc<dyn Clock>,
         settings: Option<toml::Table>,
+        sink: Arc<dyn SettingsSink>,
     ) -> Self {
         let held = Held {
             module: manifest.id,
@@ -70,6 +73,7 @@ impl<'a> StartHost<'a> {
             bus,
             clock,
             settings: settings.unwrap_or_default(),
+            sink,
             held,
         }
     }
@@ -119,6 +123,10 @@ impl Host for StartHost<'_> {
 
     fn settings(&self) -> &toml::Table {
         &self.settings
+    }
+
+    fn settings_sink(&self) -> Arc<dyn SettingsSink> {
+        Arc::clone(&self.sink)
     }
 
     fn hold(&mut self, guard: Subscription) {

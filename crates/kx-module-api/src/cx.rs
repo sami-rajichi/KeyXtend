@@ -2,7 +2,7 @@
 
 use crate::{
     Bus, Capability, Clock, Event, Flow, Manifest, ServiceError, ServiceId, ServiceKey, Settings,
-    SettingsError, Subscription, parse_as,
+    SettingsError, SettingsHandle, SettingsSink, Subscription, parse_as,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -43,6 +43,9 @@ pub trait Host {
 
     /// The module's settings section, already migrated and repaired.
     fn settings(&self) -> &toml::Table;
+
+    /// The kernel's settings sink, behind every module's settings handle.
+    fn settings_sink(&self) -> Arc<dyn SettingsSink>;
 
     /// Keeps `guard` alive until the module's `stop` begins or its start fails.
     fn hold(&mut self, guard: Subscription);
@@ -129,5 +132,12 @@ impl<'a> ModuleCx<'a> {
     /// `SettingsError::Parse` or the error from `T::check`.
     pub fn settings<T: Settings>(&self) -> Result<T, SettingsError> {
         parse_as(self.host.settings())
+    }
+
+    /// A handle that writes the module's own section at once, bound to its manifest id.
+    /// Keep it for values the module sets itself, such as a size or a position.
+    #[must_use]
+    pub fn settings_handle(&self) -> SettingsHandle {
+        SettingsHandle::new(self.manifest().id, self.host.settings_sink())
     }
 }

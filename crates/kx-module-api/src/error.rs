@@ -1,6 +1,6 @@
-//! Errors a module meets while it starts: services, settings and its own start.
+//! Errors a module meets: services, settings, its own start and its own settings writes.
 
-use crate::{Capability, ServiceId};
+use crate::{Capability, ModuleId, ServiceId};
 use thiserror::Error;
 
 /// Why a service could not be got or provided.
@@ -79,6 +79,20 @@ pub enum ModuleError {
     /// The module's own start failed; the reason is a short fixed text and never holds user data.
     #[error("start failed: {0}")]
     Start(&'static str),
+}
+
+/// Why a module's own settings write failed.
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum WriteError {
+    /// The module's validator refused the key or the value; nothing changed.
+    #[error(transparent)]
+    Invalid(#[from] SettingsError),
+    /// The section cannot change: no settings, a newer version, the version key, or a panic.
+    #[error("the settings of module {0} cannot change")]
+    Refused(ModuleId),
+    /// The value holds for this run, but the settings file could not be saved.
+    #[error("the settings were not saved")]
+    Unsaved,
 }
 
 #[cfg(test)]

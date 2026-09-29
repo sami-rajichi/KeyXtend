@@ -125,7 +125,9 @@ pub trait Module: Send + 'static {
 - **Settings** (ADR-0015):
   - one `settings.toml` in the data folder holds one flat section per module, each with its own `version`. Only the user's changes are stored, and the defaults live in the module's `defaults.toml`;
   - migrations are pure functions tested with golden files;
-  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. Changing a module's settings restarts that module and the modules that need it.
+  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. A file locked by another program is not damage: defaults run in memory and nothing is saved that run;
+  - a Settings-window change restarts the module and the modules that need it, or tries a failed module again. A module saves values it sets itself (size, position) through its `SettingsHandle`, with no restart;
+  - `Kernel::load` reads the settings before any module starts, so the app opens its log first; `Kernel::start` then starts the modules, and `boot` does both.
 
 ## Invariants (enforced by `cargo xtask tidy` in CI)
 

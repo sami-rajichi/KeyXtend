@@ -11,6 +11,7 @@ mod lifecycle;
 pub mod log;
 mod order;
 mod registry;
+mod shared;
 
 pub use grants::Policy;
 pub use kernel::{KERNEL, Kernel, KernelError, KernelSettings, Phase};

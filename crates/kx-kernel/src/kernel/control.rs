@@ -18,13 +18,25 @@ impl Kernel {
         if self.slots[at].state != Failed {
             return Err(KernelError::NotFailed(id));
         }
-        if self.slots[at].blocked || self.is_disabled(id) || self.held_off(at) {
+        if !self.startable(at) {
             return Err(KernelError::NotStartable(id));
         }
-        if self.start(at) {
+        self.revive(at);
+        Ok(())
+    }
+
+    /// True when module `at` is not blocked, not switched off and not waiting for a switched-off provider.
+    fn startable(&self, at: usize) -> bool {
+        let id = self.slots[at].manifest.id;
+        !(self.slots[at].blocked || self.is_disabled(id) || self.held_off(at))
+    }
+
+    /// Starts failed module `at`, then, once it runs, every dependent not switched off.
+    fn revive(&mut self, at: usize) {
+        if self.start_at(at) {
+            let id = self.slots[at].manifest.id;
             self.start_dependents(id, &[Failed, Pending, Stopped]);
         }
-        Ok(())
     }
 
     /// Switches module `id` off (its dependents stop first) or on (its stopped dependents follow).
@@ -46,11 +58,7 @@ impl Kernel {
             list.push(id.as_str().to_owned());
         }
         let value = Value::Array(list.into_iter().map(Value::String).collect());
-        let store = self
-            .store
-            .as_mut()
-            .ok_or(KernelError::WrongPhase(self.phase))?;
-        store.set(KERNEL, DISABLED_KEY, value)?;
+        self.store.set(KERNEL, DISABLED_KEY, value)?;
         self.save();
         if on {
             self.switch_on(at);
@@ -60,8 +68,8 @@ impl Kernel {
         Ok(())
     }
 
-    /// Sets one value of `module`'s settings, saves it and announces it; a running module restarts.
-    /// A value equal to the current one changes nothing, so nothing is saved, announced or restarted.
+    /// Sets one value of `module`'s settings, saves it and announces it; a running module restarts,
+    /// and a failed one is tried again as `retry` would. An equal value changes nothing at all.
     ///
     /// # Errors
     /// `WrongPhase` unless running, `SwitchKey` for the disabled list, or a store refusal.
@@ -75,17 +83,18 @@ impl Kernel {
         if module == KERNEL && key == DISABLED_KEY {
             return Err(KernelError::SwitchKey);
         }
-        let store = self
-            .store
-            .as_mut()
-            .ok_or(KernelError::WrongPhase(self.phase))?;
-        if !store.set(module, key, value)? {
+        if !self.store.set(module, key, value)? {
             return Ok(());
         }
         self.save();
         self.bus.publish(&SettingsChanged { module });
-        if let Some(at) = self.active(module) {
-            self.restart(at);
+        let Some(at) = self.find(module) else {
+            return Ok(());
+        };
+        match self.slots[at].state {
+            Active => self.restart(at),
+            Failed if self.startable(at) => self.revive(at),
+            _ => {}
         }
         Ok(())
     }
@@ -108,7 +117,7 @@ impl Kernel {
         if self.held_off(at) {
             return;
         }
-        if self.slots[at].state == Active || self.start(at) {
+        if self.slots[at].state == Active || self.start_at(at) {
             self.start_dependents(self.slots[at].manifest.id, &[Stopped]);
         }
     }
@@ -118,10 +127,10 @@ impl Kernel {
     fn restart(&mut self, at: usize) {
         let stopped = self.stop_dependents(self.slots[at].manifest.id);
         self.stop(at);
-        self.start(at);
+        self.start_at(at);
         for id in stopped.into_iter().rev() {
             if let Some(dependent) = self.find(id) {
-                self.start(dependent);
+                self.start_at(dependent);
             }
         }
     }
@@ -150,7 +159,7 @@ impl Kernel {
             let off = switched_off(&disabled, dependent);
             let wanted = states.contains(&slot.state) && !slot.blocked && !off;
             if wanted && self.waiting_on(at).is_none() {
-                self.start(at);
+                self.start_at(at);
             }
         }
     }

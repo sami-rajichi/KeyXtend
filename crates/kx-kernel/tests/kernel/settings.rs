@@ -2,9 +2,11 @@
 
 use crate::record::{Did, Mode, Switch};
 use crate::rig::{Rig, Seen, failed};
-use crate::samples::{Alpha, DEFAULT_LEVEL, LEVEL_KEY, LEVEL_SPEC, MAX_LEVEL, NEW_LEVEL, sample};
+use crate::samples::{
+    Alpha, DEFAULT_LEVEL, LEVEL_KEY, LEVEL_SPEC, LOOSE_SPEC, MAX_LEVEL, NEW_LEVEL, sample,
+};
 use kx_kernel::{KERNEL, KernelError, Phase};
-use kx_module_api::ModuleState::{Active, Failed};
+use kx_module_api::ModuleState::{Active, Failed, Stopped};
 use kx_module_api::{ModuleId, ServiceKey, SettingsChanged, keys};
 use kx_settings::{ARG_KEYS, StoreError};
 use std::fs;
@@ -13,6 +15,8 @@ use toml::Value;
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
 const C: ModuleId = ModuleId::new("c");
+/// A level the loose spec keeps but the sample cannot read, so A fails at start.
+const UNREADABLE: &str = "[a]\nlevel = \"high\"\n";
 
 /// A tuned by its level, B needing A's service, and C on its own.
 fn tuned() -> Rig {
@@ -77,6 +81,31 @@ fn a_provider_that_fails_after_a_setting_change_fails_its_dependents_and_try_aga
     rig.kernel.retry(A).unwrap();
     assert!([A, B, C].iter().all(|&m| rig.state(m) == Some(Active)));
     assert!(rig.log.all().contains(&Did::Saw(A, NEW_LEVEL)));
+}
+
+#[test]
+fn a_new_value_tries_a_module_that_failed_on_the_old_one_again_with_its_dependents() {
+    let mut rig = Rig::new();
+    rig.add(sample(A).provides(&[Alpha::ID]).settings(&LOOSE_SPEC));
+    rig.add(sample(B).requires(&[Alpha::ID]));
+    fs::create_dir_all(rig.data()).unwrap();
+    fs::write(rig.files().settings, UNREADABLE).unwrap();
+    rig.kernel.boot().unwrap();
+    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Failed)]);
+    set(&mut rig, NEW_LEVEL).unwrap();
+    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Active), Some(Active)]);
+    assert!(rig.log.all().contains(&Did::Saw(A, NEW_LEVEL)));
+}
+
+#[test]
+fn a_new_value_leaves_a_switched_off_module_stopped() {
+    let mut rig = tuned();
+    rig.off_in_file(&[A]);
+    rig.kernel.boot().unwrap();
+    rig.log.clear();
+    set(&mut rig, NEW_LEVEL).unwrap();
+    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Stopped), Some(Stopped)]);
+    assert_eq!(rig.log.all(), [], "nothing started");
 }
 
 #[test]
@@ -199,6 +228,31 @@ fn a_repair_whose_save_fails_warns_once_and_a_later_save_catches_up() {
         text,
         format!("[a]\nversion = 1\nlevel = {}\n", NEW_LEVEL + 1)
     );
+}
+
+/// Another program holds the settings file: defaults run, the user is told once, nothing is written.
+#[cfg(windows)]
+#[test]
+fn a_locked_settings_file_runs_on_defaults_and_is_never_written() {
+    let (mut rig, a) = (Rig::new(), crate::record::Grab::default());
+    rig.add(sample(A).settings(&LEVEL_SPEC).grab(&a));
+    let (files, text) = (rig.files(), format!("[a]\nlevel = {NEW_LEVEL}\n"));
+    fs::create_dir_all(rig.data()).unwrap();
+    fs::write(&files.settings, &text).unwrap();
+    let held = kx_test_support::lock::hold(&files.settings).unwrap();
+    let notices = rig.kernel.boot().unwrap();
+    assert!(rig.log.all().contains(&Did::Saw(A, DEFAULT_LEVEL)));
+    set(&mut rig, NEW_LEVEL + 1).unwrap();
+    let own = a.get().set(LEVEL_KEY, Value::Integer(NEW_LEVEL + 2));
+    assert_eq!(own, Ok(()), "the value holds for this run");
+    rig.kernel.stop_all();
+    drop(held);
+    let told: Vec<_> = notices.iter().map(|n| n.key).collect();
+    assert_eq!(told, [keys::SETTINGS_LOCKED]);
+    assert_eq!(rig.notice_keys(), [keys::SETTINGS_LOCKED], "told once");
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), text);
+    let others = [&files.broken, &files.previous, &files.temp];
+    assert!(others.iter().all(|f| !f.exists()), "no copy was made");
 }
 
 #[test]

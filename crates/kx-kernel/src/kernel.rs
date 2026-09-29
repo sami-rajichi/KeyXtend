@@ -1,76 +1,35 @@
 //! The `Kernel` starts modules in dependency order, contains failures and stops them in reverse.
-//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls
-//! and `wait` says who waits for whom.
+//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls,
+//! `wait` says who waits for whom and `settings` reads the kernel's own section.
 
 mod boot;
 mod control;
 mod run;
+mod settings;
 mod wait;
 
 use crate::bus::KernelBus;
 use crate::grants::Policy;
 use crate::host::Held;
 use crate::lifecycle::{self, Step};
-use crate::log;
 use crate::order::{self, Plan};
 use crate::registry::{Owner, Registry};
+use crate::shared::Shared;
 use kx_module_api::{
     Bus, Manifest, Module, ModuleId, ModuleState, ModuleStateChanged, Notice, ServiceError,
-    ServiceId, ServiceKey, Settings, SettingsError, SettingsSpec, parse_as, validate_as,
+    ServiceId, ServiceKey,
 };
 use kx_platform::Platform;
-use kx_settings::{Store, StoreError};
-use serde::{Deserialize, Serialize};
+use kx_settings::StoreError;
+use settings::{DISABLED_KEY, SPEC, switched_off};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use thiserror::Error;
 
+pub use settings::KernelSettings;
+
 /// The kernel's own settings section id; no module may take it.
 pub const KERNEL: ModuleId = ModuleId::new("kernel");
-
-/// The smallest log file cap, in MiB.
-pub(crate) const MIN_LOG_MB: u32 = 1;
-/// The largest log file cap, in MiB, so a hand-edited value cannot fill the disk.
-pub(crate) const MAX_LOG_MB: u32 = 100;
-
-/// The key of the switched-off list in the kernel's section.
-const DISABLED_KEY: &str = "disabled";
-
-/// How the store reads the kernel's section: version 1, with the defaults embedded.
-static SPEC: SettingsSpec = SettingsSpec {
-    version: 1,
-    defaults: include_str!("../defaults.toml"),
-    migrations: &[],
-    validate: validate_as::<KernelSettings>,
-};
-
-/// The kernel's settings: switched-off modules and the log limits.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct KernelSettings {
-    /// Ids of the modules the user switched off.
-    pub disabled: Vec<String>,
-    /// The least important level written, one of `log::LOG_LEVELS`.
-    pub log_level: String,
-    /// The largest log file, in MiB.
-    pub log_max_mb: u32,
-}
-
-impl Settings for KernelSettings {
-    fn check(&self) -> Result<(), SettingsError> {
-        let invalid = |why: &str| Err(SettingsError::Invalid(why.to_owned()));
-        if log::level(&self.log_level).is_none() {
-            return invalid("log_level is not a level name");
-        }
-        if !(MIN_LOG_MB..=MAX_LOG_MB).contains(&self.log_max_mb) {
-            return invalid("log_max_mb is outside its range");
-        }
-        if self.disabled.iter().any(String::is_empty) {
-            return invalid("disabled holds an empty id");
-        }
-        Ok(())
-    }
-}
 
 /// Why the kernel refused a request; nothing changed then.
 #[derive(Debug, Error)]
@@ -107,9 +66,11 @@ pub enum KernelError {
 /// Where the kernel is in its life; each public call belongs to one phase.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
-    /// Before `boot`: modules and platform services are added.
+    /// Before `load`: modules and platform services are added.
     Setup,
-    /// After `boot`: Try again, switching and settings changes work.
+    /// After `load`: the settings are read and the order planned, but nothing started yet.
+    Loaded,
+    /// After `start`: Try again, switching and settings changes work.
     Running,
     /// After `stop_all`: nothing starts or changes again.
     Stopped,
@@ -137,35 +98,36 @@ pub struct Kernel {
     /// The modules in the order they were added.
     slots: Vec<Slot>,
     plan: Plan,
-    /// The settings, loaded by `boot`.
-    store: Option<Store>,
-    /// The notices collected while `boot` runs.
+    /// The settings, loaded by `load` and shared with every module's settings handle.
+    store: Shared,
+    /// The notices collected while `load` or `start` runs.
     told: Option<Vec<Notice>>,
     phase: Phase,
 }
 
 impl Kernel {
-    /// A kernel with no modules; its bus is live at once, so the UI can subscribe before boot.
+    /// A kernel with no modules; its bus is live at once, so the UI can subscribe before load.
     #[must_use]
     pub fn new(platform: Arc<dyn Platform>, policy: Policy) -> Self {
+        let bus = Bus::new(Arc::new(KernelBus::new()));
         Self {
             platform,
             policy,
-            bus: Bus::new(Arc::new(KernelBus::new())),
+            store: Shared::new(bus.clone()),
+            bus,
             registry: Registry::new(),
             platform_ids: BTreeSet::new(),
             slots: Vec::new(),
             plan: order::plan(&[], &BTreeSet::new()),
-            store: None,
             told: None,
             phase: Phase::Setup,
         }
     }
 
-    /// Adds a module before boot; it waits `Pending` for its turn.
+    /// Adds a module before load; it waits `Pending` for its turn.
     ///
     /// # Errors
-    /// `WrongPhase` after boot, `Reserved` for the kernel's own id or `Duplicate`; nothing is added.
+    /// `WrongPhase` after setup, `Reserved` for the kernel's own id or `Duplicate`; nothing is added.
     pub fn add(&mut self, module: Box<dyn Module>) -> Result<(), KernelError> {
         self.expect(Phase::Setup)?;
         let manifest = module.manifest();
@@ -186,10 +148,10 @@ impl Kernel {
         Ok(())
     }
 
-    /// Registers a platform service before boot, gated by `K::CAPABILITY`.
+    /// Registers a platform service before load, gated by `K::CAPABILITY`.
     ///
     /// # Errors
-    /// `WrongPhase` after boot, or `Service(AlreadyProvided)` when the platform already provides `K`.
+    /// `WrongPhase` after setup, or `Service(AlreadyProvided)` when the platform already provides `K`.
     pub fn provide_platform<K: ServiceKey>(
         &mut self,
         service: Arc<K::Api>,
@@ -243,29 +205,13 @@ impl Kernel {
         }
     }
 
-    /// Publishes `notice`, and keeps it for `boot` to return while boot runs.
+    /// Publishes `notice`, and keeps it for `load` or `start` to return while it runs.
     fn notify(&mut self, notice: Notice) {
         self.bus.publish(&notice);
         if let Some(told) = &mut self.told {
             told.push(notice);
         }
     }
-
-    /// The ids the user switched off; none before boot.
-    fn disabled(&self) -> Vec<String> {
-        let table = self.store.as_ref().and_then(|s| s.get(KERNEL));
-        let settings = table.and_then(|t| parse_as::<KernelSettings>(t).ok());
-        settings.map(|s| s.disabled).unwrap_or_default()
-    }
-
-    fn is_disabled(&self, id: ModuleId) -> bool {
-        switched_off(&self.disabled(), id)
-    }
-}
-
-/// True when module `id` is in `list`, the ids the user switched off.
-fn switched_off(list: &[String], id: ModuleId) -> bool {
-    list.iter().any(|d| d == id.as_str())
 }
 
 impl Drop for Kernel {
@@ -273,6 +219,3 @@ impl Drop for Kernel {
         self.stop_all();
     }
 }
-
-#[cfg(test)]
-mod tests;

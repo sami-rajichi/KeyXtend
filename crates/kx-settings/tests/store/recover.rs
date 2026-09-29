@@ -1,4 +1,5 @@
-//! Recovery at the store level: a restored or defaulted start needs a save, and file notices come first.
+//! Recovery at the store level: a restored or defaulted start needs a save, file notices come first,
+//! and a locked file is never written.
 
 use crate::spec::{DEFAULTS, HOLD, defaults_with, folder, open, reset, table, with_file};
 use kx_module_api::{Notice, keys};
@@ -48,4 +49,48 @@ fn the_file_notice_comes_before_the_section_notices() {
     let (_, report) = open(&files);
     let expected = vec![file_notice(keys::SETTINGS_RESTORED), reset("sound")];
     assert_eq!(report.notices, expected);
+}
+
+/// Another program holds the file with no sharing: defaults in memory, one notice, and no write.
+#[cfg(windows)]
+#[test]
+fn a_locked_file_runs_on_defaults_and_is_never_written() {
+    use kx_settings::StoreError;
+    use toml::Value;
+    let (main, previous) = ("[hold]\nmax_ms = 900\n", "[hold]\nmax_ms = 700\n");
+    let (_dir, files) = with_file("locked", main);
+    fs::write(&files.previous, previous).unwrap();
+    let held = kx_test_support::lock::hold(&files.settings).unwrap();
+    let (mut store, report) = open(&files);
+    assert_eq!(report.notices, vec![file_notice(keys::SETTINGS_LOCKED)]);
+    assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)), "no restore");
+    store.set(HOLD, "max_ms", Value::Integer(800)).unwrap();
+    assert!(!store.needs_save());
+    let refused = store.save().unwrap_err();
+    drop(held);
+    assert!(matches!(refused.error, StoreError::Locked));
+    assert_eq!(refused.notice, None, "the load already told the user");
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), main);
+    assert_eq!(fs::read_to_string(&files.previous).unwrap(), previous);
+    assert!(!files.broken.exists() && !files.temp.exists());
+}
+
+/// A file locked only after the load fails that save, stays whole, and a later save catches up.
+#[cfg(windows)]
+#[test]
+fn a_file_locked_after_the_load_fails_the_save_and_stays_whole() {
+    use toml::Value;
+    let main = "[hold]\nmax_ms = 900\n";
+    let (_dir, files) = with_file("lockedlater", main);
+    let (mut store, _) = open(&files);
+    store.set(HOLD, "max_ms", Value::Integer(800)).unwrap();
+    let held = kx_test_support::lock::hold(&files.settings).unwrap();
+    let unsaved = store.save().unwrap_err();
+    drop(held);
+    assert_eq!(unsaved.notice, Some(file_notice(keys::SETTINGS_UNSAVED)));
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), main);
+    assert!(!files.broken.exists(), "a locked file is not damaged");
+    store.save().unwrap();
+    let saved = fs::read_to_string(&files.settings).unwrap();
+    assert!(saved.contains("max_ms = 800"), "{saved}");
 }

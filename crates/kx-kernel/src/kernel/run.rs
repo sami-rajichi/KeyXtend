@@ -19,7 +19,7 @@ const BLOCKED: &str = "its dependencies or settings spec are broken";
 
 impl Kernel {
     /// Starts module `at` and says whether it is `Active`; any refusal, error or panic fails it.
-    pub(super) fn start(&mut self, at: usize) -> bool {
+    pub(super) fn start_at(&mut self, at: usize) -> bool {
         if !self.step(at, Step::Start) {
             return false;
         }
@@ -54,9 +54,10 @@ impl Kernel {
         if !grants.denied().is_empty() {
             tracing::info!(module = %id, denied = ?grants.denied(), "capabilities not granted");
         }
-        let settings = self.store.as_ref().and_then(|s| s.get(id)).cloned();
+        let (settings, sink) = (self.store.get(id), self.store.sink());
         let (bus, clock) = (self.bus.clone(), self.platform.clock());
-        let mut host = StartHost::new(manifest, &mut self.registry, grants, bus, clock, settings);
+        let registry = &mut self.registry;
+        let mut host = StartHost::new(manifest, registry, grants, bus, clock, settings, sink);
         let module = &mut slot.module;
         let run = catch_unwind(AssertUnwindSafe(|| {
             module.start(&mut ModuleCx::new(&mut host))
@@ -105,9 +106,9 @@ impl Kernel {
     }
 
     /// Stops every `Active` module, dependents first, and ends the kernel's life; calling it twice is safe.
-    /// A kernel that booted tries once more to save a change the file is still missing.
+    /// A kernel that loaded tries once more to save a change the file is still missing.
     pub fn stop_all(&mut self) {
-        let booted = self.phase == Phase::Running;
+        let booted = matches!(self.phase, Phase::Loaded | Phase::Running);
         self.phase = Phase::Stopped;
         for id in order::stop_order(&self.plan) {
             if let Some(at) = self.active(id) {
