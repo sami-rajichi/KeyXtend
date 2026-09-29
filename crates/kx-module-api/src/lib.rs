@@ -20,7 +20,7 @@ mod settings;
 pub use capability::Capability;
 pub use clock::{Clock, MS_PER_S, Mono, US_PER_MS, US_PER_S};
 pub use cx::{Host, ModuleCx};
-pub use error::{ModuleError, ServiceError, SettingsError, WriteError};
+pub use error::{EventError, ModuleError, ServiceError, SettingsError, WriteError};
 pub use event::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, Subscription, SubscriptionId};
 pub use handle::{SettingsHandle, SettingsSink};
 pub use ids::{ModuleId, ServiceId};

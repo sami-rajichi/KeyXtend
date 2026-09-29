@@ -101,7 +101,7 @@ impl Env {
             manifest,
             &mut self.registry,
             grants,
-            self.bus.clone(),
+            &self.bus,
             clock,
             settings,
             Arc::clone(&self.sink),
@@ -216,11 +216,11 @@ fn release_removes_the_services_and_unsubscribes_the_guards() {
     let mut host = env.host(&PROVIDER, None);
     let mut cx = ModuleCx::new(&mut host);
     cx.provide::<Greeter>(hello()).unwrap();
-    cx.subscribe(handler);
+    cx.subscribe(handler).unwrap();
     let held = host.into_held();
-    env.bus.publish(&Ping);
+    env.bus.publish(&Ping).unwrap();
     held.release(&mut env.registry);
-    env.bus.publish(&Ping);
+    env.bus.publish(&Ping).unwrap();
     assert_eq!(count.load(Ordering::SeqCst), 1);
     assert_eq!(
         env.refusal::<Greeter>(&CONSUMER),
@@ -234,10 +234,10 @@ fn dropping_the_handlers_leaves_the_services() {
     let mut host = env.host(&PROVIDER, None);
     let mut cx = ModuleCx::new(&mut host);
     cx.provide::<Greeter>(hello()).unwrap();
-    cx.subscribe(handler);
+    cx.subscribe(handler).unwrap();
     let mut held = host.into_held();
     held.drop_handlers();
-    env.bus.publish(&Ping);
+    env.bus.publish(&Ping).unwrap();
     assert_eq!(count.load(Ordering::SeqCst), 0);
     assert_eq!(env.refusal::<Greeter>(&CONSUMER), None);
     held.release(&mut env.registry);
@@ -275,9 +275,9 @@ fn the_host_passes_on_the_clock_bus_settings_and_sink() {
     assert!(Arc::ptr_eq(&host.settings_sink(), &sink));
     assert_eq!(host.clock().now(), START);
     let (count, handler) = counter();
-    let _sub = host.bus().subscribe(handler);
+    let _sub = host.bus().subscribe(handler).unwrap();
     drop(host);
-    env.bus.publish(&Ping);
+    env.bus.publish(&Ping).unwrap();
     assert_eq!(count.load(Ordering::SeqCst), 1);
 }
 

@@ -11,6 +11,7 @@
 | None | The kernel enforces capabilities for modules; it needs none itself. | N/A |
 
 - A service is gated by the capability its provider stored, and a provider must itself hold that capability. Only the kernel builds `Grants`.
+- An event may name a capability (`Event::CAPABILITY`). To subscribe to, intercept or publish it, a module needs that grant, on its `ModuleCx` and on every clone of its `Bus`; only the kernel's own handle is unlimited.
 - Capabilities are policy inside one process, not a sandbox (ADR-0005).
 
 ## Data handled
@@ -53,10 +54,10 @@
 - Done: bidi controls and line separators are escaped in log lines.
 - Done: settings errors could quote a file value into the log; only the error kind is logged.
 - Done (P3): a settings file locked by another program counted as damaged and could be set aside; it now runs on defaults and is never written that run.
+- Done (P3): any module could subscribe to, intercept or publish any event; an event can now require a capability.
 
 ### Should fix (tracked issue)
 - A fuzz target for `Store::load` and the repair path (needs a nightly toolchain, so it waits for the owner's yes to install it). Until then, property tests cover repair and ordering.
-- Bus events have no capability gate: any module can subscribe to, intercept or publish any event. P3 decides it before any typed-text event exists (`docs/items/P3.md`).
 - The app must install a quiet panic hook, because caught panics still print their message through the default hook (`docs/items/P3.md`).
 - Redaction works by field name only, so text formatted into a log message prints in clear. P3 keeps typed text in `Redacted<T>` and adds a check for input modules (`docs/items/P3.md`).
 

@@ -55,9 +55,9 @@ impl Kernel {
             tracing::info!(module = %id, denied = ?grants.denied(), "capabilities not granted");
         }
         let (settings, sink) = (self.store.get(id), self.store.sink());
-        let (bus, clock) = (self.bus.clone(), self.platform.clock());
+        let clock = self.platform.clock();
         let registry = &mut self.registry;
-        let mut host = StartHost::new(manifest, registry, grants, bus, clock, settings, sink);
+        let mut host = StartHost::new(manifest, registry, grants, &self.bus, clock, settings, sink);
         let module = &mut slot.module;
         let run = catch_unwind(AssertUnwindSafe(|| {
             module.start(&mut ModuleCx::new(&mut host))

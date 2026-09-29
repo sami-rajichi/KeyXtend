@@ -1,5 +1,6 @@
 //! Typed events over the kernel's bus: broadcast notifications and ordered intercept chains.
 
+use crate::{Capability, EventError};
 use std::any::{Any, TypeId};
 use std::sync::{Arc, Weak};
 
@@ -7,6 +8,9 @@ use std::sync::{Arc, Weak};
 pub trait Event: Send + Sync + 'static {
     /// The event's stable kebab-case name.
     const NAME: &'static str;
+
+    /// The capability a module needs to subscribe to, intercept or send this event; none by default.
+    const CAPABILITY: Option<Capability> = None;
 }
 
 /// What an interceptor tells the chain: go on, or stop here.
@@ -74,53 +78,97 @@ pub trait BusCore: Send + Sync {
 }
 
 /// A cloneable typed handle to the bus, safe to move to worker threads.
+/// A handle from `restricted` carries its holder's grants, and its clones keep them.
 #[derive(Clone)]
-pub struct Bus(Arc<dyn BusCore>);
+pub struct Bus {
+    core: Arc<dyn BusCore>,
+    limit: Option<Arc<[Capability]>>,
+}
 
 impl Bus {
-    /// Wraps the kernel's bus core.
+    /// Wraps the kernel's bus core in a handle with no limit; only the kernel holds one.
     #[must_use]
     pub fn new(core: Arc<dyn BusCore>) -> Self {
-        Self(core)
+        Self { core, limit: None }
+    }
+
+    /// A handle to the same bus that may use a gated event only if `granted` holds its capability.
+    /// A limit only narrows: limiting a limited handle keeps what both allow.
+    #[must_use]
+    pub fn restricted(&self, granted: &[Capability]) -> Self {
+        let keep = granted.iter().copied().filter(|&c| self.allows(c));
+        Self {
+            core: Arc::clone(&self.core),
+            limit: Some(keep.collect()),
+        }
+    }
+
+    fn allows(&self, cap: Capability) -> bool {
+        self.limit
+            .as_ref()
+            .is_none_or(|granted| granted.contains(&cap))
+    }
+
+    fn check<E: Event>(&self) -> Result<(), EventError> {
+        match E::CAPABILITY {
+            Some(cap) if !self.allows(cap) => Err(EventError::NotGranted(E::NAME, cap)),
+            _ => Ok(()),
+        }
     }
 
     /// Sends `event` to every subscriber of `E`.
-    pub fn publish<E: Event>(&self, event: &E) {
-        self.0.publish(TypeId::of::<E>(), E::NAME, event);
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability this handle lacks; nothing is sent.
+    pub fn publish<E: Event>(&self, event: &E) -> Result<(), EventError> {
+        self.check::<E>()?;
+        self.core.publish(TypeId::of::<E>(), E::NAME, event);
+        Ok(())
     }
 
     /// Runs `E`'s intercept chain on `event` and says whether a handler stopped it.
-    #[must_use]
-    pub fn intercept<E: Event>(&self, event: &mut E) -> Flow {
-        self.0.intercept(TypeId::of::<E>(), E::NAME, event)
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability this handle lacks; no handler runs.
+    pub fn intercept<E: Event>(&self, event: &mut E) -> Result<Flow, EventError> {
+        self.check::<E>()?;
+        Ok(self.core.intercept(TypeId::of::<E>(), E::NAME, event))
     }
 
     /// Calls `handler` for every published `E` until the returned guard drops.
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability this handle lacks; nothing is added.
     pub fn subscribe<E: Event>(
         &self,
         handler: impl Fn(&E) + Send + Sync + 'static,
-    ) -> Subscription {
+    ) -> Result<Subscription, EventError> {
+        self.check::<E>()?;
         let raw: NotifyFn = Box::new(move |event| {
             if let Some(event) = event.downcast_ref::<E>() {
                 handler(event);
             }
         });
-        let id = self.0.subscribe(TypeId::of::<E>(), E::NAME, raw);
-        Subscription::new(&self.0, id)
+        let id = self.core.subscribe(TypeId::of::<E>(), E::NAME, raw);
+        Ok(Subscription::new(&self.core, id))
     }
 
     /// Adds `handler` to `E`'s intercept chain at `order` until the returned guard drops.
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability this handle lacks; nothing is added.
     pub fn add_interceptor<E: Event>(
         &self,
         order: i32,
         handler: impl Fn(&mut E) -> Flow + Send + Sync + 'static,
-    ) -> Subscription {
+    ) -> Result<Subscription, EventError> {
+        self.check::<E>()?;
         let raw: InterceptFn =
             Box::new(move |event| event.downcast_mut::<E>().map_or(Flow::Continue, &handler));
         let id = self
-            .0
+            .core
             .add_interceptor(TypeId::of::<E>(), E::NAME, order, raw);
-        Subscription::new(&self.0, id)
+        Ok(Subscription::new(&self.core, id))
     }
 }
 

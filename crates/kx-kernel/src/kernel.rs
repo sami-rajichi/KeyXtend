@@ -8,7 +8,7 @@ mod run;
 mod settings;
 mod wait;
 
-use crate::bus::KernelBus;
+use crate::bus::{KernelBus, announce};
 use crate::grants::Policy;
 use crate::host::Held;
 use crate::lifecycle::{self, Step};
@@ -161,6 +161,7 @@ impl Kernel {
     }
 
     /// A handle to the kernel's bus, which carries every notice and state change.
+    /// It has no capability limit; the handles modules get are limited to their grants.
     #[must_use]
     pub fn bus(&self) -> Bus {
         self.bus.clone()
@@ -192,7 +193,7 @@ impl Kernel {
         match lifecycle::next(slot.state, step) {
             Ok(state) => {
                 slot.state = state;
-                self.bus.publish(&ModuleStateChanged { module, state });
+                announce(&self.bus, &ModuleStateChanged { module, state });
                 true
             }
             Err(bad) => {

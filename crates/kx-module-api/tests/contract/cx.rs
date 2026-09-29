@@ -179,18 +179,20 @@ fn handlers_are_held_until_the_host_lets_go() {
     let mut cx = ModuleCx::new(&mut host);
     cx.subscribe(move |_: &Ping| {
         seen.fetch_add(1, Ordering::SeqCst);
-    });
+    })
+    .unwrap();
     cx.intercept(0, move |_: &mut Ping| {
         stopped.fetch_add(1, Ordering::SeqCst);
         Flow::Stop
-    });
+    })
+    .unwrap();
     let bus = cx.bus();
-    bus.publish(&Ping(1));
-    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Stop);
+    bus.publish(&Ping(1)).unwrap();
+    assert_eq!(bus.intercept(&mut Ping(1)), Ok(Flow::Stop));
     assert_eq!((hits.load(Ordering::SeqCst), host.held.len()), (2, 2));
     host.held.clear();
-    bus.publish(&Ping(1));
-    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Continue);
+    bus.publish(&Ping(1)).unwrap();
+    assert_eq!(bus.intercept(&mut Ping(1)), Ok(Flow::Continue));
     assert_eq!(hits.load(Ordering::SeqCst), 2);
 }
 

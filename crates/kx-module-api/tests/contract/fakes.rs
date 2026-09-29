@@ -123,7 +123,7 @@ impl Host for FakeHost {
 
     fn bus(&self) -> Bus {
         let core: Arc<FakeCore> = Arc::clone(&self.core);
-        Bus::new(core)
+        Bus::new(core).restricted(&self.granted)
     }
 
     fn clock(&self) -> Arc<dyn Clock> {

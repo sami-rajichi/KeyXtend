@@ -51,12 +51,13 @@ pub struct StartHost<'a> {
 
 impl<'a> StartHost<'a> {
     /// A host for `manifest`'s module; a module without settings gets an empty table.
+    /// `bus` is the kernel's own handle; the module gets one limited to its grants.
     #[must_use]
     pub fn new(
         manifest: &'static Manifest,
         registry: &'a mut Registry,
         grants: Grants,
-        bus: Bus,
+        bus: &Bus,
         clock: Arc<dyn Clock>,
         settings: Option<toml::Table>,
         sink: Arc<dyn SettingsSink>,
@@ -66,6 +67,7 @@ impl<'a> StartHost<'a> {
             guards: Vec::new(),
             provided: Vec::new(),
         };
+        let bus = bus.restricted(grants.granted());
         Self {
             manifest,
             registry,

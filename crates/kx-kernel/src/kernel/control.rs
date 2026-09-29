@@ -1,6 +1,7 @@
 //! Runtime controls: Try again, switching a module off and on, and changing one setting.
 
 use super::{DISABLED_KEY, KERNEL, Kernel, KernelError, Phase, switched_off};
+use crate::bus::announce;
 use crate::lifecycle::Step;
 use crate::order;
 use kx_module_api::ModuleState::{Active, Failed, Pending, Starting, Stopped, Stopping};
@@ -87,7 +88,7 @@ impl Kernel {
             return Ok(());
         }
         self.save();
-        self.bus.publish(&SettingsChanged { module });
+        announce(&self.bus, &SettingsChanged { module });
         let Some(at) = self.find(module) else {
             return Ok(());
         };

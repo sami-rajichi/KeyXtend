@@ -55,6 +55,11 @@ impl Grants {
         self.granted.contains(&cap)
     }
 
+    /// What the module may use, for its bus handle.
+    pub(crate) fn granted(&self) -> &[Capability] {
+        &self.granted
+    }
+
     /// What the module declared but the policy did not allow, for the start log.
     #[must_use]
     pub fn denied(&self) -> &[Capability] {

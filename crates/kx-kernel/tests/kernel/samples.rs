@@ -178,7 +178,7 @@ impl Module for Sample {
             grab.put(cx.settings_handle());
         }
         let log = self.log.clone();
-        cx.subscribe(move |_: &Ping| log.push(Did::Ping(me)));
+        cx.subscribe(move |_: &Ping| log.push(Did::Ping(me)))?;
         for &id in self.manifest.provides {
             provide(cx, id, service(id, me.as_str(), &self.log))?;
         }
@@ -200,7 +200,9 @@ impl Module for Sample {
         self.log.push(Did::Stop(self.manifest.id));
         match (self.switch.get(), &self.bus) {
             (Mode::PanicInStop, _) => panic::panic_any(SamplePanic),
-            (Mode::PingInStop, Some(bus)) => bus.publish(&Ping),
+            (Mode::PingInStop, Some(bus)) => {
+                let _ = bus.publish(&Ping);
+            }
             _ => {}
         }
     }

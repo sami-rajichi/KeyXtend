@@ -119,7 +119,7 @@ pub trait Module: Send + 'static {
   - A provider must itself hold the capability that gates its service.
 - **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
 - **Platform:** `kx-platform` holds `Platform` and `AppDirs`, which carry the data folder rule (ADR-0015).
-- **Events** are typed:
+- **Events** are typed, and an event may name a capability (`Event::CAPABILITY`) that a module needs to subscribe, intercept or publish it:
   - *notify* events are broadcast (`KeyActivated`, `LayoutChanged`, `ModeChanged`, `ModuleStateChanged`);
   - *intercept* events are an ordered chain that can stop propagation. Example: the "focused field is a password field" interceptor suppresses prediction learning.
 - **Settings** (ADR-0015):

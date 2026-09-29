@@ -1,7 +1,7 @@
 //! The kernel's event bus: broadcast handlers and ordered intercept chains.
 //! No lock is held while a handler runs or drops, so handlers may call back into the bus.
 
-use kx_module_api::{BusCore, Flow, InterceptFn, NotifyFn, SubscriptionId};
+use kx_module_api::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, SubscriptionId};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -102,6 +102,13 @@ impl KernelBus {
 
     fn mint(&self) -> SubscriptionId {
         SubscriptionId::new(self.next_id.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+/// Sends `event` on the kernel's own handle, which has no limit; a refusal is a bug, logged and ignored.
+pub(crate) fn announce<E: Event>(bus: &Bus, event: &E) {
+    if let Err(error) = bus.publish(event) {
+        tracing::error!(error = %error, "kernel event refused");
     }
 }
 

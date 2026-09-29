@@ -48,7 +48,7 @@ fn a_panicking_start_fails_only_that_module_and_rolls_back() {
     assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Active)]);
     assert_eq!(notices, [failed(A)]);
     assert!(rig.log.all().contains(&Did::Dropped(Alpha::ID)));
-    rig.kernel.bus().publish(&Ping);
+    rig.kernel.bus().publish(&Ping).unwrap();
     assert_eq!(rig.log.pings(), [B], "its subscription is gone");
 }
 

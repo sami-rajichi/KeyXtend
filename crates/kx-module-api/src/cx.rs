@@ -1,8 +1,8 @@
 //! A module's view of the kernel while it starts: typed services, events, clock and settings.
 
 use crate::{
-    Bus, Capability, Clock, Event, Flow, Manifest, ServiceError, ServiceId, ServiceKey, Settings,
-    SettingsError, SettingsHandle, SettingsSink, Subscription, parse_as,
+    Bus, Capability, Clock, Event, EventError, Flow, Manifest, ServiceError, ServiceId, ServiceKey,
+    Settings, SettingsError, SettingsHandle, SettingsSink, Subscription, parse_as,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -35,7 +35,7 @@ pub trait Host {
         service: Box<dyn Any + Send + Sync>,
     ) -> Result<(), ServiceError>;
 
-    /// A handle to the kernel's bus.
+    /// A handle to the kernel's bus, limited to the module's grants.
     fn bus(&self) -> Bus;
 
     /// The kernel's clock.
@@ -97,22 +97,33 @@ impl<'a> ModuleCx<'a> {
     }
 
     /// Calls `handler` for every published `E` until the module's `stop` begins or its start fails.
-    pub fn subscribe<E: Event>(&mut self, handler: impl Fn(&E) + Send + Sync + 'static) {
-        let guard = self.host.bus().subscribe(handler);
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability the module lacks.
+    pub fn subscribe<E: Event>(
+        &mut self,
+        handler: impl Fn(&E) + Send + Sync + 'static,
+    ) -> Result<(), EventError> {
+        let guard = self.host.bus().subscribe(handler)?;
         self.host.hold(guard);
+        Ok(())
     }
 
     /// Adds `handler` to `E`'s intercept chain at `order` until the module's `stop` begins or its start fails.
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability the module lacks.
     pub fn intercept<E: Event>(
         &mut self,
         order: i32,
         handler: impl Fn(&mut E) -> Flow + Send + Sync + 'static,
-    ) {
-        let guard = self.host.bus().add_interceptor(order, handler);
+    ) -> Result<(), EventError> {
+        let guard = self.host.bus().add_interceptor(order, handler)?;
         self.host.hold(guard);
+        Ok(())
     }
 
-    /// A handle to the bus, for publishing or for worker threads.
+    /// A handle to the bus, for publishing or for worker threads; it carries the module's grants.
     /// A guard from its `subscribe` outlives the module's stop or failure unless the module drops
     /// it; a handler from `ModuleCx::subscribe` ends before `stop` runs instead.
     #[must_use]

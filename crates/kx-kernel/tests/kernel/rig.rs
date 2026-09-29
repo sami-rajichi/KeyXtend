@@ -44,7 +44,9 @@ impl<E: Event + Clone> Seen<E> {
     pub fn watch(bus: &Bus) -> (Self, Subscription) {
         let seen = Self(Arc::new(Mutex::new(Vec::new())));
         let keep = seen.clone();
-        let guard = bus.subscribe(move |e: &E| keep.0.lock().unwrap().push(e.clone()));
+        let guard = bus
+            .subscribe(move |e: &E| keep.0.lock().unwrap().push(e.clone()))
+            .unwrap();
         (seen, guard)
     }
 

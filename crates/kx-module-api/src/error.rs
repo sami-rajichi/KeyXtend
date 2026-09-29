@@ -29,6 +29,14 @@ pub enum ServiceError {
     CapabilityMismatch(ServiceId),
 }
 
+/// Why a module could not use an event.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
+pub enum EventError {
+    /// The event needs a capability the module was not granted.
+    #[error("event {0} needs the {cap} capability, which is not granted", cap = .1.name())]
+    NotGranted(&'static str, Capability),
+}
+
 /// Why a settings section could not be read, upgraded or accepted.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum SettingsError {
@@ -73,6 +81,9 @@ pub enum ModuleError {
     /// A service could not be got or provided.
     #[error(transparent)]
     Service(#[from] ServiceError),
+    /// An event needs a capability the module lacks.
+    #[error(transparent)]
+    Event(#[from] EventError),
     /// The module's settings were unusable.
     #[error(transparent)]
     Settings(#[from] SettingsError),

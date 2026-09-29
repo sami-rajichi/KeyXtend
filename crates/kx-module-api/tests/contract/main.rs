@@ -3,4 +3,5 @@
 mod bus;
 mod cx;
 mod fakes;
+mod gate;
 mod handle;

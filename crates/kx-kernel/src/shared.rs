@@ -1,6 +1,7 @@
 //! The settings store and the one notice path the kernel shares with every module's settings handle.
 //! No lock is held while a module runs or the bus publishes, so a handler may write settings.
 
+use crate::bus::announce;
 use kx_module_api::{Bus, ModuleId, Notice, SettingsSink, WriteError};
 use kx_settings::{Store, StoreError};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -70,7 +71,7 @@ impl Shared {
 
     /// Publishes `notice`, and keeps it while `load` or `start` runs so their list holds it too.
     pub fn notify(&self, notice: Notice) {
-        self.bus.publish(&notice);
+        announce(&self.bus, &notice);
         if let Some(told) = lock(&self.told).as_mut() {
             told.push(notice);
         }
