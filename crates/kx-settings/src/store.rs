@@ -5,7 +5,8 @@ use crate::names::{Files, VERSION_KEY};
 use crate::section::{self, Section};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
 use serde::ser::{Serialize, SerializeMap, Serializer};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::panic::{self, AssertUnwindSafe};
 use thiserror::Error;
 use toml::{Table, Value};
 
@@ -14,7 +15,8 @@ use toml::{Table, Value};
 pub struct LoadReport {
     /// The file's notices, then one per section problem, in registration order.
     pub notices: Vec<Notice>,
-    /// Modules whose spec is broken or registered twice; they get no settings, and their file section stays as it was.
+    /// Modules whose spec is broken, registered twice, or whose settings code panicked.
+    /// They get no settings, and their file section stays as it was.
     pub broken: Vec<ModuleId>,
 }
 
@@ -27,6 +29,9 @@ pub enum StoreError {
     /// The module's section comes from a newer version and is kept as it is.
     #[error("the settings of {0} come from a newer version and cannot change")]
     Newer(ModuleId),
+    /// The module's settings code panicked; nothing changed.
+    #[error("the settings code of module {0} panicked")]
+    Panicked(ModuleId),
     /// The version key belongs to the store, not to the module.
     #[error("{} is the section version, not a setting", VERSION_KEY)]
     Reserved,
@@ -108,13 +113,18 @@ impl Store {
             broken: Vec::new(),
         };
         let mut table = loaded.table;
+        let mut seen = BTreeSet::new();
         for &(id, spec) in specs {
-            let defaults = section::defaults_of(spec);
-            let Some(defaults) = defaults.filter(|_| !store.sections.contains_key(&id)) else {
+            let raw = table.get(id.as_str()).cloned();
+            let read = seen
+                .insert(id)
+                .then(|| section::guarded_read(id, spec, raw))
+                .flatten();
+            let Some(read) = read else {
                 report.broken.push(id);
                 continue;
             };
-            let read = section::read(id, spec, defaults, table.remove(id.as_str()));
+            table.remove(id.as_str());
             store.unsaved |= read.repaired;
             report.notices.extend(read.notice);
             store.sections.insert(id, read.section);
@@ -144,7 +154,10 @@ impl Store {
         if key == VERSION_KEY {
             return Err(StoreError::Reserved);
         }
-        self.unsaved |= section.set(key, value)?;
+        // Nothing changes before the validator returns, so a panic leaves the section as it was.
+        let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set(key, value)))
+            .map_err(|_| StoreError::Panicked(module))??;
+        self.unsaved |= changed;
         Ok(())
     }
 

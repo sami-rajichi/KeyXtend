@@ -42,14 +42,32 @@ fn one_bad_value_resets_alone_and_is_named() {
 
 #[test]
 fn values_valid_only_together_are_both_kept() {
-    let (_dir, files) = with_file("together", "[hold]\nmin_ms = 800\nmax_ms = 900\n");
+    // Alone, each breaks a rule: 6000 is above the default maximum, and 9000 is too far above the default minimum.
+    let (_dir, files) = with_file("together", "[hold]\nmin_ms = 6000\nmax_ms = 9000\n");
     let (store, report) = open(&files);
     assert_eq!(
         store.get(HOLD),
-        Some(&defaults_with("min_ms = 800\nmax_ms = 900"))
+        Some(&defaults_with("min_ms = 6000\nmax_ms = 9000"))
     );
     assert!(report.notices.is_empty());
     assert!(!store.needs_save());
+}
+
+#[test]
+fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
+    // `max_ms` sorts first but fits only after `min_ms` is lowered.
+    let text = "[hold]\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
+    let (_dir, files) = with_file("secondpass", text);
+    let (store, report) = open(&files);
+    assert_eq!(
+        store.get(HOLD),
+        Some(&defaults_with("min_ms = 10\nmax_ms = 50"))
+    );
+    assert_eq!(report.notices, vec![reset("sound")]);
+    assert_eq!(
+        store.to_text().unwrap(),
+        "[hold]\nversion = 3\nmax_ms = 50\nmin_ms = 10\n"
+    );
 }
 
 #[test]

@@ -23,7 +23,9 @@ pub(crate) fn with(base: &Table, key: &str, value: Value) -> Table {
     next
 }
 
-/// Lays the user's values over the defaults: all of them when valid together, else each that keeps the table valid.
+/// Lays the user's values over the defaults: all at once when valid together, else one at a time.
+///
+/// The one-at-a-time passes go in table order and repeat over the rejected keys until a pass keeps none.
 pub(crate) fn repair(defaults: &Table, user: Table, validate: Validate) -> Repair {
     let mut all = defaults.clone();
     all.extend(user.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -34,18 +36,24 @@ pub(crate) fn repair(defaults: &Table, user: Table, validate: Validate) -> Repai
         };
     }
     let mut effective = defaults.clone();
-    let mut rejected = Vec::new();
-    for (key, value) in user {
-        let next = with(&effective, &key, value);
-        if validate(&next).is_ok() {
-            effective = next;
-        } else {
-            rejected.push(key);
+    let mut pending: Vec<(String, Value)> = user.into_iter().collect();
+    loop {
+        let before = pending.len();
+        pending.retain(|(key, value)| {
+            let next = with(&effective, key, value.clone());
+            let fits = validate(&next).is_ok();
+            if fits {
+                effective = next;
+            }
+            !fits
+        });
+        if pending.len() == before {
+            break;
         }
     }
     Repair {
         effective,
-        rejected,
+        rejected: pending.into_iter().map(|(key, _)| key).collect(),
     }
 }
 
@@ -68,21 +76,32 @@ mod tests {
         text.parse().unwrap()
     }
 
-    /// Accepts integer `low` and `high` with `low <= high`, and a string `name`; nothing else.
+    /// The widest gap the checker allows between `low` and `high`.
+    const SPAN: i64 = 10;
+
+    /// Accepts integer `low <= high` at most `SPAN` apart, and a string `name`; nothing else.
     fn ordered(t: &Table) -> Result<(), SettingsError> {
         let int = |k: &str| t.get(k).and_then(Value::as_integer);
         let fits = t.len() == 3 && t.get("name").is_some_and(Value::is_str);
         match (int("low"), int("high")) {
-            (Some(low), Some(high)) if fits && low <= high => Ok(()),
+            (Some(low), Some(high)) if fits && low <= high && high - low <= SPAN => Ok(()),
             _ => Err(SettingsError::Invalid("out of order".into())),
         }
     }
 
     #[test]
     fn values_valid_only_together_are_all_kept() {
-        let got = repair(&table(DEFAULTS), table("low = 8\nhigh = 9"), ordered);
-        assert_eq!(got.effective, table("low = 8\nhigh = 9\nname = \"a\""));
+        let got = repair(&table(DEFAULTS), table("low = 20\nhigh = 25"), ordered);
+        assert_eq!(got.effective, table("low = 20\nhigh = 25\nname = \"a\""));
         assert!(got.rejected.is_empty());
+    }
+
+    #[test]
+    fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
+        let user = table("low = -1\nhigh = 0\nname = 3");
+        let got = repair(&table(DEFAULTS), user, ordered);
+        assert_eq!(got.effective, table("low = -1\nhigh = 0\nname = \"a\""));
+        assert_eq!(got.rejected, ["name"]);
     }
 
     #[test]

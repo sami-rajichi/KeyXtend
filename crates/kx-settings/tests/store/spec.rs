@@ -26,8 +26,10 @@ pub const V2_DELAY: &str = "delay_ms";
 pub const V3_DELAY: &str = "min_ms";
 /// Milliseconds per second, for the first migration.
 const MS_PER_S: i64 = 1000;
+/// The widest gap allowed between the minimum and the maximum.
+const MAX_SPAN_MS: u32 = 5000;
 
-/// The sample settings; the minimum may not pass the maximum.
+/// The sample settings; the minimum may not pass the maximum, nor sit more than `MAX_SPAN_MS` below it.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Hold {
@@ -40,6 +42,9 @@ impl Settings for Hold {
     fn check(&self) -> Result<(), SettingsError> {
         if self.min_ms > self.max_ms {
             return Err(SettingsError::Invalid("min_ms is above max_ms".into()));
+        }
+        if self.max_ms - self.min_ms > MAX_SPAN_MS {
+            return Err(SettingsError::Invalid("the hold range is too wide".into()));
         }
         Ok(())
     }

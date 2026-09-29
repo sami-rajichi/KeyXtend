@@ -13,7 +13,7 @@ const KEYS: [&str; 6] = ["min_ms", "max_ms", "sound", V1_DELAY, V2_DELAY, "extra
 /// Good and bad values for the sample settings.
 fn value() -> impl Strategy<Value = Value> {
     prop_oneof![
-        (0_i64..=1000).prop_map(Value::Integer),
+        (0_i64..=9000).prop_map(Value::Integer),
         (-3_i64..0).prop_map(Value::Integer),
         any::<bool>().prop_map(Value::Boolean),
         "[a-z]{0,3}".prop_map(Value::String),
