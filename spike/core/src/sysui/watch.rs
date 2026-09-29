@@ -4,6 +4,7 @@ use std::cell::{OnceCell, RefCell};
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 
+use kx_platform_windows::com::Com;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
@@ -15,7 +16,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{PCWSTR, w};
 
 use super::{SystemLook, read};
-use crate::com::Com;
 
 /// Class of the hidden watcher window; broadcasts reach only top-level windows, never message-only ones.
 const CLASS: PCWSTR = w!("KeyXtendSpikeLookWatch");
@@ -100,7 +100,8 @@ pub struct Watch {
 pub fn watch(on_change: impl Fn(SystemLook) + Send + 'static) -> Result<Watch, String> {
     let (tx, rx) = mpsc::channel();
     let join = std::thread::spawn(move || {
-        let hwnd = match Com::start().and_then(|c| window().inspect(|_| c.keep())) {
+        let com = Com::start().map_err(|e| e.to_string());
+        let hwnd = match com.and_then(|c| window().inspect(|_| c.keep())) {
             Ok(h) => h,
             Err(e) => return drop(tx.send(Err(e))),
         };

@@ -2,6 +2,7 @@
 
 mod watch;
 
+use kx_platform_windows::com::Com;
 use windows::UI::ViewManagement::{UIColorType, UISettings};
 use windows::Win32::Graphics::Gdi::{
     COLOR_BTNFACE, COLOR_BTNTEXT, COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HIGHLIGHTTEXT,
@@ -15,7 +16,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{BOOL, PCWSTR, w};
 
-use crate::com::Com;
 use crate::lookcfg::ModeChoice;
 use crate::theme::{Common, Mode, Palette, Rgba, Shadow};
 pub use watch::{Watch, watch};
@@ -242,7 +242,7 @@ fn sys_colors() -> SysColors {
 
 /// The accent shades from WinRT's `UISettings`.
 fn accent() -> Result<Accent, String> {
-    let _com = Com::start()?;
+    let _com = Com::start().map_err(|e| e.to_string())?;
     let ui = UISettings::new().map_err(|e| e.to_string())?;
     let shade = |t: UIColorType| {
         let c = ui.GetColorValue(t).map_err(|e| e.to_string())?;

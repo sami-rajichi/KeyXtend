@@ -119,6 +119,7 @@ name = "kx-gates"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-platform-windows",
  "kx-target-window",
  "kx-test-support",
  "serde",
@@ -177,6 +178,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-platform-windows"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform",
+ "proptest",
+ "thiserror",
+ "windows",
+]
+
+[[package]]
 name = "kx-settings"
 version = "0.0.0"
 dependencies = [
@@ -193,9 +205,10 @@ name = "kx-target-window"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-module-api",
+ "kx-platform-windows",
  "kx-test-support",
  "serde",
- "spike-core",
  "thiserror",
  "toml",
  "windows",
@@ -455,6 +468,7 @@ name = "spike-core"
 version = "0.0.0"
 dependencies = [
  "kx-module-api",
+ "kx-platform-windows",
  "serde",
  "serde_json",
  "toml",

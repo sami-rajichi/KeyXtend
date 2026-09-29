@@ -73,8 +73,8 @@ tools/
                          reads kx-gates.toml; uses spike-core widely until its gates are
                          aimed at the product
   kx-target-window/      test window that logs every character it receives (CI); a library plus
-                         a binary; reads kx-target-window.toml; uses spike-core only for the
-                         QPC clock, until P3
+                         a binary; reads kx-target-window.toml; times its log with the QPC clock
+                         from kx-platform-windows
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess

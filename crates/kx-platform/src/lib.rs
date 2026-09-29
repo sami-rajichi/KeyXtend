@@ -6,7 +6,7 @@
 mod dirs;
 pub mod ui;
 
-pub use dirs::{AppDirs, DataDir, PORTABLE_DIR, pick_data_dir};
+pub use dirs::{APP_DIR_NAME, AppDirs, DataDir, PORTABLE_DIR, pick_data_dir};
 
 use kx_module_api::Clock;
 use std::sync::Arc;

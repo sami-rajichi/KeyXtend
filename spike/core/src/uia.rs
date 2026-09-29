@@ -4,6 +4,7 @@ mod act;
 mod geom;
 mod read;
 
+use kx_platform_windows::com::Com;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::VARIANT;
@@ -21,7 +22,6 @@ pub use act::{caret, focus, invoke};
 pub use geom::{Pill, anchor, centre, line_points, rects_of};
 pub use read::{Sel, boxes, is_password, lines, password_flag, selection};
 
-use crate::com::Com;
 use crate::hold::Pt;
 
 /// Most ancestors walked when looking for a pattern above an element.
@@ -34,7 +34,7 @@ impl Uia {
     /// Starts COM on this thread and creates the client.
     pub fn new() -> Result<Self, String> {
         // Elements may outlive this client on the thread, so COM stays on.
-        Com::start()?.keep();
+        Com::start().map_err(|e| e.to_string())?.keep();
         // SAFETY: creates the system's UIA client object.
         let auto = unsafe { CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER) }
             .map_err(|e| format!("UI Automation: {e}"))?;

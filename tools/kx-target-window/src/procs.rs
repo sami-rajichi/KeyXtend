@@ -5,8 +5,9 @@ use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
+use kx_module_api::{Clock, Mono};
+use kx_platform_windows::QpcClock;
 use kx_target_window::log::{self, Press};
-use spike_core::clock::now_us;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
@@ -19,6 +20,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 /// The log file, shared with the edit-box subclass.
 static LOG: OnceLock<Mutex<File>> = OnceLock::new();
+/// The clock the log's times come from, the same QPC time base kx-gates uses.
+static CLOCK: OnceLock<QpcClock> = OnceLock::new();
 /// The edit box, as a raw handle value.
 static EDIT: AtomicIsize = AtomicIsize::new(0);
 /// Set in password mode: typed characters are never logged.
@@ -26,10 +29,21 @@ static PASSWORD: AtomicBool = AtomicBool::new(false);
 /// Bits in one word of a mouse message's `lparam`: x sits in the low word, y in the next.
 const WORD_BITS: u32 = 16;
 
-/// Keeps `file` as the log and writes its start line.
-pub fn start_log(file: File) {
+/// Keeps `file` as the log and `clock` as its time source, then writes the start line.
+pub fn start_log(file: File, clock: QpcClock) {
     let _ = LOG.set(Mutex::new(file));
+    let _ = CLOCK.set(clock);
     log_line(&log::mark(log::START, now_us()));
+}
+
+/// The time for a log line in microseconds; 0 before `start_log`.
+fn now_us() -> i64 {
+    CLOCK.get().map_or(0, |clock| log_us(clock.now()))
+}
+
+/// `at` as the log writes it: signed microseconds, stopping at the largest.
+fn log_us(at: Mono) -> i64 {
+    i64::try_from(at.as_us()).unwrap_or(i64::MAX)
 }
 
 /// Turns password mode on or off.
@@ -197,6 +211,13 @@ mod tests {
         assert_eq!(press_of(WM_RBUTTONUP), Some((Press::RightUp, false)));
         assert_eq!(press_of(WM_CONTEXTMENU), Some((Press::Menu, true)));
         assert_eq!(press_of(WM_CHAR), None);
+    }
+
+    #[test]
+    fn log_times_are_signed_microseconds_that_stop_at_the_largest() {
+        assert_eq!(log_us(Mono::from_us(42)), 42);
+        assert_eq!(log_us(Mono::from_us(i64::MAX.unsigned_abs())), i64::MAX);
+        assert_eq!(log_us(Mono::from_us(u64::MAX)), i64::MAX);
     }
 
     #[test]

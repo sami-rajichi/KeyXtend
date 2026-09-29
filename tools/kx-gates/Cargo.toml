@@ -20,6 +20,7 @@ toml.workspace = true
 
 # The gates are Windows-only. spike-core is the Qt test face's shared code, until later phases aim the gates at the product.
 [target.'cfg(windows)'.dependencies]
+kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 spike-core = { path = "../../spike/core" }
 windows = { workspace = true, features = [
     "ApplicationModel_DataTransfer",

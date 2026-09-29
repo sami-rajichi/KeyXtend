@@ -2,7 +2,8 @@
 
 use std::sync::Arc;
 
-use crate::com::Com;
+use kx_platform_windows::com::Com;
+
 use crate::config::SpikeConfig;
 use crate::hello::{self, Answer};
 use crate::note::{self, Note};

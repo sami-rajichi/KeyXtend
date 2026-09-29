@@ -3,6 +3,7 @@
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 
+use kx_platform_windows::{PlatformError, QpcClock};
 use kx_target_window::config::{self, ConfigError, TargetConfig};
 use thiserror::Error;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, WPARAM};
@@ -48,6 +49,9 @@ pub enum StartError {
     /// A Windows call failed.
     #[error(transparent)]
     Windows(#[from] windows::core::Error),
+    /// The QPC clock could not start.
+    #[error(transparent)]
+    Clock(#[from] PlatformError),
     /// The edit box could not be subclassed.
     #[error("SetWindowSubclass failed: characters would not be logged")]
     Subclass,
@@ -56,7 +60,8 @@ pub enum StartError {
 /// Loads the settings and shows the window until it is closed.
 pub fn run() -> Result<(), StartError> {
     let cfg = config::load()?;
-    procs::start_log(open_log(&cfg.log)?);
+    let clock = QpcClock::new()?;
+    procs::start_log(open_log(&cfg.log)?, clock);
     let password = std::env::args().any(|a| a == cfg.password_arg);
     procs::set_password(password);
     let inst = module()?;

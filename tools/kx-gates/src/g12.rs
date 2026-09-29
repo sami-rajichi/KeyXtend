@@ -5,10 +5,10 @@
 
 use std::path::Path;
 
+use kx_platform_windows::dirs;
 use kx_test_support::ringstats::{self, FrameReport};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::folders;
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
@@ -75,7 +75,7 @@ fn click_all(ctx: &Ctx, ring: HWND, target: HWND, points: &[POINT]) -> Result<Ta
 fn drop_stats(file: &Path) {
     let _ = std::fs::remove_file(file);
     let _ = std::fs::remove_file(ringstats::part_file(file));
-    let root = folders::local_data().ok();
+    let root = dirs::local_data().ok();
     if let Some(dir) = file.parent().filter(|d| root.as_deref() != Some(*d)) {
         let _ = std::fs::remove_dir(dir);
     }

@@ -264,6 +264,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-platform"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "kx-platform-windows"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform",
+ "thiserror 2.0.21",
+ "windows",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -602,6 +620,7 @@ name = "spike-core"
 version = "0.0.0"
 dependencies = [
  "kx-module-api",
+ "kx-platform-windows",
  "serde",
  "serde_json",
  "toml",
