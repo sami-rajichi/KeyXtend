@@ -16,10 +16,67 @@ const NOBODY: ModuleId = ModuleId::new("nobody");
 
 /// A chain C needs B needs A, added dependents first, and D on its own.
 fn chain(rig: &mut Rig, a: &Switch) {
+    chain_of(rig, a, &Switch::new(Mode::Succeed));
+}
+
+/// The chain, with B steered by `b` too.
+fn chain_of(rig: &mut Rig, a: &Switch, b: &Switch) {
     rig.add(sample(C).requires(&[Beta::ID]));
-    rig.add(sample(B).requires(&[Alpha::ID]).provides(&[Beta::ID]));
+    let b_shape = sample(B).requires(&[Alpha::ID]).provides(&[Beta::ID]);
+    rig.add(b_shape.switch(b));
     rig.add(sample(A).provides(&[Alpha::ID]).switch(a));
     rig.add(sample(D));
+}
+
+/// True when every one of `ids` is `Active`.
+fn all_active(rig: &Rig, ids: &[ModuleId]) -> bool {
+    ids.iter().all(|&m| rig.state(m) == Some(Active))
+}
+
+#[test]
+fn try_again_restarts_what_a_failed_switch_on_left_stopped() {
+    let (mut rig, a) = (Rig::new(), Switch::new(Mode::Succeed));
+    chain(&mut rig, &a);
+    rig.kernel.boot();
+    rig.kernel.set_enabled(A, false).unwrap();
+    a.set(Mode::Fail);
+    rig.kernel.set_enabled(A, true).unwrap();
+    let states = [A, B, C].map(|m| rig.state(m));
+    assert_eq!(states, [Some(Failed), Some(Stopped), Some(Stopped)]);
+    a.set(Mode::Succeed);
+    rig.kernel.retry(A).unwrap();
+    assert!(all_active(&rig, &[A, B, C, D]), "{:?}", rig.moves());
+}
+
+#[test]
+fn try_again_on_a_dependent_restarts_what_waited_behind_it() {
+    let (mut rig, b) = (Rig::new(), Switch::new(Mode::Succeed));
+    chain_of(&mut rig, &Switch::new(Mode::Succeed), &b);
+    rig.kernel.boot();
+    rig.kernel.set_enabled(A, false).unwrap();
+    b.set(Mode::Fail);
+    rig.kernel.set_enabled(A, true).unwrap();
+    let states = [A, B, C].map(|m| rig.state(m));
+    assert_eq!(states, [Some(Active), Some(Failed), Some(Stopped)]);
+    b.set(Mode::Succeed);
+    rig.kernel.retry(B).unwrap();
+    assert!(all_active(&rig, &[A, B, C, D]), "{:?}", rig.moves());
+}
+
+#[test]
+fn try_again_never_starts_a_dependent_the_user_switched_off() {
+    let (mut rig, a) = (Rig::new(), Switch::new(Mode::Fail));
+    fs::create_dir_all(rig.data()).unwrap();
+    let off = "[kernel]\nversion = 1\ndisabled = [\"b\"]\n";
+    fs::write(rig.files().settings, off).unwrap();
+    chain(&mut rig, &a);
+    rig.kernel.boot();
+    a.set(Mode::Succeed);
+    rig.kernel.retry(A).unwrap();
+    let states = [A, B, C, D].map(|m| rig.state(m));
+    let want = [Some(Active), Some(Stopped), Some(Stopped), Some(Active)];
+    assert_eq!(states, want, "B stays off and C waits for it");
+    assert_eq!(rig.log.starts(), [A, D, A], "B and C never ran");
 }
 
 #[test]
