@@ -1,5 +1,5 @@
 //! The contract between the kernel and feature modules: ids, manifests, services, events,
-//! settings, notices, time and redaction.
+//! settings, notices, time, redaction, and the ports (service traits) in `ports`.
 //! Modules depend on this crate and on nothing else in the workspace.
 
 #![forbid(unsafe_code)]
@@ -13,6 +13,7 @@ mod handle;
 mod ids;
 mod manifest;
 mod notice;
+pub mod ports;
 mod redacted;
 mod service;
 mod settings;

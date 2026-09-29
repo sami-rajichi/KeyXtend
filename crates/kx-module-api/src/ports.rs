@@ -1,0 +1,13 @@
+//! Ports: the service traits and plain data types that modules, adapters and the UI talk through.
+
+mod face;
+mod input;
+mod layout;
+mod layouts;
+
+pub use face::{
+    FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey, Point, Rect,
+};
+pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
+pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
+pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey};

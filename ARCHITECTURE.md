@@ -47,8 +47,8 @@ crates/
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth
-  kx-platform/          Platform (clock, AppDirs and the data folder rule); later ports:
-                         window, hooks
+  kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
+                         (WindowGuard, Screens, SystemLook, Backdrop, Instance); later: hooks
   kx-platform-windows/  the only crate that may call Win32/WinRT for input, hooks and UIA
   kx-platform-macos/    later
   kx-platform-linux/    later (X11 + Wayland portals)
@@ -114,7 +114,7 @@ pub trait Module: Send + 'static {
   - `Kernel::retry` (Try again) moves `Failed → Starting`, and restarts the features that wait on it.
   - Switching a module off stops the active modules that need it, then the module itself, which ends `Stopped`. From `Pending` or `Failed` the module is skipped, with no failure notice.
   - Switching it on moves `Stopped → Starting`. A module that waits for a switched-off module stays `Stopped`, with no notice.
-- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutProvider`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`.
+- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`.
   - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused, and only the kernel builds a module's `Grants`.
   - A provider must itself hold the capability that gates its service.
 - **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.

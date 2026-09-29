@@ -1,0 +1,36 @@
+# A small hand-written slice of French AZERTY, for the fake's own tests.
+id = "0x00000000040C040C"
+controls = ["0x001C", "0x000E"]
+
+[facts]
+iso = "fr"
+native = "français"
+layout = "French (example)"
+rtl = false
+
+[keys.0x0003]
+base = "é"
+shift = "2"
+altgr = "~"
+caps = "2"
+caps_shift = "é"
+dead = ["altgr"]
+
+[keys.0x0010]
+base = "a"
+shift = "A"
+caps = "A"
+caps_shift = "a"
+
+[keys.0x001A]
+base = "^"
+shift = "¨"
+caps = "^"
+caps_shift = "¨"
+dead = ["base", "shift", "caps", "caps_shift"]
+
+[keys.0xE035]
+base = "/"
+shift = "/"
+caps = "/"
+caps_shift = "/"

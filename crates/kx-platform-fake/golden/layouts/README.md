@@ -1,0 +1,1 @@
+Layout tables for `FakeLayoutSource`: one TOML file per layout with `id`, `controls`, `[facts]` and a `[keys.<scan>]` table of `KeyChars` per key, every code in `0x` hex (see `LayoutFile` in `src/layout_file.rs`).

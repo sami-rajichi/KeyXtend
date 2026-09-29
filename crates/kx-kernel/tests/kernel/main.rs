@@ -4,6 +4,7 @@ mod control;
 mod gate;
 mod handle;
 mod phase;
+mod ports;
 mod record;
 mod rig;
 mod samples;

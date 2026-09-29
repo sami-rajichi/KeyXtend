@@ -33,55 +33,8 @@ pub fn is_mark(c: char) -> bool {
     is_haraka(c) || MORE_MARKS.iter().any(|r| r.contains(&c))
 }
 
-/// A modifier state a key is read in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Slot {
-    /// No modifier.
-    Base,
-    /// Shift.
-    Shift,
-    /// AltGr.
-    AltGr,
-    /// Caps Lock on.
-    Caps,
-    /// Caps Lock on, with Shift.
-    CapsShift,
-}
-
-/// What one key types in one layout, per modifier state; empty when it types nothing.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct KeyChars {
-    /// No modifier.
-    pub base: String,
-    /// Shift.
-    pub shift: String,
-    /// AltGr.
-    pub altgr: String,
-    /// Caps Lock on, as the layout gives it.
-    pub caps: String,
-    /// Caps Lock on, with Shift.
-    pub caps_shift: String,
-    /// The states whose character is a dead key, which waits for the next key to add its accent.
-    pub dead: Vec<Slot>,
-}
-
-impl KeyChars {
-    /// The text in state `s`.
-    pub fn get(&self, s: Slot) -> &str {
-        match s {
-            Slot::Base => &self.base,
-            Slot::Shift => &self.shift,
-            Slot::AltGr => &self.altgr,
-            Slot::Caps => &self.caps,
-            Slot::CapsShift => &self.caps_shift,
-        }
-    }
-
-    /// True when state `s` is a dead key, so the app must see a real key press.
-    pub fn is_dead(&self, s: Slot) -> bool {
-        self.dead.contains(&s)
-    }
-}
+/// What one key types, per modifier state; moved to the product's ports in P3.
+pub use kx_module_api::ports::{KeyChars, Slot};
 
 /// The modifiers that change legends.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

@@ -150,6 +150,7 @@ name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
  "serde",
+ "serde_json",
  "thiserror",
  "toml",
 ]
@@ -160,6 +161,7 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-test-support",
+ "thiserror",
 ]
 
 [[package]]
@@ -168,6 +170,9 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-platform",
+ "serde",
+ "thiserror",
+ "toml",
 ]
 
 [[package]]
@@ -448,6 +453,7 @@ dependencies = [
 name = "spike-core"
 version = "0.0.0"
 dependencies = [
+ "kx-module-api",
  "serde",
  "serde_json",
  "toml",
