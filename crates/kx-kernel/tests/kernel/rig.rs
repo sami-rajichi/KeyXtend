@@ -7,7 +7,7 @@
 
 use crate::record::Log;
 use crate::samples::Shape;
-use kx_kernel::grants::Policy;
+use kx_kernel::Policy;
 use kx_kernel::{KERNEL, Kernel};
 use kx_module_api::{
     Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, Subscription, keys,

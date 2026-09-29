@@ -5,7 +5,7 @@
 #![forbid(unsafe_code)]
 
 use kx_kernel::Kernel;
-use kx_kernel::grants::Policy;
+use kx_kernel::Policy;
 use kx_module_api::{
     Manifest, Module, ModuleCx, ModuleError, ModuleId, Notice, Settings, SettingsError,
     SettingsSpec, Subscription, keys, validate_as,

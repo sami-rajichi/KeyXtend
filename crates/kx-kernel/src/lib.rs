@@ -4,12 +4,13 @@
 #![forbid(unsafe_code)]
 
 pub mod bus;
-pub mod grants;
-pub mod host;
-pub mod kernel;
-pub mod lifecycle;
+mod grants;
+mod host;
+mod kernel;
+mod lifecycle;
 pub mod log;
-pub mod order;
-pub mod registry;
+mod order;
+mod registry;
 
+pub use grants::Policy;
 pub use kernel::{KERNEL, Kernel, KernelError, KernelSettings, Phase};
