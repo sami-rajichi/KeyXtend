@@ -33,6 +33,7 @@
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
   - Launchers call PowerShell by its full path under `%SystemRoot%`, so a fake `powershell.exe` on the PATH is not used.
 - **Tampering:** a swapped `.cer` file. Mitigation: the trust step imports it only if its thumbprint matches the one in the launcher.
+  - The signed uiAccess `kx-gates` reads `kx-gates.toml` beside its exe, else from the repo folder (user-writable), and that file names the programs it starts. `dev-install` copies every file of the build folder, so put `kx-gates.toml` there first and keep the config beside the installed exe.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets.
 - **Information disclosure:** no network; the private key cannot be exported.
 - **Denial of service:** not relevant for a developer tool; every step ends with an exit code.
