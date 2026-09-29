@@ -28,5 +28,8 @@ windows = { workspace = true, features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
+[dev-dependencies]
+kx-test-support = { path = "../../crates/kx-test-support" }
+
 [build-dependencies]
 embed-manifest.workspace = true

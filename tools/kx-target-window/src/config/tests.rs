@@ -1,6 +1,7 @@
 //! Tests of the settings loader.
 
 use super::*;
+use kx_test_support::tempdir::TempDir;
 
 /// The shipped settings file.
 const SHIPPED: &str = include_str!("../../kx-target-window.toml");
@@ -118,17 +119,15 @@ fn the_file_beside_the_exe_wins_when_it_exists() {
 
 #[test]
 fn locate_finds_a_file_beside_the_exe_else_the_crate_folder() {
-    let dir = std::env::temp_dir().join(format!("kx-tw-locate-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).expect("temp folder");
-    let (exe, krate) = (dir.join("tool.exe"), Path::new("crate/dir"));
+    let dir = TempDir::new("tw-locate").expect("temp folder");
+    let (exe, krate) = (dir.path().join("tool.exe"), Path::new("crate/dir"));
     assert_eq!(
         locate_for(Some(&exe), "x.toml", krate),
         krate.join("x.toml")
     );
-    std::fs::write(dir.join("x.toml"), "").expect("temp file");
+    std::fs::write(dir.path().join("x.toml"), "").expect("temp file");
     let beside = locate_for(Some(&exe), "x.toml", krate);
-    std::fs::remove_dir_all(&dir).expect("clean up");
-    assert_eq!(beside, dir.join("x.toml"));
+    assert_eq!(beside, dir.path().join("x.toml"));
     assert_eq!(locate_for(None, "x.toml", krate), krate.join("x.toml"));
 }
 
