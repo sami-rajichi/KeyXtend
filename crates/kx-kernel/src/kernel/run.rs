@@ -105,12 +105,17 @@ impl Kernel {
     }
 
     /// Stops every `Active` module, dependents first, and ends the kernel's life; calling it twice is safe.
+    /// A kernel that booted tries once more to save a change the file is still missing.
     pub fn stop_all(&mut self) {
+        let booted = self.phase == Phase::Running;
         self.phase = Phase::Stopped;
         for id in order::stop_order(&self.plan) {
             if let Some(at) = self.active(id) {
                 self.stop(at);
             }
+        }
+        if booted {
+            self.save();
         }
     }
 
