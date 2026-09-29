@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Child;
 
+use kx_target_window::config::TargetConfig;
 use spike_core::config::SpikeConfig;
 use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
@@ -63,8 +64,10 @@ impl AppKind {
 pub struct Ctx<'a> {
     /// Harness settings.
     pub cfg: &'a HarnessConfig,
-    /// Spike settings: the key block and the target window.
+    /// Spike settings: the key block and the faces.
     pub spike: &'a SpikeConfig,
+    /// The target window's settings.
+    pub target: &'a TargetConfig,
     /// Plain absolute out folder.
     pub out: PathBuf,
     /// File-name start for this run, e.g. `g1-notepad-1790000000`.

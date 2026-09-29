@@ -142,7 +142,7 @@ pub fn opened(
 
 /// Closes old target windows and deletes the log; returns target-window's program and title.
 fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
-    let (t, title) = (&ctx.cfg.timing, ctx.spike.target.title.clone());
+    let (t, title) = (&ctx.cfg.timing, ctx.target.title.clone());
     for w in win::top_windows()
         .into_iter()
         .filter(|&w| win::title(w) == title)
@@ -155,8 +155,8 @@ fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
             ));
         }
     }
-    let log = ctx.spike.resolve(&ctx.spike.target.log);
-    match std::fs::remove_file(&log) {
+    let log = &ctx.target.log;
+    match std::fs::remove_file(log) {
         Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
             return Err(format!("{}: {e}", log.display()));
         }
@@ -166,7 +166,7 @@ fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
     let exe = ctx.cfg.program(&app.exe);
     if !exe.is_file() {
         return Err(format!(
-            "{} not found; run cargo build -p target-window",
+            "{} not found; run cargo build -p kx-target-window in the root workspace",
             exe.display()
         ));
     }

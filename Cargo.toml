@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["crates/kx-module-api", "crates/kx-test-support", "xtask"]
+members = ["crates/kx-module-api", "crates/kx-test-support", "tools/kx-target-window", "xtask"]
 # The spike has its own workspaces; excluding it stops Cargo taking this file as the root of a spike crate that the qt-kb build loads after a crates/ dependency.
 exclude = ["spike"]
 resolver = "3"
@@ -32,6 +32,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 proptest = "1"
 thiserror = "2.0.21"
+toml = "1.1.6"
+windows = "0.62.2"
+embed-manifest = "1.5.1"
 
 [workspace.metadata.tidy]
 # A source file over this many lines fails tidy.

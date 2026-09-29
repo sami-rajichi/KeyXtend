@@ -35,7 +35,6 @@ pub mod sizer;
 pub mod snip;
 pub mod status;
 pub mod sysui;
-pub mod targetlog;
 pub mod theme;
 pub mod typer;
 pub mod uia;

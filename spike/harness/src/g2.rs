@@ -47,8 +47,8 @@ fn setup(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Opened, Vec<Key>, Vec<St
 
 /// Reads the target log: latencies, and focus losses since the first click.
 fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
-    let path = ctx.spike.resolve(&ctx.spike.target.log);
-    let (log, error) = match std::fs::read_to_string(&path) {
+    let path = &ctx.target.log;
+    let (log, error) = match std::fs::read_to_string(path) {
         Ok(text) => (text, None),
         Err(e) => (
             String::new(),

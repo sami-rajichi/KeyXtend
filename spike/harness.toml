@@ -56,7 +56,8 @@ max_read_chars = 1000000
 
 # One table per G1 app; a pop-up that takes the keyboard from the app window blocks the run.
 [apps.target]
-exe = "../target/spike/debug/target-window.exe"  # A relative path with a folder starts here.
+# The root workspace builds it: cargo build -p kx-target-window (its log and title are in tools/kx-target-window/kx-target-window.toml).
+exe = "../target/debug/kx-target-window.exe"  # A relative path with a folder starts here.
 args = []  # {input} becomes the prepared file or URL.
 focus_class = "Edit"  # The text box that must hold the keyboard, when the app has one.
 new_window = true  # Only a window that did not exist before counts.
@@ -292,7 +293,7 @@ max_chars = 200
 event_wait_ms = 2000
 
 [g21]
-# The web page's field names (aria-label) and style; target-window's password switch is in spike.toml.
+# The web page's field names (aria-label) and style; target-window's password switch is in kx-target-window.toml.
 user_name = "kx-user"
 pass_name = "kx-pass"
 field_css = "font:20px sans-serif;margin:24px;display:block"
