@@ -138,6 +138,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-platform"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-test-support",
+]
+
+[[package]]
+name = "kx-platform-fake"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform",
+]
+
+[[package]]
 name = "kx-target-window"
 version = "0.0.0"
 dependencies = [
