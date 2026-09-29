@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 /// File name of the spike settings.
 const FILE: &str = "spike.toml";
-/// The test face's name: the harness's face argument and part of the error file's name.
+/// The test face's name: the face argument of kx-gates and part of the error file's name.
 pub const FACE: &str = "qt";
 /// Error file the face writes in TEMP; `{face}` becomes the face name.
 const ERROR_FILE: &str = "kx-spike-{face}-error.txt";
@@ -81,7 +81,7 @@ pub const MIB: usize = 1 << 20;
 pub struct ToolsConfig {
     /// Button labels.
     pub labels: ToolLabels,
-    /// Title of the pill window, so the harness can find it.
+    /// Title of the pill window, so kx-gates can find it.
     pub pill_title: String,
     /// Title of the snip overlay.
     pub overlay_title: String,
@@ -129,7 +129,7 @@ pub struct ToolLabels {
     pub copy: String,
 }
 
-/// The tool buttons, in row order; the faces and the harness share this order.
+/// The tool buttons, in row order; the faces and kx-gates share this order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolButton {
     /// Types the test user name after Hello.

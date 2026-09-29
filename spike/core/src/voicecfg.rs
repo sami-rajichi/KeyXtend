@@ -115,7 +115,7 @@ pub struct WeakConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaptionConfig {
-    /// Window title, so the harness can find it.
+    /// Window title, so kx-gates can find it.
     pub title: String,
     /// Width, height and gap from the bottom of the work area, in logical pixels.
     pub px: [f32; 3],

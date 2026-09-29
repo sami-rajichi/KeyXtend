@@ -6,7 +6,7 @@ edition = "2024"
 publish = false
 license = "GPL-3.0-or-later"
 
-# Its own workspace, so it builds in parallel with the other faces.
+# Its own workspace, so the Qt build stays apart from the spike core workspace.
 [workspace]
 
 [dependencies]

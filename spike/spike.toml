@@ -1,7 +1,7 @@
 # Every number and path the P1 spike uses. Staged next to each exe; else read from spike/.
 
 [keyboard]
-# Window title, so the harness can find the face.
+# Window title, so kx-gates can find the face.
 title = "KeyXtend spike - Qt"
 # One key unit in logical pixels, and the gap between keys.
 key_px = 48.0
@@ -91,7 +91,7 @@ poll_ms = 16
 # Stage 1b: the tools row under the keys, the selection pill, quick-fill and snip.
 [tools]
 labels = { fill_user = "Fill user", fill_password = "Fill password", snip = "Snip", mic = "Mic", copy = "Copy" }
-# Window titles, so the harness can find them.
+# Window titles, so kx-gates can find them.
 pill_title = "KeyXtend spike - pill"
 overlay_title = "KeyXtend spike - snip"
 # How often the selection watcher looks at the focused text, in ms.
@@ -110,7 +110,7 @@ test_user = "kx-test-user"
 test_password = "kx-test-pass-42"
 # Wait after giving the app in front its focus back, before typing, in ms.
 fill_settle_ms = 300
-# Folder under TEMP for snips and the frozen screen; the harness deletes what it reads.
+# Folder under TEMP for snips and the frozen screen; kx-gates deletes what it reads.
 snip_folder = "kx-spike-snips"
 # Largest screen copy made or read, in MiB; three 4K screens need about 100.
 shot_cap_mb = 256
