@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use kx_module_api::ports::{LayoutId, LayoutSource};
-use kx_platform_windows::{WinLayouts, front};
+use kx_platform_windows::WinLayouts;
 
 use crate::config::SpikeConfig;
 use crate::kbgeom::{Board, board};
@@ -49,7 +49,7 @@ pub struct Kb {
 impl Kb {
     /// Starts at the first size preset, the configured theme and mode, and the layout of the app in front.
     pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Kb {
-        let hkl = front::layout();
+        let hkl = layout::front_layout();
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
         Kb {
             size: cfg.size.start(),

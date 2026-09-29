@@ -52,17 +52,18 @@ fn down(state: &KeyState, vk: u16) -> bool {
     state[usize::from(vk)] & DOWN != 0
 }
 
-/// What Q types in `state`: q, Q with Shift or Caps (not both), and a dead `@` on `AltGr`.
+/// What Q types in `state`: a text of its own per slot, so a swapped slot fails; `AltGr` is a dead `@`.
 fn q_text(state: &KeyState) -> (&'static str, i32) {
     let [ctrl, alt] = ALTGR_VKS;
     if down(state, ctrl) && down(state, alt) {
         return ("@", -1);
     }
     let caps = state[usize::from(VK_CAPITAL)] & TOGGLED != 0;
-    if down(state, VK_SHIFT) == caps {
-        ("q", 1)
-    } else {
-        ("Q", 1)
+    match (down(state, VK_SHIFT), caps) {
+        (false, false) => ("q", 1),
+        (true, false) => ("Q", 1),
+        (false, true) => ("C", 1),
+        (true, true) => ("c", 1),
     }
 }
 
@@ -155,8 +156,8 @@ fn each_slot_reads_its_modifier_state_and_dead_slots_are_marked() {
         base: "q".into(),
         shift: "Q".into(),
         altgr: "@".into(),
-        caps: "Q".into(),
-        caps_shift: "q".into(),
+        caps: "C".into(),
+        caps_shift: "c".into(),
         dead: vec![Slot::AltGr],
     };
     assert_eq!(keys(&Fake::new(), EN, &[Q]), [want]);
@@ -257,29 +258,4 @@ fn the_state_holds_the_keys_the_generic_modifiers_and_caps_lock() {
     );
 }
 
-#[test]
-fn a_windows_answer_gives_the_text_and_whether_the_key_is_dead() {
-    let buf: Vec<u16> = "^x".encode_utf16().collect();
-    assert_eq!(read_typed(-1, &buf), ("^".to_string(), true), "a dead key");
-    assert_eq!(read_typed(2, &buf), ("^x".to_string(), false));
-    assert_eq!(read_typed(0, &buf), (String::new(), false), "types nothing");
-    let bs: Vec<u16> = "\u{8}".encode_utf16().collect();
-    assert_eq!(read_typed(1, &bs), (String::new(), false), "a control");
-    assert_eq!(read_typed(9, &bs).0, "", "a count past the buffer");
-    assert_eq!(read_typed(i32::MIN, &buf), ("^x".to_string(), true));
-}
-
-#[test]
-fn printable_means_a_visible_character() {
-    for (text, want) in [
-        ("\r", false),
-        (" ", false),
-        ("\u{1b}", false),
-        ("", false),
-        ("a", true),
-        ("ض", true),
-        ("\u{64e}", true),
-    ] {
-        assert_eq!(is_printable(text), want, "{text:?}");
-    }
-}
+mod reader;

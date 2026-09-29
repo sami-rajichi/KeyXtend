@@ -13,10 +13,12 @@ use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::Shell::DefSubclassProc;
 use windows::Win32::UI::WindowsAndMessaging::{
-    DefWindowProcW, GetClientRect, MoveWindow, PostQuitMessage, WM_CHAR, WM_CONTEXTMENU,
+    DefWindowProcW, GetClientRect, MoveWindow, PostQuitMessage, WM_CHAR, WM_CLOSE, WM_CONTEXTMENU,
     WM_DESTROY, WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_RBUTTONDBLCLK,
     WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
 };
+
+use crate::switch;
 
 /// The log file, shared with the edit-box subclass.
 static LOG: OnceLock<Mutex<File>> = OnceLock::new();
@@ -164,7 +166,7 @@ pub fn fit_edit(main: HWND) {
     }
 }
 
-/// The main window's procedure: keeps the edit box sized and focused, and ends the loop on close.
+/// The main window's procedure: keeps the edit box sized and focused; on close it puts the layout back and ends the loop.
 #[allow(
     unsafe_code,
     reason = "Win32 window procedure with standard calls on our own windows."
@@ -178,6 +180,12 @@ pub extern "system" fn main_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: L
         WM_SETFOCUS => {
             focus(edit());
             LRESULT(0)
+        }
+        WM_CLOSE => {
+            // The layout goes back while the window still has the keyboard; then Windows destroys it.
+            switch::undo();
+            // SAFETY: the default handling of a message our own window received.
+            unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
         }
         WM_DESTROY => {
             // SAFETY: posts the quit message to this thread's own loop.

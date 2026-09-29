@@ -1,16 +1,42 @@
-//! Switches the window's own thread to an installed layout; the user's layout list and default stay as they are.
+//! Switches the input layout for a `--layout` run and puts the previous one back at close.
+//!
+//! On Windows 8+ `ActivateKeyboardLayout` switches the whole session's input language, not only this window.
+
+use std::sync::{Mutex, PoisonError};
 
 use kx_module_api::ports::{LayoutId, LayoutSource};
 use kx_platform_windows::{WinLayouts, layouts};
-use kx_target_window::layout::LayoutError;
+use kx_target_window::layout::{self, LayoutError, Restore, Switcher};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     ACTIVATE_KEYBOARD_LAYOUT_FLAGS, ActivateKeyboardLayout, GetKeyboardLayout,
 };
 
-/// `ActivateKeyboardLayout` flags: none, so only this thread switches.
-const THIS_THREAD: ACTIVATE_KEYBOARD_LAYOUT_FLAGS = ACTIVATE_KEYBOARD_LAYOUT_FLAGS(0);
+/// `ActivateKeyboardLayout` flags: none; Windows 8+ still switches the whole session.
+const NO_FLAGS: ACTIVATE_KEYBOARD_LAYOUT_FLAGS = ACTIVATE_KEYBOARD_LAYOUT_FLAGS(0);
 /// `GetKeyboardLayout` thread id that means this thread.
 const OWN_THREAD: u32 = 0;
+
+/// The layout to put back at close; empty without `--layout` or once it is back.
+static BACK: Mutex<Option<Restore>> = Mutex::new(None);
+
+/// The real switch, through Win32.
+struct Win32;
+
+impl Switcher for Win32 {
+    #[allow(unsafe_code, reason = "Activates an installed layout.")]
+    fn activate(&self, id: LayoutId) -> Option<LayoutId> {
+        let handle = layouts::hkl(id)?;
+        // SAFETY: no pointer is passed; on Windows 8+ this switches the session's input language.
+        let previous = unsafe { ActivateKeyboardLayout(handle, NO_FLAGS) };
+        previous.ok().map(layouts::id)
+    }
+
+    #[allow(unsafe_code, reason = "Reads this thread's layout.")]
+    fn current(&self) -> LayoutId {
+        // SAFETY: a plain query of this thread's layout.
+        layouts::id(unsafe { GetKeyboardLayout(OWN_THREAD) })
+    }
+}
 
 /// Refuses layout `id` unless Windows lists it as installed; nothing is ever loaded or added.
 ///
@@ -24,23 +50,22 @@ pub fn check(id: LayoutId) -> Result<(), LayoutError> {
     }
 }
 
-/// Switches this thread to installed layout `id` and reads it back; call it once the window has the keyboard.
+/// Switches to installed layout `id` once the window has the keyboard, and keeps the previous one for `undo`.
 ///
 /// # Errors
-/// `NotInstalled` for an id that is no handle, `Refused` when this thread's layout did not change.
-#[allow(
-    unsafe_code,
-    reason = "Switches this thread's layout, then reads it back."
-)]
+/// `Refused` when the layout did not change; the previous one is already back then.
 pub fn apply(id: LayoutId) -> Result<(), LayoutError> {
-    let handle = layouts::hkl(id).ok_or(LayoutError::NotInstalled(id))?;
-    // SAFETY: switches only this thread, to a layout Windows lists as installed.
-    let switched = unsafe { ActivateKeyboardLayout(handle, THIS_THREAD) }.is_ok();
-    // SAFETY: a plain query of this thread's layout.
-    let now = layouts::id(unsafe { GetKeyboardLayout(OWN_THREAD) });
-    (switched && now == id)
-        .then_some(())
-        .ok_or(LayoutError::Refused(id))
+    let back = layout::switch(&Win32, id)?;
+    *BACK.lock().unwrap_or_else(PoisonError::into_inner) = Some(back);
+    Ok(())
+}
+
+/// Puts back the layout from before `apply`; the window calls it at close, while it still has the keyboard.
+pub fn undo() {
+    let back = BACK.lock().unwrap_or_else(PoisonError::into_inner).take();
+    if let Some(back) = back {
+        layout::restore(&Win32, back);
+    }
 }
 
 #[cfg(test)]

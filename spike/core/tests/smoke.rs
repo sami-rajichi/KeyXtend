@@ -3,7 +3,7 @@
 #[test]
 fn settings_load_and_every_key_has_a_label() {
     let cfg = spike_core::config::load().unwrap();
-    let front = kx_platform_windows::front::layout();
+    let front = spike_core::layout::front_layout();
     let rows = spike_core::layout::rows(&cfg.keyboard, front);
     assert_eq!(rows.len(), cfg.keyboard.rows.len());
     for key in rows.iter().flatten() {

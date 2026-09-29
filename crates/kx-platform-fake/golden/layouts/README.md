@@ -7,4 +7,4 @@ Layout tables for `FakeLayoutSource`: one TOML file per layout with `id`, `contr
 | `ar-tn.toml` | Arabic (102) AZERTY, on Arabic (Tunisia), right to left | `kx-gates capture-layouts` |
 | `example.toml` | A small slice of French AZERTY for the fake's own tests | Hand-written |
 
-The captured tables come from real Windows layouts through the product's `LayoutSource`: the command reads the first installed layout of each language named in `[capture]` of `tools/kx-gates/kx-gates.toml`, names the file after its locale, and only reads layouts, never adding or removing one. Capture again rather than edit a table by hand.
+The captured tables come from real Windows layouts through the product's `LayoutSource`: the command reads the first installed layout of each language named in `[capture]` of `tools/kx-gates/kx-gates.toml`, names the file after its locale, and only reads layouts, never adding or removing one. A language with no installed layout makes the command fail and names it, though the other tables are still written. Capture again rather than edit a table by hand.

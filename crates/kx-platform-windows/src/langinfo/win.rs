@@ -12,7 +12,9 @@ use windows::Win32::System::Registry::{
 };
 use windows::core::{PCWSTR, w};
 
-use super::{RegName, is_rtl, lang_id, number_of, parse_layout_id, reg_name, reg_text, text_of};
+use super::{
+    RegName, is_rtl, lang_id, number_of, parse_layout_id, reg_name, reg_text, text_of, until_null,
+};
 
 /// The registry folder of the installed layouts, one key per layout.
 const LAYOUTS_KEY: PCWSTR = w!(r"SYSTEM\CurrentControlSet\Control\Keyboard Layouts");
@@ -121,7 +123,7 @@ impl Layouts {
         let mut buf = [0u16; NAME_CAP];
         // SAFETY: Windows writes at most the buffer's length, null included.
         let r = unsafe { RegEnumKeyW(self.0, index, Some(&mut buf)) };
-        (r == ERROR_SUCCESS).then(|| wide(&reg_text(u32::MAX, &buf)))
+        (r == ERROR_SUCCESS).then(|| wide(&until_null(&buf, buf.len())))
     }
 
     /// The layout key whose `Layout Id` is `number`.

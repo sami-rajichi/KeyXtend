@@ -1,5 +1,12 @@
 //! What Windows says about a layout's language: its ISO code, its name in itself, the layout's name and direction.
 //! Reading a layout id and Windows' answers is pure and tested everywhere; the queries are in `win`.
+#![cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "The answer readers serve only the Windows queries in win."
+    )
+)]
 
 use kx_module_api::ports::LayoutId;
 
@@ -62,13 +69,13 @@ pub fn reg_name(id: LayoutId) -> RegName {
 
 /// Reads a registry `Layout Id` value, such as `0029`; `None` when it is not hex.
 #[must_use]
-pub fn parse_layout_id(text: &str) -> Option<u16> {
+pub(crate) fn parse_layout_id(text: &str) -> Option<u16> {
     let hex = !text.is_empty() && text.bytes().all(|b| b.is_ascii_hexdigit());
     hex.then(|| u16::from_str_radix(text, HEX).ok()).flatten()
 }
 
 /// The first `units` of `buf`, up to the first null.
-fn until_null(buf: &[u16], units: usize) -> String {
+pub(crate) fn until_null(buf: &[u16], units: usize) -> String {
     let text = &buf[..units.min(buf.len())];
     let end = text.iter().position(|&u| u == 0).unwrap_or(text.len());
     String::from_utf16_lossy(&text[..end])
@@ -76,20 +83,20 @@ fn until_null(buf: &[u16], units: usize) -> String {
 
 /// The text of a Windows answer of `n` units, the last one being the ending null.
 #[must_use]
-pub fn text_of(n: i32, buf: &[u16]) -> String {
+pub(crate) fn text_of(n: i32, buf: &[u16]) -> String {
     until_null(buf, usize::try_from(n).unwrap_or(0).saturating_sub(1))
 }
 
 /// A registry text of `bytes` bytes in `buf`, up to its first null.
 #[must_use]
-pub fn reg_text(bytes: u32, buf: &[u16]) -> String {
+pub(crate) fn reg_text(bytes: u32, buf: &[u16]) -> String {
     let units = usize::try_from(bytes).unwrap_or(usize::MAX) / size_of::<u16>();
     until_null(buf, units)
 }
 
 /// A locale number as `GetLocaleInfoEx` writes it: a `u32` in two UTF-16 units, low unit first.
 #[must_use]
-pub fn number_of(units: [u16; 2]) -> u32 {
+pub(crate) fn number_of(units: [u16; 2]) -> u32 {
     let [a, b] = units[0].to_le_bytes();
     let [c, d] = units[1].to_le_bytes();
     u32::from_le_bytes([a, b, c, d])
@@ -97,12 +104,14 @@ pub fn number_of(units: [u16; 2]) -> u32 {
 
 /// True for a `LOCALE_IREADINGLAYOUT` value of right-to-left scripts.
 #[must_use]
-pub fn is_rtl(reading: u32) -> bool {
+pub(crate) fn is_rtl(reading: u32) -> bool {
     reading == RTL_READING
 }
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::*;
 
     /// US English, French (Legacy, AZERTY), Arabic (101) on Arabic (Tunisia).
@@ -175,6 +184,53 @@ mod tests {
         assert_eq!(number_of([1, 0]), 1);
         assert_eq!(number_of([0, 1]), 0x1_0000);
         assert_eq!(number_of([0xFFFF, 0xFFFF]), u32::MAX);
+    }
+
+    proptest! {
+        #[test]
+        fn any_windows_text_reads_inside_its_buffer(
+            n: i32,
+            bytes: u32,
+            buf in prop::collection::vec(any::<u16>(), 0..40),
+        ) {
+            let count = text_of(n, &buf).encode_utf16().count();
+            prop_assert!(count <= buf.len() && count <= usize::try_from(n).unwrap_or(0));
+            prop_assert!(reg_text(bytes, &buf).encode_utf16().count() <= buf.len());
+        }
+
+        #[test]
+        fn a_text_without_nulls_reads_back(text in r"[^\x00]{0,12}") {
+            let buf = units(&text);
+            let n = i32::try_from(buf.len()).unwrap();
+            prop_assert_eq!(text_of(n, &buf), text.clone());
+            let bytes = u32::try_from(buf.len() * size_of::<u16>()).unwrap();
+            prop_assert_eq!(reg_text(bytes, &buf), text.clone());
+            prop_assert_eq!(reg_text(u32::MAX, &buf), text);
+        }
+
+        #[test]
+        fn every_layout_id_value_reads_back_and_any_text_is_safe(v: u16, text in r"\PC{0,8}") {
+            prop_assert_eq!(parse_layout_id(&format!("{v:04X}")), Some(v));
+            prop_assert_eq!(parse_layout_id(&format!("{v:04x}")), Some(v));
+            if let Some(got) = parse_layout_id(&text) {
+                prop_assert_eq!(u16::from_str_radix(&text, HEX), Ok(got));
+            }
+        }
+
+        #[test]
+        fn every_layout_names_a_key_or_a_variant_that_reads_back(raw: u64) {
+            let id = LayoutId::new(raw);
+            let (_, device) = words(id);
+            match reg_name(id) {
+                RegName::Key(key) => {
+                    prop_assert_eq!(key.len(), KEY_DIGITS);
+                    let value = u32::from_str_radix(&key, HEX);
+                    let whole = value == Ok(handle(id));
+                    prop_assert!(value == Ok(u32::from(device)) || whole, "{key}");
+                }
+                RegName::Variant(number) => prop_assert_eq!(number | KIND_BITS, device),
+            }
+        }
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! The face's side of voice: the Mic button, what the caption bar shows, and one session per face.
 
-use kx_platform_windows::{front, langinfo, layouts};
+use kx_platform_windows::{langinfo, layouts};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
 
@@ -222,7 +222,7 @@ impl Session {
 
 /// The spoken language for the layout of the app in front.
 pub fn front_lang(v: &VoiceConfig) -> String {
-    let layout = layouts::id(front::layout());
+    let layout = layouts::id(crate::layout::front_layout());
     v.language(langinfo::lang_id(layout)).to_string()
 }
 

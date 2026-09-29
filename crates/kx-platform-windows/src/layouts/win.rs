@@ -178,6 +178,8 @@ mod tests {
     const SILENT: [u16; 2] = [0xE04B, 0xE053];
     /// The top letter row: Q to P on US English, A to P on French AZERTY, ض to ح on Arabic.
     const TOP_ROW: [u16; 10] = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19];
+    /// Languages with golden tables, whose top row is all letters; Greek and Hebrew put signs there.
+    const LETTER_LANGS: [&str; 3] = ["en", "fr", "ar"];
 
     #[test]
     fn ids_and_handles_round_trip_with_sign_extension() {
@@ -187,18 +189,24 @@ mod tests {
     }
 
     #[test]
-    fn every_installed_layout_types_its_letters_and_names_its_language() {
+    fn every_layout_names_its_language_and_the_golden_ones_type_letters() {
         let list = WinLayouts.installed();
         assert!(!list.is_empty());
+        let mut checked = 0;
         for layout in list {
-            let scans = TOP_ROW.map(Scan::new);
-            let keys = WinLayouts.keys(layout, &scans);
+            let iso = WinLayouts.facts(layout).iso;
+            assert!(!iso.is_empty(), "{layout}");
+            if !LETTER_LANGS.contains(&iso.as_str()) {
+                continue;
+            }
+            let keys = WinLayouts.keys(layout, &TOP_ROW.map(Scan::new));
             assert!(
                 keys.iter().all(|k| is_letter(&k.base)),
                 "{layout}: {keys:?}"
             );
-            assert!(!WinLayouts.facts(layout).iso.is_empty(), "{layout}");
+            checked += 1;
         }
+        assert!(checked > 0, "no English, French or Arabic layout installed");
     }
 
     fn is_letter(text: &str) -> bool {

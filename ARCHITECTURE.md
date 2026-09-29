@@ -75,7 +75,8 @@ tools/
                          layout tables from the layouts installed on the PC
   kx-target-window/      test window that logs every character it receives (CI); a library plus
                          a binary; reads kx-target-window.toml; times its log with the QPC clock
-                         from kx-platform-windows; `--layout` types into an installed layout
+                         from kx-platform-windows; `--layout` switches the session to an
+                         installed layout and puts the previous one back when the window closes
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess

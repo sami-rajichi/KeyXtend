@@ -25,8 +25,14 @@ const VK_MENU: u16 = 0x12;
 pub const ALTGR_VKS: [u16; 2] = [VK_CONTROL, VK_MENU];
 /// `VK_CAPITAL`: Caps Lock.
 pub const VK_CAPITAL: u16 = 0x14;
+/// `VK_LSHIFT`: left Shift.
+const VK_LSHIFT: u16 = 0xA0;
+/// `VK_RSHIFT`: right Shift.
+const VK_RSHIFT: u16 = 0xA1;
 /// `VK_LCONTROL`: left Ctrl.
 const VK_LCONTROL: u16 = 0xA2;
+/// `VK_RCONTROL`: right Ctrl.
+const VK_RCONTROL: u16 = 0xA3;
 /// `VK_LMENU`: left Alt.
 const VK_LMENU: u16 = 0xA4;
 /// `VK_RMENU`: right Alt.
@@ -48,10 +54,10 @@ pub(crate) const ALT_WIN_SCANS: [u16; 4] = [0x38, 0xE038, 0xE05B, 0xE05C];
 pub const ALTGR_READ: [u16; 2] = [VK_LCONTROL, VK_RMENU];
 /// Left and right Shift, Ctrl and Alt, each with the generic key `ToUnicodeEx` also reads.
 const SIDED: [(u16, u16); 6] = [
-    (0xA0, VK_SHIFT),
-    (0xA1, VK_SHIFT),
+    (VK_LSHIFT, VK_SHIFT),
+    (VK_RSHIFT, VK_SHIFT),
     (VK_LCONTROL, VK_CONTROL),
-    (0xA3, VK_CONTROL),
+    (VK_RCONTROL, VK_CONTROL),
     (VK_LMENU, VK_MENU),
     (VK_RMENU, VK_MENU),
 ];
@@ -238,6 +244,8 @@ mod tests {
             VK_RMENU,
         ];
         assert_eq!(SIDED.map(|(s, _)| s), sided.map(|vk| vk.0));
+        let named = [super::VK_LSHIFT, super::VK_RSHIFT, super::VK_RCONTROL];
+        assert_eq!(named, [VK_LSHIFT.0, VK_RSHIFT.0, VK_RCONTROL.0]);
         assert_eq!(VK_SPACE, SPACE.0);
         let alt_win = [VK_MENU, VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN];
         assert_eq!(ALT_WIN_VKS, alt_win.map(|vk| vk.0));

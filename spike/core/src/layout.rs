@@ -2,7 +2,7 @@
 //! `Follow` moves to kx-mod-layouts and the rows to kx-mod-keyboard later in P3.
 
 use kx_module_api::ports::{LayoutSource, Scan};
-use kx_platform_windows::{WinLayouts, front, layouts};
+use kx_platform_windows::{WinLayouts, layouts};
 use serde::Serialize;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyNameTextW, HKL};
 
@@ -81,6 +81,14 @@ pub fn rows(cfg: &KeyboardConfig, hkl: HKL) -> Vec<Vec<KeyCap>> {
         .collect()
 }
 
+/// The layout of the app in front, else the first installed one, read through `WinLayouts::foreground`.
+pub fn front_layout() -> HKL {
+    let id = WinLayouts
+        .foreground()
+        .or_else(|| WinLayouts.installed().first().copied());
+    id.and_then(layouts::hkl).unwrap_or_default()
+}
+
 /// Remembers which layout the labels show, to relabel only when the app in front changes it.
 #[derive(Debug, Default)]
 pub struct Follow {
@@ -98,7 +106,7 @@ impl Follow {
     /// The new layout when another app is in front and its layout differs; else `None`.
     pub fn changed(&mut self) -> Option<HKL> {
         let front = crate::window::foreground();
-        let now = front::layout();
+        let now = WinLayouts.foreground().and_then(layouts::hkl)?;
         let other = !front.is_invalid() && !crate::window::is_ours(front);
         self.step(other, now.0 as isize).then_some(now)
     }
@@ -132,12 +140,18 @@ mod tests {
     #[test]
     fn letters_read_through_the_product_and_other_keys_by_name() {
         // Scan codes: Space and Escape have names, not characters.
-        let hkl = front::layout();
+        let hkl = front_layout();
         for code in [0x39, 0x01] {
             assert_eq!(character(code, hkl), "", "{code:#x}");
             assert!(!label(code, hkl).is_empty(), "{code:#x}");
         }
         assert_eq!(scan(0xE035), Scan::new(0xE035));
+    }
+
+    #[test]
+    fn the_front_layout_is_an_installed_one() {
+        let front = layouts::id(front_layout());
+        assert!(WinLayouts.installed().contains(&front), "{front}");
     }
 
     #[test]

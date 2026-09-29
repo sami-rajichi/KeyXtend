@@ -121,7 +121,16 @@ pub fn run(cfg: &Capture) -> Result<Value, String> {
             "keys": file.keys.len(), "controls": file.controls.len(),
         }));
     }
-    Ok(json!({ "command": COMMAND, "written": written, "missing": missing }))
+    Ok(report(&written, &missing))
+}
+
+/// The command's answer; a missing language adds an `error` naming it, so the run fails.
+fn report(written: &[Value], missing: &[String]) -> Value {
+    let mut v = json!({ "command": COMMAND, "written": written, "missing": missing });
+    if !missing.is_empty() {
+        v["error"] = json!(format!("no installed layout for: {}", missing.join(", ")));
+    }
+    v
 }
 
 #[cfg(test)]
@@ -203,6 +212,16 @@ mod tests {
             ("fr.toml", want.id)
         );
         assert_eq!(find(&fake, "fr"), Some(want.id));
+    }
+
+    #[test]
+    fn a_missing_language_is_an_error_that_names_it() {
+        let v = report(&[], &["ar".into()]);
+        let error = v["error"].as_str().unwrap_or_default();
+        assert!(error.contains("ar"), "{v}");
+        assert_eq!(v["missing"], json!(["ar"]));
+        let v = report(&[json!({ "file": "fr-fr.toml" })], &[]);
+        assert!(v.get("error").is_none(), "{v}");
     }
 
     #[test]

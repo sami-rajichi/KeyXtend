@@ -31,6 +31,7 @@ windows = { workspace = true, features = [
 
 [dev-dependencies]
 kx-test-support = { path = "../../crates/kx-test-support" }
+proptest.workspace = true
 
 [build-dependencies]
 embed-manifest.workspace = true

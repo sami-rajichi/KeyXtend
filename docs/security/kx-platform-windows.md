@@ -1,7 +1,7 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-09-29
+- **Last review:** 2026-09-30
 - **Status:** Draft
 - **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), and the app in front (`front`). It runs inside the uiAccess `keyxtend` process. Later P3 tasks add windows and system parts, and this note grows with them.
 
@@ -33,9 +33,9 @@
 | `VkKeyScanExW` answer | Only no modifier, Shift, Ctrl+Alt (`AltGr`) or Shift+Ctrl+Alt is typed; anything else is `Unmappable` before a key is sent. `ToUnicodeEx` (the layout source's reader, no state change) must confirm the key types the character under the current Caps Lock, in that Shift state or the other; a dead key must give the character as its own, and Space follows it | Fixed size | Unit tests of every bit; fake-layout tests; a real AZERTY test |
 | `MapVirtualKeyExW` scan code | Only its low byte and prefix byte are read | Fixed size | Unit tests |
 | `GetKeyboardLayoutList` | Asked for the count first, then filled into a buffer of that count, so there is no cap; the copy is cut to what Windows wrote | Windows' own count | Fake-OS tests (40 layouts, a list that shrinks) |
-| `ToUnicodeEx` / `MapVirtualKeyExW` | Called only for an installed layout; flag `0x4` leaves every keyboard state as it is; the count is clamped to a 32-unit buffer and its sign read as a dead key; controls read as empty | 32 UTF-16 units per key | Unit tests of the answer reader |
-| Registry `HKLM\...\Keyboard Layouts` (`Layout Text`, `Layout Id`) | Read-only key, `REG_SZ` values only, into a 128-unit buffer; the size Windows writes back is clamped and cut at the first null; `Layout Id` must be hex; the key is closed once | 128 UTF-16 units per value; the variant search ends at the first enumeration error | Unit tests of the text and id readers |
-| `LCIDToLocaleName` / `GetLocaleInfoEx` | Fixed buffers; counts clamped; a number is read from exactly two units | 128 UTF-16 units | Unit tests |
+| `ToUnicodeEx` / `MapVirtualKeyExW` | Called only for an installed layout or the layout of the app in front; flag `0x4` leaves every keyboard state as it is; the count is clamped to a 32-unit buffer and its sign read as a dead key; controls read as empty | 32 UTF-16 units per key | Unit and property tests of the answer reader |
+| Registry `HKLM\...\Keyboard Layouts` (`Layout Text`, `Layout Id`) | Read-only key, `REG_SZ` values only, into a 128-unit buffer; the size Windows writes back is clamped and cut at the first null; `Layout Id` must be hex; the key is closed once | 128 UTF-16 units per value; the variant search ends at the first enumeration error | Unit and property tests of the text, id and key-name readers |
+| `LCIDToLocaleName` / `GetLocaleInfoEx` | Fixed buffers; counts clamped; a number is read from exactly two units | 128 UTF-16 units | Unit and property tests |
 | `GetGUIThreadInfo` (window with the keyboard) | A failed call or no focus falls back to the front window; thread 0 is refused | Fixed size | No |
 | `QueryFullProcessImageNameW` (app in front) | Buffer of the Windows path limit; the length Windows writes back is checked; invalid UTF-16 reads as unknown; the process handle is closed once | 32,767 UTF-16 units | No |
 
@@ -45,9 +45,9 @@
 - **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector and the layout source log nothing, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
 - **Information disclosure:** no network; nothing leaves the process. Text is read only through `Redacted::expose` to build the send.
 - **Denial of service:** start-up fails with a typed error, never a panic, when Windows refuses the clock or a folder. After a partial send it tries to release every key still held, and once more one event at a time for what Windows refuses, so no modifier should stay stuck down; a mask key (`keys::MASK_VK`, unassigned) goes first when Alt or Win is released, so neither opens the menu bar or Start.
-- **Elevation (layouts):** `request` posts only `WM_INPUTLANGCHANGEREQUEST`, with a layout checked against the installed list, to the window that has the keyboard; that window decides whether to switch. With uiAccess the post may reach a window above our integrity level, which is why the port needs `InjectInput`. The adapter never loads, activates, adds or removes a layout.
+- **Elevation (layouts):** `request` posts only `WM_INPUTLANGCHANGEREQUEST`, with a layout checked against the installed list, to the window that has the keyboard; that window decides whether to switch. With uiAccess the post may reach a window above our integrity level, which is why the port needs `InjectInput`. The adapter never loads, activates, adds or removes a layout; only the test window's `--layout` activates one (see Accepted).
 - **Tampering (layouts):** the layout names come from `HKLM`, which only administrators can change; they are display text, bounded and never run or parsed further.
-- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing: Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
+- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, with dead keys checked on the golden layouts only (see Accepted): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
 
 ## Findings
 ### Must fix (blocks Definition of Done)
@@ -67,6 +67,8 @@ Another program can put our tag on its own input so that our hooks skip it. The 
 
 `caps_on` reads Caps Lock with `GetKeyState`, the spike's method; it is this thread's view of the toggle, so the manual check of the non-activating keyboard must confirm it follows the key.
 
-A dead key is checked by the character `ToUnicodeEx` gives for it, since its no-state-change flag cannot read the dead key and Space as a pair. Windows layouts type that character for a dead key and Space, so the Keys route relies on it.
+A dead key is checked by the character `ToUnicodeEx` gives for it, since its no-state-change flag cannot read the dead key and Space as a pair. That holds for the EN, FR and AR golden layouts; on others a dead key and Space may type another character (Swiss French ¨ gives ", Czech ˙ gives ·), so the Keys route may type that instead.
 
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.
+
+`kx-target-window --layout` (a test tool, never shipped) activates a layout, which on Windows 8+ switches the whole session's input language. It puts the previous layout back on close and when the switch does not take; a killed window cannot, so gates close it with `WM_CLOSE` first.

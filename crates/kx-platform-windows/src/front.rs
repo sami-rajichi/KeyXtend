@@ -1,7 +1,8 @@
-//! The app in front: its keyboard layout, the window that has its keyboard, and its program's file name.
+//! The app in front: the window that has its keyboard, that window's layout, and its program's file name.
+//! The layout of the app in front comes from `WinLayouts::foreground`, the one reader of it.
 
 #[cfg(windows)]
-pub use os::{app, app_of, focus, focus_of, layout, thread_layout};
+pub use os::{app, app_of, focus, focus_of, thread_layout};
 
 /// The separators in a Windows program path.
 const PATH_SEPARATORS: [char; 2] = ['\\', '/'];
@@ -31,14 +32,6 @@ mod os {
 
     /// Longest program path read, in UTF-16 units: Windows' own path limit.
     const PATH_CAP: usize = 32_767;
-
-    /// The keyboard layout of the app in front; this thread's layout when nothing is in front.
-    #[must_use]
-    #[allow(unsafe_code, reason = "Plain window, thread and layout queries.")]
-    pub fn layout() -> HKL {
-        // SAFETY: plain queries; no window in front gives thread 0, which means this thread.
-        unsafe { GetKeyboardLayout(GetWindowThreadProcessId(GetForegroundWindow(), None)) }
-    }
 
     /// The window with the keyboard in the app in front; `None` with no app in front.
     #[must_use]
@@ -153,12 +146,6 @@ mod tests {
                 "{name}"
             );
         }
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn the_layout_in_front_is_a_real_layout() {
-        assert!(!layout().is_invalid());
     }
 
     #[cfg(windows)]

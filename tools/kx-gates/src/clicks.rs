@@ -2,7 +2,7 @@
 #![cfg(windows)]
 
 use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
-use kx_platform_windows::{WinLayouts, front, layouts};
+use kx_platform_windows::{WinLayouts, layouts};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use spike_core::window::foreground;
@@ -71,9 +71,11 @@ fn character(code: u32, layout: LayoutId) -> String {
     chars.into_iter().next().map(|k| k.base).unwrap_or_default()
 }
 
-/// The face keys that type a printable character in the foreground window's layout.
+/// The face keys that type a printable character in the layout of the app in front; none with no app in front.
 fn keys(ctx: &Ctx, face: &Face) -> Vec<Key> {
-    let layout = layouts::id(front::layout());
+    let Some(layout) = WinLayouts.foreground() else {
+        return Vec::new();
+    };
     mouse::key_places(&ctx.spike.keyboard)
         .into_iter()
         .filter_map(|(code, place)| {

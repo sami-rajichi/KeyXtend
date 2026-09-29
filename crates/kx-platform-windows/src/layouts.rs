@@ -95,24 +95,27 @@ pub(crate) fn keys<O: Os>(os: &O, layout: LayoutId, scans: &[Scan]) -> Vec<KeyCh
 /// What `key` types in `layout` in each slot, and which slots are dead keys.
 fn key_chars<O: Os>(os: &O, layout: LayoutId, key: Scan) -> KeyChars {
     let vk = os.vk_of(key, layout);
-    let read = Slot::ALL.map(|slot| {
+    let mut chars = KeyChars::default();
+    for slot in Slot::ALL {
         let (held, caps) = slot_keys(slot);
         let (n, buf) = answer(os, layout, key, vk, &state(held, caps));
-        read_typed(n, &buf)
-    });
-    let dead = Slot::ALL.into_iter().zip(&read);
-    let dead = dead
-        .filter(|(_, (_, d))| *d)
-        .map(|(slot, _)| slot)
-        .collect();
-    let [base, shift, altgr, caps, caps_shift] = read.map(|(text, _)| text);
-    KeyChars {
-        base,
-        shift,
-        altgr,
-        caps,
-        caps_shift,
-        dead,
+        let (text, dead) = read_typed(n, &buf);
+        *slot_text(&mut chars, slot) = text;
+        if dead {
+            chars.dead.push(slot);
+        }
+    }
+    chars
+}
+
+/// The text of slot `slot` in `chars`, to fill in.
+fn slot_text(chars: &mut KeyChars, slot: Slot) -> &mut String {
+    match slot {
+        Slot::Base => &mut chars.base,
+        Slot::Shift => &mut chars.shift,
+        Slot::AltGr => &mut chars.altgr,
+        Slot::Caps => &mut chars.caps,
+        Slot::CapsShift => &mut chars.caps_shift,
     }
 }
 

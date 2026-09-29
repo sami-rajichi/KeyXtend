@@ -16,7 +16,7 @@ The crate builds on every system. OS code is Windows-only, and the pure parts (Q
 | `langinfo` | none | A layout's language facts: the ISO code and native name from the locale, right to left from its reading layout, and the layout's English name from the registry (a variant is found by its `Layout Id`). Reading layout ids and Windows' answers is pure. |
 | `strokes` | none | The injection plan as plain key events (combos, Unicode units, what is still down), built and tested on every system. Its debug output never shows a key. |
 | `keys` | none | The key tables: the tag, the virtual keys Windows sends as extended, the `VkKeyScanEx` modifier bits and keys, and the keys `ToUnicodeEx` reads held (Caps Lock, `AltGr`, left and right modifiers). |
-| `front` | none | The app in front: its keyboard layout, the window that has its keyboard (`focus`, `focus_of`, `thread_layout`) and its program's file name. |
+| `front` | none | The app in front: the window that has its keyboard (`focus`, `focus_of`), that window's layout (`thread_layout`) and its program's file name. Its layout comes from `WinLayouts::foreground`. |
 | `inject::{send, send_keys, input, vk_key}` | none | The one `SendInput` path, shared with the test tools and the spike. |
 | `layouts::{id, hkl, ask, read_typed, is_printable}` | none | Layout ids to and from Windows handles, the switch request to a given window, and how a `ToUnicodeEx` answer reads, shared with the test tools and the spike. |
 | `com::Com` | none | COM start-up for one thread, undone when dropped, for UI Automation and the Windows Runtime. |

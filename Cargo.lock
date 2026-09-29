@@ -210,6 +210,7 @@ dependencies = [
  "kx-module-api",
  "kx-platform-windows",
  "kx-test-support",
+ "proptest",
  "serde",
  "thiserror",
  "toml",
