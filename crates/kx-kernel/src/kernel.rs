@@ -9,6 +9,7 @@ use crate::bus::KernelBus;
 use crate::grants::Policy;
 use crate::host::Held;
 use crate::lifecycle::{self, Step};
+use crate::log;
 use crate::order::{self, Plan};
 use crate::registry::{Owner, Registry};
 use kx_module_api::{
@@ -24,9 +25,6 @@ use thiserror::Error;
 
 /// The kernel's own settings section id; no module may take it.
 pub const KERNEL: ModuleId = ModuleId::new("kernel");
-
-/// The log level names, most important first; the log module reuses this list.
-pub const LOG_LEVELS: &[&str] = &["error", "warn", "info", "debug", "trace"];
 
 /// The smallest log file cap, in MiB.
 const MIN_LOG_MB: u32 = 1;
@@ -48,7 +46,7 @@ static SPEC: SettingsSpec = SettingsSpec {
 pub struct KernelSettings {
     /// Ids of the modules the user switched off.
     pub disabled: Vec<String>,
-    /// The least important level written, one of `LOG_LEVELS`.
+    /// The least important level written, one of `log::LOG_LEVELS`.
     pub log_level: String,
     /// The largest log file, in MiB.
     pub log_max_mb: u32,
@@ -57,7 +55,7 @@ pub struct KernelSettings {
 impl Settings for KernelSettings {
     fn check(&self) -> Result<(), SettingsError> {
         let invalid = |why: &str| Err(SettingsError::Invalid(why.to_owned()));
-        if !LOG_LEVELS.contains(&self.log_level.as_str()) {
+        if log::level(&self.log_level).is_none() {
             return invalid("log_level is not a level name");
         }
         if self.log_max_mb < MIN_LOG_MB {
