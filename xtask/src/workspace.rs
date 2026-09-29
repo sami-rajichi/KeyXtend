@@ -127,6 +127,11 @@ impl Workspace {
         self.is_under(package, &self.tidy.tool_dir)
     }
 
+    /// True if `name` is listed in the tidy config's `test_only` crates.
+    pub(crate) fn is_test_only(&self, name: &str) -> bool {
+        self.tidy.test_only.iter().any(|t| t == name)
+    }
+
     /// True if `package`'s manifest lies under `dir`, a folder relative to the workspace root.
     fn is_under(&self, package: &Package, dir: &str) -> bool {
         package.manifest_path.starts_with(self.root_dir.join(dir))

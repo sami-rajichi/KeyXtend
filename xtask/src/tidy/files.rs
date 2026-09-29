@@ -149,10 +149,12 @@ fn has_scanned_extension(path: &Path, tidy: &TidyConfig) -> bool {
 
 /// F2: every non-platform crate's `root_kinds` target must carry `unsafe_attr`.
 ///
-/// A test tool may carry `tool_unsafe_attr` instead.
+/// A test tool may carry `tool_unsafe_attr` instead. A `test_only` crate is checked even when
+/// its name has the platform prefix, since it never holds platform code.
 pub(crate) fn f2_unsafe_attr(ws: &Workspace) -> Vec<Violation> {
+    let platform = |p: &Package| p.name.starts_with(ws.tidy.platform_prefix.as_str());
     ws.members()
-        .filter(|p| !p.name.starts_with(ws.tidy.platform_prefix.as_str()))
+        .filter(|p| !platform(p) || ws.is_test_only(&p.name))
         .flat_map(|p| check_package(p, ws))
         .collect()
 }
