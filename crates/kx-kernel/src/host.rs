@@ -24,9 +24,14 @@ impl Held {
         &self.provided
     }
 
-    /// Unsubscribes the module's handlers, then removes and drops its services.
-    pub fn release(self, registry: &mut Registry) {
-        drop(self.guards);
+    /// Unsubscribes the module's handlers; its services stay in the registry.
+    pub fn drop_handlers(&mut self) {
+        self.guards.clear();
+    }
+
+    /// Unsubscribes any handlers left, then removes and drops the module's services.
+    pub fn release(mut self, registry: &mut Registry) {
+        self.drop_handlers();
         drop(registry.remove_owned(self.module));
     }
 }

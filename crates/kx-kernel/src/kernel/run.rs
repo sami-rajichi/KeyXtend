@@ -85,13 +85,16 @@ impl Kernel {
         });
     }
 
-    /// Stops module `at`: its `stop` runs contained, then what it held is released.
+    /// Stops module `at`: its handlers leave the bus, its `stop` runs contained, then its services go.
     pub(super) fn stop(&mut self, at: usize) {
         if !self.step(at, Step::Stop) {
             return;
         }
         let slot = &mut self.slots[at];
         let (id, module) = (slot.manifest.id, &mut slot.module);
+        if let Some(held) = &mut slot.held {
+            contained(id, || held.drop_handlers());
+        }
         if catch_unwind(AssertUnwindSafe(|| module.stop())).is_err() {
             tracing::warn!(module = %id, "module stop panicked");
         }
@@ -128,7 +131,12 @@ fn loggable(error: &ModuleError) -> String {
 
 /// Releases what module `id` held; a panic while its services drop is logged, never passed on.
 fn release(registry: &mut Registry, id: ModuleId, held: Held) {
-    if catch_unwind(AssertUnwindSafe(|| held.release(registry))).is_err() {
+    contained(id, || held.release(registry));
+}
+
+/// Runs `cleanup` for module `id`; a panic in it is logged, never passed on.
+fn contained(id: ModuleId, cleanup: impl FnOnce()) {
+    if catch_unwind(AssertUnwindSafe(cleanup)).is_err() {
         tracing::warn!(module = %id, "module cleanup panicked");
     }
 }

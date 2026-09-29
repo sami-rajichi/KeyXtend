@@ -3,8 +3,8 @@
 
 use crate::record::{Did, Log, Mode, SamplePanic, Switch};
 use kx_module_api::{
-    Capability, Event, Manifest, Module, ModuleCx, ModuleError, ModuleId, ServiceError, ServiceId,
-    ServiceKey, Settings, SettingsError, SettingsSpec, validate_as,
+    Bus, Capability, Event, Manifest, Module, ModuleCx, ModuleError, ModuleId, ServiceError,
+    ServiceId, ServiceKey, Settings, SettingsError, SettingsSpec, validate_as,
 };
 use serde::{Deserialize, Serialize};
 use std::panic;
@@ -149,6 +149,7 @@ struct Sample {
     switch: Switch,
     strict: bool,
     log: Log,
+    bus: Option<Bus>,
 }
 
 impl Sample {
@@ -172,6 +173,7 @@ impl Module for Sample {
     fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError> {
         let me = self.manifest.id;
         self.log.push(Did::Start(me));
+        self.bus = Some(cx.bus());
         let log = self.log.clone();
         cx.subscribe(move |_: &Ping| log.push(Did::Ping(me)));
         for &id in self.manifest.provides {
@@ -187,14 +189,16 @@ impl Module for Sample {
         match self.switch.get() {
             Mode::Fail => Err(ModuleError::Start(FAILURE)),
             Mode::Panic => panic::panic_any(SamplePanic),
-            Mode::Succeed | Mode::PanicInStop => Ok(()),
+            Mode::Succeed | Mode::PanicInStop | Mode::PingInStop => Ok(()),
         }
     }
 
     fn stop(&mut self) {
         self.log.push(Did::Stop(self.manifest.id));
-        if self.switch.get() == Mode::PanicInStop {
-            panic::panic_any(SamplePanic);
+        match (self.switch.get(), &self.bus) {
+            (Mode::PanicInStop, _) => panic::panic_any(SamplePanic),
+            (Mode::PingInStop, Some(bus)) => bus.publish(&Ping),
+            _ => {}
         }
     }
 }
@@ -268,6 +272,7 @@ impl Shape {
             switch: self.switch,
             strict: self.strict,
             log: log.clone(),
+            bus: None,
         })
     }
 }
