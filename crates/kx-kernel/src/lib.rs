@@ -8,6 +8,7 @@ pub mod grants;
 pub mod host;
 pub mod kernel;
 pub mod lifecycle;
+pub mod log;
 pub mod order;
 pub mod registry;
 

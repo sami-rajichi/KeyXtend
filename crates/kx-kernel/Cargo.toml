@@ -19,6 +19,7 @@ serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }
