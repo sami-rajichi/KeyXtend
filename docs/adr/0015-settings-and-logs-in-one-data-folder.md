@@ -34,7 +34,7 @@ Decided by the owner on 2026-09-29.
   - a section from a newer version, and a section no module owns, are kept with their values. The file is rewritten on save, so comments typed into it are not kept;
   - a module whose settings check panics fails alone, and the rest start;
   - a notice names what changed, by a translation key (the texts come with the UI in P3). It names at most 10 keys of at most 64 characters each, and counts the rest;
-  - saving writes a temp file and then renames it, so a crash never leaves a half-written file.
+  - saving writes a temp file, copies the good file to the previous copy, then renames the temp file over the settings file in one step, so a crash never leaves a half-written file and the settings file is never missing.
 - **Changes:** changing a module's settings restarts that module, and the modules that need it, until P3 adds a live settings handle.
 - **Logs:**
   - the `logs` folder sits inside the data folder: `logs/keyxtend.log` holds this run and `logs/keyxtend.previous.log` the run before, as NVDA does;
