@@ -75,6 +75,13 @@ mod tests {
     }
 
     #[test]
+    fn format_flags_print_exactly_the_marker() {
+        assert_eq!(format!("{:>20}", secret()), REDACTED_MARKER);
+        assert_eq!(format!("{:.2}", secret()), REDACTED_MARKER);
+        assert_eq!(format!("{:>20?}", secret()), REDACTED_MARKER);
+    }
+
+    #[test]
     fn no_format_leaks_the_value() {
         let all = format!("{:?}{:#?}{}", secret(), secret(), secret());
         assert!(!all.contains(SECRET));
