@@ -32,11 +32,11 @@ impl Kernel {
     pub fn load(&mut self) -> Result<Vec<Notice>, KernelError> {
         self.expect(Phase::Setup)?;
         self.phase = Phase::Loaded;
-        self.told = Some(Vec::new());
+        self.store.collect();
         let broken = self.read_settings();
         self.plan = self.plan_order();
         self.block(&broken);
-        Ok(self.told.take().unwrap_or_default())
+        Ok(self.store.collected())
     }
 
     /// Starts every loaded module it can, in dependency order, skipping what is switched off.
@@ -46,7 +46,7 @@ impl Kernel {
     pub fn start(&mut self) -> Result<Vec<Notice>, KernelError> {
         self.expect(Phase::Loaded)?;
         self.phase = Phase::Running;
-        self.told = Some(Vec::new());
+        self.store.collect();
         let skip = self.skipped();
         for id in self.plan.start().to_vec() {
             let Some(at) = self.find(id) else { continue };
@@ -60,7 +60,7 @@ impl Kernel {
             }
         }
         self.save();
-        Ok(self.told.take().unwrap_or_default())
+        Ok(self.store.collected())
     }
 
     /// Loads the store, kernel section first, tells its notices and returns the broken specs.

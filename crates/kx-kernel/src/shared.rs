@@ -1,4 +1,4 @@
-//! The settings store the kernel shares with every module's settings handle, behind one lock.
+//! The settings store and the one notice path the kernel shares with every module's settings handle.
 //! No lock is held while a module runs or the bus publishes, so a handler may write settings.
 
 use kx_module_api::{Bus, ModuleId, Notice, SettingsSink, WriteError};
@@ -6,10 +6,12 @@ use kx_settings::{Store, StoreError};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use toml::{Table, Value};
 
-/// The store, once loaded, and the bus that carries an unsaved notice from a module's write.
+/// The store, once loaded, and the notice path: the bus, plus the list `load` or `start` returns.
 #[derive(Clone)]
 pub struct Shared {
     store: Arc<Mutex<Option<Store>>>,
+    /// The notices kept while `load` or `start` runs, from the kernel and from handles alike.
+    told: Arc<Mutex<Option<Vec<Notice>>>>,
     bus: Bus,
 }
 
@@ -19,19 +21,20 @@ impl Shared {
     pub fn new(bus: Bus) -> Self {
         Self {
             store: Arc::new(Mutex::new(None)),
+            told: Arc::new(Mutex::new(None)),
             bus,
         }
     }
 
     /// Holds `store` from now on.
     pub fn put(&self, store: Store) {
-        *self.lock() = Some(store);
+        *lock(&self.store) = Some(store);
     }
 
     /// A copy of `module`'s section, ready for `parse_as`; `None` before load or without settings.
     #[must_use]
     pub fn get(&self, module: ModuleId) -> Option<Table> {
-        self.lock().as_ref()?.get(module).cloned()
+        lock(&self.store).as_ref()?.get(module).cloned()
     }
 
     /// Sets one value of `module`'s section; true when the stored value changed.
@@ -39,7 +42,7 @@ impl Shared {
     /// # Errors
     /// `Unknown` before load, or the store's refusal; nothing changes then.
     pub fn set(&self, module: ModuleId, key: &str, value: Value) -> Result<bool, StoreError> {
-        let mut guard = self.lock();
+        let mut guard = lock(&self.store);
         let store = guard.as_mut().ok_or(StoreError::Unknown(module))?;
         store.set(module, key, value)
     }
@@ -49,7 +52,7 @@ impl Shared {
     /// # Errors
     /// The `settings-unsaved` notice, or `None` when the user was already told.
     pub fn save(&self) -> Result<(), Option<Notice>> {
-        let mut guard = self.lock();
+        let mut guard = lock(&self.store);
         let Some(store) = guard.as_mut().filter(|s| s.needs_save()) else {
             return Ok(());
         };
@@ -65,20 +68,39 @@ impl Shared {
         Arc::new(self.clone())
     }
 
-    /// The store; a panic on another thread that held it does not stop the kernel.
-    fn lock(&self) -> MutexGuard<'_, Option<Store>> {
-        self.store.lock().unwrap_or_else(PoisonError::into_inner)
+    /// Publishes `notice`, and keeps it while `load` or `start` runs so their list holds it too.
+    pub fn notify(&self, notice: Notice) {
+        self.bus.publish(&notice);
+        if let Some(told) = lock(&self.told).as_mut() {
+            told.push(notice);
+        }
+    }
+
+    /// Starts keeping notices for `load` or `start` to return.
+    pub fn collect(&self) {
+        *lock(&self.told) = Some(Vec::new());
+    }
+
+    /// Stops keeping notices and returns the ones kept.
+    #[must_use]
+    pub fn collected(&self) -> Vec<Notice> {
+        lock(&self.told).take().unwrap_or_default()
     }
 }
 
+/// Locks `mutex`; a panic on another thread that held it does not stop the kernel.
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 impl SettingsSink for Shared {
-    /// Sets and saves at once; a failed save publishes its notice after the lock is released.
+    /// Sets and saves at once; a failed save tells its notice after the store lock is released.
     fn write(&self, module: ModuleId, key: &str, value: Value) -> Result<(), WriteError> {
         self.set(module, key, value)
             .map_err(|error| refusal(module, error))?;
         self.save().map_err(|notice| {
             if let Some(notice) = notice {
-                self.bus.publish(&notice);
+                self.notify(notice);
             }
             WriteError::Unsaved
         })
@@ -97,6 +119,7 @@ fn refusal(module: ModuleId, error: StoreError) -> WriteError {
 mod tests {
     use super::*;
     use crate::bus::KernelBus;
+    use kx_module_api::keys;
     use std::panic::{self, AssertUnwindSafe};
 
     const ID: ModuleId = ModuleId::new("a");
@@ -116,11 +139,27 @@ mod tests {
     }
 
     #[test]
+    fn notices_are_kept_only_while_collecting() {
+        let share = shared();
+        let notice = |key| Notice {
+            key,
+            module: None,
+            args: Vec::new(),
+        };
+        share.notify(notice(keys::SETTINGS_RESET));
+        share.collect();
+        share.notify(notice(keys::SETTINGS_UNSAVED));
+        assert_eq!(share.collected(), [notice(keys::SETTINGS_UNSAVED)]);
+        share.notify(notice(keys::MODULE_FAILED));
+        assert_eq!(share.collected(), []);
+    }
+
+    #[test]
     fn a_poisoned_lock_is_recovered_not_passed_on() {
         let share = shared();
         let held = share.clone();
         let poison = panic::catch_unwind(AssertUnwindSafe(|| {
-            let _guard = held.lock();
+            let _guard = lock(&held.store);
             panic::panic_any("a module thread panicked while it held the store");
         }));
         assert!(poison.is_err() && share.store.is_poisoned());

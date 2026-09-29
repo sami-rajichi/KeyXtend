@@ -98,10 +98,8 @@ pub struct Kernel {
     /// The modules in the order they were added.
     slots: Vec<Slot>,
     plan: Plan,
-    /// The settings, loaded by `load` and shared with every module's settings handle.
+    /// The settings, loaded by `load`, and the notice path, both shared with every settings handle.
     store: Shared,
-    /// The notices collected while `load` or `start` runs.
-    told: Option<Vec<Notice>>,
     phase: Phase,
 }
 
@@ -119,7 +117,6 @@ impl Kernel {
             platform_ids: BTreeSet::new(),
             slots: Vec::new(),
             plan: order::plan(&[], &BTreeSet::new()),
-            told: None,
             phase: Phase::Setup,
         }
     }
@@ -206,11 +203,9 @@ impl Kernel {
     }
 
     /// Publishes `notice`, and keeps it for `load` or `start` to return while it runs.
-    fn notify(&mut self, notice: Notice) {
-        self.bus.publish(&notice);
-        if let Some(told) = &mut self.told {
-            told.push(notice);
-        }
+    /// It takes the same path as a notice from a module's settings handle.
+    fn notify(&self, notice: Notice) {
+        self.store.notify(notice);
     }
 }
 

@@ -69,7 +69,7 @@ impl Kernel {
     }
 
     /// Sets one value of `module`'s settings, saves it and announces it; a running module restarts,
-    /// and a failed one is tried again as `retry` would. An equal value changes nothing at all.
+    /// and a failed one that waits for no provider is tried again. An equal value changes nothing.
     ///
     /// # Errors
     /// `WrongPhase` unless running, `SwitchKey` for the disabled list, or a store refusal.
@@ -93,7 +93,7 @@ impl Kernel {
         };
         match self.slots[at].state {
             Active => self.restart(at),
-            Failed if self.startable(at) => self.revive(at),
+            Failed if self.startable(at) && self.waiting_on(at).is_none() => self.revive(at),
             _ => {}
         }
         Ok(())

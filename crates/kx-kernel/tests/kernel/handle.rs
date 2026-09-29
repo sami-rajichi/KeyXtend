@@ -4,7 +4,10 @@ use crate::record::{Did, Grab};
 use crate::rig::{Rig, Seen};
 use crate::samples::{LEVEL_KEY, LEVEL_SPEC, MAX_LEVEL, NEW_LEVEL, sample};
 use kx_module_api::ModuleState::{Active, Stopped};
-use kx_module_api::{ModuleId, SettingsChanged, SettingsError, WriteError, keys};
+use kx_module_api::{
+    Manifest, Module, ModuleCx, ModuleError, ModuleId, SettingsChanged, SettingsError, WriteError,
+    keys,
+};
 use std::fs;
 use toml::Value;
 
@@ -12,6 +15,34 @@ const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
 /// A key the sample settings do not have.
 const UNKNOWN_KEY: &str = "speed";
+
+/// A module that saves its own level while it starts, as the UI saves its size and place.
+struct Writer;
+
+static WRITER: Manifest = Manifest {
+    id: ModuleId::new("writer"),
+    version: env!("CARGO_PKG_VERSION"),
+    requires: &[],
+    provides: &[],
+    capabilities: &[],
+    settings: Some(&LEVEL_SPEC),
+};
+
+impl Module for Writer {
+    fn manifest(&self) -> &'static Manifest {
+        &WRITER
+    }
+
+    fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError> {
+        let saved = cx.settings_handle().set(LEVEL_KEY, level(NEW_LEVEL));
+        assert_eq!(
+            saved,
+            Err(WriteError::Unsaved),
+            "the data folder is blocked"
+        );
+        Ok(())
+    }
+}
 
 /// A tuned by its level and B with no settings, each leaving its handle in its grab.
 fn grabbed() -> (Rig, Grab, Grab) {
@@ -76,6 +107,18 @@ fn a_failed_save_is_unsaved_and_told_once() {
         [Err(WriteError::Unsaved), Err(WriteError::Unsaved)]
     );
     assert_eq!(rig.notice_keys(), [keys::SETTINGS_UNSAVED]);
+}
+
+#[test]
+fn a_failed_save_while_booting_is_in_the_boot_list_and_on_the_bus_once() {
+    let mut rig = Rig::new();
+    rig.kernel.add(Box::new(Writer)).unwrap();
+    fs::write(rig.data(), "a file where the data folder should be").unwrap();
+    let notices = rig.kernel.boot().unwrap();
+    let told: Vec<_> = notices.iter().map(|n| n.key).collect();
+    assert_eq!(told, [keys::SETTINGS_UNSAVED]);
+    assert_eq!(rig.notice_keys(), [keys::SETTINGS_UNSAVED]);
+    assert_eq!(rig.state(WRITER.id), Some(Active));
 }
 
 #[test]

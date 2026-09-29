@@ -98,6 +98,21 @@ fn a_new_value_tries_a_module_that_failed_on_the_old_one_again_with_its_dependen
 }
 
 #[test]
+fn a_new_value_leaves_a_module_waiting_for_its_failed_provider_failed_and_quiet() {
+    let mut rig = Rig::new();
+    rig.add(sample(A).provides(&[Alpha::ID]).mode(Mode::Fail));
+    rig.add(sample(B).requires(&[Alpha::ID]).settings(&LEVEL_SPEC));
+    rig.kernel.boot().unwrap();
+    rig.kernel
+        .set_setting(B, LEVEL_KEY, Value::Integer(NEW_LEVEL))
+        .unwrap();
+    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Failed)]);
+    assert_eq!(rig.notices(), [failed(A), failed(B)], "no new failure");
+    let text = fs::read_to_string(rig.files().settings).unwrap();
+    assert_eq!(text, format!("[b]\nversion = 1\nlevel = {NEW_LEVEL}\n"));
+}
+
+#[test]
 fn a_new_value_leaves_a_switched_off_module_stopped() {
     let mut rig = tuned();
     rig.off_in_file(&[A]);
