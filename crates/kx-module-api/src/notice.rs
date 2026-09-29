@@ -63,7 +63,7 @@ impl Event for ModuleStateChanged {
     const NAME: &'static str = "module-state-changed";
 }
 
-/// A module's settings changed, so it should read them again.
+/// A module's settings changed; the kernel restarts the module if it runs, so it reads them again.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SettingsChanged {
     /// The module whose settings changed.

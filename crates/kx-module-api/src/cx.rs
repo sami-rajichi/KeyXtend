@@ -92,13 +92,13 @@ impl<'a> ModuleCx<'a> {
         self.host.provide(K::ID, K::CAPABILITY, Box::new(service))
     }
 
-    /// Calls `handler` for every published `E` until the module stops.
+    /// Calls `handler` for every published `E` until the module stops or its start fails.
     pub fn subscribe<E: Event>(&mut self, handler: impl Fn(&E) + Send + Sync + 'static) {
         let guard = self.host.bus().subscribe(handler);
         self.host.hold(guard);
     }
 
-    /// Adds `handler` to `E`'s intercept chain at `order` until the module stops.
+    /// Adds `handler` to `E`'s intercept chain at `order` until the module stops or its start fails.
     pub fn intercept<E: Event>(
         &mut self,
         order: i32,

@@ -41,13 +41,6 @@ pub struct Grants {
 
 impl Grants {
     /// The grants of `manifest`'s module under `policy`.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "only tests build grants until the kernel starts modules"
-        )
-    )]
     pub(crate) fn new(manifest: &Manifest, policy: &Policy) -> Self {
         let declared: BTreeSet<Capability> = manifest.capabilities.iter().copied().collect();
         let (granted, denied) = declared
