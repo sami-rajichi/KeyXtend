@@ -196,6 +196,17 @@ mod tests {
     }
 
     #[test]
+    fn the_target_window_title_is_no_title_of_the_spike() {
+        let target = kx_target_window::config::load().expect("target config loads");
+        let spike = spike_core::config::load().expect("spike.toml loads");
+        let taken = spike_core::panelcfg::titles(&spike);
+        assert!(
+            !taken.contains(&&target.title),
+            "kx-gates closes windows by title, so the target's must be its own"
+        );
+    }
+
+    #[test]
     fn program_resolves_only_relative_paths_with_a_folder() {
         let cfg = GatesConfig {
             dir: PathBuf::from("base"),

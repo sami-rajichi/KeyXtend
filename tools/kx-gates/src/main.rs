@@ -1,6 +1,6 @@
-//! kx-gates: the Windows gate runner. It drives gates G1-G7, G12, G17-G25 and the hand try, and prints one JSON line of results per run.
-//!
-//! It moves the real mouse, types into real apps and opens Start: run it only when the owner agrees. Windows only.
+//! kx-gates: the Windows gate runner for gates G1-G7, G12, G17-G25 and the hand try;
+//! it prints one JSON line per run. It moves the real mouse and types into real apps,
+//! so run it only when the owner agrees.
 #![deny(unsafe_code)]
 
 mod admin;

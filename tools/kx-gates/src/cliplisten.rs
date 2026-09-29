@@ -31,7 +31,7 @@ pub const HISTORY_FLAG: &str = "CanIncludeInClipboardHistory";
 /// Every exclusion marker, for the test copies.
 pub const MARKS: [&str; 3] = [EXCLUDE[0], EXCLUDE[1], HISTORY_FLAG];
 /// Class of the hidden listener window.
-const CLASS: PCWSTR = w!("KeyXtendSpikeClipListener");
+const CLASS: PCWSTR = w!("KeyXtendGatesClipListener");
 
 /// True when the formats on the clipboard ask history tools to leave the copy out.
 pub fn excluded(names: &[String], history_flag: Option<u32>) -> bool {

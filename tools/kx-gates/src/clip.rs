@@ -1,4 +1,5 @@
-//! Reads and writes Unicode text on the clipboard, with a cap on how much is read, plus marker formats.
+//! The open clipboard: raw formats, their names, put, empty and the change counter.
+//! `cliptext` holds the text read and write on top of it.
 #![cfg(windows)]
 
 use std::marker::PhantomData;
