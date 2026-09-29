@@ -3,32 +3,37 @@
 
 use std::path::{Path, PathBuf};
 
-use kx_target_window::config::pick;
+use kx_target_window::config::locate;
 
 /// File name of the gate settings.
 pub const FILE: &str = "kx-gates.toml";
 
 /// Where the settings file is: beside the running exe, else in the crate folder.
 pub fn path() -> PathBuf {
-    locate(std::env::current_exe().ok().as_deref())
-}
-
-/// The settings file for a run of `exe`.
-fn locate(exe: Option<&Path>) -> PathBuf {
-    let exe_dir = exe.and_then(Path::parent);
-    let beside = exe_dir.is_some_and(|dir| dir.join(FILE).is_file());
-    pick(FILE, exe_dir, Path::new(env!("CARGO_MANIFEST_DIR")), beside)
+    locate(FILE, Path::new(env!("CARGO_MANIFEST_DIR")))
 }
 
 #[cfg(test)]
 mod tests {
     use std::path::{Component, Path, PathBuf};
 
+    use kx_target_window::config::locate_for;
+
     use super::*;
     use crate::config;
 
     /// The shipped settings file.
     const SHIPPED: &str = include_str!("../kx-gates.toml");
+
+    /// Cargo's build folder, in the repo root.
+    const BUILD_DIR: &str = "target";
+    /// The `[apps.*]` entry that is the test target window.
+    const TARGET_APP: &str = "target";
+
+    /// Where the settings file is for a run of `exe`.
+    fn for_exe(exe: Option<&Path>) -> PathBuf {
+        locate_for(exe, FILE, Path::new(env!("CARGO_MANIFEST_DIR")))
+    }
 
     /// The settings file in the crate folder.
     fn crate_file() -> PathBuf {
@@ -77,9 +82,9 @@ mod tests {
             crate_file(),
             "the test exe sits in target/<profile>/deps"
         );
-        assert_eq!(locate(None), crate_file());
         let exe = Path::new("no/such/dir/kx-gates.exe");
-        assert_eq!(locate(Some(exe)), crate_file());
+        assert_eq!(for_exe(Some(exe)), crate_file());
+        assert_eq!(for_exe(None), crate_file());
     }
 
     #[test]
@@ -87,7 +92,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("kx-gates-cfg-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("temp folder");
         std::fs::write(dir.join(FILE), "").expect("temp file");
-        let got = locate(Some(&dir.join("kx-gates.exe")));
+        let got = for_exe(Some(&dir.join("kx-gates.exe")));
         std::fs::remove_dir_all(&dir).expect("clean up");
         assert_eq!(got, dir.join(FILE));
     }
@@ -116,6 +121,21 @@ mod tests {
                 "{} leaves {}",
                 p.display(),
                 root.display()
+            );
+        }
+        // Build output only: an un-rebased `../target` stays in the repo but not in its `target/`.
+        let target = root.join(BUILD_DIR);
+        let built = [
+            ("paths.out", cfg.out_dir()),
+            ("g22.worker_dir", cfg.dir.join(&cfg.g22.worker_dir)),
+            ("apps.target.exe", cfg.program(&cfg.apps[TARGET_APP].exe)),
+        ];
+        for (key, p) in built {
+            assert!(
+                fold(&p).starts_with(&target),
+                "{key} = {} is not under {}",
+                p.display(),
+                target.display()
             );
         }
     }
