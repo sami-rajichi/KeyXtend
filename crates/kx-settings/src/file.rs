@@ -33,10 +33,11 @@ pub struct Loaded {
 }
 
 /// Why a save failed; the old text stays in the settings file.
+/// Its texts name the step only, since the kernel logs them and a path holds the account name.
 #[derive(Debug, Error)]
 pub enum SaveError {
     /// The data folder could not be created.
-    #[error("cannot create the data folder {}", path.display())]
+    #[error("cannot create the data folder")]
     CreateDir {
         /// The folder.
         path: PathBuf,
@@ -45,7 +46,7 @@ pub enum SaveError {
         source: io::Error,
     },
     /// The temp file could not be written and synced.
-    #[error("cannot write the temp file {}", path.display())]
+    #[error("cannot write the temp file")]
     WriteTemp {
         /// The temp file.
         path: PathBuf,
@@ -54,7 +55,7 @@ pub enum SaveError {
         source: io::Error,
     },
     /// The settings file could not be copied to the previous copy.
-    #[error("cannot keep the previous copy {}", path.display())]
+    #[error("cannot keep the previous copy")]
     KeepPrevious {
         /// The previous copy.
         path: PathBuf,
@@ -63,7 +64,7 @@ pub enum SaveError {
         source: io::Error,
     },
     /// The temp file could not replace the settings file, which is left as it was.
-    #[error("cannot put the new settings in place at {}", path.display())]
+    #[error("cannot put the new settings in place")]
     Replace {
         /// The settings file.
         path: PathBuf,
@@ -202,7 +203,7 @@ fn save_steps(files: &Files, text: &str) -> Result<(), SaveError> {
 /// Saves the full settings text; the old file stays if any step fails.
 ///
 /// # Errors
-/// `SaveError` naming the step and the path that failed.
+/// `SaveError` naming the step that failed, with the file's path in its field.
 pub fn save(files: &Files, text: &str) -> Result<(), SaveError> {
     let result = save_steps(files, text);
     if result.is_err() {

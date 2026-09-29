@@ -11,6 +11,11 @@ const NOT_UTF8: &[u8] = &[0xff, 0xfe, 0xfd, b'=', 0x80];
 #[cfg(windows)]
 const SHARE_READ: u32 = 1;
 
+/// A user name that a save error text must never show.
+const ACCOUNT_NAME: &str = "account-name";
+/// A data path with that user name in it.
+const ACCOUNT_PATH: &str = r"C:\Users\account-name\AppData\KeyXtend";
+
 fn setup(label: &str) -> (TempDir, Files) {
     let dir = TempDir::new(label).unwrap();
     let files = Files::new(dir.path());
@@ -19,6 +24,20 @@ fn setup(label: &str) -> (TempDir, Files) {
 
 fn table(text: &str) -> toml::Table {
     text.parse().unwrap()
+}
+
+#[test]
+fn a_save_error_text_never_holds_its_path() {
+    let builds: [fn(PathBuf, io::Error) -> SaveError; 4] = [
+        |path, source| SaveError::CreateDir { path, source },
+        |path, source| SaveError::WriteTemp { path, source },
+        |path, source| SaveError::KeepPrevious { path, source },
+        |path, source| SaveError::Replace { path, source },
+    ];
+    for build in builds {
+        let text = build(PathBuf::from(ACCOUNT_PATH), io::Error::other("cause")).to_string();
+        assert!(!text.contains(ACCOUNT_NAME), "{text}");
+    }
 }
 
 #[test]
