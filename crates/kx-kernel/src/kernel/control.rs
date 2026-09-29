@@ -1,6 +1,6 @@
 //! Runtime controls: Try again, switching a module off and on, and changing one setting.
 
-use super::{DISABLED_KEY, KERNEL, Kernel, KernelError, Phase};
+use super::{DISABLED_KEY, KERNEL, Kernel, KernelError, Phase, switched_off};
 use crate::lifecycle::Step;
 use crate::order;
 use kx_module_api::ModuleState::{Active, Failed, Pending, Starting, Stopped, Stopping};
@@ -39,7 +39,7 @@ impl Kernel {
         }
         let at = self.find(id).ok_or(KernelError::Unknown(id))?;
         let mut list = self.disabled();
-        let listed = list.iter().any(|d| d == id.as_str());
+        let listed = switched_off(&list, id);
         if on {
             list.retain(|d| d != id.as_str());
         } else if !listed {
@@ -147,7 +147,7 @@ impl Kernel {
                 continue;
             };
             let slot = &self.slots[at];
-            let off = disabled.iter().any(|d| d == dependent.as_str());
+            let off = switched_off(&disabled, dependent);
             let wanted = states.contains(&slot.state) && !slot.blocked && !off;
             if wanted && self.waiting_on(at).is_none() {
                 self.start(at);

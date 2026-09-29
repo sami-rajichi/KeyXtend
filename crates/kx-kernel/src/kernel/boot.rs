@@ -1,7 +1,7 @@
 //! Boot: load settings, plan the order, block what cannot start (quietly when it is off),
 //! skip what is off, start the rest.
 
-use super::{KERNEL, Kernel, KernelError, Phase, SPEC};
+use super::{KERNEL, Kernel, KernelError, Phase, SPEC, switched_off};
 use crate::lifecycle::Step;
 use crate::order::{self, Node, Plan, Reason};
 use kx_module_api::{ModuleId, ModuleState, Notice};
@@ -126,7 +126,7 @@ impl Kernel {
         let disabled = self.disabled();
         let mut skip = BTreeSet::new();
         for &id in self.plan.start() {
-            if disabled.iter().any(|d| d == id.as_str()) {
+            if switched_off(&disabled, id) {
                 skip.insert(id);
                 skip.extend(order::dependents(&self.plan, id));
             }
