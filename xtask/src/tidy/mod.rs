@@ -199,6 +199,24 @@ mod tests {
         assert_eq!(violations[0].rule, D1);
     }
 
+    #[test]
+    fn run_includes_d5_for_a_shipped_crate_that_depends_on_a_tool() {
+        let ws = WorkspaceBuilder::new()
+            .member(
+                "kx-lib",
+                "crates",
+                vec![dep("kx-tool", DependencyKind::Normal)],
+            )
+            .member("kx-tool", "tools", vec![])
+            .build();
+
+        let violations = run(&ws);
+
+        assert_eq!(violations.len(), 1, "{violations:?}");
+        assert_eq!(violations[0].rule, D5);
+        assert_eq!(violations[0].place, "kx-lib");
+    }
+
     /// Plan edge case 7: a workspace with only `xtask`, and no scan dirs on disk, passes.
     #[test]
     fn run_on_an_xtask_only_workspace_with_no_scan_dirs_passes() {

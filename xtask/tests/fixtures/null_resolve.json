@@ -1,17 +1,17 @@
 {
   "packages": [
     {
-      "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+      "id": "path+file:///C:/repo/xtask#0.0.0",
       "name": "xtask",
-      "manifest_path": "D:\\Projects\\KeyXtend\\xtask\\Cargo.toml",
+      "manifest_path": "C:\\repo\\xtask\\Cargo.toml",
       "dependencies": [],
       "targets": [
-        { "src_path": "D:\\Projects\\KeyXtend\\xtask\\src\\main.rs" }
+        { "src_path": "C:\\repo\\xtask\\src\\main.rs" }
       ]
     }
   ],
-  "workspace_members": ["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"],
-  "workspace_root": "D:\\Projects\\KeyXtend",
+  "workspace_members": ["path+file:///C:/repo/xtask#0.0.0"],
+  "workspace_root": "C:\\repo",
   "resolve": null,
   "metadata": {
     "tidy": {

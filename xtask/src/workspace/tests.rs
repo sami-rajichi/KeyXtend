@@ -16,7 +16,7 @@ fn minimal_fixture_loads_the_package_and_config() {
     let workspace = load(MINIMAL).unwrap();
     assert_eq!(
         workspace.member_ids,
-        vec!["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"]
+        vec!["path+file:///C:/repo/xtask#0.0.0"]
     );
     assert_eq!(workspace.packages.len(), 1);
 
@@ -26,7 +26,7 @@ fn minimal_fixture_loads_the_package_and_config() {
         package.targets,
         vec![Target {
             kinds: vec!["bin".to_string()],
-            src_path: PathBuf::from("D:\\Projects\\KeyXtend\\xtask\\src\\main.rs"),
+            src_path: PathBuf::from("C:\\repo\\xtask\\src\\main.rs"),
         }]
     );
     assert_eq!(

@@ -1,24 +1,24 @@
 {
   "packages": [
     {
-      "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+      "id": "path+file:///C:/repo/xtask#0.0.0",
       "name": "xtask",
-      "manifest_path": "D:\\Projects\\KeyXtend\\xtask\\Cargo.toml",
+      "manifest_path": "C:\\repo\\xtask\\Cargo.toml",
       "dependencies": [
         { "name": "serde", "kind": null },
         { "name": "proptest", "kind": "dev" }
       ],
       "targets": [
-        { "kind": ["bin"], "src_path": "D:\\Projects\\KeyXtend\\xtask\\src\\main.rs" }
+        { "kind": ["bin"], "src_path": "C:\\repo\\xtask\\src\\main.rs" }
       ]
     }
   ],
-  "workspace_members": ["path+file:///D:/Projects/KeyXtend/xtask#0.0.0"],
-  "workspace_root": "D:\\Projects\\KeyXtend",
+  "workspace_members": ["path+file:///C:/repo/xtask#0.0.0"],
+  "workspace_root": "C:\\repo",
   "resolve": {
     "nodes": [
       {
-        "id": "path+file:///D:/Projects/KeyXtend/xtask#0.0.0",
+        "id": "path+file:///C:/repo/xtask#0.0.0",
         "deps": [
           {
             "pkg": "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
