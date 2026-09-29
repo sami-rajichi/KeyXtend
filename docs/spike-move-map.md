@@ -34,8 +34,8 @@ Task numbers below are those of the P3 plan (`docs/superpowers/plans/2026-09-29-
 | Spike | Product |
 |---|---|
 | `core/src/{kbctl,kbctl/*,latch,kbgeom,kbgeom/*,kbview,place,sizer,legend,status}.rs` | `kx-mod-keyboard` |
-| `core/src/{langinfo,langkey}.rs` | `kx-mod-keyboard` logic; layout queries and switching in `kx-platform-windows` |
-| `core/src/layout.rs` | `kx-mod-layouts` logic; `ToUnicodeEx` reading in `kx-platform-windows` |
+| `core/src/{langinfo,langkey}.rs` | `kx-platform-windows`: the locale and registry facts (`langinfo`), the window with the keyboard and its layout (`front`) and the switch request (`layouts::ask`) moved in Task 8. What stays is built on them: `LangConfig`, `short` and `space_label` go to the `[layouts]` settings (Task 10), `LangInfo` and the language key's stepping to `kx-mod-keyboard` (Task 13) |
+| `core/src/layout.rs` | `kx-platform-windows` `layouts` (the installed list, `ToUnicodeEx` reading, Caps Lock) moved in Task 8, with the spike's scan-code helpers from `core/src/lib.rs`. What stays reads through it: `Follow` goes to `kx-mod-layouts` (Task 10); `rows`, `rows_json`, `width`, `KeyCap` and `label` go to `kx-mod-keyboard` (Task 11), where key names come from translations and `key_name` ends |
 | `core/src/{inject,window,screen,sysui,sysui/*,backdrop,folders,com,uiaccess}.rs`, the extended-key table in `tools/kx-gates` `keys.rs` | `kx-platform-windows`. `inject` moved in Task 7; `core/src/sendkeys.rs` keeps spike helpers built on it until their phases (paced typing P11, shortcut keys P9) |
 | `core/src/theme.rs`, `core/src/theme/{common,extras,look,motion,palette,shape,tests}.rs` | `kx-theme` (tokens, look, contrast; no Qt, so not `kx-ui`, ADR-0016) |
 | `core/src/paint.rs` | `kx-mod-keyboard` view (Task 13); it names palette tokens as text, so it needs no `kx-theme`. Its "every theme has these tokens" test goes to `apps/keyxtend` (Task 19), the only crate that sees both |

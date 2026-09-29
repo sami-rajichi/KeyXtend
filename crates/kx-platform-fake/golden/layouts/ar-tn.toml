@@ -1,0 +1,327 @@
+# Captured from an installed layout by `kx-gates capture-layouts`; capture again rather than edit.
+id = "0xFFFFFFFFF0291C01"
+controls = ["0x0001", "0x000E", "0x000F", "0x001C", "0x0039", "0xE01C"]
+
+[facts]
+iso = "ar"
+native = "العربية"
+layout = "Arabic (102) AZERTY"
+rtl = true
+
+[keys.0x0002]
+base = "&"
+shift = "1"
+caps = "&"
+caps_shift = "1"
+
+[keys.0x0003]
+base = "é"
+shift = "2"
+caps = "é"
+caps_shift = "2"
+
+[keys.0x0004]
+base = '"'
+shift = "3"
+caps = '"'
+caps_shift = "3"
+
+[keys.0x0005]
+base = "'"
+shift = "4"
+altgr = "¤"
+caps = "'"
+caps_shift = "4"
+
+[keys.0x0006]
+base = "("
+shift = "5"
+caps = "("
+caps_shift = "5"
+
+[keys.0x0007]
+base = "-"
+shift = "6"
+caps = "-"
+caps_shift = "6"
+
+[keys.0x0008]
+base = "è"
+shift = "7"
+caps = "è"
+caps_shift = "7"
+
+[keys.0x0009]
+base = "_"
+shift = "8"
+caps = "_"
+caps_shift = "8"
+
+[keys.0x000A]
+base = "ç"
+shift = "9"
+caps = "ç"
+caps_shift = "9"
+
+[keys.0x000B]
+base = "à"
+shift = "0"
+caps = "à"
+caps_shift = "0"
+
+[keys.0x000C]
+base = ")"
+shift = "°"
+caps = ")"
+caps_shift = "°"
+
+[keys.0x000D]
+base = "="
+shift = "+"
+caps = "="
+caps_shift = "+"
+
+[keys.0x0010]
+base = "ض"
+shift = "َ"
+altgr = "َّ"
+caps = "ض"
+caps_shift = "َ"
+
+[keys.0x0011]
+base = "ص"
+shift = "ً"
+altgr = "ًّ"
+caps = "ص"
+caps_shift = "ً"
+
+[keys.0x0012]
+base = "ث"
+shift = "ُ"
+altgr = "ُّ"
+caps = "ث"
+caps_shift = "ُ"
+
+[keys.0x0013]
+base = "ق"
+shift = "ٌ"
+altgr = "ٌّ"
+caps = "ق"
+caps_shift = "ٌ"
+
+[keys.0x0014]
+base = "ف"
+shift = "لإ"
+caps = "ف"
+caps_shift = "لإ"
+
+[keys.0x0015]
+base = "غ"
+shift = "إ"
+caps = "غ"
+caps_shift = "إ"
+
+[keys.0x0016]
+base = "ع"
+shift = "‘"
+caps = "ع"
+caps_shift = "‘"
+
+[keys.0x0017]
+base = "ه"
+shift = "÷"
+caps = "ه"
+caps_shift = "÷"
+
+[keys.0x0018]
+base = "خ"
+shift = "×"
+caps = "خ"
+caps_shift = "×"
+
+[keys.0x0019]
+base = "ح"
+shift = "؛"
+caps = "ح"
+caps_shift = "؛"
+
+[keys.0x001A]
+base = "ج"
+shift = "}"
+caps = "ج"
+caps_shift = "}"
+
+[keys.0x001B]
+base = "د"
+shift = "{"
+caps = "د"
+caps_shift = "{"
+
+[keys.0x001E]
+base = "ش"
+shift = '\'
+caps = "ش"
+caps_shift = '\'
+
+[keys.0x001F]
+base = "س"
+altgr = "⃁"
+caps = "س"
+
+[keys.0x0020]
+base = "ي"
+shift = "]"
+caps = "ي"
+caps_shift = "]"
+
+[keys.0x0021]
+base = "ب"
+shift = "["
+caps = "ب"
+caps_shift = "["
+
+[keys.0x0022]
+base = "ل"
+shift = "لأ"
+caps = "ل"
+caps_shift = "لأ"
+
+[keys.0x0023]
+base = "ا"
+shift = "أ"
+caps = "ا"
+caps_shift = "أ"
+
+[keys.0x0024]
+base = "ت"
+shift = "ـ"
+caps = "ت"
+caps_shift = "ـ"
+
+[keys.0x0025]
+base = "ن"
+shift = "،"
+caps = "ن"
+caps_shift = "،"
+
+[keys.0x0026]
+base = "م"
+shift = "/"
+caps = "م"
+caps_shift = "/"
+
+[keys.0x0027]
+base = "ك"
+shift = ":"
+caps = "ك"
+caps_shift = ":"
+
+[keys.0x0028]
+base = "ط"
+shift = '"'
+caps = "ط"
+caps_shift = '"'
+
+[keys.0x0029]
+base = ">"
+shift = "<"
+caps = ">"
+caps_shift = "<"
+
+[keys.0x002B]
+base = "ذ"
+shift = "ّ"
+caps = "ذ"
+caps_shift = "ّ"
+
+[keys.0x002C]
+base = "ئ"
+shift = "~"
+caps = "ئ"
+caps_shift = "~"
+
+[keys.0x002D]
+base = "ء"
+shift = "ْ"
+caps = "ء"
+caps_shift = "ْ"
+
+[keys.0x002E]
+base = "ؤ"
+shift = "ِ"
+altgr = "ِّ"
+caps = "ؤ"
+caps_shift = "ِ"
+
+[keys.0x002F]
+base = "ر"
+shift = "ٍ"
+altgr = "ٍّ"
+caps = "ر"
+caps_shift = "ٍ"
+
+[keys.0x0030]
+base = "لا"
+shift = "لآ"
+caps = "لا"
+caps_shift = "لآ"
+
+[keys.0x0031]
+base = "ى"
+shift = "آ"
+caps = "ى"
+caps_shift = "آ"
+
+[keys.0x0032]
+base = "ة"
+shift = "’"
+caps = "ة"
+caps_shift = "’"
+
+[keys.0x0033]
+base = "و"
+shift = ","
+caps = "و"
+caps_shift = ","
+
+[keys.0x0034]
+base = "ز"
+shift = "."
+caps = "ز"
+caps_shift = "."
+
+[keys.0x0035]
+base = "ظ"
+shift = "؟"
+caps = "ظ"
+caps_shift = "؟"
+
+[keys.0x0037]
+base = "*"
+shift = "*"
+caps = "*"
+caps_shift = "*"
+
+[keys.0x004A]
+base = "-"
+shift = "-"
+caps = "-"
+caps_shift = "-"
+
+[keys.0x004E]
+base = "+"
+shift = "+"
+caps = "+"
+caps_shift = "+"
+
+[keys.0x0056]
+base = '\'
+shift = "|"
+caps = '\'
+caps_shift = "|"
+
+[keys.0xE035]
+base = "/"
+shift = "/"
+caps = "/"
+caps_shift = "/"

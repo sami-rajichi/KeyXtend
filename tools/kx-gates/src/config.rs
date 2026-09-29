@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::capture::Capture;
 use crate::cfgfile::{self, FILE};
 use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
 use crate::g22cfg::G22;
@@ -64,6 +65,8 @@ pub struct GatesConfig {
     pub g24: G24,
     /// G25 settings.
     pub g25: G25,
+    /// `capture-layouts` settings.
+    pub capture: Capture,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,

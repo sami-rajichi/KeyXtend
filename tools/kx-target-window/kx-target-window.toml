@@ -12,3 +12,5 @@ width_px = 900
 height_px = 500
 # Switch that makes the box a single-line password box, where typed characters are never logged.
 password_arg = "--password"
+# Switch, followed by an installed layout id such as 0x00000000040C040C, that types into that layout.
+layout_arg = "--layout"

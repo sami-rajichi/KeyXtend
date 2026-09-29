@@ -1,9 +1,10 @@
 //! Clicks on face keys, shared by G2 and G4: the keys, a click loop, and focus checks.
 #![cfg(windows)]
 
+use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
+use kx_platform_windows::{WinLayouts, front, layouts};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::layout;
 use spike_core::window::foreground;
 use windows::Win32::Foundation::{HWND, POINT};
 
@@ -61,14 +62,23 @@ pub fn typed(clicks: &[Click]) -> String {
     String::from_utf16_lossy(&units)
 }
 
+/// What key `code` types with no modifier in `layout`; empty for a key that prints nothing.
+fn character(code: u32, layout: LayoutId) -> String {
+    let Ok(code) = u16::try_from(code) else {
+        return String::new();
+    };
+    let chars = WinLayouts.keys(layout, &[Scan::new(code)]);
+    chars.into_iter().next().map(|k| k.base).unwrap_or_default()
+}
+
 /// The face keys that type a printable character in the foreground window's layout.
 fn keys(ctx: &Ctx, face: &Face) -> Vec<Key> {
-    let hkl = layout::foreground_layout();
+    let layout = layouts::id(front::layout());
     mouse::key_places(&ctx.spike.keyboard)
         .into_iter()
         .filter_map(|(code, place)| {
-            let text = layout::character(code, hkl);
-            layout::is_printable(&text).then(|| Key {
+            let text = character(code, layout);
+            layouts::is_printable(&text).then(|| Key {
                 code,
                 text,
                 at: mouse::centre(&place, face.origin, face.dpi),

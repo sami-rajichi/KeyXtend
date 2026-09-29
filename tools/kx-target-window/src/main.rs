@@ -6,6 +6,8 @@
 #[cfg(windows)]
 mod procs;
 #[cfg(windows)]
+mod switch;
+#[cfg(windows)]
 mod window;
 
 use std::process::ExitCode;

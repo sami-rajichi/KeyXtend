@@ -330,6 +330,14 @@ win_v = [0x5B, 0x56]
 esc = [0x1B]
 alt_tab = [0x12, 0x09]
 
+[capture]
+# `capture-layouts` writes one golden table per language, from the first installed layout of each.
+languages = ["en", "fr", "ar"]
+# Scan codes read from each layout: every code from first to last, then the extended keys.
+first = "0x0001"
+last = "0x0058"
+extended = ["0xE01C", "0xE035"]
+
 [g22]
 # Read aloud, one per Mic press, in this order; Notepad switches to each layout (LANGID) first.
 sentences = [

@@ -3,12 +3,12 @@
 - **Owner:** product owner
 - **Last review:** 2026-09-29
 - **Status:** Draft
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`) and the app in front (`front`). It runs inside the uiAccess `keyxtend` process. Later P3 tasks add layouts, windows and system parts, and this note grows with them.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), and the app in front (`front`). It runs inside the uiAccess `keyxtend` process. Later P3 tasks add windows and system parts, and this note grows with them.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's service key needs `InjectInput`. | N/A |
+| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's and layout source's service keys need `InjectInput`. | N/A |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -18,6 +18,8 @@
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
 | Typed text and the keys it becomes | Secret (may be a password) | Memory only, as `Redacted` text and key events for one send | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
+| Installed layouts, their language facts and what each key types | Public (the same for every user of that layout; not typed text) | Memory only; returned to the caller | N/A | Not kept |
+| Caps Lock state and the layout of the app in front | Public | Memory only | N/A | Not kept |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -30,14 +32,21 @@
 | `SendInput` count | Clamped to the batch length; a batch too long for a `u32` is not sent | One batch per call | Property test of the release rule |
 | `VkKeyScanExW` answer | Only no modifier, Shift, Ctrl+Alt (`AltGr`) or Shift+Ctrl+Alt is typed; anything else is `Unmappable` before a key is sent | Fixed size | Unit tests of every bit |
 | `MapVirtualKeyExW` scan code | Only its low byte and prefix byte are read | Fixed size | Unit tests |
+| `GetKeyboardLayoutList` | Asked for the count first, then filled into a buffer of that count, so there is no cap; the copy is cut to what Windows wrote | Windows' own count | Fake-OS tests (40 layouts, a list that shrinks) |
+| `ToUnicodeEx` / `MapVirtualKeyExW` | Called only for an installed layout; flag `0x4` leaves every keyboard state as it is; the count is clamped to a 32-unit buffer and its sign read as a dead key; controls read as empty | 32 UTF-16 units per key | Unit tests of the answer reader |
+| Registry `HKLM\...\Keyboard Layouts` (`Layout Text`, `Layout Id`) | Read-only key, `REG_SZ` values only, into a 128-unit buffer; the size Windows writes back is clamped and cut at the first null; `Layout Id` must be hex; the key is closed once | 128 UTF-16 units per value; the variant search ends at the first enumeration error | Unit tests of the text and id readers |
+| `LCIDToLocaleName` / `GetLocaleInfoEx` | Fixed buffers; counts clamped; a number is read from exactly two units | 128 UTF-16 units | Unit tests |
+| `GetGUIThreadInfo` (window with the keyboard) | A failed call or no focus falls back to the front window; thread 0 is refused | Fixed size | No |
 | `QueryFullProcessImageNameW` (app in front) | Buffer of the Windows path limit; the length Windows writes back is checked; invalid UTF-16 reads as unknown; the process handle is closed once | 32,767 UTF-16 units | No |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a shell or parent process could set `LOCALAPPDATA` or `TEMP` to aim our data elsewhere. Mitigation: the folder comes from the known-folder API, not the environment.
 - **Tampering:** our own injected input could loop back through our own hooks (P4) and be acted on twice. Mitigation: every event carries `keys::TAG` in `dwExtraInfo`, and our hooks skip it; the tag is pinned by a test.
-- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector logs nothing, and the debug output of key events and decoded keys never shows a key or unit.
+- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector and the layout source log nothing, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
 - **Information disclosure:** no network; nothing leaves the process. Text is read only through `Redacted::expose` to build the send.
 - **Denial of service:** start-up fails with a typed error, never a panic, when Windows refuses the clock or a folder. A partial send releases every key still held, so no Shift, Ctrl or Alt stays stuck down for the user.
+- **Elevation (layouts):** `request` posts only `WM_INPUTLANGCHANGEREQUEST`, with a layout checked against the installed list, to the window that has the keyboard; that window decides whether to switch. With uiAccess the post may reach a window above our integrity level, which is why the port needs `InjectInput`. The adapter never loads, activates, adds or removes a layout.
+- **Tampering (layouts):** the layout names come from `HKLM`, which only administrators can change; they are display text, bounded and never run or parsed further.
 - **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route never turns text into a shortcut: Ctrl-only and Alt-only answers are refused, and a line feed is typed as Enter, not Ctrl+Enter. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
 
 ## Findings
@@ -53,5 +62,9 @@ None.
 `SHGetKnownFolderPath` in the `windows` crate drops the out-string on failure without `CoTaskMemFree`; Windows returns no string then, so nothing leaks in practice.
 
 Another program can put our tag on its own input so that our hooks skip it. The tag only keeps us from acting on our own input; it is not a trust boundary, and forging it only hides that input from KeyXtend.
+
+`ToUnicodeEx`'s no-state-change flag needs Windows 10 1607 or later, and builds before it are long out of support; on them, reading a dead key could leave it waiting in our own thread only.
+
+`caps_on` reads Caps Lock with `GetKeyState`, the spike's method; it is this thread's view of the toggle, so the manual check of the non-activating keyboard must confirm it follows the key.
 
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.

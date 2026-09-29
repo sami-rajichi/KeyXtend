@@ -1,5 +1,6 @@
 //! The face's side of voice: the Mic button, what the caption bar shows, and one session per face.
 
+use kx_platform_windows::{front, langinfo, layouts};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
 
@@ -10,7 +11,7 @@ use crate::typer::Typer;
 use crate::voicecfg::VoiceConfig;
 pub use crate::voiceproto::{Cmd, Event};
 use crate::voiceworker::{WORKER_GONE, Worker};
-use crate::{layout, screen, sendkeys};
+use crate::{screen, sendkeys};
 
 /// Where the Mic button is in its cycle.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -221,8 +222,8 @@ impl Session {
 
 /// The spoken language for the layout of the app in front.
 pub fn front_lang(v: &VoiceConfig) -> String {
-    let hkl = layout::foreground_layout().0 as isize;
-    v.language(layout::lang_id(hkl)).to_string()
+    let layout = layouts::id(front::layout());
+    v.language(langinfo::lang_id(layout)).to_string()
 }
 
 /// Where the caption bar goes and its size, in physical pixels, on the screen of the app in front.

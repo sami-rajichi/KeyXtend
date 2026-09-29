@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use kx_module_api::Clock;
-use kx_module_api::ports::InputInjector;
+use kx_module_api::ports::{InputInjector, LayoutSource};
 use kx_platform::{AppDirs, Platform};
 
-use crate::{PlatformError, QpcClock, WinInjector, dirs};
+use crate::{PlatformError, QpcClock, WinInjector, WinLayouts, dirs};
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
 #[derive(Debug)]
@@ -31,6 +31,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn injector(&self) -> Arc<dyn InputInjector> {
         Arc::new(WinInjector)
+    }
+
+    /// The layout source, for the app to register under `LayoutSourceKey`.
+    #[must_use]
+    pub fn layouts(&self) -> Arc<dyn LayoutSource> {
+        Arc::new(WinLayouts)
     }
 }
 
@@ -70,5 +76,14 @@ mod tests {
             .join()
             .unwrap();
         assert!(name.is_none_or(|n| !n.is_empty()));
+    }
+
+    #[test]
+    fn the_layout_source_is_a_port_that_lists_the_installed_layouts() {
+        let layouts = WindowsPlatform::new().unwrap().layouts();
+        let list = std::thread::spawn(move || layouts.installed())
+            .join()
+            .unwrap();
+        assert!(!list.is_empty());
     }
 }

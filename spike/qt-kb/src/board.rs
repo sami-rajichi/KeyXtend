@@ -4,11 +4,13 @@ use std::pin::Pin;
 
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
+use kx_module_api::ports::LayoutSource;
+use kx_platform_windows::WinLayouts;
 use serde_json::json;
 use spike_core::kbctl::{Kb, Tapped};
 use spike_core::lookcfg::ModeChoice;
 use spike_core::sysui::{self, Watch};
-use spike_core::{layout, legend, screen};
+use spike_core::{legend, screen};
 
 /// The cxx-qt bridge that makes `Board` a QML type.
 #[cxx_qt::bridge]
@@ -205,7 +207,7 @@ impl qobject::Board {
     fn tap(mut self: Pin<&mut Self>, id: &QString, back: bool) -> QString {
         let id = id.to_string();
         let kb = &mut self.as_mut().rust_mut().kb;
-        let plan = kb.plan(&id, layout::caps_on(), back);
+        let plan = kb.plan(&id, WinLayouts.caps_on(), back);
         js(&match kb.run(&id, plan) {
             Ok(Tapped::Done) => json!({}),
             Ok(Tapped::Note(n)) => json!({ "note": n }),

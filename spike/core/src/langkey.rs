@@ -1,13 +1,9 @@
 //! The language key: asks the app in front to switch to the next installed layout.
+//! The window and layout queries are the product's (kx-platform-windows); the stepping goes to kx-mod-keyboard later in P3.
 
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-use windows::Win32::UI::Input::KeyboardAndMouse::GetKeyboardLayout;
-use windows::Win32::UI::WindowsAndMessaging::{
-    GUITHREADINFO, GetGUIThreadInfo, GetWindowThreadProcessId, PostMessageW,
-    WM_INPUTLANGCHANGEREQUEST,
-};
-
-use crate::layout::{installed_layouts, lang_id};
+use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_platform_windows::{WinLayouts, front, langinfo, layouts};
+use windows::Win32::Foundation::HWND;
 
 /// Error when the window in front closed.
 const GONE: &str = "the window is gone";
@@ -26,7 +22,9 @@ pub fn next_layout(list: &[isize], cur: isize) -> Option<isize> {
 
 /// The first layout in `list` for language `id`.
 pub fn layout_for(list: &[isize], id: u16) -> Option<isize> {
-    list.iter().copied().find(|&h| lang_id(h) == id)
+    list.iter()
+        .copied()
+        .find(|&h| langinfo::lang_id(LayoutId::new(h as u64)) == id)
 }
 
 /// The layouts before and after `cur` in `list`, wrapping; `cur` itself when nothing else is installed.
@@ -38,7 +36,11 @@ pub fn neighbours(list: &[isize], cur: isize) -> (isize, isize) {
 
 /// The installed layouts as raw values, in the system's order.
 pub fn installed() -> Vec<isize> {
-    installed_layouts().iter().map(|h| h.0 as isize).collect()
+    WinLayouts
+        .installed()
+        .iter()
+        .map(|id| id.get() as isize)
+        .collect()
 }
 
 /// The installed layout for language `id`, such as 0x040C for French (France).
@@ -46,31 +48,10 @@ pub fn installed_for(id: u16) -> Option<isize> {
     layout_for(&installed(), id)
 }
 
-/// The window that gets `hwnd`'s keys: the focus of its input queue, which may sit on another thread.
-fn focus_of(hwnd: HWND) -> Option<HWND> {
-    let mut info = GUITHREADINFO {
-        cbSize: size_of::<GUITHREADINFO>() as u32,
-        ..Default::default()
-    };
-    // SAFETY: plain queries; `info` is sized for the call.
-    unsafe {
-        let tid = GetWindowThreadProcessId(hwnd, None);
-        if tid == 0 {
-            return None;
-        }
-        let known = GetGUIThreadInfo(tid, &mut info).is_ok() && !info.hwndFocus.is_invalid();
-        Some(if known { info.hwndFocus } else { hwnd })
-    }
-}
-
 /// The layout of the thread that holds `hwnd`'s keyboard focus; `None` when the window is gone.
 pub fn layout_of(hwnd: HWND) -> Option<isize> {
-    let focus = focus_of(hwnd)?;
-    // SAFETY: plain queries; thread 0 is refused, so we never read our own layout by mistake.
-    unsafe {
-        let tid = GetWindowThreadProcessId(focus, None);
-        (tid != 0).then(|| GetKeyboardLayout(tid).0 as isize)
-    }
+    let focus = front::focus_of(hwnd)?;
+    front::thread_layout(focus).map(|h| h.0 as isize)
 }
 
 /// Asks `hwnd` to switch to the next installed layout; returns the layout asked for.
@@ -92,17 +73,7 @@ pub fn ask_step(hwnd: HWND, back: bool) -> Result<isize, String> {
 
 /// Asks `hwnd`'s focus window to switch to `layout`, the way the system language hotkey does.
 pub fn ask(hwnd: HWND, layout: isize) -> Result<(), String> {
-    let focus = focus_of(hwnd).ok_or(GONE)?;
-    // SAFETY: a plain post; the window checks and applies the request itself.
-    unsafe {
-        PostMessageW(
-            Some(focus),
-            WM_INPUTLANGCHANGEREQUEST,
-            WPARAM(0),
-            LPARAM(layout),
-        )
-    }
-    .map_err(|e| format!("{REFUSED}: {e}"))
+    layouts::ask(hwnd, LayoutId::new(layout as u64)).map_err(|e| format!("{REFUSED}: {e}"))
 }
 
 #[cfg(test)]

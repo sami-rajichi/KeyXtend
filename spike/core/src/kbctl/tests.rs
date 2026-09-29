@@ -124,7 +124,7 @@ fn a_latch_between_a_dead_key_and_its_letter_keeps_the_accent_waiting() {
 fn an_arrow_keeps_the_accent_waiting_and_space_ends_it() {
     // Windows' own layout says which keys type something, so this uses the real one.
     let mut k = kb(false);
-    k.hkl = layout::foreground_layout().0 as isize;
+    k.hkl = kx_platform_windows::front::layout().0 as isize;
     k.mark(&Plan::Dead(0x11, vec![]));
     k.mark(&Plan::Chord(0xE04B));
     assert!(k.dead, "Left types nothing");

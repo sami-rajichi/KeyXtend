@@ -245,6 +245,20 @@ mod tests {
     }
 
     #[test]
+    fn the_captured_tables_serve_english_french_and_right_to_left_arabic() {
+        let fake = FakeLayoutSource::golden(&["en-us", "fr-fr", "ar-tn"]).unwrap();
+        let facts: Vec<LangFacts> = fake
+            .installed()
+            .into_iter()
+            .map(|id| fake.facts(id))
+            .collect();
+        let isos: Vec<&str> = facts.iter().map(|f| f.iso.as_str()).collect();
+        assert_eq!(isos, ["en", "fr", "ar"]);
+        let rtl: Vec<bool> = facts.iter().map(|f| f.rtl).collect();
+        assert_eq!(rtl, [false, false, true]);
+    }
+
+    #[test]
     fn a_missing_golden_table_is_an_error() {
         assert!(FakeLayoutSource::golden(&["no-such-layout"]).is_err());
     }

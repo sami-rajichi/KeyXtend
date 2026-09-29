@@ -4,7 +4,7 @@
 use spike_core::config::FACE;
 
 use crate::apps::AppKind;
-use crate::{g5, g6, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand};
+use crate::{capture, g5, g6, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand};
 
 /// The program's name in the help.
 const PROG: &str = env!("CARGO_PKG_NAME");
@@ -36,6 +36,7 @@ pub fn usage() -> String {
        {PROG} g24 <{FACE}>
        {PROG} g25 <{}>
        {PROG} close <{FACE}>
+       {PROG} {}
 --attach types into the app's window already open; --pause sets the gap between characters.",
         names(&AppKind::ALL),
         g5::PLAIN,
@@ -52,6 +53,7 @@ pub fn usage() -> String {
         g22bench::WITH_CLOUD,
         g22type::TYPING,
         names(&g25::APPS),
+        capture::COMMAND,
     )
 }
 

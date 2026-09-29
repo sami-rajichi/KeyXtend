@@ -26,6 +26,8 @@ pub struct TargetConfig {
     pub height_px: i32,
     /// Command-line switch that makes the box a single-line password box.
     pub password_arg: String,
+    /// Command-line switch, followed by an installed layout id, that switches the window to that layout.
+    pub layout_arg: String,
 }
 
 /// Why the settings could not be loaded; each message names the file.
@@ -87,6 +89,7 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
         ("log", cfg.log.as_os_str().is_empty()),
         ("font", cfg.font.is_empty()),
         ("password_arg", cfg.password_arg.is_empty()),
+        ("layout_arg", cfg.layout_arg.is_empty()),
     ];
     if let Some((key, _)) = texts.iter().find(|(_, empty)| *empty) {
         return Err(ConfigError::Empty {

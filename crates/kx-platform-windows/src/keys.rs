@@ -1,5 +1,5 @@
-//! Key tables for injection: the tag on our own input, keys Windows sends as extended, and how
-//! `VkKeyScanEx` names the modifiers a character needs.
+//! Key tables: the tag on our own input, keys Windows sends as extended, how `VkKeyScanEx` names
+//! the modifiers a character needs, and the keys `ToUnicodeEx` reads held down.
 
 use std::fmt;
 
@@ -17,8 +17,29 @@ pub const EXTENDED_VKS: [u16; 10] = [0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0
 
 /// `VK_SHIFT`, held for a character on the Shift level.
 pub const VK_SHIFT: u16 = 0x10;
+/// `VK_CONTROL`.
+const VK_CONTROL: u16 = 0x11;
+/// `VK_MENU`: Alt.
+const VK_MENU: u16 = 0x12;
 /// `VK_CONTROL` and `VK_MENU` (Alt), held together for a character on the `AltGr` level.
-pub const ALTGR_VKS: [u16; 2] = [0x11, 0x12];
+pub const ALTGR_VKS: [u16; 2] = [VK_CONTROL, VK_MENU];
+/// `VK_CAPITAL`: Caps Lock.
+pub const VK_CAPITAL: u16 = 0x14;
+/// `VK_LCONTROL`: left Ctrl.
+const VK_LCONTROL: u16 = 0xA2;
+/// `VK_RMENU`: right Alt.
+const VK_RMENU: u16 = 0xA5;
+/// Left Ctrl and right Alt: how Windows reports `AltGr` held down.
+pub const ALTGR_READ: [u16; 2] = [VK_LCONTROL, VK_RMENU];
+/// Left and right Shift, Ctrl and Alt, each with the generic key `ToUnicodeEx` also reads.
+const SIDED: [(u16, u16); 6] = [
+    (0xA0, VK_SHIFT),
+    (0xA1, VK_SHIFT),
+    (VK_LCONTROL, VK_CONTROL),
+    (0xA3, VK_CONTROL),
+    (0xA4, VK_MENU),
+    (VK_RMENU, VK_MENU),
+];
 
 /// `VkKeyScanEx` shift-state bit for Shift.
 const SHIFT_BIT: u8 = 0x01;
@@ -71,6 +92,12 @@ pub fn key_for(raw: i16) -> Option<KeyFor> {
 pub fn vk_extended(vk: u16, mapped: u32) -> bool {
     let prefix = mapped.to_le_bytes()[1];
     EXTENDED_PREFIXES.contains(&prefix) || EXTENDED_VKS.contains(&vk)
+}
+
+/// The generic key of a left or right modifier `vk`, such as `VK_SHIFT` for `VK_LSHIFT`; `None` for other keys.
+#[must_use]
+pub fn generic(vk: u16) -> Option<u16> {
+    SIDED.iter().find(|(s, _)| *s == vk).map(|&(_, g)| g)
 }
 
 #[cfg(test)]
@@ -156,12 +183,26 @@ mod tests {
         }
     }
 
+    #[test]
+    fn sided_modifiers_add_their_generic_key_and_other_keys_none() {
+        let [ctrl, alt] = ALTGR_VKS;
+        let want = [VK_SHIFT, VK_SHIFT, ctrl, ctrl, alt, alt];
+        for ((sided, _), generic_vk) in SIDED.into_iter().zip(want) {
+            assert_eq!(generic(sided), Some(generic_vk), "{sided:#04X}");
+        }
+        for vk in [VK_A, VK_SHIFT, ctrl, alt, VK_CAPITAL] {
+            assert_eq!(generic(vk), None, "{vk:#04X}");
+        }
+        assert!(ALTGR_READ.iter().all(|&vk| generic(vk).is_some()));
+    }
+
     #[cfg(windows)]
     #[test]
     fn the_tables_match_windows() {
         use windows::Win32::UI::Input::KeyboardAndMouse::{
-            VK_CONTROL, VK_DELETE, VK_DOWN, VK_END, VK_HOME, VK_INSERT, VK_LEFT, VK_MENU, VK_NEXT,
-            VK_PRIOR, VK_RIGHT, VK_SHIFT as SHIFT, VK_UP,
+            VK_CAPITAL as CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END, VK_HOME, VK_INSERT,
+            VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT, VK_MENU, VK_NEXT, VK_PRIOR, VK_RCONTROL,
+            VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_SHIFT as SHIFT, VK_UP,
         };
         let nav = [
             VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_LEFT, VK_UP, VK_RIGHT, VK_DOWN, VK_INSERT,
@@ -170,5 +211,16 @@ mod tests {
         assert_eq!(EXTENDED_VKS, nav.map(|vk| vk.0));
         assert_eq!(VK_SHIFT, SHIFT.0);
         assert_eq!(ALTGR_VKS, [VK_CONTROL.0, VK_MENU.0]);
+        assert_eq!(VK_CAPITAL, CAPITAL.0);
+        assert_eq!(ALTGR_READ, [VK_LCONTROL.0, VK_RMENU.0]);
+        let sided = [
+            VK_LSHIFT,
+            VK_RSHIFT,
+            VK_LCONTROL,
+            VK_RCONTROL,
+            VK_LMENU,
+            VK_RMENU,
+        ];
+        assert_eq!(SIDED.map(|(s, _)| s), sided.map(|vk| vk.0));
     }
 }

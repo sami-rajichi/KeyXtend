@@ -2,7 +2,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
+use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_platform_windows::{WinLayouts, front};
 
 use crate::config::SpikeConfig;
 use crate::kbgeom::{Board, board};
@@ -48,7 +49,7 @@ pub struct Kb {
 impl Kb {
     /// Starts at the first size preset, the configured theme and mode, and the layout of the app in front.
     pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Kb {
-        let hkl = layout::foreground_layout();
+        let hkl = front::layout();
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
         Kb {
             size: cfg.size.start(),
@@ -201,23 +202,22 @@ impl Kb {
         self.resize.is_some()
     }
 
-    /// The current layout's handle.
-    fn layout(&self) -> HKL {
-        HKL(self.hkl as *mut core::ffi::c_void)
+    /// The current layout as the product names it.
+    fn layout_id(&self) -> LayoutId {
+        LayoutId::new(self.hkl as u64)
     }
 
     /// Reads what each key types in the current layout, once per layout.
     fn load_chars(&mut self) {
-        let (hkl, keys) = (self.layout(), &self.cfg.layout);
+        let (id, keys) = (self.layout_id(), &self.cfg.layout);
         self.chars.entry(self.hkl).or_insert_with(|| {
             let codes = keys.rows.iter().flatten().filter_map(|i| match i {
                 crate::kbgeom::RowItem::Chars(c) => Some(c.chars.clone()),
                 crate::kbgeom::RowItem::Key(_) => None,
             });
-            codes
-                .flatten()
-                .map(|sc| (sc, layout::key_chars(sc, hkl)))
-                .collect()
+            let codes: Vec<u32> = codes.flatten().collect();
+            let scans: Vec<_> = codes.iter().map(|&sc| layout::scan(sc)).collect();
+            codes.into_iter().zip(WinLayouts.keys(id, &scans)).collect()
         });
     }
 
@@ -254,7 +254,7 @@ impl Kb {
             keys: &b.keys,
             looks: &self.cfg.keys,
             latches: &self.latches,
-            caps: layout::caps_on(),
+            caps: WinLayouts.caps_on(),
             toggled: &self.toggled,
             chars: self.chars_here(),
             lang: [&lang[0], &lang[1], &lang[2]],

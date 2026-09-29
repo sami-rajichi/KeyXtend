@@ -71,10 +71,11 @@ crates/
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml; uses spike-core widely until its gates are
-                         aimed at the product
+                         aimed at the product; `capture-layouts` writes the fake's golden
+                         layout tables from the layouts installed on the PC
   kx-target-window/      test window that logs every character it receives (CI); a library plus
                          a binary; reads kx-target-window.toml; times its log with the QPC clock
-                         from kx-platform-windows
+                         from kx-platform-windows; `--layout` types into an installed layout
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess

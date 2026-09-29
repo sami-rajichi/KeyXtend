@@ -1,5 +1,8 @@
 //! What a click on a key sends: text, a key press or a latch, and dead keys that wait for the next key.
 
+use kx_module_api::ports::LayoutSource;
+use kx_platform_windows::{WinLayouts, layouts};
+
 use super::Kb;
 use crate::config::ToolButton;
 use crate::facecfg::Action;
@@ -81,7 +84,7 @@ impl Kb {
             return Plan::Dead(sc, unheld(s, m));
         }
         let text = c.get(s);
-        if self.dead || !layout::is_printable(text) {
+        if self.dead || !layouts::is_printable(text) {
             Plan::Press(sc, unheld(s, m))
         } else {
             Plan::Text(text.to_string())
@@ -93,7 +96,10 @@ impl Kb {
         match p {
             Plan::Dead(..) => self.dead = true,
             Plan::Press(..) | Plan::Text(_) => self.dead = false,
-            Plan::Chord(sc) if self.dead => self.dead = !layout::types_any(*sc, self.layout()),
+            Plan::Chord(sc) if self.dead => {
+                let key = layout::scan(*sc);
+                self.dead = !WinLayouts.types_any(self.layout_id(), key, &[]);
+            }
             _ => {}
         }
     }

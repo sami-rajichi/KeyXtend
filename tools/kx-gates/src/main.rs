@@ -1,11 +1,12 @@
 //! kx-gates: the Windows gate runner for gates G1-G7, G12, G17-G25 and the hand try;
 //! it prints one JSON line per run. It moves the real mouse and types into real apps,
-//! so run it only when the owner agrees.
+//! so run it only when the owner agrees. `capture-layouts` only reads layouts.
 #![deny(unsafe_code)]
 
 mod admin;
 mod apps;
 mod assist;
+mod capture;
 mod cfgfile;
 mod cli;
 mod clicks;
@@ -97,7 +98,12 @@ fn main() -> ExitCode {
     // Per-monitor DPI awareness comes from the manifest that build.rs embeds.
     keep_stdio_private();
     let raw: Vec<String> = std::env::args().skip(1).collect();
-    let result = cli::parse(&raw).and_then(|args| cli::run(&args));
+    let result = match raw.as_slice() {
+        [command] if command == capture::COMMAND => {
+            config::load().and_then(|cfg| capture::run(&cfg.capture))
+        }
+        _ => cli::parse(&raw).and_then(|args| cli::run(&args)),
+    };
     match result {
         Ok(v) => {
             out::say!("{v}");

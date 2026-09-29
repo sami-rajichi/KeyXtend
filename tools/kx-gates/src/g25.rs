@@ -3,9 +3,10 @@
 
 use std::collections::HashSet;
 
+use kx_module_api::ports::LayoutSource;
+use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
 use spike_core::langkey;
-use spike_core::layout::installed_layouts;
 use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
@@ -54,7 +55,7 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     let Some(start) = langkey::layout_of(app.hwnd) else {
         return json!({ "error": "no layout for the app's focus", "ok": false });
     };
-    let count = installed_layouts().len();
+    let count = WinLayouts.installed().len();
     if count < 2 {
         return json!({ "from": lang(start), "skipped": "needs two layouts", "ok": false });
     }

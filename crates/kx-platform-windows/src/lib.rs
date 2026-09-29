@@ -11,6 +11,8 @@ pub mod dirs;
 pub mod front;
 pub mod inject;
 pub mod keys;
+pub mod langinfo;
+pub mod layouts;
 #[cfg(windows)]
 mod platform;
 pub mod strokes;
@@ -22,6 +24,8 @@ pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
 pub use inject::WinInjector;
+#[cfg(windows)]
+pub use layouts::WinLayouts;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 

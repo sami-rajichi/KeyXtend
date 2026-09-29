@@ -1,7 +1,7 @@
-//! The app in front: its keyboard layout and its program's file name.
+//! The app in front: its keyboard layout, the window that has its keyboard, and its program's file name.
 
 #[cfg(windows)]
-pub use os::{app, app_of, layout};
+pub use os::{app, app_of, focus, focus_of, layout, thread_layout};
 
 /// The separators in a Windows program path.
 const PATH_SEPARATORS: [char; 2] = ['\\', '/'];
@@ -16,12 +16,15 @@ pub fn app_name(path: &str) -> Option<String> {
 #[cfg(windows)]
 mod os {
     use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::Foundation::HWND;
     use windows::Win32::System::Threading::{
         OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
         QueryFullProcessImageNameW,
     };
     use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyboardLayout, HKL};
-    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GUITHREADINFO, GetForegroundWindow, GetGUIThreadInfo, GetWindowThreadProcessId,
+    };
     use windows::core::PWSTR;
 
     use super::app_name;
@@ -35,6 +38,48 @@ mod os {
     pub fn layout() -> HKL {
         // SAFETY: plain queries; no window in front gives thread 0, which means this thread.
         unsafe { GetKeyboardLayout(GetWindowThreadProcessId(GetForegroundWindow(), None)) }
+    }
+
+    /// The window with the keyboard in the app in front; `None` with no app in front.
+    #[must_use]
+    #[allow(unsafe_code, reason = "A plain window query.")]
+    pub fn focus() -> Option<HWND> {
+        // SAFETY: a plain query; no window in front gives a null window, which `focus_of` refuses.
+        focus_of(unsafe { GetForegroundWindow() })
+    }
+
+    /// The window that gets `window`'s keys: the focus of its input queue, which may sit on another
+    /// thread, else `window` itself; `None` when the window is gone.
+    #[must_use]
+    #[allow(unsafe_code, reason = "Plain thread queries into a local struct.")]
+    pub fn focus_of(window: HWND) -> Option<HWND> {
+        // SAFETY: a plain query; a gone or null window gives thread 0.
+        let thread = unsafe { GetWindowThreadProcessId(window, None) };
+        if thread == 0 {
+            return None;
+        }
+        let mut info = GUITHREADINFO {
+            cbSize: u32::try_from(size_of::<GUITHREADINFO>()).ok()?,
+            ..GUITHREADINFO::default()
+        };
+        // SAFETY: `info` is a local sized for the call, which fills it in.
+        let known = unsafe { GetGUIThreadInfo(thread, &raw mut info) }.is_ok();
+        let focus = info.hwndFocus;
+        Some(if known && !focus.is_invalid() {
+            focus
+        } else {
+            window
+        })
+    }
+
+    /// The keyboard layout of `window`'s thread; `None` when the window is gone.
+    #[must_use]
+    #[allow(unsafe_code, reason = "Plain thread and layout queries.")]
+    pub fn thread_layout(window: HWND) -> Option<HKL> {
+        // SAFETY: a plain query; a gone window gives thread 0, refused so this thread is never read by mistake.
+        let thread = unsafe { GetWindowThreadProcessId(window, None) };
+        // SAFETY: a plain query of a live thread's layout.
+        (thread != 0).then(|| unsafe { GetKeyboardLayout(thread) })
     }
 
     /// The program file name of the app in front, or `None` when Windows refuses.
@@ -114,5 +159,21 @@ mod tests {
     #[test]
     fn the_layout_in_front_is_a_real_layout() {
         assert!(!layout().is_invalid());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_gone_window_has_no_focus_and_no_layout() {
+        use windows::Win32::Foundation::HWND;
+        assert_eq!(focus_of(HWND::default()), None);
+        assert_eq!(thread_layout(HWND::default()), None);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn the_window_with_the_keyboard_has_a_real_layout() {
+        if let Some(window) = focus() {
+            assert!(thread_layout(window).is_some_and(|l| !l.is_invalid()));
+        }
     }
 }
