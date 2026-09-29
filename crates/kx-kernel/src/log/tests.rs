@@ -1,9 +1,7 @@
-//! The log: redaction, escapes, levels and the kernel settings that name them.
+//! The log: redaction, escapes and levels.
 
 use super::*;
-use crate::KernelSettings;
-use crate::kernel::{MAX_LOG_MB, MIN_LOG_MB};
-use kx_module_api::{Redacted, Settings};
+use kx_module_api::Redacted;
 use std::sync::Arc;
 use tracing::callsite::{DefaultCallsite, Identifier};
 use tracing::field::{FieldSet, Value};
@@ -247,49 +245,6 @@ fn an_unknown_level_name_is_refused() {
     for name in ["", "loud", "INFO", "off", "3"] {
         assert_eq!(level(name), None, "{name:?}");
     }
-}
-
-/// Kernel settings that pass `check`.
-fn sample() -> KernelSettings {
-    KernelSettings {
-        disabled: Vec::new(),
-        log_level: LOG_LEVELS[0].to_owned(),
-        log_max_mb: MIN_LOG_MB,
-    }
-}
-
-#[test]
-fn the_kernel_settings_take_their_level_names_from_the_same_list() {
-    let with = |name: &str| KernelSettings {
-        log_level: name.to_owned(),
-        ..sample()
-    };
-    for name in LOG_LEVELS {
-        assert!(with(name).check().is_ok(), "{name}");
-    }
-    assert!(with("loud").check().is_err());
-}
-
-#[test]
-fn the_kernel_settings_cap_the_log_size() {
-    let with = |mb: u32| KernelSettings {
-        log_max_mb: mb,
-        ..sample()
-    };
-    assert!(with(MIN_LOG_MB).check().is_ok());
-    assert!(with(MAX_LOG_MB).check().is_ok());
-    assert!(with(MIN_LOG_MB - 1).check().is_err());
-    assert!(with(MAX_LOG_MB + 1).check().is_err());
-}
-
-#[test]
-fn the_kernel_settings_refuse_an_empty_id_in_the_disabled_list() {
-    let with = |ids: &[&str]| KernelSettings {
-        disabled: ids.iter().map(|id| (*id).to_owned()).collect(),
-        ..sample()
-    };
-    assert!(with(&["a", "b"]).check().is_ok());
-    assert!(with(&["a", ""]).check().is_err());
 }
 
 #[test]

@@ -1,4 +1,4 @@
-//! A global log capture for the panic tests: it keeps every line and hushes only the planned panics.
+//! A global log capture for the panic tests: it keeps every line and hushes only planned panics.
 
 use std::any::Any;
 use std::collections::BTreeMap;
@@ -23,7 +23,7 @@ pub type Planned = fn(&(dyn Any + Send)) -> bool;
 static SETUP: Once = Once::new();
 static LINES: Mutex<Vec<Line>> = Mutex::new(Vec::new());
 
-/// Installs the quiet hook and the global capture once, before any test logs, so no callsite misses it.
+/// Installs the quiet hook and the global capture once, before any test logs.
 pub fn install(planned: Planned) {
     SETUP.call_once(|| {
         let usual = panic::take_hook();
