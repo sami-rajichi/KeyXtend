@@ -56,6 +56,7 @@
 - Bus events have no capability gate: any module can subscribe to, intercept or publish any event. P3 decides it before any typed-text event exists (`docs/items/P3.md`).
 - A settings file that cannot be opened for a reason other than "not found" (for example another program's lock) counts as damaged. P3 treats it as "run on defaults in memory and do not save" (`docs/items/P3.md`).
 - The app must install a quiet panic hook, because caught panics still print their message through the default hook (`docs/items/P3.md`).
+- Redaction works by field name only, so text formatted into a log message prints in clear. P3 keeps typed text in `Redacted<T>` and adds a check for input modules (`docs/items/P3.md`).
 
 ### Accepted (with reason)
 - Settings and logs are not encrypted: in P2 they hold no Secret or Sensitive data. ADR-0010 applies when a module stores such data.

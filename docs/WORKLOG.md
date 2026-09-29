@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-29 — P2 done: kernel, settings and test tools
+The kernel starts the feature modules in dependency order, keeps a failed or crashing module from stopping the rest, and offers Try again; modules talk through a typed event bus and share services gated by capabilities. Settings live in one readable `settings.toml` in the data folder that holds only the user's changes (ADR-0015): a bad value resets alone, a damaged file is set aside and the last good copy comes back, and the log keeps this run and the previous one with sensitive fields hidden. The P1 test tools moved into `tools/kx-gates` and `tools/kx-target-window`, and the Slint and Tauri prototypes are gone. Reviews found and fixed about 60 issues, 720 tests pass, and on Windows G1, G2, G5 and G12 passed again and the owner confirmed the settings file and its repair.
+
 ## 2026-09-29 — One item per session, with notes per item
 Each item from `docs/FEATURES.md` is now built in its own session, starting from the latest `main` once the previous item's pull request is merged. Every phase has a notes file in `docs/items/` that says what the test round already built, what earlier sessions left for it, and the owner's saved ideas. Saying "idea for P13: …" in any session saves an improvement there, and `/kx-feature P13` on a finished item builds the saved ideas later. The notes from the P1 hand-off moved into these files, so nothing is lost or done twice.
 
