@@ -133,8 +133,12 @@ name = "kx-kernel"
 version = "0.0.0"
 dependencies = [
  "kx-module-api",
+ "kx-platform",
  "kx-platform-fake",
+ "kx-settings",
+ "kx-test-support",
  "proptest",
+ "serde",
  "thiserror",
  "toml",
  "tracing",
