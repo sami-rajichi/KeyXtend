@@ -6,7 +6,7 @@
 )]
 
 use kx_module_api::{ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, validate_as};
-use kx_settings::{ARG_KEYS, ARG_MODULE, Files, LoadReport, Store};
+use kx_settings::{ARG_KEYS, ARG_MODULE, ARG_MORE, Files, LoadReport, Store};
 use kx_test_support::tempdir::TempDir;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -118,6 +118,13 @@ pub fn reset(keys_text: &str) -> Notice {
         module: Some(HOLD),
         args: vec![(ARG_MODULE, HOLD.to_string()), (ARG_KEYS, keys_text.into())],
     }
+}
+
+/// The reset notice naming `named`, with the count of the `more` keys it leaves out.
+pub fn reset_more(named: &str, more: usize) -> Notice {
+    let mut notice = reset(named);
+    notice.args.push((ARG_MORE, more.to_string()));
+    notice
 }
 
 /// The notice for a sample-module section from a newer version.
