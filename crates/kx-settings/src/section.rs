@@ -4,6 +4,7 @@ use crate::merge::{self, Repair};
 use crate::names::{ARG_KEYS, ARG_MODULE, KEYS_SEPARATOR, VERSION_KEY};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
 use std::cmp::Ordering;
+use std::panic;
 use toml::{Table, Value};
 
 /// A registered module's settings.
@@ -44,8 +45,18 @@ enum Age {
     Bad,
 }
 
+/// Checks the spec and reads the module's raw section; `None` when the spec is broken or the module's code panics.
+pub(crate) fn guarded_read(
+    id: ModuleId,
+    spec: &'static SettingsSpec,
+    raw: Option<Value>,
+) -> Option<Read> {
+    let attempt = || defaults_of(spec).map(|defaults| read(id, spec, defaults, raw));
+    panic::catch_unwind(attempt).ok().flatten()
+}
+
 /// The spec's defaults, or `None` when the spec is broken: bad text, invalid defaults, a version key or a migration gap.
-pub(crate) fn defaults_of(spec: &SettingsSpec) -> Option<Table> {
+fn defaults_of(spec: &SettingsSpec) -> Option<Table> {
     let defaults: Table = spec.defaults.parse().ok()?;
     let sound = spec.is_consistent()
         && !defaults.contains_key(VERSION_KEY)
@@ -54,12 +65,7 @@ pub(crate) fn defaults_of(spec: &SettingsSpec) -> Option<Table> {
 }
 
 /// Reads the module's raw section from the file, if any, against its sound spec and defaults.
-pub(crate) fn read(
-    id: ModuleId,
-    spec: &'static SettingsSpec,
-    defaults: Table,
-    raw: Option<Value>,
-) -> Read {
+fn read(id: ModuleId, spec: &'static SettingsSpec, defaults: Table, raw: Option<Value>) -> Read {
     let Some(raw) = raw else {
         return Read::quiet(Section::fresh(spec, defaults));
     };
