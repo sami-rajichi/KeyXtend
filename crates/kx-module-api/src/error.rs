@@ -24,6 +24,9 @@ pub enum ServiceError {
     /// The stored service is not the type its key names.
     #[error("service {0} is stored with another type")]
     WrongType(ServiceId),
+    /// The request names another capability than the one stored with the service.
+    #[error("service {0} was requested with another capability than its provider's")]
+    CapabilityMismatch(ServiceId),
 }
 
 /// Why a settings section could not be read, upgraded or accepted.
