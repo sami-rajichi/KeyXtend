@@ -4,8 +4,10 @@ use std::time::Duration;
 
 /// Microseconds in one millisecond.
 pub const US_PER_MS: u32 = 1_000;
+/// Milliseconds in one second.
+pub const MS_PER_S: u32 = 1_000;
 /// Microseconds in one second.
-pub const US_PER_S: u32 = 1_000_000;
+pub const US_PER_S: u32 = US_PER_MS * MS_PER_S;
 
 /// A point in monotonic time: whole microseconds since an arbitrary start.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -31,6 +33,7 @@ impl Mono {
     }
 
     /// This point moved forward by `by`, clamped at the largest point.
+    /// Sub-microsecond parts of `by` are dropped.
     #[must_use]
     pub fn saturating_add(self, by: Duration) -> Self {
         let us = u64::try_from(by.as_micros()).unwrap_or(u64::MAX);
@@ -47,7 +50,6 @@ pub trait Clock: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     struct Fixed(Mono);
 
@@ -96,7 +98,8 @@ mod tests {
     #[test]
     fn units_relate_by_a_thousand() {
         assert_eq!(US_PER_MS, 1_000);
-        assert_eq!(US_PER_S / US_PER_MS, 1_000);
+        assert_eq!(MS_PER_S, 1_000);
+        assert_eq!(US_PER_S, US_PER_MS * MS_PER_S);
     }
 
     #[test]

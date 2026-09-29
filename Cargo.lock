@@ -131,6 +131,11 @@ dependencies = [
 [[package]]
 name = "kx-module-api"
 version = "0.0.0"
+dependencies = [
+ "serde",
+ "thiserror",
+ "toml",
+]
 
 [[package]]
 name = "kx-target-window"

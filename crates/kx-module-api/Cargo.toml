@@ -1,6 +1,6 @@
 [package]
 name = "kx-module-api"
-description = "The contract feature modules build against: time, redaction and the module interface."
+description = "The contract between the kernel and feature modules: ids, manifests, services, events, settings, time and redaction."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,3 +10,8 @@ repository.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
