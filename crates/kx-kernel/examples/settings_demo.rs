@@ -1,5 +1,6 @@
 //! Boots two sample modules over the real settings store, in a folder given on the command line.
 //! Run: `cargo run -p kx-kernel --example settings_demo -- <folder> [set [ms]]`.
+//! A repair from the previous copy needs two saves with different values first.
 
 #![forbid(unsafe_code)]
 
@@ -7,7 +8,7 @@ use kx_kernel::Kernel;
 use kx_kernel::grants::Policy;
 use kx_module_api::{
     Manifest, Module, ModuleCx, ModuleError, ModuleId, Notice, Settings, SettingsError,
-    SettingsSpec, validate_as,
+    SettingsSpec, Subscription, keys, validate_as,
 };
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::FakePlatform;
@@ -22,9 +23,13 @@ use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// The word that asks for one saved change.
 const SET_WORD: &str = "set";
+/// A hint for the manual check, printed with the usage.
+const NOTE: &str =
+    "note: a repair from the previous copy needs two saves with different values first";
 /// The folder of the user's files, inside the given folder.
 const USER_DIR: &str = "user";
 /// The sample module that holds the change.
@@ -180,13 +185,54 @@ fn report(kernel: &Kernel, notices: &[Notice]) {
     }
 }
 
-/// Saves the mouse hold time `ms` and says where the file is.
-fn save(kernel: &mut Kernel, files: &Files, ms: i64) -> Result<(), String> {
+/// Remembers whether the kernel said a save failed.
+struct Unsaved {
+    failed: Arc<AtomicBool>,
+    _guard: Subscription,
+}
+
+impl Unsaved {
+    /// Watches the kernel's bus from now on.
+    fn watch(kernel: &Kernel) -> Self {
+        let failed = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&failed);
+        let guard = kernel.bus().subscribe(move |notice: &Notice| {
+            if notice.key == keys::SETTINGS_UNSAVED {
+                flag.store(true, Ordering::Relaxed);
+            }
+        });
+        Self {
+            failed,
+            _guard: guard,
+        }
+    }
+
+    fn happened(&self) -> bool {
+        self.failed.load(Ordering::Relaxed)
+    }
+}
+
+/// The settings file text, or `None` when it is missing or unreadable.
+fn text(files: &Files) -> Option<String> {
+    fs::read_to_string(&files.settings).ok()
+}
+
+/// Sets the mouse hold time to `ms`, then says what happened to the file.
+fn save(kernel: &mut Kernel, files: &Files, ms: i64, unsaved: &Unsaved) -> Result<(), String> {
+    let before = text(files);
     let value = toml::Value::Integer(ms);
-    let saved = kernel.set_setting(MOUSE, CHANGED_KEY, value);
-    saved.map_err(|e| e.to_string())?;
-    say(&format!("saved: {MOUSE} {CHANGED_KEY} = {ms}"));
-    say(&format!("settings file: {}", files.settings.display()));
+    let set = kernel.set_setting(MOUSE, CHANGED_KEY, value);
+    set.map_err(|e| e.to_string())?;
+    if text(files) != before {
+        say(&format!("saved: {MOUSE} {CHANGED_KEY} = {ms}"));
+        say(&format!("settings file: {}", files.settings.display()));
+    } else if unsaved.happened() {
+        say(&format!(
+            "could not save {CHANGED_KEY} = {ms}: it lives in memory only"
+        ));
+    } else {
+        say(&format!("no change: {CHANGED_KEY} is already {ms}"));
+    }
     Ok(())
 }
 
@@ -207,9 +253,10 @@ fn run(folder: &Path, change: Option<i64>) -> Result<(), String> {
     kernel.add(Box::new(keyboard)).map_err(|e| e.to_string())?;
     kernel.add(Box::new(mouse)).map_err(|e| e.to_string())?;
 
+    let unsaved = Unsaved::watch(&kernel);
     let notices = kernel.boot();
     report(&kernel, &notices);
-    change.map_or(Ok(()), |ms| save(&mut kernel, &files, ms))
+    change.map_or(Ok(()), |ms| save(&mut kernel, &files, ms, &unsaved))
 }
 
 /// Reads `<folder> [set [ms]]` from the arguments; `None` when they do not fit.
@@ -230,6 +277,7 @@ fn parse(mut args: impl Iterator<Item = OsString>) -> Option<(PathBuf, Option<i6
 fn main() -> ExitCode {
     let Some((folder, change)) = parse(env::args_os().skip(1)) else {
         say(&format!("usage: settings_demo <folder> [{SET_WORD} [ms]]"));
+        say(NOTE);
         return ExitCode::FAILURE;
     };
     match run(&folder, change) {
