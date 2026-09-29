@@ -1,5 +1,5 @@
 # P1 spike workspace: kept and moved into the product phase by phase (ADR-0014, docs/spike-move-map.md).
-# The one face left, qt-kb, is its own workspace.
+# The face qt-kb no longer builds (ADR-0016); its files stay as source until they move.
 [workspace]
 members = ["core", "worker"]
 resolver = "3"

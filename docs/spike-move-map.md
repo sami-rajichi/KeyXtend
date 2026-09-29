@@ -25,14 +25,17 @@ After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to
 
 ## P3 — Keyboard core
 
+The `qt-kb` build stops at the start of P3 (ADR-0016): its Cargo files are deleted and the rest of `qt-kb/` stays as source until each part moves. `core/` and `worker/` keep building.
+
 | Spike | Product |
 |---|---|
 | `core/src/{kbctl,kbctl/*,latch,kbgeom,kbgeom/*,kbview,place,sizer,legend,status}.rs` | `kx-mod-keyboard` |
 | `core/src/{langinfo,langkey}.rs` | `kx-mod-keyboard` logic; layout queries and switching in `kx-platform-windows` |
 | `core/src/layout.rs` | `kx-mod-layouts` logic; `ToUnicodeEx` reading in `kx-platform-windows` |
 | `core/src/{inject,window,screen,sysui,sysui/*,backdrop,folders,com,uiaccess}.rs`, the extended-key table in `tools/kx-gates` `keys.rs` | `kx-platform-windows` |
-| `core/src/theme.rs`, `core/src/theme/{common,extras,look,motion,palette,shape,tests}.rs`, `core/src/{paint,lookview,lookcfg,facecfg,note}.rs` | `kx-ui` (theme loader, look, view settings) |
-| `themes.toml`, `shape.toml`, `motion.toml` | Theme tokens |
+| `core/src/theme.rs`, `core/src/theme/{common,extras,look,motion,palette,shape,tests}.rs` | `kx-theme` (tokens, look, contrast; no Qt, so not `kx-ui`, ADR-0016) |
+| `core/src/{paint,lookview,lookcfg,facecfg,note}.rs` | `kx-theme` (look view) and `kx-ui` (view settings); the Task 14 and 16 plans place each file |
+| `themes.toml`, `shape.toml`, `motion.toml` | `kx-theme` tokens |
 | `spike.toml` `[keyboard]`, `[layout]`, `[size]`, `[keys]`, `[bar]`, `[look]`, `[lang]`, `[assets]` | Settings schema defaults |
 | `qt-kb/src/main.rs` | `apps/keyxtend` |
 | `qt-kb/src/{bridge,board}.rs`, `qt-kb/build.rs` | `kx-ui` bridges and build |
@@ -41,7 +44,7 @@ After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to
 | `qt-kb/qmltest/tst_motion.qml`, `look-full.js`, `look-reduced.js`, `look-dolch.js` | `kx-ui` Qt Quick Tests, fed by the real theme loader |
 | Gates `g1`–`g4`, `g25` language part | Aimed at the product app |
 
-- **Fonts and icons** are staged today from a local assets folder outside the repo. P3 decides, with `kx-licence-check`, whether they live in the repo or are fetched by hash at build time.
+- **Fonts and icons** are staged today from a local assets folder outside the repo. P3 moves them into the repo's `assets/` with their licences, checked by `kx-licence-check`, and compiles them into the binary (ADR-0016).
 - **Open gates finished here:** G8 budgets, G9 window flags, G10 screen readers, G11 DPI, G13 live following and frosted glass, G26 other languages.
 
 ## P4 — Mouse assist
@@ -84,6 +87,6 @@ After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to
 
 ## Last
 
-Workspace files deleted last: `Cargo.toml`, `Cargo.lock`, `.cargo/`, `core/Cargo.toml`, `core/src/lib.rs`, `core/tests/smoke.rs`, `qt-kb/Cargo.toml`, `qt-kb/Cargo.lock` and `qt-kb/.gitignore`.
+Workspace files deleted last: `Cargo.toml`, `Cargo.lock`, `.cargo/`, `core/Cargo.toml`, `core/src/lib.rs` and `core/tests/smoke.rs`. The `qt-kb` Cargo files (`Cargo.toml`, `Cargo.lock`, `.gitignore`) were deleted in P3 (ADR-0016).
 
 The models `core/src/config.rs` and `core/src/clock.rs` go at the same time.
