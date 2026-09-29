@@ -154,6 +154,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-settings"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-test-support",
+ "proptest",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "kx-target-window"
 version = "0.0.0"
 dependencies = [
