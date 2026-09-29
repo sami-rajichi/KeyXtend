@@ -224,6 +224,25 @@ fn release_removes_the_services_and_unsubscribes_the_guards() {
 }
 
 #[test]
+fn dropping_the_handlers_leaves_the_services() {
+    let (mut env, (count, handler)) = (Env::new(), counter());
+    let mut host = env.host(&PROVIDER, None);
+    let mut cx = ModuleCx::new(&mut host);
+    cx.provide::<Greeter>(hello()).unwrap();
+    cx.subscribe(handler);
+    let mut held = host.into_held();
+    held.drop_handlers();
+    env.bus.publish(&Ping);
+    assert_eq!(count.load(Ordering::SeqCst), 0);
+    assert_eq!(env.refusal::<Greeter>(&CONSUMER), None);
+    held.release(&mut env.registry);
+    assert_eq!(
+        env.refusal::<Greeter>(&CONSUMER),
+        Some(Missing(Greeter::ID))
+    );
+}
+
+#[test]
 fn remove_owned_keeps_the_platform_services() {
     let mut env = Env::new();
     let (registry, platform, module): (_, Service, Service) =

@@ -44,7 +44,7 @@ pub trait Host {
     /// The module's settings section, already migrated and repaired.
     fn settings(&self) -> &toml::Table;
 
-    /// Keeps `guard` alive until the module stops or its start fails.
+    /// Keeps `guard` alive until the module's `stop` begins or its start fails.
     fn hold(&mut self, guard: Subscription);
 }
 
@@ -93,13 +93,13 @@ impl<'a> ModuleCx<'a> {
         self.host.provide(K::ID, K::CAPABILITY, Box::new(service))
     }
 
-    /// Calls `handler` for every published `E` until the module stops or its start fails.
+    /// Calls `handler` for every published `E` until the module's `stop` begins or its start fails.
     pub fn subscribe<E: Event>(&mut self, handler: impl Fn(&E) + Send + Sync + 'static) {
         let guard = self.host.bus().subscribe(handler);
         self.host.hold(guard);
     }
 
-    /// Adds `handler` to `E`'s intercept chain at `order` until the module stops or its start fails.
+    /// Adds `handler` to `E`'s intercept chain at `order` until the module's `stop` begins or its start fails.
     pub fn intercept<E: Event>(
         &mut self,
         order: i32,
@@ -111,7 +111,7 @@ impl<'a> ModuleCx<'a> {
 
     /// A handle to the bus, for publishing or for worker threads.
     /// A guard from its `subscribe` outlives the module's stop or failure unless the module drops
-    /// it; a handler from `ModuleCx::subscribe` ends with the module instead.
+    /// it; a handler from `ModuleCx::subscribe` ends before `stop` runs instead.
     #[must_use]
     pub fn bus(&self) -> Bus {
         self.host.bus()

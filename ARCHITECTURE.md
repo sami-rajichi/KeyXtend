@@ -102,7 +102,7 @@ pub struct Manifest {
 
 pub trait Module: Send + 'static {
     fn manifest(&self) -> &'static Manifest;
-    fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError>; // handlers and services are released when it stops
+    fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError>; // handlers leave the bus before `stop` runs, services after it
     fn stop(&mut self) {}
 }
 ```

@@ -144,6 +144,16 @@ fn stop_all_stops_dependents_before_their_providers_and_is_safe_twice() {
 }
 
 #[test]
+fn a_module_hears_nothing_while_it_stops() {
+    let mut rig = Rig::new();
+    rig.add(sample(A).mode(Mode::PingInStop));
+    rig.kernel.boot().unwrap();
+    rig.kernel.stop_all();
+    assert_eq!(rig.log.stops(), [A]);
+    assert_eq!(rig.log.pings(), [], "its handlers left before its stop ran");
+}
+
+#[test]
 fn switching_off_a_provider_stops_its_dependents_first_and_saves_it() {
     let mut rig = Rig::new();
     chain(&mut rig, &Switch::new(Mode::Succeed));

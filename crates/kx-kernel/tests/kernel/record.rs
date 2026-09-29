@@ -67,7 +67,10 @@ pub enum Mode {
     Fail,
     #[allow(dead_code, reason = "only the panics test binary builds it")]
     Panic,
+    #[allow(dead_code, reason = "only the panics test binary builds it")]
     PanicInStop,
+    #[allow(dead_code, reason = "only the kernel test binary builds it")]
+    PingInStop,
 }
 
 /// The payload of every planned sample panic, so a test hook can hide exactly these.
