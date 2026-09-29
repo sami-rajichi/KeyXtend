@@ -275,7 +275,7 @@ ring_after_ms = 150
 
 # Gate G12's ring test: the test strip's switch loops holds at the pointer, pausing gap_ms after each burst.
 # The ring window's title, the frame stats file under the user's local app-data folder (not TEMP, which shells may move),
-# written on every stop and deleted by harness g12 once read, and the most frame gaps kept.
+# written on every stop and deleted by kx-gates g12 once read, and the most frame gaps kept.
 [ring]
 title = "KeyXtend spike - ring"
 label = "Ring test"
