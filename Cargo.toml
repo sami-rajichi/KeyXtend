@@ -14,7 +14,7 @@ publish = false
 repository = "https://github.com/sami-rajichi/KeyXtend"
 
 [workspace.lints.rust]
-# Deny, not forbid, so kx-platform-* can allow it; other crate roots forbid it (tidy F2).
+# Deny, not forbid, so kx-platform-* and the test tools can allow it; other crate roots forbid it (tidy F2).
 unsafe_code = "deny"
 missing_docs = "warn"
 
