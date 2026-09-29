@@ -131,6 +131,57 @@ fn an_unwritable_data_folder_runs_on_defaults_and_warns_once() {
 }
 
 #[test]
+fn stopping_makes_one_last_save_of_a_change_that_failed_to_save() {
+    let mut rig = tuned();
+    fs::write(rig.data(), "a file where the data folder should be").unwrap();
+    rig.kernel.boot().unwrap();
+    set(&mut rig, NEW_LEVEL).unwrap();
+    fs::remove_file(rig.data()).unwrap();
+    rig.kernel.stop_all();
+    let text = fs::read_to_string(rig.files().settings).unwrap();
+    assert_eq!(
+        text,
+        format!(
+            "[a]
+version = 1
+level = {NEW_LEVEL}
+"
+        )
+    );
+    fs::remove_file(rig.files().settings).unwrap();
+    rig.kernel.stop_all();
+    assert!(
+        !rig.files().settings.exists(),
+        "a second stop saves nothing"
+    );
+}
+
+#[test]
+fn stopping_saves_nothing_when_nothing_changed() {
+    let mut rig = tuned();
+    rig.kernel.boot().unwrap();
+    rig.kernel.stop_all();
+    assert!(!rig.files().settings.exists(), "nothing saved");
+}
+
+#[test]
+fn a_last_save_that_fails_again_is_tried_once_and_told_once() {
+    let mut rig = tuned();
+    fs::write(rig.data(), "a file where the data folder should be").unwrap();
+    rig.kernel.boot().unwrap();
+    set(&mut rig, NEW_LEVEL).unwrap();
+    rig.kernel.stop_all();
+    rig.kernel.stop_all();
+    assert_eq!(
+        count(&rig, keys::SETTINGS_UNSAVED),
+        1,
+        "{:?}",
+        rig.notices()
+    );
+    assert!(rig.data().is_file(), "the blocker is untouched");
+}
+
+#[test]
 fn a_repair_whose_save_fails_warns_once_and_a_later_save_catches_up() {
     let mut rig = tuned();
     let files = rig.files();
