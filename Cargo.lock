@@ -129,6 +129,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-kernel"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "proptest",
+ "thiserror",
+]
+
+[[package]]
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
