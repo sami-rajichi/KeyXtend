@@ -8,12 +8,23 @@ pub const P99: f64 = 99.0;
 const ALL: f64 = 100.0;
 
 /// Nearest-rank percentile `p` (0-100) of sorted values; `None` when empty.
+#[must_use]
 pub fn percentile(sorted: &[f64], p: f64) -> Option<f64> {
     if sorted.is_empty() {
         return None;
     }
-    let rank = (p / ALL * sorted.len() as f64).ceil() as usize;
-    Some(sorted[rank.clamp(1, sorted.len()) - 1])
+    Some(sorted[rank(p, sorted.len()).clamp(1, sorted.len()) - 1])
+}
+
+/// The 1-based rank of percentile `p` among `len` values, rounded up; the caller clamps it.
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "a float rank becomes an index; lengths stay far below 2^52 and a negative rank saturates to 0"
+)]
+fn rank(p: f64, len: usize) -> usize {
+    (p / ALL * len as f64).ceil() as usize
 }
 
 #[cfg(test)]

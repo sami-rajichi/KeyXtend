@@ -2,8 +2,8 @@
 
 use crate::tlog::Unit;
 
+pub use kx_test_support::pct::{P50, P99, percentile};
 pub use spike_core::clock::US_PER_MS;
-pub use spike_core::pct::{P50, P99, percentile};
 
 /// Percentiles reported by G2 and G5: name in the results, and rank (0-100).
 pub const PERCENTILES: [(&str, f64); 3] = [("p50", P50), ("p95", 95.0), ("p99", P99)];
