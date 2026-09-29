@@ -23,7 +23,7 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES` (1 MiB); repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` (10) keys; nesting capped by the `toml` parser | Property tests only (see Should fix) |
+| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES` (1 MiB); repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` (10) keys of at most `MAX_KEY_CHARS` (64) characters; nesting capped by the `toml` parser | Property tests only (see Should fix) |
 | `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from 1 to 100; no empty ids in `disabled` | As above | Property tests only |
 | Module code (validators, migrations, `start`, `stop`, bus handlers) | Each call runs inside `catch_unwind`; a panic fails that module alone | N/A | N/A |
 
@@ -31,7 +31,7 @@
 - **Spoofing:** no IPC or network in these crates. Module ids are fixed strings in the binary; a duplicate or reserved id is refused at `Kernel::add`.
 - **Tampering:** a hand-edited or damaged settings file.
   - Each value is checked, and only a bad value resets. An unreadable or oversized file is set aside as the broken copy, and the last good copy comes back.
-  - Saving writes a temp file and renames it, so a crash never leaves half a file.
+  - Saving writes a temp file and renames it, so a crash never leaves half a file. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
   - The redacting formatter prints `‹redacted›` for any field whose name contains a `SENSITIVE` part (`text`, `typed`, `chars`, `clipboard`, `password`, `secret`, `api_key`, `token`, `transcript`), whatever its case or separators.
   - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line.
