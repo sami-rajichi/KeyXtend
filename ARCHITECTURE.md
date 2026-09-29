@@ -42,12 +42,13 @@ apps/
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update)
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits), events,
-                         Redacted<T>
+                         Clock and Mono, settings contract, notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
-                         grants, health
-  kx-settings/          versioned TOML settings + migrations (never edit an old migration)
+                         grants, boot and runtime controls, redacted log
+  kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth
-  kx-platform/          platform ports that are not module services (window, hooks, clock)
+  kx-platform/          Platform (clock, AppDirs and the data folder rule); later ports:
+                         window, hooks
   kx-platform-windows/  the only crate that may call Win32/WinRT for input, hooks and UIA
   kx-platform-macos/    later
   kx-platform-linux/    later (X11 + Wayland portals)
@@ -68,8 +69,11 @@ crates/
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20
   kx-test-support/      shared test helpers, golden files
 tools/
-  kx-gates/              Windows gate runner (moved from the P1 harness; never shipped)
-  kx-target-window/      test window that logs every character it receives (CI)
+  kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
+                         reads kx-gates.toml
+  kx-target-window/      test window that logs every character it receives (CI); a library plus
+                         a binary; reads kx-target-window.toml
+                         (both tools use spike-core for the QPC clock until P3)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess
@@ -87,17 +91,17 @@ design/                  HTML mock-ups (reference only, never shipped)
 
 ```rust
 pub struct Manifest {
-    pub id: ModuleId,                       // "keyboard", "clipboard", …
-    pub version: semver::Version,
-    pub requires: &'static [ServiceId],     // services it consumes
-    pub provides: &'static [ServiceId],     // services it registers
-    pub capabilities: &'static [Capability],// what it may do (InjectInput, ReadClipboard, …)
-    pub settings_version: u32,
+    pub id: ModuleId,                        // "keyboard", "clipboard", …
+    pub version: &'static str,               // the crate version
+    pub requires: &'static [ServiceId],      // services it consumes
+    pub provides: &'static [ServiceId],      // services it registers
+    pub capabilities: &'static [Capability], // what it may do (InjectInput, ReadClipboard, …)
+    pub settings: Option<&'static SettingsSpec>, // version, defaults.toml, migrations, validator
 }
 
 pub trait Module: Send + 'static {
     fn manifest(&self) -> &'static Manifest;
-    fn start(&mut self, cx: &mut ModuleCx) -> Result<(), ModuleError>; // registrations return Drop guards held by cx
+    fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError>; // handlers and services are released when it stops
     fn stop(&mut self) {}
 }
 ```
@@ -105,16 +109,21 @@ pub trait Module: Send + 'static {
 - **Lifecycle** of each module: `Pending → Starting → Active | Failed → Stopping → Stopped`.
   - A failure puts the module in `Failed`. It never crashes the app.
   - Dependents stop before their providers do.
+  - `Kernel::retry` (Try again) restarts a failed module and the features that wait on it.
+  - Switching a module off also stops the modules that need it.
 - **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutProvider`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`.
-  - `cx.service::<dyn InputInjector>()` returns the service only if the manifest `requires` it **and** the matching capability is granted.
+  - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused.
+  - A provider must itself hold the capability that gates its service.
   - Capability handles are types that only the kernel can construct.
+- **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
+- **Platform:** `kx-platform` holds `Platform` and `AppDirs`, which carry the data folder rule (ADR-0015).
 - **Events** are typed:
   - *notify* events are broadcast (`KeyActivated`, `LayoutChanged`, `ModeChanged`, `ModuleStateChanged`);
   - *intercept* events are an ordered chain that can stop propagation. Example: the "focused field is a password field" interceptor suppresses prediction learning.
-- **Settings:**
-  - each module owns a section with its own `settings_version`;
+- **Settings** (ADR-0015):
+  - one `settings.toml` in the data folder holds one flat section per module, each with its own `version`. Only the user's changes are stored, and the defaults live in the module's `defaults.toml`;
   - migrations are pure functions tested with golden files;
-  - invalid settings fail loudly and fall back to defaults with a visible notice.
+  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. Changing a module's settings restarts that module.
 
 ## Invariants (enforced by `cargo xtask tidy` in CI)
 
@@ -122,7 +131,7 @@ pub trait Module: Send + 'static {
 2. Only `apps/*` choose platform adapters and modules.
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
    - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
-   - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`; tidy learns this in P2 (`tools/`) and P3 (`kx-ui`).
+   - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`; tidy enforces this for `tools/` now and learns it for `kx-ui` in P3.
 4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
 6. No module logs typed text, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
@@ -135,6 +144,7 @@ pub trait Module: Send + 'static {
    - OS mappings live in adapter tables.
    - `kx-review` checks this.
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
+11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 
 ## Cross-cutting patterns
 

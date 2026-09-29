@@ -24,3 +24,6 @@ We welcome issues, ideas and test reports. Until the long-term licence is final 
 
 ## Testing on Windows
 CI cannot test uiAccess, admin windows or real apps. Follow `.claude/skills/kx-windows-manual-test/SKILL.md` and save the report in `docs/test-reports/`.
+
+- Build the two test tools with `cargo build -p kx-target-window -p kx-gates`.
+- The gates move the real mouse and keyboard, so run them only when the owner agrees. `kx-gates` with no arguments prints its commands.

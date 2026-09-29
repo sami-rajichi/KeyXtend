@@ -14,14 +14,14 @@ Where each tested spike part goes, and in which phase (ADR-0014). Paths are unde
 
 | Spike | Product | Kind |
 |---|---|---|
-| `slint-kb/`, `tauri-kb/`; their lines in `spike.toml` `[keyboard]`, `core/src/config.rs`, `harness/src/{usage,main}.rs` (help and parse tests); Slint-only `window::click_through` | Removed (kept in git history); `harness.toml` `worker_dir` repointed to the Qt stage for `g22bench` | — |
+| `slint-kb/`, `tauri-kb/`; their lines in `spike.toml` `[keyboard]`, `core/src/config.rs`, `harness/src/{usage,main}.rs` (help and parse tests); Slint-only `window::click_through` | Removed (kept in git history); `worker_dir` (now in `kx-gates.toml`) repointed to the Qt stage for `g22bench` | — |
 | `core/src/config.rs` (load beside the exe, refuse unknown keys, check at load) | `kx-settings` loader | Model |
-| `core/src/clock.rs` | `Clock` port in `kx-platform`; the QPC clock in `kx-platform-windows` (P3) | Model |
-| `core/src/{pct,ringstats}.rs` | `kx-test-support`; `ringstats` takes its clock constant from `kx-platform` | Move |
-| `core/src/targetlog.rs`, `target-window/`, `spike.toml` `[target]` | `tools/kx-target-window`, the CI test window (spec §12) | Move |
-| `harness/` whole, `harness.toml` | `tools/kx-gates`, the Windows gate runner; it keeps testing the spike face until each phase aims its gates at the product | Move |
+| `core/src/clock.rs` | `Clock` and `Mono` in `kx-module-api`, because modules may use only that crate; `Platform` in `kx-platform` hands out the clock; the QPC clock in `kx-platform-windows` (P3) | Model |
+| `core/src/{pct,ringstats}.rs` | `kx-test-support`; `ringstats` takes its unit constants from `kx-module-api` | Move |
+| `core/src/targetlog.rs`, `target-window/`, `spike.toml` `[target]` | `tools/kx-target-window`, the CI test window (spec §12); it reads `kx-target-window.toml` | Move |
+| `harness/` whole, `harness.toml` | `tools/kx-gates`, the Windows gate runner; it reads `kx-gates.toml` and keeps testing the spike face until each phase aims its gates at the product | Move |
 
-After P2, the harness rows below name files in `tools/kx-gates`.
+After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to `target/gate-logs`, and the Qt stage the gates use is `target/spike-stage/qt-kb`.
 
 ## P3 — Keyboard core
 
@@ -50,9 +50,9 @@ After P2, the harness rows below name files in `tools/kx-gates`.
 |---|---|
 | `core/src/{hold,hold/tests,holdcfg}.rs`, `spike.toml` `[hold]`, `[ring]` | `kx-mod-mouse`, settings schema |
 | `core/src/theme/ringmove.rs`, `qt-kb/qml/{Ring,RingFace}.qml`, `qt-kb/src/ring.rs` | `kx-ui` overlay; frame stats only behind a test feature, so no shipped crate depends on `kx-test-support` |
-| `tools/kx-gates` `{assist,hookhost,hookio}.rs` | `kx-platform-windows` hooks |
+| `tools/kx-gates` `{assist,hookhost,hookio,hookstate}.rs` | `kx-platform-windows` hooks |
 | `qt-kb/qmltest/tst_ring.qml`, `look-ring-full.js`, `look-ring-reduced.js` | `kx-ui` Qt Quick Tests |
-| Gates `g5`, `g12`, `g17`, `g18`, `hand` | Aimed at the product app |
+| Gates `g5`, `g12` (with `g12pts`), `g17`, `g18`, `hand` | Aimed at the product app |
 
 ## P5 to P12 — One feature each
 
@@ -61,7 +61,7 @@ After P2, the harness rows below name files in `tools/kx-gates`.
 | P5 Scroll | `tools/kx-gates` `scroll.rs` routes | `kx-mod-scroll` logic, `kx-platform-windows` routes; gate `g6` |
 | P6 Shortcuts | Gate `g25` shortcut part | `kx-mod-keyboard` shortcuts layer, OS shortcut table in `kx-platform-windows` |
 | P7 Prediction | `core/src/{uia,uia/act,uia/read}.rs` (UIA client, password flag) | `kx-platform-windows` UIA; the password intercept event in `kx-module-api`; gate `g21` |
-| P8 Clipboard | `tools/kx-gates` `{clip,cliplisten}.rs` | `kx-platform-windows` clipboard, `kx-mod-clipboard`; gate `g20` (with `clipkeep`, `winclip` staying in the tools) |
+| P8 Clipboard | `tools/kx-gates` `{clip,cliplisten,cliptext}.rs` | `kx-platform-windows` clipboard, `kx-mod-clipboard`; gate `g20` (with `clipkeep`, `winclip` staying in the tools) |
 | P9 Vault | `core/src/{hello,fill}.rs`, `qt-kb/src/tools.rs` tools-row and quick-fill part, `spike.toml` `[tools]` fill lines | `kx-mod-vault`, `kx-platform-windows` Hello; gate `g23` |
 | P10 Selection | `core/src/{selwatch,uia/geom}.rs`, `qt-kb/qml/Pill.qml`, `qt-kb/src/tools.rs` pill part, `spike.toml` `[tools]` pill lines | `kx-mod-selection`, `kx-platform-windows` UIA, `kx-ui`; gates `g19`, `g19pill` |
 | P11 Voice | `core/src/{voice,voice/tests,voicecfg,voiceworker,typer}.rs`, `qt-kb/qml/{Caption,Shimmer}.qml`, `qt-kb/src/voice.rs`, `spike.toml` `[voice*]` and the `[tools]` mic label | `kx-mod-voice`, `kx-ui`; process start in `kx-platform-windows` |
@@ -69,7 +69,7 @@ After P2, the harness rows below name files in `tools/kx-gates`.
 | P11 Voice | `core/src/{voiceproto,lines}.rs` | `kx-ipc` |
 | P11 Voice | `worker/` except `http.rs` | `apps/keyxtend-worker` |
 | P11 Voice | `worker/src/http.rs` (WinHTTP) | `kx-platform-net`, used only by the worker; P11 adds it to tidy's banned-network list for `keyxtend` (ADR-0004) |
-| P11 Voice | Gates `g22`, `g22bench`, `g22type`, `wer` | Aimed at the product app |
+| P11 Voice | Gates `g22` (with `g22cfg`), `g22bench`, `g22type`, `wer` | Aimed at the product app |
 | P12 Snip | `core/src/{capture,capture/tests,snip}.rs`, `qt-kb/qml/Overlay.qml`, `qt-kb/src/tools.rs` snip part, `spike.toml` `[tools]` snip lines | `kx-mod-snip` logic, `kx-platform-windows` screen capture, `kx-ui`; gate `g24` |
 
 ## P13 — Themes, settings, languages
