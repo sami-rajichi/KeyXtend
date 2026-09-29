@@ -7,8 +7,8 @@
 
 use crate::record::Log;
 use crate::samples::Shape;
-use kx_kernel::Kernel;
 use kx_kernel::grants::Policy;
+use kx_kernel::{KERNEL, Kernel};
 use kx_module_api::{
     Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, Subscription, keys,
 };
@@ -16,11 +16,15 @@ use kx_platform::AppDirs;
 use kx_platform_fake::FakePlatform;
 use kx_settings::{ARG_MODULE, Files};
 use kx_test_support::tempdir::TempDir;
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use toml::{Table, Value};
 
 /// The data folder, inside the rig's temp folder.
 const DATA_DIR: &str = "user";
+/// The key of the switched-off list in the kernel's settings section.
+const DISABLED: &str = "disabled";
 
 /// The `module-failed` notice about `id`.
 pub fn failed(id: ModuleId) -> Notice {
@@ -119,5 +123,14 @@ impl Rig {
     /// The settings files in the data folder.
     pub fn files(&self) -> Files {
         Files::new(&self.data())
+    }
+
+    /// Writes a settings file that switches `ids` off, as an earlier run saved it.
+    pub fn off_in_file(&self, ids: &[ModuleId]) {
+        let list = ids.iter().map(|id| Value::from(id.as_str())).collect();
+        let kernel = Table::from_iter([(DISABLED.to_owned(), Value::Array(list))]);
+        let file = Table::from_iter([(KERNEL.to_string(), Value::Table(kernel))]);
+        fs::create_dir_all(self.data()).unwrap();
+        fs::write(self.files().settings, toml::to_string(&file).unwrap()).unwrap();
     }
 }

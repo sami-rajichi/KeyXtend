@@ -7,3 +7,4 @@ mod rig;
 mod samples;
 mod settings;
 mod start;
+mod switch;

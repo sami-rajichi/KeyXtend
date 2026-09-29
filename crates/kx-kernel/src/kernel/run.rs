@@ -6,7 +6,7 @@ use crate::host::{Held, StartHost};
 use crate::lifecycle::Step;
 use crate::order;
 use crate::registry::Registry;
-use kx_module_api::{ModuleCx, ModuleId, ModuleState, Notice, ServiceId, keys};
+use kx_module_api::{ModuleCx, ModuleId, ModuleState, Notice, keys};
 use kx_settings::ARG_MODULE;
 use std::fmt::Display;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -83,19 +83,6 @@ impl Kernel {
             module: Some(id),
             args: vec![(ARG_MODULE, id.to_string())],
         });
-    }
-
-    /// The first service module `at` requires whose providing module is not `Active`.
-    /// Platform services never wait.
-    pub(super) fn waiting_on(&self, at: usize) -> Option<ServiceId> {
-        let active = |service: ServiceId| {
-            let provider = self.slots.iter().find(|s| s.manifest.provides(service));
-            provider.is_some_and(|p| p.state == ModuleState::Active)
-        };
-        let requires = self.slots[at].manifest.requires.iter().copied();
-        requires
-            .filter(|s| !self.platform_ids.contains(s))
-            .find(|&s| !active(s))
     }
 
     /// Stops module `at`: its `stop` runs contained, then what it held is released.

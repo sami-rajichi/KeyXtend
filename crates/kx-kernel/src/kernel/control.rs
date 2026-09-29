@@ -18,7 +18,7 @@ impl Kernel {
         if self.slots[at].state != Failed {
             return Err(KernelError::NotFailed(id));
         }
-        if self.slots[at].blocked || self.is_disabled(id) {
+        if self.slots[at].blocked || self.is_disabled(id) || self.held_off(at) {
             return Err(KernelError::NotStartable(id));
         }
         if self.start(at) {
@@ -103,7 +103,11 @@ impl Kernel {
     }
 
     /// Starts module `at` unless it runs, then its stopped dependents that are switched on.
+    /// While it waits for a switched-off provider it keeps its state, with no notice.
     fn switch_on(&mut self, at: usize) {
+        if self.held_off(at) {
+            return;
+        }
         if self.slots[at].state == Active || self.start(at) {
             self.start_dependents(self.slots[at].manifest.id, &[Stopped]);
         }
