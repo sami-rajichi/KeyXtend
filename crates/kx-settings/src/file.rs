@@ -31,7 +31,7 @@ pub struct Loaded {
     pub notices: Vec<Notice>,
 }
 
-/// Why a save failed; the old text stays in the settings file, or in the previous copy after `Replace`.
+/// Why a save failed; the old text stays in the settings file, or in the previous copy if `Replace` could not put it back.
 #[derive(Debug, Error)]
 pub enum SaveError {
     /// The data folder could not be created.
@@ -61,7 +61,7 @@ pub enum SaveError {
         #[source]
         source: io::Error,
     },
-    /// The temp file could not take the place of the settings file; the next start restores the previous copy.
+    /// The temp file could not take the place of the settings file; the old file goes back when it can.
     #[error("cannot put the new settings in place at {}", path.display())]
     Replace {
         /// The settings file.
@@ -97,8 +97,8 @@ fn read_table(path: &Path) -> Result<toml::Table, Problem> {
     text.parse().map_err(|_| Problem::Damaged)
 }
 
-/// A notice with only its key; the file layer has nothing else to tell.
-fn notice(key: &'static str) -> Notice {
+/// A notice with only its key, about no module.
+pub(crate) fn notice(key: &'static str) -> Notice {
     Notice {
         key,
         module: None,
@@ -155,14 +155,20 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
     file.sync_all()
 }
 
-/// Moves the settings file to the previous copy, replacing it; a missing file is fine.
-fn keep_previous(files: &Files) -> Result<(), SaveError> {
+/// Moves a settings file that reads well to the previous copy, and says whether it moved.
+///
+/// A missing or damaged file stays, so it never replaces a good previous copy.
+fn keep_previous(files: &Files) -> Result<bool, SaveError> {
+    if read_table(&files.settings).is_err() {
+        return Ok(false);
+    }
     match fs::rename(&files.settings, &files.previous) {
-        Err(e) if e.kind() != io::ErrorKind::NotFound => Err(SaveError::KeepPrevious {
+        Ok(()) => Ok(true),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(source) => Err(SaveError::KeepPrevious {
             path: files.previous.clone(),
-            source: e,
+            source,
         }),
-        _ => Ok(()),
     }
 }
 
@@ -176,10 +182,16 @@ fn save_steps(files: &Files, text: &str) -> Result<(), SaveError> {
         path: files.temp.clone(),
         source,
     })?;
-    keep_previous(files)?;
-    fs::rename(&files.temp, &files.settings).map_err(|source| SaveError::Replace {
-        path: files.settings.clone(),
-        source,
+    let moved = keep_previous(files)?;
+    fs::rename(&files.temp, &files.settings).map_err(|source| {
+        if moved {
+            // Best effort: put the old file back; if this fails too, the next start restores it.
+            let _ = fs::rename(&files.previous, &files.settings);
+        }
+        SaveError::Replace {
+            path: files.settings.clone(),
+            source,
+        }
     })
 }
 

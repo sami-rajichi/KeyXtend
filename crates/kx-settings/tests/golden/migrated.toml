@@ -1,0 +1,10 @@
+theme = "dark"
+
+[hold]
+version = 3
+max_ms = 5000
+min_ms = 2000
+sound = false
+
+[later]
+colour = "teal"

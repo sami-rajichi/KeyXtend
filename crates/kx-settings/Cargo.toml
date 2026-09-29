@@ -1,6 +1,6 @@
 [package]
 name = "kx-settings"
-description = "The settings file: names in the data folder, safe save and recovery of a damaged file."
+description = "The settings file and store: safe save, recovery, per-module sections, repair and changes-only saving."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
+serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 
