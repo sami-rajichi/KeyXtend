@@ -3,5 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+pub mod bus;
+pub mod grants;
+pub mod host;
 pub mod lifecycle;
 pub mod order;
+pub mod registry;

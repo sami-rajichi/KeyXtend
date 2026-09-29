@@ -43,6 +43,7 @@ impl SubscriptionId {
 }
 
 /// The object-safe bus the kernel implements; modules use the typed `Bus` over it.
+/// Any method may run inside a handler, so no lock is held while a handler runs or drops.
 pub trait BusCore: Send + Sync {
     /// Calls every handler subscribed to type `ty` with `event`.
     fn publish(&self, ty: TypeId, name: &'static str, event: &(dyn Any + Send + Sync));
