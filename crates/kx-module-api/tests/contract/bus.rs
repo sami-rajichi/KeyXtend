@@ -121,6 +121,31 @@ fn a_handler_keeping_a_subscription_makes_no_cycle() {
 }
 
 #[test]
+fn a_handler_may_drop_a_subscription_while_it_runs() {
+    let (core, bus) = bus();
+    let (_seen, victim) = record(&bus);
+    let slot = Mutex::new(Some(victim));
+    let _dropper = bus.subscribe(move |_: &Ping| {
+        slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+    });
+    bus.publish(&Ping(1));
+    assert_eq!(core.count(), 1);
+}
+
+#[test]
+fn an_interceptor_may_drop_a_subscription_while_it_runs() {
+    let (core, bus) = bus();
+    let (_seen, victim) = record(&bus);
+    let slot = Mutex::new(Some(victim));
+    let _dropper = bus.add_interceptor(0, move |_: &mut Ping| {
+        slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+        Flow::Continue
+    });
+    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Continue);
+    assert_eq!(core.count(), 1);
+}
+
+#[test]
 fn a_cloned_bus_publishes_from_a_worker_thread() {
     let (_core, bus) = bus();
     let (seen, _sub) = record(&bus);
