@@ -1,7 +1,7 @@
 # P1 spike workspace: kept and moved into the product phase by phase (ADR-0014, docs/spike-move-map.md).
 # The one face left, qt-kb, is its own workspace.
 [workspace]
-members = ["core", "harness", "worker"]
+members = ["core", "worker"]
 resolver = "3"
 
 [workspace.package]

@@ -14,7 +14,7 @@ pub const FILE: &str = "kx-target-window.toml";
 pub struct TargetConfig {
     /// Window title, which the gate runner finds the window by.
     pub title: String,
-    /// Character log; a relative path starts at the settings file's folder.
+    /// Character log; loading resolves a relative path against the settings file's folder.
     pub log: PathBuf,
     /// Text font name.
     pub font: String,
@@ -80,10 +80,15 @@ pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     Ok(cfg)
 }
 
-/// Refuses an empty title or switch and a size that is not above zero.
+/// Refuses an empty title, log, font or switch and a size that is not above zero.
 fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
-    let texts = [("title", &cfg.title), ("password_arg", &cfg.password_arg)];
-    if let Some((key, _)) = texts.iter().find(|(_, v)| v.is_empty()) {
+    let texts = [
+        ("title", cfg.title.is_empty()),
+        ("log", cfg.log.as_os_str().is_empty()),
+        ("font", cfg.font.is_empty()),
+        ("password_arg", cfg.password_arg.is_empty()),
+    ];
+    if let Some((key, _)) = texts.iter().find(|(_, empty)| *empty) {
         return Err(ConfigError::Empty {
             file: file.to_path_buf(),
             key,
@@ -103,11 +108,14 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
     Ok(())
 }
 
-/// The file to read: beside the exe when `beside_exists`, else in the crate folder.
-fn pick(exe_dir: Option<&Path>, crate_dir: &Path, beside_exists: bool) -> PathBuf {
+/// The settings file `name` to read: beside the exe when `beside_exists`, else in `crate_dir`.
+///
+/// Pure, so each tool with its own settings file shares the rule.
+#[must_use]
+pub fn pick(name: &str, exe_dir: Option<&Path>, crate_dir: &Path, beside_exists: bool) -> PathBuf {
     match exe_dir {
-        Some(dir) if beside_exists => dir.join(FILE),
-        _ => crate_dir.join(FILE),
+        Some(dir) if beside_exists => dir.join(name),
+        _ => crate_dir.join(name),
     }
 }
 
@@ -117,20 +125,27 @@ pub fn path() -> PathBuf {
     let exe = std::env::current_exe().ok();
     let exe_dir = exe.as_deref().and_then(Path::parent);
     let beside = exe_dir.is_some_and(|dir| dir.join(FILE).is_file());
-    pick(exe_dir, Path::new(env!("CARGO_MANIFEST_DIR")), beside)
+    pick(FILE, exe_dir, Path::new(env!("CARGO_MANIFEST_DIR")), beside)
 }
 
-/// Reads, parses and checks the settings.
+/// Reads, parses and checks the settings in `file`.
 ///
 /// # Errors
 /// [`ConfigError::Read`] when the file cannot be read, else what [`parse`] returns.
-pub fn load() -> Result<TargetConfig, ConfigError> {
-    let file = path();
-    let text = std::fs::read_to_string(&file).map_err(|source| ConfigError::Read {
-        file: file.clone(),
+pub fn load_from(file: &Path) -> Result<TargetConfig, ConfigError> {
+    let text = std::fs::read_to_string(file).map_err(|source| ConfigError::Read {
+        file: file.to_path_buf(),
         source,
     })?;
-    parse(&text, &file)
+    parse(&text, file)
+}
+
+/// Reads, parses and checks the settings at [`path`].
+///
+/// # Errors
+/// What [`load_from`] returns.
+pub fn load() -> Result<TargetConfig, ConfigError> {
+    load_from(&path())
 }
 
 #[cfg(test)]
@@ -191,8 +206,8 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_title_or_switch_fails() {
-        for key in ["title", "password_arg"] {
+    fn an_empty_text_value_fails() {
+        for key in ["title", "log", "font", "password_arg"] {
             let err = parse(&with(key, "\"\""), file()).expect_err(key);
             assert!(
                 matches!(err, ConfigError::Empty { key: k, .. } if k == key),
@@ -241,16 +256,36 @@ mod tests {
     #[test]
     fn the_file_beside_the_exe_wins_when_it_exists() {
         let (exe, krate) = (Path::new("exe/dir"), Path::new("crate/dir"));
-        assert_eq!(pick(Some(exe), krate, true), exe.join(FILE));
-        assert_eq!(pick(Some(exe), krate, false), krate.join(FILE));
-        assert_eq!(pick(None, krate, true), krate.join(FILE));
-        assert_eq!(pick(None, krate, false), krate.join(FILE));
+        assert_eq!(pick(FILE, Some(exe), krate, true), exe.join(FILE));
+        assert_eq!(pick(FILE, Some(exe), krate, false), krate.join(FILE));
+        assert_eq!(pick(FILE, None, krate, true), krate.join(FILE));
+        assert_eq!(pick(FILE, None, krate, false), krate.join(FILE));
+        assert_eq!(
+            pick("other.toml", Some(exe), krate, true),
+            exe.join("other.toml")
+        );
     }
 
     #[test]
     fn a_test_run_loads_the_file_from_the_crate_folder() {
+        let crate_file = Path::new(env!("CARGO_MANIFEST_DIR")).join(FILE);
+        assert_eq!(path(), crate_file);
         let cfg = load().expect("the crate folder's file loads");
-        assert!(cfg.log.is_absolute() || cfg.log.starts_with(env!("CARGO_MANIFEST_DIR")));
-        assert!(path().ends_with(FILE));
+        assert!(
+            cfg.log.starts_with(env!("CARGO_MANIFEST_DIR")),
+            "{:?}",
+            cfg.log
+        );
+    }
+
+    #[test]
+    fn a_missing_file_gives_the_read_error_naming_its_path() {
+        let file = Path::new("no/such/dir").join(FILE);
+        let err = load_from(&file).expect_err("no such file");
+        assert!(matches!(err, ConfigError::Read { .. }), "{err}");
+        assert!(
+            err.to_string().starts_with(&file.display().to_string()),
+            "{err}"
+        );
     }
 }
