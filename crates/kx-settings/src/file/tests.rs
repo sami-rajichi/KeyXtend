@@ -7,6 +7,9 @@ const GOOD: &str = "[keyboard]\nversion = 1\nsize = 3\n";
 const OLDER: &str = "[keyboard]\nversion = 1\nsize = 2\n";
 const BAD_TOML: &[u8] = b"[keyboard\nsize = = 3\n";
 const NOT_UTF8: &[u8] = &[0xff, 0xfe, 0xfd, b'=', 0x80];
+/// The Windows share flag that lets others read a file but not delete or rename it.
+#[cfg(windows)]
+const SHARE_READ: u32 = 1;
 
 fn setup(label: &str) -> (TempDir, Files) {
     let dir = TempDir::new(label).unwrap();
@@ -46,7 +49,7 @@ fn a_first_save_makes_no_previous_copy() {
 }
 
 #[test]
-fn a_second_save_moves_the_first_text_to_the_previous_copy() {
+fn a_second_save_copies_the_first_text_to_the_previous_copy() {
     let (_dir, files) = setup("second");
     save(&files, OLDER).unwrap();
     save(&files, GOOD).unwrap();
@@ -75,7 +78,7 @@ fn a_failed_save_leaves_the_old_file_byte_for_byte() {
 }
 
 #[test]
-fn a_failed_move_to_previous_removes_the_temp_and_keeps_the_old_file() {
+fn a_failed_copy_to_previous_removes_the_temp_and_keeps_the_old_file() {
     let (_dir, files) = setup("keepfail");
     save(&files, GOOD).unwrap();
     fs::create_dir(&files.previous).unwrap();
@@ -227,17 +230,37 @@ fn a_main_that_turned_damaged_after_the_load_is_kept_as_the_broken_copy() {
 }
 
 #[test]
-fn a_failed_replace_after_the_move_puts_the_old_file_back() {
-    let (_dir, mut files) = setup("roll");
-    // With one path for both, the last rename has no source and must fail.
-    files.temp = files.settings.clone();
+fn keeping_the_previous_copy_leaves_the_settings_file_in_place() {
+    let (_dir, files) = setup("keep");
+    save(&files, GOOD).unwrap();
+    keep_previous(&files).unwrap();
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), GOOD);
+    assert_eq!(fs::read_to_string(&files.previous).unwrap(), GOOD);
+}
+
+/// A failed last step leaves the good file and its copy, since no step moved the file away.
+#[cfg(windows)]
+#[test]
+fn a_failed_replace_leaves_the_good_settings_file_and_its_copy() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let (_dir, files) = setup("locked");
+    save(&files, OLDER).unwrap();
+    // Sharing reads but not deletes, so nothing can be renamed over the open file.
+    let open = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(SHARE_READ)
+        .open(&files.settings)
+        .unwrap();
     let err = save(&files, GOOD).unwrap_err();
-    assert!(matches!(err, SaveError::Replace { .. }));
-    assert!(!files.previous.exists());
+    drop(open);
+    assert!(matches!(&err, SaveError::Replace { path, .. } if *path == files.settings));
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), OLDER);
+    assert_eq!(fs::read_to_string(&files.previous).unwrap(), OLDER);
+    assert!(!files.temp.exists());
 }
 
 #[test]
-fn a_failed_replace_that_moved_nothing_leaves_the_previous_copy() {
+fn a_failed_replace_leaves_the_previous_copy_and_the_blocked_settings() {
     let (_dir, files) = setup("noroll");
     fs::write(&files.previous, GOOD).unwrap();
     for blocked in [&files.settings, &files.broken] {

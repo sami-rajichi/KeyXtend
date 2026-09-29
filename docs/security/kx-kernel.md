@@ -31,7 +31,7 @@
 - **Spoofing:** no IPC or network in these crates. Module ids are fixed strings in the binary; a duplicate or reserved id is refused at `Kernel::add`.
 - **Tampering:** a hand-edited or damaged settings file.
   - Each value is checked, and only a bad value resets. An unreadable or oversized file is set aside as the broken copy, and the last good copy comes back.
-  - Saving writes a temp file and renames it, so a crash never leaves half a file. A file damaged while the app runs is kept as the broken copy, not overwritten.
+  - Saving writes a temp file, copies the good file to the previous copy, then renames the temp file over it in one step, so a crash never leaves half a file and the settings file is never missing. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
   - The redacting formatter prints `‹redacted›` for any field whose name contains a `SENSITIVE` part (`text`, `typed`, `chars`, `clipboard`, `password`, `secret`, `api_key`, `token`, `transcript`), whatever its case or separators.
   - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line.

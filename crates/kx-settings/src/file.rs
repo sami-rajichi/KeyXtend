@@ -1,4 +1,5 @@
 //! The whole settings file: read it back, repairing damage, and save it without ever losing the old copy.
+//! A save never leaves the settings file missing: the good file is copied, then replaced in one step.
 
 use crate::names::{Files, MAX_FILE_BYTES};
 use kx_module_api::{Notice, keys};
@@ -31,7 +32,7 @@ pub struct Loaded {
     pub notices: Vec<Notice>,
 }
 
-/// Why a save failed; the old text stays in the settings file, or in the previous copy if `Replace` could not put it back.
+/// Why a save failed; the old text stays in the settings file.
 #[derive(Debug, Error)]
 pub enum SaveError {
     /// The data folder could not be created.
@@ -52,7 +53,7 @@ pub enum SaveError {
         #[source]
         source: io::Error,
     },
-    /// The settings file could not become the previous copy.
+    /// The settings file could not be copied to the previous copy.
     #[error("cannot keep the previous copy {}", path.display())]
     KeepPrevious {
         /// The previous copy.
@@ -61,7 +62,7 @@ pub enum SaveError {
         #[source]
         source: io::Error,
     },
-    /// The temp file could not take the place of the settings file; the old file goes back when it can.
+    /// The temp file could not replace the settings file, which is left as it was.
     #[error("cannot put the new settings in place at {}", path.display())]
     Replace {
         /// The settings file.
@@ -159,21 +160,21 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
     file.sync_all()
 }
 
-/// Moves a settings file that reads well to the previous copy, and says whether it moved.
+/// Copies a settings file that reads well to the previous copy; the file itself stays where it is.
 ///
-/// A damaged file goes to the broken copy instead, so it never replaces a good previous copy.
-fn keep_previous(files: &Files) -> Result<bool, SaveError> {
+/// A damaged file is moved to the broken copy instead, so it never replaces a good previous copy.
+fn keep_previous(files: &Files) -> Result<(), SaveError> {
     match read_table(&files.settings) {
         Ok(_) => {}
-        Err(Problem::Missing) => return Ok(false),
+        Err(Problem::Missing) => return Ok(()),
         Err(Problem::Damaged) => {
             set_aside(files);
-            return Ok(false);
+            return Ok(());
         }
     }
-    match fs::rename(&files.settings, &files.previous) {
-        Ok(()) => Ok(true),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+    match fs::copy(&files.settings, &files.previous) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(source) => Err(SaveError::KeepPrevious {
             path: files.previous.clone(),
             source,
@@ -181,7 +182,7 @@ fn keep_previous(files: &Files) -> Result<bool, SaveError> {
     }
 }
 
-/// The save steps, in order; the settings file is untouched until `keep_previous`.
+/// The save steps, in order; the settings file is replaced only by the last one, in one step.
 fn save_steps(files: &Files, text: &str) -> Result<(), SaveError> {
     fs::create_dir_all(&files.dir).map_err(|source| SaveError::CreateDir {
         path: files.dir.clone(),
@@ -191,20 +192,14 @@ fn save_steps(files: &Files, text: &str) -> Result<(), SaveError> {
         path: files.temp.clone(),
         source,
     })?;
-    let moved = keep_previous(files)?;
-    fs::rename(&files.temp, &files.settings).map_err(|source| {
-        if moved {
-            // Best effort: put the old file back; if this fails too, the next start restores it.
-            let _ = fs::rename(&files.previous, &files.settings);
-        }
-        SaveError::Replace {
-            path: files.settings.clone(),
-            source,
-        }
+    keep_previous(files)?;
+    fs::rename(&files.temp, &files.settings).map_err(|source| SaveError::Replace {
+        path: files.settings.clone(),
+        source,
     })
 }
 
-/// Saves the full settings text; the old file stays if a step before the first rename fails.
+/// Saves the full settings text; the old file stays if any step fails.
 ///
 /// # Errors
 /// `SaveError` naming the step and the path that failed.
