@@ -196,9 +196,9 @@ fn a_newline_in_the_message_stays_on_one_line() {
 }
 
 /// Line and paragraph separators and the bidi controls, listed apart from `MARKS` so the test checks it.
-const WANT_ESCAPED: [char; 13] = [
-    '\u{2028}', '\u{2029}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
-    '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+const WANT_ESCAPED: [char; 14] = [
+    '\u{2028}', '\u{2029}', '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}',
+    '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
 
 #[test]

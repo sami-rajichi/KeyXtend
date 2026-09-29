@@ -25,8 +25,8 @@ pub type Migration = fn(&mut toml::Table) -> Result<(), SettingsError>;
 pub struct SettingsSpec {
     /// The current section version, starting at 1.
     pub version: u32,
-    /// The module's embedded `defaults.toml` text: every setting, and no `version` key.
-    /// A key in the user's file that is not in it is reset, whatever `validate` says.
+    /// The module's embedded `defaults.toml` text: every setting, optional ones too, and no `version` key.
+    /// `validate` must refuse keys not in it, which repair then resets.
     pub defaults: &'static str,
     /// Entry `i` upgrades version `i + 1` to `i + 2`.
     pub migrations: &'static [Migration],
