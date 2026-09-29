@@ -54,6 +54,19 @@ fn values_valid_only_together_are_both_kept() {
 }
 
 #[test]
+fn a_pair_valid_only_together_survives_one_bad_value() {
+    let text = "[hold]\nmin_ms = 6000\nmax_ms = 9000\nsound = \"loud\"\n";
+    let (_dir, files) = with_file("pairtypo", text);
+    let (mut store, report) = open(&files);
+    let pair = defaults_with("min_ms = 6000\nmax_ms = 9000");
+    assert_eq!(store.get(HOLD), Some(&pair));
+    assert_eq!(report.notices, vec![reset("sound")]);
+    store.save().unwrap();
+    let saved = fs::read_to_string(&files.settings).unwrap();
+    assert_eq!(saved, "[hold]\nversion = 3\nmax_ms = 9000\nmin_ms = 6000\n");
+}
+
+#[test]
 fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
     // `max_ms` sorts first but fits only after `min_ms` is lowered.
     let text = "[hold]\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
@@ -68,6 +81,17 @@ fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
         store.to_text().unwrap(),
         "[hold]\nversion = 3\nmax_ms = 50\nmin_ms = 10\n"
     );
+}
+
+#[test]
+fn a_pair_that_needs_a_second_pass_survives_two_bad_values() {
+    // Two bad values defeat the leave-one-out step, so only the repeated passes keep `max_ms`.
+    let text = "[hold]\nextra = 1\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
+    let (_dir, files) = with_file("twobad", text);
+    let (store, report) = open(&files);
+    let pair = defaults_with("min_ms = 10\nmax_ms = 50");
+    assert_eq!(store.get(HOLD), Some(&pair));
+    assert_eq!(report.notices, vec![reset("extra, sound")]);
 }
 
 #[test]

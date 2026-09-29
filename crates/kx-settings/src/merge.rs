@@ -23,18 +23,35 @@ pub(crate) fn with(base: &Table, key: &str, value: Value) -> Table {
     next
 }
 
-/// Lays the user's values over the defaults: all at once when valid together, else one at a time.
-///
-/// The one-at-a-time passes go in table order and repeat over the rejected keys until a pass keeps none.
+/// Lays the user's values over the defaults: all at once, else all but one bad key, else one key at a time.
 pub(crate) fn repair(defaults: &Table, user: Table, validate: Validate) -> Repair {
-    let mut all = defaults.clone();
-    all.extend(user.iter().map(|(k, v)| (k.clone(), v.clone())));
+    let all = over(defaults, &user, None);
     if validate(&all).is_ok() {
         return Repair {
             effective: all,
             rejected: Vec::new(),
         };
     }
+    let one_bad = user.keys().find_map(|bad| {
+        let rest = over(defaults, &user, Some(bad));
+        validate(&rest).is_ok().then(|| Repair {
+            effective: rest,
+            rejected: vec![bad.clone()],
+        })
+    });
+    one_bad.unwrap_or_else(|| key_by_key(defaults, user, validate))
+}
+
+/// `defaults` with every user value over them, except the one under `skip`.
+fn over(defaults: &Table, user: &Table, skip: Option<&String>) -> Table {
+    let mut all = defaults.clone();
+    let kept = user.iter().filter(|(key, _)| Some(*key) != skip);
+    all.extend(kept.map(|(key, value)| (key.clone(), value.clone())));
+    all
+}
+
+/// Keeps each user value that fits, in table order, passing again over the rejected ones until a pass keeps none.
+fn key_by_key(defaults: &Table, user: Table, validate: Validate) -> Repair {
     let mut effective = defaults.clone();
     let mut pending: Vec<(String, Value)> = user.into_iter().collect();
     loop {
@@ -97,11 +114,19 @@ mod tests {
     }
 
     #[test]
-    fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
-        let user = table("low = -1\nhigh = 0\nname = 3");
+    fn a_pair_valid_only_together_survives_one_bad_value() {
+        let user = table("low = 20\nhigh = 25\nname = 3");
+        let got = repair(&table(DEFAULTS), user, ordered);
+        assert_eq!(got.effective, table("low = 20\nhigh = 25\nname = \"a\""));
+        assert_eq!(got.rejected, ["name"]);
+    }
+
+    #[test]
+    fn a_pair_that_needs_a_second_pass_survives_two_bad_values() {
+        let user = table("low = -1\nhigh = 0\nname = 3\nzed = 1");
         let got = repair(&table(DEFAULTS), user, ordered);
         assert_eq!(got.effective, table("low = -1\nhigh = 0\nname = \"a\""));
-        assert_eq!(got.rejected, ["name"]);
+        assert_eq!(got.rejected, ["name", "zed"]);
     }
 
     #[test]
