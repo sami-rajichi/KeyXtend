@@ -26,7 +26,7 @@ Skills are instruction packs that Claude loads for a type of task. There are two
 
 | Skill | Use it when |
 |---|---|
-| `kx-feature` | **Main entry point:** `/kx-feature P3` or `/kx-feature F2` runs the whole flow for one item from `docs/FEATURES.md` |
+| `kx-feature` | **Main entry point:** `/kx-feature P3` or `/kx-feature F2` runs the whole flow for one item from `docs/FEATURES.md`, one item per session; on a finished item it builds the owner's saved ideas |
 | `kx-plan` | Writing any plan: steps only, no code |
 | `kx-review` | Before every commit: checks every changed file for pattern, correctness, tests, security, no hardcoding, short texts, small files |
 | `kx-new-module` | Starting any `kx-mod-*` crate or platform adapter |

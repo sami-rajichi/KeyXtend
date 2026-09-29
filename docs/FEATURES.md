@@ -1,6 +1,6 @@
 # KeyXtend — build list
 
-Work happens one item at a time. To start an item, type its command in Claude Code, for example `/kx-feature P3` or `/kx-feature F2`. Claude then asks its questions, writes a plan (no code), builds it test-first, reviews it and records it.
+Work happens one item per session. Each item's notes and saved ideas are in `docs/items/<id>.md`. To start an item, type its command in Claude Code, for example `/kx-feature P3` or `/kx-feature F2`. Claude then asks its questions, writes a plan (no code), builds it test-first, reviews it and records it.
 
 **Status values:** `Ready` · `Waiting` (on the items under Needs) · `In progress` · `Done (vX.Y)`.
 
@@ -51,3 +51,5 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27, to be added one 
 | F16 | **Chinese, Japanese and Korean input** | An IME mode that sends key presses instead of characters, so the Windows IME can build the text. | P3, v1.0 | Medium |
 
 **Adding your own idea:** say "add a feature: …". Claude adds it as the next F-number with a one-line description, its needs and its size.
+
+**Improving an item:** say "idea for P13: …" in any session. Claude saves it in `docs/items/P13.md` and carries on; later, `/kx-feature P13` builds the saved ideas in their own session.

@@ -40,7 +40,9 @@ This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, w
 6. **Git.**
    - Commit each finished feature.
    - **Never push to GitHub, create a repo, or publish without the owner's explicit yes** for that action.
-7. **Work items** come from `docs/FEATURES.md` (P0–P15 for v1, then F1+), one at a time. The owner types `/kx-feature P<n>` or `/kx-feature F<n>`.
+7. **Work items** come from `docs/FEATURES.md` (P0–P15 for v1, then F1+), one item per session. The owner types `/kx-feature P<n>` or `/kx-feature F<n>`.
+   - Each item's notes and the owner's saved ideas live in `docs/items/<id>.md`. Read it first; a finding for another item goes into that item's file.
+   - When the owner says "idea for P13: …", save it there and carry on. `/kx-feature P13` builds saved ideas later.
 
 ## How we work
 
