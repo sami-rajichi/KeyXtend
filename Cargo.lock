@@ -187,6 +187,7 @@ name = "kx-target-window"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-test-support",
  "serde",
  "spike-core",
  "thiserror",

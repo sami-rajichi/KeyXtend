@@ -226,6 +226,12 @@ fn message_loop() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kx_test_support::tempdir::TempDir;
+    use std::io::Write;
+
+    /// The folder and file name of the log inside the temp folder.
+    const LOG_DIR: &str = "logs";
+    const LOG_FILE: &str = "target.log";
 
     #[test]
     fn the_password_box_is_single_line_with_the_password_style() {
@@ -234,5 +240,24 @@ mod tests {
         assert!(!has(edit_style(true), ES_MULTILINE));
         assert!(has(edit_style(false), ES_MULTILINE));
         assert!(!has(edit_style(false), ES_PASSWORD));
+    }
+
+    #[test]
+    fn the_log_makes_its_folder_and_keeps_what_earlier_opens_wrote() {
+        let dir = TempDir::new("tw-log").unwrap();
+        let file = dir.path().join(LOG_DIR).join(LOG_FILE);
+        writeln!(open_log(&file).unwrap(), "first").unwrap();
+        writeln!(open_log(&file).unwrap(), "second").unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "first\nsecond\n");
+    }
+
+    #[test]
+    fn a_log_that_cannot_open_names_its_file() {
+        let dir = TempDir::new("tw-log-bad").unwrap();
+        let blocker = dir.path().join(LOG_DIR);
+        std::fs::write(&blocker, "a file where the folder should be").unwrap();
+        let file = blocker.join(LOG_FILE);
+        let err = open_log(&file).unwrap_err();
+        assert!(matches!(&err, StartError::Log { file: f, .. } if *f == file));
     }
 }
