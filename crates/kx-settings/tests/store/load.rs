@@ -184,11 +184,12 @@ fn a_failing_migration_gives_a_bad_section() {
 fn newer_unknown_and_top_level_entries_survive_word_for_word() {
     let text = "theme = \"dark\"\n\n[hold]\nfuture = [1, 2]\nmin_ms = 1\nversion = 9\n\n[later]\ncolour = \"teal\"\n\n[later.deep]\non = true\n";
     let (_dir, files) = with_file("kept", text);
-    let (store, report) = open(&files);
+    let (mut store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)));
     assert_eq!(report.notices, vec![newer()]);
     assert!(!store.needs_save());
-    assert_eq!(store.to_text().unwrap(), text);
+    store.save().unwrap();
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), text);
 }
 
 #[test]

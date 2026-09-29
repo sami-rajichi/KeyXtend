@@ -160,6 +160,29 @@ fn stop_ends_the_chain_and_is_returned() {
 }
 
 #[test]
+fn an_interceptor_may_publish_and_unsubscribe_then_stop() {
+    let (bus, count) = (bus(), Count::default());
+    let hits = Arc::clone(&count);
+    let _ping = bus.subscribe(move |_: &Ping| tick(&hits));
+    let slot: Arc<Mutex<Option<Subscription>>> = Arc::default();
+    let pongs = Arc::clone(&count);
+    *slot.lock().unwrap() = Some(bus.subscribe(move |_: &Pong| tick(&pongs)));
+    let (inner, own) = (bus.clone(), Arc::clone(&slot));
+    let _first = bus.add_interceptor(0, move |trace: &mut Trace| {
+        trace.0.push("re-enter");
+        inner.publish(&Ping);
+        own.lock().unwrap_or_else(PoisonError::into_inner).take();
+        Flow::Stop
+    });
+    let _after = stamp(&bus, 1, "after", Flow::Continue);
+    let mut trace = Trace::default();
+    assert_eq!(bus.intercept(&mut trace), Flow::Stop);
+    assert_eq!(trace.0, ["re-enter"]);
+    bus.publish(&Pong);
+    assert_eq!(ticks(&count), 1);
+}
+
+#[test]
 fn an_empty_chain_continues() {
     assert_eq!(bus().intercept(&mut Trace::default()), Flow::Continue);
 }
