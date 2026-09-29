@@ -43,7 +43,7 @@ fn main() {
 
 /// Reports `err` (console and TEMP file) and exits with code 1.
 fn fail(err: &str) -> ! {
-    config::report_error(bridge::FACE, err);
+    config::report_error(err);
     std::process::exit(1);
 }
 

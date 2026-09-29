@@ -1,5 +1,5 @@
 # P1 spike workspace: kept and moved into the product phase by phase (ADR-0014, docs/spike-move-map.md).
-# Each face (slint-kb, qt-kb, tauri-kb) is its own workspace, so they build in parallel.
+# The one face left, qt-kb, is its own workspace.
 [workspace]
 members = ["core", "target-window", "harness", "worker"]
 resolver = "3"

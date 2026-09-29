@@ -119,7 +119,7 @@ mod tests {
 
     fn kb() -> KeyboardConfig {
         KeyboardConfig {
-            titles: Default::default(),
+            title: String::new(),
             key_px: 48.0,
             gap_px: 4.0,
             font_px: 16.0,

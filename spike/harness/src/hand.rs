@@ -16,12 +16,11 @@ pub const RIGHT: &str = "right";
 /// Hand-try mode: Grab.
 pub const GRAB: &str = "grab";
 
-/// The boxes of every open face, where presses are never held.
+/// The boxes of every open face window, where presses are never held.
 fn face_rects(ctx: &Ctx) -> Vec<RECT> {
-    let titles: Vec<&String> = ctx.spike.keyboard.titles.values().collect();
     win::top_windows()
         .into_iter()
-        .filter(|&w| titles.contains(&&win::title(w)))
+        .filter(|&w| win::title(w) == ctx.spike.keyboard.title)
         .filter_map(|w| win::rect(w).ok())
         .collect()
 }

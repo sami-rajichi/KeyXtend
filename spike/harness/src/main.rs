@@ -11,6 +11,7 @@ mod clipkeep;
 mod cliplisten;
 mod config;
 mod diff;
+mod facearg;
 mod facetools;
 mod featcfg;
 mod g1;
@@ -98,6 +99,7 @@ fn parse(args: &[String]) -> Result<Args, String> {
         g if named(g).is_some() => None,
         _ => return Err(usage()),
     };
+    facearg::check(gate, name)?;
     let g1 = gate == "g1";
     let mut out = Args {
         gate: gate.clone(),
@@ -275,7 +277,7 @@ mod tests {
             parse(&args("g2 qt --clicks 10")).expect("parses").count,
             Some(10)
         );
-        assert_eq!(parse(&args("g3 slint")).expect("parses").count, None);
+        assert_eq!(parse(&args("g3 qt")).expect("parses").count, None);
         assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
         let a = parse(&args("assist right --secs 30")).expect("parses");
         assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
@@ -297,19 +299,43 @@ mod tests {
             "g19 core",
             "g20 notepad",
             "g21 win32",
-            "g19 slint",
-            "g22 slint",
+            "g19 qt",
+            "g22 qt",
             "g22 bench",
             "g22 bench-cloud",
             "g22 typing",
             "g23 qt",
-            "g24 slint",
+            "g24 qt",
             "g25 notepad",
-            "close slint",
+            "close qt",
         ] {
             let a = parse(&args(probe)).expect("parses");
             assert_eq!((a.count, a.seed), (None, None));
             assert!(named(&a.gate).is_some(), "{probe} has no run");
+        }
+    }
+
+    #[test]
+    fn only_the_qt_face_is_accepted() {
+        for gone in [
+            "g2 slint",
+            "g3 tauri",
+            "g4 slint",
+            "g7 tauri",
+            "g12 slint",
+            "g19 tauri",
+            "g22 slint",
+            "g23 tauri",
+            "g24 slint",
+            "close slint",
+        ] {
+            let e = parse(&args(gone)).expect_err(gone);
+            assert!(e.contains("unknown face"), "{gone}: {e}");
+        }
+        for gate in [
+            "g2", "g3", "g4", "g7", "g12", "g19", "g22", "g23", "g24", "close",
+        ] {
+            assert!(parse(&args(&format!("{gate} qt"))).is_ok(), "{gate} qt");
         }
     }
 
@@ -341,7 +367,7 @@ mod tests {
             "g22 bench --seed 1",
             "g22 typing --pause 10",
             "g25 notepad --attach",
-            "g23 slint --seed 2",
+            "g23 qt --seed 2",
             "g24 qt --clicks 3",
             "g7 qt --seed 1",
             "g12 qt --seed 1",

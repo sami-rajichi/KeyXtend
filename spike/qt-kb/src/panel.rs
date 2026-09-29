@@ -9,7 +9,7 @@ use spike_core::panelcfg::PanelConfig;
 use spike_core::{pager, screen, window};
 use windows::Win32::Foundation::HWND;
 
-use crate::bridge::{FACE, config, spot, themes};
+use crate::bridge::{config, spot, themes};
 
 /// The cxx-qt bridge that makes `PanelData` a QML type.
 #[cxx_qt::bridge]
@@ -95,9 +95,9 @@ impl qobject::PanelData {
     fn spot(&self, plate_w: f64, w: f64, h: f64) -> QString {
         let size = [w as f32, h as f32];
         let gaps = themes().shape.panel.gap_px;
-        let title = config().title(FACE);
+        let title = &config().keyboard.title;
         let rtl = self.rust().cfg.rtl();
-        spot(screen::pop_for(&title, plate_w as f32, size, gaps, rtl))
+        spot(screen::pop_for(title, plate_w as f32, size, gaps, rtl))
     }
 
     fn opened(mut self: Pin<&mut Self>) {

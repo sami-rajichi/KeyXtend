@@ -77,7 +77,7 @@ pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
         &cfg.ring.title,
         &cfg.target.title,
     ];
-    let all: Vec<&String> = cfg.keyboard.titles.values().chain(named).collect();
+    let all: Vec<&String> = std::iter::once(&cfg.keyboard.title).chain(named).collect();
     let shared = all.iter().enumerate().any(|(i, t)| all[..i].contains(t));
     if shared || all.iter().any(|t| t.is_empty()) {
         return Err("window titles must be set and differ from each other".into());
@@ -140,7 +140,7 @@ mod tests {
         let pill = with(&|c| c.panel.title = c.tools.pill_title.clone());
         assert!(pill.expect_err("pill").contains("title"));
         assert!(
-            with(&|c| c.panel.title = c.title("qt")).is_err(),
+            with(&|c| c.panel.title = c.keyboard.title.clone()).is_err(),
             "the keyboard's"
         );
         assert!(

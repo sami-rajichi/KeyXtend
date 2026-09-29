@@ -14,7 +14,7 @@ use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::{self, Snip};
 use spike_core::{inject, place, window};
 
-use crate::bridge::{FACE, ms};
+use crate::bridge::ms;
 
 /// The cxx-qt bridge that makes `Tools` a QML type.
 #[cxx_qt::bridge]
@@ -168,7 +168,7 @@ impl qobject::Tools {
 
     /// Asks Windows Hello on its own thread, then types `value` into the app in front.
     fn fill_with(&self, value: String) -> &'static str {
-        fill::start(&self.rust().cfg, FACE, value, &self.rust().note)
+        fill::start(&self.rust().cfg, value, &self.rust().note)
     }
 
     /// Freezes the screen and writes it for QML to show; JSON with its file URL and physical box.

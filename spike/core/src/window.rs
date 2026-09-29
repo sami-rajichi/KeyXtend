@@ -2,7 +2,7 @@
 
 use std::sync::OnceLock;
 
-use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
     CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
 };
@@ -11,18 +11,15 @@ use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GWL_EXSTYLE, GetForegroundWindow, GetWindowLongPtrW, GetWindowTextW,
-    GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, LWA_ALPHA, MA_NOACTIVATE, STYLESTRUCT,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetForegroundWindow, SetLayeredWindowAttributes,
-    SetWindowLongPtrW, SetWindowPos, WINDOWPOS, WM_MOUSEACTIVATE, WM_STYLECHANGING,
-    WM_WINDOWPOSCHANGING, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_EX_TRANSPARENT,
+    GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, MA_NOACTIVATE, STYLESTRUCT,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos,
+    WINDOWPOS, WM_MOUSEACTIVATE, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
 };
 use windows::core::BOOL;
 
 /// Our subclass id on each guarded window.
 const GUARD_ID: usize = 0x4B58;
-/// Alpha of a fully opaque layered window.
-const OPAQUE: u8 = u8::MAX;
 
 /// Extended styles every keyboard window keeps.
 fn wanted() -> u32 {
@@ -38,21 +35,6 @@ fn through() -> u32 {
 fn kept_ex(old: u32, new: u32) -> u32 {
     let keep = old & through() == through();
     new | wanted() | if keep { through() } else { 0 }
-}
-
-/// Lets clicks pass through our visible window `title_is`; false when it is not visible yet.
-pub fn click_through(title_is: &str) -> Result<bool, String> {
-    let Some(hwnd) = own_titled(title_is) else {
-        return Ok(false);
-    };
-    // SAFETY: `hwnd` is one of our own live windows; a layered window shows only once its alpha is set.
-    unsafe {
-        let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | through() as isize);
-        SetLayeredWindowAttributes(hwnd, COLORREF(0), OPAQUE, LWA_ALPHA)
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(true)
 }
 
 /// Cuts our visible window `title_is` down to `rects` (left, top, right, bottom in physical pixels), so a click

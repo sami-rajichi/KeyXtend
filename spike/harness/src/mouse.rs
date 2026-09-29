@@ -1,6 +1,6 @@
 //! Key centres on screen from spike.toml, and real mouse moves and clicks through `SendInput`.
 
-use spike_core::config::{KeyboardConfig, SpikeConfig};
+use spike_core::config::{FACE, KeyboardConfig, SpikeConfig};
 use spike_core::place::{Place, places};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
@@ -44,11 +44,10 @@ pub fn centre(place: &Place, origin: POINT, dpi: u32) -> POINT {
 
 /// The running face called `name`, found by its exact title from spike.toml.
 pub fn find_face(spike: &SpikeConfig, name: &str) -> Result<HWND, String> {
-    let title = spike
-        .keyboard
-        .titles
-        .get(name)
-        .ok_or_else(|| format!("unknown face {name}"))?;
+    if name != FACE {
+        return Err(format!("unknown face {name}"));
+    }
+    let title = &spike.keyboard.title;
     crate::win::top_windows()
         .into_iter()
         .find(|&w| crate::win::title(w) == *title)
@@ -148,7 +147,7 @@ mod tests {
 
     fn kb() -> KeyboardConfig {
         KeyboardConfig {
-            titles: Default::default(),
+            title: String::new(),
             key_px: 48.0,
             gap_px: 4.0,
             font_px: 16.0,
