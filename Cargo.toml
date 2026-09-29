@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-settings", "crates/kx-test-support", "tools/kx-gates", "tools/kx-target-window", "xtask"]
+members = ["crates/kx-kernel", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-settings", "crates/kx-test-support", "tools/kx-gates", "tools/kx-target-window", "xtask"]
 # The spike has its own workspaces; excluding it stops Cargo taking this file as the root of a spike crate that the qt-kb build loads after a crates/ dependency.
 exclude = ["spike"]
 resolver = "3"
