@@ -36,7 +36,7 @@ Decided by the owner on 2026-09-29.
   - saving writes a temp file and then renames it, so a crash never leaves a half-written file.
 - **Changes:** changing a module's settings restarts that module, and the modules that need it, until P3 adds a live settings handle.
 - **Logs:**
-  - `logs/keyxtend.log` holds this run and `logs/keyxtend.previous.log` the run before, as NVDA does;
+  - the `logs` folder sits inside the data folder: `logs/keyxtend.log` holds this run and `logs/keyxtend.previous.log` the run before, as NVDA does;
   - each file is capped at `log_max_mb`, and later lines are dropped once it is full;
   - fields with a sensitive name are printed as `‹redacted›`;
   - typed text, clipboard content, secrets and transcripts are never logged, and the log is never sent anywhere.
@@ -47,7 +47,7 @@ Decided by the owner on 2026-09-29.
 - A settings file that only holds changes stays small, and a new default reaches users who never changed that value.
 - Repair has a cost: a value the user set wrongly goes back to its default, and the notice says which one.
 - The Windows adapter (P3) reports the two folders, and the app picks the data folder from them.
-- The uninstaller decides later (P14) whether the user's data folder is kept or deleted.
+- What the uninstaller does with the data folder is decided when the installer is built, in the release phase (P14, `docs/roadmap.md`).
 
 ## Alternatives
 

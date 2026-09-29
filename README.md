@@ -62,7 +62,7 @@ Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen
 - **Portable copy:** in a `data` folder beside the program. Make that folder and the program keeps everything there, so you can carry it on a USB stick.
 - **Only your changes are saved.** The file `settings.toml` is plain text. A setting you never changed follows the program's newest default.
 - **A damaged file is repaired, and you are told.** A bad value goes back to its default on its own. If the whole file is unreadable, it is set aside as `settings.broken.toml` and your last good copy comes back.
-- **The log keeps two runs**, this one and the one before, in the `logs` folder. It is small and never holds what you type, your clipboard or your passwords.
+- **The log keeps two runs**, this one and the one before, in a `logs` folder inside that settings folder. It is small and never holds what you type, your clipboard or your passwords.
 - **Nothing is sent anywhere.** The settings and the log stay on your PC.
 
 ## Documents
