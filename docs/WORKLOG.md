@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-29 — One item per session, with notes per item
+Each item from `docs/FEATURES.md` is now built in its own session, starting from the latest `main` once the previous item's pull request is merged. Every phase has a notes file in `docs/items/` that says what the test round already built, what earlier sessions left for it, and the owner's saved ideas. Saying "idea for P13: …" in any session saves an improvement there, and `/kx-feature P13` on a finished item builds the saved ideas later. The notes from the P1 hand-off moved into these files, so nothing is lost or done twice.
+
 ## 2026-09-29 — CI fix for pull request #2
 The Windows check failed because GitHub starts our PowerShell scripts from PowerShell 7, whose module path hides the certificate drive from Windows PowerShell; the dev tools now clear that path for every script they run. The Ubuntu check failed on a test-only constant that only the Windows tests use, so it now exists only there. The Windows failure was reproduced on this PC with the same error and passes after the fix, and a new test checks that the path is cleared.
 
