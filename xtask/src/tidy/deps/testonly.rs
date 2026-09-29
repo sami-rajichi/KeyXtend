@@ -19,19 +19,14 @@ pub(crate) fn d5_test_only_deps(ws: &Workspace) -> Vec<Violation> {
 
 /// True if `package` is a tool or a `test_only` crate, so it may depend on test code.
 fn may_use_test_code(package: &Package, ws: &Workspace) -> bool {
-    ws.is_tool(package) || is_test_only(&package.name, ws)
-}
-
-/// True if `name` is listed in `test_only`.
-fn is_test_only(name: &str, ws: &Workspace) -> bool {
-    ws.tidy.test_only.iter().any(|t| t == name)
+    ws.is_tool(package) || ws.is_test_only(&package.name)
 }
 
 /// What kind of test code `name` is (`tool` or `test-only crate`), or `None` if it is ordinary.
 fn test_code_kind(name: &str, ws: &Workspace) -> Option<&'static str> {
     if ws.find_member(name).is_some_and(|p| ws.is_tool(p)) {
         Some("tool")
-    } else if is_test_only(name, ws) {
+    } else if ws.is_test_only(name) {
         Some("test-only crate")
     } else {
         None

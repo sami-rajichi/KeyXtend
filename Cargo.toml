@@ -71,7 +71,7 @@ unsafe_attr = "#![forbid(unsafe_code)]"
 tool_unsafe_attr = "#![deny(unsafe_code)]"
 # Target kinds counted as a crate root for the unsafe-attribute rule.
 root_kinds = ["lib", "bin", "proc-macro"]
-# Crates only tests and tools may depend on (tidy D5).
+# Crates only tests and tools may depend on (tidy D5); they must forbid unsafe code even with the platform prefix (tidy F2).
 test_only = ["kx-test-support", "kx-platform-fake"]
 
 [workspace.metadata.dco]

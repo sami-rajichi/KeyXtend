@@ -226,6 +226,28 @@ fn platform_crate_without_attr_is_not_an_f2_violation() {
 }
 
 #[test]
+fn test_only_platform_crate_without_attr_is_an_f2_error() {
+    // `kx-platform-fake` is in the trimmed config's `test_only` list, so it gets no exemption.
+    let root = unique_temp_dir("f2-test-only");
+    let rel = "crates/kx-platform-fake/src/lib.rs";
+    fs::create_dir_all(root.join("crates/kx-platform-fake/src")).unwrap();
+    fs::write(root.join(rel), "fn x() {}\n").unwrap();
+
+    let ws = WorkspaceBuilder::new()
+        .root(root.clone())
+        .member("kx-platform-fake", "crates", vec![])
+        .target(&["lib"], rel)
+        .build();
+    let violations = f2_unsafe_attr(&ws);
+
+    fs::remove_dir_all(&root).ok();
+
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].rule, F2);
+    assert_eq!(violations[0].place, rel);
+}
+
+#[test]
 fn non_root_kind_target_is_never_checked() {
     // A "test" target isn't in root_kinds, and its file doesn't exist: it must be skipped.
     let ws = WorkspaceBuilder::new()
