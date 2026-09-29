@@ -12,23 +12,25 @@ pub trait Host {
     /// The starting module's manifest.
     fn manifest(&self) -> &'static Manifest;
 
-    /// The stored service `id`, once `cap` is granted and a provider exists.
+    /// The stored service `id`, gated on the capability stored with it, not on the requester's key.
+    /// A request whose `cap` differs from the stored one is refused.
     ///
     /// # Errors
-    /// `ServiceError::NotGranted` or `ServiceError::Missing`.
+    /// `ServiceError::Missing`, `ServiceError::CapabilityMismatch` or `ServiceError::NotGranted`.
     fn service(
         &self,
         id: ServiceId,
         cap: Option<Capability>,
     ) -> Result<&(dyn Any + Send + Sync), ServiceError>;
 
-    /// Stores `service` under `id` for other modules.
+    /// Stores `service` under `id` for other modules, with the capability `cap` that gates it.
     ///
     /// # Errors
     /// `ServiceError::AlreadyProvided` when another module provides `id`.
     fn provide(
         &mut self,
         id: ServiceId,
+        cap: Option<Capability>,
         service: Box<dyn Any + Send + Sync>,
     ) -> Result<(), ServiceError>;
 
@@ -41,7 +43,7 @@ pub trait Host {
     /// The module's settings section, already migrated and repaired.
     fn settings(&self) -> &toml::Table;
 
-    /// Keeps `guard` alive until the module stops.
+    /// Keeps `guard` alive until the module stops or its start fails.
     fn hold(&mut self, guard: Subscription);
 }
 
@@ -79,7 +81,7 @@ impl<'a> ModuleCx<'a> {
             .ok_or(ServiceError::WrongType(K::ID))
     }
 
-    /// Offers `service` to other modules under `K`.
+    /// Offers `service` to other modules under `K`, gated by `K::CAPABILITY`.
     ///
     /// # Errors
     /// `NotDeclared` when the manifest lacks it, or the host's refusal.
@@ -87,7 +89,7 @@ impl<'a> ModuleCx<'a> {
         if !self.manifest().provides(K::ID) {
             return Err(ServiceError::NotDeclared(K::ID));
         }
-        self.host.provide(K::ID, Box::new(service))
+        self.host.provide(K::ID, K::CAPABILITY, Box::new(service))
     }
 
     /// Calls `handler` for every published `E` until the module stops.

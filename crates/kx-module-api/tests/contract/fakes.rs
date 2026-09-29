@@ -22,11 +22,14 @@ impl Clock for Fixed {
     }
 }
 
+/// A stored service and the capability that gates it.
+pub type Stored = (Option<Capability>, Box<dyn Any + Send + Sync>);
+
 /// A host with a service map, a grant list and a fake bus; it counts service lookups.
 pub struct FakeHost {
     pub manifest: &'static Manifest,
     pub granted: Vec<Capability>,
-    pub services: HashMap<ServiceId, Box<dyn Any + Send + Sync>>,
+    pub services: HashMap<ServiceId, Stored>,
     pub lookups: Cell<usize>,
     pub settings: toml::Table,
     pub held: Vec<Subscription>,
@@ -58,24 +61,26 @@ impl Host for FakeHost {
         cap: Option<Capability>,
     ) -> Result<&(dyn Any + Send + Sync), ServiceError> {
         self.lookups.set(self.lookups.get() + 1);
-        if let Some(cap) = cap.filter(|c| !self.granted.contains(c)) {
+        let (stored, service) = self.services.get(&id).ok_or(ServiceError::Missing(id))?;
+        if *stored != cap {
+            return Err(ServiceError::CapabilityMismatch(id));
+        }
+        if let Some(cap) = stored.filter(|c| !self.granted.contains(c)) {
             return Err(ServiceError::NotGranted(id, cap));
         }
-        self.services
-            .get(&id)
-            .map(|s| &**s)
-            .ok_or(ServiceError::Missing(id))
+        Ok(&**service)
     }
 
     fn provide(
         &mut self,
         id: ServiceId,
+        cap: Option<Capability>,
         service: Box<dyn Any + Send + Sync>,
     ) -> Result<(), ServiceError> {
         match self.services.entry(id) {
             Entry::Occupied(_) => Err(ServiceError::AlreadyProvided(id)),
             Entry::Vacant(slot) => {
-                slot.insert(service);
+                slot.insert((cap, service));
                 Ok(())
             }
         }

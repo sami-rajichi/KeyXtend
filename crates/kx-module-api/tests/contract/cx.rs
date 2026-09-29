@@ -38,6 +38,15 @@ impl ServiceKey for Mic {
     const CAPABILITY: Option<Capability> = Some(Capability::Microphone);
 }
 
+/// A key that names `Mic`'s id without its capability, as a sneaky module might.
+struct SneakyMic;
+
+impl ServiceKey for SneakyMic {
+    type Api = dyn Greet;
+    const ID: ServiceId = Mic::ID;
+    const CAPABILITY: Option<Capability> = None;
+}
+
 static BARE: Manifest = Manifest {
     id: ModuleId::new("bare"),
     version: env!("CARGO_PKG_VERSION"),
@@ -51,7 +60,7 @@ static FULL: Manifest = Manifest {
     id: ModuleId::new("full"),
     version: env!("CARGO_PKG_VERSION"),
     requires: &[Greeter::ID, Mic::ID],
-    provides: &[Greeter::ID],
+    provides: &[Greeter::ID, Mic::ID],
     capabilities: &[Capability::Microphone],
     settings: None,
 };
@@ -111,7 +120,7 @@ fn a_provided_service_comes_back_as_the_same_arc() {
 #[test]
 fn a_stored_value_of_another_type_is_wrong_type() {
     let mut host = FakeHost::new(&FULL);
-    host.services.insert(Greeter::ID, Box::new(7_u32));
+    host.services.insert(Greeter::ID, (None, Box::new(7_u32)));
     let cx = ModuleCx::new(&mut host);
     assert_eq!(
         cx.service::<Greeter>().err(),
@@ -120,9 +129,39 @@ fn a_stored_value_of_another_type_is_wrong_type() {
 }
 
 #[test]
+fn provide_records_the_keys_capability() {
+    let mut host = FakeHost::new(&FULL);
+    let mut cx = ModuleCx::new(&mut host);
+    cx.provide::<Mic>(Arc::new(Hello)).unwrap();
+    cx.provide::<Greeter>(Arc::new(Hello)).unwrap();
+    assert_eq!(host.services[&Mic::ID].0, Some(Capability::Microphone));
+    assert_eq!(host.services[&Greeter::ID].0, None);
+}
+
+#[test]
+fn a_key_naming_another_capability_is_refused() {
+    let mut host = FakeHost::new(&FULL);
+    let mut cx = ModuleCx::new(&mut host);
+    cx.provide::<Mic>(Arc::new(Hello)).unwrap();
+    let mismatch = ServiceError::CapabilityMismatch(Mic::ID);
+    assert_eq!(cx.service::<SneakyMic>().err(), Some(mismatch));
+}
+
+#[test]
+fn a_granted_capability_gives_the_same_arc() {
+    let mut host = FakeHost::new(&FULL);
+    host.granted.push(Capability::Microphone);
+    let mut cx = ModuleCx::new(&mut host);
+    let hello: Arc<dyn Greet> = Arc::new(Hello);
+    cx.provide::<Mic>(Arc::clone(&hello)).unwrap();
+    assert!(Arc::ptr_eq(&cx.service::<Mic>().unwrap(), &hello));
+}
+
+#[test]
 fn host_refusals_pass_through() {
     let mut host = FakeHost::new(&FULL);
-    let cx = ModuleCx::new(&mut host);
+    let mut cx = ModuleCx::new(&mut host);
+    cx.provide::<Mic>(Arc::new(Hello)).unwrap();
     let not_granted = ServiceError::NotGranted(Mic::ID, Capability::Microphone);
     assert_eq!(cx.service::<Mic>().err(), Some(not_granted));
     assert_eq!(
@@ -170,7 +209,7 @@ fn a_boxed_module_starts_through_the_typed_front() {
     let mut module: Box<dyn Module> = Box::new(Sample);
     let mut host = FakeHost::new(module.manifest());
     let result = module.start(&mut ModuleCx::new(&mut host));
-    let refused = ServiceError::NotGranted(Mic::ID, Capability::Microphone);
+    let refused = ServiceError::Missing(Mic::ID);
     assert_eq!(result, Err(ModuleError::Service(refused)));
     assert!(host.services.contains_key(&Greeter::ID));
     module.stop();
