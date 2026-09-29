@@ -16,9 +16,9 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0010 | [Sensitive data is encrypted at rest with an OS-protected key](0010-encryption-at-rest.md) | Accepted |
 | 0011 | [Choose the UI toolkit by a measured test round](0011-toolkit-test-round.md) | Accepted (process). Result in ADR-0013; its "No leftovers" rule for code is superseded by ADR-0014. |
 | 0012 | [Installer: Inno Setup 7](0012-installer-inno-setup.md) | Accepted |
-| 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Theme loader moved to `kx-theme` by ADR-0016. |
+| 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Partly superseded by ADR-0016 (theme loader in `kx-theme`). |
 | 0014 | [Keep the tested spike code and move it into the product](0014-keep-and-move-the-spike-code.md) | Accepted (2026-09-29). Its build rule for `qt-kb` is superseded by ADR-0016. |
 | 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29) |
-| 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb`. |
+| 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

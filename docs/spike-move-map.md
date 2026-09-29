@@ -27,6 +27,10 @@ After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to
 
 The `qt-kb` build stops at the start of P3 (ADR-0016): its Cargo files are deleted and the rest of `qt-kb/` stays as source until each part moves. `core/` and `worker/` keep building.
 
+Only gates `g1`–`g4` and `g25`'s language part are aimed at the product in P3; the other gates that drive the spike face run only against its last staged or installed copy until their phase aims them at the product.
+
+Task numbers below are those of the P3 plan (`docs/superpowers/plans/2026-09-29-phase-3-keyboard-core.md`).
+
 | Spike | Product |
 |---|---|
 | `core/src/{kbctl,kbctl/*,latch,kbgeom,kbgeom/*,kbview,place,sizer,legend,status}.rs` | `kx-mod-keyboard` |
@@ -34,13 +38,17 @@ The `qt-kb` build stops at the start of P3 (ADR-0016): its Cargo files are delet
 | `core/src/layout.rs` | `kx-mod-layouts` logic; `ToUnicodeEx` reading in `kx-platform-windows` |
 | `core/src/{inject,window,screen,sysui,sysui/*,backdrop,folders,com,uiaccess}.rs`, the extended-key table in `tools/kx-gates` `keys.rs` | `kx-platform-windows` |
 | `core/src/theme.rs`, `core/src/theme/{common,extras,look,motion,palette,shape,tests}.rs` | `kx-theme` (tokens, look, contrast; no Qt, so not `kx-ui`, ADR-0016) |
-| `core/src/{paint,lookview,lookcfg,facecfg,note}.rs` | `kx-theme` (look view) and `kx-ui` (view settings); the Task 14 and 16 plans place each file |
+| `core/src/paint.rs` | `kx-mod-keyboard` view (Task 13); it names palette tokens as text, so it needs no `kx-theme`. Its "every theme has these tokens" test goes to `apps/keyxtend` (Task 19), the only crate that sees both |
+| `core/src/facecfg.rs` | `kx-mod-keyboard` (Tasks 11 and 13): key roles, latches and side-key actions in `board.toml`, the bubble corner in `[keyboard]`, the top-bar buttons in the face. Names and labels go to translations (Task 15), icon names to `kx-theme` `icons.toml` (Task 14); `[assets]` ends, as assets are compiled in (Task 16) |
+| `core/src/lookcfg.rs` | The `[ui]` settings of the `ui` module in `kx-ui` (Task 16). `ModeChoice` and the input type the look view reads go to `kx-theme` (Task 14), so `kx-theme` needs nothing from `kx-ui`; `Backdrop` becomes `kx-platform`'s `BackdropKind` |
+| `core/src/lookview.rs` | `kx-theme` look view (Task 14), called by the `ui` module, not the keyboard. It reads `kx-platform`'s `SysLook` and takes the mode and high-contrast maths of `sysui.rs` with it; the Win32 reading goes to `kx-platform-windows` (Task 9) |
+| `core/src/note.rs` | Stays in the spike (Model) for `fill.rs` (P9) and `typer.rs` (P11); the product shows such notes as kernel notices in the banner (Task 18) |
 | `themes.toml`, `shape.toml`, `motion.toml` | `kx-theme` tokens |
-| `spike.toml` `[keyboard]`, `[layout]`, `[size]`, `[keys]`, `[bar]`, `[look]`, `[lang]`, `[assets]` | Settings schema defaults |
+| `spike.toml` `[keyboard]`, `[layout]`, `[size]`, `[keys]`, `[bar]`, `[look]`, `[lang]` | Settings schema defaults, or the homes the rows above name; `[assets]` ends (ADR-0016) |
 | `qt-kb/src/main.rs` | `apps/keyxtend` |
 | `qt-kb/src/{bridge,board}.rs`, `qt-kb/build.rs` | `kx-ui` bridges and build |
 | `qt-kb/qml/{main,KbWindow,Extras,Key,KeyText,CapFace,DPad,TopBar,Bubble,Glow,Catch,Mover,Corner,Chip,Icon,Tip,Tween,ColourTween,PopIn,Shade}.qml` | `kx-ui` QML views |
-| `stage-lib.ps1`, `qt-kb/stage.ps1`, `assets/` | `cargo xtask dev-install` staging, with a check that no Qt network or TLS plugin is staged |
+| `stage-lib.ps1`, `qt-kb/stage.ps1`, `assets/` | `cargo xtask stage` (Task 20), with a check that no Qt network or TLS plugin is staged |
 | `qt-kb/qmltest/tst_motion.qml`, `look-full.js`, `look-reduced.js`, `look-dolch.js` | `kx-ui` Qt Quick Tests, fed by the real theme loader |
 | Gates `g1`–`g4`, `g25` language part | Aimed at the product app |
 

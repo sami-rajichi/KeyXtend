@@ -1,5 +1,5 @@
-# Retired: qt-kb no longer builds (ADR-0016), and `cargo xtask stage` replaces this script in P3.
-# Builds qt-kb in release and stages it with its Qt files in target\spike-stage\qt-kb.
+throw 'Retired: qt-kb no longer builds (ADR-0016), and cargo xtask stage replaces this script in P3.'
+# Kept as source until P3 deletes it. It built qt-kb in release and staged it with its Qt files in target\spike-stage\qt-kb.
 # Usage: .\stage.ps1   (from any folder; env changes last only while it runs)
 . (Join-Path (Split-Path $PSScriptRoot -Parent) 'stage-lib.ps1')
 

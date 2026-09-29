@@ -1,7 +1,7 @@
 # 16. The product app replaces the spike face
 
 - **Date:** 2026-09-29
-- **Status:** Accepted. Supersedes ADR-0014's "the spike keeps building" rule for `qt-kb` only. Refines ADR-0013's "kx-ui holds the theme loader".
+- **Status:** Accepted. Supersedes ADR-0014's "the spike keeps building" rule for `qt-kb` only. Supersedes ADR-0013's rule that `kx-ui` holds the theme loader.
 
 ## Context
 
@@ -19,7 +19,7 @@ Decided by the owner on 2026-09-29.
 - **The spike face stops building at the start of P3.**
   - `spike/qt-kb/{Cargo.toml,Cargo.lock,.gitignore}` are deleted.
   - Its other files stay as source: build script, panel, ring, tools, voice, their QML and Qt Quick Tests. Each moves in its own phase (P3–P13).
-  - The signed test copy in `C:\Program Files\KeyXtend-dev\qt-kb` stays until the owner removes it.
+  - The signed test install of the spike face (from `cargo xtask dev-install`) stays until the owner removes it.
   - `spike/core` and `spike/worker` keep building and testing, because `kx-gates` depends on `spike-core`. ADR-0014's rule still holds for them.
 - **`kx-theme` is a new crate with no Qt:** theme tokens, the look and contrast. Its tests run everywhere and spike code can use it. `kx-ui` keeps the QML, bridges, translations and the `ui` module.
 - **Ports:**
@@ -33,7 +33,7 @@ Decided by the owner on 2026-09-29.
 
 - A fresh clone has everything a build needs; the repo grows by the fonts and icons, which pass `kx-licence-check` first.
 - The unmoved spike Qt source cannot be built or run until its part moves; the panel and ring Qt Quick Tests wait for P13 and P4.
-- The gates that drive the spike face are aimed at the product app within P3 (`docs/spike-move-map.md`).
+- Only gates `g1`–`g4` and `g25`'s language part are aimed at the product in P3. The other gates that drive the spike face run only against its last staged or installed copy until their phase aims them at the product (`docs/spike-move-map.md`).
 - `kx-ui` never sees a Win32 call or a module type, so its bridges and QML can be tested with fakes.
 
 ## Alternatives
