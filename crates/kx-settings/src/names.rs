@@ -33,6 +33,8 @@ pub const ARG_MORE: &str = "more";
 pub const KEYS_SEPARATOR: &str = ", ";
 /// The most keys one notice names, so a huge file never makes a huge notice.
 pub const MAX_NAMED_KEYS: usize = 10;
+/// The longest key name a notice shows; a longer one is counted in `ARG_MORE` instead.
+pub const MAX_KEY_CHARS: usize = 64;
 
 /// The paths of the files in the data folder.
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -11,7 +11,7 @@ mod store;
 
 pub use file::{Loaded, Outcome, SaveError, load, save};
 pub use names::{
-    ARG_KEYS, ARG_MODULE, ARG_MORE, Files, KEYS_SEPARATOR, MAX_FILE_BYTES, MAX_NAMED_KEYS,
-    VERSION_KEY,
+    ARG_KEYS, ARG_MODULE, ARG_MORE, Files, KEYS_SEPARATOR, MAX_FILE_BYTES, MAX_KEY_CHARS,
+    MAX_NAMED_KEYS, VERSION_KEY,
 };
 pub use store::{LoadReport, Store, StoreError, Unsaved};

@@ -5,7 +5,9 @@
     reason = "these fixture helpers run only in tests, where a failed setup should fail the test"
 )]
 
-use kx_module_api::{ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, validate_as};
+use kx_module_api::{
+    MS_PER_S, ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, validate_as,
+};
 use kx_settings::{ARG_KEYS, ARG_MODULE, ARG_MORE, Files, LoadReport, Store};
 use kx_test_support::tempdir::TempDir;
 use serde::{Deserialize, Serialize};
@@ -24,8 +26,6 @@ pub const V1_DELAY: &str = "delay_s";
 pub const V2_DELAY: &str = "delay_ms";
 /// Version 3 calls it the minimum hold time.
 pub const V3_DELAY: &str = "min_ms";
-/// Milliseconds per second, for the first migration.
-const MS_PER_S: i64 = 1000;
 /// The widest gap allowed between the minimum and the maximum.
 const MAX_SPAN_MS: u32 = 5000;
 
@@ -55,7 +55,9 @@ fn to_v2(t: &mut Table) -> Result<(), SettingsError> {
     let Some(delay) = t.remove(V1_DELAY) else {
         return Ok(());
     };
-    let ms = delay.as_integer().and_then(|s| s.checked_mul(MS_PER_S));
+    let ms = delay
+        .as_integer()
+        .and_then(|s| s.checked_mul(i64::from(MS_PER_S)));
     let ms = ms.ok_or_else(|| SettingsError::Migration {
         from: 1,
         message: "the delay is not whole seconds".into(),

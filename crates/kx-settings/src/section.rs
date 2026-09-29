@@ -1,7 +1,9 @@
 //! One registered module's section: its version, the migrations it needs, and repair against the defaults.
 
 use crate::merge::{self, Repair};
-use crate::names::{ARG_KEYS, ARG_MODULE, ARG_MORE, KEYS_SEPARATOR, MAX_NAMED_KEYS, VERSION_KEY};
+use crate::names::{
+    ARG_KEYS, ARG_MODULE, ARG_MORE, KEYS_SEPARATOR, MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY,
+};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
 use std::cmp::Ordering;
 use std::panic;
@@ -73,11 +75,7 @@ fn read(id: ModuleId, spec: &'static SettingsSpec, defaults: Table, raw: Option<
         return Read::quiet(Section::fresh(spec, defaults));
     };
     let Value::Table(mut values) = raw else {
-        return Read::bad(
-            id,
-            Section::fresh(spec, defaults),
-            reset_args(&[id.as_str()]),
-        );
+        return Read::bad(id, Section::fresh(spec, defaults), reset_args(id, &[]));
     };
     let named = key_list(&values, id);
     match age(&values, spec.version) {
@@ -123,25 +121,30 @@ fn strip(mut values: Table) -> Table {
     values
 }
 
-/// Notice arguments naming the section's setting keys, or the section name when it has none.
+/// Notice arguments naming the section's setting keys, or the section name when none can be named.
 fn key_list(values: &Table, id: ModuleId) -> Args {
     let named: Vec<&str> = values
         .keys()
         .map(String::as_str)
         .filter(|k| *k != VERSION_KEY)
         .collect();
-    if named.is_empty() {
-        reset_args(&[id.as_str()])
-    } else {
-        reset_args(&named)
-    }
+    reset_args(id, &named)
 }
 
-/// Notice arguments naming at most `MAX_NAMED_KEYS` of `keys`, and counting the rest when some are left out.
-fn reset_args(keys: &[&str]) -> Args {
-    let shown = keys.get(..MAX_NAMED_KEYS).unwrap_or(keys);
-    let mut args = vec![(ARG_KEYS, shown.join(KEYS_SEPARATOR))];
+/// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show.
+/// The keys left out are counted, and the module's name stands in when none can be shown.
+fn reset_args(id: ModuleId, keys: &[&str]) -> Args {
+    let mut shown: Vec<&str> = keys
+        .iter()
+        .copied()
+        .filter(|k| k.chars().count() <= MAX_KEY_CHARS)
+        .take(MAX_NAMED_KEYS)
+        .collect();
     let more = keys.len() - shown.len();
+    if shown.is_empty() {
+        shown.push(id.as_str());
+    }
+    let mut args = vec![(ARG_KEYS, shown.join(KEYS_SEPARATOR))];
     if more > 0 {
         args.push((ARG_MORE, more.to_string()));
     }
@@ -196,7 +199,7 @@ impl Read {
         } = merge::repair(&defaults, user, spec.validate);
         let changes = merge::changes(&effective, &defaults);
         let names: Vec<&str> = rejected.iter().map(String::as_str).collect();
-        let reset = (!rejected.is_empty()).then(|| reset_args(&names));
+        let reset = (!rejected.is_empty()).then(|| reset_args(id, &names));
         Self {
             notice: reset.map(|named| notice(keys::SETTINGS_RESET, id, named)),
             repaired: !rejected.is_empty(),
