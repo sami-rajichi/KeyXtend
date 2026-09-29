@@ -42,9 +42,9 @@ const PART_JOINERS: [char; 2] = ['.', '-'];
 
 /// Line separators and bidi controls, escaped like control characters so no value can fake or
 /// reorder a line.
-const MARKS: [char; 13] = [
-    '\u{2028}', '\u{2029}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
-    '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+const MARKS: [char; 14] = [
+    '\u{2028}', '\u{2029}', '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}',
+    '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
 
 /// What separates the fields of one line.

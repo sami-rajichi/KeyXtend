@@ -28,7 +28,7 @@ Decided by the owner on 2026-09-29.
   - sections are flat: a nested table is compared and reset as one value.
 - **Repair:**
   - a bad value resets alone. Values that are valid only together are kept beside one bad value, and can still reset beside two or more;
-  - a key the module's defaults do not know always resets, and does not count as a bad value;
+  - a module's check refuses keys its defaults do not know, and repair resets them without counting them as bad values;
   - a damaged file (also one over 1 MiB) is moved to `settings.broken.toml`, and the last good copy, `settings.previous.toml`, comes back;
   - with no good copy, the defaults are used;
   - a section from a newer version, and a section no module owns, are kept with their values. The file is rewritten on save, so comments typed into it are not kept;
