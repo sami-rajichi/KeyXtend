@@ -20,6 +20,7 @@ pub trait Settings: Serialize + DeserializeOwned {
 pub type Migration = fn(&mut toml::Table) -> Result<(), SettingsError>;
 
 /// How the kernel reads, upgrades and checks one module's settings section.
+/// Sections are flat: a nested table is compared and reset as one value.
 #[derive(Debug)]
 pub struct SettingsSpec {
     /// The current section version, starting at 1.

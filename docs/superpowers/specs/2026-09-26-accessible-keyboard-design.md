@@ -380,7 +380,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
   - vault export and import;
   - privacy and data deletion;
   - about and licences.
-- Settings are versioned TOML with migrations (ARCHITECTURE.md).
+- Settings are versioned TOML that holds only the user's changes, in the data folder (ADR-0015), with migrations (ARCHITECTURE.md). An "Open my settings folder" button shows where the file is.
 
 ---
 
@@ -405,6 +405,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
 ### 9.3 Logs
 
 - `tracing` with a redaction layer. Typed text, clipboard content, passwords and transcripts are **never** logged; a `Redacted<T>` type makes accidental logging print `‹redacted›`.
+- The log files are `logs/keyxtend.log` (this run) and `logs/keyxtend.previous.log` (the run before), each capped in size. They stay on the PC and are never sent anywhere (ADR-0015).
 
 ### 9.4 Least privilege
 
