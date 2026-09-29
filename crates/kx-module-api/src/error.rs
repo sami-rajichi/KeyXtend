@@ -48,6 +48,25 @@ pub enum SettingsError {
     },
 }
 
+/// The log name of a `SettingsError::Parse`.
+const PARSE_KIND: &str = "settings do not parse";
+/// The log name of a `SettingsError::Invalid`.
+const INVALID_KIND: &str = "settings break a rule";
+/// The log name of a `SettingsError::Migration`.
+const MIGRATION_KIND: &str = "settings migration failed";
+
+impl SettingsError {
+    /// A short fixed name of the error's kind, safe to log; the error's own text may quote a file value.
+    #[must_use]
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::Parse(_) => PARSE_KIND,
+            Self::Invalid(_) => INVALID_KIND,
+            Self::Migration { .. } => MIGRATION_KIND,
+        }
+    }
+}
+
 /// Why a module failed to start; the kernel marks it `Failed` and keeps the rest running.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ModuleError {
@@ -84,6 +103,23 @@ mod tests {
         );
         let parse = SettingsError::Parse("bad".into());
         assert_eq!(fail_settings(), Err(ModuleError::Settings(parse)));
+    }
+
+    #[test]
+    fn a_settings_kind_is_fixed_and_never_quotes_the_value() {
+        let value = "hunter2";
+        let migration = SettingsError::Migration {
+            from: 1,
+            message: value.into(),
+        };
+        let all = [
+            SettingsError::Parse(value.into()),
+            SettingsError::Invalid(value.into()),
+            migration,
+        ];
+        let kinds: Vec<&str> = all.iter().map(SettingsError::kind).collect();
+        assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
+        assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
     }
 
     #[test]

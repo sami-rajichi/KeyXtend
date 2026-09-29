@@ -123,6 +123,22 @@ pub static BROKEN_SPEC: SettingsSpec = SettingsSpec {
     ..LEVEL_SPEC
 };
 
+/// Accepts any section, so a value the sample cannot read reaches its start.
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "matches the SettingsSpec validator"
+)]
+fn accept_all(_: &toml::Table) -> Result<(), SettingsError> {
+    Ok(())
+}
+
+/// A spec whose checker accepts anything, so the sample's own read is what fails.
+#[allow(dead_code, reason = "only the panics test binary uses it")]
+pub static LOOSE_SPEC: SettingsSpec = SettingsSpec {
+    validate: accept_all,
+    ..LEVEL_SPEC
+};
+
 /// A sample module built from a `Shape`.
 struct Sample {
     manifest: &'static Manifest,

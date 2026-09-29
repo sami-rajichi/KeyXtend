@@ -6,7 +6,7 @@ use crate::host::{Held, StartHost};
 use crate::lifecycle::Step;
 use crate::order;
 use crate::registry::Registry;
-use kx_module_api::{ModuleCx, ModuleId, ModuleState, Notice, keys};
+use kx_module_api::{ModuleCx, ModuleError, ModuleId, ModuleState, Notice, keys};
 use kx_settings::ARG_MODULE;
 use std::fmt::Display;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -64,7 +64,7 @@ impl Kernel {
         let held = host.into_held();
         let why = match run {
             Ok(Ok(())) => return Ok(held),
-            Ok(Err(error)) => error.to_string(),
+            Ok(Err(error)) => loggable(&error),
             Err(_) => PANICKED.to_owned(),
         };
         release(&mut self.registry, id, held);
@@ -115,6 +115,14 @@ impl Kernel {
     pub(super) fn active(&self, id: ModuleId) -> Option<usize> {
         let at = self.find(id)?;
         (self.slots[at].state == ModuleState::Active).then_some(at)
+    }
+}
+
+/// `error` as the log may show it: a settings error by its kind alone, as its text may quote a file value.
+fn loggable(error: &ModuleError) -> String {
+    match error {
+        ModuleError::Settings(settings) => settings.kind().to_owned(),
+        other => other.to_string(),
     }
 }
 
