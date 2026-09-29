@@ -67,35 +67,53 @@ fn a_third_start_drops_the_oldest_run() {
     assert_eq!(read(&files.log_previous), "second");
 }
 
-/// A cap of 20 bytes and the ten-byte line the cap tests write.
-const CAP: u64 = 20;
+/// The ten-byte line the cap tests write.
 const LINE: &[u8] = b"0123456789";
 
 fn size_of(text: &str) -> u64 {
-    u64::try_from(text.len()).unwrap()
+    count(text.as_bytes())
+}
+
+/// The smallest cap that holds `lines` of `LINE` and the limit line.
+fn cap_for(lines: u64) -> u64 {
+    count(LINE) * lines + count(LIMIT_LINE.as_bytes())
 }
 
 #[test]
 fn writing_past_the_cap_leaves_one_final_line_and_drops_the_rest() {
     let dir = TempDir::new("log-cap").unwrap();
-    let (files, log) = open_in(&dir, CAP);
+    let (files, log) = open_in(&dir, cap_for(2));
     let mut out = log.make_writer();
     for _ in 0..5 {
         assert_eq!(out.write(LINE).unwrap(), LINE.len());
     }
     let text = read(&files.log);
     assert_eq!(text, format!("01234567890123456789{LIMIT_LINE}"));
-    assert!(size_of(&text) <= CAP + size_of(LIMIT_LINE));
+    assert_eq!(size_of(&text), cap_for(2));
 }
 
 #[test]
-fn a_write_that_exactly_fills_the_cap_is_kept() {
+fn a_cap_inside_a_line_still_ends_with_the_limit_line_within_the_cap() {
+    let dir = TempDir::new("log-inside").unwrap();
+    let cap = cap_for(1) + count(LINE) / 2;
+    let (files, log) = open_in(&dir, cap);
+    let mut out = log.make_writer();
+    for _ in 0..10 {
+        out.write_all(LINE).unwrap();
+    }
+    let text = read(&files.log);
+    assert_eq!(text, format!("0123456789{LIMIT_LINE}"));
+    assert!(size_of(&text) <= cap, "{}", size_of(&text));
+}
+
+#[test]
+fn a_line_that_leaves_room_for_the_limit_line_is_kept() {
     let dir = TempDir::new("log-exact").unwrap();
-    let (files, log) = open_in(&dir, CAP);
+    let (files, log) = open_in(&dir, cap_for(2));
     let mut out = log.make_writer();
     out.write_all(LINE).unwrap();
     out.write_all(LINE).unwrap();
-    assert_eq!(size_of(&read(&files.log)), CAP);
+    assert_eq!(size_of(&read(&files.log)), count(LINE) * 2);
 }
 
 #[test]
@@ -119,7 +137,8 @@ fn a_zero_cap_writes_only_the_final_line() {
 #[test]
 fn the_cap_holds_for_events_through_the_subscriber() {
     let dir = TempDir::new("log-events").unwrap();
-    let (files, log) = open_in(&dir, CAP * 10);
+    let cap = cap_for(10);
+    let (files, log) = open_in(&dir, cap);
     tracing::subscriber::with_default(subscriber(LevelFilter::INFO, log), || {
         for _ in 0..100 {
             info!("a line of text");
@@ -128,7 +147,7 @@ fn the_cap_holds_for_events_through_the_subscriber() {
     let text = read(&files.log);
     assert!(text.ends_with(LIMIT_LINE), "{text}");
     assert_eq!(text.matches(LIMIT_LINE).count(), 1);
-    assert!(size_of(&text) <= CAP * 10 + size_of(LIMIT_LINE));
+    assert!(size_of(&text) <= cap, "{}", size_of(&text));
 }
 
 #[test]
