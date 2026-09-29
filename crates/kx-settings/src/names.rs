@@ -1,4 +1,4 @@
-//! Every file name and limit of the settings layer, in one table.
+//! Every file name, key name and limit of the settings layer, in one table.
 
 use std::path::{Path, PathBuf};
 
@@ -22,6 +22,13 @@ pub const MAX_FILE_BYTES: u64 = 1024 * 1024;
 
 /// The key that holds a section's version.
 pub const VERSION_KEY: &str = "version";
+
+/// The notice argument naming the module.
+pub const ARG_MODULE: &str = "module";
+/// The notice argument listing the keys that went back to their defaults.
+pub const ARG_KEYS: &str = "keys";
+/// What joins the keys in `ARG_KEYS`.
+pub const KEYS_SEPARATOR: &str = ", ";
 
 /// The paths of the files in the data folder.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -104,6 +111,14 @@ mod tests {
         ];
         let unique: HashSet<_> = all.iter().collect();
         assert_eq!(unique.len(), all.len());
+    }
+
+    #[test]
+    fn notice_arguments_keep_the_names_translations_use() {
+        assert_eq!(
+            (ARG_MODULE, ARG_KEYS, KEYS_SEPARATOR),
+            ("module", "keys", ", ")
+        );
     }
 
     #[test]

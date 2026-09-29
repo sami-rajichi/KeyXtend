@@ -64,6 +64,7 @@ pub fn check(path: &Path, actual: &str, bless: bool) -> Result<(), GoldenError> 
 /// # Panics
 ///
 /// When the check fails, with the reason as the message.
+#[track_caller]
 pub fn assert_golden(path: impl AsRef<Path>, actual: &str) {
     if let Err(e) = check(path.as_ref(), actual, blessing()) {
         panic!("{e}");
@@ -206,6 +207,7 @@ mod tests {
 
     #[test]
     fn the_assert_panics_with_the_reason() {
+        // Blessing rewrites the file instead of failing, so there is no panic to check.
         if blessing() {
             return;
         }

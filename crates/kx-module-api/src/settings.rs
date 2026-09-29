@@ -4,6 +4,8 @@ use crate::SettingsError;
 use serde::{Serialize, de::DeserializeOwned};
 
 /// A module's settings type: read with serde, plus rules serde cannot express.
+///
+/// Mark the type `#[serde(deny_unknown_fields)]`, or a misspelt key passes silently.
 pub trait Settings: Serialize + DeserializeOwned {
     /// Checks rules such as ranges; the default accepts everything.
     ///
@@ -14,7 +16,7 @@ pub trait Settings: Serialize + DeserializeOwned {
     }
 }
 
-/// Upgrades a settings section by one version, in place.
+/// Upgrades a settings section by one version, in place; it sees the values without the `version` key.
 pub type Migration = fn(&mut toml::Table) -> Result<(), SettingsError>;
 
 /// How the kernel reads, upgrades and checks one module's settings section.
@@ -22,7 +24,7 @@ pub type Migration = fn(&mut toml::Table) -> Result<(), SettingsError>;
 pub struct SettingsSpec {
     /// The current section version, starting at 1.
     pub version: u32,
-    /// The module's embedded `defaults.toml` text.
+    /// The module's embedded `defaults.toml` text: every setting, and no `version` key.
     pub defaults: &'static str,
     /// Entry `i` upgrades version `i + 1` to `i + 2`.
     pub migrations: &'static [Migration],

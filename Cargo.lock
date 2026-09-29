@@ -160,6 +160,7 @@ dependencies = [
  "kx-module-api",
  "kx-test-support",
  "proptest",
+ "serde",
  "thiserror",
  "toml",
 ]

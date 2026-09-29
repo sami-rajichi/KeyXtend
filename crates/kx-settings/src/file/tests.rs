@@ -205,3 +205,26 @@ fn a_settings_folder_in_place_of_the_file_is_damaged_not_a_panic() {
     let got = load(&files);
     assert_eq!(got.outcome, Outcome::Defaults);
 }
+
+#[test]
+fn a_damaged_main_never_replaces_the_previous_copy() {
+    let (_dir, files) = setup("damagedmain");
+    fs::write(&files.previous, GOOD).unwrap();
+    fs::write(&files.settings, BAD_TOML).unwrap();
+    save(&files, OLDER).unwrap();
+    assert_eq!(fs::read_to_string(&files.previous).unwrap(), GOOD);
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), OLDER);
+}
+
+#[test]
+fn a_failed_replace_that_moved_nothing_leaves_the_previous_copy() {
+    let (_dir, files) = setup("noroll");
+    fs::write(&files.previous, GOOD).unwrap();
+    fs::create_dir(&files.settings).unwrap();
+    fs::write(files.settings.join("blocker"), "x").unwrap();
+    let err = save(&files, OLDER).unwrap_err();
+    assert!(matches!(&err, SaveError::Replace { path, .. } if *path == files.settings));
+    assert_eq!(fs::read_to_string(&files.previous).unwrap(), GOOD);
+    assert!(files.settings.join("blocker").exists());
+    assert!(!files.temp.exists());
+}
