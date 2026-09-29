@@ -73,6 +73,18 @@ pub fn ask(window: HWND, layout: LayoutId) -> Result<(), SwitchError> {
     super::request(&Win32, front::focus_of(window), layout)
 }
 
+/// `ToUnicodeEx` for `key` (virtual key `vk`) in `state`, changing no keyboard state, for the
+/// injector's check of the Keys route: the count (negative for a dead key) and the text in `buf`.
+pub(crate) fn to_unicode(
+    vk: u16,
+    key: Scan,
+    state: &KeyState,
+    layout: LayoutId,
+    buf: &mut [u16],
+) -> i32 {
+    Win32.to_unicode(vk, key, state, layout, buf)
+}
+
 /// The Win32 calls behind `WinLayouts`.
 struct Win32;
 

@@ -36,7 +36,7 @@ fn presses(vks: &[u16]) -> Vec<KeyEvent> {
     strokes::combo(&keys)
 }
 
-/// Presses `vks` in order, then releases them in reverse; a failed send leaves nothing held down.
+/// Presses `vks` in order, then releases them in reverse; after a failed send it tries to let go of what went down.
 pub fn combo(vks: &[u16]) -> Result<(), String> {
     send_keys(&presses(vks)).map_err(|e| e.to_string())
 }
@@ -46,7 +46,7 @@ pub fn slow_combo(vks: &[u16], gap_ms: u64) -> Result<(), String> {
     let events = presses(vks);
     for (at, event) in events.iter().enumerate() {
         if let Err(e) = send_keys(std::slice::from_ref(event)) {
-            let _ = send_keys(&strokes::still_down(&events[..at]));
+            let _ = send_keys(&strokes::releases(&events[..at]));
             return Err(e.to_string());
         }
         sleep_ms(gap_ms);

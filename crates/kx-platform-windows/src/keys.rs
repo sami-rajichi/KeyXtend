@@ -1,5 +1,5 @@
 //! Key tables: the tag on our own input, keys Windows sends as extended, how `VkKeyScanEx` names
-//! the modifiers a character needs, and the keys `ToUnicodeEx` reads held down.
+//! the modifiers a character needs, the keys `ToUnicodeEx` reads held down, and the menu mask key.
 
 use std::fmt;
 
@@ -27,8 +27,23 @@ pub const ALTGR_VKS: [u16; 2] = [VK_CONTROL, VK_MENU];
 pub const VK_CAPITAL: u16 = 0x14;
 /// `VK_LCONTROL`: left Ctrl.
 const VK_LCONTROL: u16 = 0xA2;
+/// `VK_LMENU`: left Alt.
+const VK_LMENU: u16 = 0xA4;
 /// `VK_RMENU`: right Alt.
 const VK_RMENU: u16 = 0xA5;
+/// `VK_LWIN`: left Windows key.
+const VK_LWIN: u16 = 0x5B;
+/// `VK_RWIN`: right Windows key.
+const VK_RWIN: u16 = 0x5C;
+/// `VK_SPACE`, pressed after a dead key so it types its own character.
+pub const VK_SPACE: u16 = 0x20;
+/// An unassigned virtual key tapped before letting go of Alt or Win, so neither opens the menu bar
+/// or Start (the `MenuMaskKey` of `AutoHotkey`).
+pub const MASK_VK: u16 = 0xE8;
+/// Alt and Win as virtual keys: Alt, left and right Alt, left and right Win.
+pub(crate) const ALT_WIN_VKS: [u16; 5] = [VK_MENU, VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN];
+/// Alt and Win as scan codes: left and right Alt, left and right Win.
+pub(crate) const ALT_WIN_SCANS: [u16; 4] = [0x38, 0xE038, 0xE05B, 0xE05C];
 /// Left Ctrl and right Alt: how Windows reports `AltGr` held down.
 pub const ALTGR_READ: [u16; 2] = [VK_LCONTROL, VK_RMENU];
 /// Left and right Shift, Ctrl and Alt, each with the generic key `ToUnicodeEx` also reads.
@@ -37,7 +52,7 @@ const SIDED: [(u16, u16); 6] = [
     (0xA1, VK_SHIFT),
     (VK_LCONTROL, VK_CONTROL),
     (0xA3, VK_CONTROL),
-    (0xA4, VK_MENU),
+    (VK_LMENU, VK_MENU),
     (VK_RMENU, VK_MENU),
 ];
 
@@ -201,8 +216,9 @@ mod tests {
     fn the_tables_match_windows() {
         use windows::Win32::UI::Input::KeyboardAndMouse::{
             VK_CAPITAL as CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END, VK_HOME, VK_INSERT,
-            VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT, VK_MENU, VK_NEXT, VK_PRIOR, VK_RCONTROL,
-            VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_SHIFT as SHIFT, VK_UP,
+            VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_MENU, VK_NEXT, VK_PRIOR,
+            VK_RCONTROL, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT as SHIFT,
+            VK_SPACE as SPACE, VK_UP,
         };
         let nav = [
             VK_PRIOR, VK_NEXT, VK_END, VK_HOME, VK_LEFT, VK_UP, VK_RIGHT, VK_DOWN, VK_INSERT,
@@ -222,5 +238,8 @@ mod tests {
             VK_RMENU,
         ];
         assert_eq!(SIDED.map(|(s, _)| s), sided.map(|vk| vk.0));
+        assert_eq!(VK_SPACE, SPACE.0);
+        let alt_win = [VK_MENU, VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN];
+        assert_eq!(ALT_WIN_VKS, alt_win.map(|vk| vk.0));
     }
 }

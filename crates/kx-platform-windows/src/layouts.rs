@@ -16,6 +16,8 @@ use crate::keys::{self, ALTGR_READ, VK_CAPITAL, VK_SHIFT};
 mod win;
 
 #[cfg(windows)]
+pub(crate) use win::to_unicode;
+#[cfg(windows)]
 pub use win::{WinLayouts, ask, hkl, id};
 
 /// Bytes in the key-state array `ToUnicodeEx` reads: one per virtual key.
@@ -25,7 +27,7 @@ const DOWN: u8 = 0x80;
 /// Key-state bit of a toggle key that is on.
 const TOGGLED: u8 = 0x01;
 /// Longest text read for one key, in UTF-16 units.
-const TEXT_CAP: usize = 32;
+pub(crate) const TEXT_CAP: usize = 32;
 /// Keys held for the Shift slots.
 const SHIFT: [u16; 1] = [VK_SHIFT];
 

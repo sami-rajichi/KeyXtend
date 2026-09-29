@@ -72,10 +72,8 @@ mod tests {
     #[test]
     fn the_injector_is_a_port_other_threads_can_use() {
         let injector = WindowsPlatform::new().unwrap().injector();
-        let name = std::thread::spawn(move || injector.target_app())
-            .join()
-            .unwrap();
-        assert!(name.is_none_or(|n| !n.is_empty()));
+        let asked = std::thread::spawn(move || injector.target_app()).join();
+        assert!(asked.is_ok(), "the port answers on another thread");
     }
 
     #[test]

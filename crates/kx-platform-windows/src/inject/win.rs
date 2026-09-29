@@ -1,7 +1,8 @@
 //! The Win32 side of injection: `SendInput` with our tag, and the layout lookups of the app in front.
+//! The layout in front, Caps Lock and `ToUnicodeEx` come from the layout source, read one way only.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{InjectError, InputInjector, Scan, TextRoute};
+use kx_module_api::ports::{InjectError, InputInjector, LayoutId, LayoutSource, Scan, TextRoute};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     HKL, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_EXTENDEDKEY,
     KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE, MAPVK_VK_TO_VSC_EX, MapVirtualKeyExW,
@@ -11,6 +12,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use super::{Os, chord_events, deliver, type_text};
 use crate::front;
 use crate::keys::TAG;
+use crate::layouts::{self, WinLayouts, hkl};
 use crate::strokes::{Key, KeyEvent};
 
 /// The injector on Windows: `SendInput`, with every event tagged `TAG`.
@@ -39,27 +41,49 @@ impl InputInjector for WinInjector {
 struct Win32;
 
 impl Os for Win32 {
-    type Layout = HKL;
-
     fn send(&self, events: &[KeyEvent]) -> usize {
         send_count(&inputs(events))
     }
 
-    fn layout(&self) -> HKL {
-        front::layout()
+    fn layout(&self) -> Option<LayoutId> {
+        WinLayouts.foreground()
     }
 
     #[allow(unsafe_code, reason = "A plain layout-table lookup.")]
-    fn key_scan(&self, unit: u16, layout: HKL) -> i16 {
+    fn key_scan(&self, unit: u16, layout: LayoutId) -> i16 {
+        let Some(handle) = hkl(layout) else {
+            return -1;
+        };
         // SAFETY: a plain table lookup; Windows checks the layout handle.
-        unsafe { VkKeyScanExW(unit, layout) }
+        unsafe { VkKeyScanExW(unit, handle) }
     }
 
-    #[allow(unsafe_code, reason = "A plain layout-table lookup.")]
-    fn scan_of(&self, vk: u16, layout: HKL) -> u32 {
-        // SAFETY: a plain table lookup; Windows checks the layout handle.
-        unsafe { MapVirtualKeyExW(u32::from(vk), MAPVK_VK_TO_VSC_EX, Some(layout)) }
+    fn scan_of(&self, vk: u16, layout: LayoutId) -> u32 {
+        hkl(layout).map_or(0, |handle| map_vk(vk, Some(handle)))
     }
+
+    fn caps_on(&self) -> bool {
+        WinLayouts.caps_on()
+    }
+
+    fn to_unicode(
+        &self,
+        vk: u16,
+        held: &[u16],
+        caps: bool,
+        layout: LayoutId,
+        buf: &mut [u16],
+    ) -> i32 {
+        let key = Scan::new(u16::try_from(self.scan_of(vk, layout)).unwrap_or(0));
+        layouts::to_unicode(vk, key, &layouts::state(held, caps), layout, buf)
+    }
+}
+
+/// `MapVirtualKeyExW`: the scan code of `vk`, with its prefix byte, in `layout` or this thread's.
+#[allow(unsafe_code, reason = "A plain layout-table lookup.")]
+fn map_vk(vk: u16, layout: Option<HKL>) -> u32 {
+    // SAFETY: a plain table lookup; Windows checks the layout handle, and none means this thread's.
+    unsafe { MapVirtualKeyExW(u32::from(vk), MAPVK_VK_TO_VSC_EX, layout) }
 }
 
 /// Sends `inputs` in one call and returns how many Windows took; a batch too long to count takes none.
@@ -97,10 +121,10 @@ pub fn send_keys(events: &[KeyEvent]) -> Result<(), InjectError> {
     deliver(&Win32, events)
 }
 
-/// Virtual key `vk` with its scan code in the layout of the app in front.
+/// Virtual key `vk` with its scan code in the layout of the app in front, else this thread's.
 #[must_use]
 pub fn vk_key(vk: u16) -> Key {
-    Key::vk(vk, Win32.scan_of(vk, Win32.layout()))
+    Key::vk(vk, map_vk(vk, Win32.layout().and_then(hkl)))
 }
 
 /// `event` as a Windows keyboard input marked `tag`.
@@ -140,6 +164,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
+    use crate::inject::{Press, press_for};
     use crate::keys::{self, key_for};
     use crate::strokes::{combo, unicode};
 
@@ -203,15 +228,46 @@ mod tests {
     }
 
     #[test]
-    fn enter_is_enter_in_every_layout() {
-        let layout = Win32.layout();
-        let enter = key_for(Win32.key_scan(u16::from(b'\r'), layout)).unwrap();
-        assert_eq!((enter.vk, enter.shift, enter.altgr), (0x0D, false, false));
-        assert_eq!(
-            key_for(Win32.key_scan(0xD83D, layout)),
-            None,
-            "half a surrogate pair"
-        );
+    fn every_installed_layout_types_enter_and_space_with_no_modifier_whatever_caps_lock() {
+        for layout in WinLayouts.installed() {
+            for (c, vk) in [(keys::ENTER, 0x0D), (' ', keys::VK_SPACE)] {
+                for caps in [false, true] {
+                    let press = press_for(&Win32, c, layout, caps);
+                    let want = Press {
+                        vk,
+                        shift: false,
+                        altgr: false,
+                        dead: false,
+                    };
+                    assert_eq!(press, Ok(want), "{layout} {c:?} caps {caps}");
+                }
+            }
+            let half_pair = key_for(Win32.key_scan(0xD83D, layout));
+            assert_eq!(half_pair, None, "{layout}");
+        }
+    }
+
+    #[test]
+    fn on_french_azerty_the_circumflex_is_dead_altgr_types_at_and_caps_lock_flips_the_digits() {
+        // Only on a PC with French (France) AZERTY installed, as this one has.
+        let french = LayoutId::new(0x040C_040C);
+        if !WinLayouts.installed().contains(&french) {
+            return;
+        }
+        let circumflex = press_for(&Win32, '^', french, false).unwrap();
+        assert!(circumflex.dead && !circumflex.shift && !circumflex.altgr);
+        let at = press_for(&Win32, '@', french, false).unwrap();
+        assert!(at.altgr && !at.shift && !at.dead, "`AltGr` types @");
+        let one = |caps| press_for(&Win32, '1', french, caps).unwrap().shift;
+        assert!(one(false), "Shift types 1 with Caps Lock off");
+        assert!(!one(true), "no Shift with Caps Lock on");
+    }
+
+    #[test]
+    fn alt_and_win_scan_codes_match_windows() {
+        let scans = keys::ALT_WIN_VKS[1..].iter().map(|&vk| map_vk(vk, None));
+        let want = keys::ALT_WIN_SCANS.map(u32::from);
+        assert_eq!(scans.collect::<Vec<_>>(), want);
     }
 
     #[test]

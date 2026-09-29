@@ -86,7 +86,8 @@ pub trait InputInjector: Send + Sync {
     /// `Refused` when the OS drops events, `Unmappable` when the Keys route has no key for a character.
     fn text(&self, text: &Redacted<String>, route: TextRoute) -> Result<(), InjectError>;
 
-    /// The file name of the app in front, such as `notepad.exe`, for the `key_apps` setting.
+    /// The file name of the app in front, such as `Notepad.exe`, in the case the OS gives, so the
+    /// `key_apps` setting matches it without case. On Windows every UWP app reports `ApplicationFrameHost.exe`.
     fn target_app(&self) -> Option<String>;
 }
 
