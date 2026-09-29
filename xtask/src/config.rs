@@ -20,6 +20,8 @@ pub(crate) struct TidyConfig {
     pub skip_dirs: Vec<String>,
     /// Packages whose manifest is under this folder are apps, not modules.
     pub app_dir: String,
+    /// Packages whose manifest is under this folder are test tools, which never ship.
+    pub tool_dir: String,
     /// Crate-name prefix for feature modules.
     pub module_prefix: String,
     /// Crate-name prefix for platform adapters.
@@ -34,8 +36,12 @@ pub(crate) struct TidyConfig {
     pub banned_media: Vec<String>,
     /// Attribute every non-platform crate root must carry.
     pub unsafe_attr: String,
+    /// Attribute a test tool's crate roots may carry instead of `unsafe_attr`.
+    pub tool_unsafe_attr: String,
     /// Target kinds counted as a crate root for the unsafe-attribute rule.
     pub root_kinds: Vec<String>,
+    /// Crates only tests and tools may depend on.
+    pub test_only: Vec<String>,
 }
 
 impl TidyConfig {
@@ -49,6 +55,12 @@ impl TidyConfig {
         }
         if self.scan_dirs.is_empty() {
             return Err(ConfigError::EmptyList("scan_dirs"));
+        }
+        if self.tool_dir.trim().is_empty() {
+            return Err(ConfigError::EmptyValue("tool_dir"));
+        }
+        if self.tool_unsafe_attr.trim().is_empty() {
+            return Err(ConfigError::EmptyValue("tool_unsafe_attr"));
         }
         Ok(())
     }
@@ -144,6 +156,23 @@ mod tests {
     }
 
     #[test]
+    fn empty_tool_dir_is_rejected() {
+        let mut config = tidy();
+        config.tool_dir = String::new();
+        assert_eq!(config.validate(), Err(ConfigError::EmptyValue("tool_dir")));
+    }
+
+    #[test]
+    fn blank_tool_unsafe_attr_is_rejected() {
+        let mut config = tidy();
+        config.tool_unsafe_attr = "  ".to_string();
+        assert_eq!(
+            config.validate(),
+            Err(ConfigError::EmptyValue("tool_unsafe_attr"))
+        );
+    }
+
+    #[test]
     fn error_messages_name_their_values() {
         assert_eq!(
             ConfigError::ZeroValue("x").to_string(),
@@ -172,10 +201,11 @@ mod tests {
         let json = r#"{
             "max_file_lines": 400, "warn_file_lines": 300,
             "extensions": [], "scan_dirs": [], "skip_dirs": [],
-            "app_dir": "apps", "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
+            "app_dir": "apps", "tool_dir": "tools",
+            "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
             "module_allowed": [], "app": "keyxtend",
             "banned_network": [], "banned_media": [], "unsafe_attr": "x",
-            "root_kinds": [], "bogus": 1
+            "tool_unsafe_attr": "y", "root_kinds": [], "test_only": [], "bogus": 1
         }"#;
         assert!(serde_json::from_str::<TidyConfig>(json).is_err());
     }

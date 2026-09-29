@@ -38,11 +38,13 @@ warn_file_lines = 300
 # File extensions the size rule scans.
 extensions = ["rs", "qml"]
 # Directories tidy scans for source files.
-scan_dirs = ["apps", "crates", "xtask"]
+scan_dirs = ["apps", "crates", "tools", "xtask"]
 # Directories tidy never scans.
 skip_dirs = ["target"]
 # Packages whose manifest is under this folder are apps, not modules.
 app_dir = "apps"
+# Packages whose manifest is under this folder are test tools, which never ship.
+tool_dir = "tools"
 # Crate-name prefix for feature modules.
 module_prefix = "kx-mod-"
 # Crate-name prefix for platform adapters.
@@ -57,8 +59,12 @@ banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
 banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
+# Attribute a test tool's crate roots may carry instead, so a scoped allow can hold the unsafe code.
+tool_unsafe_attr = "#![deny(unsafe_code)]"
 # Target kinds counted as a crate root for the unsafe-attribute rule.
 root_kinds = ["lib", "bin", "proc-macro"]
+# Crates only tests and tools may depend on (tidy D5).
+test_only = ["kx-test-support", "kx-platform-fake"]
 
 [workspace.metadata.dco]
 # Commit trailer that counts as a sign-off.

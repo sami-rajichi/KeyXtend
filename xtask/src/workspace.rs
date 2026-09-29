@@ -119,9 +119,17 @@ impl Workspace {
 
     /// True if `package`'s manifest lies under the configured app directory.
     pub(crate) fn is_app(&self, package: &Package) -> bool {
-        package
-            .manifest_path
-            .starts_with(self.root_dir.join(&self.tidy.app_dir))
+        self.is_under(package, &self.tidy.app_dir)
+    }
+
+    /// True if `package`'s manifest lies under the configured tool directory.
+    pub(crate) fn is_tool(&self, package: &Package) -> bool {
+        self.is_under(package, &self.tidy.tool_dir)
+    }
+
+    /// True if `package`'s manifest lies under `dir`, a folder relative to the workspace root.
+    fn is_under(&self, package: &Package, dir: &str) -> bool {
+        package.manifest_path.starts_with(self.root_dir.join(dir))
     }
 }
 

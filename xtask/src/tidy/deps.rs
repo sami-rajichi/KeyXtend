@@ -1,4 +1,6 @@
-//! D1-D4: the dependency-shape rules from `ARCHITECTURE.md`.
+//! D1-D5: the dependency-shape rules from `ARCHITECTURE.md`; D5 lives in [`testonly`].
+
+pub(crate) mod testonly;
 
 use std::collections::HashSet;
 
@@ -26,13 +28,13 @@ pub(crate) fn d1_module_isolation(ws: &Workspace) -> Vec<Violation> {
     violations
 }
 
-/// D2: only the app may depend on a `module_prefix` or `platform_prefix` crate.
+/// D2: only the app and the test tools may depend on a module or a platform adapter.
 ///
 /// Modules are skipped, because D1 already covers every workspace dependency they have.
 pub(crate) fn d2_app_only_platform_and_module(ws: &Workspace) -> Vec<Violation> {
     let mut violations = Vec::new();
     for package in ws.members() {
-        if ws.is_app(package) || is_module(package, ws) {
+        if ws.is_app(package) || ws.is_tool(package) || is_module(package, ws) {
             continue;
         }
         for name in member_deps(package, ws) {
@@ -64,16 +66,23 @@ fn is_module(package: &Package, ws: &Workspace) -> bool {
     package.name.starts_with(ws.tidy.module_prefix.as_str())
 }
 
-/// Names of `package`'s normal and build dependencies that are workspace members, each once.
-fn member_deps<'a>(package: &'a Package, ws: &Workspace) -> Vec<&'a str> {
+/// Names of `package`'s normal and build dependencies, each once.
+fn non_dev_deps(package: &Package) -> Vec<&str> {
     let mut seen = HashSet::new();
     package
         .dependencies
         .iter()
-        .filter(|d| !matches!(d.kind, DependencyKind::Dev) && ws.is_member(&d.name))
+        .filter(|d| !matches!(d.kind, DependencyKind::Dev))
         .map(|d| d.name.as_str())
         .filter(|name| seen.insert(*name))
         .collect()
+}
+
+/// Names of `package`'s normal and build dependencies that are workspace members, each once.
+fn member_deps<'a>(package: &'a Package, ws: &Workspace) -> Vec<&'a str> {
+    let mut names = non_dev_deps(package);
+    names.retain(|name| ws.is_member(name));
+    names
 }
 
 /// D3: no `banned_network` crate may be reachable from the app.
