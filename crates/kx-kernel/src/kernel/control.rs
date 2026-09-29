@@ -8,7 +8,7 @@ use kx_module_api::{ModuleId, ModuleState, SettingsChanged};
 use toml::Value;
 
 impl Kernel {
-    /// Try again: starts a failed module, then, once it runs, its failed or pending dependents.
+    /// Try again: starts a failed module, then, once it runs, every dependent not switched off.
     ///
     /// # Errors
     /// `Unknown`, `NotFailed`, or `NotStartable` when it is off or its plan or spec is broken.
@@ -21,7 +21,7 @@ impl Kernel {
             return Err(KernelError::NotStartable(id));
         }
         if self.start(at) {
-            self.start_dependents(id, &[Failed, Pending]);
+            self.start_dependents(id, &[Failed, Pending, Stopped]);
         }
         Ok(())
     }
