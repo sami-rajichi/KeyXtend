@@ -17,7 +17,8 @@ pub struct Held {
 }
 
 impl Held {
-    /// The services the module provided, in order.
+    /// The services the module provided, in order; only tests read it, as release removes them by owner.
+    #[cfg(test)]
     #[must_use]
     pub fn provided(&self) -> &[ServiceId] {
         &self.provided

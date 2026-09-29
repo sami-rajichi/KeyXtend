@@ -5,7 +5,7 @@ use crate::rig::{Rig, failed};
 use crate::samples::{
     Alpha, BROKEN_SPEC, Beta, Gamma, LEVEL_SPEC, Mic, PLATFORM, Ping, sample, service,
 };
-use kx_kernel::grants::Policy;
+use kx_kernel::Policy;
 use kx_kernel::{KERNEL, KernelError};
 use kx_module_api::Capability::Microphone;
 use kx_module_api::ModuleState::{Active, Failed, Starting};
