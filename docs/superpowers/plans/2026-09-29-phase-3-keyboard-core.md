@@ -33,11 +33,11 @@ Owner's decisions (2026-09-29):
 - **The `ui` module** lives in `kx-ui`: it owns the look and window settings, takes `KeyboardFace`, shows notices and hands Try again to the app.
 - **Data files:** `kx-mod-keyboard/board.toml` (rows, widths, scan codes, side grid, key roles); `kx-theme/tokens/{themes,shape,motion,icons}.toml`, all embedded, never read from disk.
 - **Assets:** `assets/fonts/<family>/` and `assets/icons/lucide/`, each with its licence, compiled into the binary as Qt resources.
-- **Settings `[keyboard]` v1:** `modifiers = "release"` ("release" after the next key, or "stay"), `lang_key = "carousel"`, `size = 1.0`, `presets = [1.0, 1.25, 1.5]`, `size_step = 0.05`, `size_min = 0.8`, `size_max = 1.8`, `relabel_ms = 500`, `key_apps = []`.
+- **Settings `[keyboard]` v1:** `modifiers = "release"` ("release" after the next key, or "stay"), `lang_key = "carousel"`, `size = 1.0`, `presets = [1.0, 1.25, 1.5]`, `size_step = 0.05`, `size_min = 0.8`, `size_max = 1.8`, `relabel_ms = 500`, `key_apps = []`, `x = 0`, `y = 0`, `placed = false`, `bubble_corner = "right"` (place and bubble live with size, so `place.rs` does the placement maths).
 - **Settings `[layouts]` v1:** `short = { ar = "ع" }`.
-- **Settings `[ui]` v1:** `theme = "native"`, `mode = "auto"`, `follow_accent = false`, `reduced_motion = false`, `backdrop = "none"`, `language = "auto"`, `x = 0`, `y = 0`, `placed = false`, `bubble_corner = "right"`, `tip_ms = 500`, `poll_ms = 16`, `guard_delay_ms = 300`, `guard_tries = 10`, `page_rows = 5`, `min_contrast = 4.5`.
+- **Settings `[ui]` v1:** `theme = "native"`, `mode = "auto"`, `follow_accent = false`, `reduced_motion = false`, `backdrop = "none"`, `language = "auto"`, `tip_ms = 500`, `poll_ms = 16`, `guard_delay_ms = 300`, `guard_tries = 10`, `page_rows = 5`, `min_contrast = 4.5`.
 - **New theme tokens:** `notice` and `menu` shapes, `dim` (dimmed keys), `hc_outline` (hover in high contrast), `lang` cycle dots, the list panel, and the `palette` icon for the theme button.
-- **Translation keys** (EN, FR, AR in `kx-ui/i18n/`): key and button names, side keys and "coming later", tray menu, language-key names, theme names, the six P2 notices with a list of keys and "and N more".
+- **Translation keys** (EN, FR, AR in `kx-ui/i18n/`): key and button names, side keys and "coming later", tray menu, language-key names, theme names, the six P2 notices plus `notice.settings-locked`, with a list of keys and "and N more".
 
 ## Tasks
 
