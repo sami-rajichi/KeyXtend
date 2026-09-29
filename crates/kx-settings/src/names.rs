@@ -27,8 +27,12 @@ pub const VERSION_KEY: &str = "version";
 pub const ARG_MODULE: &str = "module";
 /// The notice argument listing the keys that went back to their defaults.
 pub const ARG_KEYS: &str = "keys";
+/// The notice argument counting the reset keys that `ARG_KEYS` leaves out; absent when it names all.
+pub const ARG_MORE: &str = "more";
 /// What joins the keys in `ARG_KEYS`.
 pub const KEYS_SEPARATOR: &str = ", ";
+/// The most keys one notice names, so a huge file never makes a huge notice.
+pub const MAX_NAMED_KEYS: usize = 10;
 
 /// The paths of the files in the data folder.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,8 +120,8 @@ mod tests {
     #[test]
     fn notice_arguments_keep_the_names_translations_use() {
         assert_eq!(
-            (ARG_MODULE, ARG_KEYS, KEYS_SEPARATOR),
-            ("module", "keys", ", ")
+            (ARG_MODULE, ARG_KEYS, ARG_MORE, KEYS_SEPARATOR),
+            ("module", "keys", "more", ", ")
         );
     }
 

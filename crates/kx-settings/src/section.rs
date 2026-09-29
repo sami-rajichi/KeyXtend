@@ -1,11 +1,14 @@
 //! One registered module's section: its version, the migrations it needs, and repair against the defaults.
 
 use crate::merge::{self, Repair};
-use crate::names::{ARG_KEYS, ARG_MODULE, KEYS_SEPARATOR, VERSION_KEY};
+use crate::names::{ARG_KEYS, ARG_MODULE, ARG_MORE, KEYS_SEPARATOR, MAX_NAMED_KEYS, VERSION_KEY};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
 use std::cmp::Ordering;
 use std::panic;
 use toml::{Table, Value};
+
+/// A notice's arguments, as name and text.
+type Args = Vec<(&'static str, String)>;
 
 /// A registered module's settings.
 #[derive(Debug)]
@@ -70,7 +73,11 @@ fn read(id: ModuleId, spec: &'static SettingsSpec, defaults: Table, raw: Option<
         return Read::quiet(Section::fresh(spec, defaults));
     };
     let Value::Table(mut values) = raw else {
-        return Read::bad(id, Section::fresh(spec, defaults), id.as_str().to_owned());
+        return Read::bad(
+            id,
+            Section::fresh(spec, defaults),
+            reset_args(&[id.as_str()]),
+        );
     };
     let named = key_list(&values, id);
     match age(&values, spec.version) {
@@ -116,24 +123,35 @@ fn strip(mut values: Table) -> Table {
     values
 }
 
-/// The section's setting keys for a notice, or the section name when it has none.
-fn key_list(values: &Table, id: ModuleId) -> String {
+/// Notice arguments naming the section's setting keys, or the section name when it has none.
+fn key_list(values: &Table, id: ModuleId) -> Args {
     let named: Vec<&str> = values
         .keys()
         .map(String::as_str)
         .filter(|k| *k != VERSION_KEY)
         .collect();
     if named.is_empty() {
-        id.as_str().to_owned()
+        reset_args(&[id.as_str()])
     } else {
-        named.join(KEYS_SEPARATOR)
+        reset_args(&named)
     }
 }
 
-/// A notice about the module, with the module argument first.
-fn notice(key: &'static str, id: ModuleId, reset: Option<String>) -> Notice {
+/// Notice arguments naming at most `MAX_NAMED_KEYS` of `keys`, and counting the rest when some are left out.
+fn reset_args(keys: &[&str]) -> Args {
+    let shown = keys.get(..MAX_NAMED_KEYS).unwrap_or(keys);
+    let mut args = vec![(ARG_KEYS, shown.join(KEYS_SEPARATOR))];
+    let more = keys.len() - shown.len();
+    if more > 0 {
+        args.push((ARG_MORE, more.to_string()));
+    }
+    args
+}
+
+/// A notice about the module, with the module argument before `extra`.
+fn notice(key: &'static str, id: ModuleId, extra: Args) -> Notice {
     let mut args = vec![(ARG_MODULE, id.to_string())];
-    args.extend(reset.map(|keys| (ARG_KEYS, keys)));
+    args.extend(extra);
     Notice {
         key,
         module: Some(id),
@@ -151,11 +169,11 @@ impl Read {
         }
     }
 
-    /// A bad section: the defaults, and a reset notice naming `keys`.
-    fn bad(id: ModuleId, section: Section, keys: String) -> Self {
+    /// A bad section: the defaults, and a reset notice with `named`.
+    fn bad(id: ModuleId, section: Section, named: Args) -> Self {
         Self {
             section,
-            notice: Some(notice(keys::SETTINGS_RESET, id, Some(keys))),
+            notice: Some(notice(keys::SETTINGS_RESET, id, named)),
             repaired: true,
         }
     }
@@ -165,7 +183,7 @@ impl Read {
         section.newer = Some(raw);
         Self {
             section,
-            notice: Some(notice(keys::SETTINGS_NEWER, id, None)),
+            notice: Some(notice(keys::SETTINGS_NEWER, id, Vec::new())),
             repaired: false,
         }
     }
@@ -177,9 +195,10 @@ impl Read {
             rejected,
         } = merge::repair(&defaults, user, spec.validate);
         let changes = merge::changes(&effective, &defaults);
-        let reset = (!rejected.is_empty()).then(|| rejected.join(KEYS_SEPARATOR));
+        let names: Vec<&str> = rejected.iter().map(String::as_str).collect();
+        let reset = (!rejected.is_empty()).then(|| reset_args(&names));
         Self {
-            notice: reset.map(|keys| notice(keys::SETTINGS_RESET, id, Some(keys))),
+            notice: reset.map(|named| notice(keys::SETTINGS_RESET, id, named)),
             repaired: !rejected.is_empty(),
             section: Section {
                 spec,

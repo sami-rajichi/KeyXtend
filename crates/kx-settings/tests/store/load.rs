@@ -85,7 +85,7 @@ fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
 
 #[test]
 fn a_pair_that_needs_a_second_pass_survives_two_bad_values() {
-    // Two bad values defeat the leave-one-out step, so only the repeated passes keep `max_ms`.
+    // The unknown key is set aside first, so leaving out `sound` keeps the pair.
     let text = "[hold]\nextra = 1\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
     let (_dir, files) = with_file("twobad", text);
     let (store, report) = open(&files);

@@ -2,6 +2,7 @@
 //! Values are compared and replaced per top-level key.
 
 use kx_module_api::SettingsError;
+use std::collections::BTreeSet;
 use toml::{Table, Value};
 
 /// A section's checker, as in `SettingsSpec::validate`.
@@ -23,23 +24,55 @@ pub(crate) fn with(base: &Table, key: &str, value: Value) -> Table {
     next
 }
 
-/// Lays the user's values over the defaults: all at once, else all but one bad key, else one key at a time.
+/// Lays the user's values over the defaults: all at once, else the keys the defaults know, repaired.
+/// A key the defaults lack is rejected, so the checks grow with the defaults, not with the file.
 pub(crate) fn repair(defaults: &Table, user: Table, validate: Validate) -> Repair {
     let all = over(defaults, &user, None);
     if validate(&all).is_ok() {
-        return Repair {
-            effective: all,
-            rejected: Vec::new(),
-        };
+        return keep_all(all);
     }
-    let one_bad = user.keys().find_map(|bad| {
-        let rest = over(defaults, &user, Some(bad));
+    let order: Vec<String> = user.keys().cloned().collect();
+    let known: Table = (user.into_iter())
+        .filter(|(key, _)| defaults.contains_key(key))
+        .collect();
+    let some_unknown = known.len() < order.len();
+    let known_all = over(defaults, &known, None);
+    let Repair {
+        effective,
+        rejected,
+    } = if some_unknown && validate(&known_all).is_ok() {
+        keep_all(known_all)
+    } else {
+        repair_known(defaults, known, validate)
+    };
+    let refused: BTreeSet<&str> = rejected.iter().map(String::as_str).collect();
+    let rejected = (order.into_iter())
+        .filter(|key| !defaults.contains_key(key) || refused.contains(key.as_str()))
+        .collect();
+    Repair {
+        effective,
+        rejected,
+    }
+}
+
+/// Every user value kept.
+fn keep_all(effective: Table) -> Repair {
+    Repair {
+        effective,
+        rejected: Vec::new(),
+    }
+}
+
+/// Repairs values whose keys the defaults all know: all but one bad key, else one key at a time.
+fn repair_known(defaults: &Table, known: Table, validate: Validate) -> Repair {
+    let one_bad = known.keys().find_map(|bad| {
+        let rest = over(defaults, &known, Some(bad));
         validate(&rest).is_ok().then(|| Repair {
             effective: rest,
             rejected: vec![bad.clone()],
         })
     });
-    one_bad.unwrap_or_else(|| key_by_key(defaults, user, validate))
+    one_bad.unwrap_or_else(|| key_by_key(defaults, known, validate))
 }
 
 /// `defaults` with every user value over them, except the one under `skip`.
@@ -86,30 +119,54 @@ pub(crate) fn changes(effective: &Table, defaults: &Table) -> Table {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::Cell;
 
-    const DEFAULTS: &str = "low = 1\nhigh = 5\nname = \"a\"\n";
+    const DEFAULTS: &str = "low = 1\nhigh = 5\nname = \"a\"\non = true\n";
+
+    /// Unknown keys in the large test, as many as a big hand-edited file could hold.
+    const UNKNOWN: usize = 5000;
+
+    thread_local! {
+        /// Checker calls made on this test's thread.
+        static CALLS: Cell<usize> = const { Cell::new(0) };
+    }
 
     fn table(text: &str) -> Table {
         text.parse().unwrap()
     }
 
+    /// The defaults with `text` laid over them.
+    fn defaults_with(text: &str) -> Table {
+        let mut all = table(DEFAULTS);
+        all.extend(table(text));
+        all
+    }
+
     /// The widest gap the checker allows between `low` and `high`.
     const SPAN: i64 = 10;
 
-    /// Accepts integer `low <= high` at most `SPAN` apart, and a string `name`; nothing else.
+    /// Accepts integer `low <= high` at most `SPAN` apart, a string `name` and a bool `on`; nothing else.
     fn ordered(t: &Table) -> Result<(), SettingsError> {
         let int = |k: &str| t.get(k).and_then(Value::as_integer);
-        let fits = t.len() == 3 && t.get("name").is_some_and(Value::is_str);
+        let typed =
+            t.get("name").is_some_and(Value::is_str) && t.get("on").is_some_and(Value::is_bool);
+        let fits = typed && t.len() == table(DEFAULTS).len();
         match (int("low"), int("high")) {
             (Some(low), Some(high)) if fits && low <= high && high - low <= SPAN => Ok(()),
             _ => Err(SettingsError::Invalid("out of order".into())),
         }
     }
 
+    /// `ordered`, counting each call on this thread.
+    fn counted(t: &Table) -> Result<(), SettingsError> {
+        CALLS.with(|calls| calls.set(calls.get() + 1));
+        ordered(t)
+    }
+
     #[test]
     fn values_valid_only_together_are_all_kept() {
         let got = repair(&table(DEFAULTS), table("low = 20\nhigh = 25"), ordered);
-        assert_eq!(got.effective, table("low = 20\nhigh = 25\nname = \"a\""));
+        assert_eq!(got.effective, defaults_with("low = 20\nhigh = 25"));
         assert!(got.rejected.is_empty());
     }
 
@@ -117,22 +174,50 @@ mod tests {
     fn a_pair_valid_only_together_survives_one_bad_value() {
         let user = table("low = 20\nhigh = 25\nname = 3");
         let got = repair(&table(DEFAULTS), user, ordered);
-        assert_eq!(got.effective, table("low = 20\nhigh = 25\nname = \"a\""));
+        assert_eq!(got.effective, defaults_with("low = 20\nhigh = 25"));
         assert_eq!(got.rejected, ["name"]);
     }
 
     #[test]
     fn a_pair_that_needs_a_second_pass_survives_two_bad_values() {
-        let user = table("low = -1\nhigh = 0\nname = 3\nzed = 1");
+        let user = table("low = -1\nhigh = 0\nname = 3\non = 1");
         let got = repair(&table(DEFAULTS), user, ordered);
-        assert_eq!(got.effective, table("low = -1\nhigh = 0\nname = \"a\""));
+        assert_eq!(got.effective, defaults_with("low = -1\nhigh = 0"));
+        assert_eq!(got.rejected, ["name", "on"]);
+    }
+
+    #[test]
+    fn a_typo_beside_a_pair_valid_only_together_rejects_only_the_typo() {
+        let user = table("low = 20\nhigh = 25\nlwo = 3");
+        let got = repair(&table(DEFAULTS), user, ordered);
+        assert_eq!(got.effective, defaults_with("low = 20\nhigh = 25"));
+        assert_eq!(got.rejected, ["lwo"]);
+    }
+
+    #[test]
+    fn a_typo_and_a_bad_value_beside_a_pair_keep_the_pair() {
+        let user = table("low = 20\nhigh = 25\nname = 3\nzed = 1");
+        let got = repair(&table(DEFAULTS), user, ordered);
+        assert_eq!(got.effective, defaults_with("low = 20\nhigh = 25"));
         assert_eq!(got.rejected, ["name", "zed"]);
+    }
+
+    #[test]
+    fn unknown_keys_never_multiply_the_checks() {
+        let defaults = table(DEFAULTS);
+        let mut user = table("low = 20\nhigh = 25\nname = 3");
+        user.extend((0..UNKNOWN).map(|n| (format!("typo{n}"), Value::Integer(0))));
+        let got = repair(&defaults, user, counted);
+        let calls = CALLS.with(Cell::get);
+        assert!(calls <= 2 * defaults.len() + 2, "{calls} checks");
+        assert_eq!(got.effective, defaults_with("low = 20\nhigh = 25"));
+        assert_eq!(got.rejected.len(), UNKNOWN + 1);
     }
 
     #[test]
     fn a_bad_value_is_rejected_alone() {
         let got = repair(&table(DEFAULTS), table("high = 9\nname = 3"), ordered);
-        assert_eq!(got.effective, table("low = 1\nhigh = 9\nname = \"a\""));
+        assert_eq!(got.effective, defaults_with("high = 9"));
         assert_eq!(got.rejected, ["name"]);
     }
 
@@ -145,7 +230,7 @@ mod tests {
 
     #[test]
     fn changes_leave_out_values_equal_to_their_defaults() {
-        let effective = table("low = 1\nhigh = 9\nname = \"a\"\nextra = true");
+        let effective = defaults_with("high = 9\nextra = true");
         assert_eq!(
             changes(&effective, &table(DEFAULTS)),
             table("high = 9\nextra = true")
@@ -155,6 +240,6 @@ mod tests {
     #[test]
     fn with_sets_one_key_and_keeps_the_rest() {
         let got = with(&table(DEFAULTS), "high", Value::Integer(7));
-        assert_eq!(got, table("low = 1\nhigh = 7\nname = \"a\""));
+        assert_eq!(got, defaults_with("high = 7"));
     }
 }
