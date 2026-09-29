@@ -4,11 +4,11 @@
 
 use std::path::Path;
 
+use kx_test_support::ringstats::{self, FrameReport};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use spike_core::folders;
 use spike_core::hold::Pt;
-use spike_core::ringstats::{self, FrameReport};
 use spike_core::targetlog::Press;
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{HWND, POINT, RECT};

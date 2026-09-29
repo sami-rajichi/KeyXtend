@@ -174,6 +174,7 @@ name = "harness"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-test-support",
  "serde",
  "serde_json",
  "spike-core",
@@ -270,6 +271,20 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "kx-module-api"
+version = "0.0.0"
+
+[[package]]
+name = "kx-test-support"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

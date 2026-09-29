@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 spike-core.workspace = true
+kx-test-support = { path = "../../crates/kx-test-support" }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true

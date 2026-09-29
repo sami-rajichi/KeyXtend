@@ -5,8 +5,8 @@ use std::time::Instant;
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
+use kx_test_support::ringstats::{self, Frames};
 use spike_core::holdcfg::RingTest;
-use spike_core::ringstats::{self, Frames};
 
 use crate::bridge::{config, ms};
 
@@ -87,7 +87,7 @@ impl qobject::RingData {
         let done = r
             .test
             .stats_path()
-            .and_then(|file| ringstats::save(&file, &r.rec.report()));
+            .and_then(|file| ringstats::save(&file, &r.rec.report()).map_err(|e| e.to_string()));
         QString::from(&done.err().unwrap_or_default())
     }
 }
