@@ -24,6 +24,8 @@ use crate::procs;
 
 /// Window class of the main window; the gate runner finds the window by its title.
 const CLASS: PCWSTR = w!("KxsTargetWindow");
+/// Window class of the system edit box.
+const EDIT_CLASS: PCWSTR = w!("EDIT");
 /// Id of our subclass on the edit box.
 const SUBCLASS_ID: usize = 1;
 /// `WM_SETFONT` flag: redraw with the new font now.
@@ -151,7 +153,7 @@ fn create_edit(main: HWND, inst: HINSTANCE, password: bool) -> Result<HWND, Star
     let edit = unsafe {
         CreateWindowExW(
             WS_EX_CLIENTEDGE,
-            w!("EDIT"),
+            EDIT_CLASS,
             w!(""),
             style,
             0,

@@ -1,0 +1,50 @@
+[package]
+name = "kx-gates"
+description = "Test tool: the Windows gate runner that drives real apps and prints each gate's numbers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kx-test-support = { path = "../../crates/kx-test-support" }
+kx-target-window = { path = "../../tools/kx-target-window" }
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+# The gates are Windows-only. spike-core is the Qt test face's shared code, until later phases aim the gates at the product.
+[target.'cfg(windows)'.dependencies]
+spike-core = { path = "../../spike/core" }
+windows = { workspace = true, features = [
+    "ApplicationModel_DataTransfer",
+    "Foundation",
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_Console",
+    "Win32_System_DataExchange",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_Performance",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Accessibility",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+embed-manifest.workspace = true
