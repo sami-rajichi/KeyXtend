@@ -104,16 +104,19 @@ impl Host for FakeHost {
     }
 }
 
-/// A bus core that calls every handler whatever the event type.
+/// A bus core that calls every handler whatever the event type, with no lock held while they run.
 /// That way the typed wrappers' downcast guard is exercised.
 #[derive(Default)]
 pub struct FakeCore(Mutex<Handlers>);
 
+type SharedNotify = Arc<dyn Fn(&(dyn Any + Send + Sync)) + Send + Sync>;
+type SharedIntercept = Arc<dyn Fn(&mut (dyn Any + Send + Sync)) -> Flow + Send + Sync>;
+
 #[derive(Default)]
 struct Handlers {
     last: u64,
-    notify: Vec<(SubscriptionId, NotifyFn)>,
-    intercept: Vec<(SubscriptionId, i32, InterceptFn)>,
+    notify: Vec<(SubscriptionId, SharedNotify)>,
+    intercept: Vec<(SubscriptionId, i32, SharedIntercept)>,
 }
 
 impl Handlers {
@@ -137,16 +140,28 @@ impl FakeCore {
 
 impl BusCore for FakeCore {
     fn publish(&self, _: TypeId, _: &'static str, event: &(dyn Any + Send + Sync)) {
-        for (_, handler) in &self.lock().notify {
+        let chain: Vec<_> = self
+            .lock()
+            .notify
+            .iter()
+            .map(|(_, h)| Arc::clone(h))
+            .collect();
+        for handler in chain {
             handler(event);
         }
     }
 
     fn intercept(&self, _: TypeId, _: &'static str, event: &mut (dyn Any + Send + Sync)) -> Flow {
-        let handlers = self.lock();
-        let mut chain: Vec<_> = handlers.intercept.iter().collect();
-        chain.sort_by_key(|(_, order, _)| *order);
-        for (_, _, handler) in chain {
+        let mut chain: Vec<_> = {
+            let handlers = self.lock();
+            handlers
+                .intercept
+                .iter()
+                .map(|(_, o, h)| (*o, Arc::clone(h)))
+                .collect()
+        };
+        chain.sort_by_key(|(order, _)| *order);
+        for (_, handler) in chain {
             if handler(event) == Flow::Stop {
                 return Flow::Stop;
             }
@@ -157,7 +172,7 @@ impl BusCore for FakeCore {
     fn subscribe(&self, _: TypeId, _: &'static str, handler: NotifyFn) -> SubscriptionId {
         let mut handlers = self.lock();
         let id = handlers.next_id();
-        handlers.notify.push((id, handler));
+        handlers.notify.push((id, Arc::from(handler)));
         id
     }
 
@@ -170,7 +185,7 @@ impl BusCore for FakeCore {
     ) -> SubscriptionId {
         let mut handlers = self.lock();
         let id = handlers.next_id();
-        handlers.intercept.push((id, order, handler));
+        handlers.intercept.push((id, order, Arc::from(handler)));
         id
     }
 

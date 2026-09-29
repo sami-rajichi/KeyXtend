@@ -26,7 +26,8 @@ pub trait Host {
     /// Stores `service` under `id` for other modules, with the capability `cap` that gates it.
     ///
     /// # Errors
-    /// `ServiceError::AlreadyProvided` when another module provides `id`.
+    /// `ServiceError::AlreadyProvided` when another module provides `id`, or
+    /// `ServiceError::NotGranted` when the provider lacks the capability `cap`.
     fn provide(
         &mut self,
         id: ServiceId,

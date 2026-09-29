@@ -3,7 +3,8 @@
 use crate::SettingsError;
 use serde::{Serialize, de::DeserializeOwned};
 
-/// A module's settings type: read with serde, plus rules serde cannot express.
+/// A module's settings type: read and written with serde (the Settings window writes values back),
+/// plus rules serde cannot express.
 ///
 /// Mark the type `#[serde(deny_unknown_fields)]`, or a misspelt key passes silently.
 pub trait Settings: Serialize + DeserializeOwned {
