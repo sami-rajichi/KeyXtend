@@ -161,7 +161,7 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
 
 /// Moves a settings file that reads well to the previous copy, and says whether it moved.
 ///
-/// A file that turned damaged goes to the broken copy instead, so it never replaces a good previous copy.
+/// A damaged file goes to the broken copy instead, so it never replaces a good previous copy.
 fn keep_previous(files: &Files) -> Result<bool, SaveError> {
     match read_table(&files.settings) {
         Ok(_) => {}

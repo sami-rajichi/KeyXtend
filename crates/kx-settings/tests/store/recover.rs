@@ -1,4 +1,4 @@
-//! Recovery at the store level: a restored or defaulted start needs a save, and its notices come first.
+//! Recovery at the store level: a restored or defaulted start needs a save, and file notices come first.
 
 use crate::spec::{DEFAULTS, HOLD, defaults_with, folder, open, reset, table, with_file};
 use kx_module_api::{Notice, keys};

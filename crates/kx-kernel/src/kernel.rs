@@ -268,3 +268,6 @@ impl Drop for Kernel {
         self.stop_all();
     }
 }
+
+#[cfg(test)]
+mod tests;
