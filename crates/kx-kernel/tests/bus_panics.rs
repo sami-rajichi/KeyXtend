@@ -1,44 +1,24 @@
 //! Contained handler panics: later handlers still run, and one warning names only the handler.
 //! Setup runs once: it silences only the planned panics and captures every log line globally.
 
+#[allow(dead_code, reason = "this binary uses only part of the shared capture")]
+#[path = "common/capture.rs"]
+mod capture;
+
+use capture::Line;
 use kx_kernel::bus::KernelBus;
 use kx_module_api::{Bus, BusCore, Event, Flow, Subscription};
 use std::any::{Any, TypeId};
-use std::collections::BTreeMap;
-use std::fmt;
 use std::panic;
-use std::sync::{Arc, Mutex, Once, PoisonError};
-use tracing::field::{Field, Visit};
-use tracing::span::{Attributes, Id, Record};
-use tracing::{Level, Metadata, Subscriber};
+use std::sync::{Arc, Mutex, PoisonError};
+use tracing::Level;
 
 /// The payload of every planned handler panic; it must never reach a log line.
 const PLANNED: &str = "secret planned failure";
 
-/// The id the capture hands every span; the bus opens none.
-const SPAN_ID: u64 = 1;
-
-/// One captured log line: its level and its fields by name.
-type Line = (Level, BTreeMap<&'static str, String>);
-
-static SETUP: Once = Once::new();
-static LINES: Mutex<Vec<Line>> = Mutex::new(Vec::new());
-
-/// Installs the quiet hook and the global capture before any test logs, so no callsite misses it.
+/// Installs the quiet hook and the global capture before any test logs.
 fn setup() {
-    SETUP.call_once(|| {
-        let default = panic::take_hook();
-        panic::set_hook(Box::new(move |info| {
-            if info.payload().downcast_ref::<&str>() != Some(&PLANNED) {
-                default(info);
-            }
-        }));
-        let installed = tracing::subscriber::set_global_default(Capture);
-        assert!(
-            installed.is_ok(),
-            "only this setup sets the global subscriber"
-        );
-    });
+    capture::install(|payload| payload.downcast_ref::<&str>() == Some(&PLANNED));
 }
 
 fn fail() -> ! {
@@ -102,50 +82,6 @@ fn a_panicking_interceptor_counts_as_continue() {
     assert_eq!(trace.0, ["before", "after"]);
 }
 
-/// The global subscriber: it keeps every log line in `LINES`.
-struct Capture;
-
-#[derive(Default)]
-struct Fields(BTreeMap<&'static str, String>);
-
-impl Visit for Fields {
-    fn record_str(&mut self, field: &Field, value: &str) {
-        self.0.insert(field.name(), value.to_owned());
-    }
-
-    fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        self.0.insert(field.name(), format!("{value:?}"));
-    }
-}
-
-impl Subscriber for Capture {
-    fn enabled(&self, _: &Metadata<'_>) -> bool {
-        true
-    }
-
-    fn new_span(&self, _: &Attributes<'_>) -> Id {
-        Id::from_u64(SPAN_ID)
-    }
-
-    fn record(&self, _: &Id, _: &Record<'_>) {}
-
-    fn record_follows_from(&self, _: &Id, _: &Id) {}
-
-    fn event(&self, event: &tracing::Event<'_>) {
-        let mut fields = Fields::default();
-        event.record(&mut fields);
-        let line = (*event.metadata().level(), fields.0);
-        LINES
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(line);
-    }
-
-    fn enter(&self, _: &Id) {}
-
-    fn exit(&self, _: &Id) {}
-}
-
 #[test]
 fn a_panic_logs_one_warning_naming_only_the_event_and_the_id() {
     setup();
@@ -153,7 +89,7 @@ fn a_panic_logs_one_warning_naming_only_the_event_and_the_id() {
     let fails = Box::new(|_: &(dyn Any + Send + Sync)| fail());
     let id = core.subscribe(TypeId::of::<Probe>(), Probe::NAME, fails);
     core.publish(TypeId::of::<Probe>(), Probe::NAME, &Probe);
-    let lines = LINES.lock().unwrap().clone();
+    let lines = capture::lines();
     let probe = |(_, fields): &&Line| fields.get("event").is_some_and(|e| e == Probe::NAME);
     let probes: Vec<&Line> = lines.iter().filter(probe).collect();
     let [(level, fields)] = probes.as_slice() else {

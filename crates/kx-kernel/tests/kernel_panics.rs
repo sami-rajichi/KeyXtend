@@ -1,11 +1,9 @@
 //! A panicking start or stop is contained: that module fails or stops and the rest keep running.
 //! Setup runs once: it hides only the sample panics and captures every log line globally.
 
-#![allow(
-    clippy::unwrap_used,
-    reason = "these tests fail on a broken setup, which is what a failed unwrap reports"
-)]
-
+#[allow(dead_code, reason = "this binary uses only part of the shared capture")]
+#[path = "common/capture.rs"]
+mod capture;
 #[allow(dead_code, reason = "this binary uses only part of the shared samples")]
 #[path = "kernel/record.rs"]
 mod record;
@@ -16,19 +14,15 @@ mod rig;
 #[path = "kernel/samples.rs"]
 mod samples;
 
+use capture::{Fields, Line};
 use kx_module_api::ModuleState::{Active, Failed, Stopped};
 use kx_module_api::{ModuleId, ServiceKey, SettingsError};
 use record::{Did, Mode, SamplePanic};
 use rig::{Rig, failed};
 use samples::{Alpha, FAILURE, LOOSE_SPEC, Ping, sample};
-use std::collections::BTreeMap;
-use std::fmt;
+use std::any::Any;
 use std::fs;
-use std::panic;
-use std::sync::{Mutex, Once, PoisonError};
-use tracing::field::{Field, Visit};
-use tracing::span::{Attributes, Id, Record};
-use tracing::{Level, Metadata, Subscriber};
+use tracing::Level;
 
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
@@ -38,29 +32,10 @@ const WILD: ModuleId = ModuleId::new("wild");
 const LOOSE: ModuleId = ModuleId::new("loose");
 /// A file value that no log line may ever show.
 const FILE_VALUE: &str = "hunter2";
-/// The id the capture hands every span; the kernel opens none.
-const SPAN_ID: u64 = 1;
-
-/// A log line's fields by name.
-type Fields = BTreeMap<&'static str, String>;
-/// One captured log line: its level and its fields.
-type Line = (Level, Fields);
-
-static SETUP: Once = Once::new();
-static LINES: Mutex<Vec<Line>> = Mutex::new(Vec::new());
 
 /// Installs the quiet hook and the global capture before any test logs.
 fn setup() {
-    SETUP.call_once(|| {
-        let usual = panic::take_hook();
-        panic::set_hook(Box::new(move |info| {
-            if !info.payload().is::<SamplePanic>() {
-                usual(info);
-            }
-        }));
-        let installed = tracing::subscriber::set_global_default(Capture);
-        assert!(installed.is_ok(), "only this setup sets the subscriber");
-    });
+    capture::install(<dyn Any + Send>::is::<SamplePanic>);
 }
 
 #[test]
@@ -98,7 +73,7 @@ fn a_failed_start_logs_one_warning_with_only_the_module_and_the_error() {
     rig.add(sample(LOUD).mode(Mode::Fail));
     rig.add(sample(WILD).mode(Mode::Panic));
     rig.kernel.boot().unwrap();
-    let lines = LINES.lock().unwrap().clone();
+    let lines = capture::lines();
     let warns = |id: ModuleId| -> Vec<Fields> {
         let about = |f: &Fields| f.get("module").is_some_and(|m| m == id.as_str());
         let warn = |(level, f): &Line| (*level == Level::WARN && about(f)).then(|| f.clone());
@@ -124,7 +99,7 @@ fn a_settings_failure_logs_its_kind_and_never_the_file_value() {
     rig.add(sample(LOOSE).settings(&LOOSE_SPEC));
     rig.kernel.boot().unwrap();
     assert_eq!(rig.state(LOOSE), Some(Failed));
-    let lines = LINES.lock().unwrap().clone();
+    let lines = capture::lines();
     let about = |(_, f): &&Line| f.get("module").is_some_and(|m| m == LOOSE.as_str());
     let [(_, fields)] = lines.iter().filter(about).collect::<Vec<_>>()[..] else {
         panic!("expected one line about {LOOSE}: {lines:?}");
@@ -132,45 +107,4 @@ fn a_settings_failure_logs_its_kind_and_never_the_file_value() {
     let kind = SettingsError::Parse(String::new()).kind();
     assert_eq!(fields["error"], kind);
     assert!(!format!("{lines:?}").contains(FILE_VALUE));
-}
-
-/// The global subscriber: it keeps every log line in `LINES`.
-struct Capture;
-
-/// Collects one event's fields.
-#[derive(Default)]
-struct Recorder(Fields);
-
-impl Visit for Recorder {
-    fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        self.0.insert(field.name(), format!("{value:?}"));
-    }
-}
-
-impl Subscriber for Capture {
-    fn enabled(&self, _: &Metadata<'_>) -> bool {
-        true
-    }
-
-    fn new_span(&self, _: &Attributes<'_>) -> Id {
-        Id::from_u64(SPAN_ID)
-    }
-
-    fn record(&self, _: &Id, _: &Record<'_>) {}
-
-    fn record_follows_from(&self, _: &Id, _: &Id) {}
-
-    fn event(&self, event: &tracing::Event<'_>) {
-        let mut fields = Recorder::default();
-        event.record(&mut fields);
-        let line = (*event.metadata().level(), fields.0);
-        LINES
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(line);
-    }
-
-    fn enter(&self, _: &Id) {}
-
-    fn exit(&self, _: &Id) {}
 }

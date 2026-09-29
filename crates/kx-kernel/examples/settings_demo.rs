@@ -1,6 +1,5 @@
 //! Boots two sample modules over the real settings store, in a folder given on the command line.
 //! Run: `cargo run -p kx-kernel --example settings_demo -- <folder> [set [ms]]`.
-//! A repair from the previous copy needs two saves with different values first.
 
 #![forbid(unsafe_code)]
 
@@ -210,6 +209,11 @@ impl Unsaved {
     fn happened(&self) -> bool {
         self.failed.load(Ordering::Relaxed)
     }
+
+    /// Forgets an earlier failure, so `happened` speaks only of what follows.
+    fn clear(&self) {
+        self.failed.store(false, Ordering::Relaxed);
+    }
 }
 
 /// The settings file text, or `None` when it is missing or unreadable.
@@ -221,6 +225,7 @@ fn text(files: &Files) -> Option<String> {
 fn save(kernel: &mut Kernel, files: &Files, ms: i64, unsaved: &Unsaved) -> Result<(), String> {
     let before = text(files);
     let value = toml::Value::Integer(ms);
+    unsaved.clear();
     let set = kernel.set_setting(MOUSE, CHANGED_KEY, value);
     set.map_err(|e| e.to_string())?;
     if text(files) != before {

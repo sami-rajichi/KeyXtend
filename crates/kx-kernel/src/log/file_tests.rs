@@ -1,3 +1,5 @@
+//! The log file: rotation, the size cap, thread safety and the errors of opening it.
+
 use super::tests::SECRET;
 use super::*;
 use kx_test_support::tempdir::TempDir;
@@ -32,6 +34,25 @@ fn an_existing_log_becomes_the_previous_log_and_the_new_log_is_empty() {
     let _log = LogFile::open(&files, u64::MAX).unwrap();
     assert_eq!(read(&files.log_previous), "last run");
     assert_eq!(read(&files.log), "");
+}
+
+#[test]
+fn a_file_in_place_of_the_logs_folder_is_an_error() {
+    let dir = TempDir::new("log-nofolder").unwrap();
+    let files = Files::new(dir.path());
+    fs::write(&files.logs, "not a folder").unwrap();
+    assert!(LogFile::open(&files, u64::MAX).is_err());
+}
+
+#[test]
+fn a_last_log_that_cannot_move_is_an_error_and_stays() {
+    let dir = TempDir::new("log-nomove").unwrap();
+    let files = Files::new(dir.path());
+    fs::create_dir_all(&files.log_previous).unwrap();
+    fs::write(files.log_previous.join("blocker"), "x").unwrap();
+    fs::write(&files.log, "last run").unwrap();
+    assert!(LogFile::open(&files, u64::MAX).is_err());
+    assert_eq!(read(&files.log), "last run");
 }
 
 #[test]

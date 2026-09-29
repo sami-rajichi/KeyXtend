@@ -1,10 +1,10 @@
 //! Settings through the kernel: changes saved alone, restarts, unwritable folders and every notice.
 
-use crate::record::{Did, Mode};
+use crate::record::{Did, Mode, Switch};
 use crate::rig::{Rig, Seen, failed};
-use crate::samples::{Alpha, DEFAULT_LEVEL, LEVEL_SPEC, MAX_LEVEL, sample};
+use crate::samples::{Alpha, DEFAULT_LEVEL, LEVEL_KEY, LEVEL_SPEC, MAX_LEVEL, NEW_LEVEL, sample};
 use kx_kernel::{KERNEL, KernelError, Phase};
-use kx_module_api::ModuleState::Active;
+use kx_module_api::ModuleState::{Active, Failed};
 use kx_module_api::{ModuleId, ServiceKey, SettingsChanged, keys};
 use kx_settings::{ARG_KEYS, StoreError};
 use std::fs;
@@ -13,8 +13,6 @@ use toml::Value;
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
 const C: ModuleId = ModuleId::new("c");
-const LEVEL: &str = "level";
-const NEW_LEVEL: i64 = 5;
 
 /// A tuned by its level, B needing A's service, and C on its own.
 fn tuned() -> Rig {
@@ -26,7 +24,7 @@ fn tuned() -> Rig {
 }
 
 fn set(rig: &mut Rig, level: i64) -> Result<(), KernelError> {
-    rig.kernel.set_setting(A, LEVEL, Value::Integer(level))
+    rig.kernel.set_setting(A, LEVEL_KEY, Value::Integer(level))
 }
 
 fn count(rig: &Rig, key: &str) -> usize {
@@ -55,6 +53,30 @@ fn a_setting_is_saved_alone_announced_and_seen_after_a_restart() {
     ];
     assert_eq!(rig.log.all(), restart, "C keeps running");
     assert!([A, B, C].iter().all(|&m| rig.state(m) == Some(Active)));
+}
+
+#[test]
+fn a_provider_that_fails_after_a_setting_change_fails_its_dependents_and_try_again_recovers() {
+    let (mut rig, a) = (Rig::new(), Switch::new(Mode::Succeed));
+    rig.add(
+        sample(A)
+            .provides(&[Alpha::ID])
+            .settings(&LEVEL_SPEC)
+            .switch(&a),
+    );
+    rig.add(sample(B).requires(&[Alpha::ID]));
+    rig.add(sample(C));
+    rig.kernel.boot().unwrap();
+    a.set(Mode::Fail);
+    set(&mut rig, NEW_LEVEL).unwrap();
+    let states = [A, B, C].map(|m| rig.state(m));
+    assert_eq!(states, [Some(Failed), Some(Failed), Some(Active)]);
+    assert_eq!(rig.notices(), [failed(A), failed(B)]);
+    a.set(Mode::Succeed);
+    rig.log.clear();
+    rig.kernel.retry(A).unwrap();
+    assert!([A, B, C].iter().all(|&m| rig.state(m) == Some(Active)));
+    assert!(rig.log.all().contains(&Did::Saw(A, NEW_LEVEL)));
 }
 
 #[test]
