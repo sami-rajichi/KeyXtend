@@ -1,15 +1,14 @@
-//! The QPC clock in microseconds, shared by target-window and kx-gates so G2 times match.
+//! The QPC time in microseconds for kx-gates, converted by the product's `ticks_to_us` so it matches kx-target-window's log.
 
+use kx_platform_windows::ticks_to_us;
 use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 
-/// Microseconds per second.
-const US: i128 = 1_000_000;
 /// Microseconds per millisecond.
 pub const US_PER_MS: f64 = 1000.0;
 
-/// `count` ticks at `freq` ticks per second, in microseconds.
+/// `count` ticks at `freq` ticks per second, in signed microseconds, stopping at the largest.
 fn to_us(count: i64, freq: i64) -> i64 {
-    (i128::from(count) * US / i128::from(freq.max(1))) as i64
+    i64::try_from(ticks_to_us(count, freq)).unwrap_or(i64::MAX)
 }
 
 /// QPC time in microseconds.
@@ -32,5 +31,16 @@ mod tests {
         assert_eq!(to_us(10_000_000, 10_000_000), 1_000_000);
         assert_eq!(to_us(i64::MAX, 10_000_000), i64::MAX / 10);
         assert_eq!(to_us(5, 0), 5_000_000);
+        assert_eq!(to_us(i64::MAX, 1), i64::MAX);
+    }
+
+    #[test]
+    fn now_us_is_on_the_product_clock() {
+        use kx_module_api::Clock;
+        let clock = kx_platform_windows::QpcClock::new().unwrap();
+        let before = clock.now().as_us();
+        let now = now_us().unsigned_abs();
+        let after = clock.now().as_us();
+        assert!(before <= now && now <= after, "{before} {now} {after}");
     }
 }

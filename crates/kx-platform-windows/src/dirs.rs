@@ -43,14 +43,14 @@ mod os {
     /// `PlatformError::LocalData` when Windows does not name it.
     #[allow(unsafe_code, reason = "SHGetKnownFolderPath, then frees its string.")]
     pub fn local_data() -> Result<PathBuf, PlatformError> {
-        // SAFETY: Windows allocates the returned string; it is copied once, then freed once with CoTaskMemFree.
-        unsafe {
-            let p = SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_DEFAULT, None)
-                .map_err(|e| PlatformError::LocalData(e.into()))?;
-            let path = OsString::from_wide(p.as_wide());
-            CoTaskMemFree(Some(p.0.cast_const().cast()));
-            Ok(PathBuf::from(path))
-        }
+        // SAFETY: a plain query with a known-folder id; Windows allocates the string it returns.
+        let p = unsafe { SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_DEFAULT, None) }
+            .map_err(|e| PlatformError::LocalData(e.into()))?;
+        // SAFETY: `p` is the NUL-terminated string Windows just returned, still unfreed.
+        let path = OsString::from_wide(unsafe { p.as_wide() });
+        // SAFETY: frees the string Windows allocated, once; `path` is a copy and `p` is not used again.
+        unsafe { CoTaskMemFree(Some(p.0.cast_const().cast())) };
+        Ok(PathBuf::from(path))
     }
 
     /// The folders of the running program.

@@ -1,6 +1,9 @@
 //! The Windows adapter: the only product crate that calls Win32.
 //! OS code is Windows-only; its pure maths builds and tests on every system.
 
+// Backstop to the workspace lint: each unsafe block still needs its own scoped allow.
+#![deny(unsafe_code)]
+
 pub mod clock;
 #[cfg(windows)]
 pub mod com;

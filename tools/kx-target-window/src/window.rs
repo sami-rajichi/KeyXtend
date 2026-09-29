@@ -51,7 +51,7 @@ pub enum StartError {
     Windows(#[from] windows::core::Error),
     /// The QPC clock could not start.
     #[error(transparent)]
-    Clock(#[from] PlatformError),
+    Clock(PlatformError),
     /// The edit box could not be subclassed.
     #[error("SetWindowSubclass failed: characters would not be logged")]
     Subclass,
@@ -60,7 +60,7 @@ pub enum StartError {
 /// Loads the settings and shows the window until it is closed.
 pub fn run() -> Result<(), StartError> {
     let cfg = config::load()?;
-    let clock = QpcClock::new()?;
+    let clock = QpcClock::new().map_err(StartError::Clock)?;
     procs::start_log(open_log(&cfg.log)?, clock);
     let password = std::env::args().any(|a| a == cfg.password_arg);
     procs::set_password(password);
