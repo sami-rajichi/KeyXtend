@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["xtask"]
+members = ["crates/kx-module-api", "xtask"]
 resolver = "3"
 
 [workspace.package]
