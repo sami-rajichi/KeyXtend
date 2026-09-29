@@ -27,8 +27,25 @@ pub fn stamp() -> u64 {
 
 /// A seed from the clock, for runs without `--seed`.
 pub fn clock_seed() -> u64 {
-    since_epoch().as_nanos() as u64
+    u64::try_from(since_epoch().as_nanos()).unwrap_or(u64::MAX)
 }
+
+/// Prints one progress or result line on stdout.
+#[allow(
+    clippy::print_stdout,
+    reason = "Results and progress on stdout are this tool's output."
+)]
+pub fn line(args: std::fmt::Arguments<'_>) {
+    println!("{args}");
+}
+
+/// Like `println!`, through the one place that may print.
+macro_rules! say {
+    ($($arg:tt)*) => {
+        $crate::out::line(format_args!($($arg)*))
+    };
+}
+pub(crate) use say;
 
 /// Creates the out folder and returns it as a plain absolute path.
 pub fn out_dir(dir: &Path) -> Result<PathBuf, String> {

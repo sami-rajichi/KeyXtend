@@ -1,4 +1,4 @@
-//! G6 scroll routes: UI Automation's ScrollPattern, a posted wheel message, and a SendInput wheel.
+//! G6 scroll routes: UI Automation's `ScrollPattern`, a posted wheel message, and a `SendInput` wheel.
 #![cfg(windows)]
 
 use spike_core::hold::{Act, Pt};
@@ -15,6 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::probecfg::G6;
+use crate::stats;
 use crate::{hookio, mouse, win};
 
 /// Bytes per screen pixel in a picture.
@@ -80,11 +81,11 @@ impl Dir {
 /// A way to scroll a window that is not under the pointer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
-    /// UI Automation's ScrollPattern.
+    /// UI Automation's `ScrollPattern`.
     Uia,
     /// A wheel message posted to the window at the target.
     Post,
-    /// A SendInput wheel, with the pointer moved to the target and back.
+    /// A `SendInput` wheel, with the pointer moved to the target and back.
     Send,
 }
 
@@ -102,15 +103,21 @@ impl Route {
     }
 }
 
+/// The low 16 bits of `n`, which is all a message word keeps.
+fn low_word(n: i32) -> u16 {
+    let [lo, hi, ..] = n.to_le_bytes();
+    u16::from_le_bytes([lo, hi])
+}
+
 /// A wheel message's wParam: the turn in the high word, no keys held in the low word.
 pub fn wheel_wparam(delta: i32) -> usize {
-    usize::from(delta as i16 as u16) << WORD_BITS
+    usize::from(low_word(delta)) << WORD_BITS
 }
 
 /// A screen point as a message lParam: x in the low word, y in the high word.
 pub fn point_lparam(p: Pt) -> isize {
-    // Each word keeps the low 16 bits of its coordinate, as the message wants.
-    ((p.y as u16 as isize) << WORD_BITS) | (p.x as u16 as isize)
+    let words = (usize::from(low_word(p.y)) << WORD_BITS) | usize::from(low_word(p.x));
+    words.cast_signed()
 }
 
 /// Posts wheel messages to the window at `p`, which must be `ours` or inside it; the pointer stays put.
@@ -138,7 +145,7 @@ fn post(ours: HWND, p: Pt, dir: Dir, g: &G6) -> Result<(), String> {
     Ok(())
 }
 
-/// Turns the wheel at `p` with SendInput: the pointer visits `p`, then goes back to `rest`.
+/// Turns the wheel at `p` with `SendInput`: the pointer visits `p`, then goes back to `rest`.
 fn send(p: Pt, rest: Pt, dir: Dir, g: &G6) -> Result<(), String> {
     let desk = win::desktop();
     let flags = if dir.sideways() {
@@ -154,7 +161,7 @@ fn send(p: Pt, rest: Pt, dir: Dir, g: &G6) -> Result<(), String> {
     inject::send(&inputs)
 }
 
-/// Scrolls window `ours` by `route` in `dir` at `p`; `sp` is the ScrollPattern there, if any.
+/// Scrolls window `ours` by `route` in `dir` at `p`; `sp` is the `ScrollPattern` there, if any.
 pub fn act(
     ours: HWND,
     route: Route,
@@ -191,7 +198,7 @@ pub fn changed_share(a: &[u8], b: &[u8]) -> Option<f64> {
         .iter()
         .zip(b.as_chunks::<PIXEL>().0);
     let changed = pairs.filter(|(x, y)| x != y).count();
-    Some(changed as f64 / (a.len() / PIXEL) as f64)
+    Some(stats::ratio(changed, a.len() / PIXEL))
 }
 
 /// True when UIA's percents moved the way `dir` scrolls; a missing or "cannot scroll" read never counts.

@@ -3,6 +3,8 @@
 
 use spike_core::legend;
 
+use crate::stats;
+
 /// Tatweel only stretches a word.
 const TATWEEL: char = '\u{0640}';
 /// Arabic letter forms that transcripts write either way: hamza on alef, madda, alef maqsura, ta marbuta.
@@ -42,7 +44,7 @@ pub fn words(s: &str) -> Vec<String> {
 /// Word error rate of `heard` against `reference`: word edits over reference words; `None` for an empty reference.
 pub fn wer(reference: &str, heard: &str) -> Option<f64> {
     let (r, h) = (words(reference), words(heard));
-    (!r.is_empty()).then(|| distance(&r, &h) as f64 / r.len() as f64)
+    (!r.is_empty()).then(|| stats::ratio(distance(&r, &h), r.len()))
 }
 
 /// Fewest word insertions, deletions and substitutions that turn `a` into `b`.

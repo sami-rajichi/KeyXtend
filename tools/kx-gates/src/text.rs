@@ -21,7 +21,7 @@ pub struct Charsets {
     pub lam_alef: String,
     /// Arabic diacritics, placed only after a letter.
     pub harakat: String,
-    /// Characters typed with AltGr.
+    /// Characters typed with `AltGr`.
     pub altgr: String,
     /// How often each group is picked.
     pub weights: Weights,
@@ -118,7 +118,7 @@ impl Charsets {
     fn pick_group(&self, rng: &mut Rng) -> Group {
         let groups = self.groups();
         let total: u32 = groups.iter().map(|(_, w)| w).sum();
-        let mut roll = rng.below(total as usize) as u32;
+        let mut roll = u32::try_from(rng.below(total as usize)).unwrap_or_default();
         for (group, weight) in groups {
             if roll < weight {
                 return group;

@@ -6,6 +6,25 @@ use crate::tlog::Unit;
 pub use kx_test_support::pct::{P50, P99, percentile};
 pub use spike_core::clock::US_PER_MS;
 
+/// Microseconds per millisecond, as a whole number.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "The value is the whole number 1000."
+)]
+pub const US_PER_MS_INT: i64 = US_PER_MS as i64;
+
+/// `us` microseconds in milliseconds.
+#[allow(clippy::cast_precision_loss, reason = "Times are far below 2^53 us.")]
+pub fn ms(us: i64) -> f64 {
+    us as f64 / US_PER_MS
+}
+
+/// `part` over `whole`; the counts are far below 2^53.
+#[allow(clippy::cast_precision_loss, reason = "Counts are far below 2^53.")]
+pub fn ratio(part: usize, whole: usize) -> f64 {
+    part as f64 / whole as f64
+}
+
 /// Percentiles reported by G2 and G5: name in the results, and rank (0-100).
 pub const PERCENTILES: [(&str, f64); 3] = [("p50", P50), ("p95", 95.0), ("p99", P99)];
 
@@ -66,13 +85,9 @@ fn find(click: &Click, log: &[Unit], from: usize, end_us: i64) -> Option<usize> 
 
 /// The `PERCENTILES` of the matched latencies, in ms.
 pub fn summary_ms(latencies: &[Option<i64>]) -> [(&'static str, Option<f64>); PERCENTILES.len()] {
-    let mut ms: Vec<f64> = latencies
-        .iter()
-        .flatten()
-        .map(|&us| us as f64 / US_PER_MS)
-        .collect();
-    ms.sort_by(f64::total_cmp);
-    PERCENTILES.map(|(name, p)| (name, percentile(&ms, p)))
+    let mut times: Vec<f64> = latencies.iter().flatten().map(|&us| ms(us)).collect();
+    times.sort_by(f64::total_cmp);
+    PERCENTILES.map(|(name, p)| (name, percentile(&times, p)))
 }
 
 #[cfg(test)]

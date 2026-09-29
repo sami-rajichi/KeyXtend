@@ -1,4 +1,4 @@
-//! Window helpers: list, find, describe, bring to front and close; plus polling until something happens.
+//! Window helpers: list, describe, query, bring to front and close; plus polling until something happens.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -11,9 +11,8 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
-    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindow,
-    IsWindowVisible, PostMessageW, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE,
-    WindowFromPoint,
+    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindowVisible,
+    PostMessageW, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
 
@@ -22,7 +21,16 @@ use crate::config::{Keys, Timing};
 /// Longest window title or class we read.
 const TEXT_CAP: usize = 512;
 /// Longest program path we read: the Windows long-path limit.
-const PATH_CAP: usize = 32_768;
+const PATH_CAP: u32 = 32_768;
+
+/// `size_of::<T>()` as the `u32` that Win32 structs and calls take.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "Win32 structs are far smaller than 4 GiB."
+)]
+pub const fn size32<T>() -> u32 {
+    size_of::<T>() as u32
+}
 
 /// Sleeps `ms` milliseconds.
 pub fn sleep_ms(ms: u64) {
@@ -62,7 +70,7 @@ pub fn top_windows() -> Vec<HWND> {
     }
     let mut found: Vec<HWND> = Vec::new();
     // SAFETY: the callback only touches `found`, which outlives the call.
-    let _ = unsafe { EnumWindows(Some(collect), LPARAM(&mut found as *mut _ as isize)) };
+    let _ = unsafe { EnumWindows(Some(collect), LPARAM((&raw mut found) as isize)) };
     found
 }
 
@@ -70,9 +78,9 @@ pub fn top_windows() -> Vec<HWND> {
 #[allow(unsafe_code, reason = "`v` is a local of the needed size.")]
 pub fn cloaked(hwnd: HWND) -> bool {
     let mut v = 0u32;
-    let size = size_of::<u32>() as u32;
     // SAFETY: `v` is a local of the size the attribute needs.
-    let got = unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut v).cast(), size) };
+    let got =
+        unsafe { DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut v).cast(), size32::<u32>()) };
     got.is_ok() && v != 0
 }
 
@@ -126,7 +134,7 @@ pub fn program_name(hwnd: HWND) -> Option<String> {
 pub fn owner(hwnd: HWND) -> (u32, u32) {
     let mut pid = 0;
     // SAFETY: plain query into a local.
-    let thread = unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+    let thread = unsafe { GetWindowThreadProcessId(hwnd, Some(&raw mut pid)) };
     (pid, thread)
 }
 
@@ -134,8 +142,8 @@ pub fn owner(hwnd: HWND) -> (u32, u32) {
 #[allow(unsafe_code, reason = "Our process handle, closed before returning.")]
 pub fn program(hwnd: HWND) -> Result<String, String> {
     let pid = owner(hwnd).0;
-    let mut buf = vec![0u16; PATH_CAP];
-    let mut len = PATH_CAP as u32;
+    let mut buf = vec![0u16; PATH_CAP as usize];
+    let mut len = PATH_CAP;
     // SAFETY: the process handle is ours and closed before returning; `len` is the buffer length.
     unsafe {
         let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
@@ -144,23 +152,23 @@ pub fn program(hwnd: HWND) -> Result<String, String> {
             process,
             PROCESS_NAME_WIN32,
             PWSTR(buf.as_mut_ptr()),
-            &mut len,
+            &raw mut len,
         );
         let _ = CloseHandle(process);
         read.map_err(|e| format!("QueryFullProcessImageNameW: {e}"))?;
     }
-    buf.truncate((len as usize).min(PATH_CAP));
+    buf.truncate(len.min(PATH_CAP) as usize);
     Ok(String::from_utf16_lossy(&buf))
 }
 
 #[allow(unsafe_code, reason = "`info` is a local with `cbSize` set.")]
 fn thread_info(thread: u32) -> GUITHREADINFO {
     let mut info = GUITHREADINFO {
-        cbSize: size_of::<GUITHREADINFO>() as u32,
+        cbSize: size32::<GUITHREADINFO>(),
         ..Default::default()
     };
     // SAFETY: `info` is a local with `cbSize` set, as the call requires; failure leaves it zeroed.
-    let _ = unsafe { GetGUIThreadInfo(thread, &mut info) };
+    let _ = unsafe { GetGUIThreadInfo(thread, &raw mut info) };
     info
 }
 
@@ -200,79 +208,13 @@ pub fn popups(hwnd: HWND) -> Vec<String> {
 
 pub use spike_core::capture::desktop;
 
-/// What a wanted window looks like.
-#[derive(Debug, Clone, Default)]
-pub struct Match {
-    /// Text the title must contain.
-    pub title_has: Option<String>,
-    /// Exact class name.
-    pub class: Option<String>,
-    /// Windows to ignore because they existed before.
-    pub skip: HashSet<isize>,
-}
-
-/// The topmost visible top-level window that fits `m`.
-pub fn find(m: &Match) -> Option<HWND> {
-    top_windows().into_iter().find(|&w| {
-        !m.skip.contains(&key(w))
-            && m.class.as_ref().is_none_or(|c| class(w) == *c)
-            && m.title_has
-                .as_ref()
-                .is_none_or(|t| title(w).contains(t.as_str()))
-    })
-}
-
-/// Waits up to `timeout_ms` for a window that fits `m`.
-pub fn wait_for(m: &Match, timeout_ms: u64, poll_ms: u64) -> Option<HWND> {
-    poll_until(timeout_ms, poll_ms, || find(m))
-}
-
-/// True while `hwnd` is a live window.
-#[allow(unsafe_code, reason = "Plain query.")]
-pub fn exists(hwnd: HWND) -> bool {
-    // SAFETY: plain query; any handle value is allowed.
-    unsafe { IsWindow(Some(hwnd)).as_bool() }
-}
-
-/// Waits up to `timeout_ms` for `hwnd` to go away; true if it did.
-pub fn wait_gone(hwnd: HWND, timeout_ms: u64, poll_ms: u64) -> bool {
-    poll_until(timeout_ms, poll_ms, || (!exists(hwnd)).then_some(())).is_some()
-}
-
-/// Waits up to `timeout_ms` until no window fits `m`; returns one that still does.
-pub fn wait_no_match(m: &Match, timeout_ms: u64, poll_ms: u64) -> Option<HWND> {
-    match poll_until(timeout_ms, poll_ms, || find(m).is_none().then_some(())) {
-        Some(()) => None,
-        None => find(m),
-    }
-}
-
 /// The screen box of `hwnd`.
 #[allow(unsafe_code, reason = "Plain query into a local.")]
 pub fn rect(hwnd: HWND) -> Result<RECT, String> {
     let mut r = RECT::default();
     // SAFETY: plain query into a local.
-    unsafe { GetWindowRect(hwnd, &mut r) }.map_err(|e| format!("GetWindowRect: {e}"))?;
+    unsafe { GetWindowRect(hwnd, &raw mut r) }.map_err(|e| format!("GetWindowRect: {e}"))?;
     Ok(r)
-}
-
-/// The seen window on top over `w`'s box, going by z-order; it finds click-through windows, which `root_at` skips.
-pub fn over(w: HWND) -> Option<HWND> {
-    let r = rect(w).ok()?;
-    let boxes = seen_windows()
-        .into_iter()
-        .filter_map(|h| rect(h).ok().map(|b| (key(h), b)));
-    first_over(boxes, &r).map(spike_core::window::from_raw)
-}
-
-/// The first window in `front_first` whose box overlaps `r`.
-fn first_over(front_first: impl IntoIterator<Item = (isize, RECT)>, r: &RECT) -> Option<isize> {
-    let overlaps =
-        |b: &RECT| b.left < r.right && r.left < b.right && b.top < r.bottom && r.top < b.bottom;
-    front_first
-        .into_iter()
-        .find(|(_, b)| overlaps(b))
-        .map(|(k, _)| k)
 }
 
 /// Asks `hwnd` to close.
@@ -308,29 +250,6 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_first_window_over_a_box_is_the_one_on_top_there() {
-        let bx = |left, top, right, bottom| RECT {
-            left,
-            top,
-            right,
-            bottom,
-        };
-        let target = bx(100, 100, 200, 150);
-        let list = [
-            (1, bx(0, 0, 50, 50)),
-            (2, bx(150, 140, 300, 300)),
-            (3, target),
-        ];
-        assert_eq!(first_over(list, &target), Some(2), "a corner is enough");
-        let beside = [(1, bx(200, 100, 300, 150)), (3, target)];
-        assert_eq!(
-            first_over(beside, &target),
-            Some(3),
-            "touching edges do not overlap"
-        );
-    }
 
     #[test]
     fn poll_until_returns_the_first_value_at_once() {

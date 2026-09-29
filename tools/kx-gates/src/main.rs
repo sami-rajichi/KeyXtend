@@ -12,6 +12,7 @@ mod clicks;
 mod clip;
 mod clipkeep;
 mod cliplisten;
+mod cliptext;
 mod config;
 mod diff;
 mod facearg;
@@ -19,6 +20,7 @@ mod facetools;
 mod featcfg;
 mod g1;
 mod g12;
+mod g12pts;
 mod g17;
 mod g18;
 mod g19;
@@ -28,6 +30,7 @@ mod g20;
 mod g21;
 mod g22;
 mod g22bench;
+mod g22cfg;
 mod g22type;
 mod g23;
 mod g24;
@@ -37,15 +40,19 @@ mod g4;
 mod g5;
 mod g6;
 mod g7;
+mod gatecfg;
 mod hand;
 mod hookhost;
 mod hookio;
+mod hookstate;
 mod keys;
 mod launch;
+mod launchterm;
 mod mouse;
 mod out;
 mod probe;
 mod probecfg;
+mod probetext;
 mod readback;
 mod rng;
 mod scroll;
@@ -58,6 +65,7 @@ mod usage;
 mod wer;
 mod win;
 mod winclip;
+mod winfind;
 
 use std::process::ExitCode;
 
@@ -85,10 +93,6 @@ fn keep_stdio_private() {
 }
 
 #[cfg(windows)]
-#[allow(
-    clippy::print_stdout,
-    reason = "The result line on stdout is this tool's output."
-)]
 fn main() -> ExitCode {
     // Per-monitor DPI awareness comes from the manifest that build.rs embeds.
     keep_stdio_private();
@@ -96,7 +100,7 @@ fn main() -> ExitCode {
     let result = cli::parse(&raw).and_then(|args| cli::run(&args));
     match result {
         Ok(v) => {
-            println!("{v}");
+            out::say!("{v}");
             if v.get("error").is_some() {
                 ExitCode::FAILURE
             } else {

@@ -33,7 +33,8 @@ impl Rng {
         if n == 0 {
             return 0;
         }
-        (self.next_u64() % n as u64) as usize
+        let n = u64::try_from(n).unwrap_or(u64::MAX);
+        usize::try_from(self.next_u64() % n).unwrap_or_default()
     }
 }
 

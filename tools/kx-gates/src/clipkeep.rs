@@ -40,7 +40,7 @@ pub fn save(timeout_ms: u64, poll_ms: u64, max_bytes: usize) -> Result<Saved, St
         }
         // The size is checked before the copy, so a huge clipboard is never duplicated.
         match clip::with_data(&open, format, |b| (b.len() <= left).then(|| b.to_vec())) {
-            None => continue,
+            None => {}
             Some(None) => return Err(format!("the clipboard holds more than {max_bytes} bytes")),
             Some(Some(data)) => {
                 left -= data.len();

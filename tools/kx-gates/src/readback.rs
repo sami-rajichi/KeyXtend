@@ -6,7 +6,7 @@ use spike_core::window::foreground;
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::config::GatesConfig;
 use crate::win::{self, sleep_ms};
-use crate::{clip, clipkeep, keys, out, tlog};
+use crate::{clip, clipkeep, cliptext, keys, out, tlog};
 
 /// Byte-order mark some editors put first.
 const BOM: char = '\u{FEFF}';
@@ -21,7 +21,7 @@ fn copy(cfg: &GatesConfig) -> Result<String, String> {
     if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
         return Err("the clipboard did not change after Ctrl+C".to_string());
     }
-    clip::read_text(t.read_wait_ms, t.poll_ms, cfg.g1.max_read_chars)?
+    cliptext::read_text(t.read_wait_ms, t.poll_ms, cfg.g1.max_read_chars)?
         .ok_or_else(|| "no text on the clipboard after Ctrl+C".to_string())
 }
 

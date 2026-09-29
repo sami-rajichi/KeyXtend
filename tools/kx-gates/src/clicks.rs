@@ -9,6 +9,7 @@ use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{Ctx, Opened};
 use crate::mouse::{self, Face};
+use crate::out::say;
 use crate::rng::Rng;
 use crate::stats::Click;
 use crate::win::{self, sleep_ms};
@@ -97,7 +98,7 @@ pub fn usable(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Vec<Key>, Vec<Strin
         ));
     }
     if !hidden.is_empty() {
-        println!(
+        say!(
             "left out {} covered keys: {}",
             hidden.len(),
             hidden.join("; ")

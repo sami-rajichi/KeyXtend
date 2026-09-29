@@ -8,7 +8,9 @@ use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 
 use crate::apps::{AppKind, Ctx};
 use crate::assist;
+use crate::out::say;
 use crate::probe::{self, Doc};
+use crate::probetext;
 use crate::scroll::{self, Dir, Route};
 use crate::simuser::{self, guard};
 use crate::win::{self, sleep_ms};
@@ -154,10 +156,10 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         _ => probe::open_text(
             ctx,
             kind,
-            &probe::scroll_text(pr.scroll_lines, pr.scroll_cols),
+            &probetext::scroll_text(pr.scroll_lines, pr.scroll_cols),
         )?,
     };
-    println!("G6 {name}: {}", win::describe(doc.app.hwnd));
+    say!("G6 {name}: {}", win::describe(doc.app.hwnd));
     let ((tries, at, still), notes) = probe::run_on(ctx, doc, |d| drive(ctx, &uia, d))?;
     let (pass, worked) = summary(&tries);
     let lines: Vec<Value> = tries
@@ -167,7 +169,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
             "share": t.share, "percent": t.percent, "error": t.error })
         })
         .collect();
-    println!("G6 {name}: pass {pass}; worked {worked}; noise {still:?}");
+    say!("G6 {name}: pass {pass}; worked {worked}; noise {still:?}");
     Ok(json!({
         "gate": "G6", "app": name, "pass": pass, "worked": worked, "target": [at.x, at.y],
         "noise": still, "tries": lines, "clean_up": notes,

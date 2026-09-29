@@ -8,8 +8,10 @@ use crate::apps::{Ctx, Opened};
 use crate::clicks::{self, Tally};
 use crate::diff::{self, Diff};
 use crate::mouse::{self, Face};
+use crate::out::say;
 use crate::win::{self, sleep_ms};
-use crate::{g1, launch, readback};
+use crate::winfind;
+use crate::{g1, launchterm, readback};
 
 /// What the clicks did, and the line the admin shell saved.
 struct Typed {
@@ -49,11 +51,11 @@ fn type_into(
 /// Closes the admin shell if saving the line did not end it; returns what is left open.
 fn close(ctx: &Ctx, term: &Opened) -> Vec<String> {
     let t = &ctx.cfg.timing;
-    if win::wait_gone(term.hwnd, t.close_wait_ms, t.poll_ms) {
+    if winfind::wait_gone(term.hwnd, t.close_wait_ms, t.poll_ms) {
         return Vec::new();
     }
     let _ = win::close(term.hwnd);
-    if win::wait_gone(term.hwnd, t.close_wait_ms, t.poll_ms) {
+    if winfind::wait_gone(term.hwnd, t.close_wait_ms, t.poll_ms) {
         Vec::new()
     } else {
         vec![format!("left open: {}", win::describe(term.hwnd))]
@@ -65,11 +67,9 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
     let hwnd = mouse::find_face(ctx.spike, name)?;
     let face = mouse::face(hwnd)?;
     let face_program = win::program(hwnd).unwrap_or_else(|e| e);
-    let (term, admin) = launch::open_admin(ctx)?;
+    let (term, admin) = launchterm::open_admin(ctx)?;
     let window = win::describe(term.hwnd);
-    println!(
-        "G4 {name}: {count} clicks, seed {seed}; {window}; admin {admin}; face {face_program}"
-    );
+    say!("G4 {name}: {count} clicks, seed {seed}; {window}; admin {admin}; face {face_program}");
     let typed = type_into(ctx, &term, (&face, hwnd), (count, seed));
     let left_open = close(ctx, &term);
     let t = typed?;
@@ -85,7 +85,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
     let pass = passed(admin, &t.tally, d.equal);
     print(admin, &t.tally, &d, pass);
     if let Some(e) = &read_error {
-        println!("read back failed: {e}");
+        say!("read back failed: {e}");
     }
     Ok(json!({
         "gate": "G4", "face": name, "face_program": face_program, "seed": seed, "planned": count,
@@ -100,7 +100,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
 /// Prints the verdict and what decided it.
 fn print(admin: bool, tally: &Tally, d: &Diff, pass: bool) {
     let yes = |b: bool| if b { "yes" } else { "no" };
-    println!(
+    say!(
         "admin {}; clicks {}; focus kept {}; chars sent {}, received {}; equal {}; pass {}",
         yes(admin),
         tally.clicks.len(),
@@ -111,7 +111,7 @@ fn print(admin: bool, tally: &Tally, d: &Diff, pass: bool) {
         yes(pass)
     );
     if let Some(s) = &tally.stopped {
-        println!("stopped: {s}");
+        say!("stopped: {s}");
     }
 }
 

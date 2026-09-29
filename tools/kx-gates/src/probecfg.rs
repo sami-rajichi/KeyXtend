@@ -50,6 +50,10 @@ pub struct Probes {
 
 /// The simulated user's timing, shared by G5 and the probes; in ms.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(
+    clippy::struct_field_names,
+    reason = "The `_ms` names are the config keys."
+)]
 pub struct Sim {
     /// Pause between steps.
     pub step_ms: u64,
