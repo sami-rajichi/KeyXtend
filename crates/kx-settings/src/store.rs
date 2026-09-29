@@ -139,11 +139,11 @@ impl Store {
         self.sections.get(&module).map(|s| &s.effective)
     }
 
-    /// Sets one value when the module's validator accepts the result.
+    /// Sets one value when the module's validator accepts the result; true when the stored value changed.
     ///
     /// # Errors
-    /// `Unknown`, `Newer`, `Reserved`, or the validator's `Settings` error; nothing changes then.
-    pub fn set(&mut self, module: ModuleId, key: &str, value: Value) -> Result<(), StoreError> {
+    /// `Unknown`, `Newer`, `Reserved`, `Panicked`, or the validator's `Settings` error; nothing changes then.
+    pub fn set(&mut self, module: ModuleId, key: &str, value: Value) -> Result<bool, StoreError> {
         let section = self
             .sections
             .get_mut(&module)
@@ -158,7 +158,7 @@ impl Store {
         let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set(key, value)))
             .map_err(|_| StoreError::Panicked(module))??;
         self.unsaved |= changed;
-        Ok(())
+        Ok(changed)
     }
 
     /// True when the file does not match the store yet, after a repair at load or a change.

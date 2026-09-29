@@ -1,6 +1,6 @@
 //! One module's start and stop, each contained so a failure or a panic leaves the rest running.
 
-use super::Kernel;
+use super::{Kernel, Phase};
 use crate::grants::Grants;
 use crate::host::{Held, StartHost};
 use crate::lifecycle::Step;
@@ -114,8 +114,9 @@ impl Kernel {
         self.step(at, Step::Stopped);
     }
 
-    /// Stops every `Active` module, dependents first; calling it twice is safe.
+    /// Stops every `Active` module, dependents first, and ends the kernel's life; calling it twice is safe.
     pub fn stop_all(&mut self) {
+        self.phase = Phase::Stopped;
         for id in order::stop_order(&self.plan) {
             if let Some(at) = self.active(id) {
                 self.stop(at);

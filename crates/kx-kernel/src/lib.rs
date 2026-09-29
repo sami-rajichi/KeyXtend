@@ -12,4 +12,4 @@ pub mod log;
 pub mod order;
 pub mod registry;
 
-pub use kernel::{KERNEL, Kernel, KernelError, KernelSettings};
+pub use kernel::{KERNEL, Kernel, KernelError, KernelSettings, Phase};

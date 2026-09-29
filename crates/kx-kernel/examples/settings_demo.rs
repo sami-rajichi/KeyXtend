@@ -254,7 +254,7 @@ fn run(folder: &Path, change: Option<i64>) -> Result<(), String> {
     kernel.add(Box::new(mouse)).map_err(|e| e.to_string())?;
 
     let unsaved = Unsaved::watch(&kernel);
-    let notices = kernel.boot();
+    let notices = kernel.boot().map_err(|e| e.to_string())?;
     report(&kernel, &notices);
     change.map_or(Ok(()), |ms| save(&mut kernel, &files, ms, &unsaved))
 }

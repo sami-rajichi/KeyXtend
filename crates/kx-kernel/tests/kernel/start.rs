@@ -20,7 +20,7 @@ fn a_failed_start_is_contained_and_rolled_back() {
     let mut rig = Rig::new();
     rig.add(sample(A).provides(&[Alpha::ID]).mode(Mode::Fail));
     rig.add(sample(B));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Active)]);
     let moves = [(A, Starting), (A, Failed), (B, Starting), (B, Active)];
     assert_eq!(rig.moves(), moves, "every state change is on the bus");
@@ -39,7 +39,7 @@ fn a_cycle_fails_only_its_members() {
     rig.add(sample(A).requires(&[Beta::ID]).provides(&[Alpha::ID]));
     rig.add(sample(B).requires(&[Alpha::ID]).provides(&[Beta::ID]));
     rig.add(sample(C));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Failed), Some(Failed), Some(Active)]);
     assert_eq!(notices, [failed(A), failed(B)]);
@@ -56,7 +56,7 @@ fn a_missing_service_fails_the_module_and_its_dependents() {
     rig.add(sample(A).requires(&[Gamma::ID]).provides(&[Alpha::ID]));
     rig.add(sample(B).requires(&[Alpha::ID]));
     rig.add(sample(C));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Failed), Some(Failed), Some(Active)]);
     assert_eq!(notices, [failed(A), failed(B)]);
@@ -72,7 +72,7 @@ fn an_ungranted_capability_is_refused_and_fails_a_module_that_needs_it() {
     rig.add(asks(A));
     rig.add(asks(B).tolerant());
     rig.add(asks(C));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Failed), Some(Active), Some(Active)]);
     let log = rig.log.all();
@@ -87,7 +87,7 @@ fn a_second_provider_fails_and_the_first_serves() {
     rig.add(sample(A).provides(&[Alpha::ID]));
     rig.add(sample(B).provides(&[Alpha::ID]));
     rig.add(sample(C).requires(&[Alpha::ID]));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Active), Some(Failed), Some(Active)]);
     assert_eq!(notices, [failed(B)]);
@@ -99,17 +99,17 @@ fn a_module_providing_a_platform_service_fails_and_consumers_get_the_platform_on
     let mut rig = Rig::new();
     let alpha = service(Alpha::ID, PLATFORM, &rig.log);
     rig.kernel.provide_platform::<Alpha>(alpha).unwrap();
-    rig.add(sample(A).provides(&[Alpha::ID]));
-    rig.add(sample(B).requires(&[Alpha::ID]));
-    let notices = rig.kernel.boot();
-    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Active)]);
-    assert_eq!(notices, [failed(A)]);
-    assert!(rig.log.all().contains(&Did::Got(B, PLATFORM)));
     let again = rig
         .kernel
         .provide_platform::<Alpha>(service(Alpha::ID, PLATFORM, &rig.log));
     let taken = ServiceError::AlreadyProvided(Alpha::ID);
     assert!(matches!(again, Err(KernelError::Service(e)) if e == taken));
+    rig.add(sample(A).provides(&[Alpha::ID]));
+    rig.add(sample(B).requires(&[Alpha::ID]));
+    let notices = rig.kernel.boot().unwrap();
+    assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Active)]);
+    assert_eq!(notices, [failed(A)]);
+    assert!(rig.log.all().contains(&Did::Got(B, PLATFORM)));
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn add_refuses_a_repeated_id_and_the_kernel_id() {
     assert!(matches!(twice, Err(KernelError::Duplicate(A))));
     let kernel = rig.kernel.add(sample(KERNEL).build(&rig.log));
     assert!(matches!(kernel, Err(KernelError::Reserved(KERNEL))));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     assert_eq!(rig.log.starts(), [A], "only the first one was added");
     assert_eq!(rig.state(A), Some(Active));
     assert_eq!(rig.state(KERNEL), None);
@@ -132,7 +132,7 @@ fn a_broken_settings_spec_fails_that_module_alone() {
     rig.add(sample(A).settings(&BROKEN_SPEC));
     rig.add(sample(B).settings(&LEVEL_SPEC));
     rig.add(sample(C));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Failed), Some(Active), Some(Active)]);
     assert_eq!(notices, [failed(A)]);

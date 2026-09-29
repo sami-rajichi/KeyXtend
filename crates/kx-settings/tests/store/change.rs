@@ -70,9 +70,19 @@ fn set_refuses_unknown_modules_newer_sections_and_the_version_key() {
 fn setting_the_current_value_changes_nothing() {
     let (_dir, files) = folder("same");
     let (mut store, _) = open(&files);
-    store.set(HOLD, "max_ms", Value::Integer(500)).unwrap();
+    let changed = store.set(HOLD, "max_ms", Value::Integer(500)).unwrap();
+    assert!(!changed, "the value was already 500");
     assert!(!store.needs_save());
     assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)));
+}
+
+#[test]
+fn set_says_whether_the_stored_value_changed() {
+    let (_dir, files) = folder("changed");
+    let (mut store, _) = open(&files);
+    assert!(store.set(HOLD, "max_ms", Value::Integer(900)).unwrap());
+    assert!(!store.set(HOLD, "max_ms", Value::Integer(900)).unwrap());
+    assert!(store.set(HOLD, "max_ms", Value::Integer(500)).unwrap());
 }
 
 #[test]
