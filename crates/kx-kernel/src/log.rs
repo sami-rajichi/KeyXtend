@@ -134,6 +134,8 @@ enum State {
 }
 
 /// The output, its byte count and its size limit.
+/// A line is kept only while `LIMIT_LINE` still fits, so the file stays within the limit;
+/// a limit under `LIMIT_LINE` itself holds only that line.
 struct Sink<W> {
     out: W,
     written: u64,
@@ -151,12 +153,13 @@ impl<W: Write> Sink<W> {
         }
     }
 
-    /// Writes `buf`, or the limit line when it would pass the cap. Only the first I/O error shows.
+    /// Writes `buf`, or the limit line when `buf` would leave no room for it. Only the first I/O error shows.
     fn put(&mut self, buf: &[u8]) -> io::Result<usize> {
         if self.state != State::Open {
             return Ok(buf.len());
         }
-        let bytes = if self.written.saturating_add(count(buf)) > self.max {
+        let after = self.written.saturating_add(count(buf));
+        let bytes = if after.saturating_add(count(LIMIT_LINE.as_bytes())) > self.max {
             self.state = State::Full;
             LIMIT_LINE.as_bytes()
         } else {
