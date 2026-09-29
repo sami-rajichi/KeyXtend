@@ -14,6 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::apps::Ctx;
 use crate::mouse::{self, Face};
 use crate::win;
+use crate::winfind;
 
 /// A running face window and where it is.
 pub struct FaceWin {
@@ -113,7 +114,7 @@ pub fn close(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let hwnd = mouse::find_face(ctx.spike, name)?;
     win::close(hwnd)?;
     let t = &ctx.cfg.timing;
-    let closed = win::wait_gone(hwnd, t.close_wait_ms, t.poll_ms);
+    let closed = winfind::wait_gone(hwnd, t.close_wait_ms, t.poll_ms);
     Ok(json!({ "gate": "close", "face": name, "pass": closed }))
 }
 

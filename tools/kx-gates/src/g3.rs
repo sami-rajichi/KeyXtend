@@ -14,8 +14,10 @@ use windows::Win32::System::Threading::{
 use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::apps::Ctx;
-use crate::config::Surface;
-use crate::win::{self, Match, root_at, sleep_ms};
+use crate::gatecfg::Surface;
+use crate::out::say;
+use crate::win::{self, root_at, size32, sleep_ms};
+use crate::winfind::{self, Match};
 use crate::{keys, mouse};
 
 /// What probing one surface showed.
@@ -73,7 +75,7 @@ fn contains(r: RECT, p: POINT) -> bool {
 fn window_rect(hwnd: HWND) -> Option<RECT> {
     let mut r = RECT::default();
     // SAFETY: plain query into a local; a bad handle gives an error.
-    unsafe { GetWindowRect(hwnd, &mut r) }.ok().map(|()| r)
+    unsafe { GetWindowRect(hwnd, &raw mut r) }.ok().map(|()| r)
 }
 
 /// True if the process `pid` runs with the uiAccess flag in its token.
@@ -86,43 +88,44 @@ fn ui_access(pid: u32) -> Result<bool, String> {
     unsafe {
         let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
             .map_err(|e| format!("OpenProcess {pid}: {e}"))?;
-        let opened = OpenProcessToken(process, TOKEN_QUERY, &mut token);
+        let opened = OpenProcessToken(process, TOKEN_QUERY, &raw mut token);
         let _ = CloseHandle(process);
         opened.map_err(|e| format!("OpenProcessToken: {e}"))?;
         let buf = Some(std::ptr::from_mut(&mut value).cast::<c_void>());
-        let read =
-            GetTokenInformation(token, TokenUIAccess, buf, size_of::<u32>() as u32, &mut len);
+        let read = GetTokenInformation(token, TokenUIAccess, buf, size32::<u32>(), &raw mut len);
         let _ = CloseHandle(token);
         read.map_err(|e| format!("GetTokenInformation: {e}"))?;
     }
     Ok(value != 0)
 }
 
-/// Closes what `s` opened: its close keys, or `WM_CLOSE` to a new window of its class.
-fn close(ctx: &Ctx, s: &Surface, before: &HashSet<isize>) -> String {
-    let t = &ctx.cfg.timing;
+/// Closes what `surf` opened: its close keys, or `WM_CLOSE` to a new window of its class.
+fn close(ctx: &Ctx, surf: &Surface, before: &HashSet<isize>) -> String {
+    let tm = &ctx.cfg.timing;
     let mut notes = Vec::new();
-    if !s.close_keys.is_empty() {
+    if !surf.close_keys.is_empty() {
         notes.push(
-            keys::combo(&s.close_keys).map_or_else(|e| e, |()| "close keys sent".to_string()),
+            keys::combo(&surf.close_keys).map_or_else(|e| e, |()| "close keys sent".to_string()),
         );
     }
-    if let Some(class) = &s.close_class {
-        let m = Match {
+    if let Some(class) = &surf.close_class {
+        let want = Match {
             class: Some(class.clone()),
             skip: before.clone(),
             ..Default::default()
         };
-        notes.push(match win::find(&m) {
+        notes.push(match winfind::find(&want) {
             None => format!("no new {class} window; nothing closed"),
             Some(w) => match win::close(w) {
                 Err(e) => format!("{e}; close it by hand"),
-                Ok(()) if win::wait_gone(w, t.close_wait_ms, t.poll_ms) => "closed".to_string(),
+                Ok(()) if winfind::wait_gone(w, tm.close_wait_ms, tm.poll_ms) => {
+                    "closed".to_string()
+                }
                 Ok(()) => "still open; close it by hand".to_string(),
             },
         });
     }
-    sleep_ms(t.key_settle_ms);
+    sleep_ms(tm.key_settle_ms);
     notes.join("; ")
 }
 
@@ -153,10 +156,10 @@ fn probe(ctx: &Ctx, face: HWND, probes: &[(u32, POINT)], s: &Surface) -> Result<
     let seen: Vec<(bool, bool)> = hits.iter().map(|h| (h.covered, h.found == face)).collect();
     let v = verdict(opened, &seen);
     let front = win::describe(front);
-    println!("{}: {}; front was {front}; {closed}", s.name, v.text());
+    say!("{}: {}; front was {front}; {closed}", s.name, v.text());
     for h in hits.iter().filter(|h| h.found != face || !h.covered) {
         let (code, covered) = (h.code, h.covered);
-        println!(
+        say!(
             "  key {code:#X}: found {}; covered {covered}",
             win::describe(h.found)
         );
@@ -188,7 +191,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         probes.push((code, mouse::centre(place, face.origin, face.dpi)));
     }
     let token = ui_access(win::owner(face_hwnd).0);
-    println!(
+    say!(
         "G3 {name}: face {}; uiAccess in token: {token:?}",
         win::describe(face_hwnd)
     );

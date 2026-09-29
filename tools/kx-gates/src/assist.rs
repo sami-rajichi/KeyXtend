@@ -11,9 +11,10 @@ use spike_core::inject;
 use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{PostThreadMessageW, WM_QUIT};
 
-use crate::hookhost::{self, Call, Cmd, WAKE};
-pub use crate::hookhost::{Live, Report};
+use crate::hookhost;
 use crate::hookio::{self, SIM_TAG, Source};
+use crate::hookstate::{Call, Cmd, WAKE};
+pub use crate::hookstate::{Live, Report};
 use crate::win;
 
 /// How the engine runs and whose input it acts on.
@@ -47,7 +48,7 @@ impl Assist {
         let live = Arc::new(Mutex::new(Live::default()));
         let reply = Duration::from_millis(setup.reply_ms);
         let shared = Arc::clone(&live);
-        let thread = std::thread::spawn(move || hookhost::run(setup, rx, shared, ready_tx));
+        let thread = std::thread::spawn(move || hookhost::run(setup, &rx, shared, &ready_tx));
         let tid = ready_rx
             .recv_timeout(reply)
             .map_err(|e| format!("assist hooks: {e}"))??;

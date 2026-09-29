@@ -13,7 +13,7 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::probe;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{clip, clipkeep, keys, readback, winclip};
+use crate::{clip, clipkeep, cliptext, keys, readback, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -83,7 +83,7 @@ fn shortcuts(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     keys_ours(app)?;
     keys::combo(&k.copy)?;
     let changed = clip::wait_change(before, t.read_wait_ms, t.poll_ms);
-    let text = clip::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?;
+    let text = cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?;
     let copy = changed && text.as_deref() == Some(g.text.as_str());
     keys_ours(app)?;
     keys::combo(&ek.doc_end)?;
@@ -187,6 +187,9 @@ mod tests {
     #[test]
     fn lang_is_the_low_word_in_hex() {
         assert_eq!(lang(0x0409_0409), "0409");
-        assert_eq!(lang(0xF002_1C01_u32 as isize), "1C01");
+        assert_eq!(
+            lang(isize::try_from(0xF002_1C01_u32).expect("fits")),
+            "1C01"
+        );
     }
 }

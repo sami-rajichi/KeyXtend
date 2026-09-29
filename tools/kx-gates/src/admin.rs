@@ -9,6 +9,8 @@ use windows::Win32::UI::Shell::{SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecut
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{PCWSTR, w};
 
+use crate::win::size32;
+
 /// The shell verb that asks for administrator rights.
 const RUN_AS: PCWSTR = w!("runas");
 /// Characters that make an argument need quotes.
@@ -58,7 +60,7 @@ pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
     let file = wide(exe.as_os_str());
     let params = wide(OsStr::new(&command_line(args)));
     let mut info = SHELLEXECUTEINFOW {
-        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        cbSize: size32::<SHELLEXECUTEINFOW>(),
         fMask: SEE_MASK_NOASYNC,
         lpVerb: RUN_AS,
         lpFile: PCWSTR(file.as_ptr()),
@@ -67,7 +69,7 @@ pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
         ..Default::default()
     };
     // SAFETY: `info` has `cbSize` set, and its strings live until the call returns.
-    unsafe { ShellExecuteExW(&mut info) }
+    unsafe { ShellExecuteExW(&raw mut info) }
         .map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 
@@ -76,7 +78,7 @@ mod tests {
     use super::*;
 
     fn line(args: &[&str]) -> String {
-        command_line(&args.iter().map(|a| a.to_string()).collect::<Vec<_>>())
+        command_line(&args.iter().map(ToString::to_string).collect::<Vec<_>>())
     }
 
     #[test]

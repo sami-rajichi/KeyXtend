@@ -13,7 +13,7 @@ use spike_core::voiceproto::{Cmd, Event, clip_lang};
 use spike_core::voiceworker::Worker;
 
 use crate::apps::Ctx;
-use crate::featcfg::G22;
+use crate::g22cfg::G22;
 use crate::{wer, win};
 
 /// Bench name that also runs the cloud engine; the key must be in kx-gates' environment.
@@ -97,11 +97,16 @@ fn sentence<'a>(g: &'a G22, v: &VoiceConfig, lang: &str) -> Option<&'a str> {
 }
 
 /// Time to answer over clip length; below 1 is faster than real time.
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "Clip times in ms are far below 2^53."
+)]
 fn rtf(ms: u64, audio_ms: u64) -> Option<f64> {
     (audio_ms > 0).then(|| ms as f64 / audio_ms as f64)
 }
 
 /// Mean of the numbers at `key` in `rows`.
+#[allow(clippy::cast_precision_loss, reason = "Row counts are far below 2^53.")]
 fn mean(rows: &[Value], key: &str) -> Option<f64> {
     let v: Vec<f64> = rows.iter().filter_map(|r| r[key].as_f64()).collect();
     (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)

@@ -61,7 +61,7 @@ fn chrome(ctx: &Ctx) -> Result<Value, String> {
         let cases = [(g.user_name.as_str(), false), (g.pass_name.as_str(), true)];
         Ok(cases.map(|(n, want)| field(n, want, web_field(ctx, &uia, &doc.app, n))))
     })?;
-    Ok(result(CHROME, &fields, notes))
+    Ok(result(CHROME, &fields, &notes))
 }
 
 /// Starts target-window, with a password box if `password`, clicks its box and reads the focused element's flag.
@@ -102,11 +102,11 @@ fn win32(ctx: &Ctx) -> Value {
         left.extend(notes);
         field(n, want, got)
     });
-    result(WIN32, &fields, left)
+    result(WIN32, &fields, &left)
 }
 
 /// The run's JSON: it passes when every field's flag is as expected.
-fn result(name: &str, fields: &[Value], clean_up: Vec<String>) -> Value {
+fn result(name: &str, fields: &[Value], clean_up: &[String]) -> Value {
     let pass = fields.iter().all(|f| f["ok"] == true);
     json!({ "gate": "G21", "app": name, "pass": pass, "fields": fields, "clean_up": clean_up })
 }

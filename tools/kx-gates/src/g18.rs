@@ -7,6 +7,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_SHIFT};
 
 use crate::apps::{AppKind, Ctx};
 use crate::assist::Assist;
+use crate::out::say;
 use crate::probe::{self, Doc};
 use crate::simuser::{self, is_up};
 use crate::win;
@@ -17,7 +18,7 @@ use spike_core::uia::{self, Uia};
 pub const APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Chrome, AppKind::Explorer];
 
 /// One case's line; it passes only if the modifier `vk` is up after it.
-fn line(case: &str, vk: u16, ok: bool, note: Value) -> Value {
+fn line(case: &str, vk: u16, ok: bool, note: &Value) -> Value {
     let up = is_up(vk);
     json!({ "case": case, "ok": ok && up, "key_up": up, "note": note })
 }
@@ -30,7 +31,7 @@ fn shift(ctx: &Ctx, uia: &Uia, assist: &Assist, doc: &Doc) -> Result<Value, Stri
     assist.latch(VK_SHIFT.0)?;
     simuser::click(ctx, app, mid)?;
     let (ok, note) = probe::copied(ctx, app);
-    Ok(line("shift_click", VK_SHIFT.0, ok, note))
+    Ok(line("shift_click", VK_SHIFT.0, ok, &note))
 }
 
 /// Clicks one file, latches Ctrl, clicks the other; passes when both are selected.
@@ -44,7 +45,7 @@ fn ctrl(ctx: &Ctx, uia: &Uia, assist: &Assist, doc: &Doc) -> Result<Value, Strin
     let both = uia::selected(&a).and_then(|x| Ok(x && uia::selected(&b)?));
     let ok = both.as_ref().is_ok_and(|&s| s);
     let note = json!({ "both_selected": both.map_or_else(|e| json!(e), |s| json!(s)) });
-    Ok(line("ctrl_click", VK_CONTROL.0, ok, note))
+    Ok(line("ctrl_click", VK_CONTROL.0, ok, &note))
 }
 
 /// Runs the app's case with Right-click on, so each click goes through the held-back path.
@@ -68,7 +69,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         AppKind::Explorer => probe::open_folder(ctx, &pr.ctrl_files, &[])?,
         _ => probe::open_text(ctx, kind, &pr.text)?,
     };
-    println!("G18 {name}: {}", win::describe(doc.app.hwnd));
+    say!("G18 {name}: {}", win::describe(doc.app.hwnd));
     let since = winclip::now();
     let run = |d: &Doc| clipkeep::keep(ctx.cfg, || drive(ctx, &uia, d));
     let result = probe::run_on(ctx, doc, run);
@@ -76,7 +77,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let history = probe::forget_copies(ctx, since, &|t| probe::probe_copy(ctx, t));
     let ((case, errors), notes) = result.map_err(|e| format!("{e}; history removed: {history}"))?;
     let pass = case["ok"] == json!(true) && errors.is_empty();
-    println!("G18 {name}: pass {pass}; {case}");
+    say!("G18 {name}: pass {pass}; {case}");
     Ok(json!({
         "gate": "G18", "app": name, "pass": pass, "case": case,
         "errors": errors, "clean_up": notes, "history_removed": history,

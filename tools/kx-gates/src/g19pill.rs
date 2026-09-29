@@ -15,7 +15,7 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
 use crate::win::{self, sleep_ms};
 use crate::winclip::{self, line};
-use crate::{clip, clipkeep, g19, probe, simuser};
+use crate::{clip, clipkeep, cliptext, g19, probe, simuser};
 
 /// Where kx-gates expects the pill for the current selection, from its own UI Automation read.
 fn expected(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Pt, String> {
@@ -76,7 +76,7 @@ fn copy_via(ctx: &Ctx, pill: HWND, at: &RECT, want: &str) -> Result<bool, String
     if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
         return Ok(false);
     }
-    let got = clip::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g19.max_chars)?;
+    let got = cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g19.max_chars)?;
     Ok(got.as_deref().map(line) == Some(want))
 }
 

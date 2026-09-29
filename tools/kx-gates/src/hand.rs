@@ -10,6 +10,7 @@ use windows::Win32::Foundation::RECT;
 use crate::apps::Ctx;
 use crate::assist::{Assist, Setup};
 use crate::hookio::Source;
+use crate::out::say;
 use crate::win::{self, sleep_ms};
 
 /// Hand-try mode: Right-click.
@@ -45,7 +46,7 @@ pub fn run(ctx: &Ctx, name: &str, secs: u64) -> Result<Value, String> {
         reply_ms: a.reply_ms,
     })?;
     assist.set_mode(mode)?;
-    println!("hand try: {name} for {secs} s; hold still {} ms", h.ms);
+    say!("hand try: {name} for {secs} s; hold still {} ms", h.ms);
     while Instant::now() < end {
         sleep_ms(a.rearm_ms);
         if mode == Mode::Grab {
@@ -54,7 +55,7 @@ pub fn run(ctx: &Ctx, name: &str, secs: u64) -> Result<Value, String> {
         }
     }
     let report = assist.stop()?;
-    println!("seen {}; errors {:?}", report.seen, report.errors);
+    say!("seen {}; errors {:?}", report.seen, report.errors);
     Ok(json!({
         "gate": "assist", "mode": name, "secs": secs, "seen": report.seen,
         "hook_calls": report.hook_us.len(), "hook_max_us": report.hook_us.iter().max(),

@@ -12,9 +12,10 @@ use spike_core::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
-use crate::featcfg::{self, G22, Sentence};
+use crate::g22cfg::{self, G22, Sentence};
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
+use crate::winfind;
 use crate::{g22bench, g22type, g25, probe, readback, wer};
 
 /// Name that runs the bench instead of a face.
@@ -67,7 +68,7 @@ fn bar_seen(ctx: &Ctx, wait_ms: u64) -> (bool, Option<String>) {
     let Some(bar) = win::poll_until(wait_ms, poll, || facetools::shown(title)) else {
         return (false, Some("the caption bar did not show".into()));
     };
-    match win::over(bar) {
+    match winfind::over(bar) {
         Some(w) if w == bar => (true, None),
         other => (false, other.map(win::describe)),
     }
@@ -159,7 +160,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name == g22type::TYPING {
         return g22type::run(ctx);
     }
-    featcfg::one_per_language(&ctx.cfg.g22, &ctx.spike.voice)?;
+    g22cfg::one_per_language(&ctx.cfg.g22, &ctx.spike.voice)?;
     if name == BENCH || name == g22bench::WITH_CLOUD {
         return g22bench::run(ctx, name);
     }

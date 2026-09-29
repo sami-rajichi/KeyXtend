@@ -1,6 +1,8 @@
 //! G2 no focus: random clicks on face keys; the target keeps focus and caret; click-to-character time.
 #![cfg(windows)]
 
+use std::fmt::Write;
+
 use serde_json::{Map, Value, json};
 use spike_core::place;
 use windows::Win32::Foundation::HWND;
@@ -8,6 +10,7 @@ use windows::Win32::Foundation::HWND;
 use crate::apps::{self, Ctx, Opened};
 use crate::clicks::{self, Key, Tally};
 use crate::mouse::{self, Face};
+use crate::out::say;
 use crate::stats::{self, Click};
 use crate::tlog::{self, Unit};
 use crate::win::{self, sleep_ms};
@@ -57,7 +60,7 @@ fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
         ),
     };
     let units = tlog::parse(&log);
-    let window_us = ctx.cfg.g2.match_window_ms * stats::US_PER_MS as i64;
+    let window_us = ctx.cfg.g2.match_window_ms * stats::US_PER_MS_INT;
     let since = tally.clicks.first().map_or(i64::MAX, |c| c.us);
     Logged {
         lat: stats::latencies(&tally.clicks, &units, window_us),
@@ -74,7 +77,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
     // Keys another window already covers are left out and named, never clicked.
     let (target, keys, hidden) = setup(ctx, &face, face_hwnd)?;
     let block = place::block_size(&ctx.spike.keyboard);
-    println!(
+    say!(
         "G2 {name}: {count} clicks on {} keys, seed {seed}; face dpi {}, client {:?}, block {block:?} logical",
         keys.len(),
         face.dpi,
@@ -90,7 +93,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
         "gate": "G2", "face": name, "seed": seed, "planned": count, "dpi": face.dpi, "raw": raw,
         "hidden_keys": hidden,
     });
-    Ok(report(head, &tally, &logged, left_open))
+    Ok(report(head, &tally, &logged, &left_open))
 }
 
 /// True when the target kept the keyboard for every click and never lost it.
@@ -101,7 +104,7 @@ fn focus_ok(tally: &Tally, logged: &Logged) -> bool {
 
 /// Prints the counts and latencies of the run.
 fn print(tally: &Tally, logged: &Logged) {
-    println!(
+    say!(
         "clicks {}; focus kept {}; caret kept {}; focus lost {}; chars logged {}",
         tally.clicks.len(),
         tally.focus_kept,
@@ -114,26 +117,26 @@ fn print(tally: &Tally, logged: &Logged) {
         .map(|(name, ms)| format!("{name} {ms:?}"))
         .collect();
     let matched = logged.lat.iter().flatten().count();
-    println!("latency ms {}; matched {matched}", lat.join(" "));
+    say!("latency ms {}; matched {matched}", lat.join(" "));
     let ok = if focus_ok(tally, logged) { "yes" } else { "no" };
-    println!("focus ok: {ok}");
+    say!("focus ok: {ok}");
     if tally.covered > 0 {
-        println!(
+        say!(
             "skipped {} covered keys; covered by {}",
             tally.covered,
             tally.covered_by.join(", ")
         );
     }
     if let Some(s) = &tally.stopped {
-        println!("stopped: {s}");
+        say!("stopped: {s}");
     }
     if let Some(e) = &logged.error {
-        println!("{e}");
+        say!("{e}");
     }
 }
 
 /// Prints the run and adds its numbers to `head`, the result line.
-fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: Vec<String>) -> Value {
+fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String]) -> Value {
     print(tally, logged);
     let latency: Map<String, Value> = stats::summary_ms(&logged.lat)
         .iter()
@@ -162,7 +165,8 @@ fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
     let mut s = String::from(TSV_HEADER);
     for (i, (c, l)) in clicks.iter().zip(lat).enumerate() {
         let l = l.map(|v| v.to_string()).unwrap_or_default();
-        s.push_str(&format!("{i}\t{:#X}\t{}\t{l}\n", c.code, c.us));
+        // Writing to a `String` cannot fail.
+        let _ = writeln!(s, "{i}\t{:#X}\t{}\t{l}", c.code, c.us);
     }
     s
 }

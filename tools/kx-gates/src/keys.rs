@@ -39,7 +39,7 @@ pub fn tagged(vk: u16, up: bool, tag: usize) -> INPUT {
         Anonymous: INPUT_0 {
             ki: KEYBDINPUT {
                 wVk: VIRTUAL_KEY(vk),
-                wScan: spike_core::scan_byte(scan) as u16,
+                wScan: u16::try_from(spike_core::scan_byte(scan)).unwrap_or_default(),
                 dwFlags: flags,
                 time: 0,
                 dwExtraInfo: tag,

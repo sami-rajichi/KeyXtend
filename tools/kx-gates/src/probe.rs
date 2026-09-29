@@ -10,7 +10,7 @@ use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::simuser::{self, guard, keys_ours};
 use crate::win::{self, sleep_ms};
-use crate::{clip, keys, launch, out, winclip};
+use crate::{clip, cliptext, keys, launch, out, probetext, winclip};
 use spike_core::uia::{self, Uia};
 
 /// Word's probe app, which opens a prepared file.
@@ -19,12 +19,6 @@ const WORD_FILE: &str = "word_file";
 const RTF_FILE: &str = ".rtf";
 /// Suffix of the Explorer test folder.
 const DIR_FILE: &str = "-dir";
-/// Ends an RTF paragraph.
-const RTF_PAR: &str = r"\par ";
-/// End of the RTF file.
-const RTF_TAIL: &str = "}";
-/// Letters that fill the scroll lines.
-const FILLER: &str = "abcdefghijklmnopqrstuvwxyz";
 
 /// A probe document: the app showing it, and the file or folder to delete after.
 pub struct Doc {
@@ -41,40 +35,6 @@ pub fn kind_of(name: &str, apps: &[AppKind]) -> Result<AppKind, String> {
         .copied()
         .find(|a| a.name() == name)
         .ok_or_else(|| format!("this gate probes {}, not {name}", names.join(", ")))
-}
-
-/// `text` as RTF in `font` at `half_points`, one paragraph per line; specials escaped, other than ASCII as `\uN?`.
-pub fn rtf(text: &str, font: &str, half_points: u32) -> String {
-    let mut out = format!(r"{{\rtf1\ansi\deff0{{\fonttbl{{\f0 {font};}}}}\f0\fs{half_points} ");
-    for line in text.lines() {
-        for c in line.chars() {
-            match c {
-                '\\' | '{' | '}' => {
-                    out.push('\\');
-                    out.push(c);
-                }
-                c if c.is_ascii() => out.push(c),
-                c => {
-                    for unit in c.encode_utf16(&mut [0; 2]) {
-                        out.push_str(&format!("\\u{}?", *unit as i16));
-                    }
-                }
-            }
-        }
-        out.push_str(RTF_PAR);
-    }
-    out.push_str(RTF_TAIL);
-    out
-}
-
-/// `rows` numbered lines of `cols` characters each, for the scroll documents.
-pub fn scroll_text(rows: usize, cols: usize) -> String {
-    let line = |i: usize| {
-        let head = format!("{i:04} ");
-        let fill = FILLER.chars().cycle().take(cols.saturating_sub(head.len()));
-        head.chars().chain(fill).take(cols).collect::<String>()
-    };
-    (1..=rows).map(line).collect::<Vec<_>>().join("\n")
 }
 
 /// Opens `kind` on `text`: Notepad a text file, Chrome a page, Word an RTF file.
@@ -111,7 +71,10 @@ pub fn open_page(ctx: &Ctx, body: &str) -> Result<Doc, String> {
 /// Word on a fresh RTF file holding `text`, spotted by the file name in its title.
 fn open_word(ctx: &Ctx, text: &str) -> Result<Doc, String> {
     let (pr, path) = (&ctx.cfg.probes, ctx.file(RTF_FILE));
-    out::write(&path, &rtf(text, &pr.rtf_font, pr.rtf_half_points))?;
+    out::write(
+        &path,
+        &probetext::rtf(text, &pr.rtf_font, pr.rtf_half_points),
+    )?;
     let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
     let started = launch::launch(ctx, WORD_FILE, &path.to_string_lossy(), stem.clone())
         .inspect_err(|_| drop(std::fs::remove_file(&path)))?;
@@ -197,13 +160,16 @@ pub fn run_on<T>(
 fn copy(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let t = &ctx.cfg.timing;
     keys_ours(app)?;
-    clip::write_text(None, t.read_wait_ms, t.poll_ms)?;
+    cliptext::write_text(None, t.read_wait_ms, t.poll_ms)?;
     let before = clip::sequence();
     keys::combo(&ctx.cfg.keys.copy)?;
     if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
         return Err("nothing was copied".to_string());
     }
-    Ok(clip::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?.unwrap_or_default())
+    Ok(
+        cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?
+            .unwrap_or_default(),
+    )
 }
 
 /// Copies the selection; passes when it is a part of the known text, which is then the only text logged.
@@ -275,24 +241,6 @@ pub fn item(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rtf_escapes_specials_and_non_ascii_and_ends_each_line() {
-        let got = rtf("a{b}\\c\nلا", "Calibri", 28);
-        assert!(got.starts_with(r"{\rtf1\ansi\deff0{\fonttbl{\f0 Calibri;}}\f0\fs28 "));
-        assert!(got.ends_with(RTF_TAIL));
-        assert!(got.contains(r"a\{b\}\\c\par "));
-        let lam_alef = ["\\", "u1604?", "\\", "u1575?", "\\par "].concat();
-        assert!(got.contains(&lam_alef));
-    }
-
-    #[test]
-    fn scroll_text_has_numbered_lines_of_the_asked_width() {
-        let text = scroll_text(3, 12);
-        let lines: Vec<&str> = text.lines().collect();
-        assert_eq!(lines, ["0001 abcdefg", "0002 abcdefg", "0003 abcdefg"]);
-        assert_eq!(scroll_text(1, 2), "00");
-    }
 
     #[test]
     fn only_a_non_empty_part_of_the_known_text_passes() {

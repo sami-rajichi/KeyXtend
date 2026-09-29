@@ -11,7 +11,8 @@ use windows::Win32::Foundation::HWND;
 
 use crate::config::{AppConfig, GatesConfig, Timing};
 use crate::keys;
-use crate::win::{self, Match};
+use crate::win;
+use crate::winfind::{self, Match};
 
 /// Placeholder in app arguments for the prepared file or URL.
 pub const INPUT: &str = "{input}";
@@ -63,7 +64,7 @@ impl AppKind {
 
 /// Paths and settings shared by one run.
 pub struct Ctx<'a> {
-    /// Harness settings.
+    /// Gate settings.
     pub cfg: &'a GatesConfig,
     /// Spike settings: the key block and the faces.
     pub spike: &'a SpikeConfig,
@@ -153,13 +154,15 @@ pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
         AppKind::Word if app.file.is_some() => {
             // Word gets a file only when it opens a prepared one; we only read it, so no save prompt.
             let _ = win::close(app.hwnd);
-            if !win::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) {
+            if !winfind::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) {
                 left.push(format!("left open: {}", win::describe(app.hwnd)));
             }
         }
         AppKind::Chrome if in_front => left.extend(close_pages(&app, ctx)),
-        AppKind::Terminal if win::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) => {}
-        _ if win::exists(app.hwnd) => left.push(format!("left open: {}", win::describe(app.hwnd))),
+        AppKind::Terminal if winfind::wait_gone(app.hwnd, t.close_wait_ms, t.poll_ms) => {}
+        _ if winfind::exists(app.hwnd) => {
+            left.push(format!("left open: {}", win::describe(app.hwnd)));
+        }
         _ => {}
     }
     left
@@ -179,7 +182,7 @@ fn close_tab(app: &Opened, in_front: bool, ctx: &Ctx) -> Option<String> {
         title_has: app.title_has.clone(),
         ..Default::default()
     };
-    let w = win::wait_no_match(&m, t.close_wait_ms, t.poll_ms)?;
+    let w = winfind::wait_no_match(&m, t.close_wait_ms, t.poll_ms)?;
     Some(format!(
         "{} left open: {}",
         app.kind.name(),
@@ -201,18 +204,19 @@ fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
         ctx.cfg.g1.page_title.as_str(),
         ctx.cfg.probes.page_title.as_str(),
     ];
-    while win::exists(app.hwnd) && foreground() == app.hwnd {
+    while winfind::exists(app.hwnd) && foreground() == app.hwnd {
         let before = win::title(app.hwnd);
         if !is_test_page(&before, &pages) {
             break;
         }
         let _ = keys::combo(&k.close_tab);
-        let changed = || (!win::exists(app.hwnd) || win::title(app.hwnd) != before).then_some(());
+        let changed =
+            || (!winfind::exists(app.hwnd) || win::title(app.hwnd) != before).then_some(());
         if win::poll_until(t.close_wait_ms, t.poll_ms, changed).is_none() {
             break;
         }
     }
-    win::exists(app.hwnd).then(|| format!("left open: {}", win::describe(app.hwnd)))
+    winfind::exists(app.hwnd).then(|| format!("left open: {}", win::describe(app.hwnd)))
 }
 
 /// Closes target-window and kills it if it does not end in time; returns a note if killed.
@@ -238,7 +242,7 @@ mod tests {
     fn app(args: &[&str], class: Option<&str>) -> AppConfig {
         AppConfig {
             exe: "x.exe".into(),
-            args: args.iter().map(|a| a.to_string()).collect(),
+            args: args.iter().map(ToString::to_string).collect(),
             class: class.map(String::from),
             focus_class: None,
             new_window: true,

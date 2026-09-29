@@ -12,8 +12,9 @@ pub struct Diff {
     pub received_len: usize,
     /// True when both texts are the same.
     pub equal: bool,
-    /// Index of the first differing character.
-    pub first_diff: Option<usize>,
+    /// Index of the first differing character; the JSON key stays `first_diff`.
+    #[serde(rename = "first_diff")]
+    pub first: Option<usize>,
     /// Sent code point at the first difference (`U+XXXX`, empty past the end).
     pub sent_at: String,
     /// Received code point at the first difference (`U+XXXX`, empty past the end).
@@ -42,7 +43,7 @@ pub fn compare(sent: &str, received: &str, context: usize) -> Diff {
         sent_len: a.len(),
         received_len: b.len(),
         equal: first.is_none(),
-        first_diff: first,
+        first,
         sent_at: first.and_then(|i| code(&a, i)).unwrap_or_default(),
         received_at: first.and_then(|i| code(&b, i)).unwrap_or_default(),
         sent_context: first.map(|i| around(&a, i)).unwrap_or_default(),
@@ -59,7 +60,7 @@ mod tests {
     fn compare_finds_the_first_difference() {
         let d = compare("abcdef", "abXdef", 1);
         assert!(!d.equal);
-        assert_eq!(d.first_diff, Some(2));
+        assert_eq!(d.first, Some(2));
         assert_eq!(
             (d.sent_at.as_str(), d.received_at.as_str()),
             ("U+0063", "U+0058")
@@ -72,10 +73,17 @@ mod tests {
     }
 
     #[test]
+    fn the_json_keeps_the_first_diff_key() {
+        let json = serde_json::to_value(compare("ab", "ac", 1)).expect("serialises");
+        assert_eq!(json["first_diff"], 1);
+        assert!(json.get("first").is_none());
+    }
+
+    #[test]
     fn compare_handles_equal_and_short_text() {
         assert!(compare("لا€", "لا€", 10).equal);
         let d = compare("abc", "ab", 10);
-        assert_eq!((d.first_diff, d.sent_len, d.received_len), (Some(2), 3, 2));
+        assert_eq!((d.first, d.sent_len, d.received_len), (Some(2), 3, 2));
         assert_eq!((d.sent_at.as_str(), d.received_at.as_str()), ("U+0063", ""));
         assert_eq!(d.received_context, "ab");
     }

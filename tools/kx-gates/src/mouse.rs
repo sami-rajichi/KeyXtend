@@ -32,11 +32,19 @@ pub fn key_places(kb: &KeyboardConfig) -> Vec<(u32, Place)> {
     codes.zip(places(kb).into_iter().flatten()).collect()
 }
 
+/// `v` rounded to a whole pixel.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "Screen coordinates are far inside `i32`."
+)]
+fn round_px(v: f64) -> i32 {
+    v.round() as i32
+}
+
 /// The physical screen centre of `place` for a face at `origin` and `dpi`.
 pub fn centre(place: &Place, origin: POINT, dpi: u32) -> POINT {
     let scale = f64::from(dpi) / f64::from(USER_DEFAULT_SCREEN_DPI);
-    let mid =
-        |start: f32, size: f32| ((f64::from(start) + f64::from(size) / 2.0) * scale).round() as i32;
+    let mid = |start: f32, size: f32| round_px((f64::from(start) + f64::from(size) / 2.0) * scale);
     POINT {
         x: origin.x + mid(place.x, place.w),
         y: origin.y + mid(place.y, place.h),
@@ -59,10 +67,10 @@ pub fn face(hwnd: HWND) -> Result<Face, String> {
     let mut rect = RECT::default();
     // SAFETY: plain queries into locals on a live window handle.
     let dpi = unsafe {
-        if !ClientToScreen(hwnd, &mut origin).as_bool() {
+        if !ClientToScreen(hwnd, &raw mut origin).as_bool() {
             return Err("ClientToScreen failed".to_string());
         }
-        GetClientRect(hwnd, &mut rect).map_err(|e| format!("GetClientRect: {e}"))?;
+        GetClientRect(hwnd, &raw mut rect).map_err(|e| format!("GetClientRect: {e}"))?;
         GetDpiForWindow(hwnd)
     };
     if dpi == 0 {
@@ -77,7 +85,7 @@ pub fn face(hwnd: HWND) -> Result<Face, String> {
 
 /// Maps a pixel to the 0..=65535 absolute range over `start..start+size`.
 pub fn normalise(v: i32, start: i32, size: i32) -> i32 {
-    (f64::from(v - start) * ABS_MAX / f64::from((size - 1).max(1))).round() as i32
+    round_px(f64::from(v - start) * ABS_MAX / f64::from((size - 1).max(1)))
 }
 
 /// A mouse input at absolute (`dx`, `dy`) with `flags`, marked `tag`.
@@ -106,7 +114,7 @@ pub fn wheel(delta: i32, flags: MOUSE_EVENT_FLAGS, tag: usize) -> INPUT {
                 dx: 0,
                 dy: 0,
                 // Windows reads the turn as a signed number in this unsigned field.
-                mouseData: delta as u32,
+                mouseData: delta.cast_unsigned(),
                 dwFlags: flags,
                 time: 0,
                 dwExtraInfo: tag,
@@ -127,17 +135,18 @@ fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
 
 /// Moves the pointer to `p` (physical pixels) without pressing: the first of a click's events.
 pub fn move_to(p: POINT) -> Result<(), String> {
-    let (x0, y0, w, h) = crate::win::desktop();
-    let (x, y, f) = click_events(normalise(p.x, x0, w), normalise(p.y, y0, h))[0];
-    spike_core::inject::send(&[input(x, y, f, spike_core::inject::TAG)])
+    let (left, top, width, height) = crate::win::desktop();
+    let at = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
+    let (x, y, flags) = at[0];
+    spike_core::inject::send(&[input(x, y, flags, spike_core::inject::TAG)])
 }
 
 /// Clicks at `p` (physical pixels) in one `SendInput` batch, which a hand on the mouse cannot split.
 pub fn click_at(p: POINT) -> Result<(), String> {
-    let (x0, y0, w, h) = crate::win::desktop();
-    let events = click_events(normalise(p.x, x0, w), normalise(p.y, y0, h));
+    let (left, top, width, height) = crate::win::desktop();
+    let events = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
     let tag = spike_core::inject::TAG;
-    spike_core::inject::send(&events.map(|(x, y, f)| input(x, y, f, tag)))
+    spike_core::inject::send(&events.map(|(x, y, flags)| input(x, y, flags, tag)))
 }
 
 #[cfg(test)]

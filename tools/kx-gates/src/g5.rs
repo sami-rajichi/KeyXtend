@@ -10,10 +10,12 @@ use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{self, Ctx, Opened};
 use crate::assist::{self, Assist, Report, Setup};
-use crate::config::G5;
+use crate::gatecfg::G5;
 use crate::hookio::Source;
+use crate::out::say;
 use crate::tlog::{self, Mouse};
 use crate::win::{self, sleep_ms};
+use crate::winfind;
 use crate::{launch, stats};
 
 /// What a normal click or drag logs.
@@ -71,8 +73,8 @@ fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32
 fn centre(hwnd: HWND) -> Result<Pt, String> {
     let r = win::rect(hwnd)?;
     Ok(Pt {
-        x: (r.left + r.right) / 2,
-        y: (r.top + r.bottom) / 2,
+        x: i32::midpoint(r.left, r.right),
+        y: i32::midpoint(r.top, r.bottom),
     })
 }
 
@@ -128,7 +130,7 @@ fn play_all(ctx: &Ctx, target: HWND, p: Pt) -> Result<(Vec<Value>, bool), String
                 .map(|m| format!("{}@{},{}", m.press.name(), m.x, m.y))
                 .collect();
             let verdict = if ok { "ok" } else { "FAIL" };
-            println!("{round} {}: {verdict} {}", case.name, seen.join(" "));
+            say!("{round} {}: {verdict} {}", case.name, seen.join(" "));
             lines.push(json!({ "round": round, "case": case.name, "ok": ok, "got": seen }));
         }
     }
@@ -175,15 +177,15 @@ fn drive(ctx: &Ctx, target: &Opened) -> Result<Drive, String> {
 
 /// Hook call times in ms: the p99, and every percentile plus the longest and the count.
 fn hook_ms(us: &[i64]) -> (Option<f64>, Value) {
-    let mut ms: Vec<f64> = us.iter().map(|&u| u as f64 / stats::US_PER_MS).collect();
-    ms.sort_by(f64::total_cmp);
+    let mut times: Vec<f64> = us.iter().map(|&u| stats::ms(u)).collect();
+    times.sort_by(f64::total_cmp);
     let mut out = serde_json::Map::new();
     for (name, rank) in stats::PERCENTILES {
-        out.insert(name.to_string(), json!(stats::percentile(&ms, rank)));
+        out.insert(name.to_string(), json!(stats::percentile(&times, rank)));
     }
-    out.insert("max".to_string(), json!(ms.last()));
-    out.insert("calls".to_string(), json!(ms.len()));
-    (stats::percentile(&ms, stats::P99), Value::Object(out))
+    out.insert("max".to_string(), json!(times.last()));
+    out.insert("calls".to_string(), json!(times.len()));
+    (stats::percentile(&times, stats::P99), Value::Object(out))
 }
 
 /// Closes target-window; one started as administrator is closed through its window.
@@ -193,7 +195,7 @@ fn close(ctx: &Ctx, target: Opened) -> Vec<String> {
     }
     let t = &ctx.cfg.timing;
     let _ = win::close(target.hwnd);
-    if win::wait_gone(target.hwnd, t.close_wait_ms, t.poll_ms) {
+    if winfind::wait_gone(target.hwnd, t.close_wait_ms, t.poll_ms) {
         Vec::new()
     } else {
         vec![format!("left open: {}", win::describe(target.hwnd))]
@@ -215,14 +217,14 @@ fn start(ctx: &Ctx, name: &str) -> Result<Opened, String> {
 /// Runs G5 on target-window, `plain` or `admin`.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let target = start(ctx, name)?;
-    println!("G5 {name}: {}", win::describe(target.hwnd));
+    say!("G5 {name}: {}", win::describe(target.hwnd));
     let driven = drive(ctx, &target);
     let left_open = close(ctx, target);
     let d = driven.map_err(|e| format!("{e}; left open: {left_open:?}"))?;
     let (p99, hook) = hook_ms(&d.report.hook_us);
     let fast = p99.is_some_and(|ms| ms <= ctx.cfg.g5.hook_p99_ms);
     let pass = d.passed && d.alive && fast && d.report.errors.is_empty();
-    println!("hook ms {hook}; alive {}; pass {pass}", d.alive);
+    say!("hook ms {hook}; alive {}; pass {pass}", d.alive);
     Ok(json!({
         "gate": "G5", "target": name, "hold_ms": ctx.spike.hold.ms, "pass": pass,
         "cases": d.cases, "hook_ms": hook, "hook_alive": d.alive, "seen": d.report.seen,

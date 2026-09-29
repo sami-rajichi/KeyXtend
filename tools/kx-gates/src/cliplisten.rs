@@ -19,7 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use crate::clip;
+use crate::{clip, cliptext};
 
 /// Formats whose presence means "leave this copy out" (Windows clipboard-history conventions).
 pub const EXCLUDE: [&str; 2] = [
@@ -96,7 +96,7 @@ fn read(hwnd: HWND, r: Reads) -> Report {
     if excluded(&clip::names(&open), clip::dword(&open, HISTORY_FLAG)) {
         return Ok(Update::Skipped);
     }
-    Ok(match clip::unicode(&open, r.max_chars)? {
+    Ok(match cliptext::unicode(&open, r.max_chars)? {
         Some(t) => Update::Text(t),
         None => Update::NoText,
     })
@@ -128,7 +128,7 @@ fn window() -> Result<HWND, String> {
             lpszClassName: CLASS,
             ..Default::default()
         };
-        RegisterClassW(&wc);
+        RegisterClassW(&raw const wc);
         let style = (WINDOW_EX_STYLE(0), WINDOW_STYLE(0));
         CreateWindowExW(
             style.0,
@@ -150,11 +150,11 @@ fn window() -> Result<HWND, String> {
 
 /// The listener thread: makes the window, reports its thread id, and loops until told to quit.
 #[allow(unsafe_code, reason = "Creates our queue before anyone posts to it.")]
-fn listen(tx: Sender<Report>, r: Reads, ready: Sender<Result<u32, String>>) {
+fn listen(tx: Sender<Report>, r: Reads, ready: &Sender<Result<u32, String>>) {
     let mut msg = MSG::default();
     // SAFETY: creates this thread's queue before anyone posts to it.
     let tid = unsafe {
-        let _ = PeekMessageW(&mut msg, None, 0, 0, PM_NOREMOVE);
+        let _ = PeekMessageW(&raw mut msg, None, 0, 0, PM_NOREMOVE);
         GetCurrentThreadId()
     };
     SINK.with(|s| *s.borrow_mut() = Some((tx, r)));
@@ -170,9 +170,9 @@ fn listen(tx: Sender<Report>, r: Reads, ready: Sender<Result<u32, String>>) {
     }
     let _ = ready.send(Ok(tid));
     // SAFETY: a plain message loop on this thread; it ends on WM_QUIT (0) or an error (-1).
-    while unsafe { GetMessageW(&mut msg, None, 0, 0) }.0 > 0 {
+    while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0 > 0 {
         // SAFETY: a message from our own queue.
-        unsafe { DispatchMessageW(&msg) };
+        unsafe { DispatchMessageW(&raw const msg) };
     }
     // SAFETY: our own window, listened to above.
     unsafe {
@@ -193,7 +193,7 @@ impl Listener {
     pub fn start(r: Reads) -> Result<Self, String> {
         let (tx, rx) = mpsc::channel();
         let (ready_tx, ready_rx) = mpsc::channel();
-        let thread = std::thread::spawn(move || listen(tx, r, ready_tx));
+        let thread = std::thread::spawn(move || listen(tx, r, &ready_tx));
         let tid = ready_rx
             .recv()
             .map_err(|_| "the listener thread ended".to_string())??;
@@ -226,7 +226,7 @@ mod tests {
     use super::*;
 
     fn names(n: &[&str]) -> Vec<String> {
-        n.iter().map(|s| s.to_string()).collect()
+        n.iter().map(ToString::to_string).collect()
     }
 
     #[test]

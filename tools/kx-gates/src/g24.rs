@@ -47,7 +47,7 @@ fn snips_since(dir: &Path, since: SystemTime) -> Vec<PathBuf> {
         return Vec::new();
     };
     let mut found: Vec<(PathBuf, SystemTime)> = all
-        .filter_map(|e| e.ok())
+        .filter_map(Result::ok)
         .filter_map(|e| Some((e.path(), e.metadata().ok()?.modified().ok()?)))
         .filter(|(p, t)| *t >= since && is_snip(p))
         .collect();
@@ -207,7 +207,7 @@ mod tests {
             top: 0,
             width,
             height: 1,
-            bgra: vec![0; 4 * width as usize],
+            bgra: vec![0; 4 * usize::try_from(width).expect("a width")],
         }
     }
 

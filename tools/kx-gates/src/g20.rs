@@ -13,7 +13,7 @@ use crate::probe::{self, Doc};
 use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
 use crate::winclip::{self, line};
-use crate::{clip, clipkeep, keys, readback};
+use crate::{clipkeep, cliptext, keys, readback};
 
 /// The app G20 copies in and pastes into.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -88,7 +88,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
     let (g, t) = (&ctx.cfg.g20, &ctx.cfg.timing);
     for i in 1..=g.burst {
         let quick = text(&g.prefix, g.copies + i);
-        clip::write_text(Some(&quick), t.read_wait_ms, t.poll_ms)
+        cliptext::write_text(Some(&quick), t.read_wait_ms, t.poll_ms)
             .map_err(|e| format!("burst {i}: {e}"))?;
     }
     let mut b = Tally::default();
@@ -101,7 +101,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
 /// Puts the chosen older entry back on the clipboard, pastes it at the end, and checks the saved file.
 fn paste_back(ctx: &Ctx, doc: &Doc, entry: &str) -> Result<bool, String> {
     let (t, ek) = (&ctx.cfg.timing, &ctx.cfg.edit_keys);
-    clip::write_text(Some(entry), t.read_wait_ms, t.poll_ms)
+    cliptext::write_text(Some(entry), t.read_wait_ms, t.poll_ms)
         .map_err(|e| format!("paste back: {e}"))?;
     probe::front(ctx, &doc.app)?;
     keys_ours(&doc.app)?;
@@ -123,14 +123,14 @@ fn listen(ctx: &Ctx, doc: &Doc) -> Result<(Tally, usize, Vec<String>), String> {
     let l = Listener::start(reads)?;
     let (mut tally, mut notes) = (Tally::default(), Vec::new());
     for i in halves(g).0 {
-        clip::write_text(Some(&text(&g.prefix, i)), t.read_wait_ms, t.poll_ms)
+        cliptext::write_text(Some(&text(&g.prefix, i)), t.read_wait_ms, t.poll_ms)
             .map_err(|e| format!("copy {i}: {e}"))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }
     copy_lines(ctx, doc, &l, &mut tally, &mut notes)?;
     for i in 0..g.excluded {
         let (hidden, mark) = (text(&g.hidden_prefix, i + 1), [MARKS[i % MARKS.len()]]);
-        clip::write_marked(Some(&hidden), &mark, t.read_wait_ms, t.poll_ms)
+        cliptext::write_marked(Some(&hidden), &mark, t.read_wait_ms, t.poll_ms)
             .map_err(|e| format!("marked copy {}: {e}", i + 1))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }

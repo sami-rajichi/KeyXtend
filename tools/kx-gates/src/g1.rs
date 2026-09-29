@@ -9,6 +9,7 @@ use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::diff::{self, Diff};
+use crate::out::say;
 use crate::rng::Rng;
 use crate::win::{self, sleep_ms};
 use crate::{launch, out, readback, shot, text};
@@ -171,7 +172,7 @@ fn prepare(ctx: &Ctx, kind: AppKind, run: &Run) -> Result<(String, PathBuf), Str
     let sent = text::generate(&ctx.cfg.text, run.count, &mut Rng::new(run.seed))?;
     let file = ctx.file(SENT_FILE);
     out::write(&file, &sent)?;
-    println!(
+    say!(
         "G1 {}: {} chars, seed {}, pause {} ms",
         kind.name(),
         run.count,
@@ -190,7 +191,7 @@ pub fn run(ctx: &Ctx, kind: AppKind, run: &Run) -> Result<Value, String> {
     } else {
         launch::open(ctx, kind)?
     };
-    println!("window: {}", win::describe(app.hwnd));
+    say!("window: {}", win::describe(app.hwnd));
     let mut t = typing(ctx, &app, app_cfg.focus_class.as_deref(), run, &sent);
     sleep_ms(app_cfg.done_ms);
     let (raw, read_error) = read(ctx, &app, &mut t);
@@ -199,7 +200,7 @@ pub fn run(ctx: &Ctx, kind: AppKind, run: &Run) -> Result<Value, String> {
     let received_file = ctx.file(RECEIVED_FILE);
     out::write(&received_file, received)?;
     let diff = diff::compare(&sent, received, ctx.cfg.g1.context_chars);
-    report(&t, run.count, &read_error, &diff, &left_open);
+    report(&t, run.count, read_error.as_deref(), &diff, &left_open);
     Ok(json!({
         "gate": "G1", "app": kind.name(), "seed": run.seed, "count": run.count, "typed": t.typed,
         "pause_ms": run.pause_ms, "attached": run.attach,
@@ -213,42 +214,46 @@ pub fn run(ctx: &Ctx, kind: AppKind, run: &Run) -> Result<Value, String> {
 /// Prints the first difference, if any.
 fn print_diff(d: &Diff) {
     let verdict = if d.equal { "yes" } else { "no" };
-    println!(
+    say!(
         "sent {} chars, received {}; equal: {verdict}",
-        d.sent_len, d.received_len
+        d.sent_len,
+        d.received_len
     );
-    if let Some(i) = d.first_diff {
-        println!(
+    if let Some(i) = d.first {
+        say!(
             "first difference at {i}: sent {} {:?}",
-            d.sent_at, d.sent_context
+            d.sent_at,
+            d.sent_context
         );
-        println!(
+        say!(
             "                   received {} {:?}",
-            d.received_at, d.received_context
+            d.received_at,
+            d.received_context
         );
-        println!("{} positions differ over the shorter length", d.mismatched);
+        say!("{} positions differ over the shorter length", d.mismatched);
     }
 }
 
-fn report(t: &Typing, count: usize, read_error: &Option<String>, d: &Diff, left_open: &[String]) {
+fn report(t: &Typing, count: usize, read_error: Option<&str>, d: &Diff, left_open: &[String]) {
     let note = t
         .stopped
         .as_ref()
         .map(|s| format!(" (stopped: {s})"))
         .unwrap_or_default();
-    println!(
+    say!(
         "typed {}/{count}{note}; keyboard was on {}",
-        t.typed, t.focus
+        t.typed,
+        t.focus
     );
     if let Some(e) = read_error {
-        println!("read back failed: {e}");
+        say!("read back failed: {e}");
     }
     if !t.evidence.is_null() {
-        println!("evidence: {}", t.evidence);
+        say!("evidence: {}", t.evidence);
     }
     print_diff(d);
     for note in left_open {
-        println!("{note}");
+        say!("{note}");
     }
 }
 
