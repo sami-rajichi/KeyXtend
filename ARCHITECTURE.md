@@ -107,15 +107,17 @@ pub trait Module: Send + 'static {
 }
 ```
 
-- **Lifecycle** of each module: `Pending → Starting → Active | Failed → Stopping → Stopped`.
+- **Lifecycle** of each module: `Pending → Starting → Active | Failed`, then `Active → Stopping → Stopped`. The table `MOVES` in `crates/kx-kernel/src/lifecycle.rs` is the one source.
   - A failure puts the module in `Failed`. It never crashes the app.
+  - Containing a panic needs unwinding, so no build profile may set `panic = "abort"`.
   - Dependents stop before their providers do.
-  - `Kernel::retry` (Try again) restarts a failed module and the features that wait on it.
-  - Switching a module off also stops the modules that need it.
+  - `Kernel::retry` (Try again) moves `Failed → Starting`, and restarts the features that wait on it.
+  - Switching a module off moves it, and the modules that need it, to `Stopped`. From `Pending` or `Failed` this is a skip, with no failure notice.
+  - Switching it on moves `Stopped → Starting`. A module that waits for a switched-off module stays `Stopped`, with no notice.
 - **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutProvider`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`.
   - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused.
   - A provider must itself hold the capability that gates its service.
-  - Capability handles are types that only the kernel can construct.
+  - A service is gated by the capability its provider stored with it, and only the kernel builds a module's `Grants`.
 - **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
 - **Platform:** `kx-platform` holds `Platform` and `AppDirs`, which carry the data folder rule (ADR-0015).
 - **Events** are typed:

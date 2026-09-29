@@ -30,7 +30,7 @@ pub struct BadStep {
     pub step: Step,
 }
 
-/// Every allowed move as (from, step, to): the ARCHITECTURE.md lifecycle diagram.
+/// Every allowed move as (from, step, to); ARCHITECTURE.md points here as the one source.
 const MOVES: [(ModuleState, Step, ModuleState); 10] = {
     use ModuleState::{Active, Failed, Pending, Starting, Stopped, Stopping};
     [

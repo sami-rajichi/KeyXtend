@@ -109,6 +109,8 @@ impl<'a> ModuleCx<'a> {
     }
 
     /// A handle to the bus, for publishing or for worker threads.
+    /// A guard from its `subscribe` outlives the module's stop or failure unless the module drops
+    /// it; a handler from `ModuleCx::subscribe` ends with the module instead.
     #[must_use]
     pub fn bus(&self) -> Bus {
         self.host.bus()
