@@ -17,12 +17,13 @@ mod rig;
 mod samples;
 
 use kx_module_api::ModuleState::{Active, Failed, Stopped};
-use kx_module_api::{ModuleId, ServiceKey};
+use kx_module_api::{ModuleId, ServiceKey, SettingsError};
 use record::{Did, Mode, SamplePanic};
 use rig::{Rig, failed};
-use samples::{Alpha, FAILURE, Ping, sample};
+use samples::{Alpha, FAILURE, LOOSE_SPEC, Ping, sample};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fs;
 use std::panic;
 use std::sync::{Mutex, Once, PoisonError};
 use tracing::field::{Field, Visit};
@@ -31,9 +32,12 @@ use tracing::{Level, Metadata, Subscriber};
 
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
-/// Modules only the log test adds, so it can pick its own lines.
+/// Modules only the log tests add, so each can pick its own lines.
 const LOUD: ModuleId = ModuleId::new("loud");
 const WILD: ModuleId = ModuleId::new("wild");
+const LOOSE: ModuleId = ModuleId::new("loose");
+/// A file value that no log line may ever show.
+const FILE_VALUE: &str = "hunter2";
 /// The id the capture hands every span; the kernel opens none.
 const SPAN_ID: u64 = 1;
 
@@ -108,6 +112,26 @@ fn a_failed_start_logs_one_warning_with_only_the_module_and_the_error() {
         assert_eq!(names, ["error", "message", "module"]);
     }
     assert!(warns(LOUD)[0]["error"].contains(FAILURE));
+}
+
+#[test]
+fn a_settings_failure_logs_its_kind_and_never_the_file_value() {
+    setup();
+    let mut rig = Rig::new();
+    fs::create_dir_all(rig.data()).unwrap();
+    let text = format!("[{LOOSE}]\nlevel = \"{FILE_VALUE}\"\n");
+    fs::write(rig.files().settings, text).unwrap();
+    rig.add(sample(LOOSE).settings(&LOOSE_SPEC));
+    rig.kernel.boot().unwrap();
+    assert_eq!(rig.state(LOOSE), Some(Failed));
+    let lines = LINES.lock().unwrap().clone();
+    let about = |(_, f): &&Line| f.get("module").is_some_and(|m| m == LOOSE.as_str());
+    let [(_, fields)] = lines.iter().filter(about).collect::<Vec<_>>()[..] else {
+        panic!("expected one line about {LOOSE}: {lines:?}");
+    };
+    let kind = SettingsError::Parse(String::new()).kind();
+    assert_eq!(fields["error"], kind);
+    assert!(!format!("{lines:?}").contains(FILE_VALUE));
 }
 
 /// The global subscriber: it keeps every log line in `LINES`.
