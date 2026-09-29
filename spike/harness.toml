@@ -346,8 +346,8 @@ stop_wait_ms = 5000
 max_chars = 4000
 # Folder under TEMP where the face's worker keeps the clips: start the face with its keep switch and this folder.
 clips = "kx-spike-clips"
-# Folder of the staged worker the bench starts, relative to this file; the exe name and spike.toml come from there.
-worker_dir = "../target/spike-stage/slint-kb"
+# Folder of the Qt stage, whose worker the bench starts, relative to this file; the exe name and spike.toml come from there.
+worker_dir = "../target/spike-stage/qt-kb"
 # Longest wait for the bench worker to load or answer, in ms.
 answer_wait_ms = 120000
 # Gaps between typed characters the typing check tries, in ms; 0 types each sentence in one batch.

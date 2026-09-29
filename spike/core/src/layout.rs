@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn width_uses_the_table_else_the_default() {
         let cfg = KeyboardConfig {
-            titles: Default::default(),
+            title: String::new(),
             key_px: 48.0,
             gap_px: 4.0,
             font_px: 16.0,

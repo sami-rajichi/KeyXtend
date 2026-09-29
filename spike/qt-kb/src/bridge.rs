@@ -61,8 +61,6 @@ pub mod qobject {
     }
 }
 
-/// Face name used to pick the window title and name the error file.
-pub const FACE: &str = "qt";
 /// Note when the window could not be cut because it is not on screen yet.
 const NOT_SHOWN: &str = "the keyboard is not on screen yet, so it was not cut";
 
@@ -128,7 +126,7 @@ impl Default for KeyboardRust {
         Self {
             guard_delay_ms: ms(kb.guard_delay_ms),
             relabel_ms: ms(kb.relabel_ms),
-            title: QString::from(&start.cfg.title(FACE)),
+            title: QString::from(&kb.title),
             guard_pending: QString::from(status::GUARD_PENDING),
             prev: HWND(start.prev as *mut c_void),
             max_tries: kb.guard_tries,

@@ -44,9 +44,9 @@ fn spawn(f: Fill, slot: Note) {
     std::thread::spawn(move || note::put(&slot, run(&f)));
 }
 
-/// Starts a fill of `value` into the app in front, with Hello's prompt owned by `face`'s window; returns the note to show now.
-pub fn start(cfg: &SpikeConfig, face: &str, value: String, note: &Note) -> &'static str {
-    let Some(owner) = window::own_titled(&cfg.title(face)) else {
+/// Starts a fill of `value` into the app in front, with Hello's prompt owned by the face's window; returns the note to show now.
+pub fn start(cfg: &SpikeConfig, value: String, note: &Note) -> &'static str {
+    let Some(owner) = window::own_titled(&cfg.keyboard.title) else {
         return NO_OWNER;
     };
     let f = Fill {

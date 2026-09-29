@@ -1,8 +1,8 @@
 # Every number and path the P1 spike uses. Staged next to each exe; else read from spike/.
 
 [keyboard]
-# Window titles, so the harness can find each face.
-titles = { slint = "KeyXtend spike - Slint", qt = "KeyXtend spike - Qt", tauri = "KeyXtend spike - Tauri" }
+# Window title, so the harness can find the face.
+title = "KeyXtend spike - Qt"
 # One key unit in logical pixels, and the gap between keys.
 key_px = 48.0
 gap_px = 4.0
@@ -128,7 +128,7 @@ fill_settle_ms = 300
 snip_folder = "kx-spike-snips"
 # Largest screen copy made or read, in MiB; three 4K screens need about 100.
 shot_cap_mb = 256
-# Width of the snip region's edge (mock-up .snip-rect; Qt draws it in the shared snip_edge colour, Slint in two tones), in logical pixels.
+# Width of the snip region's edge (mock-up .snip-rect; drawn in the shared snip_edge colour), in logical pixels.
 snip_edge_px = 1.5
 # What the snip overlay tells a screen reader; it is also shown at the top of the screen.
 snip_hint = "Snip: click two corners of the region. Click the same spot twice to cancel."

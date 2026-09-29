@@ -6,10 +6,12 @@ use serde::Deserialize;
 
 /// File name of the spike settings.
 const FILE: &str = "spike.toml";
-/// Error file a face writes in TEMP; `{face}` becomes the face name.
+/// The test face's name: the harness's face argument and part of the error file's name.
+pub const FACE: &str = "qt";
+/// Error file the face writes in TEMP; `{face}` becomes the face name.
 const ERROR_FILE: &str = "kx-spike-{face}-error.txt";
 /// Placeholder for the face name in `ERROR_FILE`.
-const FACE: &str = "{face}";
+const FACE_SLOT: &str = "{face}";
 
 /// All spike settings.
 #[derive(Debug, Clone, Deserialize)]
@@ -52,8 +54,8 @@ pub struct SpikeConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyboardConfig {
-    /// Window title per face (`slint`, `qt`, `tauri`).
-    pub titles: std::collections::BTreeMap<String, String>,
+    /// The face's window title.
+    pub title: String,
     /// One key unit in logical pixels.
     pub key_px: f32,
     /// Gap between keys in logical pixels.
@@ -205,15 +207,6 @@ impl ToolsConfig {
 }
 
 impl SpikeConfig {
-    /// The title for `face`, or the face name itself.
-    pub fn title(&self, face: &str) -> String {
-        self.keyboard
-            .titles
-            .get(face)
-            .cloned()
-            .unwrap_or_else(|| face.to_string())
-    }
-
     /// `rel` resolved against the settings folder.
     pub fn resolve(&self, rel: &str) -> PathBuf {
         self.dir.join(rel)
@@ -243,9 +236,9 @@ pub fn read_settings<T>(
 }
 
 /// Prints `err` and saves it in TEMP, since release faces have no console to show it.
-pub fn report_error(face: &str, err: &str) {
+pub fn report_error(err: &str) {
     eprintln!("{err}");
-    let file = std::env::temp_dir().join(ERROR_FILE.replace(FACE, face));
+    let file = std::env::temp_dir().join(ERROR_FILE.replace(FACE_SLOT, FACE));
     let _ = std::fs::write(file, err);
 }
 

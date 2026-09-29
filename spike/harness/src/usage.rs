@@ -1,5 +1,7 @@
 //! The harness's command-line help.
 
+use spike_core::config::FACE;
+
 use crate::apps::AppKind;
 use crate::{g5, g6, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand};
 
@@ -12,24 +14,24 @@ fn names(apps: &[AppKind]) -> String {
 pub fn usage() -> String {
     format!(
         "usage: harness g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
-       harness g2 <slint|qt|tauri> [--clicks N] [--seed S]
-       harness g3 <slint|qt|tauri>
-       harness g4 <slint|qt|tauri> [--clicks N] [--seed S]
+       harness g2 <{FACE}> [--clicks N] [--seed S]
+       harness g3 <{FACE}>
+       harness g4 <{FACE}> [--clicks N] [--seed S]
        harness g5 <{}|{}>
        harness assist <{}|{}> [--secs N]
        harness g17 <{}>
        harness g18 <{}>
        harness g6 <{}>
-       harness g7 <qt>
-       harness g12 <qt>
-       harness g19 <{}|slint|qt>
+       harness g7 <{FACE}>
+       harness g12 <{FACE}>
+       harness g19 <{}|{FACE}>
        harness g20 <{}>
        harness g21 <{}>
-       harness g22 <slint|qt|{}|{}|{}>
-       harness g23 <slint|qt>
-       harness g24 <slint|qt>
+       harness g22 <{FACE}|{}|{}|{}>
+       harness g23 <{FACE}>
+       harness g24 <{FACE}>
        harness g25 <{}>
-       harness close <slint|qt>
+       harness close <{FACE}>
 --attach types into the app's window already open; --pause sets the gap between characters.",
         names(&AppKind::ALL),
         g5::PLAIN,
