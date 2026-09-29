@@ -70,10 +70,11 @@ crates/
   kx-test-support/      shared test helpers, golden files
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
-                         reads kx-gates.toml
+                         reads kx-gates.toml; uses spike-core widely until its gates are
+                         aimed at the product
   kx-target-window/      test window that logs every character it receives (CI); a library plus
-                         a binary; reads kx-target-window.toml
-                         (both tools use spike-core for the QPC clock until P3)
+                         a binary; reads kx-target-window.toml; uses spike-core only for the
+                         QPC clock, until P3
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), dev-cert / dev-install / check-uiaccess
@@ -123,7 +124,7 @@ pub trait Module: Send + 'static {
 - **Settings** (ADR-0015):
   - one `settings.toml` in the data folder holds one flat section per module, each with its own `version`. Only the user's changes are stored, and the defaults live in the module's `defaults.toml`;
   - migrations are pure functions tested with golden files;
-  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. Changing a module's settings restarts that module.
+  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. Changing a module's settings restarts that module and the modules that need it.
 
 ## Invariants (enforced by `cargo xtask tidy` in CI)
 

@@ -41,7 +41,7 @@ After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to
 | `qt-kb/qmltest/tst_motion.qml`, `look-full.js`, `look-reduced.js`, `look-dolch.js` | `kx-ui` Qt Quick Tests, fed by the real theme loader |
 | Gates `g1`–`g4`, `g25` language part | Aimed at the product app |
 
-- **Fonts and icons** are staged today from `D:\dev\assets`, outside git. P3 decides, with `kx-licence-check`, whether they live in the repo or are fetched by hash at build time.
+- **Fonts and icons** are staged today from a local assets folder outside the repo. P3 decides, with `kx-licence-check`, whether they live in the repo or are fetched by hash at build time.
 - **Open gates finished here:** G8 budgets, G9 window flags, G10 screen readers, G11 DPI, G13 live following and frosted glass, G26 other languages.
 
 ## P4 — Mouse assist
