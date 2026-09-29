@@ -1,6 +1,7 @@
 //! Key centres on screen from spike.toml, and real mouse moves and clicks through `SendInput`.
 #![cfg(windows)]
 
+use kx_platform_windows::keys::TAG;
 use spike_core::config::{KeyboardConfig, SpikeConfig};
 use spike_core::place::{Place, places};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
@@ -138,15 +139,14 @@ pub fn move_to(p: POINT) -> Result<(), String> {
     let (left, top, width, height) = crate::win::desktop();
     let at = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
     let (x, y, flags) = at[0];
-    spike_core::inject::send(&[input(x, y, flags, spike_core::inject::TAG)])
+    crate::keys::send(&[input(x, y, flags, TAG)])
 }
 
 /// Clicks at `p` (physical pixels) in one `SendInput` batch, which a hand on the mouse cannot split.
 pub fn click_at(p: POINT) -> Result<(), String> {
     let (left, top, width, height) = crate::win::desktop();
     let events = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
-    let tag = spike_core::inject::TAG;
-    spike_core::inject::send(&events.map(|(x, y, flags)| input(x, y, flags, tag)))
+    crate::keys::send(&events.map(|(x, y, flags)| input(x, y, flags, TAG)))
 }
 
 #[cfg(test)]

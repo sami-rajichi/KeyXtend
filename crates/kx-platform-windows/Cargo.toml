@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM and uiAccess."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess and input injection."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -24,7 +24,9 @@ windows = { workspace = true, features = [
     "Win32_System_Com",
     "Win32_System_Performance",
     "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 
 [dev-dependencies]

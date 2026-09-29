@@ -1,8 +1,8 @@
 //! The probes' simulated user: moves, clicks, grabs and Esc, each only on our own window and tab.
 #![cfg(windows)]
 
+use kx_platform_windows::keys::TAG;
 use spike_core::hold::{Act, Button, ESC, Pt};
-use spike_core::inject::{self, TAG};
 use spike_core::window::foreground;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -138,7 +138,7 @@ pub fn release_all() -> Result<bool, String> {
     if inputs.is_empty() {
         return Ok(false);
     }
-    inject::send(&inputs).map(|()| true)
+    keys::send(&inputs).map(|()| true)
 }
 
 #[cfg(test)]

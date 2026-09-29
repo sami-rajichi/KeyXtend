@@ -6,9 +6,9 @@
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 
+use kx_platform_windows::keys::TAG;
 use spike_core::clock::now_us;
 use spike_core::hold::{Act, Engine, Event, Mode, Pt};
-use spike_core::inject::TAG;
 use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 use windows::Win32::System::SystemInformation::GetTickCount;
 use windows::Win32::UI::WindowsAndMessaging::{

@@ -131,7 +131,7 @@ fn compare(saved: Option<&Shot>, own: &Shot) -> Result<f64, String> {
 /// Types the pattern, snips the region with two clicks, and compares the file with kx-gates' own copy.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened, since: SystemTime) -> Result<Value, String> {
     keys_ours(app)?;
-    spike_core::inject::text(&ctx.cfg.g24.text)?;
+    crate::keys::text(&ctx.cfg.g24.text)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     let r = region(ctx, app)?;
     let own = capture::screen(ctx.spike.tools.shot_cap())?

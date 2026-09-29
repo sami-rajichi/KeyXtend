@@ -8,14 +8,20 @@ pub mod clock;
 #[cfg(windows)]
 pub mod com;
 pub mod dirs;
+pub mod front;
+pub mod inject;
+pub mod keys;
 #[cfg(windows)]
 mod platform;
+pub mod strokes;
 #[cfg(windows)]
 pub mod uiaccess;
 
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
+#[cfg(windows)]
+pub use inject::WinInjector;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 

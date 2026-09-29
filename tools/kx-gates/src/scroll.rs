@@ -1,8 +1,8 @@
 //! G6 scroll routes: UI Automation's `ScrollPattern`, a posted wheel message, and a `SendInput` wheel.
 #![cfg(windows)]
 
+use kx_platform_windows::keys::TAG;
 use spike_core::hold::{Act, Pt};
-use spike_core::inject::{self, TAG};
 use spike_core::{capture, uia};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::Accessibility::{
@@ -16,7 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::probecfg::G6;
 use crate::stats;
-use crate::{hookio, mouse, win};
+use crate::{hookio, keys, mouse, win};
 
 /// Bytes per screen pixel in a picture.
 const PIXEL: usize = capture::BYTES_PP as usize;
@@ -158,7 +158,7 @@ fn send(p: Pt, rest: Pt, dir: Dir, g: &G6) -> Result<(), String> {
         inputs.push(mouse::wheel(dir.sign() * g.wheel_delta, flags, TAG));
     }
     inputs.extend(hookio::inputs(&[Act::Move(rest)], desk, TAG));
-    inject::send(&inputs)
+    keys::send(&inputs)
 }
 
 /// Scrolls window `ours` by `route` in `dir` at `p`; `sp` is the `ScrollPattern` there, if any.

@@ -10,7 +10,7 @@ use crate::typer::Typer;
 use crate::voicecfg::VoiceConfig;
 pub use crate::voiceproto::{Cmd, Event};
 use crate::voiceworker::{WORKER_GONE, Worker};
-use crate::{inject, layout, screen};
+use crate::{layout, screen, sendkeys};
 
 /// Where the Mic button is in its cycle.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -177,7 +177,7 @@ impl Session {
             cfg: cfg.voice.clone(),
             button: MicButton::default(),
             worker: Worker::start(cfg, face_args, on_event),
-            typer: Typer::start(cfg.voice.type_gap_ms, Box::new(inject::text_paced)),
+            typer: Typer::start(cfg.voice.type_gap_ms, Box::new(sendkeys::text_paced)),
         }
     }
 

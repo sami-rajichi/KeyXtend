@@ -36,7 +36,7 @@ Task numbers below are those of the P3 plan (`docs/superpowers/plans/2026-09-29-
 | `core/src/{kbctl,kbctl/*,latch,kbgeom,kbgeom/*,kbview,place,sizer,legend,status}.rs` | `kx-mod-keyboard` |
 | `core/src/{langinfo,langkey}.rs` | `kx-mod-keyboard` logic; layout queries and switching in `kx-platform-windows` |
 | `core/src/layout.rs` | `kx-mod-layouts` logic; `ToUnicodeEx` reading in `kx-platform-windows` |
-| `core/src/{inject,window,screen,sysui,sysui/*,backdrop,folders,com,uiaccess}.rs`, the extended-key table in `tools/kx-gates` `keys.rs` | `kx-platform-windows` |
+| `core/src/{inject,window,screen,sysui,sysui/*,backdrop,folders,com,uiaccess}.rs`, the extended-key table in `tools/kx-gates` `keys.rs` | `kx-platform-windows`. `inject` moved in Task 7; `core/src/sendkeys.rs` keeps spike helpers built on it until their phases (paced typing P11, shortcut keys P9) |
 | `core/src/theme.rs`, `core/src/theme/{common,extras,look,motion,palette,shape,tests}.rs` | `kx-theme` (tokens, look, contrast; no Qt, so not `kx-ui`, ADR-0016) |
 | `core/src/paint.rs` | `kx-mod-keyboard` view (Task 13); it names palette tokens as text, so it needs no `kx-theme`. Its "every theme has these tokens" test goes to `apps/keyxtend` (Task 19), the only crate that sees both |
 | `core/src/facecfg.rs` | `kx-mod-keyboard` (Tasks 11 and 13): key roles, latches and side-key actions in `board.toml`, the bubble corner in `[keyboard]`, the top-bar buttons in the face. Names and labels go to translations (Task 15), icon names to `kx-theme` `icons.toml` (Task 14); `[assets]` ends, as assets are compiled in (Task 16) |
@@ -73,9 +73,9 @@ Task numbers below are those of the P3 plan (`docs/superpowers/plans/2026-09-29-
 | P6 Shortcuts | Gate `g25` shortcut part | `kx-mod-keyboard` shortcuts layer, OS shortcut table in `kx-platform-windows` |
 | P7 Prediction | `core/src/{uia,uia/act,uia/read}.rs` (UIA client, password flag) | `kx-platform-windows` UIA; the password intercept event in `kx-module-api`; gate `g21` |
 | P8 Clipboard | `tools/kx-gates` `{clip,cliplisten,cliptext}.rs` | `kx-platform-windows` clipboard, `kx-mod-clipboard`; gate `g20` (with `clipkeep`, `winclip` staying in the tools) |
-| P9 Vault | `core/src/{hello,fill}.rs`, `qt-kb/src/tools.rs` tools-row and quick-fill part, `spike.toml` `[tools]` fill lines | `kx-mod-vault`, `kx-platform-windows` Hello; gate `g23` |
+| P9 Vault | `core/src/{hello,fill}.rs`, `qt-kb/src/tools.rs` tools-row and quick-fill part, `core/src/sendkeys.rs` `combo`, `spike.toml` `[tools]` fill lines | `kx-mod-vault`, `kx-platform-windows` Hello; gate `g23` |
 | P10 Selection | `core/src/{selwatch,uia/geom}.rs`, `qt-kb/qml/Pill.qml`, `qt-kb/src/tools.rs` pill part, `spike.toml` `[tools]` pill lines | `kx-mod-selection`, `kx-platform-windows` UIA, `kx-ui`; gates `g19`, `g19pill` |
-| P11 Voice | `core/src/{voice,voice/tests,voicecfg,voiceworker,typer}.rs`, `qt-kb/qml/{Caption,Shimmer}.qml`, `qt-kb/src/voice.rs`, `spike.toml` `[voice*]` and the `[tools]` mic label | `kx-mod-voice`, `kx-ui`; process start in `kx-platform-windows` |
+| P11 Voice | `core/src/{voice,voice/tests,voicecfg,voiceworker,typer}.rs`, `core/src/sendkeys.rs` `text_paced`, `qt-kb/qml/{Caption,Shimmer}.qml`, `qt-kb/src/voice.rs`, `spike.toml` `[voice*]` and the `[tools]` mic label | `kx-mod-voice`, `kx-ui`; process start in `kx-platform-windows` |
 | P11 Voice | `core/src/weak.rs` (job objects) | `kx-platform-windows` |
 | P11 Voice | `core/src/{voiceproto,lines}.rs` | `kx-ipc` |
 | P11 Voice | `worker/` except `http.rs` | `apps/keyxtend-worker` |

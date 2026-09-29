@@ -8,7 +8,7 @@ use crate::note::{self, Note};
 /// Shown when the typing thread is gone.
 const TYPER_GONE: &str = "the typing thread stopped";
 
-/// Types one text with a gap in ms between characters; `inject::text_paced` outside tests.
+/// Types one text with a gap in ms between characters; `sendkeys::text_paced` outside tests.
 pub type TypeFn = Box<dyn Fn(&str, u64) -> Result<(), String> + Send>;
 
 /// The typing thread and its latest error.

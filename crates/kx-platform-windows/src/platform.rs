@@ -1,11 +1,12 @@
-//! `WindowsPlatform`: the clock and folders the kernel gets on Windows.
+//! `WindowsPlatform`: the clock and folders the kernel gets on Windows, and the ports the app registers.
 
 use std::sync::Arc;
 
 use kx_module_api::Clock;
+use kx_module_api::ports::InputInjector;
 use kx_platform::{AppDirs, Platform};
 
-use crate::{PlatformError, QpcClock, dirs};
+use crate::{PlatformError, QpcClock, WinInjector, dirs};
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
 #[derive(Debug)]
@@ -24,6 +25,12 @@ impl WindowsPlatform {
             clock: QpcClock::new()?,
             dirs: dirs::current()?,
         })
+    }
+
+    /// The input injector, for the app to register under `InputInjectorKey`.
+    #[must_use]
+    pub fn injector(&self) -> Arc<dyn InputInjector> {
+        Arc::new(WinInjector)
     }
 }
 
@@ -54,5 +61,14 @@ mod tests {
         let clock = platform.clock();
         let first = clock.now();
         assert!(first > Mono::default() && clock.now() >= first);
+    }
+
+    #[test]
+    fn the_injector_is_a_port_other_threads_can_use() {
+        let injector = WindowsPlatform::new().unwrap().injector();
+        let name = std::thread::spawn(move || injector.target_app())
+            .join()
+            .unwrap();
+        assert!(name.is_none_or(|n| !n.is_empty()));
     }
 }

@@ -7,7 +7,7 @@ use crate::kbgeom::KeyKind;
 use crate::kbview::{chars_of, legend_mods};
 use crate::latch::Latch;
 use crate::legend::{LegendMods, Slot, slot};
-use crate::{inject, langkey, layout, window};
+use crate::{langkey, layout, sendkeys, window};
 
 /// Error when a chip index is past the list.
 const NO_CHIP: &str = "no such chip";
@@ -102,15 +102,15 @@ impl Kb {
     pub fn run(&mut self, id: &str, p: Plan) -> Result<Tapped, String> {
         self.mark(&p);
         match p {
-            Plan::Chord(sc) => inject::chord(&self.latches.take(), sc).map(|()| Tapped::Done),
+            Plan::Chord(sc) => sendkeys::chord(&self.latches.take(), sc).map(|()| Tapped::Done),
             Plan::Dead(sc, skip) | Plan::Press(sc, skip) => {
-                inject::chord(&self.latches.take_but(&skip), sc).map(|()| Tapped::Done)
+                sendkeys::chord(&self.latches.take_but(&skip), sc).map(|()| Tapped::Done)
             }
             Plan::Text(t) => {
                 self.latches.take();
-                inject::text(&t).map(|()| Tapped::Done)
+                sendkeys::text(&t).map(|()| Tapped::Done)
             }
-            Plan::Caps(sc) => inject::tap_scan(sc).map(|()| Tapped::Done),
+            Plan::Caps(sc) => sendkeys::tap_scan(sc).map(|()| Tapped::Done),
             Plan::Latch(l, sc) => {
                 self.latches.toggle(l, sc);
                 Ok(Tapped::Done)
@@ -129,7 +129,7 @@ impl Kb {
         let chip = self.cfg.bar.chips.get(i).ok_or(NO_CHIP)?;
         let text = chip.text.clone();
         self.latches.take();
-        inject::text(&text)
+        sendkeys::text(&text)
     }
 
     /// A side key's action.

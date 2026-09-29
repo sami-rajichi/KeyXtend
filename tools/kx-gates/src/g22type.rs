@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use serde_json::{Value, json};
-use spike_core::inject;
+use spike_core::sendkeys;
 use spike_core::uia::Uia;
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -30,7 +30,7 @@ fn parts(text: &str, gap_ms: u64) -> Vec<String> {
 fn type_ours(app: &Opened, text: &str, gap_ms: u64) -> Result<(), String> {
     for p in parts(text, gap_ms) {
         keys_ours(app)?;
-        inject::text_paced(&p, gap_ms)?;
+        sendkeys::text_paced(&p, gap_ms)?;
     }
     Ok(())
 }

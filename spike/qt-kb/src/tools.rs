@@ -12,7 +12,7 @@ use spike_core::hold::Pt;
 use spike_core::note::{self, Note};
 use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::{self, Snip};
-use spike_core::{inject, place, window};
+use spike_core::{place, sendkeys, window};
 
 use crate::bridge::ms;
 
@@ -200,7 +200,7 @@ impl qobject::Tools {
     }
 
     fn copy(&self) -> QString {
-        note_of(inject::combo(&self.rust().cfg.tools.copy_keys))
+        note_of(sendkeys::combo(&self.rust().cfg.tools.copy_keys))
     }
 
     fn pick(mut self: Pin<&mut Self>) -> QString {

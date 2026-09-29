@@ -109,7 +109,7 @@ fn type_text(
         if let Err(e) = ready(app, want) {
             return (typed, Some(format!("blocked: {e}")));
         }
-        if let Err(e) = spike_core::inject::text(&chunk.iter().collect::<String>()) {
+        if let Err(e) = crate::keys::text(&chunk.iter().collect::<String>()) {
             return (typed, Some(e));
         }
         typed += chunk.len();

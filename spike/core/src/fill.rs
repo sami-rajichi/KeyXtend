@@ -7,7 +7,7 @@ use kx_platform_windows::com::Com;
 use crate::config::SpikeConfig;
 use crate::hello::{self, Answer};
 use crate::note::{self, Note};
-use crate::{inject, window};
+use crate::{sendkeys, window};
 
 /// Starts every fill note that carries an error.
 const NOTE_PREFIX: &str = "fill: ";
@@ -86,7 +86,7 @@ fn run(f: &Fill) -> String {
         Err(e) => return e,
     };
     match decide(answer, || window::bring_back(target, f.settle_ms)) {
-        Ok(()) => inject::text(&f.value).map_or_else(|e| e, |()| TYPED.to_string()),
+        Ok(()) => sendkeys::text(&f.value).map_or_else(|e| e, |()| TYPED.to_string()),
         Err(why) => why.to_string(),
     }
 }

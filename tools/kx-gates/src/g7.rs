@@ -6,7 +6,7 @@
 use serde_json::{Value, json};
 use spike_core::legend::is_mark;
 use spike_core::uia::{self, Uia};
-use spike_core::{inject, window};
+use spike_core::window;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -111,7 +111,7 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
     let forward = || (window::foreground() == panel || window::bring_back(panel, 0)).then_some(());
     let _ = win::poll_until(t.focus_wait_ms, t.poll_ms, forward);
     in_front(panel)?;
-    inject::text(&g.word)?;
+    keys::text(&g.word)?;
     let typed = || (uia::value(&field).as_deref() == Some(g.word.as_str())).then_some(());
     let typed_ok = win::poll_until(t.read_wait_ms, t.poll_ms, typed).is_some();
     let tp = uia.text_of(&field).ok_or("the field has no TextPattern")?;

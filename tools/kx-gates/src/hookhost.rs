@@ -5,9 +5,9 @@ use std::cell::RefCell;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
 
+use kx_platform_windows::keys::TAG;
 use spike_core::clock::now_us;
 use spike_core::hold::Act;
-use spike_core::inject::{self, TAG};
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
@@ -20,7 +20,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::assist::Setup;
 use crate::hookio;
 use crate::hookstate::{Call, Host, Live, Report, WAKE};
-use crate::win;
+use crate::{keys, win};
 
 /// Tells Windows to drop the event.
 const SWALLOW: LRESULT = LRESULT(1);
@@ -91,7 +91,7 @@ fn inject_acts(acts: &[Act]) {
     if acts.iter().any(hookio::is_mouse) {
         with_host(|h| h.sent(now_us()));
     }
-    if let Err(e) = inject::send(&hookio::inputs(acts, win::desktop(), TAG)) {
+    if let Err(e) = keys::send(&hookio::inputs(acts, win::desktop(), TAG)) {
         with_host(|h| h.failed(e));
     }
 }
