@@ -45,12 +45,16 @@ pub trait Module: Send + 'static {
     fn manifest(&self) -> &'static Manifest;
 
     /// Gets and provides services and registers handlers through `cx`.
+    /// A guard from the module's own `cx.bus().subscribe()` is its to drop, while a handler from
+    /// `cx.subscribe` ends when the module stops or fails.
     ///
     /// # Errors
-    /// Any `ModuleError`; the kernel then marks the module `Failed` and keeps the rest running.
+    /// Any `ModuleError`; the kernel marks the module `Failed`, never calls `stop`, and keeps the
+    /// rest running.
     fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError>;
 
     /// Releases what `start` set up; the default does nothing.
+    /// It runs only after a successful start, never after a failed or panicking one.
     fn stop(&mut self) {}
 }
 

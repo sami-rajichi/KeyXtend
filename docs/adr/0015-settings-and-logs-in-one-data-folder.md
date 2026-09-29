@@ -27,12 +27,13 @@ Decided by the owner on 2026-09-29.
   - only the user's changes are stored, and the defaults live in each module's embedded `defaults.toml`;
   - sections are flat: a nested table is compared and reset as one value.
 - **Repair:**
-  - a bad value resets alone, and values that are valid only together are kept;
+  - a bad value resets alone. Values that are valid only together are kept beside one bad value, and can still reset beside two or more;
+  - a key the module's defaults do not know always resets, and does not count as a bad value;
   - a damaged file (also one over 1 MiB) is moved to `settings.broken.toml`, and the last good copy, `settings.previous.toml`, comes back;
   - with no good copy, the defaults are used;
-  - a section from a newer version, and a section no module owns, are kept as they are;
+  - a section from a newer version, and a section no module owns, are kept with their values. The file is rewritten on save, so comments typed into it are not kept;
   - a module whose settings check panics fails alone, and the rest start;
-  - a notice names what changed, by a translation key (the texts come with the UI in P3);
+  - a notice names what changed, by a translation key (the texts come with the UI in P3). It names at most 10 keys and counts the rest;
   - saving writes a temp file and then renames it, so a crash never leaves a half-written file.
 - **Changes:** changing a module's settings restarts that module, and the modules that need it, until P3 adds a live settings handle.
 - **Logs:**

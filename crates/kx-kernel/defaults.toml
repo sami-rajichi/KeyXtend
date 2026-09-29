@@ -2,5 +2,5 @@
 disabled = []
 # The least important log level written.
 log_level = "info"
-# The largest log file, in MiB, from 1 to 100.
+# The largest log file, in MiB.
 log_max_mb = 10
