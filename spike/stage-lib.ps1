@@ -13,11 +13,11 @@ $SettingsFile = Join-Path $SpikeDir 'spike.toml'
 $ThemesFile = Join-Path $SpikeDir 'themes.toml'
 $ShapeFile = Join-Path $SpikeDir 'shape.toml'
 $MotionFile = Join-Path $SpikeDir 'motion.toml'
-# Fonts and icons stay out of git in D:\dev; the spike's own icons are in spike\assets\icons.
+# Fonts and Lucide icons are staged from D:\dev; the project's own icon is in assets\icons.
 $AssetsSource = 'D:\dev\assets'
 $LucideDir = 'icons\lucide-1.48.0'
 $FontsDir = 'fonts'
-$OwnIcons = Join-Path $SpikeDir 'assets\icons'
+$OwnIcon = Join-Path $RootDir 'assets\icons\win-logo.svg'
 # Where spike.toml [assets] puts fonts and icons, read from that one source.
 $FontsPattern = '^fonts\s*=\s*"([^"]+)"'
 $IconsPattern = '^icons\s*=\s*"([^"]+)"'
@@ -89,7 +89,7 @@ function Add-Assets([string] $Stage) {
     New-Item -ItemType Directory -Path $fonts, $icons -Force | Out-Null
     Get-ChildItem -LiteralPath (Join-Path $AssetsSource $FontsDir) | Copy-Item -Destination $fonts -Recurse
     Get-ChildItem -LiteralPath (Join-Path $AssetsSource $LucideDir) | Copy-Item -Destination $icons
-    Get-ChildItem -LiteralPath $OwnIcons | Copy-Item -Destination $icons
+    Copy-Item -LiteralPath $OwnIcon -Destination $icons
 }
 
 # Builds the voice worker in release and copies it into $Stage, next to the face.
