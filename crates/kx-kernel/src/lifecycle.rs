@@ -16,7 +16,7 @@ pub enum Step {
     Stop,
     /// Its stop finished.
     Stopped,
-    /// It is switched off before it ran or after it failed.
+    /// It is switched off, or waits for a switched-off module, before it ran or after it failed.
     Skip,
 }
 

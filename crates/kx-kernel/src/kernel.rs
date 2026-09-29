@@ -1,9 +1,11 @@
 //! The `Kernel` starts modules in dependency order, contains failures and stops them in reverse.
-//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls.
+//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls
+//! and `wait` says who waits for whom.
 
 mod boot;
 mod control;
 mod run;
+mod wait;
 
 use crate::bus::KernelBus;
 use crate::grants::Policy;

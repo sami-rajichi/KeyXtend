@@ -65,6 +65,7 @@ macro_rules! key {
 key!(Alpha, "alpha", None);
 key!(Beta, "beta", None);
 key!(Gamma, "gamma", None);
+key!(Delta, "delta", None);
 key!(Mic, "mic", Some(Capability::Microphone));
 
 fn provide(cx: &mut ModuleCx<'_>, id: ServiceId, svc: Arc<dyn Api>) -> Result<(), ServiceError> {
