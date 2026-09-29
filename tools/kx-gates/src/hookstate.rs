@@ -283,14 +283,4 @@ impl Host {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn timer_ms_rounds_up_and_never_overflows() {
-        assert_eq!(timer_ms(1_500_000, 0), 1501);
-        assert_eq!(timer_ms(1_500_999, 0), 1501);
-        assert_eq!(timer_ms(0, 10), 1);
-        assert_eq!(timer_ms(i64::MAX, i64::MIN), u32::MAX);
-    }
-}
+mod tests;

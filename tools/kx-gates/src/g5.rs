@@ -5,7 +5,7 @@ use kx_target_window::log::Press;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use spike_core::hold::{Act, Button, Mode, Pt};
-use spike_core::uiaccess;
+use spike_core::{uia, uiaccess};
 use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{self, Ctx, Opened};
@@ -67,15 +67,6 @@ fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32
         got.last().is_some_and(|m| near(m, end))
     };
     kinds_ok && start_ok && end_ok
-}
-
-/// The centre of `hwnd` on screen, in physical pixels.
-fn centre(hwnd: HWND) -> Result<Pt, String> {
-    let r = win::rect(hwnd)?;
-    Ok(Pt {
-        x: i32::midpoint(r.left, r.right),
-        y: i32::midpoint(r.top, r.bottom),
-    })
 }
 
 /// Plays `case` at `p` as the simulated user; once pressed, the button is always released.
@@ -152,7 +143,7 @@ fn drive(ctx: &Ctx, target: &Opened) -> Result<Drive, String> {
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring target-window to the front".to_string());
     }
-    let p = centre(target.hwnd)?;
+    let p = uia::centre(&win::rect(target.hwnd)?);
     let assist = Assist::start(Setup {
         hold_ms: ctx.spike.hold.ms,
         still_px: ctx.spike.hold.still_px,

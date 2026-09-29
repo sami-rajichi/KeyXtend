@@ -1,5 +1,5 @@
-# Every number and path the gate runner uses. Read beside the exe first, else from tools/kx-gates.
-# Relative paths start at this file's folder; ../../ is the repo root, and a test keeps every path inside the repo.
+# Every number and path the gate runner uses, read beside the exe first, else from tools/kx-gates.
+# Relative paths start at this file's folder, and a test keeps them inside the repo.
 
 [paths]
 # Sent and received texts, raw click data, screenshots of blocked runs, and results.jsonl.

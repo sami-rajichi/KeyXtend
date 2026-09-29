@@ -1,4 +1,5 @@
-//! Settings of the probes G7 and G19 to G25, from `[edit_keys]`, `[g7]` and `[g19]` to `[g25]`.
+//! Settings of the probes G7, G19 to G21 and G23 to G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]`
+//! and `[g23]` to `[g25]`. `check` also validates G22, whose settings live in `g22cfg`.
 #![cfg(windows)]
 
 use serde::Deserialize;

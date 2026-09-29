@@ -44,9 +44,8 @@ impl Sentence {
     /// The layout as a LANGID; `None` unless it is 4 hex digits.
     pub fn layout_id(&self) -> Option<u16> {
         let l = &self.layout;
-        (l.len() == LAYOUT_DIGITS)
-            .then(|| u16::from_str_radix(l, HEX).ok())
-            .flatten()
+        let digits = l.len() == LAYOUT_DIGITS && l.bytes().all(|b| b.is_ascii_hexdigit());
+        digits.then(|| u16::from_str_radix(l, HEX).ok()).flatten()
     }
 }
 
@@ -85,6 +84,26 @@ impl G22 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The LANGID of a sentence whose layout text is `layout`.
+    fn id(layout: &str) -> Option<u16> {
+        let text = String::new();
+        let sentence = Sentence {
+            layout: layout.into(),
+            text,
+        };
+        sentence.layout_id()
+    }
+
+    #[test]
+    fn a_layout_is_exactly_four_hex_digits() {
+        assert_eq!(id("0409"), Some(0x0409));
+        assert_eq!(id("040c"), Some(0x040c));
+        assert_eq!(id("040C"), Some(0x040c));
+        for bad in ["+409", "-409", "409", "04090", "04 9", "040g", ""] {
+            assert_eq!(id(bad), None, "{bad:?}");
+        }
+    }
 
     #[test]
     fn each_sentence_needs_its_own_voice_language() {

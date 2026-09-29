@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::ffi::c_void;
 
 use serde_json::{Value, json};
+use spike_core::hold::Pt;
 use spike_core::window::foreground;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, POINT, RECT};
 use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUIAccess};
@@ -15,6 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::apps::Ctx;
 use crate::gatecfg::Surface;
+use crate::hookio::inside;
 use crate::out::say;
 use crate::win::{self, root_at, size32, sleep_ms};
 use crate::winfind::{self, Match};
@@ -63,11 +65,6 @@ fn verdict(opened: bool, probes: &[(bool, bool)]) -> Verdict {
     } else {
         Verdict::Pass
     }
-}
-
-/// True if `p` is inside `r`; the right and bottom edges are outside.
-fn contains(r: RECT, p: POINT) -> bool {
-    (r.left..r.right).contains(&p.x) && (r.top..r.bottom).contains(&p.y)
 }
 
 /// The screen box of `hwnd`, when Windows gives one.
@@ -142,7 +139,7 @@ fn look(ctx: &Ctx, probes: &[(u32, POINT)], s: &Surface) -> Result<(HWND, bool, 
         .map(|&(code, p)| Hit {
             code,
             found: root_at(p),
-            covered: rect.is_some_and(|r| contains(r, p)),
+            covered: rect.is_some_and(|r| inside(&r, Pt { x: p.x, y: p.y })),
         })
         .collect();
     Ok((front, opened, hits))
@@ -237,20 +234,5 @@ mod tests {
         );
         assert_eq!(verdict(false, &[(false, false)]), Verdict::Fail);
         assert_eq!(verdict(true, &[]), Verdict::NotCovered);
-    }
-
-    #[test]
-    fn contains_keeps_the_right_and_bottom_edges_out() {
-        let r = RECT {
-            left: 0,
-            top: 10,
-            right: 100,
-            bottom: 50,
-        };
-        assert!(contains(r, POINT { x: 0, y: 10 }));
-        assert!(contains(r, POINT { x: 99, y: 49 }));
-        assert!(!contains(r, POINT { x: 100, y: 20 }));
-        assert!(!contains(r, POINT { x: 20, y: 50 }));
-        assert!(!contains(r, POINT { x: -1, y: 20 }));
     }
 }

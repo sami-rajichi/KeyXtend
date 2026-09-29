@@ -18,6 +18,7 @@ mod tests {
     use std::path::{Component, Path, PathBuf};
 
     use kx_target_window::config::locate_for;
+    use kx_test_support::tempdir::TempDir;
 
     use super::*;
     use crate::config;
@@ -89,12 +90,10 @@ mod tests {
 
     #[test]
     fn a_file_beside_the_exe_wins() {
-        let dir = std::env::temp_dir().join(format!("kx-gates-cfg-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("temp folder");
-        std::fs::write(dir.join(FILE), "").expect("temp file");
-        let got = for_exe(Some(&dir.join("kx-gates.exe")));
-        std::fs::remove_dir_all(&dir).expect("clean up");
-        assert_eq!(got, dir.join(FILE));
+        let dir = TempDir::new("gates-cfg").expect("temp folder");
+        std::fs::write(dir.path().join(FILE), "").expect("temp file");
+        let got = for_exe(Some(&dir.path().join("kx-gates.exe")));
+        assert_eq!(got, dir.path().join(FILE));
     }
 
     #[test]

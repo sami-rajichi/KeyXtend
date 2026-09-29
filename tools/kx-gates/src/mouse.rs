@@ -51,7 +51,7 @@ pub fn centre(place: &Place, origin: POINT, dpi: u32) -> POINT {
     }
 }
 
-/// The running face called `name`, found by its exact title from spike.toml.
+/// The running face window, found by its exact title from spike.toml; `name` only fills the error.
 pub fn find_face(spike: &SpikeConfig, name: &str) -> Result<HWND, String> {
     let title = &spike.keyboard.title;
     crate::win::top_windows()
