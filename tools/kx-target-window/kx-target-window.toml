@@ -1,0 +1,14 @@
+# Every value the test window uses. Read beside the exe first, else from this folder; relative paths start here.
+
+# Title of the recording window.
+title = "KeyXtend target window"
+# Log of every character it receives.
+log = "../../target/gate-logs/target-window.log"
+# Text font and its height in pixels; Segoe UI covers Latin and Arabic.
+font = "Segoe UI"
+font_px = 24
+# Window size in pixels.
+width_px = 900
+height_px = 500
+# Switch that makes the box a single-line password box, where typed characters are never logged.
+password_arg = "--password"

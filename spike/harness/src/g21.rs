@@ -67,7 +67,7 @@ fn chrome(ctx: &Ctx) -> Result<Value, String> {
 /// Also returns what clean-up left open.
 fn win32_box(ctx: &Ctx, password: bool) -> (Result<bool, String>, Vec<String>) {
     let extra = if password {
-        std::slice::from_ref(&ctx.spike.target.password_arg)
+        std::slice::from_ref(&ctx.target.password_arg)
     } else {
         &[]
     };

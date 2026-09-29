@@ -33,8 +33,8 @@ fn copy_all(cfg: &HarnessConfig) -> Result<String, String> {
 pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let (cfg, t) = (ctx.cfg, &ctx.cfg.timing);
     if app.kind == AppKind::Target {
-        let log = ctx.spike.resolve(&ctx.spike.target.log);
-        let text = std::fs::read_to_string(&log).map_err(|e| format!("{}: {e}", log.display()))?;
+        let log = &ctx.target.log;
+        let text = std::fs::read_to_string(log).map_err(|e| format!("{}: {e}", log.display()))?;
         return Ok(tlog::decode(&tlog::parse(&text)));
     }
     let front = foreground();

@@ -1,4 +1,4 @@
-//! The target-window log format, shared by its writer (target-window) and its reader (the harness).
+//! The log format of the test window, shared by its writer (the window) and its reader (the gate runner).
 
 /// Starts comment lines; data lines are `<µs>\t<UTF-16 unit in hex>`.
 pub const COMMENT: &str = "#";
@@ -10,11 +10,13 @@ pub const FOCUS_LOST: &str = "# focus-lost";
 pub const SEP: char = '\t';
 
 /// A data line for UTF-16 `unit` received at `us`.
+#[must_use]
 pub fn data(us: i64, unit: u16) -> String {
     format!("{us}{SEP}{unit:04X}")
 }
 
 /// A comment line `mark` at `us`.
+#[must_use]
 pub fn mark(mark: &str, us: i64) -> String {
     format!("{mark}{SEP}{us}")
 }
@@ -22,7 +24,7 @@ pub fn mark(mark: &str, us: i64) -> String {
 /// A mouse press: `# mouse\t<press>\t<µs>\t<x>\t<y>`, in screen pixels.
 pub const MOUSE: &str = "# mouse";
 
-/// The mouse events target-window logs.
+/// The mouse events the window logs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Press {
     /// The left button went down.
@@ -33,7 +35,7 @@ pub enum Press {
     RightDown,
     /// The right button came up.
     RightUp,
-    /// A context-menu request, which target-window swallows.
+    /// A context-menu request, which the window swallows.
     Menu,
 }
 
@@ -48,6 +50,7 @@ impl Press {
     ];
 
     /// The name used in the log.
+    #[must_use]
     pub fn name(self) -> &'static str {
         match self {
             Self::LeftDown => "ldown",
@@ -59,12 +62,14 @@ impl Press {
     }
 
     /// The press called `name`.
+    #[must_use]
     pub fn parse(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|p| p.name() == name)
     }
 }
 
 /// A mouse line for `press` at `us`, at screen point (`x`, `y`).
+#[must_use]
 pub fn mouse(press: Press, us: i64, x: i32, y: i32) -> String {
     format!("{MOUSE}{SEP}{}{SEP}{us}{SEP}{x}{SEP}{y}", press.name())
 }

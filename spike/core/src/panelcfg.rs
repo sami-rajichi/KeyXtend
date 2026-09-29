@@ -75,7 +75,6 @@ pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
         &cfg.voice.caption.title,
         &cfg.bar.bubble_title,
         &cfg.ring.title,
-        &cfg.target.title,
     ];
     let all: Vec<&String> = std::iter::once(&cfg.keyboard.title).chain(named).collect();
     let shared = all.iter().enumerate().any(|(i, t)| all[..i].contains(t));
@@ -152,10 +151,6 @@ mod tests {
             "ring and bubble"
         );
         assert!(with(&|c| c.ring.title.clear()).is_err(), "untitled windows");
-        assert!(
-            with(&|c| c.target.title = c.panel.title.clone()).is_err(),
-            "the target's, which the harness closes by title"
-        );
     }
 
     #[test]

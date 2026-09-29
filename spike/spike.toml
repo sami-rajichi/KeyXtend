@@ -88,20 +88,6 @@ max = 1.8
 # While the keyboard is being moved or resized, the pointer is read this often (ms), about once a frame.
 poll_ms = 16
 
-[target]
-# Title of the recording window.
-title = "KeyXtend spike - target"
-# Log of every character it receives, relative to the spike folder.
-log = "../target/spike-logs/target-window.log"
-# Text font and its height in pixels; Segoe UI covers Latin and Arabic.
-font = "Segoe UI"
-font_px = 24
-# Window size in pixels.
-width_px = 900
-height_px = 500
-# Switch that makes the box a single-line password box, where typed characters are never logged.
-password_arg = "--password"
-
 # Stage 1b: the tools row under the keys, the selection pill, quick-fill and snip.
 [tools]
 labels = { fill_user = "Fill user", fill_password = "Fill password", snip = "Snip", mic = "Mic", copy = "Copy" }

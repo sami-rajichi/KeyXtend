@@ -1,6 +1,6 @@
-//! Reads the target-window log, whose format is in `spike_core::targetlog`, after the last start.
+//! Reads the target-window log, whose format is in `kx_target_window::log`, after the last start.
 
-use spike_core::targetlog::{COMMENT, FOCUS_LOST, MOUSE, Press, SEP, START};
+use kx_target_window::log::{COMMENT, FOCUS_LOST, MOUSE, Press, SEP, START};
 
 /// Radix of the logged UTF-16 units.
 const HEX: u32 = 16;
@@ -94,8 +94,8 @@ pub fn decode(units: &[Unit]) -> String {
 
 /// Target-window's mouse presses logged at or after `since` (µs).
 pub fn mouse_since(ctx: &crate::apps::Ctx, since: i64) -> Result<Vec<Mouse>, String> {
-    let path = ctx.spike.resolve(&ctx.spike.target.log);
-    let log = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let path = &ctx.target.log;
+    let log = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     Ok(mouse(&log).into_iter().filter(|m| m.us >= since).collect())
 }
 

@@ -194,11 +194,13 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
 fn run(args: &Args) -> Result<Value, String> {
     let cfg = config::load()?;
     let spike = spike_core::config::load()?;
+    let target = kx_target_window::config::load().map_err(|e| e.to_string())?;
     let out = out::out_dir(&cfg.out_dir())?;
     let base = format!("{}-{}-{}", args.gate, args.name, out::stamp());
     let ctx = Ctx {
         cfg: &cfg,
         spike: &spike,
+        target: &target,
         out,
         base,
     };

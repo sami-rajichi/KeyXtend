@@ -1,9 +1,9 @@
 //! G5 hold engine: with Right-click on, short clicks and drags stay normal and a still hold right-clicks.
 
+use kx_target_window::log::Press;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use spike_core::hold::{Act, Button, Mode, Pt};
-use spike_core::targetlog::Press;
 use spike_core::uiaccess;
 use windows::Win32::Foundation::{HWND, POINT};
 

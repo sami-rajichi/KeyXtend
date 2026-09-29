@@ -19,8 +19,6 @@ const FACE_SLOT: &str = "{face}";
 pub struct SpikeConfig {
     /// Keyboard block and sizes.
     pub keyboard: KeyboardConfig,
-    /// The recording target window.
-    pub target: TargetConfig,
     /// The tools row, the selection pill, quick-fill and snip.
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
@@ -72,26 +70,6 @@ pub struct KeyboardConfig {
     pub rows: Vec<Vec<u32>>,
     /// `[scan code, width]` pairs; other keys are `layout::DEFAULT_WIDTH` wide.
     pub widths: Vec<(u32, f32)>,
-}
-
-/// The recording target window.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TargetConfig {
-    /// Window title.
-    pub title: String,
-    /// Character log, relative to the settings folder.
-    pub log: String,
-    /// Text font name.
-    pub font: String,
-    /// Text font height in pixels.
-    pub font_px: i32,
-    /// Window width in pixels.
-    pub width_px: i32,
-    /// Window height in pixels.
-    pub height_px: i32,
-    /// Command-line switch that makes the box a single-line password box.
-    pub password_arg: String,
 }
 
 /// Bytes in one MiB.
