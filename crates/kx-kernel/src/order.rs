@@ -50,10 +50,9 @@ impl Plan {
     }
 }
 
-/// Orders `nodes`, given in insertion order, knowing the services the `platform` provides.
-///
-/// A module with several problems gets the first of `Cycle`, `DuplicateProvider` and `Missing`.
-/// Requiring a platform service never waits for a module, even one that also provides it.
+/// Orders `nodes`, given in insertion order; a module with several problems gets the first of
+/// `Cycle`, `DuplicateProvider` and `Missing`.
+/// A service the `platform` provides never waits for a module, even one that also provides it.
 #[must_use]
 pub fn plan(nodes: &[Node<'_>], platform: &BTreeSet<ServiceId>) -> Plan {
     let owners = owners(nodes);

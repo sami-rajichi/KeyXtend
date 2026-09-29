@@ -78,8 +78,6 @@ type WriteField = fn(&mut Writer<'_>, &Field, &dyn fmt::Debug) -> fmt::Result;
 /// The field formatter of the log: see `fields`.
 pub type Fields = Delimited<&'static str, FieldFn<WriteField>>;
 
-/// The field formatter of the log.
-///
 /// A field whose name holds a `SENSITIVE` name prints `REDACTED_MARKER`. Other values print with
 /// `Debug`, with control characters and `MARKS` escaped, so no value can start or reorder a line.
 #[must_use]

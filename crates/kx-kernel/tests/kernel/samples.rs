@@ -16,6 +16,10 @@ pub const PLATFORM: &str = "platform";
 pub const MAX_LEVEL: i64 = 9;
 /// The level in the sample defaults.
 pub const DEFAULT_LEVEL: i64 = 1;
+/// A level that differs from the default and is not above `MAX_LEVEL`.
+pub const NEW_LEVEL: i64 = 5;
+/// The settings key of the level, the field of `Level`.
+pub const LEVEL_KEY: &str = "level";
 /// Why a sample start fails when told to.
 pub const FAILURE: &str = "sample failure";
 

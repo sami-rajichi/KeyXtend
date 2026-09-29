@@ -2,7 +2,7 @@
 
 use crate::record::Mode;
 use crate::rig::Rig;
-use crate::samples::{Alpha, LEVEL_SPEC, PLATFORM, sample, service};
+use crate::samples::{Alpha, LEVEL_KEY, LEVEL_SPEC, NEW_LEVEL, PLATFORM, sample, service};
 use kx_kernel::{KernelError, Phase};
 use kx_module_api::ModuleState::{Active, Failed};
 use kx_module_api::{ModuleId, ServiceKey};
@@ -10,8 +10,6 @@ use toml::Value;
 
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
-const LEVEL: &str = "level";
-const NEW_LEVEL: i64 = 5;
 
 /// True when `result` is the refusal naming `phase`.
 fn refused<T>(result: &Result<T, KernelError>, phase: Phase) -> bool {
@@ -23,7 +21,7 @@ fn controls_refused(rig: &mut Rig, phase: Phase) {
     assert!(refused(&rig.kernel.retry(A), phase));
     assert!(refused(&rig.kernel.set_enabled(B, false), phase));
     let level = Value::Integer(NEW_LEVEL);
-    assert!(refused(&rig.kernel.set_setting(B, LEVEL, level), phase));
+    assert!(refused(&rig.kernel.set_setting(B, LEVEL_KEY, level), phase));
 }
 
 #[test]

@@ -66,9 +66,7 @@ fn try_again_on_a_dependent_restarts_what_waited_behind_it() {
 #[test]
 fn try_again_never_starts_a_dependent_the_user_switched_off() {
     let (mut rig, a) = (Rig::new(), Switch::new(Mode::Fail));
-    fs::create_dir_all(rig.data()).unwrap();
-    let off = "[kernel]\nversion = 1\ndisabled = [\"b\"]\n";
-    fs::write(rig.files().settings, off).unwrap();
+    rig.off_in_file(&[B]);
     chain(&mut rig, &a);
     rig.kernel.boot().unwrap();
     a.set(Mode::Succeed);
@@ -165,11 +163,34 @@ fn switching_off_a_provider_stops_its_dependents_first_and_saves_it() {
 }
 
 #[test]
+fn switching_a_module_off_twice_lists_it_once() {
+    let mut rig = Rig::new();
+    rig.add(sample(A));
+    rig.kernel.boot().unwrap();
+    rig.kernel.set_enabled(A, false).unwrap();
+    rig.kernel.set_enabled(A, false).unwrap();
+    let text = fs::read_to_string(rig.files().settings).unwrap();
+    let file: toml::Table = text.parse().unwrap();
+    let off = toml::Value::Array(vec![A.as_str().into()]);
+    assert_eq!(file["kernel"]["disabled"], off, "{text}");
+    assert_eq!(rig.state(A), Some(Stopped));
+}
+
+#[test]
+fn switching_on_a_module_that_runs_starts_nothing() {
+    let mut rig = Rig::new();
+    rig.add(sample(A));
+    rig.kernel.boot().unwrap();
+    rig.log.clear();
+    rig.kernel.set_enabled(A, true).unwrap();
+    assert_eq!(rig.log.all(), [], "nothing restarted");
+    assert_eq!(rig.state(A), Some(Active));
+}
+
+#[test]
 fn a_module_switched_off_in_the_file_stays_stopped_until_switched_on() {
     let mut rig = Rig::new();
-    fs::create_dir_all(rig.data()).unwrap();
-    let off = "[kernel]\nversion = 1\ndisabled = [\"a\"]\n";
-    fs::write(rig.files().settings, off).unwrap();
+    rig.off_in_file(&[A]);
     rig.add(sample(A).provides(&[Alpha::ID]));
     rig.add(sample(B).requires(&[Alpha::ID]));
     rig.add(sample(C));
@@ -191,9 +212,7 @@ fn a_module_switched_off_in_the_file_stays_stopped_until_switched_on() {
 #[test]
 fn switching_on_leaves_a_dependent_stopped_while_another_provider_is_off() {
     let mut rig = Rig::new();
-    fs::create_dir_all(rig.data()).unwrap();
-    let off = "[kernel]\nversion = 1\ndisabled = [\"a\", \"b\"]\n";
-    fs::write(rig.files().settings, off).unwrap();
+    rig.off_in_file(&[A, B]);
     rig.add(sample(A).provides(&[Alpha::ID]));
     rig.add(sample(B).provides(&[Beta::ID]));
     rig.add(sample(C).requires(&[Alpha::ID, Beta::ID]));
