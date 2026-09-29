@@ -4,7 +4,7 @@ use std::path::{Component, Path, PathBuf};
 
 use serde::Deserialize;
 
-/// The most parts the stats path may have: one folder and the file, so the harness can remove both.
+/// The most parts the stats path may have: one folder and the file, so kx-gates can remove both.
 const STATS_PARTS: usize = 2;
 
 /// A still left press: how long it waits, what counts as still, and when the ring shows (spec §3.2).
@@ -49,11 +49,11 @@ impl HoldConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RingTest {
-    /// The ring window's title, so the harness can find it.
+    /// The ring window's title, so kx-gates can find it.
     pub title: String,
     /// The test strip's switch for the loop.
     pub label: String,
-    /// The frame stats file, under the user's local app-data folder, where the face writes it and the harness reads it.
+    /// The frame stats file, under the user's local app-data folder, where the face writes it and kx-gates reads it.
     pub stats: String,
     /// The most frame gaps kept, so a loop left on never grows without end.
     pub max_frames: usize,

@@ -65,8 +65,8 @@ impl PanelConfig {
     }
 }
 
-/// Refuses an empty or shared window title: the focus guard spares the panel, and the harness finds our windows, by title.
-pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
+/// Every window title the spike opens, the keyboard's first.
+pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
     let tools = &cfg.tools;
     let named = [
         &cfg.panel.title,
@@ -76,7 +76,12 @@ pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
         &cfg.bar.bubble_title,
         &cfg.ring.title,
     ];
-    let all: Vec<&String> = std::iter::once(&cfg.keyboard.title).chain(named).collect();
+    std::iter::once(&cfg.keyboard.title).chain(named).collect()
+}
+
+/// Refuses an empty or shared window title: the focus guard spares the panel, and kx-gates finds our windows, by title.
+pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
+    let all = titles(cfg);
     let shared = all.iter().enumerate().any(|(i, t)| all[..i].contains(t));
     if shared || all.iter().any(|t| t.is_empty()) {
         return Err("window titles must be set and differ from each other".into());

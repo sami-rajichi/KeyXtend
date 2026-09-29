@@ -1,4 +1,4 @@
-//! The QPC clock in microseconds, shared by target-window and the harness so G2 times match.
+//! The QPC clock in microseconds, shared by target-window and kx-gates so G2 times match.
 
 use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 

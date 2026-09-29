@@ -1,4 +1,4 @@
-//! Where each key sits, in logical pixels: one calculation shared by every face and the harness.
+//! Where each key sits, in logical pixels: one calculation shared by every face and kx-gates.
 
 use serde::{Deserialize, Serialize};
 
