@@ -18,7 +18,8 @@ use tracing_subscriber::fmt::format::{FieldFn, Writer, debug_fn};
 /// The log level names, most important first; `level` maps each to a filter.
 pub const LOG_LEVELS: &[&str] = &["error", "warn", "info", "debug", "trace"];
 
-/// Field names whose values are never printed. Add names here, never remove them.
+/// Names whose fields never print their value, also inside a longer name such as `user_password`.
+/// Add names here, never remove them.
 pub const SENSITIVE: &[&str] = &[
     "text",
     "typed",
@@ -33,6 +34,18 @@ pub const SENSITIVE: &[&str] = &[
 
 /// The field that holds an event's message.
 const MESSAGE: &str = "message";
+
+/// What separates the parts of a field name, such as `api` and `key` in `api_key`.
+const PART_SEP: &str = "_";
+/// Other characters that separate name parts; they count as `PART_SEP`.
+const PART_JOINERS: [char; 2] = ['.', '-'];
+
+/// Line separators and bidi controls, escaped like control characters so no value can fake or
+/// reorder a line.
+const MARKS: [char; 13] = [
+    '\u{2028}', '\u{2029}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
+    '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+];
 
 /// What separates the fields of one line.
 const FIELD_SEP: &str = " ";
@@ -67,17 +80,27 @@ pub type Fields = Delimited<&'static str, FieldFn<WriteField>>;
 
 /// The field formatter of the log.
 ///
-/// A field named in `SENSITIVE` prints `REDACTED_MARKER`. Other values print with `Debug`, and
-/// every control character is escaped, so no value can start a new line.
+/// A field whose name holds a `SENSITIVE` name prints `REDACTED_MARKER`. Other values print with
+/// `Debug`, with control characters and `MARKS` escaped, so no value can start or reorder a line.
 #[must_use]
 pub fn fields() -> Fields {
     debug_fn(write_field as WriteField).delimited(FIELD_SEP)
 }
 
+/// True when field `name`, lower-cased, holds a `SENSITIVE` name as a whole run of its parts.
+fn sensitive(name: &str) -> bool {
+    let name = name.to_lowercase().replace(PART_JOINERS, PART_SEP);
+    let parts: Vec<&str> = name.split(PART_SEP).collect();
+    SENSITIVE.iter().any(|listed| {
+        let want: Vec<&str> = listed.split(PART_SEP).collect();
+        parts.windows(want.len()).any(|run| run == want.as_slice())
+    })
+}
+
 fn write_field(out: &mut Writer<'_>, field: &Field, value: &dyn fmt::Debug) -> fmt::Result {
     let name = field.name();
     if name != MESSAGE {
-        if SENSITIVE.contains(&name) {
+        if sensitive(name) {
             return write!(out, "{name}={REDACTED_MARKER}");
         }
         write!(out, "{name}=")?;
@@ -85,7 +108,7 @@ fn write_field(out: &mut Writer<'_>, field: &Field, value: &dyn fmt::Debug) -> f
     write!(OneLine(out), "{value:?}")
 }
 
-/// Writes text with each control character escaped, so a value stays on one line.
+/// Writes text with each control character and each of `MARKS` escaped, so a value stays on one line.
 struct OneLine<'a, 'w>(&'a mut Writer<'w>);
 
 impl fmt::Write for OneLine<'_, '_> {
@@ -93,6 +116,8 @@ impl fmt::Write for OneLine<'_, '_> {
         text.chars().try_for_each(|c| {
             if c.is_control() {
                 write!(self.0, "{}", c.escape_debug())
+            } else if MARKS.contains(&c) {
+                write!(self.0, "{}", c.escape_unicode())
             } else {
                 self.0.write_char(c)
             }
@@ -209,7 +234,7 @@ impl<'a> MakeWriter<'a> for LogFile {
 }
 
 /// The subscriber the app installs: events at `level` and above, redacted, without colours.
-/// It only builds the subscriber; installing it is the app's job.
+/// It only builds the subscriber; installing it is the app's job, and a failed write never reaches stderr.
 #[must_use]
 pub fn subscriber<W>(level: LevelFilter, writer: W) -> impl Subscriber + Send + Sync + 'static
 where
@@ -219,6 +244,7 @@ where
         .with_max_level(level)
         .with_ansi(false)
         .fmt_fields(fields())
+        .log_internal_errors(false)
         .with_writer(writer)
         .finish()
 }

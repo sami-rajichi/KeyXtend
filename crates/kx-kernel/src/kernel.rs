@@ -29,7 +29,9 @@ use thiserror::Error;
 pub const KERNEL: ModuleId = ModuleId::new("kernel");
 
 /// The smallest log file cap, in MiB.
-const MIN_LOG_MB: u32 = 1;
+pub(crate) const MIN_LOG_MB: u32 = 1;
+/// The largest log file cap, in MiB, so a hand-edited value cannot fill the disk.
+pub(crate) const MAX_LOG_MB: u32 = 100;
 
 /// The key of the switched-off list in the kernel's section.
 const DISABLED_KEY: &str = "disabled";
@@ -60,8 +62,8 @@ impl Settings for KernelSettings {
         if log::level(&self.log_level).is_none() {
             return invalid("log_level is not a level name");
         }
-        if self.log_max_mb < MIN_LOG_MB {
-            return invalid("log_max_mb is below the smallest cap");
+        if !(MIN_LOG_MB..=MAX_LOG_MB).contains(&self.log_max_mb) {
+            return invalid("log_max_mb is outside its range");
         }
         if self.disabled.iter().any(String::is_empty) {
             return invalid("disabled holds an empty id");

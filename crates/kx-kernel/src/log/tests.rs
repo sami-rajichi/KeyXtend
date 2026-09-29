@@ -1,5 +1,6 @@
 use super::*;
 use crate::KernelSettings;
+use crate::kernel::{MAX_LOG_MB, MIN_LOG_MB};
 use kx_module_api::{Redacted, Settings};
 use std::sync::Arc;
 use tracing::callsite::{DefaultCallsite, Identifier};
@@ -23,15 +24,47 @@ static PROBE: Metadata<'static> = Metadata::new(
 );
 static SITE: DefaultCallsite = DefaultCallsite::new(&PROBE);
 
-/// One event per sensitive name, each holding `SECRET`.
-fn probe_each_name() {
-    let fields = PROBE.fields();
-    for name in SENSITIVE {
+/// Field names holding a sensitive name as a whole part, in other cases and spellings.
+const VARIANTS: &[&str] = &[
+    "typed_text",
+    "clipboard_text",
+    "api.key",
+    "api-key",
+    "Password",
+    "user_password",
+    "password_hash",
+];
+
+/// Ordinary field names, one of which holds a sensitive name only inside a longer part.
+const ORDINARY: &[&str] = &["module", "context"];
+
+/// A probe event with one field per variant name.
+static VARIANT_PROBE: Metadata<'static> = Metadata::new(
+    "variants",
+    "kx_kernel::log::tests",
+    Level::INFO,
+    None,
+    None,
+    None,
+    FieldSet::new(VARIANTS, Identifier(&VARIANT_SITE)),
+    Kind::EVENT,
+);
+static VARIANT_SITE: DefaultCallsite = DefaultCallsite::new(&VARIANT_PROBE);
+
+/// One `probe` event per name in `names`, each holding `SECRET`.
+fn probe_each(probe: &'static Metadata<'static>, names: &[&str]) {
+    let fields = probe.fields();
+    for name in names {
         let field = fields.field(name).unwrap();
         let value = SECRET;
         let values = [(&field, Some(&value as &dyn Value))];
-        Event::dispatch(&PROBE, &fields.value_set(&values));
+        Event::dispatch(probe, &fields.value_set(&values));
     }
+}
+
+/// One event per sensitive name, each holding `SECRET`.
+fn probe_each_name() {
+    probe_each(&PROBE, SENSITIVE);
 }
 
 /// A shared byte buffer that acts as the log writer of a test.
@@ -92,6 +125,23 @@ fn every_sensitive_name_prints_the_marker_and_never_its_value() {
 }
 
 #[test]
+fn a_sensitive_name_inside_a_longer_name_or_another_spelling_is_redacted() {
+    let out = info_log(|| probe_each(&VARIANT_PROBE, VARIANTS));
+    for name in VARIANTS {
+        assert_marked(&out, name);
+    }
+    assert!(!out.contains(SECRET), "{out}");
+}
+
+#[test]
+fn only_whole_parts_of_a_name_count() {
+    assert!(VARIANTS.iter().all(|name| sensitive(name)), "{VARIANTS:?}");
+    assert!(ORDINARY.iter().all(|name| !sensitive(name)), "{ORDINARY:?}");
+    let out = info_log(|| info!(module = "keyboard", context = 3, "x"));
+    assert!(out.contains("module=\"keyboard\" context=3"), "{out}");
+}
+
+#[test]
 fn a_redacted_value_in_an_ordinary_field_prints_the_marker() {
     let out = info_log(|| {
         info!(note = ?Redacted::new(SECRET), "x");
@@ -145,6 +195,23 @@ fn a_newline_in_the_message_stays_on_one_line() {
     assert!(out.contains(r"said a\nb\r\u{1b}"), "{out}");
 }
 
+/// Line and paragraph separators and the bidi controls, listed apart from `MARKS` so the test checks it.
+const WANT_ESCAPED: [char; 13] = [
+    '\u{2028}', '\u{2029}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
+    '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+];
+
+#[test]
+fn every_separator_and_bidi_control_is_escaped() {
+    for mark in WANT_ESCAPED {
+        let said = format!("a{mark}b");
+        let out = info_log(|| info!(note = %said, "said {said}"));
+        let escaped = mark.escape_unicode().to_string();
+        assert!(!out.contains(mark), "{out:?}");
+        assert_eq!(out.matches(&escaped).count(), 2, "{mark:?}: {out:?}");
+    }
+}
+
 #[test]
 fn a_line_has_no_colour_codes() {
     let out = info_log(|| warn!(count = 1, "x"));
@@ -191,6 +258,19 @@ fn the_kernel_settings_take_their_level_names_from_the_same_list() {
         assert!(with(name).check().is_ok(), "{name}");
     }
     assert!(with("loud").check().is_err());
+}
+
+#[test]
+fn the_kernel_settings_cap_the_log_size() {
+    let with = |mb: u32| KernelSettings {
+        disabled: Vec::new(),
+        log_level: LOG_LEVELS[0].to_owned(),
+        log_max_mb: mb,
+    };
+    assert!(with(MIN_LOG_MB).check().is_ok());
+    assert!(with(MAX_LOG_MB).check().is_ok());
+    assert!(with(MIN_LOG_MB - 1).check().is_err());
+    assert!(with(MAX_LOG_MB + 1).check().is_err());
 }
 
 #[test]
