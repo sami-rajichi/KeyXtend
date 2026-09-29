@@ -3,7 +3,7 @@
 use crate::record::{Did, Mode, Switch};
 use crate::rig::{Rig, failed};
 use crate::samples::{Alpha, Beta, Gamma, sample};
-use kx_kernel::{KERNEL, KernelError};
+use kx_kernel::{KERNEL, KernelError, Phase};
 use kx_module_api::ModuleState::{Active, Failed, Starting, Stopped};
 use kx_module_api::{ModuleId, ServiceKey};
 use std::fs;
@@ -37,7 +37,7 @@ fn all_active(rig: &Rig, ids: &[ModuleId]) -> bool {
 fn try_again_restarts_what_a_failed_switch_on_left_stopped() {
     let (mut rig, a) = (Rig::new(), Switch::new(Mode::Succeed));
     chain(&mut rig, &a);
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.kernel.set_enabled(A, false).unwrap();
     a.set(Mode::Fail);
     rig.kernel.set_enabled(A, true).unwrap();
@@ -52,7 +52,7 @@ fn try_again_restarts_what_a_failed_switch_on_left_stopped() {
 fn try_again_on_a_dependent_restarts_what_waited_behind_it() {
     let (mut rig, b) = (Rig::new(), Switch::new(Mode::Succeed));
     chain_of(&mut rig, &Switch::new(Mode::Succeed), &b);
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.kernel.set_enabled(A, false).unwrap();
     b.set(Mode::Fail);
     rig.kernel.set_enabled(A, true).unwrap();
@@ -70,7 +70,7 @@ fn try_again_never_starts_a_dependent_the_user_switched_off() {
     let off = "[kernel]\nversion = 1\ndisabled = [\"b\"]\n";
     fs::write(rig.files().settings, off).unwrap();
     chain(&mut rig, &a);
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     a.set(Mode::Succeed);
     rig.kernel.retry(A).unwrap();
     let states = [A, B, C, D].map(|m| rig.state(m));
@@ -83,7 +83,7 @@ fn try_again_never_starts_a_dependent_the_user_switched_off() {
 fn try_again_restarts_the_module_and_the_dependents_that_failed_with_it() {
     let (mut rig, a) = (Rig::new(), Switch::new(Mode::Fail));
     chain(&mut rig, &a);
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     let states = [A, B, C, D].map(|m| rig.state(m));
     assert_eq!(
         states,
@@ -111,7 +111,7 @@ fn try_again_refuses_unknown_running_and_blocked_modules() {
     let mut rig = Rig::new();
     rig.add(sample(A));
     rig.add(sample(B).requires(&[Gamma::ID]));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     let retry = |rig: &mut Rig, id| rig.kernel.retry(id);
     assert!(matches!(
         retry(&mut rig, NOBODY),
@@ -128,7 +128,7 @@ fn try_again_refuses_unknown_running_and_blocked_modules() {
 fn stop_all_stops_dependents_before_their_providers_and_is_safe_twice() {
     let mut rig = Rig::new();
     chain(&mut rig, &Switch::new(Mode::Succeed));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.log.clear();
     rig.kernel.stop_all();
     let want = [
@@ -149,7 +149,7 @@ fn stop_all_stops_dependents_before_their_providers_and_is_safe_twice() {
 fn switching_off_a_provider_stops_its_dependents_first_and_saves_it() {
     let mut rig = Rig::new();
     chain(&mut rig, &Switch::new(Mode::Succeed));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.log.clear();
     rig.kernel.set_enabled(A, false).unwrap();
     assert_eq!(rig.log.stops(), [C, B, A]);
@@ -173,7 +173,11 @@ fn a_module_switched_off_in_the_file_stays_stopped_until_switched_on() {
     rig.add(sample(A).provides(&[Alpha::ID]));
     rig.add(sample(B).requires(&[Alpha::ID]));
     rig.add(sample(C));
-    assert_eq!(rig.kernel.boot(), [], "switched off is not a failure");
+    assert_eq!(
+        rig.kernel.boot().unwrap(),
+        [],
+        "switched off is not a failure"
+    );
     let moves = [(A, Stopped), (B, Stopped), (C, Starting), (C, Active)];
     assert_eq!(rig.moves(), moves, "its dependent is skipped with it");
     assert_eq!(rig.log.starts(), [C]);
@@ -193,7 +197,7 @@ fn switching_on_leaves_a_dependent_stopped_while_another_provider_is_off() {
     rig.add(sample(A).provides(&[Alpha::ID]));
     rig.add(sample(B).provides(&[Beta::ID]));
     rig.add(sample(C).requires(&[Alpha::ID, Beta::ID]));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.kernel.set_enabled(A, true).unwrap();
     let states = [A, B, C].map(|m| rig.state(m));
     assert_eq!(states, [Some(Active), Some(Stopped), Some(Stopped)]);
@@ -206,7 +210,7 @@ fn switching_on_leaves_a_dependent_stopped_while_another_provider_is_off() {
 fn dropping_the_kernel_stops_every_module() {
     let mut rig = Rig::new();
     chain(&mut rig, &Switch::new(Mode::Succeed));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     let Rig { kernel, log, .. } = rig;
     drop(kernel);
     assert_eq!(log.stops(), [D, C, B, A]);
@@ -217,8 +221,8 @@ fn switching_refuses_the_kernel_unknown_modules_and_an_unbooted_kernel() {
     let mut rig = Rig::new();
     rig.add(sample(A));
     let early = rig.kernel.set_enabled(A, false);
-    assert!(matches!(early, Err(KernelError::NotBooted)));
-    rig.kernel.boot();
+    assert!(matches!(early, Err(KernelError::WrongPhase(Phase::Setup))));
+    rig.kernel.boot().unwrap();
     let kernel = rig.kernel.set_enabled(KERNEL, false);
     assert!(matches!(kernel, Err(KernelError::Reserved(KERNEL))));
     let nobody = rig.kernel.set_enabled(NOBODY, false);

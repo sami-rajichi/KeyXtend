@@ -65,7 +65,7 @@ fn a_panicking_start_fails_only_that_module_and_rolls_back() {
     let mut rig = Rig::new();
     rig.add(sample(A).provides(&[Alpha::ID]).mode(Mode::Panic));
     rig.add(sample(B));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     assert_eq!([A, B].map(|m| rig.state(m)), [Some(Failed), Some(Active)]);
     assert_eq!(notices, [failed(A)]);
     assert!(rig.log.all().contains(&Did::Dropped(Alpha::ID)));
@@ -79,7 +79,7 @@ fn a_panicking_stop_still_stops_and_releases_the_module() {
     let mut rig = Rig::new();
     rig.add(sample(A).provides(&[Alpha::ID]).mode(Mode::PanicInStop));
     rig.add(sample(B).requires(&[Alpha::ID]));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.log.clear();
     rig.kernel.stop_all();
     let want = [Did::Stop(B), Did::Stop(A), Did::Dropped(Alpha::ID)];
@@ -93,7 +93,7 @@ fn a_failed_start_logs_one_warning_with_only_the_module_and_the_error() {
     let mut rig = Rig::new();
     rig.add(sample(LOUD).mode(Mode::Fail));
     rig.add(sample(WILD).mode(Mode::Panic));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     let lines = LINES.lock().unwrap().clone();
     let warns = |id: ModuleId| -> Vec<Fields> {
         let about = |f: &Fields| f.get("module").is_some_and(|m| m == id.as_str());

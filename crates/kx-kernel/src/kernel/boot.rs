@@ -1,6 +1,6 @@
 //! Boot: load settings, plan the order, fail what cannot start, skip what is off, start the rest.
 
-use super::{KERNEL, Kernel, SPEC};
+use super::{KERNEL, Kernel, KernelError, Phase, SPEC};
 use crate::lifecycle::Step;
 use crate::order::{self, Node, Plan};
 use kx_module_api::{ModuleId, ModuleState, Notice};
@@ -12,9 +12,14 @@ use std::iter;
 const SPEC_BROKEN: &str = "its settings spec is broken";
 
 impl Kernel {
-    /// Loads the settings and starts every module it can, in dependency order; call it once.
+    /// Loads the settings and starts every module it can, in dependency order.
     /// Every notice it returns also went on the bus, as did every state change.
-    pub fn boot(&mut self) -> Vec<Notice> {
+    ///
+    /// # Errors
+    /// `WrongPhase` unless the kernel is in setup, so it boots once.
+    pub fn boot(&mut self) -> Result<Vec<Notice>, KernelError> {
+        self.expect(Phase::Setup)?;
+        self.phase = Phase::Running;
         self.told = Some(Vec::new());
         let broken = self.load();
         self.plan = self.plan_order();
@@ -32,7 +37,7 @@ impl Kernel {
             }
         }
         self.save();
-        self.told.take().unwrap_or_default()
+        Ok(self.told.take().unwrap_or_default())
     }
 
     /// Loads the store, kernel section first, tells its notices and returns the broken specs.

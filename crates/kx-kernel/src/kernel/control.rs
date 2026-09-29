@@ -1,6 +1,6 @@
 //! Runtime controls: Try again, switching a module off and on, and changing one setting.
 
-use super::{DISABLED_KEY, KERNEL, Kernel, KernelError};
+use super::{DISABLED_KEY, KERNEL, Kernel, KernelError, Phase};
 use crate::lifecycle::Step;
 use crate::order;
 use kx_module_api::ModuleState::{Active, Failed, Pending, Starting, Stopped, Stopping};
@@ -11,8 +11,9 @@ impl Kernel {
     /// Try again: starts a failed module, then, once it runs, every dependent not switched off.
     ///
     /// # Errors
-    /// `Unknown`, `NotFailed`, or `NotStartable` when it is off or its plan or spec is broken.
+    /// `WrongPhase` unless running, `Unknown`, `NotFailed`, or `NotStartable`; nothing starts then.
     pub fn retry(&mut self, id: ModuleId) -> Result<(), KernelError> {
+        self.expect(Phase::Running)?;
         let at = self.find(id).ok_or(KernelError::Unknown(id))?;
         if self.slots[at].state != Failed {
             return Err(KernelError::NotFailed(id));
@@ -30,8 +31,9 @@ impl Kernel {
     /// The choice is saved in `[kernel] disabled`.
     ///
     /// # Errors
-    /// `Reserved` for the kernel, `Unknown`, `NotBooted` or the store's refusal; nothing changes.
+    /// `WrongPhase` unless running, `Reserved` for the kernel, `Unknown` or the store's refusal.
     pub fn set_enabled(&mut self, id: ModuleId, on: bool) -> Result<(), KernelError> {
+        self.expect(Phase::Running)?;
         if id == KERNEL {
             return Err(KernelError::Reserved(id));
         }
@@ -44,7 +46,10 @@ impl Kernel {
             list.push(id.as_str().to_owned());
         }
         let value = Value::Array(list.into_iter().map(Value::String).collect());
-        let store = self.store.as_mut().ok_or(KernelError::NotBooted)?;
+        let store = self
+            .store
+            .as_mut()
+            .ok_or(KernelError::WrongPhase(self.phase))?;
         store.set(KERNEL, DISABLED_KEY, value)?;
         self.save();
         if on {
@@ -56,20 +61,27 @@ impl Kernel {
     }
 
     /// Sets one value of `module`'s settings, saves it and announces it; a running module restarts.
+    /// A value equal to the current one changes nothing, so nothing is saved, announced or restarted.
     ///
     /// # Errors
-    /// `SwitchKey` for the kernel's disabled list, `NotBooted` or a store refusal; nothing changes.
+    /// `WrongPhase` unless running, `SwitchKey` for the disabled list, or a store refusal.
     pub fn set_setting(
         &mut self,
         module: ModuleId,
         key: &str,
         value: Value,
     ) -> Result<(), KernelError> {
+        self.expect(Phase::Running)?;
         if module == KERNEL && key == DISABLED_KEY {
             return Err(KernelError::SwitchKey);
         }
-        let store = self.store.as_mut().ok_or(KernelError::NotBooted)?;
-        store.set(module, key, value)?;
+        let store = self
+            .store
+            .as_mut()
+            .ok_or(KernelError::WrongPhase(self.phase))?;
+        if !store.set(module, key, value)? {
+            return Ok(());
+        }
         self.save();
         self.bus.publish(&SettingsChanged { module });
         if let Some(at) = self.active(module) {

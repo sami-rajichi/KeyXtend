@@ -3,7 +3,7 @@
 use crate::record::{Did, Mode};
 use crate::rig::{Rig, Seen, failed};
 use crate::samples::{Alpha, DEFAULT_LEVEL, LEVEL_SPEC, MAX_LEVEL, sample};
-use kx_kernel::{KERNEL, KernelError};
+use kx_kernel::{KERNEL, KernelError, Phase};
 use kx_module_api::ModuleState::Active;
 use kx_module_api::{ModuleId, ServiceKey, SettingsChanged, keys};
 use kx_settings::{ARG_KEYS, StoreError};
@@ -37,7 +37,7 @@ fn count(rig: &Rig, key: &str) -> usize {
 fn a_setting_is_saved_alone_announced_and_seen_after_a_restart() {
     let mut rig = tuned();
     let (changed, _watch) = Seen::<SettingsChanged>::watch(&rig.kernel.bus());
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     assert!(rig.log.all().contains(&Did::Saw(A, DEFAULT_LEVEL)));
     rig.log.clear();
     set(&mut rig, NEW_LEVEL).unwrap();
@@ -58,13 +58,25 @@ fn a_setting_is_saved_alone_announced_and_seen_after_a_restart() {
 }
 
 #[test]
+fn setting_the_current_value_restarts_nothing_and_announces_nothing() {
+    let mut rig = tuned();
+    let (changed, _watch) = Seen::<SettingsChanged>::watch(&rig.kernel.bus());
+    rig.kernel.boot().unwrap();
+    rig.log.clear();
+    set(&mut rig, DEFAULT_LEVEL).unwrap();
+    assert_eq!(rig.log.all(), [], "nothing restarted");
+    assert_eq!(changed.all(), [], "nothing announced");
+    assert!(!rig.files().settings.exists(), "nothing saved");
+}
+
+#[test]
 fn a_refused_setting_changes_nothing() {
     let mut rig = tuned();
     assert!(matches!(
         set(&mut rig, NEW_LEVEL),
-        Err(KernelError::NotBooted)
+        Err(KernelError::WrongPhase(Phase::Setup))
     ));
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     rig.log.clear();
     let high = set(&mut rig, MAX_LEVEL + 1);
     assert!(matches!(
@@ -82,7 +94,7 @@ fn a_refused_setting_changes_nothing() {
 fn an_unwritable_data_folder_runs_on_defaults_and_warns_once() {
     let mut rig = tuned();
     fs::write(rig.data(), "a file where the data folder should be").unwrap();
-    rig.kernel.boot();
+    rig.kernel.boot().unwrap();
     assert!([A, B, C].iter().all(|&m| rig.state(m) == Some(Active)));
     assert!(rig.log.all().contains(&Did::Saw(A, DEFAULT_LEVEL)));
     set(&mut rig, NEW_LEVEL).unwrap();
@@ -102,7 +114,7 @@ fn a_repair_whose_save_fails_warns_once_and_a_later_save_catches_up() {
     let files = rig.files();
     fs::create_dir_all(&files.temp).unwrap();
     fs::write(&files.settings, format!("[a]\nlevel = {}\n", MAX_LEVEL + 1)).unwrap();
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     let got: Vec<_> = notices.iter().map(|n| n.key).collect();
     assert_eq!(got, [keys::SETTINGS_RESET, keys::SETTINGS_UNSAVED]);
     set(&mut rig, NEW_LEVEL).unwrap();
@@ -124,7 +136,7 @@ fn every_notice_reaches_a_subscriber_registered_before_boot() {
     fs::write(rig.files().settings, bad).unwrap();
     rig.add(sample(A).mode(Mode::Fail));
     rig.add(sample(B));
-    let notices = rig.kernel.boot();
+    let notices = rig.kernel.boot().unwrap();
     assert_eq!(notices, rig.notices());
     let [reset, fail] = notices.as_slice() else {
         panic!("expected a reset and a failure: {notices:?}");

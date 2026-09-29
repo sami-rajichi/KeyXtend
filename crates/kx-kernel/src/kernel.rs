@@ -83,12 +83,12 @@ pub enum KernelError {
     /// Only a failed module can be tried again.
     #[error("module {0} has not failed")]
     NotFailed(ModuleId),
-    /// The module is switched off, or its dependencies or settings spec keep it from starting.
+    /// The module is switched off, waits for a switched-off provider, or cannot start at all.
     #[error("module {0} cannot start")]
     NotStartable(ModuleId),
-    /// Settings change only after boot has loaded them.
-    #[error("the kernel has not booted yet")]
-    NotBooted,
+    /// The call is not allowed in the kernel's current phase, which it names.
+    #[error("not allowed while the kernel is in its {0:?} phase")]
+    WrongPhase(Phase),
     /// The switched-off list changes only through `set_enabled`, so states and file agree.
     #[error("the disabled list changes only through set_enabled")]
     SwitchKey,
@@ -98,6 +98,17 @@ pub enum KernelError {
     /// The store refused a settings change.
     #[error(transparent)]
     Settings(#[from] StoreError),
+}
+
+/// Where the kernel is in its life; each public call belongs to one phase.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Phase {
+    /// Before `boot`: modules and platform services are added.
+    Setup,
+    /// After `boot`: Try again, switching and settings changes work.
+    Running,
+    /// After `stop_all`: nothing starts or changes again.
+    Stopped,
 }
 
 /// One added module and where it is in its lifecycle.
@@ -126,6 +137,7 @@ pub struct Kernel {
     store: Option<Store>,
     /// The notices collected while `boot` runs.
     told: Option<Vec<Notice>>,
+    phase: Phase,
 }
 
 impl Kernel {
@@ -142,14 +154,16 @@ impl Kernel {
             plan: order::plan(&[], &BTreeSet::new()),
             store: None,
             told: None,
+            phase: Phase::Setup,
         }
     }
 
     /// Adds a module before boot; it waits `Pending` for its turn.
     ///
     /// # Errors
-    /// `Reserved` for the kernel's own id or `Duplicate` for a known id; the module is not added.
+    /// `WrongPhase` after boot, `Reserved` for the kernel's own id or `Duplicate`; nothing is added.
     pub fn add(&mut self, module: Box<dyn Module>) -> Result<(), KernelError> {
+        self.expect(Phase::Setup)?;
         let manifest = module.manifest();
         let id = manifest.id;
         if id == KERNEL {
@@ -171,11 +185,12 @@ impl Kernel {
     /// Registers a platform service before boot, gated by `K::CAPABILITY`.
     ///
     /// # Errors
-    /// `Service(AlreadyProvided)` when the platform already provides `K`.
+    /// `WrongPhase` after boot, or `Service(AlreadyProvided)` when the platform already provides `K`.
     pub fn provide_platform<K: ServiceKey>(
         &mut self,
         service: Arc<K::Api>,
     ) -> Result<(), KernelError> {
+        self.expect(Phase::Setup)?;
         let value = Box::new(service);
         (self.registry).provide(Owner::Platform, K::ID, K::CAPABILITY, value)?;
         self.platform_ids.insert(K::ID);
@@ -196,6 +211,15 @@ impl Kernel {
 
     fn find(&self, id: ModuleId) -> Option<usize> {
         self.slots.iter().position(|s| s.manifest.id == id)
+    }
+
+    /// `Ok` in `phase`; otherwise the refusal naming the phase the kernel is in.
+    fn expect(&self, phase: Phase) -> Result<(), KernelError> {
+        if self.phase == phase {
+            Ok(())
+        } else {
+            Err(KernelError::WrongPhase(self.phase))
+        }
     }
 
     /// Moves module `at` by `step` and announces it; a refused move is a bug, logged and ignored.
