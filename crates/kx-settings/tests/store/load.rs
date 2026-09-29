@@ -4,7 +4,7 @@ use crate::spec::{
     DEFAULTS, HOLD, Hold, SPEC, VERSION, defaults_with, folder, newer, open, reset, table,
     with_file,
 };
-use kx_module_api::{ModuleId, Notice, SettingsSpec, keys, validate_as};
+use kx_module_api::{ModuleId, SettingsSpec, validate_as};
 use kx_settings::Store;
 use kx_test_support::golden::assert_golden;
 use std::fs;
@@ -67,8 +67,8 @@ fn a_pair_valid_only_together_survives_one_bad_value() {
 }
 
 #[test]
-fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
-    // `max_ms` sorts first but fits only after `min_ms` is lowered.
+fn a_value_that_fits_only_beside_another_survives_a_bad_value() {
+    // `max_ms` is below the default minimum, so it fits only with `min_ms` lowered.
     let text = "[hold]\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
     let (_dir, files) = with_file("secondpass", text);
     let (store, report) = open(&files);
@@ -84,7 +84,7 @@ fn a_pair_that_needs_a_second_pass_survives_a_bad_value() {
 }
 
 #[test]
-fn a_pair_that_needs_a_second_pass_survives_two_bad_values() {
+fn a_value_that_fits_only_beside_another_survives_two_bad_values() {
     // The unknown key is set aside first, so leaving out `sound` keeps the pair.
     let text = "[hold]\nextra = 1\nmax_ms = 50\nmin_ms = 10\nsound = \"loud\"\n";
     let (_dir, files) = with_file("twobad", text);
@@ -266,24 +266,4 @@ fn a_module_registered_twice_is_broken_the_second_time() {
         store.to_text().unwrap(),
         "[hold]\nversion = 3\nmax_ms = 900\n"
     );
-}
-
-#[test]
-fn a_restored_file_needs_a_save_and_a_clean_one_does_not() {
-    let (_dir, files) = folder("restored");
-    fs::write(&files.previous, "[hold]\nmax_ms = 900\n").unwrap();
-    let (mut store, report) = open(&files);
-    let restored = Notice {
-        key: keys::SETTINGS_RESTORED,
-        module: None,
-        args: Vec::new(),
-    };
-    assert_eq!(report.notices, vec![restored]);
-    assert!(store.needs_save());
-    store.save().unwrap();
-    assert!(!store.needs_save());
-    let (again, report) = open(&files);
-    assert!(report.notices.is_empty());
-    assert!(!again.needs_save());
-    assert_eq!(again.get(HOLD), Some(&defaults_with("max_ms = 900")));
 }

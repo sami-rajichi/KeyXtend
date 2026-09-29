@@ -3,5 +3,6 @@
 mod change;
 mod load;
 mod props;
+mod recover;
 mod repair;
 mod spec;

@@ -217,11 +217,33 @@ fn a_damaged_main_never_replaces_the_previous_copy() {
 }
 
 #[test]
+fn a_main_that_turned_damaged_after_the_load_is_kept_as_the_broken_copy() {
+    let (_dir, files) = setup("turned");
+    fs::write(&files.previous, GOOD).unwrap();
+    fs::write(&files.settings, BAD_TOML).unwrap();
+    save(&files, OLDER).unwrap();
+    assert_eq!(fs::read(&files.broken).unwrap(), BAD_TOML);
+    assert_eq!(fs::read_to_string(&files.settings).unwrap(), OLDER);
+}
+
+#[test]
+fn a_failed_replace_after_the_move_puts_the_old_file_back() {
+    let (_dir, mut files) = setup("roll");
+    // With one path for both, the last rename has no source and must fail.
+    files.temp = files.settings.clone();
+    let err = save(&files, GOOD).unwrap_err();
+    assert!(matches!(err, SaveError::Replace { .. }));
+    assert!(!files.previous.exists());
+}
+
+#[test]
 fn a_failed_replace_that_moved_nothing_leaves_the_previous_copy() {
     let (_dir, files) = setup("noroll");
     fs::write(&files.previous, GOOD).unwrap();
-    fs::create_dir(&files.settings).unwrap();
-    fs::write(files.settings.join("blocker"), "x").unwrap();
+    for blocked in [&files.settings, &files.broken] {
+        fs::create_dir(blocked).unwrap();
+        fs::write(blocked.join("blocker"), "x").unwrap();
+    }
     let err = save(&files, OLDER).unwrap_err();
     assert!(matches!(&err, SaveError::Replace { path, .. } if *path == files.settings));
     assert_eq!(fs::read_to_string(&files.previous).unwrap(), GOOD);

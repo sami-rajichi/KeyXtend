@@ -14,7 +14,7 @@ pub enum Outcome {
     Main,
     /// The previous copy was used: the settings file was damaged or lost.
     Restored,
-    /// There was no settings file and no previous copy, so it starts empty.
+    /// There was no settings file and no usable previous copy, so it starts empty.
     Fresh,
     /// Nothing was usable, so it starts empty and a damaged copy was kept.
     Defaults,
@@ -141,11 +141,15 @@ pub fn load(files: &Files) -> Loaded {
         },
         Err(Problem::Missing) => fallback(files, false),
         Err(Problem::Damaged) => {
-            // If the move fails the damaged file stays, and the previous copy is still used.
-            let _ = fs::rename(&files.settings, &files.broken);
+            set_aside(files);
             fallback(files, true)
         }
     }
+}
+
+/// Moves a damaged settings file to the broken copy; if the move fails the file stays.
+fn set_aside(files: &Files) {
+    let _ = fs::rename(&files.settings, &files.broken);
 }
 
 /// Writes `text` to the temp file and syncs it to disk.
@@ -157,10 +161,15 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
 
 /// Moves a settings file that reads well to the previous copy, and says whether it moved.
 ///
-/// A missing or damaged file stays, so it never replaces a good previous copy.
+/// A file that turned damaged goes to the broken copy instead, so it never replaces a good previous copy.
 fn keep_previous(files: &Files) -> Result<bool, SaveError> {
-    if read_table(&files.settings).is_err() {
-        return Ok(false);
+    match read_table(&files.settings) {
+        Ok(_) => {}
+        Err(Problem::Missing) => return Ok(false),
+        Err(Problem::Damaged) => {
+            set_aside(files);
+            return Ok(false);
+        }
     }
     match fs::rename(&files.settings, &files.previous) {
         Ok(()) => Ok(true),

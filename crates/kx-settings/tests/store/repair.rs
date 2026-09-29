@@ -1,7 +1,7 @@
-//! Repair bounds: unknown keys are set aside first, and a notice names at most `MAX_NAMED_KEYS` keys.
+//! Repair bounds: unknown keys are set aside first, and a notice names a bounded number of short keys.
 
 use crate::spec::{DEFAULTS, HOLD, defaults_with, open, reset, reset_more, table, with_file};
-use kx_settings::{KEYS_SEPARATOR, MAX_NAMED_KEYS};
+use kx_settings::{KEYS_SEPARATOR, MAX_KEY_CHARS, MAX_NAMED_KEYS};
 
 /// Unknown keys in the long tests: five more than one notice names.
 const TYPOS: usize = MAX_NAMED_KEYS + 5;
@@ -60,6 +60,31 @@ fn a_notice_at_the_limit_names_every_key_and_counts_none() {
     let (_dir, files) = with_file("limit", &text);
     let (_, report) = open(&files);
     assert_eq!(report.notices, vec![reset(&named(MAX_NAMED_KEYS))]);
+}
+
+#[test]
+fn a_key_name_over_the_length_limit_is_counted_not_named() {
+    let long = "k".repeat(MAX_KEY_CHARS + 1);
+    let text = format!("[hold]\n{long} = 1\n{}", typos(2));
+    let (_dir, files) = with_file("longkey", &text);
+    let (_, report) = open(&files);
+    assert_eq!(report.notices, vec![reset_more(&named(2), 1)]);
+}
+
+#[test]
+fn a_key_name_at_the_length_limit_is_named() {
+    let exact = "k".repeat(MAX_KEY_CHARS);
+    let (_dir, files) = with_file("exactkey", &format!("[hold]\n{exact} = 1\n"));
+    let (_, report) = open(&files);
+    assert_eq!(report.notices, vec![reset(&exact)]);
+}
+
+#[test]
+fn a_section_of_only_over_long_keys_names_the_module() {
+    let long = "k".repeat(MAX_KEY_CHARS + 1);
+    let (_dir, files) = with_file("alllong", &format!("[hold]\n{long} = 1\n"));
+    let (_, report) = open(&files);
+    assert_eq!(report.notices, vec![reset_more(HOLD.as_str(), 1)]);
 }
 
 #[test]
