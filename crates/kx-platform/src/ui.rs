@@ -51,6 +51,7 @@ pub trait WindowGuard: Send + Sync {
     fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError>;
 
     /// Lets clicks outside `rects` pass through the window titled `title`.
+    /// The rects are physical pixels relative to the window's top-left corner.
     ///
     /// # Errors
     /// `NoWindow` for an unknown title, `Refused` when the OS says no.
@@ -127,13 +128,13 @@ pub struct SysLook {
     pub anim_off: bool,
 }
 
-/// Keeps a watch running; dropping it stops the watch.
+/// Keeps a watch running; dropping it stops the watch. A `Send + Sync` service may hold it.
 #[must_use = "dropping a WatchGuard stops the watch"]
-pub struct WatchGuard(Option<Box<dyn FnOnce() + Send>>);
+pub struct WatchGuard(Option<Box<dyn FnOnce() + Send + Sync>>);
 
 impl WatchGuard {
     /// A guard that runs `stop` when it drops.
-    pub fn new(stop: impl FnOnce() + Send + 'static) -> Self {
+    pub fn new(stop: impl FnOnce() + Send + Sync + 'static) -> Self {
         Self(Some(Box::new(stop)))
     }
 }
@@ -209,15 +210,16 @@ pub trait Claim: Send {
 /// Keeps one running copy per user session.
 pub trait Instance: Send + Sync {
     /// Claims the session for this copy.
+    /// When the OS cannot check, the adapter returns a claim, so the app runs as the only copy.
     ///
     /// # Errors
-    /// `Running` when another copy holds the claim.
+    /// `Running` only when another copy holds the claim.
     fn claim(&self) -> Result<Box<dyn Claim>, Running>;
 
     /// Sends `command` to the running copy.
     ///
     /// # Errors
-    /// `NoWindow` when no copy is running, `Refused` when the OS says no.
+    /// `NoWindow` when no copy is running or it does not listen yet, `Refused` when the OS says no.
     fn send(&self, command: Command) -> Result<(), UiError>;
 }
 
@@ -237,6 +239,14 @@ mod tests {
         assert_eq!(stops.load(Ordering::SeqCst), 0);
         drop(guard);
         assert_eq!(stops.load(Ordering::SeqCst), 1);
+    }
+
+    /// Compiles only for types a `Send + Sync` service may hold.
+    fn shared<T: Send + Sync>() {}
+
+    #[test]
+    fn a_watch_guard_can_live_in_a_shared_service() {
+        shared::<WatchGuard>();
     }
 
     #[test]

@@ -5,11 +5,8 @@ use crate::{Capability, ServiceId, ServiceKey};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// An opaque OS keyboard layout handle.
-#[derive(
-    Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-#[serde(transparent)]
+/// An opaque OS keyboard layout handle; data files and JSON hold it as `0x` hex text.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LayoutId(u64);
 
 impl LayoutId {
@@ -147,7 +144,7 @@ pub trait LayoutSource: Send + Sync {
     /// True when `key` types anything in `layout` with `held` down, even a control such as Enter's.
     fn types_any(&self, layout: LayoutId, key: Scan, held: &[Scan]) -> bool;
 
-    /// Asks the app in front to switch to `layout`.
+    /// Asks the app in front to switch to `layout`; the app switches later or never, as `foreground` shows.
     ///
     /// # Errors
     /// `NoTarget` with no app in front, `NotInstalled` for an unknown layout, `Refused` when the OS says no.

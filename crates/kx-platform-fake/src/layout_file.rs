@@ -1,9 +1,8 @@
-//! The layout table file format: one TOML file per layout, with every code in `0x` hex.
+//! The layout table file format: one TOML file per layout, with every code in `0x` hex text.
 
-use kx_module_api::ports::{KeyChars, LangFacts, LayoutId, Scan};
+use kx_module_api::ports::{CodeError, KeyChars, LangFacts, LayoutId, Scan};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -11,14 +10,6 @@ use thiserror::Error;
 pub const FILE_EXT: &str = "toml";
 /// The folder of the golden tables, under this crate.
 const GOLDEN_DIR: &str = "golden/layouts";
-/// What starts every code in a table file.
-const HEX_PREFIX: &str = "0x";
-/// The base of the codes.
-const HEX: u32 = 16;
-/// Hex digits of a written scan code.
-const SCAN_DIGITS: usize = 4;
-/// Hex digits of a written layout id.
-const ID_DIGITS: usize = 16;
 
 /// Why a layout table could not be read or written.
 #[derive(Debug, Error)]
@@ -37,9 +28,12 @@ pub enum LayoutFileError {
     /// The table could not be written as TOML.
     #[error("layout table does not write: {0}")]
     Write(#[from] toml::ser::Error),
-    /// A code is not `0x` and hex digits, or is too big.
-    #[error("{0:?} is not a 0x hex code")]
-    BadCode(String),
+    /// A scan code is not `0x` and hex digits, or is too big.
+    #[error(transparent)]
+    BadCode(#[from] CodeError),
+    /// A scan code appears twice, perhaps written in two widths such as `0x1C` and `0x001C`.
+    #[error("scan code {0} appears twice")]
+    Duplicate(Scan),
 }
 
 /// One layout: its id, its facts, the keys that type a control character, and what each key types.
@@ -55,11 +49,11 @@ pub struct LayoutFile {
     pub keys: BTreeMap<Scan, KeyChars>,
 }
 
-/// The file as TOML holds it: codes as hex text, plain values before tables.
+/// The file as TOML holds it: scan codes as hex text, plain values before tables.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Raw {
-    id: String,
+    id: LayoutId,
     #[serde(default)]
     controls: Vec<String>,
     facts: LangFacts,
@@ -67,57 +61,59 @@ struct Raw {
     keys: BTreeMap<String, KeyChars>,
 }
 
-/// Reads `text` as `0x` and hex digits.
-fn hex<T>(
-    text: &str,
-    parse: fn(&str, u32) -> Result<T, ParseIntError>,
-) -> Result<T, LayoutFileError> {
-    let bad = || LayoutFileError::BadCode(text.to_owned());
-    let digits = text.strip_prefix(HEX_PREFIX).ok_or_else(bad)?;
-    if !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Err(bad());
+/// Reads the control keys, refusing one listed twice.
+fn read_controls(texts: &[String]) -> Result<Vec<Scan>, LayoutFileError> {
+    let mut controls = Vec::with_capacity(texts.len());
+    for text in texts {
+        let scan: Scan = text.parse()?;
+        if controls.contains(&scan) {
+            return Err(LayoutFileError::Duplicate(scan));
+        }
+        controls.push(scan);
     }
-    parse(digits, HEX).map_err(|_| bad())
+    Ok(controls)
 }
 
-fn scan(text: &str) -> Result<Scan, LayoutFileError> {
-    hex(text, u16::from_str_radix).map(Scan::new)
-}
-
-fn scan_text(scan: Scan) -> String {
-    format!("{HEX_PREFIX}{:0w$X}", scan.code(), w = SCAN_DIGITS)
+/// Reads the key tables, refusing a scan code written twice.
+fn read_keys(raw: BTreeMap<String, KeyChars>) -> Result<BTreeMap<Scan, KeyChars>, LayoutFileError> {
+    let mut keys = BTreeMap::new();
+    for (text, chars) in raw {
+        let scan: Scan = text.parse()?;
+        if keys.insert(scan, chars).is_some() {
+            return Err(LayoutFileError::Duplicate(scan));
+        }
+    }
+    Ok(keys)
 }
 
 impl LayoutFile {
     /// Reads a table from TOML text.
     ///
     /// # Errors
-    /// `Toml` when the text is not a table, `BadCode` for a code that is not `0x` hex.
+    /// `Toml` when the text is not a table, `BadCode` or `Duplicate` for a bad scan code.
     pub fn parse(text: &str) -> Result<Self, LayoutFileError> {
         let raw: Raw = toml::from_str(text)?;
-        let controls = raw.controls.iter().map(|c| scan(c));
-        let keys = raw.keys.into_iter().map(|(c, k)| Ok((scan(&c)?, k)));
         Ok(Self {
-            id: LayoutId::new(hex(&raw.id, u64::from_str_radix)?),
+            id: raw.id,
             facts: raw.facts,
-            controls: controls.collect::<Result<_, _>>()?,
-            keys: keys.collect::<Result<_, LayoutFileError>>()?,
+            controls: read_controls(&raw.controls)?,
+            keys: read_keys(raw.keys)?,
         })
     }
 
-    /// The table as TOML text.
+    /// The table as TOML text, with scan codes as four hex digits.
     ///
     /// # Errors
     /// `Write` when TOML cannot hold a value.
     pub fn to_toml(&self) -> Result<String, LayoutFileError> {
         let raw = Raw {
-            id: format!("{HEX_PREFIX}{:0w$X}", self.id.get(), w = ID_DIGITS),
-            controls: self.controls.iter().map(|&c| scan_text(c)).collect(),
+            id: self.id,
+            controls: self.controls.iter().map(ToString::to_string).collect(),
             facts: self.facts.clone(),
             keys: self
                 .keys
                 .iter()
-                .map(|(&c, k)| (scan_text(c), k.clone()))
+                .map(|(c, k)| (c.to_string(), k.clone()))
                 .collect(),
         };
         Ok(toml::to_string(&raw)?)
@@ -146,6 +142,9 @@ pub fn golden_dir() -> PathBuf {
 mod tests {
     use super::*;
     use kx_module_api::ports::Slot;
+    use proptest::collection::{btree_map, btree_set, vec};
+    use proptest::prelude::*;
+    use proptest::sample::select;
 
     fn table() -> LayoutFile {
         let hat = KeyChars {
@@ -186,6 +185,83 @@ mod tests {
             let broken = text.replace(good, bad);
             let err = LayoutFile::parse(&broken).unwrap_err();
             assert!(matches!(err, LayoutFileError::BadCode(_)), "{bad}: {err}");
+        }
+    }
+
+    #[test]
+    fn a_code_written_twice_in_two_widths_is_refused() {
+        let text = table().to_toml().unwrap();
+        let twice = format!(
+            "{text}
+[keys.0x1A]
+base = \"x\"
+"
+        );
+        let err = LayoutFile::parse(&twice).unwrap_err();
+        assert!(
+            matches!(err, LayoutFileError::Duplicate(s) if s == Scan::new(0x1A)),
+            "{err}"
+        );
+        let controls = text.replace(r#"["0x001C"]"#, r#"["0x1C", "0x001C"]"#);
+        let err = LayoutFile::parse(&controls).unwrap_err();
+        assert!(
+            matches!(err, LayoutFileError::Duplicate(s) if s == Scan::new(0x1C)),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn a_bad_id_is_refused() {
+        let text = table().to_toml().unwrap();
+        let broken = text.replace("0xFFFFFFFFF0020409", "1234");
+        assert!(LayoutFile::parse(&broken).is_err());
+    }
+
+    fn any_chars() -> impl Strategy<Value = KeyChars> {
+        let text = || any::<String>();
+        let dead = vec(select(Slot::ALL.to_vec()), 0..3);
+        (text(), text(), text(), text(), text(), dead).prop_map(|(b, s, a, c, cs, dead)| KeyChars {
+            base: b,
+            shift: s,
+            altgr: a,
+            caps: c,
+            caps_shift: cs,
+            dead,
+        })
+    }
+
+    fn any_table() -> impl Strategy<Value = LayoutFile> {
+        let facts = (
+            any::<String>(),
+            any::<String>(),
+            any::<String>(),
+            any::<bool>(),
+        );
+        let controls = btree_set(any::<u16>(), 0..4);
+        let keys = btree_map(any::<u16>(), any_chars(), 0..6);
+        (any::<u64>(), facts, controls, keys).prop_map(|(id, (iso, native, layout, rtl), c, k)| {
+            LayoutFile {
+                id: LayoutId::new(id),
+                facts: LangFacts {
+                    iso,
+                    native,
+                    layout,
+                    rtl,
+                },
+                controls: c.into_iter().map(Scan::new).collect(),
+                keys: k
+                    .into_iter()
+                    .map(|(code, chars)| (Scan::new(code), chars))
+                    .collect(),
+            }
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn any_table_round_trips(table in any_table()) {
+            let text = table.to_toml().unwrap();
+            prop_assert_eq!(LayoutFile::parse(&text).unwrap(), table);
         }
     }
 

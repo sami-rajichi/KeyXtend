@@ -11,6 +11,7 @@ struct Session {
     claimed: bool,
     listener: Option<Box<dyn Fn(Command) + Send>>,
     sent: Vec<Command>,
+    listen_error: Option<UiError>,
 }
 
 /// A fake user session; each clone is another copy of the app in it.
@@ -22,6 +23,11 @@ impl FakeInstance {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Makes later `listen` calls fail with `error`, or work again with `None`.
+    pub fn set_listen_error(&self, error: Option<UiError>) {
+        lock(&self.0).listen_error = error;
     }
 
     /// Every command that reached the running copy, oldest first.
@@ -51,16 +57,15 @@ impl Instance for FakeInstance {
         Ok(Box::new(FakeClaim(Arc::clone(&self.0))))
     }
 
-    /// Hands `command` to the listener while holding the session, so a listener must not send.
+    /// Reaches the running copy only once it listens, as the real adapter finds it by the window it listens on.
+    /// It calls the listener while holding the session, so a listener must not send.
     fn send(&self, command: Command) -> Result<(), UiError> {
         let mut session = lock(&self.0);
-        if !session.claimed {
+        let Some(listener) = &session.listener else {
             return Err(UiError::NoWindow);
-        }
+        };
+        listener(command);
         session.sent.push(command);
-        if let Some(listener) = &session.listener {
-            listener(command);
-        }
         Ok(())
     }
 }
@@ -70,7 +75,11 @@ struct FakeClaim(Arc<Mutex<Session>>);
 
 impl Claim for FakeClaim {
     fn listen(&mut self, on: Box<dyn Fn(Command) + Send>) -> Result<(), UiError> {
-        lock(&self.0).listener = Some(on);
+        let mut session = lock(&self.0);
+        if let Some(error) = session.listen_error {
+            return Err(error);
+        }
+        session.listener = Some(on);
         Ok(())
     }
 }
@@ -111,6 +120,24 @@ mod tests {
         assert_eq!(later.send(Command::Quit), Ok(()));
         assert_eq!(*heard.lock().unwrap(), [Command::Show, Command::Quit]);
         assert_eq!(running.sent(), [Command::Show, Command::Quit]);
+    }
+
+    #[test]
+    fn a_running_copy_that_does_not_listen_yet_has_no_window() {
+        let running = FakeInstance::new();
+        let later = running.clone();
+        let _claim = running.claim().unwrap();
+        assert_eq!(later.send(Command::Show), Err(UiError::NoWindow));
+        assert!(running.sent().is_empty());
+    }
+
+    #[test]
+    fn a_refused_listen_leaves_no_window() {
+        let running = FakeInstance::new();
+        running.set_listen_error(Some(UiError::Refused(8)));
+        let mut claim = running.claim().unwrap();
+        assert_eq!(claim.listen(Box::new(|_| {})), Err(UiError::Refused(8)));
+        assert_eq!(running.send(Command::Quit), Err(UiError::NoWindow));
     }
 
     #[test]

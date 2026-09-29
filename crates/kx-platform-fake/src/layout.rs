@@ -6,7 +6,8 @@ use kx_module_api::ports::{KeyChars, LangFacts, LayoutId, LayoutSource, Scan, Sl
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// A layout source over tables the test gives; a request switches the app in front at once.
+/// A layout source over tables the test gives.
+/// A request switches the app in front at once, unless the test turns following off.
 #[derive(Debug, Default)]
 pub struct FakeLayoutSource {
     tables: Mutex<Vec<LayoutFile>>,
@@ -14,6 +15,7 @@ pub struct FakeLayoutSource {
     caps: AtomicBool,
     requests: Mutex<Vec<LayoutId>>,
     error: Mutex<Option<SwitchError>>,
+    ignore: AtomicBool,
 }
 
 impl FakeLayoutSource {
@@ -62,6 +64,11 @@ impl FakeLayoutSource {
     /// Refuses every later request with `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<SwitchError>) {
         *lock(&self.error) = error;
+    }
+
+    /// With `false`, the app in front records requests but keeps its layout, as a slow or unwilling app does.
+    pub fn set_follow(&self, on: bool) {
+        self.ignore.store(!on, Ordering::SeqCst);
     }
 
     /// Every switch request that went through, oldest first.
@@ -113,9 +120,14 @@ impl LayoutSource for FakeLayoutSource {
         if let Some(error) = *lock(&self.error) {
             return Err(error);
         }
+        if self.foreground().is_none() {
+            return Err(SwitchError::NoTarget);
+        }
         self.with(layout, |_| ()).ok_or(SwitchError::NotInstalled)?;
         lock(&self.requests).push(layout);
-        *lock(&self.front) = Some(layout);
+        if !self.ignore.load(Ordering::SeqCst) {
+            *lock(&self.front) = Some(layout);
+        }
         Ok(())
     }
 }
@@ -181,6 +193,27 @@ mod tests {
         assert_eq!(fake.request(OTHER), Ok(()));
         assert_eq!(fake.foreground(), Some(OTHER));
         assert_eq!(fake.requests(), [OTHER]);
+    }
+
+    #[test]
+    fn with_no_app_in_front_a_request_finds_no_target() {
+        let fake = example();
+        fake.set_foreground(None);
+        assert_eq!(fake.request(ID), Err(SwitchError::NoTarget));
+        assert_eq!(fake.foreground(), None);
+        assert!(fake.requests().is_empty());
+    }
+
+    #[test]
+    fn an_app_that_does_not_follow_keeps_its_layout_until_the_test_switches_it() {
+        let fake = example();
+        fake.add(other());
+        fake.set_follow(false);
+        assert_eq!(fake.request(OTHER), Ok(()));
+        assert_eq!(fake.foreground(), Some(ID), "asked, not switched");
+        assert_eq!(fake.requests(), [OTHER]);
+        fake.set_foreground(Some(OTHER));
+        assert_eq!(fake.foreground(), Some(OTHER));
     }
 
     #[test]

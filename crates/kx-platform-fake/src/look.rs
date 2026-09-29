@@ -19,6 +19,7 @@ pub struct FakeSystemLook {
     language: Mutex<String>,
     watchers: Arc<Mutex<BTreeMap<u64, Watcher>>>,
     next: AtomicU64,
+    watch_error: Mutex<Option<UiError>>,
 }
 
 impl FakeSystemLook {
@@ -30,6 +31,7 @@ impl FakeSystemLook {
             language: Mutex::new(DEFAULT_LANGUAGE.to_owned()),
             watchers: Arc::default(),
             next: AtomicU64::default(),
+            watch_error: Mutex::default(),
         }
     }
 
@@ -39,6 +41,11 @@ impl FakeSystemLook {
         for watcher in lock(&self.watchers).values() {
             watcher(look);
         }
+    }
+
+    /// Refuses later `watch` calls with `error`, or takes them again with `None`.
+    pub fn set_watch_error(&self, error: Option<UiError>) {
+        *lock(&self.watch_error) = error;
     }
 
     /// Sets the UI language tag.
@@ -68,6 +75,9 @@ impl SystemLook for FakeSystemLook {
     }
 
     fn watch(&self, on_change: Box<dyn Fn(SysLook) + Send>) -> Result<WatchGuard, UiError> {
+        if let Some(error) = *lock(&self.watch_error) {
+            return Err(error);
+        }
         let id = self.next.fetch_add(1, Ordering::SeqCst);
         lock(&self.watchers).insert(id, on_change);
         let watchers = Arc::downgrade(&self.watchers);
@@ -123,6 +133,20 @@ mod tests {
         let _second = fake.watch(hear(&count)).unwrap();
         fake.set(dark());
         assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn a_refused_watch_hears_nothing() {
+        let fake = FakeSystemLook::new();
+        fake.set_watch_error(Some(UiError::Refused(7)));
+        let count = Arc::new(AtomicU64::new(0));
+        let keep = Arc::clone(&count);
+        let watch = fake.watch(Box::new(move |_| {
+            keep.fetch_add(1, Ordering::SeqCst);
+        }));
+        assert!(matches!(watch, Err(UiError::Refused(7))));
+        fake.set(dark());
+        assert_eq!(count.load(Ordering::SeqCst), 0);
     }
 
     #[test]

@@ -44,12 +44,13 @@ pub trait Layouts: Send + Sync {
     fn refresh(&self) -> bool;
 
     /// Asks the app in front to switch `by` places along the list, wrapping.
+    /// It only asks: `current` changes when a later `refresh` sees the app switch, which may never happen.
     ///
     /// # Errors
     /// The `SwitchError` of the request; the current table stays.
     fn step(&self, by: i32) -> Result<(), SwitchError>;
 
-    /// Asks the app in front to switch to layout `id`.
+    /// Asks the app in front to switch to layout `id`; like `step`, it only asks.
     ///
     /// # Errors
     /// The `SwitchError` of the request; the current table stays.

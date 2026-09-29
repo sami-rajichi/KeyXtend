@@ -6,13 +6,14 @@ use kx_platform::ui::{
     Backdrop, BackdropKind, FocusToken, ScreenArea, Screens, UiError, WindowGuard,
 };
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 /// Screens with work areas and a pointer the test sets.
 #[derive(Debug, Default)]
 pub struct FakeScreens {
     areas: Mutex<Vec<ScreenArea>>,
     cursor: Mutex<Point>,
+    cursor_error: Mutex<Option<UiError>>,
 }
 
 impl FakeScreens {
@@ -22,6 +23,7 @@ impl FakeScreens {
         Self {
             areas: Mutex::new(areas),
             cursor: Mutex::new(cursor),
+            cursor_error: Mutex::default(),
         }
     }
 
@@ -34,6 +36,11 @@ impl FakeScreens {
     pub fn set_cursor(&self, at: Point) {
         *lock(&self.cursor) = at;
     }
+
+    /// Makes `cursor` fail with `error`, or answer again with `None`.
+    pub fn set_cursor_error(&self, error: Option<UiError>) {
+        *lock(&self.cursor_error) = error;
+    }
 }
 
 impl Screens for FakeScreens {
@@ -42,7 +49,10 @@ impl Screens for FakeScreens {
     }
 
     fn cursor(&self) -> Result<Point, UiError> {
-        Ok(*lock(&self.cursor))
+        match *lock(&self.cursor_error) {
+            Some(error) => Err(error),
+            None => Ok(*lock(&self.cursor)),
+        }
     }
 }
 
@@ -59,10 +69,11 @@ pub enum GuardCall {
     GiveBack(FocusToken),
 }
 
-/// A window guard that records its calls; `guard_own` reports the count the test chose.
+/// A window guard that records every call, refused or not; `guard_own` reports the count the test chose.
 #[derive(Debug, Default)]
 pub struct FakeWindowGuard {
-    count: usize,
+    count: AtomicUsize,
+    error: Mutex<Option<UiError>>,
     calls: Mutex<Vec<GuardCall>>,
     last: AtomicU64,
 }
@@ -72,9 +83,19 @@ impl FakeWindowGuard {
     #[must_use]
     pub fn new(count: usize) -> Self {
         Self {
-            count,
+            count: AtomicUsize::new(count),
             ..Self::default()
         }
+    }
+
+    /// Sets how many windows later `guard_own` calls report.
+    pub fn set_count(&self, count: usize) {
+        self.count.store(count, Ordering::SeqCst);
+    }
+
+    /// Refuses later `guard_own` and `shape` calls with `error`, or takes them again with `None`.
+    pub fn set_error(&self, error: Option<UiError>) {
+        *lock(&self.error) = error;
     }
 
     /// Every call so far, oldest first.
@@ -83,30 +104,31 @@ impl FakeWindowGuard {
         lock(&self.calls).clone()
     }
 
-    fn record(&self, call: GuardCall) {
+    /// Records `call`, then answers with the error the test set, if any.
+    fn record(&self, call: GuardCall) -> Result<(), UiError> {
         lock(&self.calls).push(call);
+        lock(&self.error).map_or(Ok(()), Err)
     }
 }
 
 impl WindowGuard for FakeWindowGuard {
     fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError> {
-        self.record(GuardCall::GuardOwn(spare.map(str::to_owned)));
-        Ok(self.count)
+        self.record(GuardCall::GuardOwn(spare.map(str::to_owned)))?;
+        Ok(self.count.load(Ordering::SeqCst))
     }
 
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError> {
-        self.record(GuardCall::Shape(title.to_owned(), rects.to_vec()));
-        Ok(())
+        self.record(GuardCall::Shape(title.to_owned(), rects.to_vec()))
     }
 
     fn remember(&self) -> FocusToken {
         let token = FocusToken::new(self.last.fetch_add(1, Ordering::SeqCst) + 1);
-        self.record(GuardCall::Remember(token));
+        lock(&self.calls).push(GuardCall::Remember(token));
         token
     }
 
     fn give_back(&self, token: FocusToken) {
-        self.record(GuardCall::GiveBack(token));
+        lock(&self.calls).push(GuardCall::GiveBack(token));
     }
 }
 
@@ -195,6 +217,33 @@ mod tests {
             GuardCall::GiveBack(first),
         ];
         assert_eq!(fake.calls(), want);
+    }
+
+    #[test]
+    fn the_guard_count_and_errors_follow_the_test_and_every_try_is_recorded() {
+        let fake = FakeWindowGuard::new(0);
+        assert_eq!(fake.guard_own(None), Ok(0));
+        fake.set_error(Some(UiError::Refused(5)));
+        assert_eq!(fake.guard_own(None), Err(UiError::Refused(5)));
+        assert_eq!(fake.shape(TITLE, &[]), Err(UiError::Refused(5)));
+        fake.set_error(None);
+        fake.set_count(2);
+        assert_eq!(fake.guard_own(None), Ok(2));
+        let tries = fake
+            .calls()
+            .iter()
+            .filter(|c| **c == GuardCall::GuardOwn(None))
+            .count();
+        assert_eq!(tries, 3);
+    }
+
+    #[test]
+    fn the_cursor_can_be_unknown() {
+        let fake = FakeScreens::new(Vec::new(), Point::default());
+        fake.set_cursor_error(Some(UiError::Refused(6)));
+        assert_eq!(fake.cursor(), Err(UiError::Refused(6)));
+        fake.set_cursor_error(None);
+        assert_eq!(fake.cursor(), Ok(Point::default()));
     }
 
     #[test]
