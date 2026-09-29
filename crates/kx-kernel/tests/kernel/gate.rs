@@ -18,6 +18,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 const PROBE: ModuleId = ModuleId::new("probe");
+/// Holds the grant, like the keyboard that publishes typed text.
+const HOLDER: ModuleId = ModuleId::new("holder");
+/// Runs next to `HOLDER` without the grant, like the `ui` module.
+const PEER: ModuleId = ModuleId::new("peer");
 const NEED: Capability = ReadFocusedText;
 const NONE: &[Capability] = &[];
 const NEEDS: &[Capability] = &[NEED];
@@ -104,10 +108,14 @@ impl<E: Event + Default> Module for Probe<E> {
     }
 }
 
-/// A probe of `E` that declares `caps`; the manifest leaks so it lives for the whole test.
-fn probe<E: Event + Default>(caps: &'static [Capability], strict: bool) -> (Probe<E>, Left) {
+/// A probe `id` of `E` that declares `caps`; the manifest leaks so it lives for the whole test.
+fn probe<E: Event + Default>(
+    id: ModuleId,
+    caps: &'static [Capability],
+    strict: bool,
+) -> (Probe<E>, Left) {
     let manifest = Manifest {
-        id: PROBE,
+        id,
         version: env!("CARGO_PKG_VERSION"),
         requires: &[],
         provides: &[],
@@ -127,7 +135,7 @@ fn probe<E: Event + Default>(caps: &'static [Capability], strict: bool) -> (Prob
 /// A booted rig with one probe of `E`, and what the probe left behind.
 fn boot<E: Event + Default>(policy: Policy, caps: &'static [Capability]) -> (Rig, Left) {
     let mut rig = Rig::with(policy);
-    let (module, left) = probe::<E>(caps, false);
+    let (module, left) = probe::<E>(PROBE, caps, false);
     rig.kernel.add(Box::new(module)).unwrap();
     rig.kernel.boot().unwrap();
     assert_eq!(rig.state(PROBE), Some(Active));
@@ -197,6 +205,31 @@ fn with_the_grant_a_module_may_do_all_four() {
 }
 
 #[test]
+fn a_gated_publish_reaches_only_the_module_with_the_grant() {
+    for peer_caps in [NONE, NEEDS] {
+        let mut rig = Rig::with(Policy::new().allow(HOLDER, NEEDS));
+        let (holder, a) = probe::<Secret>(HOLDER, NEEDS, false);
+        let (peer, b) = probe::<Secret>(PEER, peer_caps, false);
+        rig.kernel.add(Box::new(holder)).unwrap();
+        rig.kernel.add(Box::new(peer)).unwrap();
+        rig.kernel.boot().unwrap();
+        assert_eq!([rig.state(HOLDER), rig.state(PEER)], [Some(Active); 2]);
+        assert_eq!(a.cx(), [Ok(()), Ok(())]);
+        assert_eq!(b.cx(), [Err(refused()), Err(refused())]);
+        assert_eq!(a.bus().publish(&Secret), Ok(()));
+        assert_eq!(a.bus().intercept(&mut Secret), Ok(Flow::Stop));
+        assert_eq!((a.heard(), a.ran()), (1, 1));
+        assert_eq!(
+            (b.heard(), b.ran()),
+            (0, 0),
+            "the peer's handlers never run"
+        );
+        assert_eq!(four::<Secret>(b.bus()), [Err(refused()); 4]);
+        assert_eq!(a.heard(), 1, "the peer's refused publish reaches nobody");
+    }
+}
+
+#[test]
 fn an_event_without_a_capability_works_for_a_module_with_no_grants() {
     let (rig, left) = boot::<Open>(Policy::new(), NONE);
     let (watch, _sub) = Seen::<Open>::watch(&rig.kernel.bus());
@@ -221,7 +254,7 @@ fn the_kernels_own_handle_may_use_a_gated_event() {
 #[test]
 fn a_module_that_passes_on_the_refusal_fails_its_start() {
     let mut rig = Rig::new();
-    let (module, left) = probe::<Secret>(NEEDS, true);
+    let (module, left) = probe::<Secret>(PROBE, NEEDS, true);
     rig.kernel.add(Box::new(module)).unwrap();
     let notices = rig.kernel.boot().unwrap();
     assert_eq!(rig.state(PROBE), Some(Failed));

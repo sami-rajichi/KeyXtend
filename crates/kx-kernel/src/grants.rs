@@ -56,6 +56,7 @@ impl Grants {
     }
 
     /// What the module may use, for its bus handle.
+    #[must_use]
     pub(crate) fn granted(&self) -> &[Capability] {
         &self.granted
     }
