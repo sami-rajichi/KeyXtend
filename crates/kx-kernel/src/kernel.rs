@@ -259,8 +259,13 @@ impl Kernel {
     }
 
     fn is_disabled(&self, id: ModuleId) -> bool {
-        self.disabled().iter().any(|d| d == id.as_str())
+        switched_off(&self.disabled(), id)
     }
+}
+
+/// True when module `id` is in `list`, the ids the user switched off.
+fn switched_off(list: &[String], id: ModuleId) -> bool {
+    list.iter().any(|d| d == id.as_str())
 }
 
 impl Drop for Kernel {

@@ -1,6 +1,6 @@
 //! Who waits for whom: a module's providers, one that is not running, and one the user switched off.
 
-use super::Kernel;
+use super::{Kernel, switched_off};
 use kx_module_api::ModuleState::{Active, Stopped};
 use kx_module_api::ServiceId;
 use std::collections::BTreeSet;
@@ -31,7 +31,7 @@ impl Kernel {
         while let Some(m) = todo.pop() {
             for p in self.providers(m).filter_map(|(_, p)| p) {
                 let id = self.slots[p].manifest.id;
-                if disabled.iter().any(|d| d == id.as_str()) {
+                if switched_off(&disabled, id) {
                     return true;
                 }
                 if self.slots[p].state == Stopped && seen.insert(p) {
