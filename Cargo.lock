@@ -149,6 +149,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-keyboard"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "proptest",
+ "serde",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "kx-mod-layouts"
 version = "0.0.0"
 dependencies = [

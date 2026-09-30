@@ -1,0 +1,22 @@
+# Latched modifiers: "release" after the next key, or "stay" until clicked again.
+modifiers = "release"
+# How the language key shows the layouts: "carousel", "cycle" or "list".
+lang_key = "carousel"
+# The keyboard's size as a factor of the size-1 board; the module writes it when the user resizes.
+size = 1.0
+# The S, M and L sizes.
+presets = [1.0, 1.25, 1.5]
+# Change per smaller or bigger click, and the smallest and largest sizes.
+size_step = 0.05
+size_min = 0.8
+size_max = 1.8
+# How often the labels follow the layout of the app in front, in ms.
+relabel_ms = 500
+# Apps that get text as key presses in their own layout, by file name such as "app.exe".
+key_apps = []
+# Where the user last put the keyboard, in physical pixels; used only when `placed` is true.
+x = 0
+y = 0
+placed = false
+# The bottom corner of the keyboard's screen where the minimise bubble goes: "right" or "left".
+bubble_corner = "right"

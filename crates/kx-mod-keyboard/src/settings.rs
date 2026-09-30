@@ -1,0 +1,160 @@
+//! The `[keyboard]` settings: modifiers, the language key, size, place and the bubble corner.
+
+use kx_module_api::ports::Point;
+use kx_module_api::{Settings, SettingsError, SettingsSpec, parse_as, validate_as};
+use serde::{Deserialize, Serialize};
+
+/// Why a size was refused: it is not a finite number.
+const NOT_A_NUMBER: &str = "sizes must be numbers";
+/// Why the limits were refused.
+const BAD_RANGE: &str = "size_min must be above 0 and below size_max";
+/// Why the step was refused.
+const BAD_STEP: &str = "size_step must be above 0";
+/// Why the presets were refused.
+const BAD_PRESETS: &str = "presets must be at least one size between size_min and size_max";
+/// Why the size was refused.
+const BAD_SIZE: &str = "size must be between size_min and size_max";
+/// Why the relabel time was refused.
+const NO_RELABEL: &str = "relabel_ms must be above 0";
+/// Why an app name was refused.
+const BLANK_APP: &str = "key_apps: an app name is blank";
+
+/// How the kernel reads the `[keyboard]` section: version 1, with the defaults embedded.
+pub static SPEC: SettingsSpec = SettingsSpec {
+    version: 1,
+    defaults: include_str!("../defaults.toml"),
+    migrations: &[],
+    validate: validate_as::<KeyboardSettings>,
+};
+
+/// When latched modifiers let go.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Modifiers {
+    /// After the next key.
+    Release,
+    /// Until the modifier is clicked again.
+    Stay,
+}
+
+/// How the language key shows the layouts.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LangKey {
+    /// The layouts before, now and after, turning like a wheel.
+    Carousel,
+    /// The current layout, stepping to the next on each click.
+    Cycle,
+    /// A list of every layout to pick from.
+    List,
+}
+
+/// The bottom corner of the screen where the minimise bubble goes; never the top.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Corner {
+    /// Bottom left.
+    Left,
+    /// Bottom right.
+    Right,
+}
+
+/// The module's settings; every value comes from `defaults.toml` or the user's file.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KeyboardSettings {
+    /// When latched modifiers let go.
+    pub modifiers: Modifiers,
+    /// How the language key shows the layouts.
+    pub lang_key: LangKey,
+    /// The size, as a factor of the size-1 board.
+    pub size: f64,
+    /// The S, M and L sizes.
+    pub presets: Vec<f64>,
+    /// Change per smaller or bigger click.
+    pub size_step: f64,
+    /// The smallest size.
+    pub size_min: f64,
+    /// The largest size.
+    pub size_max: f64,
+    /// How often the labels follow the layout of the app in front, in ms.
+    pub relabel_ms: u64,
+    /// Apps that get text as key presses in their own layout, by file name.
+    pub key_apps: Vec<String>,
+    /// The saved left edge, in physical pixels.
+    pub x: i32,
+    /// The saved top edge, in physical pixels.
+    pub y: i32,
+    /// The user has put the keyboard somewhere, so `x` and `y` hold.
+    pub placed: bool,
+    /// The bubble's corner.
+    pub bubble_corner: Corner,
+}
+
+impl KeyboardSettings {
+    /// The settings in the embedded `defaults.toml`.
+    ///
+    /// # Errors
+    /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
+    pub fn from_defaults() -> Result<Self, SettingsError> {
+        let table: toml::Table = SPEC
+            .defaults
+            .parse()
+            .map_err(|e: toml::de::Error| SettingsError::Parse(e.to_string()))?;
+        parse_as(&table)
+    }
+
+    /// Where the user last put the keyboard, if anywhere.
+    #[must_use]
+    pub fn place(&self) -> Option<Point> {
+        self.placed.then_some(Point {
+            x: self.x,
+            y: self.y,
+        })
+    }
+}
+
+impl Settings for KeyboardSettings {
+    fn check(&self) -> Result<(), SettingsError> {
+        self.check_sizes().map_err(invalid)?;
+        if self.relabel_ms == 0 {
+            return Err(invalid(NO_RELABEL));
+        }
+        if self.key_apps.iter().any(|a| a.trim().is_empty()) {
+            return Err(invalid(BLANK_APP));
+        }
+        Ok(())
+    }
+}
+
+impl KeyboardSettings {
+    /// Every size is a number, the limits make a range above zero, and the rest sits within it.
+    fn check_sizes(&self) -> Result<(), &'static str> {
+        let all = [self.size, self.size_step, self.size_min, self.size_max];
+        if !all.iter().chain(&self.presets).all(|v| v.is_finite()) {
+            return Err(NOT_A_NUMBER);
+        }
+        if !(self.size_min > 0.0 && self.size_min < self.size_max) {
+            return Err(BAD_RANGE);
+        }
+        if self.size_step <= 0.0 {
+            return Err(BAD_STEP);
+        }
+        let within = |v: &f64| (self.size_min..=self.size_max).contains(v);
+        if self.presets.is_empty() || !self.presets.iter().all(within) {
+            return Err(BAD_PRESETS);
+        }
+        if !within(&self.size) {
+            return Err(BAD_SIZE);
+        }
+        Ok(())
+    }
+}
+
+/// A broken rule as a settings error.
+fn invalid(why: &str) -> SettingsError {
+    SettingsError::Invalid(why.to_owned())
+}
+
+#[cfg(test)]
+mod tests;
