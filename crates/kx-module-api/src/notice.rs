@@ -2,15 +2,36 @@
 
 use crate::{Event, ModuleId};
 
-/// A message for the user, named by a translation key; P3 adds the texts.
+/// A message for the user, named by a translation key; `kx-ui` holds the texts.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Notice {
     /// The translation key, one of `keys`.
     pub key: &'static str,
     /// The module the notice is about, if any.
     pub module: Option<ModuleId>,
-    /// Named values for the text; never typed text, clipboard data or secrets.
-    pub args: Vec<(&'static str, String)>,
+    /// Named values for the text, by the names in `args`.
+    pub args: Vec<(&'static str, NoticeArg)>,
+}
+
+/// One value for a notice's text; never typed text, clipboard data or secrets.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NoticeArg {
+    /// A word shown as it is, or a module id the UI shows by its name.
+    Text(String),
+    /// A number, so the text can take the right plural form.
+    Count(usize),
+    /// Items the UI joins in its language, such as setting keys.
+    List(Vec<String>),
+}
+
+/// The names of notice arguments, which the translations use.
+pub mod args {
+    /// The module the notice is about, as a module id.
+    pub const MODULE: &str = "module";
+    /// The setting keys that went back to their defaults, as a list.
+    pub const KEYS: &str = "keys";
+    /// How many items the notice's list leaves out; absent when it names them all.
+    pub const MORE: &str = "more";
 }
 
 impl Event for Notice {
@@ -37,6 +58,19 @@ pub mod keys {
     pub const KEYS_NOT_SENT: &str = "notice.keys-not-sent";
     /// The app in front could not be asked to switch language.
     pub const LANG_NOT_SWITCHED: &str = "notice.lang-not-switched";
+
+    /// Every notice key, so the UI can check that each has its text.
+    pub const ALL_KEYS: [&str; 9] = [
+        SETTINGS_RESET,
+        SETTINGS_RESTORED,
+        SETTINGS_DEFAULTS,
+        SETTINGS_NEWER,
+        SETTINGS_UNSAVED,
+        SETTINGS_LOCKED,
+        MODULE_FAILED,
+        KEYS_NOT_SENT,
+        LANG_NOT_SWITCHED,
+    ];
 }
 
 /// Where a module is in its lifecycle; the kernel drives it.
@@ -84,25 +118,52 @@ impl Event for SettingsChanged {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use keys::ALL_KEYS;
     use std::collections::HashSet;
-
-    const ALL_KEYS: [&str; 9] = [
-        keys::SETTINGS_RESET,
-        keys::SETTINGS_RESTORED,
-        keys::SETTINGS_DEFAULTS,
-        keys::SETTINGS_NEWER,
-        keys::SETTINGS_UNSAVED,
-        keys::SETTINGS_LOCKED,
-        keys::MODULE_FAILED,
-        keys::KEYS_NOT_SENT,
-        keys::LANG_NOT_SWITCHED,
-    ];
 
     #[test]
     fn keys_are_unique_notice_keys() {
         let unique: HashSet<_> = ALL_KEYS.iter().collect();
         assert_eq!(unique.len(), ALL_KEYS.len());
         assert!(ALL_KEYS.iter().all(|k| k.starts_with("notice.")));
+    }
+
+    #[test]
+    fn every_key_is_listed() {
+        let listed = [
+            keys::SETTINGS_RESET,
+            keys::SETTINGS_RESTORED,
+            keys::SETTINGS_DEFAULTS,
+            keys::SETTINGS_NEWER,
+            keys::SETTINGS_UNSAVED,
+            keys::SETTINGS_LOCKED,
+            keys::MODULE_FAILED,
+            keys::KEYS_NOT_SENT,
+            keys::LANG_NOT_SWITCHED,
+        ];
+        assert!(listed.iter().all(|k| ALL_KEYS.contains(k)));
+        assert_eq!(listed.len(), ALL_KEYS.len());
+    }
+
+    #[test]
+    fn arguments_keep_the_names_translations_use() {
+        assert_eq!(
+            (args::MODULE, args::KEYS, args::MORE),
+            ("module", "keys", "more")
+        );
+    }
+
+    #[test]
+    fn a_notice_carries_typed_arguments() {
+        let notice = Notice {
+            key: keys::SETTINGS_RESET,
+            module: None,
+            args: vec![
+                (args::KEYS, NoticeArg::List(vec!["size".into()])),
+                (args::MORE, NoticeArg::Count(2)),
+            ],
+        };
+        assert_eq!(notice.args[1].1, NoticeArg::Count(2));
     }
 
     #[test]

@@ -47,7 +47,7 @@ fn the_file_notice_comes_before_the_section_notices() {
     let (_dir, files) = folder("order");
     fs::write(&files.previous, "[hold]\nsound = \"loud\"\n").unwrap();
     let (_, report) = open(&files);
-    let expected = vec![file_notice(keys::SETTINGS_RESTORED), reset("sound")];
+    let expected = vec![file_notice(keys::SETTINGS_RESTORED), reset(&["sound"])];
     assert_eq!(report.notices, expected);
 }
 

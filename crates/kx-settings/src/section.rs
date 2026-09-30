@@ -1,16 +1,14 @@
 //! One registered module's section: its version, the migrations it needs, and repair against the defaults.
 
 use crate::merge::{self, Repair};
-use crate::names::{
-    ARG_KEYS, ARG_MODULE, ARG_MORE, KEYS_SEPARATOR, MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY,
-};
-use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
+use crate::names::{MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY};
+use kx_module_api::{ModuleId, Notice, NoticeArg, SettingsError, SettingsSpec, args, keys};
 use std::cmp::Ordering;
 use std::panic;
 use toml::{Table, Value};
 
-/// A notice's arguments, as name and text.
-type Args = Vec<(&'static str, String)>;
+/// A notice's arguments, as name and value.
+type Args = Vec<(&'static str, NoticeArg)>;
 
 /// A registered module's settings.
 #[derive(Debug)]
@@ -134,31 +132,31 @@ fn key_list(values: &Table, id: ModuleId) -> Args {
 /// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show.
 /// The keys left out are counted, and the module's name stands in when none can be shown.
 fn reset_args(id: ModuleId, keys: &[&str]) -> Args {
-    let mut shown: Vec<&str> = keys
+    let mut shown: Vec<String> = keys
         .iter()
-        .copied()
         .filter(|k| k.chars().count() <= MAX_KEY_CHARS)
         .take(MAX_NAMED_KEYS)
+        .map(|k| (*k).to_owned())
         .collect();
     let more = keys.len() - shown.len();
     if shown.is_empty() {
-        shown.push(id.as_str());
+        shown.push(id.to_string());
     }
-    let mut args = vec![(ARG_KEYS, shown.join(KEYS_SEPARATOR))];
+    let mut named = vec![(args::KEYS, NoticeArg::List(shown))];
     if more > 0 {
-        args.push((ARG_MORE, more.to_string()));
+        named.push((args::MORE, NoticeArg::Count(more)));
     }
-    args
+    named
 }
 
 /// A notice about the module, with the module argument before `extra`.
 fn notice(key: &'static str, id: ModuleId, extra: Args) -> Notice {
-    let mut args = vec![(ARG_MODULE, id.to_string())];
-    args.extend(extra);
+    let mut all = vec![(args::MODULE, NoticeArg::Text(id.to_string()))];
+    all.extend(extra);
     Notice {
         key,
         module: Some(id),
-        args,
+        args: all,
     }
 }
 

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: English, French and Arabic texts
+Every text the keyboard shows now comes from one Fluent file per language, compiled into the new `kx-ui` crate: key names and labels, the top bar, the tray menu, notices, and module and theme names (ADR-0017). The UI follows the Windows display language (EN, FR or AR, else English), and a text missing in French or Arabic falls back to English. French keys print French words (Échap, Suppr, Verr. Maj) and Arabic keys the English words Arabic keyboards print; Arabic counts take all six plural forms, with a fix for a library bug from 103 up. Notice arguments are now typed (text, count, list), and the theme names and the space bar's joiner moved into the translations.
+
 ## 2026-09-30 — P3: the keyboard face and the language key
 The keyboard now gives the screen everything it draws: each key's box, name and icon, the legends and lights, and dimmed side keys marked "Coming in a later version". The language key works in all three designs: Carousel, Cycle, and a List the arrows, Enter and Esc drive, five rows a page, with Arabic shown right to left. A click made while the app's layout just changed sends nothing and redraws, so the user clicks again, and failed sends or switches show a notice. Golden files pin the English, French and Arabic views for the Qt screens to come.
 

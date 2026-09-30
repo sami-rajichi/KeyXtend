@@ -7,8 +7,8 @@ use crate::samples::{
 };
 use kx_kernel::{KERNEL, KernelError, Phase};
 use kx_module_api::ModuleState::{Active, Failed, Stopped};
-use kx_module_api::{ModuleId, ServiceKey, SettingsChanged, keys};
-use kx_settings::{ARG_KEYS, StoreError};
+use kx_module_api::{ModuleId, NoticeArg, ServiceKey, SettingsChanged, args, keys};
+use kx_settings::StoreError;
 use std::fs;
 use toml::Value;
 
@@ -287,7 +287,8 @@ fn every_notice_reaches_a_subscriber_registered_before_boot() {
         (reset.key, reset.module),
         (keys::SETTINGS_RESET, Some(KERNEL))
     );
-    let every = (ARG_KEYS, "disabled, log_level, log_max_mb".to_owned());
+    let names = ["disabled", "log_level", "log_max_mb"].map(String::from);
+    let every = (args::KEYS, NoticeArg::List(names.to_vec()));
     assert!(reset.args.contains(&every), "{:?}", reset.args);
     assert_eq!(*fail, failed(A));
 }

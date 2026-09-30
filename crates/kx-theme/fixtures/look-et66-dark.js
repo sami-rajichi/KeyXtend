@@ -84,7 +84,6 @@ var lk = {
   },
   "look": {
     "id": "et66",
-    "name": "ET66",
     "key_radius_px": 9.0,
     "window_radius_px": 14.0,
     "gap_px": 5.0,

@@ -42,6 +42,13 @@ fn a_missing_token_names_the_theme_and_the_mode() {
 }
 
 #[test]
+fn theme_names_live_in_the_translations_not_the_tokens() {
+    assert!(!text().lines().any(|l| l.starts_with("name = ")));
+    let named = text().replacen("id = \"native\"\n", "id = \"native\"\nname = \"N\"\n", 1);
+    assert!(parse(&named).expect_err("a name").contains("name"));
+}
+
+#[test]
 fn a_misspelt_token_is_refused() {
     let typo = text().replacen("chip_bg = \"#0000000E\"", "chip_gb = \"#0000000E\"", 1);
     let e = parse(&typo).expect_err("an unknown token");

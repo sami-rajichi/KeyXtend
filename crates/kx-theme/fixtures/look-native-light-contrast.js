@@ -59,7 +59,6 @@ var lk = {
   },
   "look": {
     "id": "native",
-    "name": "Native Adaptive",
     "key_radius_px": 4.0,
     "window_radius_px": 8.0,
     "gap_px": 4.0,

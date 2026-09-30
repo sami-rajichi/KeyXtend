@@ -84,7 +84,6 @@ var lk = {
   },
   "look": {
     "id": "dolch",
-    "name": "Modern Dolch",
     "key_radius_px": 5.0,
     "window_radius_px": 10.0,
     "gap_px": 3.0,

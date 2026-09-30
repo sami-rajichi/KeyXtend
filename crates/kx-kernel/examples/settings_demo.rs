@@ -160,7 +160,7 @@ fn describe(notice: &Notice) -> String {
     let args = notice
         .args
         .iter()
-        .map(|(name, value)| format!("{name}={value}"));
+        .map(|(name, value)| format!("{name}={value:?}"));
     let parts: Vec<String> = module.into_iter().chain(args).collect();
     if parts.is_empty() {
         format!("notice: {}", notice.key)

@@ -55,7 +55,8 @@ crates/
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
-  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), translations, the `ui` module
+  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module, and the
+                         EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
                          WCAG contrast and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at

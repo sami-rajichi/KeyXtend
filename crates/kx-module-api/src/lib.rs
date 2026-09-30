@@ -26,7 +26,7 @@ pub use event::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, Subscription, 
 pub use handle::{SettingsHandle, SettingsSink};
 pub use ids::{ModuleId, ServiceId};
 pub use manifest::{Manifest, Module};
-pub use notice::{ModuleState, ModuleStateChanged, Notice, SettingsChanged, keys};
+pub use notice::{ModuleState, ModuleStateChanged, Notice, NoticeArg, SettingsChanged, args, keys};
 pub use redacted::{REDACTED_MARKER, Redacted};
 pub use service::ServiceKey;
 pub use settings::{Migration, Settings, SettingsSpec, parse_as, validate_as};

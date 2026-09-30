@@ -1,0 +1,25 @@
+[package]
+name = "kx-ui"
+description = "The UI: its texts in English, French and Arabic, then the QML views, bridges and the ui module."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Fluent: the translation files, their plural rules and language matching (ADR-0017).
+fluent-bundle.workspace = true
+fluent-langneg.workspace = true
+unic-langid.workspace = true
+# Notice keys and their typed arguments.
+kx-module-api = { path = "../kx-module-api" }
+
+[dev-dependencies]
+# Theme ids and top-bar button ids, so the tests check each has its text.
+kx-theme = { path = "../kx-theme" }
+toml.workspace = true

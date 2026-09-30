@@ -33,7 +33,8 @@ pub struct SpikeConfig {
     pub bar: crate::facecfg::BarConfig,
     /// Where fonts and icons are.
     pub assets: crate::facecfg::AssetsConfig,
-    /// The space bar's joiner, and the short language names from kx-mod-layouts.
+    /// The short language names from kx-mod-layouts; the file has no `[lang]` section.
+    #[serde(default)]
     pub lang: crate::langinfo::LangConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,

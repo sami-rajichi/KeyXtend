@@ -6,8 +6,7 @@ use crate::host::{Held, StartHost};
 use crate::lifecycle::Step;
 use crate::order;
 use crate::registry::Registry;
-use kx_module_api::{ModuleCx, ModuleError, ModuleId, ModuleState, Notice, keys};
-use kx_settings::ARG_MODULE;
+use kx_module_api::{ModuleCx, ModuleError, ModuleId, ModuleState, Notice, NoticeArg, args, keys};
 use std::fmt::Display;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -82,7 +81,7 @@ impl Kernel {
         self.notify(Notice {
             key: keys::MODULE_FAILED,
             module: Some(id),
-            args: vec![(ARG_MODULE, id.to_string())],
+            args: vec![(args::MODULE, NoticeArg::Text(id.to_string()))],
         });
     }
 

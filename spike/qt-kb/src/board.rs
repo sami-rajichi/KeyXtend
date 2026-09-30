@@ -181,11 +181,12 @@ impl qobject::Board {
     fn bar_json(&self) -> QString {
         let kb = &self.rust().kb;
         let c = kb.cfg();
+        // Theme ids: the names are kx-ui translations (`theme.<id>`), which this face cannot read.
         let themes: Vec<&str> = kb
             .themes()
             .list
             .iter()
-            .map(|t| t.look.name.as_str())
+            .map(|t| t.look.id.as_str())
             .collect();
         let mut bar = facecfg::bar_json(&c.bar, &kb.themes().icons);
         let chips = c.bar.chips.iter();
@@ -200,7 +201,6 @@ impl qobject::Board {
             "fonts": c.assets.font_files(&c.resolve(&c.assets.fonts)).iter().map(|p| url(p)).collect::<Vec<_>>(),
             "icons": url(&c.resolve(&c.assets.icons)),
             "iconExt": c.assets.icon_ext,
-            "joiner": c.lang.joiner,
             "tipMs": c.look.tip_ms,
         }))
     }

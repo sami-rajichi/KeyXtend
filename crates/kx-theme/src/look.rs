@@ -125,10 +125,8 @@ impl DpadRefs {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Look {
-    /// Short id, such as `native`.
+    /// Short id, such as `native`; its shown name is the translation `theme.<id>`.
     pub id: String,
-    /// Name shown in the theme bar.
-    pub name: String,
     /// Key corner radius.
     pub key_radius_px: f32,
     /// Keyboard and panel corner radius.

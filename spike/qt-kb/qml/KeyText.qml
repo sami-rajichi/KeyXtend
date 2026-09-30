@@ -117,7 +117,7 @@ Item {
             font.weight: t.look.legend_weight
             color: t.ink
         }
-        // The space bar: language and layout.
+        // The space bar: the language alone until kx-ui joins it with the layout (P3 Task 16).
         Line {
             visible: t.isSpace
             anchors.fill: parent
@@ -127,7 +127,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
             ar: t.lang.cur.rtl
-            text: t.lang.space.join(t.res.joiner)
+            text: t.lang.space[0] || ""
             font.pixelSize: t.spacePx
             color: t.ink2
         }

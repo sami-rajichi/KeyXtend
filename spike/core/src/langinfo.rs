@@ -1,20 +1,18 @@
 //! What the language key and space bar say about a layout: the product's `LangLabel`, named by kx-mod-layouts.
-//! The joiner waits here for the translations (P3 Task 15); the product's UI joins the space bar's parts itself.
+//! kx-ui's `lang.space` text joins the space bar's parts (P3 Task 15).
 
 use std::collections::BTreeMap;
 
 use kx_module_api::ports::{LangLabel, LayoutId};
 use serde::Deserialize;
 
-/// `spike.toml [lang]`: what joins the space bar's names, and the product's short names.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+/// The product's short language names; `spike.toml` has no `[lang]` section.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LangConfig {
     /// Short names by ISO 639 code from kx-mod-layouts' defaults, filled at load; spike.toml may not set them.
     #[serde(skip)]
     pub short: BTreeMap<String, String>,
-    /// Between the language and the layout on the space bar.
-    pub joiner: String,
 }
 
 /// Layout `hkl` as the product labels it, with the short names of `c`.
@@ -39,7 +37,7 @@ mod tests {
 
     #[test]
     fn spike_toml_may_not_set_short_names() {
-        let text = "short = { ar = \"x\" }\njoiner = \" · \"";
+        let text = "short = { ar = \"x\" }";
         assert!(toml::from_str::<LangConfig>(text).is_err());
     }
 

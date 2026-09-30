@@ -216,10 +216,6 @@ icon_ext = "svg"
 # Font files the faces load, by extension.
 font_exts = ["ttf", "otf"]
 
-# The space bar joins language and layout with this until translations join them (P3 Task 15); short names come from kx-mod-layouts.
-[lang]
-joiner = " · "
-
 # A still left press fires after ms (spec §5.1; the owner may set min_ms to max_ms); moves up to still_px count as still.
 # The ring around the pointer shows ring_after_ms after the press (below min_ms) and shrinks over the rest of the hold (spec §3.2).
 [hold]
