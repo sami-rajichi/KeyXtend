@@ -21,6 +21,8 @@ Window {
 
     // The banner shows (true) or hides (false); its shadow follows.
     signal showing(bool on)
+    // A press landed on the banner, which closes the tray menu; the press still reaches the button.
+    signal touched
 
     // The box whose fade and drop the shadow follows.
     readonly property alias body: body
@@ -188,6 +190,9 @@ Window {
                 main: !(note.shown && note.shown.retry)
                 onClicked: note.answer(false)
             }
+        }
+        PressWatch {
+            onTouched: note.touched()
         }
     }
 

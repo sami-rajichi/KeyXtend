@@ -20,7 +20,8 @@ var settings = {
       "name": "Large"
     }
   ],
-  "tipMs": 500
+  "tipMs": 500,
+  "trayGraceMs": 500
 };
 var texts = {
   "banner.more": "⁨{$more}⁩ more notices",

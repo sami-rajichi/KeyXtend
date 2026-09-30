@@ -1,8 +1,9 @@
-//! A fake taskbar for the tray tests: it records each call, refuses what a test names, and can run the thread's other
-//! messages inside a call, as the real one can.
+//! A fake taskbar for the tray tests: it records each call, refuses and holds what a test names, and can run the
+//! thread's other messages inside a call, as the real one can.
 
 use super::*;
 use std::sync::Condvar;
+use std::thread::ThreadId;
 use std::time::Duration;
 use windows::Win32::UI::WindowsAndMessaging::SendMessageW;
 
@@ -20,6 +21,8 @@ pub(super) struct Call {
     pub(super) tip: String,
     pub(super) icon: bool,
     pub(super) version: u32,
+    /// The thread that made the call.
+    pub(super) thread: ThreadId,
 }
 
 /// A taskbar that records each call and refuses the kinds the test names.
@@ -30,31 +33,41 @@ pub(super) struct FakeShell {
     refuse: Mutex<Vec<NOTIFY_ICON_MESSAGE>>,
     /// A window that gets the taskbar's restart message inside the next call, as a real call can run other messages.
     pub(super) restart_in: Mutex<Option<usize>>,
-    /// An icon state the owner changes during the next add, as `set` can on its own thread.
-    pub(super) change_in: Mutex<Option<Arc<Mutex<State>>>>,
+    /// Calls of this kind wait inside the call until it changes, as a slow taskbar makes them.
+    held: Mutex<Option<NOTIFY_ICON_MESSAGE>>,
+    freed: Condvar,
 }
 
 impl FakeShell {
     /// The kinds of the calls heard since the last take, and the calls.
     pub(super) fn take(&self) -> (Vec<u32>, Vec<Call>) {
-        let calls = std::mem::take(&mut *self.calls.lock().unwrap());
+        let calls = std::mem::take(&mut *locked(&self.calls));
         (calls.iter().map(|c| c.what).collect(), calls)
     }
 
-    /// Waits until `n` calls came from the icon's queue, then takes them.
+    /// Waits until `n` calls came from the icon's queue, then takes them; a failure frees the lock first, so the
+    /// icon's thread never meets a poisoned one inside its window procedure.
     pub(super) fn wait(&self, n: usize) -> (Vec<u32>, Vec<Call>) {
-        let calls = self.calls.lock().unwrap();
+        let calls = locked(&self.calls);
         let (calls, waited) = self
             .heard
             .wait_timeout_while(calls, PATIENCE, |c| c.len() < n)
-            .unwrap();
-        assert!(!waited.timed_out(), "{} calls, not {n}", calls.len());
+            .unwrap_or_else(PoisonError::into_inner);
+        let got = calls.len();
         drop(calls);
+        assert!(!waited.timed_out(), "{got} calls, not {n}");
         self.take()
     }
 
+    /// Refuses later calls of the kinds in `kinds`.
     pub(super) fn refuse(&self, kinds: &[NOTIFY_ICON_MESSAGE]) {
-        *self.refuse.lock().unwrap() = kinds.to_vec();
+        *locked(&self.refuse) = kinds.to_vec();
+    }
+
+    /// Holds later calls of kind `what` inside the call, or lets every held call go with `None`.
+    pub(super) fn hold(&self, what: Option<NOTIFY_ICON_MESSAGE>) {
+        *locked(&self.held) = what;
+        self.freed.notify_all();
     }
 }
 
@@ -72,16 +85,18 @@ impl Shell for FakeShell {
             icon: !data.hIcon.is_invalid(),
             // SAFETY: both union fields are a u32, so either reading is defined.
             version: unsafe { data.Anonymous.uVersion },
+            thread: std::thread::current().id(),
         };
-        self.calls.lock().unwrap().push(call);
+        locked(&self.calls).push(call);
         self.heard.notify_all();
-        let change = self.change_in.lock().unwrap().take();
-        if let Some(state) = change.filter(|_| what == NIM_ADD) {
-            let mut s = lock(&state);
-            s.tip = crate::tray::tip("newer");
-            s.changes += 1;
-        }
-        let restart = self.restart_in.lock().unwrap().take();
+        // A call held too long goes on, so the test that forgot it fails on its own asserts.
+        let hold = locked(&self.held);
+        let (hold, _) = self
+            .freed
+            .wait_timeout_while(hold, PATIENCE, |h| *h == Some(what))
+            .unwrap_or_else(PoisonError::into_inner);
+        drop(hold);
+        let restart = locked(&self.restart_in).take();
         if let Some(window) = restart {
             send(
                 HWND(std::ptr::without_provenance_mut(window)),
@@ -90,8 +105,13 @@ impl Shell for FakeShell {
                 0,
             );
         }
-        !self.refuse.lock().unwrap().contains(&what)
+        !locked(&self.refuse).contains(&what)
     }
+}
+
+/// Locks `m`, taking it even when a failed test poisoned it; the fake runs inside the icon's window procedure.
+fn locked<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Sends the icon's window a message and waits until its thread handled it.

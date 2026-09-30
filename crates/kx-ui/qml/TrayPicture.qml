@@ -11,8 +11,10 @@ Window {
     required property var res
 
     readonly property var sh: lk.shape.tray
+    // The screen's scale; a new one, as the tray's scale changes with it, draws the picture again.
+    property real dpr: Screen.devicePixelRatio
     // The picture's side in whole Qt units, so the grab has at least the tray's pixels; the Ui object scales it exactly.
-    readonly property real side: Math.ceil(ui.trayPx() / Screen.devicePixelRatio)
+    readonly property real side: Math.ceil(ui.trayPx() / dpr)
 
     // A grab is running, and another was asked for meanwhile.
     property bool busy: false
@@ -45,6 +47,8 @@ Window {
             visible = false;
         }
     }
+
+    onDprChanged: draw()
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     color: "transparent"

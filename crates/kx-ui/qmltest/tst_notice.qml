@@ -154,6 +154,16 @@ Item {
             }
         }
 
+        function test_a_press_on_the_banner_is_seen_and_still_reaches_its_button() {
+            const note = make([notice(1, false)]);
+            const spy = createTemporaryObject(spyC, root, { target: note, signalName: "touched" });
+            tryVerify(() => note.visible, 2000, "it shows");
+            waitForRendering(note.contentItem);
+            mouseClick(button(note, En.texts["button.ok"]));
+            compare(spy.count, 1, "seen, so the tray menu closes");
+            compare(note.ui.calls, ["dismiss 1"], "and OK still answers");
+        }
+
         function test_the_count_comes_in_the_ui_language() {
             const note = make([notice(1, false), notice(2, false), notice(3, false)], { more: Ar.more });
             tryVerify(() => note.visible, 2000, "it shows");

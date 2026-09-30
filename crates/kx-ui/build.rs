@@ -19,6 +19,7 @@ mod qt {
     /// Every QML file of the module, one row each; the first is the root the app loads.
     const QML: &[&str] = &[
         "qml/main.qml",
+        "qml/App.qml",
         "qml/KbWindow.qml",
         "qml/Plate.qml",
         "qml/TopBar.qml",
@@ -49,6 +50,7 @@ mod qt {
         "qml/Notice.qml",
         "qml/TrayMenu.qml",
         "qml/TrayPicture.qml",
+        "qml/PressWatch.qml",
     ];
     /// The Rust files holding cxx-qt bridges.
     const BRIDGES: &[&str] = &["src/bridges/ui.rs", "src/bridges/keyboard.rs"];

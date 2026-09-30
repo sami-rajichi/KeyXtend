@@ -31,6 +31,9 @@ Item {
     Component { id: cycleC; LangCycle {} }
     Component { id: keyC; Key {} }
     Component { id: spyC; SignalSpy {} }
+    Component { id: fontC; FontLoader {} }
+    // Measures text in a given font.
+    Component { id: metricsC; FontMetrics {} }
 
     TestCase {
         name: "lang"
@@ -142,6 +145,42 @@ Item {
             mouseClick(button(list.contentItem, En.texts["page.back"]));
             compare(page.signalArguments[0][0], "left");
             list.visible = false;
+        }
+
+        function test_a_press_on_the_list_is_seen_and_still_picks() {
+            const list = makeList(view(3, 0));
+            const spy = createTemporaryObject(spyC, root, { target: list, signalName: "touched" });
+            const pick = createTemporaryObject(spyC, root, { target: list, signalName: "pick" });
+            list.open();
+            waitForRendering(list.contentItem);
+            mouseClick(rowsOf(list)[1]);
+            compare(spy.count, 1, "seen, so the tray menu closes");
+            compare(pick.signalArguments[0][0], 1, "and the row is still picked");
+            list.visible = false;
+        }
+
+        // The bundled Arabic fallback font stands taller than the Latin one, as Arabic fonts do.
+        function test_an_arabic_row_fits_its_name_and_layout() {
+            const at = Assets.assets.fonts.map(f => Qt.resolvedUrl(Assets.root + "/" + f));
+            const loaders = at.map(f => createTemporaryObject(fontC, root, { source: f }));
+            tryVerify(() => loaders.every(l => l.status === FontLoader.Ready), 5000, "the bundled fonts load");
+            const arabic = N.lk.look.arabic_fonts[N.lk.look.arabic_fonts.length - 1];
+            const sh = N.lk.shape.list;
+            const tall = createTemporaryObject(metricsC, root, { font: Qt.font({ family: arabic, pixelSize: sh.name_px }) });
+            const latin = createTemporaryObject(metricsC, root, { font: Qt.font({ family: root.res.fam.latin, pixelSize: sh.name_px }) });
+            verify(tall.height > latin.height, "the case this test is for: " + tall.height + " " + latin.height);
+            const res = Object.assign({}, root.res, { fam: { latin: root.res.fam.latin, arabic: arabic, ui: root.res.fam.ui } });
+            const row = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
+            const v = { rows: [row], hi: 0, keys: [], page_back: null, page_on: null };
+            const ui = createTemporaryObject(uiC, root);
+            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, rtl: true, title: "list" });
+            const slot = slots(list)[0];
+            const name = all(slot, o => o.text === row.name[0])[0];
+            const sub = all(slot, o => o.text === root.res.space(row.name.slice(1)))[0];
+            const room = slot.height - 2 * sh.row_pad_px[0];
+            verify(name.implicitHeight + sub.implicitHeight <= room, "no clipping: " + (name.implicitHeight + sub.implicitHeight) + " in " + room);
+            const latinOnly = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: view(3, 0), rows: 5, rtl: true, title: "list" });
+            verify(latinOnly.rowH < list.rowH, "a list with no Arabic row keeps its height");
         }
 
         function test_the_boards_arrows_enter_and_esc_drive_the_open_list() {

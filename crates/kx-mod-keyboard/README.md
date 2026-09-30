@@ -71,7 +71,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 - `keys` by id: `main second third main_ar second_ar name on paint`, where `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key).
 - `lang`: `prev`, `cur` and `next` as `{short rtl arabic}` (null when the neighbour is the current layout), `at` and `count` for the Cycle's dots, the space bar's `space` parts, and `turn` (-1, 0 or 1) for the Carousel's slide.
-- `list`: null, or `{rows, hi, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page_back` and `page_on` name the board keys that turn the page, which the list's page buttons send as `panel_key`.
+- `list`: null, or `{rows, hi, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page_back` and `page_on` name the board keys with the moves `PAGE_BACK` and `PAGE_ON` (null when the board has none), which the list's page buttons send as `panel_key`; the UI dims a button on the first or last page.
 - `at`: null, or where the window goes in physical pixels.
 
 `act(action)` says what to redraw in a `FaceReply`, with a notice key for the banner above the keyboard:

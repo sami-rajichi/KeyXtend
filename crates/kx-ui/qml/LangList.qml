@@ -21,6 +21,8 @@ Window {
     // Row `index` of the whole list was picked, or a page button sent board key `id`.
     signal pick(int index)
     signal page(string id)
+    // A press landed on the list, which closes the tray menu; the press still reaches the row or button.
+    signal touched
 
     // The box whose fade, rise and scale the shadow follows.
     readonly property alias body: body
@@ -38,8 +40,11 @@ Window {
         return part.concat(Array(blanks).fill(null));
     }
     readonly property real pad: sh.pad_px * s
-    // A row fits its badge, or its name over its layout, inside its padding.
-    readonly property real rowH: Math.max(sh.badge_px[1] * s, nameLine.height + subLine.height) + 2 * sh.row_pad_px[0] * s
+    // A row fits its badge, or its name over its layout, inside its padding; any Arabic row sizes every row, so each
+    // page keeps the box's size.
+    readonly property bool arabic: view.rows.some(r => r.arabic)
+    readonly property real nameH: Math.max(nameLine.implicitHeight, arabic ? arabicLine.implicitHeight : 0)
+    readonly property real rowH: Math.max(sh.badge_px[1] * s, nameH + subLine.implicitHeight) + 2 * sh.row_pad_px[0] * s
     readonly property real pagerW: pages > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
 
     // Shows the list, popping in (mock-up popIn).
@@ -48,16 +53,6 @@ Window {
         popIn.restart();
     }
 
-    FontMetrics {
-        id: nameLine
-        font.family: box.res.fam.latin
-        font.pixelSize: box.sh.name_px * box.s
-    }
-    FontMetrics {
-        id: subLine
-        font.family: box.res.fam.latin
-        font.pixelSize: box.sh.sub_px * box.s
-    }
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     color: "transparent"
@@ -137,6 +132,31 @@ Window {
                 can: box.at < box.pages - 1 && !!box.view.page_on
                 onClicked: box.page(box.view.page_on)
             }
+        }
+        PressWatch {
+            onTouched: box.touched()
+        }
+        // Hidden lines laid out as the rows' labels are, which round each line up, so a row always fits them.
+        Label {
+            id: nameLine
+            visible: false
+            text: " "
+            font.family: box.res.fam.latin
+            font.pixelSize: box.sh.name_px * box.s
+        }
+        Label {
+            id: arabicLine
+            visible: false
+            text: " "
+            font.family: box.res.fam.arabic
+            font.pixelSize: box.sh.name_px * box.s
+        }
+        Label {
+            id: subLine
+            visible: false
+            text: " "
+            font.family: box.res.fam.latin
+            font.pixelSize: box.sh.sub_px * box.s
         }
     }
 

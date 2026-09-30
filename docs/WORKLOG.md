@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: tray menu review fixes
+The tray menu now stays open for `[ui] tray_grace_ms` (500 ms) when another window comes to the front just after it opens, as the Windows 11 hidden icons can do, and a press on the banner or the language list closes it too. The icon's changes go to the taskbar from its own thread, so a hung Explorer can no longer freeze the keyboard, and the icon is sized and redrawn for the taskbar screen's scale. Arabic rows in the language list no longer clip, and the root's wiring moved into `App.qml`, where Qt Quick tests check every way the menu closes. ADR-0019 records the tray decision, and ADR-0016 is back to its accepted text.
+
 ## 2026-09-30 — P3: labels fit Dolch's top face
 On Dolch's sculpted caps, a named key's label now fits the lighter top, plus a 1 px allowance per side from a theme token, which is how far P1's AltGr already ran. The fit test covers every size preset and the largest size, and checks that the theme's own font draws each label. The keyboard's settings now refuse more size presets than the top bar names.
 

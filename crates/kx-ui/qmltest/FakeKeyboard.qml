@@ -9,6 +9,8 @@ QtObject {
     property var reply: ({ board: false, state: false })
     // Every call so far, as `name` or `name args`.
     property var calls: []
+    // Where `bubbleAt` puts the bubble, in physical pixels, or null for nowhere.
+    property var bubble: null
 
     function note(call) {
         calls = calls.concat([call]);
@@ -58,7 +60,7 @@ QtObject {
     }
     function bubbleAt(x, y, corner) {
         note("bubbleAt " + corner);
-        return "null";
+        return JSON.stringify(bubble);
     }
     function shape(title, boxes, dpr) {
         note("shape " + title);

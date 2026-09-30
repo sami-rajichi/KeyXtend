@@ -17,10 +17,13 @@ mod win;
 #[cfg(windows)]
 pub use win::WinTray;
 
+/// The main taskbar's window class; its screen's DPI sizes the icon.
+pub(crate) const TASKBAR: &str = "Shell_TrayWnd";
+
 /// The shell's windows that come to the front when the user clicks the taskbar or its hidden icons, so their coming
 /// is no click elsewhere: the main and a second taskbar, and the hidden icons' flyout (Windows 10, then 11).
 const TASKBAR_CLASSES: [&str; 4] = [
-    "Shell_TrayWnd",
+    TASKBAR,
     "Shell_SecondaryTrayWnd",
     "NotifyIconOverflowWindow",
     "TopLevelWindowForOverflowXamlIsland",
@@ -35,6 +38,8 @@ pub const TIP_UNITS: usize = 128;
 
 /// Bytes per pixel of the icon's picture: blue, green, red and alpha.
 const BGRA: usize = 4;
+/// `CreateBitmap` reads each mask row padded to this many bits.
+const MASK_ROW_BITS: u32 = 16;
 
 /// True when a window of class `class` coming to the front means the user clicked elsewhere.
 #[must_use]
@@ -95,7 +100,7 @@ pub fn bgra(rgba: &[u8]) -> Vec<u8> {
 /// 16 bits as `CreateBitmap` reads them. `None` when it would not fit in memory.
 #[must_use]
 pub fn mask(width: u32, height: u32) -> Option<Vec<u8>> {
-    let row = width.div_ceil(16) * 2;
+    let row = width.div_ceil(MASK_ROW_BITS) * (MASK_ROW_BITS / u8::BITS);
     let bytes = u64::from(row) * u64::from(height);
     Some(vec![0; usize::try_from(bytes).ok()?])
 }

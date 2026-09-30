@@ -1,5 +1,5 @@
 // The tray icon's menu (mock-up .ctx, in the theme's panel colours): Show keyboard and Quit. It opens by the tray icon,
-// never takes focus, and closes on a pick, another click on the icon, a press on the keyboard or a new front window.
+// never takes focus, and closes on a pick, another click on the icon, a press on our windows or a new front window.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -12,6 +12,10 @@ Window {
     required property var spot
     // The UI reads right to left, so each icon goes on the right of its text.
     required property bool rtl
+    // How long after it opens a new front window leaves it open, in ms (`[ui] tray_grace_ms`), and the clock in ms.
+    required property int graceMs
+    property var now: () => Date.now()
+    property real openedAt: 0
 
     // An item was picked; the menu has closed.
     signal showKeyboard
@@ -43,9 +47,17 @@ Window {
             return;
         x = at.x;
         y = at.y;
+        openedAt = now();
         showing(true);
         visible = true;
         grow.restart();
+    }
+    // Another program's window came to the front: it closes, unless that came within the grace after it opened, as
+    // the hidden icons' pop-up closing can bring one.
+    function away() {
+        const since = now() - openedAt;
+        if (since < 0 || since >= graceMs)
+            shut();
     }
     function shut() {
         if (!visible)

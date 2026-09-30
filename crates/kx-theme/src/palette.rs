@@ -227,4 +227,11 @@ impl Palette {
             ("legend_2_plate on chip", self.legend_2_plate, chip),
         ]
     }
+
+    /// Each shape that carries meaning with the background it sits on, named for reports: the language list's ring and
+    /// tick on the panel (WCAG success criterion 1.4.11).
+    #[must_use]
+    pub fn shape_pairs(&self) -> [(&'static str, Rgba, Rgba); 1] {
+        [("ring on pop_bg", self.ring, self.pop_bg)]
+    }
 }

@@ -1,4 +1,4 @@
-//! The icon window's messages: queueing one to itself, the taskbar's restart message, and letting the taskbar reach it.
+//! The icon window's messages: queueing one to it, the taskbar's restart message, and letting the taskbar reach it.
 
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -6,10 +6,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::w;
 
-/// Queues `msg` to our own window.
+/// Queues `msg` to the icon's window, from its own thread or the owner's.
 #[allow(unsafe_code, reason = "Posts a message to our own window.")]
 pub(super) fn post(hwnd: HWND, msg: u32) {
-    // SAFETY: a plain message with no pointers, to a window this thread made.
+    // SAFETY: a plain message with no pointers, to a window of ours that lives until the icon drops.
     let _ = unsafe { PostMessageW(Some(hwnd), msg, WPARAM(0), LPARAM(0)) };
 }
 

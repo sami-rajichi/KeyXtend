@@ -95,6 +95,7 @@ fn qml_reads_the_timings_paging_and_direction() {
     assert_eq!(v["tipMs"], s.tip_ms);
     assert_eq!(v["pollMs"], s.poll_ms);
     assert_eq!(v["guardDelayMs"], s.guard_delay_ms);
+    assert_eq!(v["trayGraceMs"], s.tray_grace_ms);
     assert_eq!(v["pageRows"], s.page_rows);
     assert_eq!(
         (v["lang"].as_str(), v["rtl"].as_bool()),

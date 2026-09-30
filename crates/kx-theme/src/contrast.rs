@@ -3,6 +3,7 @@
 use std::ops::RangeInclusive;
 
 use crate::mode::Mode;
+use crate::palette::Palette;
 use crate::rgba::Rgba;
 use crate::theme::Theme;
 
@@ -64,10 +65,21 @@ pub fn readable(a: Rgba, b: Rgba, bg: Rgba) -> Rgba {
 /// Every legend below `min` contrast with its background, as `<id>.<mode>: <pair> is <n>:1`.
 #[must_use]
 pub fn low_contrast(themes: &[Theme], min: f32) -> Vec<String> {
+    low(themes, min, |p| p.legend_pairs().to_vec())
+}
+
+/// Every shape that carries meaning below WCAG's 3:1 with its background, named as `low_contrast` names legends.
+#[must_use]
+pub fn low_shapes(themes: &[Theme]) -> Vec<String> {
+    low(themes, WCAG_SHAPES, |p| p.shape_pairs().to_vec())
+}
+
+/// Every pair `pairs` gives, in each theme and mode, below `min`.
+fn low(themes: &[Theme], min: f32, pairs: impl Fn(&Palette) -> Vec<Pair>) -> Vec<String> {
     let mut low = Vec::new();
     for t in themes {
         for mode in Mode::ALL {
-            for (pair, ink, bg) in t.palette(mode).legend_pairs() {
+            for (pair, ink, bg) in pairs(t.palette(mode)) {
                 let c = contrast(ink, bg);
                 if c < min {
                     low.push(format!("{}.{}: {pair} is {c:.1}:1", t.look.id, mode.key()));
@@ -77,6 +89,9 @@ pub fn low_contrast(themes: &[Theme], min: f32) -> Vec<String> {
     }
     low
 }
+
+/// A named colour and the background it sits on.
+type Pair = (&'static str, Rgba, Rgba);
 
 #[cfg(test)]
 mod tests;

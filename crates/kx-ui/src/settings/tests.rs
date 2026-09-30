@@ -27,6 +27,7 @@ fn the_defaults_are_the_plan_v1_values() {
     assert!(!s.follow_accent && !s.reduced_motion);
     assert_eq!((s.backdrop, s.language.as_str()), (Backdrop::None, AUTO));
     assert_eq!((s.tip_ms, s.poll_ms, s.guard_delay_ms), (500, 16, 300));
+    assert_eq!(s.tray_grace_ms, 500);
     assert_eq!((s.guard_tries, s.page_rows), (10, 5));
     assert!((s.min_contrast - WCAG_AA).abs() < f32::EPSILON);
     assert_eq!(SPEC.version, 1);
@@ -116,6 +117,18 @@ fn timings_and_rows_past_their_range_are_refused() {
     assert!(invalid(&with("page_rows", past(rows))));
     let top = i64::try_from(*TIP_MS.end()).unwrap();
     assert_eq!(validate_as::<UiSettings>(&with("tip_ms", top)), Ok(()));
+}
+
+#[test]
+fn the_tray_grace_may_be_off_but_not_past_its_range() {
+    assert_eq!(validate_as::<UiSettings>(&with("tray_grace_ms", 0)), Ok(()));
+    let end = i64::try_from(*TRAY_GRACE_MS.end()).unwrap();
+    assert_eq!(
+        validate_as::<UiSettings>(&with("tray_grace_ms", end)),
+        Ok(())
+    );
+    assert!(invalid(&with("tray_grace_ms", end + 1)));
+    assert!(unparsed(&with("tray_grace_ms", -1)));
 }
 
 #[test]

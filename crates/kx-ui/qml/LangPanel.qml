@@ -1,5 +1,5 @@
-// The List design's language list with its shadow: placed by the language key above the keyboard, then opened.
-// Its picks and page buttons go to the keyboard, and the window redraws from the answer.
+// The List design's language list with its shadow: placed by the language key above the keyboard, then opened. Its
+// picks and page buttons go to the keyboard, which redraws from the answer; a press on it counts as the keyboard's.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -47,6 +47,7 @@ Glow {
         title: panel.win.res.tr("window.list")
         onPick: i => panel.win.redraw(panel.win.keyboard.langPick(i))
         onPage: id => panel.win.redraw(panel.win.keyboard.panelKey(id))
+        onTouched: panel.win.touched()
         onWidthChanged: if (visible) panel.place()
         onHeightChanged: if (visible) panel.place()
         Component.onCompleted: Qt.callLater(() => {

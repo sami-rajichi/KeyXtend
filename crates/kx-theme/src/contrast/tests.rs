@@ -1,4 +1,4 @@
-//! Contrast tests against the shipped themes: every legend and the ring, and the WCAG maths.
+//! Contrast tests against the shipped themes: every legend, the rings, and the WCAG maths.
 
 use super::*;
 use crate::Themes;
@@ -103,4 +103,29 @@ fn a_user_minimum_starts_at_wcag_aa_and_ends_at_black_on_white() {
     for bad in [4.4, MAX_CONTRAST + 1.0, f32::NAN] {
         assert!(!MIN_CONTRAST.contains(&bad), "{bad}");
     }
+}
+
+#[test]
+fn the_list_ring_and_tick_stand_out_on_the_panel() {
+    let low = low_shapes(&load().list);
+    assert!(low.is_empty(), "{low:?}");
+    for t in load().list {
+        for mode in Mode::ALL {
+            let pairs = t.palette(mode).shape_pairs();
+            let names: Vec<&str> = pairs.iter().map(|(n, ..)| *n).collect();
+            assert_eq!(names, ["ring on pop_bg"], "{}", t.look.id);
+        }
+    }
+}
+
+#[test]
+fn a_ring_too_close_to_the_panel_is_named() {
+    let mut all = load().list;
+    all[0].dark.ring = all[0].dark.pop_bg;
+    let low = low_shapes(&all);
+    assert!(
+        low.iter()
+            .any(|l| l.starts_with("native.dark: ring on pop_bg")),
+        "{low:?}"
+    );
 }

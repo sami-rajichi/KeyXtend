@@ -94,7 +94,7 @@ pub trait TrayIcon: Send {
     /// Changes the picture and the tooltip; a picture the taskbar refused is kept for when it restarts.
     ///
     /// # Errors
-    /// `Refused` when the OS will not make the picture or the taskbar refuses it.
+    /// `Refused` when the OS will not make the picture, or the taskbar refuses it and the adapter waits for its answer.
     fn set(&self, image: &TrayImage, tip: &str) -> Result<(), UiError>;
 }
 

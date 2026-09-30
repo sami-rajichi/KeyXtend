@@ -266,11 +266,8 @@ Window {
         }
     }
     // Above the plate, it watches presses without taking them.
-    Item {
-        anchors.fill: parent
-        PointHandler {
-            onActiveChanged: if (active) win.touched()
-        }
+    PressWatch {
+        onTouched: win.touched()
     }
 
     Timer {

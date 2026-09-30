@@ -3,10 +3,10 @@
 
 use kx_module_api::ports::{Point, Screen};
 use kx_platform::ui::{Screens, UiError};
-use windows::Win32::Foundation::{LPARAM, POINT, RECT};
+use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
-    EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITOR_DEFAULTTONEAREST, MONITORINFO,
-    MonitorFromRect,
+    EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITOR_DEFAULTTONEAREST,
+    MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromRect, MonitorFromWindow,
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
@@ -103,6 +103,15 @@ pub fn dpi_of(r: &RECT) -> u32 {
     monitor_dpi(nearest(r))
 }
 
+/// The DPI of the screen holding window `hwnd`, or of the main screen without one.
+#[must_use]
+#[allow(unsafe_code, reason = "A plain monitor query.")]
+pub fn window_dpi(hwnd: Option<HWND>) -> u32 {
+    // SAFETY: a plain query; a null window gives the main monitor.
+    let mon = unsafe { MonitorFromWindow(hwnd.unwrap_or_default(), MONITOR_DEFAULTTOPRIMARY) };
+    monitor_dpi(mon)
+}
+
 /// Where the pointer is.
 ///
 /// # Errors
@@ -139,6 +148,13 @@ mod tests {
         let rect = rect_of([work.left, work.top, work.right, work.bottom]);
         assert!(WinScreens.work_areas().iter().any(|a| a.rect == rect));
         assert!(dpi_of(&origin) >= DEFAULT_DPI / 2, "a real DPI");
+    }
+
+    #[test]
+    fn a_missing_window_is_on_the_main_screen() {
+        let main = WinScreens.work_areas().into_iter().find(|a| a.primary);
+        assert_eq!(Some(window_dpi(None)), main.map(|a| a.dpi));
+        assert_eq!(window_dpi(Some(HWND::default())), window_dpi(None));
     }
 
     #[test]

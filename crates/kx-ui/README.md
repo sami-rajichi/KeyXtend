@@ -10,10 +10,10 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## QML views
 
-`qml/` holds the keyboard window and its parts, moved from the P1 test build with its look (Task 17). `main.qml` makes one `Ui` and one `Keyboard`, the keyboard window (`KbWindow`, its body `Plate`), the minimise bubble, the notice banner (`Notice`) and the tray menu (`TrayMenu`), each over a click-through shadow window (`Glow`), and draws the tray icon's picture (`TrayPicture`). The windows read `settingsJson`, `lookJson`, `boardJson` and `stateJson`, redraw from each action's `{board, state}` answer, and read everything again on `settingsChanged`.
+`qml/` holds the keyboard window and its parts, moved from the P1 test build with its look (Task 17). `main.qml` makes one `Ui` and one `Keyboard` and hands them to `App`, which holds the keyboard window (`KbWindow`, its body `Plate`), the minimise bubble, the notice banner (`Notice`) and the tray menu (`TrayMenu`), each over a click-through shadow window (`Glow`), and draws the tray icon's picture (`TrayPicture`). The windows read `settingsJson`, `lookJson`, `boardJson` and `stateJson`, redraw from each action's `{board, state}` answer, and read everything again on `settingsChanged`.
 
 - **Banner:** notices queue; one shows above the keyboard (or at the bottom of the main screen while it is away) with Try again when the app can restart what failed, and OK, and says how many more wait.
-- **Tray:** × hides the keyboard; a click on the tray icon opens the themed menu (Show keyboard, Quit) above it, and it closes on a pick, a second click or a click elsewhere. The picture is the theme's badge, drawn again when the look or settings change, and the icon goes before the UI ends.
+- **Tray (ADR-0019):** × hides the keyboard; a click on the tray icon opens the themed menu (Show keyboard, Quit) above it. It closes on a pick, a second click on the icon, a press on any of our windows (`PressWatch` hears it without taking it), and another program's window coming to the front once `[ui] tray_grace_ms` has passed since it opened. The picture is the theme's badge, drawn again when the look, the settings or the screen scale change, and the icon goes before the UI ends.
 - **Language key:** Carousel, Cycle (`LangCycle`: globe, name, one dot per layout) or List (name and chevron). The List opens `LangList` (with its shadow in `LangPanel`): one page of `[ui] page_rows` rows (`LangRow`) above the keyboard with its left edge at the language key, driven by the board's arrows, Enter and Esc, with a pager when there is more than one page.
 - **Top bar:** the theme button cycles the themes (`bar.theme`).
 
@@ -24,11 +24,11 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## Qt Quick tests
 
-`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. The same test lays out the bundled fonts and icons in `target/tmp/qmltest-assets` as the app holds them, so run `cargo test -p kx-ui --test texts` first. Then run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`. Any warning fails a test.
+`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary; `tst_app` builds `App` over them as `main.qml` does. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. The same test lays out the bundled fonts and icons in `target/tmp/qmltest-assets` as the app holds them, so run `cargo test -p kx-ui --test texts` first. Then run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`. Any warning fails a test.
 
 ## The `[ui]` settings
 
-`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range.
+`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range. `tray_grace_ms` (500) may be 0, which turns the tray menu's grace off.
 
 ## The hub
 

@@ -5,7 +5,7 @@ use super::front::away;
 use super::*;
 use std::sync::mpsc::{self, Receiver};
 use windows::Win32::UI::WindowsAndMessaging::{FindWindowExW, FindWindowW, WM_CONTEXTMENU};
-use windows::core::{PCWSTR, w};
+use windows::core::PCWSTR;
 
 /// A mouse move over the icon, which opens nothing.
 const MOUSE_MOVE: isize = 0x0200;
@@ -94,7 +94,7 @@ fn a_restarted_taskbar_gets_the_icon_again_with_its_latest_picture() {
     let icon = tray.show(&image(), "old", Box::new(|_| {})).unwrap();
     shell.wait(2);
     icon.set(&image(), "new").unwrap();
-    let (whats, calls) = shell.take();
+    let (whats, calls) = shell.wait(1);
     assert_eq!(whats, [NIM_MODIFY.0]);
     assert_eq!(calls[0].tip, "new");
     send(find(&class).unwrap(), restart_msg(), 0, 0);
@@ -117,11 +117,14 @@ fn a_taskbar_not_there_yet_gets_the_icon_when_it_starts() {
         "no version without an icon"
     );
     icon.set(&image(), "later").unwrap();
-    assert!(shell.take().0.is_empty(), "the coming add carries a change");
     shell.refuse(&[]);
     send(find(&class).unwrap(), restart_msg(), 0, 0);
     let (whats, calls) = shell.wait(2);
-    assert_eq!(whats, [NIM_ADD.0, NIM_SETVERSION.0]);
+    assert_eq!(
+        whats,
+        [NIM_ADD.0, NIM_SETVERSION.0],
+        "no modify before the add, which carries the change"
+    );
     assert_eq!(calls[0].tip, "later");
 }
 
@@ -136,15 +139,18 @@ fn an_icon_the_taskbar_still_holds_is_changed_when_it_restarts() {
 }
 
 #[test]
-fn a_change_the_taskbar_refuses_is_refused_and_shown_when_it_restarts() {
+fn a_change_the_taskbar_refuses_is_shown_when_it_restarts() {
     let (shell, tray, class) = rig("refused");
     let icon = tray.show(&image(), "t", Box::new(|_| {})).unwrap();
     shell.wait(2);
     shell.refuse(&[NIM_MODIFY]);
-    assert_eq!(icon.set(&image(), "u"), Err(failed()));
+    assert_eq!(icon.set(&image(), "u"), Ok(()), "queued, so not waited on");
+    assert_eq!(shell.wait(1).0, [NIM_MODIFY.0]);
     shell.refuse(&[]);
     send(find(&class).unwrap(), restart_msg(), 0, 0);
-    assert_eq!(shell.wait(3).1[1].tip, "u", "after the refused modify");
+    let (whats, calls) = shell.wait(2);
+    assert_eq!(whats, [NIM_ADD.0, NIM_SETVERSION.0]);
+    assert_eq!(calls[0].tip, "u");
 }
 
 #[test]
@@ -165,28 +171,57 @@ fn a_taskbar_call_that_runs_other_messages_holds_no_lock() {
 
 #[test]
 fn a_change_made_while_the_add_is_on_its_way_follows_it() {
-    let shell = Arc::new(FakeShell::default());
-    let state = Arc::new(Mutex::new(State {
-        icon: Arc::new(Icon::new(&image()).unwrap()),
-        tip: crate::tray::tip("old"),
-        window: 1,
-        added: false,
-        gone: false,
-        changes: 0,
-    }));
-    *shell.change_in.lock().unwrap() = Some(Arc::clone(&state));
-    let here = Here {
-        on: Box::new(|_| {}),
-        state,
-        shell: Arc::clone(&shell) as Arc<dyn Shell>,
-        restart: 0,
-    };
-    here.add();
-    let (whats, calls) = shell.take();
-    assert_eq!(whats, [NIM_ADD.0, NIM_SETVERSION.0, NIM_MODIFY.0]);
+    let (shell, tray, _) = rig("raced");
+    shell.hold(Some(NIM_ADD));
+    let icon = tray.show(&image(), "old", Box::new(|_| {})).unwrap();
+    let (_, add) = shell.wait(1);
+    icon.set(&image(), "newer").unwrap();
+    shell.hold(None);
+    let (whats, calls) = shell.wait(2);
+    assert_eq!(whats, [NIM_SETVERSION.0, NIM_MODIFY.0]);
     assert_eq!(
-        (calls[0].tip.as_str(), calls[2].tip.as_str()),
+        (add[0].tip.as_str(), calls[1].tip.as_str()),
         ("old", "newer")
+    );
+}
+
+#[test]
+fn a_change_queued_before_a_restart_waits_for_the_new_add() {
+    let (shell, tray, class) = rig("requeued");
+    let icon = tray.show(&image(), "t", Box::new(|_| {})).unwrap();
+    shell.wait(2);
+    shell.hold(Some(NIM_MODIFY));
+    *shell.restart_in.lock().unwrap() = Some(find(&class).unwrap().0.addr());
+    icon.set(&image(), "u").unwrap();
+    assert_eq!(
+        shell.wait(1).0,
+        [NIM_MODIFY.0],
+        "held, then the taskbar restarts"
+    );
+    icon.set(&image(), "v").unwrap();
+    shell.hold(None);
+    let (whats, calls) = shell.wait(2);
+    assert_eq!(
+        whats,
+        [NIM_ADD.0, NIM_SETVERSION.0],
+        "no modify before the add"
+    );
+    assert_eq!(calls[0].tip, "v");
+}
+
+#[test]
+fn a_change_goes_to_the_taskbar_from_the_icons_thread() {
+    let (shell, tray, _) = rig("thread");
+    let icon = tray.show(&image(), "t", Box::new(|_| {})).unwrap();
+    let (_, added) = shell.wait(2);
+    icon.set(&image(), "u").unwrap();
+    let (whats, calls) = shell.wait(1);
+    assert_eq!(whats, [NIM_MODIFY.0]);
+    assert_eq!(calls[0].thread, added[0].thread, "queued like the add");
+    assert_ne!(
+        calls[0].thread,
+        std::thread::current().id(),
+        "never the owner's"
     );
 }
 
@@ -217,8 +252,9 @@ fn only_a_window_outside_the_taskbar_is_away() {
         "any other window"
     );
     assert_eq!(away(HWND::default()), None, "no window");
-    // SAFETY: a constant null-terminated class name; the taskbar is only read.
-    if let Ok(taskbar) = unsafe { FindWindowW(w!("Shell_TrayWnd"), PCWSTR::null()) } {
+    let bar = wide(crate::tray::TASKBAR);
+    // SAFETY: `bar` ends with a null and outlives the call; the taskbar is only read.
+    if let Ok(taskbar) = unsafe { FindWindowW(PCWSTR(bar.as_ptr()), PCWSTR::null()) } {
         assert_eq!(away(taskbar), None);
     }
 }

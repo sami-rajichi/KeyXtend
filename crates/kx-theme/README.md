@@ -32,7 +32,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Contrast
 
-`contrast` holds the WCAG 2.x maths and the standard's minimums: `WCAG_AA` (4.5:1 for text), `WCAG_SHAPES` (3:1 for shapes such as the ring) and `MIN_CONTRAST` (`WCAG_AA..=21`), the only range the `[ui] min_contrast` check may accept, so the setting's floor is this constant and not a second copy. The shipped-theme test checks every legend pair against `WCAG_AA`, with no exceptions, including chip text and icons on the chip over the plate; the colours the owner nudged to reach it (2026-09-30) say so in `themes.toml`. Dimmed keys are left out, since WCAG sets no minimum for inactive parts (1.4.3).
+`contrast` holds the WCAG 2.x maths and the standard's minimums: `WCAG_AA` (4.5:1 for text), `WCAG_SHAPES` (3:1 for shapes such as the ring) and `MIN_CONTRAST` (`WCAG_AA..=21`), the only range the `[ui] min_contrast` check may accept, so the setting's floor is this constant and not a second copy. The shipped-theme test checks every legend pair against `WCAG_AA`, with no exceptions, including chip text and icons on the chip over the plate; the colours the owner nudged to reach it (2026-09-30) say so in `themes.toml`. Dimmed keys are left out, since WCAG sets no minimum for inactive parts (1.4.3). `low_shapes` checks each `Palette::shape_pairs` pair against `WCAG_SHAPES` the same way: the language list's ring and tick (`ring`) on the panel (`pop_bg`).
 
 ## Assets
 

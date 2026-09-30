@@ -1,5 +1,5 @@
-//! The Windows tray icon: a hidden top-level window per icon, whose thread adds and deletes it, adds it again when
-//! the taskbar restarts, hears its clicks and watches the front window. No lock is held during a taskbar call.
+//! The Windows tray icon: a hidden top-level window per icon, whose thread adds, changes and deletes it, adds it
+//! again when the taskbar restarts, hears its clicks and watches the front window. No lock is held during a call.
 
 #[cfg(test)]
 mod fake_shell;
@@ -23,7 +23,7 @@ use windows::Win32::UI::WindowsAndMessaging::{WM_APP, WM_CREATE, WM_DESTROY};
 
 use super::{TIP_UNITS, event};
 use crate::hidden::{Hidden, Kind, answer};
-use crate::{failed, wide};
+use crate::wide;
 use front::{hook, unhook};
 use icon::{Icon, Shell, Taskbar, small_px};
 use msgs::{allow, post, restart_msg};
@@ -36,6 +36,8 @@ const ICON_ID: u32 = 1;
 const CALLBACK_MSG: u32 = WM_APP + 1;
 /// Asks the icon's thread to add the icon from its queue, so `show` never waits on the taskbar.
 const ADD_MSG: u32 = WM_APP + 2;
+/// Asks the icon's thread to send the owner's change, so `set` never waits on the taskbar either.
+const SET_MSG: u32 = WM_APP + 3;
 
 thread_local! {
     /// The icon's listener and state, on its window's thread only.
@@ -84,7 +86,6 @@ impl Tray for WinTray {
             window: 0,
             added: false,
             gone: false,
-            changes: 0,
         }));
         let here = Here {
             on,
@@ -96,7 +97,6 @@ impl Tray for WinTray {
         let hidden = Hidden::start(self.class.clone(), Kind::TopLevel, Some(proc), setup)?;
         Ok(Box::new(WinIcon {
             state,
-            shell: Arc::clone(&self.shell),
             hidden: Some(hidden),
         }))
     }
@@ -113,8 +113,6 @@ struct State {
     added: bool,
     /// Set as the owner drops the icon, so no later add brings it back.
     gone: bool,
-    /// Counts the owner's changes, so an add that raced one sends it after.
-    changes: u64,
 }
 
 impl State {
@@ -167,24 +165,21 @@ fn lock(state: &Mutex<State>) -> MutexGuard<'_, State> {
 #[derive(Debug)]
 struct WinIcon {
     state: Arc<Mutex<State>>,
-    shell: Arc<dyn Shell>,
     hidden: Option<Hidden>,
 }
 
 impl TrayIcon for WinIcon {
+    /// Keeps the change and queues it for the icon's thread; before the window exists, the coming add carries it.
     fn set(&self, image: &TrayImage, tip: &str) -> Result<(), UiError> {
         let icon = Arc::new(Icon::new(image)?);
-        let old = {
+        let (old, window) = {
             let mut state = lock(&self.state);
             state.tip = super::tip(tip);
-            state.changes = state.changes.wrapping_add(1);
-            std::mem::replace(&mut state.icon, icon)
+            (std::mem::replace(&mut state.icon, icon), state.window)
         };
-        let held = |s: &State| s.added && !s.gone;
-        let sent = send(&self.state, self.shell.as_ref(), NIM_MODIFY, held);
         drop(old);
-        if sent == Some(false) {
-            return Err(failed());
+        if window != 0 {
+            post(HWND(std::ptr::without_provenance_mut(window)), SET_MSG);
         }
         Ok(())
     }
@@ -219,6 +214,10 @@ impl Here {
                 unhook();
             }
             ADD_MSG => self.add(),
+            SET_MSG => {
+                let held = |s: &State| s.added && !s.gone;
+                let _ = send(&self.state, self.shell.as_ref(), NIM_MODIFY, held);
+            }
             CALLBACK_MSG => {
                 if let Some(e) = event(lparam.0, wparam.0) {
                     self.tell(e);
@@ -242,24 +241,15 @@ impl Here {
     }
 
     /// Adds the icon and asks for its version; an icon the taskbar still holds is changed instead. A change the owner
-    /// made during the add, which skipped its own modify, is sent after it.
+    /// makes meanwhile is queued behind this add, so it follows it.
     fn add(&self) {
         let shell = self.shell.as_ref();
         let live = |s: &State| !s.gone;
-        let seen = lock(&self.state).changes;
         let added = send(&self.state, shell, NIM_ADD, live) == Some(true)
             || send(&self.state, shell, NIM_MODIFY, live) == Some(true);
-        if !added {
-            return;
-        }
-        let _ = send(&self.state, shell, NIM_SETVERSION, live);
-        let raced = {
-            let mut s = lock(&self.state);
-            s.added = true;
-            s.changes != seen
-        };
-        if raced {
-            let _ = send(&self.state, shell, NIM_MODIFY, live);
+        if added {
+            let _ = send(&self.state, shell, NIM_SETVERSION, live);
+            lock(&self.state).added = true;
         }
     }
 

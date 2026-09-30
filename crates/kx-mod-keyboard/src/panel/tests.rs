@@ -144,6 +144,21 @@ fn the_page_buttons_send_the_board_keys_that_turn_the_page() {
     assert_eq!(v.page_on.as_deref(), Some("right"));
 }
 
+#[test]
+fn the_page_keys_are_named_once_for_the_list_and_its_buttons() {
+    let (mut l, len) = seven(2);
+    assert_eq!(l.key(PAGE_ON, 5, len), Moved::Hi);
+    assert_eq!(l.hi(len), 5);
+    assert_eq!(l.key(PAGE_BACK, 5, len), Moved::Hi);
+    assert_eq!(l.hi(len), 0);
+    let keys = [("b".to_owned(), PAGE_BACK), ("o".to_owned(), PAGE_ON)];
+    let v = list_view(&l, &[label(1, "EN", false)], LayoutId::new(1), &keys);
+    assert_eq!(
+        (v.page_back.as_deref(), v.page_on.as_deref()),
+        (Some("b"), Some("o"))
+    );
+}
+
 proptest! {
     #[test]
     fn any_keys_keep_the_highlight_on_a_row(

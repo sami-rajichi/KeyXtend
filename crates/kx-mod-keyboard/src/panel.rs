@@ -7,6 +7,10 @@ use serde::Serialize;
 
 /// The icon on the current row, by its `icons.toml` key.
 pub const CURRENT_ICON: &str = "lang.current";
+/// The move that turns back a page, for the board's key and the list's page button alike.
+pub const PAGE_BACK: Nav = Nav::Left;
+/// The move that turns on a page.
+pub const PAGE_ON: Nav = Nav::Right;
 
 /// What a panel key did.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -56,8 +60,8 @@ impl LangList {
         let to = match nav {
             Nav::Up => hi.saturating_sub(1),
             Nav::Down => (hi + 1).min(last),
-            Nav::Left => page.saturating_sub(1) * rows,
-            Nav::Right => (page + 1).min(last / rows) * rows,
+            PAGE_BACK => page.saturating_sub(1) * rows,
+            PAGE_ON => (page + 1).min(last / rows) * rows,
             Nav::Enter => return Moved::Pick(hi),
             Nav::Esc => return Moved::Close,
         };
@@ -102,9 +106,9 @@ pub struct ListView {
     pub hi: usize,
     /// The board keys the UI sends as `panel_key` while the list is open.
     pub keys: Vec<String>,
-    /// The board key that turns back a page, which the list's page button sends.
+    /// The board key that turns back a page, which the list's page button sends; `None` when the board has none.
     pub page_back: Option<String>,
-    /// The board key that turns on a page.
+    /// The board key that turns on a page; `None` when the board has none.
     pub page_on: Option<String>,
 }
 
@@ -136,8 +140,8 @@ pub fn list_view(
         rows: labels.iter().map(row).collect(),
         hi: open.hi(labels.len()),
         keys: keys.iter().map(|(id, _)| id.clone()).collect(),
-        page_back: key_of(Nav::Left),
-        page_on: key_of(Nav::Right),
+        page_back: key_of(PAGE_BACK),
+        page_on: key_of(PAGE_ON),
     }
 }
 

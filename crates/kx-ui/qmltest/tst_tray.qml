@@ -33,14 +33,16 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A menu whose spot asks a stand-in Ui, as the root does, and that Ui; `rtl` for the Arabic UI.
-        function makeMenu(rtl) {
+        // A menu whose spot asks a stand-in Ui, as the root does, and that Ui; `rtl` for the Arabic UI, and `more`
+        // for other properties, such as a clock.
+        function makeMenu(rtl, more) {
             const ui = createTemporaryObject(uiC, root);
             const spot = (x, y, w, h) => {
                 const p = JSON.parse(ui.menuAt(x, y, w, h));
                 return Qt.point(p.x, p.y);
             };
-            return [createTemporaryObject(menuC, root, { lk: N.lk, res: root.res, spot: spot, rtl: !!rtl }), ui];
+            const props = { lk: N.lk, res: root.res, spot: spot, rtl: !!rtl, graceMs: En.settings.trayGraceMs };
+            return [createTemporaryObject(menuC, root, Object.assign(props, more || {})), ui];
         }
         // Every item under `item` for which `ok` holds.
         function all(item, ok, found) {
@@ -107,19 +109,41 @@ Item {
             const long = "Show the keyboard again, please";
             const res = Object.assign({}, root.res, { tr: k => k === "tray.show" ? long : root.res.tr(k) });
             const spot = () => Qt.point(0, 0);
-            const menu = createTemporaryObject(menuC, root, { lk: N.lk, res: res, spot: spot, rtl: false });
+            const menu = createTemporaryObject(menuC, root, { lk: N.lk, res: res, spot: spot, rtl: false, graceMs: 0 });
             const item = items(menu)[0];
             verify(menu.width > N.lk.shape.menu.width_px, "wider than the smallest menu: " + menu.width);
             verify(menu.width >= item.implicitWidth + 2 * N.lk.shape.menu.pad_px, "the item fits");
         }
 
-        function test_a_window_coming_to_the_front_closes_it() {
+        function test_shut_closes_it_and_twice_is_harmless() {
             const [menu] = makeMenu();
             menu.toggle(300, 500);
             menu.shut();
             verify(!menu.visible);
             menu.shut();
             verify(!menu.visible, "closing twice is harmless");
+        }
+
+        // The hidden icons' pop-up can bring the last app to the front just after the menu opens.
+        function test_a_new_front_window_closes_it_only_after_the_grace() {
+            let t = 1000;
+            const grace = En.settings.trayGraceMs;
+            const [menu] = makeMenu(false, { now: () => t });
+            menu.toggle(300, 500);
+            t += grace - 1;
+            menu.away();
+            verify(menu.visible, "inside the grace");
+            t += 1;
+            menu.away();
+            verify(!menu.visible, "after it");
+            menu.toggle(300, 500);
+            t -= 10 * grace;
+            menu.away();
+            verify(!menu.visible, "a clock set back counts as after");
+            menu.graceMs = 0;
+            menu.toggle(300, 500);
+            menu.away();
+            verify(!menu.visible, "0 turns the grace off");
         }
 
         function test_the_picture_is_the_theme_badge_and_goes_to_the_ui() {
@@ -136,6 +160,14 @@ Item {
                 tryVerify(() => ui.calls.indexOf("trayShow") >= 0, 5000, "handed over");
                 tryVerify(() => !pic.visible, 2000, "hidden again");
             }
+        }
+
+        function test_a_new_screen_scale_draws_the_picture_again() {
+            const ui = createTemporaryObject(uiC, root);
+            const pic = createTemporaryObject(picC, root, { ui: ui, lk: N.lk, res: root.res });
+            pic.dpr = pic.dpr * 2;
+            tryVerify(() => ui.calls.indexOf("trayShow") >= 0, 5000, "drawn again for the new scale");
+            tryVerify(() => !pic.visible, 2000, "hidden again");
         }
 
         function test_a_draw_asked_during_a_grab_follows_it() {

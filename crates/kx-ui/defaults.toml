@@ -17,6 +17,8 @@ poll_ms = 16
 # How long the window guard waits before each try, in ms, and how many times it tries.
 guard_delay_ms = 300
 guard_tries = 10
+# How long the tray menu stays open when another window comes to the front just after it opens, in ms; 0 turns it off.
+tray_grace_ms = 500
 # Rows per page in every list.
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.
