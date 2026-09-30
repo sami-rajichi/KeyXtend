@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::extras::RingShape;
-use super::{bez, outside_unit};
+use crate::extras::RingShape;
+use crate::theme::{bez, outside_unit};
 
 /// The ring as written: its curves by name, and how far it goes.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct RingFile {
+pub(crate) struct RingFile {
     wave_curve: String,
     core_curve: String,
     amount: RingAmounts,
@@ -52,7 +52,7 @@ pub struct RingMotion {
 
 impl RingFile {
     /// The checked ring, with its curves taken from `curves`.
-    pub(super) fn ready(&self, curves: &BTreeMap<String, [f32; 4]>) -> Result<RingMotion, String> {
+    pub(crate) fn ready(&self, curves: &BTreeMap<String, [f32; 4]>) -> Result<RingMotion, String> {
         let pick = |field: &str, name: &String| {
             bez(curves, name).ok_or_else(|| format!("ring.{field}: no curve {name:?}"))
         };
@@ -93,7 +93,7 @@ impl RingAmounts {
 }
 
 /// Refuses a burst ring or dots that would reach past the ring's window, `shape.toml [ring] box_px`.
-pub(super) fn fits(s: &RingShape, a: &RingAmounts) -> Result<(), String> {
+pub(crate) fn fits(s: &RingShape, a: &RingAmounts) -> Result<(), String> {
     // Written as "fits", so a size that is not a number fails too.
     let burst_fits = s.burst_px[0] * a.burst_scale[1] <= s.box_px;
     if !burst_fits {
@@ -110,18 +110,21 @@ pub(super) fn fits(s: &RingShape, a: &RingAmounts) -> Result<(), String> {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::float_cmp,
+    reason = "token values parse to exactly the numbers the mock-up writes"
+)]
 mod tests {
     use super::*;
-    use crate::theme::{motion, shape};
+    use crate::{motion, shape};
 
     fn text() -> String {
-        std::fs::read_to_string(crate::config::settings_path(motion::FILE))
-            .expect("motion.toml reads")
+        crate::MOTION.to_string()
     }
 
     #[test]
     fn the_mock_up_ring_loads_and_keeps_its_curves_with_reduced_motion() {
-        let m = motion::load().expect("motion.toml loads");
+        let m = motion::parse(crate::MOTION).expect("motion.toml loads");
         let (r, a) = (m.full.ring, m.full.ring.amount);
         assert_eq!(
             r.wave,
@@ -153,8 +156,8 @@ mod tests {
     #[test]
     fn the_ring_takes_the_mock_up_sizes_and_its_burst_fits() {
         let (s, m) = (
-            shape::load().expect("shape"),
-            motion::load().expect("motion"),
+            shape::parse(crate::SHAPE).expect("shape"),
+            motion::parse(crate::MOTION).expect("motion"),
         );
         let r = &s.ring;
         assert_eq!(
@@ -174,8 +177,8 @@ mod tests {
     #[test]
     fn a_burst_or_dots_past_the_ring_window_are_refused() {
         let (s, m) = (
-            shape::load().expect("shape"),
-            motion::load().expect("motion"),
+            shape::parse(crate::SHAPE).expect("shape"),
+            motion::parse(crate::MOTION).expect("motion"),
         );
         let a = m.full.ring.amount;
         let wide = RingShape {
@@ -224,8 +227,7 @@ mod tests {
 
     #[test]
     fn a_ring_core_share_outside_0_to_1_is_refused() {
-        let file = crate::config::settings_path(shape::FILE);
-        let t = std::fs::read_to_string(file).expect("shape.toml reads");
+        let t = crate::SHAPE;
         let bad = t.replacen("core_share = 0.1", "core_share = 1.5", 1);
         assert!(
             shape::parse(&bad)

@@ -1,5 +1,6 @@
 # The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217); CSS rgba() is #RRGGBBAA.
-# The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml, timings in motion.toml.
+# The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml, timings in
+# motion.toml, icons in icons.toml. Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
@@ -21,11 +22,14 @@ legend_px = 13.0
 mod_legend_px = 11.0
 legend_weight = 400
 arabic_scale = 1.12
-latin_fonts = ["Segoe UI Variable Text", "Segoe UI", "Noto Sans"]
+# Windows's own UI font; the mock-up's web fallback Noto Sans (line 106) is not bundled, so it is left out.
+latin_fonts = ["Segoe UI Variable Text", "Segoe UI"]
 arabic_fonts = ["Segoe UI", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 0.0
 lock_glow_mix = 0.0
+# Native keeps its own blue; it takes the system accent only when [ui] follow_accent is on (spec 3.5).
+accent = true
 
 [theme.cap]
 kind = "flat"
@@ -137,6 +141,8 @@ arabic_fonts = ["IBM Plex Sans Arabic", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 0.0
 lock_glow_mix = 0.0
+# ET66 marks function with its own colours, so it never takes the accent.
+accent = false
 
 # A convex cap: lighter at the top, darker at the bottom; pressed, the gradient flips.
 [theme.cap]
@@ -250,6 +256,8 @@ arabic_fonts = ["Rubik", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 8.0
 lock_glow_mix = 0.55
+# Sculpted caps keep their skirt colours, so Dolch never takes the accent.
+accent = false
 
 # A sculpted cap: a coloured skirt with a lighter top inset into it; pressed, the top sinks.
 [theme.cap]

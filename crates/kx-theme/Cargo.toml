@@ -1,0 +1,23 @@
+[package]
+name = "kx-theme"
+description = "The theme tokens, compiled in: colours, sizes, motion and icons, the look a face draws now, contrast and high contrast."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations.
+kx-platform = { path = "../kx-platform" }
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+kx-test-support = { path = "../kx-test-support" }
+serde_json.workspace = true

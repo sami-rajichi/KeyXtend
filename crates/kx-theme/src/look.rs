@@ -2,8 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::FONT_WEIGHTS;
-use super::palette::{Palette, Rgba};
+use crate::palette::Palette;
+use crate::rgba::Rgba;
+use crate::theme::FONT_WEIGHTS;
 
 /// A two-way cap gradient: `lighten` mixes in white at the start, `darken` black at the end.
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
@@ -104,6 +105,9 @@ pub struct Dpad {
 
 impl DpadRefs {
     /// The colours these names give in `p`; an error names the first unknown token.
+    ///
+    /// # Errors
+    /// The first name `p` has no colour for.
     pub fn resolve(&self, p: &Palette) -> Result<Dpad, String> {
         let c = |n: &str| p.get(n).ok_or_else(|| format!("dpad: no token {n:?}"));
         Ok(Dpad {
@@ -151,13 +155,15 @@ pub struct Look {
     pub lock_glow_mix: f32,
     /// How caps are built.
     pub cap: Cap,
+    /// Takes the system accent on Enter, on and locked keys when the user asks (`[ui] follow_accent`).
+    pub accent: bool,
     /// The D-pad's colours.
     pub dpad: DpadRefs,
 }
 
 impl Look {
-    /// Refuses shares outside 0 to 1, an odd weight, and D-pad names that `p` lacks.
-    pub fn check(&self, p: &Palette) -> Result<(), String> {
+    /// Refuses shares outside 0 to 1, an odd weight, an accent on sculpted caps and D-pad names that `p` lacks.
+    pub(crate) fn check(&self, p: &Palette) -> Result<(), String> {
         if !FONT_WEIGHTS.contains(&self.legend_weight) {
             let (w, lo, hi) = (self.legend_weight, FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
             return Err(format!("legend_weight {w} is not {lo} to {hi}"));
@@ -165,6 +171,9 @@ impl Look {
         let share = (0.0..=1.0).contains(&self.lock_glow_mix);
         if !share || !self.cap.gradients().iter().all(Gradient::is_valid) {
             return Err("lock_glow_mix and gradient shares must be 0 to 1".into());
+        }
+        if self.accent && matches!(self.cap, Cap::Skirt { .. }) {
+            return Err("sculpted caps keep their skirt colours, so accent must be false".into());
         }
         self.dpad.resolve(p).map(|_| ())
     }

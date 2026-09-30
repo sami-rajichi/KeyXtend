@@ -1,0 +1,106 @@
+//! `themes.toml`: three looks, each light and soft dark, and the colours they share.
+
+use std::collections::BTreeMap;
+
+use serde::Deserialize;
+
+use crate::common::Common;
+use crate::look::Look;
+use crate::mode::Mode;
+use crate::palette::Palette;
+
+/// Text weights run from thin to black.
+pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
+
+/// One theme: its look and its two palettes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Theme {
+    /// Shape and type.
+    pub look: Look,
+    /// Light colours.
+    pub light: Palette,
+    /// Soft dark colours.
+    pub dark: Palette,
+}
+
+impl Theme {
+    /// The palette for `mode`.
+    #[must_use]
+    pub fn palette(&self, mode: Mode) -> &Palette {
+        match mode {
+            Mode::Light => &self.light,
+            Mode::Dark => &self.dark,
+        }
+    }
+}
+
+/// The file as written: a list of theme tables and the colours they share.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ThemeFile {
+    theme: Vec<toml::Table>,
+    common: Common,
+}
+
+/// The first of `values` outside 0 to 1, NaN included, with its name.
+pub(crate) fn outside_unit<'a>(values: &[(&'a str, f32)]) -> Option<(&'a str, f32)> {
+    values
+        .iter()
+        .copied()
+        .find(|(_, v)| !(0.0..=1.0).contains(v))
+}
+
+/// Curve `name` from `curves` as Qt bezier points, ending at (1, 1) as Qt wants.
+pub(crate) fn bez(curves: &BTreeMap<String, [f32; 4]>, name: &str) -> Option<[f32; 6]> {
+    let [x1, y1, x2, y2] = *curves.get(name)?;
+    Some([x1, y1, x2, y2, 1.0, 1.0])
+}
+
+/// The themes in `text`, in file order, and their shared colours; an error names the theme and mode at fault.
+pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
+    let ThemeFile {
+        theme: tables,
+        common,
+    } = toml::from_str(text).map_err(|e| e.to_string())?;
+    let themes = tables
+        .into_iter()
+        .map(theme)
+        .collect::<Result<Vec<_>, _>>()?;
+    if themes.is_empty() {
+        return Err("no [[theme]] tables".into());
+    }
+    for (i, t) in themes.iter().enumerate() {
+        if themes[..i].iter().any(|u| u.look.id == t.look.id) {
+            return Err(format!("theme id {:?} is used twice", t.look.id));
+        }
+    }
+    Ok((themes, common))
+}
+
+/// One theme table: its two mode tables, then its look.
+fn theme(mut t: toml::Table) -> Result<Theme, String> {
+    let id = t
+        .get("id")
+        .and_then(toml::Value::as_str)
+        .unwrap_or("?")
+        .to_string();
+    let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()))?;
+    let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()))?;
+    let look: Look = toml::Value::Table(t)
+        .try_into()
+        .map_err(|e| format!("{id}: {e}"))?;
+    for p in [&light, &dark] {
+        look.check(p).map_err(|e| format!("{id}: {e}"))?;
+    }
+    Ok(Theme { look, light, dark })
+}
+
+/// One mode table, with errors prefixed `<id>.<mode>`.
+fn palette(id: &str, mode: Mode, table: Option<toml::Value>) -> Result<Palette, String> {
+    let at = format!("{id}.{}", mode.key());
+    let table = table.ok_or_else(|| format!("{at}: missing"))?;
+    table.try_into().map_err(|e| format!("{at}: {e}"))
+}
+
+#[cfg(test)]
+mod tests;

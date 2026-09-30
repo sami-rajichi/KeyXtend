@@ -1,24 +1,14 @@
 //! `spike.toml [look]`: the starting theme and mode, accent themes, the frosted plate, the tooltip delay and motion switches.
+//! `ModeChoice` and the look view's input moved to `kx-theme` (P3); the rest becomes the `[ui]` settings (Task 16).
 
 use kx_platform::ui::BackdropKind;
-use serde::{Deserialize, Serialize};
+use kx_theme::{LookChoice, Theme};
+use serde::Deserialize;
 
-use crate::theme::Theme;
+pub use kx_theme::ModeChoice;
 
 /// Every possible WCAG contrast ratio.
 const CONTRAST: std::ops::RangeInclusive<f32> = 1.0..=21.0;
-
-/// Which palette the keyboard shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ModeChoice {
-    /// Always light.
-    Light,
-    /// Always soft dark.
-    Dark,
-    /// Follow Windows' app mode.
-    Auto,
-}
 
 /// What Native Adaptive puts behind its plate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -66,6 +56,17 @@ pub struct LookConfig {
 }
 
 impl LookConfig {
+    /// The look view's input for theme `id` in `mode`; the theme takes the accent when this file lists it.
+    pub fn choice(&self, id: &str, mode: ModeChoice) -> LookChoice {
+        LookChoice {
+            theme: id.to_string(),
+            mode,
+            follow_accent: self.accent_themes.iter().any(|t| t == id),
+            reduced_motion: self.reduced_motion,
+            min_contrast: self.min_contrast,
+        }
+    }
+
     /// Refuses a plate share outside 0 to 1, a contrast outside 1:1 to 21:1 (NaN fails both) and a zero tooltip delay.
     pub fn check(&self) -> Result<(), String> {
         let share = |v: f32| (0.0..=1.0).contains(&v);
@@ -130,7 +131,7 @@ mod tests {
 
     #[test]
     fn theme_ids_must_exist_and_sculpted_caps_never_follow_the_accent() {
-        let themes = crate::theme::load().expect("themes load").list;
+        let themes = kx_theme::Themes::shipped().expect("themes load").list;
         let mut c = cfg();
         assert_eq!(c.check_themes(&themes), Ok(()));
         c.theme = "natve".into();

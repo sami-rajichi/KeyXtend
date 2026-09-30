@@ -6,15 +6,13 @@ use std::sync::Arc;
 use kx_mod_keyboard::{Board, BoardSpec, KeyboardSettings, Limits, Resize, Typing, board};
 use kx_mod_layouts::Follow;
 use kx_module_api::ports::{LangLabel, LayoutId, LayoutSource, LayoutTable, Point};
+use kx_platform::ui::SysLook;
 use kx_platform_windows::{WinLayouts, layouts};
+use kx_theme::{LookView, Mode, ModeChoice, Themes, look_view, mode_for};
 
 use crate::config::SpikeConfig;
 use crate::kbview::{BoardView, StateInput, StateView, board_view, state_view};
 use crate::langinfo::{self, LangInfo};
-use crate::lookcfg::ModeChoice;
-use crate::lookview::{LookView, look_view};
-use crate::sysui::{self, SystemLook};
-use crate::theme::Themes;
 use crate::{langkey, layout};
 
 mod typing;
@@ -34,7 +32,7 @@ pub struct Kb {
     toggled: BTreeSet<String>,
     follow: Follow,
     hkl: isize,
-    sys: SystemLook,
+    sys: SysLook,
     resize: Option<Resize>,
     chars: BTreeMap<isize, Arc<LayoutTable>>,
     langs: BTreeMap<isize, LangInfo>,
@@ -48,7 +46,7 @@ pub struct Kb {
 
 impl Kb {
     /// Starts on the product board at its default size, the configured theme and mode, and the layout in front.
-    pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Result<Kb, String> {
+    pub fn new(cfg: SpikeConfig, themes: Themes, sys: SysLook) -> Result<Kb, String> {
         let spec = BoardSpec::shipped().map_err(|e| e.to_string())?;
         let kb = KeyboardSettings::from_defaults().map_err(|e| e.to_string())?;
         let front = layouts::id(layout::front_layout());
@@ -119,17 +117,16 @@ impl Kb {
 
     /// The look now.
     pub fn look(&self) -> Option<LookView<'_>> {
+        let id = &self.themes.list.get(self.theme)?.look.id;
         look_view(
             &self.themes,
-            self.theme,
-            self.mode,
+            &self.cfg.look.choice(id, self.mode),
             &self.sys,
-            &self.cfg.look,
         )
     }
 
     /// Windows' look changed.
-    pub fn set_sys(&mut self, sys: SystemLook) {
+    pub fn set_sys(&mut self, sys: SysLook) {
         self.sys = sys;
     }
 
@@ -149,7 +146,7 @@ impl Kb {
 
     /// The top bar's switch: the other mode from the one shown.
     pub fn flip_mode(&mut self) {
-        let dark = sysui::mode_for(self.mode, &self.sys) == crate::theme::Mode::Dark;
+        let dark = mode_for(self.mode, &self.sys) == Mode::Dark;
         self.mode = if dark {
             ModeChoice::Light
         } else {

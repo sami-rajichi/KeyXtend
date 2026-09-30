@@ -5,12 +5,14 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
 
 # Theme work
 
-- Tokens live in three files, loaded and checked by the theme loader in `kx-ui` (ADR-0013):
+- Tokens live in four files in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
   - `themes.toml`: each theme's colours for light and dark, fonts and shape;
   - `shape.toml`: sizes all themes share;
-  - `motion.toml`: each animation's length and curve, plus the reduced set.
+  - `motion.toml`: each animation's length and curve, plus the reduced set;
+  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`).
 - The reference values are in `design/keyboard-style-lab.html`, in the CSS blocks `[data-style=...][data-mode=...]`. Cite the mock-up line in the token's comment.
 - QML reads tokens only through the look object; it never writes a colour, size or time itself.
+- After a token change, run `cargo test -p kx-theme` with `KX_BLESS=1` to rewrite the QML look fixtures.
 
 ## Rules
 1. **Every theme has light and soft dark.** Soft dark means:
@@ -20,7 +22,8 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
 2. **Contrast:**
    - legends ≥ 4.5:1 against their key colour (target 7:1); secondary legends ≥ 3:1;
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
-   - the theme tests compute these; never change an owner-approved colour without asking.
+   - the theme tests compute these; never change an owner-approved colour without asking;
+   - the owner kept 11 mock-up pairs below 4.5:1 at the look check (2026-09-28); `OWNER_KEPT` in `crates/kx-theme/src/theme/tests.rs` lists them, and any other pair fails.
 3. **Colour means function** (ET66 rule): modifiers, Enter, danger keys (Esc/Backspace) and "on/locked" states each have a distinct token, in every theme.
 4. **Fonts:**
    - Native: the system UI font plus Noto Sans Arabic;

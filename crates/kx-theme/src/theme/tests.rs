@@ -1,15 +1,16 @@
-//! Theme tests against the real themes.toml.
+//! Theme tests against the shipped `themes.toml`.
 
 use super::*;
+use crate::Themes;
+use crate::accent::with_accent;
+use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast, low_contrast};
+use crate::look::Cap;
+use crate::rgba::Rgba;
 
-/// The spec's minimum legend contrast, used only to exercise the check.
-const MIN: f32 = 4.5;
-/// WCAG 1.4.11's minimum for shapes, such as the hold ring.
-const SHAPE_MIN: f32 = 3.0;
 /// Plain Windows 11 app backgrounds in light and dark mode, which the ring is drawn over.
 const WINDOW_BG: [&str; 2] = ["#F3F3F3", "#202020"];
-/// Pairs under the minimum exactly as the mock-up has them; the owner kept them at the look check (2026-09-28).
-const KNOWN_LOW: [&str; 11] = [
+/// The owner's exceptions: pairs under WCAG AA exactly as the mock-up has them, kept at the look check (2026-09-28).
+const OWNER_KEPT: [&str; 11] = [
     "et66.light: legend_2 on plate",
     "dolch.light: legend_2 on key",
     "dolch.light: legend_2 on plate",
@@ -24,12 +25,16 @@ const KNOWN_LOW: [&str; 11] = [
 ];
 
 fn text() -> String {
-    std::fs::read_to_string(crate::config::settings_path(FILE)).expect("themes.toml reads")
+    crate::THEMES.to_string()
+}
+
+fn load() -> Themes {
+    Themes::shipped().expect("tokens load")
 }
 
 #[test]
 fn the_three_themes_load_in_light_and_dark() {
-    let all = load().expect("themes.toml loads").list;
+    let all = load().list;
     let ids: Vec<&str> = all.iter().map(|t| t.look.id.as_str()).collect();
     assert_eq!(ids, ["native", "et66", "dolch"], "theme bar order");
     for t in &all {
@@ -92,27 +97,8 @@ gap_px = 4.0
 }
 
 #[test]
-fn colours_take_six_or_eight_hex_digits() {
-    let c = Rgba::parse("#F3F3F3").expect("six digits");
-    assert_eq!((c.r, c.g, c.b, c.a), (0xF3, 0xF3, 0xF3, 0xFF));
-    assert_eq!(Rgba::parse("#0000001F").map(|c| c.a), Ok(0x1F));
-    for bad in ["F3F3F3", "#FFF", "#GGGGGG", "#F3F3F3F", ""] {
-        assert!(Rgba::parse(bad).is_err(), "{bad}");
-    }
-}
-
-#[test]
-fn colours_reach_qt_alpha_first() {
-    let c = Rgba::parse("#0000001F").expect("colour");
-    assert_eq!(
-        serde_json::to_string(&c).ok().as_deref(),
-        Some("\"#1F000000\"")
-    );
-}
-
-#[test]
 fn hover_darkens_light_keys_and_lightens_dark_ones() {
-    for t in &load().expect("themes.toml loads").list {
+    for t in &load().list {
         let (l, d) = (t.light.hover, t.dark.hover);
         assert_eq!((l.r, l.g, l.b), (0, 0, 0), "{} light", t.look.id);
         assert_eq!((d.r, d.g, d.b), (255, 255, 255), "{} dark", t.look.id);
@@ -122,7 +108,7 @@ fn hover_darkens_light_keys_and_lightens_dark_ones() {
 
 #[test]
 fn every_theme_shares_one_set_of_mock_up_colours() {
-    let c = load().expect("themes.toml loads").common;
+    let c = load().common;
     let rgb = |c: Rgba| (c.r, c.g, c.b);
     assert_eq!(rgb(c.press), (0, 0, 0), "brightness(.94)");
     assert!(c.press.a > 0 && c.snip_dim.a > 0 && c.snip_tag.a > 0);
@@ -139,10 +125,10 @@ fn a_missing_shared_colour_is_refused() {
 #[test]
 fn every_ring_stands_out_on_a_plain_window_of_its_mode() {
     let bg = WINDOW_BG.map(|c| Rgba::parse(c).expect("window colour"));
-    for t in load().expect("themes.toml loads").list {
+    for t in load().list {
         let id = &t.look.id;
-        assert!(contrast(t.light.ring, bg[0]) >= SHAPE_MIN, "{id} light");
-        assert!(contrast(t.dark.ring, bg[1]) >= SHAPE_MIN, "{id} dark");
+        assert!(contrast(t.light.ring, bg[0]) >= WCAG_SHAPES, "{id} light");
+        assert!(contrast(t.dark.ring, bg[1]) >= WCAG_SHAPES, "{id} dark");
     }
 }
 
@@ -160,9 +146,9 @@ fn contrast_follows_wcag() {
 
 #[test]
 fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
-    let native = &load().expect("themes.toml loads").list[0];
+    let native = &load().list[0];
     let blue = Rgba::parse("#005FB8").expect("blue");
-    let p = with_accent(&native.light, blue, MIN);
+    let p = with_accent(&native.light, blue, WCAG_AA);
     let fills = [p.enter, p.on, p.lock, p.led_on, p.ring, p.badge_bg];
     assert!(fills.iter().all(|&c| c == blue));
     assert_eq!(
@@ -170,21 +156,21 @@ fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
         "white on blue is readable"
     );
     let yellow = Rgba::parse("#FFD800").expect("yellow");
-    let y = with_accent(&native.light, yellow, MIN);
+    let y = with_accent(&native.light, yellow, WCAG_AA);
     assert!(
-        contrast(y.enter_ink, y.enter) >= MIN,
+        contrast(y.enter_ink, y.enter) >= WCAG_AA,
         "the ink switches to stay readable"
     );
 }
 
 #[test]
-fn only_the_known_pairs_miss_the_minimum() {
-    let low = low_contrast(&load().expect("themes.toml loads").list, MIN);
+fn legends_reach_wcag_aa_outside_the_owners_exceptions() {
+    let low = low_contrast(&load().list, WCAG_AA);
     let names: Vec<&str> = low
         .iter()
         .map(|l| l.split(" is ").next().unwrap_or(l))
         .collect();
-    assert_eq!(names, KNOWN_LOW, "{low:?}");
+    assert_eq!(names, OWNER_KEPT, "{low:?}");
 }
 
 #[test]
@@ -211,7 +197,7 @@ fn a_dpad_token_that_does_not_exist_is_refused() {
 
 #[test]
 fn each_theme_resolves_its_dpad_rules() {
-    let all = load().expect("themes.toml loads").list;
+    let all = load().list;
     let d = |i: usize| all[i].look.dpad.resolve(&all[i].light).expect("dpad");
     assert_eq!(d(0).stop, all[0].light.rec);
     assert_eq!(
@@ -224,13 +210,62 @@ fn each_theme_resolves_its_dpad_rules() {
 
 #[test]
 fn a_legend_too_close_to_its_key_is_named() {
-    let mut all = load().expect("themes.toml loads").list;
+    let mut all = load().list;
     all[0].light.legend = all[0].light.key;
-    let low = low_contrast(&all, MIN);
+    let low = low_contrast(&all, WCAG_AA);
     assert!(
         low.iter()
             .any(|l| l.starts_with("native.light: legend on key")),
         "{low:?}"
     );
     assert!(low_contrast(&all, 1.0).is_empty(), "nothing is below 1:1");
+}
+
+#[test]
+fn a_user_minimum_starts_at_wcag_aa_and_ends_at_black_on_white() {
+    use crate::contrast::{MAX_CONTRAST, MIN_CONTRAST};
+    let (black, white) = (Rgba::parse("#000000"), Rgba::parse("#FFFFFF"));
+    let (black, white) = (black.expect("black"), white.expect("white"));
+    assert!((contrast(black, white) - MAX_CONTRAST).abs() < 0.01);
+    assert!((MIN_CONTRAST.start() - WCAG_AA).abs() < f32::EPSILON);
+    assert!(MIN_CONTRAST.contains(&MAX_CONTRAST));
+    for bad in [4.4, MAX_CONTRAST + 1.0, f32::NAN] {
+        assert!(!MIN_CONTRAST.contains(&bad), "{bad}");
+    }
+}
+
+#[test]
+fn dimmed_keys_are_side_keys_faded_over_the_plate() {
+    let t = load();
+    let share = t.shape.dim.share;
+    for th in &t.list {
+        for mode in Mode::ALL {
+            let (p, at) = (th.palette(mode), format!("{}.{}", th.look.id, mode.key()));
+            assert_eq!(p.dim, p.key_act.over(p.plate, share), "{at}");
+            assert_eq!(p.dim_ink, p.legend_act.over(p.plate, share), "{at}");
+            if let Some(s) = &p.skirt {
+                assert_eq!(s.dim, s.key_mod.over(p.plate, share), "{at}");
+            }
+            let (dim, lit) = (
+                contrast(p.dim_ink, p.dim),
+                contrast(p.legend_act, p.key_act),
+            );
+            assert!(dim < lit, "{at}: a dimmed key reads fainter");
+        }
+    }
+}
+
+#[test]
+fn dim_colours_come_from_the_share_and_cannot_be_written() {
+    let at = "hover = \"#0000000F\"";
+    let typed = text().replacen(at, &format!("{at}\ndim = \"#FFFFFF\""), 1);
+    let e = parse(&typed).expect_err("dim is derived");
+    assert!(e.contains("native.light") && e.contains("dim"), "{e}");
+}
+
+#[test]
+fn sculpted_caps_cannot_take_the_accent() {
+    let at = "so Dolch never takes the accent.\naccent = ";
+    let e = parse(&text().replacen(&format!("{at}false"), &format!("{at}true"), 1));
+    assert!(e.expect_err("skirts keep their colours").contains("dolch"));
 }

@@ -1,0 +1,53 @@
+# The icon each part shows, by file name without ".svg": Lucide icons are in assets/icons/lucide/, our own drawings in
+# assets/icons/ (design/keyboard-style-lab.html keyInner, sideKey, topBar and langInner, lines 958-1006).
+# A name is lower-case letters, digits and "-"; keys not listed here show a translated text label.
+
+# Named keys by their board.toml id, then the side keys; the Windows key shows our own drawing of its logo.
+[keys]
+bksp = "delete"
+tab = "arrow-right-to-line"
+enter = "corner-down-left"
+shift = "arrow-big-up"
+rshift = "arrow-big-up"
+up = "chevron-up"
+menu = "square-menu"
+win = "win-logo"
+left = "chevron-left"
+down = "chevron-down"
+right = "chevron-right"
+rclick = "mouse-right"
+grab = "hand-grab"
+shortcuts = "command"
+mic = "mic"
+clip = "clipboard-clock"
+snip = "scissors-line-dashed"
+fill = "key-round"
+settings = "settings-2"
+power = "power"
+
+# The top bar: move, the light or dark switch (mode_on while dark), the theme button, the size lenses, minimise (the
+# plain minus, as Windows draws it) and close; then the resize corner and the bubble.
+[bar]
+grip = "grip-horizontal"
+mode = "moon"
+mode_on = "sun"
+theme = "palette"
+smaller = "zoom-out"
+bigger = "zoom-in"
+minimise = "minus"
+close = "x"
+corner = "move-diagonal-2"
+bubble = "keyboard"
+
+# The D-pad's arrows and its Stop button (mock-up lines 241-259).
+[dpad]
+up = "chevron-up"
+right = "chevron-right"
+left = "chevron-left"
+down = "chevron-down"
+stop = "square"
+
+# The language key's Cycle design shows a globe, and its List design a chevron that opens the list (langInner).
+[lang]
+cycle = "globe"
+list = "chevron-up"

@@ -1,5 +1,5 @@
-//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel
-//! and the hold ring.
+//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel,
+//! the hold ring, the notice banner, the tray menu and the language list.
 
 use serde::{Deserialize, Serialize};
 
@@ -137,4 +137,82 @@ pub struct RingShape {
     pub dots: u16,
     /// How far from the centre the dots start and end.
     pub fly_px: [f32; 2],
+}
+
+/// The notice banner above the keyboard (mock-up `.toast`, its buttons `.btn`); it grows with the keyboard.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NoticeShape {
+    /// Padding: top and bottom, sides.
+    pub pad_px: [f32; 2],
+    /// Gap between the icon, the text and the buttons.
+    pub gap_px: f32,
+    /// Text size.
+    pub font_px: f32,
+    /// Icon size.
+    pub icon_px: f32,
+    /// Corner radius as a share of the window radius.
+    pub radius_share: f32,
+    /// Button padding: top and bottom, sides.
+    pub button_pad_px: [f32; 2],
+    /// Button corner radius.
+    pub button_radius_px: f32,
+    /// Button text size.
+    pub button_px: f32,
+    /// Button text weight.
+    pub button_weight: u16,
+}
+
+/// The tray menu (mock-up `.ctx`); it does not grow with the keyboard.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct MenuShape {
+    /// Least width.
+    pub width_px: f32,
+    /// Padding around the items.
+    pub pad_px: f32,
+    /// Corner radius.
+    pub radius_px: f32,
+    /// Text size.
+    pub font_px: f32,
+    /// Item padding: top and bottom, sides.
+    pub item_pad_px: [f32; 2],
+    /// Item corner radius.
+    pub item_radius_px: f32,
+    /// Gap between an item's icon and its text.
+    pub gap_px: f32,
+    /// Icon size.
+    pub icon_px: f32,
+    /// Icon opacity.
+    pub icon_share: f32,
+    /// The rule between items: margin at the top and bottom, and at the sides.
+    pub rule_px: [f32; 2],
+}
+
+/// The language list panel (mock-up `.langs`, `.lg-it`); it grows with the keyboard and pages like the panel.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ListShape {
+    /// Width.
+    pub width_px: f32,
+    /// Padding around the rows.
+    pub pad_px: f32,
+    /// Row padding: top and bottom, sides.
+    pub row_pad_px: [f32; 2],
+    /// Row corner radius.
+    pub row_radius_px: f32,
+    /// Gap between a row's badge, name and icon.
+    pub gap_px: f32,
+    /// The short-name badge: width, height, corner radius.
+    pub badge_px: [f32; 3],
+    /// Badge text size: Latin, Arabic.
+    pub badge_text_px: [f32; 2],
+    /// Badge text weight.
+    pub badge_weight: u16,
+    /// The language name's size.
+    pub name_px: f32,
+    /// The layout name's size under it.
+    pub sub_px: f32,
+    /// The current row's icon size.
+    pub icon_px: f32,
 }

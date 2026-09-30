@@ -13,6 +13,8 @@ kx-module-api = { path = "../../crates/kx-module-api" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # `Follow`, the language labels and the `[layouts]` short names moved here in P3 (ADR-0014).
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
+# The theme tokens, the look view, contrast and the high-contrast palette moved here in P3 (ADR-0016).
+kx-theme = { path = "../../crates/kx-theme" }
 # The UI port types (system look, backdrop kinds, errors) the moved window and look parts use (P3).
 kx-platform = { path = "../../crates/kx-platform" }
 # COM, folders, uiAccess, input, layouts, the window guard, screens, the system look and backdrops moved here in P3 (ADR-0014).

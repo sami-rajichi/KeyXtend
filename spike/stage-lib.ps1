@@ -8,11 +8,8 @@ $EnvScript = 'D:\dev\env.ps1'
 # The spike folder (this file's folder) and the repository root.
 $SpikeDir = $PSScriptRoot
 $RootDir = Split-Path $SpikeDir -Parent
-# Settings and themes staged next to each exe.
+# Settings staged next to each exe; the theme tokens are compiled into kx-theme since P3.
 $SettingsFile = Join-Path $SpikeDir 'spike.toml'
-$ThemesFile = Join-Path $SpikeDir 'themes.toml'
-$ShapeFile = Join-Path $SpikeDir 'shape.toml'
-$MotionFile = Join-Path $SpikeDir 'motion.toml'
 # Fonts and Lucide icons are staged from D:\dev; the project's own icon is in assets\icons.
 $AssetsSource = 'D:\dev\assets'
 $LucideDir = 'icons\lucide-1.48.0'
@@ -69,9 +66,6 @@ function New-Stage([string] $Face) {
     New-Item -ItemType Directory -Path $stage | Out-Null
     Copy-Item (Join-Path $env:CARGO_TARGET_DIR "release\$Face.exe") $stage
     Copy-Item $SettingsFile $stage
-    Copy-Item $ThemesFile $stage
-    Copy-Item $ShapeFile $stage
-    Copy-Item $MotionFile $stage
     $stage
 }
 

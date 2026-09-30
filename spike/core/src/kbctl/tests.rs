@@ -10,8 +10,8 @@ const FAKE: isize = 0x7777_7777;
 /// A keyboard on the fake layout.
 fn kb() -> Kb {
     let cfg = crate::config::load().expect("spike.toml loads");
-    let themes = crate::theme::load().expect("themes.toml loads");
-    let mut k = Kb::new(cfg, themes, SystemLook::default()).expect("the board loads");
+    let themes = kx_theme::Themes::shipped().expect("the tokens load");
+    let mut k = Kb::new(cfg, themes, SysLook::default()).expect("the board loads");
     k.hkl = FAKE;
     k
 }

@@ -55,7 +55,9 @@ crates/
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
-  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), theme loader
+  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), translations, the `ui` module
+  kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
+                         WCAG contrast and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
@@ -151,7 +153,7 @@ pub trait Module: Send + 'static {
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.
-   - Colours, fonts, spacing and motion live in theme tokens (`themes.toml`, `shape.toml`, `motion.toml`).
+   - Colours, fonts, spacing, motion and icon names live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`).
    - User-visible text lives in translation files.
    - OS mappings live in adapter tables.
    - `kx-review` checks this.

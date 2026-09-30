@@ -1,101 +1,8 @@
-//! One theme's colours in one mode, and the WCAG contrast between two colours.
+//! One theme's colours in one mode: shadows, skirts and the palette.
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
-/// Hex digits in `#RRGGBB`.
-const RGB_DIGITS: usize = 6;
-/// Hex digits in `#RRGGBBAA`.
-const RGBA_DIGITS: usize = 8;
-/// sRGB channels at or below this are linear (WCAG 2.x).
-const LINEAR_LIMIT: f32 = 0.040_45;
-/// Divisor for the linear part of the sRGB curve.
-const LINEAR_DIV: f32 = 12.92;
-/// Offset of the sRGB curve.
-const CURVE_OFFSET: f32 = 0.055;
-/// Exponent of the sRGB curve.
-const CURVE_EXP: f32 = 2.4;
-/// Red, green and blue weights of relative luminance.
-const LUMA_WEIGHTS: [f32; 3] = [0.2126, 0.7152, 0.0722];
-/// Flare added to both luminances in the contrast ratio.
-const FLARE: f32 = 0.05;
-
-/// A colour with alpha, written `#RRGGBB` or `#RRGGBBAA`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(try_from = "String")]
-pub struct Rgba {
-    /// Red.
-    pub r: u8,
-    /// Green.
-    pub g: u8,
-    /// Blue.
-    pub b: u8,
-    /// Alpha; 255 is opaque.
-    pub a: u8,
-}
-
-impl Rgba {
-    /// Reads `#RRGGBB` (opaque) or `#RRGGBBAA`.
-    pub fn parse(s: &str) -> Result<Rgba, String> {
-        let bad = || format!("{s:?} is not #RRGGBB or #RRGGBBAA");
-        let hex = s.strip_prefix('#').ok_or_else(bad)?;
-        let digits = hex.bytes().all(|b| b.is_ascii_hexdigit());
-        if !digits || !matches!(hex.len(), RGB_DIGITS | RGBA_DIGITS) {
-            return Err(bad());
-        }
-        let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|_| bad());
-        let a = if hex.len() == RGBA_DIGITS {
-            byte(6)?
-        } else {
-            u8::MAX
-        };
-        Ok(Rgba {
-            r: byte(0)?,
-            g: byte(2)?,
-            b: byte(4)?,
-            a,
-        })
-    }
-}
-
-impl Serialize for Rgba {
-    /// Written as Qt reads colours: `#AARRGGBB`.
-    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        s.serialize_str(&format!(
-            "#{:02X}{:02X}{:02X}{:02X}",
-            self.a, self.r, self.g, self.b
-        ))
-    }
-}
-
-impl TryFrom<String> for Rgba {
-    type Error = String;
-
-    fn try_from(s: String) -> Result<Self, String> {
-        Rgba::parse(&s)
-    }
-}
-
-/// One channel as linear light.
-fn linear(c: u8) -> f32 {
-    let s = f32::from(c) / f32::from(u8::MAX);
-    if s <= LINEAR_LIMIT {
-        s / LINEAR_DIV
-    } else {
-        ((s + CURVE_OFFSET) / (1.0 + CURVE_OFFSET)).powf(CURVE_EXP)
-    }
-}
-
-/// Relative luminance, ignoring alpha.
-fn luminance(c: Rgba) -> f32 {
-    let [r, g, b] = LUMA_WEIGHTS;
-    r * linear(c.r) + g * linear(c.g) + b * linear(c.b)
-}
-
-/// The WCAG contrast ratio between two colours, from 1 to 21.
-pub fn contrast(a: Rgba, b: Rgba) -> f32 {
-    let (la, lb) = (luminance(a), luminance(b));
-    (la.max(lb) + FLARE) / (la.min(lb) + FLARE)
-}
+use crate::rgba::Rgba;
 
 /// One shadow layer, as in CSS `box-shadow`.
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
@@ -132,6 +39,14 @@ pub struct Skirt {
     pub on: Rgba,
     /// The recording key.
     pub rec: Rgba,
+    /// A dimmed key: the side keys' skirt faded over the plate, set from `shape.toml [dim]`.
+    #[serde(skip_deserializing, default = "clear")]
+    pub dim: Rgba,
+}
+
+/// The default of colours set after loading, never read from a file.
+fn clear() -> Rgba {
+    Rgba::CLEAR
 }
 
 /// Every colour of one theme in one mode; the names follow the mock-up's CSS tokens.
@@ -200,6 +115,12 @@ pub struct Palette {
     pub chip_bg: Rgba,
     /// Laid over a key under the pointer: darker on light, lighter on dark.
     pub hover: Rgba,
+    /// A key that comes in a later version: the side key faded over the plate, set from `shape.toml [dim]`.
+    #[serde(skip_deserializing, default = "clear")]
+    pub dim: Rgba,
+    /// Legend on a dimmed key, faded the same way.
+    #[serde(skip_deserializing, default = "clear")]
+    pub dim_ink: Rgba,
     /// Layers under each key.
     pub key_shadow: Vec<Shadow>,
     /// Layers under the keyboard and panels.
@@ -211,7 +132,8 @@ pub struct Palette {
 
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
-    pub fn named(&self) -> [(&'static str, Rgba); 31] {
+    #[must_use]
+    pub fn named(&self) -> [(&'static str, Rgba); 33] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -244,17 +166,31 @@ impl Palette {
             ("pop_sel", self.pop_sel),
             ("chip_bg", self.chip_bg),
             ("hover", self.hover),
+            ("dim", self.dim),
+            ("dim_ink", self.dim_ink),
         ]
     }
 
+    /// Sets the dimmed-key colours: the side key, its legend and its skirt at `share` opacity over the plate.
+    pub(crate) fn fade(&mut self, share: f32) {
+        self.dim = self.key_act.over(self.plate, share);
+        self.dim_ink = self.legend_act.over(self.plate, share);
+        if let Some(s) = &mut self.skirt {
+            s.dim = s.key_mod.over(self.plate, share);
+        }
+    }
+
     /// The colour token called `name`, if there is one.
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<Rgba> {
         self.named()
             .into_iter()
             .find_map(|(n, c)| (n == name).then_some(c))
     }
 
-    /// Each text colour with the background it sits on, named for reports.
+    /// Each text colour with the background it sits on, named for reports; dimmed keys are left out, as WCAG sets no
+    /// minimum for inactive parts (success criterion 1.4.3).
+    #[must_use]
     pub fn legend_pairs(&self) -> [(&'static str, Rgba, Rgba); 13] {
         [
             ("legend on key", self.legend, self.key),

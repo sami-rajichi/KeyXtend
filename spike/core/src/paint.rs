@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn every_paint_names_tokens_each_theme_has() {
-        for t in &crate::theme::load().expect("themes load").list {
+        for t in &kx_theme::Themes::shipped().expect("themes load").list {
             let p = &t.light;
             let skirt = serde_json::to_value(p.skirt.as_ref()).expect("skirt");
             assert!(p.get(REC.fill).is_some() && p.get(REC.ink).is_some());

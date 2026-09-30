@@ -15,7 +15,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_platform_windows::window;
-use spike_core::{config, theme};
+use kx_theme::Themes;
+use spike_core::config;
 
 /// Resource URL of `main.qml`, set once by `build.rs`.
 const MAIN_QML: &str = env!("QT_KB_MAIN_QML");
@@ -24,7 +25,7 @@ const NO_ROOT: &str = "main.qml created no root object";
 
 fn main() {
     let cfg = config::load().unwrap_or_else(|err| fail(&err));
-    let themes = theme::load().unwrap_or_else(|err| fail(&err));
+    let themes = Themes::shipped().unwrap_or_else(|err| fail(&err.to_string()));
     cfg.look
         .check_themes(&themes.list)
         .unwrap_or_else(|err| fail(&err));
