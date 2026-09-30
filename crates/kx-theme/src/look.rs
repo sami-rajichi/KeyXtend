@@ -54,6 +54,8 @@ pub enum Cap {
         top_radius_px: f32,
         /// Legends move up by this much.
         legend_lift_px: f32,
+        /// How far a named key's label may run past the top onto the skirt, each side.
+        label_spill_px: f32,
     },
 }
 
@@ -65,6 +67,28 @@ impl Cap {
             Cap::Convex { rest, pressed } => vec![*rest, *pressed],
             Cap::Skirt { top, .. } => vec![*top],
         }
+    }
+
+    /// A label may spill 0 or more, and never past the skirt: at most the top's smallest side inset.
+    fn check_spill(&self) -> Result<(), String> {
+        let Cap::Skirt {
+            top_inset_px: t,
+            pressed_inset_px: p,
+            label_spill_px: v,
+            ..
+        } = self
+        else {
+            return Ok(());
+        };
+        let side = [t[1], t[3], p[1], p[3]]
+            .into_iter()
+            .fold(f32::INFINITY, f32::min);
+        if v.is_finite() && (0.0..=side).contains(v) {
+            return Ok(());
+        }
+        Err(format!(
+            "label_spill_px {v} must be 0 to the side inset {side}"
+        ))
     }
 }
 
@@ -160,7 +184,8 @@ pub struct Look {
 }
 
 impl Look {
-    /// Refuses shares outside 0 to 1, an odd weight, an accent on sculpted caps and D-pad names that `p` lacks.
+    /// Refuses shares outside 0 to 1, an odd weight, an accent on sculpted caps, a label spill past the skirt and D-pad
+    /// names that `p` lacks.
     pub(crate) fn check(&self, p: &Palette) -> Result<(), String> {
         if !FONT_WEIGHTS.contains(&self.legend_weight) {
             let (w, lo, hi) = (self.legend_weight, FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
@@ -173,6 +198,7 @@ impl Look {
         if self.accent && matches!(self.cap, Cap::Skirt { .. }) {
             return Err("sculpted caps keep their skirt colours, so accent must be false".into());
         }
+        self.cap.check_spill()?;
         self.dpad.resolve(p).map(|_| ())
     }
 }

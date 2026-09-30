@@ -12,8 +12,10 @@ const NOT_A_NUMBER: &str = "sizes must be numbers";
 const BAD_RANGE: &str = "size_min must be above 0 and below size_max";
 /// Why the step was refused.
 const BAD_STEP: &str = "size_step must be above 0";
+/// The most presets there may be: one per size button the top bar names.
+pub const MAX_PRESETS: usize = 3;
 /// Why the presets were refused.
-const BAD_PRESETS: &str = "presets must be at least one size between size_min and size_max";
+const BAD_PRESETS: &str = "presets must be at least one size, no more than the top bar names, between size_min and size_max";
 /// Why the size was refused.
 const BAD_SIZE: &str = "size must be between size_min and size_max";
 /// Why the relabel time was refused.
@@ -129,7 +131,8 @@ impl KeyboardSettings {
             return Err(BAD_STEP);
         }
         let within = |v: &f64| (self.size_min..=self.size_max).contains(v);
-        if self.presets.is_empty() || !self.presets.iter().all(within) {
+        let count = (1..=MAX_PRESETS).contains(&self.presets.len());
+        if !count || !self.presets.iter().all(within) {
             return Err(BAD_PRESETS);
         }
         if !within(&self.size) {

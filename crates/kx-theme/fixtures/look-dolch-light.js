@@ -122,7 +122,8 @@ var lk = {
         3.0
       ],
       "top_radius_px": 4.0,
-      "legend_lift_px": 1.5
+      "legend_lift_px": 1.5,
+      "label_spill_px": 1.0
     },
     "accent": false,
     "dpad": {

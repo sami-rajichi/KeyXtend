@@ -154,6 +154,29 @@ fn sculpted_skirts_stay_darker_than_their_tops() {
 }
 
 #[test]
+fn a_sculpted_label_may_spill_only_onto_its_skirt() {
+    let Cap::Skirt { label_spill_px, .. } = load().list[2].look.cap else {
+        panic!("Dolch caps are sculpted");
+    };
+    assert!(
+        (label_spill_px - 1.0).abs() < f32::EPSILON,
+        "P1's AltGr spill"
+    );
+    for bad in ["-1.0", "3.5", "nan"] {
+        let t = text().replacen(
+            "label_spill_px = 1.0",
+            &format!("label_spill_px = {bad}"),
+            1,
+        );
+        let e = parse(&t).expect_err(bad);
+        assert!(
+            e.contains("dolch") && e.contains("label_spill_px"),
+            "{bad}: {e}"
+        );
+    }
+}
+
+#[test]
 fn a_stray_cap_field_is_refused() {
     let stray = text().replacen("kind = \"flat\"", "kind = \"flat\"\ntilt = 2.0", 1);
     let e = parse(&stray).expect_err("an unknown cap field");

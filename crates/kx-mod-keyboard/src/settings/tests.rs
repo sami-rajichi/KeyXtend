@@ -94,6 +94,16 @@ fn the_size_and_every_preset_sit_within_the_limits() {
 }
 
 #[test]
+fn no_more_presets_than_the_top_bar_names() {
+    let presets = |n: usize| with("presets", vec![1.0; n]);
+    assert_eq!(
+        validate_as::<KeyboardSettings>(&presets(MAX_PRESETS)),
+        Ok(())
+    );
+    assert!(invalid(&presets(MAX_PRESETS + 1)));
+}
+
+#[test]
 fn the_step_and_the_relabel_time_are_above_zero() {
     assert!(invalid(&with("size_step", 0.0)));
     assert!(invalid(&with("size_step", -0.05)));

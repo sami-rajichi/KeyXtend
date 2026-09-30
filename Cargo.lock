@@ -610,6 +610,7 @@ dependencies = [
  "cxx-qt-lib",
  "fluent-bundle",
  "fluent-langneg",
+ "kx-mod-keyboard",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",

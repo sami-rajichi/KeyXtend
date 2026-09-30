@@ -149,14 +149,14 @@ Item {
             part: "smaller"
             onClicked: bar.smaller()
         }
-        // A preset the texts do not name shows its number.
+        // One button per preset; the keyboard's settings allow no more presets than the sizes named here.
         Repeater {
             model: bar.presets
             delegate: Button {
                 required property int index
                 readonly property var says: bar.sizes[index]
-                text: says ? says.label : String(index + 1)
-                name: says ? says.name : text
+                text: says.label
+                name: says.name
                 lit: bar.preset === index
                 onClicked: bar.pickSize(index)
             }

@@ -100,20 +100,23 @@ fn golden(name: &str) -> Value {
 }
 
 /// The board and every state the tests draw, one line each, as the keyboard's own golden files show them in full, and
-/// the smallest size the keyboard allows.
+/// the smallest and largest sizes the keyboard allows.
 fn face() -> String {
     let states: Map<String, Value> = STATES
         .iter()
         .map(|s| ((*s).to_owned(), golden(&format!("state-{s}"))))
         .collect();
     let states = Value::Object(states);
-    let size_min = crate::keyboard_defaults()["size_min"].clone();
-    let size_min = serde_json::to_value(size_min).expect("a size");
+    let size = |key: &str| {
+        let v = crate::keyboard_defaults()[key].clone();
+        serde_json::to_value(v).expect("a size")
+    };
     format!(
-        "{HEAD}{}{}{}",
+        "{HEAD}{}{}{}{}",
         var("board", &golden("board"), false),
         var("states", &states, false),
-        var("sizeMin", &size_min, false)
+        var("sizeMin", &size("size_min"), false),
+        var("sizeMax", &size("size_max"), false)
     )
 }
 

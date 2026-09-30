@@ -199,45 +199,58 @@ Item {
             compare(sizeButtons(win).filter(b => b.lit).map(b => b.Accessible.name), [En.texts["sizename.s"]]);
             win.visible = true;
             waitForRendering(win.contentItem);
-            // A smaller step lands between presets, and settings may hold more presets than the size texts name.
-            win.keyboard.board = Object.assign({}, Face.board, { preset: null, presets: Face.board.presets.concat([2]) });
+            // A smaller step lands between presets, and settings may hold fewer presets than the size texts name.
+            win.keyboard.board = Object.assign({}, Face.board, { preset: null, presets: Face.board.presets.slice(0, 2) });
             win.keyboard.reply = { board: true, state: false };
             mouseClick(named(win, En.texts["bar.smaller"]));
             compare(win.board.preset, null);
             const now = sizeButtons(win);
-            compare(now.length, 4, "one per preset");
+            compare(now.map(b => b.Accessible.name), [En.texts["sizename.s"], En.texts["sizename.m"]], "one per preset");
             compare(now.filter(b => b.lit).length, 0, "none lit off preset");
-            compare([now[3].text, now[3].Accessible.name], ["4", "4"], "an unnamed preset shows its number");
             win.visible = false;
         }
 
-        function test_every_label_fits_its_cap_in_each_theme_language_and_size() {
+        function test_every_label_fits_its_face_in_each_theme_language_and_size() {
+            const sizes = [Face.sizeMin].concat(Face.board.presets, [Face.sizeMax]);
             for (const lk of [N.lk, E.lk, D.lk])
                 for (const t of [En, Fr, Ar])
-                    for (const size of [Face.sizeMin, 1])
+                    for (const size of sizes)
                         labelsFit(lk, t, size);
         }
-        // Each label in look `lk`, texts `t` and `size` stays inside its cap, above the smallest size; at size 1 English
-        // and Arabic keep the P1 size.
+        // Where a label may run on cap `k`, left and right: the face the owner sees less the padding, or a sculpted
+        // top plus what may spill onto the skirt.
+        function room(k, lk, size) {
+            const faces = all(k, o => o.base !== undefined && o.g !== undefined && o.visible);
+            const face = faces[faces.length - 1];
+            const left = face.mapToItem(k, 0, 0).x;
+            const cap = lk.look.cap;
+            const more = cap.kind === "skirt" ? cap.label_spill_px * size : -lk.shape.legend.label_pad_px * size;
+            return [left - more, left + face.width + more];
+        }
+        // Each label in look `lk`, texts `t` and `size` is drawn in the theme's font and stays in its room, above the
+        // smallest size; English and Arabic keep the P1 size.
         function labelsFit(lk, t, size) {
             const win = make({ settings: t.settings, texts: t.texts, look: lk }, { board: scaled(size) });
             const where = lk.look.latin_fonts[0] + " " + t.settings.lang + " " + size + ": ";
-            tryCompare(win.res.fam, "latin", lk.look.latin_fonts[0], 5000, where + "the theme's font");
-            // Rows lay out when drawn.
             win.visible = true;
-            waitForRendering(win.contentItem);
-            const pad = lk.shape.legend.label_pad_px * size;
             const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
             verify(keys.length > 0, where + "labels");
-            for (const k of keys) {
-                const l = all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0];
+            const labels = keys.map(k => all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0]);
+            const font = lk.look.latin_fonts[0];
+            tryVerify(() => labels.every(l => l.fontInfo.family === font), 5000, where + "in " + labels[0].fontInfo.family);
+            // Rows lay out when drawn.
+            waitForRendering(win.contentItem);
+            keys.forEach((k, i) => {
+                const l = labels[i];
                 const at = where + k.label;
+                const [lo, hi] = room(k, lk, size);
                 const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
-                verify(left >= pad - 0.01 && left + l.contentWidth <= k.width - pad + 0.01, at + " fits: " + l.contentWidth);
+                // Anchors centre on whole pixels, so a label may sit half a pixel off.
+                verify(left >= lo - 0.5 && left + l.contentWidth <= hi + 0.5, at + " fits: " + l.contentWidth + " in " + (hi - lo));
                 verify(l.fontInfo.pixelSize >= lk.shape.legend.label_min_px, at + " not below the smallest size");
-                if (size === 1 && t !== Fr)
+                if (t !== Fr)
                     compare(l.fontInfo.pixelSize, l.font.pixelSize, at + " keeps the P1 size");
-            }
+            });
             win.visible = false;
         }
 

@@ -25,8 +25,13 @@ Item {
     readonly property var mv: lk.motion.moves
     readonly property var amt: lk.motion.amount
     readonly property color ink2: lk.palette.legend_2
-    // Dolch lifts every legend a little (mock-up line 217).
-    readonly property real lift: look.cap.kind === "skirt" ? look.cap.legend_lift_px * s : 0
+    // Dolch's sculpted caps lift every legend a little (mock-up line 217), and labels fit their lighter top.
+    readonly property bool sculpted: look.cap.kind === "skirt"
+    readonly property real lift: sculpted ? look.cap.legend_lift_px * s : 0
+    // A named key's label room: the cap less its padding, or a sculpted top plus what may spill onto the skirt.
+    readonly property real labelRoom: sculpted
+        ? width - (look.cap.top_inset_px[1] + look.cap.top_inset_px[3] - 2 * look.cap.label_spill_px) * s
+        : width - 2 * lg.label_pad_px * s
     readonly property bool isChar: kv.kind === "char"
     readonly property bool isSpace: kv.kind === "space"
     readonly property bool isLang: kv.kind === "lang"
@@ -143,9 +148,9 @@ Item {
     // Named keys: an icon, a label, or both side by side; their names show as tooltips instead of text.
     Row {
         id: named
-        readonly property real pad: t.lg.label_pad_px * t.s
         visible: !t.isChar && !t.isSpace && !t.isLang
         anchors.centerIn: parent
+        anchors.horizontalCenterOffset: t.sculpted ? (t.look.cap.top_inset_px[3] - t.look.cap.top_inset_px[1]) * t.s / 2 : 0
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
         Icon {
@@ -158,11 +163,11 @@ Item {
             px: t.lg.icon_px[t.kv.side ? 1 : 0] * t.s
             tint: t.ink
         }
-        // The label shrinks to fit its cap, as real keycaps print long words smaller.
+        // The label shrinks to fit its room, as real keycaps print long words smaller.
         Line {
             visible: !!t.label
             anchors.verticalCenter: parent.verticalCenter
-            width: t.width - 2 * named.pad - (namedIcon.visible ? namedIcon.width + named.spacing : 0)
+            width: t.labelRoom - (namedIcon.visible ? namedIcon.width + named.spacing : 0)
             horizontalAlignment: Text.AlignHCenter
             fontSizeMode: Text.HorizontalFit
             minimumPixelSize: t.lg.label_min_px
