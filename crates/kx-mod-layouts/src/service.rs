@@ -126,13 +126,19 @@ impl Layouts for LayoutsService {
         changed
     }
 
+    /// A step that lands on the shown layout, such as `by` 0 or a lone layout, asks nothing.
     fn step(&self, by: i32) -> Result<(), SwitchError> {
-        let to = {
+        let (to, shown) = {
             let state = self.state();
             let ids: Vec<LayoutId> = state.list.iter().map(|l| l.id).collect();
-            order::wrap(&ids, state.follow.shown(), by)
+            let shown = state.follow.shown();
+            (order::wrap(&ids, shown, by), shown)
         };
-        self.source.request(to.ok_or(SwitchError::NotInstalled)?)
+        match to {
+            None => Err(SwitchError::NotInstalled),
+            Some(to) if Some(to) == shown => Ok(()),
+            Some(to) => self.source.request(to),
+        }
     }
 
     fn pick(&self, id: LayoutId) -> Result<(), SwitchError> {

@@ -24,7 +24,7 @@ No typed text, clipboard content or secret passes through this module.
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
 | Layout list, layout in front, key texts and facts from `LayoutSource` | Duplicate ids dropped; a layout in front that is not installed is never shown; a short or empty answer only leaves keys out | Key texts capped by the adapter (`TEXT_CAP`); keys read only for `scans.toml`'s codes, once per layout | Property tests over the fake (random adds, removals, switches and failures) |
-| `[layouts] short` | `deny_unknown_fields`; keys are lower-case ISO 639 letters; names may not be blank | The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
+| `[layouts] short` | `deny_unknown_fields`; keys are two or three lower-case ISO 639 letters; names may not be blank | Names hold at most `MAX_SHORT_CHARS` characters; the kernel caps the settings file (`MAX_FILE_BYTES`) | No |
 | `scans.toml` | Compiled in; parsed with `deny_unknown_fields` and a range check, and a broken table fails the start | Fixed at build time | N/A |
 
 ## Threats (STRIDE-lite)

@@ -3,11 +3,18 @@
 use kx_module_api::{Settings, SettingsError, SettingsSpec, parse_as, validate_as};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::ops::RangeInclusive;
 
 /// Why a `short` key was refused.
 const BAD_CODE: &str = "short: every key must be an ISO 639 code in lower-case letters";
-/// Why a `short` value was refused.
+/// Why a blank `short` value was refused.
 const BLANK: &str = "short: a short name is blank";
+/// Why a long `short` value was refused.
+const TOO_LONG: &str = "short: a short name is too long for the language key";
+/// Letters in an ISO 639 code: two (639-1) or three (639-2 and 639-3).
+const ISO_LETTERS: RangeInclusive<usize> = 2..=3;
+/// The longest short name, in characters, so it fits on the language key.
+const MAX_SHORT_CHARS: usize = 4;
 
 /// How the kernel reads the `[layouts]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -48,13 +55,20 @@ impl Settings for LayoutsSettings {
         if self.short.values().any(|v| v.trim().is_empty()) {
             return invalid(BLANK);
         }
+        if self
+            .short
+            .values()
+            .any(|v| v.chars().count() > MAX_SHORT_CHARS)
+        {
+            return invalid(TOO_LONG);
+        }
         Ok(())
     }
 }
 
-/// True for an ISO 639 code as the OS gives it: lower-case ASCII letters only.
+/// True for an ISO 639 code as the OS gives it: two or three lower-case ASCII letters.
 fn is_iso_code(code: &str) -> bool {
-    !code.is_empty() && code.bytes().all(|b| b.is_ascii_lowercase())
+    ISO_LETTERS.contains(&code.len()) && code.bytes().all(|b| b.is_ascii_lowercase())
 }
 
 #[cfg(test)]
@@ -91,9 +105,22 @@ mod tests {
     #[test]
     fn a_short_key_must_be_a_lower_case_iso_code() {
         assert!(!invalid(&with_short(&[("fa", "ف"), ("haw", "HAW")])));
-        for bad in ["", "AR", "Ar", "a1", "ar-tn", " ar", "ع"] {
+        for bad in ["", "a", "abcd", "AR", "Ar", "a1", "ar-tn", " ar", "ع"] {
             assert!(invalid(&with_short(&[(bad, "x")])), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn a_short_name_fits_on_the_language_key() {
+        let longest = "ع".repeat(MAX_SHORT_CHARS);
+        assert!(!invalid(&with_short(&[("ar", &longest)])));
+        let marked = "\u{0639}\u{064E}";
+        assert!(
+            !invalid(&with_short(&[("ar", marked)])),
+            "a haraka counts once"
+        );
+        let over = "E".repeat(MAX_SHORT_CHARS + 1);
+        assert!(invalid(&with_short(&[("en", &over)])));
     }
 
     #[test]

@@ -6,7 +6,7 @@ use kx_module_api::ports::{LangFacts, LangLabel, LayoutId};
 use std::collections::BTreeMap;
 
 /// The label of layout `id` from its `facts`; `short` gives the language key's text by ISO 639 code.
-/// A language counts as Arabic when its own name is written in the Arabic script.
+/// A language counts as Arabic when its own name holds an Arabic letter.
 #[must_use]
 pub fn label(id: LayoutId, facts: &LangFacts, short: &BTreeMap<String, String>) -> LangLabel {
     LangLabel {

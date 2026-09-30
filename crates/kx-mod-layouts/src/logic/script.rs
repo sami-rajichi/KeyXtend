@@ -1,8 +1,8 @@
-//! Which text is written in the Arabic script, from the Unicode blocks that hold it.
+//! Which text holds Arabic letters, from the Unicode blocks that hold them.
 
 use std::ops::RangeInclusive;
 
-/// The Unicode blocks of the Arabic script; Presentation Forms-B stops before the byte-order mark.
+/// The Unicode blocks that hold Arabic letters; Presentation Forms-B stops before the byte-order mark.
 const ARABIC_BLOCKS: [RangeInclusive<char>; 7] = [
     // Arabic.
     '\u{0600}'..='\u{06FF}',
@@ -20,7 +20,7 @@ const ARABIC_BLOCKS: [RangeInclusive<char>; 7] = [
     '\u{10EC0}'..='\u{10EFF}',
 ];
 
-/// True when `text` holds any character of the Arabic script.
+/// True when `text` holds any character from those blocks.
 pub fn is_arabic(text: &str) -> bool {
     text.chars()
         .any(|c| ARABIC_BLOCKS.iter().any(|block| block.contains(&c)))

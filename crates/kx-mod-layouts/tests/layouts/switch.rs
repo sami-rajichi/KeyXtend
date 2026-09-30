@@ -42,14 +42,30 @@ fn steps_follow_the_list_and_wrap_both_ways() {
         assert_eq!(layouts.refresh(), changed, "step {by}");
         assert_eq!(shown_now(&layouts), want, "step {by}");
     }
-    let asked: Vec<LayoutId> = steps.iter().map(|s| s.1).collect();
-    assert_eq!(fake.requests(), asked);
+    let asked: Vec<LayoutId> = steps.iter().filter(|s| s.2).map(|s| s.1).collect();
+    assert_eq!(fake.requests(), asked, "a full turn asks nothing");
     assert_eq!(heard.ids(), [fr, ar, en, ar, en]);
 }
 
 /// The layout the service shows now.
 fn shown_now(layouts: &impl Layouts) -> LayoutId {
     layouts.current().label.id
+}
+
+#[test]
+fn a_step_that_lands_on_the_shown_layout_asks_nothing() {
+    let [en, fr, ar] = ids();
+    let fake = source();
+    let (layouts, _) = service(&fake);
+    assert_eq!(layouts.step(0), Ok(()));
+    assert_eq!(layouts.step(-3), Ok(()));
+    assert!(fake.requests().is_empty());
+    fake.remove(fr);
+    fake.remove(ar);
+    assert!(layouts.refresh());
+    assert_eq!(layouts.step(1), Ok(()), "one layout installed");
+    assert!(fake.requests().is_empty());
+    assert_eq!(shown_now(&layouts), en);
 }
 
 #[test]

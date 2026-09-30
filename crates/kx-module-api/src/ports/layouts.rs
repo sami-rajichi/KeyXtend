@@ -41,6 +41,7 @@ pub trait Layouts: Send + Sync {
     fn list(&self) -> Vec<LangLabel>;
 
     /// Reads the app in front and the installed list again; true when anything changed.
+    /// Call it from one thread only (the keyboard's timer), so its `LayoutChanged` events stay in order.
     fn refresh(&self) -> bool;
 
     /// Asks the app in front to switch `by` places along the list, wrapping.
@@ -67,6 +68,7 @@ impl ServiceKey for LayoutsKey {
 }
 
 /// The keyboard now shows layout `id`.
+/// The id is a hint: a listener reads `Layouts::current` for the table, which may have moved on since.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct LayoutChanged {
     /// The layout shown now.
