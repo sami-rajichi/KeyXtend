@@ -689,7 +689,8 @@ var lk = {
     },
     "lang": {
       "cycle": "globe",
-      "list": "chevron-up"
+      "list": "chevron-up",
+      "current": "check"
     }
   },
   "dpad": {

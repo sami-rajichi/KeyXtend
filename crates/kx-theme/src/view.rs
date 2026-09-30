@@ -28,7 +28,7 @@ pub struct LookChoice {
     pub follow_accent: bool,
     /// Turns every animation off except the hold ring.
     pub reduced_motion: bool,
-    /// Contrast a legend keeps when its key takes the accent; never below WCAG AA.
+    /// Contrast a legend keeps when its key takes the accent: at least WCAG AA, and a higher value is best effort.
     pub min_contrast: f32,
 }
 
@@ -73,11 +73,12 @@ pub fn reach(layers: &[Shadow]) -> f32 {
         .ceil()
 }
 
-/// The palette of `theme` in `mode`: system colours in high contrast, else the theme's, with the accent if it follows it.
-fn palette(theme: &Theme, mode: Mode, choice: &LookChoice, sys: &SysLook) -> Palette {
+/// The palette of `theme` in `mode`: system colours with `edge_px` key edges in high contrast, else the theme's,
+/// with the accent if it follows it.
+fn palette(theme: &Theme, mode: Mode, choice: &LookChoice, sys: &SysLook, edge_px: f32) -> Palette {
     let base = theme.palette(mode);
     if let Some(c) = &sys.contrast {
-        return contrast_palette(base, c);
+        return contrast_palette(base, c, edge_px);
     }
     let follows = choice.follow_accent && theme.look.accent;
     match sys.accent.filter(|_| follows) {
@@ -96,7 +97,7 @@ fn palette(theme: &Theme, mode: Mode, choice: &LookChoice, sys: &SysLook) -> Pal
 pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Option<LookView<'a>> {
     let theme = t.find(&choice.theme)?;
     let mode = mode_for(choice.mode, sys);
-    let palette = palette(theme, mode, choice, sys);
+    let palette = palette(theme, mode, choice, sys, t.shape.line.px);
     let dpad = theme.look.dpad.resolve(&palette).ok()?;
     let hc = sys.contrast.as_ref();
     let common = hc.map_or(t.common, |c| contrast_common(c, &t.common));

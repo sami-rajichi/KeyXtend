@@ -3,26 +3,12 @@
 use super::*;
 use crate::Themes;
 use crate::accent::with_accent;
-use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast, low_contrast};
+use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast, low_contrast, luminance};
 use crate::look::Cap;
 use crate::rgba::Rgba;
 
 /// Plain Windows 11 app backgrounds in light and dark mode, which the ring is drawn over.
 const WINDOW_BG: [&str; 2] = ["#F3F3F3", "#202020"];
-/// The owner's exceptions: pairs under WCAG AA exactly as the mock-up has them, kept at the look check (2026-09-28).
-const OWNER_KEPT: [&str; 11] = [
-    "et66.light: legend_2 on plate",
-    "dolch.light: legend_2 on key",
-    "dolch.light: legend_2 on plate",
-    "dolch.light: enter_ink on enter",
-    "dolch.light: on_ink on on",
-    "dolch.light: lock_ink on lock",
-    "dolch.dark: legend_2 on key",
-    "dolch.dark: enter_ink on enter",
-    "dolch.dark: on_ink on on",
-    "dolch.dark: lock_ink on lock",
-    "dolch.dark: badge_ink on badge_bg",
-];
 
 fn text() -> String {
     crate::THEMES.to_string()
@@ -164,13 +150,31 @@ fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
 }
 
 #[test]
-fn legends_reach_wcag_aa_outside_the_owners_exceptions() {
+fn every_legend_reaches_wcag_aa() {
     let low = low_contrast(&load().list, WCAG_AA);
-    let names: Vec<&str> = low
-        .iter()
-        .map(|l| l.split(" is ").next().unwrap_or(l))
-        .collect();
-    assert_eq!(names, OWNER_KEPT, "{low:?}");
+    assert!(low.is_empty(), "{low:?}");
+}
+
+#[test]
+fn sculpted_skirts_stay_darker_than_their_tops() {
+    for t in load().list {
+        for mode in Mode::ALL {
+            let p = t.palette(mode);
+            let Some(s) = &p.skirt else { continue };
+            let pairs = [
+                ("key", s.key, p.key),
+                ("key_mod", s.key_mod, p.key_mod),
+                ("enter", s.enter, p.enter),
+                ("danger", s.danger, p.danger),
+                ("on", s.on, p.on),
+                ("rec", s.rec, p.rec),
+            ];
+            for (n, skirt, top) in pairs {
+                let at = format!("{}.{}: {n}", t.look.id, mode.key());
+                assert!(luminance(skirt) < luminance(top), "{at}");
+            }
+        }
+    }
 }
 
 #[test]

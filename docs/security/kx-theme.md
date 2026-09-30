@@ -23,7 +23,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 |---|---|---|---|
 | Token files | Compiled in with `include_str!`, never read from disk (ADR-0016); parsed with `deny_unknown_fields` and range checks, and a broken file fails `Themes::shipped` with the file and token named | Fixed at build time | No; tests cover each rule |
 | `SysLook` from the `SystemLook` port | Every value is a valid colour (four bytes) or flag, so nothing can fail; an unknown theme id gives no look, never a panic | Fixed size | No |
-| `LookChoice.min_contrast` | The accent never drops a legend below `WCAG_AA`, whatever the value, NaN included; the `[ui]` check refuses values outside `MIN_CONTRAST` | N/A | No |
+| `LookChoice.min_contrast` | A legend on the accent reaches at least `WCAG_AA` whatever the value, NaN included, falling back to black or white; a higher value is best effort, and the `[ui]` check refuses values outside `MIN_CONTRAST` | N/A | No |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.

@@ -29,6 +29,20 @@ impl Rgba {
         b: 0,
         a: 0,
     };
+    /// Opaque black, the darkest ink there is.
+    pub const BLACK: Rgba = Rgba {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: u8::MAX,
+    };
+    /// Opaque white, the lightest ink; black or white reads at 4.58:1 or more on any opaque colour.
+    pub const WHITE: Rgba = Rgba {
+        r: u8::MAX,
+        g: u8::MAX,
+        b: u8::MAX,
+        a: u8::MAX,
+    };
 
     /// This colour at `share` opacity over `under`, blending each channel; exact over an opaque colour.
     #[must_use]

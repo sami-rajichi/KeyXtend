@@ -47,7 +47,9 @@ left = "chevron-left"
 down = "chevron-down"
 stop = "square"
 
-# The language key's Cycle design shows a globe, and its List design a chevron that opens the list (langInner).
+# The language key's Cycle design shows a globe, and its List design a chevron that opens the list (langInner); the list
+# ticks its current row (.lg-it .i, lines 357 and 1548).
 [lang]
 cycle = "globe"
 list = "chevron-up"
+current = "check"

@@ -46,7 +46,7 @@ pub struct DpadIcons {
     pub stop: String,
 }
 
-/// The language key's designs that show an icon.
+/// The language key's designs that show an icon, and the language list.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct LangIcons {
@@ -54,6 +54,8 @@ pub struct LangIcons {
     pub cycle: String,
     /// The List design's chevron.
     pub list: String,
+    /// The tick on the language list's current row.
+    pub current: String,
 }
 
 /// Every icon name, by the part that shows it.
@@ -66,7 +68,7 @@ pub struct Icons {
     pub bar: BarIcons,
     /// The D-pad.
     pub dpad: DpadIcons,
-    /// The language key.
+    /// The language key and its list.
     pub lang: LangIcons,
 }
 
@@ -92,6 +94,7 @@ impl Icons {
             ("dpad.stop", &d.stop),
             ("lang.cycle", &l.cycle),
             ("lang.list", &l.list),
+            ("lang.current", &l.current),
         ];
         let keys = self
             .keys
@@ -151,6 +154,7 @@ mod tests {
             (i.lang.cycle.as_str(), i.lang.list.as_str()),
             ("globe", "chevron-up")
         );
+        assert_eq!(i.lang.current, "check", "the list's current row");
         assert_eq!(i.dpad.stop, "square");
         assert!(i.names().contains(&"palette"));
     }

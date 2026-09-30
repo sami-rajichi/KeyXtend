@@ -3,37 +3,37 @@
 var lk = {
   "palette": {
     "plate": "#FF000000",
-    "key": "#FF000000",
-    "key_mod": "#FF000000",
-    "key_act": "#FF000000",
+    "key": "#FF101010",
+    "key_mod": "#FF101010",
+    "key_act": "#FF101010",
     "enter": "#FF1AEBFF",
-    "enter_ink": "#FF000000",
-    "danger": "#FF000000",
+    "enter_ink": "#FF050505",
+    "danger": "#FF101010",
     "danger_ink": "#FFFFFF00",
     "legend": "#FFFFFF00",
     "legend_mod": "#FFFFFF00",
     "legend_2": "#FFFFFF00",
     "legend_act": "#FFFFFF00",
     "on": "#FF1AEBFF",
-    "on_ink": "#FF000000",
+    "on_ink": "#FF050505",
     "lock": "#FF1AEBFF",
-    "lock_ink": "#FF000000",
+    "lock_ink": "#FF050505",
     "rec": "#FF1AEBFF",
-    "rec_ink": "#FF000000",
-    "led_off": "#FF000000",
+    "rec_ink": "#FF050505",
+    "led_off": "#FF101010",
     "led_on": "#FF1AEBFF",
     "ring": "#FF1AEBFF",
     "badge_bg": "#FF1AEBFF",
-    "badge_ink": "#FF000000",
+    "badge_ink": "#FF050505",
     "pop_bg": "#FF000000",
     "pop_ink": "#FFFFFFFF",
     "pop_muted": "#FFFFFFFF",
     "pop_line": "#FFFFFFFF",
     "pop_hover": "#FF1AEBFF",
     "pop_sel": "#FF1AEBFF",
-    "chip_bg": "#FF000000",
-    "hover": "#00000000",
-    "dim": "#FF000000",
+    "chip_bg": "#FF101010",
+    "hover": "#00101010",
+    "dim": "#FF101010",
     "dim_ink": "#FF3FF23F",
     "key_shadow": [
       {
@@ -49,9 +49,9 @@ var lk = {
     "skirt": null
   },
   "common": {
-    "press": "#00000000",
+    "press": "#00101010",
     "rec_dot": "#FF1AEBFF",
-    "pill_hover": "#00000000",
+    "pill_hover": "#00101010",
     "snip_dim": "#6B000000",
     "snip_edge": "#FF1AEBFF",
     "snip_tag": "#99000000"
@@ -664,20 +664,21 @@ var lk = {
     },
     "lang": {
       "cycle": "globe",
-      "list": "chevron-up"
+      "list": "chevron-up",
+      "current": "check"
     }
   },
   "dpad": {
-    "face": "#FF000000",
+    "face": "#FF101010",
     "ink": "#FFFFFF00",
     "on": "#FF1AEBFF",
-    "on_ink": "#FF000000",
+    "on_ink": "#FF050505",
     "stop": "#FF1AEBFF",
-    "stop_ink": "#FF000000"
+    "stop_ink": "#FF050505"
   },
   "dark": false,
   "contrast": true,
-  "sel_ink": "#FF000000",
+  "sel_ink": "#FF050505",
   "hover_line": "#FF1AEBFF",
   "margin": 0.0
 };

@@ -6,17 +6,17 @@ var lk = {
     "key": "#FFE6E7E8",
     "key_mod": "#FF5F6161",
     "key_act": "#FF5F6161",
-    "enter": "#FF00A4A9",
-    "enter_ink": "#FFF7F2EA",
+    "enter": "#FF008488",
+    "enter_ink": "#FFFFFFFF",
     "danger": "#FFB83262",
     "danger_ink": "#FFF7F2EA",
     "legend": "#FF393B3B",
     "legend_mod": "#FFF7F2EA",
-    "legend_2": "#FF6B6D6F",
+    "legend_2": "#FF4A4B4D",
     "legend_act": "#FFF7F2EA",
-    "on": "#FF00A4A9",
+    "on": "#FF008488",
     "on_ink": "#FFFFFFFF",
-    "lock": "#FF00A4A9",
+    "lock": "#FF008488",
     "lock_ink": "#FFFFFFFF",
     "rec": "#FFB83262",
     "rec_ink": "#FFFFFFFF",
@@ -66,9 +66,9 @@ var lk = {
     "skirt": {
       "key": "#FFC5C7CA",
       "key_mod": "#FF4A4C4C",
-      "enter": "#FF00878B",
+      "enter": "#FF006D70",
       "danger": "#FF952749",
-      "on": "#FF00878B",
+      "on": "#FF006D70",
       "rec": "#FF952749",
       "dim": "#FF8D8F90"
     }
@@ -708,13 +708,14 @@ var lk = {
     },
     "lang": {
       "cycle": "globe",
-      "list": "chevron-up"
+      "list": "chevron-up",
+      "current": "check"
     }
   },
   "dpad": {
     "face": "#FF5F6161",
     "ink": "#FFF7F2EA",
-    "on": "#FF00A4A9",
+    "on": "#FF008488",
     "on_ink": "#FFFFFFFF",
     "stop": "#FFB83262",
     "stop_ink": "#FFFFFFFF"

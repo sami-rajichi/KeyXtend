@@ -12,7 +12,7 @@ var lk = {
     "danger_ink": "#FF1D1B18",
     "legend": "#FF1D1B18",
     "legend_mod": "#FF1D1B18",
-    "legend_2": "#FF6B655C",
+    "legend_2": "#FF69635B",
     "legend_act": "#FF1D1B18",
     "on": "#FFFFFFFF",
     "on_ink": "#FF7A5E00",
@@ -700,7 +700,8 @@ var lk = {
     },
     "lang": {
       "cycle": "globe",
-      "list": "chevron-up"
+      "list": "chevron-up",
+      "current": "check"
     }
   },
   "dpad": {

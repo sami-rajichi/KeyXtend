@@ -1,5 +1,12 @@
 //! The fonts and icons the tokens name exist in the repo's `assets/` folder, and named-key icons name real keys.
 
+#![allow(
+    clippy::expect_used,
+    reason = "these helpers run only in tests, where a failed setup should fail the test"
+)]
+
+mod fontname;
+
 use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
@@ -20,42 +27,45 @@ fn assets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets")
 }
 
-/// The folder a bundled family lives in: its name in lower case, without spaces.
-fn font_dir(family: &str) -> PathBuf {
-    let name: String = family.split_whitespace().collect();
-    assets().join("fonts").join(name.to_lowercase())
+/// True when `p` is a font file the app bundles.
+fn is_font(p: &Path) -> bool {
+    p.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| FONT_EXTS.iter().any(|x| e.eq_ignore_ascii_case(x)))
 }
 
-/// True when `dir` holds a font file.
-fn has_font(dir: &Path) -> bool {
-    let font = |p: &Path| {
-        p.extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(|e| FONT_EXTS.iter().any(|x| e.eq_ignore_ascii_case(x)))
-    };
-    std::fs::read_dir(dir).is_ok_and(|d| d.flatten().any(|e| font(&e.path())))
+/// The family names inside every font file in `assets/fonts/`, one folder per family.
+fn bundled_families() -> Vec<String> {
+    let fonts = std::fs::read_dir(assets().join("fonts")).expect("assets/fonts reads");
+    let dirs = fonts
+        .flatten()
+        .filter_map(|d| std::fs::read_dir(d.path()).ok());
+    let files = dirs.flat_map(|d| d.flatten().map(|f| f.path()));
+    files
+        .filter(|p| is_font(p))
+        .flat_map(|p| fontname::families(&std::fs::read(&p).expect("a font reads")))
+        .collect()
 }
 
 #[test]
 fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
     let t = Themes::shipped().expect("tokens load");
-    let mut bundled = 0;
+    let bundled = bundled_families();
+    let mut checked = 0;
     for th in &t.list {
         for family in th.look.latin_fonts.iter().chain(&th.look.arabic_fonts) {
             if SYSTEM_FONTS.contains(&family.as_str()) {
                 continue;
             }
-            let dir = font_dir(family);
+            let id = &th.look.id;
             assert!(
-                has_font(&dir),
-                "{}: no {family} in {}",
-                th.look.id,
-                dir.display()
+                bundled.contains(family),
+                "{id}: no font file names itself {family}"
             );
-            bundled += 1;
+            checked += 1;
         }
     }
-    assert!(bundled > 0, "the check reached the bundled fonts");
+    assert!(checked > 0, "the check reached the bundled fonts");
 }
 
 #[test]

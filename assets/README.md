@@ -13,7 +13,7 @@ All fonts are SIL OFL-1.1 and ship unmodified.
 
 ## Icons
 
-- `icons/lucide/`: 38 icons from Lucide 1.48.0 (`lucide-static`), https://lucide.dev. ISC, and MIT for the ones derived from Feather; both texts are in `LICENSE`.
+- `icons/lucide/`: 39 icons from Lucide 1.48.0 (`lucide-static`), https://lucide.dev. ISC, and MIT for the ones derived from Feather; both texts are in `LICENSE`.
 - `icons/win-logo.svg`: KeyXtend's own drawing of the Windows key legend, GPL-3.0-or-later like the code. Windows and its logo are Microsoft trademarks; used only to label the Windows key.
 
 Add a font or icon only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

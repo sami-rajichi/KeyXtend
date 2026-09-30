@@ -1,10 +1,11 @@
 //! Look-view tests against the shipped tokens and sample system looks.
 
-use kx_platform::ui::{Accent, SysColors};
+use kx_platform::ui::Accent;
 
 use super::*;
+use crate::hc::sample::HC;
 
-/// A shipped colour as the system gives colours.
+/// A shipped colour as the system gives HC.
 fn port(s: &str) -> [u8; 4] {
     let c = Rgba::parse(s).expect("a colour");
     [c.r, c.g, c.b, c.a]
@@ -37,20 +38,6 @@ fn teal() -> SysLook {
     SysLook {
         accent: Some(accent),
         ..SysLook::default()
-    }
-}
-
-/// A sample high-contrast set: yellow on black, cyan highlight.
-fn hc_colours() -> SysColors {
-    let black = port("#000000");
-    SysColors {
-        window: black,
-        window_text: port("#FFFFFF"),
-        highlight: port("#1AEBFF"),
-        highlight_text: black,
-        button: black,
-        button_text: port("#FFFF00"),
-        gray_text: port("#3FF23F"),
     }
 }
 
@@ -125,26 +112,25 @@ fn a_setting_below_wcag_aa_still_keeps_legends_at_aa() {
 #[test]
 fn high_contrast_replaces_every_theme_colour() {
     let t = themes();
-    let colours = hc_colours();
     let sys = SysLook {
-        contrast: Some(colours),
+        contrast: Some(HC),
         ..teal()
     };
     let v = look_view(&t, &choice("dolch", ModeChoice::Light), &sys).expect("dolch");
     assert!(v.contrast && v.palette.skirt.is_none());
     assert_eq!(
         v.dpad.face,
-        Rgba::from(colours.button),
+        Rgba::from(HC.button),
         "Dolch's grey arrows become the button colour"
     );
     assert_eq!(
         v.common.snip_edge,
-        Rgba::from(colours.highlight),
+        Rgba::from(HC.highlight),
         "shared colours too"
     );
     assert_eq!(
         v.sel_ink,
-        Rgba::from(colours.highlight_text),
+        Rgba::from(HC.highlight_text),
         "text on a Highlight fill"
     );
     let plain = look_view(&t, &choice("dolch", ModeChoice::Light), &teal()).expect("dolch");
@@ -203,13 +189,12 @@ fn a_key_under_the_pointer_gets_an_outline_only_in_high_contrast() {
     )
     .expect("native");
     assert_eq!(plain.hover_line.a, 0, "the theme's tint shows hover");
-    let colours = hc_colours();
     let sys = SysLook {
-        contrast: Some(colours),
+        contrast: Some(HC),
         ..SysLook::default()
     };
     let hc = look_view(&t, &choice("native", ModeChoice::Light), &sys).expect("native");
-    assert_eq!(hc.hover_line, Rgba::from(colours.highlight));
+    assert_eq!(hc.hover_line, Rgba::from(HC.highlight));
     assert!(t.shape.hc_outline.px > 0.0, "the outline has a width");
 }
 
@@ -219,4 +204,21 @@ fn the_look_carries_the_icons() {
     let v = look_view(&t, &choice("et66", ModeChoice::Dark), &SysLook::default()).expect("et66");
     assert_eq!(v.icons.bar.theme, "palette", "the theme button");
     assert_eq!(v.icons, &t.icons);
+}
+
+#[test]
+fn high_contrast_wins_over_the_accent() {
+    let t = themes();
+    let sys = SysLook {
+        contrast: Some(HC),
+        ..teal()
+    };
+    let native = LookChoice {
+        follow_accent: true,
+        ..choice("native", ModeChoice::Light)
+    };
+    let v = look_view(&t, &native, &sys).expect("native");
+    let hc = contrast_palette(&t.list[0].light, &HC, t.shape.line.px);
+    assert_eq!(v.palette, hc, "no accent in high contrast");
+    assert_eq!(v.palette.enter, Rgba::from(HC.highlight));
 }

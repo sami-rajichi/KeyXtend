@@ -6,27 +6,27 @@ use crate::common::Common;
 use crate::palette::{Palette, Shadow};
 use crate::rgba::Rgba;
 
-/// A 1 px inner outline in `ink`, since high contrast needs edges.
-fn outline(ink: Rgba) -> Shadow {
+/// An inner outline `px` wide in `ink`, since high contrast needs edges.
+fn outline(ink: Rgba, px: f32) -> Shadow {
     Shadow {
         inset: true,
         x: 0.0,
         y: 0.0,
         blur: 0.0,
-        spread: 1.0,
+        spread: px,
         color: ink,
     }
 }
 
-/// `base` with only system colours and one outline per key; a tint is not a system colour, so hover shows
-/// `hover_line` instead.
+/// `base` with only system colours and an edge `edge_px` wide on each key (the `[line]` hairline); a tint is not a
+/// system colour, so hover shows `hover_line` instead.
 #[must_use]
-pub fn contrast_palette(base: &Palette, s: &SysColors) -> Palette {
+pub fn contrast_palette(base: &Palette, s: &SysColors, edge_px: f32) -> Palette {
     let mut p = base.clone();
     keys(&mut p, s);
     states(&mut p, s);
     panels(&mut p, s);
-    p.key_shadow = vec![outline(s.button_text.into())];
+    p.key_shadow = vec![outline(s.button_text.into(), edge_px)];
     p.window_shadow = Vec::new();
     p.skirt = None;
     p
@@ -126,5 +126,7 @@ pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
     }
 }
 
+#[cfg(test)]
+pub(crate) mod sample;
 #[cfg(test)]
 mod tests;

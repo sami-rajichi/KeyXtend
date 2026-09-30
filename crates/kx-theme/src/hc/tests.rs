@@ -1,20 +1,8 @@
-//! High-contrast tests over a sample set of system colours.
+//! High-contrast tests over the sample set of system colours.
 
+use super::sample::HC;
 use super::*;
 use crate::Themes;
-
-/// A sample high-contrast set, as `[r, g, b, a]`.
-fn sys() -> SysColors {
-    SysColors {
-        window: [0x00, 0x00, 0x00, 0xFF],
-        window_text: [0xFF, 0xFF, 0xFF, 0xFF],
-        highlight: [0x1A, 0xEB, 0xFF, 0xFF],
-        highlight_text: [0x00, 0x00, 0x00, 0xFF],
-        button: [0x10, 0x10, 0x10, 0xFF],
-        button_text: [0xFF, 0xFF, 0x00, 0xFF],
-        gray_text: [0x3F, 0xF2, 0x3F, 0xFF],
-    }
-}
 
 /// The seven system colours of `s`, in theme colours.
 fn allowed(s: &SysColors) -> [Rgba; 7] {
@@ -35,6 +23,10 @@ fn rgb(c: Rgba) -> (u8, u8, u8) {
     (c.r, c.g, c.b)
 }
 
+fn themes() -> Themes {
+    Themes::shipped().expect("tokens load")
+}
+
 #[test]
 fn a_system_colour_keeps_its_channels() {
     let c = Rgba::from([1, 2, 3, 4]);
@@ -42,29 +34,38 @@ fn a_system_colour_keeps_its_channels() {
 }
 
 #[test]
-fn high_contrast_uses_only_system_colours() {
-    let s = sys();
-    let base = &Themes::shipped().expect("tokens load").list[2].light;
-    let p = contrast_palette(base, &s);
-    let allowed = allowed(&s);
+fn high_contrast_uses_only_system_colours_in_every_theme_and_mode() {
+    let t = themes();
+    let allowed = allowed(&HC);
     let system = |c: Rgba| allowed.iter().any(|&a| rgb(a) == rgb(c));
-    assert!(p.named().iter().all(|&(_, c)| system(c)), "{p:?}");
-    assert_eq!(p.hover.a, 0, "no tints in high contrast");
-    assert!(p.skirt.is_none() && p.window_shadow.is_empty());
-    assert_eq!(
-        p.key_shadow.len(),
-        1,
-        "one outline, as high contrast needs edges"
-    );
-    assert_eq!(p.key_shadow[0].color, Rgba::from(s.button_text));
+    for base in t.list.iter().flat_map(|t| [&t.light, &t.dark]) {
+        let p = contrast_palette(base, &HC, t.shape.line.px);
+        assert!(p.named().iter().all(|&(_, c)| system(c)), "{p:?}");
+        assert_eq!(p.hover.a, 0, "no tints in high contrast");
+        assert!(p.skirt.is_none() && p.window_shadow.is_empty());
+        assert_eq!(p.key_shadow.len(), 1, "one edge per key");
+        assert_eq!(p.key_shadow[0].color, Rgba::from(HC.button_text));
+    }
+}
+
+#[test]
+fn a_key_edge_is_a_hairline_wide() {
+    let t = themes();
+    for px in [t.shape.line.px, 2.5] {
+        let p = contrast_palette(&t.list[0].light, &HC, px);
+        let edge = p.key_shadow[0];
+        assert!(
+            edge.inset && (edge.spread - px).abs() < f32::EPSILON,
+            "{px}"
+        );
+    }
 }
 
 #[test]
 fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
-    let s = sys();
-    let base = Themes::shipped().expect("tokens load").common;
-    let c = contrast_common(&s, &base);
-    let allowed = [s.window, s.highlight, s.button].map(Rgba::from);
+    let base = themes().common;
+    let c = contrast_common(&HC, &base);
+    let allowed = [HC.window, HC.highlight, HC.button].map(Rgba::from);
     for (n, v) in c.named() {
         assert!(allowed.iter().any(|&a| rgb(a) == rgb(v)), "{n}");
     }
@@ -77,14 +78,13 @@ fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
 
 #[test]
 fn dimmed_keys_take_gray_text_in_high_contrast() {
-    let s = sys();
-    let base = &Themes::shipped().expect("tokens load").list[0].dark;
-    let p = contrast_palette(base, &s);
-    assert_eq!(p.dim, Rgba::from(s.button));
-    assert_eq!(p.dim_ink, Rgba::from(s.gray_text), "disabled text");
+    let t = themes();
+    let p = contrast_palette(&t.list[0].dark, &HC, t.shape.line.px);
+    assert_eq!(p.dim, Rgba::from(HC.button));
+    assert_eq!(p.dim_ink, Rgba::from(HC.gray_text), "disabled text");
 }
 
 #[test]
 fn the_hover_outline_is_highlight() {
-    assert_eq!(hover_line(&sys()), Rgba::from(sys().highlight));
+    assert_eq!(hover_line(&HC), Rgba::from(HC.highlight));
 }

@@ -39,7 +39,7 @@ fn linear(c: u8) -> f32 {
 }
 
 /// Relative luminance, ignoring alpha.
-fn luminance(c: Rgba) -> f32 {
+pub(crate) fn luminance(c: Rgba) -> f32 {
     let [r, g, b] = LUMA_WEIGHTS;
     r * linear(c.r) + g * linear(c.g) + b * linear(c.b)
 }

@@ -20,10 +20,11 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - off-white legends (#E3E5E8 / #EDE8DF / #EDEAE4);
    - accents a little desaturated (Material dark-theme guidance; GitHub Dark dimmed).
 2. **Contrast:**
-   - legends ≥ 4.5:1 against their key colour (target 7:1); secondary legends ≥ 3:1;
+   - legends ≥ 4.5:1 against their key colour, secondary legends too (target 7:1);
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
    - the theme tests compute these; never change an owner-approved colour without asking;
-   - the owner kept 11 mock-up pairs below 4.5:1 at the look check (2026-09-28); `OWNER_KEPT` in `crates/kx-theme/src/theme/tests.rs` lists them, and any other pair fails.
+   - there are no exceptions: every legend pair reaches 4.5:1, and the owner's nudges to reach it (2026-09-30) are marked in `themes.toml`;
+   - where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 3. **Colour means function** (ET66 rule): modifiers, Enter, danger keys (Esc/Backspace) and "on/locked" states each have a distinct token, in every theme.
 4. **Fonts:**
    - Native: the system UI font plus Noto Sans Arabic;

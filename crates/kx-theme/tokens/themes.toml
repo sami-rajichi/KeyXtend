@@ -1,6 +1,8 @@
 # The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217); CSS rgba() is #RRGGBBAA.
 # The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml, timings in
 # motion.toml, icons in icons.toml. Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
+# Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference; every legend reaches
+# WCAG AA, and colours marked "owner 2026-09-30" were nudged just enough to reach it.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
@@ -170,7 +172,7 @@ danger = "#CDBBA7"
 danger_ink = "#1D1B18"
 legend = "#1D1B18"
 legend_mod = "#1D1B18"
-legend_2 = "#6B655C"
+legend_2 = "#69635B"  # owner 2026-09-30: nudged to AA (was #6B655C)
 legend_act = "#1D1B18"
 on = "#FFFFFF"
 on_ink = "#7A5E00"
@@ -282,17 +284,17 @@ plate = "#B9BBBE"
 key = "#E6E7E8"
 key_mod = "#5F6161"
 key_act = "#5F6161"
-enter = "#00A4A9"
-enter_ink = "#F7F2EA"
+enter = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
+enter_ink = "#FFFFFF"  # owner 2026-09-30: nudged to AA (was #F7F2EA)
 danger = "#B83262"
 danger_ink = "#F7F2EA"
 legend = "#393B3B"
 legend_mod = "#F7F2EA"
-legend_2 = "#6B6D6F"
+legend_2 = "#4A4B4D"  # owner 2026-09-30: nudged to AA (was #6B6D6F)
 legend_act = "#F7F2EA"
-on = "#00A4A9"
+on = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
 on_ink = "#FFFFFF"
-lock = "#00A4A9"
+lock = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
 lock_ink = "#FFFFFF"
 rec = "#B83262"
 rec_ink = "#FFFFFF"
@@ -320,9 +322,9 @@ window_shadow = [
 [theme.light.skirt]
 key = "#C5C7CA"
 key_mod = "#4A4C4C"
-enter = "#00878B"
+enter = "#006D70"  # owner 2026-09-30: darkened with its top (was #00878B)
 danger = "#952749"
-on = "#00878B"
+on = "#006D70"  # owner 2026-09-30: darkened with its top (was #00878B)
 rec = "#952749"
 
 [theme.dark]
@@ -330,24 +332,24 @@ plate = "#2A2C2E"
 key = "#4A4D4F"
 key_mod = "#35383B"
 key_act = "#35383B"
-enter = "#1A9EA3"
-enter_ink = "#F4F1EA"
+enter = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
+enter_ink = "#FFFFFF"  # owner 2026-09-30: nudged to AA (was #F4F1EA)
 danger = "#A9405F"
 danger_ink = "#F4F1EA"
 legend = "#EDEAE4"
 legend_mod = "#EDEAE4"
-legend_2 = "#B0B3B6"
+legend_2 = "#BABDBF"  # owner 2026-09-30: nudged to AA (was #B0B3B6)
 legend_act = "#EDEAE4"
-on = "#1A9EA3"
+on = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
 on_ink = "#FFFFFF"
-lock = "#1A9EA3"
+lock = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
 lock_ink = "#FFFFFF"
 rec = "#A9405F"
 rec_ink = "#FFFFFF"
 led_off = "#00000000"
 led_on = "#8FF0F2"
 ring = "#3CC0C4"
-badge_bg = "#1A9EA3"
+badge_bg = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
 badge_ink = "#FFFFFF"
 pop_bg = "#34373A"
 pop_ink = "#EDEAE4"
@@ -368,7 +370,7 @@ window_shadow = [
 [theme.dark.skirt]
 key = "#3A3C3E"
 key_mod = "#2B2D30"
-enter = "#13797D"
+enter = "#106568"  # owner 2026-09-30: darkened with its top (was #13797D)
 danger = "#86314B"
-on = "#13797D"
+on = "#106568"  # owner 2026-09-30: darkened with its top (was #13797D)
 rec = "#86314B"
