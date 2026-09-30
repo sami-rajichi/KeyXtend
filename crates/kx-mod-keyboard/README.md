@@ -16,7 +16,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 ## The board
 
-`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles), the side block and the D-pad. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. Key names, labels and icons are not in the board; translations (Task 15) and `kx-theme` (Task 14) give them by key id.
+`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. Key names, labels and icons are not in the board; translations (Task 15) and `kx-theme` (Task 14) give them by key id.
 
 | Role | A click |
 |---|---|

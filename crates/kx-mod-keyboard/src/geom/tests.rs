@@ -35,7 +35,7 @@ fn the_mock_up_board_is_about_671_by_196_at_size_1() {
     assert!(close(b.plate.w, 670.78), "{}", b.plate.w);
     assert!(close(b.plate.h, 196.0), "{}", b.plate.h);
     let count = |kind| b.keys.iter().filter(|k| k.kind == kind).count();
-    assert_eq!((count(KeyKind::Char), count(KeyKind::Act)), (47, 9));
+    assert_eq!((count(KeyKind::Char), count(KeyKind::Act)), (48, 9));
     let mut ids: Vec<&str> = b.keys.iter().map(|k| k.id.as_str()).collect();
     ids.sort_unstable();
     ids.dedup();

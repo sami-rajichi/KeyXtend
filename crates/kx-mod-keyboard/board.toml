@@ -22,6 +22,7 @@ dpad = { cell = [1, 2, 2, 4], units = 2.44, later = true }
 # Main rows, top to bottom: named keys with their width in units, kind (colours), scan code (0xE0xx is extended) and role,
 # and runs of one-unit character keys by scan code. A role says what a click does: "send" its scan code, "caps",
 # { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" }, "lang", or "later" (dimmed, coming in a later version).
+# Row 4 is ISO: a short left Shift and the key 0x56 (FR < >, AR |) before Z, as on real French keyboards.
 rows = [
     [
         { id = "esc", w = 1.0, kind = "danger", sc = 0x01, role = "send" },
@@ -39,8 +40,8 @@ rows = [
         { id = "enter", w = 3.25, kind = "enter", sc = 0x1C, role = "send" },
     ],
     [
-        { id = "shift", w = 2.25, kind = "mod", sc = 0x2A, role = { latch = "shift" } },
-        { chars = [0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] },
+        { id = "shift", w = 1.25, kind = "mod", sc = 0x2A, role = { latch = "shift" } },
+        { chars = [0x56, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] },
         { id = "rshift", w = 1.75, kind = "mod", sc = 0x36, role = { latch = "shift" } },
         { id = "up", w = 1.0, kind = "mod", sc = 0xE048, role = "send" },
         { id = "menu", w = 1.0, kind = "mod", sc = 0xE05D, role = "send" },

@@ -30,14 +30,14 @@ fn one_char(code: u16) -> RowItem {
 }
 
 #[test]
-fn the_shipped_board_has_47_character_keys_and_9_side_keys() {
+fn the_shipped_board_has_48_character_keys_and_9_side_keys() {
     let s = spec();
     let runs = s.rows.iter().flatten().map(|i| match i {
         RowItem::Chars(c) => c.chars.len(),
         RowItem::Key(_) => 0,
     });
     let chars: usize = runs.sum();
-    assert_eq!((chars, s.side.len(), s.rows.len()), (47, 9, 5));
+    assert_eq!((chars, s.side.len(), s.rows.len()), (48, 9, 5));
     assert_eq!(s.check(), Ok(()));
 }
 
@@ -52,7 +52,7 @@ fn char_scans_list_the_character_keys_in_row_order() {
         })
         .collect();
     assert_eq!(s.char_scans(), want);
-    assert_eq!(want.len(), 47);
+    assert_eq!(want.len(), 48);
 }
 
 #[test]
