@@ -41,10 +41,8 @@ pub struct LookConfig {
     pub mode: ModeChoice,
     /// Contrast a legend keeps when its key takes the accent colour.
     pub min_contrast: f32,
-    /// Native's frosted plate.
+    /// Native's frosted plate; the share of the plate kept over it is kx-theme's `[backdrop] plate`.
     pub backdrop: Backdrop,
-    /// Share of the plate colour kept over a backdrop, 0 to 1.
-    pub plate_alpha: f32,
     /// Turns every animation off except the hold ring.
     pub reduced_motion: bool,
     /// Themes whose Enter, on and lock colours follow the Windows accent.
@@ -65,12 +63,8 @@ impl LookConfig {
         }
     }
 
-    /// Refuses a plate share outside 0 to 1, a contrast outside `MIN_CONTRAST` (NaN fails both) and a zero tooltip delay.
+    /// Refuses a contrast outside `MIN_CONTRAST` (NaN fails it) and a zero tooltip delay.
     pub fn check(&self) -> Result<(), String> {
-        let share = |v: f32| (0.0..=1.0).contains(&v);
-        if !share(self.plate_alpha) {
-            return Err("look: plate_alpha must be 0 to 1".into());
-        }
         if !MIN_CONTRAST.contains(&self.min_contrast) {
             let (lo, hi) = (MIN_CONTRAST.start(), MIN_CONTRAST.end());
             return Err(format!("look: min_contrast is a ratio from {lo} to {hi}"));
@@ -116,10 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn shares_outside_zero_to_one_are_refused() {
-        let mut c = cfg();
-        c.plate_alpha = 1.5;
-        assert!(c.check().is_err());
+    fn a_contrast_below_wcag_aa_or_nan_is_refused() {
         let mut c = cfg();
         c.min_contrast = 3.0;
         assert!(c.check().is_err(), "contrast starts at WCAG AA");

@@ -60,6 +60,27 @@ fn text_on_the_plate_has_its_own_token_and_reaches_wcag_aa() {
 }
 
 #[test]
+fn chip_words_and_icons_reach_wcag_aa_on_the_chip() {
+    for t in load().list {
+        for mode in Mode::ALL {
+            let p = t.palette(mode);
+            let on_chip: Vec<_> = p
+                .legend_pairs()
+                .into_iter()
+                .filter(|(n, ..)| n.ends_with(" on chip"))
+                .collect();
+            let names: Vec<&str> = on_chip.iter().map(|(n, ..)| *n).collect();
+            assert_eq!(names, ["legend on chip", "legend_2_plate on chip"]);
+            let chip = p.chip_bg.over(p.plate, p.chip_bg.share());
+            for (pair, ink, bg) in on_chip {
+                assert_eq!(bg, chip, "{pair}: the chip lies over the plate");
+                assert!(contrast(ink, bg) >= WCAG_AA, "{}: {pair}", t.look.id);
+            }
+        }
+    }
+}
+
+#[test]
 fn a_legend_too_close_to_its_key_is_named() {
     let mut all = load().list;
     all[0].light.legend = all[0].light.key;

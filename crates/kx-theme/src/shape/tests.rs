@@ -154,6 +154,7 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     );
     assert_eq!(s.dim.share, 0.4, ".btn[disabled]");
     assert_eq!(s.hc_outline.px, 2.0, ".scroll-target outline");
+    assert_eq!(s.backdrop.plate, 0.88, "the P1 test build's plate_alpha");
 }
 
 #[test]
@@ -173,6 +174,7 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ("icon_share = 0.8", "icon_share = -0.1", "menu.icon_share"),
         ("dot_off = 0.3", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
+        ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
     ] {
         let e = parse(&text().replacen(from, to, 1)).expect_err(to);
         assert!(e.contains(says), "{to}: {e}");

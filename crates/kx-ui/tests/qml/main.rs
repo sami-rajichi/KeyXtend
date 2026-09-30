@@ -1,12 +1,14 @@
-//! The QML module loads: the root file finds `KeyXtend.Ui`, and its `Ui` object starts over the hub and follows the
-//! system look. Qt wants its app object on the main thread, so this binary runs without the test harness.
+//! The QML module loads: the root file finds `KeyXtend.Ui`, its `Ui` object starts over the hub and follows the
+//! system look, and every icon the tokens name and every bundled font loads from the compiled-in resources. Qt wants
+//! its app object on the main thread, so this binary runs without the test harness.
 
 use cxx::UniquePtr;
-use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
+use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform::ui::SysLook;
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeWindowGuard};
-use kx_ui::{Hub, MAIN_QML, UiPorts};
+use kx_theme::Themes;
+use kx_ui::{ASSETS, Hub, MAIN_QML, UiPorts};
 use std::process::ExitCode;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -40,8 +42,13 @@ fn dark(hub: &Hub) -> bool {
     look.is_some_and(|v| v["dark"] == true)
 }
 
-/// Loads the root file into an engine the caller keeps; `None` when Qt could not make it.
-fn load() -> Option<UniquePtr<QQmlApplicationEngine>> {
+/// Where the asset check says it is loaded from; it imports only Qt's own modules.
+const CHECK_URL: &str = "qrc:/kx-ui-tests/assets.qml";
+
+/// Loads QML into an engine the caller keeps, with `load`; `None` when Qt could not make its object.
+fn load(
+    load: impl FnOnce(std::pin::Pin<&mut QQmlApplicationEngine>),
+) -> Option<UniquePtr<QQmlApplicationEngine>> {
     let mut engine = QQmlApplicationEngine::new();
     let failed = Arc::new(AtomicBool::new(false));
     let seen = Arc::clone(&failed);
@@ -49,8 +56,35 @@ fn load() -> Option<UniquePtr<QQmlApplicationEngine>> {
     e.as_mut()
         .on_object_creation_failed(move |_, _| seen.store(true, Ordering::SeqCst))
         .release();
-    e.load(&QUrl::from(MAIN_QML));
+    load(e);
     (!failed.load(Ordering::SeqCst)).then_some(engine)
+}
+
+/// QML that loads every icon the tokens name and every font `Ui.assets()` lists, warns about each one that fails,
+/// and exits with their count once the event loop runs.
+fn asset_check() -> Option<String> {
+    let themes = Themes::shipped().ok()?;
+    let names = serde_json::to_string(&themes.icons.names()).ok()?;
+    Some(format!(
+        r#"import QtQuick
+QtObject {{
+    id: check
+    readonly property var assets: {ASSETS}
+    readonly property var names: {names}
+    function loads(type, url) {{
+        const o = Qt.createQmlObject("import QtQuick; " + type + " {{}}", check);
+        o.source = url;
+        return o.status === (type === "Image" ? Image.Ready : FontLoader.Ready);
+    }}
+    Component.onCompleted: {{
+        const icons = names.map(n => assets.icons + "/" + n + "." + assets.ext);
+        const bad = icons.filter(u => !loads("Image", u)).concat(assets.fonts.filter(u => !loads("FontLoader", u)));
+        bad.forEach(u => console.warn("did not load: " + u));
+        Qt.callLater(() => Qt.exit(assets.fonts.length > 0 ? bad.length : 1));
+    }}
+}}
+"#
+    ))
 }
 
 fn main() -> ExitCode {
@@ -62,8 +96,8 @@ fn main() -> ExitCode {
         eprintln!("a hub was installed already");
         return ExitCode::FAILURE;
     }
-    let _app = QGuiApplication::new();
-    let Some(_engine) = load() else {
+    let mut app = QGuiApplication::new();
+    let Some(_engine) = load(|e| e.load(&QUrl::from(MAIN_QML))) else {
         eprintln!("{MAIN_QML} did not load");
         return ExitCode::FAILURE;
     };
@@ -75,5 +109,18 @@ fn main() -> ExitCode {
         eprintln!("the Ui object did not start following the system look");
         return ExitCode::FAILURE;
     }
-    ExitCode::SUCCESS
+    let Some(check) = asset_check() else {
+        eprintln!("the asset check could not be written");
+        return ExitCode::FAILURE;
+    };
+    let data = QByteArray::from(check.as_str());
+    let Some(_check) = load(|e| e.load_data(&data, &QUrl::from(CHECK_URL))) else {
+        eprintln!("the asset check did not load");
+        return ExitCode::FAILURE;
+    };
+    if app.as_mut().map(|a| a.exec()) == Some(0) {
+        return ExitCode::SUCCESS;
+    }
+    eprintln!("icons or fonts did not load from the resources, or no font is bundled");
+    ExitCode::FAILURE
 }

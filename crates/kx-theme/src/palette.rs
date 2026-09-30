@@ -207,7 +207,8 @@ impl Palette {
     /// Each text colour with the background it sits on, named for reports; dimmed keys are left out, as WCAG sets no
     /// minimum for inactive parts (success criterion 1.4.3).
     #[must_use]
-    pub fn legend_pairs(&self) -> [(&'static str, Rgba, Rgba); 13] {
+    pub fn legend_pairs(&self) -> [(&'static str, Rgba, Rgba); 15] {
+        let chip = self.chip_bg.over(self.plate, self.chip_bg.share());
         [
             ("legend on key", self.legend, self.key),
             ("legend_2 on key", self.legend_2, self.key),
@@ -222,6 +223,8 @@ impl Palette {
             ("pop_ink on pop_bg", self.pop_ink, self.pop_bg),
             ("pop_muted on pop_bg", self.pop_muted, self.pop_bg),
             ("badge_ink on badge_bg", self.badge_ink, self.badge_bg),
+            ("legend on chip", self.legend, chip),
+            ("legend_2_plate on chip", self.legend_2_plate, chip),
         ]
     }
 }

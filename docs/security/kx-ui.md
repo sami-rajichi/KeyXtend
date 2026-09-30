@@ -32,7 +32,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | System look changes and single-instance commands (adapter threads) | Queued to the Qt thread with cxx-qt's thread queue, never blocking the adapter; commands wait until the `Ui` object is ready | One wake per change | No |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** the QML files are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. The objects QML makes reach only the hub the app installed once.
+- **Spoofing:** the QML files, fonts and icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged).
 - **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key can neither split a notice nor turn it around.

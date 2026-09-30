@@ -6,6 +6,21 @@ The UI: the texts in English, French and Arabic, the `[ui]` settings, the `ui` m
 
 The `qt` feature needs Qt 6.11.2: set `QMAKE` to its `qmake.exe` and put its `bin` first in `PATH` for the command. `build.rs` lists every QML file in one table (`QML`, the root first) and every bridge in `BRIDGES`, and hands the root's resource URL to the crate as `MAIN_QML`. Without the feature (`--no-default-features`) the texts, settings, hub and module still build and test, as the Linux checks need.
 
+It also compiles in, as Qt resources, the icons the theme tokens name and every font under `assets/fonts/` (ADR-0016), found through `kx_theme::assets`; a missing icon file stops the build. `ASSETS` hands QML their URLs as JSON, and the app never reads them from disk.
+
+## QML views
+
+`qml/` holds the keyboard window and its parts, moved from the P1 test build with its look (Task 17). `main.qml` makes one `Ui` and one `Keyboard`, the keyboard window (`KbWindow`, its body `Plate`) and the minimise bubble, each over a click-through shadow window (`Glow`). The windows read `settingsJson`, `lookJson`, `boardJson` and `stateJson`, redraw from each action's `{board, state}` answer, and read everything again on `settingsChanged`.
+
+- Every window is a no-focus tool window (ADR-0013); once shown, it is cut to its plate and corner, then guarded until the guard is done.
+- Names, labels and tips are translation keys, looked up in the UI language; the Arabic UI mirrors the top bar, never the keys.
+- Keys that come in a later version are dimmed, never press, and tell readers and the tooltip "Coming in a later version".
+- Text uses `Label` (grayscale, no ClearType fringes), and hover uses `Hover` (the theme's tint, and a `Highlight` outline in high contrast). `Icon` tints with `MultiEffect`, public Qt Quick only.
+
+## Qt Quick tests
+
+`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. Run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`.
+
 ## The `[ui]` settings
 
 `defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range.
@@ -26,12 +41,12 @@ Every bridge call runs on the Qt GUI thread, including the guard and the window 
 
 ## QML objects
 
-- `Ui`: settings and look JSON, texts, the space bar's text, notices (take, Try again, OK), the theme button, the light or dark switch, the backdrop and Quit, with signals for each change and for the app's Show and Quit.
+- `Ui`: settings and look JSON (the settings also carry the size buttons' letters and names), texts, the space bar's text, notices (take, Try again, OK), the theme button, the light or dark switch, the backdrop, the compiled-in assets and Quit, with signals for each change and for the app's Show and Quit.
 - `Keyboard`: the board and state JSON, every click and size step, the language list, the window's place, the pointer, the bubble's spot, the window shape and the no-focus guard.
 
 ## Public API
 
-`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`), and with `qt` also `install` and `MAIN_QML`.
+`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`), and with `qt` also `install`, `MAIN_QML` and `ASSETS`.
 
 ## Security
 

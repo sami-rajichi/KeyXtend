@@ -179,7 +179,7 @@ pub trait Module: Send + 'static {
 ## Qt window rules (ADR-0013)
 
 - Pin Qt 6.11.2 and cxx-qt 0.10.0; review every upgrade.
-- QML is compiled into the binary as a resource module; it is never loaded from disk.
+- QML, fonts and icons are compiled into the binary as Qt resources; they are never loaded from disk.
 - Keyboard windows are `Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus`; click-through windows add `Qt.WindowTransparentForInput`.
 - The Windows adapter guards every window we create except Settings:
   - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`.

@@ -25,3 +25,7 @@ pub use ui_module::{ID, MANIFEST, UiModule};
 /// The resource URL of the root QML file, which the app loads.
 #[cfg(feature = "qt")]
 pub const MAIN_QML: &str = env!("KX_UI_MAIN_QML");
+
+/// The compiled-in icon folder URL and type and each font's URL, as JSON `{icons, ext, fonts}`, which QML reads.
+#[cfg(feature = "qt")]
+pub const ASSETS: &str = env!("KX_UI_ASSETS");

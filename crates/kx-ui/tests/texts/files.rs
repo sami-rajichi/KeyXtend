@@ -4,11 +4,12 @@ use crate::all;
 use fluent_bundle::FluentResource;
 use fluent_bundle::concurrent::FluentBundle;
 use kx_module_api::keys::ALL_KEYS;
+use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BAR, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, OK, RETRY, SPACE, THEME, TRAY_QUIT,
-    TRAY_SHOW,
+    BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODE, MODULE, OK, RETRY, SIZE,
+    SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW, WINDOW_BUBBLE, WINDOW_KEYBOARD,
 };
 use std::collections::BTreeSet;
 
@@ -91,6 +92,29 @@ fn every_theme_bar_button_module_and_design_has_its_name() {
     let named: Vec<String> = named
         .chain(DESIGNS.iter().map(|id| format!("{LANG_KEY}.{id}")))
         .collect();
+    for t in all() {
+        let missing: Vec<&String> = named.iter().filter(|k| !t.has(k)).collect();
+        assert!(missing.is_empty(), "{}: {missing:?}", t.lang().tag);
+    }
+}
+
+#[test]
+fn every_size_mode_window_and_dpad_part_has_its_text() {
+    let themes = Themes::shipped().expect("the tokens load");
+    let dpad = toml::Table::try_from(&themes.icons.dpad).expect("the D-pad as a table");
+    let modes = [ModeChoice::Light, ModeChoice::Dark, ModeChoice::Auto];
+    let modes = modes.map(|m| serde_json::to_value(m).expect("a mode"));
+    let named = SIZES
+        .iter()
+        .flat_map(|id| [format!("{SIZE}.{id}"), format!("{SIZE_NAME}.{id}")]);
+    let named = named.chain(dpad.keys().map(|id| format!("{DPAD}.{id}")));
+    let named = named.chain(
+        modes
+            .iter()
+            .map(|m| format!("{MODE}.{}", m.as_str().unwrap_or_default())),
+    );
+    let fixed = [WINDOW_KEYBOARD, WINDOW_BUBBLE, CATCH].map(str::to_owned);
+    let named: Vec<String> = named.chain(fixed).collect();
     for t in all() {
         let missing: Vec<&String> = named.iter().filter(|k| !t.has(k)).collect();
         assert!(missing.is_empty(), "{}: {missing:?}", t.lang().tag);

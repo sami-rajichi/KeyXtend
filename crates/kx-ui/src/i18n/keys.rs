@@ -24,3 +24,19 @@ pub const LIST_MORE: &str = "list.more";
 pub const LIST_COUNT: &str = "list.count";
 /// The space bar: `$lang`, then `$layout`.
 pub const SPACE: &str = "lang.space";
+/// The size buttons' letters, by an id in `SIZES`.
+pub const SIZE: &str = "size";
+/// The size buttons' names for tips and readers, by an id in `SIZES`.
+pub const SIZE_NAME: &str = "sizename";
+/// The size buttons' ids, in `[keyboard] presets` order.
+pub const SIZES: [&str; 3] = ["s", "m", "l"];
+/// The look's modes, by `[ui] mode` value.
+pub const MODE: &str = "mode";
+/// The D-pad's arrows and Stop, by `icons.toml` `[dpad]` id.
+pub const DPAD: &str = "dpad";
+/// The keyboard window's title.
+pub const WINDOW_KEYBOARD: &str = "window.keyboard";
+/// The minimise bubble's title.
+pub const WINDOW_BUBBLE: &str = "window.bubble";
+/// What readers call the cover that ends a move or resize.
+pub const CATCH: &str = "catch";

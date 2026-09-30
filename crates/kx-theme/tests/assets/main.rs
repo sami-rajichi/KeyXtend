@@ -10,15 +10,10 @@ mod fontname;
 use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
+use kx_theme::assets::{font_files, icon_file, is_font};
 
 /// Families Windows 11 ships, so the app does not bundle them.
 const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
-/// Font file types the app bundles.
-const FONT_EXTS: [&str; 2] = ["ttf", "otf"];
-/// Folders under `assets/` that hold icons: Lucide's, then our own drawings.
-const ICON_DIRS: [&str; 2] = ["icons/lucide", "icons"];
-/// The icon file type.
-const ICON_EXT: &str = "svg";
 /// The keyboard's board, whose key ids `icons.toml [keys]` uses.
 const BOARD: &str = "../kx-mod-keyboard/board.toml";
 
@@ -27,24 +22,25 @@ fn assets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets")
 }
 
-/// True when `p` is a font file the app bundles.
-fn is_font(p: &Path) -> bool {
-    p.extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|e| FONT_EXTS.iter().any(|x| e.eq_ignore_ascii_case(x)))
-}
-
 /// The family names inside every font file in `assets/fonts/`, one folder per family.
 fn bundled_families() -> Vec<String> {
-    let fonts = std::fs::read_dir(assets().join("fonts")).expect("assets/fonts reads");
-    let dirs = fonts
-        .flatten()
-        .filter_map(|d| std::fs::read_dir(d.path()).ok());
-    let files = dirs.flat_map(|d| d.flatten().map(|f| f.path()));
+    let files = font_files(&assets()).expect("assets/fonts reads");
     files
-        .filter(|p| is_font(p))
-        .flat_map(|p| fontname::families(&std::fs::read(&p).expect("a font reads")))
+        .iter()
+        .flat_map(|p| fontname::families(&std::fs::read(p).expect("a font reads")))
         .collect()
+}
+
+#[test]
+fn the_font_list_holds_only_font_files_from_every_family() {
+    let files = font_files(&assets()).expect("assets/fonts reads");
+    assert!(files.iter().all(|p| is_font(p)), "{files:?}");
+    let families = std::fs::read_dir(assets().join("fonts")).expect("assets/fonts reads");
+    for family in families.flatten().filter(|d| d.path().is_dir()) {
+        let found = files.iter().any(|f| f.starts_with(family.path()));
+        assert!(found, "no font file from {}", family.path().display());
+    }
+    assert!(!is_font(Path::new("OFL.txt")), "licence files stay out");
 }
 
 #[test]
@@ -72,12 +68,12 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
 fn every_icon_name_has_a_file() {
     let t = Themes::shipped().expect("tokens load");
     for name in t.icons.names() {
-        let file = |d: &str| assets().join(d).join(format!("{name}.{ICON_EXT}"));
         assert!(
-            ICON_DIRS.iter().any(|d| file(d).is_file()),
+            icon_file(&assets(), name).is_some(),
             "no icon file for {name}"
         );
     }
+    assert!(icon_file(&assets(), "no-such-icon").is_none());
 }
 
 /// Every string at an `id` key in `v`, at any depth.

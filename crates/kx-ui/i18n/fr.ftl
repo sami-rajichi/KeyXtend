@@ -81,6 +81,38 @@ bar =
     .corner = Redimensionner : cliquez, déplacez, cliquez
     .bubble = Afficher le clavier
 
+## Les tailles prédéfinies de la barre du haut, dans l’ordre de [keyboard] presets : la lettre de chaque bouton, puis son nom.
+size =
+    .s = P
+    .m = M
+    .l = G
+sizename =
+    .s = Petit
+    .m = Moyen
+    .l = Grand
+
+## Les flèches du pavé directionnel et son bouton Arrêt, par identifiant [dpad] d’icons.toml.
+dpad =
+    .up = Défiler vers le haut
+    .right = Défiler vers la droite
+    .left = Défiler vers la gauche
+    .down = Défiler vers le bas
+    .stop = Arrêter le défilement
+
+## Clair, sombre ou comme Windows, par valeur de [ui] mode.
+mode =
+    .light = Clair
+    .dark = Sombre
+    .auto = Automatique
+
+## Titres des fenêtres, que les lecteurs d’écran annoncent.
+window =
+    .keyboard = Clavier { -app }
+    .bubble = Clavier { -app } (réduit)
+
+## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
+catch = Cliquez pour terminer le déplacement ou le redimensionnement
+
 tray =
     .show = Afficher le clavier
     .quit = Quitter

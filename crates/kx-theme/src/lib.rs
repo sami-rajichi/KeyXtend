@@ -5,6 +5,7 @@
 #![warn(missing_docs)]
 
 mod accent;
+pub mod assets;
 mod common;
 pub mod contrast;
 mod extras;

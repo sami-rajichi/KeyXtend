@@ -1,18 +1,22 @@
-// The top bar: move grip, suggestion chips, light or dark, the size buttons, minimise and close (mock-up topBar plus the owner's sizes).
+// The top bar: move grip, suggestion chips, light or dark, the size buttons, minimise and close (mock-up topBar plus
+// the owner's sizes). An Arabic UI mirrors it, as Windows does.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
     id: bar
 
-    // Its box, the look, fonts and icons, the bar settings, size, the preset shown, and whether it is dark.
+    // Its box, the look, fonts, icons and texts, size, the preset shown, the size buttons' texts, and the mode.
     required property var box
     required property var lk
     required property var res
-    required property var cfg
     required property real s
-    required property var preset
+    required property int preset
+    required property var sizes
+    required property bool rtl
     required property bool dark
+    // Suggestion chips, `{text, icon, ar}`; none until word suggestions come.
+    property var chips: []
 
     // One signal per button; chips and sizes carry their index.
     signal grip
@@ -29,48 +33,56 @@ Item {
     readonly property var sh: lk.shape.bar
     readonly property var p: lk.palette
     readonly property real radius: lk.look.key_radius_px * sh.radius_share
+    // The light or dark switch shows what a click gives.
+    readonly property string mode: dark ? "mode_on" : "mode"
 
     x: box.x
     y: box.y
     width: box.w
     height: box.h
+    LayoutMirroring.enabled: rtl
+    LayoutMirroring.childrenInherit: true
 
-    // One top-bar button: an icon or a short text; lit buttons use the ring colour.
+    // One top-bar button: `part` names its icon (`icons.toml [bar]`) and its name (`bar.*`); a size shows a letter.
     component Button: Item {
         id: b
-        property string icon: ""
+        property string part: ""
         property string text: ""
-        property string name: ""
+        property string name: bar.res.bar(part)
         property bool lit: false
+        readonly property bool hot: area.containsMouse
+        // Hover text sits on pop_hover, which is Highlight in high contrast, so it takes sel_ink there.
+        readonly property color ink: hot && (bar.lk.contrast || !lit) ? bar.lk.sel_ink
+            : lit ? bar.p.ring : bar.p.legend_2_plate
         signal clicked
         width: bar.sh.button_px[0] * bar.s
         height: bar.sh.button_px[1] * bar.s
         Accessible.role: Accessible.Button
         Accessible.name: b.name
         Accessible.onPressAction: b.clicked()
-        Rectangle {
-            anchors.fill: parent
+        Hover {
+            lk: bar.lk
             radius: bar.radius
-            color: area.containsMouse ? bar.p.pop_hover : "transparent"
+            visible: b.hot
+            tint: bar.p.pop_hover
         }
         Icon {
-            visible: b.icon.length > 0
+            visible: !b.text
             anchors.centerIn: parent
-            icon: b.icon
+            icon: b.text ? "" : bar.lk.icons.bar[b.part]
             base: bar.res.icons
             ext: bar.res.ext
             px: bar.sh.icon_px * bar.s
-            tint: b.lit ? bar.p.ring : area.containsMouse ? bar.p.legend : bar.p.legend_2
+            tint: b.ink
         }
-        Text {
-            visible: b.text.length > 0
+        Label {
+            visible: !!b.text
             anchors.centerIn: parent
             text: b.text
-            font.family: bar.res.fam.latin
+            font.family: bar.res.fam.ui
             font.pixelSize: bar.sh.label_px * bar.s
             font.weight: b.lit ? bar.sh.lit_weight : Font.Normal
-            color: b.lit ? bar.p.ring : area.containsMouse ? bar.p.legend : bar.p.legend_2
-            Accessible.ignored: true
+            color: b.ink
         }
         MouseArea {
             id: area
@@ -86,16 +98,15 @@ Item {
 
     Row {
         id: leftRow
+        anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         spacing: bar.sh.gap_px * bar.s
         Button {
-            icon: bar.cfg.grip.icon
-            name: bar.cfg.grip.name
+            part: "grip"
             onClicked: bar.grip()
         }
     }
 
-    // Sample chips that type their text.
     Row {
         anchors.left: leftRow.right
         anchors.right: rightRow.left
@@ -104,7 +115,7 @@ Item {
         clip: true
         spacing: bar.lk.shape.chip.gap_px * bar.s
         Repeater {
-            model: bar.cfg.chips
+            model: bar.chips
             delegate: Chip {
                 required property var modelData
                 required property int index
@@ -124,39 +135,34 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: bar.sh.gap_px * bar.s
         Button {
-            icon: bar.dark ? bar.cfg.theme.icon_on : bar.cfg.theme.icon
-            name: bar.cfg.theme.name
+            part: bar.mode
             onClicked: bar.flip()
         }
         Button {
-            icon: bar.cfg.smaller.icon
-            name: bar.cfg.smaller.name
+            part: "smaller"
             onClicked: bar.smaller()
         }
         Repeater {
-            model: bar.cfg.sizes
+            model: bar.sizes
             delegate: Button {
-                required property string modelData
+                required property var modelData
                 required property int index
-                text: modelData
-                name: bar.cfg.size_names[index]
+                text: modelData.label
+                name: modelData.name
                 lit: bar.preset === index
                 onClicked: bar.pickSize(index)
             }
         }
         Button {
-            icon: bar.cfg.bigger.icon
-            name: bar.cfg.bigger.name
+            part: "bigger"
             onClicked: bar.bigger()
         }
         Button {
-            icon: bar.cfg.minimise.icon
-            name: bar.cfg.minimise.name
+            part: "minimise"
             onClicked: bar.minimise()
         }
         Button {
-            icon: bar.cfg.close.icon
-            name: bar.cfg.close.name
+            part: "close"
             onClicked: bar.close()
         }
     }

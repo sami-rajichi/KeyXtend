@@ -3,6 +3,7 @@
 use crate::{KEYBOARD, Rig, failed};
 use kx_module_api::{Bus, Notice, keys};
 use kx_test_support::host::FakeCore;
+use kx_ui::i18n::keys::{SIZE, SIZE_NAME, SIZES};
 use kx_ui::{Request, UiSettings, Wake};
 use std::sync::Arc;
 
@@ -67,6 +68,23 @@ fn the_texts_follow_the_language_setting_else_windows() {
     fr.language = "fr".into();
     rig.hub.attach(fr, face, host.handle());
     assert_eq!(rig.hub.i18n().lang().tag, "fr", "a set language wins");
+}
+
+#[test]
+fn qml_reads_the_size_buttons_in_the_ui_language() {
+    let rig = Rig::new();
+    rig.look.set_language("ar");
+    let mut host = kx_test_support::host::FakeHost::new(&kx_ui::MANIFEST);
+    rig.attach(Arc::new(crate::FakeFace::default()), &mut host);
+    let v: serde_json::Value = serde_json::from_str(&rig.hub.settings_json()).unwrap();
+    let ar = rig.hub.i18n();
+    let sizes = v["sizes"].as_array().expect("a list of sizes");
+    assert_eq!(sizes.len(), SIZES.len());
+    for (s, id) in sizes.iter().zip(SIZES) {
+        assert_eq!(s["label"].as_str(), Some(ar.name_of(SIZE, id).as_str()));
+        assert_eq!(s["name"].as_str(), Some(ar.name_of(SIZE_NAME, id).as_str()));
+        assert_ne!(s["label"].as_str(), Some(id), "{id} has an Arabic letter");
+    }
 }
 
 #[test]

@@ -2,6 +2,8 @@
 // A header with a close button, a paged list and a text field; its shadow is a click-through window just below it.
 pragma ComponentBehavior: Bound
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 import KeyXtend.Spike
 
 Item {

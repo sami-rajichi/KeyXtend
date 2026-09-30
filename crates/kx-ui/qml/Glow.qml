@@ -5,7 +5,7 @@ import QtQuick
 Window {
     id: glow
 
-    // The look, the shadowed box in screen Qt units, and its corner radius.
+    // The look (null until one reads), the shadowed box in screen Qt units, and its corner radius.
     required property var lk
     required property rect box
     required property real radius
@@ -13,7 +13,7 @@ Window {
     // An item whose fade, rise and scale the shadow copies, so they pop in together; null keeps it still.
     property Item follow: null
 
-    readonly property real m: lk.margin
+    readonly property real m: lk ? lk.margin : 0
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     color: "transparent"
@@ -31,7 +31,7 @@ Window {
         width: glow.box.width
         height: glow.box.height
         Repeater {
-            model: glow.lk.palette.window_shadow.filter(l => !l.inset)
+            model: glow.lk ? glow.lk.palette.window_shadow.filter(l => !l.inset) : []
             delegate: Shade {
                 required property var modelData
                 anchors.fill: parent

@@ -5,7 +5,7 @@ import QtQuick
 Item {
     id: t
 
-    // The key's box and look, its changing state, the look, the language key, fonts and icons, size and legend colour.
+    // The key's cell and kind, its changing state, the look, the language key, fonts, icons and texts, size and legend colour.
     required property var kv
     required property var ks
     required property var lk
@@ -13,6 +13,9 @@ Item {
     required property var res
     required property real s
     required property color ink
+    // A named key's icon file, else its translated label.
+    required property string icon
+    required property string label
 
     readonly property var look: lk.look
     readonly property var lg: lk.shape.legend
@@ -44,12 +47,10 @@ Item {
         }
     }
 
-    // A single-line text in a theme font.
-    component Line: Text {
+    // A single-line text in the theme's Latin or Arabic font.
+    component Line: Label {
         property bool ar: false
         font.family: ar ? t.res.fam.arabic : t.res.fam.latin
-        textFormat: Text.PlainText
-        Accessible.ignored: true
     }
 
     ParallelAnimation {
@@ -117,7 +118,7 @@ Item {
             font.weight: t.look.legend_weight
             color: t.ink
         }
-        // The space bar: the language alone until kx-ui joins it with the layout (P3 Task 16).
+        // The space bar: the language and the layout, joined with bidi marks so Arabic and Latin parts keep their order.
         Line {
             visible: t.isSpace
             anchors.fill: parent
@@ -127,7 +128,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
             ar: t.lang.cur.rtl
-            text: t.lang.space[0] || ""
+            text: t.res.space(t.lang.space)
             font.pixelSize: t.spacePx
             color: t.ink2
         }
@@ -140,18 +141,18 @@ Item {
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
         Icon {
-            visible: !!t.kv.icon
+            visible: !!t.icon
             anchors.verticalCenter: parent.verticalCenter
-            icon: t.kv.icon || ""
+            icon: t.icon
             base: t.res.icons
             ext: t.res.ext
             px: t.lg.icon_px[t.kv.side ? 1 : 0] * t.s
             tint: t.ink
         }
         Line {
-            visible: !!t.kv.label
+            visible: !!t.label
             anchors.verticalCenter: parent.verticalCenter
-            text: t.kv.label || ""
+            text: t.label
             font.pixelSize: t.look.mod_legend_px * t.s
             color: t.ink
         }

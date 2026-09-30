@@ -69,6 +69,10 @@ pub mod qobject {
         #[qinvokable]
         fn backdrop(&self, title: &QString) -> bool;
 
+        /// The compiled-in icon folder and type and the font files, as JSON `{icons, ext, fonts}`.
+        #[qinvokable]
+        fn assets(&self) -> QString;
+
         /// Asks the app to quit, which stops the modules and then sends `quit_asked`; false when asked already or gone.
         #[qinvokable]
         fn quit(&self) -> bool;
@@ -203,5 +207,10 @@ impl qobject::Ui {
 
     fn quit(&self) -> bool {
         self.with(false, Hub::quit)
+    }
+
+    #[allow(clippy::unused_self, reason = "cxx-qt invokables take the object")]
+    fn assets(&self) -> QString {
+        qs(crate::ASSETS)
     }
 }

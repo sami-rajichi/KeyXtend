@@ -1,5 +1,7 @@
 // An icon button on a panel: plain (mock-up .ib, the close button) or framed (mock-up .pg, the page buttons).
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Rectangle {
     id: btn

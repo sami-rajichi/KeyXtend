@@ -81,6 +81,38 @@ bar =
     .corner = Resize: click, move, click
     .bubble = Show the keyboard
 
+## The size presets in the top bar, in [keyboard] presets order: the letter each button shows, then its name.
+size =
+    .s = S
+    .m = M
+    .l = L
+sizename =
+    .s = Small
+    .m = Medium
+    .l = Large
+
+## The D-pad's arrows and its Stop button, by icons.toml [dpad] id.
+dpad =
+    .up = Scroll up
+    .right = Scroll right
+    .left = Scroll left
+    .down = Scroll down
+    .stop = Stop scrolling
+
+## Light, dark or following Windows, by [ui] mode value.
+mode =
+    .light = Light
+    .dark = Dark
+    .auto = Auto
+
+## Window titles, which screen readers announce.
+window =
+    .keyboard = { -app } keyboard
+    .bubble = { -app } keyboard (minimised)
+
+## What screen readers name the cover that ends a move or resize.
+catch = Click to finish moving or resizing
+
 tray =
     .show = Show keyboard
     .quit = Quit

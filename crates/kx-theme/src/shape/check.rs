@@ -78,6 +78,7 @@ impl Shape {
             ("dim.share", self.dim.share),
             ("notice.radius_share", self.notice.radius_share),
             ("menu.icon_share", self.menu.icon_share),
+            ("backdrop.plate", self.backdrop.plate),
         ];
         match outside_unit(&shares) {
             Some((n, v)) => Err(format!("shape: {n} {v} is not 0 to 1")),

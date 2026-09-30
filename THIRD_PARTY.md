@@ -44,7 +44,7 @@ The versions are filled in when each component is added. Planned items stay here
 - `Qt6Network.dll` ships because Qt Qml links it. No network or TLS plugin ships.
 - Qt's build tools (moc, rcc, qsb) are GPL-3.0-only with the Qt GPL exception and run at build time only. Qt Shader Tools bundles glslang and SPIRV-Cross (BSD-3-Clause, Apache-2.0, MIT and others); none of the shipped DLLs load it, so it does not ship.
 - Fluent's full tree is 20 crates; the other seven are proc-macro helpers (displaydoc, syn, quote, proc-macro2, unicode-ident) and thiserror with its macro crate, all MIT OR Apache-2.0 (unicode-ident adds Unicode-3.0). The Fluent tree and the cxx-qt tree (63 crates, with the build tools) passed `cargo deny check licenses` against `deny.toml` on 2026-09-29.
-- Fonts and icons are in the repo under `assets/`, each set with its licence file (ADR-0016). They will be compiled into the app (from P3 Task 16).
+- Fonts and icons are in the repo under `assets/`, each set with its licence file (ADR-0016). kx-ui's build compiles them into the app as Qt resources: every font, and the icons the theme tokens name.
 
 ## Test tools (never shipped)
 

@@ -1,6 +1,6 @@
 # Assets
 
-Fonts and icons that ship in the app. Every set keeps its licence file beside it. All of these files will be compiled into the app as Qt resources (from P3 Task 16, ADR-0016), so a fresh clone builds without any download.
+Fonts and icons that ship in the app. Every set keeps its licence file beside it. kx-ui's build compiles them into the app as Qt resources (ADR-0016): every font here, and the icons the theme tokens (`icons.toml`) name. A fresh clone builds without any download, and the app never reads this folder.
 
 ## Fonts
 

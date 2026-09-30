@@ -98,6 +98,11 @@ share = 0.4
 # colour (mock-up .scroll-target outline, line 83); not scaled.
 px = 2.0
 
+[backdrop]
+# Over a system backdrop ([ui] backdrop, Mica or Acrylic) the plate keeps this share of its colour, so the material shows
+# through (the P1 test build's plate_alpha).
+plate = 0.88
+
 [pill]
 # The Copy pill (mock-up .selpill): padding, button side padding, text size and weight, icon size and icon-to-text gap;
 # its height is tools.pill_px.

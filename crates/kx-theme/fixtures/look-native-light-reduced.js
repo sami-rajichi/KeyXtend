@@ -362,6 +362,9 @@ var lk = {
     "hc_outline": {
       "px": 2.0
     },
+    "backdrop": {
+      "plate": 0.88
+    },
     "notice": {
       "pad_px": [
         7.0,

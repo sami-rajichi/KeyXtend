@@ -1,6 +1,8 @@
 // The snip overlay (mock-up .snip-*): the frozen screen, dimmed outside the region; click a corner, move, click the other corner.
 pragma ComponentBehavior: Bound
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Window {
     id: over

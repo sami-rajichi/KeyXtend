@@ -9,6 +9,7 @@ mod notices;
 pub use face::{Redraw, Resize};
 pub use notices::Shown;
 
+use crate::i18n::keys::{SIZE, SIZE_NAME, SIZES};
 use crate::settings::UiSettings;
 use crate::{I18n, pick};
 use kx_module_api::ports::KeyboardFace;
@@ -73,7 +74,7 @@ pub enum HubError {
     Theme(#[from] ThemeError),
 }
 
-/// The timings, paging and direction QML reads, as JSON.
+/// The timings, paging, direction and size buttons QML reads, as JSON.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct QmlSettings {
@@ -83,6 +84,14 @@ struct QmlSettings {
     page_rows: usize,
     lang: &'static str,
     rtl: bool,
+    sizes: Vec<SizeText>,
+}
+
+/// A size button's letter and its name, in the UI language.
+#[derive(Serialize)]
+struct SizeText {
+    label: String,
+    name: String,
 }
 
 /// What changes while the app runs.
@@ -178,18 +187,23 @@ impl Hub {
         Arc::clone(&self.lock().i18n)
     }
 
-    /// The timings, paging and text direction QML reads, as JSON.
+    /// The timings, paging, text direction and size buttons QML reads, as JSON.
     #[must_use]
     pub fn settings_json(&self) -> String {
         let live = self.lock();
-        let (s, lang) = (&live.settings, live.i18n.lang());
+        let (s, t) = (&live.settings, &live.i18n);
+        let size = |id: &str| SizeText {
+            label: t.name_of(SIZE, id),
+            name: t.name_of(SIZE_NAME, id),
+        };
         json(&QmlSettings {
             tip_ms: s.tip_ms,
             poll_ms: s.poll_ms,
             guard_delay_ms: s.guard_delay_ms,
             page_rows: s.page_rows,
-            lang: lang.tag,
-            rtl: lang.rtl,
+            lang: t.lang().tag,
+            rtl: t.lang().rtl,
+            sizes: SIZES.into_iter().map(size).collect(),
         })
     }
 

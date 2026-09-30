@@ -222,6 +222,8 @@ pub struct Shape {
     pub dim: DimShape,
     /// The hover outline in high contrast.
     pub hc_outline: OutlineShape,
+    /// The plate over a system backdrop.
+    pub backdrop: BackdropShape,
     /// The notice banner.
     pub notice: NoticeShape,
     /// The tray menu.
@@ -252,6 +254,14 @@ pub struct DimShape {
 pub struct OutlineShape {
     /// Width, not scaled with the keyboard.
     pub px: f32,
+}
+
+/// The plate over a system backdrop (`[ui] backdrop`), so the material shows through.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BackdropShape {
+    /// The share of its colour the plate keeps.
+    pub plate: f32,
 }
 
 /// The checked sizes in `text`.

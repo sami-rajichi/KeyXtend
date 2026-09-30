@@ -64,6 +64,12 @@ impl Rgba {
         }
     }
 
+    /// Its opacity, from 0 (clear) to 1 (opaque).
+    #[must_use]
+    pub fn share(self) -> f32 {
+        f32::from(self.a) / f32::from(u8::MAX)
+    }
+
     /// Reads `#RRGGBB` (opaque) or `#RRGGBBAA`.
     ///
     /// # Errors
@@ -148,5 +154,12 @@ mod tests {
         );
         assert_eq!(white.over(black, 1.0), white);
         assert_eq!(white.over(black, 0.0), black);
+    }
+
+    #[test]
+    fn a_colours_share_is_its_opacity() {
+        assert!(Rgba::WHITE.share() > 0.999 && Rgba::CLEAR.share() < 0.001);
+        let half = Rgba::parse("#00000080").expect("half");
+        assert!((half.share() - 0.502).abs() < 0.001);
     }
 }

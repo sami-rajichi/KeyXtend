@@ -1,4 +1,5 @@
-//! The shipped English, French and Arabic files: the same keys, every text the UI names, plurals and punctuation.
+//! The shipped English, French and Arabic files: the same keys, every text the UI names, plurals and punctuation, and the
+//! QML test fixtures made from them.
 
 #![allow(
     clippy::expect_used,
@@ -8,6 +9,7 @@
 mod compose;
 mod files;
 mod plural;
+mod qml;
 mod words;
 
 use kx_ui::{I18n, LANGS};

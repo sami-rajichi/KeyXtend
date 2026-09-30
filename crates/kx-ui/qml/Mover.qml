@@ -3,7 +3,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQml.Models
-import KeyXtend.Spike
 
 Item {
     id: mv
@@ -11,10 +10,11 @@ Item {
     // Nothing, following the pointer to move, or following it to resize.
     enum Mode { Idle, Moving, Resizing }
 
-    // The window's place and the board that sizes it; Qt units for a physical point; what screen readers call a catcher.
+    // The window's place, the keyboard bridge, Qt units for a physical point, the poll time, and what readers call a catcher.
     required property point at
-    required property var board
+    required property var keyboard
     required property var logical
+    required property int pollMs
     required property string name
 
     // What runs now.
@@ -26,13 +26,15 @@ Item {
 
     // The window's new place while moving, in Qt units.
     signal moved(point to)
-    // The size changed while resizing.
-    signal resized
+    // A resize step answered what to redraw, as the bridge's JSON.
+    signal redraw(string json)
+    // The second click ended a move (true) or a resize.
+    signal ended(bool wasMove)
 
     // The pointer in Qt units, or null when Windows could not say.
     function pointer() {
-        const c = JSON.parse(board.cursor());
-        return c.note ? null : logical(c.x, c.y);
+        const c = JSON.parse(keyboard.cursor());
+        return c ? logical(c.x, c.y) : null;
     }
 
     // The first click on the grip: the window follows the pointer, held where it was grabbed.
@@ -46,10 +48,9 @@ Item {
 
     // The first click on the corner: the size follows the pointer.
     function startResize() {
-        const p = pointer();
-        if (!p)
+        if (!pointer())
             return;
-        board.resizeBegin(p.x, p.y);
+        redraw(keyboard.resizeBegin());
         mode = Mover.Resizing;
     }
 
@@ -60,15 +61,19 @@ Item {
             return;
         if (mode === Mover.Moving)
             moved(Qt.point(p.x - grab.x, p.y - grab.y));
-        else if (mode === Mover.Resizing && board.resizeAt(p.x, p.y))
-            resized();
+        else if (mode === Mover.Resizing)
+            redraw(keyboard.resizeAt());
     }
 
     // The second click: the window stays where it is, at the size it reached.
     function finish() {
-        if (mode === Mover.Resizing)
-            board.resizeEnd();
+        const was = mode;
+        if (was === Mover.Idle)
+            return;
         mode = Mover.Idle;
+        if (was === Mover.Resizing)
+            redraw(keyboard.resizeEnd());
+        ended(was === Mover.Moving);
     }
 
     // A click on the keyboard itself ends it too, whatever lies below.
@@ -93,7 +98,7 @@ Item {
         }
     }
     Timer {
-        interval: mv.board.pollMs
+        interval: mv.pollMs
         running: mv.busy
         repeat: true
         onTriggered: mv.follow()

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: the keyboard's views move into the product
+The keyboard window, its keys, top bar, D-pad, resize corner, bubble and tooltips moved from the test build into `kx-ui` with the same look, now drawn from the keyboard module's board and the translated texts. Keys that come later are dimmed and say "Coming in a later version", the Arabic UI mirrors the top bar, and fonts and icons are compiled into the app. Three P1 findings are fixed: text is gray-edged without ClearType fringes, hover shows a Highlight outline in high contrast, and icons are tinted with public Qt Quick only. Qt Quick tests now check the views over the real look, texts and board.
+
 ## 2026-09-30 — P3: UI review fixes: one quit path
 Quit now has one path, from the tray or from a second copy: it reaches the app once and then closes the request queue, so the hidden keyboard process can always end. ADR-0018 records the one set-once hub the QML objects share. Tidy F3 now finds allows written over several lines and is not fooled by raw strings or nested comments, with property tests. The guard starts from its first try on each run, silent failures now warn, and `cargo deny` is clean.
 

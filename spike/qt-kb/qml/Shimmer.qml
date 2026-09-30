@@ -1,6 +1,8 @@
 // The shimmer while the words are on their way (mock-up .shimmer): a light band slides along a rounded bar, over and over.
 import QtQuick
 import QtQuick.Shapes
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Shape {
     id: bar
@@ -15,6 +17,8 @@ Shape {
     // How far through one pass the band is, 0 to 1; its geometry follows the width at every step.
     property real phase: 0
     readonly property real period: span * width
+    // The band slides.
+    readonly property bool sliding: slide.running
 
     // The default renderer leaves the round ends jagged without multisampling.
     preferredRendererType: Shape.CurveRenderer
@@ -47,6 +51,7 @@ Shape {
     }
     // Loops never run at 0 ms, so reduced motion leaves a still bar.
     Tween on phase {
+        id: slide
         move: bar.move
         running: bar.visible && bar.move.ms > 0
         loops: Animation.Infinite

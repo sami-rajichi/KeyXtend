@@ -1,21 +1,19 @@
-// A tooltip with a button's name after a short hover; it never takes focus and lets clicks through.
+// A tooltip with a button's name, and for a dimmed one when it comes, after a short hover; it never takes focus and
+// lets clicks through.
 import QtQuick
 
 Window {
     id: tip
 
-    // The look, fonts, the hover time, the keyboard's screen in Qt units, and a test for Arabic text.
+    // The look, fonts, the hover time, and the keyboard's screen in Qt units.
     required property var lk
     required property var res
     required property int ms
     required property rect area
-    required property var arabic
 
     // The button under the pointer, and its name.
     property Item at: null
     property string name: ""
-    // The name is Arabic, so it takes the Arabic font.
-    property bool ar: false
 
     readonly property var sh: lk.shape.tip
 
@@ -32,7 +30,6 @@ Window {
         wait.stop();
         visible = false;
         name = text;
-        ar = text.length > 0 && arabic(text);
         at = text.length > 0 ? item : null;
         if (at)
             wait.start();
@@ -64,12 +61,13 @@ Window {
         border.width: tip.lk.shape.line.px
         border.color: tip.lk.palette.pop_line
     }
-    Text {
+    // Tips are UI texts, so they take the UI language's font.
+    Label {
         id: label
         anchors.centerIn: parent
         text: tip.name
-        textFormat: Text.PlainText
-        font.family: tip.ar ? tip.res.fam.arabic : tip.res.fam.latin
+        horizontalAlignment: Text.AlignHCenter
+        font.family: tip.res.fam.ui
         font.pixelSize: tip.sh.font_px
         font.weight: tip.sh.weight
         color: tip.lk.palette.pop_ink

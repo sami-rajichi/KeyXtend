@@ -28,11 +28,10 @@ Item {
         radius: c.radius
         color: c.lk.palette.chip_bg
     }
-    Rectangle {
-        anchors.fill: parent
+    Hover {
+        lk: c.lk
         radius: c.radius
         visible: area.containsMouse
-        color: c.lk.palette.hover
     }
     Row {
         id: row
@@ -45,17 +44,16 @@ Item {
             base: c.res.icons
             ext: c.res.ext
             px: c.sh.icon_px * c.s
-            tint: c.lk.palette.legend_2
+            // legend_2 missed AA on Dolch light's chip (3.83:1); kx-theme checks this pair.
+            tint: c.lk.palette.legend_2_plate
         }
-        Text {
+        Label {
             anchors.verticalCenter: parent.verticalCenter
             text: c.chip.text
-            textFormat: Text.PlainText
             font.family: c.ar ? c.res.fam.arabic : c.res.fam.latin
             font.pixelSize: c.sh.font_px[c.ar ? 1 : 0] * c.s
             font.weight: c.sh.weight
             color: c.lk.palette.legend
-            Accessible.ignored: true
         }
     }
     MouseArea {
