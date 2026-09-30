@@ -75,6 +75,8 @@ pub struct Palette {
     pub legend_mod: Rgba,
     /// Second and third legends.
     pub legend_2: Rgba,
+    /// Secondary text and icons on the plate (top bar, corner): `legend_2`, darker where that misses AA there.
+    pub legend_2_plate: Rgba,
     /// Legend on side keys.
     pub legend_act: Rgba,
     /// A key that is on.
@@ -133,7 +135,7 @@ pub struct Palette {
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 33] {
+    pub fn named(&self) -> [(&'static str, Rgba); 34] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -146,6 +148,7 @@ impl Palette {
             ("legend", self.legend),
             ("legend_mod", self.legend_mod),
             ("legend_2", self.legend_2),
+            ("legend_2_plate", self.legend_2_plate),
             ("legend_act", self.legend_act),
             ("on", self.on),
             ("on_ink", self.on_ink),
@@ -195,7 +198,7 @@ impl Palette {
         [
             ("legend on key", self.legend, self.key),
             ("legend_2 on key", self.legend_2, self.key),
-            ("legend_2 on plate", self.legend_2, self.plate),
+            ("legend_2_plate on plate", self.legend_2_plate, self.plate),
             ("legend_mod on key_mod", self.legend_mod, self.key_mod),
             ("legend_act on key_act", self.legend_act, self.key_act),
             ("enter_ink on enter", self.enter_ink, self.enter),

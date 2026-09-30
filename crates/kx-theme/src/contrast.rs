@@ -77,3 +77,6 @@ pub fn low_contrast(themes: &[Theme], min: f32) -> Vec<String> {
     }
     low
 }
+
+#[cfg(test)]
+mod tests;

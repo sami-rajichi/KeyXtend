@@ -13,6 +13,7 @@ var lk = {
     "legend": "#FFFFFF00",
     "legend_mod": "#FFFFFF00",
     "legend_2": "#FFFFFF00",
+    "legend_2_plate": "#FFFFFFFF",
     "legend_act": "#FFFFFF00",
     "on": "#FF1AEBFF",
     "on_ink": "#FF050505",

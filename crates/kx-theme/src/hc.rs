@@ -85,11 +85,17 @@ fn states(p: &mut Palette, s: &SysColors) {
     }
 }
 
-/// Panels in `Window` and `WindowText`, with `Highlight` on the row under the pointer and the selected one.
+/// Panels and text on the plate in `Window` and `WindowText`, with `Highlight` on the row under the pointer and the
+/// selected one.
 fn panels(p: &mut Palette, s: &SysColors) {
     let text: Rgba = s.window_text.into();
     p.pop_bg = s.window.into();
-    for c in [&mut p.pop_ink, &mut p.pop_muted, &mut p.pop_line] {
+    for c in [
+        &mut p.pop_ink,
+        &mut p.pop_muted,
+        &mut p.pop_line,
+        &mut p.legend_2_plate,
+    ] {
         *c = text;
     }
     p.pop_hover = s.highlight.into();

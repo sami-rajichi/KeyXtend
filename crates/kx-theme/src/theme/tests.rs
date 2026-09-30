@@ -3,12 +3,9 @@
 use super::*;
 use crate::Themes;
 use crate::accent::with_accent;
-use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast, low_contrast, luminance};
+use crate::contrast::{WCAG_AA, contrast, luminance};
 use crate::look::Cap;
 use crate::rgba::Rgba;
-
-/// Plain Windows 11 app backgrounds in light and dark mode, which the ring is drawn over.
-const WINDOW_BG: [&str; 2] = ["#F3F3F3", "#202020"];
 
 fn text() -> String {
     crate::THEMES.to_string()
@@ -109,28 +106,6 @@ fn a_missing_shared_colour_is_refused() {
 }
 
 #[test]
-fn every_ring_stands_out_on_a_plain_window_of_its_mode() {
-    let bg = WINDOW_BG.map(|c| Rgba::parse(c).expect("window colour"));
-    for t in load().list {
-        let id = &t.look.id;
-        assert!(contrast(t.light.ring, bg[0]) >= WCAG_SHAPES, "{id} light");
-        assert!(contrast(t.dark.ring, bg[1]) >= WCAG_SHAPES, "{id} dark");
-    }
-}
-
-#[test]
-fn contrast_follows_wcag() {
-    let (black, white) = (Rgba::parse("#000000"), Rgba::parse("#FFFFFF"));
-    let (black, white) = (black.expect("black"), white.expect("white"));
-    assert!((contrast(black, white) - 21.0).abs() < 0.01);
-    assert!(
-        (contrast(white, black) - 21.0).abs() < 0.01,
-        "order does not matter"
-    );
-    assert!((contrast(white, white) - 1.0).abs() < 0.01);
-}
-
-#[test]
 fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
     let native = &load().list[0];
     let blue = Rgba::parse("#005FB8").expect("blue");
@@ -147,12 +122,6 @@ fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
         contrast(y.enter_ink, y.enter) >= WCAG_AA,
         "the ink switches to stay readable"
     );
-}
-
-#[test]
-fn every_legend_reaches_wcag_aa() {
-    let low = low_contrast(&load().list, WCAG_AA);
-    assert!(low.is_empty(), "{low:?}");
 }
 
 #[test]
@@ -210,32 +179,6 @@ fn each_theme_resolves_its_dpad_rules() {
         "ET66 lights the arrow in yellow"
     );
     assert_eq!(d(2).face, all[2].light.key_mod, "Dolch arrows are grey");
-}
-
-#[test]
-fn a_legend_too_close_to_its_key_is_named() {
-    let mut all = load().list;
-    all[0].light.legend = all[0].light.key;
-    let low = low_contrast(&all, WCAG_AA);
-    assert!(
-        low.iter()
-            .any(|l| l.starts_with("native.light: legend on key")),
-        "{low:?}"
-    );
-    assert!(low_contrast(&all, 1.0).is_empty(), "nothing is below 1:1");
-}
-
-#[test]
-fn a_user_minimum_starts_at_wcag_aa_and_ends_at_black_on_white() {
-    use crate::contrast::{MAX_CONTRAST, MIN_CONTRAST};
-    let (black, white) = (Rgba::parse("#000000"), Rgba::parse("#FFFFFF"));
-    let (black, white) = (black.expect("black"), white.expect("white"));
-    assert!((contrast(black, white) - MAX_CONTRAST).abs() < 0.01);
-    assert!((MIN_CONTRAST.start() - WCAG_AA).abs() < f32::EPSILON);
-    assert!(MIN_CONTRAST.contains(&MAX_CONTRAST));
-    for bad in [4.4, MAX_CONTRAST + 1.0, f32::NAN] {
-        assert!(!MIN_CONTRAST.contains(&bad), "{bad}");
-    }
 }
 
 #[test]

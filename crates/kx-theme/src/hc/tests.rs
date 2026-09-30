@@ -82,6 +82,11 @@ fn dimmed_keys_take_gray_text_in_high_contrast() {
     let p = contrast_palette(&t.list[0].dark, &HC, t.shape.line.px);
     assert_eq!(p.dim, Rgba::from(HC.button));
     assert_eq!(p.dim_ink, Rgba::from(HC.gray_text), "disabled text");
+    assert_eq!(
+        p.legend_2_plate,
+        Rgba::from(HC.window_text),
+        "text on the plate"
+    );
 }
 
 #[test]
