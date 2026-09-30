@@ -73,7 +73,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
         banned_network: vec!["reqwest".to_string()],
         banned_media: vec!["image".to_string()],
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
-        tool_unsafe_attr: "#![deny(unsafe_code)]".to_string(),
+        deny_attr: "#![deny(unsafe_code)]".to_string(),
         root_kinds: vec![
             "lib".to_string(),
             "bin".to_string(),
@@ -83,6 +83,9 @@ pub(crate) fn tidy_config() -> TidyConfig {
             "kx-test-support".to_string(),
             "kx-platform-fake".to_string(),
         ],
+        bridge_crate: "kx-ui".to_string(),
+        bridge_dir: "src/bridges".to_string(),
+        safety_tag: "// SAFETY:".to_string(),
     }
 }
 

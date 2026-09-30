@@ -1,2 +1,6 @@
 [alias]
 xtask = "run --locked --package xtask --"
+
+[env]
+# MSVC reads C++ sources in the ANSI code page unless told UTF-8; Qt's generated QML code is UTF-8 (kx-ui).
+CXXFLAGS_x86_64_pc_windows_msvc = "/utf-8"

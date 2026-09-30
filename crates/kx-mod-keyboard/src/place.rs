@@ -1,7 +1,7 @@
 //! Where the keyboard window goes, in physical pixels: the user's last place while it is on a screen, else the
 //! bottom centre of the primary screen, always inside a work area. Each screen's DPI sets the window's size there.
 
-use crate::settings::{Corner, KeyboardSettings};
+use crate::settings::KeyboardSettings;
 use kx_module_api::ports::{Point, Rect, Screen, physical};
 use kx_module_api::{SettingsHandle, WriteError};
 
@@ -92,22 +92,6 @@ pub fn start(saved: Option<Point>, size: (f64, f64), screens: &[Screen]) -> Opti
     match saved {
         Some(at) => fit(at, size, screens),
         None => home(size, screens),
-    }
-}
-
-/// Where a `d`-wide bubble goes: `inset` inside the bottom `corner` of `work`, never off it.
-#[must_use]
-pub fn bubble(work: Rect, corner: Corner, d: i32, inset: i32) -> Point {
-    let (left, top) = (i64::from(work.x), i64::from(work.y));
-    let (right, bottom) = (left + i64::from(work.w), top + i64::from(work.h));
-    let (d, inset) = (i64::from(d), i64::from(inset));
-    let x = match corner {
-        Corner::Left => left + inset,
-        Corner::Right => right - d - inset,
-    };
-    Point {
-        x: px(x.min(right - d).max(left)),
-        y: px((bottom - d - inset).max(top)),
     }
 }
 

@@ -1,6 +1,5 @@
 //! Shared core of the P1 spike faces; each phase moves its parts into the product (ADR-0014).
 
-pub mod backdrop;
 pub mod capture;
 pub mod clock;
 pub mod config;
@@ -24,7 +23,6 @@ pub mod screen;
 pub mod selwatch;
 pub mod sendkeys;
 pub mod snip;
-pub mod status;
 pub mod sysui;
 pub mod typer;
 pub mod uia;

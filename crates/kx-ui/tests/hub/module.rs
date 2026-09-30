@@ -1,0 +1,51 @@
+//! The `ui` module: its manifest, and a start that hands its settings and the face to the hub.
+
+use crate::{FakeFace, Rig, provide};
+use kx_module_api::ports::KeyboardFaceKey;
+use kx_module_api::{Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError};
+use kx_test_support::host::FakeHost;
+use kx_ui::{ID, MANIFEST, UiModule, Wake};
+use std::sync::Arc;
+
+#[test]
+fn it_needs_the_face_and_no_capability_and_owns_the_ui_section() {
+    assert_eq!(ID.as_str(), "ui");
+    assert_eq!(MANIFEST.requires, [KeyboardFaceKey::ID]);
+    assert!(MANIFEST.provides.is_empty() && MANIFEST.capabilities.is_empty());
+    assert!(MANIFEST.settings.is_some_and(|s| s.version == 1));
+}
+
+#[test]
+fn a_start_hands_the_settings_and_face_to_the_hub_and_a_stop_takes_the_face_back() {
+    let rig = Rig::new();
+    let mut host = FakeHost::new(&MANIFEST);
+    host.put("tip_ms", 700.into());
+    provide(&mut host, Arc::new(FakeFace::default()));
+    let mut module = UiModule::new(Arc::clone(&rig.hub));
+    assert!(module.start(&mut ModuleCx::new(&mut host)).is_ok());
+    assert_eq!(rig.hub.settings().tip_ms, 700);
+    assert_eq!(rig.hub.board_json(), r#"{"board":1}"#);
+    assert_eq!(rig.wakes(), [Wake::Settings]);
+    module.stop();
+    assert_eq!(rig.hub.board_json(), "null");
+    assert_eq!(rig.hub.settings().tip_ms, 700, "the last settings stay");
+}
+
+#[test]
+fn bad_settings_or_no_face_fail_the_start() {
+    let rig = Rig::new();
+    let mut module = UiModule::new(Arc::clone(&rig.hub));
+    let mut host = FakeHost::new(&MANIFEST);
+    host.put("page_rows", 0.into());
+    provide(&mut host, Arc::new(FakeFace::default()));
+    let err = module.start(&mut ModuleCx::new(&mut host)).err();
+    assert!(
+        matches!(err, Some(ModuleError::Settings(SettingsError::Invalid(_)))),
+        "{err:?}"
+    );
+    let mut bare = FakeHost::new(&MANIFEST);
+    let err = module.start(&mut ModuleCx::new(&mut bare)).err();
+    let missing = ServiceError::Missing(KeyboardFaceKey::ID);
+    assert_eq!(err, Some(ModuleError::Service(missing)));
+    assert_eq!(rig.hub.board_json(), "null", "nothing was attached");
+}

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: the UI's Qt build and the `ui` module
+`kx-ui` now builds the QML module `KeyXtend.Ui` with two bridge objects moved from the test keyboard: `Ui` for the look, texts, notices and commands, and `Keyboard` for the board, clicks, the no-focus guard and the window's shape. A new `ui` module owns the `[ui]` settings (theme, mode, language, timings and the contrast floor, which can never go below WCAG AA) and a hub that shows notices in the user's language and hands Try again and Quit to the app. Tidy's new rule F3 allows unsafe code in `kx-ui` only in its bridges, each block with a `// SAFETY:` comment. The texts, settings and hub still build and test without Qt, for the Linux checks.
+
 ## 2026-09-30 — P3: text review fixes
 Arabic tips and screen-reader names now call keys that print a Latin word "مفتاح" and that word (مفتاح Esc, مفتاح Shift), keeping Microsoft's terms for the rest; the kernel's settings carry the name KeyXtend. French notices name the part in guillemets, and a reset that can name no setting now says only how many. Bidi controls inside names are dropped before they reach a text, and ADR-0017 was corrected on Qt Linguist, plurals and language choice.
 

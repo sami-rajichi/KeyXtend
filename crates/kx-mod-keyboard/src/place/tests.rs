@@ -168,21 +168,6 @@ fn the_windows_screen_is_the_one_it_covers_most_and_none_off_them() {
 }
 
 #[test]
-fn the_bubble_sits_in_a_bottom_corner_of_the_work_area() {
-    let work = rect(0, 0, 1920, 1020);
-    assert_eq!(bubble(work, Corner::Right, 46, 12), at(1862, 962));
-    assert_eq!(bubble(work, Corner::Left, 46, 12), at(12, 962));
-    let second = rect(1920, 0, 1920, 1080);
-    assert_eq!(bubble(second, Corner::Right, 46, 12), at(3782, 1022));
-    let tiny = rect(0, 0, 20, 20);
-    assert_eq!(
-        bubble(tiny, Corner::Right, 46, 12),
-        at(0, 0),
-        "a screen smaller than the bubble"
-    );
-}
-
-#[test]
 fn odd_screens_never_panic() {
     let odd = Screen {
         rect: rect(i32::MAX - 5, i32::MIN, -10, i32::MAX),
@@ -191,7 +176,6 @@ fn odd_screens_never_panic() {
     };
     let _ = start(Some(at(i32::MAX, i32::MIN)), PLATE, &[odd]);
     let _ = start(None, (f64::NAN, f64::INFINITY), &[odd]);
-    let _ = bubble(odd.rect, Corner::Left, i32::MAX, i32::MIN);
 }
 
 proptest! {

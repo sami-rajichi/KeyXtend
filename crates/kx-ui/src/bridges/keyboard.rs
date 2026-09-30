@@ -1,0 +1,238 @@
+//! The `Keyboard` object: the keyboard window's board, state and clicks through the face, its guard and shape, the
+//! pointer and the bubble's spot. Every call runs on the Qt thread, which also runs the relabel timer.
+
+use super::{hub, qs};
+use crate::geom::{Area, whole};
+use crate::hub::{Hub, NULL, Redraw, Resize, json};
+use cxx_qt::CxxQtType;
+use cxx_qt_lib::QString;
+use kx_module_api::ports::{Corner, FaceAction, KeyId, Point, Rect};
+use std::pin::Pin;
+use std::sync::Arc;
+
+/// The cxx-qt bridge that makes `Keyboard` a QML type.
+#[cxx_qt::bridge]
+pub mod qobject {
+    // SAFETY: the header and type are cxx-qt-lib's own QString binding, so both sides match.
+    unsafe extern "C++" {
+        include!("cxx-qt-lib/qstring.h");
+        /// Qt string.
+        type QString = cxx_qt_lib::QString;
+    }
+
+    #[auto_cxx_name]
+    extern "RustQt" {
+        #[qobject]
+        #[qml_element]
+        type Keyboard = super::KeyboardRust;
+
+        /// The board to draw, as the face's JSON; `null` while the keyboard is not running.
+        #[qinvokable]
+        fn board_json(&self) -> QString;
+
+        /// The live state, as the face's JSON.
+        #[qinvokable]
+        fn state_json(&self) -> QString;
+
+        /// A click on key `id`; `back` is the language key's back part. Every action answers `{board, state}`.
+        #[qinvokable]
+        fn tap(&self, id: &QString, back: bool) -> QString;
+
+        /// One size step smaller.
+        #[qinvokable]
+        fn smaller(&self) -> QString;
+
+        /// One size step bigger.
+        #[qinvokable]
+        fn bigger(&self) -> QString;
+
+        /// Size preset `index`.
+        #[qinvokable]
+        fn preset(&self, index: i32) -> QString;
+
+        /// A resize starts where the pointer is.
+        #[qinvokable]
+        fn resize_begin(&self) -> QString;
+
+        /// The resize follows the pointer.
+        #[qinvokable]
+        fn resize_at(&self) -> QString;
+
+        /// The resize ends.
+        #[qinvokable]
+        fn resize_end(&self) -> QString;
+
+        /// The relabel timer asks whether the app in front switched layout.
+        #[qinvokable]
+        fn relabel(&self) -> QString;
+
+        /// Language `index` of the open list was picked.
+        #[qinvokable]
+        fn lang_pick(&self, index: i32) -> QString;
+
+        /// Key `id` goes to the open list.
+        #[qinvokable]
+        fn panel_key(&self, id: &QString) -> QString;
+
+        /// The window sits at `x`, `y`, `w` by `h` physical pixels.
+        #[qinvokable]
+        fn placed(&self, x: f64, y: f64, w: f64, h: f64) -> QString;
+
+        /// The pointer in physical pixels as JSON `{x, y}`, or `null`.
+        #[qinvokable]
+        fn cursor(&self) -> QString;
+
+        /// The bubble's spot in bottom `corner` of the screen holding physical point `x`, `y`: `{x, y}` or `null`.
+        #[qinvokable]
+        fn bubble_at(&self, x: f64, y: f64, corner: &QString) -> QString;
+
+        /// Cuts window `title` to `boxes`, a JSON list of `{x, y, w, h}` at scale `dpr`; false until it shows.
+        #[qinvokable]
+        fn shape(&self, title: &QString, boxes: &QString, dpr: f64) -> bool;
+
+        /// One guard try; true to try again after `guard_delay_ms`.
+        #[qinvokable]
+        fn guard(self: Pin<&mut Self>) -> bool;
+    }
+}
+
+/// Rust side of `Keyboard`.
+pub struct KeyboardRust {
+    hub: Option<Arc<Hub>>,
+    /// Guard tries so far.
+    tries: u32,
+}
+
+impl Default for KeyboardRust {
+    fn default() -> Self {
+        Self {
+            hub: hub(),
+            tries: 0,
+        }
+    }
+}
+
+/// `index` from QML as a list place; a negative one is past every list.
+fn place(index: i32) -> usize {
+    usize::try_from(index).unwrap_or(usize::MAX)
+}
+
+impl qobject::Keyboard {
+    /// `f` over the hub as JSON, or `none` before the app installed one.
+    fn with(&self, none: &str, f: impl FnOnce(&Hub) -> String) -> QString {
+        qs(&self
+            .rust()
+            .hub
+            .as_deref()
+            .map_or_else(|| none.to_owned(), f))
+    }
+
+    /// Does `action` and answers what to redraw.
+    fn run(&self, action: FaceAction) -> QString {
+        self.redraw(|h| h.act(action))
+    }
+
+    /// Answers what to redraw after `f`.
+    fn redraw(&self, f: impl FnOnce(&Hub) -> Redraw) -> QString {
+        self.with(&Redraw::default().to_json(), |h| f(h).to_json())
+    }
+
+    fn board_json(&self) -> QString {
+        self.with(NULL, Hub::board_json)
+    }
+
+    fn state_json(&self) -> QString {
+        self.with(NULL, Hub::state_json)
+    }
+
+    fn tap(&self, id: &QString, back: bool) -> QString {
+        let id = KeyId::new(id.to_string());
+        self.run(FaceAction::Tap { id, back })
+    }
+
+    fn smaller(&self) -> QString {
+        self.run(FaceAction::Smaller)
+    }
+
+    fn bigger(&self) -> QString {
+        self.run(FaceAction::Bigger)
+    }
+
+    fn preset(&self, index: i32) -> QString {
+        self.run(FaceAction::Preset {
+            index: place(index),
+        })
+    }
+
+    fn resize_begin(&self) -> QString {
+        self.redraw(|h| h.resize(Resize::Begin))
+    }
+
+    fn resize_at(&self) -> QString {
+        self.redraw(|h| h.resize(Resize::At))
+    }
+
+    fn resize_end(&self) -> QString {
+        self.redraw(|h| h.resize(Resize::End))
+    }
+
+    fn relabel(&self) -> QString {
+        self.run(FaceAction::Relabel)
+    }
+
+    fn lang_pick(&self, index: i32) -> QString {
+        self.run(FaceAction::LangPick {
+            index: place(index),
+        })
+    }
+
+    fn panel_key(&self, id: &QString) -> QString {
+        let id = id.to_string();
+        self.redraw(|h| h.panel_key(&id))
+    }
+
+    fn placed(&self, x: f64, y: f64, w: f64, h: f64) -> QString {
+        let rect = Rect {
+            x: whole(x),
+            y: whole(y),
+            w: whole(w),
+            h: whole(h),
+        };
+        self.redraw(|hub| hub.placed(rect))
+    }
+
+    fn cursor(&self) -> QString {
+        self.with(NULL, |h| json(&h.cursor()))
+    }
+
+    fn bubble_at(&self, x: f64, y: f64, corner: &QString) -> QString {
+        let at = Point {
+            x: whole(x),
+            y: whole(y),
+        };
+        let corner = serde_json::Value::String(corner.to_string());
+        let Ok(corner) = serde_json::from_value::<Corner>(corner) else {
+            tracing::warn!("QML named no bottom corner");
+            return qs(NULL);
+        };
+        self.with(NULL, |h| json(&h.bubble_at(at, corner)))
+    }
+
+    fn shape(&self, title: &QString, boxes: &QString, dpr: f64) -> bool {
+        let Ok(boxes) = serde_json::from_str::<Vec<Area>>(&boxes.to_string()) else {
+            tracing::warn!("QML sent boxes that do not read");
+            return false;
+        };
+        let title = title.to_string();
+        self.rust()
+            .hub
+            .as_deref()
+            .is_some_and(|h| h.shape(&title, &boxes, dpr))
+    }
+
+    fn guard(mut self: Pin<&mut Self>) -> bool {
+        let attempt = self.rust().tries.saturating_add(1);
+        self.as_mut().rust_mut().tries = attempt;
+        self.rust().hub.as_deref().is_some_and(|h| h.guard(attempt))
+    }
+}

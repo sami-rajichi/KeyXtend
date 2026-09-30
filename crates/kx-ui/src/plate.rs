@@ -1,5 +1,4 @@
-//! What Native Adaptive's plate shows after the product's backdrop (`kx_platform_windows::WinBackdrop`, ADR-0014)
-//! was tried: see-through over a material, else solid. This rule moves to the `ui` module in `kx-ui`.
+//! What the plate shows after the `Backdrop` port was tried: see-through over a material, else solid.
 
 use kx_platform::ui::{BackdropKind, UiError};
 
@@ -8,7 +7,7 @@ use kx_platform::ui::{BackdropKind, UiError};
 pub enum Plate {
     /// A solid colour.
     Solid,
-    /// The plate at `plate_alpha`, since Windows took the backdrop; G13 checks by eye that it really shows.
+    /// See-through, since the system took the backdrop; G13 checks by eye that it really shows.
     SeeThrough,
 }
 

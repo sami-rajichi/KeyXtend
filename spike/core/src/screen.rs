@@ -1,8 +1,8 @@
 //! Where the face's windows go on the usable screen, built on the product's screens and windows
 //! (`kx_platform_windows::{screen, window}`, ADR-0014) and kx-mod-keyboard's place maths (P3 Task 11).
 
+use kx_mod_keyboard::Area;
 use kx_mod_keyboard::place;
-use kx_mod_keyboard::{Area, Corner};
 use kx_module_api::ports::{Point, Rect, physical};
 use kx_platform::ui::UiError;
 use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, rect_of, work_area};
@@ -12,7 +12,7 @@ use windows::Win32::Foundation::RECT;
 use crate::hold::Pt;
 use crate::popspot::pop_spot;
 
-/// Error when the window a bubble or panel belongs to is not shown.
+/// Error when the window a panel belongs to is not shown.
 const NOT_SHOWN: &str = "the keyboard window is not shown";
 
 /// A product error as the face's text.
@@ -50,15 +50,6 @@ pub fn start_spot(w: f64, h: f64) -> Result<Pt, String> {
         (physical(w, dpi), physical(h, dpi)),
         0,
     ))
-}
-
-/// Where the minimise bubble goes on the screen of our window `title`: the bottom `corner`.
-/// `[d, inset]` are its diameter and inset in logical pixels.
-pub fn bubble_for(title: &str, corner: Corner, [d, inset]: [f64; 2]) -> Result<Pt, String> {
-    let r = own_rect(title)?;
-    let (work, dpi) = (work_area(&r).map_err(text)?, dpi_of(&r));
-    let (d, inset) = (physical(d, dpi), physical(inset, dpi));
-    Ok(pt(place::bubble(rect(&work), corner, d, inset)))
 }
 
 /// Where a `size` panel goes by our window `title` (see `pop_in`); the spot is in physical pixels.
@@ -169,10 +160,8 @@ mod tests {
     }
 
     #[test]
-    fn a_window_that_is_not_shown_has_no_bubble_or_panel_spot() {
+    fn a_window_that_is_not_shown_has_no_panel_spot() {
         let title = "spike test: no such window";
-        let bubble = bubble_for(title, Corner::Left, [46.0, 12.0]);
-        assert_eq!(bubble, Err(NOT_SHOWN.into()));
         let panel = pop_for(title, 800.0, [480.0, 300.0], [10.0, 8.0], false);
         assert_eq!(panel, Err(NOT_SHOWN.into()));
     }

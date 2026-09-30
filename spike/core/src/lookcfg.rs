@@ -2,13 +2,11 @@
 //! `ModeChoice` and the look view's input moved to `kx-theme` (P3); the rest becomes the `[ui]` settings (Task 16).
 
 use kx_platform::ui::BackdropKind;
+use kx_theme::contrast::MIN_CONTRAST;
 use kx_theme::{LookChoice, Theme};
 use serde::Deserialize;
 
 pub use kx_theme::ModeChoice;
-
-/// Every possible WCAG contrast ratio.
-const CONTRAST: std::ops::RangeInclusive<f32> = 1.0..=21.0;
 
 /// What Native Adaptive puts behind its plate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -67,14 +65,14 @@ impl LookConfig {
         }
     }
 
-    /// Refuses a plate share outside 0 to 1, a contrast outside 1:1 to 21:1 (NaN fails both) and a zero tooltip delay.
+    /// Refuses a plate share outside 0 to 1, a contrast outside `MIN_CONTRAST` (NaN fails both) and a zero tooltip delay.
     pub fn check(&self) -> Result<(), String> {
         let share = |v: f32| (0.0..=1.0).contains(&v);
         if !share(self.plate_alpha) {
             return Err("look: plate_alpha must be 0 to 1".into());
         }
-        if !CONTRAST.contains(&self.min_contrast) {
-            let (lo, hi) = (CONTRAST.start(), CONTRAST.end());
+        if !MIN_CONTRAST.contains(&self.min_contrast) {
+            let (lo, hi) = (MIN_CONTRAST.start(), MIN_CONTRAST.end());
             return Err(format!("look: min_contrast is a ratio from {lo} to {hi}"));
         }
         if self.tip_ms == 0 {
@@ -123,8 +121,8 @@ mod tests {
         c.plate_alpha = 1.5;
         assert!(c.check().is_err());
         let mut c = cfg();
-        c.min_contrast = 0.5;
-        assert!(c.check().is_err(), "contrast starts at 1:1");
+        c.min_contrast = 3.0;
+        assert!(c.check().is_err(), "contrast starts at WCAG AA");
         c.min_contrast = f32::NAN;
         assert!(c.check().is_err(), "NaN is refused");
     }

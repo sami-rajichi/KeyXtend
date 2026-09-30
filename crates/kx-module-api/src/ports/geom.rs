@@ -66,6 +66,16 @@ pub struct Screen {
     pub primary: bool,
 }
 
+/// A bottom corner of a screen, where the minimise bubble goes; never the top.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Corner {
+    /// Bottom left.
+    Left,
+    /// Bottom right.
+    Right,
+}
+
 /// Reads a pixel from any number, rounding a fraction to the nearest pixel.
 pub(super) fn px<'de, D: Deserializer<'de>>(deserializer: D) -> Result<i32, D::Error> {
     deserializer.deserialize_any(PxVisitor)
@@ -137,6 +147,14 @@ mod tests {
         assert_eq!(serde_json::to_string(&s).unwrap(), text);
         let spare = r#"{"rect":{"x":0,"y":0,"w":1,"h":1},"dpi":96,"primary":true,"scale":1}"#;
         assert!(serde_json::from_str::<Screen>(spare).is_err());
+    }
+
+    #[test]
+    fn a_corner_is_written_in_lower_case() {
+        assert_eq!(serde_json::to_string(&Corner::Left).unwrap(), r#""left""#);
+        let right: Corner = toml::Value::from("right").try_into().unwrap();
+        assert_eq!(right, Corner::Right);
+        assert!(serde_json::from_str::<Corner>(r#""top""#).is_err());
     }
 
     #[test]

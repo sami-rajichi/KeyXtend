@@ -40,6 +40,11 @@ embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
 fluent-langneg = "0.13.1"
 unic-langid = "0.9.6"
+# Qt through cxx-qt, pinned: every upgrade is reviewed (ADR-0013).
+cxx = "1.0.202"
+cxx-qt = "=0.10.0"
+cxx-qt-lib = { version = "=0.10.0", features = ["qt_gui", "qt_qml"] }
+cxx-qt-build = "=0.10.0"
 
 [workspace.metadata.tidy]
 # A source file over this many lines fails tidy.
@@ -70,12 +75,18 @@ banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
 banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
-# Attribute a test tool's crate roots may carry instead, so a scoped allow can hold the unsafe code.
-tool_unsafe_attr = "#![deny(unsafe_code)]"
+# Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.
+deny_attr = "#![deny(unsafe_code)]"
 # Target kinds counted as a crate root for the unsafe-attribute rule.
 root_kinds = ["lib", "bin", "proc-macro"]
 # Crates only tests and tools may depend on (tidy D5); they must forbid unsafe code even with the platform prefix (tidy F2).
 test_only = ["kx-test-support", "kx-platform-fake"]
+# The one crate beside the platform adapters that holds unsafe code: the cxx-qt bridges (ADR-0013, tidy F3).
+bridge_crate = "kx-ui"
+# The folder, inside that crate, that alone may hold unsafe code and its allow.
+bridge_dir = "src/bridges"
+# The comment that must stand above each unsafe use in that folder.
+safety_tag = "// SAFETY:"
 
 [workspace.metadata.dco]
 # Commit trailer that counts as a sign-off.

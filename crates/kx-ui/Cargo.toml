@@ -1,6 +1,6 @@
 [package]
 name = "kx-ui"
-description = "The UI: its texts in English, French and Arabic, then the QML views, bridges and the ui module."
+description = "The UI: its texts in English, French and Arabic, the QML module KeyXtend.Ui with its bridges, and the ui module."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,15 +11,40 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Qt: the QML module and its bridges. Without it the texts, settings and ui module still build and test (Linux CI).
+default = ["qt"]
+qt = ["dep:cxx", "dep:cxx-qt", "dep:cxx-qt-lib", "dep:cxx-qt-build"]
+
 [dependencies]
 # Fluent: the translation files, their plural rules and language matching (ADR-0017).
 fluent-bundle.workspace = true
 fluent-langneg.workspace = true
 unic-langid.workspace = true
-# Notice keys and their typed arguments.
+# Notice keys, the keyboard face port and the module contract.
 kx-module-api = { path = "../kx-module-api" }
+# The UI ports: window guard, screens, system look and backdrops.
+kx-platform = { path = "../kx-platform" }
+# Theme ids, the look view and the contrast floor.
+kx-theme = { path = "../kx-theme" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+cxx = { workspace = true, optional = true }
+cxx-qt = { workspace = true, optional = true }
+cxx-qt-lib = { workspace = true, optional = true }
+
+[build-dependencies]
+cxx-qt-build = { workspace = true, optional = true }
 
 [dev-dependencies]
-# Theme ids and top-bar button ids, so the tests check each has its text.
-kx-theme = { path = "../kx-theme" }
-toml.workspace = true
+kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
+
+# Loads the root QML file; Qt wants its app object on the main thread, so it runs without the harness.
+[[test]]
+name = "qml"
+harness = false
+required-features = ["qt"]

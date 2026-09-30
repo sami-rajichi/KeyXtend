@@ -1,5 +1,6 @@
 //! Tidy violation types, and `cargo xtask tidy`'s rule pipeline and report format.
 
+pub(crate) mod bridges;
 pub(crate) mod deps;
 pub(crate) mod files;
 #[cfg(test)]
@@ -20,8 +21,10 @@ pub(crate) const D4: &str = "D4";
 pub(crate) const D5: &str = "D5";
 /// F1: a source file is over `warn_file_lines` or `max_file_lines`.
 pub(crate) const F1: &str = "F1";
-/// F2: a crate root is missing `unsafe_attr` (or `tool_unsafe_attr`, for a tool).
+/// F2: a crate root is missing `unsafe_attr` (or `deny_attr`, for a tool or the bridge crate).
 pub(crate) const F2: &str = "F2";
+/// F3: the bridge crate holds `unsafe` outside its bridge folder, or without a safety comment inside it.
+pub(crate) const F3: &str = "F3";
 
 /// How serious a tidy [`Violation`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +55,7 @@ const WARNING: &str = "warning";
 /// The label [`summary`] prints its line under.
 const SUMMARY_LABEL: &str = "tidy";
 
-/// Runs every tidy rule against `ws`, in a fixed order: D1-D5, then F1-F2.
+/// Runs every tidy rule against `ws`, in a fixed order: D1-D5, then F1-F3.
 pub(crate) fn run(ws: &Workspace) -> Vec<Violation> {
     let mut violations = deps::d1_module_isolation(ws);
     violations.extend(deps::d2_app_only_platform_and_module(ws));
@@ -61,6 +64,7 @@ pub(crate) fn run(ws: &Workspace) -> Vec<Violation> {
     violations.extend(deps::testonly::d5_test_only_deps(ws));
     violations.extend(files::f1_file_length(ws));
     violations.extend(files::f2_unsafe_attr(ws));
+    violations.extend(bridges::f3_bridge_unsafe(ws));
     violations
 }
 

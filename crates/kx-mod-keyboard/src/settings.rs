@@ -1,5 +1,7 @@
 //! The `[keyboard]` settings: modifiers, the language key, size, place and the bubble corner.
 
+pub use kx_module_api::ports::Corner;
+
 use kx_module_api::ports::Point;
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
@@ -47,16 +49,6 @@ pub enum LangKey {
     Cycle,
     /// A list of every layout to pick from.
     List,
-}
-
-/// The bottom corner of the screen where the minimise bubble goes; never the top.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Corner {
-    /// Bottom left.
-    Left,
-    /// Bottom right.
-    Right,
 }
 
 /// The module's settings; every value comes from `defaults.toml` or the user's file.

@@ -6,6 +6,8 @@
 /.superpowers/
 /graphify-out/
 .claude/settings.local.json
+# cxx-qt-build writes the QML language server's build path here
+.qmlls.ini
 
 # Personal notes for this machine and owner
 CLAUDE.local.md

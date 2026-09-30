@@ -126,7 +126,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
-- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `screen_of`, `fit`, `start`, `bubble`.
+- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `screen_of`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.
 
 ## Security
 

@@ -1,0 +1,23 @@
+# The theme, by kx-theme's themes.toml id: "native", "et66" or "dolch".
+theme = "native"
+# "light", "dark", or "auto" to follow the Windows app mode.
+mode = "auto"
+# Themes that can take the Windows accent take it on Enter, on and locked keys.
+follow_accent = false
+# Turns every animation off except the hold ring.
+reduced_motion = false
+# What sits behind the keyboard: "none" (a solid plate), "mica" or "acrylic".
+backdrop = "none"
+# The UI language: "en", "fr", "ar", or "auto" to follow the Windows display language.
+language = "auto"
+# How long the pointer rests on a button before its tip shows, in ms.
+tip_ms = 500
+# How often a move or resize follows the pointer, in ms.
+poll_ms = 16
+# How long the window guard waits before each try, in ms, and how many times it tries.
+guard_delay_ms = 300
+guard_tries = 10
+# Rows per page in every list.
+page_rows = 5
+# The contrast a legend keeps when its key takes the accent; never below WCAG AA.
+min_contrast = 4.5

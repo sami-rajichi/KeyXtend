@@ -55,7 +55,7 @@ crates/
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
-  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module, and the
+  kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
                          WCAG contrast and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
@@ -147,7 +147,7 @@ pub trait Module: Send + 'static {
 2. Only `apps/*` choose platform adapters and modules.
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
    - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
-   - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`; tidy enforces this for `tools/` now and learns it for `kx-ui` in P3.
+   - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`. Tidy enforces this for `tools/` and for `kx-ui`, where rule F3 refuses `unsafe` outside `src/bridges/` and any block without a `// SAFETY:` comment.
 4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
 6. No module logs typed text, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
@@ -170,6 +170,7 @@ pub trait Module: Send + 'static {
 - **No global mutable state.** The service registry is the only "global", and it is owned by the kernel.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
 - **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
+- **UI hub (`kx-ui`).** QML makes the bridge objects without arguments, so they reach the app's `Hub` through `kx_ui::install`, set once before QML loads and never changed. Adapter threads wake the Qt thread through cxx-qt's queue, never blocking, and the UI hands Try again and Quit to the app through a request channel the app drains on its own thread.
 - **IPC:**
   - The main process spawns each worker and hands it an inherited pipe handle. The worker connects to nothing else.
   - If a named pipe is ever needed: user-SID ACL, `first_pipe_instance`, `reject_remote_clients`, and a check of the client's image path and signature.

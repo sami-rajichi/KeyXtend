@@ -29,9 +29,12 @@
       "banned_network": ["reqwest"],
       "banned_media": ["image"],
       "unsafe_attr": "#![forbid(unsafe_code)]",
-      "tool_unsafe_attr": "#![deny(unsafe_code)]",
+      "deny_attr": "#![deny(unsafe_code)]",
       "root_kinds": ["lib", "bin", "proc-macro"],
-      "test_only": ["kx-test-support", "kx-platform-fake"]
+      "test_only": ["kx-test-support", "kx-platform-fake"],
+      "bridge_crate": "kx-ui",
+      "bridge_dir": "src/bridges",
+      "safety_tag": "// SAFETY:"
     },
     "dco": {
       "trailer": "Signed-off-by",
