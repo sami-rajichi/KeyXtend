@@ -9,6 +9,8 @@ license.workspace = true
 [dependencies]
 # `KeyChars` and `Slot` moved here in P3 (ADR-0014).
 kx-module-api = { path = "../../crates/kx-module-api" }
+# `Follow`, the language labels and the `[layouts]` short names moved here in P3 (ADR-0014).
+kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
 # The UI port types (system look, backdrop kinds, errors) the moved window and look parts use (P3).
 kx-platform = { path = "../../crates/kx-platform" }
 # COM, folders, uiAccess, input, layouts, the window guard, screens, the system look and backdrops moved here in P3 (ADR-0014).

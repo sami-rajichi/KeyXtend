@@ -1,7 +1,7 @@
 //! Key labels and rows for the spike faces, read through the product's layout source (ADR-0014).
-//! `Follow` moves to kx-mod-layouts and the rows to kx-mod-keyboard later in P3.
+//! `Follow` moved to kx-mod-layouts (P3 Task 10); the rows go to kx-mod-keyboard later in P3.
 
-use kx_module_api::ports::{LayoutSource, Scan};
+use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
 use kx_platform_windows::{WinLayouts, layouts, window};
 use serde::Serialize;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyNameTextW, HKL};
@@ -89,35 +89,12 @@ pub fn front_layout() -> HKL {
     id.and_then(layouts::hkl).unwrap_or_default()
 }
 
-/// Remembers which layout the labels show, to relabel only when the app in front changes it.
-#[derive(Debug, Default)]
-pub struct Follow {
-    shown: isize,
-}
-
-impl Follow {
-    /// Starts from the labels of `hkl`.
-    pub fn new(hkl: HKL) -> Self {
-        Self {
-            shown: hkl.0 as isize,
-        }
-    }
-
-    /// The new layout when another app is in front and its layout differs; else `None`.
-    pub fn changed(&mut self) -> Option<HKL> {
-        let front = window::foreground();
-        let now = WinLayouts.foreground().and_then(layouts::hkl)?;
-        let other = !front.is_invalid() && !window::is_ours(front);
-        self.step(other, now.0 as isize).then_some(now)
-    }
-
-    fn step(&mut self, other_app_in_front: bool, now: isize) -> bool {
-        let new = other_app_in_front && now != self.shown;
-        if new {
-            self.shown = now;
-        }
-        new
-    }
+/// The layout of the app in front when it is another program's; `None` for our own window or none,
+/// so kx-mod-layouts' `Follow` keeps the shown layout.
+pub fn other_front() -> Option<LayoutId> {
+    let front = window::foreground();
+    let other = !front.is_invalid() && !window::is_ours(front);
+    WinLayouts.foreground().filter(|_| other)
 }
 
 /// The configured rows as JSON, for faces that build keys in QML or HTML.
@@ -152,15 +129,6 @@ mod tests {
     fn the_front_layout_is_an_installed_one() {
         let front = layouts::id(front_layout());
         assert!(WinLayouts.installed().contains(&front), "{front}");
-    }
-
-    #[test]
-    fn follow_relabels_only_for_another_app_with_a_new_layout() {
-        let mut f = Follow { shown: 1 };
-        assert!(!f.step(true, 1));
-        assert!(!f.step(false, 2), "our own window or none in front");
-        assert!(f.step(true, 2));
-        assert!(!f.step(true, 2), "already showing it");
     }
 
     #[test]

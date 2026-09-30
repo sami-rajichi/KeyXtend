@@ -255,6 +255,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-layouts"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "serde",
+ "thiserror 2.0.21",
+ "toml",
+]
+
+[[package]]
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
@@ -619,6 +629,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 name = "spike-core"
 version = "0.0.0"
 dependencies = [
+ "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",
  "kx-platform-windows",

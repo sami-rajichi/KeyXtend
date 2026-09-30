@@ -56,7 +56,9 @@ crates/
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), theme loader
   kx-mod-keyboard/      layout model, key state machine, modifiers, shortcuts layer
-  kx-mod-layouts/       read OS layouts, label tables (EN/FR/AR + any installed)
+  kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
+                         shown layout's table (keys from `scans.toml`), the list in the OS order,
+                         step and pick; short names in `[layouts]`
   kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click
   kx-mod-scroll/        scroll controller (2 speeds, target tracking)
   kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions

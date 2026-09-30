@@ -259,9 +259,8 @@ icon_ext = "svg"
 # Font files the faces load, by extension.
 font_exts = ["ttf", "otf"]
 
-# The language key shows the ISO code in capitals unless a short name is set here; the space bar joins language and layout.
+# The space bar joins language and layout with this until translations join them (P3 Task 15); short names come from kx-mod-layouts.
 [lang]
-short = { ar = "ع" }
 joiner = " · "
 
 # A still left press fires after ms (spec §5.1; the owner may set min_ms to max_ms); moves up to still_px count as still.

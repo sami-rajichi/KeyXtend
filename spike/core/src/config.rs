@@ -35,7 +35,7 @@ pub struct SpikeConfig {
     pub bar: crate::facecfg::BarConfig,
     /// Where fonts and icons are.
     pub assets: crate::facecfg::AssetsConfig,
-    /// Short language names and the space bar's joiner.
+    /// The space bar's joiner, and the short language names from kx-mod-layouts.
     pub lang: crate::langinfo::LangConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
@@ -236,6 +236,8 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.ring.check().map_err(at)?;
     crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
     crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
+    let layouts = kx_mod_layouts::LayoutsSettings::from_defaults().map_err(|e| e.to_string())?;
+    config.lang.short = layouts.short;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     Ok(config)
 }

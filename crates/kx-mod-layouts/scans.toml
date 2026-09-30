@@ -1,0 +1,5 @@
+# The keys whose characters each layout table holds: every scan code from `first` to `last`, then `extended`.
+# A key that types nothing in a layout is left out of its table; the keyboard gives characters only to these keys.
+first = 0x01
+last = 0x58
+extended = [0xE035]

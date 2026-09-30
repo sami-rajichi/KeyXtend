@@ -482,6 +482,7 @@ dependencies = [
 name = "spike-core"
 version = "0.0.0"
 dependencies = [
+ "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",
  "kx-platform-windows",

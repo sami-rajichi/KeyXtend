@@ -2,8 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use kx_mod_layouts::Follow;
 use kx_module_api::ports::{LayoutId, LayoutSource};
-use kx_platform_windows::WinLayouts;
+use kx_platform_windows::{WinLayouts, layouts};
 
 use crate::config::SpikeConfig;
 use crate::kbgeom::{Board, board};
@@ -30,7 +31,7 @@ pub struct Kb {
     mode: ModeChoice,
     latches: Latches,
     toggled: BTreeSet<String>,
-    follow: layout::Follow,
+    follow: Follow,
     hkl: isize,
     sys: SystemLook,
     resize: Option<Resize>,
@@ -49,7 +50,8 @@ pub struct Kb {
 impl Kb {
     /// Starts at the first size preset, the configured theme and mode, and the layout of the app in front.
     pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Kb {
-        let hkl = layout::front_layout();
+        let front = layouts::id(layout::front_layout());
+        let follow = Follow::new(Some(front), &WinLayouts.installed());
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
         Kb {
             size: cfg.size.start(),
@@ -57,8 +59,8 @@ impl Kb {
             mode: cfg.look.mode,
             latches: Latches::default(),
             toggled: BTreeSet::new(),
-            follow: layout::Follow::new(hkl),
-            hkl: hkl.0 as isize,
+            hkl: follow.shown().map_or(0, |id| id.get() as isize),
+            follow,
             sys,
             resize: None,
             chars: BTreeMap::new(),
@@ -271,13 +273,13 @@ impl Kb {
 
     /// True when the app in front switched layout since the last look.
     pub fn relabel(&mut self) -> bool {
-        match self.follow.changed() {
-            Some(h) => {
-                self.switched(h.0 as isize);
-                true
-            }
-            None => false,
+        let moved = self
+            .follow
+            .see(layout::other_front(), &WinLayouts.installed());
+        if let Some(id) = self.follow.shown().filter(|_| moved) {
+            self.switched(id.get() as isize);
         }
+        moved
     }
 }
 
