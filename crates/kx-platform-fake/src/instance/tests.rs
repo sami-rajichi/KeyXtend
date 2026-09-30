@@ -2,12 +2,10 @@
 
 use super::*;
 
-use std::sync::mpsc::{self, RecvTimeoutError};
+use std::sync::mpsc::{self, TryRecvError};
 
 /// How long a test waits for a send on another thread; a wait, never a sleep.
 const WAIT: std::time::Duration = std::time::Duration::from_secs(5);
-/// How long a test gives a drop that should wait, to show it has not returned.
-const SETTLE: std::time::Duration = std::time::Duration::from_millis(200);
 
 #[test]
 fn only_one_copy_claims_until_it_lets_go() {
@@ -161,6 +159,16 @@ fn a_send_while_the_listener_runs_on_another_thread_is_heard_next() {
     assert_eq!(*heard.lock().unwrap(), [Command::Show, Command::Quit]);
 }
 
+/// True once a claim drop in `running` waits for its listener; false if none does within `WAIT`.
+fn a_drop_waits(running: &FakeInstance) -> bool {
+    let shared = &running.0;
+    let session = lock(&shared.session);
+    let waiting = shared
+        .idle
+        .wait_timeout_while(session, WAIT, |s| s.waiting == 0);
+    !waiting.unwrap().1.timed_out()
+}
+
 #[test]
 fn dropping_the_claim_waits_for_a_running_listener() {
     let running = FakeInstance::new();
@@ -186,8 +194,12 @@ fn dropping_the_claim_waits_for_a_running_listener() {
         into.lock().unwrap().push("dropped");
         let _ = dropped_tx.send(());
     });
-    let early = dropped.recv_timeout(SETTLE);
-    assert_eq!(early, Err(RecvTimeoutError::Timeout), "the drop waits");
+    assert!(a_drop_waits(&running), "the drop waits for the listener");
+    assert_eq!(
+        dropped.try_recv(),
+        Err(TryRecvError::Empty),
+        "and has not returned"
+    );
     let _ = go_tx.send(());
     assert_eq!(dropped.recv_timeout(WAIT), Ok(()));
     assert_eq!(busy.join().unwrap(), Ok(()));

@@ -1,5 +1,7 @@
 //! A hidden window on its own thread that hears messages until it is stopped; it is never shown and never takes the focus.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 
@@ -30,6 +32,8 @@ pub(crate) enum Kind {
 pub(crate) struct Hidden {
     thread: u32,
     join: JoinHandle<()>,
+    /// Set by `stop` before its `WM_QUIT`, so a quit another program posts is ignored.
+    stopping: Arc<AtomicBool>,
 }
 
 impl Hidden {
@@ -44,24 +48,31 @@ impl Hidden {
         setup: impl FnOnce() + Send + 'static,
     ) -> Result<Self, UiError> {
         let (tx, rx) = mpsc::channel();
+        let stopping = Arc::new(AtomicBool::new(false));
+        let asked = Arc::clone(&stopping);
         let join = std::thread::spawn(move || {
             setup();
             match window(PCWSTR(class.as_ptr()), kind, proc) {
                 Ok(hwnd) => {
                     let _ = tx.send(Ok(this_thread()));
-                    pump();
+                    pump(&asked);
                     destroy(hwnd);
                 }
                 Err(e) => drop(tx.send(Err(e))),
             }
         });
         let thread = rx.recv().map_err(|_| failed())??;
-        Ok(Self { thread, join })
+        Ok(Self {
+            thread,
+            join,
+            stopping,
+        })
     }
 
     /// Ends the window and its thread and waits for it; from that thread itself it does not wait.
     #[allow(unsafe_code, reason = "Posts a quit message to our own thread.")]
     pub(crate) fn stop(self) {
+        self.stopping.store(true, Ordering::SeqCst);
         // SAFETY: posts WM_QUIT to our own window thread; a thread already gone just refuses it.
         let _ = unsafe { PostThreadMessageW(self.thread, WM_QUIT, WPARAM(0), LPARAM(0)) };
         if self.join.thread().id() != std::thread::current().id() {
@@ -134,14 +145,14 @@ pub(crate) unsafe extern "system" fn answer(
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
-/// Hears this thread's messages until `stop`'s `WM_QUIT` or an error.
+/// Hears this thread's messages until `stop`, which sets `stopping`, posts its `WM_QUIT`, or an error.
 #[allow(unsafe_code, reason = "The standard message loop.")]
-fn pump() {
+fn pump(stopping: &AtomicBool) {
     let mut msg = MSG::default();
     loop {
         // SAFETY: the loop of the thread that owns the window; `msg` is a local it fills.
         let got = unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0;
-        if ends(got, !msg.hwnd.is_invalid()) {
+        if ends(got, !msg.hwnd.is_invalid(), stopping.load(Ordering::SeqCst)) {
             break;
         }
         if got > 0 {
@@ -151,10 +162,10 @@ fn pump() {
     }
 }
 
-/// Whether `GetMessageW`'s answer `got` ends the loop: an error (-1), or a `WM_QUIT` (0) that names no
-/// window, as `stop` posts it; a `WM_QUIT` another program posts to the window is ignored.
-fn ends(got: i32, to_window: bool) -> bool {
-    got < 0 || (got == 0 && !to_window)
+/// Whether `GetMessageW`'s answer `got` ends the loop: an error (-1), or `stop`'s `WM_QUIT` (0), which names no
+/// window and comes once `stopping` is set; a `WM_QUIT` another program posts is ignored.
+fn ends(got: i32, to_window: bool, stopping: bool) -> bool {
+    got < 0 || (got == 0 && !to_window && stopping)
 }
 
 /// Destroys our hidden window on its own thread.
@@ -172,11 +183,18 @@ mod tests {
     };
 
     #[test]
-    fn only_a_thread_quit_or_an_error_ends_the_loop() {
-        assert!(ends(0, false), "stop's WM_QUIT names no window");
-        assert!(!ends(0, true), "a WM_QUIT posted to the window");
-        assert!(ends(-1, false) && ends(-1, true), "an error");
-        assert!(!ends(1, true) && !ends(1, false), "any other message");
+    fn only_stop_or_an_error_ends_the_loop() {
+        assert!(ends(0, false, true), "stop's WM_QUIT: no window, flag set");
+        assert!(
+            !ends(0, false, false),
+            "a thread WM_QUIT another program posts"
+        );
+        assert!(!ends(0, true, true), "a WM_QUIT posted to the window");
+        assert!(ends(-1, false, false) && ends(-1, true, true), "an error");
+        assert!(
+            !ends(1, false, true) && !ends(1, true, false),
+            "any other message"
+        );
     }
 
     #[test]

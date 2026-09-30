@@ -26,6 +26,8 @@ struct Session {
     queue: VecDeque<Command>,
     /// The thread hearing commands now, if any.
     hearing: Option<ThreadId>,
+    /// How many claim drops wait for that thread, so a test can see a drop wait.
+    waiting: usize,
     sent: Vec<Command>,
     listen_error: Option<UiError>,
 }
@@ -148,9 +150,17 @@ impl Drop for FakeClaim {
     fn drop(&mut self) {
         let me = thread::current().id();
         let mut session = lock(&self.shared.session);
+        let must_wait = session.hearing.is_some_and(|t| t != me);
+        if must_wait {
+            session.waiting += 1;
+            self.shared.idle.notify_all();
+        }
         while session.hearing.is_some_and(|t| t != me) {
             let waited = self.shared.idle.wait(session);
             session = waited.unwrap_or_else(PoisonError::into_inner);
+        }
+        if must_wait {
+            session.waiting -= 1;
         }
         if session.holder != Some(self.id) {
             return;

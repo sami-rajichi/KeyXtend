@@ -3,7 +3,9 @@
 use super::*;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
-use windows::Win32::UI::WindowsAndMessaging::{SendMessageW, WM_CLOSE, WM_QUIT};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetWindowThreadProcessId, PostThreadMessageW, SendMessageW, WM_CLOSE, WM_QUIT,
+};
 
 /// How long a test waits for a posted command; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(5);
@@ -163,6 +165,37 @@ fn a_quit_posted_to_the_command_window_does_not_end_it() {
         "the window is still there"
     );
     assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Show), "and still hears");
+}
+
+#[test]
+fn a_thread_quit_from_another_program_does_not_end_the_command_window() {
+    let running = app("threadquit");
+    let mut claim = running.claim().unwrap();
+    let (on, rx) = heard_list();
+    claim.listen(on).unwrap();
+    assert!(post_thread_quit(&running));
+    assert_eq!(
+        running.send(Command::Show),
+        Ok(()),
+        "the window is still there"
+    );
+    assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Show), "and still hears");
+}
+
+/// Posts `WM_QUIT` with no window to the thread of `copy`'s command window, as another program could.
+#[allow(
+    unsafe_code,
+    reason = "Posts a thread message to the test's own window thread."
+)]
+fn post_thread_quit(copy: &WinInstance) -> bool {
+    let class = PCWSTR(copy.class.as_ptr());
+    // SAFETY: the class name ends with a null; the post carries plain numbers.
+    unsafe {
+        FindWindowExW(Some(HWND_MESSAGE), None, class, PCWSTR::null()).is_ok_and(|w| {
+            let thread = GetWindowThreadProcessId(w, None);
+            PostThreadMessageW(thread, WM_QUIT, WPARAM(0), LPARAM(0)).is_ok()
+        })
+    }
 }
 
 /// Sends `WM_CLOSE` to the command window of `copy` and waits for its answer, as another program could.

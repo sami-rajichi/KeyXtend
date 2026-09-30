@@ -208,7 +208,11 @@ mod tests {
             // SAFETY: COM in an STA on this probe thread, undone below on the same thread.
             let hr = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
             assert_eq!(hr, S_OK);
-            let _ = WinLook.read();
+            let first = WinLook.read();
+            assert!(
+                first.accent.is_some(),
+                "the STA made and cached the factory"
+            );
             // SAFETY: pairs the start-up above.
             unsafe { CoUninitialize() };
         })
