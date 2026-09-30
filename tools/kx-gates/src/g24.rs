@@ -4,11 +4,12 @@
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime};
 
+use kx_platform_windows::screen;
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::capture::{self, Shot};
 use spike_core::config::ToolButton;
-use spike_core::window::foreground;
-use spike_core::{screen, snip, uia};
+use spike_core::{snip, uia};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::FindWindowW;
 use windows::core::HSTRING;

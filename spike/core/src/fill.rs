@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use kx_platform_windows::com::Com;
+use kx_platform_windows::window::{foreground, from_raw, is_ours, own_titled};
 
 use crate::config::SpikeConfig;
 use crate::hello::{self, Answer};
@@ -47,12 +48,12 @@ fn spawn(f: Fill, slot: Note) {
 
 /// Starts a fill of `value` into the app in front, with Hello's prompt owned by the face's window; returns the note to show now.
 pub fn start(cfg: &SpikeConfig, value: String, note: &Note) -> &'static str {
-    let Some(owner) = window::own_titled(&cfg.keyboard.title) else {
+    let Some(owner) = own_titled(&cfg.keyboard.title) else {
         return NO_OWNER;
     };
     let f = Fill {
         owner: owner.0 as isize,
-        target: window::foreground().0 as isize,
+        target: foreground().0 as isize,
         message: cfg.tools.hello_message.clone(),
         value,
         settle_ms: cfg.tools.fill_settle_ms,
@@ -73,8 +74,8 @@ fn decide(a: Answer, back: impl FnOnce() -> bool) -> Result<(), &'static str> {
 
 /// Asks Hello, brings the target back, then types; returns the note.
 fn run(f: &Fill) -> String {
-    let (owner, target) = (window::from_raw(f.owner), window::from_raw(f.target));
-    if target.is_invalid() || window::is_ours(target) {
+    let (owner, target) = (from_raw(f.owner), from_raw(f.target));
+    if target.is_invalid() || is_ours(target) {
         return NO_TARGET.to_string();
     }
     // WinRT needs COM, and windows-rs keeps Hello's factory for the whole process, so COM stays on.

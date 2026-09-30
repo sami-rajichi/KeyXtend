@@ -1,56 +1,21 @@
-//! The usable screen around a box: its monitor's work area without the taskbar, and its DPI.
+//! Where the face's windows go on the usable screen, built on the product's screens and windows
+//! (`kx_platform_windows::{screen, window}`, ADR-0014); the placement moves with the keyboard's place maths.
 
-use windows::Win32::Foundation::{POINT, RECT};
-use windows::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromRect,
-};
-use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetCursorPos, GetWindowRect, USER_DEFAULT_SCREEN_DPI,
-};
+use kx_platform::ui::UiError;
+use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, physical, work_area};
+use kx_platform_windows::window::own_bounds;
+use windows::Win32::Foundation::RECT;
 
 use crate::hold::Pt;
 use crate::place::Place;
 use crate::popspot::pop_spot;
-use crate::window::own_titled;
 
 /// Error when the window a bubble or panel belongs to is not shown.
 const NOT_SHOWN: &str = "the keyboard window is not shown";
 
-/// The work area of the monitor nearest to `r`; physical pixels in a per-monitor DPI-aware thread, like UIA boxes.
-pub fn work_area(r: &RECT) -> Result<RECT, String> {
-    let mut info = MONITORINFO {
-        cbSize: size_of::<MONITORINFO>() as u32,
-        ..Default::default()
-    };
-    // SAFETY: plain queries; `info` is sized for the call.
-    unsafe {
-        let mon = MonitorFromRect(r, MONITOR_DEFAULTTONEAREST);
-        if !GetMonitorInfoW(mon, &mut info).as_bool() {
-            return Err("GetMonitorInfo failed".to_string());
-        }
-    }
-    Ok(info.rcWork)
-}
-
-/// The DPI of the monitor nearest to `r`, or the default 96 when Windows cannot say.
-pub fn dpi_of(r: &RECT) -> u32 {
-    let (mut x, mut y) = (0, 0);
-    // SAFETY: plain queries into locals.
-    let ok = unsafe {
-        let mon = MonitorFromRect(r, MONITOR_DEFAULTTONEAREST);
-        GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &mut x, &mut y).is_ok()
-    };
-    if ok && x > 0 {
-        x
-    } else {
-        USER_DEFAULT_SCREEN_DPI
-    }
-}
-
-/// `px` logical pixels at `dpi`, in physical pixels.
-pub fn physical(px: f32, dpi: u32) -> i32 {
-    (px * dpi as f32 / USER_DEFAULT_SCREEN_DPI as f32).round() as i32
+/// A product error as the face's text.
+fn text(e: UiError) -> String {
+    e.to_string()
 }
 
 /// Top-left of a box of `size` centred `gap` above the bottom of `work`; a box wider than `work` starts at its left edge.
@@ -78,7 +43,7 @@ pub fn corner_spot(work: &RECT, left: bool, d: i32, inset: i32) -> Pt {
 pub fn start_spot(w: f32, h: f32) -> Result<Pt, String> {
     // The primary monitor is the one holding (0, 0).
     let origin = RECT::default();
-    let (work, dpi) = (work_area(&origin)?, dpi_of(&origin));
+    let (work, dpi) = (work_area(&origin).map_err(text)?, dpi_of(&origin));
     Ok(bottom_centre(
         &work,
         (physical(w, dpi), physical(h, dpi)),
@@ -90,7 +55,7 @@ pub fn start_spot(w: f32, h: f32) -> Result<Pt, String> {
 /// `[d, inset]` are its diameter and inset in logical pixels.
 pub fn bubble_for(title: &str, left: bool, [d, inset]: [f32; 2]) -> Result<Pt, String> {
     let r = own_rect(title)?;
-    let (work, dpi) = (work_area(&r)?, dpi_of(&r));
+    let (work, dpi) = (work_area(&r).map_err(text)?, dpi_of(&r));
     Ok(corner_spot(
         &work,
         left,
@@ -108,7 +73,7 @@ pub fn pop_for(
     rtl: bool,
 ) -> Result<Pt, String> {
     let r = own_rect(title)?;
-    let work = work_area(&r)?;
+    let work = work_area(&r).map_err(text)?;
     Ok(pop_in(&r, &work, dpi_of(&r), plate_w, size, gaps, rtl))
 }
 
@@ -123,7 +88,7 @@ fn pop_in(
     gaps: [f32; 2],
     rtl: bool,
 ) -> Pt {
-    let k = dpi as f32 / USER_DEFAULT_SCREEN_DPI as f32;
+    let k = dpi as f32 / DEFAULT_DPI as f32;
     let kb = Place {
         w: plate_w * k,
         ..place_of(r)
@@ -148,18 +113,15 @@ fn place_of(r: &RECT) -> Place {
 
 /// The box of our visible window `title`, in physical pixels.
 fn own_rect(title: &str) -> Result<RECT, String> {
-    let hwnd = own_titled(title).ok_or(NOT_SHOWN)?;
-    let mut r = RECT::default();
-    // SAFETY: `hwnd` is one of our live windows and `r` is a local.
-    unsafe { GetWindowRect(hwnd, &mut r) }.map_err(|e| format!("GetWindowRect: {e}"))?;
-    Ok(r)
+    own_bounds(title).map_err(|e| match e {
+        UiError::NoWindow => NOT_SHOWN.to_string(),
+        other => text(other),
+    })
 }
 
 /// Where the mouse pointer is, in physical pixels.
 pub fn cursor() -> Result<Pt, String> {
-    let mut p = POINT::default();
-    // SAFETY: a plain query into a local.
-    unsafe { GetCursorPos(&mut p) }.map_err(|e| format!("GetCursorPos: {e}"))?;
+    let p = kx_platform_windows::screen::cursor().map_err(text)?;
     Ok(Pt { x: p.x, y: p.y })
 }
 
@@ -231,10 +193,10 @@ mod tests {
     }
 
     #[test]
-    fn logical_pixels_scale_with_the_dpi() {
-        assert_eq!(physical(72.0, 96), 72);
-        assert_eq!(physical(72.0, 120), 90);
-        assert_eq!(physical(8.0, 120), 10);
-        assert_eq!(physical(33.0, 144), 50);
+    fn a_window_that_is_not_shown_has_no_bubble_or_panel_spot() {
+        let title = "spike test: no such window";
+        assert_eq!(bubble_for(title, true, [46.0, 12.0]), Err(NOT_SHOWN.into()));
+        let panel = pop_for(title, 800.0, [480.0, 300.0], [10.0, 8.0], false);
+        assert_eq!(panel, Err(NOT_SHOWN.into()));
     }
 }

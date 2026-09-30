@@ -2,8 +2,8 @@
 #![cfg(windows)]
 
 use kx_platform_windows::keys::TAG;
+use kx_platform_windows::window::foreground;
 use spike_core::hold::{Act, Button, ESC, Pt};
-use spike_core::window::foreground;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,

@@ -61,7 +61,7 @@ pub fn over(w: HWND) -> Option<HWND> {
     let boxes = seen_windows()
         .into_iter()
         .filter_map(|h| rect(h).ok().map(|b| (key(h), b)));
-    first_over(boxes, &r).map(spike_core::window::from_raw)
+    first_over(boxes, &r).map(kx_platform_windows::window::from_raw)
 }
 
 /// The first window in `front_first` whose box overlaps `r`.

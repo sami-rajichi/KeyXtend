@@ -132,6 +132,23 @@ mod tests {
     }
 
     #[test]
+    fn a_later_listen_replaces_the_first_and_a_refused_one_keeps_it() {
+        let running = FakeInstance::new();
+        let heard = Arc::new(Mutex::new(Vec::new()));
+        let hear = |tag: &'static str| {
+            let keep = Arc::clone(&heard);
+            Box::new(move |c: Command| keep.lock().unwrap().push((tag, c)))
+        };
+        let mut claim = running.claim().unwrap();
+        claim.listen(hear("first")).unwrap();
+        claim.listen(hear("second")).unwrap();
+        running.set_listen_error(Some(UiError::Refused(9)));
+        assert_eq!(claim.listen(hear("third")), Err(UiError::Refused(9)));
+        running.send(Command::Show).unwrap();
+        assert_eq!(*heard.lock().unwrap(), [("second", Command::Show)]);
+    }
+
+    #[test]
     fn a_refused_listen_leaves_no_window() {
         let running = FakeInstance::new();
         running.set_listen_error(Some(UiError::Refused(8)));

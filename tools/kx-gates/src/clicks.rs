@@ -2,10 +2,10 @@
 #![cfg(windows)]
 
 use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
+use kx_platform_windows::window::foreground;
 use kx_platform_windows::{WinLayouts, layouts};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::window::foreground;
 use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{Ctx, Opened};

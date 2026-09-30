@@ -101,11 +101,11 @@ impl qobject::PanelData {
     }
 
     fn opened(mut self: Pin<&mut Self>) {
-        self.as_mut().rust_mut().prev = window::foreground();
+        self.as_mut().rust_mut().prev = kx_platform_windows::window::foreground();
     }
 
     fn closed(&self) {
-        window::give_back(self.rust().prev);
+        kx_platform_windows::window::give_back(self.rust().prev);
     }
 }
 

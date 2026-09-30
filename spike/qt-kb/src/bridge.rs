@@ -144,7 +144,7 @@ impl qobject::Keyboard {
         match status::guard(window::guard_own_windows(), attempt, self.rust().max_tries) {
             Guard::Retry => QString::default(),
             Guard::Done(note) | Guard::GiveUp(note) => {
-                window::give_back(self.rust().prev);
+                kx_platform_windows::window::give_back(self.rust().prev);
                 QString::from(&note)
             }
         }

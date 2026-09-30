@@ -14,7 +14,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
-use spike_core::{config, theme, window};
+use kx_platform_windows::window;
+use spike_core::{config, theme};
 
 /// Resource URL of `main.qml`, set once by `build.rs`.
 const MAIN_QML: &str = env!("QT_KB_MAIN_QML");

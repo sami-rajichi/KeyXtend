@@ -229,7 +229,7 @@ pub fn close(hwnd: HWND) -> Result<(), String> {
 #[allow(unsafe_code, reason = "Plain calls on a window handle.")]
 pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
     for _ in 0..t.front_tries.max(1) {
-        if spike_core::window::foreground() == hwnd {
+        if kx_platform_windows::window::foreground() == hwnd {
             return true;
         }
         // SAFETY: plain calls on a window handle; failures are checked below.
@@ -244,7 +244,7 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
         let _ = unsafe { SetForegroundWindow(hwnd) };
         sleep_ms(t.front_wait_ms);
     }
-    spike_core::window::foreground() == hwnd
+    kx_platform_windows::window::foreground() == hwnd
 }
 
 #[cfg(test)]

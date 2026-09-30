@@ -1,8 +1,8 @@
 //! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
 #![cfg(windows)]
 
+use kx_platform_windows::screen::{self, work_area};
 use serde_json::{Value, json};
-use spike_core::screen::{self, work_area};
 use spike_core::selwatch::PillPx;
 use spike_core::uia::{self, Sel, Uia};
 

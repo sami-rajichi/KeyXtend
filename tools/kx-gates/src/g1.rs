@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
-use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, AppKind, Ctx, Opened};

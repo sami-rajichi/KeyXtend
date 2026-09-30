@@ -620,6 +620,7 @@ name = "spike-core"
 version = "0.0.0"
 dependencies = [
  "kx-module-api",
+ "kx-platform",
  "kx-platform-windows",
  "serde",
  "serde_json",

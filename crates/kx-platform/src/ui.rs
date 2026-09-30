@@ -45,9 +45,10 @@ impl FocusToken {
 /// Keeps our windows from taking the focus, and shapes where they take clicks.
 pub trait WindowGuard: Send + Sync {
     /// Guards our visible windows except the one titled `spare`, and says how many it guards.
+    /// Call it on the UI thread, which owns the windows.
     ///
     /// # Errors
-    /// `Refused` when the OS will not guard a window.
+    /// `Refused` when the OS will not guard a window, as from another thread.
     fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError>;
 
     /// Lets clicks outside `rects` pass through the window titled `title`.
@@ -159,12 +160,13 @@ pub trait SystemLook: Send + Sync {
     fn read(&self) -> SysLook;
 
     /// Calls `on_change` with each new look until the guard drops.
+    /// It may run on another thread than the caller's, so it hands work to the UI thread.
     ///
     /// # Errors
     /// `Refused` when the OS will not report changes.
     fn watch(&self, on_change: Box<dyn Fn(SysLook) + Send>) -> Result<WatchGuard, UiError>;
 
-    /// The UI language as a BCP-47 tag, such as `fr-FR`.
+    /// The UI language as a BCP-47 tag, such as `fr-FR`; empty when the OS cannot say.
     fn ui_language(&self) -> String;
 }
 
@@ -200,10 +202,11 @@ pub enum Command {
 
 /// Being the one running copy; dropping it lets another copy claim.
 pub trait Claim: Send {
-    /// Calls `on` with each command a later copy sends.
+    /// Calls `on` with each command a later copy sends; it may run on another thread than the caller's.
+    /// A later call replaces `on`, and `on` must not call `listen`.
     ///
     /// # Errors
-    /// `Refused` when the OS will not set up the listener.
+    /// `Refused` when the OS will not set up the listener; an earlier `on` then stays.
     fn listen(&mut self, on: Box<dyn Fn(Command) + Send>) -> Result<(), UiError>;
 }
 

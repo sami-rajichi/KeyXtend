@@ -15,6 +15,7 @@ use windows::core::{PCWSTR, w};
 use super::{
     RegName, is_rtl, lang_id, number_of, parse_layout_id, reg_name, reg_text, text_of, until_null,
 };
+use crate::wide;
 
 /// The registry folder of the installed layouts, one key per layout.
 const LAYOUTS_KEY: PCWSTR = w!(r"SYSTEM\CurrentControlSet\Control\Keyboard Layouts");
@@ -28,7 +29,12 @@ const NAME_CAP: usize = 128;
 /// The locale name of layout `id`'s language, such as `fr-FR`; `None` when Windows has none.
 #[must_use]
 pub fn locale(id: LayoutId) -> Option<String> {
-    let units = locale_units(lang_id(id))?;
+    lang_name(lang_id(id))
+}
+
+/// The locale name of language id `lang`, such as `fr-FR`; `None` when Windows has none.
+pub(crate) fn lang_name(lang: u16) -> Option<String> {
+    let units = locale_units(lang)?;
     Some(text_of(i32::try_from(units.len()).ok()?, &units))
 }
 
@@ -141,11 +147,6 @@ impl Drop for Layouts {
         // SAFETY: closes the key `open` opened, once.
         let _ = unsafe { RegCloseKey(self.0) };
     }
-}
-
-/// `text` as UTF-16 with an ending null.
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain([0]).collect()
 }
 
 /// The English name the registry gives the layout at `name`, such as `French (Legacy, AZERTY)`.

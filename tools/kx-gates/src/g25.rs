@@ -5,9 +5,9 @@ use std::collections::HashSet;
 
 use kx_module_api::ports::LayoutSource;
 use kx_platform_windows::WinLayouts;
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::langkey;
-use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{AppKind, Ctx, Opened};

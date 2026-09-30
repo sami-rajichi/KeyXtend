@@ -1,11 +1,11 @@
 //! The running face's tool buttons, pill and overlay: found by title, clicked only where they are on top.
 #![cfg(windows)]
 
+use kx_platform_windows::screen;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::hold::Pt;
 use spike_core::place::{self, Place};
-use spike_core::screen;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
@@ -39,7 +39,7 @@ impl FaceWin {
     pub fn parked(ctx: &Ctx, name: &str) -> Result<FaceWin, String> {
         let hwnd = mouse::find_face(ctx.spike, name)?;
         let r = win::rect(hwnd)?;
-        let p = corner(&r, &screen::work_area(&r)?);
+        let p = corner(&r, &screen::work_area(&r).map_err(|e| e.to_string())?);
         // SAFETY: plain call on our own face window; a failure is returned.
         unsafe {
             SetWindowPos(

@@ -3,11 +3,11 @@
 
 use std::time::Instant;
 
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::hello;
 use spike_core::uia::{self, Uia};
-use spike_core::window::foreground;
 
 use crate::apps::{Ctx, Opened};
 use crate::facetools::FaceWin;

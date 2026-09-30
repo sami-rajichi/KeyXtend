@@ -4,33 +4,69 @@
 // Backstop to the workspace lint: each unsafe block still needs its own scoped allow.
 #![deny(unsafe_code)]
 
+pub mod backdrop;
 pub mod clock;
 #[cfg(windows)]
 pub mod com;
 pub mod dirs;
 pub mod front;
+#[cfg(windows)]
+mod hidden;
 pub mod inject;
+pub mod instance;
 pub mod keys;
 pub mod langinfo;
 pub mod layouts;
 #[cfg(windows)]
 mod platform;
+pub mod screen;
 pub mod strokes;
+pub mod sysui;
 #[cfg(windows)]
 pub mod uiaccess;
+pub mod watch;
+pub mod window;
 
+#[cfg(windows)]
+pub use backdrop::WinBackdrop;
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
 pub use inject::WinInjector;
 #[cfg(windows)]
+pub use instance::WinInstance;
+#[cfg(windows)]
 pub use layouts::WinLayouts;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
+#[cfg(windows)]
+pub use screen::WinScreens;
+#[cfg(windows)]
+pub use sysui::WinLook;
+#[cfg(windows)]
+pub use window::WinGuard;
 
 use std::io;
 use thiserror::Error;
+
+/// A Windows error as a refused UI request, keeping its code.
+#[cfg(windows)]
+fn refused(e: &windows::core::Error) -> kx_platform::ui::UiError {
+    kx_platform::ui::UiError::Refused(e.code().0)
+}
+
+/// The calling thread's last Windows error as a refused UI request.
+#[cfg(windows)]
+fn last_refused() -> kx_platform::ui::UiError {
+    refused(&windows::core::Error::from_thread())
+}
+
+/// `text` as UTF-16 with an ending null, for Windows names.
+#[cfg(windows)]
+fn wide(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain([0]).collect()
+}
 
 /// Why Windows refused the adapter something. No variant names a path, so no user name reaches a log.
 #[derive(Debug, Error)]

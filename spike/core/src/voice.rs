@@ -1,5 +1,6 @@
 //! The face's side of voice: the Mic button, what the caption bar shows, and one session per face.
 
+use kx_platform_windows::screen::{dpi_of, work_area};
 use kx_platform_windows::{langinfo, layouts};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
@@ -232,8 +233,8 @@ pub fn bar_place(px: [f32; 3]) -> Result<(Pt, (i32, i32)), String> {
     let mut r = RECT::default();
     // SAFETY: plain query; on failure `r` stays empty and the nearest screen is used.
     let _ = unsafe { GetWindowRect(GetForegroundWindow(), &mut r) };
-    let work = screen::work_area(&r)?;
-    let size = PillPx(px).at(screen::dpi_of(&r));
+    let work = work_area(&r).map_err(|e| e.to_string())?;
+    let size = PillPx(px).at(dpi_of(&r));
     let at = screen::bottom_centre(&work, (size.w, size.h), size.gap);
     Ok((at, (size.w, size.h)))
 }

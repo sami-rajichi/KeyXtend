@@ -69,7 +69,7 @@ theme = "native"
 mode = "auto"
 # A legend keeps this contrast when its key takes the Windows accent; spec 3.5 asks for 4.5:1.
 min_contrast = 4.5
-# Native's frosted plate: "none", "mica" or "acrylic" (DWM backdrops) or "blur" (accent-policy blur); the plate keeps this share of its colour.
+# Native's frosted plate: "none", "mica" or "acrylic" (DWM backdrops); the plate keeps this share of its colour.
 backdrop = "acrylic"
 plate_alpha = 0.88
 # Turns every animation off except the hold ring.

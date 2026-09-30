@@ -1,31 +1,13 @@
-//! What Windows says about the look: light or dark apps, the accent colour and high contrast.
+//! The mode and high-contrast maths over Windows' look, which the product's `WinLook` reads
+//! (`kx_platform_windows::sysui`, ADR-0014); this part moves to `kx-theme` with the look view.
 
-mod watch;
+use kx_platform::ui::{self as port, SystemLook as _};
+use kx_platform_windows::WinLook;
 
-use kx_platform_windows::com::Com;
-use windows::UI::ViewManagement::{UIColorType, UISettings};
-use windows::Win32::Graphics::Gdi::{
-    COLOR_BTNFACE, COLOR_BTNTEXT, COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HIGHLIGHTTEXT,
-    COLOR_WINDOW, COLOR_WINDOWTEXT, GetSysColor, SYS_COLOR_INDEX,
-};
-use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
-use windows::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW, HIGHCONTRASTW_FLAGS};
-use windows::Win32::UI::WindowsAndMessaging::{
-    SPI_GETCLIENTAREAANIMATION, SPI_GETHIGHCONTRAST, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
-    SystemParametersInfoW,
-};
-use windows::core::{BOOL, PCWSTR, w};
+pub use kx_platform::ui::WatchGuard;
 
 use crate::lookcfg::ModeChoice;
 use crate::theme::{Common, Mode, Palette, Rgba, Shadow};
-pub use watch::{Watch, watch};
-
-/// Registry key holding the app mode.
-const THEME_KEY: PCWSTR = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
-/// Registry value: 0 means apps use the dark mode.
-const LIGHT_VALUE: PCWSTR = w!("AppsUseLightTheme");
-/// Bits of one channel in a COLORREF.
-const CHANNEL_BITS: u32 = 8;
 
 /// The high-contrast colours Windows asks every app to use.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,24 +58,45 @@ pub struct SystemLook {
     pub contrast: Option<SysColors>,
     /// Windows' animation effects are off.
     pub anim_off: bool,
-    /// Why a part could not be read, for the status line.
-    pub note: Option<String>,
 }
 
-/// True when `AppsUseLightTheme` says dark; a missing value is Windows' default, light.
-pub fn dark_from(apps_use_light: Option<u32>) -> bool {
-    apps_use_light == Some(0)
+/// A port colour as a theme colour.
+fn rgba([r, g, b, a]: port::Rgba) -> Rgba {
+    Rgba { r, g, b, a }
 }
 
-/// A COLORREF (`0x00BBGGRR`) as an opaque colour.
-pub fn from_colorref(c: u32) -> Rgba {
-    let channel = |i: u32| (c >> (i * CHANNEL_BITS)) as u8;
-    Rgba {
-        r: channel(0),
-        g: channel(1),
-        b: channel(2),
-        a: u8::MAX,
+/// The product's look in the spike's theme colours.
+pub fn from_port(look: port::SysLook) -> SystemLook {
+    let accent = look.accent.map(|a| Accent {
+        on_light: rgba(a.on_light),
+        on_dark: rgba(a.on_dark),
+    });
+    let contrast = look.contrast.map(|c| SysColors {
+        window: rgba(c.window),
+        window_text: rgba(c.window_text),
+        highlight: rgba(c.highlight),
+        highlight_text: rgba(c.highlight_text),
+        button: rgba(c.button),
+        button_text: rgba(c.button_text),
+        gray_text: rgba(c.gray_text),
+    });
+    SystemLook {
+        dark: look.dark,
+        accent,
+        contrast,
+        anim_off: look.anim_off,
     }
+}
+
+/// Reads Windows' look now.
+pub fn read() -> SystemLook {
+    from_port(WinLook.read())
+}
+
+/// Calls `on_change` on the product's watcher thread with each new look, until the guard drops.
+pub fn watch(on_change: impl Fn(SystemLook) + Send + 'static) -> Result<WatchGuard, String> {
+    let forward = move |look| on_change(from_port(look));
+    WinLook.watch(Box::new(forward)).map_err(|e| e.to_string())
 }
 
 /// The mode to show for `choice`, given Windows' look.
@@ -104,11 +107,6 @@ pub fn mode_for(choice: ModeChoice, look: &SystemLook) -> Mode {
         ModeChoice::Auto if look.dark => Mode::Dark,
         ModeChoice::Auto => Mode::Light,
     }
-}
-
-/// True when the high-contrast flags say it is on.
-pub fn contrast_on(flags: HIGHCONTRASTW_FLAGS) -> bool {
-    (flags & HCF_HIGHCONTRASTON).0 != 0
 }
 
 /// A 1 px inner outline in `ink`, since high contrast needs edges.
@@ -183,94 +181,6 @@ pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
     }
 }
 
-/// `AppsUseLightTheme`, if it is set.
-fn apps_use_light() -> Option<u32> {
-    let (mut v, mut n) = (0u32, size_of::<u32>() as u32);
-    let data = Some(std::ptr::from_mut(&mut v).cast());
-    // SAFETY: reads one DWORD into `v`, whose size is passed in `n`.
-    let r = unsafe {
-        RegGetValueW(
-            HKEY_CURRENT_USER,
-            THEME_KEY,
-            LIGHT_VALUE,
-            RRF_RT_REG_DWORD,
-            None,
-            data,
-            Some(&mut n),
-        )
-    };
-    r.is_ok().then_some(v)
-}
-
-/// True while high contrast is on.
-fn high_contrast() -> bool {
-    let mut hc = HIGHCONTRASTW {
-        cbSize: size_of::<HIGHCONTRASTW>() as u32,
-        ..Default::default()
-    };
-    let data = Some(std::ptr::from_mut(&mut hc).cast());
-    let none = SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0);
-    // SAFETY: fills `hc`, whose size is in `cbSize`.
-    let ok = unsafe { SystemParametersInfoW(SPI_GETHIGHCONTRAST, hc.cbSize, data, none) }.is_ok();
-    ok && contrast_on(hc.dwFlags)
-}
-
-/// True when Windows' animation effects are off; a failed read counts as on, Windows' default.
-fn animations_off() -> bool {
-    let mut on = BOOL(1);
-    let data = Some(std::ptr::from_mut(&mut on).cast());
-    let none = SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0);
-    // SAFETY: fills one BOOL, which is what this query writes.
-    let ok = unsafe { SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, data, none) }.is_ok();
-    ok && !on.as_bool()
-}
-
-/// The system colours now.
-fn sys_colors() -> SysColors {
-    // SAFETY: plain query of a system colour.
-    let get = |i: SYS_COLOR_INDEX| from_colorref(unsafe { GetSysColor(i) });
-    SysColors {
-        window: get(COLOR_WINDOW),
-        window_text: get(COLOR_WINDOWTEXT),
-        highlight: get(COLOR_HIGHLIGHT),
-        highlight_text: get(COLOR_HIGHLIGHTTEXT),
-        button: get(COLOR_BTNFACE),
-        button_text: get(COLOR_BTNTEXT),
-        gray_text: get(COLOR_GRAYTEXT),
-    }
-}
-
-/// The accent shades from WinRT's `UISettings`.
-fn accent() -> Result<Accent, String> {
-    let _com = Com::start().map_err(|e| e.to_string())?;
-    let ui = UISettings::new().map_err(|e| e.to_string())?;
-    let shade = |t: UIColorType| {
-        let c = ui.GetColorValue(t).map_err(|e| e.to_string())?;
-        Ok::<_, String>(Rgba {
-            r: c.R,
-            g: c.G,
-            b: c.B,
-            a: c.A,
-        })
-    };
-    Ok(Accent {
-        on_light: shade(UIColorType::AccentDark1)?,
-        on_dark: shade(UIColorType::AccentLight2)?,
-    })
-}
-
-/// Reads Windows' look now.
-pub fn read() -> SystemLook {
-    let accent = accent();
-    SystemLook {
-        dark: dark_from(apps_use_light()),
-        note: accent.as_ref().err().map(|e| format!("accent: {e}")),
-        accent: accent.ok(),
-        contrast: high_contrast().then(sys_colors),
-        anim_off: animations_off(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -293,21 +203,32 @@ mod tests {
     }
 
     #[test]
-    fn apps_use_light_zero_means_dark_and_a_missing_value_means_light() {
-        assert!(dark_from(Some(0)));
-        assert!(!dark_from(Some(1)));
-        assert!(!dark_from(None), "Windows' default is light");
-    }
-
-    #[test]
-    fn the_high_contrast_flag_alone_turns_it_on() {
-        assert!(contrast_on(HCF_HIGHCONTRASTON));
-        assert!(!contrast_on(HIGHCONTRASTW_FLAGS(0)));
-    }
-
-    #[test]
-    fn a_colorref_is_read_as_blue_green_red() {
-        assert_eq!(from_colorref(0x0033_2211), rgb("#112233"));
+    fn the_product_look_keeps_every_colour_and_flag() {
+        let colour = |n: u8| [n, n + 1, n + 2, u8::MAX];
+        let look = port::SysLook {
+            dark: true,
+            accent: Some(port::Accent {
+                on_light: colour(1),
+                on_dark: colour(4),
+            }),
+            contrast: Some(port::SysColors {
+                window: colour(10),
+                window_text: colour(20),
+                highlight: colour(30),
+                highlight_text: colour(40),
+                button: colour(50),
+                button_text: colour(60),
+                gray_text: colour(70),
+            }),
+            anim_off: true,
+        };
+        let spike = from_port(look);
+        assert!(spike.dark && spike.anim_off);
+        let accent = spike.accent.expect("an accent");
+        assert_eq!(accent.on_dark, rgb("#040506"));
+        let c = spike.contrast.expect("contrast colours");
+        assert_eq!((c.window, c.gray_text), (rgb("#0A0B0C"), rgb("#464748")));
+        assert_eq!(from_port(port::SysLook::default()), SystemLook::default());
     }
 
     #[test]

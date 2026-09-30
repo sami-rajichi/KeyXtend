@@ -2,13 +2,13 @@
 
 The Windows adapter: the only product crate that calls Win32 (ARCHITECTURE.md invariant 3). It implements the ports from `kx-platform` and `kx-module-api` on Windows; the app picks it, and modules only ever see the ports.
 
-The crate builds on every system. OS code is Windows-only, and the pure parts (QPC ticks to microseconds, the folder rule, the injection plan and its key tables, the layout reading logic and layout ids) are tested everywhere.
+The crate builds on every system. OS code is Windows-only, and the pure parts (QPC ticks to microseconds, the folder rule, the injection plan and its key tables, the layout reading logic and layout ids, the styles the window guard keeps, box and DPI maths, system colours, the backdrop table and the command table) are tested everywhere.
 
 ## What it provides
 
 | Part | Port | What it does |
 |---|---|---|
-| `WindowsPlatform` | `kx_platform::Platform` | Hands out the clock and the folders; `new` fails when Windows refuses either. `injector()` and `layouts()` hand out the input injector and the layout source for the app to register under `InputInjectorKey` and `LayoutSourceKey`. |
+| `WindowsPlatform` | `kx_platform::Platform` | Hands out the clock and the folders; `new` fails when Windows refuses either. `injector()` and `layouts()` hand out the input injector and the layout source for the app to register under `InputInjectorKey` and `LayoutSourceKey`. `guard()`, `screens()`, `look()`, `backdrop()` and `instance()` hand out the UI ports, each as an `Arc<dyn …>` for the app and the `ui` module. |
 | `QpcClock` | `kx_module_api::Clock` | Microseconds since Windows started, from the performance counter; the time base `kx-gates` and `kx-target-window` log. |
 | `dirs` | `kx_platform::AppDirs` | `exe_dir` is the running program's folder; `user_dir` is `APP_DIR_NAME` inside the Local AppData known folder, never read from environment variables. |
 | `WinInjector` (`inject`) | `kx_module_api::ports::InputInjector` | Taps, chords and text for the app in front, in one `SendInput` batch each, every event tagged `keys::TAG`. Text goes as Unicode, or as key presses in the front app's layout (`VkKeyScanEx`, checked with the layout source's `ToUnicodeEx` under the current Caps Lock; Space follows a dead key), or not at all. After a partial send it tries to release the keys still down, with a mask key before Alt or Win. |
@@ -21,13 +21,17 @@ The crate builds on every system. OS code is Windows-only, and the pure parts (Q
 | `layouts::{id, hkl, ask, read_typed, is_printable}` | none | Layout ids to and from Windows handles, the switch request to a given window, and how a `ToUnicodeEx` answer reads, shared with the test tools and the spike. |
 | `com::Com` | none | COM start-up for one thread, undone when dropped, for UI Automation and the Windows Runtime. |
 | `uiaccess::active` | none | Whether this process really runs with uiAccess. |
-
-Later P3 tasks add the window and system parts.
+| `WinGuard` (`window`) | `kx_platform::ui::WindowGuard` | Guards our visible windows except the spared one (Settings): it puts its procedure in front of the window's own (`GWLP_WNDPROC`, the original kept in a window property), keeps `WS_EX_NOACTIVATE`, `WS_EX_TOPMOST` and `WS_EX_TOOLWINDOW` in `WM_STYLECHANGING` (and click-through once set), answers `MA_NOACTIVATE`, keeps every move passive, and unhooks itself on `WM_NCDESTROY`. Only the thread that owns a window may guard it. `shape` sets a window region, which also stops drawing outside it. `remember` and `give_back` hand the focus back only from our window to another app's. It needs no timings: the caller retries (`[ui] guard_delay_ms`, `guard_tries`). |
+| `window::{foreground, from_raw, is_ours, own_windows, own_titled, own_bounds, title, guard_own, shape, give_back, to_front}` | none | The window queries and the guard with a window lifted last, shared with the test tools and the spike. |
+| `WinScreens` (`screen`) | `kx_platform::ui::Screens` | Every monitor's work area, effective DPI and primary flag, and the pointer; boxes are physical pixels in a per-monitor DPI-aware process, as Qt makes it. `screen::{work_area, dpi_of, cursor, physical}` serve the tools and the spike. |
+| `WinLook` (`sysui`, `watch`) | `kx_platform::ui::SystemLook` | Dark apps (`AppsUseLightTheme`), the accent pair (`UISettings` `AccentDark1` and `AccentLight2`), the seven system colours while high contrast is on, animations off, and the UI language as a BCP-47 tag (empty when Windows cannot say). `watch` runs a hidden top-level window on its own thread, which hears Windows' change broadcasts and calls back there once per real change; dropping the guard ends the thread. |
+| `WinBackdrop` (`backdrop`) | `kx_platform::ui::Backdrop` | Mica or Acrylic through DWM with the dark tint; `None` clears them. A Windows without system backdrops (before Windows 11 22H2) refuses a material with `Refused`, and the UI draws a solid plate. |
+| `WinInstance` (`instance`) | `kx_platform::ui::Instance` | One running copy per user session: a mutex in the session namespace (`Local\`). The claim's `listen` opens a message-only command window on its own thread, where the listener runs; a later `listen` replaces the listener. `send` posts `show` or `quit` as a code from one table; any other code is ignored. `instance::{parse, name}` read the command names. |
 
 ## Capabilities and settings
 
-The adapter holds no capability of its own: the kernel grants capabilities to the modules that use its ports, and the injector's and layout source's service keys need `InjectInput`. It has no settings; the app folder name is `kx_platform::APP_DIR_NAME`, and the apps that get key presses are the keyboard module's `key_apps` setting.
+The adapter holds no capability of its own: the kernel grants capabilities to the modules that use its ports, and the injector's and layout source's service keys need `InjectInput`. It has no settings; the app folder name is `kx_platform::APP_DIR_NAME`, which also names the running copy's mutex and command window, and the apps that get key presses are the keyboard module's `key_apps` setting. The UI ports are the app's and the `ui` module's, not the kernel's, so they have no service key.
 
 ## Security
 
-See `docs/security/kx-platform-windows.md`. Every `unsafe` block has a scoped `#[allow(unsafe_code, reason = "...")]` and a `// SAFETY:` comment. The injector and the layout source never log; the injector's errors carry counts, never text, and a switch error names no layout.
+See `docs/security/kx-platform-windows.md`. Every `unsafe` block has a scoped `#[allow(unsafe_code, reason = "...")]` and a `// SAFETY:` comment. The injector and the layout source never log; the injector's errors carry counts, never text, and a switch error names no layout. The window and look parts never log either; a panic in a look or command callback is caught before it reaches Windows.

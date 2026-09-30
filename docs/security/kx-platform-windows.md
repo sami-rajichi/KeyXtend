@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-09-30
 - **Status:** Draft
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), and the app in front (`front`). It runs inside the uiAccess `keyxtend` process. Later P3 tasks add windows and system parts, and this note grows with them.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), and the one running copy with its command window (`instance`, `hidden`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -20,6 +20,10 @@
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
 | Installed layouts, their language facts and what each key types | Public (the same for every user of that layout; not typed text) | Memory only; returned to the caller | N/A | Not kept |
 | Caps Lock state and the layout of the app in front | Public | Memory only | N/A | Not kept |
+| Titles and boxes of our own windows; the window in front as a focus token | Public (our own text; a token is a window handle) | Memory only; returned to the caller | N/A | Not kept |
+| Work areas, DPI and the pointer position | Public | Memory only; returned to the caller | N/A | Not kept |
+| The system look (dark apps, accent, high-contrast colours, animations) and the UI language tag | Public | Memory only; the watcher keeps the last reading to spot a change | N/A | Until the watch ends |
+| Commands from a later copy (`show`, `quit`) | Public (a code from a fixed table) | Memory only | N/A | Not kept |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -38,15 +42,30 @@
 | `LCIDToLocaleName` / `GetLocaleInfoEx` | Fixed buffers; counts clamped; a number is read from exactly two units | 128 UTF-16 units | Unit and property tests |
 | `GetGUIThreadInfo` (window with the keyboard) | A failed call or no focus falls back to the front window; thread 0 is refused | Fixed size | No |
 | `QueryFullProcessImageNameW` (app in front) | Buffer of the Windows path limit; the length Windows writes back is checked; invalid UTF-16 reads as unknown; the process handle is closed once | 32,767 UTF-16 units | No |
+| Messages to a guarded window (`WM_STYLECHANGING`, `WM_WINDOWPOSCHANGING`, `WM_MOUSEACTIVATE`, `WM_NCDESTROY`) | The style index is read from wParam's low 32 bits; the lParam struct is read and changed only for the two messages whose struct Windows fills; every other message goes unchanged to the window's own procedure | Fixed size | Unit tests of the style rules and the index reader; real hidden-window tests |
+| The guard's window property (`KeyXtend.Guard`) | Holds the original procedure; with no property the guard falls back to `DefWindowProcW`. Unhooking restores it only while the guard's procedure is still in front, then removes the property | One pointer | Hidden-window tests (guard, renew, unhook) |
+| `EnumWindows`, `GetWindowThreadProcessId`, `GetWindowTextW` | Only visible windows of our process count, never the console host's; a title is read into a fixed buffer and the count clamped | 512 UTF-16 units per title | Unit tests of the rules; hidden-window tests |
+| `EnumDisplayMonitors`, `GetMonitorInfoW`, `GetDpiForMonitor`, `GetCursorPos` | Fixed-size structs; a failed monitor is skipped, a failed DPI reads as 96, boxes are clamped to non-negative sizes | Fixed size | Unit tests of the box and DPI maths, including NaN and infinity |
+| Registry `HKCU\...\Themes\Personalize` `AppsUseLightTheme` | `REG_DWORD` only; missing or refused reads as light | 4 bytes | Unit test |
+| `UISettings` accent, `GetSysColor`, `SystemParametersInfoW` (high contrast, animations) | Fixed-size values; a failure reads as no accent, high contrast off or animations on; colours are always opaque | Fixed size | Unit tests of the colour and flag readers |
+| `GetUserDefaultUILanguage`, `LCIDToLocaleName` | Fixed buffer; an unknown language reads as an empty tag | 128 UTF-16 units | Real test that the tag is BCP-47 |
+| Look broadcasts to the hidden watch window (`WM_SETTINGCHANGE`, `WM_SYSCOLORCHANGE`, `WM_THEMECHANGED`, `WM_DWMCOLORIZATIONCOLORCHANGED`) | Their parameters are never read; each one only triggers a fresh reading, and only a real change calls back | One reading per broadcast | Unit test of the change rule |
+| `CreateMutexW` (`Local\` + app name) | "Already exists" or "access denied" reads as another copy; any other failure means Windows cannot check, and this copy runs | Fixed name | Unit and property tests of the name and the answer rule |
+| `WM_APP` to the command window | Only wParam is read and must be a code in the command table; any other code and lParam are ignored | One code per message | Property test of the table; real test with an unknown code |
+| `DwmSetWindowAttribute`, `DwmExtendFrameIntoClientArea` | Set only on one of our own windows, found by title; a refusal is a `UiError`, and the no-backdrop answer of old Windows is success for `None` | Fixed size | Unit tests of the kind table and the answer rule |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a shell or parent process could set `LOCALAPPDATA` or `TEMP` to aim our data elsewhere. Mitigation: the folder comes from the known-folder API, not the environment.
 - **Tampering:** our own injected input could loop back through our own hooks (P4) and be acted on twice. Mitigation: every event carries `keys::TAG` in `dwExtraInfo`, and our hooks skip it; the tag is pinned by a test.
-- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector and the layout source log nothing, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
+- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector, the layout source and the window and look parts log nothing, `UiError` holds at most an OS error code, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
 - **Information disclosure:** no network; nothing leaves the process. Text is read only through `Redacted::expose` to build the send.
 - **Denial of service:** start-up fails with a typed error, never a panic, when Windows refuses the clock or a folder. After a partial send it tries to release every key still held, and once more one event at a time for what Windows refuses, so no modifier should stay stuck down; a mask key (`keys::MASK_VK`, unassigned) goes first when Alt or Win is released, so neither opens the menu bar or Start.
 - **Elevation (layouts):** `request` posts only `WM_INPUTLANGCHANGEREQUEST`, with a layout checked against the installed list, to the window that has the keyboard; that window decides whether to switch. With uiAccess the post may reach a window above our integrity level, which is why the port needs `InjectInput`. The adapter never loads, activates, adds or removes a layout; only the test window's `--layout` activates one (see Accepted).
 - **Tampering (layouts):** the layout names come from `HKLM`, which only administrators can change; they are display text, bounded and never run or parsed further.
+- **Tampering (guard):** the guard puts its procedure in front of visible windows of our own process only, on the thread that owns them (Windows refuses any other). It keeps no global state and unhooks itself on `WM_NCDESTROY`, so no procedure outlives its window.
+- **Spoofing (command window):** the command window is message-only and reachable from this session only: Windows keeps window messages inside one desktop, and UIPI drops posts from a lower integrity level. A post does not name its sender, so the window acts only on a code from the fixed table (`show`, `quit`); a program that can post there runs as this user at our level and could end the process anyway.
+- **Denial of service (UI parts):** a panic in a look or command callback is caught before it reaches Windows. A flood of look broadcasts costs one reading each and calls back only on a real change; a failed OS read gives a safe default, never a panic.
+- **Elevation (focus):** `give_back` moves the focus only from one of our windows to another app's live window. `to_front` (the spike's quick-fill only) asks Windows, which may refuse.
 - **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, with dead keys checked on the golden layouts only (see Accepted): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
 
 ## Findings
@@ -72,3 +91,9 @@ A dead key is checked by the character `ToUnicodeEx` gives for it, since its no-
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.
 
 `kx-target-window --layout` (a test tool, never shipped) activates a layout, which on Windows 8+ switches the whole session's input language. It puts the previous layout back on close and when the switch does not take; a killed window cannot, so gates close it with `WM_CLOSE` first.
+
+Another program in this session can create `Local\KeyXtend.Running` first, so KeyXtend reads a copy as running and then finds no command window. A named object cannot be kept from a same-user program; the app (Task 19) decides what to do when no command window answers.
+
+DWM may draw Mica and Acrylic as a solid colour on an inactive window, and the keyboard is never active. The manual look check (G13, Task 16) decides; the spike's undocumented accent-policy blur ended in Task 9.
+
+A monitor whose DPI Windows cannot give reads as 96, so a window there may be sized as if unscaled until the next reading.

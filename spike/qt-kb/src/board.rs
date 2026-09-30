@@ -9,7 +9,7 @@ use kx_platform_windows::WinLayouts;
 use serde_json::json;
 use spike_core::kbctl::{Kb, Tapped};
 use spike_core::lookcfg::ModeChoice;
-use spike_core::sysui::{self, Watch};
+use spike_core::sysui::{self, WatchGuard};
 use spike_core::{legend, screen};
 
 /// The cxx-qt bridge that makes `Board` a QML type.
@@ -117,7 +117,7 @@ pub struct BoardRust {
     start_note: QString,
     kb: Kb,
     /// Keeps the look watcher running while the board lives.
-    watch: Option<Watch>,
+    watch: Option<WatchGuard>,
 }
 
 impl Default for BoardRust {

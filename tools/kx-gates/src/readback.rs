@@ -1,7 +1,7 @@
 //! G1 read-back: the text an app holds, from its saved file, its log or the clipboard.
 #![cfg(windows)]
 
-use spike_core::window::foreground;
+use kx_platform_windows::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::config::GatesConfig;

@@ -173,7 +173,7 @@ impl qobject::Tools {
 
     /// Freezes the screen and writes it for QML to show; JSON with its file URL and physical box.
     fn begin_snip(mut self: Pin<&mut Self>) -> Value {
-        let prev = window::foreground().0 as isize;
+        let prev = kx_platform_windows::window::foreground().0 as isize;
         let t = &self.rust().cfg.tools;
         let dir = t.snip_dir();
         let started = Snip::start(t.shot_cap()).and_then(|s| s.frozen_file(&dir).map(|f| (s, f)));
@@ -212,7 +212,7 @@ impl qobject::Tools {
         let Some(note) = snip.pick(&dir) else {
             return QString::default();
         };
-        let prev = window::from_raw(*prev);
+        let prev = kx_platform_windows::window::from_raw(*prev);
         me.snip = None;
         window::bring_back(prev, 0);
         QString::from(&note)

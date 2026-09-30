@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input injection and layouts."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, layouts, windows and the system look."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,14 +18,24 @@ thiserror.workspace = true
 
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
 [target.'cfg(windows)'.dependencies]
+# The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops.
 windows = { workspace = true, features = [
+    "UI",
+    "UI_ViewManagement",
     "Win32_Foundation",
     "Win32_Globalization",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_System_Com",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
     "Win32_System_Performance",
     "Win32_System_Registry",
     "Win32_System_Threading",
+    "Win32_UI_Accessibility",
+    "Win32_UI_Controls",
+    "Win32_UI_HiDpi",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",

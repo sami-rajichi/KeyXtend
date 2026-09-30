@@ -4,9 +4,9 @@
 use std::collections::HashSet;
 use std::ffi::c_void;
 
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::hold::Pt;
-use spike_core::window::foreground;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, POINT, RECT};
 use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUIAccess};
 use windows::Win32::System::Threading::{

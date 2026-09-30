@@ -4,9 +4,13 @@ use std::sync::Arc;
 
 use kx_module_api::Clock;
 use kx_module_api::ports::{InputInjector, LayoutSource};
-use kx_platform::{AppDirs, Platform};
+use kx_platform::ui::{Backdrop, Instance, Screens, SystemLook, WindowGuard};
+use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
-use crate::{PlatformError, QpcClock, WinInjector, WinLayouts, dirs};
+use crate::{
+    PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
+    WinScreens, dirs,
+};
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
 #[derive(Debug)]
@@ -37,6 +41,36 @@ impl WindowsPlatform {
     #[must_use]
     pub fn layouts(&self) -> Arc<dyn LayoutSource> {
         Arc::new(WinLayouts)
+    }
+
+    /// The window guard, for the UI to call on the thread that owns our windows.
+    #[must_use]
+    pub fn guard(&self) -> Arc<dyn WindowGuard> {
+        Arc::new(WinGuard)
+    }
+
+    /// The screens and the pointer.
+    #[must_use]
+    pub fn screens(&self) -> Arc<dyn Screens> {
+        Arc::new(WinScreens)
+    }
+
+    /// The system look and the UI language.
+    #[must_use]
+    pub fn look(&self) -> Arc<dyn SystemLook> {
+        Arc::new(WinLook)
+    }
+
+    /// The window backdrops.
+    #[must_use]
+    pub fn backdrop(&self) -> Arc<dyn Backdrop> {
+        Arc::new(WinBackdrop)
+    }
+
+    /// The one running copy of this app in the user session.
+    #[must_use]
+    pub fn instance(&self) -> Arc<dyn Instance> {
+        Arc::new(WinInstance::new(APP_DIR_NAME))
     }
 }
 
@@ -74,6 +108,33 @@ mod tests {
         let injector = WindowsPlatform::new().unwrap().injector();
         let asked = std::thread::spawn(move || injector.target_app()).join();
         assert!(asked.is_ok(), "the port answers on another thread");
+    }
+
+    #[test]
+    fn the_ui_ports_answer_on_another_thread() {
+        let platform = WindowsPlatform::new().unwrap();
+        let (screens, look, guard) = (platform.screens(), platform.look(), platform.guard());
+        let answers = std::thread::spawn(move || {
+            (
+                screens.work_areas(),
+                look.ui_language(),
+                guard.guard_own(None),
+            )
+        });
+        let (areas, language, guarded) = answers.join().unwrap();
+        assert!(!areas.is_empty() && !language.is_empty());
+        assert_eq!(guarded, Ok(0), "no window of ours is shown");
+    }
+
+    #[test]
+    fn the_backdrop_and_instance_ports_are_handed_out() {
+        use kx_platform::ui::{BackdropKind, UiError};
+        let platform = WindowsPlatform::new().unwrap();
+        let missing = platform
+            .backdrop()
+            .apply("KeyXtend test: none", BackdropKind::None, false);
+        assert_eq!(missing, Err(UiError::NoWindow));
+        let _instance: Arc<dyn Instance> = platform.instance();
     }
 
     #[test]

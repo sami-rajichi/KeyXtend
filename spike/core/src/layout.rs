@@ -2,7 +2,7 @@
 //! `Follow` moves to kx-mod-layouts and the rows to kx-mod-keyboard later in P3.
 
 use kx_module_api::ports::{LayoutSource, Scan};
-use kx_platform_windows::{WinLayouts, layouts};
+use kx_platform_windows::{WinLayouts, layouts, window};
 use serde::Serialize;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyNameTextW, HKL};
 
@@ -105,9 +105,9 @@ impl Follow {
 
     /// The new layout when another app is in front and its layout differs; else `None`.
     pub fn changed(&mut self) -> Option<HKL> {
-        let front = crate::window::foreground();
+        let front = window::foreground();
         let now = WinLayouts.foreground().and_then(layouts::hkl)?;
-        let other = !front.is_invalid() && !crate::window::is_ours(front);
+        let other = !front.is_invalid() && !window::is_ours(front);
         self.step(other, now.0 as isize).then_some(now)
     }
 

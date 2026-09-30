@@ -1,5 +1,6 @@
 //! `spike.toml [look]`: the starting theme and mode, accent themes, the frosted plate, the tooltip delay and motion switches.
 
+use kx_platform::ui::BackdropKind;
 use serde::{Deserialize, Serialize};
 
 use crate::theme::Theme;
@@ -29,8 +30,17 @@ pub enum Backdrop {
     Mica,
     /// The DWM Acrylic backdrop.
     Acrylic,
-    /// The accent-policy blur, which stays on an inactive window.
-    Blur,
+}
+
+impl Backdrop {
+    /// The product's backdrop kind.
+    pub fn kind(self) -> BackdropKind {
+        match self {
+            Self::None => BackdropKind::None,
+            Self::Mica => BackdropKind::Mica,
+            Self::Acrylic => BackdropKind::Acrylic,
+        }
+    }
 }
 
 /// `spike.toml [look]`.
@@ -135,6 +145,13 @@ mod tests {
         );
         c.accent_themes = vec!["native".into()];
         assert_eq!(c.check_themes(&themes), Ok(()));
+    }
+
+    #[test]
+    fn each_backdrop_names_the_product_kind() {
+        assert_eq!(cfg().backdrop.kind(), BackdropKind::Acrylic);
+        assert_eq!(Backdrop::None.kind(), BackdropKind::None);
+        assert_eq!(Backdrop::Mica.kind(), BackdropKind::Mica);
     }
 
     #[test]

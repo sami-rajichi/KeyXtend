@@ -14,6 +14,8 @@ use kx_module_api::ports::LayoutId;
 mod win;
 
 #[cfg(windows)]
+pub(crate) use win::lang_name;
+#[cfg(windows)]
 pub use win::{facts, locale};
 
 /// Hex digits of a registry layout key, such as `0000040C`.

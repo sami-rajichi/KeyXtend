@@ -3,12 +3,12 @@
 
 use std::time::{Duration, Instant};
 
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::langkey;
 use spike_core::uia::Uia;
 use spike_core::voicecfg::VoiceConfig;
-use spike_core::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};

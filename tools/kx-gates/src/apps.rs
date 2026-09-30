@@ -4,9 +4,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Child;
 
+use kx_platform_windows::window::foreground;
 use kx_target_window::config::TargetConfig;
 use spike_core::config::SpikeConfig;
-use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
 use crate::config::{AppConfig, GatesConfig, Timing};

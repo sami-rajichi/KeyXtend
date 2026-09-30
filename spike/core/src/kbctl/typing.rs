@@ -1,7 +1,7 @@
 //! What a click on a key sends: text, a key press or a latch, and dead keys that wait for the next key.
 
 use kx_module_api::ports::LayoutSource;
-use kx_platform_windows::{WinLayouts, layouts};
+use kx_platform_windows::{WinLayouts, layouts, window};
 
 use super::Kb;
 use crate::config::ToolButton;
@@ -10,7 +10,7 @@ use crate::kbgeom::KeyKind;
 use crate::kbview::{chars_of, legend_mods};
 use crate::latch::Latch;
 use crate::legend::{LegendMods, Slot, slot};
-use crate::{langkey, layout, sendkeys, window};
+use crate::{langkey, layout, sendkeys};
 
 /// Error when a chip index is past the list.
 const NO_CHIP: &str = "no such chip";
