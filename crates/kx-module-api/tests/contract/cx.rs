@@ -1,12 +1,13 @@
 //! `ModuleCx` over a fake host: manifest checks, typed services, held handlers, clock and settings.
 
 use crate::bus::Ping;
-use crate::fakes::{FakeHost, NOW};
 use kx_module_api::{
     Capability, Flow, Manifest, Module, ModuleCx, ModuleError, ModuleId, ServiceError, ServiceId,
     ServiceKey, Settings,
 };
+use kx_test_support::host::{FakeHost, NOW};
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -131,6 +132,7 @@ fn a_stored_value_of_another_type_is_wrong_type() {
 #[test]
 fn provide_records_the_keys_capability() {
     let mut host = FakeHost::new(&FULL);
+    host.granted.push(Capability::Microphone);
     let mut cx = ModuleCx::new(&mut host);
     cx.provide::<Mic>(Arc::new(Hello)).unwrap();
     cx.provide::<Greeter>(Arc::new(Hello)).unwrap();
@@ -141,6 +143,7 @@ fn provide_records_the_keys_capability() {
 #[test]
 fn a_key_naming_another_capability_is_refused() {
     let mut host = FakeHost::new(&FULL);
+    host.granted.push(Capability::Microphone);
     let mut cx = ModuleCx::new(&mut host);
     cx.provide::<Mic>(Arc::new(Hello)).unwrap();
     let mismatch = ServiceError::CapabilityMismatch(Mic::ID);
@@ -160,8 +163,10 @@ fn a_granted_capability_gives_the_same_arc() {
 #[test]
 fn host_refusals_pass_through() {
     let mut host = FakeHost::new(&FULL);
-    let mut cx = ModuleCx::new(&mut host);
-    cx.provide::<Mic>(Arc::new(Hello)).unwrap();
+    let mic: Arc<dyn Greet> = Arc::new(Hello);
+    let stored = (Mic::CAPABILITY, Box::new(mic) as Box<dyn Any + Send + Sync>);
+    host.services.insert(Mic::ID, stored);
+    let cx = ModuleCx::new(&mut host);
     let not_granted = ServiceError::NotGranted(Mic::ID, Capability::Microphone);
     assert_eq!(cx.service::<Mic>().err(), Some(not_granted));
     assert_eq!(

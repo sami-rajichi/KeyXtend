@@ -19,4 +19,5 @@ toml.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

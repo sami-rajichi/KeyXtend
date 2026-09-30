@@ -1,7 +1,7 @@
 //! The typed `Bus` over a fake core: round trips, the intercept chain and subscription guards.
 
-use crate::fakes::FakeCore;
 use kx_module_api::{Bus, Event, Flow, Subscription};
+use kx_test_support::host::FakeCore;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 

@@ -1,10 +1,10 @@
 //! The event capability gate: a limited `Bus` and a `ModuleCx` refuse gated events without the grant.
 
-use crate::fakes::{FakeCore, FakeHost};
 use kx_module_api::Capability::{Microphone, ReadFocusedText};
 use kx_module_api::{
     Bus, Capability, Event, EventError, Flow, Manifest, ModuleCx, ModuleError, ModuleId,
 };
+use kx_test_support::host::{FakeCore, FakeHost};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

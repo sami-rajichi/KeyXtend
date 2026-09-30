@@ -1,6 +1,6 @@
 //! The place the user moves the keyboard to is saved through the module's own settings handle.
 
-use crate::host::FakeHost;
+use crate::host::{FakeHost, fake, saved, start_settings};
 use kx_mod_keyboard::Placer;
 use kx_mod_keyboard::place::home;
 use kx_module_api::WriteError;
@@ -27,7 +27,7 @@ fn at(x: i32, y: i32) -> Point {
 }
 
 fn placer(host: &mut FakeHost) -> Placer {
-    let settings = host.settings();
+    let settings = start_settings(host);
     Placer::new(&settings, host.handle())
 }
 
@@ -41,7 +41,7 @@ fn keys(host: &FakeHost) -> Vec<Vec<String>> {
 
 #[test]
 fn it_starts_at_home_and_saves_nothing() {
-    let mut host = FakeHost::new();
+    let mut host = fake(None);
     let mut p = placer(&mut host);
     assert_eq!(p.start(PLATE, &screens()), home(PLATE, &screens()));
     assert_eq!(p.at(), home(PLATE, &screens()));
@@ -50,14 +50,14 @@ fn it_starts_at_home_and_saves_nothing() {
 
 #[test]
 fn a_move_saves_x_y_and_placed_in_one_write() {
-    let mut host = FakeHost::new();
+    let mut host = fake(None);
     let mut p = placer(&mut host);
     assert_eq!(
         p.moved(at(300, 200), PLATE, &screens()),
         Ok(Some(at(300, 200)))
     );
     assert_eq!(keys(&host), [["placed", "x", "y"]]);
-    assert_eq!(host.sink.settings().place(), Some(at(300, 200)));
+    assert_eq!(saved(&host).place(), Some(at(300, 200)));
     assert_eq!(
         p.moved(at(300, 200), PLATE, &screens()),
         Ok(Some(at(300, 200)))
@@ -67,18 +67,18 @@ fn a_move_saves_x_y_and_placed_in_one_write() {
 
 #[test]
 fn a_move_past_the_edge_is_saved_at_the_edge() {
-    let mut host = FakeHost::new();
+    let mut host = fake(None);
     let mut p = placer(&mut host);
     assert_eq!(
         p.moved(at(1800, 200), PLATE, &screens()),
         Ok(Some(at(1249, 200)))
     );
-    assert_eq!(host.sink.settings().place(), Some(at(1249, 200)));
+    assert_eq!(saved(&host).place(), Some(at(1249, 200)));
 }
 
 #[test]
 fn a_saved_place_is_where_it_starts() {
-    let mut host = FakeHost::with(Some(("placed", true.into())));
+    let mut host = fake(Some(("placed", true.into())));
     let mut p = placer(&mut host);
     assert_eq!(p.saved(), Some(at(0, 0)));
     assert_eq!(p.start(PLATE, &screens()), Some(at(0, 0)));
@@ -86,9 +86,9 @@ fn a_saved_place_is_where_it_starts() {
 
 #[test]
 fn a_saved_place_off_every_screen_starts_home_and_is_kept_for_its_screen() {
-    let mut host = FakeHost::with(Some(("x", 9000.into())));
+    let mut host = fake(Some(("x", 9000.into())));
     let settings = {
-        let mut s = host.settings();
+        let mut s = start_settings(&host);
         s.placed = true;
         s
     };
@@ -100,7 +100,7 @@ fn a_saved_place_off_every_screen_starts_home_and_is_kept_for_its_screen() {
 
 #[test]
 fn a_place_that_cannot_be_saved_holds_and_is_tried_again() {
-    let mut host = FakeHost::new();
+    let mut host = fake(None);
     let mut p = placer(&mut host);
     host.sink.refuse(Some(WriteError::Unsaved));
     assert_eq!(
@@ -115,7 +115,7 @@ fn a_place_that_cannot_be_saved_holds_and_is_tried_again() {
 
 #[test]
 fn a_place_that_fails_to_save_in_part_leaves_the_saved_place_whole() {
-    let mut host = FakeHost::with(Some(("placed", true.into())));
+    let mut host = fake(Some(("placed", true.into())));
     let mut p = placer(&mut host);
     assert_eq!(
         p.moved(at(300, 200), PLATE, &screens()),
@@ -124,9 +124,9 @@ fn a_place_that_fails_to_save_in_part_leaves_the_saved_place_whole() {
     host.sink.refuse_key("y", WriteError::Unsaved);
     let failed = p.moved(at(10, 20), PLATE, &screens());
     assert_eq!(failed, Err(WriteError::Unsaved));
-    let saved = host.sink.settings().place();
+    let kept = saved(&host).place();
     assert_eq!(
-        saved,
+        kept,
         Some(at(300, 200)),
         "never x from one place and y from another"
     );
@@ -134,7 +134,7 @@ fn a_place_that_fails_to_save_in_part_leaves_the_saved_place_whole() {
 
 #[test]
 fn with_no_screen_a_move_saves_nothing() {
-    let mut host = FakeHost::new();
+    let mut host = fake(None);
     let mut p = placer(&mut host);
     assert_eq!(p.moved(at(10, 20), PLATE, &[]), Ok(None));
     assert_eq!(p.start(PLATE, &[]), None);

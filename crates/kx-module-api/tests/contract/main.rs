@@ -1,7 +1,6 @@
-//! Contract tests: small fakes of the kernel drive the typed module API from outside the crate.
+//! Contract tests: the shared fake host of kx-test-support drives the typed module API from outside the crate.
 
 mod bus;
 mod cx;
-mod fakes;
 mod gate;
 mod handle;

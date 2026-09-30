@@ -1,7 +1,7 @@
 //! A module's settings handle over a fake sink: bound to its own module and usable from any thread.
 
-use crate::fakes::FakeHost;
 use kx_module_api::{Manifest, ModuleCx, ModuleId, SettingsError, SettingsHandle, WriteError};
+use kx_test_support::host::FakeHost;
 use std::thread;
 use toml::{Table, Value};
 
@@ -60,7 +60,7 @@ fn a_clone_writes_from_another_thread() {
 fn the_sink_refusal_reaches_the_module() {
     let mut host = FakeHost::new(&OWN);
     let refusal = WriteError::Invalid(SettingsError::Invalid("too big".into()));
-    host.sink.refuse(refusal.clone());
+    host.sink.refuse(Some(refusal.clone()));
     let handle = ModuleCx::new(&mut host).settings_handle();
     assert_eq!(handle.set(KEY, Value::Integer(99)), Err(refusal));
 }

@@ -71,7 +71,7 @@ crates/
   kx-mod-snip/          capture overlay, editor, OCR client
   kx-mod-power/         power dialog
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20
-  kx-test-support/      shared test helpers, golden files
+  kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml; uses spike-core widely until its gates are
