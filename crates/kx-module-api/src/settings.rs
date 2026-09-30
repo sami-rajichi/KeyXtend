@@ -45,6 +45,18 @@ impl SettingsSpec {
             .and_then(|n| usize::try_from(n).ok());
         steps == Some(self.migrations.len())
     }
+
+    /// The embedded defaults read as `T` and checked.
+    ///
+    /// # Errors
+    /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
+    pub fn defaults_as<T: Settings>(&self) -> Result<T, SettingsError> {
+        let table: toml::Table = self
+            .defaults
+            .parse()
+            .map_err(|e: toml::de::Error| SettingsError::Parse(e.to_string()))?;
+        parse_as(&table)
+    }
 }
 
 /// Checks `table` by reading it as `T` and running `T::check`.
@@ -174,5 +186,23 @@ mod tests {
     fn the_spec_validates_its_defaults() {
         let spec = spec(1, &[]);
         assert_eq!((spec.validate)(&table(spec.defaults)), Ok(()));
+    }
+
+    #[test]
+    fn the_defaults_read_as_the_settings_type() {
+        let speed = spec(1, &[]).defaults_as::<Demo>().map(|d| d.speed);
+        assert_eq!(speed, Ok(3));
+        let broken = SettingsSpec {
+            defaults: "speed = [",
+            ..spec(1, &[])
+        };
+        let err = broken.defaults_as::<Demo>().err();
+        assert!(matches!(err, Some(SettingsError::Parse(_))), "{err:?}");
+        let fast = SettingsSpec {
+            defaults: "speed = 99",
+            ..spec(1, &[])
+        };
+        let err = fast.defaults_as::<Demo>().err();
+        assert!(matches!(err, Some(SettingsError::Invalid(_))), "{err:?}");
     }
 }

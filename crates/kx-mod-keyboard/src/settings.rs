@@ -1,7 +1,7 @@
 //! The `[keyboard]` settings: modifiers, the language key, size, place and the bubble corner.
 
 use kx_module_api::ports::Point;
-use kx_module_api::{Settings, SettingsError, SettingsSpec, parse_as, validate_as};
+use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
 
 /// Why a size was refused: it is not a finite number.
@@ -97,11 +97,7 @@ impl KeyboardSettings {
     /// # Errors
     /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
     pub fn from_defaults() -> Result<Self, SettingsError> {
-        let table: toml::Table = SPEC
-            .defaults
-            .parse()
-            .map_err(|e: toml::de::Error| SettingsError::Parse(e.to_string()))?;
-        parse_as(&table)
+        SPEC.defaults_as()
     }
 
     /// Where the user last put the keyboard, if anywhere.

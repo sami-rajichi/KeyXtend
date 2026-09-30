@@ -1,6 +1,6 @@
 //! The `[layouts]` settings: what the language key shows for each language.
 
-use kx_module_api::{Settings, SettingsError, SettingsSpec, parse_as, validate_as};
+use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
@@ -38,11 +38,7 @@ impl LayoutsSettings {
     /// # Errors
     /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
     pub fn from_defaults() -> Result<Self, SettingsError> {
-        let table: toml::Table = SPEC
-            .defaults
-            .parse()
-            .map_err(|e: toml::de::Error| SettingsError::Parse(e.to_string()))?;
-        parse_as(&table)
+        SPEC.defaults_as()
     }
 }
 
