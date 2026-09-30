@@ -9,7 +9,7 @@ mod layouts;
 
 pub use code::CodeError;
 pub use face::{FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey};
-pub use geom::{BASE_DPI, Point, Rect, physical};
+pub use geom::{BASE_DPI, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey};

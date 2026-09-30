@@ -2,7 +2,7 @@
 //! bottom centre of the primary screen, always inside a work area. Each screen's DPI sets the window's size there.
 
 use crate::settings::{Corner, KeyboardSettings};
-use kx_module_api::ports::{Point, Rect, physical};
+use kx_module_api::ports::{Point, Rect, Screen, physical};
 use kx_module_api::{SettingsHandle, WriteError};
 
 /// The settings key of the saved left edge.
@@ -11,17 +11,6 @@ const X_KEY: &str = "x";
 const Y_KEY: &str = "y";
 /// The settings key that says the place was saved.
 const PLACED_KEY: &str = "placed";
-
-/// One screen as the UI reports it.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Screen {
-    /// The work area, without the taskbar, in physical pixels.
-    pub rect: Rect,
-    /// Dots per inch; `BASE_DPI` is 100 %.
-    pub dpi: u32,
-    /// The primary screen.
-    pub primary: bool,
-}
 
 /// `v` as a pixel, stopping at the ends of the range.
 fn px(v: i64) -> i32 {

@@ -53,6 +53,18 @@ pub struct Point {
     pub y: i32,
 }
 
+/// One screen's usable area, its DPI and whether it is the primary screen.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Screen {
+    /// The work area, without the taskbar, in physical pixels.
+    pub rect: Rect,
+    /// Dots per inch; `BASE_DPI` is 100 %.
+    pub dpi: u32,
+    /// The primary screen.
+    pub primary: bool,
+}
+
 /// Reads a pixel from any number, rounding a fraction to the nearest pixel.
 pub(super) fn px<'de, D: Deserializer<'de>>(deserializer: D) -> Result<i32, D::Error> {
     deserializer.deserialize_any(PxVisitor)
@@ -103,6 +115,27 @@ mod tests {
             (0, i32::MAX)
         );
         assert_eq!((physical(-10.0, 192), physical(10.0, 0)), (-20, 0));
+    }
+
+    #[test]
+    fn a_screen_carries_its_dpi_and_whether_it_is_primary() {
+        let text = r#"{"rect":{"x":1920,"y":0,"w":2560,"h":1400},"dpi":144,"primary":false}"#;
+        let s: Screen = serde_json::from_str(text).unwrap();
+        let rect = Rect {
+            x: 1920,
+            y: 0,
+            w: 2560,
+            h: 1400,
+        };
+        let want = Screen {
+            rect,
+            dpi: 144,
+            primary: false,
+        };
+        assert_eq!(s, want);
+        assert_eq!(serde_json::to_string(&s).unwrap(), text);
+        let spare = r#"{"rect":{"x":0,"y":0,"w":1,"h":1},"dpi":96,"primary":true,"scale":1}"#;
+        assert!(serde_json::from_str::<Screen>(spare).is_err());
     }
 
     #[test]

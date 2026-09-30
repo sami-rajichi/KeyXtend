@@ -1,8 +1,8 @@
 //! The Windows side of the screens: monitors, their work areas and DPI, and the pointer.
 //! Boxes are in physical pixels while the process is per-monitor DPI aware, as Qt makes it.
 
-use kx_module_api::ports::Point;
-use kx_platform::ui::{ScreenArea, Screens, UiError};
+use kx_module_api::ports::{Point, Screen};
+use kx_platform::ui::{Screens, UiError};
 use windows::Win32::Foundation::{LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
     EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITOR_DEFAULTTONEAREST, MONITORINFO,
@@ -20,7 +20,7 @@ use crate::{failed, refused};
 pub struct WinScreens;
 
 impl Screens for WinScreens {
-    fn work_areas(&self) -> Vec<ScreenArea> {
+    fn work_areas(&self) -> Vec<Screen> {
         monitors().into_iter().filter_map(area).collect()
     }
 
@@ -72,10 +72,10 @@ fn monitor_dpi(mon: HMONITOR) -> u32 {
 }
 
 /// Monitor `mon` as a screen area; `None` when Windows refuses.
-fn area(mon: HMONITOR) -> Option<ScreenArea> {
+fn area(mon: HMONITOR) -> Option<Screen> {
     let info = info(mon)?;
     let work = info.rcWork;
-    Some(ScreenArea {
+    Some(Screen {
         rect: rect_of([work.left, work.top, work.right, work.bottom]),
         dpi: monitor_dpi(mon),
         primary: is_primary(info.dwFlags),

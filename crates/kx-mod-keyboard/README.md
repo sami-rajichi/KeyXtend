@@ -31,7 +31,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 - `board` lays the board out at any size as boxes in logical pixels (`Area`), with the plate, D-pad and top bar.
 - `Limits` clamps a size to `size_min..=size_max`, steps it by `size_step` and names the presets; `Sizer` applies them and saves `size`.
-- `place` keeps the keyboard wholly on one screen in physical pixels, sized at that screen's DPI. It starts at the saved place, else at the bottom centre of the primary work area; a place off every screen goes there too. `Placer` saves `x`, `y` and `placed` when the user moves the keyboard.
+- `place` keeps the keyboard wholly on one screen in physical pixels, sized at that screen's DPI. The screens are the ports' `Screen`, as `FaceAction::Placed` carries them. It starts at the saved place, else at the bottom centre of the primary work area; a place off every screen goes there too. `Placer` saves `x`, `y` and `placed` when the user moves the keyboard.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -56,7 +56,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`), `BoardError`, `KeyKind`, `Latch`, `Role`, `KeySpec`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
-- `place`: `Screen`, `Placer`, `inside`, `bottom_centre`, `home`, `fit`, `start`, `bubble`.
+- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `fit`, `start`, `bubble`.
 
 ## Security
 

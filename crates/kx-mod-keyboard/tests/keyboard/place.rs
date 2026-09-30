@@ -2,9 +2,9 @@
 
 use crate::host::FakeHost;
 use kx_mod_keyboard::Placer;
-use kx_mod_keyboard::place::{Screen, home};
+use kx_mod_keyboard::place::home;
 use kx_module_api::WriteError;
-use kx_module_api::ports::{BASE_DPI, Point, Rect};
+use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 
 /// The size-1 board in logical pixels.
 const PLATE: (f64, f64) = (670.78, 196.0);

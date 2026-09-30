@@ -1,6 +1,6 @@
 //! The keyboard face: what the UI draws and the clicks it sends back.
 
-use super::{InjectError, Rect, SwitchError};
+use super::{InjectError, Rect, Screen, SwitchError};
 use crate::{Capability, REDACTED_MARKER, ServiceId, ServiceKey};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -72,13 +72,13 @@ pub enum FaceAction {
     },
     /// The resize ends at the size it reached.
     ResizeEnd,
-    /// The window ended at `rect`, and `screens` are the work areas the UI can see.
-    /// Both are physical pixels in the space of `Screens::cursor`; fractions round.
+    /// The window ended at `rect`, and `screens` are the screens the UI can see.
+    /// Rects are physical pixels in the space of `Screens::cursor`; fractions round.
     Placed {
         /// The window's place.
         rect: Rect,
-        /// The work area of each screen.
-        screens: Vec<Rect>,
+        /// Each screen's work area, DPI and primary flag.
+        screens: Vec<Screen>,
     },
     /// The UI's timer asks whether the app in front switched layout.
     Relabel,
@@ -183,9 +183,14 @@ mod tests {
             id: KeyId::new(KEY),
             back: true,
         };
+        let screen = Screen {
+            rect,
+            dpi: 144,
+            primary: true,
+        };
         let placed = FaceAction::Placed {
             rect,
-            screens: vec![rect],
+            screens: vec![screen],
         };
         let panel = FaceAction::PanelKey {
             key: KeyId::new(KEY),
@@ -215,7 +220,7 @@ mod tests {
             (FaceAction::ResizeEnd, r#"{"act":"resize_end"}"#),
             (
                 placed,
-                r#"{"act":"placed","rect":{"x":-8,"y":40,"w":900,"h":300},"screens":[{"x":-8,"y":40,"w":900,"h":300}]}"#,
+                r#"{"act":"placed","rect":{"x":-8,"y":40,"w":900,"h":300},"screens":[{"rect":{"x":-8,"y":40,"w":900,"h":300},"dpi":144,"primary":true}]}"#,
             ),
             (FaceAction::Relabel, r#"{"act":"relabel"}"#),
             (
@@ -246,11 +251,14 @@ mod tests {
         let at = r#"{"act":"resize_at","x":10.5,"y":-0.4}"#;
         let want = FaceAction::ResizeAt { x: 11, y: 0 };
         assert_eq!(serde_json::from_str::<FaceAction>(at).unwrap(), want);
-        let placed = r#"{"act":"placed","rect":{"x":0.5,"y":1,"w":2,"h":3},"screens":[]}"#;
-        let FaceAction::Placed { rect, .. } = serde_json::from_str(placed).unwrap() else {
+        let screen = r#"{"rect":{"x":0,"y":0,"w":1919.6,"h":1040},"dpi":96,"primary":false}"#;
+        let placed = format!(
+            r#"{{"act":"placed","rect":{{"x":0.5,"y":1,"w":2,"h":3}},"screens":[{screen}]}}"#
+        );
+        let FaceAction::Placed { rect, screens } = serde_json::from_str(&placed).unwrap() else {
             panic!("not a placement");
         };
-        assert_eq!(rect.x, 1);
+        assert_eq!((rect.x, screens[0].rect.w), (1, 1920));
     }
 
     #[test]

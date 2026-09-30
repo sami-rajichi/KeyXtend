@@ -1,17 +1,15 @@
 //! Fakes of the UI ports: screens, the window guard and backdrops.
 
 use crate::lock;
-use kx_module_api::ports::{Point, Rect};
-use kx_platform::ui::{
-    Backdrop, BackdropKind, FocusToken, ScreenArea, Screens, UiError, WindowGuard,
-};
+use kx_module_api::ports::{Point, Rect, Screen};
+use kx_platform::ui::{Backdrop, BackdropKind, FocusToken, Screens, UiError, WindowGuard};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 /// Screens with work areas and a pointer the test sets.
 #[derive(Debug, Default)]
 pub struct FakeScreens {
-    areas: Mutex<Vec<ScreenArea>>,
+    areas: Mutex<Vec<Screen>>,
     cursor: Mutex<Point>,
     cursor_error: Mutex<Option<UiError>>,
 }
@@ -19,7 +17,7 @@ pub struct FakeScreens {
 impl FakeScreens {
     /// Screens with `areas` and the pointer at `cursor`.
     #[must_use]
-    pub fn new(areas: Vec<ScreenArea>, cursor: Point) -> Self {
+    pub fn new(areas: Vec<Screen>, cursor: Point) -> Self {
         Self {
             areas: Mutex::new(areas),
             cursor: Mutex::new(cursor),
@@ -28,7 +26,7 @@ impl FakeScreens {
     }
 
     /// Replaces the screens, as when one is plugged in or out.
-    pub fn set_areas(&self, areas: Vec<ScreenArea>) {
+    pub fn set_areas(&self, areas: Vec<Screen>) {
         *lock(&self.areas) = areas;
     }
 
@@ -44,7 +42,7 @@ impl FakeScreens {
 }
 
 impl Screens for FakeScreens {
-    fn work_areas(&self) -> Vec<ScreenArea> {
+    fn work_areas(&self) -> Vec<Screen> {
         lock(&self.areas).clone()
     }
 
@@ -174,14 +172,14 @@ mod tests {
 
     const TITLE: &str = "KeyXtend";
 
-    fn area() -> ScreenArea {
+    fn area() -> Screen {
         let rect = Rect {
             x: 0,
             y: 0,
             w: 1920,
             h: 1040,
         };
-        ScreenArea {
+        Screen {
             rect,
             dpi: 144,
             primary: true,

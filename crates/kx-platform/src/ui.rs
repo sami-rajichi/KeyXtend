@@ -1,7 +1,7 @@
 //! UI ports: the window guard, screens, the system look, backdrops and the one running copy.
 //! The data types are OS-neutral; adapters keep their own handles behind them.
 
-use kx_module_api::ports::{Point, Rect};
+use kx_module_api::ports::{Point, Rect, Screen};
 use std::fmt;
 use thiserror::Error;
 
@@ -65,21 +65,10 @@ pub trait WindowGuard: Send + Sync {
     fn give_back(&self, token: FocusToken);
 }
 
-/// One screen's usable area.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct ScreenArea {
-    /// The work area, without the taskbar, in physical pixels.
-    pub rect: Rect,
-    /// Dots per inch; 96 is 100 %.
-    pub dpi: u32,
-    /// The primary screen.
-    pub primary: bool,
-}
-
 /// The screens and the pointer.
 pub trait Screens: Send + Sync {
     /// Every screen's work area.
-    fn work_areas(&self) -> Vec<ScreenArea>;
+    fn work_areas(&self) -> Vec<Screen>;
 
     /// Where the pointer is, in physical pixels.
     ///

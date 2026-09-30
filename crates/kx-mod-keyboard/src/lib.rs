@@ -13,7 +13,7 @@ pub mod spec;
 
 pub use geom::{Area, Board, KeyBox, board};
 pub use manifest::{ID, MANIFEST};
-pub use place::{Placer, Screen};
+pub use place::Placer;
 pub use settings::{Corner, KeyboardSettings, LangKey, Modifiers, SPEC};
 pub use sizer::{Limits, Resize, SizeError, Sizer};
 pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Role};
