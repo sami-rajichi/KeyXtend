@@ -32,7 +32,7 @@ The app makes one `Hub` over its UI ports before any window exists, so it can no
 - **Bridges:** `install(hub)` hands it to the QML objects once, before QML loads, since QML makes them without arguments (ADR-0018). An object made before it warns and does nothing.
 - **The `ui` module:** `UiModule` needs the keyboard face; its start hands the hub the checked settings, the face and its settings handle, and its stop lets the face go.
 - **Notices:** `listen(&bus)` hears every notice. Equal notices show once, texts are made in the UI language when the banner takes them, and only a failed module's notice offers Try again.
-- **Requests:** Try again sends `Request::Retry(module)`. Quit, from the user (`Ui.quit`) or a second copy (`command(Command::Quit)`), sends `Request::Quit` once and then ends the queue, so the app's drain loop stops after it. The app calls `Kernel::retry`, or stops the modules and then `end_ui`.
+- **Requests:** Try again sends `Request::Retry(module)`. Quit, from the user (`Ui.quit`) or a second copy (`command(Command::Quit)`), sends `Request::Quit` once and then ends the queue, so the app's drain loop stops after it. The app calls `Kernel::retry`, or stops the modules and then `end_ui`. When the drain thread is gone, Quit ends the UI itself. Every request is sent under the hub's lock, so none lands after Quit.
 - **A second copy's Show** wakes the UI through `command(Command::Show)`.
 
 ## Threads

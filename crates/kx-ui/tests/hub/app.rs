@@ -2,10 +2,17 @@
 
 use crate::logs::warnings_of;
 use crate::{Rig, failed};
+use kx_module_api::{ModuleId, Notice};
 use kx_platform::ui::Command;
 use kx_ui::{Hub, Request, Wake};
 use std::sync::mpsc::{RecvError, TryRecvError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Barrier, Mutex};
+use std::thread;
+
+/// The failed modules whose Try again races Quit, one thread each.
+const RACERS: [&str; 6] = ["a", "b", "c", "d", "e", "f"];
+/// How many races the order test runs; each lets Try again and Quit meet at a different point.
+const ROUNDS: usize = 200;
 
 #[test]
 fn quit_reaches_the_app_once_and_then_the_queue_ends() {
@@ -77,4 +84,48 @@ fn a_second_waker_takes_the_wakes_and_warns() {
     rig.hub.command(Command::Show);
     assert_eq!(*seen.lock().unwrap(), [Wake::Show]);
     assert!(rig.wakes().is_empty(), "the first waker hears nothing");
+}
+
+#[test]
+fn quit_stays_the_last_request_while_try_again_races_it() {
+    for _ in 0..ROUNDS {
+        let rig = Rig::new();
+        for m in RACERS {
+            let module = Some(ModuleId::new(m));
+            rig.hub.notice(Notice { module, ..failed() });
+        }
+        let ids: Vec<u64> = rig.hub.take_notices().iter().map(|s| s.id).collect();
+        let start = Arc::new(Barrier::new(ids.len() + 1));
+        let racers: Vec<_> = ids
+            .into_iter()
+            .map(|id| {
+                let (hub, start) = (Arc::clone(&rig.hub), Arc::clone(&start));
+                thread::spawn(move || {
+                    start.wait();
+                    hub.retry(id)
+                })
+            })
+            .collect();
+        start.wait();
+        assert!(rig.hub.quit());
+        for racer in racers {
+            assert!(racer.join().is_ok());
+        }
+        let got: Vec<Request> = rig.requests.iter().collect();
+        assert_eq!(got.last(), Some(&Request::Quit), "{got:?}");
+    }
+}
+
+#[test]
+fn a_quit_the_app_can_no_longer_hear_ends_the_ui_itself() {
+    let Rig {
+        hub,
+        requests,
+        wakes,
+        ..
+    } = Rig::new();
+    drop(requests);
+    hub.command(Command::Quit);
+    assert_eq!(*wakes.lock().unwrap(), [Wake::End]);
+    assert!(!hub.quit(), "asked already");
 }

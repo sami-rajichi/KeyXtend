@@ -1,5 +1,5 @@
 //! Between the app and the UI: the Qt thread's waker, a second copy's commands, Try again, and the one quit path.
-//! Quit is the last request: the hub drops its sender after it, so the app's drain loop ends on its own.
+//! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
 use super::{Hub, Request, Wake, Waker};
 use kx_platform::ui::Command;
@@ -38,21 +38,31 @@ impl Hub {
     }
 
     /// Asks the app to quit and ends its queue; false when it was asked already or no longer listens.
+    /// When the app's drain thread is gone, nobody else can end the UI, so the hub ends it itself.
     pub fn quit(&self) -> bool {
-        let requests = self.lock().requests.take();
-        requests.is_some_and(|r| r.send(Request::Quit).is_ok())
+        let sent = {
+            let mut live = self.lock();
+            let Some(requests) = live.requests.take() else {
+                return false;
+            };
+            requests.send(Request::Quit).is_ok()
+        };
+        if !sent {
+            self.end_ui();
+        }
+        sent
     }
 
     /// Try again on shown notice `id`: it closes, and the app restarts its module; false when it offers none.
+    /// It sends under the lock, which never blocks on an unbounded queue, so no Retry lands after Quit.
     pub fn retry(&self, id: u64) -> bool {
-        let (module, requests) = {
-            let mut live = self.lock();
-            (live.notices.close(id), live.requests.clone())
+        let mut live = self.lock();
+        let Some(module) = live.notices.close(id) else {
+            return false;
         };
-        match (module, requests) {
-            (Some(m), Some(r)) => r.send(Request::Retry(m)).is_ok(),
-            _ => false,
-        }
+        live.requests
+            .as_ref()
+            .is_some_and(|r| r.send(Request::Retry(module)).is_ok())
     }
 
     /// Wakes the UI with `what`, or keeps it until the waker is set.

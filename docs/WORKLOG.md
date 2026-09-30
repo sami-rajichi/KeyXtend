@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: Quit stays the last request
+Try again now reaches the app while the hub holds its lock, so a second copy's Quit can no longer overtake it, and a race test pins the order. If the app's request thread is gone, Quit now ends the keyboard's windows itself. The supply-chain notes and the security note were corrected.
+
 ## 2026-09-30 — P3: the keyboard's views move into the product
 The keyboard window, its keys, top bar, D-pad, resize corner, bubble and tooltips moved from the test build into `kx-ui` with the same look, now drawn from the keyboard module's board and the translated texts. Keys that come later are dimmed and say "Coming in a later version", the Arabic UI mirrors the top bar, and fonts and icons are compiled into the app. Three P1 findings are fixed: text is gray-edged without ClearType fringes, hover shows a Highlight outline in high contrast, and icons are tinted with public Qt Quick only. Qt Quick tests now check the views over the real look, texts and board.
 
