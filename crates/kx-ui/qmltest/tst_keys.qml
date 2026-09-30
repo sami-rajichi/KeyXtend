@@ -1,12 +1,15 @@
 // Single parts over the real look fixtures: the cap inside its cell, icons tinted with public Qt Quick only, the hover
 // outline in high contrast, dimmed keys and D-pad, plate icons and chips, and bidi marks that take no room.
 import QtQuick
+import QtQml.Models
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
+import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
 
 Item {
@@ -15,14 +18,26 @@ Item {
     height: 240
 
     readonly property var res: ({
-        fam: { latin: "Segoe UI", arabic: "Segoe UI", ui: "Segoe UI" },
-        icons: Qt.resolvedUrl("../../../assets/icons/lucide"),
-        ext: "svg",
+        fam: { latin: N.lk.look.latin_fonts[0], arabic: N.lk.look.arabic_fonts[0], ui: N.lk.look.latin_fonts[0] },
+        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => En.texts["bar." + id],
         dpad: id => En.texts["dpad." + id],
-        space: parts => parts.join(" · ")
+        space: parts => parts.join(" · "),
+        dimTip: (name, later) => name + "\n" + later
     })
+    // The bundled fonts loaded so far, from where the texts test lays them out.
+    property int fontsIn: 0
+
+    Instantiator {
+        model: Assets.assets.fonts
+        delegate: FontLoader {
+            required property string modelData
+            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
+            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
+        }
+    }
 
     // Board key `id` and its English state.
     function kv(id) {
@@ -58,6 +73,10 @@ Item {
         // The most colour gray text on the near-gray plate may show at an edge; ClearType's fringes reach about 0.5.
         readonly property real grayEdge: 0.05
 
+        // Any warning fails the test, so the run stays clean.
+        function init() {
+            failOnWarning(/./);
+        }
         function makeKey(id, lk) {
             return createTemporaryObject(keyC, root, { kv: root.kv(id), ks: root.ks(id), lk: lk || N.lk, lang: Face.states.en.lang, res: root.res, s: 1 });
         }
@@ -121,7 +140,7 @@ Item {
         }
 
         function test_chip_icons_take_the_plate_text_colour() {
-            const c = createTemporaryObject(chipC, root, { chip: { text: "Hello", icon: "at-sign" }, lk: D.lk, res: root.res, s: 1, radius: 4 });
+            const c = createTemporaryObject(chipC, root, { chip: { text: "Hello", icon: D.lk.icons.keys.clip }, lk: D.lk, res: root.res, s: 1, radius: 4 });
             const icon = find(c, o => o.tint !== undefined && o.icon !== undefined);
             verify(Qt.colorEqual(icon.tint, D.lk.palette.legend_2_plate), "legend_2_plate reaches AA on Dolch's chip");
         }
@@ -131,12 +150,11 @@ Item {
             const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
             mouseMove(k, k.width / 2, k.height / 2);
             compare(spy.count, 1);
-            compare(spy.signalArguments[0][0], En.texts["key.mic"] + "
-" + En.texts["tip.later"]);
+            compare(spy.signalArguments[0][0], root.res.dimTip(En.texts["key.mic"], En.texts["tip.later"]));
         }
 
         function test_plate_icons_take_the_plate_text_colour() {
-            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, sizes: En.settings.sizes, rtl: false, dark: false });
+            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.settings.sizes, rtl: false, dark: false });
             const grip = find(bar, o => o.icon === D.lk.icons.bar.grip && o.tint !== undefined);
             verify(Qt.colorEqual(grip.tint, D.lk.palette.legend_2_plate), "the top bar");
             const c = createTemporaryObject(cornerC, root, { lk: D.lk, res: root.res, s: 1 });
@@ -170,7 +188,10 @@ Item {
         }
 
         function test_bidi_isolation_marks_take_no_room() {
-            for (const family of [root.res.fam.latin, root.res.fam.arabic]) {
+            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by cargo test -p kx-ui --test texts");
+            const lists = [N, E, D].map(t => t.lk.look.latin_fonts.concat(t.lk.look.arabic_fonts));
+            for (const family of [...new Set([].concat(...lists))]) {
+                verify(Qt.fontFamilies().indexOf(family) >= 0, family + " is in");
                 const plain = createTemporaryObject(labelC, root, { text: "English · US", "font.family": family });
                 const marked = createTemporaryObject(labelC, root, { text: "⁨English⁩ · ⁨US⁩", "font.family": family });
                 compare(marked.implicitWidth, plain.implicitWidth, family);

@@ -122,7 +122,7 @@ Item {
             const prev = p.pager.children[0];
             verify(same(prev.color, hc.palette.pop_bg), "a framed button rests on the panel colour");
             mouseMove(prev, 5, 5);
-            tryVerify(() => same(prev.children[0].color, hc.sel_ink));
+            tryVerify(() => same(prev.children[0].tint, hc.sel_ink));
             mouseMove(p.cells[0], 10, 10);
             tryVerify(() => same(p.cells[0].children[0].color, hc.sel_ink));
             verify(same(p.cells[1].children[0].color, hc.palette.pop_ink), "a row at rest");

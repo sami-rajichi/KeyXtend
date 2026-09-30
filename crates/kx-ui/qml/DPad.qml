@@ -188,7 +188,7 @@ Item {
                 return Math.hypot(point.x - pad.r, point.y - pad.r) < pad.r;
             }
         }
-        onContainsMouseChanged: pad.tip(containsMouse ? pad.name + "\n" + pad.later : "", pad)
+        onContainsMouseChanged: pad.tip(containsMouse ? pad.res.dimTip(pad.name, pad.later) : "", pad)
     }
     // Stop pops in while an arrow scrolls and out after (mock-up .dp-stop); a spring curve overshoots a little.
     Rectangle {

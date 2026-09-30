@@ -157,7 +157,9 @@ var lk = {
         10.5,
         11.5
       ],
-      "space_pad_px": 6.0
+      "space_pad_px": 6.0,
+      "label_pad_px": 1.0,
+      "label_min_px": 7.0
     },
     "led": {
       "size_px": 4.0,

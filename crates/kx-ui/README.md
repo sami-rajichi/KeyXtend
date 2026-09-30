@@ -19,7 +19,7 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## Qt Quick tests
 
-`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. Run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`.
+`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. The same test lays out the bundled fonts and icons in `target/tmp/qmltest-assets` as the app holds them, so run `cargo test -p kx-ui --test texts` first. Then run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`. Any warning fails a test.
 
 ## The `[ui]` settings
 

@@ -120,3 +120,12 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
         assert!(missing.is_empty(), "{}: {missing:?}", t.lang().tag);
     }
 }
+
+#[test]
+fn each_default_size_preset_has_a_size_letter_and_name() {
+    let presets = crate::keyboard_defaults()["presets"]
+        .as_array()
+        .map(Vec::len)
+        .expect("the presets are a list");
+    assert_eq!(presets, SIZES.len(), "one size button text per preset");
+}

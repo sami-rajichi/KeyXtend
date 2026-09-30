@@ -6,12 +6,14 @@ import QtQuick
 Item {
     id: bar
 
-    // Its box, the look, fonts, icons and texts, size, the preset shown, the size buttons' texts, and the mode.
+    // Its box, the look, fonts, icons and texts, size, the preset shown (null between presets), how many presets there are,
+    // the size buttons' texts, and the mode.
     required property var box
     required property var lk
     required property var res
     required property real s
-    required property int preset
+    required property var preset
+    required property int presets
     required property var sizes
     required property bool rtl
     required property bool dark
@@ -142,13 +144,14 @@ Item {
             part: "smaller"
             onClicked: bar.smaller()
         }
+        // A preset the texts do not name shows its number.
         Repeater {
-            model: bar.sizes
+            model: bar.presets
             delegate: Button {
-                required property var modelData
                 required property int index
-                text: modelData.label
-                name: modelData.name
+                readonly property var says: bar.sizes[index]
+                text: says ? says.label : String(index + 1)
+                name: says ? says.name : text
                 lit: bar.preset === index
                 onClicked: bar.pickSize(index)
             }

@@ -1,6 +1,8 @@
-//! Where the bundled fonts and icons sit in the repo's `assets/` folder, for kx-ui's build script and the checks.
-//! The app never reads these folders: kx-ui compiles the files in as Qt resources.
+//! Where the bundled fonts and icons sit in the repo's `assets/` folder and under which names the app bundles them,
+//! for kx-ui's build script and the checks. The app never reads these folders: kx-ui compiles the files in.
 
+use crate::Themes;
+use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -12,6 +14,61 @@ pub const ICON_EXT: &str = "svg";
 pub const FONT_DIR: &str = "fonts";
 /// Font file types the app bundles.
 pub const FONT_EXTS: [&str; 2] = ["ttf", "otf"];
+/// The bundle's one icon folder, which holds Lucide's icons and our own drawings side by side.
+pub const ICONS_AT: &str = "icons";
+
+/// A file the app bundles: its name in the bundle and its file in the repo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bundled {
+    /// Its path in the bundle, such as `icons/x.svg` or `fonts/rubik/Rubik-wght-.ttf`.
+    pub name: String,
+    /// The file it is copied from.
+    pub file: PathBuf,
+}
+
+/// Everything the app bundles from the `assets` folder.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bundle {
+    /// Each icon the tokens name, once, in name order.
+    pub icons: Vec<Bundled>,
+    /// Every font file, each under its family folder with a name that needs no escaping in a URL.
+    pub fonts: Vec<Bundled>,
+}
+
+/// What the app bundles from the `assets` folder.
+///
+/// # Errors
+///
+/// The tokens do not load, an icon they name has no file, or a font folder cannot be read.
+pub fn bundle(assets: &Path) -> Result<Bundle, String> {
+    let themes = Themes::shipped().map_err(|e| e.to_string())?;
+    let names: BTreeSet<&str> = themes.icons.names().into_iter().collect();
+    let icon = |name: &str| {
+        let file = icon_file(assets, name).ok_or(format!("no icon file for {name}"))?;
+        let name = format!("{ICONS_AT}/{name}.{ICON_EXT}");
+        Ok(Bundled { name, file })
+    };
+    let icons = names.into_iter().map(icon).collect::<Result<_, String>>()?;
+    let files = font_files(assets).map_err(|e| format!("{FONT_DIR}: {e}"))?;
+    let fonts = files.into_iter().map(font).collect();
+    Ok(Bundle { icons, fonts })
+}
+
+/// Font `file` under its family folder, both names made URL-safe.
+fn font(file: PathBuf) -> Bundled {
+    let part = |p: Option<&std::ffi::OsStr>| safe(&p.unwrap_or_default().to_string_lossy());
+    let family = part(file.parent().and_then(Path::file_name));
+    let name = format!("{FONT_DIR}/{family}/{}", part(file.file_name()));
+    Bundled { name, file }
+}
+
+/// `name` with every character a URL path would escape, such as `[` or `,`, made a `-`.
+fn safe(name: &str) -> String {
+    let keep = |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_');
+    name.chars()
+        .map(|c| if keep(c) { c } else { '-' })
+        .collect()
+}
 
 /// The file for icon `name` in the `assets` folder, Lucide's first; `None` when no icon folder has it.
 #[must_use]

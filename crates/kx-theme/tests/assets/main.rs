@@ -10,7 +10,8 @@ mod fontname;
 use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
-use kx_theme::assets::{font_files, icon_file, is_font};
+use kx_theme::assets::{FONT_DIR, ICON_EXT, ICONS_AT, bundle, font_files, icon_file, is_font};
+use std::collections::BTreeSet;
 
 /// Families Windows 11 ships, so the app does not bundle them.
 const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
@@ -62,6 +63,33 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
         }
     }
     assert!(checked > 0, "the check reached the bundled fonts");
+}
+
+#[test]
+fn the_bundle_holds_each_named_icon_once_and_every_font_under_url_safe_names() {
+    let b = bundle(&assets()).expect("the bundle is found");
+    let t = Themes::shipped().expect("tokens load");
+    let names: BTreeSet<&str> = t.icons.names().into_iter().collect();
+    let icons: Vec<String> = names
+        .iter()
+        .map(|n| format!("{ICONS_AT}/{n}.{ICON_EXT}"))
+        .collect();
+    let bundled: Vec<&str> = b.icons.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(bundled, icons, "each named icon once, flattened");
+    assert!(b.icons.iter().all(|f| f.file.is_file()));
+    let fonts = font_files(&assets()).expect("assets/fonts reads");
+    let files: Vec<&PathBuf> = b.fonts.iter().map(|f| &f.file).collect();
+    assert_eq!(files, fonts.iter().collect::<Vec<_>>(), "every font");
+    let safe = |c: char| c.is_ascii_alphanumeric() || "./-_".contains(c);
+    for f in &b.fonts {
+        assert!(
+            f.name.starts_with(FONT_DIR) && f.name.chars().all(safe),
+            "{}",
+            f.name
+        );
+    }
+    let unique: BTreeSet<&str> = b.fonts.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(unique.len(), b.fonts.len(), "no two fonts share a name");
 }
 
 #[test]

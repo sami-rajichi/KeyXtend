@@ -3,6 +3,7 @@ import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
+import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as F
 import "../../kx-theme/fixtures/look-native-light-reduced.js" as R
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
@@ -14,8 +15,8 @@ Item {
 
     readonly property var res: ({
         fam: { latin: "Segoe UI", arabic: "Segoe UI", ui: "Segoe UI" },
-        icons: Qt.resolvedUrl("../../../assets/icons/lucide"),
-        ext: "svg",
+        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        ext: Assets.assets.ext,
         tr: k => k,
         bar: id => id,
         dpad: id => id,
@@ -56,6 +57,10 @@ Item {
         name: "motion"
         when: windowShown
 
+        // Any warning fails the test, so the run stays clean.
+        function init() {
+            failOnWarning(/./);
+        }
         function makeKey(lk, rec, kind) {
             return createTemporaryObject(keyC, root, { kv: root.kv(kind || "char"), ks: root.ks(rec), lk: lk, lang: root.lang1, res: root.res, s: 1 });
         }

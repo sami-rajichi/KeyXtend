@@ -14,6 +14,16 @@ mod words;
 
 use kx_ui::{I18n, LANGS};
 
+/// The keyboard module's `[keyboard]` defaults, whose sizes the top bar and the QML fixtures follow.
+const KEYBOARD_DEFAULTS: &str = "../kx-mod-keyboard/defaults.toml";
+
+/// The keyboard module's `[keyboard]` defaults.
+fn keyboard_defaults() -> toml::Table {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(KEYBOARD_DEFAULTS);
+    let text = std::fs::read_to_string(path).expect("the keyboard defaults read");
+    toml::from_str(&text).expect("the keyboard defaults parse")
+}
+
 /// Fluent's marks around each argument, which keep Latin words in order inside Arabic text.
 const ISOLATE: [char; 2] = ['\u{2068}', '\u{2069}'];
 

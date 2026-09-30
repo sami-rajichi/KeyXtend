@@ -155,6 +155,12 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     assert_eq!(s.dim.share, 0.4, ".btn[disabled]");
     assert_eq!(s.hc_outline.px, 2.0, ".scroll-target outline");
     assert_eq!(s.backdrop.plate, 0.88, "the P1 test build's plate_alpha");
+    let l = &s.legend;
+    assert_eq!(
+        (l.label_pad_px, l.label_min_px),
+        (1.0, 7.0),
+        "labels fit their caps"
+    );
 }
 
 #[test]
@@ -175,6 +181,16 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ("dot_off = 0.3", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
+        (
+            "label_min_px = 7.0",
+            "label_min_px = 0.0",
+            "legend.label_min_px",
+        ),
+        (
+            "label_pad_px = 1.0",
+            "label_pad_px = -1.0",
+            "legend.label_pad_px",
+        ),
     ] {
         let e = parse(&text().replacen(from, to, 1)).expect_err(to);
         assert!(e.contains(says), "{to}: {e}");

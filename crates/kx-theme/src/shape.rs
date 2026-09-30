@@ -62,6 +62,10 @@ pub struct LegendShape {
     pub space_px: [f32; 2],
     /// Space bar side padding.
     pub space_pad_px: f32,
+    /// Side padding a named key's label keeps on its cap.
+    pub label_pad_px: f32,
+    /// The smallest size a label shrinks to, not scaled with the keyboard.
+    pub label_min_px: f32,
 }
 
 /// The LED dot (`.led`).

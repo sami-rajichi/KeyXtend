@@ -4,8 +4,8 @@ use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span or outline of 0 or less and a
-    /// panel gap below 0, naming the size.
+    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline or smallest label of 0 or
+    /// less, and a panel gap or label padding below 0, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -37,22 +37,21 @@ impl Shape {
         }
     }
 
-    /// The shimmer span and the outline must be above 0 and the panel gaps 0 or more, all finite.
+    /// The shimmer span, the outline and the smallest label must be above 0, and the panel gaps and label padding 0
+    /// or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
             ("hc_outline.px", self.hc_outline.px),
+            ("legend.label_min_px", self.legend.label_min_px),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
         }
-        match self
-            .panel
-            .gap_px
-            .iter()
-            .find(|g| !(g.is_finite() && **g >= 0.0))
-        {
-            Some(g) => Err(format!("shape: panel.gap_px {g} must be 0 or more")),
+        let gaps = self.panel.gap_px.iter().map(|g| ("panel.gap_px", *g));
+        let mut zero_up = gaps.chain([("legend.label_pad_px", self.legend.label_pad_px)]);
+        match zero_up.find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
+            Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),
             None => Ok(()),
         }
     }

@@ -2,6 +2,7 @@
 // qmltestrunner cannot load KeyXtend.Ui, which is linked into Rust binaries.
 import QtQuick
 import "fixtures/ui-en.js" as En
+import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as Look
 
 QtObject {
@@ -26,8 +27,11 @@ QtObject {
     function lookJson() {
         return JSON.stringify(look);
     }
+    // The bundle as the app holds it, laid out by the texts test.
     function assets() {
-        return JSON.stringify({ icons: Qt.resolvedUrl("../../../assets/icons/lucide"), ext: "svg", fonts: [] });
+        const at = rel => Qt.resolvedUrl(Assets.root + "/" + rel).toString();
+        const a = Assets.assets;
+        return JSON.stringify({ icons: at(a.icons), ext: a.ext, fonts: a.fonts.map(at) });
     }
     function text(key) {
         return texts[key] !== undefined ? texts[key] : key;

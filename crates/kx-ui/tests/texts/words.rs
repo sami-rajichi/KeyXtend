@@ -58,10 +58,22 @@ fn the_kernel_settings_carry_the_product_name() {
 
 #[test]
 fn french_keys_print_french_words_and_arabic_keys_the_english_ones() {
-    let labels =
-        |tag: &str| ["esc", "del", "caps", "shift"].map(|k| lang(tag).text(&format!("label.{k}")));
-    assert_eq!(labels("fr"), ["Échap", "Suppr", "Verr. Maj", "Maj"]);
-    assert_eq!(labels("ar"), ["Esc", "Del", "Caps Lock", "Shift"]);
+    let labels = |tag: &str| {
+        ["esc", "del", "caps", "altgr", "bksp", "shift"]
+            .map(|k| lang(tag).text(&format!("label.{k}")))
+    };
+    let fr = [
+        "Échap",
+        "Suppr",
+        "Verr. Maj",
+        "Alt Gr",
+        "Retour arrière",
+        "Maj",
+    ];
+    assert_eq!(labels("fr"), fr);
+    let p1 = ["Esc", "Del", "Caps", "AltGr", "Back", "Shift"];
+    assert_eq!(labels("en"), p1, "the P1 test build's words");
+    assert_eq!(labels("ar"), p1, "Arabic keyboards print the English words");
     assert_eq!(lang("fr").text("key.bksp"), "Retour arrière");
 }
 

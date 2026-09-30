@@ -1,11 +1,15 @@
 // The keyboard window over stand-in bridges fed from the face's golden files, the hub's texts and the real look:
-// what screen readers find and hear, what a click sends, and how the Arabic UI and a stopped keyboard draw.
+// what screen readers find and hear, what a click sends, how labels fit, and how the Arabic UI and a stopped keyboard draw.
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
+import "../../kx-theme/fixtures/look-native-light.js" as N
+import "../../kx-theme/fixtures/look-et66-light.js" as E
+import "../../kx-theme/fixtures/look-dolch-light.js" as D
 
 Item {
     id: root
@@ -16,15 +20,20 @@ Item {
     Component { id: kbC; FakeKeyboard {} }
     Component { id: winC; KbWindow {} }
     Component { id: spyC; SignalSpy {} }
+    Component { id: bubC; Bubble {} }
 
     TestCase {
         name: "window"
         when: windowShown
 
+        // Any warning fails the test, so the run stays clean.
+        function init() {
+            failOnWarning(/./);
+        }
         // A keyboard window over fresh stand-ins, laid out and not shown.
-        function make(props) {
+        function make(props, kbProps) {
             const ui = createTemporaryObject(uiC, root, props || {});
-            const kb = createTemporaryObject(kbC, root);
+            const kb = createTemporaryObject(kbC, root, kbProps || {});
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
             return win;
@@ -51,6 +60,23 @@ Item {
             const hits = found(win, name);
             compare(hits.length, 1, name);
             return hits[0];
+        }
+        // The face's board at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
+        function scaled(size) {
+            const box = b => Object.assign({}, b, { x: b.x * size, y: b.y * size, w: b.w * size, h: b.h * size });
+            const b = Face.board;
+            return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
+        }
+        // The top bar's size buttons, in order.
+        function sizeButtons(win) {
+            return all(win.contentItem, o => o.part !== undefined && o.text.length > 0);
+        }
+        // The window's tooltip.
+        function tipOf(win) {
+            for (let i = 0; i < win.data.length; i++)
+                if (win.data[i].item && win.data[i].item.hint)
+                    return win.data[i].item;
+            return null;
         }
         // What the texts call board key `k`, or its character from the English state.
         function nameOf(k) {
@@ -141,12 +167,82 @@ Item {
             const spy = createTemporaryObject(spyC, root, { target: win, signalName: "minimise" });
             mouseClick(named(win, En.texts["bar.smaller"]));
             mouseClick(named(win, En.texts["sizename.l"]));
+            mouseClick(named(win, En.texts["bar.bigger"]));
             mouseClick(named(win, En.texts["bar.mode"]));
             mouseClick(named(win, En.texts["bar.minimise"]));
-            const sent = win.keyboard.calls.filter(c => c === "smaller" || c.startsWith("preset"));
-            compare(sent, ["smaller", "preset 2"]);
+            const sent = win.keyboard.calls.filter(c => c === "smaller" || c === "bigger" || c.startsWith("preset"));
+            compare(sent, ["smaller", "preset 2", "bigger"]);
             verify(win.ui.calls.indexOf("flipMode") >= 0, "the mode flips");
             compare(spy.count, 1, "minimise");
+            win.visible = false;
+        }
+
+        function test_one_size_button_per_preset_and_none_lit_off_preset() {
+            const win = make();
+            compare(sizeButtons(win).map(b => b.text), En.settings.sizes.map(z => z.label));
+            compare(sizeButtons(win).filter(b => b.lit).map(b => b.Accessible.name), [En.texts["sizename.s"]]);
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            // A smaller step lands between presets, and settings may hold more presets than the size texts name.
+            win.keyboard.board = Object.assign({}, Face.board, { preset: null, presets: Face.board.presets.concat([2]) });
+            win.keyboard.reply = { board: true, state: false };
+            mouseClick(named(win, En.texts["bar.smaller"]));
+            compare(win.board.preset, null);
+            const now = sizeButtons(win);
+            compare(now.length, 4, "one per preset");
+            compare(now.filter(b => b.lit).length, 0, "none lit off preset");
+            compare([now[3].text, now[3].Accessible.name], ["4", "4"], "an unnamed preset shows its number");
+            win.visible = false;
+        }
+
+        function test_every_label_fits_its_cap_in_each_theme_language_and_size() {
+            for (const lk of [N.lk, E.lk, D.lk])
+                for (const t of [En, Fr, Ar])
+                    for (const size of [Face.sizeMin, 1])
+                        labelsFit(lk, t, size);
+        }
+        // Each label in look `lk`, texts `t` and `size` stays inside its cap, above the smallest size; at size 1 English
+        // and Arabic keep the P1 size.
+        function labelsFit(lk, t, size) {
+            const win = make({ settings: t.settings, texts: t.texts, look: lk }, { board: scaled(size) });
+            const where = lk.look.latin_fonts[0] + " " + t.settings.lang + " " + size + ": ";
+            tryCompare(win.res.fam, "latin", lk.look.latin_fonts[0], 5000, where + "the theme's font");
+            // Rows lay out when drawn.
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const pad = lk.shape.legend.label_pad_px * size;
+            const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
+            verify(keys.length > 0, where + "labels");
+            for (const k of keys) {
+                const l = all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0];
+                const at = where + k.label;
+                const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
+                verify(left >= pad - 0.01 && left + l.contentWidth <= k.width - pad + 0.01, at + " fits: " + l.contentWidth);
+                verify(l.fontInfo.pixelSize >= lk.shape.legend.label_min_px, at + " not below the smallest size");
+                if (size === 1 && t !== Fr)
+                    compare(l.fontInfo.pixelSize, l.font.pixelSize, at + " keeps the P1 size");
+            }
+            win.visible = false;
+        }
+
+        function test_the_bubble_and_the_move_catcher_carry_their_texts() {
+            const win = make();
+            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res });
+            compare(bub.title, En.texts["window.bubble"]);
+            compare(bub.name, En.texts["bar.bubble"]);
+            verify(named(win, En.texts["catch"]), "the move catcher");
+        }
+
+        function test_a_dimmed_key_and_the_dpad_tip_say_their_name_then_when_they_come() {
+            const win = make();
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const tip = tipOf(win);
+            for (const name of [En.texts["key.mic"], En.texts["key.dpad"]]) {
+                const it = named(win, name);
+                mouseMove(it, it.width / 2, it.height / 2);
+                compare(tip.name, name + "\n" + En.texts["tip.later"]);
+            }
             win.visible = false;
         }
 

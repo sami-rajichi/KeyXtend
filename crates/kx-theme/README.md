@@ -9,7 +9,7 @@ The four files in `tokens/` are compiled in with `include_str!`, never read from
 | File | What it holds |
 |---|---|
 | `themes.toml` | Each theme's shape and type (radii, gap, legend sizes, fonts, cap build, D-pad colours, whether it can take the system accent) and its `light` and `dark` palettes; the `[common]` colours every theme shares. |
-| `shape.toml` | Sizes all themes share, at size 1: the top bar, chips, legends, LED, the language key (Carousel, `[lang.cycle]`, `[lang.list]`), D-pad, press, tooltips, the bubble and corner, hairlines, dimmed keys (`[dim]`), the high-contrast hover outline (`[hc_outline]`), the plate's share over a system backdrop (`[backdrop]`), the notice banner, the tray menu, the language list and the later windows (pill, caption, snip, panel, hold ring). |
+| `shape.toml` | Sizes all themes share, at size 1: the top bar, chips, legends, LED, the named-key labels, which shrink to fit their cap (`label_pad_px`, `label_min_px`), the language key (Carousel, `[lang.cycle]`, `[lang.list]`), D-pad, press, tooltips, the bubble and corner, hairlines, dimmed keys (`[dim]`), the high-contrast hover outline (`[hc_outline]`), the plate's share over a system backdrop (`[backdrop]`), the notice banner, the tray menu, the language list and the later windows (pill, caption, snip, panel, hold ring). |
 | `motion.toml` | Each animation's length and curve, its amounts, and the hold ring's curves; reduced motion keeps the curves with every length 0, except the ring's waves, which show the hold time. |
 | `icons.toml` | The icon each part shows, as a file name in `assets/icons/lucide/` (Lucide) or `assets/icons/` (our own drawings): named keys by board id, the top bar (the theme button shows `palette`), the D-pad, the language key designs and the list's tick. |
 
@@ -36,7 +36,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Assets
 
-`assets` names where the bundled fonts and icons sit in the repo's `assets/` folder (`ICON_DIRS`, `FONT_DIR`) and finds them (`icon_file`, `font_files`). kx-ui's build script uses it to compile them in, and the asset tests use it to check them, so the layout is written once. The app never reads these folders.
+`assets` names where the bundled fonts and icons sit in the repo's `assets/` folder (`ICON_DIRS`, `FONT_DIR`) and finds them (`icon_file`, `font_files`). `bundle` lists the files the app holds, under the names they take there (`ICONS_AT`, one folder of icons). kx-ui's build script uses it to compile them in, and the asset tests use it to check them, so the layout is written once. The app never reads these folders.
 
 ## QML look fixtures
 

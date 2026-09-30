@@ -105,7 +105,9 @@ Window {
             tr: key => ui.text(key),
             bar: id => ui.nameOf("bar", id),
             dpad: id => ui.nameOf("dpad", id),
-            space: parts => ui.space(JSON.stringify(parts))
+            space: parts => ui.space(JSON.stringify(parts)),
+            // A dimmed button's tip: its name, then when it comes, on two lines.
+            dimTip: (name, later) => name + "\n" + later
         };
     }
     // The first family in `list` that Qt has, else the last one.

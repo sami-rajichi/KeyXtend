@@ -194,7 +194,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         onContainsMouseChanged: {
-            const says = key.dim ? key.name + "\n" + key.later : key.icon ? key.name : "";
+            const says = key.dim ? key.res.dimTip(key.name, key.later) : key.icon ? key.name : "";
             if (says)
                 key.tip(containsMouse ? says : "", key);
         }

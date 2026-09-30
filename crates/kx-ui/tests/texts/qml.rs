@@ -1,10 +1,12 @@
-//! Writes what the Qt Quick tests read: the hub's settings and every text in English and Arabic, and the keyboard's
-//! golden board and states. A change fails this test until it runs with `KX_BLESS=1`, and so does a stray file.
+//! Writes what the Qt Quick tests read: the hub's settings and every text in each UI language, the keyboard's golden
+//! board and states, and the bundled assets' names. A change fails this test until it runs with `KX_BLESS=1`, and so
+//! does a stray file. It also lays the bundled files out as the app's resources hold them, for the tests to load.
 
 use crate::files::keys_of;
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeWindowGuard};
 use kx_test_support::golden::assert_golden;
+use kx_theme::assets::{ICON_EXT, ICONS_AT, bundle};
 use kx_ui::{Hub, I18n, UiPorts};
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
@@ -17,13 +19,17 @@ const FACE: &str = "../kx-mod-keyboard/tests/golden";
 /// The face's states the tests draw, by golden file name.
 const STATES: [&str; 4] = ["en", "fr", "ar", "list"];
 /// The UI languages the tests draw.
-const LANGS: [&str; 2] = ["en", "ar"];
+const LANGS: [&str; 3] = ["en", "fr", "ar"];
+/// Where the bundled files are laid out, from this crate; the Qt Quick tests read them from there.
+const MIRROR: &str = "../../target/tmp/qmltest-assets";
+/// The repo's `assets/` folder, from this crate.
+const ASSETS: &str = "../../assets";
 /// What starts each fixture, so QML imports it as a JavaScript library.
 const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
 
 /// The fixtures folder.
 fn dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join(DIR)
+    crate_path(DIR)
 }
 
 /// `name = value;` as JavaScript, spread over lines when `pretty`, else on one line.
@@ -82,25 +88,46 @@ fn ui(tag: &str) -> String {
 
 /// Golden file `name` of the keyboard as JSON.
 fn golden(name: &str) -> Value {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join(FACE)
-        .join(format!("{name}.json"));
+    let path = crate_path(FACE).join(format!("{name}.json"));
     let text = std::fs::read_to_string(&path).expect("a keyboard golden file");
     serde_json::from_str(&text).expect("golden JSON")
 }
 
-/// The board and every state the tests draw, one line each, as the keyboard's own golden files show them in full.
+/// The board and every state the tests draw, one line each, as the keyboard's own golden files show them in full, and
+/// the smallest size the keyboard allows.
 fn face() -> String {
     let states: Map<String, Value> = STATES
         .iter()
         .map(|s| ((*s).to_owned(), golden(&format!("state-{s}"))))
         .collect();
     let states = Value::Object(states);
+    let size_min = crate::keyboard_defaults()["size_min"].clone();
+    let size_min = serde_json::to_value(size_min).expect("a size");
+    format!(
+        "{HEAD}{}{}{}",
+        var("board", &golden("board"), false),
+        var("states", &states, false),
+        var("sizeMin", &size_min, false)
+    )
+}
+
+/// The bundled assets as `Ui.assets()` names them, relative to where they are laid out, and that place.
+fn assets() -> String {
+    let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
+    let fonts: Vec<&str> = b.fonts.iter().map(|f| f.name.as_str()).collect();
+    let assets = serde_json::json!({ "icons": ICONS_AT, "ext": ICON_EXT, "fonts": fonts });
+    // The Qt Quick tests sit one folder below this crate.
+    let root = Value::String(format!("../{MIRROR}"));
     format!(
         "{HEAD}{}{}",
-        var("board", &golden("board"), false),
-        var("states", &states, false)
+        var("root", &root, false),
+        var("assets", &assets, true)
     )
+}
+
+/// `rel` under this crate.
+fn crate_path(rel: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(rel)
 }
 
 /// Checks fixture `name` against `text`, or writes it when blessing; returns the name.
@@ -116,6 +143,7 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
         .map(|tag| fixture(format!("ui-{tag}.js"), &ui(tag)))
         .collect();
     written.push(fixture("face.js".into(), &face()));
+    written.push(fixture("assets.js".into(), &assets()));
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()
@@ -126,4 +154,20 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
             "{DIR}/{name} is no longer written; delete it"
         );
     }
+}
+
+#[test]
+fn the_bundle_is_laid_out_as_the_app_resources_hold_it() {
+    let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
+    let mirror = crate_path(MIRROR);
+    if mirror.exists() {
+        std::fs::remove_dir_all(&mirror).expect("the old layout goes");
+    }
+    for f in b.icons.iter().chain(&b.fonts) {
+        let to = mirror.join(&f.name);
+        std::fs::create_dir_all(to.parent().expect("a folder")).expect("the folder is made");
+        std::fs::copy(&f.file, &to).expect("the file is copied");
+    }
+    let icon = b.icons.first().expect("an icon");
+    assert!(mirror.join(&icon.name).is_file());
 }

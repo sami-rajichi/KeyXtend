@@ -136,11 +136,14 @@ Item {
 
     // Named keys: an icon, a label, or both side by side; their names show as tooltips instead of text.
     Row {
+        id: named
+        readonly property real pad: t.lg.label_pad_px * t.s
         visible: !t.isChar && !t.isSpace && !t.isLang
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
         Icon {
+            id: namedIcon
             visible: !!t.icon
             anchors.verticalCenter: parent.verticalCenter
             icon: t.icon
@@ -149,9 +152,14 @@ Item {
             px: t.lg.icon_px[t.kv.side ? 1 : 0] * t.s
             tint: t.ink
         }
+        // The label shrinks to fit its cap, as real keycaps print long words smaller.
         Line {
             visible: !!t.label
             anchors.verticalCenter: parent.verticalCenter
+            width: t.width - 2 * named.pad - (namedIcon.visible ? namedIcon.width + named.spacing : 0)
+            horizontalAlignment: Text.AlignHCenter
+            fontSizeMode: Text.HorizontalFit
+            minimumPixelSize: t.lg.label_min_px
             text: t.label
             font.pixelSize: t.look.mod_legend_px * t.s
             color: t.ink

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: size buttons and key labels fixed
+After a Smaller or Bigger step between presets, no size button stays lit, and each preset in the settings gets its own button. English and Arabic keys print the P1 words again (Caps, AltGr, Back), and every label shrinks to fit its cap, down to a theme token's size, so French words such as "Échap" never spill over. The Qt Quick tests now load the bundled fonts and icons as the app holds them, and any warning fails them.
+
 ## 2026-09-30 — P3: Quit stays the last request
 Try again now reaches the app while the hub holds its lock, so a second copy's Quit can no longer overtake it, and a race test pins the order. If the app's request thread is gone, Quit now ends the keyboard's windows itself. The supply-chain notes and the security note were corrected.
 

@@ -50,6 +50,7 @@ Item {
             res: body.res
             s: body.s
             preset: body.board.preset
+            presets: body.board.presets.length
             sizes: body.win.cfg.sizes
             rtl: body.win.cfg.rtl
             dark: body.lk.dark
