@@ -1,5 +1,6 @@
 //! The keyboard side of the hub: the face's JSON and actions, the window guard, the window's shape, the pointer
-//! and the bubble's spot. The face is called with no lock held, as its actions may send notices back.
+//! and the bubble's spot. The face expects one thread, the Qt thread that also runs the relabel timer, and is
+//! called with no lock held, as its actions may send notices back.
 
 use super::{Hub, NULL, json};
 use crate::geom::{Area, bubble, outward, screen_at};
@@ -50,6 +51,7 @@ impl Hub {
     }
 
     /// Does `action` and says what to redraw; a notice in the face's reply goes to the banner.
+    /// Call it, like every face call here, on the Qt thread only.
     pub fn act(&self, action: FaceAction) -> Redraw {
         let Some(face) = self.face() else {
             return Redraw::default();

@@ -14,14 +14,15 @@ The `qt` feature needs Qt 6.11.2: set `QMAKE` to its `qmake.exe` and put its `bi
 
 The app makes one `Hub` over its UI ports before any window exists, so it can note the user's focus, and gets a `Receiver<Request>` with it.
 
-- **Bridges:** `install(hub)` hands it to the QML objects once, before QML loads, since QML makes them without arguments.
+- **Bridges:** `install(hub)` hands it to the QML objects once, before QML loads, since QML makes them without arguments (ADR-0018). An object made before it warns and does nothing.
 - **The `ui` module:** `UiModule` needs the keyboard face; its start hands the hub the checked settings, the face and its settings handle, and its stop lets the face go.
 - **Notices:** `listen(&bus)` hears every notice. Equal notices show once, texts are made in the UI language when the banner takes them, and only a failed module's notice offers Try again.
-- **Requests:** Try again sends `Request::Retry(module)` and Quit sends `Request::Quit`; the app drains them on its own thread, calls `Kernel::retry` or stops the modules, then ends the UI with `command(Command::Quit)`.
+- **Requests:** Try again sends `Request::Retry(module)`. Quit, from the user (`Ui.quit`) or a second copy (`command(Command::Quit)`), sends `Request::Quit` once and then ends the queue, so the app's drain loop stops after it. The app calls `Kernel::retry`, or stops the modules and then `end_ui`.
+- **A second copy's Show** wakes the UI through `command(Command::Show)`.
 
 ## Threads
 
-Every bridge call runs on the Qt GUI thread, including the guard and the window shape. The system look watch, the single-instance commands and the bus may call the hub from other threads: the hub then calls the waker the `Ui` object set, which queues the change to the Qt thread and never blocks. Commands that come before the `Ui` object exists wait in the hub. The hub never holds its lock during a face, port or waker call.
+Every bridge call runs on the Qt GUI thread, including the guard and the window shape. The system look watch, the single-instance commands and the bus may call the hub from other threads: the hub then calls the waker the `Ui` object set, which queues the change to the Qt thread and never blocks. Show and End wakes that come before the `Ui` object exists wait in the hub; a second `Ui` object takes the wakes and warns. The hub never holds its lock during a face, port or waker call.
 
 ## QML objects
 

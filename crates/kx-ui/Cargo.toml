@@ -42,6 +42,7 @@ cxx-qt-build = { workspace = true, optional = true }
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true
 
 # Loads the root QML file; Qt wants its app object on the main thread, so it runs without the harness.
 [[test]]

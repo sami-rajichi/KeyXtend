@@ -615,6 +615,7 @@ dependencies = [
  "kx-platform-fake",
  "kx-test-support",
  "kx-theme",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

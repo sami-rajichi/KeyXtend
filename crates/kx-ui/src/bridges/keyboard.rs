@@ -3,6 +3,7 @@
 
 use super::{hub, qs};
 use crate::geom::{Area, whole};
+use crate::guard::Run;
 use crate::hub::{Hub, NULL, Redraw, Resize, json};
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
@@ -99,15 +100,15 @@ pub mod qobject {
 /// Rust side of `Keyboard`.
 pub struct KeyboardRust {
     hub: Option<Arc<Hub>>,
-    /// Guard tries so far.
-    tries: u32,
+    /// The guard run's tries so far.
+    guard: Run,
 }
 
 impl Default for KeyboardRust {
     fn default() -> Self {
         Self {
             hub: hub(),
-            tries: 0,
+            guard: Run::default(),
         }
     }
 }
@@ -230,9 +231,11 @@ impl qobject::Keyboard {
             .is_some_and(|h| h.shape(&title, &boxes, dpr))
     }
 
-    fn guard(mut self: Pin<&mut Self>) -> bool {
-        let attempt = self.rust().tries.saturating_add(1);
-        self.as_mut().rust_mut().tries = attempt;
-        self.rust().hub.as_deref().is_some_and(|h| h.guard(attempt))
+    fn guard(self: Pin<&mut Self>) -> bool {
+        let mut rust = self.rust_mut();
+        let Some(hub) = rust.hub.clone() else {
+            return false;
+        };
+        rust.guard.step(|attempt| hub.guard(attempt))
     }
 }

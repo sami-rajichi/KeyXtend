@@ -6,15 +6,17 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+mod app;
 mod face;
+mod logs;
 mod look;
 mod module;
 mod notices;
 
-use kx_module_api::ServiceKey;
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyboardFace, KeyboardFaceKey, Point, Rect, Screen,
 };
+use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeWindowGuard};
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
@@ -78,6 +80,18 @@ struct Rig {
     backdrop: Arc<FakeBackdrop>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
+}
+
+/// The module the failure notices name.
+const KEYBOARD: ModuleId = ModuleId::new("keyboard");
+
+/// The kernel's notice for a failed keyboard module, which offers Try again.
+fn failed() -> Notice {
+    Notice {
+        key: keys::MODULE_FAILED,
+        module: Some(KEYBOARD),
+        args: vec![(args::MODULE, NoticeArg::Text(KEYBOARD.to_string()))],
+    }
 }
 
 /// A 100 % primary screen with a taskbar.

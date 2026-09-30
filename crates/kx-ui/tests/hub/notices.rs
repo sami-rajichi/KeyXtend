@@ -1,21 +1,10 @@
-//! Notices from the bus, Try again and OK, Quit, commands to the UI, settings and texts.
+//! Notices from the bus, Try again and OK, settings and texts.
 
-use crate::Rig;
-use kx_module_api::{Bus, ModuleId, Notice, NoticeArg, args, keys};
-use kx_platform::ui::Command;
+use crate::{KEYBOARD, Rig, failed};
+use kx_module_api::{Bus, Notice, keys};
 use kx_test_support::host::FakeCore;
 use kx_ui::{Request, UiSettings, Wake};
 use std::sync::Arc;
-
-const KEYBOARD: ModuleId = ModuleId::new("keyboard");
-
-fn failed() -> Notice {
-    Notice {
-        key: keys::MODULE_FAILED,
-        module: Some(KEYBOARD),
-        args: vec![(args::MODULE, NoticeArg::Text(KEYBOARD.to_string()))],
-    }
-}
 
 #[test]
 fn notices_on_the_bus_reach_the_banner_until_the_subscription_drops() {
@@ -54,29 +43,6 @@ fn ok_closes_a_notice_without_a_request() {
     rig.hub.dismiss(id);
     assert!(!rig.hub.retry(id));
     assert!(rig.requests.try_recv().is_err());
-}
-
-#[test]
-fn quit_goes_to_the_app_while_it_listens() {
-    let rig = Rig::new();
-    assert!(rig.hub.quit());
-    assert_eq!(rig.requests.try_recv(), Ok(Request::Quit));
-    let Rig { hub, requests, .. } = rig;
-    drop(requests);
-    assert!(!hub.quit(), "the app is gone");
-}
-
-#[test]
-fn commands_wait_for_the_waker_then_reach_the_ui_in_order() {
-    let (hub, _requests) = kx_ui::Hub::new(Rig::new().ports()).unwrap();
-    hub.command(Command::Show);
-    hub.command(Command::Quit);
-    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
-    let log = Arc::clone(&seen);
-    hub.set_waker(Box::new(move |w| log.lock().unwrap().push(w)));
-    hub.command(Command::Show);
-    let want = [Command::Show, Command::Quit, Command::Show].map(Wake::Command);
-    assert_eq!(*seen.lock().unwrap(), want);
 }
 
 #[test]

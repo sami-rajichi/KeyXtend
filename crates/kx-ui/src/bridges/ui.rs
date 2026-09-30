@@ -5,7 +5,7 @@ use super::{hub, qs};
 use crate::hub::{Hub, NULL, Wake, json};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
-use kx_platform::ui::{Command, WatchGuard};
+use kx_platform::ui::WatchGuard;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -69,7 +69,7 @@ pub mod qobject {
         #[qinvokable]
         fn backdrop(&self, title: &QString) -> bool;
 
-        /// Asks the app to quit, which stops the modules and then sends `quit_asked`; false when no app listens.
+        /// Asks the app to quit, which stops the modules and then sends `quit_asked`; false when asked already or gone.
         #[qinvokable]
         fn quit(&self) -> bool;
 
@@ -85,11 +85,11 @@ pub mod qobject {
         #[qsignal]
         fn notices_waiting(self: Pin<&mut Self>);
 
-        /// Show the keyboard.
+        /// A second copy asks to show the keyboard.
         #[qsignal]
         fn show_asked(self: Pin<&mut Self>);
 
-        /// End the UI.
+        /// The app stopped the modules: end the UI.
         #[qsignal]
         fn quit_asked(self: Pin<&mut Self>);
     }
@@ -137,8 +137,8 @@ fn woken(ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Settings => ui.settings_changed(),
         Wake::Look => ui.look_changed(),
         Wake::Notices => ui.notices_waiting(),
-        Wake::Command(Command::Show) => ui.show_asked(),
-        Wake::Command(Command::Quit) => ui.quit_asked(),
+        Wake::Show => ui.show_asked(),
+        Wake::End => ui.quit_asked(),
     }
 }
 
@@ -167,7 +167,10 @@ impl qobject::Ui {
     }
 
     fn space(&self, parts: &QString) -> QString {
-        let parts: Vec<String> = serde_json::from_str(&parts.to_string()).unwrap_or_default();
+        let Ok(parts) = serde_json::from_str::<Vec<String>>(&parts.to_string()) else {
+            tracing::warn!("QML sent space bar parts that do not read");
+            return QString::default();
+        };
         qs(&self.with(String::new(), |h| h.i18n().space(&parts)))
     }
 

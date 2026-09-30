@@ -16,7 +16,7 @@ use crate::hub::Hub;
 use cxx_qt_lib::QString;
 use std::sync::{Arc, OnceLock};
 
-/// The hub the bridge objects share, set once by the app before QML loads.
+/// The hub the bridge objects share, set once by the app before QML loads (ADR-0018).
 static HUB: OnceLock<Arc<Hub>> = OnceLock::new();
 
 /// Hands `hub` to the bridge objects QML makes; call it once, before loading QML. False when one was set already.
@@ -24,9 +24,13 @@ pub fn install(hub: Arc<Hub>) -> bool {
     HUB.set(hub).is_ok()
 }
 
-/// The installed hub; a bridge made before `install` gets `None` and does nothing.
+/// The installed hub for a new bridge object; one made before `install` warns and does nothing.
 fn hub() -> Option<Arc<Hub>> {
-    HUB.get().cloned()
+    let hub = HUB.get().cloned();
+    if hub.is_none() {
+        tracing::warn!("a QML object was made before the hub was installed, so it does nothing");
+    }
+    hub
 }
 
 /// `text` as a Qt string.

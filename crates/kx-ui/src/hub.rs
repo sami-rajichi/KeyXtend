@@ -1,6 +1,7 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, texts, the face, the look, notices, and
 //! the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
 
+mod app;
 mod face;
 mod look;
 mod notices;
@@ -14,7 +15,7 @@ use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
 };
-use kx_platform::ui::{Backdrop, Command, FocusToken, Screens, SysLook, SystemLook, WindowGuard};
+use kx_platform::ui::{Backdrop, FocusToken, Screens, SysLook, SystemLook, WindowGuard};
 use kx_theme::{ThemeError, Themes};
 use notices::Notices;
 use serde::Serialize;
@@ -34,12 +35,12 @@ pub struct UiPorts {
     pub backdrop: Arc<dyn Backdrop>,
 }
 
-/// What the UI asks of the app, which owns the kernel and drains these on its thread.
+/// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Request {
     /// Try again on a failed module.
     Retry(ModuleId),
-    /// The user chose Quit: stop the modules, then end the UI with `Command::Quit`.
+    /// The user or a second copy chose Quit: stop the modules, then call `Hub::end_ui`; the queue ends after it.
     Quit,
 }
 
@@ -52,8 +53,10 @@ pub enum Wake {
     Look,
     /// Notices wait for the banner.
     Notices,
-    /// The app, or another copy, asks the UI to show or quit.
-    Command(Command),
+    /// A second copy asks to show the keyboard.
+    Show,
+    /// The app stopped the modules: the UI ends.
+    End,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -90,8 +93,11 @@ struct Live {
     store: Option<SettingsHandle>,
     sys: SysLook,
     notices: Notices,
-    commands: Vec<Command>,
+    /// `Show` and `End` wakes that came before the waker.
+    pending: Vec<Wake>,
     waker: Option<Arc<Waker>>,
+    /// The app's queue, until Quit ends it.
+    requests: Option<Sender<Request>>,
 }
 
 /// The shared UI state; the app makes one and hands it to the `ui` module and the bridges.
@@ -100,7 +106,6 @@ pub struct Hub {
     themes: Themes,
     /// The window that had the focus before ours, so the guard can give it back.
     focus: FocusToken,
-    requests: Sender<Request>,
     live: Mutex<Live>,
 }
 
@@ -121,14 +126,14 @@ impl Hub {
             store: None,
             sys: ports.look.read(),
             notices: Notices::default(),
-            commands: Vec::new(),
+            pending: Vec::new(),
             waker: None,
+            requests: Some(requests),
         };
         let hub = Self {
             focus: ports.guard.remember(),
             ports,
             themes,
-            requests,
             live: Mutex::new(live),
         };
         Ok((Arc::new(hub), drain))
@@ -188,33 +193,6 @@ impl Hub {
         })
     }
 
-    /// Registers the Qt thread's waker, replacing any earlier one, and hands it the commands that came first.
-    pub fn set_waker(&self, waker: Waker) {
-        let commands = {
-            let mut live = self.lock();
-            live.waker = Some(Arc::new(waker));
-            std::mem::take(&mut live.commands)
-        };
-        for command in commands {
-            self.wake(Wake::Command(command));
-        }
-    }
-
-    /// Passes `command` from the app, or another copy, to the UI; it waits for the waker if none is set yet.
-    pub fn command(&self, command: Command) {
-        let waiting = {
-            let mut live = self.lock();
-            let none = live.waker.is_none();
-            if none {
-                live.commands.push(command);
-            }
-            none
-        };
-        if !waiting {
-            self.wake(Wake::Command(command));
-        }
-    }
-
     /// Queues `notice` for the banner, unless the same one waits or shows.
     pub fn notice(&self, notice: Notice) {
         if self.lock().notices.push(notice) {
@@ -243,20 +221,9 @@ impl Hub {
         live.notices.take(&i18n)
     }
 
-    /// Try again on shown notice `id`: it closes, and the app restarts its module; false when it offers none.
-    pub fn retry(&self, id: u64) -> bool {
-        let module = self.lock().notices.close(id);
-        module.is_some_and(|m| self.requests.send(Request::Retry(m)).is_ok())
-    }
-
     /// OK on shown notice `id`: it closes.
     pub fn dismiss(&self, id: u64) {
         let _ = self.lock().notices.close(id);
-    }
-
-    /// Asks the app to quit; false when the app no longer listens.
-    pub fn quit(&self) -> bool {
-        self.requests.send(Request::Quit).is_ok()
     }
 
     /// Calls the waker, if any, outside the lock.

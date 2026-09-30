@@ -35,7 +35,14 @@ fn the_defaults_are_the_plan_v1_values() {
 
 #[test]
 fn a_theme_that_kx_theme_lacks_is_refused() {
-    assert!(invalid(&with("theme", "natve")));
+    let Err(SettingsError::Invalid(why)) = validate_as::<UiSettings>(&with("theme", "natve"))
+    else {
+        panic!("a theme typo must be refused");
+    };
+    assert!(
+        why.contains("native, et66, dolch"),
+        "the message names the themes: {why}"
+    );
     for id in ["native", "et66", "dolch"] {
         assert_eq!(
             validate_as::<UiSettings>(&with("theme", id)),

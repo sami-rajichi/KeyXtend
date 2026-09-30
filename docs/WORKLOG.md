@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: UI review fixes: one quit path
+Quit now has one path, from the tray or from a second copy: it reaches the app once and then closes the request queue, so the hidden keyboard process can always end. ADR-0018 records the one set-once hub the QML objects share. Tidy F3 now finds allows written over several lines and is not fooled by raw strings or nested comments, with property tests. The guard starts from its first try on each run, silent failures now warn, and `cargo deny` is clean.
+
 ## 2026-09-30 — P3: one table of hidden marks
 The log and the notices now share one table of the characters that can split or reorder a line (`kx_module_api::HIDDEN_MARKS`, with `is_hidden` adding every control character). The log escapes them as before; notices now drop line breaks and control characters too, not only bidi controls, so a setting name holding a line break can no longer split a notice.
 

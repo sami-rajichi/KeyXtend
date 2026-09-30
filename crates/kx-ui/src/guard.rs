@@ -1,4 +1,4 @@
-//! When the window guard tries again: while no window of ours shows yet, up to `[ui] guard_tries` times.
+//! When the window guard tries again: while no window of ours shows yet, up to `[ui] guard_tries` times per run.
 
 use kx_platform::ui::UiError;
 
@@ -20,6 +20,31 @@ pub fn next(result: &Result<usize, UiError>, attempt: u32, tries: u32) -> Next {
     }
 }
 
+/// A guard run's tries: each step makes try number 1, 2, … and a try that says stop ends the run, so the next
+/// run starts from 1 again.
+#[derive(Debug, Default)]
+#[cfg_attr(
+    not(feature = "qt"),
+    allow(dead_code, reason = "only the Qt Keyboard object runs the guard")
+)]
+pub struct Run {
+    tries: u32,
+}
+
+#[cfg_attr(
+    not(feature = "qt"),
+    allow(dead_code, reason = "only the Qt Keyboard object runs the guard")
+)]
+impl Run {
+    /// Makes the next try with `try_once(attempt)`; true to try again after `[ui] guard_delay_ms`.
+    pub fn step(&mut self, try_once: impl FnOnce(u32) -> bool) -> bool {
+        let attempt = self.tries.saturating_add(1);
+        let again = try_once(attempt);
+        self.tries = if again { attempt } else { 0 };
+        again
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,6 +55,20 @@ mod tests {
         assert_eq!(next(&Ok(0), 3, 3), Next::Done, "out of tries");
         assert_eq!(next(&Ok(2), 1, 3), Next::Done, "guarded");
         assert_eq!(next(&Err(UiError::Refused(5)), 1, 3), Next::Done);
+    }
+
+    #[test]
+    fn a_run_counts_its_tries_and_the_next_run_starts_from_one() {
+        let mut run = Run::default();
+        let mut seen = Vec::new();
+        for again in [true, true, false, false] {
+            run.step(|attempt| {
+                seen.push(attempt);
+                again
+            });
+        }
+        assert_eq!(seen, [1, 2, 3, 1], "a run ends when a try says stop");
+        assert!(run.step(|_| true));
     }
 
     #[test]

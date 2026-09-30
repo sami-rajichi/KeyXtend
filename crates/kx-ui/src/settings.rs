@@ -8,6 +8,7 @@ use kx_theme::{LookChoice, ModeChoice, Themes};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::ops::RangeInclusive;
+use std::sync::OnceLock;
 
 /// How long the pointer may rest before a tip shows, in ms.
 pub(crate) const TIP_MS: RangeInclusive<u64> = 1..=10_000;
@@ -22,8 +23,6 @@ pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 
 /// Why `language` was refused.
 const NO_LANGUAGE: &str = "language must be auto or a language the UI speaks";
-/// Why `theme` was refused.
-const NO_THEME: &str = "theme is not a theme in kx-theme";
 
 /// How the kernel reads the `[ui]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -126,9 +125,9 @@ impl Settings for UiSettings {
         if self.language != AUTO && find(&self.language).is_none() {
             return Err(invalid(NO_LANGUAGE));
         }
-        let themes = Themes::shipped().map_err(|_| invalid(NO_THEME))?;
-        if themes.find(&self.theme).is_none() {
-            return Err(invalid(NO_THEME));
+        let ids = theme_ids().map_err(invalid)?;
+        if !ids.contains(&self.theme) {
+            return Err(invalid(&format!("theme must be one of {}", ids.join(", "))));
         }
         Ok(())
     }
@@ -145,6 +144,17 @@ fn within<T: Copy + PartialOrd + Display>(
     }
     let (lo, hi) = (range.start(), range.end());
     Err(invalid(&format!("{key} must be from {lo} to {hi}")))
+}
+
+/// The shipped theme ids, read from the compiled-in tokens once per run; the error names what broke.
+fn theme_ids() -> Result<&'static [String], &'static str> {
+    static IDS: OnceLock<Result<Vec<String>, String>> = OnceLock::new();
+    let ids = IDS.get_or_init(|| {
+        let themes =
+            Themes::shipped().map_err(|e| format!("the shipped themes do not load: {e}"))?;
+        Ok(themes.list.into_iter().map(|t| t.look.id).collect())
+    });
+    ids.as_deref().map_err(String::as_str)
 }
 
 /// A broken rule as a settings error.

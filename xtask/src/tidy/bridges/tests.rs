@@ -1,8 +1,9 @@
 //! Tests for F3: `unsafe` in the bridge crate lives only in its bridge folder, each use under a safety comment.
 
 use super::*;
-use crate::test_support::TempDir;
+use crate::test_support::{TempDir, tidy_config};
 use crate::tidy::testkit::WorkspaceBuilder;
+use proptest::prelude::*;
 
 /// The bridge crate's folder, as the test config names it.
 const CRATE: &str = "crates/kx-ui";
@@ -160,12 +161,96 @@ fn unsafe_in_another_crate_is_left_to_the_compiler() {
 
 #[test]
 fn unsafe_uses_are_found_by_whole_word_outside_literals() {
-    let code = |line: &str| {
-        let mut state = Scan::default();
-        uses(&state.code(line))
-    };
-    assert_eq!(code("unsafe { f() }"), (1, 0));
-    assert_eq!(code("let x = r#unsafe_ish; // unsafe"), (0, 0));
-    assert_eq!(code("#[allow(unsafe_code)] unsafe fn f() {}"), (1, 1));
-    assert_eq!(code("'a: loop { let c = '\\''; unsafe {} }"), (1, 0));
+    let code = |line: &str| keywords(&Scan::default().code(line));
+    assert_eq!(code("unsafe { f() }"), 1);
+    assert_eq!(code("let x = r#unsafe_ish; // unsafe"), 0);
+    assert_eq!(code("#[allow(unsafe_code)] unsafe fn f() {}"), 1);
+    assert_eq!(code("'a: loop { let c = '\\''; unsafe {} }"), 1);
+    assert_eq!(
+        code("let q = '\"'; unsafe {}"),
+        1,
+        "a quote in a char opens no string"
+    );
+}
+
+#[test]
+fn an_allow_over_several_lines_or_in_a_list_is_found() {
+    let multi = "#![allow(\n    clippy::x,\n    unsafe_code,\n    reason = \"cxx-qt\"\n)]\n";
+    let found = f3_with(&[("src/lib.rs", multi)]);
+    assert_eq!(places(&found), ["crates/kx-ui/src/lib.rs:3"]);
+    let listed = concat!(
+        "#[allow(dead_code, unsafe_code)]\n",
+        "#[cfg_attr(test, expect(clippy::x, unsafe_code))]\n",
+        "#![warn( unsafe_code )]\n",
+    );
+    let found = f3_with(&[("src/geom.rs", listed)]);
+    let at = |n: u8| format!("crates/kx-ui/src/geom.rs:{n}");
+    assert_eq!(places(&found), [at(1), at(2), at(3)]);
+}
+
+#[test]
+fn deny_forbid_and_longer_names_are_no_allow() {
+    let text = concat!(
+        "#![deny(unsafe_code)]\n",
+        "#![forbid(unsafe_code)]\n",
+        "#[allow(unsafe_code_x, x_unsafe_code)]\n",
+        "#[allow(dead_code)]\n",
+        "fn f(unsafe_code: u8) {}\n",
+        "const S: &str = \"allow(unsafe_code)\";\n",
+    );
+    assert_eq!(f3_with(&[("src/lib.rs", text)]), vec![]);
+}
+
+#[test]
+fn a_raw_string_ends_at_its_own_quote() {
+    let text = concat!(
+        "const P: &str = r\"C:\\\";\n",
+        "const Q: &str = r#\"say \"unsafe\" here\"#;\n",
+        "const B: &[u8] = br\"\\\";\n",
+        "fn f() { unsafe { g() } }\n",
+    );
+    let found = f3_with(&[("src/lib.rs", text)]);
+    assert_eq!(places(&found), ["crates/kx-ui/src/lib.rs:4"]);
+}
+
+#[test]
+fn nested_block_comments_hide_their_words() {
+    let text = "/* a /* b */ unsafe */\nfn f() {}\n/* one\n unsafe */ unsafe fn g() {}\n";
+    let found = f3_with(&[("src/lib.rs", text)]);
+    assert_eq!(places(&found), ["crates/kx-ui/src/lib.rs:4"]);
+}
+
+/// Text rich in the characters the scan reacts to.
+const TRICKY: &str = "[a-z_ '#*/{}()\\\\\"\n]{0,80}";
+
+/// A literal or comment's inside: words and the characters the scan reacts to, without line breaks.
+const INSIDE: &str = "[a-z_ '#*/{}()\\\\\"]{0,30}";
+
+proptest! {
+    #[test]
+    fn the_scan_never_panics(text in any::<String>(), tricky in TRICKY) {
+        let tidy = tidy_config();
+        for t in [&text, &tricky] {
+            let _ = findings(t, true, &tidy);
+            let _ = findings(t, false, &tidy);
+        }
+    }
+
+    #[test]
+    fn words_in_literals_and_comments_are_never_code(s in INSIDE) {
+        let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+        let mut lines = vec![
+            (format!("// {s} unsafe"), 0),
+            (format!("let a = \"{escaped} unsafe\"; unsafe {{}}"), 1),
+        ];
+        if !s.contains("\"#") {
+            lines.push((format!("let b = r#\"{s} unsafe\"#; unsafe {{}}"), 1));
+        }
+        if !s.contains("*/") && !s.contains("/*") {
+            lines.push((format!("/* {s} unsafe */ unsafe {{}}"), 1));
+        }
+        for (line, want) in lines {
+            prop_assert_eq!(keywords(&Scan::default().code(&line)), want, "{}", line);
+        }
+    }
 }

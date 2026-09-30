@@ -21,5 +21,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29) |
 | 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. |
 | 0017 | [Translations: Fluent files compiled in](0017-translations-fluent-compiled-in.md) | Accepted (2026-09-30) |
+| 0018 | [One set-once hub for the QML objects](0018-set-once-hub-for-qml-objects.md) | Accepted (2026-09-30) |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

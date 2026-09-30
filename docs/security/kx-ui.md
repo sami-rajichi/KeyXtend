@@ -36,7 +36,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged).
 - **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key can neither split a notice nor turn it around.
-- **Denial of service:** the hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread. Guard tries stop at `guard_tries` (at most 100), and equal notices are merged.
+- **Denial of service:** the hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread. Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive. Guard tries stop at `guard_tries` (at most 100) per run, and equal notices are merged.
 - **Elevation:** the crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
 
 ## Findings
@@ -45,4 +45,4 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 ### Should fix (tracked issue)
 - None.
 ### Accepted (with reason)
-- The request queue to the app (Try again, Quit) has no bound: only the user's clicks fill it, one request per click, and the app drains it at once.
+- The request queue to the app (Try again, Quit) has no bound: only the user's clicks and a second copy's Quit fill it, one request each, and Quit ends it.
