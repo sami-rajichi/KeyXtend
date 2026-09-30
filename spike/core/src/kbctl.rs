@@ -1,17 +1,16 @@
 //! The stage-2 keyboard's controller: size, theme, sticky modifiers and the layout in front. Faces draw and forward clicks.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
-use kx_mod_keyboard::{Board, BoardSpec, KeyboardSettings, Limits, Resize, board};
+use kx_mod_keyboard::{Board, BoardSpec, KeyboardSettings, Limits, Resize, Typing, board};
 use kx_mod_layouts::Follow;
-use kx_module_api::ports::{LayoutId, LayoutSource, Point};
+use kx_module_api::ports::{LangLabel, LayoutId, LayoutSource, LayoutTable, Point};
 use kx_platform_windows::{WinLayouts, layouts};
 
 use crate::config::SpikeConfig;
 use crate::kbview::{BoardView, StateInput, StateView, board_view, state_view};
 use crate::langinfo::{self, LangInfo};
-use crate::latch::Latches;
-use crate::legend::KeyChars;
 use crate::lookcfg::ModeChoice;
 use crate::lookview::{LookView, look_view};
 use crate::sysui::{self, SystemLook};
@@ -19,7 +18,7 @@ use crate::theme::Themes;
 use crate::{langkey, layout};
 
 mod typing;
-pub use typing::{Plan, Tapped};
+pub use typing::Tapped;
 
 /// The keyboard's state; faces own one and ask it what to draw.
 pub struct Kb {
@@ -30,16 +29,15 @@ pub struct Kb {
     size: f64,
     theme: usize,
     mode: ModeChoice,
-    latches: Latches,
+    /// The product's typing state: latches and a dead key's wait.
+    typing: Typing,
     toggled: BTreeSet<String>,
     follow: Follow,
     hkl: isize,
     sys: SystemLook,
     resize: Option<Resize>,
-    chars: BTreeMap<isize, Vec<(u32, KeyChars)>>,
+    chars: BTreeMap<isize, Arc<LayoutTable>>,
     langs: BTreeMap<isize, LangInfo>,
-    /// A dead key was sent, so the next character goes as a key press for the app to add the accent.
-    dead: bool,
     /// The mic is recording, so its key turns red.
     rec: bool,
     /// Which way the language key last stepped, until the layout changes: -1 back, 1 on.
@@ -56,13 +54,14 @@ impl Kb {
         let front = layouts::id(layout::front_layout());
         let follow = Follow::new(Some(front), &WinLayouts.installed());
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
+        let typing = Typing::new(&spec, &kb);
         Ok(Kb {
             spec,
             limits: Limits::of(&kb),
             size: kb.size,
             theme: theme.unwrap_or_default(),
             mode: cfg.look.mode,
-            latches: Latches::default(),
+            typing,
             toggled: BTreeSet::new(),
             hkl: follow.shown().map_or(0, |id| id.get() as isize),
             follow,
@@ -70,7 +69,6 @@ impl Kb {
             resize: None,
             chars: BTreeMap::new(),
             langs: BTreeMap::new(),
-            dead: false,
             rec: false,
             asked: 0,
             turn: 0,
@@ -214,19 +212,20 @@ impl Kb {
         LayoutId::new(self.hkl as u64)
     }
 
-    /// Reads what each key types in the current layout, once per layout.
-    fn load_chars(&mut self) {
+    /// What each key types in the current layout, read once per layout.
+    fn table(&mut self) -> Arc<LayoutTable> {
         let (id, spec) = (self.layout_id(), &self.spec);
-        self.chars.entry(self.hkl).or_insert_with(|| {
+        let table = self.chars.entry(self.hkl).or_insert_with(|| {
             let scans = spec.char_scans();
-            let codes = scans.iter().map(|s| u32::from(s.code()));
-            codes.zip(WinLayouts.keys(id, &scans)).collect()
+            let keys = scans.iter().copied().zip(WinLayouts.keys(id, &scans));
+            let label = LangLabel {
+                id,
+                ..LangLabel::default()
+            };
+            let keys = keys.collect();
+            Arc::new(LayoutTable { label, keys })
         });
-    }
-
-    /// What each key types in the current layout; empty before `load_chars`.
-    fn chars_here(&self) -> &[(u32, KeyChars)] {
-        self.chars.get(&self.hkl).map_or(&[], Vec::as_slice)
+        Arc::clone(table)
     }
 
     /// The language key's names for layout `hkl`, read once.
@@ -251,15 +250,15 @@ impl Kb {
             self.lang_of(self.hkl),
             self.lang_of(next),
         ];
-        self.load_chars();
+        let table = self.table();
         let b = self.board();
         state_view(&StateInput {
             keys: &b.keys,
             looks: &self.cfg.keys,
-            latches: &self.latches,
+            latches: self.typing.latches(),
             caps: WinLayouts.caps_on(),
             toggled: &self.toggled,
-            chars: self.chars_here(),
+            chars: &table.keys,
             lang: [&lang[0], &lang[1], &lang[2]],
             rec: self.rec,
             turn: self.turn,

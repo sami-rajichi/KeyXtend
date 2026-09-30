@@ -2,8 +2,8 @@
 //! and `[g23]` to `[g25]`. `check` also validates G22, whose settings live in `g22cfg`.
 #![cfg(windows)]
 
+use kx_mod_keyboard::legend::is_mark;
 use serde::Deserialize;
-use spike_core::legend::is_mark;
 
 use crate::config::GatesConfig;
 use crate::g22cfg::plain_name;

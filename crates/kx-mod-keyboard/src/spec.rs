@@ -246,6 +246,18 @@ impl BoardSpec {
         });
         runs.flatten().collect()
     }
+
+    /// Every key's id, role and scan code: the main rows left to right, then the side keys.
+    #[must_use]
+    pub fn roles(&self) -> Vec<(String, Role, Option<Scan>)> {
+        let main = (0..self.rows.len()).flat_map(|r| self.row_keys(r));
+        let main = main.map(|k| match k {
+            RowKey::Named(n) => (n.id.clone(), n.role, n.sc),
+            RowKey::Char { id, sc } => (id, Role::Char, Some(sc)),
+        });
+        let side = self.side.iter().map(|s| (s.id.clone(), s.role, None));
+        main.chain(side).collect()
+    }
 }
 
 /// The id of the character key that sends `sc`; it stays when keys are added or moved.

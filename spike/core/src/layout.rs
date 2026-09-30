@@ -2,14 +2,9 @@
 //! `Follow` moved to kx-mod-layouts (P3 Task 10). The rows, widths and key caps moved to kx-mod-keyboard's board
 //! (Task 11); key names come from the translations (Task 15), so the Windows key-name reading ends.
 
-use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
+use kx_module_api::ports::{LayoutId, LayoutSource};
 use kx_platform_windows::{WinLayouts, layouts, window};
 use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
-
-/// Spike scan code `code` as the product's `Scan`.
-pub fn scan(code: u32) -> Scan {
-    Scan::new(code as u16)
-}
 
 /// The layout of the app in front, else the first installed one, read through `WinLayouts::foreground`.
 pub fn front_layout() -> HKL {
@@ -30,12 +25,6 @@ pub fn other_front() -> Option<LayoutId> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_spike_code_is_the_products_scan_code() {
-        assert_eq!(scan(0xE035), Scan::new(0xE035));
-        assert!(scan(0xE035).is_extended());
-    }
 
     #[test]
     fn the_front_layout_is_an_installed_one() {

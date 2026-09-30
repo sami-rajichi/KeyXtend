@@ -1,7 +1,7 @@
 //! Word error rate of a transcript against the sentence read aloud, after the usual EN, FR and AR normalising.
 #![cfg(windows)]
 
-use spike_core::legend;
+use kx_mod_keyboard::legend;
 
 use crate::stats;
 

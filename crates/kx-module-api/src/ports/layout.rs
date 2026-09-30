@@ -51,7 +51,7 @@ impl Slot {
     ];
 }
 
-/// What one key types in one layout, per modifier state; empty when it types nothing.
+/// What one key types in one layout, per modifier state; empty when it types nothing visible, such as a control.
 /// Empty fields are left out of data files and read back as empty.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]

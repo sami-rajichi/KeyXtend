@@ -6,7 +6,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use serde_json::{Value, json};
 use spike_core::hold::Pt;
-use spike_core::legend::is_arabic;
+use kx_mod_keyboard::legend::is_arabic;
 use spike_core::voice::{self, Caption, Event, Session, Update};
 
 /// The cxx-qt bridge that makes `Voice` a QML type.

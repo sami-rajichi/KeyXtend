@@ -1,18 +1,20 @@
-//! What the keyboard module declares; the face it provides and the services it needs arrive with typing.
+//! What the keyboard module declares: typing needs the injector, the layout source and the layouts service;
+//! the face it provides arrives with the language key.
 
 use crate::settings::SPEC;
-use kx_module_api::{Manifest, ModuleId};
+use kx_module_api::ports::{InputInjectorKey, LayoutSourceKey, LayoutsKey};
+use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("keyboard");
 
-/// The module's manifest: for now it only reads its settings and its board.
+/// The module's manifest: `InjectInput` gates all three services it needs.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
-    requires: &[],
+    requires: &[InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID],
     provides: &[],
-    capabilities: &[],
+    capabilities: &[Capability::InjectInput],
     settings: Some(&SPEC),
 };
 
@@ -21,10 +23,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_asks_for_nothing_yet_and_owns_the_keyboard_section() {
+    fn it_types_through_the_injector_and_reads_the_layout_source_and_the_layouts() {
+        let want = [InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID];
+        assert_eq!(MANIFEST.requires, want);
+        assert!(
+            MANIFEST.provides.is_empty(),
+            "the face comes with the language key"
+        );
+    }
+
+    #[test]
+    fn it_needs_only_inject_input_the_gate_of_all_three() {
+        assert_eq!(MANIFEST.capabilities, [Capability::InjectInput]);
+        let gates = [
+            InputInjectorKey::CAPABILITY,
+            LayoutSourceKey::CAPABILITY,
+            LayoutsKey::CAPABILITY,
+        ];
+        assert!(gates.iter().all(|&c| c == Some(Capability::InjectInput)));
+    }
+
+    #[test]
+    fn it_owns_the_keyboard_section() {
         assert_eq!(MANIFEST.id.as_str(), "keyboard");
-        assert!(MANIFEST.capabilities.is_empty());
-        assert!(MANIFEST.requires.is_empty() && MANIFEST.provides.is_empty());
         assert!(MANIFEST.settings.is_some_and(|s| s.version == 1));
     }
 }

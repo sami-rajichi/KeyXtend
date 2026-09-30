@@ -52,12 +52,14 @@ crates/
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look
   kx-platform-macos/    later
   kx-platform-linux/    later (X11 + Wayland portals)
-  kx-platform-fake/     deterministic fake for tests (records injected input, fake clock)
+  kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
+                         golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), theme loader
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
-                         `[keyboard]` settings. Later: key state machine, modifiers, shortcuts
+                         typing: sticky modifiers, legends and each click's route (ADR-0009);
+                         `[keyboard]` settings. Later: the face, language key, shortcuts
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`

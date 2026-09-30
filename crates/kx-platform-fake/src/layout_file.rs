@@ -130,6 +130,14 @@ impl LayoutFile {
         })?;
         Self::parse(&text)
     }
+
+    /// Reads this crate's golden table `name`, such as `fr-fr`.
+    ///
+    /// # Errors
+    /// As `read`.
+    pub fn golden(name: &str) -> Result<Self, LayoutFileError> {
+        Self::read(&golden_dir().join(name).with_extension(FILE_EXT))
+    }
 }
 
 /// The folder of this crate's golden layout tables.
@@ -191,12 +199,7 @@ mod tests {
     #[test]
     fn a_code_written_twice_in_two_widths_is_refused() {
         let text = table().to_toml().unwrap();
-        let twice = format!(
-            "{text}
-[keys.0x1A]
-base = \"x\"
-"
-        );
+        let twice = format!("{text}\n[keys.0x1A]\nbase = \"x\"\n");
         let err = LayoutFile::parse(&twice).unwrap_err();
         assert!(
             matches!(err, LayoutFileError::Duplicate(s) if s == Scan::new(0x1A)),

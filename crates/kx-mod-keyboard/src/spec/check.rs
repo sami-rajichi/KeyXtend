@@ -1,6 +1,6 @@
 //! The board's rules, run whenever a board is read.
 
-use super::{BoardError, BoardSpec, Role, RowItem, RowKey};
+use super::{BoardError, BoardSpec, Role, RowItem};
 use std::collections::HashSet;
 
 impl BoardSpec {
@@ -100,16 +100,12 @@ impl BoardSpec {
 
     /// Refuses an id that two keys share, character keys included.
     fn check_ids(&self) -> Result<(), BoardError> {
-        let main = (0..self.rows.len()).flat_map(|r| self.row_keys(r));
-        let main = main.map(|k| match k {
-            RowKey::Named(n) => n.id.clone(),
-            RowKey::Char { id, .. } => id,
-        });
         let mut seen = HashSet::new();
-        for id in main.chain(self.side.iter().map(|s| s.id.clone())) {
-            if !seen.insert(id.clone()) {
+        for (id, ..) in self.roles() {
+            if seen.contains(&id) {
                 return Err(BoardError::Twice(id));
             }
+            seen.insert(id);
         }
         Ok(())
     }

@@ -1,6 +1,6 @@
 //! A fake layout source that serves layout tables and records switch requests.
 
-use crate::layout_file::{FILE_EXT, LayoutFile, LayoutFileError, golden_dir};
+use crate::layout_file::{LayoutFile, LayoutFileError};
 use crate::lock;
 use kx_module_api::ports::{KeyChars, LangFacts, LayoutId, LayoutSource, Scan, Slot, SwitchError};
 use std::sync::Mutex;
@@ -35,9 +35,7 @@ impl FakeLayoutSource {
     /// # Errors
     /// The `LayoutFileError` of the first table that cannot be read.
     pub fn golden(names: &[&str]) -> Result<Self, LayoutFileError> {
-        let dir = golden_dir();
-        let path = |name: &&str| dir.join(name).with_extension(FILE_EXT);
-        let tables = names.iter().map(|n| LayoutFile::read(&path(n)));
+        let tables = names.iter().map(|n| LayoutFile::golden(n));
         Ok(Self::new(tables.collect::<Result<_, _>>()?))
     }
 
@@ -155,7 +153,7 @@ mod tests {
     }
 
     fn example_file() -> LayoutFile {
-        LayoutFile::read(&golden_dir().join("example.toml")).unwrap()
+        LayoutFile::golden(EXAMPLE).unwrap()
     }
 
     #[test]

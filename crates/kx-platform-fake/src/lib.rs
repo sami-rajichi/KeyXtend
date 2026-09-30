@@ -1,5 +1,5 @@
-//! A deterministic fake platform for tests: a clock that moves only when told, given folders,
-//! and recording fakes of the input, layout and UI ports. Only tests, tools and test-only crates use it.
+//! A deterministic fake platform for tests: a clock that moves only when told, given folders, recording
+//! fakes of the input, layout and UI ports, and of the layouts service. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
@@ -8,6 +8,7 @@ mod input;
 mod instance;
 mod layout;
 mod layout_file;
+mod layouts;
 mod look;
 mod ui;
 
@@ -16,6 +17,7 @@ pub use input::{FakeInjector, Stroke};
 pub use instance::FakeInstance;
 pub use layout::FakeLayoutSource;
 pub use layout_file::{FILE_EXT, LayoutFile, LayoutFileError, golden_dir};
+pub use layouts::{Ask, FakeLayouts};
 pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use ui::{FakeBackdrop, FakeScreens, FakeWindowGuard, GuardCall};
 

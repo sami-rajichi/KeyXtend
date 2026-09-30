@@ -3,8 +3,8 @@
 //! It opens the panel with the Settings key and types into it, and presses keys only while the panel is in front.
 #![cfg(windows)]
 
+use kx_mod_keyboard::legend::is_mark;
 use serde_json::{Value, json};
-use spike_core::legend::is_mark;
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;

@@ -6,14 +6,14 @@ use std::sync::OnceLock;
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
-use kx_mod_keyboard::{Area, BoardSpec, KeyboardSettings, board};
+use kx_mod_keyboard::{Area, BoardSpec, KeyboardSettings, board, legend};
 use kx_platform_windows::uiaccess;
 use spike_core::config::SpikeConfig;
 use spike_core::hold::Pt;
 use spike_core::place::outward;
 use spike_core::status::{self, Guard};
 use spike_core::theme::Themes;
-use spike_core::{legend, screen, window};
+use spike_core::{screen, window};
 use windows::Win32::Foundation::HWND;
 
 /// The cxx-qt bridge that makes `Keyboard` a QML type.

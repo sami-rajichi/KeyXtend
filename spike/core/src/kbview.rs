@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
-use kx_mod_keyboard::{Area, Board, KeyBox, KeyKind, Limits, Role};
+use kx_mod_keyboard::legend::{Legend, LegendMods, is_arabic, legend, typed};
+use kx_mod_keyboard::{Area, Board, KeyBox, KeyKind, Latches, Limits, Role};
+use kx_module_api::ports::{KeyChars, Scan};
 
 use crate::facecfg::{Action, KeysConfig};
 use crate::langinfo::LangInfo;
-use crate::latch::{Latch, Latches};
-use crate::legend::{KeyChars, Legend, LegendMods, is_arabic, legend, typed};
 use crate::paint::{Paint, REC, paint};
 
 /// One key as the face lays it out; it changes only with the size.
@@ -134,7 +134,7 @@ pub struct StateInput<'a> {
     /// Side keys toggled on.
     pub toggled: &'a BTreeSet<String>,
     /// What each character key types in the current layout, by scan code.
-    pub chars: &'a [(u32, KeyChars)],
+    pub chars: &'a BTreeMap<Scan, KeyChars>,
     /// The current layout and its neighbours.
     pub lang: [&'a LangInfo; 3],
     /// The mic is recording.
@@ -143,35 +143,15 @@ pub struct StateInput<'a> {
     pub turn: i8,
 }
 
-/// The legend modifiers from `latches` and Caps Lock: AltGr counts only on layouts that have AltGr characters.
-pub fn legend_mods(latches: &Latches, caps: bool, all: &[(u32, KeyChars)]) -> LegendMods {
-    let has_altgr = all.iter().any(|(_, c)| !c.altgr.is_empty());
-    LegendMods {
-        shift: latches.is_on(Latch::Shift),
-        caps,
-        altgr: has_altgr && latches.is_on(Latch::AltGr),
-    }
-}
-
-/// What key `sc` types in `all`; nothing when the layout lacks it.
-pub fn chars_of(all: &[(u32, KeyChars)], sc: u32) -> KeyChars {
-    let found = all.iter().find(|(c, _)| *c == sc);
-    found.map(|(_, k)| k.clone()).unwrap_or_default()
-}
-
 /// Every key's state and the language key.
 pub fn state_view(i: &StateInput) -> StateView {
-    let m = legend_mods(i.latches, i.caps, i.chars);
+    let m = LegendMods::of(i.latches, i.caps, i.chars);
     let rtl = i.lang[1].rtl;
     let mut keys = BTreeMap::new();
     for k in i.keys {
-        let code = k.sc.map(|s| u32::from(s.code()));
-        let found = i
-            .chars
-            .iter()
-            .find(|(sc, _)| Some(*sc) == code && k.kind == KeyKind::Char);
-        let s = match found {
-            Some((_, c)) => KeyState {
+        let char_key = k.sc.filter(|_| k.kind == KeyKind::Char);
+        let s = match char_key.and_then(|sc| i.chars.get(&sc)) {
+            Some(c) => KeyState {
                 legend: legend(c, m, k.row == 0, rtl),
                 name: typed(c, m).to_string(),
                 on: false,
@@ -231,8 +211,7 @@ fn is_on(i: &StateInput, k: &KeyBox) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::legend::testkeys::{letter, plain};
-    use kx_mod_keyboard::{BoardSpec, KeyboardSettings, board};
+    use kx_mod_keyboard::{BoardSpec, KeyboardSettings, Latch, Modifiers, board};
 
     fn cfg() -> crate::config::SpikeConfig {
         crate::config::load().expect("spike.toml loads")
@@ -246,16 +225,39 @@ mod tests {
         Limits::of(&KeyboardSettings::from_defaults().expect("the product defaults load"))
     }
 
-    /// A tiny layout: 1 and !, e with € on AltGr, and x on every other key.
-    fn key(sc: u32) -> KeyChars {
-        match sc {
-            0x02 => plain("1", "!", ""),
-            0x12 => KeyChars {
-                altgr: "€".into(),
-                ..letter("e", "E")
-            },
-            _ => letter("x", "X"),
+    /// A letter with `altgr` on AltGr: Caps Lock swaps its cases.
+    fn letter(base: &str, shift: &str, altgr: &str) -> KeyChars {
+        KeyChars {
+            base: base.into(),
+            shift: shift.into(),
+            altgr: altgr.into(),
+            caps: shift.into(),
+            caps_shift: base.into(),
+            dead: Vec::new(),
         }
+    }
+
+    /// A tiny layout: 1 and !, e with € on AltGr, and x on every other key.
+    fn key(sc: u16) -> KeyChars {
+        match sc {
+            0x02 => KeyChars {
+                caps: "1".into(),
+                caps_shift: "!".into(),
+                ..letter("1", "!", "")
+            },
+            0x12 => letter("e", "E", "€"),
+            _ => letter("x", "X", ""),
+        }
+    }
+
+    fn none() -> Latches {
+        Latches::new(Modifiers::Release)
+    }
+
+    fn latched(l: Latch, code: u16) -> Latches {
+        let mut m = none();
+        m.toggle(l, Scan::new(code));
+        m
     }
 
     fn state(latches: &Latches, caps: bool) -> StateView {
@@ -271,12 +273,12 @@ mod tests {
             rtl: false,
         };
         let toggled = BTreeSet::from(["grab".to_string()]);
-        let chars: Vec<_> = b
+        let chars: BTreeMap<Scan, KeyChars> = b
             .keys
             .iter()
             .filter(|k| k.kind == KeyKind::Char)
-            .filter_map(|k| k.sc.map(|sc| u32::from(sc.code())))
-            .map(|sc| (sc, key(sc)))
+            .filter_map(|k| k.sc)
+            .map(|sc| (sc, key(sc.code())))
             .collect();
         let i = StateInput {
             keys: &b.keys,
@@ -307,9 +309,7 @@ mod tests {
 
     #[test]
     fn a_latched_shift_lights_both_shift_keys_and_shifts_the_legends() {
-        let mut m = Latches::default();
-        m.toggle(Latch::Shift, 0x2A);
-        let s = state(&m, false);
+        let s = state(&latched(Latch::Shift, 0x2A), false);
         assert!(s.keys["shift"].on && s.keys["rshift"].on);
         assert_eq!(s.keys["c-0x0002"].legend.main, "!", "the digit row shifts");
         assert_eq!(s.keys["c-0x0012"].name, "E");
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn caps_lights_its_key_and_toggled_side_keys_light_up() {
-        let s = state(&Latches::default(), true);
+        let s = state(&none(), true);
         assert!(s.keys["caps"].on && s.keys["grab"].on);
         assert!(!s.keys["mic"].on);
         assert_eq!(s.keys["c-0x0012"].legend.main, "E");
@@ -325,19 +325,17 @@ mod tests {
 
     #[test]
     fn the_mic_key_turns_red_and_lit_while_it_records() {
-        let s = state_with(&Latches::default(), false, true);
+        let s = state_with(&none(), false, true);
         let mic = &s.keys["mic"];
         assert!(mic.rec && mic.on, "its light is on and pulses");
         assert_eq!(mic.paint, REC);
         assert!(!s.keys["grab"].rec, "only the mic key");
-        assert!(!state(&Latches::default(), false).keys["mic"].rec);
+        assert!(!state(&none(), false).keys["mic"].rec);
     }
 
     #[test]
     fn altgr_counts_when_the_layout_has_altgr_characters() {
-        let mut m = Latches::default();
-        m.toggle(Latch::AltGr, 0xE038);
-        let s = state(&m, false);
+        let s = state(&latched(Latch::AltGr, 0xE038), false);
         assert_eq!(s.keys["c-0x0012"].legend.main, "€");
         assert_eq!(s.lang.space, "English");
     }
