@@ -1,11 +1,12 @@
 //! The running face's tool buttons, pill and overlay: found by title, clicked only where they are on top.
 #![cfg(windows)]
 
+use kx_mod_keyboard::Area;
 use kx_platform_windows::screen;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::hold::Pt;
-use spike_core::place::{self, Place};
+use spike_core::place;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
@@ -59,12 +60,7 @@ impl FaceWin {
     /// The screen centre of tool button `b`.
     pub fn button(&self, ctx: &Ctx, b: ToolButton) -> POINT {
         let places = place::tools(&ctx.spike.keyboard, ToolButton::ALL.len());
-        let at = places.get(b.index()).copied().unwrap_or(Place {
-            x: 0.0,
-            y: 0.0,
-            w: 0.0,
-            h: 0.0,
-        });
+        let at = places.get(b.index()).copied().unwrap_or_default();
         mouse::centre(&at, self.face.origin, self.face.dpi)
     }
 
@@ -72,11 +68,11 @@ impl FaceWin {
     pub fn quiet_spot(&self, ctx: &Ctx) -> POINT {
         let kb = &ctx.spike.keyboard;
         let (_, top) = place::face_size(kb);
-        let line = Place {
-            x: kb.gap_px,
+        let line = Area {
+            x: f64::from(kb.gap_px),
             y: top,
-            w: kb.key_px,
-            h: kb.font_px,
+            w: f64::from(kb.key_px),
+            h: f64::from(kb.font_px),
         };
         mouse::centre(&line, self.face.origin, self.face.dpi)
     }

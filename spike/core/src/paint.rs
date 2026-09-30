@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::kbgeom::KeyKind;
+use kx_mod_keyboard::KeyKind;
 
 /// Token names that paint one key.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]

@@ -80,11 +80,11 @@ pub mod qobject {
 
         /// Starts a resize with the pointer at (`x`, `y`), in Qt units.
         #[qinvokable]
-        fn resize_begin(self: Pin<&mut Self>, x: f32, y: f32);
+        fn resize_begin(self: Pin<&mut Self>, x: f64, y: f64);
 
         /// Follows the pointer; true when the size changed.
         #[qinvokable]
-        fn resize_at(self: Pin<&mut Self>, x: f32, y: f32) -> bool;
+        fn resize_at(self: Pin<&mut Self>, x: f64, y: f64) -> bool;
 
         /// Ends the resize at the size it reached.
         #[qinvokable]
@@ -125,9 +125,9 @@ impl Default for BoardRust {
         let cfg = crate::bridge::config().clone();
         let themes = crate::bridge::themes().clone();
         Self {
-            poll_ms: crate::bridge::ms(cfg.size.poll_ms),
+            poll_ms: crate::bridge::ms(cfg.size.poll_ms.get()),
             start_note: QString::default(),
-            kb: Kb::new(cfg, themes, sysui::read()),
+            kb: Kb::new(cfg, themes, sysui::read()).expect("the board loads"),
             watch: None,
         }
     }
@@ -251,11 +251,11 @@ impl qobject::Board {
         self.as_mut().rust_mut().kb.preset(i)
     }
 
-    fn resize_begin(mut self: Pin<&mut Self>, x: f32, y: f32) {
+    fn resize_begin(mut self: Pin<&mut Self>, x: f64, y: f64) {
         self.as_mut().rust_mut().kb.resize_begin((x, y));
     }
 
-    fn resize_at(mut self: Pin<&mut Self>, x: f32, y: f32) -> bool {
+    fn resize_at(mut self: Pin<&mut Self>, x: f64, y: f64) -> bool {
         self.as_mut().rust_mut().kb.resize_at((x, y))
     }
 

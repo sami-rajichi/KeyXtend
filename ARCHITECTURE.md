@@ -55,7 +55,9 @@ crates/
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), theme loader
-  kx-mod-keyboard/      layout model, key state machine, modifiers, shortcuts layer
+  kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
+                         any size, size steps and presets, and the place on screen per DPI;
+                         `[keyboard]` settings. Later: key state machine, modifiers, shortcuts
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`

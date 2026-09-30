@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::kbgeom::{KeyKind, LayoutConfig, RowItem};
-use crate::latch::Latch;
+use kx_mod_keyboard::spec::RowItem;
+use kx_mod_keyboard::{BoardSpec, KeyKind};
 
 /// What a side key does in the spike.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -26,17 +26,7 @@ pub enum Action {
     Panel,
 }
 
-/// Which bottom corner of the screen the minimise bubble goes to; never the top.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Corner {
-    /// Bottom left.
-    Left,
-    /// Bottom right.
-    Right,
-}
-
-/// How one named key looks, what screen readers call it and what it does.
+/// How one named key looks, what screen readers call it, and what a side key does in the spike.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyLook {
@@ -48,12 +38,6 @@ pub struct KeyLook {
     pub label: Option<String>,
     /// Name for screen readers.
     pub name: String,
-    /// The modifier it latches.
-    #[serde(default)]
-    pub latch: Option<Latch>,
-    /// It is Caps Lock, so it lights while Caps Lock is on.
-    #[serde(default)]
-    pub caps: bool,
     /// What a side key does.
     #[serde(default)]
     pub action: Option<Action>,
@@ -107,8 +91,6 @@ pub struct BarConfig {
     pub bubble: BarButton,
     /// The bubble window's title, which the focus guard looks for.
     pub bubble_title: String,
-    /// The bottom corner of the keyboard's screen where the bubble goes.
-    pub bubble_corner: Corner,
     /// What a screen reader hears over the screen-wide catcher while moving or resizing.
     pub catch_name: String,
     /// Closes the keyboard.
@@ -170,8 +152,8 @@ impl AssetsConfig {
     }
 }
 
-/// Refuses a named key without a look, a look drawing nothing, and a side key without a working action.
-pub fn check_keys(keys: &KeysConfig, l: &LayoutConfig) -> Result<(), String> {
+/// Refuses a named key of the product board without a look, a look drawing nothing, and a side key without a working action.
+pub fn check_keys(keys: &KeysConfig, l: &BoardSpec) -> Result<(), String> {
     let named = l.rows.iter().flatten().filter_map(|i| match i {
         RowItem::Key(k) => Some((k.id.as_str(), k.kind)),
         RowItem::Chars(_) => None,
@@ -215,13 +197,24 @@ mod tests {
         crate::config::load().expect("spike.toml loads")
     }
 
+    fn board() -> BoardSpec {
+        BoardSpec::shipped().expect("the product board loads")
+    }
+
+    fn presets() -> usize {
+        kx_mod_keyboard::KeyboardSettings::from_defaults()
+            .expect("the product defaults load")
+            .presets
+            .len()
+    }
+
     #[test]
     fn every_named_and_side_key_has_a_look() {
         let c = cfg();
-        assert_eq!(check_keys(&c.keys, &c.layout), Ok(()));
+        assert_eq!(check_keys(&c.keys, &board()), Ok(()));
         let mut keys = c.keys.clone();
         keys.remove("esc");
-        assert!(check_keys(&keys, &c.layout).is_err(), "Esc lost its look");
+        assert!(check_keys(&keys, &board()).is_err(), "Esc lost its look");
     }
 
     #[test]
@@ -231,7 +224,7 @@ mod tests {
         let esc = keys.get_mut("esc").expect("esc");
         esc.icon = None;
         esc.label = None;
-        assert!(check_keys(&keys, &c.layout).is_err());
+        assert!(check_keys(&keys, &board()).is_err());
     }
 
     #[test]
@@ -239,19 +232,19 @@ mod tests {
         let c = cfg();
         let mut keys = c.keys.clone();
         keys.get_mut("mic").expect("mic").action = None;
-        assert!(check_keys(&keys, &c.layout).is_err());
+        assert!(check_keys(&keys, &board()).is_err());
         let mut keys = c.keys.clone();
         let power = keys.get_mut("power").expect("power");
         power.action = Some(Action::Note);
         power.note = None;
-        assert!(check_keys(&keys, &c.layout).is_err());
+        assert!(check_keys(&keys, &board()).is_err());
     }
 
     #[test]
     fn size_labels_match_the_presets() {
         let c = cfg();
-        assert_eq!(check_bar(&c.bar, c.size.presets.len()), Ok(()));
-        assert!(check_bar(&c.bar, c.size.presets.len() + 1).is_err());
+        assert_eq!(check_bar(&c.bar, presets()), Ok(()));
+        assert!(check_bar(&c.bar, presets() + 1).is_err());
     }
 
     #[test]
@@ -293,19 +286,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         assert!(made, "the junction was made");
         assert_eq!(found, [dir.join("a.ttf")]);
-    }
-
-    #[test]
-    fn the_bubble_goes_to_the_bottom_left_or_right_corner() {
-        assert_eq!(cfg().bar.bubble_corner, Corner::Right, "by default");
-        assert_eq!(
-            serde_json::from_str::<Corner>("\"left\"").ok(),
-            Some(Corner::Left)
-        );
-        assert!(
-            serde_json::from_str::<Corner>("\"top\"").is_err(),
-            "never on top"
-        );
     }
 
     #[test]

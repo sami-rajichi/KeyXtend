@@ -1,24 +1,9 @@
 //! Sticky modifiers as in osk.exe: a click latches Shift, Ctrl, Alt, AltGr or Win, and the next key releases it.
+//! `Latch` moved to kx-mod-keyboard with the board's key roles (P3); `Latches` follows with typing.
 
 use std::collections::BTreeMap;
 
-use serde::Deserialize;
-
-/// A modifier that latches; both Shift keys share one latch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Latch {
-    /// Shift.
-    Shift,
-    /// Control.
-    Ctrl,
-    /// Left Alt.
-    Alt,
-    /// Right Alt, which is AltGr on layouts that have it.
-    AltGr,
-    /// The Windows key.
-    Win,
-}
+pub use kx_mod_keyboard::Latch;
 
 /// The latched modifiers, each with the scan code of the key that latched it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

@@ -119,6 +119,7 @@ name = "kx-gates"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-mod-keyboard",
  "kx-module-api",
  "kx-platform-fake",
  "kx-platform-windows",
@@ -494,6 +495,7 @@ dependencies = [
 name = "spike-core"
 version = "0.0.0"
 dependencies = [
+ "kx-mod-keyboard",
  "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",

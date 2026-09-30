@@ -1,9 +1,10 @@
 //! Key centres on screen from spike.toml, and real mouse moves and clicks through `SendInput`.
 #![cfg(windows)]
 
+use kx_mod_keyboard::Area;
 use kx_platform_windows::keys::TAG;
 use spike_core::config::{KeyboardConfig, SpikeConfig};
-use spike_core::place::{Place, places};
+use spike_core::place::places;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
@@ -28,7 +29,7 @@ pub struct Face {
 }
 
 /// Every key's scan code and box, row by row, as the faces lay them out.
-pub fn key_places(kb: &KeyboardConfig) -> Vec<(u32, Place)> {
+pub fn key_places(kb: &KeyboardConfig) -> Vec<(u32, Area)> {
     let codes = kb.rows.iter().flatten().copied();
     codes.zip(places(kb).into_iter().flatten()).collect()
 }
@@ -43,9 +44,9 @@ fn round_px(v: f64) -> i32 {
 }
 
 /// The physical screen centre of `place` for a face at `origin` and `dpi`.
-pub fn centre(place: &Place, origin: POINT, dpi: u32) -> POINT {
+pub fn centre(place: &Area, origin: POINT, dpi: u32) -> POINT {
     let scale = f64::from(dpi) / f64::from(USER_DEFAULT_SCREEN_DPI);
-    let mid = |start: f32, size: f32| round_px((f64::from(start) + f64::from(size) / 2.0) * scale);
+    let mid = |start: f64, size: f64| round_px((start + size / 2.0) * scale);
     POINT {
         x: origin.x + mid(place.x, place.w),
         y: origin.y + mid(place.y, place.h),
@@ -161,7 +162,6 @@ mod tests {
             font_px: 16.0,
             guard_delay_ms: 0,
             guard_tries: 1,
-            relabel_ms: 0,
             rows: vec![vec![0x29, 0x02], vec![0x0F, 0x10], vec![0x39, 0xE038]],
             widths: vec![(0x0F, 1.5), (0x39, 6.25)],
         }
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn key_places_pair_each_code_with_its_box() {
-        let got: Vec<(u32, f32, f32)> = key_places(&kb())
+        let got: Vec<(u32, f64, f64)> = key_places(&kb())
             .into_iter()
             .map(|(code, p)| (code, p.x, p.y))
             .collect();

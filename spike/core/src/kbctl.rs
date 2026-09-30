@@ -2,19 +2,18 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use kx_mod_keyboard::{Board, BoardSpec, KeyboardSettings, Limits, Resize, board};
 use kx_mod_layouts::Follow;
-use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_module_api::ports::{LayoutId, LayoutSource, Point};
 use kx_platform_windows::{WinLayouts, layouts};
 
 use crate::config::SpikeConfig;
-use crate::kbgeom::{Board, board};
 use crate::kbview::{BoardView, StateInput, StateView, board_view, state_view};
 use crate::langinfo::{self, LangInfo};
 use crate::latch::Latches;
 use crate::legend::KeyChars;
 use crate::lookcfg::ModeChoice;
 use crate::lookview::{LookView, look_view};
-use crate::sizer::{self, Resize};
 use crate::sysui::{self, SystemLook};
 use crate::theme::Themes;
 use crate::{langkey, layout};
@@ -26,7 +25,9 @@ pub use typing::{Plan, Tapped};
 pub struct Kb {
     cfg: SpikeConfig,
     themes: Themes,
-    size: f32,
+    spec: BoardSpec,
+    limits: Limits,
+    size: f64,
     theme: usize,
     mode: ModeChoice,
     latches: Latches,
@@ -48,13 +49,17 @@ pub struct Kb {
 }
 
 impl Kb {
-    /// Starts at the first size preset, the configured theme and mode, and the layout of the app in front.
-    pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Kb {
+    /// Starts on the product board at its default size, the configured theme and mode, and the layout in front.
+    pub fn new(cfg: SpikeConfig, themes: Themes, sys: SystemLook) -> Result<Kb, String> {
+        let spec = BoardSpec::shipped().map_err(|e| e.to_string())?;
+        let kb = KeyboardSettings::from_defaults().map_err(|e| e.to_string())?;
         let front = layouts::id(layout::front_layout());
         let follow = Follow::new(Some(front), &WinLayouts.installed());
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
-        Kb {
-            size: cfg.size.start(),
+        Ok(Kb {
+            spec,
+            limits: Limits::of(&kb),
+            size: kb.size,
             theme: theme.unwrap_or_default(),
             mode: cfg.look.mode,
             latches: Latches::default(),
@@ -71,7 +76,7 @@ impl Kb {
             turn: 0,
             cfg,
             themes,
-        }
+        })
     }
 
     /// The settings.
@@ -85,7 +90,7 @@ impl Kb {
     }
 
     /// The size now.
-    pub fn size(&self) -> f32 {
+    pub fn size(&self) -> f64 {
         self.size
     }
 
@@ -96,12 +101,12 @@ impl Kb {
             .list
             .get(self.theme)
             .map_or(0.0, |t| t.look.gap_px);
-        board(&self.cfg.layout, gap, self.size)
+        board(&self.spec, f64::from(gap), self.size)
     }
 
     /// What the face lays out.
     pub fn view(&self) -> BoardView {
-        board_view(&self.board(), &self.cfg.keys, self.size, &self.cfg.size)
+        board_view(&self.board(), &self.cfg.keys, self.size, &self.limits)
     }
 
     /// The theme shown, by index.
@@ -155,41 +160,41 @@ impl Kb {
     }
 
     /// Sets the size to `s`; false when it did not change.
-    fn resize_to(&mut self, s: f32) -> bool {
-        let changed = (s - self.size).abs() > f32::EPSILON;
+    fn resize_to(&mut self, s: f64) -> bool {
+        let changed = (s - self.size).abs() > f64::EPSILON;
         self.size = s;
         changed
     }
 
     /// One size step up or down.
     pub fn step(&mut self, up: bool) -> bool {
-        let c = &self.cfg.size;
+        let l = &self.limits;
         let s = if up {
-            sizer::step_up(self.size, c)
+            l.up(self.size)
         } else {
-            sizer::step_down(self.size, c)
+            l.down(self.size)
         };
         self.resize_to(s)
     }
 
     /// Preset `i`: S, M or L.
     pub fn preset(&mut self, i: usize) -> bool {
-        match self.cfg.size.presets.get(i).copied() {
+        match self.limits.preset(i) {
             Some(s) => self.resize_to(s),
             None => false,
         }
     }
 
     /// Starts a resize with the pointer at `p`, in the same units as the plate.
-    pub fn resize_begin(&mut self, p: (f32, f32)) {
+    pub fn resize_begin(&mut self, p: (f64, f64)) {
         let plate = self.board().plate;
-        self.resize = Some(Resize::begin(self.size, p, (plate.w, plate.h)));
+        self.resize = Some(Resize::begin(self.size, point(p), (plate.w, plate.h)));
     }
 
     /// Follows the pointer at `p`; true when the size changed.
-    pub fn resize_at(&mut self, p: (f32, f32)) -> bool {
+    pub fn resize_at(&mut self, p: (f64, f64)) -> bool {
         match self.resize {
-            Some(r) => self.resize_to(r.at(p, &self.cfg.size)),
+            Some(r) => self.resize_to(r.at(point(p), &self.limits)),
             None => false,
         }
     }
@@ -211,15 +216,11 @@ impl Kb {
 
     /// Reads what each key types in the current layout, once per layout.
     fn load_chars(&mut self) {
-        let (id, keys) = (self.layout_id(), &self.cfg.layout);
+        let (id, spec) = (self.layout_id(), &self.spec);
         self.chars.entry(self.hkl).or_insert_with(|| {
-            let codes = keys.rows.iter().flatten().filter_map(|i| match i {
-                crate::kbgeom::RowItem::Chars(c) => Some(c.chars.clone()),
-                crate::kbgeom::RowItem::Key(_) => None,
-            });
-            let codes: Vec<u32> = codes.flatten().collect();
-            let scans: Vec<_> = codes.iter().map(|&sc| layout::scan(sc)).collect();
-            codes.into_iter().zip(WinLayouts.keys(id, &scans)).collect()
+            let scans = spec.char_scans();
+            let codes = scans.iter().map(|s| u32::from(s.code()));
+            codes.zip(WinLayouts.keys(id, &scans)).collect()
         });
     }
 
@@ -280,6 +281,14 @@ impl Kb {
             self.switched(id.get() as isize);
         }
         moved
+    }
+}
+
+/// Pointer `p` in whole pixels.
+fn point((x, y): (f64, f64)) -> Point {
+    Point {
+        x: x.round() as i32,
+        y: y.round() as i32,
     }
 }
 

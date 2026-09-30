@@ -21,6 +21,8 @@ toml.workspace = true
 # The gates are Windows-only. spike-core is the Qt test face's shared code, until later phases aim the gates at the product.
 [target.'cfg(windows)'.dependencies]
 kx-module-api = { path = "../../crates/kx-module-api" }
+# The keyboard's boxes (`Area`), which the spike's stage-1 place maths returns.
+kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The golden layout table format that `capture-layouts` writes.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }

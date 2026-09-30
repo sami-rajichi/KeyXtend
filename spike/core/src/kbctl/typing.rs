@@ -1,12 +1,12 @@
 //! What a click on a key sends: text, a key press or a latch, and dead keys that wait for the next key.
 
+use kx_mod_keyboard::Role;
 use kx_module_api::ports::LayoutSource;
 use kx_platform_windows::{WinLayouts, layouts, window};
 
 use super::Kb;
 use crate::config::ToolButton;
 use crate::facecfg::Action;
-use crate::kbgeom::KeyKind;
 use crate::kbview::{chars_of, legend_mods};
 use crate::latch::Latch;
 use crate::legend::{LegendMods, Slot, slot};
@@ -52,20 +52,21 @@ pub enum Tapped {
 }
 
 impl Kb {
-    /// What a click on key `id` does, with Caps Lock `caps`; `back` is the language key's left third.
+    /// What a click on key `id` does, from its board role, with Caps Lock `caps`; `back` is the language key's left third.
+    /// Side keys wait for a later version in the product; the spike keeps their test actions.
     pub fn plan(&mut self, id: &str, caps: bool, back: bool) -> Plan {
         let Some(k) = self.board().keys.into_iter().find(|k| k.id == id) else {
             return Plan::Nothing;
         };
         self.load_chars();
-        let look = self.cfg.keys.get(id);
-        match (k.kind, k.sc, look) {
-            (KeyKind::Lang, _, _) => Plan::Lang(back),
-            (KeyKind::Act, _, Some(l)) => l.action.map_or(Plan::Nothing, Plan::Side),
-            (KeyKind::Char, Some(sc), _) => self.plan_char(sc, caps),
-            (_, Some(sc), Some(l)) if l.caps => Plan::Caps(sc),
-            (_, Some(sc), Some(l)) => l.latch.map_or(Plan::Chord(sc), |m| Plan::Latch(m, sc)),
-            (_, Some(sc), None) => Plan::Chord(sc),
+        let action = self.cfg.keys.get(id).and_then(|l| l.action);
+        match (k.role, k.sc.map(|s| u32::from(s.code()))) {
+            (Role::Lang, _) => Plan::Lang(back),
+            (Role::Later, _) => action.map_or(Plan::Nothing, Plan::Side),
+            (Role::Char, Some(sc)) => self.plan_char(sc, caps),
+            (Role::Caps, Some(sc)) => Plan::Caps(sc),
+            (Role::Latch(m), Some(sc)) => Plan::Latch(m, sc),
+            (Role::Send, Some(sc)) => Plan::Chord(sc),
             _ => Plan::Nothing,
         }
     }

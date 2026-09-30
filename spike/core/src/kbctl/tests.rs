@@ -13,7 +13,7 @@ const FAKE: isize = 0x7777_7777;
 fn kb(altgr: bool) -> Kb {
     let cfg = crate::config::load().expect("spike.toml loads");
     let themes = crate::theme::load().expect("themes.toml loads");
-    let mut k = Kb::new(cfg, themes, SystemLook::default());
+    let mut k = Kb::new(cfg, themes, SystemLook::default()).expect("the board loads");
     let euro = if altgr { "€" } else { "" };
     k.hkl = FAKE;
     k.chars.insert(
@@ -36,13 +36,11 @@ fn kb(altgr: bool) -> Kb {
 #[test]
 fn it_starts_small_and_steps_through_sizes_and_presets() {
     let mut k = kb(false);
-    assert!(
-        (k.size() - k.cfg().size.presets[0]).abs() < f32::EPSILON,
-        "starts at S"
-    );
+    let presets = k.limits.presets().to_vec();
+    assert!((k.size() - presets[0]).abs() < f64::EPSILON, "starts at S");
     assert!(k.step(true));
     assert!(k.preset(2));
-    assert!((k.size() - k.cfg().size.presets[2]).abs() < f32::EPSILON);
+    assert!((k.size() - presets[2]).abs() < f64::EPSILON);
     assert!(!k.preset(9), "no fourth preset");
     assert!(!k.preset(2), "already L");
 }
@@ -58,7 +56,7 @@ fn a_resize_follows_the_pointer_and_ends_at_the_size_it_reached() {
     assert!(k.size() > start);
     let reached = k.size();
     k.resize_end();
-    assert!((k.size() - reached).abs() < f32::EPSILON && !k.resizing());
+    assert!((k.size() - reached).abs() < f64::EPSILON && !k.resizing());
     assert!(!k.resize_at((0.0, 0.0)), "nothing after the end");
 }
 

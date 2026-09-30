@@ -1,7 +1,7 @@
 //! The screens: each one's work area without the taskbar, its DPI, and where the pointer is.
 //! Box and DPI maths are pure and tested everywhere; the OS calls are in `win`.
 
-use kx_module_api::ports::Rect;
+use kx_module_api::ports::{self, BASE_DPI, Rect};
 
 #[cfg(windows)]
 mod win;
@@ -9,8 +9,8 @@ mod win;
 #[cfg(windows)]
 pub use win::{WinScreens, cursor, dpi_of, work_area};
 
-/// `USER_DEFAULT_SCREEN_DPI`: 96 dots per inch is 100 %.
-pub const DEFAULT_DPI: u32 = 96;
+/// `USER_DEFAULT_SCREEN_DPI`: the ports' `BASE_DPI` (96 dots per inch) is 100 %.
+pub const DEFAULT_DPI: u32 = BASE_DPI;
 /// `MONITORINFOF_PRIMARY`: the screen that holds the desktop's origin.
 const PRIMARY_FLAG: u32 = 1;
 
@@ -41,16 +41,10 @@ pub fn dpi_or_default(dpi: u32) -> u32 {
     if dpi > 0 { dpi } else { DEFAULT_DPI }
 }
 
-/// `px` logical pixels at `dpi`, in physical pixels; NaN gives 0 and a size past the range stops at its end.
+/// `px` logical pixels at `dpi`, in physical pixels, by the ports' `physical`; NaN gives 0.
 #[must_use]
 pub fn physical(px: f32, dpi: u32) -> i32 {
-    let scaled = (f64::from(px) * f64::from(dpi) / f64::from(DEFAULT_DPI)).round();
-    #[allow(
-        clippy::cast_possible_truncation,
-        reason = "`as` saturates at the ends of the range and gives 0 for NaN"
-    )]
-    let px = scaled as i32;
-    px
+    ports::physical(f64::from(px), dpi)
 }
 
 /// True when monitor flags `flags` mark the primary screen.

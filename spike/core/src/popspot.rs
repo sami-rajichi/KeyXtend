@@ -1,11 +1,11 @@
 //! Where a panel goes (mock-up `placePop`): above the keyboard, else below it, always inside the screen.
 
-use crate::place::Place;
+use kx_mod_keyboard::Area;
 
 /// The top-left corner for a `w` by `h` panel next to keyboard `kb` on `screen`, all in one unit.
 /// It sits `gap` above the keyboard, else below it, else at the top; it lines up with the keyboard's start edge
 /// (the right edge when `rtl`) and stays at least `edge` inside the screen.
-pub fn pop_spot(kb: Place, w: f32, h: f32, screen: Place, gaps: [f32; 2], rtl: bool) -> (f32, f32) {
+pub fn pop_spot(kb: Area, w: f64, h: f64, screen: Area, gaps: [f64; 2], rtl: bool) -> (f64, f64) {
     let [gap, edge] = gaps;
     let (top, left) = (screen.y + edge, screen.x + edge);
     let (bottom, right) = (screen.y + screen.h - edge, screen.x + screen.w - edge);
@@ -22,7 +22,7 @@ pub fn pop_spot(kb: Place, w: f32, h: f32, screen: Place, gaps: [f32; 2], rtl: b
 }
 
 /// `v` moved into `lo..=hi`, or `lo` when the range is empty; never panics, unlike `clamp`.
-fn inside(v: f32, lo: f32, hi: f32) -> f32 {
+fn inside(v: f64, lo: f64, hi: f64) -> f64 {
     v.min(hi).max(lo)
 }
 
@@ -30,16 +30,16 @@ fn inside(v: f32, lo: f32, hi: f32) -> f32 {
 mod tests {
     use super::*;
 
-    const GAPS: [f32; 2] = [10.0, 8.0];
-    const SCREEN: Place = Place {
+    const GAPS: [f64; 2] = [10.0, 8.0];
+    const SCREEN: Area = Area {
         x: 0.0,
         y: 0.0,
         w: 1920.0,
         h: 1040.0,
     };
 
-    fn kb(x: f32, y: f32) -> Place {
-        Place {
+    fn kb(x: f64, y: f64) -> Area {
+        Area {
             x,
             y,
             w: 800.0,
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn a_second_screen_or_a_top_taskbar_moves_the_edges() {
-        let second = Place {
+        let second = Area {
             x: 1920.0,
             y: 40.0,
             w: 1920.0,

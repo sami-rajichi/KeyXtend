@@ -4,14 +4,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
 
+use kx_mod_keyboard::{Area, Board, KeyBox, KeyKind, Limits, Role};
+
 use crate::facecfg::{Action, KeysConfig};
-use crate::kbgeom::{Board, KeyBox, KeyKind};
 use crate::langinfo::LangInfo;
 use crate::latch::{Latch, Latches};
 use crate::legend::{KeyChars, Legend, LegendMods, is_arabic, legend, typed};
 use crate::paint::{Paint, REC, paint};
-use crate::place::Place;
-use crate::sizer::SizeConfig;
 
 /// One key as the face lays it out; it changes only with the size.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -22,7 +21,7 @@ pub struct KeyView {
     pub kind: KeyKind,
     /// The cap's box.
     #[serde(flatten)]
-    pub cap: Place,
+    pub cap: Area,
     /// Lucide icon name.
     pub icon: Option<String>,
     /// Text drawn instead of an icon.
@@ -39,15 +38,15 @@ pub struct KeyView {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BoardView {
     /// The plate.
-    pub plate: Place,
+    pub plate: Area,
     /// The D-pad's round face.
-    pub dpad: Place,
+    pub dpad: Area,
     /// Every key.
     pub keys: Vec<KeyView>,
     /// The top bar.
-    pub bar: Place,
+    pub bar: Area,
     /// The size factor.
-    pub size: f32,
+    pub size: f64,
     /// The size preset this size is, if any.
     pub preset: Option<usize>,
 }
@@ -97,7 +96,7 @@ pub struct StateView {
 }
 
 /// The keyboard `b` at `size` as the face draws it, with the named keys' looks from `looks`.
-pub fn board_view(b: &Board, looks: &KeysConfig, size: f32, s: &SizeConfig) -> BoardView {
+pub fn board_view(b: &Board, looks: &KeysConfig, size: f64, limits: &Limits) -> BoardView {
     let view = |k: &KeyBox| {
         let look = looks.get(&k.id);
         let side = k.kind == KeyKind::Act;
@@ -118,10 +117,7 @@ pub fn board_view(b: &Board, looks: &KeysConfig, size: f32, s: &SizeConfig) -> B
         keys: b.keys.iter().map(view).collect(),
         bar: b.bar,
         size,
-        preset: s
-            .presets
-            .iter()
-            .position(|p| (p - size).abs() < f32::EPSILON),
+        preset: limits.preset_of(size),
     }
 }
 
@@ -169,10 +165,11 @@ pub fn state_view(i: &StateInput) -> StateView {
     let rtl = i.lang[1].rtl;
     let mut keys = BTreeMap::new();
     for k in i.keys {
+        let code = k.sc.map(|s| u32::from(s.code()));
         let found = i
             .chars
             .iter()
-            .find(|(sc, _)| Some(*sc) == k.sc && k.kind == KeyKind::Char);
+            .find(|(sc, _)| Some(*sc) == code && k.kind == KeyKind::Char);
         let s = match found {
             Some((_, c)) => KeyState {
                 legend: legend(c, m, k.row == 0, rtl),
@@ -183,7 +180,7 @@ pub fn state_view(i: &StateInput) -> StateView {
             },
             None => {
                 let rec = i.rec && is_mic(i, &k.id);
-                let on = rec || is_on(i, &k.id);
+                let on = rec || is_on(i, k);
                 let side = k.kind == KeyKind::Act;
                 KeyState {
                     on,
@@ -221,24 +218,32 @@ fn is_mic(i: &StateInput, id: &str) -> bool {
         .is_some_and(|l| l.action == Some(Action::Mic))
 }
 
-/// True when named key `id` is latched, Caps Lock while it is on, or a toggled side key.
-fn is_on(i: &StateInput, id: &str) -> bool {
-    let look = i.looks.get(id);
-    let latched = look
-        .and_then(|l| l.latch)
-        .is_some_and(|l| i.latches.is_on(l));
-    let caps = look.is_some_and(|l| l.caps) && i.caps;
-    latched || caps || i.toggled.contains(id)
+/// True when named key `k` is latched, Caps Lock while it is on, or a toggled side key.
+fn is_on(i: &StateInput, k: &KeyBox) -> bool {
+    let on = match k.role {
+        Role::Latch(l) => i.latches.is_on(l),
+        Role::Caps => i.caps,
+        _ => false,
+    };
+    on || i.toggled.contains(&k.id)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kbgeom::board;
     use crate::legend::testkeys::{letter, plain};
+    use kx_mod_keyboard::{BoardSpec, KeyboardSettings, board};
 
     fn cfg() -> crate::config::SpikeConfig {
         crate::config::load().expect("spike.toml loads")
+    }
+
+    fn spec() -> BoardSpec {
+        BoardSpec::shipped().expect("the product board loads")
+    }
+
+    fn limits() -> Limits {
+        Limits::of(&KeyboardSettings::from_defaults().expect("the product defaults load"))
     }
 
     /// A tiny layout: 1 and !, e with € on AltGr, and x on every other key.
@@ -259,7 +264,7 @@ mod tests {
 
     fn state_with(latches: &Latches, caps: bool, rec: bool) -> StateView {
         let c = cfg();
-        let b = board(&c.layout, 4.0, 1.0);
+        let b = board(&spec(), 4.0, 1.0);
         let lang = LangInfo {
             short: "EN".into(),
             name: "English".into(),
@@ -270,7 +275,8 @@ mod tests {
             .keys
             .iter()
             .filter(|k| k.kind == KeyKind::Char)
-            .filter_map(|k| k.sc.map(|sc| (sc, key(sc))))
+            .filter_map(|k| k.sc.map(|sc| u32::from(sc.code())))
+            .map(|sc| (sc, key(sc)))
             .collect();
         let i = StateInput {
             keys: &b.keys,
@@ -289,8 +295,8 @@ mod tests {
     #[test]
     fn the_view_gives_every_key_its_box_and_look() {
         let c = cfg();
-        let b = board(&c.layout, 4.0, 1.25);
-        let v = board_view(&b, &c.keys, 1.25, &c.size);
+        let b = board(&spec(), 4.0, 1.25);
+        let v = board_view(&b, &c.keys, 1.25, &limits());
         assert_eq!(v.preset, Some(1), "M");
         assert_eq!(v.keys.len(), b.keys.len());
         let esc = v.keys.iter().find(|k| k.id == "esc").expect("esc");

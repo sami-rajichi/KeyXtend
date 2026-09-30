@@ -12,9 +12,7 @@ font_px = 16.0
 guard_delay_ms = 300
 # Guard tries while no window of ours is visible yet; focus is handed back even when they run out.
 guard_tries = 10
-# How often labels follow the layout of the app in front, in ms.
-relabel_ms = 500
-# The 5-row block as scan codes; 0xE0xx marks an extended key.
+# The stage-1 5-row block the gates G2 and G3 aim with until they move to the product; 0xE0xx marks an extended key.
 rows = [
     [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E],
     [0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B],
@@ -27,40 +25,6 @@ widths = [
     [0x0E, 2.0], [0x0F, 1.5], [0x2B, 1.5], [0x3A, 1.75], [0x1C, 2.25],
     [0x2A, 1.25], [0x36, 2.75], [0x1D, 1.5], [0xE05B, 1.25], [0x38, 1.25],
     [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
-]
-
-# The stage-2 keyboard from design/keyboard-style-lab.html (lines 145-168, 241-242, 927-1006), in logical pixels at size 1.
-[layout]
-# One key unit wide, and one row high.
-unit_px = 33.0
-row_px = 31.0
-# The main block is this many units wide; a key w units wide spans w * columns_per_unit grid columns.
-main_units = 16.0
-columns_per_unit = 4
-# Side block: this many columns, each side_unit units wide.
-side_columns = 3
-side_unit = 1.22
-# Gap between the main and side blocks; plate padding (top, right, bottom, left); top bar height and the gap under it.
-body_gap_px = 8.0
-plate_pad_px = [6.0, 7.0, 7.0, 7.0]
-top_bar_px = 24.0
-top_gap_px = 4.0
-# D-pad cells as first col, first row, last col, last row (1-based, inclusive); it is min(dpad_units units, its rows) wide, less one gap.
-dpad_cell = [1, 2, 2, 4]
-dpad_units = 2.44
-# Main rows: named keys with their width in units, kind and scan code (0xE0xx is extended), and runs of 1-unit character keys.
-rows = [
-    [{ id = "esc", w = 1.0, kind = "danger", sc = 0x01 }, { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] }, { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E }],
-    [{ id = "tab", w = 1.5, kind = "mod", sc = 0x0F }, { chars = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B] }, { id = "del", w = 1.5, kind = "mod", sc = 0xE053 }],
-    [{ id = "caps", w = 1.75, kind = "mod", sc = 0x3A }, { chars = [0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28] }, { id = "enter", w = 3.25, kind = "enter", sc = 0x1C }],
-    [{ id = "shift", w = 2.25, kind = "mod", sc = 0x2A }, { chars = [0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] }, { id = "rshift", w = 1.75, kind = "mod", sc = 0x36 }, { id = "up", w = 1.0, kind = "mod", sc = 0xE048 }, { id = "menu", w = 1.0, kind = "mod", sc = 0xE05D }],
-    [{ id = "ctrl", w = 1.25, kind = "mod", sc = 0x1D }, { id = "win", w = 1.0, kind = "mod", sc = 0xE05B }, { id = "alt", w = 1.0, kind = "mod", sc = 0x38 }, { id = "lang", w = 1.75, kind = "lang" }, { id = "space", w = 7.0, kind = "space", sc = 0x39 }, { id = "altgr", w = 1.0, kind = "mod", sc = 0xE038 }, { id = "left", w = 1.0, kind = "mod", sc = 0xE04B }, { id = "down", w = 1.0, kind = "mod", sc = 0xE050 }, { id = "right", w = 1.0, kind = "mod", sc = 0xE04D }],
-]
-# Side keys by column and row (1-based).
-side = [
-    { id = "rclick", col = 1, row = 1 }, { id = "grab", col = 2, row = 1 }, { id = "shortcuts", col = 3, row = 1 },
-    { id = "mic", col = 3, row = 2 }, { id = "clip", col = 3, row = 3 }, { id = "snip", col = 3, row = 4 },
-    { id = "fill", col = 1, row = 5 }, { id = "settings", col = 2, row = 5 }, { id = "power", col = 3, row = 5 },
 ]
 
 # The keyboard's look (spec 3.5): the starting theme (an id in themes.toml) and mode: "light", "dark" or "auto" to follow Windows.
@@ -79,13 +43,9 @@ accent_themes = []
 # Hover time before an icon button's name shows in a tooltip (Windows' default tooltip delay).
 tip_ms = 500
 
-# Keyboard size (spec 3.1): presets S, M and L, the step of the - and + buttons, and the limits; the keyboard starts at S.
-[size]
-presets = [1.0, 1.25, 1.5]
-step = 0.05
-min = 0.8
-max = 1.8
+# The board, the size presets, step and limits, and the relabel time moved to kx-mod-keyboard (board.toml, [keyboard]) in P3.
 # While the keyboard is being moved or resized, the pointer is read this often (ms), about once a frame.
+[size]
 poll_ms = 16
 
 # Stage 1b: the tools row under the keys, the selection pill, quick-fill and snip.
@@ -192,24 +152,24 @@ words_icon = "captions"
 hide_ms = 4000
 
 # How each named key looks (spec 3.1, mock-up keyInner): a Lucide icon or a text label, and the name that
-# screen readers say and icon tooltips show. `latch` makes a sticky modifier; side keys say what they do.
+# screen readers say and icon tooltips show; side keys say what they do. Key roles moved to kx-mod-keyboard's board.toml.
 [keys]
 esc = { label = "Esc", name = "Escape" }
 bksp = { icon = "delete", name = "Backspace" }
 tab = { icon = "arrow-right-to-line", name = "Tab" }
 del = { label = "Del", name = "Delete" }
-caps = { label = "Caps", name = "Caps Lock", caps = true }
+caps = { label = "Caps", name = "Caps Lock" }
 enter = { icon = "corner-down-left", name = "Enter" }
-shift = { icon = "arrow-big-up", name = "Shift", latch = "shift" }
-rshift = { icon = "arrow-big-up", name = "Shift", latch = "shift" }
+shift = { icon = "arrow-big-up", name = "Shift" }
+rshift = { icon = "arrow-big-up", name = "Shift" }
 up = { icon = "chevron-up", name = "Up" }
 menu = { icon = "square-menu", name = "Menu key (context menu)" }
-ctrl = { label = "Ctrl", name = "Control", latch = "ctrl" }
-win = { icon = "win-logo", name = "Windows key", latch = "win" }
-alt = { label = "Alt", name = "Alt", latch = "alt" }
+ctrl = { label = "Ctrl", name = "Control" }
+win = { icon = "win-logo", name = "Windows key" }
+alt = { label = "Alt", name = "Alt" }
 lang = { name = "Language" }
 space = { name = "Space" }
-altgr = { label = "AltGr", name = "AltGr", latch = "altgr" }
+altgr = { label = "AltGr", name = "AltGr" }
 left = { icon = "chevron-left", name = "Left" }
 down = { icon = "chevron-down", name = "Down" }
 right = { icon = "chevron-right", name = "Right" }
@@ -233,8 +193,6 @@ bigger = { icon = "zoom-in", name = "Bigger" }
 minimise = { icon = "minus", name = "Minimise to a bubble" }
 bubble = { icon = "keyboard", name = "Show the keyboard" }
 bubble_title = "KeyXtend spike - bubble"
-# The bubble always goes to this bottom corner of the keyboard's screen, above the taskbar: "right" or "left".
-bubble_corner = "right"
 catch_name = "Click to finish moving or resizing"
 close = { icon = "x", name = "Close" }
 corner = { icon = "move-diagonal-2", name = "Resize: click, move, click" }

@@ -23,10 +23,8 @@ pub struct SpikeConfig {
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
     pub voice: crate::voicecfg::VoiceConfig,
-    /// The stage-2 keyboard's geometry.
-    pub layout: crate::kbgeom::LayoutConfig,
-    /// Keyboard size steps, presets and limits.
-    pub size: crate::sizer::SizeConfig,
+    /// How often the pointer is read while moving or resizing; the board and sizes are kx-mod-keyboard's.
+    pub size: SizeConfig,
     /// Theme, mode, frosted plate and tooltip delay.
     pub look: crate::lookcfg::LookConfig,
     /// How each named key looks and what side keys do.
@@ -64,12 +62,18 @@ pub struct KeyboardConfig {
     pub guard_delay_ms: u64,
     /// Guard tries before giving up while no window of ours is visible yet.
     pub guard_tries: u32,
-    /// How often labels follow the foreground layout, in ms.
-    pub relabel_ms: u64,
     /// Rows of scan codes; `0xE0xx` marks an extended key.
     pub rows: Vec<Vec<u32>>,
-    /// `[scan code, width]` pairs; other keys are `layout::DEFAULT_WIDTH` wide.
+    /// `[scan code, width]` pairs; other keys are `place::DEFAULT_WIDTH` wide.
     pub widths: Vec<(u32, f32)>,
+}
+
+/// `spike.toml [size]`; the size rules moved to kx-mod-keyboard's `[keyboard]` in P3.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SizeConfig {
+    /// How often the pointer is read while moving or resizing, in ms; 0 is refused.
+    pub poll_ms: std::num::NonZeroU64,
 }
 
 /// Bytes in one MiB.
@@ -226,16 +230,16 @@ pub fn load() -> Result<SpikeConfig, String> {
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let at = |e: String| format!("{}: {e}", file.display());
     let mut config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
-    config.layout.check().map_err(at)?;
-    config.size.check().map_err(at)?;
     config.look.check().map_err(at)?;
     config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
     crate::panelcfg::check_titles(&config).map_err(at)?;
     config.hold.check().map_err(at)?;
     config.ring.check().map_err(at)?;
-    crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
-    crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
+    let board = kx_mod_keyboard::BoardSpec::shipped().map_err(|e| e.to_string())?;
+    let kb = kx_mod_keyboard::KeyboardSettings::from_defaults().map_err(|e| e.to_string())?;
+    crate::facecfg::check_keys(&config.keys, &board).map_err(at)?;
+    crate::facecfg::check_bar(&config.bar, kb.presets.len()).map_err(at)?;
     let layouts = kx_mod_layouts::LayoutsSettings::from_defaults().map_err(|e| e.to_string())?;
     config.lang.short = layouts.short;
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();

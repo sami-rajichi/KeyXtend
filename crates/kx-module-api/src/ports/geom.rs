@@ -8,6 +8,21 @@ use std::fmt;
 /// What a pixel reader expects, for serde's error text.
 const EXPECTING: &str = "a pixel count within the i32 range";
 
+/// The DPI at which one logical pixel is one physical pixel (100 %).
+pub const BASE_DPI: u32 = 96;
+
+/// `px` logical pixels at `dpi`, in physical pixels; not-a-number gives 0 and a size past the range stops at its end.
+#[must_use]
+pub fn physical(px: f64, dpi: u32) -> i32 {
+    let scaled = (px * f64::from(dpi) / f64::from(BASE_DPI)).round();
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "`as` saturates at the ends of the range and gives 0 for NaN"
+    )]
+    let px = scaled as i32;
+    px
+}
+
 /// A rectangle in physical pixels.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,6 +93,17 @@ impl Visitor<'_> for PxVisitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn logical_pixels_scale_with_the_dpi() {
+        assert_eq!((physical(72.0, 96), physical(72.0, 120)), (72, 90));
+        assert_eq!(physical(33.0, 144), 50, "49.5 rounds up");
+        assert_eq!(
+            (physical(f64::NAN, 144), physical(f64::INFINITY, 96)),
+            (0, i32::MAX)
+        );
+        assert_eq!((physical(-10.0, 192), physical(10.0, 0)), (-20, 0));
+    }
 
     #[test]
     fn a_fraction_rounds_to_the_nearest_pixel() {

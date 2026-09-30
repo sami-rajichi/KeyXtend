@@ -1,0 +1,140 @@
+//! The size the user sets is saved through the module's own settings handle, once per finished change.
+
+#![allow(
+    clippy::unwrap_used,
+    reason = "these fixtures run only in tests, where a failed setup should fail the test"
+)]
+#![allow(
+    clippy::float_cmp,
+    reason = "a saved size must read back as exactly the size shown"
+)]
+
+use crate::host::FakeHost;
+use kx_mod_keyboard::{SizeError, Sizer};
+use kx_module_api::WriteError;
+use kx_module_api::ports::Point;
+use proptest::prelude::*;
+
+/// The size-1 plate in the pointer's pixels.
+const PLATE: (f64, f64) = (671.0, 196.0);
+
+fn sizer(host: &mut FakeHost) -> Sizer {
+    let settings = host.settings();
+    Sizer::new(&settings, host.handle())
+}
+
+/// The sizes written so far, oldest first.
+fn written(host: &FakeHost) -> Vec<f64> {
+    let values = host.sink.writes().into_iter().map(|(_, key, value)| {
+        assert_eq!(key, "size");
+        value.as_float().unwrap()
+    });
+    values.collect()
+}
+
+fn at(x: i32, y: i32) -> Point {
+    Point { x, y }
+}
+
+#[test]
+fn each_step_saves_the_new_size() {
+    let mut host = FakeHost::new();
+    let mut s = sizer(&mut host);
+    assert_eq!(s.bigger(), Ok(true));
+    assert_eq!(s.smaller(), Ok(true));
+    assert_eq!(written(&host), [1.05, 1.0]);
+    assert_eq!(host.sink.settings().size, 1.0);
+}
+
+#[test]
+fn a_step_past_a_limit_changes_and_saves_nothing() {
+    let mut host = FakeHost::with(Some(("size", 1.8.into())));
+    let mut s = sizer(&mut host);
+    assert_eq!(s.bigger(), Ok(false));
+    assert!(written(&host).is_empty());
+}
+
+#[test]
+fn a_preset_saves_its_size_and_an_unknown_one_is_refused() {
+    let mut host = FakeHost::new();
+    let mut s = sizer(&mut host);
+    assert_eq!(s.pick(2), Ok(true));
+    assert_eq!(s.preset(), Some(2));
+    assert_eq!(s.pick(3), Err(SizeError::NoPreset(3)));
+    assert_eq!(s.pick(2), Ok(false), "already L");
+    assert_eq!(written(&host), [1.5]);
+}
+
+#[test]
+fn a_resize_saves_once_when_it_ends() {
+    let mut host = FakeHost::new();
+    let mut s = sizer(&mut host);
+    s.begin(at(100, 100), PLATE);
+    assert!(s.resizing());
+    assert!(s.follow(at(400, 100)));
+    assert!(s.follow(at(200, 100)));
+    assert!(
+        written(&host).is_empty(),
+        "nothing saved while the pointer moves"
+    );
+    let reached = s.size();
+    assert_eq!(s.end(), Ok(true));
+    assert!(
+        !s.resizing() && !s.follow(at(0, 0)),
+        "nothing after the end"
+    );
+    assert_eq!(written(&host), [reached]);
+    assert_eq!(s.end(), Ok(false));
+}
+
+#[test]
+fn a_resize_back_to_where_it_began_saves_nothing() {
+    let mut host = FakeHost::new();
+    let mut s = sizer(&mut host);
+    s.begin(at(100, 100), PLATE);
+    assert!(s.follow(at(500, 100)));
+    assert!(s.follow(at(100, 100)));
+    assert_eq!(s.end(), Ok(false));
+    assert!(written(&host).is_empty());
+}
+
+#[test]
+fn a_size_that_cannot_be_saved_still_holds_for_this_run() {
+    let mut host = FakeHost::new();
+    let mut s = sizer(&mut host);
+    host.sink.refuse(Some(WriteError::Unsaved));
+    assert_eq!(s.bigger(), Err(SizeError::Unsaved(WriteError::Unsaved)));
+    assert_eq!(s.size(), 1.05);
+    host.sink.refuse(None);
+    assert_eq!(s.bigger(), Ok(true));
+    assert_eq!(written(&host), [1.1]);
+}
+
+#[test]
+fn it_starts_at_the_saved_size() {
+    let mut host = FakeHost::with(Some(("size", 1.25.into())));
+    let s = sizer(&mut host);
+    assert_eq!((s.size(), s.preset()), (1.25, Some(1)));
+    assert_eq!(s.limits().presets(), [1.0, 1.25, 1.5]);
+}
+
+proptest! {
+    #[test]
+    fn the_saved_size_always_matches_the_size_shown(ops in prop::collection::vec((0u8..6, 0i32..900), 0..32)) {
+        let mut host = FakeHost::new();
+        let mut s = sizer(&mut host);
+        for (op, n) in ops {
+            match op {
+                0 => { s.bigger().unwrap(); }
+                1 => { s.smaller().unwrap(); }
+                2 => { let _ = s.pick(usize::try_from(n % 4).unwrap()); }
+                3 => s.begin(at(0, 0), PLATE),
+                4 => { s.follow(at(n - 450, 0)); }
+                _ => { s.end().unwrap(); }
+            }
+            if !s.resizing() {
+                prop_assert_eq!(host.sink.settings().size, s.size());
+            }
+        }
+    }
+}

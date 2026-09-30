@@ -6,14 +6,14 @@ use std::sync::OnceLock;
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
+use kx_mod_keyboard::{Area, BoardSpec, KeyboardSettings, board};
 use kx_platform_windows::uiaccess;
 use spike_core::config::SpikeConfig;
-use spike_core::facecfg::Corner;
 use spike_core::hold::Pt;
-use spike_core::place::Place;
+use spike_core::place::outward;
 use spike_core::status::{self, Guard};
 use spike_core::theme::Themes;
-use spike_core::{kbgeom, legend, screen, window};
+use spike_core::{legend, screen, window};
 use windows::Win32::Foundation::HWND;
 
 /// The cxx-qt bridge that makes `Keyboard` a QML type.
@@ -69,6 +69,8 @@ const NOT_SHOWN: &str = "the keyboard is not on screen yet, so it was not cut";
 struct Start {
     cfg: SpikeConfig,
     themes: Themes,
+    /// kx-mod-keyboard's settings at their defaults (P3 Task 11).
+    kb: KeyboardSettings,
     /// The window in front at start-up, as a raw handle value.
     prev: usize,
 }
@@ -80,6 +82,7 @@ pub fn init(cfg: SpikeConfig, themes: Themes, prev: HWND) {
     let _ = START.set(Start {
         cfg,
         themes,
+        kb: KeyboardSettings::from_defaults().expect("the keyboard defaults load"),
         prev: prev.0 as usize,
     });
 }
@@ -123,10 +126,10 @@ impl Default for KeyboardRust {
     fn default() -> Self {
         let start = start();
         let kb = &start.cfg.keyboard;
-        let keys = kbgeom::board(&start.cfg.layout, 0.0, 1.0).keys.len();
+        let keys = BoardSpec::shipped().map_or(0, |s| board(&s, 0.0, 1.0).keys.len());
         Self {
             guard_delay_ms: ms(kb.guard_delay_ms),
-            relabel_ms: ms(kb.relabel_ms),
+            relabel_ms: ms(start.kb.relabel_ms),
             title: QString::from(&kb.title),
             guard_pending: QString::from(status::GUARD_PENDING),
             prev: HWND(start.prev as *mut c_void),
@@ -155,12 +158,8 @@ impl qobject::Keyboard {
     }
 
     fn shape(&self, boxes: &QString, dpr: f64) -> QString {
-        let rects = serde_json::from_str::<Vec<Place>>(&boxes.to_string())
-            .map(|all| {
-                all.iter()
-                    .map(|p| p.outward(dpr as f32))
-                    .collect::<Vec<_>>()
-            })
+        let rects = serde_json::from_str::<Vec<Area>>(&boxes.to_string())
+            .map(|all| all.iter().map(|p| outward(p, dpr)).collect::<Vec<_>>())
             .map_err(|e| e.to_string());
         let done = rects.and_then(|r| window::shape(&self.rust().title.to_string(), &r));
         QString::from(match done {
@@ -171,14 +170,15 @@ impl qobject::Keyboard {
     }
 
     fn start_at(&self, w: f64, h: f64) -> QString {
-        spot(screen::start_spot(w as f32, h as f32))
+        spot(screen::start_spot(w, h))
     }
 
     fn bubble_at(&self) -> QString {
         let [d, _, inset] = themes().shape.extra.bubble_px;
-        let left = config().bar.bubble_corner == Corner::Left;
+        let corner = start().kb.bubble_corner;
         let title = self.rust().title.to_string();
-        spot(screen::bubble_for(&title, left, [d, inset]))
+        let px = [f64::from(d), f64::from(inset)];
+        spot(screen::bubble_for(&title, corner, px))
     }
 
     fn is_arabic(&self, text: &QString) -> bool {
