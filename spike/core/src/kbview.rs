@@ -311,8 +311,8 @@ mod tests {
         m.toggle(Latch::Shift, 0x2A);
         let s = state(&m, false);
         assert!(s.keys["shift"].on && s.keys["rshift"].on);
-        assert_eq!(s.keys["c-0-1"].legend.main, "!", "the digit row shifts");
-        assert_eq!(s.keys["c-1-2"].name, "E");
+        assert_eq!(s.keys["c-0x0002"].legend.main, "!", "the digit row shifts");
+        assert_eq!(s.keys["c-0x0012"].name, "E");
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod tests {
         let s = state(&Latches::default(), true);
         assert!(s.keys["caps"].on && s.keys["grab"].on);
         assert!(!s.keys["mic"].on);
-        assert_eq!(s.keys["c-1-2"].legend.main, "E");
+        assert_eq!(s.keys["c-0x0012"].legend.main, "E");
     }
 
     #[test]
@@ -338,7 +338,7 @@ mod tests {
         let mut m = Latches::default();
         m.toggle(Latch::AltGr, 0xE038);
         let s = state(&m, false);
-        assert_eq!(s.keys["c-1-2"].legend.main, "€");
+        assert_eq!(s.keys["c-0x0012"].legend.main, "€");
         assert_eq!(s.lang.space, "English");
     }
 }

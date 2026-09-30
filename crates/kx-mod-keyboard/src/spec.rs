@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// The board, compiled in so it is never read from disk.
 const BOARD: &str = include_str!("../board.toml");
-/// What starts a character key's id, `c-<row>-<index>`.
+/// What starts a character key's id, `c-` and its scan code.
 const CHAR_PREFIX: &str = "c";
 
 /// What a key is, which sets its colours.
@@ -210,7 +210,7 @@ pub enum RowKey<'a> {
     Named(&'a KeySpec),
     /// A character key.
     Char {
-        /// Its id, `c-<row>-<index>`.
+        /// Its id, `c-` and its scan code, such as `c-0x002C`.
         id: String,
         /// Its scan code.
         sc: Scan,
@@ -218,26 +218,20 @@ pub enum RowKey<'a> {
 }
 
 impl BoardSpec {
-    /// The keys of main row `row`, left to right; character keys are numbered across the whole row.
+    /// The keys of main row `row`, left to right.
     #[must_use]
     pub fn row_keys(&self, row: usize) -> Vec<RowKey<'_>> {
         let Some(items) = self.rows.get(row) else {
             return Vec::new();
         };
         let mut keys = Vec::new();
-        let mut index = 0;
         for item in items {
             match item {
                 RowItem::Key(k) => keys.push(RowKey::Named(k)),
-                RowItem::Chars(c) => {
-                    for &sc in &c.chars {
-                        keys.push(RowKey::Char {
-                            id: char_id(row, index),
-                            sc,
-                        });
-                        index += 1;
-                    }
-                }
+                RowItem::Chars(c) => keys.extend(c.chars.iter().map(|&sc| RowKey::Char {
+                    id: char_id(sc),
+                    sc,
+                })),
             }
         }
         keys
@@ -254,10 +248,10 @@ impl BoardSpec {
     }
 }
 
-/// The id of character key `index` in main row `row`, both from 0.
+/// The id of the character key that sends `sc`; it stays when keys are added or moved.
 #[must_use]
-pub fn char_id(row: usize, index: usize) -> String {
-    format!("{CHAR_PREFIX}-{row}-{index}")
+pub fn char_id(sc: Scan) -> String {
+    format!("{CHAR_PREFIX}-{sc}")
 }
 
 #[cfg(test)]

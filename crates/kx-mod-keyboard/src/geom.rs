@@ -44,7 +44,7 @@ impl Area {
 /// One key: its id, kind, role, scan code and row, its grid cell and the cap drawn inside it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct KeyBox {
-    /// Id; character keys are `c-<row>-<index>`.
+    /// Id; a character key's is `c-` and its scan code, such as `c-0x002C`.
     pub id: String,
     /// Kind, which sets its colours.
     pub kind: KeyKind,

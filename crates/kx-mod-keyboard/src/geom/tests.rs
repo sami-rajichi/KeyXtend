@@ -45,12 +45,20 @@ fn the_mock_up_board_is_about_671_by_196_at_size_1() {
 #[test]
 fn character_keys_carry_their_row_code_and_role() {
     let b = board(&spec(), 4.0, 1.0);
-    let first = b.keys.iter().find(|k| k.id == char_id(0, 0)).unwrap();
+    let first = b
+        .keys
+        .iter()
+        .find(|k| k.id == char_id(Scan::new(0x29)))
+        .unwrap();
     assert_eq!(
         (first.sc, first.row, first.role),
         (Some(Scan::new(0x29)), 0, Role::Char)
     );
-    let q = b.keys.iter().find(|k| k.id == char_id(1, 0)).unwrap();
+    let q = b
+        .keys
+        .iter()
+        .find(|k| k.id == char_id(Scan::new(0x10)))
+        .unwrap();
     assert_eq!((q.sc, q.row), (Some(Scan::new(0x10)), 1));
     let mic = b.keys.iter().find(|k| k.id == "mic").unwrap();
     assert_eq!(

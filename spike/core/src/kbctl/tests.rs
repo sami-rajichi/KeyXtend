@@ -77,18 +77,18 @@ fn named_keys_send_latch_or_toggle_as_configured() {
 #[test]
 fn a_character_key_types_its_text_or_a_shortcut() {
     let mut k = kb(true);
-    assert_eq!(k.plan("c-1-0", false, false), Plan::Text("q".into()));
+    assert_eq!(k.plan("c-0x0010", false, false), Plan::Text("q".into()));
     assert_eq!(
-        k.plan("c-1-0", true, false),
+        k.plan("c-0x0010", true, false),
         Plan::Text("Q".into()),
         "Caps Lock"
     );
     k.latches.toggle(Latch::AltGr, 0xE038);
-    assert_eq!(k.plan("c-1-2", false, false), Plan::Text("€".into()));
+    assert_eq!(k.plan("c-0x0012", false, false), Plan::Text("€".into()));
     k.latches.take();
     k.latches.toggle(Latch::Ctrl, 0x1D);
     assert_eq!(
-        k.plan("c-1-0", false, false),
+        k.plan("c-0x0010", false, false),
         Plan::Chord(0x10),
         "Ctrl+Q is a shortcut"
     );
@@ -97,13 +97,13 @@ fn a_character_key_types_its_text_or_a_shortcut() {
 #[test]
 fn a_dead_key_and_the_key_after_it_go_as_key_presses_so_the_app_adds_the_accent() {
     let mut k = kb(false);
-    let hat = k.plan("c-1-1", false, false);
+    let hat = k.plan("c-0x0011", false, false);
     assert_eq!(hat, Plan::Dead(0x11, vec![]));
     k.mark(&hat);
-    let e = k.plan("c-1-2", false, false);
+    let e = k.plan("c-0x0012", false, false);
     assert_eq!(e, Plan::Press(0x12, vec![]), "the layout makes ê");
     k.mark(&e);
-    assert_eq!(k.plan("c-1-2", false, false), Plan::Text("e".into()));
+    assert_eq!(k.plan("c-0x0012", false, false), Plan::Text("e".into()));
 }
 
 #[test]
@@ -112,7 +112,7 @@ fn a_latch_between_a_dead_key_and_its_letter_keeps_the_accent_waiting() {
     k.mark(&Plan::Dead(0x11, vec![]));
     k.mark(&Plan::Latch(Latch::Shift, 0x2A));
     assert_eq!(
-        k.plan("c-1-2", false, false),
+        k.plan("c-0x0012", false, false),
         Plan::Press(0x12, vec![]),
         "Ê"
     );
@@ -135,7 +135,7 @@ fn a_shift_the_dead_key_ignores_is_released_but_not_held() {
     let mut k = kb(false);
     k.latches.toggle(Latch::Shift, 0x2A);
     assert_eq!(
-        k.plan("c-1-1", false, false),
+        k.plan("c-0x0011", false, false),
         Plan::Dead(0x11, vec![Latch::Shift])
     );
 }
@@ -144,7 +144,7 @@ fn a_shift_the_dead_key_ignores_is_released_but_not_held() {
 fn a_latch_the_legend_ignores_is_not_held_around_a_dead_key_or_its_letter() {
     let mut k = kb(true);
     k.latches.toggle(Latch::AltGr, 0xE038);
-    let hat = k.plan("c-1-1", false, false);
+    let hat = k.plan("c-0x0011", false, false);
     assert_eq!(
         hat,
         Plan::Dead(0x11, vec![Latch::AltGr]),
@@ -152,7 +152,7 @@ fn a_latch_the_legend_ignores_is_not_held_around_a_dead_key_or_its_letter() {
     );
     k.mark(&hat);
     k.latches.toggle(Latch::Shift, 0x2A);
-    let q = k.plan("c-1-0", false, false);
+    let q = k.plan("c-0x0010", false, false);
     assert_eq!(
         q,
         Plan::Press(0x10, vec![Latch::AltGr]),
@@ -170,7 +170,7 @@ fn a_chip_that_does_not_exist_sends_nothing() {
 fn altgr_without_altgr_characters_is_right_alt() {
     let mut k = kb(false);
     k.latches.toggle(Latch::AltGr, 0xE038);
-    assert_eq!(k.plan("c-1-0", false, false), Plan::Chord(0x10));
+    assert_eq!(k.plan("c-0x0010", false, false), Plan::Chord(0x10));
 }
 
 #[test]
