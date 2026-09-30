@@ -1,6 +1,8 @@
 //! Repair bounds: unknown keys are set aside first, and a notice names a bounded number of short keys.
 
-use crate::spec::{DEFAULTS, HOLD, defaults_with, open, reset, reset_more, table, with_file};
+use crate::spec::{
+    DEFAULTS, HOLD, defaults_with, open, reset, reset_count, reset_more, table, with_file,
+};
 use kx_settings::{MAX_KEY_CHARS, MAX_NAMED_KEYS};
 
 /// Unknown keys in the long tests: five more than one notice names.
@@ -79,11 +81,12 @@ fn a_key_name_at_the_length_limit_is_named() {
 }
 
 #[test]
-fn a_section_of_only_over_long_keys_names_the_module() {
+fn a_section_of_only_over_long_keys_counts_them_and_names_none() {
     let long = "k".repeat(MAX_KEY_CHARS + 1);
-    let (_dir, files) = with_file("alllong", &format!("[hold]\n{long} = 1\n"));
+    let text = format!("[hold]\n{long}a = 1\n{long}b = 2\n");
+    let (_dir, files) = with_file("alllong", &text);
     let (_, report) = open(&files);
-    assert_eq!(report.notices, vec![reset_more(&[HOLD.as_str()], 1)]);
+    assert_eq!(report.notices, vec![reset_count(2)]);
 }
 
 #[test]

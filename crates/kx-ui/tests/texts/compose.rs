@@ -1,8 +1,14 @@
-//! Texts built from parts: notices with their arguments, lists with "and N more", plurals, digits and the space bar.
+//! Texts built from parts: notices with their arguments, joined lists, bidi safety and the space bar.
 
-use crate::{ISOLATE, all, lang, plain};
-use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET};
+use crate::{ISOLATE, all, items, lang, plain};
+use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
+
+/// Every bidi control a quoted TOML key may hold, Fluent's own isolation marks included.
+const CONTROLS: [char; 12] = [
+    '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
+    '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+];
 
 /// A notice `key` with every argument a notice may carry.
 fn sample(key: &'static str) -> Notice {
@@ -11,95 +17,9 @@ fn sample(key: &'static str) -> Notice {
         module: Some(ModuleId::new("keyboard")),
         args: vec![
             (args::MODULE, NoticeArg::Text("keyboard".into())),
-            (args::KEYS, NoticeArg::List(vec!["size".into(), "x".into()])),
+            (args::KEYS, NoticeArg::List(items(&["size", "x"]))),
             (args::MORE, NoticeArg::Count(3)),
         ],
-    }
-}
-
-/// `items` as a notice list.
-fn items(names: &[&str]) -> Vec<String> {
-    names.iter().map(|n| (*n).to_owned()).collect()
-}
-
-#[test]
-fn arabic_counts_the_settings_left_out_in_all_six_forms() {
-    let ar = lang("ar");
-    let forms = [
-        (1, "وإعداد آخر"),
-        (2, "وإعدادان آخران"),
-        (3, "و3 إعدادات أخرى"),
-        (10, "و10 إعدادات أخرى"),
-        (11, "و11 إعدادًا آخر"),
-        (99, "و99 إعدادًا آخر"),
-        (100, "و100 إعداد آخر"),
-        (102, "و102 إعداد آخر"),
-        (103, "و103 إعدادات أخرى"),
-        (111, "و111 إعدادًا آخر"),
-    ];
-    for (more, form) in forms {
-        assert_eq!(plain(&ar.list(&items(&["a"]), more)), format!("a {form}"));
-    }
-}
-
-/// CLDR's Arabic form for integer `n` (`n % 100` for few and many), as the text after the list.
-fn cldr_arabic(n: usize) -> String {
-    match (n, n % 100) {
-        (1, _) => "وإعداد آخر".to_owned(),
-        (2, _) => "وإعدادان آخران".to_owned(),
-        (_, 3..=10) => format!("و{n} إعدادات أخرى"),
-        (_, 11..=99) => format!("و{n} إعدادًا آخر"),
-        _ => format!("و{n} إعداد آخر"),
-    }
-}
-
-#[test]
-fn arabic_forms_follow_cldr_for_every_count_up_to_1200() {
-    let (ar, fr) = (lang("ar"), lang("fr"));
-    for more in 1..=1200 {
-        let want = format!("a {}", cldr_arabic(more));
-        assert_eq!(plain(&ar.list(&items(&["a"]), more)), want);
-        let word = if more == 1 { "autre" } else { "autres" };
-        assert_eq!(
-            plain(&fr.list(&items(&["a"]), more)),
-            format!("a et {more} {word}")
-        );
-    }
-}
-
-#[test]
-fn french_and_english_count_the_rest() {
-    let fr = lang("fr");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 1)), "a et 1 autre");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 3)), "a et 3 autres");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 101)), "a et 101 autres");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 103)), "a et 103 autres");
-    assert_eq!(plain(&lang("en").list(&items(&["a"]), 3)), "a and 3 more");
-}
-
-#[test]
-fn each_language_joins_a_list_its_own_way() {
-    let three = items(&["a", "b", "c"]);
-    assert_eq!(lang("en").list(&three, 0), "a, b, c");
-    assert_eq!(lang("fr").list(&three, 0), "a, b, c");
-    assert_eq!(lang("ar").list(&three, 0), "a، b، c");
-}
-
-#[test]
-fn arabic_writes_western_digits() {
-    let text = lang("ar").list(&items(&["a"]), 1234);
-    assert!(text.contains("1234"), "{text}");
-    assert!(!text.chars().any(|c| ('\u{660}'..='\u{669}').contains(&c)));
-}
-
-#[test]
-fn a_huge_count_never_panics() {
-    for t in all() {
-        assert!(
-            t.list(&items(&["a"]), usize::MAX)
-                .chars()
-                .any(|c| c.is_ascii_digit())
-        );
     }
 }
 
@@ -108,6 +28,26 @@ fn a_notice_shows_its_module_list_and_count() {
     let text = lang("en").notice(&sample(SETTINGS_RESET));
     let want = "Some Keyboard settings were not valid, so they went back to their defaults: size, x and 3 more.";
     assert_eq!(plain(&text), want);
+}
+
+#[test]
+fn a_reset_that_names_no_setting_says_how_many() {
+    let mut notice = sample(SETTINGS_RESET);
+    notice.args[1].1 = NoticeArg::List(Vec::new());
+    let text = lang("en").notice(&notice);
+    let want =
+        "Some Keyboard settings were not valid, so they went back to their defaults: 3 settings.";
+    assert_eq!(plain(&text), want);
+}
+
+#[test]
+fn french_names_the_part_in_guillemets() {
+    let fr = lang("fr");
+    let text = plain(&fr.notice(&sample(MODULE_FAILED)));
+    let want = "La partie «\u{a0}Clavier\u{a0}» s’est arrêtée après une erreur. Tout le reste fonctionne toujours.";
+    assert_eq!(text, want);
+    let unsaved = fr.notice(&sample(SETTINGS_UNSAVED));
+    assert!(unsaved.contains("ne dureront que jusqu’à"), "{unsaved}");
 }
 
 #[test]
@@ -122,13 +62,18 @@ fn every_notice_formats_with_its_arguments_in_every_language() {
     for t in all() {
         for key in ALL_KEYS {
             let text = t.notice(&sample(key));
-            assert!(
-                !text.contains(['{', '}']) && text != key,
-                "{}: {text}",
-                t.lang().tag
-            );
+            let tag = t.lang().tag;
+            assert!(!text.contains(['{', '}']) && text != key, "{tag}: {text}");
         }
     }
+}
+
+#[test]
+fn each_language_joins_a_list_its_own_way() {
+    let three = items(&["a", "b", "c"]);
+    assert_eq!(lang("en").list(&three, 0), "a, b, c");
+    assert_eq!(lang("fr").list(&three, 0), "a, b, c");
+    assert_eq!(lang("ar").list(&three, 0), "a، b، c");
 }
 
 #[test]
@@ -137,12 +82,26 @@ fn latin_words_inside_arabic_text_are_isolated() {
     notice.args.truncate(2);
     notice.args[1].1 = NoticeArg::List(items(&["log_level"]));
     let text = lang("ar").notice(&notice);
-    let isolated: String = [
-        ISOLATE[0], 'l', 'o', 'g', '_', 'l', 'e', 'v', 'e', 'l', ISOLATE[1],
-    ]
-    .iter()
-    .collect();
+    let isolated = format!("{}log_level{}", ISOLATE[0], ISOLATE[1]);
     assert!(text.contains(&isolated), "{text:?}");
+}
+
+#[test]
+fn bidi_controls_in_names_and_words_are_dropped() {
+    let all_controls: String = CONTROLS.iter().collect();
+    for t in all() {
+        assert_eq!(t.list(&[format!("a{all_controls}b")], 0), "ab");
+    }
+    let only_controls = lang("en").list(std::slice::from_ref(&all_controls), 0);
+    assert_eq!(plain(&only_controls), "1 setting", "counted, not named");
+    let mut notice = sample(SETTINGS_RESET);
+    notice.args[0].1 = NoticeArg::Text(format!("{all_controls}mystery"));
+    notice.args[1].1 = NoticeArg::List(vec![format!("\u{202e}{all_controls}evil")]);
+    let text = lang("ar").notice(&notice);
+    let foreign = |c: &char| CONTROLS.contains(c) && !ISOLATE.contains(c);
+    assert!(!text.chars().any(|c| foreign(&c)), "{text:?}");
+    let count = |mark: char| text.chars().filter(|c| *c == mark).count();
+    assert_eq!(count(ISOLATE[0]), count(ISOLATE[1]), "{text:?}");
 }
 
 #[test]

@@ -7,6 +7,8 @@
 
 mod compose;
 mod files;
+mod plural;
+mod words;
 
 use kx_ui::{I18n, LANGS};
 
@@ -26,4 +28,9 @@ fn all() -> impl Iterator<Item = I18n> {
 /// The texts of shipped language `tag`.
 fn lang(tag: &str) -> I18n {
     I18n::new(kx_ui::find(tag).expect("a shipped language"))
+}
+
+/// `names` as a notice list.
+fn items(names: &[&str]) -> Vec<String> {
+    names.iter().map(|n| (*n).to_owned()).collect()
 }

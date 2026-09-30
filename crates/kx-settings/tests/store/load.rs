@@ -1,8 +1,8 @@
 //! Loading: missing, bad, older and newer sections, per-value repair, kept entries and broken specs.
 
 use crate::spec::{
-    DEFAULTS, HOLD, Hold, SPEC, VERSION, defaults_with, folder, newer, open, reset, table,
-    with_file,
+    DEFAULTS, HOLD, Hold, SPEC, VERSION, defaults_with, folder, newer, open, reset, reset_count,
+    table, with_file,
 };
 use kx_module_api::{ModuleId, SettingsSpec, validate_as};
 use kx_settings::Store;
@@ -116,11 +116,11 @@ fn a_section_without_a_version_counts_as_current() {
 }
 
 #[test]
-fn a_section_that_is_not_a_table_is_a_bad_section() {
+fn a_section_that_is_not_a_table_is_a_bad_section_counted_as_one() {
     let (_dir, files) = with_file("notable", "hold = 5\n");
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)));
-    assert_eq!(report.notices, vec![reset(&["hold"])]);
+    assert_eq!(report.notices, vec![reset_count(1)]);
     assert!(store.needs_save());
     assert_eq!(store.to_text().unwrap(), "");
 }
@@ -142,10 +142,10 @@ fn a_version_that_is_not_a_positive_integer_is_a_bad_section() {
 }
 
 #[test]
-fn a_bad_section_with_only_a_version_names_the_section() {
+fn a_bad_section_with_only_a_version_counts_one_and_names_none() {
     let (_dir, files) = with_file("onlyversion", "[hold]\nversion = 0\n");
     let (_, report) = open(&files);
-    assert_eq!(report.notices, vec![reset(&["hold"])]);
+    assert_eq!(report.notices, vec![reset_count(1)]);
 }
 
 #[test]

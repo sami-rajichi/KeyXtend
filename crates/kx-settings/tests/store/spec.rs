@@ -136,6 +136,11 @@ pub fn reset_more<S: AsRef<str>>(named: &[S], more: usize) -> Notice {
     notice
 }
 
+/// The reset notice that names no key and counts the `more` bad values.
+pub fn reset_count(more: usize) -> Notice {
+    reset_more::<&str>(&[], more)
+}
+
 /// The notice for a sample-module section from a newer version.
 pub fn newer() -> Notice {
     Notice {

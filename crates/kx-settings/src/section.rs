@@ -73,9 +73,9 @@ fn read(id: ModuleId, spec: &'static SettingsSpec, defaults: Table, raw: Option<
         return Read::quiet(Section::fresh(spec, defaults));
     };
     let Value::Table(mut values) = raw else {
-        return Read::bad(id, Section::fresh(spec, defaults), reset_args(id, &[]));
+        return Read::bad(id, Section::fresh(spec, defaults), reset_args(&[]));
     };
-    let named = key_list(&values, id);
+    let named = key_list(&values);
     match age(&values, spec.version) {
         Age::Newer => Read::newer(id, Section::fresh(spec, defaults), Value::Table(values)),
         Age::Bad => Read::bad(id, Section::fresh(spec, defaults), named),
@@ -119,29 +119,27 @@ fn strip(mut values: Table) -> Table {
     values
 }
 
-/// Notice arguments naming the section's setting keys, or the section name when none can be named.
-fn key_list(values: &Table, id: ModuleId) -> Args {
+/// Notice arguments naming the section's setting keys.
+fn key_list(values: &Table) -> Args {
     let named: Vec<&str> = values
         .keys()
         .map(String::as_str)
         .filter(|k| *k != VERSION_KEY)
         .collect();
-    reset_args(id, &named)
+    reset_args(&named)
 }
 
-/// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show.
-/// The keys left out are counted, and the module's name stands in when none can be shown.
-fn reset_args(id: ModuleId, keys: &[&str]) -> Args {
-    let mut shown: Vec<String> = keys
+/// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show, and counting the rest.
+/// A notice that can name none counts at least the one bad value, so its text always says something.
+fn reset_args(keys: &[&str]) -> Args {
+    let shown: Vec<String> = keys
         .iter()
         .filter(|k| k.chars().count() <= MAX_KEY_CHARS)
         .take(MAX_NAMED_KEYS)
         .map(|k| (*k).to_owned())
         .collect();
-    let more = keys.len() - shown.len();
-    if shown.is_empty() {
-        shown.push(id.to_string());
-    }
+    let left = keys.len() - shown.len();
+    let more = if shown.is_empty() { left.max(1) } else { left };
     let mut named = vec![(args::KEYS, NoticeArg::List(shown))];
     if more > 0 {
         named.push((args::MORE, NoticeArg::Count(more)));
@@ -197,7 +195,7 @@ impl Read {
         } = merge::repair(&defaults, user, spec.validate);
         let changes = merge::changes(&effective, &defaults);
         let names: Vec<&str> = rejected.iter().map(String::as_str).collect();
-        let reset = (!rejected.is_empty()).then(|| reset_args(id, &names));
+        let reset = (!rejected.is_empty()).then(|| reset_args(&names));
         Self {
             notice: reset.map(|named| notice(keys::SETTINGS_RESET, id, named)),
             repaired: !rejected.is_empty(),

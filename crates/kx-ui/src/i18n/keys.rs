@@ -20,5 +20,7 @@ pub const OK: &str = "button.ok";
 pub const LIST_JOIN: &str = "list.join";
 /// A list that leaves `$more` items out, after the named ones in `$list`.
 pub const LIST_MORE: &str = "list.more";
+/// A list that names nothing: only how many, `$more`.
+pub const LIST_COUNT: &str = "list.count";
 /// The space bar: `$lang`, then `$layout`.
 pub const SPACE: &str = "lang.space";

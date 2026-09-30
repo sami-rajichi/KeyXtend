@@ -1,7 +1,7 @@
 //! Texts built from parts: a notice with its arguments, a list with "and N more", and the space bar.
 
 use super::I18n;
-use super::keys::{LIST_JOIN, LIST_MORE, MODULE, SPACE};
+use super::keys::{LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, SPACE};
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::{Notice, NoticeArg, args};
 
@@ -11,12 +11,18 @@ const LIST_VAR: &str = "list";
 const LANG_VAR: &str = "lang";
 /// `lang.space`'s variable for the layout.
 const LAYOUT_VAR: &str = "layout";
-/// `list.more`'s variable that its plural forms select on.
+/// The variable that plural forms select on.
 const FORM_VAR: &str = "form";
 /// Past this, a count takes the plural form of its last two digits.
 const HUNDRED: usize = 100;
 /// Last two digits below this keep the whole count, whose form past a hundred is the plain plural.
 const LOW_TAIL: usize = 3;
+/// Bidi controls a quoted TOML key may hold: ALM, LRM, RLM, the embeddings and overrides, and the isolates.
+/// Left in, they could break Fluent's isolation and turn the rest of a notice around.
+const BIDI_CONTROLS: [char; 12] = [
+    '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
+    '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+];
 
 impl I18n {
     /// The text of `notice`: a module id shows by its name, a count as a number, a list joined in this language.
@@ -29,8 +35,10 @@ impl I18n {
         let mut values = FluentArgs::new();
         for (name, arg) in &notice.args {
             let value = match arg {
-                NoticeArg::Text(id) if *name == args::MODULE => self.name_of(MODULE, id).into(),
-                NoticeArg::Text(text) => FluentValue::from(text.as_str()),
+                NoticeArg::Text(id) if *name == args::MODULE => {
+                    self.name_of(MODULE, &clean(id)).into()
+                }
+                NoticeArg::Text(text) => clean(text).into(),
                 NoticeArg::Count(n) => count(*n),
                 NoticeArg::List(items) => self.list(items, more.unwrap_or(0)).into(),
             };
@@ -40,16 +48,26 @@ impl I18n {
     }
 
     /// `items` joined in this language, ending with "and `more` more" when `more` items are left out.
+    /// With nothing to name it says only how many; an item that is all bidi controls is counted, not named.
     #[must_use]
     pub fn list(&self, items: &[String], more: usize) -> String {
-        let named = items.join(&self.text(LIST_JOIN));
+        let named: Vec<String> = items
+            .iter()
+            .map(|i| clean(i))
+            .filter(|i| !i.is_empty())
+            .collect();
+        let more = more.saturating_add(items.len() - named.len());
+        let joined = named.join(&self.text(LIST_JOIN));
         if more == 0 {
-            return named;
+            return joined;
         }
         let mut values = FluentArgs::new();
-        values.set(LIST_VAR, named);
         values.set(args::MORE, count(more));
         values.set(FORM_VAR, form(more));
+        if named.is_empty() {
+            return self.format(LIST_COUNT, Some(&values));
+        }
+        values.set(LIST_VAR, joined);
         self.format(LIST_MORE, Some(&values))
     }
 
@@ -67,13 +85,20 @@ impl I18n {
     }
 }
 
+/// `text` without bidi controls, so an argument cannot break out of its isolation.
+fn clean(text: &str) -> String {
+    text.chars()
+        .filter(|c| !BIDI_CONTROLS.contains(c))
+        .collect()
+}
+
 /// `n` as a Fluent number, capped so the plural rules never fail on a huge count.
 fn count(n: usize) -> FluentValue<'static> {
     FluentValue::from(u32::try_from(n).unwrap_or(u32::MAX))
 }
 
-/// The number `n`'s plural form is chosen by: its last two digits past a hundred, as CLDR reads Arabic (`n % 100`).
-/// `intl_pluralrules` 7.0.2 drops that modulo, so 103 would read as "other"; English and French forms stay the same.
+/// The number `n`'s plural form is chosen by: its last two digits past a hundred, when those are 3 or more.
+/// CLDR reads Arabic by `n % 100`, which `intl_pluralrules` 7.0.2 drops; English and French forms stay the same.
 fn form(n: usize) -> FluentValue<'static> {
     let tail = n % HUNDRED;
     let by_tail = n >= HUNDRED && tail >= LOW_TAIL;

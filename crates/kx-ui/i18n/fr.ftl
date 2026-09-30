@@ -1,6 +1,9 @@
 ### Textes français (ADR-0017), avec les termes de Windows ; une clé absente vient de l’anglais.
 ### Une espace insécable précède les deux-points, le point-virgule, le point d’exclamation et le point d’interrogation.
 
+## Le nom du produit, écrit une fois et repris par les textes ci-dessous.
+-app = KeyXtend
+
 ## Touches nommées, par identifiant de board.toml : le nom des info-bulles et des lecteurs d’écran.
 key =
     .esc = Échap
@@ -89,19 +92,19 @@ button =
 
 ## Notifications, par clé de kx-module-api. $module est un nom de module et $keys une liste de paramètres.
 notice =
-    .settings-reset = Certains paramètres du module { $module } n’étaient pas valides et ont repris leur valeur par défaut : { $keys }.
+    .settings-reset = Certains paramètres de « { $module } » n’étaient pas valides et ont repris leur valeur par défaut : { $keys }.
     .settings-restored = Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.
     .settings-defaults = Aucun fichier de paramètres n’était utilisable ; les paramètres par défaut sont utilisés.
-    .settings-newer = Les paramètres du module { $module } viennent d’une version plus récente. Ils sont conservés et les valeurs par défaut sont utilisées pour l’instant.
-    .settings-unsaved = Impossible d’enregistrer les paramètres ; les modifications dureront jusqu’à la fermeture du clavier.
+    .settings-newer = Les paramètres de « { $module } » viennent d’une version plus récente. Ils sont conservés et les valeurs par défaut sont utilisées pour l’instant.
+    .settings-unsaved = Impossible d’enregistrer les paramètres ; les modifications ne dureront que jusqu’à la fermeture du clavier.
     .settings-locked = Un autre programme utilise le fichier de paramètres. Les paramètres par défaut sont utilisés et rien n’est enregistré.
-    .module-failed = Le module { $module } s’est arrêté après une erreur. Tout le reste fonctionne toujours.
+    .module-failed = La partie « { $module } » s’est arrêtée après une erreur. Tout le reste fonctionne toujours.
     .keys-not-sent = Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.
     .lang-not-switched = L’application au premier plan n’a pas pu changer de langue.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
-    .kernel = Général
+    .kernel = { -app }
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .ui = Apparence
@@ -122,11 +125,15 @@ theme =
     .et66 = ET66
     .dolch = Dolch moderne
 
-## Listes : ce qui sépare deux éléments, et la fin d’une liste qui en omet $more.
-## Les formes du pluriel se choisissent selon $form, c’est-à-dire $more tel que le lisent les règles CLDR.
+## Listes : ce qui sépare deux éléments, la fin d’une liste qui en omet $more, et une liste qui n’en nomme aucun.
+## Les formes du pluriel se choisissent selon $form, c’est-à-dire $more tel que le lisent les règles CLDR ; $more vaut au moins 1.
 list =
     .join = {", "}
     .more = { $list } et { $form ->
         [one] { $more } autre
        *[other] { $more } autres
+    }
+    .count = { $form ->
+        [one] { $more } paramètre
+       *[other] { $more } paramètres
     }

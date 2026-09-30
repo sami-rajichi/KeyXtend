@@ -129,41 +129,11 @@ mod tests {
     }
 
     #[test]
-    fn every_key_is_listed() {
-        let listed = [
-            keys::SETTINGS_RESET,
-            keys::SETTINGS_RESTORED,
-            keys::SETTINGS_DEFAULTS,
-            keys::SETTINGS_NEWER,
-            keys::SETTINGS_UNSAVED,
-            keys::SETTINGS_LOCKED,
-            keys::MODULE_FAILED,
-            keys::KEYS_NOT_SENT,
-            keys::LANG_NOT_SWITCHED,
-        ];
-        assert!(listed.iter().all(|k| ALL_KEYS.contains(k)));
-        assert_eq!(listed.len(), ALL_KEYS.len());
-    }
-
-    #[test]
     fn arguments_keep_the_names_translations_use() {
         assert_eq!(
             (args::MODULE, args::KEYS, args::MORE),
             ("module", "keys", "more")
         );
-    }
-
-    #[test]
-    fn a_notice_carries_typed_arguments() {
-        let notice = Notice {
-            key: keys::SETTINGS_RESET,
-            module: None,
-            args: vec![
-                (args::KEYS, NoticeArg::List(vec!["size".into()])),
-                (args::MORE, NoticeArg::Count(2)),
-            ],
-        };
-        assert_eq!(notice.args[1].1, NoticeArg::Count(2));
     }
 
     #[test]

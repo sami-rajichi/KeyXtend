@@ -1,6 +1,9 @@
 ### English texts, the fallback for every other language (ADR-0017).
 ### A key `group.name` in code is message `group`, attribute `name`. All three files hold the same keys.
 
+## The product's name, written once and shared by the texts below.
+-app = KeyXtend
+
 ## Named keys by board.toml id: the name that tips and screen readers use.
 key =
     .esc = Escape
@@ -101,7 +104,7 @@ notice =
 
 ## Module names by module id; an id not listed shows itself.
 module =
-    .kernel = General
+    .kernel = { -app }
     .keyboard = Keyboard
     .layouts = Keyboard layouts
     .ui = Appearance
@@ -122,8 +125,12 @@ theme =
     .et66 = ET66
     .dolch = Modern Dolch
 
-## Lists: what joins two items, and the end of a list that leaves $more items out.
-## Plural forms select on $form, which is $more as the CLDR rules read it.
+## Lists: what joins two items, the end of a list that leaves $more items out, and a list that names none.
+## Plural forms select on $form, which is $more as the CLDR rules read it; $more is at least 1.
 list =
     .join = {", "}
     .more = { $list } and { $more } more
+    .count = { $form ->
+        [one] { $more } setting
+       *[other] { $more } settings
+    }
