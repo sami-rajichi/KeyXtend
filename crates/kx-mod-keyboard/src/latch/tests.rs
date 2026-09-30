@@ -24,6 +24,28 @@ fn a_click_latches_and_a_second_click_lets_go() {
 }
 
 #[test]
+fn a_new_mode_keeps_what_is_latched_and_applies_from_the_next_key() {
+    let mut m = Latches::new(Modifiers::Stay);
+    m.toggle(Latch::Shift, SHIFT);
+    m.set_mode(Modifiers::Release);
+    assert!(m.is_on(Latch::Shift));
+    m.used();
+    assert!(!m.is_on(Latch::Shift));
+}
+
+#[test]
+fn latches_never_show_a_scan_code() {
+    let mut m = Latches::new(Modifiers::Release);
+    m.toggle(Latch::AltGr, ALTGR);
+    m.toggle(Latch::Shift, RSHIFT);
+    let shown = format!("{m:?}");
+    for leak in ["54", "36", "57400", "E038", "Scan"] {
+        assert!(!shown.contains(leak), "{shown}");
+    }
+    assert!(shown.contains("Shift") && shown.contains("AltGr") && shown.contains("Release"));
+}
+
+#[test]
 fn the_next_key_holds_every_latch_once_in_release_mode() {
     let mut m = Latches::new(Modifiers::Release);
     m.toggle(Latch::Ctrl, CTRL);

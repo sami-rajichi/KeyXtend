@@ -46,13 +46,15 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | A character key whose character is a dead key | Tap, or a chord of the latches its legend counts | Used | Starts |
 | The character key after a dead key | Tap, or a chord of the latches its legend counts, so the app adds the accent | Used | Ends |
 | A character key that types nothing in the layout shown | Its scan code, as above | Used | Kept only if the key typed nothing |
+| A character key missing from the table shown | Chord: every latch held around its scan code | Used | Kept only if the key typed nothing |
+| Any character key sent as a scan code while the app in front has another installed layout | Nothing; `Tapped::Stale`, so the face refreshes the layouts and redraws | Kept | Kept |
 | Any other character key | Its text as Unicode, or as key presses in the app's layout (`TextRoute::Keys`) when the app is in `key_apps`; Shift, Caps Lock and `AltGr` are already in the text | Used, none held | None |
 | A `send` key | Tap, or a chord with every latch held | Used | Kept only if the key typed nothing |
 | Caps Lock | Tap | Kept | Kept |
 | A modifier | Nothing; it latches or lets go | Toggled | Kept |
 | The language key, a `later` key | Nothing; `Tapped::Lang` or `Tapped::Later` for the face | Kept | Kept |
 
-"Used" means `release` lets every latch go and `stay` keeps them. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send that fails changes nothing: the latches and the wait stay. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows.
+"Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -75,10 +77,10 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 
 - `KeyboardModule`, `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
 - `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
-- `latch`: `Latches` (`new`, `mode`, `toggle`, `is_on`, `held`, `used`).
+- `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`).
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `shown`, `is_arabic`, `is_haraka`, `is_mark`.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
-- `run`: `Typing` (`new`, `tap`, `latches`, `waiting`), `Tapped`, `Io`, `Ports` (`from_cx`, `io`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
 - `place`: `Placer`, `inside`, `bottom_centre`, `home`, `fit`, `start`, `bubble`.

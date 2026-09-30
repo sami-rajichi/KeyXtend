@@ -2,7 +2,7 @@
 //! `Follow` moved to kx-mod-layouts (P3 Task 10). The rows, widths and key caps moved to kx-mod-keyboard's board
 //! (Task 11); key names come from the translations (Task 15), so the Windows key-name reading ends.
 
-use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_module_api::ports::{KeyChars, LangFacts, LayoutId, LayoutSource, Scan, SwitchError};
 use kx_platform_windows::{WinLayouts, layouts, window};
 use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
 
@@ -20,6 +20,40 @@ pub fn other_front() -> Option<LayoutId> {
     let front = window::foreground();
     let other = !front.is_invalid() && !window::is_ours(front);
     WinLayouts.foreground().filter(|_| other)
+}
+
+/// `WinLayouts` seen as `relabel` sees it: our own window in front counts as none, so a typing click
+/// checks the shown table against the same app that `Follow` follows.
+pub struct OtherFront;
+
+impl LayoutSource for OtherFront {
+    fn installed(&self) -> Vec<LayoutId> {
+        WinLayouts.installed()
+    }
+
+    fn foreground(&self) -> Option<LayoutId> {
+        other_front()
+    }
+
+    fn keys(&self, layout: LayoutId, scans: &[Scan]) -> Vec<KeyChars> {
+        WinLayouts.keys(layout, scans)
+    }
+
+    fn facts(&self, layout: LayoutId) -> LangFacts {
+        WinLayouts.facts(layout)
+    }
+
+    fn caps_on(&self) -> bool {
+        WinLayouts.caps_on()
+    }
+
+    fn types_any(&self, layout: LayoutId, key: Scan, held: &[Scan]) -> bool {
+        WinLayouts.types_any(layout, key, held)
+    }
+
+    fn request(&self, layout: LayoutId) -> Result<(), SwitchError> {
+        WinLayouts.request(layout)
+    }
 }
 
 #[cfg(test)]

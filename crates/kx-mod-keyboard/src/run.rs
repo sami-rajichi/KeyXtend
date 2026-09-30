@@ -2,12 +2,12 @@
 //! sent through the injector; the latches and a dead key's wait follow what went out.
 
 use crate::latch::Latches;
-use crate::plan::{Now, Plan, Route, Wait, plan, text_route};
+use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Role};
 use kx_module_api::ports::{
-    FaceError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
-    Layouts, LayoutsKey, Scan, TextRoute,
+    FaceError, InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey,
+    LayoutTable, Layouts, LayoutsKey, Scan,
 };
 use kx_module_api::{ModuleCx, ServiceError};
 use std::collections::HashMap;
@@ -25,6 +25,9 @@ pub enum Tapped {
     },
     /// A key from a later version: nothing happened.
     Later,
+    /// The app in front has another layout than the one shown, and this key's result depends on it: nothing
+    /// was sent. The face refreshes the layouts, which read the same layout source, and redraws.
+    Stale,
 }
 
 /// The ports one tap goes through, and the layout table the keyboard shows.
@@ -101,6 +104,12 @@ impl Typing {
         &self.latches
     }
 
+    /// Takes a new `modifiers` mode and `key_apps` list, keeping the latched modifiers and a dead key's wait.
+    pub fn update(&mut self, settings: &KeyboardSettings) {
+        self.apps.clone_from(&settings.key_apps);
+        self.latches.set_mode(settings.modifiers);
+    }
+
     /// True while a dead key waits for the next key.
     #[must_use]
     pub fn waiting(&self) -> bool {
@@ -108,10 +117,11 @@ impl Typing {
     }
 
     /// A click on key `id`, on the language key's back part when `back`: sends its plan through `io`.
+    /// A character key sent as a scan code sends nothing while the app in front has another layout (`Stale`).
     ///
     /// # Errors
-    /// `UnknownKey` for an id not on the board, or `Inject` when the keys or text did not reach the app;
-    /// then the latches and a dead key's wait stay as they were.
+    /// `UnknownKey` for an id not on the board, or `Inject` when the keys or text did not all reach the app.
+    /// A send refused whole changes nothing; one taken in part moves the state as if it all went, never retried.
     pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, FaceError> {
         let &(role, sc) = self.keys.get(id).ok_or(FaceError::UnknownKey)?;
         let now = Now {
@@ -119,9 +129,14 @@ impl Typing {
             latches: &self.latches,
             caps: io.source.caps_on(),
             dead: self.dead,
-            text: self.text_route(io.injector),
+            apps: &self.apps,
+            app: &|| io.injector.target_app(),
         };
-        match plan(role, sc, &now) {
+        let planned = plan(role, sc, &now);
+        if keyed(role, &planned) && stale(io) {
+            return Ok(Tapped::Stale);
+        }
+        match planned {
             Plan::Send { route, wait } => self.send(io, &route, wait)?,
             Plan::Caps(key) => io.injector.tap(key)?,
             Plan::Latch(l, key) => self.latches.toggle(l, key),
@@ -131,29 +146,54 @@ impl Typing {
         Ok(Tapped::Done)
     }
 
-    /// How text reaches the app in front; the app is looked up only when `key_apps` names any.
-    fn text_route(&self, injector: &dyn InputInjector) -> TextRoute {
-        if self.apps.is_empty() {
-            return TextRoute::Unicode;
-        }
-        text_route(&self.apps, injector.target_app().as_deref())
-    }
-
-    /// Sends `route`; only once it went out do the latches let go and the dead-key wait follow `wait`.
+    /// Sends `route`; once any of it reached the app, the latches are used and the dead-key wait follows `wait`.
     fn send(&mut self, io: &Io<'_>, route: &Route, wait: Wait) -> Result<(), FaceError> {
-        match route {
-            Route::Tap(key) => io.injector.tap(*key)?,
-            Route::Chord(held, key) => io.injector.chord(held, *key)?,
-            Route::Text(text, by) => io.injector.text(text, *by)?,
-        }
-        self.dead = match wait {
-            Wait::Start => true,
-            Wait::End => false,
-            Wait::Ask => !types(io, route),
+        let went = match route {
+            Route::Tap(key) => io.injector.tap(*key),
+            Route::Chord(held, key) => io.injector.chord(held, *key),
+            Route::Text(text, by) => io.injector.text(text, *by),
         };
-        self.latches.used();
-        Ok(())
+        if reached(went) {
+            self.dead = match wait {
+                Wait::Start => true,
+                Wait::End => false,
+                Wait::Ask => !types(io, route),
+            };
+            self.latches.used();
+        }
+        Ok(went?)
     }
+}
+
+/// True when any of a send reached the app: all of it, or the part the system took before refusing the rest.
+fn reached(went: Result<(), InjectError>) -> bool {
+    match went {
+        Ok(()) => true,
+        Err(InjectError::Refused { sent, .. }) => sent > 0,
+        Err(InjectError::Unmappable) => false,
+    }
+}
+
+/// True when `plan` sends a character key as a scan code, so the app's own layout decides what it types.
+fn keyed(role: Role, plan: &Plan) -> bool {
+    let scan = |p: &Plan| {
+        matches!(
+            p,
+            Plan::Send {
+                route: Route::Tap(_) | Route::Chord(..),
+                ..
+            }
+        )
+    };
+    role == Role::Char && scan(plan)
+}
+
+/// True when the app in front has another installed layout than the table shown, as `Follow` would show
+/// after a refresh; with none in front, or one that is not installed, the table shown stands.
+fn stale(io: &Io<'_>) -> bool {
+    let shown = io.table.label.id;
+    let other = io.source.foreground().filter(|&front| front != shown);
+    other.is_some_and(|front| io.source.installed().contains(&front))
 }
 
 /// True when `route` typed anything in the layout shown, as the layout source reads it.

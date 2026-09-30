@@ -1,5 +1,5 @@
 //! Typing through the fakes on the captured EN, FR and AR tables: each click's route, dead keys, Caps Lock,
-//! `AltGr`, key apps, the language key and a failed send.
+//! `AltGr`, key apps, the language key and a send refused whole.
 
 #![allow(
     clippy::unwrap_used,
@@ -56,19 +56,23 @@ impl Rig {
     }
 }
 
-fn text(t: &str, by: TextRoute) -> Stroke {
+/// Text typed by `by`.
+pub fn text(t: &str, by: TextRoute) -> Stroke {
     Stroke::Text(Redacted::new(t.into()), by)
 }
 
-fn unicode(t: &str) -> Stroke {
+/// Text typed as Unicode.
+pub fn unicode(t: &str) -> Stroke {
     text(t, TextRoute::Unicode)
 }
 
-fn tap(code: u16) -> Stroke {
+/// A key alone.
+pub fn tap(code: u16) -> Stroke {
     Stroke::Tap(Scan::new(code))
 }
 
-fn chord(held: &[u16], code: u16) -> Stroke {
+/// Keys `held` around a key.
+pub fn chord(held: &[u16], code: u16) -> Stroke {
     let held = held.iter().map(|&c| Scan::new(c)).collect();
     Stroke::Chord(held, Scan::new(code))
 }
@@ -198,7 +202,7 @@ fn the_language_key_and_later_keys_send_nothing() {
 }
 
 #[test]
-fn a_failed_send_keeps_the_latches_and_the_wait() {
+fn a_send_refused_whole_keeps_the_latches_and_the_wait() {
     let mut r = Rig::new("fr-fr", |s| s.modifiers = Modifiers::Release);
     r.tap("shift").unwrap();
     let refused = InjectError::Refused { sent: 0, total: 2 };

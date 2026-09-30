@@ -29,7 +29,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | `board.toml` | Compiled in, never read from disk; `deny_unknown_fields`, rows span the grid, whole columns, unique ids, roles fit; a broken board stops the module with an error, never a panic | Fixed at build time | Property tests |
 | Screens and pointer points from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics | — | Property tests |
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
-| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key types nothing and goes as its scan code | One click | Golden-table tests |
+| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code with every latch held; a scan-code click waits while the shown table lags the app in front | One click | Golden-table tests |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.
@@ -38,7 +38,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged.
 - **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins.
 - **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own.
-- **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch, and a failed send changes no state.
+- **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

@@ -5,12 +5,23 @@ use crate::settings::Modifiers;
 use crate::spec::Latch;
 use kx_module_api::ports::Scan;
 use std::collections::BTreeMap;
+use std::fmt;
 
 /// The latched modifiers, each with the scan code of the key that latched it, and when they let go.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Latches {
     on: BTreeMap<Latch, Scan>,
     mode: Modifiers,
+}
+
+/// Shows which modifiers are latched and the mode, never a key's scan code.
+impl fmt::Debug for Latches {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Latches")
+            .field("on", &self.on.keys().collect::<Vec<_>>())
+            .field("mode", &self.mode)
+            .finish()
+    }
 }
 
 impl Latches {
@@ -27,6 +38,11 @@ impl Latches {
     #[must_use]
     pub fn mode(&self) -> Modifiers {
         self.mode
+    }
+
+    /// From the next key on, latches let go by `mode`; what is latched now stays.
+    pub fn set_mode(&mut self, mode: Modifiers) {
+        self.mode = mode;
     }
 
     /// A click on the modifier key sending `key`: latches `l`, or lets it go when latched.

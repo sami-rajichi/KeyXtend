@@ -43,7 +43,7 @@ pub enum Wait {
 }
 
 /// What a click on a key does.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Plan {
     /// Sends `route`; then the latches let go as their mode says, and a dead key's wait follows `wait`.
     Send {
@@ -62,8 +62,25 @@ pub enum Plan {
     Later,
 }
 
+/// Shows no scan code, not even of Caps Lock or a modifier, as the rule for logs asks.
+impl fmt::Debug for Plan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Send { route, wait } => f
+                .debug_struct("Send")
+                .field("route", route)
+                .field("wait", wait)
+                .finish(),
+            Self::Caps(_) => f.write_str("Caps"),
+            Self::Latch(l, _) => write!(f, "Latch({l:?})"),
+            Self::Lang => f.write_str("Lang"),
+            Self::Later => f.write_str("Later"),
+        }
+    }
+}
+
 /// What a plan is made from.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Now<'a> {
     /// What each key types in the layout shown, by scan code.
     pub keys: &'a BTreeMap<Scan, KeyChars>,
@@ -73,8 +90,10 @@ pub struct Now<'a> {
     pub caps: bool,
     /// A dead key waits for the next key.
     pub dead: bool,
-    /// How text reaches the app in front.
-    pub text: TextRoute,
+    /// The `key_apps` setting.
+    pub apps: &'a [String],
+    /// The app in front, asked only for a click that types text while `apps` names any app.
+    pub app: &'a dyn Fn() -> Option<String>,
 }
 
 /// What a click on a key with `role` and scan code `sc` does now.
@@ -91,9 +110,13 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
 }
 
 /// Text goes as key presses to an app in `apps`, matched by file name without case; else as Unicode.
+/// The app in front is asked only when `apps` names any app.
 #[must_use]
-pub fn text_route(apps: &[String], app: Option<&str>) -> TextRoute {
-    let app = app.map(str::to_lowercase);
+pub fn text_route(apps: &[String], app: impl FnOnce() -> Option<String>) -> TextRoute {
+    if apps.is_empty() {
+        return TextRoute::Unicode;
+    }
+    let app = app().map(|a| a.to_lowercase());
     let listed = app.is_some_and(|a| apps.iter().any(|k| k.trim().to_lowercase() == a));
     if listed {
         TextRoute::Keys
@@ -102,8 +125,8 @@ pub fn text_route(apps: &[String], app: Option<&str>) -> TextRoute {
     }
 }
 
-/// A character key: a shortcut with Ctrl, Alt or Win, a key press for a dead key, for the key after one
-/// and for a key that types nothing here, else its text.
+/// A character key: a shortcut with Ctrl, Alt or Win or for a key missing from the table, a key press for
+/// a dead key, for the key after one and for a slot that types nothing, else its text.
 fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     let m = LegendMods::of(now.latches, now.caps, now.keys);
     let on = |l| now.latches.is_on(l);
@@ -111,8 +134,9 @@ fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     if on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt {
         return shortcut(sc, now);
     }
-    let none = KeyChars::default();
-    let k = now.keys.get(&sc).unwrap_or(&none);
+    let Some(k) = now.keys.get(&sc) else {
+        return shortcut(sc, now);
+    };
     let s = slot(k, m);
     let press = |wait| Plan::Send {
         route: keys(now.latches.held(&unheld(s, m)), sc),
@@ -126,7 +150,8 @@ fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     } else if now.dead {
         press(Wait::End)
     } else {
-        let route = Route::Text(Redacted::new(text.to_owned()), now.text);
+        let by = text_route(now.apps, now.app);
+        let route = Route::Text(Redacted::new(text.to_owned()), by);
         Plan::Send {
             route,
             wait: Wait::End,
@@ -134,7 +159,7 @@ fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     }
 }
 
-/// Key `sc` with every latched modifier held around it.
+/// Key `sc` with every latched modifier held around it, for the app's own layout to read.
 fn shortcut(sc: Scan, now: &Now<'_>) -> Plan {
     Plan::Send {
         route: keys(now.latches.held(&[]), sc),

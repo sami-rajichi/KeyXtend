@@ -3,11 +3,12 @@
 
 use kx_mod_keyboard::Io;
 use kx_mod_keyboard::Tapped as Typed;
-use kx_platform_windows::{WinInjector, WinLayouts, window};
+use kx_platform_windows::{WinInjector, window};
 
 use super::Kb;
 use crate::config::ToolButton;
 use crate::facecfg::Action;
+use crate::layout::OtherFront;
 use crate::{langkey, sendkeys};
 
 /// Error when a chip index is past the list.
@@ -28,16 +29,20 @@ pub enum Tapped {
 
 impl Kb {
     /// A click on key `id`, on the language key's left third when `back`: the product types it, the spike steps
-    /// the language and runs the side keys' test actions.
+    /// the language and runs the side keys' test actions. A click the product finds stale only relabels.
     pub fn tap(&mut self, id: &str, back: bool) -> Result<Tapped, String> {
         let table = self.table();
         let io = Io {
             injector: &WinInjector,
-            source: &WinLayouts,
+            source: &OtherFront,
             table: &table,
         };
         match self.typing.tap(&io, id, back).map_err(|e| e.to_string())? {
             Typed::Done => Ok(Tapped::Done),
+            Typed::Stale => {
+                self.relabel();
+                Ok(Tapped::Done)
+            }
             Typed::Lang { back } => langkey::ask_step(window::foreground(), back).map(|_| {
                 self.asked = if back { -1 } else { 1 };
                 Tapped::Done
