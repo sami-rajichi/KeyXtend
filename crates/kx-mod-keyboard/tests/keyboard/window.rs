@@ -60,6 +60,21 @@ fn a_size_that_cannot_be_saved_holds_and_shows_the_settings_notice() {
 }
 
 #[test]
+fn a_move_that_cannot_be_saved_holds_and_shows_the_settings_notice() {
+    let r = Rig::new(&GOLDEN, None);
+    let screens = [screen(0, BASE_DPI, true)];
+    r.act(placed(0, 0, &screens)).unwrap();
+    r.host.sink.refuse(Some(WriteError::Unsaved));
+    let want = FaceReply {
+        notice: Some(keys::SETTINGS_UNSAVED),
+        ..STATE
+    };
+    assert_eq!(r.act(placed(300, 200, &screens)), Ok(want));
+    assert_eq!(r.state()["at"], json!({ "x": 300, "y": 200 }), "it stays");
+    assert!(r.host.sink.writes().is_empty());
+}
+
+#[test]
 fn the_first_placement_starts_home_and_saves_nothing() {
     let r = Rig::new(&GOLDEN, None);
     assert!(r.state()["at"].is_null(), "no screen known yet");

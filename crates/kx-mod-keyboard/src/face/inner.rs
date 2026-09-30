@@ -3,12 +3,12 @@
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangClick, Turn, click};
-use crate::panel::{LangList, Moved, Nav};
+use crate::panel::{LangList, Moved};
 use crate::place::{Placer, screen_of};
-use crate::run::{Ports, Tapped, Typing};
+use crate::run::{Ports, TapError, Tapped, Typing};
 use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::{SizeError, Sizer};
-use crate::spec::BoardSpec;
+use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
 use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Rect, Screen, physical,
@@ -81,7 +81,7 @@ impl Inner {
     }
 
     /// Types key `id` on the layout shown.
-    pub(super) fn tap(&mut self, id: &str, back: bool) -> Result<Tapped, FaceError> {
+    pub(super) fn tap(&mut self, id: &str, back: bool) -> Result<Tapped, TapError> {
         let table = self.ports.layouts.current();
         self.typing.tap(&self.ports.io(&table), id, back)
     }
@@ -91,7 +91,7 @@ impl Inner {
         Arc::clone(&self.ports.layouts)
     }
 
-    /// Notes the layout shown after a refresh; true when it changed.
+    /// Notes the layout shown, setting the names' turn; true when it changed.
     pub(super) fn seen(&mut self) -> bool {
         let now = self.ports.layouts.current().label.id;
         self.turn.seen(now, &self.ids())
@@ -106,7 +106,9 @@ impl Inner {
         match click(self.settings.lang_key, back) {
             LangClick::Step(by) => match self.ports.layouts.step(by) {
                 Ok(()) => {
-                    self.turn.asked(by);
+                    if self.settings.lang_key == LangKey::Carousel {
+                        self.turn.asked(by);
+                    }
                     FaceReply::default()
                 }
                 Err(_) => notice(keys::LANG_NOT_SWITCHED, FaceReply::default()),
@@ -229,8 +231,10 @@ impl Inner {
         (self.settings.clone(), self.sizer.size())
     }
 
-    /// The state of `keys`, with `panel_keys` driving an open list.
-    pub(super) fn state(&self, keys: &[KeyBox], panel_keys: &[String]) -> StateView {
+    /// The state of `keys`, with `panel_keys` driving an open list; a new layout is noted first, so a reader
+    /// in its change event already sees the names' turn.
+    pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[String]) -> StateView {
+        self.seen();
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();
         state_view(&StateInput {

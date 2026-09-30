@@ -7,9 +7,11 @@
 )]
 
 use kx_mod_keyboard::spec::char_id;
-use kx_mod_keyboard::{BoardSpec, Io, KeyboardSettings, Latch, Modifiers, Tapped, Typing};
+use kx_mod_keyboard::{
+    BoardSpec, Io, KeyboardSettings, Latch, Modifiers, TapError, Tapped, Typing,
+};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FaceError, InjectError, LayoutTable, Scan, TextRoute};
+use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, LayoutFile, Stroke};
 
 /// One layout's fakes and a typing state on the shipped board.
@@ -34,7 +36,7 @@ impl Rig {
     }
 
     /// A click on key `id`.
-    pub fn tap(&mut self, id: &str) -> Result<Tapped, FaceError> {
+    pub fn tap(&mut self, id: &str) -> Result<Tapped, TapError> {
         let io = Io {
             injector: &self.injector,
             source: &self.source,
@@ -44,7 +46,7 @@ impl Rig {
     }
 
     /// A click on the character key that sends `code`.
-    pub fn char(&mut self, code: u16) -> Result<Tapped, FaceError> {
+    pub fn char(&mut self, code: u16) -> Result<Tapped, TapError> {
         self.tap(&char_id(Scan::new(code)))
     }
 
@@ -197,7 +199,7 @@ fn the_language_key_and_later_keys_send_nothing() {
         Ok(Tapped::Lang { back: true })
     );
     assert_eq!(r.tap("mic"), Ok(Tapped::Later));
-    assert_eq!(r.tap("no-such-key"), Err(FaceError::UnknownKey));
+    assert_eq!(r.tap("no-such-key"), Err(TapError::UnknownKey));
     assert!(r.sent().is_empty());
 }
 
@@ -207,7 +209,7 @@ fn a_send_refused_whole_keeps_the_latches_and_the_wait() {
     r.tap("shift").unwrap();
     let refused = InjectError::Refused { sent: 0, total: 2 };
     r.injector.set_error(Some(refused));
-    assert_eq!(r.char(0x1A), Err(FaceError::Inject(refused)));
+    assert_eq!(r.char(0x1A), Err(TapError::Inject(refused)));
     assert!(r.typing.latches().is_on(Latch::Shift) && !r.typing.waiting());
     r.injector.set_error(None);
     r.char(0x10).unwrap();

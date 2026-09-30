@@ -5,7 +5,6 @@ mod error;
 
 pub use error::BoardError;
 
-use crate::panel::Nav;
 use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
 
@@ -74,6 +73,24 @@ impl Role {
     pub fn sends(self) -> bool {
         matches!(self, Self::Char | Self::Send | Self::Caps | Self::Latch(_))
     }
+}
+
+/// What a board key does in an open panel, as `board.toml` names it with `nav`; other keys type as usual.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Nav {
+    /// Up one row.
+    Up,
+    /// Down one row.
+    Down,
+    /// Back one page.
+    Left,
+    /// On one page.
+    Right,
+    /// Picks the highlighted row.
+    Enter,
+    /// Closes the panel.
+    Esc,
 }
 
 /// A named key in a main row.

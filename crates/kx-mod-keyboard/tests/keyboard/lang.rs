@@ -6,6 +6,7 @@ use kx_module_api::keys;
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, SwitchError};
 use kx_platform_fake::Ask;
 use serde_json::{Value, json};
+use std::sync::{Arc, Mutex};
 
 /// The short names of the Carousel: before, now and after.
 fn carousel(r: &Rig) -> [Value; 3] {
@@ -63,6 +64,7 @@ fn the_cycle_steps_on_wherever_it_is_clicked_and_lights_one_dot() {
     r.switch("fr-fr");
     let lang = &r.state()["lang"];
     assert_eq!((&lang["at"], &lang["count"]), (&json!(1), &json!(3)));
+    assert_eq!(lang["turn"], 0, "the Cycle does not slide");
     assert_eq!(
         r.board()["keys"]
             .as_array()
@@ -101,7 +103,7 @@ fn the_list_opens_on_the_current_row_and_ticks_it() {
     assert_eq!(open["rows"][2]["short"], "ع");
     assert_eq!(
         open["keys"],
-        json!(["esc", "enter", "up", "space", "left", "down", "right"])
+        json!(["esc", "enter", "up", "left", "down", "right"])
     );
     assert_eq!(r.tap("lang"), Ok(STATE), "a second click closes it");
     assert!(r.state()["list"].is_null());
@@ -152,7 +154,40 @@ fn a_panel_key_clicked_as_a_tap_never_reaches_the_app() {
     assert_eq!(r.tap("enter"), Ok(FaceReply::default()));
     assert!(r.fakes.injector.strokes().is_empty());
     assert_eq!(r.tap("c-0x0010"), Ok(STATE), "other keys still type");
-    assert_eq!(r.fakes.injector.strokes().len(), 1);
+    assert_eq!(r.tap("space"), Ok(STATE), "the list does not use Space");
+    assert_eq!(r.fakes.injector.strokes().len(), 2);
+    assert!(!r.state()["list"].is_null(), "still open");
+}
+
+#[test]
+fn a_pick_the_app_refuses_closes_the_list_and_shows_a_notice() {
+    let r = list();
+    r.tap("lang").unwrap();
+    r.fakes.layouts.set_error(Some(SwitchError::NoTarget));
+    let want = FaceReply {
+        notice: Some(keys::LANG_NOT_SWITCHED),
+        ..STATE
+    };
+    assert_eq!(r.act(FaceAction::LangPick { index: 2 }), Ok(want));
+    assert!(r.state()["list"].is_null());
+    assert_eq!(r.shown(), "EN", "nothing switched");
+}
+
+#[test]
+fn a_layout_change_listener_reads_the_new_name_with_its_turn() {
+    let r = Rig::new(&GOLDEN, None);
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let (face, log) = (Arc::downgrade(&r.face), Arc::clone(&seen));
+    r.fakes.layouts.on_change(move || {
+        let json = face.upgrade().map(|f| f.state_json()).unwrap_or_default();
+        let lang = serde_json::from_str::<Value>(&json).unwrap()["lang"].clone();
+        log.lock()
+            .unwrap()
+            .push((lang["cur"]["short"].clone(), lang["turn"].clone()));
+    });
+    r.tap("lang").unwrap();
+    r.switch("fr-fr");
+    assert_eq!(*seen.lock().unwrap(), [(json!("FR"), json!(1))]);
 }
 
 #[test]

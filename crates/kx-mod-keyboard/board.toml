@@ -22,8 +22,8 @@ dpad = { cell = [1, 2, 2, 4], units = 2.44, later = true }
 # Main rows, top to bottom: named keys with their width in units, kind (colours), scan code (0xE0xx is extended) and role,
 # and runs of one-unit character keys by scan code. A role says what a click does: "send" its scan code, "caps",
 # { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" }, "lang", or "later" (dimmed, coming in a later version).
-# `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter", "space"
-# or "esc"; such a click goes to the panel, never to the app.
+# `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter" or
+# "esc"; such a click goes to the panel, never to the app, and every other key types as usual.
 # Row 4 is ISO: a short left Shift and the key 0x56 (FR < >, AR |) before Z, as on real French keyboards.
 rows = [
     [
@@ -53,7 +53,7 @@ rows = [
         { id = "win", w = 1.0, kind = "mod", sc = 0xE05B, role = { latch = "win" } },
         { id = "alt", w = 1.0, kind = "mod", sc = 0x38, role = { latch = "alt" } },
         { id = "lang", w = 1.75, kind = "lang", role = "lang" },
-        { id = "space", w = 7.0, kind = "space", sc = 0x39, role = "send", nav = "space" },
+        { id = "space", w = 7.0, kind = "space", sc = 0x39, role = "send" },
         { id = "altgr", w = 1.0, kind = "mod", sc = 0xE038, role = { latch = "altgr" } },
         { id = "left", w = 1.0, kind = "mod", sc = 0xE04B, role = "send", nav = "left" },
         { id = "down", w = 1.0, kind = "mod", sc = 0xE050, role = "send", nav = "down" },

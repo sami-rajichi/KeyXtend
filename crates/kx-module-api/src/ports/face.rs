@@ -1,6 +1,6 @@
 //! The keyboard face: what the UI draws and the clicks it sends back.
 
-use super::{InjectError, Rect, Screen, SwitchError};
+use super::{Rect, Screen};
 use crate::{Capability, REDACTED_MARKER, ServiceId, ServiceKey};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -107,7 +107,7 @@ pub struct FaceReply {
     pub notice: Option<&'static str>,
 }
 
-/// Why the keyboard could not do an action.
+/// Why the keyboard could not do an action; a send or switch that failed is a notice in the reply instead.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum FaceError {
     /// The board has no such key.
@@ -116,12 +116,6 @@ pub enum FaceError {
     /// The index is outside its list.
     #[error("there is no choice at index {0}")]
     NoChoice(usize),
-    /// The keys or text did not reach the app.
-    #[error(transparent)]
-    Inject(#[from] InjectError),
-    /// The app in front could not be asked to switch layout.
-    #[error(transparent)]
-    Switch(#[from] SwitchError),
 }
 
 /// The keyboard as the UI sees it; `kx-mod-keyboard` provides it.

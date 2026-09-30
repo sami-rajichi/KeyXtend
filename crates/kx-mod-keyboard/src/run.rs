@@ -6,12 +6,24 @@ use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Role};
 use kx_module_api::ports::{
-    FaceError, InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey,
-    LayoutTable, Layouts, LayoutsKey, Scan,
+    InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
+    Layouts, LayoutsKey, Scan,
 };
 use kx_module_api::{ModuleCx, ServiceError};
 use std::collections::HashMap;
 use std::sync::Arc;
+use thiserror::Error;
+
+/// Why a tap sent nothing, or not all of it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
+pub enum TapError {
+    /// The board has no such key.
+    #[error("the board has no such key")]
+    UnknownKey,
+    /// The keys or text did not all reach the app.
+    #[error(transparent)]
+    Inject(#[from] InjectError),
+}
 
 /// What a tap did, for the face to follow up.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -122,8 +134,8 @@ impl Typing {
     /// # Errors
     /// `UnknownKey` for an id not on the board, or `Inject` when the keys or text did not all reach the app.
     /// A send refused whole changes nothing; one taken in part moves the state as if it all went, never retried.
-    pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, FaceError> {
-        let &(role, sc) = self.keys.get(id).ok_or(FaceError::UnknownKey)?;
+    pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, TapError> {
+        let &(role, sc) = self.keys.get(id).ok_or(TapError::UnknownKey)?;
         let now = Now {
             keys: &io.table.keys,
             latches: &self.latches,
@@ -147,7 +159,7 @@ impl Typing {
     }
 
     /// Sends `route`; once any of it reached the app, the latches are used and the dead-key wait follows `wait`.
-    fn send(&mut self, io: &Io<'_>, route: &Route, wait: Wait) -> Result<(), FaceError> {
+    fn send(&mut self, io: &Io<'_>, route: &Route, wait: Wait) -> Result<(), TapError> {
         let went = match route {
             Route::Tap(key) => io.injector.tap(*key),
             Route::Chord(held, key) => io.injector.chord(held, *key),

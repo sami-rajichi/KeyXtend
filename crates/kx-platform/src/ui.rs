@@ -67,7 +67,7 @@ pub trait WindowGuard: Send + Sync {
 
 /// The screens and the pointer.
 pub trait Screens: Send + Sync {
-    /// Every screen's work area.
+    /// Every screen's work area, with its whole DPI as the OS gives it.
     fn work_areas(&self) -> Vec<Screen>;
 
     /// Where the pointer is, in physical pixels.

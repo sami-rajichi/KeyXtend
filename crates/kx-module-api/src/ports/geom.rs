@@ -59,7 +59,8 @@ pub struct Point {
 pub struct Screen {
     /// The work area, without the taskbar, in physical pixels.
     pub rect: Rect,
-    /// Dots per inch; `BASE_DPI` is 100 %.
+    /// The whole dots per inch the `Screens` port reads from the OS (`BASE_DPI` is 100 %); never worked out as
+    /// `devicePixelRatio * 96`, which Qt's scale rounding may change.
     pub dpi: u32,
     /// The primary screen.
     pub primary: bool,

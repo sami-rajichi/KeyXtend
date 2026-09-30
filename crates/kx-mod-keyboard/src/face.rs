@@ -4,10 +4,10 @@
 mod inner;
 
 use crate::geom::{KeyBox, board};
-use crate::panel::{Nav, navs};
-use crate::run::{Ports, Tapped};
+use crate::panel::navs;
+use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
-use crate::spec::BoardSpec;
+use crate::spec::{BoardSpec, Nav};
 use crate::view::board_view;
 use inner::Inner;
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
@@ -91,11 +91,11 @@ impl Face {
                 state: true,
                 ..self.refresh()
             }),
-            Err(FaceError::Inject(_)) => Ok(FaceReply {
+            Err(TapError::Inject(_)) => Ok(FaceReply {
                 notice: Some(keys::KEYS_NOT_SENT),
                 ..STATE
             }),
-            Err(e) => Err(e),
+            Err(TapError::UnknownKey) => Err(FaceError::UnknownKey),
         }
     }
 

@@ -7,8 +7,8 @@
 )]
 
 use crate::typing::{Rig, chord, tap, text, unicode};
-use kx_mod_keyboard::{KeyboardSettings, Latch, Modifiers, Tapped};
-use kx_module_api::ports::{FaceError, InjectError, LayoutId, TextRoute};
+use kx_mod_keyboard::{KeyboardSettings, Latch, Modifiers, TapError, Tapped};
+use kx_module_api::ports::{InjectError, LayoutId, TextRoute};
 use kx_platform_fake::{FakeLayoutSource, LayoutFile};
 
 /// A refusal after one of four events went out.
@@ -19,7 +19,7 @@ fn a_dead_key_taken_in_part_starts_the_wait_and_uses_the_latches() {
     let mut r = Rig::new("fr-fr", |_| ());
     r.tap("altgr").unwrap();
     r.injector.set_error(Some(PART));
-    assert_eq!(r.char(0x03), Err(FaceError::Inject(PART)), "still shown");
+    assert_eq!(r.char(0x03), Err(TapError::Inject(PART)), "still shown");
     assert!(r.typing.waiting(), "the app may wait for the accent");
     assert!(!r.typing.latches().is_on(Latch::AltGr));
     r.injector.set_error(None);
@@ -32,7 +32,7 @@ fn text_taken_in_part_uses_the_latches_so_a_retry_is_not_shifted_again() {
     let mut r = Rig::new("ar-tn", |_| ());
     r.tap("shift").unwrap();
     r.injector.set_error(Some(PART));
-    assert_eq!(r.char(0x30), Err(FaceError::Inject(PART)));
+    assert_eq!(r.char(0x30), Err(TapError::Inject(PART)));
     assert!(!r.typing.latches().is_on(Latch::Shift));
     r.injector.set_error(None);
     r.char(0x30).unwrap();

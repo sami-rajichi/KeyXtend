@@ -2,13 +2,12 @@ use super::*;
 use kx_module_api::ports::{LangLabel, LayoutId};
 use proptest::prelude::*;
 
-const ALL: [Nav; 7] = [
+const ALL: [Nav; 6] = [
     Nav::Up,
     Nav::Down,
     Nav::Left,
     Nav::Right,
     Nav::Enter,
-    Nav::Space,
     Nav::Esc,
 ];
 
@@ -60,11 +59,10 @@ fn left_on_the_first_page_goes_to_its_first_row() {
 }
 
 #[test]
-fn enter_picks_the_highlight_esc_closes_and_space_does_nothing() {
+fn enter_picks_the_highlight_and_esc_closes() {
     let (mut l, len) = seven(3);
     assert_eq!(l.key(Nav::Enter, 5, len), Moved::Pick(3));
     assert_eq!(l.key(Nav::Esc, 5, len), Moved::Close);
-    assert_eq!(l.key(Nav::Space, 5, len), Moved::Stay, "no row to tick");
 }
 
 #[test]
@@ -97,10 +95,7 @@ fn a_huge_page_size_from_the_ui_never_overflows() {
 fn the_board_names_one_key_for_each_panel_move() {
     let navs = navs(&BoardSpec::shipped().unwrap());
     let ids: Vec<&str> = navs.iter().map(|(id, _)| id.as_str()).collect();
-    assert_eq!(
-        ids,
-        ["esc", "enter", "up", "space", "left", "down", "right"]
-    );
+    assert_eq!(ids, ["esc", "enter", "up", "left", "down", "right"]);
     for nav in ALL {
         assert_eq!(navs.iter().filter(|(_, n)| *n == nav).count(), 1, "{nav:?}");
     }
@@ -136,11 +131,10 @@ proptest! {
         len in 1usize..20,
         rows in 0usize..8,
         at in 0usize..20,
-        keys in proptest::collection::vec(0usize..7, 0..40),
+        keys in proptest::collection::vec(proptest::sample::select(ALL.to_vec()), 0..40),
     ) {
         let mut l = LangList::open(at);
-        for k in keys {
-            let nav = ALL[k];
+        for nav in keys {
             let before = l.hi(len);
             let page = |hi: usize| hi / rows.max(1);
             match l.key(nav, rows, len) {

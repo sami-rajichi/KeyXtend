@@ -78,7 +78,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 | Action | Does | Reply |
 |---|---|---|
-| `tap {id, back}` | Types, latches, or clicks the language key | State. A failed send adds `notice.keys-not-sent`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
+| `tap {id, back}` | Types, latches, or clicks the language key | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
 | `relabel` | Refreshes the layouts | State when the layout changed. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
@@ -87,9 +87,9 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 The language key has three designs, by `lang_key`:
 
-- **Carousel:** the back part steps back, the rest steps on; the names slide the way it stepped once the switch lands.
-- **Cycle:** every click steps on; `at` lights one dot of `count`.
-- **List:** a click opens the list on the current row, and another closes it. While it is open, the board's `nav` keys (Esc, Enter, the arrows and Space) come as `panel_key` and never reach the app. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
+- **Carousel:** the back part steps back, the rest steps on; the names slide the way it stepped once the switch lands, and a state read in the change event already has the slide.
+- **Cycle:** every click steps on; `at` lights one dot of `count`, and the names never slide (`turn` stays 0).
+- **List:** a click opens the list on the current row, and another closes it. While it is open, the board's `nav` keys (Esc, Enter and the arrows) come as `panel_key` and never reach the app; every other key, Space too, types as usual. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
 
 A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
@@ -118,12 +118,12 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `DPAD_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
-- `panel`: `LangList`, `Moved`, `Nav`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec` (with `nav`), `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
+- `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec` (with `nav`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`).
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `shown`, `is_arabic`, `is_haraka`, `is_mark`.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `Io`, `Ports` (`from_cx`, `io`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
 - `place`: `Placer`, `inside`, `bottom_centre`, `home`, `screen_of`, `fit`, `start`, `bubble`.

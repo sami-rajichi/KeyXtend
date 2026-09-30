@@ -3,6 +3,7 @@
 use crate::layout_file::{LayoutFile, LayoutFileError};
 use crate::lock;
 use kx_module_api::ports::{LangLabel, LayoutId, LayoutTable, Layouts, SwitchError};
+use std::fmt;
 use std::sync::{Arc, Mutex};
 
 /// A switch the fake layouts service was asked for.
@@ -12,6 +13,16 @@ pub enum Ask {
     Step(i32),
     /// `pick(id)`.
     Pick(LayoutId),
+}
+
+/// What `refresh` runs once it changed the layout shown, as the real service publishes `LayoutChanged`.
+#[derive(Clone, Default)]
+struct Listener(Option<Arc<dyn Fn() + Send + Sync>>);
+
+impl fmt::Debug for Listener {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Listener")
+    }
 }
 
 /// A layouts service over the tables a test gives, listed in that order, with the first one shown.
@@ -25,6 +36,7 @@ pub struct FakeLayouts {
     refreshes: Mutex<usize>,
     error: Mutex<Option<SwitchError>>,
     asked: Mutex<Vec<Ask>>,
+    listener: Mutex<Listener>,
 }
 
 impl FakeLayouts {
@@ -65,6 +77,11 @@ impl FakeLayouts {
         at.is_some()
     }
 
+    /// Runs `listener` after each `refresh` that changes the layout shown, with no lock held, as a bus event does.
+    pub fn on_change(&self, listener: impl Fn() + Send + Sync + 'static) {
+        *lock(&self.listener) = Listener(Some(Arc::new(listener)));
+    }
+
     /// Refuses every later step and pick with `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<SwitchError>) {
         *lock(&self.error) = error;
@@ -102,15 +119,17 @@ impl Layouts for FakeLayouts {
         self.tables.iter().map(|t| t.label.clone()).collect()
     }
 
-    /// Shows the layout a test `switch`ed to, if any; true when that changed the layout shown.
+    /// Shows the layout a test `switch`ed to, if any, then runs the listener; true when that changed the layout shown.
     fn refresh(&self) -> bool {
         *lock(&self.refreshes) += 1;
         let Some(at) = lock(&self.pending).take() else {
             return false;
         };
-        let mut shown = lock(&self.shown);
-        let moved = *shown != at;
-        *shown = at;
+        let moved = std::mem::replace(&mut *lock(&self.shown), at) != at;
+        let listener = lock(&self.listener).clone();
+        if let (true, Some(run)) = (moved, listener.0) {
+            run();
+        }
         moved
     }
 
@@ -194,6 +213,22 @@ mod tests {
         assert!(!fake.refresh(), "nothing more changed");
         assert_eq!(fake.refreshes(), 2);
         assert!(!fake.switch(LayoutId::new(1)));
+    }
+
+    #[test]
+    fn a_refresh_that_changes_the_layout_runs_the_listener_once_it_shows() {
+        let fake = Arc::new(fake());
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let (weak, log) = (Arc::downgrade(&fake), Arc::clone(&seen));
+        fake.on_change(move || {
+            let shown = weak.upgrade().map(|f| f.current().label.id);
+            log.lock().unwrap().extend(shown);
+        });
+        let fr = ids(&fake)[1];
+        assert!(!fake.refresh());
+        fake.switch(fr);
+        assert!(fake.refresh());
+        assert_eq!(*seen.lock().unwrap(), [fr], "it reads the new layout");
     }
 
     #[test]

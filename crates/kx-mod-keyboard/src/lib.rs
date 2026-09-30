@@ -25,13 +25,13 @@ pub use langkey::{LangClick, LangName, LangView, Turn};
 pub use latch::Latches;
 pub use legend::{Legend, LegendMods};
 pub use manifest::{ID, MANIFEST};
-pub use panel::{LangList, LangRow, ListView, Moved, Nav};
+pub use panel::{LangList, LangRow, ListView, Moved};
 pub use place::Placer;
 pub use plan::{Plan, Route};
-pub use run::{Io, Ports, Tapped, Typing};
+pub use run::{Io, Ports, TapError, Tapped, Typing};
 pub use settings::{Corner, KeyboardSettings, LangKey, Modifiers, SPEC};
 pub use sizer::{Limits, Resize, SizeError, Sizer};
-pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Role};
+pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Nav, Role};
 pub use view::{BoardView, KeyState, KeyView, StateView};
 
 use kx_module_api::ports::KeyboardFaceKey;

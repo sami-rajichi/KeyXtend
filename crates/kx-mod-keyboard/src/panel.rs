@@ -1,32 +1,12 @@
 //! The language list of the List design: the board's arrows, Enter and Esc move its highlight, pick and close it
 //! (spec §3.3), and it pages at the UI's page size with no scrolling (ADR-0008).
 
-use crate::spec::{BoardSpec, RowItem};
+use crate::spec::{BoardSpec, Nav, RowItem};
 use kx_module_api::ports::{LangLabel, LayoutId};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// The icon on the current row, by its `icons.toml` key.
 pub const CURRENT_ICON: &str = "lang.current";
-
-/// What a board key does in an open panel, as `board.toml` names it with `nav`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Nav {
-    /// Up one row.
-    Up,
-    /// Down one row.
-    Down,
-    /// Back one page in a list; the previous tab in a panel with tabs.
-    Left,
-    /// On one page in a list; the next tab in a panel with tabs.
-    Right,
-    /// Picks the highlighted row.
-    Enter,
-    /// Ticks the highlighted row where rows tick.
-    Space,
-    /// Closes the panel.
-    Esc,
-}
 
 /// What a panel key did.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -80,7 +60,6 @@ impl LangList {
             Nav::Right => (page + 1).min(last / rows) * rows,
             Nav::Enter => return Moved::Pick(hi),
             Nav::Esc => return Moved::Close,
-            Nav::Space => return Moved::Stay,
         };
         self.hi = to;
         if to == hi { Moved::Stay } else { Moved::Hi }

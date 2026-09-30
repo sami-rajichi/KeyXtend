@@ -1,4 +1,5 @@
 use super::*;
+use proptest::prelude::*;
 
 const EN: LayoutId = LayoutId::new(0x0409_0409);
 const FR: LayoutId = LayoutId::new(0x040C_040C);
@@ -107,4 +108,54 @@ fn a_step_asked_is_used_once() {
     t.seen(FR, &ids);
     assert!(t.seen(AR, &ids), "a later switch the key did not ask");
     assert_eq!(t.turn(), 0);
+}
+
+/// One event at the key: a step asked, an ask cleared by a pick, or the app showing layout `n`; 3 is not listed.
+#[derive(Clone, Debug)]
+enum Event {
+    Ask(i32),
+    Clear,
+    Show(usize),
+}
+
+fn event() -> impl Strategy<Value = Event> {
+    prop_oneof![
+        (-3_i32..=3).prop_map(Event::Ask),
+        Just(Event::Clear),
+        (0_usize..4).prop_map(Event::Show),
+    ]
+}
+
+proptest! {
+    /// The names turn only on the change where the step last asked lands, the way it asked, and only once.
+    #[test]
+    fn the_names_turn_only_where_the_asked_step_lands(events in prop::collection::vec(event(), 0..40)) {
+        let ids = [EN, FR, AR];
+        let at = |n: usize| ids.get(n).copied().unwrap_or(LayoutId::new(1));
+        let mut t = Turn::new(EN);
+        let (mut shown, mut asked) = (EN, 0);
+        for e in events {
+            match e {
+                Event::Ask(by) => {
+                    t.asked(by);
+                    asked = by;
+                }
+                Event::Clear => {
+                    t.clear();
+                    asked = 0;
+                }
+                Event::Show(n) => {
+                    let (now, before) = (at(n), t.turn());
+                    prop_assert_eq!(t.seen(now, &ids), now != shown);
+                    if now == shown {
+                        prop_assert_eq!(t.turn(), before, "no change, no new turn");
+                        continue;
+                    }
+                    let lands = asked != 0 && step_to(&ids, Some(shown), asked) == Some(now);
+                    prop_assert_eq!(i32::from(t.turn()), if lands { asked.signum() } else { 0 });
+                    (shown, asked) = (now, 0);
+                }
+            }
+        }
+    }
 }
