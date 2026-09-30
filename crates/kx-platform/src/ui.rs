@@ -1,5 +1,9 @@
-//! UI ports: the window guard, screens, the system look, backdrops and the one running copy.
+//! UI ports: the window guard, screens, the system look, backdrops, the one running copy and the tray icon.
 //! The data types are OS-neutral; adapters keep their own handles behind them.
+
+mod tray;
+
+pub use tray::{BadImage, OnTray, Tray, TrayEvent, TrayIcon, TrayImage};
 
 use kx_module_api::ports::{Point, Rect, Screen};
 use std::fmt;

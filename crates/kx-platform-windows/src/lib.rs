@@ -22,6 +22,7 @@ mod platform;
 pub mod screen;
 pub mod strokes;
 pub mod sysui;
+pub mod tray;
 #[cfg(windows)]
 pub mod uiaccess;
 pub mod watch;
@@ -44,6 +45,8 @@ pub use platform::WindowsPlatform;
 pub use screen::WinScreens;
 #[cfg(windows)]
 pub use sysui::WinLook;
+#[cfg(windows)]
+pub use tray::WinTray;
 #[cfg(windows)]
 pub use window::WinGuard;
 

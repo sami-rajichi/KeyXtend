@@ -23,6 +23,7 @@ var settings = {
   "tipMs": 500
 };
 var texts = {
+  "banner.more": "⁨{$more}⁩ more notices",
   "bar.bigger": "Bigger",
   "bar.bubble": "Show the keyboard",
   "bar.close": "Hide the keyboard",
@@ -119,6 +120,9 @@ var texts = {
   "notice.settings-reset": "Some ⁨{$module}⁩ settings were not valid, so they went back to their defaults: ⁨{$keys}⁩.",
   "notice.settings-restored": "The settings file was damaged, so its last good copy was restored.",
   "notice.settings-unsaved": "Settings could not be saved, so changes last only until the keyboard closes.",
+  "page.back": "Previous page",
+  "page.of": "⁨{$at}⁩ of ⁨{$count}⁩",
+  "page.on": "Next page",
   "size.l": "L",
   "size.m": "M",
   "size.s": "S",
@@ -132,5 +136,23 @@ var texts = {
   "tray.quit": "Quit",
   "tray.show": "Show keyboard",
   "window.bubble": "KeyXtend keyboard (minimised)",
-  "window.keyboard": "KeyXtend keyboard"
+  "window.keyboard": "KeyXtend keyboard",
+  "window.list": "Keyboard languages",
+  "window.menu": "KeyXtend menu",
+  "window.notice": "KeyXtend notice"
 };
+var more = [
+  "",
+  "⁨1⁩ more notice",
+  "⁨2⁩ more notices",
+  "⁨3⁩ more notices",
+  "⁨4⁩ more notices",
+  "⁨5⁩ more notices",
+  "⁨6⁩ more notices",
+  "⁨7⁩ more notices",
+  "⁨8⁩ more notices",
+  "⁨9⁩ more notices",
+  "⁨10⁩ more notices",
+  "⁨11⁩ more notices",
+  "⁨12⁩ more notices"
+];

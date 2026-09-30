@@ -42,6 +42,13 @@ mod qt {
         "qml/Tween.qml",
         "qml/ColourTween.qml",
         "qml/PopIn.qml",
+        "qml/LangCycle.qml",
+        "qml/LangList.qml",
+        "qml/LangPanel.qml",
+        "qml/LangRow.qml",
+        "qml/Notice.qml",
+        "qml/TrayMenu.qml",
+        "qml/TrayPicture.qml",
     ];
     /// The Rust files holding cxx-qt bridges.
     const BRIDGES: &[&str] = &["src/bridges/ui.rs", "src/bridges/keyboard.rs"];

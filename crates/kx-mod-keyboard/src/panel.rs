@@ -102,16 +102,25 @@ pub struct ListView {
     pub hi: usize,
     /// The board keys the UI sends as `panel_key` while the list is open.
     pub keys: Vec<String>,
+    /// The board key that turns back a page, which the list's page button sends.
+    pub page_back: Option<String>,
+    /// The board key that turns on a page.
+    pub page_on: Option<String>,
 }
 
-/// The list `open` over `labels`, with layout `cur` shown now and `keys` driving it.
+/// The list `open` over `labels`, with layout `cur` shown now and the board keys `keys` driving it.
 #[must_use]
 pub fn list_view(
     open: &LangList,
     labels: &[LangLabel],
     cur: LayoutId,
-    keys: &[String],
+    keys: &[(String, Nav)],
 ) -> ListView {
+    let key_of = |nav: Nav| {
+        keys.iter()
+            .find(|(_, n)| *n == nav)
+            .map(|(id, _)| id.clone())
+    };
     let row = |l: &LangLabel| {
         let current = l.id == cur;
         LangRow {
@@ -126,7 +135,9 @@ pub fn list_view(
     ListView {
         rows: labels.iter().map(row).collect(),
         hi: open.hi(labels.len()),
-        keys: keys.to_vec(),
+        keys: keys.iter().map(|(id, _)| id.clone()).collect(),
+        page_back: key_of(Nav::Left),
+        page_on: key_of(Nav::Right),
     }
 }
 

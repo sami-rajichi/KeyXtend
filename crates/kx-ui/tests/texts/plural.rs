@@ -100,3 +100,38 @@ fn a_huge_count_never_panics() {
         assert!(text.chars().any(|c| c.is_ascii_digit()));
     }
 }
+
+/// CLDR's Arabic form for integer `n`, as the banner counts the notices still waiting.
+fn cldr_arabic_notices(n: usize) -> String {
+    match (n, n % 100) {
+        (1, _) => "إشعار آخر".to_owned(),
+        (2, _) => "إشعاران آخران".to_owned(),
+        (_, 3..=10) => format!("{n} إشعارات أخرى"),
+        (_, 11..=99) => format!("{n} إشعارًا آخر"),
+        _ => format!("{n} إشعار آخر"),
+    }
+}
+
+#[test]
+fn the_banner_counts_the_notices_waiting_in_each_plural_form() {
+    let (en, fr, ar) = (lang("en"), lang("fr"), lang("ar"));
+    assert_eq!(plain(&en.more(1)), "1 more notice");
+    assert_eq!(plain(&fr.more(1)), "1 autre notification");
+    for n in 2..=1200 {
+        assert_eq!(plain(&en.more(n)), format!("{n} more notices"));
+        assert_eq!(plain(&fr.more(n)), format!("{n} autres notifications"));
+    }
+    for n in 1..=1200 {
+        assert_eq!(plain(&ar.more(n)), cldr_arabic_notices(n), "{n}");
+    }
+    assert!(all().all(|t| t.more(0).is_empty()), "nothing waits");
+    assert!(all().all(|t| t.more(usize::MAX).chars().any(|c| c.is_ascii_digit())));
+}
+
+#[test]
+fn a_page_number_names_its_page_and_the_count() {
+    let cases = [("en", "2 of 3"), ("fr", "2 sur 3"), ("ar", "2 من 3")];
+    for (tag, want) in cases {
+        assert_eq!(plain(&lang(tag).page(2, 3)), want, "{tag}");
+    }
+}

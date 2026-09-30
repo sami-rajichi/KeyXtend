@@ -41,6 +41,12 @@ QtObject {
     function resizeEnd() {
         return note("resizeEnd");
     }
+    function langPick(index) {
+        return note("langPick " + index);
+    }
+    function panelKey(id) {
+        return note("panelKey " + id);
+    }
     function relabel() {
         return JSON.stringify({ board: false, state: false });
     }

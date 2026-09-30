@@ -8,8 +8,9 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODE, MODULE, OK, RETRY, SIZE,
-    SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW, WINDOW_BUBBLE, WINDOW_KEYBOARD,
+    BANNER_MORE, BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODE, MODULE, OK,
+    PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW,
+    WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE,
 };
 use std::collections::BTreeSet;
 
@@ -68,7 +69,18 @@ fn the_three_files_have_the_same_keys() {
 #[test]
 fn every_notice_and_view_key_has_its_text() {
     let fixed = [
-        TRAY_SHOW, TRAY_QUIT, RETRY, OK, LIST_JOIN, LIST_MORE, LIST_COUNT, SPACE,
+        TRAY_SHOW,
+        TRAY_QUIT,
+        RETRY,
+        OK,
+        LIST_JOIN,
+        LIST_MORE,
+        LIST_COUNT,
+        SPACE,
+        BANNER_MORE,
+        PAGE_OF,
+        PAGE_BACK,
+        PAGE_ON,
     ];
     for t in all() {
         let missing: Vec<&str> = ALL_KEYS
@@ -113,7 +125,15 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
             .iter()
             .map(|m| format!("{MODE}.{}", m.as_str().unwrap_or_default())),
     );
-    let fixed = [WINDOW_KEYBOARD, WINDOW_BUBBLE, CATCH].map(str::to_owned);
+    let fixed = [
+        WINDOW_KEYBOARD,
+        WINDOW_BUBBLE,
+        WINDOW_NOTICE,
+        WINDOW_MENU,
+        WINDOW_LIST,
+        CATCH,
+    ]
+    .map(str::to_owned);
     let named: Vec<String> = named.chain(fixed).collect();
     for t in all() {
         let missing: Vec<&String> = named.iter().filter(|k| !t.has(k)).collect();

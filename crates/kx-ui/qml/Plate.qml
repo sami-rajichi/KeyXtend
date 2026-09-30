@@ -56,6 +56,7 @@ Item {
             dark: body.lk.dark
             onGrip: mover.startMove()
             onFlip: body.win.flip()
+            onTheme: body.win.restyle()
             onSmaller: body.win.redraw(body.win.keyboard.smaller())
             onBigger: body.win.redraw(body.win.keyboard.bigger())
             onPickSize: i => body.win.redraw(body.win.keyboard.preset(i))
@@ -72,6 +73,7 @@ Item {
                 ks: body.st.keys[kv.id]
                 lk: body.lk
                 lang: body.st.lang
+                design: body.board.lang_key
                 res: body.res
                 s: body.s
                 onHit: back => body.win.tap(kv.id, back)

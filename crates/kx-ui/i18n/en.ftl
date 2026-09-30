@@ -109,6 +109,9 @@ mode =
 window =
     .keyboard = { -app } keyboard
     .bubble = { -app } keyboard (minimised)
+    .notice = { -app } notice
+    .menu = { -app } menu
+    .list = Keyboard languages
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -121,6 +124,20 @@ tray =
 button =
     .retry = Try again
     .ok = OK
+
+## The notice banner: how many more notices wait behind the one it shows.
+## Plural forms select on $form, which is $more as the CLDR rules read it; $more is at least 1.
+banner =
+    .more = { $form ->
+        [one] { $more } more notice
+       *[other] { $more } more notices
+    }
+
+## Paged lists: the page buttons, and the page number between them.
+page =
+    .back = Previous page
+    .on = Next page
+    .of = { $at } of { $count }
 
 ## Notices by kx-module-api key. $module is a module name and $keys a list of setting names.
 notice =

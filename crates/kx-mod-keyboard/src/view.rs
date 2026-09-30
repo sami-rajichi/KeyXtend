@@ -12,7 +12,7 @@ use crate::legend::{Legend, LegendMods, legend, typed};
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, KeyboardSettings, LangKey};
 use crate::sizer::Limits;
-use crate::spec::{BoardSpec, KeyKind, Role};
+use crate::spec::{BoardSpec, KeyKind, Nav, Role};
 use kx_module_api::ports::{LangLabel, LayoutTable, Point};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -142,8 +142,8 @@ pub struct StateInput<'a> {
     pub turn: i8,
     /// The language list, while open.
     pub open: Option<&'a LangList>,
-    /// The board keys that drive an open list.
-    pub panel_keys: &'a [String],
+    /// The board keys that drive an open list, with what each does.
+    pub panel_keys: &'a [(String, Nav)],
     /// Where the window goes.
     pub at: Option<Point>,
 }

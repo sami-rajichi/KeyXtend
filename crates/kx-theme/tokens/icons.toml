@@ -53,3 +53,18 @@ stop = "square"
 cycle = "globe"
 list = "chevron-up"
 current = "check"
+
+# Paged lists' page buttons (mock-up pagerHTML, line 1562): back a page and on a page.
+[page]
+back = "chevron-up"
+on = "chevron-down"
+
+# The notice banner's icon (mock-up .toast .i, line 400): the keyboard, since every notice is about it.
+[notice]
+icon = "keyboard"
+
+# The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364), Show keyboard and Quit.
+[tray]
+glyph = "keyboard"
+show = "keyboard"
+quit = "power"

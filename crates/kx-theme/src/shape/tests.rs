@@ -152,6 +152,7 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
         (11.0, 0.7),
         ".lst .i"
     );
+    assert_eq!(s.lang.icon_gap_px, 3.0, ".lk gap");
     assert_eq!(s.dim.share, 0.4, ".btn[disabled]");
     assert_eq!(s.hc_outline.px, 2.0, ".scroll-target outline");
     assert_eq!(s.backdrop.plate, 0.88, "the P1 test build's plate_alpha");
@@ -163,9 +164,20 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     );
 }
 
+/// A token line as shipped, a bad value for it, and the name the error must give.
+type Bad = (&'static str, &'static str, &'static str);
+
+/// Each `Bad` token is refused with its name.
+fn refused(cases: &[Bad]) {
+    for (from, to, says) in cases {
+        let e = parse(&text().replacen(from, to, 1)).expect_err(to);
+        assert!(e.contains(says), "{to}: {e}");
+    }
+}
+
 #[test]
 fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
-    for (from, to, says) in [
+    refused(&[
         (
             "button_weight = 600",
             "button_weight = 950",
@@ -181,6 +193,22 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ("dot_off = 0.3", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
+    ]);
+}
+
+#[test]
+fn an_odd_tray_share_or_label_size_is_refused() {
+    refused(&[
+        (
+            "glyph_share = 0.75",
+            "glyph_share = 1.5",
+            "tray.glyph_share",
+        ),
+        (
+            "radius_share = 0.22",
+            "radius_share = -1.0",
+            "tray.radius_share",
+        ),
         (
             "label_min_px = 7.0",
             "label_min_px = 0.0",
@@ -191,8 +219,6 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
             "label_pad_px = -1.0",
             "legend.label_pad_px",
         ),
-    ] {
-        let e = parse(&text().replacen(from, to, 1)).expect_err(to);
-        assert!(e.contains(says), "{to}: {e}");
-    }
+        ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
+    ]);
 }

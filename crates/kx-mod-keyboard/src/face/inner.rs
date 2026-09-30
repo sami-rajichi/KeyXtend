@@ -233,7 +233,7 @@ impl Inner {
 
     /// The state of `keys`, with `panel_keys` driving an open list; a new layout is noted first, so a reader
     /// in its change event already sees the names' turn.
-    pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[String]) -> StateView {
+    pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[(String, Nav)]) -> StateView {
         self.seen();
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();

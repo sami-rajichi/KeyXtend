@@ -1103,6 +1103,8 @@
       "down",
       "right"
     ],
+    "page_back": "left",
+    "page_on": "right",
     "rows": [
       {
         "arabic": false,

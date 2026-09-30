@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use kx_module_api::Clock;
 use kx_module_api::ports::{InputInjector, LayoutSource};
-use kx_platform::ui::{Backdrop, Instance, Screens, SystemLook, WindowGuard};
+use kx_platform::ui::{Backdrop, Instance, Screens, SystemLook, Tray, WindowGuard};
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinScreens, dirs,
+    WinScreens, WinTray, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -80,6 +80,12 @@ impl WindowsPlatform {
     pub fn instance(&self) -> Arc<dyn Instance> {
         Arc::new(WinInstance::new(&self.app))
     }
+
+    /// The tray icon in the taskbar's notification area.
+    #[must_use]
+    pub fn tray(&self) -> Arc<dyn Tray> {
+        Arc::new(WinTray::new())
+    }
 }
 
 impl Platform for WindowsPlatform {
@@ -132,6 +138,13 @@ mod tests {
         let (areas, language, guarded) = answers.join().unwrap();
         assert!(!areas.is_empty() && !language.is_empty());
         assert_eq!(guarded, Ok(0), "no window of ours is shown");
+    }
+
+    #[test]
+    fn the_tray_port_names_its_icon_size_on_another_thread() {
+        let tray = WindowsPlatform::new().unwrap().tray();
+        let px = std::thread::spawn(move || tray.icon_px()).join().unwrap();
+        assert!(px > 0);
     }
 
     #[test]

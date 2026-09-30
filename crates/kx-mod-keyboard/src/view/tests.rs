@@ -3,7 +3,7 @@ use crate::geom::board;
 use crate::latch::Latches;
 use crate::panel::LangList;
 use crate::settings::Modifiers;
-use crate::spec::Latch;
+use crate::spec::{Latch, Nav};
 use kx_module_api::ports::{KeyChars, LangLabel, LayoutId, LayoutTable, Scan};
 use std::collections::BTreeMap;
 
@@ -143,7 +143,7 @@ fn state(latches: &Latches, caps: bool, open: Option<&LangList>) -> StateView {
     let keys = board(&spec(), 0.0, 1.0).keys;
     let table = table();
     let list = [table.label.clone()];
-    let panel_keys = ["esc".to_owned()];
+    let panel_keys = [("esc".to_owned(), Nav::Esc)];
     state_view(&StateInput {
         keys: &keys,
         latches,

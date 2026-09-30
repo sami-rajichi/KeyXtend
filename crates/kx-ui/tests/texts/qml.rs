@@ -1,10 +1,9 @@
-//! Writes what the Qt Quick tests read: the hub's settings and every text in each UI language, the keyboard's golden
-//! board and states, and the bundled assets' names. A change fails this test until it runs with `KX_BLESS=1`, and so
-//! does a stray file. It also lays the bundled files out as the app's resources hold them, for the tests to load.
+//! Writes what the Qt Quick tests read (settings, texts, the keyboard's golden board and states, the assets laid out
+//! as the resources hold them); a change or a stray file fails it until it runs with `KX_BLESS=1`.
 
 use crate::files::keys_of;
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
-use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeWindowGuard};
+use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::golden::assert_golden;
 use kx_theme::assets::{ICON_EXT, ICONS_AT, bundle};
 use kx_ui::{Hub, I18n, UiPorts};
@@ -24,6 +23,10 @@ const LANGS: [&str; 3] = ["en", "fr", "ar"];
 const MIRROR: &str = "../../target/tmp/qmltest-assets";
 /// The repo's `assets/` folder, from this crate.
 const ASSETS: &str = "../../assets";
+/// The fake tray's picture side.
+const TRAY_PX: u32 = 16;
+/// The banner's counts the tests read, from none up to this many.
+const MORE_UP_TO: usize = 12;
 /// What starts each fixture, so QML imports it as a JavaScript library.
 const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
 
@@ -62,11 +65,12 @@ fn hub(tag: &str) -> Arc<Hub> {
         screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
         look,
         backdrop: Arc::new(FakeBackdrop::new()),
+        tray: Arc::new(FakeTray::new(TRAY_PX)),
     };
     Hub::new(ports).expect("the hub starts").0
 }
 
-/// Language `tag`'s settings JSON and every text by key.
+/// Language `tag`'s settings JSON, every text by key, and the banner's counts by how many wait.
 fn ui(tag: &str) -> String {
     let hub = hub(tag);
     let settings: Value = serde_json::from_str(&hub.settings_json()).expect("settings JSON");
@@ -79,10 +83,12 @@ fn ui(tag: &str) -> String {
         })
         .collect();
     let texts = Value::Object(texts);
+    let more: Vec<Value> = (0..=MORE_UP_TO).map(|n| Value::String(t.more(n))).collect();
     format!(
-        "{HEAD}{}{}",
+        "{HEAD}{}{}{}",
         var("settings", &settings, true),
-        var("texts", &texts, true)
+        var("texts", &texts, true),
+        var("more", &Value::Array(more), true)
     )
 }
 

@@ -114,15 +114,34 @@ fn label(n: u64, short: &str, rtl: bool) -> LangLabel {
 #[test]
 fn the_view_lists_every_layout_and_ticks_the_current_one() {
     let labels = [label(1, "EN", false), label(2, "ع", true)];
-    let keys = ["esc".to_owned()];
+    let keys = [("esc".to_owned(), Nav::Esc)];
     let v = list_view(&LangList::open(1), &labels, LayoutId::new(2), &keys);
     assert_eq!(
         (v.hi, v.rows.len(), v.keys.clone()),
         (1, 2, vec!["esc".to_owned()])
     );
+    assert_eq!((v.page_back, v.page_on), (None, None), "no page keys");
     assert_eq!(v.rows[1].icon, Some(CURRENT_ICON));
     assert!(v.rows[1].current && v.rows[1].rtl && v.rows[1].arabic);
     assert_eq!((v.rows[0].icon, v.rows[0].current), (None, false));
+}
+
+#[test]
+fn the_page_buttons_send_the_board_keys_that_turn_the_page() {
+    let keys = [
+        ("up".to_owned(), Nav::Up),
+        ("left".to_owned(), Nav::Left),
+        ("right".to_owned(), Nav::Right),
+    ];
+    let v = list_view(
+        &LangList::open(0),
+        &[label(1, "EN", false)],
+        LayoutId::new(1),
+        &keys,
+    );
+    assert_eq!(v.keys, ["up", "left", "right"]);
+    assert_eq!(v.page_back.as_deref(), Some("left"));
+    assert_eq!(v.page_on.as_deref(), Some("right"));
 }
 
 proptest! {

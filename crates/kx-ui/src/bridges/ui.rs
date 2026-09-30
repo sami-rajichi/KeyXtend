@@ -1,22 +1,28 @@
-//! The `Ui` object: the look, the texts, the notices and the app's commands. It follows the system look and hears
-//! the hub's wakes on the Qt thread, so make one per app, in the root file.
+//! The `Ui` object: the look, the texts, the notices, the tray icon, where pop-ups go and the app's commands. It
+//! follows the system look and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
+
+mod spots;
+mod tray;
 
 use super::{hub, qs};
 use crate::hub::{Hub, NULL, Wake, json};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
-use kx_platform::ui::WatchGuard;
+use kx_platform::ui::{TrayEvent, WatchGuard};
 use std::pin::Pin;
 use std::sync::Arc;
 
 /// The cxx-qt bridge that makes `Ui` a QML type.
 #[cxx_qt::bridge]
 pub mod qobject {
-    // SAFETY: the header and type are cxx-qt-lib's own QString binding, so both sides match.
+    // SAFETY: the headers and types are cxx-qt-lib's own QString and QImage bindings, so both sides match.
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         /// Qt string.
         type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qimage.h");
+        /// Qt picture.
+        type QImage = cxx_qt_lib::QImage;
     }
 
     #[auto_cxx_name]
@@ -44,6 +50,35 @@ pub mod qobject {
         /// The space bar's text from its parts, a JSON list.
         #[qinvokable]
         fn space(&self, parts: &QString) -> QString;
+
+        /// How many more notices wait behind the one the banner shows; empty for none.
+        #[qinvokable]
+        fn more_text(&self, n: i32) -> QString;
+
+        /// A pager's number: page `at` of `count`, both from 1.
+        #[qinvokable]
+        fn page_text(&self, at: i32, count: i32) -> QString;
+
+        /// The tray picture's side in pixels.
+        #[qinvokable]
+        fn tray_px(&self) -> i32;
+
+        /// Shows `picture`, scaled to `tray_px`, as the tray icon, or changes it; true when shown.
+        #[qinvokable]
+        fn tray_show(&self, picture: &QImage) -> bool;
+
+        /// Removes the tray icon; call it before the app ends.
+        #[qinvokable]
+        fn tray_hide(&self);
+
+        /// Where a `w` by `h` pop-up goes beside the keyboard box `over` (JSON, physical pixels, or null), its left
+        /// edge at `left` unless `centred`; a JSON point in physical pixels, or null.
+        #[qinvokable]
+        fn pop_at(&self, over: &QString, left: f64, centred: bool, w: f64, h: f64) -> QString;
+
+        /// Where a `w` by `h` tray menu goes for a click at (`x`, `y`); a JSON point in physical pixels, or null.
+        #[qinvokable]
+        fn menu_at(&self, x: i32, y: i32, w: f64, h: f64) -> QString;
 
         /// The notices waiting for the banner, as a JSON list of `{id, text, retry}`.
         #[qinvokable]
@@ -96,6 +131,14 @@ pub mod qobject {
         /// The app stopped the modules: end the UI.
         #[qsignal]
         fn quit_asked(self: Pin<&mut Self>);
+
+        /// The tray icon was clicked; its menu opens from (`x`, `y`), in physical pixels.
+        #[qsignal]
+        fn tray_clicked(self: Pin<&mut Self>, x: i32, y: i32);
+
+        /// Another window came to the front, so the tray menu closes.
+        #[qsignal]
+        fn tray_away(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}
@@ -143,6 +186,8 @@ fn woken(ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Notices => ui.notices_waiting(),
         Wake::Show => ui.show_asked(),
         Wake::End => ui.quit_asked(),
+        Wake::Tray(TrayEvent::Click(at)) => ui.tray_clicked(at.x, at.y),
+        Wake::Tray(TrayEvent::Away) => ui.tray_away(),
     }
 }
 
@@ -176,6 +221,17 @@ impl qobject::Ui {
             return QString::default();
         };
         qs(&self.with(String::new(), |h| h.i18n().space(&parts)))
+    }
+
+    fn more_text(&self, n: i32) -> QString {
+        let n = usize::try_from(n).unwrap_or_default();
+        qs(&self.with(String::new(), |h| h.i18n().more(n)))
+    }
+
+    fn page_text(&self, at: i32, count: i32) -> QString {
+        let (at, count) = (usize::try_from(at), usize::try_from(count));
+        let (at, count) = (at.unwrap_or_default(), count.unwrap_or_default());
+        qs(&self.with(String::new(), |h| h.i18n().page(at, count)))
     }
 
     fn take_notices(&self) -> QString {

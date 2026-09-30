@@ -12,12 +12,14 @@ mod logs;
 mod look;
 mod module;
 mod notices;
+mod spots;
+mod tray;
 
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyboardFace, KeyboardFaceKey, Point, Rect, Screen,
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
-use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeWindowGuard};
+use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
 use std::sync::mpsc::Receiver;
@@ -78,12 +80,17 @@ struct Rig {
     look: Arc<FakeSystemLook>,
     /// The fake backdrop.
     backdrop: Arc<FakeBackdrop>,
+    /// The fake tray.
+    tray: Arc<FakeTray>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
 }
 
 /// The module the failure notices name.
 const KEYBOARD: ModuleId = ModuleId::new("keyboard");
+
+/// The fake tray's picture side.
+const TRAY_PX: u32 = 20;
 
 /// The kernel's notice for a failed keyboard module, which offers Try again.
 fn failed() -> Notice {
@@ -116,11 +123,13 @@ impl Rig {
         let screens = Arc::new(FakeScreens::new(vec![main_screen()], Point { x: 5, y: 6 }));
         let look = Arc::new(FakeSystemLook::new());
         let backdrop = Arc::new(FakeBackdrop::new());
+        let tray = Arc::new(FakeTray::new(TRAY_PX));
         let ports = UiPorts {
             guard: guard.clone(),
             screens: screens.clone(),
             look: look.clone(),
             backdrop: backdrop.clone(),
+            tray: tray.clone(),
         };
         let (hub, requests) = Hub::new(ports).expect("the hub starts");
         let wakes = Arc::new(Mutex::new(Vec::new()));
@@ -133,6 +142,7 @@ impl Rig {
             screens,
             look,
             backdrop,
+            tray,
             wakes,
         }
     }
@@ -144,6 +154,7 @@ impl Rig {
             screens: self.screens.clone(),
             look: self.look.clone(),
             backdrop: self.backdrop.clone(),
+            tray: self.tray.clone(),
         }
     }
 

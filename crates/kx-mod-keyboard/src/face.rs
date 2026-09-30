@@ -30,8 +30,8 @@ pub struct Face {
     keys: Vec<KeyBox>,
     /// The board keys that drive an open panel.
     navs: HashMap<String, Nav>,
-    /// Their ids in board order, which the state lists.
-    nav_ids: Vec<String>,
+    /// The same keys in board order, which the state lists.
+    nav_keys: Vec<(String, Nav)>,
     inner: Mutex<Inner>,
 }
 
@@ -56,8 +56,8 @@ impl Face {
         let inner = Inner::new(&spec, b.plate, ports, settings, store);
         Self {
             keys: b.keys,
-            nav_ids: navs.iter().map(|(id, _)| id.clone()).collect(),
-            navs: navs.into_iter().collect(),
+            navs: navs.iter().cloned().collect(),
+            nav_keys: navs,
             spec,
             inner: Mutex::new(inner),
         }
@@ -127,7 +127,7 @@ impl KeyboardFace for Face {
     }
 
     fn state_json(&self) -> String {
-        json(&self.lock().state(&self.keys, &self.nav_ids))
+        json(&self.lock().state(&self.keys, &self.nav_keys))
     }
 
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {

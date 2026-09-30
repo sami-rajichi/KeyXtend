@@ -48,8 +48,8 @@ crates/
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
-                         (WindowGuard, Screens, SystemLook, Backdrop, Instance); later: hooks
-  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look
+                         (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray); later: hooks
+  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray
   kx-platform-macos/    later
   kx-platform-linux/    later (X11 + Wayland portals)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,

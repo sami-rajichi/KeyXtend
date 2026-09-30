@@ -109,6 +109,9 @@ mode =
 window =
     .keyboard = Clavier { -app }
     .bubble = Clavier { -app } (réduit)
+    .notice = Notification de { -app }
+    .menu = Menu de { -app }
+    .list = Langues du clavier
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -121,6 +124,20 @@ tray =
 button =
     .retry = Réessayer
     .ok = OK
+
+## Le bandeau des notifications : combien d’autres attendent derrière celle qu’il montre.
+## Les formes du pluriel se choisissent selon $form, qui est $more lu par les règles CLDR ; $more vaut au moins 1.
+banner =
+    .more = { $form ->
+        [one] { $more } autre notification
+       *[other] { $more } autres notifications
+    }
+
+## Listes paginées : les boutons de page, et le numéro de page entre eux.
+page =
+    .back = Page précédente
+    .on = Page suivante
+    .of = { $at } sur { $count }
 
 ## Notifications, par clé de kx-module-api. $module est un nom de module et $keys une liste de paramètres.
 notice =

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::extras::{
     CaptionShape, ListShape, MenuShape, NoticeShape, PanelShape, PillShape, RingShape, SnipShape,
+    TrayShape,
 };
 
 mod check;
@@ -92,6 +93,8 @@ pub struct LangShape {
     pub weight: u16,
     /// A click on this share of the key, from the left, goes back a layout.
     pub back_share: f32,
+    /// Gap between the Cycle and List designs' icon, name and dots (`.lk`).
+    pub icon_gap_px: f32,
     /// The Cycle design.
     pub cycle: CycleShape,
     /// The List design.
@@ -234,6 +237,8 @@ pub struct Shape {
     pub menu: MenuShape,
     /// The language list panel.
     pub list: ListShape,
+    /// The tray icon's drawing.
+    pub tray: TrayShape,
 }
 
 /// Hairlines in `pop_line`: panel and tooltip edges, the corner's rim and dividers.

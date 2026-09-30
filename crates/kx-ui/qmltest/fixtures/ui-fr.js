@@ -23,6 +23,7 @@ var settings = {
   "tipMs": 500
 };
 var texts = {
+  "banner.more": "⁨{$more}⁩ autres notifications",
   "bar.bigger": "Plus grand",
   "bar.bubble": "Afficher le clavier",
   "bar.close": "Masquer le clavier",
@@ -119,6 +120,9 @@ var texts = {
   "notice.settings-reset": "Certains paramètres de « ⁨{$module}⁩ » n’étaient pas valides et ont repris leur valeur par défaut : ⁨{$keys}⁩.",
   "notice.settings-restored": "Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.",
   "notice.settings-unsaved": "Impossible d’enregistrer les paramètres ; les modifications ne dureront que jusqu’à la fermeture du clavier.",
+  "page.back": "Page précédente",
+  "page.of": "⁨{$at}⁩ sur ⁨{$count}⁩",
+  "page.on": "Page suivante",
   "size.l": "G",
   "size.m": "M",
   "size.s": "P",
@@ -132,5 +136,23 @@ var texts = {
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "window.bubble": "Clavier KeyXtend (réduit)",
-  "window.keyboard": "Clavier KeyXtend"
+  "window.keyboard": "Clavier KeyXtend",
+  "window.list": "Langues du clavier",
+  "window.menu": "Menu de KeyXtend",
+  "window.notice": "Notification de KeyXtend"
 };
+var more = [
+  "",
+  "⁨1⁩ autre notification",
+  "⁨2⁩ autres notifications",
+  "⁨3⁩ autres notifications",
+  "⁨4⁩ autres notifications",
+  "⁨5⁩ autres notifications",
+  "⁨6⁩ autres notifications",
+  "⁨7⁩ autres notifications",
+  "⁨8⁩ autres notifications",
+  "⁨9⁩ autres notifications",
+  "⁨10⁩ autres notifications",
+  "⁨11⁩ autres notifications",
+  "⁨12⁩ autres notifications"
+];

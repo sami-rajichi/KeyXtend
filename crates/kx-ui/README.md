@@ -10,7 +10,12 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## QML views
 
-`qml/` holds the keyboard window and its parts, moved from the P1 test build with its look (Task 17). `main.qml` makes one `Ui` and one `Keyboard`, the keyboard window (`KbWindow`, its body `Plate`) and the minimise bubble, each over a click-through shadow window (`Glow`). The windows read `settingsJson`, `lookJson`, `boardJson` and `stateJson`, redraw from each action's `{board, state}` answer, and read everything again on `settingsChanged`.
+`qml/` holds the keyboard window and its parts, moved from the P1 test build with its look (Task 17). `main.qml` makes one `Ui` and one `Keyboard`, the keyboard window (`KbWindow`, its body `Plate`), the minimise bubble, the notice banner (`Notice`) and the tray menu (`TrayMenu`), each over a click-through shadow window (`Glow`), and draws the tray icon's picture (`TrayPicture`). The windows read `settingsJson`, `lookJson`, `boardJson` and `stateJson`, redraw from each action's `{board, state}` answer, and read everything again on `settingsChanged`.
+
+- **Banner:** notices queue; one shows above the keyboard (or at the bottom of the main screen while it is away) with Try again when the app can restart what failed, and OK, and says how many more wait.
+- **Tray:** × hides the keyboard; a click on the tray icon opens the themed menu (Show keyboard, Quit) above it, and it closes on a pick, a second click or a click elsewhere. The picture is the theme's badge, drawn again when the look or settings change, and the icon goes before the UI ends.
+- **Language key:** Carousel, Cycle (`LangCycle`: globe, name, one dot per layout) or List (name and chevron). The List opens `LangList` (with its shadow in `LangPanel`): one page of `[ui] page_rows` rows (`LangRow`) above the keyboard with its left edge at the language key, driven by the board's arrows, Enter and Esc, with a pager when there is more than one page.
+- **Top bar:** the theme button cycles the themes (`bar.theme`).
 
 - Every window is a no-focus tool window (ADR-0013); once shown, it is cut to its plate and corner, then guarded until the guard is done.
 - Names, labels and tips are translation keys, looked up in the UI language; the Arabic UI mirrors the top bar, never the keys.
@@ -34,14 +39,16 @@ The app makes one `Hub` over its UI ports before any window exists, so it can no
 - **Notices:** `listen(&bus)` hears every notice. Equal notices show once, texts are made in the UI language when the banner takes them, and only a failed module's notice offers Try again.
 - **Requests:** Try again sends `Request::Retry(module)`. Quit, from the user (`Ui.quit`) or a second copy (`command(Command::Quit)`), sends `Request::Quit` once and then ends the queue, so the app's drain loop stops after it. The app calls `Kernel::retry`, or stops the modules and then `end_ui`. When the drain thread is gone, Quit ends the UI itself. Every request is sent under the hub's lock, so none lands after Quit.
 - **A second copy's Show** wakes the UI through `command(Command::Show)`.
+- **Tray:** `tray_show` shows or changes the icon with the keyboard window's title as its tooltip; its clicks come back as `Wake::Tray`. `tray_hide` removes it; the root calls it before the UI ends.
+- **Spots:** `pop_at` puts a pop-up the theme's gap above the keyboard (else below, else at the top), and `menu_at` puts the tray menu above its click; both stay inside the work area, at the scale of their screen.
 
 ## Threads
 
-Every bridge call runs on the Qt GUI thread, including the guard and the window shape. The system look watch, the single-instance commands and the bus may call the hub from other threads: the hub then calls the waker the `Ui` object set, which queues the change to the Qt thread and never blocks. Show and End wakes that come before the `Ui` object exists wait in the hub; a second `Ui` object takes the wakes and warns. The hub never holds its lock during a face, port or waker call.
+Every bridge call runs on the Qt GUI thread, including the guard and the window shape. The system look watch, the single-instance commands, the tray icon and the bus may call the hub from other threads: the hub then calls the waker the `Ui` object set, which queues the change to the Qt thread and never blocks. Show and End wakes that come before the `Ui` object exists wait in the hub; a second `Ui` object takes the wakes and warns. The hub never holds its lock during a face, port or waker call.
 
 ## QML objects
 
-- `Ui`: settings and look JSON (the settings also carry the size buttons' letters and names), texts, the space bar's text, notices (take, Try again, OK), the theme button, the light or dark switch, the backdrop, the compiled-in assets and Quit, with signals for each change and for the app's Show and Quit.
+- `Ui`: settings and look JSON (the settings also carry the size buttons' letters and names), texts, the space bar's text, the banner's count and a pager's number, notices (take, Try again, OK), the theme button, the light or dark switch, the backdrop, the tray icon (`trayPx`, `trayShow`, `trayHide`), where pop-ups go (`popAt`, `menuAt`), the compiled-in assets and Quit, with signals for each change, for the app's Show and Quit, and for tray clicks (`trayClicked`, `trayAway`).
 - `Keyboard`: the board and state JSON, every click and size step, the language list, the window's place, the pointer, the bubble's spot, the window shape and the no-focus guard.
 
 ## Public API

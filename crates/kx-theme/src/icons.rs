@@ -58,6 +58,36 @@ pub struct LangIcons {
     pub current: String,
 }
 
+/// A paged list's page buttons.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PageIcons {
+    /// Back a page.
+    pub back: String,
+    /// On a page.
+    pub on: String,
+}
+
+/// The notice banner's icon.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NoticeIcons {
+    /// Before each notice's text.
+    pub icon: String,
+}
+
+/// The tray icon's drawing and its menu's items.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrayIcons {
+    /// Drawn on the tray icon.
+    pub glyph: String,
+    /// Show keyboard.
+    pub show: String,
+    /// Quit.
+    pub quit: String,
+}
+
 /// Every icon name, by the part that shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -70,12 +100,18 @@ pub struct Icons {
     pub dpad: DpadIcons,
     /// The language key and its list.
     pub lang: LangIcons,
+    /// Paged lists.
+    pub page: PageIcons,
+    /// The notice banner.
+    pub notice: NoticeIcons,
+    /// The tray icon and its menu.
+    pub tray: TrayIcons,
 }
 
 impl Icons {
     /// Every name with where it is used, such as `bar.theme`.
     fn named(&self) -> Vec<(String, &str)> {
-        let (b, d, l) = (&self.bar, &self.dpad, &self.lang);
+        let (b, d, l, t) = (&self.bar, &self.dpad, &self.lang, &self.tray);
         let fixed = [
             ("bar.grip", &b.grip),
             ("bar.mode", &b.mode),
@@ -95,6 +131,12 @@ impl Icons {
             ("lang.cycle", &l.cycle),
             ("lang.list", &l.list),
             ("lang.current", &l.current),
+            ("page.back", &self.page.back),
+            ("page.on", &self.page.on),
+            ("notice.icon", &self.notice.icon),
+            ("tray.glyph", &t.glyph),
+            ("tray.show", &t.show),
+            ("tray.quit", &t.quit),
         ];
         let keys = self
             .keys
@@ -156,6 +198,15 @@ mod tests {
         );
         assert_eq!(i.lang.current, "check", "the list's current row");
         assert_eq!(i.dpad.stop, "square");
+        assert_eq!(
+            (i.page.back.as_str(), i.page.on.as_str()),
+            ("chevron-up", "chevron-down")
+        );
+        assert_eq!(i.notice.icon, "keyboard");
+        assert_eq!(
+            (i.tray.show.as_str(), i.tray.quit.as_str()),
+            ("keyboard", "power")
+        );
         assert!(i.names().contains(&"palette"));
     }
 
@@ -166,6 +217,14 @@ mod tests {
             let e = parse(&t).expect_err(bad);
             assert!(e.contains("bar.theme"), "{bad}: {e}");
         }
+    }
+
+    #[test]
+    fn a_bad_tray_or_page_name_is_refused_with_where_it_is_used() {
+        let t = text().replacen("quit = \"power\"", "quit = \"Power\"", 1);
+        assert!(parse(&t).expect_err("a capital").contains("tray.quit"));
+        let t = text().replacen("on = \"chevron-down\"", "on = \"../x\"", 1);
+        assert!(parse(&t).expect_err("a path").contains("page.on"));
     }
 
     #[test]

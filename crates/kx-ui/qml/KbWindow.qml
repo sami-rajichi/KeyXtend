@@ -35,6 +35,8 @@ Window {
     // The minimise or close button was clicked.
     signal minimise
     signal close
+    // A press landed on the keyboard, which closes the tray menu; the press still reaches the key.
+    signal touched
 
     readonly property bool running: board !== null
     readonly property bool ready: running && st !== null && lk !== null && cfg !== null
@@ -84,6 +86,13 @@ Window {
             res: win.res
             ms: win.cfg.tipMs
             area: win.screenBox
+        }
+    }
+    // The List design's language list, while the state holds one; the list and its shadow stay above the keyboard.
+    Loader {
+        active: win.ready && win.visible && !!win.st.list
+        sourceComponent: LangPanel {
+            win: win
         }
     }
     Instantiator {
@@ -196,13 +205,30 @@ Window {
         if (body.item)
             body.item.mover.finish();
     }
+    // A click on key `id`; while the language list is open, its keys drive the list instead.
     function tap(id, back) {
         hint("", null);
-        redraw(keyboard.tap(id, back));
+        const listing = st && st.list && st.list.keys.indexOf(id) >= 0;
+        redraw(listing ? keyboard.panelKey(id) : keyboard.tap(id, back));
     }
     function flip() {
         if (ui.flipMode())
             relook();
+    }
+    function restyle() {
+        if (ui.stepTheme())
+            relook();
+    }
+
+    // Where a `w` by `h` pop-up goes, in Qt units: above the shown keyboard with its left edge at Qt x `left`, or
+    // centred when `left` is NaN; with the keyboard hidden, at the bottom centre of the main screen. Null with no screen.
+    function popSpot(w, h, left) {
+        const a = physical(at.x, at.y);
+        const over = visible ? { x: a.x, y: a.y, w: drawn.width * a.dpr, h: drawn.height * a.dpr } : null;
+        const centred = isNaN(left);
+        const l = centred ? 0 : physical(left, at.y).x;
+        const p = JSON.parse(ui.popAt(JSON.stringify(over), l, centred, w, h));
+        return p ? logical(p.x, p.y) : null;
     }
 
     // Qt units for physical pixel (px, py), using the scale of the screen that holds it; Qt keeps each screen's corner unscaled.
@@ -237,6 +263,13 @@ Window {
         active: win.ready
         sourceComponent: Plate {
             win: win
+        }
+    }
+    // Above the plate, it watches presses without taking them.
+    Item {
+        anchors.fill: parent
+        PointHandler {
+            onActiveChanged: if (active) win.touched()
         }
     }
 

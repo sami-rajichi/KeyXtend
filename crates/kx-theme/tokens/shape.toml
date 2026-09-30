@@ -42,12 +42,14 @@ inset_px = 3.0
 
 [lang]
 # Language carousel: gap, side names (size, opacity), current name (Latin size, Arabic size), weight;
-# a click on the left third goes back a layout. The Cycle and List designs show the current name the same way.
+# a click on the left third goes back a layout. The Cycle and List designs show the current name the same way, with
+# icon_gap_px between their icon, name and dots (mock-up .lk, line 219).
 gap_px = 5.0
 side = [9.0, 0.45]
 font_px = [12.5, 14.0]
 weight = 600
 back_share = 0.3333
+icon_gap_px = 3.0
 
 [lang.cycle]
 # The Cycle design (mock-up .cyc and .dots, lines 230-235): globe icon size and opacity, one dot per layout (diameter, gap),
@@ -220,6 +222,12 @@ badge_weight = 600
 name_px = 12.5
 sub_px = 10.5
 icon_px = 14.0
+
+[tray]
+# The tray icon's drawing (not in the mock-up): the badge's corner radius and the glyph's size, as shares of the icon's
+# side. The badge takes the theme's badge colours, so the icon reads on a light or a dark taskbar.
+radius_share = 0.22
+glyph_share = 0.75
 
 [ring]
 # The hold ring around the pointer (mock-up .ring, .burst), not scaled with the keyboard: side of the ring and its window,

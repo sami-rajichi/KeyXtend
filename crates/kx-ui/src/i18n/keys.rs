@@ -38,5 +38,19 @@ pub const DPAD: &str = "dpad";
 pub const WINDOW_KEYBOARD: &str = "window.keyboard";
 /// The minimise bubble's title.
 pub const WINDOW_BUBBLE: &str = "window.bubble";
+/// The notice banner's title.
+pub const WINDOW_NOTICE: &str = "window.notice";
+/// The tray menu's title.
+pub const WINDOW_MENU: &str = "window.menu";
+/// The language list's title.
+pub const WINDOW_LIST: &str = "window.list";
+/// How many more notices wait behind the one the banner shows: `$more`.
+pub const BANNER_MORE: &str = "banner.more";
+/// A pager's number: page `$at` of `$count`.
+pub const PAGE_OF: &str = "page.of";
+/// A pager's button that turns back a page.
+pub const PAGE_BACK: &str = "page.back";
+/// A pager's button that turns on a page.
+pub const PAGE_ON: &str = "page.on";
 /// What readers call the cover that ends a move or resize.
 pub const CATCH: &str = "catch";

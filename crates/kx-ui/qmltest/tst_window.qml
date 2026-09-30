@@ -135,6 +135,20 @@ Item {
             win.visible = false;
         }
 
+        function test_a_press_on_the_keyboard_is_seen_and_still_reaches_the_key() {
+            const win = make();
+            const spy = createTemporaryObject(spyC, root, { target: win, signalName: "touched" });
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            mouseClick(named(win, "q"));
+            compare(spy.count, 1, "seen, so the tray menu closes");
+            compare(win.keyboard.calls.filter(c => c.startsWith("tap")), ["tap c-0x0010 false"]);
+            mouseClick(named(win, En.texts["bar.theme"]));
+            compare(spy.count, 2, "the top bar too");
+            verify(win.ui.calls.indexOf("stepTheme") >= 0, "and its button still works");
+            win.visible = false;
+        }
+
         function test_the_arabic_ui_mirrors_the_top_bar_and_not_the_keys() {
             const en = make();
             const ar = make({ settings: Ar.settings, texts: Ar.texts });
@@ -169,10 +183,12 @@ Item {
             mouseClick(named(win, En.texts["sizename.l"]));
             mouseClick(named(win, En.texts["bar.bigger"]));
             mouseClick(named(win, En.texts["bar.mode"]));
+            mouseClick(named(win, En.texts["bar.theme"]));
             mouseClick(named(win, En.texts["bar.minimise"]));
             const sent = win.keyboard.calls.filter(c => c === "smaller" || c === "bigger" || c.startsWith("preset"));
             compare(sent, ["smaller", "preset 2", "bigger"]);
             verify(win.ui.calls.indexOf("flipMode") >= 0, "the mode flips");
+            verify(win.ui.calls.indexOf("stepTheme") >= 0, "the theme steps");
             compare(spy.count, 1, "minimise");
             win.visible = false;
         }

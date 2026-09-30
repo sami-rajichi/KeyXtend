@@ -1,7 +1,8 @@
-//! Texts built from parts: a notice with its arguments, a list with "and N more", and the space bar.
+//! Texts built from parts: a notice with its arguments, a list with "and N more", the space bar, the banner's count
+//! and a pager's number.
 
 use super::I18n;
-use super::keys::{LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, SPACE};
+use super::keys::{BANNER_MORE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, PAGE_OF, SPACE};
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::{Notice, NoticeArg, args, is_hidden};
 
@@ -11,6 +12,10 @@ const LIST_VAR: &str = "list";
 const LANG_VAR: &str = "lang";
 /// `lang.space`'s variable for the layout.
 const LAYOUT_VAR: &str = "layout";
+/// `page.of`'s variable for the page shown.
+const AT_VAR: &str = "at";
+/// `page.of`'s variable for how many pages there are.
+const COUNT_VAR: &str = "count";
 /// The variable that plural forms select on.
 const FORM_VAR: &str = "form";
 /// Past this, a count takes the plural form of its last two digits.
@@ -63,6 +68,27 @@ impl I18n {
         }
         values.set(LIST_VAR, joined);
         self.format(LIST_MORE, Some(&values))
+    }
+
+    /// How many more notices wait behind the one the banner shows; empty when none do.
+    #[must_use]
+    pub fn more(&self, n: usize) -> String {
+        if n == 0 {
+            return String::new();
+        }
+        let mut values = FluentArgs::new();
+        values.set(args::MORE, count(n));
+        values.set(FORM_VAR, form(n));
+        self.format(BANNER_MORE, Some(&values))
+    }
+
+    /// A pager's number: page `at` of `pages`, both counted from 1.
+    #[must_use]
+    pub fn page(&self, at: usize, pages: usize) -> String {
+        let mut values = FluentArgs::new();
+        values.set(AT_VAR, count(at));
+        values.set(COUNT_VAR, count(pages));
+        self.format(PAGE_OF, Some(&values))
     }
 
     /// The space bar's text from `parts`: the language, then the layout when known.

@@ -78,7 +78,7 @@ Item {
             failOnWarning(/./);
         }
         function makeKey(id, lk) {
-            return createTemporaryObject(keyC, root, { kv: root.kv(id), ks: root.ks(id), lk: lk || N.lk, lang: Face.states.en.lang, res: root.res, s: 1 });
+            return createTemporaryObject(keyC, root, { kv: root.kv(id), ks: root.ks(id), lk: lk || N.lk, lang: Face.states.en.lang, design: Face.board.lang_key, res: root.res, s: 1 });
         }
         // The first item under `item` for which `ok` holds.
         function find(item, ok) {

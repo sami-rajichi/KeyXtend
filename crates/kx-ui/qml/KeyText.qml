@@ -1,15 +1,18 @@
-// What a key shows: character legends, an icon or a label, the space bar text or the language carousel.
+// What a key shows: character legends, an icon or a label, the space bar text, or the language key in its design
+// (Carousel, Cycle or List).
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
     id: t
 
-    // The key's cell and kind, its changing state, the look, the language key, fonts, icons and texts, size and legend colour.
+    // The key's cell and kind, its changing state, the look, the language key and its design (`board.lang_key`), fonts,
+    // icons and texts, size and legend colour.
     required property var kv
     required property var ks
     required property var lk
     required property var lang
+    required property string design
     required property var res
     required property real s
     required property color ink
@@ -27,6 +30,9 @@ Item {
     readonly property bool isChar: kv.kind === "char"
     readonly property bool isSpace: kv.kind === "space"
     readonly property bool isLang: kv.kind === "lang"
+    readonly property bool isCycle: isLang && design === "cycle"
+    readonly property bool isList: isLang && design === "list"
+    readonly property bool isCarousel: isLang && !isCycle && !isList
     readonly property bool mainAr: isChar && ks ? ks.main_ar : false
     readonly property bool secondAr: isChar && ks ? ks.second_ar : false
     readonly property real spacePx: lg.space_px[lang.cur.rtl ? 1 : 0] * s
@@ -39,7 +45,7 @@ Item {
 
     // After a language change the main legend rises in; the language key's names slide in the way the key stepped.
     onCurChanged: {
-        if (isLang && lang.turn !== 0) {
+        if (isCarousel && lang.turn !== 0) {
             turn.from = lang.turn * amt.carousel_shift * langRow.width;
             turn.restart();
         } else if (isChar || isSpace) {
@@ -166,10 +172,49 @@ Item {
         }
     }
 
-    // The language key: previous, current and next layout, the current one large.
+    // The language key's Cycle design.
+    Loader {
+        active: t.isCycle
+        anchors.centerIn: parent
+        anchors.verticalCenterOffset: -t.lift
+        sourceComponent: LangCycle {
+            lang: t.lang
+            lk: t.lk
+            res: t.res
+            s: t.s
+            ink: t.ink
+            room: t.height
+        }
+    }
+    // The List design (mock-up .lst): the current name and a chevron that opens the list.
+    Row {
+        visible: t.isList
+        anchors.centerIn: parent
+        anchors.verticalCenterOffset: -t.lift
+        spacing: t.lk.shape.lang.icon_gap_px * t.s
+        Line {
+            anchors.verticalCenter: parent.verticalCenter
+            ar: t.lang.cur.arabic
+            text: t.cur
+            font.pixelSize: t.lk.shape.lang.font_px[ar ? 1 : 0] * t.s
+            font.weight: t.lk.shape.lang.weight
+            color: t.ink
+        }
+        Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            icon: t.lk.icons.lang.list
+            base: t.res.icons
+            ext: t.res.ext
+            px: t.lk.shape.lang.list.icon_px * t.s
+            tint: t.ink
+            opacity: t.lk.shape.lang.list.icon_share
+        }
+    }
+
+    // The Carousel design: previous, current and next layout, the current one large.
     Row {
         id: langRow
-        visible: t.isLang
+        visible: t.isCarousel
         readonly property var sh: t.lk.shape.lang
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -t.lift

@@ -1,5 +1,5 @@
-// The top bar: move grip, suggestion chips, light or dark, the size buttons, minimise and close (mock-up topBar plus
-// the owner's sizes). An Arabic UI mirrors it, as Windows does.
+// The top bar: move grip, suggestion chips, light or dark, the theme, the size buttons, minimise and close (mock-up
+// topBar plus the owner's sizes and theme button). An Arabic UI mirrors it, as Windows does.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -24,6 +24,7 @@ Item {
     signal grip
     signal chip(int i)
     signal flip
+    signal theme
     signal smaller
     signal bigger
     signal pickSize(int i)
@@ -139,6 +140,10 @@ Item {
         Button {
             part: bar.mode
             onClicked: bar.flip()
+        }
+        Button {
+            part: "theme"
+            onClicked: bar.theme()
         }
         Button {
             part: "smaller"

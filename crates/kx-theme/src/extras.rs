@@ -1,5 +1,5 @@
 //! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel,
-//! the hold ring, the notice banner, the tray menu and the language list.
+//! the hold ring, the notice banner, the tray menu and icon, and the language list.
 
 use serde::{Deserialize, Serialize};
 
@@ -215,4 +215,14 @@ pub struct ListShape {
     pub sub_px: f32,
     /// The current row's icon size.
     pub icon_px: f32,
+}
+
+/// The tray icon's drawing: a badge in the theme's badge colours with the glyph on it; not in the mock-up.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct TrayShape {
+    /// The badge's corner radius as a share of the icon's side.
+    pub radius_share: f32,
+    /// The glyph's size as a share of the icon's side.
+    pub glyph_share: f32,
 }

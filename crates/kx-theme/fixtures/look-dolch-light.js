@@ -196,6 +196,7 @@ var lk = {
       ],
       "weight": 600,
       "back_share": 0.3333,
+      "icon_gap_px": 3.0,
       "cycle": {
         "icon_px": 12.0,
         "icon_share": 0.75,
@@ -443,6 +444,10 @@ var lk = {
       "name_px": 12.5,
       "sub_px": 10.5,
       "icon_px": 14.0
+    },
+    "tray": {
+      "radius_share": 0.22,
+      "glyph_share": 0.75
     }
   },
   "motion": {
@@ -715,6 +720,18 @@ var lk = {
       "cycle": "globe",
       "list": "chevron-up",
       "current": "check"
+    },
+    "page": {
+      "back": "chevron-up",
+      "on": "chevron-down"
+    },
+    "notice": {
+      "icon": "keyboard"
+    },
+    "tray": {
+      "glyph": "keyboard",
+      "show": "keyboard",
+      "quit": "power"
     }
   },
   "dpad": {

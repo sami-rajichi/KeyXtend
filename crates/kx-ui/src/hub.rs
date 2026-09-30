@@ -1,10 +1,13 @@
-//! The hub the `ui` module, the app and the QML bridges share: settings, texts, the face, the look, notices, and
-//! the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
+//! The hub the `ui` module, the app and the QML bridges share: settings, texts, the face, the look, notices, the tray
+//! icon, and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker
+//! runs.
 
 mod app;
 mod face;
 mod look;
 mod notices;
+mod spots;
+mod tray;
 
 pub use face::{Redraw, Resize};
 pub use notices::Shown;
@@ -16,7 +19,9 @@ use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
 };
-use kx_platform::ui::{Backdrop, FocusToken, Screens, SysLook, SystemLook, WindowGuard};
+use kx_platform::ui::{
+    Backdrop, FocusToken, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
+};
 use kx_theme::{ThemeError, Themes};
 use notices::Notices;
 use serde::Serialize;
@@ -34,6 +39,8 @@ pub struct UiPorts {
     pub look: Arc<dyn SystemLook>,
     /// The material behind a window.
     pub backdrop: Arc<dyn Backdrop>,
+    /// The tray icon, whose events come on the adapter's thread.
+    pub tray: Arc<dyn Tray>,
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
@@ -58,6 +65,8 @@ pub enum Wake {
     Show,
     /// The app stopped the modules: the UI ends.
     End,
+    /// The tray icon heard a click, with where its menu opens, or a click elsewhere.
+    Tray(TrayEvent),
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -116,6 +125,8 @@ pub struct Hub {
     /// The window that had the focus before ours, so the guard can give it back.
     focus: FocusToken,
     live: Mutex<Live>,
+    /// The tray icon while it shows; only the UI thread sets it.
+    tray: Mutex<tray::TraySlot>,
 }
 
 impl Hub {
@@ -144,6 +155,7 @@ impl Hub {
             ports,
             themes,
             live: Mutex::new(live),
+            tray: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
     }

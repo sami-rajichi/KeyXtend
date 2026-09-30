@@ -62,10 +62,10 @@ Item {
             failOnWarning(/./);
         }
         function makeKey(lk, rec, kind) {
-            return createTemporaryObject(keyC, root, { kv: root.kv(kind || "char"), ks: root.ks(rec), lk: lk, lang: root.lang1, res: root.res, s: 1 });
+            return createTemporaryObject(keyC, root, { kv: root.kv(kind || "char"), ks: root.ks(rec), lk: lk, lang: root.lang1, design: Face.board.lang_key, res: root.res, s: 1 });
         }
         function makeText(kind, lk) {
-            const c = createTemporaryObject(textC, root, { kv: root.kv(kind), ks: kind === "char" ? root.ks(false) : null, lk: lk, lang: root.lang1, res: root.res, s: 1, ink: "black", icon: "", label: "" });
+            const c = createTemporaryObject(textC, root, { kv: root.kv(kind), ks: kind === "char" ? root.ks(false) : null, lk: lk, lang: root.lang1, design: Face.board.lang_key, res: root.res, s: 1, ink: "black", icon: "", label: "" });
             c.width = 60;
             c.height = 56;
             return c;

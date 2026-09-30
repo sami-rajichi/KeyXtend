@@ -7,11 +7,13 @@ import QtQuick.Effects
 Item {
     id: key
 
-    // The key's cell and kind (board JSON), its changing state, the look, the language key, fonts, icons and texts, and size.
+    // The key's cell and kind (board JSON), its changing state, the look, the language key and its design, fonts, icons
+    // and texts, and size.
     required property var kv
     required property var ks
     required property var lk
     required property var lang
+    required property string design
     required property var res
     required property real s
 
@@ -178,6 +180,7 @@ Item {
             ks: key.ks
             lk: key.lk
             lang: key.lang
+            design: key.design
             res: key.res
             s: key.s
             ink: key.ink

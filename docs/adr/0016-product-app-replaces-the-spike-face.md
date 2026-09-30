@@ -26,6 +26,7 @@ Decided by the owner on 2026-09-29.
   - module ports live in `kx-module-api`: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`;
   - UI ports live in `kx-platform`: `WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Instance`;
   - `kx-ui` depends only on `kx-module-api`, `kx-platform` and `kx-theme`, never on a module or an adapter.
+  - added after acceptance, in P3 Task 18: the `Tray` UI port (the tray icon, through `Shell_NotifyIcon`, so no Qt Widgets DLL is needed).
 - **Fonts and icons live in the repo** under `assets/`, each with its licence file, and are compiled into the binary as Qt resources, like the QML. Theme tokens are embedded too, so the uiAccess process reads nothing it draws from disk.
 - **CI:** Linux skips the Qt crates (`kx-ui`, `keyxtend`) until P15. The Windows job installs Qt.
 
