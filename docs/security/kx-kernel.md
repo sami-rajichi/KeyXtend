@@ -37,7 +37,7 @@
   - Saving writes a temp file, copies the good file to the previous copy, then renames the temp file over it in one step, so a crash never leaves half a file and the settings file is never missing. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
   - The redacting formatter prints `‹redacted›` for any field whose name contains a `SENSITIVE` part (`text`, `typed`, `chars`, `clipboard`, `password`, `secret`, `api_key`, `token`, `transcript`), whatever its case or separators.
-  - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line.
+  - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line. The table is `kx_module_api::HIDDEN_MARKS`, shared with notices.
   - The kernel logs a settings error by its kind only, never the file value; the bus logs only the event name and subscription id.
 - **Information disclosure:** nothing is sent anywhere. Logs stay in the data folder.
 - **Denial of service:**

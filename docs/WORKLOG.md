@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: one table of hidden marks
+The log and the notices now share one table of the characters that can split or reorder a line (`kx_module_api::HIDDEN_MARKS`, with `is_hidden` adding every control character). The log escapes them as before; notices now drop line breaks and control characters too, not only bidi controls, so a setting name holding a line break can no longer split a notice.
+
 ## 2026-09-30 — P3: the UI's Qt build and the `ui` module
 `kx-ui` now builds the QML module `KeyXtend.Ui` with two bridge objects moved from the test keyboard: `Ui` for the look, texts, notices and commands, and `Keyboard` for the board, clicks, the no-focus guard and the window's shape. A new `ui` module owns the `[ui]` settings (theme, mode, language, timings and the contrast floor, which can never go below WCAG AA) and a hub that shows notices in the user's language and hands Try again and Quit to the app. Tidy's new rule F3 allows unsafe code in `kx-ui` only in its bridges, each block with a `// SAFETY:` comment. The texts, settings and hub still build and test without Qt, for the Linux checks.
 

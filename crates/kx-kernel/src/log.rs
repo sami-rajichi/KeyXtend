@@ -1,7 +1,7 @@
 //! The local, redacted log: this run and the one before, never with typed text.
 //! The app installs `subscriber` over a `LogFile`; nothing here sets a global default.
 
-use kx_module_api::REDACTED_MARKER;
+use kx_module_api::{REDACTED_MARKER, is_hidden};
 use kx_settings::Files;
 use std::fmt::{self, Write as _};
 use std::fs::{self, File};
@@ -40,13 +40,6 @@ const PART_SEP: &str = "_";
 /// Other characters that separate name parts; they count as `PART_SEP`.
 const PART_JOINERS: [char; 2] = ['.', '-'];
 
-/// Line separators and bidi controls, escaped like control characters so no value can fake or
-/// reorder a line.
-const MARKS: [char; 14] = [
-    '\u{2028}', '\u{2029}', '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}',
-    '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
-];
-
 /// What separates the fields of one line.
 const FIELD_SEP: &str = " ";
 
@@ -79,7 +72,8 @@ type WriteField = fn(&mut Writer<'_>, &Field, &dyn fmt::Debug) -> fmt::Result;
 pub type Fields = Delimited<&'static str, FieldFn<WriteField>>;
 
 /// A field whose name holds a `SENSITIVE` name prints `REDACTED_MARKER`. Other values print with
-/// `Debug`, with control characters and `MARKS` escaped, so no value can start or reorder a line.
+/// `Debug`, with each hidden mark (`kx_module_api::is_hidden`) escaped, so no value can start or
+/// reorder a line.
 #[must_use]
 pub fn fields() -> Fields {
     debug_fn(write_field as WriteField).delimited(FIELD_SEP)
@@ -106,7 +100,8 @@ fn write_field(out: &mut Writer<'_>, field: &Field, value: &dyn fmt::Debug) -> f
     write!(OneLine(out), "{value:?}")
 }
 
-/// Writes text with each control character and each of `MARKS` escaped, so a value stays on one line.
+/// Writes text with each hidden mark escaped, so a value stays on one line: a control character as
+/// `\n` or `\u{1b}`, the separators and bidi controls as `\u{202e}`.
 struct OneLine<'a, 'w>(&'a mut Writer<'w>);
 
 impl fmt::Write for OneLine<'_, '_> {
@@ -114,7 +109,7 @@ impl fmt::Write for OneLine<'_, '_> {
         text.chars().try_for_each(|c| {
             if c.is_control() {
                 write!(self.0, "{}", c.escape_debug())
-            } else if MARKS.contains(&c) {
+            } else if is_hidden(c) {
                 write!(self.0, "{}", c.escape_unicode())
             } else {
                 self.0.write_char(c)

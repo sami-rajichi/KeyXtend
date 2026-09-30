@@ -1,14 +1,19 @@
-//! Texts built from parts: notices with their arguments, joined lists, bidi safety and the space bar.
+//! Texts built from parts: notices with their arguments, joined lists, hidden marks and the space bar.
 
 use crate::{ISOLATE, all, items, lang, plain};
 use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
+use kx_ui::i18n::keys::LIST_JOIN;
 
 /// Every bidi control a quoted TOML key may hold, Fluent's own isolation marks included.
 const CONTROLS: [char; 12] = [
     '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
     '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
+/// Line breaks a quoted TOML key may hold: LF, CR, NEL, and the line and paragraph separators.
+const BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
+/// A C0 control character (BEL).
+const C0: char = '\u{7}';
 
 /// A notice `key` with every argument a notice may carry.
 fn sample(key: &'static str) -> Notice {
@@ -102,6 +107,23 @@ fn bidi_controls_in_names_and_words_are_dropped() {
     assert!(!text.chars().any(|c| foreign(&c)), "{text:?}");
     let count = |mark: char| text.chars().filter(|c| *c == mark).count();
     assert_eq!(count(ISOLATE[0]), count(ISOLATE[1]), "{text:?}");
+}
+
+#[test]
+fn line_breaks_and_control_characters_in_names_are_dropped() {
+    let names: Vec<String> = BREAKS.iter().map(|b| format!("a{b}b")).collect();
+    let names = [names, vec![format!("c{C0}d")]].concat();
+    let mut notice = sample(SETTINGS_RESET);
+    notice.args[1].1 = NoticeArg::List(names.clone());
+    for t in all() {
+        let tag = t.lang().tag;
+        let want = ["ab", "ab", "ab", "ab", "ab", "cd"].join(&t.text(LIST_JOIN));
+        assert_eq!(t.list(&names, 0), want, "{tag}");
+        let text = t.notice(&notice);
+        let bad = text.chars().find(|c| c.is_control() || BREAKS.contains(c));
+        assert_eq!(bad, None, "{tag}: {text:?}");
+        assert!(plain(&text).contains(&want), "{tag}: {text:?}");
+    }
 }
 
 #[test]

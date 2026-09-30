@@ -3,7 +3,7 @@
 use super::I18n;
 use super::keys::{LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, SPACE};
 use fluent_bundle::{FluentArgs, FluentValue};
-use kx_module_api::{Notice, NoticeArg, args};
+use kx_module_api::{Notice, NoticeArg, args, is_hidden};
 
 /// `list.more`'s variable for the named items.
 const LIST_VAR: &str = "list";
@@ -17,12 +17,6 @@ const FORM_VAR: &str = "form";
 const HUNDRED: usize = 100;
 /// Last two digits below this keep the whole count, whose form past a hundred is the plain plural.
 const LOW_TAIL: usize = 3;
-/// Bidi controls a quoted TOML key may hold: ALM, LRM, RLM, the embeddings and overrides, and the isolates.
-/// Left in, they could break Fluent's isolation and turn the rest of a notice around.
-const BIDI_CONTROLS: [char; 12] = [
-    '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
-    '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
-];
 
 impl I18n {
     /// The text of `notice`: a module id shows by its name, a count as a number, a list joined in this language.
@@ -48,7 +42,7 @@ impl I18n {
     }
 
     /// `items` joined in this language, ending with "and `more` more" when `more` items are left out.
-    /// With nothing to name it says only how many; an item that is all bidi controls is counted, not named.
+    /// With nothing to name it says only how many; an item that is all hidden marks is counted, not named.
     #[must_use]
     pub fn list(&self, items: &[String], more: usize) -> String {
         let named: Vec<String> = items
@@ -85,11 +79,10 @@ impl I18n {
     }
 }
 
-/// `text` without bidi controls, so an argument cannot break out of its isolation.
+/// `text` without hidden marks (`is_hidden`), so an argument can neither split a notice nor break
+/// out of its isolation.
 fn clean(text: &str) -> String {
-    text.chars()
-        .filter(|c| !BIDI_CONTROLS.contains(c))
-        .collect()
+    text.chars().filter(|c| !is_hidden(*c)).collect()
 }
 
 /// `n` as a Fluent number, capped so the plural rules never fail on a huge count.

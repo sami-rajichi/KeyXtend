@@ -35,7 +35,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - **Spoofing:** the QML files are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. The objects QML makes reach only the hub the app installed once.
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged).
-- **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also have their bidi controls stripped first (`i18n/compose.rs`), so a crafted setting key cannot turn a notice around.
+- **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key can neither split a notice nor turn it around.
 - **Denial of service:** the hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread. Guard tries stop at `guard_tries` (at most 100), and equal notices are merged.
 - **Elevation:** the crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
 
