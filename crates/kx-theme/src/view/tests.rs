@@ -5,7 +5,7 @@ use kx_platform::ui::Accent;
 use super::*;
 use crate::hc::sample::HC;
 
-/// A shipped colour as the system gives HC.
+/// A shipped colour as the system gives colours.
 fn port(s: &str) -> [u8; 4] {
     let c = Rgba::parse(s).expect("a colour");
     [c.r, c.g, c.b, c.a]

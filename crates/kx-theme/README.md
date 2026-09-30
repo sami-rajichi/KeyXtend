@@ -15,6 +15,8 @@ The four files in `tokens/` are compiled in with `include_str!`, never read from
 
 `Themes::shipped()` loads and checks all four; an error names the file and the token. Unknown or missing tokens, weights outside 100–900, shares outside 0–1, a curve that runs back in time, a burst that leaves the ring window, an accent on sculpted caps and an icon name that is not a plain file name are refused.
 
+A palette's `legend_2_plate` (secondary text and icons on the plate) takes its `legend_2` unless the palette writes its own, which it does only where the two differ.
+
 Dimmed keys (keys that come in a later version) have no colours of their own: every palette's `dim` and `dim_ink`, and Dolch's skirt `dim`, are the side key faded over the plate at `[dim] share` (the mock-up's disabled opacity). A palette file may not set them.
 
 ## The look

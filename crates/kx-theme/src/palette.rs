@@ -49,6 +49,19 @@ fn clear() -> Rgba {
     Rgba::CLEAR
 }
 
+/// The plate text token, and the token whose value it takes when a mode table leaves it out.
+const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
+
+/// Gives mode table `t` its plate text from `legend_2` when the file does not write one.
+pub(crate) fn plate_default(t: &mut toml::Table) {
+    let (plate, from) = PLATE_TEXT;
+    if !t.contains_key(plate)
+        && let Some(v) = t.get(from).cloned()
+    {
+        t.insert(plate.into(), v);
+    }
+}
+
 /// Every colour of one theme in one mode; the names follow the mock-up's CSS tokens.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -75,7 +88,7 @@ pub struct Palette {
     pub legend_mod: Rgba,
     /// Second and third legends.
     pub legend_2: Rgba,
-    /// Secondary text and icons on the plate (top bar, corner): `legend_2`, darker where that misses AA there.
+    /// Secondary text and icons on the plate (top bar, corner); a palette that leaves it out takes `legend_2`.
     pub legend_2_plate: Rgba,
     /// Legend on side keys.
     pub legend_act: Rgba,

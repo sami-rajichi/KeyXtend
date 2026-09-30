@@ -3,8 +3,8 @@
 # motion.toml, icons in icons.toml. Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
 # Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference; every legend reaches
 # WCAG AA, and colours marked "owner 2026-09-30" were nudged just enough to reach it.
-# legend_2_plate is legend_2 for secondary text and icons on the plate (top bar, resize corner), darker only where
-# legend_2 misses AA on the plate.
+# legend_2_plate colours secondary text and icons on the plate (top bar, resize corner); a palette writes it only
+# where it differs from legend_2, which it takes otherwise.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
@@ -60,7 +60,6 @@ danger_ink = "#1B1B1B"
 legend = "#1B1B1B"
 legend_mod = "#1B1B1B"
 legend_2 = "#5F5F5F"
-legend_2_plate = "#5F5F5F"
 legend_act = "#1B1B1B"
 on = "#005FB8"
 on_ink = "#FFFFFF"
@@ -102,7 +101,6 @@ danger_ink = "#E3E5E8"
 legend = "#E3E5E8"
 legend_mod = "#E3E5E8"
 legend_2 = "#A9AEB5"
-legend_2_plate = "#A9AEB5"
 legend_act = "#E3E5E8"
 on = "#7CB7F0"
 on_ink = "#10202E"
@@ -219,7 +217,6 @@ danger_ink = "#EDE8DF"
 legend = "#EDE8DF"
 legend_mod = "#F3EEE6"
 legend_2 = "#B3ACA2"
-legend_2_plate = "#B3ACA2"
 legend_act = "#EDE8DF"
 on = "#44403C"
 on_ink = "#E6BE3A"
@@ -346,7 +343,7 @@ danger_ink = "#F4F1EA"
 legend = "#EDEAE4"
 legend_mod = "#EDEAE4"
 legend_2 = "#BABDBF"  # owner 2026-09-30: nudged to AA (was #B0B3B6)
-legend_2_plate = "#BABDBF"
+legend_2_plate = "#B0B3B6"  # the P1 value, which already reaches AA on the plate
 legend_act = "#EDEAE4"
 on = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
 on_ink = "#FFFFFF"

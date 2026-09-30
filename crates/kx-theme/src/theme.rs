@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::common::Common;
 use crate::look::Look;
 use crate::mode::Mode;
-use crate::palette::Palette;
+use crate::palette::{Palette, plate_default};
 
 /// Text weights run from thin to black.
 pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
@@ -95,10 +95,13 @@ fn theme(mut t: toml::Table) -> Result<Theme, String> {
     Ok(Theme { look, light, dark })
 }
 
-/// One mode table, with errors prefixed `<id>.<mode>`.
+/// One mode table, with its plate text defaulted and errors prefixed `<id>.<mode>`.
 fn palette(id: &str, mode: Mode, table: Option<toml::Value>) -> Result<Palette, String> {
     let at = format!("{id}.{}", mode.key());
-    let table = table.ok_or_else(|| format!("{at}: missing"))?;
+    let mut table = table.ok_or_else(|| format!("{at}: missing"))?;
+    if let Some(t) = table.as_table_mut() {
+        plate_default(t);
+    }
     table.try_into().map_err(|e| format!("{at}: {e}"))
 }
 

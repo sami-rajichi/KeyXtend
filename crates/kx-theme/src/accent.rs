@@ -17,7 +17,7 @@ pub fn accent_fill(accent: &Accent, mode: Mode) -> Rgba {
 }
 
 /// The first of the theme's `ink`, its `legend`, then black or white, that reaches `min` on `fill`, else the one that
-/// reads best; so an ink always reaches WCAG AA, and a higher `min` is best effort.
+/// reads best.
 fn ink_for(ink: Rgba, legend: Rgba, fill: Rgba, min: f32) -> Rgba {
     let inks = [ink, legend, readable(Rgba::BLACK, Rgba::WHITE, fill)];
     inks.into_iter()
@@ -25,7 +25,8 @@ fn ink_for(ink: Rgba, legend: Rgba, fill: Rgba, min: f32) -> Rgba {
         .unwrap_or_else(|| inks.into_iter().fold(ink, |a, b| readable(a, b, fill)))
 }
 
-/// `p` with the accent `fill` on Enter, on, locked, the LED, the ring and the badge, each ink kept readable on it.
+/// `p` with the accent `fill` on Enter, on, locked, the LED, the ring and the badge. Each ink reaches `min` when any ink
+/// can (black or white reaches 4.58:1), so it reaches WCAG AA only when `min` is at least AA.
 #[must_use]
 pub fn with_accent(p: &Palette, fill: Rgba, min: f32) -> Palette {
     let mut a = p.clone();

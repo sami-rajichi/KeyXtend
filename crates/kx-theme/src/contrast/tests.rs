@@ -54,13 +54,6 @@ fn text_on_the_plate_has_its_own_token_and_reaches_wcag_aa() {
                 assert!(contrast(ink, bg) >= WCAG_AA, "{at}: {pair}");
                 seen += 1;
             }
-            let plate_ink = p.get("legend_2_plate").expect("the plate token");
-            if contrast(p.legend_2, p.plate) >= WCAG_AA {
-                assert_eq!(
-                    plate_ink, p.legend_2,
-                    "{at}: the same where legend_2 passes"
-                );
-            }
         }
     }
     assert_eq!(seen, 6, "one plate pair per theme and mode");
