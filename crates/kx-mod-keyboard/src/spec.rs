@@ -1,10 +1,12 @@
 //! The board as `board.toml` writes it: grid sizes, main rows, side keys and the D-pad, checked when read.
 
 mod check;
+mod error;
+
+pub use error::BoardError;
 
 use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 /// The board, compiled in so it is never read from disk.
 const BOARD: &str = include_str!("../board.toml");
@@ -164,42 +166,6 @@ pub struct BoardSpec {
     pub rows: Vec<Vec<RowItem>>,
     /// Side keys.
     pub side: Vec<SideSpec>,
-}
-
-/// Why a board was refused; the texts name only board ids, never user data.
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
-pub enum BoardError {
-    /// The text is not a board.
-    #[error("the board does not parse: {0}")]
-    Parse(String),
-    /// A size is not a number above 0, or the main block is not whole columns.
-    #[error("the board's sizes must be numbers above 0, and main_units whole columns")]
-    Size,
-    /// A named key is not a whole number of columns.
-    #[error("key {0} is not a whole number of columns")]
-    Width(String),
-    /// A main row does not span the main block.
-    #[error("row {row} spans {spans} of {want} columns")]
-    Row {
-        /// The row, from 1.
-        row: usize,
-        /// Columns it spans.
-        spans: u32,
-        /// Columns the main block has.
-        want: u32,
-    },
-    /// The D-pad is off the side grid, or its last cell comes first.
-    #[error("the D-pad must sit on the side grid, its first cell before its last")]
-    Dpad,
-    /// A side key is off the grid, on the D-pad or in a taken cell.
-    #[error("side key {0} is off the grid, on the D-pad or in a taken cell")]
-    Side(String),
-    /// Two keys share an id.
-    #[error("key id {0} is used twice")]
-    Twice(String),
-    /// A key's role does not fit where it is or its scan code.
-    #[error("key {0} has a role that does not fit it")]
-    Role(String),
 }
 
 impl BoardSpec {

@@ -130,6 +130,7 @@ fn float(n: usize) -> f64 {
 }
 
 /// Main row `r`'s keys as named keys, each with its width in grid columns.
+/// Only checked specs reach it, so every width is whole columns; one unit only stands in for a broken one.
 fn row_named(s: &BoardSpec, r: usize) -> Vec<(Named, u16)> {
     let one = s.columns_per_unit;
     let named = |k: RowKey<'_>| match k {

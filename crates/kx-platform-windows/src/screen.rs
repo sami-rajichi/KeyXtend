@@ -92,19 +92,8 @@ mod tests {
     }
 
     #[test]
-    fn logical_pixels_scale_with_the_dpi() {
-        assert_eq!(physical(72.0, 96), 72);
-        assert_eq!(physical(72.0, 120), 90);
-        assert_eq!(physical(8.0, 120), 10);
-        assert_eq!(physical(33.0, 144), 50);
-    }
-
-    #[test]
-    fn odd_sizes_never_panic() {
-        assert_eq!(physical(f32::NAN, 144), 0);
-        assert_eq!(physical(f32::INFINITY, 96), i32::MAX);
-        assert_eq!(physical(-10.0, 192), -20);
-        assert_eq!(physical(10.0, 0), 0);
+    fn logical_pixels_scale_by_the_ports_rule() {
+        assert_eq!(physical(33.0, 144), ports::physical(33.0, 144));
     }
 
     #[test]

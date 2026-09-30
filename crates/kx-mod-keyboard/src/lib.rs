@@ -20,9 +20,6 @@ pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Role};
 
 use kx_module_api::{Manifest, Module, ModuleCx, ModuleError};
 
-/// Why the module could not start: its compiled-in board is broken.
-const BOARD_BROKEN: &str = "the board is broken";
-
 /// The keyboard module; the app registers it behind the `mod-keyboard` feature.
 #[derive(Debug, Default)]
 pub struct KeyboardModule;
@@ -34,7 +31,7 @@ impl Module for KeyboardModule {
 
     fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError> {
         cx.settings::<KeyboardSettings>()?;
-        BoardSpec::shipped().map_err(|_| ModuleError::Start(BOARD_BROKEN))?;
+        BoardSpec::shipped()?;
         Ok(())
     }
 }

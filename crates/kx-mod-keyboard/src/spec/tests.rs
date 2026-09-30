@@ -246,3 +246,28 @@ fn character_ids_name_their_row_and_place() {
     assert!(Role::Char.sends() && Role::Latch(Latch::Win).sends());
     assert!(!Role::Lang.sends() && !Role::Later.sends());
 }
+
+#[test]
+fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
+    let all = [
+        BoardError::Parse(String::new()),
+        BoardError::Size,
+        BoardError::Width(String::new()),
+        BoardError::Row {
+            row: 1,
+            spans: 1,
+            want: 2,
+        },
+        BoardError::Dpad,
+        BoardError::Side(String::new()),
+        BoardError::Twice(String::new()),
+        BoardError::Role(String::new()),
+    ];
+    let kinds: std::collections::HashSet<&str> = all.iter().map(BoardError::kind).collect();
+    assert_eq!(kinds.len(), all.len(), "each kind names its rule");
+    let start = kx_module_api::ModuleError::from(BoardError::Dpad);
+    assert_eq!(
+        start,
+        kx_module_api::ModuleError::Start(BoardError::Dpad.kind())
+    );
+}
