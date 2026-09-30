@@ -6,11 +6,12 @@ use std::sync::Arc;
 
 /// The kernel side of every settings handle; object-safe, so one store serves all modules.
 pub trait SettingsSink: Send + Sync {
-    /// Checks `value` for `key` in `module`'s section as a Settings-window change would, stores it and saves.
+    /// Checks `values` together in `module`'s section as a Settings-window change would, stores all of them and
+    /// saves once; a refusal changes nothing.
     ///
     /// # Errors
-    /// `WriteError` when the key or value is refused, or the file could not be saved.
-    fn write(&self, module: ModuleId, key: &str, value: toml::Value) -> Result<(), WriteError>;
+    /// `WriteError` when a key or value is refused, or the file could not be saved.
+    fn write(&self, module: ModuleId, values: toml::Table) -> Result<(), WriteError>;
 }
 
 /// Writes one module's own section at once, from any thread.
@@ -34,7 +35,15 @@ impl SettingsHandle {
     /// `Invalid` for an unknown key or a refused value, `Refused` when the section cannot change,
     /// or `Unsaved` when the file could not be written.
     pub fn set(&self, key: &str, value: toml::Value) -> Result<(), WriteError> {
-        self.sink.write(self.module, key, value)
+        self.set_all(toml::Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// Checks, stores and saves several values of the module's own section together: all of them or none.
+    ///
+    /// # Errors
+    /// As `set`; a refusal changes none of the values.
+    pub fn set_all(&self, values: toml::Table) -> Result<(), WriteError> {
+        self.sink.write(self.module, values)
     }
 }
 

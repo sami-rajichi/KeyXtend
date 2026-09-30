@@ -19,14 +19,15 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// One accepted write: the module, the key and the value.
-pub type Written = (ModuleId, String, toml::Value);
+/// One accepted write: the module and its values.
+pub type Written = (ModuleId, toml::Table);
 
 /// The `[keyboard]` section as the kernel keeps it: each write is checked against the whole section.
 pub struct Sink {
     section: Mutex<toml::Table>,
     writes: Mutex<Vec<Written>>,
     refusal: Mutex<Option<WriteError>>,
+    refused_key: Mutex<Option<(String, WriteError)>>,
 }
 
 impl Sink {
@@ -36,6 +37,7 @@ impl Sink {
             section: Mutex::new(section),
             writes: Mutex::default(),
             refusal: Mutex::default(),
+            refused_key: Mutex::default(),
         }
     }
 
@@ -53,18 +55,27 @@ impl Sink {
     pub fn refuse(&self, error: Option<WriteError>) {
         *lock(&self.refusal) = error;
     }
+
+    /// Refuses every later write that holds `key`, with `error`.
+    pub fn refuse_key(&self, key: &str, error: WriteError) {
+        *lock(&self.refused_key) = Some((key.to_owned(), error));
+    }
 }
 
 impl SettingsSink for Sink {
-    fn write(&self, module: ModuleId, key: &str, value: toml::Value) -> Result<(), WriteError> {
+    fn write(&self, module: ModuleId, values: toml::Table) -> Result<(), WriteError> {
         if let Some(error) = lock(&self.refusal).clone() {
             return Err(error);
         }
+        let refused = lock(&self.refused_key).clone();
+        if let Some((_, error)) = refused.filter(|(k, _)| values.contains_key(k)) {
+            return Err(error);
+        }
         let mut next = lock(&self.section).clone();
-        next.insert(key.to_owned(), value.clone());
+        next.extend(values.clone());
         (SPEC.validate)(&next)?;
         *lock(&self.section) = next;
-        lock(&self.writes).push((module, key.to_owned(), value));
+        lock(&self.writes).push((module, values));
         Ok(())
     }
 }

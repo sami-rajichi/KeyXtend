@@ -147,7 +147,7 @@ impl Placer {
     /// It holds even when saving fails; with no screen it gives `None` and saves nothing.
     ///
     /// # Errors
-    /// The `WriteError` of the first value that could not be saved.
+    /// The `WriteError` when the place could not be saved; none of it is saved then.
     pub fn moved(
         &mut self,
         at: Point,
@@ -165,13 +165,15 @@ impl Placer {
         Ok(Some(p))
     }
 
-    /// Writes `p` to the settings file, marking it placed last, so a first place saved in part never counts.
+    /// Writes `p` and marks it placed in one write, so a place is never saved in part.
     fn save(&self, p: Point) -> Result<(), WriteError> {
+        let values = [
+            (X_KEY, toml::Value::Integer(i64::from(p.x))),
+            (Y_KEY, toml::Value::Integer(i64::from(p.y))),
+            (PLACED_KEY, toml::Value::Boolean(true)),
+        ];
         self.store
-            .set(X_KEY, toml::Value::Integer(i64::from(p.x)))?;
-        self.store
-            .set(Y_KEY, toml::Value::Integer(i64::from(p.y)))?;
-        self.store.set(PLACED_KEY, toml::Value::Boolean(true))
+            .set_all(values.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
     }
 }
 

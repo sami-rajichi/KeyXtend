@@ -231,18 +231,21 @@ impl Section {
         self.spec.version
     }
 
-    /// Sets `key` when the spec accepts the result, and says whether anything changed.
-    pub(crate) fn set(&mut self, key: &str, value: Value) -> Result<bool, SettingsError> {
-        let next = merge::with(&self.effective, key, value.clone());
+    /// Sets every key of `values` when the spec accepts them together, and says whether anything changed.
+    pub(crate) fn set_all(&mut self, values: Table) -> Result<bool, SettingsError> {
+        let mut next = self.effective.clone();
+        next.extend(values.clone());
         (self.spec.validate)(&next)?;
         if next == self.effective {
             return Ok(false);
         }
         self.effective = next;
-        if self.defaults.get(key) == Some(&value) {
-            self.changes.remove(key);
-        } else {
-            self.changes.insert(key.to_owned(), value);
+        for (key, value) in values {
+            if self.defaults.get(&key) == Some(&value) {
+                self.changes.remove(&key);
+            } else {
+                self.changes.insert(key, value);
+            }
         }
         Ok(true)
     }

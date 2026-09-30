@@ -25,7 +25,7 @@ type Stored = (Option<Capability>, Box<dyn Any + Send + Sync>);
 struct NoWrites;
 
 impl SettingsSink for NoWrites {
-    fn write(&self, module: ModuleId, _: &str, _: toml::Value) -> Result<(), WriteError> {
+    fn write(&self, module: ModuleId, _: toml::Table) -> Result<(), WriteError> {
         Err(WriteError::Refused(module))
     }
 }

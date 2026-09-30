@@ -25,9 +25,9 @@ fn sizer(host: &mut FakeHost) -> Sizer {
 
 /// The sizes written so far, oldest first.
 fn written(host: &FakeHost) -> Vec<f64> {
-    let values = host.sink.writes().into_iter().map(|(_, key, value)| {
-        assert_eq!(key, "size");
-        value.as_float().unwrap()
+    let values = host.sink.writes().into_iter().map(|(_, values)| {
+        assert_eq!(values.keys().collect::<Vec<_>>(), ["size"]);
+        values["size"].as_float().unwrap()
     });
     values.collect()
 }

@@ -25,8 +25,8 @@ impl Clock for Fixed {
 /// A stored service and the capability that gates it.
 pub type Stored = (Option<Capability>, Box<dyn Any + Send + Sync>);
 
-/// One write a sink received: the module, the key and the value.
-pub type Written = (ModuleId, String, toml::Value);
+/// One write a sink received: the module and its values.
+pub type Written = (ModuleId, toml::Table);
 
 /// A settings sink that records every write and answers with its refusal, if one is set.
 #[derive(Default)]
@@ -48,8 +48,8 @@ impl FakeSink {
 }
 
 impl SettingsSink for FakeSink {
-    fn write(&self, module: ModuleId, key: &str, value: toml::Value) -> Result<(), WriteError> {
-        lock(&self.writes).push((module, key.to_owned(), value));
+    fn write(&self, module: ModuleId, values: toml::Table) -> Result<(), WriteError> {
+        lock(&self.writes).push((module, values));
         lock(&self.refusal).clone().map_or(Ok(()), Err)
     }
 }

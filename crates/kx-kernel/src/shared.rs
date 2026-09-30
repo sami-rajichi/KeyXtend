@@ -43,9 +43,17 @@ impl Shared {
     /// # Errors
     /// `Unknown` before load, or the store's refusal; nothing changes then.
     pub fn set(&self, module: ModuleId, key: &str, value: Value) -> Result<bool, StoreError> {
+        self.set_all(module, Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// Sets several values of `module`'s section, checked together; true when the stored values changed.
+    ///
+    /// # Errors
+    /// `Unknown` before load, or the store's refusal; nothing changes then.
+    pub fn set_all(&self, module: ModuleId, values: Table) -> Result<bool, StoreError> {
         let mut guard = lock(&self.store);
         let store = guard.as_mut().ok_or(StoreError::Unknown(module))?;
-        store.set(module, key, value)
+        store.set_all(module, values)
     }
 
     /// Saves when the file is behind; a failure is logged and gives back the notice due, if any.
@@ -95,9 +103,9 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl SettingsSink for Shared {
-    /// Sets and saves at once; a failed save tells its notice after the store lock is released.
-    fn write(&self, module: ModuleId, key: &str, value: Value) -> Result<(), WriteError> {
-        self.set(module, key, value)
+    /// Sets all the values and saves once; a failed save tells its notice after the store lock is released.
+    fn write(&self, module: ModuleId, values: Table) -> Result<(), WriteError> {
+        self.set_all(module, values)
             .map_err(|error| refusal(module, error))?;
         self.save().map_err(|notice| {
             if let Some(notice) = notice {
@@ -130,10 +138,15 @@ mod tests {
         Shared::new(Bus::new(Arc::new(KernelBus::new())))
     }
 
+    /// `KEY` set to `value`, as a handle's one-value write.
+    fn one(value: Value) -> Table {
+        Table::from_iter([(KEY.to_owned(), value)])
+    }
+
     #[test]
     fn before_load_a_write_is_refused_and_nothing_saves() {
         let share = shared();
-        let refused = share.write(ID, KEY, Value::Integer(1));
+        let refused = share.write(ID, one(Value::Integer(1)));
         assert_eq!(refused, Err(WriteError::Refused(ID)));
         assert_eq!(share.get(ID), None);
         assert_eq!(share.save(), Ok(()));
@@ -164,7 +177,7 @@ mod tests {
             panic::panic_any("a module thread panicked while it held the store");
         }));
         assert!(poison.is_err() && share.store.is_poisoned());
-        let refused = share.write(ID, KEY, Value::Integer(1));
+        let refused = share.write(ID, one(Value::Integer(1)));
         assert_eq!(refused, Err(WriteError::Refused(ID)));
     }
 }

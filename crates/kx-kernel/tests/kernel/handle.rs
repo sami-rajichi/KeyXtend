@@ -9,7 +9,7 @@ use kx_module_api::{
     keys,
 };
 use std::fs;
-use toml::Value;
+use toml::{Table, Value};
 
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
@@ -84,6 +84,23 @@ fn an_unknown_key_or_a_refused_value_writes_nothing() {
         Err(WriteError::Invalid(SettingsError::Invalid(_)))
     ));
     assert!(!rig.files().settings.exists(), "nothing saved");
+}
+
+#[test]
+fn set_all_saves_every_value_or_none() {
+    let (mut rig, a, _) = grabbed();
+    rig.kernel.boot().unwrap();
+    let good = (LEVEL_KEY.to_owned(), level(NEW_LEVEL));
+    let mixed = Table::from_iter([good.clone(), (UNKNOWN_KEY.to_owned(), level(1))]);
+    let refused = a.get().set_all(mixed);
+    assert!(matches!(
+        refused,
+        Err(WriteError::Invalid(SettingsError::Parse(_)))
+    ));
+    assert!(!rig.files().settings.exists(), "not even the good value");
+    a.get().set_all(Table::from_iter([good])).unwrap();
+    let text = fs::read_to_string(rig.files().settings).unwrap();
+    assert_eq!(text, format!("[a]\nversion = 1\nlevel = {NEW_LEVEL}\n"));
 }
 
 #[test]

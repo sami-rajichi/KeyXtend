@@ -3,7 +3,7 @@
 use crate::fakes::FakeHost;
 use kx_module_api::{Manifest, ModuleCx, ModuleId, SettingsError, SettingsHandle, WriteError};
 use std::thread;
-use toml::Value;
+use toml::{Table, Value};
 
 static OWN: Manifest = Manifest {
     id: ModuleId::new("own"),
@@ -17,6 +17,11 @@ static OWN: Manifest = Manifest {
 /// A key of the module's own section.
 const KEY: &str = "size";
 
+/// `KEY` set to `value`, as one `set` sends it.
+fn one(value: i64) -> Table {
+    Table::from_iter([(KEY.to_owned(), Value::Integer(value))])
+}
+
 #[test]
 fn a_handle_is_a_shareable_value() {
     fn shareable<T: Clone + Send + Sync + 'static>() {}
@@ -28,8 +33,17 @@ fn a_handle_writes_under_its_own_module_id() {
     let mut host = FakeHost::new(&OWN);
     let handle = ModuleCx::new(&mut host).settings_handle();
     assert_eq!(handle.set(KEY, Value::Integer(3)), Ok(()));
-    let own = (OWN.id, KEY.to_owned(), Value::Integer(3));
+    let own = (OWN.id, one(3));
     assert_eq!(host.sink.writes(), [own]);
+}
+
+#[test]
+fn set_all_sends_every_value_in_one_write() {
+    let mut host = FakeHost::new(&OWN);
+    let handle = ModuleCx::new(&mut host).settings_handle();
+    let values: Table = "x = 1\ny = 2\nplaced = true".parse().unwrap();
+    assert_eq!(handle.set_all(values.clone()), Ok(()));
+    assert_eq!(host.sink.writes(), [(OWN.id, values)]);
 }
 
 #[test]
@@ -38,7 +52,7 @@ fn a_clone_writes_from_another_thread() {
     let copy = ModuleCx::new(&mut host).settings_handle().clone();
     let written = thread::spawn(move || copy.set(KEY, Value::Integer(4)));
     assert_eq!(written.join().unwrap(), Ok(()));
-    let own = (OWN.id, KEY.to_owned(), Value::Integer(4));
+    let own = (OWN.id, one(4));
     assert_eq!(host.sink.writes(), [own]);
 }
 

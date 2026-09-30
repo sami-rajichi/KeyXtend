@@ -67,6 +67,30 @@ fn set_refuses_unknown_modules_newer_sections_and_the_version_key() {
 }
 
 #[test]
+fn set_all_checks_the_values_together_and_changes_all_or_nothing() {
+    let (_dir, files) = folder("together");
+    let (mut store, _) = open(&files);
+    let alone = store.set(HOLD, "min_ms", Value::Integer(800));
+    assert!(alone.is_err(), "above the maximum on its own");
+    let both = "min_ms = 800\nmax_ms = 900";
+    assert!(store.set_all(HOLD, table(both)).unwrap());
+    assert_eq!(store.get(HOLD), Some(&defaults_with(both)));
+    let bad = store.set_all(HOLD, table("max_ms = 1000\nsound = \"loud\""));
+    assert!(matches!(
+        bad,
+        Err(StoreError::Settings(SettingsError::Parse(_)))
+    ));
+    assert_eq!(
+        store.get(HOLD),
+        Some(&defaults_with(both)),
+        "no part of a refused batch"
+    );
+    let reserved = store.set_all(HOLD, table("version = 3\nsound = false"));
+    assert!(matches!(reserved, Err(StoreError::Reserved)));
+    assert!(!store.set_all(HOLD, table("")).unwrap(), "an empty batch");
+}
+
+#[test]
 fn setting_the_current_value_changes_nothing() {
     let (_dir, files) = folder("same");
     let (mut store, _) = open(&files);

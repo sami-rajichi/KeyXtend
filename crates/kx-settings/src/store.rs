@@ -148,8 +148,16 @@ impl Store {
     /// Sets one value when the module's validator accepts the result; true when the stored value changed.
     ///
     /// # Errors
-    /// `Unknown`, `Newer`, `Reserved`, `Panicked`, or the validator's `Settings` error; nothing changes then.
+    /// As `set_all`; nothing changes then.
     pub fn set(&mut self, module: ModuleId, key: &str, value: Value) -> Result<bool, StoreError> {
+        self.set_all(module, Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// Sets every value of `values` when the validator accepts them together; true when the stored values changed.
+    ///
+    /// # Errors
+    /// `Unknown`, `Newer`, `Reserved`, `Panicked`, or the validator's `Settings` error; nothing changes then.
+    pub fn set_all(&mut self, module: ModuleId, values: Table) -> Result<bool, StoreError> {
         let section = self
             .sections
             .get_mut(&module)
@@ -157,11 +165,11 @@ impl Store {
         if section.newer.is_some() {
             return Err(StoreError::Newer(module));
         }
-        if key == VERSION_KEY {
+        if values.contains_key(VERSION_KEY) {
             return Err(StoreError::Reserved);
         }
         // Nothing changes before the validator returns, so a panic leaves the section as it was.
-        let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set(key, value)))
+        let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set_all(values)))
             .map_err(|_| StoreError::Panicked(module))??;
         self.unsaved |= changed;
         Ok(changed)

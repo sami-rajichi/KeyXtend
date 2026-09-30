@@ -31,12 +31,11 @@ fn placer(host: &mut FakeHost) -> Placer {
     Placer::new(&settings, host.handle())
 }
 
-/// The keys written so far, in order.
-fn keys(host: &FakeHost) -> Vec<String> {
-    host.sink
-        .writes()
-        .into_iter()
-        .map(|(_, key, _)| key)
+/// The keys of each write so far, in order.
+fn keys(host: &FakeHost) -> Vec<Vec<String>> {
+    let writes = host.sink.writes().into_iter();
+    writes
+        .map(|(_, values)| values.keys().cloned().collect())
         .collect()
 }
 
@@ -50,20 +49,20 @@ fn it_starts_at_home_and_saves_nothing() {
 }
 
 #[test]
-fn a_move_saves_x_y_then_placed() {
+fn a_move_saves_x_y_and_placed_in_one_write() {
     let mut host = FakeHost::new();
     let mut p = placer(&mut host);
     assert_eq!(
         p.moved(at(300, 200), PLATE, &screens()),
         Ok(Some(at(300, 200)))
     );
-    assert_eq!(keys(&host), ["x", "y", "placed"]);
+    assert_eq!(keys(&host), [["placed", "x", "y"]]);
     assert_eq!(host.sink.settings().place(), Some(at(300, 200)));
     assert_eq!(
         p.moved(at(300, 200), PLATE, &screens()),
         Ok(Some(at(300, 200)))
     );
-    assert_eq!(keys(&host).len(), 3, "the same place is not saved again");
+    assert_eq!(keys(&host).len(), 1, "the same place is not saved again");
 }
 
 #[test]
@@ -111,7 +110,26 @@ fn a_place_that_cannot_be_saved_holds_and_is_tried_again() {
     assert_eq!((p.at(), p.saved()), (Some(at(10, 20)), None));
     host.sink.refuse(None);
     assert_eq!(p.moved(at(10, 20), PLATE, &screens()), Ok(Some(at(10, 20))));
-    assert_eq!(keys(&host), ["x", "y", "placed"]);
+    assert_eq!(keys(&host), [["placed", "x", "y"]]);
+}
+
+#[test]
+fn a_place_that_fails_to_save_in_part_leaves_the_saved_place_whole() {
+    let mut host = FakeHost::with(Some(("placed", true.into())));
+    let mut p = placer(&mut host);
+    assert_eq!(
+        p.moved(at(300, 200), PLATE, &screens()),
+        Ok(Some(at(300, 200)))
+    );
+    host.sink.refuse_key("y", WriteError::Unsaved);
+    let failed = p.moved(at(10, 20), PLATE, &screens());
+    assert_eq!(failed, Err(WriteError::Unsaved));
+    let saved = host.sink.settings().place();
+    assert_eq!(
+        saved,
+        Some(at(300, 200)),
+        "never x from one place and y from another"
+    );
 }
 
 #[test]
