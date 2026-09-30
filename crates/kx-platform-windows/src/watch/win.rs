@@ -7,12 +7,11 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use kx_platform::ui::{SysLook, UiError, WatchGuard};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    DefWindowProcW, WM_DWMCOLORIZATIONCOLORCHANGED, WM_SETTINGCHANGE, WM_SYSCOLORCHANGE,
-    WM_THEMECHANGED,
+    WM_DWMCOLORIZATIONCOLORCHANGED, WM_SETTINGCHANGE, WM_SYSCOLORCHANGE, WM_THEMECHANGED,
 };
 
 use super::changed;
-use crate::hidden::{Hidden, Kind};
+use crate::hidden::{Hidden, Kind, answer};
 use crate::{sysui, wide};
 
 /// Class of the watcher window, local to our process.
@@ -53,18 +52,21 @@ pub(crate) fn start(on_change: OnChange) -> Result<WatchGuard, UiError> {
 #[allow(unsafe_code, reason = "The window procedure of our watcher window.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if CHANGES.contains(&msg) {
-        let now = sysui::read();
-        if let Some(look) = LAST.with(|l| changed(&mut l.borrow_mut(), now)) {
-            ON_CHANGE.with(|f| {
-                if let Some(f) = f.get() {
-                    // A panic must not cross into Windows, which would end the program.
-                    let _ = catch_unwind(AssertUnwindSafe(|| f(look)));
-                }
-            });
-        }
+        deliver(sysui::read());
     }
-    // SAFETY: default handling of a message for our own window.
-    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+    // SAFETY: our own window's message, with its own values.
+    unsafe { answer(hwnd, msg, wparam, lparam) }
+}
+
+/// Calls back with `now` when it differs from the last look; a panic must not cross into Windows.
+fn deliver(now: SysLook) {
+    if let Some(look) = LAST.with(|l| changed(&mut l.borrow_mut(), now)) {
+        ON_CHANGE.with(|f| {
+            if let Some(f) = f.get() {
+                let _ = catch_unwind(AssertUnwindSafe(|| f(look)));
+            }
+        });
+    }
 }
 
 #[cfg(test)]
@@ -87,6 +89,29 @@ mod tests {
             1,
             "the callback went with its thread"
         );
+    }
+
+    #[test]
+    fn a_callback_that_panics_still_hears_the_next_change() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let on: OnChange = Box::new(move |look: SysLook| {
+            assert!(!look.dark || look.anim_off, "a callback bug");
+            let _ = tx.send(look);
+        });
+        let _ = ON_CHANGE.with(|f| f.set(on));
+        let first = SysLook::default();
+        LAST.set(Some(first));
+        deliver(SysLook {
+            dark: true,
+            ..first
+        });
+        let third = SysLook {
+            dark: true,
+            anim_off: true,
+            ..first
+        };
+        deliver(third);
+        assert_eq!(rx.try_recv(), Ok(third), "only the change after the panic");
     }
 
     #[test]

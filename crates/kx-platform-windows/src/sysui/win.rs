@@ -18,7 +18,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{BOOL, PCWSTR, w};
 
 use super::{contrast_on, dark_from, from_colorref};
-use crate::com::Com;
 use crate::{langinfo, watch};
 
 /// Registry key of the app mode.
@@ -131,9 +130,8 @@ fn sys_colors() -> SysColors {
 }
 
 /// The accent fills Fluent uses, from `UISettings`: `AccentDark1` on light and `AccentLight2` on dark.
+/// It starts no COM, so the thread stays free to pick its mode as Qt needs; windows-rs joins the process-wide apartment itself.
 fn accent() -> Option<Accent> {
-    // windows-rs caches WinRT factories for the whole process, so COM stays on for this thread.
-    Com::start().ok()?.keep();
     let ui = UISettings::new().ok()?;
     let shade = |t: UIColorType| -> Option<Rgba> {
         let c = ui.GetColorValue(t).ok()?;
@@ -163,6 +161,32 @@ mod tests {
         let here = WinLook.read();
         let there = std::thread::spawn(|| WinLook.read()).join().unwrap();
         assert_eq!(here, there);
+    }
+
+    #[test]
+    #[allow(
+        unsafe_code,
+        reason = "Starts COM on the test's own thread after a reading."
+    )]
+    fn a_reading_leaves_a_fresh_thread_free_to_pick_its_com_mode() {
+        use windows::Win32::System::Com::{
+            COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize,
+        };
+        let picked = std::thread::spawn(|| {
+            let _ = WinLook.read();
+            // SAFETY: starts COM on this test thread, as Qt's start-up does; undone below when it worked.
+            let hr = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+            if hr.is_ok() {
+                // SAFETY: pairs the start-up above, on the same thread.
+                unsafe { CoUninitialize() };
+            }
+            hr
+        });
+        let hr = picked.join().unwrap();
+        assert!(
+            hr.is_ok(),
+            "the reading put the thread in a COM mode: {hr:?}"
+        );
     }
 
     #[test]

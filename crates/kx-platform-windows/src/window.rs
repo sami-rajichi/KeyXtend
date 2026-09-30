@@ -18,7 +18,7 @@ mod win;
 #[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
-    own_windows, shape, title, to_front,
+    own_windows, shape, title,
 };
 
 /// `WS_EX_TOPMOST`: above every window that is not topmost.

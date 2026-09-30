@@ -9,15 +9,15 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId,
-    IsWindow, IsWindowVisible, SetForegroundWindow,
+    EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId,
+    InternalGetWindowText, IsWindow, IsWindowVisible, SetForegroundWindow,
 };
 use windows::core::BOOL;
 
 use super::guard::guard;
 use super::{guard_order, ours_by, should_give_back, spared};
 use crate::screen::edges;
-use crate::{last_refused, refused};
+use crate::{failed, refused};
 
 /// Longest window title read, in UTF-16 units.
 const TITLE_CAP: usize = 512;
@@ -117,13 +117,14 @@ pub fn own_windows() -> Vec<HWND> {
     found
 }
 
-/// The title of `hwnd`, at most `TITLE_CAP` units.
+/// The title of `hwnd`, at most `TITLE_CAP` units. It sends the window no message, so any thread may
+/// read it while the window's own thread is busy.
 #[must_use]
 #[allow(unsafe_code, reason = "A title query into a local buffer.")]
 pub fn title(hwnd: HWND) -> String {
     let mut buf = [0u16; TITLE_CAP];
     // SAFETY: Windows writes at most the buffer's length.
-    let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
+    let n = unsafe { InternalGetWindowText(hwnd, &mut buf) };
     let n = usize::try_from(n).unwrap_or_default();
     String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
@@ -173,10 +174,9 @@ pub fn shape(title_is: &str, rects: &[Rect]) -> Result<(), UiError> {
     let all = region(rects)?;
     // SAFETY: `all` is ours until SetWindowRgn takes it; `hwnd` is one of our live windows.
     if unsafe { SetWindowRgn(hwnd, Some(all), true) } == 0 {
-        let refusal = last_refused();
         // SAFETY: Windows did not take the region, so we delete it, once.
         let _ = unsafe { DeleteObject(all.into()) };
-        return Err(refusal);
+        return Err(failed());
     }
     Ok(())
 }
@@ -187,7 +187,7 @@ fn region(rects: &[Rect]) -> Result<HRGN, UiError> {
     // SAFETY: makes an empty region, which the caller owns.
     let all = unsafe { CreateRectRgn(0, 0, 0, 0) };
     if all.is_invalid() {
-        return Err(last_refused());
+        return Err(failed());
     }
     for r in rects {
         if let Err(e) = add(all, *r) {
@@ -206,12 +206,12 @@ fn add(all: HRGN, r: Rect) -> Result<(), UiError> {
     // SAFETY: makes one region, deleted below.
     let one = unsafe { CreateRectRgn(left, top, right, bottom) };
     if one.is_invalid() {
-        return Err(last_refused());
+        return Err(failed());
     }
     // SAFETY: both regions are ours and live.
     let joined = unsafe { CombineRgn(Some(all), Some(all), Some(one), RGN_OR) };
     let result = if joined == RGN_ERROR {
-        Err(last_refused())
+        Err(failed())
     } else {
         Ok(())
     };
@@ -221,24 +221,18 @@ fn add(all: HRGN, r: Rect) -> Result<(), UiError> {
 }
 
 /// Gives the focus back to `noted` when one of ours took it and `noted` is another app's live window.
-#[allow(
-    unsafe_code,
-    reason = "A window query and a focus change Windows allows us."
-)]
+#[allow(unsafe_code, reason = "A focus change Windows allows us.")]
 pub fn give_back(noted: HWND) {
-    // SAFETY: a plain query; a null or gone window reads as not a window.
-    let alive = unsafe { IsWindow(Some(noted)) }.as_bool();
-    if should_give_back(alive, is_ours(foreground()), is_ours(noted)) {
+    if gives_back(noted) {
         // SAFETY: one of our windows is in front, so Windows allows the change.
         let _ = unsafe { SetForegroundWindow(noted) };
     }
 }
 
-/// Asks Windows to bring `target` to the front when something else is there; it may refuse.
-#[allow(unsafe_code, reason = "A focus change request.")]
-pub fn to_front(target: HWND) {
-    if foreground() != target {
-        // SAFETY: a plain request; a refused or gone window stays behind, which the caller sees.
-        let _ = unsafe { SetForegroundWindow(target) };
-    }
+/// True when the focus should go back to `noted`: one of ours is in front and `noted` is another app's live window.
+#[allow(unsafe_code, reason = "A plain window query.")]
+pub(super) fn gives_back(noted: HWND) -> bool {
+    // SAFETY: a plain query; a null or gone window reads as not a window.
+    let alive = unsafe { IsWindow(Some(noted)) }.as_bool();
+    should_give_back(alive, is_ours(foreground()), is_ours(noted))
 }

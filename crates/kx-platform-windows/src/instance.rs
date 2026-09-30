@@ -109,6 +109,22 @@ mod tests {
     }
 
     #[test]
+    fn every_command_has_its_own_row() {
+        // Exhaustive on purpose: a new command stops this test building until it is listed here and in `COMMANDS`.
+        let slot = |c: Command| match c {
+            Command::Show => 0,
+            Command::Quit => 1,
+        };
+        let all = [Command::Show, Command::Quit];
+        assert_eq!(all.map(slot), [0, 1], "each command listed once");
+        assert_eq!(COMMANDS.len(), all.len());
+        for command in all {
+            assert_ne!(code(command), 0, "{command:?} has no row");
+            assert!(COMMANDS.iter().any(|row| row.0 == command), "{command:?}");
+        }
+    }
+
+    #[test]
     fn no_command_has_code_zero_and_codes_differ() {
         assert_ne!(code(Command::Show), 0);
         assert_ne!(code(Command::Show), code(Command::Quit));

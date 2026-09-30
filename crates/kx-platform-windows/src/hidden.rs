@@ -4,17 +4,17 @@ use std::sync::mpsc;
 use std::thread::JoinHandle;
 
 use kx_platform::ui::UiError;
-use windows::Win32::Foundation::{E_FAIL, HWND, LPARAM, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DestroyWindow, DispatchMessageW, GetMessageW, HWND_MESSAGE, MSG,
-    PostThreadMessageW, RegisterClassW, WM_QUIT, WNDCLASSW, WNDPROC, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, HWND_MESSAGE,
+    MSG, PostThreadMessageW, RegisterClassW, WM_CLOSE, WM_QUIT, WNDCLASSW, WNDPROC,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP,
 };
 use windows::core::PCWSTR;
 
-use crate::refused;
+use crate::{failed, refused};
 
 /// Where the hidden window sits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,7 +55,7 @@ impl Hidden {
                 Err(e) => drop(tx.send(Err(e))),
             }
         });
-        let thread = rx.recv().map_err(|_| UiError::Refused(E_FAIL.0))??;
+        let thread = rx.recv().map_err(|_| failed())??;
         Ok(Self { thread, join })
     }
 
@@ -115,6 +115,25 @@ fn window(class: PCWSTR, kind: Kind, proc: WNDPROC) -> Result<HWND, UiError> {
     .map_err(|e| refused(&e))
 }
 
+/// Windows' default handling for a message to one of our hidden windows, except `WM_CLOSE`, which is
+/// ignored so another program cannot end the window; `stop` ends it.
+#[allow(
+    unsafe_code,
+    reason = "Default handling in our hidden windows' procedures."
+)]
+pub(crate) unsafe extern "system" fn answer(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_CLOSE {
+        return LRESULT::default();
+    }
+    // SAFETY: the caller passes a message for our own window, as Windows gave it.
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+}
+
 /// Hears this thread's messages until `WM_QUIT` or an error.
 #[allow(unsafe_code, reason = "The standard message loop.")]
 fn pump() {
@@ -131,4 +150,30 @@ fn pump() {
 fn destroy(hwnd: HWND) {
     // SAFETY: the window belongs to this thread, which made it.
     let _ = unsafe { DestroyWindow(hwnd) };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        FindWindowExW, IsWindow, SendMessageW, WM_CLOSE,
+    };
+
+    #[test]
+    #[allow(
+        unsafe_code,
+        reason = "Finds and messages the test's own hidden window."
+    )]
+    fn another_program_cannot_close_a_hidden_window() {
+        let class = crate::wide(&format!("KeyXtendTest.{}.close", std::process::id()));
+        let hidden = Hidden::start(class.clone(), Kind::TopLevel, Some(answer), || ()).unwrap();
+        // SAFETY: the class name ends with a null; WM_CLOSE carries no pointers.
+        let open = unsafe {
+            let window = FindWindowExW(None, None, PCWSTR(class.as_ptr()), PCWSTR::null()).unwrap();
+            SendMessageW(window, WM_CLOSE, None, None);
+            IsWindow(Some(window)).as_bool()
+        };
+        hidden.stop();
+        assert!(open, "the window ignored WM_CLOSE");
+    }
 }

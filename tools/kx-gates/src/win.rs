@@ -225,6 +225,16 @@ pub fn close(hwnd: HWND) -> Result<(), String> {
         .map_err(|e| format!("WM_CLOSE to {}: {e}", describe(hwnd)))
 }
 
+/// Asks Windows to bring `hwnd` to the front with no key press; true once it is in front.
+#[allow(unsafe_code, reason = "A focus request on a window handle.")]
+pub fn ask_front(hwnd: HWND) -> bool {
+    if kx_platform_windows::window::foreground() != hwnd {
+        // SAFETY: a plain request Windows may refuse; the check below sees the result.
+        let _ = unsafe { SetForegroundWindow(hwnd) };
+    }
+    kx_platform_windows::window::foreground() == hwnd
+}
+
 /// Brings `hwnd` to the front with the Alt-tap trick; true once it is in front.
 #[allow(unsafe_code, reason = "Plain calls on a window handle.")]
 pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {

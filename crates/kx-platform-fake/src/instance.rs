@@ -58,13 +58,16 @@ impl Instance for FakeInstance {
     }
 
     /// Reaches the running copy only once it listens, as the real adapter finds it by the window it listens on.
-    /// It calls the listener while holding the session, so a listener must not send.
+    /// It calls the listener outside the session lock, so the listener may call `listen`, which then wins.
     fn send(&self, command: Command) -> Result<(), UiError> {
-        let mut session = lock(&self.0);
-        let Some(listener) = &session.listener else {
+        let Some(listener) = lock(&self.0).listener.take() else {
             return Err(UiError::NoWindow);
         };
         listener(command);
+        let mut session = lock(&self.0);
+        if session.claimed && session.listener.is_none() {
+            session.listener = Some(listener);
+        }
         session.sent.push(command);
         Ok(())
     }
@@ -95,6 +98,9 @@ impl Drop for FakeClaim {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// How long a test waits for a send on another thread; a wait, never a sleep.
+    const WAIT: std::time::Duration = std::time::Duration::from_secs(5);
 
     #[test]
     fn only_one_copy_claims_until_it_lets_go() {
@@ -146,6 +152,34 @@ mod tests {
         assert_eq!(claim.listen(hear("third")), Err(UiError::Refused(9)));
         running.send(Command::Show).unwrap();
         assert_eq!(*heard.lock().unwrap(), [("second", Command::Show)]);
+    }
+
+    #[test]
+    fn a_listener_may_listen_again() {
+        type Shared = Arc<Mutex<Option<Box<dyn Claim>>>>;
+        let running = FakeInstance::new();
+        let shared: Shared = Arc::new(Mutex::new(Some(running.claim().unwrap())));
+        let heard = Arc::new(Mutex::new(Vec::new()));
+        let (keep, into) = (Arc::clone(&shared), Arc::clone(&heard));
+        let first = Box::new(move |_| {
+            let into = Arc::clone(&into);
+            let next = Box::new(move |c| into.lock().unwrap().push(c));
+            keep.lock().unwrap().as_mut().unwrap().listen(next).unwrap();
+        });
+        shared
+            .lock()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .listen(first)
+            .unwrap();
+        let later = running.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        // On its own thread, so a listener that locks the session fails the test instead of hanging it.
+        std::thread::spawn(move || tx.send([later.send(Command::Show), later.send(Command::Quit)]));
+        assert_eq!(rx.recv_timeout(WAIT), Ok([Ok(()), Ok(())]));
+        assert_eq!(*heard.lock().unwrap(), [Command::Quit]);
+        shared.lock().unwrap().take();
     }
 
     #[test]

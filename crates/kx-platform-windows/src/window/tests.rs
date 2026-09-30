@@ -5,41 +5,58 @@
     reason = "The tests make, guard and destroy their own hidden windows."
 )]
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use kx_platform::ui::{FocusToken, UiError, WindowGuard};
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_EXSTYLE, GetDesktopWindow,
-    GetWindowLongPtrW, MA_NOACTIVATE, RegisterClassW, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
-    SWP_NOZORDER, SendMessageW, SetWindowLongPtrW, WINDOW_EX_STYLE, WINDOWPOS, WM_MOUSEACTIVATE,
-    WM_NCDESTROY, WM_WINDOWPOSCHANGING, WNDCLASSW, WS_POPUP,
+    CallWindowProcW, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_EXSTYLE, GWLP_WNDPROC,
+    GetDesktopWindow, GetWindowLongPtrW, MA_NOACTIVATE, RegisterClassW, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SWP_NOZORDER, SendMessageW, SetWindowLongPtrW, WINDOW_EX_STYLE, WINDOWPOS,
+    WM_MOUSEACTIVATE, WM_NCDESTROY, WM_WINDOWPOSCHANGING, WNDCLASSW, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
-use super::guard::{guard, guarded};
-use super::win::{token_of, window_of};
-use super::{
-    KEPT, THROUGH, WinGuard, foreground, from_raw, give_back, is_ours, own_windows, title,
-};
+use super::guard::{Proc, guard, guarded, next};
+use super::win::{gives_back, token_of, window_of};
+use super::{KEPT, THROUGH, WinGuard, foreground, from_raw, is_ours, own_windows, title};
 use crate::wide;
 
 /// Class of the test windows.
 const CLASS: PCWSTR = w!("KeyXtend.GuardTest");
+/// How long a test waits for another thread; a wait, never a sleep.
+const WAIT: std::time::Duration = std::time::Duration::from_secs(5);
 
 thread_local! {
     /// Whether the guard was still hooked when this thread's last test window got `WM_NCDESTROY`.
     static HOOKED_AT_END: Cell<Option<bool>> = const { Cell::new(None) };
+    /// Which procedures saw `WM_NCDESTROY`, in order.
+    static SEEN: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+    /// The procedure the later test subclass hands messages to.
+    static BEHIND: Cell<isize> = const { Cell::new(0) };
 }
 
 /// The test windows' own procedure; it runs after the guard's, so it sees what the guard left.
 unsafe extern "system" fn plain(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if msg == WM_NCDESTROY {
         HOOKED_AT_END.set(Some(guarded(hwnd)));
+        SEEN.with_borrow_mut(|s| s.push("own"));
     }
     // SAFETY: default handling of a message for the test's own window.
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+}
+
+/// A subclass another part of the program puts in front after the guard, as a toolkit could.
+unsafe extern "system" fn later(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if msg == WM_NCDESTROY {
+        SEEN.with_borrow_mut(|s| s.push("later"));
+    }
+    let behind = HANDLE(std::ptr::without_provenance_mut(
+        BEHIND.get().cast_unsigned(),
+    ));
+    // SAFETY: hands the message to the procedure this subclass replaced, as a subclass must.
+    unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
 }
 
 /// A hidden window of the test thread, destroyed when dropped; it is never shown.
@@ -156,6 +173,41 @@ fn the_guard_unhooks_itself_when_its_window_is_destroyed() {
 }
 
 #[test]
+fn a_later_subclass_stays_in_front_and_every_procedure_sees_the_end() {
+    let window = Hidden::new("KeyXtend test: later subclass");
+    guard(window.0).unwrap();
+    let ours = later as Proc as usize;
+    // SAFETY: puts the test's subclass in front of the guard on the test's own window.
+    BEHIND.set(unsafe { SetWindowLongPtrW(window.0, GWLP_WNDPROC, ours.cast_signed()) });
+    guard(window.0).unwrap();
+    // SAFETY: a plain query of the test's own window.
+    let front = unsafe { GetWindowLongPtrW(window.0, GWLP_WNDPROC) };
+    assert_eq!(
+        front,
+        ours.cast_signed(),
+        "guarding again keeps it in front"
+    );
+    SEEN.take();
+    drop(window);
+    assert_eq!(SEEN.take(), ["later", "own"]);
+    assert_eq!(
+        HOOKED_AT_END.get(),
+        Some(false),
+        "the guard unhooked between them"
+    );
+}
+
+#[test]
+fn a_title_reads_from_another_thread_while_the_owner_is_busy() {
+    let window = Hidden::new("KeyXtend test: busy owner");
+    let raw = window.0.0.addr().cast_signed();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || tx.send(title(from_raw(raw))));
+    let read = rx.recv_timeout(WAIT);
+    assert_eq!(read.as_deref(), Ok("KeyXtend test: busy owner"));
+}
+
+#[test]
 fn an_unguarded_window_ends_with_no_guard() {
     drop(Hidden::new("KeyXtend test: plain"));
     assert_eq!(HOOKED_AT_END.get(), Some(false));
@@ -211,6 +263,6 @@ fn a_raw_handle_and_a_focus_token_read_back() {
 fn giving_back_is_a_no_op_while_none_of_ours_is_in_front() {
     let window = Hidden::new("KeyXtend test: give back");
     assert!(!is_ours(foreground()), "the test program is never in front");
-    give_back(window.0);
-    WinGuard.give_back(FocusToken::new(0));
+    assert!(!gives_back(window.0), "none of ours is in front");
+    assert!(!gives_back(HWND::default()), "no window");
 }

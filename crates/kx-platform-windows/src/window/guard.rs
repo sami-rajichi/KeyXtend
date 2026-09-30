@@ -19,7 +19,7 @@ use crate::{last_refused, refused};
 const PROP: PCWSTR = w!("KeyXtend.Guard");
 
 /// A window procedure, as Windows calls it.
-type Proc = unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT;
+pub(super) type Proc = unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT;
 
 /// Makes our window `hwnd` non-activating and topmost, and keeps it so until it is destroyed.
 /// Windows lets only the owning thread change a window's procedure; another thread is refused.
@@ -130,7 +130,7 @@ fn pointee<T>(lparam: LPARAM) -> *mut T {
     unsafe_code,
     reason = "Turns the kept procedure value back into a function pointer."
 )]
-fn next(own: HANDLE) -> WNDPROC {
+pub(super) fn next(own: HANDLE) -> WNDPROC {
     let code = std::ptr::with_exposed_provenance::<()>(own.0.addr());
     // SAFETY: a non-null pointer the size of a function pointer; only CallWindowProcW uses it.
     (!code.is_null()).then(|| unsafe { std::mem::transmute::<*const (), Proc>(code) })

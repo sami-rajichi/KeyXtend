@@ -51,7 +51,7 @@ pub trait WindowGuard: Send + Sync {
     /// `Refused` when the OS will not guard a window, as from another thread.
     fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError>;
 
-    /// Lets clicks outside `rects` pass through the window titled `title`.
+    /// Lets clicks outside `rects` pass through the window titled `title`, a call for the UI thread.
     /// The rects are physical pixels relative to the window's top-left corner.
     ///
     /// # Errors
@@ -184,7 +184,7 @@ pub enum BackdropKind {
 
 /// Sets the material behind a window.
 pub trait Backdrop: Send + Sync {
-    /// Puts `kind` behind the window titled `title`, in dark or light.
+    /// Puts `kind` behind the window titled `title`, in dark or light; call it on the UI thread.
     ///
     /// # Errors
     /// `NoWindow` for an unknown title, `Refused` when the OS says no; the UI then draws a solid plate.
@@ -200,10 +200,10 @@ pub enum Command {
     Quit,
 }
 
-/// Being the one running copy; dropping it lets another copy claim.
+/// Being the one running copy; dropping it waits for a running `on`, then lets another copy claim.
 pub trait Claim: Send {
     /// Calls `on` with each command a later copy sends; it may run on another thread than the caller's.
-    /// A later call replaces `on`, and `on` must not call `listen`.
+    /// A later call replaces `on`, even one made while `on` runs, from any thread.
     ///
     /// # Errors
     /// `Refused` when the OS will not set up the listener; an earlier `on` then stays.

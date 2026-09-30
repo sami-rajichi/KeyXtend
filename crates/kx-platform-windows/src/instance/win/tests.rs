@@ -3,6 +3,7 @@
 use super::*;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
+use windows::Win32::UI::WindowsAndMessaging::{SendMessageW, WM_CLOSE};
 
 /// How long a test waits for a posted command; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(5);
@@ -70,6 +71,94 @@ fn a_second_listen_replaces_the_first() {
         gone,
         "the first listener was dropped, unheard"
     );
+}
+
+#[test]
+fn a_listener_waiting_for_the_ui_thread_lets_that_thread_listen() {
+    let running = app("handoff");
+    let mut claim = running.claim().unwrap();
+    let (started_tx, started) = mpsc::channel();
+    let (go_tx, go) = mpsc::channel::<()>();
+    let (done_tx, done) = mpsc::channel();
+    let on: OnCommand = Box::new(move |_| {
+        let _ = started_tx.send(());
+        let _ = done_tx.send(go.recv_timeout(WAIT).is_ok());
+    });
+    claim.listen(on).unwrap();
+    running.send(Command::Show).unwrap();
+    started.recv_timeout(WAIT).unwrap();
+    let (next, _rx) = heard_list();
+    claim.listen(next).unwrap();
+    let _ = go_tx.send(());
+    assert_eq!(done.recv_timeout(WAIT), Ok(true), "the UI thread answered");
+}
+
+#[test]
+fn a_listener_may_listen_again_from_its_own_thread() {
+    type Shared = Arc<Mutex<Option<Box<dyn Claim>>>>;
+    let running = app("relisten");
+    let shared: Shared = Arc::new(Mutex::new(Some(running.claim().unwrap())));
+    let (next, rx) = heard_list();
+    let next = Mutex::new(Some(next));
+    let keep = Arc::clone(&shared);
+    let first: OnCommand = Box::new(move |_| {
+        let replacement = next.lock().unwrap().take();
+        if let (Some(on), Some(claim)) = (replacement, keep.lock().unwrap().as_mut()) {
+            claim.listen(on).unwrap();
+        }
+    });
+    shared
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .listen(first)
+        .unwrap();
+    running.send(Command::Show).unwrap();
+    running.send(Command::Quit).unwrap();
+    assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Quit), "the new listener");
+    shared.lock().unwrap().take();
+}
+
+#[test]
+fn a_listener_that_panics_still_hears_the_next_command() {
+    let running = app("panic");
+    let mut claim = running.claim().unwrap();
+    let (tx, rx) = mpsc::channel();
+    let on: OnCommand = Box::new(move |c| {
+        assert_ne!(c, Command::Show, "a listener bug");
+        let _ = tx.send(c);
+    });
+    claim.listen(on).unwrap();
+    running.send(Command::Show).unwrap();
+    running.send(Command::Quit).unwrap();
+    assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Quit));
+}
+
+#[test]
+fn another_program_cannot_close_the_command_window() {
+    let running = app("close");
+    let mut claim = running.claim().unwrap();
+    let (on, rx) = heard_list();
+    claim.listen(on).unwrap();
+    close(&running);
+    assert_eq!(
+        running.send(Command::Show),
+        Ok(()),
+        "the window is still there"
+    );
+    assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Show));
+}
+
+/// Sends `WM_CLOSE` to the command window of `copy` and waits for its answer, as another program could.
+#[allow(unsafe_code, reason = "Sends WM_CLOSE to the test's own window.")]
+fn close(copy: &WinInstance) {
+    let class = PCWSTR(copy.class.as_ptr());
+    // SAFETY: the class name ends with a null; WM_CLOSE carries no pointers.
+    unsafe {
+        let window = FindWindowExW(Some(HWND_MESSAGE), None, class, PCWSTR::null()).unwrap();
+        SendMessageW(window, WM_CLOSE, None, None);
+    }
 }
 
 #[test]

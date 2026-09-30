@@ -24,6 +24,30 @@ const SHEET: i32 = -1;
 /// `E_INVALIDARG`: DWM's answer on a Windows without system backdrops (before Windows 11 22H2).
 const UNSUPPORTED: i32 = 0x8007_0057_u32.cast_signed();
 
+/// One DWM change `apply` asks for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Change {
+    /// The DWM backdrop type.
+    Material(i32),
+    /// The dark tint, for a material only.
+    Dark(bool),
+    /// How far the frame reaches into the window.
+    Frame(i32),
+}
+
+/// Asks `set` for each change `kind` needs, material first, so a Windows that refuses it keeps its plain frame.
+fn apply_with(
+    kind: BackdropKind,
+    dark: bool,
+    mut set: impl FnMut(Change) -> Result<(), UiError>,
+) -> Result<(), UiError> {
+    outcome(kind, set(Change::Material(system_type(kind))))?;
+    if kind != BackdropKind::None {
+        set(Change::Dark(dark))?;
+    }
+    set(Change::Frame(margin(kind)))
+}
+
 /// The result of trying `kind`: clearing a backdrop Windows does not have leaves nothing to clear.
 fn outcome(kind: BackdropKind, tried: Result<(), UiError>) -> Result<(), UiError> {
     match tried {
@@ -62,7 +86,7 @@ mod win {
     use windows::Win32::UI::Controls::MARGINS;
     use windows::core::BOOL;
 
-    use super::{margin, outcome, system_type};
+    use super::{Change, apply_with};
     use crate::refused;
     use crate::window::own_titled;
 
@@ -73,12 +97,13 @@ mod win {
     impl Backdrop for WinBackdrop {
         fn apply(&self, title: &str, kind: BackdropKind, dark: bool) -> Result<(), UiError> {
             let hwnd = own_titled(title).ok_or(UiError::NoWindow)?;
-            if kind != BackdropKind::None {
-                set(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &BOOL::from(dark))?;
-            }
-            extend(hwnd, margin(kind))?;
-            let backdrop = DWM_SYSTEMBACKDROP_TYPE(system_type(kind));
-            outcome(kind, set(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdrop))
+            apply_with(kind, dark, |change| match change {
+                Change::Material(t) => {
+                    set(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &DWM_SYSTEMBACKDROP_TYPE(t))
+                }
+                Change::Dark(on) => set(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &BOOL::from(on)),
+                Change::Frame(m) => extend(hwnd, m),
+            })
         }
     }
 
@@ -148,6 +173,51 @@ mod tests {
         for kind in [BackdropKind::Mica, BackdropKind::Acrylic] {
             assert_eq!(outcome(kind, unsupported), unsupported, "{kind:?}");
         }
+    }
+
+    /// Runs `apply_with`, refusing the material with `answer`, and lists the changes it asked for.
+    fn changes(
+        kind: BackdropKind,
+        answer: Result<(), UiError>,
+    ) -> (Vec<Change>, Result<(), UiError>) {
+        let mut asked = Vec::new();
+        let result = apply_with(kind, true, |c| {
+            asked.push(c);
+            if matches!(c, Change::Material(_)) {
+                answer
+            } else {
+                Ok(())
+            }
+        });
+        (asked, result)
+    }
+
+    #[test]
+    fn a_material_is_set_first_then_the_dark_tint_and_the_frame() {
+        let (asked, result) = changes(BackdropKind::Mica, Ok(()));
+        let all = [
+            Change::Material(DWMSBT_MAINWINDOW),
+            Change::Dark(true),
+            Change::Frame(SHEET),
+        ];
+        assert_eq!((asked.as_slice(), result), (all.as_slice(), Ok(())));
+    }
+
+    #[test]
+    fn a_refused_material_changes_nothing_else() {
+        let unsupported = Err(UiError::Refused(UNSUPPORTED));
+        for kind in [BackdropKind::Mica, BackdropKind::Acrylic] {
+            let (asked, result) = changes(kind, unsupported);
+            assert_eq!(asked, [Change::Material(system_type(kind))], "{kind:?}");
+            assert_eq!(result, unsupported);
+        }
+    }
+
+    #[test]
+    fn none_puts_the_frame_back_even_without_system_backdrops() {
+        let (asked, result) = changes(BackdropKind::None, Err(UiError::Refused(UNSUPPORTED)));
+        assert_eq!(asked, [Change::Material(DWMSBT_NONE), Change::Frame(0)]);
+        assert_eq!(result, Ok(()));
     }
 
     #[test]

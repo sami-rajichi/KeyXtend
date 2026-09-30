@@ -1,5 +1,5 @@
 //! Spike glue over the product's window guard (`kx_platform_windows::window`, ADR-0014): the spared Settings
-//! title, errors as text for the face, and the settle wait quick-fill needs. No Win32 call is made here.
+//! title, errors as text for the face, and quick-fill's focus request, the one Win32 call made here.
 
 use std::sync::OnceLock;
 
@@ -7,6 +7,7 @@ use kx_module_api::ports::Rect;
 use kx_platform::ui::UiError;
 use kx_platform_windows::window::{self, foreground};
 use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
 
 /// Our one window that may take focus, as Settings does; the guard leaves it alone.
 static SPARED: OnceLock<String> = OnceLock::new();
@@ -45,8 +46,12 @@ pub fn shape(title_is: &str, rects: &[[i32; 4]]) -> Result<bool, String> {
 }
 
 /// Brings `target` back to the front if something else took it; true when it is in front after `settle_ms`.
+/// Spike only (quick-fill, P9): the product never asks Windows for the focus, so this call stays here.
 pub fn bring_back(target: HWND, settle_ms: u64) -> bool {
-    window::to_front(target);
+    if foreground() != target {
+        // SAFETY: a plain request Windows may refuse; the check below sees the result.
+        let _ = unsafe { SetForegroundWindow(target) };
+    }
     std::thread::sleep(std::time::Duration::from_millis(settle_ms));
     foreground() == target
 }

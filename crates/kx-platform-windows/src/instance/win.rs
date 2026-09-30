@@ -10,13 +10,11 @@ use windows::Win32::Foundation::{
     CloseHandle, GetLastError, HANDLE, HWND, LPARAM, LRESULT, WPARAM,
 };
 use windows::Win32::System::Threading::CreateMutexW;
-use windows::Win32::UI::WindowsAndMessaging::{
-    DefWindowProcW, FindWindowExW, HWND_MESSAGE, PostMessageW, WM_APP,
-};
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowExW, HWND_MESSAGE, PostMessageW, WM_APP};
 use windows::core::PCWSTR;
 
 use super::{Hold, class_name, code, from_code, hold_of, mutex_name};
-use crate::hidden::{Hidden, Kind};
+use crate::hidden::{Hidden, Kind, answer};
 use crate::{refused, wide};
 
 /// The message a later copy posts, with the command's code as its first value.
@@ -153,8 +151,8 @@ fn lock(slot: &Slot) -> MutexGuard<'_, Option<OnCommand>> {
 #[allow(unsafe_code, reason = "The window procedure of our command window.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if msg != COMMAND_MSG {
-        // SAFETY: default handling of a message for our own window.
-        return unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) };
+        // SAFETY: our own window's message, with its own values.
+        return unsafe { answer(hwnd, msg, wparam, lparam) };
     }
     if let Some(command) = from_code(wparam.0) {
         SLOT.with(|s| s.get().map(|slot| heard(slot, command)));
@@ -162,10 +160,16 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
     LRESULT::default()
 }
 
-/// Calls the listener with `command`; a panic must not cross into Windows, which would end the program.
+/// Calls the listener with `command` outside the lock, so it may wait for a thread that calls `listen`.
+/// A panic must not cross into Windows, which would end the program; a listener set during the call wins.
 fn heard(slot: &Slot, command: Command) {
-    if let Some(on) = lock(slot).as_ref() {
-        let _ = catch_unwind(AssertUnwindSafe(|| on(command)));
+    let Some(on) = lock(slot).take() else {
+        return;
+    };
+    let _ = catch_unwind(AssertUnwindSafe(|| on(command)));
+    let mut now = lock(slot);
+    if now.is_none() {
+        *now = Some(on);
     }
 }
 

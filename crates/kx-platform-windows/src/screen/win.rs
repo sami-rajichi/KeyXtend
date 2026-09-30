@@ -13,7 +13,7 @@ use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 use windows::core::BOOL;
 
 use super::{dpi_or_default, is_primary, rect_of};
-use crate::{last_refused, refused};
+use crate::{failed, refused};
 
 /// The Windows screens: every monitor's work area and the pointer.
 #[derive(Clone, Copy, Debug, Default)]
@@ -94,7 +94,7 @@ fn nearest(r: &RECT) -> HMONITOR {
 /// # Errors
 /// `Refused` when Windows will not describe that screen.
 pub fn work_area(r: &RECT) -> Result<RECT, UiError> {
-    info(nearest(r)).map(|i| i.rcWork).ok_or_else(last_refused)
+    info(nearest(r)).map(|i| i.rcWork).ok_or_else(failed)
 }
 
 /// The DPI of the screen nearest to box `r`, or the default when Windows cannot say.

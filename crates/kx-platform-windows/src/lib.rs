@@ -62,6 +62,12 @@ fn last_refused() -> kx_platform::ui::UiError {
     refused(&windows::core::Error::from_thread())
 }
 
+/// A refused UI request from a call that sets no last error, with Windows' generic failure code.
+#[cfg(windows)]
+fn failed() -> kx_platform::ui::UiError {
+    kx_platform::ui::UiError::Refused(windows::Win32::Foundation::E_FAIL.0)
+}
+
 /// `text` as UTF-16 with an ending null, for Windows names.
 #[cfg(windows)]
 fn wide(text: &str) -> Vec<u16> {

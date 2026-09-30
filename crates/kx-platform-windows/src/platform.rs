@@ -127,14 +127,24 @@ mod tests {
     }
 
     #[test]
-    fn the_backdrop_and_instance_ports_are_handed_out() {
+    fn the_backdrop_port_finds_no_window_we_do_not_show() {
         use kx_platform::ui::{BackdropKind, UiError};
         let platform = WindowsPlatform::new().unwrap();
         let missing = platform
             .backdrop()
             .apply("KeyXtend test: none", BackdropKind::None, false);
         assert_eq!(missing, Err(UiError::NoWindow));
-        let _instance: Arc<dyn Instance> = platform.instance();
+    }
+
+    #[test]
+    fn two_platforms_meet_on_one_running_copy() {
+        use kx_platform::ui::Running;
+        let first = WindowsPlatform::new().unwrap().instance();
+        let second = WindowsPlatform::new().unwrap().instance();
+        // A real copy may run on this PC; either way both platforms must agree, and no command is sent.
+        let claim = first.claim();
+        assert!(matches!(second.claim(), Err(Running)), "one session name");
+        drop(claim);
     }
 
     #[test]
