@@ -1,5 +1,7 @@
 //! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`.
 
+use kx_module_api::ports::MAX_PRESETS;
+
 /// Module names, by module id.
 pub const MODULE: &str = "module";
 /// Theme names, by `themes.toml` id.
@@ -28,8 +30,8 @@ pub const SPACE: &str = "lang.space";
 pub const SIZE: &str = "size";
 /// The size buttons' names for tips and readers, by an id in `SIZES`.
 pub const SIZE_NAME: &str = "sizename";
-/// The size buttons' ids, in `[keyboard] presets` order.
-pub const SIZES: [&str; 3] = ["s", "m", "l"];
+/// The size buttons' ids, in `[keyboard] presets` order: one per preset the face offers, so the counts cannot part.
+pub const SIZES: [&str; MAX_PRESETS] = ["s", "m", "l"];
 /// The look's modes, by `[ui] mode` value.
 pub const MODE: &str = "mode";
 /// The D-pad's arrows and Stop, by `icons.toml` `[dpad]` id.

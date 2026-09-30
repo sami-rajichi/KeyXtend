@@ -142,15 +142,10 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
 }
 
 #[test]
-fn each_preset_the_keyboard_allows_has_a_size_letter_and_name() {
+fn each_default_size_preset_has_a_size_letter_and_name() {
     let presets = crate::keyboard_defaults()["presets"]
         .as_array()
         .map(Vec::len)
         .expect("the presets are a list");
     assert_eq!(presets, SIZES.len(), "one size button text per preset");
-    assert_eq!(
-        kx_mod_keyboard::MAX_PRESETS,
-        SIZES.len(),
-        "the settings check caps presets at the named sizes"
-    );
 }

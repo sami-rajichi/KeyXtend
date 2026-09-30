@@ -29,7 +29,7 @@ pub use panel::{LangList, LangRow, ListView, Moved};
 pub use place::Placer;
 pub use plan::{Plan, Route};
 pub use run::{Io, Ports, TapError, Tapped, Typing};
-pub use settings::{Corner, KeyboardSettings, LangKey, MAX_PRESETS, Modifiers, SPEC};
+pub use settings::{Corner, KeyboardSettings, LangKey, Modifiers, SPEC};
 pub use sizer::{Limits, Resize, SizeError, Sizer};
 pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Nav, Role};
 pub use view::{BoardView, KeyState, KeyView, StateView};

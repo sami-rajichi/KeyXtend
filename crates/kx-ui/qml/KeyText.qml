@@ -146,11 +146,12 @@ Item {
     }
 
     // Named keys: an icon, a label, or both side by side; their names show as tooltips instead of text.
+    // Centred by hand: anchors snap a centre to whole pixels, which can push a fitted label past its room.
     Row {
         id: named
         visible: !t.isChar && !t.isSpace && !t.isLang
-        anchors.centerIn: parent
-        anchors.horizontalCenterOffset: t.sculpted ? (t.look.cap.top_inset_px[3] - t.look.cap.top_inset_px[1]) * t.s / 2 : 0
+        x: (t.width - width) / 2 + (t.sculpted ? (t.look.cap.top_inset_px[3] - t.look.cap.top_inset_px[1]) * t.s / 2 : 0)
+        anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
         Icon {

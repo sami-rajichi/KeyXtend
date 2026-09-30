@@ -102,7 +102,7 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR and the open l
 | `modifiers` | `"release"` | Latched modifiers let go after the next key (`"release"`) or stay until clicked again (`"stay"`). |
 | `lang_key` | `"carousel"` | How the language key shows the layouts: `"carousel"`, `"cycle"` or `"list"`. |
 | `size` | `1.0` | The keyboard's size as a factor of the size-1 board; the module writes it when the user resizes. |
-| `presets` | `[1.0, 1.25, 1.5]` | The S, M and L sizes: one to `MAX_PRESETS` (one per size button the top bar names), each between `size_min` and `size_max`. |
+| `presets` | `[1.0, 1.25, 1.5]` | The S, M and L sizes: one to the face port's `MAX_PRESETS` (one per size button the top bar names), each between `size_min` and `size_max`. |
 | `size_step` | `0.05` | Change per smaller or bigger click; above 0. |
 | `size_min`, `size_max` | `0.8`, `1.8` | The smallest and largest sizes; `size_min` is above 0 and below `size_max`. |
 | `relabel_ms` | `500` | How often the labels follow the layout of the app in front, in ms; above 0. |
@@ -114,7 +114,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 
 ## Public API
 
-- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `MAX_PRESETS`, `Modifiers`, `LangKey`, `Corner`.
+- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `DPAD_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.

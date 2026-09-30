@@ -2,7 +2,7 @@
 
 pub use kx_module_api::ports::Corner;
 
-use kx_module_api::ports::Point;
+use kx_module_api::ports::{MAX_PRESETS, Point};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
 
@@ -12,8 +12,6 @@ const NOT_A_NUMBER: &str = "sizes must be numbers";
 const BAD_RANGE: &str = "size_min must be above 0 and below size_max";
 /// Why the step was refused.
 const BAD_STEP: &str = "size_step must be above 0";
-/// The most presets there may be: one per size button the top bar names.
-pub const MAX_PRESETS: usize = 3;
 /// Why the presets were refused.
 const BAD_PRESETS: &str = "presets must be at least one size, no more than the top bar names, between size_min and size_max";
 /// Why the size was refused.

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: key labels centred exactly
+Named-key labels are now centred by hand, since anchors rounded their centre to whole pixels and pushed some labels up to 0.8 px past Dolch's top face. The fit test now checks every size step from the smallest to the largest, in one hidden window per theme and language. The size preset limit moved to the keyboard face port, so the UI no longer depends on the keyboard module.
+
 ## 2026-09-30 — P3: tray menu review fixes
 The tray menu now stays open for `[ui] tray_grace_ms` (500 ms) when another window comes to the front just after it opens, as the Windows 11 hidden icons can do, and a press on the banner or the language list closes it too. The icon's changes go to the taskbar from its own thread, so a hung Explorer can no longer freeze the keyboard, and the icon is sized and redrawn for the taskbar screen's scale. Arabic rows in the language list no longer clip, and the root's wiring moved into `App.qml`, where Qt Quick tests check every way the menu closes. ADR-0019 records the tray decision, and ADR-0016 is back to its accepted text.
 

@@ -100,7 +100,7 @@ fn golden(name: &str) -> Value {
 }
 
 /// The board and every state the tests draw, one line each, as the keyboard's own golden files show them in full, and
-/// the smallest and largest sizes the keyboard allows.
+/// the smallest and largest sizes the keyboard allows and its size step.
 fn face() -> String {
     let states: Map<String, Value> = STATES
         .iter()
@@ -112,11 +112,12 @@ fn face() -> String {
         serde_json::to_value(v).expect("a size")
     };
     format!(
-        "{HEAD}{}{}{}{}",
+        "{HEAD}{}{}{}{}{}",
         var("board", &golden("board"), false),
         var("states", &states, false),
         var("sizeMin", &size("size_min"), false),
-        var("sizeMax", &size("size_max"), false)
+        var("sizeMax", &size("size_max"), false),
+        var("sizeStep", &size("size_step"), false)
     )
 }
 

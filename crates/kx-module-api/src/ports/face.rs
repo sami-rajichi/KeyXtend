@@ -31,6 +31,9 @@ impl fmt::Debug for KeyId {
     }
 }
 
+/// The most size presets a face offers: one per size button the UI names.
+pub const MAX_PRESETS: usize = 3;
+
 /// A click the UI forwards to the keyboard, sent as JSON named by `act`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "act", rename_all = "snake_case", deny_unknown_fields)]
@@ -49,7 +52,7 @@ pub enum FaceAction {
     Bigger,
     /// The size preset at `index`.
     Preset {
-        /// Place in the `presets` setting.
+        /// Place in the `presets` setting, below `MAX_PRESETS`.
         index: usize,
     },
     /// A resize starts with the pointer at `x`, `y`: physical pixels, as `Screens::cursor` gives them.

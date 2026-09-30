@@ -43,8 +43,6 @@ kx-theme = { path = "../kx-theme" }
 serde_json.workspace = true
 
 [dev-dependencies]
-# Its settings limit on presets, which the size texts must cover.
-kx-mod-keyboard = { path = "../kx-mod-keyboard" }
 kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

@@ -211,11 +211,11 @@ Item {
         }
 
         function test_every_label_fits_its_face_in_each_theme_language_and_size() {
-            const sizes = [Face.sizeMin].concat(Face.board.presets, [Face.sizeMax]);
+            const steps = Math.round((Face.sizeMax - Face.sizeMin) / Face.sizeStep);
+            const sizes = Array.from({ length: steps + 1 }, (_, i) => Face.sizeMin + i * Face.sizeStep);
             for (const lk of [N.lk, E.lk, D.lk])
                 for (const t of [En, Fr, Ar])
-                    for (const size of sizes)
-                        labelsFit(lk, t, size);
+                    labelsFit(lk, t, sizes);
         }
         // Where a label may run on cap `k`, left and right: the face the owner sees less the padding, or a sculpted
         // top plus what may spill onto the skirt.
@@ -227,31 +227,33 @@ Item {
             const more = cap.kind === "skirt" ? cap.label_spill_px * size : -lk.shape.legend.label_pad_px * size;
             return [left - more, left + face.width + more];
         }
-        // Each label in look `lk`, texts `t` and `size` is drawn in the theme's font and stays in its room, above the
-        // smallest size; English and Arabic keep the P1 size.
-        function labelsFit(lk, t, size) {
-            const win = make({ settings: t.settings, texts: t.texts, look: lk }, { board: scaled(size) });
-            const where = lk.look.latin_fonts[0] + " " + t.settings.lang + " " + size + ": ";
-            win.visible = true;
+        // Each label in look `lk` and texts `t`, at every size in `sizes`, is set in the theme's font and fits; one
+        // hidden window takes each size in turn, and the keyboard moves the same keys.
+        function labelsFit(lk, t, sizes) {
+            const win = make({ settings: t.settings, texts: t.texts, look: lk });
+            const font = lk.look.latin_fonts[0];
+            const where = font + " " + t.settings.lang + " ";
             const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
             verify(keys.length > 0, where + "labels");
             const labels = keys.map(k => all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0]);
-            const font = lk.look.latin_fonts[0];
             tryVerify(() => labels.every(l => l.fontInfo.family === font), 5000, where + "in " + labels[0].fontInfo.family);
-            // Rows lay out when drawn.
-            waitForRendering(win.contentItem);
-            keys.forEach((k, i) => {
-                const l = labels[i];
-                const at = where + k.label;
-                const [lo, hi] = room(k, lk, size);
-                const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
-                // Anchors centre on whole pixels, so a label may sit half a pixel off.
-                verify(left >= lo - 0.5 && left + l.contentWidth <= hi + 0.5, at + " fits: " + l.contentWidth + " in " + (hi - lo));
-                verify(l.fontInfo.pixelSize >= lk.shape.legend.label_min_px, at + " not below the smallest size");
-                if (t !== Fr)
-                    compare(l.fontInfo.pixelSize, l.font.pixelSize, at + " keeps the P1 size");
-            });
-            win.visible = false;
+            for (const size of sizes) {
+                win.board = scaled(size);
+                keys.forEach((k, i) => fits(k, labels[i], lk, size, t !== Fr, where + size.toFixed(2) + ": " + k.label));
+            }
+        }
+        // Label `l` stays in cap `k`'s room, give or take float rounding, above the smallest size, and at the P1 size
+        // when `p1`.
+        function fits(k, l, lk, size, p1, at) {
+            const slack = 0.01;
+            // A row lays out once a frame; the window is hidden, so it lays out now.
+            l.parent.forceLayout();
+            const [lo, hi] = room(k, lk, size);
+            const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
+            verify(left >= lo - slack && left + l.contentWidth <= hi + slack, at + " off by " + [lo - left, left + l.contentWidth - hi]);
+            verify(l.fontInfo.pixelSize >= lk.shape.legend.label_min_px, at + " not below the smallest size");
+            if (p1)
+                compare(l.fontInfo.pixelSize, l.font.pixelSize, at + " keeps the P1 size");
         }
 
         function test_the_bubble_and_the_move_catcher_carry_their_texts() {

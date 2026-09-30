@@ -155,7 +155,8 @@ fn sculpted_skirts_stay_darker_than_their_tops() {
 
 #[test]
 fn a_sculpted_label_may_spill_only_onto_its_skirt() {
-    let Cap::Skirt { label_spill_px, .. } = load().list[2].look.cap else {
+    let dolch = load().list.into_iter().find(|t| t.look.id == "dolch");
+    let Some(Cap::Skirt { label_spill_px, .. }) = dolch.map(|t| t.look.cap) else {
         panic!("Dolch caps are sculpted");
     };
     assert!(
