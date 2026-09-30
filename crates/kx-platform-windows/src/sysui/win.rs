@@ -18,6 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{BOOL, PCWSTR, w};
 
 use super::{contrast_on, dark_from, from_colorref};
+use crate::com::keep_mta;
 use crate::{langinfo, watch};
 
 /// Registry key of the app mode.
@@ -130,8 +131,11 @@ fn sys_colors() -> SysColors {
 }
 
 /// The accent fills Fluent uses, from `UISettings`: `AccentDark1` on light and `AccentLight2` on dark.
-/// It starts no COM, so the thread stays free to pick its mode as Qt needs; windows-rs joins the process-wide apartment itself.
+/// It keeps the process apartment alive first, so a cached factory outlives any STA, and changes no thread's COM mode.
 fn accent() -> Option<Accent> {
+    if !keep_mta() {
+        return None;
+    }
     let ui = UISettings::new().ok()?;
     let shade = |t: UIColorType| -> Option<Rgba> {
         let c = ui.GetColorValue(t).ok()?;
@@ -146,6 +150,7 @@ fn accent() -> Option<Accent> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use windows::Win32::Foundation::S_OK;
 
     #[test]
     fn the_look_reads_an_accent_and_opaque_system_colours() {
@@ -183,10 +188,47 @@ mod tests {
             hr
         });
         let hr = picked.join().unwrap();
+        assert_eq!(hr, S_OK, "the reading put the thread in a COM mode");
+    }
+
+    /// The probe the next test runs in its own process: an ended STA must not leave a dead cached factory.
+    const PROBE: &str = "sysui::win::tests::probe_an_sta_reads_first_then_ends";
+
+    #[test]
+    #[ignore = "a probe that `an_sta_that_reads_first_and_ends_leaves_later_readings_working` runs alone"]
+    #[allow(
+        unsafe_code,
+        reason = "Plays Qt's GUI thread: COM in an STA, then shut down."
+    )]
+    fn probe_an_sta_reads_first_then_ends() {
+        use windows::Win32::System::Com::{
+            COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize,
+        };
+        std::thread::spawn(|| {
+            // SAFETY: COM in an STA on this probe thread, undone below on the same thread.
+            let hr = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+            assert_eq!(hr, S_OK);
+            let _ = WinLook.read();
+            // SAFETY: pairs the start-up above.
+            unsafe { CoUninitialize() };
+        })
+        .join()
+        .unwrap();
+        let later = std::thread::spawn(|| WinLook.read()).join().unwrap();
         assert!(
-            hr.is_ok(),
-            "the reading put the thread in a COM mode: {hr:?}"
+            later.accent.is_some(),
+            "the watch thread still reads the accent"
         );
+    }
+
+    #[test]
+    fn an_sta_that_reads_first_and_ends_leaves_later_readings_working() {
+        let exe = std::env::current_exe().unwrap();
+        let args = [PROBE, "--exact", "--ignored", "--test-threads=1"];
+        let out = std::process::Command::new(exe).args(args).output().unwrap();
+        let said = String::from_utf8_lossy(&out.stdout);
+        assert!(out.status.success(), "{:?}\n{said}", out.status);
+        assert!(said.contains("1 passed"), "the probe ran: {said}");
     }
 
     #[test]

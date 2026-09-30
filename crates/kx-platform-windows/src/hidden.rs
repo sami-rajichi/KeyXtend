@@ -134,15 +134,27 @@ pub(crate) unsafe extern "system" fn answer(
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
-/// Hears this thread's messages until `WM_QUIT` or an error.
+/// Hears this thread's messages until `stop`'s `WM_QUIT` or an error.
 #[allow(unsafe_code, reason = "The standard message loop.")]
 fn pump() {
     let mut msg = MSG::default();
-    // SAFETY: the loop of the thread that owns the window; 0 is WM_QUIT and -1 an error, and both end it.
-    while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0 > 0 {
-        // SAFETY: dispatches a message this thread received.
-        unsafe { DispatchMessageW(&raw const msg) };
+    loop {
+        // SAFETY: the loop of the thread that owns the window; `msg` is a local it fills.
+        let got = unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0;
+        if ends(got, !msg.hwnd.is_invalid()) {
+            break;
+        }
+        if got > 0 {
+            // SAFETY: dispatches a message this thread received.
+            unsafe { DispatchMessageW(&raw const msg) };
+        }
     }
+}
+
+/// Whether `GetMessageW`'s answer `got` ends the loop: an error (-1), or a `WM_QUIT` (0) that names no
+/// window, as `stop` posts it; a `WM_QUIT` another program posts to the window is ignored.
+fn ends(got: i32, to_window: bool) -> bool {
+    got < 0 || (got == 0 && !to_window)
 }
 
 /// Destroys our hidden window on its own thread.
@@ -158,6 +170,14 @@ mod tests {
     use windows::Win32::UI::WindowsAndMessaging::{
         FindWindowExW, IsWindow, SendMessageW, WM_CLOSE,
     };
+
+    #[test]
+    fn only_a_thread_quit_or_an_error_ends_the_loop() {
+        assert!(ends(0, false), "stop's WM_QUIT names no window");
+        assert!(!ends(0, true), "a WM_QUIT posted to the window");
+        assert!(ends(-1, false) && ends(-1, true), "an error");
+        assert!(!ends(1, true) && !ends(1, false), "any other message");
+    }
 
     #[test]
     #[allow(

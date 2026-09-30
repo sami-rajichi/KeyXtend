@@ -1,9 +1,12 @@
 //! COM start-up for one thread, for UI Automation and the Windows Runtime.
 
 use std::marker::PhantomData;
+use std::sync::OnceLock;
 
 use windows::Win32::Foundation::RPC_E_CHANGED_MODE;
-use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
+use windows::Win32::System::Com::{
+    COINIT_MULTITHREADED, CoIncrementMTAUsage, CoInitializeEx, CoUninitialize,
+};
 
 use crate::PlatformError;
 
@@ -37,6 +40,16 @@ impl Com {
     pub fn keep(self) {
         std::mem::forget(self);
     }
+}
+
+/// Keeps the process's multithreaded apartment alive for good, once, before the first Windows Runtime object is made.
+/// It moves no thread into an apartment; windows-rs caches factories for the whole process, so COM must outlive
+/// any thread that made one, such as Qt's GUI thread.
+#[allow(unsafe_code, reason = "Keeps the process-wide apartment alive.")]
+pub(crate) fn keep_mta() -> bool {
+    static KEPT: OnceLock<bool> = OnceLock::new();
+    // SAFETY: a process-wide count with no thread state; the cookie is kept, never handed back.
+    *KEPT.get_or_init(|| unsafe { CoIncrementMTAUsage() }.is_ok())
 }
 
 impl Drop for Com {

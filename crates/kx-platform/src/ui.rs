@@ -129,7 +129,7 @@ pub struct SysLook {
     pub anim_off: bool,
 }
 
-/// Keeps a watch running; dropping it stops the watch. A `Send + Sync` service may hold it.
+/// Keeps a watch running; dropping it stops the watch once a running callback returns. A `Send + Sync` service may hold it.
 #[must_use = "dropping a WatchGuard stops the watch"]
 pub struct WatchGuard(Option<Box<dyn FnOnce() + Send + Sync>>);
 
@@ -160,7 +160,7 @@ pub trait SystemLook: Send + Sync {
     fn read(&self) -> SysLook;
 
     /// Calls `on_change` with each new look until the guard drops.
-    /// It may run on another thread than the caller's, so it hands work to the UI thread.
+    /// It may run on another thread than the caller's, so it hands work to the UI thread and never blocks on the thread that drops the guard.
     ///
     /// # Errors
     /// `Refused` when the OS will not report changes.
@@ -202,8 +202,8 @@ pub enum Command {
 
 /// Being the one running copy; dropping it waits for a running `on`, then lets another copy claim.
 pub trait Claim: Send {
-    /// Calls `on` with each command a later copy sends; it may run on another thread than the caller's.
-    /// A later call replaces `on`, even one made while `on` runs, from any thread.
+    /// Calls `on` with each command a later copy sends; it may run on another thread and never blocks on the thread
+    /// that drops the claim. A later call replaces `on`, even one made while `on` runs, from any thread.
     ///
     /// # Errors
     /// `Refused` when the OS will not set up the listener; an earlier `on` then stays.

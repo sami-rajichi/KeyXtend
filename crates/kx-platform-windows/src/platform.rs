@@ -17,6 +17,8 @@ use crate::{
 pub struct WindowsPlatform {
     clock: QpcClock,
     dirs: AppDirs,
+    /// Names the running copy's mutex and command window.
+    app: String,
 }
 
 impl WindowsPlatform {
@@ -25,9 +27,15 @@ impl WindowsPlatform {
     /// # Errors
     /// `PlatformError` when Windows refuses the clock or a folder.
     pub fn new() -> Result<Self, PlatformError> {
+        Self::named(APP_DIR_NAME)
+    }
+
+    /// The platform of app `app`, so a test's running copy never meets a real one.
+    pub(crate) fn named(app: &str) -> Result<Self, PlatformError> {
         Ok(Self {
             clock: QpcClock::new()?,
             dirs: dirs::current()?,
+            app: app.to_owned(),
         })
     }
 
@@ -70,7 +78,7 @@ impl WindowsPlatform {
     /// The one running copy of this app in the user session.
     #[must_use]
     pub fn instance(&self) -> Arc<dyn Instance> {
-        Arc::new(WinInstance::new(APP_DIR_NAME))
+        Arc::new(WinInstance::new(&self.app))
     }
 }
 
@@ -139,12 +147,19 @@ mod tests {
     #[test]
     fn two_platforms_meet_on_one_running_copy() {
         use kx_platform::ui::Running;
-        let first = WindowsPlatform::new().unwrap().instance();
-        let second = WindowsPlatform::new().unwrap().instance();
-        // A real copy may run on this PC; either way both platforms must agree, and no command is sent.
-        let claim = first.claim();
+        // A test name, so a real copy starting now never reads this test as running.
+        let app = format!("KeyXtendTest.{}.platform", std::process::id());
+        let first = WindowsPlatform::named(&app).unwrap().instance();
+        let second = WindowsPlatform::named(&app).unwrap().instance();
+        let claim = first.claim().unwrap();
         assert!(matches!(second.claim(), Err(Running)), "one session name");
         drop(claim);
+        assert!(second.claim().is_ok(), "free again once dropped");
+        assert_eq!(
+            WindowsPlatform::new().unwrap().app,
+            APP_DIR_NAME,
+            "the app's own name"
+        );
     }
 
     #[test]

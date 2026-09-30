@@ -1,22 +1,45 @@
 //! A fake of the one-running-copy port: copies share one fake session.
+//! Like the adapter, the running copy hears commands in order, one at a time, outside the lock.
 
 use crate::lock;
 use kx_platform::ui::{Claim, Command, Instance, Running, UiError};
+use std::collections::VecDeque;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::thread::{self, ThreadId};
+
+/// Hears the commands a later copy sends.
+type OnCommand = Box<dyn Fn(Command) + Send>;
 
 /// What the copies of one fake session share.
 #[derive(Default)]
 struct Session {
-    claimed: bool,
-    listener: Option<Box<dyn Fn(Command) + Send>>,
+    /// The claim that holds the session, by number; `None` while no copy runs.
+    holder: Option<u64>,
+    /// How many claims were made; it numbers the next one.
+    claims: u64,
+    /// The running copy listens, as the adapter's copy has its command window.
+    listening: bool,
+    listener: Option<OnCommand>,
+    /// Commands still to hear, oldest first.
+    queue: VecDeque<Command>,
+    /// The thread hearing commands now, if any.
+    hearing: Option<ThreadId>,
     sent: Vec<Command>,
     listen_error: Option<UiError>,
 }
 
+/// The session, and the signal that hearing has stopped.
+#[derive(Default)]
+struct Shared {
+    session: Mutex<Session>,
+    idle: Condvar,
+}
+
 /// A fake user session; each clone is another copy of the app in it.
 #[derive(Clone, Default)]
-pub struct FakeInstance(Arc<Mutex<Session>>);
+pub struct FakeInstance(Arc<Shared>);
 
 impl FakeInstance {
     /// A session where no copy runs yet.
@@ -27,21 +50,21 @@ impl FakeInstance {
 
     /// Makes later `listen` calls fail with `error`, or work again with `None`.
     pub fn set_listen_error(&self, error: Option<UiError>) {
-        lock(&self.0).listen_error = error;
+        lock(&self.0.session).listen_error = error;
     }
 
     /// Every command that reached the running copy, oldest first.
     #[must_use]
     pub fn sent(&self) -> Vec<Command> {
-        lock(&self.0).sent.clone()
+        lock(&self.0.session).sent.clone()
     }
 }
 
 impl fmt::Debug for FakeInstance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let session = lock(&self.0);
+        let session = lock(&self.0.session);
         f.debug_struct("FakeInstance")
-            .field("claimed", &session.claimed)
+            .field("claimed", &session.holder.is_some())
             .field("sent", &session.sent)
             .finish_non_exhaustive()
     }
@@ -49,152 +72,97 @@ impl fmt::Debug for FakeInstance {
 
 impl Instance for FakeInstance {
     fn claim(&self) -> Result<Box<dyn Claim>, Running> {
-        let mut session = lock(&self.0);
-        if session.claimed {
+        let mut session = lock(&self.0.session);
+        if session.holder.is_some() {
             return Err(Running);
         }
-        session.claimed = true;
-        Ok(Box::new(FakeClaim(Arc::clone(&self.0))))
+        session.claims += 1;
+        session.holder = Some(session.claims);
+        let (shared, id) = (Arc::clone(&self.0), session.claims);
+        Ok(Box::new(FakeClaim { shared, id }))
     }
 
-    /// Reaches the running copy only once it listens, as the real adapter finds it by the window it listens on.
-    /// It calls the listener outside the session lock, so the listener may call `listen`, which then wins.
+    /// Reaches the running copy only once it listens, as the adapter finds it by its window.
+    /// A command sent while another is heard, from any thread, waits its turn.
     fn send(&self, command: Command) -> Result<(), UiError> {
-        let Some(listener) = lock(&self.0).listener.take() else {
+        let mut session = lock(&self.0.session);
+        if !session.listening {
             return Err(UiError::NoWindow);
-        };
-        listener(command);
-        let mut session = lock(&self.0);
-        if session.claimed && session.listener.is_none() {
-            session.listener = Some(listener);
         }
         session.sent.push(command);
+        session.queue.push_back(command);
+        if session.hearing.is_none() {
+            session.hearing = Some(thread::current().id());
+            hear(&self.0, session);
+        }
         Ok(())
     }
 }
 
-/// The running copy's claim; dropping it ends the listener and frees the session.
-struct FakeClaim(Arc<Mutex<Session>>);
+/// Hears each waiting command outside the lock, then wakes a drop that waits; a listener set meanwhile wins.
+fn hear<'a>(shared: &'a Shared, mut session: MutexGuard<'a, Session>) {
+    while let Some(command) = session.queue.pop_front() {
+        let holder = session.holder;
+        let Some(on) = session.listener.take() else {
+            break;
+        };
+        drop(session);
+        let _ = catch_unwind(AssertUnwindSafe(|| on(command)));
+        let mut now = lock(&shared.session);
+        let stale = if now.holder == holder && now.listener.is_none() {
+            now.listener = Some(on);
+            None
+        } else {
+            Some(on)
+        };
+        drop(now);
+        drop(stale);
+        session = lock(&shared.session);
+    }
+    session.hearing = None;
+    shared.idle.notify_all();
+}
+
+/// The running copy's claim; dropping it waits for a command being heard, then frees the session.
+struct FakeClaim {
+    shared: Arc<Shared>,
+    id: u64,
+}
 
 impl Claim for FakeClaim {
-    fn listen(&mut self, on: Box<dyn Fn(Command) + Send>) -> Result<(), UiError> {
-        let mut session = lock(&self.0);
+    fn listen(&mut self, on: OnCommand) -> Result<(), UiError> {
+        let mut session = lock(&self.shared.session);
         if let Some(error) = session.listen_error {
             return Err(error);
         }
-        session.listener = Some(on);
+        let earlier = session.listener.replace(on);
+        session.listening = true;
+        drop(session);
+        drop(earlier);
         Ok(())
     }
 }
 
 impl Drop for FakeClaim {
+    /// Waits while another thread hears a command, as the adapter joins its listener thread.
     fn drop(&mut self) {
-        let mut session = lock(&self.0);
-        session.claimed = false;
-        session.listener = None;
+        let me = thread::current().id();
+        let mut session = lock(&self.shared.session);
+        while session.hearing.is_some_and(|t| t != me) {
+            let waited = self.shared.idle.wait(session);
+            session = waited.unwrap_or_else(PoisonError::into_inner);
+        }
+        if session.holder != Some(self.id) {
+            return;
+        }
+        session.holder = None;
+        session.listening = false;
+        session.queue.clear();
+        let gone = session.listener.take();
+        drop(session);
+        drop(gone);
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// How long a test waits for a send on another thread; a wait, never a sleep.
-    const WAIT: std::time::Duration = std::time::Duration::from_secs(5);
-
-    #[test]
-    fn only_one_copy_claims_until_it_lets_go() {
-        let first = FakeInstance::new();
-        let second = first.clone();
-        let claim = first.claim().unwrap();
-        assert!(matches!(second.claim(), Err(Running)));
-        drop(claim);
-        assert!(second.claim().is_ok());
-    }
-
-    #[test]
-    fn a_later_copy_reaches_the_listener() {
-        let running = FakeInstance::new();
-        let later = running.clone();
-        let heard = Arc::new(Mutex::new(Vec::new()));
-        let keep = Arc::clone(&heard);
-        let mut claim = running.claim().unwrap();
-        claim
-            .listen(Box::new(move |c| keep.lock().unwrap().push(c)))
-            .unwrap();
-        assert_eq!(later.send(Command::Show), Ok(()));
-        assert_eq!(later.send(Command::Quit), Ok(()));
-        assert_eq!(*heard.lock().unwrap(), [Command::Show, Command::Quit]);
-        assert_eq!(running.sent(), [Command::Show, Command::Quit]);
-    }
-
-    #[test]
-    fn a_running_copy_that_does_not_listen_yet_has_no_window() {
-        let running = FakeInstance::new();
-        let later = running.clone();
-        let _claim = running.claim().unwrap();
-        assert_eq!(later.send(Command::Show), Err(UiError::NoWindow));
-        assert!(running.sent().is_empty());
-    }
-
-    #[test]
-    fn a_later_listen_replaces_the_first_and_a_refused_one_keeps_it() {
-        let running = FakeInstance::new();
-        let heard = Arc::new(Mutex::new(Vec::new()));
-        let hear = |tag: &'static str| {
-            let keep = Arc::clone(&heard);
-            Box::new(move |c: Command| keep.lock().unwrap().push((tag, c)))
-        };
-        let mut claim = running.claim().unwrap();
-        claim.listen(hear("first")).unwrap();
-        claim.listen(hear("second")).unwrap();
-        running.set_listen_error(Some(UiError::Refused(9)));
-        assert_eq!(claim.listen(hear("third")), Err(UiError::Refused(9)));
-        running.send(Command::Show).unwrap();
-        assert_eq!(*heard.lock().unwrap(), [("second", Command::Show)]);
-    }
-
-    #[test]
-    fn a_listener_may_listen_again() {
-        type Shared = Arc<Mutex<Option<Box<dyn Claim>>>>;
-        let running = FakeInstance::new();
-        let shared: Shared = Arc::new(Mutex::new(Some(running.claim().unwrap())));
-        let heard = Arc::new(Mutex::new(Vec::new()));
-        let (keep, into) = (Arc::clone(&shared), Arc::clone(&heard));
-        let first = Box::new(move |_| {
-            let into = Arc::clone(&into);
-            let next = Box::new(move |c| into.lock().unwrap().push(c));
-            keep.lock().unwrap().as_mut().unwrap().listen(next).unwrap();
-        });
-        shared
-            .lock()
-            .unwrap()
-            .as_mut()
-            .unwrap()
-            .listen(first)
-            .unwrap();
-        let later = running.clone();
-        let (tx, rx) = std::sync::mpsc::channel();
-        // On its own thread, so a listener that locks the session fails the test instead of hanging it.
-        std::thread::spawn(move || tx.send([later.send(Command::Show), later.send(Command::Quit)]));
-        assert_eq!(rx.recv_timeout(WAIT), Ok([Ok(()), Ok(())]));
-        assert_eq!(*heard.lock().unwrap(), [Command::Quit]);
-        shared.lock().unwrap().take();
-    }
-
-    #[test]
-    fn a_refused_listen_leaves_no_window() {
-        let running = FakeInstance::new();
-        running.set_listen_error(Some(UiError::Refused(8)));
-        let mut claim = running.claim().unwrap();
-        assert_eq!(claim.listen(Box::new(|_| {})), Err(UiError::Refused(8)));
-        assert_eq!(running.send(Command::Quit), Err(UiError::NoWindow));
-    }
-
-    #[test]
-    fn with_no_running_copy_a_send_finds_no_window() {
-        let fake = FakeInstance::new();
-        assert_eq!(fake.send(Command::Show), Err(UiError::NoWindow));
-        assert!(fake.sent().is_empty());
-    }
-}
+mod tests;

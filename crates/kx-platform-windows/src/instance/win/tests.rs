@@ -3,7 +3,7 @@
 use super::*;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
-use windows::Win32::UI::WindowsAndMessaging::{SendMessageW, WM_CLOSE};
+use windows::Win32::UI::WindowsAndMessaging::{SendMessageW, WM_CLOSE, WM_QUIT};
 
 /// How long a test waits for a posted command; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(5);
@@ -150,6 +150,21 @@ fn another_program_cannot_close_the_command_window() {
     assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Show));
 }
 
+#[test]
+fn a_quit_posted_to_the_command_window_does_not_end_it() {
+    let running = app("quit");
+    let mut claim = running.claim().unwrap();
+    let (on, rx) = heard_list();
+    claim.listen(on).unwrap();
+    assert!(post(&running, WM_QUIT, 0));
+    assert_eq!(
+        running.send(Command::Show),
+        Ok(()),
+        "the window is still there"
+    );
+    assert_eq!(rx.recv_timeout(WAIT), Ok(Command::Show), "and still hears");
+}
+
 /// Sends `WM_CLOSE` to the command window of `copy` and waits for its answer, as another program could.
 #[allow(unsafe_code, reason = "Sends WM_CLOSE to the test's own window.")]
 fn close(copy: &WinInstance) {
@@ -189,7 +204,7 @@ fn an_unknown_code_reaches_no_listener() {
     let mut claim = running.claim().unwrap();
     let (on, rx) = heard_list();
     claim.listen(on).unwrap();
-    assert!(post_code(&running, usize::MAX));
+    assert!(post(&running, COMMAND_MSG, usize::MAX));
     running.send(Command::Quit).unwrap();
     assert_eq!(
         rx.recv_timeout(WAIT),
@@ -198,14 +213,14 @@ fn an_unknown_code_reaches_no_listener() {
     );
 }
 
-/// Posts `code` to the command window of `copy`, as another program could.
-#[allow(unsafe_code, reason = "Posts a bad code to the test's own window.")]
-fn post_code(copy: &WinInstance, code: usize) -> bool {
+/// Posts `msg` with `code` to the command window of `copy`, as another program could.
+#[allow(unsafe_code, reason = "Posts a message to the test's own window.")]
+fn post(copy: &WinInstance, msg: u32, code: usize) -> bool {
     let class = PCWSTR(copy.class.as_ptr());
     // SAFETY: the class name ends with a null; the post carries plain numbers.
     unsafe {
         FindWindowExW(Some(HWND_MESSAGE), None, class, PCWSTR::null())
-            .and_then(|w| PostMessageW(Some(w), COMMAND_MSG, WPARAM(code), LPARAM(0)))
+            .and_then(|w| PostMessageW(Some(w), msg, WPARAM(code), LPARAM(0)))
             .is_ok()
     }
 }
