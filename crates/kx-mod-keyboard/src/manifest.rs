@@ -1,8 +1,8 @@
-//! What the keyboard module declares: typing needs the injector, the layout source and the layouts service;
-//! the face it provides arrives with the language key.
+//! What the keyboard module declares: typing needs the injector, the layout source and the layouts service,
+//! and it provides the `KeyboardFace` the UI draws.
 
 use crate::settings::SPEC;
-use kx_module_api::ports::{InputInjectorKey, LayoutSourceKey, LayoutsKey};
+use kx_module_api::ports::{InputInjectorKey, KeyboardFaceKey, LayoutSourceKey, LayoutsKey};
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
 /// The module's id, which also names its settings section.
@@ -13,7 +13,7 @@ pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
     requires: &[InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID],
-    provides: &[],
+    provides: &[KeyboardFaceKey::ID],
     capabilities: &[Capability::InjectInput],
     settings: Some(&SPEC),
 };
@@ -26,10 +26,12 @@ mod tests {
     fn it_types_through_the_injector_and_reads_the_layout_source_and_the_layouts() {
         let want = [InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID];
         assert_eq!(MANIFEST.requires, want);
-        assert!(
-            MANIFEST.provides.is_empty(),
-            "the face comes with the language key"
-        );
+    }
+
+    #[test]
+    fn it_provides_the_face_which_needs_no_capability() {
+        assert_eq!(MANIFEST.provides, [KeyboardFaceKey::ID]);
+        assert_eq!(KeyboardFaceKey::CAPABILITY, None);
     }
 
     #[test]

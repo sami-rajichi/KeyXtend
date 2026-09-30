@@ -1,7 +1,7 @@
-//! The language key: asks the app in front to switch to the next installed layout.
-//! The window and layout queries are the product's (kx-platform-windows); the stepping goes to kx-mod-keyboard later in P3.
+//! The language key: asks the app in front to switch layout, stepping by the product's `step_to` (P3 Task 13).
+//! The window and layout queries are the product's (kx-platform-windows).
 
-use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_module_api::ports::{LayoutId, LayoutSource, step_to};
 use kx_platform_windows::{WinLayouts, front, langinfo, layouts};
 use windows::Win32::Foundation::HWND;
 
@@ -12,26 +12,11 @@ const ONLY_ONE: &str = "only one layout is installed";
 /// Error prefix when Windows refuses the layout request.
 const REFUSED: &str = "layout request";
 
-/// The layout after `cur` in `list`, wrapping and skipping copies of `cur`; `None` when there is none.
-pub fn next_layout(list: &[isize], cur: isize) -> Option<isize> {
-    let start = list.iter().position(|&l| l == cur).map_or(0, |i| i + 1);
-    (0..list.len())
-        .map(|k| list[(start + k) % list.len()])
-        .find(|&l| l != cur)
-}
-
 /// The first layout in `list` for language `id`.
 pub fn layout_for(list: &[isize], id: u16) -> Option<isize> {
     list.iter()
         .copied()
         .find(|&h| langinfo::lang_id(LayoutId::new(h as u64)) == id)
-}
-
-/// The layouts before and after `cur` in `list`, wrapping; `cur` itself when nothing else is installed.
-pub fn neighbours(list: &[isize], cur: isize) -> (isize, isize) {
-    let back: Vec<isize> = list.iter().rev().copied().collect();
-    let prev = next_layout(&back, cur).unwrap_or(cur);
-    (prev, next_layout(list, cur).unwrap_or(cur))
 }
 
 /// The installed layouts as raw values, in the system's order.
@@ -56,19 +41,23 @@ pub fn layout_of(hwnd: HWND) -> Option<isize> {
 
 /// Asks `hwnd` to switch to the next installed layout; returns the layout asked for.
 pub fn ask_next(hwnd: HWND) -> Result<isize, String> {
-    ask_step(hwnd, false)
+    ask_step(hwnd, 1)
 }
 
-/// Asks `hwnd` to switch to the layout after its current one, or before it when `back`; returns the layout asked for.
-pub fn ask_step(hwnd: HWND, back: bool) -> Result<isize, String> {
+/// Asks `hwnd` to switch `by` places along the installed layouts from its own; returns the layout asked for.
+pub fn ask_step(hwnd: HWND, by: i32) -> Result<isize, String> {
     let cur = layout_of(hwnd).ok_or(GONE)?;
-    let (prev, next) = neighbours(&installed(), cur);
-    let to = if back { prev } else { next };
-    if to == cur {
-        return Err(ONLY_ONE.into());
-    }
+    let to = step_from(&installed(), cur, by).ok_or(ONLY_ONE)?;
     ask(hwnd, to)?;
     Ok(to)
+}
+
+/// The layout `by` places from `cur` in `list`, as the product steps; `None` when that is `cur` itself.
+pub fn step_from(list: &[isize], cur: isize, by: i32) -> Option<isize> {
+    let id = |h: isize| LayoutId::new(h as u64);
+    let ids: Vec<LayoutId> = list.iter().map(|&h| id(h)).collect();
+    let to = step_to(&ids, Some(id(cur)), by).filter(|&to| to != id(cur))?;
+    Some(to.get() as isize)
 }
 
 /// Asks `hwnd`'s focus window to switch to `layout`, the way the system language hotkey does.
@@ -86,29 +75,16 @@ mod tests {
     const AR: isize = 0x1C01_1C01;
 
     #[test]
-    fn neighbours_wrap_both_ways_and_a_lone_layout_is_its_own() {
-        assert_eq!(neighbours(&[EN, FR, AR], EN), (AR, FR));
-        assert_eq!(neighbours(&[EN, FR, AR], AR), (FR, EN));
-        assert_eq!(neighbours(&[EN], EN), (EN, EN));
-    }
-
-    #[test]
-    fn next_layout_follows_the_list_and_wraps_to_the_first() {
+    fn a_step_follows_the_list_both_ways_and_wraps() {
         let list = [EN, FR, AR];
-        assert_eq!(next_layout(&list, EN), Some(FR));
-        assert_eq!(next_layout(&list, FR), Some(AR));
-        assert_eq!(next_layout(&list, AR), Some(EN));
+        assert_eq!(step_from(&list, EN, 1), Some(FR));
+        assert_eq!(step_from(&list, AR, 1), Some(EN));
+        assert_eq!(step_from(&list, EN, -1), Some(AR));
     }
 
     #[test]
-    fn an_unknown_current_layout_goes_to_the_first() {
-        assert_eq!(next_layout(&[EN, FR], AR), Some(EN));
-    }
-
-    #[test]
-    fn a_duplicate_of_the_current_layout_is_skipped() {
-        assert_eq!(next_layout(&[EN, EN, FR], EN), Some(FR));
-        assert_eq!(next_layout(&[EN, EN], EN), None);
+    fn an_unknown_current_layout_steps_from_the_first() {
+        assert_eq!(step_from(&[EN, FR], AR, 1), Some(FR));
     }
 
     #[test]
@@ -124,7 +100,7 @@ mod tests {
 
     #[test]
     fn one_layout_or_none_cannot_switch() {
-        assert_eq!(next_layout(&[EN], EN), None);
-        assert_eq!(next_layout(&[], EN), None);
+        assert_eq!(step_from(&[EN], EN, 1), None);
+        assert_eq!(step_from(&[], EN, 1), None);
     }
 }

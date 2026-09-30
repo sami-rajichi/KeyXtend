@@ -1,0 +1,1143 @@
+{
+  "at": {
+    "x": 624,
+    "y": 844
+  },
+  "keys": {
+    "alt": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "altgr": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "bksp": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "danger",
+        "ink": "danger_ink",
+        "skirt": "danger"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0002": {
+      "main": "&",
+      "main_ar": false,
+      "name": "&",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "1",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0003": {
+      "main": "é",
+      "main_ar": false,
+      "name": "é",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "2",
+      "second_ar": false,
+      "third": "~"
+    },
+    "c-0x0004": {
+      "main": "\"",
+      "main_ar": false,
+      "name": "\"",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "3",
+      "second_ar": false,
+      "third": "#"
+    },
+    "c-0x0005": {
+      "main": "'",
+      "main_ar": false,
+      "name": "'",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "4",
+      "second_ar": false,
+      "third": "{"
+    },
+    "c-0x0006": {
+      "main": "(",
+      "main_ar": false,
+      "name": "(",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "5",
+      "second_ar": false,
+      "third": "["
+    },
+    "c-0x0007": {
+      "main": "-",
+      "main_ar": false,
+      "name": "-",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "6",
+      "second_ar": false,
+      "third": "|"
+    },
+    "c-0x0008": {
+      "main": "è",
+      "main_ar": false,
+      "name": "è",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "7",
+      "second_ar": false,
+      "third": "`"
+    },
+    "c-0x0009": {
+      "main": "_",
+      "main_ar": false,
+      "name": "_",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "8",
+      "second_ar": false,
+      "third": "\\"
+    },
+    "c-0x000A": {
+      "main": "ç",
+      "main_ar": false,
+      "name": "ç",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "9",
+      "second_ar": false,
+      "third": "^"
+    },
+    "c-0x000B": {
+      "main": "à",
+      "main_ar": false,
+      "name": "à",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "0",
+      "second_ar": false,
+      "third": "@"
+    },
+    "c-0x000C": {
+      "main": ")",
+      "main_ar": false,
+      "name": ")",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "°",
+      "second_ar": false,
+      "third": "]"
+    },
+    "c-0x000D": {
+      "main": "=",
+      "main_ar": false,
+      "name": "=",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "+",
+      "second_ar": false,
+      "third": "}"
+    },
+    "c-0x0010": {
+      "main": "a",
+      "main_ar": false,
+      "name": "a",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0011": {
+      "main": "z",
+      "main_ar": false,
+      "name": "z",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0012": {
+      "main": "e",
+      "main_ar": false,
+      "name": "e",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": "€"
+    },
+    "c-0x0013": {
+      "main": "r",
+      "main_ar": false,
+      "name": "r",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0014": {
+      "main": "t",
+      "main_ar": false,
+      "name": "t",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0015": {
+      "main": "y",
+      "main_ar": false,
+      "name": "y",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0016": {
+      "main": "u",
+      "main_ar": false,
+      "name": "u",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0017": {
+      "main": "i",
+      "main_ar": false,
+      "name": "i",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0018": {
+      "main": "o",
+      "main_ar": false,
+      "name": "o",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0019": {
+      "main": "p",
+      "main_ar": false,
+      "name": "p",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x001A": {
+      "main": "^",
+      "main_ar": false,
+      "name": "^",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "¨",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x001B": {
+      "main": "$",
+      "main_ar": false,
+      "name": "$",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "£",
+      "second_ar": false,
+      "third": "¤"
+    },
+    "c-0x001E": {
+      "main": "q",
+      "main_ar": false,
+      "name": "q",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x001F": {
+      "main": "s",
+      "main_ar": false,
+      "name": "s",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0020": {
+      "main": "d",
+      "main_ar": false,
+      "name": "d",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0021": {
+      "main": "f",
+      "main_ar": false,
+      "name": "f",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0022": {
+      "main": "g",
+      "main_ar": false,
+      "name": "g",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0023": {
+      "main": "h",
+      "main_ar": false,
+      "name": "h",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0024": {
+      "main": "j",
+      "main_ar": false,
+      "name": "j",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0025": {
+      "main": "k",
+      "main_ar": false,
+      "name": "k",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0026": {
+      "main": "l",
+      "main_ar": false,
+      "name": "l",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0027": {
+      "main": "m",
+      "main_ar": false,
+      "name": "m",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0028": {
+      "main": "ù",
+      "main_ar": false,
+      "name": "ù",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0029": {
+      "main": "²",
+      "main_ar": false,
+      "name": "²",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x002B": {
+      "main": "*",
+      "main_ar": false,
+      "name": "*",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "µ",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x002C": {
+      "main": "w",
+      "main_ar": false,
+      "name": "w",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x002D": {
+      "main": "x",
+      "main_ar": false,
+      "name": "x",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x002E": {
+      "main": "c",
+      "main_ar": false,
+      "name": "c",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x002F": {
+      "main": "v",
+      "main_ar": false,
+      "name": "v",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0030": {
+      "main": "b",
+      "main_ar": false,
+      "name": "b",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0031": {
+      "main": "n",
+      "main_ar": false,
+      "name": "n",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0032": {
+      "main": ",",
+      "main_ar": false,
+      "name": ",",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "?",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0033": {
+      "main": ";",
+      "main_ar": false,
+      "name": ";",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": ".",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0034": {
+      "main": ":",
+      "main_ar": false,
+      "name": ":",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "/",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0035": {
+      "main": "!",
+      "main_ar": false,
+      "name": "!",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "§",
+      "second_ar": false,
+      "third": ""
+    },
+    "c-0x0056": {
+      "main": "<",
+      "main_ar": false,
+      "name": "<",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": ">",
+      "second_ar": false,
+      "third": ""
+    },
+    "caps": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "clip": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "ctrl": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "del": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "down": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "enter": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "enter",
+        "ink": "enter_ink",
+        "skirt": "enter"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "esc": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "danger",
+        "ink": "danger_ink",
+        "skirt": "danger"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "fill": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "grab": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "lang": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "left": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "menu": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "mic": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "power": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "rclick": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "right": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "rshift": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "settings": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "shift": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "shortcuts": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "snip": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "dim",
+        "ink": "dim_ink",
+        "skirt": "dim"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "space": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key",
+        "ink": "legend",
+        "skirt": "key"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "tab": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "up": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    },
+    "win": {
+      "main": "",
+      "main_ar": false,
+      "name": "",
+      "on": false,
+      "paint": {
+        "fill": "key_mod",
+        "ink": "legend_mod",
+        "skirt": "key_mod"
+      },
+      "second": "",
+      "second_ar": false,
+      "third": ""
+    }
+  },
+  "lang": {
+    "at": 1,
+    "count": 3,
+    "cur": {
+      "arabic": false,
+      "rtl": false,
+      "short": "FR"
+    },
+    "next": {
+      "arabic": true,
+      "rtl": true,
+      "short": "ع"
+    },
+    "prev": {
+      "arabic": false,
+      "rtl": false,
+      "short": "EN"
+    },
+    "space": [
+      "français",
+      "French (Legacy, AZERTY)"
+    ],
+    "turn": 0
+  },
+  "list": {
+    "hi": 2,
+    "keys": [
+      "esc",
+      "enter",
+      "up",
+      "space",
+      "left",
+      "down",
+      "right"
+    ],
+    "rows": [
+      {
+        "arabic": false,
+        "current": false,
+        "icon": null,
+        "name": [
+          "English",
+          "US"
+        ],
+        "rtl": false,
+        "short": "EN"
+      },
+      {
+        "arabic": false,
+        "current": true,
+        "icon": "lang.current",
+        "name": [
+          "français",
+          "French (Legacy, AZERTY)"
+        ],
+        "rtl": false,
+        "short": "FR"
+      },
+      {
+        "arabic": true,
+        "current": false,
+        "icon": null,
+        "name": [
+          "العربية",
+          "Arabic (102) AZERTY"
+        ],
+        "rtl": true,
+        "short": "ع"
+      }
+    ]
+  }
+}

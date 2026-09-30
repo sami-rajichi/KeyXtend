@@ -1,9 +1,15 @@
 //! The stage-2 keyboard's controller: size, theme, sticky modifiers and the layout in front. Faces draw and forward clicks.
+//! The views are kx-mod-keyboard's (P3 Task 13); the spike dresses them with its text, icons and working side keys.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use kx_mod_keyboard::{Board, BoardSpec, KeyboardSettings, Limits, Resize, Typing, board};
+use kx_mod_keyboard::view::{
+    BoardView, Paint, StateInput, StateView, board_view, paint, state_view,
+};
+use kx_mod_keyboard::{
+    Board, BoardSpec, KeyKind, KeyboardSettings, Limits, Resize, Turn, Typing, board,
+};
 use kx_mod_layouts::Follow;
 use kx_module_api::ports::{LangLabel, LayoutId, LayoutSource, LayoutTable, Point};
 use kx_platform::ui::SysLook;
@@ -11,18 +17,27 @@ use kx_platform_windows::{WinLayouts, layouts};
 use kx_theme::{LookView, Mode, ModeChoice, Themes, look_view, mode_for};
 
 use crate::config::SpikeConfig;
-use crate::kbview::{BoardView, StateInput, StateView, board_view, state_view};
-use crate::langinfo::{self, LangInfo};
-use crate::{langkey, layout};
+use crate::facecfg::Action;
+use crate::layout;
 
+mod lang;
 mod typing;
 pub use typing::Tapped;
+
+/// The paint of the recording mic key (mock-up `.key.rec`); the product's mic comes in a later version.
+pub const REC: Paint = Paint {
+    fill: "rec",
+    ink: "rec_ink",
+    skirt: "rec",
+};
 
 /// The keyboard's state; faces own one and ask it what to draw.
 pub struct Kb {
     cfg: SpikeConfig,
     themes: Themes,
     spec: BoardSpec,
+    /// The product's keyboard settings: the sizes, the rules and the language key's design.
+    settings: KeyboardSettings,
     limits: Limits,
     size: f64,
     theme: usize,
@@ -35,13 +50,11 @@ pub struct Kb {
     sys: SysLook,
     resize: Option<Resize>,
     chars: BTreeMap<isize, Arc<LayoutTable>>,
-    langs: BTreeMap<isize, LangInfo>,
+    labels: BTreeMap<isize, LangLabel>,
     /// The mic is recording, so its key turns red.
     rec: bool,
-    /// Which way the language key last stepped, until the layout changes: -1 back, 1 on.
-    asked: i8,
-    /// Which way the language names turn after the last change; 0 when it came another way.
-    turn: i8,
+    /// Which way the language names turn, as the product counts it.
+    turn: Turn,
 }
 
 impl Kb {
@@ -53,23 +66,24 @@ impl Kb {
         let follow = Follow::new(Some(front), &WinLayouts.installed());
         let theme = themes.list.iter().position(|t| t.look.id == cfg.look.theme);
         let typing = Typing::new(&spec, &kb);
+        let hkl = follow.shown().map_or(0, |id| id.get() as isize);
         Ok(Kb {
             spec,
             limits: Limits::of(&kb),
             size: kb.size,
+            settings: kb,
             theme: theme.unwrap_or_default(),
             mode: cfg.look.mode,
             typing,
             toggled: BTreeSet::new(),
-            hkl: follow.shown().map_or(0, |id| id.get() as isize),
+            hkl,
             follow,
             sys,
             resize: None,
             chars: BTreeMap::new(),
-            langs: BTreeMap::new(),
+            labels: BTreeMap::new(),
             rec: false,
-            asked: 0,
-            turn: 0,
+            turn: Turn::new(LayoutId::new(hkl as u64)),
             cfg,
             themes,
         })
@@ -90,19 +104,33 @@ impl Kb {
         self.size
     }
 
-    /// The keyboard's boxes now.
-    pub fn board(&self) -> Board {
-        let gap = self
-            .themes
-            .list
-            .get(self.theme)
-            .map_or(0.0, |t| t.look.gap_px);
-        board(&self.spec, f64::from(gap), self.size)
+    /// The theme's gap between keys at size 1.
+    fn gap(&self) -> f64 {
+        let theme = self.themes.list.get(self.theme);
+        theme.map_or(0.0, |t| f64::from(t.look.gap_px))
     }
 
-    /// What the face lays out.
+    /// The keyboard's boxes now.
+    pub fn board(&self) -> Board {
+        board(&self.spec, self.gap(), self.size)
+    }
+
+    /// What the face lays out: the product's board with the spike's text, Lucide icons, caps and side keys.
     pub fn view(&self) -> BoardView {
-        board_view(&self.board(), &self.cfg.keys, self.size, &self.limits)
+        let mut v = board_view(&self.spec, &self.settings, self.size);
+        let inset = self.gap() * self.size / 2.0;
+        for k in &mut v.keys {
+            let look = self.cfg.keys.get(&k.id);
+            k.icon = self.themes.icons.keys.get(&k.id).cloned();
+            k.label = look.and_then(|l| l.label.clone());
+            k.name = look.map(|l| l.name.clone());
+            k.cell = k.cell.grow(-inset);
+            if look.is_some_and(|l| l.action.is_some()) {
+                (k.dim, k.tip) = (false, None);
+            }
+        }
+        v.dpad.area = v.dpad.area.grow(-inset);
+        v
     }
 
     /// The theme shown, by index.
@@ -204,79 +232,40 @@ impl Kb {
         self.resize.is_some()
     }
 
-    /// The current layout as the product names it.
-    fn layout_id(&self) -> LayoutId {
-        LayoutId::new(self.hkl as u64)
-    }
-
-    /// What each key types in the current layout, read once per layout.
-    fn table(&mut self) -> Arc<LayoutTable> {
-        let (id, spec) = (self.layout_id(), &self.spec);
-        let table = self.chars.entry(self.hkl).or_insert_with(|| {
-            let scans = spec.char_scans();
-            let keys = scans.iter().copied().zip(WinLayouts.keys(id, &scans));
-            let label = LangLabel {
-                id,
-                ..LangLabel::default()
-            };
-            let keys = keys.collect();
-            Arc::new(LayoutTable { label, keys })
-        });
-        Arc::clone(table)
-    }
-
-    /// The language key's names for layout `hkl`, read once.
-    fn lang_of(&mut self, hkl: isize) -> LangInfo {
-        let c = &self.cfg.lang;
-        self.langs
-            .entry(hkl)
-            .or_insert_with(|| langinfo::info(hkl, c))
-            .clone()
-    }
-
     /// Whether the mic records, which turns its key red.
     pub fn set_rec(&mut self, rec: bool) {
         self.rec = rec;
     }
 
-    /// Legends, lights and the language key now.
+    /// Legends, lights and the language key now, with the spike's toggled side keys and recording mic.
     pub fn state(&mut self) -> StateView {
-        let (prev, next) = langkey::neighbours(&langkey::installed(), self.hkl);
-        let lang = [
-            self.lang_of(prev),
-            self.lang_of(self.hkl),
-            self.lang_of(next),
-        ];
-        let table = self.table();
+        let (table, list) = (self.table(), self.labels());
         let b = self.board();
-        state_view(&StateInput {
+        let mut s = state_view(&StateInput {
             keys: &b.keys,
-            looks: &self.cfg.keys,
             latches: self.typing.latches(),
             caps: WinLayouts.caps_on(),
-            toggled: &self.toggled,
-            chars: &table.keys,
-            lang: [&lang[0], &lang[1], &lang[2]],
-            rec: self.rec,
-            turn: self.turn,
-        })
+            table: &table,
+            list: &list,
+            turn: self.turn.turn(),
+            open: None,
+            panel_keys: &[],
+            at: None,
+        });
+        self.light(&mut s);
+        s
     }
 
-    /// The layout is now `h`; the names turn the way the last step asked, and only once.
-    fn switched(&mut self, h: isize) {
-        self.hkl = h;
-        self.turn = std::mem::take(&mut self.asked);
-    }
-
-    /// True when the app in front switched layout since the last look.
-    pub fn relabel(&mut self) -> bool {
-        let moved = self
-            .follow
-            .see(layout::other_front(), &WinLayouts.installed());
-        if let Some(id) = self.follow.shown().filter(|_| moved) {
-            self.switched(id.get() as isize);
+    /// Lights the toggled side keys and the recording mic, which the product leaves to later versions.
+    fn light(&self, s: &mut StateView) {
+        for (id, look) in &self.cfg.keys {
+            let (Some(action), Some(k)) = (look.action, s.keys.get_mut(id)) else {
+                continue;
+            };
+            let rec = self.rec && action == Action::Mic;
+            k.on = rec || self.toggled.contains(id);
+            k.paint = if rec { REC } else { paint(KeyKind::Act, k.on) };
         }
-        moved
     }
 }
 

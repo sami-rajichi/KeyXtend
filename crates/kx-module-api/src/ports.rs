@@ -12,4 +12,4 @@ pub use face::{FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFa
 pub use geom::{BASE_DPI, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
-pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey};
+pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};

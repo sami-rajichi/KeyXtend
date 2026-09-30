@@ -1,6 +1,6 @@
 # kx-mod-keyboard
 
-The keyboard module: the board the user clicks, its size and its place on the screen, typing with sticky modifiers, and later the language key. It talks to the OS only through ports, so it builds and tests on every system.
+The keyboard module: the board the user clicks, its size and its place on the screen, typing with sticky modifiers, the language key, and the face the UI draws. It talks to the OS only through ports, so it builds and tests on every system.
 
 ## Services
 
@@ -9,7 +9,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `InputInjector` | needs | Sends each click's keys or text to the app in front, and names that app for `key_apps`. |
 | `LayoutSource` | needs | Says whether Caps Lock is on, and whether a key typed anything while a dead key waits. |
 | `Layouts` | needs | Its current table says what each key types in the layout shown. |
-| `KeyboardFace` | provides, later | Arrives with the language key (P3 Task 13); it holds the ports and a `Typing`. |
+| `KeyboardFace` | provides | The board and state JSON the UI draws, and each click it forwards; see "The face". |
 
 ## Capabilities
 
@@ -19,7 +19,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 ## The board
 
-`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; translations (Task 15) and `kx-theme` (Task 14) give them by key id.
+`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; translations (Task 15) and `kx-theme` (Task 14) give them by key id. A key's `nav` says what it does in an open list.
 
 | Role | A click |
 |---|---|
@@ -46,8 +46,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | A character key whose character is a dead key | Tap, or a chord of the latches its legend counts | Used | Starts |
 | The character key after a dead key | Tap, or a chord of the latches its legend counts, so the app adds the accent | Used | Ends |
 | A character key that types nothing in the layout shown | Its scan code, as above | Used | Kept only if the key typed nothing |
-| A character key missing from the table shown | Chord: every latch held around its scan code | Used | Kept only if the key typed nothing |
-| Any character key sent as a scan code while the app in front has another installed layout | Nothing; `Tapped::Stale`, so the face refreshes the layouts and redraws | Kept | Kept |
+| A character key missing from the table shown | Tap, or a chord with every latch held around its scan code | Used | Kept only if the key typed nothing |
+| Any character key sent as a scan code while the app in front has another installed layout | Nothing is sent; `Tapped::Stale`, so the face refreshes the layouts and redraws, and the user clicks again | Kept | Kept |
 | Any other character key | Its text as Unicode, or as key presses in the app's layout (`TextRoute::Keys`) when the app is in `key_apps`; Shift, Caps Lock and `AltGr` are already in the text | Used, none held | None |
 | A `send` key | Tap, or a chord with every latch held | Used | Kept only if the key typed nothing |
 | Caps Lock | Tap | Kept | Kept |
@@ -55,6 +55,45 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | The language key, a `later` key | Nothing; `Tapped::Lang` or `Tapped::Later` for the face | Kept | Kept |
 
 "Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows.
+
+## The face
+
+`Face` is the `KeyboardFace` service the UI draws. The UI calls it from one thread, which also runs the relabel timer, so `Layouts::refresh` is only ever called from there. The module keeps its face across a settings restart, so the latches survive; `Face::renew` takes the new settings (`Typing::update`, `Sizer`, `Placer`).
+
+`board_json()` changes only with the size or the language key's design:
+
+- `size`, `preset`, `presets`, `relabel_ms`, `lang_key`, `bubble_corner`, and the `plate`, `bar` and `dpad` boxes (`x y w h`, logical pixels).
+- `keys`, each `id kind row side x y w h icon label name checkable dim tip`. The box is the key's cell; the UI draws the cap half the theme's `gap_px` (times the size) inside it.
+- `icon` is an `icons.toml` key (`keys.<id>`, `lang.cycle`, `lang.list`); the UI shows `label` when the theme has no such icon. `name`, `label` and `tip` are translation keys (`key.<id>`, `label.<id>`, `tip.later`).
+- A `later` key and the D-pad come with `dim: true` and the tip "Coming in a later version".
+
+`state_json()` changes as keys are used:
+
+- `keys` by id: `main second third main_ar second_ar name on paint`, where `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key).
+- `lang`: `prev`, `cur` and `next` as `{short rtl arabic}` (null when the neighbour is the current layout), `at` and `count` for the Cycle's dots, the space bar's `space` parts, and `turn` (-1, 0 or 1) for the Carousel's slide.
+- `list`: null, or `{rows, hi, keys}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`.
+- `at`: null, or where the window goes in physical pixels.
+
+`act(action)` says what to redraw in a `FaceReply`, with a notice key for the banner above the keyboard:
+
+| Action | Does | Reply |
+|---|---|---|
+| `tap {id, back}` | Types, latches, or clicks the language key | State. A failed send adds `notice.keys-not-sent`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
+| `relabel` | Refreshes the layouts | State when the layout changed. |
+| `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
+| `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
+| `smaller`, `bigger`, `preset`, `resize_begin`, `resize_at`, `resize_end` | Sizes the keyboard; the size is saved in one write | Board; `notice.settings-unsaved` when it could not be saved. |
+| `placed {rect, screens}` | Fits the window to the screens the UI reports; a move is saved | State when the place changed. |
+
+The language key has three designs, by `lang_key`:
+
+- **Carousel:** the back part steps back, the rest steps on; the names slide the way it stepped once the switch lands.
+- **Cycle:** every click steps on; `at` lights one dot of `count`.
+- **List:** a click opens the list on the current row, and another closes it. While it is open, the board's `nav` keys (Esc, Enter, the arrows and Space) come as `panel_key` and never reach the app. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
+
+A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
+
+The golden files in `tests/golden/` pin both JSONs for EN, FR, AR and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the QML fixtures (Task 17) are made from them.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -75,15 +114,19 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 
 ## Public API
 
-- `KeyboardModule`, `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
+- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
+- `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
+- `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `DPAD_NAME`, `CYCLE_ICON`, `LIST_ICON`.
+- `langkey`: `click`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
+- `panel`: `LangList`, `Moved`, `Nav`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec` (with `nav`), `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`).
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `shown`, `is_arabic`, `is_haraka`, `is_mark`.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
-- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `fit`, `start`, `bubble`.
+- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `screen_of`, `fit`, `start`, `bubble`.
 
 ## Security
 

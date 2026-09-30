@@ -29,14 +29,15 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | `board.toml` | Compiled in, never read from disk; `deny_unknown_fields`, rows span the grid, whole columns, unique ids, roles fit; a broken board stops the module with an error, never a panic | Fixed at build time | Property tests |
 | Screens and pointer points from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics | — | Property tests |
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
-| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code with every latch held; a scan-code click waits while the shown table lags the app in front | One click | Golden-table tests |
+| Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
+| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.
 - **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). A hand-edited place off every screen brings the keyboard back to the bottom centre.
 - **Logging / repudiation:** the module never logs.
-- **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged.
-- **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins.
+- **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
+- **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins. A stale click is never replayed, so a lagging table cannot loop.
 - **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier.
 

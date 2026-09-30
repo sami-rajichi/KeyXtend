@@ -156,6 +156,18 @@ fn a_window_across_two_screens_goes_to_the_one_it_covers_most() {
 }
 
 #[test]
+fn the_windows_screen_is_the_one_it_covers_most_and_none_off_them() {
+    let s = two();
+    assert_eq!(screen_of(at(2000, 100), PLATE, &s), Some(&s[1]));
+    assert_eq!(
+        screen_of(at(1500, 100), PLATE, &s),
+        Some(&s[0]),
+        "most on the first"
+    );
+    assert_eq!(screen_of(at(FAR, FAR), PLATE, &s), None);
+}
+
+#[test]
 fn the_bubble_sits_in_a_bottom_corner_of_the_work_area() {
     let work = rect(0, 0, 1920, 1020);
     assert_eq!(bubble(work, Corner::Right, 46, 12), at(1862, 962));

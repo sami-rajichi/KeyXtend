@@ -1,0 +1,155 @@
+//! The language list of the List design: the board's arrows, Enter and Esc move its highlight, pick and close it
+//! (spec §3.3), and it pages at the UI's page size with no scrolling (ADR-0008).
+
+use crate::spec::{BoardSpec, RowItem};
+use kx_module_api::ports::{LangLabel, LayoutId};
+use serde::{Deserialize, Serialize};
+
+/// The icon on the current row, by its `icons.toml` key.
+pub const CURRENT_ICON: &str = "lang.current";
+
+/// What a board key does in an open panel, as `board.toml` names it with `nav`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Nav {
+    /// Up one row.
+    Up,
+    /// Down one row.
+    Down,
+    /// Back one page in a list; the previous tab in a panel with tabs.
+    Left,
+    /// On one page in a list; the next tab in a panel with tabs.
+    Right,
+    /// Picks the highlighted row.
+    Enter,
+    /// Ticks the highlighted row where rows tick.
+    Space,
+    /// Closes the panel.
+    Esc,
+}
+
+/// What a panel key did.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Moved {
+    /// Nothing changed.
+    Stay,
+    /// The highlight moved.
+    Hi,
+    /// Row `n` was picked.
+    Pick(usize),
+    /// The panel closes.
+    Close,
+}
+
+/// The open language list: which row is highlighted.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct LangList {
+    hi: usize,
+}
+
+impl LangList {
+    /// The list opened with row `at` highlighted, the current layout's.
+    #[must_use]
+    pub fn open(at: usize) -> Self {
+        Self { hi: at }
+    }
+
+    /// The highlighted row of a list `len` rows long.
+    #[must_use]
+    pub fn hi(&self, len: usize) -> usize {
+        self.hi.min(len.saturating_sub(1))
+    }
+
+    /// Key `nav` on a list `len` rows long, shown `rows` to a page; a page size of 0 counts as 1.
+    /// Up and Down move one row, Left and Right turn to the first row of the page before or after, as the mock-up
+    /// pages; each stops at the ends.
+    pub fn key(&mut self, nav: Nav, rows: usize, len: usize) -> Moved {
+        let Some(last) = len.checked_sub(1) else {
+            return if nav == Nav::Esc {
+                Moved::Close
+            } else {
+                Moved::Stay
+            };
+        };
+        let (rows, hi) = (rows.max(1), self.hi(len));
+        let page = hi / rows;
+        let to = match nav {
+            Nav::Up => hi.saturating_sub(1),
+            Nav::Down => (hi + 1).min(last),
+            Nav::Left => page.saturating_sub(1) * rows,
+            Nav::Right => (page + 1).min(last / rows) * rows,
+            Nav::Enter => return Moved::Pick(hi),
+            Nav::Esc => return Moved::Close,
+            Nav::Space => return Moved::Stay,
+        };
+        self.hi = to;
+        if to == hi { Moved::Stay } else { Moved::Hi }
+    }
+}
+
+/// The board keys that drive an open panel, by id, in board order.
+#[must_use]
+pub fn navs(spec: &BoardSpec) -> Vec<(String, Nav)> {
+    let named = spec.rows.iter().flatten().filter_map(|i| match i {
+        RowItem::Key(k) => k.nav.map(|n| (k.id.clone(), n)),
+        RowItem::Chars(_) => None,
+    });
+    named.collect()
+}
+
+/// One layout as the list shows it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct LangRow {
+    /// The badge, such as `EN` or `ع`.
+    pub short: String,
+    /// The language, then the layout; the UI joins them.
+    pub name: Vec<String>,
+    /// Written right to left.
+    pub rtl: bool,
+    /// Needs the Arabic font.
+    pub arabic: bool,
+    /// The layout shown now.
+    pub current: bool,
+    /// The current row's tick, by its `icons.toml` key.
+    pub icon: Option<&'static str>,
+}
+
+/// The open language list: every layout in the list's order, which the UI pages, and the highlighted row.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ListView {
+    /// Every layout; the UI shows the page holding `hi`, padded to whole pages.
+    pub rows: Vec<LangRow>,
+    /// The highlighted row.
+    pub hi: usize,
+    /// The board keys the UI sends as `panel_key` while the list is open.
+    pub keys: Vec<String>,
+}
+
+/// The list `open` over `labels`, with layout `cur` shown now and `keys` driving it.
+#[must_use]
+pub fn list_view(
+    open: &LangList,
+    labels: &[LangLabel],
+    cur: LayoutId,
+    keys: &[String],
+) -> ListView {
+    let row = |l: &LangLabel| {
+        let current = l.id == cur;
+        LangRow {
+            short: l.short.clone(),
+            name: l.name.clone(),
+            rtl: l.rtl,
+            arabic: l.arabic,
+            current,
+            icon: current.then_some(CURRENT_ICON),
+        }
+    };
+    ListView {
+        rows: labels.iter().map(row).collect(),
+        hi: open.hi(labels.len()),
+        keys: keys.to_vec(),
+    }
+}
+
+#[cfg(test)]
+mod tests;

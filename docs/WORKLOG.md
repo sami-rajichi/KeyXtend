@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-09-30 — P3: the keyboard face and the language key
+The keyboard now gives the screen everything it draws: each key's box, name and icon, the legends and lights, and dimmed side keys marked "Coming in a later version". The language key works in all three designs: Carousel, Cycle, and a List the arrows, Enter and Esc drive, five rows a page, with Arabic shown right to left. A click made while the app's layout just changed sends nothing and redraws, so the user clicks again, and failed sends or switches show a notice. Golden files pin the English, French and Arabic views for the Qt screens to come.
+
 ## 2026-09-29 — P2 done: kernel, settings and test tools
 The kernel starts the feature modules in dependency order, keeps a failed or crashing module from stopping the rest, and offers Try again; modules talk through a typed event bus and share services gated by capabilities. Settings live in one readable `settings.toml` in the data folder that holds only the user's changes (ADR-0015): a bad value resets alone, a damaged file is set aside and the last good copy comes back, and the log keeps this run and the previous one with sensitive fields hidden. The P1 test tools moved into `tools/kx-gates` and `tools/kx-target-window`, and the Slint and Tauri prototypes are gone. Reviews found and fixed about 60 issues, 720 tests pass, and on Windows G1, G2, G5 and G12 passed again and the owner confirmed the settings file and its repair.
 

@@ -151,56 +151,55 @@ words_icon = "captions"
 # How long the text stays after it arrives, in ms.
 hide_ms = 4000
 
-# How each named key looks (spec 3.1, mock-up keyInner): a Lucide icon or a text label, and the name that
-# screen readers say and icon tooltips show; side keys say what they do. Key roles moved to kx-mod-keyboard's board.toml.
+# The named keys' text until the translations come (P3 Task 15): a label where icons.toml gives no icon, and the name
+# that screen readers say and tooltips show; side keys say what they do. Roles are in board.toml, icons in icons.toml.
 [keys]
 esc = { label = "Esc", name = "Escape" }
-bksp = { icon = "delete", name = "Backspace" }
-tab = { icon = "arrow-right-to-line", name = "Tab" }
+bksp = { name = "Backspace" }
+tab = { name = "Tab" }
 del = { label = "Del", name = "Delete" }
 caps = { label = "Caps", name = "Caps Lock" }
-enter = { icon = "corner-down-left", name = "Enter" }
-shift = { icon = "arrow-big-up", name = "Shift" }
-rshift = { icon = "arrow-big-up", name = "Shift" }
-up = { icon = "chevron-up", name = "Up" }
-menu = { icon = "square-menu", name = "Menu key (context menu)" }
+enter = { name = "Enter" }
+shift = { name = "Shift" }
+rshift = { name = "Shift" }
+up = { name = "Up" }
+menu = { name = "Menu key (context menu)" }
 ctrl = { label = "Ctrl", name = "Control" }
-win = { icon = "win-logo", name = "Windows key" }
+win = { name = "Windows key" }
 alt = { label = "Alt", name = "Alt" }
 lang = { name = "Language" }
 space = { name = "Space" }
 altgr = { label = "AltGr", name = "AltGr" }
-left = { icon = "chevron-left", name = "Left" }
-down = { icon = "chevron-down", name = "Down" }
-right = { icon = "chevron-right", name = "Right" }
-rclick = { icon = "mouse-right", name = "Right-click by holding", action = "toggle" }
-grab = { icon = "hand-grab", name = "Grab: drag and drop, select text", action = "toggle" }
-shortcuts = { icon = "command", name = "Shortcuts", action = "toggle" }
-mic = { icon = "mic", name = "Voice typing", action = "mic" }
-clip = { icon = "clipboard-clock", name = "Clipboard history", action = "toggle" }
-snip = { icon = "scissors-line-dashed", name = "Snip", action = "snip" }
-fill = { icon = "key-round", name = "Quick-fill", action = "fill" }
-settings = { icon = "settings-2", name = "Settings", action = "panel" }
-power = { icon = "power", name = "Power", action = "note", note = "Power opens the Windows shut-down dialog in the real app; the spike does nothing." }
+left = { name = "Left" }
+down = { name = "Down" }
+right = { name = "Right" }
+rclick = { name = "Right-click by holding", action = "toggle" }
+grab = { name = "Grab: drag and drop, select text", action = "toggle" }
+shortcuts = { name = "Shortcuts", action = "toggle" }
+mic = { name = "Voice typing", action = "mic" }
+clip = { name = "Clipboard history", action = "toggle" }
+snip = { name = "Snip", action = "snip" }
+fill = { name = "Quick-fill", action = "fill" }
+settings = { name = "Settings", action = "panel" }
+power = { name = "Power", action = "note", note = "Power opens the Windows shut-down dialog in the real app; the spike does nothing." }
 
-# The top bar (mock-up topBar) plus the owner's size buttons and resize corner; icon_on shows while a switch is on.
-# Size uses lenses, since the Windows sign for minimise is the plain minus.
+# The top bar's names (mock-up topBar) plus the owner's size buttons and resize corner; icons are in icons.toml.
 [bar]
-grip = { icon = "grip-horizontal", name = "Move keyboard: click, move, click" }
-theme = { icon = "moon", icon_on = "sun", name = "Light or soft dark" }
-smaller = { icon = "zoom-out", name = "Smaller" }
-bigger = { icon = "zoom-in", name = "Bigger" }
-minimise = { icon = "minus", name = "Minimise to a bubble" }
-bubble = { icon = "keyboard", name = "Show the keyboard" }
+grip = { name = "Move keyboard: click, move, click" }
+theme = { name = "Light or soft dark" }
+smaller = { name = "Smaller" }
+bigger = { name = "Bigger" }
+minimise = { name = "Minimise to a bubble" }
+bubble = { name = "Show the keyboard" }
 bubble_title = "KeyXtend spike - bubble"
 catch_name = "Click to finish moving or resizing"
-close = { icon = "x", name = "Close" }
-corner = { icon = "move-diagonal-2", name = "Resize: click, move, click" }
+close = { name = "Close" }
+corner = { name = "Resize: click, move, click" }
 # The D-pad's arrows (up, right, left, down) and its Stop button.
 dpad = [
-    { icon = "chevron-up", name = "Scroll up" }, { icon = "chevron-right", name = "Scroll right" },
-    { icon = "chevron-left", name = "Scroll left" }, { icon = "chevron-down", name = "Scroll down" },
-    { icon = "square", name = "Stop scrolling" },
+    { name = "Scroll up" }, { name = "Scroll right" },
+    { name = "Scroll left" }, { name = "Scroll down" },
+    { name = "Stop scrolling" },
 ]
 # One label and one spoken name per size preset.
 sizes = ["S", "M", "L"]

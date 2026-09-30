@@ -26,10 +26,10 @@ Item {
     readonly property bool isLang: kv.kind === "lang"
     readonly property bool mainAr: isChar && ks ? ks.main_ar : false
     readonly property bool secondAr: isChar && ks ? ks.second_ar : false
-    readonly property real spacePx: lg.space_px[lang.rtl ? 1 : 0] * s
+    readonly property real spacePx: lg.space_px[lang.cur.rtl ? 1 : 0] * s
     readonly property real mainPx: look.legend_px * s * (mainAr ? look.arabic_scale : 1)
     // The layout of the app in front.
-    readonly property string cur: lang.cur
+    readonly property string cur: lang.cur.short
 
     // The cap hides what slides past its edge (mock-up .cap overflow); other keys clip only while their legend rises.
     clip: isLang || swap.running
@@ -126,8 +126,8 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
-            ar: t.lang.rtl
-            text: t.lang.space || ""
+            ar: t.lang.cur.rtl
+            text: t.lang.space.join(t.res.joiner)
             font.pixelSize: t.spacePx
             color: t.ink2
         }
@@ -169,15 +169,15 @@ Item {
             id: slide
         }
         Repeater {
-            model: [t.lang.prev, t.lang.cur, t.lang.next]
+            model: [t.lang.prev || t.lang.cur, t.lang.cur, t.lang.next || t.lang.cur]
             delegate: Line {
-                required property string modelData
+                required property var modelData
                 required property int index
                 readonly property bool cur: index === 1
                 readonly property var sh: langRow.sh
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                ar: t.lang.ar ? t.lang.ar[index] : false
-                text: modelData
+                ar: modelData.arabic
+                text: modelData.short
                 font.pixelSize: (cur ? sh.font_px[ar ? 1 : 0] : sh.side[0]) * t.s
                 font.weight: cur ? sh.weight : Font.Normal
                 opacity: cur ? 1 : sh.side[1]

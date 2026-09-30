@@ -15,11 +15,15 @@ pub enum Ask {
 }
 
 /// A layouts service over the tables a test gives, listed in that order, with the first one shown.
-/// A step or pick only records the ask, as an app that has not switched yet; `show` switches.
+/// A step or pick only records the ask, as an app that has not switched yet; `show` switches at once, and
+/// `switch` on the next `refresh`, as the real service sees an app switch.
 #[derive(Debug, Default)]
 pub struct FakeLayouts {
     tables: Vec<Arc<LayoutTable>>,
     shown: Mutex<usize>,
+    pending: Mutex<Option<usize>>,
+    refreshes: Mutex<usize>,
+    error: Mutex<Option<SwitchError>>,
     asked: Mutex<Vec<Ask>>,
 }
 
@@ -52,14 +56,39 @@ impl FakeLayouts {
         at.is_some()
     }
 
+    /// The app in front switched to layout `id`, which the next `refresh` sees; false when it is not listed.
+    pub fn switch(&self, id: LayoutId) -> bool {
+        let at = self.tables.iter().position(|t| t.label.id == id);
+        if at.is_some() {
+            *lock(&self.pending) = at;
+        }
+        at.is_some()
+    }
+
+    /// Refuses every later step and pick with `error`, or takes them again with `None`.
+    pub fn set_error(&self, error: Option<SwitchError>) {
+        *lock(&self.error) = error;
+    }
+
+    /// How many times `refresh` ran.
+    #[must_use]
+    pub fn refreshes(&self) -> usize {
+        *lock(&self.refreshes)
+    }
+
     /// Every step and pick so far, oldest first.
     #[must_use]
     pub fn asked(&self) -> Vec<Ask> {
         lock(&self.asked).clone()
     }
 
-    fn ask(&self, ask: Ask) {
+    /// Records `ask`, unless the test set an error.
+    fn ask(&self, ask: Ask) -> Result<(), SwitchError> {
+        if let Some(error) = *lock(&self.error) {
+            return Err(error);
+        }
         lock(&self.asked).push(ask);
+        Ok(())
     }
 }
 
@@ -73,25 +102,30 @@ impl Layouts for FakeLayouts {
         self.tables.iter().map(|t| t.label.clone()).collect()
     }
 
-    /// Nothing changes on its own; a test switches with `show`.
+    /// Shows the layout a test `switch`ed to, if any; true when that changed the layout shown.
     fn refresh(&self) -> bool {
-        false
+        *lock(&self.refreshes) += 1;
+        let Some(at) = lock(&self.pending).take() else {
+            return false;
+        };
+        let mut shown = lock(&self.shown);
+        let moved = *shown != at;
+        *shown = at;
+        moved
     }
 
     fn step(&self, by: i32) -> Result<(), SwitchError> {
         if self.tables.is_empty() {
             return Err(SwitchError::NotInstalled);
         }
-        self.ask(Ask::Step(by));
-        Ok(())
+        self.ask(Ask::Step(by))
     }
 
     fn pick(&self, id: LayoutId) -> Result<(), SwitchError> {
         if !self.tables.iter().any(|t| t.label.id == id) {
             return Err(SwitchError::NotInstalled);
         }
-        self.ask(Ask::Pick(id));
-        Ok(())
+        self.ask(Ask::Pick(id))
     }
 }
 
@@ -147,6 +181,31 @@ mod tests {
         assert_eq!(fake.current().keys[&Q].base, "q", "not switched yet");
         assert!(fake.show(fr));
         assert_eq!(fake.current().keys[&Q].base, "a", "AZERTY");
+    }
+
+    #[test]
+    fn a_switch_lands_on_the_next_refresh_which_counts_its_calls() {
+        let fake = fake();
+        let fr = ids(&fake)[1];
+        assert!(fake.switch(fr));
+        assert_eq!(fake.current().keys[&Q].base, "q", "not seen yet");
+        assert!(fake.refresh(), "the refresh sees the switch");
+        assert_eq!(fake.current().keys[&Q].base, "a");
+        assert!(!fake.refresh(), "nothing more changed");
+        assert_eq!(fake.refreshes(), 2);
+        assert!(!fake.switch(LayoutId::new(1)));
+    }
+
+    #[test]
+    fn an_error_the_test_sets_refuses_steps_and_picks_until_cleared() {
+        let fake = fake();
+        let fr = ids(&fake)[1];
+        fake.set_error(Some(SwitchError::Refused));
+        assert_eq!(fake.step(1), Err(SwitchError::Refused));
+        assert_eq!(fake.pick(fr), Err(SwitchError::Refused));
+        assert!(fake.asked().is_empty());
+        fake.set_error(None);
+        assert_eq!(fake.step(1), Ok(()));
     }
 
     #[test]

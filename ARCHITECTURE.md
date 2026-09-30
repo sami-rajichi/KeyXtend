@@ -61,7 +61,8 @@ crates/
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
-                         `[keyboard]` settings. Later: the face, language key, shortcuts
+                         the face (board and state JSON, clicks) and the language key's
+                         Carousel, Cycle and List; `[keyboard]` settings. Later: shortcuts
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`

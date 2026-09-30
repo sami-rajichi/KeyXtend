@@ -29,7 +29,7 @@ Window {
     readonly property real s: view.size
     readonly property var strip: lk.shape.extra.strip_px
     readonly property real corner: lk.shape.extra.corner_px[0] * s
-    readonly property var res: ({ fam: families(fontsIn), icons: bar.icons, ext: bar.iconExt })
+    readonly property var res: ({ fam: families(fontsIn), icons: bar.icons, ext: bar.iconExt, joiner: bar.joiner })
     // The keyboard's screen in Qt units; tooltips stay on it.
     readonly property rect screenBox: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
     // What takes clicks: the plate, the resize corner overhanging it, and the test strip.

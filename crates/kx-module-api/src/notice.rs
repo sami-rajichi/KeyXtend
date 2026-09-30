@@ -17,7 +17,7 @@ impl Event for Notice {
     const NAME: &'static str = "notice";
 }
 
-/// Translation keys of the kernel's notices.
+/// Translation keys of the notices the kernel and the keyboard face show.
 pub mod keys {
     /// Some settings values were bad and went back to their defaults.
     pub const SETTINGS_RESET: &str = "notice.settings-reset";
@@ -33,6 +33,10 @@ pub mod keys {
     pub const SETTINGS_LOCKED: &str = "notice.settings-locked";
     /// A module failed while the rest keep running; it can be tried again.
     pub const MODULE_FAILED: &str = "notice.module-failed";
+    /// A click's keys or text did not all reach the app in front.
+    pub const KEYS_NOT_SENT: &str = "notice.keys-not-sent";
+    /// The app in front could not be asked to switch language.
+    pub const LANG_NOT_SWITCHED: &str = "notice.lang-not-switched";
 }
 
 /// Where a module is in its lifecycle; the kernel drives it.
@@ -82,7 +86,7 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
-    const ALL_KEYS: [&str; 7] = [
+    const ALL_KEYS: [&str; 9] = [
         keys::SETTINGS_RESET,
         keys::SETTINGS_RESTORED,
         keys::SETTINGS_DEFAULTS,
@@ -90,6 +94,8 @@ mod tests {
         keys::SETTINGS_UNSAVED,
         keys::SETTINGS_LOCKED,
         keys::MODULE_FAILED,
+        keys::KEYS_NOT_SENT,
+        keys::LANG_NOT_SWITCHED,
     ];
 
     #[test]

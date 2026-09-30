@@ -60,23 +60,28 @@ pub fn home(size: (f64, f64), screens: &[Screen]) -> Option<Point> {
     Some(bottom_centre(main.rect, sized(size, main.dpi)))
 }
 
-/// Where a window `size` logical pixels big with its top-left at `at` goes: inside the screen that holds the
-/// largest share of it, at that screen's DPI, else home when it is off every screen.
+/// The screen that holds the largest share of a window `size` logical pixels big at `at`, sized at each screen's
+/// DPI; `None` when it is off every screen.
 #[must_use]
-pub fn fit(at: Point, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
+pub fn screen_of(at: Point, size: (f64, f64), screens: &[Screen]) -> Option<&Screen> {
     let share = |s: &Screen| {
         let (w, h) = sized(size, s.dpi);
         let covered = shared(at.x, w, s.rect.x, s.rect.w) * shared(at.y, h, s.rect.y, s.rect.h);
         let whole = i64::from(w.max(1)) * i64::from(h.max(1));
-        (i128::from(covered), i128::from(whole), s.rect, (w, h))
+        (i128::from(covered), i128::from(whole))
     };
-    let on = screens
-        .iter()
-        .map(share)
-        .filter(|(covered, ..)| *covered > 0);
-    let best = on.max_by(|a, b| (a.0 * b.1).cmp(&(b.0 * a.1)));
-    match best {
-        Some((.., work, size_on)) => Some(inside(at, size_on, work)),
+    let on = screens.iter().map(|s| (share(s), s));
+    let on = on.filter(|((covered, _), _)| *covered > 0);
+    let best = on.max_by(|((ac, aw), _), ((bc, bw), _)| (ac * bw).cmp(&(bc * aw)));
+    best.map(|(_, s)| s)
+}
+
+/// Where a window `size` logical pixels big with its top-left at `at` goes: inside the screen that holds the
+/// largest share of it, at that screen's DPI, else home when it is off every screen.
+#[must_use]
+pub fn fit(at: Point, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
+    match screen_of(at, size, screens) {
+        Some(s) => Some(inside(at, sized(size, s.dpi), s.rect)),
         None => home(size, screens),
     }
 }

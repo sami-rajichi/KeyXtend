@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::SpikeConfig;
-use crate::facecfg::BarButton;
 use kx_mod_keyboard::legend::is_arabic;
 
 /// Where the page text puts this page's number.
@@ -12,6 +11,16 @@ const PAGE_AT: &str = "{n}";
 const PAGE_COUNT: &str = "{count}";
 /// The most rows a list page may have (ADR-0008).
 const MOST_ROWS: usize = 5;
+
+/// One panel button: its Lucide icon and its name for screen readers.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PanelButton {
+    /// Lucide icon name.
+    pub icon: String,
+    /// Name for screen readers.
+    pub name: String,
+}
 
 /// The panel's texts, icons and list.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -32,11 +41,11 @@ pub struct PanelConfig {
     /// Shown in the empty text field.
     pub hint: String,
     /// The close, previous-page and next-page buttons.
-    pub close: BarButton,
+    pub close: PanelButton,
     /// See `close`.
-    pub prev: BarButton,
+    pub prev: PanelButton,
     /// See `close`.
-    pub next: BarButton,
+    pub next: PanelButton,
 }
 
 impl PanelConfig {

@@ -7,7 +7,7 @@ use crate::logic::order;
 use kx_module_api::Bus;
 use kx_module_api::ports::{
     KeyChars, LangLabel, LayoutChanged, LayoutId, LayoutSource, LayoutTable, Layouts, Scan,
-    SwitchError,
+    SwitchError, step_to,
 };
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -132,7 +132,7 @@ impl Layouts for LayoutsService {
             let state = self.state();
             let ids: Vec<LayoutId> = state.list.iter().map(|l| l.id).collect();
             let shown = state.follow.shown();
-            (order::wrap(&ids, shown, by), shown)
+            (step_to(&ids, shown, by), shown)
         };
         match to {
             None => Err(SwitchError::NotInstalled),

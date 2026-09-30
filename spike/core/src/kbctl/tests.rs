@@ -3,9 +3,12 @@
 use super::*;
 use crate::config::ToolButton;
 use kx_mod_keyboard::Latch;
+use kx_mod_keyboard::view::DIM;
 
 /// A layout handle no system has, so nothing is read for it.
 const FAKE: isize = 0x7777_7777;
+/// Another one.
+const OTHER: isize = 0x7777_7778;
 
 /// A keyboard on the fake layout.
 fn kb() -> Kb {
@@ -13,6 +16,7 @@ fn kb() -> Kb {
     let themes = kx_theme::Themes::shipped().expect("the tokens load");
     let mut k = Kb::new(cfg, themes, SysLook::default()).expect("the board loads");
     k.hkl = FAKE;
+    k.turn = Turn::new(k.layout_id());
     k
 }
 
@@ -82,23 +86,71 @@ fn the_mode_switch_flips_what_is_shown_and_themes_must_exist() {
 fn the_mic_key_shows_the_recording_until_it_stops() {
     let mut k = kb();
     k.set_rec(true);
-    assert!(k.state().keys["mic"].rec);
+    let mic = &k.state().keys["mic"];
+    assert!(mic.on && mic.paint == REC);
     k.set_rec(false);
-    assert!(!k.state().keys["mic"].rec);
+    assert_eq!(k.state().keys["mic"].paint, paint(KeyKind::Act, false));
 }
 
 #[test]
 fn the_names_turn_the_way_the_key_stepped_and_only_once() {
     let mut k = kb();
-    k.asked = -1;
-    k.switched(FAKE);
+    let ids = [FAKE, OTHER].map(|h| LayoutId::new(h as u64));
+    k.turn.asked(-1);
+    k.switched(OTHER, &ids);
     assert_eq!(k.state().lang.turn, -1);
-    k.switched(FAKE);
+    k.switched(FAKE, &ids);
     assert_eq!(
         k.state().lang.turn,
         0,
         "a change made another way does not turn"
     );
+}
+
+#[test]
+fn the_view_is_the_products_with_the_spikes_text_icons_and_caps() {
+    let k = kb();
+    let (v, b) = (k.view(), k.board());
+    assert_eq!(v.keys.len(), b.keys.len());
+    let esc = v.keys.iter().find(|k| k.id == "esc").expect("esc");
+    assert_eq!(
+        (esc.icon.as_deref(), esc.label.as_deref()),
+        (None, Some("Esc"))
+    );
+    let mic = v.keys.iter().find(|k| k.id == "mic").expect("mic");
+    assert!(
+        mic.side && !mic.dim && mic.tip.is_none(),
+        "the spike's side keys work"
+    );
+    assert_eq!(mic.icon.as_deref(), Some("mic"));
+    let cap = b.keys.iter().find(|k| k.id == "mic").expect("mic").cap;
+    assert!((mic.cell.w - cap.w).abs() < 1e-9 && (mic.cell.x - cap.x).abs() < 1e-9);
+}
+
+#[test]
+fn every_paint_names_tokens_each_theme_has() {
+    let kinds = [
+        KeyKind::Char,
+        KeyKind::Mod,
+        KeyKind::Danger,
+        KeyKind::Enter,
+        KeyKind::Lang,
+        KeyKind::Space,
+        KeyKind::Act,
+    ];
+    let lit = kinds
+        .iter()
+        .flat_map(|&k| [paint(k, false), paint(k, true)]);
+    let all: Vec<Paint> = lit.chain([DIM, REC]).collect();
+    for t in &kx_theme::Themes::shipped().expect("themes load").list {
+        for p in [&t.light, &t.dark] {
+            let skirt = serde_json::to_value(p.skirt.as_ref()).expect("skirt");
+            for c in &all {
+                assert!(p.get(c.fill).is_some() && p.get(c.ink).is_some(), "{c:?}");
+                assert!(skirt.is_null() || skirt[c.skirt].is_string(), "{c:?}");
+            }
+        }
+    }
 }
 
 #[test]

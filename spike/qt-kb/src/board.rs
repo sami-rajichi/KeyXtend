@@ -6,6 +6,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use kx_mod_keyboard::legend;
 use serde_json::json;
+use spike_core::facecfg;
 use spike_core::kbctl::{Kb, Tapped};
 use spike_core::lookcfg::ModeChoice;
 use spike_core::sysui::{self, WatchGuard};
@@ -186,7 +187,7 @@ impl qobject::Board {
             .iter()
             .map(|t| t.look.name.as_str())
             .collect();
-        let mut bar = serde_json::to_value(&c.bar).unwrap_or_default();
+        let mut bar = facecfg::bar_json(&c.bar, &kb.themes().icons);
         let chips = c.bar.chips.iter();
         bar["chips"] = chips
             .map(
@@ -199,6 +200,7 @@ impl qobject::Board {
             "fonts": c.assets.font_files(&c.resolve(&c.assets.fonts)).iter().map(|p| url(p)).collect::<Vec<_>>(),
             "icons": url(&c.resolve(&c.assets.icons)),
             "iconExt": c.assets.icon_ext,
+            "joiner": c.lang.joiner,
             "tipMs": c.look.tip_ms,
         }))
     }

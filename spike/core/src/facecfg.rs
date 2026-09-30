@@ -1,12 +1,15 @@
-//! `spike.toml [keys]`, `[bar]` and `[assets]`: how each named key and top-bar button looks, what side keys do, and where fonts and icons are.
+//! `spike.toml [keys]`, `[bar]` and `[assets]`: the spike's text for named keys and top-bar buttons until the
+//! translations come (P3 Task 15), what side keys do, and where fonts and icons are. Icons come from `icons.toml`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 
 use kx_mod_keyboard::spec::RowItem;
 use kx_mod_keyboard::{BoardSpec, KeyKind};
+use kx_theme::Icons;
 
 /// What a side key does in the spike.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -26,14 +29,11 @@ pub enum Action {
     Panel,
 }
 
-/// How one named key looks, what screen readers call it, and what a side key does in the spike.
+/// A named key's text, what screen readers call it, and what a side key does in the spike.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyLook {
-    /// Lucide icon name.
-    #[serde(default)]
-    pub icon: Option<String>,
-    /// Text drawn instead of an icon.
+    /// Text drawn when `icons.toml` gives the key no icon.
     #[serde(default)]
     pub label: Option<String>,
     /// Name for screen readers.
@@ -49,15 +49,10 @@ pub struct KeyLook {
 /// Every named key's look, by key id.
 pub type KeysConfig = BTreeMap<String, KeyLook>;
 
-/// One top-bar button: its icon, the icon while it is on, and its name.
+/// One top-bar button's name for screen readers; its icon comes from `icons.toml`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BarButton {
-    /// Lucide icon name.
-    pub icon: String,
-    /// Icon while it is on.
-    #[serde(default)]
-    pub icon_on: Option<String>,
     /// Name for screen readers.
     pub name: String,
 }
@@ -79,7 +74,7 @@ pub struct Chip {
 pub struct BarConfig {
     /// Moves the keyboard: click, move, click.
     pub grip: BarButton,
-    /// Light or soft dark.
+    /// Light or soft dark (`icons.toml` `mode` and `mode_on`).
     pub theme: BarButton,
     /// One size step smaller.
     pub smaller: BarButton,
@@ -152,8 +147,8 @@ impl AssetsConfig {
     }
 }
 
-/// Refuses a named key of the product board without a look, a look drawing nothing, and a side key without a working action.
-pub fn check_keys(keys: &KeysConfig, l: &BoardSpec) -> Result<(), String> {
+/// Refuses a named key of the product board without a look, a key drawing nothing, and a side key without a working action.
+pub fn check_keys(keys: &KeysConfig, l: &BoardSpec, icons: &Icons) -> Result<(), String> {
     let named = l.rows.iter().flatten().filter_map(|i| match i {
         RowItem::Key(k) => Some((k.id.as_str(), k.kind)),
         RowItem::Chars(_) => None,
@@ -163,8 +158,8 @@ pub fn check_keys(keys: &KeysConfig, l: &BoardSpec) -> Result<(), String> {
         let k = keys
             .get(id)
             .ok_or_else(|| format!("keys: {id} has no [keys.{id}]"))?;
-        let draws =
-            k.icon.is_some() || k.label.is_some() || matches!(kind, KeyKind::Lang | KeyKind::Space);
+        let icon = icons.keys.contains_key(id);
+        let draws = icon || k.label.is_some() || matches!(kind, KeyKind::Lang | KeyKind::Space);
         let acts = match (kind, k.action) {
             (KeyKind::Act, Some(Action::Note)) => k.note.is_some(),
             (KeyKind::Act, a) => a.is_some(),
@@ -179,6 +174,31 @@ pub fn check_keys(keys: &KeysConfig, l: &BoardSpec) -> Result<(), String> {
     Ok(())
 }
 
+/// The bar as the spike face reads it: each button's name with its icon from `icons`.
+pub fn bar_json(bar: &BarConfig, icons: &Icons) -> Value {
+    let (b, d) = (&icons.bar, &icons.dpad);
+    let mut v = serde_json::to_value(bar).unwrap_or_default();
+    let named = [
+        ("grip", &b.grip),
+        ("theme", &b.mode),
+        ("smaller", &b.smaller),
+        ("bigger", &b.bigger),
+        ("minimise", &b.minimise),
+        ("bubble", &b.bubble),
+        ("close", &b.close),
+        ("corner", &b.corner),
+    ];
+    for (button, icon) in named {
+        v[button]["icon"] = json!(icon);
+    }
+    v["theme"]["icon_on"] = json!(b.mode_on);
+    let dpad = [&d.up, &d.right, &d.left, &d.down, &d.stop];
+    for (i, icon) in dpad.into_iter().enumerate() {
+        v["dpad"][i]["icon"] = json!(icon);
+    }
+    v
+}
+
 /// Refuses a size label list that does not match the presets.
 pub fn check_bar(bar: &BarConfig, presets: usize) -> Result<(), String> {
     if bar.sizes.len() != presets || bar.size_names.len() != presets {
@@ -190,114 +210,4 @@ pub fn check_bar(bar: &BarConfig, presets: usize) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn cfg() -> crate::config::SpikeConfig {
-        crate::config::load().expect("spike.toml loads")
-    }
-
-    fn board() -> BoardSpec {
-        BoardSpec::shipped().expect("the product board loads")
-    }
-
-    fn presets() -> usize {
-        kx_mod_keyboard::KeyboardSettings::from_defaults()
-            .expect("the product defaults load")
-            .presets
-            .len()
-    }
-
-    #[test]
-    fn every_named_and_side_key_has_a_look() {
-        let c = cfg();
-        assert_eq!(check_keys(&c.keys, &board()), Ok(()));
-        let mut keys = c.keys.clone();
-        keys.remove("esc");
-        assert!(check_keys(&keys, &board()).is_err(), "Esc lost its look");
-    }
-
-    #[test]
-    fn a_key_drawing_nothing_is_refused() {
-        let c = cfg();
-        let mut keys = c.keys.clone();
-        let esc = keys.get_mut("esc").expect("esc");
-        esc.icon = None;
-        esc.label = None;
-        assert!(check_keys(&keys, &board()).is_err());
-    }
-
-    #[test]
-    fn a_side_key_needs_an_action_and_a_note_needs_text() {
-        let c = cfg();
-        let mut keys = c.keys.clone();
-        keys.get_mut("mic").expect("mic").action = None;
-        assert!(check_keys(&keys, &board()).is_err());
-        let mut keys = c.keys.clone();
-        let power = keys.get_mut("power").expect("power");
-        power.action = Some(Action::Note);
-        power.note = None;
-        assert!(check_keys(&keys, &board()).is_err());
-    }
-
-    #[test]
-    fn size_labels_match_the_presets() {
-        let c = cfg();
-        assert_eq!(check_bar(&c.bar, presets()), Ok(()));
-        assert!(check_bar(&c.bar, presets() + 1).is_err());
-    }
-
-    #[test]
-    fn minimise_never_looks_like_a_size_button() {
-        let b = cfg().bar;
-        assert_ne!(b.minimise.icon, b.smaller.icon);
-        assert_ne!(b.minimise.icon, b.bigger.icon);
-        assert!(!b.bubble.icon.is_empty() && !b.bubble_title.is_empty());
-    }
-
-    #[test]
-    fn font_files_are_found_in_subfolders_by_extension() {
-        let dir = std::env::temp_dir().join(format!("kx-fonts-{}", std::process::id()));
-        let sub = dir.join("plex");
-        std::fs::create_dir_all(&sub).expect("temp folder");
-        for f in [sub.join("a.ttf"), dir.join("b.OTF"), dir.join("c.txt")] {
-            std::fs::write(f, b"").expect("temp file");
-        }
-        let mut found = cfg().assets.font_files(&dir);
-        found.sort();
-        let _ = std::fs::remove_dir_all(&dir);
-        assert_eq!(found, [dir.join("b.OTF"), sub.join("a.ttf")]);
-    }
-
-    #[test]
-    fn a_folder_link_is_not_followed_so_a_loop_cannot_recurse() {
-        let dir = std::env::temp_dir().join(format!("kx-loop-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("temp folder");
-        std::fs::write(dir.join("a.ttf"), b"").expect("temp file");
-        // A junction needs no special rights, unlike a symbolic link.
-        let made = std::process::Command::new("cmd")
-            .args(["/C", "mklink", "/J"])
-            .arg(dir.join("back"))
-            .arg(&dir)
-            .output()
-            .is_ok_and(|o| o.status.success());
-        let found = cfg().assets.font_files(&dir);
-        let _ = std::fs::remove_dir(dir.join("back"));
-        let _ = std::fs::remove_dir_all(&dir);
-        assert!(made, "the junction was made");
-        assert_eq!(found, [dir.join("a.ttf")]);
-    }
-
-    #[test]
-    fn an_icon_is_a_file_named_after_it() {
-        let c = cfg();
-        let p = c.assets.icon(Path::new("base"), "mic");
-        assert!(
-            p.ends_with(
-                Path::new(&c.assets.icons)
-                    .join("mic")
-                    .with_extension(&c.assets.icon_ext)
-            )
-        );
-    }
-}
+mod tests;

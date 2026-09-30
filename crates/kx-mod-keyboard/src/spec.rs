@@ -5,6 +5,7 @@ mod error;
 
 pub use error::BoardError;
 
+use crate::panel::Nav;
 use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
 
@@ -90,6 +91,9 @@ pub struct KeySpec {
     pub sc: Option<Scan>,
     /// What a click does.
     pub role: Role,
+    /// What it does in an open panel, if anything.
+    #[serde(default)]
+    pub nav: Option<Nav>,
 }
 
 /// A run of one-unit character keys, by scan code.

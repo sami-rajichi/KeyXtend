@@ -3,6 +3,7 @@
 
 use kx_mod_keyboard::Io;
 use kx_mod_keyboard::Tapped as Typed;
+use kx_mod_keyboard::langkey::{LangClick, click};
 use kx_platform_windows::{WinInjector, window};
 
 use super::Kb;
@@ -13,6 +14,8 @@ use crate::{langkey, sendkeys};
 
 /// Error when a chip index is past the list.
 const NO_CHIP: &str = "no such chip";
+/// Error when the product's settings pick the List design, which the spike face does not draw.
+const NO_LIST: &str = "the spike face has no language list";
 
 /// What the face must do after a click.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,8 +31,8 @@ pub enum Tapped {
 }
 
 impl Kb {
-    /// A click on key `id`, on the language key's left third when `back`: the product types it, the spike steps
-    /// the language and runs the side keys' test actions. A click the product finds stale only relabels.
+    /// A click on key `id`, on the language key's back part when `back`: the product types it and picks the step,
+    /// the spike asks for it and runs the side keys' test actions. A click the product finds stale only relabels.
     pub fn tap(&mut self, id: &str, back: bool) -> Result<Tapped, String> {
         let table = self.table();
         let io = Io {
@@ -43,10 +46,13 @@ impl Kb {
                 self.relabel();
                 Ok(Tapped::Done)
             }
-            Typed::Lang { back } => langkey::ask_step(window::foreground(), back).map(|_| {
-                self.asked = if back { -1 } else { 1 };
-                Tapped::Done
-            }),
+            Typed::Lang { back } => match click(self.settings.lang_key, back) {
+                LangClick::Step(by) => langkey::ask_step(window::foreground(), by).map(|_| {
+                    self.turn.asked(by);
+                    Tapped::Done
+                }),
+                LangClick::List => Err(NO_LIST.into()),
+            },
             Typed::Later => {
                 let action = self.cfg.keys.get(id).and_then(|l| l.action);
                 Ok(action.map_or(Tapped::Done, |a| self.side(id, a)))

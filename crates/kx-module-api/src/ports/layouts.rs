@@ -41,10 +41,11 @@ pub trait Layouts: Send + Sync {
     fn list(&self) -> Vec<LangLabel>;
 
     /// Reads the app in front and the installed list again; true when anything changed.
-    /// Call it from one thread only (the keyboard's timer), so its `LayoutChanged` events stay in order.
+    /// Call it from one thread only, the face's thread that runs the relabel timer and the clicks, so its
+    /// `LayoutChanged` events stay in order.
     fn refresh(&self) -> bool;
 
-    /// Asks the app in front to switch `by` places along the list, wrapping.
+    /// Asks the app in front to switch `by` places along the list from the shown layout, as `step_to` counts.
     /// It only asks: `current` changes when a later `refresh` sees the app switch, which may never happen.
     ///
     /// # Errors
@@ -56,6 +57,17 @@ pub trait Layouts: Send + Sync {
     /// # Errors
     /// The `SwitchError` of the request; the current table stays.
     fn pick(&self, id: LayoutId) -> Result<(), SwitchError>;
+}
+
+/// The layout a step of `by` from `from` lands on in `list`, wrapping both ways; `None` for an empty list.
+/// A `from` not in the list counts as the first layout; `Layouts::step` and the language key both count this way.
+#[must_use]
+pub fn step_to(list: &[LayoutId], from: Option<LayoutId>, by: i32) -> Option<LayoutId> {
+    let len = i64::try_from(list.len()).ok().filter(|&n| n > 0)?;
+    let at = from.and_then(|f| list.iter().position(|&l| l == f));
+    let at = i64::try_from(at.unwrap_or_default()).ok()?;
+    let to = usize::try_from((at + i64::from(by)).rem_euclid(len)).ok()?;
+    list.get(to).copied()
 }
 
 /// The layouts service; it needs `InjectInput`, since a switch acts on the app in front.
@@ -80,44 +92,4 @@ impl Event for LayoutChanged {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn table() -> LayoutTable {
-        let q = KeyChars {
-            base: "ض".into(),
-            shift: "\u{64E}".into(),
-            ..KeyChars::default()
-        };
-        LayoutTable {
-            label: LangLabel {
-                id: LayoutId::new(0x0401_0401),
-                short: "ع".into(),
-                name: vec!["العربية".into(), "101".into()],
-                rtl: true,
-                arabic: true,
-            },
-            keys: [(Scan::new(0x10), q)].into_iter().collect(),
-        }
-    }
-
-    #[test]
-    fn a_table_round_trips_through_json_and_toml() {
-        let json = serde_json::to_string(&table()).unwrap();
-        assert_eq!(serde_json::from_str::<LayoutTable>(&json).unwrap(), table());
-        let text = toml::to_string(&table()).unwrap();
-        assert_eq!(toml::from_str::<LayoutTable>(&text).unwrap(), table());
-    }
-
-    #[test]
-    fn the_layouts_service_needs_inject_input() {
-        assert_eq!(LayoutsKey::ID.as_str(), "layouts");
-        assert_eq!(LayoutsKey::CAPABILITY, Some(Capability::InjectInput));
-    }
-
-    #[test]
-    fn layout_changed_is_open_to_every_module() {
-        assert_eq!(LayoutChanged::NAME, "layout-changed");
-        assert_eq!(LayoutChanged::CAPABILITY, None);
-    }
-}
+mod tests;

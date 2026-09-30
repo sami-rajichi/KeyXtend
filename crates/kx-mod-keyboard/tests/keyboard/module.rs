@@ -9,14 +9,17 @@ use crate::host::{FakeHost, fake, store};
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{BoardSpec, ID, KeyboardModule, KeyboardSettings, Ports, Tapped, Typing};
 use kx_module_api::Capability::InjectInput;
-use kx_module_api::ports::{InputInjectorKey, LayoutsKey, Scan, TextRoute};
+use kx_module_api::ports::{
+    InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, TextRoute,
+};
 use kx_module_api::{
     Module, ModuleCx, ModuleError, Redacted, ServiceError, ServiceKey, SettingsError,
 };
 use kx_platform_fake::Stroke;
+use std::sync::Arc;
 
 fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
-    KeyboardModule.start(&mut ModuleCx::new(host))
+    KeyboardModule::default().start(&mut ModuleCx::new(host))
 }
 
 #[test]
@@ -25,6 +28,17 @@ fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
     store(&mut host, None);
     host.granted = vec![InjectInput];
     assert_eq!(start(&mut host), Ok(()));
+}
+
+#[test]
+fn it_provides_the_face_which_needs_no_capability() {
+    let mut host = fake(None);
+    store(&mut host, None);
+    host.granted = vec![InjectInput];
+    start(&mut host).unwrap();
+    let (gate, service) = &host.services[&KeyboardFaceKey::ID];
+    assert_eq!(*gate, None);
+    assert!(service.downcast_ref::<Arc<dyn KeyboardFace>>().is_some());
 }
 
 #[test]

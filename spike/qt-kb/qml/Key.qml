@@ -24,10 +24,11 @@ Item {
     readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
     readonly property bool on: ks ? ks.on : false
-    readonly property bool rec: ks ? ks.rec : false
+    // The recording mic takes the rec paint (spike-core `kbctl::REC`).
+    readonly property bool rec: ks ? ks.paint.fill === "rec" : false
     readonly property bool down: area.pressed
     // The palette tokens for the cap, legend and skirt, which spike-core picks from the kind and state.
-    readonly property var paint: ks ? ks.paint : kv.paint
+    readonly property var paint: ks ? ks.paint : ({})
     // Colours ease to each new state or theme (mock-up .cap transition).
     property color fillColour: p[paint.fill]
     property color ink: p[paint.ink]
@@ -40,7 +41,7 @@ Item {
     readonly property color capSkirt: lift > 0 ? Qt.lighter(skirt, glowBy) : skirt
     readonly property real radius: look.key_radius_px
     readonly property color onColour: p.on
-    readonly property string name: ks && ks.name.length > 0 ? ks.name : kv.name
+    readonly property string name: ks && ks.name.length > 0 ? ks.name : (kv.name || "")
 
     x: kv.x
     y: kv.y
@@ -49,7 +50,7 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: key.name
-    Accessible.checkable: kv.kind === "mod" || kv.side
+    Accessible.checkable: kv.checkable || kv.side
     Accessible.checked: key.on
     Accessible.onPressAction: key.hit(false)
 

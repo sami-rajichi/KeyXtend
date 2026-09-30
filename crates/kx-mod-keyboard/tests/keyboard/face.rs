@@ -1,0 +1,103 @@
+//! The face's clicks: typing, dimmed keys, failed sends, a stale table, and a settings change that keeps latches.
+
+use crate::host::{GOLDEN, id};
+use crate::rig::{Rig, STATE};
+use kx_module_api::ports::{FaceAction, FaceError, FaceReply, InjectError, TextRoute};
+use kx_module_api::{Redacted, keys};
+use kx_platform_fake::Stroke;
+
+const Q: &str = "c-0x0010";
+
+fn text(t: &str) -> Stroke {
+    Stroke::Text(Redacted::new(t.into()), TextRoute::Unicode)
+}
+
+#[test]
+fn a_click_types_and_redraws_the_state() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.tap(Q), Ok(STATE));
+    assert_eq!(r.fakes.injector.strokes(), [text("q")]);
+}
+
+#[test]
+fn a_key_from_a_later_version_does_nothing() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.tap("mic"), Ok(FaceReply::default()));
+    assert!(r.fakes.injector.strokes().is_empty());
+    assert_eq!(r.state()["keys"]["mic"]["paint"]["fill"], "dim");
+}
+
+#[test]
+fn a_key_that_is_not_on_the_board_is_refused() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.tap("nope"), Err(FaceError::UnknownKey));
+    assert_eq!(r.panel("nope", 5), Err(FaceError::UnknownKey));
+}
+
+#[test]
+fn a_send_that_fails_shows_a_notice_and_redraws_what_it_used() {
+    let r = Rig::new(&GOLDEN, None);
+    r.tap("shift").unwrap();
+    let part = InjectError::Refused { sent: 1, total: 4 };
+    r.fakes.injector.set_error(Some(part));
+    let want = FaceReply {
+        notice: Some(keys::KEYS_NOT_SENT),
+        ..STATE
+    };
+    assert_eq!(r.tap(Q), Ok(want));
+    assert_eq!(
+        r.state()["keys"]["shift"]["on"],
+        false,
+        "the part that went used it"
+    );
+}
+
+#[test]
+fn a_stale_click_refreshes_once_redraws_and_is_never_replayed() {
+    let r = Rig::new(&["fr-fr", "en-us"], None);
+    r.fakes.source.set_foreground(Some(id("en-us")));
+    r.fakes.layouts.switch(id("en-us"));
+    assert_eq!(
+        r.tap("c-0x001A"),
+        Ok(STATE),
+        "EN would type [ under the FR ^"
+    );
+    assert_eq!(r.fakes.layouts.refreshes(), 1);
+    assert!(r.fakes.injector.strokes().is_empty(), "nothing was sent");
+    assert_eq!(r.shown(), "EN", "the redraw shows the app's layout");
+    assert_eq!(r.tap("c-0x001A"), Ok(STATE), "the user clicks again");
+    assert_eq!(r.fakes.injector.strokes(), [text("[")]);
+    assert_eq!(
+        r.fakes.layouts.refreshes(),
+        1,
+        "no refresh on a fresh table"
+    );
+}
+
+#[test]
+fn relabel_redraws_only_when_the_layout_shown_changed() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.act(FaceAction::Relabel), Ok(FaceReply::default()));
+    assert_eq!(r.switch("fr-fr"), STATE);
+    assert_eq!(r.shown(), "FR");
+    assert_eq!(r.state()["keys"][Q]["main"], "a", "AZERTY");
+}
+
+#[test]
+fn a_settings_change_keeps_the_latches_and_takes_the_new_rules() {
+    let mut r = Rig::new(&GOLDEN, None);
+    r.tap("shift").unwrap();
+    r.tap("ctrl").unwrap();
+    r.restart(Some(("lang_key", "cycle".into())));
+    let state = r.state();
+    assert_eq!(state["keys"]["shift"]["on"], true);
+    assert_eq!(state["keys"]["ctrl"]["on"], true);
+    assert_eq!(r.board()["lang_key"], "cycle");
+    r.restart(Some(("modifiers", "stay".into())));
+    r.tap(Q).unwrap();
+    assert_eq!(
+        r.state()["keys"]["shift"]["on"],
+        true,
+        "stay keeps them after a key"
+    );
+}

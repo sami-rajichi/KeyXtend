@@ -27,9 +27,9 @@ pub struct SpikeConfig {
     pub size: SizeConfig,
     /// Theme, mode, frosted plate and tooltip delay.
     pub look: crate::lookcfg::LookConfig,
-    /// How each named key looks and what side keys do.
+    /// The named keys' text until the translations come, and what side keys do.
     pub keys: crate::facecfg::KeysConfig,
-    /// The top bar and the test strip.
+    /// The top bar's names and the test strip.
     pub bar: crate::facecfg::BarConfig,
     /// Where fonts and icons are.
     pub assets: crate::facecfg::AssetsConfig,
@@ -227,7 +227,10 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.ring.check().map_err(at)?;
     let board = kx_mod_keyboard::BoardSpec::shipped().map_err(|e| e.to_string())?;
     let kb = kx_mod_keyboard::KeyboardSettings::from_defaults().map_err(|e| e.to_string())?;
-    crate::facecfg::check_keys(&config.keys, &board).map_err(at)?;
+    let icons = kx_theme::Themes::shipped()
+        .map_err(|e| e.to_string())?
+        .icons;
+    crate::facecfg::check_keys(&config.keys, &board, &icons).map_err(at)?;
     crate::facecfg::check_bar(&config.bar, kb.presets.len()).map_err(at)?;
     let layouts = kx_mod_layouts::LayoutsSettings::from_defaults().map_err(|e| e.to_string())?;
     config.lang.short = layouts.short;

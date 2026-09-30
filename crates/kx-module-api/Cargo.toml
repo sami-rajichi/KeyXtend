@@ -19,4 +19,5 @@ toml.workspace = true
 [dev-dependencies]
 # The shared fake host; it depends on this crate, which Cargo allows for tests.
 kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true
 serde_json.workspace = true
