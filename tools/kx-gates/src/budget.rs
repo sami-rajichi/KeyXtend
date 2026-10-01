@@ -1,5 +1,5 @@
-//! G8's pass rules: each spec §10 budget against what the run measured, the log's start-up span, the idle CPU share
-//! and the highlight's frame budget.
+//! G8's pass rules: each spec §10 budget against what the run measured, the log's start-up span, the idle share of
+//! one core and the highlight's frame budget.
 #![cfg(windows)]
 
 use std::time::Duration;
@@ -114,20 +114,9 @@ pub fn ms_between(from_us: i64, to_us: i64) -> f64 {
     (to_us - from_us) as f64 / US_PER_MS
 }
 
-/// CPU used, in percent of `cores` cores: `cpu_ms` of work over `wall_ms` of time; none when nothing can be shared.
-pub fn cpu_pct(cpu_ms: f64, wall_ms: f64, cores: f64) -> Option<f64> {
-    (wall_ms > 0.0 && cores > 0.0).then(|| cpu_ms / (wall_ms * cores) * PCT)
-}
-
-/// The cores the product may use: all of them, or in weak mode its job's cores, at most its share of the whole PC.
-pub fn usable_cores(cores: usize, weak: Option<(usize, u32)>) -> f64 {
-    #[allow(clippy::cast_precision_loss, reason = "Core counts are tiny.")]
-    let all = cores as f64;
-    weak.map_or(all, |(n, rate)| {
-        #[allow(clippy::cast_precision_loss, reason = "Core counts are tiny.")]
-        let n = n.min(cores) as f64;
-        n.min(all * f64::from(rate) / PCT)
-    })
+/// CPU used, in percent of one core: `cpu_ms` of work over `wall_ms` of time; none when no time passed.
+pub fn core_pct(cpu_ms: f64, wall_ms: f64) -> Option<f64> {
+    (wall_ms > 0.0).then(|| cpu_ms / wall_ms * PCT)
 }
 
 /// The longest a press may take to light its key: `frames` frames at `hz`, plus the median screen copy, which every

@@ -2,6 +2,9 @@
 //! never stretched blurry, and keeps its logical size; each run records one scale and a picture, and changes nothing.
 #![cfg(windows)]
 
+use std::path::Path;
+use std::time::UNIX_EPOCH;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
@@ -13,7 +16,7 @@ use windows::Win32::UI::HiDpi::{
 use windows::Win32::UI::WindowsAndMessaging::USER_DEFAULT_SCREEN_DPI;
 
 use crate::apps::Ctx;
-use crate::product::Keyboard;
+use crate::product::{self, Keyboard};
 use crate::{out, shot, win};
 
 /// Suffix of the keyboard's picture.
@@ -34,6 +37,8 @@ pub struct Record {
     pub pmv2: bool,
     /// The window's width and height in logical pixels.
     pub size: [f64; 2],
+    /// The product build: its program's last change, in seconds since 1970.
+    pub build: u64,
 }
 
 impl Record {
@@ -43,7 +48,7 @@ impl Record {
     }
 }
 
-/// The verdict over every record so far.
+/// The verdict over one series of records.
 #[derive(Debug, PartialEq, Serialize)]
 struct Verdict {
     /// Wanted scales with no run yet.
@@ -87,6 +92,20 @@ fn verdict(records: &[Record], scales: &[u32], slack_px: f64) -> Verdict {
     }
 }
 
+/// The records of one series, oldest first: the latest record's build only, from its last run at scale `first` on.
+fn series(records: &[Record], first: u32) -> Vec<Record> {
+    let Some(build) = records.last().map(|r| r.build) else {
+        return Vec::new();
+    };
+    let same: Vec<Record> = records
+        .iter()
+        .filter(|r| r.build == build)
+        .cloned()
+        .collect();
+    let from = same.iter().rposition(|r| r.scale == first).unwrap_or(0);
+    same[from..].to_vec()
+}
+
 /// The G11 records in `results`, the lines of `results.jsonl`, oldest first.
 fn records(results: &str) -> Vec<Record> {
     let g11 = |v: &Value| v["gate"] == "G11";
@@ -109,9 +128,19 @@ fn logical(px: i32, dpi: u32) -> f64 {
     f64::from(px) * f64::from(USER_DEFAULT_SCREEN_DPI) / f64::from(dpi.max(1))
 }
 
-/// What window `hwnd` tells about its DPI and size.
+/// The build of the program at `exe`: its last change, in seconds since 1970.
+fn build_of(exe: &Path) -> Result<u64, String> {
+    let changed = std::fs::metadata(exe).and_then(|m| m.modified());
+    let changed = changed.map_err(|e| format!("{}: {e}", exe.display()))?;
+    Ok(changed
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs())
+}
+
+/// What window `hwnd` of product build `build` tells about its DPI and size.
 #[allow(unsafe_code, reason = "Plain DPI queries on a live window.")]
-fn read(hwnd: HWND) -> Result<Record, String> {
+fn read(hwnd: HWND, build: u64) -> Result<Record, String> {
     let r = win::rect(hwnd)?;
     let (mut dx, mut dy) = (0, 0);
     // SAFETY: plain queries on a live window and its screen; the locals are filled by the call.
@@ -135,20 +164,24 @@ fn read(hwnd: HWND) -> Result<Record, String> {
         screen_dpi: dx,
         pmv2,
         size,
+        build,
     })
 }
 
-/// Runs G11 on the product, called `name`: records this scale, then judges every scale recorded so far.
+/// Runs G11 on the product, called `name`: records this scale, then judges this build's runs since its last run at
+/// the first scale.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kb = Keyboard::find()?;
-    let record = read(kb.hwnd)?;
+    let (_, exe) = product::running().ok_or("the product is not running")?;
+    let record = read(kb.hwnd, build_of(Path::new(&exe))?)?;
     let path = ctx.file(PICTURE);
     shot::keep(&path, &shot::of_window(kb.hwnd)?)?;
     let before = std::fs::read_to_string(ctx.out.join(out::RESULTS)).unwrap_or_default();
     let mut all = records(&before);
     all.push(record.clone());
     let g = &ctx.cfg.g11;
-    let v = verdict(&all, &g.scales, g.slack_px);
+    let first = g.scales.first().copied().unwrap_or_default();
+    let v = verdict(&series(&all, first), &g.scales, g.slack_px);
     Ok(json!({
         "gate": "G11", "keyboard": name, "record": record, "sharp": record.sharp(), "picture": path,
         "verdict": v, "pass": v.pass,
@@ -168,6 +201,7 @@ mod tests {
             screen_dpi: dpi,
             pmv2: true,
             size,
+            build: 0,
         }
     }
 
@@ -225,6 +259,33 @@ mod tests {
             verdict(&again, &wanted, 2.0).pass,
             "the latest run of a scale counts"
         );
+    }
+
+    #[test]
+    fn only_this_builds_runs_since_its_last_run_at_the_first_scale_count() {
+        let build = |b: u64, r: Record| Record { build: b, ..r };
+        let older = [
+            build(1, at(100, [680.0, 205.0])),
+            build(1, at(150, [680.0, 205.0])),
+        ];
+        let now = build(2, at(200, [680.0, 205.0]));
+        let mut all = older.to_vec();
+        all.push(now.clone());
+        assert_eq!(
+            series(&all, 100),
+            std::slice::from_ref(&now),
+            "a new build starts over"
+        );
+        let stale = build(2, at(200, [700.0, 205.0]));
+        let fresh = [
+            stale,
+            build(2, at(100, [680.0, 205.0])),
+            build(2, at(150, [680.0, 205.0])),
+        ];
+        let mut again = fresh.to_vec();
+        again.push(now);
+        assert_eq!(series(&again, 100), again[1..], "from the last 100 % run");
+        assert!(verdict(&series(&again, 100), &[100, 150, 200], 2.0).pass);
     }
 
     #[test]

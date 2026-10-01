@@ -43,6 +43,37 @@ fn ask_quit(instance: &dyn Instance) -> Result<(), String> {
     instance.send(Command::Quit).map_err(why_not)
 }
 
+/// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
+/// yet; the tries it took. A refusal is final.
+fn ask_quit_tries(
+    instance: &dyn Instance,
+    tries: u32,
+    mut wait: impl FnMut(),
+) -> Result<u32, String> {
+    let mut n = 1;
+    loop {
+        match instance.send(Command::Quit) {
+            Ok(()) => return Ok(n),
+            Err(UiError::NoWindow) if n < tries => wait(),
+            Err(e) => return Err(why_not(e)),
+        }
+        n += 1;
+    }
+}
+
+/// Posts Quit to the copy G8 started as `process` but could not cap, trying `[g8] quit_tries` times; whether it ended
+/// within `[timing] quit_wait_ms`.
+pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
+    let g = &ctx.cfg.g8;
+    let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
+    ask_quit_tries(&*platform.instance(), g.quit_tries, || {
+        win::sleep_ms(g.quit_try_ms);
+    })?;
+    let t = &ctx.cfg.timing;
+    let ended = win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(()));
+    Ok(ended.is_some())
+}
+
 /// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
 /// `[timing] quit_wait_ms`.
 pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), String> {
@@ -79,6 +110,28 @@ mod tests {
         claim.listen(Box::new(|_| {})).expect("it listens");
         assert_eq!(ask_quit(&session.clone()), Ok(()));
         assert_eq!(session.sent(), [Command::Quit]);
+    }
+
+    #[test]
+    fn a_copy_just_started_gets_quit_once_it_listens() {
+        let session = FakeInstance::new();
+        let late = std::cell::RefCell::new(Vec::new());
+        let waits = std::cell::Cell::new(0);
+        let wait = || {
+            waits.set(waits.get() + 1);
+            if waits.get() == 2 {
+                let mut claim = session.claim().expect("the started copy runs");
+                claim.listen(Box::new(|_| {})).expect("it listens");
+                late.borrow_mut().push(claim);
+            }
+        };
+        assert_eq!(ask_quit_tries(&session.clone(), 5, wait), Ok(3));
+        assert_eq!(session.sent(), [Command::Quit]);
+        let never = ask_quit_tries(&FakeInstance::new(), 3, || {});
+        assert!(
+            never.is_err_and(|e| e.contains("command window")),
+            "it never listened"
+        );
     }
 
     #[test]

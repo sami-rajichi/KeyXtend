@@ -18,14 +18,6 @@ fn language(tag: &str) -> &str {
     tag.split('-').next().unwrap_or(tag)
 }
 
-/// True when G2's result line says every planned click typed its character and the target kept the focus.
-fn typed_intact(g2: &Value) -> bool {
-    let clicks = g2["clicks"].as_u64().unwrap_or_default();
-    let every = clicks > 0 && g2["planned"].as_u64() == Some(clicks);
-    let matched = g2["matched"].as_u64() == Some(clicks);
-    g2.get("error").is_none() && every && matched && g2["focus_ok"] == true
-}
-
 /// True when target-window closed by itself and its `log`, if read, shows no `# layout-kept`: the layout came back.
 fn put_back(g2: &Value, log: Option<&str>) -> bool {
     let closed = g2["left_open"].as_array().is_some_and(Vec::is_empty);
@@ -76,7 +68,7 @@ fn one(ctx: &Ctx, kb: &Keyboard, tag: &str) -> Result<Value, String> {
     )?;
     let log = std::fs::read_to_string(&ctx.target.log).ok();
     let back = put_back(&typed, log.as_deref());
-    let pass = misnamed.is_empty() && typed_intact(&typed) && back;
+    let pass = misnamed.is_empty() && g2::typed_intact(&typed) && back;
     Ok(json!({
         "language": tag, "layout": layout.to_string(), "misnamed": misnamed, "typed": typed,
         "layout_put_back": back, "pass": pass,
@@ -101,37 +93,9 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 mod tests {
     use super::*;
 
-    fn run(planned: u64, clicks: u64, matched: u64, focus_ok: bool) -> Value {
-        json!({
-            "gate": "G2", "planned": planned, "clicks": clicks, "matched": matched, "focus_ok": focus_ok,
-            "left_open": [],
-        })
-    }
-
-    #[test]
-    fn typing_is_intact_only_when_every_planned_click_matched_and_the_focus_stayed() {
-        assert!(typed_intact(&run(100, 100, 100, true)));
-        assert!(!typed_intact(&run(100, 100, 99, true)), "a lost character");
-        assert!(
-            !typed_intact(&run(100, 100, 100, false)),
-            "the target lost the focus"
-        );
-        assert!(
-            !typed_intact(&run(0, 0, 0, true)),
-            "no click checks nothing"
-        );
-        assert!(
-            !typed_intact(&run(100, 40, 40, true)),
-            "the clicks stopped short"
-        );
-        let mut broke = run(5, 5, 5, true);
-        broke["error"] = json!("target log");
-        assert!(!typed_intact(&broke));
-    }
-
     #[test]
     fn the_layout_is_back_only_after_a_clean_close_and_a_log_without_the_mark() {
-        let ok = run(5, 5, 5, true);
+        let ok = json!({ "gate": "G2", "left_open": [] });
         assert!(put_back(&ok, Some("# start\t0\n10\t0041\n")));
         assert!(
             !put_back(&ok, Some("# start\t0\n# layout-kept\t20\n")),

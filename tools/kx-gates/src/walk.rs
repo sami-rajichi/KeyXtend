@@ -69,9 +69,13 @@ pub fn missing(read: &[KeyRead], ids: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// The board keys a screen reader would call only "button".
-pub fn unnamed(read: &[KeyRead], ids: &[String]) -> Vec<String> {
-    let blank = |id: &&String| find(read, id).is_some_and(|k| k.name.trim().is_empty());
+/// The board keys a screen reader would call only "button"; a character key in `want` that types nothing may.
+pub fn unnamed(read: &[KeyRead], ids: &[String], want: &[CharKey]) -> Vec<String> {
+    let types_nothing = |id: &str| want.iter().any(|c| c.id == id && c.name.is_empty());
+    let blank = |id: &&String| {
+        let empty = find(read, id).is_some_and(|k| k.name.trim().is_empty());
+        empty && !types_nothing(id)
+    };
     ids.iter().filter(blank).cloned().collect()
 }
 
@@ -151,7 +155,7 @@ mod tests {
         let read = recorded();
         let board = ids(&["esc", "c-0x0029", "c-0x0010", "caps", "c-0x0056", "power"]);
         assert!(missing(&read, &board).is_empty());
-        assert!(unnamed(&read, &board).is_empty());
+        assert!(unnamed(&read, &board, &[]).is_empty());
         assert!(not_invokable(&read, &board).is_empty());
         let want = [
             CharKey::new("c-0x0010", "q", Some("q")),
@@ -168,12 +172,27 @@ mod tests {
         read[3].invokable = false;
         let board = ids(&["esc", "c-0x0029", "c-0x0010", "lang"]);
         assert_eq!(missing(&read, &board), ["lang"]);
-        assert_eq!(unnamed(&read, &board), ["c-0x0029"]);
+        assert_eq!(unnamed(&read, &board, &[]), ["c-0x0029"]);
         assert_eq!(not_invokable(&read, &board), ["c-0x0010"]);
         let want = [
             CharKey::new("c-0x0010", "й", Some("й")),
             CharKey::new("lang", "x", None),
         ];
         assert_eq!(misnamed(&read, &want), [r#"c-0x0010: "q" for "й""#]);
+    }
+
+    #[test]
+    fn a_key_that_types_nothing_may_go_unnamed() {
+        let mut read = recorded();
+        read[2].name = String::new();
+        let board = ids(&["c-0x0029", "c-0x0010"]);
+        let want = [
+            CharKey::new("c-0x0029", "", None),
+            CharKey::new("c-0x0010", "q", Some("q")),
+        ];
+        assert!(unnamed(&read, &board, &want).is_empty());
+        assert!(misnamed(&read, &want).is_empty());
+        let types = [CharKey::new("c-0x0029", "`", Some("`"))];
+        assert_eq!(unnamed(&read, &board, &types), ["c-0x0029"]);
     }
 }

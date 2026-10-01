@@ -4,7 +4,6 @@
 
 use std::path::Path;
 
-use spike_core::config::MIB;
 use windows::Win32::Foundation::{CloseHandle, FILETIME, HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::ProcessStatus::{
     GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX2,
@@ -19,6 +18,8 @@ use crate::win::size32;
 
 /// `FILETIME` ticks (100 ns) in one millisecond.
 const TICKS_PER_MS: f64 = 10_000.0;
+/// Bytes in one MB, as spec §10 counts memory and size.
+const MB: f64 = 1_000_000.0;
 
 /// A process handle and the process's id; the handle closes on drop.
 pub struct Process {
@@ -64,7 +65,7 @@ impl Process {
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
     }
 
-    /// Its private working set, in MiB: the memory Task Manager shows.
+    /// Its private working set, the memory Task Manager shows, in MB.
     #[allow(unsafe_code, reason = "Fills a local of the size we pass.")]
     pub fn private_mb(&self) -> Result<f64, String> {
         let mut c = PROCESS_MEMORY_COUNTERS_EX2 {
@@ -79,7 +80,7 @@ impl Process {
             clippy::cast_precision_loss,
             reason = "Sizes are far below 2^53 bytes."
         )]
-        Ok(c.PrivateWorkingSetSize as f64 / MIB as f64)
+        Ok(c.PrivateWorkingSetSize as f64 / MB)
     }
 
     /// The CPU time it has used so far, in the kernel and in user mode, in ms.
@@ -118,13 +119,13 @@ fn ticks(t: FILETIME) -> f64 {
     ((u64::from(t.dwHighDateTime) << u32::BITS) | u64::from(t.dwLowDateTime)) as f64
 }
 
-/// Every file's size under `dir`, in MiB; links are not followed.
+/// Every file's size under `dir`, in MB; links are not followed.
 pub fn folder_mb(dir: &Path) -> Result<f64, String> {
     #[allow(
         clippy::cast_precision_loss,
         reason = "Sizes are far below 2^53 bytes."
     )]
-    Ok(bytes(dir)? as f64 / MIB as f64)
+    Ok(bytes(dir)? as f64 / MB)
 }
 
 /// Every file's size under `dir`, in bytes.
@@ -175,9 +176,9 @@ mod tests {
     }
 
     #[test]
-    fn a_folder_counts_every_file_below_it() {
+    fn a_folder_counts_every_file_below_it_in_mb() {
         let dir = TempDir::new("gates-size").expect("temp folder");
-        let half = vec![0u8; MIB / 2];
+        let half = vec![0u8; 500_000];
         std::fs::create_dir(dir.path().join("sub")).expect("sub folder");
         std::fs::write(dir.path().join("a"), &half).expect("file");
         std::fs::write(dir.path().join("sub").join("b"), &half).expect("file");

@@ -17,10 +17,10 @@ log_guarded = "windows guarded"
 # Settle, then measure the idle product for this long, in ms.
 idle_settle_ms = 3000
 idle_ms = 10000
-# Idle private memory in MiB, idle CPU in percent of the cores it may use (Task Manager shows 0 below this), and the
-# program folder in MiB (spec §10).
+# Idle private memory and the program folder in MB of 10⁶ bytes (spec §10), and idle CPU in percent of one core in both
+# modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
 memory_mb = 80.0
-idle_cpu_pct = 0.5
+idle_core_pct = 0.5
 size_mb = 80.0
 # A press lights its key on the next frame (spec §10): within this many frames, the one being drawn and the next.
 press_key = "c-0x001E"
@@ -42,17 +42,29 @@ char_ms = 30.0
 subscribers = 20
 publishes = 10000
 bus_share = 0.01
-# PresentMon's CSV in the out folder, captured by the owner while G8 runs (G8 says how).
+# PresentMon's CSV in the out folder, recorded while G8 runs.
 presentmon = "g8-presentmon.csv"
 # How long that capture records, in seconds; it covers G8's idle wait, presses and resizes.
 presentmon_secs = 60
+# The PresentMon program G8 starts as administrator, with no window, just before the product; empty, G8 says how to
+# record. Each PC names its own copy in the installed settings.
+presentmon_exe = ""
+# Wait after starting PresentMon, in ms, so its start-up does not slow the cold start.
+presentmon_wait_ms = 2000
+# A copy G8 started but could not cap gets Quit up to quit_tries times, quit_try_ms apart, as its command window may
+# not exist yet.
+quit_tries = 50
+quit_try_ms = 200
 
 # G9 window flags: the flags stay set after hide and show, a topmost toggle, a click-through toggle and a resize.
+# Click-through goes back on only where it was, as the guard keeps it for good once a window has it.
 [g9]
 put_away = "bar.minimise"
 bring_back = "bar.bubble"
 # Wait after each step before the flags are read, in ms.
 settle_ms = 500
+# A run that broke off is sized back unless the keyboard's width is within this many px of its first width.
+slack_px = 2
 
 # G10 screen readers: every key is named and can be pressed the way Narrator and NVDA press it.
 [g10]
@@ -71,6 +83,8 @@ watch_secs = 180
 # Following live: the keyboard redraws within this time of a change, in ms.
 follow_ms = 1000
 changes = 6
+# Each of these parts of Windows' look must change at least once (roadmap G13).
+needs = ["dark", "accent", "contrast"]
 
 # G26 other languages (CI runner only): each language's first installed layout, its labels and its typed text.
 [g26]

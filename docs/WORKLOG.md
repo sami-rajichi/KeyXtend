@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the review's fixes for gates G8–G26
+Weak mode now runs each allowed core at its 30 % speed, and the spike's voice worker gets the same fix; `g8 weak` reports `partial`, never a pass, until software drawing is decided. G8 measures idle CPU per core and memory in MB, fails lost characters, starts PresentMon itself when `[g8] presentmon_exe` names it, and asks a copy it could not cap to quit. G13 needs dark mode, the accent and high contrast to each change, G9 always ends at the keyboard's first size and toggles click-through only where it was, and G11 judges one build's series. The G26 CI job prints the logs after a failure, and the roadmap points G26's Japanese part to F16.
+
 ## 2026-10-01 — P3: the gate review's fixes for `close` and G25
 `kx-gates close keyxtend` now posts Quit to the running copy's command window and starts nothing, so no program can borrow the gates' uiAccess rights. G2, G4, G10 and G25 wait one relabel period read from the running copy's own settings, and record that wait in their result lines. G25 clicks past the language key's back part, using the theme's `back_share`, and skips the List design with a reason. A new `kx_settings::peek_section` reads one section the way a later copy of the app does, and both the app and the gates use it.
 

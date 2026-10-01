@@ -103,9 +103,10 @@ pub fn save_result(out: &Path, line: &str) -> Result<(), String> {
     writeln!(f, "{line}").map_err(|e| format!("{}: {e}", file.display()))
 }
 
-/// True when result line `v` broke off or its verdict did not pass, so kx-gates exits with a failure, as CI needs.
+/// True when result line `v` broke off or has a verdict other than a pass, so kx-gates exits with a failure.
 pub fn failed(v: &serde_json::Value) -> bool {
-    v.get("error").is_some() || v.get("pass") == Some(&serde_json::Value::Bool(false))
+    let pass = v.get("pass");
+    v.get("error").is_some() || pass.is_some_and(|p| p != &serde_json::Value::Bool(true))
 }
 
 #[cfg(test)]
@@ -124,6 +125,10 @@ mod tests {
         assert!(failed(&json!({ "gate": "G26", "error": "no keyboard" })));
         assert!(failed(&json!({ "gate": "G26", "pass": false })));
         assert!(!failed(&json!({ "gate": "G26", "pass": true })));
+        assert!(
+            failed(&json!({ "gate": "G8", "pass": "partial" })),
+            "a partial result is not a pass"
+        );
         assert!(
             !failed(&json!({ "gate": "G2", "clicks": 5 })),
             "a gate without a verdict only reports"

@@ -27,7 +27,7 @@ impl Findings {
     fn of(read: &[KeyRead], ids: &[String], want: &[walk::CharKey]) -> Self {
         Self {
             missing: walk::missing(read, ids),
-            unnamed: walk::unnamed(read, ids),
+            unnamed: walk::unnamed(read, ids, want),
             not_invokable: walk::not_invokable(read, ids),
             misnamed: walk::misnamed(read, want),
         }

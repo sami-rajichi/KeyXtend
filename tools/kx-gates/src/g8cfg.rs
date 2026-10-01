@@ -28,11 +28,11 @@ pub struct G8 {
     pub idle_settle_ms: u64,
     /// How long the idle measure lasts.
     pub idle_ms: u64,
-    /// Idle private memory, in MiB.
+    /// Idle private memory, in MB (10⁶ bytes, as spec §10 counts).
     pub memory_mb: f64,
-    /// Idle CPU, in percent of the cores the product may use.
-    pub idle_cpu_pct: f64,
-    /// The program folder, in MiB.
+    /// Idle CPU, in percent of one core, in both modes.
+    pub idle_core_pct: f64,
+    /// The program folder, in MB.
     pub size_mb: f64,
     /// The key pressed for the highlight check, by board id.
     pub press_key: String,
@@ -66,6 +66,14 @@ pub struct G8 {
     pub presentmon: String,
     /// How long `PresentMon` records, in seconds; long enough to cover a G8 run.
     pub presentmon_secs: u64,
+    /// The `PresentMon` program G8 starts as administrator; empty when G8 only says how to record.
+    pub presentmon_exe: String,
+    /// Wait after starting `PresentMon`, so its start-up does not slow the cold start.
+    pub presentmon_wait_ms: u64,
+    /// Quit tries on a copy G8 started but could not cap, whose command window may not exist yet, and the wait
+    /// between them.
+    pub quit_tries: u32,
+    pub quit_try_ms: u64,
 }
 
 impl G8 {
@@ -75,7 +83,7 @@ impl G8 {
             self.start_ms,
             self.weak_start_ms,
             self.memory_mb,
-            self.idle_cpu_pct,
+            self.idle_core_pct,
             self.size_mb,
             self.highlight_frames,
             self.char_ms,
@@ -88,6 +96,9 @@ impl G8 {
             return Err(
                 "g8 presses, clicks, subscribers and publishes must be above 0".to_string(),
             );
+        }
+        if self.quit_tries == 0 {
+            return Err("g8.quit_tries must be above 0".to_string());
         }
         if !board::ids()?.contains(&self.press_key) {
             return Err(format!(
@@ -108,6 +119,11 @@ impl G8 {
 mod tests {
     use super::*;
 
+    /// The product's code that writes the start line and the guard line G8 waits for.
+    // Workspace paths from `tools/kx-gates/src`; a moved crate breaks the build here, never silently.
+    const RUN_RS: &str = include_str!("../../../apps/keyxtend/src/run.rs");
+    const FACE_RS: &str = include_str!("../../../crates/kx-ui/src/hub/face.rs");
+
     fn shipped() -> G8 {
         crate::config::load().expect("kx-gates.toml loads").g8
     }
@@ -117,6 +133,22 @@ mod tests {
         let g = shipped();
         assert_eq!(g.check(), Ok(()));
         assert!(g.start_ms < g.weak_start_ms, "weak mode may start slower");
+        assert!(
+            g.presentmon_exe.is_empty(),
+            "each PC names its own PresentMon"
+        );
+    }
+
+    #[test]
+    fn the_log_lines_g8_waits_for_are_the_ones_the_product_writes() {
+        let g = shipped();
+        let quoted = |s: &str| format!("\"{s}\"");
+        assert!(RUN_RS.contains(&quoted(&g.log_start)), "{}", g.log_start);
+        assert!(
+            FACE_RS.contains(&quoted(&g.log_guarded)),
+            "{}",
+            g.log_guarded
+        );
     }
 
     #[test]
@@ -131,11 +163,12 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 5] = [
+        let bad: [fn(&mut G8); 6] = [
             |g| g.memory_mb = 0.0,
             |g| g.bus_share = f64::NAN,
             |g| g.presses = 0,
             |g| g.publishes = 0,
+            |g| g.quit_tries = 0,
             |g| g.press_key = "c-0xFFFF".into(),
         ];
         for f in bad {

@@ -72,6 +72,13 @@ pub fn strip_flags(windows: &[HWND]) -> Result<(), String> {
         .try_for_each(|&w| write_ex(w, ex_of(w) & !(KEPT | THROUGH)))
 }
 
+/// An outside program turns click-through on for `windows`.
+pub fn through_on(windows: &[HWND]) -> Result<(), String> {
+    windows
+        .iter()
+        .try_for_each(|&w| write_ex(w, ex_of(w) | THROUGH))
+}
+
 /// Puts every shown product window G9 saw back to its `first` style, topmost included; how many needed it.
 pub fn repair(first: &HashMap<isize, u32>) -> usize {
     let mut fixed = 0;

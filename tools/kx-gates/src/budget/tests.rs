@@ -68,24 +68,14 @@ fn a_budget_passes_only_when_measured_and_within_its_limit() {
 }
 
 #[test]
-fn idle_cpu_is_a_share_of_the_cores_the_product_may_use() {
-    assert_eq!(cpu_pct(10.0, 10_000.0, 1.0), Some(0.1));
-    assert_eq!(cpu_pct(80.0, 10_000.0, 8.0), Some(0.1));
-    assert_eq!(cpu_pct(1.0, 0.0, 8.0), None);
-    assert!((usable_cores(8, None) - 8.0).abs() < 1e-9);
-    let near = |got: f64, want: f64| (got - want).abs() < 1e-9;
-    assert!(
-        near(usable_cores(8, Some((2, 30))), 2.0),
-        "weak: 2 cores, under 30 % of 8"
+fn idle_cpu_is_a_share_of_one_core_whatever_the_pc_has() {
+    assert_eq!(core_pct(10.0, 10_000.0), Some(0.1));
+    assert_eq!(
+        core_pct(300.0, 10_000.0),
+        Some(3.0),
+        "a 60 Hz animation at 0.5 ms a frame, on 16 cores as on 1"
     );
-    assert!(
-        near(usable_cores(8, Some((4, 25))), 2.0),
-        "25 % of the whole PC is 2 of 8 cores"
-    );
-    assert!(
-        near(usable_cores(1, Some((2, 50))), 0.5),
-        "never more than the PC has, then its share"
-    );
+    assert_eq!(core_pct(1.0, 0.0), None, "no time measured");
 }
 
 #[test]

@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
+use crate::admin::command_line;
 use crate::stats::{P99, percentile};
 
 /// The column that names the program, lower-cased.
@@ -20,12 +21,28 @@ const WAS_DROPPED: &str = "1";
 const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
+/// `PresentMon`'s arguments that record `program`'s frames for `secs` seconds into CSV `file`, then stop.
+pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
+    let file = file.display().to_string();
+    let secs = secs.to_string();
+    let parts = [
+        "--process_name",
+        program,
+        "--output_file",
+        &file,
+        "--timed",
+        &secs,
+        "--terminate_after_timed",
+    ];
+    parts.map(String::from).to_vec()
+}
+
 /// How to get the CSV `file` of `program`'s frames over `secs` seconds, for the result line.
 pub fn how(program: &str, file: &Path, secs: u64) -> String {
     format!(
-        "start PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) as administrator just \
-         before G8: PresentMon --process_name {program} --output_file {} --timed {secs} --terminate_after_timed",
-        file.display()
+        "name PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) in [g8] presentmon_exe and G8 \
+         starts it, or start it as administrator just before G8: PresentMon {}",
+        command_line(&args(program, file, secs))
     )
 }
 
@@ -185,6 +202,25 @@ keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,16.1,6.06,1.0,6.06
             (2, 1),
             "the cut row is not counted"
         );
+    }
+
+    #[test]
+    fn g8_starts_presentmon_with_the_arguments_the_how_to_names() {
+        let file = Path::new(r"C:\out\pm.csv");
+        let got = args("keyxtend.exe", file, 75);
+        let want = [
+            "--process_name",
+            "keyxtend.exe",
+            "--output_file",
+            r"C:\out\pm.csv",
+            "--timed",
+            "75",
+            "--terminate_after_timed",
+        ];
+        assert_eq!(got, want);
+        let text = how("keyxtend.exe", file, 75);
+        assert!(text.contains(&want.join(" ")), "{text}");
+        assert!(text.contains("presentmon_exe"), "names the setting");
     }
 
     #[test]

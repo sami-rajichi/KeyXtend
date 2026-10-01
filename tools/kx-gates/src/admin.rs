@@ -1,5 +1,5 @@
-//! Starts a program through the shell: as administrator, where this PC shows no prompt, or shown and kept to measure.
-//! Only the shell starts a uiAccess program for a caller without uiAccess.
+//! Starts a program through the shell: as administrator, where this PC shows no prompt, shown or hidden, or shown and
+//! kept to measure. Only the shell starts a uiAccess program for a caller without uiAccess.
 #![cfg(windows)]
 
 use std::ffi::OsStr;
@@ -12,7 +12,9 @@ use windows::Win32::UI::Shell::{
     SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
     ShellExecuteExW,
 };
-use windows::Win32::UI::WindowsAndMessaging::{SHOW_WINDOW_CMD, SW_SHOWNOACTIVATE, SW_SHOWNORMAL};
+use windows::Win32::UI::WindowsAndMessaging::{
+    SHOW_WINDOW_CMD, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL,
+};
 use windows::core::{PCWSTR, w};
 
 use crate::proc::Process;
@@ -52,7 +54,7 @@ fn quote(arg: &str) -> String {
 }
 
 /// `args` as one Windows command line, quoting only the ones that need it.
-fn command_line(args: &[String]) -> String {
+pub fn command_line(args: &[String]) -> String {
     args.iter().map(|a| quote(a)).collect::<Vec<_>>().join(" ")
 }
 
@@ -63,8 +65,17 @@ fn wide(s: &OsStr) -> Vec<u16> {
 
 /// Starts `exe` with `args` as administrator and returns once it has started.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    let normal = (RUN_AS, SW_SHOWNORMAL, 0);
-    let started = shell(exe, args, normal).map(drop);
+    as_admin(exe, args, SW_SHOWNORMAL)
+}
+
+/// Starts `exe` with `args` as administrator and no window, so it covers no key and takes no focus.
+pub fn run_as_hidden(exe: &Path, args: &[String]) -> Result<(), String> {
+    as_admin(exe, args, SW_HIDE)
+}
+
+/// Starts `exe` with `args` as administrator in window state `show`.
+fn as_admin(exe: &Path, args: &[String], show: SHOW_WINDOW_CMD) -> Result<(), String> {
+    let started = shell(exe, args, (RUN_AS, show, 0)).map(drop);
     started.map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 

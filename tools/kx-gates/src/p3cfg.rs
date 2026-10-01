@@ -14,6 +14,8 @@ pub struct G9 {
     pub bring_back: String,
     /// Wait after each step before the flags are read, in ms.
     pub settle_ms: u64,
+    /// Keyboard widths this many px apart count as one size, for DPI rounding.
+    pub slack_px: i32,
 }
 
 /// G10 settings: pressing each character key the way a screen reader does.
@@ -46,6 +48,8 @@ pub struct G13 {
     pub follow_ms: u64,
     /// The watch ends early after this many changes.
     pub changes: usize,
+    /// Parts of the look that must each change at least once, named as `g13::KINDS` names them.
+    pub needs: Vec<String>,
 }
 
 /// G26 settings: the languages checked on the CI runner.
@@ -68,6 +72,13 @@ pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
     if g13.watch_secs == 0 || g13.changes == 0 {
         return Err("g13.watch_secs and g13.changes must be above 0".to_string());
     }
+    let known = |n: &String| crate::g13::KINDS.contains(&n.as_str());
+    if g13.needs.is_empty() || !g13.needs.iter().all(known) {
+        return Err(format!(
+            "g13.needs must name some of {:?}",
+            crate::g13::KINDS
+        ));
+    }
     if g26.languages.is_empty() || g26.clicks == 0 {
         return Err("g26 needs languages and clicks".to_string());
     }
@@ -89,14 +100,17 @@ mod tests {
         assert_eq!(checked(&c), Ok(()));
         assert_eq!(c.g26.languages, ["de-DE", "ru-RU", "he-IL", "fa-IR"]);
         assert_eq!(c.g11.scales, [100, 150, 200]);
+        assert_eq!(c.g13.needs, crate::g13::KINDS, "the roadmap's three");
     }
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 4] = [
+        let bad: [fn(&mut GatesConfig); 6] = [
             |c| c.g11.scales.clear(),
             |c| c.g11.slack_px = -1.0,
             |c| c.g13.changes = 0,
+            |c| c.g13.needs.clear(),
+            |c| c.g13.needs.push("blue".into()),
             |c| c.g26.languages.clear(),
         ];
         for f in bad {

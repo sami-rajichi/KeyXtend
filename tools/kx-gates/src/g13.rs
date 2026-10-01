@@ -39,12 +39,19 @@ const BACKDROPS: [(DWM_SYSTEMBACKDROP_TYPE, &str); 5] = [
     (DWMSBT_TABBEDWINDOW, "tabbed"),
 ];
 
-/// What changed from look `a` to look `b`: dark mode, the accent colour, high contrast.
+/// The parts of Windows' look G13 names: dark mode, the accent colour and high contrast.
+const DARK: &str = "dark";
+const ACCENT: &str = "accent";
+const CONTRAST: &str = "contrast";
+/// Every part G13 names, which `[g13] needs` picks from.
+pub const KINDS: [&str; 3] = [DARK, ACCENT, CONTRAST];
+
+/// What changed from look `a` to look `b`, by the names in `KINDS`.
 fn what_changed(a: &SysLook, b: &SysLook) -> Vec<&'static str> {
     let parts = [
-        ("dark", a.dark != b.dark),
-        ("accent", a.accent != b.accent),
-        ("contrast", a.contrast != b.contrast),
+        (DARK, a.dark != b.dark),
+        (ACCENT, a.accent != b.accent),
+        (CONTRAST, a.contrast != b.contrast),
     ];
     parts
         .iter()
@@ -54,7 +61,7 @@ fn what_changed(a: &SysLook, b: &SysLook) -> Vec<&'static str> {
 }
 
 /// One change of Windows' look and how the keyboard followed it.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct Change {
     what: Vec<&'static str>,
     dark: bool,
@@ -65,12 +72,11 @@ struct Change {
     picture: PathBuf,
 }
 
-/// True when the owner changed something and the keyboard followed every change within `follow_ms`.
-fn passed(changes: &[Change], follow_ms: f64) -> bool {
-    !changes.is_empty()
-        && changes
-            .iter()
-            .all(|c| c.followed_ms.is_some_and(|f| f <= follow_ms))
+/// True when each part in `needs` changed at least once and the keyboard followed every change within `follow_ms`.
+fn passed(changes: &[Change], needs: &[String], follow_ms: f64) -> bool {
+    let seen = |n: &String| changes.iter().any(|c| c.what.contains(&n.as_str()));
+    let in_time = |c: &Change| c.followed_ms.is_some_and(|f| f <= follow_ms);
+    !changes.is_empty() && needs.iter().all(seen) && changes.iter().all(in_time)
 }
 
 /// The backdrop Windows draws behind window `hwnd`.
@@ -115,13 +121,15 @@ fn save(ctx: &Ctx, shot: &Shot, n: usize) -> Result<PathBuf, String> {
 fn watch(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Change>, String> {
     let (g, poll) = (&ctx.cfg.g13, ctx.cfg.timing.poll_ms);
     let end = Instant::now() + Duration::from_secs(g.watch_secs);
-    let (mut look, mut before) = (WinLook.read(), picture(hwnd)?);
+    let (mut before, mut look) = (picture(hwnd)?, WinLook.read());
     let mut changes = Vec::new();
     while Instant::now() < end && changes.len() < g.changes {
+        // The picture comes first: one taken after an unchanged read may already show a change made in between.
+        let shot = picture(hwnd)?;
         let now = WinLook.read();
         let what = what_changed(&look, &now);
         if what.is_empty() {
-            before = picture(hwnd)?;
+            before = shot;
             sleep_ms(poll);
             continue;
         }
@@ -161,7 +169,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         clippy::cast_precision_loss,
         reason = "A wait in ms is far below 2^53."
     )]
-    let pass = passed(&changes, g.follow_ms as f64);
+    let pass = passed(&changes, &g.needs, g.follow_ms as f64);
     Ok(json!({
         "gate": "G13", "keyboard": name, "backdrop": backdrop(kb.hwnd), "first": first, "changes": changes,
         "pass": pass,
@@ -175,14 +183,22 @@ mod tests {
     use super::*;
 
     fn change(followed_ms: Option<f64>) -> Change {
+        of(&[DARK], followed_ms)
+    }
+
+    fn of(what: &[&'static str], followed_ms: Option<f64>) -> Change {
         Change {
-            what: vec!["dark"],
+            what: what.to_vec(),
             dark: true,
             contrast: false,
             followed_ms,
             backdrop: "none",
             picture: PathBuf::new(),
         }
+    }
+
+    fn needs(kinds: &[&str]) -> Vec<String> {
+        kinds.iter().map(ToString::to_string).collect()
     }
 
     #[test]
@@ -214,13 +230,27 @@ mod tests {
 
     #[test]
     fn g13_passes_when_every_change_was_followed_in_time() {
-        assert!(passed(&[change(Some(120.0)), change(Some(0.0))], 1000.0));
+        let dark = needs(&[DARK]);
+        assert!(passed(
+            &[change(Some(120.0)), change(Some(0.0))],
+            &dark,
+            1000.0
+        ));
         assert!(
-            !passed(&[change(Some(120.0)), change(Some(1500.0))], 1000.0),
+            !passed(&[change(Some(120.0)), change(Some(1500.0))], &dark, 1000.0),
             "too slow"
         );
-        assert!(!passed(&[change(None)], 1000.0), "never redrawn");
-        assert!(!passed(&[], 1000.0), "the owner changed nothing");
+        assert!(!passed(&[change(None)], &dark, 1000.0), "never redrawn");
+        assert!(!passed(&[], &dark, 1000.0), "the owner changed nothing");
+    }
+
+    #[test]
+    fn g13_fails_until_each_needed_part_of_the_look_changed() {
+        let all = needs(&KINDS);
+        let two = [of(&[DARK], Some(100.0)), of(&[DARK, ACCENT], Some(200.0))];
+        assert!(!passed(&two, &all, 1000.0), "contrast never changed");
+        let three = [two[0].clone(), two[1].clone(), of(&[CONTRAST], Some(300.0))];
+        assert!(passed(&three, &all, 1000.0));
     }
 
     #[test]

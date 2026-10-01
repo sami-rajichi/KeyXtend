@@ -111,6 +111,14 @@ pub fn on_target(
     Ok(report(head, &tally, &logged, &left_open))
 }
 
+/// True when G2's result line `v` says every planned click typed its character and the target kept the focus.
+pub fn typed_intact(v: &Value) -> bool {
+    let clicks = v["clicks"].as_u64().unwrap_or_default();
+    let every = clicks > 0 && v["planned"].as_u64() == Some(clicks);
+    let matched = v["matched"].as_u64() == Some(clicks);
+    v.get("error").is_none() && every && matched && v["focus_ok"] == true
+}
+
 /// True when the target kept the keyboard for every click and never lost it.
 fn focus_ok(tally: &Tally, logged: &Logged) -> bool {
     let n = tally.clicks.len();
@@ -189,6 +197,34 @@ fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn run(planned: u64, clicks: u64, matched: u64, focus_ok: bool) -> Value {
+        json!({
+            "gate": "G2", "planned": planned, "clicks": clicks, "matched": matched, "focus_ok": focus_ok,
+            "left_open": [],
+        })
+    }
+
+    #[test]
+    fn typing_is_intact_only_when_every_planned_click_matched_and_the_focus_stayed() {
+        assert!(typed_intact(&run(100, 100, 100, true)));
+        assert!(!typed_intact(&run(100, 100, 99, true)), "a lost character");
+        assert!(
+            !typed_intact(&run(100, 100, 100, false)),
+            "the target lost the focus"
+        );
+        assert!(
+            !typed_intact(&run(0, 0, 0, true)),
+            "no click checks nothing"
+        );
+        assert!(
+            !typed_intact(&run(100, 40, 40, true)),
+            "the clicks stopped short"
+        );
+        let mut broke = run(5, 5, 5, true);
+        broke["error"] = json!("target log");
+        assert!(!typed_intact(&broke));
+    }
 
     #[test]
     fn tsv_has_a_header_and_one_line_per_click() {

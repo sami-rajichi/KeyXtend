@@ -1,10 +1,11 @@
 //! G9 window flags survive (roadmap G9, ADR-0013): the guard's flags stay on the keyboard and every guarded window after
-//! an outside topmost drop and style strip, a hide and show, and a resize, while target-window keeps the focus.
+//! an outside topmost drop, style strip and click-through toggle, a hide and show, and a resize, with target-window in
+//! front.
 #![cfg(windows)]
 
 use std::collections::HashMap;
 
-use kx_platform_windows::window::{foreground, kept_ex};
+use kx_platform_windows::window::{THROUGH, foreground, kept_ex};
 use serde::Serialize;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
@@ -13,6 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::apps::{self, Ctx};
+use crate::g8ui::{self, Size, after_grow};
 use crate::g9win::{self, ex_of};
 use crate::keymap::Reader;
 use crate::launch;
@@ -27,21 +29,45 @@ const FLAGS: [(&str, u32); 5] = [
     ("layered", WS_EX_LAYERED.0),
     ("transparent", WS_EX_TRANSPARENT.0),
 ];
-/// The steps that hide and show the keyboard, and grow and shrink it; a run that breaks off between them undoes them.
+/// The steps that hide and show the keyboard, and size it; a run that breaks off between them undoes them.
 const HIDE: &str = "hide";
 const SHOW: &str = "show";
 const GROW: &str = "grow";
 const SHRINK: &str = "shrink";
+const GROW_BACK: &str = "grow_back";
+/// The steps after a grow, by name, in the order `after_grow` presses.
+const BACK: [&str; 2] = [SHRINK, GROW_BACK];
 
 /// The flags a window must keep, by the guard's own rule: its three, and click-through when it had both at first.
 fn wants(first_ex: u32) -> u32 {
     kept_ex(first_ex, 0)
 }
 
+/// True when style `first_ex` lets clicks through; the guard keeps that for good, so G9 turns it on nowhere else.
+fn was_through(first_ex: u32) -> bool {
+    first_ex & THROUGH == THROUGH
+}
+
 /// The names of the flags in `want` that `ex` lacks.
 fn missing(ex: u32, want: u32) -> Vec<&'static str> {
     let lacks = |&&(_, bit): &&(&str, u32)| want & bit != 0 && ex & bit == 0;
     FLAGS.iter().filter(lacks).map(|(name, _)| *name).collect()
+}
+
+/// The presses and step names after a grow, as G8 sizes back.
+fn back(grew: bool) -> impl Iterator<Item = (Size, &'static str)> {
+    after_grow(grew).iter().copied().zip(BACK)
+}
+
+/// The button that sizes a keyboard `now` px wide back toward `first` px; none within `slack` px.
+fn mend(first: i32, now: i32, slack: i32) -> Option<Size> {
+    if (now - first).abs() <= slack {
+        None
+    } else if now > first {
+        Some(Size::Shrink)
+    } else {
+        Some(Size::Grow)
+    }
 }
 
 /// One look at one product window after a step.
@@ -60,12 +86,13 @@ fn passed(seen: &[Seen], steps: &[&str]) -> bool {
     steps.iter().all(looked) && seen.iter().all(|v| v.missing.is_empty() && v.front_kept)
 }
 
-/// What G9 knows across steps: each window's first style, and every look.
+/// What G9 knows across steps: each window's first style, every look, and the keyboard's width before the grow.
 struct Watch {
     first: HashMap<isize, u32>,
     seen: Vec<Seen>,
     keyboard: HWND,
     target: HWND,
+    width: Option<i32>,
 }
 
 impl Watch {
@@ -81,8 +108,16 @@ impl Watch {
         product::shown().into_iter().filter(guarded).collect()
     }
 
-    /// Looks at every window G9 checks after `step`.
-    fn look(&mut self, step: &'static str) {
+    /// The windows G9 checks that let clicks through when first seen.
+    fn through(&mut self) -> Vec<HWND> {
+        let ours = self.ours();
+        let was = |w: &HWND| was_through(self.first[&win::key(*w)]);
+        ours.into_iter().filter(was).collect()
+    }
+
+    /// Waits `[g9] settle_ms`, then looks at every window G9 checks after `step`.
+    fn look(&mut self, ctx: &Ctx, step: &'static str) {
+        sleep_ms(ctx.cfg.g9.settle_ms);
         let front_kept = foreground() == self.target;
         for w in self.ours() {
             let ex = ex_of(w);
@@ -102,30 +137,48 @@ impl Watch {
     }
 }
 
+/// The keyboard window's width, in px.
+fn width(hwnd: HWND) -> Result<i32, String> {
+    win::rect(hwnd).map(|r| r.right - r.left)
+}
+
 /// What a step does before its look.
 enum Act<'a> {
     /// Nothing: the first look.
     Nothing,
     /// An outside program turns topmost off.
     DropTopmost,
-    /// An outside program clears the guard's flags.
+    /// An outside program clears the guard's flags and click-through.
     StripFlags,
+    /// An outside program turns click-through back on, where it was.
+    ThroughOn,
     /// A top-bar button or the bubble is pressed, by UI Automation id.
     Press(&'a str),
 }
 
-/// The steps, in order, by name; each is followed by a look.
-fn plan<'a>(ctx: &'a Ctx) -> [(&'static str, Act<'a>); 7] {
-    let (g9, g8) = (&ctx.cfg.g9, &ctx.cfg.g8);
+/// The steps before the resize, in order, by name; each is followed by a look.
+fn plan<'a>(ctx: &'a Ctx) -> [(&'static str, Act<'a>); 6] {
+    let g9 = &ctx.cfg.g9;
     [
         ("start", Act::Nothing),
         ("topmost", Act::DropTopmost),
         ("styles", Act::StripFlags),
+        ("click_through", Act::ThroughOn),
         (HIDE, Act::Press(&g9.put_away)),
         (SHOW, Act::Press(&g9.bring_back)),
-        (GROW, Act::Press(&g8.grow)),
-        (SHRINK, Act::Press(&g8.shrink)),
     ]
+}
+
+/// Grows the keyboard and sizes it back as G8 does, with a look after each press.
+fn sizes(ctx: &Ctx, w: &mut Watch, reader: &Reader) -> Result<(), String> {
+    w.width = Some(width(w.keyboard)?);
+    let grew = g8ui::resize(ctx, reader, w.keyboard, Size::Grow)?;
+    w.look(ctx, GROW);
+    for (size, step) in back(grew.ms.is_some()) {
+        g8ui::resize(ctx, reader, w.keyboard, size)?;
+        w.look(ctx, step);
+    }
+    Ok(())
 }
 
 /// Runs every step on the shown product with target-window in front; a refused write breaks the run off.
@@ -136,24 +189,30 @@ fn steps(ctx: &Ctx, w: &mut Watch) -> Result<(), String> {
             Act::Nothing => {}
             Act::DropTopmost => g9win::drop_topmost(&w.ours())?,
             Act::StripFlags => g9win::strip_flags(&w.ours())?,
+            Act::ThroughOn => g9win::through_on(&w.through())?,
             Act::Press(id) => product::invoke(&reader, id)?,
         }
-        sleep_ms(ctx.cfg.g9.settle_ms);
-        w.look(step);
+        w.look(ctx, step);
     }
-    Ok(())
+    sizes(ctx, w, &reader)
 }
 
-/// After a run that broke off, shows the keyboard again and takes back a grow; best effort.
+/// After a run that broke off, shows the keyboard again and sizes it back to its first width; best effort.
 fn undo(ctx: &Ctx, w: &Watch) {
     let Ok(reader) = Reader::new() else {
         return;
     };
     if w.did(HIDE) && !w.did(SHOW) {
         let _ = product::invoke(&reader, &ctx.cfg.g9.bring_back);
+        sleep_ms(ctx.cfg.g9.settle_ms);
     }
-    if w.did(GROW) && !w.did(SHRINK) {
-        let _ = product::invoke(&reader, &ctx.cfg.g8.shrink);
+    let now = width(w.keyboard).ok();
+    let size = w
+        .width
+        .zip(now)
+        .and_then(|(first, now)| mend(first, now, ctx.cfg.g9.slack_px));
+    if let Some(size) = size {
+        let _ = g8ui::resize(ctx, &reader, w.keyboard, size);
     }
 }
 
@@ -161,12 +220,12 @@ fn undo(ctx: &Ctx, w: &Watch) {
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let keyboard = Keyboard::find()?.hwnd;
     let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
-    let (first, seen) = (HashMap::new(), Vec::new());
     let mut w = Watch {
-        first,
-        seen,
+        first: HashMap::new(),
+        seen: Vec::new(),
         keyboard,
         target: target.hwnd,
+        width: None,
     };
     let ran = steps(ctx, &mut w);
     if ran.is_err() {
@@ -174,7 +233,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     }
     let repaired = g9win::repair(&w.first);
     let left_open = apps::clean_up(ctx, target);
-    let names: Vec<&str> = plan(ctx).iter().map(|(step, _)| *step).collect();
+    let mut names: Vec<&str> = plan(ctx).iter().map(|(step, _)| *step).collect();
+    names.extend([GROW, SHRINK]);
     let pass = ran.is_ok() && passed(&w.seen, &names);
     let mut v = json!({
         "gate": "G9", "keyboard": name, "seen": w.seen, "put_back": repaired, "left_open": left_open, "pass": pass,
@@ -187,83 +247,4 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_platform_windows::window::{KEPT, THROUGH};
-
-    use super::*;
-
-    /// The keyboard window's style, recorded from the debug app on 2026-10-01: no-activate, layered, tool, topmost.
-    const KEYBOARD_EX: u32 = 0x0808_0088;
-
-    fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
-        Seen {
-            step,
-            window: "kb".into(),
-            ex: format!("{ex:#010x}"),
-            missing: missing(ex, wants(first)),
-            front_kept,
-        }
-    }
-
-    #[test]
-    fn the_names_cover_the_guards_flags_and_click_through() {
-        let kept = FLAGS[..3].iter().fold(0, |all, (_, bit)| all | bit);
-        let through = FLAGS[3..].iter().fold(0, |all, (_, bit)| all | bit);
-        assert_eq!((kept, through), (KEPT, THROUGH));
-    }
-
-    #[test]
-    fn layered_alone_is_not_wanted_back_after_a_strip_as_the_guard_keeps_only_both() {
-        let stripped = kept_ex(KEYBOARD_EX, KEYBOARD_EX & !(KEPT | THROUGH));
-        assert!(
-            missing(stripped, wants(KEYBOARD_EX)).is_empty(),
-            "{stripped:#x}"
-        );
-        let glow = KEYBOARD_EX | WS_EX_TRANSPARENT.0;
-        let kept = kept_ex(glow, glow & !(KEPT | THROUGH));
-        assert!(
-            missing(kept, wants(glow)).is_empty(),
-            "both click-through flags stay"
-        );
-    }
-
-    #[test]
-    fn the_recorded_keyboard_keeps_every_flag_and_a_lost_one_is_named() {
-        assert!(missing(KEYBOARD_EX, wants(KEYBOARD_EX)).is_empty());
-        assert_eq!(
-            missing(KEYBOARD_EX & !WS_EX_TOPMOST.0, wants(KEYBOARD_EX)),
-            ["topmost"]
-        );
-        let glow = KEYBOARD_EX | WS_EX_TRANSPARENT.0;
-        assert_eq!(
-            missing(KEYBOARD_EX, wants(glow)),
-            ["transparent"],
-            "a click-through window stays so"
-        );
-        assert!(
-            missing(glow, wants(KEYBOARD_EX)).is_empty(),
-            "extra flags are fine"
-        );
-    }
-
-    #[test]
-    fn g9_passes_only_when_every_step_looked_kept_every_flag_and_the_focus() {
-        let steps = ["start", "topmost"];
-        let good = [
-            seen("start", KEYBOARD_EX, KEYBOARD_EX, true),
-            seen("topmost", KEYBOARD_EX, KEYBOARD_EX, true),
-        ];
-        assert!(passed(&good, &steps));
-        assert!(!passed(&good[..1], &steps), "a step saw no window");
-        let lost = [
-            good[0].clone(),
-            seen("topmost", KEYBOARD_EX & !WS_EX_TOPMOST.0, KEYBOARD_EX, true),
-        ];
-        assert!(!passed(&lost, &steps));
-        let focus = [
-            good[0].clone(),
-            seen("topmost", KEYBOARD_EX, KEYBOARD_EX, false),
-        ];
-        assert!(!passed(&focus, &steps), "the target lost the focus");
-    }
-}
+mod tests;

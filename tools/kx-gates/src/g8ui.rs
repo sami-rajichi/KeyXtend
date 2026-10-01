@@ -10,6 +10,7 @@ use windows::Win32::Graphics::Dwm::{DWM_TIMING_INFO, DwmGetCompositionTimingInfo
 
 use crate::apps::Ctx;
 use crate::budget::ms;
+use crate::g8cfg::G8;
 use crate::keymap::Reader;
 use crate::product::{self, Keyboard};
 use crate::win::{self, size32, sleep_ms};
@@ -103,9 +104,37 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
     Ok(out)
 }
 
-/// Presses button `id` and waits for keyboard window `hwnd` to settle at its new box.
-fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, id: &str) -> Result<Resize, String> {
+/// One of the top bar's size buttons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Size {
+    Grow,
+    Shrink,
+}
+
+impl Size {
+    /// Its button's UI Automation id, from `[g8]`.
+    pub fn button(self, g: &G8) -> &str {
+        match self {
+            Self::Grow => &g.grow,
+            Self::Shrink => &g.shrink,
+        }
+    }
+}
+
+/// The presses after a grow that end at the first size: a shrink, or, when the grow changed nothing as the keyboard was
+/// at its largest, a shrink and a grow.
+pub fn after_grow(grew: bool) -> &'static [Size] {
+    if grew {
+        &[Size::Shrink]
+    } else {
+        &[Size::Shrink, Size::Grow]
+    }
+}
+
+/// Presses `size`'s button and waits for keyboard window `hwnd` to settle at its new box.
+pub fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, size: Size) -> Result<Resize, String> {
     let g = &ctx.cfg.g8;
+    let id = size.button(g);
     let (wait, settle) = (
         Duration::from_millis(g.resize_wait_ms),
         Duration::from_millis(g.resize_settle_ms),
@@ -129,22 +158,31 @@ fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, id: &str) -> Result<Resize, St
     })
 }
 
-/// One size step and back: grow then shrink, or, at the largest size, shrink then grow.
+/// One grow, then the presses of `after_grow` back to the first size.
 pub fn resizes(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Resize>, String> {
-    let (g, reader) = (&ctx.cfg.g8, Reader::new()?);
-    let grew = resize(ctx, &reader, hwnd, &g.grow)?;
-    if grew.ms.is_some() {
-        let back = resize(ctx, &reader, hwnd, &g.shrink)?;
-        return Ok(vec![grew, back]);
+    let reader = Reader::new()?;
+    let grew = resize(ctx, &reader, hwnd, Size::Grow)?;
+    let back = after_grow(grew.ms.is_some());
+    let mut all = vec![grew];
+    for &size in back {
+        all.push(resize(ctx, &reader, hwnd, size)?);
     }
-    let shrank = resize(ctx, &reader, hwnd, &g.shrink)?;
-    let back = resize(ctx, &reader, hwnd, &g.grow)?;
-    Ok(vec![grew, shrank, back])
+    Ok(all)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_grow_that_changed_nothing_is_undone_by_a_shrink_and_a_grow() {
+        assert_eq!(after_grow(true), [Size::Shrink]);
+        assert_eq!(
+            after_grow(false),
+            [Size::Shrink, Size::Grow],
+            "at the largest size a lone shrink would leave it one step smaller"
+        );
+    }
 
     #[test]
     fn letting_go_happens_above_the_keyboard_or_below_it_at_the_top_of_the_screen() {

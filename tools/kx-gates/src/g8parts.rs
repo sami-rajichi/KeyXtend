@@ -1,21 +1,25 @@
 //! G8's verdict: what it measured, set against each spec §10 budget it owns.
 #![cfg(windows)]
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::budget::{self, Part};
+use crate::g2;
 use crate::g8cfg::G8;
 use crate::g8ui::{Presses, Resize};
+
+/// G8's verdict in weak mode when every budget held: weak mode does not draw in software yet, so it is no pass.
+pub const PARTIAL: &str = "partial";
 
 /// What the product did while G8 measured it.
 pub struct Measured {
     /// Start to the log's start line, and that line to the guard's, in ms.
     pub log: Option<(f64, f64)>,
-    /// Idle private memory, in MiB.
+    /// Idle private memory, in MB.
     pub memory_mb: f64,
-    /// Idle CPU, in percent of the usable cores.
-    pub cpu_pct: Option<f64>,
-    /// The program folder, in MiB.
+    /// Idle CPU, in percent of one core.
+    pub core_pct: Option<f64>,
+    /// The program folder, in MB.
     pub size_mb: f64,
     /// Key highlights.
     pub presses: Presses,
@@ -44,11 +48,11 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         o.hz.and_then(|hz| budget::lit_within_ms(hz, g.highlight_frames, &m.presses.copy_ms));
     let char_p99 = m.g2["latency_ms"]["p99"]
         .as_f64()
-        .filter(|_| m.g2.get("error").is_none());
+        .filter(|_| g2::typed_intact(&m.g2));
     vec![
         Part::at_most("start_ms", shown_ms, start),
         Part::at_most("memory_mb", Some(m.memory_mb), g.memory_mb),
-        Part::at_most("idle_cpu_pct", m.cpu_pct, g.idle_cpu_pct),
+        Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
         Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
         Part::at_most(
             "highlight_ms",
@@ -61,26 +65,42 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     ]
 }
 
+/// G8's `pass`: true when every budget was `met`, only `PARTIAL` then in weak mode, else false.
+pub fn verdict(weak: bool, met: bool) -> Value {
+    match (met, weak) {
+        (false, _) => json!(false),
+        (true, false) => json!(true),
+        (true, true) => json!(PARTIAL),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
 
     use super::*;
 
-    /// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, a 55.4 MiB stage, 165 Hz) on the shipped budgets.
+    /// Idle CPU time of a QML animation at 60 Hz and 0.5 ms a frame over a 10 s measure, and that measure, in ms.
+    const ANIMATION_MS: (f64, f64) = (300.0, 10_000.0);
+
+    /// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, a 55.4 MiB or 58.1 MB stage, 165 Hz) on the shipped
+    /// budgets.
     fn sample() -> (G8, Measured, Outside) {
         let g = crate::config::load().expect("kx-gates.toml loads").g8;
         let m = Measured {
             log: Some((180.0, 1074.3)),
             memory_mb: 61.0,
-            cpu_pct: Some(0.1),
-            size_mb: 55.4,
+            core_pct: Some(0.1),
+            size_mb: 58.1,
             presses: Presses {
                 lit_ms: vec![Some(9.0), Some(12.5)],
                 copy_ms: vec![2.0, 2.5, 3.0],
             },
             resizes: vec![],
-            g2: json!({ "latency_ms": { "p50": 4.2, "p99": 13.1 } }),
+            g2: json!({
+                "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true,
+                "latency_ms": { "p50": 4.2, "p99": 13.1 },
+            }),
         };
         let o = Outside {
             hz: Some(165.0),
@@ -129,6 +149,25 @@ mod tests {
             failed(&parts(&g, Some(420.0), &m, false, &o)),
             ["highlight_ms", "dropped_frames"]
         );
+    }
+
+    #[test]
+    fn an_idle_animation_or_a_lost_character_fails_its_part() {
+        let (g, mut m, o) = sample();
+        m.core_pct = budget::core_pct(ANIMATION_MS.0, ANIMATION_MS.1);
+        m.g2["matched"] = json!(99);
+        assert_eq!(
+            failed(&parts(&g, Some(420.0), &m, false, &o)),
+            ["idle_core_pct", "char_p99_ms"]
+        );
+    }
+
+    #[test]
+    fn weak_mode_meeting_every_budget_is_partial_and_a_miss_fails() {
+        assert_eq!(verdict(false, true), json!(true));
+        assert_eq!(verdict(true, true), json!(PARTIAL));
+        assert_eq!(verdict(true, false), json!(false));
+        assert_eq!(verdict(false, false), json!(false));
     }
 
     #[test]
