@@ -3,10 +3,14 @@
 use kx_platform_windows::ticks_to_us;
 use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 
-/// Microseconds per millisecond.
-pub const US_PER_MS: f64 = 1000.0;
+/// Microseconds per millisecond: the product's `kx_module_api::US_PER_MS`, as a float.
+#[allow(
+    clippy::cast_lossless,
+    reason = "`f64::from` is not const, and a u32 always fits an f64."
+)]
+pub const US_PER_MS: f64 = kx_module_api::US_PER_MS as f64;
 
-/// `count` ticks at `freq` ticks per second, in signed microseconds, stopping at the largest.
+/// `count` ticks at `freq` ticks per second, in microseconds, at most `i64::MAX`.
 fn to_us(count: i64, freq: i64) -> i64 {
     i64::try_from(ticks_to_us(count, freq)).unwrap_or(i64::MAX)
 }
