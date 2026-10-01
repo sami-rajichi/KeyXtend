@@ -41,6 +41,19 @@ fn table(b: &mut [u8], at: usize, names_at: usize, t: &Table, libs: &[&str], fla
     }
 }
 
+/// Writes the one section's header at `sec`: it maps the file from `RAW` on to memory at `VA`.
+fn section(b: &mut [u8], sec: usize) {
+    let fields = [
+        (V_SIZE_AT, RAW),
+        (VA_AT, VA),
+        (RAW_SIZE_AT, RAW),
+        (RAW_AT, RAW),
+    ];
+    for (at, v) in fields {
+        put32(b, sec + at, v);
+    }
+}
+
 /// A small PE image with one section holding `imports` and delay-loaded `delayed`; `wide` picks PE32+.
 fn image(imports: &[&str], delayed: &[&str], wide: bool, flags: u32) -> Vec<u8> {
     let mut b = vec![0u8; IMAGE_LEN];
@@ -70,15 +83,7 @@ fn image(imports: &[&str], delayed: &[&str], wide: bool, flags: u32) -> Vec<u8> 
         opt + dirs + DELAYED.index * DIR_LEN,
         rva(DELAY_TABLE),
     );
-    let sec = opt + opt_len;
-    for (at, v) in [
-        (V_SIZE_AT, RAW),
-        (VA_AT, VA),
-        (RAW_SIZE_AT, RAW),
-        (RAW_AT, RAW),
-    ] {
-        put32(&mut b, sec + at, v);
-    }
+    section(&mut b, opt + opt_len);
     table(&mut b, IMPORT_TABLE, IMPORT_NAMES, &IMPORTS, imports, flags);
     table(&mut b, DELAY_TABLE, DELAY_NAMES, &DELAYED, delayed, flags);
     b
