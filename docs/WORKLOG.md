@@ -2,13 +2,13 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
-## 2026-10-02 00:30 — P3 final fix round, part 3
+## 2026-10-02 00:30 — P3: final review fixes for saving, the language key and tests
 After a save fails on a locked settings file, moving or resizing the keyboard back now changes the value the store keeps, so stop no longer saves the abandoned one. With one layout installed, the language key does nothing in every design, the List included, and its Arabic tip reads «لا يوجد سوى لغة واحدة مثبّتة للوحة المفاتيح». A full message queue can no longer hang quitting, a refused `[ui]` value is logged by its kind, and `Typing`'s debug print hides the typing state. Several tests now prove what they claim (the locked file, a poisoned lock, a blocked module, NaN pixels, the plate token, golden layout ids), and the window tests find keys by their UI Automation id.
 
-## 2026-10-01 23:57 — P3 final fix round, part 2
+## 2026-10-01 23:57 — P3: final review fixes for tools, docs and item notes
 The stage now counts its 80 MB budget in MB of 10⁶ bytes, as G8 and spec §10 do, and a test keeps G8's folder limit equal to the stage's. G10 and G26 now expect a key that types Arabic marks to be named as the product names it, in words or on a dotted circle, and two long tests, a G9 comment and the spike clock's unit are tidied. The roadmap, spec, security notes, ADR-0016, CONTRIBUTING, credits and work log wording follow the review. P3's item file now lists the owner's look, tray, tip and Arabic AltGr checks and G8's accepted weak-mode `partial`, and the notes for later items moved to P6, P7, P11, P13 and P14.
 
-## 2026-10-01 23:40 — P3 final fix round, part 1
+## 2026-10-01 23:40 — P3: final review fixes for Arabic marks and the language key
 Arabic AltGr marks now sit on a dotted circle in the Arabic font, and screen readers name mark keys by their Arabic names. With one layout installed, the language key's tip and description say so. The keyboard relabels as soon as it shows, the window guard reads the pop-up's title at each try, and relabel_ms takes 50 ms at the fastest. Small review gaps are closed: a second-Quit test, a tip-alone z-order test, a Qt wide-environment probe and several doc fixes.
 
 ## 2026-10-01 — P3: the docs pass

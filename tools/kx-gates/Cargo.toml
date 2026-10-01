@@ -23,7 +23,7 @@ toml.workspace = true
 kx-module-api = { path = "../../crates/kx-module-api" }
 # G8's bus publish time on the product's own event bus.
 kx-kernel = { path = "../../crates/kx-kernel" }
-# The product's board (key ids, roles) and the keyboard's boxes (`Area`), which the spike's tools-row maths returns.
+# The product's board (key ids, roles), its legend naming rule (`legend`) and the boxes (`Area`) the spike's tools-row maths returns.
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The scan list the product reads labels for, which `capture-layouts` follows.
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }

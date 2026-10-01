@@ -87,7 +87,7 @@ pub fn not_invokable(read: &[KeyRead], ids: &[String]) -> Vec<String> {
 }
 
 /// True when `name` is how the product names a key whose base is `base`: marks it has words for by any name but the
-/// marks, bare or drawn (the run records the words), and anything else as drawn, marks on a dotted circle.
+/// marks, bare or drawn (G10's run records the words), and anything else as drawn, marks on a dotted circle.
 fn named_right(name: &str, base: &str) -> bool {
     let drawn = legend::shown(base);
     if legend::mark_names(base).is_empty() {
