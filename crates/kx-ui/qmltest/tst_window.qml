@@ -1,6 +1,6 @@
 // The keyboard window over stand-in bridges fed from the face's golden files, the hub's texts and the real look:
 // what screen readers find and hear, what a click sends, and how the Arabic UI and a stopped keyboard draw (labels
-// fitting their caps: tst_fit).
+// fitting their caps: tst_fit; the top bar: tst_bar). Keys are found by their UI Automation id, as the gates do.
 import QtQuick
 import QtTest
 import "../qml"
@@ -18,7 +18,6 @@ Item {
     Component { id: kbC; FakeKeyboard {} }
     Component { id: winC; KbWindow {} }
     Component { id: spyC; SignalSpy {} }
-    Component { id: bubC; Bubble {} }
 
     TestCase {
         name: "window"
@@ -50,19 +49,17 @@ Item {
         function buttons(win) {
             return all(win.contentItem, o => o.Accessible.role === Accessible.Button && o.Accessible.name.length > 0);
         }
-        // Every control a screen reader calls `name`.
-        function found(win, name) {
-            return buttons(win).filter(o => o.Accessible.name === name);
-        }
-        // The one control a screen reader calls `name`.
-        function named(win, name) {
-            const hits = found(win, name);
-            compare(hits.length, 1, name);
+        // The one control UI Automation finds by `id`: a board key's id, or a top-bar button's.
+        function keyed(win, id) {
+            const hits = all(win.contentItem, o => o.Accessible.id === id);
+            compare(hits.length, 1, id);
             return hits[0];
         }
-        // The top bar's size buttons, in order.
-        function sizeButtons(win) {
-            return all(win.contentItem, o => o.part !== undefined && o.text.length > 0);
+        // The one control a screen reader calls `name`, for the D-pad, which carries no id.
+        function named(win, name) {
+            const hits = buttons(win).filter(o => o.Accessible.name === name);
+            compare(hits.length, 1, name);
+            return hits[0];
         }
         // The window's tooltip.
         function tipOf(win) {
@@ -76,33 +73,30 @@ Item {
             return k.name ? En.texts[k.name] : Face.states.en.keys[k.id].name;
         }
 
-        function test_keys_are_found_by_accessible_name() {
+        function test_each_key_is_found_by_its_id_and_carries_its_screen_reader_name() {
             const win = make();
-            const names = Face.board.keys.map(nameOf);
-            for (const n of names)
-                compare(found(win, n).length, names.filter(m => m === n).length, n);
-            verify(named(win, En.texts["key.esc"]), "a named key");
-            verify(named(win, "q"), "a character key by its character");
-            verify(named(win, En.texts["bar.grip"]), "a top-bar button");
+            for (const k of Face.board.keys)
+                compare(keyed(win, k.id).Accessible.name, nameOf(k), k.id);
+            compare(keyed(win, "c-0x0010").Accessible.name, "q", "a character key by its character");
+            compare(keyed(win, "bar.grip").Accessible.name, En.texts["bar.grip"], "a top-bar button");
             verify(named(win, En.texts["key.dpad"]), "the D-pad");
         }
 
         function test_only_latches_and_caps_are_checkable() {
             const win = make();
-            const checkable = buttons(win).filter(o => o.Accessible.checkable).map(o => o.Accessible.name).sort();
-            const latches = Face.board.keys.filter(k => k.checkable).map(nameOf).sort();
+            const checkable = buttons(win).filter(o => o.Accessible.checkable).map(o => o.Accessible.id).sort();
+            const latches = Face.board.keys.filter(k => k.checkable).map(k => k.id).sort();
             compare(checkable, latches);
-            verify(latches.indexOf(En.texts["key.caps"]) >= 0, "Caps Lock is one");
+            verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
             for (const k of Face.board.keys.filter(k => k.side))
-                verify(!named(win, nameOf(k)).Accessible.checkable, "side key " + k.id);
+                verify(!keyed(win, k.id).Accessible.checkable, "side key " + k.id);
         }
 
         function test_dimmed_keys_announce_coming_in_a_later_version() {
             const win = make();
             const later = En.texts["tip.later"];
             for (const k of Face.board.keys)
-                for (const hit of found(win, nameOf(k)))
-                    compare(hit.Accessible.description, k.dim ? later : "", k.id);
+                compare(keyed(win, k.id).Accessible.description, k.dim ? later : "", k.id);
             compare(named(win, En.texts["key.dpad"]).Accessible.description, later, "the D-pad");
         }
 
@@ -118,12 +112,12 @@ Item {
             const win = make();
             win.visible = true;
             waitForRendering(win.contentItem);
-            mouseClick(named(win, "q"));
-            const lang = named(win, En.texts["key.lang"]);
+            mouseClick(keyed(win, "c-0x0010"));
+            const lang = keyed(win, "lang");
             mouseClick(lang, lang.width * 0.1, lang.height / 2);
             const taps = win.keyboard.calls.filter(c => c.startsWith("tap"));
             compare(taps, ["tap c-0x0010 false", "tap lang true"]);
-            mouseClick(named(win, En.texts["key.mic"]));
+            mouseClick(keyed(win, "mic"));
             compare(win.keyboard.calls.filter(c => c.startsWith("tap")).length, 2, "a dimmed key sends nothing");
             win.visible = false;
         }
@@ -133,10 +127,10 @@ Item {
             const spy = createTemporaryObject(spyC, root, { target: win, signalName: "touched" });
             win.visible = true;
             waitForRendering(win.contentItem);
-            mouseClick(named(win, "q"));
+            mouseClick(keyed(win, "c-0x0010"));
             compare(spy.count, 1, "seen, so the tray menu closes");
             compare(win.keyboard.calls.filter(c => c.startsWith("tap")), ["tap c-0x0010 false"]);
-            mouseClick(named(win, En.texts["bar.theme"]));
+            mouseClick(keyed(win, "bar.theme"));
             compare(spy.count, 2, "the top bar too");
             verify(win.ui.calls.indexOf("stepTheme") >= 0, "and its button still works");
             win.visible = false;
@@ -146,10 +140,10 @@ Item {
         function test_the_arabic_ui_keeps_the_top_bar_and_the_keys_in_place() {
             const en = make();
             const ar = make({ settings: Ar.settings, lang: Ar.lang, texts: Ar.texts });
-            const at = (win, name) => named(win, name).mapToItem(null, 0, 0).x;
-            verify(at(ar, Ar.texts["bar.grip"]) < at(ar, Ar.texts["bar.close"]), "grip on the left");
-            compare(at(ar, Ar.texts["bar.grip"]), at(en, En.texts["bar.grip"]), "the bar keeps its places");
-            compare(at(ar, "q"), at(en, "q"), "the keys stay where the board puts them");
+            const at = (win, id) => keyed(win, id).mapToItem(null, 0, 0).x;
+            verify(at(ar, "bar.grip") < at(ar, "bar.close"), "grip on the left");
+            compare(at(ar, "bar.grip"), at(en, "bar.grip"), "the bar keeps its places");
+            compare(at(ar, "c-0x0010"), at(en, "c-0x0010"), "the keys stay where the board puts them");
             compare(ar.title, Ar.texts["window.keyboard"]);
         }
 
@@ -167,69 +161,15 @@ Item {
             win.visible = false;
         }
 
-        function test_top_bar_buttons_reach_the_keyboard_and_the_look() {
-            const win = make();
-            win.visible = true;
-            waitForRendering(win.contentItem);
-            const spy = createTemporaryObject(spyC, root, { target: win, signalName: "minimise" });
-            mouseClick(named(win, En.texts["bar.smaller"]));
-            mouseClick(named(win, En.texts["sizename.l"]));
-            mouseClick(named(win, En.texts["bar.bigger"]));
-            mouseClick(named(win, En.texts["bar.mode"]));
-            mouseClick(named(win, En.texts["bar.theme"]));
-            mouseClick(named(win, En.texts["bar.minimise"]));
-            const sent = win.keyboard.calls.filter(c => c === "smaller" || c === "bigger" || c.startsWith("preset"));
-            compare(sent, ["smaller", "preset 2", "bigger"]);
-            verify(win.ui.calls.indexOf("flipMode") >= 0, "the mode flips");
-            verify(win.ui.calls.indexOf("stepTheme") >= 0, "the theme steps");
-            compare(spy.count, 1, "minimise");
-            win.visible = false;
-        }
-
-        function test_one_size_button_per_preset_and_none_lit_off_preset() {
-            const win = make();
-            compare(sizeButtons(win).map(b => b.text), En.lang.sizes.map(z => z.label));
-            compare(sizeButtons(win).filter(b => b.lit).map(b => b.Accessible.name), [En.texts["sizename.s"]]);
-            win.visible = true;
-            waitForRendering(win.contentItem);
-            // A smaller step lands between presets, and settings may hold fewer presets than the size texts name.
-            win.keyboard.board = Object.assign({}, Face.board, { preset: null, presets: Face.board.presets.slice(0, 2) });
-            win.keyboard.reply = { board: true, state: false };
-            mouseClick(named(win, En.texts["bar.smaller"]));
-            compare(win.board.preset, null);
-            const now = sizeButtons(win);
-            compare(now.map(b => b.Accessible.name), [En.texts["sizename.s"], En.texts["sizename.m"]], "one per preset");
-            compare(now.filter(b => b.lit).length, 0, "none lit off preset");
-            win.visible = false;
-        }
-
-        function test_the_bubble_and_the_move_catcher_carry_their_texts() {
-            const win = make();
-            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs, lift: t => true });
-            compare(bub.title, En.texts["window.bubble"]);
-            compare(bub.name, En.texts["bar.bubble"]);
-            verify(named(win, En.texts["catch"]), "the move catcher");
-        }
-
-        // The gates find the top bar's buttons and the bubble by these ids, whatever the language.
-        function test_top_bar_buttons_and_the_bubble_give_ui_automation_their_bar_ids() {
-            const win = make();
-            for (const part of ["grip", "theme", "smaller", "bigger", "minimise", "close"])
-                compare(named(win, En.texts["bar." + part]).Accessible.id, "bar." + part);
-            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs, lift: t => true });
-            const disc = all(bub.contentItem, o => o.Accessible.role === Accessible.Button)[0];
-            compare(disc.Accessible.id, "bar.bubble");
-        }
-
         function test_a_dimmed_key_and_the_dpad_tip_say_their_name_then_when_they_come() {
             const win = make();
             win.visible = true;
             waitForRendering(win.contentItem);
             const tip = tipOf(win);
-            for (const name of [En.texts["key.mic"], En.texts["key.dpad"]]) {
-                const it = named(win, name);
+            const said = [[keyed(win, "mic"), "key.mic"], [named(win, En.texts["key.dpad"]), "key.dpad"]];
+            for (const [it, name] of said) {
                 mouseMove(it, it.width / 2, it.height / 2);
-                compare(tip.name, name + "\n" + En.texts["tip.later"]);
+                compare(tip.name, En.texts[name] + "\n" + En.texts["tip.later"]);
             }
             win.visible = false;
         }
@@ -243,7 +183,7 @@ Item {
             const win = make({}, { state: Object.assign({}, st, { lang: lang, keys: keys }) });
             win.visible = true;
             waitForRendering(win.contentItem);
-            const key = named(win, En.texts["key.lang"]);
+            const key = keyed(win, "lang");
             compare(key.Accessible.description, En.texts["tip.one-lang"]);
             mouseMove(key, key.width / 2, key.height / 2);
             compare(tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
@@ -271,7 +211,7 @@ Item {
             kb.state = Face.states.en;
             ui.settingsChanged();
             verify(win.running, "a settings change reads the board again");
-            verify(named(win, En.texts["key.esc"]));
+            verify(keyed(win, "esc"));
         }
     }
 }

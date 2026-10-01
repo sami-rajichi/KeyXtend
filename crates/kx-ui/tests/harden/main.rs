@@ -1,7 +1,7 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
 //! QML import paths, nor Qt's narrow or wide reads, and pinned plugins and imports hold only the app's folders and the
-//! compiled-in modules. The
-//! variables must be set before the process starts, so the test runs itself again, as a child, with them set.
+//! compiled-in modules. The variables must be set before the process starts, so the test runs itself again, as a
+//! child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
 use kx_test_support::tempdir::TempDir;
