@@ -25,6 +25,7 @@ Item {
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => En.texts["bar." + id],
+        barId: id => "bar." + id,
         dpad: id => En.texts["dpad." + id],
         space: parts => parts.join(" · "),
         dimTip: (name, later) => name + "\n" + later

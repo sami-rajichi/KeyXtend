@@ -211,6 +211,16 @@ Item {
             verify(named(win, En.texts["catch"]), "the move catcher");
         }
 
+        // The gates find the top bar's buttons and the bubble by these ids, whatever the language.
+        function test_top_bar_buttons_and_the_bubble_give_ui_automation_their_bar_ids() {
+            const win = make();
+            for (const part of ["grip", "theme", "smaller", "bigger", "minimise", "close"])
+                compare(named(win, En.texts["bar." + part]).Accessible.id, "bar." + part);
+            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs, lift: t => true });
+            const disc = all(bub.contentItem, o => o.Accessible.role === Accessible.Button)[0];
+            compare(disc.Accessible.id, "bar.bubble");
+        }
+
         function test_a_dimmed_key_and_the_dpad_tip_say_their_name_then_when_they_come() {
             const win = make();
             win.visible = true;

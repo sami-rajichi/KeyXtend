@@ -120,6 +120,8 @@ Window {
             tr: key => ui.text(key),
             tray: key => ui.trayText(key),
             bar: id => ui.nameOf("bar", id),
+            // A top-bar button's UI Automation id: its icons.toml [bar] id, the same in every language.
+            barId: id => "bar." + id,
             dpad: id => ui.nameOf("dpad", id),
             space: parts => ui.space(JSON.stringify(parts)),
             // A dimmed button's tip: its name, then when it comes, on two lines.

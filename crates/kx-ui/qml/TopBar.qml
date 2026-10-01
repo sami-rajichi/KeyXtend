@@ -59,6 +59,8 @@ Item {
         height: bar.sh.button_px[1] * bar.s
         Accessible.role: Accessible.Button
         Accessible.name: b.name
+        // The gates find each button by this id, whatever the language.
+        Accessible.id: b.part ? bar.res.barId(b.part) : ""
         Accessible.onPressAction: b.clicked()
         Hover {
             lk: bar.lk
