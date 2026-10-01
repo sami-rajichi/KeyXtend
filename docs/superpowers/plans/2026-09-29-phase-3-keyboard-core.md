@@ -167,7 +167,7 @@ ARCHITECTURE.md; spec §3.1, §3.5, §3.6, §4.3; roadmap; move map; README; CON
 2. Type EN, FR (AltGr) and AR (harakat, لا) into Notepad, Chrome, an admin Terminal and a signed-in Word; G1–G4 on the product.
 3. Modifiers in both modes, Caps, the three language keys, theme button, sun/moon, sizes, move, resize, bubble.
 4. × to tray, tray menu Show and Quit, start again from the Start menu; a damaged settings file shows the banner.
-5. G10 with Narrator and NVDA; G11 at 100, 150 and 200 % scale; G13 dark mode, accent and high contrast live, and the frosted-glass choice.
+5. G10 with Narrator and NVDA; G11 at 100, 150 and 200 % scale, with the tray picture sharp after each change (a second monitor's taskbar is P14's); G13 dark mode, accent and high contrast live, and the frosted-glass choice.
 6. G8 on this PC and in weak mode.
 7. Report in `docs/test-reports/2026-09-29-p3-keyboard-core.md`.
 

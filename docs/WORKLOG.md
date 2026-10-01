@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the docs pass
+The spec, roadmap, architecture map, move map, README and CONTRIBUTING now describe the keyboard as built, with the Qt set-up and the P3 edge cases. The three P3 security notes are corrected, and docs name settings instead of repeating their values. `kx-review` now fails a `tracing` call on an input path that could log typed text. Each P3 item note is marked handled or waiting for the manual check, or moved to the item that owns it.
+
 ## 2026-10-01 — P3: the late review's fixes for gates G8–G26
 G8 now keeps the PresentMon it starts and reads the CSV only once PresentMon has stopped, and a copy it cannot open or cap gets Quit until it listens or ends. G8 and G9 size the keyboard back after every run, and G9 fails when no size press changed anything. G9 also writes click-through on to every window, and the guard must refuse it where the window took clicks at first. G13 joins a part that changed while the keyboard followed, and the G26 job prints its logs after any failure or timeout.
 

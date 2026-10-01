@@ -125,22 +125,30 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 3 — Keyboard core — v0.1 "it types"
 
-- `kx-mod-layouts`: reads installed layouts, label tables for EN/FR/AR, `ToUnicodeEx` with flag 0x4.
-- `kx-mod-keyboard`: key model (§4.1), modifiers kx-style (§4.4), Caps, layers, language key (carousel, cycle or list), panel key routing.
-- `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the no-activate topmost window, per-monitor DPI v2.
-- `kx-ui` (Qt Quick, ADR-0013): all three themes' tokens from the spike, the Native Adaptive look first (light + soft dark), keyboard view, top bar, move (click, move, click), minimise to bubble, size S/M/L plus steps.
+- `kx-mod-layouts`: reads installed layouts, label tables for EN/FR/AR, `ToUnicodeEx` with flag 0x4; the list, step and pick, and short names (`[layouts] short`).
+- `kx-mod-keyboard`: key model (§4.1) with the side block dimmed until its phases, modifiers kx-style (§4.4), Caps, the language key (Carousel, Cycle or List), panel key routing for the language list, size and place per screen DPI, and the face the UI draws.
+- `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the key-press route for `key_apps`, the no-activate topmost window and its guard, per-monitor DPI v2, the system look, backdrops, one running copy and the tray icon.
+- `kx-theme`: all three themes' tokens from the spike, the look view, WCAG contrast and the high-contrast palette, with no Qt (ADR-0016).
+- `kx-ui` (Qt Quick, ADR-0013): the keyboard view in all three themes (light + soft dark), top bar with a theme button (a trial), sun/moon, move (click, move, click), resize, minimise to bubble, size S/M/L plus steps, tips, the notice banner, the tray menu, and EN/FR/AR texts in the keyboard's language (ADR-0017, ADR-0020).
+- `apps/keyxtend`: the app over the kernel and Qt, with the log, the panic hook, `--show` and `--quit`, and a hardened Qt start for the uiAccess build.
 - **Moves in:** the keyboard, layouts, window guard, theme and Qt face parts of the spike (move map, P3).
-- **Gates to pass here:** G8 budgets (development PC and weak mode), G9 window flags, G10 Narrator and NVDA, G11 DPI, G13 live following of accent, dark mode and high contrast plus the frosted-glass tries, G26 other languages.
+- **Gates to pass here:** G8 budgets (development PC and weak mode), G9 window flags, G10 Narrator and NVDA, G11 DPI, G13 live following of accent, dark mode and high contrast plus the frosted-glass tries, G26 other languages. G1–G4 and G25's language part run on the product.
 - **Remembers its state:** size, position, theme, light or dark and mode survive a restart or shutdown (`kx-settings`); the bubble sits in a bottom corner of the screen.
-- `kx-crypto` (needed later, but it is small and foundational).
+- `kx-crypto` moved to P8, its first user (owner, 2026-09-29).
 - **Edge cases:**
-  - modifiers + AltGr on AZERTY;
-  - Arabic shifted harakat;
+  - modifiers + AltGr on AZERTY; AltGr on a layout without AltGr acts as Right Alt;
+  - Arabic shifted harakat shown on ◌ and typed bare; `لا` types two code points;
   - a layout added or removed while running;
-  - a target window that drops `VK_PACKET`;
-  - multi-monitor with mixed DPI;
-  - moving the keyboard off-screen;
-  - a key click while a modifier is held in "Stay held" mode.
+  - an app listed in `key_apps` gets key presses in its own layout (the answer to a target that drops `VK_PACKET`);
+  - a saved place on a missing or mixed-DPI screen comes back on screen, sized for that screen;
+  - moving the keyboard off-screen stops at the screen edge;
+  - a key click while a modifier is held in "Stay held" mode keeps it held;
+  - a dead key, then Space, an unrelated letter or a language switch;
+  - only one layout installed: the language key stays still;
+  - a second launch shows the running keyboard, and `--quit` ends it;
+  - a locked settings file; a log file that cannot open (the run logs to standard error and says so once);
+  - a UI language other than EN, FR or AR falls back to English;
+  - high contrast on: system colours only, with a hover outline.
 
 ## Phase 4 — Mouse assist — v0.2
 
@@ -180,7 +188,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 8 — Clipboard history — v0.5
 
-- `kx-mod-clipboard` plus the `media` worker (thumbnails).
+- `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
 - The encrypted store, retention, exclusion formats, the paged panel, multi-paste, and pasting files and images.
 - **Edge cases:**
   - a 200 MB image;
@@ -223,7 +231,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 13 — Themes, settings, i18n — v0.9
 
-- ET66 and Modern Dolch (light + soft dark).
+- ET66 and Modern Dolch (light + soft dark): built in P3; here the theme choice moves into Settings.
 - The complete settings window (paged, steppers): a separate window with its own icon, in the keyboard's language, carrying each theme's character as strongly as the keyboard does (owner, 2026-09-29).
 - The paged list panel rebuilt to the full mock-up design.
 - The quick settings strip (theme, light or dark, size), shown only when asked; "Reset size" and the bubble corner in Settings.

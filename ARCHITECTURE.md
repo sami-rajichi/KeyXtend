@@ -38,7 +38,8 @@ rust-toolchain.toml      pinned stable toolchain
 deny.toml                cargo-deny: licences, advisories, bans, sources
 apps/
   keyxtend/              composition root: picks the platform adapter and the enabled modules
-                         (one Cargo feature per module)
+                         (one Cargo feature per module); the command line, one running copy,
+                         the log, the panic hook and Qt's hardened start
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update)
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits), events,
@@ -92,6 +93,7 @@ tools/
                          while it holds the keyboard (gates bring it to the front first); a
                          failed restore logs `# layout-kept`, and a killed window leaves the
                          session switched
+assets/                  fonts and icons with their licences, compiled into kx-ui (ADR-0016)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), stage (the release app with its Qt files),
@@ -168,6 +170,8 @@ pub trait Module: Send + 'static {
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 
+**CI** (`.github/workflows/ci.yml`): Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage. Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
+
 ## Cross-cutting patterns
 
 - **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
@@ -189,7 +193,7 @@ pub trait Module: Send + 'static {
 - Keyboard windows are `Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus`; click-through windows add `Qt.WindowTransparentForInput`.
 - The Windows adapter guards every window we create except Settings:
   - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`, and refuses click-through on a window that took clicks when first guarded.
-  - In `WM_WINDOWPOSCHANGED`, it lifts a window that left the topmost band straight back, as `HWND_NOTOPMOST` never reaches `WM_STYLECHANGING`.
+  - In `WM_WINDOWPOSCHANGED`, it lifts a window that left the topmost band straight back, as `HWND_NOTOPMOST` never reaches `WM_STYLECHANGING`. After such a drop by another program, the keyboard comes back above a shown banner or list until a guard run names that pop-up as `top`.
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
   - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.

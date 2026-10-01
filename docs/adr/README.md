@@ -19,7 +19,7 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Partly superseded by ADR-0016 (theme loader in `kx-theme`). |
 | 0014 | [Keep the tested spike code and move it into the product](0014-keep-and-move-the-spike-code.md) | Accepted (2026-09-29). Its build rule for `qt-kb` is superseded by ADR-0016. |
 | 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29) |
-| 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. Its UI ports gain `Tray` in ADR-0019. |
+| 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. Its UI ports gain `Tray` in ADR-0019. Its CI line as built: Linux leaves out the app and builds `kx-ui` without Qt. |
 | 0017 | [Translations: Fluent files compiled in](0017-translations-fluent-compiled-in.md) | Accepted (2026-09-30). Its language choice for the keyboard's text is superseded by ADR-0020. |
 | 0018 | [One set-once hub for the QML objects](0018-set-once-hub-for-qml-objects.md) | Accepted (2026-09-30) |
 | 0019 | [The tray icon: a port over the taskbar, and our own QML menu](0019-tray-icon-port-and-qml-menu.md) | Accepted (2026-09-30). Adds the `Tray` port to ADR-0016's UI ports. |
