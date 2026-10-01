@@ -8,7 +8,7 @@ use super::{Network, StageConfig};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
-const LIB_EXT: &str = "dll";
+pub(super) const LIB_EXT: &str = "dll";
 
 /// What the check found in a stage that passed.
 #[derive(Debug, PartialEq, Eq)]
@@ -76,28 +76,28 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
 }
 
 /// The key the loader matches a library name by: its lower-case text.
-fn key(name: &str) -> String {
+pub(super) fn key(name: &str) -> String {
     name.to_lowercase()
 }
 
-/// True if `path`'s extension is `ext`, in any letter case.
-fn has_ext(path: &Path, ext: &str) -> bool {
+/// True if `path` has the library extension, in any letter case; the walk reads only such files.
+pub(super) fn is_lib(path: &Path) -> bool {
     path.extension()
-        .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case(ext))
+        .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case(LIB_EXT))
 }
 
 /// The libraries directly beside the program, by key; only these satisfy an import by name.
 fn libraries(files: &[PathBuf]) -> BTreeMap<String, PathBuf> {
     files
         .iter()
-        .filter(|f| f.parent() == Some(Path::new("")) && has_ext(f, LIB_EXT))
+        .filter(|f| f.parent() == Some(Path::new("")) && is_lib(f))
         .map(|f| (key(&f.to_string_lossy()), f.clone()))
         .collect()
 }
 
 /// Where the walk starts: the program, and every library in a subfolder, which Qt loads as a plugin.
 fn roots(files: &[PathBuf], config: &StageConfig) -> Vec<PathBuf> {
-    let plugin = |f: &&PathBuf| f.parent() != Some(Path::new("")) && has_ext(f, LIB_EXT);
+    let plugin = |f: &&PathBuf| f.parent() != Some(Path::new("")) && is_lib(f);
     let plugins = files.iter().filter(plugin).cloned();
     std::iter::once(PathBuf::from(config.program()))
         .chain(plugins)

@@ -29,6 +29,10 @@ pub use ui_module::{ID, MANIFEST, UiModule};
 #[cfg(feature = "qt")]
 pub const MAIN_QML: &str = env!("KX_UI_MAIN_QML");
 
+/// The URI of the QML module compiled into the crate.
+#[cfg(feature = "qt")]
+pub const QML_URI: &str = env!("KX_UI_QML_URI");
+
 /// The compiled-in icon folder URL and type and each font's URL, as JSON `{icons, ext, fonts}`, which QML reads.
 #[cfg(feature = "qt")]
 pub const ASSETS: &str = env!("KX_UI_ASSETS");

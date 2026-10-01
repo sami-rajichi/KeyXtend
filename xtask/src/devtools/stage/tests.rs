@@ -109,6 +109,32 @@ fn the_network_library_and_its_importers_must_be_plain_names() {
 }
 
 #[test]
+fn the_network_library_and_its_importers_must_be_staged_libraries() {
+    let unlisted = Err(ConfigError::NotListed("network", "libs"));
+    assert_eq!(
+        invalid(|c| c.network.lib = "Qt6Net.dll".to_string()),
+        unlisted
+    );
+    assert_eq!(
+        invalid(|c| c.network.by.push("Qt6Gui.dll".to_string())),
+        unlisted
+    );
+}
+
+#[test]
+fn libraries_and_plugins_must_be_dlls() {
+    assert_eq!(
+        invalid(|c| c.libs.push("helper.exe".to_string())),
+        Err(ConfigError::NotType("libs", check::LIB_EXT))
+    );
+    assert_eq!(
+        invalid(|c| c.plugins = vec!["platforms/qwindows".to_string()]),
+        Err(ConfigError::NotType("plugins", check::LIB_EXT))
+    );
+    assert_eq!(invalid(|c| c.libs.push("Qt6Svg.DLL".to_string())), Ok(()));
+}
+
+#[test]
 fn load_reads_the_section() {
     let json =
         serde_json::json!({ "workspace_root": "/ws", "metadata": { "stage": stage_json() } });
@@ -154,6 +180,10 @@ fn the_plan_puts_the_program_libraries_plugins_and_qml_in_place() {
         Copy {
             from: q.bins.join("Qt6Qml.dll"),
             to: rel("Qt6Qml.dll"),
+        },
+        Copy {
+            from: q.bins.join("Qt6Quick.dll"),
+            to: rel("Qt6Quick.dll"),
         },
         Copy {
             from: q.bins.join("Qt6Network.dll"),

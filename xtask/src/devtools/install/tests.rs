@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{TempDir, devtools_config, make_dir_link, stage_config};
+use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, stage_config};
 
 const TP: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
 
@@ -67,6 +67,39 @@ fn a_folder_without_the_app_is_not_stage_checked() {
     let (dir, setup) = tls_folder("vet-other", "other.exe");
     let windows = |_: &str| Some(paths::text(dir.path()));
     assert_eq!(vet(dir.path(), &setup, &stage_config(), windows), Ok(()));
+}
+
+/// A folder holding the app, and an environment whose roaming folder is `menu` and whose profile is `u`, both in it.
+fn app_with_menu(label: &str, menu: &str) -> (TempDir, impl Fn(&str) -> Option<String>) {
+    let dir = TempDir::new(label);
+    std::fs::write(dir.path().join(stage_config().program()), b"").unwrap();
+    let at = |rel: &str| paths::join_rel(dir.path().to_path_buf(), rel);
+    let env = fake_env(vec![("APPDATA", at(menu)), ("USERPROFILE", at("u"))]);
+    (dir, env)
+}
+
+#[test]
+fn an_app_folder_gets_its_shortcut_worked_out_up_front() {
+    let (dir, env) = app_with_menu("link-app", "u/AppData/Roaming");
+    let (config, program) = (devtools_config(), stage_config().program());
+    let link = link_for(dir.path(), &program, &config, &env);
+    assert_eq!(link, Ok(Some(shortcut::link(&config, &env).unwrap())));
+}
+
+#[test]
+fn an_app_folder_whose_shortcut_leaves_the_profile_is_refused() {
+    let (dir, env) = app_with_menu("link-out", "ProgramData");
+    let program = stage_config().program();
+    let link = link_for(dir.path(), &program, &devtools_config(), env);
+    assert!(matches!(link, Err(DevError::NotInProfile(_))), "{link:?}");
+}
+
+#[test]
+fn a_folder_without_the_app_needs_no_shortcut() {
+    let dir = TempDir::new("link-none");
+    let program = stage_config().program();
+    let link = link_for(dir.path(), &program, &devtools_config(), fake_env(vec![]));
+    assert_eq!(link, Ok(None));
 }
 
 #[test]

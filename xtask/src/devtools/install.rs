@@ -87,7 +87,7 @@ pub(crate) fn holds_app(folder: &Path, program: &str) -> bool {
     folder.join(program).is_file()
 }
 
-/// Runs the stage check on `source` when it holds the app, so a tampered stage is never signed.
+/// Runs the stage check on `source` when it holds the app, so a refused or hand-edited stage is never signed.
 pub(crate) fn vet(
     source: &Path,
     setup: &DevSetup,
@@ -98,6 +98,20 @@ pub(crate) fn vet(
         stage::verify(setup, stage, source, env)?;
     }
     Ok(())
+}
+
+/// The shortcut `source`'s install gets, worked out before anything changes; none when it does not hold the app.
+pub(crate) fn link_for(
+    source: &Path,
+    program: &str,
+    config: &DevToolsConfig,
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<Option<PathBuf>, DevError> {
+    if holds_app(source, program) {
+        shortcut::link(config, env).map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 /// The thumbprint of the test certificate, or a hint to run `dev-cert` first.
@@ -130,6 +144,7 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
     check_source(&source, &target, setup.config.install_max_mb)?;
     vet(&source, &setup, &stage, env)?;
     let program = stage.program();
+    let link = link_for(&source, &program, &setup.config, env)?;
     let programs = exes(&source)?;
     let thumbprint = require_cert(&setup)?;
     let signtool = sdk::find_tool(&setup.config, &setup.config.signtool)?;
@@ -142,25 +157,26 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
         admin::build_params(&setup.config, Some(&source), &target),
     )?;
     println!("Installed to {}.", paths::text(&target));
-    if holds_app(&source, &program) {
-        let link = shortcut::add(&setup, &target.join(&program))?;
+    if let Some(link) = link {
+        shortcut::add(&setup, &link, &target.join(&program))?;
         println!("Start-menu shortcut: {}.", paths::text(&link));
     }
     Ok(())
 }
 
 /// Runs `cargo xtask dev-install --remove <name>`: deletes that install, with no prompt if it is absent, then its
-/// shortcut.
+/// shortcut, whose path is worked out first.
 pub(crate) fn remove(name: &str) -> Result<(), DevError> {
     let (setup, stage, target) = prepare(&plain(name)?)?;
     let program = stage.program();
+    let link = shortcut::link(&setup.config, env)?;
     if target.exists() {
         admin::run(&setup, admin::build_params(&setup.config, None, &target))?;
         println!("Removed {}.", paths::text(&target));
     } else {
         println!("{} is not installed.", paths::text(&target));
     }
-    if shortcut::remove(&setup, &target.join(&program))? {
+    if shortcut::remove(&setup, &link, &target.join(&program))? {
         println!("Removed its Start-menu shortcut.");
     }
     Ok(())

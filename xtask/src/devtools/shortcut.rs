@@ -42,18 +42,15 @@ fn call(setup: &DevSetup, params: &[(&'static str, String)]) -> Result<String, D
     ps::run_script(setup, &setup.config.shortcut_script, params, None)
 }
 
-/// Adds the user's Start-menu shortcut to `exe`, replacing an old one, and returns its path.
-pub(crate) fn add(setup: &DevSetup, exe: &Path) -> Result<PathBuf, DevError> {
-    let link = link(&setup.config, |key| std::env::var(key).ok())?;
-    call(setup, &params(script::ADD, &link, exe))?;
-    Ok(link)
+/// Adds the Start-menu shortcut `link` to `exe`, replacing an old one; `link` comes from [`link`].
+pub(crate) fn add(setup: &DevSetup, link: &Path, exe: &Path) -> Result<(), DevError> {
+    call(setup, &params(script::ADD, link, exe)).map(drop)
 }
 
-/// Removes the user's Start-menu shortcut if it starts `exe`; true when one went.
-pub(crate) fn remove(setup: &DevSetup, exe: &Path) -> Result<bool, DevError> {
-    let link = link(&setup.config, |key| std::env::var(key).ok())?;
+/// Removes the Start-menu shortcut `link` if it starts `exe`; true when one went.
+pub(crate) fn remove(setup: &DevSetup, link: &Path, exe: &Path) -> Result<bool, DevError> {
     let had = link.exists();
-    call(setup, &params(script::REMOVE, &link, exe))?;
+    call(setup, &params(script::REMOVE, link, exe))?;
     Ok(had && !link.exists())
 }
 

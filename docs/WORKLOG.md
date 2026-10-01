@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the stage review's small fixes
+`dev-install` now works out the Start-menu shortcut before it signs, installs or removes anything, so an `APPDATA` outside the user's profile stops it with nothing changed. The stage settings refuse `libs` or `plugins` that are not `.dll` files, which the check would never read, and a network library or importer missing from `libs`, so a rename cannot leave the guard idle. The agree test now finds the app's own QML module by the URI kx-ui exports, and requires the plugin of every staged `qmldir` that does not mark it optional.
+
 ## 2026-10-01 — P3: tips in front of every window, and a steady guard test
 A tip now lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`, through the window guard port), so a top-bar tip no longer hides under the banner or the language list that the guard lifted after the keyboard; a native test shows the old bug and that the keyboard stays under the banner. Each tip now stays on the screen under its button, so a keyboard across two monitors keeps every tip by its key. The flaky guard test now starts its window topmost, as Qt makes ours: under load it failed 1958 of 3000 rounds before and 0 of 5000 after, and 2000 runs of the window tests passed. A Qt Quick test checks that every guarded window asks Qt to stay on top, a rule now in the guard's doc and `ARCHITECTURE.md`.
 

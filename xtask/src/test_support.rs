@@ -57,6 +57,16 @@ pub(crate) fn make_dir_link(link: &Path, target: &Path) {
     assert!(output.status.success(), "mklink /J failed: {output:?}");
 }
 
+/// An environment with `pairs` set and nothing else.
+pub(crate) fn fake_env(pairs: Vec<(&'static str, PathBuf)>) -> impl Fn(&str) -> Option<String> {
+    move |k| {
+        pairs
+            .iter()
+            .find(|(key, _)| *key == k)
+            .map(|(_, v)| crate::devtools::paths::text(v))
+    }
+}
+
 /// A trimmed copy of the project's tidy config: the same limits, prefixes and app, but shorter lists.
 pub(crate) fn tidy_config() -> TidyConfig {
     TidyConfig {
@@ -142,7 +152,7 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "max_mb": 80,
         "qmake_env": "QMAKE",
         "qt_version": "6.11.2",
-        "libs": ["Qt6Core.dll", "Qt6Qml.dll", "Qt6Network.dll"],
+        "libs": ["Qt6Core.dll", "Qt6Qml.dll", "Qt6Quick.dll", "Qt6Network.dll"],
         "plugins": ["platforms/qwindows.dll"],
         "qml": ["QtQuick/qmldir", "QtQuick/qtquick2plugin.dll"],
         "qml_dir": "qml",

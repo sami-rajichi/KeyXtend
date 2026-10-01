@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::devtools_config as config;
+use crate::test_support::{devtools_config as config, fake_env as env};
 
 /// A made-up user profile, absolute on every system.
 fn profile() -> PathBuf {
@@ -9,16 +9,6 @@ fn profile() -> PathBuf {
 /// The profile's roaming folder.
 fn roaming() -> PathBuf {
     paths::join_rel(profile(), "AppData/Roaming")
-}
-
-/// An environment with `pairs` set and nothing else.
-fn env(pairs: Vec<(&'static str, PathBuf)>) -> impl Fn(&str) -> Option<String> {
-    move |k| {
-        pairs
-            .iter()
-            .find(|(key, _)| *key == k)
-            .map(|(_, v)| paths::text(v))
-    }
 }
 
 #[test]
@@ -125,17 +115,17 @@ mod script_runs {
     #[test]
     fn remove_deletes_the_shortcut_to_the_program() {
         let (_dir, a, _b, link) = folder();
-        act(script::ADD, &link, &a);
-        act(script::REMOVE, &link, &a);
+        add(&setup(), &link, &a).unwrap();
+        assert_eq!(remove(&setup(), &link, &a), Ok(true));
         assert!(!link.exists());
-        act(script::REMOVE, &link, &a);
+        assert_eq!(remove(&setup(), &link, &a), Ok(false));
     }
 
     #[test]
     fn remove_keeps_a_shortcut_to_another_program() {
         let (_dir, a, b, link) = folder();
         act(script::ADD, &link, &b);
-        act(script::REMOVE, &link, &a);
+        assert_eq!(remove(&setup(), &link, &a), Ok(false));
         assert_eq!(target(&link), paths::text(&b));
     }
 }

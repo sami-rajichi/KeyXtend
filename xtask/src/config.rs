@@ -111,6 +111,10 @@ pub(crate) enum ConfigError {
     NotPlain(&'static str),
     /// A value must be a relative `/`-separated path of plain names.
     NotRelative(&'static str),
+    /// The first value must name only entries of the second list.
+    NotListed(&'static str, &'static str),
+    /// A list must hold only files with the given extension.
+    NotType(&'static str, &'static str),
 }
 
 impl fmt::Display for ConfigError {
@@ -125,6 +129,8 @@ impl fmt::Display for ConfigError {
             Self::Same(a, b) => write!(f, "{a} and {b} must differ"),
             Self::NotPlain(name) => write!(f, "{name} must be one plain name"),
             Self::NotRelative(name) => write!(f, "{name} must be a relative path of plain names"),
+            Self::NotListed(name, list) => write!(f, "{name} must name only entries of {list}"),
+            Self::NotType(name, ext) => write!(f, "{name} must hold only .{ext} files"),
         }
     }
 }
@@ -222,6 +228,14 @@ mod tests {
         assert_eq!(
             ConfigError::Same("a", "b").to_string(),
             "a and b must differ"
+        );
+        assert_eq!(
+            ConfigError::NotListed("a", "b").to_string(),
+            "a must name only entries of b"
+        );
+        assert_eq!(
+            ConfigError::NotType("a", "dll").to_string(),
+            "a must hold only .dll files"
         );
     }
 

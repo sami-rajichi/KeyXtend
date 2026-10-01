@@ -68,6 +68,8 @@ mod qt {
     const ASSETS: &str = "../../assets";
     /// The variable that hands the root's resource URL to the crate.
     const MAIN_ENV: &str = "KX_UI_MAIN_QML";
+    /// The variable that hands the module's URI to the crate.
+    const URI_ENV: &str = "KX_UI_QML_URI";
     /// The variable that hands the icon folder, icon type and font files, as JSON, to the crate.
     const ASSETS_ENV: &str = "KX_UI_ASSETS";
     /// MSVC switches that stop this crate's test binaries writing an import library for Qt's exported QML
@@ -91,6 +93,7 @@ mod qt {
         let base = format!("{QML_ROOT}/{}", URI.replace('.', "/"));
         let root = QML.first().copied().unwrap_or_default();
         println!("cargo::rustc-env={MAIN_ENV}={base}/{root}");
+        println!("cargo::rustc-env={URI_ENV}={URI}");
         println!(
             "cargo::rustc-env={ASSETS_ENV}={}",
             assets_json(&base, &fonts)
