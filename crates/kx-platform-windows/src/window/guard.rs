@@ -1,5 +1,8 @@
-//! The subclass that keeps our window from taking the focus; it unhooks itself when the window is destroyed.
-//! It uses user32 only (`GWLP_WNDPROC` and a window property), so no program needs the Common Controls 6 manifest.
+//! The subclass that keeps our window from taking the focus and in the topmost band; it unhooks itself when the window
+//! is destroyed. It uses user32 only (`GWLP_WNDPROC` and window properties), so no program needs a Common Controls 6
+//! manifest.
+
+use std::cell::Cell;
 
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
@@ -9,15 +12,22 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowThreadProcessId, HWND_TOPMOST, MA_NOACTIVATE, RemovePropW, SET_WINDOW_POS_FLAGS,
     STYLESTRUCT, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SetPropW,
     SetWindowLongPtrW, SetWindowPos, WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING,
-    WM_WINDOWPOSCHANGING, WNDPROC,
+    WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
-use super::{KEPT, kept_ex};
+use super::{KEPT, is_through, kept_ex, lifts_back};
 use crate::{last_refused, refused};
 
 /// The window property that holds the window's own procedure while the guard is hooked.
 const PROP: PCWSTR = w!("KeyXtend.Guard");
+/// The window property set while the guard is hooked on a window that let clicks through when it was first guarded.
+const THROUGH_PROP: PCWSTR = w!("KeyXtend.Through");
+
+thread_local! {
+    /// True while the guard lifts a window back into the topmost band, so a move inside that lift never lifts again.
+    static LIFTING: Cell<bool> = const { Cell::new(false) };
+}
 
 /// A window procedure, as Windows calls it.
 pub(super) type Proc = unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT;
@@ -40,11 +50,26 @@ pub(super) fn guarded(hwnd: HWND) -> bool {
     !unsafe { GetPropW(hwnd, PROP) }.is_invalid()
 }
 
+/// True when our window let clicks through as the guard first saw it.
+#[allow(unsafe_code, reason = "A plain window property query.")]
+fn was_through(hwnd: HWND) -> bool {
+    // SAFETY: a plain query; a window without the property gives null.
+    !unsafe { GetPropW(hwnd, THROUGH_PROP) }.is_invalid()
+}
+
 /// True when `hwnd` belongs to the calling thread.
 #[allow(unsafe_code, reason = "Plain thread queries.")]
 fn on_this_thread(hwnd: HWND) -> bool {
     // SAFETY: plain queries; a gone window gives thread 0, which is never ours.
     unsafe { GetWindowThreadProcessId(hwnd, None) == GetCurrentThreadId() }
+}
+
+/// Our window's extended style; 0 for a gone window.
+#[allow(unsafe_code, reason = "A plain style query.")]
+fn ex_of(hwnd: HWND) -> u32 {
+    // SAFETY: a plain query of our own window.
+    let ex = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    u32::try_from(ex).unwrap_or_default()
 }
 
 /// Our procedure as a window-long value.
@@ -64,20 +89,44 @@ fn hook(hwnd: HWND) -> Result<(), UiError> {
     if own == 0 {
         return Err(last_refused());
     }
-    let keep = HANDLE(std::ptr::without_provenance_mut(own.cast_unsigned()));
-    // SAFETY: stores a number on our own window; `unhook` removes it before the window goes.
-    unsafe { SetPropW(hwnd, PROP, Some(keep)) }.map_err(|e| refused(&e))?;
+    keep_props(hwnd, own)?;
     // SAFETY: our procedure is static and hands every message on to the kept one.
     if unsafe { SetWindowLongPtrW(hwnd, GWLP_WNDPROC, ours()) } == 0 {
         let refusal = last_refused();
-        // SAFETY: removes the property set above, once.
-        let _ = unsafe { RemovePropW(hwnd, PROP) };
+        drop_props(hwnd);
         return Err(refusal);
     }
     Ok(())
 }
 
-/// Puts the window's own procedure back, if ours is still in front, and removes the property.
+/// Stores the window's own procedure `own` on it, and marks it when it lets clicks through now.
+#[allow(unsafe_code, reason = "Stores two numbers on our own window.")]
+fn keep_props(hwnd: HWND, own: isize) -> Result<(), UiError> {
+    let keep = HANDLE(std::ptr::without_provenance_mut(own.cast_unsigned()));
+    // SAFETY: stores a number on our own window; `unhook` removes it before the window goes.
+    unsafe { SetPropW(hwnd, PROP, Some(keep)) }.map_err(|e| refused(&e))?;
+    if !is_through(ex_of(hwnd)) {
+        return Ok(());
+    }
+    let mark = HANDLE(std::ptr::without_provenance_mut(1));
+    // SAFETY: stores a marker number on our own window; `unhook` removes it too.
+    unsafe { SetPropW(hwnd, THROUGH_PROP, Some(mark)) }.map_err(|e| {
+        drop_props(hwnd);
+        refused(&e)
+    })
+}
+
+/// Removes the guard's properties from our window; a missing one is skipped.
+#[allow(unsafe_code, reason = "Removes our own window's properties.")]
+fn drop_props(hwnd: HWND) {
+    // SAFETY: removes properties the guard set on our own window, once each.
+    unsafe {
+        let _ = RemovePropW(hwnd, PROP);
+        let _ = RemovePropW(hwnd, THROUGH_PROP);
+    }
+}
+
+/// Puts the window's own procedure back, if ours is still in front, and removes the properties.
 #[allow(
     unsafe_code,
     reason = "Restores our own window's procedure as it goes."
@@ -88,8 +137,8 @@ fn unhook(hwnd: HWND, own: HANDLE) {
         if GetWindowLongPtrW(hwnd, GWLP_WNDPROC) == ours() {
             SetWindowLongPtrW(hwnd, GWLP_WNDPROC, own.0.addr().cast_signed());
         }
-        let _ = RemovePropW(hwnd, PROP);
     }
+    drop_props(hwnd);
 }
 
 /// Adds the kept styles; the subclass then keeps them against later changes.
@@ -125,6 +174,17 @@ fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
     unsafe { SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, flags) }.map_err(|e| refused(&e))
 }
 
+/// Lifts our window, with the windows it owns, back to the top of the topmost band when a move took it out, as
+/// `HWND_NOTOPMOST` from another program does: Windows changes topmost there without `WM_STYLECHANGING`.
+fn keep_top(hwnd: HWND) {
+    if lifts_back(ex_of(hwnd), LIFTING.get()) {
+        LIFTING.set(true);
+        // A refused lift leaves nothing more to try.
+        let _ = lift(hwnd);
+        LIFTING.set(false);
+    }
+}
+
 /// The style index `WM_STYLECHANGING` carries, from the low half of `wparam`.
 fn style_index(wparam: WPARAM) -> i32 {
     let [b0, b1, b2, b3, ..] = wparam.0.to_le_bytes();
@@ -147,7 +207,8 @@ pub(super) fn next(own: HANDLE) -> WNDPROC {
     (!code.is_null()).then(|| unsafe { std::mem::transmute::<*const (), Proc>(code) })
 }
 
-/// Keeps every show and move passive, answers clicks with no activation, keeps the styles, and unhooks at the end.
+/// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles
+/// and unhooks at the end.
 #[allow(unsafe_code, reason = "The procedure of our guarded windows.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // SAFETY: a plain query of our own window's property.
@@ -163,18 +224,22 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         WM_STYLECHANGING if style_index(wparam) == GWL_EXSTYLE.0 => {
             // SAFETY: for this message `lparam` points to a live STYLESTRUCT.
             if let Some(style) = unsafe { pointee::<STYLESTRUCT>(lparam).as_mut() } {
-                style.styleNew = kept_ex(style.styleOld, style.styleNew);
+                style.styleNew = kept_ex(style.styleNew, was_through(hwnd));
             }
         }
         WM_NCDESTROY => unhook(hwnd, own),
         _ => {}
     }
-    match next(own) {
+    let answer = match next(own) {
         // SAFETY: hands the message to the window's own procedure, as a subclass must.
         Some(own) => unsafe { CallWindowProcW(Some(own), hwnd, msg, wparam, lparam) },
         // SAFETY: with no kept procedure, Windows' default handling is the safe answer.
         None => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+    };
+    if msg == WM_WINDOWPOSCHANGED {
+        keep_top(hwnd);
     }
+    answer
 }
 
 #[cfg(test)]

@@ -1,7 +1,8 @@
 //! The whole settings file: read it back, repairing damage, and save it without ever losing the old copy.
 //! A save never leaves the settings file missing: the good file is copied, then replaced in one step.
 
-use crate::names::{Files, VERSION_KEY};
+use crate::names::Files;
+use crate::section;
 use kx_module_api::{ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, parse_as};
 use read::{Problem, read_table};
 use std::fs::{self, File};
@@ -115,24 +116,21 @@ pub fn peek(files: &Files) -> Option<toml::Table> {
     read_table(&files.settings).ok()
 }
 
-/// Module `id`'s section of a peeked settings table `file`, over `spec`'s defaults, for a later copy of the app; the
-/// defaults when there is no section or it does not read. Its version key is ignored.
+/// Module `id`'s section of a peeked settings table `file`, read as the store reads it, for a later copy of the app:
+/// migrated, repaired value by value, and the defaults for a newer version or any fault.
 ///
 /// # Errors
 /// When `spec`'s own defaults do not read as `T`.
 pub fn peek_section<T: Settings>(
     file: Option<&toml::Table>,
     id: ModuleId,
-    spec: &SettingsSpec,
+    spec: &'static SettingsSpec,
 ) -> Result<T, SettingsError> {
     let defaults = spec.defaults_as::<T>()?;
-    let section = file.and_then(|f| f.get(id.as_str())?.as_table());
-    let (Some(section), Ok(mut merged)) = (section, spec.defaults.parse::<toml::Table>()) else {
-        return Ok(defaults);
-    };
-    let kept = section.iter().filter(|(k, _)| k.as_str() != VERSION_KEY);
-    merged.extend(kept.map(|(k, v)| (k.clone(), v.clone())));
-    Ok(parse_as::<T>(&merged).unwrap_or(defaults))
+    let raw = file.and_then(|f| f.get(id.as_str())).cloned();
+    let read = section::guarded_read(id, spec, raw);
+    let effective = read.and_then(|r| parse_as::<T>(&r.section.effective).ok());
+    Ok(effective.unwrap_or(defaults))
 }
 
 /// Reads the settings file and repairs it when it is damaged.

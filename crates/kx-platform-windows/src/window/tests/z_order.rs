@@ -4,7 +4,8 @@ use std::sync::{Mutex, PoisonError};
 
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, MA_NOACTIVATE, SendMessageW, SetWindowLongPtrW, WM_MOUSEACTIVATE, WS_EX_TOPMOST,
+    GWL_EXSTYLE, HWND_BOTTOM, HWND_NOTOPMOST, MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SendMessageW, SetWindowLongPtrW, SetWindowPos, WM_MOUSEACTIVATE, WS_EX_TOPMOST,
 };
 
 use super::super::KEPT;
@@ -20,6 +21,18 @@ fn above(a: &Hidden, b: &Hidden) -> bool {
     let z = top_level();
     let at = |w: &Hidden| z.iter().position(|&x| x == w.0).unwrap();
     at(a) < at(b)
+}
+
+/// Moves `window` after `after` in the z-order as another program could, without moving or activating it.
+fn put_after(window: &Hidden, after: HWND) {
+    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+    // SAFETY: a z-order change on the test's own hidden window.
+    unsafe { SetWindowPos(window.0, Some(after), 0, 0, 0, 0, flags) }.unwrap();
+}
+
+/// True while `window` is in the topmost band.
+fn topmost(window: &Hidden) -> bool {
+    window.ex_style() & WS_EX_TOPMOST.0 != 0
 }
 
 /// `windows` front first, as a guard run lists the shown ones.
@@ -48,6 +61,30 @@ fn a_guarded_window_keeps_its_styles_and_never_activates() {
     // SAFETY: asks the test window how a click would activate it.
     let answer = unsafe { SendMessageW(window.0, WM_MOUSEACTIVATE, None, None) };
     assert_eq!(answer.0, isize::try_from(MA_NOACTIVATE).unwrap());
+}
+
+/// Another program's move out of the topmost band drops an unguarded window, such as Settings, but a guarded one and
+/// the windows it owns come straight back.
+#[test]
+fn a_guarded_window_stays_topmost_when_another_program_drops_it() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let plain = Hidden::new("KeyXtend test: plain below");
+    let drops = [
+        ("no topmost", HWND_NOTOPMOST),
+        ("bottom", HWND_BOTTOM),
+        ("after a plain window", plain.0),
+    ];
+    for (how, after) in drops {
+        let open = Hidden::topmost("KeyXtend test: unguarded", None);
+        let kept = Hidden::topmost("KeyXtend test: dropped", None);
+        let tip = Hidden::tip("KeyXtend test: dropped's tip", Some(kept.0));
+        guard(kept.0).unwrap();
+        put_after(&open, after);
+        put_after(&kept, after);
+        assert!(!topmost(&open), "{how}: an unguarded window drops");
+        assert!(topmost(&kept), "{how}: the guarded one stays");
+        assert!(topmost(&tip), "{how}: and the window it owns");
+    }
 }
 
 /// The tip bug: a hidden window shows again where it was, so only a tip its window owns stays above it after a lift.

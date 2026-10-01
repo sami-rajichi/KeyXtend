@@ -112,6 +112,18 @@ fn the_step_and_the_relabel_time_are_above_zero() {
 }
 
 #[test]
+fn the_relabel_time_has_a_ceiling() {
+    let top = i64::try_from(*RELABEL_MS.end()).unwrap();
+    let relabel = |ms: i64| validate_as::<KeyboardSettings>(&with("relabel_ms", ms));
+    assert_eq!(relabel(top), Ok(()));
+    assert!(invalid(&with("relabel_ms", top + 1)));
+    assert!(
+        invalid(&with("relabel_ms", i64::MAX)),
+        "a hand-edited huge value"
+    );
+}
+
+#[test]
 fn a_size_that_is_not_a_number_is_refused() {
     for key in ["size", "size_step", "size_min", "size_max"] {
         for odd in [f64::NAN, f64::INFINITY] {

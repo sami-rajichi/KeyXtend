@@ -19,10 +19,31 @@ fn read(file: Option<&Table>) -> (u32, u32) {
 }
 
 #[test]
-fn the_section_is_read_over_the_defaults_and_its_version_is_ignored() {
+fn the_section_is_read_over_the_defaults_at_its_version() {
     assert_eq!(
         read(Some(&table("[hold]\nversion = 3\nmin_ms = 200"))),
         (200, 500)
+    );
+    assert_eq!(read(Some(&table("[hold]\nmin_ms = 200"))), (200, 500));
+}
+
+#[test]
+fn one_bad_value_takes_its_default_and_the_others_stay() {
+    let text = "[hold]\nversion = 3\nmin_ms = 200\nmax_ms = \"x\"";
+    assert_eq!(read(Some(&table(text))), (200, 500));
+}
+
+#[test]
+fn an_older_section_is_migrated_as_the_store_does() {
+    let text = "[hold]\nversion = 1\ndelay_s = 1\nmax_ms = 2000";
+    assert_eq!(read(Some(&table(text))), (1000, 2000));
+}
+
+#[test]
+fn a_newer_section_gives_the_defaults() {
+    assert_eq!(
+        read(Some(&table("[hold]\nversion = 4\nmin_ms = 200"))),
+        (100, 500)
     );
 }
 

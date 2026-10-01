@@ -107,7 +107,7 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR and the open l
 | `presets` | `[1.0, 1.25, 1.5]` | The S, M and L sizes: one to the face port's `MAX_PRESETS` (one per size button the top bar names), each between `size_min` and `size_max`. |
 | `size_step` | `0.05` | Change per smaller or bigger click; above 0. |
 | `size_min`, `size_max` | `0.8`, `1.8` | The smallest and largest sizes; `size_min` is above 0 and below `size_max`. |
-| `relabel_ms` | `500` | How often the labels follow the layout of the app in front, in ms; above 0. |
+| `relabel_ms` | `500` | How often the labels follow the layout of the app in front, in ms; within `RELABEL_MS` in `settings.rs`, so a hand-edited value cannot stall them. |
 | `key_apps` | `[]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |

@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-09-30
+- **Last review:** 2026-10-01
 - **Status:** Draft
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -25,7 +25,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite, inside `size_min..=size_max`, step and `relabel_ms` above 0; no blank app names | The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
+| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite, inside `size_min..=size_max`, step above 0, `relabel_ms` within `RELABEL_MS`; no blank app names | The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
 | `board.toml` | Compiled in, never read from disk; `deny_unknown_fields`, rows span the grid, whole columns, unique ids, roles fit; a broken board stops the module with an error, never a panic | Fixed at build time | Property tests |
 | Screens and pointer points from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics | — | Property tests |
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
@@ -37,7 +37,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 - **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). A hand-edited place off every screen brings the keyboard back to the bottom centre.
 - **Logging / repudiation:** the module never logs.
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
-- **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins. A stale click is never replayed, so a lagging table cannot loop.
+- **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins, and a relabel time past its ceiling is refused, so the labels never stall. A stale click is never replayed, so a lagging table cannot loop.
 - **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier.
 

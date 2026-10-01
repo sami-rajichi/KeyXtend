@@ -36,14 +36,31 @@ const WS_EX_NOACTIVATE: u32 = 0x0800_0000;
 
 /// Extended styles every guarded window keeps: no focus, on top, no taskbar button.
 pub const KEPT: u32 = WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
-/// Extended styles that let clicks pass through a window; a guarded window keeps them once it has both.
+/// Extended styles that let clicks pass through a window; a guarded window keeps them only if it had both at first.
 pub const THROUGH: u32 = WS_EX_LAYERED | WS_EX_TRANSPARENT;
 
-/// The extended style a guarded window may take when it asks for `new` over `old`.
+/// True when extended style `ex` lets clicks pass through.
 #[must_use]
-pub fn kept_ex(old: u32, new: u32) -> u32 {
-    let through = if old & THROUGH == THROUGH { THROUGH } else { 0 };
-    new | KEPT | through
+pub fn is_through(ex: u32) -> bool {
+    ex & THROUGH == THROUGH
+}
+
+/// The extended style a guarded window may take when it asks for `new`; `through` says whether it let clicks pass
+/// through when the guard first saw it.
+#[must_use]
+pub fn kept_ex(new: u32, through: bool) -> u32 {
+    let kept = new | KEPT;
+    if through {
+        kept | THROUGH
+    } else {
+        kept & !WS_EX_TRANSPARENT
+    }
+}
+
+/// True when the guard lifts a window with extended style `ex` back into the topmost band; never while `lifting`
+/// one already, so a refused lift cannot loop.
+fn lifts_back(ex: u32, lifting: bool) -> bool {
+    ex & WS_EX_TOPMOST == 0 && !lifting
 }
 
 /// Windows listed front first, in guard order: each guard lifts its window to the top, so the front one
@@ -76,20 +93,58 @@ fn should_give_back(noted: bool, ours_in_front: bool, noted_ours: bool) -> bool 
 #[cfg(test)]
 mod rules {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn a_guarded_window_keeps_its_styles_and_a_click_through_one_stays_so() {
-        assert_eq!(kept_ex(0, 0), KEPT, "other windows keep taking clicks");
-        assert_eq!(kept_ex(THROUGH, 0), KEPT | THROUGH);
-        assert_eq!(kept_ex(KEPT, WS_EX_LAYERED), KEPT | WS_EX_LAYERED);
+        assert_eq!(kept_ex(0, false), KEPT, "other windows keep taking clicks");
+        assert_eq!(kept_ex(0, true), KEPT | THROUGH);
+        assert_eq!(
+            kept_ex(WS_EX_LAYERED, false),
+            KEPT | WS_EX_LAYERED,
+            "Qt's layered keyboard"
+        );
         let other = 0x0000_0100;
-        assert_eq!(kept_ex(0, other), other | KEPT, "other asked styles stay");
+        assert_eq!(
+            kept_ex(other, false),
+            other | KEPT,
+            "other asked styles stay"
+        );
     }
 
     #[test]
-    fn one_click_through_bit_alone_is_not_kept() {
-        assert_eq!(kept_ex(WS_EX_LAYERED, 0), KEPT, "layered alone");
-        assert_eq!(kept_ex(WS_EX_TRANSPARENT, 0), KEPT, "transparent alone");
+    fn a_window_that_took_clicks_at_first_refuses_click_through_later() {
+        assert_eq!(kept_ex(THROUGH, false), KEPT | WS_EX_LAYERED);
+        assert_eq!(kept_ex(WS_EX_TRANSPARENT, false), KEPT);
+    }
+
+    #[test]
+    fn only_both_click_through_bits_let_clicks_through() {
+        assert!(is_through(THROUGH | KEPT));
+        assert!(!is_through(WS_EX_LAYERED), "layered alone");
+        assert!(!is_through(WS_EX_TRANSPARENT), "transparent alone");
+    }
+
+    #[test]
+    fn a_window_out_of_the_topmost_band_is_lifted_back_once() {
+        assert!(lifts_back(KEPT & !WS_EX_TOPMOST, false));
+        assert!(
+            !lifts_back(KEPT & !WS_EX_TOPMOST, true),
+            "a lift is running"
+        );
+        assert!(!lifts_back(KEPT, false), "still topmost");
+    }
+
+    proptest! {
+        #[test]
+        fn a_kept_style_holds_the_guards_styles_and_the_first_click_through(new: u32, through: bool) {
+            let kept = kept_ex(new, through);
+            let rest = !(KEPT | THROUGH);
+            prop_assert_eq!(kept & KEPT, KEPT);
+            prop_assert_eq!(is_through(kept), through);
+            prop_assert_eq!(kept & rest, new & rest, "other styles stay as asked");
+            prop_assert!(!lifts_back(kept, false), "a kept style is topmost");
+        }
     }
 
     #[test]

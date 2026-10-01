@@ -188,7 +188,8 @@ pub trait Module: Send + 'static {
 - QML, fonts and icons are compiled into the binary as Qt resources; they are never loaded from disk.
 - Keyboard windows are `Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus`; click-through windows add `Qt.WindowTransparentForInput`.
 - The Windows adapter guards every window we create except Settings:
-  - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`.
+  - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`, and refuses click-through on a window that took clicks when first guarded.
+  - In `WM_WINDOWPOSCHANGED`, it lifts a window that left the topmost band straight back, as `HWND_NOTOPMOST` never reaches `WM_STYLECHANGING`.
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
   - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.

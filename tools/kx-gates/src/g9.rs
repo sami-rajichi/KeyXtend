@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use kx_platform_windows::window::{THROUGH, foreground, kept_ex};
+use kx_platform_windows::window::{foreground, is_through, kept_ex};
 use serde::Serialize;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
@@ -40,12 +40,7 @@ const BACK: [&str; 2] = [SHRINK, GROW_BACK];
 
 /// The flags a window must keep, by the guard's own rule: its three, and click-through when it had both at first.
 fn wants(first_ex: u32) -> u32 {
-    kept_ex(first_ex, 0)
-}
-
-/// True when style `first_ex` lets clicks through; the guard keeps that for good, so G9 turns it on nowhere else.
-fn was_through(first_ex: u32) -> bool {
-    first_ex & THROUGH == THROUGH
+    kept_ex(0, is_through(first_ex))
 }
 
 /// The names of the flags in `want` that `ex` lacks.
@@ -108,10 +103,10 @@ impl Watch {
         product::shown().into_iter().filter(guarded).collect()
     }
 
-    /// The windows G9 checks that let clicks through when first seen.
+    /// The windows G9 checks that let clicks through when first seen; the guard refuses click-through on the others.
     fn through(&mut self) -> Vec<HWND> {
         let ours = self.ours();
-        let was = |w: &HWND| was_through(self.first[&win::key(*w)]);
+        let was = |w: &HWND| is_through(self.first[&win::key(*w)]);
         ours.into_iter().filter(was).collect()
     }
 

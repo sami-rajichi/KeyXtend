@@ -1,6 +1,6 @@
 //! Tests of G9's flag rule, its size steps and its pass rule on recorded styles.
 
-use kx_platform_windows::window::KEPT;
+use kx_platform_windows::window::{KEPT, THROUGH};
 
 use super::*;
 
@@ -29,13 +29,13 @@ fn the_names_cover_the_guards_flags_and_click_through() {
 
 #[test]
 fn layered_alone_is_not_wanted_back_after_a_strip_as_the_guard_keeps_only_both() {
-    let stripped = kept_ex(KEYBOARD_EX, KEYBOARD_EX & !(KEPT | THROUGH));
+    let stripped = kept_ex(KEYBOARD_EX & !(KEPT | THROUGH), is_through(KEYBOARD_EX));
     assert!(
         missing(stripped, wants(KEYBOARD_EX)).is_empty(),
         "{stripped:#x}"
     );
     let glow = KEYBOARD_EX | WS_EX_TRANSPARENT.0;
-    let kept = kept_ex(glow, glow & !(KEPT | THROUGH));
+    let kept = kept_ex(glow & !(KEPT | THROUGH), is_through(glow));
     assert!(
         missing(kept, wants(glow)).is_empty(),
         "both click-through flags stay"
@@ -82,14 +82,15 @@ fn a_run_that_broke_off_is_sized_back_toward_its_first_width() {
 }
 
 #[test]
-fn click_through_is_turned_on_only_where_it_was_as_the_guard_never_drops_it() {
-    assert!(!was_through(KEYBOARD_EX));
-    assert!(was_through(KEYBOARD_EX | WS_EX_TRANSPARENT.0));
-    let stuck = kept_ex(KEYBOARD_EX | THROUGH, KEYBOARD_EX);
+fn click_through_is_wanted_only_where_it_was_as_the_guard_refuses_it_elsewhere() {
+    assert!(!is_through(KEYBOARD_EX));
+    assert!(is_through(KEYBOARD_EX | WS_EX_TRANSPARENT.0));
+    assert_eq!(wants(KEYBOARD_EX) & THROUGH, 0);
+    let refused = kept_ex(KEYBOARD_EX | THROUGH, is_through(KEYBOARD_EX));
     assert_eq!(
-        stuck & THROUGH,
-        THROUGH,
-        "on the keyboard it would ignore clicks until it restarts"
+        refused & WS_EX_TRANSPARENT.0,
+        0,
+        "the keyboard keeps taking clicks"
     );
 }
 

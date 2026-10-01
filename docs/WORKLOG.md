@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the guard keeps the keyboard on top and clickable, and settings are peeked safely
+The window guard now lifts a guarded window straight back when another program drops it out of the topmost band, which `HWND_NOTOPMOST` does without `WM_STYLECHANGING`. It keeps click-through only on windows that had it when first guarded, so no program can make the keyboard ignore clicks. `kx_settings::peek_section` reads a section through the store's own reader, so migrations run, a bad value takes its default and a newer version gives the defaults; `[keyboard] relabel_ms` gets a ceiling, so a hand-edited value cannot stall the labels or the gates.
+
 ## 2026-10-01 — P3: the review's fixes for gates G8–G26
 Weak mode now runs each allowed core at its 30 % speed, and the spike's voice worker gets the same fix; `g8 weak` reports `partial`, never a pass, until software drawing is decided. G8 measures idle CPU per core and memory in MB, fails lost characters, starts PresentMon itself when `[g8] presentmon_exe` names it, and asks a copy it could not cap to quit. G13 needs dark mode, the accent and high contrast to each change, G9 always ends at the keyboard's first size and toggles click-through only where it was, and G11 judges one build's series. The G26 CI job prints the logs after a failure, and the roadmap points G26's Japanese part to F16.
 

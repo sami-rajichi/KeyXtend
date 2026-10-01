@@ -2,9 +2,14 @@
 
 pub use kx_module_api::ports::Corner;
 
+use std::ops::RangeInclusive;
+
 use kx_module_api::ports::{MAX_PRESETS, Point};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
+
+/// How often the labels may follow the app in front, in ms; the ceiling keeps a hand-edited value from stalling them.
+pub(crate) const RELABEL_MS: RangeInclusive<u64> = 1..=10_000;
 
 /// Why a size was refused: it is not a finite number.
 const NOT_A_NUMBER: &str = "sizes must be numbers";
@@ -16,8 +21,6 @@ const BAD_STEP: &str = "size_step must be above 0";
 const BAD_PRESETS: &str = "presets must be at least one size, no more than the top bar names, between size_min and size_max";
 /// Why the size was refused.
 const BAD_SIZE: &str = "size must be between size_min and size_max";
-/// Why the relabel time was refused.
-const NO_RELABEL: &str = "relabel_ms must be above 0";
 /// Why an app name was refused.
 const BLANK_APP: &str = "key_apps: an app name is blank";
 
@@ -105,8 +108,9 @@ impl KeyboardSettings {
 impl Settings for KeyboardSettings {
     fn check(&self) -> Result<(), SettingsError> {
         self.check_sizes().map_err(invalid)?;
-        if self.relabel_ms == 0 {
-            return Err(invalid(NO_RELABEL));
+        if !RELABEL_MS.contains(&self.relabel_ms) {
+            let (low, high) = (RELABEL_MS.start(), RELABEL_MS.end());
+            return Err(invalid(&format!("relabel_ms must be from {low} to {high}")));
         }
         if self.key_apps.iter().any(|a| a.trim().is_empty()) {
             return Err(invalid(BLANK_APP));

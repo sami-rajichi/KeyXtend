@@ -20,6 +20,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
+use super::WS_EX_TRANSPARENT as TRANSPARENT;
 use super::guard::{Proc, guard, guarded, next};
 use super::win::{gives_back, token_of, window_of};
 use super::{KEPT, THROUGH, WinGuard, foreground, from_raw, is_ours, own_windows, title};
@@ -114,6 +115,12 @@ impl Hidden {
         // SAFETY: a plain query of the test's own window.
         u32::try_from(unsafe { GetWindowLongPtrW(self.0, GWL_EXSTYLE) }).unwrap()
     }
+
+    /// Asks for extended style `ex`, as another program could.
+    fn set_ex(&self, ex: u32) {
+        // SAFETY: a style change on the test's own window.
+        unsafe { SetWindowLongPtrW(self.0, GWL_EXSTYLE, isize::try_from(ex).unwrap()) };
+    }
 }
 
 impl Drop for Hidden {
@@ -133,6 +140,24 @@ fn the_style_table_matches_windows() {
         (WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW).0
     );
     assert_eq!(THROUGH, (WS_EX_LAYERED | WS_EX_TRANSPARENT).0);
+}
+
+/// Only a window that let clicks through when first guarded keeps doing so, so no program can make the keyboard
+/// ignore clicks.
+#[test]
+fn click_through_is_kept_only_from_the_first_look() {
+    let solid = Hidden::new("KeyXtend test: solid");
+    let tip = Hidden::tip("KeyXtend test: see-through", None);
+    guard(solid.0).unwrap();
+    guard(tip.0).unwrap();
+    solid.set_ex(solid.ex_style() | THROUGH);
+    assert_eq!(solid.ex_style() & TRANSPARENT, 0, "a later click-through");
+    tip.set_ex(0);
+    assert_eq!(
+        tip.ex_style() & THROUGH,
+        THROUGH,
+        "a tip stays click-through"
+    );
 }
 
 #[test]

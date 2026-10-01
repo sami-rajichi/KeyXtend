@@ -29,6 +29,7 @@
 | Staged programs and libraries (PE import tables) | Every read is bounds-checked and a malformed file fails the stage, never panics; only descriptors with image-relative places are read | The file's own length | Property test |
 | `APPDATA` and `USERPROFILE` for the shortcut | Both absolute, else an error, checked before anything is signed, installed or removed; the shortcut goes only under the Start-menu folder of `APPDATA`, and only inside `USERPROFILE`, never `ProgramData` | N/A | Unit tests |
 | Script output (thumbprints) | Exactly 40 hex digits each, else an error | N/A | No |
+| The running copy's `settings.toml`, for the gates | Gates read its `[keyboard]` section through `kx_settings::peek` (size cap, never writes) and `peek_section`, which checks it as the store does: a bad value gives its default, and a section that does not check gives the defaults | `MAX_FILE_BYTES` (1 MiB); `relabel_ms` capped by the keyboard's settings check | Unit tests |
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
 | Manifest XML from `mt.exe` | Comments skipped; only `uiAccess` on `requestedExecutionLevel` (any prefix) is read; missing means fail | Developer-chosen file | No |
@@ -44,7 +45,7 @@
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, each core's speed, memory) until kx-gates exits; a copy it cannot cap gets Quit.
   - When `[g8] presentmon_exe` names PresentMon, `kx-gates g8` starts it as administrator with no window, as G4 and G5 start their admin programs. It records for `presentmon_secs` and stops itself.
-  - `kx-gates g9` turns off topmost and clears the guard's style flags on the keyboard and its guarded windows, as an outside program could, then puts each back as it found it. It turns click-through back on only where it was, since the guard keeps it for good, and never touches another program's windows.
+  - `kx-gates g9` turns off topmost and clears the guard's style flags on the keyboard and its guarded windows, as an outside program could, then puts each back as it found it. It turns click-through back on only where it was, as the guard refuses it on any other window, and never touches another program's windows.
   - `kx-gates g10` presses keys by UI Automation, as Narrator does, with only target-window in front. `kx-gates g26` switches the session's input language through `kx-target-window --layout`, so it runs on the GitHub runner only.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets.
 - **Information disclosure:** no network; the private key cannot be exported.
