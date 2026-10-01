@@ -1,4 +1,4 @@
-//! A fake system look: the test sets the look and the UI language, and each set calls the watchers.
+//! A fake system look: the test sets the look and the display language, and each set calls the watchers.
 
 use crate::lock;
 use kx_platform::ui::{SysLook, SystemLook, UiError, WatchGuard};
@@ -7,7 +7,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-/// The UI language a new `FakeSystemLook` reports.
+/// The display language a new `FakeSystemLook` reports.
 pub const DEFAULT_LANGUAGE: &str = "en-US";
 
 /// A watcher of the look.
@@ -48,7 +48,7 @@ impl FakeSystemLook {
         *lock(&self.watch_error) = error;
     }
 
-    /// Sets the UI language tag.
+    /// Sets the display language tag.
     pub fn set_language(&self, tag: &str) {
         tag.clone_into(&mut lock(&self.language));
     }

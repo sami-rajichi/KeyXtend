@@ -143,7 +143,7 @@ fn the_style_table_matches_windows() {
 }
 
 /// Only a window that let clicks through when first guarded keeps doing so, so no program can make the keyboard
-/// ignore clicks.
+/// click-through.
 #[test]
 fn click_through_is_kept_only_from_the_first_look() {
     let solid = Hidden::new("KeyXtend test: solid");

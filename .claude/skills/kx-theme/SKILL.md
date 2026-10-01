@@ -21,7 +21,7 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - accents a little desaturated (Material dark-theme guidance; GitHub Dark dimmed).
 2. **Contrast:**
    - legends ≥ 4.5:1 against their key colour, secondary legends too (target 7:1);
-   - secondary text and icons on the plate use `legend_2_plate`, which takes `legend_2` unless a palette writes its own (only where it differs);
+   - secondary text and icons on the plate use `legend_2_plate` (4.5:1 on the plate), which takes `legend_2` unless a palette writes its own (only where it differs);
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
    - the theme tests compute these; never change an owner-approved colour without asking;
    - there are no exceptions: every legend pair reaches 4.5:1, and the owner's nudges to reach it (2026-09-30) are marked in `themes.toml`;

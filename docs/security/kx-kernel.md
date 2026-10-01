@@ -24,15 +24,15 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES` (1 MiB); repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` (10) keys of at most `MAX_KEY_CHARS` (64) characters; nesting capped by the `toml` parser | Property tests only (see Should fix) |
-| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from 1 to 100; no empty ids in `disabled` | As above | Property tests only |
+| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES`; repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` keys of at most `MAX_KEY_CHARS` characters; nesting capped by the `toml` parser | Property tests only (see Should fix) |
+| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from `MIN_LOG_MB` to `MAX_LOG_MB`; no empty ids in `disabled` | As above | Property tests only |
 | Module code (validators, migrations, `start`, `stop`, bus handlers) | Each call runs inside `catch_unwind`; a panic fails that module alone | N/A | N/A |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network in these crates. Module ids are fixed strings in the binary; a duplicate or reserved id is refused at `Kernel::add`.
 - **Tampering:** a hand-edited or damaged settings file.
   - Each value is checked, and only a bad value resets. A damaged or oversized file is set aside as the broken copy, and the last good copy comes back.
-  - A file another program holds or refuses (access denied, busy, or a Windows sharing or lock violation) is not damage: the app runs on defaults in memory, says so once, and never writes the file that run. Any other read error still counts as damage.
+  - A file another program holds or refuses (access denied, busy, or a Windows sharing or lock violation) is not damage: the app runs on defaults in memory, says so once, and never writes the file that run. Any other read error except "not found" still counts as damage.
   - A module writes only through its `SettingsHandle`, which `ModuleCx` binds to the module's own id, so it can never change another section or `[kernel]`. Each write passes the module's validator before it is stored and saved; `set_all` checks its values together and stores all or none.
   - Saving writes a temp file, copies the good file to the previous copy, then renames the temp file over it in one step, so a crash never leaves half a file and the settings file is never missing. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
@@ -58,8 +58,8 @@
 
 ### Should fix (tracked issue)
 - A fuzz target for `Store::load` and the repair path (needs a nightly toolchain, so it waits for the owner's yes to install it). Until then, property tests cover repair and ordering.
-- The app must install a quiet panic hook, because caught panics still print their message through the default hook (`docs/items/P3.md`).
-- Redaction works by field name only, so text formatted into a log message prints in clear. P3 keeps typed text in `Redacted<T>` and adds a check for input modules (`docs/items/P3.md`).
+- Done (P3): the app installs a quiet panic hook that logs only the place, never the payload (`keyxtend.md`).
+- Done (P3): redaction works by field name only, so text formatted into a log message would print in clear; typed text stays in `Redacted<T>`, and `kx-review` check 4 refuses such a `tracing` call on an input path.
 
 ### Accepted (with reason)
 - Settings and logs are not encrypted: in P2 they hold no Secret or Sensitive data. ADR-0010 applies when a module stores such data.

@@ -24,7 +24,7 @@ mod ffi {
         /// Qt string list.
         type QStringList = cxx_qt_lib::QStringList;
 
-        /// Every name in the C runtime's narrow environment, which Qt reads, each ended by `NAME_END`.
+        /// Every name in the C runtime's narrow environment, which Qt's byte reads use, each ended by `NAME_END`.
         #[namespace = "kxui"]
         fn narrow_names() -> Vec<u8>;
 

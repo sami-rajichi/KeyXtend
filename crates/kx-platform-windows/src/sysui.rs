@@ -1,5 +1,5 @@
-//! What Windows says about the look: dark apps, the accent pair, the high-contrast colours, animations and the UI language.
-//! Reading Windows' answers is pure and tested everywhere; the queries are in `win`.
+//! What Windows says about the look: dark apps, the accent pair, the high-contrast colours, animations and the
+//! display language. Reading Windows' answers is pure and tested everywhere; the queries are in `win`.
 
 use kx_platform::ui::Rgba;
 

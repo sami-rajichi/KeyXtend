@@ -18,7 +18,7 @@
 | `[keyboard]` settings: size, place, modifiers mode, language-key style, bubble corner, `key_apps` | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
 | The board: rows, widths, scan codes, roles | Public | Compiled into the app (`board.toml`) | No | The build |
 | The text of each click, built from the layout table | Sensitive (typed text) | Memory only, as `Redacted<String>`, until the injector takes it | No | One click |
-| The app in front's file name, for `key_apps` | Public | Memory only | No | One click |
+| The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
 
 Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. The debug output of a `Route` hides its keys and text, since a run of clicks would show what was typed.
 
@@ -35,7 +35,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.
 - **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). A hand-edited place off every screen brings the keyboard back to the bottom centre.
-- **Logging / repudiation:** the module never logs.
+- **Logging / repudiation:** the module never logs. Typed text that reached a log through a field named for it is redacted (the app's log test), and `kx-review` check 4 refuses a `tracing` call on an input path that could carry it.
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
 - **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins, and a relabel time past its ceiling is refused, so the labels never stall. A stale click is never replayed, so a lagging table cannot loop.
 - **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own.

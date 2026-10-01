@@ -26,7 +26,7 @@ fn ink_for(ink: Rgba, legend: Rgba, fill: Rgba, min: f32) -> Rgba {
 }
 
 /// `p` with the accent `fill` on Enter, on, locked, the LED, the ring and the badge. Each ink reaches `min` when any ink
-/// can (black or white reaches 4.58:1), so it reaches WCAG AA only when `min` is at least AA.
+/// can (black or white reaches 4.58:1), so it reaches WCAG AA whenever `min` is at least AA.
 #[must_use]
 pub fn with_accent(p: &Palette, fill: Rgba, min: f32) -> Palette {
     let mut a = p.clone();

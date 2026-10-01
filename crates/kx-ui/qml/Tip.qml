@@ -94,7 +94,7 @@ Window {
         border.width: tip.lk.shape.line.px
         border.color: tip.lk.palette.pop_line
     }
-    // Tips are UI texts, so they take the UI language's font.
+    // Tips are keyboard texts, so they take the font of the keyboard's language.
     Label {
         id: label
         anchors.centerIn: parent

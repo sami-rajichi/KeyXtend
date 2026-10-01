@@ -1,5 +1,5 @@
 //! The Windows side of the look: the app mode in the registry, the accent from `UISettings`, the system
-//! colours and parameters, and the UI language.
+//! colours and parameters, and the display language.
 
 use kx_platform::ui::{Accent, Rgba, SysColors, SysLook, SystemLook, UiError, WatchGuard};
 use windows::UI::ViewManagement::{UIColorType, UISettings};
@@ -26,7 +26,7 @@ const THEME_KEY: PCWSTR = w!(r"Software\Microsoft\Windows\CurrentVersion\Themes\
 /// Registry value: 0 means apps use the dark mode.
 const LIGHT_VALUE: PCWSTR = w!("AppsUseLightTheme");
 
-/// The Windows system look and UI language.
+/// The Windows system look and display language.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WinLook;
 

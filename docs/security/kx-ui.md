@@ -8,7 +8,7 @@
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `KeyInjector`. | N/A |
+| None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `InputInjector`. | N/A |
 | `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). | The `ui` module fails and offers Try again; the rest keeps running. |
 | UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
 
@@ -32,7 +32,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
 | The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown, broken or missing tag gives English. Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
-| Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms` (at most 5 s) | One wake per event | No |
+| Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms`, within its range in `settings.rs` | One wake per event | No |
 | The grabbed tray picture (QML `QImage`) | A null picture or size is refused; it is scaled to the tray's size and read pixel by pixel into a `TrayImage`, which checks its length | The taskbar's small icon size | Unit tests with pictures made in Rust; the QML load test checks a real grab reaches the tray |
 | System look changes and single-instance commands (adapter threads) | Queued to the Qt thread with cxx-qt's thread queue, never blocking the adapter; a second copy's Show waits until the `Ui` object is ready, and its Quit goes straight to the app's request queue | One wake per change | No |
 
@@ -44,12 +44,12 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - **Denial of service:**
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
-  - Guard tries stop at `guard_tries` (at most 100) per run, and equal notices are merged.
-  - A second copy's tries to reach the running one stop at `send_tries` (at most 100), `send_wait_ms` (at most 10 s) apart.
+  - Guard tries stop at `guard_tries` per run, and equal notices are merged.
+  - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
 - **Elevation:**
   - The crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
-  - `harden_qt` keeps another program of the user from loading its plugin, QML module or cached shader into the uiAccess process. It clears every name with a Qt prefix from the C runtime's narrow copy of the environment, which is what Qt reads, so a name the code page narrows to a Qt one goes too, and turns off Qt Quick's shader cache on disk.
+  - `harden_qt` keeps another program of the user from loading its plugin, QML module or cached shader into the uiAccess process. It clears every name with a Qt prefix from the C runtime's narrow copy of the environment, which Qt's byte reads use, so a name the code page narrows to a Qt one goes too; `qunsetenv` also clears it from the wide copy that Qt's text reads use. It then turns off Qt Quick's shader cache on disk.
   - It reads that copy without the runtime's lock, which is safe on Windows because no thread of the app writes it. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's and the C runtime's own functions.
 
 ## Findings

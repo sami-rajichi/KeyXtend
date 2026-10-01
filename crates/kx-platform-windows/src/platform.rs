@@ -63,7 +63,7 @@ impl WindowsPlatform {
         Arc::new(WinScreens)
     }
 
-    /// The system look and the UI language.
+    /// The system look and the display language.
     #[must_use]
     pub fn look(&self) -> Arc<dyn SystemLook> {
         Arc::new(WinLook)
