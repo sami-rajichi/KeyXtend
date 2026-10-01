@@ -9,6 +9,7 @@ import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-dolch-light.js" as Dolch
+import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -22,6 +23,7 @@ Item {
             keyboard: FakeKeyboard {}
         }
     }
+    Component { id: spyC; SignalSpy {} }
 
     TestCase {
         name: "tips"
@@ -53,13 +55,26 @@ Item {
         // windows, so a hand on the mouse during the run cannot move the hover; the test's own moves still reach them.
         function make() {
             const app = createTemporaryObject(appC, root);
-            for (const w of [app.face, app.bubble])
-                w.flags |= Qt.WindowTransparentForInput;
+            Pointer.through([app.face, app.bubble]);
             app.ui.settings = Object.assign({}, En.settings, { tipMs: waitMs });
             tryVerify(() => app.face.visible, 2000, "the keyboard shows");
             waitForRendering(app.face.contentItem);
             compare(tipOf(app.face).ms, waitMs, "the wait comes from the settings");
+            compare(tipOf(app.bubble).ms, waitMs, "the bubble's wait too");
             return app;
+        }
+        // The tip `tip` lies on the screen of the window that owns it.
+        function onScreen(tip, at) {
+            const sc = tip.transientParent.screen;
+            const inX = tip.x >= sc.virtualX && tip.x + tip.width <= sc.virtualX + sc.width;
+            const inY = tip.y >= sc.virtualY && tip.y + tip.height <= sc.virtualY + sc.height;
+            verify(inX && inY, at + "on its window's screen: " + [tip.x, tip.y, tip.width, tip.height]);
+        }
+        // The tip `tip` never takes focus, lets clicks through, and stays a tool-tip window: Qt gives a pop-up no owner.
+        function isTip(tip, at) {
+            verify(tip.flags & Qt.WindowDoesNotAcceptFocus, at + "no focus");
+            verify(tip.flags & Qt.WindowTransparentForInput, at + "click-through");
+            compare(tip.flags & Qt.WindowType_Mask, Qt.ToolTip, at + "a tool-tip window");
         }
         // The tip window `win` shows, made directly or by a Loader.
         function tipOf(win) {
@@ -114,9 +129,7 @@ Item {
                 verify(!tip.visible, at + "it waits");
                 tryVerify(() => tip.visible, 2000, at + "it shows");
                 verify(tip.at === c.item, at + "over its control");
-                const a = tip.area;
-                const inside = tip.x >= a.x && tip.y >= a.y && tip.x + tip.width <= a.x + a.width && tip.y + tip.height <= a.y + a.height;
-                verify(inside, at + "on the screen: " + [tip.x, tip.y, tip.width, tip.height]);
+                onScreen(tip, at);
             }
         }
         // The keyboard switched to the layout in texts `t`; a tip in the last language closes.
@@ -163,8 +176,27 @@ Item {
             mouseMove(bksp, bksp.width / 2, bksp.height / 2);
             tryVerify(() => shown(app) !== null, 2000, "the key's tip shows");
             compare(shown(app).transientParent, app.face, "the keyboard owns its tip");
+            isTip(shown(app), "the keyboard's tip: ");
             bubbleTip(app);
             compare(shown(app).transientParent, app.bubble, "the bubble owns its tip");
+            isTip(shown(app), "the bubble's tip: ");
+        }
+
+        // A quick hand crosses several keys without resting: only the last one's tip shows, once, after the wait.
+        function test_a_quick_sweep_shows_one_tip_over_the_last_key() {
+            const app = make();
+            const tip = tipOf(app.face);
+            const keys = tipped(app, En).filter(c => c.item.part === undefined).slice(0, 4);
+            const seen = createTemporaryObject(spyC, root, { target: tip, signalName: "visibleChanged" });
+            for (const c of keys) {
+                mouseMove(c.item, c.item.width / 2, c.item.height / 2);
+                verify(!tip.visible, c.says + ": no tip while the hand moves");
+            }
+            const last = keys[keys.length - 1];
+            tryVerify(() => tip.visible, 2000, "the last key's tip shows");
+            compare(seen.count, 1, "it showed once");
+            verify(tip.at === last.item, "over the last key");
+            compare(tip.name, last.says, "with its text");
         }
 
         // A tip in the last language closes, the bubble's too, as the keyboard's language changes (ADR-0020).
@@ -187,6 +219,7 @@ Item {
             mouseMove(disc, disc.width / 2, disc.height / 2);
             tryVerify(() => shown(app) !== null, 2000, "the bubble's tip shows");
             compare(shown(app).name, En.texts["bar.bubble"]);
+            onScreen(shown(app), "the bubble's tip: ");
         }
     }
 }

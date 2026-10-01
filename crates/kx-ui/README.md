@@ -24,14 +24,14 @@ The app calls `harden_qt` before Qt's app object exists. It clears with `qunsete
 - **Top bar:** the theme button cycles the themes (`bar.theme`).
 
 - Every window is a no-focus tool window (ADR-0013); once shown, it is cut to its plate and corner, then guarded until the guard is done.
-- The keyboard and the bubble each own their tip (`Tip`), so Windows keeps it above them when the guard lifts them.
-- Names, labels and tips are translation keys, looked up in the keyboard's language: the layout's in front, unless `[ui] language` pins one (ADR-0020). Arabic flips text only; nothing mirrors, and a tip in the last language closes when it changes.
+- The keyboard and the bubble each own their tip (`Tip`), so Windows keeps it above them when the guard lifts them; each tip stays on its owner's screen.
+- Names, labels and tips are translation keys, looked up in the keyboard's language: the layout's in front, unless `[ui] language` pins one (ADR-0020). Arabic flips text only; nothing mirrors, and a tip closes when the texts or the look change, so it never shows the last language.
 - Keys that come in a later version are dimmed, never press, and tell readers and the tooltip "Coming in a later version".
 - Text uses `Label` (grayscale, no ClearType fringes), and hover uses `Hover` (the theme's tint, and a `Highlight` outline in high contrast). `Icon` tints with `MultiEffect`, public Qt Quick only.
 
 ## Qt Quick tests
 
-`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary; `tst_app` builds `App` over them as `main.qml` does. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. The same test lays out the bundled fonts and icons in `target/tmp/qmltest-assets` as the app holds them, so run `cargo test -p kx-ui --test texts` first. Then run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`. Any warning fails a test.
+`qmltest/` checks the views over stand-ins for `Ui` and `Keyboard` (`FakeUi`, `FakeKeyboard`), because `qmltestrunner` cannot load a module linked into a Rust binary; `tst_app` builds `App` over them as `main.qml` does. They answer from `qmltest/fixtures/` (written by the texts test from the hub and the face's golden files) and from kx-theme's look fixtures, so QML never reads a stale value. The same test lays out the bundled fonts and icons in `target/tmp/qmltest-assets` as the app holds them, so run `cargo test -p kx-ui --test texts` first. Then run them with Qt's `bin` in `PATH` and `QML_DISABLE_DISK_CACHE=1`: `qmltestrunner -input crates/kx-ui/qmltest`. Any warning fails a test. Tests that hover pass their windows to `pointer.js`, so the real pointer goes through them and a hand on the mouse cannot move a hover.
 
 ## The `[ui]` settings
 

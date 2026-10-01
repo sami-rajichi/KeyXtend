@@ -44,8 +44,6 @@ Window {
     readonly property real s: running ? board.size : 1
     readonly property real corner: ready ? lk.shape.extra.corner_px[0] * s : 0
     readonly property var res: resources(texts, fontsIn)
-    // The keyboard's screen in Qt units; tooltips stay on it.
-    readonly property rect screenBox: Qt.rect(Screen.virtualX, Screen.virtualY, Screen.width, Screen.height)
     // What takes clicks: the plate and the resize corner overhanging it.
     readonly property var boxes: ready ? [
         { x: 0, y: 0, w: board.plate.w, h: board.plate.h },
@@ -89,7 +87,6 @@ Window {
             lk: win.lk
             res: win.res
             ms: win.cfg.tipMs
-            area: win.screenBox
         }
     }
     // The List design's language list, while the state holds one; the list and its shadow stay above the keyboard.

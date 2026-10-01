@@ -8,17 +8,21 @@ Window {
     // The window whose buttons it names owns it: Windows keeps an owned window above its owner, also after the guard
     // lifts the owner, whereas a hidden window shows again where it was (ADR-0013).
     required transientParent
-    // The look, fonts, the hover time, and its window's screen in Qt units.
+    // The look, fonts and the hover time.
     required property var lk
     required property var res
     required property int ms
-    required property rect area
 
     // The button under the pointer, and its name.
     property Item at: null
     property string name: ""
 
     readonly property var sh: lk.shape.tip
+    // Its owner's screen in Qt units, which it stays on; the bubble may sit on another screen than the keyboard.
+    readonly property rect area: {
+        const sc = transientParent.screen;
+        return Qt.rect(sc.virtualX, sc.virtualY, sc.width, sc.height);
+    }
 
     flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     color: "transparent"
@@ -26,7 +30,7 @@ Window {
     width: label.implicitWidth + 2 * sh.pad_px[1]
     height: label.implicitHeight + 2 * sh.pad_px[0]
 
-    // New texts close it, so it never shows a word in the last language (ADR-0020).
+    // New texts or a new look close it, so it never shows a word in the last language (ADR-0020).
     onResChanged: hint("", null)
 
     // Shows `text` over `item` after the hover time; an empty text hides it, unless it comes late from another button.

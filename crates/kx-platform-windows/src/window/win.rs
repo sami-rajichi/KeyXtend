@@ -93,17 +93,22 @@ fn visible(hwnd: HWND) -> bool {
 
 /// This process's visible top-level windows, front first.
 #[must_use]
+pub fn own_windows() -> Vec<HWND> {
+    let mut found = top_level();
+    found.retain(|&w| visible(w) && is_ours(w));
+    found
+}
+
+/// Every top-level window, hidden ones too, front first: one snapshot of the z-order.
 #[allow(
     unsafe_code,
     reason = "Enumerates top-level windows into a local list."
 )]
-pub fn own_windows() -> Vec<HWND> {
+pub(super) fn top_level() -> Vec<HWND> {
     unsafe extern "system" fn collect(hwnd: HWND, list: LPARAM) -> BOOL {
-        if visible(hwnd) && is_ours(hwnd) {
-            let found = std::ptr::with_exposed_provenance_mut::<Vec<HWND>>(list.0.cast_unsigned());
-            // SAFETY: `list` is the address of the Vec passed below, alive and not borrowed during the call.
-            unsafe { (*found).push(hwnd) };
-        }
+        let found = std::ptr::with_exposed_provenance_mut::<Vec<HWND>>(list.0.cast_unsigned());
+        // SAFETY: `list` is the address of the Vec passed below, alive and not borrowed during the call.
+        unsafe { (*found).push(hwnd) };
         BOOL::from(true)
     }
     let mut found: Vec<HWND> = Vec::new();

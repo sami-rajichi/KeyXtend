@@ -187,7 +187,7 @@ pub trait Module: Send + 'static {
   - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`.
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
-- Owned windows (shadows, bubble, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
+- Owned windows (shadows, bubble, tips, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
 - Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
 
 ## Platform notes

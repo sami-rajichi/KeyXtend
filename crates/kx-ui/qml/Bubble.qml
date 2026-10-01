@@ -4,11 +4,10 @@ import QtQuick
 Window {
     id: bub
 
-    // The look, fonts, icons and texts, how long the pointer rests before its tip shows, and its screen in Qt units.
+    // The look, fonts, icons and texts, and how long the pointer rests before its tip shows.
     required property var lk
     required property var res
     required property int tipMs
-    required property rect screenBox
 
     signal clicked
 
@@ -61,6 +60,5 @@ Window {
         lk: bub.lk
         res: bub.res
         ms: bub.tipMs
-        area: bub.screenBox
     }
 }

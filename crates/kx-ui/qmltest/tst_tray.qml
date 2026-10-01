@@ -8,6 +8,7 @@ import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-dark.js" as Dark
+import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -36,7 +37,7 @@ Item {
             failOnWarning(/./);
         }
         // A menu whose spot asks a stand-in Ui, as the root does, and that Ui; `res` for other texts, and `more` for
-        // other properties, such as a clock.
+        // other properties, such as a clock. The real pointer passes through the menu.
         function makeMenu(res, more) {
             const ui = createTemporaryObject(uiC, root);
             const spot = (x, y, w, h) => {
@@ -44,7 +45,9 @@ Item {
                 return Qt.point(p.x, p.y);
             };
             const props = { lk: N.lk, res: res || root.res, spot: spot, graceMs: En.settings.trayGraceMs };
-            return [createTemporaryObject(menuC, root, Object.assign(props, more || {})), ui];
+            const menu = createTemporaryObject(menuC, root, Object.assign(props, more || {}));
+            Pointer.through([menu]);
+            return [menu, ui];
         }
         // Every item under `item` for which `ok` holds.
         function all(item, ok, found) {

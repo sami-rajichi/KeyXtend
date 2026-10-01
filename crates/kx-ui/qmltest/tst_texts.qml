@@ -7,6 +7,7 @@ import "../qml"
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
+import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -49,9 +50,10 @@ Item {
         function button(app, name) {
             return named(app.face.contentItem, Accessible.Button, name);
         }
-        // The app over fresh stand-ins, its keyboard shown under an English banner.
+        // The app over fresh stand-ins, its keyboard shown under an English banner; the real pointer passes through.
         function make() {
             const app = createTemporaryObject(appC, root);
+            Pointer.through([app.face]);
             tryVerify(() => app.face.visible, 2000, "the keyboard shows");
             waitForRendering(app.face.contentItem);
             app.ui.notices = [{ id: 1, text: En.texts[noticeKey], retry: false }];

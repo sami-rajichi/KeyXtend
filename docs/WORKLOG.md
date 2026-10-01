@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the tip fix pinned by a native test
+A Windows test now lets the guard lift a window over two hidden tips and checks that only the tip it owns stays above it; it fails when the tip has no owner. The Qt Quick tests also check each tip's no-focus, click-through and tool-tip flags, a quick sweep over four keys, and the bubble's wait and screen, and every hover test lets the real pointer pass through its windows (`pointer.js`). Each tip now stays on its own window's screen, so the bubble's tip no longer borrows the keyboard's. Top-bar tips under the banner or the language list are noted in `docs/items/P3.md`.
+
 ## 2026-10-01 — P3: `cargo xtask stage` and the Start-menu shortcut
 `cargo xtask stage` builds KeyXtend in release and stages it in `target/stage/keyxtend` with only the 21 Qt files it was measured to load (46 MB of the 80 MB budget), replacing the spike's PowerShell staging. Its check reads every staged program's import table and refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, and any library nothing imports. A run of the staged release app loaded everything from the stage and nothing from planted Qt paths, `PATH` or the working folder, and wrote nothing to `%LOCALAPPDATA%`. `dev-install` now adds a "KeyXtend (dev)" shortcut to the user's own Start menu, and `--remove` deletes it.
 

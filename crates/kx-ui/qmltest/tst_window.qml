@@ -10,6 +10,7 @@ import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
+import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -30,12 +31,13 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A keyboard window over fresh stand-ins, laid out and not shown.
+        // A keyboard window over fresh stand-ins, laid out and not shown; the real pointer passes through it.
         function make(props, kbProps) {
             const ui = createTemporaryObject(uiC, root, props || {});
             const kb = createTemporaryObject(kbC, root, kbProps || {});
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
+            Pointer.through([win]);
             return win;
         }
         // Every item under `item` for which `ok` holds.
@@ -260,7 +262,7 @@ Item {
 
         function test_the_bubble_and_the_move_catcher_carry_their_texts() {
             const win = make();
-            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs, screenBox: win.screenBox });
+            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs });
             compare(bub.title, En.texts["window.bubble"]);
             compare(bub.name, En.texts["bar.bubble"]);
             verify(named(win, En.texts["catch"]), "the move catcher");

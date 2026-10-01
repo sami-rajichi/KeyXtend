@@ -6,6 +6,7 @@
 )]
 
 use std::cell::{Cell, RefCell};
+use std::sync::{Mutex, PoisonError};
 
 use kx_platform::ui::{FocusToken, UiError, WindowGuard};
 use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
@@ -19,7 +20,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{PCWSTR, w};
 
 use super::guard::{Proc, guard, guarded, next};
-use super::win::{gives_back, token_of, window_of};
+use super::win::{gives_back, token_of, top_level, window_of};
 use super::{KEPT, THROUGH, WinGuard, foreground, from_raw, is_ours, own_windows, title};
 use crate::wide;
 
@@ -27,6 +28,8 @@ use crate::wide;
 const CLASS: PCWSTR = w!("KeyXtend.GuardTest");
 /// How long a test waits for another thread; a wait, never a sleep.
 const WAIT: std::time::Duration = std::time::Duration::from_secs(5);
+/// Held by the tests that read the z-order or the topmost style: a lift on another thread can drop a hidden window.
+static Z_ORDER: Mutex<()> = Mutex::new(());
 
 thread_local! {
     /// Whether the guard was still hooked when this thread's last test window got `WM_NCDESTROY`.
@@ -64,6 +67,15 @@ struct Hidden(HWND);
 
 impl Hidden {
     fn new(title_is: &str) -> Self {
+        Self::make(title_is, WINDOW_EX_STYLE::default(), None)
+    }
+
+    /// Topmost from the start with a Qt tip's styles, as Qt makes its windows; owned by `owner` when given.
+    fn topmost(title_is: &str, owner: Option<HWND>) -> Self {
+        Self::make(title_is, WINDOW_EX_STYLE(KEPT | THROUGH), owner)
+    }
+
+    fn make(title_is: &str, ex: WINDOW_EX_STYLE, owner: Option<HWND>) -> Self {
         let name = wide(title_is);
         // SAFETY: registers the test class, made again harmlessly, and a window of it that is never shown.
         let hwnd = unsafe {
@@ -75,18 +87,17 @@ impl Hidden {
                 ..WNDCLASSW::default()
             };
             RegisterClassW(&raw const wc);
-            let (ex, style) = (WINDOW_EX_STYLE::default(), WS_POPUP);
             let name = PCWSTR(name.as_ptr());
             CreateWindowExW(
                 ex,
                 CLASS,
                 name,
-                style,
+                WS_POPUP,
                 0,
                 0,
                 1,
                 1,
-                None,
+                owner,
                 None,
                 Some(module.into()),
                 None,
@@ -108,6 +119,13 @@ impl Drop for Hidden {
     }
 }
 
+/// True when window `a` is above window `b`, read from one snapshot of the z-order.
+fn above(a: &Hidden, b: &Hidden) -> bool {
+    let z = top_level();
+    let at = |w: &Hidden| z.iter().position(|&x| x == w.0).unwrap();
+    at(a) < at(b)
+}
+
 #[test]
 fn the_style_table_matches_windows() {
     use windows::Win32::UI::WindowsAndMessaging::{
@@ -122,6 +140,7 @@ fn the_style_table_matches_windows() {
 
 #[test]
 fn a_guarded_window_keeps_its_styles_and_never_activates() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
     let window = Hidden::new("KeyXtend test: guarded");
     guard(window.0).unwrap();
     assert_eq!(window.ex_style() & KEPT, KEPT);
@@ -131,6 +150,19 @@ fn a_guarded_window_keeps_its_styles_and_never_activates() {
     // SAFETY: asks the test window how a click would activate it.
     let answer = unsafe { SendMessageW(window.0, WM_MOUSEACTIVATE, None, None) };
     assert_eq!(answer.0, isize::try_from(MA_NOACTIVATE).unwrap());
+}
+
+/// The tip bug: a hidden window shows again where it was, so only a tip its window owns stays above it after a lift.
+#[test]
+fn a_tip_stays_above_its_window_after_the_guard_lifts_it_only_when_owned() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = Hidden::topmost("KeyXtend test: tip owner", None);
+    let owned = Hidden::topmost("KeyXtend test: owned tip", Some(kb.0));
+    let loose = Hidden::topmost("KeyXtend test: loose tip", None);
+    assert!(above(&loose, &kb), "a new tip starts above the keyboard");
+    guard(kb.0).unwrap();
+    assert!(above(&kb, &loose), "the lift covers an unowned tip");
+    assert!(above(&owned, &kb), "an owned tip stays above it");
 }
 
 #[test]

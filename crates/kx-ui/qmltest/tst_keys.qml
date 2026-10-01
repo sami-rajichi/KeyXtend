@@ -11,6 +11,7 @@ import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
+import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -75,6 +76,10 @@ Item {
         // Float rounding in a measured position, far below the whole-pixel steps anchors take.
         readonly property real slack: 0.01
 
+        // The keys sit in the test's own window, which the real pointer passes through.
+        function initTestCase() {
+            Pointer.through([Window.window]);
+        }
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
