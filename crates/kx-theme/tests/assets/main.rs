@@ -11,11 +11,10 @@ mod fontname;
 use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
-use kx_theme::assets::{FONT_DIR, ICON_EXT, ICONS_AT, bundle, font_files, icon_file, is_font};
+use kx_theme::assets::{
+    FONT_DIR, ICON_EXT, ICONS_AT, SYSTEM_FONTS, bundle, font_files, icon_file, is_font,
+};
 use std::collections::BTreeSet;
-
-/// Families Windows 11 ships, so the app does not bundle them.
-const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
 
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {

@@ -1,15 +1,12 @@
 // The keyboard window over stand-in bridges fed from the face's golden files, the hub's texts and the real look:
-// what screen readers find and hear, what a click sends, how labels fit, and how the Arabic UI and a stopped keyboard draw.
+// what screen readers find and hear, what a click sends, and how the Arabic UI and a stopped keyboard draw (labels
+// fitting their caps: tst_fit).
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
-import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
-import "../../kx-theme/fixtures/look-native-light.js" as N
-import "../../kx-theme/fixtures/look-et66-light.js" as E
-import "../../kx-theme/fixtures/look-dolch-light.js" as D
 import "pointer.js" as Pointer
 
 Item {
@@ -62,12 +59,6 @@ Item {
             const hits = found(win, name);
             compare(hits.length, 1, name);
             return hits[0];
-        }
-        // The face's board at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
-        function scaled(size) {
-            const box = b => Object.assign({}, b, { x: b.x * size, y: b.y * size, w: b.w * size, h: b.h * size });
-            const b = Face.board;
-            return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
         }
         // The top bar's size buttons, in order.
         function sizeButtons(win) {
@@ -210,54 +201,6 @@ Item {
             compare(now.map(b => b.Accessible.name), [En.texts["sizename.s"], En.texts["sizename.m"]], "one per preset");
             compare(now.filter(b => b.lit).length, 0, "none lit off preset");
             win.visible = false;
-        }
-
-        function test_every_label_fits_its_face_in_each_theme_language_and_size() {
-            // Every step from the smallest size to the largest, and each preset, which may sit off the steps.
-            const steps = Math.round((Face.sizeMax - Face.sizeMin) / Face.sizeStep);
-            const grid = Array.from({ length: steps + 1 }, (_, i) => Face.sizeMin + i * Face.sizeStep);
-            const sizes = [...new Set(grid.concat(Face.board.presets))];
-            for (const lk of [N.lk, E.lk, D.lk])
-                for (const t of [En, Fr, Ar])
-                    labelsFit(lk, t, sizes);
-        }
-        // Where a label may run on cap `k`, left and right: the face the owner sees less the padding, or a sculpted
-        // top plus what may spill onto the skirt.
-        function room(k, lk, size) {
-            const faces = all(k, o => o.base !== undefined && o.g !== undefined && o.visible);
-            const face = faces[faces.length - 1];
-            const left = face.mapToItem(k, 0, 0).x;
-            const cap = lk.look.cap;
-            const more = cap.kind === "skirt" ? cap.label_spill_px * size : -lk.shape.legend.label_pad_px * size;
-            return [left - more, left + face.width + more];
-        }
-        // Each label in look `lk` and texts `t`, at every size in `sizes`, is set in the theme's font and fits; one
-        // hidden window takes each size in turn, and the keyboard moves the same keys.
-        function labelsFit(lk, t, sizes) {
-            const win = make({ settings: t.settings, lang: t.lang, texts: t.texts, look: lk });
-            const font = lk.look.latin_fonts[0];
-            const where = font + " " + t.lang.tag + " ";
-            const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
-            verify(keys.length > 0, where + "labels");
-            const labels = keys.map(k => all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0]);
-            tryVerify(() => labels.every(l => l.fontInfo.family === font), 5000, where + "in " + labels[0].fontInfo.family);
-            for (const size of sizes) {
-                win.board = scaled(size);
-                keys.forEach((k, i) => fits(k, labels[i], lk, size, t !== Fr, where + size.toFixed(2) + ": " + k.label));
-            }
-        }
-        // Label `l` stays in cap `k`'s room, give or take float rounding, above the smallest size, and at the P1 size
-        // when `p1`.
-        function fits(k, l, lk, size, p1, at) {
-            const slack = 0.01;
-            // A row lays out once a frame; the window is hidden, so it lays out now.
-            l.parent.forceLayout();
-            const [lo, hi] = room(k, lk, size);
-            const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
-            verify(left >= lo - slack && left + l.contentWidth <= hi + slack, at + " off by " + [lo - left, left + l.contentWidth - hi]);
-            verify(l.fontInfo.pixelSize >= lk.shape.legend.label_min_px, at + " not below the smallest size");
-            if (p1)
-                compare(l.fontInfo.pixelSize, l.font.pixelSize, at + " keeps the P1 size");
         }
 
         function test_the_bubble_and_the_move_catcher_carry_their_texts() {

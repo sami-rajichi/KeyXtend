@@ -1,0 +1,39 @@
+name: Qt
+description: Installs the Qt that the stage settings pin, and sets QMAKE and PATH as a developer does for a Qt build.
+
+outputs:
+  version:
+    description: The Qt version, from `qt_version` in the root Cargo.toml's `[workspace.metadata.stage]`.
+    value: ${{ steps.pin.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    # The stage settings are the one place that pins Qt's version.
+    - id: pin
+      shell: pwsh
+      run: |
+        $meta = cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
+        "version=$($meta.metadata.stage.qt_version)" >> $env:GITHUB_OUTPUT
+
+    - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+      with:
+        version: ${{ steps.pin.outputs.version }}
+        arch: win64_msvc2022_64
+        cache: true
+        # The next step sets only what a developer sets, so no Qt plugin or import path leaks into the tests.
+        set-env: false
+        # The aqtinstall commit THIRD_PARTY.md reviewed, which installed the dev Qt, and the py7zr version it needs.
+        aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
+        py7zrversion: ==1.1.3
+
+    # QMAKE names Qt for cxx-qt, `cargo xtask stage` and the agree test, and Qt's bin folder leads PATH for its DLLs
+    # and tools. The action puts Qt in `$RUNNER_WORKSPACE/Qt` by default.
+    - shell: pwsh
+      env:
+        QT_VERSION: ${{ steps.pin.outputs.version }}
+      run: |
+        $qmake = @(Get-ChildItem "$env:RUNNER_WORKSPACE/Qt/$env:QT_VERSION/*/bin/qmake.exe")
+        if ($qmake.Count -ne 1) { throw "expected one qmake for Qt $env:QT_VERSION, found $($qmake.Count)" }
+        "QMAKE=$($qmake[0].FullName)" >> $env:GITHUB_ENV
+        $qmake[0].DirectoryName >> $env:GITHUB_PATH

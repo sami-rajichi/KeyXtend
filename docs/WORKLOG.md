@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: CI builds and tests the Qt app
+The Windows check now installs the Qt that the stage settings pin (a pinned action over the reviewed aqtinstall), sets `QMAKE`, runs every workspace test, the Qt Quick tests (any warning fails the job) and `cargo xtask stage`. The Linux check names its packages in lists that must cover the workspace, builds kx-ui without Qt and leaves the app out. Tests that need a font Windows ships share one rule that skips them by name on an image without it, and the label-fit test moved to `tst_fit.qml`. A G26 job stays skipped until its gate exists.
+
 ## 2026-10-01 — P3: pop-ups land in front, and tips hide for the guard
 The window guard port now takes a `top` title, so a banner or tray menu that shows again at its old place lands in front of the keyboard; a native test shows a menu shown again under the keyboard and in front once named. A shown tip now hides as a guard run starts, since a guard run that lifts it also lifts the keyboard over the banner, which a second native test pins. A tip's lift is now checked to find the tip shown, and static checks keep the window titles distinct across the three languages and every window file topmost. The keyboard's place helpers moved to `Spots.qml`, so `KbWindow.qml` has room again.
 

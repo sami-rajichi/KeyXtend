@@ -20,24 +20,99 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Formats, lints, tests and tidies the workspace on both target OSes.
-  check:
+  # Builds and tests everything with Qt (ADR-0013): the workspace, the Qt Quick tests and the stage the installer takes.
+  # Each check job keeps the name the `main` ruleset requires.
+  windows:
     if: github.event_name != 'schedule'
-    name: check (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
+    name: check (windows-latest)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: rustup toolchain install
+      - id: qt
+        uses: ./.github/actions/qt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          # cxx-qt builds against Qt, so a new Qt starts a new cache.
+          key: qt-${{ steps.qt.outputs.version }}
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
       - run: cargo xtask tidy
+      # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
+      - run: cargo test -p kx-ui --test texts --locked
+      - name: Qt Quick tests
+        env:
+          # Each QML file compiles afresh, so a stale cache never hides a change.
+          QML_DISABLE_DISK_CACHE: "1"
+          LOG: ${{ runner.temp }}/qmltest.txt
+        run: |
+          qmltestrunner -input crates/kx-ui/qmltest -o "$env:LOG,txt"
+          $code = $LASTEXITCODE
+          $log = Get-Content $env:LOG
+          $log
+          # A skip (fonts.js: a Windows font this image lacks) shows on the pull request, so it never passes unseen.
+          $log | Where-Object { $_ -like 'SKIP*' } | ForEach-Object { "::warning title=Qt Quick test skipped::$_" }
+          if ($log | Where-Object { $_ -like 'QWARN*' }) { throw 'a Qt Quick test logged a warning' }
+          exit $code
+      # Builds the app in release and stages only the Qt files it loads, then checks the stage (ADR-0012).
+      - run: cargo xtask stage
+
+  # Linux has no Qt until P15 (ADR-0016): the app is left out, and kx-ui builds without its default `qt` feature.
+  linux:
+    if: github.event_name != 'schedule'
+    name: check (ubuntu-latest)
+    runs-on: ubuntu-latest
+    env:
+      # Every workspace package sits in exactly one list; the first step fails when a package is missing or extra.
+      PACKAGES: >-
+        -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-module-api -p kx-platform
+        -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme
+        -p xtask
+      NO_QT: -p kx-ui
+      QT_ONLY: -p keyxtend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - name: The package lists hold every workspace package once
+        run: |
+          listed=$(printf '%s\n' $PACKAGES $NO_QT $QT_ONLY | grep -vx -- -p | sort)
+          meta=$(cargo metadata --no-deps --format-version 1 --locked)
+          names='import json, sys; [print(p["name"]) for p in json.load(sys.stdin)["packages"]]'
+          found=$(echo "$meta" | python3 -c "$names" | sort)
+          diff <(echo "$listed") <(echo "$found")
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --locked $PACKAGES -- -D warnings
+      - run: cargo clippy --all-targets --locked --no-default-features $NO_QT -- -D warnings
+      - run: cargo test --locked $PACKAGES
+      - run: cargo test --locked --no-default-features $NO_QT
+      - run: cargo xtask tidy
+
+  # Gate G26 on a clean Windows (roadmap): German, Russian, Hebrew and Persian labels match their layouts and their
+  # text arrives intact, and a Japanese IME fed key presses types 日本. It moves the runner's mouse, not a developer's.
+  g26:
+    # Skipped, not passed, until P3 Task 24 writes the gate; that task drops this line and fills the last step.
+    if: false
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - id: qt
+        uses: ./.github/actions/qt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: qt-${{ steps.qt.outputs.version }}
+      - run: cargo build --locked -p keyxtend -p kx-gates
+      - name: G26 (placeholder; P3 Task 24 adds the layouts and the gate's command)
+        run: cargo run --locked -p kx-gates -- g26
 
   # Checks licences, bans and advisories against deny.toml, and scans for known vulnerabilities.
   supply-chain:

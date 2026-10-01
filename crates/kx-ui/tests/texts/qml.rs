@@ -8,7 +8,7 @@ use kx_module_api::ports::{
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
-use kx_theme::assets::{ICON_EXT, ICONS_AT, bundle};
+use kx_theme::assets::{ICON_EXT, ICONS_AT, SYSTEM_FONTS, bundle};
 use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
@@ -156,7 +156,8 @@ fn face() -> String {
     )
 }
 
-/// The bundled assets as `Ui.assets()` names them, relative to where they are laid out, and that place.
+/// The bundled assets as `Ui.assets()` names them, relative to where they are laid out, that place, and the font
+/// families Windows ships, which the tests' font rule may skip on a system without them.
 fn assets() -> String {
     let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
     let fonts: Vec<&str> = b.fonts.iter().map(|f| f.name.as_str()).collect();
@@ -164,9 +165,10 @@ fn assets() -> String {
     // The Qt Quick tests sit one folder below this crate.
     let root = Value::String(format!("../{MIRROR}"));
     format!(
-        "{HEAD}{}{}",
+        "{HEAD}{}{}{}",
         var("root", &root, false),
-        var("assets", &assets, true)
+        var("assets", &assets, true),
+        var("system", &serde_json::json!(SYSTEM_FONTS), false)
     )
 }
 

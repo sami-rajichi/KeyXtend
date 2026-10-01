@@ -1,7 +1,7 @@
 # Security note: CI and supply chain
 
 - **Owner:** product owner
-- **Last review:** 2026-09-27
+- **Last review:** 2026-10-01 (P3: Qt on the Windows job)
 - **Status:** Reviewed
 
 ## Capabilities
@@ -25,10 +25,13 @@
 | crates.io (via `cargo`) | `cargo deny check` and `--locked` pin sources and versions | N/A | No |
 | RustSec advisory DB (via `cargo audit`) | Signed, versioned advisory database | N/A | No |
 | `cargo metadata` JSON and `git log` output (read by `xtask`) | Parsed into typed values; every error is reported, never a panic | N/A (developer tool) | Property tests only |
+| Qt binaries (`.github/actions/qt`, Windows jobs) | aqtinstall checks each archive's SHA-256 against Qt's own server; the version comes from the stage settings, and `cargo xtask stage` refuses any other | Cached per Qt version and runner OS | No |
+| aqtinstall and its Python packages (pip, at run time) | aqtinstall is pinned to the reviewed commit and py7zr to one version; the rest resolve from PyPI at run time (Accepted below) | N/A | No |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a hijacked action tag. Mitigation: every action is pinned to a full commit SHA, and Dependabot opens the update PRs.
 - **Tampering:** a malicious crate. Mitigation: `deny.toml` allow-lists licences and sources, `cargo audit` checks advisories, and builds run with `--locked`. Dependabot waits 7 days before proposing a new release.
+- **Tampering:** a tampered Qt download or Python package. Mitigation: hash checks against Qt's server, pinned aqtinstall and py7zr, and check jobs that hold no secret and publish nothing.
 - **Logging / repudiation:** an unsigned commit on `main`. Mitigation: the `dco` job plus a branch ruleset block the merge.
 - **Information disclosure:** a pushed secret. Mitigation: GitHub push protection blocks the push before it lands, and the workflow token cannot read other repos or org secrets.
 - **Denial of service:** a burst of pushes queues many runs. Mitigation: a new push cancels the superseded pull-request run, and every job has GitHub's standard timeout.
@@ -41,9 +44,13 @@ None.
 ### Should fix (tracked issue)
 Add a workflow linter (actionlint or zizmor) to CI later.
 
+A release workflow that ships the Qt it installs must pin aqtinstall's Python packages by hash (`kx-release`, P14).
+
 ### Accepted (with reason)
 Dependabot commits are exempt from the DCO check, because they are bot-authored and reviewed through their PR.
 
 The DCO exemption matches the commit author *name*, so it could be spoofed. This is accepted while ADR-0006 bars outside code, because the product owner reviews every PR.
 
 The `xtask` parsers are not fuzzed. They are developer tools that never ship, so property tests that prove they never panic are enough.
+
+aqtinstall's own dependencies (requests, beautifulsoup4 and others) are not pinned. The Windows jobs hold only the read-only token and ship nothing, so a bad release can only break a run.

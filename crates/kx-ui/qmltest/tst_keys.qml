@@ -12,6 +12,7 @@ import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
 import "pointer.js" as Pointer
+import "fonts.js" as Fonts
 
 Item {
     id: root
@@ -237,18 +238,22 @@ Item {
             verify(most < grayEdge, "the most colour at an edge: " + most);
         }
 
-        function test_bidi_isolation_marks_take_no_room() {
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by cargo test -p kx-ui --test texts");
+        // One row per family a theme names, so a Windows family this system lacks skips alone (fonts.js).
+        function test_bidi_isolation_marks_take_no_room_data() {
             const lists = [N, E, D].map(t => t.lk.look.latin_fonts.concat(t.lk.look.arabic_fonts));
-            for (const family of [...new Set([].concat(...lists))]) {
-                verify(Qt.fontFamilies().indexOf(family) >= 0, family + " is in");
-                const plain = createTemporaryObject(labelC, root, { text: "English · US", "font.family": family });
-                const marked = createTemporaryObject(labelC, root, { text: "⁨English⁩ · ⁨US⁩", "font.family": family });
-                compare(marked.implicitWidth, plain.implicitWidth, family);
-                const ar = createTemporaryObject(labelC, root, { text: "العربية · Arabic", "font.family": family });
-                const arMarked = createTemporaryObject(labelC, root, { text: "⁨العربية⁩ · ⁨Arabic⁩", "font.family": family });
-                compare(arMarked.implicitWidth, ar.implicitWidth, family + " in Arabic");
-            }
+            return [...new Set([].concat(...lists))].map(f => ({ tag: f, family: f }));
+        }
+        function test_bidi_isolation_marks_take_no_room(row) {
+            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by cargo test -p kx-ui --test texts");
+            const family = row.family;
+            Fonts.need([family], skip);
+            verify(Qt.fontFamilies().indexOf(family) >= 0, family + " is in");
+            const plain = createTemporaryObject(labelC, root, { text: "English · US", "font.family": family });
+            const marked = createTemporaryObject(labelC, root, { text: "⁨English⁩ · ⁨US⁩", "font.family": family });
+            compare(marked.implicitWidth, plain.implicitWidth, family);
+            const ar = createTemporaryObject(labelC, root, { text: "العربية · Arabic", "font.family": family });
+            const arMarked = createTemporaryObject(labelC, root, { text: "⁨العربية⁩ · ⁨Arabic⁩", "font.family": family });
+            compare(arMarked.implicitWidth, ar.implicitWidth, family + " in Arabic");
         }
     }
 }

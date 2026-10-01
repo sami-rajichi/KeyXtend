@@ -16,6 +16,8 @@ pub const FONT_DIR: &str = "fonts";
 pub const FONT_EXTS: [&str; 2] = ["ttf", "otf"];
 /// The bundle's one icon folder, which holds Lucide's icons and our own drawings side by side.
 pub const ICONS_AT: &str = "icons";
+/// Font families Windows 11 ships, so the app never bundles them; any other family a theme names is bundled.
+pub const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
 
 /// A file the app bundles: its name in the bundle and its file in the repo.
 #[derive(Debug, Clone, PartialEq, Eq)]

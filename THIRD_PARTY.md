@@ -50,9 +50,22 @@ The versions are filled in when each component is added. Planned items stay here
 
 | Tool | Version | Licence | Source | Used for |
 |---|---|---|---|---|
-| aqtinstall | master `076e165` | MIT | https://github.com/miurahr/aqtinstall | Downloads Qt |
+| aqtinstall | master `076e165` | MIT | https://github.com/miurahr/aqtinstall | Downloads Qt, on the dev PC and in CI |
+| py7zr | 1.1.3 | LGPL-2.1-or-later | https://github.com/miurahr/py7zr | Unpacks Qt's archives for aqtinstall |
 | PresentMon | 2.6.0 | MIT | https://github.com/GameTechDev/PresentMon | Frame times (G8) |
 | NVDA (portable) | 2026.2 | GPL-2.0 with exceptions | https://github.com/nvaccess/nvda | Screen-reader check (G10) |
 | Tauri | 2.12.0 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tauri | Quick comparison only; removed in P2 |
 | proptest | 1.11.0 | MIT OR Apache-2.0 | https://github.com/proptest-rs/proptest | Property tests |
 | Whisper `base` model (`ggml-base.bin`) | SHA-256 `60ed5bc3…2efe` | MIT | https://huggingface.co/ggerganov/whisper.cpp | Local speech model (G22) |
+
+## CI actions (never shipped)
+
+Each runs only on GitHub's runners, pinned to a full commit SHA; Dependabot proposes updates (`docs/security/ci.md`).
+
+| Action | Version | Licence | Source | Used for |
+|---|---|---|---|---|
+| actions/checkout | 7.0.1 | MIT | https://github.com/actions/checkout | Fetches the repo |
+| Swatinem/rust-cache | 2.9.2 | LGPL-3.0 | https://github.com/Swatinem/rust-cache | Caches cargo's builds between runs |
+| taiki-e/install-action | 2.87.21 | Apache-2.0 OR MIT | https://github.com/taiki-e/install-action | Installs cargo-deny and cargo-audit |
+| jurplel/install-qt-action | 4.4.1 | MIT | https://github.com/jurplel/install-qt-action | Installs Qt through aqtinstall on the Windows jobs (P3) |
+| actions/setup-python | 6.3.0, pinned inside install-qt-action | MIT | https://github.com/actions/setup-python | Python for aqtinstall |

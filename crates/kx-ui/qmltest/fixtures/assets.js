@@ -13,3 +13,4 @@ var assets = {
   ],
   "icons": "icons"
 };
+var system = ["Segoe UI Variable Text","Segoe UI"];
