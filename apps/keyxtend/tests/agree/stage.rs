@@ -68,9 +68,9 @@ fn only_the_apps_own_module_is_compiled_in() {
 
 /// The file that describes a QML module.
 const QMLDIR: &str = "qmldir";
-/// The qmldir keyword of a plugin line, and the word before it that marks a plugin Qt skips only when a library the
-/// program links has already registered the module.
+/// The qmldir keyword of a plugin line.
 const PLUGIN: &str = "plugin";
+/// The word before `plugin` that marks a plugin Qt skips only when a library the program links registered the module.
 const OPTIONAL: &str = "optional";
 /// QML modules a library the program links registers, by URI and library (measured in P3 Task 20).
 const BY_PROGRAM: &[(&str, &str)] = &[("QtQml", "Qt6Qml")];

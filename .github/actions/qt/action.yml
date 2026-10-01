@@ -24,6 +24,7 @@ runs:
         # The next step sets only what a developer sets, so no Qt plugin or import path leaks into the tests.
         set-env: false
         # The aqtinstall commit THIRD_PARTY.md reviewed, which installed the dev Qt, and the py7zr version it needs.
+        # Upstream's py7zr ==1.1.0 is a Bad7zFile workaround; 076e165 asks py7zr>=1.1.3; setup-python's >=3.14.0 is a floor.
         aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
         py7zrversion: ==1.1.3
 
