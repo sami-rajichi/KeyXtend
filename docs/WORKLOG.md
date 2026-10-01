@@ -2,6 +2,12 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 23:57 — P3 final fix round, part 2
+The stage now counts its 80 MB budget in MB of 10⁶ bytes, as G8 and spec §10 do, and a test keeps G8's folder limit equal to the stage's. G10 and G26 now expect a key that types Arabic marks to be named as the product names it, in words or on a dotted circle, and two long tests, a G9 comment and the spike clock's unit are tidied. The roadmap, spec, security notes, ADR-0016, CONTRIBUTING, credits and work log wording follow the review. P3's item file now lists the owner's look, tray, tip and Arabic AltGr checks and G8's accepted weak-mode `partial`, and the notes for later items moved to P6, P7, P11, P13 and P14.
+
+## 2026-10-01 23:40 — P3 final fix round, part 1
+Arabic AltGr marks now sit on a dotted circle in the Arabic font, and screen readers name mark keys by their Arabic names. With one layout installed, the language key's tip and description say so. The keyboard relabels as soon as it shows, the window guard reads the pop-up's title at each try, and relabel_ms takes 50 ms at the fastest. Small review gaps are closed: a second-Quit test, a tip-alone z-order test, a Qt wide-environment probe and several doc fixes.
+
 ## 2026-10-01 — P3: the docs pass
 The spec, roadmap, architecture map, move map, README and CONTRIBUTING now describe the keyboard as built, with the Qt set-up and the P3 edge cases. The three P3 security notes are corrected, and docs name settings instead of repeating their values. `kx-review` now fails a `tracing` call on an input path that could log typed text. Each P3 item note is marked handled or waiting for the manual check, or moved to the item that owns it.
 
