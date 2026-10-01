@@ -1,7 +1,7 @@
 # Security note: kernel, settings and log
 
 - **Owner:** product owner
-- **Last review:** 2026-09-29
+- **Last review:** 2026-09-29 (P2); the P3 lines await P3's review.
 - **Status:** Reviewed
 - **Scope:** `kx-module-api`, `kx-kernel` (lifecycle, order, bus, registry, grants, `Kernel`, log), `kx-settings`, `kx-platform`. They run inside the uiAccess `keyxtend` process from P3 on. The test crates (`kx-platform-fake`, `kx-test-support`) and the tools never ship.
 

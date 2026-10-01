@@ -35,4 +35,4 @@ CI cannot test uiAccess, admin windows or real apps. Follow `.claude/skills/kx-w
 - Build the two test tools with `cargo build -p kx-target-window -p kx-gates`.
 - The gates move the real mouse and keyboard, so run them only when the owner agrees. `kx-gates` with no arguments prints its commands.
 - Gates that click the Qt keyboard need uiAccess on both sides. Install the keyboard and a release `kx-gates` with `cargo xtask dev-install <folder>`, then run `kx-gates` from there.
-- The installed `kx-gates` reads `kx-gates.toml` and `kx-gates-p3.toml` beside it, else from `tools/kx-gates`. A relative path starts at its file's folder, so in copies beside the installed exe write the repo paths (`[paths] out`, `[apps.target] exe`, `worker_dir`) in full; `[g8] program` already points at the installed app.
+- The installed `kx-gates` reads `kx-gates.toml` and `kx-gates-p3.toml` beside it, else from `tools/kx-gates`. A relative path starts at its file's folder, so in copies beside the installed exe write the repo paths (`[paths] out`, `[apps.target] exe`, `[g22] worker_dir`) in full; `[g8] program` already points at the installed app.

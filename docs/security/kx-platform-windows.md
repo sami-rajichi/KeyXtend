@@ -112,4 +112,4 @@ DWM may draw Mica and Acrylic as a solid colour on an inactive window, and the k
 
 A monitor whose DPI Windows cannot give reads as 96, so a window there may be sized as if unscaled until the next reading.
 
-The guard lifts a dropped window back every time, with no cap, so a program that keeps dropping our window keeps it in a loop of drops and lifts. Each lift is one `SetWindowPos` that never moves or activates the window; a cap needs a `[ui]` setting and comes later.
+The guard lifts a dropped window back every time, with no cap, so a program that keeps dropping our window keeps it in a loop of drops and lifts. Each lift is one `SetWindowPos` that never moves or activates the window; a cap needs a `[ui]` setting, which P13 adds (`docs/items/P13.md`).

@@ -180,10 +180,11 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 
 - Detect every input language installed in the OS. Windows: `GetKeyboardLayoutList`. Labels are read per layout with `ToUnicodeEx`, flag `0x4` (does not change kernel keyboard state).
 - The labels follow the layout of the app in front, checked every `[keyboard] relabel_ms`, so a layout added or removed while running shows at the next check. A key that must go as a scan code while the labels lag the app's layout sends nothing; the keyboard redraws, and the user clicks again.
-- v1 must render and type **English (US QWERTY)**, **French (AZERTY)** and **Arabic (101)** correctly; P3 was tested on US, French (Legacy, AZERTY) and Arabic (102) AZERTY:
+- v1 must render and type **English (US QWERTY)**, **French (AZERTY)** and **Arabic (101)** correctly:
   - AltGr level on AZERTY (e.g. `€ ~ # { [ | \` \\ ^ @ ] }`);
   - Arabic shifted level with harakat shown on a dotted circle `◌` and typed bare;
   - `لا` as one key that types two code points.
+- P3 was tested on US, French (Legacy, AZERTY) and Arabic (102) AZERTY; Arabic (101) is type-tested before v1 (P14).
 - On a layout without AltGr characters, AltGr acts as Right Alt.
 - Keys show **only the active language**.
 - Apps listed in `[keyboard] key_apps` get text as key presses in their own layout instead of Unicode (§4.5).

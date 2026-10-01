@@ -20,8 +20,10 @@ Decided by the owner on 2026-09-29.
   - `spike/qt-kb/{Cargo.toml,Cargo.lock,.gitignore}` are deleted.
   - Its other files stay as source: build script, panel, ring, tools, voice, their QML and Qt Quick Tests. Each moves in its own phase (P3–P13).
   - The signed test install of the spike face (from `cargo xtask dev-install`) stays until the owner removes it.
-  - `spike/core` and `spike/worker` keep building and testing, because `kx-gates` depends on `spike-core`. ADR-0014's rule still holds for them.
-- **`kx-theme` is a new crate with no Qt:** theme tokens, the look and contrast. Its tests run everywhere and spike code can use it. `kx-ui` keeps the QML, bridges, translations and the `ui` module.
+  - `spike/core` and `spike/worker` keep building and testing, because `kx-gates` depends on `spike-core` and `g22bench` runs the spike worker. ADR-0014's rule still holds for them.
+- **`kx-theme` is a new crate with no Qt:** theme tokens, the look and contrast.
+  - Its tests run everywhere, and spike code can use it.
+  - `kx-ui` keeps the QML, bridges, translations and the `ui` module.
 - **Ports:**
   - module ports live in `kx-module-api`: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`;
   - UI ports live in `kx-platform`: `WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Instance`;
