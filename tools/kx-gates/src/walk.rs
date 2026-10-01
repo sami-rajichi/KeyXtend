@@ -1,36 +1,37 @@
 //! What a screen reader meets on the product keyboard, by board key: keys UI Automation lacks, keys with no name or no
-//! way to press them, and character keys whose name is not what their layout types. G10 and G26 check these; G2 and
-//! G4 click the character keys that type.
+//! way to press them, and character keys not named as the product names what their layout types. G10 and G26 check
+//! these; G2 and G4 click the character keys that type.
 #![cfg(windows)]
 
+use kx_mod_keyboard::legend;
 use kx_module_api::ports::{KeyChars, LayoutId, LayoutSource, Scan, Slot};
 use kx_platform_windows::{WinLayouts, layouts};
 
 use crate::board;
 use crate::keymap::KeyRead;
 
-/// A character key in one layout: its scan code and id, the name it should have (what it types with no modifier, empty
-/// when it types nothing), and what one press types at once (none for a dead key or one that types nothing printable).
+/// A character key in one layout: its scan code and id, what it types with no modifier (empty when nothing), which
+/// gives its name, and what one press types at once (none for a dead key or one that types nothing printable).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharKey {
     /// Its scan code.
     pub scan: Scan,
     /// Its board id.
     pub id: String,
-    /// The name it should have.
-    pub name: String,
+    /// What it types with no modifier.
+    pub base: String,
     /// What one press types at once.
     pub types: Option<String>,
 }
 
 impl CharKey {
-    /// A key named `name` that types `types`, for tests, which find keys by id; its scan code is none.
+    /// A key whose base is `base` and that types `types`, for tests, which find keys by id; its scan code is none.
     #[cfg(test)]
-    pub fn new(id: &str, name: &str, types: Option<&str>) -> Self {
+    pub fn new(id: &str, base: &str, types: Option<&str>) -> Self {
         Self {
             scan: Scan::new(0),
             id: id.into(),
-            name: name.into(),
+            base: base.into(),
             types: types.map(Into::into),
         }
     }
@@ -51,7 +52,7 @@ pub fn char_keys(layout: LayoutId) -> Result<Vec<CharKey>, String> {
         scan,
         id,
         types: typed_by(&c),
-        name: c.base,
+        base: c.base,
     };
     Ok(keys.into_iter().zip(chars).map(key).collect())
 }
@@ -71,7 +72,7 @@ pub fn missing(read: &[KeyRead], ids: &[String]) -> Vec<String> {
 
 /// The board keys a screen reader would call only "button"; a character key in `want` that types nothing may.
 pub fn unnamed(read: &[KeyRead], ids: &[String], want: &[CharKey]) -> Vec<String> {
-    let types_nothing = |id: &str| want.iter().any(|c| c.id == id && c.name.is_empty());
+    let types_nothing = |id: &str| want.iter().any(|c| c.id == id && c.base.is_empty());
     let blank = |id: &&String| {
         let empty = find(read, id).is_some_and(|k| k.name.trim().is_empty());
         empty && !types_nothing(id)
@@ -85,11 +86,23 @@ pub fn not_invokable(read: &[KeyRead], ids: &[String]) -> Vec<String> {
     ids.iter().filter(stuck).cloned().collect()
 }
 
-/// Character keys named unlike what their layout types, as `id: "got" for "wanted"`.
+/// True when `name` is how the product names a key whose base is `base`: marks it has words for by any name but the
+/// marks, bare or drawn (the run records the words), and anything else as drawn, marks on a dotted circle.
+fn named_right(name: &str, base: &str) -> bool {
+    let drawn = legend::shown(base);
+    if legend::mark_names(base).is_empty() {
+        name == drawn
+    } else {
+        !name.trim().is_empty() && name != base && name != drawn
+    }
+}
+
+/// Character keys not named as the product names what their layout types, as `id: "got" for "base"`.
 pub fn misnamed(read: &[KeyRead], want: &[CharKey]) -> Vec<String> {
     let wrong = |c: &CharKey| {
         let k = find(read, &c.id)?;
-        (k.name != c.name).then(|| format!("{}: {:?} for {:?}", c.id, k.name, c.name))
+        let right = named_right(&k.name, &c.base);
+        (!right).then(|| format!("{}: {:?} for {:?}", c.id, k.name, c.base))
     };
     want.iter().filter_map(wrong).collect()
 }
@@ -194,5 +207,31 @@ mod tests {
         assert!(misnamed(&read, &want).is_empty());
         let types = [CharKey::new("c-0x0029", "`", Some("`"))];
         assert_eq!(unnamed(&read, &board, &types), ["c-0x0029"]);
+    }
+
+    /// True when a key read as `name` is named right for a key whose base is `base`.
+    fn named(name: &str, base: &str) -> bool {
+        let want = [CharKey::new("c-0x0010", base, None)];
+        misnamed(&[key("c-0x0010", name, true)], &want).is_empty()
+    }
+
+    #[test]
+    fn a_key_that_types_named_marks_is_said_in_words_never_by_the_marks() {
+        let (fatha, shadda_fatha) = ("\u{064E}", "\u{0651}\u{064E}");
+        assert!(
+            named("فتحة", fatha) && named("Fatha", fatha),
+            "in the keyboard's language"
+        );
+        assert!(named("شدّة مع فتحة", shadda_fatha));
+        for bare in [fatha, "\u{25CC}\u{064E}", " ", ""] {
+            assert!(!named(bare, fatha), "{bare:?}");
+        }
+    }
+
+    #[test]
+    fn a_key_that_types_another_mark_is_named_on_a_dotted_circle() {
+        let alef = "\u{0670}";
+        assert!(named("\u{25CC}\u{0670}", alef));
+        assert!(!named(alef, alef), "a bare mark has no base to sit on");
     }
 }
