@@ -105,7 +105,7 @@ pub struct CloudConfig {
 pub struct WeakConfig {
     /// Cores it may use.
     pub cores: u32,
-    /// CPU share, in percent of the whole machine.
+    /// Speed of each allowed core, in percent.
     pub rate_pct: u32,
     /// Memory cap, in MiB.
     pub mem_mb: u64,

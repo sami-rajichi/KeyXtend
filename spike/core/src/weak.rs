@@ -26,13 +26,25 @@ const MAX_PCT: u32 = 100;
 pub struct Caps {
     /// One bit per allowed core, lowest cores first.
     pub affinity: usize,
-    /// CPU share in hundredths of a percent.
+    /// CPU share of the whole PC, in hundredths of a percent, so each allowed core runs at the weak speed.
     pub cpu_rate: u32,
     /// Memory cap for the whole job.
     pub mem_bytes: usize,
 }
 
+/// The job rate, of the whole PC with `cpus` cores, that runs `cores` cores at `pct` percent each; at least 1.
+fn rate_of(pct: u32, cores: usize, cpus: usize) -> u32 {
+    let whole = u128::from(pct * RATE_PER_PCT) * cores as u128 / cpus.max(1) as u128;
+    u32::try_from(whole).unwrap_or(u32::MAX).max(1)
+}
+
 impl Caps {
+    /// The CPU time the job allows on a PC with `cpus` cores, in whole cores.
+    #[allow(clippy::cast_precision_loss, reason = "Core counts are tiny.")]
+    pub fn cpu_cores(&self, cpus: usize) -> f64 {
+        f64::from(self.cpu_rate) * cpus as f64 / f64::from(RATE_PER_PCT * MAX_PCT)
+    }
+
     /// Checks `w` and converts it for a PC with `cpus` logical cores.
     pub fn from(w: &WeakConfig, cpus: usize) -> Result<Caps, String> {
         let bits = usize::BITS as usize;
@@ -62,7 +74,7 @@ impl Caps {
             .saturating_mul(MIB);
         Ok(Caps {
             affinity,
-            cpu_rate: w.rate_pct * RATE_PER_PCT,
+            cpu_rate: rate_of(w.rate_pct, cores, cpus),
             mem_bytes,
         })
     }
@@ -143,10 +155,23 @@ mod tests {
 
     #[test]
     fn caps_turn_settings_into_job_values() {
-        let c = Caps::from(&weak(2, 30), 8).expect("valid");
+        let c = Caps::from(&weak(2, 30), 16).expect("valid");
         assert_eq!(c.affinity, 0b11);
-        assert_eq!(c.cpu_rate, 3000, "hundredths of a percent");
+        assert_eq!(
+            c.cpu_rate, 375,
+            "2 of 16 CPUs at 30 %, in hundredths of a percent of the PC"
+        );
         assert_eq!(c.mem_bytes, 4096 * 1024 * 1024);
+    }
+
+    #[test]
+    fn each_allowed_core_runs_at_the_share_on_any_pc() {
+        for cpus in [2, 8, 16] {
+            let c = Caps::from(&weak(2, 30), cpus).expect("valid");
+            assert!((c.cpu_cores(cpus) - 0.6).abs() < 1e-9, "{cpus} CPUs");
+        }
+        let tiny = Caps::from(&weak(1, 1), 256).expect("valid");
+        assert_eq!(tiny.cpu_rate, 1, "never 0, which Windows refuses");
     }
 
     #[test]

@@ -107,7 +107,7 @@ model = "whisper-large-v3"
 key_env = "GROQ_API_KEY"
 timeout_ms = 30000
 
-# Weak mode: the local server's job is capped to these cores, CPU share (percent) and memory (MiB).
+# Weak mode: the local server's job is capped to these cores, each at this speed (percent), and memory (MiB).
 [voice.weak]
 cores = 2
 rate_pct = 30
