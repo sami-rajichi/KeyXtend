@@ -16,37 +16,53 @@ static FR: Lang = Lang {
     ftl: "plain = Simple\ngroup =\n    .name = Nommé\nbroken line\nafter = Après\n",
 };
 
+/// The system language of this PC, which the layout's language must win over.
+const OS: &str = "fr-FR";
+
 #[test]
-fn auto_follows_the_windows_language() {
-    assert_eq!(pick(AUTO, "fr-FR").tag, "fr");
-    assert_eq!(pick(AUTO, "ar-TN").tag, "ar");
-    assert_eq!(pick(AUTO, "en-GB").tag, "en");
+fn auto_follows_the_layouts_language_not_the_systems() {
+    assert_eq!(pick(AUTO, "en", OS).tag, "en");
+    assert_eq!(pick(AUTO, "ar", OS).tag, "ar");
+    assert_eq!(pick(AUTO, "fr", "ar-TN").tag, "fr");
 }
 
 #[test]
-fn auto_falls_back_to_english() {
-    for os in ["de-DE", "zh-Hant-TW", "", "not a tag"] {
-        assert_eq!(pick(AUTO, os).tag, "en", "{os:?}");
+fn a_layout_language_without_texts_gives_english() {
+    for layout in ["de", "zh-Hant-TW", "not a tag"] {
+        assert_eq!(pick(AUTO, layout, OS).tag, "en", "{layout:?}");
     }
 }
 
 #[test]
-fn auto_reads_odd_but_real_tags() {
-    assert_eq!(pick(AUTO, "fr_CA").tag, "fr");
-    assert_eq!(pick(AUTO, "AR-tn").tag, "ar");
-    assert_eq!(pick(AUTO, "fr-FR-u-ca-gregory").tag, "fr");
+fn with_no_layout_known_the_system_language_speaks() {
+    assert_eq!(pick(AUTO, "", OS).tag, "fr");
+    assert_eq!(pick(AUTO, "", "de-DE").tag, "en");
 }
 
 #[test]
-fn a_supported_setting_wins_over_windows() {
-    assert_eq!(pick("ar", "fr-FR").tag, "ar");
-    assert_eq!(pick("en", "fr-FR").tag, "en");
+fn odd_but_real_tags_are_read() {
+    assert_eq!(pick(AUTO, "fr_CA", "").tag, "fr");
+    assert_eq!(pick(AUTO, "AR-tn", "").tag, "ar");
+    assert_eq!(pick(AUTO, "", "fr-FR-u-ca-gregory").tag, "fr");
 }
 
 #[test]
-fn an_unknown_setting_follows_windows() {
-    assert_eq!(pick("xx", "fr-FR").tag, "fr");
-    assert_eq!(pick("", "ar-TN").tag, "ar");
+fn a_supported_setting_pins_the_keyboards_language() {
+    assert_eq!(pick("ar", "fr", OS).tag, "ar");
+    assert_eq!(pick("fr", "en", "en-US").tag, "fr");
+}
+
+#[test]
+fn an_unknown_setting_follows_the_layout() {
+    assert_eq!(pick("xx", "ar", OS).tag, "ar");
+    assert_eq!(pick("", "en", OS).tag, "en");
+}
+
+#[test]
+fn the_system_language_ignores_the_layout_and_falls_back_to_english() {
+    assert_eq!(os_lang("ar-TN").tag, "ar");
+    assert_eq!(os_lang(OS).tag, "fr");
+    assert_eq!(os_lang("de-DE").tag, "en");
 }
 
 #[test]

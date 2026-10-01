@@ -129,6 +129,9 @@ pub trait KeyboardFace: Send + Sync {
     /// The live state, as JSON: legends, lights, the language key, an open panel and the window's place.
     fn state_json(&self) -> String;
 
+    /// The language of the layout shown, as `LangLabel::iso`; it only reads, so any thread may ask.
+    fn lang(&self) -> String;
+
     /// Does `action` and says what to redraw; a send or switch that failed comes back as a notice in the reply.
     ///
     /// # Errors

@@ -56,7 +56,8 @@ crates/
                          golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
-                         EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017)
+                         EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
+                         language, the tray's in the system's (ADR-0020)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
                          WCAG contrast and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
@@ -186,7 +187,7 @@ pub trait Module: Send + 'static {
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
 - Owned windows (shadows, bubble, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
-- Right-to-left layouts use `LayoutMirroring`; Arabic text uses the theme's Arabic font.
+- Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
 
 ## Platform notes
 

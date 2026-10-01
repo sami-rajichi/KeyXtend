@@ -15,8 +15,6 @@ Window {
     required property real s
     required property var view
     required property int rows
-    // The UI reads right to left, so the pager goes on the left and each row mirrors.
-    required property bool rtl
 
     // Row `index` of the whole list was picked, or a page button sent board key `id`.
     signal pick(int index)
@@ -70,8 +68,6 @@ Window {
         // High contrast outlines it, as the P1 panel did.
         border.width: box.lk.contrast ? box.lk.shape.line.px : 0
         border.color: box.p.pop_line
-        LayoutMirroring.enabled: box.rtl
-        LayoutMirroring.childrenInherit: true
 
         Column {
             id: list

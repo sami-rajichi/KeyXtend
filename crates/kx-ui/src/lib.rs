@@ -21,7 +21,7 @@ pub use bridges::harden::{QML_DIR, harden_qt, pin_imports};
 pub use bridges::install;
 pub use geom::Area;
 pub use hub::{Hub, HubError, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker};
-pub use i18n::{AUTO, I18n, LANGS, Lang, find, pick};
+pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, SPEC, UiSettings};
 pub use ui_module::{ID, MANIFEST, UiModule};
 

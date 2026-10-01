@@ -1,5 +1,5 @@
 // The top bar: move grip, suggestion chips, light or dark, the theme, the size buttons, minimise and close (mock-up
-// topBar plus the owner's sizes and theme button). An Arabic UI mirrors it, as Windows does.
+// topBar plus the owner's sizes and theme button). It never mirrors: in Arabic only its texts change (ADR-0020).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -7,7 +7,7 @@ Item {
     id: bar
 
     // Its box, the look, fonts, icons and texts, size, the preset shown (null between presets), how many presets there are,
-    // the size buttons' texts, and the mode.
+    // the size buttons' texts in the keyboard's language, and the mode.
     required property var box
     required property var lk
     required property var res
@@ -15,7 +15,6 @@ Item {
     required property var preset
     required property int presets
     required property var sizes
-    required property bool rtl
     required property bool dark
     // Suggestion chips, `{text, icon, ar}`; none until word suggestions come.
     property var chips: []
@@ -43,8 +42,6 @@ Item {
     y: box.y
     width: box.w
     height: box.h
-    LayoutMirroring.enabled: rtl
-    LayoutMirroring.childrenInherit: true
 
     // One top-bar button: `part` names its icon (`icons.toml [bar]`) and its name (`bar.*`); a size shows a letter.
     component Button: Item {

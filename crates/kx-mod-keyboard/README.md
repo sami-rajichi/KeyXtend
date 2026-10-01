@@ -74,6 +74,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 - `list`: null, or `{rows, hi, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page_back` and `page_on` name the board keys with the moves `PAGE_BACK` and `PAGE_ON` (null when the board has none), which the list's page buttons send as `panel_key`; the UI dims a button on the first or last page.
 - `at`: null, or where the window goes in physical pixels.
 
+`lang()` names the language of the layout shown (`LangLabel::iso`), which the UI's keyboard texts follow (ADR-0020); it only reads, so any thread may ask.
+
 `act(action)` says what to redraw in a `FaceReply`, with a notice key for the banner above the keyboard:
 
 | Action | Does | Reply |

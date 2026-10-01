@@ -7,6 +7,7 @@ import "../qml"
 import "fixtures/assets.js" as Assets
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 
 Item {
@@ -58,9 +59,9 @@ Item {
             const face = Face.states.list.list;
             return { rows: [...Array(n).keys()].map(row), hi: hi, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
         }
-        function makeList(v, rtl) {
+        function makeList(v, res) {
             const ui = createTemporaryObject(uiC, root);
-            return createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: v, rows: En.settings.pageRows, rtl: !!rtl, title: "list" });
+            return createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res || root.res, s: 1, view: v, rows: En.settings.pageRows, title: "list" });
         }
         // The rows a screen reader meets, and every row slot, padding too.
         function rowsOf(list) {
@@ -91,26 +92,31 @@ Item {
             compare(number.text, list.ui.pageText(2, 2));
         }
 
-        function test_the_arabic_ui_puts_the_pager_on_the_left_and_mirrors_the_rows() {
-            for (const rtl of [false, true]) {
-                const list = makeList(view(7, 0), rtl);
-                list.open();
-                waitForRendering(list.contentItem);
-                const back = button(list.contentItem, En.texts["page.back"]);
-                const row = rowsOf(list)[0];
-                const [pagerX, rowX] = [back, row].map(o => o.mapToItem(list.contentItem, 0, 0).x);
-                verify(rtl ? pagerX < rowX : pagerX > rowX, "pager " + pagerX + ", rows " + rowX);
-                const badge = all(row, o => o.text === "L0")[0];
-                const name = all(row, o => o.text === "Language 0")[0];
-                const [b, n] = [badge, name].map(o => o.mapToItem(row, 0, 0).x);
-                verify(rtl ? b > n : b < n, "badge " + b + ", name " + n);
-                list.visible = false;
-            }
+        // Arabic flips text only (ADR-0020): the pager stays on the right and each badge before its name.
+        function test_the_arabic_ui_keeps_the_lists_places_and_arabic_names_read_right_to_left() {
+            const ar = Object.assign({}, root.res, { tr: k => Ar.texts[k] !== undefined ? Ar.texts[k] : k });
+            const v = view(7, 0);
+            v.rows[1] = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
+            const list = makeList(v, ar);
+            list.open();
+            waitForRendering(list.contentItem);
+            const back = button(list.contentItem, Ar.texts["page.back"]);
+            const row = rowsOf(list)[0];
+            const [pagerX, rowX] = [back, row].map(o => o.mapToItem(list.contentItem, 0, 0).x);
+            verify(pagerX > rowX, "pager " + pagerX + ", rows " + rowX);
+            const badge = all(row, o => o.text === "L0")[0];
+            const name = all(row, o => o.text === "Language 0")[0];
+            const [b, n] = [badge, name].map(o => o.mapToItem(row, 0, 0).x);
+            verify(b < n, "badge " + b + ", name " + n);
+            const arabic = all(rowsOf(list)[1], o => o.text === "العربية")[0];
+            compare(arabic.effectiveHorizontalAlignment, Text.AlignRight, "Arabic reads right to left");
+            compare(name.effectiveHorizontalAlignment, Text.AlignLeft);
+            list.visible = false;
         }
 
         function test_a_pager_taller_than_its_rows_stays_inside_the_box() {
             const ui = createTemporaryObject(uiC, root);
-            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0), rows: 2, rtl: false, title: "list" });
+            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0), rows: 2, title: "list" });
             list.open();
             waitForRendering(list.contentItem);
             const back = button(list.contentItem, En.texts["page.back"]);
@@ -173,13 +179,13 @@ Item {
             const row = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
             const v = { rows: [row], hi: 0, keys: [], page_back: null, page_on: null };
             const ui = createTemporaryObject(uiC, root);
-            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, rtl: true, title: "list" });
+            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, title: "list" });
             const slot = slots(list)[0];
             const name = all(slot, o => o.text === row.name[0])[0];
             const sub = all(slot, o => o.text === root.res.space(row.name.slice(1)))[0];
             const room = slot.height - 2 * sh.row_pad_px[0];
             verify(name.implicitHeight + sub.implicitHeight <= room, "no clipping: " + (name.implicitHeight + sub.implicitHeight) + " in " + room);
-            const latinOnly = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: view(3, 0), rows: 5, rtl: true, title: "list" });
+            const latinOnly = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: view(3, 0), rows: 5, title: "list" });
             verify(latinOnly.rowH < list.rowH, "a list with no Arabic row keeps its height");
         }
 

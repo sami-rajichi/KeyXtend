@@ -13,6 +13,7 @@ pub fn label(id: LayoutId, facts: &LangFacts, short: &BTreeMap<String, String>) 
         id,
         short: short_name(&facts.iso, short),
         name: name_parts(facts),
+        iso: facts.iso.to_ascii_lowercase(),
         rtl: facts.rtl,
         arabic: script::is_arabic(&facts.native),
     }
@@ -74,6 +75,13 @@ mod tests {
     #[test]
     fn a_code_in_capitals_still_finds_its_short_name() {
         assert_eq!(label(ID, &facts("AR", "", "", true), &short()).short, "ع");
+    }
+
+    #[test]
+    fn the_label_carries_the_language_code_in_lower_case() {
+        assert_eq!(label(ID, &facts("FR", "", "", false), &short()).iso, "fr");
+        assert_eq!(label(ID, &facts("ar", "", "", true), &short()).iso, "ar");
+        assert!(label(ID, &LangFacts::default(), &short()).iso.is_empty());
     }
 
     #[test]

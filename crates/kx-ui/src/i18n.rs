@@ -14,7 +14,7 @@ use unic_langid::LanguageIdentifier;
 pub struct Lang {
     /// Its BCP-47 tag, the value the `[ui] language` setting names.
     pub tag: &'static str,
-    /// It is written right to left, so the UI mirrors.
+    /// It is written right to left: its texts read that way, in the theme's Arabic font, and nothing mirrors.
     pub rtl: bool,
     /// Its Fluent file, compiled in.
     pub ftl: &'static str,
@@ -39,7 +39,7 @@ pub static LANGS: [Lang; 3] = [
     },
 ];
 
-/// The `[ui] language` value that follows the Windows display language.
+/// The `[ui] language` value that follows the keyboard's language, the one of the layout in front (ADR-0020).
 pub const AUTO: &str = "auto";
 
 /// Where a key's group ends and its name starts.
@@ -51,11 +51,21 @@ const TAG_SEPARATORS: [char; 2] = ['-', '_'];
 /// A language's texts, safe to share between threads.
 type Bundle = FluentBundle<FluentResource>;
 
-/// The language for the `[ui] language` value `setting` when Windows shows `os_tag`.
-/// A supported tag wins; any other value, `auto` included, follows `os_tag`, else English.
+/// The keyboard's language: a supported `[ui] language` value `setting` pins it; any other value, `auto` included,
+/// follows the layout's language `layout`, else English. While no layout names one, it is the system's `os`.
 #[must_use]
-pub fn pick(setting: &str, os_tag: &str) -> &'static Lang {
-    find(setting).unwrap_or_else(|| negotiate(os_tag))
+pub fn pick(setting: &str, layout: &str, os: &str) -> &'static Lang {
+    let follow = || match layout {
+        "" => os_lang(os),
+        _ => negotiate(layout),
+    };
+    find(setting).unwrap_or_else(follow)
+}
+
+/// The system's language, which the tray icon and its menu speak: `os` matched to a language the UI has, else English.
+#[must_use]
+pub fn os_lang(os: &str) -> &'static Lang {
+    negotiate(os)
 }
 
 /// The language with tag `tag`, if the UI has it.
@@ -64,9 +74,9 @@ pub fn find(tag: &str) -> Option<&'static Lang> {
     LANGS.iter().find(|l| l.tag == tag)
 }
 
-/// The language closest to `os_tag`, such as French for `fr-CA`, else the fallback.
-fn negotiate(os_tag: &str) -> &'static Lang {
-    let wanted: Vec<LanguageIdentifier> = langid(os_tag).into_iter().collect();
+/// The language closest to `tag`, such as French for `fr-CA`, else the fallback.
+fn negotiate(tag: &str) -> &'static Lang {
+    let wanted: Vec<LanguageIdentifier> = langid(tag).into_iter().collect();
     let have: Vec<LanguageIdentifier> = LANGS
         .iter()
         .map(|l| langid(l.tag).unwrap_or_default())

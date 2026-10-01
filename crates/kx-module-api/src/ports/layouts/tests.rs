@@ -18,6 +18,7 @@ fn table() -> LayoutTable {
             id: AR,
             short: "ع".into(),
             name: vec!["العربية".into(), "101".into()],
+            iso: "ar".into(),
             rtl: true,
             arabic: true,
         },

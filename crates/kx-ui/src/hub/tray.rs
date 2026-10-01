@@ -21,10 +21,10 @@ impl Hub {
         self.ports.tray.icon_px()
     }
 
-    /// Shows `image` as the tray icon with the keyboard window's title as its tooltip, or changes it; call it on the UI
-    /// thread. False when the system refused or the icon was hidden for good; its events come back as `Wake::Tray`.
+    /// Shows `image` as the tray icon with the keyboard window's title in the system's language as its tooltip, or
+    /// changes it; call it on the UI thread. False when refused or hidden for good; its events come as `Wake::Tray`.
     pub fn tray_show(self: &Arc<Self>, image: &TrayImage) -> bool {
-        let tip = self.i18n().text(WINDOW_KEYBOARD);
+        let tip = self.tray_i18n().text(WINDOW_KEYBOARD);
         // Taken in its own statement, so the slot's lock is free again while the port works.
         let slot = std::mem::take(&mut *held(&self.tray));
         match slot {

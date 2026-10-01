@@ -130,6 +130,11 @@ impl KeyboardFace for Face {
         json(&self.lock().state(&self.keys, &self.nav_keys))
     }
 
+    fn lang(&self) -> String {
+        let layouts = self.lock().layouts();
+        layouts.current().label.iso.clone()
+    }
+
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
             FaceAction::Tap { id, back } => self.tap(id.as_str(), back),

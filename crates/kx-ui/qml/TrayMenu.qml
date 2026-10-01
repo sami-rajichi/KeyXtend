@@ -1,17 +1,17 @@
-// The tray icon's menu (mock-up .ctx, in the theme's panel colours): Show keyboard and Quit. It opens by the tray icon,
-// never takes focus, and closes on a pick, another click on the icon, a press on our windows or a new front window.
+// The tray icon's menu (mock-up .ctx, in the theme's panel colours): Show keyboard and Quit, in the system's language
+// (ADR-0020). It opens by the tray icon, never takes focus, and closes on a pick, another click on the icon, a press on
+// our windows or a new front window.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Window {
     id: menu
 
-    // The look, fonts, icons and texts, and where a `w` by `h` menu goes for a click at physical (x, y): a Qt point or null.
+    // The look, fonts, icons and texts (`res.tray`), and where a `w` by `h` menu goes for a click at physical (x, y): a Qt
+    // point or null.
     required property var lk
     required property var res
     required property var spot
-    // The UI reads right to left, so each icon goes on the right of its text.
-    required property bool rtl
     // How long after it opens a new front window leaves it open, in ms (`[ui] tray_grace_ms`), and the clock in ms.
     required property int graceMs
     property var now: () => Date.now()
@@ -29,7 +29,7 @@ Window {
     readonly property var p: lk.palette
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
-    title: res.tr("window.menu")
+    title: res.tray("window.menu")
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole, so the widest item always fits.
@@ -80,8 +80,6 @@ Window {
         border.color: menu.p.pop_line
         // It grows from the corner by the icon (.ctx transform-origin), which is its bottom left.
         transformOrigin: Item.BottomLeft
-        LayoutMirroring.enabled: menu.rtl
-        LayoutMirroring.childrenInherit: true
         Accessible.role: Accessible.PopupMenu
         Accessible.name: menu.title
 
@@ -93,7 +91,7 @@ Window {
             MenuItem {
                 id: showItem
                 part: "show"
-                text: menu.res.tr("tray.show")
+                text: menu.res.tray("tray.show")
                 onClicked: menu.picked(menu.showKeyboard)
             }
             // The rule between items (.ctx hr).
@@ -111,7 +109,7 @@ Window {
             MenuItem {
                 id: quitItem
                 part: "quit"
-                text: menu.res.tr("tray.quit")
+                text: menu.res.tray("tray.quit")
                 onClicked: menu.picked(menu.quitApp)
             }
         }
@@ -156,7 +154,7 @@ Window {
             Label {
                 anchors.verticalCenter: parent.verticalCenter
                 text: it.text
-                font.family: menu.res.fam.ui
+                font.family: menu.res.fam.tray
                 font.pixelSize: menu.sh.font_px
                 color: it.ink
             }

@@ -16,6 +16,8 @@ pub struct LangLabel {
     pub short: String,
     /// The space bar's text parts: the language, then the layout when known; the UI joins them.
     pub name: Vec<String>,
+    /// The language's ISO 639 code in lower case, such as `fr`, which the keyboard's texts follow; empty when unknown.
+    pub iso: String,
     /// The language is written right to left.
     pub rtl: bool,
     /// The labels need the Arabic font.

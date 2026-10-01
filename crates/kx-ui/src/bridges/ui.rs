@@ -1,7 +1,9 @@
-//! The `Ui` object: the look, the texts, the notices, the tray icon, where pop-ups go and the app's commands. It
-//! follows the system look and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
+//! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go and the
+//! app's commands. It follows the system look and hears the hub's wakes on the Qt thread, so make one per app, in the
+//! root file.
 
 mod spots;
+mod texts;
 mod tray;
 
 use super::{hub, qs};
@@ -31,17 +33,25 @@ pub mod qobject {
         #[qml_element]
         type Ui = super::UiRust;
 
-        /// The timings, paging and text direction, as JSON.
+        /// The timings and paging, as JSON.
         #[qinvokable]
         fn settings_json(&self) -> QString;
+
+        /// The keyboard's language, its size buttons' texts and the tray's language, as JSON.
+        #[qinvokable]
+        fn lang_json(&self) -> QString;
 
         /// The look to draw now, as JSON.
         #[qinvokable]
         fn look_json(&self) -> QString;
 
-        /// The text of translation key `key`.
+        /// The text of translation key `key`, in the keyboard's language.
         #[qinvokable]
         fn text(&self, key: &QString) -> QString;
+
+        /// The text of translation key `key`, in the system's language, for the tray menu.
+        #[qinvokable]
+        fn tray_text(&self, key: &QString) -> QString;
 
         /// The name of `id` in group `group`, such as a theme or a top-bar button.
         #[qinvokable]
@@ -84,6 +94,10 @@ pub mod qobject {
         #[qinvokable]
         fn take_notices(&self) -> QString;
 
+        /// The notices the banner shows, in the keyboard's language now, as `take_notices` gives them.
+        #[qinvokable]
+        fn shown_notices(&self) -> QString;
+
         /// Try again on notice `id`; true when the app was asked.
         #[qinvokable]
         fn retry(&self, id: i64) -> bool;
@@ -112,9 +126,13 @@ pub mod qobject {
         #[qinvokable]
         fn quit(&self) -> bool;
 
-        /// The settings, texts or face changed: read everything again.
+        /// The settings or face changed: read everything again.
         #[qsignal]
         fn settings_changed(self: Pin<&mut Self>);
+
+        /// The keyboard's language changed: read only its texts again.
+        #[qsignal]
+        fn texts_changed(self: Pin<&mut Self>);
 
         /// The look changed.
         #[qsignal]
@@ -182,6 +200,7 @@ impl cxx_qt::Initialize for qobject::Ui {
 fn woken(ui: Pin<&mut qobject::Ui>, wake: Wake) {
     match wake {
         Wake::Settings => ui.settings_changed(),
+        Wake::Texts => ui.texts_changed(),
         Wake::Look => ui.look_changed(),
         Wake::Notices => ui.notices_waiting(),
         Wake::Show => ui.show_asked(),
@@ -205,37 +224,12 @@ impl qobject::Ui {
         qs(&self.with(NULL.to_owned(), Hub::look_json))
     }
 
-    fn text(&self, key: &QString) -> QString {
-        let key = key.to_string();
-        qs(&self.with(key.clone(), |h| h.i18n().text(&key)))
-    }
-
-    fn name_of(&self, group: &QString, id: &QString) -> QString {
-        let (group, id) = (group.to_string(), id.to_string());
-        qs(&self.with(id.clone(), |h| h.i18n().name_of(&group, &id)))
-    }
-
-    fn space(&self, parts: &QString) -> QString {
-        let Ok(parts) = serde_json::from_str::<Vec<String>>(&parts.to_string()) else {
-            tracing::warn!("QML sent space bar parts that do not read");
-            return QString::default();
-        };
-        qs(&self.with(String::new(), |h| h.i18n().space(&parts)))
-    }
-
-    fn more_text(&self, n: i32) -> QString {
-        let n = usize::try_from(n).unwrap_or_default();
-        qs(&self.with(String::new(), |h| h.i18n().more(n)))
-    }
-
-    fn page_text(&self, at: i32, count: i32) -> QString {
-        let (at, count) = (usize::try_from(at), usize::try_from(count));
-        let (at, count) = (at.unwrap_or_default(), count.unwrap_or_default());
-        qs(&self.with(String::new(), |h| h.i18n().page(at, count)))
-    }
-
     fn take_notices(&self) -> QString {
         qs(&self.with(NULL.to_owned(), |h| json(&h.take_notices())))
+    }
+
+    fn shown_notices(&self) -> QString {
+        qs(&self.with(NULL.to_owned(), |h| json(&h.shown_notices())))
     }
 
     fn retry(&self, id: i64) -> bool {

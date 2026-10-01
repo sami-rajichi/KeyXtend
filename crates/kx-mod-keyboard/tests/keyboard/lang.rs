@@ -56,6 +56,16 @@ fn arabic_takes_the_arabic_font_and_reads_right_to_left() {
 }
 
 #[test]
+fn the_face_names_the_language_of_the_layout_shown() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.face.lang(), "en");
+    for (name, iso) in [("fr-fr", "fr"), ("ar-tn", "ar"), ("en-us", "en")] {
+        r.switch(name);
+        assert_eq!(r.face.lang(), iso, "{name}");
+    }
+}
+
+#[test]
 fn the_cycle_steps_on_wherever_it_is_clicked_and_lights_one_dot() {
     let r = Rig::new(&GOLDEN, Some(("lang_key", "cycle".into())));
     r.click("lang", true).unwrap();

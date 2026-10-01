@@ -43,7 +43,6 @@ Glow {
         s: panel.win.s
         view: panel.win.st.list
         rows: panel.win.cfg.pageRows
-        rtl: panel.win.cfg.rtl
         title: panel.win.res.tr("window.list")
         onPick: i => panel.win.redraw(panel.win.keyboard.langPick(i))
         onPage: id => panel.win.redraw(panel.win.keyboard.panelKey(id))

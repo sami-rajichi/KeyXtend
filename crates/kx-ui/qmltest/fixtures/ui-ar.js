@@ -2,9 +2,12 @@
 // Written by kx-ui's texts test; do not edit.
 var settings = {
   "guardDelayMs": 300,
-  "lang": "ar",
   "pageRows": 5,
   "pollMs": 16,
+  "tipMs": 500,
+  "trayGraceMs": 500
+};
+var lang = {
   "rtl": true,
   "sizes": [
     {
@@ -20,8 +23,11 @@ var settings = {
       "name": "كبير"
     }
   ],
-  "tipMs": 500,
-  "trayGraceMs": 500
+  "tag": "ar",
+  "tray": {
+    "rtl": true,
+    "tag": "ar"
+  }
 };
 var texts = {
   "banner.more": "⁨{$more}⁩ إشعار آخر",

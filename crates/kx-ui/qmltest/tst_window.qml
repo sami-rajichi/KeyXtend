@@ -149,14 +149,14 @@ Item {
             win.visible = false;
         }
 
-        function test_the_arabic_ui_mirrors_the_top_bar_and_not_the_keys() {
+        // Arabic flips text only (ADR-0020): the top bar and the keys keep their places.
+        function test_the_arabic_ui_keeps_the_top_bar_and_the_keys_in_place() {
             const en = make();
-            const ar = make({ settings: Ar.settings, texts: Ar.texts });
-            const grip = named(ar, Ar.texts["bar.grip"]);
-            const close = named(ar, Ar.texts["bar.close"]);
-            verify(grip.mapToItem(null, 0, 0).x > close.mapToItem(null, 0, 0).x, "grip on the right");
-            const q = [named(en, "q"), named(ar, "q")].map(k => k.mapToItem(null, 0, 0).x);
-            compare(q[1], q[0], "the keys stay where the board puts them");
+            const ar = make({ settings: Ar.settings, lang: Ar.lang, texts: Ar.texts });
+            const at = (win, name) => named(win, name).mapToItem(null, 0, 0).x;
+            verify(at(ar, Ar.texts["bar.grip"]) < at(ar, Ar.texts["bar.close"]), "grip on the left");
+            compare(at(ar, Ar.texts["bar.grip"]), at(en, En.texts["bar.grip"]), "the bar keeps its places");
+            compare(at(ar, "q"), at(en, "q"), "the keys stay where the board puts them");
             compare(ar.title, Ar.texts["window.keyboard"]);
         }
 
@@ -195,7 +195,7 @@ Item {
 
         function test_one_size_button_per_preset_and_none_lit_off_preset() {
             const win = make();
-            compare(sizeButtons(win).map(b => b.text), En.settings.sizes.map(z => z.label));
+            compare(sizeButtons(win).map(b => b.text), En.lang.sizes.map(z => z.label));
             compare(sizeButtons(win).filter(b => b.lit).map(b => b.Accessible.name), [En.texts["sizename.s"]]);
             win.visible = true;
             waitForRendering(win.contentItem);
@@ -230,9 +230,9 @@ Item {
         // Each label in look `lk` and texts `t`, at every size in `sizes`, is set in the theme's font and fits; one
         // hidden window takes each size in turn, and the keyboard moves the same keys.
         function labelsFit(lk, t, sizes) {
-            const win = make({ settings: t.settings, texts: t.texts, look: lk });
+            const win = make({ settings: t.settings, lang: t.lang, texts: t.texts, look: lk });
             const font = lk.look.latin_fonts[0];
-            const where = font + " " + t.settings.lang + " ";
+            const where = font + " " + t.lang.tag + " ";
             const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
             verify(keys.length > 0, where + "labels");
             const labels = keys.map(k => all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0]);

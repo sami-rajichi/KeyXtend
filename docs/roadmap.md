@@ -78,7 +78,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
 | G5 Hold engine (core) | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
 | G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
-| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Noto Sans Arabic for Dolch), a mirrored right-to-left panel, and an Arabic text field whose caret moves correctly |
+| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Noto Sans Arabic for Dolch), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode. Frame times measured with PresentMon; a pressed key lights up on the next frame |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
 | G10 Screen readers | Narrator and NVDA read and activate every key |
@@ -227,7 +227,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 - The complete settings window (paged, steppers): a separate window with its own icon, in the keyboard's language, carrying each theme's character as strongly as the keyboard does (owner, 2026-09-29).
 - The paged list panel rebuilt to the full mock-up design.
 - The quick settings strip (theme, light or dark, size), shown only when asked; "Reset size" and the bubble corner in Settings.
-- UI translations in EN/FR/AR, with an RTL settings window.
+- UI translations in EN/FR/AR; the settings window's Arabic text reads right to left in place (ADR-0020).
 
 ## Phase 14 — Release pipeline — v1.0 (Windows)
 

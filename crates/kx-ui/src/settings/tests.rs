@@ -55,7 +55,7 @@ fn a_theme_that_kx_theme_lacks_is_refused() {
 }
 
 #[test]
-fn a_language_is_auto_or_one_the_ui_speaks() {
+fn a_language_is_auto_or_one_the_keyboard_speaks() {
     for tag in ["auto", "en", "fr", "ar"] {
         assert_eq!(
             validate_as::<UiSettings>(&with("language", tag)),

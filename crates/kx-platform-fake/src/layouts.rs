@@ -148,12 +148,13 @@ impl Layouts for FakeLayouts {
     }
 }
 
-/// A layout file as the layouts service serves it; its label holds only the id and the direction,
-/// since naming layouts is the layouts module's work.
+/// A layout file as the layouts service serves it; its label holds only the id, the language code and the
+/// direction, since naming layouts is the layouts module's work.
 impl From<&LayoutFile> for LayoutTable {
     fn from(file: &LayoutFile) -> Self {
         let label = LangLabel {
             id: file.id,
+            iso: file.facts.iso.to_ascii_lowercase(),
             rtl: file.facts.rtl,
             ..LangLabel::default()
         };
@@ -188,6 +189,8 @@ mod tests {
         assert_eq!(*shown, LayoutTable::from(&files[0]));
         assert_eq!(shown.keys[&Q].base, "q");
         assert!(fake.list()[2].rtl, "Arabic is right to left");
+        let isos: Vec<String> = fake.list().into_iter().map(|l| l.iso).collect();
+        assert_eq!(isos, ["en", "fr", "ar"], "each label carries its language");
     }
 
     #[test]

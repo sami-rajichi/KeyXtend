@@ -6,14 +6,13 @@ import QtQuick
 Window {
     id: note
 
-    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, its widest width in Qt units, the UI's
-    // direction, and where a pop-up of a given size goes: `spot(w, h)` gives a Qt point or null.
+    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, its widest width in Qt units, and where a
+    // pop-up of a given size goes: `spot(w, h)` gives a Qt point or null. It never mirrors; Arabic text reads right to left.
     required property var ui
     required property var lk
     required property var res
     required property real s
     required property real widest
-    required property bool rtl
     required property var spot
 
     // The notice shown, then those waiting: `{id, text, retry}` each.
@@ -51,6 +50,12 @@ Window {
         function onNoticesWaiting() {
             note.take();
         }
+        function onTextsChanged() {
+            note.retell();
+        }
+        function onSettingsChanged() {
+            note.retell();
+        }
     }
     Component.onCompleted: take()
     onWidthChanged: follow()
@@ -64,6 +69,11 @@ Window {
         queue = queue.concat(got);
         if (!visible)
             Qt.callLater(open);
+    }
+    // The keyboard's language changed: each notice in the queue reads again in it.
+    function retell() {
+        const now = JSON.parse(ui.shownNotices()) || [];
+        queue = queue.map(n => now.find(m => m.id === n.id) || n);
     }
     // Places the banner over the keyboard and drops it in.
     function open() {
@@ -130,8 +140,6 @@ Window {
         color: note.p.pop_bg
         border.width: note.lk.contrast ? note.lk.shape.line.px : 0
         border.color: note.p.pop_line
-        LayoutMirroring.enabled: note.rtl
-        LayoutMirroring.childrenInherit: true
         Accessible.role: Accessible.AlertMessage
         Accessible.name: note.shown ? note.shown.text : ""
         Accessible.description: note.more

@@ -8,7 +8,7 @@ follow_accent = false
 reduced_motion = false
 # What sits behind the keyboard: "none" (a solid plate), "mica" or "acrylic".
 backdrop = "none"
-# The UI language: "en", "fr", "ar", or "auto" to follow the Windows display language.
+# The keyboard's language: "auto" follows the layout in front, "en", "fr" or "ar" pins it; the tray follows Windows.
 language = "auto"
 # How long the pointer rests on a button before its tip shows, in ms.
 tip_ms = 500

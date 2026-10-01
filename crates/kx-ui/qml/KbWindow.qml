@@ -12,14 +12,15 @@ Window {
     required property var ui
     required property var keyboard
 
-    // Settings, look, board and state as last read; each is null until it reads, and the board while the keyboard stops.
+    // Settings, language, look, board and state as last read; each is null until it reads, the board while it stops.
     property var cfg: JSON.parse(ui.settingsJson())
+    property var tongue: JSON.parse(ui.langJson())
     property var lk: JSON.parse(ui.lookJson())
     property var board: JSON.parse(keyboard.boardJson())
     property var st: JSON.parse(keyboard.stateJson())
     // The icon folder and type and the font files, compiled into the app.
     readonly property var assets: JSON.parse(ui.assets())
-    // Bumped on each settings change, so every text is looked up again in the new language.
+    // Bumped on each settings or language change, so every text is looked up again in the new language.
     property int texts: 0
     // Where the window is, in Qt units; its shadow reads it too, so both move in the same step.
     property point at: Qt.point(0, 0)
@@ -39,7 +40,7 @@ Window {
     signal touched
 
     readonly property bool running: board !== null
-    readonly property bool ready: running && st !== null && lk !== null && cfg !== null
+    readonly property bool ready: running && st !== null && lk !== null && cfg !== null && tongue !== null
     readonly property real s: running ? board.size : 1
     readonly property real corner: ready ? lk.shape.extra.corner_px[0] * s : 0
     readonly property var res: resources(texts, fontsIn)
@@ -75,6 +76,9 @@ Window {
         function onLookChanged() {
             win.relook();
         }
+        function onTextsChanged() {
+            win.retext();
+        }
     }
     // Not owned by the keyboard: Qt shows no owned window while its owner is hidden, and the bubble needs tips too.
     Loader {
@@ -104,7 +108,7 @@ Window {
         }
     }
 
-    // The fonts, icons and texts the parts draw with; `n` and `f` make it run again as texts and fonts change.
+    // The fonts, icons and texts (keyboard's and tray's) the parts draw with; `n` and `f` rerun it as they change.
     function resources(n, f) {
         const fam = lk ? families(f) : {};
         return {
@@ -112,6 +116,7 @@ Window {
             icons: assets.icons,
             ext: assets.ext,
             tr: key => ui.text(key),
+            tray: key => ui.trayText(key),
             bar: id => ui.nameOf("bar", id),
             dpad: id => ui.nameOf("dpad", id),
             space: parts => ui.space(JSON.stringify(parts)),
@@ -124,20 +129,27 @@ Window {
         const all = Qt.fontFamilies();
         return list.find(f => all.indexOf(f) >= 0) || list[list.length - 1];
     }
-    // The Latin and Arabic families, and the UI language's.
+    // The Latin and Arabic families, and those of the keyboard's language and the tray's.
     function families(f) {
         const latin = pick(lk.look.latin_fonts);
         const arabic = pick(lk.look.arabic_fonts);
-        return { latin: latin, arabic: arabic, ui: cfg && cfg.rtl ? arabic : latin };
+        const of = l => l && l.rtl ? arabic : latin;
+        return { latin: latin, arabic: arabic, ui: of(tongue), tray: of(tongue && tongue.tray) };
     }
 
-    // Reads everything again: the settings, texts or face changed.
+    // Reads everything again: the settings or face changed.
     function reread() {
         cfg = JSON.parse(ui.settingsJson());
-        texts++;
+        retext();
         relook();
         board = JSON.parse(keyboard.boardJson());
         restate();
+    }
+    // The keyboard's language changed: only its texts are read again, and a tip in the last language closes.
+    function retext() {
+        tongue = JSON.parse(ui.langJson());
+        texts++;
+        hint("", null);
     }
     // Reads the look again, and the backdrop, which follows light or dark.
     function relook() {

@@ -51,8 +51,7 @@ Item {
             s: body.s
             preset: body.board.preset
             presets: body.board.presets.length
-            sizes: body.win.cfg.sizes
-            rtl: body.win.cfg.rtl
+            sizes: body.win.tongue.sizes
             dark: body.lk.dark
             onGrip: mover.startMove()
             onFlip: body.win.flip()

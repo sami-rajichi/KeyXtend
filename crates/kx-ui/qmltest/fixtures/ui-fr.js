@@ -2,9 +2,12 @@
 // Written by kx-ui's texts test; do not edit.
 var settings = {
   "guardDelayMs": 300,
-  "lang": "fr",
   "pageRows": 5,
   "pollMs": 16,
+  "tipMs": 500,
+  "trayGraceMs": 500
+};
+var lang = {
   "rtl": false,
   "sizes": [
     {
@@ -20,8 +23,11 @@ var settings = {
       "name": "Grand"
     }
   ],
-  "tipMs": 500,
-  "trayGraceMs": 500
+  "tag": "fr",
+  "tray": {
+    "rtl": false,
+    "tag": "fr"
+  }
 };
 var texts = {
   "banner.more": "⁨{$more}⁩ autres notifications",

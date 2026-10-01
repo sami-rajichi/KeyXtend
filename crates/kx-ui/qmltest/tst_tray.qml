@@ -5,6 +5,7 @@ import QtTest
 import "../qml"
 import "fixtures/assets.js" as Assets
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-dark.js" as Dark
 
@@ -13,11 +14,12 @@ Item {
     width: 200
     height: 100
 
+    // The tray menu speaks the system's language, through `tray`.
     readonly property var res: ({
-        fam: { latin: "Segoe UI", arabic: "Segoe UI", ui: "Segoe UI" },
+        fam: { latin: "Segoe UI", arabic: "Segoe UI", ui: "Segoe UI", tray: "Segoe UI" },
         icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
         ext: Assets.assets.ext,
-        tr: k => En.texts[k] !== undefined ? En.texts[k] : k
+        tray: k => En.texts[k] !== undefined ? En.texts[k] : k
     })
 
     Component { id: uiC; FakeUi {} }
@@ -33,15 +35,15 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A menu whose spot asks a stand-in Ui, as the root does, and that Ui; `rtl` for the Arabic UI, and `more`
-        // for other properties, such as a clock.
-        function makeMenu(rtl, more) {
+        // A menu whose spot asks a stand-in Ui, as the root does, and that Ui; `res` for other texts, and `more` for
+        // other properties, such as a clock.
+        function makeMenu(res, more) {
             const ui = createTemporaryObject(uiC, root);
             const spot = (x, y, w, h) => {
                 const p = JSON.parse(ui.menuAt(x, y, w, h));
                 return Qt.point(p.x, p.y);
             };
-            const props = { lk: N.lk, res: root.res, spot: spot, rtl: !!rtl, graceMs: En.settings.trayGraceMs };
+            const props = { lk: N.lk, res: res || root.res, spot: spot, graceMs: En.settings.trayGraceMs };
             return [createTemporaryObject(menuC, root, Object.assign(props, more || {})), ui];
         }
         // Every item under `item` for which `ok` holds.
@@ -67,15 +69,17 @@ Item {
             compare(popup.Accessible.name, En.texts["window.menu"]);
         }
 
-        function test_the_arabic_menu_puts_each_icon_on_the_right_of_its_text() {
-            for (const rtl of [false, true]) {
-                const [menu] = makeMenu(rtl);
-                const item = items(menu)[0];
-                const icon = all(item, o => o.tint !== undefined && o.icon !== undefined)[0];
-                const text = all(item, o => o.text === En.texts["tray.show"] && o.font !== undefined)[0];
-                const [i, t] = [icon, text].map(o => o.mapToItem(item, 0, 0).x);
-                verify(rtl ? i > t : i < t, (rtl ? "right to left: " : "left to right: ") + i + " " + t);
-            }
+        // Arabic flips text only (ADR-0020): each icon stays on the left of its text.
+        function test_an_arabic_system_keeps_each_icon_left_of_its_text() {
+            const ar = Object.assign({}, root.res, { tray: k => Ar.texts[k] !== undefined ? Ar.texts[k] : k });
+            const [menu] = makeMenu(ar);
+            compare(menu.title, Ar.texts["window.menu"]);
+            const item = items(menu)[0];
+            compare(item.Accessible.name, Ar.texts["tray.show"]);
+            const icon = all(item, o => o.tint !== undefined && o.icon !== undefined)[0];
+            const text = all(item, o => o.text === Ar.texts["tray.show"] && o.font !== undefined)[0];
+            const [i, t] = [icon, text].map(o => o.mapToItem(item, 0, 0).x);
+            verify(i < t, "icon " + i + ", text " + t);
         }
 
         function test_a_click_on_the_icon_opens_it_above_the_click_and_another_closes_it() {
@@ -107,9 +111,9 @@ Item {
         function test_a_long_translation_widens_the_menu() {
             const ui = createTemporaryObject(uiC, root);
             const long = "Show the keyboard again, please";
-            const res = Object.assign({}, root.res, { tr: k => k === "tray.show" ? long : root.res.tr(k) });
+            const res = Object.assign({}, root.res, { tray: k => k === "tray.show" ? long : root.res.tray(k) });
             const spot = () => Qt.point(0, 0);
-            const menu = createTemporaryObject(menuC, root, { lk: N.lk, res: res, spot: spot, rtl: false, graceMs: 0 });
+            const menu = createTemporaryObject(menuC, root, { lk: N.lk, res: res, spot: spot, graceMs: 0 });
             const item = items(menu)[0];
             verify(menu.width > N.lk.shape.menu.width_px, "wider than the smallest menu: " + menu.width);
             verify(menu.width >= item.implicitWidth + 2 * N.lk.shape.menu.pad_px, "the item fits");
@@ -128,7 +132,7 @@ Item {
         function test_a_new_front_window_closes_it_only_after_the_grace() {
             let t = 1000;
             const grace = En.settings.trayGraceMs;
-            const [menu] = makeMenu(false, { now: () => t });
+            const [menu] = makeMenu(null, { now: () => t });
             menu.toggle(300, 500);
             t += grace - 1;
             menu.away();

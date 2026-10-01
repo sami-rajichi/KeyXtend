@@ -134,8 +134,8 @@ References: Material dark-theme guidance, GitHub "Dark dimmed".
 ### 3.6 Languages of the UI
 
 - The keyboard's own UI text (settings, tooltips) is translatable from day one, from one translation file per language.
-- v1 ships EN, FR and AR, including right-to-left layout of the settings window for Arabic.
-- Qt mirrors layouts for right-to-left (`LayoutMirroring`) and edits Arabic text with a correct caret (gate G7, ADR-0013).
+- v1 ships EN, FR and AR. The keyboard's text, and later the settings window's, follows the language of the layout in front; the tray follows the system's (ADR-0020).
+- Arabic flips text only: windows and controls keep their places, Arabic text reads right to left, and Qt edits it with a correct caret (gate G7, ADR-0013, ADR-0020).
 - Our UI still prefers pickers and steppers over text fields, since they need fewer clicks.
 
 ---

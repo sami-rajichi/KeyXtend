@@ -12,6 +12,7 @@ fn label(id: LayoutId, short: &str, parts: &[&str], arabic: bool) -> LangLabel {
         name: parts.iter().map(|&p| p.to_owned()).collect(),
         rtl: arabic,
         arabic,
+        ..LangLabel::default()
     }
 }
 

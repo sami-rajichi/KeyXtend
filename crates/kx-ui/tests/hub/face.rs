@@ -207,7 +207,7 @@ fn the_guard_stops_after_its_last_try_or_an_error() {
 }
 
 #[test]
-fn the_face_may_send_a_notice_while_it_acts() {
+fn the_face_may_send_a_notice_or_read_the_texts_while_it_acts() {
     let (rig, _face, _host) = Rig::with_face();
     let hub = std::sync::Arc::clone(&rig.hub);
     let face = std::sync::Arc::new(Echo(hub));
@@ -223,9 +223,17 @@ fn the_face_may_send_a_notice_while_it_acts() {
         1,
         "no lock is held while the face acts"
     );
+    assert_eq!(
+        rig.hub.i18n().lang().tag,
+        ECHO_LANG,
+        "nor while it names its language"
+    );
 }
 
-/// A face that sends a notice through the hub from inside `act`, as a failed settings save would.
+/// The language of the layout `Echo` shows.
+const ECHO_LANG: &str = "fr";
+
+/// A face that calls the hub from inside `act` and `lang`, as a failed settings save would send a notice.
 struct Echo(std::sync::Arc<kx_ui::Hub>);
 
 impl kx_module_api::ports::KeyboardFace for Echo {
@@ -237,6 +245,11 @@ impl kx_module_api::ports::KeyboardFace for Echo {
         String::new()
     }
 
+    fn lang(&self) -> String {
+        let _ = self.0.i18n();
+        ECHO_LANG.to_owned()
+    }
+
     fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {
         let key = keys::SETTINGS_UNSAVED;
         self.0.notice(kx_module_api::Notice {
@@ -244,6 +257,9 @@ impl kx_module_api::ports::KeyboardFace for Echo {
             module: None,
             args: Vec::new(),
         });
-        Ok(FaceReply::default())
+        Ok(FaceReply {
+            state: true,
+            ..FaceReply::default()
+        })
     }
 }

@@ -9,7 +9,7 @@ use serde::Serialize;
 pub struct Shown {
     /// Names it for Try again or OK.
     pub id: u64,
-    /// Its text in the UI language.
+    /// Its text in the keyboard's language.
     pub text: String,
     /// It offers Try again, as a failed module does.
     pub retry: bool,
@@ -38,20 +38,30 @@ impl Notices {
         let mut shown = Vec::new();
         for notice in std::mem::take(&mut self.waiting) {
             self.next += 1;
-            shown.push(Shown {
-                id: self.next,
-                text: i18n.notice(&notice),
-                retry: retry_of(&notice).is_some(),
-            });
+            shown.push(show(self.next, &notice, i18n));
             self.open.push((self.next, notice));
         }
         shown
+    }
+
+    /// The notices shown and not yet closed, as texts in `i18n`, oldest first.
+    pub fn shown(&self, i18n: &I18n) -> Vec<Shown> {
+        self.open.iter().map(|(id, n)| show(*id, n, i18n)).collect()
     }
 
     /// Closes shown notice `id`, and names its module when it offers Try again.
     pub fn close(&mut self, id: u64) -> Option<ModuleId> {
         let at = self.open.iter().position(|(i, _)| *i == id)?;
         retry_of(&self.open.remove(at).1)
+    }
+}
+
+/// Notice `notice`, shown as `id`, with its text in `i18n`.
+fn show(id: u64, notice: &Notice, i18n: &I18n) -> Shown {
+    Shown {
+        id,
+        text: i18n.notice(notice),
+        retry: retry_of(notice).is_some(),
     }
 }
 

@@ -97,7 +97,6 @@ QtObject {
             res: face.res
             s: face.s
             widest: face.running ? face.drawn.width : face.lk.shape.panel.width_px
-            rtl: face.cfg.rtl
             spot: (w, h) => face.popSpot(w, h, NaN)
             onShowing: on => app.shadow(app.noticeGlow, on)
             onTouched: trayMenu.shut()
@@ -115,7 +114,6 @@ QtObject {
             id: trayMenu
             lk: face.lk
             res: face.res
-            rtl: face.cfg.rtl
             graceMs: face.cfg.trayGraceMs
             now: app.now
             spot: (x, y, w, h) => {

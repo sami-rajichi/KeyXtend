@@ -154,7 +154,7 @@ Item {
         }
 
         function test_plate_icons_take_the_plate_text_colour() {
-            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.settings.sizes, rtl: false, dark: false });
+            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false });
             const grip = find(bar, o => o.icon === D.lk.icons.bar.grip && o.tint !== undefined);
             verify(Qt.colorEqual(grip.tint, D.lk.palette.legend_2_plate), "the top bar");
             const c = createTemporaryObject(cornerC, root, { lk: D.lk, res: root.res, s: 1 });

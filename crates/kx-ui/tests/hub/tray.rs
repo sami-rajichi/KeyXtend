@@ -15,7 +15,7 @@ fn the_icon_shows_the_picture_with_the_keyboard_title_and_changes_in_place() {
     let rig = Rig::new();
     assert_eq!(rig.hub.tray_px(), TRAY_PX);
     assert!(rig.hub.tray_show(&image(1)));
-    let tip = rig.hub.i18n().text(WINDOW_KEYBOARD);
+    let tip = rig.hub.tray_i18n().text(WINDOW_KEYBOARD);
     assert_eq!(rig.tray.shown(), [(image(1), tip.clone())]);
     assert!(rig.hub.tray_show(&image(2)));
     assert_eq!(rig.tray.shown(), [(image(2), tip)], "one icon, changed");

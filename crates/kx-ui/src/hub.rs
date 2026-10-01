@@ -1,5 +1,5 @@
-//! The hub the `ui` module, the app and the QML bridges share: settings, texts, the face, the look, notices, the tray
-//! icon, and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker
+//! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the face,
+//! the look, notices, the tray icon, and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker
 //! runs.
 
 mod app;
@@ -7,14 +7,13 @@ mod face;
 mod look;
 mod notices;
 mod spots;
+mod texts;
 mod tray;
 
 pub use face::{Redraw, Resize};
 pub use notices::Shown;
 
-use crate::i18n::keys::{SIZE, SIZE_NAME, SIZES};
 use crate::settings::UiSettings;
-use crate::{I18n, pick};
 use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
@@ -27,6 +26,7 @@ use notices::Notices;
 use serde::Serialize;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use texts::Texts;
 use thiserror::Error;
 
 /// The UI ports the app hands over; they run on the UI thread unless their docs say otherwise.
@@ -35,7 +35,7 @@ pub struct UiPorts {
     pub guard: Arc<dyn WindowGuard>,
     /// The screens and the pointer.
     pub screens: Arc<dyn Screens>,
-    /// The system look and the UI language.
+    /// The system look and the system's display language.
     pub look: Arc<dyn SystemLook>,
     /// The material behind a window.
     pub backdrop: Arc<dyn Backdrop>,
@@ -55,8 +55,10 @@ pub enum Request {
 /// What changed, so the bridges redraw on the Qt thread.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Wake {
-    /// The `[ui]` settings, the texts or the face.
+    /// The `[ui]` settings or the face, and with them the texts: read everything again.
     Settings,
+    /// The keyboard's language changed: read only its texts again.
+    Texts,
     /// The look to draw.
     Look,
     /// Notices wait for the banner.
@@ -83,7 +85,7 @@ pub enum HubError {
     Theme(#[from] ThemeError),
 }
 
-/// The timings, paging, direction and size buttons QML reads, as JSON.
+/// The timings and paging QML reads, as JSON.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct QmlSettings {
@@ -92,22 +94,12 @@ struct QmlSettings {
     guard_delay_ms: u64,
     tray_grace_ms: u64,
     page_rows: usize,
-    lang: &'static str,
-    rtl: bool,
-    sizes: Vec<SizeText>,
-}
-
-/// A size button's letter and its name, in the UI language.
-#[derive(Serialize)]
-struct SizeText {
-    label: String,
-    name: String,
 }
 
 /// What changes while the app runs.
 struct Live {
     settings: UiSettings,
-    i18n: Arc<I18n>,
+    texts: Texts,
     face: Option<Arc<dyn KeyboardFace>>,
     store: Option<SettingsHandle>,
     sys: SysLook,
@@ -141,7 +133,7 @@ impl Hub {
         let themes = Themes::shipped()?;
         let (requests, drain) = mpsc::channel();
         let live = Live {
-            i18n: texts(&settings, &*ports.look),
+            texts: Texts::new(&settings.language, "", ports.look.ui_language()),
             settings,
             face: None,
             store: None,
@@ -165,13 +157,18 @@ impl Hub {
         self.live.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle.
+    /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
+    /// follow the language of the layout the face shows.
     pub fn attach(&self, settings: UiSettings, face: Arc<dyn KeyboardFace>, store: SettingsHandle) {
-        let i18n = texts(&settings, &*self.ports.look);
+        let texts = Texts::new(
+            &settings.language,
+            &face.lang(),
+            self.ports.look.ui_language(),
+        );
         {
             let mut live = self.lock();
             live.settings = settings;
-            live.i18n = i18n;
+            live.texts = texts;
             live.face = Some(face);
             live.store = Some(store);
         }
@@ -194,30 +191,16 @@ impl Hub {
         self.lock().settings.clone()
     }
 
-    /// The texts in the UI language now.
-    #[must_use]
-    pub fn i18n(&self) -> Arc<I18n> {
-        Arc::clone(&self.lock().i18n)
-    }
-
-    /// The timings, paging, text direction and size buttons QML reads, as JSON.
+    /// The timings and paging QML reads, as JSON; the language comes apart, in `lang_json`.
     #[must_use]
     pub fn settings_json(&self) -> String {
-        let live = self.lock();
-        let (s, t) = (&live.settings, &live.i18n);
-        let size = |id: &str| SizeText {
-            label: t.name_of(SIZE, id),
-            name: t.name_of(SIZE_NAME, id),
-        };
+        let s = self.settings();
         json(&QmlSettings {
             tip_ms: s.tip_ms,
             poll_ms: s.poll_ms,
             guard_delay_ms: s.guard_delay_ms,
             tray_grace_ms: s.tray_grace_ms,
             page_rows: s.page_rows,
-            lang: t.lang().tag,
-            rtl: t.lang().rtl,
-            sizes: SIZES.into_iter().map(size).collect(),
         })
     }
 
@@ -241,12 +224,12 @@ impl Hub {
         })
     }
 
-    /// The waiting notices in the UI language; the banner shows them from now on.
+    /// The waiting notices in the keyboard's language; the banner shows them from now on.
     #[must_use]
     pub fn take_notices(&self) -> Vec<Shown> {
         let mut live = self.lock();
-        let i18n = Arc::clone(&live.i18n);
-        live.notices.take(&i18n)
+        let Live { texts, notices, .. } = &mut *live;
+        notices.take(texts.keyboard())
     }
 
     /// OK on shown notice `id`: it closes.
@@ -261,11 +244,6 @@ impl Hub {
             waker(what);
         }
     }
-}
-
-/// The texts for `settings`' language, following the system's UI language when it says `auto`.
-fn texts(settings: &UiSettings, look: &dyn SystemLook) -> Arc<I18n> {
-    Arc::new(I18n::new(pick(&settings.language, &look.ui_language())))
 }
 
 /// `value` as JSON; a value that cannot be written gives `null`.

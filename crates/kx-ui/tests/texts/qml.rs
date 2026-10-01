@@ -70,10 +70,11 @@ fn hub(tag: &str) -> Arc<Hub> {
     Hub::new(ports).expect("the hub starts").0
 }
 
-/// Language `tag`'s settings JSON, every text by key, and the banner's counts by how many wait.
+/// Language `tag`'s settings and language JSON, every text by key, and the banner's counts by how many wait.
 fn ui(tag: &str) -> String {
     let hub = hub(tag);
     let settings: Value = serde_json::from_str(&hub.settings_json()).expect("settings JSON");
+    let lang: Value = serde_json::from_str(&hub.lang_json()).expect("language JSON");
     let t: Arc<I18n> = hub.i18n();
     let texts: Map<String, Value> = keys_of(t.lang().ftl)
         .into_iter()
@@ -85,8 +86,9 @@ fn ui(tag: &str) -> String {
     let texts = Value::Object(texts);
     let more: Vec<Value> = (0..=MORE_UP_TO).map(|n| Value::String(t.more(n))).collect();
     format!(
-        "{HEAD}{}{}{}",
+        "{HEAD}{}{}{}{}",
         var("settings", &settings, true),
+        var("lang", &lang, true),
         var("texts", &texts, true),
         var("more", &Value::Array(more), true)
     )

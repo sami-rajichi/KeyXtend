@@ -1,7 +1,7 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-09-30
+- **Last review:** 2026-10-01
 - **Status:** Draft
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
@@ -9,7 +9,7 @@
 | Capability | Why needed | What breaks without it |
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `KeyInjector`. | N/A |
-| `KeyboardFace` service (required) | The board, the live state and every click on a key. | The `ui` module fails and offers Try again; the rest keeps running. |
+| `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). | The `ui` module fails and offers Try again; the rest keeps running. |
 | UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard and window shape, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
 
 ## Data handled
@@ -18,6 +18,7 @@
 | Key ids QML sends on a click | Sensitive (together they spell what the user types) | Memory only, passed straight to the face | N/A | The call |
 | Board and state JSON (key boxes, legends, lights) | Public | Memory only | N/A | Until the next redraw |
 | Notices: setting keys, module ids and counts | Public | Memory only, until dismissed | N/A | Until dismissed |
+| The language code of the layout in front and the system's display language | Public | Memory only | N/A | Until the next switch |
 | `[ui]` settings | Public | `settings.toml` through the kernel | No | Until changed |
 | The focus token (a window handle) | Public | Memory only | N/A | Until the app quits |
 | The tray picture (our own drawing of the theme badge) and where a tray click happened | Public | Memory only; the adapter keeps the picture while the icon shows | N/A | Until the icon hides |
@@ -29,6 +30,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 |---|---|---|---|
 | `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing or row count outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
 | Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
+| The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown or broken tag gives English (the system's while no layout names one). Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
 | Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms` (at most 5 s) | One wake per event | No |
 | The grabbed tray picture (QML `QImage`) | A null picture or size is refused; it is scaled to the tray's size and read pixel by pixel into a `TrayImage`, which checks its length | The taskbar's small icon size | Unit tests with pictures made in Rust; the QML load test checks a real grab reaches the tray |

@@ -28,7 +28,7 @@ pub(crate) const TRAY_GRACE_MS: RangeInclusive<u64> = 0..=5_000;
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 
 /// Why `language` was refused.
-const NO_LANGUAGE: &str = "language must be auto or a language the UI speaks";
+const NO_LANGUAGE: &str = "language must be auto or a language the keyboard speaks";
 
 /// How the kernel reads the `[ui]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -76,7 +76,7 @@ pub struct UiSettings {
     pub reduced_motion: bool,
     /// What sits behind the plate.
     pub backdrop: Backdrop,
-    /// The UI language tag, or `auto`.
+    /// The language that pins the keyboard's texts, or `auto` to follow the layout in front (ADR-0020).
     pub language: String,
     /// How long the pointer rests before a tip shows, in ms.
     pub tip_ms: u64,

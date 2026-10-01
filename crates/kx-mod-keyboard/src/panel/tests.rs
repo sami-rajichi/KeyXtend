@@ -108,6 +108,7 @@ fn label(n: u64, short: &str, rtl: bool) -> LangLabel {
         name: vec![short.into()],
         rtl,
         arabic: rtl,
+        ..LangLabel::default()
     }
 }
 

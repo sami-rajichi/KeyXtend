@@ -13,6 +13,7 @@ mod look;
 mod module;
 mod notices;
 mod spots;
+mod texts;
 mod tray;
 
 use kx_module_api::ports::{
@@ -25,11 +26,12 @@ use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex, PoisonError};
 
-/// A face that records every action and answers with the reply the test chose.
+/// A face that records every action, answers with the reply the test chose and shows a layout in the language set.
 #[derive(Default)]
 struct FakeFace {
     acts: Mutex<Vec<FaceAction>>,
     reply: Mutex<Option<Result<FaceReply, FaceError>>>,
+    lang: Mutex<String>,
 }
 
 impl FakeFace {
@@ -45,6 +47,11 @@ impl FakeFace {
     fn answer(&self, reply: Result<FaceReply, FaceError>) {
         *self.reply.lock().unwrap_or_else(PoisonError::into_inner) = Some(reply);
     }
+
+    /// Shows a layout in language `iso` from now on.
+    fn set_lang(&self, iso: &str) {
+        iso.clone_into(&mut self.lang.lock().unwrap_or_else(PoisonError::into_inner));
+    }
 }
 
 impl KeyboardFace for FakeFace {
@@ -54,6 +61,13 @@ impl KeyboardFace for FakeFace {
 
     fn state_json(&self) -> String {
         r#"{"state":1}"#.to_owned()
+    }
+
+    fn lang(&self) -> String {
+        self.lang
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {

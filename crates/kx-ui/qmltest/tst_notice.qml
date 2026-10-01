@@ -1,10 +1,12 @@
 // The notice banner over the stand-in Ui: it queues and counts what waits, offers Try again only when the app can
-// restart what failed, answers each notice once, and never takes focus.
+// restart what failed, answers each notice once, tells its notices again in a new keyboard language, and never takes
+// focus.
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/assets.js" as Assets
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 
@@ -35,10 +37,10 @@ Item {
             failOnWarning(/./);
         }
         // A banner over a stand-in Ui holding `waiting`, as wide as `widest` at most (the panel's width by default).
-        function make(waiting, props, widest, rtl) {
+        function make(waiting, props, widest) {
             const ui = createTemporaryObject(uiC, root, Object.assign({ notices: waiting }, props || {}));
             return createTemporaryObject(noteC, root, {
-                ui: ui, lk: N.lk, res: root.res, s: 1, widest: widest || N.lk.shape.panel.width_px, rtl: !!rtl,
+                ui: ui, lk: N.lk, res: root.res, s: 1, widest: widest || N.lk.shape.panel.width_px,
                 spot: (w, h) => root.at
             });
         }
@@ -142,16 +144,33 @@ Item {
             tryCompare(note, "x", 70, 2000, "its size changed");
         }
 
-        function test_the_arabic_banner_puts_the_icon_on_the_right() {
-            for (const rtl of [false, true]) {
-                const note = make([notice(1, false)], {}, 0, rtl);
+        // Arabic flips text only (ADR-0020): the icon stays on the left and the buttons on the right.
+        function test_an_arabic_notice_keeps_the_banners_places_and_reads_right_to_left() {
+            for (const t of [En, Ar]) {
+                const text = t.texts["notice.keys-not-sent"];
+                const note = make([{ id: 1, text: text, retry: false }]);
                 tryVerify(() => note.visible, 2000, "it shows");
                 waitForRendering(note.contentItem);
                 const icon = all(note.contentItem, o => o.tint !== undefined && o.icon === N.lk.icons.notice.icon)[0];
                 const ok = button(note, En.texts["button.ok"]);
                 const [i, b] = [icon, ok].map(o => o.mapToItem(note.contentItem, 0, 0).x);
-                verify(rtl ? i > b : i < b, "icon " + i + ", button " + b);
+                verify(i < b, "icon " + i + ", button " + b);
+                const msg = all(note.contentItem, o => o.text === text && o.wrapMode !== undefined)[0];
+                compare(msg.effectiveHorizontalAlignment, t === Ar ? Text.AlignRight : Text.AlignLeft, t.lang.tag);
             }
+        }
+
+        function test_a_new_keyboard_language_tells_the_queued_notices_again() {
+            const note = make([notice(1, false), notice(2, true)]);
+            tryVerify(() => note.visible, 2000, "it shows");
+            const retold = id => ({ id: id, text: Fr.texts["notice.keys-not-sent"] + " " + id, retry: id === 2 });
+            note.ui.retold = [retold(1), retold(2)];
+            note.ui.texts = Fr.texts;
+            compare(note.queue, [retold(1), retold(2)]);
+            compare(note.shown.text, retold(1).text, "the banner reads in French at once");
+            note.ui.retold = [retold(2)];
+            note.ui.texts = En.texts;
+            compare(note.queue.map(n => n.text), [retold(1).text, retold(2).text], "a notice the hub does not tell again keeps its text");
         }
 
         function test_a_press_on_the_banner_is_seen_and_still_reaches_its_button() {

@@ -1,9 +1,8 @@
-//! Notices from the bus, Try again and OK, settings and texts.
+//! Notices from the bus, Try again and OK, and the settings QML reads.
 
 use crate::{KEYBOARD, Rig, failed};
 use kx_module_api::{Bus, Notice, keys};
 use kx_test_support::host::FakeCore;
-use kx_ui::i18n::keys::{SIZE, SIZE_NAME, SIZES};
 use kx_ui::{Request, UiSettings, Wake};
 use std::sync::Arc;
 
@@ -56,39 +55,7 @@ fn attach_and_detach_swap_the_face_and_keep_the_settings() {
 }
 
 #[test]
-fn the_texts_follow_the_language_setting_else_windows() {
-    let rig = Rig::new();
-    assert_eq!(rig.hub.i18n().lang().tag, "en");
-    rig.look.set_language("ar-TN");
-    let mut host = kx_test_support::host::FakeHost::new(&kx_ui::MANIFEST);
-    let face = Arc::new(crate::FakeFace::default());
-    rig.attach(Arc::clone(&face), &mut host);
-    assert_eq!(rig.hub.i18n().lang().tag, "ar", "auto follows Windows");
-    let mut fr = UiSettings::from_defaults().unwrap();
-    fr.language = "fr".into();
-    rig.hub.attach(fr, face, host.handle());
-    assert_eq!(rig.hub.i18n().lang().tag, "fr", "a set language wins");
-}
-
-#[test]
-fn qml_reads_the_size_buttons_in_the_ui_language() {
-    let rig = Rig::new();
-    rig.look.set_language("ar");
-    let mut host = kx_test_support::host::FakeHost::new(&kx_ui::MANIFEST);
-    rig.attach(Arc::new(crate::FakeFace::default()), &mut host);
-    let v: serde_json::Value = serde_json::from_str(&rig.hub.settings_json()).unwrap();
-    let ar = rig.hub.i18n();
-    let sizes = v["sizes"].as_array().expect("a list of sizes");
-    assert_eq!(sizes.len(), SIZES.len());
-    for (s, id) in sizes.iter().zip(SIZES) {
-        assert_eq!(s["label"].as_str(), Some(ar.name_of(SIZE, id).as_str()));
-        assert_eq!(s["name"].as_str(), Some(ar.name_of(SIZE_NAME, id).as_str()));
-        assert_ne!(s["label"].as_str(), Some(id), "{id} has an Arabic letter");
-    }
-}
-
-#[test]
-fn qml_reads_the_timings_paging_and_direction() {
+fn qml_reads_the_timings_and_paging_and_the_language_apart() {
     let rig = Rig::new();
     let v: serde_json::Value = serde_json::from_str(&rig.hub.settings_json()).unwrap();
     let s = UiSettings::from_defaults().unwrap();
@@ -97,8 +64,5 @@ fn qml_reads_the_timings_paging_and_direction() {
     assert_eq!(v["guardDelayMs"], s.guard_delay_ms);
     assert_eq!(v["trayGraceMs"], s.tray_grace_ms);
     assert_eq!(v["pageRows"], s.page_rows);
-    assert_eq!(
-        (v["lang"].as_str(), v["rtl"].as_bool()),
-        (Some("en"), Some(false))
-    );
+    assert!(v.get("lang").is_none() && v.get("sizes").is_none(), "{v}");
 }

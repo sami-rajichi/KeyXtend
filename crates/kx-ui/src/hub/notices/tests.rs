@@ -69,6 +69,23 @@ fn texts_follow_the_language_when_taken() {
     assert_eq!(shown[0].text, I18n::new(ar).notice(&failed()));
 }
 
+#[test]
+fn the_shown_notices_are_told_again_in_a_new_language_until_closed() {
+    let mut n = Notices::default();
+    n.push(failed());
+    n.push(plain(keys::KEYS_NOT_SENT));
+    let en = n.take(&I18n::new(&LANGS[0]));
+    n.push(plain(keys::SETTINGS_LOCKED));
+    let fr = I18n::new(crate::find("fr").unwrap());
+    let again = n.shown(&fr);
+    let ids: Vec<u64> = again.iter().map(|s| s.id).collect();
+    assert_eq!(ids, [en[0].id, en[1].id], "the shown ones, in order");
+    assert_eq!(again[0].text, fr.notice(&failed()));
+    assert_eq!((again[0].retry, again[1].retry), (true, false));
+    n.close(en[0].id);
+    assert_eq!(n.shown(&fr).len(), 1, "a closed one is gone");
+}
+
 /// One step on the notices: push sample `n`, take the waiting ones, or close the open one at a place.
 #[derive(Clone, Debug)]
 enum Op {
