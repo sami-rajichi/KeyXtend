@@ -36,6 +36,10 @@ mod ffi {
         #[namespace = "kxui"]
         fn qt_sees(name: &str) -> bool;
 
+        /// True when Qt's text read, through the wide copy, finds variable `name`.
+        #[namespace = "kxui"]
+        fn qt_reads(name: &str) -> bool;
+
         /// Turns off Qt Quick's shader pipeline cache on disk.
         #[namespace = "kxui"]
         fn no_shader_cache();
@@ -70,6 +74,12 @@ pub fn harden_qt(plugins: Option<&Path>) -> usize {
 #[must_use]
 pub fn qt_sees(name: &str) -> bool {
     ffi::qt_sees(name)
+}
+
+/// True when Qt's text read (`qEnvironmentVariable`) finds variable `name`, through the C runtime's wide copy.
+#[must_use]
+pub fn qt_reads(name: &str) -> bool {
+    ffi::qt_reads(name)
 }
 
 /// Pins `engine`'s QML imports to the compiled-in modules and the `qml` folder in `dir`, and each module's plugin

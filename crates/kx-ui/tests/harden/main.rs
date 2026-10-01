@@ -1,5 +1,6 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
-//! QML import paths, and pinned plugins and imports hold only the app's folders and the compiled-in modules. The
+//! QML import paths, nor Qt's narrow or wide reads, and pinned plugins and imports hold only the app's folders and the
+//! compiled-in modules. The
 //! variables must be set before the process starts, so the test runs itself again, as a child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
@@ -98,12 +99,23 @@ fn seen() -> Vec<(&'static str, bool)> {
         .to_vec()
 }
 
+/// The planted variables Qt's text read finds, through the C runtime's wide copy.
+fn wide() -> Vec<&'static str> {
+    PLANTED.into_iter().filter(|v| kx_ui::qt_reads(v)).collect()
+}
+
 /// Clears Qt's variables, pins its plugins, starts Qt, and checks its plugin and import paths.
 fn child(planted: &Path, pinned: &Path) -> Outcome {
-    let before = seen();
+    let (before, wide_before) = (seen(), wide());
     let cleared = kx_ui::harden_qt(Some(pinned));
     let after = seen();
     eprintln!("Qt's narrow view before harden_qt: {before:?}; after: {after:?}");
+    if wide_before.len() != PLANTED.len() || !wide().is_empty() {
+        return Err(format!(
+            "Qt's wide read found {wide_before:?} before and {:?} after",
+            wide()
+        ));
+    }
     if cleared < PLANTED.len() || PLANTED.iter().any(|v| env::var_os(v).is_some()) {
         return Err(format!(
             "{cleared} Qt variables were cleared, and some are still set"

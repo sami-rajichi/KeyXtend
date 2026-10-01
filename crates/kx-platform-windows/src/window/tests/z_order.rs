@@ -87,6 +87,28 @@ fn a_guarded_window_stays_topmost_when_another_program_drops_it() {
     }
 }
 
+/// A guard run guards a shown tip too; another program's move of the tip alone out of the topmost band can take its
+/// owner along, and both come straight back.
+#[test]
+fn a_guarded_owner_and_its_tip_stay_topmost_when_the_tip_alone_is_dropped() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let plain = Hidden::new("KeyXtend test: plain below a tip");
+    let drops = [
+        ("no topmost", HWND_NOTOPMOST),
+        ("bottom", HWND_BOTTOM),
+        ("after a plain window", plain.0),
+    ];
+    for (how, after) in drops {
+        let owner = Hidden::topmost("KeyXtend test: tip's owner", None);
+        let tip = Hidden::tip("KeyXtend test: dropped tip", Some(owner.0));
+        guard(owner.0).unwrap();
+        guard(tip.0).unwrap();
+        put_after(&tip, after);
+        assert!(topmost(&tip), "{how}: the tip stays");
+        assert!(topmost(&owner), "{how}: and its owner");
+    }
+}
+
 /// The tip bug: a hidden window shows again where it was, so only a tip its window owns stays above it after a lift.
 #[test]
 fn a_tip_stays_above_its_window_after_the_guard_lifts_it_only_when_owned() {

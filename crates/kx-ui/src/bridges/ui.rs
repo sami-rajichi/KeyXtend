@@ -123,6 +123,7 @@ pub mod qobject {
         fn assets(&self) -> QString;
 
         /// Asks the app to quit, which stops the modules and then sends `quit_asked`; a gone app ends the UI at once.
+        /// False when Quit was asked already, the app is gone, or no hub is installed.
         #[qinvokable]
         fn quit(&self) -> bool;
 

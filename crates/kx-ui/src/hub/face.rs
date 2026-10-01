@@ -145,8 +145,8 @@ impl Hub {
         }
     }
 
-    /// Lifts our shown window `title` alone in front of our others, as a tip does when it shows; false when it is not
-    /// shown or was refused. Call it on the UI thread.
+    /// Lifts our shown windows titled `title` alone in front of our others, as a tip does when it shows; false when none
+    /// shows or it was refused. Call it on the UI thread.
     pub fn lift_alone(&self, title: &str) -> bool {
         match self.ports.guard.lift_alone(title) {
             Ok(()) => true,

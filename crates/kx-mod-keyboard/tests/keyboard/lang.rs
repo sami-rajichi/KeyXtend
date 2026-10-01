@@ -4,10 +4,13 @@ use crate::host::{GOLDEN, id};
 use crate::rig::{Rig, STATE};
 use kx_mod_keyboard::view::LONE_TIP;
 use kx_module_api::keys;
-use kx_module_api::ports::{FaceAction, FaceError, FaceReply, SwitchError};
-use kx_platform_fake::Ask;
+use kx_module_api::ports::{FaceAction, FaceError, FaceReply, Scan, SwitchError};
+use kx_platform_fake::{Ask, Stroke};
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
+
+/// Space's scan code, as the board sends it.
+const SPACE: u16 = 0x39;
 
 /// The short names of the Carousel: before, now and after.
 fn carousel(r: &Rig) -> [Value; 3] {
@@ -177,7 +180,13 @@ fn a_panel_key_clicked_as_a_tap_never_reaches_the_app() {
     assert!(r.fakes.injector.strokes().is_empty());
     assert_eq!(r.tap("c-0x0010"), Ok(STATE), "other keys still type");
     assert_eq!(r.tap("space"), Ok(STATE), "the list does not use Space");
-    assert_eq!(r.fakes.injector.strokes().len(), 2);
+    let strokes = r.fakes.injector.strokes();
+    assert_eq!(strokes.len(), 2);
+    assert_eq!(
+        strokes[1],
+        Stroke::Tap(Scan::new(SPACE)),
+        "Space reaches the app"
+    );
     assert!(!r.state()["list"].is_null(), "still open");
 }
 

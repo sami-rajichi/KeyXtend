@@ -41,6 +41,8 @@ inline char **narrow_environment()
 inline rust::Vec<std::uint8_t> narrow_names()
 {
     rust::Vec<std::uint8_t> names;
+    // A null narrow environment, as a wide-only start would leave it, gives no names and so clears nothing; a Rust main
+    // always starts with one.
     for (char **entry = narrow_environment(); entry && *entry; ++entry) {
         const char *text = *entry;
         // A name may start with '=', as "=C:" does; its value starts after the next one.
@@ -48,6 +50,7 @@ inline rust::Vec<std::uint8_t> narrow_names()
         const std::size_t size = value ? std::size_t(value - text) : std::strlen(text);
         for (std::size_t i = 0; i < size; ++i)
             names.push_back(static_cast<std::uint8_t>(text[i]));
+        // harden::NAME_END in src/harden.rs, which splits the list again.
         names.push_back(0);
     }
     return names;
@@ -65,6 +68,13 @@ inline bool qt_sees(rust::Str name)
 {
     const std::string text(name.data(), name.size());
     return qEnvironmentVariableIsSet(text.c_str());
+}
+
+// True when Qt's text read finds variable `name`; on Windows it reads the C runtime's wide copy.
+inline bool qt_reads(rust::Str name)
+{
+    const std::string text(name.data(), name.size());
+    return !qEnvironmentVariable(text.c_str()).isNull();
 }
 
 // Qt Quick neither reads nor writes its shader pipeline cache on disk.

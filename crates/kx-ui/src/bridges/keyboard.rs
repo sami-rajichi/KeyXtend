@@ -91,7 +91,7 @@ pub mod qobject {
         #[qinvokable]
         fn shape(&self, title: &QString, boxes: &QString, dpr: f64) -> bool;
 
-        /// Lifts our shown window `title` alone in front of our others, as a tip does; false until it shows.
+        /// Lifts our shown windows titled `title` alone in front of our others, as a tip does; false until one shows.
         #[qinvokable]
         fn lift_alone(&self, title: &QString) -> bool;
 

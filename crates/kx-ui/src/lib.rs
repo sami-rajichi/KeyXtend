@@ -16,7 +16,7 @@ mod settings;
 mod ui_module;
 
 #[cfg(feature = "qt")]
-pub use bridges::harden::{QML_DIR, harden_qt, pin_imports, qt_sees};
+pub use bridges::harden::{QML_DIR, harden_qt, pin_imports, qt_reads, qt_sees};
 #[cfg(feature = "qt")]
 pub use bridges::install;
 pub use geom::Area;

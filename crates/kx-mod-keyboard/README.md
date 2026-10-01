@@ -53,6 +53,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Caps Lock | Tap | Kept | Kept |
 | A modifier | Nothing; it latches or lets go | Toggled | Kept |
 | The language key, a `later` key | Nothing; `Tapped::Lang` or `Tapped::Later` for the face | Kept | Kept |
+| An id not on the board | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
 
 "Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows.
 

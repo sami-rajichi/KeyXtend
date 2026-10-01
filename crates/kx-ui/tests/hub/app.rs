@@ -24,6 +24,20 @@ fn quit_reaches_the_app_once_and_then_the_queue_ends() {
 }
 
 #[test]
+fn a_second_quit_leaves_ending_the_ui_to_the_app() {
+    let rig = Rig::new();
+    assert!(rig.hub.quit());
+    assert!(!rig.hub.quit(), "asked already");
+    rig.hub.command(Command::Quit);
+    assert!(
+        rig.wakes().is_empty(),
+        "the UI ends once the modules stopped"
+    );
+    assert_eq!(rig.requests.try_recv(), Ok(Request::Quit));
+    assert_eq!(rig.requests.try_recv(), Err(TryRecvError::Disconnected));
+}
+
+#[test]
 fn quit_is_false_when_the_app_no_longer_listens() {
     let Rig { hub, requests, .. } = Rig::new();
     drop(requests);

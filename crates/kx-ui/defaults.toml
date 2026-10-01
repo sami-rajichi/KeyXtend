@@ -18,7 +18,7 @@ poll_ms = 16
 guard_delay_ms = 300
 guard_tries = 10
 # How many times a second copy tries to hand Show or Quit to the running one, and the wait between tries, in ms.
-# A second copy reads these from the defaults, as only the running copy loads the settings file.
+# A second copy reads these from the settings file without changing it.
 send_tries = 10
 send_wait_ms = 100
 # How long the tray menu stays open when another window comes to the front just after it opens, in ms; 0 turns it off.

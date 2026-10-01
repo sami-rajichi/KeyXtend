@@ -9,7 +9,8 @@ const EXTENDED: u16 = 0xE000;
 /// The prefix byte of a scan code.
 const PREFIX_MASK: u16 = 0xFF00;
 
-/// A key's scan code; `0xE0xx` marks an extended key. Data files hold it as a plain number.
+/// A key's scan code; `0xE0xx` marks an extended key. Serde holds it as a plain number, and the layout tables as
+/// `0x` hex text (`FromStr`, `Display`).
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Scan(u16);

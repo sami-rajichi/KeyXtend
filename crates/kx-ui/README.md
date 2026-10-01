@@ -12,7 +12,7 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## Qt's start
 
-The app calls `harden_qt` before Qt's app object exists. It clears with `qunsetenv` every name with a Qt prefix (`harden::QT_PREFIXES`, any case) in the C runtime's narrow copy of the environment, which Qt's byte reads use, and from the wide copy its text reads use; a name the code page narrows to a Qt one, such as a fullwidth `ＱＴ_`, goes too. It also turns off Qt Quick's shader cache on disk, and `qt_sees` tells whether Qt still reads a variable. In the uiAccess build the app also passes its folder, so Qt loads plugins only from there, and calls `pin_imports` on the engine before loading: QML modules then come only from the compiled-in ones and the `qml` folder beside the app (`QML_DIR`).
+The app calls `harden_qt` before Qt's app object exists. It clears with `qunsetenv` every name with a Qt prefix (`harden::QT_PREFIXES`, any case) in the C runtime's narrow copy of the environment, which Qt's byte reads use, and from the wide copy its text reads use; a name the code page narrows to a Qt one, such as a fullwidth `ＱＴ_`, goes too. It also turns off Qt Quick's shader cache on disk, and `qt_sees` and `qt_reads` tell whether Qt's narrow and wide reads still find a variable. In the uiAccess build the app also passes its folder, so Qt loads plugins only from there, and calls `pin_imports` on the engine before loading: QML modules then come only from the compiled-in ones and the `qml` folder beside the app (`QML_DIR`).
 
 ## QML views
 
@@ -61,7 +61,7 @@ Every bridge call runs on the Qt GUI thread, including the guard and the window 
 
 ## Public API
 
-`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`, `os_lang`), `harden` (`QT_PREFIXES`, `NAME_END`, `is_qt`, `qt_names`), and with `qt` also `install`, `MAIN_QML`, `ASSETS`, `harden_qt`, `qt_sees`, `pin_imports` and `QML_DIR`.
+`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`, `os_lang`), `harden` (`QT_PREFIXES`, `NAME_END`, `is_qt`, `qt_names`), and with `qt` also `install`, `MAIN_QML`, `ASSETS`, `harden_qt`, `qt_sees`, `qt_reads`, `pin_imports` and `QML_DIR`.
 
 ## Security
 
