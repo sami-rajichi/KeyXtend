@@ -147,7 +147,7 @@ impl fmt::Debug for WatchGuard {
     }
 }
 
-/// The system look and the UI language.
+/// The system look and the system's display language.
 pub trait SystemLook: Send + Sync {
     /// The look now.
     fn read(&self) -> SysLook;
@@ -159,7 +159,7 @@ pub trait SystemLook: Send + Sync {
     /// `Refused` when the OS will not report changes.
     fn watch(&self, on_change: Box<dyn Fn(SysLook) + Send>) -> Result<WatchGuard, UiError>;
 
-    /// The UI language as a BCP-47 tag, such as `fr-FR`; empty when the OS cannot say.
+    /// The system's display language, which only the tray speaks, as a BCP-47 tag such as `fr-FR`; empty when unknown.
     fn ui_language(&self) -> String;
 }
 

@@ -7,8 +7,8 @@ import QtQuick
 Window {
     id: menu
 
-    // The look, fonts, icons and texts (`res.tray`), and where a `w` by `h` menu goes for a click at physical (x, y): a Qt
-    // point or null.
+    // The look, fonts, icons and texts (`res.tray`), and where a `w` by `h` menu goes for a click at physical
+    // (x, y): a Qt point or null.
     required property var lk
     required property var res
     required property var spot

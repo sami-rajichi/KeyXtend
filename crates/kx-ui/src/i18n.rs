@@ -52,14 +52,10 @@ const TAG_SEPARATORS: [char; 2] = ['-', '_'];
 type Bundle = FluentBundle<FluentResource>;
 
 /// The keyboard's language: a supported `[ui] language` value `setting` pins it; any other value, `auto` included,
-/// follows the layout's language `layout`, else English. While no layout names one, it is the system's `os`.
+/// follows the layout's language `layout`, else English, also while no layout names one. It never reads the system's.
 #[must_use]
-pub fn pick(setting: &str, layout: &str, os: &str) -> &'static Lang {
-    let follow = || match layout {
-        "" => os_lang(os),
-        _ => negotiate(layout),
-    };
-    find(setting).unwrap_or_else(follow)
+pub fn pick(setting: &str, layout: &str) -> &'static Lang {
+    find(setting).unwrap_or_else(|| negotiate(layout))
 }
 
 /// The system's language, which the tray icon and its menu speak: `os` matched to a language the UI has, else English.

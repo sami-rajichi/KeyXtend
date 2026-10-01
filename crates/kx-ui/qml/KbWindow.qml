@@ -124,13 +124,10 @@ Window {
             dimTip: (name, later) => name + "\n" + later
         };
     }
-    // The first family in `list` that Qt has, else the last one.
-    function pick(list) {
-        const all = Qt.fontFamilies();
-        return list.find(f => all.indexOf(f) >= 0) || list[list.length - 1];
-    }
-    // The Latin and Arabic families, and those of the keyboard's language and the tray's.
+    // The Latin and Arabic families (each list's first that Qt has, else its last), and the keyboard's and tray's.
     function families(f) {
+        const all = Qt.fontFamilies();
+        const pick = list => list.find(n => all.indexOf(n) >= 0) || list[list.length - 1];
         const latin = pick(lk.look.latin_fonts);
         const arabic = pick(lk.look.arabic_fonts);
         const of = l => l && l.rtl ? arabic : latin;

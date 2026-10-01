@@ -170,7 +170,8 @@ Item {
             compare(note.shown.text, retold(1).text, "the banner reads in French at once");
             note.ui.retold = [retold(2)];
             note.ui.texts = En.texts;
-            compare(note.queue.map(n => n.text), [retold(1).text, retold(2).text], "a notice the hub does not tell again keeps its text");
+            const texts = note.queue.map(n => n.text);
+            compare(texts, [retold(1).text, retold(2).text], "a notice the hub does not tell again keeps its text");
         }
 
         function test_a_press_on_the_banner_is_seen_and_still_reaches_its_button() {

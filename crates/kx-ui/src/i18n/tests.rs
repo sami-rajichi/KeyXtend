@@ -16,46 +16,46 @@ static FR: Lang = Lang {
     ftl: "plain = Simple\ngroup =\n    .name = Nommé\nbroken line\nafter = Après\n",
 };
 
-/// The system language of this PC, which the layout's language must win over.
+/// The system language of this PC, which only the tray speaks.
 const OS: &str = "fr-FR";
 
 #[test]
-fn auto_follows_the_layouts_language_not_the_systems() {
-    assert_eq!(pick(AUTO, "en", OS).tag, "en");
-    assert_eq!(pick(AUTO, "ar", OS).tag, "ar");
-    assert_eq!(pick(AUTO, "fr", "ar-TN").tag, "fr");
+fn auto_follows_the_layouts_language() {
+    assert_eq!(pick(AUTO, "en").tag, "en");
+    assert_eq!(pick(AUTO, "ar").tag, "ar");
+    assert_eq!(pick(AUTO, "fr").tag, "fr");
 }
 
 #[test]
 fn a_layout_language_without_texts_gives_english() {
     for layout in ["de", "zh-Hant-TW", "not a tag"] {
-        assert_eq!(pick(AUTO, layout, OS).tag, "en", "{layout:?}");
+        assert_eq!(pick(AUTO, layout).tag, "en", "{layout:?}");
     }
 }
 
 #[test]
-fn with_no_layout_known_the_system_language_speaks() {
-    assert_eq!(pick(AUTO, "", OS).tag, "fr");
-    assert_eq!(pick(AUTO, "", "de-DE").tag, "en");
+fn with_no_layout_language_the_keyboard_speaks_english() {
+    assert_eq!(pick(AUTO, "").tag, "en");
 }
 
 #[test]
 fn odd_but_real_tags_are_read() {
-    assert_eq!(pick(AUTO, "fr_CA", "").tag, "fr");
-    assert_eq!(pick(AUTO, "AR-tn", "").tag, "ar");
-    assert_eq!(pick(AUTO, "", "fr-FR-u-ca-gregory").tag, "fr");
+    assert_eq!(pick(AUTO, "fr_CA").tag, "fr");
+    assert_eq!(pick(AUTO, "AR-tn").tag, "ar");
+    assert_eq!(os_lang("fr-FR-u-ca-gregory").tag, "fr");
 }
 
 #[test]
 fn a_supported_setting_pins_the_keyboards_language() {
-    assert_eq!(pick("ar", "fr", OS).tag, "ar");
-    assert_eq!(pick("fr", "en", "en-US").tag, "fr");
+    assert_eq!(pick("ar", "fr").tag, "ar");
+    assert_eq!(pick("fr", "en").tag, "fr");
+    assert_eq!(pick("fr", "").tag, "fr");
 }
 
 #[test]
 fn an_unknown_setting_follows_the_layout() {
-    assert_eq!(pick("xx", "ar", OS).tag, "ar");
-    assert_eq!(pick("", "en", OS).tag, "en");
+    assert_eq!(pick("xx", "ar").tag, "ar");
+    assert_eq!(pick("", "en").tag, "en");
 }
 
 #[test]

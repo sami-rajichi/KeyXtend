@@ -10,8 +10,6 @@ use std::sync::Arc;
 
 /// The keyboard's texts and the system's.
 pub(super) struct Texts {
-    /// The system's display language, as `SystemLook::ui_language` gave it.
-    os: String,
     /// The keyboard's texts.
     keyboard: Arc<I18n>,
     /// The system's texts.
@@ -20,11 +18,10 @@ pub(super) struct Texts {
 
 impl Texts {
     /// The texts for `[ui] language` value `setting`, a layout in language `layout` and a system in `os`.
-    pub(super) fn new(setting: &str, layout: &str, os: String) -> Self {
+    pub(super) fn new(setting: &str, layout: &str, os: &str) -> Self {
         Self {
-            keyboard: Arc::new(I18n::new(pick(setting, layout, &os))),
-            tray: Arc::new(I18n::new(os_lang(&os))),
-            os,
+            keyboard: Arc::new(I18n::new(pick(setting, layout))),
+            tray: Arc::new(I18n::new(os_lang(os))),
         }
     }
 
@@ -35,7 +32,7 @@ impl Texts {
 
     /// Follows `setting` and a layout in language `layout`; true when the keyboard's language changed.
     fn follow(&mut self, setting: &str, layout: &str) -> bool {
-        let lang = pick(setting, layout, &self.os);
+        let lang = pick(setting, layout);
         if lang.tag == self.keyboard.lang().tag {
             return false;
         }

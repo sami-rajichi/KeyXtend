@@ -6,8 +6,8 @@ import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as Look
 
 QtObject {
-    // What the hub gives: settings, the keyboard's language and texts, the tray's texts, and the look; setting one sends
-    // its change signal. Setting `texts` last switches the keyboard's language as the hub does, by `textsChanged`.
+    // What the hub gives: settings, the keyboard's language and texts, the tray's texts, and the look; setting one
+    // sends its change signal. Setting `texts` last switches the keyboard's language as the hub does (`textsChanged`).
     property var settings: En.settings
     property var lang: En.lang
     property var texts: En.texts

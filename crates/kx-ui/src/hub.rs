@@ -1,6 +1,6 @@
-//! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the face,
-//! the look, notices, the tray icon, and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker
-//! runs.
+//! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
+//! face, the look, notices, the tray icon, and the requests the app drains on its own thread. No lock is held while a
+//! face call, a port call or a waker runs.
 
 mod app;
 mod face;
@@ -133,7 +133,7 @@ impl Hub {
         let themes = Themes::shipped()?;
         let (requests, drain) = mpsc::channel();
         let live = Live {
-            texts: Texts::new(&settings.language, "", ports.look.ui_language()),
+            texts: Texts::new(&settings.language, "", &ports.look.ui_language()),
             settings,
             face: None,
             store: None,
@@ -163,7 +163,7 @@ impl Hub {
         let texts = Texts::new(
             &settings.language,
             &face.lang(),
-            self.ports.look.ui_language(),
+            &self.ports.look.ui_language(),
         );
         {
             let mut live = self.lock();

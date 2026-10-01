@@ -130,18 +130,23 @@ fn the_tray_speaks_the_systems_language_whatever_the_keyboard_speaks() {
 }
 
 #[test]
-fn until_a_layout_names_its_language_the_system_language_speaks() {
+fn until_a_layout_names_its_language_the_keyboard_speaks_english() {
     let rig = Rig::new();
     rig.look.set_language("ar-TN");
     let (hub, _requests) = Hub::new(rig.ports()).unwrap();
-    assert_eq!(hub.i18n().lang().tag, "ar", "no keyboard yet");
+    assert_eq!(hub.i18n().lang().tag, "en", "no keyboard yet");
     let mut host = FakeHost::new(&MANIFEST);
     hub.attach(
         UiSettings::from_defaults().unwrap(),
         Arc::new(FakeFace::default()),
         host.handle(),
     );
-    assert_eq!(hub.i18n().lang().tag, "ar", "a layout with no language");
+    assert_eq!(hub.i18n().lang().tag, "en", "a layout with no language");
+    assert_eq!(
+        hub.tray_i18n().lang().tag,
+        "ar",
+        "the tray keeps the system's"
+    );
 }
 
 #[test]

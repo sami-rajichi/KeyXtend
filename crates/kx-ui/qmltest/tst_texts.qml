@@ -59,10 +59,12 @@ Item {
             tryVerify(() => app.notice.visible, 2000, "the banner shows");
             return app;
         }
-        // The app in front switched to a layout in language `t`: the hub tells the banner again, then the texts change.
-        function speak(app, t) {
+        // The app in front switched to a layout in language `t` on a system in `sys`: the hub tells the banner again,
+        // then the texts change.
+        function speak(app, t, sys) {
             app.ui.retold = [{ id: 1, text: t.texts[noticeKey], retry: false }];
-            app.ui.lang = t.lang;
+            app.ui.trayTexts = sys.texts;
+            app.ui.lang = Object.assign({}, t.lang, { tray: sys.lang.tray });
             app.ui.texts = t.texts;
         }
         // The keyboard window's tooltip.
@@ -104,19 +106,24 @@ Item {
         // The owner's case: an English layout in front of a Windows in another language, then French, then English.
         function test_the_layouts_language_switches_the_keyboards_texts_at_once_and_not_the_trays() {
             const app = make();
-            app.ui.trayTexts = Ar.texts;
             const board = app.face.board;
             const keys = labelled(app).concat([button(app, En.texts["bar.grip"])]);
             const was = places(app, keys);
+            const fam = app.face.res.fam;
             verify(keys.some(k => k.kv && En.texts[k.kv.label] !== Fr.texts[k.kv.label]), "the case this test is for");
+            verify(fam.arabic !== fam.latin, "the fonts this test tells apart");
             for (const t of [Fr, En]) {
-                speak(app, t);
+                speak(app, t, Ar);
                 speaks(app, t);
                 compare(places(app, keys), was, t.lang.tag + ": nothing moves");
                 verify(app.face.board === board, t.lang.tag + ": the board is not read again");
+                compare(app.face.res.fam.ui, fam.latin, t.lang.tag + ": the keyboard's font");
                 app.ui.trayClicked(300, 500);
-                verify(named(app.menu.contentItem, Accessible.MenuItem, Ar.texts["tray.show"]), "the tray keeps its language");
+                const show = Ar.texts["tray.show"];
+                verify(named(app.menu.contentItem, Accessible.MenuItem, show), "the tray keeps its language");
                 compare(app.menu.title, Ar.texts["window.menu"]);
+                const label = all(app.menu.contentItem, o => o.text === show && o.font !== undefined)[0];
+                compare(label.font.family, fam.arabic, "the tray keeps its language's font");
                 app.menu.shut();
             }
         }
@@ -126,9 +133,10 @@ Item {
             const app = make();
             const keys = labelled(app).concat([button(app, En.texts["bar.grip"])]);
             const was = places(app, keys);
-            speak(app, Ar);
+            speak(app, Ar, En);
             speaks(app, Ar);
             compare(button(app, Ar.texts["key.esc"]).label, En.texts["label.esc"], "the English word");
+            compare(app.face.res.fam.ui, app.face.res.fam.arabic, "Arabic texts in the Arabic font");
             compare(places(app, keys), was, "nothing moves");
             const msg = all(app.notice.contentItem, o => o.text === Ar.texts[noticeKey] && o.wrapMode !== undefined)[0];
             compare(msg.effectiveHorizontalAlignment, Text.AlignRight, "the banner reads right to left");

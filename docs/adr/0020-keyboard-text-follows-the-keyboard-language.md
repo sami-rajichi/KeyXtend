@@ -19,7 +19,7 @@ Decided by the owner on 2026-10-01.
 2. **So does everything on and around the keyboard:** tips, screen-reader names, window titles, the notice banner, the language list, the size letters and the top bar, and later the Settings window.
 3. **The tray follows the system.** The tray icon's tooltip and its menu speak the system's display language (`SystemLook::ui_language`).
 4. **Arabic flips text only.** Keys, the top bar, the side block and every window keep their places; Arabic text reads right to left in the theme's Arabic font. Nothing uses `LayoutMirroring`.
-5. **Fallbacks.** A layout whose language has no texts, such as German, gets English. Until a layout names its language (no keyboard yet), the keyboard's texts follow the system's.
+5. **Fallbacks.** A layout whose language has no texts, such as German, gets English. So does a layout whose language Windows cannot name, and the time before the keyboard starts: the keyboard's text never follows the system's language.
 
 How it works:
 
@@ -31,7 +31,7 @@ How it works:
 ## Consequences
 
 - The words switch as soon as the relabel timer sees the app in front switch layout, and nothing moves.
-- Window titles change with the language; the guard, the shape and the backdrop name a window by its title at each call, so they follow.
+- Window titles change with the language. The shape and the backdrop find a window by its live title at each call, so they follow; the guard uses no title.
 - Each switch builds one text set from its compiled-in Fluent file; switching back builds it again.
 - ARCHITECTURE's rule "right-to-left layouts use `LayoutMirroring`" ends; gate G7's right-to-left panel now means right-to-left text in a panel that keeps its places.
 

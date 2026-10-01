@@ -6,8 +6,8 @@ import QtQuick
 Window {
     id: note
 
-    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, its widest width in Qt units, and where a
-    // pop-up of a given size goes: `spot(w, h)` gives a Qt point or null. It never mirrors; Arabic text reads right to left.
+    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, its widest width in Qt units, and
+    // where a pop-up of a given size goes: `spot(w, h)` gives a Qt point or null. It never mirrors (ADR-0020).
     required property var ui
     required property var lk
     required property var res

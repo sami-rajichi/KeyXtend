@@ -11,7 +11,7 @@ Owner's decisions (2026-09-29):
 - Notices show in a banner above the keyboard with Try again or OK.
 - A small theme button in the top bar cycles the three themes (a trial; Settings takes the choice in P13). The top bar keeps its size.
 - All three language-key designs are built: Carousel (default), Cycle and List.
-- The UI language follows Windows (EN, FR or AR, else EN), with a setting.
+- The keyboard's text follows the layout in front (EN, FR or AR, else EN) and the tray follows Windows, with a setting (ADR-0020).
 - The keyboard always starts as the full keyboard at its saved place, size and theme; off-screen places come back to the bottom centre.
 - Fonts and icons live in the repo; translations use Fluent (`.ftl`).
 - `kx-crypto` moves to P8 and G26's Japanese IME part to F16.

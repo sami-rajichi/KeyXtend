@@ -2,11 +2,14 @@
 //! as the resources hold them); a change or a stray file fails it until it runs with `KX_BLESS=1`.
 
 use crate::files::keys_of;
-use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
+use kx_module_api::ports::{
+    BASE_DPI, FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect, Screen,
+};
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::golden::assert_golden;
+use kx_test_support::host::FakeHost;
 use kx_theme::assets::{ICON_EXT, ICONS_AT, bundle};
-use kx_ui::{Hub, I18n, UiPorts};
+use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -45,8 +48,38 @@ fn var(name: &str, value: &Value, pretty: bool) -> String {
     format!("var {name} = {};\n", json.expect("JSON writes"))
 }
 
+/// A face that shows a layout in language `0`; the fixtures read only its language.
+struct Speaks(String);
+
+impl KeyboardFace for Speaks {
+    fn board_json(&self) -> String {
+        Value::Null.to_string()
+    }
+
+    fn state_json(&self) -> String {
+        Value::Null.to_string()
+    }
+
+    fn lang(&self) -> String {
+        self.0.clone()
+    }
+
+    fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {
+        Ok(FaceReply::default())
+    }
+}
+
+/// A hub whose system shows language `tag`, with a layout in `tag` in front, and the host behind its settings.
+fn hub(tag: &str) -> (Arc<Hub>, FakeHost) {
+    let hub = system(tag);
+    let mut host = FakeHost::new(&MANIFEST);
+    let settings = UiSettings::from_defaults().expect("the [ui] defaults");
+    hub.attach(settings, Arc::new(Speaks(tag.to_owned())), host.handle());
+    (hub, host)
+}
+
 /// A hub whose system shows language `tag`, over fake ports.
-fn hub(tag: &str) -> Arc<Hub> {
+fn system(tag: &str) -> Arc<Hub> {
     let look = Arc::new(FakeSystemLook::new());
     look.set_language(tag);
     let rect = Rect {
@@ -72,7 +105,7 @@ fn hub(tag: &str) -> Arc<Hub> {
 
 /// Language `tag`'s settings and language JSON, every text by key, and the banner's counts by how many wait.
 fn ui(tag: &str) -> String {
-    let hub = hub(tag);
+    let (hub, _host) = hub(tag);
     let settings: Value = serde_json::from_str(&hub.settings_json()).expect("settings JSON");
     let lang: Value = serde_json::from_str(&hub.lang_json()).expect("language JSON");
     let t: Arc<I18n> = hub.i18n();

@@ -29,7 +29,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **No scrolling, dragging or right-click anywhere in its own UI** (ADR-0008).
   - Lists are paged, five rows at a time, and numbers use −/+ steppers instead of sliders.
   - The keyboard's own arrow keys drive every panel, and the keyboard moves by click, move, click.
-- **Any installed language.** English, French and Arabic come first, with correct Arabic: joined letters, harakat, `لا` as one key, and a right-to-left settings window.
+- **Any installed language.** English, French and Arabic come first, with correct Arabic: joined letters, harakat, `لا` as one key, and Arabic text that reads right to left in a settings window that keeps its places.
 - **Private and local.**
   - Voice typing runs free on your PC.
   - Clipboard history, the vault, learned words and transcripts are encrypted.
