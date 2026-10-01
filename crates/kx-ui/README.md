@@ -6,7 +6,13 @@ The UI: the texts in English, French and Arabic, the `[ui]` settings, the `ui` m
 
 The `qt` feature needs Qt 6.11.2: set `QMAKE` to its `qmake.exe` and put its `bin` first in `PATH` for the command. `build.rs` lists every QML file in one table (`QML`, the root first) and every bridge in `BRIDGES`, and hands the root's resource URL to the crate as `MAIN_QML`. Without the feature (`--no-default-features`) the texts, settings, hub and module still build and test, as the Linux checks need.
 
+`cpp/` holds the C++ the bridges call where cxx-qt-lib has no binding; `build.rs` adds it to the include path and rebuilds when it changes.
+
 It also compiles in, as Qt resources, the icons the theme tokens name and every font under `assets/fonts/` (ADR-0016), found through `kx_theme::assets`; a missing icon file stops the build. `ASSETS` hands QML their URLs as JSON, and the app never reads them from disk.
+
+## Qt's start
+
+The app calls `harden_qt` before Qt's app object exists. It clears every variable Qt reads (`harden::QT_PREFIXES`, any case) with `qunsetenv`, since Qt reads the C runtime's copy of the environment, and turns off Qt Quick's shader cache on disk. In release the app also passes its folder, so Qt loads plugins only from there, and calls `pin_imports` on the engine before loading: QML modules then come only from the compiled-in ones and the `qml` folder beside the app (`QML_DIR`).
 
 ## QML views
 
@@ -28,7 +34,7 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## The `[ui]` settings
 
-`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range. `tray_grace_ms` (500) may be 0, which turns the tray menu's grace off. `send_tries` (10) and `send_wait_ms` (100) set how a second copy hands Show or Quit to the running one; it reads them from the defaults only, since only the running copy loads the settings file.
+`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range. `tray_grace_ms` (500) may be 0, which turns the tray menu's grace off. `send_tries` (10) and `send_wait_ms` (100) set how a second copy hands Show or Quit to the running one; it reads the user's `[ui]` section without changing the file, and falls back to the defaults on any fault.
 
 ## The hub
 
@@ -53,8 +59,8 @@ Every bridge call runs on the Qt GUI thread, including the guard and the window 
 
 ## Public API
 
-`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`), and with `qt` also `install`, `MAIN_QML` and `ASSETS`.
+`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`), `harden` (`QT_PREFIXES`, `is_qt`, `qt_names`), and with `qt` also `install`, `MAIN_QML`, `ASSETS`, `harden_qt`, `pin_imports` and `QML_DIR`.
 
 ## Security
 
-See `docs/security/kx-ui.md`. The crate root denies unsafe code; only `src/bridges/` allows it, for the cxx-qt glue, with a `// SAFETY:` comment on each block (tidy F3).
+See `docs/security/kx-ui.md`. The crate root denies unsafe code; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, with a `// SAFETY:` comment on each block (tidy F3).

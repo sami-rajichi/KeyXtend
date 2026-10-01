@@ -9,6 +9,6 @@ mod names;
 mod section;
 mod store;
 
-pub use file::{Loaded, Outcome, SaveError, load, save};
+pub use file::{Loaded, Outcome, SaveError, load, peek, save};
 pub use names::{Files, MAX_FILE_BYTES, MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY};
 pub use store::{LoadReport, Store, StoreError, Unsaved};

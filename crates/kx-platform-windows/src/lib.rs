@@ -9,6 +9,8 @@ pub mod clock;
 #[cfg(windows)]
 pub mod com;
 pub mod dirs;
+#[cfg(windows)]
+pub mod dll;
 pub mod front;
 #[cfg(windows)]
 mod hidden;
@@ -95,4 +97,7 @@ pub enum PlatformError {
     /// COM did not start on this thread.
     #[error("COM did not start on this thread: {0}")]
     Com(io::Error),
+    /// Windows did not limit where libraries load from.
+    #[error("Windows did not limit where libraries load from: {0}")]
+    DllDirs(io::Error),
 }

@@ -80,3 +80,50 @@ fn the_reach_follows_the_ui_defaults() {
     assert_eq!(reach.tries, settings.send_tries);
     assert_eq!(reach.wait, Duration::from_millis(settings.send_wait_ms));
 }
+
+#[test]
+fn a_copy_that_quits_during_the_tries_leaves_the_session_to_this_one() {
+    let session = FakeInstance::new();
+    let mut held = Some(session.claim().unwrap());
+    let later = start(&session.clone(), Command::Show, REACH, |_| {
+        drop(held.take());
+    });
+    assert!(matches!(later, Start::Run(_)), "this copy runs instead");
+    assert!(session.sent().is_empty());
+}
+
+#[test]
+fn quit_finds_nothing_once_the_running_copy_has_gone() {
+    let session = FakeInstance::new();
+    let mut held = Some(session.claim().unwrap());
+    let later = start(&session.clone(), Command::Quit, REACH, |_| {
+        drop(held.take());
+    });
+    assert!(matches!(later, Start::Done));
+    assert!(session.claim().is_ok(), "nothing kept the session");
+}
+
+/// A settings file whose `[ui]` section is `ui`, with its version line.
+fn file(ui: &str) -> toml::Table {
+    format!("[ui]\nversion = 1\n{ui}").parse().unwrap()
+}
+
+#[test]
+fn the_reach_follows_the_users_file() {
+    let reach = Reach::from_file(Some(&file("send_tries = 3\nsend_wait_ms = 40"))).unwrap();
+    assert_eq!(reach.tries, 3);
+    assert_eq!(reach.wait, Duration::from_millis(40));
+}
+
+#[test]
+fn a_bad_or_missing_ui_section_gives_the_defaults() {
+    let defaults = Reach::of(&UiSettings::from_defaults().unwrap());
+    for f in [
+        None,
+        Some(file("send_tries = 0")),
+        Some(file("send_wait_ms = \"x\"")),
+        Some(toml::Table::new()),
+    ] {
+        assert_eq!(Reach::from_file(f.as_ref()).unwrap(), defaults, "{f:?}");
+    }
+}

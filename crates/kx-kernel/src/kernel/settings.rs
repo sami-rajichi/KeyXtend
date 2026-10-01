@@ -33,6 +33,16 @@ pub struct KernelSettings {
     pub log_max_mb: u32,
 }
 
+impl KernelSettings {
+    /// The settings in the embedded `defaults.toml`, for a log opened before any settings load.
+    ///
+    /// # Errors
+    /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
+    pub fn from_defaults() -> Result<Self, SettingsError> {
+        SPEC.defaults_as()
+    }
+}
+
 impl Settings for KernelSettings {
     fn check(&self) -> Result<(), SettingsError> {
         let invalid = |why: &str| Err(SettingsError::Invalid(why.to_owned()));

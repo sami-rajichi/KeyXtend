@@ -52,3 +52,9 @@ proptest.workspace = true
 name = "qml"
 harness = false
 required-features = ["qt"]
+
+# Qt's start ignores planted Qt variables; it runs itself again with them set, so it needs no harness either.
+[[test]]
+name = "harden"
+harness = false
+required-features = ["qt"]

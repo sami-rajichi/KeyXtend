@@ -568,6 +568,7 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-platform",
+ "kx-test-support",
  "proptest",
  "thiserror 2.0.21",
  "windows",

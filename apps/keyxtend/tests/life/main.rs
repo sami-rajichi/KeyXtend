@@ -12,6 +12,7 @@ mod fakes;
 mod lang;
 mod rig;
 mod second;
+mod stop;
 
 use keyxtend::boot::{Boot, modules};
 use keyxtend::drain;

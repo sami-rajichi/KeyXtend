@@ -45,7 +45,9 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - Guard tries stop at `guard_tries` (at most 100) per run, and equal notices are merged.
   - A second copy's tries to reach the running one stop at `send_tries` (at most 100), `send_wait_ms` (at most 10 s) apart.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
-- **Elevation:** the crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
+- **Elevation:**
+  - The crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
+  - `harden_qt` clears every variable Qt reads before Qt starts and turns off Qt Quick's shader cache on disk, so another program of the user cannot load its plugin, QML module or cached shader into the uiAccess process. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's own functions.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

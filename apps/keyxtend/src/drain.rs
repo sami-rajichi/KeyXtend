@@ -41,6 +41,18 @@ pub fn drain(mut kernel: Kernel, hub: &Hub, requests: &Receiver<Request>) {
     }
 }
 
+/// Stops the app after Qt's loop: asks the kernel's thread to quit, unless it was asked already, removes the tray icon
+/// and waits for the thread. False when the thread ended in a panic, which is logged.
+pub fn stop(hub: &Hub, kernel: JoinHandle<()>) -> bool {
+    let _ = hub.quit();
+    hub.tray_hide();
+    let joined = kernel.join().is_ok();
+    if !joined {
+        tracing::error!("the kernel's thread ended in a panic");
+    }
+    joined
+}
+
 /// Ends the UI when it drops, so Quit ends it even if stopping the modules panics.
 struct EndUi<'a>(&'a Hub);
 

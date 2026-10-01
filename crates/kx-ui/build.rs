@@ -53,7 +53,17 @@ mod qt {
         "qml/PressWatch.qml",
     ];
     /// The Rust files holding cxx-qt bridges.
-    const BRIDGES: &[&str] = &["src/bridges/ui.rs", "src/bridges/keyboard.rs"];
+    const BRIDGES: &[&str] = &[
+        "src/bridges/ui.rs",
+        "src/bridges/keyboard.rs",
+        "src/bridges/harden.rs",
+    ];
+    /// The hand-written C++ the bridges include.
+    const CPP: &str = "cpp";
+    /// The resource root of compiled-in QML modules, as cxx-qt-build lays them out.
+    const QML_ROOT: &str = "qrc:/qt/qml";
+    /// The variable that hands that root to the crate.
+    const ROOT_ENV: &str = "KX_UI_QML_ROOT";
     /// The repo's `assets/` folder, from this crate.
     const ASSETS: &str = "../../assets";
     /// The variable that hands the root's resource URL to the crate.
@@ -78,14 +88,16 @@ mod qt {
             .files(BRIDGES.iter().copied())
             .qrc_resources(resources)
             .build();
-        let base = format!("qrc:/qt/qml/{}", URI.replace('.', "/"));
+        let base = format!("{QML_ROOT}/{}", URI.replace('.', "/"));
         let root = QML.first().copied().unwrap_or_default();
         println!("cargo::rustc-env={MAIN_ENV}={base}/{root}");
         println!(
             "cargo::rustc-env={ASSETS_ENV}={}",
             assets_json(&base, &fonts)
         );
+        println!("cargo::rustc-env={ROOT_ENV}={QML_ROOT}");
         println!("cargo::rerun-if-changed={ASSETS}");
+        println!("cargo::rerun-if-changed={CPP}");
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
             for arg in NO_IMPORT_LIB {
                 println!("cargo::rustc-link-arg={arg}");

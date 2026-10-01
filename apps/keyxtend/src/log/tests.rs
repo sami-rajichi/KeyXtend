@@ -79,3 +79,13 @@ fn a_name_that_is_no_level_opens_nothing() {
     assert!(open(&settings("loud"), &files).is_none());
     assert!(!files.logs.exists(), "nothing was made");
 }
+
+#[test]
+fn with_no_loaded_settings_the_kernel_defaults_open_the_log() {
+    let (_dir, files) = data();
+    let chosen = or_defaults(None).unwrap();
+    assert_eq!(chosen, KernelSettings::from_defaults().unwrap());
+    assert!(open(&chosen, &files).is_some());
+    let mine = settings("warn");
+    assert_eq!(or_defaults(Some(mine.clone())), Some(mine));
+}

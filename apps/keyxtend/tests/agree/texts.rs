@@ -1,7 +1,8 @@
 //! Every name, label and tip the board draws, every module the app ships and the kernel, and every language-key
 //! design has its text in English, French and Arabic.
 
-use crate::{board, designs, fakes::ports};
+use crate::fakes::{ports, tray};
+use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
@@ -39,7 +40,7 @@ fn every_name_label_and_tip_the_board_draws_has_its_text() {
 
 #[test]
 fn every_shipped_module_and_the_kernel_have_a_name() {
-    let (hub, _requests) = Hub::new(ports()).unwrap();
+    let (hub, _requests) = Hub::new(ports(tray())).unwrap();
     let ids = modules(&hub)
         .into_iter()
         .map(|m| m.manifest().id)

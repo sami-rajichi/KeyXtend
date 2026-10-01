@@ -25,5 +25,10 @@ fn the_language_shown_and_the_legends_come_from_the_layout_in_front() {
         assert_eq!(state["lang"]["cur"]["short"], want.short.as_str(), "{id}");
         assert_eq!(state["lang"]["space"], json!(want.name), "{id}");
         assert_eq!(state["keys"][&key]["name"], typed.as_str(), "{id}");
+        assert_eq!(
+            state["keys"][&key]["main"],
+            typed.as_str(),
+            "{id}: the drawn legend"
+        );
     }
 }

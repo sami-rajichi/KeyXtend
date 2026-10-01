@@ -1,17 +1,18 @@
-//! The app's order of start and stop on Windows. Start: the command line and the quiet hook, the one running copy
-//! (listening at once), the hub and the kernel, the log, the modules, the kernel's thread, then Qt. Stop: Quit reaches
-//! the kernel's thread, which stops the modules and ends the UI; once Qt's loop returns, the tray icon goes and the
-//! kernel's thread is joined.
+//! The app's order of start and stop on Windows. Start: pinned library folders in release, the command line and the
+//! quiet hook, the one running copy (listening at once), the hub and the kernel, the log, the modules, the kernel's
+//! thread, then Qt, hardened first. Stop: Quit reaches the kernel's thread, which stops the modules and ends the UI;
+//! once Qt's loop returns, `drain::stop` removes the tray icon and joins the kernel's thread.
 
-use keyxtend::boot::{Boot, Services};
+use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::relay::Relay;
 use keyxtend::{args, drain, log, quiet};
+use kx_kernel::KernelSettings;
 use kx_platform::Platform;
 use kx_platform::ui::UiError;
-use kx_platform_windows::{WindowsPlatform, uiaccess};
-use kx_settings::Files;
-use kx_ui::{Hub, UiPorts, UiSettings};
+use kx_platform_windows::{WindowsPlatform, dll, uiaccess};
+use kx_settings::{Files, peek};
+use kx_ui::{Hub, UiPorts};
 use std::env;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -19,9 +20,15 @@ use std::thread;
 
 /// The app's version, for the first log line.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Release builds load libraries only from the app's folder and System32, and Qt's plugins and QML modules only from
+/// the app's folder; debug builds find the installed Qt through `PATH`.
+const PINNED: bool = !cfg!(debug_assertions);
 
 /// Runs the app to its end and says how it ended.
 pub fn main() -> ExitCode {
+    if let Err(e) = PINNED.then(dll::pin).transpose() {
+        return fail(&e);
+    }
     let command = match args::parse(env::args_os().skip(1)) {
         Ok(command) => command,
         Err(e) => return fail(&e),
@@ -31,8 +38,9 @@ pub fn main() -> ExitCode {
         Ok(platform) => Arc::new(platform),
         Err(e) => return fail(&e),
     };
-    let reach = match UiSettings::from_defaults() {
-        Ok(settings) => Reach::of(&settings),
+    let files = Files::new(platform.dirs().data_dir().path());
+    let reach = match Reach::from_file(peek(&files).as_ref()) {
+        Ok(reach) => reach,
         Err(e) => return fail(&e),
     };
     let mut claim = match copy::start(&*platform.instance(), command, reach, thread::sleep) {
@@ -43,24 +51,30 @@ pub fn main() -> ExitCode {
     let relay = Arc::new(Relay::default());
     let heard = Arc::clone(&relay);
     let listened = claim.listen(Box::new(move |c| heard.hear(c)));
-    let code = run(&platform, &relay, listened);
+    let code = run(&platform, &files, &relay, listened);
     drop(claim);
     tracing::info!("KeyXtend ended");
     code
 }
 
-/// Boots the kernel and the hub over `platform`, then runs Qt until the UI ends.
-fn run(platform: &Arc<WindowsPlatform>, relay: &Relay, listened: Result<(), UiError>) -> ExitCode {
-    let services = Services {
-        injector: platform.injector(),
-        layouts: platform.layouts(),
-    };
-    let mut boot = match Boot::load(platform.clone(), services, ports(platform)) {
+/// Boots the kernel and the hub over `platform`, logging into `files`, then runs Qt until the UI ends.
+fn run(
+    platform: &Arc<WindowsPlatform>,
+    files: &Files,
+    relay: &Relay,
+    listened: Result<(), UiError>,
+) -> ExitCode {
+    let mut boot = match boot(platform) {
         Ok(boot) => boot,
-        Err(e) => return fail(&e),
+        Err(e) => {
+            start_log(None, files);
+            return fail(&e);
+        }
     };
     let _tray = TrayGuard(Arc::clone(&boot.hub));
-    start_log(&boot, platform);
+    start_log(boot.kernel.kernel_settings(), files);
+    let ui_access = uiaccess::active();
+    tracing::info!(version = VERSION, ui_access, "KeyXtend started");
     if let Err(e) = listened {
         tracing::warn!(error = %e, "a second copy cannot reach this one");
     }
@@ -73,22 +87,25 @@ fn run(platform: &Arc<WindowsPlatform>, relay: &Relay, listened: Result<(), UiEr
         kernel,
         hub,
         requests,
-        heard: _heard,
+        ..
     } = boot;
     let kernel_thread = match drain::spawn(kernel, Arc::clone(&hub), requests) {
         Ok(handle) => handle,
-        Err(e) => {
-            tracing::error!(error = %e, "the kernel's thread did not start");
-            return ExitCode::FAILURE;
-        }
+        Err(e) => return fail(&e),
     };
-    crate::qt::run(|| {
-        hub.quit();
-        hub.tray_hide();
-        if kernel_thread.join().is_err() {
-            tracing::error!("the kernel's thread ended in a panic");
-        }
+    let pinned = PINNED.then(|| platform.dirs().exe_dir.as_path());
+    crate::qt::run(pinned, || {
+        let _ = drain::stop(&hub, kernel_thread);
     })
+}
+
+/// The hub and the kernel over `platform`, with every module added and the settings loaded.
+fn boot(platform: &Arc<WindowsPlatform>) -> Result<Boot, BootError> {
+    let services = Services {
+        injector: platform.injector(),
+        layouts: platform.layouts(),
+    };
+    Boot::load(platform.clone(), services, ports(platform))
 }
 
 /// Every UI port from the Windows adapter, the tray icon too.
@@ -102,24 +119,17 @@ fn ports(platform: &WindowsPlatform) -> UiPorts {
     }
 }
 
-/// Opens the log from the kernel's loaded settings, before any module starts, and notes how the app runs.
-fn start_log(boot: &Boot, platform: &WindowsPlatform) {
-    let files = Files::new(platform.dirs().data_dir().path());
-    let settings = boot.kernel.kernel_settings();
-    match settings.as_ref().and_then(|s| log::open(s, &files)) {
+/// Opens the log in `files` from the kernel's `loaded` settings, or from its defaults when none loaded.
+fn start_log(loaded: Option<KernelSettings>, files: &Files) {
+    match log::or_defaults(loaded).and_then(|s| log::open(&s, files)) {
         Some(opened) => {
             let _ = log::install(opened);
         }
-        None => eprintln!("no log this run: the kernel's settings did not load"),
+        None => eprintln!("no log this run: the kernel's settings did not read"),
     }
-    tracing::info!(
-        version = VERSION,
-        ui_access = uiaccess::active(),
-        "KeyXtend started"
-    );
 }
 
-/// Removes the tray icon when it drops, so a panic on this thread leaves no dead icon; the hub itself never drops.
+/// Removes the tray icon when this thread unwinds or returns early; the hub itself never drops.
 struct TrayGuard(Arc<Hub>);
 
 impl Drop for TrayGuard {
@@ -128,7 +138,7 @@ impl Drop for TrayGuard {
     }
 }
 
-/// Says why the app stops on standard error, as no log may be open yet, and gives the failure code.
+/// Says why the app stops, on standard error and in the log once it is open, and gives the failure code.
 fn fail(why: &dyn std::fmt::Display) -> ExitCode {
     eprintln!("KeyXtend stopped: {why}");
     tracing::error!(error = %why, "KeyXtend stopped");

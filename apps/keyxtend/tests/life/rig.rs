@@ -1,13 +1,13 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
 //! captured EN, FR and AR tables, and the shared fake UI ports; a waker keeps every wake.
 
-use crate::fakes::ports;
+use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
 use kx_module_api::ports::Scan;
 use kx_platform::{AppDirs, PORTABLE_DIR};
-use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakePlatform};
+use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakePlatform, FakeTray};
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
@@ -26,6 +26,8 @@ pub struct Rig {
     pub injector: Arc<FakeInjector>,
     /// Behind the layout source, with the app in front on the first layout.
     pub layouts: Arc<FakeLayoutSource>,
+    /// Behind the tray icon.
+    pub tray: Arc<FakeTray>,
 }
 
 impl Rig {
@@ -38,6 +40,7 @@ impl Rig {
             user: TempDir::new("app-user").unwrap(),
             injector: Arc::new(FakeInjector::new()),
             layouts: Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap()),
+            tray: tray(),
         }
     }
 
@@ -56,7 +59,8 @@ impl Rig {
             injector: self.injector.clone(),
             layouts: self.layouts.clone(),
         };
-        Boot::load(Arc::new(FakePlatform::new(dirs)), services, ports()).unwrap()
+        let ports = ports(self.tray.clone());
+        Boot::load(Arc::new(FakePlatform::new(dirs)), services, ports).unwrap()
     }
 }
 

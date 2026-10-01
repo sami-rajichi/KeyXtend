@@ -45,3 +45,10 @@ fn the_kernel_settings_refuse_an_empty_id_in_the_disabled_list() {
     assert!(with(&["a", "b"]).check().is_ok());
     assert!(with(&["a", ""]).check().is_err());
 }
+
+#[test]
+fn the_defaults_read_as_kernel_settings_that_pass_the_check() {
+    let defaults = KernelSettings::from_defaults().unwrap();
+    assert!(defaults.check().is_ok());
+    assert!(log::level(&defaults.log_level).is_some());
+}

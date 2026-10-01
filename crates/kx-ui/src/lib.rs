@@ -8,12 +8,15 @@
 mod bridges;
 mod geom;
 mod guard;
+pub mod harden;
 mod hub;
 pub mod i18n;
 mod plate;
 mod settings;
 mod ui_module;
 
+#[cfg(feature = "qt")]
+pub use bridges::harden::{QML_DIR, harden_qt, pin_imports};
 #[cfg(feature = "qt")]
 pub use bridges::install;
 pub use geom::Area;

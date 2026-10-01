@@ -1,5 +1,5 @@
-//! The quiet panic hook logs where a panic happened and never what it said. It is the process's one hook, so this
-//! binary holds a single test.
+//! The quiet panic hook logs where a panic happened and never what it said, and says the place on standard error too
+//! until the run's log is set up. It is the process's one hook, so this binary holds a single test.
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
@@ -34,7 +34,7 @@ fn a_panic_logs_its_place_and_never_its_payload() {
     let mut at = None;
     tracing::dispatcher::with_default(&log.dispatch, || {
         assert!(catch_unwind(AssertUnwindSafe(|| fail(&mut at))).is_err());
-        quiet::report(None);
+        quiet::report(None, &mut Vec::new());
     });
     let at = at.unwrap();
     let text = std::fs::read_to_string(&files.log).unwrap();
@@ -49,4 +49,13 @@ fn a_panic_logs_its_place_and_never_its_payload() {
         "{text}"
     );
     assert_eq!(text.lines().count(), 2, "one line each: {text}");
+    let mut early = Vec::new();
+    quiet::report(Some(&at), &mut early);
+    let said = String::from_utf8(early).unwrap();
+    let place = format!("{}:{}:{}", at.file(), at.line(), at.column());
+    assert!(said.contains(&place) && !said.contains(SECRET), "{said}");
+    assert!(keyxtend::log::install(log), "the run's log is set up");
+    let mut later = Vec::new();
+    quiet::report(Some(&at), &mut later);
+    assert!(later.is_empty(), "the log has it now");
 }

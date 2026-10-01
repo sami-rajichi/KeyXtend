@@ -9,6 +9,7 @@
     reason = "cxx-qt's generated glue makes each object's Rust side in a Box"
 )]
 
+pub mod harden;
 mod keyboard;
 mod ui;
 

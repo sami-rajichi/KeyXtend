@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-09-30
 - **Status:** Draft
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the one running copy with its command window (`instance`, `hidden`), and the tray icon with its window and front-window hook (`tray`). It runs inside the uiAccess `keyxtend` process.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the one running copy with its command window (`instance`, `hidden`), and the tray icon with its window and front-window hook (`tray`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -74,6 +74,7 @@
   - A panic in the tray listener is caught before it reaches Windows.
   - Adds and changes run from the icon's own queue and no lock is held during a taskbar call, so a message that arrives inside the call cannot deadlock the thread, and neither `show` nor `set` waits on the taskbar: a hung Explorer stalls only the icon's thread, never the keyboard. A change queued behind an add, or behind a taskbar restart, follows the add.
   - The icon's thread deletes the icon as its window ends, after any add it had queued, so no dead icon stays behind while the app runs.
+- **Elevation (libraries):** `dll::pin` limits libraries named without a folder to the app's folder and System32, so the working folder and `PATH` can no longer lend one to the uiAccess process. It does not cover the libraries the exe imports, which load before `main`; those must sit beside the exe.
 - **Elevation (focus):** `give_back` moves the focus only from one of our windows to another app's live window. The adapter never asks for the focus for our own windows (ADR-0013); only the spike and the test tools keep such a request.
 - **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, with dead keys checked on the golden layouts only (see Accepted): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
 

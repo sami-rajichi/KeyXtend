@@ -108,6 +108,13 @@ fn fallback(files: &Files, damaged: bool) -> Loaded {
     }
 }
 
+/// The settings file's table as it is, for a later copy of the app that must not change it: nothing when it is
+/// missing, held, too big or damaged. It never repairs, moves or writes a file.
+#[must_use]
+pub fn peek(files: &Files) -> Option<toml::Table> {
+    read_table(&files.settings).ok()
+}
+
 /// Reads the settings file and repairs it when it is damaged.
 ///
 /// A damaged file is moved to the broken copy, so the next save cannot make it the previous copy.
