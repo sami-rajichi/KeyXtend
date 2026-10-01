@@ -1,4 +1,5 @@
-//! The product app the gates G2-G4, G25 and `close` aim at: its windows, found by program, and its keyboard.
+//! The product app the gates G2-G4, G8-G13, G25, G26 and `close` aim at: its windows, found by program, and its
+//! keyboard.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -6,7 +7,7 @@ use std::env::consts::EXE_SUFFIX;
 use std::path::Path;
 
 use kx_mod_keyboard::{KeyboardSettings, Role};
-use windows::Win32::Foundation::{HWND, POINT};
+use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::keymap::{KeyMap, Reader};
 use crate::{board, win};
@@ -38,6 +39,26 @@ fn owns(w: HWND) -> bool {
     win::program(w).is_ok_and(|p| is_ours(&p))
 }
 
+/// The product's windows a person can see now, topmost first.
+pub fn shown() -> Vec<HWND> {
+    win::seen_windows()
+        .into_iter()
+        .filter(|&w| owns(w))
+        .collect()
+}
+
+/// Presses the button with UI Automation id `id` in whichever shown product window has it.
+pub fn invoke(reader: &Reader, id: &str) -> Result<(), String> {
+    let mut why = format!("no shown {NAME} window has {id}");
+    for hwnd in shown() {
+        match reader.invoke(hwnd, id) {
+            Ok(()) => return Ok(()),
+            Err(e) => why = e,
+        }
+    }
+    Err(why)
+}
+
 /// The running product's process id and program path, found by any of its windows, shown or hidden.
 pub fn running() -> Option<(u32, String)> {
     let mut asked = HashSet::new();
@@ -63,7 +84,7 @@ impl Keyboard {
     pub fn find() -> Result<Self, String> {
         let anchor = board::id_of(Role::Lang)?;
         let reader = Reader::new()?;
-        for hwnd in win::seen_windows().into_iter().filter(|&w| owns(w)) {
+        for hwnd in shown() {
             let Ok(keys) = reader.read(hwnd) else {
                 continue;
             };
@@ -76,9 +97,18 @@ impl Keyboard {
 
     /// The screen centre of key `id`, in physical pixels.
     pub fn at(&self, id: &str) -> Result<POINT, String> {
-        let missing = || format!("key {id} not found by its UI Automation id");
-        self.keys.at(id).ok_or_else(missing)
+        self.keys.at(id).ok_or_else(|| missing(id))
     }
+
+    /// The screen box of key `id`, in physical pixels.
+    pub fn rect(&self, id: &str) -> Result<RECT, String> {
+        self.keys.rect(id).ok_or_else(|| missing(id))
+    }
+}
+
+/// Why key `id` has no place.
+fn missing(id: &str) -> String {
+    format!("key {id} not found by its UI Automation id")
 }
 
 #[cfg(test)]

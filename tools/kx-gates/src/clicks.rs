@@ -65,7 +65,7 @@ pub fn typed(clicks: &[Click]) -> String {
 }
 
 /// What a key types with no modifier, when that is a printable character at once; a dead key waits for the next.
-fn typed_by(k: &KeyChars) -> Option<String> {
+pub fn typed_by(k: &KeyChars) -> Option<String> {
     let live = !k.dead.contains(&Slot::Base);
     (live && layouts::is_printable(&k.base)).then(|| k.base.clone())
 }

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: gates G8–G11, G13 and G26
+G8 times the product's start-up from its own log, idle memory and CPU, its folder size, key highlights, resizes, click-to-character and a bus publish against spec §10, with a `weak` mode capped like the spike's, and reads a PresentMon CSV when the owner records one. G9 checks the window flags after outside changes, hiding, showing and resizing; G10 walks and presses every key by UI Automation; G11 records size and sharpness per display scale; G13 times how fast the keyboard follows Windows' look and saves pictures for the owner. G26 checks German, Russian, Hebrew and Persian labels and typing on GitHub's Windows runner, where `--layout` now reports a layout that did not come back. The top bar's buttons and the bubble give UI Automation their `bar.<id>`, and `capture-layouts` follows the layouts module's scan list.
+
 ## 2026-10-01 — P3: gates G2–G4 and G25 aim at the product
 Each key now gives UI Automation its board id (`esc`, `c-0x001E`, `lang`), and gates G2, G3 and G4 find the product keyboard and click each key at the centre of the box UI Automation reports, so the top bar no longer shifts their clicks. G25 clicks the product's language key, after one relabel period so the key steps from the layout in front. `kx-gates close keyxtend` runs the app's own `--quit` and waits for its process to end, while `close qt` still closes the frozen spike face; the `--quit` flag now comes from the one command table the app and the gates share.
 

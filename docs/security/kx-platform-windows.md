@@ -1,7 +1,7 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-09-30
+- **Last review:** 2026-10-01
 - **Status:** Draft
 - **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the one running copy with its command window (`instance`, `hidden`), and the tray icon with its window and front-window hook (`tray`). It runs inside the uiAccess `keyxtend` process.
 
@@ -100,7 +100,9 @@ A dead key is checked by the character `ToUnicodeEx` gives for it, since its no-
 
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.
 
-`kx-target-window --layout` (a test tool, never shipped) activates a layout, which on Windows 8+ switches the whole session's input language. It puts the previous layout back on close and when the switch does not take; a killed window cannot, so gates close it with `WM_CLOSE` first.
+`kx-target-window --layout` (a test tool, never shipped) activates a layout, which on Windows 8+ switches the whole session's input language. It puts the previous layout back on close, only while it holds the keyboard, and when the switch does not take; a killed window cannot.
+- Gates bring it to the front, then close it with `WM_CLOSE`; a failed restore logs `# layout-kept`, which G26 reports.
+- G26 is the only gate that passes `--layout`, and it runs on the GitHub runner only, never on the owner's PC.
 
 Another program in this session can create `Local\KeyXtend.Running` first, so KeyXtend reads a copy as running and then finds no command window. A named object cannot be kept from a same-user program; the app (Task 19) decides what to do when no command window answers.
 

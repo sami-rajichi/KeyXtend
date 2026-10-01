@@ -118,12 +118,14 @@ pub fn opened(
 }
 
 /// Closes old target windows and deletes the log; returns target-window's program and title.
+/// Each comes to the front first, since it puts back a `--layout` switch only while it has the keyboard.
 fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
     let (t, title) = (&ctx.cfg.timing, ctx.target.title.clone());
     for w in win::top_windows()
         .into_iter()
         .filter(|&w| win::title(w) == title)
     {
+        let _ = win::front(w, t, &ctx.cfg.keys);
         let _ = win::close(w);
         if !winfind::wait_gone(w, t.close_wait_ms, t.poll_ms) {
             return Err(format!(
@@ -153,6 +155,15 @@ fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
 /// Closes old target windows, deletes the log, starts target-window and waits for it.
 pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
     start_target_with(ctx, &[])
+}
+
+/// Brings target-window `target` to the front, or closes it and says so.
+pub fn to_front(ctx: &Ctx, target: Opened) -> Result<Opened, String> {
+    if win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
+        return Ok(target);
+    }
+    crate::apps::clean_up(ctx, target);
+    Err("could not bring target-window to the front".to_string())
 }
 
 /// Like `start_target`, with `extra` arguments, such as the ones that make a password box.

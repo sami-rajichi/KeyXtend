@@ -1,17 +1,23 @@
-//! Starts a program through the shell: as administrator, where this PC shows no prompt, or hidden. Only the shell
-//! starts a uiAccess program for a caller without uiAccess.
+//! Starts a program through the shell: as administrator, where this PC shows no prompt, hidden, or shown and kept to
+//! measure. Only the shell starts a uiAccess program for a caller without uiAccess.
 #![cfg(windows)]
 
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::System::Threading::GetProcessId;
 use windows::Win32::UI::Shell::{
-    SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW,
+    SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
+    ShellExecuteExW,
 };
-use windows::Win32::UI::WindowsAndMessaging::{SHOW_WINDOW_CMD, SW_HIDE, SW_SHOWNORMAL};
+use windows::Win32::UI::WindowsAndMessaging::{
+    SHOW_WINDOW_CMD, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL,
+};
 use windows::core::{PCWSTR, w};
 
+use crate::proc::Process;
 use crate::win::size32;
 
 /// The shell verb that asks for administrator rights.
@@ -59,30 +65,54 @@ fn wide(s: &OsStr) -> Vec<u16> {
 
 /// Starts `exe` with `args` as administrator and returns once it has started.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    let normal = (RUN_AS, SW_SHOWNORMAL, false);
-    shell(exe, args, normal).map_err(|e| format!("start {} as administrator: {e}", exe.display()))
+    let normal = (RUN_AS, SW_SHOWNORMAL, 0);
+    let started = shell(exe, args, normal).map(drop);
+    started.map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 
 /// Starts `exe` with `args` and no window, and returns once it has started; a failure shows no dialog.
 pub fn run_hidden(exe: &Path, args: &[String]) -> Result<(), String> {
-    let hidden = (PCWSTR::null(), SW_HIDE, true);
-    shell(exe, args, hidden).map_err(|e| format!("start {}: {e}", exe.display()))
+    let hidden = (PCWSTR::null(), SW_HIDE, SEE_MASK_FLAG_NO_UI);
+    let started = shell(exe, args, hidden).map(drop);
+    started.map_err(|e| format!("start {}: {e}", exe.display()))
 }
 
-/// Starts `exe` with `args` through the shell with a verb (null is the default), a window state, and whether a
-/// failure stays quiet.
+/// Starts `exe` with `args`, shown without taking the focus, and opens its process to measure it.
+#[allow(
+    unsafe_code,
+    reason = "Reads the id of, then closes, the handle the shell gave."
+)]
+pub fn start_measured(exe: &Path, args: &[String]) -> Result<Process, String> {
+    let kept = (
+        PCWSTR::null(),
+        SW_SHOWNOACTIVATE,
+        SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS,
+    );
+    let shown = shell(exe, args, kept).map_err(|e| format!("start {}: {e}", exe.display()))?;
+    let Some(h) = shown.filter(|h| !h.is_invalid()) else {
+        return Err(format!("the shell gave no process for {}", exe.display()));
+    };
+    // SAFETY: `h` is the open handle the shell gave us; it is closed once, here.
+    let pid = unsafe { GetProcessId(h) };
+    let ours = Process::to_measure(pid);
+    // SAFETY: as above.
+    let _ = unsafe { CloseHandle(h) };
+    ours
+}
+
+/// Starts `exe` with `args` through the shell with a verb (null is the default), a window state and extra mask bits;
+/// the process handle when the mask asked for one.
 #[allow(unsafe_code, reason = "The struct is set up as the call needs.")]
 fn shell(
     exe: &Path,
     args: &[String],
-    (verb, show, quiet): (PCWSTR, SHOW_WINDOW_CMD, bool),
-) -> windows::core::Result<()> {
+    (verb, show, mask): (PCWSTR, SHOW_WINDOW_CMD, u32),
+) -> windows::core::Result<Option<HANDLE>> {
     let file = wide(exe.as_os_str());
     let params = wide(OsStr::new(&command_line(args)));
-    let no_ui = if quiet { SEE_MASK_FLAG_NO_UI } else { 0 };
     let mut info = SHELLEXECUTEINFOW {
         cbSize: size32::<SHELLEXECUTEINFOW>(),
-        fMask: SEE_MASK_NOASYNC | no_ui,
+        fMask: SEE_MASK_NOASYNC | mask,
         lpVerb: verb,
         lpFile: PCWSTR(file.as_ptr()),
         lpParameters: PCWSTR(params.as_ptr()),
@@ -90,7 +120,8 @@ fn shell(
         ..Default::default()
     };
     // SAFETY: `info` has `cbSize` set, and its strings live until the call returns.
-    unsafe { ShellExecuteExW(&raw mut info) }
+    unsafe { ShellExecuteExW(&raw mut info) }?;
+    Ok((mask & SEE_MASK_NOCLOSEPROCESS != 0).then_some(info.hProcess))
 }
 
 #[cfg(test)]

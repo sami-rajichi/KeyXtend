@@ -472,13 +472,17 @@ name = "kx-gates"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-kernel",
  "kx-mod-keyboard",
+ "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",
  "kx-platform-windows",
+ "kx-settings",
  "kx-target-window",
  "kx-test-support",
+ "kx-theme",
  "serde",
  "serde_json",
  "spike-core",

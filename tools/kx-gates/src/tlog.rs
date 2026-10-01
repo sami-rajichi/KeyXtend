@@ -1,7 +1,7 @@
 //! Reads the target-window log, whose format is in `kx_target_window::log`, after the last start.
 #![cfg(windows)]
 
-use kx_target_window::log::{COMMENT, FOCUS_LOST, MOUSE, Press, SEP, START};
+use kx_target_window::log::{COMMENT, FOCUS_LOST, LAYOUT_KEPT, MOUSE, Press, SEP, START};
 
 /// Radix of the logged UTF-16 units.
 const HEX: u32 = 16;
@@ -87,6 +87,12 @@ fn mouse_fields(rest: &str) -> Option<Mouse> {
     Some(Mouse { press, us, x, y })
 }
 
+/// True when target-window's last run could not put back the layout from before `--layout`.
+pub fn layout_kept(log: &str) -> bool {
+    let last = log.rfind(START).map_or(log, |at| &log[at..]);
+    last.lines().any(|l| l.starts_with(LAYOUT_KEPT))
+}
+
 /// The text the units spell; broken surrogates become U+FFFD.
 pub fn decode(units: &[Unit]) -> String {
     let raw: Vec<u16> = units.iter().map(|u| u.unit).collect();
@@ -152,5 +158,16 @@ mod tests {
         assert_eq!(focus_lost(log, 200), 2);
         assert_eq!(focus_lost(log, 0), 3);
         assert_eq!(focus_lost("# start\t0\n10\t0041\n", 0), 0);
+    }
+
+    #[test]
+    fn a_layout_kept_at_the_last_close_is_seen() {
+        assert!(layout_kept("# start\t0\n10\t0041\n# layout-kept\t20\r\n"));
+        let earlier = "# start\t0\n# layout-kept\t20\n# start\t30\n40\t0041\n";
+        assert!(
+            !layout_kept(earlier),
+            "a run before the last start is not this one"
+        );
+        assert!(!layout_kept(""));
     }
 }

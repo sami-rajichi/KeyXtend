@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::win::{poll_until, sleep_ms};
 
 /// Every run appends its JSON line here, inside the out folder.
-const RESULTS: &str = "results.jsonl";
+pub const RESULTS: &str = "results.jsonl";
 /// Prefix Windows puts on canonical paths.
 const VERBATIM: &str = r"\\?\";
 /// Characters escaped in a file URL path.
@@ -71,7 +71,12 @@ pub fn file_url(path: &Path) -> String {
 
 /// Writes `text` to `path`.
 pub fn write(path: &Path, text: &str) -> Result<(), String> {
-    std::fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))
+    write_bytes(path, text.as_bytes())
+}
+
+/// Writes `bytes` to `path`.
+pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    std::fs::write(path, bytes).map_err(|e| format!("{}: {e}", path.display()))
 }
 
 /// Waits up to `timeout_ms` for `path` to be non-empty, lets the writer finish, then reads it.
@@ -98,6 +103,11 @@ pub fn save_result(out: &Path, line: &str) -> Result<(), String> {
     writeln!(f, "{line}").map_err(|e| format!("{}: {e}", file.display()))
 }
 
+/// True when result line `v` broke off or its verdict did not pass, so kx-gates exits with a failure, as CI needs.
+pub fn failed(v: &serde_json::Value) -> bool {
+    v.get("error").is_some() || v.get("pass") == Some(&serde_json::Value::Bool(false))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +116,18 @@ mod tests {
     fn file_url_uses_slashes_and_escapes() {
         let url = file_url(Path::new(r"D:\a b\c#1%.html"));
         assert_eq!(url, "file:///D:/a%20b/c%231%25.html");
+    }
+
+    #[test]
+    fn a_result_fails_on_an_error_or_a_verdict_that_did_not_pass() {
+        use serde_json::json;
+        assert!(failed(&json!({ "gate": "G26", "error": "no keyboard" })));
+        assert!(failed(&json!({ "gate": "G26", "pass": false })));
+        assert!(!failed(&json!({ "gate": "G26", "pass": true })));
+        assert!(
+            !failed(&json!({ "gate": "G2", "clicks": 5 })),
+            "a gate without a verdict only reports"
+        );
     }
 
     #[test]

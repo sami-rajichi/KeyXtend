@@ -1,4 +1,5 @@
-//! Key boxes by UI Automation id: one read of a window's buttons, then each key's screen centre by its board id.
+//! Key boxes by UI Automation id: one read of a window's buttons, then each key's screen centre by its board id; and
+//! what a screen reader meets on each button, and a press the way it presses.
 #![cfg(windows)]
 
 use kx_platform_windows::com::Com;
@@ -6,9 +7,24 @@ use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
-    CUIAutomation, IUIAutomation, TreeScope_Descendants, UIA_ButtonControlTypeId,
-    UIA_ControlTypePropertyId,
+    CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
+    IUIAutomationInvokePattern, TreeScope_Descendants, UIA_AutomationIdPropertyId,
+    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
 };
+use windows::core::{BSTR, Interface};
+
+/// What a screen reader meets on one button: its id, name and box, and whether it can be pressed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KeyRead {
+    /// UI Automation id; a key's board id.
+    pub id: String,
+    /// What a screen reader says.
+    pub name: String,
+    /// Screen box, in physical pixels.
+    pub rect: RECT,
+    /// True when it offers the Invoke pattern, which Narrator and NVDA press.
+    pub invokable: bool,
+}
 
 /// Every button of one window: its UI Automation id and screen box, in physical pixels.
 pub struct KeyMap(Vec<(String, RECT)>);
@@ -21,8 +37,13 @@ impl KeyMap {
 
     /// The screen centre of the first button with id `id`; none when it is missing or has no area on screen.
     pub fn at(&self, id: &str) -> Option<POINT> {
+        self.rect(id).map(|r| centre(&r))
+    }
+
+    /// The screen box of the first button with id `id`; none when it is missing or has no area on screen.
+    pub fn rect(&self, id: &str) -> Option<RECT> {
         let (_, r) = self.0.iter().find(|(k, _)| !k.is_empty() && k == id)?;
-        (r.right > r.left && r.bottom > r.top).then(|| centre(r))
+        (r.right > r.left && r.bottom > r.top).then_some(*r)
     }
 }
 
@@ -50,29 +71,88 @@ impl Reader {
     }
 
     /// Every button inside window `hwnd`, with its id and screen box.
+    pub fn read(&self, hwnd: HWND) -> Result<KeyMap, String> {
+        let keys = self.walk(hwnd)?;
+        Ok(KeyMap::new(
+            keys.into_iter().map(|k| (k.id, k.rect)).collect(),
+        ))
+    }
+
+    /// Every button inside window `hwnd`, as a screen reader meets it.
     #[allow(
         unsafe_code,
         reason = "UI Automation calls on objects this client made."
     )]
-    pub fn read(&self, hwnd: HWND) -> Result<KeyMap, String> {
-        let err = |e: windows::core::Error| format!("UI Automation: {e}");
+    pub fn walk(&self, hwnd: HWND) -> Result<Vec<KeyRead>, String> {
         let button = VARIANT::from(UIA_ButtonControlTypeId.0);
-        let mut buttons = Vec::new();
+        let mut keys = Vec::new();
         // SAFETY: plain calls on live UI Automation objects; a dead window gives an error.
         unsafe {
             let cond = self
                 .0
                 .CreatePropertyCondition(UIA_ControlTypePropertyId, &button)
                 .map_err(err)?;
-            let root = self.0.ElementFromHandle(hwnd).map_err(err)?;
-            let found = root.FindAll(TreeScope_Descendants, &cond).map_err(err)?;
+            let found = self
+                .root(hwnd)?
+                .FindAll(TreeScope_Descendants, &cond)
+                .map_err(err)?;
             for i in 0..found.Length().map_err(err)? {
-                let el = found.GetElement(i).map_err(err)?;
-                let id = el.CurrentAutomationId().map_err(err)?.to_string();
-                buttons.push((id, el.CurrentBoundingRectangle().map_err(err)?));
+                keys.push(read_one(&found.GetElement(i).map_err(err)?)?);
             }
         }
-        Ok(KeyMap::new(buttons))
+        Ok(keys)
+    }
+
+    /// Presses the button with id `id` inside window `hwnd` through its Invoke pattern, as a screen reader does.
+    #[allow(
+        unsafe_code,
+        reason = "UI Automation calls on objects this client made."
+    )]
+    pub fn invoke(&self, hwnd: HWND, id: &str) -> Result<(), String> {
+        let want = VARIANT::from(BSTR::from(id));
+        // SAFETY: plain calls on live UI Automation objects; a missing button or pattern gives an error.
+        unsafe {
+            let cond: IUIAutomationCondition = self
+                .0
+                .CreatePropertyCondition(UIA_AutomationIdPropertyId, &want)
+                .map_err(err)?;
+            let el = self
+                .root(hwnd)?
+                .FindFirst(TreeScope_Descendants, &cond)
+                .map_err(err)?;
+            let pattern = el.GetCurrentPattern(UIA_InvokePatternId).map_err(err)?;
+            let invoke: IUIAutomationInvokePattern = pattern.cast().map_err(err)?;
+            invoke.Invoke().map_err(err)
+        }
+    }
+
+    /// The element of window `hwnd`.
+    #[allow(unsafe_code, reason = "A UI Automation call on this client.")]
+    fn root(&self, hwnd: HWND) -> Result<IUIAutomationElement, String> {
+        // SAFETY: a plain call; a dead window gives an error.
+        unsafe { self.0.ElementFromHandle(hwnd) }.map_err(err)
+    }
+}
+
+/// A UI Automation error as text.
+#[allow(clippy::needless_pass_by_value, reason = "It fits `map_err` as it is.")]
+fn err(e: windows::core::Error) -> String {
+    format!("UI Automation: {e}")
+}
+
+/// What one button tells a screen reader.
+#[allow(unsafe_code, reason = "UI Automation calls on a live element.")]
+fn read_one(el: &IUIAutomationElement) -> Result<KeyRead, String> {
+    // SAFETY: plain property reads on a live element; a missing pattern reads as an error, so as not invokable.
+    unsafe {
+        Ok(KeyRead {
+            id: el.CurrentAutomationId().map_err(err)?.to_string(),
+            name: el.CurrentName().map_err(err)?.to_string(),
+            rect: el.CurrentBoundingRectangle().map_err(err)?,
+            invokable: el
+                .GetCurrentPattern(UIA_InvokePatternId)
+                .is_ok_and(|p| !p.as_raw().is_null()),
+        })
     }
 }
 

@@ -103,8 +103,13 @@ impl Job {
 
     /// Puts `child` in the job.
     pub fn assign(&self, child: &Child) -> Result<(), String> {
-        let process = HANDLE(child.as_raw_handle());
-        // SAFETY: both handles are open for the duration of the call; `child` still owns its handle.
+        // `child` still owns its handle, which stays open for the call.
+        self.assign_handle(HANDLE(child.as_raw_handle()))
+    }
+
+    /// Puts the process behind `process` in the job; the handle needs the set-quota and terminate rights.
+    pub fn assign_handle(&self, process: HANDLE) -> Result<(), String> {
+        // SAFETY: the job handle is ours and open; the caller keeps `process` open for the call.
         unsafe { AssignProcessToJobObject(self.0, process) }.map_err(|e| format!("job: {e}"))
     }
 
@@ -170,6 +175,23 @@ mod tests {
         assert!(Caps::from(&weak(0, 30), 8).is_err());
         assert!(Caps::from(&weak(2, 0), 8).is_err());
         assert!(Caps::from(&weak(2, 101), 8).is_err());
+    }
+
+    #[test]
+    fn a_child_joins_a_job_by_its_handle() {
+        use std::process::{Command, Stdio};
+        let job = Job::new(None).expect("a job");
+        // `findstr` waits for its input until we close it, so it cannot end before it joins.
+        let mut child = Command::new("findstr")
+            .arg("x")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("starts");
+        let joined = job.assign_handle(HANDLE(child.as_raw_handle()));
+        drop(child.stdin.take());
+        let _ = child.wait();
+        assert_eq!(joined, Ok(()));
     }
 
     #[test]

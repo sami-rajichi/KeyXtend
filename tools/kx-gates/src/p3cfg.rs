@@ -1,0 +1,131 @@
+//! Settings of the gates P3 adds besides G8: G9 window flags, G10 screen readers, G11 DPI, G13 themes and G26 other
+//! languages, from `[g9]` to `[g26]` of `kx-gates-p3.toml`.
+#![cfg(windows)]
+
+use serde::Deserialize;
+
+/// G9 settings: the top bar's buttons that hide and show the keyboard; resizing uses `[g8]` grow and shrink.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G9 {
+    /// The button that puts the keyboard away, by UI Automation id.
+    pub put_away: String,
+    /// The bubble that brings it back, by UI Automation id.
+    pub bring_back: String,
+    /// Wait after each step before the flags are read, in ms.
+    pub settle_ms: u64,
+}
+
+/// G10 settings: pressing each character key the way a screen reader does.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G10 {
+    /// Pause after each press through UI Automation, in ms.
+    pub press_gap_ms: u64,
+    /// Wait for the last character to reach target-window, in ms.
+    pub drain_ms: u64,
+}
+
+/// G11 settings: the scales the owner sets, one run each.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G11 {
+    /// Display scales in percent that must each have a run.
+    pub scales: Vec<u32>,
+    /// Largest difference in the keyboard's logical size between scales, in px.
+    pub slack_px: f64,
+}
+
+/// G13 settings: watching the keyboard follow Windows' look while the owner changes it.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G13 {
+    /// How long the gate watches, in seconds.
+    pub watch_secs: u64,
+    /// The keyboard redraws within this time of a change, in ms.
+    pub follow_ms: u64,
+    /// The watch ends early after this many changes.
+    pub changes: usize,
+}
+
+/// G26 settings: the languages checked on the CI runner.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G26 {
+    /// Language tags such as `de-DE`; each is checked in the first installed layout of its language part.
+    pub languages: Vec<String>,
+    /// Clicks on character keys per language.
+    pub clicks: usize,
+    /// Longest wait for the keyboard to show, in ms; the runner starts it just before.
+    pub show_wait_ms: u64,
+}
+
+/// Refuses settings that could pass with nothing checked.
+pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
+    if g11.scales.is_empty() || g11.slack_px.is_nan() || g11.slack_px < 0.0 {
+        return Err("g11 needs scales and a slack of 0 px or more".to_string());
+    }
+    if g13.watch_secs == 0 || g13.changes == 0 {
+        return Err("g13.watch_secs and g13.changes must be above 0".to_string());
+    }
+    if g26.languages.is_empty() || g26.clicks == 0 {
+        return Err("g26 needs languages and clicks".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{GatesConfig, load};
+
+    fn checked(c: &GatesConfig) -> Result<(), String> {
+        check(&c.g11, &c.g13, &c.g26)
+    }
+
+    #[test]
+    fn the_shipped_settings_pass_and_g26_checks_the_roadmaps_four_languages() {
+        let c = load().expect("kx-gates.toml loads");
+        assert_eq!(checked(&c), Ok(()));
+        assert_eq!(c.g26.languages, ["de-DE", "ru-RU", "he-IL", "fa-IR"]);
+        assert_eq!(c.g11.scales, [100, 150, 200]);
+    }
+
+    #[test]
+    fn settings_that_check_nothing_are_refused() {
+        let bad: [fn(&mut GatesConfig); 4] = [
+            |c| c.g11.scales.clear(),
+            |c| c.g11.slack_px = -1.0,
+            |c| c.g13.changes = 0,
+            |c| c.g26.languages.clear(),
+        ];
+        for f in bad {
+            let mut c = load().expect("loads");
+            f(&mut c);
+            assert!(checked(&c).is_err());
+        }
+    }
+
+    #[test]
+    fn the_ci_job_can_read_the_g26_languages_line_as_json() {
+        // ci.yml's G26 job finds this line with `^languages = (\[.*\])$` and reads the list as JSON.
+        let lines: Vec<&str> = include_str!("../kx-gates-p3.toml")
+            .lines()
+            .filter_map(|l| l.strip_prefix("languages = "))
+            .collect();
+        assert_eq!(lines.len(), 1, "one languages line in the file");
+        let tags: Vec<String> = serde_json::from_str(lines[0]).expect("a JSON list");
+        assert_eq!(tags, load().expect("loads").g26.languages);
+    }
+
+    #[test]
+    fn the_gates_name_top_bar_buttons_by_their_icons_toml_bar_ids() {
+        let c = load().expect("loads");
+        let themes = kx_theme::Themes::shipped().expect("the tokens read");
+        let icons = serde_json::to_value(&themes.icons).expect("serialises");
+        for id in [&c.g9.put_away, &c.g9.bring_back, &c.g8.grow, &c.g8.shrink] {
+            let part = id.strip_prefix("bar.").expect("a bar id");
+            assert!(icons["bar"].get(part).is_some(), "{id}");
+        }
+    }
+}

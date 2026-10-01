@@ -130,17 +130,40 @@ fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
 
 /// Moves the pointer to `p` (physical pixels) without pressing: the first of a click's events.
 pub fn move_to(p: POINT) -> Result<(), String> {
-    let (left, top, width, height) = crate::win::desktop();
-    let at = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
-    let (x, y, flags) = at[0];
-    crate::keys::send(&[input(x, y, flags, TAG)])
+    let [moved, ..] = events_at(p);
+    send(&[moved])
 }
 
 /// Clicks at `p` (physical pixels) in one `SendInput` batch, which a hand on the mouse cannot split.
 pub fn click_at(p: POINT) -> Result<(), String> {
+    send(&events_at(p))
+}
+
+/// Presses the left button at `p` (physical pixels) and holds it.
+pub fn press_at(p: POINT) -> Result<(), String> {
+    let [moved, down, _] = events_at(p);
+    send(&[moved, down])
+}
+
+/// Moves to `p` (physical pixels) and lets the left button go there.
+pub fn release_at(p: POINT) -> Result<(), String> {
+    let [moved, _, up] = events_at(p);
+    send(&[moved, up])
+}
+
+/// A click's events at `p` (physical pixels), in the 0..=65535 absolute range of the desktop.
+fn events_at(p: POINT) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
     let (left, top, width, height) = crate::win::desktop();
-    let events = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
-    crate::keys::send(&events.map(|(x, y, flags)| input(x, y, flags, TAG)))
+    click_events(normalise(p.x, left, width), normalise(p.y, top, height))
+}
+
+/// Sends `events`, each marked as ours, in one batch.
+fn send(events: &[(i32, i32, MOUSE_EVENT_FLAGS)]) -> Result<(), String> {
+    let inputs: Vec<INPUT> = events
+        .iter()
+        .map(|&(x, y, flags)| input(x, y, flags, TAG))
+        .collect();
+    crate::keys::send(&inputs)
 }
 
 #[cfg(test)]

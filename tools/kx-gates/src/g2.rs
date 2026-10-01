@@ -13,7 +13,7 @@ use crate::out::say;
 use crate::product::Keyboard;
 use crate::stats::{self, Click};
 use crate::tlog::{self, Unit};
-use crate::win::{self, sleep_ms};
+use crate::win::sleep_ms;
 use crate::{launch, out};
 
 /// Suffix of the raw click file.
@@ -33,13 +33,13 @@ struct Logged {
     error: Option<String>,
 }
 
-/// Starts target-window in front and lists the uncovered keys it can type; cleans up on failure.
-fn setup(ctx: &Ctx, kb: &Keyboard) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
-    let target = launch::start_target(ctx)?;
-    if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
-        apps::clean_up(ctx, target);
-        return Err("could not bring target-window to the front".to_string());
-    }
+/// Brings `target` to the front and lists the uncovered keys it can type; cleans up on failure.
+fn setup(
+    ctx: &Ctx,
+    kb: &Keyboard,
+    target: Opened,
+) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
+    let target = launch::to_front(ctx, target)?;
     match clicks::usable(ctx, kb) {
         Ok((keys, hidden)) => Ok((target, keys, hidden)),
         Err(e) => {
@@ -73,16 +73,36 @@ fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
 /// Runs G2 on the product keyboard, called `name`, with `count` clicks from `seed`.
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
     let kb = Keyboard::find()?;
-    let place = mouse::face(kb.hwnd)?;
+    let target = launch::start_target(ctx)?;
+    on_target(ctx, name, &kb, target, (count, seed))
+}
+
+/// G2 on keyboard `kb` into `target`, already started (G26 starts it in a layout): `run.0` clicks from seed `run.1`.
+/// The target is closed at the end.
+pub fn on_target(
+    ctx: &Ctx,
+    name: &str,
+    kb: &Keyboard,
+    target: Opened,
+    run: (usize, u64),
+) -> Result<Value, String> {
+    let place = match mouse::face(kb.hwnd) {
+        Ok(place) => place,
+        Err(e) => {
+            apps::clean_up(ctx, target);
+            return Err(e);
+        }
+    };
     // Keys another window already covers are left out and named, never clicked.
-    let (target, keys, hidden) = setup(ctx, &kb)?;
+    let (target, keys, hidden) = setup(ctx, kb, target)?;
+    let (count, seed) = run;
     say!(
         "G2 {name}: {count} clicks on {} keys, seed {seed}; keyboard dpi {}, client {:?}",
         keys.len(),
         place.dpi,
         place.client
     );
-    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &keys, (count, seed));
+    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &keys, run);
     sleep_ms(ctx.cfg.g2.drain_ms);
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);

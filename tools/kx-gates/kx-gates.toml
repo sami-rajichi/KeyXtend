@@ -334,12 +334,9 @@ esc = [0x1B]
 alt_tab = [0x12, 0x09]
 
 [capture]
-# `capture-layouts` writes one golden table per language, from the first installed layout of each.
+# `capture-layouts` writes one golden table per language, from the first installed layout of each. The keys it reads
+# are kx-mod-layouts' scans.toml, the table the product reads, so the range lives in one place.
 languages = ["en", "fr", "ar"]
-# Scan codes read from each layout: every code from first to last, then the extended keys.
-first = "0x0001"
-last = "0x0058"
-extended = ["0xE01C", "0xE035"]
 
 [g22]
 # Read aloud, one per Mic press, in this order; Notepad switches to each layout (LANGID) first.

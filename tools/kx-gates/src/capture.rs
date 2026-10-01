@@ -15,31 +15,17 @@ pub const COMMAND: &str = "capture-layouts";
 /// The first line of every table it writes.
 const HEADER: &str = "# Captured from an installed layout by `kx-gates capture-layouts`; capture again rather than edit.\n";
 
-/// `[capture]` in kx-gates.toml.
+/// `[capture]` in kx-gates.toml; the keys read are the layouts module's own scan table, so one list remains.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Capture {
     /// ISO 639 languages to capture, each from its first installed layout.
     pub languages: Vec<String>,
-    /// First scan code read, as `0x` hex.
-    pub first: String,
-    /// Last scan code read.
-    pub last: String,
-    /// Extended keys read after the range.
-    pub extended: Vec<String>,
 }
 
-impl Capture {
-    /// Every scan code to read: `first` to `last`, then `extended`.
-    pub fn scans(&self) -> Result<Vec<Scan>, String> {
-        let code = |text: &String| text.parse::<Scan>().map_err(|e| e.to_string());
-        let (first, last) = (code(&self.first)?.code(), code(&self.last)?.code());
-        if first > last {
-            return Err(format!("capture: {} comes after {}", self.first, self.last));
-        }
-        let extended: Vec<Scan> = self.extended.iter().map(code).collect::<Result<_, _>>()?;
-        Ok((first..=last).map(Scan::new).chain(extended).collect())
-    }
+/// Every scan code a captured table reads: the layouts module's table, compiled into the product.
+pub fn scans() -> Result<Vec<Scan>, String> {
+    kx_mod_layouts::scans().map_err(|e| e.to_string())
 }
 
 /// One table to write: its file name and content.
@@ -56,7 +42,7 @@ pub fn capture(
     cfg: &Capture,
     name: impl Fn(LayoutId, &str) -> String,
 ) -> Result<(Vec<Captured>, Vec<String>), String> {
-    let scans = cfg.scans()?;
+    let scans = scans()?;
     let (mut tables, mut missing) = (Vec::new(), Vec::new());
     for iso in &cfg.languages {
         match find(source, iso) {
@@ -71,7 +57,7 @@ pub fn capture(
 }
 
 /// The first installed layout whose language is `iso`.
-fn find(source: &dyn LayoutSource, iso: &str) -> Option<LayoutId> {
+pub fn find(source: &dyn LayoutSource, iso: &str) -> Option<LayoutId> {
     let mut installed = source.installed().into_iter();
     installed.find(|&id| source.facts(id).iso == iso)
 }
@@ -159,37 +145,23 @@ mod tests {
     }
 
     #[test]
-    fn the_scan_list_runs_first_to_last_then_the_extended_keys() {
-        let cfg = Capture {
-            first: "0x0001".into(),
-            last: "0x0003".into(),
-            extended: vec!["0xE035".into()],
-            ..settings()
-        };
-        let want = [0x01, 0x02, 0x03, 0xE035].map(Scan::new);
-        assert_eq!(cfg.scans().unwrap(), want);
-    }
-
-    #[test]
-    fn a_bad_or_reversed_range_is_refused() {
-        for (first, last) in [
-            ("zz", "0x0003"),
-            ("0x0003", "0x0001"),
-            ("0x0001", "0x10000"),
-        ] {
-            let cfg = Capture {
-                first: first.into(),
-                last: last.into(),
-                ..settings()
-            };
-            assert!(cfg.scans().is_err(), "{first}..{last}");
-        }
+    fn the_scan_list_is_the_layouts_modules_table() {
+        let all = scans().expect("the layouts module's table reads");
+        assert_eq!(all.first(), Some(&Scan::new(0x01)), "Esc first");
+        assert!(
+            all.contains(&Scan::new(0xE035)),
+            "numpad /, which types a character"
+        );
+        assert!(
+            !all.contains(&Scan::new(0xE01C)),
+            "numpad Enter types only a control and no board key sends it"
+        );
     }
 
     #[test]
     fn a_capture_of_the_example_table_gives_it_back() {
         let (fake, want) = example();
-        let got = table(&fake, want.id, &settings().scans().unwrap());
+        let got = table(&fake, want.id, &scans().unwrap());
         assert_eq!(
             (got.id, &got.facts, &got.keys),
             (want.id, &want.facts, &want.keys)
@@ -202,7 +174,6 @@ mod tests {
         let (fake, want) = example();
         let cfg = Capture {
             languages: vec!["en".into(), "fr".into(), "ar".into()],
-            ..settings()
         };
         let (tables, missing) = capture(&fake, &cfg, |_, iso| format!("{iso}.toml")).unwrap();
         assert_eq!(missing, ["en", "ar"]);
@@ -240,10 +211,9 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_settings_name_languages_and_scans_and_the_help_names_the_command() {
+    fn the_shipped_settings_name_languages_and_the_help_names_the_command() {
         let cfg = settings();
         assert!(!cfg.languages.is_empty());
-        assert!(!cfg.scans().unwrap().is_empty());
         assert!(crate::usage::usage().contains(COMMAND));
     }
 }

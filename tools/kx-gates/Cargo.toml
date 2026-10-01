@@ -21,13 +21,19 @@ toml.workspace = true
 # Windows-only gates. spike-core is the Qt test face's shared code, until each phase aims its gates at the product.
 [target.'cfg(windows)'.dependencies]
 kx-module-api = { path = "../../crates/kx-module-api" }
+# G8's bus publish time on the product's own event bus.
+kx-kernel = { path = "../../crates/kx-kernel" }
 # The product's board (key ids, roles) and the keyboard's boxes (`Area`), which the spike's tools-row maths returns.
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
+# The scan list the product reads labels for, which `capture-layouts` follows.
+kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
 # The product's commands, whose flags `close` sends.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
+# The product's file names: G8 reads its log.
+kx-settings = { path = "../../crates/kx-settings" }
 spike-core = { path = "../../spike/core" }
 windows = { workspace = true, features = [
     "ApplicationModel_DataTransfer",
@@ -43,6 +49,7 @@ windows = { workspace = true, features = [
     "Win32_System_Memory",
     "Win32_System_Ole",
     "Win32_System_Performance",
+    "Win32_System_ProcessStatus",
     "Win32_System_Registry",
     "Win32_System_SystemInformation",
     "Win32_System_Threading",
@@ -53,6 +60,10 @@ windows = { workspace = true, features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[target.'cfg(windows)'.dev-dependencies]
+# The top bar's icon ids, which G8 and G9 press by UI Automation id.
+kx-theme = { path = "../../crates/kx-theme" }
 
 [build-dependencies]
 embed-manifest.workspace = true

@@ -7,6 +7,8 @@ use kx_target_window::config::locate;
 
 /// File name of the gate settings.
 pub const FILE: &str = "kx-gates.toml";
+/// File name of the settings of the gates P3 adds; it is read only from the folder of `FILE`.
+pub const P3_FILE: &str = "kx-gates-p3.toml";
 
 /// Where the settings file is: beside the running exe, else in the crate folder.
 pub fn path() -> PathBuf {
@@ -25,6 +27,8 @@ mod tests {
 
     /// The shipped settings file.
     const SHIPPED: &str = include_str!("../kx-gates.toml");
+    /// The shipped settings of the gates P3 adds.
+    const SHIPPED_P3: &str = include_str!("../kx-gates-p3.toml");
 
     /// Cargo's build folder, in the repo root.
     const BUILD_DIR: &str = "target";
@@ -111,7 +115,9 @@ mod tests {
         let mut paths = vec![cfg.out_dir(), cfg.dir.join(&cfg.g22.worker_dir)];
         paths.extend(cfg.apps.values().map(|app| cfg.program(&app.exe)));
         let mut strings = Vec::new();
-        dotted(&toml::from_str(SHIPPED).expect("parses"), &mut strings);
+        for shipped in [SHIPPED, SHIPPED_P3] {
+            dotted(&toml::from_str(shipped).expect("parses"), &mut strings);
+        }
         paths.extend(strings.iter().map(|s| cfg.dir.join(s)));
         let root = repo_root();
         for p in paths.iter().filter(|p| p.starts_with(&cfg.dir)) {

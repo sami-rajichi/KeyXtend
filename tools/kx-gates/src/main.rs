@@ -1,12 +1,13 @@
-//! kx-gates: the Windows gate runner for gates G1-G7, G12, G17-G25 and the hand try;
-//! it prints one JSON line per run. It moves the real mouse and types into real apps,
-//! so run it only when the owner agrees. `capture-layouts` only reads layouts.
+//! kx-gates: the Windows gate runner for gates G1-G13, G17-G26 and the hand try; it prints one JSON line per run.
+//! It moves the real mouse and types into real apps, so it runs only with the owner's yes; `capture-layouts` only reads.
 #![deny(unsafe_code)]
 
 mod admin;
 mod apps;
 mod assist;
 mod board;
+mod budget;
+mod busbench;
 mod capture;
 mod cfgfile;
 mod cli;
@@ -22,8 +23,11 @@ mod facearg;
 mod facetools;
 mod featcfg;
 mod g1;
+mod g10;
+mod g11;
 mod g12;
 mod g12pts;
+mod g13;
 mod g17;
 mod g18;
 mod g19;
@@ -38,11 +42,18 @@ mod g22type;
 mod g23;
 mod g24;
 mod g25;
+mod g26;
 mod g3;
 mod g4;
 mod g5;
 mod g6;
 mod g7;
+mod g8;
+mod g8cfg;
+mod g8parts;
+mod g8ui;
+mod g9;
+mod g9win;
 mod gatecfg;
 mod hand;
 mod hookhost;
@@ -54,9 +65,12 @@ mod launch;
 mod launchterm;
 mod mouse;
 mod out;
+mod p3cfg;
+mod presentmon;
 mod probe;
 mod probecfg;
 mod probetext;
+mod proc;
 mod product;
 mod readback;
 mod rng;
@@ -67,6 +81,7 @@ mod stats;
 mod text;
 mod tlog;
 mod usage;
+mod walk;
 mod wer;
 mod win;
 mod winclip;
@@ -111,7 +126,7 @@ fn main() -> ExitCode {
     match result {
         Ok(v) => {
             out::say!("{v}");
-            if v.get("error").is_some() {
+            if out::failed(&v) {
                 ExitCode::FAILURE
             } else {
                 ExitCode::SUCCESS

@@ -1,0 +1,82 @@
+# Settings of the gates P3 adds: G8-G11, G13 and G26. kx-gates reads them with kx-gates.toml, from its folder.
+
+# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
+[g8]
+# The copy G8 starts, through the shell: the signed uiAccess one beside the installed kx-gates, where
+# `cargo xtask dev-install` puts both; a relative path starts at this file's folder.
+program = "../keyxtend/keyxtend.exe"
+# Cold start to a shown keyboard, in ms: on this PC, and in weak mode (spec §10).
+start_ms = 500.0
+weak_start_ms = 1000.0
+# Longest wait for the keyboard and the log's guard line, and how often the start and each resize are looked at, in ms.
+start_wait_ms = 10000
+look_ms = 2
+# The product's log lines that open and close its start-up (apps/keyxtend run.rs, kx-ui hub/face.rs).
+log_start = "KeyXtend started"
+log_guarded = "windows guarded"
+# Settle, then measure the idle product for this long, in ms.
+idle_settle_ms = 3000
+idle_ms = 10000
+# Idle private memory in MiB, idle CPU in percent of the cores it may use (Task Manager shows 0 below this), and the
+# program folder in MiB (spec §10).
+memory_mb = 80.0
+idle_cpu_pct = 0.5
+size_mb = 80.0
+# A press lights its key on the next frame (spec §10): within this many frames, the one being drawn and the next.
+press_key = "c-0x001E"
+presses = 20
+highlight_frames = 2.0
+# Pause with the pointer on the key before each press, and the longest wait for its light, in ms.
+hover_settle_ms = 500
+press_wait_ms = 500
+# Resizing through the top bar's buttons (UI Automation ids); the box has settled after resize_settle_ms unchanged.
+grow = "bar.bigger"
+shrink = "bar.smaller"
+resize_settle_ms = 200
+resize_wait_ms = 3000
+# Click to character: G2's clicks on the copy G8 started; their 99th percentile, in ms (spec §10).
+clicks = 100
+char_ms = 30.0
+# Bus publish: handlers on one event (about one per module) and publishes timed. A publish is one step of a key click,
+# so its 99th percentile may take this share of char_ms (docs/items/P3.md: else the bus copies its list less).
+subscribers = 20
+publishes = 10000
+bus_share = 0.01
+# PresentMon's CSV in the out folder, captured by the owner while G8 runs (G8 says how).
+presentmon = "g8-presentmon.csv"
+# How long that capture records, in seconds; it covers G8's idle wait, presses and resizes.
+presentmon_secs = 60
+
+# G9 window flags: the flags stay set after hide and show, a topmost toggle, a click-through toggle and a resize.
+[g9]
+put_away = "bar.minimise"
+bring_back = "bar.bubble"
+# Wait after each step before the flags are read, in ms.
+settle_ms = 500
+
+# G10 screen readers: every key is named and can be pressed the way Narrator and NVDA press it.
+[g10]
+# Pause after each press through UI Automation, and the wait for the last character, in ms.
+press_gap_ms = 100
+drain_ms = 1000
+
+# G11 DPI: one run at each scale the owner sets in Windows; the keyboard keeps its logical size within slack_px.
+[g11]
+scales = [100, 150, 200]
+slack_px = 2.0
+
+# G13 themes: the gate watches while the owner changes dark mode, the accent and high contrast in Windows.
+[g13]
+watch_secs = 180
+# Following live: the keyboard redraws within this time of a change, in ms.
+follow_ms = 1000
+changes = 6
+
+# G26 other languages (CI runner only): each language's first installed layout, its labels and its typed text.
+[g26]
+# Language tags; the CI job adds each to the runner's languages, and G26 uses the first layout of its language part.
+languages = ["de-DE", "ru-RU", "he-IL", "fa-IR"]
+# Clicks on character keys per language; pauses and limits come from [g2].
+clicks = 100
+# Longest wait for the keyboard to show, in ms; the runner starts a cold debug build just before.
+show_wait_ms = 60000

@@ -1,6 +1,6 @@
 # Captured from an installed layout by `kx-gates capture-layouts`; capture again rather than edit.
 id = "0x0000000004090409"
-controls = ["0x0001", "0x000E", "0x000F", "0x001C", "0x0039", "0xE01C"]
+controls = ["0x0001", "0x000E", "0x000F", "0x001C", "0x0039"]
 
 [facts]
 iso = "en"
