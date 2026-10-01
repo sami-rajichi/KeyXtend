@@ -1,5 +1,5 @@
 //! The stage settings in the root `Cargo.toml` name this app and the QML folder kx-ui pins, and list each QML module
-//! the app imports with the plugin its `qmldir` requires, so `cargo xtask stage` ships what the uiAccess build loads.
+//! the app imports with every plugin Qt loads for it, so `cargo xtask stage` ships what the uiAccess build loads.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 
@@ -68,8 +68,14 @@ fn only_the_apps_own_module_is_compiled_in() {
 
 /// The file that describes a QML module.
 const QMLDIR: &str = "qmldir";
-/// The qmldir keyword of a plugin the module cannot load without; `optional plugin` lines start with another word.
+/// The qmldir keyword of a plugin line, and the word before it that marks a plugin Qt skips only when a library the
+/// program links has already registered the module.
 const PLUGIN: &str = "plugin";
+const OPTIONAL: &str = "optional";
+/// QML modules a library the program links registers, by URI and library (measured in P3 Task 20).
+const BY_PROGRAM: &[(&str, &str)] = &[("QtQml", "Qt6Qml")];
+/// The app's program, which cargo builds for this test.
+const PROGRAM: &str = env!("CARGO_BIN_EXE_keyxtend");
 /// qmake's flag and key that print Qt's QML folder.
 const QML_QUERY: [&str; 2] = ["-query", "QT_INSTALL_QML"];
 
@@ -86,25 +92,38 @@ fn lib_file(name: &str) -> String {
     format!("{DLL_PREFIX}{name}{DLL_SUFFIX}")
 }
 
-/// The library files a qmldir's `text` says its module needs, relative to the qmldir's folder.
-fn required_plugins(text: &str) -> Vec<String> {
+/// The library files Qt loads for a qmldir's `text`, relative to its folder; optional ones only when the program does
+/// not register the module (`linked`).
+fn needed_plugins(text: &str, linked: bool) -> Vec<String> {
     let lines = text
         .lines()
         .map(|l| l.split_whitespace().collect::<Vec<_>>());
     lines
-        .filter_map(|words| match words.as_slice() {
-            [PLUGIN, name] => Some(lib_file(name)),
-            [PLUGIN, name, path] => Some(format!("{path}/{}", lib_file(name))),
-            _ => None,
+        .filter_map(|words| {
+            let words = match words.strip_prefix(&[OPTIONAL]) {
+                Some(_) if linked => return None,
+                Some(rest) => rest,
+                None => words.as_slice(),
+            };
+            match words {
+                [PLUGIN, name] => Some(lib_file(name)),
+                [PLUGIN, name, path] => Some(format!("{path}/{}", lib_file(name))),
+                _ => None,
+            }
         })
         .collect()
 }
 
 #[test]
-fn a_qmldir_needs_only_its_plugins_that_are_not_optional() {
+fn a_qmldir_needs_its_optional_plugins_unless_the_program_registers_the_module() {
     let text = "module M\noptional plugin a\nplugin b\nplugin c sub\nclassname P\n";
-    let (b, c) = (lib_file("b"), lib_file("c"));
-    assert_eq!(required_plugins(text), [b, format!("sub/{c}")]);
+    let (a, b, c) = (
+        lib_file("a"),
+        lib_file("b"),
+        format!("sub/{}", lib_file("c")),
+    );
+    assert_eq!(needed_plugins(text, false), [a, b.clone(), c.clone()]);
+    assert_eq!(needed_plugins(text, true), [b, c]);
 }
 
 /// Qt's QML folder, asked of the qmake the stage settings name, as `cargo xtask stage` does.
@@ -120,22 +139,49 @@ fn qt_qml(stage: &toml::Table) -> std::path::PathBuf {
 }
 
 #[test]
-fn every_staged_qmldir_has_the_plugins_it_needs() {
+fn every_staged_qmldir_has_the_plugins_qt_loads() {
     let stage = stage();
     let (staged, qml) = (staged_qml(&stage), qt_qml(&stage));
     let folders = staged.iter().filter_map(|f| {
         let folder = f.strip_suffix(QMLDIR)?;
         (folder.is_empty() || folder.ends_with('/')).then_some((f, folder))
     });
+    let mut spared = Vec::new();
     for (qmldir, folder) in folders {
         let text = std::fs::read_to_string(qml.join(qmldir)).unwrap();
-        for plugin in required_plugins(&text) {
+        let uri = folder.trim_end_matches('/').replace('/', ".");
+        let linked = BY_PROGRAM.iter().any(|(m, _)| *m == uri);
+        if linked && needed_plugins(&text, true) != needed_plugins(&text, false) {
+            spared.push(uri);
+        }
+        for plugin in needed_plugins(&text, linked) {
             let file = format!("{folder}{plugin}");
             assert!(
                 staged.contains(&file),
                 "{qmldir} needs {file} in the stage's qml list"
             );
         }
+    }
+    for (uri, _) in BY_PROGRAM {
+        let used = spared.iter().any(|s| s == uri);
+        assert!(
+            used,
+            "{uri} spares no staged plugin; drop it from BY_PROGRAM"
+        );
+    }
+}
+
+#[test]
+fn the_program_links_each_library_that_spares_a_plugin() {
+    let program = std::fs::read(PROGRAM).unwrap();
+    for (uri, lib) in BY_PROGRAM {
+        // An imported library's name ends in a zero byte in the program's import table.
+        let name = format!("{}\0", lib_file(lib));
+        let named = program.windows(name.len()).any(|w| w == name.as_bytes());
+        assert!(
+            named,
+            "the program no longer links {lib}; drop {uri} from BY_PROGRAM"
+        );
     }
 }
 
