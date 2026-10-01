@@ -39,7 +39,7 @@ pub fn start_settings(host: &FakeHost) -> KeyboardSettings {
     parse_as(&host.settings).unwrap()
 }
 
-/// The settings as saved so far.
+/// The settings the store holds, which the kernel saves at the latest when it stops.
 pub fn saved(host: &FakeHost) -> KeyboardSettings {
     host.sink.read_as().unwrap()
 }

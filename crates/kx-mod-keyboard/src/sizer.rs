@@ -238,11 +238,14 @@ impl Sizer {
         Ok(changed)
     }
 
-    /// Writes the size to the settings file when it differs from the last size saved.
+    /// Writes the size to the settings when it differs from the size they hold, which an unsaved write still sets.
     fn save(&mut self) -> Result<(), SizeError> {
         if differs(self.size, self.saved) {
-            self.store.set(SIZE_KEY, toml::Value::Float(self.size))?;
-            self.saved = self.size;
+            let wrote = self.store.set(SIZE_KEY, toml::Value::Float(self.size));
+            if wrote.as_ref().err().is_none_or(WriteError::holds) {
+                self.saved = self.size;
+            }
+            wrote?;
         }
         Ok(())
     }

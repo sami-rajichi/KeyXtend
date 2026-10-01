@@ -106,6 +106,14 @@ pub enum WriteError {
     Unsaved,
 }
 
+impl WriteError {
+    /// True when the values still hold for this run: the store took them, and only the file was not saved.
+    #[must_use]
+    pub fn holds(&self) -> bool {
+        matches!(self, Self::Unsaved)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,6 +153,14 @@ mod tests {
         let kinds: Vec<&str> = all.iter().map(SettingsError::kind).collect();
         assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
         assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
+    }
+
+    #[test]
+    fn only_an_unsaved_write_still_holds() {
+        let refused = WriteError::Refused(ModuleId::new("a"));
+        let invalid = WriteError::Invalid(SettingsError::Invalid("bad".into()));
+        assert!(WriteError::Unsaved.holds());
+        assert!(!refused.holds() && !invalid.holds());
     }
 
     #[test]

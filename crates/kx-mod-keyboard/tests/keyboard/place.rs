@@ -99,18 +99,36 @@ fn a_saved_place_off_every_screen_starts_home_and_is_kept_for_its_screen() {
 }
 
 #[test]
-fn a_place_that_cannot_be_saved_holds_and_is_tried_again() {
+fn an_unsaved_place_holds_in_the_store_which_saves_it_later() {
     let mut host = fake(None);
     let mut p = placer(&mut host);
     host.sink.refuse(Some(WriteError::Unsaved));
-    assert_eq!(
-        p.moved(at(10, 20), PLATE, &screens()),
-        Err(WriteError::Unsaved)
-    );
-    assert_eq!((p.at(), p.saved()), (Some(at(10, 20)), None));
+    let away = at(10, 20);
+    assert_eq!(p.moved(away, PLATE, &screens()), Err(WriteError::Unsaved));
+    assert_eq!((p.at(), p.saved()), (Some(away), Some(away)));
+    assert_eq!(saved(&host).place(), Some(away), "the store holds it");
     host.sink.refuse(None);
-    assert_eq!(p.moved(at(10, 20), PLATE, &screens()), Ok(Some(at(10, 20))));
-    assert_eq!(keys(&host), [["placed", "x", "y"]]);
+    assert_eq!(p.moved(away, PLATE, &screens()), Ok(Some(away)));
+    assert!(
+        keys(&host).is_empty(),
+        "the kernel saves it, not a second write"
+    );
+}
+
+#[test]
+fn after_an_unsaved_move_a_move_back_is_the_place_stop_saves() {
+    let (mut host, first, away) = (fake(None), at(300, 200), at(10, 20));
+    let mut p = placer(&mut host);
+    assert_eq!(p.moved(first, PLATE, &screens()), Ok(Some(first)));
+    host.sink.refuse(Some(WriteError::Unsaved));
+    assert_eq!(p.moved(away, PLATE, &screens()), Err(WriteError::Unsaved));
+    let back = p.moved(first, PLATE, &screens());
+    assert_eq!(
+        back,
+        Err(WriteError::Unsaved),
+        "the move back is written too"
+    );
+    assert_eq!(saved(&host).place(), Some(first), "the last place");
 }
 
 #[test]
@@ -121,9 +139,10 @@ fn a_place_that_fails_to_save_in_part_leaves_the_saved_place_whole() {
         p.moved(at(300, 200), PLATE, &screens()),
         Ok(Some(at(300, 200)))
     );
-    host.sink.refuse_key("y", WriteError::Unsaved);
+    let refused = WriteError::Refused(kx_mod_keyboard::ID);
+    host.sink.refuse_key("y", refused.clone());
     let failed = p.moved(at(10, 20), PLATE, &screens());
-    assert_eq!(failed, Err(WriteError::Unsaved));
+    assert_eq!(failed, Err(refused));
     let kept = saved(&host).place();
     assert_eq!(
         kept,

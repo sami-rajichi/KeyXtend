@@ -35,7 +35,7 @@ impl FakeSink {
         }
     }
 
-    /// Every accepted write, oldest first.
+    /// Every write the file got, oldest first; an unsaved one is not listed.
     #[must_use]
     pub fn writes(&self) -> Vec<Written> {
         lock(&self.writes).clone()
@@ -60,12 +60,13 @@ impl FakeSink {
         lock(&self.section).extend(values);
     }
 
-    /// Refuses every later write with `error`, or takes them again with `None`.
+    /// Refuses every later write with `error`, or takes them again with `None`. As in the kernel's store, an
+    /// `Unsaved` write still lands in the section once checked; any other refusal keeps nothing.
     pub fn refuse(&self, error: Option<WriteError>) {
         *lock(&self.refusal) = error;
     }
 
-    /// Refuses every later write that holds `key`, with `error`.
+    /// Refuses every later write that holds `key`, with `error`, as `refuse` does.
     pub fn refuse_key(&self, key: &str, error: WriteError) {
         *lock(&self.refused_key) = Some((key.to_owned(), error));
     }
@@ -80,7 +81,8 @@ impl FakeSink {
 
 impl SettingsSink for FakeSink {
     fn write(&self, module: ModuleId, values: Table) -> Result<(), WriteError> {
-        if let Some(error) = self.refusal_for(&values) {
+        let refusal = self.refusal_for(&values);
+        if let Some(error) = refusal.clone().filter(|e| !e.holds()) {
             return Err(error);
         }
         let mut next = self.section();
@@ -89,6 +91,9 @@ impl SettingsSink for FakeSink {
             (spec.validate)(&next)?;
         }
         *lock(&self.section) = next;
+        if let Some(unsaved) = refusal {
+            return Err(unsaved);
+        }
         lock(&self.writes).push((module, values));
         Ok(())
     }

@@ -120,7 +120,7 @@ impl Placer {
         self.at
     }
 
-    /// The place in the settings file, if the user ever put the keyboard somewhere.
+    /// The place the settings hold, if the user ever put the keyboard somewhere.
     #[must_use]
     pub fn saved(&self) -> Option<Point> {
         self.saved
@@ -136,7 +136,8 @@ impl Placer {
     /// It holds even when saving fails; with no screen it gives `None` and saves nothing.
     ///
     /// # Errors
-    /// The `WriteError` when the place could not be saved; none of it is saved then.
+    /// `Unsaved` when the file was not written: the store still keeps the place, now the saved one, and saves it
+    /// later. Any other `WriteError` keeps none of it.
     pub fn moved(
         &mut self,
         at: Point,
@@ -148,8 +149,11 @@ impl Placer {
         };
         self.at = Some(p);
         if self.saved != Some(p) {
-            self.save(p)?;
-            self.saved = Some(p);
+            let wrote = self.save(p);
+            if wrote.as_ref().err().is_none_or(WriteError::holds) {
+                self.saved = Some(p);
+            }
+            wrote?;
         }
         Ok(Some(p))
     }

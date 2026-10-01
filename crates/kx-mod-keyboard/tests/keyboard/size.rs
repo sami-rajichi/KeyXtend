@@ -111,6 +111,18 @@ fn a_size_that_cannot_be_saved_still_holds_for_this_run() {
 }
 
 #[test]
+fn after_an_unsaved_size_a_step_back_is_the_size_stop_saves() {
+    let mut host = fake(None);
+    let mut s = sizer(&mut host);
+    host.sink.refuse(Some(WriteError::Unsaved));
+    let unsaved = Err(SizeError::Unsaved(WriteError::Unsaved));
+    assert_eq!(s.bigger(), unsaved);
+    assert_eq!(saved(&host).size, 1.05, "the store holds it");
+    assert_eq!(s.smaller(), unsaved, "the step back is written too");
+    assert_eq!(saved(&host).size, 1.0, "the last size");
+}
+
+#[test]
 fn it_starts_at_the_saved_size() {
     let mut host = fake(Some(("size", 1.25.into())));
     let s = sizer(&mut host);

@@ -65,12 +65,27 @@ fn writes_are_checked_together_and_kept_whole_or_not_at_all() {
 }
 
 #[test]
+fn an_unsaved_write_holds_in_the_section_but_is_never_saved() {
+    let mut host = FakeHost::new(&SPANNED);
+    let handle = host.handle();
+    host.sink.refuse(Some(WriteError::Unsaved));
+    let both = handle.set_all(values("low = 2\nhigh = 6"));
+    assert_eq!(both, Err(WriteError::Unsaved));
+    assert_eq!(span(&host), Ok(Span { low: 2, high: 6 }), "it holds");
+    assert!(host.sink.writes().is_empty(), "the file never got it");
+    let bad = handle.set("low", Value::Integer(9));
+    assert!(matches!(bad, Err(WriteError::Invalid(_))), "checked first");
+    assert_eq!(span(&host), Ok(Span { low: 2, high: 6 }));
+}
+
+#[test]
 fn a_refusal_or_a_refused_key_stores_nothing() {
     let mut host = FakeHost::new(&SPANNED);
     let handle = host.handle();
-    host.sink.refuse_key("high", WriteError::Unsaved);
+    host.sink
+        .refuse_key("high", WriteError::Refused(SPANNED.id));
     let both = handle.set_all(values("low = 2\nhigh = 6"));
-    assert_eq!(both, Err(WriteError::Unsaved));
+    assert_eq!(both, Err(WriteError::Refused(SPANNED.id)));
     assert_eq!(handle.set("low", Value::Integer(2)), Ok(()), "another key");
     host.sink.refuse(Some(WriteError::Refused(SPANNED.id)));
     let refused = handle.set("low", Value::Integer(3));
