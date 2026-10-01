@@ -151,3 +151,36 @@ ui_access_on = "true"
 cancel_code = 1223
 # Exit code the admin script returns for any other failure.
 fail_code = 1
+# Env var naming the user's roaming folder, which holds their own Start menu; dev-install never uses the all-users one.
+start_menu_env = "APPDATA"
+# The user's Start-menu programs folder, under that folder.
+start_menu_dir = "Microsoft/Windows/Start Menu/Programs"
+# The shortcut dev-install adds there for an install that holds the app; `--remove` deletes it.
+shortcut = "KeyXtend (dev).lnk"
+# User-level shortcut script: add, find or remove that shortcut.
+shortcut_script = "dev-shortcut.ps1"
+
+[workspace.metadata.stage]
+# The app package `cargo xtask stage` builds in release; its program has the same name.
+app = "keyxtend"
+# Folder, under the workspace root, holding the stage; the app's own folder in it is emptied first.
+out_dir = "target/stage"
+# Largest stage, in MB: the download budget (ADR-0012).
+max_mb = 80
+# Env var naming Qt's qmake; Qt's folders come from `qmake -query`, so the stage takes the Qt the app was built with.
+qmake_env = "QMAKE"
+# Qt libraries, from Qt's bin folder, staged beside the program; the stage check proves something imports each one.
+libs = ["Qt6Core.dll", "Qt6Gui.dll", "Qt6Network.dll", "Qt6OpenGL.dll", "Qt6Qml.dll", "Qt6QmlMeta.dll", "Qt6QmlModels.dll", "Qt6QmlWorkerScript.dll", "Qt6Quick.dll", "Qt6QuickEffects.dll", "Qt6QuickShapes.dll", "Qt6Svg.dll"]
+# Qt plugins, from Qt's plugins folder, staged in the same subfolders beside the program.
+plugins = ["platforms/qwindows.dll", "imageformats/qsvg.dll"]
+# Qt QML module files, from Qt's qml folder, staged in `qml_dir`. Measured: QtQml, Models and WorkerScript register
+# from libraries Qt Quick loads, so of theirs only QtQml's qmldir ships, which QtQuick's qmldir imports.
+qml = ["QtQml/qmldir", "QtQuick/qmldir", "QtQuick/qtquick2plugin.dll", "QtQuick/Effects/qmldir", "QtQuick/Effects/effectsplugin.dll", "QtQuick/Shapes/qmldir", "QtQuick/Shapes/qmlshapesplugin.dll"]
+# Folder beside the program for Qt's QML modules; kx-ui pins the same one (the app's agree test).
+qml_dir = "qml"
+# Folders the stage check refuses anywhere: TLS, network-information and QML debugging plugins (ADR-0004).
+banned = ["tls", "networkinformation", "qmltooling"]
+# Name prefixes of Windows API sets, which the loader maps without searching any folder.
+api_sets = ["api-ms-", "ext-ms-"]
+# Windows' system folder, under the folder `devtools.shell_root_env` names; an import found there resolves.
+system_dir = "System32"

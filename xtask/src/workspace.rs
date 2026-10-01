@@ -197,6 +197,12 @@ pub(crate) fn root_and_section<T: serde::de::DeserializeOwned>(
     ))
 }
 
+/// Cargo's output folder, from `cargo metadata` JSON.
+pub(crate) fn target_dir(json: &str) -> Result<PathBuf, LoadError> {
+    let raw: raw::RawTargetDir = serde_json::from_str(json).map_err(LoadError::Json)?;
+    Ok(PathBuf::from(raw.target_directory))
+}
+
 /// Deserializes one `workspace.metadata` section, naming it if missing.
 fn load_section<T: serde::de::DeserializeOwned>(
     value: Option<serde_json::Value>,

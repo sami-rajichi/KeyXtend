@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::config::{DcoConfig, TidyConfig};
 use crate::devtools::config::DevToolsConfig;
+use crate::devtools::stage::StageConfig;
 
 static UNIQUE: AtomicU32 = AtomicU32::new(0);
 
@@ -119,13 +120,39 @@ pub(crate) fn devtools_json() -> serde_json::Value {
         "ui_access_attr": "uiAccess",
         "ui_access_on": "true",
         "cancel_code": 1223,
-        "fail_code": 1
+        "fail_code": 1,
+        "start_menu_env": "APPDATA",
+        "start_menu_dir": "Microsoft/Windows/Start Menu/Programs",
+        "shortcut": "KeyXtend (dev).lnk",
+        "shortcut_script": "dev-shortcut.ps1"
     })
 }
 
 /// The test dev-tools settings, deserialized.
 pub(crate) fn devtools_config() -> DevToolsConfig {
     serde_json::from_value(devtools_json()).expect("the test settings are valid")
+}
+
+/// Test stage settings as `cargo metadata` prints them, with shorter lists than the project's.
+pub(crate) fn stage_json() -> serde_json::Value {
+    serde_json::json!({
+        "app": "keyxtend",
+        "out_dir": "target/stage",
+        "max_mb": 80,
+        "qmake_env": "QMAKE",
+        "libs": ["Qt6Core.dll", "Qt6Qml.dll", "Qt6Network.dll"],
+        "plugins": ["platforms/qwindows.dll"],
+        "qml": ["QtQuick/qmldir", "QtQuick/qtquick2plugin.dll"],
+        "qml_dir": "qml",
+        "banned": ["tls", "networkinformation", "qmltooling"],
+        "api_sets": ["api-ms-", "ext-ms-"],
+        "system_dir": "System32"
+    })
+}
+
+/// The test stage settings, deserialized.
+pub(crate) fn stage_config() -> StageConfig {
+    serde_json::from_value(stage_json()).expect("the test settings are valid")
 }
 
 /// The project's DCO config: the `Signed-off-by` trailer, with `dependabot[bot]` exempt.

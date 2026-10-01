@@ -1,4 +1,4 @@
-//! Tools for uiAccess test builds: a test certificate, a Program Files install and a check.
+//! Tools for uiAccess test builds: the stage, a test certificate, a Program Files install with its shortcut, and a check.
 
 pub(crate) mod admin;
 pub(crate) mod cert;
@@ -10,6 +10,8 @@ pub(crate) mod paths;
 pub(crate) mod ps;
 pub(crate) mod script;
 pub(crate) mod sdk;
+pub(crate) mod shortcut;
+pub(crate) mod stage;
 
 use std::fmt;
 
@@ -71,6 +73,19 @@ pub(crate) enum DevError {
     Link(String),
     /// The build folder has no program directly inside it.
     NoExe(String),
+    /// A staged file lies in a folder the stage must never hold.
+    Banned(String),
+    /// A staged file imports a library found neither in the stage nor in the system folder.
+    Unresolved {
+        /// The staged file, relative to the stage.
+        by: String,
+        /// The library it names.
+        lib: String,
+    },
+    /// A library beside the program that nothing staged imports.
+    Unused(String),
+    /// A file that is not a readable Windows program or library.
+    BadPe(String),
 }
 
 impl From<LoadError> for DevError {
@@ -111,6 +126,18 @@ impl fmt::Display for DevError {
                 f,
                 "no program directly inside {path}; pick the build output"
             ),
+            Self::Banned(path) => write!(
+                f,
+                "{path} is a network, TLS or debugging plugin; the app ships none"
+            ),
+            Self::Unresolved { by, lib } => {
+                write!(
+                    f,
+                    "{by} needs {lib}, which is neither staged nor in the system folder"
+                )
+            }
+            Self::Unused(lib) => write!(f, "{lib} is staged but nothing staged imports it"),
+            Self::BadPe(path) => write!(f, "{path} is not a readable Windows program or library"),
         }
     }
 }

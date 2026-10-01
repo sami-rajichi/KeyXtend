@@ -61,11 +61,14 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 - Done (fix round 1): libraries named without a folder could come from the working folder or `PATH`. Release builds now load them only from the app's folder and System32.
 - Done (fix round 1): Qt Quick read and wrote a shader pipeline cache in a user-writable folder. It is now turned off.
 ### Should fix (tracked issue)
-- Only the staged uiAccess build runs the pinned paths, so Task 20's stage must check, before any signed build:
-  - every library the exe imports is in the app's folder or System32, since these load before `main` by Windows' usual order and a missing one would be looked for in `PATH`;
-  - Qt's plugins are in subfolders of the app's folder (`platforms/`, …) and its QML modules in `<app>/qml`, each module's plugin beside its `qmldir`;
-  - with a planted `QT_PLUGIN_PATH`, `QML2_IMPORT_PATH` and a best-fit alias of each, the app loads nothing from their folders and still types;
-  - a copy of a Qt library or plugin in the working folder is never loaded.
+Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage (`cargo xtask stage`), and ran a scratch copy of it whose manifest alone had uiAccess off, since Windows starts no unsigned uiAccess program outside Program Files:
+- Done (Task 20): every library the exe and each staged plugin import, the MSVC runtime too, is in the stage or System32. The stage check walks their import tables and fails on any other, and the running copy loaded each one from there, with Qt's own folder first in `PATH`.
+- Done (Task 20): Qt's plugins are in subfolders of the app's folder (`platforms/`, `imageformats/`) and its QML modules in `<app>/qml`, each module's plugin beside its `qmldir`; the release app loaded `main.qml` with the pinned lists.
+- Done (Task 20): with `QT_PLUGIN_PATH`, `QT_QPA_PLATFORM_PLUGIN_PATH`, `QML_IMPORT_PATH`, `QML2_IMPORT_PATH` and fullwidth aliases (`ＱＴ_PLUGIN_PATH`, `ＱＴ_QPA_PLATFORM_PLUGIN_PATH`, `ＱＭＬ2_IMPORT_PATH`) planted, the app loaded nothing from their folders.
+- Done (Task 20): copies of `Qt6Svg.dll`, `Qt6Network.dll` and `d3dcompiler_47.dll` in the working folder were never loaded.
+- Done (Task 20): `%LOCALAPPDATA%\KeyXtend` (shader and `.qmlc` caches) was never created; the copy wrote only its portable log.
+- Open (manual test): typing under the planted variables, since a test click would move the owner's mouse.
+- Open (P14): the MSVC runtime is not staged and loads from System32, where the Visual C++ redistributable puts it. On a PC without it Windows would look in the working folder and `PATH`, so the installer must provide it.
 ### Accepted (with reason)
 - A same-user program can squat `Local\KeyXtend.Running`: a named object cannot be kept from the same user, who could end the process anyway.
 - Commands that arrive before the hub exists wait in an unbounded list: only same-session programs can post them, one code each, during the few milliseconds of load.

@@ -1,6 +1,6 @@
 //! What only the app sees, since it alone depends on every crate: the board, the modules and the language key's
-//! designs have their texts in every language, the board's icons resolve, every paint names tokens each theme has, and
-//! every character key has its scan code in the layouts table.
+//! designs have their texts in every language, the board's icons resolve, every paint names tokens each theme has,
+//! every character key has its scan code in the layouts table, and the stage puts Qt's QML where the app pins it.
 
 #![allow(
     clippy::unwrap_used,
@@ -12,6 +12,7 @@ mod fakes;
 mod icons;
 mod paint;
 mod scans;
+mod stage;
 mod texts;
 
 use kx_mod_keyboard::view::{BoardView, board_view};

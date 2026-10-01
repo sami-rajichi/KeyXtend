@@ -1,9 +1,9 @@
 # Security note: uiAccess dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-09-27
+- **Last review:** 2026-10-01
 - **Status:** Reviewed
-- **Scope:** `cargo xtask dev-cert`, `dev-install`, `check-uiaccess`, and `xtask/scripts/dev-cert.ps1` and `dev-admin.ps1`. Developer tools only; never shipped.
+- **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, and `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`. Developer tools only; never shipped.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -12,6 +12,7 @@
 | Trust that certificate in `LocalMachine\Root` (admin, started by the owner) | The signature must chain to a root the machine trusts. | uiAccess is refused, so gates G3 and G4 cannot run. |
 | Write and delete `Program Files\KeyXtend-dev\<name>` (admin, Windows prompt) | Windows grants uiAccess only from a secure folder. | Same as above. |
 | Read a program's signature and manifest | `check-uiaccess` explains why uiAccess is missing. | Only diagnosis is lost. |
+| Write and delete one shortcut in the user's own Start menu | The owner starts the installed app with one click. | The app is started from its folder instead. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -23,7 +24,10 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[workspace.metadata.devtools]` | Typed; unknown keys, empty or zero values, exit codes below 1 or equal, a subject with `"`, and non-plain names rejected; `cargo xtask tidy` checks it in CI | N/A | No |
+| `[workspace.metadata.devtools]` and `[workspace.metadata.stage]` | Typed; unknown keys, empty or zero values, exit codes below 1 or equal, a subject with `"`, and non-plain names or paths rejected; `cargo xtask tidy` checks both in CI | N/A | No |
+| `QMAKE` and `qmake -query` | An absolute path, else an error; each Qt folder must be absolute | N/A | No |
+| Staged programs and libraries (PE import tables) | Every read is bounds-checked and a malformed file fails the stage, never panics; only descriptors with image-relative places are read | The file's own length | Property test |
+| `APPDATA` for the shortcut | Absolute, else an error; the shortcut goes only under its Start-menu folder, never `ProgramData` | N/A | Unit test |
 | Script output (thumbprints) | Exactly 40 hex digits each, else an error | N/A | No |
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
@@ -33,6 +37,7 @@
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
   - Launchers call PowerShell by its full path under `%SystemRoot%`, so a fake `powershell.exe` on the PATH is not used.
 - **Tampering:** a swapped `.cer` file. Mitigation: the trust step imports it only if its thumbprint matches the one in the launcher.
+  - A network or TLS plugin, or a library nothing loads, slipping into the signed uiAccess install. Mitigation: the stage copies only the files `[workspace.metadata.stage]` lists, and its check refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, and any library nothing imports.
   - The signed uiAccess `kx-gates` reads `kx-gates.toml` beside its exe, else from the repo folder (user-writable), and that file names the programs it starts. `dev-install` copies every file of the build folder, so put `kx-gates.toml` there first and keep the config beside the installed exe.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets.
 - **Information disclosure:** no network; the private key cannot be exported.
@@ -41,6 +46,8 @@
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
   - An elevated folder delete could hit the wrong folder. Mitigation: `dev-admin.ps1` checks every argument before the Windows prompt, and only touches a direct child of `Program Files\<install dir>`; `install_dir` must be a plain name.
   - Untrust could remove someone else's root. Mitigation: it removes only roots with our subject **and** a thumbprint from our own list.
+  - `--remove` could delete another shortcut. Mitigation: it deletes ours only when it starts that install's program.
+  - The stage empties `<out_dir>/<app>` first. Mitigation: both settings are plain relative names, so the folder is always inside the workspace.
   - Program files signed with the test key would show a verified publisher on this PC. Mitigation: the trust is removed when the owner decides, at the latest when the certificate expires (`dev-cert --remove` plus the untrust launcher; ADR-0014).
 
 ## Findings

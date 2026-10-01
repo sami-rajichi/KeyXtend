@@ -45,6 +45,7 @@ fn run(command: &cli::Command) -> ExitCode {
         cli::Command::Dco { base, head } => run_dco(base, head),
         cli::Command::Licences => finish(licences::run()),
         cli::Command::Dist => finish(dist::run()),
+        cli::Command::Stage => finish(devtools::stage::run()),
         cli::Command::DevCert { remove } => finish(devtools::cert::run(*remove)),
         cli::Command::DevInstall { folder } => finish(devtools::install::run(folder)),
         cli::Command::DevUninstall { name } => finish(devtools::install::remove(name)),
@@ -76,10 +77,11 @@ fn finish(result: Result<(), impl Display>) -> ExitCode {
 
 /// Runs `cargo xtask tidy`: loads the real workspace, runs every rule and prints the report.
 ///
-/// It also validates the real dev-tools settings, so CI catches a bad value there.
+/// It also validates the real dev-tools and stage settings, so CI catches a bad value there.
 fn run_tidy() -> ExitCode {
     let loaded = workspace::metadata_json().and_then(|json| {
         devtools::config::load(&json)?;
+        devtools::stage::load(&json)?;
         workspace::load(&json)
     });
     match loaded {

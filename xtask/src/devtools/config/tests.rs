@@ -108,6 +108,26 @@ fn the_subject_must_survive_command_line_quoting() {
 }
 
 #[test]
+fn shortcut_settings_must_be_plain_and_relative() {
+    assert_eq!(
+        invalid(|c| c.shortcut = "..\\x.lnk".to_string()),
+        Err(ConfigError::NotPlain("shortcut"))
+    );
+    assert_eq!(
+        invalid(|c| c.shortcut_script = "a/b.ps1".to_string()),
+        Err(ConfigError::NotPlain("shortcut_script"))
+    );
+    assert_eq!(
+        invalid(|c| c.start_menu_dir = "C:/Start Menu".to_string()),
+        Err(ConfigError::NotRelative("start_menu_dir"))
+    );
+    assert_eq!(
+        invalid(|c| c.start_menu_env = " ".to_string()),
+        Err(ConfigError::EmptyValue("start_menu_env"))
+    );
+}
+
+#[test]
 fn installs_use_the_first_secure_variable() {
     assert_eq!(config().install_env(), "ProgramFiles");
 }

@@ -13,6 +13,8 @@ const SUB_TIDY: &str = "tidy";
 const SUB_DCO: &str = "dco";
 const SUB_LICENCES: &str = "licences";
 const SUB_DIST: &str = "dist";
+/// Builds the app in release and stages it with its Qt files.
+const SUB_STAGE: &str = "stage";
 /// Creates or removes the uiAccess test certificate.
 pub(crate) const SUB_DEV_CERT: &str = "dev-cert";
 /// Installs or removes a signed test build under Program Files.
@@ -30,6 +32,7 @@ fn usage_line() -> String {
         format!("{SUB_DCO} <base> <head>"),
         SUB_LICENCES.to_string(),
         SUB_DIST.to_string(),
+        SUB_STAGE.to_string(),
         format!("{SUB_DEV_CERT} [{FLAG_REMOVE}]"),
         format!("{SUB_DEV_INSTALL} <folder>"),
         format!("{SUB_DEV_INSTALL} {FLAG_REMOVE} <name>"),
@@ -54,6 +57,8 @@ pub(crate) enum Command {
     Licences,
     /// Build release distribution artifacts.
     Dist,
+    /// Build the app in release and stage it with its Qt files.
+    Stage,
     /// Create the test certificate, or remove it.
     DevCert {
         /// Remove instead of create.
@@ -92,6 +97,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, UsageError> {
         [name] if name == SUB_TIDY => Ok(Command::Tidy),
         [name] if name == SUB_LICENCES => Ok(Command::Licences),
         [name] if name == SUB_DIST => Ok(Command::Dist),
+        [name] if name == SUB_STAGE => Ok(Command::Stage),
         [name, base, head] if name == SUB_DCO => Ok(Command::Dco {
             base: base.clone(),
             head: head.clone(),
@@ -180,6 +186,12 @@ mod tests {
     }
 
     #[test]
+    fn stage_parses_alone() {
+        assert_eq!(parse(&args(&["stage"])), Ok(Command::Stage));
+        assert_eq!(parse(&args(&["stage", "x"])), Err(UsageError));
+    }
+
+    #[test]
     fn dev_cert_parses_with_and_without_remove() {
         assert_eq!(
             parse(&args(&["dev-cert"])),
@@ -252,6 +264,7 @@ mod tests {
             SUB_DCO,
             SUB_LICENCES,
             SUB_DIST,
+            SUB_STAGE,
             SUB_DEV_CERT,
             SUB_DEV_INSTALL,
             SUB_CHECK_UIACCESS,

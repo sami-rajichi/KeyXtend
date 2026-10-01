@@ -33,6 +33,14 @@ fn only_top_level_exes_are_signed() {
 }
 
 #[test]
+fn only_a_folder_with_the_app_gets_a_shortcut() {
+    let dir = TempDir::new("app");
+    assert!(!holds_app(dir.path(), "keyxtend.exe"));
+    std::fs::write(dir.path().join("keyxtend.exe"), b"").unwrap();
+    assert!(holds_app(dir.path(), "keyxtend.exe"));
+}
+
+#[test]
 fn a_folder_without_programs_is_refused() {
     let dir = TempDir::new("no-exe");
     std::fs::write(dir.path().join("c.dll"), b"").unwrap();
@@ -73,7 +81,7 @@ fn a_source_over_the_limit_is_refused() {
     let dir = TempDir::new("big");
     let source = dir.path().join("kb");
     std::fs::create_dir_all(&source).unwrap();
-    let size = usize::try_from(BYTES_PER_MB).unwrap() + 1;
+    let size = usize::try_from(paths::BYTES_PER_MB).unwrap() + 1;
     std::fs::write(source.join("big.bin"), vec![0u8; size]).unwrap();
     let target = dir.path().join("target");
     assert_eq!(

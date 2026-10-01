@@ -90,8 +90,9 @@ tools/
                          installed layout and puts the previous one back when the window closes
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
-                         dist (stub until P14), dev-cert / dev-install / check-uiaccess
-                         (uiAccess test builds), sign (later), sbom (later)
+                         dist (stub until P14), stage (the release app with its Qt files),
+                         dev-cert / dev-install / check-uiaccess (uiAccess test builds),
+                         sign (later), sbom (later)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs

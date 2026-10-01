@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: `cargo xtask stage` and the Start-menu shortcut
+`cargo xtask stage` builds KeyXtend in release and stages it in `target/stage/keyxtend` with only the 21 Qt files it was measured to load (46 MB of the 80 MB budget), replacing the spike's PowerShell staging. Its check reads every staged program's import table and refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, and any library nothing imports. A run of the staged release app loaded everything from the stage and nothing from planted Qt paths, `PATH` or the working folder, and wrote nothing to `%LOCALAPPDATA%`. `dev-install` now adds a "KeyXtend (dev)" shortcut to the user's own Start menu, and `--remove` deletes it.
+
 ## 2026-10-01 — P3: key tips no longer hide behind the keyboard
 Each run of the window guard (when the keyboard, a banner, a menu, the list or the bubble shows) lifts the keyboard above every other window, and the tip window, owned by no window, then showed behind it, so the tips of keys, the D-pad and the resize corner vanished. The keyboard now owns its tip and the bubble owns its own, so Windows keeps each tip above its window (ADR-0013); a new language still closes both. Qt Quick tests check the owners and hover every tipped control in English, French and Arabic, at the smallest size and in another theme.
 

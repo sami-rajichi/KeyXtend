@@ -30,6 +30,10 @@ pub(crate) const ERROR_FILE: &str = "ErrorFile";
 pub(crate) const STORE: &str = "Store";
 /// Parameter: days a reused certificate must still be valid.
 pub(crate) const MIN_DAYS: &str = "MinDays";
+/// Parameter: the Start-menu shortcut file.
+pub(crate) const LINK: &str = "Link";
+/// Parameter: the program the shortcut starts.
+pub(crate) const EXE: &str = "Exe";
 /// Separator of a thumbprint list; `dev-admin.ps1` names the same one as `$ListSep`.
 pub(crate) const LIST_SEP: &str = ",";
 /// Switch: show the result in a message box.
@@ -38,7 +42,7 @@ pub(crate) const NOTIFY: &str = "-Notify";
 #[cfg(all(test, windows))]
 pub(crate) const VALIDATE_ONLY: &str = "-ValidateOnly";
 
-/// `dev-cert.ps1` action: print the thumbprint of a valid certificate, if any.
+/// `dev-cert.ps1` action: print the thumbprint of a valid certificate; `dev-shortcut.ps1`: print the shortcut's program.
 pub(crate) const FIND: &str = "Find";
 /// `dev-cert.ps1` action: print the thumbprints of every certificate with the subject.
 pub(crate) const LIST: &str = "List";
@@ -46,8 +50,10 @@ pub(crate) const LIST: &str = "List";
 pub(crate) const CREATE: &str = "Create";
 /// `dev-cert.ps1` action: export the public certificate to a file.
 pub(crate) const EXPORT: &str = "Export";
-/// `dev-cert.ps1` action: delete the certificate and its key.
+/// `dev-cert.ps1` action: delete the certificate and its key; `dev-shortcut.ps1`: delete the shortcut to `Exe`.
 pub(crate) const REMOVE: &str = "Remove";
+/// `dev-shortcut.ps1` action: write the shortcut to `Exe`, replacing any old one.
+pub(crate) const ADD: &str = "Add";
 /// `dev-admin.ps1` action: trust the exported certificate.
 pub(crate) const TRUST: &str = "Trust";
 /// `dev-admin.ps1` action: stop trusting the certificate.

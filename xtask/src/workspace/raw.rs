@@ -83,3 +83,9 @@ pub(super) struct RawSections {
     #[serde(default)]
     pub(super) metadata: Option<Map<String, Value>>,
 }
+
+/// Just cargo's output folder.
+#[derive(Deserialize)]
+pub(super) struct RawTargetDir {
+    pub(super) target_directory: String,
+}

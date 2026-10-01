@@ -208,7 +208,7 @@ size_names = ["Small", "Medium", "Large"]
 modes = ["Light", "Dark", "Auto"]
 chips = [{ text = "Hello" }, { text = "Thanks" }, { text = "شكرًا" }, { text = "@gmail.com", icon = "at-sign" }]
 
-# Fonts and icons, under the settings folder; stage-lib.ps1 copies them from the D:\dev assets folder.
+# Fonts and icons, under the settings folder; the spike's stage script, deleted in P3, copied them from D:\dev.
 [assets]
 fonts = "assets/fonts"
 icons = "assets/icons"
