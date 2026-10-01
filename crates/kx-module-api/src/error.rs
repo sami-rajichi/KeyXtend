@@ -92,7 +92,7 @@ pub enum ModuleError {
     Start(&'static str),
 }
 
-/// Why a module's own settings write failed.
+/// Why a module's own settings write failed; log it by `kind`, since an `Invalid` text may quote a settings value.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum WriteError {
     /// The module's validator refused the key or the value; nothing changed.
@@ -106,7 +106,22 @@ pub enum WriteError {
     Unsaved,
 }
 
+/// The log name of a `WriteError::Refused`.
+const REFUSED_KIND: &str = "settings cannot change";
+/// The log name of a `WriteError::Unsaved`.
+const UNSAVED_KIND: &str = "settings not saved";
+
 impl WriteError {
+    /// A short fixed name of the error's kind, safe to log: an `Invalid` write gives its `SettingsError::kind`.
+    #[must_use]
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::Invalid(e) => e.kind(),
+            Self::Refused(_) => REFUSED_KIND,
+            Self::Unsaved => UNSAVED_KIND,
+        }
+    }
+
     /// True when the values still hold for this run: the store took them, and only the file was not saved.
     #[must_use]
     pub fn holds(&self) -> bool {
@@ -151,6 +166,21 @@ mod tests {
             migration,
         ];
         let kinds: Vec<&str> = all.iter().map(SettingsError::kind).collect();
+        assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
+        assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
+    }
+
+    #[test]
+    fn a_write_error_is_logged_by_a_fixed_kind() {
+        let value = "hunter2";
+        let invalid = SettingsError::Invalid(value.into());
+        let all = [
+            WriteError::Invalid(invalid.clone()),
+            WriteError::Refused(ModuleId::new("a")),
+            WriteError::Unsaved,
+        ];
+        let kinds: Vec<&str> = all.iter().map(WriteError::kind).collect();
+        assert_eq!(kinds[0], invalid.kind());
         assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
         assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
     }

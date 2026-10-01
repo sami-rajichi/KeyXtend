@@ -245,7 +245,8 @@ fn a_repair_whose_save_fails_warns_once_and_a_later_save_catches_up() {
     );
 }
 
-/// Another program holds the settings file: defaults run, the user is told once, nothing is written.
+/// Another program held the settings file at load: defaults run, the user is told once, and nothing is written
+/// even once the file is free again.
 #[cfg(windows)]
 #[test]
 fn a_locked_settings_file_runs_on_defaults_and_is_never_written() {
@@ -256,12 +257,12 @@ fn a_locked_settings_file_runs_on_defaults_and_is_never_written() {
     fs::write(&files.settings, &text).unwrap();
     let held = kx_test_support::lock::hold(&files.settings).unwrap();
     let notices = rig.kernel.boot().unwrap();
+    drop(held);
     assert!(rig.log.all().contains(&Did::Saw(A, DEFAULT_LEVEL)));
     set(&mut rig, NEW_LEVEL + 1).unwrap();
     let own = a.get().set(LEVEL_KEY, Value::Integer(NEW_LEVEL + 2));
     assert_eq!(own, Ok(()), "the value holds for this run");
     rig.kernel.stop_all();
-    drop(held);
     let told: Vec<_> = notices.iter().map(|n| n.key).collect();
     assert_eq!(told, [keys::SETTINGS_LOCKED]);
     assert_eq!(rig.notice_keys(), [keys::SETTINGS_LOCKED], "told once");

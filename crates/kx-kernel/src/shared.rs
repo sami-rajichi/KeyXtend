@@ -169,15 +169,24 @@ mod tests {
     }
 
     #[test]
-    fn a_poisoned_lock_is_recovered_not_passed_on() {
+    fn a_poisoned_lock_is_recovered_with_what_it_held() {
         let share = shared();
+        share.collect();
         let held = share.clone();
         let poison = panic::catch_unwind(AssertUnwindSafe(|| {
-            let _guard = lock(&held.store);
-            panic::panic_any("a module thread panicked while it held the store");
+            let _store = lock(&held.store);
+            let _told = lock(&held.told);
+            panic::panic_any("a module thread panicked while it held both locks");
         }));
-        assert!(poison.is_err() && share.store.is_poisoned());
+        assert!(poison.is_err() && share.store.is_poisoned() && share.told.is_poisoned());
         let refused = share.write(ID, one(Value::Integer(1)));
         assert_eq!(refused, Err(WriteError::Refused(ID)));
+        let notice = || Notice {
+            key: keys::SETTINGS_UNSAVED,
+            module: None,
+            args: Vec::new(),
+        };
+        share.notify(notice());
+        assert_eq!(share.collected(), [notice()], "still collecting");
     }
 }

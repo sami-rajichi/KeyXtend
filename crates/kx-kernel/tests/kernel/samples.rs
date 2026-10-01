@@ -201,6 +201,7 @@ impl Module for Sample {
         match (self.switch.get(), &self.bus) {
             (Mode::PanicInStop, _) => panic::panic_any(SamplePanic),
             (Mode::PingInStop, Some(bus)) => {
+                // `Ping` needs no capability, so the bus never refuses it; the test checks who hears it.
                 let _ = bus.publish(&Ping);
             }
             _ => {}

@@ -86,7 +86,8 @@ pub struct Bus {
 }
 
 impl Bus {
-    /// Wraps the kernel's bus core in a handle with no limit; only the kernel holds one.
+    /// Wraps the kernel's bus core in a handle with no limit; the kernel and its app hold one, and modules get
+    /// `restricted` handles.
     #[must_use]
     pub fn new(core: Arc<dyn BusCore>) -> Self {
         Self { core, limit: None }

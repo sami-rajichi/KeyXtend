@@ -100,7 +100,7 @@ impl Hub {
         match store.set(key, value) {
             Ok(()) | Err(WriteError::Unsaved) => {}
             Err(e) => {
-                tracing::warn!(key, error = %e, "a [ui] value was refused");
+                tracing::warn!(key, kind = e.kind(), "a [ui] value was refused");
                 return false;
             }
         }
