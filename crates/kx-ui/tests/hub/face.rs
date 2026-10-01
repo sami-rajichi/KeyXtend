@@ -190,10 +190,20 @@ fn a_shown_window_is_lifted_alone_by_its_title() {
 fn the_guard_tries_until_a_window_shows_then_gives_the_focus_back_once() {
     let rig = Rig::new();
     let tries = rig.hub.settings().guard_tries;
-    assert!(rig.hub.guard(1), "no window yet");
+    assert!(rig.hub.guard(1, None), "no window yet");
     rig.guard.set_count(2);
-    assert!(!rig.hub.guard(2));
+    assert!(!rig.hub.guard(2, Some("menu")));
     let calls = rig.guard.calls();
+    let runs: Vec<_> = calls
+        .iter()
+        .filter(|c| matches!(c, GuardCall::GuardOwn(..)))
+        .collect();
+    let menu = GuardCall::GuardOwn(None, Some("menu".into()));
+    assert_eq!(
+        runs,
+        [&GuardCall::GuardOwn(None, None), &menu],
+        "the window just shown comes last"
+    );
     let GuardCall::Remember(focus) = calls[0] else {
         panic!("the hub notes the focus first: {calls:?}");
     };
@@ -209,9 +219,9 @@ fn the_guard_tries_until_a_window_shows_then_gives_the_focus_back_once() {
 fn the_guard_stops_after_its_last_try_or_an_error() {
     let rig = Rig::new();
     let tries = rig.hub.settings().guard_tries;
-    assert!(!rig.hub.guard(tries), "out of tries");
+    assert!(!rig.hub.guard(tries, None), "out of tries");
     rig.guard.set_error(Some(UiError::Refused(1)));
-    assert!(!rig.hub.guard(1));
+    assert!(!rig.hub.guard(1, None));
     let backs = rig
         .guard
         .calls()

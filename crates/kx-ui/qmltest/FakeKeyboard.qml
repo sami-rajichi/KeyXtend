@@ -12,6 +12,9 @@ QtObject {
     // Where `bubbleAt` puts the bubble, in physical pixels, or null for nowhere.
     property var bubble: null
 
+    // A window titled `title` asked to be lifted alone, as the call runs.
+    signal lifted(string title)
+
     function note(call) {
         calls = calls.concat([call]);
         return JSON.stringify(reply);
@@ -68,10 +71,11 @@ QtObject {
     }
     function liftAlone(title) {
         note("liftAlone " + title);
+        lifted(title);
         return true;
     }
-    function guard() {
-        note("guard");
+    function guard(top) {
+        note(top ? "guard " + top : "guard");
         return false;
     }
 }

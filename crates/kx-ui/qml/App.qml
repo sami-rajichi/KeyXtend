@@ -98,8 +98,8 @@ QtObject {
             res: face.res
             s: face.s
             widest: face.running ? face.drawn.width : face.lk.shape.panel.width_px
-            spot: (w, h) => face.popSpot(w, h, NaN)
-            onShowing: on => app.shadow(app.noticeGlow, on)
+            spot: (w, h) => face.spots.popSpot(w, h, NaN)
+            onShowing: on => app.shadow(app.noticeGlow, on, notice.title)
             onTouched: trayMenu.shut()
         }
     }
@@ -119,9 +119,9 @@ QtObject {
             now: app.now
             spot: (x, y, w, h) => {
                 const p = JSON.parse(app.ui.menuAt(x, y, w, h));
-                return p ? face.logical(p.x, p.y) : null;
+                return p ? face.spots.logical(p.x, p.y) : null;
             }
-            onShowing: on => app.shadow(app.menuGlow, on)
+            onShowing: on => app.shadow(app.menuGlow, on, trayMenu.title)
             onShowKeyboard: app.open()
             onQuitApp: app.ui.quit()
         }
@@ -147,11 +147,14 @@ QtObject {
         }
     }
 
-    // Shows or hides a pop-up's shadow with it; a shown pop-up gets the guard.
-    function shadow(glow, on) {
+    // Shows or hides a pop-up's shadow with it. A pop-up titled `top` shows again where it was, so its guard run puts
+    // it in front; the bubble's tip hides first, as the keyboard's does.
+    function shadow(glow, on, top) {
         glow.visible = on;
-        if (on)
-            face.guardRun();
+        if (!on)
+            return;
+        bubble.hideTip();
+        face.guardRun(top);
     }
 
     // Shows the keyboard over its shadow at its place, once the keyboard module runs.

@@ -27,8 +27,8 @@ const TITLE_CAP: usize = 512;
 pub struct WinGuard;
 
 impl WindowGuard for WinGuard {
-    fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError> {
-        guard_own(spare, None)
+    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
+        guard_own(spare, top)
     }
 
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError> {
@@ -163,7 +163,19 @@ pub fn own_bounds(title_is: &str) -> Result<RECT, UiError> {
 /// # Errors
 /// `Refused` when Windows will not guard a window, as from a thread that does not own it.
 pub fn guard_own(spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
-    let named = own_windows().into_iter().map(|w| (w, title(w)));
+    guard_these(own_windows(), spare, top)
+}
+
+/// Guards `front_first`, our windows listed front first, as `guard_own` does its shown ones.
+///
+/// # Errors
+/// `Refused` when Windows will not guard a window.
+pub(super) fn guard_these(
+    front_first: Vec<HWND>,
+    spare: Option<&str>,
+    top: Option<&str>,
+) -> Result<usize, UiError> {
+    let named = front_first.into_iter().map(|w| (w, title(w)));
     let kept: Vec<(HWND, String)> = named.filter(|(_, t)| !spared(t, spare)).collect();
     let order = guard_order(kept, |(_, t)| top == Some(t.as_str()));
     for (hwnd, _) in &order {

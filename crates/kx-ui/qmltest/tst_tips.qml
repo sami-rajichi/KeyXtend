@@ -192,6 +192,9 @@ Item {
         function test_a_tip_lifts_itself_in_front_once_it_shows() {
             const app = make();
             const lifts = () => app.keyboard.calls.filter(c => c === "liftAlone " + En.texts["window.tip"]).length;
+            // Only a shown window is found by its title, so each lift must find its tip shown.
+            const seen = [];
+            app.keyboard.lifted.connect(() => seen.push(shown(app) !== null));
             const bksp = named(app.face.contentItem, En.texts["key.bksp"]);
             mouseMove(bksp, bksp.width / 2, bksp.height / 2);
             compare(lifts(), 0, "not while it waits");
@@ -199,6 +202,24 @@ Item {
             compare(lifts(), 1, "the keyboard's tip, once shown");
             bubbleTip(app);
             compare(lifts(), 2, "the bubble's tip too");
+            compare(seen, [true, true], "each tip shows before it lifts");
+        }
+
+        // A guard run would lift a shown tip, and its window with it, over a pop-up; so a tip hides as a run starts, the
+        // keyboard's for the banner and the bubble's for the tray menu.
+        function test_a_shown_tip_hides_when_a_pop_up_shows() {
+            const app = make();
+            const bksp = named(app.face.contentItem, En.texts["key.bksp"]);
+            mouseMove(bksp, bksp.width / 2, bksp.height / 2);
+            tryVerify(() => shown(app) !== null, 2000, "the key's tip shows");
+            app.ui.notices = [{ id: 1, text: "Notice 1", retry: false }];
+            app.ui.noticesWaiting();
+            tryVerify(() => app.notice.visible, 2000, "the banner shows");
+            verify(shown(app) === null, "the keyboard's tip hides");
+            bubbleTip(app);
+            app.ui.trayClicked(300, 500);
+            verify(app.menu.visible, "the menu opens");
+            verify(shown(app) === null, "the bubble's tip hides");
         }
 
         // A quick hand crosses several keys without resting: only the last one's tip shows, once, after the wait.

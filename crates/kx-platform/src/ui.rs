@@ -48,12 +48,12 @@ impl FocusToken {
 
 /// Keeps our windows from taking the focus, and shapes where they take clicks.
 pub trait WindowGuard: Send + Sync {
-    /// Guards our visible windows except the one titled `spare`, and says how many it guards.
-    /// Call it on the UI thread, which owns the windows.
+    /// Guards our visible windows except the one titled `spare`, with the one titled `top` last so it lands in front (a
+    /// hidden window shows again at its old place), and says how many. Call it on the UI thread, which owns the windows.
     ///
     /// # Errors
     /// `Refused` when the OS will not guard a window, as from another thread.
-    fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError>;
+    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError>;
 
     /// Lets clicks outside `rects` pass through the window titled `title`, a call for the UI thread.
     /// The rects are physical pixels relative to the window's top-left corner.
@@ -62,8 +62,8 @@ pub trait WindowGuard: Send + Sync {
     /// `NoWindow` for an unknown title, `Refused` when the OS says no.
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError>;
 
-    /// Lifts our shown window titled `title` alone in front of our others, leaving its owner where it is, as a tip
-    /// does when it shows; a call for the UI thread.
+    /// Lifts our shown windows titled `title` alone in front of our others, leaving their owners where they are, as a
+    /// tip does when it shows; a call for the UI thread.
     ///
     /// # Errors
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.

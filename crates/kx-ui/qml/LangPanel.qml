@@ -18,7 +18,7 @@ Glow {
     function place() {
         const w = panel.win;
         const key = w.board.keys.find(k => k.kind === "lang");
-        const p = w.popSpot(list.width, list.height, key ? w.at.x + key.x : NaN);
+        const p = w.spots.popSpot(list.width, list.height, key ? w.at.x + key.x : NaN);
         if (p) {
             list.x = p.x;
             list.y = p.y;

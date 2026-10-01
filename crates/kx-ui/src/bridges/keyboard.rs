@@ -95,9 +95,10 @@ pub mod qobject {
         #[qinvokable]
         fn lift_alone(&self, title: &QString) -> bool;
 
-        /// One guard try; true to try again after `guard_delay_ms`.
+        /// One guard try, with our window titled `top` (empty for none) landing in front; true to try again after
+        /// `guard_delay_ms`.
         #[qinvokable]
-        fn guard(self: Pin<&mut Self>) -> bool;
+        fn guard(self: Pin<&mut Self>, top: &QString) -> bool;
     }
 }
 
@@ -243,11 +244,13 @@ impl qobject::Keyboard {
             .is_some_and(|h| h.lift_alone(&title))
     }
 
-    fn guard(self: Pin<&mut Self>) -> bool {
+    fn guard(self: Pin<&mut Self>, top: &QString) -> bool {
+        let top = top.to_string();
+        let top = (!top.is_empty()).then_some(top.as_str());
         let mut rust = self.rust_mut();
         let Some(hub) = rust.hub.clone() else {
             return false;
         };
-        rust.guard.step(|attempt| hub.guard(attempt))
+        rust.guard.step(|attempt| hub.guard(attempt, top))
     }
 }

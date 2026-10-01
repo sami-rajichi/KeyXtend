@@ -21,6 +21,7 @@ mod qt {
         "qml/main.qml",
         "qml/App.qml",
         "qml/KbWindow.qml",
+        "qml/Spots.qml",
         "qml/Plate.qml",
         "qml/TopBar.qml",
         "qml/Chip.qml",

@@ -57,8 +57,8 @@ impl Screens for FakeScreens {
 /// One call the fake window guard took.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GuardCall {
-    /// `guard_own(spare)`.
-    GuardOwn(Option<String>),
+    /// `guard_own(spare, top)`.
+    GuardOwn(Option<String>, Option<String>),
     /// `shape(title, rects)`.
     Shape(String, Vec<Rect>),
     /// `lift_alone(title)`.
@@ -112,8 +112,9 @@ impl FakeWindowGuard {
 }
 
 impl WindowGuard for FakeWindowGuard {
-    fn guard_own(&self, spare: Option<&str>) -> Result<usize, UiError> {
-        self.record(GuardCall::GuardOwn(spare.map(str::to_owned)))?;
+    fn guard_own(&self, spare: Option<&str>, top: Option<&str>) -> Result<usize, UiError> {
+        let call = GuardCall::GuardOwn(spare.map(str::to_owned), top.map(str::to_owned));
+        self.record(call)?;
         Ok(self.count.load(Ordering::SeqCst))
     }
 
@@ -177,6 +178,8 @@ mod tests {
     use super::*;
 
     const TITLE: &str = "KeyXtend";
+    /// The window a guard run puts in front.
+    const TOP: &str = "KeyXtend menu";
 
     fn area() -> Screen {
         let rect = Rect {
@@ -207,7 +210,7 @@ mod tests {
     fn the_guard_records_every_call_in_order() {
         let fake = FakeWindowGuard::new(3);
         let rects = [area().rect];
-        assert_eq!(fake.guard_own(Some(TITLE)), Ok(3));
+        assert_eq!(fake.guard_own(Some(TITLE), Some(TOP)), Ok(3));
         assert_eq!(fake.shape(TITLE, &rects), Ok(()));
         assert_eq!(fake.lift_alone(TITLE), Ok(()));
         let first = fake.remember();
@@ -215,7 +218,7 @@ mod tests {
         assert_ne!(first, second);
         fake.give_back(first);
         let want = [
-            GuardCall::GuardOwn(Some(TITLE.into())),
+            GuardCall::GuardOwn(Some(TITLE.into()), Some(TOP.into())),
             GuardCall::Shape(TITLE.into(), rects.to_vec()),
             GuardCall::LiftAlone(TITLE.into()),
             GuardCall::Remember(first),
@@ -228,18 +231,18 @@ mod tests {
     #[test]
     fn the_guard_count_and_errors_follow_the_test_and_every_try_is_recorded() {
         let fake = FakeWindowGuard::new(0);
-        assert_eq!(fake.guard_own(None), Ok(0));
+        assert_eq!(fake.guard_own(None, None), Ok(0));
         fake.set_error(Some(UiError::Refused(5)));
-        assert_eq!(fake.guard_own(None), Err(UiError::Refused(5)));
+        assert_eq!(fake.guard_own(None, None), Err(UiError::Refused(5)));
         assert_eq!(fake.shape(TITLE, &[]), Err(UiError::Refused(5)));
         assert_eq!(fake.lift_alone(TITLE), Err(UiError::Refused(5)));
         fake.set_error(None);
         fake.set_count(2);
-        assert_eq!(fake.guard_own(None), Ok(2));
+        assert_eq!(fake.guard_own(None, None), Ok(2));
         let tries = fake
             .calls()
             .iter()
-            .filter(|c| **c == GuardCall::GuardOwn(None))
+            .filter(|c| **c == GuardCall::GuardOwn(None, None))
             .count();
         assert_eq!(tries, 3);
     }

@@ -132,7 +132,7 @@ mod tests {
             (
                 screens.work_areas(),
                 look.ui_language(),
-                guard.guard_own(None),
+                guard.guard_own(None, None),
             )
         });
         let (areas, language, guarded) = answers.join().unwrap();

@@ -102,7 +102,7 @@ Item {
         anchors.fill: parent
         at: body.win.at
         keyboard: body.win.keyboard
-        logical: body.win.logical
+        logical: body.win.spots.logical
         pollMs: body.win.cfg.pollMs
         name: body.res.tr("catch")
         onMoved: to => body.win.at = to

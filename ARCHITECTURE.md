@@ -189,7 +189,8 @@ pub trait Module: Send + 'static {
   - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
 - Owned windows (shadows, bubble, tips, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
-- A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner.
+- A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner. A shown tip hides as a guard run starts, or the guard would lift its owner with it.
+- A hidden window shows again at its old place, so a pop-up's guard run names it as `top` to land in front.
 - Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
 
 ## Platform notes

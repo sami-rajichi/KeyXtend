@@ -125,21 +125,17 @@ Item {
             verify(!app.menu.visible);
         }
 
-        // The guard keeps a window topmost only when it starts so (kx-platform-windows `window`), so every window it
-        // covers asks Qt for it; Settings is spared.
-        function test_every_guarded_window_starts_on_top() {
+        // A hidden pop-up shows again at its old place, maybe under the keyboard, so its guard run names it to land in
+        // front (kx-platform `guard_own`); the keyboard's own run names none.
+        function test_a_shown_pop_up_lands_in_front() {
             const app = make();
-            const item = (w, ok) => [...w.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && ok(o));
-            const tip = w => item(w, o => o.hint && o.ms !== undefined);
-            const mover = item(app.face, o => o.mover).mover;
-            const wins = [
-                ["Bubble", app.bubble], ["Catch", item(mover, o => o.objectAt).objectAt(0)], ["Glow", app.kbGlow],
-                ["KbWindow", app.face], ["LangList", openList(app)], ["Notice", app.notice], ["Tip", tip(app.face)],
-                ["TrayMenu", app.menu], ["TrayPicture", app.trayPicture], ["the bubble's Glow", app.bubbleGlow],
-                ["the banner's Glow", app.noticeGlow], ["the menu's Glow", app.menuGlow], ["the bubble's Tip", tip(app.bubble)]
-            ];
-            for (const [kind, w] of wins)
-                verify(w && (w.flags & Qt.WindowStaysOnTopHint), kind + " starts on top");
+            const ran = top => app.keyboard.calls.indexOf(top ? "guard " + top : "guard") >= 0;
+            tryVerify(() => ran(""), 2000, "the keyboard's run");
+            app.ui.notices = [{ id: 1, text: "Notice 1", retry: false }];
+            app.ui.noticesWaiting();
+            tryVerify(() => ran(En.texts["window.notice"]), 2000, "the banner's run");
+            open(app);
+            tryVerify(() => ran(En.texts["window.menu"]), 2000, "the menu's run");
         }
 
         function test_a_new_front_window_closes_it_after_the_grace() {

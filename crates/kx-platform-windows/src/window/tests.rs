@@ -236,7 +236,7 @@ fn hidden_windows_are_ours_but_never_guarded_shaped_or_lifted() {
         "only visible windows count"
     );
     assert_eq!(
-        WinGuard.guard_own(None),
+        WinGuard.guard_own(None, None),
         Ok(0),
         "the test program shows no window"
     );

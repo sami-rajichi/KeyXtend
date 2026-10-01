@@ -23,6 +23,11 @@ Window {
     width: px[0]
     height: px[0]
 
+    // Hides its tip, as a guard run starts: the guard would lift the bubble with it.
+    function hideTip() {
+        tip.hint("", null);
+    }
+
     Rectangle {
         id: disc
         anchors.fill: parent
