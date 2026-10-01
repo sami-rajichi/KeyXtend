@@ -167,7 +167,7 @@ profile_env = "USERPROFILE"
 app = "keyxtend"
 # Folder, under the workspace root, holding the stage; the app's own folder in it is emptied first.
 out_dir = "target/stage"
-# Largest stage, in MB: the download budget (ADR-0012).
+# Largest stage, in MB of 10⁶ bytes: the download budget (ADR-0012). G8's `size_mb` must match; a kx-gates test checks.
 max_mb = 80
 # Env var naming Qt's qmake; Qt's folders come from `qmake -query`, so the stage takes the Qt the app was built with.
 qmake_env = "QMAKE"

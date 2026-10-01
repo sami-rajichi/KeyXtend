@@ -32,7 +32,7 @@ pub struct G8 {
     pub memory_mb: f64,
     /// Idle CPU, in percent of one core, in both modes.
     pub idle_core_pct: f64,
-    /// The program folder, in MB.
+    /// The program folder, in MB of 10⁶ bytes: the stage's `max_mb`.
     pub size_mb: f64,
     /// The key pressed for the highlight check, by board id.
     pub press_key: String,
@@ -130,9 +130,23 @@ mod tests {
     // Workspace paths from `tools/kx-gates/src`; a moved crate breaks the build here, never silently.
     const RUN_RS: &str = include_str!("../../../apps/keyxtend/src/run.rs");
     const FACE_RS: &str = include_str!("../../../crates/kx-ui/src/hub/face.rs");
+    /// The workspace manifest, whose stage settings hold the download budget.
+    const ROOT_TOML: &str = include_str!("../../../Cargo.toml");
 
     fn shipped() -> G8 {
         crate::config::load().expect("kx-gates.toml loads").g8
+    }
+
+    #[test]
+    fn the_folder_budget_is_the_stages_own_limit() {
+        let root: toml::Table = ROOT_TOML.parse().expect("is TOML");
+        let max_mb = root["workspace"]["metadata"]["stage"]["max_mb"].as_integer();
+        let max_mb = i32::try_from(max_mb.expect("a whole MB count")).expect("fits");
+        let size_mb = shipped().size_mb;
+        assert!(
+            (size_mb - f64::from(max_mb)).abs() < f64::EPSILON,
+            "{size_mb} vs {max_mb}"
+        );
     }
 
     #[test]

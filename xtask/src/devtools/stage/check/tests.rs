@@ -262,6 +262,12 @@ fn the_summary_counts_files_and_bytes() {
 }
 
 #[test]
+fn a_megabyte_is_a_million_bytes_as_spec_10_and_g8_count() {
+    let mb = |bytes| Summary { files: 1, bytes }.mb();
+    assert_eq!((mb(1_000_000), mb(1_000_001)), (1, 2));
+}
+
+#[test]
 fn the_summary_rounds_megabytes_up() {
     let summary = Summary {
         files: 1,

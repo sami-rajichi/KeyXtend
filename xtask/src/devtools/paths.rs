@@ -14,8 +14,8 @@ const NUMBERED: [&str; 2] = ["COM", "LPT"];
 const DEVICE_DIGITS: &str = "123456789¹²³";
 /// Separator of the relative folders in the settings.
 const SETTINGS_SEP: char = '/';
-/// Bytes in one MB, for the size limits.
-pub(crate) const BYTES_PER_MB: u64 = 1024 * 1024;
+/// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
+pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
 
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {

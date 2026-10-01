@@ -21,6 +21,7 @@ idle_ms = 10000
 # modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
 memory_mb = 80.0
 idle_core_pct = 0.5
+# The program folder's budget is the stage's own `max_mb` (root Cargo.toml); a test keeps the two equal.
 size_mb = 80.0
 # A press lights its key on the next frame (spec §10): within this many frames, the one being drawn and the next.
 press_key = "c-0x001E"
