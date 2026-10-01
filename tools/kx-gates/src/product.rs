@@ -1,12 +1,14 @@
-//! The product app the gates G2-G4, G8-G13, G25, G26 and `close` aim at: its windows, found by program, and its
-//! keyboard.
+//! The product app the gates G2-G4, G8-G13, G25, G26 and `close` aim at: its windows, found by program, its keyboard,
+//! and the running copy's data files and keyboard settings, read without changing them.
 #![cfg(windows)]
 
 use std::collections::HashSet;
 use std::env::consts::EXE_SUFFIX;
 use std::path::Path;
 
-use kx_mod_keyboard::{KeyboardSettings, Role};
+use kx_mod_keyboard::{ID, KeyboardSettings, Role, SPEC};
+use kx_platform_windows::dirs;
+use kx_settings::{Files, peek, peek_section};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::keymap::{KeyMap, Reader};
@@ -26,12 +28,41 @@ pub fn is_ours(path: &str) -> bool {
         .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(&program))
 }
 
-/// The longest the keyboard takes to show the layout of the app in front: one relabel period of its default
-/// settings, and one `poll_ms` more. A key clicked before then may step from, or wait for, the old layout.
+/// The longest a keyboard with `settings` takes to show the layout of the app in front: one relabel period and one
+/// `poll_ms` more. A key clicked before then may step from, or wait for, the old layout.
+pub fn follow_after(settings: &KeyboardSettings, poll_ms: u64) -> u64 {
+    settings.relabel_ms + poll_ms
+}
+
+/// `follow_after` with the running copy's settings.
 pub fn follow_ms(poll_ms: u64) -> Result<u64, String> {
-    let settings =
-        KeyboardSettings::from_defaults().map_err(|e| format!("the keyboard's defaults: {e}"))?;
-    Ok(settings.relabel_ms + poll_ms)
+    keyboard().map(|s| follow_after(&s, poll_ms))
+}
+
+/// The data files of the product at `program`: beside it in a portable copy, else in the user's folder.
+pub fn files(program: &Path) -> Result<Files, String> {
+    let local = dirs::local_data().map_err(|e| e.to_string())?;
+    let app = dirs::from_paths(program, &local).map_err(|e| e.to_string())?;
+    Ok(Files::new(app.data_dir().path()))
+}
+
+/// The `[keyboard]` settings in settings file `file`, as a later copy of the app reads a section.
+fn keyboard_in(file: Option<&toml::Table>) -> Result<KeyboardSettings, String> {
+    peek_section(file, ID, &SPEC).map_err(|e| format!("the keyboard's defaults: {e}"))
+}
+
+/// The keyboard settings of the product at `program`, read without changing its files.
+fn keyboard_of(program: &Path) -> Result<KeyboardSettings, String> {
+    let file = files(program).ok().and_then(|f| peek(&f));
+    keyboard_in(file.as_ref())
+}
+
+/// The running copy's keyboard settings; the defaults when no copy runs.
+pub fn keyboard() -> Result<KeyboardSettings, String> {
+    match running() {
+        Some((_, exe)) => keyboard_of(Path::new(&exe)),
+        None => keyboard_in(None),
+    }
 }
 
 /// True when window `w` belongs to the product.
@@ -113,6 +144,10 @@ fn missing(id: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use kx_mod_keyboard::LangKey;
+    use kx_platform::PORTABLE_DIR;
+    use kx_test_support::tempdir::TempDir;
+
     use super::*;
 
     #[test]
@@ -126,12 +161,45 @@ mod tests {
         assert!(!is_ours(""));
     }
 
+    fn table(text: &str) -> toml::Table {
+        text.parse().expect("TOML")
+    }
+
+    fn defaults() -> KeyboardSettings {
+        KeyboardSettings::from_defaults().expect("defaults")
+    }
+
     #[test]
     fn the_keyboard_follows_within_one_relabel_period_and_one_poll() {
-        let relabel = KeyboardSettings::from_defaults()
-            .expect("defaults")
-            .relabel_ms;
-        assert_eq!(follow_ms(50), Ok(relabel + 50));
+        let mut s = defaults();
+        s.relabel_ms = 900;
+        assert_eq!(follow_after(&s, 50), 950);
+    }
+
+    #[test]
+    fn the_keyboard_settings_are_the_files_section_over_the_defaults() {
+        assert_eq!(keyboard_in(None), Ok(defaults()));
+        assert_eq!(keyboard_in(Some(&table("[ui]\nx = 1"))), Ok(defaults()));
+        let file = table("[keyboard]\nversion = 1\nrelabel_ms = 900\nlang_key = \"list\"");
+        let s = keyboard_in(Some(&file)).expect("reads");
+        assert_eq!((s.relabel_ms, s.lang_key), (900, LangKey::List));
+        assert_eq!(
+            s.modifiers,
+            defaults().modifiers,
+            "the rest keeps its default"
+        );
+    }
+
+    #[test]
+    fn a_portable_copy_keeps_its_settings_beside_its_program() {
+        let dir = TempDir::new("gates-portable").expect("a temp folder");
+        let data = dir.path().join(PORTABLE_DIR);
+        std::fs::create_dir(&data).expect("the data folder");
+        let want = Files::new(&data);
+        std::fs::write(&want.settings, "[keyboard]\nrelabel_ms = 700\n").expect("written");
+        let program = dir.path().join(format!("{NAME}{EXE_SUFFIX}"));
+        assert_eq!(files(&program), Ok(want));
+        assert_eq!(keyboard_of(&program).map(|s| s.relabel_ms), Ok(700));
     }
 
     #[test]

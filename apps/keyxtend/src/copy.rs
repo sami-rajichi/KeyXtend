@@ -2,9 +2,9 @@
 //! the running one, trying again for a while, and runs itself if that copy quits meanwhile. Quit with no copy running
 //! starts nothing.
 
-use kx_module_api::{SettingsError, parse_as};
+use kx_module_api::SettingsError;
 use kx_platform::ui::{Claim, Command, Instance, Running, UiError};
-use kx_settings::VERSION_KEY;
+use kx_settings::peek_section;
 use kx_ui::UiSettings;
 use std::time::Duration;
 
@@ -24,14 +24,7 @@ impl Reach {
     /// # Errors
     /// When the compiled-in `[ui]` defaults do not read.
     pub fn from_file(file: Option<&toml::Table>) -> Result<Self, SettingsError> {
-        let defaults = UiSettings::from_defaults()?;
-        let section = file.and_then(|f| f.get(kx_ui::ID.as_str())?.as_table().cloned());
-        let Some(section) = section else {
-            return Ok(Self::of(&defaults));
-        };
-        let mut merged: toml::Table = kx_ui::SPEC.defaults.parse().map_err(|e| parse_error(&e))?;
-        merged.extend(section.into_iter().filter(|(k, _)| k != VERSION_KEY));
-        let settings = parse_as::<UiSettings>(&merged).unwrap_or(defaults);
+        let settings = peek_section::<UiSettings>(file, kx_ui::ID, &kx_ui::SPEC)?;
         Ok(Self::of(&settings))
     }
 
@@ -78,11 +71,6 @@ pub fn start(
         }
     }
     Start::Unanswered(last)
-}
-
-/// A TOML error as a settings error.
-fn parse_error(e: &toml::de::Error) -> SettingsError {
-    SettingsError::Parse(e.to_string())
 }
 
 #[cfg(test)]

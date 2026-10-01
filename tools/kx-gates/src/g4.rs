@@ -17,6 +17,8 @@ struct Typed {
     tally: Tally,
     /// Keys left out because another window covered them.
     hidden: Vec<String>,
+    /// The wait for the keyboard to follow the shell's layout.
+    follow_ms: u64,
     /// The saved line, or why it could not be read.
     got: Result<String, String>,
 }
@@ -32,14 +34,19 @@ fn type_into(ctx: &Ctx, term: &Opened, kb: &Keyboard, run: (usize, u64)) -> Resu
     let app = ctx.cfg.app(term.kind.name())?;
     g1::wait_ready(ctx, term, app.focus_class.as_deref())?;
     // Keys are read once the shell is in front, so they follow its keyboard layout.
-    let (keys, hidden) = clicks::usable(ctx, kb)?;
-    let tally = clicks::click_loop(ctx, term, kb.hwnd, &keys, run);
+    let usable = clicks::usable(ctx, kb)?;
+    let tally = clicks::click_loop(ctx, term, kb.hwnd, &usable.keys, run);
     sleep_ms(app.done_ms);
     let got = match &tally.stopped {
         Some(_) => Err("skipped: clicking stopped".to_string()),
         None => readback::read_back(ctx, term),
     };
-    Ok(Typed { tally, hidden, got })
+    Ok(Typed {
+        tally,
+        hidden: usable.hidden,
+        follow_ms: usable.follow_ms,
+        got,
+    })
 }
 
 /// Closes the admin shell if saving the line did not end it; returns what is left open.
@@ -86,7 +93,8 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
         "clicks": t.tally.clicks.len(), "focus_kept": t.tally.focus_kept,
         "failures": t.tally.failures, "stopped": t.tally.stopped,
         "covered_skips": t.tally.covered, "covered_by": t.tally.covered_by,
-        "hidden_keys": t.hidden, "read_error": read_error, "diff": d, "left_open": left_open,
+        "hidden_keys": t.hidden, "follow_ms": t.follow_ms, "read_error": read_error, "diff": d,
+        "left_open": left_open,
     }))
 }
 

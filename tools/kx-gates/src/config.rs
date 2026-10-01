@@ -112,7 +112,7 @@ pub struct Timing {
     pub close_wait_ms: u64,
     /// Longest wait for an app's text box to take the keyboard.
     pub focus_wait_ms: u64,
-    /// Longest wait for the product to end after its `--quit`.
+    /// Longest wait for the product to end after `close` posts it Quit.
     pub quit_wait_ms: u64,
 }
 

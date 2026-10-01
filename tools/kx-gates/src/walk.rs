@@ -1,17 +1,20 @@
 //! What a screen reader meets on the product keyboard, by board key: keys UI Automation lacks, keys with no name or no
-//! way to press them, and character keys whose name is not what their layout types. G10 and G26 check these.
+//! way to press them, and character keys whose name is not what their layout types. G10 and G26 check these; G2 and
+//! G4 click the character keys that type.
 #![cfg(windows)]
 
-use kx_module_api::ports::{LayoutId, LayoutSource};
-use kx_platform_windows::WinLayouts;
+use kx_module_api::ports::{KeyChars, LayoutId, LayoutSource, Scan, Slot};
+use kx_platform_windows::{WinLayouts, layouts};
 
+use crate::board;
 use crate::keymap::KeyRead;
-use crate::{board, clicks};
 
-/// A character key in one layout: its id, the name it should have (what it types with no modifier, empty when it types
-/// nothing), and what one press types at once (none for a dead key or one that types nothing printable).
+/// A character key in one layout: its scan code and id, the name it should have (what it types with no modifier, empty
+/// when it types nothing), and what one press types at once (none for a dead key or one that types nothing printable).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharKey {
+    /// Its scan code.
+    pub scan: Scan,
     /// Its board id.
     pub id: String,
     /// The name it should have.
@@ -21,10 +24,11 @@ pub struct CharKey {
 }
 
 impl CharKey {
-    /// A key named `name` that types `types`, for tests.
+    /// A key named `name` that types `types`, for tests, which find keys by id; its scan code is none.
     #[cfg(test)]
     pub fn new(id: &str, name: &str, types: Option<&str>) -> Self {
         Self {
+            scan: Scan::new(0),
             id: id.into(),
             name: name.into(),
             types: types.map(Into::into),
@@ -32,14 +36,21 @@ impl CharKey {
     }
 }
 
+/// What a key types with no modifier, when that is a printable character at once; a dead key waits for the next.
+pub fn typed_by(k: &KeyChars) -> Option<String> {
+    let live = !k.dead.contains(&Slot::Base);
+    (live && layouts::is_printable(&k.base)).then(|| k.base.clone())
+}
+
 /// The board's character keys in `layout`.
 pub fn char_keys(layout: LayoutId) -> Result<Vec<CharKey>, String> {
     let keys = board::char_keys()?;
     let scans: Vec<_> = keys.iter().map(|(sc, _)| *sc).collect();
     let chars = WinLayouts.keys(layout, &scans);
-    let key = |((_, id), c)| CharKey {
+    let key = |((scan, id), c)| CharKey {
+        scan,
         id,
-        types: clicks::typed_by(&c),
+        types: typed_by(&c),
         name: c.base,
     };
     Ok(keys.into_iter().zip(chars).map(key).collect())
@@ -113,6 +124,26 @@ mod tests {
 
     fn ids(list: &[&str]) -> Vec<String> {
         list.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn a_key_counts_only_when_it_types_a_printable_character_at_once() {
+        let k = |base: &str, dead: Vec<Slot>| KeyChars {
+            base: base.into(),
+            dead,
+            ..KeyChars::default()
+        };
+        assert_eq!(typed_by(&k("a", vec![])), Some("a".to_string()));
+        assert_eq!(typed_by(&k("ض", vec![])), Some("ض".to_string()));
+        assert_eq!(
+            typed_by(&k("^", vec![Slot::Base])),
+            None,
+            "a dead key waits"
+        );
+        assert_eq!(typed_by(&k("^", vec![Slot::Shift])), Some("^".to_string()));
+        for nothing in ["", " ", "\r", "\u{1b}"] {
+            assert_eq!(typed_by(&k(nothing, vec![])), None, "{nothing:?}");
+        }
     }
 
     #[test]

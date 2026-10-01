@@ -3,11 +3,9 @@
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`); it clicks, so only with the owner's yes.
 #![cfg(windows)]
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use kx_platform_windows::dirs;
-use kx_settings::Files;
 use serde_json::{Value, json};
 use spike_core::weak::{Caps, Job};
 use windows::Win32::System::Threading::GetCurrentProcess;
@@ -87,16 +85,9 @@ fn start(ctx: &Ctx, program: &Path, job: Option<&Job>) -> Result<Started, String
     })
 }
 
-/// The log of the product at `program`: beside it in a portable copy, else in the user's folder.
-fn log_file(program: &Path) -> Result<PathBuf, String> {
-    let local = dirs::local_data().map_err(|e| e.to_string())?;
-    let app = dirs::from_paths(program, &local).map_err(|e| e.to_string())?;
-    Ok(Files::new(app.data_dir().path()).log)
-}
-
 /// Start to the log's start line, and that line to the guard's, in ms; this run's lines only.
 fn log_span(ctx: &Ctx, program: &Path, since_us: i64) -> Result<Option<(f64, f64)>, String> {
-    let (g, file) = (&ctx.cfg.g8, log_file(program)?);
+    let (g, file) = (&ctx.cfg.g8, product::files(program)?.log);
     let read = || {
         let text = std::fs::read_to_string(&file).ok()?;
         let (from, to) = budget::span_us(&text, &g.log_start, &g.log_guarded)?;

@@ -184,9 +184,9 @@ mod tests {
     }
 
     #[test]
-    fn a_taller_top_bar_moves_the_aim_with_the_key() {
-        let at = |bar: i32| {
-            let keys = KeyMap::new(vec![("esc".into(), bx(8, 30 + bar, 40, 62 + bar))]);
+    fn the_aim_follows_the_box_ui_automation_reports() {
+        let at = |down: i32| {
+            let keys = KeyMap::new(vec![("esc".into(), bx(8, 30 + down, 40, 62 + down))]);
             keys.at("esc").map(|p| p.y)
         };
         assert_eq!(at(0), Some(46));

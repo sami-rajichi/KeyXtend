@@ -7,7 +7,7 @@ use std::fmt::Write;
 use serde_json::{Map, Value, json};
 
 use crate::apps::{self, Ctx, Opened};
-use crate::clicks::{self, Key, Tally};
+use crate::clicks::{self, Tally, Usable};
 use crate::mouse;
 use crate::out::say;
 use crate::product::Keyboard;
@@ -34,14 +34,10 @@ struct Logged {
 }
 
 /// Brings `target` to the front and lists the uncovered keys it can type; cleans up on failure.
-fn setup(
-    ctx: &Ctx,
-    kb: &Keyboard,
-    target: Opened,
-) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
+fn setup(ctx: &Ctx, kb: &Keyboard, target: Opened) -> Result<(Opened, Usable), String> {
     let target = launch::to_front(ctx, target)?;
     match clicks::usable(ctx, kb) {
-        Ok((keys, hidden)) => Ok((target, keys, hidden)),
+        Ok(usable) => Ok((target, usable)),
         Err(e) => {
             apps::clean_up(ctx, target);
             Err(e)
@@ -94,15 +90,15 @@ pub fn on_target(
         }
     };
     // Keys another window already covers are left out and named, never clicked.
-    let (target, keys, hidden) = setup(ctx, kb, target)?;
+    let (target, usable) = setup(ctx, kb, target)?;
     let (count, seed) = run;
     say!(
         "G2 {name}: {count} clicks on {} keys, seed {seed}; keyboard dpi {}, client {:?}",
-        keys.len(),
+        usable.keys.len(),
         place.dpi,
         place.client
     );
-    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &keys, run);
+    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &usable.keys, run);
     sleep_ms(ctx.cfg.g2.drain_ms);
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);
@@ -110,7 +106,7 @@ pub fn on_target(
     out::write(&raw, &tsv(&tally.clicks, &logged.lat))?;
     let head = json!({
         "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "dpi": place.dpi, "raw": raw,
-        "hidden_keys": hidden,
+        "hidden_keys": usable.hidden, "follow_ms": usable.follow_ms,
     });
     Ok(report(head, &tally, &logged, &left_open))
 }

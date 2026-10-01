@@ -1,45 +1,57 @@
-//! `close`: the product quits through its own `--quit`, and the gate waits for its process to end. The frozen spike
-//! face only gets `WM_CLOSE`, as before, which hides its window but leaves its process running.
+//! `close`: the product gets Quit on its command window, as its own `--quit` sends it, and the gate waits for its
+//! process to end; nothing is started. The frozen spike face only gets `WM_CLOSE`, which leaves its process running.
 #![cfg(windows)]
 
-use std::path::Path;
-
-use kx_platform::ui::Command;
-use kx_platform_windows::instance;
+use kx_platform::ui::{Command, Instance, UiError};
+use kx_platform_windows::WindowsPlatform;
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
 use crate::proc::Process;
-use crate::{admin, mouse, product, win, winfind};
+use crate::product::{self, NAME};
+use crate::{mouse, win, winfind};
 
 /// Runs `close` on `name`: the product or the frozen face.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if name == product::NAME {
-        quit(ctx)
+    if name == NAME {
+        let (exe, ended) = quit_running(ctx)?;
+        Ok(result(&exe, ended))
     } else {
         close_face(ctx, name)
     }
 }
 
-/// The arguments that ask the running product to quit.
-fn quit_args() -> Vec<String> {
-    vec![instance::flag(Command::Quit)]
+/// The result line of `close` on the product, run from `program`.
+fn result(program: &str, ended: bool) -> Value {
+    json!({ "gate": "close", "keyboard": NAME, "program": program, "pass": ended })
 }
 
-/// Runs the product's own program with `--quit`, then waits for the running copy to end.
-fn quit(ctx: &Ctx) -> Result<Value, String> {
-    let (exe, ended) = quit_running(ctx)?;
-    Ok(json!({ "gate": "close", "name": product::NAME, "program": exe, "pass": ended }))
+/// Why the running copy did not take Quit.
+fn why_not(e: UiError) -> String {
+    match e {
+        UiError::NoWindow => {
+            format!("{NAME} runs but has no command window yet; try again once it shows")
+        }
+        UiError::Refused(_) => {
+            format!("{NAME} did not take Quit: {e}; run the installed uiAccess kx-gates")
+        }
+    }
 }
 
-/// Asks the running product to quit with its own `--quit`, which returns at once; its program, and whether it ended
-/// within `[timing] quit_wait_ms`.
+/// Posts Quit to the copy that holds the session in `instance`.
+fn ask_quit(instance: &dyn Instance) -> Result<(), String> {
+    instance.send(Command::Quit).map_err(why_not)
+}
+
+/// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
+/// `[timing] quit_wait_ms`.
 pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), String> {
-    let not_running = || format!("{} is not running", product::NAME);
+    let not_running = || format!("{NAME} is not running");
     let (pid, exe) = product::running().ok_or_else(not_running)?;
     // Opened before the quit, so the id cannot name another process by the time we look.
     let process = Process::to_wait(pid)?;
-    admin::run_hidden(Path::new(&exe), &quit_args())?;
+    let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
+    ask_quit(&*platform.instance())?;
     let t = &ctx.cfg.timing;
     let ended = win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(()));
     Ok((exe, ended.is_some()))
@@ -56,10 +68,37 @@ fn close_face(ctx: &Ctx, name: &str) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
+    use kx_platform_fake::FakeInstance;
+
     use super::*;
 
     #[test]
-    fn the_product_is_asked_to_quit_with_its_own_flag() {
-        assert_eq!(quit_args(), ["--quit"]);
+    fn quit_is_posted_to_the_running_copy_and_starts_nothing() {
+        let session = FakeInstance::new();
+        let mut claim = session.claim().expect("the first copy runs");
+        claim.listen(Box::new(|_| {})).expect("it listens");
+        assert_eq!(ask_quit(&session.clone()), Ok(()));
+        assert_eq!(session.sent(), [Command::Quit]);
+    }
+
+    #[test]
+    fn a_copy_that_cannot_hear_quit_says_why() {
+        let none = ask_quit(&FakeInstance::new()).expect_err("no copy listens");
+        assert!(none.contains("command window"), "{none}");
+        let refused = why_not(UiError::Refused(5));
+        assert!(
+            refused.contains("code 5") && refused.contains("uiAccess"),
+            "{refused}"
+        );
+    }
+
+    #[test]
+    fn the_result_names_the_product_as_its_keyboard() {
+        let v = result(r"C:\x\keyxtend.exe", true);
+        assert_eq!(v["keyboard"], product::NAME);
+        assert_eq!(
+            (v["gate"].as_str(), v["pass"].as_bool()),
+            (Some("close"), Some(true))
+        );
     }
 }

@@ -2,8 +2,7 @@
 //! before Qt starts, so no Qt option (such as a plugin path) reaches the uiAccess process.
 
 use kx_platform::ui::Command;
-pub use kx_platform_windows::instance::flag;
-use kx_platform_windows::instance::from_flag;
+use kx_platform_windows::instance::{flag, from_flag};
 use std::ffi::OsString;
 use std::fmt;
 

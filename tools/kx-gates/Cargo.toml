@@ -27,13 +27,15 @@ kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The scan list the product reads labels for, which `capture-layouts` follows.
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
-# The product's commands, whose flags `close` sends.
+# The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
-# The product's file names: G8 reads its log.
+# The product's file names: G8 reads its log, and the gates its keyboard settings.
 kx-settings = { path = "../../crates/kx-settings" }
+# The language key's back part, which G25 clicks past; a test checks G8 and G9's top-bar ids against its icons.
+kx-theme = { path = "../../crates/kx-theme" }
 spike-core = { path = "../../spike/core" }
 windows = { workspace = true, features = [
     "ApplicationModel_DataTransfer",
@@ -60,10 +62,6 @@ windows = { workspace = true, features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
-
-[target.'cfg(windows)'.dev-dependencies]
-# The top bar's icon ids, which G8 and G9 press by UI Automation id.
-kx-theme = { path = "../../crates/kx-theme" }
 
 [build-dependencies]
 embed-manifest.workspace = true

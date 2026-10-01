@@ -73,7 +73,8 @@ fn press_all(ctx: &Ctx, kb: &Keyboard, ids: &[String]) -> Result<String, String>
 
 /// Walks and presses the keyboard with target-window in front, in its layout.
 fn check(ctx: &Ctx, kb: &Keyboard) -> Result<Value, String> {
-    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
+    let follow_ms = product::follow_ms(ctx.cfg.timing.poll_ms)?;
+    sleep_ms(follow_ms);
     let layout = WinLayouts
         .foreground()
         .ok_or("no app in front to read a layout from")?;
@@ -89,7 +90,7 @@ fn check(ctx: &Ctx, kb: &Keyboard) -> Result<Value, String> {
         .collect();
     Ok(json!({
         "layout": layout.to_string(), "found": found, "pressed": ids.len(), "typed_ok": typed,
-        "expected": expected, "got": got, "names": names, "pass": found.clean() && typed,
+        "expected": expected, "got": got, "names": names, "follow_ms": follow_ms, "pass": found.clean() && typed,
     }))
 }
 

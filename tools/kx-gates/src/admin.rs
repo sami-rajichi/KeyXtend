@@ -1,5 +1,5 @@
-//! Starts a program through the shell: as administrator, where this PC shows no prompt, hidden, or shown and kept to
-//! measure. Only the shell starts a uiAccess program for a caller without uiAccess.
+//! Starts a program through the shell: as administrator, where this PC shows no prompt, or shown and kept to measure.
+//! Only the shell starts a uiAccess program for a caller without uiAccess.
 #![cfg(windows)]
 
 use std::ffi::OsStr;
@@ -12,9 +12,7 @@ use windows::Win32::UI::Shell::{
     SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
     ShellExecuteExW,
 };
-use windows::Win32::UI::WindowsAndMessaging::{
-    SHOW_WINDOW_CMD, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL,
-};
+use windows::Win32::UI::WindowsAndMessaging::{SHOW_WINDOW_CMD, SW_SHOWNOACTIVATE, SW_SHOWNORMAL};
 use windows::core::{PCWSTR, w};
 
 use crate::proc::Process;
@@ -68,13 +66,6 @@ pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
     let normal = (RUN_AS, SW_SHOWNORMAL, 0);
     let started = shell(exe, args, normal).map(drop);
     started.map_err(|e| format!("start {} as administrator: {e}", exe.display()))
-}
-
-/// Starts `exe` with `args` and no window, and returns once it has started; a failure shows no dialog.
-pub fn run_hidden(exe: &Path, args: &[String]) -> Result<(), String> {
-    let hidden = (PCWSTR::null(), SW_HIDE, SEE_MASK_FLAG_NO_UI);
-    let started = shell(exe, args, hidden).map(drop);
-    started.map_err(|e| format!("start {}: {e}", exe.display()))
 }
 
 /// Starts `exe` with `args`, shown without taking the focus, and opens its process to measure it.

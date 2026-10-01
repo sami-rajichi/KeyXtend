@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the gate review's fixes for `close` and G25
+`kx-gates close keyxtend` now posts Quit to the running copy's command window and starts nothing, so no program can borrow the gates' uiAccess rights. G2, G4, G10 and G25 wait one relabel period read from the running copy's own settings, and record that wait in their result lines. G25 clicks past the language key's back part, using the theme's `back_share`, and skips the List design with a reason. A new `kx_settings::peek_section` reads one section the way a later copy of the app does, and both the app and the gates use it.
+
 ## 2026-10-01 — P3: gates G8–G11, G13 and G26
 G8 times the product's start-up from its own log, idle memory and CPU, its folder size, key highlights, resizes, click-to-character and a bus publish against spec §10, with a `weak` mode capped like the spike's, and reads a PresentMon CSV when the owner records one. G9 checks the window flags after outside changes, hiding, showing and resizing; G10 walks and presses every key by UI Automation; G11 records size and sharpness per display scale; G13 times how fast the keyboard follows Windows' look and saves pictures for the owner. G26 checks German, Russian, Hebrew and Persian labels and typing on GitHub's Windows runner, where `--layout` now reports a layout that did not come back. The top bar's buttons and the bubble give UI Automation their `bar.<id>`, and `capture-layouts` follows the layouts module's scan list.
 

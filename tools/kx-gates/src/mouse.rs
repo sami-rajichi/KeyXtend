@@ -32,7 +32,7 @@ pub struct Face {
     clippy::cast_possible_truncation,
     reason = "Screen coordinates are far inside `i32`."
 )]
-fn round_px(v: f64) -> i32 {
+pub fn round_px(v: f64) -> i32 {
     v.round() as i32
 }
 

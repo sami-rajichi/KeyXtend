@@ -1,20 +1,20 @@
 //! Clicks on the product keyboard's character keys, shared by G2 and G4: the keys, a click loop, and focus checks.
 #![cfg(windows)]
 
-use kx_module_api::ports::{KeyChars, LayoutId, LayoutSource, Scan, Slot};
+use kx_module_api::ports::LayoutSource;
+use kx_platform_windows::WinLayouts;
 use kx_platform_windows::window::foreground;
-use kx_platform_windows::{WinLayouts, layouts};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{Ctx, Opened};
-use crate::board;
 use crate::mouse;
 use crate::out::say;
 use crate::product::{self, Keyboard};
 use crate::rng::Rng;
 use crate::stats::Click;
+use crate::walk;
 use crate::win::{self, sleep_ms};
 
 /// A clickable key: scan code, the character it types in the target's layout, screen centre in physical pixels.
@@ -64,17 +64,6 @@ pub fn typed(clicks: &[Click]) -> String {
     String::from_utf16_lossy(&units)
 }
 
-/// What a key types with no modifier, when that is a printable character at once; a dead key waits for the next.
-pub fn typed_by(k: &KeyChars) -> Option<String> {
-    let live = !k.dead.contains(&Slot::Base);
-    (live && layouts::is_printable(&k.base)).then(|| k.base.clone())
-}
-
-/// What character key `sc` types at once in `layout`, if anything printable.
-fn character(sc: Scan, layout: LayoutId) -> Option<String> {
-    WinLayouts.keys(layout, &[sc]).first().and_then(typed_by)
-}
-
 /// The keyboard's character keys that type in the layout of the app in front, and the ones UI Automation did not
 /// find; none with no app in front.
 fn keys(kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
@@ -82,13 +71,13 @@ fn keys(kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
     let Some(layout) = WinLayouts.foreground() else {
         return Ok((found, missing));
     };
-    for (sc, id) in board::char_keys()? {
-        let Some(text) = character(sc, layout) else {
+    for key in walk::char_keys(layout)? {
+        let Some(text) = key.types else {
             continue;
         };
-        match kb.at(&id) {
+        match kb.at(&key.id) {
             Ok(at) => found.push(Key {
-                code: u32::from(sc.code()),
+                code: u32::from(key.scan.code()),
                 text,
                 at,
             }),
@@ -109,10 +98,21 @@ fn visible(keys: Vec<Key>, kb: HWND) -> (Vec<Key>, Vec<String>) {
     (shown, hidden)
 }
 
-/// The printable keys on top of keyboard `kb`, and the ones it leaves out, covered or not found, by name. It first
-/// waits until the keyboard shows the layout of the app in front, as a click on a stale layout sends nothing.
-pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
-    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
+/// The keys a click run can use, and how long it first waited for the keyboard to follow the app in front.
+pub struct Usable {
+    /// The printable keys on top.
+    pub keys: Vec<Key>,
+    /// The keys left out, covered or not found, by name.
+    pub hidden: Vec<String>,
+    /// The wait, from the running copy's relabel period.
+    pub follow_ms: u64,
+}
+
+/// The printable keys on top of keyboard `kb`, and the ones it leaves out. It first waits until the keyboard shows
+/// the layout of the app in front, as a click on a stale layout sends nothing.
+pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<Usable, String> {
+    let follow_ms = product::follow_ms(ctx.cfg.timing.poll_ms)?;
+    sleep_ms(follow_ms);
     let (keys, mut hidden) = keys(kb)?;
     let (keys, covered) = visible(keys, kb.hwnd);
     hidden.extend(covered);
@@ -125,7 +125,11 @@ pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), Strin
     if !hidden.is_empty() {
         say!("left out {} keys: {}", hidden.len(), hidden.join("; "));
     }
-    Ok((keys, hidden))
+    Ok(Usable {
+        keys,
+        hidden,
+        follow_ms,
+    })
 }
 
 /// Clicks one key; the character that arrives, not the cursor, shows where it landed.
@@ -214,26 +218,6 @@ mod tests {
         }
         assert_eq!(t.covered, 4);
         assert_eq!(t.covered_by, vec!["osk".to_string(), "menu".to_string()]);
-    }
-
-    #[test]
-    fn a_key_counts_only_when_it_types_a_printable_character_at_once() {
-        let k = |base: &str, dead: Vec<Slot>| KeyChars {
-            base: base.into(),
-            dead,
-            ..KeyChars::default()
-        };
-        assert_eq!(typed_by(&k("a", vec![])), Some("a".to_string()));
-        assert_eq!(typed_by(&k("ض", vec![])), Some("ض".to_string()));
-        assert_eq!(
-            typed_by(&k("^", vec![Slot::Base])),
-            None,
-            "a dead key waits"
-        );
-        assert_eq!(typed_by(&k("^", vec![Slot::Shift])), Some("^".to_string()));
-        for nothing in ["", " ", "\r", "\u{1b}"] {
-            assert_eq!(typed_by(&k(nothing, vec![])), None, "{nothing:?}");
-        }
     }
 
     #[test]

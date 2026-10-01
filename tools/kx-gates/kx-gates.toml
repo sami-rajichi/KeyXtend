@@ -21,7 +21,7 @@ read_wait_ms = 5000
 close_wait_ms = 3000
 # Longest wait for an app's text box to take the keyboard before typing, in ms.
 focus_wait_ms = 5000
-# Longest wait for the product to end after `close keyxtend` runs its --quit, in ms.
+# Longest wait for the product to end after `close keyxtend` posts it Quit, in ms.
 quit_wait_ms = 10000
 
 [keys]
