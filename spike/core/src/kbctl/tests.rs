@@ -3,7 +3,6 @@
 use super::*;
 use crate::config::ToolButton;
 use kx_mod_keyboard::Latch;
-use kx_mod_keyboard::view::DIM;
 
 /// A layout handle no system has, so nothing is read for it.
 const FAKE: isize = 0x7777_7777;
@@ -127,28 +126,14 @@ fn the_view_is_the_products_with_the_spikes_text_icons_and_caps() {
     assert!((mic.cell.w - cap.w).abs() < 1e-9 && (mic.cell.x - cap.x).abs() < 1e-9);
 }
 
+/// The product's paints moved to `apps/keyxtend` (P3 Task 19); the spike checks only its own recording paint.
 #[test]
-fn every_paint_names_tokens_each_theme_has() {
-    let kinds = [
-        KeyKind::Char,
-        KeyKind::Mod,
-        KeyKind::Danger,
-        KeyKind::Enter,
-        KeyKind::Lang,
-        KeyKind::Space,
-        KeyKind::Act,
-    ];
-    let lit = kinds
-        .iter()
-        .flat_map(|&k| [paint(k, false), paint(k, true)]);
-    let all: Vec<Paint> = lit.chain([DIM, REC]).collect();
+fn the_recording_paint_names_tokens_each_theme_has() {
     for t in &kx_theme::Themes::shipped().expect("themes load").list {
         for p in [&t.light, &t.dark] {
             let skirt = serde_json::to_value(p.skirt.as_ref()).expect("skirt");
-            for c in &all {
-                assert!(p.get(c.fill).is_some() && p.get(c.ink).is_some(), "{c:?}");
-                assert!(skirt.is_null() || skirt[c.skirt].is_string(), "{c:?}");
-            }
+            assert!(p.get(REC.fill).is_some() && p.get(REC.ink).is_some());
+            assert!(skirt.is_null() || skirt[REC.skirt].is_string());
         }
     }
 }

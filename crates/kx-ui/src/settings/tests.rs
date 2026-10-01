@@ -29,6 +29,7 @@ fn the_defaults_are_the_plan_v1_values() {
     assert_eq!((s.tip_ms, s.poll_ms, s.guard_delay_ms), (500, 16, 300));
     assert_eq!(s.tray_grace_ms, 500);
     assert_eq!((s.guard_tries, s.page_rows), (10, 5));
+    assert_eq!((s.send_tries, s.send_wait_ms), (10, 100));
     assert!((s.min_contrast - WCAG_AA).abs() < f32::EPSILON);
     assert_eq!(SPEC.version, 1);
     assert!(SPEC.is_consistent());
@@ -93,6 +94,8 @@ fn zero_timings_and_rows_are_refused() {
         "poll_ms",
         "guard_delay_ms",
         "guard_tries",
+        "send_tries",
+        "send_wait_ms",
         "page_rows",
     ] {
         assert!(invalid(&with(key, 0)), "{key}");
@@ -113,6 +116,11 @@ fn timings_and_rows_past_their_range_are_refused() {
         "guard_tries",
         past(u64::from(*GUARD_TRIES.end()))
     )));
+    assert!(invalid(&with(
+        "send_tries",
+        past(u64::from(*SEND_TRIES.end()))
+    )));
+    assert!(invalid(&with("send_wait_ms", past(*SEND_WAIT_MS.end()))));
     let rows = u64::try_from(*PAGE_ROWS.end()).unwrap();
     assert!(invalid(&with("page_rows", past(rows))));
     let top = i64::try_from(*TIP_MS.end()).unwrap();

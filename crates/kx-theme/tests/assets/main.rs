@@ -1,4 +1,5 @@
-//! The fonts and icons the tokens name exist in the repo's `assets/` folder, and named-key icons name real keys.
+//! The fonts and icons the tokens name exist in the repo's `assets/` folder. The app checks that named-key icons name
+//! real board keys, as only it sees the board.
 
 #![allow(
     clippy::expect_used,
@@ -15,8 +16,6 @@ use std::collections::BTreeSet;
 
 /// Families Windows 11 ships, so the app does not bundle them.
 const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
-/// The keyboard's board, whose key ids `icons.toml [keys]` uses.
-const BOARD: &str = "../kx-mod-keyboard/board.toml";
 
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {
@@ -102,31 +101,4 @@ fn every_icon_name_has_a_file() {
         );
     }
     assert!(icon_file(&assets(), "no-such-icon").is_none());
-}
-
-/// Every string at an `id` key in `v`, at any depth.
-fn ids(v: &toml::Value, out: &mut Vec<String>) {
-    match v {
-        toml::Value::Table(t) => {
-            if let Some(toml::Value::String(id)) = t.get("id") {
-                out.push(id.clone());
-            }
-            t.values().for_each(|v| ids(v, out));
-        }
-        toml::Value::Array(a) => a.iter().for_each(|v| ids(v, out)),
-        _ => {}
-    }
-}
-
-#[test]
-fn every_named_key_icon_names_a_board_key() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(BOARD);
-    let text = std::fs::read_to_string(&path).expect("board.toml reads");
-    let board: toml::Value = toml::from_str(&text).expect("board.toml parses");
-    let mut known = Vec::new();
-    ids(&board, &mut known);
-    let t = Themes::shipped().expect("tokens load");
-    for id in t.icons.keys.keys() {
-        assert!(known.contains(id), "icons.toml [keys] {id} is no board key");
-    }
 }

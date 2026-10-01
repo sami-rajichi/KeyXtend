@@ -28,7 +28,7 @@ It also compiles in, as Qt resources, the icons the theme tokens name and every 
 
 ## The `[ui]` settings
 
-`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range. `tray_grace_ms` (500) may be 0, which turns the tray menu's grace off.
+`defaults.toml` holds the values and `settings.rs` the limits of each number. The check refuses an unknown theme, a language that is neither `auto` nor in `LANGS`, a `min_contrast` outside `kx_theme::contrast::MIN_CONTRAST` (never below WCAG AA), and a timing or row count outside its range. `tray_grace_ms` (500) may be 0, which turns the tray menu's grace off. `send_tries` (10) and `send_wait_ms` (100) set how a second copy hands Show or Quit to the running one; it reads them from the defaults only, since only the running copy loads the settings file.
 
 ## The hub
 

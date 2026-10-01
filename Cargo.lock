@@ -445,6 +445,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyxtend"
+version = "0.0.0"
+dependencies = [
+ "cxx-qt-lib",
+ "embed-manifest",
+ "kx-kernel",
+ "kx-mod-keyboard",
+ "kx-mod-layouts",
+ "kx-module-api",
+ "kx-platform",
+ "kx-platform-fake",
+ "kx-platform-windows",
+ "kx-settings",
+ "kx-test-support",
+ "kx-theme",
+ "kx-ui",
+ "proptest",
+ "serde_json",
+ "toml",
+ "tracing",
+]
+
+[[package]]
 name = "kx-gates"
 version = "0.0.0"
 dependencies = [

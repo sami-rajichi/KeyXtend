@@ -43,6 +43,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
   - Guard tries stop at `guard_tries` (at most 100) per run, and equal notices are merged.
+  - A second copy's tries to reach the running one stop at `send_tries` (at most 100), `send_wait_ms` (at most 10 s) apart.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
 - **Elevation:** the crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
 

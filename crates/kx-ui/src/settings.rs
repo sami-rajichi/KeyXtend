@@ -18,6 +18,10 @@ pub(crate) const POLL_MS: RangeInclusive<u64> = 1..=1_000;
 pub(crate) const GUARD_DELAY_MS: RangeInclusive<u64> = 1..=10_000;
 /// How many times the window guard may try.
 pub(crate) const GUARD_TRIES: RangeInclusive<u32> = 1..=100;
+/// How many times a second copy may try to reach the running one.
+pub(crate) const SEND_TRIES: RangeInclusive<u32> = 1..=100;
+/// How long a second copy may wait between tries, in ms.
+pub(crate) const SEND_WAIT_MS: RangeInclusive<u64> = 1..=10_000;
 /// How long the tray menu may ignore a new front window after it opens, in ms; 0 turns that off.
 pub(crate) const TRAY_GRACE_MS: RangeInclusive<u64> = 0..=5_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
@@ -82,6 +86,10 @@ pub struct UiSettings {
     pub guard_delay_ms: u64,
     /// How many times the window guard tries.
     pub guard_tries: u32,
+    /// How many times a second copy tries to hand its command to the running one.
+    pub send_tries: u32,
+    /// How long a second copy waits between tries, in ms.
+    pub send_wait_ms: u64,
     /// How long the tray menu ignores a new front window after it opens, in ms, as the hidden icons' pop-up closing
     /// can bring one.
     pub tray_grace_ms: u64,
@@ -118,6 +126,8 @@ impl UiSettings {
         within("poll_ms", self.poll_ms, &POLL_MS)?;
         within("guard_delay_ms", self.guard_delay_ms, &GUARD_DELAY_MS)?;
         within("guard_tries", self.guard_tries, &GUARD_TRIES)?;
+        within("send_tries", self.send_tries, &SEND_TRIES)?;
+        within("send_wait_ms", self.send_wait_ms, &SEND_WAIT_MS)?;
         within("tray_grace_ms", self.tray_grace_ms, &TRAY_GRACE_MS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }

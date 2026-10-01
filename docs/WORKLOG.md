@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the first real app types
+`apps/keyxtend` now runs the kernel, the layouts, keyboard and UI modules and Qt over the Windows adapter, and types into other apps without taking focus. A second copy hands Show or Quit to the running one, with tries timed by the new `[ui] send_tries` and `send_wait_ms`, and stops when no copy answers. The log opens between the settings load and the modules' start, a panic logs only its place, and Quit stops the modules, ends the UI and removes the tray icon on every path. Tests cover the start-to-stop order over fakes, the texts, icons, paints and scan codes the board needs, and that the language shown always matches the legends.
+
 ## 2026-10-01 — P3: key labels centred exactly
 Named-key labels are now centred by hand, since anchors rounded their centre to whole pixels and pushed some labels up to 0.8 px past Dolch's top face. The fit test now checks every size step from the smallest to the largest, in one hidden window per theme and language. The size preset limit moved to the keyboard face port, so the UI no longer depends on the keyboard module.
 
