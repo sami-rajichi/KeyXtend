@@ -1,5 +1,5 @@
 //! One running copy per user session: a session-local named mutex, and a command window only the running copy owns.
-//! The command table and the object names are pure and tested everywhere; the OS calls are in `win`.
+//! The command table, its flags and the object names are pure and tested everywhere; the OS calls are in `win`.
 #![cfg_attr(
     not(windows),
     allow(
@@ -20,6 +20,8 @@ pub use win::WinInstance;
 const COMMANDS: [(Command, &str, usize); 2] =
     [(Command::Show, "show", 1), (Command::Quit, "quit", 2)];
 
+/// What starts a command's flag on the command line; the rest is its name, as in `--quit`.
+const FLAG: &str = "--";
 /// The session namespace: a named object in it is seen only inside this user session.
 const SESSION: &str = r"Local\";
 /// Ends the name of the mutex the running copy holds.
@@ -42,6 +44,18 @@ pub fn parse(name: &str) -> Option<Command> {
 #[must_use]
 pub fn name(command: Command) -> &'static str {
     COMMANDS.iter().find(|c| c.0 == command).map_or("", |c| c.1)
+}
+
+/// The command-line flag that asks a copy for `command`, such as `--quit`.
+#[must_use]
+pub fn flag(command: Command) -> String {
+    format!("{FLAG}{}", name(command))
+}
+
+/// The command flag `arg` names, such as Quit for `--quit`; anything else is refused.
+#[must_use]
+pub fn from_flag(arg: &str) -> Option<Command> {
+    arg.strip_prefix(FLAG).and_then(parse)
 }
 
 /// The code `command` travels as.
@@ -96,6 +110,17 @@ mod tests {
         }
         assert_eq!(parse("show"), Some(Command::Show));
         assert_eq!(parse("quit"), Some(Command::Quit));
+    }
+
+    #[test]
+    fn each_command_reads_back_from_its_flag() {
+        for command in [Command::Show, Command::Quit] {
+            assert_eq!(from_flag(&flag(command)), Some(command));
+        }
+        assert_eq!(flag(Command::Quit), "--quit");
+        for text in ["quit", "-quit", "--Quit", "--", "", "--quit "] {
+            assert_eq!(from_flag(text), None, "{text:?}");
+        }
     }
 
     #[test]
@@ -164,7 +189,7 @@ mod tests {
     proptest::proptest! {
         #[test]
         fn any_text_or_code_reads_without_panic(text in r"\PC{0,12}", code: usize) {
-            let _ = (parse(&text), from_code(code));
+            let _ = (parse(&text), from_flag(&text), from_code(code));
         }
     }
 

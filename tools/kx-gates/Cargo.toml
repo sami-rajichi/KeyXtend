@@ -18,11 +18,13 @@ serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 
-# The gates are Windows-only. spike-core is the Qt test face's shared code, until later phases aim the gates at the product.
+# Windows-only gates. spike-core is the Qt test face's shared code, until each phase aims its gates at the product.
 [target.'cfg(windows)'.dependencies]
 kx-module-api = { path = "../../crates/kx-module-api" }
-# The keyboard's boxes (`Area`), which the spike's stage-1 place maths returns.
+# The product's board (key ids, roles) and the keyboard's boxes (`Area`), which the spike's tools-row maths returns.
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
+# The product's commands, whose flags `close` sends.
+kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }

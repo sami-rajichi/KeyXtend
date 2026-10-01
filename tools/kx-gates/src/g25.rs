@@ -1,20 +1,22 @@
-//! G25: the language key cycles the layouts of the app in front, and the common shortcuts work.
+//! G25: the product's language key cycles the layouts of the app in front, and the common shortcuts work.
 #![cfg(windows)]
 
 use std::collections::HashSet;
 
+use kx_mod_keyboard::Role;
 use kx_module_api::ports::LayoutSource;
 use kx_platform_windows::WinLayouts;
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::langkey;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::probe;
+use crate::facetools::click_on;
+use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{clip, clipkeep, cliptext, keys, readback, winclip};
+use crate::{board, clip, clipkeep, cliptext, keys, probe, product, readback, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -42,15 +44,46 @@ pub(crate) fn switch_to(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
     langkey::ask(app.hwnd, layout).is_ok() && shows(ctx, app, layout)
 }
 
-/// One press of the language key: the layout asked for and whether the app took it, or the error.
-fn step(ctx: &Ctx, app: &Opened) -> Value {
-    match keys_ours(app).and_then(|()| langkey::ask_next(app.hwnd)) {
-        Ok(want) => json!({ "to": lang(want), "ok": shows(ctx, app, want) }),
+/// The layout one step on from the app's own, as the product steps; `None` when the app's focus has none.
+fn next(app: &Opened) -> Option<isize> {
+    let cur = langkey::layout_of(app.hwnd)?;
+    langkey::step_from(&langkey::installed(), cur, 1)
+}
+
+/// The product's language key: its keyboard's window, its centre, and how long the keyboard takes to follow the
+/// layout in front, which each click waits first, since the key steps from the layout the keyboard shows.
+struct LangKey {
+    hwnd: HWND,
+    at: POINT,
+    follow_ms: u64,
+}
+
+impl LangKey {
+    /// The language key of the product keyboard on screen.
+    fn find(ctx: &Ctx) -> Result<Self, String> {
+        let kb = Keyboard::find()?;
+        Ok(Self {
+            hwnd: kb.hwnd,
+            at: kb.at(&board::id_of(Role::Lang)?)?,
+            follow_ms: product::follow_ms(ctx.cfg.timing.poll_ms)?,
+        })
+    }
+}
+
+/// One click on the product's language key: the layout the product steps to and whether the app took it, or the
+/// error. The key's Carousel or Cycle design steps on from its middle.
+fn step(ctx: &Ctx, app: &Opened, key: &LangKey) -> Value {
+    sleep_ms(key.follow_ms);
+    let Some(want) = next(app) else {
+        return json!({ "ok": false, "error": "no layout for the app's focus" });
+    };
+    match keys_ours(app).and_then(|()| click_on(key.hwnd, key.at)) {
+        Ok(()) => json!({ "to": lang(want), "ok": shows(ctx, app, want) }),
         Err(e) => json!({ "ok": false, "error": e }),
     }
 }
 
-/// Asks for the next layout once per installed layout, so the list wraps; the first layout is always put back.
+/// Clicks the language key once per installed layout, so the list wraps; the first layout is always put back.
 fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     let Some(start) = langkey::layout_of(app.hwnd) else {
         return json!({ "error": "no layout for the app's focus", "ok": false });
@@ -59,7 +92,11 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     if count < 2 {
         return json!({ "from": lang(start), "skipped": "needs two layouts", "ok": false });
     }
-    let steps: Vec<Value> = (0..count).map(|_| step(ctx, app)).collect();
+    let key = match LangKey::find(ctx) {
+        Ok(key) => key,
+        Err(e) => return json!({ "from": lang(start), "error": e, "ok": false }),
+    };
+    let steps: Vec<Value> = (0..count).map(|_| step(ctx, app, &key)).collect();
     let wrapped = langkey::layout_of(app.hwnd) == Some(start);
     let restored = wrapped || switch_to(ctx, app, start);
     let all = steps.iter().all(|s| s["ok"] == true);

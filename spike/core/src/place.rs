@@ -1,4 +1,4 @@
-//! The stage-1 key block and tools row, in logical pixels, for the gates (G2 to G4) and the tools row until they move.
+//! The stage-1 key block and tools row, in logical pixels, for the tools row and the frozen face's tool gates.
 //! Boxes are kx-mod-keyboard's `Area`, which replaced this file's `Place` in P3 (ADR-0014).
 
 use kx_mod_keyboard::Area;

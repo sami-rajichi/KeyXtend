@@ -41,6 +41,7 @@
   - A staged file the check never reads, or a network name the guard never meets. Mitigation: `libs` and `plugins` may name only `.dll` files, which the check reads, and the network library and its importers must be listed in `libs`.
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - The signed uiAccess `kx-gates` reads `kx-gates.toml` beside its exe, else from the repo folder (user-writable), and that file names the programs it starts. `dev-install` copies every file of the build folder, so put `kx-gates.toml` there first and keep the config beside the installed exe.
+  - `kx-gates close keyxtend` starts the program the running `keyxtend.exe` came from, with `--quit`, and children of a uiAccess program share its rights. A same-user fake copy would be started that way, as the repo's target window already can be; run gates only on a PC you trust.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets.
 - **Information disclosure:** no network; the private key cannot be exported.
 - **Denial of service:** not relevant for a developer tool; every step ends with an exit code.

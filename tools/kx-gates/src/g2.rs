@@ -1,16 +1,16 @@
-//! G2 no focus: random clicks on face keys; the target keeps focus and caret; click-to-character time.
+//! G2 no focus: random clicks on the product keyboard's keys; the target keeps focus and caret; click-to-character
+//! time.
 #![cfg(windows)]
 
 use std::fmt::Write;
 
 use serde_json::{Map, Value, json};
-use spike_core::place;
-use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, Ctx, Opened};
 use crate::clicks::{self, Key, Tally};
-use crate::mouse::{self, Face};
+use crate::mouse;
 use crate::out::say;
+use crate::product::Keyboard;
 use crate::stats::{self, Click};
 use crate::tlog::{self, Unit};
 use crate::win::{self, sleep_ms};
@@ -34,13 +34,13 @@ struct Logged {
 }
 
 /// Starts target-window in front and lists the uncovered keys it can type; cleans up on failure.
-fn setup(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
+fn setup(ctx: &Ctx, kb: &Keyboard) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
     let target = launch::start_target(ctx)?;
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         apps::clean_up(ctx, target);
         return Err("could not bring target-window to the front".to_string());
     }
-    match clicks::usable(ctx, face, hwnd) {
+    match clicks::usable(ctx, kb) {
         Ok((keys, hidden)) => Ok((target, keys, hidden)),
         Err(e) => {
             apps::clean_up(ctx, target);
@@ -70,27 +70,26 @@ fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
     }
 }
 
-/// Runs G2 on the face called `name` with `count` clicks from `seed`.
+/// Runs G2 on the product keyboard, called `name`, with `count` clicks from `seed`.
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
-    let face_hwnd = mouse::find_face(ctx.spike, name)?;
-    let face = mouse::face(face_hwnd)?;
+    let kb = Keyboard::find()?;
+    let place = mouse::face(kb.hwnd)?;
     // Keys another window already covers are left out and named, never clicked.
-    let (target, keys, hidden) = setup(ctx, &face, face_hwnd)?;
-    let block = place::block_size(&ctx.spike.keyboard);
+    let (target, keys, hidden) = setup(ctx, &kb)?;
     say!(
-        "G2 {name}: {count} clicks on {} keys, seed {seed}; face dpi {}, client {:?}, block {block:?} logical",
+        "G2 {name}: {count} clicks on {} keys, seed {seed}; keyboard dpi {}, client {:?}",
         keys.len(),
-        face.dpi,
-        face.client
+        place.dpi,
+        place.client
     );
-    let tally = clicks::click_loop(ctx, &target, face_hwnd, &keys, (count, seed));
+    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &keys, (count, seed));
     sleep_ms(ctx.cfg.g2.drain_ms);
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);
     let raw = ctx.file(CLICKS_FILE);
     out::write(&raw, &tsv(&tally.clicks, &logged.lat))?;
     let head = json!({
-        "gate": "G2", "face": name, "seed": seed, "planned": count, "dpi": face.dpi, "raw": raw,
+        "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "dpi": place.dpi, "raw": raw,
         "hidden_keys": hidden,
     });
     Ok(report(head, &tally, &logged, &left_open))

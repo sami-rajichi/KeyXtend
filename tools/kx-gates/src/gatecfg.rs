@@ -42,10 +42,26 @@ pub struct G2 {
 pub struct G3 {
     /// Wait after opening a surface before probing, in ms.
     pub open_wait_ms: u64,
-    /// Scan codes of the probed keys.
-    pub probe_codes: Vec<u32>,
-    /// System surfaces opened over the face.
+    /// Board ids of the probed keys, which UI Automation finds on the product keyboard.
+    pub probe_keys: Vec<String>,
+    /// System surfaces opened over the keyboard.
     pub surfaces: Vec<Surface>,
+}
+
+impl G3 {
+    /// Refuses a run that probes nothing or a key the product's board does not have.
+    pub fn check(&self) -> Result<(), String> {
+        if self.probe_keys.is_empty() {
+            return Err("g3.probe_keys must name at least one key".to_string());
+        }
+        let ids = crate::board::ids()?;
+        match self.probe_keys.iter().find(|k| !ids.contains(k)) {
+            Some(k) => Err(format!(
+                "g3.probe_keys: {k} is no key of the product's board"
+            )),
+            None => Ok(()),
+        }
+    }
 }
 
 /// G4 admin-window settings; click pauses and failure limits come from G2.
@@ -83,7 +99,7 @@ pub struct G5 {
     pub hook_p99_ms: f64,
 }
 
-/// A system surface to open over the face.
+/// A system surface to open over the keyboard.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Surface {
     /// Name in the report.

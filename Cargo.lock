@@ -474,6 +474,7 @@ dependencies = [
  "embed-manifest",
  "kx-mod-keyboard",
  "kx-module-api",
+ "kx-platform",
  "kx-platform-fake",
  "kx-platform-windows",
  "kx-target-window",

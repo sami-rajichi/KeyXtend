@@ -1,10 +1,9 @@
-//! Key centres on screen from spike.toml, and real mouse moves and clicks through `SendInput`.
+//! The frozen face's window and its tools' centres, and real mouse moves and clicks through `SendInput`.
 #![cfg(windows)]
 
 use kx_mod_keyboard::Area;
 use kx_platform_windows::keys::TAG;
-use spike_core::config::{KeyboardConfig, SpikeConfig};
-use spike_core::place::places;
+use spike_core::config::SpikeConfig;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
@@ -17,7 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, USER_DEFAULT_SCREEN
 /// Largest absolute mouse coordinate; the virtual desktop maps onto 0..=this.
 const ABS_MAX: f64 = 65535.0;
 
-/// Where the face is: client origin in physical pixels, its DPI and client size.
+/// Where a keyboard window is: client origin in physical pixels, its DPI and client size.
 #[derive(Debug, Clone, Copy)]
 pub struct Face {
     /// Top-left corner of the client area, in physical pixels.
@@ -26,12 +25,6 @@ pub struct Face {
     pub dpi: u32,
     /// Client width and height, in physical pixels.
     pub client: (i32, i32),
-}
-
-/// Every key's scan code and box, row by row, as the faces lay them out.
-pub fn key_places(kb: &KeyboardConfig) -> Vec<(u32, Area)> {
-    let codes = kb.rows.iter().flatten().copied();
-    codes.zip(places(kb).into_iter().flatten()).collect()
 }
 
 /// `v` rounded to a whole pixel.
@@ -62,7 +55,7 @@ pub fn find_face(spike: &SpikeConfig, name: &str) -> Result<HWND, String> {
         .ok_or_else(|| format!("face window {title:?} not found; start the {name} face first"))
 }
 
-/// Reads where the face window's client area is and its DPI.
+/// Reads where a keyboard window's client area is and its DPI.
 #[allow(unsafe_code, reason = "Queries into locals on a live window.")]
 pub fn face(hwnd: HWND) -> Result<Face, String> {
     let mut origin = POINT::default();
@@ -154,50 +147,18 @@ pub fn click_at(p: POINT) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    fn kb() -> KeyboardConfig {
-        KeyboardConfig {
-            title: String::new(),
-            key_px: 48.0,
-            gap_px: 4.0,
-            font_px: 16.0,
-            rows: vec![vec![0x29, 0x02], vec![0x0F, 0x10], vec![0x39, 0xE038]],
-            widths: vec![(0x0F, 1.5), (0x39, 6.25)],
-        }
-    }
-
-    #[test]
-    fn key_places_pair_each_code_with_its_box() {
-        let got: Vec<(u32, f64, f64)> = key_places(&kb())
-            .into_iter()
-            .map(|(code, p)| (code, p.x, p.y))
-            .collect();
-        assert_eq!(got[0], (0x29, 4.0, 4.0));
-        assert_eq!(got[2], (0x0F, 4.0, 56.0));
-        assert_eq!(got[5], (0xE038, 329.0, 108.0));
-        assert_eq!(got.len(), 6);
-    }
-
     #[test]
     fn centres_scale_to_dpi_144() {
-        let keys = key_places(&kb());
+        let place = Area {
+            x: 4.0,
+            y: 4.0,
+            w: 48.0,
+            h: 48.0,
+        };
         let origin = POINT { x: 100, y: 200 };
-        let got: Vec<(i32, i32)> = keys
-            .iter()
-            .map(|(_, p)| centre(p, origin, 144))
-            .map(|p| (p.x, p.y))
-            .collect();
-        assert_eq!(
-            got,
-            vec![
-                (142, 242),
-                (220, 242),
-                (162, 320),
-                (259, 320),
-                (347, 398),
-                (630, 398)
-            ]
-        );
-        let p = centre(&keys[0].1, origin, 96);
+        let p = centre(&place, origin, 144);
+        assert_eq!((p.x, p.y), (142, 242));
+        let p = centre(&place, origin, 96);
         assert_eq!((p.x, p.y), (128, 228));
     }
 

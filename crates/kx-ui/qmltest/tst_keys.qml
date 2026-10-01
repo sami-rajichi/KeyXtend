@@ -105,6 +105,12 @@ Item {
             return all(item, ok)[0] || null;
         }
 
+        // UI Automation finds each key by this id, so tools aim at keys wherever the top bar puts them.
+        function test_every_key_gives_ui_automation_its_board_id() {
+            for (const c of Face.board.keys)
+                compare(makeKey(c.id).Accessible.id, c.id);
+        }
+
         function test_the_cap_sits_half_a_gap_inside_its_cell() {
             const cell = root.kv("esc");
             const k = makeKey("esc");

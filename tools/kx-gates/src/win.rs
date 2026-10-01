@@ -56,22 +56,26 @@ pub fn key(hwnd: HWND) -> isize {
     hwnd.0 as isize
 }
 
-/// Every visible top-level window, topmost first.
+/// Every top-level window, shown or hidden, topmost first.
 #[allow(unsafe_code, reason = "`found` is the `Vec` alive for the call.")]
-pub fn top_windows() -> Vec<HWND> {
+pub fn all_windows() -> Vec<HWND> {
     unsafe extern "system" fn collect(hwnd: HWND, found: LPARAM) -> BOOL {
         // SAFETY: `found` is the `Vec` passed below, alive for the whole call.
-        unsafe {
-            if IsWindowVisible(hwnd).as_bool() {
-                (*(found.0 as *mut Vec<HWND>)).push(hwnd);
-            }
-        }
+        unsafe { (*(found.0 as *mut Vec<HWND>)).push(hwnd) };
         BOOL(1)
     }
     let mut found: Vec<HWND> = Vec::new();
     // SAFETY: the callback only touches `found`, which outlives the call.
     let _ = unsafe { EnumWindows(Some(collect), LPARAM((&raw mut found) as isize)) };
     found
+}
+
+/// Every visible top-level window, topmost first.
+#[allow(unsafe_code, reason = "A plain query per window.")]
+pub fn top_windows() -> Vec<HWND> {
+    // SAFETY: a plain query; any handle value is allowed.
+    let shown = |w: &HWND| unsafe { IsWindowVisible(*w) }.as_bool();
+    all_windows().into_iter().filter(shown).collect()
 }
 
 /// True when the compositor hides `hwnd` though it counts as visible, like a closed system panel.

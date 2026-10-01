@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: gates G2–G4 and G25 aim at the product
+Each key now gives UI Automation its board id (`esc`, `c-0x001E`, `lang`), and gates G2, G3 and G4 find the product keyboard and click each key at the centre of the box UI Automation reports, so the top bar no longer shifts their clicks. G25 clicks the product's language key, after one relabel period so the key steps from the layout in front. `kx-gates close keyxtend` runs the app's own `--quit` and waits for its process to end, while `close qt` still closes the frozen spike face; the `--quit` flag now comes from the one command table the app and the gates share.
+
 ## 2026-10-01 — P3: the spike keeps no keyboard part
 The spike's keyboard controller (`kbctl`), `sysui`, `langinfo`, `facecfg` and `lookcfg` are deleted, with the face-only helpers left in `layout`, `screen`, `window` and `place`. `spike.toml` drops `[look]`, `[size]`, `[keys]`, `[bar]`, `[assets]` and the guard lines, and keeps `[keyboard]` only as the frozen face's title and stage-1 geometry for the gates and the tools row. Gate G7 now reads the face's Settings key name from `kx-gates.toml [g7] opener`, and spike-core no longer depends on kx-theme or kx-mod-layouts.
 

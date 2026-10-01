@@ -1,7 +1,7 @@
-//! Clicks on face keys, shared by G2 and G4: the keys, a click loop, and focus checks.
+//! Clicks on the product keyboard's character keys, shared by G2 and G4: the keys, a click loop, and focus checks.
 #![cfg(windows)]
 
-use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
+use kx_module_api::ports::{KeyChars, LayoutId, LayoutSource, Scan, Slot};
 use kx_platform_windows::window::foreground;
 use kx_platform_windows::{WinLayouts, layouts};
 use serde_json::{Value, json};
@@ -9,13 +9,15 @@ use spike_core::clock::now_us;
 use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{Ctx, Opened};
-use crate::mouse::{self, Face};
+use crate::board;
+use crate::mouse;
 use crate::out::say;
+use crate::product::{self, Keyboard};
 use crate::rng::Rng;
 use crate::stats::Click;
 use crate::win::{self, sleep_ms};
 
-/// A clickable key: scan code, the character it types in the target's layout, screen centre.
+/// A clickable key: scan code, the character it types in the target's layout, screen centre in physical pixels.
 pub struct Key {
     code: u32,
     text: String,
@@ -62,37 +64,44 @@ pub fn typed(clicks: &[Click]) -> String {
     String::from_utf16_lossy(&units)
 }
 
-/// What key `code` types with no modifier in `layout`; empty for a key that prints nothing.
-fn character(code: u32, layout: LayoutId) -> String {
-    let Ok(code) = u16::try_from(code) else {
-        return String::new();
-    };
-    let chars = WinLayouts.keys(layout, &[Scan::new(code)]);
-    chars.into_iter().next().map(|k| k.base).unwrap_or_default()
+/// What a key types with no modifier, when that is a printable character at once; a dead key waits for the next.
+fn typed_by(k: &KeyChars) -> Option<String> {
+    let live = !k.dead.contains(&Slot::Base);
+    (live && layouts::is_printable(&k.base)).then(|| k.base.clone())
 }
 
-/// The face keys that type a printable character in the layout of the app in front; none with no app in front.
-fn keys(ctx: &Ctx, face: &Face) -> Vec<Key> {
+/// What character key `sc` types at once in `layout`, if anything printable.
+fn character(sc: Scan, layout: LayoutId) -> Option<String> {
+    WinLayouts.keys(layout, &[sc]).first().and_then(typed_by)
+}
+
+/// The keyboard's character keys that type in the layout of the app in front, and the ones UI Automation did not
+/// find; none with no app in front.
+fn keys(kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
+    let (mut found, mut missing) = (Vec::new(), Vec::new());
     let Some(layout) = WinLayouts.foreground() else {
-        return Vec::new();
+        return Ok((found, missing));
     };
-    mouse::key_places(&ctx.spike.keyboard)
-        .into_iter()
-        .filter_map(|(code, place)| {
-            let text = character(code, layout);
-            layouts::is_printable(&text).then(|| Key {
-                code,
+    for (sc, id) in board::char_keys()? {
+        let Some(text) = character(sc, layout) else {
+            continue;
+        };
+        match kb.at(&id) {
+            Ok(at) => found.push(Key {
+                code: u32::from(sc.code()),
                 text,
-                at: mouse::centre(&place, face.origin, face.dpi),
-            })
-        })
-        .collect()
+                at,
+            }),
+            Err(e) => missing.push(e),
+        }
+    }
+    Ok((found, missing))
 }
 
 /// Splits keys into those on top and those another window covers, named by that window.
-fn visible(keys: Vec<Key>, face: HWND) -> (Vec<Key>, Vec<String>) {
+fn visible(keys: Vec<Key>, kb: HWND) -> (Vec<Key>, Vec<String>) {
     let (shown, hidden): (Vec<Key>, Vec<Key>) =
-        keys.into_iter().partition(|k| win::root_at(k.at) == face);
+        keys.into_iter().partition(|k| win::root_at(k.at) == kb);
     let hidden = hidden
         .iter()
         .map(|k| format!("{:#X} under {}", k.code, win::describe(win::root_at(k.at))))
@@ -100,21 +109,21 @@ fn visible(keys: Vec<Key>, face: HWND) -> (Vec<Key>, Vec<String>) {
     (shown, hidden)
 }
 
-/// The printable keys on top of face `hwnd`, and the covered ones it leaves out, by name.
-pub fn usable(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Vec<Key>, Vec<String>), String> {
-    let (keys, hidden) = visible(keys(ctx, face), hwnd);
+/// The printable keys on top of keyboard `kb`, and the ones it leaves out, covered or not found, by name. It first
+/// waits until the keyboard shows the layout of the app in front, as a click on a stale layout sends nothing.
+pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
+    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
+    let (keys, mut hidden) = keys(kb)?;
+    let (keys, covered) = visible(keys, kb.hwnd);
+    hidden.extend(covered);
     if keys.is_empty() {
         return Err(format!(
-            "no printable key on top; covered: {}",
+            "no printable key on top; left out: {}",
             hidden.join("; ")
         ));
     }
     if !hidden.is_empty() {
-        say!(
-            "left out {} covered keys: {}",
-            hidden.len(),
-            hidden.join("; ")
-        );
+        say!("left out {} keys: {}", hidden.len(), hidden.join("; "));
     }
     Ok((keys, hidden))
 }
@@ -164,14 +173,8 @@ fn check(
     Ok(())
 }
 
-/// Clicks random keys of the face `face`; a key another window covers is skipped, never clicked.
-pub fn click_loop(
-    ctx: &Ctx,
-    target: &Opened,
-    face: HWND,
-    keys: &[Key],
-    run: (usize, u64),
-) -> Tally {
+/// Clicks random keys of keyboard window `kb`; a key another window covers is skipped, never clicked.
+pub fn click_loop(ctx: &Ctx, target: &Opened, kb: HWND, keys: &[Key], run: (usize, u64)) -> Tally {
     let g = &ctx.cfg.g2;
     let caret0 = win::caret(win::owner(target.hwnd).1);
     let mut rng = Rng::new(run.1);
@@ -179,7 +182,7 @@ pub fn click_loop(
     while tally.clicks.len() < run.0 {
         let key = &keys[rng.below(keys.len())];
         let top = win::root_at(key.at);
-        if top != face {
+        if top != kb {
             tally.skip(win::describe(top), g.failures_shown);
             if tally.covered >= g.max_failures {
                 tally.stopped = Some(format!("{} keys covered by other windows", tally.covered));
@@ -211,6 +214,26 @@ mod tests {
         }
         assert_eq!(t.covered, 4);
         assert_eq!(t.covered_by, vec!["osk".to_string(), "menu".to_string()]);
+    }
+
+    #[test]
+    fn a_key_counts_only_when_it_types_a_printable_character_at_once() {
+        let k = |base: &str, dead: Vec<Slot>| KeyChars {
+            base: base.into(),
+            dead,
+            ..KeyChars::default()
+        };
+        assert_eq!(typed_by(&k("a", vec![])), Some("a".to_string()));
+        assert_eq!(typed_by(&k("ض", vec![])), Some("ض".to_string()));
+        assert_eq!(
+            typed_by(&k("^", vec![Slot::Base])),
+            None,
+            "a dead key waits"
+        );
+        assert_eq!(typed_by(&k("^", vec![Slot::Shift])), Some("^".to_string()));
+        for nothing in ["", " ", "\r", "\u{1b}"] {
+            assert_eq!(typed_by(&k(nothing, vec![])), None, "{nothing:?}");
+        }
     }
 
     #[test]

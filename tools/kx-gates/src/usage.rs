@@ -4,6 +4,7 @@
 use spike_core::config::FACE;
 
 use crate::apps::AppKind;
+use crate::product::NAME;
 use crate::{capture, g5, g6, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand};
 
 /// The program's name in the help.
@@ -18,9 +19,9 @@ fn names(apps: &[AppKind]) -> String {
 pub fn usage() -> String {
     format!(
         "usage: {PROG} g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
-       {PROG} g2 <{FACE}> [--clicks N] [--seed S]
-       {PROG} g3 <{FACE}>
-       {PROG} g4 <{FACE}> [--clicks N] [--seed S]
+       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
+       {PROG} g3 <{NAME}>
+       {PROG} g4 <{NAME}> [--clicks N] [--seed S]
        {PROG} g5 <{}|{}>
        {PROG} assist <{}|{}> [--secs N]
        {PROG} g17 <{}>
@@ -35,9 +36,10 @@ pub fn usage() -> String {
        {PROG} g23 <{FACE}>
        {PROG} g24 <{FACE}>
        {PROG} g25 <{}>
-       {PROG} close <{FACE}>
+       {PROG} close <{NAME}|{FACE}>
        {PROG} {}
---attach types into the app's window already open; --pause sets the gap between characters.",
+--attach types into the app's window already open; --pause sets the gap between characters.
+{NAME} is the product keyboard; {FACE} is the frozen spike face.",
         names(&AppKind::ALL),
         g5::PLAIN,
         g5::ADMIN,

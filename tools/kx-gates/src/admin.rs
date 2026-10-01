@@ -1,12 +1,15 @@
-//! Starts a program as administrator; on this PC no prompt shows.
+//! Starts a program through the shell: as administrator, where this PC shows no prompt, or hidden. Only the shell
+//! starts a uiAccess program for a caller without uiAccess.
 #![cfg(windows)]
 
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
-use windows::Win32::UI::Shell::{SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW};
-use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+use windows::Win32::UI::Shell::{
+    SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW,
+};
+use windows::Win32::UI::WindowsAndMessaging::{SHOW_WINDOW_CMD, SW_HIDE, SW_SHOWNORMAL};
 use windows::core::{PCWSTR, w};
 
 use crate::win::size32;
@@ -55,22 +58,39 @@ fn wide(s: &OsStr) -> Vec<u16> {
 }
 
 /// Starts `exe` with `args` as administrator and returns once it has started.
-#[allow(unsafe_code, reason = "The struct is set up as the call needs.")]
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
+    let normal = (RUN_AS, SW_SHOWNORMAL, false);
+    shell(exe, args, normal).map_err(|e| format!("start {} as administrator: {e}", exe.display()))
+}
+
+/// Starts `exe` with `args` and no window, and returns once it has started; a failure shows no dialog.
+pub fn run_hidden(exe: &Path, args: &[String]) -> Result<(), String> {
+    let hidden = (PCWSTR::null(), SW_HIDE, true);
+    shell(exe, args, hidden).map_err(|e| format!("start {}: {e}", exe.display()))
+}
+
+/// Starts `exe` with `args` through the shell with a verb (null is the default), a window state, and whether a
+/// failure stays quiet.
+#[allow(unsafe_code, reason = "The struct is set up as the call needs.")]
+fn shell(
+    exe: &Path,
+    args: &[String],
+    (verb, show, quiet): (PCWSTR, SHOW_WINDOW_CMD, bool),
+) -> windows::core::Result<()> {
     let file = wide(exe.as_os_str());
     let params = wide(OsStr::new(&command_line(args)));
+    let no_ui = if quiet { SEE_MASK_FLAG_NO_UI } else { 0 };
     let mut info = SHELLEXECUTEINFOW {
         cbSize: size32::<SHELLEXECUTEINFOW>(),
-        fMask: SEE_MASK_NOASYNC,
-        lpVerb: RUN_AS,
+        fMask: SEE_MASK_NOASYNC | no_ui,
+        lpVerb: verb,
         lpFile: PCWSTR(file.as_ptr()),
         lpParameters: PCWSTR(params.as_ptr()),
-        nShow: SW_SHOWNORMAL.0,
+        nShow: show.0,
         ..Default::default()
     };
     // SAFETY: `info` has `cbSize` set, and its strings live until the call returns.
     unsafe { ShellExecuteExW(&raw mut info) }
-        .map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 
 #[cfg(test)]

@@ -1,14 +1,13 @@
-//! G4 admin windows: face keys clicked into Windows Terminal running as administrator.
+//! G4 admin windows: the product keyboard's keys clicked into Windows Terminal running as administrator.
 #![cfg(windows)]
 
 use serde_json::{Value, json};
-use windows::Win32::Foundation::HWND;
 
 use crate::apps::{Ctx, Opened};
 use crate::clicks::{self, Tally};
 use crate::diff::{self, Diff};
-use crate::mouse::{self, Face};
 use crate::out::say;
+use crate::product::Keyboard;
 use crate::win::{self, sleep_ms};
 use crate::winfind;
 use crate::{g1, launchterm, readback};
@@ -28,18 +27,13 @@ fn passed(admin: bool, tally: &Tally, equal: bool) -> bool {
     admin && equal && n > 0 && tally.focus_kept == n && tally.stopped.is_none()
 }
 
-/// Waits for the shell's text box, clicks face keys, then presses Enter to save the line.
-fn type_into(
-    ctx: &Ctx,
-    term: &Opened,
-    face: (&Face, HWND),
-    run: (usize, u64),
-) -> Result<Typed, String> {
+/// Waits for the shell's text box, clicks the keyboard's keys, then presses Enter to save the line.
+fn type_into(ctx: &Ctx, term: &Opened, kb: &Keyboard, run: (usize, u64)) -> Result<Typed, String> {
     let app = ctx.cfg.app(term.kind.name())?;
     g1::wait_ready(ctx, term, app.focus_class.as_deref())?;
     // Keys are read once the shell is in front, so they follow its keyboard layout.
-    let (keys, hidden) = clicks::usable(ctx, face.0, face.1)?;
-    let tally = clicks::click_loop(ctx, term, face.1, &keys, run);
+    let (keys, hidden) = clicks::usable(ctx, kb)?;
+    let tally = clicks::click_loop(ctx, term, kb.hwnd, &keys, run);
     sleep_ms(app.done_ms);
     let got = match &tally.stopped {
         Some(_) => Err("skipped: clicking stopped".to_string()),
@@ -62,15 +56,14 @@ fn close(ctx: &Ctx, term: &Opened) -> Vec<String> {
     }
 }
 
-/// Runs G4 on the face called `name` with `count` clicks from `seed`.
+/// Runs G4 on the product keyboard, called `name`, with `count` clicks from `seed`.
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
-    let hwnd = mouse::find_face(ctx.spike, name)?;
-    let face = mouse::face(hwnd)?;
-    let face_program = win::program(hwnd).unwrap_or_else(|e| e);
+    let kb = Keyboard::find()?;
+    let program = win::program(kb.hwnd).unwrap_or_else(|e| e);
     let (term, admin) = launchterm::open_admin(ctx)?;
     let window = win::describe(term.hwnd);
-    say!("G4 {name}: {count} clicks, seed {seed}; {window}; admin {admin}; face {face_program}");
-    let typed = type_into(ctx, &term, (&face, hwnd), (count, seed));
+    say!("G4 {name}: {count} clicks, seed {seed}; {window}; admin {admin}; keyboard {program}");
+    let typed = type_into(ctx, &term, &kb, (count, seed));
     let left_open = close(ctx, &term);
     let t = typed?;
     let (got, read_error) = match &t.got {
@@ -88,7 +81,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
         say!("read back failed: {e}");
     }
     Ok(json!({
-        "gate": "G4", "face": name, "face_program": face_program, "seed": seed, "planned": count,
+        "gate": "G4", "keyboard": name, "program": program, "seed": seed, "planned": count,
         "window": window, "admin": admin, "pass": pass,
         "clicks": t.tally.clicks.len(), "focus_kept": t.tally.focus_kept,
         "failures": t.tally.failures, "stopped": t.tally.stopped,

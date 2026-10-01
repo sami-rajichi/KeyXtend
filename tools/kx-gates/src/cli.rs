@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use crate::apps::{AppKind, Ctx};
 use crate::usage::usage;
 use crate::{
-    config, facearg, facetools, g1, g2, g3, g4, g5, g6, g7, g12, g17, g18, g19, g20, g21, g22, g23,
+    close, config, facearg, g1, g2, g3, g4, g5, g6, g7, g12, g17, g18, g19, g20, g21, g22, g23,
     g24, g25, hand, out,
 };
 
@@ -18,7 +18,7 @@ const SEEDED: [&str; 3] = ["g1", "g2", "g4"];
 pub struct Args {
     /// Gate name, such as `g1`.
     gate: String,
-    /// App, face or gate-specific name.
+    /// App, keyboard or gate-specific name.
     name: String,
     /// Characters, clicks or seconds, depending on the gate.
     count: Option<usize>,
@@ -92,7 +92,7 @@ const NAMED: [(&str, NamedRun); 14] = [
     ("g23", g23::run),
     ("g24", g24::run),
     ("g25", g25::run),
-    ("close", facetools::close),
+    ("close", close::run),
 ];
 
 /// The run of `gate` when it takes only a name.
@@ -185,14 +185,16 @@ mod tests {
         assert!(a.attach);
         assert_eq!(a.pause_ms, Some(100));
         assert_eq!(
-            parse(&args("g2 qt --clicks 10")).expect("parses").count,
+            parse(&args("g2 keyxtend --clicks 10"))
+                .expect("parses")
+                .count,
             Some(10)
         );
-        assert_eq!(parse(&args("g3 qt")).expect("parses").count, None);
+        assert_eq!(parse(&args("g3 keyxtend")).expect("parses").count, None);
         assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
         let a = parse(&args("assist right --secs 30")).expect("parses");
         assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
-        let a = parse(&args("g4 qt --clicks 50 --seed 3")).expect("parses");
+        let a = parse(&args("g4 keyxtend --clicks 50 --seed 3")).expect("parses");
         assert_eq!(
             (a.gate.as_str(), a.count, a.seed),
             ("g4", Some(50), Some(3))
@@ -219,6 +221,7 @@ mod tests {
             "g24 qt",
             "g25 notepad",
             "close qt",
+            "close keyxtend",
         ] {
             let a = parse(&args(probe)).expect("parses");
             assert_eq!((a.count, a.seed), (None, None));
@@ -227,9 +230,9 @@ mod tests {
     }
 
     #[test]
-    fn a_face_gate_refuses_a_face_that_is_gone() {
+    fn a_keyboard_gate_refuses_a_face_that_is_gone() {
         let e = parse(&args("g2 slint")).expect_err("slint is gone");
-        assert!(e.contains("unknown face"), "{e}");
+        assert!(e.contains("unknown keyboard"), "{e}");
     }
 
     #[test]
@@ -239,15 +242,15 @@ mod tests {
             "g1",
             "g9 x",
             "g1 target --clicks 3",
-            "g3 qt --seed 1",
-            "g2 qt --clicks",
+            "g3 keyxtend --seed 1",
+            "g2 keyxtend --clicks",
             "g1 target --count x",
-            "g2 qt --attach",
-            "g2 qt --pause 5",
+            "g2 keyxtend --attach",
+            "g2 keyxtend --pause 5",
             "g1 word --pause",
-            "g4 qt --attach",
-            "g4 qt --count 5",
-            "g4 qt --pause 5",
+            "g4 keyxtend --attach",
+            "g4 keyxtend --count 5",
+            "g4 keyxtend --pause 5",
             "g5 plain --seed 1",
             "assist grab --seed 1",
             "g17 notepad --seed 1",
@@ -265,6 +268,11 @@ mod tests {
             "g7 qt --seed 1",
             "g12 qt --seed 1",
             "g12 qt --clicks 5",
+            "g2 qt",
+            "g3 qt",
+            "g4 qt --clicks 5",
+            "g7 keyxtend",
+            "g24 keyxtend",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad} should fail");
         }

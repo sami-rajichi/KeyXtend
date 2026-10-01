@@ -98,6 +98,8 @@ pub struct Timing {
     pub close_wait_ms: u64,
     /// Longest wait for an app's text box to take the keyboard.
     pub focus_wait_ms: u64,
+    /// Longest wait for the product to end after its `--quit`.
+    pub quit_wait_ms: u64,
 }
 
 /// Virtual-key combos: pressed in order, released in reverse.
@@ -173,6 +175,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     config.text.validate()?;
     featcfg::check(&config)?;
+    config.g3.check()?;
     config.g12.check()?;
     Ok(config)
 }
@@ -187,8 +190,8 @@ mod tests {
         for app in crate::apps::AppKind::ALL {
             assert!(cfg.app(app.name()).is_ok(), "missing app {}", app.name());
         }
-        assert_eq!(cfg.g3.probe_codes.len(), 3);
-        assert!(cfg.g4.clicks > 0);
+        assert_eq!(cfg.g3.probe_keys.len(), 3);
+        assert!(cfg.g4.clicks > 0 && cfg.timing.quit_wait_ms > 0);
         let hold = spike_core::config::load().expect("spike.toml loads").hold;
         assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < hold.ms);
         for app in ["explorer", "word_file"] {
@@ -196,6 +199,17 @@ mod tests {
         }
         assert!(cfg.probes.move_steps > 0 && cfg.g6.notches > 0);
         assert!(!cfg.g25.panel_classes.is_empty());
+    }
+
+    #[test]
+    fn g3_probes_only_keys_of_the_product_board() {
+        let mut g3 = load().expect("kx-gates.toml loads").g3;
+        assert!(g3.check().is_ok());
+        g3.probe_keys.push("c-0xFFFF".into());
+        let e = g3.check().expect_err("no such key");
+        assert!(e.contains("c-0xFFFF"), "{e}");
+        g3.probe_keys.clear();
+        assert!(g3.check().is_err(), "probing nothing checks nothing");
     }
 
     #[test]

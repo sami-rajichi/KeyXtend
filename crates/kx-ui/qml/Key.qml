@@ -62,6 +62,8 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: key.name
+    // UI Automation's id is the board id, which never changes with the language, the size or the top bar.
+    Accessible.id: key.kv.id
     Accessible.description: key.later
     Accessible.checkable: !!kv.checkable
     Accessible.checked: key.on

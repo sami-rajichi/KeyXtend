@@ -2,12 +2,11 @@
 //! before Qt starts, so no Qt option (such as a plugin path) reaches the uiAccess process.
 
 use kx_platform::ui::Command;
-use kx_platform_windows::instance::{name, parse as named};
+pub use kx_platform_windows::instance::flag;
+use kx_platform_windows::instance::from_flag;
 use std::ffi::OsString;
 use std::fmt;
 
-/// What starts a flag; the rest is the command's name in the running copy's table, as in `--show`.
-const FLAG: &str = "--";
 /// The command when no argument is given: start, or show the running copy.
 const DEFAULT: Command = Command::Show;
 /// Every command a flag can name, for the usage line.
@@ -35,12 +34,6 @@ impl fmt::Display for ArgError {
 
 impl std::error::Error for ArgError {}
 
-/// The flag that asks for `command`, such as `--quit`.
-#[must_use]
-pub fn flag(command: Command) -> String {
-    format!("{FLAG}{}", name(command))
-}
-
 /// The command `args` ask for, without the program's own name; nothing means Show.
 ///
 /// # Errors
@@ -55,8 +48,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Command, ArgErr
     }
     first
         .to_str()
-        .and_then(|a| a.strip_prefix(FLAG))
-        .and_then(named)
+        .and_then(from_flag)
         .ok_or_else(|| ArgError::Unknown(first.to_string_lossy().into_owned()))
 }
 
