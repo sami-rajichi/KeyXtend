@@ -24,6 +24,7 @@ The app calls `harden_qt` before Qt's app object exists. It clears with `qunsete
 - **Top bar:** the theme button cycles the themes (`bar.theme`).
 
 - Every window is a no-focus tool window (ADR-0013); once shown, it is cut to its plate and corner, then guarded until the guard is done.
+- The keyboard and the bubble each own their tip (`Tip`), so Windows keeps it above them when the guard lifts them.
 - Names, labels and tips are translation keys, looked up in the keyboard's language: the layout's in front, unless `[ui] language` pins one (ADR-0020). Arabic flips text only; nothing mirrors, and a tip in the last language closes when it changes.
 - Keys that come in a later version are dimmed, never press, and tell readers and the tooltip "Coming in a later version".
 - Text uses `Label` (grayscale, no ClearType fringes), and hover uses `Hover` (the theme's tint, and a `Highlight` outline in high contrast). `Icon` tints with `MultiEffect`, public Qt Quick only.

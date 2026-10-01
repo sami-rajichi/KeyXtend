@@ -70,15 +70,17 @@ QtObject {
         box: Qt.rect(bubble.x, bubble.y, bubble.width, bubble.height)
         radius: bubble.width / 2
 
+        // The bubble sits on the keyboard's screen.
         Bubble {
             id: bubble
             lk: face.lk
             res: face.res
+            tipMs: face.cfg.tipMs
+            screenBox: face.screenBox
             onClicked: {
                 trayMenu.shut();
                 app.open();
             }
-            onTip: (name, at) => face.hint(name, at)
         }
     }
 

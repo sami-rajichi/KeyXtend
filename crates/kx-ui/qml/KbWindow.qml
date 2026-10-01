@@ -80,12 +80,12 @@ Window {
             win.retext();
         }
     }
-    // Not owned by the keyboard: Qt shows no owned window while its owner is hidden, and the bubble needs tips too.
+    // Owned by the keyboard, so it stays above it when the guard lifts it; the bubble owns its own.
     Loader {
         id: tips
         active: win.lk !== null && win.cfg !== null
         sourceComponent: Tip {
-            transientParent: null
+            transientParent: win
             lk: win.lk
             res: win.res
             ms: win.cfg.tipMs
@@ -142,11 +142,10 @@ Window {
         board = JSON.parse(keyboard.boardJson());
         restate();
     }
-    // The keyboard's language changed: only its texts are read again, and a tip in the last language closes.
+    // The keyboard's language changed: only its texts are read again, and a tip in the last language closes (Tip).
     function retext() {
         tongue = JSON.parse(ui.langJson());
         texts++;
-        hint("", null);
     }
     // Reads the look again, and the backdrop, which follows light or dark.
     function relook() {

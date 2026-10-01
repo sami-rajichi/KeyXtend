@@ -5,7 +5,10 @@ import QtQuick
 Window {
     id: tip
 
-    // The look, fonts, the hover time, and the keyboard's screen in Qt units.
+    // The window whose buttons it names owns it: Windows keeps an owned window above its owner, also after the guard
+    // lifts the owner, whereas a hidden window shows again where it was (ADR-0013).
+    required transientParent
+    // The look, fonts, the hover time, and its window's screen in Qt units.
     required property var lk
     required property var res
     required property int ms
@@ -22,6 +25,9 @@ Window {
     visible: false
     width: label.implicitWidth + 2 * sh.pad_px[1]
     height: label.implicitHeight + 2 * sh.pad_px[0]
+
+    // New texts close it, so it never shows a word in the last language (ADR-0020).
+    onResChanged: hint("", null)
 
     // Shows `text` over `item` after the hover time; an empty text hides it, unless it comes late from another button.
     function hint(text, item) {

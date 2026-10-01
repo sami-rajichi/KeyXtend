@@ -4,13 +4,13 @@ import QtQuick
 Window {
     id: bub
 
-    // The look, fonts, icons and texts.
+    // The look, fonts, icons and texts, how long the pointer rests before its tip shows, and its screen in Qt units.
     required property var lk
     required property var res
+    required property int tipMs
+    required property rect screenBox
 
     signal clicked
-    // The pointer came onto the button (its name) or left it (empty), for the tooltip.
-    signal tip(string name, Item at)
 
     readonly property var px: lk.shape.extra.bubble_px
     readonly property string name: res.bar("bubble")
@@ -48,10 +48,19 @@ Window {
         id: area
         anchors.fill: parent
         hoverEnabled: true
-        onContainsMouseChanged: bub.tip(containsMouse ? bub.name : "", disc)
+        onContainsMouseChanged: tip.hint(containsMouse ? bub.name : "", disc)
         onClicked: {
-            bub.tip("", disc);
+            tip.hint("", disc);
             bub.clicked();
         }
+    }
+    // Its own tip, which it owns, so the tip stays above it while the keyboard is away.
+    Tip {
+        id: tip
+        transientParent: bub
+        lk: bub.lk
+        res: bub.res
+        ms: bub.tipMs
+        area: bub.screenBox
     }
 }

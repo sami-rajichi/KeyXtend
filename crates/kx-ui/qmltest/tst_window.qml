@@ -260,7 +260,7 @@ Item {
 
         function test_the_bubble_and_the_move_catcher_carry_their_texts() {
             const win = make();
-            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res });
+            const bub = createTemporaryObject(bubC, root, { lk: win.lk, res: win.res, tipMs: win.cfg.tipMs, screenBox: win.screenBox });
             compare(bub.title, En.texts["window.bubble"]);
             compare(bub.name, En.texts["bar.bubble"]);
             verify(named(win, En.texts["catch"]), "the move catcher");

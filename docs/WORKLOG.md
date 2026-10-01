@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: key tips no longer hide behind the keyboard
+Each run of the window guard (when the keyboard, a banner, a menu, the list or the bubble shows) lifts the keyboard above every other window, and the tip window, owned by no window, then showed behind it, so the tips of keys, the D-pad and the resize corner vanished. The keyboard now owns its tip and the bubble owns its own, so Windows keeps each tip above its window (ADR-0013); a new language still closes both. Qt Quick tests check the owners and hover every tipped control in English, French and Arabic, at the smallest size and in another theme.
+
 ## 2026-10-01 — P3: key icons back on whole pixels
 Only named keys that show a label are now centred exactly; keys that show an icon are centred by anchors again, on whole pixels, so their icons stay crisp at 100 % scale. A test checks both at each size preset in every theme, and that a key centres again when a theme drops or brings back its icon. The label fit test now also runs each preset, in case one sits off the size steps.
 
