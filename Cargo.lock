@@ -957,11 +957,9 @@ name = "spike-core"
 version = "0.0.0"
 dependencies = [
  "kx-mod-keyboard",
- "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",
  "kx-platform-windows",
- "kx-theme",
  "serde",
  "serde_json",
  "toml",

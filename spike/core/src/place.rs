@@ -1,4 +1,4 @@
-//! The stage-1 key block and tools row, in logical pixels, for the gates (G2, G3) and the tools row until they move.
+//! The stage-1 key block and tools row, in logical pixels, for the gates (G2 to G4) and the tools row until they move.
 //! Boxes are kx-mod-keyboard's `Area`, which replaced this file's `Place` in P3 (ADR-0014).
 
 use kx_mod_keyboard::Area;
@@ -14,16 +14,6 @@ pub fn width(cfg: &KeyboardConfig, code: u32) -> f32 {
         .iter()
         .find(|(c, _)| *c == code)
         .map_or(DEFAULT_WIDTH, |(_, w)| *w)
-}
-
-/// Left, top, right and bottom of `p` in physical pixels at scale `dpr`, rounded outwards so the box is covered.
-pub fn outward(p: &Area, dpr: f64) -> [i32; 4] {
-    [
-        (p.x * dpr).floor() as i32,
-        (p.y * dpr).floor() as i32,
-        ((p.x + p.w) * dpr).ceil() as i32,
-        ((p.y + p.h) * dpr).ceil() as i32,
-    ]
 }
 
 /// Every key's box, row by row: the block starts at (gap, gap); a key `u` units wide takes `u` pitches.
@@ -96,32 +86,12 @@ pub fn face_size(cfg: &KeyboardConfig) -> (f64, f64) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn outward_covers_the_box_in_whole_physical_pixels() {
-        let p = Area {
-            x: 0.5,
-            y: 1.0,
-            w: 10.0,
-            h: 2.0,
-        };
-        assert_eq!(outward(&p, 1.25), [0, 1, 14, 4]);
-        assert_eq!(outward(&p, 1.0), [0, 1, 11, 3]);
-    }
-
-    #[test]
-    fn places_arrive_from_qml_as_json() {
-        let all: Vec<Area> = serde_json::from_str(r#"[{"x":1,"y":2,"w":3,"h":4}]"#).expect("json");
-        assert_eq!(outward(&all[0], 2.0), [2, 4, 8, 12]);
-    }
-
     fn kb() -> KeyboardConfig {
         KeyboardConfig {
             title: String::new(),
             key_px: 48.0,
             gap_px: 4.0,
             font_px: 16.0,
-            guard_delay_ms: 0,
-            guard_tries: 1,
             rows: vec![vec![0x29, 0x02], vec![0x0F, 0x10], vec![0x39, 0xE038]],
             widths: vec![(0x0F, 1.5), (0x39, 6.25)],
         }

@@ -44,10 +44,10 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// Refuses a G7 run that would check nothing: no word, no keys, or a word that starts with a mark.
+/// Refuses a G7 run that would check nothing: no word, no keys, a word that starts with a mark, or no opener.
 fn check_g7(g: &G7) -> Result<(), String> {
-    if g.word.chars().next().is_none_or(is_mark) || g.keys.is_empty() {
-        return Err("g7 needs keys and a word that starts with a letter".to_string());
+    if g.word.chars().next().is_none_or(is_mark) || g.keys.is_empty() || g.opener.is_empty() {
+        return Err("g7 needs an opener, keys and a word that starts with a letter".to_string());
     }
     Ok(())
 }
@@ -137,6 +137,8 @@ pub enum Move {
 /// G7 Arabic panel check.
 #[derive(Debug, Clone, Deserialize)]
 pub struct G7 {
+    /// The screen-reader name of the face's Settings key, which opens the panel.
+    pub opener: String,
     /// The word typed into the panel's field, with harakat.
     pub word: String,
     /// Caret keys pressed after it, in order.
@@ -196,9 +198,10 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("kx-gates.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut GatesConfig); 19] = [
+        let bad: [fn(&mut GatesConfig); 20] = [
             |c| c.g7.word.clear(),
             |c| c.g7.keys.clear(),
+            |c| c.g7.opener.clear(),
             |c| c.g7.word.insert(0, '\u{064E}'),
             |c| c.g22.type_gaps_ms.clear(),
             |c| c.g19.lines.clear(),

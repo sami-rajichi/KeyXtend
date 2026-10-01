@@ -1,9 +1,9 @@
-//! Where the face's windows go on the usable screen, built on the product's screens and windows
-//! (`kx_platform_windows::{screen, window}`, ADR-0014) and kx-mod-keyboard's place maths (P3 Task 11).
+//! Where the spike's later windows go: the caption (P11), the test panel (P13) and a snip's pointer (P12).
+//! Built on the product's screens and windows (`kx_platform_windows`, ADR-0014) and kx-mod-keyboard's place maths.
 
 use kx_mod_keyboard::Area;
 use kx_mod_keyboard::place;
-use kx_module_api::ports::{Point, Rect, physical};
+use kx_module_api::ports::{Point, Rect};
 use kx_platform::ui::UiError;
 use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, rect_of, work_area};
 use kx_platform_windows::window::own_bounds;
@@ -38,18 +38,6 @@ pub fn bottom_centre(work: &RECT, size: (i32, i32), gap: i32) -> Pt {
         ..r
     };
     pt(place::bottom_centre(raised, size))
-}
-
-/// Where a window `w` by `h` logical pixels starts, in physical pixels: the bottom centre of the primary work area.
-pub fn start_spot(w: f64, h: f64) -> Result<Pt, String> {
-    // The primary monitor is the one holding (0, 0).
-    let origin = RECT::default();
-    let (work, dpi) = (work_area(&origin).map_err(text)?, dpi_of(&origin));
-    Ok(bottom_centre(
-        &work,
-        (physical(w, dpi), physical(h, dpi)),
-        0,
-    ))
 }
 
 /// Where a `size` panel goes by our window `title` (see `pop_in`); the spot is in physical pixels.

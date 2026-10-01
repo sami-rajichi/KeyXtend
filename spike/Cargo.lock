@@ -266,16 +266,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kx-mod-layouts"
-version = "0.0.0"
-dependencies = [
- "kx-module-api",
- "serde",
- "thiserror 2.0.21",
- "toml",
-]
-
-[[package]]
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
@@ -300,16 +290,6 @@ dependencies = [
  "kx-platform",
  "thiserror 2.0.21",
  "windows",
-]
-
-[[package]]
-name = "kx-theme"
-version = "0.0.0"
-dependencies = [
- "kx-platform",
- "serde",
- "thiserror 2.0.21",
- "toml",
 ]
 
 [[package]]
@@ -651,11 +631,9 @@ name = "spike-core"
 version = "0.0.0"
 dependencies = [
  "kx-mod-keyboard",
- "kx-mod-layouts",
  "kx-module-api",
  "kx-platform",
  "kx-platform-windows",
- "kx-theme",
  "serde",
  "serde_json",
  "toml",

@@ -363,6 +363,8 @@ answer_wait_ms = 120000
 type_gaps_ms = [0, 2, 10]
 
 [g7]
+# The frozen spike face's name for its Settings key, which opens the panel (spike.toml [keys] ended in P3 Task 22).
+opener = "Settings"
 # The Arabic panel check: marhaban with harakat is typed into the panel's field, then these caret keys are pressed.
 # They cross every letter both ways and push once past each end; timing.key_settle_ms follows each key.
 word = "مَرْحَبًا"

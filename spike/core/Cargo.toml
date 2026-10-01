@@ -1,23 +1,19 @@
 [package]
 name = "spike-core"
-description = "P1 spike core: injection, window guard, layouts, hold engine, UI Automation, pill, Hello fill, snip and the face side of voice."
+description = "P1 spike core: the hold engine, UI Automation, pill, Hello fill, snip, voice and the gates' face facts."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
 license.workspace = true
 
 [dependencies]
-# `KeyChars` and `Slot` moved here in P3 (ADR-0014).
+# The clock, the input and layout ports and the screen boxes moved here in P2 and P3 (ADR-0014).
 kx-module-api = { path = "../../crates/kx-module-api" }
-# The board, its geometry, the size rules, the placement maths and `[keyboard]` moved here in P3 (ADR-0014).
+# The board's boxes (`Area`), the placement maths and the Arabic test moved here in P3 (ADR-0014).
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
-# `Follow`, the language labels and the `[layouts]` short names moved here in P3 (ADR-0014).
-kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
-# The theme tokens, the look view, contrast and the high-contrast palette moved here in P3 (ADR-0016).
-kx-theme = { path = "../../crates/kx-theme" }
-# The UI port types (system look, backdrop kinds, errors) the moved window and look parts use (P3).
+# The UI port errors the screen spots use (P3).
 kx-platform = { path = "../../crates/kx-platform" }
-# COM, folders, uiAccess, input, layouts, the window guard, screens, the system look and backdrops moved here in P3 (ADR-0014).
+# COM, folders, input, layouts, the window guard and screens moved here in P3 (ADR-0014).
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 serde.workspace = true
 serde_json.workspace = true

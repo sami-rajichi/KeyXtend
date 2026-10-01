@@ -18,9 +18,6 @@ use crate::simuser::in_front;
 use crate::win::{self, sleep_ms};
 use crate::{facetools, keys, mouse};
 
-/// The side key that opens and closes the panel.
-const OPENER: &str = "settings";
-
 /// A caret key's virtual key (adapter table).
 fn vk(m: Move) -> VIRTUAL_KEY {
     match m {
@@ -68,9 +65,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let uia = Uia::new()?;
     let face = mouse::find_face(ctx.spike, name)?;
     let pid = win::owner(face).0;
-    let opener = ctx.spike.keys.get(OPENER).ok_or("no Settings key")?;
     let key = uia
-        .named(face, &opener.name)
+        .named(face, &ctx.cfg.g7.opener)
         .ok_or("the Settings key has no UIA element")?;
     // The key toggles the panel, so one left open is closed first.
     if shown(ctx, pid).is_some() && !(uia::invoke(&key).is_ok() && gone(ctx, pid)) {

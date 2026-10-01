@@ -1,4 +1,4 @@
-//! The language key: asks the app in front to switch layout, stepping by the product's `step_to` (P3 Task 13).
+//! Layout requests for gates G22 and G25: asks the app in front to switch, stepping by the product's `step_to`.
 //! The window and layout queries are the product's (kx-platform-windows).
 
 use kx_module_api::ports::{LayoutId, LayoutSource, step_to};

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the spike keeps no keyboard part
+The spike's keyboard controller (`kbctl`), `sysui`, `langinfo`, `facecfg` and `lookcfg` are deleted, with the face-only helpers left in `layout`, `screen`, `window` and `place`. `spike.toml` drops `[look]`, `[size]`, `[keys]`, `[bar]`, `[assets]` and the guard lines, and keeps `[keyboard]` only as the frozen face's title and stage-1 geometry for the gates and the tools row. Gate G7 now reads the face's Settings key name from `kx-gates.toml [g7] opener`, and spike-core no longer depends on kx-theme or kx-mod-layouts.
+
 ## 2026-10-01 — P3: CI builds and tests the Qt app
 The Windows check now installs the Qt that the stage settings pin (a pinned action over the reviewed aqtinstall), sets `QMAKE`, runs every workspace test, the Qt Quick tests (any warning fails the job) and `cargo xtask stage`. The Linux check names its packages in lists that must cover the workspace, builds kx-ui without Qt and leaves the app out. Tests that need a font Windows ships share one rule that skips them by name on an image without it, and the label-fit test moved to `tst_fit.qml`. A G26 job stays skipped until its gate exists.
 

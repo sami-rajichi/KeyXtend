@@ -160,8 +160,6 @@ mod tests {
             key_px: 48.0,
             gap_px: 4.0,
             font_px: 16.0,
-            guard_delay_ms: 0,
-            guard_tries: 1,
             rows: vec![vec![0x29, 0x02], vec![0x0F, 0x10], vec![0x39, 0xE038]],
             widths: vec![(0x0F, 1.5), (0x39, 6.25)],
         }
