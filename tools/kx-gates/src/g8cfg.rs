@@ -52,6 +52,8 @@ pub struct G8 {
     pub resize_settle_ms: u64,
     /// Longest wait for a resize.
     pub resize_wait_ms: u64,
+    /// Keyboard widths this many px apart count as one size, for DPI rounding; G8 and G9 size back past it.
+    pub resize_slack_px: i32,
     /// G2 clicks on the started copy, for the click-to-character time.
     pub clicks: usize,
     /// Click to character, 99th percentile.
@@ -70,14 +72,17 @@ pub struct G8 {
     pub presentmon_exe: String,
     /// Wait after starting `PresentMon`, so its start-up does not slow the cold start.
     pub presentmon_wait_ms: u64,
-    /// Quit tries on a copy G8 started but could not cap, whose command window may not exist yet, and the wait
-    /// between them.
+    /// Longest wait past the recording time for `PresentMon` to stop and write its last rows, whether G8 or the owner
+    /// started it.
+    pub presentmon_stop_ms: u64,
+    /// Quit tries on a copy G8 started but could not open or cap, whose command window may not exist yet, and the
+    /// wait between them.
     pub quit_tries: u32,
     pub quit_try_ms: u64,
 }
 
 impl G8 {
-    /// Refuses a zero count, a budget that is not above 0, or a pressed key the product's board does not have.
+    /// Refuses a zero count, a budget that is not above 0, a negative slack, or a pressed key the board does not have.
     pub fn check(&self) -> Result<(), String> {
         let budgets = [
             self.start_ms,
@@ -97,8 +102,10 @@ impl G8 {
                 "g8 presses, clicks, subscribers and publishes must be above 0".to_string(),
             );
         }
-        if self.quit_tries == 0 {
-            return Err("g8.quit_tries must be above 0".to_string());
+        if self.quit_tries == 0 || self.resize_slack_px < 0 {
+            return Err(
+                "g8.quit_tries must be above 0 and g8.resize_slack_px not below 0".to_string(),
+            );
         }
         if !board::ids()?.contains(&self.press_key) {
             return Err(format!(
@@ -163,12 +170,13 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 6] = [
+        let bad: [fn(&mut G8); 7] = [
             |g| g.memory_mb = 0.0,
             |g| g.bus_share = f64::NAN,
             |g| g.presses = 0,
             |g| g.publishes = 0,
             |g| g.quit_tries = 0,
+            |g| g.resize_slack_px = -1,
             |g| g.press_key = "c-0xFFFF".into(),
         ];
         for f in bad {

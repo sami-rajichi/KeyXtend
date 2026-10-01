@@ -117,6 +117,47 @@ fn save(ctx: &Ctx, shot: &Shot, n: usize) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+/// `what` with each part of `more` it lacks added at the end.
+fn joined(mut what: Vec<&'static str>, more: &[&'static str]) -> Vec<&'static str> {
+    for part in more {
+        if !what.contains(part) {
+            what.push(part);
+        }
+    }
+    what
+}
+
+/// Follows change number `n` from look `was` to `now` against picture `before`, then takes the settled picture and
+/// reads the look again, so a part that changed meanwhile joins this change; the change, that picture and that look.
+fn record(
+    ctx: &Ctx,
+    hwnd: HWND,
+    before: &Shot,
+    (was, now): (&SysLook, SysLook),
+    n: usize,
+) -> Result<(Change, Shot, SysLook), String> {
+    let (g, poll) = (&ctx.cfg.g13, ctx.cfg.timing.poll_ms);
+    let followed_ms = follow(hwnd, before, g.follow_ms, poll)?;
+    sleep_ms(g.follow_ms);
+    let shot = picture(hwnd)?;
+    let after = WinLook.read();
+    let what = joined(what_changed(was, &now), &what_changed(&now, &after));
+    let picture = save(ctx, &shot, n)?;
+    say!(
+        "G13: {} changed; followed after {followed_ms:?} ms",
+        what.join(", ")
+    );
+    let change = Change {
+        what,
+        dark: after.dark,
+        contrast: after.contrast.is_some(),
+        followed_ms,
+        backdrop: backdrop(hwnd),
+        picture,
+    };
+    Ok((change, shot, after))
+}
+
 /// Watches Windows' look and the keyboard until the watch ends or enough changes were seen.
 fn watch(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Change>, String> {
     let (g, poll) = (&ctx.cfg.g13, ctx.cfg.timing.poll_ms);
@@ -127,30 +168,14 @@ fn watch(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Change>, String> {
         // The picture comes first: one taken after an unchanged read may already show a change made in between.
         let shot = picture(hwnd)?;
         let now = WinLook.read();
-        let what = what_changed(&look, &now);
-        if what.is_empty() {
+        if what_changed(&look, &now).is_empty() {
             before = shot;
             sleep_ms(poll);
             continue;
         }
-        let followed_ms = follow(hwnd, &before, g.follow_ms, poll)?;
-        sleep_ms(g.follow_ms);
-        before = picture(hwnd)?;
-        let picture = save(ctx, &before, changes.len() + 1)?;
-        let (dark, contrast, backdrop) = (now.dark, now.contrast.is_some(), backdrop(hwnd));
-        say!(
-            "G13: {} changed; followed after {followed_ms:?} ms",
-            what.join(", ")
-        );
-        changes.push(Change {
-            what,
-            dark,
-            contrast,
-            followed_ms,
-            backdrop,
-            picture,
-        });
-        look = now;
+        let (change, shot, after) = record(ctx, hwnd, &before, (&look, now), changes.len() + 1)?;
+        changes.push(change);
+        (before, look) = (shot, after);
     }
     Ok(changes)
 }
@@ -177,87 +202,4 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_platform::ui::Accent;
-
-    use super::*;
-
-    fn change(followed_ms: Option<f64>) -> Change {
-        of(&[DARK], followed_ms)
-    }
-
-    fn of(what: &[&'static str], followed_ms: Option<f64>) -> Change {
-        Change {
-            what: what.to_vec(),
-            dark: true,
-            contrast: false,
-            followed_ms,
-            backdrop: "none",
-            picture: PathBuf::new(),
-        }
-    }
-
-    fn needs(kinds: &[&str]) -> Vec<String> {
-        kinds.iter().map(ToString::to_string).collect()
-    }
-
-    #[test]
-    fn each_part_of_windows_look_is_named_when_it_changes() {
-        let light = SysLook::default();
-        let dark = SysLook {
-            dark: true,
-            ..light
-        };
-        assert_eq!(what_changed(&light, &dark), ["dark"]);
-        let accent = SysLook {
-            accent: Some(Accent {
-                on_light: [0, 95, 184, 255],
-                on_dark: [96, 205, 255, 255],
-            }),
-            ..dark
-        };
-        assert_eq!(what_changed(&light, &accent), ["dark", "accent"]);
-        assert!(what_changed(&accent, &accent).is_empty());
-        let moved = SysLook {
-            anim_off: true,
-            ..light
-        };
-        assert!(
-            what_changed(&light, &moved).is_empty(),
-            "animations are not G13's"
-        );
-    }
-
-    #[test]
-    fn g13_passes_when_every_change_was_followed_in_time() {
-        let dark = needs(&[DARK]);
-        assert!(passed(
-            &[change(Some(120.0)), change(Some(0.0))],
-            &dark,
-            1000.0
-        ));
-        assert!(
-            !passed(&[change(Some(120.0)), change(Some(1500.0))], &dark, 1000.0),
-            "too slow"
-        );
-        assert!(!passed(&[change(None)], &dark, 1000.0), "never redrawn");
-        assert!(!passed(&[], &dark, 1000.0), "the owner changed nothing");
-    }
-
-    #[test]
-    fn g13_fails_until_each_needed_part_of_the_look_changed() {
-        let all = needs(&KINDS);
-        let two = [of(&[DARK], Some(100.0)), of(&[DARK, ACCENT], Some(200.0))];
-        assert!(!passed(&two, &all, 1000.0), "contrast never changed");
-        let three = [two[0].clone(), two[1].clone(), of(&[CONTRAST], Some(300.0))];
-        assert!(passed(&three, &all, 1000.0));
-    }
-
-    #[test]
-    fn every_backdrop_the_product_sets_has_a_name() {
-        let names: Vec<&str> = BACKDROPS.iter().map(|(_, n)| *n).collect();
-        for kind in ["none", "mica", "acrylic"] {
-            assert!(names.contains(&kind), "{kind}");
-        }
-    }
-}
+mod tests;

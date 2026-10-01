@@ -4,7 +4,7 @@
 
 use serde::Deserialize;
 
-/// G9 settings: the top bar's buttons that hide and show the keyboard; resizing uses `[g8]` grow and shrink.
+/// G9 settings: the top bar's buttons that hide and show the keyboard; resizing uses `[g8]`'s resize settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct G9 {
@@ -14,8 +14,6 @@ pub struct G9 {
     pub bring_back: String,
     /// Wait after each step before the flags are read, in ms.
     pub settle_ms: u64,
-    /// Keyboard widths this many px apart count as one size, for DPI rounding.
-    pub slack_px: i32,
 }
 
 /// G10 settings: pressing each character key the way a screen reader does.
@@ -79,6 +77,9 @@ pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
             crate::g13::KINDS
         ));
     }
+    if g13.changes < g13.needs.len() {
+        return Err("g13.changes must leave room for each of g13.needs".to_string());
+    }
     if g26.languages.is_empty() || g26.clicks == 0 {
         return Err("g26 needs languages and clicks".to_string());
     }
@@ -105,10 +106,11 @@ mod tests {
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 6] = [
+        let bad: [fn(&mut GatesConfig); 7] = [
             |c| c.g11.scales.clear(),
             |c| c.g11.slack_px = -1.0,
             |c| c.g13.changes = 0,
+            |c| c.g13.changes = c.g13.needs.len() - 1,
             |c| c.g13.needs.clear(),
             |c| c.g13.needs.push("blue".into()),
             |c| c.g26.languages.clear(),

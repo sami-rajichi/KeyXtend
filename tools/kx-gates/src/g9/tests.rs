@@ -6,9 +6,6 @@ use super::*;
 
 /// The keyboard window's style, recorded from the debug app on 2026-10-01: no-activate, layered, tool, topmost.
 const KEYBOARD_EX: u32 = 0x0808_0088;
-/// Widths of the keyboard on this PC at 125 %, one size step apart, and the slack the settings allow.
-const WIDTHS: [i32; 3] = [765, 850, 935];
-const SLACK: i32 = 2;
 
 fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
     Seen {
@@ -16,7 +13,15 @@ fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
         window: "kb".into(),
         ex: format!("{ex:#010x}"),
         missing: missing(ex, wants(first)),
+        extra: extra(ex, first),
         front_kept,
+    }
+}
+
+fn resized(ms: Option<f64>) -> Resize {
+    Resize {
+        button: "bar.bigger".into(),
+        ms,
     }
 }
 
@@ -73,12 +78,23 @@ fn the_size_steps_after_a_grow_end_at_the_first_size() {
 }
 
 #[test]
-fn a_run_that_broke_off_is_sized_back_toward_its_first_width() {
-    let [small, first, big] = WIDTHS;
-    assert_eq!(mend(first, big, SLACK), Some(Size::Shrink));
-    assert_eq!(mend(first, small, SLACK), Some(Size::Grow));
-    assert_eq!(mend(first, first, SLACK), None);
-    assert_eq!(mend(first, first + 1, SLACK), None, "DPI rounding");
+fn a_resize_step_fails_when_no_press_changed_the_keyboard() {
+    assert!(any_changed(&[resized(None), resized(Some(120.0))]));
+    assert!(
+        !any_changed(&[resized(None), resized(None)]),
+        "the size buttons did nothing"
+    );
+}
+
+#[test]
+fn click_through_written_to_a_window_that_took_clicks_must_be_refused() {
+    let written = KEYBOARD_EX | WS_EX_TRANSPARENT.0;
+    assert_eq!(extra(written, KEYBOARD_EX), ["transparent"]);
+    assert!(extra(KEYBOARD_EX, KEYBOARD_EX).is_empty());
+    assert!(extra(written, written).is_empty(), "a click-through glow");
+    let steps = ["click_through"];
+    let kept = [seen("click_through", written, KEYBOARD_EX, true)];
+    assert!(!passed(&kept, &steps), "the guard let it through");
 }
 
 #[test]

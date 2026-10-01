@@ -44,14 +44,18 @@ fn ask_quit(instance: &dyn Instance) -> Result<(), String> {
 }
 
 /// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
-/// yet; the tries it took. A refusal is final.
+/// yet; it stops once `gone` says the copy ended. The tries it took; a refusal is final.
 fn ask_quit_tries(
     instance: &dyn Instance,
     tries: u32,
+    gone: impl Fn() -> bool,
     mut wait: impl FnMut(),
 ) -> Result<u32, String> {
     let mut n = 1;
     loop {
+        if gone() {
+            return Ok(n - 1);
+        }
         match instance.send(Command::Quit) {
             Ok(()) => return Ok(n),
             Err(UiError::NoWindow) if n < tries => wait(),
@@ -61,17 +65,22 @@ fn ask_quit_tries(
     }
 }
 
-/// Posts Quit to the copy G8 started as `process` but could not cap, trying `[g8] quit_tries` times; whether it ended
-/// within `[timing] quit_wait_ms`.
+/// True when `process` ended within `[timing] quit_wait_ms`.
+fn ended_within(ctx: &Ctx, process: &Process) -> bool {
+    let t = &ctx.cfg.timing;
+    win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(())).is_some()
+}
+
+/// Posts Quit to a copy G8 just started, trying `[g8] quit_tries` times as its command window may not exist yet;
+/// whether `process` ended within `[timing] quit_wait_ms`.
 pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
     let g = &ctx.cfg.g8;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
-    ask_quit_tries(&*platform.instance(), g.quit_tries, || {
+    let gone = || process.ended();
+    ask_quit_tries(&*platform.instance(), g.quit_tries, gone, || {
         win::sleep_ms(g.quit_try_ms);
     })?;
-    let t = &ctx.cfg.timing;
-    let ended = win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(()));
-    Ok(ended.is_some())
+    Ok(ended_within(ctx, process))
 }
 
 /// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
@@ -83,9 +92,7 @@ pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), String> {
     let process = Process::to_wait(pid)?;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
     ask_quit(&*platform.instance())?;
-    let t = &ctx.cfg.timing;
-    let ended = win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(()));
-    Ok((exe, ended.is_some()))
+    Ok((exe, ended_within(ctx, &process)))
 }
 
 /// Closes the frozen face `name` and waits until its window is gone; needs the uiAccess kx-gates.
@@ -125,13 +132,22 @@ mod tests {
                 late.borrow_mut().push(claim);
             }
         };
-        assert_eq!(ask_quit_tries(&session.clone(), 5, wait), Ok(3));
+        assert_eq!(ask_quit_tries(&session.clone(), 5, || false, wait), Ok(3));
         assert_eq!(session.sent(), [Command::Quit]);
-        let never = ask_quit_tries(&FakeInstance::new(), 3, || {});
+        let never = ask_quit_tries(&FakeInstance::new(), 3, || false, || {});
         assert!(
             never.is_err_and(|e| e.contains("command window")),
             "it never listened"
         );
+    }
+
+    #[test]
+    fn a_copy_that_ended_by_itself_gets_no_more_tries() {
+        let session = FakeInstance::new();
+        let gone = std::cell::Cell::new(false);
+        let tries = ask_quit_tries(&session.clone(), 5, || gone.get(), || gone.set(true));
+        assert_eq!(tries, Ok(1), "one try, then it was gone");
+        assert!(session.sent().is_empty());
     }
 
     #[test]

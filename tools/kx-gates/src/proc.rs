@@ -1,5 +1,5 @@
-//! A process kx-gates watches: opened by id, to wait for its end or to measure its private memory and CPU time; and
-//! the size of a program's folder.
+//! A process kx-gates watches, opened by id or given by the shell, to wait for its end or to measure its private
+//! memory and CPU time; and the size of a program's folder.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -9,9 +9,9 @@ use windows::Win32::System::ProcessStatus::{
     GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX2,
 };
 use windows::Win32::System::Threading::{
-    GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS, PROCESS_QUERY_LIMITED_INFORMATION,
-    PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, PROCESS_VM_READ,
-    WaitForSingleObject,
+    GetProcessId, GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
+    PROCESS_VM_READ, WaitForSingleObject,
 };
 
 use crate::win::size32;
@@ -38,6 +38,17 @@ impl Process {
         let job = PROCESS_SET_QUOTA | PROCESS_TERMINATE;
         let read = PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ | PROCESS_SYNCHRONIZE;
         Self::open(pid, read | job)
+    }
+
+    /// Takes `handle`, an open process handle; it closes on drop.
+    ///
+    /// # Safety
+    /// `handle` is an open process handle the caller owns and closes nowhere else.
+    #[allow(unsafe_code, reason = "Takes a handle that `drop` closes.")]
+    pub unsafe fn own(handle: HANDLE) -> Self {
+        // SAFETY: the caller hands over an open process handle.
+        let pid = unsafe { GetProcessId(handle) };
+        Self { handle, pid }
     }
 
     #[allow(unsafe_code, reason = "Opens a handle that `drop` closes.")]
@@ -103,7 +114,7 @@ impl Process {
 }
 
 impl Drop for Process {
-    #[allow(unsafe_code, reason = "Closes the handle `open` made.")]
+    #[allow(unsafe_code, reason = "Closes the handle `open` or `own` took.")]
     fn drop(&mut self) {
         // SAFETY: the handle is ours and closed only here.
         let _ = unsafe { CloseHandle(self.handle) };
@@ -160,6 +171,18 @@ mod tests {
         assert!(!me.ended() && me.pid() == std::process::id());
         assert!(me.private_mb().expect("memory") > 0.0);
         assert!(me.cpu_ms().expect("CPU time") >= 0.0);
+    }
+
+    #[test]
+    #[allow(unsafe_code, reason = "Opens a handle that `own` then owns.")]
+    fn an_owned_handle_names_its_process() {
+        let rights = PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE;
+        // SAFETY: a plain call on our own id; the handle goes to `own`, which closes it.
+        let h = unsafe { OpenProcess(rights, false, std::process::id()) }.expect("opens");
+        // SAFETY: `h` is ours alone, and only `me` closes it.
+        let me = unsafe { Process::own(h) };
+        assert_eq!(me.pid(), std::process::id());
+        assert!(!me.ended());
     }
 
     #[test]

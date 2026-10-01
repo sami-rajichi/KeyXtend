@@ -1,13 +1,12 @@
-//! Starts a program through the shell: as administrator, where this PC shows no prompt, shown or hidden, or shown and
-//! kept to measure. Only the shell starts a uiAccess program for a caller without uiAccess.
+//! Starts a program through the shell: as administrator, where this PC shows no prompt, shown or hidden and kept, or
+//! shown and kept to measure. Only the shell starts a uiAccess program for a caller without uiAccess.
 #![cfg(windows)]
 
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
-use windows::Win32::Foundation::{CloseHandle, HANDLE};
-use windows::Win32::System::Threading::GetProcessId;
+use windows::Win32::Foundation::HANDLE;
 use windows::Win32::UI::Shell::{
     SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
     ShellExecuteExW,
@@ -65,41 +64,48 @@ fn wide(s: &OsStr) -> Vec<u16> {
 
 /// Starts `exe` with `args` as administrator and returns once it has started.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    as_admin(exe, args, SW_SHOWNORMAL)
-}
-
-/// Starts `exe` with `args` as administrator and no window, so it covers no key and takes no focus.
-pub fn run_as_hidden(exe: &Path, args: &[String]) -> Result<(), String> {
-    as_admin(exe, args, SW_HIDE)
-}
-
-/// Starts `exe` with `args` as administrator in window state `show`.
-fn as_admin(exe: &Path, args: &[String], show: SHOW_WINDOW_CMD) -> Result<(), String> {
-    let started = shell(exe, args, (RUN_AS, show, 0)).map(drop);
+    let started = shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)).map(drop);
     started.map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 
-/// Starts `exe` with `args`, shown without taking the focus, and opens its process to measure it.
+/// Starts `exe` with `args` as administrator and no window, so it covers no key and takes no focus; its process.
 #[allow(
     unsafe_code,
-    reason = "Reads the id of, then closes, the handle the shell gave."
+    reason = "Hands the shell's handle to the process that closes it."
 )]
-pub fn start_measured(exe: &Path, args: &[String]) -> Result<Process, String> {
-    let kept = (
+pub fn run_as_hidden(exe: &Path, args: &[String]) -> Result<Process, String> {
+    let hidden = (RUN_AS, SW_HIDE, SEE_MASK_NOCLOSEPROCESS);
+    let h = kept(exe, args, hidden)
+        .map_err(|e| format!("start {} as administrator: {e}", exe.display()))?;
+    // SAFETY: the shell gave `h` to us alone, and nothing else closes it.
+    Ok(unsafe { Process::own(h) })
+}
+
+/// Starts `exe` with `args`, shown without taking the focus; its process, with the handle the shell gave.
+#[allow(
+    unsafe_code,
+    reason = "Hands the shell's handle to the process that closes it."
+)]
+pub fn start_shown(exe: &Path, args: &[String]) -> Result<Process, String> {
+    let shown = (
         PCWSTR::null(),
         SW_SHOWNOACTIVATE,
         SEE_MASK_FLAG_NO_UI | SEE_MASK_NOCLOSEPROCESS,
     );
-    let shown = shell(exe, args, kept).map_err(|e| format!("start {}: {e}", exe.display()))?;
-    let Some(h) = shown.filter(|h| !h.is_invalid()) else {
-        return Err(format!("the shell gave no process for {}", exe.display()));
-    };
-    // SAFETY: `h` is the open handle the shell gave us; it is closed once, here.
-    let pid = unsafe { GetProcessId(h) };
-    let ours = Process::to_measure(pid);
-    // SAFETY: as above.
-    let _ = unsafe { CloseHandle(h) };
-    ours
+    let h = kept(exe, args, shown).map_err(|e| format!("start {}: {e}", exe.display()))?;
+    // SAFETY: the shell gave `h` to us alone, and nothing else closes it.
+    Ok(unsafe { Process::own(h) })
+}
+
+/// Starts `exe` with `args` through the shell with `how` (verb, window state, mask) and keeps the process it gives.
+fn kept(
+    exe: &Path,
+    args: &[String],
+    how: (PCWSTR, SHOW_WINDOW_CMD, u32),
+) -> Result<HANDLE, String> {
+    let shown = shell(exe, args, how).map_err(|e| e.to_string())?;
+    let gave = shown.filter(|h| !h.is_invalid());
+    gave.ok_or_else(|| "the shell gave no process".to_string())
 }
 
 /// Starts `exe` with `args` through the shell with a verb (null is the default), a window state and extra mask bits;

@@ -4,7 +4,7 @@
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value, json};
 use spike_core::weak::{Caps, Job};
@@ -13,6 +13,7 @@ use windows::Win32::System::Threading::GetCurrentProcess;
 use crate::apps::Ctx;
 use crate::budget;
 use crate::busbench::{self, BusTimes};
+use crate::g8frames::{self, Recorder};
 use crate::g8parts::{Measured, Outside, parts, verdict};
 use crate::g8ui;
 use crate::out::say;
@@ -25,7 +26,7 @@ use crate::{admin, close, g2, out};
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
 /// Weak mode cannot force software drawing: the app clears every Qt variable before Qt starts (kx-ui `harden`).
-const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mode caps cores, speed and memory \
+const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mode caps cores, CPU time and memory \
      only, so its best verdict is partial until the owner decides";
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
@@ -55,42 +56,40 @@ fn weak_job(ctx: &Ctx) -> Result<(Job, f64), String> {
     Ok((Job::new(Some(&caps))?, caps.cpu_cores(cpus)))
 }
 
-/// Puts `process`, just started, in `job`; a copy it cannot cap is asked to quit, so no uncapped copy stays.
-fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
-    job.assign_handle(process.handle()).map_err(|e| {
-        let left = match close::quit_started(ctx, process) {
-            Ok(true) => "it quit".to_string(),
-            Ok(false) => "it still runs; close it".to_string(),
-            Err(q) => format!("it still runs ({q}); close it"),
-        };
-        format!("{e}: the copy runs uncapped, so {left}")
-    })
+/// Asks the copy G8 just started, held as `process`, to quit; what is left of it, for the error.
+fn quit_left(ctx: &Ctx, process: &Process) -> String {
+    match close::quit_started(ctx, process) {
+        Ok(true) => "it quit".to_string(),
+        Ok(false) => "it still runs; close it".to_string(),
+        Err(q) => format!("it still runs ({q}); close it"),
+    }
 }
 
-/// Starts `[g8] presentmon_exe`, when named, as administrator to record the product's frames; else nothing.
-fn record_frames(ctx: &Ctx, program: &Path) -> Result<(), String> {
-    let g = &ctx.cfg.g8;
-    if g.presentmon_exe.is_empty() {
-        return Ok(());
-    }
-    let args = presentmon::args(
-        &exe_name(program),
-        &ctx.out.join(&g.presentmon),
-        g.presentmon_secs,
-    );
-    admin::run_as_hidden(&ctx.cfg.program(&g.presentmon_exe), &args)?;
-    sleep_ms(g.presentmon_wait_ms);
-    Ok(())
+/// Puts `process`, just started, in `job`; a copy it cannot cap is asked to quit, so no uncapped copy stays.
+fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
+    let uncapped = |e| {
+        format!(
+            "{e}: the copy runs uncapped, so {}",
+            quit_left(ctx, process)
+        )
+    };
+    job.assign_handle(process.handle()).map_err(uncapped)
 }
 
 /// Starts the product through the shell, in `job` when given, and waits for its first shown window.
-/// A copy it cannot open is asked to quit, so the next run still starts cold.
+/// A copy it cannot open gets Quit with the same tries, so the next run still starts cold.
 fn start(ctx: &Ctx, program: &Path, job: Option<&Job>) -> Result<Started, String> {
     let g = &ctx.cfg.g8;
     let (at_us, at) = (now_us(), Instant::now());
-    let process = admin::start_measured(program, &[]).inspect_err(|_| {
-        let _ = close::quit_running(ctx);
-    })?;
+    let given = admin::start_shown(program, &[])?;
+    // The shell's handle lacks the rights to measure, so the process is opened again.
+    let unmeasured = |e| {
+        format!(
+            "{e}: G8 cannot measure the copy, so {}",
+            quit_left(ctx, &given)
+        )
+    };
+    let process = Process::to_measure(given.pid()).map_err(unmeasured)?;
     if let Some(job) = job {
         cap(ctx, job, &process)?;
     }
@@ -174,36 +173,6 @@ fn bench(ctx: &Ctx, job: Option<Job>) -> Result<BusTimes, String> {
     busbench::time(ctx.cfg.g8.subscribers, ctx.cfg.g8.publishes)
 }
 
-/// The file name of `program`, which `PresentMon` matches its process by.
-fn exe_name(program: &Path) -> String {
-    program
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default()
-}
-
-/// `PresentMon`'s frames for `program`, from a CSV written since `since`; else how to get one.
-fn frames(ctx: &Ctx, program: &Path, since: SystemTime) -> Result<presentmon::Frames, String> {
-    let (g, file) = (&ctx.cfg.g8, ctx.out.join(&ctx.cfg.g8.presentmon));
-    let name = exe_name(program);
-    let fresh = std::fs::metadata(&file)
-        .and_then(|m| m.modified())
-        .is_ok_and(|t| t >= since);
-    if !fresh {
-        return Err(format!(
-            "no PresentMon CSV from this run; {}",
-            presentmon::how(&name, &file, g.presentmon_secs)
-        ));
-    }
-    // PresentMon, started just before G8, records `presentmon_secs`; read its CSV only once it has stopped.
-    let end = since + Duration::from_secs(g.presentmon_secs);
-    if let Ok(left) = end.duration_since(SystemTime::now()) {
-        std::thread::sleep(left);
-    }
-    let csv = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
-    presentmon::parse(&csv, &name)
-}
-
 /// `r` for the result line: its value, or its error.
 fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
     r.as_ref()
@@ -215,9 +184,10 @@ fn outside(
     ctx: &Ctx,
     job: Option<Job>,
     program: &Path,
-    since: SystemTime,
+    (since, rec): (SystemTime, Option<&Recorder>),
 ) -> (Outside, [Value; 2]) {
-    let (bus, frames) = (bench(ctx, job), frames(ctx, program, since));
+    let bus = bench(ctx, job);
+    let frames = g8frames::frames(ctx, program, since, rec);
     #[allow(
         clippy::cast_precision_loss,
         reason = "Frame counts are far below 2^53."
@@ -252,7 +222,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         (None, None)
     };
     let since = SystemTime::now();
-    record_frames(ctx, &program)?;
+    let rec = g8frames::record(ctx, &program)?;
     let s = start(ctx, &program, job.as_ref())?;
     say!(
         "G8 {name}: started {} (pid {}); shown after {:?} ms",
@@ -263,7 +233,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let measured = measure(ctx, &s, &program);
     let quit = close::quit_running(ctx).map(|(_, ended)| ended);
     let m = measured?;
-    let (o, [bus, frames]) = outside(ctx, job, &program, since);
+    let (o, [bus, frames]) = outside(ctx, job, &program, (since, rec.as_ref()));
     let parts = parts(&ctx.cfg.g8, s.shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();

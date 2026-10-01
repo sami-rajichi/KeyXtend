@@ -80,6 +80,22 @@ mod tests {
         }
     }
 
+    /// The CI workflow, whose G26 job prints the logs in the gates' out folder; a workspace path from this file.
+    const CI: &str = include_str!("../../../.github/workflows/ci.yml");
+    /// The G26 job's variable that names that folder.
+    const GATE_LOGS: &str = "GATE_LOGS: ";
+
+    #[test]
+    fn the_g26_job_prints_the_logs_of_the_gates_out_folder() {
+        let cfg = config::load().expect("kx-gates.toml loads");
+        let named = CI.lines().find_map(|l| l.trim().strip_prefix(GATE_LOGS));
+        let out = fold(&cfg.out_dir());
+        assert_eq!(repo_root().join(named.expect("the G26 job names it")), out);
+        let target = kx_target_window::config::load().expect("target config loads");
+        let log_dir = fold(target.log.parent().expect("a folder"));
+        assert_eq!(log_dir, out, "target-window's log is there too");
+    }
+
     #[test]
     fn the_crate_folder_is_used_when_no_file_sits_beside_the_exe() {
         assert_eq!(

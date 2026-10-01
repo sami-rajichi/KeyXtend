@@ -111,7 +111,7 @@ jobs:
     env:
       # An empty `data` folder beside the app (kx-platform `PORTABLE_DIR`) makes it portable, so it reads no user folder.
       DATA: target/debug/data
-      # The gates' out folder (kx-gates.toml `out`), which holds target-window's log (kx-target-window.toml `log`).
+      # The gates' out folder (kx-gates.toml `out`), which holds target-window's log; a kx-gates test pins both.
       GATE_LOGS: target/gate-logs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -143,12 +143,12 @@ jobs:
       - name: Close KeyXtend
         if: always()
         run: cargo run --locked -p kx-gates -- close keyxtend
-      # After a failure, the app's log (kx-settings `logs` in DATA), target-window's log and the result lines.
+      # After a failure or a timeout, the app's log (kx-settings `logs` in DATA), target-window's log and the results.
       - name: G26 logs
-        if: failure()
+        if: ${{ !success() }}
         run: |
           $logs = Get-ChildItem "$env:DATA/logs/*.log", "$env:GATE_LOGS/*.log", "$env:GATE_LOGS/*.jsonl" -ErrorAction SilentlyContinue
-          foreach ($f in $logs) { "== $($f.FullName)"; Get-Content $f }
+          foreach ($f in $logs) { "== $($f.FullName)"; Get-Content -LiteralPath $f.FullName }
 
   # Checks licences, bans and advisories against deny.toml, and scans for known vulnerabilities.
   supply-chain:

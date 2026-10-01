@@ -3,6 +3,7 @@
 #![cfg(windows)]
 
 use std::path::Path;
+use std::time::Duration;
 
 use serde::Serialize;
 
@@ -21,6 +22,15 @@ const WAS_DROPPED: &str = "1";
 const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
+/// Milliseconds in one second.
+const MS_PER_SEC: u64 = 1_000;
+
+/// How much longer to wait for a recording of `secs` seconds, plus `stop_ms` to stop, `gone` after it started.
+pub fn stop_wait(secs: u64, stop_ms: u64, gone: Duration) -> Duration {
+    let all = Duration::from_millis(secs.saturating_mul(MS_PER_SEC).saturating_add(stop_ms));
+    all.saturating_sub(gone)
+}
+
 /// `PresentMon`'s arguments that record `program`'s frames for `secs` seconds into CSV `file`, then stop.
 pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
     let file = file.display().to_string();
@@ -220,19 +230,20 @@ keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,16.1,6.06,1.0,6.06
         assert_eq!(got, want);
         let text = how("keyxtend.exe", file, 75);
         assert!(text.contains(&want.join(" ")), "{text}");
-        assert!(text.contains("presentmon_exe"), "names the setting");
+        for part in ["presentmon_exe", "administrator"] {
+            assert!(text.contains(part), "{part}: {text}");
+        }
     }
 
     #[test]
-    fn the_how_to_names_the_program_the_file_and_the_time() {
-        let text = how("keyxtend.exe", Path::new(r"C:\out\pm.csv"), 75);
-        for part in [
-            "--process_name keyxtend.exe",
-            r"--output_file C:\out\pm.csv",
-            "--timed 75",
-            "administrator",
-        ] {
-            assert!(text.contains(part), "{part}: {text}");
-        }
+    fn g8_waits_out_the_recording_and_its_stop_time_from_its_start() {
+        let gone = |s| Duration::from_secs(s);
+        assert_eq!(stop_wait(90, 15_000, gone(60)), gone(45));
+        assert_eq!(stop_wait(90, 0, gone(30)), gone(60), "no stop time");
+        assert_eq!(
+            stop_wait(90, 15_000, gone(200)),
+            Duration::ZERO,
+            "long done"
+        );
     }
 }

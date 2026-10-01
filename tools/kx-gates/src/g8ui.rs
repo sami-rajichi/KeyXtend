@@ -107,7 +107,9 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
 /// One of the top bar's size buttons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Size {
+    /// One size step bigger.
     Grow,
+    /// One size step smaller.
     Shrink,
 }
 
@@ -158,21 +160,64 @@ pub fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, size: Size) -> Result<Resi
     })
 }
 
-/// One grow, then the presses of `after_grow` back to the first size.
+/// The keyboard window's width, in px.
+pub fn width(hwnd: HWND) -> Result<i32, String> {
+    win::rect(hwnd).map(|r| r.right - r.left)
+}
+
+/// The button that sizes a keyboard `now` px wide back toward `first` px; none within `slack` px.
+pub fn mend(first: i32, now: i32, slack: i32) -> Option<Size> {
+    if (now - first).abs() <= slack {
+        None
+    } else if now > first {
+        Some(Size::Shrink)
+    } else {
+        Some(Size::Grow)
+    }
+}
+
+/// Sizes keyboard `hwnd` back toward `first` px wide when it is off by more than `[g8] resize_slack_px`; the press.
+pub fn size_back(
+    ctx: &Ctx,
+    reader: &Reader,
+    hwnd: HWND,
+    first: i32,
+) -> Result<Option<Resize>, String> {
+    match mend(first, width(hwnd)?, ctx.cfg.g8.resize_slack_px) {
+        Some(size) => resize(ctx, reader, hwnd, size).map(Some),
+        None => Ok(None),
+    }
+}
+
+/// One grow, then the presses of `after_grow` back to the first size, and one more if a press silently did nothing.
 pub fn resizes(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Resize>, String> {
-    let reader = Reader::new()?;
+    let (reader, first) = (Reader::new()?, width(hwnd)?);
     let grew = resize(ctx, &reader, hwnd, Size::Grow)?;
     let back = after_grow(grew.ms.is_some());
     let mut all = vec![grew];
     for &size in back {
         all.push(resize(ctx, &reader, hwnd, size)?);
     }
+    all.extend(size_back(ctx, &reader, hwnd, first)?);
     Ok(all)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Widths of the keyboard on this PC at 125 %, one size step apart, and a sample slack for DPI rounding.
+    const WIDTHS: [i32; 3] = [765, 850, 935];
+    const SLACK: i32 = 2;
+
+    #[test]
+    fn a_keyboard_off_its_first_width_is_sized_back_toward_it() {
+        let [small, first, big] = WIDTHS;
+        assert_eq!(mend(first, big, SLACK), Some(Size::Shrink));
+        assert_eq!(mend(first, small, SLACK), Some(Size::Grow));
+        assert_eq!(mend(first, first, SLACK), None);
+        assert_eq!(mend(first, first + 1, SLACK), None, "DPI rounding");
+    }
 
     #[test]
     fn a_grow_that_changed_nothing_is_undone_by_a_shrink_and_a_grow() {

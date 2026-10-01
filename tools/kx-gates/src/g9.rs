@@ -14,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::apps::{self, Ctx};
-use crate::g8ui::{self, Size, after_grow};
+use crate::g8ui::{self, Resize, Size, after_grow};
 use crate::g9win::{self, ex_of};
 use crate::keymap::Reader;
 use crate::launch;
@@ -49,20 +49,25 @@ fn missing(ex: u32, want: u32) -> Vec<&'static str> {
     FLAGS.iter().filter(lacks).map(|(name, _)| *name).collect()
 }
 
+/// The names of the flags in `ex` the guard must refuse: click-through on a window that took clicks at first.
+fn extra(ex: u32, first_ex: u32) -> Vec<&'static str> {
+    let refused = if is_through(first_ex) {
+        0
+    } else {
+        WS_EX_TRANSPARENT.0
+    };
+    let has = |&&(_, bit): &&(&str, u32)| refused & bit != 0 && ex & bit != 0;
+    FLAGS.iter().filter(has).map(|(name, _)| *name).collect()
+}
+
+/// True when at least one size press changed the keyboard's box.
+fn any_changed(presses: &[Resize]) -> bool {
+    presses.iter().any(|r| r.ms.is_some())
+}
+
 /// The presses and step names after a grow, as G8 sizes back.
 fn back(grew: bool) -> impl Iterator<Item = (Size, &'static str)> {
     after_grow(grew).iter().copied().zip(BACK)
-}
-
-/// The button that sizes a keyboard `now` px wide back toward `first` px; none within `slack` px.
-fn mend(first: i32, now: i32, slack: i32) -> Option<Size> {
-    if (now - first).abs() <= slack {
-        None
-    } else if now > first {
-        Some(Size::Shrink)
-    } else {
-        Some(Size::Grow)
-    }
 }
 
 /// One look at one product window after a step.
@@ -72,13 +77,16 @@ struct Seen {
     window: String,
     ex: String,
     missing: Vec<&'static str>,
+    extra: Vec<&'static str>,
     front_kept: bool,
 }
 
-/// True when every step saw at least one window, none lacked a flag, and the target stayed in front.
+/// True when every step saw at least one window, none lacked a flag or kept a refused one, and the target stayed in
+/// front.
 fn passed(seen: &[Seen], steps: &[&str]) -> bool {
     let looked = |s: &&str| seen.iter().any(|v| v.step == *s);
-    steps.iter().all(looked) && seen.iter().all(|v| v.missing.is_empty() && v.front_kept)
+    let kept = |v: &Seen| v.missing.is_empty() && v.extra.is_empty() && v.front_kept;
+    steps.iter().all(looked) && seen.iter().all(kept)
 }
 
 /// What G9 knows across steps: each window's first style, every look, and the keyboard's width before the grow.
@@ -103,24 +111,18 @@ impl Watch {
         product::shown().into_iter().filter(guarded).collect()
     }
 
-    /// The windows G9 checks that let clicks through when first seen; the guard refuses click-through on the others.
-    fn through(&mut self) -> Vec<HWND> {
-        let ours = self.ours();
-        let was = |w: &HWND| is_through(self.first[&win::key(*w)]);
-        ours.into_iter().filter(was).collect()
-    }
-
     /// Waits `[g9] settle_ms`, then looks at every window G9 checks after `step`.
     fn look(&mut self, ctx: &Ctx, step: &'static str) {
         sleep_ms(ctx.cfg.g9.settle_ms);
         let front_kept = foreground() == self.target;
         for w in self.ours() {
-            let ex = ex_of(w);
+            let (ex, first) = (ex_of(w), self.first[&win::key(w)]);
             self.seen.push(Seen {
                 step,
                 window: format!("{:#x} {}", win::key(w), win::class(w)),
                 ex: format!("{ex:#010x}"),
-                missing: missing(ex, wants(self.first[&win::key(w)])),
+                missing: missing(ex, wants(first)),
+                extra: extra(ex, first),
                 front_kept,
             });
         }
@@ -132,11 +134,6 @@ impl Watch {
     }
 }
 
-/// The keyboard window's width, in px.
-fn width(hwnd: HWND) -> Result<i32, String> {
-    win::rect(hwnd).map(|r| r.right - r.left)
-}
-
 /// What a step does before its look.
 enum Act<'a> {
     /// Nothing: the first look.
@@ -145,7 +142,7 @@ enum Act<'a> {
     DropTopmost,
     /// An outside program clears the guard's flags and click-through.
     StripFlags,
-    /// An outside program turns click-through back on, where it was.
+    /// An outside program turns click-through on everywhere: back on where it was, refused on the rest.
     ThroughOn,
     /// A top-bar button or the bubble is pressed, by UI Automation id.
     Press(&'a str),
@@ -164,16 +161,22 @@ fn plan<'a>(ctx: &'a Ctx) -> [(&'static str, Act<'a>); 6] {
     ]
 }
 
-/// Grows the keyboard and sizes it back as G8 does, with a look after each press.
+/// Grows the keyboard and sizes it back as G8 does, with a look after each press; an error when no press resized it.
 fn sizes(ctx: &Ctx, w: &mut Watch, reader: &Reader) -> Result<(), String> {
-    w.width = Some(width(w.keyboard)?);
+    w.width = Some(g8ui::width(w.keyboard)?);
     let grew = g8ui::resize(ctx, reader, w.keyboard, Size::Grow)?;
     w.look(ctx, GROW);
+    let mut presses = vec![];
     for (size, step) in back(grew.ms.is_some()) {
-        g8ui::resize(ctx, reader, w.keyboard, size)?;
+        presses.push(g8ui::resize(ctx, reader, w.keyboard, size)?);
         w.look(ctx, step);
     }
-    Ok(())
+    presses.push(grew);
+    if any_changed(&presses) {
+        Ok(())
+    } else {
+        Err("no size button changed the keyboard".to_string())
+    }
 }
 
 /// Runs every step on the shown product with target-window in front; a refused write breaks the run off.
@@ -184,7 +187,7 @@ fn steps(ctx: &Ctx, w: &mut Watch) -> Result<(), String> {
             Act::Nothing => {}
             Act::DropTopmost => g9win::drop_topmost(&w.ours())?,
             Act::StripFlags => g9win::strip_flags(&w.ours())?,
-            Act::ThroughOn => g9win::through_on(&w.through())?,
+            Act::ThroughOn => g9win::through_on(&w.ours())?,
             Act::Press(id) => product::invoke(&reader, id)?,
         }
         w.look(ctx, step);
@@ -192,7 +195,8 @@ fn steps(ctx: &Ctx, w: &mut Watch) -> Result<(), String> {
     sizes(ctx, w, &reader)
 }
 
-/// After a run that broke off, shows the keyboard again and sizes it back to its first width; best effort.
+/// After every run, shows the keyboard again if a run broke off while it was hidden, and sizes it back to its first
+/// width if a press went missing; best effort.
 fn undo(ctx: &Ctx, w: &Watch) {
     let Ok(reader) = Reader::new() else {
         return;
@@ -201,13 +205,8 @@ fn undo(ctx: &Ctx, w: &Watch) {
         let _ = product::invoke(&reader, &ctx.cfg.g9.bring_back);
         sleep_ms(ctx.cfg.g9.settle_ms);
     }
-    let now = width(w.keyboard).ok();
-    let size = w
-        .width
-        .zip(now)
-        .and_then(|(first, now)| mend(first, now, ctx.cfg.g9.slack_px));
-    if let Some(size) = size {
-        let _ = g8ui::resize(ctx, &reader, w.keyboard, size);
+    if let Some(first) = w.width {
+        let _ = g8ui::size_back(ctx, &reader, w.keyboard, first);
     }
 }
 
@@ -223,9 +222,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         width: None,
     };
     let ran = steps(ctx, &mut w);
-    if ran.is_err() {
-        undo(ctx, &w);
-    }
+    undo(ctx, &w);
     let repaired = g9win::repair(&w.first);
     let left_open = apps::clean_up(ctx, target);
     let mut names: Vec<&str> = plan(ctx).iter().map(|(step, _)| *step).collect();
