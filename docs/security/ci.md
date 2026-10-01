@@ -34,6 +34,7 @@
 - **Tampering:** a tampered Qt download or Python package. Mitigation: hash checks against Qt's server, pinned aqtinstall and py7zr, and check jobs that hold no secret and publish nothing.
 - **Logging / repudiation:** an unsigned commit on `main`. Mitigation: the `dco` job plus a branch ruleset block the merge.
 - **Information disclosure:** a pushed secret. Mitigation: GitHub push protection blocks the push before it lands, and the workflow token cannot read other repos or org secrets.
+  - A failed G26 run prints the app's log, target-window's log and the result lines. Mitigation: the app never logs typed text, and target-window holds only the gate's own test characters.
 - **Denial of service:** a burst of pushes queues many runs. Mitigation: a new push cancels the superseded pull-request run; the G26 job stops after 60 minutes, the Qt Quick step after 10, and the rest at GitHub's standard timeout.
 - **Elevation:** template injection through `${{ }}` inside a `run:` step. Mitigation: untrusted values are passed only through `env:`, never interpolated into `run:`.
 - **Tampering:** the G26 job runs pull-request code that adds languages to the runner, starts the debug app and moves the runner's mouse. Mitigation: the runner is thrown away after the job, which holds only the read-only token and no secret.
