@@ -231,7 +231,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let mut v = json!({
         "gate": "G9", "keyboard": name, "seen": w.seen, "put_back": repaired, "left_open": left_open, "pass": pass,
     });
-    // Only a run that broke off carries `error`.
+    // Only a run that broke off, or whose size step failed, carries `error`.
     if let Err(e) = ran {
         v["error"] = json!(e);
     }
