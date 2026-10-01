@@ -6,7 +6,7 @@ mod paint;
 pub use paint::{DIM, Paint, paint};
 
 use crate::geom::{Area, KeyBox, board};
-use crate::langkey::{LangView, lang_view};
+use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
 use crate::legend::{Legend, LegendMods, legend, mark_names, shown, typed};
 use crate::panel::{LangList, ListView, list_view};
@@ -261,11 +261,11 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
         Role::Caps => i.caps,
         _ => false,
     };
-    let lone = k.role == Role::Lang && i.list.len() <= 1;
+    let still = k.role == Role::Lang && lone(i.list.len());
     KeyState {
         on,
         paint: paint(k.kind, on),
-        tip: lone.then_some(LONE_TIP),
+        tip: still.then_some(LONE_TIP),
         ..KeyState::default()
     }
 }

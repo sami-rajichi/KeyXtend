@@ -101,9 +101,12 @@ impl Inner {
         self.ports.layouts.list().iter().map(|l| l.id).collect()
     }
 
-    /// A click on the language key: a step asks the app to switch, which a later refresh sees.
+    /// A click on the language key: a step asks the app to switch, which a later refresh sees; with one layout
+    /// installed it does nothing.
     pub(super) fn lang(&mut self, back: bool) -> FaceReply {
-        match click(self.settings.lang_key, back) {
+        let count = self.ports.layouts.list().len();
+        match click(self.settings.lang_key, back, count) {
+            LangClick::Still => FaceReply::default(),
             LangClick::Step(by) => match self.ports.layouts.step(by) {
                 Ok(()) => {
                     if self.settings.lang_key == LangKey::Carousel {

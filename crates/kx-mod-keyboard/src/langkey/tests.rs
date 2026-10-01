@@ -24,18 +24,35 @@ fn three() -> [LangLabel; 3] {
     ]
 }
 
+/// Three layouts, so every design has somewhere to go.
+const MANY: usize = 3;
+
 #[test]
 fn the_carousel_goes_back_on_its_back_part_and_on_elsewhere() {
-    assert_eq!(click(LangKey::Carousel, true), LangClick::Step(-1));
-    assert_eq!(click(LangKey::Carousel, false), LangClick::Step(1));
+    assert_eq!(click(LangKey::Carousel, true, MANY), LangClick::Step(-1));
+    assert_eq!(click(LangKey::Carousel, false, MANY), LangClick::Step(1));
 }
 
 #[test]
 fn the_cycle_always_steps_on_and_the_list_opens() {
-    assert_eq!(click(LangKey::Cycle, true), LangClick::Step(1));
-    assert_eq!(click(LangKey::Cycle, false), LangClick::Step(1));
-    assert_eq!(click(LangKey::List, true), LangClick::List);
-    assert_eq!(click(LangKey::List, false), LangClick::List);
+    assert_eq!(click(LangKey::Cycle, true, MANY), LangClick::Step(1));
+    assert_eq!(click(LangKey::Cycle, false, MANY), LangClick::Step(1));
+    assert_eq!(click(LangKey::List, true, MANY), LangClick::List);
+    assert_eq!(click(LangKey::List, false, MANY), LangClick::List);
+}
+
+#[test]
+fn with_one_layout_or_none_every_design_stays_still() {
+    for style in [LangKey::Carousel, LangKey::Cycle, LangKey::List] {
+        for (count, back) in [(0, false), (1, false), (1, true)] {
+            assert_eq!(
+                click(style, back, count),
+                LangClick::Still,
+                "{style:?} {count}"
+            );
+        }
+    }
+    assert!(lone(0) && lone(1) && !lone(2));
 }
 
 #[test]

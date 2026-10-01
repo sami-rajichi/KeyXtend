@@ -96,8 +96,12 @@ fn with_one_layout_the_language_key_stays_still_and_says_so() {
     for design in ["carousel", "cycle", "list"] {
         let r = Rig::new(&["ar-tn"], Some(("lang_key", design.into())));
         assert_eq!(r.state()["keys"]["lang"]["tip"], LONE_TIP, "{design}");
-        r.tap("lang").unwrap();
-        assert_eq!(r.shown(), "ع", "{design}: nothing switched");
+        assert_eq!(r.tap("lang"), Ok(FaceReply::default()), "{design}");
+        assert!(r.state()["list"].is_null(), "{design}: no list opens");
+        assert!(
+            r.fakes.layouts.asked().is_empty(),
+            "{design}: nothing asked"
+        );
     }
 }
 
