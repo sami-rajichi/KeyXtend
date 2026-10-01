@@ -20,7 +20,7 @@
 | The text of each click, built from the layout table | Sensitive (typed text) | Memory only, as `Redacted<String>`, until the injector takes it | No | One click |
 | The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
 
-Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. The debug output of a `Route` hides its keys and text, since a run of clicks would show what was typed.
+Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. The debug output of a `Route` hides its keys and text, and that of `Typing` its latches and dead-key wait, since a run of clicks would show what was typed.
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -47,4 +47,4 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 ### Should fix (tracked issue)
 - None.
 ### Accepted (with reason)
-- None.
+- **A front layout that is not installed:** the table shown stands, so a character key sent as a scan code types in the app's own layout and may not match its legend. Telling the user is later work; nothing is typed that the user did not click.

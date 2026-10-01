@@ -11,6 +11,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{ModuleCx, ServiceError};
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -89,12 +90,18 @@ impl Ports {
 }
 
 /// The typing state: the latched modifiers and a dead key's wait, over the board's keys and `key_apps`.
-#[derive(Debug)]
 pub struct Typing {
     keys: HashMap<String, (Role, Option<Scan>)>,
     apps: Vec<String>,
     latches: Latches,
     dead: bool,
+}
+
+/// Prints no field: the latches and a dead key's wait tell what the user is typing.
+impl fmt::Debug for Typing {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Typing").finish_non_exhaustive()
+    }
 }
 
 impl Typing {

@@ -227,3 +227,12 @@ fn stay_keeps_shift_for_every_letter_until_it_is_clicked_again() {
     r.char(0x10).unwrap();
     assert_eq!(r.sent(), [unicode("Q"), unicode("W"), unicode("q")]);
 }
+
+#[test]
+fn a_debug_print_shows_no_latch_dead_key_or_key_map() {
+    let mut r = Rig::new("fr-fr", |_| {});
+    r.char(0x1A).unwrap();
+    r.tap("shift").unwrap();
+    assert!(r.typing.waiting() && r.typing.latches().is_on(Latch::Shift));
+    assert_eq!(format!("{:?}", r.typing), "Typing { .. }");
+}

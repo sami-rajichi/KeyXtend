@@ -250,14 +250,20 @@ fn sculpted_caps_cannot_take_the_accent() {
 
 #[test]
 fn a_palette_without_plate_text_takes_legend_2() {
-    let gone = text().replacen(
-        "legend_2_plate = \"#5F5F5F\"
-",
-        "",
-        1,
+    let (shipped, _) = parse(&text()).expect("themes.toml parses");
+    let et66 = &shipped[1].light;
+    assert_ne!(
+        et66.legend_2_plate, et66.legend_2,
+        "ET66 light writes its own"
     );
+    let mut file: toml::Table = toml::from_str(&text()).expect("themes.toml parses");
+    let themes = file.get_mut("theme").and_then(toml::Value::as_array_mut);
+    let light = themes.and_then(|t| t[1].get_mut("light")?.as_table_mut());
+    let dropped = light.and_then(|l| l.remove("legend_2_plate"));
+    assert!(dropped.is_some(), "the token was there");
+    let gone = toml::to_string(&file).expect("the file writes back");
     let (themes, _) = parse(&gone).expect("the plate token is optional");
-    let p = &themes[0].light;
+    let p = &themes[1].light;
     assert_eq!(p.legend_2_plate, p.legend_2);
 }
 
@@ -265,10 +271,12 @@ fn a_palette_without_plate_text_takes_legend_2() {
 fn plate_text_is_written_only_where_it_differs() {
     let file: toml::Table = toml::from_str(&text()).expect("themes.toml parses");
     let themes = file["theme"].as_array().expect("a theme list");
+    let colour = |v: Option<&toml::Value>| v.and_then(toml::Value::as_str).map(Rgba::parse);
     for (t, mode) in themes.iter().flat_map(|t| Mode::ALL.map(|m| (t, m))) {
         let p = &t[mode.key()];
         if let Some(plate) = p.get("legend_2_plate") {
-            assert_ne!(Some(plate), p.get("legend_2"), "{}.{}", t["id"], mode.key());
+            let (plate, legend) = (colour(Some(plate)), colour(p.get("legend_2")));
+            assert_ne!(plate, legend, "{}.{}", t["id"], mode.key());
         }
     }
 }
