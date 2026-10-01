@@ -10,7 +10,7 @@ use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
     BANNER_MORE, BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODE, MODULE, OK,
     PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW,
-    WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE,
+    WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_TIP,
 };
 use std::collections::BTreeSet;
 
@@ -131,6 +131,7 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
         WINDOW_NOTICE,
         WINDOW_MENU,
         WINDOW_LIST,
+        WINDOW_TIP,
         CATCH,
     ]
     .map(str::to_owned);

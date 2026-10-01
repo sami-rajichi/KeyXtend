@@ -4,10 +4,12 @@ import QtQuick
 Window {
     id: bub
 
-    // The look, fonts, icons and texts, and how long the pointer rests before its tip shows.
+    // The look, fonts, icons and texts, how long the pointer rests before its tip shows, and how its tip lifts itself
+    // in front of our windows (`Tip.lift`).
     required property var lk
     required property var res
     required property int tipMs
+    required property var lift
 
     signal clicked
 
@@ -60,5 +62,6 @@ Window {
         lk: bub.lk
         res: bub.res
         ms: bub.tipMs
+        lift: bub.lift
     }
 }

@@ -75,6 +75,7 @@ QtObject {
             lk: face.lk
             res: face.res
             tipMs: face.cfg.tipMs
+            lift: t => app.keyboard.liftAlone(t)
             onClicked: {
                 trayMenu.shut();
                 app.open();

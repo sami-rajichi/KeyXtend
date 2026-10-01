@@ -57,6 +57,17 @@ Item {
         function item(app, key) {
             return named(app.menu.contentItem, Accessible.MenuItem, En.texts[key]);
         }
+        // Opens the List design's language list over the keyboard; answers the list once it shows.
+        function openList(app) {
+            app.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
+            app.keyboard.state = Face.states.list;
+            app.face.redraw(JSON.stringify({ board: true, state: true }));
+            const panel = () => [...app.face.data].find(o => o.item && o.item.win === app.face);
+            tryVerify(() => panel() && panel().item.visible, 2000, "the list shows");
+            const list = [...panel().item.data].find(o => o.view !== undefined);
+            tryVerify(() => list.visible, 2000);
+            return list;
+        }
 
         function test_a_pick_closes_the_menu_then_does_it() {
             const app = make();
@@ -107,17 +118,28 @@ Item {
 
         function test_a_press_on_the_language_list_closes_it() {
             const app = make();
-            app.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
-            app.keyboard.state = Face.states.list;
-            app.face.redraw(JSON.stringify({ board: true, state: true }));
-            const panel = () => [...app.face.data].find(o => o.item && o.item.win === app.face);
-            tryVerify(() => panel() && panel().item.visible, 2000, "the list shows");
-            const list = [...panel().item.data].find(o => o.view !== undefined);
-            tryVerify(() => list.visible, 2000);
+            const list = openList(app);
             open(app);
             waitForRendering(list.contentItem);
             mouseClick(all(list.contentItem, o => o.Accessible.role === Accessible.ListItem && !o.Accessible.ignored)[0]);
             verify(!app.menu.visible);
+        }
+
+        // The guard keeps a window topmost only when it starts so (kx-platform-windows `window`), so every window it
+        // covers asks Qt for it; Settings is spared.
+        function test_every_guarded_window_starts_on_top() {
+            const app = make();
+            const item = (w, ok) => [...w.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && ok(o));
+            const tip = w => item(w, o => o.hint && o.ms !== undefined);
+            const mover = item(app.face, o => o.mover).mover;
+            const wins = [
+                ["Bubble", app.bubble], ["Catch", item(mover, o => o.objectAt).objectAt(0)], ["Glow", app.kbGlow],
+                ["KbWindow", app.face], ["LangList", openList(app)], ["Notice", app.notice], ["Tip", tip(app.face)],
+                ["TrayMenu", app.menu], ["TrayPicture", app.trayPicture], ["the bubble's Glow", app.bubbleGlow],
+                ["the banner's Glow", app.noticeGlow], ["the menu's Glow", app.menuGlow], ["the bubble's Tip", tip(app.bubble)]
+            ];
+            for (const [kind, w] of wins)
+                verify(w && (w.flags & Qt.WindowStaysOnTopHint), kind + " starts on top");
         }
 
         function test_a_new_front_window_closes_it_after_the_grace() {

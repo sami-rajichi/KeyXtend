@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: tips in front of every window, and a steady guard test
+A tip now lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`, through the window guard port), so a top-bar tip no longer hides under the banner or the language list that the guard lifted after the keyboard; a native test shows the old bug and that the keyboard stays under the banner. Each tip now stays on the screen under its button, so a keyboard across two monitors keeps every tip by its key. The flaky guard test now starts its window topmost, as Qt makes ours: under load it failed 1958 of 3000 rounds before and 0 of 5000 after, and 2000 runs of the window tests passed. A Qt Quick test checks that every guarded window asks Qt to stay on top, a rule now in the guard's doc and `ARCHITECTURE.md`.
+
 ## 2026-10-01 — P3: the stage review fixes
 The stage check now lets only Qt Qml and Qt Quick import Qt's network library, takes only the reviewed Qt 6.11.2, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML. A stage that fails its copy or check is removed, and `dev-install` re-runs the check on an app folder before it signs anything. An agree test maps every QML import to a staged `qmldir`, and the dev shortcut must land inside the user's profile.
 

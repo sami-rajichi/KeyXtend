@@ -6,9 +6,10 @@ use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, 
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW,
-    GetWindowThreadProcessId, HWND_TOPMOST, MA_NOACTIVATE, RemovePropW, STYLESTRUCT,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetPropW, SetWindowLongPtrW, SetWindowPos, WINDOWPOS,
-    WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WNDPROC,
+    GetWindowThreadProcessId, HWND_TOPMOST, MA_NOACTIVATE, RemovePropW, SET_WINDOW_POS_FLAGS,
+    STYLESTRUCT, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SetPropW,
+    SetWindowLongPtrW, SetWindowPos, WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING,
+    WM_WINDOWPOSCHANGING, WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
@@ -106,10 +107,20 @@ fn add_kept(hwnd: HWND) {
     }
 }
 
-/// Lifts our window above every window that is not topmost, without moving or activating it.
-#[allow(unsafe_code, reason = "Changes our own window's z-order.")]
+/// Lifts our window, and the windows it owns, to the top of the topmost band.
 fn lift(hwnd: HWND) -> Result<(), UiError> {
-    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+    to_top(hwnd, SET_WINDOW_POS_FLAGS::default())
+}
+
+/// Lifts our window alone to the top of the topmost band, such as a tip as it shows; its owner stays where it is.
+pub(super) fn front(hwnd: HWND) -> Result<(), UiError> {
+    to_top(hwnd, SWP_NOOWNERZORDER)
+}
+
+/// Puts our window at the top of the topmost band with the `extra` flags, without moving or activating it.
+#[allow(unsafe_code, reason = "Changes our own window's z-order.")]
+fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
+    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | extra;
     // SAFETY: our own live window; no move, no size and no activation.
     unsafe { SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, flags) }.map_err(|e| refused(&e))
 }

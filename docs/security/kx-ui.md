@@ -10,7 +10,7 @@
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `KeyInjector`. | N/A |
 | `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). | The `ui` module fails and offers Try again; the rest keeps running. |
-| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard and window shape, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
+| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |

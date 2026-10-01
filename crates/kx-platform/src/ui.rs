@@ -62,6 +62,13 @@ pub trait WindowGuard: Send + Sync {
     /// `NoWindow` for an unknown title, `Refused` when the OS says no.
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError>;
 
+    /// Lifts our shown window titled `title` alone in front of our others, leaving its owner where it is, as a tip
+    /// does when it shows; a call for the UI thread.
+    ///
+    /// # Errors
+    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
+    fn lift_alone(&self, title: &str) -> Result<(), UiError>;
+
     /// Notes the window that has the focus now.
     fn remember(&self) -> FocusToken;
 

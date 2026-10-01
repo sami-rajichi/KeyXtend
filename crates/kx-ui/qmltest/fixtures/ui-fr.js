@@ -146,7 +146,8 @@ var texts = {
   "window.keyboard": "Clavier KeyXtend",
   "window.list": "Langues du clavier",
   "window.menu": "Menu de KeyXtend",
-  "window.notice": "Notification de KeyXtend"
+  "window.notice": "Notification de KeyXtend",
+  "window.tip": "Info-bulle de KeyXtend"
 };
 var more = [
   "",

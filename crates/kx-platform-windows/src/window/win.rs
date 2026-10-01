@@ -14,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::BOOL;
 
-use super::guard::guard;
+use super::guard::{front, guard};
 use super::{guard_order, ours_by, should_give_back, spared};
 use crate::screen::edges;
 use crate::{failed, refused};
@@ -33,6 +33,10 @@ impl WindowGuard for WinGuard {
 
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError> {
         shape(title, rects)
+    }
+
+    fn lift_alone(&self, title: &str) -> Result<(), UiError> {
+        lift_alone(title)
     }
 
     fn remember(&self) -> FocusToken {
@@ -166,6 +170,22 @@ pub fn guard_own(spare: Option<&str>, top: Option<&str>) -> Result<usize, UiErro
         guard(*hwnd)?;
     }
     Ok(order.len())
+}
+
+/// Lifts our shown windows titled `title` alone to the top of the topmost band, never activating them and leaving
+/// their owners where they are: the guard may have lifted a banner or the list after a tip's owner.
+///
+/// # Errors
+/// `NoWindow` while none shows, `Refused` when Windows says no.
+fn lift_alone(title_is: &str) -> Result<(), UiError> {
+    let named: Vec<HWND> = own_windows()
+        .into_iter()
+        .filter(|&w| title(w) == title_is)
+        .collect();
+    if named.is_empty() {
+        return Err(UiError::NoWindow);
+    }
+    named.into_iter().rev().try_for_each(front)
 }
 
 /// Cuts our window titled `title` to `rects` (physical pixels from its top-left corner), so clicks

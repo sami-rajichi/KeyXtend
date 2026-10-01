@@ -172,6 +172,21 @@ fn the_window_is_cut_to_its_boxes_rounded_outwards() {
 }
 
 #[test]
+fn a_shown_window_is_lifted_alone_by_its_title() {
+    let rig = Rig::new();
+    assert!(rig.hub.lift_alone("tip"));
+    assert!(
+        rig.guard
+            .calls()
+            .contains(&GuardCall::LiftAlone("tip".into()))
+    );
+    rig.guard.set_error(Some(UiError::NoWindow));
+    assert!(!rig.hub.lift_alone("tip"), "not shown");
+    rig.guard.set_error(Some(UiError::Refused(4)));
+    assert!(!rig.hub.lift_alone("tip"));
+}
+
+#[test]
 fn the_guard_tries_until_a_window_shows_then_gives_the_focus_back_once() {
     let rig = Rig::new();
     let tries = rig.hub.settings().guard_tries;

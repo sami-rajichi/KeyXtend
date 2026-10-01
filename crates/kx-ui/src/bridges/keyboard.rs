@@ -91,6 +91,10 @@ pub mod qobject {
         #[qinvokable]
         fn shape(&self, title: &QString, boxes: &QString, dpr: f64) -> bool;
 
+        /// Lifts our shown window `title` alone in front of our others, as a tip does; false until it shows.
+        #[qinvokable]
+        fn lift_alone(&self, title: &QString) -> bool;
+
         /// One guard try; true to try again after `guard_delay_ms`.
         #[qinvokable]
         fn guard(self: Pin<&mut Self>) -> bool;
@@ -229,6 +233,14 @@ impl qobject::Keyboard {
             .hub
             .as_deref()
             .is_some_and(|h| h.shape(&title, &boxes, dpr))
+    }
+
+    fn lift_alone(&self, title: &QString) -> bool {
+        let title = title.to_string();
+        self.rust()
+            .hub
+            .as_deref()
+            .is_some_and(|h| h.lift_alone(&title))
     }
 
     fn guard(self: Pin<&mut Self>) -> bool {

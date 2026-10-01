@@ -87,6 +87,7 @@ Window {
             lk: win.lk
             res: win.res
             ms: win.cfg.tipMs
+            lift: t => win.keyboard.liftAlone(t)
         }
     }
     // The List design's language list, while the state holds one; the list and its shadow stay above the keyboard.

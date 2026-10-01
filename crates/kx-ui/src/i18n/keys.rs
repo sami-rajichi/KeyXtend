@@ -46,6 +46,8 @@ pub const WINDOW_NOTICE: &str = "window.notice";
 pub const WINDOW_MENU: &str = "window.menu";
 /// The language list's title.
 pub const WINDOW_LIST: &str = "window.list";
+/// A tip's title, by which it lifts itself in front of our windows as it shows.
+pub const WINDOW_TIP: &str = "window.tip";
 /// How many more notices wait behind the one the banner shows: `$more`.
 pub const BANNER_MORE: &str = "banner.more";
 /// A pager's number: page `$at` of `$count`.

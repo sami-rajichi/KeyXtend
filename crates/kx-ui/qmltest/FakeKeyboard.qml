@@ -66,6 +66,10 @@ QtObject {
         note("shape " + title);
         return true;
     }
+    function liftAlone(title) {
+        note("liftAlone " + title);
+        return true;
+    }
     function guard() {
         note("guard");
         return false;

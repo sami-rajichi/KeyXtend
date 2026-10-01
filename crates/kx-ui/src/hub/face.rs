@@ -145,6 +145,16 @@ impl Hub {
         }
     }
 
+    /// Lifts our shown window `title` alone in front of our others, as a tip does when it shows; false when it is not
+    /// shown or was refused. Call it on the UI thread.
+    pub fn lift_alone(&self, title: &str) -> bool {
+        match self.ports.guard.lift_alone(title) {
+            Ok(()) => true,
+            Err(UiError::NoWindow) => false,
+            Err(e) => log("the window could not be lifted")(e),
+        }
+    }
+
     /// Guard try number `attempt` (from 1): true to try again after `[ui] guard_delay_ms`; once done, the focus
     /// goes back to the app the user had in front. Call it on the UI thread.
     pub fn guard(&self, attempt: u32) -> bool {

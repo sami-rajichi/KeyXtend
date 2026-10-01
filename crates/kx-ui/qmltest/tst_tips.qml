@@ -63,12 +63,17 @@ Item {
             compare(tipOf(app.bubble).ms, waitMs, "the bubble's wait too");
             return app;
         }
-        // The tip `tip` lies on the screen of the window that owns it.
+        // True when a `tip`-sized box at `p` lies on screen `sc`.
+        function inside(tip, p, sc) {
+            const inX = p.x >= sc.virtualX && p.x + tip.width <= sc.virtualX + sc.width;
+            return inX && p.y >= sc.virtualY && p.y + tip.height <= sc.virtualY + sc.height;
+        }
+        // The tip `tip` lies on the screen under its control.
         function onScreen(tip, at) {
-            const sc = tip.transientParent.screen;
-            const inX = tip.x >= sc.virtualX && tip.x + tip.width <= sc.virtualX + sc.width;
-            const inY = tip.y >= sc.virtualY && tip.y + tip.height <= sc.virtualY + sc.height;
-            verify(inX && inY, at + "on its window's screen: " + [tip.x, tip.y, tip.width, tip.height]);
+            const c = tip.at.mapToGlobal(tip.at.width / 2, 0);
+            const holds = sc => c.x >= sc.virtualX && c.x < sc.virtualX + sc.width && c.y >= sc.virtualY && c.y < sc.virtualY + sc.height;
+            const sc = Array.from(Qt.application.screens).find(holds);
+            verify(sc && inside(tip, tip, sc), at + "on its control's screen: " + [tip.x, tip.y, tip.width, tip.height]);
         }
         // The tip `tip` never takes focus, lets clicks through, and stays a tool-tip window: Qt gives a pop-up no owner.
         function isTip(tip, at) {
@@ -182,6 +187,20 @@ Item {
             isTip(shown(app), "the bubble's tip: ");
         }
 
+        // The guard may lift a banner or the list after the keyboard, so each tip lifts itself alone in front of our
+        // windows, by its title, once it shows (ADR-0013); the bubble's tip too.
+        function test_a_tip_lifts_itself_in_front_once_it_shows() {
+            const app = make();
+            const lifts = () => app.keyboard.calls.filter(c => c === "liftAlone " + En.texts["window.tip"]).length;
+            const bksp = named(app.face.contentItem, En.texts["key.bksp"]);
+            mouseMove(bksp, bksp.width / 2, bksp.height / 2);
+            compare(lifts(), 0, "not while it waits");
+            tryVerify(() => shown(app) !== null, 2000, "the key's tip shows");
+            compare(lifts(), 1, "the keyboard's tip, once shown");
+            bubbleTip(app);
+            compare(lifts(), 2, "the bubble's tip too");
+        }
+
         // A quick hand crosses several keys without resting: only the last one's tip shows, once, after the wait.
         function test_a_quick_sweep_shows_one_tip_over_the_last_key() {
             const app = make();
@@ -197,6 +216,20 @@ Item {
             compare(seen.count, 1, "it showed once");
             verify(tip.at === last.item, "over the last key");
             compare(tip.name, last.says, "with its text");
+        }
+
+        // A keyboard across two stand-in screens, the second a quarter lower: each tip stays on the screen under its
+        // button, and a button on no screen keeps it on its window's screen.
+        function test_a_tip_stays_on_the_screen_under_its_button() {
+            const app = make();
+            const tip = tipOf(app.face);
+            const a = tip.area;
+            const left = { virtualX: a.x, virtualY: a.y, width: a.width, height: a.height };
+            const right = { virtualX: a.x + a.width, virtualY: a.y + a.height / 4, width: a.width, height: a.height };
+            const spot = (x, y) => tip.spot(Qt.point(x, y), Qt.point(x, y + a.height / 20), [left, right]);
+            verify(inside(tip, spot(right.virtualX + 1, right.virtualY + 1), right), "at the right screen's top-left corner");
+            verify(inside(tip, spot(right.virtualX - 1, a.y + a.height / 2), left), "at the left screen's right edge");
+            verify(inside(tip, spot(a.x - 1, a.y + a.height / 2), left), "on no screen: its window's");
         }
 
         // A tip in the last language closes, the bubble's too, as the keyboard's language changes (ADR-0020).

@@ -146,7 +146,8 @@ var texts = {
   "window.keyboard": "لوحة مفاتيح KeyXtend",
   "window.list": "لغات لوحة المفاتيح",
   "window.menu": "قائمة KeyXtend",
-  "window.notice": "إشعار KeyXtend"
+  "window.notice": "إشعار KeyXtend",
+  "window.tip": "تلميح KeyXtend"
 };
 var more = [
   "",

@@ -61,6 +61,8 @@ pub enum GuardCall {
     GuardOwn(Option<String>),
     /// `shape(title, rects)`.
     Shape(String, Vec<Rect>),
+    /// `lift_alone(title)`.
+    LiftAlone(String),
     /// `remember`, with the token it gave.
     Remember(FocusToken),
     /// `give_back(token)`.
@@ -91,7 +93,7 @@ impl FakeWindowGuard {
         self.count.store(count, Ordering::SeqCst);
     }
 
-    /// Refuses later `guard_own` and `shape` calls with `error`, or takes them again with `None`.
+    /// Refuses later `guard_own`, `shape` and `lift_alone` calls with `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<UiError>) {
         *lock(&self.error) = error;
     }
@@ -117,6 +119,10 @@ impl WindowGuard for FakeWindowGuard {
 
     fn shape(&self, title: &str, rects: &[Rect]) -> Result<(), UiError> {
         self.record(GuardCall::Shape(title.to_owned(), rects.to_vec()))
+    }
+
+    fn lift_alone(&self, title: &str) -> Result<(), UiError> {
+        self.record(GuardCall::LiftAlone(title.to_owned()))
     }
 
     fn remember(&self) -> FocusToken {
@@ -203,6 +209,7 @@ mod tests {
         let rects = [area().rect];
         assert_eq!(fake.guard_own(Some(TITLE)), Ok(3));
         assert_eq!(fake.shape(TITLE, &rects), Ok(()));
+        assert_eq!(fake.lift_alone(TITLE), Ok(()));
         let first = fake.remember();
         let second = fake.remember();
         assert_ne!(first, second);
@@ -210,6 +217,7 @@ mod tests {
         let want = [
             GuardCall::GuardOwn(Some(TITLE.into())),
             GuardCall::Shape(TITLE.into(), rects.to_vec()),
+            GuardCall::LiftAlone(TITLE.into()),
             GuardCall::Remember(first),
             GuardCall::Remember(second),
             GuardCall::GiveBack(first),
@@ -224,6 +232,7 @@ mod tests {
         fake.set_error(Some(UiError::Refused(5)));
         assert_eq!(fake.guard_own(None), Err(UiError::Refused(5)));
         assert_eq!(fake.shape(TITLE, &[]), Err(UiError::Refused(5)));
+        assert_eq!(fake.lift_alone(TITLE), Err(UiError::Refused(5)));
         fake.set_error(None);
         fake.set_count(2);
         assert_eq!(fake.guard_own(None), Ok(2));

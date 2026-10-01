@@ -112,6 +112,7 @@ window =
     .notice = { -app } notice
     .menu = { -app } menu
     .list = Keyboard languages
+    .tip = { -app } tip
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing

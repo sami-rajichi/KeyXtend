@@ -12,19 +12,23 @@ Window {
     required property var lk
     required property var res
     required property int ms
+    // Lifts our shown window titled as given alone in front of our others: the guard may lift a banner or the list after
+    // the owner, and a hidden tip shows again below them.
+    required property var lift
 
     // The button under the pointer, and its name.
     property Item at: null
     property string name: ""
 
     readonly property var sh: lk.shape.tip
-    // Its owner's screen in Qt units, which it stays on; the bubble may sit on another screen than the keyboard.
+    // Its owner's screen in Qt units, for a button on no screen; the bubble may sit on another screen than the keyboard.
     readonly property rect area: {
         const sc = transientParent.screen;
         return Qt.rect(sc.virtualX, sc.virtualY, sc.width, sc.height);
     }
 
     flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
+    title: res.tr("window.tip")
     color: "transparent"
     visible: false
     width: label.implicitWidth + 2 * sh.pad_px[1]
@@ -45,13 +49,30 @@ Window {
             wait.start();
     }
 
-    // Centres it above the button, or below when the screen's top is too close, and keeps it on screen.
+    // Centres it above the button, or below when its screen's top is too close, and keeps it on that screen.
     function place() {
-        const top = at.mapToGlobal(at.width / 2, 0);
-        const bottom = at.mapToGlobal(at.width / 2, at.height);
+        const p = spot(at.mapToGlobal(at.width / 2, 0), at.mapToGlobal(at.width / 2, at.height), Qt.application.screens);
+        x = p.x;
+        y = p.y;
+    }
+    // Where it goes, in Qt units, for a button whose top and bottom centres are `top` and `bottom`: on the one of
+    // `screens` under the button, so a keyboard across two screens keeps each tip by its button.
+    function spot(top, bottom, screens) {
+        const a = boxOf(top, screens);
         const above = top.y - sh.gap_px - height;
-        x = Math.max(area.x, Math.min(top.x - width / 2, area.x + area.width - width));
-        y = above >= area.y ? above : bottom.y + sh.gap_px;
+        return {
+            x: Math.max(a.x, Math.min(top.x - width / 2, a.x + a.width - width)),
+            y: above >= a.y ? above : bottom.y + sh.gap_px
+        };
+    }
+    // The box of the one of `screens` holding Qt point `p`, or its owner's screen when none does.
+    function boxOf(p, screens) {
+        const holds = sc => {
+            const inX = p.x >= sc.virtualX && p.x < sc.virtualX + sc.width;
+            return inX && p.y >= sc.virtualY && p.y < sc.virtualY + sc.height;
+        };
+        const sc = Array.from(screens).find(holds);
+        return sc ? Qt.rect(sc.virtualX, sc.virtualY, sc.width, sc.height) : area;
     }
 
     Timer {
@@ -62,6 +83,8 @@ Window {
                 return;
             tip.place();
             tip.visible = true;
+            // Only a shown window is found by its title.
+            tip.lift(tip.title);
         }
     }
     Rectangle {

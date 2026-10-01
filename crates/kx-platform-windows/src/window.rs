@@ -1,5 +1,7 @@
 //! Our windows' guard: they stay on top and never take the focus, and clicks may pass through them.
 //! Which styles the guard keeps and in what order it guards are pure and tested everywhere; the OS calls are in `win`.
+//! Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`), as guarding a plain hidden window can leave
+//! it below the topmost band; Settings is spared.
 #![cfg_attr(
     not(windows),
     allow(

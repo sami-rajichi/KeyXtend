@@ -112,6 +112,7 @@ window =
     .notice = Notification de { -app }
     .menu = Menu de { -app }
     .list = Langues du clavier
+    .tip = Info-bulle de { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
