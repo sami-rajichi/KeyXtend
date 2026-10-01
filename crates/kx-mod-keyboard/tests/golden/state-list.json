@@ -18,7 +18,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "altgr": {
       "main": "",
@@ -34,7 +35,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "bksp": {
       "main": "",
@@ -50,7 +52,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0002": {
       "main": "&",
@@ -66,7 +69,8 @@
       "second": "1",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0003": {
       "main": "é",
@@ -82,7 +86,8 @@
       "second": "2",
       "second_ar": false,
       "third": "~",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0004": {
       "main": "\"",
@@ -98,7 +103,8 @@
       "second": "3",
       "second_ar": false,
       "third": "#",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0005": {
       "main": "'",
@@ -114,7 +120,8 @@
       "second": "4",
       "second_ar": false,
       "third": "{",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0006": {
       "main": "(",
@@ -130,7 +137,8 @@
       "second": "5",
       "second_ar": false,
       "third": "[",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0007": {
       "main": "-",
@@ -146,7 +154,8 @@
       "second": "6",
       "second_ar": false,
       "third": "|",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0008": {
       "main": "è",
@@ -162,7 +171,8 @@
       "second": "7",
       "second_ar": false,
       "third": "`",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0009": {
       "main": "_",
@@ -178,7 +188,8 @@
       "second": "8",
       "second_ar": false,
       "third": "\\",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x000A": {
       "main": "ç",
@@ -194,7 +205,8 @@
       "second": "9",
       "second_ar": false,
       "third": "^",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x000B": {
       "main": "à",
@@ -210,7 +222,8 @@
       "second": "0",
       "second_ar": false,
       "third": "@",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x000C": {
       "main": ")",
@@ -226,7 +239,8 @@
       "second": "°",
       "second_ar": false,
       "third": "]",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x000D": {
       "main": "=",
@@ -242,7 +256,8 @@
       "second": "+",
       "second_ar": false,
       "third": "}",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0010": {
       "main": "a",
@@ -258,7 +273,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0011": {
       "main": "z",
@@ -274,7 +290,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0012": {
       "main": "e",
@@ -290,7 +307,8 @@
       "second": "",
       "second_ar": false,
       "third": "€",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0013": {
       "main": "r",
@@ -306,7 +324,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0014": {
       "main": "t",
@@ -322,7 +341,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0015": {
       "main": "y",
@@ -338,7 +358,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0016": {
       "main": "u",
@@ -354,7 +375,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0017": {
       "main": "i",
@@ -370,7 +392,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0018": {
       "main": "o",
@@ -386,7 +409,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0019": {
       "main": "p",
@@ -402,7 +426,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x001A": {
       "main": "^",
@@ -418,7 +443,8 @@
       "second": "¨",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x001B": {
       "main": "$",
@@ -434,7 +460,8 @@
       "second": "£",
       "second_ar": false,
       "third": "¤",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x001E": {
       "main": "q",
@@ -450,7 +477,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x001F": {
       "main": "s",
@@ -466,7 +494,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0020": {
       "main": "d",
@@ -482,7 +511,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0021": {
       "main": "f",
@@ -498,7 +528,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0022": {
       "main": "g",
@@ -514,7 +545,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0023": {
       "main": "h",
@@ -530,7 +562,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0024": {
       "main": "j",
@@ -546,7 +579,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0025": {
       "main": "k",
@@ -562,7 +596,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0026": {
       "main": "l",
@@ -578,7 +613,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0027": {
       "main": "m",
@@ -594,7 +630,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0028": {
       "main": "ù",
@@ -610,7 +647,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0029": {
       "main": "²",
@@ -626,7 +664,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x002B": {
       "main": "*",
@@ -642,7 +681,8 @@
       "second": "µ",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x002C": {
       "main": "w",
@@ -658,7 +698,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x002D": {
       "main": "x",
@@ -674,7 +715,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x002E": {
       "main": "c",
@@ -690,7 +732,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x002F": {
       "main": "v",
@@ -706,7 +749,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0030": {
       "main": "b",
@@ -722,7 +766,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0031": {
       "main": "n",
@@ -738,7 +783,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0032": {
       "main": ",",
@@ -754,7 +800,8 @@
       "second": "?",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0033": {
       "main": ";",
@@ -770,7 +817,8 @@
       "second": ".",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0034": {
       "main": ":",
@@ -786,7 +834,8 @@
       "second": "/",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0035": {
       "main": "!",
@@ -802,7 +851,8 @@
       "second": "§",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "c-0x0056": {
       "main": "<",
@@ -818,7 +868,8 @@
       "second": ">",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "caps": {
       "main": "",
@@ -834,7 +885,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "clip": {
       "main": "",
@@ -850,7 +902,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "ctrl": {
       "main": "",
@@ -866,7 +919,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "del": {
       "main": "",
@@ -882,7 +936,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "down": {
       "main": "",
@@ -898,7 +953,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "enter": {
       "main": "",
@@ -914,7 +970,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "esc": {
       "main": "",
@@ -930,7 +987,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "fill": {
       "main": "",
@@ -946,7 +1004,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "grab": {
       "main": "",
@@ -962,7 +1021,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "lang": {
       "main": "",
@@ -978,7 +1038,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "left": {
       "main": "",
@@ -994,7 +1055,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "menu": {
       "main": "",
@@ -1010,7 +1072,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "mic": {
       "main": "",
@@ -1026,7 +1089,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "power": {
       "main": "",
@@ -1042,7 +1106,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "rclick": {
       "main": "",
@@ -1058,7 +1123,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "right": {
       "main": "",
@@ -1074,7 +1140,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "rshift": {
       "main": "",
@@ -1090,7 +1157,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "settings": {
       "main": "",
@@ -1106,7 +1174,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "shift": {
       "main": "",
@@ -1122,7 +1191,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "shortcuts": {
       "main": "",
@@ -1138,7 +1208,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "snip": {
       "main": "",
@@ -1154,7 +1225,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "space": {
       "main": "",
@@ -1170,7 +1242,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "tab": {
       "main": "",
@@ -1186,7 +1259,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "up": {
       "main": "",
@@ -1202,7 +1276,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     },
     "win": {
       "main": "",
@@ -1218,7 +1293,8 @@
       "second": "",
       "second_ar": false,
       "third": "",
-      "third_ar": false
+      "third_ar": false,
+      "tip": null
     }
   },
   "lang": {

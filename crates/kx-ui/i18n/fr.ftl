@@ -67,6 +67,7 @@ label =
 
 tip =
     .later = Disponible dans une version ultérieure
+    .one-lang = Une seule langue de clavier est installée
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =

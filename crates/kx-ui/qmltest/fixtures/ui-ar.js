@@ -149,6 +149,7 @@ var texts = {
   "theme.et66": "ET66",
   "theme.native": "الأصلي المتكيّف",
   "tip.later": "ستتوفّر هذه الميزة في إصدار لاحق",
+  "tip.one-lang": "لا توجد سوى لغة لوحة مفاتيح واحدة مثبّتة",
   "tray.quit": "إنهاء",
   "tray.show": "إظهار لوحة المفاتيح",
   "window.bubble": "لوحة مفاتيح KeyXtend (مصغّرة)",

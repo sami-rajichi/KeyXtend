@@ -1,11 +1,12 @@
-//! Every name, label and tip the board draws, every mark the face names, every module the app ships and the kernel,
-//! and every language-key design has its text in English, French and Arabic.
+//! Every name, label and tip the face draws, every mark it names, every module the app ships and the kernel, and
+//! every language-key design has its text in English, French and Arabic.
 
 use crate::fakes::{ports, tray};
 use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names};
+use kx_mod_keyboard::view::LONE_TIP;
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
@@ -21,8 +22,8 @@ fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
 }
 
 #[test]
-fn every_name_label_and_tip_the_board_draws_has_its_text() {
-    let mut wanted = BTreeSet::new();
+fn every_name_label_and_tip_the_face_draws_has_its_text() {
+    let mut wanted = BTreeSet::from([LONE_TIP.to_owned()]);
     for design in designs() {
         let view = board(design);
         for k in &view.keys {

@@ -195,6 +195,15 @@ fn dimmed_keys_paint_dim_and_named_keys_have_no_legend() {
 }
 
 #[test]
+fn with_one_layout_the_language_key_says_so_and_no_other_key_does() {
+    let s = state(&none(), false, None);
+    assert_eq!(s.lang.count, 1, "the case this test is for");
+    assert_eq!(s.keys["lang"].tip, Some(LONE_TIP));
+    let others = s.keys.iter().filter(|(id, _)| *id != "lang");
+    assert!(others.into_iter().all(|(_, k)| k.tip.is_none()));
+}
+
+#[test]
 fn the_list_shows_only_while_it_is_open() {
     assert!(state(&none(), false, None).list.is_none());
     let open = LangList::open(0);

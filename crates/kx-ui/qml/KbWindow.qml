@@ -124,8 +124,8 @@ Window {
             barId: id => "bar." + id,
             dpad: id => ui.nameOf("dpad", id),
             space: parts => ui.space(JSON.stringify(parts)),
-            // A dimmed button's tip: its name, then when it comes, on two lines.
-            dimTip: (name, later) => name + "\n" + later
+            // A tip with a note, such as when a dimmed button comes: its name, then the note, on two lines.
+            noteTip: (name, note) => name + "\n" + note
         };
     }
     // The Latin and Arabic families (each list's first that Qt has, else its last), and the keyboard's and tray's.

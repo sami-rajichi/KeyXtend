@@ -149,6 +149,7 @@ var texts = {
   "theme.et66": "ET66",
   "theme.native": "Natif adaptatif",
   "tip.later": "Disponible dans une version ultérieure",
+  "tip.one-lang": "Une seule langue de clavier est installée",
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "window.bubble": "Clavier KeyXtend (réduit)",

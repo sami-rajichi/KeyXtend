@@ -1,5 +1,5 @@
-// One key: its shadows, cap, inner shading, legends or icon, LED and pointer feedback. Readers hear its name, and a key
-// that comes in a later version is drawn dimmed, never presses and says so.
+// One key: its shadows, cap, inner shading, legends or icon, LED and pointer feedback. Readers hear its name and a note,
+// also in its tip: when a dimmed key, which never presses, comes, or that the language key has only one language.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
@@ -50,6 +50,9 @@ Item {
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
     readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
+    // What readers hear after its name, also in its tip: when a dimmed key comes, else the state's tip, such as a lone
+    // language key's.
+    readonly property string note: later || (ks && ks.tip ? res.tr(ks.tip) : "")
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
     // The recording glow runs.
@@ -64,7 +67,7 @@ Item {
     Accessible.name: key.name
     // UI Automation's id is the board id, which never changes with the language, the size or the top bar.
     Accessible.id: key.kv.id
-    Accessible.description: key.later
+    Accessible.description: key.note
     Accessible.checkable: !!kv.checkable
     Accessible.checked: key.on
     Accessible.onPressAction: if (!key.dim) key.hit(false)
@@ -204,7 +207,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         onContainsMouseChanged: {
-            const says = key.dim ? key.res.dimTip(key.name, key.later) : key.icon ? key.name : "";
+            const says = key.note ? key.res.noteTip(key.name, key.note) : key.icon ? key.name : "";
             if (says)
                 key.tip(containsMouse ? says : "", key);
         }

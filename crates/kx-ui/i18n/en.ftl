@@ -67,6 +67,7 @@ label =
 
 tip =
     .later = Coming in a later version
+    .one-lang = Only one keyboard language is installed
 
 ## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
 mark =

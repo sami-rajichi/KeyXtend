@@ -149,6 +149,7 @@ var texts = {
   "theme.et66": "ET66",
   "theme.native": "Native Adaptive",
   "tip.later": "Coming in a later version",
+  "tip.one-lang": "Only one keyboard language is installed",
   "tray.quit": "Quit",
   "tray.show": "Show keyboard",
   "window.bubble": "KeyXtend keyboard (minimised)",

@@ -25,6 +25,8 @@ pub const LABEL_PREFIX: &str = "label.";
 pub const ICON_PREFIX: &str = "keys.";
 /// The tip of every dimmed part: "Coming in a later version".
 pub const LATER_TIP: &str = "tip.later";
+/// The language key's tip while it has nothing to step to: "Only one keyboard language is installed".
+pub const LONE_TIP: &str = "tip.one-lang";
 /// The D-pad's name.
 pub const DPAD_NAME: &str = "key.dpad";
 /// The Cycle design's globe, by its `icons.toml` key.
@@ -113,6 +115,8 @@ pub struct KeyState {
     pub on: bool,
     /// Its colours now, by palette token.
     pub paint: Paint,
+    /// What it says after its name now, by translation key, shown in its tip; the language key's `LONE_TIP`.
+    pub tip: Option<&'static str>,
 }
 
 /// Everything that changes as keys are used.
@@ -231,7 +235,8 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
     }
 }
 
-/// Key `k`'s legends, light and paint with the legend modifiers `mods` on a layout written right to left when `rtl`.
+/// Key `k`'s legends, light, paint and tip with the legend modifiers `mods` on a layout written right to left when
+/// `rtl`; the language key says so when one layout, or none, is installed.
 fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> KeyState {
     if k.role == Role::Later {
         return KeyState {
@@ -248,6 +253,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             marks: mark_names(text),
             on: false,
             paint: paint(k.kind, false),
+            tip: None,
         };
     }
     let on = match k.role {
@@ -255,9 +261,11 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
         Role::Caps => i.caps,
         _ => false,
     };
+    let lone = k.role == Role::Lang && i.list.len() <= 1;
     KeyState {
         on,
         paint: paint(k.kind, on),
+        tip: lone.then_some(LONE_TIP),
         ..KeyState::default()
     }
 }

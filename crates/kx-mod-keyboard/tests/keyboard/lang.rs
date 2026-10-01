@@ -2,6 +2,7 @@
 
 use crate::host::{GOLDEN, id};
 use crate::rig::{Rig, STATE};
+use kx_mod_keyboard::view::LONE_TIP;
 use kx_module_api::keys;
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, SwitchError};
 use kx_platform_fake::Ask;
@@ -84,6 +85,17 @@ fn the_cycle_steps_on_wherever_it_is_clicked_and_lights_one_dot() {
             .unwrap()["icon"],
         "lang.cycle"
     );
+}
+
+#[test]
+fn with_one_layout_the_language_key_stays_still_and_says_so() {
+    assert!(Rig::new(&GOLDEN, None).state()["keys"]["lang"]["tip"].is_null());
+    for design in ["carousel", "cycle", "list"] {
+        let r = Rig::new(&["ar-tn"], Some(("lang_key", design.into())));
+        assert_eq!(r.state()["keys"]["lang"]["tip"], LONE_TIP, "{design}");
+        r.tap("lang").unwrap();
+        assert_eq!(r.shown(), "ع", "{design}: nothing switched");
+    }
 }
 
 #[test]

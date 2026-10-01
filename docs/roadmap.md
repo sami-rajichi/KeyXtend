@@ -144,7 +144,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
   - moving the keyboard off-screen stops at the screen edge;
   - a key click while a modifier is held in "Stay held" mode keeps it held;
   - a dead key, then Space, an unrelated letter or a language switch;
-  - only one layout installed: the language key stays still;
+  - only one layout installed: the language key stays still and says so;
   - a second launch shows the running keyboard, and `--quit` ends it;
   - a locked settings file; a log file that cannot open (the run logs to standard error and says so once);
   - a UI language other than EN, FR or AR falls back to English;

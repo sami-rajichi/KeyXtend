@@ -191,7 +191,7 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
   - **Carousel (default):** shows previous · current · next. Click the left third = previous, anywhere else = next. It swipes with animation.
   - **Cycle:** globe icon plus the current language and dots.
   - **List:** a popover listing all languages, one page of `[ui] page_rows` rows, driven by the keyboard's arrows, Enter and Esc.
-  - With one layout installed, the key shows only its name and a click changes nothing.
+  - With one layout installed, the key shows only its name, a click changes nothing, and its tip and screen-reader text say so.
 - Changing language switches our labels **and** asks the target window to switch too (`WM_INPUTLANGCHANGEREQUEST`), so the OS indicator and IMEs stay in sync.
 
 ### 4.4 Modifiers (osk.exe behaviour, decided in round 6)

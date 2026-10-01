@@ -28,7 +28,7 @@ Item {
         barId: id => "bar." + id,
         dpad: id => En.texts["dpad." + id],
         space: parts => parts.join(" · "),
-        dimTip: (name, later) => name + "\n" + later
+        noteTip: (name, note) => name + "\n" + note
     })
     // The bundled fonts loaded so far, from where the texts test lays them out.
     property int fontsIn: 0
@@ -208,7 +208,7 @@ Item {
             const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
             mouseMove(k, k.width / 2, k.height / 2);
             compare(spy.count, 1);
-            compare(spy.signalArguments[0][0], root.res.dimTip(En.texts["key.mic"], En.texts["tip.later"]));
+            compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.mic"], En.texts["tip.later"]));
         }
 
         function test_plate_icons_take_the_plate_text_colour() {

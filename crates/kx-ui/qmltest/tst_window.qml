@@ -234,6 +234,22 @@ Item {
             win.visible = false;
         }
 
+        // With one layout installed the language key stays still and says so: readers hear it after the name, and the
+        // Carousel, which has no icon and so no tip, shows it in one.
+        function test_a_lone_layout_makes_the_language_key_say_so() {
+            const st = Face.states.en;
+            const lang = Object.assign({}, st.lang, { prev: null, next: null, at: 0, count: 1 });
+            const keys = Object.assign({}, st.keys, { lang: Object.assign({}, st.keys.lang, { tip: "tip.one-lang" }) });
+            const win = make({}, { state: Object.assign({}, st, { lang: lang, keys: keys }) });
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const key = named(win, En.texts["key.lang"]);
+            compare(key.Accessible.description, En.texts["tip.one-lang"]);
+            mouseMove(key, key.width / 2, key.height / 2);
+            compare(tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
+            win.visible = false;
+        }
+
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {
             const ui = createTemporaryObject(uiC, root);
             const kb = createTemporaryObject(kbC, root, { board: null, state: null });
