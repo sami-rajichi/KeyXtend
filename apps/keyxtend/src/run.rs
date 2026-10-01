@@ -1,12 +1,12 @@
-//! The app's order of start and stop on Windows. Start: pinned library folders in release, the command line and the
-//! quiet hook, the one running copy (listening at once), the hub and the kernel, the log, the modules, the kernel's
-//! thread, then Qt, hardened first. Stop: Quit reaches the kernel's thread, which stops the modules and ends the UI;
-//! once Qt's loop returns, `drain::stop` removes the tray icon and joins the kernel's thread.
+//! The app's order of start and stop on Windows. Start: pinned library folders in the uiAccess build, the command line
+//! and the quiet hook, the one running copy (listening at once), the hub and the kernel, the log, the modules, the
+//! kernel's thread, then Qt, hardened first. Stop: Quit reaches the kernel's thread, which stops the modules and ends
+//! the UI; once Qt's loop returns, `drain::stop` removes the tray icon and joins the kernel's thread.
 
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::relay::Relay;
-use keyxtend::{args, drain, log, quiet};
+use keyxtend::{UI_ACCESS, args, drain, log, quiet};
 use kx_kernel::KernelSettings;
 use kx_platform::Platform;
 use kx_platform::ui::UiError;
@@ -20,13 +20,10 @@ use std::thread;
 
 /// The app's version, for the first log line.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-/// Release builds load libraries only from the app's folder and System32, and Qt's plugins and QML modules only from
-/// the app's folder; debug builds find the installed Qt through `PATH`.
-const PINNED: bool = !cfg!(debug_assertions);
 
 /// Runs the app to its end and says how it ended.
 pub fn main() -> ExitCode {
-    if let Err(e) = PINNED.then(dll::pin).transpose() {
+    if let Err(e) = UI_ACCESS.then(dll::pin).transpose() {
         return fail(&e);
     }
     let command = match args::parse(env::args_os().skip(1)) {
@@ -93,7 +90,7 @@ fn run(
         Ok(handle) => handle,
         Err(e) => return fail(&e),
     };
-    let pinned = PINNED.then(|| platform.dirs().exe_dir.as_path());
+    let pinned = UI_ACCESS.then(|| platform.dirs().exe_dir.as_path());
     crate::qt::run(pinned, || {
         let _ = drain::stop(&hub, kernel_thread);
     })

@@ -49,7 +49,8 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
 - **Elevation:**
   - The crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
-  - `harden_qt` clears every variable Qt reads before Qt starts and turns off Qt Quick's shader cache on disk, so another program of the user cannot load its plugin, QML module or cached shader into the uiAccess process. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's own functions.
+  - `harden_qt` keeps another program of the user from loading its plugin, QML module or cached shader into the uiAccess process. It clears every name with a Qt prefix from the C runtime's narrow copy of the environment, which is what Qt reads, so a name the code page narrows to a Qt one goes too, and turns off Qt Quick's shader cache on disk.
+  - It reads that copy without the runtime's lock, which is safe on Windows because no thread of the app writes it. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's and the C runtime's own functions.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

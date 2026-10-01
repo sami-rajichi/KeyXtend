@@ -2,11 +2,14 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: Qt's variables cleared by the names Qt reads
+Qt reads the C runtime's narrow copy of the environment, where the ANSI code page can turn a fullwidth `ＱＴ_` or a non-ASCII last letter into a plain Qt name, so such names could slip past the clearing. The app now clears every name with a Qt prefix in that copy, and its manifest names the UTF-8 code page outright, under which no name narrows to a Qt one; tests check both. One cfg from the build script, set with the manifest's uiAccess, now also turns on the pinned load paths and hides the console.
+
 ## 2026-10-01 — P3: the keyboard speaks the language of the layout in front
 The words on keys, tips, screen-reader names, the banner, the language list and the size letters now follow the language of the layout in front, so an English layout shows Esc and Del even on a French Windows; the tray icon and its menu keep the system's language. A layout language without texts gets English, and `[ui] language` can still pin one. Arabic now flips text only: no bar, list, banner or menu mirrors. ADR-0020 records the owner's decision and supersedes ADR-0017's language rule.
 
 ## 2026-10-01 — P3: the app's start hardened for uiAccess
-The app now clears every Qt variable before Qt starts and turns off Qt Quick's shader cache on disk, so no other program of the user can load code into the uiAccess process or leave a cache it reads. Release builds load libraries only from the app's folder and System32, and Qt's plugins and QML modules only from the app's folder. A later copy now honours the user's `[ui] send_tries` and `send_wait_ms` and runs itself when the running copy quits meanwhile, a failed boot is logged at the kernel's defaults, and a panic's place reaches standard error until the log opens.
+The app now clears Qt's variables before Qt starts and turns off Qt Quick's shader cache on disk, so no other program of the user can load code into the uiAccess process or leave a cache it reads. Release builds load libraries only from the app's folder and System32, and Qt's plugins and QML modules only from the app's folder. A later copy now honours the user's `[ui] send_tries` and `send_wait_ms` and runs itself when the running copy quits meanwhile, a failed boot is logged at the kernel's defaults, and a panic's place reaches standard error until the log opens.
 
 ## 2026-10-01 — P3: the first real app types
 `apps/keyxtend` now runs the kernel, the layouts, keyboard and UI modules and Qt over the Windows adapter, and types into other apps without taking focus. A second copy hands Show or Quit to the running one, with tries timed by the new `[ui] send_tries` and `send_wait_ms`, and stops when no copy answers. The log opens between the settings load and the modules' start, a panic logs only its place, and Quit stops the modules, ends the UI and removes the tray icon. Tests cover the start-to-stop order over fakes, the texts, icons, paints and scan codes the board needs, and that the language shown always matches the legends.

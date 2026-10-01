@@ -1,7 +1,7 @@
 //! The app's entry point on Windows: the command line, the one running copy, the log, the kernel with every module,
 //! then Qt's loop on this thread while the kernel drains the UI's requests on its own.
-// Release builds open no console window, which would take the foreground.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// The uiAccess build (`kx_ui_access`, from `build.rs`) opens no console window, which would take the foreground.
+#![cfg_attr(kx_ui_access, windows_subsystem = "windows")]
 #![forbid(unsafe_code)]
 
 #[cfg(windows)]

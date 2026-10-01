@@ -1,11 +1,6 @@
 use super::*;
 use proptest::prelude::*;
 
-/// `name` as an OS string.
-fn os(name: &str) -> OsString {
-    OsString::from(name)
-}
-
 #[test]
 fn qt_plugin_import_and_scene_graph_variables_are_qt_ones() {
     for name in [
@@ -17,14 +12,14 @@ fn qt_plugin_import_and_scene_graph_variables_are_qt_ones() {
         "QV4_FORCE_INTERPRETER",
         "QT_SCALE_FACTOR",
     ] {
-        assert!(is_qt(&os(name)), "{name}");
+        assert!(is_qt(name.as_bytes()), "{name}");
     }
 }
 
 #[test]
 fn case_does_not_matter_as_windows_ignores_it() {
     for name in ["qt_plugin_path", "Qml2_Import_Path", "qsg_info"] {
-        assert!(is_qt(&os(name)), "{name}");
+        assert!(is_qt(name.as_bytes()), "{name}");
     }
 }
 
@@ -40,30 +35,59 @@ fn other_variables_stay() {
         "KX_QT_X",
         "SystemRoot",
     ] {
-        assert!(!is_qt(&os(name)), "{name}");
+        assert!(!is_qt(name.as_bytes()), "{name}");
     }
 }
 
-#[cfg(windows)]
 #[test]
-fn a_name_that_is_not_unicode_is_not_one_qt_reads() {
-    use std::os::windows::ffi::OsStringExt;
-    let mut units: Vec<u16> = "QT_".encode_utf16().collect();
-    units.push(0xD800);
-    assert!(!is_qt(&OsString::from_wide(&units)));
+fn a_name_with_any_tail_after_its_prefix_is_a_qt_one() {
+    // A last letter the code page could not narrow, and a UTF-8 tail.
+    for name in [
+        &b"QT_PLUGIN_PAT\xC4"[..],
+        "QML2_IMPORT_PATĤ".as_bytes(),
+        b"QSG_\xFF",
+    ] {
+        assert!(is_qt(name), "{name:?}");
+    }
+}
+
+#[test]
+fn a_prefix_that_is_not_ascii_is_not_one() {
+    for name in ["ＱＴ_PLUGIN_PATH", "QṪ_PLUGIN_PATH"] {
+        assert!(!is_qt(name.as_bytes()), "{name}");
+    }
 }
 
 #[test]
 fn qt_names_keeps_only_qt_ones_in_order() {
-    let names = ["PATH", "QT_PLUGIN_PATH", "HOME", "qml2_import_path"].map(os);
-    assert_eq!(qt_names(names), ["QT_PLUGIN_PATH", "qml2_import_path"]);
+    let list = b"PATH\0QT_PLUGIN_PATH\0HOME\0qml2_import_path\0\0=C:\0";
+    let want: [&[u8]; 2] = [b"QT_PLUGIN_PATH", b"qml2_import_path"];
+    assert_eq!(qt_names(list), want);
 }
 
 proptest! {
     #[test]
-    fn a_name_is_qt_exactly_when_a_prefix_starts_it(name in "[A-Za-z0-9_]{0,12}") {
-        let upper = name.to_ascii_uppercase();
-        let want = QT_PREFIXES.iter().any(|p| upper.starts_with(p));
-        prop_assert_eq!(is_qt(&os(&name)), want);
+    fn a_prefix_in_either_case_with_any_tail_is_qt(
+        prefix in proptest::sample::select(QT_PREFIXES.to_vec()),
+        lower in any::<bool>(),
+        tail in proptest::collection::vec(any::<u8>(), 0..8),
+    ) {
+        let head = if lower { prefix.to_ascii_lowercase() } else { prefix.to_owned() };
+        prop_assert!(is_qt(&[head.as_bytes(), &tail].concat()));
+    }
+
+    #[test]
+    fn a_name_is_qt_exactly_when_a_prefix_starts_it(name in proptest::collection::vec(any::<u8>(), 0..12)) {
+        let starts = |p: &&str| name.len() >= p.len() && name[..p.len()].eq_ignore_ascii_case(p.as_bytes());
+        prop_assert_eq!(is_qt(&name), QT_PREFIXES.iter().any(starts));
+    }
+
+    #[test]
+    fn qt_names_never_holds_an_end_or_a_name_that_is_not_qt(
+        list in proptest::collection::vec(any::<u8>(), 0..64),
+    ) {
+        for name in qt_names(&list) {
+            prop_assert!(is_qt(name) && !name.contains(&NAME_END));
+        }
     }
 }

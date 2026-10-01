@@ -15,6 +15,12 @@ const CHILD: &str = "KX_HARDEN_CHILD";
 const PINNED: &str = "KX_HARDEN_PINNED";
 /// The variables the child starts with, one in lower case, as Windows ignores case.
 const PLANTED: [&str; 3] = ["QT_PLUGIN_PATH", "QML2_IMPORT_PATH", "qml_import_path"];
+/// Names the C runtime narrows to a Qt variable with the ANSI code page's best fit: a fullwidth `ＱＴ`, and a
+/// non-ASCII last letter. Each pairs the planted name with the name Qt then reads.
+const ALIASES: [(&str, &str); 2] = [
+    ("ＱＴ_KX_PROBE", "QT_KX_PROBE"),
+    ("QT_QPA_PLATFORM_PLUGIN_PATĤ", "QT_QPA_PLATFORM_PLUGIN_PATH"),
+];
 /// The variable naming Qt's `qmake`, two folders above Qt's own plugins.
 const QMAKE: &str = "QMAKE";
 /// Qt's plugin folder, and the platform plugin Qt needs to start, inside it.
@@ -55,7 +61,7 @@ fn parent() -> Outcome {
     std::fs::copy(from, pinned.path().join(folder).join(plugin)).map_err(|e| e.to_string())?;
     let mut run = Command::new(env::current_exe().map_err(|e| e.to_string())?);
     run.env(CHILD, planted.path()).env(PINNED, pinned.path());
-    for name in PLANTED {
+    for name in PLANTED.into_iter().chain(ALIASES.map(|(alias, _)| alias)) {
         run.env(name, planted.path());
     }
     let status = run.status().map_err(|e| e.to_string())?;
@@ -85,13 +91,26 @@ fn names(list: &QStringList, dir: &Path) -> bool {
     items(list).iter().any(|i| i.to_lowercase().contains(&dir))
 }
 
+/// Whether Qt sees each alias's narrow name set.
+fn seen() -> Vec<(&'static str, bool)> {
+    ALIASES
+        .map(|(_, name)| (name, kx_ui::qt_sees(name)))
+        .to_vec()
+}
+
 /// Clears Qt's variables, pins its plugins, starts Qt, and checks its plugin and import paths.
 fn child(planted: &Path, pinned: &Path) -> Outcome {
+    let before = seen();
     let cleared = kx_ui::harden_qt(Some(pinned));
+    let after = seen();
+    eprintln!("Qt's narrow view before harden_qt: {before:?}; after: {after:?}");
     if cleared < PLANTED.len() || PLANTED.iter().any(|v| env::var_os(v).is_some()) {
         return Err(format!(
             "{cleared} Qt variables were cleared, and some are still set"
         ));
+    }
+    if after.iter().any(|(_, set)| *set) {
+        return Err(format!("Qt still sees an alias: {after:?}"));
     }
     let app = QGuiApplication::new();
     let paths = app
