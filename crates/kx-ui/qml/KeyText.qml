@@ -40,6 +40,7 @@ Item {
     readonly property bool isCarousel: isLang && !isCycle && !isList
     readonly property bool mainAr: isChar && ks ? ks.main_ar : false
     readonly property bool secondAr: isChar && ks ? ks.second_ar : false
+    readonly property bool thirdAr: isChar && ks ? ks.third_ar : false
     readonly property real spacePx: lg.space_px[lang.cur.rtl ? 1 : 0] * s
     readonly property real mainPx: look.legend_px * s * (mainAr ? look.arabic_scale : 1)
     // The layout of the app in front.
@@ -106,6 +107,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.rightMargin: t.lg.corner_px[1] * t.s
         anchors.bottomMargin: t.lg.corner_px[0] * t.s + t.lift
+        ar: t.thirdAr
         text: t.ks ? t.ks.third : ""
         font.pixelSize: t.look.legend_px * t.lg.corner_scale[1] * t.s
         color: t.ink2

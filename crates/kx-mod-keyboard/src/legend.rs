@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
 
-/// Drawn before a lone Arabic mark so it has a base to sit on.
+/// Drawn before Arabic marks that have no letter before them, so they have a base to sit on.
 const DOTTED_CIRCLE: char = '\u{25CC}';
 /// Arabic harakat, from fathatan to sukun.
 const HARAKAT: RangeInclusive<char> = '\u{064B}'..='\u{0652}';
@@ -37,6 +37,37 @@ const MORE_MARKS: [RangeInclusive<char>; 7] = [
 #[must_use]
 pub fn is_mark(c: char) -> bool {
     is_haraka(c) || MORE_MARKS.iter().any(|r| r.contains(&c))
+}
+
+/// Starts a mark's name, a translation key such as `mark.fatha`.
+pub const MARK_PREFIX: &str = "mark.";
+
+/// Each haraka with its name's id after `MARK_PREFIX`, so readers can say a mark they cannot say bare.
+pub const HARAKA_NAMES: [(char, &str); 8] = [
+    ('\u{064B}', "fathatan"),
+    ('\u{064C}', "dammatan"),
+    ('\u{064D}', "kasratan"),
+    ('\u{064E}', "fatha"),
+    ('\u{064F}', "damma"),
+    ('\u{0650}', "kasra"),
+    ('\u{0651}', "shadda"),
+    ('\u{0652}', "sukun"),
+];
+
+/// The names of the marks `s` holds, by translation key; none unless `s` is only marks with a name.
+#[must_use]
+pub fn mark_names(s: &str) -> Vec<String> {
+    let name = |c: char| {
+        HARAKA_NAMES
+            .iter()
+            .find(|&&(h, _)| h == c)
+            .map(|&(_, id)| id)
+    };
+    let ids: Option<Vec<&str>> = s.chars().map(name).collect();
+    ids.unwrap_or_default()
+        .into_iter()
+        .map(|id| format!("{MARK_PREFIX}{id}"))
+        .collect()
 }
 
 /// The modifiers that change legends.
@@ -76,6 +107,8 @@ pub struct Legend {
     pub main_ar: bool,
     /// `second` needs the Arabic font.
     pub second_ar: bool,
+    /// `third` needs the Arabic font.
+    pub third_ar: bool,
 }
 
 /// The state key `k` is read in with `m`; a state that types nothing falls back to a simpler one.
@@ -107,12 +140,11 @@ pub fn is_arabic(s: &str) -> bool {
     s.chars().any(|c| ARABIC.contains(&c))
 }
 
-/// `s` as drawn: a lone haraka gets a dotted circle to sit on.
+/// `s` as drawn: marks with no letter before them, one or more, get a dotted circle to sit on.
 #[must_use]
 pub fn shown(s: &str) -> String {
-    let mut it = s.chars();
-    match (it.next(), it.next()) {
-        (Some(c), None) if is_haraka(c) => format!("{DOTTED_CIRCLE}{c}"),
+    match s.chars().next() {
+        Some(c) if is_mark(c) => format!("{DOTTED_CIRCLE}{s}"),
         _ => s.to_string(),
     }
 }
@@ -138,9 +170,10 @@ pub fn legend(k: &KeyChars, m: LegendMods, top_row: bool, rtl: bool) -> Legend {
     Legend {
         main: shown(main),
         second: shown(second),
-        third: third.to_string(),
+        third: shown(third),
         main_ar: is_arabic(main),
         second_ar: is_arabic(second),
+        third_ar: is_arabic(third),
     }
 }
 

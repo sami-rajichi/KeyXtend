@@ -8,9 +8,10 @@
 
 use crate::host::GOLDEN;
 use crate::rig::Rig;
+use kx_mod_keyboard::legend::is_mark;
 use kx_module_api::ports::{BASE_DPI, FaceAction, Rect, Screen};
 use kx_test_support::golden::assert_golden;
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::path::PathBuf;
 
 /// `json` laid out one value per line, keys sorted, so a change shows as a small diff.
@@ -73,6 +74,38 @@ fn the_arabic_state_matches_its_golden_file() {
         "the ISO key is on the board"
     );
     assert_golden(golden("state-ar.json"), &pretty(&r.face.state_json()));
+}
+
+/// The owner's Arabic (102) AZERTY puts shadda and a vowel on `AltGr`, which the latched legends show.
+#[test]
+fn the_arabic_altgr_state_matches_its_golden_file() {
+    let r = showing("ar-tn", None);
+    r.tap("altgr").unwrap();
+    let dad = &r.state()["keys"]["c-0x0010"];
+    assert_eq!(dad["main"], "\u{25CC}\u{651}\u{64E}", "shadda and fatha");
+    assert_eq!(dad["marks"], json!(["mark.shadda", "mark.fatha"]));
+    assert_golden(golden("state-ar-altgr.json"), &pretty(&r.face.state_json()));
+}
+
+/// The latches that change what Arabic keys show: none, Shift, `AltGr`, and both.
+const LATCHED: [&[&str]; 4] = [&[], &["shift"], &["altgr"], &["shift", "altgr"]];
+
+#[test]
+fn no_arabic_legend_or_name_starts_with_a_bare_mark() {
+    for latched in LATCHED {
+        let r = showing("ar-tn", None);
+        for id in latched {
+            r.tap(id).unwrap();
+        }
+        let state = r.state();
+        for (id, k) in state["keys"].as_object().unwrap() {
+            for part in ["main", "second", "third", "name"] {
+                let text = k[part].as_str().unwrap();
+                let bare = text.chars().next().is_some_and(is_mark);
+                assert!(!bare, "{latched:?} {id} {part}: {text:?}");
+            }
+        }
+    }
 }
 
 #[test]

@@ -68,6 +68,18 @@ label =
 tip =
     .later = Coming in a later version
 
+## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
+mark =
+    .fathatan = Fathatan
+    .dammatan = Dammatan
+    .kasratan = Kasratan
+    .fatha = Fatha
+    .damma = Damma
+    .kasra = Kasra
+    .shadda = Shadda
+    .sukun = Sukun
+    .join = {" with "}
+
 ## Top-bar buttons, the resize corner and the bubble, by icons.toml [bar] id.
 bar =
     .grip = Move the keyboard: click, move, click

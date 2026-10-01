@@ -68,6 +68,18 @@ label =
 tip =
     .later = Disponible dans une version ultérieure
 
+## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
+mark =
+    .fathatan = Tanwin fatha
+    .dammatan = Tanwin damma
+    .kasratan = Tanwin kasra
+    .fatha = Fatha
+    .damma = Damma
+    .kasra = Kasra
+    .shadda = Chadda
+    .sukun = Soukoun
+    .join = {" avec "}
+
 ## Boutons de la barre du haut, coin de redimensionnement et bulle, par identifiant [bar] d’icons.toml.
 bar =
     .grip = Déplacer le clavier : cliquez, déplacez, cliquez

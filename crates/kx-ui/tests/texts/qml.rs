@@ -19,7 +19,7 @@ const DIR: &str = "qmltest/fixtures";
 /// The keyboard's golden files, which pin the face's JSON.
 const FACE: &str = "../kx-mod-keyboard/tests/golden";
 /// The face's states the tests draw, by golden file name.
-const STATES: [&str; 4] = ["en", "fr", "ar", "list"];
+const STATES: [&str; 5] = ["en", "fr", "ar", "ar-altgr", "list"];
 /// The UI languages the tests draw.
 const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// Where the bundled files are laid out, from this crate; the Qt Quick tests read them from there.

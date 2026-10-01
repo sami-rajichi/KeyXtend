@@ -9,8 +9,9 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BANNER_MORE, BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MODE, MODULE, OK,
-    PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW,
+    BANNER_MORE, BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE,
+    MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME,
+    TRAY_QUIT, TRAY_SHOW,
 };
 use std::collections::BTreeSet;
 
@@ -81,6 +82,7 @@ fn every_notice_and_view_key_has_its_text() {
         PAGE_OF,
         PAGE_BACK,
         PAGE_ON,
+        MARK_JOIN,
     ];
     for t in all() {
         let missing: Vec<&str> = ALL_KEYS

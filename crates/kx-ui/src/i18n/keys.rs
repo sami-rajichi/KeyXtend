@@ -58,3 +58,5 @@ pub const PAGE_BACK: &str = "page.back";
 pub const PAGE_ON: &str = "page.on";
 /// What readers call the cover that ends a move or resize.
 pub const CATCH: &str = "catch";
+/// What links the names of Arabic marks typed together, which readers hear for a mark key (`Key.qml`).
+pub const MARK_JOIN: &str = "mark.join";

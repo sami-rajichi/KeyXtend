@@ -8,7 +8,7 @@ pub use paint::{DIM, Paint, paint};
 use crate::geom::{Area, KeyBox, board};
 use crate::langkey::{LangView, lang_view};
 use crate::latch::Latches;
-use crate::legend::{Legend, LegendMods, legend, typed};
+use crate::legend::{Legend, LegendMods, legend, mark_names, shown, typed};
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, KeyboardSettings, LangKey};
 use crate::sizer::Limits;
@@ -105,8 +105,10 @@ pub struct KeyState {
     /// Legends; empty for named keys.
     #[serde(flatten)]
     pub legend: Legend,
-    /// What a character key types now, for screen readers; empty for named keys.
+    /// What a character key types now, for screen readers, marks on a dotted circle; empty for named keys.
     pub name: String,
+    /// The names of the marks it types, by translation key, which readers hear instead of `name`; often none.
+    pub marks: Vec<String>,
     /// Latched, or Caps Lock while it is on.
     pub on: bool,
     /// Its colours now, by palette token.
@@ -239,9 +241,11 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
     }
     let chars = k.sc.filter(|_| k.role == Role::Char);
     if let Some(c) = chars.and_then(|sc| i.table.keys.get(&sc)) {
+        let text = typed(c, mods);
         return KeyState {
             legend: legend(c, mods, k.row == 0, rtl),
-            name: typed(c, mods).to_owned(),
+            name: shown(text),
+            marks: mark_names(text),
             on: false,
             paint: paint(k.kind, false),
         };

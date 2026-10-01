@@ -48,7 +48,7 @@ Item {
     // The icon file the theme gives this key; without one the key shows its label.
     readonly property string icon: iconOf(kv.icon)
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
-    readonly property string name: kv.name ? res.tr(kv.name) : (ks ? ks.name : "")
+    readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
@@ -69,6 +69,11 @@ Item {
     Accessible.checked: key.on
     Accessible.onPressAction: if (!key.dim) key.hit(false)
 
+    // What readers hear for a character key in state `st`: the names of the marks it types, which they cannot say bare,
+    // or else what it types.
+    function said(st) {
+        return st.marks.length > 0 ? st.marks.map(m => res.tr(m)).join(res.tr("mark.join")) : st.name;
+    }
     // The file name `icons.toml` gives for `path`, such as `keys.bksp`, or empty.
     function iconOf(path) {
         const [group, id] = path ? path.split(".") : [];

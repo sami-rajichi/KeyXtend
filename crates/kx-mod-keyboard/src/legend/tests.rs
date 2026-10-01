@@ -79,6 +79,57 @@ fn arabic_letters_show_the_shifted_form_only_on_the_top_row() {
 }
 
 #[test]
+fn any_mark_or_pair_of_marks_sits_on_a_dotted_circle() {
+    assert_eq!(
+        shown("\u{651}\u{64E}"),
+        "\u{25CC}\u{651}\u{64E}",
+        "shadda, fatha"
+    );
+    assert_eq!(shown("\u{653}"), "\u{25CC}\u{653}", "maddah, not a haraka");
+    assert_eq!(
+        shown("\u{628}\u{64E}"),
+        "\u{628}\u{64E}",
+        "a letter carries it"
+    );
+    assert_eq!(shown(""), "");
+}
+
+#[test]
+fn the_altgr_marks_sit_on_a_dotted_circle_in_the_arabic_font() {
+    // Arabic (102) AZERTY: shadda and a vowel on AltGr.
+    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
+    let l = legend(&dad, LegendMods::default(), false, true);
+    assert_eq!(l.third, "\u{25CC}\u{651}\u{64E}");
+    assert!(l.third_ar);
+    let l = legend(&dad, mods(false, false, true), false, true);
+    assert_eq!(l.main, "\u{25CC}\u{651}\u{64E}", "AltGr latched");
+    assert!(l.main_ar);
+    let euro = legend(&keys("e", "E", "€"), LegendMods::default(), false, false);
+    assert!(!euro.third_ar, "the euro keeps the Latin font");
+}
+
+#[test]
+fn readers_hear_marks_by_name_only_when_every_mark_has_one() {
+    assert_eq!(mark_names("\u{651}\u{64E}"), ["mark.shadda", "mark.fatha"]);
+    assert_eq!(mark_names("\u{64B}"), ["mark.fathatan"]);
+    assert!(mark_names("ض").is_empty(), "a letter says itself");
+    assert!(
+        mark_names("\u{628}\u{64E}").is_empty(),
+        "a letter with its mark"
+    );
+    assert!(mark_names("\u{653}").is_empty(), "a mark with no name");
+    assert!(mark_names("").is_empty());
+}
+
+#[test]
+fn every_haraka_has_its_own_name() {
+    let named: Vec<char> = HARAKA_NAMES.iter().map(|&(c, _)| c).collect();
+    assert_eq!(named, HARAKAT.collect::<Vec<char>>());
+    let ids: std::collections::BTreeSet<&str> = HARAKA_NAMES.iter().map(|&(_, id)| id).collect();
+    assert_eq!(ids.len(), HARAKA_NAMES.len());
+}
+
+#[test]
 fn caps_lock_gives_what_the_layout_gives() {
     // French AZERTY: Caps Lock turns the é key into 2, as Shift does.
     let e2 = KeyChars {

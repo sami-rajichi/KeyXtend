@@ -69,7 +69,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 `state_json()` changes as keys are used:
 
-- `keys` by id: `main second third main_ar second_ar name on paint`, where `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key).
+- `keys` by id: `main second third main_ar second_ar third_ar name marks on paint`. Marks with no letter before them sit on a dotted circle (◌) in every legend and in `name`. `marks` names the harakat a key types by translation key (`mark.fatha`), for readers; `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key).
 - `lang`: `prev`, `cur` and `next` as `{short rtl arabic}` (null when the neighbour is the current layout), `at` and `count` for the Cycle's dots, the space bar's `space` parts, and `turn` (-1, 0 or 1) for the Carousel's slide.
 - `list`: null, or `{rows, hi, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page_back` and `page_on` name the board keys with the moves `PAGE_BACK` and `PAGE_ON` (null when the board has none), which the list's page buttons send as `panel_key`; the UI dims a button on the first or last page.
 - `at`: null, or where the window goes in physical pixels.
@@ -95,7 +95,7 @@ The language key has three designs, by `lang_key`:
 
 A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
-The golden files in `tests/golden/` pin both JSONs for EN, FR, AR and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the QML fixtures (Task 17) are made from them.
+The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltGr` latched and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the QML fixtures (Task 17) are made from them.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -123,7 +123,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
 - `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec` (with `nav`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`).
-- `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `shown`, `is_arabic`, `is_haraka`, `is_mark`.
+- `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `shown`, `is_arabic`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.

@@ -7,6 +7,7 @@
     "alt": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -16,11 +17,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "altgr": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -30,11 +33,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "bksp": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -44,11 +49,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0002": {
       "main": "&",
       "main_ar": false,
+      "marks": [],
       "name": "&",
       "on": false,
       "paint": {
@@ -58,11 +65,13 @@
       },
       "second": "1",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0003": {
       "main": "é",
       "main_ar": false,
+      "marks": [],
       "name": "é",
       "on": false,
       "paint": {
@@ -72,11 +81,13 @@
       },
       "second": "2",
       "second_ar": false,
-      "third": "~"
+      "third": "~",
+      "third_ar": false
     },
     "c-0x0004": {
       "main": "\"",
       "main_ar": false,
+      "marks": [],
       "name": "\"",
       "on": false,
       "paint": {
@@ -86,11 +97,13 @@
       },
       "second": "3",
       "second_ar": false,
-      "third": "#"
+      "third": "#",
+      "third_ar": false
     },
     "c-0x0005": {
       "main": "'",
       "main_ar": false,
+      "marks": [],
       "name": "'",
       "on": false,
       "paint": {
@@ -100,11 +113,13 @@
       },
       "second": "4",
       "second_ar": false,
-      "third": "{"
+      "third": "{",
+      "third_ar": false
     },
     "c-0x0006": {
       "main": "(",
       "main_ar": false,
+      "marks": [],
       "name": "(",
       "on": false,
       "paint": {
@@ -114,11 +129,13 @@
       },
       "second": "5",
       "second_ar": false,
-      "third": "["
+      "third": "[",
+      "third_ar": false
     },
     "c-0x0007": {
       "main": "-",
       "main_ar": false,
+      "marks": [],
       "name": "-",
       "on": false,
       "paint": {
@@ -128,11 +145,13 @@
       },
       "second": "6",
       "second_ar": false,
-      "third": "|"
+      "third": "|",
+      "third_ar": false
     },
     "c-0x0008": {
       "main": "è",
       "main_ar": false,
+      "marks": [],
       "name": "è",
       "on": false,
       "paint": {
@@ -142,11 +161,13 @@
       },
       "second": "7",
       "second_ar": false,
-      "third": "`"
+      "third": "`",
+      "third_ar": false
     },
     "c-0x0009": {
       "main": "_",
       "main_ar": false,
+      "marks": [],
       "name": "_",
       "on": false,
       "paint": {
@@ -156,11 +177,13 @@
       },
       "second": "8",
       "second_ar": false,
-      "third": "\\"
+      "third": "\\",
+      "third_ar": false
     },
     "c-0x000A": {
       "main": "ç",
       "main_ar": false,
+      "marks": [],
       "name": "ç",
       "on": false,
       "paint": {
@@ -170,11 +193,13 @@
       },
       "second": "9",
       "second_ar": false,
-      "third": "^"
+      "third": "^",
+      "third_ar": false
     },
     "c-0x000B": {
       "main": "à",
       "main_ar": false,
+      "marks": [],
       "name": "à",
       "on": false,
       "paint": {
@@ -184,11 +209,13 @@
       },
       "second": "0",
       "second_ar": false,
-      "third": "@"
+      "third": "@",
+      "third_ar": false
     },
     "c-0x000C": {
       "main": ")",
       "main_ar": false,
+      "marks": [],
       "name": ")",
       "on": false,
       "paint": {
@@ -198,11 +225,13 @@
       },
       "second": "°",
       "second_ar": false,
-      "third": "]"
+      "third": "]",
+      "third_ar": false
     },
     "c-0x000D": {
       "main": "=",
       "main_ar": false,
+      "marks": [],
       "name": "=",
       "on": false,
       "paint": {
@@ -212,11 +241,13 @@
       },
       "second": "+",
       "second_ar": false,
-      "third": "}"
+      "third": "}",
+      "third_ar": false
     },
     "c-0x0010": {
       "main": "a",
       "main_ar": false,
+      "marks": [],
       "name": "a",
       "on": false,
       "paint": {
@@ -226,11 +257,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0011": {
       "main": "z",
       "main_ar": false,
+      "marks": [],
       "name": "z",
       "on": false,
       "paint": {
@@ -240,11 +273,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0012": {
       "main": "e",
       "main_ar": false,
+      "marks": [],
       "name": "e",
       "on": false,
       "paint": {
@@ -254,11 +289,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": "€"
+      "third": "€",
+      "third_ar": false
     },
     "c-0x0013": {
       "main": "r",
       "main_ar": false,
+      "marks": [],
       "name": "r",
       "on": false,
       "paint": {
@@ -268,11 +305,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0014": {
       "main": "t",
       "main_ar": false,
+      "marks": [],
       "name": "t",
       "on": false,
       "paint": {
@@ -282,11 +321,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0015": {
       "main": "y",
       "main_ar": false,
+      "marks": [],
       "name": "y",
       "on": false,
       "paint": {
@@ -296,11 +337,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0016": {
       "main": "u",
       "main_ar": false,
+      "marks": [],
       "name": "u",
       "on": false,
       "paint": {
@@ -310,11 +353,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0017": {
       "main": "i",
       "main_ar": false,
+      "marks": [],
       "name": "i",
       "on": false,
       "paint": {
@@ -324,11 +369,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0018": {
       "main": "o",
       "main_ar": false,
+      "marks": [],
       "name": "o",
       "on": false,
       "paint": {
@@ -338,11 +385,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0019": {
       "main": "p",
       "main_ar": false,
+      "marks": [],
       "name": "p",
       "on": false,
       "paint": {
@@ -352,11 +401,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x001A": {
       "main": "^",
       "main_ar": false,
+      "marks": [],
       "name": "^",
       "on": false,
       "paint": {
@@ -366,11 +417,13 @@
       },
       "second": "¨",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x001B": {
       "main": "$",
       "main_ar": false,
+      "marks": [],
       "name": "$",
       "on": false,
       "paint": {
@@ -380,11 +433,13 @@
       },
       "second": "£",
       "second_ar": false,
-      "third": "¤"
+      "third": "¤",
+      "third_ar": false
     },
     "c-0x001E": {
       "main": "q",
       "main_ar": false,
+      "marks": [],
       "name": "q",
       "on": false,
       "paint": {
@@ -394,11 +449,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x001F": {
       "main": "s",
       "main_ar": false,
+      "marks": [],
       "name": "s",
       "on": false,
       "paint": {
@@ -408,11 +465,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0020": {
       "main": "d",
       "main_ar": false,
+      "marks": [],
       "name": "d",
       "on": false,
       "paint": {
@@ -422,11 +481,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0021": {
       "main": "f",
       "main_ar": false,
+      "marks": [],
       "name": "f",
       "on": false,
       "paint": {
@@ -436,11 +497,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0022": {
       "main": "g",
       "main_ar": false,
+      "marks": [],
       "name": "g",
       "on": false,
       "paint": {
@@ -450,11 +513,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0023": {
       "main": "h",
       "main_ar": false,
+      "marks": [],
       "name": "h",
       "on": false,
       "paint": {
@@ -464,11 +529,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0024": {
       "main": "j",
       "main_ar": false,
+      "marks": [],
       "name": "j",
       "on": false,
       "paint": {
@@ -478,11 +545,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0025": {
       "main": "k",
       "main_ar": false,
+      "marks": [],
       "name": "k",
       "on": false,
       "paint": {
@@ -492,11 +561,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0026": {
       "main": "l",
       "main_ar": false,
+      "marks": [],
       "name": "l",
       "on": false,
       "paint": {
@@ -506,11 +577,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0027": {
       "main": "m",
       "main_ar": false,
+      "marks": [],
       "name": "m",
       "on": false,
       "paint": {
@@ -520,11 +593,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0028": {
       "main": "ù",
       "main_ar": false,
+      "marks": [],
       "name": "ù",
       "on": false,
       "paint": {
@@ -534,11 +609,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0029": {
       "main": "²",
       "main_ar": false,
+      "marks": [],
       "name": "²",
       "on": false,
       "paint": {
@@ -548,11 +625,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x002B": {
       "main": "*",
       "main_ar": false,
+      "marks": [],
       "name": "*",
       "on": false,
       "paint": {
@@ -562,11 +641,13 @@
       },
       "second": "µ",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x002C": {
       "main": "w",
       "main_ar": false,
+      "marks": [],
       "name": "w",
       "on": false,
       "paint": {
@@ -576,11 +657,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x002D": {
       "main": "x",
       "main_ar": false,
+      "marks": [],
       "name": "x",
       "on": false,
       "paint": {
@@ -590,11 +673,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x002E": {
       "main": "c",
       "main_ar": false,
+      "marks": [],
       "name": "c",
       "on": false,
       "paint": {
@@ -604,11 +689,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x002F": {
       "main": "v",
       "main_ar": false,
+      "marks": [],
       "name": "v",
       "on": false,
       "paint": {
@@ -618,11 +705,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0030": {
       "main": "b",
       "main_ar": false,
+      "marks": [],
       "name": "b",
       "on": false,
       "paint": {
@@ -632,11 +721,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0031": {
       "main": "n",
       "main_ar": false,
+      "marks": [],
       "name": "n",
       "on": false,
       "paint": {
@@ -646,11 +737,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0032": {
       "main": ",",
       "main_ar": false,
+      "marks": [],
       "name": ",",
       "on": false,
       "paint": {
@@ -660,11 +753,13 @@
       },
       "second": "?",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0033": {
       "main": ";",
       "main_ar": false,
+      "marks": [],
       "name": ";",
       "on": false,
       "paint": {
@@ -674,11 +769,13 @@
       },
       "second": ".",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0034": {
       "main": ":",
       "main_ar": false,
+      "marks": [],
       "name": ":",
       "on": false,
       "paint": {
@@ -688,11 +785,13 @@
       },
       "second": "/",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0035": {
       "main": "!",
       "main_ar": false,
+      "marks": [],
       "name": "!",
       "on": false,
       "paint": {
@@ -702,11 +801,13 @@
       },
       "second": "§",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "c-0x0056": {
       "main": "<",
       "main_ar": false,
+      "marks": [],
       "name": "<",
       "on": false,
       "paint": {
@@ -716,11 +817,13 @@
       },
       "second": ">",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "caps": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -730,11 +833,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "clip": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -744,11 +849,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "ctrl": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -758,11 +865,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "del": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -772,11 +881,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "down": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -786,11 +897,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "enter": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -800,11 +913,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "esc": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -814,11 +929,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "fill": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -828,11 +945,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "grab": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -842,11 +961,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "lang": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -856,11 +977,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "left": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -870,11 +993,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "menu": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -884,11 +1009,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "mic": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -898,11 +1025,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "power": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -912,11 +1041,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "rclick": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -926,11 +1057,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "right": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -940,11 +1073,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "rshift": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -954,11 +1089,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "settings": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -968,11 +1105,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "shift": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -982,11 +1121,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "shortcuts": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -996,11 +1137,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "snip": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -1010,11 +1153,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "space": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -1024,11 +1169,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "tab": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -1038,11 +1185,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "up": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -1052,11 +1201,13 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     },
     "win": {
       "main": "",
       "main_ar": false,
+      "marks": [],
       "name": "",
       "on": false,
       "paint": {
@@ -1066,7 +1217,8 @@
       },
       "second": "",
       "second_ar": false,
-      "third": ""
+      "third": "",
+      "third_ar": false
     }
   },
   "lang": {

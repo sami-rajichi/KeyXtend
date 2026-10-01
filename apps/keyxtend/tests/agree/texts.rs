@@ -1,10 +1,11 @@
-//! Every name, label and tip the board draws, every module the app ships and the kernel, and every language-key
-//! design has its text in English, French and Arabic.
+//! Every name, label and tip the board draws, every mark the face names, every module the app ships and the kernel,
+//! and every language-key design has its text in English, French and Arabic.
 
 use crate::fakes::{ports, tray};
 use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
+use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names};
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
@@ -35,6 +36,14 @@ fn every_name_label_and_tip_the_board_draws_has_its_text() {
         wanted.len() > LANGS.len(),
         "the board names its keys: {wanted:?}"
     );
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
+#[test]
+fn every_mark_the_face_names_has_its_text() {
+    let names = HARAKA_NAMES.map(|(c, _)| mark_names(&c.to_string()));
+    let wanted: BTreeSet<String> = names.into_iter().flatten().collect();
+    assert_eq!(wanted.len(), HARAKA_NAMES.len());
     assert_eq!(missing(&wanted), Vec::new());
 }
 
