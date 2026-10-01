@@ -111,10 +111,17 @@ fn the_step_and_the_relabel_time_are_above_zero() {
     assert!(unparsed(&with("relabel_ms", -1)));
 }
 
+/// The fastest relabel the settings take, in ms: an engineering bound, as a faster poll only costs CPU time.
+const FLOOR_MS: i64 = 50;
+
 #[test]
-fn the_relabel_time_has_a_ceiling() {
+fn the_relabel_time_has_a_floor_and_a_ceiling() {
+    let low = i64::try_from(*RELABEL_MS.start()).unwrap();
     let top = i64::try_from(*RELABEL_MS.end()).unwrap();
+    assert_eq!(low, FLOOR_MS);
     let relabel = |ms: i64| validate_as::<KeyboardSettings>(&with("relabel_ms", ms));
+    assert_eq!(relabel(low), Ok(()));
+    assert!(invalid(&with("relabel_ms", low - 1)));
     assert_eq!(relabel(top), Ok(()));
     assert!(invalid(&with("relabel_ms", top + 1)));
     assert!(

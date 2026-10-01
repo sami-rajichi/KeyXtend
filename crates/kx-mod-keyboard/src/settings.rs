@@ -8,8 +8,9 @@ use kx_module_api::ports::{MAX_PRESETS, Point};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
 
-/// How often the labels may follow the app in front, in ms; the ceiling keeps a hand-edited value from stalling them.
-pub(crate) const RELABEL_MS: RangeInclusive<u64> = 1..=10_000;
+/// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
+/// hand-edited value from stalling them.
+pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
 
 /// Why a size was refused: it is not a finite number.
 const NOT_A_NUMBER: &str = "sizes must be numbers";
