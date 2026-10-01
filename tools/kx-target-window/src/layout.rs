@@ -20,6 +20,9 @@ pub enum LayoutError {
     /// Windows did not switch to the layout; the previous one is already back.
     #[error("Windows did not switch to layout {0}")]
     Refused(LayoutId),
+    /// The previous layout did not come back at close, so the session still types in the switched one.
+    #[error("layout {0} did not come back")]
+    NotBack(LayoutId),
 }
 
 /// The layout named after switch `flag` in `args`; `None` when the switch is absent.
@@ -52,19 +55,28 @@ pub struct Restore(LayoutId);
 /// Switches to `id`; when the switch does not take, the previous layout is put back at once.
 ///
 /// # Errors
-/// `Refused` when Windows refused the switch or this thread's layout did not change.
+/// `Refused` when Windows refused the switch or this thread's layout did not change; `NotBack` when, after that, the
+/// previous layout did not come back either.
 pub fn switch(s: &impl Switcher, id: LayoutId) -> Result<Restore, LayoutError> {
     let back = Restore(s.activate(id).ok_or(LayoutError::Refused(id))?);
     if s.current() == id {
         return Ok(back);
     }
-    restore(s, back);
+    restore(s, back)?;
     Err(LayoutError::Refused(id))
 }
 
 /// Puts back the layout from before `switch`; call it while the window still has the keyboard.
-pub fn restore(s: &impl Switcher, Restore(previous): Restore) {
-    let _ = s.activate(previous);
+///
+/// # Errors
+/// `NotBack` when Windows refused it or this thread still types in another layout.
+pub fn restore(s: &impl Switcher, Restore(previous): Restore) -> Result<(), LayoutError> {
+    let taken = s.activate(previous).is_some() && s.current() == previous;
+    if taken {
+        Ok(())
+    } else {
+        Err(LayoutError::NotBack(previous))
+    }
 }
 
 #[cfg(test)]
@@ -179,7 +191,7 @@ mod tests {
         let fake = Fake::new(false, false);
         let back = switch(&fake, FR).expect("the switch takes");
         assert_eq!(fake.session.get(), FR);
-        restore(&fake, back);
+        assert_eq!(restore(&fake, back), Ok(()));
         assert_eq!(fake.session.get(), EN);
         assert_eq!(*fake.calls.borrow(), [FR, EN]);
     }
@@ -193,6 +205,18 @@ mod tests {
     }
 
     #[test]
+    fn a_switch_that_does_not_take_and_cannot_be_put_back_says_so() {
+        let fake = Fake::new(true, false);
+        fake.thread.set(LayoutId::new(0x0401_0401));
+        assert_eq!(
+            switch(&fake, FR),
+            Err(LayoutError::NotBack(EN)),
+            "the thread sits on a third layout"
+        );
+        assert_eq!(*fake.calls.borrow(), [FR, EN]);
+    }
+
+    #[test]
     fn a_refused_switch_changes_nothing_to_put_back() {
         let fake = Fake::new(false, true);
         assert_eq!(switch(&fake, FR), Err(LayoutError::Refused(FR)));
@@ -201,9 +225,28 @@ mod tests {
     }
 
     #[test]
+    fn a_previous_layout_that_does_not_come_back_is_reported() {
+        let fake = Fake::new(false, false);
+        let back = switch(&fake, FR).expect("the switch takes");
+        let deaf = Fake { deaf: true, ..fake };
+        assert_eq!(restore(&deaf, back), Err(LayoutError::NotBack(EN)));
+        let stuck = Fake::new(true, false);
+        stuck.thread.set(FR);
+        assert_eq!(
+            restore(&stuck, Restore(EN)),
+            Err(LayoutError::NotBack(EN)),
+            "the thread kept FR"
+        );
+    }
+
+    #[test]
     fn each_error_names_the_layout() {
         let id = LayoutId::new(0x0419_0419);
-        for err in [LayoutError::NotInstalled(id), LayoutError::Refused(id)] {
+        for err in [
+            LayoutError::NotInstalled(id),
+            LayoutError::Refused(id),
+            LayoutError::NotBack(id),
+        ] {
             assert!(err.to_string().contains("0x0000000004190419"), "{err}");
         }
     }

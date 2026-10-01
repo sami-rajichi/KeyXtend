@@ -6,6 +6,8 @@ pub const COMMENT: &str = "#";
 pub const START: &str = "# start";
 /// The text box lost the keyboard focus: `# focus-lost\t<µs>`.
 pub const FOCUS_LOST: &str = "# focus-lost";
+/// The layout from before `--layout` did not come back at close: `# layout-kept\t<µs>`.
+pub const LAYOUT_KEPT: &str = "# layout-kept";
 /// Field separator.
 pub const SEP: char = '\t';
 
@@ -93,5 +95,6 @@ mod tests {
         assert_eq!(data(12, 0x0644), "12\t0644");
         assert_eq!(mark(FOCUS_LOST, 7), "# focus-lost\t7");
         assert!(START.starts_with(COMMENT) && FOCUS_LOST.starts_with(COMMENT));
+        assert!(LAYOUT_KEPT.starts_with(COMMENT));
     }
 }

@@ -53,7 +53,8 @@ pub fn check(id: LayoutId) -> Result<(), LayoutError> {
 /// Switches to installed layout `id` once the window has the keyboard, and keeps the previous one for `undo`.
 ///
 /// # Errors
-/// `Refused` when the layout did not change; the previous one is already back then.
+/// `Refused` when the layout did not change, and the previous one is back; `NotBack` when it did not come back
+/// either. Either way the window never opens, so a gate fails at its start.
 pub fn apply(id: LayoutId) -> Result<(), LayoutError> {
     let back = layout::switch(&Win32, id)?;
     *BACK.lock().unwrap_or_else(PoisonError::into_inner) = Some(back);
@@ -61,11 +62,12 @@ pub fn apply(id: LayoutId) -> Result<(), LayoutError> {
 }
 
 /// Puts back the layout from before `apply`; the window calls it at close, while it still has the keyboard.
-pub fn undo() {
+///
+/// # Errors
+/// `NotBack` when the previous layout did not come back; nothing to put back is fine.
+pub fn undo() -> Result<(), LayoutError> {
     let back = BACK.lock().unwrap_or_else(PoisonError::into_inner).take();
-    if let Some(back) = back {
-        layout::restore(&Win32, back);
-    }
+    back.map_or(Ok(()), |back| layout::restore(&Win32, back))
 }
 
 #[cfg(test)]

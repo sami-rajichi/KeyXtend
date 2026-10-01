@@ -183,7 +183,9 @@ pub extern "system" fn main_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: L
         }
         WM_CLOSE => {
             // The layout goes back while the window still has the keyboard; then Windows destroys it.
-            switch::undo();
+            if switch::undo().is_err() {
+                log_line(&log::mark(log::LAYOUT_KEPT, now_us()));
+            }
             // SAFETY: the default handling of a message our own window received.
             unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
         }

@@ -12,6 +12,6 @@ width_px = 900
 height_px = 500
 # Switch that makes the box a single-line password box, where typed characters are never logged.
 password_arg = "--password"
-# Switch, followed by an installed layout id such as 0x00000000040C040C, that types into that layout.
-# Windows 8+ switches the whole session to it; the window puts the previous layout back when it closes.
+# Switch, followed by an installed layout id such as 0x00000000040C040C, that switches the whole session to it.
+# The window puts the previous layout back at close only while it holds the keyboard (ARCHITECTURE.md has the rest).
 layout_arg = "--layout"
