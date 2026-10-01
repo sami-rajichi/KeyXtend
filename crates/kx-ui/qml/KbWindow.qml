@@ -196,13 +196,11 @@ Window {
         if (visible && ready)
             keyboard.shape(title, JSON.stringify(boxes), Screen.devicePixelRatio);
     }
-    // Guards our shown windows, trying again after the delay while none shows yet; our window titled `top`, if given,
-    // lands in front. A shown tip hides first, as the guard would lift its window with it over a pop-up.
+    // Guards our shown windows (Guard); our window `top`, if given, lands in front until the run ends. A shown tip hides
+    // first, as the guard would lift its window with it over a pop-up.
     function guardRun(top) {
         hint("", null);
-        if (top)
-            guard.top = top;
-        guard.restart();
+        guard.run(top);
     }
 
     // Where the minimise bubble goes, in Qt units: a bottom corner of this window's screen; null when none is known.
@@ -249,25 +247,16 @@ Window {
         onTouched: win.touched()
     }
 
-    Timer {
+    Guard {
         id: guard
-        // The window to land in front, until the run ends.
-        property string top: ""
-        interval: win.cfg ? win.cfg.guardDelayMs : 0
-        onTriggered: {
-            const again = win.keyboard.guard(guard.top);
-            win.reshape();
-            win.frosted = win.ui.backdrop(win.title);
-            if (again)
-                restart();
-            else
-                guard.top = "";
-        }
+        win: win
     }
+    // The labels follow the layout in front, at once as the keyboard shows, since the timer rests while it is hidden.
     Timer {
         interval: win.ready ? win.board.relabel_ms : 0
         running: win.ready && win.visible
         repeat: true
+        triggeredOnStart: true
         onTriggered: win.redraw(win.keyboard.relabel())
     }
 }

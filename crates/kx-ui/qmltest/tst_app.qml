@@ -5,6 +5,7 @@ import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 
 Item {
     id: root
@@ -136,6 +137,42 @@ Item {
             tryVerify(() => ran(En.texts["window.notice"]), 2000, "the banner's run");
             open(app);
             tryVerify(() => ran(En.texts["window.menu"]), 2000, "the menu's run");
+        }
+
+        // The banner's guard run, its first try answering "try again", once the keyboard's own run has ended.
+        function bannerRun(app) {
+            tryVerify(() => app.keyboard.calls.indexOf("guard") >= 0, 2000, "the keyboard's run");
+            app.keyboard.again = 1;
+            app.keyboard.calls = [];
+            app.ui.notices = [{ id: 1, text: "Notice 1", retry: false }];
+            app.ui.noticesWaiting();
+            tryVerify(() => app.notice.visible, 2000, "the banner shows");
+        }
+        function tries(app) {
+            return app.keyboard.calls.filter(c => c.startsWith("guard"));
+        }
+
+        // A run started before the banner's ends keeps naming the banner until the run ends; the next run names none.
+        function test_the_pop_up_named_in_a_run_stays_named_until_it_ends() {
+            const app = make();
+            bannerRun(app);
+            app.face.guardRun();
+            tryVerify(() => tries(app).length === 2, 2000, "two tries");
+            const banner = "guard " + En.texts["window.notice"];
+            compare(tries(app), [banner, banner], "the banner stays named");
+            app.face.guardRun();
+            tryVerify(() => tries(app).length === 3, 2000);
+            compare(tries(app)[2], "guard", "the next run names none");
+        }
+
+        // Each try reads the pop-up's title, so a new keyboard language within the guard's delay still finds it.
+        function test_a_new_language_during_a_run_still_names_the_pop_up() {
+            const app = make();
+            bannerRun(app);
+            app.ui.lang = Fr.lang;
+            app.ui.texts = Fr.texts;
+            compare(app.notice.title, Fr.texts["window.notice"], "the banner's title follows");
+            tryVerify(() => tries(app).indexOf("guard " + Fr.texts["window.notice"]) >= 0, 2000, "a try names it in French");
         }
 
         function test_a_new_front_window_closes_it_after_the_grace() {

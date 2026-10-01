@@ -250,6 +250,18 @@ Item {
             win.visible = false;
         }
 
+        // The labels follow the layout in front as soon as the keyboard shows again, not one relabel period later.
+        function test_the_labels_follow_the_layout_at_once_each_time_the_keyboard_shows() {
+            const wait = 2000;
+            const win = make({}, { board: Object.assign({}, Face.board, { relabel_ms: 10 * wait }) });
+            const relabels = () => win.keyboard.calls.filter(c => c === "relabel").length;
+            for (const n of [1, 2]) {
+                win.visible = true;
+                tryVerify(() => relabels() === n, wait, "show " + n);
+                win.visible = false;
+            }
+        }
+
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {
             const ui = createTemporaryObject(uiC, root);
             const kb = createTemporaryObject(kbC, root, { board: null, state: null });

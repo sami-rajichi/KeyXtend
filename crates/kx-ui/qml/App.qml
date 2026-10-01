@@ -99,7 +99,7 @@ QtObject {
             s: face.s
             widest: face.running ? face.drawn.width : face.lk.shape.panel.width_px
             spot: (w, h) => face.spots.popSpot(w, h, NaN)
-            onShowing: on => app.shadow(app.noticeGlow, on, notice.title)
+            onShowing: on => app.shadow(app.noticeGlow, on, notice)
             onTouched: trayMenu.shut()
         }
     }
@@ -121,7 +121,7 @@ QtObject {
                 const p = JSON.parse(app.ui.menuAt(x, y, w, h));
                 return p ? face.spots.logical(p.x, p.y) : null;
             }
-            onShowing: on => app.shadow(app.menuGlow, on, trayMenu.title)
+            onShowing: on => app.shadow(app.menuGlow, on, trayMenu)
             onShowKeyboard: app.open()
             onQuitApp: app.ui.quit()
         }
@@ -147,8 +147,8 @@ QtObject {
         }
     }
 
-    // Shows or hides a pop-up's shadow with it. A pop-up titled `top` shows again where it was, so its guard run puts
-    // it in front; the bubble's tip hides first, as the keyboard's does.
+    // Shows or hides a pop-up's shadow with it. Pop-up window `top` shows again where it was, so its guard run puts it
+    // in front; the bubble's tip hides first, as the keyboard's does.
     function shadow(glow, on, top) {
         glow.visible = on;
         if (!on)

@@ -11,6 +11,8 @@ QtObject {
     property var calls: []
     // Where `bubbleAt` puts the bubble, in physical pixels, or null for nowhere.
     property var bubble: null
+    // How many more guard tries answer "try again", as when a window has not shown yet.
+    property int again: 0
 
     // A window titled `title` asked to be lifted alone, as the call runs.
     signal lifted(string title)
@@ -53,6 +55,7 @@ QtObject {
         return note("panelKey " + id);
     }
     function relabel() {
+        note("relabel");
         return JSON.stringify({ board: false, state: false });
     }
     function placed(x, y, w, h) {
@@ -76,6 +79,9 @@ QtObject {
     }
     function guard(top) {
         note(top ? "guard " + top : "guard");
-        return false;
+        if (again <= 0)
+            return false;
+        again--;
+        return true;
     }
 }
