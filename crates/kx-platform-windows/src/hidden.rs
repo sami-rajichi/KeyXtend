@@ -69,16 +69,26 @@ impl Hidden {
         })
     }
 
-    /// Ends the window and its thread and waits for it; from that thread itself it does not wait.
+    /// Ends the window and its thread, and waits for it as `waits` says.
     #[allow(unsafe_code, reason = "Posts a quit message to our own thread.")]
     pub(crate) fn stop(self) {
         self.stopping.store(true, Ordering::SeqCst);
         // SAFETY: posts WM_QUIT to our own window thread; a thread already gone just refuses it.
-        let _ = unsafe { PostThreadMessageW(self.thread, WM_QUIT, WPARAM(0), LPARAM(0)) };
-        if self.join.thread().id() != std::thread::current().id() {
+        let posted =
+            unsafe { PostThreadMessageW(self.thread, WM_QUIT, WPARAM(0), LPARAM(0)) }.is_ok();
+        if waits(
+            posted,
+            self.join.thread().id() == std::thread::current().id(),
+        ) {
             let _ = self.join.join();
         }
     }
+}
+
+/// Whether `stop` waits for the window's thread: only when its `WM_QUIT` was `posted`, so a full queue cannot hang
+/// quitting, and never from that thread itself (`own`).
+fn waits(posted: bool, own: bool) -> bool {
+    posted && !own
 }
 
 /// This thread's id.
@@ -145,7 +155,7 @@ pub(crate) unsafe extern "system" fn answer(
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
-/// Hears this thread's messages until `stop`, which sets `stopping`, posts its `WM_QUIT`, or an error.
+/// Hears this thread's messages until `stop`'s `WM_QUIT`, posted once `stopping` is set, or until `GetMessageW` fails.
 #[allow(unsafe_code, reason = "The standard message loop.")]
 fn pump(stopping: &AtomicBool) {
     let mut msg = MSG::default();
@@ -195,6 +205,13 @@ mod tests {
             !ends(1, false, true) && !ends(1, true, false),
             "any other message"
         );
+    }
+
+    #[test]
+    fn stop_waits_only_for_a_quit_it_posted_and_never_from_the_window_thread() {
+        assert!(waits(true, false), "a posted quit ends the loop");
+        assert!(!waits(false, false), "a full queue refused the quit");
+        assert!(!waits(true, true) && !waits(false, true), "its own thread");
     }
 
     #[test]

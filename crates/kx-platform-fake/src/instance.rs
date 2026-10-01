@@ -32,7 +32,7 @@ struct Session {
     listen_error: Option<UiError>,
 }
 
-/// The session, and the signal that hearing has stopped.
+/// The session, and its signal: hearing stopped, or a claim drop began to wait for it.
 #[derive(Default)]
 struct Shared {
     session: Mutex<Session>,

@@ -185,6 +185,21 @@ mod tests {
     }
 
     #[test]
+    fn a_fraction_that_rounds_past_the_range_or_is_not_a_number_is_refused() {
+        let json = |x: &str| serde_json::from_str::<Point>(&format!(r#"{{"x":{x},"y":0}}"#));
+        assert_eq!(
+            json("2147483647.4").ok().map(|p| p.x),
+            Some(i32::MAX),
+            "the edge"
+        );
+        assert!(json("2147483647.5").is_err() && json("-2147483648.5").is_err());
+        for x in ["nan", "inf", "-inf"] {
+            let read = toml::from_str::<Point>(&format!("x = {x}\ny = 0"));
+            assert!(read.is_err(), "{x}");
+        }
+    }
+
+    #[test]
     fn pixels_are_written_as_integers_and_read_from_toml() {
         let json = serde_json::to_string(&Point { x: -8, y: 40 }).unwrap();
         assert_eq!(json, r#"{"x":-8,"y":40}"#);

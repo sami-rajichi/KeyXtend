@@ -171,6 +171,9 @@ mod tests {
 
     /// Arabic (102) AZERTY on Arabic (Tunisia): a variant, sign-extended in a 64-bit handle.
     const AR_102: LayoutId = LayoutId::new(0xFFFF_FFFF_F029_1C01);
+    /// US English and French AZERTY, the other golden layouts.
+    const EN_US: LayoutId = LayoutId::new(0x0409_0409);
+    const FR_FR: LayoutId = LayoutId::new(0x040C_040C);
     /// A layout id no Windows installs.
     const NONE: LayoutId = LayoutId::new(0x7FFF_0000_0000_0000);
     /// Space, Enter and Tab type something; Left and Delete (extended) type nothing.
@@ -178,8 +181,8 @@ mod tests {
     const SILENT: [u16; 2] = [0xE04B, 0xE053];
     /// The top letter row: Q to P on US English, A to P on French AZERTY, ض to ح on Arabic.
     const TOP_ROW: [u16; 10] = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19];
-    /// Languages with golden tables, whose top row is all letters; Greek and Hebrew put signs there.
-    const LETTER_LANGS: [&str; 3] = ["en", "fr", "ar"];
+    /// The layouts with golden tables, whose top row is all letters; Dvorak, Greek and Hebrew put signs there.
+    const GOLDEN: [LayoutId; 3] = [EN_US, FR_FR, AR_102];
 
     #[test]
     fn ids_and_handles_round_trip_with_sign_extension() {
@@ -194,9 +197,8 @@ mod tests {
         assert!(!list.is_empty());
         let mut checked = 0;
         for layout in list {
-            let iso = WinLayouts.facts(layout).iso;
-            assert!(!iso.is_empty(), "{layout}");
-            if !LETTER_LANGS.contains(&iso.as_str()) {
+            assert!(!WinLayouts.facts(layout).iso.is_empty(), "{layout}");
+            if !GOLDEN.contains(&layout) {
                 continue;
             }
             let keys = WinLayouts.keys(layout, &TOP_ROW.map(Scan::new));
@@ -206,7 +208,7 @@ mod tests {
             );
             checked += 1;
         }
-        assert!(checked > 0, "no English, French or Arabic layout installed");
+        assert!(checked > 0, "no golden layout installed");
     }
 
     fn is_letter(text: &str) -> bool {

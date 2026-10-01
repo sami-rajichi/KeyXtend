@@ -49,6 +49,7 @@ pub trait Layouts: Send + Sync {
 
     /// Asks the app in front to switch `by` places along the list from the shown layout, as `step_to` counts.
     /// It only asks: `current` changes when a later `refresh` sees the app switch, which may never happen.
+    /// A step that lands on the shown layout, such as `by` 0 or a lone layout, asks nothing and returns `Ok`.
     ///
     /// # Errors
     /// The `SwitchError` of the request; the current table stays.
