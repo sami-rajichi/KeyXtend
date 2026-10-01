@@ -124,7 +124,8 @@ pub(crate) fn devtools_json() -> serde_json::Value {
         "start_menu_env": "APPDATA",
         "start_menu_dir": "Microsoft/Windows/Start Menu/Programs",
         "shortcut": "KeyXtend (dev).lnk",
-        "shortcut_script": "dev-shortcut.ps1"
+        "shortcut_script": "dev-shortcut.ps1",
+        "profile_env": "USERPROFILE"
     })
 }
 
@@ -140,11 +141,13 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "out_dir": "target/stage",
         "max_mb": 80,
         "qmake_env": "QMAKE",
+        "qt_version": "6.11.2",
         "libs": ["Qt6Core.dll", "Qt6Qml.dll", "Qt6Network.dll"],
         "plugins": ["platforms/qwindows.dll"],
         "qml": ["QtQuick/qmldir", "QtQuick/qtquick2plugin.dll"],
         "qml_dir": "qml",
         "banned": ["tls", "networkinformation", "qmltooling"],
+        "network": { "lib": "Qt6Network.dll", "by": ["Qt6Qml.dll", "Qt6Quick.dll"] },
         "api_sets": ["api-ms-", "ext-ms-"],
         "system_dir": "System32"
     })

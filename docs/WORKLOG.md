@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: the stage review fixes
+The stage check now lets only Qt Qml and Qt Quick import Qt's network library, takes only the reviewed Qt 6.11.2, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML. A stage that fails its copy or check is removed, and `dev-install` re-runs the check on an app folder before it signs anything. An agree test maps every QML import to a staged `qmldir`, and the dev shortcut must land inside the user's profile.
+
 ## 2026-10-01 — P3: the tip fix pinned by a native test
 A Windows test now lets the guard lift a window over two hidden tips and checks that only the tip it owns stays above it; it fails when the tip has no owner. The Qt Quick tests also check each tip's no-focus, click-through and tool-tip flags, a quick sweep over four keys, and the bubble's wait and screen, and every hover test lets the real pointer pass through its windows (`pointer.js`). Each tip now stays on its own window's screen, so the bubble's tip no longer borrows the keyboard's. Top-bar tips under the banner or the language list are noted in `docs/items/P3.md`.
 

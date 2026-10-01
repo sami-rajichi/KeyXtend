@@ -159,6 +159,8 @@ start_menu_dir = "Microsoft/Windows/Start Menu/Programs"
 shortcut = "KeyXtend (dev).lnk"
 # User-level shortcut script: add, find or remove that shortcut.
 shortcut_script = "dev-shortcut.ps1"
+# Env var naming the user's profile folder; the shortcut must land inside it.
+profile_env = "USERPROFILE"
 
 [workspace.metadata.stage]
 # The app package `cargo xtask stage` builds in release; its program has the same name.
@@ -169,6 +171,8 @@ out_dir = "target/stage"
 max_mb = 80
 # Env var naming Qt's qmake; Qt's folders come from `qmake -query`, so the stage takes the Qt the app was built with.
 qmake_env = "QMAKE"
+# The only Qt version the stage takes: the one THIRD_PARTY.md reviewed.
+qt_version = "6.11.2"
 # Qt libraries, from Qt's bin folder, staged beside the program; the stage check proves something imports each one.
 libs = ["Qt6Core.dll", "Qt6Gui.dll", "Qt6Network.dll", "Qt6OpenGL.dll", "Qt6Qml.dll", "Qt6QmlMeta.dll", "Qt6QmlModels.dll", "Qt6QmlWorkerScript.dll", "Qt6Quick.dll", "Qt6QuickEffects.dll", "Qt6QuickShapes.dll", "Qt6Svg.dll"]
 # Qt plugins, from Qt's plugins folder, staged in the same subfolders beside the program.
@@ -180,6 +184,8 @@ qml = ["QtQml/qmldir", "QtQuick/qmldir", "QtQuick/qtquick2plugin.dll", "QtQuick/
 qml_dir = "qml"
 # Folders the stage check refuses anywhere: TLS, network-information and QML debugging plugins (ADR-0004).
 banned = ["tls", "networkinformation", "qmltooling"]
+# Qt's network library ships only because Qt Qml and Qt Quick import it (ADR-0013); any other importer is refused (ADR-0004).
+network = { lib = "Qt6Network.dll", by = ["Qt6Qml.dll", "Qt6Quick.dll"] }
 # Name prefixes of Windows API sets, which the loader maps without searching any folder.
 api_sets = ["api-ms-", "ext-ms-"]
 # Windows' system folder, under the folder `devtools.shell_root_env` names; an import found there resolves.

@@ -12,6 +12,7 @@ fn invalid(change: impl FnOnce(&mut StageConfig)) -> Result<(), ConfigError> {
 fn qt() -> QtDirs {
     let root = std::env::temp_dir().join("qt");
     QtDirs {
+        version: "6.11.2".to_string(),
         bins: root.join("bin"),
         plugins: root.join("plugins"),
         qml: root.join("qml"),
@@ -80,10 +81,30 @@ fn required_lists_must_not_be_empty() {
 }
 
 #[test]
-fn the_qmake_variable_must_be_named() {
+fn the_qmake_variable_and_qt_version_must_be_named() {
     assert_eq!(
         invalid(|c| c.qmake_env = String::new()),
         Err(ConfigError::EmptyValue("qmake_env"))
+    );
+    assert_eq!(
+        invalid(|c| c.qt_version = " ".to_string()),
+        Err(ConfigError::EmptyValue("qt_version"))
+    );
+}
+
+#[test]
+fn the_network_library_and_its_importers_must_be_plain_names() {
+    assert_eq!(
+        invalid(|c| c.network.lib = "bin/Qt6Network.dll".to_string()),
+        Err(ConfigError::NotPlain("network"))
+    );
+    assert_eq!(
+        invalid(|c| c.network.by.clear()),
+        Err(ConfigError::EmptyList("network"))
+    );
+    assert_eq!(
+        invalid(|c| c.network.by = vec!["../Qt6Qml.dll".to_string()]),
+        Err(ConfigError::NotPlain("network"))
     );
 }
 
@@ -182,4 +203,54 @@ fn a_missing_source_names_the_file() {
     }];
     let err = copy(&dir.path().join("stage"), &files).unwrap_err();
     assert!(err.to_string().contains("Qt6Missing.dll"), "{err}");
+}
+
+/// A temp folder with one source file `a.dll` and the stage path, not yet made.
+fn fill_case(label: &str) -> (TempDir, PathBuf, [Copy; 1]) {
+    let dir = TempDir::new(label);
+    let from = dir.path().join("a.dll");
+    std::fs::write(&from, b"abc").unwrap();
+    let stage = dir.path().join("stage");
+    let files = [Copy {
+        from,
+        to: PathBuf::from("a.dll"),
+    }];
+    (dir, stage, files)
+}
+
+#[test]
+fn a_passing_stage_stays() {
+    let (_dir, stage, files) = fill_case("fill-pass");
+    let summary = check::Summary { files: 1, bytes: 3 };
+    let done = fill(&stage, &files, |_| {
+        Ok(check::Summary { files: 1, bytes: 3 })
+    });
+    assert_eq!(done, Ok(summary));
+    assert!(stage.join("a.dll").is_file());
+}
+
+#[test]
+fn a_refused_stage_is_removed_and_says_so() {
+    let (_dir, stage, files) = fill_case("fill-refused");
+    let banned = DevError::Banned("tls/x.dll".to_string());
+    let err = fill(&stage, &files, |_| Err(banned.clone())).unwrap_err();
+    assert_eq!(err, DevError::StageRemoved(Box::new(banned)));
+    assert!(err.to_string().contains("removed"), "{err}");
+    assert!(!stage.exists());
+}
+
+#[test]
+fn a_failed_copy_leaves_no_stage() {
+    let (dir, stage, _) = fill_case("fill-copy");
+    let from = dir.path().join("missing.dll");
+    let files = [Copy {
+        from,
+        to: PathBuf::from("missing.dll"),
+    }];
+    let err = fill(&stage, &files, |_| {
+        Ok(check::Summary { files: 0, bytes: 0 })
+    })
+    .unwrap_err();
+    assert!(matches!(err, DevError::StageRemoved(_)), "{err}");
+    assert!(!stage.exists());
 }

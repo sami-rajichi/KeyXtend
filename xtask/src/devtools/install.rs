@@ -87,19 +87,37 @@ pub(crate) fn holds_app(folder: &Path, program: &str) -> bool {
     folder.join(program).is_file()
 }
 
+/// Runs the stage check on `source` when it holds the app, so a tampered stage is never signed.
+pub(crate) fn vet(
+    source: &Path,
+    setup: &DevSetup,
+    stage: &stage::StageConfig,
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<(), DevError> {
+    if holds_app(source, &stage.program()) {
+        stage::verify(setup, stage, source, env)?;
+    }
+    Ok(())
+}
+
 /// The thumbprint of the test certificate, or a hint to run `dev-cert` first.
 fn require_cert(setup: &DevSetup) -> Result<String, DevError> {
     ScriptStore { setup }.find()?.ok_or(DevError::NoCert)
 }
 
-/// The settings, the install target for `name` and the app's program name.
-fn prepare(name: &str) -> Result<(DevSetup, PathBuf, String), DevError> {
+/// The settings, the stage settings and the install target for `name`.
+fn prepare(name: &str) -> Result<(DevSetup, stage::StageConfig, PathBuf), DevError> {
     let json = workspace::metadata_json()?;
-    let (setup, program) = (config::load(&json)?, stage::load(&json)?.program());
-    let root = setup.config.install_root(|key| std::env::var(key).ok())?;
+    let (setup, stage) = (config::load(&json)?, stage::load(&json)?);
+    let root = setup.config.install_root(env)?;
     let target = target_dir(&root, &setup.config, name);
     std::fs::create_dir_all(setup.out(""))?;
-    Ok((setup, target, program))
+    Ok((setup, stage, target))
+}
+
+/// The process environment.
+fn env(key: &str) -> Option<String> {
+    std::env::var(key).ok()
 }
 
 /// Runs `cargo xtask dev-install <folder>`: signs every exe, copies the folder, then adds the app's shortcut.
@@ -108,8 +126,10 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
     if !source.is_dir() {
         return Err(DevError::NotAFolder(folder.to_string()));
     }
-    let (setup, target, program) = prepare(&install_name(&source)?)?;
+    let (setup, stage, target) = prepare(&install_name(&source)?)?;
     check_source(&source, &target, setup.config.install_max_mb)?;
+    vet(&source, &setup, &stage, env)?;
+    let program = stage.program();
     let programs = exes(&source)?;
     let thumbprint = require_cert(&setup)?;
     let signtool = sdk::find_tool(&setup.config, &setup.config.signtool)?;
@@ -132,7 +152,8 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
 /// Runs `cargo xtask dev-install --remove <name>`: deletes that install, with no prompt if it is absent, then its
 /// shortcut.
 pub(crate) fn remove(name: &str) -> Result<(), DevError> {
-    let (setup, target, program) = prepare(&plain(name)?)?;
+    let (setup, stage, target) = prepare(&plain(name)?)?;
+    let program = stage.program();
     if target.exists() {
         admin::run(&setup, admin::build_params(&setup.config, None, &target))?;
         println!("Removed {}.", paths::text(&target));

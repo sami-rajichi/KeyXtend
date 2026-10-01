@@ -79,6 +79,8 @@ pub(crate) struct DevToolsConfig {
     pub shortcut: String,
     /// User-level shortcut script.
     pub shortcut_script: String,
+    /// Env var naming the user's profile folder, which must hold the shortcut.
+    pub profile_env: String,
 }
 
 impl DevToolsConfig {
@@ -134,6 +136,7 @@ impl DevToolsConfig {
             ("ui_access_attr", &self.ui_access_attr),
             ("ui_access_on", &self.ui_access_on),
             ("start_menu_env", &self.start_menu_env),
+            ("profile_env", &self.profile_env),
         ];
         first_failing(&texts, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
         if !launcher::is_quotable(&self.cert_subject) {

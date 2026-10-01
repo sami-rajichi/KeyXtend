@@ -39,7 +39,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
   - The panic hook replaces Rust's default one and logs only the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
-- **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004).
+- **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004). Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
   - Quit ends the request queue; the kernel's thread stops the modules, then ends the UI even if stopping panics (a drop guard). After Qt's loop, `drain::stop` removes the tray icon and joins the thread, whether it was running, already asked to quit, or ended in a panic.
   - The tray icon goes when the app ends or a panic unwinds. A panic inside a Qt callback aborts the process, and a killed process leaves the icon until the pointer passes over it, as Windows does for any app.
@@ -73,4 +73,5 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
 - A same-user program can squat `Local\KeyXtend.Running`: a named object cannot be kept from the same user, who could end the process anyway.
 - Commands that arrive before the hub exists wait in an unbounded list: only same-session programs can post them, one code each, during the few milliseconds of load.
 - Lines the kernel logs while it loads are lost, since the log opens from the loaded settings; their notices still reach the banner.
+- `Qt6Network.dll` loads in the uiAccess process because Qt Qml and Qt Quick import it (ADR-0013). No TLS backend ships, the stage check lets only those two import it, and the app's QML names no network address (`kx-ui` offline test).
 - In the release build standard error goes nowhere, so a refused argument or a later copy's failure is silent there; the running copy's log is never touched by a later copy.

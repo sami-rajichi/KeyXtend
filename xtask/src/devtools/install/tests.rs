@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{TempDir, devtools_config, make_dir_link};
+use crate::test_support::{TempDir, devtools_config, make_dir_link, stage_config};
 
 const TP: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
 
@@ -38,6 +38,35 @@ fn only_a_folder_with_the_app_gets_a_shortcut() {
     assert!(!holds_app(dir.path(), "keyxtend.exe"));
     std::fs::write(dir.path().join("keyxtend.exe"), b"").unwrap();
     assert!(holds_app(dir.path(), "keyxtend.exe"));
+}
+
+/// A folder holding `program` and a TLS plugin, with settings rooted there.
+fn tls_folder(label: &str, program: &str) -> (TempDir, DevSetup) {
+    let dir = TempDir::new(label);
+    std::fs::write(dir.path().join(program), b"").unwrap();
+    std::fs::create_dir_all(dir.path().join("tls")).unwrap();
+    std::fs::write(dir.path().join("tls").join("x.dll"), b"").unwrap();
+    let setup = DevSetup {
+        root: dir.path().to_path_buf(),
+        config: devtools_config(),
+    };
+    (dir, setup)
+}
+
+#[test]
+fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
+    let stage = stage_config();
+    let (dir, setup) = tls_folder("vet-app", &stage.program());
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let result = vet(dir.path(), &setup, &stage, windows);
+    assert!(matches!(result, Err(DevError::Banned(_))), "{result:?}");
+}
+
+#[test]
+fn a_folder_without_the_app_is_not_stage_checked() {
+    let (dir, setup) = tls_folder("vet-other", "other.exe");
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    assert_eq!(vet(dir.path(), &setup, &stage_config(), windows), Ok(()));
 }
 
 #[test]

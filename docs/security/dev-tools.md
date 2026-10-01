@@ -25,9 +25,9 @@
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
 | `[workspace.metadata.devtools]` and `[workspace.metadata.stage]` | Typed; unknown keys, empty or zero values, exit codes below 1 or equal, a subject with `"`, and non-plain names or paths rejected; `cargo xtask tidy` checks both in CI | N/A | No |
-| `QMAKE` and `qmake -query` | An absolute path, else an error; each Qt folder must be absolute | N/A | No |
+| `QMAKE` and `qmake -query` | An absolute path, else an error; each Qt folder must be absolute, and Qt's version must be `qt_version`, the one `THIRD_PARTY.md` reviewed | N/A | Unit tests |
 | Staged programs and libraries (PE import tables) | Every read is bounds-checked and a malformed file fails the stage, never panics; only descriptors with image-relative places are read | The file's own length | Property test |
-| `APPDATA` for the shortcut | Absolute, else an error; the shortcut goes only under its Start-menu folder, never `ProgramData` | N/A | Unit test |
+| `APPDATA` and `USERPROFILE` for the shortcut | Both absolute, else an error; the shortcut goes only under the Start-menu folder of `APPDATA`, and only inside `USERPROFILE`, never `ProgramData` | N/A | Unit tests |
 | Script output (thumbprints) | Exactly 40 hex digits each, else an error | N/A | No |
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
@@ -37,7 +37,8 @@
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
   - Launchers call PowerShell by its full path under `%SystemRoot%`, so a fake `powershell.exe` on the PATH is not used.
 - **Tampering:** a swapped `.cer` file. Mitigation: the trust step imports it only if its thumbprint matches the one in the launcher.
-  - A network or TLS plugin, or a library nothing loads, slipping into the signed uiAccess install. Mitigation: the stage copies only the files `[workspace.metadata.stage]` lists, and its check refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, and any library nothing imports.
+  - A network or TLS plugin, or a library nothing loads, slipping into the signed uiAccess install. Mitigation: the stage copies only the files `[workspace.metadata.stage]` lists, and its check refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, any library nothing imports, and Qt's network library imported by anything but Qt Qml and Qt Quick.
+  - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - The signed uiAccess `kx-gates` reads `kx-gates.toml` beside its exe, else from the repo folder (user-writable), and that file names the programs it starts. `dev-install` copies every file of the build folder, so put `kx-gates.toml` there first and keep the config beside the installed exe.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets.
 - **Information disclosure:** no network; the private key cannot be exported.

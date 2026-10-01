@@ -1,10 +1,10 @@
-//! The stage check: no banned plugin, every import found in the stage or the system folder, no library that
-//! nothing imports, and the size under the cap.
+//! The stage check: no banned plugin, every import found in the stage or the system folder, the network library
+//! imported only by the listed Qt libraries, no library that nothing imports, and the size under the cap.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use super::StageConfig;
+use super::{Network, StageConfig};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
@@ -41,7 +41,11 @@ pub(crate) fn check(
     let libs = libraries(&files);
     let found = |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib);
     let resolves = |lib: &str| paths::is_plain_name(lib) && found(lib);
-    let reached = closure(stage, roots(&files, config), &libs, read, resolves)?;
+    let guarded = |file: &Path| {
+        let imports = read(&stage.join(file))?;
+        guard(file, &imports, &config.network).map(|()| imports)
+    };
+    let reached = closure(roots(&files, config), &libs, guarded, resolves)?;
     if let Some(unused) = libs.iter().find(|(key, _)| !reached.contains(*key)) {
         return Err(DevError::Unused(paths::text(unused.1)));
     }
@@ -100,16 +104,29 @@ fn roots(files: &[PathBuf], config: &StageConfig) -> Vec<PathBuf> {
         .collect()
 }
 
+/// Fails if `file` imports the network library but is not a library beside the program that `network` allows.
+fn guard(file: &Path, imports: &[String], network: &Network) -> Result<(), DevError> {
+    let name = key(&file.to_string_lossy());
+    let beside = file.parent() == Some(Path::new(""));
+    let allowed = beside && network.by.iter().any(|b| key(b) == name);
+    match imports.iter().find(|lib| key(lib) == key(&network.lib)) {
+        Some(lib) if !allowed => Err(DevError::NetworkImport {
+            by: paths::text(file),
+            lib: lib.clone(),
+        }),
+        _ => Ok(()),
+    }
+}
+
 /// True if `lib` names a Windows API set by one of `prefixes`.
 fn is_api_set(lib: &str, prefixes: &[String]) -> bool {
     let lib = key(lib);
     prefixes.iter().any(|p| lib.starts_with(&key(p)))
 }
 
-/// Walks the imports from `roots`; returns the keys of the staged libraries reached, or the first import found
-/// nowhere.
+/// Walks the imports from `roots`, by stage-relative path; returns the keys of the staged libraries reached, or the
+/// first import found nowhere.
 fn closure(
-    stage: &Path,
     roots: Vec<PathBuf>,
     libs: &BTreeMap<String, PathBuf>,
     read: impl Fn(&Path) -> Result<Vec<String>, DevError>,
@@ -118,7 +135,7 @@ fn closure(
     let mut reached = BTreeSet::new();
     let mut queue = roots;
     while let Some(file) = queue.pop() {
-        for lib in read(&stage.join(&file))? {
+        for lib in read(&file)? {
             if let Some(staged) = libs.get(&key(&lib)) {
                 if reached.insert(key(&lib)) {
                     queue.push(staged.clone());

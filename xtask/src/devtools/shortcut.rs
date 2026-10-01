@@ -5,17 +5,27 @@ use std::path::{Path, PathBuf};
 use super::config::{DevSetup, DevToolsConfig};
 use super::{DevError, paths, ps, script};
 
-/// The shortcut file in the user's Start menu, under the absolute folder `start_menu_env` names, and nowhere else.
+/// The shortcut file in the user's Start menu, under the folder `start_menu_env` names, and only inside their profile.
 pub(crate) fn link(
     config: &DevToolsConfig,
     env: impl Fn(&str) -> Option<String>,
 ) -> Result<PathBuf, DevError> {
-    let key = &config.start_menu_env;
-    let root = env(key)
+    let root = absolute(&env, &config.start_menu_env)?;
+    let profile = absolute(&env, &config.profile_env)?;
+    let link = paths::join_rel(root, &config.start_menu_dir).join(&config.shortcut);
+    if paths::is_under(&link, &profile) {
+        Ok(link)
+    } else {
+        Err(DevError::NotInProfile(paths::text(&link)))
+    }
+}
+
+/// The absolute folder the env var `key` names.
+fn absolute(env: impl Fn(&str) -> Option<String>, key: &str) -> Result<PathBuf, DevError> {
+    env(key)
         .map(PathBuf::from)
         .filter(|path| path.is_absolute())
-        .ok_or_else(|| DevError::MissingEnv(key.clone()))?;
-    Ok(paths::join_rel(root, &config.start_menu_dir).join(&config.shortcut))
+        .ok_or_else(|| DevError::MissingEnv(key.to_string()))
 }
 
 /// Parameters for one `dev-shortcut.ps1` action on `link` for the program `exe`.

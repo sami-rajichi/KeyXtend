@@ -108,9 +108,10 @@ fn the_check_refuses_a_network_library_nothing_imports() {
 }
 
 #[test]
-fn a_network_library_the_qml_library_imports_passes() {
+fn a_network_library_only_the_listed_libraries_import_passes() {
     let stage = Fake::new(&[
-        (PROGRAM, &["Qt6Qml.dll", "KERNEL32.dll"]),
+        (PROGRAM, &["Qt6Quick.dll", "KERNEL32.dll"]),
+        ("Qt6Quick.dll", &["Qt6Qml.dll", "Qt6Network.dll"]),
         ("Qt6Qml.dll", &["Qt6Network.dll", "Qt6Core.dll"]),
         ("Qt6Network.dll", &["Qt6Core.dll"]),
         (
@@ -118,7 +119,32 @@ fn a_network_library_the_qml_library_imports_passes() {
             &["VCRUNTIME140.dll", "api-ms-win-crt-heap-l1-1-0.dll"],
         ),
     ]);
-    assert_eq!(stage.check(), Ok(Summary { files: 4, bytes: 0 }));
+    assert_eq!(stage.check(), Ok(Summary { files: 5, bytes: 0 }));
+}
+
+#[test]
+fn the_program_importing_the_network_library_is_refused() {
+    let stage = Fake::new(&[
+        (PROGRAM, &["Qt6Qml.dll", "QT6NETWORK.DLL"]),
+        ("Qt6Qml.dll", &["Qt6Network.dll"]),
+        ("Qt6Network.dll", &[]),
+    ]);
+    let err = DevError::NetworkImport {
+        by: PROGRAM.to_string(),
+        lib: "QT6NETWORK.DLL".to_string(),
+    };
+    assert_eq!(stage.check(), Err(err));
+}
+
+#[test]
+fn a_plugin_importing_the_network_library_is_refused() {
+    let stage = Fake::new(&[
+        (PROGRAM, &["Qt6Qml.dll"]),
+        ("Qt6Qml.dll", &["Qt6Network.dll"]),
+        ("Qt6Network.dll", &[]),
+        ("imageformats/qnet.dll", &["Qt6Network.dll"]),
+    ]);
+    assert!(matches!(stage.check(), Err(DevError::NetworkImport { .. })));
 }
 
 #[test]

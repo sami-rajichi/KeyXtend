@@ -9,14 +9,18 @@ use crate::devtools::{DevError, paths, ps};
 const QUERY: &str = "-query";
 /// Separator between a key and its value in that output.
 const SEP: char = ':';
+/// qmake's key for Qt's version.
+const VERSION: &str = "QT_VERSION";
 /// qmake's keys for Qt's libraries, plugins and QML modules.
 const BINS: &str = "QT_INSTALL_BINS";
 const PLUGINS: &str = "QT_INSTALL_PLUGINS";
 const QML: &str = "QT_INSTALL_QML";
 
-/// Qt's folders that the stage copies from.
+/// Qt's version and the folders that the stage copies from.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct QtDirs {
+    /// Qt's version, as qmake reports it.
+    pub version: String,
     /// Qt's libraries.
     pub bins: PathBuf,
     /// Qt's plugins, one subfolder per type.
@@ -25,24 +29,43 @@ pub(crate) struct QtDirs {
     pub qml: PathBuf,
 }
 
-/// Qt's folders from qmake's query output; each must be absolute.
+/// Qt's version and folders from qmake's query output; each folder must be absolute.
 pub(crate) fn parse(text: &str) -> Result<QtDirs, DevError> {
+    let missing = |key: &str| DevError::Failed {
+        step: QUERY.to_string(),
+        detail: format!("no value for {key}"),
+    };
     let value = |key: &str| {
         text.lines()
             .filter_map(|line| line.trim().split_once(SEP))
-            .find(|(k, _)| *k == key)
-            .map(|(_, v)| PathBuf::from(v))
-            .filter(|p| p.is_absolute())
-            .ok_or_else(|| DevError::Failed {
-                step: QUERY.to_string(),
-                detail: format!("no folder for {key}"),
-            })
+            .find(|(k, v)| *k == key && !v.is_empty())
+            .map(|(_, v)| v.to_string())
+            .ok_or_else(|| missing(key))
+    };
+    let dir = |key: &str| {
+        let path = PathBuf::from(value(key)?);
+        path.is_absolute()
+            .then_some(path)
+            .ok_or_else(|| missing(key))
     };
     Ok(QtDirs {
-        bins: value(BINS)?,
-        plugins: value(PLUGINS)?,
-        qml: value(QML)?,
+        version: value(VERSION)?,
+        bins: dir(BINS)?,
+        plugins: dir(PLUGINS)?,
+        qml: dir(QML)?,
     })
+}
+
+/// Keeps `dirs` only if they belong to the Qt version `config` names.
+pub(crate) fn reviewed(dirs: QtDirs, config: &StageConfig) -> Result<QtDirs, DevError> {
+    if dirs.version == config.qt_version {
+        Ok(dirs)
+    } else {
+        Err(DevError::QtVersion {
+            found: dirs.version,
+            want: config.qt_version.clone(),
+        })
+    }
 }
 
 /// The qmake that `config.qmake_env` names; it must be an absolute path.
@@ -57,13 +80,16 @@ pub(crate) fn qmake(
         .ok_or_else(|| DevError::MissingEnv(key.clone()))
 }
 
-/// Asks the qmake the environment names for Qt's folders.
+/// Asks the qmake the environment names for Qt's folders, and refuses any Qt but the reviewed one.
 pub(crate) fn find(
     config: &StageConfig,
     env: impl Fn(&str) -> Option<String>,
 ) -> Result<QtDirs, DevError> {
     let program = paths::text(&qmake(config, env)?);
-    parse(&ps::run(&program, &program, &[QUERY.to_string()])?)
+    reviewed(
+        parse(&ps::run(&program, &program, &[QUERY.to_string()])?)?,
+        config,
+    )
 }
 
 #[cfg(test)]
@@ -77,6 +103,7 @@ mod tests {
         let line = |key: &str, dir: &str| format!("{key}{SEP}{}", paths::text(&root.join(dir)));
         let text = [
             "QT_SYSROOT:".to_string(),
+            format!("{VERSION}{SEP}6.11.2"),
             line(BINS, "bin"),
             line(PLUGINS, "plugins"),
             line(QML, "qml"),
@@ -85,12 +112,37 @@ mod tests {
         assert_eq!(dirs.bins, root.join("bin"));
         assert_eq!(dirs.plugins, root.join("plugins"));
         assert_eq!(dirs.qml, root.join("qml"));
+        assert_eq!(dirs.version, "6.11.2");
     }
 
     #[test]
-    fn parse_names_a_missing_folder() {
-        let err = parse("QT_INSTALL_BINS:relative").unwrap_err();
+    fn only_the_reviewed_qt_is_staged() {
+        let root = std::env::temp_dir().join("qt");
+        let dirs = |version: &str| QtDirs {
+            version: version.to_string(),
+            bins: root.join("bin"),
+            plugins: root.join("plugins"),
+            qml: root.join("qml"),
+        };
+        let config = stage_config();
+        assert_eq!(reviewed(dirs("6.11.2"), &config), Ok(dirs("6.11.2")));
+        let err = DevError::QtVersion {
+            found: "6.12.0".to_string(),
+            want: "6.11.2".to_string(),
+        };
+        assert_eq!(reviewed(dirs("6.12.0"), &config), Err(err));
+    }
+
+    #[test]
+    fn parse_names_a_missing_folder_or_version() {
+        let err = parse(&format!(
+            "{VERSION}{SEP}6.11.2
+{BINS}{SEP}relative"
+        ))
+        .unwrap_err();
         assert!(err.to_string().contains(BINS), "{err}");
+        let err = parse("").unwrap_err();
+        assert!(err.to_string().contains(VERSION), "{err}");
     }
 
     #[test]

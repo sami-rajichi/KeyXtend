@@ -9,7 +9,7 @@ Give **one short step at a time**. Prefer steps you can run yourself (PowerShell
 
 ## Setup (once per machine)
 1. The dev certificate: `cargo xtask dev-cert` creates a self-signed code-signing certificate and imports it into LocalMachine\Root and TrustedPublisher. Admin approval is needed; explain to the owner what it does before asking.
-2. `cargo xtask dev-install`: builds release, signs, and copies to `C:\Program Files\KeyXtend-dev\`.
+2. `cargo xtask stage`, then `cargo xtask dev-install target\stage\keyxtend`: signs, copies to `C:\Program Files\KeyXtend-dev\` and adds the "KeyXtend (dev)" Start-menu shortcut.
 3. Confirm uiAccess is active: the process token has `TokenUIAccess` (`cargo xtask check-uiaccess`).
 
 ## Test script

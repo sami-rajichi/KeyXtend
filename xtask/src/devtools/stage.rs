@@ -33,6 +33,8 @@ pub(crate) struct StageConfig {
     pub max_mb: u64,
     /// Env var naming Qt's qmake.
     pub qmake_env: String,
+    /// The only Qt version the stage takes.
+    pub qt_version: String,
     /// Qt libraries, from Qt's bin folder, staged beside the program.
     pub libs: Vec<String>,
     /// Qt plugins, from Qt's plugins folder, staged in the same subfolders.
@@ -43,10 +45,22 @@ pub(crate) struct StageConfig {
     pub qml_dir: String,
     /// Folder names the stage must never hold.
     pub banned: Vec<String>,
+    /// Qt's network library and the only staged libraries allowed to import it.
+    pub network: Network,
     /// Name prefixes of Windows API sets, which never load from a folder.
     pub api_sets: Vec<String>,
     /// Windows' system folder, under the Windows folder.
     pub system_dir: String,
+}
+
+/// Qt's network library and its allowed importers.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Network {
+    /// The library's file name.
+    pub lib: String,
+    /// The staged libraries, beside the program, that may import it.
+    pub by: Vec<String>,
 }
 
 impl StageConfig {
@@ -55,9 +69,16 @@ impl StageConfig {
         if self.max_mb == 0 {
             return Err(ConfigError::ZeroValue("max_mb"));
         }
-        let texts = [("qmake_env", &self.qmake_env)];
+        let texts = [
+            ("qmake_env", &self.qmake_env),
+            ("qt_version", &self.qt_version),
+        ];
         first_failing(&texts, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
-        let names = [("app", &self.app), ("qml_dir", &self.qml_dir)];
+        let names = [
+            ("app", &self.app),
+            ("qml_dir", &self.qml_dir),
+            ("network", &self.network.lib),
+        ];
         first_failing(&names, paths::is_plain_name, ConfigError::NotPlain)?;
         let rel = [("out_dir", &self.out_dir), ("system_dir", &self.system_dir)];
         first_failing(&rel, paths::is_relative_plain, ConfigError::NotRelative)?;
@@ -66,7 +87,11 @@ impl StageConfig {
 
     /// Every list must hold values: plain names, relative paths or, for the API sets, any text.
     fn check_lists(&self) -> Result<(), ConfigError> {
-        let names = [("libs", &self.libs), ("banned", &self.banned)];
+        let names = [
+            ("libs", &self.libs),
+            ("banned", &self.banned),
+            ("network", &self.network.by),
+        ];
         for (name, list) in names {
             each(name, list, paths::is_plain_name, ConfigError::NotPlain)?;
         }
@@ -158,6 +183,39 @@ pub(crate) fn copy(stage: &Path, files: &[Copy]) -> Result<(), DevError> {
     Ok(())
 }
 
+/// Copies `files` into `stage`, then runs `inspect` on it; on any failure the stage is removed, so it never looks
+/// ready to install.
+pub(crate) fn fill(
+    stage: &Path,
+    files: &[Copy],
+    inspect: impl FnOnce(&Path) -> Result<check::Summary, DevError>,
+) -> Result<check::Summary, DevError> {
+    copy(stage, files)
+        .and_then(|()| inspect(stage))
+        .map_err(|err| discard(stage, err))
+}
+
+/// Removes `stage` after `err`; says so, or why it stayed.
+fn discard(stage: &Path, err: DevError) -> DevError {
+    match std::fs::remove_dir_all(stage) {
+        Err(e) if stage.exists() => {
+            DevError::Io(format!("{err}; {} stayed: {e}", paths::text(stage)))
+        }
+        _ => DevError::StageRemoved(Box::new(err)),
+    }
+}
+
+/// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder.
+pub(crate) fn verify(
+    setup: &DevSetup,
+    config: &StageConfig,
+    folder: &Path,
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<check::Summary, DevError> {
+    let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
+    check::check(folder, config, pe::read, |lib| system.join(lib).is_file())
+}
+
 /// Loads and validates the stage settings from `cargo metadata` JSON.
 pub(crate) fn load(json: &str) -> Result<StageConfig, LoadError> {
     let (_, config): (PathBuf, StageConfig) = workspace::root_and_section(json, SECTION)?;
@@ -197,9 +255,8 @@ pub(crate) fn run() -> Result<(), DevError> {
         .join(RELEASE_DIR)
         .join(config.program());
     let stage = setup.path(&config.out_dir).join(&config.app);
-    copy(&stage, &plan(&config, &qt, &exe))?;
-    let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
-    let summary = check::check(&stage, &config, pe::read, |lib| system.join(lib).is_file())?;
+    let files = plan(&config, &qt, &exe);
+    let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);
     Ok(())
 }

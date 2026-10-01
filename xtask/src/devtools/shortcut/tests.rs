@@ -1,36 +1,71 @@
 use super::*;
 use crate::test_support::devtools_config as config;
 
-/// A made-up roaming folder, absolute on every system.
-fn roaming() -> PathBuf {
-    std::env::temp_dir().join("Roaming")
+/// A made-up user profile, absolute on every system.
+fn profile() -> PathBuf {
+    std::env::temp_dir().join("Users").join("u")
 }
 
-/// The environment with only `key` set to `value`.
-fn only(key: &'static str, value: PathBuf) -> impl Fn(&str) -> Option<String> {
-    move |k| (k == key).then(|| paths::text(&value))
+/// The profile's roaming folder.
+fn roaming() -> PathBuf {
+    paths::join_rel(profile(), "AppData/Roaming")
+}
+
+/// An environment with `pairs` set and nothing else.
+fn env(pairs: Vec<(&'static str, PathBuf)>) -> impl Fn(&str) -> Option<String> {
+    move |k| {
+        pairs
+            .iter()
+            .find(|(key, _)| *key == k)
+            .map(|(_, v)| paths::text(v))
+    }
 }
 
 #[test]
 fn the_link_is_in_the_users_own_start_menu() {
-    let link = link(&config(), only("APPDATA", roaming())).unwrap();
+    let link = link(
+        &config(),
+        env(vec![("APPDATA", roaming()), ("USERPROFILE", profile())]),
+    )
+    .unwrap();
     let menu = paths::join_rel(roaming(), "Microsoft/Windows/Start Menu/Programs");
     assert_eq!(link, menu.join("KeyXtend (dev).lnk"));
-    assert!(paths::is_under(&link, &roaming()));
+    assert!(paths::is_under(&link, &profile()));
 }
 
 #[test]
 fn without_the_users_folder_there_is_no_link() {
-    let all_users = only("ProgramData", std::env::temp_dir());
+    let all_users = env(vec![
+        ("ProgramData", std::env::temp_dir()),
+        ("USERPROFILE", profile()),
+    ]);
     assert_eq!(
         link(&config(), all_users),
         Err(DevError::MissingEnv("APPDATA".to_string()))
     );
-    let relative = only("APPDATA", PathBuf::from("Roaming"));
+    let relative = env(vec![
+        ("APPDATA", PathBuf::from("Roaming")),
+        ("USERPROFILE", profile()),
+    ]);
     assert!(matches!(
         link(&config(), relative),
         Err(DevError::MissingEnv(_))
     ));
+}
+
+#[test]
+fn a_link_outside_the_users_profile_is_refused() {
+    let shared = std::env::temp_dir().join("ProgramData");
+    let outside = env(vec![("APPDATA", shared), ("USERPROFILE", profile())]);
+    assert!(matches!(
+        link(&config(), outside),
+        Err(DevError::NotInProfile(_))
+    ));
+    let no_profile = env(vec![("APPDATA", roaming())]);
+    assert_eq!(
+        link(&config(), no_profile),
+        Err(DevError::MissingEnv("USERPROFILE".to_string()))
+    );
 }
 
 #[test]

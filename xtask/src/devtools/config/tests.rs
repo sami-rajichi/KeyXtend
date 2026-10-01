@@ -125,6 +125,10 @@ fn shortcut_settings_must_be_plain_and_relative() {
         invalid(|c| c.start_menu_env = " ".to_string()),
         Err(ConfigError::EmptyValue("start_menu_env"))
     );
+    assert_eq!(
+        invalid(|c| c.profile_env = String::new()),
+        Err(ConfigError::EmptyValue("profile_env"))
+    );
 }
 
 #[test]
