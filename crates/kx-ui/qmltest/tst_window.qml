@@ -211,8 +211,10 @@ Item {
         }
 
         function test_every_label_fits_its_face_in_each_theme_language_and_size() {
+            // Every step from the smallest size to the largest, and each preset, which may sit off the steps.
             const steps = Math.round((Face.sizeMax - Face.sizeMin) / Face.sizeStep);
-            const sizes = Array.from({ length: steps + 1 }, (_, i) => Face.sizeMin + i * Face.sizeStep);
+            const grid = Array.from({ length: steps + 1 }, (_, i) => Face.sizeMin + i * Face.sizeStep);
+            const sizes = [...new Set(grid.concat(Face.board.presets))];
             for (const lk of [N.lk, E.lk, D.lk])
                 for (const t of [En, Fr, Ar])
                     labelsFit(lk, t, sizes);

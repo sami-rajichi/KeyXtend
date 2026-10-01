@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-01 — P3: key icons back on whole pixels
+Only named keys that show a label are now centred exactly; keys that show an icon are centred by anchors again, on whole pixels, so their icons stay crisp at 100 % scale. A test checks both at each size preset in every theme, and that a key centres again when a theme drops or brings back its icon. The label fit test now also runs each preset, in case one sits off the size steps.
+
 ## 2026-10-01 — P3: Qt's variables cleared by the names Qt reads
 Qt reads the C runtime's narrow copy of the environment, where the ANSI code page can turn a fullwidth `ＱＴ_` or a non-ASCII last letter into a plain Qt name, so such names could slip past the clearing. The app now clears every name with a Qt prefix in that copy, and its manifest names the UTF-8 code page outright, under which no name narrows to a Qt one; tests check both. One cfg from the build script, set with the manifest's uiAccess, now also turns on the pinned load paths and hides the console.
 

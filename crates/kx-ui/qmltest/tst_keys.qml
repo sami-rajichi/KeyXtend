@@ -72,24 +72,31 @@ Item {
 
         // The most colour gray text on the near-gray plate may show at an edge; ClearType's fringes reach about 0.5.
         readonly property real grayEdge: 0.05
+        // Float rounding in a measured position, far below the whole-pixel steps anchors take.
+        readonly property real slack: 0.01
 
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
         }
-        function makeKey(id, lk) {
-            return createTemporaryObject(keyC, root, { kv: root.kv(id), ks: root.ks(id), lk: lk || N.lk, lang: Face.states.en.lang, design: Face.board.lang_key, res: root.res, s: 1 });
+        // Key `id` in look `lk` at `size` (1 when not given), its cell scaled as the module scales it.
+        function makeKey(id, lk, size) {
+            const z = size || 1;
+            const c = root.kv(id);
+            const kv = Object.assign({}, c, { x: c.x * z, y: c.y * z, w: c.w * z, h: c.h * z });
+            return createTemporaryObject(keyC, root, { kv: kv, ks: root.ks(id), lk: lk || N.lk, lang: Face.states.en.lang, design: Face.board.lang_key, res: root.res, s: z });
         }
-        // The first item under `item` for which `ok` holds.
-        function find(item, ok) {
+        // Every item under `item` for which `ok` holds, and the first one.
+        function all(item, ok, found) {
+            found = found || [];
             if (ok(item))
-                return item;
-            for (let i = 0; i < item.children.length; i++) {
-                const f = find(item.children[i], ok);
-                if (f)
-                    return f;
-            }
-            return null;
+                found.push(item);
+            for (let i = 0; i < item.children.length; i++)
+                all(item.children[i], ok, found);
+            return found;
+        }
+        function find(item, ok) {
+            return all(item, ok)[0] || null;
         }
 
         function test_the_cap_sits_half_a_gap_inside_its_cell() {
@@ -115,6 +122,44 @@ Item {
             verify(find(bksp, o => o.icon === N.lk.icons.keys.bksp && o.tint !== undefined), "the Backspace icon");
             const esc = makeKey("esc");
             verify(find(esc, o => o.text === En.texts["label.esc"] && o.visible), "Esc has no icon, so its label");
+        }
+
+        // At each preset an icon keeps the anchors' whole pixels, so it draws crisp; a label centres exactly on the face
+        // the owner sees, so a fitted label stays in its room.
+        function test_an_icon_sits_on_whole_pixels_and_a_label_centres_exactly() {
+            for (const lk of [N.lk, E.lk, D.lk])
+                for (const size of Face.board.presets) {
+                    const keys = Face.board.keys.filter(k => k.icon && k.label).map(k => makeKey(k.id, lk, size));
+                    const shown = keys.map(k => centred(k, lk.look.latin_fonts[0] + " " + size + " " + k.kv.id));
+                    verify(shown.indexOf("icon") >= 0 && shown.indexOf("label") >= 0, "both kinds: " + shown);
+                }
+        }
+        // Checks key `k`'s icon or label, as said above, and tells which it shows.
+        function centred(k, at) {
+            const t = find(k, o => o.labelRoom !== undefined);
+            const part = t.icon ? find(t, o => o.icon === t.icon && o.tint !== undefined) : find(t, o => o.text === t.label && o.visible);
+            // A row lays out once a frame; this one lays out now.
+            part.parent.forceLayout();
+            if (t.icon) {
+                const x = part.mapToItem(t, 0, 0).x;
+                verify(Math.abs(x - Math.round(x)) < slack, at + " icon at " + x);
+                return "icon";
+            }
+            const faces = all(k, o => o.base !== undefined && o.g !== undefined && o.visible);
+            const face = faces[faces.length - 1];
+            const off = part.mapToItem(face, part.width / 2, 0).x - face.width / 2;
+            verify(Math.abs(off) < slack, at + " label off centre by " + off);
+            return "label";
+        }
+
+        function test_a_key_centres_again_when_a_theme_drops_or_brings_back_its_icon() {
+            const k = makeKey("tab");
+            const bare = Object.assign({}, N.lk, { icons: Object.assign({}, N.lk.icons, { keys: {} }) });
+            compare(centred(k, "tab"), "icon");
+            k.lk = bare;
+            compare(centred(k, "tab without its icon"), "label");
+            k.lk = N.lk;
+            compare(centred(k, "tab with its icon back"), "icon");
         }
 
         function test_high_contrast_outlines_the_key_under_the_pointer() {

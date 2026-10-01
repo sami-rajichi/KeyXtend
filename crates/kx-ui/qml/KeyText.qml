@@ -146,14 +146,24 @@ Item {
     }
 
     // Named keys: an icon, a label, or both side by side; their names show as tooltips instead of text.
-    // Centred by hand: anchors snap a centre to whole pixels, which can push a fitted label past its room.
+    // Anchors centre an icon on whole pixels, so it draws crisp; a label centres exactly, as that rounding can push a
+    // fitted label past its room.
     Row {
         id: named
+        // How far right of the key's middle the row centres: on a sculpted cap, its top's middle.
+        readonly property real shift: t.sculpted ? (t.look.cap.top_inset_px[3] - t.look.cap.top_inset_px[1]) * t.s / 2 : 0
         visible: !t.isChar && !t.isSpace && !t.isLang
-        x: (t.width - width) / 2 + (t.sculpted ? (t.look.cap.top_inset_px[3] - t.look.cap.top_inset_px[1]) * t.s / 2 : 0)
+        anchors.horizontalCenter: t.label ? undefined : parent.horizontalCenter
+        anchors.horizontalCenterOffset: shift
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: -t.lift
         spacing: t.lg.gap_px * t.s
+        // A label's exact x; an icon's anchor holds x instead, so nothing is restored when a label goes.
+        Binding on x {
+            when: !!t.label
+            value: (t.width - named.width) / 2 + named.shift
+            restoreMode: Binding.RestoreNone
+        }
         Icon {
             id: namedIcon
             visible: !!t.icon
