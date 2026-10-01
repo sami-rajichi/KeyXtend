@@ -1,4 +1,4 @@
-//! A Windows job for a child process: it dies with us, and in weak mode it is capped in cores, CPU share and memory.
+//! A Windows job for a child process: it dies with us, and in weak mode it is capped in cores, CPU time and memory.
 
 use std::os::windows::io::AsRawHandle;
 use std::process::Child;
@@ -18,7 +18,7 @@ use crate::voicecfg::WeakConfig;
 
 /// The job's CPU rate is in hundredths of a percent.
 const RATE_PER_PCT: u32 = 100;
-/// Highest CPU share, in percent.
+/// Highest CPU time per allowed core, in percent of one core.
 const MAX_PCT: u32 = 100;
 
 /// Weak-mode limits in the units the job takes.
@@ -26,13 +26,14 @@ const MAX_PCT: u32 = 100;
 pub struct Caps {
     /// One bit per allowed core, lowest cores first.
     pub affinity: usize,
-    /// CPU share of the whole PC, in hundredths of a percent, so each allowed core runs at the weak speed.
+    /// CPU share of the whole PC, in hundredths of a percent: `cores × rate_pct` % of one core in all.
     pub cpu_rate: u32,
     /// Memory cap for the whole job.
     pub mem_bytes: usize,
 }
 
-/// The job rate, of the whole PC with `cpus` cores, that runs `cores` cores at `pct` percent each; at least 1.
+/// The job rate on a PC with `cpus` cores that allows `pct` % of one core's time per allowed core, `cores` of them; at
+/// least 1.
 fn rate_of(pct: u32, cores: usize, cpus: usize) -> u32 {
     let whole = u128::from(pct * RATE_PER_PCT) * cores as u128 / cpus.max(1) as u128;
     u32::try_from(whole).unwrap_or(u32::MAX).max(1)
@@ -60,7 +61,7 @@ impl Caps {
         }
         if w.rate_pct == 0 || w.rate_pct > MAX_PCT {
             return Err(format!(
-                "weak CPU share must be 1 to {MAX_PCT} %, got {}",
+                "weak rate_pct must be 1 to {MAX_PCT} % of a core, got {}",
                 w.rate_pct
             ));
         }
