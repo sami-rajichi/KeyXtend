@@ -220,9 +220,14 @@ Item {
         function test_the_cycle_design_shows_a_globe_the_name_and_one_dot_per_layout() {
             const lang = Face.states.en.lang;
             const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: 40 });
-            const dots = all(c, o => o.radius !== undefined && o.width === N.lk.shape.lang.cycle.dot_px);
+            const cy = N.lk.shape.lang.cycle;
+            const dots = all(c, o => o.lit !== undefined && o.radius !== undefined);
+            const each = (on, off) => [...Array(lang.count).keys()].map(i => i === lang.at ? on : off);
             compare(dots.length, lang.count, "one dot per layout");
-            compare(dots.map(d => d.opacity), [...Array(lang.count).keys()].map(i => i === lang.at ? 1 : N.lk.shape.lang.cycle.dot_off));
+            compare(dots.map(d => d.opacity), each(1, cy.dot_off));
+            // An unlit dot keeps 3:1 too, so the current layout's dot stands out by size.
+            compare(dots.map(d => d.width), each(cy.dot_on_px, cy.dot_px));
+            compare(new Set(dots.map(d => d.mapToItem(c, d.width / 2, 0).x)).size, 1, "one column, centred");
             compare(all(c, o => o.tint !== undefined && o.icon !== undefined)[0].icon, N.lk.icons.lang.cycle);
             compare(all(c, o => o.text === lang.cur.short).length, 1, "the current name");
             c.lang = Face.states.ar.lang;
@@ -230,12 +235,21 @@ Item {
         }
 
         function test_many_layouts_wrap_their_dots_inside_the_cap() {
-            const lang = Object.assign({}, Face.states.en.lang, { count: 8, at: 5 });
-            const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: 20 });
-            const dots = () => all(c, o => o.radius !== undefined && o.width === N.lk.shape.lang.cycle.dot_px);
+            const room = 18;
+            const lang = Object.assign({}, Face.states.en.lang, { count: 8, at: 0 });
+            const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: room });
+            const dots = () => all(c, o => o.lit !== undefined && o.radius !== undefined);
             compare(dots().length, 8);
-            tryVerify(() => dots().every(d => d.mapToItem(c, 0, 0).y + d.height <= 20), 2000, "no dot below the cap");
-            verify(new Set(dots().map(d => d.x)).size > 1, "more than one column");
+            // The key centres the design, so the cap's edges sit half the room above and below its middle.
+            const inside = d => {
+                const y = d.mapToItem(c, 0, 0).y - (c.height - room) / 2;
+                return y >= 0 && y + d.height <= room;
+            };
+            for (let at = 0; at < 8; at++) {
+                c.lang = Object.assign({}, lang, { at: at });
+                tryVerify(() => dots().every(inside), 2000, "every dot inside the cap with " + at + " lit");
+            }
+            verify(new Set(dots().map(d => d.mapToItem(c, d.width / 2, 0).x)).size > 1, "more than one column");
         }
 
         // The side names keep the owner's faded decoration (kx-theme's one contrast exception) in their own weight.

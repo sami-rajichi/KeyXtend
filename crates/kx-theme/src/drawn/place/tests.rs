@@ -56,8 +56,8 @@ fn the_corner_legends_ride_near_the_top_and_the_bottom() {
 fn cycles_dots_fill_the_cap_as_langcycle_lays_them_out() {
     let t = themes();
     let v = view(&t, "dolch");
-    // Six dots of 3 px with 2 px gaps fill the 28 px cap, centred 1.5 px up.
-    assert_eq!(spans(&v, Mark::Dots), vec![[-1.5, 26.5]]);
+    // Five dots of 3 px with 2 px gaps fit the 28 px cap with room for the lit dot's 4.5 px, centred 1.5 px up.
+    assert_eq!(spans(&v, Mark::Dots), vec![[1.0, 24.0]]);
 }
 
 #[test]

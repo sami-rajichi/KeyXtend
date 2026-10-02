@@ -117,6 +117,8 @@ pub struct CycleShape {
     pub icon_share: f32,
     /// Dot diameter.
     pub dot_px: f32,
+    /// The lit dot's diameter, larger so it stands out from the unlit ones.
+    pub dot_on_px: f32,
     /// Gap between dots.
     pub dot_gap_px: f32,
     /// Opacity of a dot whose layout is not shown.

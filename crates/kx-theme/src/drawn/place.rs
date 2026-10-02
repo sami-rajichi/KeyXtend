@@ -65,10 +65,12 @@ fn square(mid: f32, px: f32) -> Span {
     [mid - px / 2.0, mid + px / 2.0]
 }
 
-/// The tallest column of Cycle's dots that fits a cap `h` high (LangCycle.qml `perColumn`).
+/// The tallest column of Cycle's dots that fits a cap `h` high with room for the larger lit dot (LangCycle.qml
+/// `perColumn`).
 fn column(v: &LookView, h: f32) -> f32 {
     let c = &v.shape.lang.cycle;
-    let dots = ((h + c.dot_gap_px) / (c.dot_px + c.dot_gap_px))
+    let room = h - (c.dot_on_px - c.dot_px);
+    let dots = ((room + c.dot_gap_px) / (c.dot_px + c.dot_gap_px))
         .floor()
         .max(1.0);
     dots * c.dot_px + (dots - 1.0) * c.dot_gap_px

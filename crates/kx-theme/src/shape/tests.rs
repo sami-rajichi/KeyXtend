@@ -149,6 +149,7 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
         c.dot_off > 0.3,
         "raised from the mock-up's .3 to keep 3:1 (drawn)"
     );
+    assert!(c.dot_on_px > c.dot_px, "the lit dot stands out by size");
     assert_eq!(
         (s.lang.list.icon_px, s.lang.list.icon_share),
         (11.0, 0.7),
@@ -225,6 +226,7 @@ fn an_odd_tray_share_or_label_size_is_refused() {
         ),
         ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
         ("row_px = 31.0", "row_px = 0.0", "drawn.row_px"),
+        ("dot_on_px = 4.5", "dot_on_px = 3.0", "lang.cycle.dot_on_px"),
         (
             "mark_px = [10.0, 2.0, 2.0]",
             "mark_px = [10.0, 0.0, 2.0]",

@@ -5,11 +5,25 @@ use crate::theme::{FONT_WEIGHTS, outside_unit};
 
 impl Shape {
     /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, row or mark
-    /// of 0 or less, and a panel gap, label padding or mark gap below 0, naming the size.
+    /// of 0 or less, a panel gap, label padding or mark gap below 0, and a lit dot no larger than the others, naming the
+    /// size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
+        self.check_dots()?;
         self.check_shares()
+    }
+
+    /// Cycle's lit dot must be larger than an unlit one, which is how it stands out.
+    fn check_dots(&self) -> Result<(), String> {
+        let c = &self.lang.cycle;
+        if c.dot_on_px > c.dot_px {
+            return Ok(());
+        }
+        let (on, off) = (c.dot_on_px, c.dot_px);
+        Err(format!(
+            "shape: lang.cycle.dot_on_px {on} must be above dot_px {off}"
+        ))
     }
 
     /// Font weights must be 100 to 900.

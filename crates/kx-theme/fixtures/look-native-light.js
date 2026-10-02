@@ -194,6 +194,7 @@ var lk = {
         "icon_px": 12.0,
         "icon_share": 0.75,
         "dot_px": 3.0,
+        "dot_on_px": 4.5,
         "dot_gap_px": 2.0,
         "dot_off": 0.68
       },
