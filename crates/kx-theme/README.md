@@ -32,7 +32,18 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Contrast
 
-`contrast` holds the WCAG 2.x maths and the standard's minimums: `WCAG_AA` (4.5:1 for text), `WCAG_SHAPES` (3:1 for shapes such as the ring) and `MIN_CONTRAST` (`WCAG_AA..=21`), the only range the `[ui] min_contrast` check may accept, so the setting's floor is this constant and not a second copy. The shipped-theme test checks every legend pair against `WCAG_AA`, with no exceptions, including chip text and icons on the chip over the plate; the colours the owner nudged to reach it (2026-09-30) say so in `themes.toml`. Dimmed keys are left out, since WCAG sets no minimum for inactive parts (1.4.3). `low_shapes` checks each `Palette::shape_pairs` pair against `WCAG_SHAPES` the same way: the language list's ring and tick (`ring`) on the panel (`pop_bg`).
+`contrast` holds the WCAG 2.x maths and the standard's minimums: `WCAG_AA` (4.5:1 for text), `WCAG_SHAPES` (3:1 for icons and marks) and `MIN_CONTRAST` (`WCAG_AA..=21`), the only range the `[ui] min_contrast` check may accept, so the setting's floor is this constant and not a second copy.
+
+`drawn` checks the colours the keyboard really draws, blended as QML blends them, so every pair is opaque and its ratio is what shows:
+
+- each legend on the lightest and darkest spot of its cap's gradient, at rest, under the hover tint and under the press shade;
+- the language key's faded marks (Cycle's dots and globe, List's chevron) at 3:1, and the D-pad's icons;
+- the top bar's texts and icons, the lit size letter and the move ring (`ring`) on the plate, chips, and the same plate see-through over a system backdrop of its mode (`WINDOWS`);
+- text on the panels, their rows and buttons, the list's ring and the badge.
+
+`drawn::low` names every pair below its minimum, and the shipped-theme tests keep it empty in all six palettes and in high contrast. Dimmed keys are left out, since WCAG sets no minimum for inactive parts (1.4.3). The colours nudged to pass are marked in `themes.toml` ("owner 2026-09-30" for flat pairs, "2026-10-02" for drawn ones).
+
+**The one exception** (owner, 2026-10-02): the Carousel's side names keep the mock-up's 45 % fade (`[lang] side`) as decoration, below 4.5:1; the current layout's name beside them stays opaque. `drawn::EXCEPTION` names it, and a test fails as soon as any other pair falls below its minimum.
 
 ## Assets
 
@@ -44,7 +55,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Public API
 
-`Themes` (`shipped`, `find`), `ThemeError`, `Theme`, `Look`, `Cap`, `Gradient`, `DpadRefs`, `Dpad`, `Palette`, `Skirt`, `Shadow`, `Rgba` (`parse`, `over`, `share`, `CLEAR`, `BLACK`, `WHITE`), `Common`, `Shape`, `Motions`, `Motion`, `Timed`, `Amounts`, `MOVES`, `RingMotion`, `RingAmounts`, `Icons` (`names`) with `BarIcons`, `DpadIcons`, `LangIcons`, the `assets` module, `Mode`, `ModeChoice`, `mode_for`, `LookChoice`, `LookView`, `look_view`, `reach`, `accent_fill`, `with_accent`, `contrast_palette`, `contrast_common`, `hover_line`, and the `contrast` module.
+`Themes` (`shipped`, `find`), `ThemeError`, `Theme`, `Look`, `Cap`, `Gradient`, `DpadRefs`, `Dpad`, `Palette`, `Skirt`, `Shadow`, `Rgba` (`parse`, `over`, `on`, `share`, `CLEAR`, `BLACK`, `WHITE`), `Common`, `Shape`, `Motions`, `Motion`, `Timed`, `Amounts`, `MOVES`, `RingMotion`, `RingAmounts`, `Icons` (`names`) with `BarIcons`, `DpadIcons`, `LangIcons`, `PageIcons`, `NoticeIcons` and `TrayIcons`, `Mode`, `ModeChoice`, `mode_for`, `LookChoice`, `LookView`, `look_view`, `reach`, `accent_fill`, `with_accent`, `contrast_palette`, `contrast_common`, `hover_line`; the `contrast` module; the `drawn` module (`Drawn`, `drawn`, `low`, `EXCEPTION`, `WINDOWS`); and the `assets` module (`Bundle`, `Bundled`, `bundle`, `icon_file`, `font_files`, `is_font`, `ICON_DIRS`, `ICON_EXT`, `ICONS_AT`, `FONT_DIR`, `FONT_EXTS`, `SYSTEM_FONTS`).
 
 ## Security
 

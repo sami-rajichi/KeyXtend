@@ -183,7 +183,7 @@ var lk = {
         "icon_share": 0.75,
         "dot_px": 3.0,
         "dot_gap_px": 2.0,
-        "dot_off": 0.3
+        "dot_off": 0.68
       },
       "list": {
         "icon_px": 11.0,

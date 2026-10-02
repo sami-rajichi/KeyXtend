@@ -1,10 +1,11 @@
-# The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217); CSS rgba() is #RRGGBBAA.
-# The faces take every colour and each theme's radius, gap and fonts from here; shared sizes are in shape.toml, timings in
-# motion.toml, icons in icons.toml. Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
-# Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference; every legend reaches
-# WCAG AA, and colours marked "owner 2026-09-30" were nudged just enough to reach it.
-# legend_2_plate colours secondary text and icons on the plate (top bar, resize corner); a palette writes it only
-# where it differs from legend_2, which it takes otherwise.
+# The three keyboard themes, each light and soft dark, from design/keyboard-style-lab.html (lines 105-142, 198-217).
+# CSS rgba() is written #RRGGBBAA.
+# Shared sizes are in shape.toml, timings in motion.toml and icons in icons.toml.
+# Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
+# Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
+# Contrast: the drawn check (src/drawn.rs) keeps all drawn text at WCAG AA, except the Carousel's faded side names.
+# Colours marked "owner 2026-09-30" or "2026-10-02" were nudged just enough to pass it.
+# legend_2_plate colours secondary text and icons on the plate; a palette writes it only where it differs from legend_2.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
@@ -99,7 +100,7 @@ danger = "#34373C"
 danger_ink = "#E3E5E8"
 legend = "#E3E5E8"
 legend_mod = "#E3E5E8"
-legend_2 = "#A9AEB5"
+legend_2 = "#AFB4BA"  # 2026-10-02: AA as drawn, under the hover tint (was #A9AEB5)
 legend_act = "#E3E5E8"
 on = "#7CB7F0"
 on_ink = "#10202E"
@@ -119,7 +120,7 @@ pop_line = "#FFFFFF17"
 pop_hover = "#FFFFFF0E"
 pop_sel = "#2E4760"
 chip_bg = "#FFFFFF12"
-hover = "#FFFFFF14"
+hover = "#FFFFFF0A"  # 2026-10-02: the mock-up's 4 % (.key:hover), so legends keep AA (was #FFFFFF14)
 key_shadow = [
     { inset = true, x = 0.0, y = -1.0, blur = 0.0, spread = 0.0, color = "#00000047" },
     { x = 0.0, y = 0.0, blur = 0.0, spread = 1.0, color = "#FFFFFF0A" },
@@ -172,7 +173,7 @@ danger = "#CDBBA7"
 danger_ink = "#1D1B18"
 legend = "#1D1B18"
 legend_mod = "#1D1B18"
-legend_2 = "#6B655C"
+legend_2 = "#615C54"  # 2026-10-02: AA as drawn, on the pressed gradient (was #6B655C)
 legend_2_plate = "#69635B"  # owner 2026-09-30: nudged to AA on the plate (was #6B655C)
 legend_act = "#1D1B18"
 on = "#FFFFFF"
@@ -183,7 +184,7 @@ rec = "#FFFFFF"
 rec_ink = "#7A5E00"
 led_off = "#D3CEC4"
 led_on = "#2F7A4C"
-ring = "#A68600"
+ring = "#735C00"  # 2026-10-02: AA as the lit size letter on the plate (was #A68600)
 badge_bg = "#1D1B18"
 badge_ink = "#F2C400"
 pop_bg = "#FBFAF7"
@@ -211,16 +212,16 @@ key_act = "#3A3734"
 enter = "#E6BE3A"
 enter_ink = "#2A2418"
 danger = "#6B5645"
-danger_ink = "#EDE8DF"
+danger_ink = "#F3EEE6"  # 2026-10-02: the modifier legend, AA under the pointer (was #EDE8DF)
 legend = "#EDE8DF"
 legend_mod = "#F3EEE6"
-legend_2 = "#B3ACA2"
+legend_2 = "#C1BCB4"  # 2026-10-02: AA as drawn, on the convex top (was #B3ACA2)
 legend_act = "#EDE8DF"
-on = "#44403C"
+on = "#3F3B37"  # 2026-10-02: AA as drawn, under the pointer (was #44403C)
 on_ink = "#E6BE3A"
-lock = "#846B56"
+lock = "#79624F"  # 2026-10-02: AA as drawn, on the convex top (was #846B56)
 lock_ink = "#FFFFFF"
-rec = "#44403C"
+rec = "#3F3B37"  # 2026-10-02: as on (was #44403C)
 rec_ink = "#E6BE3A"
 led_off = "#4A4642"
 led_on = "#6CC08A"
@@ -234,7 +235,7 @@ pop_line = "#FFFFFF14"
 pop_hover = "#FFFFFF0D"
 pop_sel = "#4A4130"
 chip_bg = "#3A3734"
-hover = "#FFFFFF14"
+hover = "#FFFFFF0A"  # 2026-10-02: the mock-up's 4 % (.key:hover), so legends keep AA (was #FFFFFF14)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#00000059" },
     { inset = true, x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#FFFFFF0F" },
@@ -284,26 +285,26 @@ stop_ink = "rec_ink"
 [theme.light]
 plate = "#B9BBBE"
 key = "#E6E7E8"
-key_mod = "#5F6161"
-key_act = "#5F6161"
-enter = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
+key_mod = "#595B5B"  # 2026-10-02: AA on the sculpted top (was #5F6161)
+key_act = "#595B5B"  # 2026-10-02: as key_mod (was #5F6161)
+enter = "#007275"  # 2026-10-02: AA on the sculpted top (was #008488, mock-up #00A4A9)
 enter_ink = "#FFFFFF"  # owner 2026-09-30: nudged to AA (was #F7F2EA)
-danger = "#B83262"
+danger = "#AD2F5C"  # 2026-10-02: AA on the sculpted top (was #B83262)
 danger_ink = "#F7F2EA"
 legend = "#393B3B"
 legend_mod = "#F7F2EA"
-legend_2 = "#67686A"  # owner 2026-09-30: nudged to AA (was #6B6D6F)
+legend_2 = "#5E5F60"  # 2026-10-02: AA under the pointer (was #67686A, mock-up #6B6D6F)
 legend_2_plate = "#4A4B4D"  # owner 2026-09-30: nudged to AA on the plate (was #6B6D6F)
 legend_act = "#F7F2EA"
-on = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
+on = "#007275"  # 2026-10-02: as enter (was #008488, mock-up #00A4A9)
 on_ink = "#FFFFFF"
-lock = "#008488"  # owner 2026-09-30: nudged to AA (was #00A4A9)
+lock = "#007275"  # 2026-10-02: as enter (was #008488, mock-up #00A4A9)
 lock_ink = "#FFFFFF"
-rec = "#B83262"
+rec = "#AD2F5C"  # 2026-10-02: as danger (was #B83262)
 rec_ink = "#FFFFFF"
 led_off = "#00000000"
 led_on = "#7FF4F7"
-ring = "#00898D"
+ring = "#004D4F"  # 2026-10-02: AA as the lit size letter on the plate (was #00898D)
 badge_bg = "#393B3B"
 badge_ink = "#7FE6E9"
 pop_bg = "#E6E7E8"
@@ -324,31 +325,31 @@ window_shadow = [
 
 [theme.light.skirt]
 key = "#C5C7CA"
-key_mod = "#4A4C4C"
-enter = "#006D70"  # owner 2026-09-30: darkened with its top (was #00878B)
-danger = "#952749"
-on = "#006D70"  # owner 2026-09-30: darkened with its top (was #00878B)
-rec = "#952749"
+key_mod = "#454747"  # 2026-10-02: darkened with its top (was #4A4C4C)
+enter = "#005E60"  # 2026-10-02: darkened with its top (was #006D70)
+danger = "#8C2545"  # 2026-10-02: darkened with its top (was #952749)
+on = "#005E60"  # 2026-10-02: darkened with its top (was #006D70)
+rec = "#8C2545"  # 2026-10-02: darkened with its top (was #952749)
 
 [theme.dark]
 plate = "#2A2C2E"
 key = "#4A4D4F"
 key_mod = "#35383B"
 key_act = "#35383B"
-enter = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
+enter = "#126A6E"  # 2026-10-02: AA on the sculpted top (was #168388, mock-up #1A9EA3)
 enter_ink = "#FFFFFF"  # owner 2026-09-30: nudged to AA (was #F4F1EA)
-danger = "#A9405F"
+danger = "#913752"  # 2026-10-02: AA on the sculpted top (was #A9405F)
 danger_ink = "#F4F1EA"
 legend = "#EDEAE4"
 legend_mod = "#EDEAE4"
-legend_2 = "#BABDBF"  # owner 2026-09-30: nudged to AA (was #B0B3B6)
+legend_2 = "#E5E7E7"  # 2026-10-02: AA on the sculpted top (was #BABDBF, mock-up #B0B3B6)
 legend_2_plate = "#B0B3B6"  # the P1 value, which already reaches AA on the plate
 legend_act = "#EDEAE4"
-on = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
+on = "#126A6E"  # 2026-10-02: as enter (was #168388, mock-up #1A9EA3)
 on_ink = "#FFFFFF"
-lock = "#168388"  # owner 2026-09-30: nudged to AA (was #1A9EA3)
+lock = "#126A6E"  # 2026-10-02: as enter (was #168388, mock-up #1A9EA3)
 lock_ink = "#FFFFFF"
-rec = "#A9405F"
+rec = "#913752"  # 2026-10-02: as danger (was #A9405F)
 rec_ink = "#FFFFFF"
 led_off = "#00000000"
 led_on = "#8FF0F2"
@@ -362,7 +363,7 @@ pop_line = "#FFFFFF14"
 pop_hover = "#FFFFFF0D"
 pop_sel = "#1D4A4C"
 chip_bg = "#3E4144"
-hover = "#FFFFFF14"
+hover = "#FFFFFF0A"  # 2026-10-02: the mock-up's 4 % (.key:hover), so legends keep AA (was #FFFFFF14)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 1.0, spread = 0.0, color = "#00000059" },
 ]
@@ -374,7 +375,7 @@ window_shadow = [
 [theme.dark.skirt]
 key = "#3A3C3E"
 key_mod = "#2B2D30"
-enter = "#106568"  # owner 2026-09-30: darkened with its top (was #13797D)
-danger = "#86314B"
-on = "#106568"  # owner 2026-09-30: darkened with its top (was #13797D)
-rec = "#86314B"
+enter = "#0D5254"  # 2026-10-02: darkened with its top (was #106568)
+danger = "#732A40"  # 2026-10-02: darkened with its top (was #86314B)
+on = "#0D5254"  # 2026-10-02: darkened with its top (was #106568)
+rec = "#732A40"  # 2026-10-02: darkened with its top (was #86314B)

@@ -4,26 +4,26 @@ var lk = {
   "palette": {
     "plate": "#FFB9BBBE",
     "key": "#FFE6E7E8",
-    "key_mod": "#FF5F6161",
-    "key_act": "#FF5F6161",
-    "enter": "#FF008488",
+    "key_mod": "#FF595B5B",
+    "key_act": "#FF595B5B",
+    "enter": "#FF007275",
     "enter_ink": "#FFFFFFFF",
-    "danger": "#FFB83262",
+    "danger": "#FFAD2F5C",
     "danger_ink": "#FFF7F2EA",
     "legend": "#FF393B3B",
     "legend_mod": "#FFF7F2EA",
-    "legend_2": "#FF67686A",
+    "legend_2": "#FF5E5F60",
     "legend_2_plate": "#FF4A4B4D",
     "legend_act": "#FFF7F2EA",
-    "on": "#FF008488",
+    "on": "#FF007275",
     "on_ink": "#FFFFFFFF",
-    "lock": "#FF008488",
+    "lock": "#FF007275",
     "lock_ink": "#FFFFFFFF",
-    "rec": "#FFB83262",
+    "rec": "#FFAD2F5C",
     "rec_ink": "#FFFFFFFF",
     "led_off": "#00000000",
     "led_on": "#FF7FF4F7",
-    "ring": "#FF00898D",
+    "ring": "#FF004D4F",
     "badge_bg": "#FF393B3B",
     "badge_ink": "#FF7FE6E9",
     "pop_bg": "#FFE6E7E8",
@@ -34,7 +34,7 @@ var lk = {
     "pop_sel": "#FFCBEDEE",
     "chip_bg": "#FFD4D6D8",
     "hover": "#0F000000",
-    "dim": "#FF959799",
+    "dim": "#FF939596",
     "dim_ink": "#FFD2D1D0",
     "key_shadow": [
       {
@@ -66,12 +66,12 @@ var lk = {
     ],
     "skirt": {
       "key": "#FFC5C7CA",
-      "key_mod": "#FF4A4C4C",
-      "enter": "#FF006D70",
-      "danger": "#FF952749",
-      "on": "#FF006D70",
-      "rec": "#FF952749",
-      "dim": "#FF8D8F90"
+      "key_mod": "#FF454747",
+      "enter": "#FF005E60",
+      "danger": "#FF8C2545",
+      "on": "#FF005E60",
+      "rec": "#FF8C2545",
+      "dim": "#FF8B8D8E"
     }
   },
   "common": {
@@ -203,7 +203,7 @@ var lk = {
         "icon_share": 0.75,
         "dot_px": 3.0,
         "dot_gap_px": 2.0,
-        "dot_off": 0.3
+        "dot_off": 0.68
       },
       "list": {
         "icon_px": 11.0,
@@ -736,11 +736,11 @@ var lk = {
     }
   },
   "dpad": {
-    "face": "#FF5F6161",
+    "face": "#FF595B5B",
     "ink": "#FFF7F2EA",
-    "on": "#FF008488",
+    "on": "#FF007275",
     "on_ink": "#FFFFFFFF",
-    "stop": "#FFB83262",
+    "stop": "#FFAD2F5C",
     "stop_ink": "#FFFFFFFF"
   },
   "dark": false,

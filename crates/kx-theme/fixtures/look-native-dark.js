@@ -12,8 +12,8 @@ var lk = {
     "danger_ink": "#FFE3E5E8",
     "legend": "#FFE3E5E8",
     "legend_mod": "#FFE3E5E8",
-    "legend_2": "#FFA9AEB5",
-    "legend_2_plate": "#FFA9AEB5",
+    "legend_2": "#FFAFB4BA",
+    "legend_2_plate": "#FFAFB4BA",
     "legend_act": "#FFE3E5E8",
     "on": "#FF7CB7F0",
     "on_ink": "#FF10202E",
@@ -33,7 +33,7 @@ var lk = {
     "pop_hover": "#0EFFFFFF",
     "pop_sel": "#FF2E4760",
     "chip_bg": "#12FFFFFF",
-    "hover": "#14FFFFFF",
+    "hover": "#0AFFFFFF",
     "dim": "#FF303338",
     "dim_ink": "#FF75787B",
     "key_shadow": [
@@ -183,7 +183,7 @@ var lk = {
         "icon_share": 0.75,
         "dot_px": 3.0,
         "dot_gap_px": 2.0,
-        "dot_off": 0.3
+        "dot_off": 0.68
       },
       "list": {
         "icon_px": 11.0,

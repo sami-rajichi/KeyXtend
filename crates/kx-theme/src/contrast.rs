@@ -1,11 +1,8 @@
-//! WCAG 2.x contrast: the ratio between two colours, the standard's minimums, and the legends below one.
+//! WCAG 2.x contrast: the ratio between two colours and the standard's minimums; `drawn` checks what is drawn.
 
 use std::ops::RangeInclusive;
 
-use crate::mode::Mode;
-use crate::palette::Palette;
 use crate::rgba::Rgba;
-use crate::theme::Theme;
 
 /// WCAG 2.x level AA's least contrast for text (success criterion 1.4.3).
 pub const WCAG_AA: f32 = 4.5;
@@ -45,7 +42,7 @@ pub(crate) fn luminance(c: Rgba) -> f32 {
     r * linear(c.r) + g * linear(c.g) + b * linear(c.b)
 }
 
-/// The WCAG contrast ratio between two colours, from 1 to 21.
+/// The WCAG contrast ratio between two opaque colours, from 1 to 21; lay a see-through one on its background first.
 #[must_use]
 pub fn contrast(a: Rgba, b: Rgba) -> f32 {
     let (la, lb) = (luminance(a), luminance(b));
@@ -61,37 +58,6 @@ pub fn readable(a: Rgba, b: Rgba, bg: Rgba) -> Rgba {
         b
     }
 }
-
-/// Every legend below `min` contrast with its background, as `<id>.<mode>: <pair> is <n>:1`.
-#[must_use]
-pub fn low_contrast(themes: &[Theme], min: f32) -> Vec<String> {
-    low(themes, min, |p| p.legend_pairs().to_vec())
-}
-
-/// Every shape that carries meaning below WCAG's 3:1 with its background, named as `low_contrast` names legends.
-#[must_use]
-pub fn low_shapes(themes: &[Theme]) -> Vec<String> {
-    low(themes, WCAG_SHAPES, |p| p.shape_pairs().to_vec())
-}
-
-/// Every pair `pairs` gives, in each theme and mode, below `min`.
-fn low(themes: &[Theme], min: f32, pairs: impl Fn(&Palette) -> Vec<Pair>) -> Vec<String> {
-    let mut low = Vec::new();
-    for t in themes {
-        for mode in Mode::ALL {
-            for (pair, ink, bg) in pairs(t.palette(mode)) {
-                let c = contrast(ink, bg);
-                if c < min {
-                    low.push(format!("{}.{}: {pair} is {c:.1}:1", t.look.id, mode.key()));
-                }
-            }
-        }
-    }
-    low
-}
-
-/// A named colour and the background it sits on.
-type Pair = (&'static str, Rgba, Rgba);
 
 #[cfg(test)]
 mod tests;

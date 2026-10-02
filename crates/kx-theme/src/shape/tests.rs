@@ -142,10 +142,10 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     let s = load().expect("shape.toml loads");
     let c = &s.lang.cycle;
     assert_eq!((c.icon_px, c.icon_share), (12.0, 0.75), ".cyc .i");
-    assert_eq!(
-        (c.dot_px, c.dot_gap_px, c.dot_off),
-        (3.0, 2.0, 0.3),
-        ".dots"
+    assert_eq!((c.dot_px, c.dot_gap_px), (3.0, 2.0), ".dots");
+    assert!(
+        c.dot_off > 0.3,
+        "raised from the mock-up's .3 to keep 3:1 (drawn)"
     );
     assert_eq!(
         (s.lang.list.icon_px, s.lang.list.icon_share),
@@ -190,7 +190,7 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ),
         ("\nshare = 0.4", "\nshare = 1.5", "dim.share"),
         ("icon_share = 0.8", "icon_share = -0.1", "menu.icon_share"),
-        ("dot_off = 0.3", "dot_off = nan", "lang.cycle.dot_off"),
+        ("dot_off = 0.68", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
     ]);

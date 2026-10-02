@@ -64,6 +64,15 @@ impl Rgba {
         }
     }
 
+    /// This colour laid on `under` at its own opacity, as Qt draws a tint: the result is as opaque as `under`.
+    #[must_use]
+    pub fn on(self, under: Rgba) -> Rgba {
+        Rgba {
+            a: under.a,
+            ..self.over(under, self.share())
+        }
+    }
+
     /// Its opacity, from 0 (clear) to 1 (opaque).
     #[must_use]
     pub fn share(self) -> f32 {
@@ -154,6 +163,14 @@ mod tests {
         );
         assert_eq!(white.over(black, 1.0), white);
         assert_eq!(white.over(black, 0.0), black);
+    }
+
+    #[test]
+    fn a_tint_laid_on_an_opaque_colour_blends_and_stays_opaque() {
+        let tint = Rgba::parse("#00000033").expect("a fifth of black");
+        let laid = tint.on(Rgba::WHITE);
+        assert_eq!(laid, Rgba::parse("#CCCCCC").expect("grey"));
+        assert_eq!(Rgba::CLEAR.on(Rgba::WHITE), Rgba::WHITE, "no tint");
     }
 
     #[test]

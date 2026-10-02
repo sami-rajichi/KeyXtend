@@ -203,35 +203,4 @@ impl Palette {
             .into_iter()
             .find_map(|(n, c)| (n == name).then_some(c))
     }
-
-    /// Each text colour with the background it sits on, named for reports; dimmed keys are left out, as WCAG sets no
-    /// minimum for inactive parts (success criterion 1.4.3).
-    #[must_use]
-    pub fn legend_pairs(&self) -> [(&'static str, Rgba, Rgba); 15] {
-        let chip = self.chip_bg.over(self.plate, self.chip_bg.share());
-        [
-            ("legend on key", self.legend, self.key),
-            ("legend_2 on key", self.legend_2, self.key),
-            ("legend_2_plate on plate", self.legend_2_plate, self.plate),
-            ("legend_mod on key_mod", self.legend_mod, self.key_mod),
-            ("legend_act on key_act", self.legend_act, self.key_act),
-            ("enter_ink on enter", self.enter_ink, self.enter),
-            ("danger_ink on danger", self.danger_ink, self.danger),
-            ("on_ink on on", self.on_ink, self.on),
-            ("lock_ink on lock", self.lock_ink, self.lock),
-            ("rec_ink on rec", self.rec_ink, self.rec),
-            ("pop_ink on pop_bg", self.pop_ink, self.pop_bg),
-            ("pop_muted on pop_bg", self.pop_muted, self.pop_bg),
-            ("badge_ink on badge_bg", self.badge_ink, self.badge_bg),
-            ("legend on chip", self.legend, chip),
-            ("legend_2_plate on chip", self.legend_2_plate, chip),
-        ]
-    }
-
-    /// Each shape that carries meaning with the background it sits on, named for reports: the language list's ring and
-    /// tick on the panel (WCAG success criterion 1.4.11).
-    #[must_use]
-    pub fn shape_pairs(&self) -> [(&'static str, Rgba, Rgba); 1] {
-        [("ring on pop_bg", self.ring, self.pop_bg)]
-    }
 }

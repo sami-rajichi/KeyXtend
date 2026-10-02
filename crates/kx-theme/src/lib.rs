@@ -8,6 +8,7 @@ mod accent;
 pub mod assets;
 mod common;
 pub mod contrast;
+pub mod drawn;
 mod extras;
 mod hc;
 mod icons;

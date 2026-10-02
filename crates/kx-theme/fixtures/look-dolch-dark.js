@@ -6,20 +6,20 @@ var lk = {
     "key": "#FF4A4D4F",
     "key_mod": "#FF35383B",
     "key_act": "#FF35383B",
-    "enter": "#FF168388",
+    "enter": "#FF126A6E",
     "enter_ink": "#FFFFFFFF",
-    "danger": "#FFA9405F",
+    "danger": "#FF913752",
     "danger_ink": "#FFF4F1EA",
     "legend": "#FFEDEAE4",
     "legend_mod": "#FFEDEAE4",
-    "legend_2": "#FFBABDBF",
+    "legend_2": "#FFE5E7E7",
     "legend_2_plate": "#FFB0B3B6",
     "legend_act": "#FFEDEAE4",
-    "on": "#FF168388",
+    "on": "#FF126A6E",
     "on_ink": "#FFFFFFFF",
-    "lock": "#FF168388",
+    "lock": "#FF126A6E",
     "lock_ink": "#FFFFFFFF",
-    "rec": "#FFA9405F",
+    "rec": "#FF913752",
     "rec_ink": "#FFFFFFFF",
     "led_off": "#00000000",
     "led_on": "#FF8FF0F2",
@@ -33,7 +33,7 @@ var lk = {
     "pop_hover": "#0DFFFFFF",
     "pop_sel": "#FF1D4A4C",
     "chip_bg": "#FF3E4144",
-    "hover": "#14FFFFFF",
+    "hover": "#0AFFFFFF",
     "dim": "#FF2E3133",
     "dim_ink": "#FF787877",
     "key_shadow": [
@@ -67,10 +67,10 @@ var lk = {
     "skirt": {
       "key": "#FF3A3C3E",
       "key_mod": "#FF2B2D30",
-      "enter": "#FF106568",
-      "danger": "#FF86314B",
-      "on": "#FF106568",
-      "rec": "#FF86314B",
+      "enter": "#FF0D5254",
+      "danger": "#FF732A40",
+      "on": "#FF0D5254",
+      "rec": "#FF732A40",
       "dim": "#FF2A2C2F"
     }
   },
@@ -203,7 +203,7 @@ var lk = {
         "icon_share": 0.75,
         "dot_px": 3.0,
         "dot_gap_px": 2.0,
-        "dot_off": 0.3
+        "dot_off": 0.68
       },
       "list": {
         "icon_px": 11.0,
@@ -738,9 +738,9 @@ var lk = {
   "dpad": {
     "face": "#FF35383B",
     "ink": "#FFEDEAE4",
-    "on": "#FF168388",
+    "on": "#FF126A6E",
     "on_ink": "#FFFFFFFF",
-    "stop": "#FFA9405F",
+    "stop": "#FF913752",
     "stop_ink": "#FFFFFFFF"
   },
   "dark": true,
