@@ -29,7 +29,7 @@ fn expected(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Pt, String> {
 /// Waits until the pill shows (`show`) or hides; returns the ms since `t0`, the step that should cause it.
 fn wait_pill(ctx: &Ctx, show: bool, t0: Instant) -> Option<u128> {
     let title = &ctx.spike.tools.pill_title;
-    let spent = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let spent = win::ms_since(t0);
     let left = ctx.cfg.g19.pill_wait_ms.saturating_sub(spent);
     let done = || (facetools::shown(title).is_some() == show).then(|| t0.elapsed().as_millis());
     win::poll_until(left, ctx.cfg.timing.poll_ms, done)

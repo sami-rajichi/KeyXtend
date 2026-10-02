@@ -103,7 +103,7 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
         .ok_or("the panel has no text field")?;
     uia::focus(&field)?;
     // Brought forward without keys: an Alt tap would reach the app in front.
-    let forward = || win::ask_front(panel).then_some(());
+    let forward = || spike_core::window::bring_back(panel, 0).then_some(());
     let _ = win::poll_until(t.focus_wait_ms, t.poll_ms, forward);
     in_front(panel)?;
     keys::text(&g.word)?;

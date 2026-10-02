@@ -11,14 +11,14 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
-    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindowVisible,
-    PostMessageW, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
+    GetWindowRect, GetWindowThreadProcessId, IsChild, IsIconic, IsWindowVisible, PostMessageW,
+    SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
 
 use crate::config::{Keys, Timing};
 
-/// Longest window title or class we read.
+/// Longest window class we read.
 const TEXT_CAP: usize = 512;
 /// Longest program path we read: the Windows long-path limit.
 const PATH_CAP: u32 = 32_768;
@@ -35,6 +35,11 @@ pub const fn size32<T>() -> u32 {
 /// Sleeps `ms` milliseconds.
 pub fn sleep_ms(ms: u64) {
     std::thread::sleep(Duration::from_millis(ms));
+}
+
+/// Milliseconds since `t`.
+pub fn ms_since(t: Instant) -> u64 {
+    u64::try_from(t.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Calls `f` every `poll_ms` until it gives a value or `timeout_ms` has passed.
@@ -98,14 +103,7 @@ pub fn snapshot() -> HashSet<isize> {
     top_windows().into_iter().map(key).collect()
 }
 
-/// The window title.
-#[allow(unsafe_code, reason = "The buffer is valid for its whole length.")]
-pub fn title(hwnd: HWND) -> String {
-    let mut buf = [0u16; TEXT_CAP];
-    // SAFETY: the buffer is valid for its whole length.
-    let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
-    String::from_utf16_lossy(&buf[..usize::try_from(n).unwrap_or(0)])
-}
+pub use kx_platform_windows::window::title;
 
 /// The window class name.
 #[allow(unsafe_code, reason = "The buffer is valid for its whole length.")]
@@ -113,7 +111,8 @@ pub fn class(hwnd: HWND) -> String {
     let mut buf = [0u16; TEXT_CAP];
     // SAFETY: the buffer is valid for its whole length.
     let n = unsafe { GetClassNameW(hwnd, &mut buf) };
-    String::from_utf16_lossy(&buf[..usize::try_from(n).unwrap_or(0)])
+    let n = usize::try_from(n).unwrap_or_default();
+    String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
 
 /// `[class] of program`, for reports.
@@ -128,9 +127,7 @@ pub fn describe(hwnd: HWND) -> String {
 
 /// The file name of the program that owns `hwnd`, such as `notepad.exe`.
 pub fn program_name(hwnd: HWND) -> Option<String> {
-    let path = program(hwnd).ok()?;
-    let name = std::path::Path::new(&path).file_name()?;
-    Some(name.to_string_lossy().into_owned())
+    kx_platform_windows::front::app_of(owner(hwnd).0)
 }
 
 /// The process and thread that own `hwnd`.
@@ -229,16 +226,6 @@ pub fn close(hwnd: HWND) -> Result<(), String> {
         .map_err(|e| format!("WM_CLOSE to {}: {e}", describe(hwnd)))
 }
 
-/// Asks Windows to bring `hwnd` to the front with no key press; true once it is in front.
-#[allow(unsafe_code, reason = "A focus request on a window handle.")]
-pub fn ask_front(hwnd: HWND) -> bool {
-    if kx_platform_windows::window::foreground() != hwnd {
-        // SAFETY: a plain request Windows may refuse; the check below sees the result.
-        let _ = unsafe { SetForegroundWindow(hwnd) };
-    }
-    kx_platform_windows::window::foreground() == hwnd
-}
-
 /// Brings `hwnd` to the front with the Alt-tap trick; true once it is in front.
 #[allow(unsafe_code, reason = "Plain calls on a window handle.")]
 pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
@@ -273,6 +260,19 @@ mod tests {
             Some(7)
         });
         assert_eq!((got, calls), (Some(7), 1));
+    }
+
+    #[test]
+    fn a_window_that_does_not_exist_reads_as_nothing() {
+        let none = HWND::default();
+        assert_eq!((title(none), class(none)), (String::new(), String::new()));
+        assert_eq!(program_name(none), None);
+    }
+
+    #[test]
+    fn ms_since_counts_up_from_its_start() {
+        let t = Instant::now();
+        assert!(ms_since(t) <= ms_since(t));
     }
 
     #[test]

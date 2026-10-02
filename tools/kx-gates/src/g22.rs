@@ -14,7 +14,7 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
 use crate::g22cfg::{self, G22, Sentence};
 use crate::simuser::keys_ours;
-use crate::win::{self, sleep_ms};
+use crate::win::{self, ms_since, sleep_ms};
 use crate::winfind;
 use crate::{g22bench, g22type, g25, probe, readback, wer};
 
@@ -40,11 +40,6 @@ pub(crate) fn added(before: &str, now: &str) -> String {
         .unwrap_or(now)
         .trim()
         .to_string()
-}
-
-/// Milliseconds since `t`.
-pub(crate) fn ms_since(t: Instant) -> u64 {
-    u64::try_from(t.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Clicks Mic again until the click lands or `stop_wait_ms` runs out; the last error when it never landed.

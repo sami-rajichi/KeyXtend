@@ -10,8 +10,9 @@ use spike_core::sendkeys;
 use spike_core::uia::Uia;
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::g22::{added, ms_since, words_in};
+use crate::g22::{added, words_in};
 use crate::simuser::keys_ours;
+use crate::win::ms_since;
 use crate::{probe, readback};
 
 /// Name that runs this check instead of a face.
