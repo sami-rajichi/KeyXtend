@@ -45,6 +45,8 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 **The see-through plate** (theme review M1, accepted): over a system backdrop the plate keeps 88 % of its colour (`[backdrop] plate`), and the check measures it over Windows' plain window colour in the keyboard's mode (`WINDOWS`), so Acrylic, or Mica over a dark wallpaper, may show a little lighter or darker. The backdrop is off by default, and its full check comes with the Settings window that turns it on (P13).
 
+**A known limit** (owner, 2026-10-02): the check measures each legend over the Latin capital height, but accents, brackets and tall or descending Arabic letters reach a little beyond it, where a nudged token can read about 4.4:1. The owner checks those keys by eye.
+
 **The one exception** (owner, 2026-10-02): the Carousel's side names keep the mock-up's 45 % fade (`[lang] side`) as decoration, below 4.5:1; the current layout's name beside them stays opaque. `drawn::EXCEPTION` names it, and a test fails as soon as any other pair falls below its minimum.
 
 ## Assets
