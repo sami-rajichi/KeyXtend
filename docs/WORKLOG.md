@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-02 10:05 — P3: kx-review fixes for the keyboard's look and QML
+kx-theme now checks every text, icon and mark the keyboard really draws, on its cap's gradient, under hover and press and on the see-through plate, and the Dolch, ET66 and Native tokens were nudged until all pass; the Carousel's faded side names are the owner's one named exception. A system accent stays only while the keyboard stays readable, and high contrast draws flat caps with Windows' own colour pairs. Every control now gives UI Automation its text key as its id, the move catcher's title is translated, `close` became `putAway`, and new Quick tests cover the two-click move and resize and units on a scaled screen. A static test keeps all QML text plain, the guard holds no borrow while it moves windows, and an open language list closes on a click even with one layout left.
+
 ## 2026-10-02 00:30 — P3: final review fixes for saving, the language key and tests
 After a save fails on a locked settings file, moving or resizing the keyboard back now changes the value the store keeps, so stop no longer saves the abandoned one. With one layout installed, the language key does nothing in every design, the List included, and its Arabic tip reads «لا يوجد سوى لغة واحدة مثبّتة للوحة المفاتيح». A full message queue can no longer hang quitting, a refused `[ui]` value is logged by its kind, and `Typing`'s debug print hides the typing state. Several tests now prove what they claim (the locked file, a poisoned lock, a blocked module, NaN pixels, the plate token, golden layout ids), and the window tests find keys by their UI Automation id.
 
