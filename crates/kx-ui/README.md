@@ -27,7 +27,7 @@ The app calls `harden_qt` before Qt's app object exists. It clears with `qunsete
 - The keyboard and the bubble each own their tip (`Tip`), so Windows keeps it above them when the guard lifts them. A shown tip also lifts itself alone in front of our windows (`Keyboard.liftAlone`, by its title `window.tip`), hides as a guard run starts, and stays on the screen under its button.
 - Names, labels and tips are translation keys, looked up in the keyboard's language: the layout's in front, unless `[ui] language` pins one (ADR-0020). Arabic flips text only; nothing mirrors, and a tip closes when the texts or the look change, so it never shows the last language.
 - Keys that come in a later version are dimmed, never press, and tell readers and the tooltip "Coming in a later version".
-- Text uses `Label` (grayscale, no ClearType fringes), and hover uses `Hover` (the theme's tint, and a `Highlight` outline in high contrast). `Icon` tints with `MultiEffect`, public Qt Quick only.
+- Text uses `Label` (grayscale, no ClearType fringes, plain text only; the texts test fails on any text element that could read markup), and hover uses `Hover` (the theme's tint, and a `Highlight` outline in high contrast). `Icon` tints with `MultiEffect`, public Qt Quick only.
 
 ## Qt Quick tests
 

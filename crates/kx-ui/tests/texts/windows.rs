@@ -1,12 +1,11 @@
 //! Our windows as the guard finds them: each title names one kind of window in every language, and every window file
 //! asks Qt to start on top.
 
-use crate::all;
+use crate::{all, qml_files};
 use kx_ui::i18n::keys::{
     CATCH, WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_TIP,
 };
 use std::collections::BTreeMap;
-use std::path::Path;
 
 /// Every window title the UI names; the guard, `shape`, the backdrops, a tip's lift and UI Automation find windows by them.
 pub const TITLES: [&str; 7] = [
@@ -18,8 +17,6 @@ pub const TITLES: [&str; 7] = [
     WINDOW_TIP,
     CATCH,
 ];
-/// The QML folder, under this crate.
-const QML: &str = "qml";
 /// What may come before a file's root type: comments, pragmas and imports.
 const HEAD: [&str; 3] = ["//", "pragma ", "import "];
 /// A root type that makes a window.
@@ -57,17 +54,11 @@ fn each_window_title_names_one_kind_of_window_in_every_language() {
 /// The guard keeps a window topmost only when it starts so; the Settings window it spares will need its own rule here.
 #[test]
 fn every_window_file_starts_on_top() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join(QML);
     let mut found = Vec::new();
-    for f in std::fs::read_dir(dir)
-        .expect("the QML folder reads")
-        .flatten()
-    {
-        let text = std::fs::read_to_string(f.path()).expect("a QML file reads");
+    for (name, text) in qml_files() {
         if root(&text) != Some(WINDOW_ROOT) {
             continue;
         }
-        let name = f.file_name().to_string_lossy().into_owned();
         let flags = text.lines().map(str::trim).find(|l| l.starts_with(FLAGS));
         assert!(
             flags.is_some_and(|l| l.contains(ON_TOP)),
