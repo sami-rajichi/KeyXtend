@@ -6,6 +6,7 @@ use super::*;
 use crate::Themes;
 use crate::contrast::luminance;
 use crate::hc::sample::HC;
+use crate::look::Cap;
 use crate::mode::{Mode, ModeChoice};
 use crate::view::{LookChoice, look_view};
 
@@ -136,6 +137,43 @@ fn legends_are_checked_on_a_sculpted_caps_lit_top_and_under_hover_and_press() {
     );
     assert_ne!(rest.bg, hover.bg, "the hover tint lies under the legend");
     assert!(all.iter().any(|d| d.name == "legend on key, press"));
+}
+
+#[test]
+fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() {
+    let t = themes();
+    let v = look_view(&t, &choice("dolch", Mode::Dark), &SysLook::default()).expect("dolch");
+    let all = drawn(&v);
+    let bg = |n: &str| luminance(all.iter().find(|d| d.name == n).expect(n).bg);
+    let Cap::Skirt { top, .. } = &v.look.cap else {
+        unreachable!("dolch has sculpted caps")
+    };
+    let end = luminance(Rgba::WHITE.over(v.palette.key, top.lighten));
+    let (corner, centre) = (bg("legend_2 on key, rest"), bg("legend on key, rest"));
+    assert!(
+        corner < end,
+        "the corner legend sits below the brightest end"
+    );
+    assert!(
+        centre < corner,
+        "a centred legend sits lower, where the top is darker"
+    );
+    assert!(
+        centre > luminance(v.palette.key),
+        "and still on the lit part"
+    );
+}
+
+#[test]
+fn a_named_keys_label_is_text_and_its_icon_a_mark() {
+    let t = themes();
+    for (at, v) in views(&t, &SysLook::default()) {
+        let all = drawn(&v);
+        let min = |n: &str| all.iter().find(|d| d.name == n).map(|d| d.min);
+        assert_eq!(min("legend_mod on key_mod, rest"), Some(WCAG_AA), "{at}");
+        let icon = min("legend_mod icon on key_mod, rest");
+        assert_eq!(icon, Some(WCAG_SHAPES), "{at}");
+    }
 }
 
 #[test]

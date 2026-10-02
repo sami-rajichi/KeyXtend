@@ -243,6 +243,16 @@ pub struct Shape {
     pub list: ListShape,
     /// The tray icon's drawing.
     pub tray: TrayShape,
+    /// What the drawn check measures caps by.
+    pub drawn: DrawnShape,
+}
+
+/// What the drawn check measures caps by.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DrawnShape {
+    /// The keyboard's row height at size 1; a cap is this less the theme's gap.
+    pub row_px: f32,
 }
 
 /// Hairlines in `pop_line`: panel and tooltip edges, the corner's rim and dividers.

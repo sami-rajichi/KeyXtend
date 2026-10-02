@@ -4,8 +4,8 @@ use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline or smallest label of 0 or
-    /// less, and a panel gap or label padding below 0, naming the size.
+    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label or row of 0
+    /// or less, and a panel gap or label padding below 0, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -39,13 +39,14 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outline and the smallest label must be above 0, and the panel gaps, the label padding
-    /// and the language icon's gap 0 or more, all finite.
+    /// The shimmer span, the outline, the smallest label and the row must be above 0, and the panel gaps, the label
+    /// padding and the language icon's gap 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
             ("hc_outline.px", self.hc_outline.px),
             ("legend.label_min_px", self.legend.label_min_px),
+            ("drawn.row_px", self.drawn.row_px),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));

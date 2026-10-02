@@ -1,4 +1,5 @@
-//! The look: the look view JSON, following the system look, the theme button, the light or dark switch and backdrops.
+//! The look: the look view JSON, following the system look, the theme button, the light or dark switch, backdrops and
+//! the board row the drawn check measures by.
 
 use crate::Rig;
 use kx_module_api::WriteError;
@@ -106,4 +107,15 @@ fn a_backdrop_is_tried_only_when_chosen_and_a_refusal_leaves_the_plate_solid() {
     );
     rig.backdrop.set_error(Some(UiError::Refused(1)));
     assert!(!rig.hub.backdrop("kb"));
+}
+
+/// The keyboard's board, whose row height the theme's drawn check measures caps by.
+const BOARD: &str = "../kx-mod-keyboard/board.toml";
+
+#[test]
+fn the_drawn_check_measures_caps_one_board_row_high() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(BOARD);
+    let board: toml::Table = toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let row = Themes::shipped().unwrap().shape.drawn.row_px;
+    assert_eq!(board["row_px"].as_float(), Some(f64::from(row)));
 }

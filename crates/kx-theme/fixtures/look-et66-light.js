@@ -98,6 +98,11 @@ var lk = {
       "IBM Plex Sans Arabic",
       "Noto Sans Arabic"
     ],
+    "font_metrics": [
+      1.025,
+      0.275,
+      0.698
+    ],
     "led_glow_px": 5.0,
     "lock_glow_px": 0.0,
     "lock_glow_mix": 0.0,
@@ -442,6 +447,9 @@ var lk = {
     "tray": {
       "radius_share": 0.22,
       "glyph_share": 0.75
+    },
+    "drawn": {
+      "row_px": 31.0
     }
   },
   "motion": {

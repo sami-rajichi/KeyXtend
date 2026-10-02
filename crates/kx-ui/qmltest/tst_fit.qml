@@ -1,5 +1,6 @@
 // Every key label in each theme, language and size: set in the theme's font and inside its cap, as the keyboard window
-// lays it out over stand-in bridges fed from the face's golden files, the hub's texts and the real look.
+// lays it out over stand-in bridges fed from the face's golden files, the hub's texts and the real look; and each theme's
+// font metrics, which the drawn check places legends by.
 import QtQuick
 import QtTest
 import "../qml"
@@ -17,6 +18,9 @@ Item {
     id: root
     width: 200
     height: 100
+
+    // Measures a theme's Latin font, as the drawn check's metrics must match it.
+    FontMetrics { id: fm }
 
     Component { id: uiC; FakeUi {} }
     Component { id: kbC; FakeKeyboard {} }
@@ -67,6 +71,23 @@ Item {
             const sizes = [...new Set(grid.concat(Face.board.presets))];
             for (const t of [En, Fr, Ar])
                 labelsFit(row.lk, t, sizes);
+        }
+        // The drawn check places each legend by its theme's font metrics (kx-theme look.rs), so they are the font's own.
+        function test_the_drawn_checks_font_metrics_are_the_fonts_own_data() {
+            return test_every_label_fits_its_face_in_each_language_and_size_data();
+        }
+        function test_the_drawn_checks_font_metrics_are_the_fonts_own(row) {
+            // A large size, so Qt's rounding is a small share; a capital H's top is the cap height.
+            const px = 100;
+            const font = row.lk.look.latin_fonts[0];
+            Fonts.need([font], skip);
+            make({ look: row.lk });
+            tryVerify(() => Qt.fontFamilies().indexOf(font) >= 0, 5000, font + " loads");
+            fm.font.family = font;
+            fm.font.pixelSize = px;
+            const got = [fm.ascent, fm.descent, -fm.tightBoundingRect("H").y];
+            const names = ["ascent", "descent", "cap height"];
+            row.lk.look.font_metrics.forEach((m, i) => fuzzyCompare(got[i] / px, m, 0.005, font + " " + names[i]));
         }
         // Where a label may run on cap `k`, left and right: the face the owner sees less the padding, or a sculpted
         // top plus what may spill onto the skirt.

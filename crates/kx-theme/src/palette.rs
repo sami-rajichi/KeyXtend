@@ -145,6 +145,21 @@ pub struct Palette {
     pub skirt: Option<Skirt>,
 }
 
+impl Skirt {
+    /// The skirt under the key colour called `name`, such as `key_mod`, if one has its own.
+    pub(crate) fn get(&self, name: &str) -> Option<Rgba> {
+        let all = [
+            ("key", self.key),
+            ("key_mod", self.key_mod),
+            ("enter", self.enter),
+            ("danger", self.danger),
+            ("on", self.on),
+            ("rec", self.rec),
+        ];
+        all.into_iter().find_map(|(n, c)| (n == name).then_some(c))
+    }
+}
+
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
     #[must_use]

@@ -173,6 +173,24 @@ fn an_odd_weight_or_share_is_refused() {
 }
 
 #[test]
+fn font_metrics_must_be_shares_with_the_cap_below_the_ascent() {
+    let shipped = "font_metrics = [1.079, 0.251, 0.7]";
+    assert!(text().contains(shipped), "native's metrics");
+    for bad in [
+        "[1.079, -0.1, 0.7]",
+        "[1.079, 0.251, nan]",
+        "[0.6, 0.251, 0.7]",
+    ] {
+        let odd = text().replacen(shipped, &format!("font_metrics = {bad}"), 1);
+        let e = parse(&odd).expect_err(bad);
+        assert!(
+            e.contains("native") && e.contains("font_metrics"),
+            "{bad}: {e}"
+        );
+    }
+}
+
+#[test]
 fn a_dpad_token_that_does_not_exist_is_refused() {
     let typo = text().replacen("face = \"key_act\"", "face = \"key_akt\"", 1);
     let e = parse(&typo).expect_err("an unknown token");

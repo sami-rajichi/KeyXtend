@@ -6,6 +6,9 @@ use crate::palette::Palette;
 use crate::rgba::Rgba;
 use crate::theme::FONT_WEIGHTS;
 
+/// The largest font metric, as a share of the font's size; tall Arabic fonts reach about 1.4.
+const METRIC_MAX: f32 = 2.0;
+
 /// A two-way cap gradient: `lighten` mixes in white at the start, `darken` black at the end.
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -169,6 +172,8 @@ pub struct Look {
     pub latin_fonts: Vec<String>,
     /// Arabic fonts, first found wins.
     pub arabic_fonts: Vec<String>,
+    /// The first Latin font's ascent, descent and cap height as shares of its size: where legends sit on a cap.
+    pub font_metrics: [f32; 3],
     /// Glow around a lit LED.
     pub led_glow_px: f32,
     /// Glow around a locked key, in the `on` colour; 0 for none.
@@ -184,8 +189,8 @@ pub struct Look {
 }
 
 impl Look {
-    /// Refuses shares outside 0 to 1, an odd weight, an accent on sculpted caps, a label spill past the skirt and D-pad
-    /// names that `p` lacks.
+    /// Refuses shares outside 0 to 1, an odd weight, an accent on sculpted caps, a label spill past the skirt, odd font
+    /// metrics and D-pad names that `p` lacks.
     pub(crate) fn check(&self, p: &Palette) -> Result<(), String> {
         if !FONT_WEIGHTS.contains(&self.legend_weight) {
             let (w, lo, hi) = (self.legend_weight, FONT_WEIGHTS.start(), FONT_WEIGHTS.end());
@@ -199,6 +204,23 @@ impl Look {
             return Err("sculpted caps keep their skirt colours, so accent must be false".into());
         }
         self.cap.check_spill()?;
+        self.check_metrics()?;
         self.dpad.resolve(p).map(|_| ())
+    }
+
+    /// Font metrics are shares of 0 to `METRIC_MAX`, with the cap height no taller than the ascent.
+    fn check_metrics(&self) -> Result<(), String> {
+        let [ascent, _, cap] = self.font_metrics;
+        let shares = self
+            .font_metrics
+            .iter()
+            .all(|m| (0.0..=METRIC_MAX).contains(m));
+        if shares && cap <= ascent {
+            return Ok(());
+        }
+        let m = self.font_metrics;
+        Err(format!(
+            "font_metrics {m:?} must be 0 to {METRIC_MAX}, with the cap height at most the ascent"
+        ))
     }
 }

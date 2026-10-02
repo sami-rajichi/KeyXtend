@@ -1,10 +1,13 @@
 //! What the keyboard draws: each text, icon and mark on the colour it really sits on, blended as QML blends it, with
 //! the least contrast WCAG asks of it.
 
+mod place;
+mod plate;
+
 use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast};
-use crate::look::Cap;
 use crate::rgba::Rgba;
 use crate::view::LookView;
+use place::{Mark, spans, under};
 
 /// The one pair allowed below its minimum (owner, 2026-10-02): the Carousel's side names, faded as decoration.
 pub const EXCEPTION: &str = "Carousel side names";
@@ -56,8 +59,8 @@ pub fn drawn(v: &LookView) -> Vec<Drawn> {
     keys(v, &mut out);
     marks(v, &mut out);
     dpad(v, &mut out);
-    plate(v, &mut out);
-    panels(v, &mut out);
+    plate::plate(v, &mut out);
+    plate::panels(v, &mut out);
     out
 }
 
@@ -85,80 +88,124 @@ fn worst(name: &str, ink: Rgba, share: f32, bgs: &[Rgba], min: f32) -> Drawn {
         .unwrap_or_else(|| on(ink))
 }
 
-/// The colours a cap of `fill` shows under its legends: its gradient's two ends and its own colour.
-fn spots(cap: &Cap, fill: Rgba, pressed: bool) -> Vec<Rgba> {
-    let g = match cap {
-        Cap::Flat {} => return vec![fill],
-        Cap::Convex {
-            rest,
-            pressed: down,
-        } => {
-            if pressed {
-                down
-            } else {
-                rest
-            }
-        }
-        Cap::Skirt { top, .. } => top,
-    };
-    let (light, dark) = (
-        Rgba::WHITE.over(fill, g.lighten),
-        Rgba::BLACK.over(fill, g.darken),
-    );
-    vec![light, fill, dark]
+/// What a key draws: its name, ink, opacity, what it is and the least contrast it needs.
+struct Legend<'a> {
+    name: &'a str,
+    ink: Rgba,
+    share: f32,
+    mark: Mark,
+    min: f32,
 }
 
-/// A cap of `fill` in each of `STATES`: its spots, under the hover tint, and pressed under the press shade.
-fn states(v: &LookView, fill: Rgba) -> [Vec<Rgba>; 3] {
-    let cap = &v.look.cap;
-    let rest = spots(cap, fill, false);
+/// A key's colour and, on a sculpted cap, the skirt around its top.
+#[derive(Clone, Copy)]
+struct Fill {
+    top: Rgba,
+    skirt: Rgba,
+}
+
+/// Each key's ink, colour, skirt and what the ink draws, by token, as kx-mod-keyboard's paint.rs pairs them; a
+/// named key's label also has an icon.
+const KEYS: [(&str, &str, &str, Mark); 9] = [
+    ("legend", "key", "key", Mark::Main),
+    ("legend_2", "key", "key", Mark::Second),
+    ("legend_mod", "key_mod", "key_mod", Mark::Label),
+    ("legend_act", "key_act", "key_mod", Mark::Label),
+    ("enter_ink", "enter", "enter", Mark::Label),
+    ("danger_ink", "danger", "danger", Mark::Label),
+    ("on_ink", "on", "on", Mark::Label),
+    ("lock_ink", "lock", "on", Mark::Label),
+    ("rec_ink", "rec", "rec", Mark::Label),
+];
+
+/// The palette colour `name`; an unknown one is clear, which fails the opacity test.
+fn token(v: &LookView, name: &str) -> Rgba {
+    v.palette.get(name).unwrap_or(Rgba::CLEAR)
+}
+
+/// A key of colour `top` with the skirt called `skirt`, if its cap has skirts.
+fn fill(v: &LookView, top: &str, skirt: &str) -> Fill {
+    let top = token(v, top);
+    let skirt = v.palette.skirt.as_ref().and_then(|s| s.get(skirt));
+    Fill {
+        top,
+        skirt: skirt.unwrap_or(top),
+    }
+}
+
+/// The colours under `mark` on a key of `f` in each of `STATES`: where it sits, under the hover tint, and pressed
+/// under the press shade.
+fn states(v: &LookView, mark: Mark, f: Fill) -> [Vec<Rgba>; 3] {
+    let (mut rest, mut down) = (Vec::new(), Vec::new());
+    for span in spans(v, mark) {
+        rest.extend(under(v, f.top, f.skirt, span, false));
+        down.extend(under(v, f.top, f.skirt, span, true));
+    }
     let hover = rest.iter().map(|&s| v.palette.hover.on(s)).collect();
-    let down = spots(cap, fill, true);
     let press = down.into_iter().map(|s| v.common.press.on(s)).collect();
     [rest, hover, press]
 }
 
-/// `ink` at `share` on a cap of `fill` in every state, as text or a mark needing `min`.
-fn on_cap(v: &LookView, name: &str, ink: Rgba, share: f32, fill: Rgba, min: f32) -> Vec<Drawn> {
-    let states = states(v, fill);
-    STATES
-        .iter()
-        .zip(states.iter())
-        .map(|(state, bgs)| worst(&format!("{name}, {state}"), ink, share, bgs, min))
+/// `l` on a key of `f` in every state.
+fn on_cap(v: &LookView, l: &Legend, f: Fill) -> Vec<Drawn> {
+    let states = states(v, l.mark, f);
+    let named = STATES.iter().zip(states.iter());
+    named
+        .map(|(state, bgs)| worst(&format!("{}, {state}", l.name), l.ink, l.share, bgs, l.min))
         .collect()
 }
 
-/// Each legend on its key, with the hover tint or press shade under it (Key.qml); dimmed keys are left out, as WCAG
-/// sets no minimum for inactive parts (1.4.3).
+/// Each legend on its key, where it sits, with the hover tint or press shade under it (Key.qml); a named key's icon
+/// is a mark. Dimmed keys are left out, as WCAG sets no minimum for inactive parts (1.4.3).
 fn keys(v: &LookView, out: &mut Vec<Drawn>) {
-    let p = &v.palette;
-    let pairs = [
-        ("legend on key", p.legend, p.key),
-        ("legend_2 on key", p.legend_2, p.key),
-        ("legend_mod on key_mod", p.legend_mod, p.key_mod),
-        ("legend_act on key_act", p.legend_act, p.key_act),
-        ("enter_ink on enter", p.enter_ink, p.enter),
-        ("danger_ink on danger", p.danger_ink, p.danger),
-        ("on_ink on on", p.on_ink, p.on),
-        ("lock_ink on lock", p.lock_ink, p.lock),
-        ("rec_ink on rec", p.rec_ink, p.rec),
-    ];
-    for (name, ink, fill) in pairs {
-        out.extend(on_cap(v, name, ink, 1.0, fill, WCAG_AA));
+    for (ink, top, skirt, mark) in KEYS {
+        let (name, f) = (format!("{ink} on {top}"), fill(v, top, skirt));
+        let ink = token(v, ink);
+        let text = Legend {
+            name: &name,
+            ink,
+            share: 1.0,
+            mark,
+            min: WCAG_AA,
+        };
+        out.extend(on_cap(v, &text, f));
+        if mark == Mark::Label {
+            let name = name.replacen(" on ", " icon on ", 1);
+            let icon = Legend {
+                name: &name,
+                mark: Mark::Icon,
+                min: WCAG_SHAPES,
+                ..text
+            };
+            out.extend(on_cap(v, &icon, f));
+        }
     }
 }
 
 /// The language key's faded marks in `legend_mod`: Cycle's unlit dots and globe, List's chevron, Carousel's side names.
 fn marks(v: &LookView, out: &mut Vec<Drawn>) {
-    let (l, p) = (&v.shape.lang, &v.palette);
+    let (l, f) = (&v.shape.lang, fill(v, "key_mod", "key_mod"));
     let marks = [
-        ("Cycle unlit dot", l.cycle.dot_off, WCAG_SHAPES),
-        ("Cycle globe", l.cycle.icon_share, WCAG_SHAPES),
-        ("List chevron", l.list.icon_share, WCAG_SHAPES),
-        (EXCEPTION, l.side[1], WCAG_AA),
+        ("Cycle unlit dot", l.cycle.dot_off, Mark::Dots, WCAG_SHAPES),
+        ("Cycle globe", l.cycle.icon_share, Mark::Globe, WCAG_SHAPES),
+        (
+            "List chevron",
+            l.list.icon_share,
+            Mark::Chevron,
+            WCAG_SHAPES,
+        ),
+        (EXCEPTION, l.side[1], Mark::Side, WCAG_AA),
     ];
-    for (name, share, min) in marks {
-        out.extend(on_cap(v, name, p.legend_mod, share, p.key_mod, min));
+    for (name, share, mark, min) in marks {
+        let ink = v.palette.legend_mod;
+        let l = Legend {
+            name,
+            ink,
+            share,
+            mark,
+            min,
+        };
+        out.extend(on_cap(v, &l, f));
     }
 }
 
@@ -174,96 +221,6 @@ fn dpad(v: &LookView, out: &mut Vec<Drawn>) {
     }
     let stop = worst("D-pad Stop", d.stop_ink, 1.0, &[d.stop], WCAG_SHAPES);
     out.push(stop);
-}
-
-/// Text and icons on the plate, solid and, outside high contrast, see-through over a system backdrop of its mode.
-fn plate(v: &LookView, out: &mut Vec<Drawn>) {
-    let solid = v.palette.plate;
-    on_plate(v, solid, "", out);
-    if !v.contrast {
-        let under = WINDOWS[usize::from(v.dark)];
-        on_plate(
-            v,
-            solid.over(under, v.shape.backdrop.plate),
-            ", frosted",
-            out,
-        );
-    }
-}
-
-/// The top bar's texts and icons, the corner and the chips on `plate`, named with `tag` (TopBar.qml, Chip.qml).
-fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
-    let p = &v.palette;
-    let hot = p.pop_hover.on(plate);
-    let chip = p.chip_bg.on(plate);
-    let chips = vec![chip, p.hover.on(chip)];
-    // The lit size letter keeps the ring under the pointer, except in high contrast, where it takes sel_ink.
-    let lit = if v.contrast {
-        vec![plate]
-    } else {
-        vec![plate, hot]
-    };
-    // A chip is a button, so high contrast draws its icon in ButtonText, as its word (Chip.qml).
-    let icon = if v.contrast {
-        p.legend
-    } else {
-        p.legend_2_plate
-    };
-    let pairs = [
-        (
-            "legend_2_plate on plate",
-            p.legend_2_plate,
-            vec![plate],
-            WCAG_AA,
-        ),
-        ("sel_ink on hovered plate", v.sel_ink, vec![hot], WCAG_AA),
-        ("ring on plate", p.ring, lit, WCAG_AA),
-        ("legend on chip", p.legend, chips.clone(), WCAG_AA),
-        ("chip icon on chip", icon, chips, WCAG_SHAPES),
-    ];
-    for (name, ink, bgs, min) in pairs {
-        out.push(worst(&format!("{name}{tag}"), ink, 1.0, &bgs, min));
-    }
-}
-
-/// Text on the panels (list, notices, tips, tray menu), their rows and buttons, the list's ring and the badge.
-fn panels(v: &LookView, out: &mut Vec<Drawn>) {
-    let p = &v.palette;
-    let bg = p.pop_bg;
-    let ghost = p.pop_hover.on(bg);
-    let main = p.pop_ink;
-    let pairs = [
-        ("pop_ink on pop_bg", p.pop_ink, vec![bg], WCAG_AA),
-        ("pop_muted on pop_bg", p.pop_muted, vec![bg], WCAG_AA),
-        (
-            "sel_ink on pop_hover",
-            v.sel_ink,
-            vec![ghost, p.hover.on(ghost)],
-            WCAG_AA,
-        ),
-        (
-            "sel_ink on pop_sel",
-            v.sel_ink,
-            vec![p.pop_sel.on(bg), p.pop_sel.on(ghost)],
-            WCAG_AA,
-        ),
-        (
-            "pop_bg on the main button",
-            p.pop_bg,
-            vec![main, p.hover.on(main)],
-            WCAG_AA,
-        ),
-        ("ring on pop_bg", p.ring, vec![bg], WCAG_SHAPES),
-        (
-            "badge_ink on badge_bg",
-            p.badge_ink,
-            vec![p.badge_bg],
-            WCAG_AA,
-        ),
-    ];
-    for (name, ink, bgs, min) in pairs {
-        out.push(worst(name, ink, 1.0, &bgs, min));
-    }
 }
 
 #[cfg(test)]

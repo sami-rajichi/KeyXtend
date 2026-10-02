@@ -98,6 +98,11 @@ var lk = {
       "Rubik",
       "Noto Sans Arabic"
     ],
+    "font_metrics": [
+      0.935,
+      0.25,
+      0.7
+    ],
     "led_glow_px": 5.0,
     "lock_glow_px": 8.0,
     "lock_glow_mix": 0.55,
@@ -451,6 +456,9 @@ var lk = {
     "tray": {
       "radius_share": 0.22,
       "glyph_share": 0.75
+    },
+    "drawn": {
+      "row_px": 31.0
     }
   },
   "motion": {

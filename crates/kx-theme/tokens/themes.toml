@@ -28,6 +28,8 @@ legend_weight = 400
 arabic_scale = 1.12
 # Windows's own UI font; the mock-up's web fallback Noto Sans (line 106) is not bundled, so it is left out.
 latin_fonts = ["Segoe UI Variable Text", "Segoe UI"]
+# Its ascent, descent and cap height as shares of its size, as Qt reads them: where its legends sit on a cap.
+font_metrics = [1.079, 0.251, 0.7]
 arabic_fonts = ["Segoe UI", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 0.0
@@ -140,6 +142,7 @@ mod_legend_px = 10.5
 legend_weight = 500
 arabic_scale = 1.14
 latin_fonts = ["IBM Plex Sans"]
+font_metrics = [1.025, 0.275, 0.698]
 arabic_fonts = ["IBM Plex Sans Arabic", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 0.0
@@ -255,6 +258,7 @@ mod_legend_px = 10.5
 legend_weight = 500
 arabic_scale = 1.1
 latin_fonts = ["Rubik"]
+font_metrics = [0.935, 0.25, 0.7]
 arabic_fonts = ["Rubik", "Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 8.0
