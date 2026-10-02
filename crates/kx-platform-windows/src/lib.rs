@@ -73,6 +73,12 @@ fn failed() -> kx_platform::ui::UiError {
     kx_platform::ui::UiError::Refused(windows::Win32::Foundation::E_FAIL.0)
 }
 
+/// Locks `m`, taking the value even when a panicking thread poisoned it.
+#[cfg(windows)]
+fn lock<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 /// `text` as UTF-16 with an ending null, for Windows names.
 #[cfg(windows)]
 fn wide(text: &str) -> Vec<u16> {

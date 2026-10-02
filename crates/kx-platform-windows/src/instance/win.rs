@@ -3,7 +3,7 @@
 
 use std::cell::OnceCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 
 use kx_platform::ui::{Claim, Command, Instance, Running, UiError};
 use windows::Win32::Foundation::{
@@ -15,7 +15,7 @@ use windows::core::PCWSTR;
 
 use super::{Hold, class_name, code, from_code, hold_of, mutex_name};
 use crate::hidden::{Hidden, Kind, answer};
-use crate::{refused, wide};
+use crate::{lock, refused, wide};
 
 /// The message a later copy posts, with the command's code as its first value.
 const COMMAND_MSG: u32 = WM_APP;
@@ -140,11 +140,6 @@ impl Drop for WinClaim {
         }
         drop(self.mutex.take());
     }
-}
-
-/// Locks `slot`, taking the listener even when a panicking one poisoned it.
-fn lock(slot: &Slot) -> MutexGuard<'_, Option<OnCommand>> {
-    slot.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Hands each known command to the listener; any other message gets Windows' default handling.

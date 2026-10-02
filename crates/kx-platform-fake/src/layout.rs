@@ -30,7 +30,7 @@ impl FakeLayoutSource {
         }
     }
 
-    /// A source over the golden tables `names`, such as `["en", "fr", "ar"]`, installed in that order.
+    /// A source over the golden tables `names`, such as `["en-us", "fr-fr", "ar-tn"]`, installed in that order.
     ///
     /// # Errors
     /// The `LayoutFileError` of the first table that cannot be read.

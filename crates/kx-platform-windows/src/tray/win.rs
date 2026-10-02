@@ -11,7 +11,7 @@ mod tests;
 
 use std::cell::OnceCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 
 use kx_platform::ui::{OnTray, Tray, TrayEvent, TrayIcon, TrayImage, UiError};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
@@ -23,7 +23,7 @@ use windows::Win32::UI::WindowsAndMessaging::{WM_APP, WM_CREATE, WM_DESTROY};
 
 use super::{TIP_UNITS, event};
 use crate::hidden::{Hidden, Kind, answer};
-use crate::wide;
+use crate::{lock, wide};
 use front::{hook, unhook};
 use icon::{Icon, Shell, Taskbar, small_px};
 use msgs::{allow, post, restart_msg};
@@ -155,11 +155,6 @@ fn send(
 const NOTIFYICON_VERSION_4_DATA: NOTIFYICONDATAW_0 = NOTIFYICONDATAW_0 {
     uVersion: NOTIFYICON_VERSION_4,
 };
-
-/// Locks `state`, taking it even when a panicking thread poisoned it.
-fn lock(state: &Mutex<State>) -> MutexGuard<'_, State> {
-    state.lock().unwrap_or_else(PoisonError::into_inner)
-}
 
 /// A shown icon; dropping it deletes the icon and ends its window.
 #[derive(Debug)]

@@ -15,7 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::PCWSTR;
 
 use crate::screen::window_dpi;
-use crate::tray::{TASKBAR, bgra, mask};
+use crate::tray::{BGRA, TASKBAR, bgra, mask};
 use crate::{failed, refused, wide};
 
 /// The small icon's side at 100 % scale, when Windows cannot say.
@@ -23,8 +23,6 @@ const BASE_PX: u32 = 16;
 /// Bits per pixel of the colour picture, and of the mask.
 const COLOR_BITS: u16 = 32;
 const MASK_BITS: u32 = 1;
-/// Bytes per pixel of the colour picture.
-const BYTES_PER_PIXEL: i32 = 4;
 
 /// The taskbar's notification-area call, so tests never touch the real taskbar.
 pub(crate) trait Shell: fmt::Debug + Send + Sync {
@@ -147,8 +145,8 @@ fn color(w: i32, h: i32, bgra: &[u8]) -> Result<HBITMAP, UiError> {
         )
     }
     .map_err(|e| refused(&e))?;
-    let room = [w, h, BYTES_PER_PIXEL].map(usize::try_from);
-    let fits = matches!(room, [Ok(w), Ok(h), Ok(b)] if w.checked_mul(h).and_then(|n| n.checked_mul(b)) == Some(bgra.len()));
+    let room = [w, h].map(usize::try_from);
+    let fits = matches!(room, [Ok(w), Ok(h)] if w.checked_mul(h).and_then(|n| n.checked_mul(BGRA)) == Some(bgra.len()));
     if bits.is_null() || !fits {
         drop_bitmap(map);
         return Err(failed());

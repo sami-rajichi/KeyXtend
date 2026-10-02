@@ -1,7 +1,5 @@
 //! Our windows' guard: they stay on top and never take the focus, and clicks may pass through them.
 //! Which styles the guard keeps and in what order it guards are pure and tested everywhere; the OS calls are in `win`.
-//! Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`), as guarding a plain hidden window can leave
-//! it below the topmost band; Settings is spared.
 #![cfg_attr(
     not(windows),
     allow(
@@ -35,6 +33,8 @@ const WS_EX_LAYERED: u32 = 0x0008_0000;
 const WS_EX_NOACTIVATE: u32 = 0x0800_0000;
 
 /// Extended styles every guarded window keeps: no focus, on top, no taskbar button.
+/// Each such window must start topmost (Qt's `WindowStaysOnTopHint`), as guarding a plain hidden one can leave it below
+/// the topmost band; Settings is spared.
 pub const KEPT: u32 = WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
 /// Extended styles that let clicks pass through a window; a guarded window keeps them only if it had both at first.
 pub const THROUGH: u32 = WS_EX_LAYERED | WS_EX_TRANSPARENT;

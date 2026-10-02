@@ -2,7 +2,7 @@
 //! thread's other messages inside a call, as the real one can.
 
 use super::*;
-use std::sync::Condvar;
+use std::sync::{Condvar, PoisonError};
 use std::thread::ThreadId;
 use std::time::Duration;
 use windows::Win32::UI::WindowsAndMessaging::SendMessageW;
@@ -41,14 +41,14 @@ pub(super) struct FakeShell {
 impl FakeShell {
     /// The kinds of the calls heard since the last take, and the calls.
     pub(super) fn take(&self) -> (Vec<u32>, Vec<Call>) {
-        let calls = std::mem::take(&mut *locked(&self.calls));
+        let calls = std::mem::take(&mut *lock(&self.calls));
         (calls.iter().map(|c| c.what).collect(), calls)
     }
 
     /// Waits until `n` calls came from the icon's queue, then takes them; a failure frees the lock first, so the
     /// icon's thread never meets a poisoned one inside its window procedure.
     pub(super) fn wait(&self, n: usize) -> (Vec<u32>, Vec<Call>) {
-        let calls = locked(&self.calls);
+        let calls = lock(&self.calls);
         let (calls, waited) = self
             .heard
             .wait_timeout_while(calls, PATIENCE, |c| c.len() < n)
@@ -61,12 +61,12 @@ impl FakeShell {
 
     /// Refuses later calls of the kinds in `kinds`.
     pub(super) fn refuse(&self, kinds: &[NOTIFY_ICON_MESSAGE]) {
-        *locked(&self.refuse) = kinds.to_vec();
+        *lock(&self.refuse) = kinds.to_vec();
     }
 
     /// Holds later calls of kind `what` inside the call, or lets every held call go with `None`.
     pub(super) fn hold(&self, what: Option<NOTIFY_ICON_MESSAGE>) {
-        *locked(&self.held) = what;
+        *lock(&self.held) = what;
         self.freed.notify_all();
     }
 }
@@ -87,16 +87,16 @@ impl Shell for FakeShell {
             version: unsafe { data.Anonymous.uVersion },
             thread: std::thread::current().id(),
         };
-        locked(&self.calls).push(call);
+        lock(&self.calls).push(call);
         self.heard.notify_all();
         // A call held too long goes on, so the test that forgot it fails on its own asserts.
-        let hold = locked(&self.held);
+        let hold = lock(&self.held);
         let (hold, _) = self
             .freed
             .wait_timeout_while(hold, PATIENCE, |h| *h == Some(what))
             .unwrap_or_else(PoisonError::into_inner);
         drop(hold);
-        let restart = locked(&self.restart_in).take();
+        let restart = lock(&self.restart_in).take();
         if let Some(window) = restart {
             send(
                 HWND(std::ptr::without_provenance_mut(window)),
@@ -105,13 +105,8 @@ impl Shell for FakeShell {
                 0,
             );
         }
-        !locked(&self.refuse).contains(&what)
+        !lock(&self.refuse).contains(&what)
     }
-}
-
-/// Locks `m`, taking it even when a failed test poisoned it; the fake runs inside the icon's window procedure.
-fn locked<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Sends the icon's window a message and waits until its thread handled it.

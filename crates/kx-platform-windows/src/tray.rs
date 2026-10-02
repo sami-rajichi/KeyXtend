@@ -37,7 +37,7 @@ const OPENS: [u32; 3] = [0x0400, 0x0401, 0x007B];
 pub const TIP_UNITS: usize = 128;
 
 /// Bytes per pixel of the icon's picture: blue, green, red and alpha.
-const BGRA: usize = 4;
+pub(crate) const BGRA: usize = 4;
 /// `CreateBitmap` reads each mask row padded to this many bits.
 const MASK_ROW_BITS: u32 = 16;
 
