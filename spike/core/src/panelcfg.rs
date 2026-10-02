@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::SpikeConfig;
-use kx_mod_keyboard::legend::is_arabic;
+use kx_module_api::is_arabic;
 
 /// Where the page text puts this page's number.
 const PAGE_AT: &str = "{n}";
@@ -99,7 +99,7 @@ pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use kx_mod_keyboard::legend::is_arabic;
+    use kx_module_api::is_arabic;
 
     fn panel() -> super::PanelConfig {
         crate::config::load().expect("spike.toml loads").panel
