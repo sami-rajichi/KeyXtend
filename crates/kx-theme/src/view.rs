@@ -1,5 +1,7 @@
 //! The look a face draws now: the chosen theme in the right mode, with the system accent or high contrast applied.
 
+use std::borrow::Cow;
+
 use kx_platform::ui::SysLook;
 use serde::Serialize;
 
@@ -9,7 +11,7 @@ use crate::common::Common;
 use crate::contrast::WCAG_AA;
 use crate::hc::{contrast_common, contrast_palette, hover_line};
 use crate::icons::Icons;
-use crate::look::{Dpad, Look};
+use crate::look::{Cap, Dpad, Look};
 use crate::mode::{Mode, ModeChoice, mode_for};
 use crate::motion::Motion;
 use crate::palette::{Palette, Shadow};
@@ -39,8 +41,8 @@ pub struct LookView<'a> {
     pub palette: Palette,
     /// Colours every theme shares, as system colours in high contrast.
     pub common: Common,
-    /// Shape and type of the theme.
-    pub look: &'a Look,
+    /// Shape and type of the theme; caps are flat in high contrast, as effects are off.
+    pub look: Cow<'a, Look>,
     /// Sizes all themes share.
     pub shape: &'a Shape,
     /// Animations; every length is 0 with reduced motion.
@@ -82,6 +84,14 @@ fn palette(theme: &Theme, mode: Mode, sys: &SysLook, edge_px: f32) -> Palette {
     }
 }
 
+/// `look` with flat caps: a cap's gradient tints are not system colours.
+fn flat(look: &Look) -> Look {
+    Look {
+        cap: Cap::Flat {},
+        ..look.clone()
+    }
+}
+
 /// The chosen theme as it should look while the system looks like `sys`; `None` for a theme that does not exist.
 #[must_use]
 pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Option<LookView<'a>> {
@@ -99,7 +109,9 @@ pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Optio
         hover_line,
         palette,
         common,
-        look: &theme.look,
+        look: hc.map_or(Cow::Borrowed(&theme.look), |_| {
+            Cow::Owned(flat(&theme.look))
+        }),
         shape: &t.shape,
         motion: t.motion.pick(choice.reduced_motion || sys.anim_off),
         icons: &t.icons,

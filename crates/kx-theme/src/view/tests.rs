@@ -4,6 +4,7 @@ use kx_platform::ui::Accent;
 
 use super::*;
 use crate::hc::sample::HC;
+use crate::look::Cap;
 
 /// A shipped colour as the system gives colours.
 fn port(s: &str) -> [u8; 4] {
@@ -221,4 +222,25 @@ fn high_contrast_wins_over_the_accent() {
     let hc = contrast_palette(&t.list[0].light, &HC, t.shape.line.px);
     assert_eq!(v.palette, hc, "no accent in high contrast");
     assert_eq!(v.palette.enter, Rgba::from(HC.highlight));
+}
+
+#[test]
+fn high_contrast_caps_are_flat_as_effects_are_off() {
+    let t = themes();
+    let sys = SysLook {
+        contrast: Some(HC),
+        ..SysLook::default()
+    };
+    for theme in &t.list {
+        let id = &theme.look.id;
+        let v = look_view(&t, &choice(id, ModeChoice::Light), &sys).expect("a theme");
+        assert_eq!(v.look.cap, Cap::Flat {}, "{id}: no white or black tints");
+        assert_eq!(v.look.id, theme.look.id, "{id}: the rest of the look stays");
+        let plain = look_view(&t, &choice(id, ModeChoice::Light), &SysLook::default());
+        assert_eq!(
+            plain.expect("a theme").look.cap,
+            theme.look.cap,
+            "{id}: its own cap"
+        );
+    }
 }

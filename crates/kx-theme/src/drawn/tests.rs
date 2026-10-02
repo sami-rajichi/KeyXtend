@@ -168,3 +168,43 @@ fn the_lit_size_letter_and_the_move_ring_are_checked_as_text_on_the_plate() {
         assert!(ring.min >= WCAG_AA, "{at}: the lit letter is text");
     }
 }
+
+/// The pairs Windows' contrast themes are made to read: text on its own background, and Highlight marks on a window.
+fn system_pairs() -> Vec<(Rgba, Rgba)> {
+    let c = |x: [u8; 4]| Rgba::from(x);
+    vec![
+        (c(HC.window_text), c(HC.window)),
+        (c(HC.highlight), c(HC.window)),
+        (c(HC.button_text), c(HC.button)),
+        (c(HC.highlight_text), c(HC.highlight)),
+        (c(HC.window), c(HC.window_text)),
+    ]
+}
+
+#[test]
+fn in_high_contrast_each_opaque_pair_is_one_windows_pairs() {
+    let t = themes();
+    let pairs = system_pairs();
+    let system = [
+        HC.window,
+        HC.window_text,
+        HC.highlight,
+        HC.highlight_text,
+        HC.button,
+        HC.button_text,
+    ]
+    .map(Rgba::from);
+    for (at, v) in views(&t, &hc()) {
+        // Faded marks blend their ink; only full-strength inks are system colours.
+        let opaque = drawn(&v).into_iter().filter(|d| system.contains(&d.ink));
+        for d in opaque {
+            assert!(
+                pairs.contains(&(d.ink, d.bg)),
+                "{at}: {} mixes {:?} on {:?}",
+                d.name,
+                d.ink,
+                d.bg
+            );
+        }
+    }
+}

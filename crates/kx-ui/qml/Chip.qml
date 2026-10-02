@@ -44,8 +44,9 @@ Item {
             base: c.res.icons
             ext: c.res.ext
             px: c.sh.icon_px * c.s
-            // legend_2 missed AA on Dolch light's chip (3.83:1); kx-theme checks this pair.
-            tint: c.lk.palette.legend_2_plate
+            // legend_2 missed AA on Dolch light's chip (3.83:1), so it takes the plate's text colour; a chip is a button, so
+            // high contrast draws it in ButtonText, as its word. kx-theme checks this pair.
+            tint: c.lk.contrast ? c.lk.palette.legend : c.lk.palette.legend_2_plate
         }
         Label {
             anchors.verticalCenter: parent.verticalCenter

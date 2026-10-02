@@ -203,7 +203,12 @@ fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     } else {
         vec![plate, hot]
     };
-    let icon = p.legend_2_plate;
+    // A chip is a button, so high contrast draws its icon in ButtonText, as its word (Chip.qml).
+    let icon = if v.contrast {
+        p.legend
+    } else {
+        p.legend_2_plate
+    };
     let pairs = [
         (
             "legend_2_plate on plate",

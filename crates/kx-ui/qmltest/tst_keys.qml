@@ -203,6 +203,13 @@ Item {
             verify(Qt.colorEqual(icon.tint, D.lk.palette.legend_2_plate), "legend_2_plate reaches AA on Dolch's chip");
         }
 
+        // A chip is a button, so high contrast draws its icon in ButtonText, as its word, never WindowText.
+        function test_in_high_contrast_chip_icons_take_the_chip_text_colour() {
+            const c = createTemporaryObject(chipC, root, { chip: { text: "Hello", icon: H.lk.icons.keys.clip }, lk: H.lk, res: root.res, s: 1, radius: 4 });
+            const icon = find(c, o => o.tint !== undefined && o.icon !== undefined);
+            verify(Qt.colorEqual(icon.tint, H.lk.palette.legend), "the chip's own text colour");
+        }
+
         function test_a_dimmed_key_tip_says_when_it_comes() {
             const k = makeKey("mic");
             const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
