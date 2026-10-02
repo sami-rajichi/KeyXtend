@@ -89,9 +89,20 @@ fn passed(seen: &[Seen], steps: &[&str]) -> bool {
     steps.iter().all(looked) && seen.iter().all(kept)
 }
 
-/// What G9 knows across steps: each window's first style, every look, and the keyboard's width before the grow.
+/// Adds each of `windows` to `written` once, in order.
+fn note_written(written: &mut Vec<HWND>, windows: &[HWND]) {
+    for &w in windows {
+        if !written.contains(&w) {
+            written.push(w);
+        }
+    }
+}
+
+/// What G9 knows across steps: each window's first style, the windows it wrote, every look, and the keyboard's width
+/// before the grow.
 struct Watch {
     first: HashMap<isize, u32>,
+    written: Vec<HWND>,
     seen: Vec<Seen>,
     keyboard: HWND,
     target: HWND,
@@ -109,6 +120,13 @@ impl Watch {
             *w == keyboard || was & WS_EX_NOACTIVATE.0 != 0
         };
         product::shown().into_iter().filter(guarded).collect()
+    }
+
+    /// The windows G9 checks, kept as written, since the next act writes their styles.
+    fn writing(&mut self) -> Vec<HWND> {
+        let windows = self.ours();
+        note_written(&mut self.written, &windows);
+        windows
     }
 
     /// Waits `[g9] settle_ms`, then looks at every window G9 checks after `step`.
@@ -185,9 +203,9 @@ fn steps(ctx: &Ctx, w: &mut Watch) -> Result<(), String> {
     for (step, act) in plan(ctx) {
         match act {
             Act::Nothing => {}
-            Act::DropTopmost => g9win::drop_topmost(&w.ours())?,
-            Act::StripFlags => g9win::strip_flags(&w.ours())?,
-            Act::ThroughOn => g9win::through_on(&w.ours())?,
+            Act::DropTopmost => g9win::drop_topmost(&w.writing())?,
+            Act::StripFlags => g9win::strip_flags(&w.writing())?,
+            Act::ThroughOn => g9win::through_on(&w.writing())?,
             Act::Press(id) => product::invoke(&reader, id)?,
         }
         w.look(ctx, step);
@@ -196,18 +214,25 @@ fn steps(ctx: &Ctx, w: &mut Watch) -> Result<(), String> {
 }
 
 /// After every run, shows the keyboard again if a run broke off while it was hidden, and sizes it back to its first
-/// width if a press went missing; best effort.
-fn undo(ctx: &Ctx, w: &Watch) {
-    let Ok(reader) = Reader::new() else {
-        return;
+/// width if a press went missing; what could not be undone.
+fn undo(ctx: &Ctx, w: &Watch) -> Vec<String> {
+    let reader = match Reader::new() {
+        Ok(reader) => reader,
+        Err(e) => return vec![format!("nothing undone: {e}")],
     };
+    let mut left = Vec::new();
     if w.did(HIDE) && !w.did(SHOW) {
-        let _ = product::invoke(&reader, &ctx.cfg.g9.bring_back);
+        if let Err(e) = product::invoke(&reader, &ctx.cfg.g9.bring_back) {
+            left.push(format!("the keyboard stays hidden: {e}"));
+        }
         sleep_ms(ctx.cfg.g9.settle_ms);
     }
-    if let Some(first) = w.width {
-        let _ = g8ui::size_back(ctx, &reader, w.keyboard, first);
+    if let Some(first) = w.width
+        && let Err(e) = g8ui::size_back(ctx, &reader, w.keyboard, first)
+    {
+        left.push(format!("the size was not put back: {e}"));
     }
+    left
 }
 
 /// Runs G9 on the product, called `name`; it writes the product windows' styles, so only with the owner's yes.
@@ -216,20 +241,23 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
     let mut w = Watch {
         first: HashMap::new(),
+        written: Vec::new(),
         seen: Vec::new(),
         keyboard,
         target: target.hwnd,
         width: None,
     };
     let ran = steps(ctx, &mut w);
-    undo(ctx, &w);
-    let repaired = g9win::repair(&w.first);
+    let mut not_put_back = undo(ctx, &w);
+    let repaired = g9win::repair(&w.first, &w.written);
+    not_put_back.extend(repaired.not_put_back);
     let left_open = apps::clean_up(ctx, target);
     let mut names: Vec<&str> = plan(ctx).iter().map(|(step, _)| *step).collect();
     names.extend([GROW, SHRINK]);
     let pass = ran.is_ok() && passed(&w.seen, &names);
     let mut v = json!({
-        "gate": "G9", "keyboard": name, "seen": w.seen, "put_back": repaired, "left_open": left_open, "pass": pass,
+        "gate": "G9", "keyboard": name, "seen": w.seen, "put_back": repaired.fixed, "not_put_back": not_put_back,
+        "left_open": left_open, "pass": pass,
     });
     // Only a run that broke off, or whose size step failed, carries `error`.
     if let Err(e) = ran {

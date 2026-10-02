@@ -130,3 +130,35 @@ fn g9_passes_only_when_every_step_looked_kept_every_flag_and_the_focus() {
     ];
     assert!(!passed(&focus, &steps), "the target lost the focus");
 }
+
+#[test]
+fn a_window_counts_as_put_back_only_when_its_writes_worked_and_its_style_is_the_first() {
+    use crate::g9win::put_back;
+    assert_eq!(put_back(Ok(()), KEYBOARD_EX, KEYBOARD_EX, "kb"), Ok(()));
+    let off =
+        put_back(Ok(()), KEYBOARD_EX & !KEPT, KEYBOARD_EX, "kb").expect_err("a flag is still off");
+    assert!(off.starts_with("kb") && off.contains("0x08080088"), "{off}");
+    let refused = put_back(
+        Err("Windows refused".into()),
+        KEYBOARD_EX,
+        KEYBOARD_EX,
+        "kb",
+    );
+    assert_eq!(
+        refused,
+        Err("Windows refused".into()),
+        "a refused write is never counted"
+    );
+}
+
+#[test]
+fn every_window_g9_wrote_is_kept_once_for_the_repair() {
+    let mut written = Vec::new();
+    let (a, b) = (
+        HWND(std::ptr::without_provenance_mut(1)),
+        HWND(std::ptr::without_provenance_mut(2)),
+    );
+    note_written(&mut written, &[a, b]);
+    note_written(&mut written, &[b]);
+    assert_eq!(written, [a, b]);
+}

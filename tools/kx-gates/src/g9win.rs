@@ -1,4 +1,5 @@
-//! The window writes G9 makes as an outside program would, and the repair that puts each window back as G9 found it.
+//! The window writes G9 makes as an outside program would, and the repair that puts each window it wrote back as G9
+//! found it.
 #![cfg(windows)]
 
 use std::collections::HashMap;
@@ -11,7 +12,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use kx_platform_windows::window::{KEPT, THROUGH};
 
-use crate::{product, win};
+use crate::{win, winfind};
 
 /// A window's extended style.
 #[allow(unsafe_code, reason = "A plain query of a window's style.")]
@@ -79,19 +80,40 @@ pub fn through_on(windows: &[HWND]) -> Result<(), String> {
         .try_for_each(|&w| write_ex(w, ex_of(w) | THROUGH))
 }
 
-/// Puts every shown product window G9 saw back to its `first` style, topmost included; how many needed it.
-pub fn repair(first: &HashMap<isize, u32>) -> usize {
-    let mut fixed = 0;
-    for w in product::shown() {
+/// Whether window `who` is back as G9 found it: its writes, `wrote`, worked and its style `now` is the first, `was`.
+pub fn put_back(wrote: Result<(), String>, now: u32, was: u32, who: &str) -> Result<(), String> {
+    wrote?;
+    if now == was {
+        Ok(())
+    } else {
+        Err(format!("{who}: style {now:#010x}, not {was:#010x}"))
+    }
+}
+
+/// What the repair did: the windows it put back, and why each other one is not.
+#[derive(Debug, Default)]
+pub struct Repaired {
+    /// Windows whose style needed it and is now the first again.
+    pub fixed: usize,
+    /// Windows that still differ, or whose writes Windows refused.
+    pub not_put_back: Vec<String>,
+}
+
+/// Puts each window G9 `written` back to its `first` style, topmost included, shown or hidden; gone ones need nothing.
+pub fn repair(first: &HashMap<isize, u32>, written: &[HWND]) -> Repaired {
+    let mut done = Repaired::default();
+    for &w in written {
         let Some(&was) = first.get(&win::key(w)) else {
             continue;
         };
-        if ex_of(w) == was {
+        if !winfind::exists(w) || ex_of(w) == was {
             continue;
         }
-        let _ = write_ex(w, was);
-        let _ = set_topmost(w, was & WS_EX_TOPMOST.0 != 0);
-        fixed += 1;
+        let wrote = write_ex(w, was).and(set_topmost(w, was & WS_EX_TOPMOST.0 != 0));
+        match put_back(wrote, ex_of(w), was, &win::describe(w)) {
+            Ok(()) => done.fixed += 1,
+            Err(e) => done.not_put_back.push(e),
+        }
     }
-    fixed
+    done
 }
