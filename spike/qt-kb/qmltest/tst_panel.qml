@@ -10,7 +10,7 @@ Item {
     width: 520
     height: 360
 
-    readonly property var res: ({ fam: { latin: "Segoe UI", arabic: "Segoe UI" }, icons: Qt.resolvedUrl("../../../target/spike-stage/qt-kb/assets/icons"), ext: "svg" })
+    readonly property var res: ({ fam: { latin: "Segoe UI", arabic: "Segoe UI" }, icons: Qt.resolvedUrl("../../../assets/icons/lucide"), ext: "svg" })
     readonly property var fx: ({ title: "list", rows: 5, rtl: true, prev: { icon: "chevron-up", name: "prev" }, next: { icon: "chevron-down", name: "next" } })
     readonly property var pg2: ({ rows: ["a", "b", null, null, null], at: 1, count: 2, label: "2 من 2" })
 

@@ -1,14 +1,10 @@
-//! Layout requests for gates G22 and G25: asks the app in front to switch, stepping by the product's `step_to`.
+//! Layout requests for gates G10, G22 and G25: asks the app in front to switch, stepping by the product's `step_to`.
 //! The window and layout queries are the product's (kx-platform-windows).
 
 use kx_module_api::ports::{LayoutId, LayoutSource, step_to};
 use kx_platform_windows::{WinLayouts, front, langinfo, layouts};
 use windows::Win32::Foundation::HWND;
 
-/// Error when the window in front closed.
-const GONE: &str = "the window is gone";
-/// Error when there is no other layout to switch to.
-const ONLY_ONE: &str = "only one layout is installed";
 /// Error prefix when Windows refuses the layout request.
 const REFUSED: &str = "layout request";
 
@@ -37,19 +33,6 @@ pub fn installed_for(id: u16) -> Option<isize> {
 pub fn layout_of(hwnd: HWND) -> Option<isize> {
     let focus = front::focus_of(hwnd)?;
     front::thread_layout(focus).map(|h| h.0 as isize)
-}
-
-/// Asks `hwnd` to switch to the next installed layout; returns the layout asked for.
-pub fn ask_next(hwnd: HWND) -> Result<isize, String> {
-    ask_step(hwnd, 1)
-}
-
-/// Asks `hwnd` to switch `by` places along the installed layouts from its own; returns the layout asked for.
-pub fn ask_step(hwnd: HWND, by: i32) -> Result<isize, String> {
-    let cur = layout_of(hwnd).ok_or(GONE)?;
-    let to = step_from(&installed(), cur, by).ok_or(ONLY_ONE)?;
-    ask(hwnd, to)?;
-    Ok(to)
 }
 
 /// The layout `by` places from `cur` in `list`, as the product steps; `None` when that is `cur` itself.
