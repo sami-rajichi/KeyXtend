@@ -14,6 +14,8 @@ pub struct G1 {
     pub chunk_pause_ms: u64,
     /// Title of the Chrome test page, used to find its window.
     pub page_title: String,
+    /// The Chrome test page's body: one text box that fills the page and takes the focus.
+    pub page_body: String,
     /// Characters shown on each side of the first difference.
     pub context_chars: usize,
     /// Longest clipboard text we read, in characters; more is an error.

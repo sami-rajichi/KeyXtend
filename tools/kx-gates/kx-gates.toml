@@ -51,8 +51,9 @@ count = 1000
 # Characters per SendInput call, and the pause between calls, in ms.
 chunk_chars = 1
 chunk_pause_ms = 20
-# Title of the Chrome test page, used to find its window.
+# Title of the Chrome test page, used to find its window, and its body: one text box that fills the page.
 page_title = "KeyXtend G1 page"
+page_body = "<textarea autofocus spellcheck=\"false\" style=\"width:95vw;height:90vh\"></textarea>"
 # Characters shown on each side of the first difference.
 context_chars = 10
 # Longest clipboard text we read back or save for the owner, in characters; more is an error.

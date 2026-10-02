@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::launch::{app_args, launch, opened, window_match};
+use crate::launch::{app_args, late_window, launch, opened, window_match};
 use crate::win::{self, sleep_ms};
 use crate::winfind;
 use crate::{admin, out};
@@ -56,9 +56,16 @@ pub fn open_terminal(ctx: &Ctx) -> Result<Opened, String> {
     let (script, ready, result) = terminal_files(ctx)?;
     let kind = AppKind::Terminal;
     let (wait, poll) = (ctx.cfg.app(kind.name())?.wait_ms, ctx.cfg.timing.poll_ms);
-    let started = launch(ctx, kind.name(), &script.to_string_lossy(), None)?;
-    out::wait_read(&ready, wait, poll).map_err(|e| format!("terminal not ready: {e}"))?;
-    Ok(opened(kind, started, Some(result), None))
+    let (hwnd, mut child) = launch(ctx, kind.name(), &script.to_string_lossy(), None)?;
+    if let Err(e) = out::wait_read(&ready, wait, poll) {
+        // Nothing of ours stays behind: the window is asked to close and its program ended.
+        let closed = win::close(hwnd);
+        let killed = child.kill();
+        return Err(format!(
+            "terminal not ready: {e}; closed: {closed:?}; killed: {killed:?}"
+        ));
+    }
+    Ok(opened(kind, (hwnd, child), Some(result), None))
 }
 
 /// Terminal as administrator on the one-line script; also says whether the script runs as admin.
@@ -69,8 +76,14 @@ pub fn open_admin(ctx: &Ctx) -> Result<(Opened, bool), String> {
     let m = window_match(app, None);
     let args = app_args(app, &script.to_string_lossy());
     admin::run_as(&ctx.cfg.program(&app.exe), &args)?;
-    let hwnd = winfind::wait_for(&m, app.wait_ms, poll)
-        .ok_or_else(|| format!("no admin {} window after {} ms", kind.name(), app.wait_ms))?;
+    let Some(hwnd) = winfind::wait_for(&m, app.wait_ms, poll) else {
+        let late = late_window(ctx, &m);
+        return Err(format!(
+            "no admin {} window after {} ms; {late}",
+            kind.name(),
+            app.wait_ms
+        ));
+    };
     let answer = out::wait_read(&ready, app.wait_ms, poll).map_err(|e| {
         let _ = win::close(hwnd);
         format!("admin {} not ready: {e}", kind.name())
