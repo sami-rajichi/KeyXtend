@@ -225,7 +225,6 @@ fn an_odd_tray_share_or_label_size_is_refused() {
             "legend.label_pad_px",
         ),
         ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
-        ("row_px = 31.0", "row_px = 0.0", "drawn.row_px"),
         ("dot_on_px = 4.5", "dot_on_px = 3.0", "lang.cycle.dot_on_px"),
         (
             "mark_px = [10.0, 2.0, 2.0]",

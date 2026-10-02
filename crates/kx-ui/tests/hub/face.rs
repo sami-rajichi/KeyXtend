@@ -206,7 +206,7 @@ fn the_guard_stops_after_its_last_try_or_an_error() {
 }
 
 #[test]
-fn the_face_may_send_a_notice_or_read_the_texts_while_it_acts() {
+fn the_face_may_send_a_notice_or_read_the_texts_while_it_acts_or_answers() {
     let (rig, _face, _host) = Rig::with_face();
     let hub = std::sync::Arc::clone(&rig.hub);
     let face = std::sync::Arc::new(Echo(hub));
@@ -227,12 +227,13 @@ fn the_face_may_send_a_notice_or_read_the_texts_while_it_acts() {
         ECHO_LANG,
         "nor while it names its language"
     );
+    assert_ne!(rig.hub.look_json(), "null", "nor while it gives its row");
 }
 
 /// The language of the layout `Echo` shows.
 const ECHO_LANG: &str = "fr";
 
-/// A face that calls the hub from inside `act` and `lang`, as a failed settings save would send a notice.
+/// A face that calls the hub from inside `act`, `lang` and `row_px`, as a failed settings save would send a notice.
 struct Echo(std::sync::Arc<kx_ui::Hub>);
 
 impl kx_module_api::ports::KeyboardFace for Echo {
@@ -247,6 +248,11 @@ impl kx_module_api::ports::KeyboardFace for Echo {
     fn lang(&self) -> String {
         let _ = self.0.i18n();
         ECHO_LANG.to_owned()
+    }
+
+    fn row_px(&self) -> f64 {
+        let _ = self.0.i18n();
+        f64::from(crate::look::board_row())
     }
 
     fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {

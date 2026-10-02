@@ -35,7 +35,7 @@ fn views<'a>(t: &'a Themes, sys: &SysLook) -> Vec<(String, LookView<'a>)> {
     for theme in &t.list {
         for mode in Mode::ALL {
             let id = &theme.look.id;
-            let v = look_view(t, &choice(id, mode), sys).expect("a shipped theme");
+            let v = look_view(t, &choice(id, mode), sys, None).expect("a shipped theme");
             all.push((format!("{id}.{}", mode.key()), v));
         }
     }
@@ -46,7 +46,7 @@ fn views<'a>(t: &'a Themes, sys: &SysLook) -> Vec<(String, LookView<'a>)> {
 fn all_low(sys: &SysLook) -> Vec<String> {
     let t = themes();
     let views = views(&t, sys);
-    let named = views.iter().map(|(at, v)| (at, low(v)));
+    let named = views.iter().map(|(at, v)| (at, low(v, TEST_ROW_PX)));
     named
         .flat_map(|(at, low)| low.into_iter().map(move |l| format!("{at}: {l}")))
         .collect()
@@ -77,7 +77,7 @@ fn the_carousel_side_names_are_the_one_pair_allowed_below_its_minimum() {
     let t = themes();
     let mut faded = 0;
     for (at, v) in views(&t, &SysLook::default()) {
-        let all = drawn(&v);
+        let all = drawn(&v, TEST_ROW_PX);
         let side: Vec<&Drawn> = all
             .iter()
             .filter(|d| d.name.starts_with(EXCEPTION))
@@ -100,7 +100,7 @@ fn every_drawn_pair_is_opaque_so_its_ratio_is_what_shows() {
     let t = themes();
     for sys in [SysLook::default(), hc()] {
         for (at, v) in views(&t, &sys) {
-            for d in drawn(&v) {
+            for d in drawn(&v, TEST_ROW_PX) {
                 let opaque = d.ink.a == u8::MAX && d.bg.a == u8::MAX;
                 assert!(opaque, "{at}: {} {:?} on {:?}", d.name, d.ink, d.bg);
             }
@@ -113,7 +113,7 @@ fn a_legend_too_close_to_its_key_is_named() {
     let t = themes();
     let (_, mut v) = views(&t, &SysLook::default()).swap_remove(0);
     v.palette.legend = v.palette.key;
-    let low = low(&v);
+    let low = low(&v, TEST_ROW_PX);
     assert!(
         low.iter().any(|l| l.starts_with("legend on key, rest")),
         "{low:?}"
@@ -123,8 +123,8 @@ fn a_legend_too_close_to_its_key_is_named() {
 #[test]
 fn legends_are_checked_on_a_sculpted_caps_lit_top_and_under_hover_and_press() {
     let t = themes();
-    let v = look_view(&t, &choice("dolch", Mode::Light), &SysLook::default()).expect("dolch");
-    let all = drawn(&v);
+    let v = look_view(&t, &choice("dolch", Mode::Light), &SysLook::default(), None).expect("dolch");
+    let all = drawn(&v, TEST_ROW_PX);
     let find = |n: &str| all.iter().find(|d| d.name == n).expect(n).clone();
     let latched = find("lock_ink on lock, rest");
     assert!(
@@ -142,8 +142,8 @@ fn legends_are_checked_on_a_sculpted_caps_lit_top_and_under_hover_and_press() {
 #[test]
 fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() {
     let t = themes();
-    let v = look_view(&t, &choice("dolch", Mode::Dark), &SysLook::default()).expect("dolch");
-    let all = drawn(&v);
+    let v = look_view(&t, &choice("dolch", Mode::Dark), &SysLook::default(), None).expect("dolch");
+    let all = drawn(&v, TEST_ROW_PX);
     let bg = |n: &str| luminance(all.iter().find(|d| d.name == n).expect(n).bg);
     let Cap::Skirt { top, .. } = &v.look.cap else {
         unreachable!("dolch has sculpted caps")
@@ -168,7 +168,7 @@ fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() 
 fn a_named_keys_label_is_text_and_its_icon_a_mark() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
-        let all = drawn(&v);
+        let all = drawn(&v, TEST_ROW_PX);
         let min = |n: &str| all.iter().find(|d| d.name == n).map(|d| d.min);
         assert_eq!(min("legend_mod on key_mod, rest"), Some(WCAG_AA), "{at}");
         let icon = min("legend_mod icon on key_mod, rest");
@@ -180,7 +180,7 @@ fn a_named_keys_label_is_text_and_its_icon_a_mark() {
 fn the_plate_is_also_checked_see_through_over_a_backdrop_of_its_mode() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
-        let all = drawn(&v);
+        let all = drawn(&v, TEST_ROW_PX);
         let frosted = all
             .iter()
             .find(|d| d.name == "legend_2_plate on plate, frosted");
@@ -190,7 +190,9 @@ fn the_plate_is_also_checked_see_through_over_a_backdrop_of_its_mode() {
     }
     for (at, v) in views(&t, &hc()) {
         assert!(
-            drawn(&v).iter().all(|d| !d.name.ends_with("frosted")),
+            drawn(&v, TEST_ROW_PX)
+                .iter()
+                .all(|d| !d.name.ends_with("frosted")),
             "{at}: no materials"
         );
     }
@@ -200,7 +202,7 @@ fn the_plate_is_also_checked_see_through_over_a_backdrop_of_its_mode() {
 fn the_lit_size_letter_is_text_and_the_ring_that_marks_it_a_shape() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
-        let all = drawn(&v);
+        let all = drawn(&v, TEST_ROW_PX);
         let find = |n: &str| all.iter().find(|d| d.name == n).cloned().expect(n);
         let (letter, ring) = (find("lit size letter on plate"), find("ring on plate"));
         assert_eq!(
@@ -217,7 +219,7 @@ fn the_bubble_the_tray_menu_icons_and_a_hovered_rows_badge_are_checked() {
     let t = themes();
     for sys in [SysLook::default(), hc()] {
         for (at, v) in views(&t, &sys) {
-            let (all, p) = (drawn(&v), &v.palette);
+            let (all, p) = (drawn(&v, TEST_ROW_PX), &v.palette);
             let find = |n: &str| all.iter().find(|d| d.name == n).cloned().expect(n);
             // The bubble's disc is the plate, so high contrast draws its icon in WindowText.
             let ink = if v.contrast {
@@ -266,7 +268,9 @@ fn in_high_contrast_each_opaque_pair_is_one_windows_pairs() {
     .map(Rgba::from);
     for (at, v) in views(&t, &hc()) {
         // Faded marks blend their ink; only full-strength inks are system colours.
-        let opaque = drawn(&v).into_iter().filter(|d| system.contains(&d.ink));
+        let opaque = drawn(&v, TEST_ROW_PX)
+            .into_iter()
+            .filter(|d| system.contains(&d.ink));
         for d in opaque {
             assert!(
                 pairs.contains(&(d.ink, d.bg)),

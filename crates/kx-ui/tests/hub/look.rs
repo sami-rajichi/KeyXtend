@@ -1,11 +1,14 @@
 //! The look: the look view JSON, following the system look, the theme button, the light or dark switch, backdrops and
-//! the board row the drawn check measures by.
+//! the accent, which the drawn check measures on the face's own board row.
 
 use crate::Rig;
 use kx_module_api::WriteError;
-use kx_platform::ui::{BackdropKind, SysLook, UiError};
-use kx_theme::{ModeChoice, Themes};
+use kx_platform::ui::{Accent, BackdropKind, SysLook, UiError};
+use kx_theme::contrast::WCAG_AA;
+use kx_theme::drawn::low;
+use kx_theme::{LookChoice, Mode, ModeChoice, Rgba, Themes, look_view};
 use kx_ui::{Backdrop, UiSettings, Wake};
+use serde::Deserialize;
 use serde_json::Value;
 
 /// The look JSON read back.
@@ -109,13 +112,69 @@ fn a_backdrop_is_tried_only_when_chosen_and_a_refusal_leaves_the_plate_solid() {
     assert!(!rig.hub.backdrop("kb"));
 }
 
-/// The keyboard's board, whose row height the theme's drawn check measures caps by.
+/// The keyboard's board, whose row height the face reports and the drawn check measures caps by.
 const BOARD: &str = "../kx-mod-keyboard/board.toml";
+/// A Windows teal accent as the system gives it, which Native takes in light mode.
+const TEAL: [u8; 4] = [0x1D, 0x69, 0x78, 0xFF];
+
+/// The board file's row height.
+#[derive(Deserialize)]
+struct Row {
+    row_px: f32,
+}
+
+/// The keyboard board's own row height at size 1, read from its file.
+pub fn board_row() -> f32 {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(BOARD);
+    let text = std::fs::read_to_string(path).unwrap();
+    toml::from_str::<Row>(&text).unwrap().row_px
+}
 
 #[test]
-fn the_drawn_check_measures_caps_one_board_row_high() {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(BOARD);
-    let board: toml::Table = toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
-    let row = Themes::shipped().unwrap().shape.drawn.row_px;
-    assert_eq!(board["row_px"].as_float(), Some(f64::from(row)));
+fn every_shipped_theme_passes_the_drawn_check_on_the_boards_own_row() {
+    // High contrast draws flat caps, where the row moves nothing; kx-theme's tests cover it.
+    let t = Themes::shipped().unwrap();
+    for theme in &t.list {
+        for mode in [ModeChoice::Light, ModeChoice::Dark] {
+            let choice = LookChoice {
+                theme: theme.look.id.clone(),
+                mode,
+                follow_accent: false,
+                reduced_motion: false,
+                min_contrast: WCAG_AA,
+            };
+            let v = look_view(&t, &choice, &SysLook::default(), None).unwrap();
+            let under = low(&v, board_row());
+            assert!(under.is_empty(), "{} {mode:?}: {under:#?}", theme.look.id);
+        }
+    }
+}
+
+#[test]
+fn the_accent_is_checked_on_the_faces_row_and_waits_for_a_face() {
+    let (rig, face, mut host) = Rig::with_face();
+    let mut s = UiSettings::from_defaults().unwrap();
+    s.follow_accent = true;
+    let accent = Accent {
+        on_light: TEAL,
+        on_dark: TEAL,
+    };
+    rig.hub.set_sys(SysLook {
+        accent: Some(accent),
+        ..SysLook::default()
+    });
+    rig.hub.attach(s, face, host.handle());
+    let enter = |rig: &Rig| look(rig)["palette"]["enter"].clone();
+    let teal = serde_json::to_value(Rgba::from(TEAL)).unwrap();
+    assert_eq!(enter(&rig), teal, "checked on the face's row");
+    rig.hub.detach();
+    let own = Themes::shipped().unwrap().list[0]
+        .palette(Mode::Light)
+        .enter;
+    let own = serde_json::to_value(own).unwrap();
+    assert_eq!(
+        enter(&rig),
+        own,
+        "no face, no row: the theme keeps its colours"
+    );
 }

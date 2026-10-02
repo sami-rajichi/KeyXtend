@@ -132,6 +132,9 @@ pub trait KeyboardFace: Send + Sync {
     /// The language of the layout shown, as `LangLabel::iso`; it only reads, so any thread may ask.
     fn lang(&self) -> String;
 
+    /// The board's row height at size 1, in logical pixels, which the theme's drawn check measures caps by.
+    fn row_px(&self) -> f64;
+
     /// Does `action` and says what to redraw; a send or switch that failed comes back as a notice in the reply.
     ///
     /// # Errors

@@ -7,7 +7,7 @@ mod plate;
 use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast};
 use crate::rgba::Rgba;
 use crate::view::LookView;
-use place::{Mark, spans, under};
+use place::{Mark, height, spans, under};
 
 /// The one pair allowed below its minimum (owner, 2026-10-02): the Carousel's side names, faded as decoration.
 pub const EXCEPTION: &str = "Carousel side names";
@@ -27,6 +27,10 @@ pub const WINDOWS: [Rgba; 2] = [
         a: u8::MAX,
     },
 ];
+
+/// A board row at size 1 for kx-theme's own tests; kx-ui's test runs the check on the keyboard's own row.
+#[cfg(test)]
+pub(crate) const TEST_ROW_PX: f32 = 31.0;
 
 /// A cap at rest, under the pointer and pressed.
 const STATES: [&str; 3] = ["rest", "hover", "press"];
@@ -52,22 +56,23 @@ impl Drawn {
     }
 }
 
-/// Every pair view `v` draws: legends on caps, the language key's marks, the D-pad, the plate and the panels.
+/// Every pair view `v` draws on a keyboard whose rows are `row_px` high at size 1: legends on caps, the language
+/// key's marks, the D-pad, the plate and the panels.
 #[must_use]
-pub fn drawn(v: &LookView) -> Vec<Drawn> {
-    let mut out = Vec::new();
-    keys(v, &mut out);
-    marks(v, &mut out);
+pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
+    let (mut out, h) = (Vec::new(), height(v, row_px));
+    keys(v, h, &mut out);
+    marks(v, h, &mut out);
     dpad(v, &mut out);
     plate::plate(v, &mut out);
     plate::panels(v, &mut out);
     out
 }
 
-/// Every pair of `v` below its minimum but the named exception, as `<pair> is <n>:1`.
+/// Every pair of `v` on rows `row_px` high below its minimum but the named exception, as `<pair> is <n>:1`.
 #[must_use]
-pub fn low(v: &LookView) -> Vec<String> {
-    drawn(v)
+pub fn low(v: &LookView, row_px: f32) -> Vec<String> {
+    drawn(v, row_px)
         .into_iter()
         .filter(|d| d.ratio() < d.min && !d.name.starts_with(EXCEPTION))
         .map(|d| format!("{} is {:.2}:1", d.name, d.ratio()))
@@ -133,31 +138,31 @@ fn fill(v: &LookView, top: &str, skirt: &str) -> Fill {
     }
 }
 
-/// The colours under `mark` on a key of `f` in each of `STATES`: where it sits, under the hover tint, and pressed
-/// under the press shade.
-fn states(v: &LookView, mark: Mark, f: Fill) -> [Vec<Rgba>; 3] {
+/// The colours under `mark` on a key `h` high of `f` in each of `STATES`: where it sits, under the hover tint, and
+/// pressed under the press shade.
+fn states(v: &LookView, h: f32, mark: Mark, f: Fill) -> [Vec<Rgba>; 3] {
     let (mut rest, mut down) = (Vec::new(), Vec::new());
-    for span in spans(v, mark) {
-        rest.extend(under(v, f.top, f.skirt, span, false));
-        down.extend(under(v, f.top, f.skirt, span, true));
+    for span in spans(v, h, mark) {
+        rest.extend(under(v, h, f.top, f.skirt, span, false));
+        down.extend(under(v, h, f.top, f.skirt, span, true));
     }
     let hover = rest.iter().map(|&s| v.palette.hover.on(s)).collect();
     let press = down.into_iter().map(|s| v.common.press.on(s)).collect();
     [rest, hover, press]
 }
 
-/// `l` on a key of `f` in every state.
-fn on_cap(v: &LookView, l: &Legend, f: Fill) -> Vec<Drawn> {
-    let states = states(v, l.mark, f);
+/// `l` on a key `h` high of `f` in every state.
+fn on_cap(v: &LookView, h: f32, l: &Legend, f: Fill) -> Vec<Drawn> {
+    let states = states(v, h, l.mark, f);
     let named = STATES.iter().zip(states.iter());
     named
         .map(|(state, bgs)| worst(&format!("{}, {state}", l.name), l.ink, l.share, bgs, l.min))
         .collect()
 }
 
-/// Each legend on its key, where it sits, with the hover tint or press shade under it (Key.qml); a named key's icon
-/// is a mark. Dimmed keys are left out, as WCAG sets no minimum for inactive parts (1.4.3).
-fn keys(v: &LookView, out: &mut Vec<Drawn>) {
+/// Each legend on its key `h` high, where it sits, with the hover tint or press shade under it (Key.qml); a named
+/// key's icon is a mark. Dimmed keys are left out, as WCAG sets no minimum for inactive parts (1.4.3).
+fn keys(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     for (ink, top, skirt, mark) in KEYS {
         let (name, f) = (format!("{ink} on {top}"), fill(v, top, skirt));
         let ink = token(v, ink);
@@ -168,7 +173,7 @@ fn keys(v: &LookView, out: &mut Vec<Drawn>) {
             mark,
             min: WCAG_AA,
         };
-        out.extend(on_cap(v, &text, f));
+        out.extend(on_cap(v, h, &text, f));
         if mark == Mark::Label {
             let name = name.replacen(" on ", " icon on ", 1);
             let icon = Legend {
@@ -177,13 +182,14 @@ fn keys(v: &LookView, out: &mut Vec<Drawn>) {
                 min: WCAG_SHAPES,
                 ..text
             };
-            out.extend(on_cap(v, &icon, f));
+            out.extend(on_cap(v, h, &icon, f));
         }
     }
 }
 
-/// The language key's faded marks in `legend_mod`: Cycle's unlit dots and globe, List's chevron, Carousel's side names.
-fn marks(v: &LookView, out: &mut Vec<Drawn>) {
+/// The language key's faded marks in `legend_mod` on a key `h` high: Cycle's unlit dots and globe, List's chevron,
+/// Carousel's side names.
+fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     let (l, f) = (&v.shape.lang, fill(v, "key_mod", "key_mod"));
     let marks = [
         ("Cycle unlit dot", l.cycle.dot_off, Mark::Dots, WCAG_SHAPES),
@@ -205,7 +211,7 @@ fn marks(v: &LookView, out: &mut Vec<Drawn>) {
             mark,
             min,
         };
-        out.extend(on_cap(v, &l, f));
+        out.extend(on_cap(v, h, &l, f));
     }
 }
 

@@ -9,7 +9,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `InputInjector` | needs | Sends each click's keys or text to the app in front, and names that app for `key_apps`. |
 | `LayoutSource` | needs | Says whether Caps Lock is on, and whether a key typed anything while a dead key waits. |
 | `Layouts` | needs | Its current table says what each key types in the layout shown. |
-| `KeyboardFace` | provides | The board and state JSON the UI draws, and each click it forwards; see "The face". |
+| `KeyboardFace` | provides | The board and state JSON the UI draws, the board's row the theme's drawn check measures caps by, and each click it forwards; see "The face". |
 
 ## Capabilities
 

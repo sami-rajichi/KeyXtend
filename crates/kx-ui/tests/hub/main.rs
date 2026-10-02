@@ -70,6 +70,10 @@ impl KeyboardFace for FakeFace {
             .clone()
     }
 
+    fn row_px(&self) -> f64 {
+        f64::from(look::board_row())
+    }
+
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         self.acts
             .lock()

@@ -42,6 +42,17 @@ fn the_board_matches_its_golden_file() {
 }
 
 #[test]
+fn the_face_reports_its_boards_row_for_the_themes_drawn_check() {
+    let r = showing("en-us", None);
+    let spec = kx_mod_keyboard::BoardSpec::shipped().unwrap();
+    assert_eq!(
+        r.face.row_px().to_bits(),
+        spec.row_px.to_bits(),
+        "the same row, bit for bit"
+    );
+}
+
+#[test]
 fn the_english_state_matches_its_golden_file() {
     let r = showing("en-us", None);
     assert_golden(golden("state-en.json"), &pretty(&r.face.state_json()));

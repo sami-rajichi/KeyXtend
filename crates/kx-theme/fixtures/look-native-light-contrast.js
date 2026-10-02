@@ -417,9 +417,6 @@ var lk = {
     "tray": {
       "radius_share": 0.22,
       "glyph_share": 0.75
-    },
-    "drawn": {
-      "row_px": 31.0
     }
   },
   "motion": {

@@ -93,8 +93,14 @@ fn flat(look: &Look) -> Look {
 }
 
 /// The chosen theme as it should look while the system looks like `sys`; `None` for a theme that does not exist.
+/// The accent is checked on the keyboard's rows, `row_px` high at size 1; without them the theme keeps its colours.
 #[must_use]
-pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Option<LookView<'a>> {
+pub fn look_view<'a>(
+    t: &'a Themes,
+    choice: &LookChoice,
+    sys: &SysLook,
+    row_px: Option<f32>,
+) -> Option<LookView<'a>> {
     let theme = t.find(&choice.theme)?;
     let mode = mode_for(choice.mode, sys);
     let palette = palette(theme, mode, sys, t.shape.line.px);
@@ -121,9 +127,9 @@ pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Optio
     };
     // High contrast wins over the accent; `max` also turns a NaN setting into WCAG AA.
     let follows = choice.follow_accent && theme.look.accent && hc.is_none();
-    if let Some(a) = sys.accent.filter(|_| follows) {
+    if let (Some(a), Some(row)) = (sys.accent.filter(|_| follows), row_px) {
         let min = choice.min_contrast.max(WCAG_AA);
-        view.palette = with_accent(&view, accent_fill(&a, mode), min);
+        view.palette = with_accent(&view, accent_fill(&a, mode), min, row);
         view.dpad = theme.look.dpad.resolve(&view.palette).ok()?;
     }
     Some(view)

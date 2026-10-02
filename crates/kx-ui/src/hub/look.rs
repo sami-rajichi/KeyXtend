@@ -15,15 +15,27 @@ const THEME_KEY: &str = "theme";
 /// The `[ui]` key of the mode.
 const MODE_KEY: &str = "mode";
 
+/// A board row in the theme's single precision.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "a keyboard row is tens of pixels, which f32 holds exactly enough"
+)]
+fn narrow(row_px: f64) -> f32 {
+    row_px as f32
+}
+
 impl Hub {
-    /// The look to draw now, as JSON; `null` when the theme is missing.
+    /// The look to draw now, as JSON; `null` when the theme is missing. The accent is checked on the face's board
+    /// row, so it waits for the face.
     #[must_use]
     pub fn look_json(&self) -> String {
-        let (choice, sys) = {
+        let (choice, sys, face) = {
             let live = self.lock();
-            (live.settings.choice(), live.sys)
+            (live.settings.choice(), live.sys, live.face.clone())
         };
-        look_view(&self.themes, &choice, &sys).map_or_else(|| NULL.to_owned(), |v| json(&v))
+        let row = face.map(|f| narrow(f.row_px()));
+        let view = look_view(&self.themes, &choice, &sys, row);
+        view.map_or_else(|| NULL.to_owned(), |v| json(&v))
     }
 
     /// Takes a new system look, as the watch reports it from any thread.

@@ -27,10 +27,10 @@ fn ink_for(ink: Rgba, legend: Rgba, fill: Rgba, min: f32) -> Rgba {
         .unwrap_or_else(|| inks.into_iter().fold(ink, |a, b| readable(a, b, fill)))
 }
 
-/// View `v`'s palette with the accent `fill` (see `accented`), kept only when every pair it draws still reaches its
-/// minimum (`drawn::low`); else the theme's own palette.
+/// View `v`'s palette with the accent `fill` (see `accented`), kept only when every pair it draws on rows `row_px`
+/// high still reaches its minimum (`drawn::low`); else the theme's own palette.
 #[must_use]
-pub fn with_accent(v: &LookView, fill: Rgba, min: f32) -> Palette {
+pub fn with_accent(v: &LookView, fill: Rgba, min: f32, row_px: f32) -> Palette {
     let palette = accented(&v.palette, fill, min);
     let Ok(dpad) = v.look.dpad.resolve(&palette) else {
         return v.palette.clone();
@@ -40,7 +40,7 @@ pub fn with_accent(v: &LookView, fill: Rgba, min: f32) -> Palette {
         dpad,
         ..v.clone()
     };
-    if low(&trial).is_empty() {
+    if low(&trial, row_px).is_empty() {
         trial.palette
     } else {
         v.palette.clone()
@@ -79,6 +79,7 @@ mod tests {
     use super::*;
     use crate::Themes;
     use crate::contrast::{MAX_CONTRAST, WCAG_AA};
+    use crate::drawn::TEST_ROW_PX;
     use crate::mode::ModeChoice;
     use crate::view::{LookChoice, look_view};
 
@@ -146,7 +147,7 @@ mod tests {
             reduced_motion: false,
             min_contrast: WCAG_AA,
         };
-        look_view(t, &choice, &SysLook::default()).expect("native")
+        look_view(t, &choice, &SysLook::default(), None).expect("native")
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         for mode in [ModeChoice::Light, ModeChoice::Dark] {
             let v = native(&t, mode);
             for fill in fills().into_iter().step_by(SAMPLE) {
-                let p = with_accent(&v, fill, WCAG_AA);
+                let p = with_accent(&v, fill, WCAG_AA, TEST_ROW_PX);
                 if p == v.palette {
                     back += 1;
                     continue;
@@ -168,7 +169,11 @@ mod tests {
                     dpad,
                     ..v.clone()
                 };
-                assert!(low(&shown).is_empty(), "{fill:?}: {:?}", low(&shown));
+                assert!(
+                    low(&shown, TEST_ROW_PX).is_empty(),
+                    "{fill:?}: {:?}",
+                    low(&shown, TEST_ROW_PX)
+                );
             }
         }
         assert!(kept > 0 && back > 0, "kept {kept}, fell back {back}");
@@ -180,7 +185,7 @@ mod tests {
         let v = native(&t, ModeChoice::Light);
         let yellow = Rgba::parse("#FFD800").expect("yellow");
         assert_eq!(
-            with_accent(&v, yellow, WCAG_AA),
+            with_accent(&v, yellow, WCAG_AA, TEST_ROW_PX),
             v.palette,
             "unreadable on the plate"
         );
@@ -190,7 +195,7 @@ mod tests {
             "inks switch"
         );
         let teal = Rgba::parse("#1D6978").expect("teal");
-        let p = with_accent(&v, teal, WCAG_AA);
+        let p = with_accent(&v, teal, WCAG_AA, TEST_ROW_PX);
         let fills = [p.enter, p.on, p.lock, p.led_on, p.ring, p.badge_bg];
         assert!(fills.iter().all(|&c| c == teal), "{p:?}");
     }

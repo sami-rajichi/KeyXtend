@@ -3,8 +3,12 @@
 use kx_platform::ui::Accent;
 
 use super::*;
+use crate::drawn::TEST_ROW_PX;
 use crate::hc::sample::HC;
 use crate::look::Cap;
+
+/// The test board's rows, so the accent is checked.
+const ROWS: Option<f32> = Some(TEST_ROW_PX);
 
 /// A shipped colour as the system gives colours.
 fn port(s: &str) -> [u8; 4] {
@@ -45,10 +49,21 @@ fn teal() -> SysLook {
 #[test]
 fn by_default_native_keeps_its_own_blue() {
     let t = themes();
-    let light = look_view(&t, &choice("native", ModeChoice::Light), &teal()).expect("light");
+    let light = look_view(&t, &choice("native", ModeChoice::Light), &teal(), ROWS).expect("light");
     assert_eq!(light.palette.enter, t.list[0].light.enter);
-    let dark = look_view(&t, &choice("native", ModeChoice::Dark), &teal()).expect("dark");
+    let dark = look_view(&t, &choice("native", ModeChoice::Dark), &teal(), ROWS).expect("dark");
     assert_eq!(dark.palette.on, t.list[0].dark.on);
+}
+
+#[test]
+fn without_the_keyboards_rows_the_accent_is_not_tried() {
+    let t = themes();
+    let follow = LookChoice {
+        follow_accent: true,
+        ..choice("native", ModeChoice::Light)
+    };
+    let v = look_view(&t, &follow, &teal(), None).expect("native");
+    assert_eq!(v.palette.enter, t.list[0].light.enter);
 }
 
 #[test]
@@ -58,14 +73,14 @@ fn only_themes_that_take_the_accent_follow_it() {
         follow_accent: true,
         ..choice(id, ModeChoice::Light)
     };
-    let native = look_view(&t, &follow("native"), &teal()).expect("native");
+    let native = look_view(&t, &follow("native"), &teal(), ROWS).expect("native");
     assert_eq!(native.palette.enter, rgb("#1D6978"));
-    let et66 = look_view(&t, &follow("et66"), &teal()).expect("et66");
+    let et66 = look_view(&t, &follow("et66"), &teal(), ROWS).expect("et66");
     assert_eq!(
         et66.palette.enter, t.list[1].light.enter,
         "ET66 keeps its yellow"
     );
-    let dolch = look_view(&t, &follow("dolch"), &teal()).expect("dolch");
+    let dolch = look_view(&t, &follow("dolch"), &teal(), ROWS).expect("dolch");
     assert_eq!(
         dolch.palette.on, t.list[2].light.on,
         "skirts keep their colour"
@@ -83,7 +98,7 @@ fn auto_follows_the_system_and_dark_uses_the_light_accent_shade() {
         follow_accent: true,
         ..choice("native", ModeChoice::Auto)
     };
-    let v = look_view(&t, &native, &sys).expect("native");
+    let v = look_view(&t, &native, &sys, ROWS).expect("native");
     assert!(v.dark);
     assert_eq!(v.palette.on, rgb("#71D4DB"));
 }
@@ -104,7 +119,7 @@ fn a_setting_below_wcag_aa_still_keeps_legends_at_aa() {
             min_contrast: min,
             ..choice("native", ModeChoice::Light)
         };
-        let v = look_view(&t, &native, &yellow).expect("native");
+        let v = look_view(&t, &native, &yellow, ROWS).expect("native");
         let c = crate::contrast::contrast(v.palette.enter_ink, v.palette.enter);
         assert!(c >= WCAG_AA, "{min}: {c}");
     }
@@ -117,7 +132,7 @@ fn high_contrast_replaces_every_theme_colour() {
         contrast: Some(HC),
         ..teal()
     };
-    let v = look_view(&t, &choice("dolch", ModeChoice::Light), &sys).expect("dolch");
+    let v = look_view(&t, &choice("dolch", ModeChoice::Light), &sys, ROWS).expect("dolch");
     assert!(v.contrast && v.palette.skirt.is_none());
     assert_eq!(
         v.dpad.face,
@@ -134,7 +149,7 @@ fn high_contrast_replaces_every_theme_colour() {
         Rgba::from(HC.highlight_text),
         "text on a Highlight fill"
     );
-    let plain = look_view(&t, &choice("dolch", ModeChoice::Light), &teal()).expect("dolch");
+    let plain = look_view(&t, &choice("dolch", ModeChoice::Light), &teal(), ROWS).expect("dolch");
     assert_eq!(plain.common, t.common);
     assert_eq!(plain.sel_ink, plain.palette.pop_ink);
 }
@@ -147,7 +162,7 @@ fn reduced_motion_or_system_animations_off_zero_every_duration() {
         ..SysLook::default()
     };
     let press = |sys: &SysLook, c: &LookChoice| {
-        let v = look_view(&t, c, sys).expect("native");
+        let v = look_view(&t, c, sys, ROWS).expect("native");
         v.motion.moves["press"].ms
     };
     let mut c = choice("native", ModeChoice::Light);
@@ -169,6 +184,7 @@ fn the_margin_fits_the_widest_outer_shadow() {
         &t,
         &choice("native", ModeChoice::Light),
         &SysLook::default(),
+        ROWS,
     )
     .expect("native");
     assert!(
@@ -177,7 +193,7 @@ fn the_margin_fits_the_widest_outer_shadow() {
         v.margin
     );
     let none = choice("nope", ModeChoice::Light);
-    assert!(look_view(&t, &none, &SysLook::default()).is_none());
+    assert!(look_view(&t, &none, &SysLook::default(), ROWS).is_none());
 }
 
 #[test]
@@ -187,6 +203,7 @@ fn a_key_under_the_pointer_gets_an_outline_only_in_high_contrast() {
         &t,
         &choice("native", ModeChoice::Light),
         &SysLook::default(),
+        ROWS,
     )
     .expect("native");
     assert_eq!(plain.hover_line.a, 0, "the theme's tint shows hover");
@@ -194,7 +211,7 @@ fn a_key_under_the_pointer_gets_an_outline_only_in_high_contrast() {
         contrast: Some(HC),
         ..SysLook::default()
     };
-    let hc = look_view(&t, &choice("native", ModeChoice::Light), &sys).expect("native");
+    let hc = look_view(&t, &choice("native", ModeChoice::Light), &sys, ROWS).expect("native");
     assert_eq!(hc.hover_line, Rgba::from(HC.highlight));
     assert!(t.shape.hc_outline.px > 0.0, "the outline has a width");
 }
@@ -202,7 +219,13 @@ fn a_key_under_the_pointer_gets_an_outline_only_in_high_contrast() {
 #[test]
 fn the_look_carries_the_icons() {
     let t = themes();
-    let v = look_view(&t, &choice("et66", ModeChoice::Dark), &SysLook::default()).expect("et66");
+    let v = look_view(
+        &t,
+        &choice("et66", ModeChoice::Dark),
+        &SysLook::default(),
+        ROWS,
+    )
+    .expect("et66");
     assert_eq!(v.icons.bar.theme, "palette", "the theme button");
     assert_eq!(v.icons, &t.icons);
 }
@@ -218,7 +241,7 @@ fn high_contrast_wins_over_the_accent() {
         follow_accent: true,
         ..choice("native", ModeChoice::Light)
     };
-    let v = look_view(&t, &native, &sys).expect("native");
+    let v = look_view(&t, &native, &sys, ROWS).expect("native");
     let hc = contrast_palette(&t.list[0].light, &HC, t.shape.line.px);
     assert_eq!(v.palette, hc, "no accent in high contrast");
     assert_eq!(v.palette.enter, Rgba::from(HC.highlight));
@@ -233,10 +256,15 @@ fn high_contrast_caps_are_flat_as_effects_are_off() {
     };
     for theme in &t.list {
         let id = &theme.look.id;
-        let v = look_view(&t, &choice(id, ModeChoice::Light), &sys).expect("a theme");
+        let v = look_view(&t, &choice(id, ModeChoice::Light), &sys, ROWS).expect("a theme");
         assert_eq!(v.look.cap, Cap::Flat {}, "{id}: no white or black tints");
         assert_eq!(v.look.id, theme.look.id, "{id}: the rest of the look stays");
-        let plain = look_view(&t, &choice(id, ModeChoice::Light), &SysLook::default());
+        let plain = look_view(
+            &t,
+            &choice(id, ModeChoice::Light),
+            &SysLook::default(),
+            ROWS,
+        );
         assert_eq!(
             plain.expect("a theme").look.cap,
             theme.look.cap,

@@ -53,14 +53,13 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outline, the smallest label, the row and the mark's size must be above 0, and the panel
+    /// The shimmer span, the outline, the smallest label and the mark's size must be above 0, and the panel
     /// gaps, the label padding, the language icon's gap and the mark's 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
             ("hc_outline.px", self.hc_outline.px),
             ("legend.label_min_px", self.legend.label_min_px),
-            ("drawn.row_px", self.drawn.row_px),
             ("bar.mark_px", self.bar.mark_px[0]),
             ("bar.mark_px", self.bar.mark_px[1]),
         ];

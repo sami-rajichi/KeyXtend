@@ -28,9 +28,9 @@ pub(super) enum Mark {
     Side,
 }
 
-/// The cap's height at size 1: one keyboard row less the gap between keys.
-pub(super) fn height(v: &LookView) -> f32 {
-    v.shape.drawn.row_px - v.look.gap_px
+/// The cap's height at size 1: the keyboard's row, `row_px`, less the gap between keys.
+pub(super) fn height(v: &LookView, row_px: f32) -> f32 {
+    row_px - v.look.gap_px
 }
 
 /// How far a sculpted cap lifts its legends.
@@ -76,9 +76,9 @@ fn column(v: &LookView, h: f32) -> f32 {
     dots * c.dot_px + (dots - 1.0) * c.dot_gap_px
 }
 
-/// Where `mark` sits on a cap: one span for each place or size it may take.
-pub(super) fn spans(v: &LookView, mark: Mark) -> Vec<Span> {
-    let (h, look, lg, lang) = (height(v), &v.look, &v.shape.legend, &v.shape.lang);
+/// Where `mark` sits on a cap `h` high: one span for each place or size it may take.
+pub(super) fn spans(v: &LookView, h: f32, mark: Mark) -> Vec<Span> {
+    let (look, lg, lang) = (&v.look, &v.shape.legend, &v.shape.lang);
     let mid = h / 2.0 - lift(v);
     match mark {
         Mark::Main => [1.0, look.arabic_scale]
@@ -132,10 +132,16 @@ fn shade(stops: &[(f32, Rgba); 3], t: f32) -> Rgba {
     to.over(from, share.clamp(0.0, 1.0))
 }
 
-/// The colours a cap of `fill` shows over `span`, at rest or pressed: both ends and any stop between, plus the skirt
-/// when the span runs off a sculpted top.
-pub(super) fn under(v: &LookView, fill: Rgba, skirt: Rgba, span: Span, pressed: bool) -> Vec<Rgba> {
-    let h = height(v);
+/// The colours a cap `h` high and of `fill` shows over `span`, at rest or pressed: both ends and any stop between,
+/// plus the skirt when the span runs off a sculpted top.
+pub(super) fn under(
+    v: &LookView,
+    h: f32,
+    fill: Rgba,
+    skirt: Rgba,
+    span: Span,
+    pressed: bool,
+) -> Vec<Rgba> {
     let (grad, band) = match &v.look.cap {
         Cap::Flat {} => return vec![fill],
         Cap::Convex {

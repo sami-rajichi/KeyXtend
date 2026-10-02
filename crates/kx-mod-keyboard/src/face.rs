@@ -135,6 +135,10 @@ impl KeyboardFace for Face {
         layouts.current().label.iso.clone()
     }
 
+    fn row_px(&self) -> f64 {
+        self.spec.row_px
+    }
+
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
             FaceAction::Tap { id, back } => self.tap(id.as_str(), back),

@@ -46,7 +46,7 @@ fn dir() -> PathBuf {
 
 /// Checks fixture `name` against the look for `choice` on `sys`, or writes it when blessing; returns the name.
 fn fixture(t: &Themes, name: String, choice: &LookChoice, sys: &SysLook) -> String {
-    let view = look_view(t, choice, sys).expect("a shipped theme");
+    let view = look_view(t, choice, sys, None).expect("a shipped theme");
     let json = serde_json::to_string_pretty(&view).expect("the look is JSON");
     assert_golden(dir().join(&name), &format!("{HEAD}{json}{TAIL}"));
     name
