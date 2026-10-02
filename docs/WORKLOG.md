@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-02 11:25 — P3: kx-review fixes for the modules, kernel, platform and tools
+The keyboard now opens no larger than its screen: `size_max` has a ceiling, the size step and presets must fit and rise, and a size too big for the screen it lands on is shrunk for the run without being saved. Debug output hides latches and Caps Lock, both modules share one Arabic script table, a property run pins the dead-key wait and what each key types, and the bubble comes back when the keyboard module restarts while minimised. Settings refuse a key the defaults lack, a file nested too deep counts as damaged, tidy D6 bans toml's `unbounded` feature, kernel errors are logged by kind, and the fake host and sink refuse what the kernel refuses. On Windows the guard refuses kept styles that never land, the tray reports a message it cannot queue, a hidden window's loop ends once stopping, and the stage check refuses any file off its list.
+
 ## 2026-10-02 10:05 — P3: kx-review fixes for the keyboard's look and QML
 kx-theme now checks every text, icon and mark the keyboard really draws, on its cap's gradient, under hover and press and on the see-through plate, and the Dolch, ET66 and Native tokens were nudged until all pass; the Carousel's faded side names are the owner's one named exception. A system accent stays only while the keyboard stays readable, and high contrast draws flat caps with Windows' own colour pairs. Every control now gives UI Automation its text key as its id, the move catcher's title is translated, `close` became `putAway`, and new Quick tests cover the two-click move and resize and units on a scaled screen. A static test keeps all QML text plain, the guard holds no borrow while it moves windows, and an open language list closes on a click even with one layout left.
 
