@@ -241,3 +241,15 @@ fn legend_mods_hide_shift_caps_and_altgr() {
     };
     assert_eq!(format!("{all:?}"), "LegendMods { .. }");
 }
+
+#[test]
+fn a_debug_print_hides_the_legends_as_they_tell_shift_caps_and_altgr() {
+    let shifted = Legend {
+        main: "Q".into(),
+        second: "q".into(),
+        third: "@".into(),
+        main_ar: true,
+        ..Legend::default()
+    };
+    assert_eq!(format!("{shifted:?}"), "Legend { .. }");
+}

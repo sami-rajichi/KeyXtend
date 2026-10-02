@@ -102,7 +102,7 @@ impl LegendMods {
 }
 
 /// A character key's legends, ready to draw.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize)]
 pub struct Legend {
     /// What the key types now.
     pub main: String,
@@ -116,6 +116,13 @@ pub struct Legend {
     pub second_ar: bool,
     /// `third` needs the Arabic font.
     pub third_ar: bool,
+}
+
+/// Shows no field: what a key shows tells Shift, Caps Lock and `AltGr`, as `LegendMods` hides them.
+impl fmt::Debug for Legend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Legend").finish_non_exhaustive()
+    }
 }
 
 /// The state key `k` is read in with `m`; a state that types nothing falls back to a simpler one.
