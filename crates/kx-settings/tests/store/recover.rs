@@ -51,6 +51,24 @@ fn the_file_notice_comes_before_the_section_notices() {
     assert_eq!(report.notices, expected);
 }
 
+/// A file nested far past toml's limit is damaged: a later copy peeks nothing and a load restores the previous copy.
+#[test]
+fn a_file_nested_too_deep_counts_as_damaged() {
+    const DEPTH: usize = 10_000;
+    let deep = format!(
+        "[hold]\nmax_ms = {}1{}\n",
+        "[".repeat(DEPTH),
+        "]".repeat(DEPTH)
+    );
+    let (_dir, files) = with_file("deep", &deep);
+    fs::write(&files.previous, "[hold]\nmax_ms = 900\n").unwrap();
+    assert_eq!(kx_settings::peek(&files), None);
+    let (store, report) = open(&files);
+    assert_eq!(report.notices, vec![file_notice(keys::SETTINGS_RESTORED)]);
+    assert_eq!(store.get(HOLD), Some(&defaults_with("max_ms = 900")));
+    assert_eq!(fs::read_to_string(&files.broken).unwrap(), deep);
+}
+
 /// Another program holds the file with no sharing: defaults in memory, one notice, and no write.
 #[cfg(windows)]
 #[test]
