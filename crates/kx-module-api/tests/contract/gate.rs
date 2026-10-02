@@ -26,12 +26,13 @@ impl Event for Open {
     const NAME: &'static str = "open";
 }
 
-static BARE: Manifest = Manifest {
-    id: ModuleId::new("bare"),
+/// A module that declares both capabilities; each test grants it some, as the kernel's policy would.
+static DECLARED: Manifest = Manifest {
+    id: ModuleId::new("declared"),
     version: env!("CARGO_PKG_VERSION"),
     requires: &[],
     provides: &[],
-    capabilities: &[],
+    capabilities: &[NEED, Microphone],
     settings: None,
 };
 
@@ -148,7 +149,7 @@ fn a_clone_on_another_thread_keeps_the_limit() {
 
 /// A host granted `granted`, as the kernel would build it for a module.
 fn host(granted: &[Capability]) -> FakeHost {
-    let mut host = FakeHost::new(&BARE);
+    let mut host = FakeHost::new(&DECLARED);
     host.granted.extend(granted);
     host
 }

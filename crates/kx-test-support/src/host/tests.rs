@@ -1,5 +1,7 @@
 use super::*;
-use kx_module_api::{ModuleId, Settings, SettingsError, SettingsSpec, WriteError, validate_as};
+use kx_module_api::{
+    Event, EventError, ModuleId, Settings, SettingsError, SettingsSpec, WriteError, validate_as,
+};
 use serde::{Deserialize, Serialize};
 
 /// A span whose low end may not pass its high end.
@@ -31,9 +33,27 @@ static SPANNED: Manifest = Manifest {
     version: env!("CARGO_PKG_VERSION"),
     requires: &[],
     provides: &[],
-    capabilities: &[],
+    capabilities: &[Capability::Microphone],
     settings: Some(&SPAN),
 };
+
+/// A module that declares no capability.
+static PLAIN: Manifest = Manifest {
+    id: ModuleId::new("plain"),
+    version: env!("CARGO_PKG_VERSION"),
+    requires: &[],
+    provides: &[],
+    capabilities: &[],
+    settings: None,
+};
+
+/// An event only a module holding the microphone may hear.
+struct Heard;
+
+impl Event for Heard {
+    const NAME: &'static str = "heard";
+    const CAPABILITY: Option<Capability> = Some(Capability::Microphone);
+}
 
 fn values(text: &str) -> Table {
     text.parse().unwrap_or_default()
@@ -109,4 +129,22 @@ fn a_provider_needs_the_capability_of_its_service() {
     assert_eq!(twice, Err(ServiceError::AlreadyProvided(id)));
     assert!(host.service(id, cap).is_ok());
     assert_eq!((host.lookups.get(), host.clock().now()), (1, NOW));
+}
+
+#[test]
+fn a_grant_the_manifest_never_declared_is_refused_as_the_kernel_does() {
+    let mut host = FakeHost::new(&PLAIN);
+    host.granted.push(Capability::Microphone);
+    let (id, cap) = (ServiceId::new("mic"), Some(Capability::Microphone));
+    let refused = ServiceError::NotGranted(id, Capability::Microphone);
+    assert_eq!(
+        host.provide(id, cap, Box::new(1_u8)),
+        Err(refused),
+        "provide"
+    );
+    host.services.insert(id, (cap, Box::new(1_u8)));
+    assert_eq!(host.service(id, cap).err(), Some(refused), "service");
+    let heard = host.bus().subscribe(|_: &Heard| {}).map(drop);
+    let not_granted = EventError::NotGranted(Heard::NAME, Capability::Microphone);
+    assert_eq!(heard, Err(not_granted), "bus");
 }

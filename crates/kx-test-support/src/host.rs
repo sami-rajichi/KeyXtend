@@ -36,7 +36,7 @@ impl Clock for Fixed {
 pub struct FakeHost {
     /// The module's manifest.
     pub manifest: &'static Manifest,
-    /// The capabilities the module was granted.
+    /// The capabilities the policy allows the module; as in the kernel, only those its manifest declares count.
     pub granted: Vec<Capability>,
     /// The services by id, with the capability that gates each.
     pub services: HashMap<ServiceId, Stored>,
@@ -82,6 +82,13 @@ impl FakeHost {
     pub fn handle(&mut self) -> SettingsHandle {
         ModuleCx::new(self).settings_handle()
     }
+
+    /// What the module may use: the capabilities both granted and declared, as the kernel's grants.
+    fn holds(&self) -> Vec<Capability> {
+        let declared = self.manifest.capabilities;
+        let held = self.granted.iter().filter(|c| declared.contains(c));
+        held.copied().collect()
+    }
 }
 
 impl Host for FakeHost {
@@ -99,7 +106,7 @@ impl Host for FakeHost {
         if *stored != cap {
             return Err(ServiceError::CapabilityMismatch(id));
         }
-        if let Some(cap) = stored.filter(|c| !self.granted.contains(c)) {
+        if let Some(cap) = stored.filter(|c| !self.holds().contains(c)) {
             return Err(ServiceError::NotGranted(id, cap));
         }
         Ok(&**service)
@@ -112,7 +119,7 @@ impl Host for FakeHost {
         cap: Option<Capability>,
         service: Box<dyn Any + Send + Sync>,
     ) -> Result<(), ServiceError> {
-        if let Some(cap) = cap.filter(|c| !self.granted.contains(c)) {
+        if let Some(cap) = cap.filter(|c| !self.holds().contains(c)) {
             return Err(ServiceError::NotGranted(id, cap));
         }
         if self.services.contains_key(&id) {
@@ -123,7 +130,7 @@ impl Host for FakeHost {
     }
 
     fn bus(&self) -> Bus {
-        Bus::new(Arc::clone(&self.core)).restricted(&self.granted)
+        Bus::new(Arc::clone(&self.core)).restricted(&self.holds())
     }
 
     fn clock(&self) -> Arc<dyn Clock> {
