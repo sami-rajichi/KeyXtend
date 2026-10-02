@@ -95,7 +95,7 @@ The language key has three designs, by `lang_key`:
 - **Cycle:** every click steps on; `at` lights one dot of `count`, and the names never slide (`turn` stays 0).
 - **List:** a click opens the list on the current row, and another closes it. While it is open, the board's `nav` keys (Esc, Enter and the arrows) come as `panel_key` and never reach the app; every other key, Space too, types as usual. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
 
-With one layout installed, a click does nothing in any design (no step is asked and no list opens), and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
+With one layout installed, a click asks no step and opens no list in any design, but still closes a list left open, and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
 The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltGr` latched and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the QML fixtures (Task 17) are made from them.
 

@@ -122,6 +122,19 @@ fn list() -> Rig {
 }
 
 #[test]
+fn an_open_list_closes_from_the_key_once_one_layout_is_left() {
+    let r = list();
+    assert_eq!(r.tap("lang"), Ok(STATE));
+    let gone = ["fr-fr", "ar-tn"].map(|name| r.fakes.layouts.remove(id(name)));
+    assert_eq!(gone, [true, true]);
+    assert_eq!(r.tap("lang"), Ok(STATE), "the key closes it");
+    assert!(r.state()["list"].is_null());
+    assert_eq!(r.state()["keys"]["lang"]["tip"], LONE_TIP, "then says so");
+    assert_eq!(r.tap("lang"), Ok(FaceReply::default()), "and stays still");
+    assert!(r.state()["list"].is_null() && r.fakes.layouts.asked().is_empty());
+}
+
+#[test]
 fn the_list_opens_on_the_current_row_and_ticks_it() {
     let r = list();
     r.switch("fr-fr");

@@ -101,8 +101,8 @@ impl Inner {
         self.ports.layouts.list().iter().map(|l| l.id).collect()
     }
 
-    /// A click on the language key: a step asks the app to switch, which a later refresh sees; with one layout
-    /// installed it does nothing.
+    /// A click on the language key: a step asks the app to switch, which a later refresh sees. With one layout
+    /// installed it does nothing, except close a list that is still open.
     pub(super) fn lang(&mut self, back: bool) -> FaceReply {
         let count = self.ports.layouts.list().len();
         match click(self.settings.lang_key, back, count, self.list.is_some()) {
