@@ -4,8 +4,9 @@
 use std::collections::HashSet;
 
 use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
-use kx_module_api::ports::LayoutSource;
+use kx_module_api::ports::{LayoutId, LayoutSource};
 use kx_platform_windows::WinLayouts;
+use kx_platform_windows::langinfo::lang_id;
 use kx_platform_windows::window::foreground;
 use kx_theme::Themes;
 use serde_json::{Value, json};
@@ -22,14 +23,13 @@ use crate::{board, clip, clipkeep, cliptext, keys, probe, product, readback, win
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
-/// Bits of a layout handle that hold its language id.
-const LANG_MASK: isize = 0xFFFF;
 /// Why the language part is skipped with the List design.
 const LIST_SKIP: &str = "the List design opens a list on a click";
 
-/// A layout's language id in hex, such as `0409` for English (US).
+/// A layout's language id in hex, such as `0409` for English (US); the handle keeps its sign extension.
 fn lang(layout: isize) -> String {
-    format!("{:04X}", layout & LANG_MASK)
+    let raw = u64::try_from(layout.cast_unsigned()).unwrap_or_default();
+    format!("{:04X}", lang_id(LayoutId::new(raw)))
 }
 
 /// Waits until `f` holds, up to G25's switch wait.
@@ -285,5 +285,7 @@ mod tests {
             lang(isize::try_from(0xF002_1C01_u32).expect("fits")),
             "1C01"
         );
+        let extended = isize::try_from(0xFFFF_FFFF_F029_1C01_u64.cast_signed()).expect("64-bit");
+        assert_eq!(lang(extended), "1C01", "a sign-extended handle");
     }
 }
