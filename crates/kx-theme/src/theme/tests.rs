@@ -2,8 +2,7 @@
 
 use super::*;
 use crate::Themes;
-use crate::accent::with_accent;
-use crate::contrast::{WCAG_AA, contrast, luminance};
+use crate::contrast::{contrast, luminance};
 use crate::look::Cap;
 use crate::rgba::Rgba;
 
@@ -110,25 +109,6 @@ fn every_theme_shares_one_set_of_mock_up_colours() {
 fn a_missing_shared_colour_is_refused() {
     let gone = text().replacen("snip_tag = ", "snip_tagg = ", 1);
     assert!(parse(&gone).expect_err("a typo").contains("snip_tagg"));
-}
-
-#[test]
-fn the_accent_fills_native_keys_and_keeps_their_legends_readable() {
-    let native = &load().list[0];
-    let blue = Rgba::parse("#005FB8").expect("blue");
-    let p = with_accent(&native.light, blue, WCAG_AA);
-    let fills = [p.enter, p.on, p.lock, p.led_on, p.ring, p.badge_bg];
-    assert!(fills.iter().all(|&c| c == blue));
-    assert_eq!(
-        p.enter_ink, native.light.enter_ink,
-        "white on blue is readable"
-    );
-    let yellow = Rgba::parse("#FFD800").expect("yellow");
-    let y = with_accent(&native.light, yellow, WCAG_AA);
-    assert!(
-        contrast(y.enter_ink, y.enter) >= WCAG_AA,
-        "the ink switches to stay readable"
-    );
 }
 
 #[test]

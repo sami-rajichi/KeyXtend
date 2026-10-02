@@ -26,7 +26,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 - `LookChoice` is what the user chose: the theme id, `ModeChoice` (light, dark or auto), `follow_accent`, `reduced_motion` and `min_contrast`, all from the `[ui]` settings.
 - `sys` is the system look from the `kx-platform` port (`SysLook`): dark mode, the accent pair, the seven high-contrast colours and animations off.
 - **Mode:** `mode_for` shows the chosen mode, or the system's with `auto`.
-- **Accent:** only a theme with `accent = true` (Native) takes it, and only when `follow_accent` is on. Enter, on, locked, the LED, the ring and the badge take the accent shade for the mode; an ink below `min_contrast` switches to the main legend, then to black or white, so every legend reaches at least WCAG AA and a higher `min_contrast` is best effort.
+- **Accent:** only a theme with `accent = true` (Native) takes it, and only when `follow_accent` is on. Enter, on, locked, the LED, the ring and the badge take the accent shade for the mode; an ink below `min_contrast` switches to the main legend, then to black or white, so every legend reaches at least WCAG AA and a higher `min_contrast` is best effort. `with_accent` keeps the accent only when every pair the view draws still passes `drawn`; otherwise the theme keeps its own colours.
 - **High contrast:** every colour becomes one of the seven system colours, keys get a `[line] px` hairline edge, dimmed keys show `GrayText` on `ButtonFace`, and `hover_line` is `Highlight` (drawn `[hc_outline] px` wide) instead of a tint, which is not a system colour. It wins over the accent.
 - **Motion:** every length is 0 with the reduced-motion setting or the system's animations off.
 

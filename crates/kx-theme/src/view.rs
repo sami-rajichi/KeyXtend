@@ -73,21 +73,11 @@ pub fn reach(layers: &[Shadow]) -> f32 {
         .ceil()
 }
 
-/// The palette of `theme` in `mode`: system colours with `edge_px` key edges in high contrast, else the theme's,
-/// with the accent if it follows it.
-fn palette(theme: &Theme, mode: Mode, choice: &LookChoice, sys: &SysLook, edge_px: f32) -> Palette {
+/// The palette of `theme` in `mode`: system colours with `edge_px` key edges in high contrast, else the theme's own.
+fn palette(theme: &Theme, mode: Mode, sys: &SysLook, edge_px: f32) -> Palette {
     let base = theme.palette(mode);
-    if let Some(c) = &sys.contrast {
-        return contrast_palette(base, c, edge_px);
-    }
-    let follows = choice.follow_accent && theme.look.accent;
-    match sys.accent.filter(|_| follows) {
-        // `max` also turns a NaN setting into WCAG AA.
-        Some(a) => with_accent(
-            base,
-            accent_fill(&a, mode),
-            choice.min_contrast.max(WCAG_AA),
-        ),
+    match &sys.contrast {
+        Some(c) => contrast_palette(base, c, edge_px),
         None => base.clone(),
     }
 }
@@ -97,13 +87,13 @@ fn palette(theme: &Theme, mode: Mode, choice: &LookChoice, sys: &SysLook, edge_p
 pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Option<LookView<'a>> {
     let theme = t.find(&choice.theme)?;
     let mode = mode_for(choice.mode, sys);
-    let palette = palette(theme, mode, choice, sys, t.shape.line.px);
+    let palette = palette(theme, mode, sys, t.shape.line.px);
     let dpad = theme.look.dpad.resolve(&palette).ok()?;
     let hc = sys.contrast.as_ref();
     let common = hc.map_or(t.common, |c| contrast_common(c, &t.common));
     let sel_ink = hc.map_or(palette.pop_ink, |c| c.highlight_text.into());
     let hover_line = hc.map_or(Rgba::CLEAR, hover_line);
-    Some(LookView {
+    let mut view = LookView {
         margin: reach(&palette.window_shadow),
         sel_ink,
         hover_line,
@@ -116,7 +106,15 @@ pub fn look_view<'a>(t: &'a Themes, choice: &LookChoice, sys: &SysLook) -> Optio
         dpad,
         dark: mode == Mode::Dark,
         contrast: hc.is_some(),
-    })
+    };
+    // High contrast wins over the accent; `max` also turns a NaN setting into WCAG AA.
+    let follows = choice.follow_accent && theme.look.accent && hc.is_none();
+    if let Some(a) = sys.accent.filter(|_| follows) {
+        let min = choice.min_contrast.max(WCAG_AA);
+        view.palette = with_accent(&view, accent_fill(&a, mode), min);
+        view.dpad = theme.look.dpad.resolve(&view.palette).ok()?;
+    }
+    Some(view)
 }
 
 #[cfg(test)]
