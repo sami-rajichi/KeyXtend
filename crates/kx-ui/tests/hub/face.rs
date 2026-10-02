@@ -1,21 +1,11 @@
-//! The keyboard side: the face's JSON and actions, redraws, the guard, the window's shape, the pointer and the bubble.
+//! The keyboard side: the face's JSON and actions, redraws, the guard, the window's shape and the pointer.
 
-use crate::{DPI, Rig, main_screen};
+use crate::{Rig, main_screen};
 use kx_module_api::keys;
-use kx_module_api::ports::{
-    Corner, FaceAction, FaceError, FaceReply, KeyId, Point, Rect, physical,
-};
+use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyId, Point, Rect};
 use kx_platform::ui::UiError;
 use kx_platform_fake::GuardCall;
-use kx_theme::Themes;
 use kx_ui::{Area, Redraw, Resize, Wake};
-
-/// The theme's bubble diameter and its inset from the screen corner, in pixels at `dpi`.
-fn bubble(dpi: u32) -> [i32; 2] {
-    let themes = Themes::shipped().expect("the shipped themes");
-    let [d, _, inset] = themes.shape.extra.bubble_px;
-    [d, inset].map(|v| physical(f64::from(v), dpi))
-}
 
 #[test]
 fn without_a_face_there_is_nothing_to_draw_or_do() {
@@ -127,34 +117,6 @@ fn an_unknown_pointer_sends_no_resize_step() {
     assert_eq!(rig.hub.cursor(), None);
     assert_eq!(rig.hub.resize(Resize::At), Redraw::default());
     assert!(face.acts().is_empty());
-}
-
-#[test]
-fn the_bubble_takes_the_theme_size_at_the_screen_dpi() {
-    let rig = Rig::new();
-    let [d, inset] = bubble(DPI);
-    let at = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Right);
-    assert_eq!(
-        at,
-        Some(Point {
-            x: 1920 - d - inset,
-            y: 1040 - d - inset
-        })
-    );
-    let mut big = main_screen();
-    big.dpi = 2 * DPI;
-    rig.screens.set_areas(vec![big]);
-    let [d, inset] = bubble(big.dpi);
-    let left = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Left);
-    assert_eq!(
-        left,
-        Some(Point {
-            x: inset,
-            y: 1040 - d - inset
-        })
-    );
-    rig.screens.set_areas(Vec::new());
-    assert_eq!(rig.hub.bubble_at(Point::default(), Corner::Left), None);
 }
 
 #[test]

@@ -1,7 +1,7 @@
-//! Where the pop-ups go: beside the keyboard, at home with no keyboard, and the tray menu by its icon.
+//! Where the pop-ups go: beside the keyboard, at home with no keyboard, the tray menu by its icon, and the bubble.
 
-use crate::{DPI, Rig};
-use kx_module_api::ports::{Point, Rect, Screen, physical};
+use crate::{DPI, Rig, main_screen};
+use kx_module_api::ports::{Corner, Point, Rect, Screen, physical};
 use kx_theme::Themes;
 
 /// Windows' 150 % DPI.
@@ -13,6 +13,13 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
 
 fn at(x: i32, y: i32) -> Point {
     Point { x, y }
+}
+
+/// The theme's bubble diameter and its inset from the screen corner, in pixels at `dpi`.
+fn bubble(dpi: u32) -> [i32; 2] {
+    let themes = Themes::shipped().expect("the shipped themes");
+    let [d, _, inset] = themes.shape.extra.bubble_px;
+    [d, inset].map(|v| physical(f64::from(v), dpi))
 }
 
 /// The theme's pop-up gaps, to the keyboard and to the screen edge, in pixels at `dpi`.
@@ -58,7 +65,7 @@ fn sizes_and_gaps_follow_the_scale_of_the_screen_they_land_on() {
         dpi: DPI_150,
         primary: false,
     };
-    rig.screens.set_areas(vec![crate::main_screen(), big]);
+    rig.screens.set_areas(vec![main_screen(), big]);
     let kb = rect(2000, 800, 1500, 500);
     // 200 by 100 Qt units are 300 by 150 pixels at 150 %, and so are the gaps.
     let [near, edge] = gaps(DPI_150);
@@ -81,7 +88,7 @@ fn a_tray_click_outside_every_work_area_opens_on_the_main_screen() {
         dpi: DPI,
         primary: false,
     };
-    rig.screens.set_areas(vec![crate::main_screen(), below]);
+    rig.screens.set_areas(vec![main_screen(), below]);
     // On the main taskbar, though nearer the lower screen's work area.
     let edge = gaps(DPI)[1];
     assert_eq!(
@@ -111,4 +118,32 @@ fn with_no_screen_there_is_no_spot() {
     rig.screens.set_areas(Vec::new());
     assert_eq!(rig.hub.pop_at(None, None, 1.0, 1.0), None);
     assert_eq!(rig.hub.menu_at(at(0, 0), 1.0, 1.0), None);
+}
+
+#[test]
+fn the_bubble_takes_the_theme_size_at_the_screen_dpi() {
+    let rig = Rig::new();
+    let [d, inset] = bubble(DPI);
+    let at = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Right);
+    assert_eq!(
+        at,
+        Some(Point {
+            x: 1920 - d - inset,
+            y: 1040 - d - inset
+        })
+    );
+    let mut big = main_screen();
+    big.dpi = 2 * DPI;
+    rig.screens.set_areas(vec![big]);
+    let [d, inset] = bubble(big.dpi);
+    let left = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Left);
+    assert_eq!(
+        left,
+        Some(Point {
+            x: inset,
+            y: 1040 - d - inset
+        })
+    );
+    rig.screens.set_areas(Vec::new());
+    assert_eq!(rig.hub.bubble_at(Point::default(), Corner::Left), None);
 }
