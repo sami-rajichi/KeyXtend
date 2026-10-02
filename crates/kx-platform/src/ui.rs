@@ -200,7 +200,8 @@ pub enum Command {
     Quit,
 }
 
-/// Being the one running copy; dropping it waits for a running `on`, then lets another copy claim.
+/// Being the one running copy; dropping it waits for a running `on`, unless its quit could not be posted, then lets
+/// another copy claim.
 pub trait Claim: Send {
     /// Calls `on` with each command a later copy sends; it may run on another thread and never blocks on the thread
     /// that drops the claim. A later call replaces `on`, even one made while `on` runs, from any thread.
