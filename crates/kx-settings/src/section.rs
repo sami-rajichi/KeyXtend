@@ -231,14 +231,14 @@ impl Section {
     }
 
     /// Sets every key of `values` when the spec accepts them together, and says whether anything changed.
-    /// A key the defaults lack is refused, as a load's repair would reset it, whatever the validator says.
+    /// A key the defaults lack is refused, as a load's repair would reset it, even when the validator lets it through.
     pub(crate) fn set_all(&mut self, values: Table) -> Result<bool, SettingsError> {
-        if values.keys().any(|key| !self.defaults.contains_key(key)) {
-            return Err(SettingsError::Invalid(NOT_A_SETTING.to_owned()));
-        }
         let mut next = self.effective.clone();
         next.extend(values.clone());
         (self.spec.validate)(&next)?;
+        if values.keys().any(|key| !self.defaults.contains_key(key)) {
+            return Err(SettingsError::Invalid(NOT_A_SETTING.to_owned()));
+        }
         if next == self.effective {
             return Ok(false);
         }
