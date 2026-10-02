@@ -67,6 +67,25 @@ pub(super) fn away(hwnd: HWND) -> Option<TrayEvent> {
     let mut name = [0u16; CLASS_CAP];
     // SAFETY: fills a local buffer of its given length; a window gone gives 0.
     let len = unsafe { GetClassNameW(hwnd, &mut name) };
+    elsewhere(&class_text(&name, len)?).then_some(TrayEvent::Away)
+}
+
+/// The class name in `name`, `len` units long as Windows counted it; none for 0 or a count past the buffer.
+fn class_text(name: &[u16], len: i32) -> Option<String> {
     let len = usize::try_from(len).ok().filter(|n| *n > 0)?;
-    elsewhere(&String::from_utf16_lossy(&name[..len])).then_some(TrayEvent::Away)
+    name.get(..len).map(String::from_utf16_lossy)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_class_count_past_the_buffer_or_zero_reads_nothing() {
+        let name = [u16::from(b'A'), u16::from(b'B')];
+        assert_eq!(class_text(&name, 2).as_deref(), Some("AB"));
+        assert_eq!(class_text(&name, 3), None, "never a panic in the callback");
+        assert_eq!(class_text(&name, 0), None);
+        assert_eq!(class_text(&name, -1), None);
+    }
 }
