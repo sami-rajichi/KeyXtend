@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::launch::{app_args, late_window, launch, opened, window_match};
+use crate::launch::{app_args, launch, opened, window_match};
 use crate::win::{self, sleep_ms};
 use crate::winfind;
 use crate::{admin, out};
@@ -77,7 +77,7 @@ pub fn open_admin(ctx: &Ctx) -> Result<(Opened, bool), String> {
     let args = app_args(app, &script.to_string_lossy());
     admin::run_as(&ctx.cfg.program(&app.exe), &args)?;
     let Some(hwnd) = winfind::wait_for(&m, app.wait_ms, poll) else {
-        let late = late_window(ctx, &m);
+        let late = admin::late_window(ctx, &m);
         return Err(format!(
             "no admin {} window after {} ms; {late}",
             kind.name(),

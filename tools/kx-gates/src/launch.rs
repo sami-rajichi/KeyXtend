@@ -179,7 +179,7 @@ pub fn start_target_admin(ctx: &Ctx) -> Result<Opened, String> {
     let m = window_match(app, Some(title));
     admin::run_as(&exe, &[])?;
     let Some(hwnd) = winfind::wait_for(&m, app.wait_ms, ctx.cfg.timing.poll_ms) else {
-        let late = late_window(ctx, &m);
+        let late = admin::late_window(ctx, &m);
         return Err(format!(
             "no admin target window after {} ms; {late}",
             app.wait_ms
@@ -193,26 +193,6 @@ pub fn start_target_admin(ctx: &Ctx) -> Result<Opened, String> {
         file: None,
         title_has: None,
     })
-}
-
-/// One more look for an admin window `m` after its wait ran out, as the elevated program may still open it; a late
-/// one is closed. What to add to the error.
-pub fn late_window(ctx: &Ctx, m: &Match) -> String {
-    let t = &ctx.cfg.timing;
-    let late = winfind::wait_for(m, t.close_wait_ms, t.poll_ms).map(|w| {
-        let closed = win::close(w).is_ok() && winfind::wait_gone(w, t.close_wait_ms, t.poll_ms);
-        (win::describe(w), closed)
-    });
-    late_note(late)
-}
-
-/// The note for an admin window that came late, `(window, closed)`, or for none.
-fn late_note(late: Option<(String, bool)>) -> String {
-    match late {
-        None => "none came late; if one opens later, close it".to_string(),
-        Some((w, true)) => format!("a late {w} came and was closed"),
-        Some((w, false)) => format!("a late {w} came and stays open; close it"),
-    }
 }
 
 /// Notepad on a fresh text file holding `text`, spotted by the file name in its title.
@@ -258,19 +238,6 @@ pub fn open(ctx: &Ctx, kind: AppKind) -> Result<Opened, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn an_admin_window_that_came_late_is_named_and_closed_when_it_can_be() {
-        let none = late_note(None);
-        assert!(none.contains("if one opens later"), "{none}");
-        let closed = late_note(Some(("[CASCADIA] of wt.exe".into(), true)));
-        assert!(
-            closed.contains("wt.exe") && closed.contains("closed"),
-            "{closed}"
-        );
-        let open = late_note(Some(("[CASCADIA] of wt.exe".into(), false)));
-        assert!(open.contains("stays open"), "{open}");
-    }
 
     #[test]
     fn the_g1_page_body_is_one_text_box_that_takes_the_focus() {

@@ -16,8 +16,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
+use crate::apps::Ctx;
 use crate::proc::Process;
-use crate::win::size32;
+use crate::win::{self, size32};
+use crate::winfind::{self, Match};
 
 /// The shell verb that asks for administrator rights.
 const RUN_AS: PCWSTR = w!("runas");
@@ -132,9 +134,42 @@ fn shell(
     Ok((mask & SEE_MASK_NOCLOSEPROCESS != 0).then_some(info.hProcess))
 }
 
+/// One more look for an admin window `m` after its wait ran out, as the elevated program may still open it; a late
+/// one is closed. What to add to the error.
+pub fn late_window(ctx: &Ctx, m: &Match) -> String {
+    let t = &ctx.cfg.timing;
+    let late = winfind::wait_for(m, t.close_wait_ms, t.poll_ms).map(|w| {
+        let closed = win::close(w).is_ok() && winfind::wait_gone(w, t.close_wait_ms, t.poll_ms);
+        (win::describe(w), closed)
+    });
+    late_note(late)
+}
+
+/// The note for an admin window that came late, `(window, closed)`, or for none.
+fn late_note(late: Option<(String, bool)>) -> String {
+    match late {
+        None => "none came late; if one opens later, close it".to_string(),
+        Some((w, true)) => format!("a late {w} came and was closed"),
+        Some((w, false)) => format!("a late {w} came and stays open; close it"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_admin_window_that_came_late_is_named_and_closed_when_it_can_be() {
+        let none = late_note(None);
+        assert!(none.contains("if one opens later"), "{none}");
+        let closed = late_note(Some(("[CASCADIA] of wt.exe".into(), true)));
+        assert!(
+            closed.contains("wt.exe") && closed.contains("closed"),
+            "{closed}"
+        );
+        let open = late_note(Some(("[CASCADIA] of wt.exe".into(), false)));
+        assert!(open.contains("stays open"), "{open}");
+    }
 
     fn line(args: &[&str]) -> String {
         command_line(&args.iter().map(ToString::to_string).collect::<Vec<_>>())
