@@ -22,12 +22,10 @@ const WAS_DROPPED: &str = "1";
 const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
-/// Milliseconds in one second.
-const MS_PER_SEC: u64 = 1_000;
 
 /// How much longer to wait for a recording of `secs` seconds, plus `stop_ms` to stop, `gone` after it started.
 pub fn stop_wait(secs: u64, stop_ms: u64, gone: Duration) -> Duration {
-    let all = Duration::from_millis(secs.saturating_mul(MS_PER_SEC).saturating_add(stop_ms));
+    let all = Duration::from_secs(secs).saturating_add(Duration::from_millis(stop_ms));
     all.saturating_sub(gone)
 }
 

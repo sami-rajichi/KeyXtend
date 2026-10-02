@@ -4,12 +4,11 @@
 
 use std::time::Duration;
 
+use kx_module_api::{MS_PER_S, US_PER_S};
 use serde::Serialize;
 
 use crate::stats::{P50, US_PER_MS, percentile};
 
-/// Microseconds in one second.
-const US_PER_SEC: i64 = 1_000_000;
 /// Seconds in one day.
 const SECS_PER_DAY: i64 = 86_400;
 /// Seconds in one hour and in one minute.
@@ -19,8 +18,6 @@ const SECS_PER_MIN: i64 = 60;
 const US_DIGITS: usize = 6;
 /// Percent of a whole.
 const PCT: f64 = 100.0;
-/// Milliseconds in one second.
-const MS_PER_SEC: f64 = 1_000.0;
 
 /// One budget: what the run measured, the most it may be, and whether it passed; nothing measured fails.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -89,7 +86,7 @@ pub fn stamp_us(line: &str) -> Option<i64> {
     } else {
         num(&digits, 0, US_DIGITS)?
     };
-    Some(secs * US_PER_SEC + us)
+    Some(secs * i64::from(US_PER_S) + us)
 }
 
 /// The stamps of the first line holding `start` and of the first later line holding `end`.
@@ -105,7 +102,7 @@ pub fn span_us(log: &str, start: &str, end: &str) -> Option<(i64, i64)> {
 
 /// `d` in ms.
 pub fn ms(d: Duration) -> f64 {
-    d.as_secs_f64() * MS_PER_SEC
+    d.as_secs_f64() * f64::from(MS_PER_S)
 }
 
 /// Milliseconds between two microsecond stamps.
@@ -125,7 +122,7 @@ pub fn lit_within_ms(hz: f64, frames: f64, copy_ms: &[f64]) -> Option<f64> {
     let mut copies = copy_ms.to_vec();
     copies.sort_by(f64::total_cmp);
     let copy = percentile(&copies, P50)?;
-    (hz > 0.0).then(|| frames * MS_PER_SEC / hz + copy)
+    (hz > 0.0).then(|| frames * f64::from(MS_PER_S) / hz + copy)
 }
 
 #[cfg(test)]

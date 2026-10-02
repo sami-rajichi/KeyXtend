@@ -85,3 +85,10 @@ fn a_press_may_take_its_frames_plus_one_screen_copy() {
     assert_eq!(lit_within_ms(0.0, 2.0, &[1.0]), None, "no refresh rate");
     assert_eq!(lit_within_ms(60.0, 2.0, &[]), None, "no copy timed");
 }
+
+#[test]
+fn durations_turn_into_ms_by_the_products_own_units() {
+    assert!((ms(Duration::from_secs(2)) - 2.0 * f64::from(MS_PER_S)).abs() < 1e-9);
+    let one_s = i64::from(kx_module_api::US_PER_S);
+    assert!((ms_between(0, one_s) - f64::from(MS_PER_S)).abs() < 1e-9);
+}
