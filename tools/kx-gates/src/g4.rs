@@ -10,7 +10,7 @@ use crate::out::say;
 use crate::product::Keyboard;
 use crate::win::{self, sleep_ms};
 use crate::winfind;
-use crate::{g1, launchterm, readback};
+use crate::{g1, g3, launchterm, readback};
 
 /// What the clicks did, and the line the admin shell saved.
 struct Typed {
@@ -67,6 +67,8 @@ fn close(ctx: &Ctx, term: &Opened) -> Vec<String> {
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
     let kb = Keyboard::find()?;
     let program = win::program(kb.hwnd).unwrap_or_else(|e| e);
+    // Roadmap G4 asks whether typing needs more than uiAccess, so the keyboard's token is recorded.
+    let (ui_access, ui_access_error) = g3::token_fields(g3::ui_access(win::owner(kb.hwnd).0));
     let (term, admin) = launchterm::open_admin(ctx)?;
     let window = win::describe(term.hwnd);
     say!("G4 {name}: {count} clicks, seed {seed}; {window}; admin {admin}; keyboard {program}");
@@ -89,7 +91,7 @@ pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, Stri
     }
     Ok(json!({
         "gate": "G4", "keyboard": name, "program": program, "seed": seed, "planned": count,
-        "window": window, "admin": admin, "pass": pass,
+        "window": window, "admin": admin, "ui_access": ui_access, "ui_access_error": ui_access_error, "pass": pass,
         "clicks": t.tally.clicks.len(), "focus_kept": t.tally.focus_kept,
         "failures": t.tally.failures, "stopped": t.tally.stopped,
         "covered_skips": t.tally.covered, "covered_by": t.tally.covered_by,

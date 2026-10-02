@@ -7,12 +7,11 @@ use std::ffi::c_void;
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::hold::Pt;
-use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, POINT, RECT};
+use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, POINT};
 use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUIAccess};
 use windows::Win32::System::Threading::{
     OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
 };
-use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 
 use crate::apps::Ctx;
 use crate::gatecfg::Surface;
@@ -68,17 +67,22 @@ fn verdict(opened: bool, probes: &[(bool, bool)]) -> Verdict {
     }
 }
 
-/// The screen box of `hwnd`, when Windows gives one.
-#[allow(unsafe_code, reason = "Plain query into a local.")]
-fn window_rect(hwnd: HWND) -> Option<RECT> {
-    let mut r = RECT::default();
-    // SAFETY: plain query into a local; a bad handle gives an error.
-    unsafe { GetWindowRect(hwnd, &raw mut r) }.ok().map(|()| r)
+/// True when every surface passed and the keyboard's token has uiAccess, as roadmap G3 is about the uiAccess build.
+fn passed(surfaces: bool, ui_access: Option<bool>) -> bool {
+    surfaces && ui_access == Some(true)
+}
+
+/// The uiAccess flag read from a token, or why it could not be read, as the result line keeps them.
+pub(crate) fn token_fields(read: Result<bool, String>) -> (Option<bool>, Option<String>) {
+    match read {
+        Ok(v) => (Some(v), None),
+        Err(e) => (None, Some(e)),
+    }
 }
 
 /// True if the process `pid` runs with the uiAccess flag in its token.
 #[allow(unsafe_code, reason = "Both handles are ours and closed after use.")]
-fn ui_access(pid: u32) -> Result<bool, String> {
+pub(crate) fn ui_access(pid: u32) -> Result<bool, String> {
     let mut value: u32 = 0;
     let mut len = 0u32;
     let mut token = HANDLE::default();
@@ -138,7 +142,7 @@ fn look(
     sleep_ms(ctx.cfg.g3.open_wait_ms);
     let front = foreground();
     let opened = front != front0 && !front.is_invalid();
-    let rect = window_rect(front).filter(|_| opened);
+    let rect = win::rect(front).ok().filter(|_| opened);
     let hits = probes
         .iter()
         .map(|(key, p)| Hit {
@@ -201,11 +205,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         .iter()
         .map(|s| probe(ctx, kb.hwnd, &probes, s))
         .collect::<Result<Vec<_>, _>>()?;
-    let pass = surfaces.iter().all(|s| s["pass"] == true);
-    let (ui, ui_error) = match token {
-        Ok(v) => (Some(v), None),
-        Err(e) => (None, Some(e)),
-    };
+    let (ui, ui_error) = token_fields(token);
+    let pass = passed(surfaces.iter().all(|s| s["pass"] == true), ui);
     Ok(json!({
         "gate": "G3", "keyboard": name, "pass": pass,
         "ui_access": ui, "ui_access_error": ui_error, "surfaces": surfaces,
@@ -236,5 +237,22 @@ mod tests {
         );
         assert_eq!(verdict(false, &[(false, false)]), Verdict::Fail);
         assert_eq!(verdict(true, &[]), Verdict::NotCovered);
+    }
+
+    #[test]
+    fn g3_passes_only_for_a_keyboard_whose_token_has_ui_access() {
+        assert!(passed(true, Some(true)));
+        assert!(!passed(true, Some(false)), "a build without uiAccess");
+        assert!(!passed(true, None), "a token that could not be read");
+        assert!(!passed(false, Some(true)));
+    }
+
+    #[test]
+    fn a_token_reads_as_its_flag_or_as_the_error() {
+        assert_eq!(token_fields(Ok(true)), (Some(true), None));
+        assert_eq!(
+            token_fields(Err("OpenProcess 7: denied".into())),
+            (None, Some("OpenProcess 7: denied".into()))
+        );
     }
 }
