@@ -60,7 +60,7 @@ Item {
             onBigger: body.win.redraw(body.win.keyboard.bigger())
             onPickSize: i => body.win.redraw(body.win.keyboard.preset(i))
             onMinimise: body.win.minimise()
-            onClose: body.win.close()
+            onClose: body.win.putAway()
             onTip: (name, at) => body.win.hint(name, at)
         }
         // A count, not the list: a new size then moves the keys instead of making them all again.

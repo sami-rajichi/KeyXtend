@@ -33,9 +33,9 @@ Window {
     // The keyboard has placed the window; a restarted keyboard places it again.
     property bool placed: false
 
-    // The minimise or close button was clicked.
+    // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
-    signal close
+    signal putAway
     // A press landed on the keyboard, which closes the tray menu; the press still reaches the key.
     signal touched
 

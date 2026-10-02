@@ -58,7 +58,7 @@ QtObject {
             ui: app.ui
             keyboard: app.keyboard
             onMinimise: app.minimise()
-            onClose: app.hide()
+            onPutAway: app.hide()
             onRunningChanged: app.follow()
             onTouched: trayMenu.shut()
         }

@@ -1,5 +1,5 @@
-// The app's windows over the stand-in Ui and Keyboard, as the root wires them: the tray menu closes on a pick, a second
-// click on the icon, a press on any of our windows, and a new front window after the grace; Quit removes the icon.
+// The app's windows over the stand-in Ui and Keyboard, as the root wires them: Close puts the keyboard away, a stopped
+// keyboard hides it all, and the tray menu closes on a pick, a press on our windows or another front window.
 import QtQuick
 import QtTest
 import "../qml"
@@ -186,6 +186,39 @@ Item {
             t += 1;
             app.ui.trayAway();
             verify(!app.menu.visible, "another app");
+        }
+
+        // Close puts the keyboard and its shadow away by its own signal, not Window.close(), until Show brings it back.
+        function test_close_puts_the_keyboard_and_its_shadow_away() {
+            const app = make();
+            const spy = createTemporaryObject(spyC, root, { target: app.face, signalName: "putAway" });
+            mouseClick(all(app.face.contentItem, o => o.Accessible.id === "bar.close")[0]);
+            compare(spy.count, 1);
+            verify(app.away, "away");
+            verify(!app.face.visible && !app.kbGlow.visible, "the keyboard and its shadow hide");
+            app.ui.showAsked();
+            verify(app.face.visible && app.kbGlow.visible, "Show brings both back");
+        }
+
+        // The keyboard module stops (no board) or runs again, as the hub tells it with new settings.
+        function run(app, on) {
+            app.keyboard.board = on ? Face.board : null;
+            app.ui.settings = Object.assign({}, app.ui.settings);
+            compare(app.face.running, on);
+        }
+
+        // A keyboard module that stops hides the keyboard, its shadow and the bubble; when it runs again, it shows.
+        function test_a_stopped_keyboard_hides_everything_until_it_runs_again() {
+            const app = make();
+            run(app, false);
+            verify(!app.face.visible && !app.kbGlow.visible, "the keyboard and its shadow hide");
+            run(app, true);
+            verify(app.face.visible && app.kbGlow.visible, "both show again");
+            app.keyboard.bubble = { x: 40, y: 50 };
+            app.minimise();
+            verify(app.bubble.visible && app.bubbleGlow.visible, "minimised");
+            run(app, false);
+            verify(!app.bubble.visible && !app.bubbleGlow.visible, "the bubble and its shadow hide");
         }
 
         function test_quit_closes_the_menu_and_removes_the_icon_before_the_end() {
