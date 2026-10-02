@@ -14,6 +14,8 @@ QtObject {
     property var now: () => Date.now()
     // Minimise or Close put the keyboard away; it comes back from the bubble or a second copy's Show.
     property bool away: false
+    // Minimise put it away behind the bubble, which comes back when the keyboard module runs again.
+    property bool minimised: false
 
     // The UI ended and the tray icon is gone, so the root quits.
     signal done
@@ -160,6 +162,7 @@ QtObject {
     // Shows the keyboard over its shadow at its place, once the keyboard module runs.
     function open() {
         away = false;
+        minimised = false;
         bubble.visible = false;
         bubbleGlow.visible = false;
         if (!face.running)
@@ -170,37 +173,42 @@ QtObject {
         face.visible = true;
     }
 
-    // Hides the keyboard and shows the bubble in a bottom corner of its screen, where it always is (owner's choice).
+    // Hides the keyboard and shows the bubble in a bottom corner of its screen, where it always is (owner's choice);
+    // false when there is nowhere for the bubble, so the keyboard stays.
     function minimise() {
         face.finish();
         const at = face.bubbleSpot();
         if (!at)
-            return;
+            return false;
         bubble.x = at.x;
         bubble.y = at.y;
         hide();
+        minimised = true;
         bubbleGlow.visible = true;
         bubble.visible = true;
         face.guardRun();
+        return true;
     }
 
     // Hides the keyboard until the bubble or a second copy's Show brings it back.
     function hide() {
         face.finish();
         away = true;
+        minimised = false;
         face.visible = false;
         kbGlow.visible = false;
     }
 
-    // The keyboard module started or stopped: show it, unless put away, or hide it with its bubble.
+    // The keyboard module stopped: everything hides. It runs again: the keyboard shows, or its bubble when minimised
+    // (the keyboard if the bubble has nowhere to go), and a closed keyboard stays closed.
     function follow() {
-        if (face.running && !away) {
-            open();
-        } else if (!face.running) {
+        if (!face.running) {
             face.visible = false;
             kbGlow.visible = false;
             bubble.visible = false;
             bubbleGlow.visible = false;
+        } else if (!away || (minimised && !minimise())) {
+            open();
         }
     }
 

@@ -221,6 +221,48 @@ Item {
             verify(!app.bubble.visible && !app.bubbleGlow.visible, "the bubble and its shadow hide");
         }
 
+        // A minimised keyboard whose module stops and runs again gets its bubble back, in the corner the new settings
+        // name, so a one-click user can always reach it.
+        function test_a_minimised_keyboard_gets_its_bubble_back_when_it_runs_again() {
+            const app = make();
+            app.keyboard.bubble = { x: 40, y: 50 };
+            app.minimise();
+            run(app, false);
+            app.keyboard.calls = [];
+            app.keyboard.board = Object.assign({}, Face.board, { bubble_corner: "left" });
+            app.ui.settings = Object.assign({}, app.ui.settings);
+            verify(app.face.running);
+            verify(app.bubble.visible && app.bubbleGlow.visible, "the bubble comes back");
+            verify(!app.face.visible && !app.kbGlow.visible, "the keyboard stays minimised");
+            verify(app.keyboard.calls.indexOf("bubbleAt left") >= 0, "in the new corner");
+            waitForRendering(app.bubble.contentItem);
+            mouseClick(app.bubble.contentItem);
+            verify(app.face.visible && !app.bubble.visible, "a click brings the keyboard");
+        }
+
+        // With nowhere for the bubble, the keyboard itself comes back rather than nothing.
+        function test_a_minimised_keyboard_with_no_bubble_spot_comes_back_itself() {
+            const app = make();
+            app.keyboard.bubble = { x: 40, y: 50 };
+            app.minimise();
+            run(app, false);
+            app.keyboard.bubble = null;
+            run(app, true);
+            verify(app.face.visible && app.kbGlow.visible, "the keyboard shows");
+            verify(!app.bubble.visible && !app.away, "and nothing is away");
+        }
+
+        // Close stays closed when the module runs again, as before it stopped; the tray's Show brings it back.
+        function test_a_closed_keyboard_stays_closed_when_it_runs_again() {
+            const app = make();
+            app.hide();
+            run(app, false);
+            run(app, true);
+            verify(!app.face.visible && !app.bubble.visible, "still closed");
+            app.ui.showAsked();
+            verify(app.face.visible, "Show brings it back");
+        }
+
         function test_quit_closes_the_menu_and_removes_the_icon_before_the_end() {
             const app = make();
             const done = createTemporaryObject(spyC, root, { target: app, signalName: "done" });
