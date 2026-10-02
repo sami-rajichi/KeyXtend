@@ -2,6 +2,7 @@
 
 mod edges;
 mod face;
+mod fit;
 mod golden;
 mod host;
 mod lang;

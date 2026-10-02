@@ -9,17 +9,19 @@ use thiserror::Error;
 /// The settings key the size is saved under.
 const SIZE_KEY: &str = "size";
 
-/// The size rules from `[keyboard]`: the presets, the step and the limits.
+/// The size rules from `[keyboard]`: the presets, the step and the limits, and the room on the keyboard's screen.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Limits {
     presets: Vec<f64>,
     step: f64,
     min: f64,
     max: f64,
+    /// The largest size that fits the keyboard's screen; it wins over `min`, so the window never spills past it.
+    room: f64,
 }
 
 impl Limits {
-    /// The rules in `s`.
+    /// The rules in `s`, with no screen known yet.
     #[must_use]
     pub fn of(s: &KeyboardSettings) -> Self {
         Self {
@@ -27,6 +29,7 @@ impl Limits {
             step: s.size_step,
             min: s.size_min,
             max: s.size_max,
+            room: f64::INFINITY,
         }
     }
 
@@ -48,13 +51,16 @@ impl Limits {
         self.presets.iter().position(|&p| !differs(p, size))
     }
 
-    /// `v` inside the limits; not-a-number gives the smallest size, and it never panics, unlike `f64::clamp`.
+    /// `v` inside the limits and the room; not-a-number gives the smallest size, and it never panics, unlike
+    /// `f64::clamp`.
     #[must_use]
     pub fn clamp(&self, v: f64) -> f64 {
+        let top = self.max.min(self.room);
+        let low = self.min.min(top);
         if v.is_nan() {
-            return self.min;
+            return low;
         }
-        v.min(self.max).max(self.min)
+        v.min(top).max(low)
     }
 
     /// `v` rounded to a whole number of steps, inside the limits.
@@ -168,6 +174,15 @@ impl Sizer {
         self.limits.preset_of(self.size)
     }
 
+    /// Caps the size at `room`, the largest that fits the keyboard's screen, saving nothing; true when it changed.
+    pub fn fit(&mut self, room: f64) -> bool {
+        self.limits.room = room;
+        let size = self.limits.clamp(self.size);
+        let changed = differs(size, self.size);
+        self.size = size;
+        changed
+    }
+
     /// One step smaller; true when the size changed.
     ///
     /// # Errors
@@ -184,7 +199,7 @@ impl Sizer {
         self.set(self.limits.up(self.size))
     }
 
-    /// Preset `index`; true when the size changed.
+    /// Preset `index`, as big as the room allows; true when the size changed.
     ///
     /// # Errors
     /// `NoPreset` for an unknown index, or `Unsaved` when the new size could not be saved.
@@ -193,7 +208,7 @@ impl Sizer {
             .limits
             .preset(index)
             .ok_or(SizeError::NoPreset(index))?;
-        self.set(size)
+        self.set(self.limits.clamp(size))
     }
 
     /// Starts a resize with the pointer at `at` and the plate `plate` big, in the pointer's pixels.
@@ -230,11 +245,14 @@ impl Sizer {
         self.resize.is_some()
     }
 
-    /// Sets the size and saves it; true when it changed.
+    /// Sets the size and saves it when it changed, so a step that a fitted size stops saves nothing; true when it
+    /// changed.
     fn set(&mut self, size: f64) -> Result<bool, SizeError> {
         let changed = differs(size, self.size);
         self.size = size;
-        self.save()?;
+        if changed {
+            self.save()?;
+        }
         Ok(changed)
     }
 

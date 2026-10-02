@@ -1,18 +1,18 @@
 //! The face's state behind its lock: typing, size and place, the language key's turn and the open list.
 
+mod fit;
+
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangClick, Turn, click};
 use crate::panel::{LangList, Moved};
-use crate::place::{Placer, screen_of};
+use crate::place::Placer;
 use crate::run::{Ports, TapError, Tapped, Typing};
 use crate::settings::{KeyboardSettings, LangKey};
-use crate::sizer::{SizeError, Sizer};
+use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
-use kx_module_api::ports::{
-    BASE_DPI, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Rect, Screen, physical,
-};
+use kx_module_api::ports::{FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen};
 use kx_module_api::{SettingsHandle, keys};
 use std::sync::Arc;
 
@@ -65,7 +65,7 @@ impl Inner {
         self.sizer = Sizer::new(&settings, store.clone());
         self.placer = Placer::new(&settings, store);
         if !self.screens.is_empty() {
-            self.placer.start(self.size(), &self.screens);
+            self.start_place();
         }
         if settings.lang_key != LangKey::List {
             self.list = None;
@@ -160,9 +160,10 @@ impl Inner {
     /// The size, place and pick actions; the face does taps, relabels and panel keys itself.
     pub(super) fn act(&mut self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
-            FaceAction::Smaller => sized(self.sizer.smaller()),
-            FaceAction::Bigger => sized(self.sizer.bigger()),
-            FaceAction::Preset { index } => sized(self.sizer.pick(index)),
+            FaceAction::Smaller => self.resized(Sizer::smaller),
+            FaceAction::Bigger => self.resized(Sizer::bigger),
+            FaceAction::Preset { index } => self.resized(|s| s.pick(index)),
+            FaceAction::ResizeEnd => self.resized(Sizer::end),
             FaceAction::ResizeBegin { x, y } => {
                 let plate = self.plate_px();
                 self.sizer.begin(Point { x, y }, plate);
@@ -172,60 +173,11 @@ impl Inner {
                 board: self.sizer.follow(Point { x, y }),
                 ..FaceReply::default()
             }),
-            FaceAction::ResizeEnd => sized(self.sizer.end()),
             FaceAction::Placed { rect, screens } => Ok(self.placed(rect, screens)),
             FaceAction::LangPick { index } => self.pick(index),
             FaceAction::Tap { .. } | FaceAction::Relabel | FaceAction::PanelKey { .. } => {
                 Ok(FaceReply::default())
             }
-        }
-    }
-
-    /// The window's size now, in logical pixels.
-    fn size(&self) -> (f64, f64) {
-        let plate = self.plate.scale(self.sizer.size());
-        (plate.w, plate.h)
-    }
-
-    /// The window's size in the physical pixels of the screen it is on, as the pointer counts them.
-    fn plate_px(&self) -> (f64, f64) {
-        let size = self.size();
-        let on = self
-            .placer
-            .at()
-            .and_then(|at| screen_of(at, size, &self.screens));
-        let dpi = on.map_or(BASE_DPI, |s| s.dpi);
-        (
-            f64::from(physical(size.0, dpi)),
-            f64::from(physical(size.1, dpi)),
-        )
-    }
-
-    /// The window ended at `rect`: where the face put it, the saved place is fitted to `screens` again without
-    /// saving; anywhere else the user moved it, so it is fitted and saved.
-    fn placed(&mut self, rect: Rect, screens: Vec<Screen>) -> FaceReply {
-        self.screens = screens;
-        let (to, size) = (
-            Point {
-                x: rect.x,
-                y: rect.y,
-            },
-            self.size(),
-        );
-        let moved = self.placer.at().is_some_and(|at| at != to);
-        let saved = if moved {
-            self.placer.moved(to, size, &self.screens).map(|_| ())
-        } else {
-            self.placer.start(size, &self.screens);
-            Ok(())
-        };
-        let state = self.placer.at() != Some(to);
-        match saved {
-            Ok(()) => FaceReply {
-                state,
-                ..FaceReply::default()
-            },
-            Err(_) => notice(keys::SETTINGS_UNSAVED, STATE),
         }
     }
 
@@ -260,16 +212,4 @@ fn notice(key: &'static str, reply: FaceReply) -> FaceReply {
         notice: Some(key),
         ..reply
     }
-}
-
-/// The reply to a size change: redraw the board when it changed, with a notice when it could not be saved.
-fn sized(changed: Result<bool, SizeError>) -> Result<FaceReply, FaceError> {
-    let redraw = |board| FaceReply {
-        board,
-        ..FaceReply::default()
-    };
-    changed.map(redraw).or_else(|e| match e {
-        SizeError::NoPreset(index) => Err(FaceError::NoChoice(index)),
-        SizeError::Unsaved(_) => Ok(notice(keys::SETTINGS_UNSAVED, redraw(true))),
-    })
 }

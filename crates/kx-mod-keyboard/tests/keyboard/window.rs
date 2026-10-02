@@ -143,6 +143,14 @@ fn a_resize_counts_the_plate_in_the_pixels_of_the_windows_screen() {
         r.host.sink.writes().is_empty(),
         "nothing saved while it moves"
     );
-    assert_eq!(r.act(FaceAction::ResizeEnd), Ok(BOARD));
+    let moved_up = FaceReply {
+        state: true,
+        ..BOARD
+    };
+    assert_eq!(
+        r.act(FaceAction::ResizeEnd),
+        Ok(moved_up),
+        "it grew past the bottom, so it moves up"
+    );
     assert!((saved(&r.host).size - 1.25).abs() < f64::EPSILON);
 }

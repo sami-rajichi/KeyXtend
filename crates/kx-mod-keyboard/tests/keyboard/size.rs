@@ -123,6 +123,21 @@ fn after_an_unsaved_size_a_step_back_is_the_size_stop_saves() {
 }
 
 #[test]
+fn a_fitted_size_holds_unsaved_and_no_step_grows_it_past_the_room() {
+    let mut host = fake(Some(("size", 1.8.into())));
+    let mut s = sizer(&mut host);
+    assert!(s.fit(1.3));
+    assert_eq!((s.size(), s.preset()), (1.3, None));
+    assert_eq!(s.bigger(), Ok(false));
+    assert_eq!(s.pick(2), Ok(false), "L does not fit");
+    assert!(written(&host).is_empty(), "the saved size stays");
+    assert_eq!(s.smaller(), Ok(true));
+    assert_eq!(written(&host), [1.25]);
+    assert!(!s.fit(2.0), "more room grows nothing");
+    assert!(s.fit(0.5) && s.size() == 0.5, "the room wins over size_min");
+}
+
+#[test]
 fn it_starts_at_the_saved_size() {
     let mut host = fake(Some(("size", 1.25.into())));
     let s = sizer(&mut host);

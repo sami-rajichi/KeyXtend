@@ -168,6 +168,30 @@ fn the_windows_screen_is_the_one_it_covers_most_and_none_off_them() {
 }
 
 #[test]
+fn the_room_is_the_largest_size_whose_plate_fits_the_work_area() {
+    let [primary, high] = two();
+    let wide = room(PLATE, &primary).unwrap();
+    assert!((wide - 1920.0 / PLATE.0).abs() < 1e-9, "the width binds");
+    let fits = room(PLATE, &high).unwrap();
+    assert!(physical(PLATE.0 * fits, HIGH_DPI) <= high.rect.w);
+    let flat = Screen {
+        rect: rect(0, 0, 1920, 0),
+        ..primary
+    };
+    assert_eq!(room(PLATE, &flat), None, "an empty work area");
+    assert_eq!(room((0.0, 0.0), &primary), None, "an empty plate");
+}
+
+#[test]
+fn a_window_lands_on_the_screen_it_covers_most_else_the_primary() {
+    let s = two();
+    assert_eq!(landing(Some(at(2000, 100)), PLATE, &s), Some(&s[1]));
+    assert_eq!(landing(None, PLATE, &s), Some(&s[0]), "home");
+    assert_eq!(landing(Some(at(FAR, FAR)), PLATE, &s), Some(&s[0]));
+    assert_eq!(landing(None, PLATE, &[]), None);
+}
+
+#[test]
 fn odd_screens_never_panic() {
     let odd = Screen {
         rect: rect(i32::MAX - 5, i32::MIN, -10, i32::MAX),

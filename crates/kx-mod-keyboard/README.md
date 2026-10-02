@@ -35,6 +35,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 - `board` lays the board out at any size as boxes in logical pixels (`Area`), with the plate, D-pad and top bar.
 - `Limits` clamps a size to `size_min..=size_max`, steps it by `size_step` and names the presets; `Sizer` applies them and saves `size`.
 - `place` keeps the keyboard wholly on one screen in physical pixels, sized at that screen's DPI. The screens are the ports' `Screen`, as `FaceAction::Placed` carries them. It starts at the saved place, else at the bottom centre of the primary work area; a place off every screen goes there too. `Placer` saves `x`, `y` and `placed` when the user moves the keyboard.
+- The keyboard always fits the screen it is on, so the size buttons at the top bar's right never leave it. `room` gives the largest size that fits, `Sizer::fit` caps the size there without saving (below `size_min` if it must), and `Placer::keep` moves the window back inside after a size change, saving nothing.
 
 ## Typing
 
@@ -85,8 +86,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `relabel` | Refreshes the layouts | State when the layout changed. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
-| `smaller`, `bigger`, `preset`, `resize_begin`, `resize_at`, `resize_end` | Sizes the keyboard; the size is saved in one write | Board; `notice.settings-unsaved` when it could not be saved. |
-| `placed {rect, screens}` | Fits the window to the screens the UI reports; a move is saved | State when the place changed. |
+| `smaller`, `bigger`, `preset`, `resize_begin`, `resize_at`, `resize_end` | Sizes the keyboard within the room on its screen; the size is saved in one write | Board, and state when the window moved to stay on its screen; `notice.settings-unsaved` when it could not be saved. |
+| `placed {rect, screens}` | Fits the window and its size to the screens the UI reports; a move is saved | Board when the size had to fit its screen, state when the place changed. |
 
 The language key has three designs, by `lang_key`:
 
@@ -128,8 +129,8 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
-- `sizer`: `Limits`, `Resize`, `Sizer`, `SizeError`.
-- `place`: `Placer`, `inside`, `bottom_centre`, `home`, `screen_of`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.
+- `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
+- `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.
 
 ## Security
 

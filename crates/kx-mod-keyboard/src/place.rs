@@ -2,7 +2,7 @@
 //! bottom centre of the primary screen, always inside a work area. Each screen's DPI sets the window's size there.
 
 use crate::settings::KeyboardSettings;
-use kx_module_api::ports::{Point, Rect, Screen, physical};
+use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen, physical};
 use kx_module_api::{SettingsHandle, WriteError};
 
 /// The settings key of the saved left edge.
@@ -52,12 +52,36 @@ pub fn bottom_centre(work: Rect, size: (i32, i32)) -> Point {
     inside(Point { x: px(x), y: px(y) }, size, work)
 }
 
+/// The primary screen, else the first; `None` with no screen.
+fn main_screen(screens: &[Screen]) -> Option<&Screen> {
+    screens.iter().find(|s| s.primary).or(screens.first())
+}
+
 /// The bottom centre of the primary screen, else the first, for a window `size` logical pixels big;
 /// `None` with no screen.
 #[must_use]
 pub fn home(size: (f64, f64), screens: &[Screen]) -> Option<Point> {
-    let main = screens.iter().find(|s| s.primary).or(screens.first())?;
+    let main = main_screen(screens)?;
     Some(bottom_centre(main.rect, sized(size, main.dpi)))
+}
+
+/// The screen a window `size` logical pixels big lands on from `at`, as `fit` and `start` place it: the one
+/// holding most of it, else the primary screen.
+#[must_use]
+pub fn landing(at: Option<Point>, size: (f64, f64), screens: &[Screen]) -> Option<&Screen> {
+    at.and_then(|p| screen_of(p, size, screens))
+        .or_else(|| main_screen(screens))
+}
+
+/// The largest size at which a plate `unit` logical pixels big at size 1 fits `screen`'s work area; `None` when
+/// either is empty.
+#[must_use]
+pub fn room(unit: (f64, f64), screen: &Screen) -> Option<f64> {
+    let scale = f64::from(screen.dpi) / f64::from(BASE_DPI);
+    let w = f64::from(screen.rect.w) / (unit.0 * scale);
+    let h = f64::from(screen.rect.h) / (unit.1 * scale);
+    let fits = w.min(h);
+    (fits.is_finite() && fits > 0.0).then_some(fits)
 }
 
 /// The screen that holds the largest share of a window `size` logical pixels big at `at`, sized at each screen's
@@ -130,6 +154,16 @@ impl Placer {
     pub fn start(&mut self, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
         self.at = start(self.saved, size, screens);
         self.at
+    }
+
+    /// Keeps the keyboard, now `size` big, inside the screen it is on, saving nothing; true when it moved.
+    pub fn keep(&mut self, size: (f64, f64), screens: &[Screen]) -> bool {
+        let kept = self.at.and_then(|at| fit(at, size, screens));
+        let moved = kept.is_some() && kept != self.at;
+        if moved {
+            self.at = kept;
+        }
+        moved
     }
 
     /// The user put the keyboard at `at`: it stays on a screen, and a new place is saved.
