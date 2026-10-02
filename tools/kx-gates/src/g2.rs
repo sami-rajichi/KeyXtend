@@ -7,7 +7,7 @@ use std::fmt::Write;
 use serde_json::{Map, Value, json};
 
 use crate::apps::{self, Ctx, Opened};
-use crate::clicks::{self, Tally, Usable};
+use crate::clicks::{self, Run, Tally, Usable};
 use crate::mouse;
 use crate::out::say;
 use crate::product::Keyboard;
@@ -70,17 +70,22 @@ fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
     let kb = Keyboard::find()?;
     let target = launch::start_target(ctx)?;
-    on_target(ctx, name, &kb, target, (count, seed))
+    let run = Run {
+        count,
+        seed,
+        sweep: false,
+    };
+    on_target(ctx, name, &kb, target, run)
 }
 
-/// G2 on keyboard `kb` into `target`, already started (G26 starts it in a layout): `run.0` clicks from seed `run.1`.
+/// G2 on keyboard `kb` into `target`, already started (G26 starts it in a layout), with the clicks `run` says.
 /// The target is closed at the end.
 pub fn on_target(
     ctx: &Ctx,
     name: &str,
     kb: &Keyboard,
     target: Opened,
-    run: (usize, u64),
+    run: Run,
 ) -> Result<Value, String> {
     let place = match mouse::face(kb.hwnd) {
         Ok(place) => place,
@@ -91,7 +96,7 @@ pub fn on_target(
     };
     // Keys another window already covers are left out and named, never clicked.
     let (target, usable) = setup(ctx, kb, target)?;
-    let (count, seed) = run;
+    let (count, seed) = (run.count, run.seed);
     say!(
         "G2 {name}: {count} clicks on {} keys, seed {seed}; keyboard dpi {}, client {:?}",
         usable.keys.len(),
@@ -105,7 +110,8 @@ pub fn on_target(
     let raw = ctx.file(CLICKS_FILE);
     out::write(&raw, &tsv(&tally.clicks, &logged.lat))?;
     let head = json!({
-        "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "dpi": place.dpi, "raw": raw,
+        "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "sweep": run.sweep, "dpi": place.dpi,
+        "raw": raw,
         "hidden_keys": usable.hidden, "follow_ms": usable.follow_ms,
     });
     Ok(report(head, &tally, &logged, &left_open))

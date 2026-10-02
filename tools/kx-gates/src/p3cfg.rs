@@ -83,6 +83,12 @@ pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
     if g26.languages.is_empty() || g26.clicks == 0 {
         return Err("g26 needs languages and clicks".to_string());
     }
+    let keys = crate::board::char_keys()?.len();
+    if g26.clicks < keys {
+        return Err(format!(
+            "g26.clicks must be {keys} or more, so the sweep types every character key"
+        ));
+    }
     Ok(())
 }
 
@@ -120,6 +126,15 @@ mod tests {
             f(&mut c);
             assert!(checked(&c).is_err());
         }
+    }
+
+    #[test]
+    fn g26_clicks_must_reach_every_character_key_once() {
+        let keys = crate::board::char_keys().expect("the board reads").len();
+        let mut c = load().expect("loads");
+        assert!(c.g26.clicks >= keys, "the shipped clicks sweep the board");
+        c.g26.clicks = keys - 1;
+        assert!(checked(&c).is_err(), "a key would never be typed");
     }
 
     #[test]

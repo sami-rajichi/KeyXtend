@@ -55,6 +55,26 @@ impl Tally {
     }
 }
 
+/// How many clicks a run makes, from which seed, and whether it first clicks each key once in board order.
+#[derive(Debug, Clone, Copy)]
+pub struct Run {
+    /// Clicks in all, the sweep's included.
+    pub count: usize,
+    /// Seed of the random clicks.
+    pub seed: u64,
+    /// Clicks each key once in board order before the random clicks, so no key goes untyped.
+    pub sweep: bool,
+}
+
+/// The key for step `step` of `run` over `n` keys: each in board order first when sweeping, then a random one.
+fn pick(run: &Run, step: usize, n: usize, rng: &mut Rng) -> usize {
+    if run.sweep && step < n {
+        step
+    } else {
+        rng.below(n)
+    }
+}
+
 /// The text the clicks should have typed, in click order.
 pub fn typed(clicks: &[Click]) -> String {
     let units: Vec<u16> = clicks
@@ -177,14 +197,16 @@ fn check(
     Ok(())
 }
 
-/// Clicks random keys of keyboard window `kb`; a key another window covers is skipped, never clicked.
-pub fn click_loop(ctx: &Ctx, target: &Opened, kb: HWND, keys: &[Key], run: (usize, u64)) -> Tally {
+/// Clicks keys of keyboard window `kb` as `run` says; a key another window covers is skipped, never clicked.
+pub fn click_loop(ctx: &Ctx, target: &Opened, kb: HWND, keys: &[Key], run: Run) -> Tally {
     let g = &ctx.cfg.g2;
     let caret0 = win::caret(win::owner(target.hwnd).1);
-    let mut rng = Rng::new(run.1);
+    let mut rng = Rng::new(run.seed);
     let mut tally = Tally::default();
-    while tally.clicks.len() < run.0 {
-        let key = &keys[rng.below(keys.len())];
+    let mut step = 0;
+    while tally.clicks.len() < run.count {
+        let key = &keys[pick(&run, step, keys.len(), &mut rng)];
+        step += 1;
         let top = win::root_at(key.at);
         if top != kb {
             tally.skip(win::describe(top), g.failures_shown);
@@ -218,6 +240,30 @@ mod tests {
         }
         assert_eq!(t.covered, 4);
         assert_eq!(t.covered_by, vec!["osk".to_string(), "menu".to_string()]);
+    }
+
+    #[test]
+    fn a_sweep_clicks_each_key_once_in_board_order_before_the_random_clicks() {
+        let sweep = Run {
+            count: 6,
+            seed: 7,
+            sweep: true,
+        };
+        let mut rng = Rng::new(sweep.seed);
+        let picks: Vec<usize> = (0..6).map(|step| pick(&sweep, step, 4, &mut rng)).collect();
+        assert_eq!(picks[..4], [0, 1, 2, 3]);
+        assert!(picks[4..].iter().all(|&i| i < 4));
+        let random = Run {
+            sweep: false,
+            ..sweep
+        };
+        let (mut a, mut b) = (Rng::new(random.seed), Rng::new(random.seed));
+        let got: Vec<usize> = (0..4).map(|step| pick(&random, step, 4, &mut a)).collect();
+        let want: Vec<usize> = (0..4).map(|_| b.below(4)).collect();
+        assert_eq!(
+            got, want,
+            "without a sweep every click is random, as before"
+        );
     }
 
     #[test]

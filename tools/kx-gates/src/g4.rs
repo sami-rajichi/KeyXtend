@@ -35,6 +35,12 @@ fn type_into(ctx: &Ctx, term: &Opened, kb: &Keyboard, run: (usize, u64)) -> Resu
     g1::wait_ready(ctx, term, app.focus_class.as_deref())?;
     // Keys are read once the shell is in front, so they follow its keyboard layout.
     let usable = clicks::usable(ctx, kb)?;
+    let (count, seed) = run;
+    let run = clicks::Run {
+        count,
+        seed,
+        sweep: false,
+    };
     let tally = clicks::click_loop(ctx, term, kb.hwnd, &usable.keys, run);
     sleep_ms(app.done_ms);
     let got = match &tally.stopped {

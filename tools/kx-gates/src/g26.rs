@@ -1,6 +1,6 @@
-//! G26 other languages (roadmap G26; the Japanese IME part moved to F16): in each `[g26]` language, the character keys
-//! are named after the layout target-window types in, and G2's clicks arrive intact; it switches the session's input
-//! language through `kx-target-window --layout`, so it runs on GitHub's Windows runner only.
+//! G26 other languages (roadmap G26; the Japanese IME part moved to F16): in each `[g26]` language, every character key
+//! is listed and named after the layout target-window types in, and G2's clicks arrive intact. It switches the
+//! session's input language through `kx-target-window --layout`, so it runs on GitHub's Windows runner only.
 #![cfg(windows)]
 
 use kx_module_api::ports::LayoutId;
@@ -8,7 +8,8 @@ use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
 
 use crate::apps::{self, Ctx, Opened};
-use crate::keymap::Reader;
+use crate::clicks::Run;
+use crate::keymap::{KeyRead, Reader};
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
 use crate::{capture, g2, launch, out, tlog, walk};
@@ -29,15 +30,24 @@ fn passed(langs: &[Value]) -> bool {
     !langs.is_empty() && langs.iter().all(|l| l["pass"] == true)
 }
 
-/// The character keys of keyboard `kb` that are not named after `layout`, read after one follow wait.
-fn misnamed(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<Vec<String>, String> {
-    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
-    let read = Reader::new()?.walk(kb.hwnd)?;
-    Ok(walk::misnamed(&read, &walk::char_keys(layout)?))
+/// Character keys named wrongly, then those UI Automation did not list.
+type Labels = (Vec<String>, Vec<String>);
+
+/// The character keys in `want` that UI Automation's `read` names wrongly, and those it does not list at all.
+fn labels(read: &[KeyRead], want: &[walk::CharKey]) -> Labels {
+    let ids: Vec<String> = want.iter().map(|c| c.id.clone()).collect();
+    (walk::misnamed(read, want), walk::missing(read, &ids))
 }
 
-/// Target-window, in front, in `layout`, and the keys misnamed; it is closed if that fails.
-fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, Vec<String>), String> {
+/// The character keys of keyboard `kb` not named after `layout` or not listed, read after one follow wait.
+fn misnamed(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<Labels, String> {
+    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
+    let read = Reader::new()?.walk(kb.hwnd)?;
+    Ok(labels(&read, &walk::char_keys(layout)?))
+}
+
+/// Target-window, in front, in `layout`, and its key labels; it is closed if reading them fails.
+fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, Labels), String> {
     let args = [ctx.target.layout_arg.clone(), layout.to_string()];
     let target = launch::to_front(ctx, launch::start_target_with(ctx, &args)?)?;
     match misnamed(ctx, kb, layout) {
@@ -49,28 +59,28 @@ fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, Vec<St
     }
 }
 
-/// One language: the labels, then G2's clicks, which close target-window and so put the layout back.
+/// One language: the labels, then G2's clicks, which close target-window and so put the layout back. The clicks
+/// type each key once in board order first, so every key's text is checked.
 fn one(ctx: &Ctx, kb: &Keyboard, tag: &str) -> Result<Value, String> {
     let layout = capture::find(&WinLayouts, language(tag))
         .ok_or_else(|| format!("no installed {tag} layout"))?;
-    let (target, misnamed) = open_in(ctx, kb, layout)?;
+    let (target, (misnamed, missing)) = open_in(ctx, kb, layout)?;
     let lang_ctx = Ctx {
         out: ctx.out.clone(),
         base: format!("{}-{tag}", ctx.base),
         ..*ctx
     };
-    let typed = g2::on_target(
-        &lang_ctx,
-        product::NAME,
-        kb,
-        target,
-        (ctx.cfg.g26.clicks, out::clock_seed()),
-    )?;
+    let run = Run {
+        count: ctx.cfg.g26.clicks,
+        seed: out::clock_seed(),
+        sweep: true,
+    };
+    let typed = g2::on_target(&lang_ctx, product::NAME, kb, target, run)?;
     let log = std::fs::read_to_string(&ctx.target.log).ok();
     let back = put_back(&typed, log.as_deref());
-    let pass = misnamed.is_empty() && g2::typed_intact(&typed) && back;
+    let pass = misnamed.is_empty() && missing.is_empty() && g2::typed_intact(&typed) && back;
     Ok(json!({
-        "language": tag, "layout": layout.to_string(), "misnamed": misnamed, "typed": typed,
+        "language": tag, "layout": layout.to_string(), "misnamed": misnamed, "missing": missing, "typed": typed,
         "layout_put_back": back, "pass": pass,
     }))
 }
@@ -108,6 +118,26 @@ mod tests {
             !put_back(&killed, Some("# start\t0\n")),
             "a killed window could not put it back"
         );
+    }
+
+    #[test]
+    fn a_character_key_ui_automation_does_not_list_is_named_as_missing() {
+        use crate::keymap::KeyRead;
+        use crate::walk::CharKey;
+        use windows::Win32::Foundation::RECT;
+        let read = [KeyRead {
+            id: "c-0x0010".into(),
+            name: "q".into(),
+            rect: RECT::default(),
+            invokable: true,
+        }];
+        let want = [
+            CharKey::new("c-0x0010", "q", Some("q")),
+            CharKey::new("c-0x0011", "w", Some("w")),
+        ];
+        let (misnamed, missing) = labels(&read, &want);
+        assert!(misnamed.is_empty());
+        assert_eq!(missing, ["c-0x0011"]);
     }
 
     #[test]
