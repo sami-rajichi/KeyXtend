@@ -21,7 +21,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## The look
 
-`look_view(themes, choice, sys)` gives a face everything it draws, as `LookView` (serialized to JSON for QML):
+`look_view(themes, choice, sys, row_px)` gives a face everything it draws, as `LookView` (serialized to JSON for QML):
 
 - `LookChoice` is what the user chose: the theme id, `ModeChoice` (light, dark or auto), `follow_accent`, `reduced_motion` and `min_contrast`, all from the `[ui]` settings.
 - `sys` is the system look from the `kx-platform` port (`SysLook`): dark mode, the accent pair, the seven high-contrast colours and animations off.

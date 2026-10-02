@@ -92,8 +92,13 @@ fn flat(look: &Look) -> Look {
     }
 }
 
+/// `row_px` when it is a finite row above 0, which the drawn check can measure caps by.
+fn measurable(row_px: Option<f32>) -> Option<f32> {
+    row_px.filter(|r| r.is_finite() && *r > 0.0)
+}
+
 /// The chosen theme as it should look while the system looks like `sys`; `None` for a theme that does not exist.
-/// The accent is checked on the keyboard's rows, `row_px` high at size 1; without them the theme keeps its colours.
+/// The accent is checked on the keyboard's rows, `row_px` high at size 1; without a finite row above 0 it is not tried.
 #[must_use]
 pub fn look_view<'a>(
     t: &'a Themes,
@@ -127,7 +132,7 @@ pub fn look_view<'a>(
     };
     // High contrast wins over the accent; `max` also turns a NaN setting into WCAG AA.
     let follows = choice.follow_accent && theme.look.accent && hc.is_none();
-    if let (Some(a), Some(row)) = (sys.accent.filter(|_| follows), row_px) {
+    if let (Some(a), Some(row)) = (sys.accent.filter(|_| follows), measurable(row_px)) {
         let min = choice.min_contrast.max(WCAG_AA);
         view.palette = with_accent(&view, accent_fill(&a, mode), min, row);
         view.dpad = theme.look.dpad.resolve(&view.palette).ok()?;

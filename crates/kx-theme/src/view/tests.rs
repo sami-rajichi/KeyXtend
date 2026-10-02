@@ -62,8 +62,10 @@ fn without_the_keyboards_rows_the_accent_is_not_tried() {
         follow_accent: true,
         ..choice("native", ModeChoice::Light)
     };
-    let v = look_view(&t, &follow, &teal(), None).expect("native");
-    assert_eq!(v.palette.enter, t.list[0].light.enter);
+    for rows in [None, Some(0.0), Some(f32::NAN)] {
+        let v = look_view(&t, &follow, &teal(), rows).expect("native");
+        assert_eq!(v.palette.enter, t.list[0].light.enter, "{rows:?}");
+    }
 }
 
 #[test]
