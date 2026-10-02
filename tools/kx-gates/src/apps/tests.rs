@@ -60,3 +60,11 @@ fn same_program_compares_file_names_ignoring_case() {
     assert!(!same_program(r"C:\Windows\notepad.exe", word));
     assert!(!same_program("", word));
 }
+
+#[test]
+fn a_kill_is_reported_as_it_went() {
+    assert_eq!(kill_note(Ok(())), "target-window did not close; killed it");
+    let denied = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
+    let note = kill_note(Err(denied));
+    assert!(note.contains("could not be killed"), "{note}");
+}

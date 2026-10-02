@@ -219,17 +219,27 @@ fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
     winfind::exists(app.hwnd).then(|| format!("left open: {}", win::describe(app.hwnd)))
 }
 
-/// Closes target-window and kills it if it does not end in time; returns a note if killed.
-/// It comes to the front first, since it puts back a `--layout` switch only while it has the keyboard.
+/// Closes target-window and kills it if it does not end in time; returns a note if it had to be killed.
+/// A window still there comes to the front first, since it puts back a `--layout` switch only while it has the
+/// keyboard; a gone one gets no Alt taps, which would reach the app in front.
 fn close_target(ctx: &Ctx, hwnd: HWND, child: &mut Child) -> Option<String> {
     let t = &ctx.cfg.timing;
-    let _ = win::front(hwnd, t, &ctx.cfg.keys);
-    let _ = win::close(hwnd);
+    if winfind::exists(hwnd) {
+        let _ = win::front(hwnd, t, &ctx.cfg.keys);
+        let _ = win::close(hwnd);
+    }
     if wait_exit(child, t.close_wait_ms, t.poll_ms) {
         return None;
     }
-    let _ = child.kill();
-    Some("target-window did not close; killed it".to_string())
+    Some(kill_note(child.kill()))
+}
+
+/// What a kill of target-window, with result `killed`, leaves to report.
+fn kill_note(killed: std::io::Result<()>) -> String {
+    match killed {
+        Ok(()) => "target-window did not close; killed it".to_string(),
+        Err(e) => format!("target-window did not close and could not be killed: {e}"),
+    }
 }
 
 /// Waits up to `timeout_ms` for `child` to end; true if it did.
