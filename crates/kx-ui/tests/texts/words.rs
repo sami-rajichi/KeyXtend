@@ -6,13 +6,14 @@ use kx_ui::find;
 use kx_ui::i18n::keys::{MODULE, THEME};
 
 /// Arabic names of keys that print a Latin word: "مفتاح" and that word (owner, 2026-09-30).
-const AR_LATIN_NAMES: [(&str, &str); 7] = [
+const AR_LATIN_NAMES: [(&str, &str); 8] = [
     ("esc", "مفتاح Esc"),
     ("tab", "مفتاح Tab"),
     ("shift", "مفتاح Shift"),
     ("rshift", "مفتاح Shift الأيمن"),
     ("ctrl", "مفتاح Ctrl"),
     ("alt", "مفتاح Alt"),
+    ("altgr", "مفتاح Alt Gr"),
     ("win", "مفتاح Windows"),
 ];
 /// Arabic names that keep Microsoft's established term.

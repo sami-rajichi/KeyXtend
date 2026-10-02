@@ -139,15 +139,15 @@ button =
     .retry = Réessayer
     .ok = OK
 
-## Le bandeau des notifications : combien d’autres attendent derrière celle qu’il montre.
-## Les formes du pluriel se choisissent selon $form, qui est $more lu par les règles CLDR ; $more vaut au moins 1.
+## Le bandeau des notifications : combien d’autres attendent derrière celle qu’il montre.
+## Les formes du pluriel se choisissent selon $form, qui est $more lu par les règles CLDR ; $more vaut au moins 1.
 banner =
     .more = { $form ->
         [one] { $more } autre notification
        *[other] { $more } autres notifications
     }
 
-## Listes paginées : les boutons de page, et le numéro de page entre eux.
+## Listes paginées : les boutons de page, et le numéro de page entre eux.
 page =
     .back = Page précédente
     .on = Page suivante

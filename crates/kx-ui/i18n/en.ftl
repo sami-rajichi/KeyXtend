@@ -1,5 +1,5 @@
-### English texts, the fallback for every other language (ADR-0017).
-### A key `group.name` in code is message `group`, attribute `name`. All three files hold the same keys.
+### English texts, the fallback for every other language (ADR-0017); all three files hold the same keys.
+### A key `group.name` in code is message `group`, attribute `name`.
 
 ## The product's name, written once and shared by the texts below.
 -app = KeyXtend

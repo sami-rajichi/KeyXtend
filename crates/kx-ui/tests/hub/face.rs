@@ -1,11 +1,21 @@
 //! The keyboard side: the face's JSON and actions, redraws, the guard, the window's shape, the pointer and the bubble.
 
-use crate::{Rig, main_screen};
+use crate::{DPI, Rig, main_screen};
 use kx_module_api::keys;
-use kx_module_api::ports::{Corner, FaceAction, FaceError, FaceReply, KeyId, Point, Rect};
+use kx_module_api::ports::{
+    Corner, FaceAction, FaceError, FaceReply, KeyId, Point, Rect, physical,
+};
 use kx_platform::ui::UiError;
 use kx_platform_fake::GuardCall;
+use kx_theme::Themes;
 use kx_ui::{Area, Redraw, Resize, Wake};
+
+/// The theme's bubble diameter and its inset from the screen corner, in pixels at `dpi`.
+fn bubble(dpi: u32) -> [i32; 2] {
+    let themes = Themes::shipped().expect("the shipped themes");
+    let [d, _, inset] = themes.shape.extra.bubble_px;
+    [d, inset].map(|v| physical(f64::from(v), dpi))
+}
 
 #[test]
 fn without_a_face_there_is_nothing_to_draw_or_do() {
@@ -122,23 +132,25 @@ fn an_unknown_pointer_sends_no_resize_step() {
 #[test]
 fn the_bubble_takes_the_theme_size_at_the_screen_dpi() {
     let rig = Rig::new();
+    let [d, inset] = bubble(DPI);
     let at = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Right);
     assert_eq!(
         at,
         Some(Point {
-            x: 1920 - 46 - 12,
-            y: 1040 - 46 - 12
+            x: 1920 - d - inset,
+            y: 1040 - d - inset
         })
     );
     let mut big = main_screen();
-    big.dpi = 192;
+    big.dpi = 2 * DPI;
     rig.screens.set_areas(vec![big]);
+    let [d, inset] = bubble(big.dpi);
     let left = rig.hub.bubble_at(Point { x: 100, y: 100 }, Corner::Left);
     assert_eq!(
         left,
         Some(Point {
-            x: 24,
-            y: 1040 - 92 - 24
+            x: inset,
+            y: 1040 - d - inset
         })
     );
     rig.screens.set_areas(Vec::new());

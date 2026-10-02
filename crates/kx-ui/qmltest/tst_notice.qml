@@ -184,7 +184,7 @@ Item {
             compare(note.ui.calls, ["dismiss 1"], "and OK still answers");
         }
 
-        function test_the_count_comes_in_the_ui_language() {
+        function test_the_count_comes_in_the_keyboards_language() {
             const note = make([notice(1, false), notice(2, false), notice(3, false)], { more: Ar.more });
             tryVerify(() => note.visible, 2000, "it shows");
             compare(note.more, Ar.more[2]);

@@ -115,6 +115,9 @@ fn failed() -> Notice {
     }
 }
 
+/// Windows' 100 % DPI, the main screen's.
+const DPI: u32 = 96;
+
 /// A 100 % primary screen with a taskbar.
 fn main_screen() -> Screen {
     let rect = Rect {
@@ -125,7 +128,7 @@ fn main_screen() -> Screen {
     };
     Screen {
         rect,
-        dpi: 96,
+        dpi: DPI,
         primary: true,
     }
 }

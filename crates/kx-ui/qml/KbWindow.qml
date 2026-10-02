@@ -1,6 +1,5 @@
-// The keyboard window: the board the keyboard module lays out, drawn in the look; it never takes focus (ADR-0013).
-// Its shadow is a separate click-through window, and the window is cut to what takes clicks.
-// Bound: delegates may use the window's ids, and get their data only from `modelData` and `index`.
+// The keyboard window: the board the keyboard module lays out, drawn in the look and cut to what takes clicks, over a
+// click-through shadow; it never takes focus (ADR-0013). Bound: delegates take data only from modelData and index.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQml.Models
