@@ -4,14 +4,16 @@ import QtQuick
 Window {
     id: c
 
-    // The screen it covers, from `Qt.application.screens`, and what a screen reader hears.
+    // The screen it covers, from `Qt.application.screens`, its UI Automation id, and what a screen reader hears.
     required property var area
+    required property string uid
     required property string name
 
     // The second click.
     signal picked
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
+    title: c.name
     color: "transparent"
     visible: false
     screen: area
@@ -25,6 +27,7 @@ Window {
         anchors.fill: parent
         Accessible.role: Accessible.Button
         Accessible.name: c.name
+        Accessible.id: c.uid
         Accessible.onPressAction: c.picked()
         onClicked: c.picked()
     }

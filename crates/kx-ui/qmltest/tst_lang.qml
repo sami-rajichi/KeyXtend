@@ -22,6 +22,7 @@ Item {
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => id,
         dpad: id => id,
+        uid: (group, id) => group + "." + id,
         space: parts => parts.join(" · ")
     })
 
@@ -235,6 +236,21 @@ Item {
             compare(dots().length, 8);
             tryVerify(() => dots().every(d => d.mapToItem(c, 0, 0).y + d.height <= 20), 2000, "no dot below the cap");
             verify(new Set(dots().map(d => d.x)).size > 1, "more than one column");
+        }
+
+        // The side names keep the owner's faded decoration (kx-theme's one contrast exception) in their own weight.
+        function test_the_carousel_side_names_take_their_size_fade_and_weight_from_the_tokens() {
+            const kv = Face.board.keys.find(k => k.kind === "lang");
+            const key = createTemporaryObject(keyC, root, { kv: kv, ks: Face.states.en.keys[kv.id], lk: N.lk, lang: Face.states.en.lang, design: "carousel", res: root.res, s: 1 });
+            const sh = N.lk.shape.lang;
+            const names = all(key, o => o.cur !== undefined && o.modelData !== undefined);
+            compare(names.length, 3, "back, current and next");
+            for (const n of names.filter(n => !n.cur)) {
+                compare(n.opacity, sh.side[1]);
+                compare(n.font.pixelSize, sh.side[0]);
+                compare(n.font.weight, sh.side_weight);
+            }
+            compare(names.filter(n => n.cur)[0].font.weight, sh.weight);
         }
 
         function test_each_design_draws_the_language_key_its_own_way() {

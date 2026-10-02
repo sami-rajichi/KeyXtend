@@ -10,12 +10,12 @@ Item {
     // Nothing, following the pointer to move, or following it to resize.
     enum Mode { Idle, Moving, Resizing }
 
-    // The window's place, the keyboard bridge, Qt units for a physical point, the poll time, and what readers call a catcher.
+    // The window's place, the keyboard bridge, Qt units for a physical point, the poll time, and the texts.
     required property point at
     required property var keyboard
     required property var logical
     required property int pollMs
-    required property string name
+    required property var res
 
     // What runs now.
     property int mode: Mover.Idle
@@ -23,6 +23,11 @@ Item {
     property point grab: Qt.point(0, 0)
     // True between the two clicks.
     readonly property bool busy: mode !== Mover.Idle
+    // The catchers' text key, also their UI Automation id in every language, and what readers call them.
+    readonly property string uid: "catch"
+    readonly property string name: res.tr(uid)
+    // The catchers, one per screen.
+    readonly property alias covers: covers
 
     // The window's new place while moving, in Qt units.
     signal moved(point to)
@@ -83,15 +88,18 @@ Item {
         hoverEnabled: true
         Accessible.role: Accessible.Button
         Accessible.name: mv.name
+        Accessible.id: mv.uid
         Accessible.onPressAction: mv.finish()
         onClicked: mv.finish()
     }
     // One catcher per screen, since screens may have different scales.
     Instantiator {
+        id: covers
         model: Qt.application.screens
         delegate: Catch {
             required property var modelData
             area: modelData
+            uid: mv.uid
             name: mv.name
             visible: mv.busy
             onPicked: mv.finish()

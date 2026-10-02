@@ -9,9 +9,9 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BANNER_MORE, BAR, CATCH, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE,
-    MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME,
-    TRAY_QUIT, TRAY_SHOW,
+    BANNER_MORE, BAR, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE, MODULE,
+    OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT,
+    TRAY_SHOW,
 };
 use std::collections::BTreeSet;
 
@@ -127,7 +127,7 @@ fn every_size_mode_window_and_dpad_part_has_its_text() {
             .iter()
             .map(|m| format!("{MODE}.{}", m.as_str().unwrap_or_default())),
     );
-    let fixed = TITLES.iter().chain(&[CATCH]).map(|k| (*k).to_owned());
+    let fixed = TITLES.iter().map(|k| (*k).to_owned());
     let named: Vec<String> = named.chain(fixed).collect();
     for t in all() {
         let missing: Vec<&String> = named.iter().filter(|k| !t.has(k)).collect();

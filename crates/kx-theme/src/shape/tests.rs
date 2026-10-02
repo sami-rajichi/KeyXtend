@@ -21,6 +21,8 @@ fn the_shared_sizes_load() {
     assert_eq!(s.bar.button_px, [24.0, 22.0], "mock-up .tb");
     assert!(s.tip.font_px > 0.0 && s.tip.gap_px > 0.0, "tooltips");
     assert_eq!(s.line.px, 1.0, "mock-up 1px pop-line borders");
+    assert_eq!((s.bar.weight, s.bar.lit_weight), (400, 600), ".tb, .tb.on");
+    assert_eq!((s.lang.side_weight, s.lang.weight), (400, 600), ".car-it");
 }
 
 #[test]
@@ -193,6 +195,8 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ("dot_off = 0.68", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
+        ("weight = 400", "weight = 1000", "bar.weight"),
+        ("side_weight = 400", "side_weight = 0", "lang.side_weight"),
     ]);
 }
 

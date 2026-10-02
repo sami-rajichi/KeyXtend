@@ -36,7 +36,7 @@ Window {
         Accessible.role: Accessible.Button
         Accessible.name: bub.name
         // The id the top bar's buttons use; the gates find the bubble by it.
-        Accessible.id: bub.res.barId("bubble")
+        Accessible.id: bub.res.uid("bar", "bubble")
         Accessible.onPressAction: bub.clicked()
     }
     Hover {

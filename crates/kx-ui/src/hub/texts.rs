@@ -66,9 +66,10 @@ struct LangView {
     tray: Tag,
 }
 
-/// A size button's letter and its name.
+/// A size button's id in `SIZES`, its letter and its name.
 #[derive(Serialize)]
 struct SizeText {
+    id: &'static str,
     label: String,
     name: String,
 }
@@ -90,7 +91,8 @@ impl Hub {
     #[must_use]
     pub fn lang_json(&self) -> String {
         let (t, tray) = (self.i18n(), self.tray_i18n());
-        let size = |id: &str| SizeText {
+        let size = |id: &'static str| SizeText {
+            id,
             label: t.name_of(SIZE, id),
             name: t.name_of(SIZE_NAME, id),
         };

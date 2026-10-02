@@ -15,10 +15,12 @@ impl Shape {
     /// Font weights must be 100 to 900.
     fn check_weights(&self) -> Result<(), String> {
         let weights = [
+            ("bar.weight", self.bar.weight),
             ("bar.lit_weight", self.bar.lit_weight),
             ("chip.weight", self.chip.weight),
             ("legend.corner_weight", self.legend.corner_weight),
             ("lang.weight", self.lang.weight),
+            ("lang.side_weight", self.lang.side_weight),
             ("tip.weight", self.tip.weight),
             ("pill.weight", self.pill.weight),
             ("caption.status_weight", self.caption.status_weight),

@@ -104,7 +104,7 @@ Item {
         keyboard: body.win.keyboard
         logical: body.win.spots.logical
         pollMs: body.win.cfg.pollMs
-        name: body.res.tr("catch")
+        res: body.res
         onMoved: to => body.win.at = to
         onRedraw: json => body.win.redraw(json)
         onEnded: wasMove => {

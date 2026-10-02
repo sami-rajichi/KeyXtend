@@ -19,6 +19,8 @@ pub struct BarShape {
     pub icon_px: f32,
     /// Text size of the S, M and L buttons.
     pub label_px: f32,
+    /// Their weight while another size is shown.
+    pub weight: u16,
     /// Their weight while their size is shown.
     pub lit_weight: u16,
     /// Corner radius as a share of the key radius.
@@ -87,6 +89,8 @@ pub struct LangShape {
     pub gap_px: f32,
     /// Size and opacity of the side names.
     pub side: [f32; 2],
+    /// Weight of the side names.
+    pub side_weight: u16,
     /// Current name size, Latin and Arabic.
     pub font_px: [f32; 2],
     /// Current name weight.

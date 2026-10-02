@@ -20,6 +20,7 @@ Item {
         tr: k => Ar.texts[k] !== undefined ? Ar.texts[k] : k,
         bar: id => id,
         dpad: id => id,
+        uid: (group, id) => group + "." + id,
         space: parts => parts.join(" · ")
     })
     // The Arabic states: as typed, and with AltGr latched.

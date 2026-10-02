@@ -251,7 +251,7 @@ Item {
                 ar: modelData.arabic
                 text: modelData.short
                 font.pixelSize: (cur ? sh.font_px[ar ? 1 : 0] : sh.side[0]) * t.s
-                font.weight: cur ? sh.weight : Font.Normal
+                font.weight: cur ? sh.weight : sh.side_weight
                 opacity: cur ? 1 : sh.side[1]
                 color: t.ink
             }

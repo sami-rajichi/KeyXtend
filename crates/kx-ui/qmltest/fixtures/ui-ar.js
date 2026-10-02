@@ -11,14 +11,17 @@ var lang = {
   "rtl": true,
   "sizes": [
     {
+      "id": "s",
       "label": "ص",
       "name": "صغير"
     },
     {
+      "id": "m",
       "label": "م",
       "name": "متوسط"
     },
     {
+      "id": "l",
       "label": "ك",
       "name": "كبير"
     }

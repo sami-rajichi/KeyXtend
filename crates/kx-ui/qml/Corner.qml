@@ -21,6 +21,7 @@ Item {
     height: px[0] * s
     Accessible.role: Accessible.Button
     Accessible.name: name
+    Accessible.id: res.uid("bar", "corner")
     Accessible.onPressAction: corner.clicked()
 
     Rectangle {

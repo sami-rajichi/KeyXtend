@@ -20,6 +20,7 @@ Item {
         tr: k => k,
         bar: id => id,
         dpad: id => id,
+        uid: (group, id) => group + "." + id,
         space: parts => parts.join(" · ")
     })
     readonly property var paintRec: ({ fill: "rec", ink: "rec_ink", skirt: "rec" })

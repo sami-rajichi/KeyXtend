@@ -49,6 +49,8 @@ Item {
         property string part: ""
         property string text: ""
         property string name: bar.res.bar(part)
+        // The gates find each button by this id, whatever the language.
+        property string uid: part ? bar.res.uid("bar", part) : ""
         property bool lit: false
         readonly property bool hot: area.containsMouse
         // Hover text sits on pop_hover, which is Highlight in high contrast, so it takes sel_ink there.
@@ -59,8 +61,7 @@ Item {
         height: bar.sh.button_px[1] * bar.s
         Accessible.role: Accessible.Button
         Accessible.name: b.name
-        // The gates find each button by this id, whatever the language.
-        Accessible.id: b.part ? bar.res.barId(b.part) : ""
+        Accessible.id: b.uid
         Accessible.onPressAction: b.clicked()
         Hover {
             lk: bar.lk
@@ -83,7 +84,7 @@ Item {
             text: b.text
             font.family: bar.res.fam.ui
             font.pixelSize: bar.sh.label_px * bar.s
-            font.weight: b.lit ? bar.sh.lit_weight : Font.Normal
+            font.weight: b.lit ? bar.sh.lit_weight : bar.sh.weight
             color: b.ink
         }
         MouseArea {
@@ -156,6 +157,7 @@ Item {
                 readonly property var says: bar.sizes[index]
                 text: says.label
                 name: says.name
+                uid: bar.res.uid("size", says.id)
                 lit: bar.preset === index
                 onClicked: bar.pickSize(index)
             }

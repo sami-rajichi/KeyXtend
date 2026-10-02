@@ -25,7 +25,7 @@ Item {
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => En.texts["bar." + id],
-        barId: id => "bar." + id,
+        uid: (group, id) => group + "." + id,
         dpad: id => En.texts["dpad." + id],
         space: parts => parts.join(" · "),
         noteTip: (name, note) => name + "\n" + note
@@ -233,6 +233,10 @@ Item {
             compare(pad.Accessible.role, Accessible.Grouping, "a group of arrows");
             for (const id of Object.keys(N.lk.icons.dpad).filter(id => id !== "stop"))
                 verify(find(pad, o => o.Accessible.name === En.texts["dpad." + id] && !o.Accessible.ignored), id);
+            // UI Automation finds each arrow and Stop by its text key, whatever the language.
+            for (const id of Object.keys(N.lk.icons.dpad))
+                compare(find(pad, o => o.Accessible.id === "dpad." + id).Accessible.name, En.texts["dpad." + id], id);
+            compare(pad.Accessible.id, box.name, "the pad");
             const dim = createTemporaryObject(padC, root, { box: Face.board.dpad, lk: N.lk, res: root.res, s: 1 });
             compare(dim.Accessible.role, Accessible.Button);
             compare(dim.Accessible.description, En.texts["tip.later"]);

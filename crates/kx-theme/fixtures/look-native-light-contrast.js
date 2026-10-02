@@ -98,6 +98,7 @@ var lk = {
       ],
       "icon_px": 14.0,
       "label_px": 11.0,
+      "weight": 400,
       "lit_weight": 600,
       "radius_share": 0.8,
       "gap_px": 4.0
@@ -146,6 +147,7 @@ var lk = {
         9.0,
         0.45
       ],
+      "side_weight": 400,
       "font_px": [
         12.5,
         14.0

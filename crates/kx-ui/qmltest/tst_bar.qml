@@ -50,12 +50,6 @@ Item {
             compare(hits.length, 1, id);
             return hits[0];
         }
-        // The one button a screen reader calls `name`, for the controls that carry no id.
-        function named(win, name) {
-            const hits = all(win.contentItem, o => o.Accessible.role === Accessible.Button && o.Accessible.name === name);
-            compare(hits.length, 1, name);
-            return hits[0];
-        }
         // The top bar's size buttons, in order.
         function sizeButtons(win) {
             return all(win.contentItem, o => o.part !== undefined && o.text.length > 0);
@@ -71,7 +65,7 @@ Item {
             waitForRendering(win.contentItem);
             const spy = createTemporaryObject(spyC, root, { target: win, signalName: "minimise" });
             mouseClick(keyed(win, "bar.smaller"));
-            mouseClick(named(win, En.texts["sizename.l"]));
+            mouseClick(keyed(win, "size.l"));
             for (const part of ["bigger", "mode", "theme", "minimise"])
                 mouseClick(keyed(win, "bar." + part));
             const sent = win.keyboard.calls.filter(c => c === "smaller" || c === "bigger" || c.startsWith("preset"));
@@ -104,7 +98,29 @@ Item {
             const bub = bubble(win);
             compare(bub.title, En.texts["window.bubble"]);
             compare(bub.name, En.texts["bar.bubble"]);
-            verify(named(win, En.texts["catch"]), "the move catcher");
+            compare(keyed(win, "catch").Accessible.name, En.texts["catch"], "the catcher over the keyboard");
+            const covers = all(win.contentItem, o => o.covers !== undefined)[0].covers;
+            compare(covers.count, Qt.application.screens.length, "one per screen");
+            const cover = covers.objectAt(0);
+            compare(cover.title, En.texts["catch"], "UI Automation names the full-screen cover");
+            const area = all(cover.contentItem, o => o.Accessible.role === Accessible.Button)[0];
+            compare(area.Accessible.id, "catch");
+        }
+
+        // Every other control's id is its text key too: the size buttons, the resize corner, the D-pad.
+        function test_size_buttons_the_corner_and_the_dpad_give_ui_automation_their_text_keys() {
+            const win = make();
+            for (const z of En.lang.sizes)
+                compare(keyed(win, "size." + z.id).Accessible.name, z.name);
+            compare(keyed(win, "bar.corner").Accessible.name, En.texts["bar.corner"]);
+            compare(keyed(win, Face.board.dpad.name).Accessible.name, En.texts[Face.board.dpad.name]);
+        }
+
+        // The unlit letters take the bar's weight token, the lit one its lit weight.
+        function test_the_size_letters_take_their_weights_from_the_tokens() {
+            const win = make();
+            const letters = sizeButtons(win).map(b => all(b, o => o.font !== undefined && o.text === b.text)[0]);
+            compare(letters.map(l => l.font.weight), sizeButtons(win).map(b => b.lit ? win.lk.shape.bar.lit_weight : win.lk.shape.bar.weight));
         }
 
         // The gates find the top bar's buttons and the bubble by these ids, whatever the language.

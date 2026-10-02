@@ -176,5 +176,10 @@ fn qml_reads_the_size_letters_in_the_keyboards_language() {
         assert_eq!(s["label"].as_str(), Some(ar.name_of(SIZE, id).as_str()));
         assert_eq!(s["name"].as_str(), Some(ar.name_of(SIZE_NAME, id).as_str()));
         assert_ne!(s["label"].as_str(), Some(id), "{id} has an Arabic letter");
+        assert_eq!(
+            s["id"].as_str(),
+            Some(id),
+            "UI Automation's id, in every language"
+        );
     }
 }

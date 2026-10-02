@@ -3,19 +3,20 @@
 
 use crate::all;
 use kx_ui::i18n::keys::{
-    WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_TIP,
+    CATCH, WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_TIP,
 };
 use std::collections::BTreeMap;
 use std::path::Path;
 
-/// Every window title the UI names; the guard, `shape`, the backdrops and a tip's lift find windows by them.
-pub const TITLES: [&str; 6] = [
+/// Every window title the UI names; the guard, `shape`, the backdrops, a tip's lift and UI Automation find windows by them.
+pub const TITLES: [&str; 7] = [
     WINDOW_KEYBOARD,
     WINDOW_BUBBLE,
     WINDOW_NOTICE,
     WINDOW_MENU,
     WINDOW_LIST,
     WINDOW_TIP,
+    CATCH,
 ];
 /// The QML folder, under this crate.
 const QML: &str = "qml";

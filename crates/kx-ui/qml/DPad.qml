@@ -47,6 +47,7 @@ Item {
 
     Accessible.role: dim ? Accessible.Button : Accessible.Grouping
     Accessible.name: name
+    Accessible.id: box.name
     Accessible.description: later
 
     Repeater {
@@ -91,6 +92,7 @@ Item {
                 containsMode: Shape.FillContains
                 Accessible.role: Accessible.Button
                 Accessible.name: name
+                Accessible.id: pad.res.uid("dpad", modelData.id)
                 Accessible.ignored: pad.dim
                 Accessible.onPressAction: if (!pad.dim) pad.dir = arrow.lit ? -1 : arrow.index
 
@@ -201,6 +203,7 @@ Item {
         color: pad.d.stop
         Accessible.role: Accessible.Button
         Accessible.name: pad.res.dpad(pad.stopId)
+        Accessible.id: pad.res.uid("dpad", pad.stopId)
         Accessible.onPressAction: pad.dir = -1
         Behavior on scale {
             Tween {
