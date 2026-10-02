@@ -98,7 +98,7 @@ mod tests {
             },
             resizes: vec![],
             g2: json!({
-                "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true,
+                "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true, "caret_kept": 100,
                 "latency_ms": { "p50": 4.2, "p99": 13.1 },
             }),
         };

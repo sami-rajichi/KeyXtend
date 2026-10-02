@@ -111,12 +111,14 @@ pub fn on_target(
     Ok(report(head, &tally, &logged, &left_open))
 }
 
-/// True when G2's result line `v` says every planned click typed its character and the target kept the focus.
+/// True when G2's result line `v` says every planned click typed its character and the target kept the focus and
+/// its caret after each one (roadmap G2).
 pub fn typed_intact(v: &Value) -> bool {
     let clicks = v["clicks"].as_u64().unwrap_or_default();
     let every = clicks > 0 && v["planned"].as_u64() == Some(clicks);
     let matched = v["matched"].as_u64() == Some(clicks);
-    v.get("error").is_none() && every && matched && v["focus_ok"] == true
+    let caret = v["caret_kept"].as_u64() == Some(clicks);
+    v.get("error").is_none() && every && matched && caret && v["focus_ok"] == true
 }
 
 /// True when the target kept the keyboard for every click and never lost it.
@@ -141,8 +143,13 @@ fn print(tally: &Tally, logged: &Logged) {
         .collect();
     let matched = logged.lat.iter().flatten().count();
     say!("latency ms {}; matched {matched}", lat.join(" "));
-    let ok = if focus_ok(tally, logged) { "yes" } else { "no" };
-    say!("focus ok: {ok}");
+    let yes = |b: bool| if b { "yes" } else { "no" };
+    let caret = tally.caret_kept == tally.clicks.len();
+    say!(
+        "focus ok: {}; caret ok: {}",
+        yes(focus_ok(tally, logged)),
+        yes(caret)
+    );
     if tally.covered > 0 {
         say!(
             "skipped {} covered keys; covered by {}",
@@ -158,7 +165,7 @@ fn print(tally: &Tally, logged: &Logged) {
     }
 }
 
-/// Prints the run and adds its numbers to `head`, the result line.
+/// Prints the run and adds its numbers and its verdict to `head`, the result line.
 fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String]) -> Value {
     print(tally, logged);
     let latency: Map<String, Value> = stats::summary_ms(&logged.lat)
@@ -180,6 +187,7 @@ fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String])
     if let Some(e) = &logged.error {
         head["error"] = json!(e);
     }
+    head["pass"] = json!(typed_intact(&head));
     head
 }
 
@@ -201,7 +209,7 @@ mod tests {
     fn run(planned: u64, clicks: u64, matched: u64, focus_ok: bool) -> Value {
         json!({
             "gate": "G2", "planned": planned, "clicks": clicks, "matched": matched, "focus_ok": focus_ok,
-            "left_open": [],
+            "caret_kept": clicks, "left_open": [],
         })
     }
 
@@ -224,6 +232,40 @@ mod tests {
         let mut broke = run(5, 5, 5, true);
         broke["error"] = json!("target log");
         assert!(!typed_intact(&broke));
+        let mut moved = run(100, 100, 100, true);
+        moved["caret_kept"] = json!(99);
+        assert!(!typed_intact(&moved), "the caret moved once");
+    }
+
+    /// A tally of `clicks` clicks after which the focus stayed every time and the caret `caret` times.
+    fn tally(clicks: usize, caret: usize) -> Tally {
+        let click = Click {
+            code: 0x1E,
+            us: 0,
+            expect: vec![],
+        };
+        Tally {
+            clicks: vec![click; clicks],
+            focus_kept: clicks,
+            caret_kept: caret,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn the_result_line_carries_g2s_verdict_on_focus_caret_and_text() {
+        let logged = |n: usize| Logged {
+            units: Vec::new(),
+            lat: vec![Some(10); n],
+            focus_lost: 0,
+            error: None,
+        };
+        let head = || json!({ "gate": "G2", "planned": 3 });
+        let good = report(head(), &tally(3, 3), &logged(3), &[]);
+        assert_eq!(good["pass"], true);
+        let caret = report(head(), &tally(3, 2), &logged(3), &[]);
+        assert_eq!(caret["pass"], false, "a lost caret fails G2 on its own");
+        assert!(out::failed(&caret));
     }
 
     #[test]
