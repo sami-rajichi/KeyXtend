@@ -87,7 +87,8 @@ pub(crate) fn holds_app(folder: &Path, program: &str) -> bool {
     folder.join(program).is_file()
 }
 
-/// Runs the stage check on `source` when it holds the app, so a refused or hand-edited stage is never signed.
+/// Runs the stage check on `source` when it holds the app, so a refused stage, or one holding a file off its list, is
+/// never signed.
 pub(crate) fn vet(
     source: &Path,
     setup: &DevSetup,

@@ -184,6 +184,13 @@ pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, exe: &Path) -> Vec<Copy> {
         .collect()
 }
 
+/// The stage-relative path of every file `plan` stages; the check refuses any other file.
+pub(crate) fn planned(config: &StageConfig) -> Vec<PathBuf> {
+    let unread = QtDirs::default();
+    let files = plan(config, &unread, Path::new(""));
+    files.into_iter().map(|c| c.to).collect()
+}
+
 /// Empties `stage`, then copies each file into it; a missing source is named.
 pub(crate) fn copy(stage: &Path, files: &[Copy]) -> Result<(), DevError> {
     if stage.exists() {

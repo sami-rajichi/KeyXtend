@@ -17,7 +17,7 @@ const PLUGINS: &str = "QT_INSTALL_PLUGINS";
 const QML: &str = "QT_INSTALL_QML";
 
 /// Qt's version and the folders that the stage copies from.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct QtDirs {
     /// Qt's version, as qmake reports it.
     pub version: String,

@@ -84,6 +84,8 @@ pub(crate) enum DevError {
     },
     /// A library beside the program that nothing staged imports.
     Unused(String),
+    /// A staged file that is not in the stage's list.
+    Unplanned(String),
     /// A file that is not a readable Windows program or library.
     BadPe(String),
     /// A staged file other than the listed Qt libraries imports Qt's network library.
@@ -144,6 +146,10 @@ impl fmt::Display for DevError {
                 write!(f, "{by} needs {lib}: not staged, not in the system folder")
             }
             Self::Unused(lib) => write!(f, "{lib} is staged but nothing staged imports it"),
+            Self::Unplanned(path) => write!(
+                f,
+                "{path} is not in the stage's list; only listed files ship"
+            ),
             Self::BadPe(path) => write!(f, "{path} is not a readable Windows program or library"),
             Self::NetworkImport { by, lib } => {
                 write!(f, "{by} imports {lib}; only the listed Qt libraries may")

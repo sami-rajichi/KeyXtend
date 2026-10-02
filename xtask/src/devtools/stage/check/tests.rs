@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+mod listed;
+
 use super::*;
 use crate::devtools::paths;
 use crate::test_support::{TempDir, make_dir_link, stage_config};
@@ -198,7 +200,10 @@ fn a_library_only_a_plugin_imports_is_used() {
         ("Qt6Svg.dll", &["Qt6Core.dll"]),
         ("imageformats/qsvg.dll", &["Qt6Svg.dll"]),
     ]);
-    assert!(stage.check().is_ok());
+    let mut config = settings();
+    config.libs.push("Qt6Svg.dll".to_string());
+    config.plugins.push("imageformats/qsvg.dll".to_string());
+    assert!(stage.check_with(&config).is_ok());
 }
 
 #[test]
@@ -210,9 +215,9 @@ fn import_names_match_in_any_letter_case() {
 #[test]
 fn libraries_that_import_each_other_end_the_walk() {
     let stage = Fake::new(&[
-        (PROGRAM, &["Qt6A.dll"]),
-        ("Qt6A.dll", &["Qt6B.dll"]),
-        ("Qt6B.dll", &["Qt6A.dll"]),
+        (PROGRAM, &["Qt6Qml.dll"]),
+        ("Qt6Qml.dll", &["Qt6Quick.dll"]),
+        ("Qt6Quick.dll", &["Qt6Qml.dll"]),
     ]);
     assert!(stage.check().is_ok());
 }

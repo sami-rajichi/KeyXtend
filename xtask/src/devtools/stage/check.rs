@@ -1,10 +1,10 @@
 //! The stage check: no banned plugin, every import found in the stage or the system folder, the network library
-//! imported only by the listed Qt libraries, no library that nothing imports, and the size under the cap.
+//! imported only by the listed Qt libraries, no library that nothing imports, no file off the list, and the size cap.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use super::{Network, StageConfig};
+use super::{Network, StageConfig, planned};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
@@ -49,6 +49,7 @@ pub(crate) fn check(
     if let Some(unused) = libs.iter().find(|(key, _)| !reached.contains(*key)) {
         return Err(DevError::Unused(paths::text(unused.1)));
     }
+    refuse_unplanned(&files, &planned(config))?;
     let bytes = paths::folder_size(stage)?;
     let summary = Summary {
         files: files.len(),
@@ -73,6 +74,19 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
         .iter()
         .find(|f| f.parent().is_some_and(|dir| dir.iter().any(is_banned)));
     found.map_or(Ok(()), |f| Err(DevError::Banned(paths::text(f))))
+}
+
+/// Fails on the first file that is not one of the `planned` paths, in any letter case, so no unlisted file is signed.
+fn refuse_unplanned(files: &[PathBuf], planned: &[PathBuf]) -> Result<(), DevError> {
+    let listed: BTreeSet<String> = planned.iter().map(|p| path_key(p)).collect();
+    let extra = files.iter().find(|f| !listed.contains(&path_key(f)));
+    extra.map_or(Ok(()), |f| Err(DevError::Unplanned(paths::text(f))))
+}
+
+/// The key a stage-relative path is matched by: its parts in lower case, joined the same way on every system.
+fn path_key(path: &Path) -> String {
+    let parts: Vec<String> = path.iter().map(|p| key(&p.to_string_lossy())).collect();
+    parts.join("/")
 }
 
 /// The key the loader matches a library name by: its lower-case text.
