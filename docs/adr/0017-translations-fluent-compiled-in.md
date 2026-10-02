@@ -1,7 +1,7 @@
 # 17. Translations: Fluent files compiled in
 
 - **Date:** 2026-09-30
-- **Status:** Accepted
+- **Status:** Accepted. Its language choice for the keyboard's text is superseded by ADR-0020.
 
 ## Context
 

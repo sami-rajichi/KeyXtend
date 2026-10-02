@@ -37,7 +37,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 **Output:** an empty but strict workspace.
 
-- `git init` in `D:\Projects\KeyXtend`. Create the GitHub repo and remote only after the owner's yes; then protect `main` and add a DCO check.
+- `git init` in the project folder. Create the GitHub repo and remote only after the owner's yes; then protect `main` and add a DCO check.
 - Workspace `Cargo.toml`, `rust-toolchain.toml` (pinned stable), `deny.toml`, `rustfmt.toml`, `clippy.toml`.
 - `xtask`: `tidy` (enforces the ARCHITECTURE.md invariants), `licences`, `dist` (stub).
 - CI (GitHub Actions on `windows-latest` and `ubuntu-latest`): fmt, clippy, tests, cargo-deny, cargo-audit, tidy, Dependabot for Cargo and Actions, secret scanning.
@@ -78,7 +78,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
 | G5 Hold engine (core) | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
 | G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
-| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Noto Sans Arabic for Dolch), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
+| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode. Frame times measured with PresentMon; a pressed key lights up on the next frame |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
 | G10 Screen readers | Narrator and NVDA read and activate every key |
