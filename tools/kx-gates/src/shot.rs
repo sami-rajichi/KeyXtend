@@ -9,6 +9,14 @@ use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::{out, win};
 
+/// The file extension of the pictures `save` and `keep` write.
+pub const EXT: &str = ".bmp";
+
+/// The file name suffix `stem` with the picture extension, for a gate's output file.
+pub fn named(stem: &str) -> String {
+    format!("{stem}{EXT}")
+}
+
 /// Saves the whole desktop to `path` as a BMP file, if it fits in `cap` bytes.
 pub fn save(path: &Path, cap: usize) -> Result<(), String> {
     let bmp = capture::screen(cap)?.to_bmp()?;
@@ -37,4 +45,25 @@ pub fn of_window(hwnd: HWND) -> Result<Shot, String> {
 /// Saves `shot` to `path` as a BMP file.
 pub fn keep(path: &Path, shot: &Shot) -> Result<(), String> {
     out::write_bytes(path, &shot.to_bmp()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_picture_name_ends_in_the_format_save_and_keep_write() {
+        let name = named("-look-3");
+        assert!(name.starts_with("-look-3") && name.ends_with(EXT), "{name}");
+        let bmp = Shot {
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+            bgra: vec![0; 4],
+        }
+        .to_bmp()
+        .expect("one pixel");
+        assert!(bmp.starts_with(b"BM"), "a BMP file, as `EXT` says");
+    }
 }

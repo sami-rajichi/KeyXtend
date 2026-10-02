@@ -25,8 +25,6 @@ use crate::win::{size32, sleep_ms};
 
 /// Suffix of picture `{n}` of a run.
 const LOOK: &str = "-look-";
-/// Picture files' extension.
-const BMP: &str = ".bmp";
 /// The backdrop's name when DWM gives none or one this table lacks.
 const UNKNOWN: &str = "unknown";
 
@@ -112,7 +110,7 @@ fn follow(hwnd: HWND, before: &Shot, wait_ms: u64, poll_ms: u64) -> Result<Optio
 
 /// Saves `shot` as picture number `n` of this run.
 fn save(ctx: &Ctx, shot: &Shot, n: usize) -> Result<PathBuf, String> {
-    let path = ctx.file(&format!("{LOOK}{n}{BMP}"));
+    let path = ctx.file(&shot::named(&format!("{LOOK}{n}")));
     shot::keep(&path, shot)?;
     Ok(path)
 }

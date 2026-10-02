@@ -19,8 +19,8 @@ use crate::apps::Ctx;
 use crate::product::{self, Keyboard};
 use crate::{out, shot, win};
 
-/// Suffix of the keyboard's picture.
-const PICTURE: &str = "-keyboard.bmp";
+/// Suffix of the keyboard's picture, before `shot`'s extension.
+const PICTURE: &str = "-keyboard";
 /// Percent of a whole.
 const PCT: u32 = 100;
 
@@ -174,7 +174,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kb = Keyboard::find()?;
     let (_, exe) = product::running().ok_or("the product is not running")?;
     let record = read(kb.hwnd, build_of(Path::new(&exe))?)?;
-    let path = ctx.file(PICTURE);
+    let path = ctx.file(&shot::named(PICTURE));
     shot::keep(&path, &shot::of_window(kb.hwnd)?)?;
     let before = std::fs::read_to_string(ctx.out.join(out::RESULTS)).unwrap_or_default();
     let mut all = records(&before);
