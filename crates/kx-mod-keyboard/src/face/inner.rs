@@ -105,7 +105,7 @@ impl Inner {
     /// installed it does nothing.
     pub(super) fn lang(&mut self, back: bool) -> FaceReply {
         let count = self.ports.layouts.list().len();
-        match click(self.settings.lang_key, back, count) {
+        match click(self.settings.lang_key, back, count, self.list.is_some()) {
             LangClick::Still => FaceReply::default(),
             LangClick::Step(by) => match self.ports.layouts.step(by) {
                 Ok(()) => {

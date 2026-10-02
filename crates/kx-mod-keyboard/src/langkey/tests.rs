@@ -29,16 +29,25 @@ const MANY: usize = 3;
 
 #[test]
 fn the_carousel_goes_back_on_its_back_part_and_on_elsewhere() {
-    assert_eq!(click(LangKey::Carousel, true, MANY), LangClick::Step(-1));
-    assert_eq!(click(LangKey::Carousel, false, MANY), LangClick::Step(1));
+    assert_eq!(
+        click(LangKey::Carousel, true, MANY, false),
+        LangClick::Step(-1)
+    );
+    assert_eq!(
+        click(LangKey::Carousel, false, MANY, false),
+        LangClick::Step(1)
+    );
 }
 
 #[test]
 fn the_cycle_always_steps_on_and_the_list_opens() {
-    assert_eq!(click(LangKey::Cycle, true, MANY), LangClick::Step(1));
-    assert_eq!(click(LangKey::Cycle, false, MANY), LangClick::Step(1));
-    assert_eq!(click(LangKey::List, true, MANY), LangClick::List);
-    assert_eq!(click(LangKey::List, false, MANY), LangClick::List);
+    assert_eq!(click(LangKey::Cycle, true, MANY, false), LangClick::Step(1));
+    assert_eq!(
+        click(LangKey::Cycle, false, MANY, false),
+        LangClick::Step(1)
+    );
+    assert_eq!(click(LangKey::List, true, MANY, false), LangClick::List);
+    assert_eq!(click(LangKey::List, false, MANY, false), LangClick::List);
 }
 
 #[test]
@@ -46,13 +55,23 @@ fn with_one_layout_or_none_every_design_stays_still() {
     for style in [LangKey::Carousel, LangKey::Cycle, LangKey::List] {
         for (count, back) in [(0, false), (1, false), (1, true)] {
             assert_eq!(
-                click(style, back, count),
+                click(style, back, count, false),
                 LangClick::Still,
                 "{style:?} {count}"
             );
         }
     }
     assert!(lone(0) && lone(1) && !lone(2));
+}
+
+/// A refresh may leave one layout or none while the list is open; a click still closes it (re-review addendum).
+#[test]
+fn a_click_closes_an_open_list_even_with_one_layout_left() {
+    for count in [0, 1, MANY] {
+        for back in [false, true] {
+            assert_eq!(click(LangKey::List, back, count, true), LangClick::List);
+        }
+    }
 }
 
 #[test]

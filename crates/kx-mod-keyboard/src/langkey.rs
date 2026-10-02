@@ -1,6 +1,6 @@
 //! The language key in its three designs (spec §4.3, mock-up `langInner`): the Carousel steps back on its left
 //! part and on elsewhere, the Cycle steps on, and the List opens the language list. Steps count as `step_to` does,
-//! and with one layout installed no design moves.
+//! and with one layout installed no design moves, though an open list still closes.
 
 use crate::settings::LangKey;
 use kx_module_api::ports::{LangLabel, LayoutId, step_to};
@@ -23,10 +23,12 @@ pub fn lone(count: usize) -> bool {
     count <= 1
 }
 
-/// The click on a language key of design `style`, on its back part when `back`, with `count` layouts installed.
+/// The click on a language key of design `style`, on its back part when `back`, with `count` layouts installed and
+/// the list `open`; an open list closes even when a refresh left one layout or none.
 #[must_use]
-pub fn click(style: LangKey, back: bool, count: usize) -> LangClick {
+pub fn click(style: LangKey, back: bool, count: usize, open: bool) -> LangClick {
     match style {
+        _ if open => LangClick::List,
         _ if lone(count) => LangClick::Still,
         LangKey::Carousel if back => LangClick::Step(-1),
         LangKey::Carousel | LangKey::Cycle => LangClick::Step(1),
