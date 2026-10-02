@@ -78,7 +78,8 @@ impl Tray for WinTray {
         small_px()
     }
 
-    /// Adds the icon from its window's thread; a taskbar that is not there yet gets it when it starts.
+    /// Adds the icon from its window's thread; a taskbar that is not there yet gets it when it starts. Refused when
+    /// the taskbar could never reach the window or its add cannot be queued.
     fn show(&self, image: &TrayImage, tip: &str, on: OnTray) -> Result<Box<dyn TrayIcon>, UiError> {
         let state = Arc::new(Mutex::new(State {
             icon: Arc::new(Icon::new(image)?),
@@ -86,6 +87,7 @@ impl Tray for WinTray {
             window: 0,
             added: false,
             gone: false,
+            failed: None,
         }));
         let here = Here {
             on,
@@ -95,10 +97,15 @@ impl Tray for WinTray {
         };
         let setup = move || drop(HERE.with(|h| h.set(here)));
         let hidden = Hidden::start(self.class.clone(), Kind::TopLevel, Some(proc), setup)?;
-        Ok(Box::new(WinIcon {
+        let icon = WinIcon {
             state,
             hidden: Some(hidden),
-        }))
+        };
+        let failed = lock(&icon.state).failed.take();
+        match failed {
+            Some(e) => Err(e),
+            None => Ok(Box::new(icon)),
+        }
     }
 }
 
@@ -113,6 +120,8 @@ struct State {
     added: bool,
     /// Set as the owner drops the icon, so no later add brings it back.
     gone: bool,
+    /// Why the new window cannot hear the taskbar or queue its add, for `show` to refuse.
+    failed: Option<UiError>,
 }
 
 impl State {
@@ -164,7 +173,8 @@ struct WinIcon {
 }
 
 impl TrayIcon for WinIcon {
-    /// Keeps the change and queues it for the icon's thread; before the window exists, the coming add carries it.
+    /// Keeps the change and queues it for the icon's thread, refused when it cannot be queued; before the window
+    /// exists, the coming add carries it.
     fn set(&self, image: &TrayImage, tip: &str) -> Result<(), UiError> {
         let icon = Arc::new(Icon::new(image)?);
         let (old, window) = {
@@ -174,7 +184,7 @@ impl TrayIcon for WinIcon {
         };
         drop(old);
         if window != 0 {
-            post(HWND(std::ptr::without_provenance_mut(window)), SET_MSG);
+            post(HWND(std::ptr::without_provenance_mut(window)), SET_MSG)?;
         }
         Ok(())
     }
@@ -220,19 +230,21 @@ impl Here {
             }
             m if m == self.restart && m != 0 => {
                 lock(&self.state).added = false;
-                post(hwnd, ADD_MSG);
+                // A refused post leaves the icon off until the taskbar starts again.
+                let _ = post(hwnd, ADD_MSG);
             }
             _ => {}
         }
     }
 
-    /// Notes the new window, lets the taskbar reach it, watches the front window and queues the add.
+    /// Notes the new window, lets the taskbar reach it, watches the front window and queues the add; a failure is
+    /// kept for `show`.
     fn start(&self, hwnd: HWND) {
         lock(&self.state).window = hwnd.0.addr();
-        allow(hwnd, CALLBACK_MSG);
-        allow(hwnd, self.restart);
+        let reach = allow(hwnd, CALLBACK_MSG).and(allow(hwnd, self.restart));
         hook();
-        post(hwnd, ADD_MSG);
+        let ready = reach.and(post(hwnd, ADD_MSG));
+        lock(&self.state).failed = ready.err();
     }
 
     /// Adds the icon and asks for its version; an icon the taskbar still holds is changed instead. A change the owner

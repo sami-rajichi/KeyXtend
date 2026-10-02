@@ -226,6 +226,38 @@ fn a_change_goes_to_the_taskbar_from_the_icons_thread() {
 }
 
 #[test]
+fn a_change_that_cannot_be_queued_is_refused() {
+    let (_shell, tray, class) = rig("unqueued");
+    let shown = tray.show(&image(), "t", Box::new(|_| {})).unwrap();
+    let gone = find(&class).unwrap().0.addr();
+    drop(shown);
+    let state = State {
+        icon: Arc::new(Icon::new(&image()).unwrap()),
+        tip: crate::tray::tip("t"),
+        window: gone,
+        added: true,
+        gone: false,
+        failed: None,
+    };
+    let icon = WinIcon {
+        state: Arc::new(Mutex::new(state)),
+        hidden: None,
+    };
+    assert!(matches!(icon.set(&image(), "u"), Err(UiError::Refused(_))));
+}
+
+#[test]
+fn a_message_or_a_filter_for_a_gone_window_is_refused() {
+    let (_shell, tray, class) = rig("filter");
+    let shown = tray.show(&image(), "t", Box::new(|_| {})).unwrap();
+    let window = find(&class).unwrap();
+    drop(shown);
+    assert!(post(window, SET_MSG).is_err());
+    assert!(allow(window, CALLBACK_MSG).is_err());
+    assert_eq!(allow(window, 0), Ok(()), "no message to let through");
+}
+
+#[test]
 fn a_listener_that_panics_still_hears_the_next_click() {
     let (_shell, tray, class) = rig("panic");
     let (tx, rx) = mpsc::channel();
