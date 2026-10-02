@@ -20,8 +20,8 @@ pub fn next(result: &Result<usize, UiError>, attempt: u32, tries: u32) -> Next {
     }
 }
 
-/// A guard run's tries: each step makes try number 1, 2, … and a try that says stop ends the run, so the next
-/// run starts from 1 again.
+/// A guard run's tries: try number 1, 2, … and a try that says stop ends the run, so the next run starts from 1
+/// again. The caller makes the try between `next` and `settle`, holding nothing of the run.
 #[derive(Debug, Default)]
 #[cfg_attr(
     not(feature = "qt"),
@@ -36,12 +36,15 @@ pub struct Run {
     allow(dead_code, reason = "only the Qt Keyboard object runs the guard")
 )]
 impl Run {
-    /// Makes the next try with `try_once(attempt)`; true to try again after `[ui] guard_delay_ms`.
-    pub fn step(&mut self, try_once: impl FnOnce(u32) -> bool) -> bool {
-        let attempt = self.tries.saturating_add(1);
-        let again = try_once(attempt);
+    /// The number of the next try.
+    #[must_use]
+    pub fn next(&self) -> u32 {
+        self.tries.saturating_add(1)
+    }
+
+    /// Records try `attempt`: `again` keeps the run going, else the next run starts from 1.
+    pub fn settle(&mut self, attempt: u32, again: bool) {
         self.tries = if again { attempt } else { 0 };
-        again
     }
 }
 
@@ -62,13 +65,19 @@ mod tests {
         let mut run = Run::default();
         let mut seen = Vec::new();
         for again in [true, true, false, false] {
-            run.step(|attempt| {
-                seen.push(attempt);
-                again
-            });
+            let attempt = run.next();
+            seen.push(attempt);
+            run.settle(attempt, again);
         }
         assert_eq!(seen, [1, 2, 3, 1], "a run ends when a try says stop");
-        assert!(run.step(|_| true));
+    }
+
+    #[test]
+    fn naming_the_next_try_changes_nothing_until_it_settles() {
+        let mut run = Run::default();
+        assert_eq!((run.next(), run.next()), (1, 1));
+        run.settle(1, true);
+        assert_eq!(run.next(), 2);
     }
 
     #[test]

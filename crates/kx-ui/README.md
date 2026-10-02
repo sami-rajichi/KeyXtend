@@ -6,7 +6,7 @@ The UI: the texts in English, French and Arabic, the `[ui]` settings, the `ui` m
 
 The `qt` feature needs Qt 6.11.2: set `QMAKE` to its `qmake.exe` and put its `bin` first in `PATH` for the command. `build.rs` lists every QML file in one table (`QML`, the root first) and every bridge in `BRIDGES`, and hands the root's resource URL to the crate as `MAIN_QML`. Without the feature (`--no-default-features`) the texts, settings, hub and module still build and test, as the Linux checks need.
 
-`cpp/` holds the C++ the bridges call where cxx-qt-lib has no binding; `build.rs` adds it to the include path and rebuilds when it changes.
+`cpp/` holds the C++ the bridges call where cxx-qt-lib has no binding; they include it as `kx-ui/cpp/…` through cxx-qt-build's crate include root, and `build.rs` rebuilds when it changes.
 
 It also compiles in, as Qt resources, the icons the theme tokens name and every font under `assets/fonts/` (ADR-0016), found through `kx_theme::assets`; a missing icon file stops the build. `ASSETS` hands QML their URLs as JSON, and the app never reads them from disk.
 
@@ -61,7 +61,7 @@ Every bridge call runs on the Qt GUI thread, including the guard and the window 
 
 ## Public API
 
-`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`, `os_lang`), `harden` (`QT_PREFIXES`, `NAME_END`, `is_qt`, `qt_names`), and with `qt` also `install`, `MAIN_QML`, `ASSETS`, `harden_qt`, `qt_sees`, `qt_reads`, `pin_imports` and `QML_DIR`.
+`Hub`, `HubError`, `UiPorts`, `Request`, `Wake`, `Waker`, `Redraw`, `Resize`, `Shown`, `UiSettings`, `Backdrop`, `SPEC`, `UiModule`, `ID`, `MANIFEST`, `Area`, the i18n API (`I18n`, `Lang`, `LANGS`, `AUTO`, `find`, `pick`, `os_lang`, and the `i18n::keys` module of translation keys), `harden` (`QT_PREFIXES`, `NAME_END`, `is_qt`, `qt_names`), and with `qt` also `install`, `MAIN_QML`, `QML_URI`, `ASSETS`, `harden_qt`, `qt_sees`, `qt_reads`, `pin_imports` and `QML_DIR`.
 
 ## Security
 

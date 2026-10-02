@@ -247,10 +247,13 @@ impl qobject::Keyboard {
     fn guard(self: Pin<&mut Self>, top: &QString) -> bool {
         let top = top.to_string();
         let top = (!top.is_empty()).then_some(top.as_str());
-        let mut rust = self.rust_mut();
-        let Some(hub) = rust.hub.clone() else {
+        // No borrow lives across the try: the guard port moves Qt's windows, whose handlers may call this object.
+        let (hub, attempt) = (self.rust().hub.clone(), self.rust().guard.next());
+        let Some(hub) = hub else {
             return false;
         };
-        rust.guard.step(|attempt| hub.guard(attempt, top))
+        let again = hub.guard(attempt, top);
+        self.rust_mut().guard.settle(attempt, again);
+        again
     }
 }
