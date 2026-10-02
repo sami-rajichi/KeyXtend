@@ -219,3 +219,13 @@ fn the_mods_come_from_the_latches_and_caps_lock() {
         "AltGr counts only on a layout with AltGr characters"
     );
 }
+
+#[test]
+fn legend_mods_hide_shift_caps_and_altgr() {
+    let all = LegendMods {
+        shift: true,
+        caps: true,
+        altgr: true,
+    };
+    assert_eq!(format!("{all:?}"), "LegendMods { .. }");
+}

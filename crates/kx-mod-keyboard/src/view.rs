@@ -16,6 +16,7 @@ use crate::spec::{BoardSpec, KeyKind, Nav, Role};
 use kx_module_api::ports::{LangLabel, LayoutTable, Point};
 use serde::Serialize;
 use std::collections::BTreeMap;
+use std::fmt;
 
 /// Starts a named key's name, a translation key such as `key.esc`.
 pub const NAME_PREFIX: &str = "key.";
@@ -102,7 +103,7 @@ pub struct BoardView {
 }
 
 /// One key's changing part.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize)]
 pub struct KeyState {
     /// Legends; empty for named keys.
     #[serde(flatten)]
@@ -120,7 +121,7 @@ pub struct KeyState {
 }
 
 /// Everything that changes as keys are used.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize)]
 pub struct StateView {
     /// Each key's state, by id.
     pub keys: BTreeMap<String, KeyState>,
@@ -130,6 +131,24 @@ pub struct StateView {
     pub list: Option<ListView>,
     /// Where the window goes, in physical pixels, once the UI has said where it can be.
     pub at: Option<Point>,
+}
+
+/// Shows no field: its legends and lights tell the latches and Caps Lock, as `Latches` hides them.
+impl fmt::Debug for KeyState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyState").finish_non_exhaustive()
+    }
+}
+
+/// Shows the language key, the list and the place, never the keys' states.
+impl fmt::Debug for StateView {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StateView")
+            .field("lang", &self.lang)
+            .field("list", &self.list)
+            .field("at", &self.at)
+            .finish_non_exhaustive()
+    }
 }
 
 /// What the state is made from.

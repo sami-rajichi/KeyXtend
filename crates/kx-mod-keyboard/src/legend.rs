@@ -6,6 +6,7 @@ use crate::spec::Latch;
 use kx_module_api::ports::{KeyChars, Scan, Slot};
 use serde::Serialize;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::ops::RangeInclusive;
 
 /// Drawn before Arabic marks that have no letter before them, so they have a base to sit on.
@@ -71,7 +72,7 @@ pub fn mark_names(s: &str) -> Vec<String> {
 }
 
 /// The modifiers that change legends.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct LegendMods {
     /// Shift is latched.
     pub shift: bool,
@@ -79,6 +80,13 @@ pub struct LegendMods {
     pub caps: bool,
     /// `AltGr` is latched and the layout has `AltGr` characters.
     pub altgr: bool,
+}
+
+/// Shows no field, so latches and Caps Lock stay out of any log, as `Latches` does.
+impl fmt::Debug for LegendMods {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LegendMods").finish_non_exhaustive()
+    }
 }
 
 impl LegendMods {

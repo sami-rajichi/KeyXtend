@@ -14,13 +14,12 @@ pub struct Latches {
     mode: Modifiers,
 }
 
-/// Shows which modifiers are latched and the mode, never a key's scan code.
+/// Shows only the mode: which modifiers are latched stays hidden, as a run of clicks would show what was typed.
 impl fmt::Debug for Latches {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Latches")
-            .field("on", &self.on.keys().collect::<Vec<_>>())
             .field("mode", &self.mode)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

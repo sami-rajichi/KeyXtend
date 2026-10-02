@@ -34,15 +34,15 @@ fn a_new_mode_keeps_what_is_latched_and_applies_from_the_next_key() {
 }
 
 #[test]
-fn latches_never_show_a_scan_code() {
+fn latches_show_neither_a_scan_code_nor_which_are_on() {
     let mut m = Latches::new(Modifiers::Release);
     m.toggle(Latch::AltGr, ALTGR);
     m.toggle(Latch::Shift, RSHIFT);
     let shown = format!("{m:?}");
-    for leak in ["54", "36", "57400", "E038", "Scan"] {
+    for leak in ["54", "36", "57400", "E038", "Scan", "Shift", "AltGr", "on"] {
         assert!(!shown.contains(leak), "{shown}");
     }
-    assert!(shown.contains("Shift") && shown.contains("AltGr") && shown.contains("Release"));
+    assert_eq!(shown, "Latches { mode: Release, .. }");
 }
 
 #[test]

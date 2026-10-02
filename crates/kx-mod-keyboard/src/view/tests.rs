@@ -210,3 +210,29 @@ fn the_list_shows_only_while_it_is_open() {
     let list = state(&none(), false, Some(&open)).list.unwrap();
     assert_eq!((list.rows.len(), list.hi, list.keys.len()), (1, 0, 1));
 }
+
+#[test]
+fn key_and_state_debug_hide_legends_lights_and_caps() {
+    let lit = KeyState {
+        legend: Legend {
+            main: "Q".into(),
+            ..Legend::default()
+        },
+        name: "Q".into(),
+        on: true,
+        ..KeyState::default()
+    };
+    assert_eq!(format!("{lit:?}"), "KeyState { .. }");
+    let state = StateView {
+        keys: BTreeMap::from([("caps".to_owned(), lit)]),
+        ..StateView::default()
+    };
+    let shown = format!("{state:?}");
+    for leak in ["caps", "Q", "true", "keys"] {
+        assert!(!shown.contains(leak), "{shown}");
+    }
+    assert!(
+        shown.starts_with("StateView { lang: ") && shown.ends_with(", .. }"),
+        "{shown}"
+    );
+}
