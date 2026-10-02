@@ -5,6 +5,8 @@ import QtQuick
 QtObject {
     // The keyboard window, whose place, plate size and Ui object the spots read.
     required property Window win
+    // The screens, each with its corner in physical pixels and size in Qt units; tests give scaled ones.
+    property var screens: Qt.application.screens
 
     // Where a `w` by `h` pop-up goes, in Qt units: above the shown keyboard with its left edge at Qt x `left`, or
     // centred when `left` is NaN; with the keyboard hidden, at the bottom centre of the main screen. Null with no screen.
@@ -40,6 +42,6 @@ QtObject {
             const inX = x >= sc.virtualX && x < sc.virtualX + sc.width * d;
             return inX && y >= sc.virtualY && y < sc.virtualY + sc.height * d;
         };
-        return Array.from(Qt.application.screens).find(holds) || null;
+        return Array.from(screens).find(holds) || null;
     }
 }

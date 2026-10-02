@@ -13,6 +13,8 @@ QtObject {
     property var bubble: null
     // How many more guard tries answer "try again", as when a window has not shown yet.
     property int again: 0
+    // Where the pointer is, in physical pixels, or null when Windows cannot say.
+    property var pointer: null
 
     // A window titled `title` asked to be lifted alone, as the call runs.
     signal lifted(string title)
@@ -62,7 +64,7 @@ QtObject {
         return note("placed");
     }
     function cursor() {
-        return "null";
+        return JSON.stringify(pointer);
     }
     function bubbleAt(x, y, corner) {
         note("bubbleAt " + corner);
