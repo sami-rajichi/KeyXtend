@@ -1,12 +1,13 @@
 //! The kernel's event bus: broadcast handlers and ordered intercept chains.
 //! No lock is held while a handler runs or drops, so handlers may call back into the bus.
 
+use crate::shared::lock;
 use kx_module_api::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, SubscriptionId};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /// The first subscription id the bus hands out.
 const FIRST_ID: u64 = 1;
@@ -97,7 +98,7 @@ impl KernelBus {
     }
 
     fn lock(&self) -> MutexGuard<'_, Handlers> {
-        self.handlers.lock().unwrap_or_else(PoisonError::into_inner)
+        lock(&self.handlers)
     }
 
     fn mint(&self) -> SubscriptionId {

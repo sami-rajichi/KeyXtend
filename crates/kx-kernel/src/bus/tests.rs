@@ -32,7 +32,7 @@ fn bus() -> Bus {
 }
 
 fn push(log: &Log, tag: &'static str) {
-    log.lock().unwrap_or_else(PoisonError::into_inner).push(tag);
+    lock(log).push(tag);
 }
 
 fn seen(log: &Log) -> Vec<&'static str> {
@@ -175,7 +175,7 @@ fn an_interceptor_may_publish_and_unsubscribe_then_stop() {
         .add_interceptor(0, move |trace: &mut Trace| {
             trace.0.push("re-enter");
             inner.publish(&Ping).unwrap();
-            own.lock().unwrap_or_else(PoisonError::into_inner).take();
+            lock(&own).take();
             Flow::Stop
         })
         .unwrap();
@@ -215,7 +215,7 @@ fn a_handler_may_subscribe_and_the_new_handler_waits_for_the_next_publish() {
     let (inner, keep, hits) = (bus.clone(), Arc::clone(&slot), Arc::clone(&count));
     let _adder = bus
         .subscribe(move |_: &Ping| {
-            let mut keep = keep.lock().unwrap_or_else(PoisonError::into_inner);
+            let mut keep = lock(&keep);
             if keep.is_none() {
                 let hits = Arc::clone(&hits);
                 *keep = Some(inner.subscribe(move |_: &Ping| tick(&hits)).unwrap());
@@ -237,7 +237,7 @@ fn a_handler_may_drop_its_own_subscription() {
     let sub = bus
         .subscribe(move |_: &Ping| {
             tick(&hits);
-            own.lock().unwrap_or_else(PoisonError::into_inner).take();
+            lock(&own).take();
         })
         .unwrap();
     *slot.lock().unwrap() = Some(sub);

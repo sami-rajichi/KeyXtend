@@ -1,12 +1,13 @@
 //! The local, redacted log: this run and the one before, never with typed text.
 //! The app installs `subscriber` over a `LogFile`; nothing here sets a global default.
 
+use crate::shared::lock;
 use kx_module_api::{REDACTED_MARKER, is_hidden};
 use kx_settings::Files;
 use std::fmt::{self, Write as _};
 use std::fs::{self, File};
 use std::io::{self, Write};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard};
 use tracing::Subscriber;
 use tracing::field::Field;
 use tracing::level_filters::LevelFilter;
@@ -207,7 +208,7 @@ pub struct LogWriter<'a>(&'a Mutex<Sink<File>>);
 
 impl LogWriter<'_> {
     fn sink(&self) -> MutexGuard<'_, Sink<File>> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+        lock(self.0)
     }
 }
 
