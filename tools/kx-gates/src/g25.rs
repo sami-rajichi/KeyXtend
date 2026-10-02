@@ -39,7 +39,7 @@ fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
 }
 
 /// True once the app's focus shows `layout`.
-fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
+pub(crate) fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
     until(ctx, || langkey::layout_of(app.hwnd) == Some(layout))
 }
 

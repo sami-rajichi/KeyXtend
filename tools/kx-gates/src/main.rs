@@ -24,6 +24,8 @@ mod facetools;
 mod featcfg;
 mod g1;
 mod g10;
+mod g10keys;
+mod g10steps;
 mod g11;
 mod g12;
 mod g12pts;

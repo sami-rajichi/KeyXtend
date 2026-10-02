@@ -1,17 +1,18 @@
 //! G10 screen readers, the automatic part (roadmap G10): every key is found by UI Automation, named (character keys
-//! after the layout in front, ADR-0020) and pressable, and Invoke on each, as Narrator and NVDA press, types into
-//! target-window; Narrator and NVDA themselves are the owner's.
+//! after the layout in front, ADR-0020) and pressable. Invoke, as Narrator and NVDA press, then activates every key:
+//! the character keys type into target-window, and the others send their keys there (`g10steps`), leaving the window
+//! and its layout as they were. Narrator and NVDA themselves are the owner's.
 #![cfg(windows)]
 
 use kx_module_api::ports::LayoutSource;
 use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
 
-use crate::apps::{self, Ctx};
+use crate::apps::{self, Ctx, Opened};
 use crate::keymap::{KeyRead, Reader};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{board, launch, tlog, walk};
+use crate::{board, g10steps, launch, tlog, walk};
 
 /// What the walk found wrong, by board key.
 #[derive(Debug, Default, PartialEq, serde::Serialize)]
@@ -71,8 +72,8 @@ fn press_all(ctx: &Ctx, kb: &Keyboard, ids: &[String]) -> Result<String, String>
     Ok(tlog::decode(&tlog::parse(&log)))
 }
 
-/// Walks and presses the keyboard with target-window in front, in its layout.
-fn check(ctx: &Ctx, kb: &Keyboard) -> Result<Value, String> {
+/// Walks and presses the keyboard with `target`, target-window, in front, in its layout.
+fn check(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     let follow_ms = product::follow_ms(ctx.cfg.timing.poll_ms)?;
     sleep_ms(follow_ms);
     let layout = WinLayouts
@@ -84,13 +85,15 @@ fn check(ctx: &Ctx, kb: &Keyboard) -> Result<Value, String> {
     let (ids, expected) = to_press(&want);
     let got = press_all(ctx, kb, &ids)?;
     let typed = typed_all(&expected, &got);
+    let keys = g10steps::run(ctx, kb, target)?;
     let names: Vec<(&str, &str)> = read
         .iter()
         .map(|k| (k.id.as_str(), k.name.as_str()))
         .collect();
+    let pass = found.clean() && typed && keys["ok"] == true;
     Ok(json!({
         "layout": layout.to_string(), "found": found, "pressed": ids.len(), "typed_ok": typed,
-        "expected": expected, "got": got, "names": names, "follow_ms": follow_ms, "pass": found.clean() && typed,
+        "expected": expected, "got": got, "keys": keys, "names": names, "follow_ms": follow_ms, "pass": pass,
     }))
 }
 
@@ -98,7 +101,7 @@ fn check(ctx: &Ctx, kb: &Keyboard) -> Result<Value, String> {
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kb = Keyboard::find()?;
     let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
-    let out = check(ctx, &kb);
+    let out = check(ctx, &kb, &target);
     let left_open = apps::clean_up(ctx, target);
     let mut v = out.map_err(|e| format!("{e}; left open: {left_open:?}"))?;
     v["gate"] = json!("G10");

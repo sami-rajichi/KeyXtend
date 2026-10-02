@@ -5,11 +5,12 @@
 use kx_platform_windows::com::Com;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
-use windows::Win32::System::Variant::VARIANT;
+use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
-    IUIAutomationInvokePattern, TreeScope_Descendants, UIA_AutomationIdPropertyId,
+    IUIAutomationInvokePattern, ToggleState_On, TreeScope_Descendants, UIA_AutomationIdPropertyId,
     UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
+    UIA_ToggleToggleStatePropertyId,
 };
 use windows::core::{BSTR, Interface};
 
@@ -118,20 +119,42 @@ impl Reader {
         reason = "UI Automation calls on objects this client made."
     )]
     pub fn invoke(&self, hwnd: HWND, id: &str) -> Result<(), String> {
+        let el = self.find(hwnd, id)?;
+        // SAFETY: plain calls on a live element; a missing pattern gives an error.
+        unsafe {
+            let pattern = el.GetCurrentPattern(UIA_InvokePatternId).map_err(err)?;
+            let invoke: IUIAutomationInvokePattern = pattern.cast().map_err(err)?;
+            invoke.Invoke().map_err(err)
+        }
+    }
+
+    /// Whether the button with id `id` inside window `hwnd` reads as on, as a screen reader reads a latched key;
+    /// none when it has no toggle state.
+    #[allow(unsafe_code, reason = "A UI Automation call on a live element.")]
+    pub fn toggled(&self, hwnd: HWND, id: &str) -> Result<Option<bool>, String> {
+        let el = self.find(hwnd, id)?;
+        // SAFETY: a plain property read on a live element.
+        let v =
+            unsafe { el.GetCurrentPropertyValue(UIA_ToggleToggleStatePropertyId) }.map_err(err)?;
+        Ok(toggle_state(&v))
+    }
+
+    /// The first element with UI Automation id `id` inside window `hwnd`.
+    #[allow(
+        unsafe_code,
+        reason = "UI Automation calls on objects this client made."
+    )]
+    fn find(&self, hwnd: HWND, id: &str) -> Result<IUIAutomationElement, String> {
         let want = VARIANT::from(BSTR::from(wanted(id)?));
-        // SAFETY: plain calls on live UI Automation objects; a missing button or pattern gives an error.
+        // SAFETY: plain calls on live UI Automation objects; a missing button gives an error.
         unsafe {
             let cond: IUIAutomationCondition = self
                 .0
                 .CreatePropertyCondition(UIA_AutomationIdPropertyId, &want)
                 .map_err(err)?;
-            let el = self
-                .root(hwnd)?
+            self.root(hwnd)?
                 .FindFirst(TreeScope_Descendants, &cond)
-                .map_err(err)?;
-            let pattern = el.GetCurrentPattern(UIA_InvokePatternId).map_err(err)?;
-            let invoke: IUIAutomationInvokePattern = pattern.cast().map_err(err)?;
-            invoke.Invoke().map_err(err)
+                .map_err(err)
         }
     }
 
@@ -141,6 +164,12 @@ impl Reader {
         // SAFETY: a plain call; a dead window gives an error.
         unsafe { self.0.ElementFromHandle(hwnd) }.map_err(err)
     }
+}
+
+/// The toggle state in property value `v`: on or off, or none when the element has no Toggle pattern.
+fn toggle_state(v: &VARIANT) -> Option<bool> {
+    let state = (v.vt() == VT_I4).then(|| i32::try_from(v).ok()).flatten()?;
+    Some(state == ToggleState_On.0)
 }
 
 /// A UI Automation error as text.
@@ -203,6 +232,19 @@ mod tests {
             at(24),
             Some(70),
             "the box comes from the keyboard, not from a key map"
+        );
+    }
+
+    #[test]
+    fn a_toggle_state_reads_as_on_or_off_and_a_button_without_one_as_none() {
+        use windows::Win32::UI::Accessibility::{ToggleState_Off, ToggleState_On};
+        assert_eq!(toggle_state(&VARIANT::from(ToggleState_On.0)), Some(true));
+        assert_eq!(toggle_state(&VARIANT::from(ToggleState_Off.0)), Some(false));
+        assert_eq!(toggle_state(&VARIANT::default()), None, "no Toggle pattern");
+        assert_eq!(
+            toggle_state(&VARIANT::from(true)),
+            None,
+            "not a toggle state"
         );
     }
 

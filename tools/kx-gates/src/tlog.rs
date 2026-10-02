@@ -1,7 +1,7 @@
 //! Reads the target-window log, whose format is in `kx_target_window::log`, after the last start.
 #![cfg(windows)]
 
-use kx_target_window::log::{COMMENT, FOCUS_LOST, LAYOUT_KEPT, MOUSE, Press, SEP, START};
+use kx_target_window::log::{COMMENT, FOCUS_LOST, KEY, LAYOUT_KEPT, MOUSE, Press, SEP, START};
 
 /// Radix of the logged UTF-16 units.
 const HEX: u32 = 16;
@@ -87,6 +87,39 @@ fn mouse_fields(rest: &str) -> Option<Mouse> {
     Some(Mouse { press, us, x, y })
 }
 
+/// One logged key going down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyDown {
+    /// QPC time in microseconds.
+    pub us: i64,
+    /// The virtual key.
+    pub vk: u16,
+    /// The scan code; an extended key's is `E0xx`.
+    pub scan: u16,
+}
+
+/// The keys logged going down since the last start; bad lines are skipped.
+pub fn keys(log: &str) -> Vec<KeyDown> {
+    let mut found = Vec::new();
+    for line in log.lines() {
+        if line.starts_with(START) {
+            found.clear();
+        } else if let Some(rest) = line.trim().strip_prefix(KEY) {
+            found.extend(key_fields(rest));
+        }
+    }
+    found
+}
+
+/// The fields after `# key`: µs, virtual key and scan code.
+fn key_fields(rest: &str) -> Option<KeyDown> {
+    let mut f = rest.strip_prefix(SEP)?.split(SEP);
+    let us = f.next()?.parse().ok()?;
+    let vk = u16::from_str_radix(f.next()?, HEX).ok()?;
+    let scan = u16::from_str_radix(f.next()?, HEX).ok()?;
+    Some(KeyDown { us, vk, scan })
+}
+
 /// True when target-window's last run could not put back the layout from before `--layout`.
 pub fn layout_kept(log: &str) -> bool {
     let last = log.rfind(START).map_or(log, |at| &log[at..]);
@@ -158,6 +191,14 @@ mod tests {
         assert_eq!(focus_lost(log, 200), 2);
         assert_eq!(focus_lost(log, 0), 3);
         assert_eq!(focus_lost("# start\t0\n10\t0041\n", 0), 0);
+    }
+
+    #[test]
+    fn reads_key_presses_after_the_last_start() {
+        let log = "# start\t0\n# key\t5\t0D\t001C\n# start\t10\n\
+                   # key\t20\t26\tE048\r\n30\t0041\n# key\t21\tZZ\t0001\n# key\t22\t1B\n";
+        let at = |us, vk, scan| KeyDown { us, vk, scan };
+        assert_eq!(keys(log), vec![at(20, 0x26, 0xE048)]);
     }
 
     #[test]

@@ -26,6 +26,10 @@ pub struct G10 {
     pub press_gap_ms: u64,
     /// Wait for the last character to reach target-window, in ms.
     pub drain_ms: u64,
+    /// Wait after each key step for its keys to reach target-window, in ms.
+    pub step_wait_ms: u64,
+    /// The send key pressed after each modifier latches, so the modifier goes out with it.
+    pub probe: String,
 }
 
 /// G11 settings: the scales the owner sets, one run each.
@@ -66,13 +70,21 @@ pub struct G26 {
 
 /// Refuses settings that could pass with nothing checked.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
-    let (g9, g11, g13, g26) = (&c.g9, &c.g11, &c.g13, &c.g26);
+    let (g9, g11) = (&c.g9, &c.g11);
     if g9.put_away.is_empty() || g9.bring_back.is_empty() {
         return Err("g9.put_away and g9.bring_back must name a button".to_string());
     }
+    let roles = crate::board::roles()?;
+    crate::g10keys::probe_scan(&roles, &c.g10.probe).map_err(|e| format!("g10.probe: {e}"))?;
     if g11.scales.is_empty() || !g11.slack_px.is_finite() || g11.slack_px < 0.0 {
         return Err("g11 needs scales and a finite slack of 0 px or more".to_string());
     }
+    check_g13(&c.g13)?;
+    check_g26(&c.g26)
+}
+
+/// Refuses G13 settings that could pass with nothing checked.
+fn check_g13(g13: &G13) -> Result<(), String> {
     if g13.watch_secs == 0 || g13.changes == 0 {
         return Err("g13.watch_secs and g13.changes must be above 0".to_string());
     }
@@ -86,6 +98,11 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     if g13.changes < g13.needs.len() {
         return Err("g13.changes must leave room for each of g13.needs".to_string());
     }
+    Ok(())
+}
+
+/// Refuses G26 settings that could pass with nothing checked.
+fn check_g26(g26: &G26) -> Result<(), String> {
     if g26.languages.is_empty() || g26.clicks == 0 {
         return Err("g26 needs languages and clicks".to_string());
     }
@@ -118,9 +135,10 @@ mod tests {
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 10] = [
+        let bad: [fn(&mut GatesConfig); 11] = [
             |c| c.g9.put_away.clear(),
             |c| c.g9.bring_back.clear(),
+            |c| c.g10.probe = "shift".into(),
             |c| c.g11.scales.clear(),
             |c| c.g11.slack_px = -1.0,
             |c| c.g11.slack_px = f64::INFINITY,
