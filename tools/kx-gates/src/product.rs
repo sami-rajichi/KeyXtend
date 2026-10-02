@@ -1,5 +1,5 @@
-//! The product app the gates G2-G4, G8-G13, G25, G26 and `close` aim at: its windows, found by program, its keyboard,
-//! and the running copy's data files and keyboard settings, read without changing them.
+//! The product app the gates G2-G4, G8-G11, G13, G25, G26 and `close` aim at: its windows, found by program, its
+//! keyboard, and the running copy's data files and keyboard settings, read without changing them.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -12,7 +12,7 @@ use kx_settings::{Files, peek, peek_section};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::keymap::{KeyMap, Reader};
-use crate::{board, win};
+use crate::{apps, board, win};
 
 /// The product's name on the command line; its program is this name and the system's program suffix.
 pub const NAME: &str = "keyxtend";
@@ -22,10 +22,7 @@ const APP_MANIFEST: &str = "../../apps/keyxtend/Cargo.toml";
 
 /// True when `path` is the product's program, whatever its folder and letter case.
 pub fn is_ours(path: &str) -> bool {
-    let program = format!("{NAME}{EXE_SUFFIX}");
-    Path::new(path)
-        .file_name()
-        .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(&program))
+    apps::same_program(path, &format!("{NAME}{EXE_SUFFIX}"))
 }
 
 /// The longest a keyboard with `settings` takes to show the layout of the app in front: one relabel period and one
@@ -51,9 +48,10 @@ fn keyboard_in(file: Option<&toml::Table>) -> Result<KeyboardSettings, String> {
     peek_section(file, ID, &SPEC).map_err(|e| format!("the keyboard's defaults: {e}"))
 }
 
-/// The keyboard settings of the product at `program`, read without changing its files.
+/// The keyboard settings of the product at `program`, read without changing its files; an error when its data
+/// folder cannot be named, so a gate never acts on the defaults by mistake.
 fn keyboard_of(program: &Path) -> Result<KeyboardSettings, String> {
-    let file = files(program).ok().and_then(|f| peek(&f));
+    let file = peek(&files(program)?);
     keyboard_in(file.as_ref())
 }
 
@@ -200,6 +198,19 @@ mod tests {
         let program = dir.path().join(format!("{NAME}{EXE_SUFFIX}"));
         assert_eq!(files(&program), Ok(want));
         assert_eq!(keyboard_of(&program).map(|s| s.relabel_ms), Ok(700));
+    }
+
+    #[test]
+    fn a_program_whose_data_folder_cannot_be_named_is_an_error_not_the_defaults() {
+        let bare = Path::new("keyxtend.exe");
+        assert!(
+            files(bare).is_err(),
+            "no folder to read the settings beside"
+        );
+        assert!(
+            keyboard_of(bare).is_err(),
+            "G25 must not click with defaults"
+        );
     }
 
     #[test]

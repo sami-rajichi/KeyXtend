@@ -109,8 +109,8 @@ fn attach_class<'a>(name: &str, app: &'a AppConfig) -> Result<&'a str, String> {
         .ok_or_else(|| format!("--attach needs a class in [apps.{name}]"))
 }
 
-/// True if the program at `image` has the file name of `exe`, ignoring case.
-fn same_program(image: &str, exe: &str) -> bool {
+/// True if the program at `image` has the file name of `exe`, ignoring case; the one rule the gates match programs by.
+pub(crate) fn same_program(image: &str, exe: &str) -> bool {
     let name = |p: &str| {
         Path::new(p)
             .file_name()
