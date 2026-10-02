@@ -13,4 +13,5 @@ mod rig;
 mod size;
 mod typing;
 mod views;
+mod waits;
 mod window;
