@@ -1,8 +1,8 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-01
-- **Status:** Draft
+- **Last review:** 2026-10-02
+- **Status:** Reviewed
 - **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the one running copy with its command window (`instance`, `hidden`), and the tray icon with its window and front-window hook (`tray`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
@@ -16,7 +16,7 @@
 | Program folder and per-user folder paths | Sensitive (the per-user path holds the account name) | Memory only | N/A | For the run |
 | Clock readings | Public | Memory only | N/A | Not kept |
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
-| Typed text and the keys it becomes | Secret (may be a password) | Memory only, as `Redacted` text and key events for one send | N/A | Dropped after the send |
+| Typed text and the keys it becomes | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted` text and key events for one send; not zeroised (see Accepted) | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
 | Installed layouts, their language facts and what each key types | Public (the same for every user of that layout; not typed text) | Memory only; returned to the caller | N/A | Not kept |
 | Caps Lock state and the layout of the app in front | Public | Memory only | N/A | Not kept |
@@ -70,22 +70,33 @@
 - **Tampering (topmost):** another program's `SetWindowPos` that drops a guarded window out of the topmost band (`HWND_NOTOPMOST`, `HWND_BOTTOM`, or after a plain window) is undone at once: the guard lifts it back, with the windows it owns, without activating it. Settings is not guarded, so it can still go behind other windows.
 - **Denial of service (click-through):** only a window that let clicks through when first guarded (tips, shadows) keeps click-through; on any other, the guard refuses `WS_EX_TRANSPARENT`, so no program can make the keyboard click-through.
 - **Spoofing (command window):** the command window is message-only and reachable from this session only: Windows keeps window messages inside one desktop, and UIPI drops posts from a lower integrity level. A post does not name its sender, so the window acts only on a code from the fixed table (`show`, `quit`); a program that can post there runs as this user at our level and could end the process anyway.
-- **Denial of service (UI parts):** a panic in a look or command callback is caught before it reaches Windows, and the next change or command is still heard. Another program's `WM_CLOSE`, or a `WM_QUIT` it posts to the window or to its thread, cannot end the command or watch window: the loop ends only on `stop`'s `WM_QUIT`, sent after `stop` sets its flag. Dropping a claim or a watch waits for a running callback, so a callback must never wait for the thread that drops it. A flood of look broadcasts costs one reading each and calls back only on a real change; a failed OS read gives a safe default, never a panic.
+- **Denial of service (UI parts):** a panic in a look or command callback is caught before it reaches Windows, and the next change or command is still heard. Another program's `WM_CLOSE`, or a `WM_QUIT` it posts to the window or to its thread, cannot end the command or watch window: the loop ends only on `stop`'s `WM_QUIT`, sent after `stop` sets its flag. Dropping a claim or a watch waits for its thread, and so for a running callback, unless its quit message could not be posted; a callback must never wait for the thread that drops it. A flood of look broadcasts costs one reading each and calls back only on a real change; a failed OS read gives a safe default, never a panic.
 - **Spoofing (tray):** the tray window takes the taskbar's callback and `TaskbarCreated` from any program in the session, which UIPI would otherwise drop from below our level; a forged message can only open our own menu or add our icon again. The front-window hook reads class names only, never titles or content, and skips our own windows.
 - **Denial of service (tray):**
   - A panic in the tray listener is caught before it reaches Windows.
   - Adds and changes run from the icon's own queue and no lock is held during a taskbar call, so a message that arrives inside the call cannot deadlock the thread, and neither `show` nor `set` waits on the taskbar: a hung Explorer stalls only the icon's thread, never the keyboard. A change queued behind an add, or behind a taskbar restart, follows the add.
   - The icon's thread deletes the icon as its window ends, after any add it had queued, so no dead icon stays behind while the app runs.
+  - The front-window hook, the only hook in P3, runs out of context with our process skipped; it reads one class name and queues a wake inside `catch_unwind`, so it cannot stall anyone's input.
 - **Elevation (libraries):** `dll::pin` limits libraries named without a folder to the app's folder and System32, so the working folder and `PATH` can no longer lend one to the uiAccess process. It does not cover the libraries the exe imports, which load before `main`; those must sit beside the exe.
 - **Elevation (focus):** `give_back` moves the focus only from one of our windows to another app's live window. The adapter never asks for the focus for our own windows (ADR-0013); only the spike and the test tools keep such a request.
-- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, checked exactly only on the golden layouts, where dead keys are known (see Accepted): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, or Windows-allocated strings freed once.
+- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, checked exactly only on the golden layouts, where dead keys are known (see Should fix): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, Windows-allocated strings freed once, the message structs Windows passes our window procedure, or the procedure kept in our window's property (see Accepted).
 
 ## Findings
 ### Must fix (blocks Definition of Done)
-None.
+Done (P3 review): typed text was classed Secret, which asks for zeroising that the send path does not do. It is Sensitive, as in the keyboard and `kx-ui` notes, and Accepted says why it is not zeroised.
 
 ### Should fix (tracked issue)
-None.
+Dead key then Space (P14, fix before beta): a dead key is checked by the character `ToUnicodeEx` gives for it alone, which holds on the EN, FR and AR golden layouts. On others a dead key and Space may type another character (Swiss French ¨ gives ", Czech ˙ gives ·), so the Keys route may type that instead (`docs/items/P14.md`).
+
+A cut send after a dead key (P14): after a cut Keys-route send that follows a dead key's press, `deliver` releases the keys still down but never sends the Space, so the dead key stays pending (`docs/items/P14.md`).
+
+Uncapped lift-backs (P13): the guard lifts a dropped window back every time, so a program that keeps dropping our window holds it in a loop; each lift is one `SetWindowPos` that never moves or activates it. The cap needs a `[ui]` setting, which P13 adds (`docs/items/P13.md`).
+
+A stale focus token (P13): `give_back` checks only that the noted window lives, and the token is taken once at start, so hours later a reused handle could get the focus (`docs/items/P13.md`).
+
+Text of any length (P7): `InputInjector::text` builds two inputs per UTF-16 unit in one batch, whatever the length. P3 sends one key's text, at most 32 units; cap it from the settings schema before P7 types words (`docs/items/P7.md`).
+
+Done (P3, ed424ef): the tray's class reader sliced its buffer by Windows' count inside a callback, where a panic would abort the uiAccess process. It now reads with `get`, as the other readers do.
 
 ### Accepted (with reason)
 `QueryPerformanceCounter` cannot report failure through `Clock::now`; Windows XP and later never fail it, so the clock reads the result as given.
@@ -97,8 +108,6 @@ Another program can put our tag on its own input so that our hooks skip it. The 
 `ToUnicodeEx`'s no-state-change flag needs Windows 10 1607 or later, and builds before it are long out of support; on them, reading a dead key could leave it waiting in our own thread only.
 
 `caps_on` reads Caps Lock with `GetKeyState`, the spike's method; it is this thread's view of the toggle, so the manual check of the non-activating keyboard must confirm it follows the key.
-
-A dead key is checked by the character `ToUnicodeEx` gives for it, since its no-state-change flag cannot read the dead key and Space as a pair. That holds for the EN, FR and AR golden layouts; on others a dead key and Space may type another character (Swiss French ¨ gives ", Czech ˙ gives ·), so the Keys route may type that instead.
 
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.
 
@@ -112,4 +121,8 @@ DWM may draw Mica and Acrylic as a solid colour on an inactive window, and the k
 
 A monitor whose DPI Windows cannot give reads as 96, so a window there may be sized as if unscaled until the next reading.
 
-The guard lifts a dropped window back every time, with no cap, so a program that keeps dropping our window keeps it in a loop of drops and lifts. Each lift is one `SetWindowPos` that never moves or activates the window; a cap needs a `[ui]` setting, which P13 adds (`docs/items/P13.md`).
+The guard calls the procedure kept in its window property (`KeyXtend.Guard`). Another process's `SetPropW` passes UIPI only at our integrity level or above, and such a program can already write into our process.
+
+`inject::send`, `input`, `send_keys` and `vk_key` are public for the gate tools, and `send` takes raw inputs with any tag and no recovery. Modules cannot depend on the adapter (tidy), and the app never calls them.
+
+Typed text is not zeroised: one click's text, at most 32 UTF-16 units, lives for one send, and Windows keeps its own copies in the input queue.

@@ -1,7 +1,7 @@
 # Security note: kernel, settings and log
 
 - **Owner:** product owner
-- **Last review:** 2026-09-29 (P2); the P3 lines await P3's review.
+- **Last review:** 2026-10-02 (P3)
 - **Status:** Reviewed
 - **Scope:** `kx-module-api`, `kx-kernel` (lifecycle, order, bus, registry, grants, `Kernel`, log), `kx-settings`, `kx-platform`. They run inside the uiAccess `keyxtend` process from P3 on. The test crates (`kx-platform-fake`, `kx-test-support`) and the tools never ship.
 
@@ -24,7 +24,8 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES`; repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` keys of at most `MAX_KEY_CHARS` characters; nesting capped by the `toml` parser | Property tests only (see Should fix) |
+| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES`; repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` keys of at most `MAX_KEY_CHARS` characters; nesting capped at 80 levels (toml's default) | Property tests only (see Should fix) |
+| A later copy's and the gates' read (`peek`, `peek_section`) | The same size cap; it never repairs, moves or writes the file. `peek_section` checks a section as the store does: a bad value gives its default, and a fault gives the defaults | `MAX_FILE_BYTES` | Unit tests |
 | `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from `MIN_LOG_MB` to `MAX_LOG_MB`; no empty ids in `disabled` | As above | Property tests only |
 | Module code (validators, migrations, `start`, `stop`, bus handlers) | Each call runs inside `catch_unwind`; a panic fails that module alone | N/A | N/A |
 
@@ -58,6 +59,7 @@
 
 ### Should fix (tracked issue)
 - A fuzz target for `Store::load` and the repair path (needs a nightly toolchain, so it waits for the owner's yes to install it). Until then, property tests cover repair and ordering.
+- Done (P3, acf5816 and a22eb92): a file nested past toml's limit reads as damaged, never a stack overflow that would abort the uiAccess process at every start. Tidy D6 refuses any package that turns on toml's `unbounded` feature, which feature unification would spread to the whole workspace.
 - Done (P3): the app installs a quiet panic hook that logs only the place, never the payload (`keyxtend.md`).
 - Done (P3): redaction works by field name only, so text formatted into a log message would print in clear; typed text stays in `Redacted<T>`, and `kx-review` check 4 refuses such a `tracing` call on an input path.
 
@@ -65,3 +67,5 @@
 - Settings and logs are not encrypted: in P2 they hold no Secret or Sensitive data. ADR-0010 applies when a module stores such data.
 - A same-user program can edit the settings file. It can already act as the user; the file is fully validated, so the worst case is a reset setting and a notice.
 - Containment needs unwinding: no build profile may set `panic = "abort"` (ARCHITECTURE.md).
+- A same-user program can turn `settings.toml`, its copies or `logs` into a link or junction. The app then reads and writes with the user's own rights, which that program already has; uiAccess gives no extra file access.
+- A settings path that blocks a read (a link to a pipe, a held oplock) stalls start-up before any window. It is no worse than a same-user program editing the file.

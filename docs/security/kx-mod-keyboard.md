@@ -1,8 +1,8 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-01
-- **Status:** Draft
+- **Last review:** 2026-10-02
+- **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
 ## Capabilities
@@ -17,34 +17,43 @@
 |---|---|---|---|---|
 | `[keyboard]` settings: size, place, modifiers mode, language-key style, bubble corner, `key_apps` | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
 | The board: rows, widths, scan codes, roles | Public | Compiled into the app (`board.toml`) | No | The build |
-| The text of each click, built from the layout table | Sensitive (typed text) | Memory only, as `Redacted<String>`, until the injector takes it | No | One click |
+| The text of each click, built from the layout table | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted<String>`, until the injector takes it; not zeroised (`kx-platform-windows.md`) | No | One click |
+| Typing state: the latched modifiers and the dead-key wait | Sensitive together with the clicks around it (the latches alone show on screen and to screen readers) | Memory only; kept across a module restart | No | Until a click lets go of it, or the app quits |
 | The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
 
-Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. The debug output of a `Route` hides its keys and text, and that of `Typing` its latches and dead-key wait, since a run of clicks would show what was typed.
+Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text and legends (`Route`, `Plan`, `Legend`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`), since a run of clicks would show what was typed (ae6f192, d3b925e).
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite, inside `size_min..=size_max`, step above 0, `relabel_ms` within `RELABEL_MS`; no blank app names | The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
+| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite; `size_min` and `size_max` within `SIZE_FLOOR` (0.8, where key cells on the 31 px row stay at least 24 px apart, WCAG 2.2 SC 2.5.8 through its spacing exception) and `SIZE_CEILING` (4.0); `size` and the rising presets inside `size_min..=size_max`, the step above 0 and no wider than that range; `relabel_ms` from 50 to 10,000 ms (`RELABEL_MS`); no blank app names | Checked at load: a refused value goes back to its default with the `settings-reset` notice. The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
 | `board.toml` | Compiled in, never read from disk; `deny_unknown_fields`, rows span the grid, whole columns, unique ids, roles fit; a broken board stops the module with an error, never a panic | Fixed at build time | Property tests |
 | Screens and pointer points from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics | — | Property tests |
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
-| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests |
+| Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** no IPC or network.
-- **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). A hand-edited place off every screen brings the keyboard back to the bottom centre.
+- **Spoofing:** no IPC or network. A key acts on a click or a UI Automation Invoke from any program UIPI lets through, and the face cannot tell who sent it; the P3 manual check confirms that a normal program's click and Invoke type nothing in the signed uiAccess build (`docs/items/P3.md`).
+- **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). Sizes stop at `SIZE_FLOOR` and `SIZE_CEILING`, so a hand-edited size can neither shrink the keys past clicking nor open the keyboard off every screen, and a place off every screen brings the keyboard back to the bottom centre.
 - **Logging / repudiation:** the module never logs. Typed text that reached a log through a field named for it is redacted (the app's log test), and `kx-review` check 4 refuses a `tracing` call on an input path that could carry it.
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
-- **Denial of service:** a size or time of zero or not-a-number is refused, so nothing divides by zero or spins, and a relabel time past its ceiling is refused, so the labels never stall. A stale click is never replayed, so a lagging table cannot loop.
-- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own.
+- **Denial of service:**
+  - A size or time of zero or not-a-number is refused, so nothing divides by zero or spins; a relabel time or size past its ceiling is refused, so the labels never stall and the keyboard never opens far off every screen.
+  - A stale click is never replayed, so a lagging table cannot loop.
+  - A click holds the face's lock while it sends, but no OS call on that path sends a message to another window, so a hung app cannot stall a click.
+- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own. The face service itself has no capability gate (see Should fix).
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier.
 
 ## Findings
 ### Must fix (blocks Definition of Done)
-- None.
+- **Who can press a key (manual check):** only UIPI keeps a normal program from making the uiAccess keyboard type into an admin window, since a key acts on any click or Invoke Windows lets through. The P3 manual check confirms it in the signed build (`docs/items/P3.md`); if a normal program can type, P3 is not done.
+- Done (P3, c163124 and 5dcce0e): `size_max`, `size` and `size_step` had no ceiling, so a hand-edited `size_max = 1000` opened the keyboard off every screen on each start. `SIZE_CEILING` and `SIZE_FLOOR` now bound every size at load.
 ### Should fix (tracked issue)
-- None.
+- **The face has no capability gate (P7):** `KeyboardFaceKey` carries none, yet a `Tap` types, so any module that requires the face types without `InjectInput`. Today only `ui` requires it (`docs/items/P7.md`).
+- Done (P3, cc31ec9): the dead-key wait had no property test; a run of clicks on French AZERTY now pins how the wait starts, ends and stays, and that each Unicode send equals the key's legend without its ◌.
 ### Accepted (with reason)
 - **A front layout that is not installed:** the table shown stands, so a character key sent as a scan code types in the app's own layout and may not match its legend. Telling the user is later work; nothing is typed that the user did not click.
+- **`AltGr` as Right Alt:** on a layout without `AltGr` characters, `AltGr` is Right Alt, so a character key runs an Alt shortcut (such as Alt+Y on a dialog) while its legend shows the letter. Ctrl, Alt and Win latches do the same and the key stays lit, as a physical right Alt does.
+- **Check, then send:** the stale check and the send are separate OS reads, so a layout switch in the microseconds between them types in the new layout. Only the user's own hotkey or another program can switch then.
+- **The dead-key wait is a guess:** a dead key used up elsewhere leaves the wait set. The next character then goes as a key press, which the stale check keeps equal to its legend.

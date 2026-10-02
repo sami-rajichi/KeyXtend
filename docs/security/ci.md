@@ -1,7 +1,7 @@
 # Security note: CI and supply chain
 
 - **Owner:** product owner
-- **Last review:** 2026-10-01 (P3: Qt on the Windows job, and the G26 job)
+- **Last review:** 2026-10-02 (P3: Qt on the Windows job, the staged app and the G26 job)
 - **Status:** Reviewed
 
 ## Capabilities
@@ -31,10 +31,12 @@
 ## Threats (STRIDE-lite)
 - **Spoofing:** a hijacked action tag. Mitigation: every action is pinned to a full commit SHA, and Dependabot opens the update PRs.
 - **Tampering:** a malicious crate. Mitigation: `deny.toml` allow-lists licences and sources, `cargo audit` checks advisories, and builds run with `--locked`. Dependabot waits 7 days before proposing a new release.
+  - cargo-deny 0.20.2 and cargo-audit 0.22.2 come pinned by version through the SHA-pinned install-action.
 - **Tampering:** a tampered Qt download or Python package. Mitigation: hash checks against Qt's server, pinned aqtinstall and py7zr, and check jobs that hold no secret and publish nothing.
 - **Logging / repudiation:** an unsigned commit on `main`. Mitigation: the `dco` job plus a branch ruleset block the merge.
 - **Information disclosure:** a pushed secret. Mitigation: GitHub push protection blocks the push before it lands, and the workflow token cannot read other repos or org secrets.
-  - A failed G26 run prints the app's log, target-window's log and the result lines. Mitigation: the app never logs typed text, and target-window holds only the gate's own test characters.
+  - A failed G26 run prints the app's log, target-window's log and the result lines. Mitigation: the app never logs typed text, and target-window holds only the gate's own test characters and keys.
+  - The Windows job builds the release app with its uiAccess manifest (`cargo xtask stage`) and uploads nothing, so no unsigned uiAccess build leaves CI.
 - **Denial of service:** a burst of pushes queues many runs. Mitigation: a new push cancels the superseded pull-request run; the G26 job stops after 60 minutes, the Qt Quick step after 10, and the rest at GitHub's standard timeout.
 - **Elevation:** template injection through `${{ }}` inside a `run:` step. Mitigation: untrusted values are passed only through `env:`, never interpolated into `run:`.
 - **Tampering:** the G26 job runs pull-request code that adds languages to the runner, starts the debug app and moves the runner's mouse. Mitigation: the runner is thrown away after the job, which holds only the read-only token and no secret.

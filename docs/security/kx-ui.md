@@ -1,15 +1,15 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-10-01
-- **Status:** Draft
+- **Last review:** 2026-10-02
+- **Status:** Reviewed
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `InputInjector`. | N/A |
-| `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). | The `ui` module fails and offers Try again; the rest keeps running. |
+| `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). The face has no capability gate, so the `ui` module, which holds no capability, types through it (see Should fix). | The `ui` module fails and offers Try again; the rest keeps running. |
 | UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
 
 ## Data handled
@@ -37,7 +37,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | System look changes and single-instance commands (adapter threads) | Queued to the Qt thread with cxx-qt's thread queue, never blocking the adapter; a second copy's Show waits until the `Ui` object is ready, and its Quit goes straight to the app's request queue | One wake per change | No |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** the QML files, fonts and icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
+- **Spoofing:** the QML files, the bundled fonts and the icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. Native's Segoe UI and Qt's glyph fallback come from Windows' font stack (`keyxtend.md`, Accepted). Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged).
 - **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key can neither split a notice nor turn it around.
@@ -56,6 +56,10 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 ### Must fix (blocks Definition of Done)
 - None.
 ### Should fix (tracked issue)
-- None.
+- **The face has no capability gate (P7):** `KeyboardFaceKey` carries none, while `FaceAction::Tap` types keys, so any module that requires the face could type. P7 decides between a dedicated capability and a read-only face before another module requires it (`docs/items/P7.md`).
+- Done (P3, 4cfa0c8 and 553fa82): a plain `Text` reads markup, and notice arguments carry setting keys from the user-writable file, so rich text could have made the uiAccess process load an image. `tests/texts/markup.rs` now fails on any QML text element that does not read plain text.
 ### Accepted (with reason)
 - The request queue to the app (Try again, Quit) has no bound: only the user's clicks and a second copy's Quit fill it, one request each, and Quit ends it.
+- Any program of the session can forge the tray's callback, which the filter lets through for the taskbar, and open our tray menu at a spot it picks. The menu holds only Show keyboard and Quit, which `keyxtend.exe --show` and `--quit` give any program anyway.
+- Qt's own messages go to the debugger channel, which a program of the session can read, never to the log file, also for a category the user-writable `qtlogging.ini` turns on. Our windows hold no typed text, and the click positions such logs could show are what that program's mouse hook sees anyway.
+- `harden_qt` warns and carries on when a Qt-prefixed name stays set. Qt reads only short fixed names, which `qunsetenv` always clears, so a name left over is never one Qt reads.

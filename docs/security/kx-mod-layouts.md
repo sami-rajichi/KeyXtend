@@ -1,8 +1,8 @@
 # Security note: kx-mod-layouts
 
 - **Owner:** product owner
-- **Last review:** 2026-09-30
-- **Status:** Draft
+- **Last review:** 2026-10-02
+- **Status:** Reviewed
 - **Scope:** `crates/kx-mod-layouts`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
 ## Capabilities
@@ -33,12 +33,12 @@ No typed text, clipboard content or secret passes through this module.
 - **Logging / repudiation:** the module never logs.
 - **Information disclosure:** the installed languages are visible to any module through `list`; they are not sensitive.
 - **Denial of service:** tables are read once per layout and labels once per list change; `refresh` reads only the list and the app in front. A source error never panics and keeps the shown layout.
-- **Elevation:** `step` and `pick` only ask the app in front through the adapter (`WM_INPUTLANGCHANGEREQUEST` on Windows) and only for installed layouts; `pick` refuses an id not in the list before asking.
+- **Elevation:** `step` and `pick` only ask the app in front through the adapter (`WM_INPUTLANGCHANGEREQUEST` on Windows) and only for installed layouts; `pick` refuses an id not in the list before asking. Both read the list under the lock and ask only after letting it go, and a step that lands on the shown layout asks nothing.
 
 ## Findings
 ### Must fix (blocks Definition of Done)
 - None.
 ### Should fix (tracked issue)
-- None.
+- **Our own window in front (P13):** with Settings in front, the keyboard follows our own thread's layout, as the adapter's `foreground` does not tell our windows apart. P13 hides Settings from the layout source (`docs/items/P13.md`); until then the keyboard only shows the layout Settings types in.
 ### Accepted (with reason)
-- Our own window in front (Settings, P13) makes the keyboard follow our own thread's layout, as the adapter's `foreground` does not tell our windows apart; the spike hid them. Showing the layout Settings types in is harmless.
+- **A misleading short name:** a hand-edited `short` value can label a language as another (`ar = "EN"`). The space bar and the legends still show the real layout, and only the user's own programs can write the file.
