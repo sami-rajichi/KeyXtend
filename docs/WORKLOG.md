@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-02 13:04 — P3: round B's second pass, a size floor and one row source
+A hand-edited `size_min` now has a floor (0.8, where every key stays a 24 px target), as `size_max` has a ceiling; a value past either goes back to its default with the reset notice, and the keyboard's defaults name both bounds. A size step that lands on another screen fits that screen, the fake sink refuses a key the defaults lack as the store does, and a `Legend`'s debug print hides what Shift and Caps Lock show. The drawn check takes the board's row from the keyboard face instead of a copy in the theme, so the accent waits for the face, and the theme README names the check's limit at the capital height. The stage errors moved into their own `StageError`.
+
 ## 2026-10-02 12:24 — P3: the look's contrast measured where the text sits
 The drawn check now places every legend as the keyboard lays it out, from the board's row, the theme's gap and its font's metrics, so it no longer asks for colours darker than readability needs. Every colour the owner approved is back unless it still fails where its text sits, and those moved by the smallest step that passes: the light rings, the Dolch teals, some legend_2 greys, and Dolch dark's hover at 4 % (Native and ET66 keep 8 %). The lit size letter is plain text with a ring-coloured pill under it, Cycle's current dot is larger, and the bubble's icon, the tray menu's icons and a hovered row's badge are checked too. The plain-text check reads one-line and quoted text elements, and the README accepts the see-through plate until Settings turns it on (P13).
 
