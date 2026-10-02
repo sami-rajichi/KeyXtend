@@ -19,7 +19,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 ## The board
 
-`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; translations (Task 15) and `kx-theme` (Task 14) give them by key id. A key's `nav` says what it does in an open list.
+`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; the `kx-ui` translations (`i18n/*.ftl`) and `kx-theme` (`tokens/icons.toml`) give them by key id. A key's `nav` says what it does in an open list.
 
 | Role | A click |
 |---|---|
@@ -97,7 +97,7 @@ The language key has three designs, by `lang_key`:
 
 With one layout installed, a click asks no step and opens no list in any design, but still closes a list left open, and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
-The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltGr` latched and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the QML fixtures (Task 17) are made from them.
+The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltGr` latched and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the `kx-ui` QML test fixtures are made from them.
 
 ## Settings (`[keyboard]`, version 1)
 

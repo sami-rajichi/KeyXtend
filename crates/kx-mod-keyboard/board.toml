@@ -20,13 +20,13 @@ top_gap_px = 4.0
 dpad = { cell = [1, 2, 2, 4], units = 2.44, later = true }
 
 # Main rows, top to bottom: named keys with their width in units, kind (colours), scan code (0xE0xx is extended) and role,
-# and runs of one-unit character keys by scan code. A role says what a click does: "send" its scan code, "caps",
-# { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" }, "lang", or "later" (dimmed, coming in a later version).
-# `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter" or
-# "esc"; such a click goes to the panel, never to the app, and every other key types as usual.
-# Row 4 is ISO: a short left Shift and the key 0x56 (FR < >, AR |) before Z, as on real French keyboards.
+# and runs of one-unit character keys by scan code.
 rows = [
+    # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
+    # "lang", or "later" (dimmed, coming in a later version).
     [
+        # `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter"
+        # or "esc"; such a click goes to the panel, never to the app, and every other key types as usual.
         { id = "esc", w = 1.0, kind = "danger", sc = 0x01, role = "send", nav = "esc" },
         { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] },
         { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E, role = "send" },
@@ -41,6 +41,7 @@ rows = [
         { chars = [0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28] },
         { id = "enter", w = 3.25, kind = "enter", sc = 0x1C, role = "send", nav = "enter" },
     ],
+    # Row 4 is ISO: a short left Shift and the key 0x56 (FR < >, AR |) before Z, as on real French keyboards.
     [
         { id = "shift", w = 1.25, kind = "mod", sc = 0x2A, role = { latch = "shift" } },
         { chars = [0x56, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] },
