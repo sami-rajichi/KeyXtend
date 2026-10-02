@@ -123,6 +123,12 @@ fn a_failed_save_is_unsaved_and_told_once() {
         [first, second],
         [Err(WriteError::Unsaved), Err(WriteError::Unsaved)]
     );
+    rig.kernel.set_enabled(A, false).unwrap();
+    rig.kernel.set_enabled(A, true).unwrap();
+    assert!(
+        rig.log.all().contains(&Did::Saw(A, NEW_LEVEL + 1)),
+        "the unsaved value holds for the run"
+    );
     assert_eq!(rig.notice_keys(), [keys::SETTINGS_UNSAVED]);
 }
 
