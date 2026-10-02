@@ -79,6 +79,18 @@ fn arabic_letters_show_the_shifted_form_only_on_the_top_row() {
 }
 
 #[test]
+fn a_legend_from_any_arabic_block_takes_the_arabic_font() {
+    // Persian's rial sign (Presentation Forms-A) and a lam-alef form (Forms-B), as a layout may type them.
+    let rial = legend(
+        &keys("\u{FDFC}", "\u{FEFB}", ""),
+        LegendMods::default(),
+        true,
+        false,
+    );
+    assert!(rial.main_ar && rial.second_ar, "{rial:?}");
+}
+
+#[test]
 fn any_mark_or_pair_of_marks_sits_on_a_dotted_circle() {
     assert_eq!(
         shown("\u{651}\u{64E}"),

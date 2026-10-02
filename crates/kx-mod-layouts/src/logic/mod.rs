@@ -3,4 +3,3 @@
 pub mod follow;
 pub mod label;
 pub mod order;
-mod script;

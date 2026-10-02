@@ -3,6 +3,7 @@
 
 use crate::latch::Latches;
 use crate::spec::Latch;
+use kx_module_api::is_arabic;
 use kx_module_api::ports::{KeyChars, Scan, Slot};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -13,8 +14,6 @@ use std::ops::RangeInclusive;
 const DOTTED_CIRCLE: char = '\u{25CC}';
 /// Arabic harakat, from fathatan to sukun.
 const HARAKAT: RangeInclusive<char> = '\u{064B}'..='\u{0652}';
-/// The Arabic block, which picks the Arabic font.
-const ARABIC: RangeInclusive<char> = '\u{0600}'..='\u{06FF}';
 
 /// True for an Arabic haraka, which sits on the letter before it.
 #[must_use]
@@ -140,12 +139,6 @@ pub fn slot(k: &KeyChars, m: LegendMods) -> Slot {
 fn is_letter(s: &str) -> bool {
     let mut it = s.chars();
     matches!((it.next(), it.next()), (Some(c), None) if c.to_lowercase().ne(c.to_uppercase()))
-}
-
-/// True when `s` has an Arabic character.
-#[must_use]
-pub fn is_arabic(s: &str) -> bool {
-    s.chars().any(|c| ARABIC.contains(&c))
 }
 
 /// `s` as drawn: marks with no letter before them, one or more, get a dotted circle to sit on.

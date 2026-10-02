@@ -6,14 +6,13 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-use kx_mod_keyboard::legend::is_arabic;
 use kx_mod_keyboard::{KeyboardSettings, MANIFEST};
-use kx_module_api::parse_as;
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable, Layouts,
     LayoutsKey,
 };
 use kx_module_api::{Capability, ServiceId, ServiceKey};
+use kx_module_api::{is_arabic, parse_as};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeLayouts, LayoutFile};
 pub use kx_test_support::host::FakeHost;
 use std::any::Any;

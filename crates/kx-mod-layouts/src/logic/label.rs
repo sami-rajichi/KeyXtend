@@ -1,7 +1,7 @@
 //! How the keyboard names a layout: the language key's short name, the space bar's parts,
 //! the direction, and whether it needs the Arabic font.
 
-use super::script;
+use kx_module_api::is_arabic;
 use kx_module_api::ports::{LangFacts, LangLabel, LayoutId};
 use std::collections::BTreeMap;
 
@@ -15,7 +15,7 @@ pub fn label(id: LayoutId, facts: &LangFacts, short: &BTreeMap<String, String>) 
         name: name_parts(facts),
         iso: facts.iso.to_ascii_lowercase(),
         rtl: facts.rtl,
-        arabic: script::is_arabic(&facts.native),
+        arabic: is_arabic(&facts.native),
     }
 }
 
