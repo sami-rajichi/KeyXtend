@@ -103,6 +103,10 @@ impl G8 {
                 "g8 presses, clicks, subscribers and publishes must be above 0".to_string(),
             );
         }
+        if self.presentmon_secs == 0 {
+            // PresentMon runs hidden as administrator, so it must stop by itself.
+            return Err("g8.presentmon_secs must be above 0".to_string());
+        }
         if self.quit_tries == 0 || self.resize_slack_px < 0 {
             return Err(
                 "g8.quit_tries must be above 0 and g8.resize_slack_px not below 0".to_string(),
@@ -185,7 +189,7 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 7] = [
+        let bad: [fn(&mut G8); 8] = [
             |g| g.memory_mb = 0.0,
             |g| g.bus_share = f64::NAN,
             |g| g.presses = 0,
@@ -193,6 +197,7 @@ mod tests {
             |g| g.quit_tries = 0,
             |g| g.resize_slack_px = -1,
             |g| g.press_key = "c-0xFFFF".into(),
+            |g| g.presentmon_secs = 0,
         ];
         for f in bad {
             let mut g = shipped();
