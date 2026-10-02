@@ -7,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 
 use kx_module_api::{Clock, Mono};
 use kx_platform_windows::QpcClock;
+use kx_target_window::layout::LayoutError;
 use kx_target_window::log::{self, Press};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
@@ -46,6 +47,13 @@ fn now_us() -> i64 {
 /// `at` as the log writes it: signed microseconds, stopping at the largest.
 fn log_us(at: Mono) -> i64 {
     i64::try_from(at.as_us()).unwrap_or(i64::MAX)
+}
+
+/// Logs `# layout-kept` when `e` left the session typing in another layout, so a gate sees it.
+pub fn note_layout(e: &LayoutError) {
+    if e.kept() {
+        log_line(&log::mark(log::LAYOUT_KEPT, now_us()));
+    }
 }
 
 /// Turns password mode on or off.
@@ -183,8 +191,8 @@ pub extern "system" fn main_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: L
         }
         WM_CLOSE => {
             // The layout goes back while the window still has the keyboard; then Windows destroys it.
-            if switch::undo().is_err() {
-                log_line(&log::mark(log::LAYOUT_KEPT, now_us()));
+            if let Err(e) = switch::undo() {
+                note_layout(&e);
             }
             // SAFETY: the default handling of a message our own window received.
             unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }

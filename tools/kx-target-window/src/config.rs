@@ -20,13 +20,16 @@ pub struct TargetConfig {
     pub font: String,
     /// Text font height in pixels.
     pub font_px: i32,
+    /// The text box's accessible name, which Narrator and NVDA read.
+    pub edit_name: String,
     /// Window width in pixels.
     pub width_px: i32,
     /// Window height in pixels.
     pub height_px: i32,
     /// Command-line switch that makes the box a single-line password box.
     pub password_arg: String,
-    /// Command-line switch, followed by an installed layout id, that switches the window to that layout.
+    /// Command-line switch, followed by an installed layout id, that switches the whole session's input language to
+    /// that layout.
     pub layout_arg: String,
 }
 
@@ -57,6 +60,12 @@ pub enum ConfigError {
         /// The key.
         key: &'static str,
     },
+    /// The password and layout switches are the same text, so every `--layout` run would be a password box.
+    #[error("{}: password_arg and layout_arg must differ", .file.display())]
+    SameSwitch {
+        /// The settings file.
+        file: PathBuf,
+    },
     /// A size is zero or negative.
     #[error("{}: {key} must be above zero", .file.display())]
     NotPositive {
@@ -82,12 +91,13 @@ pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     Ok(cfg)
 }
 
-/// Refuses an empty title, log, font or switch and a size that is not above zero.
+/// Refuses an empty title, log, font, name or switch, one text for both switches, and a size that is not above zero.
 fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
     let texts = [
         ("title", cfg.title.is_empty()),
         ("log", cfg.log.as_os_str().is_empty()),
         ("font", cfg.font.is_empty()),
+        ("edit_name", cfg.edit_name.is_empty()),
         ("password_arg", cfg.password_arg.is_empty()),
         ("layout_arg", cfg.layout_arg.is_empty()),
     ];
@@ -95,6 +105,11 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
         return Err(ConfigError::Empty {
             file: file.to_path_buf(),
             key,
+        });
+    }
+    if cfg.password_arg == cfg.layout_arg {
+        return Err(ConfigError::SameSwitch {
+            file: file.to_path_buf(),
         });
     }
     let sizes = [

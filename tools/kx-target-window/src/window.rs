@@ -22,7 +22,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
-use crate::{procs, switch};
+use crate::{name, procs, switch};
 
 /// Window class of the main window; the gate runner finds the window by its title.
 const CLASS: PCWSTR = w!("KxsTargetWindow");
@@ -56,6 +56,9 @@ pub enum StartError {
     /// The edit box could not be subclassed.
     #[error("SetWindowSubclass failed: characters would not be logged")]
     Subclass,
+    /// The text box could not be given its accessible name.
+    #[error("the text box's accessible name: {0}")]
+    Name(String),
     /// The `--layout` id is bad, not installed, or Windows did not switch to it.
     #[error(transparent)]
     Layout(#[from] LayoutError),
@@ -75,8 +78,11 @@ pub fn run() -> Result<(), StartError> {
     let main = create_main(&cfg, inst)?;
     let edit = create_edit(main, inst, password)?;
     set_font(edit, &cfg);
+    name::set(edit, &cfg.edit_name).map_err(StartError::Name)?;
     procs::focus(edit);
-    wanted.map(switch::apply).transpose()?;
+    if let Some(id) = wanted {
+        switch::apply(id).inspect_err(procs::note_layout)?;
+    }
     message_loop();
     Ok(())
 }

@@ -25,6 +25,14 @@ pub enum LayoutError {
     NotBack(LayoutId),
 }
 
+impl LayoutError {
+    /// True when the session was left typing in another layout, which the log shows as `# layout-kept`.
+    #[must_use]
+    pub fn kept(&self) -> bool {
+        matches!(self, Self::NotBack(_))
+    }
+}
+
 /// The layout named after switch `flag` in `args`; `None` when the switch is absent.
 ///
 /// # Errors
@@ -184,6 +192,17 @@ mod tests {
             let words: Vec<String> = before.into_iter().chain(after).collect();
             prop_assert_eq!(parse(&words, FLAG), Ok(Some(id)));
         }
+    }
+
+    #[test]
+    fn only_a_layout_that_did_not_come_back_is_kept_in_the_session() {
+        assert!(LayoutError::NotBack(EN).kept());
+        let others = [
+            LayoutError::Missing(FLAG.to_owned()),
+            LayoutError::NotInstalled(FR),
+            LayoutError::Refused(FR),
+        ];
+        assert!(others.iter().all(|e| !e.kept()));
     }
 
     #[test]

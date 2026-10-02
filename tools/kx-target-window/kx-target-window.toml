@@ -7,6 +7,8 @@ log = "../../target/gate-logs/target-window.log"
 # Text font and its height in pixels; Segoe UI covers Latin and Arabic.
 font = "Segoe UI"
 font_px = 24
+# The text box's accessible name, which Narrator and NVDA read.
+edit_name = "Test text"
 # Window size in pixels.
 width_px = 900
 height_px = 500

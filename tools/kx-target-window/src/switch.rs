@@ -54,7 +54,7 @@ pub fn check(id: LayoutId) -> Result<(), LayoutError> {
 ///
 /// # Errors
 /// `Refused` when the layout did not change, and the previous one is back; `NotBack` when it did not come back
-/// either. Either way the window never opens, so a gate fails at its start.
+/// either. Either way the window, already shown, closes at once, so a gate fails at its start.
 pub fn apply(id: LayoutId) -> Result<(), LayoutError> {
     let back = layout::switch(&Win32, id)?;
     *BACK.lock().unwrap_or_else(PoisonError::into_inner) = Some(back);
