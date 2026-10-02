@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-02 12:24 — P3: the look's contrast measured where the text sits
+The drawn check now places every legend as the keyboard lays it out, from the board's row, the theme's gap and its font's metrics, so it no longer asks for colours darker than readability needs. Every colour the owner approved is back unless it still fails where its text sits, and those moved by the smallest step that passes: the light rings, the Dolch teals, some legend_2 greys, and Dolch dark's hover at 4 % (Native and ET66 keep 8 %). The lit size letter is plain text with a ring-coloured pill under it, Cycle's current dot is larger, and the bubble's icon, the tray menu's icons and a hovered row's badge are checked too. The plain-text check reads one-line and quoted text elements, and the README accepts the see-through plate until Settings turns it on (P13).
+
 ## 2026-10-02 11:25 — P3: kx-review fixes for the modules, kernel, platform and tools
 The keyboard now opens no larger than its screen: `size_max` has a ceiling, the size step and presets must fit and rise, and a size too big for the screen it lands on is shrunk for the run without being saved. Debug output hides latches and Caps Lock, both modules share one Arabic script table, a property run pins the dead-key wait and what each key types, and the bubble comes back when the keyboard module restarts while minimised. Settings refuse a key the defaults lack, a file nested too deep counts as damaged, tidy D6 bans toml's `unbounded` feature, kernel errors are logged by kind, and the fake host and sink refuse what the kernel refuses. On Windows the guard refuses kept styles that never land, the tray reports a message it cannot queue, a hidden window's loop ends once stopping, and the stage check refuses any file off its list.
 
