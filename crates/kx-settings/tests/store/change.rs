@@ -1,10 +1,27 @@
 //! Changing and saving: checked changes, changes-only text and the unsaved notice.
 
 use crate::spec::{DEFAULTS, HOLD, defaults_with, folder, open, table, with_file};
-use kx_module_api::{ModuleId, Notice, SettingsError, keys};
-use kx_settings::{Files, SaveError, StoreError, VERSION_KEY};
+use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
+use kx_settings::{Files, SaveError, Store, StoreError, VERSION_KEY};
 use std::fs;
-use toml::Value;
+use toml::{Table, Value};
+
+/// A module whose validator lets any key through.
+const LAX: ModuleId = ModuleId::new("lax");
+
+/// Accepts every table, as a validator without `deny_unknown_fields` would.
+#[allow(clippy::unnecessary_wraps, reason = "matches the validator signature")]
+fn anything(_: &Table) -> Result<(), SettingsError> {
+    Ok(())
+}
+
+/// The lax module's spec: one setting.
+static LAX_SPEC: SettingsSpec = SettingsSpec {
+    version: 1,
+    defaults: "level = 1\n",
+    migrations: &[],
+    validate: anything,
+};
 
 /// The notice for a failed save.
 fn unsaved() -> Notice {
@@ -64,6 +81,26 @@ fn set_refuses_unknown_modules_newer_sections_and_the_version_key() {
     let newer = store.set(HOLD, "max_ms", Value::Integer(900));
     assert!(matches!(newer, Err(StoreError::Newer(id)) if id == HOLD));
     assert_eq!(store.to_text().unwrap(), "[hold]\nversion = 4\n");
+}
+
+#[test]
+fn a_key_the_defaults_lack_is_refused_even_by_a_lax_validator() {
+    let (_dir, files) = folder("laxkey");
+    let (mut store, _) = Store::load(files, &[(LAX, &LAX_SPEC)]);
+    let stray = store.set(LAX, "stray", Value::Integer(2));
+    assert!(matches!(
+        stray,
+        Err(StoreError::Settings(SettingsError::Invalid(_)))
+    ));
+    assert_eq!(store.get(LAX), Some(&table("level = 1")));
+    assert!(
+        !store.needs_save(),
+        "nothing to save, as a load would reset it"
+    );
+    assert!(matches!(
+        store.set(LAX, "level", Value::Integer(2)),
+        Ok(true)
+    ));
 }
 
 #[test]

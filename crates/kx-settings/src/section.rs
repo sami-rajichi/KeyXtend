@@ -10,6 +10,9 @@ use toml::{Table, Value};
 /// A notice's arguments, as name and value.
 type Args = Vec<(&'static str, NoticeArg)>;
 
+/// Why a change was refused: it names a key the module's defaults lack.
+const NOT_A_SETTING: &str = "a key is not one of the module's settings";
+
 /// A registered module's settings.
 #[derive(Debug)]
 pub(crate) struct Section {
@@ -228,7 +231,11 @@ impl Section {
     }
 
     /// Sets every key of `values` when the spec accepts them together, and says whether anything changed.
+    /// A key the defaults lack is refused, as a load's repair would reset it, whatever the validator says.
     pub(crate) fn set_all(&mut self, values: Table) -> Result<bool, SettingsError> {
+        if values.keys().any(|key| !self.defaults.contains_key(key)) {
+            return Err(SettingsError::Invalid(NOT_A_SETTING.to_owned()));
+        }
         let mut next = self.effective.clone();
         next.extend(values.clone());
         (self.spec.validate)(&next)?;

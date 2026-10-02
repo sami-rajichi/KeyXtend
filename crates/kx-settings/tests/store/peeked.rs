@@ -2,10 +2,27 @@
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
+use kx_module_api::{SettingsError, SettingsSpec, validate_as};
 use kx_settings::peek_section;
 use toml::Table;
 
-use crate::spec::{HOLD, Hold, SPEC};
+use crate::spec::{DEFAULTS, HOLD, Hold, SPEC, VERSION};
+
+/// The sample spec with its migrations lost, so the version no longer matches them.
+static GAPPED: SettingsSpec = SettingsSpec {
+    version: VERSION,
+    defaults: DEFAULTS,
+    migrations: &[],
+    validate: validate_as::<Hold>,
+};
+
+/// A spec whose own defaults do not read as `Hold`.
+static UNREADABLE: SettingsSpec = SettingsSpec {
+    version: 1,
+    defaults: "min_ms = \"x\"\n",
+    migrations: &[],
+    validate: validate_as::<Hold>,
+};
 
 /// `text` as a settings table.
 fn table(text: &str) -> Table {
@@ -60,4 +77,19 @@ fn no_section_or_one_that_does_not_read_gives_the_defaults() {
     ] {
         assert_eq!(read(Some(&table(text))), defaults, "{text}");
     }
+}
+
+#[test]
+fn an_inconsistent_spec_reads_no_section_and_gives_its_defaults() {
+    assert!(!GAPPED.is_consistent());
+    let file = table("[hold]\nversion = 3\nmin_ms = 200");
+    let h: Hold = peek_section(Some(&file), HOLD, &GAPPED).unwrap();
+    assert_eq!((h.min_ms, h.max_ms), (100, 500));
+}
+
+#[test]
+fn defaults_that_do_not_read_are_an_error() {
+    let file = table("[hold]\nmin_ms = 200");
+    let read = peek_section::<Hold>(Some(&file), HOLD, &UNREADABLE);
+    assert!(matches!(read, Err(SettingsError::Parse(_))));
 }
