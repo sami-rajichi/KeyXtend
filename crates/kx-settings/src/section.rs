@@ -11,7 +11,7 @@ use toml::{Table, Value};
 type Args = Vec<(&'static str, NoticeArg)>;
 
 /// Why a change was refused: it names a key the module's defaults lack.
-const NOT_A_SETTING: &str = "a key is not one of the module's settings";
+pub const NOT_A_SETTING: &str = "a key is not one of the module's settings";
 
 /// A registered module's settings.
 #[derive(Debug)]

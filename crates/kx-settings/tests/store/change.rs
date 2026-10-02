@@ -2,7 +2,7 @@
 
 use crate::spec::{DEFAULTS, HOLD, defaults_with, folder, open, table, with_file};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
-use kx_settings::{Files, SaveError, Store, StoreError, VERSION_KEY};
+use kx_settings::{Files, NOT_A_SETTING, SaveError, Store, StoreError, VERSION_KEY};
 use std::fs;
 use toml::{Table, Value};
 
@@ -88,10 +88,8 @@ fn a_key_the_defaults_lack_is_refused_even_by_a_lax_validator() {
     let (_dir, files) = folder("laxkey");
     let (mut store, _) = Store::load(files, &[(LAX, &LAX_SPEC)]);
     let stray = store.set(LAX, "stray", Value::Integer(2));
-    assert!(matches!(
-        stray,
-        Err(StoreError::Settings(SettingsError::Invalid(_)))
-    ));
+    let not_a_setting = SettingsError::Invalid(NOT_A_SETTING.to_owned());
+    assert!(matches!(stray, Err(StoreError::Settings(e)) if e == not_a_setting));
     assert_eq!(store.get(LAX), Some(&table("level = 1")));
     assert!(
         !store.needs_save(),

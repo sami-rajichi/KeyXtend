@@ -2,7 +2,7 @@ use super::*;
 use kx_module_api::{
     Event, EventError, ModuleId, Settings, SettingsError, SettingsSpec, WriteError, validate_as,
 };
-use kx_settings::VERSION_KEY;
+use kx_settings::{NOT_A_SETTING, VERSION_KEY};
 use serde::{Deserialize, Serialize};
 
 /// A span whose low end may not pass its high end.
@@ -36,6 +36,25 @@ static SPANNED: Manifest = Manifest {
     provides: &[],
     capabilities: &[Capability::Microphone],
     settings: Some(&SPAN),
+};
+
+/// A spec whose validator takes anything, so only the defaults can turn a key away.
+static LAX: SettingsSpec = SettingsSpec {
+    version: 1,
+    defaults: "low = 1
+",
+    migrations: &[],
+    validate: |_| Ok(()),
+};
+
+/// A module whose settings use the lax spec.
+static LAXED: Manifest = Manifest {
+    id: ModuleId::new("laxed"),
+    version: env!("CARGO_PKG_VERSION"),
+    requires: &[],
+    provides: &[],
+    capabilities: &[],
+    settings: Some(&LAX),
 };
 
 /// A module that declares no capability.
@@ -121,6 +140,19 @@ fn the_version_key_is_refused_before_any_check_as_the_store_does() {
     let version = handle.set_all(values(&format!("{VERSION_KEY} = 2\nlow = 2")));
     assert_eq!(version, Err(WriteError::Refused(SPANNED.id)));
     assert_eq!(span(&host), Ok(Span { low: 1, high: 5 }));
+    assert!(host.sink.writes().is_empty());
+}
+
+#[test]
+fn a_key_the_defaults_lack_is_refused_after_the_check_as_the_store_does() {
+    let mut host = FakeHost::new(&LAXED);
+    let typo = host.handle().set_all(values(
+        "low = 2
+lwo = 3",
+    ));
+    let not_a_setting = SettingsError::Invalid(NOT_A_SETTING.to_owned());
+    assert_eq!(typo, Err(WriteError::Invalid(not_a_setting)));
+    assert_eq!(host.sink.section(), values(LAX.defaults), "nothing kept");
     assert!(host.sink.writes().is_empty());
 }
 

@@ -3,7 +3,7 @@
 use kx_module_api::{
     ModuleId, Settings, SettingsError, SettingsSink, SettingsSpec, WriteError, parse_as,
 };
-use kx_settings::VERSION_KEY;
+use kx_settings::{NOT_A_SETTING, VERSION_KEY};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use toml::Table;
 
@@ -16,7 +16,7 @@ pub(super) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// Stores writes in one section: checked together by the spec when there is one, all or nothing.
-/// As in the kernel's store, a write that holds the version key is refused before any check.
+/// As in the kernel's store, the version key is refused before any check, and a key the defaults lack after it.
 #[derive(Debug, Default)]
 pub struct FakeSink {
     spec: Option<&'static SettingsSpec>,
@@ -73,6 +73,19 @@ impl FakeSink {
         *lock(&self.refused_key) = Some((key.to_owned(), error));
     }
 
+    /// Checks `next`, the section after the write of `values`, as the store does: the validator, then the keys.
+    fn check(&self, next: &Table, values: &Table) -> Result<(), SettingsError> {
+        let Some(spec) = self.spec else {
+            return Ok(());
+        };
+        (spec.validate)(next)?;
+        let defaults: Table = spec.defaults.parse().unwrap_or_default();
+        if values.keys().any(|key| !defaults.contains_key(key)) {
+            return Err(SettingsError::Invalid(NOT_A_SETTING.to_owned()));
+        }
+        Ok(())
+    }
+
     /// The refusal due for a write of `values`, if any.
     fn refusal_for(&self, values: &Table) -> Option<WriteError> {
         let keyed = lock(&self.refused_key).clone();
@@ -92,9 +105,7 @@ impl SettingsSink for FakeSink {
         }
         let mut next = self.section();
         next.extend(values.clone());
-        if let Some(spec) = self.spec {
-            (spec.validate)(&next)?;
-        }
+        self.check(&next, &values)?;
         *lock(&self.section) = next;
         if let Some(unsaved) = refusal {
             return Err(unsaved);
