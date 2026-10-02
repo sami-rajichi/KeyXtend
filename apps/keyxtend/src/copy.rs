@@ -1,6 +1,6 @@
 //! One running copy per user session. The first copy claims the session and runs; a later copy hands its command to
-//! the running one, trying again for a while, and runs itself if that copy quits meanwhile. Quit with no copy running
-//! starts nothing.
+//! the running one, trying again for a while, and runs itself if that copy quits meanwhile, while Quit with no copy
+//! running starts nothing.
 
 use kx_module_api::SettingsError;
 use kx_platform::ui::{Claim, Command, Instance, Running, UiError};

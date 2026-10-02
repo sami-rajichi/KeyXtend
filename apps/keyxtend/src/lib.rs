@@ -11,6 +11,6 @@ pub mod log;
 pub mod quiet;
 pub mod relay;
 
-/// True in the build whose manifest asks for uiAccess (`build.rs` sets `kx_ui_access`), which also loads libraries,
-/// plugins and QML only from the app's folder; other builds find the installed Qt through `PATH`.
+/// True in the build whose manifest asks for uiAccess (`build.rs` sets `kx_ui_access`), which loads libraries only from
+/// the app's folder and System32, and plugins and QML only from the app's folder; other builds find Qt through `PATH`.
 pub const UI_ACCESS: bool = cfg!(kx_ui_access);

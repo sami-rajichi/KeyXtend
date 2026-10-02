@@ -1,7 +1,6 @@
-//! The app's order of start and stop on Windows. Start: pinned library folders in the uiAccess build, the command line
-//! and the quiet hook, the one running copy (listening at once), the hub and the kernel, the log, the modules, the
-//! kernel's thread, then Qt, hardened first. Stop: Quit reaches the kernel's thread, which stops the modules and ends
-//! the UI; once Qt's loop returns, `drain::stop` removes the tray icon and joins the kernel's thread.
+//! The app on Windows starts in order: pinned folders, command line, hook, one copy, hub and kernel, log, modules,
+//! kernel thread, then hardened Qt. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the
+//! tray icon and joins the kernel's thread.
 
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
