@@ -135,8 +135,8 @@ pub fn peek_section<T: Settings>(
 
 /// Reads the settings file and repairs it when it is damaged.
 ///
-/// A damaged file is moved to the broken copy, so the next save cannot make it the previous copy.
-/// A locked file is left alone: nothing is restored, and the store must not save this run.
+/// A damaged file is moved to the broken copy, so the next save cannot make it the previous copy; a locked file is
+/// left alone, nothing is restored and the store must not save this run.
 #[must_use]
 pub fn load(files: &Files) -> Loaded {
     let (table, outcome, notices) = match read_table(&files.settings) {
@@ -173,8 +173,8 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
 
 /// Copies a settings file that reads well to the previous copy; the file itself stays where it is.
 ///
-/// A damaged file is moved to the broken copy instead, so it never replaces a good previous copy.
-/// A locked file fails the copy, so the save stops and the file stays as it was.
+/// A damaged file is moved to the broken copy instead, so it never replaces a good previous copy; a locked file fails
+/// the copy, so the save stops and the file stays as it was.
 fn keep_previous(files: &Files) -> Result<(), SaveError> {
     match read_table(&files.settings) {
         Ok(_) | Err(Problem::Locked) => {}
