@@ -262,7 +262,7 @@ fn a_passing_stage_stays() {
 #[test]
 fn a_refused_stage_is_removed_and_says_so() {
     let (_dir, stage, files) = fill_case("fill-refused");
-    let banned = DevError::Banned("tls/x.dll".to_string());
+    let banned = DevError::Stage(StageError::Banned("tls/x.dll".to_string()));
     let err = fill(&stage, &files, |_| Err(banned.clone())).unwrap_err();
     assert_eq!(err, DevError::StageRemoved(Box::new(banned)));
     assert!(err.to_string().contains("removed"), "{err}");

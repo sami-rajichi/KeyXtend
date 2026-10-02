@@ -59,7 +59,10 @@ fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
     let (dir, setup) = tls_folder("vet-app", &stage.program());
     let windows = |_: &str| Some(paths::text(dir.path()));
     let result = vet(dir.path(), &setup, &stage, windows);
-    assert!(matches!(result, Err(DevError::Banned(_))), "{result:?}");
+    assert!(
+        matches!(result, Err(DevError::Stage(StageError::Banned(_)))),
+        "{result:?}"
+    );
 }
 
 #[test]
@@ -106,7 +109,10 @@ fn a_folder_without_the_app_needs_no_shortcut() {
 fn a_folder_without_programs_is_refused() {
     let dir = TempDir::new("no-exe");
     std::fs::write(dir.path().join("c.dll"), b"").unwrap();
-    assert!(matches!(exes(dir.path()), Err(DevError::NoExe(_))));
+    assert!(matches!(
+        exes(dir.path()),
+        Err(DevError::Stage(StageError::NoExe(_)))
+    ));
 }
 
 #[test]

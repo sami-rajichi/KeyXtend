@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use super::StageConfig;
+use super::{StageConfig, StageError};
 use crate::devtools::{DevError, paths, ps};
 
 /// qmake's flag that prints its settings, one `KEY:value` per line.
@@ -61,10 +61,11 @@ pub(crate) fn reviewed(dirs: QtDirs, config: &StageConfig) -> Result<QtDirs, Dev
     if dirs.version == config.qt_version {
         Ok(dirs)
     } else {
-        Err(DevError::QtVersion {
+        Err(StageError::QtVersion {
             found: dirs.version,
             want: config.qt_version.clone(),
-        })
+        }
+        .into())
     }
 }
 
@@ -126,11 +127,11 @@ mod tests {
         };
         let config = stage_config();
         assert_eq!(reviewed(dirs("6.11.2"), &config), Ok(dirs("6.11.2")));
-        let err = DevError::QtVersion {
+        let err = StageError::QtVersion {
             found: "6.12.0".to_string(),
             want: "6.11.2".to_string(),
         };
-        assert_eq!(reviewed(dirs("6.12.0"), &config), Err(err));
+        assert_eq!(reviewed(dirs("6.12.0"), &config), Err(err.into()));
     }
 
     #[test]

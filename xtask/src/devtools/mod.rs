@@ -15,6 +15,7 @@ pub(crate) mod stage;
 
 use std::fmt;
 
+use self::stage::StageError;
 use crate::cli::SUB_DEV_CERT as DEV_CERT;
 use crate::workspace::LoadError;
 
@@ -71,39 +72,10 @@ pub(crate) enum DevError {
     },
     /// The build folder holds a link or junction, which the copy would follow.
     Link(String),
-    /// The build folder has no program directly inside it.
-    NoExe(String),
-    /// A staged file lies in a folder the stage must never hold.
-    Banned(String),
-    /// A staged file imports a library found neither in the stage nor in the system folder.
-    Unresolved {
-        /// The staged file, relative to the stage.
-        by: String,
-        /// The library it names.
-        lib: String,
-    },
-    /// A library beside the program that nothing staged imports.
-    Unused(String),
-    /// A staged file that is not in the stage's list.
-    Unplanned(String),
-    /// A file that is not a readable Windows program or library.
-    BadPe(String),
-    /// A staged file other than the listed Qt libraries imports Qt's network library.
-    NetworkImport {
-        /// The staged file, relative to the stage.
-        by: String,
-        /// The network library it names.
-        lib: String,
-    },
+    /// The stage, or the build folder an install copies, was refused.
+    Stage(StageError),
     /// The stage failed and was removed, so it never looks installable.
     StageRemoved(Box<DevError>),
-    /// `QMAKE` names a Qt other than the reviewed one.
-    QtVersion {
-        /// The version qmake reports.
-        found: String,
-        /// The reviewed version.
-        want: String,
-    },
     /// The shortcut would land outside the user's profile.
     NotInProfile(String),
 }
@@ -140,24 +112,8 @@ impl fmt::Display for DevError {
             Self::Overlap(path) => write!(f, "{path} overlaps the install target; build elsewhere"),
             Self::TooBig { mb, max } => write!(f, "{mb} MB is over the {max} MB limit"),
             Self::Link(path) => write!(f, "{path} is a link; remove it from the build folder"),
-            Self::NoExe(path) => write!(f, "no program directly in {path}; pick the build output"),
-            Self::Banned(path) => write!(f, "{path} is a network, TLS or debug plugin; none ship"),
-            Self::Unresolved { by, lib } => {
-                write!(f, "{by} needs {lib}: not staged, not in the system folder")
-            }
-            Self::Unused(lib) => write!(f, "{lib} is staged but nothing staged imports it"),
-            Self::Unplanned(path) => write!(
-                f,
-                "{path} is not in the stage's list; only listed files ship"
-            ),
-            Self::BadPe(path) => write!(f, "{path} is not a readable Windows program or library"),
-            Self::NetworkImport { by, lib } => {
-                write!(f, "{by} imports {lib}; only the listed Qt libraries may")
-            }
+            Self::Stage(why) => write!(f, "{why}"),
             Self::StageRemoved(why) => write!(f, "{why}; the stage was removed"),
-            Self::QtVersion { found, want } => {
-                write!(f, "qmake reports Qt {found}; only Qt {want} is reviewed")
-            }
             Self::NotInProfile(path) => write!(f, "{path} is outside the user's profile"),
         }
     }

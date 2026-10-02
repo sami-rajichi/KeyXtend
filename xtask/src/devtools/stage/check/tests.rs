@@ -64,6 +64,14 @@ fn shown(rel: &str) -> String {
     paths::text(&paths::join_rel(PathBuf::new(), rel))
 }
 
+/// The stage error `result` refused with, if it was one.
+fn refusal(result: Result<Summary, DevError>) -> Option<StageError> {
+    match result {
+        Err(DevError::Stage(why)) => Some(why),
+        _ => None,
+    }
+}
+
 #[test]
 fn the_check_refuses_a_tls_plugin() {
     let stage = Fake::new(&[
@@ -72,7 +80,7 @@ fn the_check_refuses_a_tls_plugin() {
         ("tls/qschannelbackend.dll", &["Qt6Core.dll"]),
     ]);
     let banned = shown("tls/qschannelbackend.dll");
-    assert_eq!(stage.check(), Err(DevError::Banned(banned)));
+    assert_eq!(refusal(stage.check()), Some(StageError::Banned(banned)));
 }
 
 #[test]
@@ -86,15 +94,15 @@ fn the_check_refuses_a_network_information_plugin() {
         ),
     ]);
     let banned = shown("networkinformation/qnetworklistmanager.dll");
-    assert_eq!(stage.check(), Err(DevError::Banned(banned)));
+    assert_eq!(refusal(stage.check()), Some(StageError::Banned(banned)));
 }
 
 #[test]
 fn banned_folders_match_in_any_letter_case_and_depth() {
     let stage = Fake::new(&[(PROGRAM, &[]), ("qml/x/TLS/y.dll", &[])]);
     assert_eq!(
-        stage.check(),
-        Err(DevError::Banned(shown("qml/x/TLS/y.dll")))
+        refusal(stage.check()),
+        Some(StageError::Banned(shown("qml/x/TLS/y.dll")))
     );
 }
 
@@ -105,8 +113,8 @@ fn the_check_refuses_a_network_library_nothing_imports() {
         ("Qt6Core.dll", &[]),
         ("Qt6Network.dll", &["Qt6Core.dll"]),
     ]);
-    let unused = DevError::Unused("Qt6Network.dll".to_string());
-    assert_eq!(stage.check(), Err(unused));
+    let unused = StageError::Unused("Qt6Network.dll".to_string());
+    assert_eq!(refusal(stage.check()), Some(unused));
 }
 
 #[test]
@@ -131,11 +139,11 @@ fn the_program_importing_the_network_library_is_refused() {
         ("Qt6Qml.dll", &["Qt6Network.dll"]),
         ("Qt6Network.dll", &[]),
     ]);
-    let err = DevError::NetworkImport {
+    let err = StageError::NetworkImport {
         by: PROGRAM.to_string(),
         lib: "QT6NETWORK.DLL".to_string(),
     };
-    assert_eq!(stage.check(), Err(err));
+    assert_eq!(refusal(stage.check()), Some(err));
 }
 
 #[test]
@@ -146,17 +154,20 @@ fn a_plugin_importing_the_network_library_is_refused() {
         ("Qt6Network.dll", &[]),
         ("imageformats/qnet.dll", &["Qt6Network.dll"]),
     ]);
-    assert!(matches!(stage.check(), Err(DevError::NetworkImport { .. })));
+    assert!(matches!(
+        refusal(stage.check()),
+        Some(StageError::NetworkImport { .. })
+    ));
 }
 
 #[test]
 fn an_import_found_nowhere_is_refused() {
     let stage = Fake::new(&[(PROGRAM, &["missing.dll"])]);
-    let err = DevError::Unresolved {
+    let err = StageError::Unresolved {
         by: PROGRAM.to_string(),
         lib: "missing.dll".to_string(),
     };
-    assert_eq!(stage.check(), Err(err));
+    assert_eq!(refusal(stage.check()), Some(err));
 }
 
 #[test]
@@ -170,7 +181,7 @@ fn an_import_with_a_folder_never_resolves() {
             |_| true,
         );
         assert!(
-            matches!(found, Err(DevError::Unresolved { .. })),
+            matches!(refusal(found), Some(StageError::Unresolved { .. })),
             "{lib} resolved"
         );
     }
@@ -179,17 +190,20 @@ fn an_import_with_a_folder_never_resolves() {
 #[test]
 fn a_plugin_import_must_resolve_too() {
     let stage = Fake::new(&[(PROGRAM, &[]), ("platforms/qwindows.dll", &["Qt6Gui.dll"])]);
-    let err = DevError::Unresolved {
+    let err = StageError::Unresolved {
         by: shown("platforms/qwindows.dll"),
         lib: "Qt6Gui.dll".to_string(),
     };
-    assert_eq!(stage.check(), Err(err));
+    assert_eq!(refusal(stage.check()), Some(err));
 }
 
 #[test]
 fn a_library_in_a_subfolder_never_satisfies_an_import() {
     let stage = Fake::new(&[(PROGRAM, &["Qt6Svg.dll"]), ("imageformats/Qt6Svg.dll", &[])]);
-    assert!(matches!(stage.check(), Err(DevError::Unresolved { .. })));
+    assert!(matches!(
+        refusal(stage.check()),
+        Some(StageError::Unresolved { .. })
+    ));
 }
 
 #[test]
@@ -225,15 +239,15 @@ fn libraries_that_import_each_other_end_the_walk() {
 #[test]
 fn a_stage_without_the_program_is_refused() {
     let stage = Fake::new(&[("Qt6Core.dll", &[])]);
-    assert!(matches!(stage.check(), Err(DevError::NoExe(_))));
+    assert!(matches!(refusal(stage.check()), Some(StageError::NoExe(_))));
 }
 
 #[test]
 fn a_file_that_is_not_a_program_fails_the_check() {
     let stage = Fake::new(&[(PROGRAM, &[])]);
-    let read = |p: &Path| Err(DevError::BadPe(paths::text(p)));
+    let read = |p: &Path| Err(DevError::Stage(StageError::BadPe(paths::text(p))));
     let result = check(stage.dir.path(), &settings(), read, |_| true);
-    assert!(matches!(result, Err(DevError::BadPe(_))));
+    assert!(matches!(refusal(result), Some(StageError::BadPe(_))));
 }
 
 #[test]

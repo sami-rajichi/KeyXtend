@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 
 use super::cert::{CertStore, ScriptStore};
 use super::config::{self, DevSetup, DevToolsConfig};
-use super::{DevError, admin, paths, ps, sdk, shortcut, stage};
+use super::stage::{self, StageError};
+use super::{DevError, admin, paths, ps, sdk, shortcut};
 use crate::workspace;
 
 /// `signtool` subcommand that signs files.
@@ -57,7 +58,7 @@ pub(crate) fn exes(folder: &Path) -> Result<Vec<PathBuf>, DevError> {
         .filter(|path| path.is_file() && is_exe(path))
         .collect();
     if found.is_empty() {
-        return Err(DevError::NoExe(paths::text(folder)));
+        return Err(StageError::NoExe(paths::text(folder)).into());
     }
     found.sort();
     Ok(found)

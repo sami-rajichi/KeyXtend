@@ -139,7 +139,10 @@ fn read_names_a_file_that_is_not_an_image() {
     let dir = crate::test_support::TempDir::new("pe");
     let path = dir.path().join("x.dll");
     std::fs::write(&path, b"not a program").unwrap();
-    assert_eq!(read(&path), Err(DevError::BadPe(paths::text(&path))));
+    assert_eq!(
+        read(&path),
+        Err(DevError::Stage(StageError::BadPe(paths::text(&path))))
+    );
 }
 
 #[cfg(windows)]

@@ -1,8 +1,11 @@
 //! `cargo xtask stage`: builds the app in release and stages it with only the Qt files it loads, then checks the stage.
 
 mod check;
+mod error;
 mod pe;
 mod qt;
+
+pub(crate) use self::error::StageError;
 
 use std::path::{Path, PathBuf};
 

@@ -16,8 +16,8 @@ fn a_file_outside_the_list_is_refused_even_when_it_loads() {
             &[]
         };
         let stage = Fake::new(&[(PROGRAM, loads), (extra, &[])]);
-        let unplanned = DevError::Unplanned(shown(extra));
-        assert_eq!(stage.check(), Err(unplanned), "{extra}");
+        let unplanned = StageError::Unplanned(shown(extra));
+        assert_eq!(refusal(stage.check()), Some(unplanned), "{extra}");
     }
 }
 

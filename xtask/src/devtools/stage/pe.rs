@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use super::StageError;
 use crate::devtools::{DevError, paths};
 
 /// The DOS header's magic, and where it keeps the PE header's place.
@@ -151,7 +152,7 @@ fn text_at(bytes: &[u8], at: usize) -> Option<String> {
 /// The library names the file at `path` imports.
 pub(crate) fn read(path: &Path) -> Result<Vec<String>, DevError> {
     let bytes = std::fs::read(path)?;
-    imports(&bytes).ok_or_else(|| DevError::BadPe(paths::text(path)))
+    imports(&bytes).ok_or_else(|| StageError::BadPe(paths::text(path)).into())
 }
 
 #[cfg(test)]

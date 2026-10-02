@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use super::{Network, StageConfig, planned};
+use super::{Network, StageConfig, StageError, planned};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
@@ -36,7 +36,7 @@ pub(crate) fn check(
     let files = paths::files(stage)?;
     refuse_banned(&files, &config.banned)?;
     if !files.contains(&PathBuf::from(config.program())) {
-        return Err(DevError::NoExe(paths::text(stage)));
+        return Err(StageError::NoExe(paths::text(stage)).into());
     }
     let libs = libraries(&files);
     let found = |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib);
@@ -47,7 +47,7 @@ pub(crate) fn check(
     };
     let reached = closure(roots(&files, config), &libs, guarded, resolves)?;
     if let Some(unused) = libs.iter().find(|(key, _)| !reached.contains(*key)) {
-        return Err(DevError::Unused(paths::text(unused.1)));
+        return Err(StageError::Unused(paths::text(unused.1)).into());
     }
     refuse_unplanned(&files, &planned(config))?;
     let bytes = paths::folder_size(stage)?;
@@ -73,14 +73,17 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
     let found = files
         .iter()
         .find(|f| f.parent().is_some_and(|dir| dir.iter().any(is_banned)));
-    found.map_or(Ok(()), |f| Err(DevError::Banned(paths::text(f))))
+    found.map_or(Ok(()), |f| Err(StageError::Banned(paths::text(f)).into()))
 }
 
 /// Fails on the first file that is not one of the `planned` paths, in any letter case, so no unlisted file is signed.
 fn refuse_unplanned(files: &[PathBuf], planned: &[PathBuf]) -> Result<(), DevError> {
     let listed: BTreeSet<String> = planned.iter().map(|p| path_key(p)).collect();
     let extra = files.iter().find(|f| !listed.contains(&path_key(f)));
-    extra.map_or(Ok(()), |f| Err(DevError::Unplanned(paths::text(f))))
+    extra.map_or(
+        Ok(()),
+        |f| Err(StageError::Unplanned(paths::text(f)).into()),
+    )
 }
 
 /// The key a stage-relative path is matched by: its parts in lower case, joined the same way on every system.
@@ -124,10 +127,11 @@ fn guard(file: &Path, imports: &[String], network: &Network) -> Result<(), DevEr
     let beside = file.parent() == Some(Path::new(""));
     let allowed = beside && network.by.iter().any(|b| key(b) == name);
     match imports.iter().find(|lib| key(lib) == key(&network.lib)) {
-        Some(lib) if !allowed => Err(DevError::NetworkImport {
+        Some(lib) if !allowed => Err(StageError::NetworkImport {
             by: paths::text(file),
             lib: lib.clone(),
-        }),
+        }
+        .into()),
         _ => Ok(()),
     }
 }
@@ -156,7 +160,7 @@ fn closure(
                 }
             } else if !resolves(&lib) {
                 let by = paths::text(&file);
-                return Err(DevError::Unresolved { by, lib });
+                return Err(StageError::Unresolved { by, lib }.into());
             }
         }
     }
