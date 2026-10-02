@@ -11,6 +11,9 @@ use serde::{Deserialize, Serialize};
 /// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
 /// hand-edited value from stalling them.
 pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
+/// The smallest `size_min` the settings take: the lowest size step where every key is still a 24 px target
+/// (WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
+pub(crate) const SIZE_FLOOR: f64 = 0.8;
 /// The largest `size_max` the settings take, so a hand-edited size cannot open the keyboard far past every screen.
 pub(crate) const SIZE_CEILING: f64 = 4.0;
 
@@ -112,8 +115,11 @@ impl KeyboardSettings {
 impl Settings for KeyboardSettings {
     fn check(&self) -> Result<(), SettingsError> {
         self.check_sizes().map_err(invalid)?;
-        if self.size_max > SIZE_CEILING {
-            return Err(invalid(&format!("size_max must be at most {SIZE_CEILING}")));
+        if self.size_min < SIZE_FLOOR || self.size_max > SIZE_CEILING {
+            let (low, high) = (SIZE_FLOOR, SIZE_CEILING);
+            return Err(invalid(&format!(
+                "size_min and size_max must be from {low} to {high}"
+            )));
         }
         if !RELABEL_MS.contains(&self.relabel_ms) {
             let (low, high) = (RELABEL_MS.start(), RELABEL_MS.end());

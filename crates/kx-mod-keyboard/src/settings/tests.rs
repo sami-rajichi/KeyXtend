@@ -121,6 +121,42 @@ fn size_max_has_a_ceiling_so_a_hand_edited_size_cannot_open_off_every_screen() {
     assert!(invalid(&top(1000.0)), "the reviewer's case");
 }
 
+/// The smallest target WCAG 2.2 asks for (SC 2.5.8, Target Size Minimum), in CSS px, which are logical pixels.
+const TARGET_PX: f64 = 24.0;
+
+/// The shortest side of any key cell on the shipped board at `size`, in logical pixels.
+fn smallest_key(size: f64) -> f64 {
+    let b = crate::geom::board(&crate::spec::BoardSpec::shipped().unwrap(), 0.0, size);
+    b.keys
+        .iter()
+        .map(|k| k.cell.w.min(k.cell.h))
+        .fold(f64::INFINITY, f64::min)
+}
+
+#[test]
+fn size_min_has_a_floor_so_a_hand_edited_size_cannot_shrink_the_keys_past_clicking() {
+    let low = |min: f64| with("size_min", min);
+    assert_eq!(validate_as::<KeyboardSettings>(&low(SIZE_FLOOR)), Ok(()));
+    assert!(invalid(&low(SIZE_FLOOR - 0.05)), "just under the floor");
+    assert!(invalid(&low(0.01)), "a damaged file's case");
+}
+
+#[test]
+fn the_floor_is_the_lowest_default_step_where_every_key_is_a_full_target() {
+    let step = KeyboardSettings::from_defaults().unwrap().size_step;
+    assert!(smallest_key(SIZE_FLOOR) >= TARGET_PX);
+    assert!(
+        smallest_key(SIZE_FLOOR - step) < TARGET_PX,
+        "a step lower, a key is below the target"
+    );
+}
+
+#[test]
+fn the_defaults_name_the_hard_bounds_with_an_example() {
+    let bounds = format!("down to size_min = {SIZE_FLOOR} and up to size_max = {SIZE_CEILING}");
+    assert!(SPEC.defaults.contains(&bounds), "{bounds}");
+}
+
 #[test]
 fn the_step_fits_inside_the_limits_and_divides_into_a_finite_grid() {
     let (min, max) = (0.8, 1.8);
