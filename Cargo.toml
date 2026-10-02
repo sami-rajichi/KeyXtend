@@ -73,6 +73,8 @@ app = "keyxtend"
 banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
 # Media-decoding crates banned from the app (ARCHITECTURE.md invariant 5).
 banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
+# Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
+banned_features = { toml = ["unbounded"] }
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
 # Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.

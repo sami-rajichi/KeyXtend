@@ -43,11 +43,15 @@ fn minimal_fixture_loads_the_package_and_config() {
         ]
     );
 
+    assert_eq!(package.features, vec!["default".to_string()]);
+
     let edges = &workspace.graph[&package.id];
     assert_eq!(edges.len(), 1);
     assert_eq!(edges[0].kind, DependencyKind::Normal);
 
     assert_eq!(workspace.tidy.max_file_lines, 400);
+    let banned = &workspace.tidy.banned_features["toml"];
+    assert_eq!(banned, &vec!["unbounded".to_string()]);
     assert_eq!(workspace.dco.trailer, "Signed-off-by");
 }
 

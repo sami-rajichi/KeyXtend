@@ -1,7 +1,9 @@
 //! The workspace model that tidy and DCO checks run against.
 
 mod raw;
+mod resolve;
 
+use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 
@@ -63,6 +65,8 @@ pub(crate) struct Package {
     pub dependencies: Vec<Dependency>,
     /// The package's build targets.
     pub targets: Vec<Target>,
+    /// The features the resolve turns on for it; none for a package outside the resolve.
+    pub features: Vec<String>,
 }
 
 /// A resolved dependency edge: another package id, with the kind it's used as.
@@ -173,12 +177,14 @@ pub(crate) fn load(json: &str) -> Result<Workspace, LoadError> {
     let tidy = load_section::<TidyConfig>(meta.remove("tidy"), "tidy")?;
     tidy.validate().map_err(config_error)?;
     let dco = load_section::<DcoConfig>(meta.remove("dco"), "dco")?;
+    let mut features = resolve::features(&resolve);
+    let packages = output.packages.into_iter();
 
     Ok(Workspace {
         root_dir: PathBuf::from(output.workspace_root),
-        packages: output.packages.into_iter().map(into_package).collect(),
+        packages: packages.map(|p| into_package(p, &mut features)).collect(),
         member_ids: output.workspace_members,
-        graph: build_graph(&resolve),
+        graph: resolve::graph(&resolve),
         tidy,
         dco,
     })
@@ -217,9 +223,10 @@ pub(crate) fn config_error(err: ConfigError) -> LoadError {
     LoadError::BadConfig(err.to_string())
 }
 
-/// Converts one raw package entry into the domain model.
-fn into_package(raw: raw::RawPackage) -> Package {
+/// Converts one raw package entry into the domain model, taking its turned-on features from `features`.
+fn into_package(raw: raw::RawPackage, features: &mut HashMap<String, Vec<String>>) -> Package {
     Package {
+        features: features.remove(&raw.id).unwrap_or_default(),
         id: raw.id,
         name: raw.name,
         manifest_path: PathBuf::from(raw.manifest_path),
@@ -240,37 +247,6 @@ fn into_package(raw: raw::RawPackage) -> Package {
             })
             .collect(),
     }
-}
-
-/// Builds the resolved dependency graph from the `resolve` section.
-fn build_graph(resolve: &raw::RawResolve) -> ResolvedGraph {
-    resolve
-        .nodes
-        .iter()
-        .map(|node| {
-            (
-                node.id.clone(),
-                node.deps.iter().flat_map(resolved_edges).collect(),
-            )
-        })
-        .collect()
-}
-
-/// Expands one resolved dependency into one edge per kind it's used as.
-fn resolved_edges(dep: &raw::RawNodeDep) -> Vec<ResolvedDependency> {
-    if dep.dep_kinds.is_empty() {
-        return vec![ResolvedDependency {
-            id: dep.pkg.clone(),
-            kind: DependencyKind::Normal,
-        }];
-    }
-    dep.dep_kinds
-        .iter()
-        .map(|dk| ResolvedDependency {
-            id: dep.pkg.clone(),
-            kind: DependencyKind::from_raw(dk.kind.as_deref()),
-        })
-        .collect()
 }
 
 /// Runs `cargo metadata` and loads its output into a [`Workspace`].

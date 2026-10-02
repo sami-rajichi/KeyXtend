@@ -1,5 +1,6 @@
 //! Shared helpers for unit tests: unique temp folders and test configs.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -83,6 +84,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
         app: "keyxtend".to_string(),
         banned_network: vec!["reqwest".to_string()],
         banned_media: vec!["image".to_string()],
+        banned_features: BTreeMap::from([("toml".to_string(), vec!["unbounded".to_string()])]),
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
         deny_attr: "#![deny(unsafe_code)]".to_string(),
         root_kinds: vec![

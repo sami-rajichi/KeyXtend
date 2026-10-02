@@ -54,6 +54,7 @@ impl WorkspaceBuilder {
             manifest_path: self.root_dir.join(sub_dir).join(name).join("Cargo.toml"),
             dependencies: deps,
             targets: Vec::new(),
+            features: Vec::new(),
         });
         self.member_ids.push(id);
         self
@@ -67,6 +68,7 @@ impl WorkspaceBuilder {
             manifest_path: PathBuf::from("/external").join(name),
             dependencies: Vec::new(),
             targets: Vec::new(),
+            features: Vec::new(),
         });
         self
     }
@@ -81,6 +83,14 @@ impl WorkspaceBuilder {
                 kinds: kinds.iter().map(|k| (*k).to_string()).collect(),
                 src_path,
             });
+        }
+        self
+    }
+
+    /// Turns `features` on for the most recently added package, as the resolve would.
+    pub(crate) fn features(mut self, features: &[&str]) -> Self {
+        if let Some(package) = self.packages.last_mut() {
+            package.features = features.iter().map(|f| (*f).to_string()).collect();
         }
         self
     }
