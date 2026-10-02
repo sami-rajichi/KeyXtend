@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-02 14:18 — P3: kx-review fixes for the gates, the test window and the docs
+G10 now presses every key the way a screen reader does and checks what reaches the test window, and G13 stops early when the keys cannot take the accent and compares only the keys' solid faces. G1 to G3 now give a verdict (G2 also checks the caret), G19 and G23 report partial when part of the gate did not run, and G23 now tests the password. The test window logs each key and has a name screen readers read, G26 types every character key, and G9 and the launchers put back or close exactly what they changed or opened. The security notes are marked reviewed, later work is in the item files, and the move map shows where P3 left each spike part.
+
 ## 2026-10-02 13:04 — P3: round B's second pass, a size floor and one row source
 A hand-edited `size_min` now has a floor (0.8, where every key stays a 24 px target), as `size_max` has a ceiling; a value past either goes back to its default with the reset notice, and the keyboard's defaults name both bounds. A size step that lands on another screen fits that screen, the fake sink refuses a key the defaults lack as the store does, and a `Legend`'s debug print hides what Shift and Caps Lock show. The drawn check takes the board's row from the keyboard face instead of a copy in the theme, so the accent waits for the face, and the theme README names the check's limit at the capital height. The stage errors moved into their own `StageError`.
 
