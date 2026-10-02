@@ -15,8 +15,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::Shell::DefSubclassProc;
 use windows::Win32::UI::WindowsAndMessaging::{
     DefWindowProcW, GetClientRect, MoveWindow, PostQuitMessage, WM_CHAR, WM_CLOSE, WM_CONTEXTMENU,
-    WM_DESTROY, WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_RBUTTONDBLCLK,
-    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE,
+    WM_DESTROY, WM_KEYDOWN, WM_KILLFOCUS, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_RBUTTONDBLCLK, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETFOCUS, WM_SIZE, WM_SYSKEYDOWN,
 };
 
 use crate::switch;
@@ -31,6 +31,10 @@ static EDIT: AtomicIsize = AtomicIsize::new(0);
 static PASSWORD: AtomicBool = AtomicBool::new(false);
 /// Bits in one word of a mouse message's `lparam`: x sits in the low word, y in the next.
 const WORD_BITS: u32 = 16;
+/// The prefix byte of an extended key's scan code, as `kx_module_api::ports::Scan` writes it (`0xE0xx`).
+const EXTENDED_PREFIX: u8 = 0xE0;
+/// Bit 24 of a key message's `lparam`, the lowest bit of its fourth byte: an extended key.
+const EXTENDED_FLAG: u8 = 1;
 
 /// Keeps `file` as the log and `clock` as its time source, then writes the start line.
 pub fn start_log(file: File, clock: QpcClock) {
@@ -81,10 +85,21 @@ fn log_line(line: &str) {
     }
 }
 
-/// The UTF-16 unit a `WM_CHAR` carries in the low word of its `wparam`.
-fn unit_of(wparam: WPARAM) -> u16 {
+/// The low word of `wparam`: a `WM_CHAR`'s UTF-16 unit, or a key message's virtual key.
+fn low_word(wparam: WPARAM) -> u16 {
     let [lo, hi, ..] = wparam.0.to_le_bytes();
     u16::from_le_bytes([lo, hi])
+}
+
+/// The scan code a key message carries in bits 16-23 of `lparam`, with the extended prefix when bit 24 is set.
+fn scan_of(lparam: isize) -> u16 {
+    let [_, _, scan, flags, ..] = lparam.to_le_bytes();
+    let prefix = if flags & EXTENDED_FLAG == 0 {
+        0
+    } else {
+        EXTENDED_PREFIX
+    };
+    u16::from_be_bytes([prefix, scan])
 }
 
 /// The signed low word of `v`.
@@ -124,7 +139,8 @@ fn log_press(hwnd: HWND, press: Press, on_screen: bool, lparam: LPARAM) {
     log_line(&log::mouse(press, now_us(), pt.x, pt.y));
 }
 
-/// The edit box's subclass procedure: logs characters, focus losses and presses.
+/// The edit box's subclass procedure: logs characters, keys going down, focus losses and presses; a password box logs
+/// no character and no key.
 #[allow(
     unsafe_code,
     reason = "Win32 subclass callback that forwards to DefSubclassProc."
@@ -139,7 +155,10 @@ pub extern "system" fn edit_proc(
 ) -> LRESULT {
     match msg {
         WM_CHAR if !PASSWORD.load(Ordering::Relaxed) => {
-            log_line(&log::data(now_us(), unit_of(wparam)));
+            log_line(&log::data(now_us(), low_word(wparam)));
+        }
+        WM_KEYDOWN | WM_SYSKEYDOWN if !PASSWORD.load(Ordering::Relaxed) => {
+            log_line(&log::key(now_us(), low_word(wparam), scan_of(lparam.0)));
         }
         WM_KILLFOCUS => log_line(&log::mark(log::FOCUS_LOST, now_us())),
         _ => {}
@@ -240,7 +259,18 @@ mod tests {
 
     #[test]
     fn a_char_message_carries_one_utf16_unit_in_its_low_word() {
-        assert_eq!(unit_of(WPARAM(0x0644)), 0x0644);
-        assert_eq!(unit_of(WPARAM(0xFFFF_0041)), 0x0041);
+        assert_eq!(low_word(WPARAM(0x0644)), 0x0644);
+        assert_eq!(low_word(WPARAM(0xFFFF_0041)), 0x0041);
+    }
+
+    #[test]
+    fn a_key_message_carries_its_scan_code_as_the_product_writes_it() {
+        use kx_module_api::ports::Scan;
+        // Enter: scan 0x1C in bits 16-23, a repeat count of 1, and the previous-state bit set.
+        assert_eq!(scan_of(0x401C_0001), 0x001C);
+        // Up arrow: scan 0x48 with bit 24, the extended key.
+        let up = Scan::new(scan_of(0x0148_0001));
+        assert!(up.is_extended() && up.byte() == 0x48, "{up:?}");
+        assert!(!Scan::new(scan_of(0x002A_0001)).is_extended());
     }
 }

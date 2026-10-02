@@ -23,6 +23,15 @@ pub fn mark(mark: &str, us: i64) -> String {
     format!("{mark}{SEP}{us}")
 }
 
+/// A key went down: `# key\t<µs>\t<virtual key>\t<scan code>`, both in hex; an extended key's scan code is `E0xx`.
+pub const KEY: &str = "# key";
+
+/// A key line for virtual key `vk` with scan code `scan`, going down at `us`.
+#[must_use]
+pub fn key(us: i64, vk: u16, scan: u16) -> String {
+    format!("{KEY}{SEP}{us}{SEP}{vk:02X}{SEP}{scan:04X}")
+}
+
 /// A mouse press: `# mouse\t<press>\t<µs>\t<x>\t<y>`, in screen pixels.
 pub const MOUSE: &str = "# mouse";
 
@@ -88,6 +97,13 @@ mod tests {
         }
         assert_eq!(Press::parse("wheel"), None);
         assert!(MOUSE.starts_with(COMMENT));
+    }
+
+    #[test]
+    fn key_lines_have_the_documented_shape() {
+        assert_eq!(key(7, 0x0D, 0xE01C), "# key\t7\t0D\tE01C");
+        assert_eq!(key(8, 0xA0, 0x2A), "# key\t8\tA0\t002A");
+        assert!(KEY.starts_with(COMMENT));
     }
 
     #[test]
