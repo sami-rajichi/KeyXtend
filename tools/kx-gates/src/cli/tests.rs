@@ -140,3 +140,11 @@ fn the_p3_gates_take_no_option_and_only_their_names() {
         assert!(parse(&args(bad)).is_err(), "{bad} should fail");
     }
 }
+
+#[test]
+fn the_help_names_every_gate_that_takes_only_a_name() {
+    let help = crate::usage::usage();
+    for (gate, _) in NAMED {
+        assert!(help.contains(&format!("kx-gates {gate} <")), "{gate}");
+    }
+}
