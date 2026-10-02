@@ -83,6 +83,7 @@ mod simuser;
 mod stats;
 mod text;
 mod tlog;
+mod uilook;
 mod usage;
 mod walk;
 mod wer;

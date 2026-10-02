@@ -92,3 +92,50 @@ fn every_backdrop_the_product_sets_has_a_name() {
         assert!(names.contains(&kind), "{kind}");
     }
 }
+
+#[test]
+fn a_key_face_is_its_box_inset_on_every_side() {
+    let r = RECT {
+        left: 100,
+        top: 10,
+        right: 140,
+        bottom: 50,
+    };
+    let face = inner(&r, 0.25).expect("something is left");
+    assert_eq!(
+        (face.left, face.top, face.right, face.bottom),
+        (110, 20, 130, 40)
+    );
+    assert_eq!(inner(&r, 0.0), Some(r));
+    assert_eq!(inner(&r, 0.5), None, "nothing is left");
+    assert_eq!(inner(&RECT::default(), 0.1), None, "a key with no box");
+}
+
+#[test]
+fn g13_stops_at_the_start_when_it_needs_an_accent_the_keyboard_cannot_take() {
+    let themes = kx_theme::Themes::shipped().expect("the themes read");
+    let can = themes
+        .list
+        .iter()
+        .find(|t| t.look.accent)
+        .expect("one theme takes it");
+    let look = |theme: &str, follow_accent| UiLook {
+        theme: theme.to_string(),
+        follow_accent,
+        backdrop: String::new(),
+    };
+    let why = accent_blocked(&look("dolch", false), &themes, &needs(&KINDS)).expect("blocked");
+    assert!(
+        why.contains("follow_accent = true") && why.contains(&can.look.id),
+        "{why}"
+    );
+    assert!(why.contains("put back"), "{why}");
+    assert_eq!(
+        accent_blocked(&look(&can.look.id, true), &themes, &needs(&KINDS)),
+        None
+    );
+    assert_eq!(
+        accent_blocked(&look("dolch", false), &themes, &needs(&[DARK])),
+        None
+    );
+}

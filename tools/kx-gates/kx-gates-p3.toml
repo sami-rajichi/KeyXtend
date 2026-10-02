@@ -92,8 +92,12 @@ watch_secs = 180
 # Following live: the keyboard redraws within this time of a change, in ms.
 follow_ms = 1000
 changes = 6
-# Each of these parts of Windows' look must change at least once (roadmap G13).
+# Each of these parts of Windows' look must change at least once (roadmap G13). The accent needs [ui] follow_accent on
+# a theme that takes it (Native); G13 stops at the start and says so otherwise.
 needs = ["dark", "accent", "contrast"]
+# Only each key's solid face is compared: this share of its width and height is left out on every side, so the
+# window's clear margin, the plate's corners and a backdrop never count as a redraw.
+key_inset = 0.25
 
 # G26 other languages (CI runner only): each language's first installed layout, its labels and its typed text.
 [g26]

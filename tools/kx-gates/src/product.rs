@@ -1,5 +1,5 @@
 //! The product app the gates G2-G4, G8-G11, G13, G25, G26 and `close` aim at: its windows, found by program, its
-//! keyboard, and the running copy's data files and keyboard settings, read without changing them.
+//! keyboard, and the running copy's data files and settings, read without changing them.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -48,19 +48,26 @@ fn keyboard_in(file: Option<&toml::Table>) -> Result<KeyboardSettings, String> {
     peek_section(file, ID, &SPEC).map_err(|e| format!("the keyboard's defaults: {e}"))
 }
 
-/// The keyboard settings of the product at `program`, read without changing its files; an error when its data
-/// folder cannot be named, so a gate never acts on the defaults by mistake.
+/// The settings file of the product at `program`, read without changing it; an error when its data folder cannot be
+/// named, so a gate never acts on the defaults by mistake.
+fn file_of(program: &Path) -> Result<Option<toml::Table>, String> {
+    Ok(peek(&files(program)?))
+}
+
+/// The keyboard settings of the product at `program`, read without changing its files.
+#[cfg(test)]
 fn keyboard_of(program: &Path) -> Result<KeyboardSettings, String> {
-    let file = peek(&files(program)?);
-    keyboard_in(file.as_ref())
+    keyboard_in(file_of(program)?.as_ref())
+}
+
+/// The running copy's settings file, read without changing it; none when no copy runs.
+pub fn running_file() -> Result<Option<toml::Table>, String> {
+    running().map_or(Ok(None), |(_, exe)| file_of(Path::new(&exe)))
 }
 
 /// The running copy's keyboard settings; the defaults when no copy runs.
 pub fn keyboard() -> Result<KeyboardSettings, String> {
-    match running() {
-        Some((_, exe)) => keyboard_of(Path::new(&exe)),
-        None => keyboard_in(None),
-    }
+    keyboard_in(running_file()?.as_ref())
 }
 
 /// True when window `w` belongs to the product.

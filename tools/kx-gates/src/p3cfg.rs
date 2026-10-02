@@ -54,6 +54,8 @@ pub struct G13 {
     pub changes: usize,
     /// Parts of the look that must each change at least once, named as `g13::KINDS` names them.
     pub needs: Vec<String>,
+    /// The share of each key's width and height left out on every side, so only its solid face is compared.
+    pub key_inset: f64,
 }
 
 /// G26 settings: the languages checked on the CI runner.
@@ -98,6 +100,12 @@ fn check_g13(g13: &G13) -> Result<(), String> {
     if g13.changes < g13.needs.len() {
         return Err("g13.changes must leave room for each of g13.needs".to_string());
     }
+    if !(0.0..crate::g13::MAX_INSET).contains(&g13.key_inset) {
+        return Err(format!(
+            "g13.key_inset must be 0 or more and below {}, so part of each key is left",
+            crate::g13::MAX_INSET
+        ));
+    }
     Ok(())
 }
 
@@ -135,7 +143,7 @@ mod tests {
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 11] = [
+        let bad: [fn(&mut GatesConfig); 13] = [
             |c| c.g9.put_away.clear(),
             |c| c.g9.bring_back.clear(),
             |c| c.g10.probe = "shift".into(),
@@ -146,6 +154,8 @@ mod tests {
             |c| c.g13.changes = c.g13.needs.len() - 1,
             |c| c.g13.needs.clear(),
             |c| c.g13.needs.push("blue".into()),
+            |c| c.g13.key_inset = 0.5,
+            |c| c.g13.key_inset = f64::NAN,
             |c| c.g26.languages.clear(),
         ];
         for (i, f) in bad.iter().enumerate() {
