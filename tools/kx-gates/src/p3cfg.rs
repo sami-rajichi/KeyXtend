@@ -4,6 +4,8 @@
 
 use serde::Deserialize;
 
+use crate::config::GatesConfig;
+
 /// G9 settings: the top bar's buttons that hide and show the keyboard; resizing uses `[g8]`'s resize settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -63,9 +65,13 @@ pub struct G26 {
 }
 
 /// Refuses settings that could pass with nothing checked.
-pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
-    if g11.scales.is_empty() || g11.slack_px.is_nan() || g11.slack_px < 0.0 {
-        return Err("g11 needs scales and a slack of 0 px or more".to_string());
+pub fn check(c: &GatesConfig) -> Result<(), String> {
+    let (g9, g11, g13, g26) = (&c.g9, &c.g11, &c.g13, &c.g26);
+    if g9.put_away.is_empty() || g9.bring_back.is_empty() {
+        return Err("g9.put_away and g9.bring_back must name a button".to_string());
+    }
+    if g11.scales.is_empty() || !g11.slack_px.is_finite() || g11.slack_px < 0.0 {
+        return Err("g11 needs scales and a finite slack of 0 px or more".to_string());
     }
     if g13.watch_secs == 0 || g13.changes == 0 {
         return Err("g13.watch_secs and g13.changes must be above 0".to_string());
@@ -95,10 +101,10 @@ pub fn check(g11: &G11, g13: &G13, g26: &G26) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{GatesConfig, load};
+    use crate::config::load;
 
     fn checked(c: &GatesConfig) -> Result<(), String> {
-        check(&c.g11, &c.g13, &c.g26)
+        check(c)
     }
 
     #[test]
@@ -112,19 +118,22 @@ mod tests {
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 7] = [
+        let bad: [fn(&mut GatesConfig); 10] = [
+            |c| c.g9.put_away.clear(),
+            |c| c.g9.bring_back.clear(),
             |c| c.g11.scales.clear(),
             |c| c.g11.slack_px = -1.0,
+            |c| c.g11.slack_px = f64::INFINITY,
             |c| c.g13.changes = 0,
             |c| c.g13.changes = c.g13.needs.len() - 1,
             |c| c.g13.needs.clear(),
             |c| c.g13.needs.push("blue".into()),
             |c| c.g26.languages.clear(),
         ];
-        for f in bad {
+        for (i, f) in bad.iter().enumerate() {
             let mut c = load().expect("loads");
             f(&mut c);
-            assert!(checked(&c).is_err());
+            assert!(checked(&c).is_err(), "case {i}");
         }
     }
 

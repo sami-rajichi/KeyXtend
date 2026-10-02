@@ -47,6 +47,15 @@ impl KeyMap {
     }
 }
 
+/// `id` when it can name one button; an empty id would match the first button that has none, such as S, M or L.
+fn wanted(id: &str) -> Result<&str, String> {
+    if id.is_empty() {
+        Err("an empty UI Automation id names no button".to_string())
+    } else {
+        Ok(id)
+    }
+}
+
 /// The centre of box `r`.
 fn centre(r: &RECT) -> POINT {
     POINT {
@@ -109,7 +118,7 @@ impl Reader {
         reason = "UI Automation calls on objects this client made."
     )]
     pub fn invoke(&self, hwnd: HWND, id: &str) -> Result<(), String> {
-        let want = VARIANT::from(BSTR::from(id));
+        let want = VARIANT::from(BSTR::from(wanted(id)?));
         // SAFETY: plain calls on live UI Automation objects; a missing button or pattern gives an error.
         unsafe {
             let cond: IUIAutomationCondition = self
@@ -195,6 +204,13 @@ mod tests {
             Some(70),
             "the box comes from the keyboard, not from a key map"
         );
+    }
+
+    #[test]
+    fn an_empty_id_names_no_button_so_it_is_refused_before_ui_automation() {
+        assert_eq!(wanted("esc"), Ok("esc"));
+        let e = wanted("").expect_err("the S, M and L buttons have no id");
+        assert!(e.contains("empty"), "{e}");
     }
 
     #[test]
