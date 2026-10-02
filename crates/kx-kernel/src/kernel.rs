@@ -1,9 +1,10 @@
 //! The `Kernel` starts modules in dependency order, contains failures and stops them in reverse.
-//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls,
-//! `wait` says who waits for whom and `settings` reads the kernel's own section.
+//! `boot` loads and starts, `run` starts and stops one module, `control` holds runtime controls, `wait` says who
+//! waits for whom, `settings` reads the kernel's own section and `kind` names each error for the log.
 
 mod boot;
 mod control;
+mod kind;
 mod run;
 mod settings;
 mod wait;
@@ -31,7 +32,7 @@ pub use settings::KernelSettings;
 /// The kernel's own settings section id; no module may take it.
 pub const KERNEL: ModuleId = ModuleId::new("kernel");
 
-/// Why the kernel refused a request; nothing changed then.
+/// Why the kernel refused a request; nothing changed then, and a log names it by `kind`, since a text may quote a value.
 #[derive(Debug, Error)]
 pub enum KernelError {
     /// No added module has this id.

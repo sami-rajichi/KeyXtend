@@ -30,7 +30,7 @@ pub fn drain(mut kernel: Kernel, hub: &Hub, requests: &Receiver<Request>) {
         match request {
             Request::Retry(module) => {
                 if let Err(e) = kernel.retry(module) {
-                    tracing::warn!(module = %module, error = %e, "try again was refused");
+                    tracing::warn!(module = %module, error = e.kind(), "try again was refused");
                 }
             }
             Request::Quit => {

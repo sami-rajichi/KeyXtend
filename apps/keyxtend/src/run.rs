@@ -78,7 +78,7 @@ fn run(
     relay.attach(&boot.hub);
     kx_ui::install(Arc::clone(&boot.hub));
     if let Err(e) = boot.start() {
-        tracing::error!(error = %e, "the modules did not start");
+        tracing::error!(error = e.kind(), "the modules did not start");
     }
     let Boot {
         kernel,
