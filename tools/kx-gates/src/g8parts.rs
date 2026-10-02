@@ -1,15 +1,13 @@
 //! G8's verdict: what it measured, set against each spec §10 budget it owns.
 #![cfg(windows)]
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::budget::{self, Part};
 use crate::g2;
 use crate::g8cfg::G8;
 use crate::g8ui::{Presses, Resize};
-
-/// G8's verdict in weak mode when every budget held: weak mode does not draw in software yet, so it is no pass.
-pub const PARTIAL: &str = "partial";
+use crate::out;
 
 /// What the product did while G8 measured it.
 pub struct Measured {
@@ -65,13 +63,9 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     ]
 }
 
-/// G8's `pass`: true when every budget was `met`, only `PARTIAL` then in weak mode, else false.
+/// G8's `pass`: true when every budget was `met`, only `out::PARTIAL` then in weak mode, else false.
 pub fn verdict(weak: bool, met: bool) -> Value {
-    match (met, weak) {
-        (false, _) => json!(false),
-        (true, false) => json!(true),
-        (true, true) => json!(PARTIAL),
-    }
+    out::pass(met, !weak)
 }
 
 #[cfg(test)]
@@ -165,7 +159,7 @@ mod tests {
     #[test]
     fn weak_mode_meeting_every_budget_is_partial_and_a_miss_fails() {
         assert_eq!(verdict(false, true), json!(true));
-        assert_eq!(verdict(true, true), json!(PARTIAL));
+        assert_eq!(verdict(true, true), json!(out::PARTIAL));
         assert_eq!(verdict(true, false), json!(false));
         assert_eq!(verdict(false, false), json!(false));
     }

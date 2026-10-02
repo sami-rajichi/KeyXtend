@@ -1,4 +1,5 @@
 //! G23: Fill asks Windows Hello from the no-focus face; it types after Verified, and nothing after Cancel.
+//! Without Hello only the refusal runs, so the verdict is at most partial.
 #![cfg(windows)]
 
 use std::time::Instant;
@@ -11,8 +12,13 @@ use spike_core::uia::{self, Uia};
 
 use crate::apps::{Ctx, Opened};
 use crate::facetools::FaceWin;
+use crate::out::{self, say};
 use crate::win::{self, sleep_ms};
 use crate::{g21, probe};
+
+/// What the owner answers at each Hello prompt, in order.
+const ORDER: &str =
+    "Hello asks three times: confirm (user name), cancel (password), then confirm (password).";
 
 /// The login page: a user field, and a password field whose length the page keeps in its title, from 0 at load.
 fn page(ctx: &Ctx) -> String {
@@ -101,6 +107,31 @@ fn cancelled(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, 
     Ok(json!({ "ok": ok, "prompt_secs": prompt, "closed_secs": closed, "password_length": len }))
 }
 
+/// The owner confirms again: the test password must arrive, seen by its length in the page title.
+fn filled(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
+    let mark = &ctx.cfg.g23.length_mark;
+    // The page counts UTF-16 units, as JavaScript does.
+    let want = ctx.spike.tools.test_password.encode_utf16().count();
+    ask(
+        ctx,
+        uia,
+        fw,
+        app,
+        &ctx.cfg.g21.pass_name,
+        ToolButton::FillPassword,
+    )?;
+    let prompt = within(ctx, || prompt_up(ctx));
+    let typed = within(ctx, || length_in(&win::title(app.hwnd), mark) == Some(want));
+    let back = foreground() == app.hwnd;
+    let ok = prompt.is_some() && typed.is_some() && back;
+    Ok(json!({ "ok": ok, "prompt_secs": prompt, "typed_secs": typed, "front_back": back }))
+}
+
+/// G23's `pass`: without Hello only the refusal ran, so it is at most partial.
+fn verdict(hello: bool, ok: bool) -> Value {
+    out::pass(ok, hello)
+}
+
 /// True if a Hello prompt shows within the refuse wait.
 fn prompt_within_refuse(ctx: &Ctx) -> bool {
     let (wait, poll) = (ctx.cfg.g23.refuse_wait_ms, ctx.cfg.timing.poll_ms);
@@ -126,18 +157,23 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
     }))
 }
 
-/// With Hello: the owner confirms once, then cancels once. Without it: nothing may be typed.
+/// With Hello: the owner confirms, cancels, then confirms again, as `ORDER` says. Without it: nothing may be typed.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
     let uia = Uia::new()?;
     probe::front(ctx, app)?;
     if !hello::available()? {
         let r = refused(ctx, &uia, fw, app)?;
-        return Ok(json!({ "hello": "unavailable", "pass": r["ok"], "refused": r }));
+        let pass = verdict(false, r["ok"] == true);
+        return Ok(json!({ "hello": "unavailable", "pass": pass, "refused": r }));
     }
+    say!("{ORDER}");
     let yes = confirmed(ctx, &uia, fw, app)?;
     let no = cancelled(ctx, &uia, fw, app)?;
-    let pass = yes["ok"] == true && no["ok"] == true;
-    Ok(json!({ "hello": "available", "pass": pass, "confirmed": yes, "cancelled": no }))
+    let filled = filled(ctx, &uia, fw, app)?;
+    let pass = verdict(true, [&yes, &no, &filled].iter().all(|v| v["ok"] == true));
+    Ok(json!({
+        "hello": "available", "pass": pass, "confirmed": yes, "cancelled": no, "filled": filled,
+    }))
 }
 
 /// Runs G23 with face `name` on a local Chrome login page.
@@ -154,6 +190,24 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn without_hello_g23_is_at_most_partial() {
+        assert_eq!(verdict(true, true), json!(true));
+        assert_eq!(
+            verdict(false, true),
+            json!(crate::out::PARTIAL),
+            "only the refusal ran"
+        );
+        assert_eq!(verdict(false, false), json!(false));
+        assert_eq!(verdict(true, false), json!(false));
+    }
+
+    #[test]
+    fn the_owner_is_told_the_three_answers_in_order() {
+        let (yes, no) = (ORDER.find("confirm"), ORDER.find("cancel"));
+        assert!(yes < no && ORDER.rfind("confirm") > no, "{ORDER}");
+    }
 
     #[test]
     fn the_password_length_comes_from_the_title() {
