@@ -24,14 +24,14 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - secondary text and icons on the plate use `legend_2_plate` (4.5:1 on the plate), which takes `legend_2` unless a palette writes its own (only where it differs);
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
    - the theme tests compute these; never change an owner-approved colour without asking;
-   - there are no exceptions: every legend pair reaches 4.5:1, and the owner's nudges to reach it (2026-09-30) are marked in `themes.toml`;
+   - one owner-approved exception: the Carousel's side names keep their fade as decoration (owner, 2026-10-02; `drawn::EXCEPTION`). Every other pair reaches its minimum, and the owner's nudges to reach it (2026-09-30, 2026-10-02) are marked in `themes.toml`;
    - where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 3. **Colour means function** (ET66 rule): modifiers, Enter, danger keys (Esc/Backspace) and "on/locked" states each have a distinct token, in every theme.
 4. **Fonts:**
    - Native: the system UI font plus Noto Sans Arabic;
    - ET66: IBM Plex Sans + IBM Plex Sans Arabic;
-   - Dolch: Rubik (Latin) with Noto Sans Arabic.
-   - All are OFL; bundle them with the licence (`kx-licence-check`).
+   - Dolch: Rubik for Latin and Arabic, with Noto Sans Arabic as fallback.
+   - The bundled fonts are OFL; bundle them with the licence (`kx-licence-check`).
    - Arabic legends are about 1.1× larger than Latin ones.
 5. **Icons:** Lucide (ISC) only, platform-specific where it matters (Windows logo vs ⌘ vs Super). No emoji as icons.
 6. **Scale:** every size is multiplied by the keyboard's scale. Panels use the panel scale, which never goes below 0.8.

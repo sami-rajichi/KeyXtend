@@ -40,19 +40,19 @@ apps/
   keyxtend/              composition root: picks the platform adapter and the enabled modules
                          (one Cargo feature per module); the command line, one running copy,
                          the log, the panic hook and Qt's hardened start
-  keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update)
+  keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update) (P8)
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits), events,
                          Clock and Mono, settings contract, notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
-  kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth
+  kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth (P8)
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
-                         (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray: ADR-0019); later: hooks
+                         (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray: ADR-0019); hooks (P4)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray
-  kx-platform-macos/    later
-  kx-platform-linux/    later (X11 + Wayland portals)
+  kx-platform-macos/    (P15)
+  kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service)
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
@@ -60,26 +60,29 @@ crates/
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
                          language, the tray's in the system's (ADR-0020)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
-                         WCAG contrast and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
+                         WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
+                         and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
-                         the face (board and state JSON, clicks) and the language key's
-                         Carousel, Cycle and List; `[keyboard]` settings. Later: shortcuts
+                         the face (board and state JSON, clicks, and the board's row height,
+                         `row_px`, for the theme's contrast check) and the language key's
+                         Carousel, Cycle and List; `[keyboard]` settings. Shortcuts (P6)
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`
-  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click
-  kx-mod-scroll/        scroll controller (2 speeds, target tracking)
-  kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions
-  kx-mod-clipboard/     history store, retention, formats, exclusion rules
-  kx-mod-vault/         encrypted vault, unlock, import/export
-  kx-mod-selection/     selection helper
-  kx-mod-voice/         voice UI + worker client (engine lives in the worker)
-  kx-mod-snip/          capture overlay, editor, OCR client
-  kx-mod-power/         power dialog
-  kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20
-  kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests
+  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4)
+  kx-mod-scroll/        scroll controller (2 speeds, target tracking) (P5)
+  kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions (P7)
+  kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
+  kx-mod-vault/         encrypted vault, unlock, import/export (P9)
+  kx-mod-selection/     selection helper (P10)
+  kx-mod-voice/         voice UI + worker client (engine lives in the worker) (P11)
+  kx-mod-snip/          capture overlay, editor, OCR client (P12)
+  kx-mod-power/         power dialog (P6)
+  kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20 (P8)
+  kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests; it
+                         depends on kx-settings, whose key names its fake settings sink checks as the store does
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml and, beside it, kx-gates-p3.toml (the P3
@@ -98,7 +101,7 @@ spike/                   tested P1 code, moved out phase by phase (ADR-0014, doc
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), stage (the release app with its Qt files),
                          dev-cert / dev-install / check-uiaccess (uiAccess test builds),
-                         sign (later), sbom (later)
+                         sign (P14), sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs
@@ -169,6 +172,7 @@ pub trait Module: Send + 'static {
    - `kx-review` checks this.
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
+12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
 
 **CI** (`.github/workflows/ci.yml`): Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage. Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
 
@@ -177,7 +181,7 @@ pub trait Module: Send + 'static {
 - **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
 - **State machines as enums** with explicit transitions, for the keyboard, hold engine, scroll, vault lock and voice session. Time is always injected through a `Clock` trait, so tests are deterministic.
 - **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops. No cycles of bounded channels.
-- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
+- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
 - **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
 - **UI hub (`kx-ui`).** QML makes the bridge objects without arguments, so they reach the app's `Hub` through `kx_ui::install`, set once before QML loads (ADR-0018). Adapter threads wake the Qt thread through cxx-qt's queue, never blocking. Try again and Quit go to the app through a request queue it drains on its own thread; Quit, from the user or a second copy, is the last request, and the queue then ends.
