@@ -82,6 +82,8 @@ pub struct AssistCfg {
     pub try_secs: u64,
     /// How often the Grab hand try turns Grab back on after a drop, in ms.
     pub rearm_ms: u64,
+    /// Most hook timings kept for G5's p99; later calls still run but are not timed.
+    pub hook_samples: usize,
 }
 
 /// G5 hold-engine settings; times in ms, distances in px.

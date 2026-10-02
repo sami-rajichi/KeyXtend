@@ -29,6 +29,8 @@ pub struct Setup {
     pub own: Vec<RECT>,
     /// Longest wait for the hook thread to start or answer, in ms.
     pub reply_ms: u64,
+    /// Most hook timings kept for the p99; later calls still run but are not timed.
+    pub samples: usize,
 }
 
 /// The running engine and its hook thread.

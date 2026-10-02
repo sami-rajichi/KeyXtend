@@ -44,6 +44,7 @@ pub fn run(ctx: &Ctx, name: &str, secs: u64) -> Result<Value, String> {
         source: Source::Physical,
         own: face_rects(ctx),
         reply_ms: a.reply_ms,
+        samples: a.hook_samples,
     })?;
     assist.set_mode(mode)?;
     say!("hand try: {name} for {secs} s; hold still {} ms", h.ms);

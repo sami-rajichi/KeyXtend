@@ -151,6 +151,7 @@ fn drive(ctx: &Ctx, target: &Opened) -> Result<Drive, String> {
         source: Source::Simulated,
         own: Vec::new(),
         reply_ms: a.reply_ms,
+        samples: a.hook_samples,
     })?;
     assist.set_mode(Mode::RightClick)?;
     let (cases_out, passed) = play_all(ctx, target.hwnd, p)?;

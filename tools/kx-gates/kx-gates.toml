@@ -173,6 +173,8 @@ reply_ms = 2000
 try_secs = 90
 # How often the Grab hand try turns Grab back on after a drop, in ms; keep it below spike.toml [hold] ms.
 rearm_ms = 250
+# Most hook timings kept for G5's p99; later calls still run but are not timed.
+hook_samples = 65536
 
 [sim]
 # The simulated user (G5 and the probes): pause between steps, a short click, and how far past hold_ms a long hold lasts, in ms.

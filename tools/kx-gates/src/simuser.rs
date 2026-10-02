@@ -61,6 +61,7 @@ pub fn start_assist(ctx: &Ctx, own: Vec<RECT>) -> Result<Assist, String> {
         source: Source::Simulated,
         own,
         reply_ms: ctx.cfg.assist.reply_ms,
+        samples: ctx.cfg.assist.hook_samples,
     })
 }
 

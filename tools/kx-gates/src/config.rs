@@ -229,6 +229,10 @@ mod tests {
         assert!(cfg.g4.clicks > 0 && cfg.timing.quit_wait_ms > 0);
         let hold = spike_core::config::load().expect("spike.toml loads").hold;
         assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < hold.ms);
+        assert!(
+            cfg.assist.hook_samples > 0,
+            "with no timing kept, G5's p99 always fails"
+        );
         for app in ["explorer", "word_file"] {
             assert!(cfg.app(app).is_ok(), "missing app {app}");
         }
