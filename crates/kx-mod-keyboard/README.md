@@ -105,9 +105,9 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltG
 | `modifiers` | `"release"` | Latched modifiers let go after the next key (`"release"`) or stay until clicked again (`"stay"`). |
 | `lang_key` | `"carousel"` | How the language key shows the layouts: `"carousel"`, `"cycle"` or `"list"`. |
 | `size` | `1.0` | The keyboard's size as a factor of the size-1 board; the module writes it when the user resizes. |
-| `presets` | `[1.0, 1.25, 1.5]` | The S, M and L sizes: one to the face port's `MAX_PRESETS` (one per size button the top bar names), each between `size_min` and `size_max`. |
-| `size_step` | `0.05` | Change per smaller or bigger click; above 0. |
-| `size_min`, `size_max` | `0.8`, `1.8` | The smallest and largest sizes; `size_min` is above 0 and below `size_max`. |
+| `presets` | `[1.0, 1.25, 1.5]` | The S, M and L sizes, rising: one to the face port's `MAX_PRESETS` (one per size button the top bar names), each between `size_min` and `size_max`. |
+| `size_step` | `0.05` | Change per smaller or bigger click; above 0, no wider than `size_max - size_min`, and with a finite reciprocal. |
+| `size_min`, `size_max` | `0.8`, `1.8` | The smallest and largest sizes; `size_min` is above 0 and below `size_max`, which is at most `SIZE_CEILING` in `settings.rs`. |
 | `relabel_ms` | `500` | How often the labels follow the layout of the app in front, in ms; within `RELABEL_MS` in `settings.rs`, so a hand-edited value can neither stall them nor poll for nothing. |
 | `key_apps` | `[]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |

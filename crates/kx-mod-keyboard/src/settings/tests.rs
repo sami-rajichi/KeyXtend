@@ -19,6 +19,11 @@ fn invalid(t: &toml::Table) -> bool {
     )
 }
 
+/// `n` as a float, for small counts.
+fn float(n: usize) -> f64 {
+    f64::from(u32::try_from(n).unwrap())
+}
+
 fn unparsed(t: &toml::Table) -> bool {
     matches!(
         validate_as::<KeyboardSettings>(t),
@@ -95,12 +100,48 @@ fn the_size_and_every_preset_sit_within_the_limits() {
 
 #[test]
 fn no_more_presets_than_the_top_bar_names() {
-    let presets = |n: usize| with("presets", vec![1.0; n]);
+    let rising = |n: usize| (0..n).map(|i| 1.0 + 0.1 * float(i)).collect::<Vec<f64>>();
+    let presets = |n: usize| with("presets", rising(n));
     assert_eq!(
         validate_as::<KeyboardSettings>(&presets(MAX_PRESETS)),
         Ok(())
     );
     assert!(invalid(&presets(MAX_PRESETS + 1)));
+}
+
+#[test]
+fn size_max_has_a_ceiling_so_a_hand_edited_size_cannot_open_off_every_screen() {
+    let top = |max: f64| {
+        let mut t = with("size_max", max);
+        t.insert("size".into(), max.into());
+        t
+    };
+    assert_eq!(validate_as::<KeyboardSettings>(&top(SIZE_CEILING)), Ok(()));
+    assert!(invalid(&top(SIZE_CEILING + 0.05)), "just past the ceiling");
+    assert!(invalid(&top(1000.0)), "the reviewer's case");
+}
+
+#[test]
+fn the_step_fits_inside_the_limits_and_divides_into_a_finite_grid() {
+    let (min, max) = (0.8, 1.8);
+    let step = |s: f64| validate_as::<KeyboardSettings>(&with("size_step", s));
+    assert_eq!(step(max - min), Ok(()), "one step spans the range");
+    assert!(
+        invalid(&with("size_step", max - min + 0.05)),
+        "wider than the range"
+    );
+    assert!(invalid(&with("size_step", 5e-324)), "no finite grid");
+}
+
+#[test]
+fn the_presets_rise_as_the_buttons_name_them() {
+    let presets = |p: Vec<f64>| with("presets", p);
+    assert!(invalid(&presets(vec![1.25, 1.0])), "falling");
+    assert!(invalid(&presets(vec![1.0, 1.0])), "repeated");
+    assert_eq!(
+        validate_as::<KeyboardSettings>(&presets(vec![0.8, 1.0, 1.8])),
+        Ok(())
+    );
 }
 
 #[test]

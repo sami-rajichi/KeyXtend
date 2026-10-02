@@ -11,15 +11,18 @@ use serde::{Deserialize, Serialize};
 /// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
 /// hand-edited value from stalling them.
 pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
+/// The largest `size_max` the settings take, so a hand-edited size cannot open the keyboard far past every screen.
+pub(crate) const SIZE_CEILING: f64 = 4.0;
 
 /// Why a size was refused: it is not a finite number.
 const NOT_A_NUMBER: &str = "sizes must be numbers";
 /// Why the limits were refused.
 const BAD_RANGE: &str = "size_min must be above 0 and below size_max";
 /// Why the step was refused.
-const BAD_STEP: &str = "size_step must be above 0";
+const BAD_STEP: &str = "size_step must be above 0 and no wider than size_max - size_min";
 /// Why the presets were refused.
-const BAD_PRESETS: &str = "presets must be at least one size, no more than the top bar names, between size_min and size_max";
+const BAD_PRESETS: &str =
+    "presets must rise, one to as many as the top bar names, between size_min and size_max";
 /// Why the size was refused.
 const BAD_SIZE: &str = "size must be between size_min and size_max";
 /// Why an app name was refused.
@@ -109,6 +112,9 @@ impl KeyboardSettings {
 impl Settings for KeyboardSettings {
     fn check(&self) -> Result<(), SettingsError> {
         self.check_sizes().map_err(invalid)?;
+        if self.size_max > SIZE_CEILING {
+            return Err(invalid(&format!("size_max must be at most {SIZE_CEILING}")));
+        }
         if !RELABEL_MS.contains(&self.relabel_ms) {
             let (low, high) = (RELABEL_MS.start(), RELABEL_MS.end());
             return Err(invalid(&format!("relabel_ms must be from {low} to {high}")));
@@ -121,7 +127,7 @@ impl Settings for KeyboardSettings {
 }
 
 impl KeyboardSettings {
-    /// Every size is a number, the limits make a range above zero, and the rest sits within it.
+    /// Every size is a number, the limits make a range above zero, the step fits it, and the rest sits within it.
     fn check_sizes(&self) -> Result<(), &'static str> {
         let all = [self.size, self.size_step, self.size_min, self.size_max];
         if !all.iter().chain(&self.presets).all(|v| v.is_finite()) {
@@ -130,12 +136,14 @@ impl KeyboardSettings {
         if !(self.size_min > 0.0 && self.size_min < self.size_max) {
             return Err(BAD_RANGE);
         }
-        if self.size_step <= 0.0 {
+        let step = self.size_step;
+        if !(step > 0.0 && step <= self.size_max - self.size_min && step.recip().is_finite()) {
             return Err(BAD_STEP);
         }
         let within = |v: &f64| (self.size_min..=self.size_max).contains(v);
         let count = (1..=MAX_PRESETS).contains(&self.presets.len());
-        if !count || !self.presets.iter().all(within) {
+        let rising = self.presets.windows(2).all(|p| p[0] < p[1]);
+        if !count || !rising || !self.presets.iter().all(within) {
             return Err(BAD_PRESETS);
         }
         if !within(&self.size) {
