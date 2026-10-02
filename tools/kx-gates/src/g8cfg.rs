@@ -78,6 +78,7 @@ pub struct G8 {
     /// Quit tries on a copy G8 started but could not open or cap, whose command window may not exist yet, and the
     /// wait between them.
     pub quit_tries: u32,
+    /// The wait between those quit tries, in ms.
     pub quit_try_ms: u64,
 }
 

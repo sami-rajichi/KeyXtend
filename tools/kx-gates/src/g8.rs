@@ -27,7 +27,7 @@ use crate::{admin, close, g2, out};
 pub const WEAK: &str = "weak";
 /// Weak mode cannot force software drawing: the app clears every Qt variable before Qt starts (kx-ui `harden`).
 const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mode caps cores, CPU time and memory \
-     only, so its best verdict is partial until the owner decides";
+     only, so its best verdict is partial. The owner accepted that for P3, and software drawing moved to P14";
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
@@ -206,6 +206,21 @@ fn outside(
     (o, [shown(&bus), shown(&frames)])
 }
 
+/// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
+/// and whether the product quit after `quit`.
+fn broke(e: &str, recorder: Option<u32>, secs: u64, quit: Option<&Result<bool, String>>) -> String {
+    let left = recorder.map(|pid| {
+        format!("; PresentMon (pid {pid}) records for up to {secs} s from its start, then stops")
+    });
+    let product = match quit {
+        Some(Ok(true)) => "; the product quit".to_string(),
+        Some(Ok(false)) => "; the product still runs; close it".to_string(),
+        Some(Err(q)) => format!("; the product still runs ({q}); close it"),
+        None => String::new(),
+    };
+    format!("{e}{}{product}", left.unwrap_or_default())
+}
+
 /// Runs G8: `name` is the product, or `weak` for weak mode. The product must not be running, as G8 times a cold start.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if product::running().is_some() {
@@ -223,7 +238,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     };
     let since = SystemTime::now();
     let rec = g8frames::record(ctx, &program)?;
-    let s = start(ctx, &program, job.as_ref())?;
+    let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
+    let s = start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
     say!(
         "G8 {name}: started {} (pid {}); shown after {:?} ms",
         program.display(),
@@ -232,7 +248,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     );
     let measured = measure(ctx, &s, &program);
     let quit = close::quit_running(ctx).map(|(_, ended)| ended);
-    let m = measured?;
+    let m = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
     let (o, [bus, frames]) = outside(ctx, job, &program, (since, rec.as_ref()));
     let parts = parts(&ctx.cfg.g8, s.shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
@@ -243,4 +259,28 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "log_to_guarded_ms": log_span, "resizes": m.resizes, "presses": m.presses, "g2": m.g2, "bus": bus,
         "frames": frames, "parts": parts, "quit": ended, "pass": verdict(weak, ended && budget::all_pass(&parts)),
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_run_that_broke_off_names_the_presentmon_it_left_and_whether_the_product_quit() {
+        let e = broke("no keyboard", Some(4242), 90, Some(&Ok(false)));
+        assert!(e.starts_with("no keyboard"), "{e}");
+        assert!(
+            e.contains("PresentMon (pid 4242)") && e.contains("90 s"),
+            "{e}"
+        );
+        assert!(e.contains("still runs"), "{e}");
+        let quit = broke("no keyboard", None, 90, Some(&Ok(true)));
+        assert!(
+            !quit.contains("PresentMon") && quit.contains("quit"),
+            "{quit}"
+        );
+        let refused = broke("x", None, 90, Some(&Err("no command window".into())));
+        assert!(refused.contains("no command window"), "{refused}");
+        assert_eq!(broke("x", None, 90, None), "x", "nothing left to name");
+    }
 }

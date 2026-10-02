@@ -14,7 +14,7 @@ use crate::g8cfg::G8;
 use crate::keymap::Reader;
 use crate::product::{self, Keyboard};
 use crate::win::{self, size32, sleep_ms};
-use crate::{mouse, shot};
+use crate::{mouse, shot, simuser};
 
 /// What the presses measured, in ms.
 #[derive(Debug, Default, Serialize)]
@@ -84,6 +84,14 @@ fn away_from(kb: RECT, on: POINT, desktop_top: i32) -> POINT {
     POINT { x: on.x, y }
 }
 
+/// `released`, the result of letting the button go; on an error `release` lets every button go, so none stays down.
+fn or_release(
+    released: Result<(), String>,
+    release: impl FnOnce() -> Result<bool, String>,
+) -> Result<(), String> {
+    released.map_err(|e| format!("{e}; buttons let go: {:?}", release()))
+}
+
 /// Presses `[g8] press_key` again and again and times how soon it lights; the pointer rests on it first, so the
 /// hover is already drawn.
 pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
@@ -98,7 +106,7 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
         let start = Instant::now();
         mouse::press_at(on)?;
         let lit = watch(&r, &before, start, g.press_wait_ms, &mut out.copy_ms);
-        mouse::release_at(away)?;
+        or_release(mouse::release_at(away), simuser::release_all)?;
         out.lit_ms.push(lit?);
     }
     Ok(out)
@@ -209,6 +217,26 @@ mod tests {
     /// Widths of the keyboard on this PC at 125 %, one size step apart, and a sample slack for DPI rounding.
     const WIDTHS: [i32; 3] = [765, 850, 935];
     const SLACK: i32 = 2;
+
+    #[test]
+    fn a_failed_release_lets_every_button_go_and_says_so() {
+        let mut freed = false;
+        let e = or_release(Err("SendInput refused".into()), || {
+            freed = true;
+            Ok(true)
+        })
+        .expect_err("the release failed");
+        assert!(freed && e.contains("SendInput refused"), "{e}");
+        let mut called = false;
+        let ok = or_release(Ok(()), || {
+            called = true;
+            Ok(true)
+        });
+        assert!(
+            ok.is_ok() && !called,
+            "a release that worked needs nothing more"
+        );
+    }
 
     #[test]
     fn a_keyboard_off_its_first_width_is_sized_back_toward_it() {

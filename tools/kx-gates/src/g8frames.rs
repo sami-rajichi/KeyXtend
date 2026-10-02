@@ -17,6 +17,13 @@ pub struct Recorder {
     at: Instant,
 }
 
+impl Recorder {
+    /// The process id of the `PresentMon` G8 started.
+    pub fn pid(&self) -> u32 {
+        self.process.pid()
+    }
+}
+
 /// The file name of `program`, which `PresentMon` matches its process by.
 fn exe_name(program: &Path) -> String {
     program
