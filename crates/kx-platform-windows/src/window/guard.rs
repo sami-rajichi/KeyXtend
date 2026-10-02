@@ -16,7 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use super::{KEPT, is_through, kept_ex, lifts_back};
+use super::{KEPT, holds_kept, is_through, kept_ex, lifts_back};
 use crate::{last_refused, refused};
 
 /// The window property that holds the window's own procedure while the guard is hooked.
@@ -39,7 +39,7 @@ pub(super) fn guard(hwnd: HWND) -> Result<(), UiError> {
         return Err(UiError::Refused(ERROR_INVALID_THREAD_ID.to_hresult().0));
     }
     hook(hwnd)?;
-    add_kept(hwnd);
+    add_kept(hwnd)?;
     lift(hwnd)
 }
 
@@ -135,24 +135,30 @@ fn unhook(hwnd: HWND, own: HANDLE) {
     // SAFETY: plain query and change on our own window during its last message; another subclass in front stays.
     unsafe {
         if GetWindowLongPtrW(hwnd, GWLP_WNDPROC) == ours() {
-            SetWindowLongPtrW(hwnd, GWLP_WNDPROC, own.0.addr().cast_signed());
+            // A refused restore leaves nothing more to try as the window goes.
+            let _ = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, own.0.addr().cast_signed());
         }
     }
     drop_props(hwnd);
 }
 
-/// Adds the kept styles; the subclass then keeps them against later changes.
+/// Adds the kept styles, refused when they did not land; the subclass then keeps them against later changes.
 #[allow(
     unsafe_code,
     reason = "Reads and sets our own window's extended style."
 )]
-fn add_kept(hwnd: HWND) {
+pub(super) fn add_kept(hwnd: HWND) -> Result<(), UiError> {
     // The kept styles fit in 31 bits, so this never falls back.
     let kept = isize::try_from(KEPT).unwrap_or_default();
     // SAFETY: plain style query and change on our own live window.
     unsafe {
         let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
         SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | kept);
+    }
+    if holds_kept(ex_of(hwnd)) {
+        Ok(())
+    } else {
+        Err(last_refused())
     }
 }
 

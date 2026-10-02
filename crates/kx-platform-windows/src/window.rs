@@ -39,6 +39,14 @@ pub const KEPT: u32 = WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW;
 /// Extended styles that let clicks pass through a window; a guarded window keeps them only if it had both at first.
 pub const THROUGH: u32 = WS_EX_LAYERED | WS_EX_TRANSPARENT;
 
+/// The kept styles a style change sets; topmost comes only from `SetWindowPos`.
+const STYLED: u32 = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+
+/// True when extended style `ex` holds the kept styles a style change sets.
+fn holds_kept(ex: u32) -> bool {
+    ex & STYLED == STYLED
+}
+
 /// True when extended style `ex` lets clicks pass through.
 #[must_use]
 pub fn is_through(ex: u32) -> bool {
@@ -110,6 +118,14 @@ mod rules {
             other | KEPT,
             "other asked styles stay"
         );
+    }
+
+    #[test]
+    fn the_kept_styles_hold_with_no_focus_and_tool_whatever_the_topmost_bit() {
+        assert!(holds_kept(KEPT) && holds_kept(KEPT & !WS_EX_TOPMOST));
+        assert!(holds_kept(KEPT | THROUGH));
+        assert!(!holds_kept(0) && !holds_kept(WS_EX_TOOLWINDOW | WS_EX_TOPMOST));
+        assert!(!holds_kept(WS_EX_NOACTIVATE));
     }
 
     #[test]

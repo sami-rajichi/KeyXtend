@@ -220,7 +220,7 @@ pub fn shape(title_is: &str, rects: &[Rect]) -> Result<(), UiError> {
 
 /// One region covering every rect; the caller owns it.
 #[allow(unsafe_code, reason = "Makes a region and deletes it on failure.")]
-fn region(rects: &[Rect]) -> Result<HRGN, UiError> {
+pub(super) fn region(rects: &[Rect]) -> Result<HRGN, UiError> {
     // SAFETY: makes an empty region, which the caller owns.
     let all = unsafe { CreateRectRgn(0, 0, 0, 0) };
     if all.is_invalid() {

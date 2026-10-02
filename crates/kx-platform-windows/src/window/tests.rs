@@ -5,6 +5,7 @@
     reason = "The tests make, guard and destroy their own hidden windows."
 )]
 
+mod calls;
 mod z_order;
 
 use std::cell::{Cell, RefCell};
