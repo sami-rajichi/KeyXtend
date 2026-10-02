@@ -2,6 +2,7 @@ use super::*;
 use kx_module_api::{
     Event, EventError, ModuleId, Settings, SettingsError, SettingsSpec, WriteError, validate_as,
 };
+use kx_settings::VERSION_KEY;
 use serde::{Deserialize, Serialize};
 
 /// A span whose low end may not pass its high end.
@@ -111,6 +112,16 @@ fn a_refusal_or_a_refused_key_stores_nothing() {
     let refused = handle.set("low", Value::Integer(3));
     assert_eq!(refused, Err(WriteError::Refused(SPANNED.id)));
     assert_eq!(span(&host), Ok(Span { low: 2, high: 5 }));
+}
+
+#[test]
+fn the_version_key_is_refused_before_any_check_as_the_store_does() {
+    let mut host = FakeHost::new(&SPANNED);
+    let handle = host.handle();
+    let version = handle.set_all(values(&format!("{VERSION_KEY} = 2\nlow = 2")));
+    assert_eq!(version, Err(WriteError::Refused(SPANNED.id)));
+    assert_eq!(span(&host), Ok(Span { low: 1, high: 5 }));
+    assert!(host.sink.writes().is_empty());
 }
 
 #[test]

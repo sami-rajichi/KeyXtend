@@ -3,6 +3,7 @@
 use kx_module_api::{
     ModuleId, Settings, SettingsError, SettingsSink, SettingsSpec, WriteError, parse_as,
 };
+use kx_settings::VERSION_KEY;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use toml::Table;
 
@@ -15,6 +16,7 @@ pub(super) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// Stores writes in one section: checked together by the spec when there is one, all or nothing.
+/// As in the kernel's store, a write that holds the version key is refused before any check.
 #[derive(Debug, Default)]
 pub struct FakeSink {
     spec: Option<&'static SettingsSpec>,
@@ -84,6 +86,9 @@ impl SettingsSink for FakeSink {
         let refusal = self.refusal_for(&values);
         if let Some(error) = refusal.clone().filter(|e| !e.holds()) {
             return Err(error);
+        }
+        if values.contains_key(VERSION_KEY) {
+            return Err(WriteError::Refused(module));
         }
         let mut next = self.section();
         next.extend(values.clone());

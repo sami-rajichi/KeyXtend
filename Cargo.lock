@@ -611,6 +611,7 @@ name = "kx-test-support"
 version = "0.0.0"
 dependencies = [
  "kx-module-api",
+ "kx-settings",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

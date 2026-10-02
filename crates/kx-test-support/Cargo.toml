@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
+kx-settings = { path = "../kx-settings" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
