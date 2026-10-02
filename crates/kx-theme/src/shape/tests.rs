@@ -225,5 +225,15 @@ fn an_odd_tray_share_or_label_size_is_refused() {
         ),
         ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
         ("row_px = 31.0", "row_px = 0.0", "drawn.row_px"),
+        (
+            "mark_px = [10.0, 2.0, 2.0]",
+            "mark_px = [10.0, 0.0, 2.0]",
+            "bar.mark_px",
+        ),
+        (
+            "mark_px = [10.0, 2.0, 2.0]",
+            "mark_px = [10.0, 2.0, -1.0]",
+            "bar.mark_px",
+        ),
     ]);
 }

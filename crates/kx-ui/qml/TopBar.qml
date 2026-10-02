@@ -53,9 +53,9 @@ Item {
         property string uid: part ? bar.res.uid("bar", part) : ""
         property bool lit: false
         readonly property bool hot: area.containsMouse
-        // Hover text sits on pop_hover, which is Highlight in high contrast, so it takes sel_ink there.
-        readonly property color ink: hot && (bar.lk.contrast || !lit) ? bar.lk.sel_ink
-            : lit ? bar.p.ring : bar.p.legend_2_plate
+        // Hover text sits on pop_hover, which is Highlight in high contrast, so it takes sel_ink there; the lit size
+        // letter is text in pop_ink, and its mark carries the ring colour.
+        readonly property color ink: hot ? bar.lk.sel_ink : lit ? bar.p.pop_ink : bar.p.legend_2_plate
         signal clicked
         width: bar.sh.button_px[0] * bar.s
         height: bar.sh.button_px[1] * bar.s
@@ -86,6 +86,18 @@ Item {
             font.pixelSize: bar.sh.label_px * bar.s
             font.weight: b.lit ? bar.sh.lit_weight : bar.sh.weight
             color: b.ink
+        }
+        // The lit size's mark: a pill under its letter, in sel_ink on a hovered button in high contrast.
+        Rectangle {
+            readonly property bool mark: true
+            visible: b.lit
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: bar.sh.mark_px[2] * bar.s
+            width: bar.sh.mark_px[0] * bar.s
+            height: bar.sh.mark_px[1] * bar.s
+            radius: height / 2
+            color: b.hot && bar.lk.contrast ? bar.lk.sel_ink : bar.p.ring
         }
         MouseArea {
             id: area

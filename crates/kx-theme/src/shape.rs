@@ -27,6 +27,8 @@ pub struct BarShape {
     pub radius_share: f32,
     /// Gap between items.
     pub gap_px: f32,
+    /// The lit size's mark under its letter: width, height and gap above the button's bottom.
+    pub mark_px: [f32; 3],
 }
 
 /// Suggestion chips (`.chip`).

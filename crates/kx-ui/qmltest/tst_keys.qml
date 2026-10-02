@@ -227,6 +227,29 @@ Item {
             verify(Qt.colorEqual(icon.tint, D.lk.palette.legend_2_plate), "the resize corner");
         }
 
+        // The lit size letter is text in the plate's text colour and the ring marks it as a shape (mock-up .tb.on).
+        function test_the_lit_size_letter_reads_as_text_and_the_ring_marks_it() {
+            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false });
+            const [lit, unlit] = [true, false].map(on => find(bar, o => o.lit === on && o.text !== undefined && o.text.length > 0));
+            const letter = find(lit, o => o.font !== undefined && o.text === lit.text);
+            verify(Qt.colorEqual(letter.color, D.lk.palette.pop_ink), "the letter is plate text");
+            const mark = find(lit, o => o.mark === true);
+            verify(mark.visible && Qt.colorEqual(mark.color, D.lk.palette.ring), "the ring marks it");
+            compare([mark.width, mark.height], D.lk.shape.bar.mark_px.slice(0, 2));
+            verify(!find(unlit, o => o.mark === true).visible, "an unlit size has no mark");
+        }
+
+        // In high contrast a hovered button is Highlight, so its letter and mark take the hover text colour.
+        function test_in_high_contrast_a_hovered_lit_size_marks_in_the_hover_text_colour() {
+            const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: H.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false });
+            const lit = find(bar, o => o.lit === true && o.text !== undefined);
+            const mark = find(lit, o => o.mark === true);
+            verify(Qt.colorEqual(mark.color, H.lk.palette.ring), "Highlight on the window");
+            mouseMove(lit, lit.width / 2, lit.height / 2);
+            tryVerify(() => lit.hot, 1000, "hovered");
+            verify(Qt.colorEqual(mark.color, H.lk.sel_ink) && Qt.colorEqual(lit.ink, H.lk.sel_ink), "HighlightText on Highlight");
+        }
+
         function test_a_working_dpad_names_each_arrow_and_a_dimmed_one_is_one_button() {
             const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null });
             const pad = createTemporaryObject(padC, root, { box: box, lk: N.lk, res: root.res, s: 1 });

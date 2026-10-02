@@ -26,7 +26,8 @@ fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     let hot = p.pop_hover.on(plate);
     let chip = p.chip_bg.on(plate);
     let chips = vec![chip, p.hover.on(chip)];
-    // The lit size letter keeps the ring under the pointer, except in high contrast, where it takes sel_ink.
+    // The lit size letter is text in pop_ink and the ring marks it, under the pointer too; in high contrast the hovered
+    // button is Highlight, so both take sel_ink there, checked as hovered plate text.
     let lit = if v.contrast {
         vec![plate]
     } else {
@@ -46,7 +47,8 @@ fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
             WCAG_AA,
         ),
         ("sel_ink on hovered plate", v.sel_ink, vec![hot], WCAG_AA),
-        ("ring on plate", p.ring, lit, WCAG_AA),
+        ("lit size letter on plate", p.pop_ink, lit.clone(), WCAG_AA),
+        ("ring on plate", p.ring, lit, WCAG_SHAPES),
         ("legend on chip", p.legend, chips.clone(), WCAG_AA),
         ("chip icon on chip", icon, chips, WCAG_SHAPES),
     ];

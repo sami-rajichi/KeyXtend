@@ -11,6 +11,9 @@ weight = 400
 lit_weight = 600
 radius_share = 0.8
 gap_px = 4.0
+# The lit size's mark in the ring colour under its letter, as Windows 11 marks a selected tab with a pill: width, height and
+# gap above the button's bottom.
+mark_px = [10.0, 2.0, 2.0]
 
 [chip]
 # Suggestion chips: height, side padding, text size (Latin, Arabic), weight, icon size, icon gap.

@@ -197,13 +197,18 @@ fn the_plate_is_also_checked_see_through_over_a_backdrop_of_its_mode() {
 }
 
 #[test]
-fn the_lit_size_letter_and_the_move_ring_are_checked_as_text_on_the_plate() {
+fn the_lit_size_letter_is_text_and_the_ring_that_marks_it_a_shape() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
-        let ring = drawn(&v).into_iter().find(|d| d.name == "ring on plate");
-        let ring = ring.expect("the ring pair");
-        assert_eq!(ring.ink, v.palette.ring, "{at}");
-        assert!(ring.min >= WCAG_AA, "{at}: the lit letter is text");
+        let all = drawn(&v);
+        let find = |n: &str| all.iter().find(|d| d.name == n).cloned().expect(n);
+        let (letter, ring) = (find("lit size letter on plate"), find("ring on plate"));
+        assert_eq!(
+            (letter.ink, letter.min),
+            (v.palette.pop_ink, WCAG_AA),
+            "{at}"
+        );
+        assert_eq!((ring.ink, ring.min), (v.palette.ring, WCAG_SHAPES), "{at}");
     }
 }
 

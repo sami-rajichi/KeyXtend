@@ -142,7 +142,12 @@ var lk = {
       "weight": 400,
       "lit_weight": 600,
       "radius_share": 0.8,
-      "gap_px": 4.0
+      "gap_px": 4.0,
+      "mark_px": [
+        10.0,
+        2.0,
+        2.0
+      ]
     },
     "chip": {
       "height_px": 20.0,
