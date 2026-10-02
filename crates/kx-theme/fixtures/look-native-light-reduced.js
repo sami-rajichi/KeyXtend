@@ -196,7 +196,7 @@ var lk = {
         "dot_px": 3.0,
         "dot_on_px": 4.5,
         "dot_gap_px": 2.0,
-        "dot_off": 0.68
+        "dot_off": 0.72
       },
       "list": {
         "icon_px": 11.0,

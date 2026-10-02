@@ -66,8 +66,8 @@ dot_px = 3.0
 # An unlit dot keeps 3:1, so the lit one stands out by size instead (mock-up .dots i.on is opaque only).
 dot_on_px = 4.5
 dot_gap_px = 2.0
-# 2026-10-02: an unlit dot still counts the layouts, so it keeps 3:1 on every cap (mock-up .3).
-dot_off = 0.68
+# 2026-10-02: an unlit dot still counts the layouts, so it keeps 3:1 where it sits on every cap (mock-up .3).
+dot_off = 0.72
 
 [lang.list]
 # The List design (mock-up .lst, lines 237-238): the chevron's size and opacity beside the current name.

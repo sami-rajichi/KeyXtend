@@ -6,20 +6,20 @@ var lk = {
     "key": "#FF4A4D4F",
     "key_mod": "#FF35383B",
     "key_act": "#FF35383B",
-    "enter": "#FF126A6E",
+    "enter": "#FF137378",
     "enter_ink": "#FFFFFFFF",
-    "danger": "#FF913752",
+    "danger": "#FFA03D5A",
     "danger_ink": "#FFF4F1EA",
     "legend": "#FFEDEAE4",
     "legend_mod": "#FFEDEAE4",
-    "legend_2": "#FFE5E7E7",
+    "legend_2": "#FFE2E4E4",
     "legend_2_plate": "#FFB0B3B6",
     "legend_act": "#FFEDEAE4",
-    "on": "#FF126A6E",
+    "on": "#FF137378",
     "on_ink": "#FFFFFFFF",
-    "lock": "#FF126A6E",
+    "lock": "#FF137378",
     "lock_ink": "#FFFFFFFF",
-    "rec": "#FF913752",
+    "rec": "#FFA9405F",
     "rec_ink": "#FFFFFFFF",
     "led_off": "#00000000",
     "led_on": "#FF8FF0F2",
@@ -67,10 +67,10 @@ var lk = {
     "skirt": {
       "key": "#FF3A3C3E",
       "key_mod": "#FF2B2D30",
-      "enter": "#FF0D5254",
-      "danger": "#FF732A40",
-      "on": "#FF0D5254",
-      "rec": "#FF732A40",
+      "enter": "#FF106568",
+      "danger": "#FF86314B",
+      "on": "#FF106568",
+      "rec": "#FF86314B",
       "dim": "#FF2A2C2F"
     }
   },
@@ -216,7 +216,7 @@ var lk = {
         "dot_px": 3.0,
         "dot_on_px": 4.5,
         "dot_gap_px": 2.0,
-        "dot_off": 0.68
+        "dot_off": 0.72
       },
       "list": {
         "icon_px": 11.0,
@@ -754,9 +754,9 @@ var lk = {
   "dpad": {
     "face": "#FF35383B",
     "ink": "#FFEDEAE4",
-    "on": "#FF126A6E",
+    "on": "#FF137378",
     "on_ink": "#FFFFFFFF",
-    "stop": "#FF913752",
+    "stop": "#FFA9405F",
     "stop_ink": "#FFFFFFFF"
   },
   "dark": true,

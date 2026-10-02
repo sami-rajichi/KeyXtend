@@ -9,11 +9,11 @@ var lk = {
     "enter": "#FFE6BE3A",
     "enter_ink": "#FF2A2418",
     "danger": "#FF6B5645",
-    "danger_ink": "#FFF3EEE6",
+    "danger_ink": "#FFF0ECE4",
     "legend": "#FFEDE8DF",
     "legend_mod": "#FFF3EEE6",
-    "legend_2": "#FFC1BCB4",
-    "legend_2_plate": "#FFC1BCB4",
+    "legend_2": "#FFC6C0B9",
+    "legend_2_plate": "#FFC6C0B9",
     "legend_act": "#FFEDE8DF",
     "on": "#FF3F3B37",
     "on_ink": "#FFE6BE3A",
@@ -33,7 +33,7 @@ var lk = {
     "pop_hover": "#0DFFFFFF",
     "pop_sel": "#FF4A4130",
     "chip_bg": "#FF3A3734",
-    "hover": "#0AFFFFFF",
+    "hover": "#14FFFFFF",
     "dim": "#FF302E2C",
     "dim_ink": "#FF787570",
     "key_shadow": [
@@ -207,7 +207,7 @@ var lk = {
         "dot_px": 3.0,
         "dot_on_px": 4.5,
         "dot_gap_px": 2.0,
-        "dot_off": 0.68
+        "dot_off": 0.72
       },
       "list": {
         "icon_px": 11.0,

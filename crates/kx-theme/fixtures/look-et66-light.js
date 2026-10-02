@@ -12,7 +12,7 @@ var lk = {
     "danger_ink": "#FF1D1B18",
     "legend": "#FF1D1B18",
     "legend_mod": "#FF1D1B18",
-    "legend_2": "#FF615C54",
+    "legend_2": "#FF666057",
     "legend_2_plate": "#FF69635B",
     "legend_act": "#FF1D1B18",
     "on": "#FFFFFFFF",
@@ -23,7 +23,7 @@ var lk = {
     "rec_ink": "#FF7A5E00",
     "led_off": "#FFD3CEC4",
     "led_on": "#FF2F7A4C",
-    "ring": "#FF735C00",
+    "ring": "#FF947700",
     "badge_bg": "#FF1D1B18",
     "badge_ink": "#FFF2C400",
     "pop_bg": "#FFFBFAF7",
@@ -207,7 +207,7 @@ var lk = {
         "dot_px": 3.0,
         "dot_on_px": 4.5,
         "dot_gap_px": 2.0,
-        "dot_off": 0.68
+        "dot_off": 0.72
       },
       "list": {
         "icon_px": 11.0,

@@ -193,7 +193,7 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ),
         ("\nshare = 0.4", "\nshare = 1.5", "dim.share"),
         ("icon_share = 0.8", "icon_share = -0.1", "menu.icon_share"),
-        ("dot_off = 0.68", "dot_off = nan", "lang.cycle.dot_off"),
+        ("dot_off = 0.72", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
         ("weight = 400", "weight = 1000", "bar.weight"),
