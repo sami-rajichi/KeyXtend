@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 /// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
 /// hand-edited value from stalling them.
 pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
-/// The smallest `size_min` the settings take: the lowest size step where every key is still a 24 px target
-/// (WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
+/// The smallest `size_min` the settings take: the lowest size step where every key cell is still 24 px across
+/// (the spacing rule of WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
 /// The largest `size_max` the settings take, so a hand-edited size cannot open the keyboard far past every screen.
 pub(crate) const SIZE_CEILING: f64 = 4.0;

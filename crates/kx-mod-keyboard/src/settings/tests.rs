@@ -121,7 +121,7 @@ fn size_max_has_a_ceiling_so_a_hand_edited_size_cannot_open_off_every_screen() {
     assert!(invalid(&top(1000.0)), "the reviewer's case");
 }
 
-/// The smallest target WCAG 2.2 asks for (SC 2.5.8, Target Size Minimum), in CSS px, which are logical pixels.
+/// The spacing WCAG 2.2 asks around a small target (SC 2.5.8, Target Size Minimum), in CSS px, which are logical pixels.
 const TARGET_PX: f64 = 24.0;
 
 /// The shortest side of any key cell on the shipped board at `size`, in logical pixels.
@@ -142,12 +142,12 @@ fn size_min_has_a_floor_so_a_hand_edited_size_cannot_shrink_the_keys_past_clicki
 }
 
 #[test]
-fn the_floor_is_the_lowest_default_step_where_every_key_is_a_full_target() {
+fn the_floor_is_the_lowest_default_step_where_every_key_cell_spans_the_target_spacing() {
     let step = KeyboardSettings::from_defaults().unwrap().size_step;
     assert!(smallest_key(SIZE_FLOOR) >= TARGET_PX);
     assert!(
         smallest_key(SIZE_FLOOR - step) < TARGET_PX,
-        "a step lower, a key is below the target"
+        "a step lower, a key cell is below the spacing"
     );
 }
 

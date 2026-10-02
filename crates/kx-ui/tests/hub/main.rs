@@ -7,6 +7,8 @@
 )]
 
 mod app;
+#[path = "../shared/board.rs"]
+mod board;
 mod face;
 mod logs;
 mod look;
@@ -71,7 +73,7 @@ impl KeyboardFace for FakeFace {
     }
 
     fn row_px(&self) -> f64 {
-        f64::from(look::board_row())
+        f64::from(board::row())
     }
 
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {

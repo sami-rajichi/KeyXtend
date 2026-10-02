@@ -6,6 +6,8 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+#[path = "../shared/board.rs"]
+mod board;
 mod compose;
 mod files;
 mod markup;
@@ -42,17 +44,6 @@ fn keyboard_defaults() -> toml::Table {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(KEYBOARD_DEFAULTS);
     let text = std::fs::read_to_string(path).expect("the keyboard defaults read");
     toml::from_str(&text).expect("the keyboard defaults parse")
-}
-
-/// The keyboard module's board, whose row height the face reports.
-const KEYBOARD_BOARD: &str = "../kx-mod-keyboard/board.toml";
-
-/// The keyboard board's own row height at size 1.
-fn board_row() -> f64 {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(KEYBOARD_BOARD);
-    let text = std::fs::read_to_string(path).expect("the keyboard board reads");
-    let board: toml::Table = toml::from_str(&text).expect("the keyboard board parses");
-    board["row_px"].as_float().expect("a row height")
 }
 
 /// Fluent's marks around each argument, which keep Latin words in order inside Arabic text.

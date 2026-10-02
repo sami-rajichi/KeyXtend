@@ -252,7 +252,7 @@ impl kx_module_api::ports::KeyboardFace for Echo {
 
     fn row_px(&self) -> f64 {
         let _ = self.0.i18n();
-        f64::from(crate::look::board_row())
+        f64::from(crate::board::row())
     }
 
     fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {

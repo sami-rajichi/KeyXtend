@@ -65,7 +65,7 @@ impl KeyboardFace for Speaks {
     }
 
     fn row_px(&self) -> f64 {
-        crate::board_row()
+        f64::from(crate::board::row())
     }
 
     fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {
