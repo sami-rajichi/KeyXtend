@@ -5,6 +5,7 @@ import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
 import "pointer.js" as Pointer
 
 Item {
@@ -121,6 +122,17 @@ Item {
             const win = make();
             const letters = sizeButtons(win).map(b => all(b, o => o.font !== undefined && o.text === b.text)[0]);
             compare(letters.map(l => l.font.weight), sizeButtons(win).map(b => b.lit ? win.lk.shape.bar.lit_weight : win.lk.shape.bar.weight));
+        }
+
+        // The bubble's disc is the plate, a window, so high contrast draws its icon in WindowText, not ButtonText.
+        function test_the_bubble_icon_takes_the_plate_text_colour_in_high_contrast() {
+            const win = make();
+            const tint = lk => {
+                const b = createTemporaryObject(bubC, root, { lk: lk, res: win.res, tipMs: win.cfg.tipMs, lift: t => true });
+                return all(b.contentItem, o => o.icon === lk.icons.bar.bubble && o.tint !== undefined)[0].tint;
+            };
+            verify(Qt.colorEqual(tint(win.lk), win.lk.palette.legend), "the legend colour");
+            verify(Qt.colorEqual(tint(H.lk), H.lk.palette.legend_2_plate), "WindowText on Window");
         }
 
         // The gates find the top bar's buttons and the bubble by these ids, whatever the language.

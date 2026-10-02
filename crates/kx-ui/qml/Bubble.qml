@@ -50,7 +50,8 @@ Window {
         base: bub.res.icons
         ext: bub.res.ext
         px: bub.px[1]
-        tint: bub.lk.palette.legend
+        // The disc is the plate, a window, so high contrast draws the icon in WindowText.
+        tint: bub.lk.contrast ? bub.lk.palette.legend_2_plate : bub.lk.palette.legend
     }
     MouseArea {
         id: area

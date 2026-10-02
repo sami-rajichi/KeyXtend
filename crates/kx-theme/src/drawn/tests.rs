@@ -212,6 +212,33 @@ fn the_lit_size_letter_is_text_and_the_ring_that_marks_it_a_shape() {
     }
 }
 
+#[test]
+fn the_bubble_the_tray_menu_icons_and_a_hovered_rows_badge_are_checked() {
+    let t = themes();
+    for sys in [SysLook::default(), hc()] {
+        for (at, v) in views(&t, &sys) {
+            let (all, p) = (drawn(&v), &v.palette);
+            let find = |n: &str| all.iter().find(|d| d.name == n).cloned().expect(n);
+            // The bubble's disc is the plate, so high contrast draws its icon in WindowText.
+            let ink = if v.contrast {
+                p.legend_2_plate
+            } else {
+                p.legend
+            };
+            let bubble = find("bubble icon on plate");
+            assert_eq!((bubble.ink, bubble.min), (ink, WCAG_SHAPES), "{at}");
+            let tray = find("tray menu icon on pop_bg");
+            let faded = p.pop_ink.over(p.pop_bg, v.shape.menu.icon_share);
+            assert_eq!((tray.ink, tray.min), (faded, WCAG_SHAPES), "{at}");
+            let hot = find("tray menu icon on pop_hover");
+            assert_eq!((hot.bg, hot.min), (p.pop_hover.on(p.pop_bg), WCAG_SHAPES));
+            let badge = find("list badge on a hovered row");
+            let twice = p.pop_hover.on(p.pop_hover.on(p.pop_bg));
+            assert_eq!((badge.ink, badge.bg), (v.sel_ink, twice), "{at}");
+        }
+    }
+}
+
 /// The pairs Windows' contrast themes are made to read: text on its own background, and Highlight marks on a window.
 fn system_pairs() -> Vec<(Rgba, Rgba)> {
     let c = |x: [u8; 4]| Rgba::from(x);

@@ -39,7 +39,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 - each legend where it sits on its cap, at rest, under the hover tint and under the press shade. The place comes from a row (`[drawn] row_px`, kx-mod-keyboard's own, which a kx-ui test keeps equal) less the theme's gap, and the theme's font metrics (`font_metrics`, which a Quick test checks against the font). Each legend's capitals, from baseline to cap height, are measured against the gradient there, plus the skirt where they leave a sculpted top. A named key's label needs 4.5:1 and its icon 3:1;
 - the language key's faded marks (Cycle's dots and globe, List's chevron) at 3:1 where they sit, and the D-pad's icons;
 - the top bar's texts and icons, the lit size letter (text, in `pop_ink`), its mark and the move ring (shapes, in `ring`) on the plate, chips, and the same plate see-through over a system backdrop of its mode (`WINDOWS`);
-- text on the panels, their rows and buttons, the list's ring and the badge.
+- text on the panels, their rows and buttons, the list's ring and the badge, also on a hovered row, the tray menu's faded icons and the bubble's icon.
 
 `drawn::low` names every pair below its minimum, and the shipped-theme tests keep it empty in all six palettes and in high contrast. Dimmed keys are left out, since WCAG sets no minimum for inactive parts (1.4.3). The colours nudged to pass are marked in `themes.toml` ("owner 2026-09-30" for flat pairs, "2026-10-02" for drawn ones).
 

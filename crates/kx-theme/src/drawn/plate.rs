@@ -1,4 +1,5 @@
-//! What sits on the plate and the panels: the top bar, the corner and the chips, the panels' texts, rows and marks.
+//! What sits on the plate and the panels: the top bar, the corner, the chips and the bubble, the panels' texts, rows,
+//! marks and icons.
 
 use super::{Drawn, WINDOWS, worst};
 use crate::contrast::{WCAG_AA, WCAG_SHAPES};
@@ -57,7 +58,7 @@ fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     }
 }
 
-/// Text on the panels (list, notices, tips, tray menu), their rows and buttons, the list's ring and the badge.
+/// Text on the panels (list, notices, tips, tray menu), their rows and buttons, the list's ring, the badges and icons.
 pub(super) fn panels(v: &LookView, out: &mut Vec<Drawn>) {
     let p = &v.palette;
     let bg = p.pop_bg;
@@ -95,4 +96,37 @@ pub(super) fn panels(v: &LookView, out: &mut Vec<Drawn>) {
     for (name, ink, bgs, min) in pairs {
         out.push(worst(name, ink, 1.0, &bgs, min));
     }
+    icons(v, out);
+}
+
+/// The bubble's icon on its plate-coloured disc (Bubble.qml), the tray menu's faded icons (TrayMenu.qml) and the
+/// list's badge on a hovered row, which is `pop_hover` twice (LangRow.qml).
+fn icons(v: &LookView, out: &mut Vec<Drawn>) {
+    let p = &v.palette;
+    let ghost = p.pop_hover.on(p.pop_bg);
+    // The disc is a window, so high contrast draws the icon in WindowText.
+    let bubble = if v.contrast {
+        p.legend_2_plate
+    } else {
+        p.legend
+    };
+    let disc = [p.plate, p.hover.on(p.plate)];
+    out.push(worst(
+        "bubble icon on plate",
+        bubble,
+        1.0,
+        &disc,
+        WCAG_SHAPES,
+    ));
+    let share = v.shape.menu.icon_share;
+    let menu = [
+        ("tray menu icon on pop_bg", p.pop_ink, p.pop_bg),
+        ("tray menu icon on pop_hover", v.sel_ink, ghost),
+    ];
+    for (name, ink, bg) in menu {
+        out.push(worst(name, ink, share, &[bg], WCAG_SHAPES));
+    }
+    let row = [p.pop_hover.on(ghost)];
+    let badge = worst("list badge on a hovered row", v.sel_ink, 1.0, &row, WCAG_AA);
+    out.push(badge);
 }
