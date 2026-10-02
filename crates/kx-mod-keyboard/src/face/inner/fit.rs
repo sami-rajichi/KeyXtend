@@ -80,17 +80,20 @@ impl Inner {
             .is_some_and(|fits| self.sizer.fit(fits))
     }
 
-    /// Applies a size change and keeps the keyboard on its screen: the board redraws when the size changed, the
-    /// state when it moved, with a notice when the size could not be saved.
+    /// Applies a size change and keeps the keyboard on its screen, fitted to the screen it now lands on: the board
+    /// redraws when the size changed, the state when it moved, with a notice when the size could not be saved.
     pub(super) fn resized(
         &mut self,
         change: impl FnOnce(&mut Sizer) -> Result<bool, SizeError>,
     ) -> Result<FaceReply, FaceError> {
+        let before = self.placer.at();
         let changed = change(&mut self.sizer);
         let size = self.size();
-        let state = self.placer.keep(size, &self.screens);
-        let redraw = |board| FaceReply {
-            board,
+        self.placer.keep(size, &self.screens);
+        let refit = self.settle();
+        let state = self.placer.at() != before;
+        let redraw = |board: bool| FaceReply {
+            board: board || refit,
             state,
             notice: None,
         };

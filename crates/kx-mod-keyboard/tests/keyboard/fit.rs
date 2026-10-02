@@ -110,6 +110,47 @@ fn a_bigger_step_by_the_right_edge_keeps_the_keyboard_on_its_screen() {
     );
 }
 
+/// A 250 % screen, dense enough that a grown keyboard's larger share falls on it.
+const DENSE_DPI: u32 = 240;
+
+#[test]
+fn a_preset_that_tips_it_onto_a_denser_screen_fits_it_there() {
+    let r = Rig::new(&GOLDEN, None);
+    let wide = screen(WIDE, BASE_DPI);
+    r.act(placed(0, 0, wide)).unwrap();
+    let unit = plate_on(&r, &wide).0;
+    // Three size-1 widths at 250 %: the larger share of a size-1.5 board, yet too narrow to hold it.
+    let rect = Rect {
+        x: WIDE.w,
+        w: 3 * unit,
+        ..WIDE
+    };
+    let dense = Screen {
+        rect,
+        dpi: DENSE_DPI,
+        primary: false,
+    };
+    let put = |x: i32| FaceAction::Placed {
+        rect: Rect {
+            x,
+            y: 0,
+            w: 1,
+            h: 1,
+        },
+        screens: vec![wide, dense],
+    };
+    r.act(put(WIDE.w - unit)).unwrap();
+    assert!(on_screen(&r, &wide), "it starts by the right edge");
+    let reply = r.act(FaceAction::Preset { index: 2 }).unwrap();
+    assert!(reply.board && reply.state, "{reply:?}");
+    assert!(
+        on_screen(&r, &dense),
+        "plate {:?} at {:?}",
+        plate_on(&r, &dense),
+        at(&r)
+    );
+}
+
 #[test]
 fn a_move_to_a_smaller_screen_fits_it_there() {
     let r = Rig::new(&GOLDEN, Some(("size", 1.5.into())));
