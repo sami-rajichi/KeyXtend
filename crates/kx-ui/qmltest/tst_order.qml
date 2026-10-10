@@ -77,7 +77,7 @@ Item {
         }
         // `text` safe inside styled text, its no-break spaces kept as such.
         function escaped(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\u00a0/g, "&nbsp;");
         }
         // Where drawn text `label` lays out `part`: the first line holding it and the middle of its pixels there.
         function placeOf(label, part) {

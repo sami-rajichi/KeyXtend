@@ -5,6 +5,7 @@ import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/assets.js" as Assets
+import "board.js" as Board
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
@@ -33,7 +34,6 @@ Item {
     Component { id: cycleC; LangCycle {} }
     Component { id: keyC; Key {} }
     Component { id: spyC; SignalSpy {} }
-    Component { id: fontC; FontLoader {} }
     // Measures text in a given font.
     Component { id: metricsC; FontMetrics {} }
 
@@ -44,15 +44,6 @@ Item {
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
-        }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
         }
         // A list view of `n` layouts, the third current, row `hi` highlighted, paged by the board's arrows.
         function view(n, hi) {
@@ -66,17 +57,17 @@ Item {
         }
         // The rows a screen reader meets, and every row slot, padding too.
         function rowsOf(list) {
-            return all(list.contentItem, o => o.Accessible.role === Accessible.ListItem && !o.Accessible.ignored);
+            return Board.all(list.contentItem, o => o.Accessible.role === Accessible.ListItem && !o.Accessible.ignored);
         }
         function slots(list) {
-            return all(list.contentItem, o => o.place !== undefined && o.hi !== undefined);
+            return Board.all(list.contentItem, o => o.place !== undefined && o.hi !== undefined);
         }
         function button(item, name) {
-            return all(item, o => o.Accessible.role === Accessible.Button && o.Accessible.name === name)[0];
+            return Board.all(item, o => o.Accessible.role === Accessible.Button && o.Accessible.name === name)[0];
         }
         // The page number the pager shows, the one text a screen reader meets besides the rows.
         function pageNumber(list) {
-            return all(list.contentItem, o => o.Accessible.role === Accessible.StaticText && !o.Accessible.ignored)[0];
+            return Board.all(list.contentItem, o => o.Accessible.role === Accessible.StaticText && !o.Accessible.ignored)[0];
         }
 
         function test_the_list_pages_five_rows_and_shows_the_page_of_the_highlight() {
@@ -105,11 +96,11 @@ Item {
             const row = rowsOf(list)[0];
             const [pagerX, rowX] = [back, row].map(o => o.mapToItem(list.contentItem, 0, 0).x);
             verify(pagerX > rowX, "pager " + pagerX + ", rows " + rowX);
-            const badge = all(row, o => o.text === "L0")[0];
-            const name = all(row, o => o.text === "Language 0")[0];
+            const badge = Board.all(row, o => o.text === "L0")[0];
+            const name = Board.all(row, o => o.text === "Language 0")[0];
             const [b, n] = [badge, name].map(o => o.mapToItem(row, 0, 0).x);
             verify(b < n, "badge " + b + ", name " + n);
-            const arabic = all(rowsOf(list)[1], o => o.text === "العربية")[0];
+            const arabic = Board.all(rowsOf(list)[1], o => o.text === "العربية")[0];
             compare(arabic.effectiveHorizontalAlignment, Text.AlignRight, "Arabic reads right to left");
             compare(name.effectiveHorizontalAlignment, Text.AlignLeft);
             list.visible = false;
@@ -134,7 +125,7 @@ Item {
             compare(slots(list).filter(r => r.hi).map(r => r.place), [1]);
             const current = slots(list).filter(r => r.row.current)[0];
             verify(current.Accessible.checked, "readers hear the current layout");
-            const tick = all(current, o => o.tint !== undefined && o.icon !== undefined)[0];
+            const tick = Board.all(current, o => o.tint !== undefined && o.icon !== undefined)[0];
             compare([tick.icon, tick.tint], [N.lk.icons.lang.current, Qt.color(N.lk.palette.ring)]);
         }
 
@@ -180,9 +171,8 @@ Item {
 
         // The bundled Arabic fallback font stands taller than the Latin one, as Arabic fonts do.
         function test_an_arabic_row_fits_its_name_and_layout() {
-            const at = Assets.assets.fonts.map(f => Qt.resolvedUrl(Assets.root + "/" + f));
-            const loaders = at.map(f => createTemporaryObject(fontC, root, { source: f }));
-            tryVerify(() => loaders.every(l => l.status === FontLoader.Ready), 5000, "the bundled fonts load");
+            const fonts = Board.loadFonts(root);
+            tryVerify(() => Board.loaded(fonts), 5000, "the bundled fonts load");
             const arabic = N.lk.look.arabic_fonts[N.lk.look.arabic_fonts.length - 1];
             const sh = N.lk.shape.list;
             const tall = createTemporaryObject(metricsC, root, { font: Qt.font({ family: arabic, pixelSize: sh.name_px }) });
@@ -194,23 +184,22 @@ Item {
             const ui = createTemporaryObject(uiC, root);
             const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, title: "list" });
             const slot = slots(list)[0];
-            const name = all(slot, o => o.text === row.name[0])[0];
-            const sub = all(slot, o => o.text === root.res.space(row.name.slice(1)))[0];
+            const name = Board.all(slot, o => o.text === row.name[0])[0];
+            const sub = Board.all(slot, o => o.text === root.res.space(row.name.slice(1)))[0];
             const room = slot.height - 2 * sh.row_pad_px[0];
             verify(name.implicitHeight + sub.implicitHeight <= room, "no clipping: " + (name.implicitHeight + sub.implicitHeight) + " in " + room);
             const latinOnly = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: view(3, 0), rows: 5, title: "list" });
             verify(latinOnly.rowH < list.rowH, "a list with no Arabic row keeps its height");
         }
 
-        // An OS may wrap its names in bidi isolates; a row draws each through `res.space`, which drops them as the hub does.
+        // An OS may wrap its names in isolates; a row draws them through `res.space`, which drops them as the hub does.
         function test_a_row_draws_marked_os_names_cleaned() {
-            const marks = /[⁦-⁩]/g;
+            const marks = /[\u2066-\u2069]/g;
             const res = Object.assign({}, root.res, { space: parts => root.res.space(parts.map(p => p.replace(marks, ""))) });
             const v = view(1, 0);
-            v.rows[0].name = ["⁨العربية⁩", "⁦Arabic (102)⁩"];
-            const drawn = all(makeList(v, res).contentItem, o => o.font !== undefined && o.visible).map(o => o.text);
-            verify(["العربية", "Arabic (102)"].every(n => drawn.indexOf(n) >= 0), JSON.stringify(drawn));
-            verify(!drawn.some(t => t.search(marks) >= 0), JSON.stringify(drawn));
+            v.rows[0].name = ["\u2068العربية\u2069", "\u2066Arabic (102)\u2069"];
+            const drawn = Board.all(makeList(v, res).contentItem, o => o.font !== undefined && o.visible).map(o => o.text);
+            verify(["العربية", "Arabic (102)"].every(n => drawn.indexOf(n) >= 0) && drawn.every(t => t.search(marks) < 0), JSON.stringify(drawn));
         }
 
         function test_the_boards_arrows_enter_and_esc_drive_the_open_list() {
@@ -244,24 +233,24 @@ Item {
             const lang = Face.states.en.lang;
             const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: 40 });
             const cy = N.lk.shape.lang.cycle;
-            const dots = all(c, o => o.lit !== undefined && o.radius !== undefined);
+            const dots = Board.all(c, o => o.lit !== undefined && o.radius !== undefined);
             const each = (on, off) => [...Array(lang.count).keys()].map(i => i === lang.at ? on : off);
             compare(dots.length, lang.count, "one dot per layout");
             compare(dots.map(d => d.opacity), each(1, cy.dot_off));
             // An unlit dot keeps 3:1 too, so the current layout's dot stands out by size.
             compare(dots.map(d => d.width), each(cy.dot_on_px, cy.dot_px));
             compare(new Set(dots.map(d => d.mapToItem(c, d.width / 2, 0).x)).size, 1, "one column, centred");
-            compare(all(c, o => o.tint !== undefined && o.icon !== undefined)[0].icon, N.lk.icons.lang.cycle);
-            compare(all(c, o => o.text === lang.cur.short).length, 1, "the current name");
+            compare(Board.all(c, o => o.tint !== undefined && o.icon !== undefined)[0].icon, N.lk.icons.lang.cycle);
+            compare(Board.all(c, o => o.text === lang.cur.short).length, 1, "the current name");
             c.lang = Face.states.ar.lang;
-            compare(all(c, o => o.text === Face.states.ar.lang.cur.short).length, 1, "the next name rises in");
+            compare(Board.all(c, o => o.text === Face.states.ar.lang.cur.short).length, 1, "the next name rises in");
         }
 
         function test_many_layouts_wrap_their_dots_inside_the_cap() {
             const room = 18;
             const lang = Object.assign({}, Face.states.en.lang, { count: 8, at: 0 });
             const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: room });
-            const dots = () => all(c, o => o.lit !== undefined && o.radius !== undefined);
+            const dots = () => Board.all(c, o => o.lit !== undefined && o.radius !== undefined);
             compare(dots().length, 8);
             // The key centres the design, so the cap's edges sit half the room above and below its middle.
             const inside = d => {
@@ -280,7 +269,7 @@ Item {
             const kv = Face.board.keys.find(k => k.kind === "lang");
             const key = createTemporaryObject(keyC, root, { kv: kv, ks: Face.states.en.keys[kv.id], lk: N.lk, lang: Face.states.en.lang, design: "carousel", res: root.res, s: 1 });
             const sh = N.lk.shape.lang;
-            const names = all(key, o => o.cur !== undefined && o.modelData !== undefined);
+            const names = Board.all(key, o => o.cur !== undefined && o.modelData !== undefined);
             compare(names.length, 3, "back, current and next");
             for (const n of names.filter(n => !n.cur)) {
                 compare(n.opacity, sh.side[1]);
@@ -301,7 +290,7 @@ Item {
                             return false;
                     return true;
                 };
-                return all(key, o => o.icon !== undefined && o.tint !== undefined && o.icon.length > 0 && visible(o)).map(o => o.icon);
+                return Board.all(key, o => o.icon !== undefined && o.tint !== undefined && o.icon.length > 0 && visible(o)).map(o => o.icon);
             };
             compare(shows("carousel"), []);
             compare(shows("cycle"), [N.lk.icons.lang.cycle]);
