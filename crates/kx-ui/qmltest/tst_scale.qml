@@ -3,8 +3,8 @@
 import QtQuick
 import QtTest
 import "../qml"
+import "kbwin.js" as Win
 import "fixtures/face.js" as Face
-import "pointer.js" as Pointer
 
 Item {
     id: root
@@ -51,6 +51,7 @@ Item {
     }
 
     TestCase {
+        id: test
         name: "scale"
         when: windowShown
 
@@ -58,44 +59,19 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
-        }
-        // How often the keyboard heard `call`.
-        function heard(kb, call) {
-            return kb.calls.filter(c => c === call).length;
-        }
-        // A shown keyboard window that the keyboard put at physical `at`, its pointer there too; the real pointer
-        // passes through it and the catchers.
+        // A shown keyboard window that the keyboard put at physical `at` (kbwin.js).
         function make(at) {
-            const state = Object.assign({}, Face.states.en, { at: at });
-            const kb = createTemporaryObject(kbC, root, { pointer: at, state: state });
-            const win = createTemporaryObject(winC, root, { ui: createTemporaryObject(uiC, root), keyboard: kb });
-            const mover = all(win.contentItem, o => o.covers !== undefined)[0];
-            const covers = [];
-            for (let i = 0; i < mover.covers.count; i++)
-                covers.push(mover.covers.objectAt(i));
-            Pointer.through([win].concat(covers));
-            win.place();
-            win.visible = true;
-            waitForRendering(win.contentItem);
-            return { win: win, kb: kb, mover: mover, rescale: rescaleOf(win) };
+            return Win.make(test, { ui: uiC, kb: kbC, win: winC }, root, at);
         }
         // The `Rescale` of window `w`.
         function rescaleOf(w) {
-            return all(w.contentItem, o => o.keep !== undefined)[0];
+            return Win.all(w.contentItem, o => o.keep !== undefined)[0];
         }
         // The keyboard over stand-in `screens`, at its state's place in their Qt units.
         function onScreens(r, screens) {
-            const placed = heard(r.kb, "placed");
+            const placed = Win.heard(r.kb, "placed");
             r.win.spots.screens = screens;
-            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again on the new screens");
+            tryVerify(() => Win.heard(r.kb, "placed") === placed + 1, 2000, "placed again on the new screens");
             r.win.restate();
         }
         // The app over fresh stand-ins, once its keyboard shows.
@@ -132,10 +108,10 @@ Item {
         function test_on_a_new_scale_the_keyboard_is_cut_and_placed_again_where_it_is() {
             const at = { x: 100, y: 200 };
             const r = make(at);
-            const placed = heard(r.kb, "placed");
+            const placed = Win.heard(r.kb, "placed");
             const ratio = r.rescale.ratio * 2;
             r.rescale.ratio = ratio;
-            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            tryVerify(() => Win.heard(r.kb, "placed") === placed + 1, 2000, "placed again");
             const size = { w: r.win.wide * ratio, h: r.win.high * ratio, overhang: r.win.overhang / r.win.s };
             compare(r.kb.placedAt, Object.assign({}, at, size), "where it is, its size in the new pixels");
             compare(r.kb.shapeDpr, ratio, "cut at the new scale");
@@ -158,14 +134,14 @@ Item {
         function test_on_a_new_scale_a_keyboard_just_moved_is_placed_again_from_where_it_was_left() {
             const r = make({ x: 100, y: 200 });
             r.kb.keeps = true;
-            mouseClick(all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
+            mouseClick(Win.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
             r.kb.pointer = { x: 300, y: 260 };
             tryVerify(() => r.win.at.x > 100, 2000, "the poll moves it");
-            mouseClick(all(r.mover.covers.objectAt(0).contentItem, o => o.Accessible.id === "catch")[0]);
+            mouseClick(Win.all(r.mover.covers.objectAt(0).contentItem, o => o.Accessible.id === "catch")[0]);
             const left = r.kb.placedAt;
-            const placed = heard(r.kb, "placed");
+            const placed = Win.heard(r.kb, "placed");
             r.rescale.ratio = r.rescale.ratio * 2;
-            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            tryVerify(() => Win.heard(r.kb, "placed") === placed + 1, 2000, "placed again");
             compare([r.kb.placedAt.x, r.kb.placedAt.y], [left.x, left.y], "from where the move left it");
             r.win.visible = false;
         }
@@ -178,9 +154,9 @@ Item {
             onScreens(r, [a, b]);
             compare(r.win.at, Qt.point(4100, 90), "on the second screen");
             r.kb.state = Object.assign({}, r.kb.state, { at: { x: 100, y: 90 } });
-            const placed = heard(r.kb, "placed");
+            const placed = Win.heard(r.kb, "placed");
             r.win.spots.screens = [a];
-            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            tryVerify(() => Win.heard(r.kb, "placed") === placed + 1, 2000, "placed again");
             compare([r.kb.placedAt.x, r.kb.placedAt.y], [4100, 90], "from where it was in pixels");
             tryCompare(r.win, "at", Qt.point(100, 90), 2000, "where the keyboard puts it");
             r.win.visible = false;
@@ -254,12 +230,12 @@ Item {
         // A move places the keyboard when it ends, so a new scale meanwhile only cuts it again.
         function test_a_new_scale_during_a_move_only_cuts_the_keyboard() {
             const r = make({ x: 120, y: 90 });
-            mouseClick(all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
+            mouseClick(Win.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
             verify(r.mover.busy, "moving");
-            const placed = heard(r.kb, "placed");
+            const placed = Win.heard(r.kb, "placed");
             r.rescale.ratio = r.rescale.ratio * 2;
             tryVerify(() => r.kb.shapeDpr === r.rescale.ratio, 2000, "cut again");
-            compare(heard(r.kb, "placed"), placed, "not placed mid-move");
+            compare(Win.heard(r.kb, "placed"), placed, "not placed mid-move");
             r.win.finish();
             r.win.visible = false;
         }
