@@ -18,13 +18,13 @@ Item {
 
     // The largest size the keyboard allows, so small legends show their details.
     readonly property real s: Face.sizeMax
-    // The states pictured, by golden name, each with the texts of its layout's language (ADR-0020).
+    // The states pictured, by golden name, each with its layout's language: its texts and direction (ADR-0020).
     readonly property var states: [
-        { name: "en", texts: En.texts },
-        { name: "fr", texts: Fr.texts },
-        { name: "ar", texts: Ar.texts },
-        { name: "ar-shift", texts: Ar.texts },
-        { name: "ar-altgr", texts: Ar.texts }
+        { name: "en", ui: En },
+        { name: "fr", ui: Fr },
+        { name: "ar", ui: Ar },
+        { name: "ar-shift", ui: Ar },
+        { name: "ar-altgr", ui: Ar }
     ]
     // The bundled fonts loaded so far, from where the texts test lays them out.
     property int fontsIn: 0
@@ -96,17 +96,25 @@ Item {
             o.destroy();
             return f;
         }
-        // Fonts, icons and texts for look `lk`, each family the first Qt has, else the last, as the keyboard window picks.
-        function resOf(lk, texts) {
+        // The space bar's text as the hub joins `parts`: each layout after the language through `lang.space`, whose
+        // variables the texts test leaves as Fluent shows them, each between bidi isolation marks.
+        function spaceOf(texts) {
+            const at = name => "{$" + name + "}";
+            const join = (lang, layout) => texts["lang.space"].replace(at("lang"), lang).replace(at("layout"), layout);
+            return parts => parts.slice(1).reduce(join, parts[0]);
+        }
+        // Fonts, icons and texts for look `lk` in language `ui`, each family the first Qt has, else the last, and the
+        // UI font by the language's direction, as the keyboard window picks.
+        function resOf(lk, ui) {
             const have = Qt.fontFamilies();
             const pick = list => list.find(f => have.indexOf(f) >= 0) || list[list.length - 1];
-            const latin = pick(lk.look.latin_fonts);
+            const [latin, arabic] = [pick(lk.look.latin_fonts), pick(lk.look.arabic_fonts)];
             return {
-                fam: { latin: latin, arabic: pick(lk.look.arabic_fonts), mark: pick(lk.look.mark_fonts), ui: latin },
+                fam: { latin: latin, arabic: arabic, mark: pick(lk.look.mark_fonts), ui: ui.lang.rtl ? arabic : latin },
                 icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
                 ext: Assets.assets.ext,
-                tr: k => texts[k] !== undefined ? texts[k] : k,
-                space: parts => parts.join(" · "),
+                tr: k => ui.texts[k] !== undefined ? ui.texts[k] : k,
+                space: spaceOf(ui.texts),
                 noteTip: (name, note) => name + "\n" + note
             };
         }
@@ -118,7 +126,7 @@ Item {
             tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
             for (const t of [N, E, D])
                 for (const st of root.states) {
-                    const props = { lk: t.lk, st: Face.states[st.name], res: resOf(t.lk, st.texts) };
+                    const props = { lk: t.lk, st: Face.states[st.name], res: resOf(t.lk, st.ui) };
                     const board = boardC.createObject(root, props);
                     const texts = all(board, o => o.isChar === true);
                     tryVerify(() => texts.every(o => !o.clip), 2000, "the legends rose in");
