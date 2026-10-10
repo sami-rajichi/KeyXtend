@@ -1,7 +1,8 @@
-//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter the app picks,
-//! Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders give plugins and QML modules.
+//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter and the drawing
+//! variables the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders give
+//! plugins and QML modules.
 
-use crate::harden::qt_names;
+use crate::harden::{DRAW_VARS, qt_names};
 use cxx_qt_lib::{QQmlApplicationEngine, QString, QStringList};
 use std::path::{MAIN_SEPARATOR, Path};
 use std::pin::Pin;
@@ -81,6 +82,16 @@ pub fn harden_qt(plugins: Option<&Path>) -> usize {
 #[must_use]
 pub fn pin_adapter(index: u32) -> bool {
     ffi::set_env(ADAPTER_VAR, &index.to_string())
+}
+
+/// Sets every variable of `DRAW_VARS` where Qt reads it; call it after `harden_qt` and before Qt's app object exists.
+/// False when one could not be set.
+#[must_use]
+pub fn pin_drawing() -> bool {
+    let failed = DRAW_VARS
+        .iter()
+        .filter(|(name, value)| !ffi::set_env(name, value));
+    failed.count() == 0
 }
 
 /// True when Qt reads variable `name` as set, through the C runtime's narrow copy it reads at start.

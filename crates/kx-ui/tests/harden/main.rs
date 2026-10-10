@@ -1,10 +1,11 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
 //! QML import paths, nor Qt's narrow or wide reads, pinned plugins and imports hold only the app's folders and the
-//! compiled-in modules, and only the graphics adapter the app picks reaches Qt. The variables must be set before the
-//! process starts, so the test runs itself again, as a child, with them set.
+//! compiled-in modules, and only the graphics adapter and the drawing variables the app picks reach Qt. The variables
+//! must be set before the process starts, so the test runs itself again, as a child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
 use kx_test_support::tempdir::TempDir;
+use kx_ui::harden::{DRAW_VARS, is_qt};
 use std::env;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::pin::Pin;
@@ -23,6 +24,8 @@ const PLANTED: [&str; 4] = [
 ];
 /// The adapter the child pins, as the app pins the lowest-power one.
 const ADAPTER: u32 = 1;
+/// A render loop another program chose, which the app's own value must replace (ADR-0021).
+const OUTSIDE: (&str, &str) = ("QSG_RENDER_LOOP", "threaded");
 /// Names the C runtime narrows to a Qt variable with the ANSI code page's best fit: a fullwidth `ＱＴ`, and a
 /// non-ASCII last letter. Each pairs the planted name with the name Qt then reads.
 const ALIASES: [(&str, &str); 2] = [
@@ -69,6 +72,7 @@ fn parent() -> Outcome {
     std::fs::copy(from, pinned.path().join(folder).join(plugin)).map_err(|e| e.to_string())?;
     let mut run = Command::new(env::current_exe().map_err(|e| e.to_string())?);
     run.env(CHILD, planted.path()).env(PINNED, pinned.path());
+    run.env(OUTSIDE.0, OUTSIDE.1);
     for name in PLANTED.into_iter().chain(ALIASES.map(|(alias, _)| alias)) {
         run.env(name, planted.path());
     }
@@ -132,6 +136,7 @@ fn child(planted: &Path, pinned: &Path) -> Outcome {
         return Err(format!("Qt still sees an alias: {after:?}"));
     }
     adapter()?;
+    drawing()?;
     let app = QGuiApplication::new();
     let paths = app
         .as_ref()
@@ -151,6 +156,48 @@ fn adapter() -> Outcome {
     let read = env::var(kx_ui::ADAPTER_VAR).ok();
     if !kx_ui::qt_sees(kx_ui::ADAPTER_VAR) || read != Some(ADAPTER.to_string()) {
         return Err(format!("Qt's adapter is {read:?}, not {ADAPTER}"));
+    }
+    Ok(())
+}
+
+/// After the clear and the pins, Qt reads exactly the adapter and the drawing variables, with the app's values, so the
+/// outside render loop is replaced.
+fn drawing() -> Outcome {
+    if !kx_ui::pin_drawing() {
+        return Err("the drawing variables were not set".into());
+    }
+    let names = DRAW_VARS.map(|(name, _)| name);
+    let mut want: Vec<String> = names
+        .iter()
+        .chain([&kx_ui::ADAPTER_VAR])
+        .map(|n| n.to_uppercase())
+        .collect();
+    // Qt's text read matches only its own ASCII names; a planted non-ASCII alias stays in the wide copy, unread.
+    let mut set: Vec<String> = env::vars_os()
+        .filter_map(|(name, _)| name.into_string().ok())
+        .filter(|name| name.is_ascii() && is_qt(name.as_bytes()))
+        .map(|name| name.to_uppercase())
+        .collect();
+    want.sort();
+    set.sort();
+    if set != want {
+        return Err(format!("Qt reads {set:?}, not {want:?}"));
+    }
+    let wrong: Vec<&str> = DRAW_VARS
+        .iter()
+        .filter(|(name, value)| {
+            env::var(name).ok().as_deref() != Some(*value) || !kx_ui::qt_sees(name)
+        })
+        .map(|(name, _)| *name)
+        .collect();
+    let replaced = DRAW_VARS
+        .iter()
+        .any(|(name, value)| *name == OUTSIDE.0 && *value != OUTSIDE.1);
+    if !wrong.is_empty() || !replaced {
+        return Err(format!(
+            "{wrong:?} hold other values, or {} was not replaced",
+            OUTSIDE.0
+        ));
     }
     Ok(())
 }

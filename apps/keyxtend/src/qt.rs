@@ -2,7 +2,7 @@
 //! QML over the installed hub, and the event loop.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QUrl};
-use kx_ui::{MAIN_QML, harden_qt, pin_adapter, pin_imports};
+use kx_ui::{MAIN_QML, harden_qt, pin_adapter, pin_drawing, pin_imports};
 use std::path::Path;
 use std::pin::Pin;
 use std::process::ExitCode;
@@ -17,6 +17,9 @@ pub fn run(pinned: Option<&Path>, adapter: Option<u32>, end: impl FnOnce()) -> E
         tracing::info!(cleared, "Qt variables were cleared before Qt started");
     }
     pin(adapter);
+    if !pin_drawing() {
+        tracing::warn!("Qt's drawing variables could not be set, so each window draws as Qt picks");
+    }
     let mut app = QGuiApplication::new();
     let mut engine = QQmlApplicationEngine::new();
     if let (Some(dir), Some(e)) = (pinned, engine.as_mut()) {

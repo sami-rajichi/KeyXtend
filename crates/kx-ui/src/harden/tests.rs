@@ -17,6 +17,13 @@ fn qt_plugin_import_and_scene_graph_variables_are_qt_ones() {
 }
 
 #[test]
+fn every_drawing_variable_is_a_qt_one_so_the_clear_drops_an_outside_value_first() {
+    for (name, value) in DRAW_VARS {
+        assert!(is_qt(name.as_bytes()) && !value.is_empty(), "{name}");
+    }
+}
+
+#[test]
 fn case_does_not_matter_as_windows_ignores_it() {
     for name in ["qt_plugin_path", "Qml2_Import_Path", "qsg_info"] {
         assert!(is_qt(name.as_bytes()), "{name}");

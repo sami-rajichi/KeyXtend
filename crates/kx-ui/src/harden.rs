@@ -4,6 +4,11 @@
 /// The name prefixes of the variables Qt, Qt Quick and the QML engine read.
 pub const QT_PREFIXES: [&str; 4] = ["QT_", "QML", "QSG_", "QV4_"];
 
+/// The scene graph variables the app sets after the clear (ADR-0021): every window draws on the GUI thread, as one
+/// shared device needs, and without a depth buffer.
+pub const DRAW_VARS: [(&str, &str); 2] =
+    [("QSG_RENDER_LOOP", "basic"), ("QSG_NO_DEPTH_BUFFER", "1")];
+
 /// Ends each name in a list of names, as it ends a C string.
 pub const NAME_END: u8 = 0;
 
