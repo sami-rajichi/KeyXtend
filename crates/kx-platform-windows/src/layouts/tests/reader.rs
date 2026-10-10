@@ -12,6 +12,7 @@ fn a_windows_answer_gives_the_text_and_whether_the_key_is_dead() {
     assert_eq!(read_typed(0, &buf), (String::new(), false), "types nothing");
     let bs: Vec<u16> = "\u{8}".encode_utf16().collect();
     assert_eq!(read_typed(1, &bs), (String::new(), false), "a control");
+    assert_eq!(read_typed(1, &[0]), (String::new(), false), "U+0000");
     assert_eq!(read_typed(9, &bs).0, "", "a count past the buffer");
     assert_eq!(read_typed(i32::MIN, &buf), ("^x".to_string(), true));
 }
