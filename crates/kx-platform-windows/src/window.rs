@@ -66,7 +66,7 @@ pub fn kept_ex(new: u32, through: bool) -> u32 {
 }
 
 /// True when the guard lifts a window with extended style `ex` back into the topmost band; never while `lifting`
-/// one already, so a refused lift cannot loop.
+/// that same window already, so a refused lift cannot loop.
 fn lifts_back(ex: u32, lifting: bool) -> bool {
     ex & WS_EX_TOPMOST == 0 && !lifting
 }

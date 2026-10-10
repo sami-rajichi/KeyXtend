@@ -2,7 +2,7 @@
 //! is destroyed. It uses user32 only (`GWLP_WNDPROC` and window properties), so no program needs a Common Controls 6
 //! manifest.
 
-use std::cell::Cell;
+use std::cell::RefCell;
 
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
@@ -25,8 +25,9 @@ const PROP: PCWSTR = w!("KeyXtend.Guard");
 const THROUGH_PROP: PCWSTR = w!("KeyXtend.Through");
 
 thread_local! {
-    /// True while the guard lifts a window back into the topmost band, so a move inside that lift never lifts again.
-    static LIFTING: Cell<bool> = const { Cell::new(false) };
+    /// The windows the guard is lifting back into the topmost band: a move inside a window's own lift never lifts it
+    /// again, but another window's repair still runs, so the nesting stays as deep as our windows are many.
+    static LIFTING: RefCell<Vec<HWND>> = const { RefCell::new(Vec::new()) };
 }
 
 /// A window procedure, as Windows calls it.
@@ -183,11 +184,12 @@ fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
 /// Lifts our window, with the windows it owns, back to the top of the topmost band when a move took it out, as
 /// `HWND_NOTOPMOST` from another program does: Windows changes topmost there without `WM_STYLECHANGING`.
 fn keep_top(hwnd: HWND) {
-    if lifts_back(ex_of(hwnd), LIFTING.get()) {
-        LIFTING.set(true);
+    let lifting = LIFTING.with_borrow(|l| l.contains(&hwnd));
+    if lifts_back(ex_of(hwnd), lifting) {
+        LIFTING.with_borrow_mut(|l| l.push(hwnd));
         // A refused lift leaves nothing more to try.
         let _ = lift(hwnd);
-        LIFTING.set(false);
+        LIFTING.with_borrow_mut(|l| l.retain(|&w| w != hwnd));
     }
 }
 

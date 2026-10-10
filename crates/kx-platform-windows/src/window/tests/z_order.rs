@@ -1,20 +1,42 @@
 //! The tests that read the z-order or the topmost style, on hidden windows only.
 
+use std::cell::Cell;
 use std::sync::{Mutex, PoisonError};
 
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, HWND_BOTTOM, HWND_NOTOPMOST, MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SendMessageW, SetWindowLongPtrW, SetWindowPos, WM_MOUSEACTIVATE, WS_EX_TOPMOST,
+    GWL_EXSTYLE, GWLP_WNDPROC, GetWindowLongPtrW, HWND_BOTTOM, HWND_NOTOPMOST, MA_NOACTIVATE,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SendMessageW, SetWindowLongPtrW, SetWindowPos,
+    WM_MOUSEACTIVATE, WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
 };
 
 use super::super::KEPT;
-use super::super::guard::{front, guard};
+use super::super::guard::{Proc, front, guard};
 use super::super::win::{guard_these, top_level};
-use super::Hidden;
+use super::{Hidden, plain};
 
 /// Keeps these tests apart: one test's lift can drop another's hidden window.
 static Z_ORDER: Mutex<()> = Mutex::new(());
+
+thread_local! {
+    /// The window `dropper` drops once, as the guard lifts its own window back.
+    static TO_DROP: Cell<Option<HWND>> = const { Cell::new(None) };
+}
+
+/// A subclass behind the guard that drops `TO_DROP` inside its window's lift, as the keyboard's lift moves its shadow.
+/// It never panics, since a panic cannot leave a window procedure; a refused drop fails the test's checks instead.
+unsafe extern "system" fn dropper(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    // SAFETY: a plain query of the test's own window.
+    let ex = u32::try_from(unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) }).unwrap_or_default();
+    let lifted = msg == WM_WINDOWPOSCHANGED && ex & WS_EX_TOPMOST.0 != 0;
+    if let Some(other) = lifted.then(|| TO_DROP.take()).flatten() {
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+        // SAFETY: a z-order change on the test's own hidden window.
+        let _ = unsafe { SetWindowPos(other, Some(HWND_NOTOPMOST), 0, 0, 0, 0, flags) };
+    }
+    // SAFETY: hands the message to the test windows' own procedure.
+    unsafe { plain(hwnd, msg, wparam, lparam) }
+}
 
 /// True when window `a` is above window `b`, read from one snapshot of the z-order.
 fn above(a: &Hidden, b: &Hidden) -> bool {
@@ -107,6 +129,40 @@ fn a_guarded_owner_and_its_tip_stay_topmost_when_the_tip_alone_is_dropped() {
         assert!(topmost(&tip), "{how}: the tip stays");
         assert!(topmost(&owner), "{how}: and its owner");
     }
+}
+
+/// The keyboard's shadow owns the keyboard; another program drops the keyboard, then the shadow, and both come back.
+#[test]
+fn a_guarded_shadow_and_its_keyboard_stay_topmost_when_both_are_dropped_in_turn() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let shadow = Hidden::tip("KeyXtend test: shadow", None);
+    let kb = Hidden::topmost("KeyXtend test: shadowed keyboard", Some(shadow.0));
+    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    put_after(&kb, HWND_NOTOPMOST);
+    put_after(&shadow, HWND_NOTOPMOST);
+    assert!(topmost(&kb), "the keyboard stays");
+    assert!(topmost(&shadow), "and its shadow");
+}
+
+/// The G9 bug: while the guard lifts one window back, another window dropped inside that lift is lifted back too.
+#[test]
+fn a_window_dropped_inside_another_windows_lift_is_lifted_back_too() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = Hidden::topmost("KeyXtend test: lifted keyboard", None);
+    let shadow = Hidden::tip("KeyXtend test: shadow dropped in the lift", None);
+    let ours: Proc = dropper;
+    // SAFETY: puts the test subclass behind the guard on the test's own window; it hands every message on.
+    unsafe { SetWindowLongPtrW(kb.0, GWLP_WNDPROC, (ours as usize).cast_signed()) };
+    guard(kb.0).unwrap();
+    guard(shadow.0).unwrap();
+    TO_DROP.set(Some(shadow.0));
+    put_after(&kb, HWND_NOTOPMOST);
+    assert!(
+        TO_DROP.take().is_none(),
+        "the shadow dropped inside the lift"
+    );
+    assert!(topmost(&kb), "the keyboard stays");
+    assert!(topmost(&shadow), "and the shadow came back");
 }
 
 /// The tip bug: a hidden window shows again where it was, so only a tip its window owns stays above it after a lift.
