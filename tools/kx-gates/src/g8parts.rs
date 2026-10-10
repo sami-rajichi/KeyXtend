@@ -29,6 +29,8 @@ pub struct Measured {
     pub resizes: Vec<Resize>,
     /// G2's result line: click to character.
     pub g2: Value,
+    /// Why `dropped_frames` covers fewer steps, when `PresentMon`'s capture ended before G2 did.
+    pub capture_cut: Option<&'static str>,
     /// Memory around rounds of pop-ups.
     pub churn: Churn,
 }
@@ -115,6 +117,7 @@ mod tests {
                 "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true, "caret_kept": 100,
                 "latency_ms": { "p50": 4.2, "p99": 13.1 },
             }),
+            capture_cut: None,
             churn,
         };
         let o = Outside {

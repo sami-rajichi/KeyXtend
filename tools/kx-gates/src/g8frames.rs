@@ -3,13 +3,17 @@
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::admin;
 use crate::apps::Ctx;
 use crate::presentmon::{self, Frames};
 use crate::proc::Process;
 use crate::win::{self, sleep_ms};
+
+/// Why `dropped_frames` covers fewer steps than G8's run up to the churn.
+const CUT: &str = "PresentMon's capture ended before G2 did, so dropped_frames covers fewer steps; raise [g8] \
+     presentmon_secs";
 
 /// `PresentMon` as G8 started it: its process, and when it started.
 pub struct Recorder {
@@ -67,6 +71,19 @@ fn owner_done(ctx: &Ctx, since: SystemTime) {
     }
 }
 
+/// True when a capture of `secs` s that started `age` ago has already ended.
+fn over(secs: u64, age: Duration) -> bool {
+    age > Duration::from_secs(secs)
+}
+
+/// A note when the capture, G8's own or the owner's from about `since`, has already ended, so it missed the last
+/// steps before now.
+pub fn cut(ctx: &Ctx, since: SystemTime, rec: Option<&Recorder>) -> Option<&'static str> {
+    let owners = || SystemTime::now().duration_since(since).unwrap_or_default();
+    let age = rec.map_or_else(owners, |r| r.at.elapsed());
+    over(ctx.cfg.g8.presentmon_secs, age).then_some(CUT)
+}
+
 /// `program`'s frames from this run's CSV, written since `since`, read once the recording stopped; else why not.
 pub fn frames(
     ctx: &Ctx,
@@ -102,7 +119,6 @@ pub fn frames(
 #[cfg(test)]
 mod tests {
     use std::process::{Child, Command, Stdio};
-    use std::time::Duration;
 
     use kx_test_support::tempdir::TempDir;
 
@@ -157,6 +173,19 @@ mod tests {
     /// Ten seconds before now, so a CSV written now counts as this run's.
     fn before_now() -> SystemTime {
         SystemTime::now() - Duration::from_secs(10)
+    }
+
+    #[test]
+    fn a_capture_that_ended_before_the_run_up_to_the_churn_did_is_noted() {
+        assert!(!over(90, Duration::from_secs(89)), "still recording");
+        assert!(
+            over(90, Duration::from_secs(91)),
+            "it missed the last steps"
+        );
+        with_ctx(|ctx| {
+            let note = cut(ctx, before_now(), None).expect("a 0 s capture has ended");
+            assert!(note.contains("presentmon_secs"), "{note}");
+        });
     }
 
     #[test]

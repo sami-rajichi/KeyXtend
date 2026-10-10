@@ -77,6 +77,7 @@ fn measure(
     let presses = g8ui::presses(ctx, &kb)?;
     let resizes = g8ui::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
+    let capture_cut = g8frames::cut(ctx, since, rec);
     let frames = g8frames::frames(ctx, program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
     let m = Measured {
@@ -88,6 +89,7 @@ fn measure(
         presses,
         resizes,
         g2,
+        capture_cut,
         churn,
     };
     Ok((m, frames))
@@ -184,7 +186,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
-        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "parts": parts, "quit": ended,
+        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "capture_cut": m.capture_cut, "parts": parts,
+        "quit": ended,
         "pass": verdict(weak, &m.churn, ended && budget::all_pass(&parts)),
     }))
 }
