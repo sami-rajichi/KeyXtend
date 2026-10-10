@@ -37,7 +37,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | System look changes and single-instance commands (adapter threads) | Queued to the Qt thread with cxx-qt's thread queue, never blocking the adapter; a second copy's Show waits until the `Ui` object is ready, and its Quit goes straight to the app's request queue | One wake per change | No |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** the QML files, the bundled fonts and the icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. Native's Segoe UI and Qt's glyph fallback come from Windows' font stack (`keyxtend.md`, Accepted). Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
+- **Spoofing:** the QML files, the bundled fonts and the icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. The hub adds a theme's fonts to Qt's font list only from those resources, never from a user path (ADR-0021). Native's Segoe UI and Qt's glyph fallback come from Windows' font stack (`keyxtend.md`, Accepted). Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged).
 - **Information disclosure:** notice arguments are bounded setting names and counts, each isolated with Unicode bidi marks by Fluent. List items and text arguments also lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key can neither split a notice nor turn it around.
@@ -47,11 +47,13 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - Guard tries stop at `guard_tries` per run, and equal notices are merged.
   - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
+  - A lost graphics device ends Qt's loop once and brings the windows back at most `[ui] device_rebuilds` times per run (0 to 10), then each window keeps its own device, so a loss cannot loop. Only debug builds can mark a device lost.
 - **Elevation:**
   - The crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
   - `harden_qt` keeps another program of the user from loading its plugin, QML module or cached shader into the uiAccess process. It clears every name with a Qt prefix from the C runtime's narrow copy of the environment, which Qt's byte reads use, so a name the code page narrows to a Qt one goes too; `qunsetenv` also clears it from the wide copy that Qt's text reads use. It then turns off Qt Quick's shader cache on disk.
   - It reads that copy without the runtime's lock, which is safe on Windows because nothing writes it while `harden_qt` reads it. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's and the C runtime's own functions.
   - After the clear, `pin_adapter` sets one Qt variable, `QT_D3D_ADAPTER_INDEX`, to the number the Windows adapter picked (the lowest-power GPU), on Qt's thread before Qt starts, so no outside value chooses Qt's graphics adapter.
+  - `pin_drawing` then sets `QSG_RENDER_LOOP=basic` and `QSG_NO_DEPTH_BUFFER=1` (`harden::DRAW_VARS`), so the one shared `QRhi` is used on the GUI thread only; the app shares it only when both read back (ADR-0021).
 
 ## Findings
 ### Must fix (blocks Definition of Done)

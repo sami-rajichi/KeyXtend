@@ -205,6 +205,8 @@ pub trait Module: Send + 'static {
 - A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner. A shown tip hides as a guard run starts, or the guard would lift its owner with it.
 - A hidden window shows again at its old place, so a pop-up's guard run names it as `top` to land in front.
 - Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
+- Every window draws on one shared graphics device, on the GUI thread (Qt's basic render loop) and without a depth buffer; a lost device brings the windows back over the same hub, up to `[ui] device_rebuilds` times (ADR-0021).
+- Only the shown theme's bundled fonts stay in Qt's font list: the hub loads them from the resources before the QML and again on each theme switch (ADR-0021).
 
 ## Platform notes
 
