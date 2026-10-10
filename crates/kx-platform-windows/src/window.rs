@@ -18,6 +18,8 @@ mod top;
 mod win;
 
 #[cfg(windows)]
+pub use guard::guarded;
+#[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
     own_windows, shape, title,

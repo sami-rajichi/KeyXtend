@@ -16,6 +16,7 @@ fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
         extra: extra(ex, first),
         front_kept,
         front: None,
+        guarded: true,
     }
 }
 

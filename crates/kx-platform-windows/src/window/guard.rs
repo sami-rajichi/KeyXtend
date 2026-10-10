@@ -12,7 +12,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use super::top::{keep_top, lift, on_this_thread};
+use super::top::{keep_top, lift, on_this_thread, recheck, recheck_id};
 use super::{KEPT, holds_kept, is_through, kept_ex};
 use crate::{last_refused, refused};
 
@@ -35,9 +35,10 @@ pub(super) fn guard(hwnd: HWND) -> Result<(), UiError> {
     lift(hwnd)
 }
 
-/// True while the guard is hooked on `hwnd`.
+/// True while the guard is hooked on `hwnd`; another program may ask too, as a test tool does.
+#[must_use]
 #[allow(unsafe_code, reason = "A plain window property query.")]
-pub(super) fn guarded(hwnd: HWND) -> bool {
+pub fn guarded(hwnd: HWND) -> bool {
     // SAFETY: a plain query; a gone window has no property.
     !unsafe { GetPropW(hwnd, PROP) }.is_invalid()
 }
@@ -170,9 +171,13 @@ pub(super) fn next(own: HANDLE) -> WNDPROC {
 }
 
 /// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles
-/// and unhooks at the end.
+/// and unhooks at the end; the guard's own posted check goes no further.
 #[allow(unsafe_code, reason = "The procedure of our guarded windows.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if recheck_id() == Some(msg) {
+        recheck(hwnd);
+        return LRESULT(0);
+    }
     // SAFETY: a plain query of our own window's property.
     let own = unsafe { GetPropW(hwnd, PROP) };
     match msg {

@@ -1,25 +1,66 @@
 //! Keeps our guarded windows in the topmost band: a window lifted back brings its guarded owners and the windows they
 //! own back too, each above its owner. It runs on the windows' own thread, from the guard's procedure.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::sync::OnceLock;
 
 use kx_platform::ui::UiError;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GW_OWNER, GetWindow, GetWindowThreadProcessId, HWND_TOPMOST, SET_WINDOW_POS_FLAGS,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SetWindowPos,
+    GW_OWNER, GetWindow, GetWindowThreadProcessId, HWND_TOPMOST, PostMessageW,
+    RegisterWindowMessageW, SET_WINDOW_POS_FLAGS, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER,
+    SWP_NOSIZE, SetWindowPos,
 };
+use windows::core::{PCWSTR, w};
 
 use super::guard::{ex_of, guarded};
 use super::win::top_level;
 use super::{family, is_top, to_lift};
 use crate::refused;
 
+/// The name of the message the guard posts to check a window again once the call that moved it is over.
+const RECHECK: PCWSTR = w!("KeyXtend.Guard.Recheck");
+
 thread_local! {
     /// The windows the guard is lifting back into the topmost band: a move inside the lift of a window or its owner
     /// never lifts again, but another window's repair still runs, so the nesting stays as deep as our windows are many.
     static LIFTING: RefCell<Vec<HWND>> = const { RefCell::new(Vec::new()) };
+    /// True while a posted check runs: the moves it makes post no more checks, so the checks always end.
+    static RECHECKING: Cell<bool> = const { Cell::new(false) };
+}
+
+/// The id of the guard's check-again message; `None` when Windows gave none.
+#[allow(unsafe_code, reason = "Registers a message name.")]
+pub(super) fn recheck_id() -> Option<u32> {
+    static ID: OnceLock<u32> = OnceLock::new();
+    // SAFETY: registers a constant name; Windows gives the same id for it every time.
+    let id = *ID.get_or_init(|| unsafe { RegisterWindowMessageW(RECHECK) });
+    (id != 0).then_some(id)
+}
+
+/// Checks our window `hwnd` again from its queue, once the call that moved it is over: a lift made inside another
+/// program's call may not land, and a move inside a lift is skipped. A posted check posts none.
+#[allow(unsafe_code, reason = "Posts a message to our own window.")]
+fn later(hwnd: HWND) {
+    let Some(id) = recheck_id().filter(|_| !RECHECKING.get()) else {
+        return;
+    };
+    // SAFETY: a message with no data to our own window; a gone window refuses it, which needs nothing more.
+    let _ = unsafe { PostMessageW(Some(hwnd), id, WPARAM(0), LPARAM(0)) };
+}
+
+/// The posted check of our window `hwnd`: the guard lifts it back if it, or an owner, is still out of the band.
+pub(super) fn recheck(hwnd: HWND) {
+    let was = RECHECKING.replace(true);
+    keep_top(hwnd);
+    RECHECKING.set(was);
+}
+
+/// True while the guard lifts windows back on this thread.
+#[cfg(test)]
+pub(super) fn lifting() -> bool {
+    LIFTING.with_borrow(|l| !l.is_empty())
 }
 
 /// True when `hwnd` belongs to the calling thread.
@@ -77,13 +118,17 @@ fn owned_here() -> Vec<(HWND, HWND)> {
 }
 
 /// Lifts our window back to the top of the topmost band when a move took it, or an owner, out, as `HWND_NOTOPMOST`
-/// from another program does. The furthest guarded owner goes up, then every window it owns, each above its owner.
+/// from another program does. The furthest guarded owner goes up, then every window it owns, each above its owner;
+/// the window is checked again once the call that moved it is over.
 pub(super) fn keep_top(hwnd: HWND) {
     let chain = chain(hwnd);
     let states: Vec<(bool, bool)> = LIFTING.with_borrow(|l| {
         let state = |w: &HWND| (is_top(ex_of(*w)), l.contains(w));
         chain.iter().map(state).collect()
     });
+    if states.iter().any(|&(top, _)| !top) {
+        later(hwnd);
+    }
     let Some(root) = to_lift(&states).map(|i| chain[i]) else {
         return;
     };

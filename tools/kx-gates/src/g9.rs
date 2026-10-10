@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use kx_platform_windows::window::{foreground, is_through, kept_ex};
+use kx_platform_windows::window::{foreground, guarded, is_through, kept_ex};
 use serde::Serialize;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
@@ -81,6 +81,8 @@ struct Seen {
     front_kept: bool,
     /// The window in front instead of target-window, by class and program; null while the target kept it.
     front: Option<String>,
+    /// True while the guard is hooked on the window, so a missing flag shows whether the guard was there to keep it.
+    guarded: bool,
 }
 
 /// The window `front` named by class and program, unless it is the `target`.
@@ -151,6 +153,7 @@ impl Watch {
                 extra: extra(ex, first),
                 front_kept,
                 front: in_front(front, self.target),
+                guarded: guarded(w),
             });
         }
     }
