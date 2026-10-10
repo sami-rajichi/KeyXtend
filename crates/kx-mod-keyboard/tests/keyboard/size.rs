@@ -99,6 +99,63 @@ fn a_resize_back_to_where_it_began_saves_nothing() {
 }
 
 #[test]
+fn two_clicks_with_no_move_write_nothing_even_on_a_capped_size() {
+    let mut host = fake(Some(("size", 1.5.into())));
+    let mut s = sizer(&mut host);
+    assert!(s.fit(1.1), "a laptop caps the big monitor's size");
+    s.begin(at(100, 100), PLATE);
+    assert_eq!(s.end(), Ok(false));
+    assert!(written(&host).is_empty(), "the saved size stays");
+    assert_eq!(saved(&host).size, 1.5);
+}
+
+#[test]
+fn a_size_capped_below_the_floor_is_never_written() {
+    let mut host = fake(None);
+    let mut s = sizer(&mut host);
+    s.begin(at(100, 100), PLATE);
+    assert!(s.fit(0.5), "the screen shrank during the resize");
+    assert_eq!(s.end(), Ok(true), "it holds for this run");
+    s.begin(at(100, 100), PLATE);
+    assert!(!s.follow(at(-400, 100)), "the room holds it");
+    assert_eq!(s.end(), Ok(false));
+    assert!(
+        written(&host).is_empty(),
+        "the settings check would refuse it"
+    );
+}
+
+#[test]
+fn a_resize_from_a_capped_size_saves_the_size_it_reached() {
+    let mut host = fake(Some(("size", 1.8.into())));
+    let mut s = sizer(&mut host);
+    assert!(s.fit(1.3));
+    s.begin(at(400, 100), PLATE);
+    assert!(s.follow(at(300, 100)));
+    s.begin(at(300, 100), PLATE);
+    assert!(!s.follow(at(300, 100)));
+    let reached = s.size();
+    assert_eq!(s.end(), Ok(true), "a second start ends against the first");
+    assert_eq!(written(&host), [reached]);
+}
+
+#[test]
+fn a_step_during_a_resize_still_leaves_the_size_shown_saved() {
+    let mut host = fake(None);
+    let mut s = sizer(&mut host);
+    s.begin(at(0, 0), PLATE);
+    assert!(s.follow(at(-450, 0)));
+    assert_eq!(s.smaller(), Ok(false), "at the floor");
+    assert_eq!(s.end(), Ok(true));
+    assert_eq!(saved(&host).size, s.size());
+    s.begin(at(0, 0), PLATE);
+    assert_eq!(s.pick(1), Ok(true), "saved at once");
+    assert!(s.follow(at(0, 0)), "back to where the resize began");
+    assert_eq!(s.end(), Ok(true));
+    assert_eq!(saved(&host).size, s.size());
+}
+
+#[test]
 fn a_size_that_cannot_be_saved_still_holds_for_this_run() {
     let mut host = fake(None);
     let mut s = sizer(&mut host);

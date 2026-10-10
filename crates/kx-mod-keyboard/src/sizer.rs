@@ -63,6 +63,12 @@ impl Limits {
         v.min(top).max(low)
     }
 
+    /// True when the settings check takes `v`: inside `size_min` and `size_max`, whatever the room.
+    #[must_use]
+    pub fn allows(&self, v: f64) -> bool {
+        (self.min..=self.max).contains(&v)
+    }
+
     /// `v` rounded to a whole number of steps, inside the limits.
     /// Dividing by the steps per unit keeps sizes such as 1.05 exact in the settings file.
     #[must_use]
@@ -139,6 +145,8 @@ pub struct Sizer {
     size: f64,
     saved: f64,
     resize: Option<Resize>,
+    /// The size as a resize's start or the last step left it, which the resize's end compares against.
+    settled: f64,
     store: SettingsHandle,
 }
 
@@ -147,11 +155,13 @@ impl Sizer {
     #[must_use]
     pub fn new(settings: &KeyboardSettings, store: SettingsHandle) -> Self {
         let limits = Limits::of(settings);
+        let size = limits.clamp(settings.size);
         Self {
-            size: limits.clamp(settings.size),
+            size,
             saved: settings.size,
             limits,
             resize: None,
+            settled: size,
             store,
         }
     }
@@ -211,8 +221,12 @@ impl Sizer {
         self.set(self.limits.clamp(size))
     }
 
-    /// Starts a resize with the pointer at `at` and the plate `plate` big, in the pointer's pixels.
+    /// Starts a resize with the pointer at `at` and the plate `plate` big, in the pointer's pixels; one already running
+    /// goes on from here and still ends against the size it began at.
     pub fn begin(&mut self, at: Point, plate: (f64, f64)) {
+        if self.resize.is_none() {
+            self.settled = self.size;
+        }
         self.resize = Some(Resize::begin(self.size, at, plate));
     }
 
@@ -227,16 +241,20 @@ impl Sizer {
         changed
     }
 
-    /// Ends the resize at the size it reached and saves it; true when that differs from where it began.
+    /// Ends the resize at the size it reached, saved only when it differs from where it began, so two clicks with no
+    /// move never save a size fitted to the screen; true when it differs.
     ///
     /// # Errors
     /// `Unsaved` when the size could not be saved; it holds for this run.
     pub fn end(&mut self) -> Result<bool, SizeError> {
-        let Some(r) = self.resize.take() else {
+        if self.resize.take().is_none() {
             return Ok(false);
-        };
-        self.save()?;
-        Ok(differs(self.size, r.start()))
+        }
+        let changed = differs(self.size, self.settled);
+        if changed {
+            self.save()?;
+        }
+        Ok(changed)
     }
 
     /// True while a resize runs.
@@ -251,14 +269,16 @@ impl Sizer {
         let changed = differs(size, self.size);
         self.size = size;
         if changed {
+            self.settled = size;
             self.save()?;
         }
         Ok(changed)
     }
 
-    /// Writes the size to the settings when it differs from the size they hold, which an unsaved write still sets.
+    /// Writes the size to the settings when it differs from the size they hold, which an unsaved write still sets; a
+    /// size fitted below `size_min`, which the settings check refuses, is never written.
     fn save(&mut self) -> Result<(), SizeError> {
-        if differs(self.size, self.saved) {
+        if differs(self.size, self.saved) && self.limits.allows(self.size) {
             let wrote = self.store.set(SIZE_KEY, toml::Value::Float(self.size));
             if wrote.as_ref().err().is_none_or(WriteError::holds) {
                 self.saved = self.size;

@@ -77,6 +77,19 @@ fn clamping_keeps_any_value_inside_the_limits() {
 }
 
 #[test]
+fn the_settings_take_only_sizes_inside_their_limits_whatever_the_room() {
+    let (mut l, s) = (limits(), settings());
+    assert!(l.allows(s.size_min) && l.allows(s.size_max) && l.allows(1.3));
+    assert!(!l.allows(s.size_min - s.size_step) && !l.allows(s.size_max + s.size_step));
+    assert!(!l.allows(f64::NAN));
+    l.room = s.size_min / 2.0;
+    assert!(
+        l.allows(1.0) && !l.allows(l.clamp(1.0)),
+        "a fitted size below the floor"
+    );
+}
+
+#[test]
 fn a_resize_follows_the_pointer_in_steps_and_stops_at_the_limits() {
     let (l, s) = (limits(), settings());
     let r = Resize::begin(1.0, at(100, 100), (600.0, 200.0));

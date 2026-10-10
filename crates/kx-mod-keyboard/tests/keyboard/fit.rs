@@ -7,6 +7,7 @@
 
 use crate::host::{GOLDEN, saved};
 use crate::rig::Rig;
+use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::ports::{BASE_DPI, FaceAction, Point, Rect, Screen, physical};
 
 /// A 150 % screen.
@@ -83,6 +84,22 @@ fn an_oversized_keyboard_shrinks_to_its_screen_and_keeps_its_saved_size() {
     r.act(FaceAction::Bigger).unwrap();
     r.act(FaceAction::Preset { index: 2 }).unwrap();
     assert!(on_screen(&r, &small), "no step grows it past the screen");
+}
+
+#[test]
+fn a_resize_on_a_screen_below_the_floor_writes_nothing_and_shows_no_notice() {
+    let r = Rig::new(&GOLDEN, None);
+    let tiny = Rect { w: 500, ..SMALL };
+    r.act(placed(0, 0, screen(tiny, BASE_DPI))).unwrap();
+    let floor = KeyboardSettings::from_defaults().unwrap().size_min;
+    assert!(
+        r.board()["size"].as_f64().unwrap() < floor,
+        "capped below size_min"
+    );
+    r.act(FaceAction::ResizeBegin { x: 0, y: 0 }).unwrap();
+    let end = r.act(FaceAction::ResizeEnd).unwrap();
+    assert_eq!(end.notice, None, "no false settings notice");
+    assert!(r.host.sink.writes().is_empty(), "the saved size stays");
 }
 
 #[test]
