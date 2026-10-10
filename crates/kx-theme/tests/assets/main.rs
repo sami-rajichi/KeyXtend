@@ -13,21 +13,16 @@ use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
 use kx_theme::assets::{
-    FONT_DIR, ICON_EXT, ICONS_AT, SYSTEM_FONTS, bundle, font_files, icon_file, is_font,
+    FONT_DIR, ICON_EXT, ICONS_AT, MARK_CIRCLE, MARKS, SYSTEM_FONTS, bundle, font_files, icon_file,
+    is_font,
 };
 use std::collections::BTreeSet;
-use std::ops::RangeInclusive;
 
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets")
 }
 
-/// The circle marks with no letter before them sit on (U+25CC).
-const CIRCLE: char = '\u{25CC}';
-/// The marks the keyboard names for readers (kx-mod-keyboard `HARAKA_NAMES`, fathatan to sukun) and the superscript
-/// alef, which it also draws on the circle in the mark font.
-const MARKS: [RangeInclusive<char>; 2] = ['\u{064B}'..='\u{0652}', '\u{0670}'..='\u{0670}'];
 /// Mark fonts that ship with Windows, so no file here can be read, and why each draws the circle and the marks.
 const SYSTEM_MARK_FONTS: [(&str, &str); 1] = [(
     "Segoe UI",
@@ -94,7 +89,7 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
 #[test]
 fn every_mark_font_a_theme_names_draws_the_dotted_circle_and_each_mark() {
     let t = Themes::shipped().expect("tokens load");
-    let wanted: Vec<char> = std::iter::once(CIRCLE)
+    let wanted: Vec<char> = std::iter::once(MARK_CIRCLE)
         .chain(MARKS.into_iter().flatten())
         .collect();
     let mut checked = 0;
@@ -138,7 +133,7 @@ fn the_circle_check_reads_real_fonts_rubik_lacking_it_and_noto_holding_it() {
     assert!(!rubik.is_empty(), "Rubik is bundled");
     for f in &rubik {
         assert!(
-            !cmap::maps(f, CIRCLE),
+            !cmap::maps(f, MARK_CIRCLE),
             "why Dolch's marks need their own font"
         );
         assert!(
@@ -147,7 +142,7 @@ fn the_circle_check_reads_real_fonts_rubik_lacking_it_and_noto_holding_it() {
         );
     }
     let noto = files_of("Noto Sans Arabic");
-    assert!(!noto.is_empty() && noto.iter().all(|f| cmap::maps(f, CIRCLE)));
+    assert!(!noto.is_empty() && noto.iter().all(|f| cmap::maps(f, MARK_CIRCLE)));
 }
 
 #[test]

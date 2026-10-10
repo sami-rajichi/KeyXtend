@@ -4,6 +4,7 @@
 use crate::Themes;
 use std::collections::BTreeSet;
 use std::io;
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
 /// Folders under `assets/` that hold icons: Lucide's, then our own drawings.
@@ -18,6 +19,11 @@ pub const FONT_EXTS: [&str; 2] = ["ttf", "otf"];
 pub const ICONS_AT: &str = "icons";
 /// Font families Windows 11 ships, so the app never bundles them; any other family a theme names is bundled.
 pub const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
+/// The circle a mark with no letter before it sits on (U+25CC), which every mark font draws.
+pub const MARK_CIRCLE: char = '\u{25CC}';
+/// The marks every mark font draws on that circle: the harakat the keyboard names (fathatan to sukun) and the
+/// superscript alef; the app pins them to the keyboard's names.
+pub const MARKS: [RangeInclusive<char>; 2] = ['\u{064B}'..='\u{0652}', '\u{0670}'..='\u{0670}'];
 
 /// A file the app bundles: its name in the bundle and its file in the repo.
 #[derive(Debug, Clone, PartialEq, Eq)]

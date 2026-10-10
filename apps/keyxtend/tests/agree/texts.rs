@@ -1,12 +1,14 @@
 //! Every name, label and tip the face draws, every mark it names, every module the app ships and the kernel, and
-//! every language-key design has its text in English, French and Arabic.
+//! every language-key design has its text in English, French and Arabic; every mark it names is one the theme's mark
+//! fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
 use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
-use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names};
-use kx_mod_keyboard::view::LONE_TIP;
+use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
+use kx_mod_keyboard::view::{EMPTY_NAME, LONE_TIP};
+use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
@@ -23,7 +25,7 @@ fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
 
 #[test]
 fn every_name_label_and_tip_the_face_draws_has_its_text() {
-    let mut wanted = BTreeSet::from([LONE_TIP.to_owned()]);
+    let mut wanted = BTreeSet::from([LONE_TIP.to_owned(), EMPTY_NAME.to_owned()]);
     for design in designs() {
         let view = board(design);
         for k in &view.keys {
@@ -46,6 +48,18 @@ fn every_mark_the_face_names_has_its_text() {
     let wanted: BTreeSet<String> = names.into_iter().flatten().collect();
     assert_eq!(wanted.len(), HARAKA_NAMES.len());
     assert_eq!(missing(&wanted), Vec::new());
+}
+
+#[test]
+fn every_mark_the_face_names_is_one_the_mark_fonts_are_checked_for_on_their_circle() {
+    let checked = |c: char| MARKS.iter().any(|r| r.contains(&c));
+    for (c, id) in HARAKA_NAMES {
+        assert!(checked(c), "{id} is not in kx-theme's MARKS");
+    }
+    for c in MARKS.into_iter().flatten() {
+        let drawn = shown(&c.to_string());
+        assert!(drawn.starts_with(MARK_CIRCLE), "U+{:04X}", u32::from(c));
+    }
 }
 
 #[test]
