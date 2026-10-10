@@ -14,9 +14,6 @@ use crate::mouse;
 use crate::proc::{Memory, Process};
 use crate::win::sleep_ms;
 
-/// Why no list showed: only the List design has one, and the other steps still churn.
-const NO_LIST: &str = "the language key is not the List design, so the list step was skipped";
-
 /// What the churn did, and private memory around its measured rounds.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Churn {
@@ -30,13 +27,13 @@ pub struct Churn {
     pub hovers: usize,
     /// Hovers that showed a tip.
     pub tips: usize,
-    /// Rounds that showed the language list; none when the language key opens no list.
+    /// Rounds that showed the language list; none when the list step was skipped.
     pub lists: Option<usize>,
     /// Rounds whose minimise hid the keyboard and showed the bubble.
     pub bubbles: usize,
     /// Rounds whose bubble brought the keyboard back.
     pub returns: usize,
-    /// Why no list showed, when none could.
+    /// Why the list step was skipped: not the List design, or one layout installed.
     pub note: Option<&'static str>,
 }
 
@@ -105,7 +102,7 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
         lists,
         bubbles: seen.bubbles,
         returns: seen.returns,
-        note: lists.is_none().then_some(NO_LIST),
+        note: plan.skip,
     })
 }
 

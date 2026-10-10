@@ -4,7 +4,10 @@
 
 use std::collections::HashSet;
 
+use kx_mod_keyboard::langkey::lone;
 use kx_mod_keyboard::{LangKey, Role};
+use kx_module_api::ports::LayoutSource;
+use kx_platform_windows::WinLayouts;
 use kx_theme::Themes;
 use windows::Win32::Foundation::{HWND, POINT};
 
@@ -17,6 +20,11 @@ use crate::{board, g8ui, mouse, uilook};
 
 /// What a round that broke off mid-cycle leaves, for its error.
 const THEME_LEFT: &str = "the theme may differ now: press the theme button to bring yours back";
+/// Why the list step is skipped: only the List design has a list.
+const NOT_LIST: &str = "the language key is not the List design, so the list step was skipped";
+/// Why the list step is skipped: with one layout the key opens nothing.
+const ONE_LAYOUT: &str =
+    "only one layout is installed, so the List design opens no list and the step was skipped";
 /// Why the bubble step stops: minimise was refused, or the bubble had not shown yet.
 const NO_BUBBLE: &str =
     "minimise showed no bubble: the screen may have no spot for it, or raise g8.churn_settle_ms";
@@ -29,8 +37,10 @@ pub struct Plan {
     pub away: POINT,
     /// The pointer's rest on each key: the running copy's tip time and `[g8] churn_tip_ms`.
     hover_ms: u64,
-    /// The language key's id, when its design opens the list.
+    /// The language key's id, when it opens the list.
     pub lang: Option<String>,
+    /// Why the list step is skipped, when it is.
+    pub skip: Option<&'static str>,
     /// Theme button presses that bring the theme back: one per shipped theme.
     themes: usize,
     /// The owner's theme, which each cycle must end on.
@@ -40,6 +50,17 @@ pub struct Plan {
     /// The buttons that minimise the keyboard and bring it back, from `[g9]`.
     hide: String,
     back: String,
+}
+
+/// Why the list step is skipped for a language key of `design` with `layouts` installed; nothing when it runs.
+fn skip_list(design: LangKey, layouts: usize) -> Option<&'static str> {
+    if design != LangKey::List {
+        Some(NOT_LIST)
+    } else if lone(layouts) {
+        Some(ONE_LAYOUT)
+    } else {
+        None
+    }
 }
 
 /// The plan for the running copy: its keys' places, its tip time and its language key's design.
@@ -53,8 +74,11 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
         .collect::<Result<_, _>>()?;
     let first = *tips.first().ok_or("g8.churn_tips names no key")?;
     let away = g8ui::away_from(win::rect(kb.hwnd)?, first, win::desktop().1);
-    let lists = product::keyboard()?.lang_key == LangKey::List;
-    let lang = lists.then(|| board::id_of(Role::Lang)).transpose()?;
+    let skip = skip_list(product::keyboard()?.lang_key, WinLayouts.installed().len());
+    let lang = skip
+        .is_none()
+        .then(|| board::id_of(Role::Lang))
+        .transpose()?;
     let themes = Themes::shipped().map_err(|e| format!("the shipped themes: {e}"))?;
     let look = uilook::running()?;
     Ok(Plan {
@@ -62,6 +86,7 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
         away,
         hover_ms: look.tip_ms + g.churn_tip_ms,
         lang,
+        skip,
         themes: themes.list.len(),
         theme: look.theme,
         keyboard: kb.hwnd,
@@ -213,6 +238,15 @@ mod tests {
                 "{e}"
             );
         }
+    }
+
+    #[test]
+    fn the_list_step_runs_only_in_the_list_design_with_two_layouts_and_says_why_not() {
+        assert_eq!(skip_list(LangKey::List, 2), None);
+        let one = skip_list(LangKey::List, 1).expect("one layout opens no list");
+        assert!(one.contains("one layout"), "{one}");
+        let carousel = skip_list(LangKey::Carousel, 3).expect("the Carousel has no list");
+        assert!(carousel.contains("not the List design"), "{carousel}");
     }
 
     #[test]
