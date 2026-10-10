@@ -2,6 +2,15 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-10 18:00 — P3: fix round F, windows and G9
+After a scale or screen change, the keyboard keeps its place in pixels and is placed again from fresh screens, also when the change comes during a move or resize, so a moved keyboard is never lost off-screen. The shadow hides during a live resize instead of trailing it, and the guard brings back a dropped window's whole family, owners included, and checks again after another program's call ends. G10 keeps no other app's labels, and G9 records each window's owner and guard state; G9's pass waits for the next installed run.
+
+## 2026-10-10 17:30 — P3: fix round F, key faces in Arabic and Dolch
+Arabic letters sit centred again, and a key whose base is an Arabic letter shows no AltGr corner, as on Windows' own keyboard; the owner chose this from rendered pictures. A key that types nothing with Shift or AltGr shows empty and a click sends nothing, from one rule in the OS-free core, while a Ctrl, Alt or Win latch still sends the shortcut. Corner legends are 20 % smaller with their own top, bottom and side margins, a Quick test fails when any corner touches a main legend, and a new picture test (`KX_PICTURES`) renders every theme for review.
+
+## 2026-10-10 16:10 — P3: G8 measures commit, a warm-up and pop-up churn
+G8 now reads private commit beside the working set and judges both (100 MB and 140 MB, ADR-0021), after a set warm-up and never trimming. A churn of tips, the bubble, the theme cycle and the List design's language list checks that memory stays flat, after PresentMon's capture so frame drops are judged as before. G11's top scale is 175 %, the largest Windows offers on the development PC's screen.
+
 ## 2026-10-10 12:50 — P3: fix round E, display scale, Arabic marks and legends, and the GPU
 The windows now keep their size and place across a display scale change: Qt left each native window as it was, so a new `Rescale` part sets the bound values again, and the keyboard cuts itself and is placed again in the new pixels. In Dolch, marks on their dotted circle take Noto Sans Arabic (Rubik lacks U+25CC), and a wide Arabic letter over an AltGr legend rises 6 px so they no longer touch. The app now pins Qt to the lowest-power GPU through DXGI; it was already on the AMD iGPU here, and the large memory comes from one Direct3D device per shown window, a finding for a later ADR.
 
