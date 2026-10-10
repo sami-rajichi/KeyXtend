@@ -17,6 +17,8 @@ QtObject {
     property var pointer: null
     // The last place the window sent: its box in physical pixels and the corner's overhang at size 1.
     property var placedAt: null
+    // The place sent becomes the state's, as the keyboard saves a move, though it answers that nothing changed.
+    property bool keeps: false
     // The scale the window last cut itself at.
     property var shapeDpr: null
 
@@ -66,6 +68,8 @@ QtObject {
     }
     function placed(x, y, w, h, overhang) {
         placedAt = { x: x, y: y, w: w, h: h, overhang: overhang };
+        if (keeps)
+            state = Object.assign({}, state, { at: { x: x, y: y } });
         return note("placed");
     }
     function cursor() {

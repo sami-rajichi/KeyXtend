@@ -46,8 +46,10 @@ Window {
     readonly property bool ready: running && st !== null && lk !== null && cfg !== null && tongue !== null
     readonly property real s: running ? board.size : 1
     readonly property real corner: ready ? lk.shape.extra.corner_px[0] * s : 0
+    // How far the corner hangs past the plate at size 1, which placement keeps on screen too.
+    readonly property real unitOverhang: ready ? lk.shape.extra.corner_px[0] / 2 : 0
     // How far the window reaches past the plate's right and bottom edges: the half of the corner that hangs over.
-    readonly property real overhang: corner / 2
+    readonly property real overhang: unitOverhang * s
     // The window's size in Qt units: the plate and the overhang.
     readonly property real wide: ready ? board.plate.w + overhang : 0
     readonly property real high: ready ? board.plate.h + overhang : 0
@@ -76,6 +78,7 @@ Window {
     onVisibleChanged: if (visible) Qt.callLater(shown)
     onRunningChanged: if (!running) placed = false
     onScreenChanged: Qt.callLater(rescreen)
+    onUnitOverhangChanged: if (placed) Qt.callLater(rescreen)
     Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
 
     Connections {
@@ -198,22 +201,22 @@ Window {
         const l = spots.logical(p.x, p.y);
         at = Qt.point(l.x, l.y);
     }
-    // Tells the keyboard where the window is and how far its corner hangs past the plate at size 1, which placement
-    // keeps on screen too; the first time, it answers with the saved or home place.
+    // Tells the keyboard where the window is, its corner and all; the first time, it answers with the saved or home
+    // place. The state is read again, so `st.at` holds the place the keyboard keeps even when it answers no change.
     function place() {
         if (!running)
             return;
         const p = spots.physical(at.x, at.y);
         placed = true;
-        redraw(keyboard.placed(p.x, p.y, width * p.dpr, height * p.dpr, overhang / s));
+        redraw(keyboard.placed(p.x, p.y, width * p.dpr, height * p.dpr, unitOverhang), true);
     }
 
-    // On a new display scale or screen: the cut again and, unless it is moving, a new placement where it is in pixels,
-    // for its size in the new ones; the window then goes where the keyboard puts it, in the new Qt units.
+    // On a new display scale, screen or corner: the cut again and, unless it is moving, a new placement where it is in
+    // pixels, for its size in the new ones; the window then goes where the keyboard puts it, in the new Qt units.
     function rescreen() {
         reshape();
         if (placed && st && st.at && !(body.item && body.item.mover.busy))
-            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, overhang / s), true);
+            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, unitOverhang), true);
     }
     // Once shown: the cut, then the guard, which also puts the backdrop on.
     function shown() {

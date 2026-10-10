@@ -108,6 +108,23 @@ Item {
             r.win.visible = false;
         }
 
+        // A new corner, or a look read after the first placement, places the keyboard again where the keyboard put it,
+        // so it keeps the whole corner on screen and saves no move.
+        function test_a_new_corner_places_the_keyboard_again_where_it_is() {
+            const r = make({ x: 120, y: 90 });
+            r.kb.keeps = true;
+            r.win.place();
+            const placed = heard(r.kb, "placed");
+            const lk = JSON.parse(JSON.stringify(r.win.lk));
+            lk.shape.extra.corner_px[0] *= 2;
+            r.win.lk = lk;
+            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            compare(r.kb.placedAt.overhang, lk.shape.extra.corner_px[0] / 2, "with the new corner, at size 1");
+            const at = r.win.st.at;
+            compare([r.kb.placedAt.x, r.kb.placedAt.y], [at.x, at.y], "where the keyboard put it");
+            r.win.visible = false;
+        }
+
         function test_a_resize_follows_the_pointer_and_a_click_on_a_screens_catcher_ends_it() {
             const r = make({ x: 300, y: 200 });
             mouseClick(keyed(r.win, "bar.corner"));

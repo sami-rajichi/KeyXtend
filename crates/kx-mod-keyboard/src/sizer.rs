@@ -184,12 +184,14 @@ impl Sizer {
         self.limits.preset_of(self.size)
     }
 
-    /// Caps the size at `room`, the largest that fits the keyboard's screen, saving nothing; true when it changed.
+    /// Caps the size at `room`, the largest that fits the keyboard's screen, saving nothing, and a running resize ends
+    /// against the fitted size, so it never saves it; true when it changed.
     pub fn fit(&mut self, room: f64) -> bool {
         self.limits.room = room;
         let size = self.limits.clamp(self.size);
         let changed = differs(size, self.size);
         self.size = size;
+        self.settled = if changed { size } else { self.settled };
         changed
     }
 

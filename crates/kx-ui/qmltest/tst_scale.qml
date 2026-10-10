@@ -153,6 +153,22 @@ Item {
             r.win.visible = false;
         }
 
+        // A new scale after a move starts from where the user left it, though the keyboard answered that nothing changed.
+        function test_on_a_new_scale_a_keyboard_just_moved_is_placed_again_from_where_it_was_left() {
+            const r = make({ x: 100, y: 200 });
+            r.kb.keeps = true;
+            mouseClick(all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
+            r.kb.pointer = { x: 300, y: 260 };
+            tryVerify(() => r.win.at.x > 100, 2000, "the poll moves it");
+            mouseClick(all(r.mover.covers.objectAt(0).contentItem, o => o.Accessible.id === "catch")[0]);
+            const left = r.kb.placedAt;
+            const placed = heard(r.kb, "placed");
+            r.rescale.ratio = r.rescale.ratio * 2;
+            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            compare([r.kb.placedAt.x, r.kb.placedAt.y], [left.x, left.y], "from where the move left it");
+            r.win.visible = false;
+        }
+
         // A screen that goes places the keyboard again from where it was, and it goes where the keyboard puts it.
         function test_a_screen_that_goes_places_the_keyboard_again_on_the_screens_left() {
             const r = make({ x: 4100, y: 90 });

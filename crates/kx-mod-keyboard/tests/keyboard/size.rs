@@ -115,7 +115,11 @@ fn a_size_capped_below_the_floor_is_never_written() {
     let mut s = sizer(&mut host);
     s.begin(at(100, 100), PLATE);
     assert!(s.fit(0.5), "the screen shrank during the resize");
-    assert_eq!(s.end(), Ok(true), "it holds for this run");
+    assert_eq!(
+        s.end(),
+        Ok(false),
+        "the resize ends against the fitted size"
+    );
     s.begin(at(100, 100), PLATE);
     assert!(!s.follow(at(-400, 100)), "the room holds it");
     assert_eq!(s.end(), Ok(false));
@@ -123,6 +127,23 @@ fn a_size_capped_below_the_floor_is_never_written() {
         written(&host).is_empty(),
         "the settings check would refuse it"
     );
+}
+
+#[test]
+fn a_fit_during_a_resize_is_never_saved() {
+    let mut host = fake(None);
+    let mut s = sizer(&mut host);
+    s.begin(at(100, 100), PLATE);
+    assert!(
+        s.fit(0.9),
+        "a size step tipped the keyboard onto a smaller screen"
+    );
+    assert_eq!(
+        s.end(),
+        Ok(false),
+        "the resize ends against the fitted size"
+    );
+    assert!(written(&host).is_empty(), "the fitted size is never saved");
 }
 
 #[test]
