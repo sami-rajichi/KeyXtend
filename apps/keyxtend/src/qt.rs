@@ -1,25 +1,25 @@
 //! Qt on the main thread: hardened first, kept on the lowest-power graphics adapter and drawing every window on this
 //! thread, then the app object, the shared graphics device with the root QML over the installed hub, and the event
-//! loop, run again each time a lost device's windows are made again.
+//! loop, run again each time the windows are made again or wait for the next try at a device.
 
 use cxx_qt_lib::QGuiApplication;
-use kx_ui::{After, Gpu, Shell, harden_qt, pin_adapter, pin_drawing};
+use kx_ui::{After, Pick, Shell, harden_qt, pin_adapter, pin_drawing};
 use std::path::Path;
 use std::process::ExitCode;
 
 /// Loads the root QML and runs Qt's loop until the UI ends; `end` runs after the loop, while Qt's objects still live.
-/// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `gpu` picks.
-pub fn run(pinned: Option<&Path>, gpu: Gpu, end: impl FnOnce()) -> ExitCode {
+/// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `pick` finds.
+pub fn run(pinned: Option<&Path>, pick: Pick, end: impl FnOnce()) -> ExitCode {
     let cleared = harden_qt(pinned);
     if cleared > 0 {
         tracing::info!(cleared, "Qt variables were cleared before Qt started");
     }
-    pin((gpu.pick)());
+    pin(pick());
     if !pin_drawing() {
         tracing::warn!("Qt's drawing variables could not be set, so each window draws as Qt picks");
     }
     let mut app = QGuiApplication::new();
-    let mut shell = Shell::open(pinned, gpu);
+    let mut shell = Shell::open(pinned, pick);
     let exec = || app.as_mut().map(QGuiApplication::exec);
     let code = shell.as_mut().and_then(|s| looped(exec, s));
     end();
@@ -34,7 +34,7 @@ pub fn run(pinned: Option<&Path>, gpu: Gpu, end: impl FnOnce()) -> ExitCode {
 
 /// What runs after each end of Qt's loop; the app's is the shell.
 trait Rebuild {
-    /// Makes a lost device's windows again, or says the app ends.
+    /// Makes the windows again, waits for the next try, or says the app ends.
     fn rebuilt(&mut self) -> After;
 }
 
@@ -44,13 +44,13 @@ impl Rebuild for Shell {
     }
 }
 
-/// Runs Qt's loop with `exec` until it ends with no lost device to rebuild; its exit code, or `None` with no app object
-/// or when a lost device's windows could not be made again.
+/// Runs Qt's loop with `exec` until it ends with nothing to rebuild or wait for; its exit code, or `None` with no app
+/// object or when the windows could not be made again.
 fn looped(mut exec: impl FnMut() -> Option<i32>, shell: &mut impl Rebuild) -> Option<i32> {
     loop {
         let code = exec()?;
         match shell.rebuilt() {
-            After::Again => {}
+            After::Again | After::Wait => {}
             After::End => return Some(code),
             After::Failed => return None,
         }
@@ -107,6 +107,14 @@ mod tests {
             &mut Fake(vec![After::Again, After::Again]),
         );
         assert_eq!((code, runs), (Some(0), 3));
+    }
+
+    #[test]
+    fn a_wait_for_the_next_try_runs_the_loop_again() {
+        let mut runs = 0;
+        let waits = vec![After::Wait, After::Wait, After::Again];
+        let code = looped(exec(0, &mut runs), &mut Fake(waits));
+        assert_eq!((code, runs), (Some(0), 4));
     }
 
     #[test]

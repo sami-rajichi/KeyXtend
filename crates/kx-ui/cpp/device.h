@@ -16,6 +16,7 @@
 #include <rhi/qrhi.h>
 
 #include "kx-ui-build.h"
+#include "watch.h"
 
 #include <atomic>
 #include <cstddef>
@@ -92,11 +93,9 @@ private:
     {
         if (QThread::currentThread() != thread())
             offThread = true;
-        if ((offThread.load() || gone()) && !found.exchange(true)) {
-            // Each exit also emits aboutToQuit, so nothing of ours may hang work on that signal.
-            const auto end = [] { QCoreApplication::exit(0); };
-            QMetaObject::invokeMethod(QCoreApplication::instance(), end, Qt::QueuedConnection);
-        }
+        // Each exit also emits aboutToQuit, so nothing of ours may hang work on that signal.
+        if ((offThread.load() || gone()) && !found.exchange(true))
+            end_loop();
     }
 
     // True when the device is gone, or a debug build marked it so.
@@ -122,8 +121,7 @@ private:
 inline std::unique_ptr<Device> device_new()
 {
 #if defined(Q_OS_WIN)
-    const QCoreApplication *app = QCoreApplication::instance();
-    if (!app || QThread::currentThread() != app->thread())
+    if (!on_app_thread())
         return nullptr;
     QRhiD3D11InitParams params;
     QRhi *rhi = QRhi::create(QRhi::D3D11, &params);

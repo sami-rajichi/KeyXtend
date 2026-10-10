@@ -1,21 +1,22 @@
 //! The device test's steps without a loss, each over the running app's windows.
 
-use crate::rig::{GUARDED, Outcome, Rig, wait};
+use crate::rig::{FIRST, GUARDED, Outcome, Rig, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
 use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
-use kx_ui::{Device, Shell, UiSettings, drawing, font_families};
+use kx_ui::{ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees};
 use std::thread;
 use tracing::Level;
 
 /// The themes the font step shows in turn: two with bundled fonts, then the one Windows draws, which loads none.
 const THEMES: [&str; 3] = ["dolch", "et66", "native"];
-/// What a font that did not load logs.
+/// What a font that did not load logs, and what each warning of a device that could not be shared holds.
 const NOT_LOADED: &str = "did not load";
+const GRAPHICS: &str = "graphics";
 
 /// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
-/// shared device, and every frame ends on the GUI thread; no device is made off that thread.
+/// shared device, and every frame ends on the GUI thread; no device is made off that thread, and the pin stays.
 pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let device = shell.device().ok_or("no shared device was made")?;
     wait(app, "the keyboard's first frame", || {
@@ -33,10 +34,20 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
             device.windows()
         ));
     }
-    let elsewhere = thread::spawn(|| Device::make().is_some()).join();
-    match elsewhere {
-        Ok(false) => Ok(()),
-        _ => Err("a device was made off the GUI thread".into()),
+    elsewhere(rig)
+}
+
+/// Off the GUI thread no device is made, and the adapter pin stays with no warning.
+fn elsewhere(rig: &Rig) -> Outcome {
+    let warned = rig.lines.count(Level::WARN, GRAPHICS);
+    if !pin_adapter(FIRST) {
+        return Err("the adapter was not pinned".into());
+    }
+    let made = thread::spawn(|| Device::make().is_some()).join();
+    let kept = qt_sees(ADAPTER_VAR) && rig.lines.count(Level::WARN, GRAPHICS) == warned;
+    match made {
+        Ok(false) if kept => Ok(()),
+        _ => Err("off the GUI thread a device was made or the pin dropped".into()),
     }
 }
 

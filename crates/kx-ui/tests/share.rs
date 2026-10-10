@@ -1,6 +1,7 @@
 //! How the shared graphics device is made (ADR-0021), apart from Qt: at once on the pinned adapter, or on Qt's default
-//! when that adapter is gone, with one warning; a lost one is made again on the adapter picked anew, never dropping
-//! the pin, each try counted against `[ui] device_rebuilds`.
+//! when that adapter is gone, with one warning. A lost one, or one a window could not start drawing on, is made again
+//! one try at a time on the adapter picked anew, never dropping the pin; the next try comes later, through Qt's loop,
+//! and every try counts against `[ui] device_rebuilds`.
 
 #![allow(
     clippy::expect_used,
@@ -12,12 +13,14 @@
 mod logs;
 
 use kx_ui::UiSettings;
-use kx_ui::device::{Rebuilds, Remake, share};
+use kx_ui::device::{Cause, Next, Rebuilds, Remake, share};
 use logs::warnings_of;
 use std::cell::Cell;
 
 /// What the fake maker makes.
 const DEVICE: u8 = 7;
+/// A device loss with every frame on the GUI thread.
+const LOST: Cause = Cause::Lost { gui_only: true };
 
 /// A maker that fails `fails` times, then makes `DEVICE`, and counts its tries.
 fn maker(fails: u32, tries: &Cell<u32>) -> impl FnMut() -> Option<u8> + '_ {
@@ -79,10 +82,9 @@ fn no_device_without_a_pin_is_tried_once_with_one_warning() {
 enum Step {
     Repin,
     Make,
-    Pause,
 }
 
-/// A remake whose first `fails` makes fail; it notes each step.
+/// A remake whose first `fails` makes fail; it notes each step. It has nothing that waits, as `Remake` has none.
 #[derive(Default)]
 struct Fake {
     fails: usize,
@@ -110,10 +112,6 @@ impl Remake for Fake {
         let tries = self.steps.iter().filter(|s| **s == Step::Make).count();
         (tries > self.fails).then_some(DEVICE)
     }
-
-    fn pause(&mut self) {
-        self.steps.push(Step::Pause);
-    }
 }
 
 /// The most rebuilds the defaults allow.
@@ -121,46 +119,57 @@ fn most() -> u32 {
     UiSettings::from_defaults().unwrap().device_rebuilds
 }
 
+/// One try.
+const TRY: [Step; 2] = [Step::Repin, Step::Make];
+
 #[test]
 fn a_lost_device_is_made_again_on_the_adapter_picked_anew_with_one_warning() {
     let mut fake = Fake::default();
-    let mut made = None;
-    let warned = warnings_of(|| made = Rebuilds::default().remake(most(), true, &mut fake));
-    assert_eq!(made, Some(DEVICE));
-    assert_eq!(fake.steps, [Step::Repin, Step::Make]);
+    let mut next = Next::Own;
+    let warned = warnings_of(|| next = Rebuilds::default().next(most(), LOST, &mut fake));
+    assert_eq!(next, Next::Shared(DEVICE));
+    assert_eq!(fake.steps, TRY);
     assert_eq!(warned.len(), 1, "{warned:?}");
 }
 
 #[test]
-fn a_device_not_made_yet_is_tried_again_after_a_pause_and_the_pin_stays() {
-    let mut fake = Fake::failing(1);
-    let mut made = None;
-    let warned = warnings_of(|| made = Rebuilds::default().remake(most(), true, &mut fake));
-    assert_eq!(made, Some(DEVICE), "no try drops the pin for Qt's default");
-    let tries = [Step::Repin, Step::Make];
+fn a_device_not_made_yet_is_tried_again_later_and_nothing_waits_here() {
+    let (mut rebuilds, mut fake) = (Rebuilds::default(), Fake::failing(1));
+    let mut first = Next::Own;
+    let warned = warnings_of(|| first = rebuilds.next(most(), LOST, &mut fake));
+    assert_eq!(
+        first,
+        Next::Later,
+        "the caller tries again through Qt's loop"
+    );
+    assert_eq!(fake.steps, TRY, "one try, then back to the caller");
+    assert_eq!(warned.len(), 1, "{warned:?}");
+    assert_eq!(rebuilds.next(most(), LOST, &mut fake), Next::Shared(DEVICE));
     assert_eq!(
         fake.steps,
-        [&tries[..], &[Step::Pause], &tries[..]].concat()
-    );
-    assert_eq!(
-        warned.len(),
-        2,
-        "the failed try and the rebuild: {warned:?}"
+        [TRY, TRY].concat(),
+        "the pin is set anew, never dropped"
     );
 }
 
 #[test]
 fn the_tries_count_against_the_setting_then_each_window_takes_its_own() {
-    let mut rebuilds = Rebuilds::default();
-    let mut fake = Fake::failing(usize::MAX);
-    let mut made = Some(DEVICE);
-    let warned = warnings_of(|| made = rebuilds.remake(most(), true, &mut fake));
-    assert_eq!(made, None);
-    let tries = fake.steps.iter().filter(|s| **s == Step::Make).count();
-    assert_eq!(u32::try_from(tries).unwrap(), most());
-    assert!(warned.last().unwrap().contains("too often"), "{warned:?}");
+    let (mut rebuilds, mut fake) = (Rebuilds::default(), Fake::failing(usize::MAX));
+    let mut got = Vec::new();
+    let warned = warnings_of(|| {
+        got = (0..most())
+            .map(|_| rebuilds.next(most(), LOST, &mut fake))
+            .collect();
+    });
+    let later = usize::try_from(most()).unwrap() - 1;
+    assert!(got[..later].iter().all(|n| *n == Next::Later), "{got:?}");
+    assert_eq!(got[later], Next::Own);
+    assert!(
+        warned.last().unwrap().contains("no new graphics device"),
+        "{warned:?}"
+    );
     fake.steps.clear();
-    assert_eq!(rebuilds.remake(most(), true, &mut fake), None);
+    assert_eq!(rebuilds.next(most(), LOST, &mut fake), Next::Own);
     assert!(fake.steps.is_empty(), "spent for the run");
 }
 
@@ -168,33 +177,63 @@ fn the_tries_count_against_the_setting_then_each_window_takes_its_own() {
 fn rebuilds_add_up_over_a_run() {
     let mut rebuilds = Rebuilds::default();
     let mut fake = Fake::default();
-    assert_eq!(rebuilds.remake(2, true, &mut fake), Some(DEVICE));
-    assert_eq!(rebuilds.remake(2, true, &mut fake), Some(DEVICE));
+    assert_eq!(rebuilds.next(2, LOST, &mut fake), Next::Shared(DEVICE));
+    assert_eq!(rebuilds.next(2, LOST, &mut fake), Next::Shared(DEVICE));
     fake.steps.clear();
-    assert_eq!(rebuilds.remake(2, true, &mut fake), None);
+    assert_eq!(rebuilds.next(2, LOST, &mut fake), Next::Own);
     assert!(fake.steps.is_empty(), "{:?}", fake.steps);
 }
 
 #[test]
 fn with_no_rebuilds_the_first_loss_leaves_each_window_its_own() {
     let mut fake = Fake::default();
-    assert_eq!(Rebuilds::default().remake(0, true, &mut fake), None);
+    assert_eq!(Rebuilds::default().next(0, LOST, &mut fake), Next::Own);
     assert!(fake.steps.is_empty());
 }
 
 #[test]
 fn a_frame_off_the_gui_thread_leaves_each_window_its_own_at_once_with_one_warning() {
     let mut fake = Fake::default();
-    let mut made = Some(DEVICE);
-    let warned = warnings_of(|| made = Rebuilds::default().remake(most(), false, &mut fake));
-    assert_eq!(made, None);
+    let mut next = Next::Later;
+    let off = Cause::Lost { gui_only: false };
+    let warned = warnings_of(|| next = Rebuilds::default().next(most(), off, &mut fake));
+    assert_eq!(next, Next::Own);
     assert!(fake.steps.is_empty(), "{:?}", fake.steps);
     assert_eq!(warned.len(), 1, "{warned:?}");
     assert!(warned[0].contains("GUI thread"), "{warned:?}");
 }
 
+#[test]
+fn a_window_that_cannot_draw_takes_the_rebuild_path_while_tries_remain() {
+    let mut fake = Fake::default();
+    let next = Rebuilds::default().next(most(), Cause::Failed, &mut fake);
+    assert_eq!(next, Next::Shared(DEVICE));
+}
+
+#[test]
+fn a_window_that_cannot_draw_once_the_tries_are_used_ends_the_app() {
+    let (mut rebuilds, mut fake) = (Rebuilds::default(), Fake::failing(usize::MAX));
+    assert_eq!(
+        rebuilds.next(1, Cause::Failed, &mut fake),
+        Next::End,
+        "its last try failed"
+    );
+    fake.steps.clear();
+    assert_eq!(
+        rebuilds.next(1, Cause::Failed, &mut fake),
+        Next::End,
+        "none left"
+    );
+    assert!(fake.steps.is_empty());
+}
+
 #[cfg(feature = "qt")]
 #[test]
-fn no_device_is_made_before_qts_app_object() {
-    assert!(kx_ui::Device::make().is_none());
+fn no_device_is_made_before_qts_app_object_and_the_pin_stays_unwarned() {
+    let pinned = 1;
+    assert!(kx_ui::pin_adapter(pinned));
+    let mut made = true;
+    let warned = warnings_of(|| made = kx_ui::Device::make().is_some());
+    assert!(!made && warned.is_empty(), "{warned:?}");
+    assert!(kx_ui::qt_sees(kx_ui::ADAPTER_VAR), "the pin stays");
 }

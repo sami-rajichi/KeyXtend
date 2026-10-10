@@ -1,6 +1,6 @@
-//! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame, and
-//! whether a frame found it lost or drew off the GUI thread. Debug builds can mark it lost and count which windows
-//! draw on it, for tests.
+//! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame,
+//! whether a frame found it lost or drew off the GUI thread, and the watch for a window that could not start drawing.
+//! Debug builds can mark the device lost or a window failed, and count which windows draw on it, for tests.
 
 use super::harden::unpin_adapter;
 use crate::device::share;
@@ -8,9 +8,9 @@ use cxx::UniquePtr;
 
 #[cxx_qt::bridge]
 mod ffi {
-    // SAFETY: `device.h` declares exactly these functions and `Device` members with these types. `device_new` makes
-    // nothing off the thread of Qt's app object; every other call runs on that GUI thread, which owns the device and
-    // the windows, and the app drops every window before the device.
+    // SAFETY: `device.h` and the `watch.h` it includes declare exactly these functions, types and members with these
+    // types. `device_new` and `watch_new` make nothing off the thread of Qt's app object; every other call runs on that
+    // GUI thread, which owns the device, the watch and the windows, and the app drops every window before the device.
     unsafe extern "C++" {
         include!("kx-ui/cpp/device.h");
 
@@ -50,6 +50,65 @@ mod ffi {
         /// Deletes the objects that wait for a later delete, so no window outlives its device.
         #[namespace = "kxui"]
         fn flush_deletes();
+
+        /// True on the thread of Qt's app object, once it exists.
+        #[namespace = "kxui"]
+        fn on_app_thread() -> bool;
+
+        /// Watches each Qt Quick window for a scene graph that could not start, and times the next try at a device.
+        #[namespace = "kxui"]
+        type Watch;
+
+        /// A watch over every Qt Quick window; null before Qt's app object, or off its thread.
+        #[namespace = "kxui"]
+        fn watch_new() -> UniquePtr<Watch>;
+
+        /// True once a window's scene graph could not start since the last call, which clears it.
+        fn take_failed(self: Pin<&mut Watch>) -> bool;
+
+        /// Ends Qt's loop after `ms`, for the next try at a device.
+        fn retry(self: Pin<&mut Watch>, ms: u64);
+
+        /// True once the timer of the last `retry` ran out.
+        fn ready(self: &Watch) -> bool;
+
+        /// Has a window report a scene graph that could not start, as a failed device would.
+        #[cfg(debug_assertions)]
+        fn fail(self: Pin<&mut Watch>);
+    }
+}
+
+/// Watches each Qt Quick window for a scene graph that could not start, which Qt would otherwise end the app for, and
+/// times the next try at a new device while Qt's loop runs.
+pub(crate) struct Watch(UniquePtr<ffi::Watch>);
+
+impl Watch {
+    /// A watch over every Qt Quick window; it watches nothing before Qt's app object, or off its thread.
+    pub(crate) fn new() -> Self {
+        Self(ffi::watch_new())
+    }
+
+    /// True once a window's scene graph could not start since the last call, which clears it.
+    pub(crate) fn take_failed(&mut self) -> bool {
+        self.0.as_mut().is_some_and(ffi::Watch::take_failed)
+    }
+
+    /// Ends Qt's loop after `ms`, for the next try at a device, while the loop runs; false when nothing can time it.
+    pub(crate) fn retry(&mut self, ms: u64) -> bool {
+        self.0.as_mut().map(|w| w.retry(ms)).is_some()
+    }
+
+    /// True once the time of the last `retry` ran out.
+    pub(crate) fn ready(&self) -> bool {
+        self.0.as_ref().is_some_and(ffi::Watch::ready)
+    }
+
+    /// Has a window report a scene graph that could not start; debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    pub(crate) fn fail(&mut self) {
+        if let Some(watch) = self.0.as_mut() {
+            watch.fail();
+        }
     }
 }
 
@@ -58,9 +117,13 @@ pub struct Device(UniquePtr<ffi::Device>);
 
 impl Device {
     /// The shared device on the pinned adapter, or on Qt's default when that adapter is gone; `None` when none can be
-    /// made, so each window makes its own. Call it on the GUI thread once Qt's app object exists, before any window.
+    /// made, so each window makes its own. Call it on the GUI thread once Qt's app object exists, before any window;
+    /// elsewhere it makes nothing and leaves the pin.
     #[must_use]
     pub fn make() -> Option<Self> {
+        if !ffi::on_app_thread() {
+            return None;
+        }
         share(Self::pinned, unpin_adapter)
     }
 

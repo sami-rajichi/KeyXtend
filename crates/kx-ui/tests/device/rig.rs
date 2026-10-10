@@ -8,10 +8,9 @@ use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::host::FakeHost;
-use kx_ui::{Gpu, Hub, MANIFEST, Shell, UiPorts, UiSettings};
+use kx_ui::{Hub, MANIFEST, Pick, Shell, UiPorts, UiSettings};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::Duration;
 use tracing::Level;
 
 /// The fake tray's picture side, and the one screen's work area.
@@ -33,24 +32,23 @@ const SECOND_UI: &str = "second Ui";
 /// An adapter no PC has, so no device can be made on it, as when the pinned one is gone.
 pub(crate) const GONE: u32 = 99;
 /// DXGI's first adapter, which every PC with a graphics adapter has.
-const FIRST: u32 = 0;
+pub(crate) const FIRST: u32 = 0;
 /// How many ticks a step may take, as `tryVerify` waits in the Qt Quick tests.
-const TICKS: usize = 250;
-/// The rebuilds the loss steps take: two tries for the first, one for each other.
-const REBUILDS: u32 = 5;
+pub(crate) const TICKS: usize = 250;
+/// The rebuilds the loss and failure steps take: two tries for the first, one for each other.
+const REBUILDS: u32 = 6;
+/// The wait before the next try at a device, many ticks long, so Qt's loop must run through it.
+const RETRY_MS: u64 = 200;
 
 /// The adapter the next pick gives; each pick then falls back to `FIRST`.
-static PICK: AtomicU32 = AtomicU32::new(FIRST);
+static NEXT: AtomicU32 = AtomicU32::new(FIRST);
 
-/// The test's adapter pick and wait: no time passes, so no step sleeps.
-pub(crate) const GPU: Gpu = Gpu {
-    pick: || Some(PICK.swap(FIRST, Ordering::SeqCst)),
-    wait: |_: Duration| {},
-};
+/// The test's adapter pick, which always finds one.
+const PICK: Pick = || Some(NEXT.swap(FIRST, Ordering::SeqCst));
 
 /// Has the next pick give `adapter`.
 pub(crate) fn pick_next(adapter: u32) {
-    PICK.store(adapter, Ordering::SeqCst);
+    NEXT.store(adapter, Ordering::SeqCst);
 }
 
 /// A step's verdict; the error says what failed.
@@ -73,8 +71,8 @@ pub(crate) struct Rig {
 }
 
 impl Rig {
-    /// A hub over fresh fakes with the fake face attached, as the `ui` module attaches the keyboard's, and room for
-    /// every loss step's rebuilds.
+    /// A hub over fresh fakes with the fake face attached, as the `ui` module attaches the keyboard's, room for every
+    /// loss step's rebuilds, and a wait between tries.
     fn new(lines: Lines) -> Result<Self, String> {
         let screen = Screen {
             rect: SCREEN,
@@ -106,6 +104,7 @@ impl Rig {
         let s = UiSettings::from_defaults().map_err(|e| e.to_string())?;
         rig.show(UiSettings {
             device_rebuilds: REBUILDS,
+            device_retry_ms: RETRY_MS,
             ..s
         });
         Ok(rig)
@@ -161,8 +160,8 @@ pub(crate) fn wait(
         .ok_or_else(|| format!("{what} did not happen"))
 }
 
-/// Starts Qt as the app does, then checks the shared device, the losses, the fonts, losses past the most, the
-/// fallback and the End.
+/// Starts Qt as the app does, then checks the shared device, the losses, a window that cannot draw, the fonts, losses
+/// past the most, the fallback and the End.
 pub(crate) fn run() -> Outcome {
     let lines = Lines::install().ok_or("a log capture was set already")?;
     if !kx_ui::pin_drawing() || !kx_ui::pin_adapter(GONE) {
@@ -174,7 +173,7 @@ pub(crate) fn run() -> Outcome {
     }
     let mut app = QGuiApplication::new();
     let mut tick = ticker()?;
-    let mut shell = Shell::open(None, GPU).ok_or("the root QML did not load")?;
+    let mut shell = Shell::open(None, PICK).ok_or("the root QML did not load")?;
     if kx_ui::qt_sees(kx_ui::ADAPTER_VAR) {
         return Err("the pin to a gone adapter stayed".into());
     }
@@ -183,10 +182,12 @@ pub(crate) fn run() -> Outcome {
     left::away(&mut app, &mut shell, &rig)?;
     left::minimised(&mut app, &mut shell, &rig)?;
     left::theme(&mut app, &mut shell, &mut rig)?;
+    rebuild::failed(&mut app, &mut shell, &rig, &mut tick)?;
     checks::fonts(&mut rig)?;
     rebuild::past_most(&mut app, &mut shell, &mut rig, kept)?;
+    rebuild::spent(&mut app, &mut shell, &rig)?;
     drop(shell);
-    let shell = Shell::open_with(None, GPU, None).ok_or("the root QML did not load again")?;
+    let shell = Shell::open_with(None, PICK, None).ok_or("the root QML did not load again")?;
     checks::own(&mut app, &shell, &rig)?;
     checks::ends(&mut app, &rig)?;
     drop(shell);

@@ -1,12 +1,14 @@
 //! The app's windows over one shared graphics device (ADR-0021): the device and the theme's fonts first, then the root
-//! QML; at the end the engine and its windows go before the device they draw on. A lost device's windows are made
-//! again over the same hub (ADR-0018), on a new device on the lowest-power adapter found anew.
+//! QML; at the end the engine and its windows go before the device they draw on. A lost device's windows, or windows
+//! that could not start drawing, are made again over the same hub (ADR-0018), on a new device on the lowest-power
+//! adapter found anew, one try per turn of Qt's loop.
 
-use crate::bridges::device::{Device, flush_deletes};
+use crate::bridges::device::{Device, Watch, flush_deletes};
 use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_adapter, pin_imports, unpin_adapter};
 use crate::bridges::installed;
-use crate::device::{Rebuilds, Remake};
+use crate::device::{Cause, Next, Rebuilds, Remake};
+use crate::hub::Hub;
 use crate::{MAIN_QML, Resize};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QQmlApplicationEngine, QUrl};
@@ -14,25 +16,20 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
-/// How the shell finds the graphics adapter again after a loss, and waits between tries at a new device.
-#[derive(Clone, Copy, Debug)]
-pub struct Gpu {
-    /// The lowest-power hardware adapter's place in DXGI's list now; `None` lets Qt pick.
-    pub pick: fn() -> Option<u32>,
-    /// Waits as long as it is told.
-    pub wait: fn(Duration),
-}
+/// Finds the lowest-power hardware adapter's place in DXGI's list now; `None` lets Qt pick.
+pub type Pick = fn() -> Option<u32>;
 
 /// What follows the end of Qt's loop.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum After {
-    /// A lost device's windows were made again, so the loop runs again.
+    /// The windows were made again, so the loop runs again.
     Again,
-    /// No device was lost, or the UI ended: the app ends.
+    /// No device could be made yet, so the loop runs until the next try, after `[ui] device_retry_ms`.
+    Wait,
+    /// No device was lost and no window failed, or the UI ended: the app ends.
     End,
-    /// A lost device's windows could not be made again: the app ends with a failure.
+    /// The windows could not be made again: the app ends with a failure.
     Failed,
 }
 
@@ -40,34 +37,39 @@ pub enum After {
 pub struct Shell {
     engine: UniquePtr<QQmlApplicationEngine>,
     device: Option<Device>,
+    watch: Watch,
     /// The folder QML imports are pinned to, as the uiAccess build pins them.
     pinned: Option<PathBuf>,
-    gpu: Gpu,
+    pick: Pick,
     rebuilds: Rebuilds,
+    /// Why the windows wait for the next try at a device, while they do.
+    waiting: Option<Cause>,
 }
 
 impl Shell {
     /// Makes the shared device, when every window draws on the GUI thread, then loads the root QML over the installed
-    /// hub, its imports pinned to `pinned` when given; `gpu` finds the adapter again after a loss. `None` when the root
-    /// did not load. Call it on the GUI thread once Qt's app object exists.
+    /// hub, its imports pinned to `pinned` when given; `pick` finds the adapter again after a loss. `None` when the
+    /// root did not load. Call it on the GUI thread once Qt's app object exists.
     #[must_use]
-    pub fn open(pinned: Option<&Path>, gpu: Gpu) -> Option<Self> {
-        Self::open_with(pinned, gpu, shared())
+    pub fn open(pinned: Option<&Path>, pick: Pick) -> Option<Self> {
+        Self::open_with(pinned, pick, shared())
     }
 
     /// Loads the theme's fonts, then the root QML over `device`, or with `None` over a device each window makes, as Qt
-    /// does alone; `pinned` and `gpu` as in `open`. Call it on the GUI thread once Qt's app object exists.
+    /// does alone; `pinned` and `pick` as in `open`. Call it on the GUI thread once Qt's app object exists.
     #[must_use]
-    pub fn open_with(pinned: Option<&Path>, gpu: Gpu, device: Option<Device>) -> Option<Self> {
+    pub fn open_with(pinned: Option<&Path>, pick: Pick, device: Option<Device>) -> Option<Self> {
         if let Some(hub) = installed() {
             hub.set_fonts(Box::new(QtFontBook));
         }
         let mut shell = Self {
             engine: UniquePtr::null(),
             device,
+            watch: Watch::new(),
             pinned: pinned.map(Path::to_path_buf),
-            gpu,
+            pick,
             rebuilds: Rebuilds::default(),
+            waiting: None,
         };
         shell.load().then_some(shell)
     }
@@ -78,31 +80,29 @@ impl Shell {
         self.device.as_ref()
     }
 
-    /// After Qt's loop ends: when a frame found the shared device lost and the UI has not ended, the windows are made
-    /// again over the same hub, a resize ended first, on a new device while `[ui] device_rebuilds` lasts.
+    /// After Qt's loop ends: when the device was lost or a window could not start drawing, and the UI has not ended,
+    /// the windows are made again over the same hub, a resize ended first, one try at a new device each time, while
+    /// `[ui] device_rebuilds` lasts. It never waits itself: a failed try asks for another after `device_retry_ms`.
     pub fn rebuilt(&mut self) -> After {
-        let lost = self.device.as_ref().filter(|d| d.lost());
-        let Some(gui_only) = lost.map(Device::gui_only) else {
-            return After::End;
-        };
         let Some(hub) = installed().filter(|h| !h.ended()) else {
             return After::End;
         };
-        let s = hub.settings();
-        self.close();
-        let _ = hub.resize(Resize::End);
-        let mut again = Again {
-            gpu: self.gpu,
-            pause: Duration::from_millis(s.device_retry_ms),
+        let cause = match self.waiting.take() {
+            Some(cause) if !self.watch.ready() => {
+                self.waiting = Some(cause);
+                return After::Wait;
+            }
+            Some(cause) => cause,
+            None => {
+                let Some(cause) = self.cause() else {
+                    return After::End;
+                };
+                self.close();
+                let _ = hub.resize(Resize::End);
+                cause
+            }
         };
-        self.device = self
-            .rebuilds
-            .remake(s.device_rebuilds, gui_only, &mut again);
-        if self.load() {
-            After::Again
-        } else {
-            After::Failed
-        }
+        self.attempt(&hub, cause)
     }
 
     /// Marks the shared device lost, as a driver reset would, so the next frame finds it; debug builds only, for tests.
@@ -110,6 +110,52 @@ impl Shell {
     pub fn lose(&mut self) {
         if let Some(device) = self.device.as_mut() {
             device.lose();
+        }
+    }
+
+    /// Has a window report that its scene graph could not start, as when it cannot make its device during a reset;
+    /// debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    pub fn fail_window(&mut self) {
+        self.watch.fail();
+    }
+
+    /// Why the windows must be made again, if they must: the shared device was lost, or a window could not draw.
+    fn cause(&mut self) -> Option<Cause> {
+        let failed = self.watch.take_failed();
+        let lost = self.device.as_ref().filter(|d| d.lost());
+        let lost = lost.map(|d| Cause::Lost {
+            gui_only: d.gui_only(),
+        });
+        lost.or(failed.then_some(Cause::Failed))
+    }
+
+    /// One try at a new device for `cause`, then the windows on it or on their own; a failed try asks Qt's loop for
+    /// the next one, or makes it at once when nothing can time it.
+    fn attempt(&mut self, hub: &Hub, cause: Cause) -> After {
+        let s = hub.settings();
+        let mut again = Again { pick: self.pick };
+        loop {
+            match self.rebuilds.next(s.device_rebuilds, cause, &mut again) {
+                Next::Shared(device) => return self.reload(Some(device)),
+                Next::Own => return self.reload(None),
+                Next::End => return After::Failed,
+                Next::Later if self.watch.retry(s.device_retry_ms) => {
+                    self.waiting = Some(cause);
+                    return After::Wait;
+                }
+                Next::Later => {}
+            }
+        }
+    }
+
+    /// The windows again over `device`, or over their own with `None`.
+    fn reload(&mut self, device: Option<Device>) -> After {
+        self.device = device;
+        if self.load() {
+            After::Again
+        } else {
+            After::Failed
         }
     }
 
@@ -150,17 +196,16 @@ impl Drop for Shell {
     }
 }
 
-/// Makes a lost device again through Qt, on the adapter `gpu` picks, waiting `pause` between tries.
+/// Makes a lost device again through Qt, on the adapter `pick` finds.
 struct Again {
-    gpu: Gpu,
-    pause: Duration,
+    pick: Pick,
 }
 
 impl Remake for Again {
     type Device = Device;
 
     fn repin(&mut self) {
-        match (self.gpu.pick)() {
+        match (self.pick)() {
             Some(index) if pin_adapter(index) => {
                 tracing::info!(
                     adapter = index,
@@ -180,10 +225,6 @@ impl Remake for Again {
 
     fn make(&mut self) -> Option<Device> {
         Device::pinned()
-    }
-
-    fn pause(&mut self) {
-        (self.gpu.wait)(self.pause);
     }
 }
 

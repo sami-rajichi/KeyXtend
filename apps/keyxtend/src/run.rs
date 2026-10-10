@@ -11,7 +11,7 @@ use kx_platform::Platform;
 use kx_platform::ui::UiError;
 use kx_platform_windows::{WindowsPlatform, dll, gpu, uiaccess};
 use kx_settings::{Files, peek};
-use kx_ui::{Gpu, Hub, UiPorts};
+use kx_ui::{Hub, UiPorts};
 use std::env;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -90,11 +90,7 @@ fn run(
         Err(e) => return fail(&e),
     };
     let pinned = UI_ACCESS.then(|| platform.dirs().exe_dir.as_path());
-    let gpu = Gpu {
-        pick: gpu::low_power_adapter,
-        wait: thread::sleep,
-    };
-    crate::qt::run(pinned, gpu, || {
+    crate::qt::run(pinned, gpu::low_power_adapter, || {
         let _ = drain::stop(&hub, kernel_thread);
     })
 }

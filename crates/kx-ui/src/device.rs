@@ -1,5 +1,5 @@
 //! The shared graphics device's rules, apart from Qt (ADR-0021): how it is made when the pinned adapter is gone at
-//! start, what happens when none can be made, and how a lost one is made again.
+//! start, what happens when none can be made, and how a lost one is made again, one try at a time.
 
 /// Makes the shared device with `make`; when that fails, `unpin` drops the adapter pin, true when there was one, and
 /// `make` tries Qt's default adapter once. `None` means each window makes its own device, as Qt does alone.
@@ -18,7 +18,8 @@ pub fn share<T>(mut make: impl FnMut() -> Option<T>, unpin: impl FnOnce() -> boo
     retried
 }
 
-/// What making a lost device again needs; the app's goes through Qt, the tests' is a fake.
+/// What making a lost device again needs; the app's goes through Qt, the tests' is a fake. Nothing here waits: the next
+/// try comes through Qt's loop.
 pub trait Remake {
     /// The device made.
     type Device;
@@ -26,8 +27,31 @@ pub trait Remake {
     fn repin(&mut self);
     /// A device on the pinned adapter; `None` when none can be made now.
     fn make(&mut self) -> Option<Self::Device>;
-    /// Waits before the next try.
-    fn pause(&mut self);
+}
+
+/// Why the windows are made again.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Cause {
+    /// A frame found the shared device lost; `gui_only` is false when a frame ran off the GUI thread.
+    Lost {
+        /// Every frame on the device ended on the GUI thread.
+        gui_only: bool,
+    },
+    /// A window could not start drawing, as when it cannot make its own device during a reset.
+    Failed,
+}
+
+/// What the windows of a lost device do next.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Next<T> {
+    /// They are made again on this new shared device.
+    Shared(T),
+    /// Each is made again on its own device, as Qt makes them.
+    Own,
+    /// No device could be made yet: the next try comes after `[ui] device_retry_ms`, with Qt's loop running.
+    Later,
+    /// No window can draw and the tries are used: the app ends with a failure.
+    End,
 }
 
 /// The rebuilds of one run, so a device lost again and again cannot spin.
@@ -35,43 +59,46 @@ pub trait Remake {
 pub struct Rebuilds(u32);
 
 impl Rebuilds {
-    /// A new shared device for a lost one's windows: each try pins the adapter anew, never drops the pin, and counts
-    /// against `most`, with a pause after a failed one. `None` once the tries run out, or at once when a frame ended
-    /// off the GUI thread (`gui_only` false), so each window makes its own.
-    pub fn remake<R: Remake>(
-        &mut self,
-        most: u32,
-        gui_only: bool,
-        how: &mut R,
-    ) -> Option<R::Device> {
-        if !gui_only {
+    /// One try at a new shared device for `cause`: it pins the adapter anew, never drops the pin, and counts against
+    /// `most`. A frame off the GUI thread gives each window its own device at once.
+    pub fn next<R: Remake>(&mut self, most: u32, cause: Cause, how: &mut R) -> Next<R::Device> {
+        if cause == (Cause::Lost { gui_only: false }) {
             tracing::warn!("a frame ended off the GUI thread, so each window makes its own device");
-            return None;
+            return Next::Own;
         }
-        let mut failed = false;
-        while self.0 < most {
-            self.0 += 1;
-            if failed {
-                how.pause();
-            }
-            how.repin();
-            if let Some(device) = how.make() {
-                tracing::warn!(
-                    rebuild = self.0,
-                    "the graphics device was lost, so the windows are made again"
-                );
-                return Some(device);
-            }
-            failed = true;
+        if self.0 >= most {
+            return spent(cause);
+        }
+        self.0 += 1;
+        how.repin();
+        if let Some(device) = how.make() {
             tracing::warn!(
                 rebuild = self.0,
-                "no graphics device could be made after the loss"
+                "the windows are made again on a new graphics device"
             );
+            return Next::Shared(device);
         }
         tracing::warn!(
-            most,
-            "the graphics device was lost too often, so each window makes its own"
+            rebuild = self.0,
+            "no graphics device could be made after the loss"
         );
-        None
+        if self.0 < most {
+            Next::Later
+        } else {
+            spent(cause)
+        }
     }
+}
+
+/// What follows once the tries are used: each window's own device after a loss, or the end when a window could not
+/// draw even on its own.
+fn spent<T>(cause: Cause) -> Next<T> {
+    if cause == Cause::Failed {
+        tracing::error!(
+            "a window cannot draw and no new graphics device could be made, so the app ends"
+        );
+        return Next::End;
+    }
+    tracing::warn!("no new graphics device could be made, so each window makes its own");
+    Next::Own
 }

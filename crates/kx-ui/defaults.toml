@@ -23,8 +23,8 @@ send_tries = 10
 send_wait_ms = 100
 # How long the tray menu stays open when another window comes to the front just after it opens, in ms; 0 turns it off.
 tray_grace_ms = 500
-# How many times one run tries to make the windows again on a new graphics device after the device is lost; past it,
-# each window draws on its own device, as Qt makes them.
+# How many times one run tries to make the windows again on a new graphics device after the device is lost or a window
+# cannot draw; past it, each window draws on its own device, as Qt makes them.
 device_rebuilds = 3
 # How long to wait before trying again when a new graphics device could not be made yet, as a driver resets, in ms.
 device_retry_ms = 500

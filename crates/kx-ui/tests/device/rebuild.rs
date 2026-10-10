@@ -1,9 +1,9 @@
-//! The device-loss steps (ADR-0021): the debug-only trigger marks the shared device lost, a frame finds it, and the
-//! windows are made again over the same hub, at the face's place and size, on a device on the adapter picked anew,
-//! until `[ui] device_rebuilds` runs out.
+//! The device-loss and window-failure steps (ADR-0021): debug-only triggers mark the shared device lost or a window
+//! unable to draw, Qt's loop ends, and the windows are made again over the same hub, at the face's place and size, on
+//! a device on the adapter picked anew, one try per turn of the loop, until `[ui] device_rebuilds` runs out.
 
 use crate::face::HOME;
-use crate::rig::{GONE, GUARDED, Outcome, Rig, pick_next, ticker, timer, wait};
+use crate::rig::{GONE, GUARDED, Outcome, Rig, TICKS, pick_next, ticker, timer, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine};
 use kx_module_api::ports::Rect;
@@ -13,9 +13,12 @@ use tracing::Level;
 
 /// What the guard logs once a run guarded our windows.
 const GUARDED_LINE: &str = "windows guarded";
-/// What a loss past `[ui] device_rebuilds` warns, and a try at a new device that failed.
-const TOO_OFTEN: &str = "too often";
+/// What a loss past `[ui] device_rebuilds` warns, a try at a new device that failed, and a window failure past it.
+const SPENT: &str = "no new graphics device";
 const NOT_MADE: &str = "after the loss";
+const ENDS: &str = "so the app ends";
+/// The fewest ticks Qt's loop must run while a try waits, as the wait is many ticks long.
+const WAITED: usize = 2;
 /// The watchdog ends Qt's loop with its own code if the loss does not end it first; its time in ms, and its URL.
 const WATCHDOG_MS: u32 = 5_000;
 const WATCHDOG_CODE: i32 = 3;
@@ -66,27 +69,47 @@ pub(crate) fn kept(rig: &Rig) -> Result<Rect, String> {
     }
 }
 
-/// With no ticker, a loss alone ends Qt's loop, by the device's own exit, long before the watchdog's.
+/// With no ticker, `trigger` alone ends Qt's loop, by our own exit, long before the watchdog's.
 fn alone(
     app: &mut UniquePtr<QGuiApplication>,
-    shell: &mut Shell,
     tick: &mut UniquePtr<QQmlApplicationEngine>,
+    trigger: impl FnOnce(),
 ) -> Outcome {
     *tick = UniquePtr::null();
     let watchdog = timer(WATCHDOG_MS, WATCHDOG_CODE, false, WATCHDOG_URL)?;
-    shell.lose();
+    trigger();
     let code = app.as_mut().map(|a| a.exec());
     drop(watchdog);
     *tick = ticker()?;
     match code {
-        Some(0) if shell.device().is_some_and(Device::lost) => Ok(()),
-        _ => Err(format!("Qt's loop ended with {code:?}, not by the loss")),
+        Some(0) => Ok(()),
+        _ => Err(format!("Qt's loop ended with {code:?}, not by the trigger")),
     }
 }
 
+/// The first try fails and hands back at once with no device; Qt's loop then runs tick by tick through `[ui]
+/// device_retry_ms`, so nothing sleeps on the GUI thread, and the next try makes the windows again.
+fn retried(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
+    let first = shell.rebuilt();
+    if first != After::Wait || shell.device().is_some() {
+        return Err(format!("a failed try gave {first:?}, not a wait"));
+    }
+    let mut waits = 0;
+    for _ in 0..TICKS {
+        app.as_mut().map(|a| a.exec());
+        match shell.rebuilt() {
+            After::Wait => waits += 1,
+            After::Again if waits >= WAITED => return Ok(()),
+            after => return Err(format!("{after:?} after {waits} ticks of waiting")),
+        }
+    }
+    Err("the next try never came".into())
+}
+
 /// The first loss, during a resize and with no ticker: the device's own exit ends Qt's loop, the resize ends, and the
-/// windows come back once, on one shared device made on the second try, as the first pick names a gone adapter; the
-/// pin is set again, the keyboard sits at the face's place and the new banner hears the hub. The keyboard's box.
+/// windows come back once, on one shared device made on the second try, after Qt's loop ran through the wait, as the
+/// first pick names a gone adapter; the pin is set again, the keyboard sits at the face's place and the new banner
+/// hears the hub. The keyboard's box.
 pub(crate) fn once(
     app: &mut UniquePtr<QGuiApplication>,
     shell: &mut Shell,
@@ -98,9 +121,12 @@ pub(crate) fn once(
         return Err("the resize did not begin".into());
     }
     let was = marks(rig);
-    alone(app, shell, tick)?;
+    alone(app, tick, || shell.lose())?;
+    if !shell.device().is_some_and(Device::lost) {
+        return Err("Qt's loop ended before a frame found the loss".into());
+    }
     pick_next(GONE);
-    rebuilt(shell)?;
+    retried(app, shell)?;
     back(app, rig, was)?;
     if rig.face.resizing() || !qt_sees(ADAPTER_VAR) || rig.lines.count(Level::WARN, NOT_MADE) != 1 {
         return Err(
@@ -152,8 +178,40 @@ pub(crate) fn past_most(
     if now != was {
         return Err(format!("the box went from {was:?} to {now:?}"));
     }
-    match rig.lines.count(Level::WARN, TOO_OFTEN) {
+    match rig.lines.count(Level::WARN, SPENT) {
         1 => Ok(()),
-        n => Err(format!("{n} warnings of too many rebuilds")),
+        n => Err(format!("{n} warnings of spent rebuilds")),
+    }
+}
+
+/// A window whose scene graph cannot start, as when it cannot make its device during a reset, ends Qt's loop through
+/// the watch, where Qt would end the app; the windows come back on one shared device, as after a loss.
+pub(crate) fn failed(
+    app: &mut UniquePtr<QGuiApplication>,
+    shell: &mut Shell,
+    rig: &Rig,
+    tick: &mut UniquePtr<QQmlApplicationEngine>,
+) -> Outcome {
+    let was = marks(rig);
+    alone(app, tick, || shell.fail_window())?;
+    rebuilt(shell)?;
+    back(app, rig, was)?;
+    let device = shell.device().ok_or("no shared device after the failure")?;
+    let (windows, devices) = drawing();
+    if device.windows() != windows || devices != 1 {
+        return Err(format!(
+            "{windows} windows draw on {devices} devices after the failure"
+        ));
+    }
+    Ok(())
+}
+
+/// A window that cannot draw once `[ui] device_rebuilds` is spent ends the app with a failure and one error.
+pub(crate) fn spent(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig) -> Outcome {
+    shell.fail_window();
+    app.as_mut().map(|a| a.exec());
+    match (shell.rebuilt(), rig.lines.count(Level::ERROR, ENDS)) {
+        (After::Failed, 1) => Ok(()),
+        (after, n) => Err(format!("{after:?} with {n} errors, not a failure")),
     }
 }

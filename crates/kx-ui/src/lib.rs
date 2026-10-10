@@ -36,7 +36,7 @@ pub use hub::{
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, SPEC, UiSettings};
 #[cfg(feature = "qt")]
-pub use shell::{After, Gpu, Shell};
+pub use shell::{After, Pick, Shell};
 pub use ui_module::{ID, MANIFEST, UiModule};
 
 /// The resource URL of the root QML file, which the app loads.
