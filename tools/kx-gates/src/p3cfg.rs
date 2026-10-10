@@ -139,7 +139,7 @@ mod tests {
         let c = load().expect("kx-gates.toml loads");
         assert_eq!(checked(&c), Ok(()));
         assert_eq!(c.g26.languages, ["de-DE", "ru-RU", "he-IL", "fa-IR"]);
-        assert_eq!(c.g11.scales, [100, 150, 200]);
+        assert_eq!(c.g11.scales, [100, 150, 175]);
         assert_eq!(c.g13.needs, crate::g13::KINDS, "the roadmap's three");
     }
 
