@@ -113,7 +113,7 @@ var texts = {
   "langkey.cycle": "تناوب",
   "langkey.list": "قائمة",
   "list.count": "{$more} إعداد",
-  "list.join": "، ",
+  "list.join": " و ",
   "list.more": "{$list} و{$more} إعداد آخر",
   "mark.damma": "ضمّة",
   "mark.dammatan": "تنوين الضمّ",

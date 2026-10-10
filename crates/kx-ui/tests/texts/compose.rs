@@ -73,7 +73,8 @@ fn each_language_joins_a_list_its_own_way() {
     let three = items(&["a", "b", "c"]);
     assert_eq!(lang("en").list(&three, 0), "a, b, c");
     assert_eq!(lang("fr").list(&three, 0), "a, b, c");
-    assert_eq!(lang("ar").list(&three, 0), "a، b، c");
+    // A Latin name next to the Arabic "و" keeps its place in the Arabic order; after "،" it would not (owner).
+    assert_eq!(lang("ar").list(&three, 0), "a و b و c");
 }
 
 #[test]

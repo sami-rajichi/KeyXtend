@@ -8,7 +8,7 @@ var texts = {
         "bubble_corner",
         "key_apps"
       ],
-      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner، key_apps و3 إعدادات أخرى."
+      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner و key_apps و3 إعدادات أخرى."
     },
     "spaces": [
       {

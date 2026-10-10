@@ -21,6 +21,7 @@ Decided by the owner on 2026-10-10.
 2. **No other direction marks either.** LRM, RLM and the isolates are missing from the bundled fonts too, so any of them would bring back the font search.
 3. **OS names are cleaned.** The space bar's parts lose their hidden marks, as notice arguments already did, and a part that held only marks is left out.
 4. **Accepted changes:** Arabic texts now read in Arabic order. ET66's full stop in EN and FR notices moves about 1 px, and Dolch's lines are 2–3 px shorter.
+5. **Arabic lists join with " و ", not "، ":** after the comma, Latin setting names ran left to right as one run; the owner chose و (2026-10-10).
 
 ## Consequences
 

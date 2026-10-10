@@ -1,6 +1,6 @@
 // Texts without bidi marks read in their UI's order (ADR-0022): the space bar puts the language first, and a reset
-// notice names its settings before the count. Text items give no character places, so a twin of the drawn text, with
-// the part to find as a link, shows through `linkAt` where Qt lays that part out.
+// notice names its settings in order, before the count. Text items give no character places, so a twin of the drawn
+// text, with the part to find as a link, shows through `linkAt` where Qt lays that part out.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
@@ -157,16 +157,17 @@ Item {
             verify(before(lang, layout, rtl), "the language reads first");
         }
 
-        function test_a_reset_notice_names_its_settings_before_the_count_data() {
+        function test_a_reset_notice_names_its_settings_in_order_before_the_count_data() {
             const reset = tag => Order.texts[tag].reset;
             return rows((t, tag) => [{ tag: "one line", entry: reset(tag), wrap: false }, { tag: "wrapped", entry: reset(tag), wrap: true }]);
         }
-        function test_a_reset_notice_names_its_settings_before_the_count(row) {
+        function test_a_reset_notice_names_its_settings_in_order_before_the_count(row) {
             const e = row.entry;
             const label = createTemporaryObject(noteC, root, { lk: row.lk, res: resOf(row.lk, row.ui, ""), wrap: row.wrap, text: e.text });
-            const name = placeOf(label, e.names[0]);
+            const [first, second] = e.names.map(n => placeOf(label, n));
             const count = placeOf(label, e.more);
-            verify(before(name, count, row.ui.lang.rtl), "the settings read before the count");
+            verify(before(first, second, row.ui.lang.rtl), "the settings read in their order");
+            verify(before(second, count, row.ui.lang.rtl), "the settings read before the count");
         }
     }
 }
