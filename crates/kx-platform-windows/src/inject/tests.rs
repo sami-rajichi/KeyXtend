@@ -1,6 +1,6 @@
 mod fake;
 
-use fake::{Fake, VK_A};
+use fake::{Fake, VK_A, VK_LCONTROL, VK_RMENU};
 
 use super::*;
 
@@ -154,6 +154,25 @@ fn the_keys_route_holds_shift_and_altgr_as_the_layout_says() {
     want.extend(down_up(&[0x1D, 0x38, 0x0B]));
     assert_eq!(sends(&fake), [want]);
     assert_eq!(fake.layouts.get(), 1, "the layout is read once per text");
+}
+
+#[test]
+fn the_keys_route_sends_altgr_as_a_physical_one_left_ctrl_then_extended_right_alt() {
+    let fake = Fake::default();
+    assert_eq!(keys(&fake, "@"), Ok(()));
+    let ctrl = Key::Vk {
+        vk: VK_LCONTROL,
+        scan: 0x1D,
+        extended: false,
+    };
+    let right_alt = Key::Vk {
+        vk: VK_RMENU,
+        scan: 0x38,
+        extended: true,
+    };
+    let sent = fake.sends.borrow()[0].clone();
+    assert_eq!(sent[..2], [ctrl.event(false), right_alt.event(false)]);
+    assert_eq!(sent[4..], [right_alt.event(true), ctrl.event(true)]);
 }
 
 #[test]

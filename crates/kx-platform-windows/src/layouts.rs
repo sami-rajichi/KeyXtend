@@ -10,7 +10,7 @@
 
 use kx_module_api::ports::{KeyChars, LangFacts, LayoutId, Scan, Slot, SwitchError};
 
-use crate::keys::{self, ALTGR_READ, VK_CAPITAL, VK_SHIFT};
+use crate::keys::{self, ALTGR_VKS, VK_CAPITAL, VK_SHIFT};
 
 #[cfg(windows)]
 mod win;
@@ -124,7 +124,7 @@ fn slot_keys(slot: Slot) -> (&'static [u16], bool) {
     match slot {
         Slot::Base => (&[], false),
         Slot::Shift => (&SHIFT, false),
-        Slot::AltGr => (&ALTGR_READ, false),
+        Slot::AltGr => (&ALTGR_VKS, false),
         Slot::Caps => (&[], true),
         Slot::CapsShift => (&SHIFT, true),
     }

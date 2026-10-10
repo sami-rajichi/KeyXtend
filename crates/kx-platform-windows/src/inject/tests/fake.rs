@@ -17,6 +17,9 @@ pub const VK_1: u16 = 0x31;
 pub const VK_7: u16 = 0x37;
 pub const VK_RETURN: u16 = 0x0D;
 pub const VK_DEAD: u16 = 0xDD;
+/// `VK_LCONTROL` and `VK_RMENU`: left Ctrl and right Alt, which a physical `AltGr` holds.
+pub const VK_LCONTROL: u16 = 0xA2;
+pub const VK_RMENU: u16 = 0xA5;
 
 /// `VkKeyScanEx` answers: plain, Shift, `AltGr`, controls, Ctrl-only ones and dead keys.
 const KEYMAP: [(char, i16); 10] = [
@@ -47,11 +50,12 @@ const TYPES: [(u16, bool, bool, bool, char, bool); 10] = [
     (VK_7, false, true, false, '\u{2CB}', true),
 ];
 
-/// `MapVirtualKeyExW` scan codes: Shift, Ctrl, Alt, A (the Q place), 0, 1, 7, Enter, the dead key and Space.
+/// `MapVirtualKeyExW` scan codes: Shift, left Ctrl, right Alt (prefixed), A (the Q place), 0, 1, 7, Enter, the dead
+/// key and Space.
 const SCANS: [(u16, u32); 10] = [
     (VK_SHIFT, 0x2A),
-    (keys::ALTGR_VKS[0], 0x1D),
-    (keys::ALTGR_VKS[1], 0x38),
+    (VK_LCONTROL, 0x1D),
+    (VK_RMENU, 0xE038),
     (VK_A, 0x10),
     (VK_0, 0x0B),
     (VK_1, 0x02),

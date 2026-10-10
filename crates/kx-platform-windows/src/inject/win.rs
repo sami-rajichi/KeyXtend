@@ -222,9 +222,13 @@ mod tests {
         for vk in keys::EXTENDED_VKS {
             assert!(vk_key(vk).extended(), "{vk:#04X}");
         }
-        for vk in [0x41, keys::VK_SHIFT, keys::ALTGR_VKS[0], keys::ALTGR_VKS[1]] {
+        for vk in [0x41, keys::VK_SHIFT, keys::ALTGR_VKS[0]] {
             assert!(!vk_key(vk).extended(), "{vk:#04X}");
         }
+        assert!(
+            vk_key(keys::ALTGR_VKS[1]).extended(),
+            "right Alt, as `AltGr` sends it"
+        );
     }
 
     #[test]

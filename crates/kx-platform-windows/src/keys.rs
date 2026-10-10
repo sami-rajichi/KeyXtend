@@ -23,8 +23,6 @@ pub const VK_SHIFT: u16 = 0x10;
 const VK_CONTROL: u16 = 0x11;
 /// `VK_MENU`: Alt.
 const VK_MENU: u16 = 0x12;
-/// `VK_CONTROL` and `VK_MENU` (Alt), held together for a character on the `AltGr` level.
-pub const ALTGR_VKS: [u16; 2] = [VK_CONTROL, VK_MENU];
 /// `VK_CAPITAL`: Caps Lock.
 pub const VK_CAPITAL: u16 = 0x14;
 /// `VK_LSHIFT`: left Shift.
@@ -52,8 +50,9 @@ pub const MASK_VK: u16 = 0xE8;
 pub(crate) const ALT_WIN_VKS: [u16; 5] = [VK_MENU, VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN];
 /// Alt and Win as scan codes: left and right Alt, left and right Win.
 pub(crate) const ALT_WIN_SCANS: [u16; 4] = [0x38, 0xE038, 0xE05B, 0xE05C];
-/// Left Ctrl and right Alt: how Windows reports `AltGr` held down.
-pub const ALTGR_READ: [u16; 2] = [VK_LCONTROL, VK_RMENU];
+/// Left Ctrl and right Alt, in that order: the keys a physical `AltGr` holds, as Windows reports them and as the Keys
+/// route sends them for a character on the `AltGr` level.
+pub const ALTGR_VKS: [u16; 2] = [VK_LCONTROL, VK_RMENU];
 /// Left and right Shift, Ctrl and Alt, each with the generic key `ToUnicodeEx` also reads.
 const SIDED: [(u16, u16); 6] = [
     (VK_LSHIFT, VK_SHIFT),
@@ -85,7 +84,7 @@ pub struct KeyFor {
     pub vk: u16,
     /// Shift is held.
     pub shift: bool,
-    /// Ctrl and Alt are held, as `AltGr`.
+    /// The `AltGr` level, which `VkKeyScanEx` names as Ctrl and Alt held.
     pub altgr: bool,
 }
 
@@ -227,7 +226,7 @@ mod tests {
 
     #[test]
     fn sided_modifiers_add_their_generic_key_and_other_keys_none() {
-        let [ctrl, alt] = ALTGR_VKS;
+        let (ctrl, alt) = (VK_CONTROL, VK_MENU);
         let want = [VK_SHIFT, VK_SHIFT, ctrl, ctrl, alt, alt];
         for ((sided, _), generic_vk) in SIDED.into_iter().zip(want) {
             assert_eq!(generic(sided), Some(generic_vk), "{sided:#04X}");
@@ -235,7 +234,7 @@ mod tests {
         for vk in [VK_A, VK_SHIFT, ctrl, alt, VK_CAPITAL] {
             assert_eq!(generic(vk), None, "{vk:#04X}");
         }
-        assert!(ALTGR_READ.iter().all(|&vk| generic(vk).is_some()));
+        assert!(ALTGR_VKS.iter().all(|&vk| generic(vk).is_some()));
     }
 
     #[cfg(windows)]
@@ -253,9 +252,12 @@ mod tests {
         ];
         assert_eq!(EXTENDED_VKS, nav.map(|vk| vk.0));
         assert_eq!(VK_SHIFT, SHIFT.0);
-        assert_eq!(ALTGR_VKS, [VK_CONTROL.0, VK_MENU.0]);
+        assert_eq!(
+            [super::VK_CONTROL, super::VK_MENU],
+            [VK_CONTROL.0, VK_MENU.0]
+        );
         assert_eq!(VK_CAPITAL, CAPITAL.0);
-        assert_eq!(ALTGR_READ, [VK_LCONTROL.0, VK_RMENU.0]);
+        assert_eq!(ALTGR_VKS, [VK_LCONTROL.0, VK_RMENU.0]);
         let sided = [
             VK_LSHIFT,
             VK_RSHIFT,

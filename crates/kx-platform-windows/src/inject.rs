@@ -128,7 +128,7 @@ pub(crate) struct Press {
     pub vk: u16,
     /// Shift is held.
     pub shift: bool,
-    /// Ctrl and Alt are held, as `AltGr`.
+    /// Left Ctrl and right Alt are held, as a physical `AltGr` holds them.
     pub altgr: bool,
     /// A dead key, which types its own character when Space follows.
     pub dead: bool,
@@ -180,7 +180,7 @@ fn typed<O: Os>(
     (n.unsigned_abs() == 1).then_some((buf[0], n < 0))
 }
 
-/// The virtual keys held around a key for Shift and for `AltGr` (Ctrl and Alt).
+/// The virtual keys held around a key for Shift and for `AltGr` (left Ctrl, then right Alt).
 fn held(shift: bool, altgr: bool) -> Vec<u16> {
     let shift = shift.then_some(keys::VK_SHIFT);
     let altgr = keys::ALTGR_VKS.into_iter().filter(|_| altgr);

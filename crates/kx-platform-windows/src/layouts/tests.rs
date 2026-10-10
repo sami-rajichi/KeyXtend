@@ -3,7 +3,6 @@
 use std::cell::{Cell, RefCell};
 
 use super::*;
-use crate::keys::ALTGR_VKS;
 
 /// Installed layouts: US English and Arabic (102) AZERTY, a sign-extended variant.
 const EN: LayoutId = LayoutId::new(0x0409_0409);
@@ -194,7 +193,7 @@ fn a_held_modifier_is_down_on_its_side_and_generic_keys_only() {
     let fake = Fake::new();
     assert!(types_any(&fake, EN, Q, &[RIGHT_ALT]));
     let state = fake.last.get().unwrap();
-    let [_, alt] = ALTGR_VKS;
+    let alt = keys::generic(VK_RMENU).unwrap();
     assert!(down(&state, VK_RMENU) && down(&state, alt));
     let others = (0..=u16::from(u8::MAX))
         .filter(|&vk| down(&state, vk))
@@ -244,8 +243,9 @@ fn the_state_holds_the_keys_the_generic_modifiers_and_caps_lock() {
     let shift = state(&SHIFT, false);
     assert!(down(&shift, VK_SHIFT));
     assert_eq!(shift.iter().filter(|&&b| b != 0).count(), 1);
-    let altgr = state(&ALTGR_READ, false);
-    for vk in ALTGR_READ.into_iter().chain(ALTGR_VKS) {
+    let altgr = state(&ALTGR_VKS, false);
+    let generics = ALTGR_VKS.into_iter().filter_map(keys::generic);
+    for vk in ALTGR_VKS.into_iter().chain(generics) {
         assert!(down(&altgr, vk), "{vk:#04X}");
     }
     let caps = state(&[], true);
