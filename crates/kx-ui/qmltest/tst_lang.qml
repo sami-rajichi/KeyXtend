@@ -16,7 +16,7 @@ Item {
     height: 100
 
     readonly property var res: ({
-        fam: { latin: "Segoe UI", arabic: "Segoe UI", ui: "Segoe UI" },
+        fam: { latin: "Segoe UI", arabic: "Segoe UI", mark: "Segoe UI", ui: "Segoe UI" },
         icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
@@ -188,7 +188,7 @@ Item {
             const tall = createTemporaryObject(metricsC, root, { font: Qt.font({ family: arabic, pixelSize: sh.name_px }) });
             const latin = createTemporaryObject(metricsC, root, { font: Qt.font({ family: root.res.fam.latin, pixelSize: sh.name_px }) });
             verify(tall.height > latin.height, "the case this test is for: " + tall.height + " " + latin.height);
-            const res = Object.assign({}, root.res, { fam: { latin: root.res.fam.latin, arabic: arabic, ui: root.res.fam.ui } });
+            const res = Object.assign({}, root.res, { fam: { latin: root.res.fam.latin, arabic: arabic, mark: arabic, ui: root.res.fam.ui } });
             const row = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
             const v = { rows: [row], hi: 0, keys: [], page_back: null, page_on: null };
             const ui = createTemporaryObject(uiC, root);

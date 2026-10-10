@@ -129,14 +129,15 @@ Window {
             noteTip: (name, note) => name + "\n" + note
         };
     }
-    // The Latin and Arabic families (each list's first that Qt has, else its last), and the keyboard's and tray's.
+    // The Latin, Arabic and mark families (each list's first that Qt has, else its last), and the keyboard's and tray's.
     function families(f) {
         const all = Qt.fontFamilies();
         const pick = list => list.find(n => all.indexOf(n) >= 0) || list[list.length - 1];
         const latin = pick(lk.look.latin_fonts);
         const arabic = pick(lk.look.arabic_fonts);
+        const mark = pick(lk.look.mark_fonts);
         const of = l => l && l.rtl ? arabic : latin;
-        return { latin: latin, arabic: arabic, ui: of(tongue), tray: of(tongue && tongue.tray) };
+        return { latin: latin, arabic: arabic, mark: mark, ui: of(tongue), tray: of(tongue && tongue.tray) };
     }
 
     // Reads everything again: the settings or face changed.

@@ -41,6 +41,10 @@ Item {
     readonly property bool mainAr: isChar && ks ? ks.main_ar : false
     readonly property bool secondAr: isChar && ks ? ks.second_ar : false
     readonly property bool thirdAr: isChar && ks ? ks.third_ar : false
+    // Marks on their dotted circle, which the face flags, take the theme's mark font so they attach to it.
+    readonly property bool mainMark: isChar && ks ? ks.main_mark : false
+    readonly property bool secondMark: isChar && ks ? ks.second_mark : false
+    readonly property bool thirdMark: isChar && ks ? ks.third_mark : false
     readonly property real spacePx: lg.space_px[lang.cur.rtl ? 1 : 0] * s
     readonly property real mainPx: look.legend_px * s * (mainAr ? look.arabic_scale : 1)
     // The layout of the app in front.
@@ -59,10 +63,11 @@ Item {
         }
     }
 
-    // A single-line text in the theme's Latin or Arabic font.
+    // A single-line text in the theme's Latin, Arabic or mark font.
     component Line: Label {
         property bool ar: false
-        font.family: ar ? t.res.fam.arabic : t.res.fam.latin
+        property bool mark: false
+        font.family: mark ? t.res.fam.mark : ar ? t.res.fam.arabic : t.res.fam.latin
     }
 
     ParallelAnimation {
@@ -96,6 +101,7 @@ Item {
         x: t.lg.corner_px[1] * t.s
         y: t.lg.corner_px[0] * t.s - t.lift
         ar: t.secondAr
+        mark: t.secondMark
         text: t.ks ? t.ks.second : ""
         font.pixelSize: t.look.legend_px * t.lg.corner_scale[0] * t.s
         font.weight: t.lg.corner_weight
@@ -108,6 +114,7 @@ Item {
         anchors.rightMargin: t.lg.corner_px[1] * t.s
         anchors.bottomMargin: t.lg.corner_px[0] * t.s + t.lift
         ar: t.thirdAr
+        mark: t.thirdMark
         text: t.ks ? t.ks.third : ""
         font.pixelSize: t.look.legend_px * t.lg.corner_scale[1] * t.s
         color: t.ink2
@@ -126,6 +133,7 @@ Item {
             anchors.centerIn: parent
             anchors.verticalCenterOffset: -t.lift
             ar: t.mainAr
+            mark: t.mainMark
             text: t.ks ? t.ks.main : ""
             font.pixelSize: t.mainPx
             font.weight: t.look.legend_weight

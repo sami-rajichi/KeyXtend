@@ -6,6 +6,7 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+mod cmap;
 mod fontname;
 
 use std::path::{Path, PathBuf};
@@ -19,6 +20,21 @@ use std::collections::BTreeSet;
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets")
+}
+
+/// The circle marks with no letter before them sit on (U+25CC).
+const CIRCLE: char = '\u{25CC}';
+/// Mark fonts that ship with Windows, so no file here can be read, and why each draws the circle.
+const SYSTEM_MARK_FONTS: [(&str, &str); 1] = [("Segoe UI", "Windows 11's Segoe UI holds U+25CC")];
+
+/// The bytes of every bundled font file that names itself `family`.
+fn files_of(family: &str) -> Vec<Vec<u8>> {
+    let files = font_files(&assets()).expect("assets/fonts reads");
+    let read = files
+        .iter()
+        .map(|p| std::fs::read(p).expect("a font reads"));
+    read.filter(|b| fontname::families(b).iter().any(|f| f == family))
+        .collect()
 }
 
 /// The family names inside every font file in `assets/fonts/`, one folder per family.
@@ -48,7 +64,12 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
     let bundled = bundled_families();
     let mut checked = 0;
     for th in &t.list {
-        for family in th.look.latin_fonts.iter().chain(&th.look.arabic_fonts) {
+        let fonts = [
+            &th.look.latin_fonts,
+            &th.look.arabic_fonts,
+            &th.look.mark_fonts,
+        ];
+        for family in fonts.into_iter().flatten() {
             if SYSTEM_FONTS.contains(&family.as_str()) {
                 continue;
             }
@@ -61,6 +82,45 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
         }
     }
     assert!(checked > 0, "the check reached the bundled fonts");
+}
+
+#[test]
+fn every_mark_font_a_theme_names_draws_the_dotted_circle() {
+    let t = Themes::shipped().expect("tokens load");
+    let mut checked = 0;
+    for th in &t.list {
+        let id = &th.look.id;
+        for family in &th.look.mark_fonts {
+            if SYSTEM_MARK_FONTS.iter().any(|(f, _)| f == family) {
+                continue;
+            }
+            let files = files_of(family);
+            assert!(!files.is_empty(), "{id}: {family} is not bundled or listed");
+            for f in &files {
+                assert!(cmap::maps(f, CIRCLE), "{id}: {family} has no U+25CC");
+            }
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "the check reached the bundled fonts");
+}
+
+#[test]
+fn the_circle_check_reads_real_fonts_rubik_lacking_it_and_noto_holding_it() {
+    let rubik = files_of("Rubik");
+    assert!(!rubik.is_empty(), "Rubik is bundled");
+    for f in &rubik {
+        assert!(
+            !cmap::maps(f, CIRCLE),
+            "why Dolch's marks need their own font"
+        );
+        assert!(
+            cmap::maps(f, 'A') && cmap::maps(f, '\u{0636}'),
+            "its letters read"
+        );
+    }
+    let noto = files_of("Noto Sans Arabic");
+    assert!(!noto.is_empty() && noto.iter().all(|f| cmap::maps(f, CIRCLE)));
 }
 
 #[test]

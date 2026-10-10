@@ -191,6 +191,26 @@ fn font_metrics_must_be_shares_with_the_cap_below_the_ascent() {
 }
 
 #[test]
+fn marks_take_the_arabic_fonts_unless_a_theme_names_its_own() {
+    for t in &load().list {
+        let own = t.look.id == "dolch";
+        assert_eq!(
+            t.look.mark_fonts == t.look.arabic_fonts,
+            !own,
+            "{}",
+            t.look.id
+        );
+        assert!(!t.look.mark_fonts.is_empty(), "{}", t.look.id);
+    }
+    let dolch = load().list.remove(2).look;
+    assert_eq!(
+        dolch.mark_fonts,
+        ["Noto Sans Arabic"],
+        "Rubik has no dotted circle"
+    );
+}
+
+#[test]
 fn a_dpad_token_that_does_not_exist_is_refused() {
     let typo = text().replacen("face = \"key_act\"", "face = \"key_akt\"", 1);
     let e = parse(&typo).expect_err("an unknown token");

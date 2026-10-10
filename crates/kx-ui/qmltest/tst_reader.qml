@@ -13,7 +13,7 @@ Item {
     height: 240
 
     readonly property var res: ({
-        fam: { latin: N.lk.look.latin_fonts[0], arabic: N.lk.look.arabic_fonts[0], ui: N.lk.look.latin_fonts[0] },
+        fam: { latin: N.lk.look.latin_fonts[0], arabic: N.lk.look.arabic_fonts[0], mark: N.lk.look.mark_fonts[0], ui: N.lk.look.latin_fonts[0] },
         icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,

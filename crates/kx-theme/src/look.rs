@@ -172,6 +172,9 @@ pub struct Look {
     pub latin_fonts: Vec<String>,
     /// Arabic fonts, first found wins.
     pub arabic_fonts: Vec<String>,
+    /// Fonts for marks drawn on a dotted circle, first found wins; the Arabic fonts unless the theme names its own.
+    #[serde(default)]
+    pub mark_fonts: Vec<String>,
     /// The first Latin font's ascent, descent and cap height as shares of its size: where legends sit on a cap.
     pub font_metrics: [f32; 3],
     /// Glow around a lit LED.

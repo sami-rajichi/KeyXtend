@@ -98,6 +98,10 @@ var lk = {
       "IBM Plex Sans Arabic",
       "Noto Sans Arabic"
     ],
+    "mark_fonts": [
+      "IBM Plex Sans Arabic",
+      "Noto Sans Arabic"
+    ],
     "font_metrics": [
       1.025,
       0.275,

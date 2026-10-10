@@ -98,6 +98,9 @@ var lk = {
       "Rubik",
       "Noto Sans Arabic"
     ],
+    "mark_fonts": [
+      "Noto Sans Arabic"
+    ],
     "font_metrics": [
       0.935,
       0.25,

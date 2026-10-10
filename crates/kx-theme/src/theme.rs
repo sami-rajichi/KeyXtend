@@ -77,7 +77,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     Ok((themes, common))
 }
 
-/// One theme table: its two mode tables, then its look.
+/// One theme table: its two mode tables, then its look, whose marks take its Arabic fonts unless it names its own.
 fn theme(mut t: toml::Table) -> Result<Theme, String> {
     let id = t
         .get("id")
@@ -86,9 +86,12 @@ fn theme(mut t: toml::Table) -> Result<Theme, String> {
         .to_string();
     let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()))?;
     let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()))?;
-    let look: Look = toml::Value::Table(t)
+    let mut look: Look = toml::Value::Table(t)
         .try_into()
         .map_err(|e| format!("{id}: {e}"))?;
+    if look.mark_fonts.is_empty() {
+        look.mark_fonts.clone_from(&look.arabic_fonts);
+    }
     for p in [&light, &dark] {
         look.check(p).map_err(|e| format!("{id}: {e}"))?;
     }

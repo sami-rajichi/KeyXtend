@@ -262,6 +262,9 @@ arabic_scale = 1.1
 latin_fonts = ["Rubik"]
 font_metrics = [0.935, 0.25, 0.7]
 arabic_fonts = ["Rubik", "Noto Sans Arabic"]
+# Marks on a dotted circle (U+25CC), which Rubik lacks, so they attach to it (owner 2026-10-10); other themes use their
+# Arabic fonts for marks, as both hold the circle.
+mark_fonts = ["Noto Sans Arabic"]
 led_glow_px = 5.0
 lock_glow_px = 8.0
 lock_glow_mix = 0.55

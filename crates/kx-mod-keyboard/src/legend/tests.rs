@@ -121,6 +121,27 @@ fn the_altgr_marks_sit_on_a_dotted_circle_in_the_arabic_font() {
 }
 
 #[test]
+fn only_marks_on_their_circle_are_flagged_for_the_mark_font() {
+    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
+    let l = legend(&dad, LegendMods::default(), true, true);
+    assert_eq!(
+        (l.main_mark, l.second_mark, l.third_mark),
+        (false, true, true)
+    );
+    let l = legend(&dad, mods(false, false, true), false, true);
+    assert!(l.main_mark && !l.third_mark, "AltGr latched: {l:?}");
+    let carried = legend(
+        &keys("\u{628}\u{64E}", "", ""),
+        LegendMods::default(),
+        false,
+        true,
+    );
+    assert!(!carried.main_mark, "a letter carries its mark");
+    let plain = legend(&keys("e", "E", "€"), LegendMods::default(), true, false);
+    assert!(!(plain.main_mark || plain.second_mark || plain.third_mark));
+}
+
+#[test]
 fn readers_hear_marks_by_name_only_when_every_mark_has_one() {
     assert_eq!(mark_names("\u{651}\u{64E}"), ["mark.shadda", "mark.fatha"]);
     assert_eq!(mark_names("\u{64B}"), ["mark.fathatan"]);

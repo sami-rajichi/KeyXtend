@@ -103,6 +103,10 @@ impl LegendMods {
 
 /// A character key's legends, ready to draw.
 #[derive(Clone, Default, PartialEq, Eq, Serialize)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each legend's font flags sit flat beside it in the JSON that QML reads."
+)]
 pub struct Legend {
     /// What the key types now.
     pub main: String,
@@ -116,6 +120,12 @@ pub struct Legend {
     pub second_ar: bool,
     /// `third` needs the Arabic font.
     pub third_ar: bool,
+    /// `main` is marks on the dotted circle, drawn in the theme's mark font so they attach to it.
+    pub main_mark: bool,
+    /// `second` is marks on the dotted circle.
+    pub second_mark: bool,
+    /// `third` is marks on the dotted circle.
+    pub third_mark: bool,
 }
 
 /// Shows no field: what a key shows tells Shift, Caps Lock and `AltGr`, as `LegendMods` hides them.
@@ -148,12 +158,18 @@ fn is_letter(s: &str) -> bool {
     matches!((it.next(), it.next()), (Some(c), None) if c.to_lowercase().ne(c.to_uppercase()))
 }
 
+/// True when `s` starts with a mark, which has no letter before it, so it is drawn on a dotted circle.
+fn on_circle(s: &str) -> bool {
+    s.chars().next().is_some_and(is_mark)
+}
+
 /// `s` as drawn: marks with no letter before them, one or more, get a dotted circle to sit on.
 #[must_use]
 pub fn shown(s: &str) -> String {
-    match s.chars().next() {
-        Some(c) if is_mark(c) => format!("{DOTTED_CIRCLE}{s}"),
-        _ => s.to_string(),
+    if on_circle(s) {
+        format!("{DOTTED_CIRCLE}{s}")
+    } else {
+        s.to_string()
     }
 }
 
@@ -182,6 +198,9 @@ pub fn legend(k: &KeyChars, m: LegendMods, top_row: bool, rtl: bool) -> Legend {
         main_ar: is_arabic(main),
         second_ar: is_arabic(second),
         third_ar: is_arabic(third),
+        main_mark: on_circle(main),
+        second_mark: on_circle(second),
+        third_mark: on_circle(third),
     }
 }
 

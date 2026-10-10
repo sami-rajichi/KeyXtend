@@ -74,6 +74,10 @@ var lk = {
       "Segoe UI",
       "Noto Sans Arabic"
     ],
+    "mark_fonts": [
+      "Segoe UI",
+      "Noto Sans Arabic"
+    ],
     "font_metrics": [
       1.079,
       0.251,
