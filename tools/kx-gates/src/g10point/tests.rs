@@ -28,11 +28,17 @@ fn button(id: &str, rect: RECT) -> KeyRead {
     }
 }
 
-/// An element UI Automation found, with id `id` and name `name`, in process `pid`.
+/// An element UI Automation found in process `pid`, as `read_hit` keeps it: id `id` and name `name` only when the
+/// keyboard shows it.
 fn hit(id: &str, name: &str, pid: u32) -> Hit {
+    let label = || {
+        Ok(Label {
+            id: id.into(),
+            name: name.into(),
+        })
+    };
     Hit {
-        id: id.into(),
-        name: name.into(),
+        label: own(pid, KB, label).expect("a label"),
         kind: "QQuickItem / type 50000".into(),
         pid,
         hwnd: 0,
@@ -79,6 +85,20 @@ fn each_key_found_by_id_is_aimed_at_the_centre_of_its_box() {
             ("lang".to_string(), None),
         ],
         "a box with no area has no centre; a key the walk missed is its own finding; a bar button is no board key"
+    );
+}
+
+#[test]
+fn only_the_keyboards_own_elements_have_their_id_and_name_read() {
+    let ours = own(KB, KB, || Ok("esc"));
+    assert_eq!(ours, Ok(Some("esc")));
+    let theirs = own(OTHER, KB, || -> Result<&str, String> {
+        panic!("another app's label is read")
+    });
+    assert_eq!(theirs, Ok(None), "it may hold the owner's text");
+    assert_eq!(
+        own(KB, KB, || Err::<(), _>("UIA id".to_string())),
+        Err("UIA id".into())
     );
 }
 
@@ -154,15 +174,20 @@ fn the_block_is_ok_only_when_every_key_matched_and_some_key_was_checked() {
 }
 
 #[test]
-fn a_failure_line_keeps_the_window_under_the_point_and_another_apps_element_keeps_no_name() {
+fn a_failure_line_keeps_the_window_under_the_point_and_another_apps_element_keeps_no_id_or_name() {
     let other = probe_of("caps", Ok(hit("doc", "Report.docx", OTHER))).line(KB);
     assert_eq!(other["outcome"], "wrong_window");
     assert_eq!(other["at"], json!([10, 20]));
-    assert_eq!(other["hit"]["id"], "doc");
     assert_eq!(other["hit"]["pid"], OTHER);
+    assert_eq!(other["hit"]["kind"], "QQuickItem / type 50000");
     assert!(
-        other["hit"]["name"].is_null(),
-        "it may hold the owner's text"
+        other["hit"]["id"].is_null() && other["hit"]["name"].is_null(),
+        "they may hold the owner's text"
+    );
+    let kept = probe_of("caps", Ok(hit("doc", "Report.docx", OTHER))).hit;
+    assert!(
+        !format!("{kept:?}").contains("Report"),
+        "nor can a debug print show them"
     );
     assert_eq!(other["under"]["hwnd"], 42);
     assert_eq!(other["under"]["pid"], KB);
@@ -171,6 +196,7 @@ fn a_failure_line_keeps_the_window_under_the_point_and_another_apps_element_keep
         "[Qt6110QWindowIcon] of keyxtend.exe"
     );
     let ours = probe_of("tab", Ok(hit("shift", "Shift", KB))).line(KB);
+    assert_eq!(ours["hit"]["id"], "shift");
     assert_eq!(ours["hit"]["name"], "Shift", "the keyboard's own label");
 }
 

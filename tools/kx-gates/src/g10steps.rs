@@ -15,9 +15,6 @@ use crate::product::{self, Keyboard};
 use crate::win::{poll_until, sleep_ms};
 use crate::{board, g25, tlog};
 
-/// Why a key is left to the owner's Narrator and NVDA check.
-const NO_TOGGLE: &str = "its latch shows no toggle state through UI Automation";
-
 /// Where G10 presses: the keyboard, target-window in front, and the layout target-window had at the start.
 struct Desk<'a> {
     ctx: &'a Ctx<'a>,
@@ -179,11 +176,14 @@ pub fn run(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     for step in &plan {
         let (mut v, unread) = one(&d, step)
             .unwrap_or_else(|e| (json!({ "key": step.key, "ok": false, "error": e }), false));
-        if v["ok"] != true && step.toggles {
-            v["latched_after"] = json!(let_go(&d, step));
+        let failed = v["ok"] != true;
+        let mut after = None;
+        if failed && step.toggles {
+            after = let_go(&d, step);
+            v["latched_after"] = json!(after);
         }
-        if unread {
-            owner.push(json!({ "key": step.key, "why": NO_TOGGLE }));
+        if let Some(why) = step.owner_why(unread, failed, after) {
+            owner.push(json!({ "key": step.key, "why": why }));
         }
         steps.push(v);
     }

@@ -81,7 +81,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode. Frame times measured with PresentMon; a pressed key lights up on the next frame |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
-| G10 Screen readers | Narrator and NVDA read and activate every key |
+| G10 Screen readers | Narrator and NVDA read and activate every key. Each key is also hit-tested at its centre, as Narrator's mouse mode reads what is under the pointer, and must be found there |
 | G11 DPI | 100/150/200 % on the development PC's one screen keep the size and sharpness. The move between mixed-DPI monitors is checked by beta testers in P14 |
 | G12 Overlay | The pointer ring runs at 60 Hz without dropping clicks underneath it |
 | G13 Themes | Native Adaptive in light and dark matches the mock-up side by side and follows the system accent, dark mode and high contrast live. Two frosted-glass tricks are tried on the inactive window; otherwise the plate is solid. A sampler row of ET66 and Dolch keys (colour marks, LED, pressed inset) matches the mock-up |

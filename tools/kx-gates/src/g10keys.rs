@@ -7,6 +7,11 @@ use kx_mod_keyboard::{LangKey, Latch, Role};
 use kx_module_api::ports::Scan;
 use kx_platform_windows::keys;
 
+/// Why a key is left to the owner's Narrator and NVDA check.
+const NO_TOGGLE: &str = "its latch shows no toggle state through UI Automation";
+/// Why a failed step's key is left to the owner: its latch read nothing after.
+const MAY_BE_ON: &str = "the step failed and its latch may still be on";
+
 /// What one step must leave in target-window's key log.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expect {
@@ -46,6 +51,25 @@ impl Step {
     /// True when this step's latch reads as still on, `on`, after the step failed, so one more press lets it go.
     pub fn left_latched(&self, on: Option<bool>) -> bool {
         self.toggles && on == Some(true)
+    }
+
+    /// Why the owner checks this step's key by hand, if at all: its latch never read (`unread`), or the step `failed`
+    /// and its latch read nothing `after`.
+    pub fn owner_why(
+        &self,
+        unread: bool,
+        failed: bool,
+        after: Option<bool>,
+    ) -> Option<&'static str> {
+        if !self.toggles {
+            None
+        } else if unread {
+            Some(NO_TOGGLE)
+        } else if failed && after.is_none() {
+            Some(MAY_BE_ON)
+        } else {
+            None
+        }
     }
 }
 

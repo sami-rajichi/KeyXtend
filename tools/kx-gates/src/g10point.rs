@@ -13,13 +13,18 @@ use crate::win;
 /// Why a key was not hit-tested.
 const NO_BOX: &str = "no box on screen";
 
+/// A keyboard element's UI Automation id, a key's board id, and what a screen reader says.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Label {
+    id: String,
+    name: String,
+}
+
 /// What UI Automation found at a key's centre.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Hit {
-    /// Its UI Automation id; a key's board id.
-    id: String,
-    /// What a screen reader says; kept only for the keyboard's own elements.
-    name: String,
+    /// Its label, read only for the keyboard's own elements, as another app's may hold the owner's text.
+    label: Option<Label>,
     /// Its class and control type.
     kind: String,
     /// The process that shows it.
@@ -104,7 +109,7 @@ fn judge(key: &str, kb: u32, hit: Option<&Hit>) -> Outcome {
     match hit {
         None => Outcome::Unread,
         Some(h) if h.pid != kb => Outcome::WrongWindow,
-        Some(h) if h.id != key => Outcome::WrongElement,
+        Some(h) if h.label.as_ref().is_none_or(|l| l.id != key) => Outcome::WrongElement,
         Some(_) => Outcome::Matched,
     }
 }
@@ -115,10 +120,11 @@ impl Probe {
         judge(&self.key, kb, self.hit.as_ref().ok())
     }
 
-    /// This key's result line; another app's element keeps no name, as it may hold the owner's text.
+    /// This key's result line; another app's element has no id or name in it.
     fn line(&self, kb: u32) -> Value {
         let hit = self.hit.as_ref().ok().map(|h| {
-            json!({ "id": h.id, "name": (h.pid == kb).then_some(&h.name), "kind": h.kind, "pid": h.pid,
+            let label = h.label.as_ref();
+            json!({ "id": label.map(|l| &l.id), "name": label.map(|l| &l.name), "kind": h.kind, "pid": h.pid,
                 "hwnd": h.hwnd })
         });
         json!({
@@ -142,40 +148,60 @@ fn tally(probes: &[Probe], kb: u32, shown: usize) -> Value {
     v
 }
 
-/// What `el` says about itself; its id and process must read, the rest may be blank.
+/// What `read` gives, read only when keyboard process `kb` shows the element, process `pid`.
+fn own<T>(
+    pid: u32,
+    kb: u32,
+    read: impl FnOnce() -> Result<T, String>,
+) -> Result<Option<T>, String> {
+    (pid == kb).then(read).transpose()
+}
+
+/// The id and name of `el`, a keyboard element; its id must read, its name may be blank.
+#[allow(
+    unsafe_code,
+    reason = "a UI Automation property read on a live element."
+)]
+fn read_label(el: &IUIAutomationElement) -> Result<Label, String> {
+    // SAFETY: a plain property read on a live element; a failed read gives an error.
+    let id = unsafe { el.CurrentAutomationId() }.map_err(|e| format!("UIA id: {e}"))?;
+    Ok(Label {
+        id: id.to_string(),
+        name: uia::name(el),
+    })
+}
+
+/// What `el` says about itself, its label only when keyboard process `kb` shows it; its process must read.
 #[allow(
     unsafe_code,
     reason = "UI Automation property reads on a live element."
 )]
-fn read_hit(el: &IUIAutomationElement) -> Result<Hit, String> {
+fn read_hit(el: &IUIAutomationElement, kb: u32) -> Result<Hit, String> {
     // SAFETY: plain property reads on a live element; a failed read gives an error or a blank.
-    let (id, pid, hwnd) = unsafe {
-        let id = el
-            .CurrentAutomationId()
-            .map_err(|e| format!("UIA id: {e}"))?;
+    let (pid, hwnd) = unsafe {
         let pid = el
             .CurrentProcessId()
             .map_err(|e| format!("UIA process: {e}"))?;
-        (id, pid, el.CurrentNativeWindowHandle().unwrap_or_default())
+        (pid, el.CurrentNativeWindowHandle().unwrap_or_default())
     };
+    let pid = u32::try_from(pid).unwrap_or_default();
     Ok(Hit {
-        id: id.to_string(),
-        name: uia::name(el),
+        label: own(pid, kb, || read_label(el))?,
         kind: uia::kind(el),
-        pid: u32::try_from(pid).unwrap_or_default(),
+        pid,
         hwnd: win::key(hwnd),
     })
 }
 
-/// Hit-tests key `key` at `at` with `reader`; a key with no box is not hit-tested.
-fn probe(reader: &Reader, key: String, at: Option<POINT>) -> Probe {
+/// Hit-tests key `key` at `at` with `reader` for keyboard process `kb`; a key with no box is not hit-tested.
+fn probe(reader: &Reader, kb: u32, key: String, at: Option<POINT>) -> Probe {
     let el = at
         .ok_or_else(|| NO_BOX.to_string())
         .and_then(|p| reader.at(p));
     Probe {
         key,
         at,
-        hit: el.and_then(|el| read_hit(&el)),
+        hit: el.and_then(|el| read_hit(&el, kb)),
         under: at.map(Under::at),
     }
 }
@@ -186,7 +212,7 @@ pub fn run(reader: &Reader, kb: HWND, read: &[KeyRead], ids: &[String], shown: u
     let pid = win::owner(kb).0;
     let probes: Vec<Probe> = aims(read, ids)
         .into_iter()
-        .map(|(key, at)| probe(reader, key, at))
+        .map(|(key, at)| probe(reader, pid, key, at))
         .collect();
     tally(&probes, pid, shown)
 }

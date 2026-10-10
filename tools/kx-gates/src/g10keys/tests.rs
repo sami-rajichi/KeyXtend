@@ -98,6 +98,24 @@ fn a_latch_a_failed_step_left_on_is_pressed_once_more() {
 }
 
 #[test]
+fn the_owner_checks_a_latch_that_never_read_or_that_a_failed_step_may_have_left_on() {
+    let shift = step_of(false, "shift");
+    assert_eq!(shift.owner_why(true, false, None), Some(NO_TOGGLE));
+    assert_eq!(
+        shift.owner_why(false, true, None),
+        Some(MAY_BE_ON),
+        "failed, and unread after"
+    );
+    assert_eq!(shift.owner_why(false, true, Some(false)), None, "let go");
+    assert_eq!(shift.owner_why(false, false, None), None, "passed");
+    assert_eq!(
+        step_of(false, "esc").owner_why(false, true, None),
+        None,
+        "a send key latches nothing"
+    );
+}
+
+#[test]
 fn a_key_of_a_later_version_must_send_nothing() {
     let mic = step_of(false, "mic");
     assert_eq!((mic.presses, mic.expect), (ids(&["mic"]), Expect::Nothing));
