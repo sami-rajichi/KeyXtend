@@ -23,6 +23,11 @@ use std::path::Path;
 
 /// The QML folder, under this crate.
 const QML: &str = "qml";
+/// Every bidi control a quoted TOML key or an OS name may hold, the isolates included.
+const CONTROLS: [char; 12] = [
+    '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
+    '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+];
 
 /// Every QML file of the UI, by name, with its text.
 fn qml_files() -> Vec<(String, String)> {

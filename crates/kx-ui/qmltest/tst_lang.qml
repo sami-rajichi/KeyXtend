@@ -202,6 +202,17 @@ Item {
             verify(latinOnly.rowH < list.rowH, "a list with no Arabic row keeps its height");
         }
 
+        // An OS may wrap its names in bidi isolates; a row draws each through `res.space`, which drops them as the hub does.
+        function test_a_row_draws_marked_os_names_cleaned() {
+            const marks = /[⁦-⁩]/g;
+            const res = Object.assign({}, root.res, { space: parts => root.res.space(parts.map(p => p.replace(marks, ""))) });
+            const v = view(1, 0);
+            v.rows[0].name = ["⁨العربية⁩", "⁦Arabic (102)⁩"];
+            const drawn = all(makeList(v, res).contentItem, o => o.font !== undefined && o.visible).map(o => o.text);
+            verify(["العربية", "Arabic (102)"].every(n => drawn.indexOf(n) >= 0), JSON.stringify(drawn));
+            verify(!drawn.some(t => t.search(marks) >= 0), JSON.stringify(drawn));
+        }
+
         function test_the_boards_arrows_enter_and_esc_drive_the_open_list() {
             const ui = createTemporaryObject(uiC, root);
             const board = Object.assign({}, Face.board, { lang_key: "list" });

@@ -1,15 +1,15 @@
-//! Every text the hub fills in for QML holds no bidi isolate, which would make Qt search every font (ADR-0022), and
-//! the filled texts the Quick reading-order test draws.
+//! Every text the hub fills in for QML holds no bidi control, which could make Qt search every font (ADR-0022), QML
+//! draws OS names only through the hub's cleaning, and the filled texts the Quick reading-order test draws.
 
 use crate::files::keys_of;
-use crate::keyboard_defaults;
+use crate::markup::code;
 use crate::qml::spaces;
+use crate::{CONTROLS, keyboard_defaults, qml_files};
 use kx_module_api::keys::{ALL_KEYS, SETTINGS_RESET};
 use kx_module_api::{Notice, NoticeArg, args};
 use kx_ui::i18n::keys::MODULE;
 use kx_ui::{I18n, LANGS};
 use serde_json::{Value, json};
-use std::ops::RangeInclusive;
 
 /// Counts that reach every plural form: one, two, few and many, and 100 for Arabic's other.
 const COUNTS: [usize; 5] = [1, 2, 3, 11, 100];
@@ -19,10 +19,12 @@ const LEFT_OUT: usize = COUNTS[2];
 const UNKNOWN: &str = "mystery";
 /// How many real `[keyboard]` setting names a list names.
 const NAMED: usize = 2;
-/// The bidi isolates: LRI, RLI, FSI and PDI.
-const ISOLATES: RangeInclusive<char> = '\u{2066}'..='\u{2069}';
-/// A language and a layout name as an OS may give them, wrapped in isolates.
-const MARKED_OS_NAMES: [&str; 2] = ["\u{2068}العربية\u{2069}", "\u{2066}Arabic (102)\u{2069}"];
+/// A language and a layout name as an OS gives them; the tests wrap them in every bidi control.
+const OS_NAMES: [&str; 2] = ["العربية", "Arabic (102)"];
+/// Where QML reads OS names from the face: a list row's names and the space bar's parts.
+const OS_NAME_READS: [&str; 2] = ["row.name", "lang.space"];
+/// The hub's call that cleans OS names, as QML makes it.
+const SPACE_CALL: &str = "space(";
 
 /// Every module id the texts name, then one they do not.
 fn modules(t: &I18n) -> Vec<String> {
@@ -74,11 +76,18 @@ fn notices(t: &I18n) -> Vec<String> {
     out
 }
 
-/// Every text with arguments, and the space bar for the face's states and for marked OS names.
-fn every_filled(t: &I18n) -> Vec<String> {
-    let os_names: Vec<String> = MARKED_OS_NAMES.iter().map(|n| (*n).to_owned()).collect();
-    let space = spaces().iter().map(|(_, parts)| t.space(parts)).collect();
-    [counted(t), notices(t), space, vec![t.space(&os_names)]].concat()
+/// The space bar for the face's states, and marked OS names together and one by one, as the space bar and the
+/// language list draw them.
+fn os_texts(t: &I18n) -> Vec<String> {
+    let controls: String = CONTROLS.iter().collect();
+    let marked: Vec<String> = OS_NAMES
+        .iter()
+        .map(|n| format!("{controls}{n}{controls}"))
+        .collect();
+    let alone = marked.iter().map(|n| t.space(std::slice::from_ref(n)));
+    let states = spaces();
+    let space = states.iter().map(|(_, parts)| t.space(parts));
+    space.chain(alone).chain([t.space(&marked)]).collect()
 }
 
 /// The texts the Quick reading-order test draws, per language tag: each space-bar text with its parts and face state,
@@ -100,13 +109,38 @@ pub fn order() -> Value {
 }
 
 #[test]
-fn no_text_the_hub_gives_holds_a_bidi_isolate() {
+fn no_text_the_hub_gives_holds_a_bidi_control() {
     for l in &LANGS {
         let t = I18n::new(l);
         let keys = keys_of(l.ftl).into_iter().map(|k| t.text(&k));
-        for text in keys.chain(every_filled(&t)) {
-            let found = text.chars().find(|c| ISOLATES.contains(c));
+        let filled = [counted(&t), notices(&t), os_texts(&t)].concat();
+        for text in keys.chain(filled) {
+            let found = text.chars().find(|c| CONTROLS.contains(c));
             assert_eq!(found, None, "{}: {text:?}", l.tag);
+        }
+    }
+}
+
+/// Whether code line `l` reads an OS name, as a whole name such as `r.row.name` but not `arrow.name`.
+fn reads_os_name(l: &str) -> bool {
+    let word = |c: char| c.is_alphanumeric() || c == '_';
+    let whole = |i: usize| !l[..i].chars().next_back().is_some_and(word);
+    OS_NAME_READS
+        .iter()
+        .any(|r| l.match_indices(r).any(|(i, _)| whole(i)))
+}
+
+#[test]
+fn qml_draws_os_names_only_through_the_hubs_cleaning() {
+    assert!(reads_os_name("x: r.row.name[0]") && !reads_os_name("x: arrow.name"));
+    for (file, text) in qml_files() {
+        for (n, line) in text.lines().map(code).enumerate() {
+            let reads = reads_os_name(&line);
+            assert!(
+                !reads || line.contains(SPACE_CALL),
+                "{file}:{}: {line}",
+                n + 1
+            );
         }
     }
 }

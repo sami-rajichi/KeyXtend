@@ -29,7 +29,7 @@ Decided by the owner on 2026-10-10.
   - This happens to an EN or FR UI pinned by `[ui] language` over an Arabic layout, and to an Arabic UI pinned over a Latin one.
   - It also happens to a right-to-left layout without UI texts, such as Hebrew or Persian, which speaks English.
   - The fix is a P13 note: draw the parts as separate texts in the UI's order. `tst_order` expects these cases to fail until then.
-- Every text drawn by Qt keeps clear of the four isolates. The texts test checks every text the hub fills in.
+- No text drawn by Qt holds a bidi control. The texts test checks every text the hub fills in, and that QML draws OS names only through the hub's cleaning.
 
 ## Alternatives
 

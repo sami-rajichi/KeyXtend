@@ -82,9 +82,10 @@ Item {
         Column {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width - badge.width - tick.width - 2 * parent.spacing
+            // The OS's names go through the hub's `space`, which drops their hidden marks (ADR-0022).
             Label {
                 width: parent.width
-                text: r.filled ? r.row.name[0] || "" : ""
+                text: r.filled ? r.res.space(r.row.name.slice(0, 1)) : ""
                 elide: Text.ElideRight
                 font.family: r.ar ? r.res.fam.arabic : r.res.fam.latin
                 font.pixelSize: r.sh.name_px * r.s

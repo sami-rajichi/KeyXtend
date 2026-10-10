@@ -19,7 +19,7 @@ const STATEMENT_END: char = ';';
 const LABEL: &str = "Label.qml";
 
 /// Line `l` as code: each string emptied and any comment dropped, so braces and names inside them do not count.
-fn code(l: &str) -> String {
+pub fn code(l: &str) -> String {
     let (mut out, mut quote, mut escaped) = (String::new(), None, false);
     for (i, c) in l.char_indices() {
         match quote {

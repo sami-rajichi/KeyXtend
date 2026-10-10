@@ -1,15 +1,10 @@
 //! Texts built from parts: notices with their arguments, joined lists, hidden marks and the space bar.
 
-use crate::{all, items, lang};
+use crate::{CONTROLS, all, items, lang};
 use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
 use kx_ui::i18n::keys::LIST_JOIN;
 
-/// Every bidi control a quoted TOML key or an OS name may hold, the isolates included.
-const CONTROLS: [char; 12] = [
-    '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
-    '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
-];
 /// Line breaks a quoted TOML key may hold: LF, CR, NEL, and the line and paragraph separators.
 const BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
 /// A C0 control character (BEL).
