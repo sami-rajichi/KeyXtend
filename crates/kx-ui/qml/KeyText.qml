@@ -25,9 +25,11 @@ Item {
     readonly property var mv: lk.motion.moves
     readonly property var amt: lk.motion.amount
     readonly property color ink2: lk.palette.legend_2
-    // Dolch's sculpted caps lift every legend a little (mock-up line 217), and labels fit their lighter top.
+    // Dolch's sculpted caps lift centred legends to their lighter top's middle (mock-up line 217), and labels fit it.
     readonly property bool sculpted: look.cap.kind === "skirt"
     readonly property real lift: sculpted ? look.cap.legend_lift_px * s : 0
+    // The face the theme draws, as insets from the cap (top, right, bottom, left): a sculpted lit top, else the cap.
+    readonly property var face: sculpted ? look.cap.top_inset_px : [0, 0, 0, 0]
     // A named key's label room: the cap less its padding, or a sculpted top plus what may spill onto the skirt.
     readonly property real labelRoom: sculpted
         ? width - (look.cap.top_inset_px[1] + look.cap.top_inset_px[3] - 2 * look.cap.label_spill_px) * s
@@ -95,11 +97,14 @@ Item {
         move: t.mv.carousel
     }
 
-    // Character keys: the other case top left, and AltGr bottom right; they change at once (mock-up .lg2, .lg3).
+    // Character keys: the other case top left, and AltGr bottom right, the same way in from the face in every theme;
+    // they change at once (mock-up .lg2, .lg3). Each sits on the theme's Latin baseline, so a taller Arabic or mark
+    // font keeps the same margin.
     Line {
         visible: t.isChar
-        x: t.lg.corner_px[1] * t.s
-        y: t.lg.corner_px[0] * t.s - t.lift
+        x: (t.face[3] + t.lg.corner_px[1]) * t.s
+        anchors.baseline: parent.top
+        anchors.baselineOffset: (t.face[0] + t.lg.corner_px[0]) * t.s + t.look.font_metrics[0] * font.pixelSize
         ar: t.secondAr
         mark: t.secondMark
         text: t.ks ? t.ks.second : ""
@@ -110,9 +115,9 @@ Item {
     Line {
         visible: t.isChar
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.rightMargin: t.lg.corner_px[1] * t.s
-        anchors.bottomMargin: t.lg.corner_px[0] * t.s + t.lift
+        anchors.rightMargin: (t.face[1] + t.lg.corner_px[1]) * t.s
+        anchors.baseline: parent.bottom
+        anchors.baselineOffset: -(t.face[2] + t.lg.corner_px[0]) * t.s - t.look.font_metrics[1] * font.pixelSize
         ar: t.thirdAr
         mark: t.thirdMark
         text: t.ks ? t.ks.third : ""

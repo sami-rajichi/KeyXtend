@@ -1,6 +1,6 @@
 // The owner's Arabic (102) AZERTY keys over the face's golden states: every legend the face flags as marks sits on a
 // dotted circle in the theme's mark font, in each corner and with AltGr latched; readers hear a mark key's marks; letters
-// stay centred; and a key that types nothing shows no letter.
+// stay centred; corner legends keep one margin in from each theme's face; and a key that types nothing shows no letter.
 import QtQuick
 import QtTest
 import "../qml"
@@ -8,7 +8,9 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-ar.js" as Ar
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
+import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
+import "fonts.js" as Fonts
 
 Item {
     id: root
@@ -27,6 +29,17 @@ Item {
     })
     // The Arabic states: as typed, and with AltGr latched.
     readonly property var states: [Face.states.ar, Face.states["ar-altgr"]]
+    // The bundled fonts loaded so far, from where the texts test lays them out.
+    property int fontsIn: 0
+
+    Instantiator {
+        model: Assets.assets.fonts
+        delegate: FontLoader {
+            required property string modelData
+            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
+            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
+        }
+    }
 
     Component { id: keyC; Key {} }
 
@@ -98,6 +111,54 @@ Item {
             const [over, alone] = [pick(k => k.third !== ""), pick(k => k.third === "")];
             verify(over && alone, "the case this test is for");
             compare(offset(over), offset(alone));
+        }
+
+        // Look `lk`'s own first fonts, as the keyboard window picks them when the system has them.
+        function resOf(lk) {
+            const l = lk.look;
+            const fam = { latin: l.latin_fonts[0], arabic: l.arabic_fonts[0], mark: l.mark_fonts[0], ui: l.latin_fonts[0] };
+            return Object.assign({}, root.res, { fam: fam });
+        }
+        // How far key `id`'s corner legends sit in from the face its look draws, at size 1: [side, baseline, legend] for
+        // the top left and then the bottom right, undefined for a corner with no legend.
+        function margins(state, id, lk) {
+            const key = makeKey(state, id, lk, resOf(lk));
+            // The cap's own face, the first one drawn; the inner shading draws it again, moved.
+            const cap = all(key, o => o.sculpted !== undefined && o.grad !== undefined)[0];
+            const fills = all(cap, o => o.base !== undefined && o.g !== undefined && o.visible);
+            const f = fills[fills.length - 1];
+            const c = f.mapToItem(key, 0, 0);
+            const shown = s => all(key, o => o.font !== undefined && o.visible && s !== "" && o.text === s)[0];
+            const [lt, rb] = [shown(state.keys[id].second), shown(state.keys[id].third)];
+            const at = (l, x) => l.mapToItem(key, x, l.baselineOffset);
+            const top = lt && [at(lt, 0).x - c.x, at(lt, 0).y - c.y, lt];
+            const bottom = rb && [c.x + f.width - at(rb, rb.width).x, c.y + f.height - at(rb, 0).y, rb];
+            return [top, bottom];
+        }
+
+        // Every theme leaves one margin between its face and a corner legend, Dolch's lit top too (owner 2026-10-10);
+        // a mark in a taller font sits on the Latin baseline, as a Latin legend in its corner does.
+        function test_corner_legends_sit_the_same_way_in_from_each_face_data() {
+            return [N, E, D].map(t => ({ tag: t.lk.look.id, lk: t.lk }));
+        }
+        function test_corner_legends_sit_the_same_way_in_from_each_face(row) {
+            const [lk, state] = [row.lk, Face.states.ar];
+            Fonts.need([lk.look.latin_fonts[0], lk.look.mark_fonts[0]], skip);
+            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
+            const [lg, fm] = [lk.shape.legend, lk.look.font_metrics];
+            const find = ok => Object.keys(state.keys).find(id => ok(state.keys[id]));
+            // A Latin key with both corners, and a letter with marks bottom right.
+            const ids = [find(k => k.second !== "" && k.third !== "" && !k.third_mark), find(k => k.third_mark)];
+            verify(ids.every(id => !!id), "the cases this test is for");
+            for (const id of ids) {
+                const [top, bottom] = margins(state, id, lk);
+                if (top) {
+                    fuzzyCompare(top[0], lg.corner_px[1], 0.5, id + " top left, side");
+                    fuzzyCompare(top[1], lg.corner_px[0] + fm[0] * top[2].font.pixelSize, 0.5, id + " top left, baseline");
+                }
+                fuzzyCompare(bottom[0], lg.corner_px[1], 0.5, id + " bottom right, side");
+                fuzzyCompare(bottom[1], lg.corner_px[0] + fm[1] * bottom[2].font.pixelSize, 0.5, id + " bottom right, baseline");
+            }
         }
 
         // A key that types nothing with Shift (س) or AltGr (ف) shows no letter, as Windows' keyboard does, and readers hear

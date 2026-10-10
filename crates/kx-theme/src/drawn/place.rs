@@ -41,6 +41,14 @@ fn lift(v: &LookView) -> f32 {
     }
 }
 
+/// The face the theme draws, as insets from the cap (top, right, bottom, left): a sculpted lit top, else the cap.
+fn face(v: &LookView) -> [f32; 4] {
+    match &v.look.cap {
+        Cap::Skirt { top_inset_px, .. } => *top_inset_px,
+        _ => [0.0; 4],
+    }
+}
+
 /// The capitals of a text `px` high whose line box starts at `top`: baseline up to cap height.
 fn text(v: &LookView, top: f32, px: f32) -> Span {
     let [ascent, _, cap] = v.look.font_metrics;
@@ -85,10 +93,12 @@ pub(super) fn spans(v: &LookView, h: f32, mark: Mark) -> Vec<Span> {
             .map(|k| centred(v, mid, look.legend_px * k))
             .to_vec(),
         Mark::Second => {
+            // The corners sit in from the face on the theme's Latin baseline, whatever font they draw in.
             let corner = |i: usize| look.legend_px * lg.corner_scale[i];
+            let [top, _, bottom, _] = face(v);
             let mut all = vec![
-                text(v, lg.corner_px[0] - lift(v), corner(0)),
-                above(v, h - lg.corner_px[0] - lift(v), corner(1)),
+                text(v, top + lg.corner_px[0], corner(0)),
+                above(v, h - bottom - lg.corner_px[0], corner(1)),
             ];
             // The space bar's text is centred on the cap itself, unlifted.
             all.extend(lg.space_px.map(|px| centred(v, h / 2.0, px)));

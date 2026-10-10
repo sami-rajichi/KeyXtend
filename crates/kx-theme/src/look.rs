@@ -55,7 +55,7 @@ pub enum Cap {
         pressed_inset_px: [f32; 4],
         /// Corner radius of the top.
         top_radius_px: f32,
-        /// Legends move up by this much.
+        /// Centred legends move up by this much, to the top's middle; corner legends sit in from the top instead.
         legend_lift_px: f32,
         /// How far a named key's label may run past the top onto the skirt, each side.
         label_spill_px: f32,

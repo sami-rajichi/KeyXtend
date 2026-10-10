@@ -48,13 +48,18 @@ fn a_main_legend_sits_where_its_fonts_metrics_put_it() {
 }
 
 #[test]
-fn the_corner_legends_ride_near_the_top_and_the_bottom() {
+fn the_corner_legends_sit_in_from_the_face_the_theme_draws() {
     let t = themes();
+    // Dolch: 2 px in from its lit top, which runs from 1 px below the 28 px cap's top to 4 px above its bottom.
     let v = view(&t, "dolch");
     let all = spans(&v, cap(&v), Mark::Second);
     let (top, bottom) = (all[0], all[1]);
-    assert!(near(top, [2.394, 8.0361]), "{top:?}");
-    assert!(near(bottom, [17.09, 22.55]), "{bottom:?}");
+    assert!(near(top, [4.8941, 10.5361]), "{top:?}");
+    assert!(near(bottom, [14.59, 20.05]), "{bottom:?}");
+    // Native: 2 px in from the flat cap itself; Segoe UI's ascent 1.079 and cap height 0.7 at 8.06 px.
+    let v = view(&t, "native");
+    let top = spans(&v, cap(&v), Mark::Second)[0];
+    assert!(near(top, [5.05474, 10.69674]), "{top:?}");
 }
 
 #[test]
