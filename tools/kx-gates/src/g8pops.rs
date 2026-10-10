@@ -17,6 +17,9 @@ use crate::{board, g8ui, mouse, uilook};
 
 /// What a round that broke off mid-cycle leaves, for its error.
 const THEME_LEFT: &str = "the theme may differ now: press the theme button to bring yours back";
+/// Why the bubble step stops: minimise was refused, or the bubble had not shown yet.
+const NO_BUBBLE: &str =
+    "minimise showed no bubble: the screen may have no spot for it, or raise g8.churn_settle_ms";
 
 /// What each round does, worked out once.
 pub struct Plan {
@@ -123,15 +126,24 @@ fn holds(reader: &Reader, w: HWND, id: &str) -> bool {
     reader.read(w).is_ok_and(|keys| keys.at(id).is_some())
 }
 
+/// Whether minimise swapped the keyboard for its bubble, from what shows after it; a miss when both show. An error
+/// when no bubble showed, as nothing could then bring the keyboard back.
+fn swapped(keyboard_shown: bool, bubble_shown: bool) -> Result<bool, String> {
+    if bubble_shown {
+        Ok(!keyboard_shown)
+    } else {
+        Err(NO_BUBBLE.to_string())
+    }
+}
+
 /// Minimises the keyboard to its bubble and brings it back, counting a bubble that showed in its place and a keyboard
 /// that came back.
 fn bubble(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), String> {
     product::invoke(reader, &plan.hide)?;
     sleep_ms(g.churn_settle_ms);
     let shown = product::shown();
-    let swapped =
-        !shown.contains(&plan.keyboard) && shown.iter().any(|&w| holds(reader, w, &plan.back));
-    seen.bubbles += usize::from(swapped);
+    let bubble_shown = shown.iter().any(|&w| holds(reader, w, &plan.back));
+    seen.bubbles += usize::from(swapped(shown.contains(&plan.keyboard), bubble_shown)?);
     product::invoke(reader, &plan.back)?;
     sleep_ms(g.churn_settle_ms);
     seen.returns += usize::from(product::shown().contains(&plan.keyboard));
@@ -184,6 +196,23 @@ mod tests {
             any_new(&base, &[1, 2, 9]),
             "a tip that showed as a banner hid"
         );
+    }
+
+    #[test]
+    fn a_minimise_counts_a_swap_or_a_miss_and_stops_with_its_cause_when_no_bubble_showed() {
+        assert_eq!(
+            swapped(false, true),
+            Ok(true),
+            "the bubble took the keyboard's place"
+        );
+        assert_eq!(swapped(true, true), Ok(false), "a slow hide is a miss");
+        for keyboard in [true, false] {
+            let e = swapped(keyboard, false).expect_err("nothing to press back");
+            assert!(
+                e.contains("no bubble") && e.contains("churn_settle_ms"),
+                "{e}"
+            );
+        }
     }
 
     #[test]
