@@ -10,7 +10,7 @@ pub(super) type Span = [f32; 2];
 /// What an ink draws on a cap, which sets where it sits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Mark {
-    /// A character key's main legend, at its Latin and Arabic sizes, and Arabic risen over an `AltGr` legend.
+    /// A character key's main legend, at its Latin and Arabic sizes.
     Main,
     /// The corner legends and the space bar's text.
     Second,
@@ -81,11 +81,9 @@ pub(super) fn spans(v: &LookView, h: f32, mark: Mark) -> Vec<Span> {
     let (look, lg, lang) = (&v.look, &v.shape.legend, &v.shape.lang);
     let mid = h / 2.0 - lift(v);
     match mark {
-        Mark::Main => {
-            let ar = look.legend_px * look.arabic_scale;
-            let risen = centred(v, mid - lg.arabic_lift_px, ar);
-            vec![centred(v, mid, look.legend_px), centred(v, mid, ar), risen]
-        }
+        Mark::Main => [1.0, look.arabic_scale]
+            .map(|k| centred(v, mid, look.legend_px * k))
+            .to_vec(),
         Mark::Second => {
             let corner = |i: usize| look.legend_px * lg.corner_scale[i];
             let mut all = vec![

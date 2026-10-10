@@ -1,6 +1,5 @@
 // The owner's Arabic (102) AZERTY keys over the face's golden states: every legend the face flags as marks sits on a
-// dotted circle in the theme's mark font, in each corner and with AltGr latched; readers hear a mark key's marks; and
-// wide letters rise clear of the AltGr legend below them.
+// dotted circle in the theme's mark font, in each corner and with AltGr latched, and readers hear a mark key's marks.
 import QtQuick
 import QtTest
 import "../qml"
@@ -8,9 +7,7 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-ar.js" as Ar
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
-import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
-import "fonts.js" as Fonts
 
 Item {
     id: root
@@ -29,17 +26,6 @@ Item {
     })
     // The Arabic states: as typed, and with AltGr latched.
     readonly property var states: [Face.states.ar, Face.states["ar-altgr"]]
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
 
     Component { id: keyC; Key {} }
 
@@ -78,41 +64,6 @@ Item {
         function texts(key, marks) {
             return all(key, o => o.font !== undefined && o.visible && o.text !== "" && o.text.startsWith(circle) === marks);
         }
-        // The texts in look `lk`'s own fonts.
-        function resOf(lk) {
-            const l = lk.look;
-            const fam = { latin: l.latin_fonts[0], arabic: l.arabic_fonts[0], mark: l.mark_fonts[0], ui: l.arabic_fonts[0] };
-            return Object.assign({}, root.res, { fam: fam });
-        }
-        // The text `key` shows as `text`, once its legends have risen in.
-        function line(key, text) {
-            const found = all(key, o => o.font !== undefined && o.visible && o.text === text)[0];
-            tryVerify(() => !found.parent.parent.clip, 2000, "the legends rose in");
-            return found;
-        }
-        // The pixels of `shot` that differ from `bare` by half the strongest difference or more, so faint edges count
-        // as blank.
-        function ink(shot, bare) {
-            const px = [];
-            for (let y = 0; y < shot.height; y++)
-                for (let x = 0; x < shot.width; x++) {
-                    const p = shot.pixel(x, y), q = bare.pixel(x, y);
-                    px.push([x, y, Math.abs(p.r - q.r) + Math.abs(p.g - q.g) + Math.abs(p.b - q.b)]);
-                }
-            const most = Math.max(...px.map(p => p[2]));
-            return px.filter(p => p[2] >= most / 2);
-        }
-        // The inks of texts `a` and `b` on `key`, each drawn alone over the bare cap, and the device pixels per px.
-        function inks(key, a, b) {
-            a.opacity = b.opacity = 0;
-            const bare = grabImage(key);
-            a.opacity = 1;
-            const inkA = ink(grabImage(key), bare);
-            [a.opacity, b.opacity] = [0, 1];
-            const inkB = ink(grabImage(key), bare);
-            a.opacity = 1;
-            return [inkA, inkB, bare.width / key.width];
-        }
 
         function test_a_mark_sits_on_a_circle_in_the_mark_font_in_every_corner() {
             compare(root.states.map(s => markKeys(s).length > 0), [true, true], "the case this test is for");
@@ -128,46 +79,24 @@ Item {
 
         function test_dolch_draws_marks_in_its_mark_font_and_letters_in_rubik() {
             verify(D.lk.look.mark_fonts[0] !== D.lk.look.arabic_fonts[0], "Dolch names its own mark font");
-            const res = resOf(D.lk);
+            const fam = { latin: D.lk.look.latin_fonts[0], arabic: D.lk.look.arabic_fonts[0], mark: D.lk.look.mark_fonts[0] };
+            const res = Object.assign({}, root.res, { fam: Object.assign({ ui: fam.arabic }, fam) });
             const key = makeKey(Face.states.ar, markKeys(Face.states.ar)[0], D.lk, res);
-            compare(texts(key, true).map(t => t.font.family), [res.fam.mark], "the AltGr marks");
-            compare(texts(key, false).map(t => t.font.family), [res.fam.arabic], "the letter");
+            compare(texts(key, true).map(t => t.font.family), [fam.mark], "the AltGr marks");
+            compare(texts(key, false).map(t => t.font.family), [fam.arabic], "the letter");
         }
 
-        // One row per theme, so a theme whose Windows font this system lacks skips alone (fonts.js).
-        function test_a_wide_letter_keeps_a_clear_gap_over_its_altgr_legend_data() {
-            return [N, E, D].map(t => ({ tag: t.lk.look.id, lk: t.lk }));
-        }
-        // The owner saw AltGr marks and the riyal sign touch letters such as ض and س; a clear gap is 1 px of blank cap.
-        function test_a_wide_letter_keeps_a_clear_gap_over_its_altgr_legend(row) {
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by cargo test -p kx-ui --test texts");
-            const look = row.lk.look;
-            Fonts.need([look.arabic_fonts[0], look.mark_fonts[0]], skip);
+        // The owner wants every letter centred, also over an AltGr legend (2026-10-10), so ض sits as ف does.
+        function test_an_arabic_letter_over_an_altgr_legend_stays_centred() {
             const state = Face.states.ar;
-            const ids = Object.keys(state.keys).filter(id => state.keys[id].main_ar && state.keys[id].third !== "");
-            verify(ids.length > 0, "the case this test is for");
-            for (const id of ids) {
-                const ks = state.keys[id];
-                const key = makeKey(state, id, row.lk, resOf(row.lk));
-                const [a, b, k] = inks(key, line(key, ks.main), line(key, ks.third));
-                let gap = Infinity;
-                for (const p of a)
-                    for (const q of b)
-                        gap = Math.min(gap, Math.hypot(p[0] - q[0], p[1] - q[1]) / k);
-                verify(gap >= 1, ks.main + " " + ks.third + ": " + gap.toFixed(2) + " px apart");
-                verify(a.every(p => p[1] > 0), ks.main + " stays on its cap");
-            }
-        }
-
-        function test_only_an_arabic_letter_over_an_altgr_legend_rises() {
-            const up = N.lk.shape.legend.arabic_lift_px;
-            verify(up > 0, "the token");
-            const offset = (state, id) => line(makeKey(state, id), state.keys[id].main).anchors.verticalCenterOffset;
-            const [ar, fr] = [Face.states.ar, Face.states.fr];
-            const pick = (st, ok) => Object.keys(st.keys).find(id => st.keys[id].main !== undefined && ok(st.keys[id]));
-            compare(offset(ar, pick(ar, k => k.main_ar && k.third !== "")), -up, "an Arabic letter over an AltGr legend");
-            compare(offset(ar, pick(ar, k => k.main_ar && k.third === "")), 0, "nothing below it");
-            compare(offset(fr, pick(fr, k => !k.main_ar && k.third !== "")), 0, "a Latin legend keeps its place");
+            const pick = ok => Object.keys(state.keys).find(id => state.keys[id].main_ar && ok(state.keys[id]));
+            const offset = id => {
+                const key = makeKey(state, id, D.lk);
+                return all(key, o => o.font !== undefined && o.text === state.keys[id].main)[0].anchors.verticalCenterOffset;
+            };
+            const [over, alone] = [pick(k => k.third !== ""), pick(k => k.third === "")];
+            verify(over && alone, "the case this test is for");
+            compare(offset(over), offset(alone));
         }
 
         function test_readers_hear_a_mark_key_by_its_marks_names() {

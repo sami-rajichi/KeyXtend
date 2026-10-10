@@ -182,7 +182,6 @@ var lk = {
         4.0
       ],
       "corner_weight": 400,
-      "arabic_lift_px": 6.0,
       "icon_px": [
         14.0,
         15.0
