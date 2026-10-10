@@ -112,3 +112,17 @@ fn a_span_between_stops_also_shows_the_stop_inside_it() {
     assert!(all.contains(&key), "{all:?}");
     assert_eq!(all.len(), 5, "both ends and the three stops");
 }
+
+#[test]
+fn an_arabic_letter_over_an_altgr_legend_is_also_checked_where_it_rises() {
+    let t = themes();
+    for id in ["native", "et66", "dolch"] {
+        let v = view(&t, id);
+        let all = spans(&v, cap(&v), Mark::Main);
+        let up = v.shape.legend.arabic_lift_px;
+        assert!(up > 0.0, "{id}: the token");
+        assert_eq!(all.len(), 3, "{id}: Latin, Arabic, and Arabic risen");
+        let ar = all[1];
+        assert!(near(all[2], [ar[0] - up, ar[1] - up]), "{id}: {all:?}");
+    }
+}

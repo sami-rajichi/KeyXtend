@@ -47,6 +47,8 @@ Item {
     readonly property bool thirdMark: isChar && ks ? ks.third_mark : false
     readonly property real spacePx: lg.space_px[lang.cur.rtl ? 1 : 0] * s
     readonly property real mainPx: look.legend_px * s * (mainAr ? look.arabic_scale : 1)
+    // An Arabic letter rises clear of the AltGr legend below it; right-to-left layouts leave the top-left corner free.
+    readonly property real mainRise: mainAr && ks.third !== "" && ks.second === "" ? lg.arabic_lift_px * s : 0
     // The layout of the app in front.
     readonly property string cur: lang.cur.short
 
@@ -131,7 +133,7 @@ Item {
         Line {
             visible: t.isChar
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: -t.lift
+            anchors.verticalCenterOffset: -t.lift - t.mainRise
             ar: t.mainAr
             mark: t.mainMark
             text: t.ks ? t.ks.main : ""

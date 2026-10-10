@@ -62,6 +62,8 @@ pub struct LegendShape {
     pub corner_px: [f32; 2],
     /// Weight of the corner legends.
     pub corner_weight: u16,
+    /// How far an Arabic main legend rises over an `AltGr` legend below it.
+    pub arabic_lift_px: f32,
     /// Icon size on main and side keys.
     pub icon_px: [f32; 2],
     /// Gap between an icon and a text beside it.

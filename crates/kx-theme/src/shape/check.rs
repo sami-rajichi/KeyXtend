@@ -54,7 +54,7 @@ impl Shape {
     }
 
     /// The shimmer span, the outline, the smallest label and the mark's size must be above 0, and the panel
-    /// gaps, the label padding, the language icon's gap and the mark's 0 or more, all finite.
+    /// gaps, the label padding, the Arabic lift, the language icon's gap and the mark's 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -69,6 +69,7 @@ impl Shape {
         let gaps = self.panel.gap_px.iter().map(|g| ("panel.gap_px", *g));
         let mut zero_up = gaps.chain([
             ("legend.label_pad_px", self.legend.label_pad_px),
+            ("legend.arabic_lift_px", self.legend.arabic_lift_px),
             ("lang.icon_gap_px", self.lang.icon_gap_px),
             ("bar.mark_px", self.bar.mark_px[2]),
         ]);

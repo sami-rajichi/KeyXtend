@@ -224,6 +224,11 @@ fn an_odd_tray_share_or_label_size_is_refused() {
             "label_pad_px = -1.0",
             "legend.label_pad_px",
         ),
+        (
+            "arabic_lift_px = 6.0",
+            "arabic_lift_px = -1.0",
+            "legend.arabic_lift_px",
+        ),
         ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
         ("dot_on_px = 4.5", "dot_on_px = 3.0", "lang.cycle.dot_on_px"),
         (

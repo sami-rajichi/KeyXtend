@@ -155,8 +155,8 @@ fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() 
         "the corner legend sits below the brightest end"
     );
     assert!(
-        centre < corner,
-        "a centred legend sits lower, where the top is darker"
+        centre < end,
+        "so does the main legend, even an Arabic one risen over an AltGr legend"
     );
     assert!(
         centre > luminance(v.palette.key),
