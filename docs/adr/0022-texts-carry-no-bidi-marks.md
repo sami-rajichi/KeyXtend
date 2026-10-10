@@ -30,7 +30,7 @@ Decided by the owner on 2026-10-10.
   - New with the marks gone: an EN or FR UI pinned by `[ui] language` over an Arabic layout, and a right-to-left layout without UI texts, such as Hebrew or Persian, which speaks English.
   - Already there with the marks: an Arabic UI pinned over a Latin layout.
   - The fix is a P13 note: draw the parts as separate texts in the UI's order, or in Native, add LRM or RLM. `tst_order` expects these cases to fail until then.
-- No text drawn by Qt holds a bidi control. The texts test checks every text the hub fills in, and that QML draws OS names only through the hub's cleaning.
+- No text the hub fills in, and no OS name the keyboard draws, holds a bidi control. The texts test checks every filled text, and that QML draws OS names only through the hub's cleaning.
 
 ## Alternatives
 
