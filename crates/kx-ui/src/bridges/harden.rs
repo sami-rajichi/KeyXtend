@@ -1,6 +1,6 @@
-//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter and the drawing
-//! variables the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders give
-//! plugins and QML modules.
+//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter and the
+//! drawing variables the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders
+//! give plugins and QML modules.
 
 use crate::harden::{DRAW_VARS, qt_names};
 use cxx_qt_lib::{QQmlApplicationEngine, QString, QStringList};
@@ -47,7 +47,8 @@ mod ffi {
         #[namespace = "kxui"]
         fn qt_reads(name: &str) -> bool;
 
-        /// The value Qt's byte read gives variable `name`, from the narrow copy Qt Quick reads; empty when it is not set.
+        /// The value Qt's byte read gives variable `name`, from the narrow copy Qt Quick reads; empty when it is not
+        /// set.
         #[namespace = "kxui"]
         fn qt_value(name: &str) -> String;
 

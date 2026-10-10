@@ -2,9 +2,10 @@
 //! its shadow and the language list a Loader makes later all draw on the shared device, on the GUI thread, made on
 //! Qt's default adapter when the pinned one is gone; a lost device, or a window that cannot draw, brings the windows
 //! back over the same hub, as the user left them, with Qt's loop running between tries, and such a window ends the app
-//! once the tries are spent; Qt's font list takes only the theme's bundled fonts; without a shared device, each window
-//! draws on its own. Qt wants its app object on the main thread, so this binary runs without the test harness. It reads probes
-//! and marks devices lost, which only debug builds have, so a release build of it checks nothing.
+//! once the tries are spent; after a frame off the GUI thread, no rebuild shares a device; Qt's font list takes only
+//! the theme's bundled fonts; without a shared device, each window draws on its own. Qt wants its app object on the
+//! main thread, so this binary runs without the test harness. It reads probes and marks devices lost, which only debug
+//! builds have, so a release build of it checks nothing.
 
 #![allow(
     clippy::expect_used,

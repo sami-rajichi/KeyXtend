@@ -44,7 +44,7 @@ const RETRY_MS: u64 = 200;
 static NEXT: AtomicU32 = AtomicU32::new(FIRST);
 
 /// The test's adapter pick, which always finds one.
-const PICK: Pick = || Some(NEXT.swap(FIRST, Ordering::SeqCst));
+pub(crate) const PICK: Pick = || Some(NEXT.swap(FIRST, Ordering::SeqCst));
 
 /// Has the next pick give `adapter`.
 pub(crate) fn pick_next(adapter: u32) {
@@ -161,7 +161,7 @@ pub(crate) fn wait(
 }
 
 /// Starts Qt as the app does, then checks the shared device, the losses, a window that cannot draw, the fonts, losses
-/// past the most, the fallback and the End.
+/// past the most, sharing turned off, the fallback and the End.
 pub(crate) fn run() -> Outcome {
     let lines = Lines::install().ok_or("a log capture was set already")?;
     if !kx_ui::pin_drawing() || !kx_ui::pin_adapter(GONE) {
@@ -187,6 +187,7 @@ pub(crate) fn run() -> Outcome {
     rebuild::past_most(&mut app, &mut shell, &mut rig, kept)?;
     rebuild::spent(&mut app, &mut shell, &rig)?;
     drop(shell);
+    rebuild::unshared(&mut app, &mut rig)?;
     let shell = Shell::open_with(None, PICK, None).ok_or("the root QML did not load again")?;
     checks::own(&mut app, &shell, &rig)?;
     checks::ends(&mut app, &rig)?;

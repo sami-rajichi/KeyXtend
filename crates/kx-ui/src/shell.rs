@@ -44,6 +44,8 @@ pub struct Shell {
     rebuilds: Rebuilds,
     /// Why the windows wait for the next try at a device, while they do.
     waiting: Option<Cause>,
+    /// False once sharing is off for the run: Qt may draw off the GUI thread, or a frame did.
+    shares: bool,
 }
 
 impl Shell {
@@ -70,6 +72,7 @@ impl Shell {
             pick,
             rebuilds: Rebuilds::default(),
             waiting: None,
+            shares: drawing_pinned(),
         };
         shell.load().then_some(shell)
     }
@@ -120,6 +123,15 @@ impl Shell {
         self.watch.fail();
     }
 
+    /// Has the next frame on the shared device count as drawn off the GUI thread, which ends sharing; debug builds
+    /// only, for tests.
+    #[cfg(debug_assertions)]
+    pub fn stray(&mut self) {
+        if let Some(device) = self.device.as_mut() {
+            device.stray();
+        }
+    }
+
     /// Why the windows must be made again, if they must: the shared device was lost, or a window could not draw.
     fn cause(&mut self) -> Option<Cause> {
         let failed = self.watch.take_failed();
@@ -131,10 +143,14 @@ impl Shell {
     }
 
     /// One try at a new device for `cause`, then the windows on it or on their own; a failed try asks Qt's loop for
-    /// the next one, or makes it at once when nothing can time it.
+    /// the next one, or makes it at once when nothing can time it. A frame off the GUI thread ends sharing for the run.
     fn attempt(&mut self, hub: &Hub, cause: Cause) -> After {
         let s = hub.settings();
-        let mut again = Again { pick: self.pick };
+        self.shares &= cause != Cause::OFF_THREAD;
+        let mut again = Again {
+            pick: self.pick,
+            shares: self.shares,
+        };
         loop {
             match self.rebuilds.next(s.device_rebuilds, cause, &mut again) {
                 Next::Shared(device) => return self.reload(Some(device)),
@@ -196,9 +212,10 @@ impl Drop for Shell {
     }
 }
 
-/// Makes a lost device again through Qt, on the adapter `pick` finds.
+/// Makes a lost device again through Qt, on the adapter `pick` finds, and makes none while sharing is off.
 struct Again {
     pick: Pick,
+    shares: bool,
 }
 
 impl Remake for Again {
@@ -224,7 +241,7 @@ impl Remake for Again {
     }
 
     fn make(&mut self) -> Option<Device> {
-        Device::pinned()
+        self.shares.then(Device::pinned).flatten()
     }
 }
 

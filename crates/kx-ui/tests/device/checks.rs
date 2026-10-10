@@ -1,5 +1,6 @@
 //! The device test's steps without a loss, each over the running app's windows.
 
+use crate::rebuild::watched;
 use crate::rig::{FIRST, GUARDED, Outcome, Rig, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
@@ -16,7 +17,8 @@ const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
 
 /// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
-/// shared device, and every frame ends on the GUI thread; no device is made off that thread, and the pin stays.
+/// shared device, and every frame ends on the GUI thread; each has its scene graph errors heard, and no device is
+/// made off that thread, where the pin stays.
 pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let device = shell.device().ok_or("no shared device was made")?;
     wait(app, "the keyboard's first frame", || {
@@ -34,6 +36,7 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
             device.windows()
         ));
     }
+    watched()?;
     elsewhere(rig)
 }
 

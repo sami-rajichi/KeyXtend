@@ -4,6 +4,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QEvent>
 #include <QtCore/QList>
+#include <QtCore/QMetaMethod>
 #include <QtCore/QMetaObject>
 #include <QtCore/QObject>
 #include <QtCore/QSet>
@@ -60,6 +61,19 @@ public:
     void lose()
     {
         forced.store(true);
+        redraw();
+    }
+
+    // Has the next frame count as drawn off the GUI thread, as Qt's threaded loop would draw; debug builds only.
+    void stray()
+    {
+        offThread.store(true);
+        redraw();
+    }
+
+    // Asks each Qt Quick window for a frame.
+    static void redraw()
+    {
         for (QWindow *window : QGuiApplication::allWindows()) {
             if (auto *quick = qobject_cast<QQuickWindow *>(window))
                 quick->update();
@@ -157,6 +171,26 @@ inline std::size_t drawing_devices()
     for (QQuickWindow *window : drawn())
         devices.insert(window->rhi());
     return std::size_t(devices.size());
+}
+
+// Reads QObject's protected isSignalConnected through a member pointer, which a derived class may form.
+struct Peek : QObject
+{
+    static bool heard(const QObject *object, const QMetaMethod &signal)
+    {
+        const auto connected = &Peek::isSignalConnected;
+        return (object->*connected)(signal);
+    }
+};
+
+// How many drawn Qt Quick windows have sceneGraphError connected, as Qt checks before it ends the app over one.
+inline std::size_t wired_windows()
+{
+    const QMetaMethod error = QMetaMethod::fromSignal(&QQuickWindow::sceneGraphError);
+    std::size_t count = 0;
+    for (QQuickWindow *window : drawn())
+        count += Peek::heard(window, error) ? 1 : 0;
+    return count;
 }
 #endif
 

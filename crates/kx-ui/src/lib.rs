@@ -28,7 +28,10 @@ pub use bridges::harden::{
 #[cfg(feature = "qt")]
 pub use bridges::install;
 #[cfg(all(feature = "qt", debug_assertions))]
-pub use bridges::{device::drawing, fonts::font_families};
+pub use bridges::{
+    device::{drawing, wired},
+    fonts::font_families,
+};
 pub use geom::Area;
 pub use hub::{
     FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker,

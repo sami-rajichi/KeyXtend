@@ -37,6 +37,10 @@ mod ffi {
         #[cfg(debug_assertions)]
         fn lose(self: Pin<&mut Device>);
 
+        /// Has the next frame count as drawn off the GUI thread, and asks each window for one.
+        #[cfg(debug_assertions)]
+        fn stray(self: Pin<&mut Device>);
+
         /// How many Qt Quick windows draw, on any device.
         #[cfg(debug_assertions)]
         #[namespace = "kxui"]
@@ -46,6 +50,11 @@ mod ffi {
         #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn drawing_devices() -> usize;
+
+        /// How many of those windows have `sceneGraphError` connected.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn wired_windows() -> usize;
 
         /// Deletes the objects that wait for a later delete, so no window outlives its device.
         #[namespace = "kxui"]
@@ -160,6 +169,14 @@ impl Device {
             device.lose();
         }
     }
+
+    /// Has the next frame count as drawn off the GUI thread, which ends sharing; debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    pub fn stray(&mut self) {
+        if let Some(device) = self.0.as_mut() {
+            device.stray();
+        }
+    }
 }
 
 /// How many Qt Quick windows draw, and on how many devices; debug builds only, for tests.
@@ -167,6 +184,14 @@ impl Device {
 #[must_use]
 pub fn drawing() -> (usize, usize) {
     (ffi::drawing_windows(), ffi::drawing_devices())
+}
+
+/// How many drawing Qt Quick windows have `sceneGraphError` connected, so Qt cannot end the app over it; debug builds
+/// only, for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn wired() -> usize {
+    ffi::wired_windows()
 }
 
 /// Deletes the objects that wait for a later delete, as windows a dropped engine left.

@@ -144,6 +144,10 @@ fn a_device_not_made_yet_is_tried_again_later_and_nothing_waits_here() {
     );
     assert_eq!(fake.steps, TRY, "one try, then back to the caller");
     assert_eq!(warned.len(), 1, "{warned:?}");
+    assert!(
+        warned[0].contains("made yet"),
+        "it names no loss: {warned:?}"
+    );
     assert_eq!(rebuilds.next(most(), LOST, &mut fake), Next::Shared(DEVICE));
     assert_eq!(
         fake.steps,
@@ -165,7 +169,7 @@ fn the_tries_count_against_the_setting_then_each_window_takes_its_own() {
     assert!(got[..later].iter().all(|n| *n == Next::Later), "{got:?}");
     assert_eq!(got[later], Next::Own);
     assert!(
-        warned.last().unwrap().contains("no new graphics device"),
+        warned.last().unwrap().contains("each window makes its own"),
         "{warned:?}"
     );
     fake.steps.clear();

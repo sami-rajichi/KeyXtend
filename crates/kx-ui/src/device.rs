@@ -41,6 +41,11 @@ pub enum Cause {
     Failed,
 }
 
+impl Cause {
+    /// A loss found by a frame drawn off the GUI thread, which ends sharing for the run.
+    pub const OFF_THREAD: Self = Self::Lost { gui_only: false };
+}
+
 /// What the windows of a lost device do next.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Next<T> {
@@ -62,7 +67,7 @@ impl Rebuilds {
     /// One try at a new shared device for `cause`: it pins the adapter anew, never drops the pin, and counts against
     /// `most`. A frame off the GUI thread gives each window its own device at once.
     pub fn next<R: Remake>(&mut self, most: u32, cause: Cause, how: &mut R) -> Next<R::Device> {
-        if cause == (Cause::Lost { gui_only: false }) {
+        if cause == Cause::OFF_THREAD {
             tracing::warn!("a frame ended off the GUI thread, so each window makes its own device");
             return Next::Own;
         }
@@ -78,10 +83,7 @@ impl Rebuilds {
             );
             return Next::Shared(device);
         }
-        tracing::warn!(
-            rebuild = self.0,
-            "no graphics device could be made after the loss"
-        );
+        tracing::warn!(rebuild = self.0, "no new graphics device could be made yet");
         if self.0 < most {
             Next::Later
         } else {

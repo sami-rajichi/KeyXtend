@@ -1,4 +1,5 @@
-// What makes the windows again besides a lost device (ADR-0021); src/bridges/device.rs calls these on the Qt GUI thread.
+// What makes the windows again besides a lost device (ADR-0021); src/bridges/device.rs calls these on the Qt GUI
+// thread.
 #pragma once
 
 #include <QtCore/QCoreApplication>

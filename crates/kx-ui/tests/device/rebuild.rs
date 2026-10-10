@@ -3,22 +3,26 @@
 //! a device on the adapter picked anew, one try per turn of the loop, until `[ui] device_rebuilds` runs out.
 
 use crate::face::HOME;
-use crate::rig::{GONE, GUARDED, Outcome, Rig, TICKS, pick_next, ticker, timer, wait};
+use crate::rig::{GONE, GUARDED, Outcome, PICK, Rig, TICKS, pick_next, ticker, timer, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine};
 use kx_module_api::ports::Rect;
 use kx_module_api::{Notice, keys};
-use kx_ui::{ADAPTER_VAR, After, Device, Resize, Shell, UiSettings, drawing, qt_sees};
+use kx_ui::{ADAPTER_VAR, After, Device, Resize, Shell, UiSettings, drawing, qt_sees, wired};
 use tracing::Level;
 
 /// What the guard logs once a run guarded our windows.
 const GUARDED_LINE: &str = "windows guarded";
-/// What a loss past `[ui] device_rebuilds` warns, a try at a new device that failed, and a window failure past it.
-const SPENT: &str = "no new graphics device";
-const NOT_MADE: &str = "after the loss";
+/// What a loss past `[ui] device_rebuilds` warns, a try at a new device that failed, a new shared device, and a window
+/// failure past the tries.
+const SPENT: &str = "no new graphics device could be made, so each window makes its own";
+const NOT_MADE: &str = "could be made yet";
+const MADE: &str = "made again on a new graphics device";
 const ENDS: &str = "so the app ends";
 /// The fewest ticks Qt's loop must run while a try waits, as the wait is many ticks long.
 const WAITED: usize = 2;
+/// The tries a window failure takes once sharing is off, so at least one waits.
+const UNSHARED_TRIES: u32 = 2;
 /// The watchdog ends Qt's loop with its own code if the loss does not end it first; its time in ms, and its URL.
 const WATCHDOG_MS: u32 = 5_000;
 const WATCHDOG_CODE: i32 = 3;
@@ -87,6 +91,19 @@ fn alone(
     }
 }
 
+/// Runs Qt's loop, then `rebuilt`, while the windows wait for the next try; what came after, and how many waits.
+fn settle(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> (After, usize) {
+    let mut waits = 0;
+    for _ in 0..TICKS {
+        app.as_mut().map(|a| a.exec());
+        match shell.rebuilt() {
+            After::Wait => waits += 1,
+            after => return (after, waits),
+        }
+    }
+    (After::Wait, waits)
+}
+
 /// The first try fails and hands back at once with no device; Qt's loop then runs tick by tick through `[ui]
 /// device_retry_ms`, so nothing sleeps on the GUI thread, and the next try makes the windows again.
 fn retried(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
@@ -94,16 +111,22 @@ fn retried(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
     if first != After::Wait || shell.device().is_some() {
         return Err(format!("a failed try gave {first:?}, not a wait"));
     }
-    let mut waits = 0;
-    for _ in 0..TICKS {
-        app.as_mut().map(|a| a.exec());
-        match shell.rebuilt() {
-            After::Wait => waits += 1,
-            After::Again if waits >= WAITED => return Ok(()),
-            after => return Err(format!("{after:?} after {waits} ticks of waiting")),
-        }
+    match settle(app, shell) {
+        (After::Again, waits) if waits >= WAITED => Ok(()),
+        (after, waits) => Err(format!("{after:?} after {waits} ticks of waiting")),
     }
-    Err("the next try never came".into())
+}
+
+/// Every drawn window has `sceneGraphError` heard, so none can end the app.
+pub(crate) fn watched() -> Outcome {
+    let (windows, heard) = (drawing().0, wired());
+    if windows > 0 && heard == windows {
+        Ok(())
+    } else {
+        Err(format!(
+            "{heard} of {windows} windows have their scene graph errors heard"
+        ))
+    }
 }
 
 /// The first loss, during a resize and with no ticker: the device's own exit ends Qt's loop, the resize ends, and the
@@ -128,6 +151,7 @@ pub(crate) fn once(
     pick_next(GONE);
     retried(app, shell)?;
     back(app, rig, was)?;
+    watched()?;
     if rig.face.resizing() || !qt_sees(ADAPTER_VAR) || rig.lines.count(Level::WARN, NOT_MADE) != 1 {
         return Err(
             "the resize ran on, or the gone adapter was not tried once with the pin kept".into(),
@@ -214,4 +238,41 @@ pub(crate) fn spent(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig
         (After::Failed, 1) => Ok(()),
         (after, n) => Err(format!("{after:?} with {n} errors, not a failure")),
     }
+}
+
+/// In new windows, a frame off the GUI thread turns sharing off for the run and each window takes its own device; a
+/// window that cannot draw then gets no shared device, as its tries run out through Qt's loop and the app ends.
+pub(crate) fn unshared(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
+    rig.show(UiSettings {
+        device_rebuilds: UNSHARED_TRIES,
+        ..rig.hub.settings()
+    });
+    let was = marks(rig);
+    let mut shell = Shell::open(None, PICK).ok_or("the root QML did not load")?;
+    back(app, rig, was)?;
+    let was = marks(rig);
+    shell.stray();
+    wait(app, "a frame finding the stray frame", || {
+        shell.device().is_some_and(Device::lost)
+    })?;
+    rebuilt(&mut shell)?;
+    back(app, rig, was)?;
+    watched()?;
+    let (made, ends) = (
+        rig.lines.count(Level::WARN, MADE),
+        rig.lines.count(Level::ERROR, ENDS),
+    );
+    shell.fail_window();
+    let (after, waits) = settle(app, &mut shell);
+    let shared = shell.device().is_some() || rig.lines.count(Level::WARN, MADE) != made;
+    if after != After::Failed
+        || waits == 0
+        || shared
+        || rig.lines.count(Level::ERROR, ENDS) != ends + 1
+    {
+        return Err(format!(
+            "{after:?} after {waits} waits, a shared device made: {shared}"
+        ));
+    }
+    Ok(())
 }
