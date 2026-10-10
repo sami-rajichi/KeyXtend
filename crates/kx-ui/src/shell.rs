@@ -25,12 +25,13 @@ impl Shell {
     /// Qt's app object exists.
     #[must_use]
     pub fn open(pinned: Option<&Path>) -> Option<Self> {
-        let device = if drawing_pinned() {
-            Device::make()
-        } else {
-            tracing::warn!("Qt may draw off the GUI thread, so each window makes its own device");
-            None
-        };
+        Self::open_with(pinned, shared())
+    }
+
+    /// Loads the root QML over `device`, or with `None` over a device each window makes, as Qt does alone; `pinned` as
+    /// in `open`. Call it on the GUI thread once Qt's app object exists.
+    #[must_use]
+    pub fn open_with(pinned: Option<&Path>, device: Option<Device>) -> Option<Self> {
         let mut shell = Self {
             engine: UniquePtr::null(),
             device,
@@ -73,6 +74,16 @@ impl Drop for Shell {
     fn drop(&mut self) {
         self.close();
     }
+}
+
+/// The device every window shares, when every window draws on the GUI thread; else, or when none can be made, `None`
+/// and each window makes its own.
+fn shared() -> Option<Device> {
+    if drawing_pinned() {
+        return Device::make();
+    }
+    tracing::warn!("Qt may draw off the GUI thread, so each window makes its own device");
+    None
 }
 
 /// Loads the root QML into `engine`; true when Qt made its objects.

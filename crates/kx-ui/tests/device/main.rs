@@ -1,7 +1,7 @@
 //! One graphics device for every window (ADR-0021): the app's QML over a hub with a fake face, where the keyboard,
 //! its shadow and the language list a Loader makes later all draw on the shared device, on the GUI thread, made on
-//! Qt's default adapter when the pinned one is gone. Qt wants its app object on the main thread, so this binary runs
-//! without the test harness.
+//! Qt's default adapter when the pinned one is gone; without a shared device, each window draws on its own. Qt wants
+//! its app object on the main thread, so this binary runs without the test harness.
 
 #![allow(
     clippy::expect_used,
@@ -121,7 +121,23 @@ fn run() -> Outcome {
     }
     shared(&mut app, &shell, &rig)?;
     drop(shell);
+    let shell = Shell::open_with(None, None).ok_or("the root QML did not load again")?;
+    own(&mut app, &shell, &rig)?;
+    drop(shell);
     drop(app);
+    Ok(())
+}
+
+/// Without a shared device the app still starts: each window draws on its own device, as Qt makes them alone.
+fn own(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
+    let placed = rig.face.placed().len();
+    wait(app, "the keyboard's first frame on its own device", || {
+        rig.face.placed().len() > placed && drawing().0 >= GUARDED
+    })?;
+    let (windows, devices) = drawing();
+    if shell.device().is_some() || devices != windows {
+        return Err(format!("{windows} windows draw on {devices} devices"));
+    }
     Ok(())
 }
 

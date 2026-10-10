@@ -51,3 +51,23 @@ fn a_gone_pinned_adapter_is_dropped_and_the_device_made_on_the_default_with_one_
     assert_eq!(warned.len(), 1, "{warned:?}");
     assert!(warned[0].contains("default"), "{warned:?}");
 }
+
+#[test]
+fn no_device_on_the_pin_or_the_default_leaves_each_window_its_own_with_one_warning() {
+    let tries = Cell::new(0);
+    let mut made = None;
+    let warned = warnings_of(|| made = share(maker(u32::MAX, &tries), || true));
+    assert_eq!(made, None);
+    assert_eq!(tries.get(), 2, "one try on the pin, one on the default");
+    assert_eq!(warned.len(), 1, "{warned:?}");
+    assert!(warned[0].contains("its own"), "{warned:?}");
+}
+
+#[test]
+fn no_device_without_a_pin_is_tried_once_with_one_warning() {
+    let tries = Cell::new(0);
+    let mut made = None;
+    let warned = warnings_of(|| made = share(maker(u32::MAX, &tries), || false));
+    assert_eq!((made, tries.get()), (None, 1));
+    assert_eq!(warned.len(), 1, "{warned:?}");
+}
