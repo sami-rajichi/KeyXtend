@@ -1,5 +1,6 @@
 //! Any run of clicks on French AZERTY with its dead keys (`^` and `AltGr` `~`): the dead-key wait starts on a dead
-//! key, ends on a key that types, is kept only by a key that types nothing, and a latch or Caps Lock leaves it.
+//! key, ends on a key that types, is kept only by a key that types nothing, and an empty key, a latch or Caps Lock
+//! leaves it.
 //! Every Unicode send is the key's legend without its dotted circle, so a key types what it shows.
 
 use crate::typing::Rig;
@@ -67,16 +68,12 @@ fn rule(r: &Rig, kind: Kind, mods: LegendMods) -> Rule {
         Kind::Char(code) => r.table.keys.get(&Scan::new(code)),
     };
     match key {
-        Some(k) if !shortcut => {
-            let s = slot(k, mods);
-            if k.is_dead(s) {
-                Rule::Start
-            } else if k.get(s).is_empty() {
-                Rule::Ask
-            } else {
-                Rule::End
-            }
-        }
+        Some(k) if !shortcut => match slot(k, mods) {
+            None => Rule::Keep,
+            Some(s) if k.is_dead(s) => Rule::Start,
+            Some(s) if k.get(s).is_empty() => Rule::Ask,
+            Some(_) => Rule::End,
+        },
         _ => Rule::Ask,
     }
 }

@@ -1,10 +1,12 @@
 //! Any run of clicks on the board, in both latch modes: "release" lets every latch go after the next key,
-//! "stay" keeps each until it is clicked again, and no key ever holds a modifier that was not latched.
+//! "stay" keeps each until it is clicked again, an empty key keeps them, and no key ever holds a modifier that was
+//! not latched.
 
 use crate::typing::Rig;
+use kx_mod_keyboard::legend::slot;
 use kx_mod_keyboard::spec::char_id;
-use kx_mod_keyboard::{Latch, Modifiers};
-use kx_module_api::ports::Scan;
+use kx_mod_keyboard::{Latch, LegendMods, Modifiers};
+use kx_module_api::ports::{LayoutSource, Scan};
 use kx_platform_fake::Stroke;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
@@ -24,6 +26,8 @@ enum Kind {
     Latch(Latch, u16),
     /// Sends one stroke, which uses the latches.
     Key,
+    /// A character key with this scan code: one stroke, or nothing while it is empty.
+    Char(u16),
     /// Taps Caps Lock, which keeps the latches.
     Caps,
     /// Sends nothing.
@@ -33,7 +37,7 @@ enum Kind {
 /// The keys a run clicks, with what each does.
 fn keys() -> Vec<(String, Kind)> {
     let latch = |id: &str, l, code| (id.to_owned(), Kind::Latch(l, code));
-    let chars = [0x10, 0x11, 0x1E, 0x2E, 0x02].map(|c| (char_id(Scan::new(c)), Kind::Key));
+    let chars = [0x10, 0x11, 0x1E, 0x2E, 0x02].map(|c| (char_id(Scan::new(c)), Kind::Char(c)));
     let named = ["esc", "space", "left", "bksp", "enter"].map(|id| (id.to_owned(), Kind::Key));
     let mut all = vec![
         latch("shift", Latch::Shift, 0x2A),
@@ -60,6 +64,17 @@ fn held(strokes: &[Stroke]) -> Vec<Scan> {
     chords.flatten().collect()
 }
 
+/// True when character key `code` is empty now: Shift or `AltGr` latched where it types nothing, and no shortcut.
+fn empty(r: &Rig, code: u16) -> bool {
+    let latches = r.typing.latches();
+    let mods = LegendMods::of(latches, r.source.caps_on(), &r.table.keys);
+    let on = |l| latches.is_on(l);
+    let right_alt = on(Latch::AltGr) && !mods.altgr;
+    let shortcut = on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt;
+    let key = r.table.keys.get(&Scan::new(code));
+    !shortcut && key.is_some_and(|k| slot(k, mods).is_none())
+}
+
 /// Clicks `picks` of `keys()` on `layout` in `mode`, checking each click against a model of the latches.
 fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseError> {
     let keys = keys();
@@ -67,18 +82,23 @@ fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseErr
     let mut model: BTreeMap<Latch, Scan> = BTreeMap::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
+        let kind = match *kind {
+            Kind::Char(code) if empty(&r, code) => Kind::Quiet,
+            Kind::Char(_) => Kind::Key,
+            other => other,
+        };
         r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
         let sent = r.sent();
         let latched: Vec<Scan> = model.values().copied().collect();
         prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
-        match *kind {
+        match kind {
             Kind::Latch(l, code) => {
                 prop_assert!(sent.is_empty());
                 if model.remove(&l).is_none() {
                     model.insert(l, Scan::new(code));
                 }
             }
-            Kind::Key => {
+            Kind::Key | Kind::Char(_) => {
                 prop_assert_eq!(sent.len(), 1);
                 if mode == Modifiers::Release {
                     model.clear();

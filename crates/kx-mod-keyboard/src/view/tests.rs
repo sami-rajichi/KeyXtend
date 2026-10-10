@@ -186,6 +186,17 @@ fn altgr_counts_when_the_layout_has_altgr_characters() {
 }
 
 #[test]
+fn a_key_that_types_nothing_with_altgr_shows_nothing_and_is_named_empty() {
+    let s = state(&latched(Latch::AltGr, 0xE038), false, None);
+    let x = &s.keys["c-0x0010"];
+    assert_eq!((x.legend.main.as_str(), x.name.as_str()), ("", ""));
+    assert_eq!(x.blank, Some(EMPTY_NAME));
+    assert_eq!(s.keys["c-0x0012"].blank, None, "it types €");
+    let plain = state(&none(), false, None);
+    assert!(plain.keys.values().all(|k| k.blank.is_none()));
+}
+
+#[test]
 fn dimmed_keys_paint_dim_and_named_keys_have_no_legend() {
     let s = state(&none(), false, None);
     assert_eq!(s.keys["mic"].paint, DIM);

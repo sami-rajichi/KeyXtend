@@ -46,7 +46,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | A character key with Ctrl, Alt or Win latched, or `AltGr` on a layout without `AltGr` characters (Right Alt) | Chord: every latch held around its scan code | Used | Kept only if the key typed nothing |
 | A character key whose character is a dead key | Tap, or a chord of the latches its legend counts | Used | Starts |
 | The character key after a dead key | Tap, or a chord of the latches its legend counts, so the app adds the accent | Used | Ends |
-| A character key that types nothing in the layout shown | Its scan code, as above | Used | Kept only if the key typed nothing |
+| A character key that types nothing in the layout shown, with neither Shift nor `AltGr` latched | Its scan code, as above | Used | Kept only if the key typed nothing |
+| An empty key: a character key that types nothing with the latched Shift or `AltGr` | Nothing; `Tapped::Empty`, as Windows' own keyboard does | Kept | Kept |
 | A character key missing from the table shown | Tap, or a chord with every latch held around its scan code | Used | Kept only if the key typed nothing |
 | Any character key sent as a scan code while the app in front has another installed layout | Nothing is sent; `Tapped::Stale`, so the face refreshes the layouts and redraws, and the user clicks again | Kept | Kept |
 | Any other character key | Its text as Unicode, or as key presses in the app's layout (`TextRoute::Keys`) when the app is in `key_apps`; Shift, Caps Lock and `AltGr` are already in the text | Used, none held | None |
@@ -56,7 +57,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | The language key, a `later` key | Nothing; `Tapped::Lang` or `Tapped::Later` for the face | Kept | Kept |
 | An id not on the board | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
 
-"Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows.
+"Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows. Caps Lock that types nothing falls back to the same state without it; Shift or `AltGr` never fall back, so such a key shows no legend but its `AltGr` corner and types nothing (`slot` gives `None`). A layout cell holds only visible text: the adapter reads a control or U+0000 as empty.
 
 ## The face
 
@@ -71,7 +72,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 `state_json()` changes as keys are used:
 
-- `keys` by id: `main second third main_ar second_ar third_ar main_mark second_mark third_mark name marks on paint tip`. Marks with no letter before them sit on a dotted circle (◌) in every legend and in `name`; `*_mark` flags such a legend, which the UI draws in the theme's mark font. `marks` names the harakat a key types by translation key (`mark.fatha`), for readers; `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key). `tip` is a translation key the key says after its name: `tip.one-lang` on the language key while one layout, or none, is installed.
+- `keys` by id: `main second third main_ar second_ar third_ar main_mark second_mark third_mark name marks blank on paint tip`. Marks with no letter before them sit on a dotted circle (◌) in every legend and in `name`; `*_mark` flags such a legend, which the UI draws in the theme's mark font. `marks` names the harakat a key types by translation key (`mark.fatha`), for readers, and `blank` is `key.empty` while an empty key shows nothing; `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` for a later key). `tip` is a translation key the key says after its name: `tip.one-lang` on the language key while one layout, or none, is installed.
 - `lang`: `prev`, `cur` and `next` as `{short rtl arabic}` (null when the neighbour is the current layout), `at` and `count` for the Cycle's dots, the space bar's `space` parts, and `turn` (-1, 0 or 1) for the Carousel's slide.
 - `list`: null, or `{rows, hi, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page_back` and `page_on` name the board keys with the moves `PAGE_BACK` and `PAGE_ON` (null when the board has none), which the list's page buttons send as `panel_key`; the UI dims a button on the first or last page.
 - `at`: null, or where the window goes in physical pixels.
@@ -97,7 +98,7 @@ The language key has three designs, by `lang_key`:
 
 With one layout installed, a click asks no step and opens no list in any design, but still closes a list left open, and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
-The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with `AltGr` latched and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the `kx-ui` QML test fixtures are made from them.
+The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift or `AltGr` latched, and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the `kx-ui` QML test fixtures are made from them.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -120,7 +121,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 
 - `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
-- `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `DPAD_NAME`, `CYCLE_ICON`, `LIST_ICON`.
+- `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
 - `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Role`, `KeySpec` (with `nav`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.

@@ -182,7 +182,7 @@ fn a_dead_key_is_known_in_the_state_it_is_read_in() {
         dead: vec![Slot::Base, Slot::Shift],
         ..plain("^", "¨", "")
     };
-    let dead = |k: &KeyChars, m| k.is_dead(slot(k, m));
+    let dead = |k: &KeyChars, m| slot(k, m).is_some_and(|s| k.is_dead(s));
     assert!(dead(&hat, LegendMods::default()));
     assert!(dead(&hat, mods(true, false, false)));
     assert!(!dead(&keys("a", "A", ""), LegendMods::default()));
@@ -205,22 +205,65 @@ fn altgr_shows_in_the_corner_and_takes_over_when_latched() {
     assert_eq!((l.main.as_str(), l.third.as_str()), ("€", ""));
     let a = keys("a", "A", "");
     assert_eq!(
-        legend(&a, mods(false, false, true), false, false).main,
-        "a",
-        "no AltGr character"
+        legend(&a, mods(false, false, true), false, false),
+        Legend::default(),
+        "no AltGr character: an empty key"
     );
 }
 
 #[test]
-fn altgr_without_a_character_keeps_shift_and_caps() {
+fn altgr_without_a_character_leaves_the_key_empty_whatever_shift_and_caps_say() {
     let a = letter("a", "A");
+    for (shift, caps) in [(false, false), (true, false), (false, true), (true, true)] {
+        assert_eq!(slot(&a, mods(shift, caps, true)), None, "{shift} {caps}");
+    }
+    assert_eq!(typed(&a, mods(true, false, true)), "");
+}
+
+/// Arabic (102) AZERTY's س: nothing with Shift, the riyal sign on `AltGr`.
+fn seen() -> KeyChars {
+    KeyChars {
+        caps: "س".into(),
+        ..keys("س", "", "\u{20C1}")
+    }
+}
+
+#[test]
+fn shift_on_a_key_that_types_nothing_shifted_leaves_it_empty_but_its_altgr_corner() {
+    for caps in [false, true] {
+        assert_eq!(slot(&seen(), mods(true, caps, false)), None, "{caps}");
+    }
+    let l = legend(&seen(), mods(true, false, false), true, true);
+    let parts = (l.main.as_str(), l.second.as_str(), l.third.as_str());
     assert_eq!(
-        typed(&a, mods(true, false, true)),
-        "A",
-        "Shift still counts"
+        parts,
+        ("", "", "\u{20C1}"),
+        "no letter, as Windows shows it"
     );
-    assert_eq!(typed(&a, mods(false, true, true)), "A", "Caps still counts");
-    assert_eq!(slot(&a, mods(true, true, true)), Slot::CapsShift);
+    assert!(!l.main_ar && !l.main_mark);
+}
+
+#[test]
+fn caps_lock_falls_back_to_the_same_state_without_it() {
+    let b = KeyChars {
+        caps: String::new(),
+        caps_shift: String::new(),
+        ..keys("b", "B", "")
+    };
+    assert_eq!(
+        slot(&b, mods(false, true, false)),
+        Some(Slot::Base),
+        "alone"
+    );
+    assert_eq!(typed(&b, mods(true, true, false)), "B", "with Shift");
+    assert_eq!(slot(&seen(), mods(false, true, false)), Some(Slot::Caps));
+}
+
+#[test]
+fn a_key_with_nothing_latched_is_read_in_its_base_even_when_it_types_nothing() {
+    let none = KeyChars::default();
+    assert_eq!(slot(&none, LegendMods::default()), Some(Slot::Base));
+    assert_eq!(slot(&none, mods(false, true, false)), Some(Slot::Base));
 }
 
 /// A two-key layout: q, and e with `euro` on `AltGr`.

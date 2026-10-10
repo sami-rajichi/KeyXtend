@@ -28,6 +28,16 @@ fn a_key_from_a_later_version_does_nothing() {
 }
 
 #[test]
+fn an_empty_key_does_nothing_and_keeps_its_latch_lit() {
+    let r = Rig::new(&["ar-tn"], None);
+    r.tap("shift").unwrap();
+    assert_eq!(r.state()["keys"]["c-0x001F"]["blank"], "key.empty", "س");
+    assert_eq!(r.tap("c-0x001F"), Ok(FaceReply::default()));
+    assert!(r.fakes.injector.strokes().is_empty());
+    assert_eq!(r.state()["keys"]["shift"]["on"], true);
+}
+
+#[test]
 fn a_key_that_is_not_on_the_board_is_refused() {
     let r = Rig::new(&GOLDEN, None);
     assert_eq!(r.tap("nope"), Err(FaceError::UnknownKey));

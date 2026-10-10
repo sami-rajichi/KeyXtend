@@ -166,6 +166,29 @@ fn arabic_types_lam_alef_and_harakat_whole_and_in_order() {
 }
 
 #[test]
+fn an_empty_key_sends_nothing_and_keeps_the_latches_and_the_wait() {
+    let mut r = Rig::new("ar-tn", |_| ());
+    r.tap("shift").unwrap();
+    assert_eq!(
+        r.char(0x1F),
+        Ok(Tapped::Empty),
+        "س types nothing with Shift"
+    );
+    assert!(r.typing.latches().is_on(Latch::Shift));
+    r.tap("shift").unwrap();
+    r.tap("altgr").unwrap();
+    assert_eq!(r.char(0x14), Ok(Tapped::Empty), "ف has no AltGr character");
+    assert!(r.typing.latches().is_on(Latch::AltGr));
+    assert!(r.sent().is_empty());
+    let mut r = Rig::new("fr-fr", |_| ());
+    r.char(0x1A).unwrap();
+    r.tap("altgr").unwrap();
+    assert_eq!(r.char(0x10), Ok(Tapped::Empty), "a has no AltGr character");
+    assert!(r.typing.waiting(), "the ^ still waits");
+    assert_eq!(r.sent(), [tap(0x1A)]);
+}
+
+#[test]
 fn a_key_app_gets_text_as_key_presses_matched_without_case() {
     let apps = |s: &mut KeyboardSettings| {
         s.key_apps = vec!["notepad.exe".into(), "ApplicationFrameHost.exe".into()];

@@ -85,7 +85,7 @@ impl Face {
         };
         match tapped {
             Ok(Tapped::Done) => Ok(STATE),
-            Ok(Tapped::Later) => Ok(FaceReply::default()),
+            Ok(Tapped::Later | Tapped::Empty) => Ok(FaceReply::default()),
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),
             Ok(Tapped::Stale) => Ok(FaceReply {
                 state: true,

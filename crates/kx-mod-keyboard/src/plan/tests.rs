@@ -1,5 +1,5 @@
 use super::*;
-use crate::legend::testkeys::{dead, letter};
+use crate::legend::testkeys::{dead, letter, plain};
 use crate::settings::Modifiers;
 use std::cell::Cell;
 
@@ -7,6 +7,7 @@ const ESC: Scan = Scan::new(0x01);
 const Q: Scan = Scan::new(0x10);
 const HAT: Scan = Scan::new(0x11);
 const E: Scan = Scan::new(0x12);
+const TILDE: Scan = Scan::new(0x03);
 const NONE_HERE: Scan = Scan::new(0x2C);
 const SHIFT: Scan = Scan::new(0x2A);
 const RSHIFT: Scan = Scan::new(0x36);
@@ -151,23 +152,37 @@ fn a_latch_clicked_between_a_dead_key_and_its_letter_is_held_for_the_letter() {
 }
 
 #[test]
-fn a_shift_the_dead_key_ignores_is_not_held() {
-    let g = Given::new(false).latch(Latch::Shift, SHIFT);
-    assert_eq!(g.char(HAT), send(Route::Tap(HAT), Wait::Start));
+fn shift_is_not_held_around_a_key_read_in_its_altgr_state() {
+    // French AZERTY: AltGr é is a dead ~.
+    let mut g = Given::new(true).latch(Latch::AltGr, ALTGR);
+    let tilde = KeyChars {
+        dead: vec![Slot::AltGr],
+        ..plain("é", "2", "~")
+    };
+    g.keys.insert(TILDE, tilde);
+    let g = g.latch(Latch::Shift, SHIFT);
+    let altgr = send(Route::Chord(vec![ALTGR], TILDE), Wait::Start);
+    assert_eq!(g.char(TILDE), altgr);
 }
 
 #[test]
-fn a_latch_the_legend_ignores_is_not_held_around_a_dead_key_or_its_letter() {
-    let g = Given::new(true).latch(Latch::AltGr, ALTGR);
-    assert_eq!(
-        g.char(HAT),
-        send(Route::Tap(HAT), Wait::Start),
-        "^ has no AltGr character"
-    );
-    let mut g = g.latch(Latch::Shift, SHIFT);
+fn a_key_that_types_nothing_with_shift_or_altgr_sends_nothing() {
+    let mut g = Given::new(true).latch(Latch::Shift, SHIFT);
+    assert_eq!(g.char(HAT), Plan::Empty, "^ has no Shift character");
     g.dead = true;
-    let q = send(Route::Chord(vec![SHIFT], Q), Wait::End);
-    assert_eq!(g.char(Q), q, "Shift is kept for Q, AltGr is not");
+    assert_eq!(g.char(HAT), Plan::Empty, "the wait stays too");
+    let g = Given::new(true).latch(Latch::AltGr, ALTGR);
+    assert_eq!(g.char(Q), Plan::Empty, "q has no AltGr character");
+    assert_eq!(g.char(E), unicode("€"));
+    assert_eq!(format!("{:?}", Plan::Empty), "Empty");
+}
+
+#[test]
+fn an_empty_key_still_sends_its_shortcut() {
+    let g = Given::new(true).latch(Latch::AltGr, ALTGR);
+    let g = g.latch(Latch::Ctrl, CTRL);
+    let held = send(Route::Chord(vec![CTRL, ALTGR], Q), Wait::End);
+    assert_eq!(g.char(Q), held, "Ctrl, AltGr and q");
 }
 
 #[test]
@@ -189,7 +204,8 @@ fn a_key_sent_while_a_dead_key_waits_asks_the_layout_whether_it_typed() {
 
 #[test]
 fn a_key_that_types_nothing_in_the_layout_goes_as_its_scan_code() {
-    let mut g = Given::new(false).latch(Latch::Shift, SHIFT);
+    let mut g = Given::new(false);
+    g.caps = true;
     g.keys.insert(NONE_HERE, KeyChars::default());
     let plan = g.char(NONE_HERE);
     assert_eq!(

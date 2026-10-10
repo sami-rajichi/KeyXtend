@@ -61,6 +61,7 @@ var texts = {
   "key.del": "Supprimer",
   "key.down": "Flèche bas",
   "key.dpad": "Pavé de défilement",
+  "key.empty": "Touche vide",
   "key.enter": "Entrée",
   "key.esc": "Échap",
   "key.fill": "Remplissage rapide",

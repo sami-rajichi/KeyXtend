@@ -9,6 +9,7 @@
 use crate::host::GOLDEN;
 use crate::rig::Rig;
 use kx_mod_keyboard::legend::is_mark;
+use kx_mod_keyboard::view::EMPTY_NAME;
 use kx_module_api::ports::{BASE_DPI, FaceAction, Rect, Screen};
 use kx_test_support::golden::assert_golden;
 use serde_json::{Value, json};
@@ -92,10 +93,30 @@ fn the_arabic_state_matches_its_golden_file() {
 fn the_arabic_altgr_state_matches_its_golden_file() {
     let r = showing("ar-tn", None);
     r.tap("altgr").unwrap();
-    let dad = &r.state()["keys"]["c-0x0010"];
+    let state = r.state();
+    let dad = &state["keys"]["c-0x0010"];
     assert_eq!(dad["main"], "\u{25CC}\u{651}\u{64E}", "shadda and fatha");
     assert_eq!(dad["marks"], json!(["mark.shadda", "mark.fatha"]));
+    let feh = &state["keys"]["c-0x0014"];
+    assert_eq!(
+        (&feh["main"], &feh["blank"]),
+        (&json!(""), &json!(EMPTY_NAME)),
+        "ف types nothing"
+    );
     assert_golden(golden("state-ar-altgr.json"), &pretty(&r.face.state_json()));
+}
+
+/// Arabic (102) AZERTY types nothing on س with Shift, so that key shows empty, as Windows' keyboard does.
+#[test]
+fn the_arabic_shift_state_matches_its_golden_file() {
+    let r = showing("ar-tn", None);
+    r.tap("shift").unwrap();
+    let seen = &r.state()["keys"]["c-0x001F"];
+    assert_eq!(
+        (&seen["main"], &seen["blank"]),
+        (&json!(""), &json!(EMPTY_NAME))
+    );
+    assert_golden(golden("state-ar-shift.json"), &pretty(&r.face.state_json()));
 }
 
 /// The latches that change what Arabic keys show: none, Shift, `AltGr`, and both.

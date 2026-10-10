@@ -8,7 +8,7 @@ pub use paint::{DIM, Paint, paint};
 use crate::geom::{Area, KeyBox, board};
 use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
-use crate::legend::{Legend, LegendMods, legend, mark_names, shown, typed};
+use crate::legend::{Legend, LegendMods, legend, mark_names, shown, slot, typed};
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, KeyboardSettings, LangKey};
 use crate::sizer::Limits;
@@ -30,6 +30,8 @@ pub const LATER_TIP: &str = "tip.later";
 pub const LONE_TIP: &str = "tip.one-lang";
 /// The D-pad's name.
 pub const DPAD_NAME: &str = "key.dpad";
+/// The name of a character key that types nothing with the latched Shift or `AltGr`: "Empty key".
+pub const EMPTY_NAME: &str = "key.empty";
 /// The Cycle design's globe, by its `icons.toml` key.
 pub const CYCLE_ICON: &str = "lang.cycle";
 /// The List design's chevron, by its `icons.toml` key.
@@ -112,6 +114,8 @@ pub struct KeyState {
     pub name: String,
     /// The names of the marks it types, by translation key, which readers hear instead of `name`; often none.
     pub marks: Vec<String>,
+    /// `EMPTY_NAME` while a character key types nothing, so it shows no main legend; readers hear it instead of `name`.
+    pub blank: Option<&'static str>,
     /// Latched, or Caps Lock while it is on.
     pub on: bool,
     /// Its colours now, by palette token.
@@ -270,6 +274,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             legend: legend(c, mods, k.row == 0, rtl),
             name: shown(text),
             marks: mark_names(text),
+            blank: slot(c, mods).is_none().then_some(EMPTY_NAME),
             on: false,
             paint: paint(k.kind, false),
             tip: None,

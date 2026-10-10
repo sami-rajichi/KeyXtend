@@ -93,6 +93,18 @@ fn arabic_names_latin_printed_keys_by_that_word_and_the_others_by_microsoft_term
 }
 
 #[test]
+fn a_key_that_types_nothing_is_named_empty_in_each_language() {
+    let empty = |tag: &str| lang(tag).text("key.empty");
+    assert_eq!(empty("en"), "Empty key");
+    assert_eq!(empty("fr"), "Touche vide");
+    assert_eq!(
+        empty("ar"),
+        "مفتاح فارغ",
+        "a key, then empty, both masculine"
+    );
+}
+
+#[test]
 fn french_spaces_high_punctuation_and_guillemets_with_no_break_spaces() {
     let fr = find("fr").expect("French");
     for line in text_lines(fr.ftl) {

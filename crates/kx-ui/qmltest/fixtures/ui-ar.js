@@ -61,6 +61,7 @@ var texts = {
   "key.del": "حذف",
   "key.down": "سهم لأسفل",
   "key.dpad": "لوحة التمرير",
+  "key.empty": "مفتاح فارغ",
   "key.enter": "إدخال",
   "key.esc": "مفتاح Esc",
   "key.fill": "تعبئة سريعة",

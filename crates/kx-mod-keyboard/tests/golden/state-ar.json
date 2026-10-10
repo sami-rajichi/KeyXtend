@@ -2,6 +2,7 @@
   "at": null,
   "keys": {
     "alt": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -22,6 +23,7 @@
       "tip": null
     },
     "altgr": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -42,6 +44,7 @@
       "tip": null
     },
     "bksp": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -62,6 +65,7 @@
       "tip": null
     },
     "c-0x0002": {
+      "blank": null,
       "main": "&",
       "main_ar": false,
       "main_mark": false,
@@ -82,6 +86,7 @@
       "tip": null
     },
     "c-0x0003": {
+      "blank": null,
       "main": "é",
       "main_ar": false,
       "main_mark": false,
@@ -102,6 +107,7 @@
       "tip": null
     },
     "c-0x0004": {
+      "blank": null,
       "main": "\"",
       "main_ar": false,
       "main_mark": false,
@@ -122,6 +128,7 @@
       "tip": null
     },
     "c-0x0005": {
+      "blank": null,
       "main": "'",
       "main_ar": false,
       "main_mark": false,
@@ -142,6 +149,7 @@
       "tip": null
     },
     "c-0x0006": {
+      "blank": null,
       "main": "(",
       "main_ar": false,
       "main_mark": false,
@@ -162,6 +170,7 @@
       "tip": null
     },
     "c-0x0007": {
+      "blank": null,
       "main": "-",
       "main_ar": false,
       "main_mark": false,
@@ -182,6 +191,7 @@
       "tip": null
     },
     "c-0x0008": {
+      "blank": null,
       "main": "è",
       "main_ar": false,
       "main_mark": false,
@@ -202,6 +212,7 @@
       "tip": null
     },
     "c-0x0009": {
+      "blank": null,
       "main": "_",
       "main_ar": false,
       "main_mark": false,
@@ -222,6 +233,7 @@
       "tip": null
     },
     "c-0x000A": {
+      "blank": null,
       "main": "ç",
       "main_ar": false,
       "main_mark": false,
@@ -242,6 +254,7 @@
       "tip": null
     },
     "c-0x000B": {
+      "blank": null,
       "main": "à",
       "main_ar": false,
       "main_mark": false,
@@ -262,6 +275,7 @@
       "tip": null
     },
     "c-0x000C": {
+      "blank": null,
       "main": ")",
       "main_ar": false,
       "main_mark": false,
@@ -282,6 +296,7 @@
       "tip": null
     },
     "c-0x000D": {
+      "blank": null,
       "main": "=",
       "main_ar": false,
       "main_mark": false,
@@ -302,6 +317,7 @@
       "tip": null
     },
     "c-0x0010": {
+      "blank": null,
       "main": "ض",
       "main_ar": true,
       "main_mark": false,
@@ -322,6 +338,7 @@
       "tip": null
     },
     "c-0x0011": {
+      "blank": null,
       "main": "ص",
       "main_ar": true,
       "main_mark": false,
@@ -342,6 +359,7 @@
       "tip": null
     },
     "c-0x0012": {
+      "blank": null,
       "main": "ث",
       "main_ar": true,
       "main_mark": false,
@@ -362,6 +380,7 @@
       "tip": null
     },
     "c-0x0013": {
+      "blank": null,
       "main": "ق",
       "main_ar": true,
       "main_mark": false,
@@ -382,6 +401,7 @@
       "tip": null
     },
     "c-0x0014": {
+      "blank": null,
       "main": "ف",
       "main_ar": true,
       "main_mark": false,
@@ -402,6 +422,7 @@
       "tip": null
     },
     "c-0x0015": {
+      "blank": null,
       "main": "غ",
       "main_ar": true,
       "main_mark": false,
@@ -422,6 +443,7 @@
       "tip": null
     },
     "c-0x0016": {
+      "blank": null,
       "main": "ع",
       "main_ar": true,
       "main_mark": false,
@@ -442,6 +464,7 @@
       "tip": null
     },
     "c-0x0017": {
+      "blank": null,
       "main": "ه",
       "main_ar": true,
       "main_mark": false,
@@ -462,6 +485,7 @@
       "tip": null
     },
     "c-0x0018": {
+      "blank": null,
       "main": "خ",
       "main_ar": true,
       "main_mark": false,
@@ -482,6 +506,7 @@
       "tip": null
     },
     "c-0x0019": {
+      "blank": null,
       "main": "ح",
       "main_ar": true,
       "main_mark": false,
@@ -502,6 +527,7 @@
       "tip": null
     },
     "c-0x001A": {
+      "blank": null,
       "main": "ج",
       "main_ar": true,
       "main_mark": false,
@@ -522,6 +548,7 @@
       "tip": null
     },
     "c-0x001B": {
+      "blank": null,
       "main": "د",
       "main_ar": true,
       "main_mark": false,
@@ -542,6 +569,7 @@
       "tip": null
     },
     "c-0x001E": {
+      "blank": null,
       "main": "ش",
       "main_ar": true,
       "main_mark": false,
@@ -562,6 +590,7 @@
       "tip": null
     },
     "c-0x001F": {
+      "blank": null,
       "main": "س",
       "main_ar": true,
       "main_mark": false,
@@ -582,6 +611,7 @@
       "tip": null
     },
     "c-0x0020": {
+      "blank": null,
       "main": "ي",
       "main_ar": true,
       "main_mark": false,
@@ -602,6 +632,7 @@
       "tip": null
     },
     "c-0x0021": {
+      "blank": null,
       "main": "ب",
       "main_ar": true,
       "main_mark": false,
@@ -622,6 +653,7 @@
       "tip": null
     },
     "c-0x0022": {
+      "blank": null,
       "main": "ل",
       "main_ar": true,
       "main_mark": false,
@@ -642,6 +674,7 @@
       "tip": null
     },
     "c-0x0023": {
+      "blank": null,
       "main": "ا",
       "main_ar": true,
       "main_mark": false,
@@ -662,6 +695,7 @@
       "tip": null
     },
     "c-0x0024": {
+      "blank": null,
       "main": "ت",
       "main_ar": true,
       "main_mark": false,
@@ -682,6 +716,7 @@
       "tip": null
     },
     "c-0x0025": {
+      "blank": null,
       "main": "ن",
       "main_ar": true,
       "main_mark": false,
@@ -702,6 +737,7 @@
       "tip": null
     },
     "c-0x0026": {
+      "blank": null,
       "main": "م",
       "main_ar": true,
       "main_mark": false,
@@ -722,6 +758,7 @@
       "tip": null
     },
     "c-0x0027": {
+      "blank": null,
       "main": "ك",
       "main_ar": true,
       "main_mark": false,
@@ -742,6 +779,7 @@
       "tip": null
     },
     "c-0x0028": {
+      "blank": null,
       "main": "ط",
       "main_ar": true,
       "main_mark": false,
@@ -762,6 +800,7 @@
       "tip": null
     },
     "c-0x0029": {
+      "blank": null,
       "main": ">",
       "main_ar": false,
       "main_mark": false,
@@ -782,6 +821,7 @@
       "tip": null
     },
     "c-0x002B": {
+      "blank": null,
       "main": "ذ",
       "main_ar": true,
       "main_mark": false,
@@ -802,6 +842,7 @@
       "tip": null
     },
     "c-0x002C": {
+      "blank": null,
       "main": "ئ",
       "main_ar": true,
       "main_mark": false,
@@ -822,6 +863,7 @@
       "tip": null
     },
     "c-0x002D": {
+      "blank": null,
       "main": "ء",
       "main_ar": true,
       "main_mark": false,
@@ -842,6 +884,7 @@
       "tip": null
     },
     "c-0x002E": {
+      "blank": null,
       "main": "ؤ",
       "main_ar": true,
       "main_mark": false,
@@ -862,6 +905,7 @@
       "tip": null
     },
     "c-0x002F": {
+      "blank": null,
       "main": "ر",
       "main_ar": true,
       "main_mark": false,
@@ -882,6 +926,7 @@
       "tip": null
     },
     "c-0x0030": {
+      "blank": null,
       "main": "لا",
       "main_ar": true,
       "main_mark": false,
@@ -902,6 +947,7 @@
       "tip": null
     },
     "c-0x0031": {
+      "blank": null,
       "main": "ى",
       "main_ar": true,
       "main_mark": false,
@@ -922,6 +968,7 @@
       "tip": null
     },
     "c-0x0032": {
+      "blank": null,
       "main": "ة",
       "main_ar": true,
       "main_mark": false,
@@ -942,6 +989,7 @@
       "tip": null
     },
     "c-0x0033": {
+      "blank": null,
       "main": "و",
       "main_ar": true,
       "main_mark": false,
@@ -962,6 +1010,7 @@
       "tip": null
     },
     "c-0x0034": {
+      "blank": null,
       "main": "ز",
       "main_ar": true,
       "main_mark": false,
@@ -982,6 +1031,7 @@
       "tip": null
     },
     "c-0x0035": {
+      "blank": null,
       "main": "ظ",
       "main_ar": true,
       "main_mark": false,
@@ -1002,6 +1052,7 @@
       "tip": null
     },
     "c-0x0056": {
+      "blank": null,
       "main": "\\",
       "main_ar": false,
       "main_mark": false,
@@ -1022,6 +1073,7 @@
       "tip": null
     },
     "caps": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1042,6 +1094,7 @@
       "tip": null
     },
     "clip": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1062,6 +1115,7 @@
       "tip": null
     },
     "ctrl": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1082,6 +1136,7 @@
       "tip": null
     },
     "del": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1102,6 +1157,7 @@
       "tip": null
     },
     "down": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1122,6 +1178,7 @@
       "tip": null
     },
     "enter": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1142,6 +1199,7 @@
       "tip": null
     },
     "esc": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1162,6 +1220,7 @@
       "tip": null
     },
     "fill": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1182,6 +1241,7 @@
       "tip": null
     },
     "grab": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1202,6 +1262,7 @@
       "tip": null
     },
     "lang": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1222,6 +1283,7 @@
       "tip": null
     },
     "left": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1242,6 +1304,7 @@
       "tip": null
     },
     "menu": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1262,6 +1325,7 @@
       "tip": null
     },
     "mic": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1282,6 +1346,7 @@
       "tip": null
     },
     "power": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1302,6 +1367,7 @@
       "tip": null
     },
     "rclick": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1322,6 +1388,7 @@
       "tip": null
     },
     "right": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1342,6 +1409,7 @@
       "tip": null
     },
     "rshift": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1362,6 +1430,7 @@
       "tip": null
     },
     "settings": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1382,6 +1451,7 @@
       "tip": null
     },
     "shift": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1402,6 +1472,7 @@
       "tip": null
     },
     "shortcuts": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1422,6 +1493,7 @@
       "tip": null
     },
     "snip": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1442,6 +1514,7 @@
       "tip": null
     },
     "space": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1462,6 +1535,7 @@
       "tip": null
     },
     "tab": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1482,6 +1556,7 @@
       "tip": null
     },
     "up": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1502,6 +1577,7 @@
       "tip": null
     },
     "win": {
+      "blank": null,
       "main": "",
       "main_ar": false,
       "main_mark": false,

@@ -4,7 +4,7 @@
 ## Le nom du produit, écrit une fois et repris par les textes ci-dessous.
 -app = KeyXtend
 
-## Touches nommées, par identifiant de board.toml : le nom des info-bulles et des lecteurs d’écran.
+## Touches nommées, par identifiant de board.toml, puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
 key =
     .esc = Échap
     .bksp = Retour arrière
@@ -35,6 +35,7 @@ key =
     .settings = Paramètres
     .power = Marche/Arrêt
     .dpad = Pavé de défilement
+    .empty = Touche vide
 
 ## Le mot court sur la touche, ou sous son icône en grande taille, comme sur les claviers français.
 label =

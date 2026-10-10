@@ -20,7 +20,7 @@ const MODULES: [&str; 4] = ["kernel", "keyboard", "layouts", "ui"];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
 /// Keys the keyboard view names beside its board ids.
-const VIEW_KEYS: [&str; 2] = ["key.dpad", "tip.later"];
+const VIEW_KEYS: [&str; 3] = ["key.dpad", "key.empty", "tip.later"];
 /// What starts a Fluent term, a text the files share but code never names.
 const TERM: char = '-';
 

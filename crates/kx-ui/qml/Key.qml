@@ -76,9 +76,11 @@ Item {
     // UI Automation's Toggle on a latch key asks Qt for this action, not the press.
     Accessible.onToggleAction: if (!key.dim) key.hit(false)
 
-    // What readers hear for a character key in state `st`: the names of the marks it types, which they cannot say bare,
-    // or else what it types.
+    // What readers hear for a character key in state `st`: its empty name while it types nothing, the names of the marks
+    // it types, which they cannot say bare, or else what it types.
     function said(st) {
+        if (st.blank)
+            return res.tr(st.blank);
         return st.marks.length > 0 ? st.marks.map(m => res.tr(m)).join(res.tr("mark.join")) : st.name;
     }
     // The file name `icons.toml` gives for `path`, such as `keys.bksp`, or empty.

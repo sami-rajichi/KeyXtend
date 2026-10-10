@@ -60,6 +60,8 @@ pub enum Plan {
     Lang,
     /// A key from a later version, or one without the code its role needs: nothing.
     Later,
+    /// A character key that types nothing with the latched Shift or `AltGr`: nothing, and the latches and wait stay.
+    Empty,
 }
 
 /// Shows no scan code, not even of Caps Lock or a modifier, as the rule for logs asks.
@@ -75,6 +77,7 @@ impl fmt::Debug for Plan {
             Self::Latch(l, _) => write!(f, "Latch({l:?})"),
             Self::Lang => f.write_str("Lang"),
             Self::Later => f.write_str("Later"),
+            Self::Empty => f.write_str("Empty"),
         }
     }
 }
@@ -125,8 +128,8 @@ pub fn text_route(apps: &[String], app: impl FnOnce() -> Option<String>) -> Text
     }
 }
 
-/// A character key: a shortcut with Ctrl, Alt or Win or for a key missing from the table, a key press for
-/// a dead key, for the key after one and for a slot that types nothing, else its text.
+/// A character key: a shortcut with Ctrl, Alt or Win or for a key missing from the table, nothing for an empty
+/// key, a key press for a dead key, for the key after one and for a base that types nothing, else its text.
 fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     let m = LegendMods::of(now.latches, now.caps, now.keys);
     let on = |l| now.latches.is_on(l);
@@ -137,7 +140,9 @@ fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     let Some(k) = now.keys.get(&sc) else {
         return shortcut(sc, now);
     };
-    let s = slot(k, m);
+    let Some(s) = slot(k, m) else {
+        return Plan::Empty;
+    };
     let press = |wait| Plan::Send {
         route: keys(now.latches.held(&unheld(s, m)), sc),
         wait,
@@ -181,16 +186,14 @@ fn keys(held: Vec<Scan>, key: Scan) -> Route {
     }
 }
 
-/// The latches slot `s` ignores, so a key press types what its legend shows.
+/// The latches slot `s` ignores, so a key press types what its legend shows: Shift, under `AltGr`.
 fn unheld(s: Slot, m: LegendMods) -> Vec<Latch> {
     let shifted = matches!(s, Slot::Shift | Slot::CapsShift);
-    let drop = [
-        (Latch::AltGr, m.altgr && s != Slot::AltGr),
-        (Latch::Shift, m.shift && !shifted),
-    ];
-    drop.into_iter()
-        .filter_map(|(l, d)| d.then_some(l))
-        .collect()
+    if m.shift && !shifted {
+        vec![Latch::Shift]
+    } else {
+        Vec::new()
+    }
 }
 
 #[cfg(test)]

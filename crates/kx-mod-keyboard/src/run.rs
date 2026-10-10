@@ -38,6 +38,8 @@ pub enum Tapped {
     },
     /// A key from a later version: nothing happened.
     Later,
+    /// A character key that types nothing with the latched Shift or `AltGr`: nothing happened.
+    Empty,
     /// The app in front has another layout than the one shown, and this key's result depends on it: nothing
     /// was sent. The face refreshes the layouts, which read the same layout source, and redraws.
     Stale,
@@ -161,6 +163,7 @@ impl Typing {
             Plan::Latch(l, key) => self.latches.toggle(l, key),
             Plan::Lang => return Ok(Tapped::Lang { back }),
             Plan::Later => return Ok(Tapped::Later),
+            Plan::Empty => return Ok(Tapped::Empty),
         }
         Ok(Tapped::Done)
     }

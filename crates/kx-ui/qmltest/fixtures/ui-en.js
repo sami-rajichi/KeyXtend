@@ -61,6 +61,7 @@ var texts = {
   "key.del": "Delete",
   "key.down": "Down arrow",
   "key.dpad": "Scroll pad",
+  "key.empty": "Empty key",
   "key.enter": "Enter",
   "key.esc": "Escape",
   "key.fill": "Quick fill",

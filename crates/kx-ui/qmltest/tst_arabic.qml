@@ -1,5 +1,6 @@
 // The owner's Arabic (102) AZERTY keys over the face's golden states: every legend the face flags as marks sits on a
-// dotted circle in the theme's mark font, in each corner and with AltGr latched, and readers hear a mark key's marks.
+// dotted circle in the theme's mark font, in each corner and with AltGr latched; readers hear a mark key's marks; letters
+// stay centred; and a key that types nothing shows no letter.
 import QtQuick
 import QtTest
 import "../qml"
@@ -97,6 +98,23 @@ Item {
             const [over, alone] = [pick(k => k.third !== ""), pick(k => k.third === "")];
             verify(over && alone, "the case this test is for");
             compare(offset(over), offset(alone));
+        }
+
+        // A key that types nothing with Shift (س) or AltGr (ف) shows no letter, as Windows' keyboard does, and readers hear
+        // its empty name; only an AltGr corner may stay.
+        function test_an_empty_key_shows_no_letter_and_readers_hear_it_is_empty() {
+            for (const name of ["ar-shift", "ar-altgr"]) {
+                const state = Face.states[name];
+                const ids = Object.keys(state.keys).filter(id => state.keys[id].blank);
+                verify(ids.length > 0, name + ": the case this test is for");
+                for (const id of ids) {
+                    const ks = state.keys[id];
+                    const key = makeKey(state, id);
+                    const shown = all(key, o => o.font !== undefined && o.visible && o.text !== "").map(o => o.text);
+                    compare(shown, ks.third ? [ks.third] : [], name + " " + id);
+                    compare(key.Accessible.name, Ar.texts[ks.blank], name + " " + id);
+                }
+            }
         }
 
         function test_readers_hear_a_mark_key_by_its_marks_names() {

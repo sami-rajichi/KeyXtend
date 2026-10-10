@@ -4,7 +4,7 @@
 ## The product's name, written once and shared by the texts below.
 -app = KeyXtend
 
-## Named keys by board.toml id: the name that tips and screen readers use.
+## Named keys by board.toml id, then .empty for a character key that types nothing now: the name that tips and screen readers use.
 key =
     .esc = Escape
     .bksp = Backspace
@@ -35,6 +35,7 @@ key =
     .settings = Settings
     .power = Power
     .dpad = Scroll pad
+    .empty = Empty key
 
 ## The short word on a key, or under its icon at large sizes, as real keyboards print it.
 label =

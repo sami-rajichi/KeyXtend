@@ -135,21 +135,20 @@ impl fmt::Debug for Legend {
     }
 }
 
-/// The state key `k` is read in with `m`; a state that types nothing falls back to a simpler one.
+/// The state key `k` is read in with `m`; Caps Lock that types nothing falls back to the same state without it.
+/// With Shift or `AltGr` latched, a key that types nothing there is empty (`None`), as Windows' keyboard shows it.
 #[must_use]
-pub fn slot(k: &KeyChars, m: LegendMods) -> Slot {
-    let (want, simpler) = match (m.caps, m.shift) {
-        (true, true) => (Slot::CapsShift, Slot::Shift),
-        (true, false) => (Slot::Caps, Slot::Base),
-        (false, true) => (Slot::Shift, Slot::Base),
-        (false, false) => (Slot::Base, Slot::Base),
+pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
+    let (want, uncapped) = match (m.altgr, m.shift, m.caps) {
+        (true, _, _) => (Slot::AltGr, Slot::AltGr),
+        (false, true, true) => (Slot::CapsShift, Slot::Shift),
+        (false, true, false) => (Slot::Shift, Slot::Shift),
+        (false, false, true) => (Slot::Caps, Slot::Base),
+        (false, false, false) => (Slot::Base, Slot::Base),
     };
-    let altgr = m.altgr.then_some(Slot::AltGr);
-    altgr
-        .into_iter()
-        .chain([want, simpler])
-        .find(|&s| !k.get(s).is_empty())
-        .unwrap_or(Slot::Base)
+    let found = [want, uncapped].into_iter().find(|&s| !k.get(s).is_empty());
+    let latched = m.altgr || m.shift;
+    found.or((!latched).then_some(Slot::Base))
 }
 
 /// True for one character that has upper and lower case.
@@ -173,18 +172,20 @@ pub fn shown(s: &str) -> String {
     }
 }
 
-/// What the key types with `m`: the face sends this, never the drawn legend with its dotted circle.
+/// What the key types with `m`, empty for an empty key: the face sends this, never the drawn legend with its circle.
 #[must_use]
 pub fn typed(k: &KeyChars, m: LegendMods) -> &str {
-    k.get(slot(k, m))
+    slot(k, m).map_or("", |s| k.get(s))
 }
 
 /// The legends of key `k`: the top row and non-letters of left-to-right layouts also show the other case.
+/// An empty key shows neither; its `AltGr` corner stays while `AltGr` is not latched, as on every key.
 #[must_use]
 pub fn legend(k: &KeyChars, m: LegendMods, top_row: bool, rtl: bool) -> Legend {
-    let main = typed(k, m);
+    let s = slot(k, m);
+    let main = s.map_or("", |s| k.get(s));
     let other = if main == k.base { &k.shift } else { &k.base };
-    let wants = top_row || (!rtl && !is_letter(&k.base));
+    let wants = s.is_some() && (top_row || (!rtl && !is_letter(&k.base)));
     let second = if wants && !other.is_empty() && other != main {
         other.as_str()
     } else {
