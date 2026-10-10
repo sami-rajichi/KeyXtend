@@ -188,8 +188,8 @@ QtObject {
         return true;
     }
 
-    // Puts the bubble in a bottom corner of the keyboard's screen, where it always is (owner's choice); false when there
-    // is nowhere for it.
+    // Puts the bubble in a bottom corner of the keyboard's screen, where it always is (owner's choice); false when
+    // there is nowhere for it.
     function bubbleTo() {
         const at = face.bubbleSpot();
         if (!at)

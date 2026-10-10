@@ -40,14 +40,17 @@ pub fn run(pinned: Option<&Path>, adapter: Option<u32>, end: impl FnOnce()) -> E
 
 /// Has Qt draw on `adapter`, its place in DXGI's list; with none, Qt picks its own.
 fn pin(adapter: Option<u32>) {
-    match adapter {
-        Some(index) if pin_adapter(index) => {
+    let pinned = adapter.map(|index| (index, pin_adapter(index)));
+    match pinned {
+        Some((index, true)) => {
             tracing::info!(
                 adapter = index,
                 "Qt draws on the lowest-power graphics adapter"
             );
         }
-        Some(index) => tracing::warn!(adapter = index, "the graphics adapter could not be pinned"),
+        Some((index, false)) => {
+            tracing::warn!(adapter = index, "the graphics adapter could not be pinned");
+        }
         None => tracing::info!("no graphics adapter was found to pin, so Qt picks one"),
     }
 }

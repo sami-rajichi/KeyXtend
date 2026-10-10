@@ -1,6 +1,6 @@
 //! The app on Windows starts in order: pinned folders, command line, hook, one copy, hub and kernel, log, modules,
-//! kernel thread, then hardened Qt on the lowest-power graphics adapter. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the
-//! tray icon and joins the kernel's thread.
+//! kernel thread, then hardened Qt on the lowest-power graphics adapter. It stops as Quit stops the modules and ends
+//! the UI, then `drain::stop` hides the tray icon and joins the kernel's thread.
 
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};

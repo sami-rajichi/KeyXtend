@@ -141,7 +141,7 @@ Item {
             r.win.visible = false;
         }
 
-        // A keyboard the user moved keeps its place in pixels, in the new Qt units, though the keyboard answers nothing.
+        // A moved keyboard keeps its place in pixels, in the new Qt units, though the keyboard answers nothing.
         function test_on_a_new_scale_a_moved_keyboard_keeps_its_place_in_pixels() {
             const r = make({ x: 400, y: 600 });
             const sc = createTemporaryObject(screenC, root);
@@ -153,7 +153,7 @@ Item {
             r.win.visible = false;
         }
 
-        // A new scale after a move starts from where the user left it, though the keyboard answered that nothing changed.
+        // A new scale after a move starts from where the user left it, though the keyboard answered no change.
         function test_on_a_new_scale_a_keyboard_just_moved_is_placed_again_from_where_it_was_left() {
             const r = make({ x: 100, y: 200 });
             r.kb.keeps = true;
