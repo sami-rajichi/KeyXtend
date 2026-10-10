@@ -9,8 +9,9 @@ QtObject {
     property var reply: ({ board: false, state: false })
     // Every call so far, as `name` or `name args`.
     property var calls: []
-    // Where `bubbleAt` puts the bubble, in physical pixels, or null for nowhere.
+    // Where `bubbleAt` puts the bubble, in physical pixels, or null for nowhere, and the point it was last asked from.
     property var bubble: null
+    property var bubbleFrom: null
     // How many more guard tries answer "try again", as when a window has not shown yet.
     property int again: 0
     // Where the pointer is, in physical pixels, or null when Windows cannot say.
@@ -76,6 +77,7 @@ QtObject {
         return JSON.stringify(pointer);
     }
     function bubbleAt(x, y, corner) {
+        bubbleFrom = { x: x, y: y };
         note("bubbleAt " + corner);
         return JSON.stringify(bubble);
     }

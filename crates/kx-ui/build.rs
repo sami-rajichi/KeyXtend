@@ -23,6 +23,7 @@ mod qt {
         "qml/KbWindow.qml",
         "qml/Spots.qml",
         "qml/Rescale.qml",
+        "qml/Placing.qml",
         "qml/Guard.qml",
         "qml/Plate.qml",
         "qml/TopBar.qml",

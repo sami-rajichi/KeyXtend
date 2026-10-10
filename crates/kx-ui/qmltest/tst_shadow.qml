@@ -81,6 +81,26 @@ Item {
             a.face.finish();
         }
 
+        // Whatever ends a resize, the shadow draws again: a hide, a minimise or the keyboard module stopping.
+        function test_the_shadow_draws_again_whatever_ends_a_resize() {
+            const ends = {
+                hide: a => a.hide(),
+                minimise: a => verify(a.minimise(), "minimised"),
+                stop: a => {
+                    a.keyboard.board = null;
+                    a.ui.settings = Object.assign({}, a.ui.settings);
+                }
+            };
+            for (const how in ends) {
+                const a = make().app;
+                a.keyboard.bubble = { x: 40, y: 50 };
+                mouseClick(control(a, "bar.corner"));
+                verify(!a.kbGlow.shade.visible, how + ": nothing while it resizes");
+                ends[how](a);
+                verify(a.kbGlow.shade.visible, how + ": drawn again");
+            }
+        }
+
         function test_the_shadow_meets_the_keyboard_in_whole_units_and_after_a_new_scale() {
             const a = make().app;
             a.face.at = Qt.point(100.6, 200.4);

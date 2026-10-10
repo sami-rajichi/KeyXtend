@@ -64,6 +64,8 @@ QtObject {
             onPutAway: app.hide()
             onRunningChanged: app.follow()
             onTouched: trayMenu.shut()
+            // A minimised keyboard placed again, as on a new scale, puts its bubble back from its new place.
+            onAtChanged: if (bubble.visible) Qt.callLater(app.rebubble)
         }
     }
     // Not owned by the keyboard's shadow, so it can show while the keyboard is hidden.

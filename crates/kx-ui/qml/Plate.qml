@@ -109,10 +109,6 @@ Item {
         res: body.res
         onMoved: to => body.win.at = to
         onRedraw: json => body.win.redraw(json)
-        onEnded: wasMove => {
-            if (wasMove)
-                body.win.place();
-        }
         onBusyChanged: body.win.hint("", null)
     }
 }

@@ -31,10 +31,13 @@ Window {
     property int fontsIn: 0
     // A system backdrop is behind the plate, so the plate lets some of it through.
     property bool frosted: false
-    // The keyboard has placed the window; a restarted keyboard places it again.
-    property bool placed: false
-    // A live resize runs, while its shadow draws nothing (Glow).
+    // The keyboard has placed the window (Placing).
+    property alias placed: placing.placed
+    // The plate's mover while the plate is drawn, and whether a live resize runs: its shadow then draws nothing.
+    readonly property var mover: body.item ? body.item.mover : null
     readonly property bool resizing: !!body.item && body.item.resizing
+    // The window's display scale, as its heal keeps it (Rescale).
+    readonly property real ratio: rescale.ratio
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -76,9 +79,6 @@ Window {
     onBoxesChanged: reshape()
     onBoardChanged: Qt.callLater(() => drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0))
     onVisibleChanged: if (visible) Qt.callLater(shown)
-    onRunningChanged: if (!running) placed = false
-    onScreenChanged: Qt.callLater(rescreen)
-    onUnitOverhangChanged: if (placed) Qt.callLater(rescreen)
     Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
 
     Connections {
@@ -96,14 +96,11 @@ Window {
     // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
     Rescale {
         id: rescale
-        onRatioChanged: Qt.callLater(win.rescreen)
+        onRatioChanged: Qt.callLater(placing.rescreen)
     }
-    // A screen came or went: the keyboard is placed again on the screens left.
-    Connections {
-        target: win.spots
-        function onScreensChanged() {
-            Qt.callLater(win.rescreen);
-        }
+    Placing {
+        id: placing
+        win: win
     }
     // Owned by the keyboard, so it stays above it when the guard lifts it; the bubble owns its own.
     Loader {
@@ -151,7 +148,8 @@ Window {
             noteTip: (name, note) => name + "\n" + note
         };
     }
-    // The Latin, Arabic and mark families (each list's first that Qt has, else its last), and the keyboard's and tray's.
+    // The Latin, Arabic and mark families (each list's first that Qt has, else its last), and the keyboard's and
+    // tray's.
     function families(f) {
         const all = Qt.fontFamilies();
         const pick = list => list.find(n => all.indexOf(n) >= 0) || list[list.length - 1];
@@ -186,7 +184,7 @@ Window {
     // Reads the legends, lights and place again; the window goes where the keyboard says, unless it is moving.
     function restate() {
         st = JSON.parse(keyboard.stateJson());
-        if (st && st.at && !(body.item && body.item.mover.busy))
+        if (st && st.at && !(mover && mover.busy))
             moveTo(st.at);
     }
     // Rereads what an action's `json` answer asks for, and the state and place too when `always`.
@@ -201,22 +199,9 @@ Window {
         const l = spots.logical(p.x, p.y);
         at = Qt.point(l.x, l.y);
     }
-    // Tells the keyboard where the window is, its corner and all; the first time, it answers with the saved or home
-    // place. The state is read again, so `st.at` holds the place the keyboard keeps even when it answers no change.
+    // Tells the keyboard where the window is (Placing).
     function place() {
-        if (!running)
-            return;
-        const p = spots.physical(at.x, at.y);
-        placed = true;
-        redraw(keyboard.placed(p.x, p.y, width * p.dpr, height * p.dpr, unitOverhang), true);
-    }
-
-    // On a new display scale, screen or corner: the cut again and, unless it is moving, a new placement where it is in
-    // pixels, for its size in the new ones; the window then goes where the keyboard puts it, in the new Qt units.
-    function rescreen() {
-        reshape();
-        if (placed && st && st.at && !(body.item && body.item.mover.busy))
-            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, unitOverhang), true);
+        placing.place();
     }
     // Once shown: the cut, then the guard, which also puts the backdrop on.
     function shown() {
@@ -228,8 +213,8 @@ Window {
         if (visible && ready)
             keyboard.shape(title, JSON.stringify(boxes), rescale.ratio);
     }
-    // Guards our shown windows (Guard); our window `top`, if given, lands in front until the run ends. A shown tip hides
-    // first, as the guard would lift its window with it over a pop-up.
+    // Guards our shown windows (Guard); our window `top`, if given, lands in front until the run ends. A shown tip
+    // hides first, as the guard would lift its window with it over a pop-up.
     function guardRun(top) {
         hint("", null);
         guard.run(top);
@@ -248,8 +233,8 @@ Window {
     }
     // Ends a move or resize where it is.
     function finish() {
-        if (body.item)
-            body.item.mover.finish();
+        if (mover)
+            mover.finish();
     }
     // A click on key `id`; while the language list is open, its keys drive the list instead.
     function tap(id, back) {

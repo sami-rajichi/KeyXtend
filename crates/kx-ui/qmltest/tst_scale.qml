@@ -74,7 +74,8 @@ Item {
         // A shown keyboard window that the keyboard put at physical `at`, its pointer there too; the real pointer
         // passes through it and the catchers.
         function make(at) {
-            const kb = createTemporaryObject(kbC, root, { pointer: at, state: Object.assign({}, Face.states.en, { at: at }) });
+            const state = Object.assign({}, Face.states.en, { at: at });
+            const kb = createTemporaryObject(kbC, root, { pointer: at, state: state });
             const win = createTemporaryObject(winC, root, { ui: createTemporaryObject(uiC, root), keyboard: kb });
             const mover = all(win.contentItem, o => o.covers !== undefined)[0];
             const covers = [];
@@ -195,6 +196,26 @@ Item {
             const want = a.face.spots.logical(60, 70);
             tryCompare(a.bubble, "x", Math.trunc(want.x), 2000, "its corner in the new Qt units");
             compare(a.bubble.y, Math.trunc(want.y));
+        }
+
+        // The bubble goes back to its corner from the keyboard's place in the new scale, whichever hears it first.
+        function test_a_new_scale_puts_the_bubble_back_from_the_keyboards_new_place() {
+            const a = app();
+            const kb = a.keyboard;
+            kb.state = Object.assign({}, kb.state, { at: { x: 300, y: 200 } });
+            a.face.restate();
+            kb.bubble = { x: 40, y: 50 };
+            verify(a.minimise(), "minimised");
+            kb.state = Object.assign({}, kb.state, { at: { x: 500, y: 400 } });
+            for (const w of [a.bubble, a.face]) {
+                const r = rescaleOf(w);
+                r.ratio = r.ratio * 2;
+            }
+            const f = a.face;
+            const to = f.spots.logical(500, 400);
+            tryVerify(() => f.at.x === to.x && f.at.y === to.y, 2000, "the keyboard placed in the new scale");
+            const c = f.spots.physical(f.at.x + f.drawn.width / 2, f.at.y + f.drawn.height / 2);
+            tryVerify(() => kb.bubbleFrom.x === c.x && kb.bubbleFrom.y === c.y, 2000, "from its new place");
         }
 
         function test_a_new_scale_puts_the_banner_back_over_the_keyboard() {
