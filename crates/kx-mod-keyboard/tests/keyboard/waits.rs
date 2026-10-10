@@ -6,7 +6,7 @@
 use crate::typing::Rig;
 use kx_mod_keyboard::legend::{legend, slot};
 use kx_mod_keyboard::spec::char_id;
-use kx_mod_keyboard::{Latch, LegendMods, Modifiers};
+use kx_mod_keyboard::{LegendMods, Modifiers};
 use kx_module_api::ports::{LayoutSource, Scan};
 use kx_platform_fake::Stroke;
 use proptest::prelude::*;
@@ -59,16 +59,13 @@ fn keys() -> Vec<(String, Kind)> {
 
 /// The rule a click of `kind` follows with the latches now and `mods`, as the plan reads the layout.
 fn rule(r: &Rig, kind: Kind, mods: LegendMods) -> Rule {
-    let on = |l| r.typing.latches().is_on(l);
-    let right_alt = on(Latch::AltGr) && !mods.altgr;
-    let shortcut = on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt;
     let key = match kind {
         Kind::Latch | Kind::Caps => return Rule::Keep,
         Kind::Named => return Rule::Ask,
         Kind::Char(code) => r.table.keys.get(&Scan::new(code)),
     };
     match key {
-        Some(k) if !shortcut => match slot(k, mods) {
+        Some(k) if !mods.shortcut => match slot(k, mods) {
             None => Rule::Keep,
             Some(s) if k.is_dead(s) => Rule::Start,
             Some(s) if k.get(s).is_empty() => Rule::Ask,

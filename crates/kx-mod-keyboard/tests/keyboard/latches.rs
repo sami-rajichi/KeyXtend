@@ -3,7 +3,7 @@
 //! not latched.
 
 use crate::typing::Rig;
-use kx_mod_keyboard::legend::slot;
+use kx_mod_keyboard::legend::is_empty;
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{Latch, LegendMods, Modifiers};
 use kx_module_api::ports::{LayoutSource, Scan};
@@ -37,7 +37,8 @@ enum Kind {
 /// The keys a run clicks, with what each does.
 fn keys() -> Vec<(String, Kind)> {
     let latch = |id: &str, l, code| (id.to_owned(), Kind::Latch(l, code));
-    let chars = [0x10, 0x11, 0x1E, 0x2E, 0x02].map(|c| (char_id(Scan::new(c)), Kind::Char(c)));
+    let chars =
+        [0x10, 0x11, 0x1E, 0x1F, 0x2E, 0x02].map(|c| (char_id(Scan::new(c)), Kind::Char(c)));
     let named = ["esc", "space", "left", "bksp", "enter"].map(|id| (id.to_owned(), Kind::Key));
     let mut all = vec![
         latch("shift", Latch::Shift, 0x2A),
@@ -64,15 +65,11 @@ fn held(strokes: &[Stroke]) -> Vec<Scan> {
     chords.flatten().collect()
 }
 
-/// True when character key `code` is empty now: Shift or `AltGr` latched where it types nothing, and no shortcut.
+/// True when character key `code` is empty now, by the core's one rule.
 fn empty(r: &Rig, code: u16) -> bool {
-    let latches = r.typing.latches();
-    let mods = LegendMods::of(latches, r.source.caps_on(), &r.table.keys);
-    let on = |l| latches.is_on(l);
-    let right_alt = on(Latch::AltGr) && !mods.altgr;
-    let shortcut = on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt;
+    let mods = LegendMods::of(r.typing.latches(), r.source.caps_on(), &r.table.keys);
     let key = r.table.keys.get(&Scan::new(code));
-    !shortcut && key.is_some_and(|k| slot(k, mods).is_none())
+    key.is_some_and(|k| is_empty(k, mods))
 }
 
 /// Clicks `picks` of `keys()` on `layout` in `mode`, checking each click against a model of the latches.
@@ -82,22 +79,19 @@ fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseErr
     let mut model: BTreeMap<Latch, Scan> = BTreeMap::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
-        let kind = match *kind {
-            Kind::Char(code) if empty(&r, code) => Kind::Quiet,
-            Kind::Char(_) => Kind::Key,
-            other => other,
-        };
+        let quiet = matches!(*kind, Kind::Char(code) if empty(&r, code));
         r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
         let sent = r.sent();
         let latched: Vec<Scan> = model.values().copied().collect();
         prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
-        match kind {
+        match *kind {
             Kind::Latch(l, code) => {
                 prop_assert!(sent.is_empty());
                 if model.remove(&l).is_none() {
                     model.insert(l, Scan::new(code));
                 }
             }
+            Kind::Char(_) if quiet => prop_assert!(sent.is_empty(), "{}: empty", id),
             Kind::Key | Kind::Char(_) => {
                 prop_assert_eq!(sent.len(), 1);
                 if mode == Modifiers::Release {
@@ -123,14 +117,17 @@ fn picks() -> impl Strategy<Value = Vec<usize>> {
     prop::collection::vec(0..keys().len(), 0..30)
 }
 
+/// The layouts a run takes: English, French with its dead keys, and Arabic, whose س types nothing with Shift.
+const LAYOUTS: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
+
 proptest! {
     #[test]
-    fn release_lets_every_latch_go_after_the_next_key(p in picks(), fr in any::<bool>()) {
-        run(if fr { "fr-fr" } else { "en-us" }, Modifiers::Release, &p)?;
+    fn release_lets_every_latch_go_after_the_next_key(p in picks(), lay in 0..LAYOUTS.len()) {
+        run(LAYOUTS[lay], Modifiers::Release, &p)?;
     }
 
     #[test]
-    fn stay_keeps_every_latch_until_it_is_clicked_again(p in picks(), fr in any::<bool>()) {
-        run(if fr { "fr-fr" } else { "en-us" }, Modifiers::Stay, &p)?;
+    fn stay_keeps_every_latch_until_it_is_clicked_again(p in picks(), lay in 0..LAYOUTS.len()) {
+        run(LAYOUTS[lay], Modifiers::Stay, &p)?;
     }
 }

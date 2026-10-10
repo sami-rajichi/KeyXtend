@@ -132,14 +132,10 @@ pub fn text_route(apps: &[String], app: impl FnOnce() -> Option<String>) -> Text
 /// key, a key press for a dead key, for the key after one and for a base that types nothing, else its text.
 fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     let m = LegendMods::of(now.latches, now.caps, now.keys);
-    let on = |l| now.latches.is_on(l);
-    let right_alt = on(Latch::AltGr) && !m.altgr;
-    if on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt {
-        return shortcut(sc, now);
-    }
-    let Some(k) = now.keys.get(&sc) else {
+    let Some(k) = now.keys.get(&sc).filter(|_| !m.shortcut) else {
         return shortcut(sc, now);
     };
+    // No slot is `is_empty`'s rule: the key shows no letter, so a click sends nothing.
     let Some(s) = slot(k, m) else {
         return Plan::Empty;
     };

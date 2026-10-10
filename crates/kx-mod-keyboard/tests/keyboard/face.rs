@@ -2,7 +2,7 @@
 
 use crate::host::{GOLDEN, id};
 use crate::rig::{Rig, STATE};
-use kx_module_api::ports::{FaceAction, FaceError, FaceReply, InjectError, TextRoute};
+use kx_module_api::ports::{FaceAction, FaceError, FaceReply, InjectError, Scan, TextRoute};
 use kx_module_api::{Redacted, keys};
 use kx_platform_fake::Stroke;
 
@@ -35,6 +35,25 @@ fn an_empty_key_does_nothing_and_keeps_its_latch_lit() {
     assert_eq!(r.tap("c-0x001F"), Ok(FaceReply::default()));
     assert!(r.fakes.injector.strokes().is_empty());
     assert_eq!(r.state()["keys"]["shift"]["on"], true);
+}
+
+#[test]
+fn with_ctrl_latched_a_key_that_types_nothing_shifted_shows_its_letter_and_sends_its_shortcut() {
+    // Ctrl, then Shift, on Arabic (102) AZERTY: a click on س sends Ctrl+Shift+S, so it never reads as empty.
+    let r = Rig::new(&["ar-tn"], None);
+    r.tap("ctrl").unwrap();
+    r.tap("shift").unwrap();
+    let state = r.state();
+    let seen = &state["keys"]["c-0x001F"];
+    assert!(seen["blank"].is_null(), "not empty: {seen}");
+    assert_eq!(
+        seen["main"], "س",
+        "its letter, as before an empty key had a name"
+    );
+    r.tap("c-0x001F").unwrap();
+    let (shift, ctrl) = (Scan::new(0x2A), Scan::new(0x1D));
+    let want = Stroke::Chord(vec![shift, ctrl], Scan::new(0x1F));
+    assert_eq!(r.fakes.injector.strokes(), [want]);
 }
 
 #[test]

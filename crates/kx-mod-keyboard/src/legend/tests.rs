@@ -9,7 +9,12 @@ fn keys(base: &str, shift: &str, altgr: &str) -> KeyChars {
 }
 
 fn mods(shift: bool, caps: bool, altgr: bool) -> LegendMods {
-    LegendMods { shift, caps, altgr }
+    LegendMods {
+        shift,
+        caps,
+        altgr,
+        shortcut: false,
+    }
 }
 
 #[test]
@@ -201,9 +206,42 @@ fn the_mods_come_from_the_latches_and_caps_lock() {
     );
     assert_eq!(
         LegendMods::of(&latches, false, &table("")),
-        mods(true, false, false),
-        "AltGr counts only on a layout with AltGr characters"
+        shortcut(mods(true, false, false)),
+        "AltGr counts only on a layout with AltGr characters; else it is Right Alt, a shortcut"
     );
+    latches.toggle(Latch::AltGr, Scan::new(0xE038));
+    for (latch, sc) in [
+        (Latch::Ctrl, 0x1D),
+        (Latch::Alt, 0x38),
+        (Latch::Win, 0xE05B),
+    ] {
+        let mut more = latches.clone();
+        more.toggle(latch, Scan::new(sc));
+        let m = LegendMods::of(&more, false, &table("€"));
+        assert_eq!(m, shortcut(mods(true, false, false)), "{latch:?}");
+    }
+}
+
+/// `m` with a shortcut latch on.
+fn shortcut(m: LegendMods) -> LegendMods {
+    LegendMods {
+        shortcut: true,
+        ..m
+    }
+}
+
+#[test]
+fn a_shortcut_latch_keeps_a_key_from_being_empty_and_shows_its_fallback() {
+    assert!(is_empty(&seen(), mods(true, false, false)), "س with Shift");
+    assert!(!is_empty(&seen(), shortcut(mods(true, false, false))));
+    assert_eq!(
+        slot(&seen(), shortcut(mods(true, true, false))),
+        Some(Slot::Base)
+    );
+    let a = letter("a", "A");
+    assert!(is_empty(&a, mods(false, false, true)), "a with AltGr");
+    assert_eq!(typed(&a, shortcut(mods(false, false, true))), "a");
+    assert!(!is_empty(&a, LegendMods::default()));
 }
 
 #[test]
@@ -212,6 +250,7 @@ fn legend_mods_hide_shift_caps_and_altgr() {
         shift: true,
         caps: true,
         altgr: true,
+        shortcut: true,
     };
     assert_eq!(format!("{all:?}"), "LegendMods { .. }");
 }

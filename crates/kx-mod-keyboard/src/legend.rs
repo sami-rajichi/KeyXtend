@@ -70,8 +70,12 @@ pub fn mark_names(s: &str) -> Vec<String> {
         .collect()
 }
 
-/// The modifiers that change legends.
+/// The modifiers that change legends, and whether a click sends a shortcut.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one latch state the legend reads; they are set together from the latches."
+)]
 pub struct LegendMods {
     /// Shift is latched.
     pub shift: bool,
@@ -79,6 +83,9 @@ pub struct LegendMods {
     pub caps: bool,
     /// `AltGr` is latched and the layout has `AltGr` characters.
     pub altgr: bool,
+    /// Ctrl, Alt or Win is latched, or `AltGr` on a layout without `AltGr` characters (Right Alt): a click sends a
+    /// shortcut, so no key is empty.
+    pub shortcut: bool,
 }
 
 /// Shows no field, so latches and Caps Lock stay out of any log, as `Latches` does.
@@ -93,10 +100,13 @@ impl LegendMods {
     #[must_use]
     pub fn of(latches: &Latches, caps: bool, keys: &BTreeMap<Scan, KeyChars>) -> Self {
         let has_altgr = keys.values().any(|k| !k.altgr.is_empty());
+        let on = |l| latches.is_on(l);
+        let right_alt = on(Latch::AltGr) && !has_altgr;
         Self {
-            shift: latches.is_on(Latch::Shift),
+            shift: on(Latch::Shift),
             caps,
-            altgr: has_altgr && latches.is_on(Latch::AltGr),
+            altgr: has_altgr && on(Latch::AltGr),
+            shortcut: on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt,
         }
     }
 }
@@ -136,7 +146,7 @@ impl fmt::Debug for Legend {
 }
 
 /// The state key `k` is read in with `m`; Caps Lock that types nothing falls back to the same state without it.
-/// With Shift or `AltGr` latched, a key that types nothing there is empty (`None`), as Windows' keyboard shows it.
+/// With Shift or `AltGr` latched and no shortcut latch, a key that types nothing there is empty (`None`).
 #[must_use]
 pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
     let (want, uncapped) = match (m.altgr, m.shift, m.caps) {
@@ -148,7 +158,14 @@ pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
     };
     let found = [want, uncapped].into_iter().find(|&s| !k.get(s).is_empty());
     let latched = m.altgr || m.shift;
-    found.or((!latched).then_some(Slot::Base))
+    found.or((!latched || m.shortcut).then_some(Slot::Base))
+}
+
+/// The one rule for an empty key: it shows no letter, readers hear its empty name, and a click sends nothing, as
+/// Windows' keyboard shows it. A shortcut latch makes no key empty, as the click sends the shortcut.
+#[must_use]
+pub fn is_empty(k: &KeyChars, m: LegendMods) -> bool {
+    slot(k, m).is_none()
 }
 
 /// True for one character that has upper and lower case.

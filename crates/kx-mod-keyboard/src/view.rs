@@ -8,7 +8,7 @@ pub use paint::{DIM, Paint, paint};
 use crate::geom::{Area, KeyBox, board};
 use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
-use crate::legend::{Legend, LegendMods, legend, mark_names, shown, slot, typed};
+use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typed};
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, KeyboardSettings, LangKey};
 use crate::sizer::Limits;
@@ -274,7 +274,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             legend: legend(c, mods, k.row == 0, rtl),
             name: shown(text),
             marks: mark_names(text),
-            blank: slot(c, mods).is_none().then_some(EMPTY_NAME),
+            blank: is_empty(c, mods).then_some(EMPTY_NAME),
             on: false,
             paint: paint(k.kind, false),
             tip: None,
