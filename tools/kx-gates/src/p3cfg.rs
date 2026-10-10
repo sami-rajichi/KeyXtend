@@ -18,7 +18,7 @@ pub struct G9 {
     pub settle_ms: u64,
 }
 
-/// G10 settings: pressing each character key the way a screen reader does.
+/// G10 settings: finding and pressing each key the way a screen reader does.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct G10 {
@@ -30,6 +30,8 @@ pub struct G10 {
     pub step_wait_ms: u64,
     /// The send key pressed after each modifier latches, so the modifier goes out with it.
     pub probe: String,
+    /// Keys that failed the check by point listed in full; all of them are counted.
+    pub failures_shown: usize,
 }
 
 /// G11 settings: the scales the owner sets, one run each.

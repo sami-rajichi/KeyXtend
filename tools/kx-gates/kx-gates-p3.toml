@@ -70,7 +70,8 @@ bring_back = "bar.bubble"
 # Wait after each step before the flags are read, in ms.
 settle_ms = 500
 
-# G10 screen readers: every key is named and can be pressed the way Narrator and NVDA press it.
+# G10 screen readers: every key is named, found at its centre by point and can be pressed the way Narrator and NVDA
+# find and press it.
 [g10]
 # Pause after each press through UI Automation, and the wait for the last character, in ms.
 press_gap_ms = 100
@@ -80,6 +81,8 @@ step_wait_ms = 300
 # The send key pressed after each modifier latches, so the modifier goes out with it; Enter changes nothing outside
 # target-window.
 probe = "enter"
+# Keys that failed the check by point listed in full in the result; all of them are counted.
+failures_shown = 5
 
 # G11 DPI: one run at each scale the owner sets in Windows; the keyboard keeps its logical size within slack_px.
 [g11]

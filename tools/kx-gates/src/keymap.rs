@@ -1,5 +1,5 @@
 //! Key boxes by UI Automation id: one read of a window's buttons, then each key's screen centre by its board id; and
-//! what a screen reader meets on each button, and a press the way it presses.
+//! what a screen reader meets on each button or at a point, and a press the way it presses.
 #![cfg(windows)]
 
 use kx_platform_windows::com::Com;
@@ -137,6 +137,13 @@ impl Reader {
         let v =
             unsafe { el.GetCurrentPropertyValue(UIA_ToggleToggleStatePropertyId) }.map_err(err)?;
         Ok(toggle_state(&v))
+    }
+
+    /// The element UI Automation finds at screen point `p`, as Narrator's mouse mode reads what is under the pointer.
+    #[allow(unsafe_code, reason = "A UI Automation call on this client.")]
+    pub fn at(&self, p: POINT) -> Result<IUIAutomationElement, String> {
+        // SAFETY: a plain call; any point is allowed, and it moves no pointer.
+        unsafe { self.0.ElementFromPoint(p) }.map_err(err)
     }
 
     /// The first element with UI Automation id `id` inside window `hwnd`.

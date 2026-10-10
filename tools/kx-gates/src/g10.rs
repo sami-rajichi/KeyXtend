@@ -1,7 +1,7 @@
 //! G10 screen readers, the automatic part (roadmap G10): every key is found by UI Automation, named (character keys
-//! after the layout in front, ADR-0020) and pressable, and Narrator and NVDA themselves are the owner's. Invoke then
-//! activates every key into target-window but a dead key or one that types nothing in the layout in front: the
-//! character keys here and the others in `g10steps`.
+//! after the layout in front, ADR-0020), pressable, and the element at its centre as Narrator's mouse mode reads it
+//! (`g10point`); Narrator and NVDA themselves are the owner's. Invoke then activates every key into target-window but
+//! a dead key or one that types nothing in the layout in front: the character keys here and the others in `g10steps`.
 #![cfg(windows)]
 
 use kx_module_api::ports::LayoutSource;
@@ -12,7 +12,7 @@ use crate::apps::{self, Ctx, Opened};
 use crate::keymap::{KeyRead, Reader};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{board, g10steps, launch, tlog, walk};
+use crate::{board, g10point, g10steps, launch, tlog, walk};
 
 /// What the walk found wrong, by board key.
 #[derive(Debug, Default, PartialEq, serde::Serialize)]
@@ -80,20 +80,24 @@ fn check(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
         .foreground()
         .ok_or("no app in front to read a layout from")?;
     let want = walk::char_keys(layout)?;
-    let read = Reader::new()?.walk(kb.hwnd)?;
-    let found = Findings::of(&read, &board::ids()?, &want);
-    let (ids, expected) = to_press(&want);
-    let got = press_all(ctx, kb, &ids)?;
+    let (reader, ids) = (Reader::new()?, board::ids()?);
+    let read = reader.walk(kb.hwnd)?;
+    let found = Findings::of(&read, &ids, &want);
+    let shown = ctx.cfg.g10.failures_shown;
+    let by_point = g10point::run(&reader, kb.hwnd, &read, &ids, shown);
+    let (pressed, expected) = to_press(&want);
+    let got = press_all(ctx, kb, &pressed)?;
     let typed = typed_all(&expected, &got);
     let keys = g10steps::run(ctx, kb, target)?;
     let names: Vec<(&str, &str)> = read
         .iter()
         .map(|k| (k.id.as_str(), k.name.as_str()))
         .collect();
-    let pass = found.clean() && typed && keys["ok"] == true;
+    let pass = found.clean() && by_point["ok"] == true && typed && keys["ok"] == true;
     Ok(json!({
-        "layout": layout.to_string(), "found": found, "pressed": ids.len(), "typed_ok": typed,
-        "expected": expected, "got": got, "keys": keys, "names": names, "follow_ms": follow_ms, "pass": pass,
+        "layout": layout.to_string(), "found": found, "by_point": by_point, "pressed": pressed.len(),
+        "typed_ok": typed, "expected": expected, "got": got, "keys": keys, "names": names, "follow_ms": follow_ms,
+        "pass": pass,
     }))
 }
 

@@ -183,11 +183,18 @@ pub fn focus(hwnd: HWND) -> HWND {
     thread_info(owner(hwnd).1).hwndFocus
 }
 
+/// The window under screen point `p`, child windows included, or a null handle.
+#[allow(unsafe_code, reason = "Plain query.")]
+pub fn under(p: POINT) -> HWND {
+    // SAFETY: plain query; any point is allowed.
+    unsafe { WindowFromPoint(p) }
+}
+
 /// The top-level window under screen point `p`, or a null handle.
-#[allow(unsafe_code, reason = "Plain queries.")]
+#[allow(unsafe_code, reason = "Plain query.")]
 pub fn root_at(p: POINT) -> HWND {
-    // SAFETY: plain queries; a null result is handled by the caller's comparison.
-    unsafe { GetAncestor(WindowFromPoint(p), GA_ROOT) }
+    // SAFETY: plain query; a null result is handled by the caller's comparison.
+    unsafe { GetAncestor(under(p), GA_ROOT) }
 }
 
 /// True if `w` is `parent` itself or one of its child windows.
