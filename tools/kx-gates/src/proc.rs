@@ -1,9 +1,10 @@
 //! A process kx-gates watches, opened by id or given by the shell, to wait for its end or to measure its private
-//! memory and CPU time; and the size of a program's folder.
+//! working set, private commit and CPU time; and the size of a program's folder.
 #![cfg(windows)]
 
 use std::path::Path;
 
+use serde::Serialize;
 use windows::Win32::Foundation::{CloseHandle, FILETIME, HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::ProcessStatus::{
     GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX2,
@@ -20,6 +21,15 @@ use crate::win::size32;
 const TICKS_PER_MS: f64 = 10_000.0;
 /// Bytes in one MB, as spec §10 counts memory and size.
 const MB: f64 = 1_000_000.0;
+
+/// A process's private memory, in MB.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Memory {
+    /// The private working set: what Task Manager shows.
+    pub working_mb: f64,
+    /// The private commit: what the process holds in memory or paged out, which a trim never lowers.
+    pub commit_mb: f64,
+}
 
 /// A process handle and the process's id; the handle closes on drop.
 pub struct Process {
@@ -76,9 +86,9 @@ impl Process {
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
     }
 
-    /// Its private working set, the memory Task Manager shows, in MB.
+    /// Its private working set and private commit, read only; nothing here ever trims the working set.
     #[allow(unsafe_code, reason = "Fills a local of the size we pass.")]
-    pub fn private_mb(&self) -> Result<f64, String> {
+    pub fn memory(&self) -> Result<Memory, String> {
         let mut c = PROCESS_MEMORY_COUNTERS_EX2 {
             cb: size32::<PROCESS_MEMORY_COUNTERS_EX2>(),
             ..Default::default()
@@ -91,7 +101,11 @@ impl Process {
             clippy::cast_precision_loss,
             reason = "Sizes are far below 2^53 bytes."
         )]
-        Ok(c.PrivateWorkingSetSize as f64 / MB)
+        let mb = |bytes: usize| bytes as f64 / MB;
+        Ok(Memory {
+            working_mb: mb(c.PrivateWorkingSetSize),
+            commit_mb: mb(c.PrivateUsage),
+        })
     }
 
     /// The CPU time it has used so far, in the kernel and in user mode, in ms.
@@ -166,11 +180,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn our_own_process_reads_memory_and_cpu_and_has_not_ended() {
+    fn our_own_process_reads_its_working_set_commit_and_cpu_and_has_not_ended() {
         let me = Process::to_measure(std::process::id()).expect("our own process opens");
         assert!(!me.ended() && me.pid() == std::process::id());
-        assert!(me.private_mb().expect("memory") > 0.0);
+        let m = me.memory().expect("memory");
+        assert!(m.working_mb > 0.0 && m.commit_mb > 0.0, "{m:?}");
         assert!(me.cpu_ms().expect("CPU time") >= 0.0);
+    }
+
+    /// Every `.rs` file under `dir`.
+    fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("the folder reads") {
+            let path = entry.expect("an entry").path();
+            if path.is_dir() {
+                sources(&path, out);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                out.push(path);
+            }
+        }
+    }
+
+    #[test]
+    fn no_gate_trims_a_working_set() {
+        // A trim drops the working set but not the commit, so it would only game G8 (ADR-0021). Split so this file
+        // does not match itself.
+        let trims = [
+            ["Empty", "WorkingSet"].concat(),
+            ["SetProcess", "WorkingSetSize"].concat(),
+        ];
+        let mut files = Vec::new();
+        sources(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut files,
+        );
+        assert!(!files.is_empty());
+        for file in files {
+            let text = std::fs::read_to_string(&file).expect("reads");
+            assert!(
+                !trims.iter().any(|t| text.contains(t.as_str())),
+                "{}",
+                file.display()
+            );
+        }
     }
 
     #[test]

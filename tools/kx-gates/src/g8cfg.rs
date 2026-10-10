@@ -28,8 +28,12 @@ pub struct G8 {
     pub idle_settle_ms: u64,
     /// How long the idle measure lasts.
     pub idle_ms: u64,
-    /// Idle private memory, in MB (10⁶ bytes, as spec §10 counts).
+    /// Wait from the shown keyboard to the memory sample, a fixed warm-up so runs compare (ADR-0021).
+    pub warm_ms: u64,
+    /// Idle private working set, in MB (10⁶ bytes, as spec §10 counts).
     pub memory_mb: f64,
+    /// Idle private commit, in MB; a trim cannot lower it, so it keeps the working set honest.
+    pub commit_mb: f64,
     /// Idle CPU, in percent of one core, in both modes.
     pub idle_core_pct: f64,
     /// The program folder, in MB of 10⁶ bytes: the stage's `max_mb`.
@@ -83,12 +87,14 @@ pub struct G8 {
 }
 
 impl G8 {
-    /// Refuses a zero count, a budget that is not above 0, a negative slack, or a pressed key the board does not have.
+    /// Refuses a zero count or warm-up, a budget that is not above 0, a negative slack, or a pressed key the board does
+    /// not have.
     pub fn check(&self) -> Result<(), String> {
         let budgets = [
             self.start_ms,
             self.weak_start_ms,
             self.memory_mb,
+            self.commit_mb,
             self.idle_core_pct,
             self.size_mb,
             self.highlight_frames,
@@ -103,9 +109,9 @@ impl G8 {
                 "g8 presses, clicks, subscribers and publishes must be above 0".to_string(),
             );
         }
-        if self.presentmon_secs == 0 {
-            // PresentMon runs hidden as administrator, so it must stop by itself.
-            return Err("g8.presentmon_secs must be above 0".to_string());
+        if self.presentmon_secs == 0 || self.warm_ms == 0 {
+            // PresentMon runs hidden as administrator, so it must stop by itself; memory is read after a warm-up.
+            return Err("g8.presentmon_secs and g8.warm_ms must be above 0".to_string());
         }
         if self.quit_tries == 0 || self.resize_slack_px < 0 {
             return Err(
@@ -137,9 +143,23 @@ mod tests {
     const FACE_RS: &str = include_str!("../../../crates/kx-ui/src/hub/face.rs");
     /// The workspace manifest, whose stage settings hold the download budget.
     const ROOT_TOML: &str = include_str!("../../../Cargo.toml");
+    /// The spec, whose §10 sets the budgets G8 holds the product to.
+    const SPEC: &str =
+        include_str!("../../../docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md");
 
     fn shipped() -> G8 {
         crate::config::load().expect("kx-gates.toml loads").g8
+    }
+
+    /// The number after each `≤ ` in spec §10's row for `metric`.
+    fn spec_limits(metric: &str) -> Vec<f64> {
+        let head = format!("| {metric} |");
+        let row = SPEC.lines().find(|l| l.starts_with(&head));
+        let row = row.unwrap_or_else(|| panic!("spec §10 has no {metric} row"));
+        let numbers = row.split("≤ ").skip(1);
+        numbers
+            .filter_map(|n| n.split_whitespace().next()?.parse().ok())
+            .collect()
     }
 
     #[test]
@@ -158,6 +178,21 @@ mod tests {
     fn the_shipped_budgets_are_spec_10s() {
         let g = shipped();
         assert_eq!(g.check(), Ok(()));
+        let memory = spec_limits("Main process memory, idle");
+        assert_eq!(
+            memory,
+            [g.memory_mb, g.commit_mb],
+            "working set, then commit"
+        );
+        assert_eq!(spec_limits("Cold start to visible keyboard"), [g.start_ms]);
+        assert_eq!(
+            spec_limits("Key click to character in target app"),
+            [g.char_ms]
+        );
+        assert_eq!(
+            spec_limits("Download size, without voice models"),
+            [g.size_mb]
+        );
         assert!(g.start_ms < g.weak_start_ms, "weak mode may start slower");
         assert!(
             g.presentmon_exe.is_empty(),
@@ -188,9 +223,24 @@ mod tests {
     }
 
     #[test]
+    fn a_g8_table_without_a_commit_budget_is_refused() {
+        let file: toml::Table = include_str!("../kx-gates-p3.toml")
+            .parse()
+            .expect("is TOML");
+        let mut g8 = file["g8"].as_table().expect("a [g8] table").clone();
+        let read = |t: toml::Table| toml::Value::Table(t).try_into::<G8>();
+        assert!(read(g8.clone()).is_ok(), "the shipped table reads");
+        g8.remove("commit_mb");
+        let e = read(g8).expect_err("commit_mb is needed");
+        assert!(e.to_string().contains("commit_mb"), "{e}");
+    }
+
+    #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 8] = [
+        let bad: [fn(&mut G8); 10] = [
             |g| g.memory_mb = 0.0,
+            |g| g.commit_mb = f64::NAN,
+            |g| g.warm_ms = 0,
             |g| g.bus_share = f64::NAN,
             |g| g.presses = 0,
             |g| g.publishes = 0,

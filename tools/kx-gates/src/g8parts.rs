@@ -8,13 +8,16 @@ use crate::g2;
 use crate::g8cfg::G8;
 use crate::g8ui::{Presses, Resize};
 use crate::out;
+use crate::proc::Memory;
 
 /// What the product did while G8 measured it.
 pub struct Measured {
     /// Start to the log's start line, and that line to the guard's, in ms.
     pub log: Option<(f64, f64)>,
-    /// Idle private memory, in MB.
-    pub memory_mb: f64,
+    /// Idle private memory, read after the warm-up.
+    pub memory: Memory,
+    /// When it was read, in ms from the shown keyboard.
+    pub memory_at_ms: f64,
     /// Idle CPU, in percent of one core.
     pub core_pct: Option<f64>,
     /// The program folder, in MB.
@@ -49,7 +52,8 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         .filter(|_| g2::typed_intact(&m.g2));
     vec![
         Part::at_most("start_ms", shown_ms, start),
-        Part::at_most("memory_mb", Some(m.memory_mb), g.memory_mb),
+        Part::at_most("memory_mb", Some(m.memory.working_mb), g.memory_mb),
+        Part::at_most("commit_mb", Some(m.memory.commit_mb), g.commit_mb),
         Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
         Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
         Part::at_most(
@@ -83,7 +87,11 @@ mod tests {
         let g = crate::config::load().expect("kx-gates.toml loads").g8;
         let m = Measured {
             log: Some((180.0, 1074.3)),
-            memory_mb: 61.0,
+            memory: Memory {
+                working_mb: 61.0,
+                commit_mb: 90.0,
+            },
+            memory_at_ms: 10_000.0,
             core_pct: Some(0.1),
             size_mb: 58.1,
             presses: Presses {
@@ -113,7 +121,27 @@ mod tests {
         let (g, m, o) = sample();
         let parts = parts(&g, Some(420.0), &m, false, &o);
         assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
-        assert_eq!(parts.len(), 8, "one part per spec §10 budget G8 owns");
+        assert_eq!(parts.len(), 9, "one part per spec §10 budget G8 owns");
+    }
+
+    #[test]
+    fn a_working_set_or_a_commit_over_its_budget_fails_its_part() {
+        let (g, mut m, o) = sample();
+        let over = |working_mb, commit_mb| Memory {
+            working_mb,
+            commit_mb,
+        };
+        m.memory = over(g.memory_mb + 1.0, g.commit_mb);
+        assert_eq!(
+            failed(&parts(&g, Some(420.0), &m, false, &o)),
+            ["memory_mb"]
+        );
+        m.memory = over(g.memory_mb, g.commit_mb + 1.0);
+        assert_eq!(
+            failed(&parts(&g, Some(420.0), &m, false, &o)),
+            ["commit_mb"],
+            "a trim lowers the working set only, so commit is judged too"
+        );
     }
 
     #[test]

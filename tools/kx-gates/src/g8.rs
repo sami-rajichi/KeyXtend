@@ -4,7 +4,7 @@
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime};
 
 use serde_json::{Value, json};
 use spike_core::weak::{Caps, Job};
@@ -15,13 +15,14 @@ use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8frames::{self, Recorder};
 use crate::g8parts::{Measured, Outside, parts, verdict};
+use crate::g8start::{self, Started, log_span};
 use crate::g8ui;
 use crate::out::say;
 use crate::presentmon;
-use crate::proc::{self, Process};
+use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
-use crate::win::{self, sleep_ms};
-use crate::{admin, close, g2, out};
+use crate::win::sleep_ms;
+use crate::{close, g2, out};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -31,24 +32,6 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
-/// The product as G8 started it.
-struct Started {
-    /// Its process, opened to measure.
-    process: Process,
-    /// When it was started, in µs since 1970.
-    at_us: i64,
-    /// Start to its first shown window, in ms.
-    shown_ms: Option<f64>,
-}
-
-/// Microseconds since 1970 now.
-fn now_us() -> i64 {
-    let since = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    i64::try_from(since.as_micros()).unwrap_or(i64::MAX)
-}
-
 /// The weak-mode job from `spike.toml [voice.weak]`, and the CPU time it allows in whole cores.
 fn weak_job(ctx: &Ctx) -> Result<(Job, f64), String> {
     let cpus = std::thread::available_parallelism().map_or(1, usize::from);
@@ -56,95 +39,31 @@ fn weak_job(ctx: &Ctx) -> Result<(Job, f64), String> {
     Ok((Job::new(Some(&caps))?, caps.cpu_cores(cpus)))
 }
 
-/// Asks the copy G8 just started, held as `process`, to quit; what is left of it, for the error.
-fn quit_left(ctx: &Ctx, process: &Process) -> String {
-    match close::quit_started(ctx, process) {
-        Ok(true) => "it quit".to_string(),
-        Ok(false) => "it still runs; close it".to_string(),
-        Err(q) => format!("it still runs ({q}); close it"),
-    }
+/// Private memory once `[g8] warm_ms` has passed since the keyboard showed, and the ms from show to the read.
+fn warm(ctx: &Ctx, s: &Started) -> Result<(Memory, f64), String> {
+    let from = s.shown_at.unwrap_or(s.at);
+    std::thread::sleep(g8start::warm_left(from, ctx.cfg.g8.warm_ms, Instant::now()));
+    let memory = s.process.memory()?;
+    Ok((memory, budget::ms(from.elapsed())))
 }
 
-/// Puts `process`, just started, in `job`; a copy it cannot cap is asked to quit, so no uncapped copy stays.
-fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
-    let uncapped = |e| {
-        format!(
-            "{e}: the copy runs uncapped, so {}",
-            quit_left(ctx, process)
-        )
-    };
-    job.assign_handle(process.handle()).map_err(uncapped)
-}
-
-/// Starts the product through the shell, in `job` when given, and waits for its first shown window.
-/// A copy it cannot open gets Quit with the same tries, so the next run still starts cold.
-fn start(ctx: &Ctx, program: &Path, job: Option<&Job>) -> Result<Started, String> {
-    let g = &ctx.cfg.g8;
-    let (at_us, at) = (now_us(), Instant::now());
-    let given = admin::start_shown(program, &[])?;
-    // The shell's handle lacks the rights to measure, so the process is opened again.
-    let unmeasured = |e| {
-        format!(
-            "{e}: G8 cannot measure the copy, so {}",
-            quit_left(ctx, &given)
-        )
-    };
-    let process = Process::to_measure(given.pid()).map_err(unmeasured)?;
-    if let Some(job) = job {
-        cap(ctx, job, &process)?;
-    }
-    let pid = process.pid();
-    let shown = || {
-        let ours = win::seen_windows()
-            .into_iter()
-            .any(|w| win::owner(w).0 == pid);
-        ours.then(|| budget::ms(at.elapsed()))
-    };
-    let shown_ms = win::poll_until(g.start_wait_ms, g.look_ms, shown);
-    Ok(Started {
-        process,
-        at_us,
-        shown_ms,
-    })
-}
-
-/// Start to the log's start line, and that line to the guard's, in ms; this run's lines only.
-fn log_span(ctx: &Ctx, program: &Path, since_us: i64) -> Result<Option<(f64, f64)>, String> {
-    let (g, file) = (&ctx.cfg.g8, product::files(program)?.log);
-    let read = || {
-        let text = std::fs::read_to_string(&file).ok()?;
-        let (from, to) = budget::span_us(&text, &g.log_start, &g.log_guarded)?;
-        (from >= since_us).then(|| {
-            (
-                budget::ms_between(since_us, from),
-                budget::ms_between(from, to),
-            )
-        })
-    };
-    Ok(win::poll_until(
-        g.start_wait_ms,
-        ctx.cfg.timing.poll_ms,
-        read,
-    ))
-}
-
-/// Idle private memory in MB, and idle CPU in percent of one core.
-fn idle(ctx: &Ctx, p: &Process) -> Result<(f64, Option<f64>), String> {
+/// Idle CPU in percent of one core, after a settle.
+fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
     let g = &ctx.cfg.g8;
     sleep_ms(g.idle_settle_ms);
     let (cpu, at) = (p.cpu_ms()?, Instant::now());
     sleep_ms(g.idle_ms);
     let used = p.cpu_ms()? - cpu;
-    let pct = budget::core_pct(used, budget::ms(at.elapsed()));
-    Ok((p.private_mb()?, pct))
+    Ok(budget::core_pct(used, budget::ms(at.elapsed())))
 }
 
-/// Everything G8 measures on the started product, in order: start-up log, idle, folder, presses, resizes, G2.
+/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes, G2.
 fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
     let g = &ctx.cfg.g8;
     let log = log_span(ctx, program, s.at_us)?;
     let kb = Keyboard::find()?;
-    let (memory_mb, core_pct) = idle(ctx, &s.process)?;
+    let (memory, memory_at_ms) = warm(ctx, s)?;
+    let core_pct = idle(ctx, &s.process)?;
     let folder = program.parent().ok_or("the program has no folder")?;
     let size_mb = proc::folder_mb(folder)?;
     let presses = g8ui::presses(ctx, &kb)?;
@@ -152,7 +71,8 @@ fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     Ok(Measured {
         log,
-        memory_mb,
+        memory,
+        memory_at_ms,
         core_pct,
         size_mb,
         presses,
@@ -239,25 +159,26 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let since = SystemTime::now();
     let rec = g8frames::record(ctx, &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
-    let s = start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
+    let s = g8start::start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
+    let shown_ms = s.shown_ms();
     say!(
-        "G8 {name}: started {} (pid {}); shown after {:?} ms",
+        "G8 {name}: started {} (pid {}); shown after {shown_ms:?} ms",
         program.display(),
         s.process.pid(),
-        s.shown_ms
     );
     let measured = measure(ctx, &s, &program);
     let quit = close::quit_running(ctx).map(|(_, ended)| ended);
     let m = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
     let (o, [bus, frames]) = outside(ctx, job, &program, (since, rec.as_ref()));
-    let parts = parts(&ctx.cfg.g8, s.shown_ms, &m, weak, &o);
+    let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();
     Ok(json!({
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
-        "log_to_guarded_ms": log_span, "resizes": m.resizes, "presses": m.presses, "g2": m.g2, "bus": bus,
-        "frames": frames, "parts": parts, "quit": ended, "pass": verdict(weak, ended && budget::all_pass(&parts)),
+        "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
+        "g2": m.g2, "bus": bus, "frames": frames, "parts": parts, "quit": ended,
+        "pass": verdict(weak, ended && budget::all_pass(&parts)),
     }))
 }
 
