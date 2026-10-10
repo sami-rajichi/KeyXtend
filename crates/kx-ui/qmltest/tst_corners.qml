@@ -40,7 +40,7 @@ Item {
     }
 
     Component { id: keyC; Key {} }
-    // Every key of the board at size 1, in look `lk` and state `st`.
+    // Every key of the board at size `s`, in look `lk` and state `st`.
     Component {
         id: boardC
         Item {
@@ -48,20 +48,26 @@ Item {
             required property var lk
             required property var st
             required property var res
+            required property real s
             width: root.width
             height: root.height
+
+            // Cell `kv` at size `s`.
+            function scaled(kv) {
+                return Object.assign({}, kv, { x: kv.x * s, y: kv.y * s, w: kv.w * s, h: kv.h * s });
+            }
 
             Repeater {
                 model: Face.board.keys
                 delegate: Key {
                     required property var modelData
-                    kv: modelData
+                    kv: board.scaled(modelData)
                     ks: board.st.keys[modelData.id]
                     lk: board.lk
                     lang: board.st.lang
                     design: Face.board.lang_key
                     res: board.res
-                    s: 1
+                    s: board.s
                 }
             }
         }
@@ -73,6 +79,9 @@ Item {
 
         // Drawn before a mark so it has a base, as the face draws it.
         readonly property string circle: "◌"
+        // The blank cap, in px at size 1, a corner legend's ink keeps from the main legend's ink; it scales with the
+        // board, like every size.
+        readonly property real clearPx: 1
 
         // Any warning fails the test, so the run stays clean.
         function init() {
@@ -184,13 +193,14 @@ Item {
             const [w, h] = [r.x + r.width, r.y + r.height];
             return [clamp(r.x, key.x, x1), clamp(r.y, key.y, y1), clamp(w, key.x, x1), clamp(h, key.y, y1)];
         }
-        // The least distance between inks `a` and `b`, in device pixels.
-        function apart(a, b) {
+        // The blank cap between inks `a` and `b`, in px on a screen of `k` device pixels per px: their nearest pixel
+        // centres, less the one pixel that centres of touching inks are apart.
+        function blank(a, b, k) {
             let gap = Infinity;
             for (const p of a)
                 for (const q of b)
                     gap = Math.min(gap, Math.hypot(p[0] - q[0], p[1] - q[1]));
-            return gap;
+            return (gap - 1) / k;
         }
         // `board` grabbed with only line `n` of each key in `keys` drawn (0 main, 1 second, 2 third; -1 none).
         function only(board, keys, n) {
@@ -198,8 +208,8 @@ Item {
                 lines.forEach((l, i) => l && (l.opacity = i === n ? 1 : 0));
             return grabImage(board);
         }
-        // Each corner legend of every key on `board` in `state` with a main legend, with its ink's distance from the
-        // main legend's ink in px; each line is drawn alone over the bare board.
+        // Each corner legend of every key on `board` in `state` with a main legend, with the blank cap between its ink
+        // and the main legend's ink in px; each line is drawn alone over the bare board.
         function gaps(board, state) {
             const keys = board.children.filter(k => k.kv && k.kv.kind === "char").map(k => {
                 const ks = state.keys[k.kv.id];
@@ -213,26 +223,37 @@ Item {
                 const main = ink(shots[0], bare, box(key, lines[0], k));
                 for (const n of [1, 2])
                     if (lines[n])
-                        found.push([lines[0].text, lines[n].text, apart(main, ink(shots[n], bare, box(key, lines[n], k))) / k]);
+                        found.push([lines[0].text, lines[n].text, blank(main, ink(shots[n], bare, box(key, lines[n], k)), k)]);
             }
             return found;
         }
 
-        // The owner saw corner legends touch letters such as ض and س, and Dolch's @ touch its 2 (2026-10-10): a clear
-        // gap is 1 px of blank cap between the inks, on every key with a corner legend.
+        // Inks in neighbouring pixels touch at any screen scale, even corner to corner; at 100 %, one blank pixel
+        // between them is the 1 px of clear cap the check below asks for.
+        function test_inks_in_neighbouring_pixels_touch_at_any_scale() {
+            for (const k of [1, 1.25, 2])
+                compare(blank([[0, 0]], [[1, 0]], k), 0, "side by side at " + k);
+            verify(blank([[0, 0]], [[1, 1]], 1) < clearPx, "corner to corner");
+            compare(blank([[0, 0]], [[2, 0]], 1), clearPx, "one blank pixel at 100 %");
+        }
+
+        // The owner saw corner legends touch letters such as ض and س, and Dolch's @ touch its 2 (2026-10-10): every
+        // key with a corner legend keeps `clearPx` of blank cap between the inks, at the default and smallest sizes.
         function test_no_corner_legend_touches_the_main_one_data() {
-            return themes();
+            const sizes = [1, Face.sizeMin];
+            const rows = themes().map(t => sizes.map(s => ({ tag: t.tag + " at " + s, lk: t.lk, s: s })));
+            return [].concat(...rows);
         }
         function test_no_corner_legend_touches_the_main_one(row) {
             fonts(row.lk);
             const [touching, seen] = [[], []];
             for (const st of root.states) {
-                const props = { lk: row.lk, st: Face.states[st.name], res: resOf(row.lk, st.texts) };
+                const props = { lk: row.lk, st: Face.states[st.name], res: resOf(row.lk, st.texts), s: row.s };
                 const board = createTemporaryObject(boardC, root, props);
                 risen(board);
                 for (const [main, corner, gap] of gaps(board, props.st)) {
                     const at = st.name + " " + main + " " + corner + ": " + gap.toFixed(2) + " px";
-                    (gap < 1 ? touching : seen).push(at);
+                    (gap < clearPx * row.s ? touching : seen).push(at);
                 }
                 board.visible = false;
                 board.destroy();
