@@ -93,12 +93,14 @@ pub(super) fn spans(v: &LookView, h: f32, mark: Mark) -> Vec<Span> {
             .map(|k| centred(v, mid, look.legend_px * k))
             .to_vec(),
         Mark::Second => {
-            // The corners sit in from the face on the theme's Latin baseline, whatever font they draw in.
+            // The corners sit in from the face on the theme's Latin baseline, whatever font they draw in; as for every
+            // text, the check reads their capitals, so accents and bracket tips above them go unchecked.
             let corner = |i: usize| look.legend_px * lg.corner_scale[i];
             let [top, _, bottom, _] = face(v);
+            let [from_top, from_bottom, _] = lg.corner_px;
             let mut all = vec![
-                text(v, top + lg.corner_px[0], corner(0)),
-                above(v, h - bottom - lg.corner_px[0], corner(1)),
+                text(v, top + from_top, corner(0)),
+                above(v, h - bottom - from_bottom, corner(1)),
             ];
             // The space bar's text is centred on the cap itself, unlifted.
             all.extend(lg.space_px.map(|px| centred(v, h / 2.0, px)));

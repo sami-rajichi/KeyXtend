@@ -50,13 +50,13 @@ fn a_main_legend_sits_where_its_fonts_metrics_put_it() {
 #[test]
 fn the_corner_legends_sit_in_from_the_face_the_theme_draws() {
     let t = themes();
-    // Dolch: 2.5 px in from its lit top, which runs from 1 px below the 28 px cap's top to 4 px above its bottom;
-    // the corners are 6.448 px and 6.24 px.
+    // Dolch: 2.5 px below its lit top and 1.5 px above its bottom; the lit top runs from 1 px below the 28 px cap's
+    // top to 4 px above its bottom, and the corners are 6.448 px and 6.24 px.
     let v = view(&t, "dolch");
     let all = spans(&v, cap(&v), Mark::Second);
     let (top, bottom) = (all[0], all[1]);
     assert!(near(top, [5.01528, 9.52888]), "{top:?}");
-    assert!(near(bottom, [15.572, 19.94]), "{bottom:?}");
+    assert!(near(bottom, [16.572, 20.94]), "{bottom:?}");
     // Native: 2.5 px in from the flat cap itself; Segoe UI's ascent 1.079 and cap height 0.7 at 6.448 px.
     let v = view(&t, "native");
     let top = spans(&v, cap(&v), Mark::Second)[0];

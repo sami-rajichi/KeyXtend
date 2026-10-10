@@ -179,6 +179,7 @@ var lk = {
       ],
       "corner_px": [
         2.5,
+        1.5,
         3.0
       ],
       "corner_weight": 400,

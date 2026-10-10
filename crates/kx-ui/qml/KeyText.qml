@@ -97,12 +97,12 @@ Item {
         move: t.mv.carousel
     }
 
-    // Character keys: the other case top left, and AltGr bottom right, the same way in from the face in every theme;
-    // they change at once (mock-up .lg2, .lg3). Each sits on the theme's Latin baseline, so a taller Arabic or mark
-    // font keeps the same margin.
+    // Character keys: the other case top left, and AltGr bottom right, the same way in from the face in every theme
+    // (top, bottom and side margins); they change at once (mock-up .lg2, .lg3). Each sits on the theme's Latin
+    // baseline, so a taller Arabic or mark font keeps the same margin.
     Line {
         visible: t.isChar
-        x: (t.face[3] + t.lg.corner_px[1]) * t.s
+        x: (t.face[3] + t.lg.corner_px[2]) * t.s
         anchors.baseline: parent.top
         anchors.baselineOffset: (t.face[0] + t.lg.corner_px[0]) * t.s + t.look.font_metrics[0] * font.pixelSize
         ar: t.secondAr
@@ -115,9 +115,9 @@ Item {
     Line {
         visible: t.isChar
         anchors.right: parent.right
-        anchors.rightMargin: (t.face[1] + t.lg.corner_px[1]) * t.s
+        anchors.rightMargin: (t.face[1] + t.lg.corner_px[2]) * t.s
         anchors.baseline: parent.bottom
-        anchors.baselineOffset: -(t.face[2] + t.lg.corner_px[0]) * t.s - t.look.font_metrics[1] * font.pixelSize
+        anchors.baselineOffset: -(t.face[2] + t.lg.corner_px[1]) * t.s - t.look.font_metrics[1] * font.pixelSize
         ar: t.thirdAr
         mark: t.thirdMark
         text: t.ks ? t.ks.third : ""

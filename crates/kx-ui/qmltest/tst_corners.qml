@@ -154,10 +154,11 @@ Item {
                 const [lt, rb] = [line(key, ks.second), line(key, ks.third)];
                 const [top, bottom] = margins(key, lt, rb);
                 const at = ks.third + ": ";
-                fuzzyCompare(top[0], lg.corner_px[1], 0.5, at + "top left, side");
-                fuzzyCompare(top[1], lg.corner_px[0] + fm[0] * lt.font.pixelSize, 0.5, at + "top left, baseline");
-                fuzzyCompare(bottom[0], lg.corner_px[1], 0.5, at + "bottom right, side");
-                fuzzyCompare(bottom[1], lg.corner_px[0] + fm[1] * rb.font.pixelSize, 0.5, at + "bottom right, baseline");
+                const [above, below, side] = lg.corner_px;
+                fuzzyCompare(top[0], side, 0.5, at + "top left, side");
+                fuzzyCompare(top[1], above + fm[0] * lt.font.pixelSize, 0.5, at + "top left, baseline");
+                fuzzyCompare(bottom[0], side, 0.5, at + "bottom right, side");
+                fuzzyCompare(bottom[1], below + fm[1] * rb.font.pixelSize, 0.5, at + "bottom right, baseline");
             }
         }
 

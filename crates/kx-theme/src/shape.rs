@@ -58,8 +58,9 @@ pub struct ChipShape {
 pub struct LegendShape {
     /// Second and third legend sizes as shares of the main one.
     pub corner_scale: [f32; 2],
-    /// Corner legends' distance from the top or bottom, and from the side.
-    pub corner_px: [f32; 2],
+    /// Corner legends' distance in from the face: the top one's from the top, the bottom one's from the bottom, and
+    /// both from their side.
+    pub corner_px: [f32; 3],
     /// Weight of the corner legends.
     pub corner_weight: u16,
     /// Icon size on main and side keys.
