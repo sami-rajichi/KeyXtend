@@ -28,9 +28,14 @@ fn named(name: &str) -> Option<PathBuf> {
     value.map(|v| repo().join(v))
 }
 
-/// Whether the pictures go elsewhere than their baseline; saved over it, each picture would match itself.
+/// Whether the pictures go elsewhere than their baseline, as the file system finds both, so case, `..` and links
+/// count; saved over it, each picture would match itself.
 fn apart(folder: Option<&Path>, base: Option<&Path>) -> bool {
-    folder.is_none() || folder != base
+    let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    match (folder, base) {
+        (Some(f), Some(b)) => real(f) != real(b),
+        _ => true,
+    }
 }
 
 /// `folder` as a QML string, with forward slashes, or an empty string.
@@ -39,19 +44,31 @@ fn qml_string(folder: Option<&Path>) -> String {
     serde_json::to_string(&shown.unwrap_or_default()).expect("a string")
 }
 
-/// Writes `PICTURES_QML` into `mirror`: the pictures folder, made if missing; the baseline folder; and the scratch
-/// folder, made. An unset variable hands over an empty string.
+/// Writes `PICTURES_QML` into `mirror` from the folders `PICTURES_VAR` and `BASE_VAR` name, as `hand_to` does.
 pub fn hand_over(mirror: &Path) {
     let [folder, base] = [named(PICTURES_VAR), named(BASE_VAR)];
-    let same = !apart(folder.as_deref(), base.as_deref());
-    assert!(!same, "{PICTURES_VAR} and {BASE_VAR} name the same folder");
+    hand_to(mirror, folder.as_deref(), base.as_deref());
+}
+
+/// Writes `PICTURES_QML` into `mirror`: pictures folder `folder`, made if missing; baseline `base`; and the scratch
+/// folder, made. A missing folder hands over an empty string; the same folder twice is refused, and no older hand-over
+/// is left for the picture test to read.
+fn hand_to(mirror: &Path, folder: Option<&Path>, base: Option<&Path>) {
+    let file = mirror.join(PICTURES_QML);
+    if file.exists() {
+        std::fs::remove_file(&file).expect("the old hand-over goes");
+    }
     let scratch = repo().join(SCRATCH);
-    for f in folder.iter().chain([&scratch]) {
+    for f in folder.into_iter().chain([scratch.as_path()]) {
         std::fs::create_dir_all(f).expect("a picture folder is made");
     }
+    assert!(
+        apart(folder, base),
+        "{PICTURES_VAR} and {BASE_VAR} name the same folder"
+    );
     let [folder, base, scratch] = [
-        qml_string(folder.as_deref()),
-        qml_string(base.as_deref()),
+        qml_string(folder),
+        qml_string(base),
         qml_string(Some(&scratch)),
     ];
     let qml = format!(
@@ -59,20 +76,28 @@ pub fn hand_over(mirror: &Path) {
          readonly property string folder: {folder}\n    readonly property string base: {base}\n    \
          readonly property string scratch: {scratch}\n}}\n"
     );
-    std::fs::write(mirror.join(PICTURES_QML), qml).expect("the picture folders are handed over");
+    std::fs::write(&file, qml).expect("the picture folders are handed over");
 }
 
 #[test]
 fn pictures_saved_over_their_own_baseline_are_refused() {
-    let [a, b] = [Path::new("target/a"), Path::new("target/b")];
+    let dir = repo().join(SCRATCH).join("apart");
+    let [a, b, mirror] = [dir.join("a"), dir.join("b"), dir.join("mirror")];
+    for f in [&a, &b, &mirror] {
+        std::fs::create_dir_all(f).expect("a test folder is made");
+    }
+    assert!(apart(Some(&a), Some(&b)) && apart(Some(&a), None) && apart(None, None));
+    // The same folder written another way: through `..`, and in another case where the file system ignores case.
+    let twin = b.join("..").join("a");
+    assert!(!apart(Some(&a), Some(&twin)));
+    #[cfg(windows)]
+    assert!(!apart(Some(&a), Some(&dir.join("A"))));
+    std::fs::write(mirror.join(PICTURES_QML), "old").expect("an old hand-over");
+    let refused = std::panic::catch_unwind(|| hand_to(&mirror, Some(&a), Some(&twin)));
+    let left = mirror.join(PICTURES_QML).exists();
+    std::fs::remove_dir_all(&dir).expect("the test folders go");
     assert!(
-        apart(Some(a), Some(b))
-            && apart(Some(a), None)
-            && apart(None, Some(a))
-            && apart(None, None)
-    );
-    assert!(
-        !apart(Some(a), Some(Path::new("target/a/"))),
-        "the same folder, written another way"
+        refused.is_err() && !left,
+        "refused, with no old hand-over left"
     );
 }

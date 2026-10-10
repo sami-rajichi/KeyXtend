@@ -90,6 +90,16 @@ fn os_texts(t: &I18n) -> Vec<String> {
     space.chain(alone).chain([t.space(&marked)]).collect()
 }
 
+/// The words a list of `names` gains when `more` are left out, such as "and 3 more", so a test finds the whole count
+/// rather than its first digit.
+fn count_words(t: &I18n, names: &[String], more: usize) -> String {
+    let [listed, full] = [t.list(names, 0), t.list(names, more)];
+    let words = full
+        .strip_prefix(&listed)
+        .expect("a longer list starts with its names");
+    words.trim().to_owned()
+}
+
 /// The texts the Quick reading-order test draws, per language tag: each space-bar text with its parts and face state,
 /// and a reset notice naming settings and leaving some out.
 pub fn order() -> Value {
@@ -102,7 +112,8 @@ pub fn order() -> Value {
             .collect();
         let names = setting_names();
         let reset = notice(&t, SETTINGS_RESET, UNKNOWN, &names, LEFT_OUT);
-        let reset = json!({ "names": names, "more": LEFT_OUT.to_string(), "text": reset });
+        let more = count_words(&t, &names, LEFT_OUT);
+        let reset = json!({ "names": names, "more": more, "text": reset });
         by_lang.insert(l.tag.to_owned(), json!({ "spaces": space, "reset": reset }));
     }
     Value::Object(by_lang)

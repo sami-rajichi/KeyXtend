@@ -5,12 +5,12 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
 import "../qml"
+import "board.js" as Board
 import "fixtures/face.js" as Face
 import "fixtures/order.js" as Order
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
-import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
@@ -24,20 +24,11 @@ Item {
     readonly property var uis: ({ en: En, fr: Fr, ar: Ar })
     // The space bar's cell on the board.
     readonly property var cell: Face.board.keys.find(k => k.kind === "space")
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
+    // The bundled fonts, from where the texts test lays them out.
+    property var bundled: []
 
     width: Math.max(cell.w * s, N.lk.shape.panel.width_px * s)
     height: Face.board.plate.h * s
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
 
     // The space bar alone, in face state `st`.
     Component {
@@ -48,8 +39,8 @@ Item {
             s: root.s
         }
     }
-    // A text as the banner draws its message: the UI font, wrapped at the panel's width or, as on a wide keyboard, on
-    // one line.
+    // A text as the banner draws its message, in the UI font, on one line as on a wide keyboard, or wrapped. It wraps
+    // at the panel's whole width, a little wider than the banner's words (`Notice.wordsW`), so its breaks may differ.
     Component {
         id: noteC
         Label {
@@ -75,37 +66,18 @@ Item {
         name: "order"
         when: windowShown
 
+        // The bundled fonts load once, for every row.
+        function initTestCase() {
+            root.bundled = Board.loadFonts(root);
+        }
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
+            tryVerify(() => Board.loaded(root.bundled), 5000, "the bundle is laid out by the texts test");
         }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
-        }
-        // Fonts and texts for look `lk` in UI language `ui`, as the keyboard window picks them; the space bar says `text`.
-        function resOf(lk, ui, text) {
-            const have = Qt.fontFamilies();
-            const pick = list => list.find(f => have.indexOf(f) >= 0) || list[list.length - 1];
-            const [latin, arabic] = [pick(lk.look.latin_fonts), pick(lk.look.arabic_fonts)];
-            return {
-                fam: { latin: latin, arabic: arabic, mark: pick(lk.look.mark_fonts), ui: ui.lang.rtl ? arabic : latin },
-                icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
-                ext: Assets.assets.ext,
-                tr: k => ui.texts[k] !== undefined ? ui.texts[k] : k,
-                space: () => text,
-                noteTip: (name, note) => name + "\n" + note
-            };
-        }
-        // `text` safe inside styled text.
+        // `text` safe inside styled text, its no-break spaces kept as such.
         function escaped(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
         }
         // Where drawn text `label` lays out `part`: the first line holding it and the middle of its pixels there.
         function placeOf(label, part) {
@@ -114,6 +86,7 @@ Item {
             const [head, tail] = [label.text.slice(0, at), label.text.slice(at + part.length)];
             const linked = escaped(head) + "<a href=\"part\">" + escaped(part) + "</a>" + escaped(tail);
             const twin = createTemporaryObject(twinC, root, { text: linked, font: label.font, width: label.width, wrapMode: label.wrapMode });
+            compare(twin.lineCount, label.lineCount, "the twin breaks its lines as the drawn text does");
             const lineH = twin.contentHeight / twin.lineCount;
             for (let line = 0; line < twin.lineCount; line++) {
                 const xs = [];
@@ -146,9 +119,9 @@ Item {
         function test_the_space_bar_reads_the_language_first(row) {
             const e = row.entry;
             const st = Face.states[e.state];
-            const key = createTemporaryObject(spaceC, root, { ks: st.keys[root.cell.id], lk: row.lk, lang: st.lang, res: resOf(row.lk, row.ui, e.text) });
-            const label = all(key, o => o.text === e.text && o.font !== undefined)[0];
-            verify(label && label.visible, "the space bar draws its text");
+            const key = createTemporaryObject(spaceC, root, { ks: st.keys[root.cell.id], lk: row.lk, lang: st.lang, res: Board.resOf(row.lk, row.ui) });
+            const label = Board.all(key, o => o.text === e.text && o.font !== undefined)[0];
+            verify(label && label.visible, "the space bar draws the hub's text: " + e.text);
             const rtl = row.ui.lang.rtl;
             const [lang, layout] = [placeOf(label, e.parts[0]), placeOf(label, e.parts[1])];
             // A UI pinned over a layout whose language reads the other way keeps Qt's order: a P13 note (ADR-0022).
@@ -163,7 +136,7 @@ Item {
         }
         function test_a_reset_notice_names_its_settings_in_order_before_the_count(row) {
             const e = row.entry;
-            const label = createTemporaryObject(noteC, root, { lk: row.lk, res: resOf(row.lk, row.ui, ""), wrap: row.wrap, text: e.text });
+            const label = createTemporaryObject(noteC, root, { lk: row.lk, res: Board.resOf(row.lk, row.ui), wrap: row.wrap, text: e.text });
             const [first, second] = e.names.map(n => placeOf(label, n));
             const count = placeOf(label, e.more);
             verify(before(first, second, row.ui.lang.rtl), "the settings read in their order");

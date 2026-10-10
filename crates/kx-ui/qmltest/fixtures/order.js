@@ -3,7 +3,7 @@
 var texts = {
   "ar": {
     "reset": {
-      "more": "3",
+      "more": "و3 إعدادات أخرى",
       "names": [
         "bubble_corner",
         "key_apps"
@@ -39,7 +39,7 @@ var texts = {
   },
   "en": {
     "reset": {
-      "more": "3",
+      "more": "and 3 more",
       "names": [
         "bubble_corner",
         "key_apps"
@@ -75,7 +75,7 @@ var texts = {
   },
   "fr": {
     "reset": {
-      "more": "3",
+      "more": "et 3 autres",
       "names": [
         "bubble_corner",
         "key_apps"

@@ -7,6 +7,7 @@ import QtQuick.Window
 import QtTest
 import "../qml"
 import "pointer.js" as Pointer
+import "board.js" as Board
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
@@ -38,20 +39,11 @@ Item {
     ]
     // The key pictured pressed: the board's first character key, in the English state.
     readonly property string pressed: Face.board.keys.find(k => k.kind === "char").id
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
+    // The bundled fonts, from where the texts test lays them out.
+    property var bundled: []
 
     width: Face.board.plate.w * s
     height: Face.board.plate.h * s
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
 
     // The plate and every key of the board at size `root.s`, in look `lk` and state `st`.
     Component {
@@ -104,22 +96,14 @@ Item {
         name: "pictures"
         when: windowShown
 
-        // The board sits in the test's own window, which the real pointer passes through.
+        // The board sits in the test's own window, which the real pointer passes through; the bundled fonts load once.
         function initTestCase() {
             Pointer.through([Window.window]);
+            root.bundled = Board.loadFonts(root);
         }
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
-        }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
         }
         // The folders the texts test handed over: `folder` (KX_PICTURES), `base` (KX_PICTURES_BASE) and `scratch`.
         function folders() {
@@ -129,28 +113,6 @@ Item {
             const f = { folder: o.folder, base: o.base, scratch: o.scratch };
             o.destroy();
             return f;
-        }
-        // The space bar's text as the hub joins `parts`: each layout after the language through `lang.space`, whose
-        // variables the texts test leaves as Fluent shows them, as `{$name}`.
-        function spaceOf(texts) {
-            const at = name => "{$" + name + "}";
-            const join = (lang, layout) => texts["lang.space"].replace(at("lang"), lang).replace(at("layout"), layout);
-            return parts => parts.slice(1).reduce(join, parts[0]);
-        }
-        // Fonts, icons and texts for look `lk` in language `ui`, each family the first Qt has, else the last, and the
-        // UI font by the language's direction, as the keyboard window picks.
-        function resOf(lk, ui) {
-            const have = Qt.fontFamilies();
-            const pick = list => list.find(f => have.indexOf(f) >= 0) || list[list.length - 1];
-            const [latin, arabic] = [pick(lk.look.latin_fonts), pick(lk.look.arabic_fonts)];
-            return {
-                fam: { latin: latin, arabic: arabic, mark: pick(lk.look.mark_fonts), ui: ui.lang.rtl ? arabic : latin },
-                icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
-                ext: Assets.assets.ext,
-                tr: k => ui.texts[k] !== undefined ? ui.texts[k] : k,
-                space: spaceOf(ui.texts),
-                noteTip: (name, note) => name + "\n" + note
-            };
         }
         // A file URL for local path `path`.
         function url(path) {
@@ -188,10 +150,10 @@ Item {
         function shoot(lk, st, ui, down) {
             // The test's pointer rests on the bare plate, so no key is hovered wherever the real pointer stood.
             mouseMove(root, 1, 1);
-            const board = boardC.createObject(root, { lk: lk, st: Face.states[st], res: resOf(lk, ui) });
-            const texts = all(board, o => o.isChar === true);
+            const board = boardC.createObject(root, { lk: lk, st: Face.states[st], res: Board.resOf(lk, ui) });
+            const texts = Board.all(board, o => o.isChar === true);
             tryVerify(() => texts.every(o => !o.clip), 2000, "the legends rose in");
-            const key = down ? all(board, o => o.kv !== undefined && o.kv.id === down)[0] : null;
+            const key = down ? Board.all(board, o => o.kv !== undefined && o.kv.id === down)[0] : null;
             if (key) {
                 mousePress(key, key.width / 2, key.height / 2);
                 tryCompare(key, "sink", 1, 2000, "the key went down");
@@ -232,13 +194,14 @@ Item {
             const f = folders();
             if (f.folder === "" && f.base === "")
                 skip("neither KX_PICTURES nor KX_PICTURES_BASE names a folder (crates/kx-ui/README.md)");
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
+            tryVerify(() => Board.loaded(root.bundled), 5000, "the bundle is laid out by the texts test");
             const notes = [];
             for (const p of pictures()) {
                 const shot = shoot(p.lk, p.st, p.ui, p.down);
+                // Compared before it is saved, so even a run saving over its baseline meets the old picture.
+                const note = f.base === "" ? "" : unlike(f.base, p.file, shot);
                 if (f.folder !== "")
                     shot.save(f.folder + "/" + p.file);
-                const note = f.base === "" ? "" : unlike(f.base, p.file, shot);
                 if (note !== "") {
                     // QtTest cuts a long failure message, so each note is also logged whole.
                     console.log(note);

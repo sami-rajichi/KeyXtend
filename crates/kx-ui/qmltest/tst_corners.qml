@@ -8,10 +8,10 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
-import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
+import "board.js" as Board
 import "fonts.js" as Fonts
 
 Item {
@@ -19,25 +19,16 @@ Item {
     width: Face.board.plate.w
     height: Face.board.plate.h
 
-    // The states checked, by golden name, each with the texts of its layout's language.
+    // The states checked, by golden name, each with its layout's language: its texts and direction.
     readonly property var states: [
-        { name: "en", texts: En.texts },
-        { name: "fr", texts: Fr.texts },
-        { name: "ar", texts: Ar.texts },
-        { name: "ar-shift", texts: Ar.texts },
-        { name: "ar-altgr", texts: Ar.texts }
+        { name: "en", ui: En },
+        { name: "fr", ui: Fr },
+        { name: "ar", ui: Ar },
+        { name: "ar-shift", ui: Ar },
+        { name: "ar-altgr", ui: Ar }
     ]
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
+    // The bundled fonts, from where the texts test lays them out.
+    property var bundled: []
 
     Component { id: keyC; Key {} }
     // Every key of the board at size `s`, in look `lk` and state `st`.
@@ -83,18 +74,13 @@ Item {
         // board, like every size.
         readonly property real clearPx: 1
 
+        // The bundled fonts load once, for every row.
+        function initTestCase() {
+            root.bundled = Board.loadFonts(root);
+        }
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
-        }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
         }
         // One row per theme, so a theme whose Windows font this system lacks skips alone (fonts.js).
         function themes() {
@@ -103,38 +89,24 @@ Item {
         // Skips without look `lk`'s Windows fonts, and waits for the bundled ones.
         function fonts(lk) {
             Fonts.need([lk.look.latin_fonts[0], lk.look.arabic_fonts[0], lk.look.mark_fonts[0]], skip);
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
-        }
-        // Look `lk`'s fonts and texts `texts`, as the keyboard window picks them.
-        function resOf(lk, texts) {
-            const l = lk.look;
-            return {
-                fam: { latin: l.latin_fonts[0], arabic: l.arabic_fonts[0], mark: l.mark_fonts[0], ui: l.latin_fonts[0] },
-                icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
-                ext: Assets.assets.ext,
-                tr: k => texts[k] !== undefined ? texts[k] : k,
-                bar: id => id,
-                dpad: id => id,
-                uid: (group, id) => group + "." + id,
-                space: parts => parts.join(" · ")
-            };
+            tryVerify(() => Board.loaded(root.bundled), 5000, "the bundle is laid out by the texts test");
         }
         // Waits until the legends under `item` have risen in.
         function risen(item) {
-            const texts = all(item, o => o.isChar === true);
+            const texts = Board.all(item, o => o.isChar === true);
             tryVerify(() => texts.every(o => !o.clip), 2000, "the legends rose in");
         }
         // The line `key` shows as `text`.
         function line(key, text) {
-            return all(key, o => o.font !== undefined && o.visible && o.text === text)[0];
+            return Board.all(key, o => o.font !== undefined && o.visible && o.text === text)[0];
         }
 
         // How far `key`'s corner legends `lt` (top left) and `rb` (bottom right) sit in from the face its look draws,
         // at size 1: [side, baseline] for each.
         function margins(key, lt, rb) {
             // The cap's own face, the first one drawn; the inner shading draws it again, moved.
-            const cap = all(key, o => o.sculpted !== undefined && o.grad !== undefined)[0];
-            const fills = all(cap, o => o.base !== undefined && o.g !== undefined && o.visible);
+            const cap = Board.all(key, o => o.sculpted !== undefined && o.grad !== undefined)[0];
+            const fills = Board.all(cap, o => o.base !== undefined && o.g !== undefined && o.visible);
             const f = fills[fills.length - 1];
             const c = f.mapToItem(key, 0, 0);
             const at = (l, x) => l.mapToItem(key, x, l.baselineOffset);
@@ -159,7 +131,7 @@ Item {
             for (const ks of [state.keys[id], marked]) {
                 const kv = Face.board.keys.find(k => k.id === id);
                 const props = { kv: kv, ks: ks, lk: lk, lang: state.lang, design: Face.board.lang_key, s: 1 };
-                const key = createTemporaryObject(keyC, root, Object.assign(props, { res: resOf(lk, Ar.texts) }));
+                const key = createTemporaryObject(keyC, root, Object.assign(props, { res: Board.resOf(lk, Ar) }));
                 const [lt, rb] = [line(key, ks.second), line(key, ks.third)];
                 const [top, bottom] = margins(key, lt, rb);
                 const at = ks.third + ": ";
@@ -248,7 +220,7 @@ Item {
             fonts(row.lk);
             const [touching, seen] = [[], []];
             for (const st of root.states) {
-                const props = { lk: row.lk, st: Face.states[st.name], res: resOf(row.lk, st.texts), s: row.s };
+                const props = { lk: row.lk, st: Face.states[st.name], res: Board.resOf(row.lk, st.ui), s: row.s };
                 const board = createTemporaryObject(boardC, root, props);
                 risen(board);
                 for (const [main, corner, gap] of gaps(board, props.st)) {
