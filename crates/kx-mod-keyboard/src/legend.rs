@@ -145,10 +145,8 @@ impl fmt::Debug for Legend {
     }
 }
 
-/// The state key `k` is read in with `m`; Caps Lock that types nothing falls back to the same state without it.
-/// With Shift or `AltGr` latched and no shortcut latch, a key that types nothing there is empty (`None`).
-#[must_use]
-pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
+/// The first state `m` reads where key `k` types something: the one `m` wants, then the same without Caps Lock.
+fn found(k: &KeyChars, m: LegendMods) -> Option<Slot> {
     let (want, uncapped) = match (m.altgr, m.shift, m.caps) {
         (true, _, _) => (Slot::AltGr, Slot::AltGr),
         (false, true, true) => (Slot::CapsShift, Slot::Shift),
@@ -156,16 +154,21 @@ pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
         (false, false, true) => (Slot::Caps, Slot::Base),
         (false, false, false) => (Slot::Base, Slot::Base),
     };
-    let found = [want, uncapped].into_iter().find(|&s| !k.get(s).is_empty());
-    let latched = m.altgr || m.shift;
-    found.or((!latched || m.shortcut).then_some(Slot::Base))
+    [want, uncapped].into_iter().find(|&s| !k.get(s).is_empty())
 }
 
-/// The one rule for an empty key: it shows no letter, readers hear its empty name, and a click sends nothing, as
-/// Windows' keyboard shows it. A shortcut latch makes no key empty, as the click sends the shortcut.
+/// The one rule for an empty key: Shift or `AltGr` latched with no shortcut latch, and nothing typed in that state.
+/// It shows no letter, readers hear its empty name, and a click sends nothing, as Windows' keyboard shows it.
 #[must_use]
 pub fn is_empty(k: &KeyChars, m: LegendMods) -> bool {
-    slot(k, m).is_none()
+    (m.altgr || m.shift) && !m.shortcut && found(k, m).is_none()
+}
+
+/// The state key `k` is read in with `m`, none for an empty key (`is_empty`); Caps Lock that types nothing falls
+/// back to the same state without it, and any other state to the base.
+#[must_use]
+pub fn slot(k: &KeyChars, m: LegendMods) -> Option<Slot> {
+    (!is_empty(k, m)).then(|| found(k, m).unwrap_or(Slot::Base))
 }
 
 /// True for one character that has upper and lower case.

@@ -135,7 +135,7 @@ fn char_plan(sc: Scan, now: &Now<'_>) -> Plan {
     let Some(k) = now.keys.get(&sc).filter(|_| !m.shortcut) else {
         return shortcut(sc, now);
     };
-    // No slot is `is_empty`'s rule: the key shows no letter, so a click sends nothing.
+    // `slot` is none just when `is_empty`, the rule the view shows: the key shows no letter, so a click sends nothing.
     let Some(s) = slot(k, m) else {
         return Plan::Empty;
     };
