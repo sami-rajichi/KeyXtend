@@ -44,6 +44,9 @@ Window {
     readonly property real corner: ready ? lk.shape.extra.corner_px[0] * s : 0
     // How far the window reaches past the plate's right and bottom edges: the half of the corner that hangs over.
     readonly property real overhang: corner / 2
+    // The window's size in Qt units: the plate and the overhang.
+    readonly property real wide: ready ? board.plate.w + overhang : 0
+    readonly property real high: ready ? board.plate.h + overhang : 0
     readonly property var res: resources(texts, fontsIn)
     // Units and pop-up spots: physical pixels or Qt units on the screen that holds them.
     readonly property Spots spots: Spots {
@@ -59,16 +62,15 @@ Window {
     title: res.tr("window.keyboard")
     visible: false
     color: "transparent"
-    x: at.x
-    y: at.y
-    width: ready ? board.plate.w + overhang : 0
-    height: ready ? board.plate.h + overhang : 0
+    x: rescale.keep(at.x)
+    y: rescale.keep(at.y)
+    width: rescale.keep(wide)
+    height: rescale.keep(high)
 
     onBoxesChanged: reshape()
     onBoardChanged: Qt.callLater(() => drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0))
     onVisibleChanged: if (visible) Qt.callLater(shown)
     onRunningChanged: if (!running) placed = false
-    Screen.onDevicePixelRatioChanged: reshape()
     Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
 
     Connections {
@@ -82,6 +84,11 @@ Window {
         function onTextsChanged() {
             win.retext();
         }
+    }
+    // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
+    Rescale {
+        id: rescale
+        onRatioChanged: Qt.callLater(win.rescreen)
     }
     // Owned by the keyboard, so it stays above it when the guard lifts it; the bubble owns its own.
     Loader {
@@ -189,6 +196,13 @@ Window {
         redraw(keyboard.placed(p.x, p.y, width * p.dpr, height * p.dpr, overhang / s));
     }
 
+    // On a new display scale or screen: the cut again and, unless it is moving, a new placement where it is in pixels,
+    // for its size in the new ones.
+    function rescreen() {
+        reshape();
+        if (placed && st && st.at && !(body.item && body.item.mover.busy))
+            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, overhang / s));
+    }
     // Once shown: the cut, then the guard, which also puts the backdrop on.
     function shown() {
         reshape();
@@ -197,7 +211,7 @@ Window {
     // Cuts the window to `boxes`, so clicks around the keyboard reach the app below; a hidden window waits for `shown`.
     function reshape() {
         if (visible && ready)
-            keyboard.shape(title, JSON.stringify(boxes), Screen.devicePixelRatio);
+            keyboard.shape(title, JSON.stringify(boxes), rescale.ratio);
     }
     // Guards our shown windows (Guard); our window `top`, if given, lands in front until the run ends. A shown tip hides
     // first, as the guard would lift its window with it over a pop-up.

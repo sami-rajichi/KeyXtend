@@ -20,8 +20,13 @@ Window {
     title: res.tr("window.bubble")
     color: "transparent"
     visible: false
-    width: px[0]
-    height: px[0]
+    width: rescale.keep(px[0])
+    height: rescale.keep(px[0])
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     // Hides its tip, as a guard run starts: the guard would lift the bubble with it.
     function hideTip() {

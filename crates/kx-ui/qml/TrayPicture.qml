@@ -11,8 +11,9 @@ Window {
     required property var res
 
     readonly property var sh: lk.shape.tray
-    // The screen's scale; a new one, as the tray's scale changes with it, draws the picture again.
-    property real dpr: Screen.devicePixelRatio
+    // The window's scale, which follows its screen's; a new one, as the tray's scale changes with it, draws the picture
+    // again.
+    readonly property real dpr: rescale.ratio
     // The picture's side in whole Qt units, so the grab has at least the tray's pixels; the Ui object scales it exactly.
     readonly property real side: Math.ceil(ui.trayPx() / dpr)
 
@@ -54,8 +55,13 @@ Window {
     color: "transparent"
     opacity: 0
     visible: false
-    width: side
-    height: side
+    width: rescale.keep(side)
+    height: rescale.keep(side)
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     Rectangle {
         id: badge

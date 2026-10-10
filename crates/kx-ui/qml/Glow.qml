@@ -18,10 +18,15 @@ Window {
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     color: "transparent"
     visible: false
-    x: box.x - m
-    y: box.y - m
-    width: box.width + 2 * m
-    height: box.height + 2 * m
+    x: rescale.keep(box.x - m)
+    y: rescale.keep(box.y - m)
+    width: rescale.keep(box.width + 2 * m)
+    height: rescale.keep(box.height + 2 * m)
+
+    // Keeps the size and place above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     Item {
         x: glow.m

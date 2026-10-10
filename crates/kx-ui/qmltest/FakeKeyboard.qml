@@ -17,6 +17,8 @@ QtObject {
     property var pointer: null
     // The last place the window sent: its box in physical pixels and the corner's overhang at size 1.
     property var placedAt: null
+    // The scale the window last cut itself at.
+    property var shapeDpr: null
 
     // A window titled `title` asked to be lifted alone, as the call runs.
     signal lifted(string title)
@@ -74,6 +76,7 @@ QtObject {
         return JSON.stringify(bubble);
     }
     function shape(title, boxes, dpr) {
+        shapeDpr = dpr;
         note("shape " + title);
         return true;
     }

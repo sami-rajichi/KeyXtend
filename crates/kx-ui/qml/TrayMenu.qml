@@ -33,8 +33,13 @@ Window {
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole, so the widest item always fits.
-    width: Math.ceil(Math.max(sh.width_px, Math.max(showItem.implicitWidth, quitItem.implicitWidth) + 2 * sh.pad_px))
-    height: Math.ceil(items.implicitHeight + 2 * sh.pad_px)
+    width: rescale.keep(Math.ceil(Math.max(sh.width_px, Math.max(showItem.implicitWidth, quitItem.implicitWidth) + 2 * sh.pad_px)))
+    height: rescale.keep(Math.ceil(items.implicitHeight + 2 * sh.pad_px))
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     // A click on the tray icon at physical (px, py): opens the menu there, or closes it when it shows.
     function toggle(px, py) {

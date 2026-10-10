@@ -169,10 +169,13 @@ Item {
             }
         }
 
+        // The picture takes its own window's scale, which Qt updates on a new display scale, as the screen's does not.
         function test_a_new_screen_scale_draws_the_picture_again() {
             const ui = createTemporaryObject(uiC, root);
             const pic = createTemporaryObject(picC, root, { ui: ui, lk: N.lk, res: root.res });
-            pic.dpr = pic.dpr * 2;
+            compare(pic.dpr, pic.devicePixelRatio, "the window's own scale");
+            const rescale = all(pic.contentItem, o => o.keep !== undefined)[0];
+            rescale.ratio = rescale.ratio * 2;
             tryVerify(() => ui.calls.indexOf("trayShow") >= 0, 5000, "drawn again for the new scale");
             tryVerify(() => !pic.visible, 2000, "hidden again");
         }

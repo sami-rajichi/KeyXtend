@@ -1,5 +1,10 @@
 //! The face's size buttons, resize and placement: redraws, saves in one write, and the window's screen DPI.
 
+#![allow(
+    clippy::unwrap_used,
+    reason = "these fixtures run only in tests, where a failed setup should fail the test"
+)]
+
 use crate::host::{GOLDEN, saved};
 use crate::rig::{BOARD, Rig, STATE};
 use kx_mod_keyboard::place::{Extent, home};
@@ -192,4 +197,52 @@ fn a_resize_counts_the_plate_in_the_pixels_of_the_windows_screen() {
         "it grew past the bottom, so it moves up"
     );
     assert!((saved(&r.host).size - 1.25).abs() < f64::EPSILON);
+}
+
+/// What the window sends after a display scale change: the same spot, on the same screen at its new DPI.
+fn rescaled(r: &Rig, dpi: u32) -> Result<FaceReply, FaceError> {
+    let p: Point = serde_json::from_value(r.state()["at"].clone()).unwrap();
+    r.act(placed(p.x, p.y, &[screen(0, dpi, true)]))
+}
+
+#[test]
+fn a_scale_change_fits_the_keyboard_again_for_its_new_size_and_saves_nothing() {
+    let r = Rig::new(&GOLDEN, None);
+    r.act(placed(0, 0, &[screen(0, BASE_DPI, true)])).unwrap();
+    assert_eq!(
+        rescaled(&r, 144),
+        Ok(STATE),
+        "home moved for the bigger plate"
+    );
+    assert_eq!(
+        r.state()["at"],
+        at(home(PLATE.into(), &[screen(0, 144, true)]))
+    );
+    r.act(placed(300, 200, &[screen(0, 144, true)])).unwrap();
+    assert_eq!(r.host.sink.writes().len(), 1, "only the move saved");
+    assert_eq!(
+        rescaled(&r, 120),
+        Ok(FaceReply::default()),
+        "a moved one stays"
+    );
+    assert_eq!(
+        r.host.sink.writes().len(),
+        1,
+        "a scale change saves nothing"
+    );
+}
+
+#[test]
+fn after_a_scale_change_a_resize_counts_the_new_pixels() {
+    let r = Rig::new(&GOLDEN, None);
+    r.act(placed(0, 0, &[screen(0, 120, true)])).unwrap();
+    rescaled(&r, 144).unwrap();
+    r.act(FaceAction::ResizeBegin { x: 0, y: 0 }).unwrap();
+    let quarter = physical(PLATE.0, 144) / 4;
+    r.act(FaceAction::ResizeAt { x: quarter, y: 0 }).unwrap();
+    assert_eq!(
+        r.board()["size"],
+        1.25,
+        "a quarter of the plate at the new 144 DPI"
+    );
 }

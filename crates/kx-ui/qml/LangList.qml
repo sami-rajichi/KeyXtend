@@ -56,8 +56,13 @@ Window {
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole.
-    width: Math.ceil(sh.width_px * s + pagerW)
-    height: Math.ceil(Math.max(list.height, pages > 1 ? pager.height : 0) + 2 * pad)
+    width: rescale.keep(Math.ceil(sh.width_px * s + pagerW))
+    height: rescale.keep(Math.ceil(Math.max(list.height, pages > 1 ? pager.height : 0) + 2 * pad))
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     Rectangle {
         id: body

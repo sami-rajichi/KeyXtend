@@ -42,8 +42,13 @@ Window {
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole.
-    width: Math.ceil(fixed + wordsW)
-    height: Math.ceil(Math.max(words.height, buttons.height, icon.height) + 2 * sh.pad_px[0] * s)
+    width: rescale.keep(Math.ceil(fixed + wordsW))
+    height: rescale.keep(Math.ceil(Math.max(words.height, buttons.height, icon.height) + 2 * sh.pad_px[0] * s))
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     Connections {
         target: note.ui

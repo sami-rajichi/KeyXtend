@@ -31,8 +31,13 @@ Window {
     title: res.tr("window.tip")
     color: "transparent"
     visible: false
-    width: label.implicitWidth + 2 * sh.pad_px[1]
-    height: label.implicitHeight + 2 * sh.pad_px[0]
+    width: rescale.keep(label.implicitWidth + 2 * sh.pad_px[1])
+    height: rescale.keep(label.implicitHeight + 2 * sh.pad_px[0])
+
+    // Keeps the size above across display scale changes.
+    Rescale {
+        id: rescale
+    }
 
     // New texts or a new look close it, so it never shows a word in the last language (ADR-0020).
     onResChanged: hint("", null)
