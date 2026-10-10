@@ -5,6 +5,7 @@
 
 use kx_mod_keyboard::{LangKey, Latch, Role};
 use kx_module_api::ports::Scan;
+use kx_platform_windows::keys;
 
 /// What one step must leave in target-window's key log.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,13 +17,13 @@ pub enum Expect {
 }
 
 impl Expect {
-    /// True when the scan codes that went down, `downs`, meet this.
+    /// True when the scan codes that went down, `downs`, meet this; each wanted code is matched as Windows reports it.
     pub fn met(&self, downs: &[u16]) -> bool {
         match self {
             Self::Nothing => downs.is_empty(),
             Self::Keys(want) => {
                 let mut left = downs.iter();
-                want.iter().all(|w| left.any(|d| d == w))
+                want.iter().all(|&w| left.any(|&d| d == keys::reported(w)))
             }
         }
     }

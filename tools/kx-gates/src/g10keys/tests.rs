@@ -114,6 +114,16 @@ fn expected_keys_must_go_down_in_order_with_others_between_allowed() {
 }
 
 #[test]
+fn right_shift_matches_as_windows_reports_it_and_left_shift_stays_plain() {
+    let rshift = step_of(false, "rshift").expect;
+    assert_eq!(rshift, Expect::Keys(vec![0x36, 0x1C]), "the board's code");
+    assert!(rshift.met(&[0xE036, 0x1C]), "Windows marks it extended");
+    let lshift = step_of(false, "shift").expect;
+    assert!(lshift.met(&[0x2A, 0x1C]));
+    assert!(!lshift.met(&[0xE02A, 0x1C]), "left Shift stays plain");
+}
+
+#[test]
 fn the_language_key_steps_opens_its_list_or_does_nothing_with_one_layout() {
     assert_eq!(lang_want(LangKey::Carousel, 2), LangWant::Steps);
     assert_eq!(lang_want(LangKey::Cycle, 3), LangWant::Steps);

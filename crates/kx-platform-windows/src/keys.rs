@@ -1,4 +1,4 @@
-//! Key tables: the tag on our own input, keys Windows sends as extended, how `VkKeyScanEx` names
+//! Key tables: the tag on our own input, keys Windows sends or reports as extended, how `VkKeyScanEx` names
 //! the modifiers a character needs, the keys `ToUnicodeEx` reads held down, and the menu mask key.
 
 use std::fmt;
@@ -14,6 +14,8 @@ const EXTENDED_PREFIXES: [u8; 2] = [0xE0, 0xE1];
 /// Virtual keys Windows documents as extended, though `MapVirtualKeyExW` gives their numpad scan code:
 /// Page Up, Page Down, End, Home, the four arrows, Insert and Delete.
 pub const EXTENDED_VKS: [u16; 10] = [0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E];
+/// Scan codes sent plain that Windows reports as extended in key messages: layouts mark right Shift `KBDEXT`.
+pub const REPORTED_EXTENDED: [u16; 1] = [0x36];
 
 /// `VK_SHIFT`, held for a character on the Shift level.
 pub const VK_SHIFT: u16 = 0x10;
@@ -115,6 +117,17 @@ pub fn vk_extended(vk: u16, mapped: u32) -> bool {
     EXTENDED_PREFIXES.contains(&prefix) || EXTENDED_VKS.contains(&vk)
 }
 
+/// Scan code `sent` as Windows reports it in key messages: with the `E0` prefix when it is in `REPORTED_EXTENDED`.
+#[must_use]
+pub fn reported(sent: u16) -> u16 {
+    let [low, _] = sent.to_le_bytes();
+    if REPORTED_EXTENDED.contains(&sent) {
+        u16::from_be_bytes([EXTENDED_PREFIXES[0], low])
+    } else {
+        sent
+    }
+}
+
 /// The generic key of a left or right modifier `vk`, such as `VK_SHIFT` for `VK_LSHIFT`; `None` for other keys.
 #[must_use]
 pub fn generic(vk: u16) -> Option<u16> {
@@ -201,6 +214,14 @@ mod tests {
         assert!(vk_extended(0x13, 0xE11D), "Pause");
         for (vk, mapped) in [(VK_A, 0x1E), (VK_SHIFT, 0x2A), (0x11, 0x1D), (0x12, 0x38)] {
             assert!(!vk_extended(vk, mapped), "{vk:#04X}");
+        }
+    }
+
+    #[test]
+    fn right_shift_is_reported_extended_and_other_plain_codes_as_sent() {
+        assert_eq!(reported(0x36), 0xE036, "right Shift");
+        for sent in [0x2A, 0x1C, 0xE038] {
+            assert_eq!(reported(sent), sent, "{sent:#06X}");
         }
     }
 
