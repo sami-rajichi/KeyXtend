@@ -1,10 +1,11 @@
-//! Between the app and the UI: Quit and a second copy's commands reach the app, which ends the UI and its queue.
+//! Between the app and the UI: Quit and a second copy's commands reach the app, which ends the UI and its queue,
+//! and the keyboard's mode outlives the windows that kept it.
 
 use crate::logs::warnings_of;
 use crate::{Rig, failed};
 use kx_module_api::{ModuleId, Notice};
 use kx_platform::ui::Command;
-use kx_ui::{Hub, Request, Wake};
+use kx_ui::{Hub, Mode, Request, Wake};
 use std::sync::mpsc::{RecvError, TryRecvError};
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
@@ -175,4 +176,32 @@ fn a_quit_the_app_can_no_longer_hear_ends_the_ui_itself() {
     hub.command(Command::Quit);
     assert_eq!(*wakes.lock().unwrap(), [Wake::End]);
     assert!(!hub.quit(), "asked already");
+}
+
+#[test]
+fn a_new_hub_keeps_the_keyboard_shown() {
+    let rig = Rig::new();
+    assert_eq!(rig.hub.mode(), Mode::Shown);
+    assert_eq!(rig.hub.mode_json(), r#"{"away":false,"minimised":false}"#);
+}
+
+#[test]
+fn the_mode_the_ui_keeps_outlives_it_for_the_next() {
+    let rig = Rig::new();
+    rig.hub.keep_mode(Mode::of(true, true));
+    rig.hub.drop_waker();
+    rig.hub.set_waker(keeper(&Arc::default()));
+    assert_eq!(rig.hub.mode(), Mode::Minimised);
+    assert_eq!(rig.hub.mode_json(), r#"{"away":true,"minimised":true}"#);
+    rig.hub.keep_mode(Mode::of(true, false));
+    assert_eq!(rig.hub.mode_json(), r#"{"away":true,"minimised":false}"#);
+    assert!(rig.wakes().is_empty(), "keeping it wakes nothing");
+}
+
+#[test]
+fn a_minimised_keyboard_is_away_too() {
+    assert_eq!(Mode::of(false, false), Mode::Shown);
+    assert_eq!(Mode::of(true, false), Mode::Away);
+    assert_eq!(Mode::of(true, true), Mode::Minimised);
+    assert_eq!(Mode::of(false, true), Mode::Minimised);
 }

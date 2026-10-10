@@ -16,6 +16,8 @@ QtObject {
     property bool away: false
     // Minimise put it away behind the bubble, which comes back when the keyboard module runs again.
     property bool minimised: false
+    // Both start as the hub keeps them, so windows made again leave the keyboard as it was; nothing follows before.
+    property bool restored: false
 
     // The UI ended and the tray icon is gone, so the root quits.
     signal done
@@ -167,6 +169,7 @@ QtObject {
     function open() {
         away = false;
         minimised = false;
+        keep();
         bubble.visible = false;
         bubbleGlow.visible = false;
         if (!face.running)
@@ -177,13 +180,17 @@ QtObject {
         face.visible = true;
     }
 
-    // Hides the keyboard and shows the bubble; false when there is nowhere for the bubble, so the keyboard stays.
+    // Hides the keyboard and shows the bubble; false when there is nowhere for the bubble, so the keyboard stays. A
+    // keyboard not placed yet, as one made again, is placed first, so the bubble goes by where the keyboard keeps it.
     function minimise() {
         face.finish();
+        if (!face.placed)
+            face.place();
         if (!bubbleTo())
             return false;
         hide();
         minimised = true;
+        keep();
         bubbleGlow.visible = true;
         bubble.visible = true;
         face.guardRun();
@@ -211,13 +218,20 @@ QtObject {
         face.finish();
         away = true;
         minimised = false;
+        keep();
         face.visible = false;
         kbGlow.visible = false;
+    }
+    // The hub keeps the mode for windows made again.
+    function keep() {
+        ui.keepMode(away, minimised);
     }
 
     // The keyboard module stopped: everything hides. It runs again: the keyboard shows, or its bubble when minimised
     // (the keyboard if the bubble has nowhere to go), and a closed keyboard stays closed.
     function follow() {
+        if (!restored)
+            return;
         if (!face.running) {
             face.visible = false;
             kbGlow.visible = false;
@@ -228,9 +242,14 @@ QtObject {
         }
     }
 
-    // After every handler here has run, so the keyboard has its place; the tray icon is drawn once the look is in.
+    // After every handler here has run, so the keyboard has its place, it shows, stays away or gets its bubble, as the
+    // hub keeps it; the tray icon is drawn once the look is in.
     Component.onCompleted: {
-        Qt.callLater(open);
+        const kept = JSON.parse(ui.modeJson()) || {};
+        away = !!kept.away;
+        minimised = !!kept.minimised;
+        restored = true;
+        Qt.callLater(follow);
         Qt.callLater(app.trayPicture.draw);
     }
 }

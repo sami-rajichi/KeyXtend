@@ -27,6 +27,8 @@ QtObject {
     property int trayPixels: 16
     // Where `popAt` puts every pop-up, in physical pixels.
     property point popSpot: Qt.point(40, 30)
+    // The keyboard's mode the hub keeps, as `keepMode` last set it.
+    property var mode: ({ away: false, minimised: false })
     // The keyboard's language and texts as the calls read them, copied on each change where no binding sees it, as the
     // real object's calls are not tracked: QML must read them again on `textsChanged`.
     readonly property var said: ({ lang: En.lang, texts: En.texts })
@@ -142,6 +144,12 @@ QtObject {
     function menuAt(x, y, w, h) {
         note("menuAt " + x + " " + y);
         return JSON.stringify({ x: x, y: y - h });
+    }
+    function modeJson() {
+        return JSON.stringify(mode);
+    }
+    function keepMode(away, minimised) {
+        mode = { away: away, minimised: minimised };
     }
     function backdrop(title) {
         note("backdrop " + title);

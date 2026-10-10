@@ -11,6 +11,7 @@ mod spots;
 mod texts;
 mod tray;
 
+pub use app::Mode;
 pub use face::{Redraw, Resize};
 pub use fonts::FontBook;
 pub use notices::Shown;
@@ -112,6 +113,8 @@ struct Live {
     waker: Option<Arc<Waker>>,
     /// The app ended the UI.
     ended: bool,
+    /// How the user left the keyboard.
+    mode: Mode,
     /// The app's queue, until Quit ends it.
     requests: Option<Sender<Request>>,
 }
@@ -152,6 +155,7 @@ impl Hub {
             pending: Vec::new(),
             waker: None,
             ended: false,
+            mode: Mode::Shown,
             requests: Some(requests),
         };
         let hub = Self {

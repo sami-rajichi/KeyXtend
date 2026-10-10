@@ -1,12 +1,65 @@
-//! Between the app and the UI: the Qt thread's waker and its handover to rebuilt windows, a second copy's commands,
-//! Try again, and the one quit path.
+//! Between the app and the UI: the Qt thread's waker and the keyboard's mode, both handed over to rebuilt windows, a
+//! second copy's commands, Try again, and the one quit path.
 //! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
-use super::{Hub, Request, Wake, Waker};
+use super::{Hub, Request, Wake, Waker, json};
 use kx_platform::ui::Command;
+use serde::Serialize;
 use std::sync::Arc;
 
+/// How the user left the keyboard, which windows made again keep.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum Mode {
+    /// It shows, once the keyboard module runs.
+    #[default]
+    Shown,
+    /// Close put it away until Show.
+    Away,
+    /// Minimise put it away behind its bubble.
+    Minimised,
+}
+
+/// The mode as QML's `away` and `minimised` hold it.
+#[derive(Serialize)]
+struct Flags {
+    away: bool,
+    minimised: bool,
+}
+
+impl Mode {
+    /// The mode QML's `away` and `minimised` describe; a minimised keyboard is away too.
+    #[must_use]
+    pub fn of(away: bool, minimised: bool) -> Self {
+        match (away, minimised) {
+            (_, true) => Self::Minimised,
+            (true, false) => Self::Away,
+            (false, false) => Self::Shown,
+        }
+    }
+}
+
 impl Hub {
+    /// Keeps how the user left the keyboard, for windows made again.
+    pub fn keep_mode(&self, mode: Mode) {
+        self.lock().mode = mode;
+    }
+
+    /// How the user left the keyboard.
+    #[must_use]
+    pub fn mode(&self) -> Mode {
+        self.lock().mode
+    }
+
+    /// The mode as JSON `{away, minimised}`, as QML holds it.
+    #[must_use]
+    pub fn mode_json(&self) -> String {
+        let mode = self.mode();
+        json(&Flags {
+            away: mode != Mode::Shown,
+            minimised: mode == Mode::Minimised,
+        })
+    }
+
     /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first.
     /// A second waker replaces the first, which then hears nothing; that is a bug, so it warns.
     pub fn set_waker(&self, waker: Waker) {

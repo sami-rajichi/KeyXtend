@@ -1,5 +1,6 @@
 //! The device-loss steps (ADR-0021): the debug-only trigger marks the shared device lost, a frame finds it, and the
-//! windows are made again over the same hub, at the face's place and size, until `[ui] device_rebuilds` runs out.
+//! windows are made again over the same hub, at the face's place and size, shown, away or minimised as the user left
+//! the keyboard, until `[ui] device_rebuilds` runs out.
 
 use crate::face::HOME;
 use crate::{GUARDED, Outcome, Rig, wait};
@@ -7,7 +8,9 @@ use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
 use kx_module_api::ports::Rect;
 use kx_module_api::{Notice, keys};
-use kx_ui::{Device, Resize, Shell, UiSettings, drawing};
+use kx_platform::ui::Command;
+use kx_platform_fake::GuardCall;
+use kx_ui::{Device, Mode, Resize, Shell, UiSettings, drawing};
 use tracing::Level;
 
 /// What the guard logs once a run guarded our windows.
@@ -23,15 +26,21 @@ fn lose(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
     })
 }
 
+/// Loses the device, then makes the windows again.
+fn remake(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
+    lose(app, shell)?;
+    shell
+        .rebuilt()
+        .then_some(())
+        .ok_or_else(|| "the windows were not made again".into())
+}
+
 /// Makes the windows again after a loss, then waits until the keyboard is placed and guarded again and the tray shows
 /// its one icon.
 fn rebuild(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig) -> Outcome {
     let placed = rig.face.placed().len();
     let guarded = rig.lines.count(Level::INFO, GUARDED_LINE);
-    lose(app, shell)?;
-    if !shell.rebuilt() {
-        return Err("the windows were not made again".into());
-    }
+    remake(app, shell)?;
     wait(app, "the rebuilt keyboard placed and guarded", || {
         rig.face.placed().len() > placed
             && rig.lines.count(Level::INFO, GUARDED_LINE) > guarded
@@ -80,6 +89,55 @@ pub(crate) fn once(
         !rig.hub.shown_notices().is_empty()
     })?;
     kept(rig)
+}
+
+/// How many cuts and guard runs the guard took; only the shown keyboard cuts itself.
+fn guarded(rig: &Rig) -> (usize, usize) {
+    let calls = rig.guard.calls();
+    let cuts = calls.iter().filter(|c| matches!(c, GuardCall::Shape(..)));
+    let runs = calls
+        .iter()
+        .filter(|c| matches!(c, GuardCall::GuardOwn(..)));
+    (cuts.count(), runs.count())
+}
+
+/// A loss while the keyboard is `mode`, as Close or Minimise keeps it: once a guard run of the windows made again
+/// came, only a minimised keyboard placed itself, for its bubble, none showed, and the mode stayed. Then Show brings
+/// it back.
+fn left(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig, mode: Mode) -> Outcome {
+    rig.hub.keep_mode(mode);
+    let ((cuts, runs), before) = (guarded(rig), rig.face.placed().len());
+    let bubble = mode == Mode::Minimised;
+    remake(app, shell)?;
+    wait(app, "a guard run of the windows made again", || {
+        rig.face.placed().len() == before + usize::from(bubble) && guarded(rig).1 > runs
+    })?;
+    if guarded(rig).0 != cuts || rig.hub.mode() != mode || rig.tray.shown().len() != 1 {
+        return Err(format!(
+            "{mode:?}: the keyboard did not stay as it was left"
+        ));
+    }
+    if bubble {
+        kept(rig)?;
+    }
+    rig.hub.command(Command::Show);
+    wait(app, "Show bringing the keyboard back", || {
+        guarded(rig).0 > cuts && rig.hub.mode() == Mode::Shown
+    })
+}
+
+/// A loss after Close: the keyboard stays away while the banner made again shows, until Show.
+pub(crate) fn away(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig) -> Outcome {
+    left(app, shell, rig, Mode::Away)
+}
+
+/// A loss after Minimise: the keyboard is placed where it was and stays behind its bubble, until Show.
+pub(crate) fn minimised(
+    app: &mut UniquePtr<QGuiApplication>,
+    shell: &mut Shell,
+    rig: &Rig,
+) -> Outcome {
+    left(app, shell, rig, Mode::Minimised)
 }
 
 /// A loss past `[ui] device_rebuilds` makes the windows again on their own devices, with one warning, and the keyboard

@@ -7,7 +7,7 @@ mod texts;
 mod tray;
 
 use super::{hub, qs};
-use crate::hub::{Hub, NULL, Wake, json};
+use crate::hub::{Hub, Mode, NULL, Wake, json};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use kx_platform::ui::{TrayEvent, WatchGuard};
@@ -121,6 +121,14 @@ pub mod qobject {
         /// The compiled-in icon folder and type and the font files, as JSON `{icons, ext, fonts}`.
         #[qinvokable]
         fn assets(&self) -> QString;
+
+        /// How the user left the keyboard, as JSON `{away, minimised}`, so windows made again leave it the same.
+        #[qinvokable]
+        fn mode_json(&self) -> QString;
+
+        /// Keeps how the user left the keyboard: away after Close or Minimise, minimised behind the bubble.
+        #[qinvokable]
+        fn keep_mode(&self, away: bool, minimised: bool);
 
         /// Asks the app to quit, which stops the modules and then sends `quit_asked`; a gone app ends the UI at once.
         /// False when Quit was asked already, the app is gone, or no hub is installed.
@@ -261,6 +269,14 @@ impl qobject::Ui {
     fn backdrop(&self, title: &QString) -> bool {
         let title = title.to_string();
         self.with(false, |h| h.backdrop(&title))
+    }
+
+    fn mode_json(&self) -> QString {
+        qs(&self.with(NULL.to_owned(), Hub::mode_json))
+    }
+
+    fn keep_mode(&self, away: bool, minimised: bool) {
+        self.with((), |h| h.keep_mode(Mode::of(away, minimised)));
     }
 
     fn quit(&self) -> bool {

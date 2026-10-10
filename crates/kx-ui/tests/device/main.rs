@@ -49,12 +49,14 @@ const TICKS: usize = 250;
 /// A step's verdict; the error says what failed.
 pub(crate) type Outcome = Result<(), String>;
 
-/// What the test drives: the hub, its face, the tray, the host behind its settings, and the log.
+/// What the test drives: the hub, its face, the window guard, the tray, the host behind its settings, and the log.
 pub(crate) struct Rig {
     /// The hub the app's QML reads.
     pub(crate) hub: Arc<Hub>,
     /// The keyboard face it draws.
     pub(crate) face: Arc<Face>,
+    /// The guard that cuts and guards our windows.
+    pub(crate) guard: Arc<FakeWindowGuard>,
     /// The tray its icon shows in.
     pub(crate) tray: Arc<FakeTray>,
     /// The host behind the face's settings.
@@ -77,8 +79,9 @@ impl Rig {
             primary: true,
         };
         let tray = Arc::new(FakeTray::new(TRAY_PX));
+        let guard = Arc::new(FakeWindowGuard::new(GUARDED));
         let ports = UiPorts {
-            guard: Arc::new(FakeWindowGuard::new(GUARDED)),
+            guard: guard.clone(),
             screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
             look: Arc::new(FakeSystemLook::new()),
             backdrop: Arc::new(FakeBackdrop::new()),
@@ -90,6 +93,7 @@ impl Rig {
         let mut rig = Self {
             hub,
             face,
+            guard,
             tray,
             host,
             lines,
@@ -164,6 +168,10 @@ fn run() -> Outcome {
     checks::shared(&mut app, &shell, &rig)?;
     #[cfg(debug_assertions)]
     let kept = rebuild::once(&mut app, &mut shell, &rig)?;
+    #[cfg(debug_assertions)]
+    rebuild::away(&mut app, &mut shell, &rig)?;
+    #[cfg(debug_assertions)]
+    rebuild::minimised(&mut app, &mut shell, &rig)?;
     checks::fonts(&mut rig)?;
     #[cfg(debug_assertions)]
     rebuild::past_most(&mut app, &mut shell, &mut rig, kept)?;
