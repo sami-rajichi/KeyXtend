@@ -159,20 +159,36 @@ mod qt {
     fn rhi_headers() -> Result<PathBuf, String> {
         println!("cargo::rerun-if-env-changed={QMAKE_ENV}");
         let qmake = std::env::var_os(QMAKE_ENV).unwrap_or_else(|| QMAKE.into());
-        let query = |key: &str| -> Result<String, String> {
-            let out = Command::new(&qmake).args(["-query", key]).output();
-            let out = out.map_err(|e| format!("qmake -query {key}: {e}"))?;
-            let text = String::from_utf8(out.stdout).map_err(|e| e.to_string())?;
-            Ok(text.trim().to_owned())
-        };
-        let (version, pinned) = (query(VERSION_KEY)?, pinned_qt()?);
+        let (version, pinned) = (query(&qmake, VERSION_KEY)?, pinned_qt()?);
         if version != pinned {
+            let (table, key) = PIN_PATH.split_at(PIN_PATH.len() - 1);
             return Err(format!(
-                "Qt {version} is not the pinned {pinned}; check the graphics device glue first (ADR-0021)"
+                "Qt {version} is not the pinned {pinned}; check the graphics device glue first (ADR-0021), then change \
+                 [{}] {} in the root Cargo.toml",
+                table.join("."),
+                key.join(".")
             ));
         }
-        let headers = PathBuf::from(query(HEADERS_KEY)?);
+        let headers = PathBuf::from(query(&qmake, HEADERS_KEY)?);
         Ok(headers.join(GUI).join(version).join(GUI))
+    }
+
+    /// What `qmake -query key` answers; an error when qmake does not run, fails, or answers nothing.
+    fn query(qmake: &std::ffi::OsStr, key: &str) -> Result<String, String> {
+        let failed = |why: String| {
+            format!("qmake -query {key} failed: {why}; set {QMAKE_ENV} to Qt's qmake")
+        };
+        let out = Command::new(qmake).args(["-query", key]).output();
+        let out = out.map_err(|e| failed(e.to_string()))?;
+        let text = String::from_utf8(out.stdout).map_err(|e| failed(e.to_string()))?;
+        let text = text.trim();
+        if !out.status.success() || text.is_empty() {
+            return Err(failed(format!(
+                "it ended with {} and answered {text:?}",
+                out.status
+            )));
+        }
+        Ok(text.to_owned())
     }
 
     /// The Qt version the workspace manifest pins.
