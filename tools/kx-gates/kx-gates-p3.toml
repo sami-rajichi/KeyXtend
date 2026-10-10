@@ -107,8 +107,9 @@ probe = "enter"
 failures_shown = 5
 
 # G11 DPI: one run at each scale the owner sets in Windows; the keyboard keeps its logical size within slack_px.
+# The top scale is the largest Windows offers on the development PC's 1920x1080 screen (175 %, not 200 %).
 [g11]
-scales = [100, 150, 200]
+scales = [100, 150, 175]
 slack_px = 2.0
 
 # G13 themes: the gate watches while the owner changes dark mode, the accent and high contrast in Windows.
