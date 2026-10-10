@@ -1,5 +1,5 @@
 // Single parts over the real look fixtures: the cap inside its cell, icons tinted with public Qt Quick only, the hover
-// outline in high contrast, dimmed keys and D-pad, plate icons and chips, and bidi marks that take no room.
+// outline in high contrast, dimmed keys, plate icons and chips, and bidi marks that take no room.
 import QtQuick
 import QtQml.Models
 import QtTest
@@ -66,7 +66,6 @@ Item {
     }
     Component { id: barC; TopBar {} }
     Component { id: cornerC; Corner {} }
-    Component { id: padC; DPad {} }
     Component { id: spyC; SignalSpy {} }
 
     TestCase {
@@ -104,12 +103,6 @@ Item {
         }
         function find(item, ok) {
             return all(item, ok)[0] || null;
-        }
-
-        // UI Automation finds each key by this id, so tools aim at keys wherever the top bar puts them.
-        function test_every_key_gives_ui_automation_its_board_id() {
-            for (const c of Face.board.keys)
-                compare(makeKey(c.id).Accessible.id, c.id);
         }
 
         function test_the_cap_sits_half_a_gap_inside_its_cell() {
@@ -248,22 +241,6 @@ Item {
             mouseMove(lit, lit.width / 2, lit.height / 2);
             tryVerify(() => lit.hot, 1000, "hovered");
             verify(Qt.colorEqual(mark.color, H.lk.sel_ink) && Qt.colorEqual(lit.ink, H.lk.sel_ink), "HighlightText on Highlight");
-        }
-
-        function test_a_working_dpad_names_each_arrow_and_a_dimmed_one_is_one_button() {
-            const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null });
-            const pad = createTemporaryObject(padC, root, { box: box, lk: N.lk, res: root.res, s: 1 });
-            compare(pad.Accessible.role, Accessible.Grouping, "a group of arrows");
-            for (const id of Object.keys(N.lk.icons.dpad).filter(id => id !== "stop"))
-                verify(find(pad, o => o.Accessible.name === En.texts["dpad." + id] && !o.Accessible.ignored), id);
-            // UI Automation finds each arrow and Stop by its text key, whatever the language.
-            for (const id of Object.keys(N.lk.icons.dpad))
-                compare(find(pad, o => o.Accessible.id === "dpad." + id).Accessible.name, En.texts["dpad." + id], id);
-            compare(pad.Accessible.id, box.name, "the pad");
-            const dim = createTemporaryObject(padC, root, { box: Face.board.dpad, lk: N.lk, res: root.res, s: 1 });
-            compare(dim.Accessible.role, Accessible.Button);
-            compare(dim.Accessible.description, En.texts["tip.later"]);
-            verify(!find(dim, o => o !== dim && o.Accessible.role === Accessible.Button && !o.Accessible.ignored && o.visible), "no arrow on its own");
         }
 
         function test_text_has_no_colour_fringes() {

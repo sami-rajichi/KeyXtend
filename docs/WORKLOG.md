@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-10 10:30 — P3: screen readers can toggle latch keys and language rows
+UI Automation's Toggle on a checkable control asks Qt for its toggle action, not the press, so a reader that toggled Shift or a language row did nothing. Keys and rows now answer both actions the same way, and a dimmed key still ignores both. The reader checks moved into their own Quick test file.
+
 ## 2026-10-02 14:18 — P3: kx-review fixes for the gates, the test window and the docs
 G10 now presses every key the way a screen reader does and checks what reaches the test window, and G13 stops early when the keys cannot take the accent and compares only the keys' solid faces. G1 to G3 now give a verdict (G2 also checks the caret), G19 and G23 report partial when part of the gate did not run, and G23 now tests the password. The test window logs each key and has a name screen readers read, G26 types every character key, and G9 and the launchers put back or close exactly what they changed or opened. The security notes are marked reviewed, later work is in the item files, and the move map shows where P3 left each spike part.
 

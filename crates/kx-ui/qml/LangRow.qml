@@ -35,6 +35,8 @@ Item {
     Accessible.checkable: true
     Accessible.checked: filled && row.current
     Accessible.onPressAction: if (r.filled) r.picked()
+    // UI Automation's Toggle on a checkable row asks Qt for this action, not the press.
+    Accessible.onToggleAction: if (r.filled) r.picked()
 
     Hover {
         lk: r.lk

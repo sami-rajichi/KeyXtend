@@ -71,6 +71,8 @@ Item {
     Accessible.checkable: !!kv.checkable
     Accessible.checked: key.on
     Accessible.onPressAction: if (!key.dim) key.hit(false)
+    // UI Automation's Toggle on a latch key asks Qt for this action, not the press.
+    Accessible.onToggleAction: if (!key.dim) key.hit(false)
 
     // What readers hear for a character key in state `st`: the names of the marks it types, which they cannot say bare,
     // or else what it types.

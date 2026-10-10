@@ -166,6 +166,18 @@ Item {
             list.visible = false;
         }
 
+        // Screen readers press a row, or toggle it since rows are checkable; both pick it.
+        function test_a_reader_press_or_toggle_picks_a_row() {
+            const list = makeList(view(3, 0));
+            const pick = createTemporaryObject(spyC, root, { target: list, signalName: "pick" });
+            list.open();
+            waitForRendering(list.contentItem);
+            rowsOf(list)[1].Accessible.pressAction();
+            rowsOf(list)[2].Accessible.toggleAction();
+            compare(pick.signalArguments.map(a => a[0]), [1, 2], "press and toggle each pick their row");
+            list.visible = false;
+        }
+
         // The bundled Arabic fallback font stands taller than the Latin one, as Arabic fonts do.
         function test_an_arabic_row_fits_its_name_and_layout() {
             const at = Assets.assets.fonts.map(f => Qt.resolvedUrl(Assets.root + "/" + f));
