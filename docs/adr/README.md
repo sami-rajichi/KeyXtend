@@ -24,5 +24,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0018 | [One set-once hub for the QML objects](0018-set-once-hub-for-qml-objects.md) | Accepted (2026-09-30) |
 | 0019 | [The tray icon: a port over the taskbar, and our own QML menu](0019-tray-icon-port-and-qml-menu.md) | Accepted (2026-09-30). Adds the `Tray` port to ADR-0016's UI ports. |
 | 0020 | [The keyboard's text follows the keyboard's language](0020-keyboard-text-follows-the-keyboard-language.md) | Accepted (2026-10-01). Supersedes ADR-0017's language choice for the keyboard's text. |
+| 0021 | [One graphics device for every window](0021-one-graphics-device-for-every-window.md) | Accepted (2026-10-10). Adds how ADR-0013's windows draw; sets spec §10's idle memory to 100 MB. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
