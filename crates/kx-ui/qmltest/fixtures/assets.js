@@ -14,3 +14,4 @@ var assets = {
   "icons": "icons"
 };
 var system = ["Segoe UI Variable Text","Segoe UI"];
+var pictures = "Pictures.qml";
