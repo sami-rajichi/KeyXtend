@@ -1,7 +1,7 @@
 # 17. Translations: Fluent files compiled in
 
 - **Date:** 2026-09-30
-- **Status:** Accepted. Its language choice for the keyboard's text is superseded by ADR-0020, and its bidi rule by ADR-0022.
+- **Status:** Accepted. Its language choice for the keyboard's text is superseded by ADR-0020, and its bidi rule and Arabic list join by ADR-0022.
 
 ## Context
 
