@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-10 12:50 — P3: fix round E, display scale, Arabic marks and legends, and the GPU
+The windows now keep their size and place across a display scale change: Qt left each native window as it was, so a new `Rescale` part sets the bound values again, and the keyboard cuts itself and is placed again in the new pixels. In Dolch, marks on their dotted circle take Noto Sans Arabic (Rubik lacks U+25CC), and a wide Arabic letter over an AltGr legend rises 6 px so they no longer touch. The app now pins Qt to the lowest-power GPU through DXGI; it was already on the AMD iGPU here, and the large memory comes from one Direct3D device per shown window, a finding for a later ADR.
+
 ## 2026-10-10 11:08 — P3: fix round D, the last fixes before the module-done gate
 The window guard now stops a repeat lift per window, so a window dropped inside another window's lift is lifted back too, the likely cause of G9's lost shadow, and G10 matches right Shift as Windows reports it. A resize saves only a size it changed and never one the settings refuse, the Keys route sends `AltGr` as left Ctrl and right Alt, the D-pad stays inside its columns, and placement keeps the resize corner on the work area. A key takes its tip back on leave even when its note went, a failed G10 step lets its latch go, and G13 finds the keyboard before it reads the look settings. G10's texts now name the keys it skips, and the keyboard's security note says the P3 manual check must still confirm who can press a key.
 
