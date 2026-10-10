@@ -9,6 +9,8 @@
 #include <QtGui/QImageReader>
 #include <QtGui/QPainter>
 #include <QtQuick/QQuickImageProvider>
+#include <QtQuick/QQuickWindow>
+#include <QtQuick/QSGTexture>
 
 #include <algorithm>
 #include <functional>
@@ -58,18 +60,55 @@ inline QImage tinted(const QString &root, const QString &ext, const QString &id,
     return art;
 }
 
-// Serves `image://<provider>/<rrggbb>/<name>.<ext>` from the icons in `root`. A refused or missing icon is a clear
-// image of the asked size, and `refused` hears its id.
+// An icon's own texture, outside Qt's shared atlas: an icon drawn between whole pixels samples the same however other
+// images, such as a colour change's steps, filled the atlas.
+class IconTexture : public QQuickTextureFactory
+{
+public:
+    explicit IconTexture(QImage art) : art(std::move(art)) {}
+
+    QSGTexture *createTexture(QQuickWindow *window) const override
+    {
+        return window->createTextureFromImage(art);
+    }
+    QSize textureSize() const override
+    {
+        return art.size();
+    }
+    int textureByteCount() const override
+    {
+        return int(art.sizeInBytes());
+    }
+    QImage image() const override
+    {
+        return art;
+    }
+
+private:
+    const QImage art;
+};
+
+// Serves `image://<provider>/<rrggbb>/<name>.<ext>` from the icons in `root`, each as its own texture. A refused or
+// missing icon is a clear image of the asked size, and `refused` hears its id.
 class TintIcons : public QQuickImageProvider
 {
 public:
     TintIcons(QString root, QString ext, Refused refused)
-        : QQuickImageProvider(QQuickImageProvider::Image), root(std::move(root)), ext(std::move(ext)),
+        : QQuickImageProvider(QQuickImageProvider::Texture), root(std::move(root)), ext(std::move(ext)),
           refused(std::move(refused))
     {
     }
 
-    QImage requestImage(const QString &id, QSize *size, const QSize &requested) override
+    QQuickTextureFactory *requestTexture(const QString &id, QSize *size, const QSize &requested) override
+    {
+        QImage art = serve(id, requested);
+        if (size)
+            *size = art.size();
+        return new IconTexture(std::move(art));
+    }
+
+    // Icon `id` at `requested`, or a clear image after telling `refused`.
+    QImage serve(const QString &id, const QSize &requested) const
     {
         QImage art = tinted(root, ext, id, requested);
         if (art.isNull()) {
@@ -77,8 +116,6 @@ public:
             art = QImage(requested.isValid() ? requested : QSize(1, 1), QImage::Format_ARGB32_Premultiplied);
             art.fill(Qt::transparent);
         }
-        if (size)
-            *size = art.size();
         return art;
     }
 

@@ -61,7 +61,7 @@ inline rust::Vec<std::uint32_t> icon_pixels(rust::Str root, rust::Str ext, rust:
                                             Heard heard)
 {
     const std::unique_ptr<TintIcons> icons(tint_icons(root, ext, heard));
-    return icon_words(icons->requestImage(icon_text(id), nullptr, QSize(side, side)));
+    return icon_words(icons->serve(icon_text(id), QSize(side, side)));
 }
 
 // File `name` in `root` read at `side` pixels square, untinted; debug builds only.
