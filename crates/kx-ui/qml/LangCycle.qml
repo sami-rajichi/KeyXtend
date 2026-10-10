@@ -34,7 +34,7 @@ Row {
         ext: cyc.res.ext
         px: cyc.cy.icon_px * cyc.s
         tint: cyc.ink
-        opacity: cyc.cy.icon_share
+        share: cyc.cy.icon_share
     }
     Label {
         id: name

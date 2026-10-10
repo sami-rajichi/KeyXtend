@@ -80,7 +80,7 @@ jobs:
         -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme
         -p xtask
       NO_QT: -p kx-ui
-      QT_ONLY: -p keyxtend
+      QT_ONLY: -p keyxtend -p kx-test-icons
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

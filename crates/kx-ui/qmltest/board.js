@@ -29,7 +29,7 @@ function resOf(lk, ui) {
     const [latin, arabic] = [pick(lk.look.latin_fonts), pick(lk.look.arabic_fonts)];
     return {
         fam: { latin: latin, arabic: arabic, mark: pick(lk.look.mark_fonts), ui: ui.lang.rtl ? arabic : latin },
-        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        icons: Assets.assets.icons,
         ext: Assets.assets.ext,
         tr: k => ui.texts[k] !== undefined ? ui.texts[k] : k,
         bar: id => id,

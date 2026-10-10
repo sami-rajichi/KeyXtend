@@ -27,10 +27,13 @@ pub use bridges::harden::{
 };
 #[cfg(feature = "qt")]
 pub use bridges::install;
+#[cfg(feature = "qt")]
+pub use bridges::tint::serve_icons;
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use bridges::{
     device::{drawing, wired},
     fonts::font_families,
+    tint::{icon_mask, icon_pixels},
 };
 pub use geom::Area;
 pub use hub::{
@@ -50,6 +53,7 @@ pub const MAIN_QML: &str = env!("KX_UI_MAIN_QML");
 #[cfg(feature = "qt")]
 pub const QML_URI: &str = env!("KX_UI_QML_URI");
 
-/// The compiled-in icon folder URL and type and each font's URL, as JSON `{icons, ext, fonts}`, which QML reads.
+/// The URL that serves the icons in their tint, the icon type and each compiled-in font's URL, as JSON
+/// `{icons, ext, fonts}`, which QML reads.
 #[cfg(feature = "qt")]
 pub const ASSETS: &str = env!("KX_UI_ASSETS");

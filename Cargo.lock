@@ -607,6 +607,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-test-icons"
+version = "0.0.0"
+dependencies = [
+ "cxx-qt-build",
+ "kx-theme",
+]
+
+[[package]]
 name = "kx-test-support"
 version = "0.0.0"
 dependencies = [
@@ -643,6 +651,7 @@ dependencies = [
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",
+ "kx-test-icons",
  "kx-test-support",
  "kx-theme",
  "proptest",

@@ -11,7 +11,7 @@ var assets = {
     "fonts/notosansarabic/NotoSansArabic-wdth-wght-.ttf",
     "fonts/rubik/Rubik-wght-.ttf"
   ],
-  "icons": "icons"
+  "icons": "image://kxicon"
 };
 var system = ["Segoe UI Variable Text","Segoe UI"];
 var pictures = "Pictures.qml";

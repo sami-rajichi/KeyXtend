@@ -72,11 +72,11 @@ QtObject {
     function lookJson() {
         return JSON.stringify(look);
     }
-    // The bundle as the app holds it, laid out by the texts test.
+    // The bundle as the app holds it: fonts the texts test lays out, and icons the tests' icon plugin serves.
     function assets() {
         const at = rel => Qt.resolvedUrl(Assets.root + "/" + rel).toString();
         const a = Assets.assets;
-        return JSON.stringify({ icons: at(a.icons), ext: a.ext, fonts: a.fonts.map(at) });
+        return JSON.stringify({ icons: a.icons, ext: a.ext, fonts: a.fonts.map(at) });
     }
     function text(key) {
         return said.texts[key] !== undefined ? said.texts[key] : key;

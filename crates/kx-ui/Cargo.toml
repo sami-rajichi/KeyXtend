@@ -49,6 +49,10 @@ kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 
+# The Qt Quick tests' QML plugin, which the texts test lays out beside the icons (Windows, where they run).
+[target.'cfg(windows)'.dev-dependencies]
+kx-test-icons = { path = "../../tools/kx-test-icons" }
+
 # Loads the root QML file; Qt wants its app object on the main thread, so it runs without the harness.
 [[test]]
 name = "qml"
@@ -64,5 +68,11 @@ required-features = ["qt"]
 # Qt's start ignores planted Qt variables; it runs itself again with them set, so it needs no harness either.
 [[test]]
 name = "harden"
+harness = false
+required-features = ["qt"]
+
+# The icon provider tints the bundled icons; Qt wants its app object on the main thread, so it runs without the harness.
+[[test]]
+name = "tint"
 harness = false
 required-features = ["qt"]

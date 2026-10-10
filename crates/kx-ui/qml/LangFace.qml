@@ -51,7 +51,7 @@ Item {
                 ext: f.t.res.ext
                 px: f.sh.list.icon_px * f.t.s
                 tint: f.t.ink
-                opacity: f.sh.list.icon_share
+                share: f.sh.list.icon_share
             }
         }
     }

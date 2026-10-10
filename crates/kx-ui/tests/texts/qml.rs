@@ -1,6 +1,6 @@
 //! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the assets
-//! laid out as the resources hold them, and the picture folders); a change or a stray file fails it until it runs with
-//! `KX_BLESS=1`.
+//! laid out as the resources hold them with the icon plugin, and the picture folders); a change or a stray file fails
+//! it until it runs with `KX_BLESS=1`.
 
 use crate::files::keys_of;
 use crate::pictures::{PICTURES_QML, hand_over};
@@ -10,7 +10,7 @@ use kx_module_api::ports::{
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
-use kx_theme::assets::{ICON_EXT, ICONS_AT, SYSTEM_FONTS, bundle};
+use kx_theme::assets::{ICON_EXT, SYSTEM_FONTS, bundle, icon_url};
 use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
@@ -24,8 +24,8 @@ const FACE: &str = "../kx-mod-keyboard/tests/golden";
 const STATES: [&str; 7] = ["en", "fr", "ar", "ar-shift", "ar-altgr", "list", "en-caps"];
 /// The UI languages the tests draw.
 const LANGS: [&str; 3] = ["en", "fr", "ar"];
-/// Where the bundled files are laid out, from this crate; the Qt Quick tests read them from there.
-const MIRROR: &str = "../../target/tmp/qmltest-assets";
+/// Where the bundled files and the icon plugin are laid out, from this crate; the Qt Quick tests read them from there.
+pub const MIRROR: &str = "../../target/tmp/qmltest-assets";
 /// The repo's `assets/` folder, from this crate.
 const ASSETS: &str = "../../assets";
 /// The fake tray's picture side.
@@ -175,12 +175,12 @@ pub fn spaces() -> Vec<(String, Vec<String>)> {
     out
 }
 
-/// The bundled assets as `Ui.assets()` names them, relative to where they are laid out, that place, and the font
-/// families Windows ships, which the tests' font rule may skip on a system without them.
+/// The bundled assets as `Ui.assets()` names them, the fonts relative to where they are laid out, that place, and the
+/// font families Windows ships, which the tests' font rule may skip on a system without them.
 fn assets() -> String {
     let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
     let fonts: Vec<&str> = b.fonts.iter().map(|f| f.name.as_str()).collect();
-    let assets = serde_json::json!({ "icons": ICONS_AT, "ext": ICON_EXT, "fonts": fonts });
+    let assets = serde_json::json!({ "icons": icon_url(), "ext": ICON_EXT, "fonts": fonts });
     // The Qt Quick tests sit one folder below this crate.
     let root = Value::String(format!("../{MIRROR}"));
     format!(
@@ -239,6 +239,7 @@ fn the_bundle_is_laid_out_as_the_app_resources_hold_it() {
     }
     let icon = b.icons.first().expect("an icon");
     assert!(mirror.join(&icon.name).is_file());
+    crate::plugin::lay_out(&mirror);
     hand_over(&mirror);
     assert!(mirror.join(PICTURES_QML).is_file());
 }

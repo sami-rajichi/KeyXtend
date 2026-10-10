@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "xtask"]
+members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"

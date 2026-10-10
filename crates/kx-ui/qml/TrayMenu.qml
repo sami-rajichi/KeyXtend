@@ -155,7 +155,7 @@ Window {
                 ext: menu.res.ext
                 px: menu.sh.icon_px
                 tint: it.ink
-                opacity: menu.sh.icon_share
+                share: menu.sh.icon_share
             }
             Label {
                 anchors.verticalCenter: parent.verticalCenter

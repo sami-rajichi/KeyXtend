@@ -13,6 +13,7 @@ mod files;
 mod filled;
 mod markup;
 mod pictures;
+mod plugin;
 mod plural;
 mod qml;
 mod windows;

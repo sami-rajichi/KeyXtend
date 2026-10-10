@@ -1,4 +1,4 @@
-// Single parts over the real look fixtures: the cap inside its cell, icons tinted with public Qt Quick only, the hover
+// Single parts over the real look fixtures: the cap inside its cell, icons in their tint, the hover
 // outline in high contrast, dimmed keys, plate icons and chips. Texts carry no bidi marks (tst_order, ADR-0022).
 import QtQuick
 import QtTest
@@ -19,7 +19,7 @@ Item {
 
     readonly property var res: ({
         fam: { latin: N.lk.look.latin_fonts[0], arabic: N.lk.look.arabic_fonts[0], mark: N.lk.look.mark_fonts[0], ui: N.lk.look.latin_fonts[0] },
-        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        icons: Assets.assets.icons,
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => En.texts["bar." + id],
@@ -98,7 +98,7 @@ Item {
             compare([k.x, k.y, k.width, k.height], [cell.x + half, cell.y + half, cell.w - 2 * half, cell.h - 2 * half]);
         }
 
-        function test_an_icon_takes_its_tint_with_public_qt_quick_only() {
+        function test_an_icon_takes_its_tint() {
             const tint = "#FF005FB8";
             const i = createTemporaryObject(iconC, root, { icon: "minus", base: root.res.icons, ext: "svg", px: 48, tint: tint });
             waitForRendering(i);

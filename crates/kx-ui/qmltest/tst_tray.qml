@@ -18,7 +18,7 @@ Item {
     // The tray menu speaks the system's language, through `tray`.
     readonly property var res: ({
         fam: { latin: "Segoe UI", arabic: "Segoe UI", mark: "Segoe UI", ui: "Segoe UI", tray: "Segoe UI" },
-        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        icons: Assets.assets.icons,
         ext: Assets.assets.ext,
         tray: k => En.texts[k] !== undefined ? En.texts[k] : k
     })

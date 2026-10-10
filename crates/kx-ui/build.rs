@@ -11,7 +11,7 @@ fn main() {
 #[cfg(feature = "qt")]
 mod qt {
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
-    use kx_theme::assets::{Bundled, ICON_EXT, ICONS_AT, bundle};
+    use kx_theme::assets::{Bundled, ICON_EXT, bundle, icon_url};
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
@@ -70,6 +70,7 @@ mod qt {
         "src/bridges/harden.rs",
         "src/bridges/device.rs",
         "src/bridges/fonts.rs",
+        "src/bridges/tint.rs",
     ];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
@@ -108,7 +109,7 @@ mod qt {
     const FILES_ENV: &str = "KX_UI_FILES";
     /// The scheme a resource URL has and a resource file path drops.
     const QRC_SCHEME: &str = "qrc";
-    /// The variable that hands the icon folder, icon type and font files, as JSON, to the crate.
+    /// The variable that hands the icons' URL, icon type and font files, as JSON, to the crate.
     const ASSETS_ENV: &str = "KX_UI_ASSETS";
     /// MSVC switches that stop this crate's test binaries writing an import library for Qt's exported QML
     /// registration, which the linker would announce on every link.
@@ -244,10 +245,10 @@ mod qt {
         Some(QResource::new().file(file))
     }
 
-    /// What QML reads from `Ui.assets()`: the icon folder URL, the icon type and each font's URL.
+    /// What QML reads from `Ui.assets()`: the URL that serves the icons in their tint, their type and each font's URL.
     fn assets_json(base: &str, fonts: &[String]) -> String {
         let fonts: Vec<String> = fonts.iter().map(|f| format!("{base}/{f}")).collect();
-        let value = serde_json::json!({ "icons": format!("{base}/{ICONS_AT}"), "ext": ICON_EXT, "fonts": fonts });
+        let value = serde_json::json!({ "icons": icon_url(), "ext": ICON_EXT, "fonts": fonts });
         value.to_string()
     }
 }

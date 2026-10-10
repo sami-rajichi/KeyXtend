@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 
 use kx_theme::Themes;
 use kx_theme::assets::{
-    FONT_DIR, ICON_EXT, ICONS_AT, MARK_CIRCLE, MARKS, SYSTEM_FONTS, bundle, font_files, icon_file,
-    is_font,
+    FONT_DIR, ICON_EXT, ICON_PROVIDER, ICONS_AT, IMAGE_SCHEME, MARK_CIRCLE, MARKS, SYSTEM_FONTS,
+    bundle, font_files, icon_file, icon_url, is_font,
 };
 use std::collections::BTreeSet;
 
@@ -183,4 +183,14 @@ fn every_icon_name_has_a_file() {
         );
     }
     assert!(icon_file(&assets(), "no-such-icon").is_none());
+}
+
+#[test]
+fn qml_asks_for_icons_by_one_image_url() {
+    assert_eq!(icon_url(), format!("{IMAGE_SCHEME}://{ICON_PROVIDER}"));
+    let host = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit();
+    assert!(
+        ICON_PROVIDER.chars().all(host),
+        "a URL host Qt matches as written"
+    );
 }

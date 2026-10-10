@@ -18,6 +18,10 @@ pub const FONT_DIR: &str = "fonts";
 pub const FONT_EXTS: [&str; 2] = ["ttf", "otf"];
 /// The bundle's one icon folder, which holds Lucide's icons and our own drawings side by side.
 pub const ICONS_AT: &str = "icons";
+/// The URL scheme Qt gives its image providers.
+pub const IMAGE_SCHEME: &str = "image";
+/// The image provider that draws the bundle's icons in their tint, so QML needs no effect to tint them.
+pub const ICON_PROVIDER: &str = "kxicon";
 /// Font families Windows 11 ships, so the app never bundles them; any other family a theme names is bundled.
 pub const SYSTEM_FONTS: [&str; 2] = ["Segoe UI Variable Text", "Segoe UI"];
 /// The circle a mark with no letter before it sits on (U+25CC), which every mark font draws.
@@ -67,6 +71,12 @@ impl FontFiles {
         let files = self.files(family)?;
         Some(files.iter().map(|rel| font_name(rel)).collect())
     }
+}
+
+/// The URL QML asks the bundle's icons by, as `<url>/<rrggbb tint>/<name>.<ICON_EXT>`.
+#[must_use]
+pub fn icon_url() -> String {
+    format!("{IMAGE_SCHEME}://{ICON_PROVIDER}")
 }
 
 /// The bundle name of font file `rel`, a path under `assets/fonts/` such as `rubik/Rubik[wght].ttf`: each part made

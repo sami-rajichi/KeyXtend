@@ -13,11 +13,15 @@ pub mod device;
 pub mod fonts;
 pub mod harden;
 mod keyboard;
+pub mod tint;
 mod ui;
 
 use crate::hub::Hub;
 use cxx_qt_lib::QString;
 use std::sync::{Arc, OnceLock};
+
+/// The resource folder of the bundled files, as a path Qt opens, from the build.
+const FILES: &str = env!("KX_UI_FILES");
 
 /// The hub the bridge objects share, set once by the app before QML loads (ADR-0018).
 static HUB: OnceLock<Arc<Hub>> = OnceLock::new();

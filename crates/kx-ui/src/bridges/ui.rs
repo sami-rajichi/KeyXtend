@@ -118,7 +118,7 @@ pub mod qobject {
         #[qinvokable]
         fn backdrop(&self, title: &QString) -> bool;
 
-        /// The compiled-in icon folder and type and the font files, as JSON `{icons, ext, fonts}`.
+        /// The icons' URL and type and the compiled-in font files, as JSON `{icons, ext, fonts}`.
         #[qinvokable]
         fn assets(&self) -> QString;
 

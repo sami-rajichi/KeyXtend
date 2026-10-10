@@ -18,7 +18,7 @@ Item {
 
     readonly property var res: ({
         fam: { latin: "Segoe UI", arabic: "Segoe UI", mark: "Segoe UI", ui: "Segoe UI" },
-        icons: Qt.resolvedUrl(Assets.root + "/" + Assets.assets.icons),
+        icons: Assets.assets.icons,
         ext: Assets.assets.ext,
         tr: k => En.texts[k] !== undefined ? En.texts[k] : k,
         bar: id => id,
