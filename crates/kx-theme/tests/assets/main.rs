@@ -16,6 +16,7 @@ use kx_theme::assets::{
     FONT_DIR, ICON_EXT, ICONS_AT, SYSTEM_FONTS, bundle, font_files, icon_file, is_font,
 };
 use std::collections::BTreeSet;
+use std::ops::RangeInclusive;
 
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {
@@ -24,8 +25,14 @@ fn assets() -> PathBuf {
 
 /// The circle marks with no letter before them sit on (U+25CC).
 const CIRCLE: char = '\u{25CC}';
-/// Mark fonts that ship with Windows, so no file here can be read, and why each draws the circle.
-const SYSTEM_MARK_FONTS: [(&str, &str); 1] = [("Segoe UI", "Windows 11's Segoe UI holds U+25CC")];
+/// The marks the keyboard names for readers (kx-mod-keyboard `HARAKA_NAMES`, fathatan to sukun) and the superscript
+/// alef, which it also draws on the circle in the mark font.
+const MARKS: [RangeInclusive<char>; 2] = ['\u{064B}'..='\u{0652}', '\u{0670}'..='\u{0670}'];
+/// Mark fonts that ship with Windows, so no file here can be read, and why each draws the circle and the marks.
+const SYSTEM_MARK_FONTS: [(&str, &str); 1] = [(
+    "Segoe UI",
+    "Windows 11's Segoe UI holds U+25CC, U+064B to U+0652 and U+0670",
+)];
 
 /// The bytes of every bundled font file that names itself `family`.
 fn files_of(family: &str) -> Vec<Vec<u8>> {
@@ -85,8 +92,11 @@ fn every_font_a_theme_names_is_bundled_or_ships_with_windows() {
 }
 
 #[test]
-fn every_mark_font_a_theme_names_draws_the_dotted_circle() {
+fn every_mark_font_a_theme_names_draws_the_dotted_circle_and_each_mark() {
     let t = Themes::shipped().expect("tokens load");
+    let wanted: Vec<char> = std::iter::once(CIRCLE)
+        .chain(MARKS.into_iter().flatten())
+        .collect();
     let mut checked = 0;
     for th in &t.list {
         let id = &th.look.id;
@@ -96,13 +106,30 @@ fn every_mark_font_a_theme_names_draws_the_dotted_circle() {
             }
             let files = files_of(family);
             assert!(!files.is_empty(), "{id}: {family} is not bundled or listed");
-            for f in &files {
-                assert!(cmap::maps(f, CIRCLE), "{id}: {family} has no U+25CC");
+            for (f, &c) in files
+                .iter()
+                .flat_map(|f| wanted.iter().map(move |c| (f, c)))
+            {
+                assert!(
+                    cmap::maps(f, c),
+                    "{id}: {family} has no U+{:04X}",
+                    u32::from(c)
+                );
             }
             checked += 1;
         }
     }
     assert!(checked > 0, "the check reached the bundled fonts");
+}
+
+#[test]
+fn the_mark_check_reads_real_fonts_a_latin_one_lacking_fatha() {
+    let plex = files_of("IBM Plex Sans");
+    assert!(!plex.is_empty(), "IBM Plex Sans is bundled");
+    for f in &plex {
+        assert!(!cmap::maps(f, '\u{064E}'), "a Latin font fails the check");
+        assert!(cmap::maps(f, 'A'), "its letters read");
+    }
 }
 
 #[test]

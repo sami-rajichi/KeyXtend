@@ -202,9 +202,9 @@ fn marks_take_the_arabic_fonts_unless_a_theme_names_its_own() {
         );
         assert!(!t.look.mark_fonts.is_empty(), "{}", t.look.id);
     }
-    let dolch = load().list.remove(2).look;
+    let dolch = load().list.into_iter().find(|t| t.look.id == "dolch");
     assert_eq!(
-        dolch.mark_fonts,
+        dolch.expect("Dolch ships").look.mark_fonts,
         ["Noto Sans Arabic"],
         "Rubik has no dotted circle"
     );
