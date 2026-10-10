@@ -119,6 +119,27 @@ fn the_dpad_is_the_smaller_of_its_width_and_height_less_a_gap() {
 }
 
 #[test]
+fn a_dpad_wider_than_its_columns_is_capped_by_their_width() {
+    let mut s = spec();
+    let [c0, r0, c1, _] = s.dpad.cell;
+    let f = Frame::of(&s);
+    let width = f64::from(c1 + 1 - c0) * f.side_w;
+    s.dpad.units = width / s.unit_px * 1.1;
+    let b = board(&s, 4.0, 1.0);
+    assert!(
+        close(b.dpad.w, width - 4.0) && close(b.dpad.h, b.dpad.w),
+        "{:?}",
+        b.dpad
+    );
+    let wrap = side_cell(&s, &f, c0, r0);
+    assert!(
+        b.dpad.x >= wrap.x && b.dpad.x + b.dpad.w <= wrap.x + width,
+        "{:?}",
+        b.dpad
+    );
+}
+
+#[test]
 fn side_keys_sit_in_their_cells_right_of_the_main_block() {
     let s = spec();
     let b = board(&s, 0.0, 1.0);

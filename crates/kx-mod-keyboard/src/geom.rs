@@ -209,7 +209,7 @@ fn dpad(s: &BoardSpec, f: &Frame, gap: f64) -> Area {
     let cols = f64::from(c1) + 1.0 - f64::from(c0);
     let rows = f64::from(r1) + 1.0 - f64::from(r0);
     let (width, height) = (cols * f.side_w, rows * s.row_px);
-    let side = (s.dpad.units * s.unit_px).min(height) - gap;
+    let side = (s.dpad.units * s.unit_px).min(width).min(height) - gap;
     Area {
         x: wrap.x + (width - side) / 2.0,
         y: wrap.y + (height - side) / 2.0,
