@@ -71,6 +71,12 @@ Item {
             c.height = 56;
             return c;
         }
+        // The carousel's turn under the language key's face `l`: the animation that slides its names sideways.
+        function turnOf(l) {
+            const turn = a => a.duration !== undefined && a.property === "x";
+            const row = find(l, o => o.data !== undefined && o.data.some(turn));
+            return row ? row.data.find(turn) : null;
+        }
         function test_press_eases_in_full_and_jumps_when_reduced() {
             const k = makeKey(F.lk, false);
             mousePress(k);
@@ -130,16 +136,16 @@ Item {
             const legends = find(c, o => o.opacity < 1);
             verify(legends, "the legends fade in");
             const corner = find(c, o => o.text === root.ks(false).second);
-            verify(corner && corner.parent === c, "the corner legend changes at once");
+            verify(corner && corner.parent === c.item, "the corner legend changes at once");
             tryVerify(() => !c.clip && legends.opacity === 1, 1000);
             const l = makeText("lang", F.lk);
-            const slide = l.data.find(o => o.duration !== undefined && o.property === "x");
+            const slide = turnOf(l);
             l.lang = root.lang2;
             verify(slide && slide.running, "the carousel turns");
             tryVerify(() => !slide.running, 1000);
             verify(l.clip, "the language key always clips");
             const still = makeText("lang", F.lk);
-            const slide2 = still.data.find(o => o.duration !== undefined && o.property === "x");
+            const slide2 = turnOf(still);
             still.lang = root.lang3;
             verify(!slide2.running, "no turn when the change came another way");
             const r = makeText("char", R.lk);
