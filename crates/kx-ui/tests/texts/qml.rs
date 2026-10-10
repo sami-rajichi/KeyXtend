@@ -1,8 +1,9 @@
 //! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the assets
-//! laid out as the resources hold them, and the picture folder); a change or a stray file fails it until it runs with
+//! laid out as the resources hold them, and the picture folders); a change or a stray file fails it until it runs with
 //! `KX_BLESS=1`.
 
 use crate::files::keys_of;
+use crate::pictures::{PICTURES_QML, hand_over};
 use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect, Screen,
 };
@@ -20,7 +21,7 @@ const DIR: &str = "qmltest/fixtures";
 /// The keyboard's golden files, which pin the face's JSON.
 const FACE: &str = "../kx-mod-keyboard/tests/golden";
 /// The face's states the tests draw, by golden file name.
-const STATES: [&str; 6] = ["en", "fr", "ar", "ar-shift", "ar-altgr", "list"];
+const STATES: [&str; 7] = ["en", "fr", "ar", "ar-shift", "ar-altgr", "list", "en-caps"];
 /// The UI languages the tests draw.
 const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// Where the bundled files are laid out, from this crate; the Qt Quick tests read them from there.
@@ -33,12 +34,6 @@ const TRAY_PX: u32 = 16;
 const MORE_UP_TO: usize = 12;
 /// What starts each fixture, so QML imports it as a JavaScript library.
 const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
-/// The variable naming a folder for the board's pictures; a relative one counts from the repo root.
-const PICTURES_VAR: &str = "KX_PICTURES";
-/// The file in the laid-out assets that hands that folder to the Quick picture test, empty when it is unset.
-const PICTURES_QML: &str = "Pictures.qml";
-/// The repo root, as levels above this crate.
-const REPO_UP: usize = 2;
 
 /// The fixtures folder.
 fn dir() -> PathBuf {
@@ -197,24 +192,6 @@ fn assets() -> String {
     )
 }
 
-/// Writes `PICTURES_QML` into `mirror` with the folder `PICTURES_VAR` names, made if it is missing, or empty.
-fn hand_over_pictures(mirror: &Path) {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(REPO_UP);
-    let named = std::env::var_os(PICTURES_VAR).filter(|v| !v.is_empty());
-    let folder = named.map(|v| root.expect("the repo root").join(v));
-    if let Some(f) = &folder {
-        std::fs::create_dir_all(f).expect("the picture folder is made");
-    }
-    let shown = folder.map(|f| f.to_string_lossy().replace('\\', "/"));
-    let text = serde_json::to_string(&shown.unwrap_or_default()).expect("a string");
-    let qml = format!(
-        "// Written by kx-ui's texts test from {PICTURES_VAR}.\nimport QtQml\nQtObject {{ readonly property string folder: {text} }}\n"
-    );
-    std::fs::write(mirror.join(PICTURES_QML), qml).expect("the picture folder is handed over");
-}
-
 /// `rel` under this crate.
 fn crate_path(rel: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(rel)
@@ -262,6 +239,6 @@ fn the_bundle_is_laid_out_as_the_app_resources_hold_it() {
     }
     let icon = b.icons.first().expect("an icon");
     assert!(mirror.join(&icon.name).is_file());
-    hand_over_pictures(&mirror);
+    hand_over(&mirror);
     assert!(mirror.join(PICTURES_QML).is_file());
 }

@@ -59,6 +59,21 @@ fn the_english_state_matches_its_golden_file() {
     assert_golden(golden("state-en.json"), &pretty(&r.face.state_json()));
 }
 
+/// Caps Lock on in Windows: the lit lock key the pictures show, over capital legends.
+#[test]
+fn the_english_caps_state_matches_its_golden_file() {
+    let r = showing("en-us", None);
+    r.fakes.source.set_caps(true);
+    r.act(FaceAction::Relabel).unwrap();
+    let state = r.state();
+    assert_eq!(state["keys"]["caps"]["on"], true, "Caps Lock is lit");
+    assert_eq!(
+        state["keys"]["c-0x0010"]["main"], "Q",
+        "the letters are capitals"
+    );
+    assert_golden(golden("state-en-caps.json"), &pretty(&r.face.state_json()));
+}
+
 #[test]
 fn the_french_state_matches_its_golden_file() {
     let r = showing("fr-fr", None);

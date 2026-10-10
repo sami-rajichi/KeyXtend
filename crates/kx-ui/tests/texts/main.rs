@@ -12,6 +12,7 @@ mod compose;
 mod files;
 mod filled;
 mod markup;
+mod pictures;
 mod plural;
 mod qml;
 mod windows;
