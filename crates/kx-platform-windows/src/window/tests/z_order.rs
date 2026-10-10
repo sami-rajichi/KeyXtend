@@ -3,15 +3,15 @@
 use std::cell::Cell;
 use std::sync::{Mutex, PoisonError};
 
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, GWLP_WNDPROC, GetWindowLongPtrW, HWND_BOTTOM, HWND_NOTOPMOST, MA_NOACTIVATE,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SendMessageW, SetWindowLongPtrW, SetWindowPos,
-    WM_MOUSEACTIVATE, WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
+    CallWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetWindowLongPtrW, HWND_BOTTOM, HWND_NOTOPMOST,
+    MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SendMessageW, SetWindowLongPtrW,
+    SetWindowPos, WM_MOUSEACTIVATE, WM_WINDOWPOSCHANGED, WS_EX_TOPMOST,
 };
 
 use super::super::KEPT;
-use super::super::guard::{Proc, front, guard};
+use super::super::guard::{Proc, front, guard, next};
 use super::super::win::{guard_these, top_level};
 use super::{Hidden, plain};
 
@@ -21,6 +21,8 @@ static Z_ORDER: Mutex<()> = Mutex::new(());
 thread_local! {
     /// The window `dropper` drops once, as the guard lifts its own window back.
     static TO_DROP: Cell<Option<HWND>> = const { Cell::new(None) };
+    /// The guard procedure `deaf` hands messages to.
+    static DEAF_BEHIND: Cell<isize> = const { Cell::new(0) };
 }
 
 /// A subclass behind the guard that drops `TO_DROP` inside its window's lift, as the keyboard's lift moves its shadow.
@@ -36,6 +38,26 @@ unsafe extern "system" fn dropper(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
     }
     // SAFETY: hands the message to the test windows' own procedure.
     unsafe { plain(hwnd, msg, wparam, lparam) }
+}
+
+/// A subclass in front of the guard that swallows `WM_WINDOWPOSCHANGED`, so the guard never hears its window move.
+unsafe extern "system" fn deaf(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if msg == WM_WINDOWPOSCHANGED {
+        return LRESULT(0);
+    }
+    let behind = HANDLE(std::ptr::without_provenance_mut(
+        DEAF_BEHIND.get().cast_unsigned(),
+    ));
+    // SAFETY: hands every other message to the guard this subclass replaced, as a subclass must.
+    unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
+}
+
+/// Puts `deaf` in front of the guard on `window`.
+fn deafen(window: &Hidden) {
+    let ours: Proc = deaf;
+    // SAFETY: puts the test subclass in front of the guard on the test's own window; it hands the rest on.
+    DEAF_BEHIND
+        .set(unsafe { SetWindowLongPtrW(window.0, GWLP_WNDPROC, (ours as usize).cast_signed()) });
 }
 
 /// True when window `a` is above window `b`, read from one snapshot of the z-order.
@@ -142,6 +164,26 @@ fn a_guarded_shadow_and_its_keyboard_stay_topmost_when_both_are_dropped_in_turn(
     put_after(&shadow, HWND_NOTOPMOST);
     assert!(topmost(&kb), "the keyboard stays");
     assert!(topmost(&shadow), "and its shadow");
+}
+
+/// The G9 bug: an outside drop of the keyboard or its shadow takes the shadow out of the band, and the shadow may hear
+/// no move (Windows tells only the keyboard when the shadow drops); the keyboard's repair brings the shadow back too.
+#[test]
+fn a_shadow_comes_back_with_its_keyboard_after_an_outside_drop_even_when_it_hears_no_move() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    for (deaf, drop_kb) in [(false, true), (false, false), (true, true), (true, false)] {
+        let shadow = Hidden::tip("KeyXtend test: owner shadow", None);
+        let kb = Hidden::topmost("KeyXtend test: owned keyboard", Some(shadow.0));
+        guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+        if deaf {
+            deafen(&shadow);
+        }
+        put_after(if drop_kb { &kb } else { &shadow }, HWND_NOTOPMOST);
+        let how = format!("deaf {deaf}, keyboard dropped {drop_kb}");
+        assert!(topmost(&kb), "{how}: the keyboard stays");
+        assert!(topmost(&shadow), "{how}: and its shadow");
+        assert!(above(&kb, &shadow), "{how}: above its shadow");
+    }
 }
 
 /// The G9 bug: while the guard lifts one window back, another window dropped inside that lift is lifted back too.

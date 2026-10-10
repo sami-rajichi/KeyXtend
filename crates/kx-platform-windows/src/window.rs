@@ -65,10 +65,22 @@ pub fn kept_ex(new: u32, through: bool) -> u32 {
     }
 }
 
-/// True when the guard lifts a window with extended style `ex` back into the topmost band; never while `lifting`
-/// that same window already, so a refused lift cannot loop.
-fn lifts_back(ex: u32, lifting: bool) -> bool {
-    ex & WS_EX_TOPMOST == 0 && !lifting
+/// True when extended style `ex` puts the window in the topmost band.
+fn is_top(ex: u32) -> bool {
+    ex & WS_EX_TOPMOST != 0
+}
+
+/// Which window the guard lifts back, from `chain`: the window that moved, then each guarded owner, as (topmost,
+/// lifting). When one left the topmost band the furthest owner goes up, so the windows it owns follow; none while one
+/// of them is lifting, so a refused lift cannot loop.
+fn to_lift(chain: &[(bool, bool)]) -> Option<usize> {
+    let dropped = chain.iter().any(|&(top, _)| !top);
+    let lifting = chain.iter().any(|&(_, lifting)| lifting);
+    if dropped && !lifting {
+        chain.len().checked_sub(1)
+    } else {
+        None
+    }
 }
 
 /// Windows listed front first, in guard order: each guard lifts its window to the top, so the front one
@@ -143,12 +155,26 @@ mod rules {
 
     #[test]
     fn a_window_out_of_the_topmost_band_is_lifted_back_once() {
-        assert!(lifts_back(KEPT & !WS_EX_TOPMOST, false));
-        assert!(
-            !lifts_back(KEPT & !WS_EX_TOPMOST, true),
-            "a lift is running"
+        assert_eq!(to_lift(&[(is_top(KEPT & !WS_EX_TOPMOST), false)]), Some(0));
+        assert_eq!(to_lift(&[(false, true)]), None, "a lift is running");
+        assert_eq!(to_lift(&[(is_top(KEPT), false)]), None, "still topmost");
+        assert_eq!(to_lift(&[]), None);
+    }
+
+    #[test]
+    fn a_dropped_keyboard_or_shadow_lifts_the_shadow_so_the_keyboard_follows() {
+        assert_eq!(
+            to_lift(&[(false, false), (true, false)]),
+            Some(1),
+            "keyboard"
         );
-        assert!(!lifts_back(KEPT, false), "still topmost");
+        assert_eq!(to_lift(&[(true, false), (false, false)]), Some(1), "shadow");
+        assert_eq!(to_lift(&[(true, false), (true, false)]), None);
+        assert_eq!(
+            to_lift(&[(false, false), (false, true)]),
+            None,
+            "the shadow's lift brings it"
+        );
     }
 
     proptest! {
@@ -159,7 +185,15 @@ mod rules {
             prop_assert_eq!(kept & KEPT, KEPT);
             prop_assert_eq!(is_through(kept), through);
             prop_assert_eq!(kept & rest, new & rest, "other styles stay as asked");
-            prop_assert!(!lifts_back(kept, false), "a kept style is topmost");
+            prop_assert_eq!(to_lift(&[(is_top(kept), false)]), None, "a kept style is topmost");
+        }
+
+        #[test]
+        fn only_the_furthest_owner_is_lifted_and_never_during_a_lift(chain: Vec<(bool, bool)>) {
+            let picked = to_lift(&chain);
+            prop_assert!(picked.is_none() || picked == Some(chain.len() - 1));
+            let needed = chain.iter().any(|l| !l.0) && chain.iter().all(|l| !l.1);
+            prop_assert_eq!(picked.is_some(), needed);
         }
     }
 

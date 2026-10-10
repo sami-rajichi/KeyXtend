@@ -79,6 +79,13 @@ struct Seen {
     missing: Vec<&'static str>,
     extra: Vec<&'static str>,
     front_kept: bool,
+    /// The window in front instead of target-window, by class and program; null while the target kept it.
+    front: Option<String>,
+}
+
+/// The window `front` named by class and program, unless it is the `target`.
+fn in_front(front: HWND, target: HWND) -> Option<String> {
+    (front != target).then(|| win::describe(front))
 }
 
 /// True when every step saw at least one window, none lacked a flag or kept a refused one, and the target stayed in
@@ -132,7 +139,8 @@ impl Watch {
     /// Waits `[g9] settle_ms`, then looks at every window G9 checks after `step`.
     fn look(&mut self, ctx: &Ctx, step: &'static str) {
         sleep_ms(ctx.cfg.g9.settle_ms);
-        let front_kept = foreground() == self.target;
+        let front = foreground();
+        let front_kept = front == self.target;
         for w in self.ours() {
             let (ex, first) = (ex_of(w), self.first[&win::key(w)]);
             self.seen.push(Seen {
@@ -142,6 +150,7 @@ impl Watch {
                 missing: missing(ex, wants(first)),
                 extra: extra(ex, first),
                 front_kept,
+                front: in_front(front, self.target),
             });
         }
     }

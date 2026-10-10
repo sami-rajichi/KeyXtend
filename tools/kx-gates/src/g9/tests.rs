@@ -15,6 +15,7 @@ fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
         missing: missing(ex, wants(first)),
         extra: extra(ex, first),
         front_kept,
+        front: None,
     }
 }
 
@@ -129,6 +130,13 @@ fn g9_passes_only_when_every_step_looked_kept_every_flag_and_the_focus() {
         seen("topmost", KEYBOARD_EX, KEYBOARD_EX, false),
     ];
     assert!(!passed(&focus, &steps), "the target lost the focus");
+}
+
+#[test]
+fn the_window_in_front_is_named_only_when_it_is_not_the_target() {
+    let (target, other) = (HWND(std::ptr::without_provenance_mut(1)), HWND::default());
+    assert_eq!(in_front(target, target), None);
+    assert_eq!(in_front(other, target).as_deref(), Some("(none)"));
 }
 
 #[test]
