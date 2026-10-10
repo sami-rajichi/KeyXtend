@@ -1,9 +1,11 @@
-//! The app's windows over one shared graphics device (ADR-0021): the device first, then the root QML; at the end the
-//! engine and its windows go before the device they draw on.
+//! The app's windows over one shared graphics device (ADR-0021): the device and the theme's fonts first, then the root
+//! QML; at the end the engine and its windows go before the device they draw on.
 
 use crate::MAIN_QML;
 use crate::bridges::device::{Device, flush_deletes};
+use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_imports};
+use crate::bridges::installed;
 use cxx::UniquePtr;
 use cxx_qt_lib::{QQmlApplicationEngine, QUrl};
 use std::path::{Path, PathBuf};
@@ -28,10 +30,13 @@ impl Shell {
         Self::open_with(pinned, shared())
     }
 
-    /// Loads the root QML over `device`, or with `None` over a device each window makes, as Qt does alone; `pinned` as
-    /// in `open`. Call it on the GUI thread once Qt's app object exists.
+    /// Loads the theme's fonts, then the root QML over `device`, or with `None` over a device each window makes, as Qt
+    /// does alone; `pinned` as in `open`. Call it on the GUI thread once Qt's app object exists.
     #[must_use]
     pub fn open_with(pinned: Option<&Path>, device: Option<Device>) -> Option<Self> {
+        if let Some(hub) = installed() {
+            hub.set_fonts(Box::new(QtFontBook));
+        }
         let mut shell = Self {
             engine: UniquePtr::null(),
             device,

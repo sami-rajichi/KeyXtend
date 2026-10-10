@@ -10,6 +10,7 @@
 )]
 
 pub mod device;
+pub mod fonts;
 pub mod harden;
 mod keyboard;
 mod ui;
@@ -24,6 +25,11 @@ static HUB: OnceLock<Arc<Hub>> = OnceLock::new();
 /// Hands `hub` to the bridge objects QML makes; call it once, before loading QML. False when one was set already.
 pub fn install(hub: Arc<Hub>) -> bool {
     HUB.set(hub).is_ok()
+}
+
+/// The installed hub, if the app installed one.
+pub(crate) fn installed() -> Option<Arc<Hub>> {
+    HUB.get().cloned()
 }
 
 /// The installed hub for a new bridge object; one made before `install` warns and does nothing.

@@ -27,7 +27,7 @@ pub use bridges::harden::{
 #[cfg(feature = "qt")]
 pub use bridges::install;
 pub use geom::Area;
-pub use hub::{Hub, HubError, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker};
+pub use hub::{FontBook, Hub, HubError, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker};
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, SPEC, UiSettings};
 #[cfg(feature = "qt")]

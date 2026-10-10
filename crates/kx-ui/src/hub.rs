@@ -1,9 +1,10 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look, notices, the tray icon, and the requests the app drains on its own thread. No lock is held while a
-//! face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, the tray icon, and the requests the app drains on its own thread. No lock is
+//! held while a face call, a port call or a waker runs.
 
 mod app;
 mod face;
+mod fonts;
 mod look;
 mod notices;
 mod spots;
@@ -11,6 +12,7 @@ mod texts;
 mod tray;
 
 pub use face::{Redraw, Resize};
+pub use fonts::FontBook;
 pub use notices::Shown;
 
 use crate::settings::UiSettings;
@@ -21,6 +23,7 @@ use kx_module_api::{
 use kx_platform::ui::{
     Backdrop, FocusToken, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
 };
+use kx_theme::assets::FontFiles;
 use kx_theme::{ThemeError, Themes};
 use notices::Notices;
 use serde::Serialize;
@@ -115,11 +118,15 @@ struct Live {
 pub struct Hub {
     ports: UiPorts,
     themes: Themes,
+    /// Each bundled font family's files.
+    font_files: FontFiles,
     /// The window that had the focus before ours, so the guard can give it back.
     focus: FocusToken,
     live: Mutex<Live>,
     /// The tray icon while it shows; only the UI thread sets it.
     tray: Mutex<tray::TraySlot>,
+    /// The font book and the files it holds; only the UI thread uses it.
+    fonts: Mutex<fonts::Fonts>,
 }
 
 impl Hub {
@@ -131,6 +138,7 @@ impl Hub {
     pub fn new(ports: UiPorts) -> Result<(Arc<Self>, Receiver<Request>), HubError> {
         let settings = UiSettings::from_defaults()?;
         let themes = Themes::shipped()?;
+        let font_files = FontFiles::shipped()?;
         let (requests, drain) = mpsc::channel();
         let live = Live {
             texts: Texts::new(&settings.language, "", &ports.look.ui_language()),
@@ -147,8 +155,10 @@ impl Hub {
             focus: ports.guard.remember(),
             ports,
             themes,
+            font_files,
             live: Mutex::new(live),
             tray: Mutex::default(),
+            fonts: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
     }

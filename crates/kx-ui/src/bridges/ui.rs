@@ -139,6 +139,10 @@ pub mod qobject {
         #[qsignal]
         fn look_changed(self: Pin<&mut Self>);
 
+        /// Other bundled fonts are loaded: pick the families again.
+        #[qsignal]
+        fn fonts_changed(self: Pin<&mut Self>);
+
         /// Notices wait for the banner.
         #[qsignal]
         fn notices_waiting(self: Pin<&mut Self>);
@@ -197,8 +201,11 @@ impl cxx_qt::Initialize for qobject::Ui {
     }
 }
 
-/// Tells QML what changed, on the Qt thread.
-fn woken(ui: Pin<&mut qobject::Ui>, wake: Wake) {
+/// Tells QML what changed, on the Qt thread; a new theme's fonts load first, so QML picks its families from them.
+fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
+    if matches!(wake, Wake::Settings | Wake::Look) && ui.with(false, Hub::sync_fonts) {
+        ui.as_mut().fonts_changed();
+    }
     match wake {
         Wake::Settings => ui.settings_changed(),
         Wake::Texts => ui.texts_changed(),

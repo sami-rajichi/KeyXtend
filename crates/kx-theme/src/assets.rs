@@ -1,8 +1,9 @@
 //! Where the bundled fonts and icons sit in the repo's `assets/` folder and under which names the app bundles them,
-//! for kx-ui's build script and the checks. The app never reads these folders: kx-ui compiles the files in.
+//! for kx-ui's build script and the checks, and which files each bundled font family has. The app never reads these
+//! folders: kx-ui compiles the files in.
 
-use crate::Themes;
-use std::collections::BTreeSet;
+use crate::{ThemeError, Themes};
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
@@ -24,6 +25,57 @@ pub const MARK_CIRCLE: char = '\u{25CC}';
 /// The marks every mark font draws on that circle: the harakat the keyboard names (fathatan to sukun) and the
 /// superscript alef; the app pins them to the keyboard's names.
 pub const MARKS: [RangeInclusive<char>; 2] = ['\u{064B}'..='\u{0652}', '\u{0670}'..='\u{0670}'];
+
+/// Name of the font table, for errors.
+const FONT_FILES_FILE: &str = "font_files.toml";
+/// The font table, compiled in so the app knows each family's files without the folder (ADR-0021).
+const FONT_FILES: &str = include_str!("../tokens/font_files.toml");
+
+/// Each bundled font family and its files, from `font_files.toml`; Windows' own families have none, so it leaves them
+/// out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FontFiles(BTreeMap<String, Vec<String>>);
+
+impl FontFiles {
+    /// The shipped table.
+    ///
+    /// # Errors
+    ///
+    /// `font_files.toml` does not parse.
+    pub fn shipped() -> Result<Self, ThemeError> {
+        let why = |e: toml::de::Error| ThemeError {
+            file: FONT_FILES_FILE,
+            why: e.to_string(),
+        };
+        toml::from_str(FONT_FILES).map(Self).map_err(why)
+    }
+
+    /// Every bundled family, in name order.
+    pub fn families(&self) -> impl Iterator<Item = &str> {
+        self.0.keys().map(String::as_str)
+    }
+
+    /// The files of `family`, as paths under `assets/fonts/`; `None` when it is not bundled.
+    #[must_use]
+    pub fn files(&self, family: &str) -> Option<&[String]> {
+        self.0.get(family).map(Vec::as_slice)
+    }
+
+    /// The files of `family` under the names the bundle gives them; `None` when it is not bundled.
+    #[must_use]
+    pub fn names(&self, family: &str) -> Option<Vec<String>> {
+        let files = self.files(family)?;
+        Some(files.iter().map(|rel| font_name(rel)).collect())
+    }
+}
+
+/// The bundle name of font file `rel`, a path under `assets/fonts/` such as `rubik/Rubik[wght].ttf`: each part made
+/// URL-safe, under `FONT_DIR`.
+#[must_use]
+pub fn font_name(rel: &str) -> String {
+    let parts: Vec<String> = rel.split('/').map(safe).collect();
+    format!("{FONT_DIR}/{}", parts.join("/"))
+}
 
 /// A file the app bundles: its name in the bundle and its file in the repo.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,9 +116,9 @@ pub fn bundle(assets: &Path) -> Result<Bundle, String> {
 
 /// Font `file` under its family folder, both names made URL-safe.
 fn font(file: PathBuf) -> Bundled {
-    let part = |p: Option<&std::ffi::OsStr>| safe(&p.unwrap_or_default().to_string_lossy());
+    let part = |p: Option<&std::ffi::OsStr>| p.unwrap_or_default().to_string_lossy().into_owned();
     let family = part(file.parent().and_then(Path::file_name));
-    let name = format!("{FONT_DIR}/{family}/{}", part(file.file_name()));
+    let name = font_name(&format!("{family}/{}", part(file.file_name())));
     Bundled { name, file }
 }
 

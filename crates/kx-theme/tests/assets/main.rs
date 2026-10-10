@@ -8,6 +8,7 @@
 
 mod cmap;
 mod fontname;
+mod table;
 
 use std::path::{Path, PathBuf};
 

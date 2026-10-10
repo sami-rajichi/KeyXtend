@@ -1,11 +1,14 @@
 // Stands in for the hub's Ui object: it answers from the hub's fixtures and records the calls QML makes.
 // qmltestrunner cannot load KeyXtend.Ui, which is linked into Rust binaries.
 import QtQuick
+import QtQml.Models
 import "fixtures/ui-en.js" as En
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as Look
 
 QtObject {
+    id: stub
+
     // What the hub gives: settings, the keyboard's language and texts, the tray's texts, and the look; setting one
     // sends its change signal. Setting `texts` last switches the keyboard's language as the hub does (`textsChanged`).
     property var settings: En.settings
@@ -34,6 +37,18 @@ QtObject {
         said.lang = lang;
         said.texts = texts;
     }
+
+    // The hub loads the theme's bundled fonts before QML picks its families; the stand-in loads every bundled file and
+    // says so as each comes in.
+    property Instantiator loaders: Instantiator {
+        model: Assets.assets.fonts
+        delegate: FontLoader {
+            required property string modelData
+            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
+            onStatusChanged: if (status === FontLoader.Ready) stub.fontsChanged()
+        }
+    }
+    signal fontsChanged
 
     // A second copy asks to show the keyboard; the app ended the UI.
     signal showAsked

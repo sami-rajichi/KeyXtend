@@ -63,6 +63,7 @@ mod qt {
         "src/bridges/keyboard.rs",
         "src/bridges/harden.rs",
         "src/bridges/device.rs",
+        "src/bridges/fonts.rs",
     ];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
@@ -85,6 +86,10 @@ mod qt {
     const MAIN_ENV: &str = "KX_UI_MAIN_QML";
     /// The variable that hands the module's URI to the crate.
     const URI_ENV: &str = "KX_UI_QML_URI";
+    /// The variable that hands the module's resource folder, as a file path Qt opens, to the crate.
+    const FILES_ENV: &str = "KX_UI_FILES";
+    /// The scheme a resource URL has and a resource file path drops.
+    const QRC_SCHEME: &str = "qrc";
     /// The variable that hands the icon folder, icon type and font files, as JSON, to the crate.
     const ASSETS_ENV: &str = "KX_UI_ASSETS";
     /// MSVC switches that stop this crate's test binaries writing an import library for Qt's exported QML
@@ -93,15 +98,9 @@ mod qt {
 
     /// Compiles the bridges, the QML, the fonts and the icons into the crate, and names their URLs.
     pub fn build() {
-        let (resources, fonts) = match resources() {
+        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?)));
+        let (resources, fonts, rhi) = match parts {
             Ok(done) => done,
-            Err(e) => {
-                println!("cargo::error={e}");
-                return;
-            }
-        };
-        let rhi = match rhi_headers() {
-            Ok(dir) => dir,
             Err(e) => {
                 println!("cargo::error={e}");
                 return;
@@ -116,15 +115,7 @@ mod qt {
             .iter()
             .fold(builder, |b, m| b.qt_module(m))
             .build();
-        let base = format!("{QML_ROOT}/{}", URI.replace('.', "/"));
-        let root = QML.first().copied().unwrap_or_default();
-        println!("cargo::rustc-env={MAIN_ENV}={base}/{root}");
-        println!("cargo::rustc-env={URI_ENV}={URI}");
-        println!(
-            "cargo::rustc-env={ASSETS_ENV}={}",
-            assets_json(&base, &fonts)
-        );
-        println!("cargo::rustc-env={ROOT_ENV}={QML_ROOT}");
+        hand_over(&fonts);
         println!("cargo::rerun-if-changed={ASSETS}");
         println!("cargo::rerun-if-changed={CPP}");
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
@@ -132,6 +123,23 @@ mod qt {
                 println!("cargo::rustc-link-arg={arg}");
             }
         }
+    }
+
+    /// Hands the crate the root's URL, the module's URI, the assets as JSON and the resource roots.
+    fn hand_over(fonts: &[String]) {
+        let base = format!("{QML_ROOT}/{}", URI.replace('.', "/"));
+        let root = QML.first().copied().unwrap_or_default();
+        println!("cargo::rustc-env={MAIN_ENV}={base}/{root}");
+        println!("cargo::rustc-env={URI_ENV}={URI}");
+        println!(
+            "cargo::rustc-env={ASSETS_ENV}={}",
+            assets_json(&base, fonts)
+        );
+        println!("cargo::rustc-env={ROOT_ENV}={QML_ROOT}");
+        println!(
+            "cargo::rustc-env={FILES_ENV}={}",
+            base.replacen(QRC_SCHEME, "", 1)
+        );
     }
 
     /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021).

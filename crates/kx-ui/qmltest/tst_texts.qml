@@ -8,6 +8,10 @@ import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "pointer.js" as Pointer
+import "fonts.js" as Fonts
+import "../../kx-theme/fixtures/look-native-light.js" as N
+import "../../kx-theme/fixtures/look-et66-light.js" as E
+import "../../kx-theme/fixtures/look-dolch-light.js" as D
 
 Item {
     id: root
@@ -142,6 +146,24 @@ Item {
             compare(places(app, keys), was, "nothing moves");
             const msg = all(app.notice.contentItem, o => o.text === Ar.texts[noticeKey] && o.wrapMode !== undefined)[0];
             compare(msg.effectiveHorizontalAlignment, Text.AlignRight, "the banner reads right to left");
+        }
+
+        // Native, Dolch, ET66, then Native again (ADR-0021): after each switch, as the hub loads the theme's fonts and
+        // then gives its look, Arabic draws in that theme's first Arabic family.
+        function test_arabic_draws_in_each_themes_font_after_each_switch() {
+            Fonts.need([N.lk.look.arabic_fonts[0]], skip);
+            const app = make();
+            speak(app, Ar, En);
+            const msg = () => all(app.notice.contentItem, o => o.text === Ar.texts[noticeKey] && o.wrapMode !== undefined)[0];
+            for (const t of [N, D, E, N]) {
+                const want = t.lk.look.arabic_fonts[0];
+                app.ui.look = t.lk;
+                app.ui.fontsChanged();
+                app.ui.lookChanged();
+                tryVerify(() => app.face.res.fam.arabic === want, 2000, t.lk.look.id + ": the Arabic family");
+                compare(app.face.res.fam.ui, want, t.lk.look.id + ": the keyboard's Arabic texts");
+                compare(msg().font.family, want, t.lk.look.id + ": the banner's Arabic text");
+            }
         }
     }
 }

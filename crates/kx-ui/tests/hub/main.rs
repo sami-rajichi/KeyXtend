@@ -10,6 +10,7 @@ mod app;
 #[path = "../shared/board.rs"]
 mod board;
 mod face;
+mod fonts;
 mod logs;
 mod look;
 mod module;

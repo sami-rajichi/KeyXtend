@@ -1,7 +1,8 @@
 //! One graphics device for every window (ADR-0021): the app's QML over a hub with a fake face, where the keyboard,
 //! its shadow and the language list a Loader makes later all draw on the shared device, on the GUI thread, made on
-//! Qt's default adapter when the pinned one is gone; without a shared device, each window draws on its own. Qt wants
-//! its app object on the main thread, so this binary runs without the test harness.
+//! Qt's default adapter when the pinned one is gone; Qt's font list takes each theme's bundled fonts; without a shared
+//! device, each window draws on its own. Qt wants its app object on the main thread, so this binary runs without the
+//! test harness.
 
 #![allow(
     clippy::expect_used,
@@ -10,7 +11,9 @@
 
 #[path = "../shared/board.rs"]
 mod board;
+mod checks;
 mod face;
+mod logs;
 
 use cxx::UniquePtr;
 use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
@@ -18,14 +21,15 @@ use face::Face;
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
 use kx_test_support::host::FakeHost;
-use kx_ui::{Hub, MANIFEST, Shell, UiPorts, UiSettings, drawing};
+use kx_ui::{Hub, MANIFEST, Shell, UiPorts, UiSettings};
+use logs::Lines;
 use std::process::ExitCode;
 use std::sync::Arc;
 
 /// The fake tray's picture side.
 const TRAY_PX: u32 = 16;
 /// How many windows the fake guard reports, so each guard run ends at once.
-const GUARDED: usize = 2;
+pub(crate) const GUARDED: usize = 2;
 /// Where the ticker says it is loaded from: it ends the event loop at each tick, so the test can look between ticks.
 const TICK_URL: &str = "qrc:/kx-ui-tests/device-tick.qml";
 /// The ticker.
@@ -37,40 +41,59 @@ const GONE: u32 = 99;
 /// How many ticks a step may take, as `tryVerify` waits in the Qt Quick tests.
 const TICKS: usize = 250;
 
-type Outcome = Result<(), String>;
+/// A step's verdict; the error says what failed.
+pub(crate) type Outcome = Result<(), String>;
 
-/// What the test drives: the hub's face and the host behind its settings.
-struct Rig {
-    face: Arc<Face>,
-    _host: FakeHost,
+/// What the test drives: the hub, its face, the host behind its settings, and the log.
+pub(crate) struct Rig {
+    /// The hub the app's QML reads.
+    pub(crate) hub: Arc<Hub>,
+    /// The keyboard face it draws.
+    pub(crate) face: Arc<Face>,
+    /// The host behind the face's settings.
+    pub(crate) host: FakeHost,
+    /// Every log line so far.
+    pub(crate) lines: Lines,
 }
 
-/// A hub over fresh fakes with the fake face attached, as the `ui` module attaches the keyboard's.
-fn hub() -> Result<(Arc<Hub>, Rig), String> {
-    let rect = Rect {
-        x: 0,
-        y: 0,
-        w: 1920,
-        h: 1040,
-    };
-    let screen = Screen {
-        rect,
-        dpi: BASE_DPI,
-        primary: true,
-    };
-    let ports = UiPorts {
-        guard: Arc::new(FakeWindowGuard::new(GUARDED)),
-        screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
-        look: Arc::new(FakeSystemLook::new()),
-        backdrop: Arc::new(FakeBackdrop::new()),
-        tray: Arc::new(FakeTray::new(TRAY_PX)),
-    };
-    let (hub, _requests) = Hub::new(ports).map_err(|e| e.to_string())?;
-    let face = Arc::new(Face::new(f64::from(board::row()))?);
-    let mut host = FakeHost::new(&MANIFEST);
-    let settings = UiSettings::from_defaults().map_err(|e| e.to_string())?;
-    hub.attach(settings, face.clone(), host.handle());
-    Ok((hub, Rig { face, _host: host }))
+impl Rig {
+    /// A hub over fresh fakes with the fake face attached, as the `ui` module attaches the keyboard's.
+    fn new(lines: Lines) -> Result<Self, String> {
+        let screen = Screen {
+            rect: Rect {
+                x: 0,
+                y: 0,
+                w: 1920,
+                h: 1040,
+            },
+            dpi: BASE_DPI,
+            primary: true,
+        };
+        let ports = UiPorts {
+            guard: Arc::new(FakeWindowGuard::new(GUARDED)),
+            screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
+            look: Arc::new(FakeSystemLook::new()),
+            backdrop: Arc::new(FakeBackdrop::new()),
+            tray: Arc::new(FakeTray::new(TRAY_PX)),
+        };
+        let (hub, _requests) = Hub::new(ports).map_err(|e| e.to_string())?;
+        let face = Arc::new(Face::new(f64::from(board::row()))?);
+        let host = FakeHost::new(&MANIFEST);
+        let mut rig = Self {
+            hub,
+            face,
+            host,
+            lines,
+        };
+        rig.show(UiSettings::from_defaults().map_err(|e| e.to_string())?);
+        Ok(rig)
+    }
+
+    /// Hands the hub `settings` with the face, as the `ui` module does when it starts again.
+    pub(crate) fn show(&mut self, settings: UiSettings) {
+        let face = self.face.clone();
+        self.hub.attach(settings, face, self.host.handle());
+    }
 }
 
 /// The ticker, loaded into its own engine, which the windows' rebuild leaves alone.
@@ -82,7 +105,11 @@ fn ticker() -> Result<UniquePtr<QQmlApplicationEngine>, String> {
 }
 
 /// Runs Qt's loop tick by tick until `done` holds; the error names `what` did not happen.
-fn wait(app: &mut UniquePtr<QGuiApplication>, what: &str, done: impl Fn() -> bool) -> Outcome {
+pub(crate) fn wait(
+    app: &mut UniquePtr<QGuiApplication>,
+    what: &str,
+    done: impl Fn() -> bool,
+) -> Outcome {
     for _ in 0..TICKS {
         if done() {
             return Ok(());
@@ -104,13 +131,14 @@ fn main() -> ExitCode {
     }
 }
 
-/// Starts Qt as the app does, then checks the shared device.
+/// Starts Qt as the app does, then checks the shared device, the fonts and the fallback.
 fn run() -> Outcome {
+    let lines = Lines::install().ok_or("a log capture was set already")?;
     if !kx_ui::pin_drawing() || !kx_ui::pin_adapter(GONE) {
         return Err("the drawing variables or the adapter were not set".into());
     }
-    let (hub, rig) = hub()?;
-    if !kx_ui::install(hub) {
+    let mut rig = Rig::new(lines)?;
+    if !kx_ui::install(rig.hub.clone()) {
         return Err("a hub was installed already".into());
     }
     let mut app = QGuiApplication::new();
@@ -119,49 +147,12 @@ fn run() -> Outcome {
     if kx_ui::qt_sees(kx_ui::ADAPTER_VAR) {
         return Err("the pin to a gone adapter stayed".into());
     }
-    shared(&mut app, &shell, &rig)?;
+    checks::shared(&mut app, &shell, &rig)?;
+    checks::fonts(&mut rig)?;
     drop(shell);
     let shell = Shell::open_with(None, None).ok_or("the root QML did not load again")?;
-    own(&mut app, &shell, &rig)?;
+    checks::own(&mut app, &shell, &rig)?;
     drop(shell);
     drop(app);
     Ok(())
-}
-
-/// Without a shared device the app still starts: each window draws on its own device, as Qt makes them alone.
-fn own(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
-    let placed = rig.face.placed().len();
-    wait(app, "the keyboard's first frame on its own device", || {
-        rig.face.placed().len() > placed && drawing().0 >= GUARDED
-    })?;
-    let (windows, devices) = drawing();
-    if shell.device().is_some() || devices != windows {
-        return Err(format!("{windows} windows draw on {devices} devices"));
-    }
-    Ok(())
-}
-
-/// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
-/// shared device, and every frame ends on the GUI thread.
-fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
-    let device = shell.device().ok_or("no shared device was made")?;
-    wait(app, "the keyboard's first frame", || {
-        !rig.face.placed().is_empty() && drawing().0 >= GUARDED
-    })?;
-    let before = drawing().0;
-    rig.face.open_list();
-    wait(app, "the language list's first frame", || {
-        drawing().0 > before
-    })?;
-    let (windows, devices) = drawing();
-    if device.windows() != windows || devices != 1 {
-        return Err(format!(
-            "{windows} windows draw on {devices} devices, {} on the shared one",
-            device.windows()
-        ));
-    }
-    device
-        .gui_only()
-        .then_some(())
-        .ok_or_else(|| "a frame ended off the GUI thread".into())
 }

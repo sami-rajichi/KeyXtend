@@ -2,7 +2,6 @@
 // click-through shadow; it never takes focus (ADR-0013). Bound: delegates take data only from modelData and index.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQml.Models
 
 Window {
     id: win
@@ -17,7 +16,7 @@ Window {
     property var lk: JSON.parse(ui.lookJson())
     property var board: JSON.parse(keyboard.boardJson())
     property var st: JSON.parse(keyboard.stateJson())
-    // The icon folder and type and the font files, compiled into the app.
+    // The icon folder and type, compiled into the app.
     readonly property var assets: JSON.parse(ui.assets())
     // Bumped on each settings or language change, so every text is looked up again in the new language.
     property int texts: 0
@@ -27,8 +26,8 @@ Window {
     readonly property point origin: Qt.point(Math.round(at.x), Math.round(at.y))
     // The plate size the shadow follows, set once the keys are laid out, so the shadow never runs ahead.
     property size drawn: Qt.size(0, 0)
-    // Font files loaded so far, so families are picked again once they are in.
-    property int fontsIn: 0
+    // Bumped when the hub loads another theme's fonts, so families are picked again from them.
+    property int faces: 0
     // A system backdrop is behind the plate, so the plate lets some of it through.
     property bool frosted: false
     // The keyboard has placed the window (Placing).
@@ -56,7 +55,7 @@ Window {
     // The window's size in Qt units: the plate and the overhang.
     readonly property real wide: ready ? board.plate.w + overhang : 0
     readonly property real high: ready ? board.plate.h + overhang : 0
-    readonly property var res: resources(texts, fontsIn)
+    readonly property var res: resources(texts, faces)
     // Units and pop-up spots: physical pixels or Qt units on the screen that holds them.
     readonly property Spots spots: Spots {
         win: win
@@ -92,6 +91,9 @@ Window {
         function onTextsChanged() {
             win.retext();
         }
+        function onFontsChanged() {
+            win.faces++;
+        }
     }
     // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
     Rescale {
@@ -119,14 +121,6 @@ Window {
         active: win.ready && win.visible && !!win.st.list
         sourceComponent: LangPanel {
             win: win
-        }
-    }
-    Instantiator {
-        model: win.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: modelData
-            onStatusChanged: if (status === FontLoader.Ready) win.fontsIn++
         }
     }
 
