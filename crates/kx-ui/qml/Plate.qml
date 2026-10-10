@@ -10,6 +10,8 @@ Item {
     required property Window win
     // The move and resize control, so the window can end it.
     property alias mover: mover
+    // A live resize runs.
+    readonly property bool resizing: mover.mode === Mover.Resizing
 
     readonly property var lk: win.lk
     readonly property var board: win.board

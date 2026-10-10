@@ -177,8 +177,8 @@ Item {
             const r = rescaleOf(a.bubble);
             r.ratio = r.ratio * 2;
             const want = a.face.spots.logical(60, 70);
-            tryCompare(a.bubble, "x", want.x, 2000, "its corner in the new Qt units");
-            compare(a.bubble.y, want.y);
+            tryCompare(a.bubble, "x", Math.trunc(want.x), 2000, "its corner in the new Qt units");
+            compare(a.bubble.y, Math.trunc(want.y));
         }
 
         function test_a_new_scale_puts_the_banner_back_over_the_keyboard() {
@@ -187,8 +187,8 @@ Item {
             a.ui.noticesWaiting();
             tryVerify(() => a.notice.visible, 2000, "the banner shows");
             const want = newScale(a, a.notice, { x: 90, y: 20 });
-            tryCompare(a.notice, "x", want.x, 2000, "placed again");
-            compare(a.notice.y, want.y);
+            tryCompare(a.notice, "x", Math.trunc(want.x), 2000, "placed again");
+            compare(a.notice.y, Math.trunc(want.y));
         }
 
         function test_a_new_scale_puts_the_language_list_back_over_the_keyboard() {
@@ -201,8 +201,8 @@ Item {
             const list = [...panel().item.data].find(o => o.view !== undefined);
             tryVerify(() => list.visible, 2000);
             const want = newScale(a, list, { x: 70, y: 10 });
-            tryCompare(list, "x", want.x, 2000, "placed again");
-            compare(list.y, want.y);
+            tryCompare(list, "x", Math.trunc(want.x), 2000, "placed again");
+            compare(list.y, Math.trunc(want.y));
         }
 
         function test_a_new_scale_closes_the_tray_menu() {

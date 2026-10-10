@@ -52,8 +52,9 @@ QtObject {
 
     property Glow kbGlow: Glow {
         lk: face.lk
-        box: Qt.rect(face.at.x, face.at.y, face.drawn.width, face.drawn.height)
+        box: Qt.rect(face.origin.x, face.origin.y, face.drawn.width, face.drawn.height)
         radius: face.lk ? face.lk.look.window_radius_px : 0
+        hidden: face.resizing
 
         KbWindow {
             id: face

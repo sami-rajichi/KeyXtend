@@ -21,8 +21,10 @@ Window {
     readonly property var assets: JSON.parse(ui.assets())
     // Bumped on each settings or language change, so every text is looked up again in the new language.
     property int texts: 0
-    // Where the window is, in Qt units; its shadow reads it too, so both move in the same step.
+    // Where the window is, in Qt units, and the same in whole units as the window takes it; its shadow is drawn around
+    // `origin`, so both move in the same step and their edges meet.
     property point at: Qt.point(0, 0)
+    readonly property point origin: Qt.point(Math.round(at.x), Math.round(at.y))
     // The plate size the shadow follows, set once the keys are laid out, so the shadow never runs ahead.
     property size drawn: Qt.size(0, 0)
     // Font files loaded so far, so families are picked again once they are in.
@@ -31,6 +33,8 @@ Window {
     property bool frosted: false
     // The keyboard has placed the window; a restarted keyboard places it again.
     property bool placed: false
+    // A live resize runs, while its shadow draws nothing (Glow).
+    readonly property bool resizing: !!body.item && body.item.resizing
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -62,8 +66,8 @@ Window {
     title: res.tr("window.keyboard")
     visible: false
     color: "transparent"
-    x: rescale.keep(at.x)
-    y: rescale.keep(at.y)
+    x: rescale.keep(origin.x)
+    y: rescale.keep(origin.y)
     width: rescale.keep(wide)
     height: rescale.keep(high)
 
