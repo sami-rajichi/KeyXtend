@@ -71,6 +71,7 @@ Window {
     onBoardChanged: Qt.callLater(() => drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0))
     onVisibleChanged: if (visible) Qt.callLater(shown)
     onRunningChanged: if (!running) placed = false
+    onScreenChanged: Qt.callLater(rescreen)
     Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
 
     Connections {
@@ -89,6 +90,13 @@ Window {
     Rescale {
         id: rescale
         onRatioChanged: Qt.callLater(win.rescreen)
+    }
+    // A screen came or went: the keyboard is placed again on the screens left.
+    Connections {
+        target: win.spots
+        function onScreensChanged() {
+            Qt.callLater(win.rescreen);
+        }
     }
     // Owned by the keyboard, so it stays above it when the guard lifts it; the bubble owns its own.
     Loader {
@@ -174,12 +182,12 @@ Window {
         if (st && st.at && !(body.item && body.item.mover.busy))
             moveTo(st.at);
     }
-    // Rereads what an action's `json` answer asks for.
-    function redraw(json) {
+    // Rereads what an action's `json` answer asks for, and the state and place too when `always`.
+    function redraw(json, always) {
         const r = JSON.parse(json);
         if (r && r.board)
             board = JSON.parse(keyboard.boardJson());
-        if (r && (r.state || r.board))
+        if (always || (r && (r.state || r.board)))
             restate();
     }
     function moveTo(p) {
@@ -197,11 +205,11 @@ Window {
     }
 
     // On a new display scale or screen: the cut again and, unless it is moving, a new placement where it is in pixels,
-    // for its size in the new ones.
+    // for its size in the new ones; the window then goes where the keyboard puts it, in the new Qt units.
     function rescreen() {
         reshape();
         if (placed && st && st.at && !(body.item && body.item.mover.busy))
-            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, overhang / s));
+            redraw(keyboard.placed(st.at.x, st.at.y, wide * rescale.ratio, high * rescale.ratio, overhang / s), true);
     }
     // Once shown: the cut, then the guard, which also puts the backdrop on.
     function shown() {

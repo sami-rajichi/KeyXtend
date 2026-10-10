@@ -47,6 +47,7 @@ Glow {
         onPick: i => panel.win.redraw(panel.win.keyboard.langPick(i))
         onPage: id => panel.win.redraw(panel.win.keyboard.panelKey(id))
         onTouched: panel.win.touched()
+        onRescaled: Qt.callLater(panel.place)
         onWidthChanged: if (visible) panel.place()
         onHeightChanged: if (visible) panel.place()
         Component.onCompleted: Qt.callLater(() => {

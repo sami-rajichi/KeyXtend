@@ -78,6 +78,7 @@ QtObject {
             res: face.res
             tipMs: face.cfg.tipMs
             lift: t => app.keyboard.liftAlone(t)
+            onRescaled: Qt.callLater(app.rebubble)
             onClicked: {
                 trayMenu.shut();
                 app.open();
@@ -173,21 +174,33 @@ QtObject {
         face.visible = true;
     }
 
-    // Hides the keyboard and shows the bubble in a bottom corner of its screen, where it always is (owner's choice);
-    // false when there is nowhere for the bubble, so the keyboard stays.
+    // Hides the keyboard and shows the bubble; false when there is nowhere for the bubble, so the keyboard stays.
     function minimise() {
         face.finish();
-        const at = face.bubbleSpot();
-        if (!at)
+        if (!bubbleTo())
             return false;
-        bubble.x = at.x;
-        bubble.y = at.y;
         hide();
         minimised = true;
         bubbleGlow.visible = true;
         bubble.visible = true;
         face.guardRun();
         return true;
+    }
+
+    // Puts the bubble in a bottom corner of the keyboard's screen, where it always is (owner's choice); false when there
+    // is nowhere for it.
+    function bubbleTo() {
+        const at = face.bubbleSpot();
+        if (!at)
+            return false;
+        bubble.x = at.x;
+        bubble.y = at.y;
+        return true;
+    }
+    // A new display scale left the shown bubble at its old top-left, so it goes back to its corner.
+    function rebubble() {
+        if (bubble.visible)
+            bubbleTo();
     }
 
     // Hides the keyboard until the bubble or a second copy's Show brings it back.

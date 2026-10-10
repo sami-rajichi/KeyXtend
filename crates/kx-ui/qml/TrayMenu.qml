@@ -36,9 +36,10 @@ Window {
     width: rescale.keep(Math.ceil(Math.max(sh.width_px, Math.max(showItem.implicitWidth, quitItem.implicitWidth) + 2 * sh.pad_px)))
     height: rescale.keep(Math.ceil(items.implicitHeight + 2 * sh.pad_px))
 
-    // Keeps the size above across display scale changes.
+    // Keeps the size above across display scale changes; a new scale closes it, as it was placed in the old one.
     Rescale {
         id: rescale
+        onRatioChanged: menu.shut()
     }
 
     // A click on the tray icon at physical (px, py): opens the menu there, or closes it when it shows.

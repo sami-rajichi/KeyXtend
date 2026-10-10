@@ -45,9 +45,10 @@ Window {
     width: rescale.keep(Math.ceil(fixed + wordsW))
     height: rescale.keep(Math.ceil(Math.max(words.height, buttons.height, icon.height) + 2 * sh.pad_px[0] * s))
 
-    // Keeps the size above across display scale changes.
+    // Keeps the size above across display scale changes, and the place over the keyboard on a new scale.
     Rescale {
         id: rescale
+        onRatioChanged: Qt.callLater(note.follow)
     }
 
     Connections {

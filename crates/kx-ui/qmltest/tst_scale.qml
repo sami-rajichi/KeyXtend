@@ -1,5 +1,5 @@
-// A display scale change over stand-in bridges: a window keeps the size and place its bindings give in Qt units, and
-// the keyboard cuts itself at the new scale and asks to be placed again for its size in the new pixels (G11).
+// A display scale or screen change over stand-in bridges: a window keeps the size and place its bindings give in Qt
+// units, the keyboard is cut and placed again in the new pixels (G11), and the pop-ups go back where they belong.
 import QtQuick
 import QtTest
 import "../qml"
@@ -15,6 +15,24 @@ Item {
     Component { id: kbC; FakeKeyboard {} }
     Component { id: winC; KbWindow {} }
     Component { id: spyC; SignalSpy {} }
+    Component {
+        id: appC
+        App {
+            ui: FakeUi {}
+            keyboard: FakeKeyboard {}
+        }
+    }
+    // A stand-in screen with its corner at (`virtualX`, 0), 4000 by 3000 Qt units, at the scale the test sets.
+    Component {
+        id: screenC
+        QtObject {
+            property real devicePixelRatio: 1
+            property int virtualX: 0
+            property int virtualY: 0
+            property int width: 4000
+            property int height: 3000
+        }
+    }
     // A hidden window kept at 240 by 120 at (60, 50), and a value that changes each time the kept values are set.
     Component {
         id: keptC
@@ -66,8 +84,32 @@ Item {
             win.place();
             win.visible = true;
             waitForRendering(win.contentItem);
-            const rescale = all(win.contentItem, o => o.keep !== undefined)[0];
-            return { win: win, kb: kb, mover: mover, rescale: rescale };
+            return { win: win, kb: kb, mover: mover, rescale: rescaleOf(win) };
+        }
+        // The `Rescale` of window `w`.
+        function rescaleOf(w) {
+            return all(w.contentItem, o => o.keep !== undefined)[0];
+        }
+        // The keyboard over stand-in `screens`, at its state's place in their Qt units.
+        function onScreens(r, screens) {
+            const placed = heard(r.kb, "placed");
+            r.win.spots.screens = screens;
+            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again on the new screens");
+            r.win.restate();
+        }
+        // The app over fresh stand-ins, once its keyboard shows.
+        function app() {
+            const a = createTemporaryObject(appC, root);
+            tryVerify(() => a.face.visible, 2000, "the keyboard shows");
+            waitForRendering(a.face.contentItem);
+            return a;
+        }
+        // Doubles window `w`'s scale; the pop-up spots answer `spot` in physical pixels from then on.
+        function newScale(a, w, spot) {
+            a.ui.popSpot = Qt.point(spot.x, spot.y);
+            const r = rescaleOf(w);
+            r.ratio = r.ratio * 2;
+            return a.face.spots.logical(spot.x, spot.y);
         }
 
         // Qt leaves the native window as it was on a new scale, and may resize it during a move: the bindings win.
@@ -97,6 +139,79 @@ Item {
             compare(r.kb.placedAt, Object.assign({}, at, size), "where it is, its size in the new pixels");
             compare(r.kb.shapeDpr, ratio, "cut at the new scale");
             r.win.visible = false;
+        }
+
+        // A keyboard the user moved keeps its place in pixels, in the new Qt units, though the keyboard answers nothing.
+        function test_on_a_new_scale_a_moved_keyboard_keeps_its_place_in_pixels() {
+            const r = make({ x: 400, y: 600 });
+            const sc = createTemporaryObject(screenC, root);
+            onScreens(r, [sc]);
+            compare(r.win.at, Qt.point(400, 600), "on the stand-in screen");
+            sc.devicePixelRatio = 2;
+            r.rescale.ratio = 2;
+            tryCompare(r.win, "at", Qt.point(200, 300), 2000, "its pixels in the new Qt units");
+            r.win.visible = false;
+        }
+
+        // A screen that goes places the keyboard again from where it was, and it goes where the keyboard puts it.
+        function test_a_screen_that_goes_places_the_keyboard_again_on_the_screens_left() {
+            const r = make({ x: 4100, y: 90 });
+            const a = createTemporaryObject(screenC, root);
+            const b = createTemporaryObject(screenC, root, { virtualX: 4000 });
+            onScreens(r, [a, b]);
+            compare(r.win.at, Qt.point(4100, 90), "on the second screen");
+            r.kb.state = Object.assign({}, r.kb.state, { at: { x: 100, y: 90 } });
+            const placed = heard(r.kb, "placed");
+            r.win.spots.screens = [a];
+            tryVerify(() => heard(r.kb, "placed") === placed + 1, 2000, "placed again");
+            compare([r.kb.placedAt.x, r.kb.placedAt.y], [4100, 90], "from where it was in pixels");
+            tryCompare(r.win, "at", Qt.point(100, 90), 2000, "where the keyboard puts it");
+            r.win.visible = false;
+        }
+
+        function test_a_new_scale_puts_the_shown_bubble_back_in_its_corner() {
+            const a = app();
+            a.keyboard.bubble = { x: 40, y: 50 };
+            verify(a.minimise(), "minimised");
+            a.keyboard.bubble = { x: 60, y: 70 };
+            const r = rescaleOf(a.bubble);
+            r.ratio = r.ratio * 2;
+            const want = a.face.spots.logical(60, 70);
+            tryCompare(a.bubble, "x", want.x, 2000, "its corner in the new Qt units");
+            compare(a.bubble.y, want.y);
+        }
+
+        function test_a_new_scale_puts_the_banner_back_over_the_keyboard() {
+            const a = app();
+            a.ui.notices = [{ id: 1, text: "Notice 1", retry: false }];
+            a.ui.noticesWaiting();
+            tryVerify(() => a.notice.visible, 2000, "the banner shows");
+            const want = newScale(a, a.notice, { x: 90, y: 20 });
+            tryCompare(a.notice, "x", want.x, 2000, "placed again");
+            compare(a.notice.y, want.y);
+        }
+
+        function test_a_new_scale_puts_the_language_list_back_over_the_keyboard() {
+            const a = app();
+            a.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
+            a.keyboard.state = Face.states.list;
+            a.face.redraw(JSON.stringify({ board: true, state: true }));
+            const panel = () => [...a.face.data].find(o => o.item && o.item.win === a.face);
+            tryVerify(() => panel() && panel().item.visible, 2000, "the list shows");
+            const list = [...panel().item.data].find(o => o.view !== undefined);
+            tryVerify(() => list.visible, 2000);
+            const want = newScale(a, list, { x: 70, y: 10 });
+            tryCompare(list, "x", want.x, 2000, "placed again");
+            compare(list.y, want.y);
+        }
+
+        function test_a_new_scale_closes_the_tray_menu() {
+            const a = app();
+            a.ui.trayClicked(300, 500);
+            verify(a.menu.visible, "the menu opens");
+            const r = rescaleOf(a.menu);
+            r.ratio = r.ratio * 2;
+            verify(!a.menu.visible, "closed");
         }
 
         // A move places the keyboard when it ends, so a new scale meanwhile only cuts it again.

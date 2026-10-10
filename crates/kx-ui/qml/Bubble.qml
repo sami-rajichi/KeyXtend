@@ -12,6 +12,8 @@ Window {
     required property var lift
 
     signal clicked
+    // The display scale changed, so its place, set in the old Qt units, is stale.
+    signal rescaled
 
     readonly property var px: lk.shape.extra.bubble_px
     readonly property string name: res.bar("bubble")
@@ -26,6 +28,7 @@ Window {
     // Keeps the size above across display scale changes.
     Rescale {
         id: rescale
+        onRatioChanged: bub.rescaled()
     }
 
     // Hides its tip, as a guard run starts: the guard would lift the bubble with it.

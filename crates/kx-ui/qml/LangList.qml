@@ -21,6 +21,8 @@ Window {
     signal page(string id)
     // A press landed on the list, which closes the tray menu; the press still reaches the row or button.
     signal touched
+    // The display scale changed, so its place, set in the old Qt units, is stale.
+    signal rescaled
 
     // The box whose fade, rise and scale the shadow follows.
     readonly property alias body: body
@@ -62,6 +64,7 @@ Window {
     // Keeps the size above across display scale changes.
     Rescale {
         id: rescale
+        onRatioChanged: box.rescaled()
     }
 
     Rectangle {
