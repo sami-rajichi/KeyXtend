@@ -1,6 +1,6 @@
 //! Qt on the main thread: hardened first, kept on the lowest-power graphics adapter and drawing every window on this
 //! thread, then the app object, the shared graphics device with the root QML over the installed hub, and the event
-//! loop.
+//! loop, run again each time a lost device's windows are made again.
 
 use cxx_qt_lib::QGuiApplication;
 use kx_ui::{Shell, harden_qt, pin_adapter, pin_drawing};
@@ -19,10 +19,9 @@ pub fn run(pinned: Option<&Path>, adapter: Option<u32>, end: impl FnOnce()) -> E
         tracing::warn!("Qt's drawing variables could not be set, so each window draws as Qt picks");
     }
     let mut app = QGuiApplication::new();
-    let shell = Shell::open(pinned);
-    let code = shell
-        .as_ref()
-        .and_then(|_| app.as_mut().map(QGuiApplication::exec));
+    let mut shell = Shell::open(pinned);
+    let exec = || app.as_mut().map(QGuiApplication::exec);
+    let code = shell.as_mut().and_then(|s| looped(exec, s));
     end();
     drop(shell);
     drop(app);
@@ -30,6 +29,16 @@ pub fn run(pinned: Option<&Path>, adapter: Option<u32>, end: impl FnOnce()) -> E
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
+    }
+}
+
+/// Runs Qt's loop with `exec` until it ends with no lost device to rebuild; its exit code, or `None` with no app object.
+fn looped(mut exec: impl FnMut() -> Option<i32>, shell: &mut Shell) -> Option<i32> {
+    loop {
+        let code = exec()?;
+        if !shell.rebuilt() {
+            return Some(code);
+        }
     }
 }
 

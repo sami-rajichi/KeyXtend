@@ -1,5 +1,6 @@
 //! A keyboard face over the keyboard module's golden board and states: it puts the window at `HOME` first, follows
-//! each later placement, shows the language list at the next relabel once asked, and keeps every placement.
+//! each later placement, shows the language list at the next relabel once asked, keeps every placement, and knows
+//! whether a resize runs.
 
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect};
 use serde_json::Value;
@@ -22,6 +23,7 @@ struct Live {
     ask_list: bool,
     list: bool,
     placed: Vec<Rect>,
+    resizing: bool,
 }
 
 /// The face the hub draws in the test.
@@ -72,6 +74,11 @@ impl Face {
     pub fn placed(&self) -> Vec<Rect> {
         self.lock().placed.clone()
     }
+
+    /// True between a resize's begin and its end.
+    pub fn resizing(&self) -> bool {
+        self.lock().resizing
+    }
 }
 
 impl KeyboardFace for Face {
@@ -118,6 +125,14 @@ impl KeyboardFace for Face {
                 let opens = live.ask_list && !live.list;
                 live.list |= live.ask_list;
                 opens
+            }
+            FaceAction::ResizeBegin { .. } => {
+                live.resizing = true;
+                false
+            }
+            FaceAction::ResizeEnd => {
+                live.resizing = false;
+                false
             }
             _ => false,
         };

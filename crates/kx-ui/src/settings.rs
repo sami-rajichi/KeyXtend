@@ -24,6 +24,8 @@ pub(crate) const SEND_TRIES: RangeInclusive<u32> = 1..=100;
 pub(crate) const SEND_WAIT_MS: RangeInclusive<u64> = 1..=10_000;
 /// How long the tray menu may ignore a new front window after it opens, in ms; 0 turns that off.
 pub(crate) const TRAY_GRACE_MS: RangeInclusive<u64> = 0..=5_000;
+/// How many times one run may make the windows again after the graphics device is lost; 0 never does.
+pub(crate) const DEVICE_REBUILDS: RangeInclusive<u32> = 0..=10;
 /// How many rows a list page may show; every list is paged (ADR-0008).
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 
@@ -93,6 +95,8 @@ pub struct UiSettings {
     /// How long the tray menu ignores a new front window after it opens, in ms, as the hidden icons' pop-up closing
     /// can bring one.
     pub tray_grace_ms: u64,
+    /// How many times one run makes the windows again on a new graphics device after the device is lost (ADR-0021).
+    pub device_rebuilds: u32,
     /// Rows per page in every list.
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.
@@ -129,6 +133,7 @@ impl UiSettings {
         within("send_tries", self.send_tries, &SEND_TRIES)?;
         within("send_wait_ms", self.send_wait_ms, &SEND_WAIT_MS)?;
         within("tray_grace_ms", self.tray_grace_ms, &TRAY_GRACE_MS)?;
+        within("device_rebuilds", self.device_rebuilds, &DEVICE_REBUILDS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }
 }

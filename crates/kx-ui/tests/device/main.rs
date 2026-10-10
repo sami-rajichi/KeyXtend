@@ -1,8 +1,8 @@
 //! One graphics device for every window (ADR-0021): the app's QML over a hub with a fake face, where the keyboard,
 //! its shadow and the language list a Loader makes later all draw on the shared device, on the GUI thread, made on
-//! Qt's default adapter when the pinned one is gone; Qt's font list takes each theme's bundled fonts; without a shared
-//! device, each window draws on its own. Qt wants its app object on the main thread, so this binary runs without the
-//! test harness.
+//! Qt's default adapter when the pinned one is gone; a lost device brings the windows back over the same hub; Qt's
+//! font list takes each theme's bundled fonts; without a shared device, each window draws on its own. Qt wants its app
+//! object on the main thread, so this binary runs without the test harness.
 
 #![allow(
     clippy::expect_used,
@@ -14,6 +14,8 @@ mod board;
 mod checks;
 mod face;
 mod logs;
+#[cfg(debug_assertions)]
+mod rebuild;
 
 use cxx::UniquePtr;
 use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
@@ -25,6 +27,7 @@ use kx_ui::{Hub, MANIFEST, Shell, UiPorts, UiSettings};
 use logs::Lines;
 use std::process::ExitCode;
 use std::sync::Arc;
+use tracing::Level;
 
 /// The fake tray's picture side.
 const TRAY_PX: u32 = 16;
@@ -36,6 +39,8 @@ const TICK_URL: &str = "qrc:/kx-ui-tests/device-tick.qml";
 const TICK: &str = r"import QtQuick
 Timer { interval: 20; running: true; repeat: true; onTriggered: Qt.exit(0) }
 ";
+/// What a second `Ui` object taking the hub's wakes warns.
+const SECOND_UI: &str = "second Ui";
 /// An adapter no PC has, so the device is made on Qt's default, as when the pinned one is gone.
 const GONE: u32 = 99;
 /// How many ticks a step may take, as `tryVerify` waits in the Qt Quick tests.
@@ -44,12 +49,14 @@ const TICKS: usize = 250;
 /// A step's verdict; the error says what failed.
 pub(crate) type Outcome = Result<(), String>;
 
-/// What the test drives: the hub, its face, the host behind its settings, and the log.
+/// What the test drives: the hub, its face, the tray, the host behind its settings, and the log.
 pub(crate) struct Rig {
     /// The hub the app's QML reads.
     pub(crate) hub: Arc<Hub>,
     /// The keyboard face it draws.
     pub(crate) face: Arc<Face>,
+    /// The tray its icon shows in.
+    pub(crate) tray: Arc<FakeTray>,
     /// The host behind the face's settings.
     pub(crate) host: FakeHost,
     /// Every log line so far.
@@ -69,12 +76,13 @@ impl Rig {
             dpi: BASE_DPI,
             primary: true,
         };
+        let tray = Arc::new(FakeTray::new(TRAY_PX));
         let ports = UiPorts {
             guard: Arc::new(FakeWindowGuard::new(GUARDED)),
             screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
             look: Arc::new(FakeSystemLook::new()),
             backdrop: Arc::new(FakeBackdrop::new()),
-            tray: Arc::new(FakeTray::new(TRAY_PX)),
+            tray: tray.clone(),
         };
         let (hub, _requests) = Hub::new(ports).map_err(|e| e.to_string())?;
         let face = Arc::new(Face::new(f64::from(board::row()))?);
@@ -82,6 +90,7 @@ impl Rig {
         let mut rig = Self {
             hub,
             face,
+            tray,
             host,
             lines,
         };
@@ -131,7 +140,8 @@ fn main() -> ExitCode {
     }
 }
 
-/// Starts Qt as the app does, then checks the shared device, the fonts and the fallback.
+/// Starts Qt as the app does, then checks the shared device, a loss, the fonts, losses past the most, the fallback and
+/// the End.
 fn run() -> Outcome {
     let lines = Lines::install().ok_or("a log capture was set already")?;
     if !kx_ui::pin_drawing() || !kx_ui::pin_adapter(GONE) {
@@ -143,16 +153,28 @@ fn run() -> Outcome {
     }
     let mut app = QGuiApplication::new();
     let _tick = ticker()?;
-    let shell = Shell::open(None).ok_or("the root QML did not load")?;
+    #[cfg_attr(
+        not(debug_assertions),
+        allow(unused_mut, reason = "only the loss steps change it")
+    )]
+    let mut shell = Shell::open(None).ok_or("the root QML did not load")?;
     if kx_ui::qt_sees(kx_ui::ADAPTER_VAR) {
         return Err("the pin to a gone adapter stayed".into());
     }
     checks::shared(&mut app, &shell, &rig)?;
+    #[cfg(debug_assertions)]
+    let kept = rebuild::once(&mut app, &mut shell, &rig)?;
     checks::fonts(&mut rig)?;
+    #[cfg(debug_assertions)]
+    rebuild::past_most(&mut app, &mut shell, &mut rig, kept)?;
     drop(shell);
     let shell = Shell::open_with(None, None).ok_or("the root QML did not load again")?;
     checks::own(&mut app, &shell, &rig)?;
+    checks::ends(&mut app, &rig)?;
     drop(shell);
     drop(app);
-    Ok(())
+    match rig.lines.count(Level::WARN, SECOND_UI) {
+        0 => Ok(()),
+        n => Err(format!("{n} Ui objects took the wakes from a live one")),
+    }
 }

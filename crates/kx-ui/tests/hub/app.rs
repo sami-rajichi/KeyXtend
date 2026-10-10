@@ -100,6 +100,39 @@ fn a_second_waker_takes_the_wakes_and_warns() {
     assert!(rig.wakes().is_empty(), "the first waker hears nothing");
 }
 
+/// A waker that keeps every wake in `seen`.
+fn keeper(seen: &Arc<Mutex<Vec<Wake>>>) -> kx_ui::Waker {
+    let log = Arc::clone(seen);
+    Box::new(move |w| log.lock().unwrap().push(w))
+}
+
+#[test]
+fn a_dropped_waker_leaves_show_and_end_to_the_next_ui_without_a_warning() {
+    let rig = Rig::new();
+    assert!(!rig.hub.ended());
+    rig.hub.drop_waker();
+    rig.hub.command(Command::Show);
+    rig.hub.end_ui();
+    assert!(rig.hub.ended());
+    assert!(rig.wakes().is_empty(), "the last Ui object hears nothing");
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let warned = warnings_of(|| rig.hub.set_waker(keeper(&seen)));
+    assert!(warned.is_empty(), "{warned:?}");
+    assert_eq!(*seen.lock().unwrap(), [Wake::Show, Wake::End]);
+}
+
+#[test]
+fn an_end_the_last_ui_may_have_missed_reaches_the_next_once() {
+    let rig = Rig::new();
+    rig.hub.end_ui();
+    assert_eq!(rig.wakes(), [Wake::End]);
+    rig.hub.drop_waker();
+    rig.hub.drop_waker();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    rig.hub.set_waker(keeper(&seen));
+    assert_eq!(*seen.lock().unwrap(), [Wake::End]);
+}
+
 #[test]
 fn quit_stays_the_last_request_while_try_again_races_it() {
     for _ in 0..ROUNDS {

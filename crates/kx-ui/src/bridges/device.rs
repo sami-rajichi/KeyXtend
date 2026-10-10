@@ -1,5 +1,5 @@
 //! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame,
-//! whether it is lost, and which windows draw on it.
+//! whether a frame found it lost, and which windows draw on it. Debug builds can mark it lost, for tests.
 
 use super::harden::unpin_adapter;
 use crate::device::share;
@@ -20,7 +20,7 @@ mod ffi {
         #[namespace = "kxui"]
         fn device_new() -> UniquePtr<Device>;
 
-        /// True when the device is gone.
+        /// True once a frame found the device gone; that frame asked Qt's loop to end.
         fn lost(self: &Device) -> bool;
 
         /// How many Qt Quick windows draw on the device.
@@ -28,6 +28,10 @@ mod ffi {
 
         /// True while every frame on the device has ended on the GUI thread.
         fn gui_only(self: &Device) -> bool;
+
+        /// Marks the device gone and asks each window for a frame, as a driver reset would.
+        #[cfg(debug_assertions)]
+        fn lose(self: Pin<&mut Device>);
 
         /// How many Qt Quick windows draw, on any device.
         #[namespace = "kxui"]
@@ -55,7 +59,7 @@ impl Device {
         share(made, unpin_adapter)
     }
 
-    /// True when the device is gone, so the windows must be built again.
+    /// True once a frame found the device gone, so the windows must be made again; it asked Qt's loop to end.
     #[must_use]
     pub fn lost(&self) -> bool {
         self.0.as_ref().is_some_and(ffi::Device::lost)
@@ -71,6 +75,14 @@ impl Device {
     #[must_use]
     pub fn gui_only(&self) -> bool {
         self.0.as_ref().is_some_and(ffi::Device::gui_only)
+    }
+
+    /// Marks the device gone, as a driver reset would, so the next frame finds it; debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    pub fn lose(&mut self) {
+        if let Some(device) = self.0.as_mut() {
+            device.lose();
+        }
     }
 }
 

@@ -20,6 +20,9 @@ Item {
         const w = win;
         if (!w.running)
             return;
+        // A window made again, as after a device loss, first goes where the keyboard keeps it, so nothing moves.
+        if (!placed && w.st && w.st.at)
+            w.moveTo(w.st.at);
         const p = w.spots.physical(w.at.x, w.at.y);
         placed = true;
         owed = false;

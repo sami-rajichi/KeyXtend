@@ -1,6 +1,6 @@
 // The notice banner over the stand-in Ui: it queues and counts what waits, offers Try again only when the app can
-// restart what failed, answers each notice once, tells its notices again in a new keyboard language, and never takes
-// focus.
+// restart what failed, answers each notice once, tells its notices again in a new keyboard language, shows again what
+// the hub still shows when made again, and never takes focus.
 import QtQuick
 import QtTest
 import "../qml"
@@ -62,6 +62,14 @@ Item {
         }
         function button(note, name) {
             return all(note.contentItem, o => o.Accessible.role === Accessible.Button && o.Accessible.name === name)[0];
+        }
+
+        // A banner made while the hub still shows notices, as after a device loss, shows them again before those waiting.
+        function test_a_banner_made_again_shows_what_the_hub_still_shows() {
+            const note = make([notice(3, false)], { retold: [notice(1, false), notice(2, true)] });
+            tryVerify(() => note.visible, 2000, "it shows");
+            compare(note.queue.map(n => n.id), [1, 2, 3]);
+            compare(note.shown.id, 1);
         }
 
         function test_the_banner_queues_and_counts_what_waits() {

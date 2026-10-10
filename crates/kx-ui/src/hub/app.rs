@@ -1,4 +1,5 @@
-//! Between the app and the UI: the Qt thread's waker, a second copy's commands, Try again, and the one quit path.
+//! Between the app and the UI: the Qt thread's waker and its handover to rebuilt windows, a second copy's commands,
+//! Try again, and the one quit path.
 //! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
 use super::{Hub, Request, Wake, Waker};
@@ -20,6 +21,22 @@ impl Hub {
         for wake in pending {
             self.wake(wake);
         }
+    }
+
+    /// Lets the waker go before the windows are made again: `Show` and `End` wait for the next `Ui` object, and an `End`
+    /// already sent goes to it again, as the last one may not have run it.
+    pub fn drop_waker(&self) {
+        let mut live = self.lock();
+        live.waker = None;
+        if live.ended && !live.pending.contains(&Wake::End) {
+            live.pending.push(Wake::End);
+        }
+    }
+
+    /// True once the app ended the UI.
+    #[must_use]
+    pub fn ended(&self) -> bool {
+        self.lock().ended
     }
 
     /// A second copy's `command`: Show goes to the UI, Quit to the app, as the user's Quit does.
@@ -65,10 +82,11 @@ impl Hub {
             .is_some_and(|r| r.send(Request::Retry(module)).is_ok())
     }
 
-    /// Wakes the UI with `what`, or keeps it until the waker is set.
+    /// Wakes the UI with `what`, or keeps it until the waker is set; an `End` is noted under the same lock.
     fn wake_or_wait(&self, what: Wake) {
         let waiting = {
             let mut live = self.lock();
+            live.ended |= what == Wake::End;
             let none = live.waker.is_none();
             if none {
                 live.pending.push(what);

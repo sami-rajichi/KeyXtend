@@ -1,5 +1,5 @@
 //! How the shared graphics device is made (ADR-0021), apart from Qt: at once on the pinned adapter, or on Qt's default
-//! when that adapter is gone, with one warning.
+//! when that adapter is gone, with one warning; a lost one is made again up to `[ui] device_rebuilds` times.
 
 #![allow(
     clippy::expect_used,
@@ -10,7 +10,8 @@
 #[path = "hub/logs.rs"]
 mod logs;
 
-use kx_ui::device::share;
+use kx_ui::UiSettings;
+use kx_ui::device::{Rebuild, Rebuilds, share};
 use logs::warnings_of;
 use std::cell::Cell;
 
@@ -70,4 +71,25 @@ fn no_device_without_a_pin_is_tried_once_with_one_warning() {
     let warned = warnings_of(|| made = share(maker(u32::MAX, &tries), || false));
     assert_eq!((made, tries.get()), (None, 1));
     assert_eq!(warned.len(), 1, "{warned:?}");
+}
+
+#[test]
+fn a_lost_device_is_made_again_up_to_the_setting_then_each_window_takes_its_own() {
+    let most = UiSettings::from_defaults().unwrap().device_rebuilds;
+    let mut rebuilds = Rebuilds::default();
+    let mut got = Vec::new();
+    let warned = warnings_of(|| got = (0..most + 2).map(|_| rebuilds.next(most)).collect());
+    let shared = usize::try_from(most).unwrap();
+    assert!(
+        got[..shared].iter().all(|r| *r == Rebuild::Shared),
+        "{got:?}"
+    );
+    assert_eq!(got[shared..], [Rebuild::Own, Rebuild::Own], "{got:?}");
+    assert_eq!(warned.len(), got.len(), "each rebuild warns: {warned:?}");
+}
+
+#[test]
+fn with_no_rebuilds_the_first_loss_leaves_each_window_its_own() {
+    let mut rebuilds = Rebuilds::default();
+    assert_eq!(rebuilds.next(0), Rebuild::Own);
 }

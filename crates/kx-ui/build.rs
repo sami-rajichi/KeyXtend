@@ -76,6 +76,14 @@ mod qt {
     const GUI: &str = "QtGui";
     /// The hand-written C++ the bridges include.
     const CPP: &str = "cpp";
+    /// The header that tells that C++ the build kind, in its own folder under `OUT_DIR`, and the macro a debug build
+    /// defines in it to turn on the test-only device loss (ADR-0021).
+    const KIND_DIR: &str = "kx-ui-build";
+    const KIND_H: &str = "kx-ui-build.h";
+    const LOSE: &str = "KX_UI_LOSE";
+    /// Cargo's variables for the build's output folder, and for debug assertions, set only when they are on.
+    const OUT_ENV: &str = "OUT_DIR";
+    const DEBUG_ENV: &str = "CARGO_CFG_DEBUG_ASSERTIONS";
     /// The resource root of compiled-in QML modules, as cxx-qt-build lays them out.
     const QML_ROOT: &str = "qrc:/qt/qml";
     /// The variable that hands that root to the crate.
@@ -98,8 +106,8 @@ mod qt {
 
     /// Compiles the bridges, the QML, the fonts and the icons into the crate, and names their URLs.
     pub fn build() {
-        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?)));
-        let (resources, fonts, rhi) = match parts {
+        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?, kind_header()?)));
+        let (resources, fonts, rhi, kind) = match parts {
             Ok(done) => done,
             Err(e) => {
                 println!("cargo::error={e}");
@@ -110,7 +118,8 @@ mod qt {
         let builder = CxxQtBuilder::new_qml_module(module)
             .files(BRIDGES.iter().copied())
             .qrc_resources(resources)
-            .include_dir(rhi);
+            .include_dir(rhi)
+            .include_dir(kind);
         QT_MODULES
             .iter()
             .fold(builder, |b, m| b.qt_module(m))
@@ -154,6 +163,22 @@ mod qt {
         };
         let headers = PathBuf::from(query(HEADERS_KEY)?);
         Ok(headers.join(GUI).join(query(VERSION_KEY)?).join(GUI))
+    }
+
+    /// Writes the build-kind header, which defines `LOSE` only with debug assertions, and gives its folder.
+    fn kind_header() -> Result<PathBuf, String> {
+        let out = std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?;
+        let dir = PathBuf::from(out).join(KIND_DIR);
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let debug = std::env::var_os(DEBUG_ENV).is_some();
+        let lose = if debug {
+            format!("#define {LOSE} 1\n")
+        } else {
+            String::new()
+        };
+        let text = format!("#pragma once\n{lose}");
+        std::fs::write(dir.join(KIND_H), text).map_err(|e| e.to_string())?;
+        Ok(dir)
     }
 
     /// The icons and fonts `kx_theme::assets::bundle` names, as resources next to the QML files, and the fonts' names.

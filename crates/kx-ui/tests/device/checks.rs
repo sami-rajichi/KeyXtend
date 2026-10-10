@@ -58,6 +58,12 @@ pub(crate) fn fonts(rig: &mut Rig) -> Outcome {
     }
 }
 
+/// The app's End reaches a `Ui` object made after the last one closed, which hides the tray icon as it ends.
+pub(crate) fn ends(app: &mut UniquePtr<QGuiApplication>, rig: &Rig) -> Outcome {
+    rig.hub.end_ui();
+    wait(app, "the UI ending", || rig.tray.shown().is_empty())
+}
+
 /// Without a shared device the app still starts: each window draws on its own device, as Qt makes them alone.
 pub(crate) fn own(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let placed = rig.face.placed().len();

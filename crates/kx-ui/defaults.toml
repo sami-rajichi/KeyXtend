@@ -23,6 +23,9 @@ send_tries = 10
 send_wait_ms = 100
 # How long the tray menu stays open when another window comes to the front just after it opens, in ms; 0 turns it off.
 tray_grace_ms = 500
+# How many times one run makes the windows again on a new graphics device after the device is lost; past it, each
+# window draws on its own device, as Qt makes them.
+device_rebuilds = 3
 # Rows per page in every list.
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.

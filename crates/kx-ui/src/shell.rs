@@ -1,11 +1,13 @@
 //! The app's windows over one shared graphics device (ADR-0021): the device and the theme's fonts first, then the root
-//! QML; at the end the engine and its windows go before the device they draw on.
+//! QML; at the end the engine and its windows go before the device they draw on. A lost device's windows are made
+//! again over the same hub (ADR-0018).
 
-use crate::MAIN_QML;
 use crate::bridges::device::{Device, flush_deletes};
 use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_imports};
 use crate::bridges::installed;
+use crate::device::{Rebuild, Rebuilds};
+use crate::{MAIN_QML, Resize};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QQmlApplicationEngine, QUrl};
 use std::path::{Path, PathBuf};
@@ -19,6 +21,7 @@ pub struct Shell {
     device: Option<Device>,
     /// The folder QML imports are pinned to, as the uiAccess build pins them.
     pinned: Option<PathBuf>,
+    rebuilds: Rebuilds,
 }
 
 impl Shell {
@@ -41,6 +44,7 @@ impl Shell {
             engine: UniquePtr::null(),
             device,
             pinned: pinned.map(Path::to_path_buf),
+            rebuilds: Rebuilds::default(),
         };
         shell.load().then_some(shell)
     }
@@ -49,6 +53,32 @@ impl Shell {
     #[must_use]
     pub fn device(&self) -> Option<&Device> {
         self.device.as_ref()
+    }
+
+    /// After Qt's loop ends: when a frame found the shared device lost and the UI has not ended, the windows are made
+    /// again over the same hub, a resize ended first, on a new device until `[ui] device_rebuilds` runs out. True when
+    /// they were, so the loop runs again.
+    pub fn rebuilt(&mut self) -> bool {
+        let lost = self.device.as_ref().is_some_and(Device::lost);
+        let Some(hub) = installed().filter(|h| lost && !h.ended()) else {
+            return false;
+        };
+        let next = self.rebuilds.next(hub.settings().device_rebuilds);
+        self.close();
+        let _ = hub.resize(Resize::End);
+        self.device = match next {
+            Rebuild::Shared => shared(),
+            Rebuild::Own => None,
+        };
+        self.load()
+    }
+
+    /// Marks the shared device lost, as a driver reset would, so the next frame finds it; debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    pub fn lose(&mut self) {
+        if let Some(device) = self.device.as_mut() {
+            device.lose();
+        }
     }
 
     /// Loads the root QML into a new engine; true when Qt made its objects. Loading from resources is synchronous.
@@ -67,8 +97,11 @@ impl Shell {
         loaded
     }
 
-    /// Drops the engine and the windows it made, then the device they drew on.
+    /// Lets the hub's waker go, then drops the engine and the windows it made, then the device they drew on.
     fn close(&mut self) {
+        if let Some(hub) = installed() {
+            hub.drop_waker();
+        }
         self.engine = UniquePtr::null();
         flush_deletes();
         self.device = None;

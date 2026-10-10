@@ -63,7 +63,13 @@ Window {
             note.retell();
         }
     }
-    Component.onCompleted: take()
+    // A banner made again, as after a device loss, shows what the hub still shows before what waits.
+    Component.onCompleted: {
+        queue = JSON.parse(ui.shownNotices()) || [];
+        take();
+        if (shown && !visible)
+            Qt.callLater(open);
+    }
     onWidthChanged: follow()
     onHeightChanged: follow()
 

@@ -4,6 +4,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QEvent>
 #include <QtCore/QList>
+#include <QtCore/QMetaObject>
 #include <QtCore/QObject>
 #include <QtCore/QSet>
 #include <QtCore/QThread>
@@ -14,6 +15,8 @@
 #include <QtQuick/QQuickWindow>
 #include <rhi/qrhi.h>
 
+#include "kx-ui-build.h"
+
 #include <atomic>
 #include <cstddef>
 #include <memory>
@@ -21,7 +24,7 @@
 namespace kxui {
 
 // The shared QRhi. An app-wide filter has each Qt Quick window adopt it as its native window is made, before its first
-// frame.
+// frame; the first frame that finds it lost ends Qt's loop, so the app can make the windows again.
 class Device : public QObject
 {
 public:
@@ -34,8 +37,8 @@ public:
             app->removeEventFilter(this);
     }
 
-    // True when the device is gone.
-    bool lost() const { return shared->isDeviceLost(); }
+    // True once a frame found the device gone.
+    bool lost() const { return found.load(); }
 
     // How many Qt Quick windows draw on the device.
     std::size_t windows() const
@@ -50,6 +53,18 @@ public:
 
     // True while every frame on the device has ended on the GUI thread, as the basic render loop draws.
     bool gui_only() const { return !offThread.load(); }
+
+#if defined(KX_UI_LOSE)
+    // Marks the device gone and asks each window for a frame, as a driver reset would; debug builds only.
+    void lose()
+    {
+        forced.store(true);
+        for (QWindow *window : QGuiApplication::allWindows()) {
+            if (auto *quick = qobject_cast<QQuickWindow *>(window))
+                quick->update();
+        }
+    }
+#endif
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override
@@ -71,15 +86,34 @@ private:
         connect(window, &QQuickWindow::afterFrameEnd, this, &Device::framed, how);
     }
 
-    // After each frame, also a failed one: notes a frame off the GUI thread.
+    // After each frame, also a failed one: notes a frame off the GUI thread, and ends Qt's loop once the device is gone.
+    // The end is queued, so it also comes when the frame ran outside the loop.
     void framed()
     {
         if (QThread::currentThread() != thread())
             offThread = true;
+        if (gone() && !found.exchange(true)) {
+            const auto end = [] { QCoreApplication::exit(0); };
+            QMetaObject::invokeMethod(QCoreApplication::instance(), end, Qt::QueuedConnection);
+        }
+    }
+
+    // True when the device is gone, or a debug build marked it so.
+    bool gone() const
+    {
+#if defined(KX_UI_LOSE)
+        if (forced.load())
+            return true;
+#endif
+        return shared->isDeviceLost();
     }
 
     std::unique_ptr<QRhi> shared;
     std::atomic<bool> offThread{false};
+    std::atomic<bool> found{false};
+#if defined(KX_UI_LOSE)
+    std::atomic<bool> forced{false};
+#endif
 };
 
 // A device on the adapter Qt's variables pin, or null when Direct3D 11 makes none; other systems share none yet.

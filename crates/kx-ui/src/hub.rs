@@ -110,6 +110,8 @@ struct Live {
     /// `Show` and `End` wakes that came before the waker.
     pending: Vec<Wake>,
     waker: Option<Arc<Waker>>,
+    /// The app ended the UI.
+    ended: bool,
     /// The app's queue, until Quit ends it.
     requests: Option<Sender<Request>>,
 }
@@ -149,6 +151,7 @@ impl Hub {
             notices: Notices::default(),
             pending: Vec::new(),
             waker: None,
+            ended: false,
             requests: Some(requests),
         };
         let hub = Self {

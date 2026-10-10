@@ -1,8 +1,10 @@
 // Placing the keyboard again over stand-in bridges: a new scale or screen during a move or resize waits for its end,
-// and a new screen size or a screen change of the window's own places it again.
+// a new screen size or a screen change of the window's own places it again, and a window made again starts where the
+// keyboard keeps it.
 import QtQuick
 import QtTest
 import "../qml"
+import "fixtures/face.js" as Face
 import "kbwin.js" as Win
 
 Item {
@@ -115,6 +117,17 @@ Item {
                 compare([r.kb.placedAt.x, r.kb.placedAt.y], [100, 200], "from where it is");
             }
             r.win.visible = false;
+        }
+
+        // A window made while the keyboard keeps a place, as after a device loss, starts there and reports it unmoved.
+        function test_a_window_made_again_starts_where_the_keyboard_keeps_it() {
+            const state = Object.assign({}, Face.states.en, { at: { x: 100, y: 200 } });
+            const kb = createTemporaryObject(kbC, root, { state: state });
+            const win = createTemporaryObject(winC, root, { ui: createTemporaryObject(uiC, root), keyboard: kb });
+            win.place();
+            compare([kb.placedAt.x, kb.placedAt.y], [100, 200], "reported unmoved");
+            const l = win.spots.logical(100, 200);
+            compare([win.at.x, win.at.y], [l.x, l.y], "where the keyboard keeps it");
         }
 
         function test_the_windows_own_screen_change_places_it_again() {
