@@ -25,6 +25,8 @@ QtObject {
 
     // A window titled `title` asked to be lifted alone, as the call runs.
     signal lifted(string title)
+    // A guard try runs, as the call starts.
+    signal guarding
 
     function note(call) {
         calls = calls.concat([call]);
@@ -92,6 +94,7 @@ QtObject {
         return true;
     }
     function guard(top) {
+        guarding();
         note(top ? "guard " + top : "guard");
         if (again <= 0)
             return false;

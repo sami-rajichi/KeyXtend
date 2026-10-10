@@ -200,6 +200,26 @@ Item {
             verify(app.face.visible && app.kbGlow.visible, "Show brings both back");
         }
 
+        // The shadow shows before the keyboard and hides after it, so every guard try that finds the keyboard shown
+        // finds its shadow shown too: a run never guards the keyboard without its shadow (G9).
+        function test_every_guard_try_that_finds_the_keyboard_finds_its_shadow() {
+            const app = make();
+            const seen = [];
+            app.keyboard.guarding.connect(() => seen.push({ kb: app.face.visible, glow: app.kbGlow.visible }));
+            const tried = act => {
+                const n = seen.length;
+                act();
+                tryVerify(() => seen.length > n, 2000, "a guard try");
+            };
+            tried(() => { app.hide(); app.ui.showAsked(); });
+            app.keyboard.bubble = { x: 40, y: 50 };
+            tried(() => app.minimise());
+            tried(() => app.open());
+            tried(() => { run(app, false); run(app, true); });
+            verify(seen.filter(s => s.kb).length >= 3, "tries with the keyboard shown");
+            verify(seen.every(s => !s.kb || s.glow), "its shadow showed at each");
+        }
+
         // The keyboard module stops (no board) or runs again, as the hub tells it with new settings.
         function run(app, on) {
             app.keyboard.board = on ? Face.board : null;
