@@ -1,26 +1,21 @@
-//! G8's churn (spec §10, no growth): rounds of key tips, the language list and a full theme cycle, with private
-//! memory read before and after. It moves the real pointer but never clicks, and presses buttons by UI Automation.
+//! G8's churn (spec §10, no growth): rounds of key tips, the language list, the bubble and a full theme cycle
+//! (`g8pops`), with private memory read before and after. It runs after `PresentMon`'s capture, so no frame counts.
 #![cfg(windows)]
 
-use kx_mod_keyboard::{LangKey, Role};
-use kx_theme::Themes;
 use serde::Serialize;
-use windows::Win32::Foundation::POINT;
 
 use crate::apps::Ctx;
+use crate::board;
 use crate::budget::Part;
 use crate::g8cfg::G8;
+use crate::g8pops::{self, Seen};
 use crate::keymap::Reader;
+use crate::mouse;
 use crate::proc::{Memory, Process};
-use crate::product::{self, Keyboard};
-use crate::win::{self, sleep_ms};
-use crate::{board, g8ui, mouse, uilook};
+use crate::win::sleep_ms;
 
-/// Why a churn is not whole when the language key opens no list.
-const NO_LIST: &str = "no list showed, as the language key is not the List design; set [keyboard] \
-     lang_key = \"list\" for a full pass";
-/// What a churn that broke off mid-cycle leaves, for its error.
-const THEME_LEFT: &str = "the theme may differ now: press the theme button to bring yours back";
+/// Why no list showed: only the List design has one, and the other steps still churn.
+const NO_LIST: &str = "the language key is not the List design, so the list step was skipped";
 
 /// What the churn did, and private memory around its measured rounds.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -37,14 +32,21 @@ pub struct Churn {
     pub tips: usize,
     /// Rounds that showed the language list; none when the language key opens no list.
     pub lists: Option<usize>,
+    /// Rounds whose minimise hid the keyboard and showed the bubble.
+    pub bubbles: usize,
+    /// Rounds whose bubble brought the keyboard back.
+    pub returns: usize,
     /// Why no list showed, when none could.
     pub note: Option<&'static str>,
 }
 
 impl Churn {
-    /// True when every hover showed a tip and every round showed the list.
+    /// True when every hover showed a tip and every round showed the bubble, the keyboard again, and the list in the
+    /// List design.
     pub fn whole(&self) -> bool {
-        self.tips == self.hovers && self.lists == Some(self.rounds)
+        let every = |n: usize| n == self.rounds;
+        let pops = self.tips == self.hovers && every(self.bubbles) && every(self.returns);
+        pops && self.lists.is_none_or(every)
     }
 }
 
@@ -77,107 +79,20 @@ pub fn check(g: &G8) -> Result<(), String> {
     }
 }
 
-/// What each round does, worked out once.
-struct Plan {
-    /// Screen centres of the keys whose tips show.
-    tips: Vec<POINT>,
-    /// Where the pointer rests between hovers: just off the keyboard.
-    away: POINT,
-    /// The pointer's rest on each key: the running copy's tip time and `[g8] churn_tip_ms`.
-    hover_ms: u64,
-    /// The language key's id, when its design opens the list.
-    lang: Option<String>,
-    /// Theme button presses that bring the theme back: one per shipped theme.
-    themes: usize,
-}
-
-/// The plan for the running copy: its keys' places, its tip time and its language key's design.
-fn plan(g: &G8) -> Result<Plan, String> {
-    let kb = Keyboard::find()?;
-    let tips: Vec<POINT> = g
-        .churn_tips
-        .iter()
-        .map(|id| kb.at(id))
-        .collect::<Result<_, _>>()?;
-    let first = *tips.first().ok_or("g8.churn_tips names no key")?;
-    let away = g8ui::away_from(win::rect(kb.hwnd)?, first, win::desktop().1);
-    let lists = product::keyboard()?.lang_key == LangKey::List;
-    let lang = lists.then(|| board::id_of(Role::Lang)).transpose()?;
-    let themes = Themes::shipped().map_err(|e| format!("the shipped themes: {e}"))?;
-    Ok(Plan {
-        tips,
-        away,
-        hover_ms: uilook::running()?.tip_ms + g.churn_tip_ms,
-        lang,
-        themes: themes.list.len(),
-    })
-}
-
-/// What showed in the measured rounds.
-#[derive(Default)]
-struct Seen {
-    /// Hovers that showed a new window.
-    tips: usize,
-    /// List opens that showed a new window.
-    lists: usize,
-}
-
-/// Rests the pointer on each tip key, counting each hover that showed a new window, then moves it away.
-fn hover(plan: &Plan, base: usize, seen: &mut Seen) -> Result<(), String> {
-    for &at in &plan.tips {
-        mouse::move_to(at)?;
-        sleep_ms(plan.hover_ms);
-        seen.tips += usize::from(product::shown().len() > base);
-    }
-    mouse::move_to(plan.away)
-}
-
-/// Opens and closes the language list with its key, counting an open that showed a new window.
-fn list(g: &G8, reader: &Reader, lang: &str, base: usize, seen: &mut Seen) -> Result<(), String> {
-    product::invoke(reader, lang)?;
-    sleep_ms(g.churn_settle_ms);
-    seen.lists += usize::from(product::shown().len() > base);
-    product::invoke(reader, lang)?;
-    sleep_ms(g.churn_settle_ms);
-    Ok(())
-}
-
-/// Presses the theme button `n` times, once per theme, so the theme ends where it started.
-fn themes(g: &G8, reader: &Reader, n: usize) -> Result<(), String> {
-    for i in 0..n {
-        let left = |e| format!("{e}; pressed {i} of {n} times, so {THEME_LEFT}");
-        product::invoke(reader, &g.churn_theme).map_err(left)?;
-        sleep_ms(g.churn_settle_ms);
-    }
-    Ok(())
-}
-
-/// One round: the tips, the list when the language key opens one, and a full theme cycle.
-fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), String> {
-    // The pointer rests away from the keys, so no tip shows yet.
-    let base = product::shown().len();
-    hover(plan, base, seen)?;
-    sleep_ms(g.churn_settle_ms);
-    if let Some(lang) = &plan.lang {
-        list(g, reader, lang, base, seen)?;
-    }
-    themes(g, reader, plan.themes)
-}
-
 /// Runs `[g8] churn_warm_rounds` unmeasured rounds, then `churn_rounds` measured ones, reading `p`'s memory around
 /// them. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
 pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     let g = &ctx.cfg.g8;
-    let (plan, reader) = (plan(g)?, Reader::new()?);
+    let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
     mouse::move_to(plan.away)?;
     sleep_ms(g.churn_settle_ms);
     for _ in 0..g.churn_warm_rounds {
-        round(g, &reader, &plan, &mut Seen::default())?;
+        g8pops::round(g, &reader, &plan, &mut Seen::default())?;
     }
     let before = p.memory()?;
     let mut seen = Seen::default();
     for _ in 0..g.churn_rounds {
-        round(g, &reader, &plan, &mut seen)?;
+        g8pops::round(g, &reader, &plan, &mut seen)?;
     }
     let after = p.memory()?;
     let lists = plan.lang.as_ref().map(|_| seen.lists);
@@ -188,11 +103,13 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
         hovers: g.churn_rounds * plan.tips.len(),
         tips: seen.tips,
         lists,
+        bubbles: seen.bubbles,
+        returns: seen.returns,
         note: lists.is_none().then_some(NO_LIST),
     })
 }
 
-/// A churn of `g`'s rounds from `before` to `after` in which every tip and list showed, for tests.
+/// A churn of `g`'s rounds from `before` to `after` in which every pop-up showed, for tests.
 #[cfg(test)]
 pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
     let hovers = g.churn_rounds * g.churn_tips.len();
@@ -203,12 +120,16 @@ pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
         hovers,
         tips: hovers,
         lists: Some(g.churn_rounds),
+        bubbles: g.churn_rounds,
+        returns: g.churn_rounds,
         note: None,
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use kx_theme::Themes;
+
     use super::*;
     use crate::budget;
 
@@ -248,24 +169,29 @@ mod tests {
     }
 
     #[test]
-    fn a_churn_is_whole_only_when_every_tip_and_every_list_showed() {
+    fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_counts() {
         let full = churn(mem(98.0, 138.0), mem(98.0, 138.0));
         assert!(full.whole());
-        let missed = Churn {
-            tips: full.hovers - 1,
-            ..full.clone()
-        };
-        assert!(!missed.whole(), "a hover showed no tip");
         let no_list = Churn {
             lists: None,
             ..full.clone()
         };
-        assert!(!no_list.whole(), "the language key opens no list");
-        let short = Churn {
-            lists: Some(full.rounds - 1),
-            ..full
-        };
-        assert!(!short.whole(), "a round showed no list");
+        assert!(no_list.whole(), "the default Carousel design opens no list");
+        let short = full.rounds - 1;
+        let missed: [fn(&mut Churn, usize); 4] = [
+            |c, n| c.tips = n,
+            |c, n| c.lists = Some(n),
+            |c, n| c.bubbles = n,
+            |c, n| c.returns = n,
+        ];
+        for (i, miss) in missed.iter().enumerate() {
+            let mut c = full.clone();
+            miss(&mut c, short);
+            assert!(
+                !c.whole(),
+                "case {i}: a pop-up or the keyboard's return was missed"
+            );
+        }
     }
 
     #[test]

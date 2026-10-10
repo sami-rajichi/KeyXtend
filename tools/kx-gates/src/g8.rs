@@ -20,7 +20,7 @@ use crate::g8parts::{Measured, Outside, parts, verdict};
 use crate::g8start::{self, Started, log_span};
 use crate::g8ui;
 use crate::out::say;
-use crate::presentmon;
+use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
@@ -59,9 +59,14 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
     Ok(budget::core_pct(used, budget::ms(at.elapsed())))
 }
 
-/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes, G2
-/// and the churn.
-fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
+/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes and
+/// G2; then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
+fn measure(
+    ctx: &Ctx,
+    s: &Started,
+    program: &Path,
+    (since, rec): (SystemTime, Option<&Recorder>),
+) -> Result<(Measured, Result<Frames, String>), String> {
     let g = &ctx.cfg.g8;
     let log = log_span(ctx, program, s.at_us)?;
     let kb = Keyboard::find()?;
@@ -72,8 +77,9 @@ fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
     let presses = g8ui::presses(ctx, &kb)?;
     let resizes = g8ui::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
+    let frames = g8frames::frames(ctx, program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
-    Ok(Measured {
+    let m = Measured {
         log,
         memory,
         memory_at_ms,
@@ -83,7 +89,8 @@ fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
         resizes,
         g2,
         churn,
-    })
+    };
+    Ok((m, frames))
 }
 
 /// Times the bus in kx-gates, after joining the weak job when given; the job then lives until kx-gates ends, as
@@ -104,15 +111,10 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
         .map_or_else(|e| json!({ "error": e }), |v| json!(v))
 }
 
-/// Times the bus, then reads `PresentMon`'s CSV and the refresh rate; with the bus and frames for the result line.
-fn outside(
-    ctx: &Ctx,
-    job: Option<Job>,
-    program: &Path,
-    (since, rec): (SystemTime, Option<&Recorder>),
-) -> (Outside, [Value; 2]) {
+/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames`, what G8 measured outside the product, and
+/// the bus and frames for the result line.
+fn outside(ctx: &Ctx, job: Option<Job>, frames: &Result<Frames, String>) -> (Outside, [Value; 2]) {
     let bus = bench(ctx, job);
-    let frames = g8frames::frames(ctx, program, since, rec);
     #[allow(
         clippy::cast_precision_loss,
         reason = "Frame counts are far below 2^53."
@@ -120,7 +122,7 @@ fn outside(
     let dropped = frames
         .as_ref()
         .ok()
-        .and_then(presentmon::Frames::drops)
+        .and_then(Frames::drops)
         .map(|d| d as f64);
     let bus_p99_us = bus.as_ref().ok().and_then(|b| b.p99_us);
     let o = Outside {
@@ -128,7 +130,7 @@ fn outside(
         bus_p99_us,
         dropped,
     };
-    (o, [shown(&bus), shown(&frames)])
+    (o, [shown(&bus), shown(frames)])
 }
 
 /// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
@@ -171,10 +173,10 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         program.display(),
         s.process.pid(),
     );
-    let measured = measure(ctx, &s, &program);
+    let measured = measure(ctx, &s, &program, (since, rec.as_ref()));
     let quit = close::quit_running(ctx).map(|(_, ended)| ended);
-    let m = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
-    let (o, [bus, frames]) = outside(ctx, job, &program, (since, rec.as_ref()));
+    let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
+    let (o, [bus, frames]) = outside(ctx, job, &frames);
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();

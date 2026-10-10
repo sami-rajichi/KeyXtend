@@ -50,8 +50,9 @@ publishes = 10000
 bus_share = 0.01
 # PresentMon's CSV in the out folder, recorded while G8 runs.
 presentmon = "g8-presentmon.csv"
-# How long that capture records, in seconds; it covers a whole G8 run, which takes about three minutes with its churn.
-presentmon_secs = 240
+# How long that capture records, in seconds: G8's run up to the churn, about a minute. G8 waits for its end before the
+# churn, so a theme switch never counts as a dropped frame.
+presentmon_secs = 90
 # The PresentMon program G8 starts as administrator, with no window, just before the product; empty, G8 says how to
 # record. Each PC names its own copy in the installed settings.
 presentmon_exe = ""
@@ -65,7 +66,8 @@ presentmon_stop_ms = 15000
 quit_tries = 50
 quit_try_ms = 200
 # Churn (spec §10, no growth), last in a G8 run: each round hovers keys for their tips, opens and closes the language
-# list and cycles the theme button once. It moves the pointer but never clicks, and presses buttons by UI Automation.
+# list in the List design, minimises to the bubble and back with [g9]'s buttons, and cycles the theme button once.
+# It moves the pointer but never clicks, and presses buttons by UI Automation.
 # Unmeasured rounds first, so each pop-up's first show, a one-time cost, is not counted as growth.
 churn_warm_rounds = 1
 # Measured rounds, with private memory read before and after them.
@@ -78,7 +80,7 @@ churn_tips = ["bksp", "enter", "shift"]
 churn_tip_ms = 300
 # The top bar's theme button, pressed once per theme each round, so the theme ends where it started.
 churn_theme = "bar.theme"
-# Wait after each list or theme press, so its windows have shown or gone, in ms.
+# Wait after each list, bubble or theme press, so its windows have shown or gone, in ms.
 churn_settle_ms = 500
 
 # G9 window flags: the flags stay set after hide and show, a topmost toggle, a click-through toggle and a resize.

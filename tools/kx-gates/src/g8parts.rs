@@ -215,9 +215,18 @@ mod tests {
             lists: None,
             ..whole.clone()
         };
+        let no_bubble = Churn {
+            bubbles: whole.rounds - 1,
+            ..whole.clone()
+        };
         assert_eq!(verdict(false, whole, true), json!(true));
+        assert_eq!(
+            verdict(false, &no_list, true),
+            json!(true),
+            "the default design"
+        );
         assert_eq!(verdict(true, whole, true), json!(out::PARTIAL));
-        assert_eq!(verdict(false, &no_list, true), json!(out::PARTIAL));
+        assert_eq!(verdict(false, &no_bubble, true), json!(out::PARTIAL));
         assert_eq!(verdict(true, whole, false), json!(false));
         assert_eq!(verdict(false, whole, false), json!(false));
     }

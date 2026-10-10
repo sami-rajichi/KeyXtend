@@ -86,7 +86,7 @@ pub struct G8 {
     pub quit_try_ms: u64,
     /// Unmeasured churn rounds first, so each pop-up's first show is not counted as growth.
     pub churn_warm_rounds: usize,
-    /// Measured churn rounds of tips, the language list and a theme cycle.
+    /// Measured churn rounds of tips, the language list, the bubble and a theme cycle.
     pub churn_rounds: usize,
     /// Most growth of the working set and of the commit over those rounds, in MB.
     pub churn_growth_mb: f64,
@@ -96,7 +96,7 @@ pub struct G8 {
     pub churn_tip_ms: u64,
     /// The top bar's theme button, by UI Automation id.
     pub churn_theme: String,
-    /// Wait after each list or theme press, so the pop-ups have shown or gone.
+    /// Wait after each list, bubble or theme press, so the pop-ups have shown or gone.
     pub churn_settle_ms: u64,
 }
 
