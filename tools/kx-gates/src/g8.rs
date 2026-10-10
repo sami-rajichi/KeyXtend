@@ -1,5 +1,6 @@
 //! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, folder size, key highlight,
-//! click to character, a bus publish and `PresentMon`'s dropped frames against them, and times resizes.
+//! click to character, a bus publish, `PresentMon`'s dropped frames and memory growth under pop-up churn against
+//! them, and times resizes.
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`); it clicks, so only with the owner's yes.
 #![cfg(windows)]
 
@@ -13,6 +14,7 @@ use windows::Win32::System::Threading::GetCurrentProcess;
 use crate::apps::Ctx;
 use crate::budget;
 use crate::busbench::{self, BusTimes};
+use crate::g8churn;
 use crate::g8frames::{self, Recorder};
 use crate::g8parts::{Measured, Outside, parts, verdict};
 use crate::g8start::{self, Started, log_span};
@@ -57,7 +59,8 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
     Ok(budget::core_pct(used, budget::ms(at.elapsed())))
 }
 
-/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes, G2.
+/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes, G2
+/// and the churn.
 fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
     let g = &ctx.cfg.g8;
     let log = log_span(ctx, program, s.at_us)?;
@@ -69,6 +72,7 @@ fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
     let presses = g8ui::presses(ctx, &kb)?;
     let resizes = g8ui::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
+    let churn = g8churn::run(ctx, &s.process)?;
     Ok(Measured {
         log,
         memory,
@@ -78,6 +82,7 @@ fn measure(ctx: &Ctx, s: &Started, program: &Path) -> Result<Measured, String> {
         presses,
         resizes,
         g2,
+        churn,
     })
 }
 
@@ -177,8 +182,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
-        "g2": m.g2, "bus": bus, "frames": frames, "parts": parts, "quit": ended,
-        "pass": verdict(weak, ended && budget::all_pass(&parts)),
+        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "parts": parts, "quit": ended,
+        "pass": verdict(weak, &m.churn, ended && budget::all_pass(&parts)),
     }))
 }
 

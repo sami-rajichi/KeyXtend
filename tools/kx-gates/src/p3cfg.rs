@@ -193,7 +193,8 @@ mod tests {
         let c = load().expect("loads");
         let themes = kx_theme::Themes::shipped().expect("the tokens read");
         let icons = serde_json::to_value(&themes.icons).expect("serialises");
-        for id in [&c.g9.put_away, &c.g9.bring_back, &c.g8.grow, &c.g8.shrink] {
+        let g8 = [&c.g8.grow, &c.g8.shrink, &c.g8.churn_theme];
+        for id in [&c.g9.put_away, &c.g9.bring_back].into_iter().chain(g8) {
             let part = id.strip_prefix("bar.").expect("a bar id");
             assert!(icons["bar"].get(part).is_some(), "{id}");
         }

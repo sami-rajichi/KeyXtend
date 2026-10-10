@@ -123,6 +123,7 @@ fn g13_stops_at_the_start_when_it_needs_an_accent_the_keyboard_cannot_take() {
         theme: theme.to_string(),
         follow_accent,
         backdrop: String::new(),
+        tip_ms: 0,
     };
     let why = accent_blocked(&look("dolch", false), &themes, &needs(&KINDS)).expect("blocked");
     assert!(

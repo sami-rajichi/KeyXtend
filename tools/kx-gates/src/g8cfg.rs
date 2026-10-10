@@ -84,11 +84,25 @@ pub struct G8 {
     pub quit_tries: u32,
     /// The wait between those quit tries, in ms.
     pub quit_try_ms: u64,
+    /// Unmeasured churn rounds first, so each pop-up's first show is not counted as growth.
+    pub churn_warm_rounds: usize,
+    /// Measured churn rounds of tips, the language list and a theme cycle.
+    pub churn_rounds: usize,
+    /// Most growth of the working set and of the commit over those rounds, in MB.
+    pub churn_growth_mb: f64,
+    /// Keys hovered each round, by board id; each has an icon, so its tip shows.
+    pub churn_tips: Vec<String>,
+    /// Rest on each key past the running copy's `[ui] tip_ms`, so its tip has shown.
+    pub churn_tip_ms: u64,
+    /// The top bar's theme button, by UI Automation id.
+    pub churn_theme: String,
+    /// Wait after each list or theme press, so the pop-ups have shown or gone.
+    pub churn_settle_ms: u64,
 }
 
 impl G8 {
-    /// Refuses a zero count or warm-up, a budget that is not above 0, a negative slack, or a pressed key the board does
-    /// not have.
+    /// Refuses a zero count or warm-up, a budget that is not above 0, a negative slack, a pressed key the board does not
+    /// have, or a churn that churns nothing.
     pub fn check(&self) -> Result<(), String> {
         let budgets = [
             self.start_ms,
@@ -124,7 +138,7 @@ impl G8 {
                 self.press_key
             ));
         }
-        Ok(())
+        crate::g8churn::check(self)
     }
 
     /// The bus publish budget, in µs: `bus_share` of the click-to-character budget.

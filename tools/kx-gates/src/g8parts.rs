@@ -1,4 +1,4 @@
-//! G8's verdict: what it measured, set against each spec §10 budget it owns.
+//! G8's verdict: what it measured, set against each spec §10 budget it owns, its churn included.
 #![cfg(windows)]
 
 use serde_json::Value;
@@ -6,6 +6,7 @@ use serde_json::Value;
 use crate::budget::{self, Part};
 use crate::g2;
 use crate::g8cfg::G8;
+use crate::g8churn::{self, Churn};
 use crate::g8ui::{Presses, Resize};
 use crate::out;
 use crate::proc::Memory;
@@ -28,6 +29,8 @@ pub struct Measured {
     pub resizes: Vec<Resize>,
     /// G2's result line: click to character.
     pub g2: Value,
+    /// Memory around rounds of pop-ups.
+    pub churn: Churn,
 }
 
 /// What G8 measured outside the product.
@@ -50,7 +53,7 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     let char_p99 = m.g2["latency_ms"]["p99"]
         .as_f64()
         .filter(|_| g2::typed_intact(&m.g2));
-    vec![
+    let mut all = vec![
         Part::at_most("start_ms", shown_ms, start),
         Part::at_most("memory_mb", Some(m.memory.working_mb), g.memory_mb),
         Part::at_most("commit_mb", Some(m.memory.commit_mb), g.commit_mb),
@@ -64,12 +67,15 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         Part::at_most("char_p99_ms", char_p99, g.char_ms),
         Part::at_most("bus_p99_us", o.bus_p99_us, g.bus_p99_us()),
         Part::at_most("dropped_frames", o.dropped, 0.0),
-    ]
+    ];
+    all.extend(g8churn::parts(g, &m.churn));
+    all
 }
 
-/// G8's `pass`: true when every budget was `met`, only `out::PARTIAL` then in weak mode, else false.
-pub fn verdict(weak: bool, met: bool) -> Value {
-    out::pass(met, !weak)
+/// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode or when not every churn
+/// pop-up showed; else false.
+pub fn verdict(weak: bool, churn: &Churn, met: bool) -> Value {
+    out::pass(met, !weak && churn.whole())
 }
 
 #[cfg(test)]
@@ -85,6 +91,12 @@ mod tests {
     /// budgets.
     fn sample() -> (G8, Measured, Outside) {
         let g = crate::config::load().expect("kx-gates.toml loads").g8;
+        // Flat memory under churn, near ADR-0021's expected idle.
+        let still = Memory {
+            working_mb: 98.0,
+            commit_mb: 138.0,
+        };
+        let churn = g8churn::whole_over(&g, still, still);
         let m = Measured {
             log: Some((180.0, 1074.3)),
             memory: Memory {
@@ -103,6 +115,7 @@ mod tests {
                 "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true, "caret_kept": 100,
                 "latency_ms": { "p50": 4.2, "p99": 13.1 },
             }),
+            churn,
         };
         let o = Outside {
             hz: Some(165.0),
@@ -121,7 +134,17 @@ mod tests {
         let (g, m, o) = sample();
         let parts = parts(&g, Some(420.0), &m, false, &o);
         assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
-        assert_eq!(parts.len(), 9, "one part per spec §10 budget G8 owns");
+        assert_eq!(parts.len(), 11, "one part per spec §10 budget G8 owns");
+    }
+
+    #[test]
+    fn memory_that_grew_under_churn_fails_g8() {
+        let (g, mut m, o) = sample();
+        m.churn.after.commit_mb += g.churn_growth_mb + 1.0;
+        assert_eq!(
+            failed(&parts(&g, Some(420.0), &m, false, &o)),
+            ["churn_commit_mb"]
+        );
     }
 
     #[test]
@@ -185,11 +208,18 @@ mod tests {
     }
 
     #[test]
-    fn weak_mode_meeting_every_budget_is_partial_and_a_miss_fails() {
-        assert_eq!(verdict(false, true), json!(true));
-        assert_eq!(verdict(true, true), json!(out::PARTIAL));
-        assert_eq!(verdict(true, false), json!(false));
-        assert_eq!(verdict(false, false), json!(false));
+    fn weak_mode_or_a_churn_short_of_pop_ups_meeting_every_budget_is_partial_and_a_miss_fails() {
+        let (_, m, _) = sample();
+        let whole = &m.churn;
+        let no_list = Churn {
+            lists: None,
+            ..whole.clone()
+        };
+        assert_eq!(verdict(false, whole, true), json!(true));
+        assert_eq!(verdict(true, whole, true), json!(out::PARTIAL));
+        assert_eq!(verdict(false, &no_list, true), json!(out::PARTIAL));
+        assert_eq!(verdict(true, whole, false), json!(false));
+        assert_eq!(verdict(false, whole, false), json!(false));
     }
 
     #[test]

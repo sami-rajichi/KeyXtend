@@ -53,6 +53,7 @@ mod g6;
 mod g7;
 mod g8;
 mod g8cfg;
+mod g8churn;
 mod g8frames;
 mod g8parts;
 mod g8start;

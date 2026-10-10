@@ -23,7 +23,7 @@ static SPEC: SettingsSpec = SettingsSpec {
     validate: validate_as::<UiLook>,
 };
 
-/// The `[ui]` settings the gates depend on.
+/// The `[ui]` settings the gates depend on: the look, and the tip time G8's churn waits out.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiLook {
     /// The theme, by its `themes.toml` id.
@@ -32,6 +32,8 @@ pub struct UiLook {
     pub follow_accent: bool,
     /// What sits behind the keyboard.
     pub backdrop: String,
+    /// How long the pointer rests on a button before its tip shows, in ms.
+    pub tip_ms: u64,
 }
 
 impl Settings for UiLook {}
@@ -82,6 +84,12 @@ mod tests {
             table("[ui]\nversion = 1\nfollow_accent = true\ntheme = \"dolch\"\nmode = \"dark\"");
         let set = look_in(Some(&file)).expect("reads");
         assert_eq!((set.follow_accent, set.theme.as_str()), (true, "dolch"));
+        let slow = table("[ui]\nversion = 1\ntip_ms = 1500");
+        assert_eq!(
+            look_in(Some(&slow)).map(|l| l.tip_ms),
+            Ok(1500),
+            "G8's churn waits it out"
+        );
         assert_eq!(set.backdrop, plain.backdrop, "the rest keeps its default");
     }
 
@@ -102,6 +110,7 @@ mod tests {
             theme: theme.to_string(),
             follow_accent,
             backdrop: String::new(),
+            tip_ms: 0,
         };
         assert!(look(&can.look.id, true).takes_accent(&themes));
         assert!(!look(&can.look.id, false).takes_accent(&themes));

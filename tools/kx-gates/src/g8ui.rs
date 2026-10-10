@@ -75,7 +75,7 @@ fn watch(
 }
 
 /// A point just above the keyboard's box, else just below it, where letting go clicks nothing.
-fn away_from(kb: RECT, on: POINT, desktop_top: i32) -> POINT {
+pub fn away_from(kb: RECT, on: POINT, desktop_top: i32) -> POINT {
     let y = if kb.top > desktop_top {
         kb.top - 1
     } else {
