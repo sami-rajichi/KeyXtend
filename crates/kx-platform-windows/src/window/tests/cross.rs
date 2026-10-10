@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, PoisonError};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -16,11 +16,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use super::super::guard::{Proc, next};
 use super::super::top::lifting;
 use super::super::win::guard_these;
-use super::Hidden;
 use super::z_order::{Z_ORDER, above, listed, put_after, topmost};
-
-/// The longest the other thread's drops may take before the test stops waiting.
-const LIMIT: Duration = Duration::from_secs(5);
+use super::{Hidden, WAIT};
 
 /// The most messages one `pump` answers, so a message loop fails a test instead of hanging it.
 const CAP: usize = 1000;
@@ -76,6 +73,7 @@ fn pump() -> usize {
 }
 
 /// Turns topmost off on `windows`, one after another, from another thread, while this thread answers their messages.
+/// A thread still busy after `WAIT` fails the test and is left behind, as joining it could hang.
 fn drop_elsewhere(windows: &[HWND]) {
     let raw: Vec<usize> = windows.iter().map(|w| w.0.addr()).collect();
     let done = Arc::new(AtomicBool::new(false));
@@ -90,9 +88,13 @@ fn drop_elsewhere(windows: &[HWND]) {
         flag.store(true, Ordering::SeqCst);
     });
     let start = Instant::now();
-    while !done.load(Ordering::SeqCst) && start.elapsed() < LIMIT {
+    while !done.load(Ordering::SeqCst) && start.elapsed() < WAIT {
         pump();
     }
+    assert!(
+        done.load(Ordering::SeqCst),
+        "the other thread's drops ended"
+    );
     thread.join().unwrap();
     pump();
 }
@@ -110,8 +112,8 @@ fn a_keyboard_and_its_shadow_dropped_in_turn_from_another_thread_both_come_back(
     assert!(above(&kb, &shadow), "above its shadow");
 }
 
-/// The G9 bug as the installed build seems to meet it: the guard's lift of the shadow does not land while the other
-/// program's drop is still running, so the guard checks again once that call is over.
+/// A model of one possible G9 cause: the guard's lift of the shadow does not land while the other program's drop is
+/// still running, so the guard checks again after the window has answered the move.
 #[test]
 fn a_lift_that_does_not_land_during_another_threads_drop_is_made_again_after_it() {
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);

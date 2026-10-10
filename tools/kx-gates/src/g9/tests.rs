@@ -16,8 +16,19 @@ fn seen(step: &'static str, ex: u32, first: u32, front_kept: bool) -> Seen {
         extra: extra(ex, first),
         front_kept,
         front: None,
-        guarded: true,
+        guard: Guard::On,
+        owner: None,
     }
+}
+
+#[test]
+fn the_guard_reads_off_only_when_the_keyboard_showed_its_mark() {
+    assert_eq!(guard_of(true, true), Guard::On);
+    assert_eq!(guard_of(true, false), Guard::On, "a mark read is readable");
+    assert_eq!(guard_of(false, true), Guard::Off);
+    assert_eq!(guard_of(false, false), Guard::Unknown, "no mark to read");
+    let words = [Guard::On, Guard::Off, Guard::Unknown].map(|g| json!(g));
+    assert_eq!(words, [json!("on"), json!("off"), json!("unknown")]);
 }
 
 fn resized(ms: Option<f64>) -> Resize {

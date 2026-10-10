@@ -1,18 +1,47 @@
-//! The window writes G9 makes as an outside program would, and the repair that puts each window it wrote back as G9
-//! found it.
+//! The window writes G9 makes as an outside program would, how it reads the guard's mark, and the repair that puts each
+//! window it wrote back as G9 found it.
 #![cfg(windows)]
 
 use std::collections::HashMap;
 
+use serde::Serialize;
+
 use windows::Win32::Foundation::{ERROR_SUCCESS, GetLastError, HWND, SetLastError, WIN32_ERROR};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, GetWindowLongPtrW, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SetWindowLongPtrW, SetWindowPos, WS_EX_TOPMOST,
+    GW_OWNER, GWL_EXSTYLE, GetWindow, GetWindowLongPtrW, HWND_NOTOPMOST, HWND_TOPMOST,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowLongPtrW, SetWindowPos, WS_EX_TOPMOST,
 };
 
 use kx_platform_windows::window::{KEPT, THROUGH};
 
 use crate::{win, winfind};
+
+/// Whether the guard is on a window, as G9 can tell from its mark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Guard {
+    On,
+    Off,
+    /// The keyboard showed no mark at the first look, so a missing mark says nothing.
+    Unknown,
+}
+
+/// The guard on a window whose mark reads `hooked`, when the keyboard's read as `readable` at the first look.
+pub fn guard_of(hooked: bool, readable: bool) -> Guard {
+    match (hooked, readable) {
+        (true, _) => Guard::On,
+        (false, true) => Guard::Off,
+        (false, false) => Guard::Unknown,
+    }
+}
+
+/// The key of the window that owns `w`, as G9 names windows; the keyboard's owner is its shadow.
+#[allow(unsafe_code, reason = "A plain owner query.")]
+pub fn owner_of(w: HWND) -> Option<String> {
+    // SAFETY: a plain query; a window with no owner gives an error.
+    let owner = unsafe { GetWindow(w, GW_OWNER) }.ok()?;
+    (!owner.is_invalid()).then(|| format!("{:#x}", win::key(owner)))
+}
 
 /// A window's extended style.
 #[allow(unsafe_code, reason = "A plain query of a window's style.")]

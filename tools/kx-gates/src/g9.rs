@@ -15,7 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::apps::{self, Ctx};
 use crate::g8ui::{self, Resize, Size, after_grow};
-use crate::g9win::{self, ex_of};
+use crate::g9win::{self, Guard, ex_of, guard_of, owner_of};
 use crate::keymap::Reader;
 use crate::launch;
 use crate::product::{self, Keyboard};
@@ -81,8 +81,10 @@ struct Seen {
     front_kept: bool,
     /// The window in front instead of target-window, by class and program; null while the target kept it.
     front: Option<String>,
-    /// True while the guard is hooked on the window, so a missing flag shows whether the guard was there to keep it.
-    guarded: bool,
+    /// Whether the guard was on the window, so a missing flag shows whether it was there to keep it.
+    guard: Guard,
+    /// The window that owns this one, so the keyboard names its shadow among windows of the same class.
+    owner: Option<String>,
 }
 
 /// The window `front` named by class and program, unless it is the `target`.
@@ -107,8 +109,8 @@ fn note_written(written: &mut Vec<HWND>, windows: &[HWND]) {
     }
 }
 
-/// What G9 knows across steps: each window's first style, the windows it wrote, every look, and the keyboard's width
-/// before the grow.
+/// What G9 knows across steps: each window's first style, the windows it wrote, every look, the keyboard's width
+/// before the grow, and whether the keyboard showed the guard's mark at the first look.
 struct Watch {
     first: HashMap<isize, u32>,
     written: Vec<HWND>,
@@ -116,6 +118,7 @@ struct Watch {
     keyboard: HWND,
     target: HWND,
     width: Option<i32>,
+    readable: Option<bool>,
 }
 
 impl Watch {
@@ -124,11 +127,11 @@ impl Watch {
     fn ours(&mut self) -> Vec<HWND> {
         let first = &mut self.first;
         let keyboard = self.keyboard;
-        let guarded = |w: &HWND| {
+        let checked = |w: &HWND| {
             let was = *first.entry(win::key(*w)).or_insert_with(|| ex_of(*w));
             *w == keyboard || was & WS_EX_NOACTIVATE.0 != 0
         };
-        product::shown().into_iter().filter(guarded).collect()
+        product::shown().into_iter().filter(checked).collect()
     }
 
     /// The windows G9 checks, kept as written, since the next act writes their styles.
@@ -143,6 +146,8 @@ impl Watch {
         sleep_ms(ctx.cfg.g9.settle_ms);
         let front = foreground();
         let front_kept = front == self.target;
+        let keyboard = self.keyboard;
+        let readable = *self.readable.get_or_insert_with(|| guarded(keyboard));
         for w in self.ours() {
             let (ex, first) = (ex_of(w), self.first[&win::key(w)]);
             self.seen.push(Seen {
@@ -153,7 +158,8 @@ impl Watch {
                 extra: extra(ex, first),
                 front_kept,
                 front: in_front(front, self.target),
-                guarded: guarded(w),
+                guard: guard_of(guarded(w), readable),
+                owner: owner_of(w),
             });
         }
     }
@@ -258,6 +264,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         keyboard,
         target: target.hwnd,
         width: None,
+        readable: None,
     };
     let ran = steps(ctx, &mut w);
     let mut not_put_back = undo(ctx, &w);

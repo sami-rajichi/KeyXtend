@@ -14,12 +14,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
+use super::band::{dropped, family, is_top, to_lift};
 use super::guard::{ex_of, guarded};
 use super::win::top_level;
-use super::{family, is_top, to_lift};
 use crate::refused;
 
-/// The name of the message the guard posts to check a window again once the call that moved it is over.
+/// The name of the message the guard posts to check a window again after the window has answered the move.
 const RECHECK: PCWSTR = w!("KeyXtend.Guard.Recheck");
 
 thread_local! {
@@ -39,10 +39,10 @@ pub(super) fn recheck_id() -> Option<u32> {
     (id != 0).then_some(id)
 }
 
-/// Checks our window `hwnd` again from its queue, once the call that moved it is over: a lift made inside another
-/// program's call may not land, and a move inside a lift is skipped. A posted check posts none.
+/// Checks our window `hwnd` again from its queue after it has answered the move, as a lift made inside another
+/// program's call may not land. The check runs once, even if that program is still busy; a posted check posts none.
 #[allow(unsafe_code, reason = "Posts a message to our own window.")]
-fn later(hwnd: HWND) {
+fn post_recheck(hwnd: HWND) {
     let Some(id) = recheck_id().filter(|_| !RECHECKING.get()) else {
         return;
     };
@@ -119,15 +119,15 @@ fn owned_here() -> Vec<(HWND, HWND)> {
 
 /// Lifts our window back to the top of the topmost band when a move took it, or an owner, out, as `HWND_NOTOPMOST`
 /// from another program does. The furthest guarded owner goes up, then every window it owns, each above its owner;
-/// the window is checked again once the call that moved it is over.
+/// the window is checked again after it has answered the move.
 pub(super) fn keep_top(hwnd: HWND) {
     let chain = chain(hwnd);
     let states: Vec<(bool, bool)> = LIFTING.with_borrow(|l| {
         let state = |w: &HWND| (is_top(ex_of(*w)), l.contains(w));
         chain.iter().map(state).collect()
     });
-    if states.iter().any(|&(top, _)| !top) {
-        later(hwnd);
+    if dropped(&states) {
+        post_recheck(hwnd);
     }
     let Some(root) = to_lift(&states).map(|i| chain[i]) else {
         return;
