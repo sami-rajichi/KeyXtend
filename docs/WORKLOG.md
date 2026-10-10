@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-10 11:08 — P3: fix round D, the last fixes before the module-done gate
+The window guard now stops a repeat lift per window, so a window dropped inside another window's lift is lifted back too, the likely cause of G9's lost shadow, and G10 matches right Shift as Windows reports it. A resize saves only a size it changed and never one the settings refuse, the Keys route sends `AltGr` as left Ctrl and right Alt, the D-pad stays inside its columns, and placement keeps the resize corner on the work area. A key takes its tip back on leave even when its note went, a failed G10 step lets its latch go, and G13 finds the keyboard before it reads the look settings. G10's texts now name the keys it skips, and the keyboard's security note says the P3 manual check must still confirm who can press a key.
+
 ## 2026-10-10 10:30 — P3: screen readers can toggle latch keys and language rows
 UI Automation's Toggle on a checkable control asks Qt for its toggle action, not the press, so a reader that toggled Shift or a language row did nothing. Keys and rows now answer both actions the same way, and a dimmed key still ignores both. The reader checks moved into their own Quick test file.
 
