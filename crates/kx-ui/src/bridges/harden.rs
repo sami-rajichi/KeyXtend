@@ -19,8 +19,8 @@ pub const ADAPTER_VAR: &str = "QT_D3D_ADAPTER_INDEX";
 #[cxx_qt::bridge]
 mod ffi {
     // SAFETY: `harden.h` declares exactly these functions with these types; QStringList is cxx-qt-lib's binding. On
-    // Windows the C runtime and Win32 lock their environments, and only Qt's start writes them, under those locks, so
-    // `narrow_names` may read without the lock while other threads run.
+    // Windows the C runtime and Win32 lock their environments for each write. `narrow_names` reads without the lock,
+    // but only in `harden_qt`, before Qt starts; the adapter pins of a device rebuild write later, on the GUI thread.
     unsafe extern "C++" {
         include!("kx-ui/cpp/harden.h");
         include!("cxx-qt-lib/qstringlist.h");
@@ -47,7 +47,7 @@ mod ffi {
         #[namespace = "kxui"]
         fn qt_reads(name: &str) -> bool;
 
-        /// The value Qt's text read gives variable `name`; empty when it is not set.
+        /// The value Qt's byte read gives variable `name`, from the narrow copy Qt Quick reads; empty when it is not set.
         #[namespace = "kxui"]
         fn qt_value(name: &str) -> String;
 
@@ -98,8 +98,10 @@ pub fn pin_drawing() -> bool {
     failed.count() == 0
 }
 
-/// True when Qt reads every variable of `DRAW_VARS` with the app's value, so every window draws on the GUI thread.
-pub(crate) fn drawing_pinned() -> bool {
+/// True when Qt's byte read gives every variable of `DRAW_VARS` the app's value, so every window draws on the GUI
+/// thread.
+#[must_use]
+pub fn drawing_pinned() -> bool {
     DRAW_VARS
         .iter()
         .all(|(name, value)| ffi::qt_value(name) == *value)

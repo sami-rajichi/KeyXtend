@@ -1,5 +1,6 @@
-//! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame,
-//! whether a frame found it lost, and which windows draw on it. Debug builds can mark it lost, for tests.
+//! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame, and
+//! whether a frame found it lost or drew off the GUI thread. Debug builds can mark it lost and count which windows
+//! draw on it, for tests.
 
 use super::harden::unpin_adapter;
 use crate::device::share;
@@ -7,8 +8,9 @@ use cxx::UniquePtr;
 
 #[cxx_qt::bridge]
 mod ffi {
-    // SAFETY: `device.h` declares exactly these functions and `Device` members with these types. Every call runs on the
-    // Qt GUI thread, which owns the device and the windows, and the app drops every window before the device.
+    // SAFETY: `device.h` declares exactly these functions and `Device` members with these types. `device_new` makes
+    // nothing off the thread of Qt's app object; every other call runs on that GUI thread, which owns the device and
+    // the windows, and the app drops every window before the device.
     unsafe extern "C++" {
         include!("kx-ui/cpp/device.h");
 
@@ -16,28 +18,32 @@ mod ffi {
         #[namespace = "kxui"]
         type Device;
 
-        /// A device on the adapter Qt's variables pin; null when none can be made.
+        /// A device on the adapter Qt's variables pin; null before Qt's app object, off its thread, or when none can
+        /// be made.
         #[namespace = "kxui"]
         fn device_new() -> UniquePtr<Device>;
 
-        /// True once a frame found the device gone; that frame asked Qt's loop to end.
+        /// True once a frame found the device gone or ran off the GUI thread; that frame asked Qt's loop to end.
         fn lost(self: &Device) -> bool;
-
-        /// How many Qt Quick windows draw on the device.
-        fn windows(self: &Device) -> usize;
 
         /// True while every frame on the device has ended on the GUI thread.
         fn gui_only(self: &Device) -> bool;
+
+        /// How many Qt Quick windows draw on the device.
+        #[cfg(debug_assertions)]
+        fn windows(self: &Device) -> usize;
 
         /// Marks the device gone and asks each window for a frame, as a driver reset would.
         #[cfg(debug_assertions)]
         fn lose(self: Pin<&mut Device>);
 
         /// How many Qt Quick windows draw, on any device.
+        #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn drawing_windows() -> usize;
 
         /// How many devices those windows draw on.
+        #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn drawing_devices() -> usize;
 
@@ -55,26 +61,33 @@ impl Device {
     /// made, so each window makes its own. Call it on the GUI thread once Qt's app object exists, before any window.
     #[must_use]
     pub fn make() -> Option<Self> {
-        let made = || Some(ffi::device_new()).filter(|d| !d.is_null()).map(Self);
-        share(made, unpin_adapter)
+        share(Self::pinned, unpin_adapter)
     }
 
-    /// True once a frame found the device gone, so the windows must be made again; it asked Qt's loop to end.
+    /// The shared device on the adapter Qt's variables pin, if any, and nowhere else; `None` when none can be made,
+    /// before Qt's app object exists, or off its thread.
+    pub(crate) fn pinned() -> Option<Self> {
+        Some(ffi::device_new()).filter(|d| !d.is_null()).map(Self)
+    }
+
+    /// True once a frame found the device gone or drawing off the GUI thread, so the windows must be made again; it
+    /// asked Qt's loop to end.
     #[must_use]
     pub fn lost(&self) -> bool {
         self.0.as_ref().is_some_and(ffi::Device::lost)
-    }
-
-    /// How many Qt Quick windows draw on the device.
-    #[must_use]
-    pub fn windows(&self) -> usize {
-        self.0.as_ref().map_or(0, ffi::Device::windows)
     }
 
     /// True while every frame on the device has ended on the GUI thread, as one device needs.
     #[must_use]
     pub fn gui_only(&self) -> bool {
         self.0.as_ref().is_some_and(ffi::Device::gui_only)
+    }
+
+    /// How many Qt Quick windows draw on the device; debug builds only, for tests.
+    #[cfg(debug_assertions)]
+    #[must_use]
+    pub fn windows(&self) -> usize {
+        self.0.as_ref().map_or(0, ffi::Device::windows)
     }
 
     /// Marks the device gone, as a driver reset would, so the next frame finds it; debug builds only, for tests.
@@ -86,7 +99,8 @@ impl Device {
     }
 }
 
-/// How many Qt Quick windows draw, and on how many devices.
+/// How many Qt Quick windows draw, and on how many devices; debug builds only, for tests.
+#[cfg(debug_assertions)]
 #[must_use]
 pub fn drawing() -> (usize, usize) {
     (ffi::drawing_windows(), ffi::drawing_devices())

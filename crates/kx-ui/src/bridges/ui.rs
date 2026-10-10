@@ -209,20 +209,22 @@ impl cxx_qt::Initialize for qobject::Ui {
     }
 }
 
-/// Tells QML what changed, on the Qt thread; a new theme's fonts load first, so QML picks its families from them.
+/// Tells QML what changed, on the Qt thread. A new theme's fonts load before QML reads the new look, so it picks their
+/// families at once; `fonts_changed` comes last, when the look is read already.
 fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
-    if matches!(wake, Wake::Settings | Wake::Look) && ui.with(false, Hub::sync_fonts) {
-        ui.as_mut().fonts_changed();
-    }
+    let refont = matches!(wake, Wake::Settings | Wake::Look) && ui.with(false, Hub::sync_fonts);
     match wake {
-        Wake::Settings => ui.settings_changed(),
-        Wake::Texts => ui.texts_changed(),
-        Wake::Look => ui.look_changed(),
-        Wake::Notices => ui.notices_waiting(),
-        Wake::Show => ui.show_asked(),
-        Wake::End => ui.quit_asked(),
-        Wake::Tray(TrayEvent::Click(at)) => ui.tray_clicked(at.x, at.y),
-        Wake::Tray(TrayEvent::Away) => ui.tray_away(),
+        Wake::Settings => ui.as_mut().settings_changed(),
+        Wake::Texts => ui.as_mut().texts_changed(),
+        Wake::Look => ui.as_mut().look_changed(),
+        Wake::Notices => ui.as_mut().notices_waiting(),
+        Wake::Show => ui.as_mut().show_asked(),
+        Wake::End => ui.as_mut().quit_asked(),
+        Wake::Tray(TrayEvent::Click(at)) => ui.as_mut().tray_clicked(at.x, at.y),
+        Wake::Tray(TrayEvent::Away) => ui.as_mut().tray_away(),
+    }
+    if refont {
+        ui.fonts_changed();
     }
 }
 

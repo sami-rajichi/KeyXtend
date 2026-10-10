@@ -85,11 +85,12 @@ inline bool qt_reads(rust::Str name)
     return !qEnvironmentVariable(text.c_str()).isNull();
 }
 
-// The value Qt's text read gives variable `name`; empty when it is not set.
+// The value Qt's byte read (qgetenv) gives variable `name`; on Windows it reads the C runtime's narrow copy, as Qt
+// Quick reads its render loop. Empty when it is not set.
 inline rust::String qt_value(rust::Str name)
 {
     const std::string text(name.data(), name.size());
-    return rust::String(qEnvironmentVariable(text.c_str()).toStdString());
+    return rust::String(qgetenv(text.c_str()).toStdString());
 }
 
 // Qt Quick neither reads nor writes its shader pipeline cache on disk.

@@ -74,13 +74,16 @@ mod qt {
     const HEADERS_KEY: &str = "QT_INSTALL_HEADERS";
     const VERSION_KEY: &str = "QT_VERSION";
     const GUI: &str = "QtGui";
+    /// The workspace manifest and the path of the one Qt version it pins, which the graphics device glue is checked for.
+    const WORKSPACE: &str = "../../Cargo.toml";
+    const PIN_PATH: [&str; 4] = ["workspace", "metadata", "stage", "qt_version"];
     /// The hand-written C++ the bridges include.
     const CPP: &str = "cpp";
     /// The header that tells that C++ the build kind, in its own folder under `OUT_DIR`, and the macro a debug build
-    /// defines in it to turn on the test-only device loss (ADR-0021).
+    /// defines in it to turn on the test-only device loss and window counts (ADR-0021).
     const KIND_DIR: &str = "kx-ui-build";
     const KIND_H: &str = "kx-ui-build.h";
-    const LOSE: &str = "KX_UI_LOSE";
+    const PROBES: &str = "KX_UI_PROBES";
     /// Cargo's variables for the build's output folder, and for debug assertions, set only when they are on.
     const OUT_ENV: &str = "OUT_DIR";
     const DEBUG_ENV: &str = "CARGO_CFG_DEBUG_ASSERTIONS";
@@ -151,7 +154,8 @@ mod qt {
         );
     }
 
-    /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021).
+    /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021); an error when
+    /// Qt is not the version the workspace pins, as that header keeps few promises across versions.
     fn rhi_headers() -> Result<PathBuf, String> {
         println!("cargo::rerun-if-env-changed={QMAKE_ENV}");
         let qmake = std::env::var_os(QMAKE_ENV).unwrap_or_else(|| QMAKE.into());
@@ -161,22 +165,40 @@ mod qt {
             let text = String::from_utf8(out.stdout).map_err(|e| e.to_string())?;
             Ok(text.trim().to_owned())
         };
+        let (version, pinned) = (query(VERSION_KEY)?, pinned_qt()?);
+        if version != pinned {
+            return Err(format!(
+                "Qt {version} is not the pinned {pinned}; check the graphics device glue first (ADR-0021)"
+            ));
+        }
         let headers = PathBuf::from(query(HEADERS_KEY)?);
-        Ok(headers.join(GUI).join(query(VERSION_KEY)?).join(GUI))
+        Ok(headers.join(GUI).join(version).join(GUI))
     }
 
-    /// Writes the build-kind header, which defines `LOSE` only with debug assertions, and gives its folder.
+    /// The Qt version the workspace manifest pins.
+    fn pinned_qt() -> Result<String, String> {
+        println!("cargo::rerun-if-changed={WORKSPACE}");
+        let text = std::fs::read_to_string(WORKSPACE).map_err(|e| format!("{WORKSPACE}: {e}"))?;
+        let table: toml::Table = text.parse().map_err(|e| format!("{WORKSPACE}: {e}"))?;
+        let root = toml::Value::Table(table);
+        let pin = PIN_PATH.iter().try_fold(&root, |v, key| v.get(key));
+        pin.and_then(toml::Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| format!("{WORKSPACE} pins no Qt version at {}", PIN_PATH.join(".")))
+    }
+
+    /// Writes the build-kind header, which defines `PROBES` only with debug assertions, and gives its folder.
     fn kind_header() -> Result<PathBuf, String> {
         let out = std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?;
         let dir = PathBuf::from(out).join(KIND_DIR);
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
         let debug = std::env::var_os(DEBUG_ENV).is_some();
-        let lose = if debug {
-            format!("#define {LOSE} 1\n")
+        let probes = if debug {
+            format!("#define {PROBES} 1\n")
         } else {
             String::new()
         };
-        let text = format!("#pragma once\n{lose}");
+        let text = format!("#pragma once\n{probes}");
         std::fs::write(dir.join(KIND_H), text).map_err(|e| e.to_string())?;
         Ok(dir)
     }

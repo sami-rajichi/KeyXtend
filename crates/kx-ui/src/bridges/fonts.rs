@@ -1,5 +1,5 @@
 //! Qt's font list as the hub's font book (ADR-0021): it adds a bundled font file from the compiled-in resources, never
-//! from disk, and drops it again.
+//! from disk, and drops it again. Debug builds can list Qt's families, for tests.
 
 use crate::hub::FontBook;
 
@@ -17,7 +17,20 @@ mod ffi {
         /// Drops the font file added as `id`; false when Qt held none.
         #[namespace = "kxui"]
         fn font_unload(id: i32) -> bool;
+
+        /// Every family Qt draws with now.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn font_families() -> Vec<String>;
     }
+}
+
+/// Every font family Qt draws with now, as QML's `Qt.fontFamilies()` lists them; debug builds only, for tests. Call it
+/// on the Qt GUI thread.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn font_families() -> Vec<String> {
+    ffi::font_families()
 }
 
 /// The resource folder of the bundled files, as a path Qt opens, from the build.

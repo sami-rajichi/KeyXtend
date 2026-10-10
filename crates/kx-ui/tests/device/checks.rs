@@ -1,19 +1,21 @@
-//! The device test's steps, each over the running app's windows.
+//! The device test's steps without a loss, each over the running app's windows.
 
-use crate::{GUARDED, Outcome, Rig, wait};
+use crate::rig::{GUARDED, Outcome, Rig, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
-use kx_ui::{Shell, UiSettings, drawing};
+use kx_theme::Themes;
+use kx_theme::assets::FontFiles;
+use kx_ui::{Device, Shell, UiSettings, drawing, font_families};
+use std::thread;
 use tracing::Level;
 
-/// The theme whose fonts are all bundled, and the one Windows draws.
-const BUNDLED: &str = "dolch";
-const WINDOWS: &str = "native";
+/// The themes the font step shows in turn: two with bundled fonts, then the one Windows draws, which loads none.
+const THEMES: [&str; 3] = ["dolch", "et66", "native"];
 /// What a font that did not load logs.
 const NOT_LOADED: &str = "did not load";
 
 /// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
-/// shared device, and every frame ends on the GUI thread.
+/// shared device, and every frame ends on the GUI thread; no device is made off that thread.
 pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let device = shell.device().ok_or("no shared device was made")?;
     wait(app, "the keyboard's first frame", || {
@@ -25,31 +27,52 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
         drawing().0 > before
     })?;
     let (windows, devices) = drawing();
-    if device.windows() != windows || devices != 1 {
+    if device.windows() != windows || devices != 1 || !device.gui_only() {
         return Err(format!(
-            "{windows} windows draw on {devices} devices, {} on the shared one",
+            "{windows} windows draw on {devices} devices, {} on the shared one, or off the GUI thread",
             device.windows()
         ));
     }
-    device
-        .gui_only()
-        .then_some(())
-        .ok_or_else(|| "a frame ended off the GUI thread".into())
+    let elsewhere = thread::spawn(|| Device::make().is_some()).join();
+    match elsewhere {
+        Ok(false) => Ok(()),
+        _ => Err("a device was made off the GUI thread".into()),
+    }
 }
 
-/// Qt's font list takes every bundled file of a theme from the compiled-in resources, and drops them for Native.
+/// Shows theme `id` and loads its fonts; true when that changed what Qt holds.
+fn switch(rig: &mut Rig, id: &str) -> bool {
+    rig.show(UiSettings {
+        theme: id.to_owned(),
+        ..rig.hub.settings()
+    });
+    rig.hub.sync_fonts()
+}
+
+/// Qt's font list takes each theme's bundled fonts from the compiled-in resources and drops the others: after each
+/// switch it has the theme's first Arabic family, which QML picks for Arabic text, and no bundled family the theme
+/// does not name, unless Windows has it too.
 pub(crate) fn fonts(rig: &mut Rig) -> Outcome {
-    let theme = |id: &str| -> Result<UiSettings, String> {
-        let s = UiSettings::from_defaults().map_err(|e| e.to_string())?;
-        Ok(UiSettings {
-            theme: id.to_owned(),
-            ..s
-        })
-    };
-    for id in [BUNDLED, WINDOWS] {
-        rig.show(theme(id)?);
-        if !rig.hub.sync_fonts() {
+    let themes = Themes::shipped().map_err(|e| e.to_string())?;
+    let files = FontFiles::shipped().map_err(|e| e.to_string())?;
+    let _ = switch(rig, THEMES[THEMES.len() - 1]);
+    let windows = font_families();
+    for id in THEMES {
+        let look = &themes.find(id).ok_or("no such theme")?.look;
+        let lists = [&look.latin_fonts, &look.arabic_fonts, &look.mark_fonts];
+        let named = |f: &str| lists.iter().any(|l| l.iter().any(|n| n == f));
+        if !switch(rig, id) {
             return Err(format!("{id}: the fonts did not change"));
+        }
+        let qt = font_families();
+        let has = |f: &str| qt.iter().any(|q| q == f);
+        let stray: Vec<&str> = files
+            .families()
+            .filter(|f| !named(f) && !windows.iter().any(|w| w == f) && has(f))
+            .collect();
+        let arabic = look.arabic_fonts.first().ok_or("no Arabic family")?;
+        if !has(arabic) || !stray.is_empty() {
+            return Err(format!("{id}: Qt lacks {arabic} or still holds {stray:?}"));
         }
     }
     match rig.lines.count(Level::WARN, NOT_LOADED) {

@@ -26,6 +26,8 @@ pub(crate) const SEND_WAIT_MS: RangeInclusive<u64> = 1..=10_000;
 pub(crate) const TRAY_GRACE_MS: RangeInclusive<u64> = 0..=5_000;
 /// How many times one run may make the windows again after the graphics device is lost; 0 never does.
 pub(crate) const DEVICE_REBUILDS: RangeInclusive<u32> = 0..=10;
+/// How long one may wait before trying again at a graphics device that could not be made, in ms.
+pub(crate) const DEVICE_RETRY_MS: RangeInclusive<u64> = 0..=5_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 
@@ -97,6 +99,8 @@ pub struct UiSettings {
     pub tray_grace_ms: u64,
     /// How many times one run makes the windows again on a new graphics device after the device is lost (ADR-0021).
     pub device_rebuilds: u32,
+    /// How long to wait before trying again at a new graphics device that could not be made, as a driver resets, in ms.
+    pub device_retry_ms: u64,
     /// Rows per page in every list.
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.
@@ -134,6 +138,7 @@ impl UiSettings {
         within("send_wait_ms", self.send_wait_ms, &SEND_WAIT_MS)?;
         within("tray_grace_ms", self.tray_grace_ms, &TRAY_GRACE_MS)?;
         within("device_rebuilds", self.device_rebuilds, &DEVICE_REBUILDS)?;
+        within("device_retry_ms", self.device_retry_ms, &DEVICE_RETRY_MS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }
 }

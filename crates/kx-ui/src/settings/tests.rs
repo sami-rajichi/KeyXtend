@@ -30,7 +30,7 @@ fn the_defaults_are_the_plan_v1_values() {
     assert_eq!(s.tray_grace_ms, 500);
     assert_eq!((s.guard_tries, s.page_rows), (10, 5));
     assert_eq!((s.send_tries, s.send_wait_ms), (10, 100));
-    assert_eq!(s.device_rebuilds, 3);
+    assert_eq!((s.device_rebuilds, s.device_retry_ms), (3, 500));
     assert!((s.min_contrast - WCAG_AA).abs() < f32::EPSILON);
     assert_eq!(SPEC.version, 1);
     assert!(SPEC.is_consistent());
@@ -153,6 +153,21 @@ fn device_rebuilds_may_be_none_but_not_past_their_range() {
     );
     assert!(invalid(&with("device_rebuilds", end + 1)));
     assert!(unparsed(&with("device_rebuilds", -1)));
+}
+
+#[test]
+fn the_device_retry_may_be_at_once_but_not_past_its_range() {
+    assert_eq!(
+        validate_as::<UiSettings>(&with("device_retry_ms", 0)),
+        Ok(())
+    );
+    let end = i64::try_from(*DEVICE_RETRY_MS.end()).unwrap();
+    assert_eq!(
+        validate_as::<UiSettings>(&with("device_retry_ms", end)),
+        Ok(())
+    );
+    assert!(invalid(&with("device_retry_ms", end + 1)));
+    assert!(unparsed(&with("device_retry_ms", -1)));
 }
 
 #[test]

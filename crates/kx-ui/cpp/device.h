@@ -37,10 +37,14 @@ public:
             app->removeEventFilter(this);
     }
 
-    // True once a frame found the device gone.
+    // True once a frame found the device gone or ran off the GUI thread.
     bool lost() const { return found.load(); }
 
-    // How many Qt Quick windows draw on the device.
+    // True while every frame on the device has ended on the GUI thread, as the basic render loop draws.
+    bool gui_only() const { return !offThread.load(); }
+
+#if defined(KX_UI_PROBES)
+    // How many Qt Quick windows draw on the device; debug builds only.
     std::size_t windows() const
     {
         std::size_t count = 0;
@@ -51,10 +55,6 @@ public:
         return count;
     }
 
-    // True while every frame on the device has ended on the GUI thread, as the basic render loop draws.
-    bool gui_only() const { return !offThread.load(); }
-
-#if defined(KX_UI_LOSE)
     // Marks the device gone and asks each window for a frame, as a driver reset would; debug builds only.
     void lose()
     {
@@ -86,13 +86,14 @@ private:
         connect(window, &QQuickWindow::afterFrameEnd, this, &Device::framed, how);
     }
 
-    // After each frame, also a failed one: notes a frame off the GUI thread, and ends Qt's loop once the device is gone.
-    // The end is queued, so it also comes when the frame ran outside the loop.
+    // After each frame, also a failed one: ends Qt's loop once the device is gone or a frame ran off the GUI thread,
+    // which one device cannot take. The end is queued, so it also comes when the frame ran outside the loop.
     void framed()
     {
         if (QThread::currentThread() != thread())
             offThread = true;
-        if (gone() && !found.exchange(true)) {
+        if ((offThread.load() || gone()) && !found.exchange(true)) {
+            // Each exit also emits aboutToQuit, so nothing of ours may hang work on that signal.
             const auto end = [] { QCoreApplication::exit(0); };
             QMetaObject::invokeMethod(QCoreApplication::instance(), end, Qt::QueuedConnection);
         }
@@ -101,7 +102,7 @@ private:
     // True when the device is gone, or a debug build marked it so.
     bool gone() const
     {
-#if defined(KX_UI_LOSE)
+#if defined(KX_UI_PROBES)
         if (forced.load())
             return true;
 #endif
@@ -111,15 +112,19 @@ private:
     std::unique_ptr<QRhi> shared;
     std::atomic<bool> offThread{false};
     std::atomic<bool> found{false};
-#if defined(KX_UI_LOSE)
+#if defined(KX_UI_PROBES)
     std::atomic<bool> forced{false};
 #endif
 };
 
-// A device on the adapter Qt's variables pin, or null when Direct3D 11 makes none; other systems share none yet.
+// A device on the adapter Qt's variables pin; null before Qt's app object exists, off its thread, or when Direct3D 11
+// makes none. Other systems share none yet.
 inline std::unique_ptr<Device> device_new()
 {
 #if defined(Q_OS_WIN)
+    const QCoreApplication *app = QCoreApplication::instance();
+    if (!app || QThread::currentThread() != app->thread())
+        return nullptr;
     QRhiD3D11InitParams params;
     QRhi *rhi = QRhi::create(QRhi::D3D11, &params);
     return rhi ? std::make_unique<Device>(rhi) : nullptr;
@@ -128,7 +133,8 @@ inline std::unique_ptr<Device> device_new()
 #endif
 }
 
-// The Qt Quick windows that have drawn, on any device.
+#if defined(KX_UI_PROBES)
+// The Qt Quick windows that have drawn, on any device; debug builds only.
 inline QList<QQuickWindow *> drawn()
 {
     QList<QQuickWindow *> found;
@@ -154,6 +160,7 @@ inline std::size_t drawing_devices()
         devices.insert(window->rhi());
     return std::size_t(devices.size());
 }
+#endif
 
 // Deletes the objects that wait for a later delete, as windows a gone engine left, so none outlives its device.
 inline void flush_deletes()

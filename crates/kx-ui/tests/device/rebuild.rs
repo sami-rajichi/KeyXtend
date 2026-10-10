@@ -1,56 +1,64 @@
 //! The device-loss steps (ADR-0021): the debug-only trigger marks the shared device lost, a frame finds it, and the
-//! windows are made again over the same hub, at the face's place and size, shown, away or minimised as the user left
-//! the keyboard, until `[ui] device_rebuilds` runs out.
+//! windows are made again over the same hub, at the face's place and size, on a device on the adapter picked anew,
+//! until `[ui] device_rebuilds` runs out.
 
 use crate::face::HOME;
-use crate::{GUARDED, Outcome, Rig, wait};
+use crate::rig::{GONE, GUARDED, Outcome, Rig, pick_next, ticker, timer, wait};
 use cxx::UniquePtr;
-use cxx_qt_lib::QGuiApplication;
+use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine};
 use kx_module_api::ports::Rect;
 use kx_module_api::{Notice, keys};
-use kx_platform::ui::Command;
-use kx_platform_fake::GuardCall;
-use kx_ui::{Device, Mode, Resize, Shell, UiSettings, drawing};
+use kx_ui::{ADAPTER_VAR, After, Device, Resize, Shell, UiSettings, drawing, qt_sees};
 use tracing::Level;
 
 /// What the guard logs once a run guarded our windows.
 const GUARDED_LINE: &str = "windows guarded";
-/// What a loss past `[ui] device_rebuilds` warns.
+/// What a loss past `[ui] device_rebuilds` warns, and a try at a new device that failed.
 const TOO_OFTEN: &str = "too often";
+const NOT_MADE: &str = "after the loss";
+/// The watchdog ends Qt's loop with its own code if the loss does not end it first; its time in ms, and its URL.
+const WATCHDOG_MS: u32 = 5_000;
+const WATCHDOG_CODE: i32 = 3;
+const WATCHDOG_URL: &str = "qrc:/kx-ui-tests/device-watchdog.qml";
 
 /// Marks the shared device lost, as a driver reset would, and waits until a frame finds it.
-fn lose(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
+pub(crate) fn lose(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
     shell.lose();
     wait(app, "a frame finding the device lost", || {
         shell.device().is_some_and(Device::lost)
     })
 }
 
-/// Loses the device, then makes the windows again.
-fn remake(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell) -> Outcome {
-    lose(app, shell)?;
-    shell
-        .rebuilt()
-        .then_some(())
-        .ok_or_else(|| "the windows were not made again".into())
+/// Makes the windows of a lost device again.
+pub(crate) fn rebuilt(shell: &mut Shell) -> Outcome {
+    match shell.rebuilt() {
+        After::Again => Ok(()),
+        after => Err(format!("the windows were not made again: {after:?}")),
+    }
 }
 
-/// Makes the windows again after a loss, then waits until the keyboard is placed and guarded again and the tray shows
-/// its one icon.
-fn rebuild(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig) -> Outcome {
-    let placed = rig.face.placed().len();
-    let guarded = rig.lines.count(Level::INFO, GUARDED_LINE);
-    remake(app, shell)?;
+/// The marks a step waits past: the keyboard's placements and the guard's runs so far.
+pub(crate) fn marks(rig: &Rig) -> (usize, usize) {
+    (
+        rig.face.placed().len(),
+        rig.lines.count(Level::INFO, GUARDED_LINE),
+    )
+}
+
+/// Waits until the windows made again placed and guarded the keyboard past `was`, and the tray shows its one icon.
+pub(crate) fn back(
+    app: &mut UniquePtr<QGuiApplication>,
+    rig: &Rig,
+    was: (usize, usize),
+) -> Outcome {
     wait(app, "the rebuilt keyboard placed and guarded", || {
-        rig.face.placed().len() > placed
-            && rig.lines.count(Level::INFO, GUARDED_LINE) > guarded
-            && drawing().0 >= GUARDED
-            && rig.tray.shown().len() == 1
+        let now = marks(rig);
+        now.0 > was.0 && now.1 > was.1 && drawing().0 >= GUARDED && rig.tray.shown().len() == 1
     })
 }
 
 /// The keyboard's last reported box, which must sit at the face's place with a size.
-fn kept(rig: &Rig) -> Result<Rect, String> {
+pub(crate) fn kept(rig: &Rig) -> Result<Rect, String> {
     let last = rig.face.placed().last().copied();
     match last {
         Some(r) if r.x == HOME.x && r.y == HOME.y && r.w > 0 && r.h > 0 => Ok(r),
@@ -58,20 +66,46 @@ fn kept(rig: &Rig) -> Result<Rect, String> {
     }
 }
 
-/// A loss during a resize: the resize ends first, the windows come back once on a new shared device, the keyboard sits
-/// at the face's place, and the new banner hears the hub; the keyboard's box, for the next loss to keep.
+/// With no ticker, a loss alone ends Qt's loop, by the device's own exit, long before the watchdog's.
+fn alone(
+    app: &mut UniquePtr<QGuiApplication>,
+    shell: &mut Shell,
+    tick: &mut UniquePtr<QQmlApplicationEngine>,
+) -> Outcome {
+    *tick = UniquePtr::null();
+    let watchdog = timer(WATCHDOG_MS, WATCHDOG_CODE, false, WATCHDOG_URL)?;
+    shell.lose();
+    let code = app.as_mut().map(|a| a.exec());
+    drop(watchdog);
+    *tick = ticker()?;
+    match code {
+        Some(0) if shell.device().is_some_and(Device::lost) => Ok(()),
+        _ => Err(format!("Qt's loop ended with {code:?}, not by the loss")),
+    }
+}
+
+/// The first loss, during a resize and with no ticker: the device's own exit ends Qt's loop, the resize ends, and the
+/// windows come back once, on one shared device made on the second try, as the first pick names a gone adapter; the
+/// pin is set again, the keyboard sits at the face's place and the new banner hears the hub. The keyboard's box.
 pub(crate) fn once(
     app: &mut UniquePtr<QGuiApplication>,
     shell: &mut Shell,
     rig: &Rig,
+    tick: &mut UniquePtr<QQmlApplicationEngine>,
 ) -> Result<Rect, String> {
     let _ = rig.hub.resize(Resize::Begin);
     if !rig.face.resizing() {
         return Err("the resize did not begin".into());
     }
-    rebuild(app, shell, rig)?;
-    if rig.face.resizing() {
-        return Err("the resize still ran after the rebuild".into());
+    let was = marks(rig);
+    alone(app, shell, tick)?;
+    pick_next(GONE);
+    rebuilt(shell)?;
+    back(app, rig, was)?;
+    if rig.face.resizing() || !qt_sees(ADAPTER_VAR) || rig.lines.count(Level::WARN, NOT_MADE) != 1 {
+        return Err(
+            "the resize ran on, or the gone adapter was not tried once with the pin kept".into(),
+        );
     }
     let device = shell.device().ok_or("no shared device after the rebuild")?;
     let (windows, devices) = drawing();
@@ -91,55 +125,6 @@ pub(crate) fn once(
     kept(rig)
 }
 
-/// How many cuts and guard runs the guard took; only the shown keyboard cuts itself.
-fn guarded(rig: &Rig) -> (usize, usize) {
-    let calls = rig.guard.calls();
-    let cuts = calls.iter().filter(|c| matches!(c, GuardCall::Shape(..)));
-    let runs = calls
-        .iter()
-        .filter(|c| matches!(c, GuardCall::GuardOwn(..)));
-    (cuts.count(), runs.count())
-}
-
-/// A loss while the keyboard is `mode`, as Close or Minimise keeps it: once a guard run of the windows made again
-/// came, only a minimised keyboard placed itself, for its bubble, none showed, and the mode stayed. Then Show brings
-/// it back.
-fn left(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig, mode: Mode) -> Outcome {
-    rig.hub.keep_mode(mode);
-    let ((cuts, runs), before) = (guarded(rig), rig.face.placed().len());
-    let bubble = mode == Mode::Minimised;
-    remake(app, shell)?;
-    wait(app, "a guard run of the windows made again", || {
-        rig.face.placed().len() == before + usize::from(bubble) && guarded(rig).1 > runs
-    })?;
-    if guarded(rig).0 != cuts || rig.hub.mode() != mode || rig.tray.shown().len() != 1 {
-        return Err(format!(
-            "{mode:?}: the keyboard did not stay as it was left"
-        ));
-    }
-    if bubble {
-        kept(rig)?;
-    }
-    rig.hub.command(Command::Show);
-    wait(app, "Show bringing the keyboard back", || {
-        guarded(rig).0 > cuts && rig.hub.mode() == Mode::Shown
-    })
-}
-
-/// A loss after Close: the keyboard stays away while the banner made again shows, until Show.
-pub(crate) fn away(app: &mut UniquePtr<QGuiApplication>, shell: &mut Shell, rig: &Rig) -> Outcome {
-    left(app, shell, rig, Mode::Away)
-}
-
-/// A loss after Minimise: the keyboard is placed where it was and stays behind its bubble, until Show.
-pub(crate) fn minimised(
-    app: &mut UniquePtr<QGuiApplication>,
-    shell: &mut Shell,
-    rig: &Rig,
-) -> Outcome {
-    left(app, shell, rig, Mode::Minimised)
-}
-
 /// A loss past `[ui] device_rebuilds` makes the windows again on their own devices, with one warning, and the keyboard
 /// keeps box `was`.
 pub(crate) fn past_most(
@@ -153,7 +138,10 @@ pub(crate) fn past_most(
         device_rebuilds: 1,
         ..s
     });
-    rebuild(app, shell, rig)?;
+    let marks = marks(rig);
+    lose(app, shell)?;
+    rebuilt(shell)?;
+    back(app, rig, marks)?;
     let (windows, devices) = drawing();
     if shell.device().is_some() || devices != windows {
         return Err(format!(

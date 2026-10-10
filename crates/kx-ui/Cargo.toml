@@ -41,6 +41,8 @@ cxx-qt-build = { workspace = true, optional = true }
 # The icons the tokens name and where the bundled assets sit, so the build compiles in only what QML shows.
 kx-theme = { path = "../kx-theme" }
 serde_json.workspace = true
+# Reads the Qt version the workspace manifest pins.
+toml.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }

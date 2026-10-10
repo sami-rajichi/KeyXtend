@@ -193,9 +193,9 @@ fn drawing() -> Outcome {
     let replaced = DRAW_VARS
         .iter()
         .any(|(name, value)| *name == OUTSIDE.0 && *value != OUTSIDE.1);
-    if !wrong.is_empty() || !replaced {
+    if !wrong.is_empty() || !replaced || !kx_ui::drawing_pinned() {
         return Err(format!(
-            "{wrong:?} hold other values, or {} was not replaced",
+            "{wrong:?} hold other values, {} was not replaced, or Qt's byte read differs",
             OUTSIDE.0
         ));
     }
