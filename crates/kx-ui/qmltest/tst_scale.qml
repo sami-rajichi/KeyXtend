@@ -4,6 +4,7 @@ import QtQuick
 import QtTest
 import "../qml"
 import "kbwin.js" as Win
+import "board.js" as Board
 import "fixtures/face.js" as Face
 
 Item {
@@ -65,7 +66,7 @@ Item {
         }
         // The `Rescale` of window `w`.
         function rescaleOf(w) {
-            return Win.all(w.contentItem, o => o.keep !== undefined)[0];
+            return Board.all(w.contentItem, o => o.keep !== undefined)[0];
         }
         // The keyboard over stand-in `screens`, at its state's place in their Qt units.
         function onScreens(r, screens) {
@@ -134,10 +135,10 @@ Item {
         function test_on_a_new_scale_a_keyboard_just_moved_is_placed_again_from_where_it_was_left() {
             const r = make({ x: 100, y: 200 });
             r.kb.keeps = true;
-            mouseClick(Win.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
+            mouseClick(Board.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
             r.kb.pointer = { x: 300, y: 260 };
             tryVerify(() => r.win.at.x > 100, 2000, "the poll moves it");
-            mouseClick(Win.all(r.mover.covers.objectAt(0).contentItem, o => o.Accessible.id === "catch")[0]);
+            mouseClick(Board.all(r.mover.covers.objectAt(0).contentItem, o => o.Accessible.id === "catch")[0]);
             const left = r.kb.placedAt;
             const placed = Win.heard(r.kb, "placed");
             r.rescale.ratio = r.rescale.ratio * 2;
@@ -230,7 +231,7 @@ Item {
         // A move places the keyboard when it ends, so a new scale meanwhile only cuts it again.
         function test_a_new_scale_during_a_move_only_cuts_the_keyboard() {
             const r = make({ x: 120, y: 90 });
-            mouseClick(Win.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
+            mouseClick(Board.all(r.win.contentItem, o => o.Accessible.id === "bar.grip")[0]);
             verify(r.mover.busy, "moving");
             const placed = Win.heard(r.kb, "placed");
             r.rescale.ratio = r.rescale.ratio * 2;

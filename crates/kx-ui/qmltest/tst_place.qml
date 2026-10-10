@@ -6,6 +6,7 @@ import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "kbwin.js" as Win
+import "board.js" as Board
 
 Item {
     id: root
@@ -50,7 +51,7 @@ Item {
         }
         // Starts a move or a resize from bar control `id`.
         function start(r, id) {
-            mouseClick(Win.all(r.win.contentItem, o => o.Accessible.id === id)[0]);
+            mouseClick(Board.all(r.win.contentItem, o => o.Accessible.id === id)[0]);
             verify(r.mover.busy, id);
         }
         // Waits for a placement skipped while the window moves or resizes; none comes until it ends.

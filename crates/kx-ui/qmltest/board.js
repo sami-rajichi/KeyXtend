@@ -1,7 +1,7 @@
 .pragma library
 .import "fixtures/assets.js" as Assets
-// What the keyboard window hands its keys for a look and a UI language, and the bundled fonts, shared by the board
-// tests (tst_corners, tst_order, tst_pictures, and tst_lang for its fonts) so their copies cannot drift.
+// The shared item search, what the keyboard window hands its keys for a look and a UI language, and the bundled fonts,
+// for kbwin.js and the tests that import this file, so their copies cannot drift.
 
 // Every item under `item` for which `ok` holds.
 function all(item, ok, found) {
