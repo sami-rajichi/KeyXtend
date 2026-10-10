@@ -332,9 +332,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌َّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x0011": {
@@ -353,9 +353,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌ًّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x0012": {
@@ -374,9 +374,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌ُّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x0013": {
@@ -395,9 +395,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌ٌّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x0014": {
@@ -605,7 +605,7 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "⃁",
+      "third": "",
       "third_ar": false,
       "third_mark": false,
       "tip": null
@@ -899,9 +899,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌ِّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x002F": {
@@ -920,9 +920,9 @@
       "second": "",
       "second_ar": false,
       "second_mark": false,
-      "third": "◌ٍّ",
-      "third_ar": true,
-      "third_mark": true,
+      "third": "",
+      "third_ar": false,
+      "third_mark": false,
       "tip": null
     },
     "c-0x0030": {

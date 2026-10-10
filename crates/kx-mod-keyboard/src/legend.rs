@@ -174,6 +174,11 @@ fn is_letter(s: &str) -> bool {
     matches!((it.next(), it.next()), (Some(c), None) if c.to_lowercase().ne(c.to_uppercase()))
 }
 
+/// True when `s` is Arabic letters only, such as ض or lam-alef; marks, digits and punctuation are not letters.
+fn arabic_letters(s: &str) -> bool {
+    !s.is_empty() && is_arabic(s) && s.chars().all(|c| c.is_alphabetic() && !is_mark(c))
+}
+
 /// True when `s` starts with a mark, which has no letter before it, so it is drawn on a dotted circle.
 fn on_circle(s: &str) -> bool {
     s.chars().next().is_some_and(is_mark)
@@ -196,7 +201,8 @@ pub fn typed(k: &KeyChars, m: LegendMods) -> &str {
 }
 
 /// The legends of key `k`: the top row and non-letters of left-to-right layouts also show the other case.
-/// An empty key shows neither; its `AltGr` corner stays while `AltGr` is not latched, as on every key.
+/// The `AltGr` corner shows while `AltGr` is not latched, except on an Arabic letter, which it would crowd (owner
+/// 2026-10-10); an empty key shows no main or second legend.
 #[must_use]
 pub fn legend(k: &KeyChars, m: LegendMods, top_row: bool, rtl: bool) -> Legend {
     let s = slot(k, m);
@@ -208,7 +214,11 @@ pub fn legend(k: &KeyChars, m: LegendMods, top_row: bool, rtl: bool) -> Legend {
     } else {
         ""
     };
-    let third = if m.altgr { "" } else { k.altgr.as_str() };
+    let third = if m.altgr || arabic_letters(&k.base) {
+        ""
+    } else {
+        k.altgr.as_str()
+    };
     Legend {
         main: shown(main),
         second: shown(second),

@@ -26,9 +26,10 @@ gap_px = 4.0
 
 [legend]
 # Corner legends: sizes as shares of the main one (second, third), distance in from the face the theme draws (top or
-# bottom, side), weight.
-corner_scale = [0.62, 0.6]
-corner_px = [2.0, 4.0]
+# bottom, side), weight. Small and tucked into their corner, so they leave the main legend clear (owner 2026-10-10);
+# 2.5 px top and bottom keeps ET66's secondary legends at 4.5:1 near its convex cap's ends.
+corner_scale = [0.496, 0.48]
+corner_px = [2.5, 3.0]
 corner_weight = 400
 # Icons (main keys, side keys) and the gap to a text beside them.
 icon_px = [14.0, 15.0]

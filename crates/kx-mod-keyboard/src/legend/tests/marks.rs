@@ -40,11 +40,12 @@ fn any_mark_or_pair_of_marks_sits_on_a_dotted_circle() {
 
 #[test]
 fn the_altgr_marks_sit_on_a_dotted_circle_in_the_arabic_font() {
-    // Arabic (102) AZERTY: shadda and a vowel on AltGr.
-    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
-    let l = legend(&dad, LegendMods::default(), false, true);
+    // Shadda and a vowel on AltGr: in the corner of a key with no Arabic letter, and on ض with AltGr latched.
+    let quote = keys("'", "4", "\u{651}\u{64E}");
+    let l = legend(&quote, LegendMods::default(), false, true);
     assert_eq!(l.third, "\u{25CC}\u{651}\u{64E}");
     assert!(l.third_ar);
+    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
     let l = legend(&dad, mods(false, false, true), false, true);
     assert_eq!(l.main, "\u{25CC}\u{651}\u{64E}", "AltGr latched");
     assert!(l.main_ar);
@@ -54,12 +55,13 @@ fn the_altgr_marks_sit_on_a_dotted_circle_in_the_arabic_font() {
 
 #[test]
 fn only_marks_on_their_circle_are_flagged_for_the_mark_font() {
-    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
-    let l = legend(&dad, LegendMods::default(), true, true);
+    let quote = keys("'", "\u{64E}", "\u{651}\u{64E}");
+    let l = legend(&quote, LegendMods::default(), true, true);
     assert_eq!(
         (l.main_mark, l.second_mark, l.third_mark),
         (false, true, true)
     );
+    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
     let l = legend(&dad, mods(false, false, true), false, true);
     assert!(l.main_mark && !l.third_mark, "AltGr latched: {l:?}");
     let carried = legend(

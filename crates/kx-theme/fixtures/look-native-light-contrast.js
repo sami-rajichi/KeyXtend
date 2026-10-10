@@ -130,12 +130,12 @@ var lk = {
     },
     "legend": {
       "corner_scale": [
-        0.62,
-        0.6
+        0.496,
+        0.48
       ],
       "corner_px": [
-        2.0,
-        4.0
+        2.5,
+        3.0
       ],
       "corner_weight": 400,
       "icon_px": [

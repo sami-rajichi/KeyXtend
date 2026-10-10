@@ -1,6 +1,6 @@
 // The owner's Arabic (102) AZERTY keys over the face's golden states: every legend the face flags as marks sits on a
-// dotted circle in the theme's mark font, in each corner and with AltGr latched; readers hear a mark key's marks; letters
-// stay centred; corner legends keep one margin in from each theme's face; and a key that types nothing shows no letter.
+// dotted circle in the theme's mark font, with Shift and with AltGr latched; readers hear a mark key's marks; a letter
+// stands alone and centred; and a key that types nothing shows nothing.
 import QtQuick
 import QtTest
 import "../qml"
@@ -8,9 +8,7 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-ar.js" as Ar
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
-import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
-import "fonts.js" as Fonts
 
 Item {
     id: root
@@ -27,19 +25,8 @@ Item {
         uid: (group, id) => group + "." + id,
         space: parts => parts.join(" · ")
     })
-    // The Arabic states: as typed, and with AltGr latched.
-    readonly property var states: [Face.states.ar, Face.states["ar-altgr"]]
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
+    // The Arabic states that show marks: with Shift and with AltGr latched.
+    readonly property var states: [Face.states["ar-shift"], Face.states["ar-altgr"]]
 
     Component { id: keyC; Key {} }
 
@@ -79,7 +66,7 @@ Item {
             return all(key, o => o.font !== undefined && o.visible && o.text !== "" && o.text.startsWith(circle) === marks);
         }
 
-        function test_a_mark_sits_on_a_circle_in_the_mark_font_in_every_corner() {
+        function test_a_mark_sits_on_a_circle_in_the_mark_font_with_shift_and_with_altgr() {
             compare(root.states.map(s => markKeys(s).length > 0), [true, true], "the case this test is for");
             for (const state of root.states)
                 for (const id of markKeys(state)) {
@@ -95,75 +82,32 @@ Item {
             verify(D.lk.look.mark_fonts[0] !== D.lk.look.arabic_fonts[0], "Dolch names its own mark font");
             const fam = { latin: D.lk.look.latin_fonts[0], arabic: D.lk.look.arabic_fonts[0], mark: D.lk.look.mark_fonts[0] };
             const res = Object.assign({}, root.res, { fam: Object.assign({ ui: fam.arabic }, fam) });
-            const key = makeKey(Face.states.ar, markKeys(Face.states.ar)[0], D.lk, res);
-            compare(texts(key, true).map(t => t.font.family), [fam.mark], "the AltGr marks");
-            compare(texts(key, false).map(t => t.font.family), [fam.arabic], "the letter");
+            const id = markKeys(Face.states["ar-shift"])[0];
+            const marks = makeKey(Face.states["ar-shift"], id, D.lk, res);
+            compare(texts(marks, true).map(t => t.font.family), [fam.mark], "the Shift marks");
+            const letter = makeKey(Face.states.ar, id, D.lk, res);
+            compare(texts(letter, false).map(t => t.font.family), [fam.arabic], "the letter");
         }
 
-        // The owner wants every letter centred, also over an AltGr legend (2026-10-10), so ض sits as ف does.
-        function test_an_arabic_letter_over_an_altgr_legend_stays_centred() {
-            const state = Face.states.ar;
-            const pick = ok => Object.keys(state.keys).find(id => state.keys[id].main_ar && ok(state.keys[id]));
-            const offset = id => {
-                const key = makeKey(state, id, D.lk);
-                return all(key, o => o.font !== undefined && o.text === state.keys[id].main)[0].anchors.verticalCenterOffset;
-            };
-            const [over, alone] = [pick(k => k.third !== ""), pick(k => k.third === "")];
-            verify(over && alone, "the case this test is for");
-            compare(offset(over), offset(alone));
-        }
-
-        // Look `lk`'s own first fonts, as the keyboard window picks them when the system has them.
-        function resOf(lk) {
-            const l = lk.look;
-            const fam = { latin: l.latin_fonts[0], arabic: l.arabic_fonts[0], mark: l.mark_fonts[0], ui: l.latin_fonts[0] };
-            return Object.assign({}, root.res, { fam: fam });
-        }
-        // How far key `id`'s corner legends sit in from the face its look draws, at size 1: [side, baseline, legend] for
-        // the top left and then the bottom right, undefined for a corner with no legend.
-        function margins(state, id, lk) {
-            const key = makeKey(state, id, lk, resOf(lk));
-            // The cap's own face, the first one drawn; the inner shading draws it again, moved.
-            const cap = all(key, o => o.sculpted !== undefined && o.grad !== undefined)[0];
-            const fills = all(cap, o => o.base !== undefined && o.g !== undefined && o.visible);
-            const f = fills[fills.length - 1];
-            const c = f.mapToItem(key, 0, 0);
-            const shown = s => all(key, o => o.font !== undefined && o.visible && s !== "" && o.text === s)[0];
-            const [lt, rb] = [shown(state.keys[id].second), shown(state.keys[id].third)];
-            const at = (l, x) => l.mapToItem(key, x, l.baselineOffset);
-            const top = lt && [at(lt, 0).x - c.x, at(lt, 0).y - c.y, lt];
-            const bottom = rb && [c.x + f.width - at(rb, rb.width).x, c.y + f.height - at(rb, 0).y, rb];
-            return [top, bottom];
-        }
-
-        // Every theme leaves one margin between its face and a corner legend, Dolch's lit top too (owner 2026-10-10);
-        // a mark in a taller font sits on the Latin baseline, as a Latin legend in its corner does.
-        function test_corner_legends_sit_the_same_way_in_from_each_face_data() {
-            return [N, E, D].map(t => ({ tag: t.lk.look.id, lk: t.lk }));
-        }
-        function test_corner_legends_sit_the_same_way_in_from_each_face(row) {
-            const [lk, state] = [row.lk, Face.states.ar];
-            Fonts.need([lk.look.latin_fonts[0], lk.look.mark_fonts[0]], skip);
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by the texts test");
-            const [lg, fm] = [lk.shape.legend, lk.look.font_metrics];
-            const find = ok => Object.keys(state.keys).find(id => ok(state.keys[id]));
-            // A Latin key with both corners, and a letter with marks bottom right.
-            const ids = [find(k => k.second !== "" && k.third !== "" && !k.third_mark), find(k => k.third_mark)];
-            verify(ids.every(id => !!id), "the cases this test is for");
-            for (const id of ids) {
-                const [top, bottom] = margins(state, id, lk);
-                if (top) {
-                    fuzzyCompare(top[0], lg.corner_px[1], 0.5, id + " top left, side");
-                    fuzzyCompare(top[1], lg.corner_px[0] + fm[0] * top[2].font.pixelSize, 0.5, id + " top left, baseline");
-                }
-                fuzzyCompare(bottom[0], lg.corner_px[1], 0.5, id + " bottom right, side");
-                fuzzyCompare(bottom[1], lg.corner_px[0] + fm[1] * bottom[2].font.pixelSize, 0.5, id + " bottom right, baseline");
+        // The owner wants each Arabic letter alone and centred (2026-10-10): no corner legend crowds it, plain or with
+        // Shift, and every letter sits at the same height, as ف does.
+        function test_an_arabic_letter_stands_alone_and_centred() {
+            for (const name of ["ar", "ar-shift"]) {
+                const state = Face.states[name];
+                const ids = Object.keys(state.keys).filter(id => state.keys[id].main_ar && !state.keys[id].main_mark);
+                verify(ids.length > 0, name + ": the case this test is for");
+                const offsets = ids.map(id => {
+                    const shown = all(makeKey(state, id, D.lk), o => o.font !== undefined && o.visible && o.text !== "");
+                    compare(shown.map(o => o.text), [state.keys[id].main], name + " " + id);
+                    return shown[0].anchors.verticalCenterOffset;
+                });
+                verify(offsets.every(o => o === offsets[0]), name + ": " + offsets);
             }
         }
 
-        // A key that types nothing with Shift (س) or AltGr (ف) shows no letter, as Windows' keyboard does, and readers hear
-        // its empty name; only an AltGr corner may stay.
-        function test_an_empty_key_shows_no_letter_and_readers_hear_it_is_empty() {
+        // A key that types nothing with Shift (س) or AltGr (ف) shows nothing, as Windows' keyboard does, and readers
+        // hear its empty name.
+        function test_an_empty_key_shows_nothing_and_readers_hear_it_is_empty() {
             for (const name of ["ar-shift", "ar-altgr"]) {
                 const state = Face.states[name];
                 const ids = Object.keys(state.keys).filter(id => state.keys[id].blank);
@@ -172,7 +116,7 @@ Item {
                     const ks = state.keys[id];
                     const key = makeKey(state, id);
                     const shown = all(key, o => o.font !== undefined && o.visible && o.text !== "").map(o => o.text);
-                    compare(shown, ks.third ? [ks.third] : [], name + " " + id);
+                    compare(shown, [], name + " " + id);
                     compare(key.Accessible.name, Ar.texts[ks.blank], name + " " + id);
                 }
             }

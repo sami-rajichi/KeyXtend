@@ -144,18 +144,41 @@ fn seen() -> KeyChars {
 }
 
 #[test]
-fn shift_on_a_key_that_types_nothing_shifted_leaves_it_empty_but_its_altgr_corner() {
+fn shift_on_a_key_that_types_nothing_shifted_leaves_it_fully_empty() {
     for caps in [false, true] {
         assert_eq!(slot(&seen(), mods(true, caps, false)), None, "{caps}");
     }
     let l = legend(&seen(), mods(true, false, false), true, true);
     let parts = (l.main.as_str(), l.second.as_str(), l.third.as_str());
-    assert_eq!(
-        parts,
-        ("", "", "\u{20C1}"),
-        "no letter, as Windows shows it"
-    );
+    assert_eq!(parts, ("", "", ""), "as Windows shows it");
     assert!(!l.main_ar && !l.main_mark);
+}
+
+#[test]
+fn an_arabic_letter_shows_no_altgr_corner_but_shows_its_altgr_character_when_latched() {
+    // Arabic (102) AZERTY's ض: fatha with Shift, shadda and fatha on AltGr; and lam-alef, two letters.
+    let dad = keys("ض", "\u{64E}", "\u{651}\u{64E}");
+    for (shift, caps) in [(false, false), (true, false), (false, true), (true, true)] {
+        let l = legend(&dad, mods(shift, caps, false), false, true);
+        assert!(
+            l.third.is_empty() && !l.third_ar && !l.third_mark,
+            "{shift} {caps}"
+        );
+    }
+    let lam_alef = legend(
+        &keys("لا", "", "\u{651}"),
+        LegendMods::default(),
+        false,
+        true,
+    );
+    assert_eq!(lam_alef.third, "");
+    let latched = legend(&dad, mods(false, false, true), false, true);
+    assert_eq!(latched.main, "\u{25CC}\u{651}\u{64E}");
+    // A quote, Arabic punctuation and digits, and a Latin letter keep their corner.
+    for base in ["'", "\u{061F}", "\u{0661}", "e"] {
+        let l = legend(&keys(base, "", "€"), LegendMods::default(), false, true);
+        assert_eq!(l.third, "€", "{base}");
+    }
 }
 
 #[test]
