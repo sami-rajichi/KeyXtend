@@ -57,6 +57,8 @@ Item {
     readonly property real inset: look.gap_px * s / 2
     // The recording glow runs.
     readonly property bool glowing: glow.running
+    // This key showed a tip, which it takes back on leave even when its note went meanwhile.
+    property bool tipped: false
 
     x: kv.x + inset
     y: kv.y + inset
@@ -210,8 +212,11 @@ Item {
         hoverEnabled: true
         onContainsMouseChanged: {
             const says = key.note ? key.res.noteTip(key.name, key.note) : key.icon ? key.name : "";
-            if (says)
-                key.tip(containsMouse ? says : "", key);
+            if (containsMouse && says)
+                key.tip(says, key);
+            else if (!containsMouse && key.tipped)
+                key.tip("", key);
+            key.tipped = containsMouse && !!says;
         }
         onClicked: mouse => {
             if (!key.dim)

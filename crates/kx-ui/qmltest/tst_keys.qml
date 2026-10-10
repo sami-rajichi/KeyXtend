@@ -211,6 +211,19 @@ Item {
             compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.mic"], En.texts["tip.later"]));
         }
 
+        // The lone language's tip goes as the pointer leaves, though a second layout took the note away meanwhile.
+        function test_a_tip_goes_on_leave_even_when_its_note_went_meanwhile() {
+            const lone = Object.assign({}, root.ks("lang"), { tip: "tip.one-lang" });
+            const k = createTemporaryObject(keyC, root, { kv: root.kv("lang"), ks: lone, lk: N.lk, lang: Face.states.en.lang, design: Face.board.lang_key, res: root.res, s: 1 });
+            const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
+            mouseMove(k, k.width / 2, k.height / 2);
+            compare(spy.count, 1, "the lone language's tip");
+            k.ks = root.ks("lang");
+            mouseMove(k, -k.width, k.height / 2);
+            compare(spy.count, 2, "the tip goes");
+            compare(spy.signalArguments[1][0], "");
+        }
+
         function test_plate_icons_take_the_plate_text_colour() {
             const bar = createTemporaryObject(barC, root, { box: Face.board.bar, lk: D.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false });
             const grip = find(bar, o => o.icon === D.lk.icons.bar.grip && o.tint !== undefined);
