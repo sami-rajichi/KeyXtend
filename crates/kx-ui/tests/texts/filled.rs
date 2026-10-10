@@ -132,26 +132,29 @@ fn no_text_the_hub_gives_holds_a_bidi_control() {
     }
 }
 
-/// Whether code line `l` reads an OS name, as a whole name such as `r.row.name` but not `arrow.name`.
-fn reads_os_name(l: &str) -> bool {
+/// The `OS_NAME_READS` entries code line `l` reads, each as a whole name such as `r.row.name` but not `arrow.name`.
+fn os_name_reads(l: &str) -> Vec<&'static str> {
     let word = |c: char| c.is_alphanumeric() || c == '_';
     let whole = |i: usize| !l[..i].chars().next_back().is_some_and(word);
-    OS_NAME_READS
-        .iter()
-        .any(|r| l.match_indices(r).any(|(i, _)| whole(i)))
+    let read = |r: &&str| l.match_indices(*r).any(|(i, _)| whole(i));
+    OS_NAME_READS.into_iter().filter(read).collect()
 }
 
 #[test]
 fn qml_draws_os_names_only_through_the_hubs_cleaning() {
-    assert!(reads_os_name("x: r.row.name[0]") && !reads_os_name("x: arrow.name"));
+    assert_eq!(os_name_reads("x: r.row.name[0]"), ["row.name"]);
+    assert!(os_name_reads("x: arrow.name").is_empty());
+    let mut seen = Vec::new();
     for (file, text) in qml_files() {
         for (n, line) in text.lines().map(code).enumerate() {
-            let reads = reads_os_name(&line);
-            assert!(
-                !reads || line.contains(SPACE_CALL),
-                "{file}:{}: {line}",
-                n + 1
-            );
+            let reads = os_name_reads(&line);
+            let at = format!("{file}:{}: {line}", n + 1);
+            assert!(reads.is_empty() || line.contains(SPACE_CALL), "{at}");
+            seen.extend(reads);
         }
+    }
+    // Each read is found somewhere, so a renamed receiver cannot switch the scan off unseen.
+    for r in OS_NAME_READS {
+        assert!(seen.contains(&r), "no QML line reads {r}");
     }
 }
