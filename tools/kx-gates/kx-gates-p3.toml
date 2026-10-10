@@ -48,7 +48,7 @@ char_ms = 30.0
 subscribers = 20
 publishes = 10000
 bus_share = 0.01
-# PresentMon's CSV in the out folder, recorded while G8 runs.
+# PresentMon's CSV in the out folder, recorded while G8 runs up to its churn.
 presentmon = "g8-presentmon.csv"
 # How long that capture records, in seconds: G8's run up to the churn, about a minute. G8 waits for its end before the
 # churn, so a theme switch never counts as a dropped frame.
@@ -66,7 +66,8 @@ presentmon_stop_ms = 15000
 quit_tries = 50
 quit_try_ms = 200
 # Churn (spec §10, no growth), last in a G8 run: each round hovers keys for their tips, opens and closes the language
-# list in the List design, minimises to the bubble and back with [g9]'s buttons, and cycles the theme button once.
+# list in the List design, minimises to the bubble and back with [g9]'s buttons, and presses the theme button once per
+# theme.
 # It moves the pointer but never clicks, and presses buttons by UI Automation.
 # Unmeasured rounds first, so each pop-up's first show, a one-time cost, is not counted as growth.
 churn_warm_rounds = 1

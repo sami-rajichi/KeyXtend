@@ -121,7 +121,7 @@ pub fn warm_left(from: Instant, warm_ms: u64, now: Instant) -> Duration {
 mod tests {
     use super::*;
 
-    /// A warm-up of 10 s, as the shipped settings have.
+    /// A sample warm-up, in ms.
     const WARM_MS: u64 = 10_000;
 
     #[test]

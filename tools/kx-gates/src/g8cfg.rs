@@ -70,7 +70,7 @@ pub struct G8 {
     pub bus_share: f64,
     /// `PresentMon`'s CSV, in the out folder.
     pub presentmon: String,
-    /// How long `PresentMon` records, in seconds; long enough to cover a G8 run.
+    /// How long `PresentMon` records, in seconds; long enough to cover G8's run up to the churn.
     pub presentmon_secs: u64,
     /// The `PresentMon` program G8 starts as administrator; empty when G8 only says how to record.
     pub presentmon_exe: String,
@@ -251,7 +251,8 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 10] = [
+        let bad: [fn(&mut G8); 11] = [
+            |g| g.churn_rounds = 0,
             |g| g.memory_mb = 0.0,
             |g| g.commit_mb = f64::NAN,
             |g| g.warm_ms = 0,

@@ -47,8 +47,9 @@ pub struct Plan {
     theme: String,
     /// The keyboard's window, which hides while the bubble shows.
     keyboard: HWND,
-    /// The buttons that minimise the keyboard and bring it back, from `[g9]`.
+    /// The top bar's minimise button, from `[g9] put_away`.
     hide: String,
+    /// The bubble, which brings the keyboard back, from `[g9] bring_back`.
     back: String,
 }
 
