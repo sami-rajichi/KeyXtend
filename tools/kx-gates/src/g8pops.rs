@@ -28,6 +28,8 @@ pub struct Plan {
     pub lang: Option<String>,
     /// Theme button presses that bring the theme back: one per shipped theme.
     themes: usize,
+    /// The owner's theme, which each cycle must end on.
+    theme: String,
     /// The keyboard's window, which hides while the bubble shows.
     keyboard: HWND,
     /// The buttons that minimise the keyboard and bring it back, from `[g9]`.
@@ -49,12 +51,14 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
     let lists = product::keyboard()?.lang_key == LangKey::List;
     let lang = lists.then(|| board::id_of(Role::Lang)).transpose()?;
     let themes = Themes::shipped().map_err(|e| format!("the shipped themes: {e}"))?;
+    let look = uilook::running()?;
     Ok(Plan {
         tips,
         away,
-        hover_ms: uilook::running()?.tip_ms + g.churn_tip_ms,
+        hover_ms: look.tip_ms + g.churn_tip_ms,
         lang,
         themes: themes.list.len(),
+        theme: look.theme,
         keyboard: kb.hwnd,
         hide: g9.put_away.clone(),
         back: g9.bring_back.clone(),
@@ -114,14 +118,26 @@ fn bubble(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), S
     Ok(())
 }
 
-/// Presses the theme button `n` times, once per theme, so the theme ends where it started.
-fn themes(g: &G8, reader: &Reader, n: usize) -> Result<(), String> {
+/// Nothing when a theme cycle that started on theme `was` ended on it, `now`; else why the churn stops.
+fn back_to(was: &str, now: &str) -> Result<(), String> {
+    if was == now {
+        Ok(())
+    } else {
+        Err(format!(
+            "a theme cycle from {was} ended on {now}, so {THEME_LEFT}"
+        ))
+    }
+}
+
+/// Presses the theme button once per theme, then checks the running copy is back on the owner's theme.
+fn themes(g: &G8, reader: &Reader, plan: &Plan) -> Result<(), String> {
+    let n = plan.themes;
     for i in 0..n {
         let left = |e| format!("{e}; pressed {i} of {n} times, so {THEME_LEFT}");
         product::invoke(reader, &g.churn_theme).map_err(left)?;
         sleep_ms(g.churn_settle_ms);
     }
-    Ok(())
+    back_to(&plan.theme, &uilook::running()?.theme)
 }
 
 /// One round: the tips, the list when the language key opens one, the bubble, and a full theme cycle.
@@ -134,11 +150,21 @@ pub fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<()
         list(g, reader, lang, base, seen)?;
     }
     bubble(g, reader, plan, seen)?;
-    themes(g, reader, plan.themes)
+    themes(g, reader, plan)
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn a_theme_cycle_that_ends_elsewhere_stops_the_churn_and_says_how_to_undo_it() {
+        assert_eq!(back_to("native", "native"), Ok(()));
+        let e = back_to("native", "et66").expect_err("the owner's theme moved");
+        assert!(e.contains("native") && e.contains("et66"), "{e}");
+        assert!(e.contains(THEME_LEFT), "{e}");
+    }
+
     /// The windows whose buttons the bubble step presses.
     // Workspace paths from `tools/kx-gates/src`; a moved file breaks the build here, never silently.
     const TOP_BAR_QML: &str = include_str!("../../../crates/kx-ui/qml/TopBar.qml");
