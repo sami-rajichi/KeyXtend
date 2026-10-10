@@ -103,6 +103,7 @@
 3. Pop-in, hover and press motion feel as smooth as before.
 4. Typing EN, FR and AR in Notepad.
 5. Gates: G8 (PresentMon, admin prompt), G2, G9, G10, G11 at 100/150/200 %, G13.
+6. A real GPU reset, with the owner's yes for each (it needs admin and the Graphics Tools feature): `dxcap -forcetdr` once with the keyboard shown, once closed and once minimised. Each time it comes back in the same mode, place and size, and the log shows one rebuild.
 
 ## Done when
 - The Definition of Done in `docs/roadmap.md` is met.
