@@ -59,6 +59,11 @@ Item {
     readonly property bool glowing: glow.running
     // This key showed a tip, which it takes back on leave even when its note went meanwhile.
     property bool tipped: false
+    // How lit the lock glow and the light's glow are, 0 to 1, and the light's colour. They ease here on the key, so a
+    // glow or light made only while it shows starts where the key is.
+    property real lockLit: on && !rec ? 1 : 0
+    property real ledLit: on ? 1 : 0
+    property color ledColour: on ? p.led_on : p.led_off
 
     x: kv.x + inset
     y: kv.y + inset
@@ -110,6 +115,21 @@ Item {
             move: key.mv.press
         }
     }
+    Behavior on lockLit {
+        Tween {
+            move: key.mv.colour
+        }
+    }
+    Behavior on ledLit {
+        Tween {
+            move: key.mv.colour
+        }
+    }
+    Behavior on ledColour {
+        ColourTween {
+            move: key.mv.colour
+        }
+    }
     // A recording cap glows (mock-up .key.rec .cap); loops never run at 0 ms.
     SequentialAnimation on lift {
         id: glow
@@ -129,18 +149,15 @@ Item {
         }
     }
 
-    // A locked key's glow (Dolch); the recording key has its own.
-    RectangularShadow {
-        opacity: key.on && !key.rec ? 1 : 0
-        visible: opacity > 0 && !key.lk.contrast && key.look.lock_glow_px > 0
+    // A locked key's glow (Dolch), made only while it shows; the recording key has its own.
+    Loader {
         anchors.fill: cap
-        blur: key.look.lock_glow_px * key.s
-        radius: key.radius
-        color: Qt.rgba(key.onColour.r, key.onColour.g, key.onColour.b, key.look.lock_glow_mix)
-        Behavior on opacity {
-            Tween {
-                move: key.mv.colour
-            }
+        active: key.lockLit > 0 && !key.lk.contrast && key.look.lock_glow_px > 0
+        sourceComponent: RectangularShadow {
+            opacity: key.lockLit
+            blur: key.look.lock_glow_px * key.s
+            radius: key.radius
+            color: Qt.rgba(key.onColour.r, key.onColour.g, key.onColour.b, key.look.lock_glow_mix)
         }
     }
 
@@ -203,8 +220,12 @@ Item {
             icon: key.icon
             label: key.label
         }
-        Led {
-            key: key
+        // The light, made only where it shows: on a lit or recording key, or on every key of a theme with off lights.
+        Loader {
+            active: key.rec || key.ledLit > 0 || key.ledColour.a > 0
+            sourceComponent: Led {
+                key: key
+            }
         }
     }
 

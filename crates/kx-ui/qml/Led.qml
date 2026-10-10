@@ -1,4 +1,6 @@
-// A key's LED, with its glow while lit; it pulses while recording (mock-up .key.rec .led).
+// A key's LED, with its glow made only while lit; it pulses while recording (mock-up .key.rec .led). Its colour and
+// glow ease on the key (`ledColour`, `ledLit`).
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 
@@ -34,27 +36,20 @@ Item {
             to: 1
         }
     }
-    RectangularShadow {
-        opacity: led.key.on ? 1 : 0
-        visible: opacity > 0 && !led.key.lk.contrast
+    // High contrast has no glow.
+    Loader {
         anchors.fill: parent
-        blur: led.key.look.led_glow_px * led.key.s
-        radius: parent.width / 2
-        color: led.key.p.led_on
-        Behavior on opacity {
-            Tween {
-                move: led.key.mv.colour
-            }
+        active: led.key.ledLit > 0 && !led.key.lk.contrast
+        sourceComponent: RectangularShadow {
+            opacity: led.key.ledLit
+            blur: led.key.look.led_glow_px * led.key.s
+            radius: led.width / 2
+            color: led.key.p.led_on
         }
     }
     Rectangle {
         anchors.fill: parent
         radius: width / 2
-        color: led.key.on ? led.key.p.led_on : led.key.p.led_off
-        Behavior on color {
-            ColourTween {
-                move: led.key.mv.colour
-            }
-        }
+        color: led.key.ledColour
     }
 }
