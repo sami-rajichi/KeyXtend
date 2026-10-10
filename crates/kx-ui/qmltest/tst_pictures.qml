@@ -97,7 +97,7 @@ Item {
             return f;
         }
         // The space bar's text as the hub joins `parts`: each layout after the language through `lang.space`, whose
-        // variables the texts test leaves as Fluent shows them, each between bidi isolation marks.
+        // variables the texts test leaves as Fluent shows them, as `{$name}`.
         function spaceOf(texts) {
             const at = name => "{$" + name + "}";
             const join = (lang, layout) => texts["lang.space"].replace(at("lang"), lang).replace(at("layout"), layout);

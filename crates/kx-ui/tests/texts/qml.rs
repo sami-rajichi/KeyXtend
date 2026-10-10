@@ -1,5 +1,6 @@
-//! Writes what the Qt Quick tests read (settings, texts, the keyboard's golden board and states, the assets laid out
-//! as the resources hold them, and the picture folder); a change or a stray file fails it until it runs with `KX_BLESS=1`.
+//! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the assets
+//! laid out as the resources hold them, and the picture folder); a change or a stray file fails it until it runs with
+//! `KX_BLESS=1`.
 
 use crate::files::keys_of;
 use kx_module_api::ports::{
@@ -166,6 +167,19 @@ fn face() -> String {
     )
 }
 
+/// The parts of each space-bar text the face's states make, once, with the first state that makes it.
+pub fn spaces() -> Vec<(String, Vec<String>)> {
+    let mut out: Vec<(String, Vec<String>)> = Vec::new();
+    for s in STATES {
+        let parts = golden(&format!("state-{s}"))["lang"]["space"].clone();
+        let parts: Vec<String> = serde_json::from_value(parts).expect("space-bar parts");
+        if !out.iter().any(|(_, p)| *p == parts) {
+            out.push(((*s).to_owned(), parts));
+        }
+    }
+    out
+}
+
 /// The bundled assets as `Ui.assets()` names them, relative to where they are laid out, that place, and the font
 /// families Windows ships, which the tests' font rule may skip on a system without them.
 fn assets() -> String {
@@ -220,6 +234,8 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
         .collect();
     written.push(fixture("face.js".into(), &face()));
     written.push(fixture("assets.js".into(), &assets()));
+    let order = var("texts", &crate::filled::order(), true);
+    written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()

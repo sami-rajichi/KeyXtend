@@ -144,7 +144,7 @@ Item {
             font.weight: t.look.legend_weight
             color: t.ink
         }
-        // The space bar: the language and the layout, joined with bidi marks so Arabic and Latin parts keep their order.
+        // The space bar: the language and the layout, without bidi marks, so the first letter sets the reading order.
         Line {
             visible: t.isSpace
             anchors.fill: parent

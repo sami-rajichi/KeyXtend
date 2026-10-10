@@ -1,11 +1,11 @@
 //! Texts built from parts: notices with their arguments, joined lists, hidden marks and the space bar.
 
-use crate::{ISOLATE, all, items, lang, plain};
+use crate::{all, items, lang};
 use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
 use kx_ui::i18n::keys::LIST_JOIN;
 
-/// Every bidi control a quoted TOML key may hold, Fluent's own isolation marks included.
+/// Every bidi control a quoted TOML key or an OS name may hold, the isolates included.
 const CONTROLS: [char; 12] = [
     '\u{61c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}',
     '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
@@ -32,7 +32,7 @@ fn sample(key: &'static str) -> Notice {
 fn a_notice_shows_its_module_list_and_count() {
     let text = lang("en").notice(&sample(SETTINGS_RESET));
     let want = "Some Keyboard settings were not valid, so they went back to their defaults: size, x and 3 more.";
-    assert_eq!(plain(&text), want);
+    assert_eq!(text, want);
 }
 
 #[test]
@@ -42,13 +42,13 @@ fn a_reset_that_names_no_setting_says_how_many() {
     let text = lang("en").notice(&notice);
     let want =
         "Some Keyboard settings were not valid, so they went back to their defaults: 3 settings.";
-    assert_eq!(plain(&text), want);
+    assert_eq!(text, want);
 }
 
 #[test]
 fn french_names_the_part_in_guillemets() {
     let fr = lang("fr");
-    let text = plain(&fr.notice(&sample(MODULE_FAILED)));
+    let text = fr.notice(&sample(MODULE_FAILED));
     let want = "La partie «\u{a0}Clavier\u{a0}» s’est arrêtée après une erreur. Tout le reste fonctionne toujours.";
     assert_eq!(text, want);
     let unsaved = fr.notice(&sample(SETTINGS_UNSAVED));
@@ -82,13 +82,12 @@ fn each_language_joins_a_list_its_own_way() {
 }
 
 #[test]
-fn latin_words_inside_arabic_text_are_isolated() {
+fn latin_words_sit_in_arabic_text_without_marks() {
     let mut notice = sample(SETTINGS_RESET);
     notice.args.truncate(2);
     notice.args[1].1 = NoticeArg::List(items(&["log_level"]));
     let text = lang("ar").notice(&notice);
-    let isolated = format!("{}log_level{}", ISOLATE[0], ISOLATE[1]);
-    assert!(text.contains(&isolated), "{text:?}");
+    assert!(text.ends_with("الافتراضية: log_level."), "{text:?}");
 }
 
 #[test]
@@ -98,15 +97,12 @@ fn bidi_controls_in_names_and_words_are_dropped() {
         assert_eq!(t.list(&[format!("a{all_controls}b")], 0), "ab");
     }
     let only_controls = lang("en").list(std::slice::from_ref(&all_controls), 0);
-    assert_eq!(plain(&only_controls), "1 setting", "counted, not named");
+    assert_eq!(only_controls, "1 setting", "counted, not named");
     let mut notice = sample(SETTINGS_RESET);
     notice.args[0].1 = NoticeArg::Text(format!("{all_controls}mystery"));
     notice.args[1].1 = NoticeArg::List(vec![format!("\u{202e}{all_controls}evil")]);
     let text = lang("ar").notice(&notice);
-    let foreign = |c: &char| CONTROLS.contains(c) && !ISOLATE.contains(c);
-    assert!(!text.chars().any(|c| foreign(&c)), "{text:?}");
-    let count = |mark: char| text.chars().filter(|c| *c == mark).count();
-    assert_eq!(count(ISOLATE[0]), count(ISOLATE[1]), "{text:?}");
+    assert!(!text.chars().any(|c| CONTROLS.contains(&c)), "{text:?}");
 }
 
 #[test]
@@ -122,14 +118,36 @@ fn line_breaks_and_control_characters_in_names_are_dropped() {
         let text = t.notice(&notice);
         let bad = text.chars().find(|c| c.is_control() || BREAKS.contains(c));
         assert_eq!(bad, None, "{tag}: {text:?}");
-        assert!(plain(&text).contains(&want), "{tag}: {text:?}");
+        assert!(text.contains(&want), "{tag}: {text:?}");
     }
 }
 
 #[test]
 fn the_space_bar_joins_the_language_and_the_layout() {
     let en = lang("en");
-    assert_eq!(plain(&en.space(&items(&["English", "US"]))), "English · US");
+    assert_eq!(en.space(&items(&["English", "US"])), "English · US");
     assert_eq!(en.space(&items(&["English"])), "English");
     assert_eq!(en.space(&[]), "");
+}
+
+#[test]
+fn os_names_on_the_space_bar_lose_their_hidden_marks() {
+    let all_controls: String = CONTROLS.iter().collect();
+    let parts = [
+        format!("{all_controls}English"),
+        format!("U{}S{C0}", BREAKS[0]),
+    ];
+    for t in all() {
+        let want = t.space(&items(&["English", "US"]));
+        assert_eq!(t.space(&parts), want, "{}", t.lang().tag);
+    }
+}
+
+#[test]
+fn a_space_bar_part_of_hidden_marks_only_is_left_out() {
+    let en = lang("en");
+    let hidden: String = CONTROLS.iter().chain(&BREAKS).collect();
+    assert_eq!(en.space(&[hidden.clone(), "US".to_owned()]), "US");
+    assert_eq!(en.space(&["English".to_owned(), hidden.clone()]), "English");
+    assert_eq!(en.space(&[hidden]), "");
 }

@@ -10,6 +10,7 @@
 mod board;
 mod compose;
 mod files;
+mod filled;
 mod markup;
 mod plural;
 mod qml;
@@ -44,14 +45,6 @@ fn keyboard_defaults() -> toml::Table {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(KEYBOARD_DEFAULTS);
     let text = std::fs::read_to_string(path).expect("the keyboard defaults read");
     toml::from_str(&text).expect("the keyboard defaults parse")
-}
-
-/// Fluent's marks around each argument, which keep Latin words in order inside Arabic text.
-const ISOLATE: [char; 2] = ['\u{2068}', '\u{2069}'];
-
-/// `text` without Fluent's isolation marks.
-fn plain(text: &str) -> String {
-    text.chars().filter(|c| !ISOLATE.contains(c)).collect()
 }
 
 /// The texts of every shipped language.

@@ -1,7 +1,6 @@
 // Single parts over the real look fixtures: the cap inside its cell, icons tinted with public Qt Quick only, the hover
-// outline in high contrast, dimmed keys, plate icons and chips, and bidi marks that take no room.
+// outline in high contrast, dimmed keys, plate icons and chips. Texts carry no bidi marks (tst_order, ADR-0022).
 import QtQuick
-import QtQml.Models
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
@@ -12,7 +11,6 @@ import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
 import "../../kx-theme/fixtures/look-et66-light.js" as E
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
 import "pointer.js" as Pointer
-import "fonts.js" as Fonts
 
 Item {
     id: root
@@ -30,17 +28,6 @@ Item {
         space: parts => parts.join(" · "),
         noteTip: (name, note) => name + "\n" + note
     })
-    // The bundled fonts loaded so far, from where the texts test lays them out.
-    property int fontsIn: 0
-
-    Instantiator {
-        model: Assets.assets.fonts
-        delegate: FontLoader {
-            required property string modelData
-            source: Qt.resolvedUrl(Assets.root + "/" + modelData)
-            onStatusChanged: if (status === FontLoader.Ready) root.fontsIn++
-        }
-    }
 
     // Board key `id` and its English state.
     function kv(id) {
@@ -53,7 +40,6 @@ Item {
     Component { id: keyC; Key {} }
     Component { id: iconC; Icon {} }
     Component { id: chipC; Chip {} }
-    Component { id: labelC; Label {} }
     Component {
         id: plateC
         Rectangle {
@@ -267,24 +253,6 @@ Item {
                     most = Math.max(most, Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b));
                 }
             verify(most < grayEdge, "the most colour at an edge: " + most);
-        }
-
-        // One row per family a theme names, so a Windows family this system lacks skips alone (fonts.js).
-        function test_bidi_isolation_marks_take_no_room_data() {
-            const lists = [N, E, D].map(t => t.lk.look.latin_fonts.concat(t.lk.look.arabic_fonts));
-            return [...new Set([].concat(...lists))].map(f => ({ tag: f, family: f }));
-        }
-        function test_bidi_isolation_marks_take_no_room(row) {
-            tryCompare(root, "fontsIn", Assets.assets.fonts.length, 5000, "the bundle is laid out by cargo test -p kx-ui --test texts");
-            const family = row.family;
-            Fonts.need([family], skip);
-            verify(Qt.fontFamilies().indexOf(family) >= 0, family + " is in");
-            const plain = createTemporaryObject(labelC, root, { text: "English · US", "font.family": family });
-            const marked = createTemporaryObject(labelC, root, { text: "⁨English⁩ · ⁨US⁩", "font.family": family });
-            compare(marked.implicitWidth, plain.implicitWidth, family);
-            const ar = createTemporaryObject(labelC, root, { text: "العربية · Arabic", "font.family": family });
-            const arMarked = createTemporaryObject(labelC, root, { text: "⁨العربية⁩ · ⁨Arabic⁩", "font.family": family });
-            compare(arMarked.implicitWidth, ar.implicitWidth, family + " in Arabic");
         }
     }
 }

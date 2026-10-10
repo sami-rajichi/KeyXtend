@@ -122,7 +122,7 @@ QtObject {
     function moreText(n) {
         return more[n] !== undefined ? more[n] : String(n);
     }
-    // Fluent fills the page and the count into `page.of`, each between isolation marks the fixture keeps.
+    // Fluent fills the page and the count into `page.of`, whose variables the fixture shows as `{$name}`.
     function pageText(at, count) {
         return text("page.of").replace("{$at}", at).replace("{$count}", count);
     }

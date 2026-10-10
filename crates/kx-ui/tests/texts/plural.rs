@@ -1,6 +1,6 @@
 //! Counts: "and N more" and a bare count in each plural form, CLDR's Arabic rule, Western digits and huge counts.
 
-use crate::{all, items, lang, plain};
+use crate::{all, items, lang};
 
 /// CLDR's Arabic form for integer `n` (`n % 100` for few and many), as the text after a named list.
 fn cldr_arabic_more(n: usize) -> String {
@@ -41,7 +41,7 @@ fn arabic_counts_the_settings_left_out_in_its_five_reachable_forms() {
         (111, "و111 إعدادًا آخر"),
     ];
     for (more, form) in forms {
-        assert_eq!(plain(&ar.list(&items(&["a"]), more)), format!("a {form}"));
+        assert_eq!(ar.list(&items(&["a"]), more), format!("a {form}"));
     }
 }
 
@@ -50,21 +50,21 @@ fn arabic_and_french_forms_follow_cldr_for_every_count_up_to_1200() {
     let (ar, fr) = (lang("ar"), lang("fr"));
     for more in 1..=1200 {
         let named = format!("a {}", cldr_arabic_more(more));
-        assert_eq!(plain(&ar.list(&items(&["a"]), more)), named);
-        assert_eq!(plain(&ar.list(&[], more)), cldr_arabic_count(more));
+        assert_eq!(ar.list(&items(&["a"]), more), named);
+        assert_eq!(ar.list(&[], more), cldr_arabic_count(more));
         let word = if more == 1 { "autre" } else { "autres" };
         let french = format!("a et {more} {word}");
-        assert_eq!(plain(&fr.list(&items(&["a"]), more)), french);
+        assert_eq!(fr.list(&items(&["a"]), more), french);
     }
 }
 
 #[test]
 fn french_and_english_count_the_rest() {
     let fr = lang("fr");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 1)), "a et 1 autre");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 3)), "a et 3 autres");
-    assert_eq!(plain(&fr.list(&items(&["a"]), 103)), "a et 103 autres");
-    assert_eq!(plain(&lang("en").list(&items(&["a"]), 3)), "a and 3 more");
+    assert_eq!(fr.list(&items(&["a"]), 1), "a et 1 autre");
+    assert_eq!(fr.list(&items(&["a"]), 3), "a et 3 autres");
+    assert_eq!(fr.list(&items(&["a"]), 103), "a et 103 autres");
+    assert_eq!(lang("en").list(&items(&["a"]), 3), "a and 3 more");
 }
 
 #[test]
@@ -81,7 +81,7 @@ fn a_list_that_names_nothing_says_how_many() {
         ("ar", 103, "103 إعدادات"),
     ];
     for (tag, more, want) in cases {
-        assert_eq!(plain(&lang(tag).list(&[], more)), want, "{tag} {more}");
+        assert_eq!(lang(tag).list(&[], more), want, "{tag} {more}");
     }
     assert_eq!(lang("en").list(&[], 0), "");
 }
@@ -115,14 +115,14 @@ fn cldr_arabic_notices(n: usize) -> String {
 #[test]
 fn the_banner_counts_the_notices_waiting_in_each_plural_form() {
     let (en, fr, ar) = (lang("en"), lang("fr"), lang("ar"));
-    assert_eq!(plain(&en.more(1)), "1 more notice");
-    assert_eq!(plain(&fr.more(1)), "1 autre notification");
+    assert_eq!(en.more(1), "1 more notice");
+    assert_eq!(fr.more(1), "1 autre notification");
     for n in 2..=1200 {
-        assert_eq!(plain(&en.more(n)), format!("{n} more notices"));
-        assert_eq!(plain(&fr.more(n)), format!("{n} autres notifications"));
+        assert_eq!(en.more(n), format!("{n} more notices"));
+        assert_eq!(fr.more(n), format!("{n} autres notifications"));
     }
     for n in 1..=1200 {
-        assert_eq!(plain(&ar.more(n)), cldr_arabic_notices(n), "{n}");
+        assert_eq!(ar.more(n), cldr_arabic_notices(n), "{n}");
     }
     assert!(all().all(|t| t.more(0).is_empty()), "nothing waits");
     assert!(all().all(|t| t.more(usize::MAX).chars().any(|c| c.is_ascii_digit())));
@@ -132,6 +132,6 @@ fn the_banner_counts_the_notices_waiting_in_each_plural_form() {
 fn a_page_number_names_its_page_and_the_count() {
     let cases = [("en", "2 of 3"), ("fr", "2 sur 3"), ("ar", "2 من 3")];
     for (tag, want) in cases {
-        assert_eq!(plain(&lang(tag).page(2, 3)), want, "{tag}");
+        assert_eq!(lang(tag).page(2, 3), want, "{tag}");
     }
 }

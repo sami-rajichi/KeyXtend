@@ -108,8 +108,9 @@ fn join(group: &str, id: &str) -> String {
 fn bundle(lang: &Lang) -> Bundle {
     let res = FluentResource::try_new(lang.ftl.to_owned()).unwrap_or_else(|(res, _)| res);
     let mut b = Bundle::new_concurrent(vec![langid(lang.tag).unwrap_or_default()]);
-    // Each argument sits between bidi isolation marks, so Latin words keep their order inside Arabic text.
-    b.set_use_isolating(true);
+    // No bidi isolation marks: Qt searches every system font for their glyph, and they turned Arabic lines around
+    // (ADR-0022).
+    b.set_use_isolating(false);
     // A key written twice keeps its first text; the file tests refuse that.
     let _ = b.add_resource(res);
     b

@@ -91,22 +91,22 @@ impl I18n {
         self.format(PAGE_OF, Some(&values))
     }
 
-    /// The space bar's text from `parts`: the language, then the layout when known.
+    /// The space bar's text from `parts`, the OS's names: the language, then the layout when known. Each loses its
+    /// hidden marks, and a part that was only marks is left out.
     #[must_use]
     pub fn space(&self, parts: &[String]) -> String {
-        let mut rest = parts.iter();
-        let first = rest.next().cloned().unwrap_or_default();
+        let mut rest = parts.iter().map(|p| clean(p)).filter(|p| !p.is_empty());
+        let first = rest.next().unwrap_or_default();
         rest.fold(first, |lang, layout| {
             let mut values = FluentArgs::new();
             values.set(LANG_VAR, lang);
-            values.set(LAYOUT_VAR, layout.as_str());
+            values.set(LAYOUT_VAR, layout);
             self.format(SPACE, Some(&values))
         })
     }
 }
 
-/// `text` without hidden marks (`is_hidden`), so an argument can neither split a notice nor break
-/// out of its isolation.
+/// `text` without hidden marks (`is_hidden`), so an argument can neither split a text nor turn it around.
 fn clean(text: &str) -> String {
     text.chars().filter(|c| !is_hidden(*c)).collect()
 }
