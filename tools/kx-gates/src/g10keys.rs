@@ -9,7 +9,7 @@ use kx_platform_windows::keys;
 
 /// Why a key is left to the owner's Narrator and NVDA check.
 const NO_TOGGLE: &str = "its latch shows no toggle state through UI Automation";
-/// Why a failed step's key is left to the owner: its latch read nothing after.
+/// Why a failed step's key is left to the owner: its latch read on, or nothing, after.
 const MAY_BE_ON: &str = "the step failed and its latch may still be on";
 
 /// What one step must leave in target-window's key log.
@@ -54,7 +54,7 @@ impl Step {
     }
 
     /// Why the owner checks this step's key by hand, if at all: its latch never read (`unread`), or the step `failed`
-    /// and its latch read nothing `after`.
+    /// and its latch did not read as let go `after`.
     pub fn owner_why(
         &self,
         unread: bool,
@@ -65,7 +65,7 @@ impl Step {
             None
         } else if unread {
             Some(NO_TOGGLE)
-        } else if failed && after.is_none() {
+        } else if failed && after != Some(false) {
             Some(MAY_BE_ON)
         } else {
             None

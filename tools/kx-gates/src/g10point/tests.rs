@@ -96,6 +96,10 @@ fn only_the_keyboards_own_elements_have_their_id_and_name_read() {
         panic!("another app's label is read")
     });
     assert_eq!(theirs, Ok(None), "it may hold the owner's text");
+    let gone = own(0, 0, || -> Result<&str, String> {
+        panic!("a label is read for no keyboard")
+    });
+    assert_eq!(gone, Ok(None), "a keyboard gone reads as process 0");
     assert_eq!(
         own(KB, KB, || Err::<(), _>("UIA id".to_string())),
         Err("UIA id".into())

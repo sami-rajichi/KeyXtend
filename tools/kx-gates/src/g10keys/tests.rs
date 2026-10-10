@@ -106,6 +106,11 @@ fn the_owner_checks_a_latch_that_never_read_or_that_a_failed_step_may_have_left_
         Some(MAY_BE_ON),
         "failed, and unread after"
     );
+    assert_eq!(
+        shift.owner_why(false, true, Some(true)),
+        Some(MAY_BE_ON),
+        "failed, and still on after"
+    );
     assert_eq!(shift.owner_why(false, true, Some(false)), None, "let go");
     assert_eq!(shift.owner_why(false, false, None), None, "passed");
     assert_eq!(

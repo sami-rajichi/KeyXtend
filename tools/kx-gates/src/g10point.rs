@@ -148,13 +148,13 @@ fn tally(probes: &[Probe], kb: u32, shown: usize) -> Value {
     v
 }
 
-/// What `read` gives, read only when keyboard process `kb` shows the element, process `pid`.
+/// What `read` gives, read only when keyboard process `kb` shows the element, process `pid`; a gone keyboard is 0.
 fn own<T>(
     pid: u32,
     kb: u32,
     read: impl FnOnce() -> Result<T, String>,
 ) -> Result<Option<T>, String> {
-    (pid == kb).then(read).transpose()
+    (pid == kb && kb != 0).then(read).transpose()
 }
 
 /// The id and name of `el`, a keyboard element; its id must read, its name may be blank.
