@@ -75,9 +75,10 @@ pub mod qobject {
         #[qinvokable]
         fn panel_key(&self, id: &QString) -> QString;
 
-        /// The window sits at `x`, `y`, `w` by `h` physical pixels.
+        /// The window sits at `x`, `y`, `w` by `h` physical pixels; its resize corner hangs `overhang` Qt units past the
+        /// plate at size 1.
         #[qinvokable]
-        fn placed(&self, x: f64, y: f64, w: f64, h: f64) -> QString;
+        fn placed(&self, x: f64, y: f64, w: f64, h: f64, overhang: f64) -> QString;
 
         /// The pointer in physical pixels as JSON `{x, y}`, or `null`.
         #[qinvokable]
@@ -197,14 +198,14 @@ impl qobject::Keyboard {
         self.redraw(|h| h.panel_key(&id))
     }
 
-    fn placed(&self, x: f64, y: f64, w: f64, h: f64) -> QString {
+    fn placed(&self, x: f64, y: f64, w: f64, h: f64, overhang: f64) -> QString {
         let rect = Rect {
             x: whole(x),
             y: whole(y),
             w: whole(w),
             h: whole(h),
         };
-        self.redraw(|hub| hub.placed(rect))
+        self.redraw(|hub| hub.placed(rect, overhang))
     }
 
     fn cursor(&self) -> QString {

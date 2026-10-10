@@ -2,7 +2,7 @@
 
 use crate::host::{GOLDEN, saved};
 use crate::rig::{BOARD, Rig, STATE};
-use kx_mod_keyboard::place::home;
+use kx_mod_keyboard::place::{Extent, home};
 use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, Point, Rect, Screen, physical,
 };
@@ -11,6 +11,8 @@ use serde_json::{Value, json};
 
 /// The size-1 plate in logical pixels.
 const PLATE: (f64, f64) = (670.78, 196.0);
+/// How far the resize corner hangs past the plate at size 1: half the shipped themes' 20 px corner.
+const OVERHANG: f64 = 10.0;
 
 fn screen(x: i32, dpi: u32, primary: bool) -> Screen {
     let rect = Rect {
@@ -23,9 +25,18 @@ fn screen(x: i32, dpi: u32, primary: bool) -> Screen {
 }
 
 fn placed(x: i32, y: i32, screens: &[Screen]) -> FaceAction {
+    place_with(x, y, screens, 0.0)
+}
+
+/// The window at `x`, `y` with the resize corner hanging `overhang` past the plate at size 1.
+fn place_with(x: i32, y: i32, screens: &[Screen], overhang: f64) -> FaceAction {
     let rect = Rect { x, y, w: 1, h: 1 };
     let screens = screens.to_vec();
-    FaceAction::Placed { rect, screens }
+    FaceAction::Placed {
+        rect,
+        screens,
+        overhang,
+    }
 }
 
 fn at(p: Option<Point>) -> Value {
@@ -80,8 +91,36 @@ fn the_first_placement_starts_home_and_saves_nothing() {
     assert!(r.state()["at"].is_null(), "no screen known yet");
     let screens = [screen(0, BASE_DPI, true)];
     assert_eq!(r.act(placed(5, 5, &screens)), Ok(STATE));
-    assert_eq!(r.state()["at"], at(home(PLATE, &screens)));
+    assert_eq!(r.state()["at"], at(home(PLATE.into(), &screens)));
     assert!(r.host.sink.writes().is_empty());
+}
+
+#[test]
+fn placement_counts_the_resize_corner_hanging_past_the_plate() {
+    let r = Rig::new(&GOLDEN, None);
+    let screens = [screen(0, BASE_DPI, true)];
+    r.act(place_with(0, 0, &screens, OVERHANG)).unwrap();
+    let whole = Extent {
+        plate: PLATE,
+        overhang: OVERHANG,
+    };
+    assert_eq!(r.state()["at"], at(home(whole, &screens)));
+    let side = |v: f64| physical(v, BASE_DPI);
+    let (w, h) = (side(PLATE.0 + OVERHANG), side(PLATE.1 + OVERHANG));
+    r.act(place_with(1900, 1000, &screens, OVERHANG)).unwrap();
+    assert_eq!(r.state()["at"], json!({ "x": 1920 - w, "y": 1040 - h }));
+    r.act(FaceAction::Bigger).unwrap();
+    let grown = whole.scale(r.board()["size"].as_f64().unwrap()).whole();
+    let p: Point = serde_json::from_value(r.state()["at"].clone()).unwrap();
+    let reach = (p.x + side(grown.0), p.y + side(grown.1));
+    assert_eq!(reach, (1920, 1040), "a bigger step keeps the corner on");
+    let odd = Rig::new(&GOLDEN, None);
+    odd.act(place_with(0, 0, &screens, f64::NAN)).unwrap();
+    assert_eq!(
+        odd.state()["at"],
+        at(home(PLATE.into(), &screens)),
+        "no number, no corner"
+    );
 }
 
 #[test]
@@ -117,7 +156,7 @@ fn new_screens_bring_the_saved_place_back_without_saving() {
         Ok(STATE),
         "its screen is gone"
     );
-    assert_eq!(r.state()["at"], at(home(PLATE, &one)));
+    assert_eq!(r.state()["at"], at(home(PLATE.into(), &one)));
     let home = r.state()["at"].clone();
     let (x, y) = (home["x"].as_i64().unwrap(), home["y"].as_i64().unwrap());
     let (x, y) = (i32::try_from(x).unwrap(), i32::try_from(y).unwrap());

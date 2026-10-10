@@ -4,6 +4,17 @@ use proptest::prelude::*;
 
 /// The size-1 board, about 671 by 196 logical pixels.
 const PLATE: (f64, f64) = (670.78, 196.0);
+/// How far the resize corner hangs past the plate at size 1: half the shipped themes' 20 px corner.
+const OVERHANG: f64 = 10.0;
+/// The size-1 window with no corner, and with the corner hanging past the plate.
+const BARE: Extent = Extent {
+    plate: PLATE,
+    overhang: 0.0,
+};
+const CORNERED: Extent = Extent {
+    plate: PLATE,
+    overhang: OVERHANG,
+};
 /// A 150 % screen.
 const HIGH_DPI: u32 = 144;
 /// How far from the screens the tests try places, in pixels.
@@ -71,10 +82,10 @@ fn a_box_sits_centred_at_the_bottom_of_the_work_area() {
 #[test]
 fn the_keyboard_starts_at_the_bottom_centre_of_the_primary_screen() {
     let home_spot = at(624, 844);
-    assert_eq!(start(None, PLATE, &two()), Some(home_spot));
+    assert_eq!(start(None, BARE, &two()), Some(home_spot));
     let [high, primary] = left_first();
     assert_eq!(
-        home(PLATE, &[high, primary]),
+        home(BARE, &[high, primary]),
         Some(home_spot),
         "the primary, wherever it is listed"
     );
@@ -89,12 +100,8 @@ fn the_keyboard_starts_at_the_bottom_centre_of_the_primary_screen() {
             ..a
         },
     ];
-    assert_eq!(
-        home(PLATE, &none),
-        home(PLATE, &[b]),
-        "no primary: the first"
-    );
-    assert_eq!(start(None, PLATE, &[]), None);
+    assert_eq!(home(BARE, &none), home(BARE, &[b]), "no primary: the first");
+    assert_eq!(start(None, BARE, &[]), None);
 }
 
 #[test]
@@ -105,20 +112,66 @@ fn the_primary_home_uses_the_primary_dpi() {
         primary: true,
     };
     let (w, h) = size_on(&high);
-    assert_eq!(home(PLATE, &[high]), Some(at((2560 - w) / 2, 1400 - h)));
+    assert_eq!(home(BARE, &[high]), Some(at((2560 - w) / 2, 1400 - h)));
+}
+
+#[test]
+fn at_home_the_plate_keeps_its_centre_and_rises_so_its_corner_clears_the_taskbar() {
+    let screens = two();
+    let (bare, cornered) = (
+        home(BARE, &screens).unwrap(),
+        home(CORNERED, &screens).unwrap(),
+    );
+    assert_eq!(cornered.x, bare.x, "the plate stays centred");
+    assert_eq!(cornered.y, bare.y - physical(OVERHANG, BASE_DPI));
+}
+
+#[test]
+fn a_corner_that_would_leave_the_work_area_moves_the_plate_only_as_far_as_it_needs() {
+    let (w, h) = sized(CORNERED.whole(), BASE_DPI);
+    let narrow = Screen {
+        rect: rect(0, 0, w + 4, 1040),
+        dpi: BASE_DPI,
+        primary: true,
+    };
+    let home_spot = home(CORNERED, &[narrow]);
+    assert_eq!(
+        home_spot,
+        Some(at(4, 1040 - h)),
+        "flush right and at the bottom"
+    );
+    assert!(
+        home(BARE, &[narrow]).unwrap().x > 4,
+        "the plate alone sat further right"
+    );
+    let [primary, _] = two();
+    let edge = fit(at(1900, 1000), CORNERED, &[primary]);
+    assert_eq!(
+        edge,
+        Some(at(1920 - w, 1040 - h)),
+        "a move counts the corner too"
+    );
+}
+
+#[test]
+fn a_window_grows_with_its_corner() {
+    let big = CORNERED.scale(2.0).whole();
+    assert!((big.0 - 2.0 * (PLATE.0 + OVERHANG)).abs() < 1e-9);
+    assert!((big.1 - 2.0 * (PLATE.1 + OVERHANG)).abs() < 1e-9);
+    assert_eq!(Extent::from(PLATE), BARE, "a plain box has no corner");
 }
 
 #[test]
 fn a_saved_place_on_a_screen_stays() {
-    assert_eq!(start(Some(at(100, 200)), PLATE, &two()), Some(at(100, 200)));
+    assert_eq!(start(Some(at(100, 200)), BARE, &two()), Some(at(100, 200)));
 }
 
 #[test]
 fn an_off_screen_place_returns_to_the_bottom_centre() {
     let screens = two();
-    let home_spot = home(PLATE, &screens);
+    let home_spot = home(BARE, &screens);
     for far in [at(FAR, FAR), at(-FAR, 0), at(0, -FAR), at(1920, 1400)] {
-        assert_eq!(start(Some(far), PLATE, &screens), home_spot, "{far:?}");
+        assert_eq!(start(Some(far), BARE, &screens), home_spot, "{far:?}");
     }
 }
 
@@ -126,11 +179,11 @@ fn an_off_screen_place_returns_to_the_bottom_centre() {
 fn a_place_on_a_second_screen_with_another_dpi_stays_there() {
     let screens = two();
     assert_eq!(
-        start(Some(at(2400, 900)), PLATE, &screens),
+        start(Some(at(2400, 900)), BARE, &screens),
         Some(at(2400, 900))
     );
     let (w, _) = size_on(&screens[1]);
-    let near_edge = fit(at(3600, 900), PLATE, &screens);
+    let near_edge = fit(at(3600, 900), BARE, &screens);
     assert_eq!(
         near_edge,
         Some(at(1920 + 2560 - w, 900)),
@@ -140,9 +193,9 @@ fn a_place_on_a_second_screen_with_another_dpi_stays_there() {
 
 #[test]
 fn a_place_past_the_edge_is_stopped_at_the_edge() {
-    assert_eq!(fit(at(-300, 1000), PLATE, &two()), Some(at(0, 844)));
-    assert_eq!(fit(at(300, -50), PLATE, &two()), Some(at(300, 0)));
-    let r = fit(at(1320, 500), PLATE, &two());
+    assert_eq!(fit(at(-300, 1000), BARE, &two()), Some(at(0, 844)));
+    assert_eq!(fit(at(300, -50), BARE, &two()), Some(at(300, 0)));
+    let r = fit(at(1320, 500), BARE, &two());
     assert_eq!(r, Some(at(1920 - 671, 500)), "mostly on the primary");
 }
 
@@ -150,7 +203,7 @@ fn a_place_past_the_edge_is_stopped_at_the_edge() {
 fn a_window_across_two_screens_goes_to_the_one_it_covers_most() {
     let screens = two();
     let (w, _) = size_on(&screens[1]);
-    let r = fit(at(1920 - 100, 500), PLATE, &screens).unwrap();
+    let r = fit(at(1920 - 100, 500), BARE, &screens).unwrap();
     assert_eq!(r, at(1920, 500), "most of it is on the second screen");
     assert!(within(r, (w, physical(PLATE.1, HIGH_DPI)), screens[1].rect));
 }
@@ -198,15 +251,19 @@ fn odd_screens_never_panic() {
         dpi: 0,
         primary: true,
     };
-    let _ = start(Some(at(i32::MAX, i32::MIN)), PLATE, &[odd]);
-    let _ = start(None, (f64::NAN, f64::INFINITY), &[odd]);
+    let _ = start(Some(at(i32::MAX, i32::MIN)), BARE, &[odd]);
+    let odd_size = Extent {
+        plate: (f64::NAN, f64::INFINITY),
+        overhang: f64::NAN,
+    };
+    let _ = start(None, odd_size, &[odd]);
 }
 
 proptest! {
     #[test]
     fn a_fitted_place_lies_wholly_on_one_screen(x in -FAR..FAR, y in -FAR..FAR, left in any::<bool>()) {
         let screens = if left { left_first() } else { two() };
-        let p = fit(at(x, y), PLATE, &screens).unwrap();
+        let p = fit(at(x, y), BARE, &screens).unwrap();
         let on = screens.iter().any(|s| within(p, size_on(s), s.rect));
         prop_assert!(on, "{p:?}");
     }
@@ -222,12 +279,20 @@ proptest! {
             off
         };
         let p = at(s.rect.x + room(s.rect.w, w, fx), s.rect.y + room(s.rect.h, h, fy));
-        prop_assert_eq!(fit(p, PLATE, &two()), Some(p));
+        prop_assert_eq!(fit(p, BARE, &two()), Some(p));
+    }
+
+    #[test]
+    fn a_fitted_window_lies_wholly_on_one_screen_corner_and_all(x in -FAR..FAR, y in -FAR..FAR) {
+        let screens = two();
+        let p = fit(at(x, y), CORNERED, &screens).unwrap();
+        let on = screens.iter().any(|s| within(p, sized(CORNERED.whole(), s.dpi), s.rect));
+        prop_assert!(on, "{p:?}");
     }
 
     #[test]
     fn a_place_off_every_screen_goes_home(x in FAR..2 * FAR, y in -FAR..FAR) {
         let screens = two();
-        prop_assert_eq!(fit(at(x, y), PLATE, &screens), home(PLATE, &screens));
+        prop_assert_eq!(fit(at(x, y), BARE, &screens), home(BARE, &screens));
     }
 }

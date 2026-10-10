@@ -2,36 +2,46 @@
 //! bar's right never leave it, and only a move by the user is saved.
 
 use super::{Inner, STATE, notice};
-use crate::place::{landing, room, screen_of};
+use crate::place::{Extent, landing, room, screen_of};
 use crate::sizer::{SizeError, Sizer};
 use kx_module_api::keys;
 use kx_module_api::ports::{BASE_DPI, FaceError, FaceReply, Point, Rect, Screen, physical};
 
 impl Inner {
-    /// The window's size now, in logical pixels.
-    pub(super) fn size(&self) -> (f64, f64) {
-        let plate = self.plate.scale(self.sizer.size());
-        (plate.w, plate.h)
+    /// The window at size 1, in logical pixels: the plate and the resize corner hanging past it.
+    fn unit(&self) -> Extent {
+        Extent {
+            plate: (self.plate.w, self.plate.h),
+            overhang: self.overhang,
+        }
     }
 
-    /// The window's size in the physical pixels of the screen it is on, as the pointer counts them.
+    /// The window now, in logical pixels.
+    pub(super) fn size(&self) -> Extent {
+        self.unit().scale(self.sizer.size())
+    }
+
+    /// The plate's size in the physical pixels of the screen the window is on, as the pointer counts them.
     pub(super) fn plate_px(&self) -> (f64, f64) {
         let size = self.size();
         let on = self
             .placer
             .at()
-            .and_then(|at| screen_of(at, size, &self.screens));
+            .and_then(|at| screen_of(at, size.whole(), &self.screens));
         let dpi = on.map_or(BASE_DPI, |s| s.dpi);
-        (
-            f64::from(physical(size.0, dpi)),
-            f64::from(physical(size.1, dpi)),
-        )
+        let (w, h) = size.plate;
+        (f64::from(physical(w, dpi)), f64::from(physical(h, dpi)))
     }
 
-    /// The window ended at `rect`: where the face put it, the saved place is fitted to `screens` again without
-    /// saving; anywhere else the user moved it, so it is fitted and saved.
-    pub(super) fn placed(&mut self, rect: Rect, screens: Vec<Screen>) -> FaceReply {
+    /// The window ended at `rect`, its corner hanging `overhang` past the plate at size 1: where the face put it, the
+    /// saved place is fitted to `screens` again without saving; anywhere else the user moved it, so it is saved.
+    pub(super) fn placed(&mut self, rect: Rect, screens: Vec<Screen>, overhang: f64) -> FaceReply {
         self.screens = screens;
+        self.overhang = if overhang.is_finite() {
+            overhang.max(0.0)
+        } else {
+            0.0
+        };
         let to = Point {
             x: rect.x,
             y: rect.y,
@@ -74,9 +84,8 @@ impl Inner {
 
     /// Caps the size at the room on the screen a window at `at` lands on, home when `None`; true when it changed.
     fn fit_size(&mut self, at: Option<Point>) -> bool {
-        let unit = (self.plate.w, self.plate.h);
-        let on = landing(at, self.size(), &self.screens);
-        on.and_then(|s| room(unit, s))
+        let on = landing(at, self.size().whole(), &self.screens);
+        on.and_then(|s| room(self.unit().whole(), s))
             .is_some_and(|fits| self.sizer.fit(fits))
     }
 

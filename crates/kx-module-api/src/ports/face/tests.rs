@@ -43,6 +43,7 @@ fn built() -> [FaceAction; 3] {
     let placed = FaceAction::Placed {
         rect,
         screens: vec![screen],
+        overhang: 10.5,
     };
     let panel = FaceAction::PanelKey {
         key: KeyId::new(KEY),
@@ -73,7 +74,7 @@ fn wire() -> Vec<(FaceAction, &'static str)> {
         (FaceAction::ResizeEnd, r#"{"act":"resize_end"}"#),
         (
             placed,
-            r#"{"act":"placed","rect":{"x":-8,"y":40,"w":900,"h":300},"screens":[{"rect":{"x":-8,"y":40,"w":900,"h":300},"dpi":144,"primary":true}]}"#,
+            r#"{"act":"placed","rect":{"x":-8,"y":40,"w":900,"h":300},"screens":[{"rect":{"x":-8,"y":40,"w":900,"h":300},"dpi":144,"primary":true}],"overhang":10.5}"#,
         ),
         (FaceAction::Relabel, r#"{"act":"relabel"}"#),
         (
@@ -105,12 +106,28 @@ fn pointer_and_window_places_may_have_fractions() {
     let want = FaceAction::ResizeAt { x: 11, y: 0 };
     assert_eq!(serde_json::from_str::<FaceAction>(at).unwrap(), want);
     let screen = r#"{"rect":{"x":0,"y":0,"w":1919.6,"h":1040},"dpi":96,"primary":false}"#;
-    let placed =
-        format!(r#"{{"act":"placed","rect":{{"x":0.5,"y":1,"w":2,"h":3}},"screens":[{screen}]}}"#);
-    let FaceAction::Placed { rect, screens } = serde_json::from_str(&placed).unwrap() else {
+    let placed = format!(
+        r#"{{"act":"placed","rect":{{"x":0.5,"y":1,"w":2,"h":3}},"screens":[{screen}],"overhang":10}}"#
+    );
+    let FaceAction::Placed { rect, screens, .. } = serde_json::from_str(&placed).unwrap() else {
         panic!("not a placement");
     };
     assert_eq!((rect.x, screens[0].rect.w), (1, 1920));
+}
+
+#[test]
+fn a_placement_carries_how_far_the_resize_corner_hangs_past_the_plate() {
+    let rect = r#"{"x":0,"y":0,"w":2,"h":3}"#;
+    let bare = format!(r#"{{"act":"placed","rect":{rect},"screens":[]}}"#);
+    assert!(
+        serde_json::from_str::<FaceAction>(&bare).is_err(),
+        "the overhang is needed"
+    );
+    let full = format!(r#"{{"act":"placed","rect":{rect},"screens":[],"overhang":10}}"#);
+    let FaceAction::Placed { overhang, .. } = serde_json::from_str(&full).unwrap() else {
+        panic!("not a placement");
+    };
+    assert!((overhang - 10.0).abs() < f64::EPSILON);
 }
 
 #[test]

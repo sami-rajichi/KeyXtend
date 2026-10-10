@@ -27,6 +27,8 @@ pub(super) struct Inner {
     screens: Vec<Screen>,
     /// The size-1 plate in logical pixels.
     plate: Area,
+    /// How far the window reaches past the plate at size 1, as the UI last reported it: half its resize corner.
+    overhang: f64,
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
@@ -50,6 +52,7 @@ impl Inner {
             settings,
             screens: Vec::new(),
             plate,
+            overhang: 0.0,
             list: None,
         }
     }
@@ -173,7 +176,11 @@ impl Inner {
                 board: self.sizer.follow(Point { x, y }),
                 ..FaceReply::default()
             }),
-            FaceAction::Placed { rect, screens } => Ok(self.placed(rect, screens)),
+            FaceAction::Placed {
+                rect,
+                screens,
+                overhang,
+            } => Ok(self.placed(rect, screens, overhang)),
             FaceAction::LangPick { index } => self.pick(index),
             FaceAction::Tap { .. } | FaceAction::Relabel | FaceAction::PanelKey { .. } => {
                 Ok(FaceReply::default())

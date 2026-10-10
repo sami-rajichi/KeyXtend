@@ -12,6 +12,8 @@ use kx_module_api::ports::{BASE_DPI, FaceAction, Point, Rect, Screen, physical};
 
 /// A 150 % screen.
 const HIGH_DPI: u32 = 144;
+/// How far the resize corner hangs past the plate at size 1: half the shipped themes' 20 px corner.
+const OVERHANG: f64 = 10.0;
 /// A small work area, narrower than the size-1 board at 150 %.
 const SMALL: Rect = Rect {
     x: 0,
@@ -40,6 +42,7 @@ fn placed(x: i32, y: i32, s: Screen) -> FaceAction {
     FaceAction::Placed {
         rect,
         screens: vec![s],
+        overhang: 0.0,
     }
 }
 
@@ -103,6 +106,29 @@ fn a_resize_on_a_screen_below_the_floor_writes_nothing_and_shows_no_notice() {
 }
 
 #[test]
+fn an_oversized_keyboard_shrinks_until_its_resize_corner_fits_too() {
+    let r = Rig::new(&GOLDEN, Some(("size", 1.8.into())));
+    let rect = Rect {
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1,
+    };
+    let (screens, overhang) = (vec![screen(SMALL, HIGH_DPI)], OVERHANG);
+    r.act(FaceAction::Placed {
+        rect,
+        screens,
+        overhang,
+    })
+    .unwrap();
+    let (scale, p) = (r.board()["size"].as_f64().unwrap(), at(&r));
+    let plate = r.board()["plate"].clone();
+    let reach = |k: &str| physical(plate[k].as_f64().unwrap() + OVERHANG * scale, HIGH_DPI);
+    let inside = p.x >= 0 && p.y >= 0 && p.x + reach("w") <= SMALL.w && p.y + reach("h") <= SMALL.h;
+    assert!(inside, "window {}x{} at {p:?}", reach("w"), reach("h"));
+}
+
+#[test]
 fn a_bigger_step_by_the_right_edge_keeps_the_keyboard_on_its_screen() {
     let r = Rig::new(&GOLDEN, None);
     let wide = screen(WIDE, BASE_DPI);
@@ -155,6 +181,7 @@ fn a_preset_that_tips_it_onto_a_denser_screen_fits_it_there() {
             h: 1,
         },
         screens: vec![wide, dense],
+        overhang: 0.0,
     };
     r.act(put(WIDE.w - unit)).unwrap();
     assert!(on_screen(&r, &wide), "it starts by the right edge");
@@ -184,6 +211,7 @@ fn a_move_to_a_smaller_screen_fits_it_there() {
             h: 1,
         },
         screens: both.clone(),
+        overhang: 0.0,
     };
     r.act(place(0)).unwrap();
     assert!(on_screen(&r, &wide));

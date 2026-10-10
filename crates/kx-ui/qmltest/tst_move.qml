@@ -95,6 +95,19 @@ Item {
             r.win.visible = false;
         }
 
+        // The keyboard places the whole window: its box, and how far the theme's resize corner hangs past the plate.
+        function test_a_placement_sends_the_whole_window_and_the_corners_overhang() {
+            const r = make({ x: 120, y: 90 });
+            mouseClick(keyed(r.win, "bar.grip"));
+            mouseClick(keyed(r.win, "catch"));
+            const p = r.kb.placedAt;
+            compare(p.overhang, r.win.lk.shape.extra.corner_px[0] / 2, "half the corner, at size 1");
+            const dpr = r.win.spots.physical(r.win.at.x, r.win.at.y).dpr;
+            compare([p.w, p.h], [r.win.width * dpr, r.win.height * dpr], "the window, corner and all");
+            verify(r.win.width > r.win.board.plate.w, "wider than the plate");
+            r.win.visible = false;
+        }
+
         function test_a_resize_follows_the_pointer_and_a_click_on_a_screens_catcher_ends_it() {
             const r = make({ x: 300, y: 200 });
             mouseClick(keyed(r.win, "bar.corner"));

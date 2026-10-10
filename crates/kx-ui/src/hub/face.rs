@@ -89,10 +89,15 @@ impl Hub {
         })
     }
 
-    /// The window now sits at `rect`, physical pixels, on the screens the `Screens` port reports.
-    pub fn placed(&self, rect: Rect) -> Redraw {
+    /// The window now sits at `rect`, physical pixels, on the screens the `Screens` port reports; its resize corner
+    /// hangs `overhang` logical pixels past the plate at size 1.
+    pub fn placed(&self, rect: Rect, overhang: f64) -> Redraw {
         let screens = self.ports.screens.work_areas();
-        self.act(FaceAction::Placed { rect, screens })
+        self.act(FaceAction::Placed {
+            rect,
+            screens,
+            overhang,
+        })
     }
 
     /// One step of a resize, following the pointer; nothing happens when the pointer cannot be read.

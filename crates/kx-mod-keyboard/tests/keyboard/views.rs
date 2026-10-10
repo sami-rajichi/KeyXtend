@@ -133,7 +133,13 @@ fn the_open_list_matches_its_golden_file() {
         dpi: BASE_DPI,
         primary: true,
     }];
-    r.act(FaceAction::Placed { rect, screens }).unwrap();
+    let overhang = 0.0;
+    r.act(FaceAction::Placed {
+        rect,
+        screens,
+        overhang,
+    })
+    .unwrap();
     r.tap("lang").unwrap();
     r.panel("down", 5).unwrap();
     assert_golden(golden("state-list.json"), &pretty(&r.face.state_json()));

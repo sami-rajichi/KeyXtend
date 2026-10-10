@@ -42,6 +42,8 @@ Window {
     readonly property bool ready: running && st !== null && lk !== null && cfg !== null && tongue !== null
     readonly property real s: running ? board.size : 1
     readonly property real corner: ready ? lk.shape.extra.corner_px[0] * s : 0
+    // How far the window reaches past the plate's right and bottom edges: the half of the corner that hangs over.
+    readonly property real overhang: corner / 2
     readonly property var res: resources(texts, fontsIn)
     // Units and pop-up spots: physical pixels or Qt units on the screen that holds them.
     readonly property Spots spots: Spots {
@@ -50,7 +52,7 @@ Window {
     // What takes clicks: the plate and the resize corner overhanging it.
     readonly property var boxes: ready ? [
         { x: 0, y: 0, w: board.plate.w, h: board.plate.h },
-        { x: board.plate.w - corner / 2, y: board.plate.h - corner / 2, w: corner, h: corner }
+        { x: board.plate.w - overhang, y: board.plate.h - overhang, w: corner, h: corner }
     ] : []
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
@@ -59,8 +61,8 @@ Window {
     color: "transparent"
     x: at.x
     y: at.y
-    width: ready ? board.plate.w + corner / 2 : 0
-    height: ready ? board.plate.h + corner / 2 : 0
+    width: ready ? board.plate.w + overhang : 0
+    height: ready ? board.plate.h + overhang : 0
 
     onBoxesChanged: reshape()
     onBoardChanged: Qt.callLater(() => drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0))
@@ -176,13 +178,14 @@ Window {
         const l = spots.logical(p.x, p.y);
         at = Qt.point(l.x, l.y);
     }
-    // Tells the keyboard where the window is; the first time, it answers with the saved or home place.
+    // Tells the keyboard where the window is and how far its corner hangs past the plate at size 1, which placement
+    // keeps on screen too; the first time, it answers with the saved or home place.
     function place() {
         if (!running)
             return;
         const p = spots.physical(at.x, at.y);
         placed = true;
-        redraw(keyboard.placed(p.x, p.y, board.plate.w * p.dpr, board.plate.h * p.dpr));
+        redraw(keyboard.placed(p.x, p.y, width * p.dpr, height * p.dpr, overhang / s));
     }
 
     // Once shown: the cut, then the guard, which also puts the backdrop on.

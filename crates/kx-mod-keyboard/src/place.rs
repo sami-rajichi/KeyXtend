@@ -35,6 +35,43 @@ fn sized((w, h): (f64, f64), dpi: u32) -> (i32, i32) {
     (physical(w, dpi), physical(h, dpi))
 }
 
+/// The keyboard window in logical pixels: its plate, and how far the resize corner hangs past the plate's right and
+/// bottom edges.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Extent {
+    /// The plate's width and height.
+    pub plate: (f64, f64),
+    /// How far the window reaches past the plate on the right and at the bottom.
+    pub overhang: f64,
+}
+
+impl Extent {
+    /// The whole window's width and height, corner and all.
+    #[must_use]
+    pub fn whole(self) -> (f64, f64) {
+        (self.plate.0 + self.overhang, self.plate.1 + self.overhang)
+    }
+
+    /// This window at size `size`.
+    #[must_use]
+    pub fn scale(self, size: f64) -> Self {
+        Self {
+            plate: (self.plate.0 * size, self.plate.1 * size),
+            overhang: self.overhang * size,
+        }
+    }
+}
+
+/// A plain box: a plate with no corner past it.
+impl From<(f64, f64)> for Extent {
+    fn from(plate: (f64, f64)) -> Self {
+        Self {
+            plate,
+            overhang: 0.0,
+        }
+    }
+}
+
 /// The top-left that keeps a `size` box at `at` inside `work`; a box bigger than `work` starts at its top-left.
 #[must_use]
 pub fn inside(at: Point, size: (i32, i32), work: Rect) -> Point {
@@ -57,12 +94,13 @@ fn main_screen(screens: &[Screen]) -> Option<&Screen> {
     screens.iter().find(|s| s.primary).or(screens.first())
 }
 
-/// The bottom centre of the primary screen, else the first, for a window `size` logical pixels big;
-/// `None` with no screen.
+/// The window `size` with its plate at the bottom centre of the primary screen, else the first, moved only as far
+/// as keeps its corner on the work area; `None` with no screen.
 #[must_use]
-pub fn home(size: (f64, f64), screens: &[Screen]) -> Option<Point> {
+pub fn home(size: Extent, screens: &[Screen]) -> Option<Point> {
     let main = main_screen(screens)?;
-    Some(bottom_centre(main.rect, sized(size, main.dpi)))
+    let plate = bottom_centre(main.rect, sized(size.plate, main.dpi));
+    Some(inside(plate, sized(size.whole(), main.dpi), main.rect))
 }
 
 /// The screen a window `size` logical pixels big lands on from `at`, as `fit` and `start` place it: the one
@@ -73,7 +111,7 @@ pub fn landing(at: Option<Point>, size: (f64, f64), screens: &[Screen]) -> Optio
         .or_else(|| main_screen(screens))
 }
 
-/// The largest size at which a plate `unit` logical pixels big at size 1 fits `screen`'s work area; `None` when
+/// The largest size at which a window `unit` logical pixels big at size 1 fits `screen`'s work area; `None` when
 /// either is empty.
 #[must_use]
 pub fn room(unit: (f64, f64), screen: &Screen) -> Option<f64> {
@@ -100,19 +138,19 @@ pub fn screen_of(at: Point, size: (f64, f64), screens: &[Screen]) -> Option<&Scr
     best.map(|(_, s)| s)
 }
 
-/// Where a window `size` logical pixels big with its top-left at `at` goes: inside the screen that holds the
-/// largest share of it, at that screen's DPI, else home when it is off every screen.
+/// Where window `size` with its top-left at `at` goes: wholly inside the screen that holds the largest share of it,
+/// at that screen's DPI, else home when it is off every screen.
 #[must_use]
-pub fn fit(at: Point, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
-    match screen_of(at, size, screens) {
-        Some(s) => Some(inside(at, sized(size, s.dpi), s.rect)),
+pub fn fit(at: Point, size: Extent, screens: &[Screen]) -> Option<Point> {
+    match screen_of(at, size.whole(), screens) {
+        Some(s) => Some(inside(at, sized(size.whole(), s.dpi), s.rect)),
         None => home(size, screens),
     }
 }
 
 /// Where the keyboard starts: its `saved` place fitted to the screens, else home.
 #[must_use]
-pub fn start(saved: Option<Point>, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
+pub fn start(saved: Option<Point>, size: Extent, screens: &[Screen]) -> Option<Point> {
     match saved {
         Some(at) => fit(at, size, screens),
         None => home(size, screens),
@@ -151,13 +189,13 @@ impl Placer {
     }
 
     /// Puts the keyboard where it starts, saving nothing, so the saved place comes back with its screen.
-    pub fn start(&mut self, size: (f64, f64), screens: &[Screen]) -> Option<Point> {
+    pub fn start(&mut self, size: Extent, screens: &[Screen]) -> Option<Point> {
         self.at = start(self.saved, size, screens);
         self.at
     }
 
     /// Keeps the keyboard, now `size` big, inside the screen it is on, saving nothing; true when it moved.
-    pub fn keep(&mut self, size: (f64, f64), screens: &[Screen]) -> bool {
+    pub fn keep(&mut self, size: Extent, screens: &[Screen]) -> bool {
         let kept = self.at.and_then(|at| fit(at, size, screens));
         let moved = kept.is_some() && kept != self.at;
         if moved {
@@ -175,7 +213,7 @@ impl Placer {
     pub fn moved(
         &mut self,
         at: Point,
-        size: (f64, f64),
+        size: Extent,
         screens: &[Screen],
     ) -> Result<Option<Point>, WriteError> {
         let Some(p) = fit(at, size, screens) else {

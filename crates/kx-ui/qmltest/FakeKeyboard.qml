@@ -15,6 +15,8 @@ QtObject {
     property int again: 0
     // Where the pointer is, in physical pixels, or null when Windows cannot say.
     property var pointer: null
+    // The last place the window sent: its box in physical pixels and the corner's overhang at size 1.
+    property var placedAt: null
 
     // A window titled `title` asked to be lifted alone, as the call runs.
     signal lifted(string title)
@@ -60,7 +62,8 @@ QtObject {
         note("relabel");
         return JSON.stringify({ board: false, state: false });
     }
-    function placed(x, y, w, h) {
+    function placed(x, y, w, h, overhang) {
+        placedAt = { x: x, y: y, w: w, h: h, overhang: overhang };
         return note("placed");
     }
     function cursor() {

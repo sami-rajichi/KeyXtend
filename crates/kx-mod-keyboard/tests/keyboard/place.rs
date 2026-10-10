@@ -2,12 +2,15 @@
 
 use crate::host::{FakeHost, fake, saved, start_settings};
 use kx_mod_keyboard::Placer;
-use kx_mod_keyboard::place::home;
+use kx_mod_keyboard::place::{Extent, home};
 use kx_module_api::WriteError;
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 
-/// The size-1 board in logical pixels.
-const PLATE: (f64, f64) = (670.78, 196.0);
+/// The size-1 board in logical pixels, with no resize corner.
+const PLATE: Extent = Extent {
+    plate: (670.78, 196.0),
+    overhang: 0.0,
+};
 
 fn screens() -> [Screen; 1] {
     [Screen {

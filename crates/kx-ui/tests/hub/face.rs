@@ -82,7 +82,7 @@ fn a_panel_key_carries_the_page_rows_setting() {
 }
 
 #[test]
-fn a_placed_window_carries_the_screens_the_port_reports() {
+fn a_placed_window_carries_the_screens_the_port_reports_and_its_corners_overhang() {
     let (rig, face, _host) = Rig::with_face();
     let rect = Rect {
         x: 10,
@@ -90,9 +90,14 @@ fn a_placed_window_carries_the_screens_the_port_reports() {
         w: 900,
         h: 300,
     };
-    rig.hub.placed(rect);
+    rig.hub.placed(rect, 10.0);
     let screens = vec![main_screen()];
-    assert_eq!(face.acts(), [FaceAction::Placed { rect, screens }]);
+    let want = FaceAction::Placed {
+        rect,
+        screens,
+        overhang: 10.0,
+    };
+    assert_eq!(face.acts(), [want]);
 }
 
 #[test]

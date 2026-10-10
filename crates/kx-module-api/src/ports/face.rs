@@ -35,7 +35,7 @@ impl fmt::Debug for KeyId {
 pub const MAX_PRESETS: usize = 3;
 
 /// A click the UI forwards to the keyboard, sent as JSON named by `act`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "act", rename_all = "snake_case", deny_unknown_fields)]
 pub enum FaceAction {
     /// A click on key `id`; `back` is the language key's left third.
@@ -82,6 +82,9 @@ pub enum FaceAction {
         rect: Rect,
         /// Each screen as the `Screens` port gives it: its whole `dpi` is sent as given, never `devicePixelRatio * 96`.
         screens: Vec<Screen>,
+        /// How far the window reaches past the plate's right and bottom edges at size 1, in logical pixels: the half
+        /// of the resize corner that hangs over, which placement keeps on the work area too.
+        overhang: f64,
     },
     /// The UI's timer asks whether the app in front switched layout.
     Relabel,
