@@ -2,6 +2,8 @@
 //! moves the real pointer but never clicks, presses buttons by UI Automation and counts what showed.
 #![cfg(windows)]
 
+use std::collections::HashSet;
+
 use kx_mod_keyboard::{LangKey, Role};
 use kx_theme::Themes;
 use windows::Win32::Foundation::{HWND, POINT};
@@ -78,21 +80,39 @@ pub struct Seen {
     pub returns: usize,
 }
 
+/// The product's shown windows now, as plain numbers.
+fn shown_now() -> Vec<isize> {
+    product::shown().into_iter().map(win::key).collect()
+}
+
+/// True when a window in `now` was not shown in `base`; a window that hid meanwhile, such as a banner, never counts.
+fn any_new(base: &HashSet<isize>, now: &[isize]) -> bool {
+    now.iter().any(|w| !base.contains(w))
+}
+
+/// The product's shown windows now, to spot a pop-up later.
+fn snapshot() -> HashSet<isize> {
+    shown_now().into_iter().collect()
+}
+
 /// Rests the pointer on each tip key, counting each hover that showed a new window, then moves it away.
-fn hover(plan: &Plan, base: usize, seen: &mut Seen) -> Result<(), String> {
+fn hover(plan: &Plan, seen: &mut Seen) -> Result<(), String> {
+    // The pointer rests away from the keys, so no tip shows yet.
+    let base = snapshot();
     for &at in &plan.tips {
         mouse::move_to(at)?;
         sleep_ms(plan.hover_ms);
-        seen.tips += usize::from(product::shown().len() > base);
+        seen.tips += usize::from(any_new(&base, &shown_now()));
     }
     mouse::move_to(plan.away)
 }
 
 /// Opens and closes the language list with its key, counting an open that showed a new window.
-fn list(g: &G8, reader: &Reader, lang: &str, base: usize, seen: &mut Seen) -> Result<(), String> {
+fn list(g: &G8, reader: &Reader, lang: &str, seen: &mut Seen) -> Result<(), String> {
+    let base = snapshot();
     product::invoke(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
-    seen.lists += usize::from(product::shown().len() > base);
+    seen.lists += usize::from(any_new(&base, &shown_now()));
     product::invoke(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
     Ok(())
@@ -142,12 +162,10 @@ fn themes(g: &G8, reader: &Reader, plan: &Plan) -> Result<(), String> {
 
 /// One round: the tips, the list when the language key opens one, the bubble, and a full theme cycle.
 pub fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), String> {
-    // The pointer rests away from the keys, so no tip shows yet.
-    let base = product::shown().len();
-    hover(plan, base, seen)?;
+    hover(plan, seen)?;
     sleep_ms(g.churn_settle_ms);
     if let Some(lang) = &plan.lang {
-        list(g, reader, lang, base, seen)?;
+        list(g, reader, lang, seen)?;
     }
     bubble(g, reader, plan, seen)?;
     themes(g, reader, plan)
@@ -156,6 +174,17 @@ pub fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pop_up_counts_by_a_window_new_since_the_step_began_not_by_how_many_show() {
+        let base: HashSet<isize> = [1, 2, 3].into();
+        assert!(!any_new(&base, &[1, 2, 3]), "nothing new");
+        assert!(!any_new(&base, &[1, 2]), "a banner that hid is no pop-up");
+        assert!(
+            any_new(&base, &[1, 2, 9]),
+            "a tip that showed as a banner hid"
+        );
+    }
 
     #[test]
     fn a_theme_cycle_that_ends_elsewhere_stops_the_churn_and_says_how_to_undo_it() {
