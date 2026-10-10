@@ -11,12 +11,13 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::super::KEPT;
-use super::super::guard::{Proc, front, guard, next};
+use super::super::guard::{Proc, guard, next};
+use super::super::top::front;
 use super::super::win::{guard_these, top_level};
 use super::{Hidden, plain};
 
 /// Keeps these tests apart: one test's lift can drop another's hidden window.
-static Z_ORDER: Mutex<()> = Mutex::new(());
+pub(super) static Z_ORDER: Mutex<()> = Mutex::new(());
 
 thread_local! {
     /// The window `dropper` drops once, as the guard lifts its own window back.
@@ -61,26 +62,26 @@ fn deafen(window: &Hidden) {
 }
 
 /// True when window `a` is above window `b`, read from one snapshot of the z-order.
-fn above(a: &Hidden, b: &Hidden) -> bool {
+pub(super) fn above(a: &Hidden, b: &Hidden) -> bool {
     let z = top_level();
     let at = |w: &Hidden| z.iter().position(|&x| x == w.0).unwrap();
     at(a) < at(b)
 }
 
 /// Moves `window` after `after` in the z-order as another program could, without moving or activating it.
-fn put_after(window: &Hidden, after: HWND) {
+pub(super) fn put_after(window: &Hidden, after: HWND) {
     let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
     // SAFETY: a z-order change on the test's own hidden window.
     unsafe { SetWindowPos(window.0, Some(after), 0, 0, 0, 0, flags) }.unwrap();
 }
 
 /// True while `window` is in the topmost band.
-fn topmost(window: &Hidden) -> bool {
+pub(super) fn topmost(window: &Hidden) -> bool {
     window.ex_style() & WS_EX_TOPMOST.0 != 0
 }
 
 /// `windows` front first, as a guard run lists the shown ones.
-fn listed(windows: &[&Hidden]) -> Vec<HWND> {
+pub(super) fn listed(windows: &[&Hidden]) -> Vec<HWND> {
     let ours: Vec<_> = windows.iter().map(|w| w.0).collect();
     top_level()
         .into_iter()

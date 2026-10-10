@@ -14,7 +14,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::BOOL;
 
-use super::guard::{front, guard};
+use super::guard::guard;
+use super::top::front;
 use super::{guard_order, ours_by, should_give_back, spared};
 use crate::screen::edges;
 use crate::{failed, refused};

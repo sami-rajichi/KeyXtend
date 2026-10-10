@@ -2,33 +2,24 @@
 //! is destroyed. It uses user32 only (`GWLP_WNDPROC` and window properties), so no program needs a Common Controls 6
 //! manifest.
 
-use std::cell::RefCell;
-
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
-use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallWindowProcW, DefWindowProcW, GW_OWNER, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindow,
-    GetWindowLongPtrW, GetWindowThreadProcessId, HWND_TOPMOST, MA_NOACTIVATE, RemovePropW,
-    SET_WINDOW_POS_FLAGS, STYLESTRUCT, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
-    SetPropW, SetWindowLongPtrW, SetWindowPos, WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY,
-    WM_STYLECHANGING, WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WNDPROC,
+    CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW,
+    MA_NOACTIVATE, RemovePropW, STYLESTRUCT, SWP_NOACTIVATE, SetPropW, SetWindowLongPtrW,
+    WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED,
+    WM_WINDOWPOSCHANGING, WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
-use super::{KEPT, holds_kept, is_through, is_top, kept_ex, to_lift};
+use super::top::{keep_top, lift, on_this_thread};
+use super::{KEPT, holds_kept, is_through, kept_ex};
 use crate::{last_refused, refused};
 
 /// The window property that holds the window's own procedure while the guard is hooked.
 const PROP: PCWSTR = w!("KeyXtend.Guard");
 /// The window property set while the guard is hooked on a window that let clicks through when it was first guarded.
 const THROUGH_PROP: PCWSTR = w!("KeyXtend.Through");
-
-thread_local! {
-    /// The windows the guard is lifting back into the topmost band: a move inside the lift of a window or its owner
-    /// never lifts again, but another window's repair still runs, so the nesting stays as deep as our windows are many.
-    static LIFTING: RefCell<Vec<HWND>> = const { RefCell::new(Vec::new()) };
-}
 
 /// A window procedure, as Windows calls it.
 pub(super) type Proc = unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT;
@@ -58,16 +49,9 @@ fn was_through(hwnd: HWND) -> bool {
     !unsafe { GetPropW(hwnd, THROUGH_PROP) }.is_invalid()
 }
 
-/// True when `hwnd` belongs to the calling thread.
-#[allow(unsafe_code, reason = "Plain thread queries.")]
-fn on_this_thread(hwnd: HWND) -> bool {
-    // SAFETY: plain queries; a gone window gives thread 0, which is never ours.
-    unsafe { GetWindowThreadProcessId(hwnd, None) == GetCurrentThreadId() }
-}
-
 /// Our window's extended style; 0 for a gone window.
 #[allow(unsafe_code, reason = "A plain style query.")]
-fn ex_of(hwnd: HWND) -> u32 {
+pub(super) fn ex_of(hwnd: HWND) -> u32 {
     // SAFETY: a plain query of our own window.
     let ex = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
     u32::try_from(ex).unwrap_or_default()
@@ -161,58 +145,6 @@ pub(super) fn add_kept(hwnd: HWND) -> Result<(), UiError> {
     } else {
         Err(last_refused())
     }
-}
-
-/// Lifts our window, and the windows it owns, to the top of the topmost band.
-fn lift(hwnd: HWND) -> Result<(), UiError> {
-    to_top(hwnd, SET_WINDOW_POS_FLAGS::default())
-}
-
-/// Lifts our window alone to the top of the topmost band, such as a tip as it shows; its owner stays where it is.
-pub(super) fn front(hwnd: HWND) -> Result<(), UiError> {
-    to_top(hwnd, SWP_NOOWNERZORDER)
-}
-
-/// Puts our window at the top of the topmost band with the `extra` flags, without moving or activating it.
-#[allow(unsafe_code, reason = "Changes our own window's z-order.")]
-fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
-    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | extra;
-    // SAFETY: our own live window; no move, no size and no activation.
-    unsafe { SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, flags) }.map_err(|e| refused(&e))
-}
-
-/// Our window, then each owner the guard holds, nearest first.
-#[allow(unsafe_code, reason = "Plain owner queries.")]
-fn chain(hwnd: HWND) -> Vec<HWND> {
-    let mut chain = vec![hwnd];
-    loop {
-        let last = chain.last().copied().unwrap_or(hwnd);
-        // SAFETY: a plain query; a window with no owner gives an error.
-        let owner = unsafe { GetWindow(last, GW_OWNER) }.unwrap_or_default();
-        if owner.is_invalid() || !guarded(owner) || chain.contains(&owner) {
-            return chain;
-        }
-        chain.push(owner);
-    }
-}
-
-/// Lifts our window back to the top of the topmost band when a move took it, or an owner, out, as `HWND_NOTOPMOST`
-/// from another program does. Windows may tell only the owned window, and lifting it alone drops its owner, so the
-/// furthest guarded owner goes up with the windows it owns, then each nearer one goes above its owner.
-fn keep_top(hwnd: HWND) {
-    let chain = chain(hwnd);
-    let states: Vec<(bool, bool)> = LIFTING.with_borrow(|l| {
-        let state = |w: &HWND| (is_top(ex_of(*w)), l.contains(w));
-        chain.iter().map(state).collect()
-    });
-    let Some(root) = to_lift(&states) else {
-        return;
-    };
-    LIFTING.with_borrow_mut(|l| l.extend(&chain));
-    let nearer = chain.iter().take(root).rev();
-    // A refused lift leaves nothing more to try.
-    let _ = lift(chain[root]).and_then(|()| nearer.copied().try_for_each(front));
-    LIFTING.with_borrow_mut(|l| l.retain(|w| !chain.contains(w)));
 }
 
 /// The style index `WM_STYLECHANGING` carries, from the low half of `wparam`.

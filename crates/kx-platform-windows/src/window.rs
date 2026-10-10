@@ -13,6 +13,8 @@ mod guard;
 #[cfg(test)]
 mod tests;
 #[cfg(windows)]
+mod top;
+#[cfg(windows)]
 mod win;
 
 #[cfg(windows)]
@@ -81,6 +83,22 @@ fn to_lift(chain: &[(bool, bool)]) -> Option<usize> {
     } else {
         None
     }
+}
+
+/// The windows `root` owns, directly or not, in the order the guard brings them to the front after lifting it: each
+/// right after its owner, so it lands above it, and siblings bottom first, so they keep their order. `owned` holds
+/// (window, owner) pairs, front first.
+fn family<T: Copy + PartialEq>(root: T, owned: &[(T, T)]) -> Vec<T> {
+    let mut found = Vec::new();
+    let mut next = vec![root];
+    while let Some(owner) = next.pop() {
+        if owner != root {
+            found.push(owner);
+        }
+        let owns = owned.iter().filter(|&&(w, o)| o == owner && w != root);
+        next.extend(owns.map(|&(w, _)| w));
+    }
+    found
 }
 
 /// Windows listed front first, in guard order: each guard lifts its window to the top, so the front one
@@ -177,7 +195,37 @@ mod rules {
         );
     }
 
+    #[test]
+    fn a_lifted_shadow_brings_its_family_back_each_above_its_owner_and_siblings_as_they_were() {
+        // Front first: the list over its shadow, then the tip, all owned by the keyboard, which the shadow (1) owns.
+        let (kb, tip, glow, list, other) = (2, 3, 4, 5, 9);
+        let owned = [(list, glow), (glow, kb), (tip, kb), (kb, 1), (other, 8)];
+        assert_eq!(family(1, &owned), [kb, tip, glow, list]);
+        assert_eq!(family(glow, &owned), [list], "a branch alone");
+        assert!(family(list, &owned).is_empty(), "nothing owned");
+        let (front, back) = ([(10, 11), (11, 1)], [(20, 21), (21, 1)]);
+        let both: Vec<_> = front.into_iter().chain(back).collect();
+        assert_eq!(
+            family(1, &both),
+            [21, 20, 11, 10],
+            "the window behind, with its own, goes first"
+        );
+    }
+
     proptest! {
+        #[test]
+        fn a_family_lists_each_window_once_after_its_owner(owners in prop::collection::vec(0u8..12, 0..12)) {
+            // Window i + 1 is owned by a window numbered below it, so owners never loop.
+            let owned: Vec<(u8, u8)> = owners.iter().zip(1u8..).map(|(&o, w)| (w, o % w)).collect();
+            let got = family(0, &owned);
+            for (i, w) in got.iter().enumerate() {
+                let owner = owned.iter().find(|(x, _)| x == w).map(|&(_, o)| o);
+                prop_assert!(owner == Some(0) || got[..i].iter().any(|&b| Some(b) == owner));
+                prop_assert!(!got[..i].contains(w), "once each");
+            }
+            prop_assert_eq!(got.len(), owned.len(), "every window descends from 0");
+        }
+
         #[test]
         fn a_kept_style_holds_the_guards_styles_and_the_first_click_through(new: u32, through: bool) {
             let kept = kept_ex(new, through);
