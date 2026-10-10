@@ -18,13 +18,15 @@ thiserror.workspace = true
 
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
 [target.'cfg(windows)'.dependencies]
-# The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops.
+# The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops, and DXGI ranks the
+# graphics adapters by power.
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
     "Win32_Foundation",
     "Win32_Globalization",
     "Win32_Graphics_Dwm",
+    "Win32_Graphics_Dxgi",
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_System_Com",

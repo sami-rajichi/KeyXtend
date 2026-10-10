@@ -1,5 +1,5 @@
-//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives, Qt Quick keeps no shader cache on
-//! disk, and when pinned only the app's own folders give plugins and QML modules.
+//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter the app picks,
+//! Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders give plugins and QML modules.
 
 use crate::harden::qt_names;
 use cxx_qt_lib::{QQmlApplicationEngine, QString, QStringList};
@@ -12,11 +12,13 @@ const QML_ROOT: &str = env!("KX_UI_QML_ROOT");
 pub const QML_DIR: &str = "qml";
 /// Where the engine looks for a module's plugin: the folder of its `qmldir`, as Qt does by default.
 const MODULE_PLUGINS: &str = ".";
+/// The variable Qt's Direct3D backend reads for the adapter it draws on, by its place in DXGI's adapter list.
+pub const ADAPTER_VAR: &str = "QT_D3D_ADAPTER_INDEX";
 
 #[cxx_qt::bridge]
 mod ffi {
     // SAFETY: `harden.h` declares exactly these functions with these types; QStringList is cxx-qt-lib's binding. On
-    // Windows the C runtime and Win32 lock their environments, and no thread of the app writes them, so
+    // Windows the C runtime and Win32 lock their environments, and only Qt's start writes them, under those locks, so
     // `narrow_names` may read without the lock while other threads run.
     unsafe extern "C++" {
         include!("kx-ui/cpp/harden.h");
@@ -31,6 +33,10 @@ mod ffi {
         /// Removes variable `name`, in the narrow environment's bytes, from what Qt reads; false when it could not.
         #[namespace = "kxui"]
         fn unset_env(name: &[u8]) -> bool;
+
+        /// Sets variable `name` to `value` where Qt reads it; false when it could not.
+        #[namespace = "kxui"]
+        fn set_env(name: &str, value: &str) -> bool;
 
         /// True when Qt reads variable `name` as set.
         #[namespace = "kxui"]
@@ -68,6 +74,13 @@ pub fn harden_qt(plugins: Option<&Path>) -> usize {
         ffi::set_library_paths(&list([text(dir)]));
     }
     cleared
+}
+
+/// Has Qt draw on adapter `index`, its place in DXGI's adapter list; call it after `harden_qt`, which clears the
+/// variable, and before Qt's app object exists. False when the variable could not be set.
+#[must_use]
+pub fn pin_adapter(index: u32) -> bool {
+    ffi::set_env(ADAPTER_VAR, &index.to_string())
 }
 
 /// True when Qt reads variable `name` as set, through the C runtime's narrow copy it reads at start.

@@ -51,6 +51,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The crate root has `#![deny(unsafe_code)]`; only `src/bridges/` allows it, for the cxx-qt glue and the calls into `cpp/`, and each block has a `// SAFETY:` comment (tidy F3). The windows never take focus: the guard hands the focus back and no bridge activates a window.
   - `harden_qt` keeps another program of the user from loading its plugin, QML module or cached shader into the uiAccess process. It clears every name with a Qt prefix from the C runtime's narrow copy of the environment, which Qt's byte reads use, so a name the code page narrows to a Qt one goes too; `qunsetenv` also clears it from the wide copy that Qt's text reads use. It then turns off Qt Quick's shader cache on disk.
   - It reads that copy without the runtime's lock, which is safe on Windows because no thread of the app writes it. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's and the C runtime's own functions.
+  - After the clear, `pin_adapter` sets one Qt variable, `QT_D3D_ADAPTER_INDEX`, to the number the Windows adapter picked (the lowest-power GPU), on Qt's thread before Qt starts, so no outside value chooses Qt's graphics adapter.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

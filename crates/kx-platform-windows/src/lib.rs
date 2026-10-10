@@ -12,6 +12,7 @@ pub mod dirs;
 #[cfg(windows)]
 pub mod dll;
 pub mod front;
+pub mod gpu;
 #[cfg(windows)]
 mod hidden;
 pub mod inject;

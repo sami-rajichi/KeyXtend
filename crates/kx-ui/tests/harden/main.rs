@@ -1,6 +1,6 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
-//! QML import paths, nor Qt's narrow or wide reads, and pinned plugins and imports hold only the app's folders and the
-//! compiled-in modules. The variables must be set before the process starts, so the test runs itself again, as a
+//! QML import paths, nor Qt's narrow or wide reads, pinned plugins and imports hold only the app's folders and the
+//! compiled-in modules, and only the graphics adapter the app picks reaches Qt. The variables must be set before the process starts, so the test runs itself again, as a
 //! child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
@@ -14,8 +14,15 @@ use std::process::{Command, ExitCode};
 const CHILD: &str = "KX_HARDEN_CHILD";
 /// The folder the child pins Qt's plugins to; it holds a copy of the platform plugin.
 const PINNED: &str = "KX_HARDEN_PINNED";
-/// The variables the child starts with, one in lower case, as Windows ignores case.
-const PLANTED: [&str; 3] = ["QT_PLUGIN_PATH", "QML2_IMPORT_PATH", "qml_import_path"];
+/// The variables the child starts with, one in lower case, as Windows ignores case, and a planted adapter.
+const PLANTED: [&str; 4] = [
+    "QT_PLUGIN_PATH",
+    "QML2_IMPORT_PATH",
+    "qml_import_path",
+    kx_ui::ADAPTER_VAR,
+];
+/// The adapter the child pins, as the app pins the lowest-power one.
+const ADAPTER: u32 = 1;
 /// Names the C runtime narrows to a Qt variable with the ANSI code page's best fit: a fullwidth `ＱＴ`, and a
 /// non-ASCII last letter. Each pairs the planted name with the name Qt then reads.
 const ALIASES: [(&str, &str); 2] = [
@@ -124,6 +131,7 @@ fn child(planted: &Path, pinned: &Path) -> Outcome {
     if after.iter().any(|(_, set)| *set) {
         return Err(format!("Qt still sees an alias: {after:?}"));
     }
+    adapter()?;
     let app = QGuiApplication::new();
     let paths = app
         .as_ref()
@@ -133,6 +141,18 @@ fn child(planted: &Path, pinned: &Path) -> Outcome {
     let mut engine = QQmlApplicationEngine::new();
     let e = engine.as_mut().ok_or("the engine did not start")?;
     imports(e, planted)
+}
+
+/// After the clear, Qt reads the adapter the app pins, and only that.
+fn adapter() -> Outcome {
+    if !kx_ui::pin_adapter(ADAPTER) {
+        return Err("the adapter was not pinned".into());
+    }
+    let read = env::var(kx_ui::ADAPTER_VAR).ok();
+    if !kx_ui::qt_sees(kx_ui::ADAPTER_VAR) || read != Some(ADAPTER.to_string()) {
+        return Err(format!("Qt's adapter is {read:?}, not {ADAPTER}"));
+    }
+    Ok(())
 }
 
 /// Qt's plugin folders hold the pinned folder, and neither the planted one nor Qt's own.

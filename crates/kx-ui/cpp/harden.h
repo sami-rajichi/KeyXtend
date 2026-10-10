@@ -1,6 +1,7 @@
 // Qt's start in the uiAccess process; src/bridges/harden.rs calls these before Qt's app object exists.
 #pragma once
 
+#include <QtCore/QByteArrayView>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QStringList>
 #include <QtCore/qtenvironmentvariables.h>
@@ -61,6 +62,13 @@ inline bool unset_env(rust::Slice<const std::uint8_t> name)
 {
     const std::string text(reinterpret_cast<const char *>(name.data()), name.size());
     return qunsetenv(text.c_str());
+}
+
+// Sets variable `name` to `value` in the C runtime's copies and the process's, where Qt reads it.
+inline bool set_env(rust::Str name, rust::Str value)
+{
+    const std::string key(name.data(), name.size());
+    return qputenv(key.c_str(), QByteArrayView(value.data(), qsizetype(value.size())));
 }
 
 // True when Qt reads variable `name` as set; on Windows it reads the C runtime's narrow copy.

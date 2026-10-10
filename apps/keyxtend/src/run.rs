@@ -1,5 +1,5 @@
 //! The app on Windows starts in order: pinned folders, command line, hook, one copy, hub and kernel, log, modules,
-//! kernel thread, then hardened Qt. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the
+//! kernel thread, then hardened Qt on the lowest-power graphics adapter. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the
 //! tray icon and joins the kernel's thread.
 
 use keyxtend::boot::{Boot, BootError, Services};
@@ -9,7 +9,7 @@ use keyxtend::{UI_ACCESS, args, drain, log, quiet};
 use kx_kernel::KernelSettings;
 use kx_platform::Platform;
 use kx_platform::ui::UiError;
-use kx_platform_windows::{WindowsPlatform, dll, uiaccess};
+use kx_platform_windows::{WindowsPlatform, dll, gpu, uiaccess};
 use kx_settings::{Files, peek};
 use kx_ui::{Hub, UiPorts};
 use std::env;
@@ -90,7 +90,7 @@ fn run(
         Err(e) => return fail(&e),
     };
     let pinned = UI_ACCESS.then(|| platform.dirs().exe_dir.as_path());
-    crate::qt::run(pinned, || {
+    crate::qt::run(pinned, gpu::low_power_adapter(), || {
         let _ = drain::stop(&hub, kernel_thread);
     })
 }
