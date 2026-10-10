@@ -110,6 +110,16 @@ fn one(d: &Desk, step: &Step) -> Result<(Value, bool), String> {
     Ok((v, unread))
 }
 
+/// After a failed `step`, presses its key once more while it reads as latched, so the next step goes out alone; the
+/// latch's state after, `None` when it cannot be read.
+fn let_go(d: &Desk, step: &Step) -> Option<bool> {
+    let on = d.latched(step).ok().flatten();
+    if !step.left_latched(on) || d.press(&step.key).is_err() {
+        return on;
+    }
+    d.latched(step).ok().flatten()
+}
+
 /// Carousel or Cycle: target-window steps from its first layout to the next, which G10 then puts back.
 fn stepped(d: &Desk) -> bool {
     let Some(start) = d.layout else {
@@ -150,7 +160,7 @@ fn lang(d: &Desk, settings: &KeyboardSettings) -> Result<Value, String> {
     Ok(v)
 }
 
-/// Presses every key that types no character at once, in board order, then the language key: the steps, the keys
+/// Presses every key but the character keys, in board order, then the language key: the steps, the keys
 /// left to the owner's Narrator and NVDA check, and `ok`.
 pub fn run(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     let settings = product::keyboard()?;
@@ -167,8 +177,11 @@ pub fn run(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     };
     let (mut steps, mut owner) = (Vec::new(), Vec::new());
     for step in &plan {
-        let (v, unread) = one(&d, step)
+        let (mut v, unread) = one(&d, step)
             .unwrap_or_else(|e| (json!({ "key": step.key, "ok": false, "error": e }), false));
+        if v["ok"] != true && step.toggles {
+            v["latched_after"] = json!(let_go(&d, step));
+        }
         if unread {
             owner.push(json!({ "key": step.key, "why": NO_TOGGLE }));
         }

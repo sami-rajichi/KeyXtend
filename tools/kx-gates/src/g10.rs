@@ -1,6 +1,7 @@
 //! G10 screen readers, the automatic part (roadmap G10): every key is found by UI Automation, named (character keys
 //! after the layout in front, ADR-0020) and pressable, and Narrator and NVDA themselves are the owner's. Invoke then
-//! activates every key into target-window, the character keys here and the others in `g10steps`.
+//! activates every key into target-window but a dead key or one that types nothing in the layout in front: the
+//! character keys here and the others in `g10steps`.
 #![cfg(windows)]
 
 use kx_module_api::ports::LayoutSource;

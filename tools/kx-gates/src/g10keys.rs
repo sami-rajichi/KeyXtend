@@ -1,6 +1,6 @@
-//! G10's key plan (roadmap G10): a step for every key that types no character at once, pressed as a screen reader
-//! presses, with what target-window must log. Each step leaves the keyboard, the window and the layout as it found
-//! them.
+//! G10's key plan (roadmap G10): a step for every key but the character keys and the language key, pressed as a
+//! screen reader presses, with what target-window must log. Each step leaves the keyboard, the window and the layout
+//! as it found them.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{LangKey, Latch, Role};
@@ -40,6 +40,13 @@ pub struct Step {
     pub expect: Expect,
     /// True when the key must read as latched after its first press, and as let go after the last.
     pub toggles: bool,
+}
+
+impl Step {
+    /// True when this step's latch reads as still on, `on`, after the step failed, so one more press lets it go.
+    pub fn left_latched(&self, on: Option<bool>) -> bool {
+        self.toggles && on == Some(true)
+    }
 }
 
 /// The scan code of send key `probe`, which goes out after each modifier latches.

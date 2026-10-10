@@ -256,12 +256,12 @@ fn watch(w: &Watched) -> Result<Vec<Change>, String> {
 /// Runs G13 on the product, called `name`; the owner changes Windows' look while it watches. It stops at the start
 /// when the running copy's `[ui]` settings keep the accent off the keys.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
+    let kb = Keyboard::find()?;
     let (g, ui) = (&ctx.cfg.g13, uilook::running()?);
     let themes = Themes::shipped().map_err(|e| format!("theme {e}"))?;
     if let Some(why) = accent_blocked(&ui, &themes, &g.needs) {
         return Err(why);
     }
-    let kb = Keyboard::find()?;
     let faces = faces(&kb, g.key_inset)?;
     let first = save(ctx, &picture(kb.hwnd)?, 0)?;
     say!(

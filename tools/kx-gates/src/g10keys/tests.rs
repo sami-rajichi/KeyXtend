@@ -85,6 +85,19 @@ fn win_is_latched_and_let_go_with_nothing_sent_since_its_shortcuts_reach_windows
 }
 
 #[test]
+fn a_latch_a_failed_step_left_on_is_pressed_once_more() {
+    let shift = step_of(false, "shift");
+    assert!(shift.left_latched(Some(true)));
+    assert!(!shift.left_latched(Some(false)), "already let go");
+    assert!(!shift.left_latched(None), "unread: the owner checks it");
+    assert!(step_of(false, "win").left_latched(Some(true)), "Win too");
+    assert!(
+        !step_of(false, "esc").left_latched(Some(true)),
+        "a send key latches nothing"
+    );
+}
+
+#[test]
 fn a_key_of_a_later_version_must_send_nothing() {
     let mic = step_of(false, "mic");
     assert_eq!((mic.presses, mic.expect), (ids(&["mic"]), Expect::Nothing));
