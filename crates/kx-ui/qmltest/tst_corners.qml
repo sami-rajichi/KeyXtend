@@ -1,10 +1,12 @@
 // Corner legends in every theme, in the bundled fonts: one margin in from the face each theme draws, on the Latin
-// baseline whatever font they draw in.
+// baseline whatever font they draw in, and a clear gap from the main legend's ink in each language and latch state.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
+import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
@@ -17,6 +19,14 @@ Item {
     width: Face.board.plate.w
     height: Face.board.plate.h
 
+    // The states checked, by golden name, each with the texts of its layout's language.
+    readonly property var states: [
+        { name: "en", texts: En.texts },
+        { name: "fr", texts: Fr.texts },
+        { name: "ar", texts: Ar.texts },
+        { name: "ar-shift", texts: Ar.texts },
+        { name: "ar-altgr", texts: Ar.texts }
+    ]
     // The bundled fonts loaded so far, from where the texts test lays them out.
     property int fontsIn: 0
 
@@ -30,6 +40,32 @@ Item {
     }
 
     Component { id: keyC; Key {} }
+    // Every key of the board at size 1, in look `lk` and state `st`.
+    Component {
+        id: boardC
+        Item {
+            id: board
+            required property var lk
+            required property var st
+            required property var res
+            width: root.width
+            height: root.height
+
+            Repeater {
+                model: Face.board.keys
+                delegate: Key {
+                    required property var modelData
+                    kv: modelData
+                    ks: board.st.keys[modelData.id]
+                    lk: board.lk
+                    lang: board.st.lang
+                    design: Face.board.lang_key
+                    res: board.res
+                    s: 1
+                }
+            }
+        }
+    }
 
     TestCase {
         name: "corners"
@@ -73,6 +109,11 @@ Item {
                 uid: (group, id) => group + "." + id,
                 space: parts => parts.join(" · ")
             };
+        }
+        // Waits until the legends under `item` have risen in.
+        function risen(item) {
+            const texts = all(item, o => o.isChar === true);
+            tryVerify(() => texts.every(o => !o.clip), 2000, "the legends rose in");
         }
         // The line `key` shows as `text`.
         function line(key, text) {
@@ -118,6 +159,85 @@ Item {
                 fuzzyCompare(bottom[0], lg.corner_px[1], 0.5, at + "bottom right, side");
                 fuzzyCompare(bottom[1], lg.corner_px[0] + fm[1] * rb.font.pixelSize, 0.5, at + "bottom right, baseline");
             }
+        }
+
+        // The pixels of `shot` inside `box` (device px) that differ from `bare` by half the strongest difference or
+        // more, so faint edges count as blank.
+        function ink(shot, bare, box) {
+            const px = [];
+            for (let y = box[1]; y < box[3]; y++)
+                for (let x = box[0]; x < box[2]; x++) {
+                    const p = shot.pixel(x, y), q = bare.pixel(x, y);
+                    px.push([x, y, Math.abs(p.r - q.r) + Math.abs(p.g - q.g) + Math.abs(p.b - q.b)]);
+                }
+            const most = Math.max(...px.map(p => p[2]));
+            return px.filter(p => p[2] > 0 && p[2] >= most / 2);
+        }
+        // Where line `l` of `key` may draw on its board, in device px at `k` per px: its box, one font size wider all
+        // round for marks and overhangs, inside the key so a neighbour's ink stays out.
+        function box(key, l, k) {
+            const m = l.font.pixelSize;
+            const r = l.mapToItem(key.parent, -m, -m, l.width + 2 * m, l.height + 2 * m);
+            const clamp = (v, lo, hi) => Math.round(Math.max(lo, Math.min(hi, v)) * k);
+            const [x1, y1] = [key.x + key.width, key.y + key.height];
+            const [w, h] = [r.x + r.width, r.y + r.height];
+            return [clamp(r.x, key.x, x1), clamp(r.y, key.y, y1), clamp(w, key.x, x1), clamp(h, key.y, y1)];
+        }
+        // The least distance between inks `a` and `b`, in device pixels.
+        function apart(a, b) {
+            let gap = Infinity;
+            for (const p of a)
+                for (const q of b)
+                    gap = Math.min(gap, Math.hypot(p[0] - q[0], p[1] - q[1]));
+            return gap;
+        }
+        // `board` grabbed with only line `n` of each key in `keys` drawn (0 main, 1 second, 2 third; -1 none).
+        function only(board, keys, n) {
+            for (const [, lines] of keys)
+                lines.forEach((l, i) => l && (l.opacity = i === n ? 1 : 0));
+            return grabImage(board);
+        }
+        // Each corner legend of every key on `board` in `state` with a main legend, with its ink's distance from the
+        // main legend's ink in px; each line is drawn alone over the bare board.
+        function gaps(board, state) {
+            const keys = board.children.filter(k => k.kv && k.kv.kind === "char").map(k => {
+                const ks = state.keys[k.kv.id];
+                return [k, [ks.main, ks.second, ks.third].map(t => t !== "" && line(k, t))];
+            }).filter(([, l]) => l[0] && (l[1] || l[2]));
+            const bare = only(board, keys, -1);
+            const k = bare.width / board.width;
+            const shots = [0, 1, 2].map(n => only(board, keys, n));
+            const found = [];
+            for (const [key, lines] of keys) {
+                const main = ink(shots[0], bare, box(key, lines[0], k));
+                for (const n of [1, 2])
+                    if (lines[n])
+                        found.push([lines[0].text, lines[n].text, apart(main, ink(shots[n], bare, box(key, lines[n], k))) / k]);
+            }
+            return found;
+        }
+
+        // The owner saw corner legends touch letters such as ض and س, and Dolch's @ touch its 2 (2026-10-10): a clear
+        // gap is 1 px of blank cap between the inks, on every key with a corner legend.
+        function test_no_corner_legend_touches_the_main_one_data() {
+            return themes();
+        }
+        function test_no_corner_legend_touches_the_main_one(row) {
+            fonts(row.lk);
+            const [touching, seen] = [[], []];
+            for (const st of root.states) {
+                const props = { lk: row.lk, st: Face.states[st.name], res: resOf(row.lk, st.texts) };
+                const board = createTemporaryObject(boardC, root, props);
+                risen(board);
+                for (const [main, corner, gap] of gaps(board, props.st)) {
+                    const at = st.name + " " + main + " " + corner + ": " + gap.toFixed(2) + " px";
+                    (gap < 1 ? touching : seen).push(at);
+                }
+                board.visible = false;
+                board.destroy();
+            }
+            verify(seen.length > 0, "the case this test is for");
+            compare(touching, [], "a corner legend touches the main one");
         }
     }
 }
