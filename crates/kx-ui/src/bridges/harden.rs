@@ -47,6 +47,10 @@ mod ffi {
         #[namespace = "kxui"]
         fn qt_reads(name: &str) -> bool;
 
+        /// The value Qt's text read gives variable `name`; empty when it is not set.
+        #[namespace = "kxui"]
+        fn qt_value(name: &str) -> String;
+
         /// Turns off Qt Quick's shader pipeline cache on disk.
         #[namespace = "kxui"]
         fn no_shader_cache();
@@ -92,6 +96,18 @@ pub fn pin_drawing() -> bool {
         .iter()
         .filter(|(name, value)| !ffi::set_env(name, value));
     failed.count() == 0
+}
+
+/// True when Qt reads every variable of `DRAW_VARS` with the app's value, so every window draws on the GUI thread.
+pub(crate) fn drawing_pinned() -> bool {
+    DRAW_VARS
+        .iter()
+        .all(|(name, value)| ffi::qt_value(name) == *value)
+}
+
+/// Drops the adapter pin, so Qt draws on its default adapter; false when none was set or it could not go.
+pub(crate) fn unpin_adapter() -> bool {
+    ffi::qt_sees(ADAPTER_VAR) && ffi::unset_env(ADAPTER_VAR.as_bytes())
 }
 
 /// True when Qt reads variable `name` as set, through the C runtime's narrow copy it reads at start.

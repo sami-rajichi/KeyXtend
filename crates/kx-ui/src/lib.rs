@@ -6,6 +6,7 @@
 
 #[cfg(feature = "qt")]
 mod bridges;
+pub mod device;
 mod geom;
 mod guard;
 pub mod harden;
@@ -13,8 +14,12 @@ mod hub;
 pub mod i18n;
 mod plate;
 mod settings;
+#[cfg(feature = "qt")]
+mod shell;
 mod ui_module;
 
+#[cfg(feature = "qt")]
+pub use bridges::device::{Device, drawing};
 #[cfg(feature = "qt")]
 pub use bridges::harden::{
     ADAPTER_VAR, QML_DIR, harden_qt, pin_adapter, pin_drawing, pin_imports, qt_reads, qt_sees,
@@ -25,6 +30,8 @@ pub use geom::Area;
 pub use hub::{Hub, HubError, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker};
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, SPEC, UiSettings};
+#[cfg(feature = "qt")]
+pub use shell::Shell;
 pub use ui_module::{ID, MANIFEST, UiModule};
 
 /// The resource URL of the root QML file, which the app loads.

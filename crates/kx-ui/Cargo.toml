@@ -53,6 +53,12 @@ name = "qml"
 harness = false
 required-features = ["qt"]
 
+# Every window shares one graphics device over the app's QML and a fake face; Qt's loop runs on the main thread.
+[[test]]
+name = "device"
+harness = false
+required-features = ["qt"]
+
 # Qt's start ignores planted Qt variables; it runs itself again with them set, so it needs no harness either.
 [[test]]
 name = "harden"

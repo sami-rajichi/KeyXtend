@@ -12,7 +12,8 @@ fn main() {
 mod qt {
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
     use kx_theme::assets::{Bundled, ICON_EXT, ICONS_AT, bundle};
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
 
     /// QML module URI; its files land under `qrc:/qt/qml/<uri as folders>/`.
     const URI: &str = "KeyXtend.Ui";
@@ -61,7 +62,17 @@ mod qt {
         "src/bridges/ui.rs",
         "src/bridges/keyboard.rs",
         "src/bridges/harden.rs",
+        "src/bridges/device.rs",
     ];
+    /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
+    const QT_MODULES: &[&str] = &["Quick"];
+    /// The variable naming Qt's qmake, as cxx-qt-build reads it, and the program it runs when that is unset.
+    const QMAKE_ENV: &str = "QMAKE";
+    const QMAKE: &str = "qmake";
+    /// qmake's keys for Qt's header folder and version: `rhi/qrhi.h` sits under `<headers>/QtGui/<version>/QtGui`.
+    const HEADERS_KEY: &str = "QT_INSTALL_HEADERS";
+    const VERSION_KEY: &str = "QT_VERSION";
+    const GUI: &str = "QtGui";
     /// The hand-written C++ the bridges include.
     const CPP: &str = "cpp";
     /// The resource root of compiled-in QML modules, as cxx-qt-build lays them out.
@@ -89,10 +100,21 @@ mod qt {
                 return;
             }
         };
+        let rhi = match rhi_headers() {
+            Ok(dir) => dir,
+            Err(e) => {
+                println!("cargo::error={e}");
+                return;
+            }
+        };
         let module = QmlModule::new(URI).qml_files(QML.iter().copied());
-        CxxQtBuilder::new_qml_module(module)
+        let builder = CxxQtBuilder::new_qml_module(module)
             .files(BRIDGES.iter().copied())
             .qrc_resources(resources)
+            .include_dir(rhi);
+        QT_MODULES
+            .iter()
+            .fold(builder, |b, m| b.qt_module(m))
             .build();
         let base = format!("{QML_ROOT}/{}", URI.replace('.', "/"));
         let root = QML.first().copied().unwrap_or_default();
@@ -110,6 +132,20 @@ mod qt {
                 println!("cargo::rustc-link-arg={arg}");
             }
         }
+    }
+
+    /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021).
+    fn rhi_headers() -> Result<PathBuf, String> {
+        println!("cargo::rerun-if-env-changed={QMAKE_ENV}");
+        let qmake = std::env::var_os(QMAKE_ENV).unwrap_or_else(|| QMAKE.into());
+        let query = |key: &str| -> Result<String, String> {
+            let out = Command::new(&qmake).args(["-query", key]).output();
+            let out = out.map_err(|e| format!("qmake -query {key}: {e}"))?;
+            let text = String::from_utf8(out.stdout).map_err(|e| e.to_string())?;
+            Ok(text.trim().to_owned())
+        };
+        let headers = PathBuf::from(query(HEADERS_KEY)?);
+        Ok(headers.join(GUI).join(query(VERSION_KEY)?).join(GUI))
     }
 
     /// The icons and fonts `kx_theme::assets::bundle` names, as resources next to the QML files, and the fonts' names.
