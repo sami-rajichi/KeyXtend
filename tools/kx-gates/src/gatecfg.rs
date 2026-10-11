@@ -1,6 +1,7 @@
 //! Settings of the first gates: G1 typing, G2 and G4 clicks, G3 top band, the hold engine run and G5.
 #![cfg(windows)]
 
+use kx_mod_keyboard::KeyboardSettings;
 use serde::Deserialize;
 
 /// G1 typing settings.
@@ -41,21 +42,33 @@ pub struct G2 {
     pub press_ms: u64,
     /// How far each click slips right and down while the button is down, in physical px.
     pub slip_px: i32,
+    /// How far below the keyboard's repeat delay each click's hold stays, in ms.
+    pub repeat_margin_ms: u64,
 }
 
 impl G2 {
-    /// Refuses a click with no hold, a hold the keyboard would repeat, or no slip.
+    /// Refuses a click with no hold or no slip, or a hold the default keyboard would repeat.
     pub fn check(&self) -> Result<(), String> {
-        let keyboard = kx_mod_keyboard::KeyboardSettings::from_defaults()
-            .map_err(|e| format!("the keyboard's defaults: {e}"))?;
-        let delay = keyboard.repeat_delay_ms;
-        if self.press_ms == 0 || self.press_ms >= delay {
-            return Err(format!(
-                "g2.press_ms must be above 0 and below the repeat delay, {delay} ms"
-            ));
+        if self.press_ms == 0 || self.slip_px <= 0 {
+            return Err("g2.press_ms and g2.slip_px must be above 0".to_string());
         }
-        if self.slip_px <= 0 {
-            return Err("g2.slip_px must be above 0".to_string());
+        let defaults = KeyboardSettings::from_defaults()
+            .map_err(|e| format!("the keyboard's defaults: {e}"))?;
+        self.holds_below(&defaults)
+    }
+
+    /// Refuses a hold that, with its margin, reaches the repeat delay of a keyboard with `settings`, as each click
+    /// would then repeat.
+    pub fn holds_below(&self, settings: &KeyboardSettings) -> Result<(), String> {
+        let (delay, held) = (
+            settings.repeat_delay_ms,
+            self.press_ms + self.repeat_margin_ms,
+        );
+        if settings.repeat && held >= delay {
+            return Err(format!(
+                "g2.press_ms plus repeat_margin_ms is {held} ms, not below the keyboard's repeat delay of {delay} ms: \
+                 each click would repeat"
+            ));
         }
         Ok(())
     }
@@ -143,7 +156,6 @@ pub struct Surface {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kx_mod_keyboard::KeyboardSettings;
 
     fn g2() -> G2 {
         crate::config::load().expect("kx-gates.toml loads").g2
@@ -159,8 +171,8 @@ mod tests {
     #[test]
     fn g2_refuses_no_hold_a_hold_that_would_repeat_and_no_slip() {
         let defaults = KeyboardSettings::from_defaults().expect("the defaults load");
-        let delay = defaults.repeat_delay_ms;
-        for (press_ms, slip_px) in [(0, 2), (delay, 2), (400, 0), (400, -2)] {
+        let close = defaults.repeat_delay_ms - g2().repeat_margin_ms;
+        for (press_ms, slip_px) in [(0, 2), (close, 2), (400, 0), (400, -2)] {
             let g = G2 {
                 press_ms,
                 slip_px,
@@ -168,5 +180,21 @@ mod tests {
             };
             assert!(g.check().is_err(), "{press_ms} ms, {slip_px} px");
         }
+    }
+
+    #[test]
+    fn a_hold_stays_a_margin_below_the_running_keyboards_repeat_delay() {
+        let g = g2();
+        let mut running = KeyboardSettings::from_defaults().expect("the defaults load");
+        assert_eq!(g.holds_below(&running), Ok(()));
+        running.repeat_delay_ms = g.press_ms + g.repeat_margin_ms;
+        let e = g.holds_below(&running).expect_err("a click would repeat");
+        assert!(e.contains("repeat"), "{e}");
+        running.repeat = false;
+        assert_eq!(
+            g.holds_below(&running),
+            Ok(()),
+            "a keyboard that never repeats"
+        );
     }
 }

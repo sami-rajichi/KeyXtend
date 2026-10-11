@@ -146,6 +146,8 @@ max_failures = 20
 press_ms = 400
 # Each click slips right and down while the button is down, inside the key, in physical px.
 slip_px = 2
+# Each click's hold stays this far below the running keyboard's repeat delay, so it never repeats, in ms.
+repeat_margin_ms = 200
 
 [g3]
 # Wait after opening a surface before probing, in ms.

@@ -141,10 +141,12 @@ pub struct Usable {
     pub follow_ms: u64,
 }
 
-/// The printable keys on top of keyboard `kb`, and the ones it leaves out. It first waits until the keyboard shows
-/// the layout of the app in front, as a click on a stale layout sends nothing.
+/// The printable keys on top of keyboard `kb`, and the ones it leaves out. It refuses a hold the running keyboard
+/// would repeat, then waits until it shows the layout of the app in front, as a click on a stale layout sends nothing.
 pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<Usable, String> {
-    let follow_ms = product::follow_ms(ctx.cfg.timing.poll_ms)?;
+    let running = product::keyboard()?;
+    ctx.cfg.g2.holds_below(&running)?;
+    let follow_ms = product::follow_after(&running, ctx.cfg.timing.poll_ms);
     sleep_ms(follow_ms);
     let (keys, mut hidden) = keys(kb, ctx.cfg.g2.slip_px)?;
     let (keys, covered) = visible(keys, kb.hwnd);
