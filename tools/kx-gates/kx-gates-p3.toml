@@ -21,6 +21,9 @@ alive_ms = 2000
 # guard_headroom_ms must fit [mouse_guard] limit_ms; the headroom covers starting apps, waits and clean-up, in ms.
 [fit]
 guard_headroom_ms = 120000
+# G8's capture must last through its counted steps up to its G2 clicks' end, plus this for its cold start, resizes and
+# the target window's start, in ms.
+capture_headroom_ms = 30000
 
 # G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
 [g8]
@@ -76,9 +79,9 @@ publishes = 10000
 bus_share = 0.01
 # PresentMon's CSV in the out folder, recorded with QPC times (--qpc_time_ms) while G8 runs up to its churn.
 presentmon = "g8-presentmon.csv"
-# How long that capture records, in seconds: G8's run up to the churn, about a minute. G8 waits for its end before the
-# churn, so a theme switch never counts as a dropped frame.
-presentmon_secs = 90
+# How long that capture records, in seconds: G8's run up to the churn with its held G2 clicks, about two minutes, as
+# [fit] checks. G8 waits for its end before the churn, so a theme switch never counts as a dropped frame.
+presentmon_secs = 150
 # The PresentMon program G8 starts as administrator, with no window, just before the product; empty, G8 says how to
 # record. Each PC names its own copy in the installed settings.
 presentmon_exe = ""

@@ -1,5 +1,5 @@
-//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, as each click now
-//! holds the button for `[g2] press_ms`.
+//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, and G8's capture
+//! covers its steps through its G2 clicks, as each click now holds the button for `[g2] press_ms`.
 #![cfg(windows)]
 
 use std::time::Duration;
@@ -15,6 +15,8 @@ use crate::gatecfg::G2;
 pub struct Fit {
     /// A guarded run's steps not counted here, such as starting apps, waits and clean-up.
     pub guard_headroom_ms: u64,
+    /// G8's steps before its G2 clicks end that are not counted here: the cold start, resizes and starting the target.
+    pub capture_headroom_ms: u64,
 }
 
 /// The least time `clicks` of G2's clicks take: each holds `press_ms`, then rests `click_gap_ms`.
@@ -36,8 +38,41 @@ fn g8_ms(c: &GatesConfig) -> u64 {
     ms_of(g.presentmon_secs).saturating_add(churn)
 }
 
-/// Refuses a guarded run whose counted steps and headroom pass the guard's limit, as the guard would stop it midway.
+/// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
+/// longest, the rise, and the clicks with their drain.
+fn g8_captured_ms(c: &GatesConfig) -> u64 {
+    let g = &c.g8;
+    let press = g.hover_settle_ms.saturating_add(g.press_wait_ms);
+    let presses = u64::try_from(g.presses).map_or(u64::MAX, |n| n.saturating_mul(press));
+    let waits = [
+        g.presentmon_wait_ms,
+        g.warm_ms,
+        g.idle_settle_ms,
+        g.idle_ms,
+        presses,
+        g.rise_wait_ms,
+        clicks_ms(&c.g2, g.clicks),
+        c.g2.drain_ms,
+    ];
+    waits.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
+}
+
+/// Refuses a G8 capture that would end before its G2 clicks, so their frames would go unseen.
+fn check_capture(c: &GatesConfig) -> Result<(), String> {
+    let need = g8_captured_ms(c).saturating_add(c.fit.capture_headroom_ms);
+    let secs = c.g8.presentmon_secs;
+    if ms_of(secs) < need {
+        return Err(format!(
+            "g8.presentmon_secs ({secs} s) ends before G8's G2 clicks end, {need} ms in: raise it"
+        ));
+    }
+    Ok(())
+}
+
+/// Refuses a guarded run whose counted steps and headroom pass the guard's limit, as the guard would stop it midway,
+/// and a G8 capture that would end before its G2 clicks.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
+    check_capture(c)?;
     if !c.mouse_guard.on {
         return Ok(());
     }
@@ -100,6 +135,20 @@ mod tests {
         assert!(check(&g4).expect_err("G4 too").contains("g4"));
         let g8 = with(|c| c.g8.presentmon_secs = c.mouse_guard.limit_ms / 1000);
         assert!(check(&g8).expect_err("G8 too").contains("g8"));
+    }
+
+    #[test]
+    fn g8s_capture_covers_its_steps_through_its_g2_clicks() {
+        let c = load().expect("loads");
+        let need = g8_captured_ms(&c) + c.fit.capture_headroom_ms;
+        assert!(ms_of(c.g8.presentmon_secs) >= need, "{need} ms to cover");
+        assert!(
+            g8_captured_ms(&c) > clicks_ms(&c.g2, c.g8.clicks),
+            "the clicks are counted"
+        );
+        let more = with(|c| c.g8.clicks *= 10);
+        let e = check(&more).expect_err("the capture would end before the clicks");
+        assert!(e.contains("presentmon_secs"), "{e}");
     }
 
     #[test]
