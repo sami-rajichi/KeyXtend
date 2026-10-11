@@ -87,7 +87,7 @@ impl WindowsPlatform {
         Arc::new(WinTray::new())
     }
 
-    /// Gives the heaps' free pages back to Windows after a look change.
+    /// The port that gives the heaps' free pages back to Windows after a look change.
     #[must_use]
     pub fn memory(&self) -> Arc<dyn Memory> {
         Arc::new(WinMemory)
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn the_memory_port_gives_back_on_another_thread() {
         let memory = WindowsPlatform::new().unwrap().memory();
-        let given = std::thread::spawn(move || memory.give_back()).join();
+        let given = std::thread::spawn(move || memory.decommit()).join();
         assert_eq!(given.ok(), Some(Ok(())));
     }
 

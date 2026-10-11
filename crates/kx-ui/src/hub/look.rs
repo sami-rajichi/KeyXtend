@@ -115,8 +115,8 @@ impl Hub {
 
     /// Gives the heaps' free pages back to the system, once every window dropped what it cached for the last look
     /// (ADR-0023). A refusal warns only the first time and stops nothing.
-    pub fn give_back(&self) {
-        let Err(e) = self.ports.memory.give_back() else {
+    pub fn decommit(&self) {
+        let Err(e) = self.ports.memory.decommit() else {
             return;
         };
         if !self.refused.swap(true, Ordering::Relaxed) {

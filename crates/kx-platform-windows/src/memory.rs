@@ -11,13 +11,13 @@ use windows::Win32::System::SystemServices::{
 use crate::refused;
 
 /// Decommits the free pages of the process heaps through `HeapOptimizeResources` (Windows 8.1 or later); with no heap
-/// named, Windows takes every heap with a low-fragmentation front end, which locks itself. Pages in use stay.
+/// named, Windows takes every heap with a low-fragmentation front end, each of which serialises its own calls.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WinMemory;
 
 impl Memory for WinMemory {
     #[allow(unsafe_code, reason = "A heap call with a local struct and its size.")]
-    fn give_back(&self) -> Result<(), UiError> {
+    fn decommit(&self) -> Result<(), UiError> {
         let info = HEAP_OPTIMIZE_RESOURCES_INFORMATION {
             Version: HEAP_OPTIMIZE_RESOURCES_CURRENT_VERSION,
             ..Default::default()
@@ -34,15 +34,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn windows_takes_the_ask_after_a_free() {
+    fn free_pages_go_back_after_a_free() {
         let freed: Vec<Vec<u8>> = (0..1024).map(|n| vec![0; n]).collect();
         drop(freed);
-        assert_eq!(WinMemory.give_back(), Ok(()));
-    }
-
-    #[test]
-    fn it_works_on_any_thread() {
-        let given = std::thread::spawn(|| WinMemory.give_back()).join();
-        assert_eq!(given.ok(), Some(Ok(())));
+        assert_eq!(WinMemory.decommit(), Ok(()));
     }
 }

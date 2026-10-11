@@ -32,7 +32,7 @@ impl FakeMemory {
 }
 
 impl Memory for FakeMemory {
-    fn give_back(&self) -> Result<(), UiError> {
+    fn decommit(&self) -> Result<(), UiError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         lock(&self.error).map_or(Ok(()), Err)
     }
@@ -43,14 +43,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_counts_each_give_back_and_refuses_while_told() {
+    fn it_counts_each_decommit_and_refuses_while_told() {
         let memory = FakeMemory::new();
         assert_eq!(memory.calls(), 0);
-        assert_eq!(memory.give_back(), Ok(()));
+        assert_eq!(memory.decommit(), Ok(()));
         memory.set_error(Some(UiError::Refused(5)));
-        assert_eq!(memory.give_back(), Err(UiError::Refused(5)));
+        assert_eq!(memory.decommit(), Err(UiError::Refused(5)));
         memory.set_error(None);
-        assert_eq!(memory.give_back(), Ok(()));
+        assert_eq!(memory.decommit(), Ok(()));
         assert_eq!(memory.calls(), 3, "refused calls count too");
     }
 }

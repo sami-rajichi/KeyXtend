@@ -216,7 +216,7 @@ pub(crate) fn release_after_frame() {
 /// Every window dropped what it cached for the last look, so the hub gives the freed memory back.
 fn settled() {
     if let Some(hub) = installed() {
-        hub.give_back();
+        hub.decommit();
     }
 }
 

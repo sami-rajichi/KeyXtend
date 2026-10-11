@@ -5,7 +5,6 @@
 #include <QtCore/QEvent>
 #include <QtCore/QList>
 #include <QtCore/QMetaMethod>
-#include <QtCore/QMetaObject>
 #include <QtCore/QObject>
 #include <QtCore/QSet>
 #include <QtCore/QThread>
