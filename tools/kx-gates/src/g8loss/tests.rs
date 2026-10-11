@@ -7,9 +7,8 @@ use crate::presentmon;
 
 /// The product's program, as `PresentMon` names it.
 const PROGRAM: &str = "keyxtend.exe";
-/// The CSV's header: only the columns G8 reads, by their `PresentMon` 2.6 names.
-const HEAD: &str =
-    "Application,SwapChainAddress,CPUStartTimeInMs,MsCPUBusy,MsBetweenPresents,MsUntilDisplayed\n";
+/// The CSV's header: only the columns G8 reads, by their `PresentMon` 2.6 names under `--qpc_time_ms`.
+const HEAD: &str = "Application,SwapChainAddress,CPUStartQPCTimeInMs,MsCPUBusy,MsBetweenPresents,MsUntilDisplayed\n";
 /// A frame's usual CPU time before its present, in ms.
 const BUSY_MS: f64 = 1.0;
 /// A 60 Hz screen: one refresh is 16.7 ms.

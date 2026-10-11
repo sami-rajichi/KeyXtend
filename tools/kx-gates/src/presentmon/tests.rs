@@ -23,11 +23,16 @@ keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,16.1,NA,12.12,NA,0.1,1.0,NA,15.0
 16.1,0.0,NA,NA\r
 ";
 
-/// The columns G8 needs, by their exact names in `PresentMon` 2.6's own header.
+/// The 2.6 file as `--qpc_time_ms` writes it: the start column takes the QPC name 2.6's program holds.
+fn v2_6_qpc() -> String {
+    V2_6.replacen("CPUStartTimeInMs", "CPUStartQPCTimeInMs", 1)
+}
+
+/// The columns G8 needs, by their exact names in `PresentMon` 2.6's header under `--qpc_time_ms`.
 const NEEDED: [&str; 6] = [
     "Application",
     "SwapChainAddress",
-    "CPUStartTimeInMs",
+    "CPUStartQPCTimeInMs",
     "MsCPUBusy",
     "MsBetweenPresents",
     "MsUntilDisplayed",
@@ -48,7 +53,7 @@ fn each_present_is_timed_at_its_cpu_start_plus_its_cpu_busy_time_on_its_swap_cha
 
 #[test]
 fn version_2_6_files_read_by_their_own_column_names_with_or_without_the_byte_order_mark() {
-    for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}")] {
+    for csv in [v2_6_qpc(), format!("\u{FEFF}{}", v2_6_qpc())] {
         let f = parse(&csv, "keyxtend.exe").expect("reads");
         assert_eq!((f.presented, f.lost), (2, 1));
         assert_eq!(f.p99_ms, Some(12.12));
@@ -58,13 +63,25 @@ fn version_2_6_files_read_by_their_own_column_names_with_or_without_the_byte_ord
 }
 
 #[test]
+fn a_file_with_only_the_relative_start_time_is_refused_and_names_the_flag() {
+    let seconds = V2_6.replacen("CPUStartTimeInMs", "CPUStartTimeInSeconds", 1);
+    for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}"), seconds] {
+        let e = parse(&csv, "keyxtend.exe").expect_err("no QPC start");
+        assert!(
+            e.contains(QPC_ARG) && e.contains("CPUStartQPCTimeInMs"),
+            "{e}"
+        );
+    }
+}
+
+#[test]
 fn a_file_without_a_needed_column_is_refused_and_names_it() {
     for name in NEEDED {
-        let csv = V2_6.replacen(name, "Gone", 1);
+        let csv = v2_6_qpc().replacen(name, "Gone", 1);
         let e = parse(&csv, "keyxtend.exe").expect_err("a column is missing");
         assert!(e.contains(name), "{name}: {e}");
     }
-    let lower = V2_6.replacen("MsCPUBusy", "mscpubusy", 1);
+    let lower = v2_6_qpc().replacen("MsCPUBusy", "mscpubusy", 1);
     assert!(
         parse(&lower, "keyxtend.exe").is_err(),
         "names match exactly"

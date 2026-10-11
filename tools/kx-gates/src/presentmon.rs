@@ -16,8 +16,9 @@ const APP: &str = "Application";
 const CHAIN: &str = "SwapChainAddress";
 /// Asks `PresentMon` for each frame's CPU start on the QPC clock, in ms.
 pub const QPC_ARG: &str = "--qpc_time_ms";
-/// Columns with a frame's CPU start, in ms: 2.6, then 2.0 to 2.5.
-const START: [&str; 2] = ["CPUStartTimeInMs", "CPUStartQPCTime"];
+/// Columns with a frame's CPU start on the QPC clock in ms, as `QPC_ARG` names them: 2.6, then 2.0 to 2.5. The plain
+/// `CPUStartTimeInMs` counts from the recording's start, so it can never line up with G8's clock and is never read.
+const START: [&str; 2] = ["CPUStartQPCTimeInMs", "CPUStartQPCTime"];
 /// Columns with the ms from a frame's CPU start to its present: 2.6, then 2.0 to 2.5.
 const BUSY: [&str; 2] = ["MsCPUBusy", "CPUBusy"];
 /// Columns with the time since the previous present, in ms: 2.6, then 2.0 to 2.5.
