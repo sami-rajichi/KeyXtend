@@ -2,6 +2,27 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-11 17:10 — P3: hold a key to repeat it
+Holding a character key, Space, Enter, Backspace, Delete or an arrow types it again after 0.8 s, then 10 times a second, as on a real keyboard; with Ctrl, Alt or Win latched, a held key acts once. The delay, the speed and an off switch are settings (`[keyboard] repeat`, `repeat_delay_ms`, `repeat_every_ms`), which P13's settings window will explain in EN, FR and AR. A `Repeat` state machine with an injected clock decides each tick, and one timer per window ticks only while a key is held.
+
+## 2026-10-11 16:20 — P3: G8's churn warms up for five rounds and lists each round
+G8's pop-up churn now runs five warm-up rounds before it measures (owner's decision), and its result lists the memory after each measured round, so a failed run shows a steady climb or a single jump. A round that fails keeps the readings taken so far, and the app's debug churn shows a key's tip, the language list and the bubble each round.
+
+## 2026-10-11 11:40 — P3: freed heap pages go back after a look change (ADR-0023)
+After a theme or light/dark change, the app asks Windows once to give back the heap pages the old look freed, through the platform's memory port. The first look change still keeps about 19 / 31 MB in Native, which P13 investigates.
+
+## 2026-10-11 10:43 — P3: three leaks fixed in the theme switch
+Qt 6.11's soft shadow never freed its default material, a theme switch let QML read the new look before its fonts loaded, and each shown window kept the old look's cached graphics. All three are fixed, and only debug builds hold the churn's test QML.
+
+## 2026-10-11 01:20 — P3: the key diet, each key makes only what it shows
+Each key builds only the parts its kind needs, an icon provider tints the icons so no icon needs its own effect, and glows and lights exist only while they show. Each icon is a texture of its own, so the saved pictures repeat exactly.
+
+## 2026-10-10 23:15 — P3: texts carry no hidden bidi marks (ADR-0022)
+Texts no longer carry LRM and RLM marks, which made Qt search every font for them. The language list draws OS names plainly, and Arabic joins a list with و, so Latin names keep their order.
+
+## 2026-10-10 20:50 — P3: one graphics device for every window (ADR-0021)
+All windows share one graphics device and draw on the GUI thread, which took idle memory from about 215 MB to about 127 MB in a harness and stopped each pop-up from adding a device of its own. Only the look's fonts load, from Rust before QML, and a lost graphics device rebuilds the windows where the user left them. The budget is now 100 MB working set and 140 MB commit (G8).
+
 ## 2026-10-10 18:00 — P3: fix round F, windows and G9
 After a scale or screen change, the keyboard keeps its place in pixels and is placed again from fresh screens, also when the change comes during a move or resize, so a moved keyboard is never lost off-screen. The shadow hides during a live resize instead of trailing it, and the guard brings back a dropped window's whole family, owners included, and checks again after another program's call ends. G10 keeps no other app's labels, and G9 records each window's owner and guard state; G9's pass waits for the next installed run.
 
