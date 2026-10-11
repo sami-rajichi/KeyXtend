@@ -48,7 +48,7 @@ pub struct G8 {
     pub hover_settle_ms: u64,
     /// Longest wait for a press to light its key.
     pub press_wait_ms: u64,
-    /// A pressed key's rise, from the press; only frames lost in it count as `dropped_frames`.
+    /// A pressed key's rise after its release; frames lost from the press to its end count as `dropped_frames`.
     pub rise_ms: u64,
     /// Wait after the last press before the resizes, so its rise has ended; at least `rise_ms`.
     pub rise_wait_ms: u64,

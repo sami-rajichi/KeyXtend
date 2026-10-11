@@ -99,9 +99,9 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
         let before = picture(&r)?;
         let (start, at_us) = (Instant::now(), now_us());
         mouse::press_at(on)?;
-        out.spans.push(Span::press(at_us, g.rise_ms));
         let lit = watch(&r, &before, start, g.press_wait_ms, &mut out.copy_ms);
         or_release(mouse::release_at(away), simuser::release_all)?;
+        out.spans.push(Span::press(at_us, now_us(), g.rise_ms));
         out.lit_ms.push(lit?);
     }
     sleep_ms(g.rise_wait_ms);

@@ -33,7 +33,7 @@ highlight_frames = 2.0
 # Pause with the pointer on the key before each press, and the longest wait for its light, in ms.
 hover_settle_ms = 500
 press_wait_ms = 500
-# A pressed key's rise (the theme's colour move, 150 ms, and a few frames): only frames lost in it are dropped_frames.
+# A key's rise after its release (colour move 150 ms, plus a few frames); frames lost from press to its end are dropped.
 rise_ms = 200
 # Wait after the last press so its rise has ended before the resizes, in ms; at least rise_ms.
 rise_wait_ms = 300

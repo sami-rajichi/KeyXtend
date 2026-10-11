@@ -15,7 +15,9 @@ const HZ: f64 = 60.0;
 /// G8's start, its one press with a 200 ms rise, and its one resize, on the QPC clock in ms.
 const START_MS: f64 = 10_000.0;
 const PRESS_MS: f64 = 11_000.0;
-const RISE_MS: u64 = 200;
+const RISE_MS: u32 = 200;
+/// How long a slow key keeps the button down before G8 lets go, within `[g8] press_wait_ms`.
+const HELD_MS: f64 = 300.0;
 const RESIZE_MS: (f64, f64) = (12_000.0, 12_500.0);
 /// The swap chains in the rows.
 const CHAIN: &str = "0x1";
@@ -43,17 +45,22 @@ fn base() -> Vec<String> {
 
 fn spans() -> Vec<Span> {
     vec![
-        Span::press(us(PRESS_MS), RISE_MS),
+        Span::press(us(PRESS_MS), us(PRESS_MS), u64::from(RISE_MS)),
         Span::resize(us(RESIZE_MS.0), us(RESIZE_MS.1)),
     ]
 }
 
 /// The losses in `rows` after `base`, read with and without a byte order mark, which must agree.
 fn read(rows: &[String]) -> Result<Losses, String> {
+    read_over(rows, &spans())
+}
+
+/// `read` against G8's steps `spans`.
+fn read_over(rows: &[String], spans: &[Span]) -> Result<Losses, String> {
     let csv = format!("{HEAD}{}{}", base().concat(), rows.concat());
     let of = |csv: &str| {
         let f = presentmon::parse(csv, PROGRAM)?;
-        losses(&f.presents, &spans(), Some(HZ), us(START_MS))
+        losses(&f.presents, spans, Some(HZ), us(START_MS))
     };
     let (plain, marked) = (of(&csv), of(&format!("\u{FEFF}{csv}")));
     assert_eq!(plain, marked, "the byte order mark changes nothing");
@@ -73,6 +80,27 @@ fn a_loss_while_a_pressed_key_rises_counts() {
     let got = read(&[row(CHAIN, at, false), row(CHAIN, at + 50.0, true)]).expect("lines up");
     assert_eq!(got.counted, [loss(at, During::Press)]);
     assert!(got.listed.is_empty());
+}
+
+#[test]
+fn a_press_window_runs_from_the_press_to_its_release_plus_the_rise() {
+    let up = PRESS_MS + HELD_MS;
+    let held = [Span::press(us(PRESS_MS), us(up), u64::from(RISE_MS))];
+    let end = up + f64::from(RISE_MS);
+    let (rising, after) = (end - 10.0, end + 50.0);
+    let rows = [
+        row(CHAIN, rising, false),
+        row(CHAIN, rising + 30.0, true),
+        row(CHAIN, after, false),
+        row(CHAIN, after + 30.0, true),
+    ];
+    let got = read_over(&rows, &held).expect("lines up");
+    assert_eq!(
+        got.counted,
+        [loss(rising, During::Press)],
+        "the rise starts at the release"
+    );
+    assert_eq!(got.listed, [loss(after, During::Outside)]);
 }
 
 #[test]

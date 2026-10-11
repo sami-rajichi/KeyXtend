@@ -39,12 +39,12 @@ pub struct Span {
 }
 
 impl Span {
-    /// A press at `at_us` and the rise of `rise_ms` that follows it.
-    pub fn press(at_us: i64, rise_ms: u64) -> Self {
+    /// A press at `at_us`, let go at `up_us`, and the rise of `rise_ms` that follows the release.
+    pub fn press(at_us: i64, up_us: i64, rise_ms: u64) -> Self {
         let rise = i64::try_from(rise_ms).unwrap_or(i64::MAX);
         Self {
             from_us: at_us,
-            to_us: at_us.saturating_add(rise.saturating_mul(US_PER_MS_INT)),
+            to_us: up_us.saturating_add(rise.saturating_mul(US_PER_MS_INT)),
             during: During::Press,
         }
     }
