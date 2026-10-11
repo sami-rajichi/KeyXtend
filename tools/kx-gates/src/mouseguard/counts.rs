@@ -3,7 +3,7 @@
 /// The hand's events a guard dropped and kx-gates' own events it passed; never a position, button or key.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Counts {
-    /// Physical events dropped.
+    /// Events dropped that were not kx-gates' own: the hand's, or other programs' injected input.
     pub dropped: u32,
     /// kx-gates' own injected events passed.
     pub passed: u32,
