@@ -22,6 +22,8 @@ const WAS_DROPPED: &str = "1";
 const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
+/// The UTF-8 byte order mark `PresentMon` 2.6 starts its CSV with.
+const BOM: char = '\u{FEFF}';
 
 /// How much longer to wait for a recording of `secs` seconds, plus `stop_ms` to stop, `gone` after it started.
 pub fn stop_wait(secs: u64, stop_ms: u64, gone: Duration) -> Duration {
@@ -111,9 +113,10 @@ impl Columns {
     }
 }
 
-/// The frames of `program` (its file name, any case) in `PresentMon`'s `csv`; a last row with no line end is still being
-/// written, so it is left out.
+/// The frames of `program` (its file name, any case) in `PresentMon`'s `csv`, after any byte order mark; a last row with
+/// no line end is still being written, so it is left out.
 pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
+    let csv = csv.strip_prefix(BOM).unwrap_or(csv);
     let whole = csv.rfind('\n').map_or(csv, |end| &csv[..=end]);
     let mut lines = whole.lines();
     let cols = Columns::of(lines.next().ok_or("the CSV is empty")?)?;
@@ -164,6 +167,27 @@ FrameType,CPUStartTime,FrameTime,CPUBusy,DisplayedTime
 keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,10.0,6.06,1.0,6.06
 keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,16.1,6.06,1.0,6.06
 ";
+
+    /// `PresentMon` 2.6's own header line, from a real capture, and two rows: one shown, one never shown.
+    const V2_6: &str = "\
+Application,ProcessID,SwapChainAddress,PresentRuntime,SyncInterval,PresentFlags,AllowsTearing,PresentMode,TimeInMs,\
+MsBetweenSimulationStart,MsBetweenPresents,MsBetweenDisplayChange,MsInPresentAPI,MsRenderPresentLatency,\
+MsUntilDisplayed,CPUStartTimeInMs,MsBetweenAppStart,MsCPUBusy,MsCPUWait,MsGPULatency,MsGPUTime,MsGPUBusy,MsGPUWait,\
+MsAnimationError,AnimationTime,MsFlipDelay,MsAllInputToPhotonLatency,MsClickToPhotonLatency\r
+keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,10.0,NA,6.06,6.06,0.1,1.0,6.0,9.0,6.06,1.0,0.1,0.5,0.5,0.5,0.1,0.0,\
+10.0,0.0,NA,NA\r
+keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,16.1,NA,12.12,NA,0.1,1.0,NA,15.0,6.06,1.0,0.1,0.5,0.5,0.5,0.1,0.0,\
+16.1,0.0,NA,NA\r
+";
+
+    #[test]
+    fn version_2_6_files_read_with_or_without_the_byte_order_mark_they_start_with() {
+        for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}")] {
+            let f = parse(&csv, "keyxtend.exe").expect("reads");
+            assert_eq!((f.presented, f.dropped), (2, 1));
+            assert_eq!(f.p99_ms, Some(12.12));
+        }
+    }
 
     #[test]
     fn version_1_rows_count_the_products_frames_and_drops_in_any_case() {
