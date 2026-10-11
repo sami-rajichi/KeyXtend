@@ -140,6 +140,20 @@ QtObject {
         lk: face.lk
         res: face.res
     }
+    // Debug builds only: the app churns through its windows for a memory check when the keyboard object hands it a
+    // plan; release builds hold no Churn.qml and no plan.
+    property Loader churn: Loader {
+        readonly property string plan: app.keyboard.churnPlan ? app.keyboard.churnPlan() : ""
+        active: face.ready && plan !== ""
+        onActiveChanged: start()
+        Component.onCompleted: start()
+
+        // Loads the churn the first time it is on, as the keyboard starts or later.
+        function start() {
+            if (active && source.toString() === "")
+                setSource("Churn.qml", { app: app, plan: JSON.parse(plan) });
+        }
+    }
 
     // The banner follows the keyboard as it shows, hides, moves or changes size.
     property Connections noticeFollows: Connections {

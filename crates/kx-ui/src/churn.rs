@@ -1,5 +1,5 @@
-//! Debug builds only: with `KX_UI_CHURN` set, the keyboard window churns through its own buttons' calls
-//! (`qml/Churn.qml`), so a memory check can measure after it with no mouse and no key sent.
+//! Debug builds only: with `KX_UI_CHURN` set, the app churns through its own buttons' calls (`qml/Churn.qml`), so a
+//! memory check can measure after it with no mouse and no key sent.
 
 use serde::Serialize;
 use std::ffi::OsStr;
@@ -7,17 +7,19 @@ use std::ffi::OsStr;
 /// The variable that turns the churn on.
 pub const CHURN_VAR: &str = "KX_UI_CHURN";
 
-/// The churn: ms between steps, then how many theme switches, Caps Lock changes and size changes, in that order.
+/// The churn: ms between steps, rounds and the theme switches in each, then how many Caps Lock changes and size
+/// changes, in that order. Each round first shows a key's tip, the List design's language list and the bubble (`Churn.qml`).
 #[derive(Serialize)]
 struct Plan {
     step_ms: u32,
+    rounds: u32,
     themes: u32,
     caps: u32,
     sizes: u32,
 }
 
-/// G8's churn: ms between steps, theme rounds, Caps Lock changes and size changes. Each round shows every theme once
-/// and comes back to the first; Caps Lock comes back to off, and the sizes go up by half of them and down again.
+/// G8's churn: ms between steps, rounds, Caps Lock changes and size changes. Each round shows every theme once and
+/// comes back to the first; Caps Lock comes back to off, and the sizes go up by half of them and down again.
 const STEP_MS: u32 = 400;
 const ROUNDS: u32 = 1;
 const CAPS: u32 = 20;
@@ -28,10 +30,10 @@ const SIZES: u32 = 24;
 pub fn plan(value: Option<&OsStr>, themes: usize) -> String {
     match value {
         Some(v) if !v.is_empty() => {
-            let count = u32::try_from(themes).unwrap_or(u32::MAX);
             let plan = Plan {
                 step_ms: STEP_MS,
-                themes: ROUNDS.saturating_mul(count),
+                rounds: ROUNDS,
+                themes: u32::try_from(themes).unwrap_or(u32::MAX),
                 caps: CAPS,
                 sizes: SIZES,
             };
@@ -61,11 +63,12 @@ mod tests {
     }
 
     #[test]
-    fn the_plan_has_one_theme_step_per_theme_per_round() {
+    fn each_round_has_one_theme_step_per_theme() {
         for themes in [3_u8, 4] {
             let on: serde_json::Value =
                 serde_json::from_str(&plan(Some(OsStr::new("1")), usize::from(themes))).unwrap();
-            assert_eq!(on["themes"], ROUNDS * u32::from(themes));
+            assert_eq!(on["rounds"], ROUNDS);
+            assert_eq!(on["themes"], u32::from(themes));
         }
     }
 }
