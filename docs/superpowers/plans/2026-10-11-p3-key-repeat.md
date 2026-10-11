@@ -25,7 +25,7 @@
 - **Crates and files:**
   - `crates/kx-mod-keyboard`: `board.toml` (a `repeat` flag on named keys; character runs always repeat), `defaults.toml`, `settings.rs`, `spec.rs` (reads the flag), a new `repeat.rs` (the state machine), and `face.rs` with `face/inner.rs` (press, hold and let-go calls);
   - `crates/kx-ui`: `src/bridges/keyboard.rs`, `qml/Key.qml` (press, release, leave), `qml/KbWindow.qml` (one hold timer for the whole window, never one per key), and the Quick stand-in `FakeKeyboard`;
-  - the spec, `docs/items/P3.md`, `P9.md` and `P13.md`.
+  - the spec, `docs/items/P3.md`, `P7.md` and `P13.md`.
 - **State machine `Repeat`** in `kx-mod-keyboard`:
   - states: idle, held (a key, since when) and repeating (a key, next due time);
   - inputs: press, tick, let go and leave;
