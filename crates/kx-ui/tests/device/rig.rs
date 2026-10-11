@@ -35,6 +35,10 @@ pub(crate) const GUARDED: usize = 2;
 /// is loaded from.
 const TICK_MS: u32 = 20;
 const TICK_URL: &str = "qrc:/kx-ui-tests/device-tick.qml";
+/// The one-shot timer `untick` runs Qt's loop under: its exit code, which neither the ticker nor the loss step's
+/// watchdog uses, and its URL.
+const STILL_CODE: i32 = 4;
+const STILL_URL: &str = "qrc:/kx-ui-tests/device-still.qml";
 /// What a second `Ui` object taking the hub's wakes warns.
 const SECOND_UI: &str = "second Ui";
 /// An adapter no PC has, so no device can be made on it, as when the pinned one is gone.
@@ -155,6 +159,22 @@ pub(crate) fn timer(
 /// The ticker.
 pub(crate) fn ticker() -> Result<UniquePtr<QQmlApplicationEngine>, String> {
     timer(TICK_MS, 0, true, TICK_URL)
+}
+
+/// Stops the ticker, then runs Qt's loop until a one-shot timer of its own ends it. A tick that fired as the loop was
+/// ending leaves its exit queued, which would otherwise end the next run of the loop at once.
+pub(crate) fn untick(
+    app: &mut UniquePtr<QGuiApplication>,
+    tick: &mut UniquePtr<QQmlApplicationEngine>,
+) -> Outcome {
+    *tick = UniquePtr::null();
+    for _ in 0..TICKS {
+        let _still = timer(TICK_MS, STILL_CODE, false, STILL_URL)?;
+        if app.as_mut().map(|a| a.exec()) == Some(STILL_CODE) {
+            return Ok(());
+        }
+    }
+    Err("an exit stayed queued after the ticker stopped".into())
 }
 
 /// Runs Qt's loop tick by tick until `done` holds; the error names `what` did not happen.

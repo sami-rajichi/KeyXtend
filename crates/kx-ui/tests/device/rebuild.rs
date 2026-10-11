@@ -4,7 +4,9 @@
 
 use crate::checks::{adopted, iconed};
 use crate::face::HOME;
-use crate::rig::{GONE, GUARDED, Outcome, PICK, Rig, TICKS, pick_next, ticker, timer, wait};
+use crate::rig::{
+    GONE, GUARDED, Outcome, PICK, Rig, TICKS, pick_next, ticker, timer, untick, wait,
+};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine};
 use kx_module_api::ports::Rect;
@@ -80,7 +82,7 @@ fn alone(
     tick: &mut UniquePtr<QQmlApplicationEngine>,
     trigger: impl FnOnce(),
 ) -> Outcome {
-    *tick = UniquePtr::null();
+    untick(app, tick)?;
     let watchdog = timer(WATCHDOG_MS, WATCHDOG_CODE, false, WATCHDOG_URL)?;
     trigger();
     let code = app.as_mut().map(|a| a.exec());
