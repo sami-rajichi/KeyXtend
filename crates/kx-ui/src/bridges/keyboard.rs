@@ -1,5 +1,6 @@
-//! The `Keyboard` object: the keyboard window's board, state and clicks through the face, its guard and shape, the
-//! pointer and the bubble's spot. Every call runs on the Qt thread, which also runs the relabel timer.
+//! The `Keyboard` object: the keyboard window's board, state, clicks and held keys through the face, its guard
+//! and shape, the pointer and the bubble's spot. Every call runs on the Qt thread, which runs the relabel and hold
+//! timers too.
 
 use super::{hub, qs};
 use crate::geom::whole;

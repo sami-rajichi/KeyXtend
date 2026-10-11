@@ -69,7 +69,7 @@ Every bridge call runs on the Qt GUI thread, including the guard and the window 
 ## QML objects
 
 - `Ui`: settings, language (with the size buttons' letters and names, and the tray's language) and look JSON, the keyboard's texts and the tray's (`trayText`), the space bar's text, the banner's count and a pager's number, notices (take, tell again, Try again, OK), the theme button, the light or dark switch, the backdrop, the tray icon (`trayPx`, `trayShow`, `trayHide`), where pop-ups go (`popAt`, `menuAt`), the keyboard's mode (`keepMode`, `modeJson`), the compiled-in assets and Quit, with signals for each change (`textsChanged` for a new keyboard language, `fontsChanged` once the hub loaded another theme's fonts), for the app's Show and Quit, and for tray clicks (`trayClicked`, `trayAway`).
-- `Keyboard`: the board and state JSON, every click and size step, the language list, the window's place, the pointer, the bubble's spot, the window shape and the no-focus guard.
+- `Keyboard`: the board and state JSON, every click and size step, a held key's `press`, `tick`, `letGo` and `leave`, the language list, the window's place, the pointer, the bubble's spot, the window shape and the no-focus guard.
 
 ## Public API
 

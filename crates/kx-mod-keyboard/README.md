@@ -84,9 +84,9 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Action | Does | Reply |
 |---|---|---|
 | `tap {id, back}` | Types, latches, or clicks the language key | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
-| `press {id}` | The pointer went down on a repeating key (spec §4.6). It may repeat when `repeat` is on, no list is open, no Ctrl, Alt or Win acts on it and it is not a dead key (`Typing::repeats`); else it types once, on let-go | State only when a burst left over ended. `UnknownKey` off the board. |
+| `press {id}` | The pointer went down on a repeating key (spec §4.6). It may repeat when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it and it is not a dead key (`Typing::repeats`); else it types once, on let-go | State only when a burst left over ended. `UnknownKey` off the board, which also ends a held key. |
 | `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | As a tap: state, a stale refresh, or `notice.keys-not-sent` once. Nothing when no repeat is due. |
-| `let_go {id}` | The pointer let go on the key: a click types once as `tap`; after a repeat nothing more types, and the burst's latches let go (`Typing::release`) | As `tap` for a click; state when a burst ended. |
+| `let_go {id}` | The pointer let go on the key: a click types once as `tap`; after a repeat nothing more types, and the burst's latches let go (`Typing::release`) | As `tap` for a click; state when a burst ended. `UnknownKey` off the board, which also ends a held key. |
 | `leave` | The pointer left the held key, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
@@ -98,7 +98,7 @@ The language key has three designs, by `lang_key`:
 
 - **Carousel:** the back part steps back, the rest steps on; the names slide the way it stepped once the switch lands, and a state read in the change event already has the slide.
 - **Cycle:** every click steps on; `at` lights one dot of `count`, and the names never slide (`turn` stays 0).
-- **List:** a click opens the list on the current row, and another closes it. While it is open, the board's `nav` keys (Esc, Enter and the arrows) come as `panel_key` and never reach the app; every other key, Space too, types as usual. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
+- **List:** a click opens the list on the current row, and another closes it. Opening it ends a held key's burst. While it is open, the board's `nav` keys (Esc, Enter and the arrows) come as `panel_key` and never reach the app; every other key, Space too, types as usual. Up and Down move one row, Left and Right one page, Enter picks and Esc closes.
 
 With one layout installed, a click asks no step and opens no list in any design, but still closes a list left open, and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
@@ -135,7 +135,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
-- `repeat`: `Repeat` (`new`, `press`, `tick`, `let_go`, `leave`), the hold of one key, timed by the face's clock; its debug output shows only its phase.
+- `repeat`: `Repeat` (`new`, `press`, `tick`, `let_go`, `leave`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`, with the kernel's `clock`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.

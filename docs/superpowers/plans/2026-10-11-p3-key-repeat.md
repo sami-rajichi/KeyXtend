@@ -11,7 +11,7 @@
   - the spec, the board data, the tests and the manual check.
 - Out:
   - the settings window's controls and their explaining texts (P13, §8.6);
-  - hold-to-fill on @ and P (P9 decides how it meets repeat);
+  - hold-to-fill on @ and P (P7 decides how it meets repeat);
   - Home, End and the Page keys, which are not on the board (spec §4.1; F15 adds them, and they then repeat too);
   - sounds per repeat (P4).
 
@@ -92,7 +92,7 @@
    - *Implement:* pressed, released and exited handlers on repeating keys. One `Timer` in `KbWindow.qml`, with its interval from the settings, asks the bridge on each tick.
    - *Verify:* `cargo test -p kx-ui --test texts`, then `qmltestrunner -input crates/kx-ui/qmltest` with `QML_DISABLE_DISK_CACHE=1`: 0 failures, no QWARN.
 6. **Notes for later items, and the record.**
-   - *Files:* `docs/items/P9.md` (hold-to-fill on @ and P meets repeat), `docs/items/P13.md` (settings window: repeat on/off, delay, speed, each with a plain explanation in EN, FR and AR), `docs/items/P3.md`.
+   - *Files:* `docs/items/P7.md` (hold-to-fill on @ and P meets repeat), `docs/items/P13.md` (settings window: repeat on/off, delay, speed, each with a plain explanation in EN, FR and AR), `docs/items/P3.md`.
    - *Verify:* `cargo xtask tidy`.
 
 ## Edge cases (each maps to a test)
