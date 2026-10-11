@@ -1,5 +1,5 @@
-//! Every stop of a held key's repeats (spec §4.6): leaving the key or hiding, a stale table, a failed send and a
-//! restart; after each, no tick types again, in any run of inputs, and a key not on the board is refused.
+//! Every stop of a held key's repeats (spec §4.6): leaving the key, hiding, a stale table, a failed send, a restart
+//! and the list opening; after each, no tick types again, in any run of inputs, and a key not on the board is refused.
 
 #![allow(
     clippy::unwrap_used,
@@ -100,6 +100,19 @@ fn a_restart_drops_the_held_key_and_ends_its_burst() {
     assert_eq!(r.state()["keys"]["shift"]["on"], false, "the burst ended");
     assert_eq!(r.let_go(A), Ok(FaceReply::default()));
     assert_eq!(r.fakes.injector.strokes(), [text("A")]);
+}
+
+#[test]
+fn opening_the_list_stops_the_burst() {
+    // A second input, such as a reader's Invoke on the language key, opens the list while an arrow repeats.
+    let r = Rig::new(&GOLDEN, Some(("lang_key", "list".into())));
+    hold(&r, "down", 0);
+    let typed = r.fakes.injector.strokes();
+    assert_eq!(typed.len(), 1, "the first repeat");
+    assert_eq!(r.tap("lang"), Ok(STATE));
+    still(&r, 3);
+    assert_eq!(r.let_go("down"), Ok(FaceReply::default()));
+    assert_eq!(r.fakes.injector.strokes(), typed, "nothing reached the app");
 }
 
 #[test]

@@ -140,6 +140,10 @@ impl Inner {
                     Some(_) => None,
                     None => Some(LangList::open(at.unwrap_or_default())),
                 };
+                if self.list.is_some() {
+                    // A held key's burst ends, so it never types past the open list.
+                    self.ended();
+                }
                 STATE
             }
         }

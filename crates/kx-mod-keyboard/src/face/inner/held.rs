@@ -44,7 +44,7 @@ impl Inner {
     }
 
     /// Drops the held key and ends its burst; the state redraws when the burst's latches let go.
-    fn ended(&mut self) -> FaceReply {
+    pub(super) fn ended(&mut self) -> FaceReply {
         self.repeat.leave();
         if self.typing.release() {
             STATE
