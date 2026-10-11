@@ -1,11 +1,12 @@
-// Icons are one Image each, which the icon provider draws in its tint: no key holds an effect or a layer, a tint's
-// alpha is the image's opacity, and a new theme, mode or size draws every icon again.
+// Icons are one Image each, which the icon provider draws in its tint: no key holds an effect or a layer, as a sweep
+// that finds each kind shows, a tint's alpha is the image's opacity, and a new theme, mode or size draws every icon again.
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/assets.js" as Assets
+import "board.js" as Board
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-dark.js" as ND
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
@@ -42,22 +43,20 @@ Item {
             const kv = Face.board.keys.find(k => k.id === id);
             return createTemporaryObject(keyC, root, { kv: kv, ks: Face.states.en.keys[id], lk: lk, lang: Face.states.en.lang, design: Face.board.lang_key, res: root.res, s: s || 1 });
         }
-        // Every item under `item` for which `ok` holds.
-        function all(item, ok, found) {
-            found = found || [];
-            if (ok(item))
-                found.push(item);
-            for (let i = 0; i < item.children.length; i++)
-                all(item.children[i], ok, found);
-            return found;
-        }
-        // The QML type of `o`, such as `Icon`.
+        // The QML type of `o`, such as `Icon`; Qt names a C++ type by its class, such as `QQuickMultiEffect`.
         function type(o) {
             return String(o).replace(/(_QML.*)?\(.*$/, "");
         }
         // The key's icon.
         function iconOf(k) {
-            return all(k, o => type(o) === "Icon")[0];
+            return Board.all(k, o => type(o) === "Icon")[0];
+        }
+        // Whether `o` draws through an effect of its own: a MultiEffect, a ShaderEffect outside a key's shadow, or a
+        // layer.
+        function effect(o) {
+            const t = type(o);
+            const shader = /ShaderEffect/.test(t) && type(o.parent) !== "QQuickRectangularShadow";
+            return /MultiEffect$/.test(t) || shader || (o.layer !== undefined && o.layer.enabled);
         }
         // Colour `c` as the provider names a tint: six hex digits, without its alpha.
         function hex(c) {
@@ -68,9 +67,19 @@ Item {
             for (const lk of [N.lk, E.lk, D.lk])
                 for (const kv of Face.board.keys) {
                     const k = makeKey(kv.id, lk);
-                    const odd = all(k, o => type(o) === "MultiEffect" || (o.layer !== undefined && o.layer.enabled));
+                    const odd = Board.all(k, effect);
                     compare(odd.length, 0, kv.id + " holds " + odd.map(type));
                 }
+        }
+
+        // The sweep above finds each kind of effect it looks for.
+        function test_the_effect_sweep_finds_each_kind() {
+            const shader = "ShaderEffect { objectName: 'shader'; property Item source: ShaderEffectSource {} }";
+            const kinds = "MultiEffect { objectName: 'multi' } " + shader + " Item { objectName: 'layer'; layer.enabled: true }";
+            const held = createTemporaryQmlObject("import QtQuick; import QtQuick.Effects; Item { " + kinds + " }", root);
+            const found = Board.all(held, effect).map(o => o.objectName);
+            for (const name of ["multi", "shader", "layer"])
+                verify(found.indexOf(name) >= 0, name + " is found");
         }
 
         function test_an_icon_is_one_image_in_its_tint() {
