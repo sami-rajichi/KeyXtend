@@ -29,6 +29,23 @@ mod tests {
     const SHIPPED: &str = include_str!("../kx-gates.toml");
     /// The shipped settings of the gates P3 adds.
     const SHIPPED_P3: &str = include_str!("../kx-gates-p3.toml");
+    /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
+    const WORKSPACE: &str = include_str!("../../../Cargo.toml");
+
+    #[test]
+    fn each_shipped_settings_file_stays_within_the_size_rule() {
+        let ws: toml::Table = WORKSPACE.parse().expect("parses");
+        let max = ws["workspace"]["metadata"]["tidy"]["max_file_lines"]
+            .as_integer()
+            .expect("a number");
+        for (name, text) in [(FILE, SHIPPED), (P3_FILE, SHIPPED_P3)] {
+            let lines = i64::try_from(text.lines().count()).expect("fits");
+            assert!(
+                lines <= max,
+                "{name} has {lines} lines: move a section to its own file"
+            );
+        }
+    }
 
     /// Cargo's build folder, in the repo root.
     const BUILD_DIR: &str = "target";

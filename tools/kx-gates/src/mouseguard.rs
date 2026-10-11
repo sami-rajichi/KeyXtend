@@ -46,7 +46,7 @@ pub const X2: u8 = 1 << 4;
 /// The X button's number sits in the high word of a hook's mouse data.
 const X_SHIFT: u32 = 16;
 
-/// `[mouse_guard]` in `kx-gates.toml`, shared by every gate; times in ms.
+/// `[mouse_guard]` in `kx-gates-p3.toml`, shared by every gate; times in ms.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MouseGuard {
