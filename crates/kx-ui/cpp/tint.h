@@ -18,6 +18,12 @@
 #include <functional>
 #include <utility>
 
+// The build kind, which sets the class layout below, comes before it in every kx-ui file; the Quick tests' plugin has
+// no such header and builds without the probes.
+#if __has_include("kx-ui-build.h")
+#include "kx-ui-build.h"
+#endif
+
 namespace kxui {
 
 // Hears the id of each icon that was refused or did not read.
@@ -76,8 +82,8 @@ inline QImage tinted(const QString &root, const QString &ext, const QString &id,
 }
 
 #if defined(KX_UI_PROBES)
-// Counts the icon textures made and those alive, for tests: only in debug builds, whose `kx-ui-build.h` icons.h
-// includes first.
+// Counts the icon textures made and those alive, for tests: only in debug builds, whose `kx-ui-build.h` this file
+// includes above.
 struct IconCount
 {
     inline static std::atomic<std::uint64_t> made{0};
