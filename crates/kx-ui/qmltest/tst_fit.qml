@@ -118,8 +118,10 @@ Item {
         // when `p1`.
         function fits(k, l, lk, size, p1, at) {
             const slack = 0.01;
-            // A row lays out once a frame; the window is hidden, so it lays out now.
-            l.parent.forceLayout();
+            // A row lays out once a frame; the window is hidden, so any row around the label lays out now.
+            for (let p = l.parent; p && p !== k; p = p.parent)
+                if (typeof p.forceLayout === "function")
+                    p.forceLayout();
             const [lo, hi] = room(k, lk, size);
             const left = l.mapToItem(k, (l.width - l.contentWidth) / 2, 0).x;
             verify(left >= lo - slack && left + l.contentWidth <= hi + slack, at + " off by " + [lo - left, left + l.contentWidth - hi]);
