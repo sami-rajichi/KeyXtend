@@ -99,6 +99,19 @@ fn with_ctrl_alt_or_win_latched_a_held_key_acts_once() {
 }
 
 #[test]
+fn altgr_acting_as_right_alt_acts_once() {
+    // US English has no AltGr characters, so the latch sends Right Alt, which makes a shortcut.
+    let r = Rig::new(&GOLDEN, None);
+    r.tap("altgr").unwrap();
+    hold(&r, A, 5);
+    assert!(r.fakes.injector.strokes().is_empty(), "not while held");
+    r.let_go(A).unwrap();
+    let once = Stroke::Chord(vec![Scan::new(0xE038)], Scan::new(0x1E));
+    assert_eq!(r.fakes.injector.strokes(), [once]);
+    assert_eq!(r.state()["keys"]["altgr"]["on"], false);
+}
+
+#[test]
 fn a_held_dead_key_types_once() {
     let r = Rig::new(&["fr-fr"], None);
     let hat = "c-0x001A";

@@ -1,5 +1,5 @@
 //! Every stop of a held key's repeats (spec §4.6): leaving the key, hiding, a stale table, a failed send, a restart
-//! and the list opening; after each, no tick types again, in any run of inputs, and a key not on the board is refused.
+//! and the list opening; after each, in any run of inputs, nothing more types and no latch stays down for the burst.
 
 #![allow(
     clippy::unwrap_used,
@@ -91,6 +91,41 @@ fn a_failed_send_stops_the_burst_with_one_notice() {
 }
 
 #[test]
+fn a_first_repeat_sent_in_part_stops_the_burst_and_lets_shift_go() {
+    let r = Rig::new(&GOLDEN, None);
+    let (delay, _) = times();
+    r.tap("shift").unwrap();
+    r.press(A).unwrap();
+    let part = InjectError::Refused { sent: 1, total: 2 };
+    r.fakes.injector.set_error(Some(part));
+    assert_eq!(r.tick_in(delay).notice, Some(keys::KEYS_NOT_SENT));
+    r.fakes.injector.set_error(None);
+    assert_eq!(r.state()["keys"]["shift"]["on"], false, "part of it went");
+    still(&r, 3);
+    assert_eq!(r.let_go(A), Ok(FaceReply::default()));
+}
+
+#[test]
+fn a_stale_first_repeat_keeps_shift_for_the_next_key() {
+    let r = Rig::new(&["fr-fr", "en-us"], None);
+    r.tap("c-0x001A").unwrap();
+    r.tap("shift").unwrap();
+    r.fakes.source.set_foreground(Some(id("en-us")));
+    r.fakes.layouts.switch(id("en-us"));
+    let (delay, _) = times();
+    r.press("c-0x0012").unwrap();
+    assert_eq!(r.tick_in(delay), STATE, "it sends nothing and redraws");
+    still(&r, 3);
+    assert_eq!(r.let_go("c-0x0012"), Ok(FaceReply::default()));
+    assert_eq!(
+        r.state()["keys"]["shift"]["on"],
+        true,
+        "nothing went, so Shift waits"
+    );
+    assert_eq!(r.fakes.injector.strokes(), [Stroke::Tap(Scan::new(0x1A))]);
+}
+
+#[test]
 fn a_restart_drops_the_held_key_and_ends_its_burst() {
     let mut r = Rig::new(&GOLDEN, None);
     r.tap("shift").unwrap();
@@ -144,6 +179,20 @@ enum Input {
     Leave,
 }
 
+/// After a let-go or leave of the press `held` made: once that press typed, no latch is left down by its burst.
+fn latches_went(r: &Rig, held: Option<(usize, usize)>) -> Result<(), TestCaseError> {
+    let Some((k, sent)) = held else {
+        return Ok(());
+    };
+    let typed = r.fakes.injector.strokes().len() > sent;
+    let shift = r.state()["keys"]["shift"]["on"].clone();
+    prop_assert!(
+        KEYS[k] == "shift" || !typed || shift == false,
+        "Shift outlived the burst"
+    );
+    Ok(())
+}
+
 fn input() -> impl Strategy<Value = Input> {
     let (delay, _) = times();
     prop_oneof![
@@ -159,25 +208,29 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(64))]
 
     #[test]
-    fn a_burst_never_outlives_the_press(inputs in vec(input(), 0..40)) {
+    fn a_burst_never_outlives_the_press(shift in any::<bool>(), inputs in vec(input(), 0..40)) {
         let r = Rig::new(&GOLDEN, None);
-        let mut held = false;
+        if shift {
+            r.tap("shift").unwrap();
+        }
+        // The key held and how many strokes had gone out when it went down.
+        let mut held: Option<(usize, usize)> = None;
         for i in inputs {
             let sent = r.fakes.injector.strokes().len();
             match i {
-                Input::Press(k) => held = r.press(KEYS[k]).is_ok(),
+                Input::Press(k) => held = r.press(KEYS[k]).is_ok().then_some((k, sent)),
                 Input::Tick(ms) => {
                     r.tick_in(ms);
                     let now = r.fakes.injector.strokes().len();
-                    prop_assert!(held || now == sent, "a tick typed with nothing held");
+                    prop_assert!(held.is_some() || now == sent, "a tick typed with nothing held");
                 }
                 Input::LetGo(k) => {
                     r.let_go(KEYS[k]).unwrap();
-                    held = false;
+                    latches_went(&r, held.take())?;
                 }
                 Input::Leave => {
                     r.leave();
-                    held = false;
+                    latches_went(&r, held.take())?;
                 }
             }
         }
