@@ -158,6 +158,10 @@ drain_ms = 1000
 # Failures listed in the report, and failures that stop the run.
 failures_shown = 5
 max_failures = 20
+# Each click holds the button as the owner's hand does, below the keyboard's repeat delay, in ms.
+press_ms = 400
+# Each click slips right and down while the button is down, inside the key, in physical px.
+slip_px = 2
 
 [g3]
 # Wait after opening a surface before probing, in ms.

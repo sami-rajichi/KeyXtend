@@ -37,6 +37,28 @@ pub struct G2 {
     pub failures_shown: usize,
     /// Failures that stop the run.
     pub max_failures: usize,
+    /// How long each click holds the button down, as the owner's hand does, in ms.
+    pub press_ms: u64,
+    /// How far each click slips right and down while the button is down, in physical px.
+    pub slip_px: i32,
+}
+
+impl G2 {
+    /// Refuses a click with no hold, a hold the keyboard would repeat, or no slip.
+    pub fn check(&self) -> Result<(), String> {
+        let keyboard = kx_mod_keyboard::KeyboardSettings::from_defaults()
+            .map_err(|e| format!("the keyboard's defaults: {e}"))?;
+        let delay = keyboard.repeat_delay_ms;
+        if self.press_ms == 0 || self.press_ms >= delay {
+            return Err(format!(
+                "g2.press_ms must be above 0 and below the repeat delay, {delay} ms"
+            ));
+        }
+        if self.slip_px <= 0 {
+            return Err("g2.slip_px must be above 0".to_string());
+        }
+        Ok(())
+    }
 }
 
 /// G3 top-band settings.
@@ -116,4 +138,35 @@ pub struct Surface {
     /// Class of a new window to close with `WM_CLOSE`.
     #[serde(default)]
     pub close_class: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kx_mod_keyboard::KeyboardSettings;
+
+    fn g2() -> G2 {
+        crate::config::load().expect("kx-gates.toml loads").g2
+    }
+
+    #[test]
+    fn g2_clicks_as_the_owner_does_held_a_while_with_a_slip() {
+        let g = g2();
+        assert_eq!(g.check(), Ok(()));
+        assert!(g.press_ms > 0 && g.slip_px > 0);
+    }
+
+    #[test]
+    fn g2_refuses_no_hold_a_hold_that_would_repeat_and_no_slip() {
+        let defaults = KeyboardSettings::from_defaults().expect("the defaults load");
+        let delay = defaults.repeat_delay_ms;
+        for (press_ms, slip_px) in [(0, 2), (delay, 2), (400, 0), (400, -2)] {
+            let g = G2 {
+                press_ms,
+                slip_px,
+                ..g2()
+            };
+            assert!(g.check().is_err(), "{press_ms} ms, {slip_px} px");
+        }
+    }
 }

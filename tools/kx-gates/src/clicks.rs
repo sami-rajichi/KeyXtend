@@ -9,7 +9,7 @@ use spike_core::clock::now_us;
 use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{Ctx, Opened};
-use crate::mouse;
+use crate::g2hand;
 use crate::out::say;
 use crate::product::{self, Keyboard};
 use crate::rng::Rng;
@@ -17,11 +17,13 @@ use crate::stats::Click;
 use crate::walk;
 use crate::win::{self, sleep_ms};
 
-/// A clickable key: scan code, the character it types in the target's layout, screen centre in physical pixels.
+/// A clickable key: scan code, the character it types in the target's layout, screen centre and the point a click
+/// slips to, in physical pixels.
 pub struct Key {
     code: u32,
     text: String,
     at: POINT,
+    to: POINT,
 }
 
 /// Counts and records of one click run.
@@ -29,6 +31,8 @@ pub struct Key {
 pub struct Tally {
     /// Every click made, in order.
     pub clicks: Vec<Click>,
+    /// When each click let go, in QPC µs.
+    pub released: Vec<i64>,
     /// Clicks after which the target was still in front.
     pub focus_kept: usize,
     /// Clicks after which the target's caret was unchanged.
@@ -84,9 +88,17 @@ pub fn typed(clicks: &[Click]) -> String {
     String::from_utf16_lossy(&units)
 }
 
+/// Where a click on key `id` goes down and where it slips to, `slip_px` away inside the key.
+fn spots(kb: &Keyboard, id: &str, slip_px: i32) -> Result<(POINT, POINT), String> {
+    let at = kb.at(id)?;
+    let to = g2hand::slip_to(at, kb.rect(id)?, slip_px)
+        .ok_or_else(|| format!("a {slip_px} px slip leaves key {id}"))?;
+    Ok((at, to))
+}
+
 /// The keyboard's character keys that type in the layout of the app in front, and the ones UI Automation did not
-/// find; none with no app in front.
-fn keys(kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
+/// find or a slip of `slip_px` would leave; none with no app in front.
+fn keys(kb: &Keyboard, slip_px: i32) -> Result<(Vec<Key>, Vec<String>), String> {
     let (mut found, mut missing) = (Vec::new(), Vec::new());
     let Some(layout) = WinLayouts.foreground() else {
         return Ok((found, missing));
@@ -95,11 +107,12 @@ fn keys(kb: &Keyboard) -> Result<(Vec<Key>, Vec<String>), String> {
         let Some(text) = key.types else {
             continue;
         };
-        match kb.at(&key.id) {
-            Ok(at) => found.push(Key {
+        match spots(kb, &key.id, slip_px) {
+            Ok((at, to)) => found.push(Key {
                 code: u32::from(key.scan.code()),
                 text,
                 at,
+                to,
             }),
             Err(e) => missing.push(e),
         }
@@ -133,7 +146,7 @@ pub struct Usable {
 pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<Usable, String> {
     let follow_ms = product::follow_ms(ctx.cfg.timing.poll_ms)?;
     sleep_ms(follow_ms);
-    let (keys, mut hidden) = keys(kb)?;
+    let (keys, mut hidden) = keys(kb, ctx.cfg.g2.slip_px)?;
     let (keys, covered) = visible(keys, kb.hwnd);
     hidden.extend(covered);
     if keys.is_empty() {
@@ -152,15 +165,17 @@ pub fn usable(ctx: &Ctx, kb: &Keyboard) -> Result<Usable, String> {
     })
 }
 
-/// Clicks one key; the character that arrives, not the cursor, shows where it landed.
-fn click(key: &Key, tally: &mut Tally) -> Result<(), String> {
+/// Clicks one key as a hand does, held `press_ms` with a slip; the character that arrives, not the cursor, shows
+/// where it landed.
+fn click(key: &Key, press_ms: u64, tally: &mut Tally) -> Result<(), String> {
     let us = now_us();
-    mouse::click_at(key.at)?;
+    g2hand::perform(&g2hand::steps(key.at, key.to, press_ms), g2hand::act)?;
     tally.clicks.push(Click {
         code: key.code,
         us,
         expect: key.text.encode_utf16().collect(),
     });
+    tally.released.push(now_us());
     Ok(())
 }
 
@@ -216,7 +231,7 @@ pub fn click_loop(ctx: &Ctx, target: &Opened, kb: HWND, keys: &[Key], run: Run) 
             }
             continue;
         }
-        let step = click(key, &mut tally).and_then(|()| {
+        let step = click(key, g.press_ms, &mut tally).and_then(|()| {
             sleep_ms(g.click_gap_ms);
             check(ctx, target, caret0, key, &mut tally)
         });

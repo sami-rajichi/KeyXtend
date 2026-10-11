@@ -1,4 +1,4 @@
-//! G2's raw click file: one line per click with its scan code, its time and its latency, in µs.
+//! G2's raw click file: one line per click with its scan code, its press and release times and its latency, in µs.
 #![cfg(windows)]
 
 use std::fmt::Write;
@@ -9,7 +9,7 @@ use crate::stats::Click;
 /// Suffix of the raw click file.
 pub const CLICKS_FILE: &str = "-clicks.tsv";
 /// The raw click file's columns, in order.
-const COLUMNS: [&str; 4] = ["index", "code", "click_us", "latency_us"];
+const COLUMNS: [&str; 5] = ["index", "code", "click_us", "release_us", "latency_us"];
 /// Where the click time sits among them.
 const CLICK_AT: usize = 2;
 
@@ -18,13 +18,13 @@ fn header() -> String {
     format!("{}\n", COLUMNS.join("\t"))
 }
 
-/// One line per click: index, scan code, click time and latency in µs.
-pub fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
+/// One line per click: index, scan code, press and release times and latency in µs.
+pub fn tsv(clicks: &[Click], released: &[i64], lat: &[Option<i64>]) -> String {
     let mut s = header();
-    for (i, (c, l)) in clicks.iter().zip(lat).enumerate() {
+    for (i, ((c, r), l)) in clicks.iter().zip(released).zip(lat).enumerate() {
         let l = l.map(|v| v.to_string()).unwrap_or_default();
         // Writing to a `String` cannot fail.
-        let _ = writeln!(s, "{i}\t{:#X}\t{}\t{l}", c.code, c.us);
+        let _ = writeln!(s, "{i}\t{:#X}\t{}\t{r}\t{l}", c.code, c.us);
     }
     s
 }
@@ -52,14 +52,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tsv_has_a_header_and_one_line_per_click() {
+    fn tsv_has_a_header_and_one_line_per_click_with_its_press_and_release() {
         let click = |code, us| Click {
             code,
             us,
             expect: vec![],
         };
-        let got = tsv(&[click(0x1E, 100), click(0xE01D, 250)], &[Some(30), None]);
-        let want = "index\tcode\tclick_us\tlatency_us\n0\t0x1E\t100\t30\n1\t0xE01D\t250\t\n";
+        let clicks = [click(0x1E, 100), click(0xE01D, 250)];
+        let got = tsv(&clicks, &[500, 650], &[Some(30), None]);
+        let head = "index\tcode\tclick_us\trelease_us\tlatency_us\n";
+        let want = format!("{head}0\t0x1E\t100\t500\t30\n1\t0xE01D\t250\t650\t\n");
         assert_eq!(got, want);
     }
 
@@ -70,7 +72,7 @@ mod tests {
             us,
             expect: vec![],
         };
-        let file = tsv(&[click(100), click(250)], &[Some(30), None]);
+        let file = tsv(&[click(100), click(250)], &[500, 650], &[Some(30), None]);
         assert_eq!(times(&file), Ok(vec![100, 250]));
         assert_eq!(times(&header()), Ok(vec![]), "no clicks");
         assert!(times("").is_err(), "no header");

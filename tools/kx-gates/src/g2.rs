@@ -102,10 +102,11 @@ pub fn on_target(
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);
     let raw = ctx.file(CLICKS_FILE);
-    out::write(&raw, &tsv(&tally.clicks, &logged.lat))?;
+    out::write(&raw, &tsv(&tally.clicks, &tally.released, &logged.lat))?;
+    let g = &ctx.cfg.g2;
     let head = json!({
         "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "sweep": run.sweep, "dpi": place.dpi,
-        "raw": raw,
+        "raw": raw, "press_ms": g.press_ms, "slip_px": g.slip_px,
         "hidden_keys": usable.hidden, "follow_ms": usable.follow_ms,
     });
     Ok(report(head, &tally, &logged, &left_open))

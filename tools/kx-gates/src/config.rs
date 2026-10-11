@@ -211,6 +211,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.dir = dir;
     config.text.validate()?;
     featcfg::check(&config)?;
+    config.g2.check()?;
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;

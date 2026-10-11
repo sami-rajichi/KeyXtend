@@ -46,6 +46,7 @@ mod g23;
 mod g24;
 mod g25;
 mod g26;
+mod g2hand;
 mod g2raw;
 mod g3;
 mod g4;
