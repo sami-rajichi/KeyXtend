@@ -168,15 +168,25 @@ fn a_click_ends_a_burst_left_open_so_its_latches_never_ride_on() {
 }
 
 #[test]
-fn a_key_not_on_the_board_is_refused_and_ends_a_burst() {
+fn a_key_not_on_the_board_is_refused_and_changes_nothing() {
+    let (_, every) = times();
     for bad in [Rig::press, Rig::let_go] {
         let r = Rig::new(&GOLDEN, None);
         r.tap("shift").unwrap();
         hold(&r, A, 0);
         assert_eq!(bad(&r, "nope"), Err(FaceError::UnknownKey));
-        still(&r, 3);
-        assert_eq!(r.state()["keys"]["shift"]["on"], false, "the burst ended");
-        assert_eq!(r.fakes.injector.strokes(), [text("A")]);
+        assert_eq!(
+            r.state()["keys"]["shift"]["on"],
+            true,
+            "no change the UI is not told of"
+        );
+        r.tick_in(every);
+        assert_eq!(
+            r.fakes.injector.strokes(),
+            [text("A"), text("A")],
+            "the hold goes on"
+        );
+        assert_eq!(r.leave(), STATE, "its own end redraws");
     }
 }
 
