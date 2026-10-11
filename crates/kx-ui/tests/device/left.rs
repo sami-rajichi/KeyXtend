@@ -8,7 +8,7 @@ use cxx_qt_lib::QGuiApplication;
 use kx_platform::ui::Command;
 use kx_platform_fake::GuardCall;
 use kx_theme::Themes;
-use kx_ui::{Mode, Shell, UiSettings, font_families};
+use kx_ui::{Mode, Shell, UiSettings, font_families, unreleased};
 
 /// The theme picked while the windows close, then the one picked just before a loss.
 const PICKED: &str = "dolch";
@@ -90,14 +90,14 @@ pub(crate) fn theme(
     Ok(())
 }
 
-/// A theme picked just before a loss: the windows that wait to drop their graphics after it go before their frame, and
-/// the free memory still goes back once.
+/// A theme picked just before a loss: at least one window that waits to drop its graphics after it goes before its
+/// frame, and the free memory still goes back once.
 pub(crate) fn waiting(
     app: &mut UniquePtr<QGuiApplication>,
     shell: &mut Shell,
     rig: &mut Rig,
 ) -> Outcome {
-    let (was, calls) = (marks(rig), rig.memory.calls());
+    let (was, calls, gone) = (marks(rig), rig.memory.calls(), unreleased());
     rig.show(UiSettings {
         theme: WAITED.to_owned(),
         ..rig.hub.settings()
@@ -105,6 +105,11 @@ pub(crate) fn waiting(
     lose(app, shell)?;
     rebuilt(shell)?;
     back(app, rig, was)?;
+    if unreleased() == gone {
+        return Err(
+            "every waiting window drew before the loss, so none went while it waited".into(),
+        );
+    }
     wait(
         app,
         "one give-back after the windows that waited went",

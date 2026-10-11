@@ -69,6 +69,11 @@ mod ffi {
         #[namespace = "kxui"]
         fn released_windows() -> usize;
 
+        /// How many windows went while they waited for that frame.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn gone_windows() -> usize;
+
         /// Deletes the objects that wait for a later delete, so no window outlives its device.
         #[namespace = "kxui"]
         fn flush_deletes();
@@ -225,6 +230,13 @@ fn settled() {
 #[must_use]
 pub fn released() -> usize {
     ffi::released_windows()
+}
+
+/// How many windows went while they waited to drop their cached graphics; debug builds only, for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn unreleased() -> usize {
+    ffi::gone_windows()
 }
 
 /// Deletes the objects that wait for a later delete, as windows a dropped engine left.

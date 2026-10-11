@@ -19,12 +19,19 @@
 namespace kxui {
 
 #if defined(KX_UI_PROBES)
-// How many windows dropped Qt's cached graphics after a frame so far; debug builds only.
+// How many windows dropped Qt's cached graphics after a frame so far, and how many went while they waited for it;
+// debug builds only.
 inline std::atomic<std::size_t> releases{0};
+inline std::atomic<std::size_t> gone{0};
 
 inline std::size_t released_windows()
 {
     return releases.load();
+}
+
+inline std::size_t gone_windows()
+{
+    return gone.load();
 }
 #endif
 
@@ -57,6 +64,9 @@ public:
         if (done)
             return;
         --owed;
+#if defined(KX_UI_PROBES)
+        ++gone;
+#endif
         if (QCoreApplication *app = QCoreApplication::instance())
             QMetaObject::invokeMethod(app, &Release::settle, Qt::QueuedConnection);
     }
