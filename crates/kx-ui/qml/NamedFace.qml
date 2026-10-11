@@ -8,27 +8,27 @@ Item {
     id: n
 
     // The key's face (KeyText): its look, icons, fonts, size and legend colour.
-    required property Item t
+    required property Item host
 
     // The icon file, else the translated label.
-    readonly property string icon: t.icon
-    readonly property string label: t.label
+    readonly property string icon: host.icon
+    readonly property string label: host.label
     // The label's room: the cap less its padding, or a sculpted top plus what may spill onto the skirt.
-    readonly property real labelRoom: t.sculpted
-        ? width - (t.look.cap.top_inset_px[1] + t.look.cap.top_inset_px[3] - 2 * t.look.cap.label_spill_px) * t.s
-        : width - 2 * t.lg.label_pad_px * t.s
+    readonly property real labelRoom: host.sculpted
+        ? width - (host.look.cap.top_inset_px[1] + host.look.cap.top_inset_px[3] - 2 * host.look.cap.label_spill_px) * host.s
+        : width - 2 * host.lg.label_pad_px * host.s
     // The face never clips.
     readonly property bool clips: false
 
     Row {
         id: named
         // How far right of the key's middle the row centres: on a sculpted cap, its top's middle.
-        readonly property real shift: n.t.sculpted ? (n.t.look.cap.top_inset_px[3] - n.t.look.cap.top_inset_px[1]) * n.t.s / 2 : 0
+        readonly property real shift: n.host.sculpted ? (n.host.look.cap.top_inset_px[3] - n.host.look.cap.top_inset_px[1]) * n.host.s / 2 : 0
         anchors.horizontalCenter: n.label ? undefined : parent.horizontalCenter
         anchors.horizontalCenterOffset: shift
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -n.t.lift
-        spacing: n.t.lg.gap_px * n.t.s
+        anchors.verticalCenterOffset: -n.host.lift
+        spacing: n.host.lg.gap_px * n.host.s
         // A label's exact x; an icon's anchor holds x instead, so nothing is restored when a label goes.
         Binding on x {
             when: !!n.label
@@ -40,10 +40,10 @@ Item {
             visible: !!n.icon
             anchors.verticalCenter: parent.verticalCenter
             icon: n.icon
-            base: n.t.res.icons
-            ext: n.t.res.ext
-            px: n.t.lg.icon_px[n.t.kv.side ? 1 : 0] * n.t.s
-            tint: n.t.ink
+            base: n.host.res.icons
+            ext: n.host.res.ext
+            px: n.host.lg.icon_px[n.host.kv.side ? 1 : 0] * n.host.s
+            tint: n.host.ink
         }
         // The label shrinks to fit its room, as real keycaps print long words smaller.
         Legend {
@@ -52,11 +52,11 @@ Item {
             width: n.labelRoom - (glyph.visible ? glyph.width + named.spacing : 0)
             horizontalAlignment: Text.AlignHCenter
             fontSizeMode: Text.HorizontalFit
-            minimumPixelSize: n.t.lg.label_min_px
-            fam: n.t.res.fam
+            minimumPixelSize: n.host.lg.label_min_px
+            fam: n.host.res.fam
             text: n.label
-            font.pixelSize: n.t.look.mod_legend_px * n.t.s
-            color: n.t.ink
+            font.pixelSize: n.host.look.mod_legend_px * n.host.s
+            color: n.host.ink
         }
     }
 }

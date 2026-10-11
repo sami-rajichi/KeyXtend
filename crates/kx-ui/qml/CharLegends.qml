@@ -8,60 +8,60 @@ Item {
     id: c
 
     // The key's face (KeyText): its state, look, language, fonts and size.
-    required property Item t
+    required property Item host
 
-    readonly property var ks: t.ks
-    readonly property var fam: t.res.fam
+    readonly property var ks: host.ks
+    readonly property var fam: host.res.fam
     // Arabic legends, and marks on their dotted circle, which the face flags, take the theme's Arabic or mark font.
     readonly property bool mainAr: ks ? ks.main_ar : false
-    readonly property real mainPx: t.look.legend_px * t.s * (mainAr ? t.look.arabic_scale : 1)
+    readonly property real mainPx: host.look.legend_px * host.s * (mainAr ? host.look.arabic_scale : 1)
     // The layout of the app in front.
-    readonly property string cur: t.lang.cur.short
+    readonly property string cur: host.lang.cur.short
     // The cap clips while the main legend rises (mock-up .cap overflow).
     readonly property bool clips: legends.running
 
     onCurChanged: legends.play()
 
     Legend {
-        x: (c.t.face[3] + c.t.lg.corner_px[2]) * c.t.s
+        x: (c.host.face[3] + c.host.lg.corner_px[2]) * c.host.s
         anchors.baseline: parent.top
-        anchors.baselineOffset: (c.t.face[0] + c.t.lg.corner_px[0]) * c.t.s + c.t.look.font_metrics[0] * font.pixelSize
+        anchors.baselineOffset: (c.host.face[0] + c.host.lg.corner_px[0]) * c.host.s + c.host.look.font_metrics[0] * font.pixelSize
         fam: c.fam
         ar: c.ks ? c.ks.second_ar : false
         mark: c.ks ? c.ks.second_mark : false
         text: c.ks ? c.ks.second : ""
-        font.pixelSize: c.t.look.legend_px * c.t.lg.corner_scale[0] * c.t.s
-        font.weight: c.t.lg.corner_weight
-        color: c.t.ink2
+        font.pixelSize: c.host.look.legend_px * c.host.lg.corner_scale[0] * c.host.s
+        font.weight: c.host.lg.corner_weight
+        color: c.host.ink2
     }
     Legend {
         anchors.right: parent.right
-        anchors.rightMargin: (c.t.face[1] + c.t.lg.corner_px[2]) * c.t.s
+        anchors.rightMargin: (c.host.face[1] + c.host.lg.corner_px[2]) * c.host.s
         anchors.baseline: parent.bottom
-        anchors.baselineOffset: -(c.t.face[2] + c.t.lg.corner_px[1]) * c.t.s - c.t.look.font_metrics[1] * font.pixelSize
+        anchors.baselineOffset: -(c.host.face[2] + c.host.lg.corner_px[1]) * c.host.s - c.host.look.font_metrics[1] * font.pixelSize
         fam: c.fam
         ar: c.ks ? c.ks.third_ar : false
         mark: c.ks ? c.ks.third_mark : false
         text: c.ks ? c.ks.third : ""
-        font.pixelSize: c.t.look.legend_px * c.t.lg.corner_scale[1] * c.t.s
-        color: c.t.ink2
+        font.pixelSize: c.host.look.legend_px * c.host.lg.corner_scale[1] * c.host.s
+        color: c.host.ink2
     }
     Rise {
         id: legends
         anchors.fill: parent
-        move: c.t.mv.legends
-        from: c.t.amt.rise * c.mainPx
+        move: c.host.mv.legends
+        from: c.host.amt.rise * c.mainPx
 
         Legend {
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: -c.t.lift
+            anchors.verticalCenterOffset: -c.host.lift
             fam: c.fam
             ar: c.mainAr
             mark: c.ks ? c.ks.main_mark : false
             text: c.ks ? c.ks.main : ""
             font.pixelSize: c.mainPx
-            font.weight: c.t.look.legend_weight
-            color: c.t.ink
+            font.weight: c.host.look.legend_weight
+            color: c.host.ink
         }
     }
 }

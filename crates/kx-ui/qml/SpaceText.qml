@@ -7,11 +7,11 @@ Item {
     id: sp
 
     // The key's face (KeyText): its look, language, fonts and size.
-    required property Item t
+    required property Item host
 
-    readonly property real px: t.lg.space_px[t.lang.cur.rtl ? 1 : 0] * t.s
+    readonly property real px: host.lg.space_px[host.lang.cur.rtl ? 1 : 0] * host.s
     // The layout of the app in front.
-    readonly property string cur: t.lang.cur.short
+    readonly property string cur: host.lang.cur.short
     // The cap clips while the text rises (mock-up .cap overflow).
     readonly property bool clips: words.running
 
@@ -20,21 +20,21 @@ Item {
     Rise {
         id: words
         anchors.fill: parent
-        move: sp.t.mv.legends
-        from: sp.t.amt.rise * sp.px
+        move: sp.host.mv.legends
+        from: sp.host.amt.rise * sp.px
 
         Legend {
             anchors.fill: parent
-            anchors.leftMargin: sp.t.lg.space_pad_px * sp.t.s
-            anchors.rightMargin: sp.t.lg.space_pad_px * sp.t.s
+            anchors.leftMargin: sp.host.lg.space_pad_px * sp.host.s
+            anchors.rightMargin: sp.host.lg.space_pad_px * sp.host.s
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
-            fam: sp.t.res.fam
-            ar: sp.t.lang.cur.rtl
-            text: sp.t.res.space(sp.t.lang.space)
+            fam: sp.host.res.fam
+            ar: sp.host.lang.cur.rtl
+            text: sp.host.res.space(sp.host.lang.space)
             font.pixelSize: sp.px
-            color: sp.t.ink2
+            color: sp.host.ink2
         }
     }
 }

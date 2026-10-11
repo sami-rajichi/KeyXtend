@@ -41,25 +41,25 @@ Loader {
     Component {
         id: charC
         CharLegends {
-            t: host
+            host: host
         }
     }
     Component {
         id: spaceC
         SpaceText {
-            t: host
+            host: host
         }
     }
     Component {
         id: namedC
         NamedFace {
-            t: host
+            host: host
         }
     }
     Component {
         id: langC
         LangFace {
-            t: host
+            host: host
         }
     }
 }
