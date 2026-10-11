@@ -19,7 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::run::{Hook, Live};
-use super::{End, Filter, Verdict, kind_of, ours, wait_ms};
+use super::{End, Filter, Loss, Verdict, kind_of, ours, wait_ms};
 use crate::out::say;
 
 /// Tells Windows to drop the event.
@@ -113,12 +113,12 @@ fn pump(clock: QpcClock) -> Option<End> {
         let due = match with_state(|s| (s.filter.tick(now), s.filter.due_in(now))) {
             Some((None, due)) => due,
             Some((end, _)) => return end,
-            None => return Some(End::Lost),
+            None => return Some(End::Lost(Loss::Thread)),
         };
         // SAFETY: waits on no handles for a message, a hook call or the next check.
         let woke = unsafe { MsgWaitForMultipleObjects(None, false, wait_ms(due), QS_ALLINPUT) };
         if woke == WAIT_FAILED {
-            return Some(End::Lost);
+            return Some(End::Lost(Loss::Thread));
         }
     }
 }

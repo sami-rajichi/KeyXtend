@@ -98,20 +98,28 @@ fn a_wait_rounds_up_to_whole_ms_and_stops_at_the_largest_wait() {
 }
 
 #[test]
-fn only_the_owner_the_limit_or_a_lost_guard_stops_the_gate_and_each_end_has_its_own_name() {
-    let all = [
-        End::Done,
-        End::Error,
-        End::Panic,
-        End::Prompt,
-        End::Idle,
-        End::Owner,
-        End::Limit,
-        End::Lost,
-    ];
+fn only_a_press_the_limit_or_a_lost_hook_stops_the_gate_and_each_end_says_its_own_why() {
+    let all = End::ALL;
     let stops: Vec<_> = all.iter().filter(|e| e.stops()).collect();
-    assert_eq!(stops, [&End::Owner, &End::Limit, &End::Lost]);
+    let lost = [Loss::Off, Loss::Prompt, Loss::Thread].map(End::Lost);
+    assert_eq!(
+        stops,
+        [&End::Owner, &End::Limit, &lost[0], &lost[1], &lost[2]]
+    );
+    let whys: BTreeSet<_> = all.iter().map(|e| e.why()).collect();
+    assert_eq!(whys.len(), all.len(), "each end says its own why");
     let names: BTreeSet<_> = all.iter().map(|e| e.name()).collect();
-    assert_eq!(names.len(), all.len());
-    assert!(all.iter().all(|e| !e.why().is_empty()));
+    assert_eq!(
+        names.len(),
+        all.len() - lost.len() + 1,
+        "every loss is lost"
+    );
+    assert!(lost.iter().all(|e| e.name() == "lost"));
+}
+
+#[test]
+fn a_press_is_named_without_saying_whose_it_was() {
+    let why = End::Owner.why();
+    assert!(why.starts_with("a mouse button was pressed"), "{why}");
+    assert!(!why.contains("owner"), "another program may have clicked");
 }

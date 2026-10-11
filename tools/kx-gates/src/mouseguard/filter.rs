@@ -44,7 +44,7 @@ impl Filter {
         }
     }
 
-    /// Why it lets go at `now`, if it does: the time limit, or the owner's clicks before it.
+    /// Why it lets go at `now`, if it does: the time limit, or the escape presses before it.
     pub fn tick(&mut self, now: Mono) -> Option<End> {
         if self.out.is_none() && now >= self.deadline {
             self.out = Some(End::Limit);
@@ -93,7 +93,7 @@ impl Filter {
         }
     }
 
-    /// How long until `tick` could let go: the time limit, as the owner's clicks let go in the event itself.
+    /// How long until `tick` could let go: the time limit, as the escape presses let go in the event itself.
     pub fn due_in(&self, now: Mono) -> Duration {
         self.deadline.saturating_since(now)
     }

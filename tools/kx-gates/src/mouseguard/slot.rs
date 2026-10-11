@@ -115,7 +115,7 @@ impl Drop for Scope {
     }
 }
 
-/// Refuses new input once the guard let go early: the owner, the time limit, or a lost hook.
+/// Refuses new input once the guard let go early: a press, the time limit, or a lost hook.
 pub fn allowed() -> Result<(), String> {
     slot().as_mut().map_or(Ok(()), |s| s.refusal())
 }

@@ -1,5 +1,5 @@
 //! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out, the owner clicks or Windows switches its hook off. `filter` decides, `hook` applies
+//! ends, the time limit runs out, a button is pressed or Windows switches its hook off. `filter` decides, `hook` applies
 //! it, `run` runs it and `slot` holds this process's run.
 #![cfg(windows)]
 
@@ -110,16 +110,41 @@ pub enum End {
     Prompt,
     /// The gate's pointer work is over, so the guard lets go for the rest of the run.
     Idle,
-    /// The owner pressed a physical button the escape's number of times.
+    /// A physical button was pressed the escape's number of times: the owner's, or another program's click.
     Owner,
     /// The time limit ran out.
     Limit,
-    /// The guard lost its hook: Windows switched it off, it could not come back after an admin prompt, or its thread
-    /// could not wait.
-    Lost,
+    /// The guard lost its hook, for the reason given.
+    Lost(Loss),
+}
+
+/// How the guard lost its hook.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Loss {
+    /// Windows switched it off: it counted none of kx-gates' own clicks or moves in time.
+    Off,
+    /// It could not come back after an admin prompt.
+    Prompt,
+    /// Its thread could not wait or lost its state.
+    Thread,
 }
 
 impl End {
+    /// Every end, each loss included.
+    #[cfg(test)]
+    pub const ALL: [Self; 10] = [
+        Self::Done,
+        Self::Error,
+        Self::Panic,
+        Self::Prompt,
+        Self::Idle,
+        Self::Owner,
+        Self::Limit,
+        Self::Lost(Loss::Off),
+        Self::Lost(Loss::Prompt),
+        Self::Lost(Loss::Thread),
+    ];
+
     /// Its name in the result line.
     pub fn name(self) -> &'static str {
         match self {
@@ -130,7 +155,7 @@ impl End {
             Self::Idle => "idle",
             Self::Owner => "owner",
             Self::Limit => "limit",
-            Self::Lost => "lost",
+            Self::Lost(_) => "lost",
         }
     }
 
@@ -142,17 +167,23 @@ impl End {
             Self::Panic => "the gate panicked",
             Self::Prompt => "an admin prompt is up",
             Self::Idle => "the gate's pointer work is over",
-            Self::Owner => "the owner clicked a mouse button, so the gate stops and does not pass",
+            Self::Owner => "a mouse button was pressed, so the gate stops and does not pass",
             Self::Limit => "its time limit ran out, so the gate stops and does not pass",
-            Self::Lost => {
-                "Windows switched the mouse guard off or it could not come back, so the gate stops and does not pass"
+            Self::Lost(Loss::Off) => {
+                "Windows switched the mouse guard off, so the gate stops and does not pass"
+            }
+            Self::Lost(Loss::Prompt) => {
+                "the mouse guard could not come back after an admin prompt, so the gate stops and does not pass"
+            }
+            Self::Lost(Loss::Thread) => {
+                "the mouse guard's thread failed, so the gate stops and does not pass"
             }
         }
     }
 
-    /// True when the gate must stop: the owner, the limit, or a lost hook.
+    /// True when the gate must stop: a press, the limit, or a lost hook.
     pub fn stops(self) -> bool {
-        matches!(self, Self::Owner | Self::Limit | Self::Lost)
+        matches!(self, Self::Owner | Self::Limit | Self::Lost(_))
     }
 
     /// The log line when the guard ends; it names no position or key.

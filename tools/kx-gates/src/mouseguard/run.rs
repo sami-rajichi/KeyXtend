@@ -1,12 +1,12 @@
 //! A run's mouse guard: it holds the mouse from the gate's start, lets go for an admin prompt, refuses new input once
-//! the owner, the time limit or a lost hook ended it, and always lets go when the gate ends, breaks off or panics.
+//! a press, the time limit or a lost hook ended it, and always lets go when the gate ends, breaks off or panics.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use kx_module_api::{Clock, Mono};
 
-use super::{Counts, End, Filter, MouseGuard, Tally, Watch};
+use super::{Counts, End, Filter, Loss, MouseGuard, Tally, Watch};
 use crate::out::say;
 
 /// Starts hooks that apply a filter.
@@ -19,7 +19,7 @@ pub trait Hook {
 
 /// A running hook.
 pub trait Live {
-    /// Why it let go by itself, once it has: the owner or the time limit.
+    /// Why it let go by itself, once it has: a press or the time limit.
     fn ended(&self) -> Option<End>;
     /// Removes the hook; why it had let go by itself, if it had.
     fn stop(self) -> Option<End>;
@@ -122,8 +122,9 @@ impl<H: Hook, C: Clock> Session<H, C> {
                 say!("{}", self.cfg.line());
             }
             Err(e) => {
-                say!("{}: {e}", End::Lost.line());
-                self.early = Some(End::Lost);
+                let lost = End::Lost(Loss::Prompt);
+                say!("{}: {e}", lost.line());
+                self.early = Some(lost);
             }
         }
     }
@@ -151,8 +152,9 @@ impl<H: Hook, C: Clock> Session<H, C> {
     fn check_alive(&mut self) {
         let held = self.live.is_some() && self.early.is_none();
         if held && self.watch.lost(self.clock.now(), self.tally.passed()) {
-            self.unhook(End::Lost);
-            self.early = self.early.or(Some(End::Lost));
+            let lost = End::Lost(Loss::Off);
+            self.unhook(lost);
+            self.early = self.early.or(Some(lost));
         }
     }
 

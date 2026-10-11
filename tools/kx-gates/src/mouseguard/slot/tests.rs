@@ -6,7 +6,7 @@ use windows::Win32::Foundation::HWND;
 use super::*;
 use crate::keymap::Reader;
 use crate::mouseguard::fake::{Fake, cfg, held, slot_lock};
-use crate::mouseguard::{Counts, End};
+use crate::mouseguard::{Counts, End, Loss};
 
 #[test]
 fn a_stopped_gate_is_refused_a_press_and_a_prompt_but_a_restore_still_goes_out() {
@@ -81,12 +81,15 @@ fn a_hook_that_misses_own_clicks_refuses_the_next_press_but_not_a_restore_and_fa
     assert_eq!(own_input(|| Ok(())), Ok(()), "sent, but never counted");
     fake.wait(alive);
     let e = allowed().expect_err("Windows switched the hook off");
-    assert!(e.contains(End::Lost.why()), "{e}");
+    assert!(e.contains(End::Lost(Loss::Off).why()), "{e}");
     let reader = Reader::new().expect("a UI Automation client");
     let press = reader.invoke(HWND::default(), "").expect_err("refused");
-    assert!(press.contains(End::Lost.why()), "{press}");
+    assert!(press.contains(End::Lost(Loss::Off).why()), "{press}");
     let back = reader.restore(HWND::default(), "").expect_err("no key");
-    assert!(!back.contains(End::Lost.why()), "never refused: {back}");
+    assert!(
+        !back.contains(End::Lost(Loss::Off).why()),
+        "never refused: {back}"
+    );
     let mut result = json!({ "gate": "G2", "pass": true });
     mark(&mut result, scope.finish(true));
     assert_eq!(result["pass"], json!(false));

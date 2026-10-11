@@ -5,6 +5,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use kx_platform_fake::FakeClock;
 
 use super::*;
+use crate::mouseguard::Loss;
 use crate::mouseguard::fake::{Fake, begun, cfg};
 
 /// Clicks kx-gates sends now, noted as `slot::own_input` notes them.
@@ -36,7 +37,7 @@ fn own_clicks_the_hook_misses_for_alive_ms_end_the_guard_as_lost_and_let_go_of_i
     let e = s.refusal().expect_err("Windows switched the hook off");
     assert!(e.contains("Windows switched the mouse guard off"), "{e}");
     assert_eq!(fake.counts(), (1, 1), "the guard removed its hook");
-    assert_eq!(s.finish(true).end, End::Lost);
+    assert_eq!(s.finish(true).end, End::Lost(Loss::Off));
 }
 
 #[test]
@@ -49,7 +50,7 @@ fn a_lost_hook_is_caught_as_the_gate_ends_or_lets_go_after_its_pointer_work() {
         if idle {
             s.release();
         }
-        assert_eq!(s.finish(true).end, End::Lost, "idle: {idle}");
+        assert_eq!(s.finish(true).end, End::Lost(Loss::Off), "idle: {idle}");
     }
 }
 
@@ -158,8 +159,8 @@ fn a_guard_that_cannot_start_refuses_the_gate_or_stops_it_after_a_prompt() {
     fake.seen().fail = true;
     s.resume();
     let e = s.refusal().expect_err("it could not come back");
-    assert!(e.contains(End::Lost.why()), "{e}");
-    assert_eq!(s.finish(true).end, End::Lost);
+    assert!(e.contains(End::Lost(Loss::Prompt).why()), "{e}");
+    assert_eq!(s.finish(true).end, End::Lost(Loss::Prompt));
 }
 
 #[test]
