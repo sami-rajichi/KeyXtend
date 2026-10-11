@@ -1,6 +1,6 @@
 //! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out, a button is pressed or Windows switches its hook off. `filter` decides, `hook` applies
-//! it, `run` runs it and `slot` holds this process's run.
+//! ends, the time limit runs out, a button is pressed or Windows switches its hook off. `filter` decides, `hook`
+//! applies it, `run` runs it and `slot` holds this process's run.
 #![cfg(windows)]
 
 mod counts;

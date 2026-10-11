@@ -32,8 +32,8 @@ impl Watch {
         }
     }
 
-    /// Notes clicks or moves sent at `at` after the hooks had counted `base` own events; an older send still uncounted stays
-    /// the one watched.
+    /// Notes clicks or moves sent at `at` after the hooks had counted `base` own events; an older send still
+    /// uncounted stays the one watched.
     pub fn sent(&mut self, at: Mono, base: u64) {
         if self.pending.is_none_or(|p| p.base != base) {
             self.pending = Some(Sent { at, base });

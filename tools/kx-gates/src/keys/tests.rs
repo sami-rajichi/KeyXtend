@@ -152,6 +152,14 @@ fn a_move_that_lands_far_enough_from_the_pointer_is_watched_and_one_beside_it_is
 }
 
 #[test]
+fn only_a_batch_with_an_absolute_move_needs_the_pointer_read() {
+    let keys = [tagged(0x41, false, TAG), tagged(0x41, true, TAG)];
+    assert!(!moves_absolute(&keys), "G1's key bursts");
+    assert!(!moves_absolute(&[input(5, 5, MOUSEEVENTF_MOVE, TAG)]));
+    assert!(moves_absolute(&[at(MOUSE_EVENT_FLAGS(0))]));
+}
+
+#[test]
 fn a_combo_presses_in_order_and_releases_in_reverse() {
     let got: Vec<_> = presses(&[0x11, 0x43]).iter().map(|e| e.up).collect();
     assert_eq!(got, [false, false, true, true]);

@@ -90,8 +90,8 @@ impl<H: Hook, C: Clock> Session<H, C> {
         self.tally.passed()
     }
 
-    /// Notes clicks or moves kx-gates sent after its hooks had counted `base` own events; while a hook holds the mouse, it
-    /// must count one within `alive_ms`.
+    /// Notes clicks or moves kx-gates sent after its hooks had counted `base` own events; while a hook holds the
+    /// mouse, it must count one within `alive_ms`.
     pub fn sent(&mut self, base: u64) {
         if self.live.is_some() && self.early.is_none() {
             self.watch.sent(self.clock.now(), base);
@@ -148,8 +148,8 @@ impl<H: Hook, C: Clock> Session<H, C> {
         }
     }
 
-    /// Lets go as lost when the running hook counted none of kx-gates' own clicks or moves within `alive_ms`, as Windows
-    /// switched it off.
+    /// Lets go as lost when the running hook counted none of kx-gates' own clicks or moves within `alive_ms`, as
+    /// Windows switched it off.
     fn check_alive(&mut self) {
         let held = self.live.is_some() && self.early.is_none();
         if held && self.watch.lost(self.clock.now(), self.tally.passed()) {

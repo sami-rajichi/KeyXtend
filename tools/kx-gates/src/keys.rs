@@ -99,12 +99,21 @@ fn moves_far(inputs: &[INPUT], at: POINT, desk: (i32, i32, i32, i32)) -> bool {
     false
 }
 
+/// True when `inputs` hold an absolute mouse move, the only kind `moves_far` judges.
+fn moves_absolute(inputs: &[INPUT]) -> bool {
+    let absolute = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+    inputs
+        .iter()
+        .filter_map(as_mouse)
+        .any(|mi| mi.dwFlags.contains(absolute))
+}
+
 /// True when every live low-level hook surely sees `inputs`: a mouse button goes down or up, or the pointer moves
-/// far enough from where it is now.
+/// far enough from where it is now. Only a batch with an absolute move reads the pointer and the screen.
 fn hooks_see(inputs: &[INPUT]) -> bool {
     let far =
         || cursor().is_ok_and(|p| moves_far(inputs, POINT { x: p.x, y: p.y }, win::desktop()));
-    clicks(inputs) || far()
+    clicks(inputs) || (moves_absolute(inputs) && far())
 }
 
 /// True when `inputs` let something go and press nothing, so they still go out after the mouse guard stopped a gate.
@@ -156,9 +165,9 @@ fn outgoing(
     }
 }
 
-/// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
-/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed; input every hook sees tells the
-/// guard its hook must count it.
+/// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate,
+/// only a batch that lets go goes out, moved as `after` says, so nothing stays pressed; input every hook sees tells
+/// the guard its hook must count it.
 pub fn send_as(inputs: &[INPUT], after: After) -> Result<(), String> {
     let out = outgoing(inputs, mouseguard::allowed(), after)?;
     let send = || inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()));
