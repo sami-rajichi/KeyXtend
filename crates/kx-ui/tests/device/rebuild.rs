@@ -5,7 +5,7 @@
 use crate::checks::{adopted, iconed};
 use crate::face::HOME;
 use crate::rig::{
-    GONE, GUARDED, Outcome, PICK, Rig, TICKS, pick_next, ticker, timer, untick, wait,
+    GONE, GUARDED, Outcome, PICK, Rig, TICKS, WATCHDOG_CODE, pick_next, ticker, timer, untick, wait,
 };
 use cxx::UniquePtr;
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine};
@@ -26,9 +26,9 @@ const ENDS: &str = "so the app ends";
 const WAITED: usize = 2;
 /// The tries a window failure takes once sharing is off, so at least one waits.
 const UNSHARED_TRIES: u32 = 2;
-/// The watchdog ends Qt's loop with its own code if the loss does not end it first; its time in ms, and its URL.
+/// The watchdog ends Qt's loop with its own code (`WATCHDOG_CODE`) if the loss does not end it first; its time in ms,
+/// and its URL.
 const WATCHDOG_MS: u32 = 5_000;
-const WATCHDOG_CODE: i32 = 3;
 const WATCHDOG_URL: &str = "qrc:/kx-ui-tests/device-watchdog.qml";
 
 /// Marks the shared device lost, as a driver reset would, and waits until a frame finds it.

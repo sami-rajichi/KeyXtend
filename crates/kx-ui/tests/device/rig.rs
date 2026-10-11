@@ -35,10 +35,17 @@ pub(crate) const GUARDED: usize = 2;
 /// is loaded from.
 const TICK_MS: u32 = 20;
 const TICK_URL: &str = "qrc:/kx-ui-tests/device-tick.qml";
-/// The one-shot timer `untick` runs Qt's loop under: its exit code, which neither the ticker nor the loss step's
-/// watchdog uses, and its URL.
-const STILL_CODE: i32 = 4;
+/// The URL of the one-shot timer that `untick` runs Qt's loop under.
 const STILL_URL: &str = "qrc:/kx-ui-tests/device-still.qml";
+/// The codes the test's timers end Qt's loop with: the ticker's, the loss step's watchdog's and `untick`'s. Each
+/// differs, so a run's code names the timer that ended it; the build checks that below.
+const TICK_CODE: i32 = 0;
+pub(crate) const WATCHDOG_CODE: i32 = 3;
+const STILL_CODE: i32 = 4;
+const _: () = assert!(
+    TICK_CODE != WATCHDOG_CODE && TICK_CODE != STILL_CODE && WATCHDOG_CODE != STILL_CODE,
+    "each of the test's timers needs its own exit code"
+);
 /// What a second `Ui` object taking the hub's wakes warns.
 const SECOND_UI: &str = "second Ui";
 /// An adapter no PC has, so no device can be made on it, as when the pinned one is gone.
@@ -158,7 +165,7 @@ pub(crate) fn timer(
 
 /// The ticker.
 pub(crate) fn ticker() -> Result<UniquePtr<QQmlApplicationEngine>, String> {
-    timer(TICK_MS, 0, true, TICK_URL)
+    timer(TICK_MS, TICK_CODE, true, TICK_URL)
 }
 
 /// Stops the ticker, then runs Qt's loop until a one-shot timer of its own ends it. A tick that fired as the loop was
