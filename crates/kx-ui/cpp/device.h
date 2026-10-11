@@ -194,6 +194,46 @@ inline std::size_t wired_windows()
 }
 #endif
 
+#if defined(KX_UI_PROBES)
+// How many windows dropped Qt's cached graphics after a frame so far; debug builds only.
+inline std::atomic<std::size_t> releases{0};
+
+inline std::size_t released_windows()
+{
+    return releases.load();
+}
+#endif
+
+// The property that marks a window waiting for the frame after which it drops Qt's cached graphics.
+inline constexpr char RELEASING[] = "kxReleasing";
+
+// Drops `window`'s cached graphics once the frame now ending is out of the way.
+inline void release_soon(QQuickWindow *window)
+{
+    QMetaObject::invokeMethod(window, [window] {
+        window->releaseResources();
+#if defined(KX_UI_PROBES)
+        ++releases;
+#endif
+    }, Qt::QueuedConnection);
+}
+
+// Has each shown Qt Quick window drop Qt's cached graphics after its next frame: pipelines, shaders and upload data,
+// which look changes would otherwise pile up. A window asked already waits for that frame.
+inline void release_after_frame()
+{
+    for (QWindow *window : QGuiApplication::topLevelWindows()) {
+        auto *quick = qobject_cast<QQuickWindow *>(window);
+        if (!quick || !quick->isVisible() || quick->property(RELEASING).toBool())
+            continue;
+        quick->setProperty(RELEASING, true);
+        QObject::connect(quick, &QQuickWindow::frameSwapped, quick, [quick] {
+            quick->setProperty(RELEASING, false);
+            release_soon(quick);
+        }, Qt::SingleShotConnection);
+    }
+}
+
 // Deletes the objects that wait for a later delete, as windows a gone engine left, so none outlives its device.
 inline void flush_deletes()
 {

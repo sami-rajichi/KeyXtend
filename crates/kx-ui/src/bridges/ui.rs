@@ -6,6 +6,7 @@ mod spots;
 mod texts;
 mod tray;
 
+use super::device::release_after_frame;
 use super::{hub, qs};
 use crate::hub::{Hub, Mode, NULL, Wake, json};
 use cxx_qt::{CxxQtType, Threading};
@@ -210,7 +211,8 @@ impl cxx_qt::Initialize for qobject::Ui {
 }
 
 /// Tells QML what changed, on the Qt thread: a new theme's fonts load before QML reads the new look and the last
-/// theme's go after, so no text asks Qt for a family it lacks; `fonts_changed` comes last.
+/// theme's go after, so no text asks Qt for a family it lacks. `fonts_changed` comes last, then each shown window drops
+/// what Qt cached for the last look once it drew the new one.
 fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
     let relook = matches!(wake, Wake::Settings | Wake::Look);
     let loaded = relook && ui.with(false, Hub::load_fonts);
@@ -227,6 +229,9 @@ fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
     let dropped = relook && ui.with(false, Hub::drop_fonts);
     if loaded || dropped {
         ui.fonts_changed();
+    }
+    if relook {
+        release_after_frame();
     }
 }
 

@@ -56,6 +56,15 @@ mod ffi {
         #[namespace = "kxui"]
         fn wired_windows() -> usize;
 
+        /// Has each shown window drop Qt's cached graphics once its next frame ends.
+        #[namespace = "kxui"]
+        fn release_after_frame();
+
+        /// How many windows dropped Qt's cached graphics after a frame so far.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn released_windows() -> usize;
+
         /// Deletes the objects that wait for a later delete, so no window outlives its device.
         #[namespace = "kxui"]
         fn flush_deletes();
@@ -192,6 +201,19 @@ pub fn drawing() -> (usize, usize) {
 #[must_use]
 pub fn wired() -> usize {
     ffi::wired_windows()
+}
+
+/// Has each shown Qt Quick window drop Qt's cached graphics, such as the last look's pipelines and upload data, once
+/// its next frame ends; call it on the GUI thread after a look change.
+pub(crate) fn release_after_frame() {
+    ffi::release_after_frame();
+}
+
+/// How many windows dropped Qt's cached graphics after a frame so far; debug builds only, for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn released() -> usize {
+    ffi::released_windows()
 }
 
 /// Deletes the objects that wait for a later delete, as windows a dropped engine left.

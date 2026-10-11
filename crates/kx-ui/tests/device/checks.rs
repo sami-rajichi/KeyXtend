@@ -6,7 +6,9 @@ use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
 use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
-use kx_ui::{ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees};
+use kx_ui::{
+    ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees, released,
+};
 use std::thread;
 use tracing::Level;
 
@@ -67,6 +69,29 @@ fn elsewhere(rig: &Rig) -> Outcome {
         Ok(false) if kept => Ok(()),
         _ => Err("off the GUI thread a device was made or the pin dropped".into()),
     }
+}
+
+/// A theme picked in the settings reaches the windows through the wake alone: it loads the theme's fonts, so Qt has its
+/// first Arabic family, and each shown window drops Qt's cached graphics once it drew the new look; going back drops
+/// those fonts.
+pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
+    let themes = Themes::shipped().map_err(|e| e.to_string())?;
+    let look = &themes.find(THEMES[0]).ok_or("no such theme")?.look;
+    let arabic = look.arabic_fonts.first().ok_or("no Arabic family")?;
+    let (was, before) = (rig.hub.settings(), released());
+    rig.show(UiSettings {
+        theme: THEMES[0].to_owned(),
+        ..was.clone()
+    });
+    wait(
+        app,
+        "the wake loading the fonts and a window dropping its graphics",
+        || released() > before && font_families().contains(arabic),
+    )?;
+    rig.show(was);
+    wait(app, "the wake dropping the fonts", || {
+        !font_families().contains(arabic)
+    })
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.

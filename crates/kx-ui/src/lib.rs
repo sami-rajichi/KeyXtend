@@ -35,7 +35,7 @@ pub use bridges::shadows::serve_shadows;
 pub use bridges::tint::serve_icons;
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use bridges::{
-    device::{drawing, wired},
+    device::{drawing, released, wired},
     fonts::font_families,
     tint::{icon_mask, icon_pixels, icon_textures},
 };
