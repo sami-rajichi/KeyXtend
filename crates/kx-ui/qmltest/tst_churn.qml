@@ -12,10 +12,11 @@ Item {
 
     // What the churn did, in order: `k` a key's tip, `u` that tip taken back, `l` the language key, `m` minimise, `b`
     // the bubble, `t` a theme, `c` Caps Lock, `+` and `-` a size step; how often it ended; and the churn's wait as the
-    // tip was taken back.
+    // tip was taken back, and as the language key was pressed after it.
     property string did: ""
     property int ended: 0
     property int tipWait: 0
+    property int stepWait: 0
     // The stand-in window's language key design and hover time, and the churn made last.
     property string design: "list"
     readonly property int tipMs: 7
@@ -95,7 +96,10 @@ Item {
                 property string icon: ""
                 property string note: ""
                 signal hit(bool back)
-                onHit: back => root.did += back ? "L" : "l"
+                onHit: back => {
+                    root.did += back ? "L" : "l";
+                    root.stepWait = root.made.data.find(o => o.interval !== undefined).interval;
+                }
             }
         }
     }
@@ -132,6 +136,7 @@ Item {
             root.did = "";
             root.ended = 0;
             root.tipWait = 0;
+            root.stepWait = 0;
             root.made = null;
             root.design = "list";
         }
@@ -151,6 +156,11 @@ Item {
         function test_a_tip_shows_for_the_hover_time_before_it_goes() {
             churned();
             compare(root.tipWait, root.plan.step_ms + root.tipMs);
+        }
+
+        function test_a_step_with_no_tip_waits_the_step_time_alone() {
+            churned();
+            compare(root.stepWait, root.plan.step_ms);
         }
 
         function test_another_design_keeps_the_language_key_still_as_it_would_switch_the_layout() {
