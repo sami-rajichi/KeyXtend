@@ -36,6 +36,16 @@ mod ffi {
         #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn icon_mask(root: &str, name: &str, side: i32) -> Vec<u32>;
+
+        /// How many icon textures the provider made so far.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn icon_textures_made() -> u64;
+
+        /// How many icon textures are alive now.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn icon_textures_live() -> u64;
     }
 }
 
@@ -72,4 +82,11 @@ pub fn icon_pixels(id: &str, side: i32) -> Vec<u32> {
 #[must_use]
 pub fn icon_mask(name: &str, side: i32) -> Vec<u32> {
     ffi::icon_mask(&root(), name, side)
+}
+
+/// How many icon textures the provider made so far, and how many are alive now; debug builds only, for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn icon_textures() -> (u64, u64) {
+    (ffi::icon_textures_made(), ffi::icon_textures_live())
 }

@@ -64,6 +64,16 @@ inline rust::Vec<std::uint32_t> icon_pixels(rust::Str root, rust::Str ext, rust:
     return icon_words(icons->serve(icon_text(id), QSize(side, side)));
 }
 
+// Icon textures made so far, and those alive now; debug builds only.
+inline std::uint64_t icon_textures_made()
+{
+    return IconCount::made;
+}
+inline std::uint64_t icon_textures_live()
+{
+    return IconCount::live;
+}
+
 // File `name` in `root` read at `side` pixels square, untinted; debug builds only.
 inline rust::Vec<std::uint32_t> icon_mask(rust::Str root, rust::Str name, std::int32_t side)
 {

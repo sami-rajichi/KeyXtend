@@ -15,10 +15,24 @@ const THEMES: [&str; 3] = ["dolch", "et66", "native"];
 /// What a font that did not load logs, and what each warning of a device that could not be shared holds.
 const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
+/// What a refused icon warns.
+const REFUSED: &str = "icon was refused";
+
+/// The windows drew icons through the provider since it had made `made` textures, and it refused none: each engine,
+/// a rebuilt one too, has the provider, as Qt finds no other.
+pub(crate) fn iconed(rig: &Rig, made: u64) -> Outcome {
+    let drawn = kx_ui::icon_textures().0.saturating_sub(made);
+    match rig.lines.count(Level::WARN, REFUSED) {
+        0 if drawn > 0 => Ok(()),
+        n => Err(format!(
+            "{drawn} icons drawn through the provider, {n} refused"
+        )),
+    }
+}
 
 /// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
-/// shared device, and every frame ends on the GUI thread; each has its scene graph errors heard, and no device is
-/// made off that thread, where the pin stays.
+/// shared device, and every frame ends on the GUI thread; each has its scene graph errors heard, the icons come from
+/// the provider, and no device is made off that thread, where the pin stays.
 pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let device = shell.device().ok_or("no shared device was made")?;
     wait(app, "the keyboard's first frame", || {
@@ -37,6 +51,7 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
         ));
     }
     watched()?;
+    iconed(rig, 0)?;
     elsewhere(rig)
 }
 

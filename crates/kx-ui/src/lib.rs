@@ -33,7 +33,7 @@ pub use bridges::tint::serve_icons;
 pub use bridges::{
     device::{drawing, wired},
     fonts::font_families,
-    tint::{icon_mask, icon_pixels},
+    tint::{icon_mask, icon_pixels, icon_textures},
 };
 pub use geom::Area;
 pub use hub::{

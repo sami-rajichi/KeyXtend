@@ -13,6 +13,8 @@
 #include <QtQuick/QSGTexture>
 
 #include <algorithm>
+#include <atomic>
+#include <cstdint>
 #include <functional>
 #include <utility>
 
@@ -22,6 +24,8 @@ namespace kxui {
 using Refused = std::function<void(const QString &)>;
 // The first code point past ASCII.
 constexpr char16_t ascii_end = 0x80;
+// The size served when Qt asks for an empty one.
+constexpr QSize one_pixel(1, 1);
 
 // True when `name` is a plain file name of type `ext`: ASCII letters, digits, `-`, `_` and dots, and no leading dot,
 // so it never leaves the icons folder.
@@ -35,8 +39,17 @@ inline bool bare_name(const QString &name, const QString &ext)
     return typed && !name.startsWith(u'.') && std::all_of(name.cbegin(), name.cend(), plain);
 }
 
-// Icon `id`, `<rrggbb>/<name>.<ext>`, from folder `root`, drawn at `size` (its own when invalid) with its ink filled
-// in that tint and its alpha kept; a null image when the id is refused or the file does not read.
+// A clear image of `size`, or of one pixel when `size` is empty, as Qt draws nothing from a null image.
+inline QImage clear(const QSize &size)
+{
+    QImage art(size.isEmpty() ? one_pixel : size, QImage::Format_ARGB32_Premultiplied);
+    art.fill(Qt::transparent);
+    return art;
+}
+
+// Icon `id`, `<rrggbb>/<name>.<ext>`, from folder `root`, drawn at `size` (its own when invalid, one clear pixel when
+// empty) with its ink filled in that tint and its alpha kept; a null image when the id is refused or the file does not
+// read.
 inline QImage tinted(const QString &root, const QString &ext, const QString &id, const QSize &size)
 {
     const qsizetype cut = id.indexOf(u'/');
@@ -45,6 +58,8 @@ inline QImage tinted(const QString &root, const QString &ext, const QString &id,
     const QString name = id.mid(cut + 1);
     if (cut <= 0 || !tint.isValid() || tint.name() != hex || !bare_name(name, ext))
         return {};
+    if (size.isValid() && size.isEmpty())
+        return clear(size);
     QImageReader reader(root + u'/' + name);
     if (size.isValid())
         reader.setScaledSize(size);
@@ -59,6 +74,28 @@ inline QImage tinted(const QString &root, const QString &ext, const QString &id,
     }
     return art;
 }
+
+#if defined(KX_UI_PROBES)
+// Counts the icon textures made and those alive, for tests: only in debug builds, whose `kx-ui-build.h` icons.h
+// includes first.
+struct IconCount
+{
+    inline static std::atomic<std::uint64_t> made{0};
+    inline static std::atomic<std::uint64_t> live{0};
+
+    IconCount()
+    {
+        ++made;
+        ++live;
+    }
+    IconCount(const IconCount &) = delete;
+    IconCount &operator=(const IconCount &) = delete;
+    ~IconCount()
+    {
+        --live;
+    }
+};
+#endif
 
 // An icon's own texture, outside Qt's shared atlas: an icon drawn between whole pixels samples the same however other
 // images, such as a colour change's steps, filled the atlas.
@@ -86,6 +123,9 @@ public:
 
 private:
     const QImage art;
+#if defined(KX_UI_PROBES)
+    const IconCount counted;
+#endif
 };
 
 // Serves `image://<provider>/<rrggbb>/<name>.<ext>` from the icons in `root`, each as its own texture. A refused or
@@ -113,8 +153,7 @@ public:
         QImage art = tinted(root, ext, id, requested);
         if (art.isNull()) {
             refused(id);
-            art = QImage(requested.isValid() ? requested : QSize(1, 1), QImage::Format_ARGB32_Premultiplied);
-            art.fill(Qt::transparent);
+            art = clear(requested);
         }
         return art;
     }
