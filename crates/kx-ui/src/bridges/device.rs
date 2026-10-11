@@ -11,9 +11,9 @@ use cxx::UniquePtr;
 #[cxx_qt::bridge]
 mod ffi {
     // SAFETY: `device.h`, the `watch.h` it includes and `release.h` declare exactly these functions, types and members
-    // with these types. `device_new` and `watch_new` make nothing off the thread of Qt's app object; every other call
-    // runs on that GUI thread, which owns the device, the watch and the windows, and the app drops every window before
-    // the device. The function `release_after_frame` keeps is a plain Rust function, valid for the whole run.
+    // with these types, and the function `release_after_frame` keeps is a plain Rust one, valid for the whole run.
+    // `device_new` and `watch_new` make nothing off the thread of Qt's app object; every other call runs on that GUI
+    // thread, which owns the device, the watch and the windows, and the app drops every window before the device.
     unsafe extern "C++" {
         include!("kx-ui/cpp/device.h");
         include!("kx-ui/cpp/release.h");

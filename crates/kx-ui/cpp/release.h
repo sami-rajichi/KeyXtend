@@ -35,7 +35,7 @@ inline constexpr char RELEASING[] = "kxReleasing";
 using Settled = rust::Fn<void()>;
 
 // Drops its window's cached graphics once the window's next frame is out of the way, or once it hid if it hides first,
-// then goes. The window owns it, so a window that goes first takes it along. All of this runs on the GUI thread.
+// then goes; a window that goes first takes it along. All of this runs on the GUI thread.
 class Release : public QObject
 {
 public:
@@ -51,11 +51,18 @@ public:
         window->update();
     }
 
+    // A window that went before its frame still lets the last look change's settled call run.
     ~Release() override
     {
-        if (!done)
-            --owed;
+        if (done)
+            return;
+        --owed;
+        if (QCoreApplication *app = QCoreApplication::instance())
+            QMetaObject::invokeMethod(app, &Release::settle, Qt::QueuedConnection);
     }
+
+    // Keeps `then` as the call to run once no window waits, in place of an earlier look change's.
+    static void after(Settled then) { settled = then; }
 
     // Runs the last look change's settled call, once no window waits to drop its cached graphics.
     static void settle()
@@ -67,10 +74,10 @@ public:
         call();
     }
 
+private:
     // The call that waits for the windows, kept until they all dropped their cached graphics.
     static inline std::optional<Settled> settled;
 
-private:
     void later() { QMetaObject::invokeMethod(this, &Release::now, Qt::QueuedConnection); }
 
     void now()
@@ -95,12 +102,11 @@ private:
     bool done = false;
 };
 
-// Has each shown Qt Quick window drop Qt's cached graphics after its next frame: pipelines, shaders and upload data,
-// which look changes would otherwise pile up. A window asked already waits for that frame. Once none waits, `then` runs
-// once, the call of the last look change only.
+// Has each shown Qt Quick window not waiting yet drop Qt's cached graphics after its next frame: pipelines, shaders and
+// upload data, which look changes would otherwise pile up. Once none waits, `then` runs once, the last look change's.
 inline void release_after_frame(Settled then)
 {
-    Release::settled = then;
+    Release::after(then);
     for (QWindow *window : QGuiApplication::topLevelWindows()) {
         auto *quick = qobject_cast<QQuickWindow *>(window);
         if (quick && quick->isVisible() && !quick->property(RELEASING).toBool())

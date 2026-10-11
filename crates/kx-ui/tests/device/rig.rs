@@ -38,7 +38,7 @@ pub(crate) const FIRST: u32 = 0;
 /// How many ticks a step may take, as `tryVerify` waits in the Qt Quick tests.
 pub(crate) const TICKS: usize = 250;
 /// The rebuilds the loss and failure steps take: two tries for the first, one for each other.
-const REBUILDS: u32 = 6;
+const REBUILDS: u32 = 7;
 /// The wait before the next try at a device, many ticks long, so Qt's loop must run through it.
 const RETRY_MS: u64 = 200;
 
@@ -191,6 +191,7 @@ pub(crate) fn run() -> Outcome {
     left::away(&mut app, &mut shell, &rig)?;
     left::minimised(&mut app, &mut shell, &rig)?;
     left::theme(&mut app, &mut shell, &mut rig)?;
+    left::waiting(&mut app, &mut shell, &mut rig)?;
     rebuild::failed(&mut app, &mut shell, &rig, &mut tick)?;
     checks::fonts(&mut rig)?;
     rebuild::past_most(&mut app, &mut shell, &mut rig, kept)?;

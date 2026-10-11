@@ -1,5 +1,5 @@
-//! Losses with the keyboard closed, minimised, or a theme picked while the windows close: the windows made again leave
-//! the keyboard as the user left it, and draw with the theme's fonts.
+//! Losses with the keyboard closed, minimised, or a theme picked as the windows close or wait to drop their graphics:
+//! the windows made again leave the keyboard as the user left it and draw the theme's fonts, and memory goes back.
 
 use crate::rebuild::{back, kept, lose, marks, rebuilt};
 use crate::rig::{Outcome, Rig, wait};
@@ -10,8 +10,9 @@ use kx_platform_fake::GuardCall;
 use kx_theme::Themes;
 use kx_ui::{Mode, Shell, UiSettings, font_families};
 
-/// The theme picked while the windows close.
+/// The theme picked while the windows close, then the one picked just before a loss.
 const PICKED: &str = "dolch";
+const WAITED: &str = "et66";
 
 /// How many cuts and guard runs the guard took; only the shown keyboard cuts itself.
 fn guarded(rig: &Rig) -> (usize, usize) {
@@ -87,4 +88,26 @@ pub(crate) fn theme(
         ));
     }
     Ok(())
+}
+
+/// A theme picked just before a loss: the windows that wait to drop their graphics after it go before their frame, and
+/// the free memory still goes back once.
+pub(crate) fn waiting(
+    app: &mut UniquePtr<QGuiApplication>,
+    shell: &mut Shell,
+    rig: &mut Rig,
+) -> Outcome {
+    let (was, calls) = (marks(rig), rig.memory.calls());
+    rig.show(UiSettings {
+        theme: WAITED.to_owned(),
+        ..rig.hub.settings()
+    });
+    lose(app, shell)?;
+    rebuilt(shell)?;
+    back(app, rig, was)?;
+    wait(
+        app,
+        "one give-back after the windows that waited went",
+        || rig.memory.calls() == calls + 1,
+    )
 }
