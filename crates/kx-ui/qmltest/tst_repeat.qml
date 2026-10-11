@@ -147,6 +147,33 @@ Item {
             compare(sent(win), ["press " + q, "leave"]);
         }
 
+        function test_a_stopped_keyboard_ends_the_hold() {
+            const win = make();
+            mousePress(keyed(win, q));
+            win.board = null;
+            verify(!win.hold.running);
+            compare(sent(win), ["press " + q, "leave"]);
+            win.visible = false;
+        }
+
+        function test_a_press_qt_cancels_sends_leave() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            Board.all(key, o => o.containsMouse !== undefined)[0].canceled();
+            compare(sent(win), ["press " + q, "leave"]);
+            verify(!win.hold.running);
+            win.visible = false;
+        }
+
+        function test_a_readers_press_on_a_repeating_key_still_clicks() {
+            const win = make();
+            keyed(win, q).Accessible.pressAction();
+            compare(sent(win), ["tap " + q + " false"]);
+            verify(!win.hold.running);
+            win.visible = false;
+        }
+
         function test_the_language_key_named_keys_and_dimmed_keys_keep_their_click() {
             const win = make();
             for (const id of ["lang", "esc", "mic"])
