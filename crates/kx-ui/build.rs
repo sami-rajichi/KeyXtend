@@ -52,6 +52,7 @@ mod qt {
         "qml/Label.qml",
         "qml/Icon.qml",
         "qml/Shade.qml",
+        "qml/Soft.qml",
         "qml/Tween.qml",
         "qml/ColourTween.qml",
         "qml/PopIn.qml",
@@ -72,7 +73,10 @@ mod qt {
         "src/bridges/device.rs",
         "src/bridges/fonts.rs",
         "src/bridges/tint.rs",
+        "src/bridges/shadows.rs",
     ];
+    /// The hand-written C++ `QObject` classes, which moc reads.
+    const MOC: &[&str] = &["cpp/shadows.h"];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
     /// The variable naming Qt's qmake, as cxx-qt-build reads it, and the program it runs when that is unset.
@@ -129,6 +133,7 @@ mod qt {
         let module = QmlModule::new(URI).qml_files(QML.iter().copied());
         let builder = CxxQtBuilder::new_qml_module(module)
             .files(BRIDGES.iter().copied())
+            .cpp_files(MOC.iter().copied())
             .qrc_resources(resources)
             .include_dir(rhi)
             .include_dir(kind);

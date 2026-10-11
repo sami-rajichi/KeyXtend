@@ -117,6 +117,7 @@ fn run() -> Result<(), String> {
     let mut app = QGuiApplication::new();
     let _engine = load(|mut e| {
         kx_ui::serve_icons(e.as_mut());
+        kx_ui::serve_shadows(e.as_mut());
         e.load(&QUrl::from(MAIN_QML));
     })
     .ok_or_else(|| format!("{MAIN_QML} did not load"))?;

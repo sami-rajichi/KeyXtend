@@ -7,6 +7,7 @@ use crate::bridges::device::{Device, Watch, flush_deletes};
 use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_adapter, pin_imports, unpin_adapter};
 use crate::bridges::installed;
+use crate::bridges::shadows::serve_shadows;
 use crate::bridges::tint::serve_icons;
 use crate::device::{Cause, Next, Rebuilds, Remake};
 use crate::hub::Hub;
@@ -177,7 +178,8 @@ impl Shell {
     }
 
     /// Loads the theme's fonts, as a wake lost meanwhile may have changed it, then the root QML into a new engine that
-    /// serves the icons; true when Qt made its objects. Loading from resources is synchronous.
+    /// serves the icons and the soft shadows' adopter; true when Qt made its objects. Loading from resources is
+    /// synchronous.
     fn load(&mut self) -> bool {
         if let Some(hub) = installed() {
             let _ = hub.sync_fonts();
@@ -190,6 +192,7 @@ impl Shell {
             pin_imports(engine.as_mut(), dir);
         }
         serve_icons(engine.as_mut());
+        serve_shadows(engine.as_mut());
         let loaded = root(engine);
         if !loaded {
             tracing::error!(url = MAIN_QML, "the root QML did not load");

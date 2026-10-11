@@ -13,6 +13,8 @@ use std::path::PathBuf;
 const KX_UI_CPP: &str = "../../crates/kx-ui/cpp";
 /// The provider's header there.
 const TINT_H: &str = "tint.h";
+/// The soft shadows' adopter there, a `QObject` that moc reads.
+const SHADOWS_H: &str = "shadows.h";
 /// The plugin's header, which moc reads.
 const PLUGIN: &str = "plugin.h";
 /// The generated header that names the provider, its folder and file type, in its own folder under `OUT_DIR`.
@@ -42,7 +44,8 @@ fn main() {
         .fold(CxxQtBuilder::new(), |b, m| b.qt_module(m))
         .include_dir(KX_UI_CPP)
         .include_dir(names)
-        .cpp_file(PLUGIN);
+        .cpp_file(PLUGIN)
+        .cpp_file(format!("{KX_UI_CPP}/{SHADOWS_H}"));
     // SAFETY: the closure only adds macros and a link modifier to cxx-qt-build's C++ build, which keeps its own
     // files and flags.
     let builder = unsafe {
@@ -61,6 +64,7 @@ fn main() {
     }
     println!("cargo::rerun-if-changed={PLUGIN}");
     println!("cargo::rerun-if-changed={KX_UI_CPP}/{TINT_H}");
+    println!("cargo::rerun-if-changed={KX_UI_CPP}/{SHADOWS_H}");
 }
 
 /// Writes the header that names the provider, the icons' folder and their file type, and gives its folder.

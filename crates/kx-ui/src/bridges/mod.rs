@@ -13,6 +13,7 @@ pub mod device;
 pub mod fonts;
 pub mod harden;
 mod keyboard;
+pub mod shadows;
 pub mod tint;
 mod ui;
 

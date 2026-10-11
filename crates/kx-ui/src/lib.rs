@@ -30,6 +30,8 @@ pub use bridges::harden::{
 #[cfg(feature = "qt")]
 pub use bridges::install;
 #[cfg(feature = "qt")]
+pub use bridges::shadows::serve_shadows;
+#[cfg(feature = "qt")]
 pub use bridges::tint::serve_icons;
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use bridges::{

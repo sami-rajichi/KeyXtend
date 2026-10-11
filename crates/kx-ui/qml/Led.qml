@@ -2,7 +2,6 @@
 // glow ease on the key (`ledColour`, `ledLit`).
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 
 Item {
     id: led
@@ -40,7 +39,7 @@ Item {
     Loader {
         anchors.fill: parent
         active: led.key.ledLit > 0 && !led.key.lk.contrast
-        sourceComponent: RectangularShadow {
+        sourceComponent: Soft {
             opacity: led.key.ledLit
             blur: led.key.look.led_glow_px * led.key.s
             radius: led.width / 2

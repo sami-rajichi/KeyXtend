@@ -55,7 +55,7 @@ Item {
         // layer.
         function effect(o) {
             const t = type(o);
-            const shader = /ShaderEffect/.test(t) && type(o.parent) !== "QQuickRectangularShadow";
+            const shader = /ShaderEffect/.test(t) && type(o.parent) !== "Soft";
             return /MultiEffect$/.test(t) || shader || (o.layer !== undefined && o.layer.enabled);
         }
         // Colour `c` as the provider names a tint: six hex digits, without its alpha.

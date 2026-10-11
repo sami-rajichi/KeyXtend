@@ -2,7 +2,6 @@
 // the item its layer draws, sized from the box it sits in, its parent, so it takes no anchors.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 
 Loader {
     id: shade
@@ -31,7 +30,7 @@ Loader {
     }
     Component {
         id: softC
-        RectangularShadow {
+        Soft {
             width: shade.box.width
             height: shade.box.height
             offset: Qt.vector2d(shade.shadow.x, shade.shadow.y)

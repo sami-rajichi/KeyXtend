@@ -1,5 +1,6 @@
 // Glows and lights exist only while they show: a lock key's glow and its light's glow come when it lights and go once
-// their fade ends, and only a key that can light, or a theme that shows its off lights, holds a light.
+// their fade ends, taking their material along, and only a key that can light, or a theme that shows its off lights,
+// holds a light.
 import QtQuick
 import QtTest
 import "../qml"
@@ -30,6 +31,8 @@ Item {
     readonly property var capsOn: Face.states["en-caps"].keys.caps
 
     Component { id: keyC; Key {} }
+    // Holds an item until Qt frees it.
+    Component { id: heldC; QtObject { property Item item } }
 
     TestCase {
         name: "glows"
@@ -57,9 +60,9 @@ Item {
         function type(o) {
             return String(o).replace(/(_QML.*)?\(.*$/, "");
         }
-        // The glows on key `k`: the lock glow and its light's, not the cap's shadows. Qt names the type by its C++ class.
+        // The glows on key `k`: the lock glow and its light's, not the cap's shadows.
         function glows(k) {
-            return all(k, o => type(o) === "QQuickRectangularShadow" && type(o.parent) !== "Shade");
+            return all(k, o => type(o) === "Soft" && type(o.parent) !== "Shade");
         }
         // The light on key `k`, or null.
         function lightOf(k) {
@@ -111,6 +114,20 @@ Item {
             const now = glows(k);
             verify(now.length === 2 && now.every((g, i) => g === items[i]), "the same glows");
             tryCompare(k, "lockLit", 1, 1000);
+        }
+
+        // A soft shadow that goes, a glow or a theme's key shade, takes the material Qt made for it along, so lock and
+        // theme changes keep no memory.
+        function test_a_soft_shadow_that_goes_frees_its_material() {
+            const k = makeKey("caps", D.lk, root.capsOn);
+            tryVerify(() => glows(k).length === 2, 1000, "both glows");
+            const soft = all(k, o => type(o) === "Soft");
+            verify(soft.length > 2, "the glows and Dolch's soft key shade");
+            const held = soft.map(s => createTemporaryObject(heldC, root, { item: s.material }));
+            verify(held.every(h => h.item !== null), "each shadow has its material");
+            k.ks = root.capsOff;
+            k.lk = N.lk;
+            tryVerify(() => held.every(h => h.item === null), 1000, "every material went with its shadow");
         }
 
         // Edge case 10: high contrast makes no glow, as before.

@@ -2,7 +2,6 @@
 // also in its tip: when a dimmed key, which never presses, comes, or that the language key has only one language.
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Effects
 
 Item {
     id: key
@@ -153,7 +152,7 @@ Item {
     Loader {
         anchors.fill: cap
         active: key.lockLit > 0 && !key.lk.contrast && key.look.lock_glow_px > 0
-        sourceComponent: RectangularShadow {
+        sourceComponent: Soft {
             opacity: key.lockLit
             blur: key.look.lock_glow_px * key.s
             radius: key.radius
