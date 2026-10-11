@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-11 (key repeat)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -15,13 +15,14 @@
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
-| `[keyboard]` settings: size, place, modifiers mode, language-key style, bubble corner, `key_apps` | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
+| `[keyboard]` settings: size, place, modifiers mode, language-key style, key repeat, bubble corner, `key_apps` | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
 | The board: rows, widths, scan codes, roles | Public | Compiled into the app (`board.toml`) | No | The build |
 | The text of each click, built from the layout table | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted<String>`, until the injector takes it; not zeroised (`kx-platform-windows.md`) | No | One click |
 | Typing state: the latched modifiers and the dead-key wait | Sensitive together with the clicks around it (the latches alone show on screen and to screen readers) | Memory only; kept across a module restart | No | Until a click lets go of it, or the app quits |
 | The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
+| The held key's id and its next repeat time | Sensitive together with the clicks around it | Memory only (`Repeat`) | No | Until the pointer lets go or leaves, the keyboard hides, or a restart |
 
-Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text and legends (`Route`, `Plan`, `Legend`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`), since a run of clicks would show what was typed (ae6f192, d3b925e).
+Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text and legends (`Route`, `Plan`, `Legend`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -31,19 +32,22 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | Screens, pointer points and the resize corner's overhang from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics; an overhang below 0 or not a finite number counts as none | — | Property tests |
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
+| Held-key actions from the UI: `press`, `tick`, `let_go`, `leave` (spec §4.6) | A pressed or let-go key must be on the board (`UnknownKey`); a tick types only while a key is held and a repeat is due, and a late tick types once; a let-go of another key types nothing | One repeat per `repeat_every_ms` (33 ms or more) | Property tests (`Repeat` runs; face runs of presses, ticks, let-gos and leaves) |
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network. A key acts on a click or a UI Automation Invoke from any program UIPI lets through, and the face cannot tell who sent it; the P3 manual check must confirm that a normal program's click and Invoke type nothing in the signed uiAccess build (`docs/items/P3.md`).
 - **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). Sizes stop at `SIZE_FLOOR` and `SIZE_CEILING`, so a hand-edited size can neither shrink the keys past clicking nor open the keyboard off every screen, and a place off every screen brings the keyboard back to the bottom centre.
-- **Logging / repudiation:** the module never logs. Typed text that reached a log through a field named for it is redacted (the app's log test), and `kx-review` check 4 refuses a `tracing` call on an input path that could carry it.
+- **Logging / repudiation:** the module never logs; a held key's failed repeat is one `keys-not-sent` notice, with no key. Typed text that reached a log through a field named for it is redacted (the app's log test), and `kx-review` check 4 refuses a `tracing` call on an input path that could carry it.
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
 - **Denial of service:**
   - A size or time of zero or not-a-number is refused, so nothing divides by zero or spins; a relabel time or size past its ceiling is refused, so the labels never stall and the keyboard never opens far off every screen.
   - A stale click is never replayed, so a lagging table cannot loop.
   - A click holds the face's lock while it sends, but no OS call on that path sends a message to another window, so a hung app cannot stall a click.
-- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key; nothing types on its own. The face service itself has no capability gate (see Should fix).
-- **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier.
+  - A held key repeats at most once a beat, and a late tick types once and never catches up, so a slow frame cannot flood the app.
+- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. The face service itself has no capability gate (see Should fix).
+- **Stuck repeat:** a burst ends on let-go, on leaving the key, when the keyboard hides (the UI sends `leave`), when a repeat is stale, empty or fails, and on a restart. A face property run shows that no tick types after a let-go or leave, and the UI's hold timer runs only while a key is held on a shown keyboard.
+- **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier. During a burst the latches stay latched, not pressed, and let go when it ends.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

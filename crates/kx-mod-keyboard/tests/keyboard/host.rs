@@ -11,9 +11,9 @@ use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable, Layouts,
     LayoutsKey,
 };
-use kx_module_api::{Capability, ServiceId, ServiceKey};
+use kx_module_api::{Capability, Mono, ServiceId, ServiceKey};
 use kx_module_api::{is_arabic, parse_as};
-use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeLayouts, LayoutFile};
+use kx_platform_fake::{FakeClock, FakeInjector, FakeLayoutSource, FakeLayouts, LayoutFile};
 pub use kx_test_support::host::FakeHost;
 use std::any::Any;
 use std::sync::Arc;
@@ -72,6 +72,8 @@ pub struct Fakes {
     pub source: Arc<FakeLayoutSource>,
     /// Behind the layouts service.
     pub layouts: Arc<FakeLayouts>,
+    /// The kernel's clock, which moves only when a test says so.
+    pub clock: FakeClock,
 }
 
 impl Fakes {
@@ -81,11 +83,13 @@ impl Fakes {
             injector: Arc::new(FakeInjector::new()),
             source: Arc::new(FakeLayoutSource::golden(names).unwrap()),
             layouts: Arc::new(labelled(names)),
+            clock: FakeClock::new(Mono::default()),
         }
     }
 
-    /// Stores the services in `host`, all but `leave`; `InjectInput` is not granted.
+    /// Stores the services in `host`, all but `leave`, and sets its clock; `InjectInput` is not granted.
     pub fn store(&self, host: &mut FakeHost, leave: Option<ServiceId>) {
+        host.clock = Arc::new(self.clock.clone());
         let injector: Arc<dyn InputInjector> = self.injector.clone();
         let source: Arc<dyn LayoutSource> = self.source.clone();
         let layouts: Arc<dyn Layouts> = self.layouts.clone();

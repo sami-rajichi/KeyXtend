@@ -15,6 +15,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Module, ModuleCx, ServiceKey};
 use serde_json::Value;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// A redraw of the state alone.
 pub const STATE: FaceReply = FaceReply {
@@ -100,6 +101,27 @@ impl Rig {
     pub fn panel(&self, id: &str, rows: usize) -> Result<FaceReply, FaceError> {
         let key = KeyId::new(id);
         self.act(FaceAction::PanelKey { key, rows })
+    }
+
+    /// The pointer goes down on key `id`.
+    pub fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
+        self.act(FaceAction::Press { id: KeyId::new(id) })
+    }
+
+    /// The hold timer ticks `ms` later.
+    pub fn tick_in(&self, ms: u64) -> FaceReply {
+        self.fakes.clock.advance(Duration::from_millis(ms));
+        self.act(FaceAction::Tick).unwrap()
+    }
+
+    /// The pointer lets go of key `id` on it.
+    pub fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
+        self.act(FaceAction::LetGo { id: KeyId::new(id) })
+    }
+
+    /// The pointer leaves the held key, or the keyboard hides.
+    pub fn leave(&self) -> FaceReply {
+        self.act(FaceAction::Leave).unwrap()
     }
 
     /// The app in front switched to golden layout `name`, and the relabel timer ran.

@@ -191,3 +191,20 @@ fn a_grant_the_manifest_never_declared_is_refused_as_the_kernel_does() {
     let not_granted = EventError::NotGranted(Heard::NAME, Capability::Microphone);
     assert_eq!(heard, Err(not_granted), "bus");
 }
+
+/// A clock stuck one second after `NOW`.
+struct Later;
+
+impl Clock for Later {
+    fn now(&self) -> Mono {
+        NOW.saturating_add(std::time::Duration::from_secs(1))
+    }
+}
+
+#[test]
+fn a_test_may_set_the_clock_the_module_reads() {
+    let mut host = FakeHost::new(&PLAIN);
+    assert_eq!(ModuleCx::new(&mut host).clock().now(), NOW);
+    host.clock = Arc::new(Later);
+    assert_eq!(ModuleCx::new(&mut host).clock().now(), Later.now());
+}

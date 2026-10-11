@@ -4,7 +4,7 @@ use super::*;
 
 const KEY: &str = "key-q";
 /// The number of `FaceAction` variants, debug builds' `FlipCaps` too; `row` fails to build when one is added.
-const VARIANTS: usize = if cfg!(debug_assertions) { 12 } else { 11 };
+const VARIANTS: usize = if cfg!(debug_assertions) { 16 } else { 15 };
 
 /// Each variant's place in `wire`, by an exhaustive match.
 fn row(action: &FaceAction) -> usize {
@@ -20,8 +20,12 @@ fn row(action: &FaceAction) -> usize {
         FaceAction::Relabel => 8,
         FaceAction::LangPick { .. } => 9,
         FaceAction::PanelKey { .. } => 10,
+        FaceAction::Press { .. } => 11,
+        FaceAction::Tick => 12,
+        FaceAction::LetGo { .. } => 13,
+        FaceAction::Leave => 14,
         #[cfg(debug_assertions)]
-        FaceAction::FlipCaps => 11,
+        FaceAction::FlipCaps => 15,
     }
 }
 
@@ -54,9 +58,21 @@ fn built() -> [FaceAction; 3] {
     [tap, placed, panel]
 }
 
+/// The press and let-go samples of a held key.
+fn held() -> [FaceAction; 2] {
+    let press = FaceAction::Press {
+        id: KeyId::new(KEY),
+    };
+    let let_go = FaceAction::LetGo {
+        id: KeyId::new(KEY),
+    };
+    [press, let_go]
+}
+
 /// Every action and the exact JSON the UI sends for it.
 fn wire() -> Vec<(FaceAction, &'static str)> {
     let [tap, placed, panel] = built();
+    let [press, let_go] = held();
     vec![
         (tap, r#"{"act":"tap","id":"key-q","back":true}"#),
         (FaceAction::Smaller, r#"{"act":"smaller"}"#),
@@ -84,6 +100,10 @@ fn wire() -> Vec<(FaceAction, &'static str)> {
             r#"{"act":"lang_pick","index":1}"#,
         ),
         (panel, r#"{"act":"panel_key","key":"key-q","rows":5}"#),
+        (press, r#"{"act":"press","id":"key-q"}"#),
+        (FaceAction::Tick, r#"{"act":"tick"}"#),
+        (let_go, r#"{"act":"let_go","id":"key-q"}"#),
+        (FaceAction::Leave, r#"{"act":"leave"}"#),
         #[cfg(debug_assertions)]
         (FaceAction::FlipCaps, r#"{"act":"flip_caps"}"#),
     ]

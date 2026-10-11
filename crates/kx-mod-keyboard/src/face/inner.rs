@@ -1,12 +1,14 @@
-//! The face's state behind its lock: typing, size and place, the language key's turn and the open list.
+//! The face's state behind its lock: typing, a held key, size and place, the language key's turn and the open list.
 
 mod fit;
+mod held;
 
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangClick, Turn, click};
 use crate::panel::{LangList, Moved};
 use crate::place::Placer;
+use crate::repeat::Repeat;
 use crate::run::{Ports, TapError, Tapped, Typing};
 use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
@@ -15,12 +17,15 @@ use crate::view::{StateInput, StateView, state_view};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen};
 use kx_module_api::{SettingsHandle, keys};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Everything a click can change.
 pub(super) struct Inner {
     ports: Ports,
     settings: KeyboardSettings,
     typing: Typing,
+    /// The key the pointer holds, and when it repeats.
+    repeat: Repeat<String>,
     sizer: Sizer,
     placer: Placer,
     /// The screens the UI last reported.
@@ -48,6 +53,7 @@ impl Inner {
     ) -> Self {
         Self {
             typing: Typing::new(spec, &settings),
+            repeat: timed(&settings),
             sizer: Sizer::new(&settings, store.clone()),
             placer: Placer::new(&settings, store),
             turn: Turn::new(ports.layouts.current().label.id),
@@ -62,13 +68,16 @@ impl Inner {
         }
     }
 
-    /// New services and settings; the latches and wait stay, the size and place come from the settings again.
+    /// New services and settings; the latches and wait stay, the size and place come from the settings again. A held
+    /// key is dropped, and its burst ends.
     pub(super) fn renew(
         &mut self,
         ports: Ports,
         settings: KeyboardSettings,
         store: SettingsHandle,
     ) {
+        self.typing.release();
+        self.repeat = timed(&settings);
         self.typing.update(&settings);
         self.sizer = Sizer::new(&settings, store.clone());
         self.placer = Placer::new(&settings, store);
@@ -165,7 +174,7 @@ impl Inner {
         })
     }
 
-    /// The size, place and pick actions; the face does taps, relabels and panel keys itself.
+    /// The size, place and pick actions; the face does taps, held keys, relabels and panel keys itself.
     pub(super) fn act(&mut self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
             FaceAction::Smaller => self.resized(Sizer::smaller),
@@ -187,9 +196,13 @@ impl Inner {
                 overhang,
             } => Ok(self.placed(rect, screens, overhang)),
             FaceAction::LangPick { index } => self.pick(index),
-            FaceAction::Tap { .. } | FaceAction::Relabel | FaceAction::PanelKey { .. } => {
-                Ok(FaceReply::default())
-            }
+            FaceAction::Tap { .. }
+            | FaceAction::Relabel
+            | FaceAction::PanelKey { .. }
+            | FaceAction::Press { .. }
+            | FaceAction::Tick
+            | FaceAction::LetGo { .. }
+            | FaceAction::Leave => Ok(FaceReply::default()),
             #[cfg(debug_assertions)]
             FaceAction::FlipCaps => {
                 self.caps_flipped = !self.caps_flipped;
@@ -237,4 +250,10 @@ fn notice(key: &'static str, reply: FaceReply) -> FaceReply {
         notice: Some(key),
         ..reply
     }
+}
+
+/// A held key's repeats at the delay and pace of `settings`.
+fn timed(settings: &KeyboardSettings) -> Repeat<String> {
+    let delay = Duration::from_millis(settings.repeat_delay_ms);
+    Repeat::new(delay, Duration::from_millis(settings.repeat_every_ms))
 }

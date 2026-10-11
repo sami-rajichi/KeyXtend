@@ -61,7 +61,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 ## The face
 
-`Face` is the `KeyboardFace` service the UI draws. The UI calls it from one thread, which also runs the relabel timer, so `Layouts::refresh` is only ever called from there. The module keeps its face across a settings restart, so the latches survive; `Face::renew` takes the new settings (`Typing::update`, `Sizer`, `Placer`).
+`Face` is the `KeyboardFace` service the UI draws. The UI calls it from one thread, which also runs the relabel timer, so `Layouts::refresh` is only ever called from there. The module keeps its face across a settings restart, so the latches survive; `Face::renew` takes the new settings (`Typing::update`, `Sizer`, `Placer`) and drops a held key, ending its burst. A held key's times come from the kernel's clock (`Ports::clock`), so tests move a fake clock and never sleep.
 
 `board_json()` changes only with the size or the language key's design:
 
@@ -84,6 +84,10 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Action | Does | Reply |
 |---|---|---|
 | `tap {id, back}` | Types, latches, or clicks the language key | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
+| `press {id}` | The pointer went down on a repeating key (spec §4.6). It may repeat when `repeat` is on, no list is open, no Ctrl, Alt or Win acts on it and it is not a dead key (`Typing::repeats`); else it types once, on let-go | State only when a burst left over ended. `UnknownKey` off the board. |
+| `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | As a tap: state, a stale refresh, or `notice.keys-not-sent` once. Nothing when no repeat is due. |
+| `let_go {id}` | The pointer let go on the key: a click types once as `tap`; after a repeat nothing more types, and the burst's latches let go (`Typing::release`) | As `tap` for a click; state when a burst ended. |
+| `leave` | The pointer left the held key, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
@@ -132,7 +136,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `let_go`, `leave`, `bursting`), the hold of one key, timed by the face's clock; its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`, with the kernel's `clock`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.

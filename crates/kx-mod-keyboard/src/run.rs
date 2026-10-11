@@ -1,6 +1,8 @@
 //! Running a tap: the key's plan from the board, the layout shown, Caps Lock and the app in front,
 //! sent through the injector; the latches and a dead key's wait follow what went out.
 
+mod held;
+
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
@@ -9,8 +11,8 @@ use kx_module_api::ports::{
     InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
     Layouts, LayoutsKey, Scan,
 };
-use kx_module_api::{ModuleCx, ServiceError};
-use std::collections::HashMap;
+use kx_module_api::{Clock, ModuleCx, ServiceError};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
@@ -56,7 +58,7 @@ pub struct Io<'a> {
     pub table: &'a LayoutTable,
 }
 
-/// The services typing needs, as the kernel hands them out.
+/// The services typing needs, as the kernel hands them out, and the kernel's clock.
 #[derive(Clone)]
 pub struct Ports {
     /// The input injector.
@@ -65,10 +67,12 @@ pub struct Ports {
     pub source: Arc<dyn LayoutSource>,
     /// The layouts service, whose current table the keyboard shows.
     pub layouts: Arc<dyn Layouts>,
+    /// The kernel's clock, which times a held key's repeats.
+    pub clock: Arc<dyn Clock>,
 }
 
 impl Ports {
-    /// The three services from the kernel.
+    /// The three services and the clock from the kernel.
     ///
     /// # Errors
     /// The `ServiceError` of the first service the module cannot have.
@@ -77,6 +81,7 @@ impl Ports {
             injector: cx.service::<InputInjectorKey>()?,
             source: cx.service::<LayoutSourceKey>()?,
             layouts: cx.service::<LayoutsKey>()?,
+            clock: cx.clock(),
         })
     }
 
@@ -94,9 +99,13 @@ impl Ports {
 /// The typing state: the latched modifiers and a dead key's wait, over the board's keys and `key_apps`.
 pub struct Typing {
     keys: HashMap<String, (Role, Option<Scan>)>,
+    /// The keys the board lets repeat while held.
+    repeating: HashSet<String>,
     apps: Vec<String>,
     latches: Latches,
     dead: bool,
+    /// While a held key repeats: whether a key went out, so the latches let go when the burst ends.
+    burst: Option<bool>,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -113,9 +122,11 @@ impl Typing {
         let keys = spec.roles().into_iter();
         Self {
             keys: keys.map(|(id, role, sc)| (id, (role, sc))).collect(),
+            repeating: spec.repeating(),
             apps: settings.key_apps.clone(),
             latches: Latches::new(settings.modifiers),
             dead: false,
+            burst: None,
         }
     }
 
@@ -181,9 +192,17 @@ impl Typing {
                 Wait::End => false,
                 Wait::Ask => !types(io, route),
             };
-            self.latches.used();
+            self.used();
         }
         Ok(went?)
+    }
+
+    /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats.
+    fn used(&mut self) {
+        match &mut self.burst {
+            Some(went) => *went = true,
+            None => self.latches.used(),
+        }
     }
 }
 

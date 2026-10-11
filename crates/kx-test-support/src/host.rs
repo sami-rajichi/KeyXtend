@@ -1,5 +1,5 @@
-//! A fake kernel host for module tests: gated services, a bus, a fixed clock and a settings sink that checks
-//! each write as the kernel does. One host serves the API's contract tests and every module's tests.
+//! A fake kernel host for module tests: gated services, a bus, a clock and a settings sink that checks each write as
+//! the kernel does. One host serves the API's contract tests and every module's tests.
 
 mod bus;
 mod sink;
@@ -50,6 +50,8 @@ pub struct FakeHost {
     pub sink: Arc<FakeSink>,
     /// The bus core; a `FakeCore` unless a test sets its own.
     pub core: Arc<dyn BusCore>,
+    /// The clock the module reads; stuck at `NOW` unless a test sets its own.
+    pub clock: Arc<dyn Clock>,
 }
 
 impl FakeHost {
@@ -69,6 +71,7 @@ impl FakeHost {
             settings,
             held: Vec::new(),
             core: Arc::new(FakeCore::default()),
+            clock: Arc::new(Fixed),
         }
     }
 
@@ -134,7 +137,7 @@ impl Host for FakeHost {
     }
 
     fn clock(&self) -> Arc<dyn Clock> {
-        Arc::new(Fixed)
+        Arc::clone(&self.clock)
     }
 
     fn settings(&self) -> &Table {

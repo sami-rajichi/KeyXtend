@@ -100,6 +100,20 @@ pub enum FaceAction {
         /// Rows per page, which turning a page moves by.
         rows: usize,
     },
+    /// The pointer went down on repeating key `id` (spec §4.6): it types on let-go, or again and again while held.
+    Press {
+        /// The key.
+        id: KeyId,
+    },
+    /// The hold timer asks whether a held key's repeat is due.
+    Tick,
+    /// The pointer let go of key `id` on it: a short click types once, and a repeat ends.
+    LetGo {
+        /// The key.
+        id: KeyId,
+    },
+    /// The pointer left the held key, or the keyboard hid: the repeat stops and nothing more types.
+    Leave,
     /// Debug builds only: Caps Lock shows the other way round, with no key sent, for the memory churn.
     #[cfg(debug_assertions)]
     FlipCaps,

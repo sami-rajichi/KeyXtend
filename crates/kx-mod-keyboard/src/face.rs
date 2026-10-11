@@ -83,6 +83,45 @@ impl Face {
             }
             inner.tap(id, back)
         };
+        self.answer(tapped)
+    }
+
+    /// The pointer went down on key `id` (spec §4.6): it types on let-go, or at the delay and on while held.
+    fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
+        self.known(id)?;
+        Ok(self.lock().press(id))
+    }
+
+    /// The hold timer: a due repeat answers as a tap does, and a burst that ends redraws its latches.
+    fn tick(&self) -> Result<FaceReply, FaceError> {
+        let Some((tapped, ended)) = self.lock().tick() else {
+            return Ok(FaceReply::default());
+        };
+        let reply = self.answer(tapped)?;
+        Ok(FaceReply {
+            state: reply.state || ended,
+            ..reply
+        })
+    }
+
+    /// The pointer let go of key `id` on it: a click types it now, as a tap, and a burst ends.
+    fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
+        self.known(id)?;
+        let ended = self.lock().let_go(id);
+        ended.map_or_else(|| self.tap(id, false), Ok)
+    }
+
+    /// Refuses a key that is not on the board.
+    fn known(&self, id: &str) -> Result<(), FaceError> {
+        if self.keys.iter().any(|k| k.id == id) {
+            Ok(())
+        } else {
+            Err(FaceError::UnknownKey)
+        }
+    }
+
+    /// What to redraw after a tap or a repeat did `tapped`.
+    fn answer(&self, tapped: Result<Tapped, TapError>) -> Result<FaceReply, FaceError> {
         match tapped {
             Ok(Tapped::Done) => Ok(STATE),
             Ok(Tapped::Later | Tapped::Empty) => Ok(FaceReply::default()),
@@ -142,6 +181,10 @@ impl KeyboardFace for Face {
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
             FaceAction::Tap { id, back } => self.tap(id.as_str(), back),
+            FaceAction::Press { id } => self.press(id.as_str()),
+            FaceAction::Tick => self.tick(),
+            FaceAction::LetGo { id } => self.let_go(id.as_str()),
+            FaceAction::Leave => Ok(self.lock().leave()),
             FaceAction::Relabel => Ok(self.refresh()),
             FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
             other => self.lock().act(other),
