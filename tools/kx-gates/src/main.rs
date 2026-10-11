@@ -22,6 +22,7 @@ mod diff;
 mod facearg;
 mod facetools;
 mod featcfg;
+mod fit;
 mod g1;
 mod g10;
 mod g10keys;

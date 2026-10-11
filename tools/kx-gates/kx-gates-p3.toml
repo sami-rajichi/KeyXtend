@@ -7,8 +7,8 @@
 # the gate, which fails.
 [mouse_guard]
 on = true
-# Longest the guard holds the mouse in one run, in ms.
-limit_ms = 360000
+# Longest the guard holds the mouse in one run, in ms: 15 minutes, as G2's 1000 held clicks take over 8 (owner).
+limit_ms = 900000
 # Physical button presses that give the mouse back at once and stop the gate; the press drops and its release passes.
 escape_clicks = 1
 # How close together the presses must come when escape_clicks is above 1, in ms.
@@ -16,6 +16,11 @@ escape_window_ms = 3000
 # How soon, in ms, the hook must count kx-gates' own clicks and moves; past it, Windows switched it off.
 # Twice Windows' 1 s hook timeout.
 alive_ms = 2000
+
+# Run lengths checked at load: a guarded run's counted steps (its clicks, G8's capture and churn rests) plus
+# guard_headroom_ms must fit [mouse_guard] limit_ms; the headroom covers starting apps, waits and clean-up, in ms.
+[fit]
+guard_headroom_ms = 120000
 
 # G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
 [g8]

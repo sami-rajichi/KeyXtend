@@ -25,8 +25,8 @@ fn the_shipped_guard_is_on_with_the_owners_limit_and_one_click_escape() {
     assert!(g.on);
     assert_eq!(
         (g.limit_ms, g.escape_clicks, g.escape_window_ms),
-        (360_000, 1, 3_000),
-        "owner, 2026-10-11"
+        (900_000, 1, 3_000),
+        "owner, 2026-10-11: 15 minutes, for G2's held clicks"
     );
     assert!(
         g.alive_ms >= 2 * HOOK_TIMEOUT_MS,

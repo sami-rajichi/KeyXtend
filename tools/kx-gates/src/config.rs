@@ -9,6 +9,7 @@ use serde::Deserialize;
 use crate::capture::Capture;
 use crate::cfgfile::{self, FILE, P3_FILE};
 use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
+use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g22cfg::G22;
 use crate::gatecfg::{AssistCfg, G1, G2, G3, G4, G5};
@@ -84,6 +85,8 @@ pub struct GatesConfig {
     pub g26: G26,
     /// The mouse guard, shared by every gate.
     pub mouse_guard: MouseGuard,
+    /// What a run spends beyond its counted steps, for the run-length checks.
+    pub fit: Fit,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -216,6 +219,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g12.check()?;
     config.g8.check()?;
     config.mouse_guard.check()?;
+    fit::check(&config)?;
     p3cfg::check(&config)?;
     Ok(config)
 }
