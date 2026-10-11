@@ -13,7 +13,7 @@ use crate::g8pops::{self, Seen};
 use crate::keymap::Reader;
 use crate::mouse;
 use crate::proc::{Memory, Process};
-use crate::stats::{P50, percentile};
+use crate::stats;
 use crate::win::sleep_ms;
 
 /// Decimals of each MB reading in a round's error: a tenth of an MB, finer than any growth budget.
@@ -78,12 +78,12 @@ impl Churn {
     }
 }
 
-/// The median working set and the median commit of `readings`, each on its own (nearest rank); none when empty.
+/// The median working set and the median commit of `readings`, each on its own; none when empty.
 fn median(readings: &[Memory]) -> Option<Memory> {
     let of = |mb: fn(&Memory) -> f64| {
         let mut all: Vec<f64> = readings.iter().map(mb).collect();
         all.sort_by(f64::total_cmp);
-        percentile(&all, P50)
+        stats::median(&all)
     };
     Some(Memory {
         working_mb: of(|m| m.working_mb)?,
