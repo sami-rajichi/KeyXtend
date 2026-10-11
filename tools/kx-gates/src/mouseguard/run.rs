@@ -10,7 +10,7 @@ use kx_platform_windows::QpcClock;
 use serde_json::{Value, json};
 
 use super::hook::WinHook;
-use super::{End, Filter, MouseGuard};
+use super::{Counts, End, Filter, MouseGuard};
 use crate::out::say;
 
 /// The result line's field that says how the guard ended.
@@ -30,8 +30,17 @@ pub trait Hook {
 pub trait Live {
     /// Why it let go by itself, once it has: the owner or the time limit.
     fn ended(&self) -> Option<End>;
-    /// Removes the hook; why it had let go by itself, if it had.
-    fn stop(self) -> Option<End>;
+    /// Removes the hook; why it had let go by itself, if it had, and what it counted.
+    fn stop(self) -> (Option<End>, Counts);
+}
+
+/// How a run's guard ended, and what all its hooks counted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Outcome {
+    /// Why it let go.
+    pub end: End,
+    /// The hand's events dropped and the own events passed.
+    pub counts: Counts,
 }
 
 /// One run's guard over `H`'s hooks, timed by `C`.
@@ -48,6 +57,8 @@ pub struct Session<H: Hook, C: Clock> {
     early: Option<End>,
     /// True once the gate's pointer work is over, so the guard never comes back.
     idle: bool,
+    /// What the hooks that ended counted.
+    seen: Counts,
 }
 
 impl<H: Hook, C: Clock> Session<H, C> {
@@ -65,6 +76,7 @@ impl<H: Hook, C: Clock> Session<H, C> {
             live: Some(live),
             early: None,
             idle: false,
+            seen: Counts::default(),
         })
     }
 
@@ -112,19 +124,24 @@ impl<H: Hook, C: Clock> Session<H, C> {
         self.idle = true;
     }
 
-    /// Lets go as the gate ends, `ok` or broken off; why the guard ended, an early end first.
-    pub fn finish(mut self, ok: bool) -> End {
+    /// Lets go as the gate ends, `ok` or broken off; why the guard ended, an early end first, and what it counted.
+    pub fn finish(mut self, ok: bool) -> Outcome {
         let why = if ok { End::Done } else { End::Error };
         self.unhook(why);
-        self.early.unwrap_or(why)
+        Outcome {
+            end: self.early.unwrap_or(why),
+            counts: self.seen,
+        }
     }
 
-    /// Removes a running hook and adds its time to `used`, logging `why` unless it had let go by itself (it logged
-    /// that itself).
+    /// Removes a running hook and adds its time to `used` and its counts to `seen`, logging `why` unless it had let
+    /// go by itself (it logged that itself).
     fn unhook(&mut self, why: End) {
         if let Some(live) = self.live.take() {
             self.used += self.clock.now().saturating_since(self.since);
-            match live.stop() {
+            let (own, counts) = live.stop();
+            self.seen.add(counts);
+            match own {
                 Some(own) => self.early = self.early.or(Some(own)),
                 None => say!("{}", why.line()),
             }
@@ -154,7 +171,7 @@ pub trait Held: Send {
     /// See `Session::release`.
     fn release(&mut self);
     /// See `Session::finish`.
-    fn finish(self: Box<Self>, ok: bool) -> End;
+    fn finish(self: Box<Self>, ok: bool) -> Outcome;
 }
 
 impl<H, C> Held for Session<H, C>
@@ -175,7 +192,7 @@ where
     fn release(&mut self) {
         Session::release(self);
     }
-    fn finish(self: Box<Self>, ok: bool) -> End {
+    fn finish(self: Box<Self>, ok: bool) -> Outcome {
         Session::finish(*self, ok)
     }
 }
@@ -213,8 +230,8 @@ pub fn begin(cfg: &MouseGuard, held: bool) -> Result<Scope, String> {
 }
 
 impl Scope {
-    /// Lets go as the gate ends, `ok` or broken off; how the guard ended, when it held the mouse.
-    pub fn finish(mut self, ok: bool) -> Option<End> {
+    /// Lets go as the gate ends, `ok` or broken off; how the guard ended and what it counted, when it held the mouse.
+    pub fn finish(mut self, ok: bool) -> Option<Outcome> {
         if !std::mem::replace(&mut self.on, false) {
             return None;
         }
@@ -258,15 +275,15 @@ pub fn around_prompt<T>(prompt: impl FnOnce() -> Result<T, String>) -> Result<T,
     out
 }
 
-/// Adds how the guard ended to result line `v`; an end that stops the gate also fails it.
-pub fn mark(v: &mut Value, end: Option<End>) {
-    let (Some(end), Some(fields)) = (end, v.as_object_mut()) else {
+/// Adds how the guard ended and what it counted to result line `v`; an end that stops the gate also fails it.
+pub fn mark(v: &mut Value, outcome: Option<Outcome>) {
+    let (Some(Outcome { end, counts }), Some(fields)) = (outcome, v.as_object_mut()) else {
         return;
     };
-    fields.insert(
-        FIELD.to_string(),
-        json!({ "ended": end.name(), "why": end.why() }),
-    );
+    let guard = json!({
+        "ended": end.name(), "why": end.why(), "dropped": counts.dropped, "passed": counts.passed,
+    });
+    fields.insert(FIELD.to_string(), guard);
     if end.stops() {
         fields.insert(PASS.to_string(), json!(false));
     }

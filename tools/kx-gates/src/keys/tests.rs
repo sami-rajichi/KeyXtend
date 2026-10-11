@@ -8,7 +8,6 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 
 use super::*;
 use crate::mouse::input;
-use crate::mouseguard::End;
 use crate::mouseguard::fake::{Fake, cfg, held, slot_lock};
 
 #[allow(unsafe_code, reason = "Reads the keyboard member of a key input.")]
@@ -107,7 +106,7 @@ fn a_stop_between_the_gates_press_and_its_release_still_lets_go_away_from_the_ke
     assert_eq!(flags, [to, off], "it moves away first, so no click lands");
     let again = outgoing(&[moved, down], mouseguard::allowed(), After::Away);
     assert!(again.is_err(), "no new press after the stop");
-    assert!(scope.finish(true).is_some_and(End::stops));
+    assert!(scope.finish(true).is_some_and(|o| o.end.stops()));
 }
 
 #[test]

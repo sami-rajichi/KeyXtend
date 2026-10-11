@@ -144,6 +144,27 @@ fn injected_events_pass_and_physical_moves_clicks_and_wheels_drop() {
 }
 
 #[test]
+fn the_filter_counts_the_hands_events_it_dropped_and_its_own_it_passed_but_nothing_else() {
+    let mut f = filter();
+    f.event(true, Kind::Other, at(1));
+    f.event(true, LEFT_DOWN, at(1));
+    physical(&mut f, Kind::Other, 2);
+    physical(&mut f, LEFT_UP, 3);
+    physical(&mut f, LEFT_DOWN, 4);
+    assert_eq!(
+        f.counts(),
+        Counts {
+            dropped: 2,
+            passed: 2
+        },
+        "a release whose press came before the guard is neither"
+    );
+    let over = shipped().limit_ms + 1;
+    physical(&mut f, Kind::Other, over);
+    assert_eq!(f.counts().dropped, 2, "nothing drops once it let go");
+}
+
+#[test]
 fn a_physical_button_held_past_the_escape_time_lets_go_and_a_shorter_hold_does_not() {
     let escape = shipped().escape_ms;
     let mut f = filter();

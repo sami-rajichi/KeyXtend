@@ -8,7 +8,7 @@ use kx_module_api::{Clock, Mono};
 use kx_platform_fake::FakeClock;
 
 use super::run::{self, Hook, Live, Scope, Session};
-use super::{End, Filter, Kind, LEFT, MouseGuard};
+use super::{Counts, End, Filter, Kind, LEFT, MouseGuard};
 
 /// Serialises the tests that put a session in this process's slot.
 static SLOT_TESTS: Mutex<()> = Mutex::new(());
@@ -63,6 +63,14 @@ impl Fake {
         filter.event(false, Kind::Down(LEFT), now);
     }
 
+    /// A move kx-gates injected now, as the hook would see it.
+    pub fn mine(&self) {
+        let now = self.clock.now();
+        let mut seen = self.seen();
+        let filter = seen.filter.as_mut().expect("a started hook");
+        filter.event(true, Kind::Other, now);
+    }
+
     /// Moves the fake clock on by `ms`.
     pub fn wait(&self, ms: u64) {
         self.clock.advance(Duration::from_millis(ms));
@@ -89,10 +97,14 @@ impl Live for Fake {
         self.seen().filter.as_mut()?.tick(now)
     }
 
-    fn stop(self) -> Option<End> {
+    fn stop(self) -> (Option<End>, Counts) {
         let own = self.ended();
-        self.seen().stops += 1;
-        own
+        let mut seen = self.seen();
+        seen.stops += 1;
+        (
+            own,
+            seen.filter.as_ref().map(Filter::counts).unwrap_or_default(),
+        )
     }
 }
 

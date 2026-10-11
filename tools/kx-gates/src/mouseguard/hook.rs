@@ -19,7 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::run::{Hook, Live};
-use super::{End, Filter, Verdict, kind_of, ours, wait_ms};
+use super::{Counts, End, Filter, Verdict, kind_of, ours, wait_ms};
 use crate::out::say;
 
 /// Tells Windows to drop the event.
@@ -123,15 +123,16 @@ fn pump(clock: QpcClock) -> Option<End> {
     }
 }
 
-/// The hook thread: installs the hook, sends its id, pumps, then removes the hook and says why when it let go itself.
-fn run(state: State, ended: &OnceLock<End>, ready: &Sender<Result<u32, String>>) {
+/// The hook thread: installs the hook, sends its id, pumps, then removes the hook and says why when it let go itself;
+/// what its filter counted.
+fn run(state: State, ended: &OnceLock<End>, ready: &Sender<Result<u32, String>>) -> Counts {
     let (tid, clock) = (queue(), state.clock);
     STATE.with(|s| *s.borrow_mut() = Some(state));
     let hook = match Installed::new() {
         Ok(hook) => hook,
         Err(e) => {
             let _ = ready.send(Err(e));
-            return;
+            return Counts::default();
         }
     };
     let _ = ready.send(Ok(tid));
@@ -141,6 +142,7 @@ fn run(state: State, ended: &OnceLock<End>, ready: &Sender<Result<u32, String>>)
         let _ = ended.set(end);
         say!("{}", end.line());
     }
+    with_state(|s| s.filter.counts()).unwrap_or_default()
 }
 
 /// Starts the real hook, on a thread of its own.
@@ -192,20 +194,21 @@ impl Hook for WinHook {
 /// A hook thread that runs; dropping it stops the thread, so no hook outlives its owner.
 pub struct Running {
     tid: u32,
-    thread: Option<JoinHandle<()>>,
+    thread: Option<JoinHandle<Counts>>,
     ended: Arc<OnceLock<End>>,
 }
 
 impl Running {
-    /// Asks the hook thread to let go and waits for it, once.
+    /// Asks the hook thread to let go and waits for it, once; what it counted, none the second time.
     #[allow(unsafe_code, reason = "Posts to our own hook thread.")]
-    fn halt(&mut self) {
-        if let Some(thread) = self.thread.take() {
-            // SAFETY: our own thread, whose id stays ours while `thread` holds its handle; a post to a thread that
-            // already ended only fails.
-            let _ = unsafe { PostThreadMessageW(self.tid, STOP, WPARAM(0), LPARAM(0)) };
-            let _ = thread.join();
-        }
+    fn halt(&mut self) -> Counts {
+        let Some(thread) = self.thread.take() else {
+            return Counts::default();
+        };
+        // SAFETY: our own thread, whose id stays ours while `thread` holds its handle; a post to a thread that already
+        // ended only fails.
+        let _ = unsafe { PostThreadMessageW(self.tid, STOP, WPARAM(0), LPARAM(0)) };
+        thread.join().unwrap_or_default()
     }
 }
 
@@ -214,9 +217,9 @@ impl Live for Running {
         self.ended.get().copied()
     }
 
-    fn stop(mut self) -> Option<End> {
-        self.halt();
-        self.ended.get().copied()
+    fn stop(mut self) -> (Option<End>, Counts) {
+        let counts = self.halt();
+        (self.ended.get().copied(), counts)
     }
 }
 

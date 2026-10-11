@@ -2,11 +2,13 @@
 //! ends, the time limit runs out or the owner holds a button down. `hook` applies them; `run` runs them.
 #![cfg(windows)]
 
+mod counts;
 #[cfg(test)]
 pub mod fake;
 mod hook;
 mod run;
 
+pub use counts::Counts;
 pub use run::{allowed, around_prompt, begin, let_go, mark};
 
 use std::time::Duration;
@@ -197,6 +199,8 @@ pub struct Filter {
     since: Option<Mono>,
     /// Why it let go, once it has; every event then passes.
     out: Option<End>,
+    /// What it dropped and passed so far.
+    seen: Counts,
 }
 
 impl Filter {
@@ -209,6 +213,7 @@ impl Filter {
             held: 0,
             since: None,
             out: None,
+            seen: Counts::default(),
         }
     }
 
@@ -231,9 +236,13 @@ impl Filter {
     }
 
     /// Whether an event at `now` passes: kx-gates' own input does, and so does a physical release whose press came
-    /// before the guard, so no button sticks.
+    /// before the guard, so no button sticks. It counts what it drops and the own input it passes.
     pub fn event(&mut self, ours: bool, kind: Kind, now: Mono) -> Verdict {
-        if ours || self.tick(now).is_some() {
+        if ours {
+            self.seen.add(Counts::PASS);
+            return Verdict::Pass;
+        }
+        if self.tick(now).is_some() {
             return Verdict::Pass;
         }
         match kind {
@@ -248,7 +257,13 @@ impl Filter {
             }
             Kind::Other => {}
         }
+        self.seen.add(Counts::DROP);
         Verdict::Drop
+    }
+
+    /// The hand's events it dropped and its own it passed so far.
+    pub fn counts(&self) -> Counts {
+        self.seen
     }
 
     /// How long until `tick` could let go: the time limit, or a held button's escape, whichever is first.
