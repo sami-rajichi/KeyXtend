@@ -1,6 +1,11 @@
 //! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out or the owner holds a button down. `guardhook` applies them; `guardrun` runs them.
+//! ends, the time limit runs out or the owner holds a button down. `hook` applies them; `run` runs them.
 #![cfg(windows)]
+
+mod hook;
+mod run;
+
+pub use run::{allowed, around_prompt, begin, mark};
 
 use std::time::Duration;
 

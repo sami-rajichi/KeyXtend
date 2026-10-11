@@ -18,8 +18,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     QS_ALLINPUT, SetWindowsHookExW, UnhookWindowsHookEx, WH_MOUSE_LL, WM_APP,
 };
 
-use crate::guardrun::{Hook, Live};
-use crate::mouseguard::{End, Filter, Verdict, kind_of, wait_ms};
+use super::run::{Hook, Live};
+use super::{End, Filter, Verdict, kind_of, wait_ms};
 use crate::out::say;
 
 /// Tells Windows to drop the event.

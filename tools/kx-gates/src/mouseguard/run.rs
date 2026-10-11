@@ -8,8 +8,8 @@ use kx_module_api::{Clock, Mono};
 use kx_platform_windows::QpcClock;
 use serde_json::{Value, json};
 
-use crate::guardhook::WinHook;
-use crate::mouseguard::{End, Filter, MouseGuard};
+use super::hook::WinHook;
+use super::{End, Filter, MouseGuard};
 use crate::out::say;
 
 /// The result line's field that says how the guard ended.

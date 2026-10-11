@@ -17,7 +17,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{PCWSTR, w};
 
 use crate::apps::Ctx;
-use crate::guardrun;
+use crate::mouseguard;
 use crate::proc::Process;
 use crate::win::{self, size32};
 use crate::winfind::{self, Match};
@@ -67,7 +67,7 @@ fn wide(s: &OsStr) -> Vec<u16> {
 
 /// Starts `exe` with `args` as administrator and returns once it has started; the mouse guard lets go for the prompt.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    let started = guardrun::around_prompt(|| shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)));
+    let started = mouseguard::around_prompt(|| shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)));
     started
         .map(drop)
         .map_err(|e| format!("start {} as administrator: {e}", exe.display()))
@@ -81,7 +81,7 @@ pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
 )]
 pub fn run_as_hidden(exe: &Path, args: &[String]) -> Result<Process, String> {
     let hidden = (RUN_AS, SW_HIDE, SEE_MASK_NOCLOSEPROCESS);
-    let h = guardrun::around_prompt(|| kept(exe, args, hidden))
+    let h = mouseguard::around_prompt(|| kept(exe, args, hidden))
         .map_err(|e| format!("start {} as administrator: {e}", exe.display()))?;
     // SAFETY: the shell gave `h` to us alone, and nothing else closes it.
     Ok(unsafe { Process::own(h) })

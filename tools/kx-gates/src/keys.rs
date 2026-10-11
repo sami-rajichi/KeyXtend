@@ -14,7 +14,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP,
 };
 
-use crate::guardrun;
+use crate::mouseguard;
 use crate::win::sleep_ms;
 
 /// Mouse flags that press a button or turn a wheel.
@@ -56,14 +56,14 @@ fn only_lets_go(inputs: &[INPUT]) -> bool {
 /// a batch that lets go goes out, so nothing stays pressed.
 pub fn send(inputs: &[INPUT]) -> Result<(), String> {
     if !only_lets_go(inputs) {
-        guardrun::allowed()?;
+        mouseguard::allowed()?;
     }
     inject::send(inputs).map_err(|e| format!("{e}: {}", io::Error::last_os_error()))
 }
 
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
 pub fn text(text: &str) -> Result<(), String> {
-    guardrun::allowed()?;
+    mouseguard::allowed()?;
     let text = Redacted::new(text.to_owned());
     WinInjector
         .text(&text, TextRoute::Unicode)
@@ -83,13 +83,13 @@ fn presses(vks: &[u16]) -> Vec<KeyEvent> {
 
 /// Presses `vks` in order, then releases them in reverse; after a failed send it tries to let go of what went down.
 pub fn combo(vks: &[u16]) -> Result<(), String> {
-    guardrun::allowed()?;
+    mouseguard::allowed()?;
     send_keys(&presses(vks)).map_err(|e| e.to_string())
 }
 
 /// Like `combo`, with a pause of `gap_ms` after each press and release, for shell shortcuts.
 pub fn slow_combo(vks: &[u16], gap_ms: u64) -> Result<(), String> {
-    guardrun::allowed()?;
+    mouseguard::allowed()?;
     let events = presses(vks);
     for (at, event) in events.iter().enumerate() {
         if let Err(e) = send_keys(std::slice::from_ref(event)) {

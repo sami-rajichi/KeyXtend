@@ -62,8 +62,6 @@ mod g8ui;
 mod g9;
 mod g9win;
 mod gatecfg;
-mod guardhook;
-mod guardrun;
 mod hand;
 mod hookhost;
 mod hookio;
