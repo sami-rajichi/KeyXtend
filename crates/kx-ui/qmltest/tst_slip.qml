@@ -14,10 +14,8 @@ Item {
     Component { id: uiC; FakeUi {} }
     Component { id: kbC; FakeKeyboard {} }
     Component { id: winC; KbWindow {} }
-    Component { id: beatC; Timer { repeat: true } }
 
     TestCase {
-        id: test
         name: "slip"
         when: windowShown
 
@@ -150,21 +148,18 @@ Item {
             win.visible = false;
         }
 
-        // The owner's own press: held about 0.4 s while the hand slips from 1 px inside the edge into the gap.
+        // The owner's own press: held about 0.4 s, below the repeat delay, while the hand slips from 1 px inside the
+        // edge into the gap. No real time passes: the hold's first beat is checked to come after such a press.
         function test_a_press_held_like_the_owners_with_slips_into_the_gap_types_once() {
             const win = make();
             const a = keyed(win, q);
             const at = { x: a.width - 1, y: a.height / 2 };
             mousePress(a, at.x, at.y);
-            let left = slips.slice();
-            const beat = createTemporaryObject(beatC, root, { interval: pressMs / slips.length });
-            beat.triggered.connect(() => {
-                at.x += left.shift();
-                test.mouseMove(a, at.x, at.y, -1, Qt.LeftButton);
-                beat.running = left.length > 0;
-            });
-            beat.start();
-            tryVerify(() => !beat.running, pressMs * 2, "the slips ran");
+            verify(win.hold.running && win.hold.interval > pressMs, "no repeat within the owner's press");
+            for (const px of slips) {
+                at.x += px;
+                mouseMove(a, at.x, at.y, -1, Qt.LeftButton);
+            }
             verify(at.x >= a.width, "the pointer ended off the key");
             mouseRelease(a, at.x, at.y);
             compare(sent(win), ["press " + q, "letGo " + q]);
