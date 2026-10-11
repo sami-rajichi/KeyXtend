@@ -13,11 +13,8 @@
 #include <atomic>
 #include <cstddef>
 
-// The build kind, which sets `adopt` below, comes before it in every kx-ui file; the Quick tests' plugin has no such
-// header and builds without the probes.
-#if __has_include("kx-ui-build.h")
+// The build kind sets `adopt` below the same way in every file; the Quick tests' plugin writes it empty.
 #include "kx-ui-build.h"
-#endif
 
 namespace kxui {
 

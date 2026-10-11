@@ -20,6 +20,9 @@ const PLUGIN: &str = "plugin.h";
 /// The generated header that names the provider, its folder and file type, in its own folder under `OUT_DIR`.
 const NAMES_DIR: &str = "kx-test-icons";
 const NAMES_H: &str = "kx-test-icons.h";
+/// kx-ui's build-kind header, which the plugin writes empty beside it, so the C++ builds without kx-ui's probes.
+const KIND_H: &str = "kx-ui-build.h";
+const KIND_TEXT: &str = "#pragma once\n";
 /// Cargo's variable for the build's output folder.
 const OUT_ENV: &str = "OUT_DIR";
 /// Qt modules the plugin links: Gui for images, Qml for the plugin, Quick for the provider.
@@ -67,7 +70,8 @@ fn main() {
     println!("cargo::rerun-if-changed={KX_UI_CPP}/{SHADOWS_H}");
 }
 
-/// Writes the header that names the provider, the icons' folder and their file type, and gives its folder.
+/// Writes the header that names the provider, the icons' folder and their file type, and the empty build kind, and
+/// gives their folder.
 fn names_header() -> Result<PathBuf, String> {
     let out = std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?;
     let dir = PathBuf::from(out).join(NAMES_DIR);
@@ -77,5 +81,6 @@ fn names_header() -> Result<PathBuf, String> {
          #define KX_ICON_EXT \"{ICON_EXT}\"\n"
     );
     std::fs::write(dir.join(NAMES_H), text).map_err(|e| e.to_string())?;
+    std::fs::write(dir.join(KIND_H), KIND_TEXT).map_err(|e| e.to_string())?;
     Ok(dir)
 }
