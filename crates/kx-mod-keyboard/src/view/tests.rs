@@ -2,10 +2,10 @@ use super::*;
 use crate::geom::board;
 use crate::latch::Latches;
 use crate::panel::LangList;
-use crate::settings::Modifiers;
-use crate::spec::{Latch, Nav};
+use crate::settings::{KeyboardSettings, Modifiers};
+use crate::spec::{BoardSpec, Latch, Nav};
 use kx_module_api::ports::{KeyChars, LangLabel, LayoutId, LayoutTable, Scan};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 fn spec() -> BoardSpec {
     BoardSpec::shipped().unwrap()
@@ -94,6 +94,27 @@ fn the_board_carries_the_size_rules_the_relabel_time_and_the_bubble_corner() {
     assert_eq!(v.presets, s.presets);
     assert_eq!((v.relabel_ms, v.lang_key), (s.relabel_ms, s.lang_key));
     assert_eq!(v.bubble_corner, s.bubble_corner);
+}
+
+#[test]
+fn the_board_marks_the_keys_that_repeat_and_carries_the_hold_times() {
+    let s = settings();
+    let v = board_view(&spec(), &s, 1.0);
+    let marked: HashSet<String> = v
+        .keys
+        .iter()
+        .filter(|k| k.repeat)
+        .map(|k| k.id.clone())
+        .collect();
+    assert_eq!(marked, spec().repeating());
+    let times = (v.repeat_delay_ms, v.repeat_every_ms);
+    assert_eq!(times, (s.repeat_delay_ms, s.repeat_every_ms));
+    let off = KeyboardSettings { repeat: false, ..s };
+    let v = board_view(&spec(), &off, 1.0);
+    assert!(
+        v.keys.iter().all(|k| !k.repeat),
+        "repeat off: every key clicks"
+    );
 }
 
 /// A letter with `altgr` on `AltGr`: Caps Lock swaps its cases.

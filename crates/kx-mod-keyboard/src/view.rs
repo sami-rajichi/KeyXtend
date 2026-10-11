@@ -1,18 +1,19 @@
 //! What the UI draws, as the face's JSON: the board (boxes, names, dimmed keys and the size), which changes with
 //! the size, and the state (legends, lights, the language key, the list and the place), which changes as keys are used.
 
+mod board;
 mod paint;
 
+pub use board::board_view;
 pub use paint::{DIM, Paint, paint};
 
-use crate::geom::{Area, KeyBox, board};
+use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
 use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typed};
 use crate::panel::{LangList, ListView, list_view};
-use crate::settings::{Corner, KeyboardSettings, LangKey};
-use crate::sizer::Limits;
-use crate::spec::{BoardSpec, KeyKind, Nav, Role};
+use crate::settings::{Corner, LangKey};
+use crate::spec::{KeyKind, Nav, Role};
 use kx_module_api::ports::{LangLabel, LayoutTable, Point};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -37,8 +38,12 @@ pub const CYCLE_ICON: &str = "lang.cycle";
 /// The List design's chevron, by its `icons.toml` key.
 pub const LIST_ICON: &str = "lang.list";
 
-/// One key as the board draws it; it changes only with the size or the language key's design.
+/// One key as the board draws it; it changes only with the size or the settings, such as the language key's design.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact about the key that QML reads flat from the board JSON."
+)]
 pub struct KeyView {
     /// Id, which keys its state and its clicks.
     pub id: String,
@@ -63,6 +68,8 @@ pub struct KeyView {
     pub dim: bool,
     /// Its tip by translation key, for a dimmed key.
     pub tip: Option<&'static str>,
+    /// It repeats while held (spec §4.6), so the UI sends its press and let-go instead of a click.
+    pub repeat: bool,
 }
 
 /// The D-pad's round face.
@@ -90,6 +97,10 @@ pub struct BoardView {
     pub presets: Vec<f64>,
     /// How often the UI sends `relabel`, in ms.
     pub relabel_ms: u64,
+    /// How long the UI's hold timer waits before its first `tick`, in ms.
+    pub repeat_delay_ms: u64,
+    /// The hold timer's pace after that, in ms.
+    pub repeat_every_ms: u64,
     /// The language key's design.
     pub lang_key: LangKey,
     /// The bottom corner the minimise bubble goes to.
@@ -175,69 +186,6 @@ pub struct StateInput<'a> {
     pub panel_keys: &'a [(String, Nav)],
     /// Where the window goes.
     pub at: Option<Point>,
-}
-
-/// The board of `spec` at `size`, with the rules and design of `settings`.
-#[must_use]
-pub fn board_view(spec: &BoardSpec, settings: &KeyboardSettings, size: f64) -> BoardView {
-    let b = board(spec, 0.0, size);
-    let dim = spec.dpad.later;
-    let dpad = DpadView {
-        area: b.dpad,
-        dim,
-        name: DPAD_NAME,
-        tip: dim.then_some(LATER_TIP),
-    };
-    BoardView {
-        size,
-        preset: Limits::of(settings).preset_of(size),
-        presets: settings.presets.clone(),
-        relabel_ms: settings.relabel_ms,
-        lang_key: settings.lang_key,
-        bubble_corner: settings.bubble_corner,
-        plate: b.plate,
-        bar: b.bar,
-        dpad,
-        keys: b
-            .keys
-            .iter()
-            .map(|k| key_view(k, settings.lang_key))
-            .collect(),
-    }
-}
-
-/// Key `k` as the board draws it, with the language key in design `style`.
-fn key_view(k: &KeyBox, style: LangKey) -> KeyView {
-    let text = |prefix: &str| Some(format!("{prefix}{}", k.id));
-    let (icon, label, name) = match k.kind {
-        KeyKind::Char => (None, None, None),
-        KeyKind::Space => (None, None, text(NAME_PREFIX)),
-        KeyKind::Lang => (lang_icon(style), None, text(NAME_PREFIX)),
-        _ => (text(ICON_PREFIX), text(LABEL_PREFIX), text(NAME_PREFIX)),
-    };
-    let dim = k.role == Role::Later;
-    KeyView {
-        id: k.id.clone(),
-        kind: k.kind,
-        row: k.row,
-        side: k.kind == KeyKind::Act,
-        cell: k.cell,
-        icon,
-        label,
-        name,
-        checkable: matches!(k.role, Role::Latch(_) | Role::Caps),
-        dim,
-        tip: dim.then_some(LATER_TIP),
-    }
-}
-
-/// The language key's icon in design `style`: the Carousel shows names only.
-fn lang_icon(style: LangKey) -> Option<String> {
-    match style {
-        LangKey::Carousel => None,
-        LangKey::Cycle => Some(CYCLE_ICON.to_owned()),
-        LangKey::List => Some(LIST_ICON.to_owned()),
-    }
 }
 
 /// Every key's state, the language key, the list and the place.

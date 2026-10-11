@@ -115,10 +115,11 @@ Item {
             mouseClick(keyed(win, "c-0x0010"));
             const lang = keyed(win, "lang");
             mouseClick(lang, lang.width * 0.1, lang.height / 2);
-            const taps = win.keyboard.calls.filter(c => c.startsWith("tap"));
-            compare(taps, ["tap c-0x0010 false", "tap lang true"]);
+            // A key that repeats while held sends its press and let-go instead of a tap.
+            const taps = () => win.keyboard.calls.filter(c => /^(tap|press|letGo)\b/.test(c));
+            compare(taps(), ["press c-0x0010", "letGo c-0x0010", "tap lang true"]);
             mouseClick(keyed(win, "mic"));
-            compare(win.keyboard.calls.filter(c => c.startsWith("tap")).length, 2, "a dimmed key sends nothing");
+            compare(taps().length, 3, "a dimmed key sends nothing");
             win.visible = false;
         }
 
@@ -129,7 +130,7 @@ Item {
             waitForRendering(win.contentItem);
             mouseClick(keyed(win, "c-0x0010"));
             compare(spy.count, 1, "seen, so the tray menu closes");
-            compare(win.keyboard.calls.filter(c => c.startsWith("tap")), ["tap c-0x0010 false"]);
+            compare(win.keyboard.calls.filter(c => c.startsWith("letGo")), ["letGo c-0x0010"]);
             mouseClick(keyed(win, "bar.theme"));
             compare(spy.count, 2, "the top bar too");
             verify(win.ui.calls.indexOf("stepTheme") >= 0, "and its button still works");

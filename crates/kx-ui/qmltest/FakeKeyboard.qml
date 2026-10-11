@@ -41,6 +41,18 @@ QtObject {
     function tap(id, back) {
         return note("tap " + id + " " + back);
     }
+    function press(id) {
+        return note("press " + id);
+    }
+    function tick() {
+        return note("tick");
+    }
+    function letGo(id) {
+        return note("letGo " + id);
+    }
+    function leave() {
+        return note("leave");
+    }
     function smaller() {
         return note("smaller");
     }

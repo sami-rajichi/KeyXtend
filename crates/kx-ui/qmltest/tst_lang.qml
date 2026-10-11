@@ -211,10 +211,10 @@ Item {
             waitForRendering(win.contentItem);
             for (const id of ["up", "down", "left", "right", "enter", "esc"])
                 mouseClick(button(win.contentItem, En.texts["key." + id]));
-            // A character key types as usual: the key at US "q" in this French state.
+            // A character key types as usual, by its press and let-go: the key at US "q" in this French state.
             mouseClick(button(win.contentItem, Face.states.list.keys["c-0x0010"].name));
-            const sent = kb.calls.filter(c => c.startsWith("panelKey") || c.startsWith("tap"));
-            compare(sent, ["panelKey up", "panelKey down", "panelKey left", "panelKey right", "panelKey enter", "panelKey esc", "tap c-0x0010 false"]);
+            const sent = kb.calls.filter(c => /^(panelKey|tap|press|letGo)\b/.test(c));
+            compare(sent, ["panelKey up", "panelKey down", "panelKey left", "panelKey right", "panelKey enter", "panelKey esc", "press c-0x0010", "letGo c-0x0010"]);
             tryVerify(() => ui.calls.indexOf("popAt over left") >= 0, 2000, "the list opens by the language key");
             const panel = [...win.data].find(o => o.item && o.item.win === win).item;
             const list = [...panel.data].find(o => o.view !== undefined);

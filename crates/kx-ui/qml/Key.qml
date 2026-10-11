@@ -18,6 +18,10 @@ Item {
 
     // A click; `back` is the language key's left part.
     signal hit(bool back)
+    // A key that repeats while held (spec §4.6) went down, came up over itself, or lost the pointer.
+    signal held
+    signal letGo
+    signal slid
     // The pointer came onto a key with a tip (the tip) or left it (empty).
     signal tip(string name, Item at)
 
@@ -26,6 +30,8 @@ Item {
     readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
     readonly property bool dim: !!kv.dim
+    // It repeats while held, so the pointer's press and release drive it instead of a click.
+    readonly property bool repeats: !!kv.repeat && !dim
     readonly property bool on: ks ? ks.on : false
     // The recording mic takes the rec paint.
     readonly property bool rec: ks ? ks.paint.fill === "rec" : false
@@ -238,9 +244,14 @@ Item {
             else if (!containsMouse && key.tipped)
                 key.tip("", key);
             key.tipped = containsMouse && !!says;
+            if (!containsMouse && pressed && key.repeats)
+                key.slid();
         }
+        onPressed: if (key.repeats) key.held()
+        onReleased: if (key.repeats && containsMouse) key.letGo()
+        onCanceled: if (key.repeats) key.slid()
         onClicked: mouse => {
-            if (!key.dim)
+            if (!key.dim && !key.repeats)
                 key.hit(key.kv.kind === "lang" && mouse.x < width * key.lk.shape.lang.back_share);
         }
     }

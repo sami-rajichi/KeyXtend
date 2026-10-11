@@ -50,18 +50,23 @@ impl Hub {
             .map_or_else(|| NULL.to_owned(), |f| f.state_json())
     }
 
-    /// Does `action` and says what to redraw; a notice in the face's reply goes to the banner, and a new state may
-    /// show a layout in another language. Call it, like every face call here, on the Qt thread only.
+    /// Does `action` and says what to redraw; a notice in the face's reply goes to the banner (a failed repeat also to
+    /// one warning, with no key), and a new state may show a layout in another language. Call it, like every face call
+    /// here, on the Qt thread only.
     pub fn act(&self, action: FaceAction) -> Redraw {
         let Some(face) = self.face() else {
             return Redraw::default();
         };
+        let tick = action == FaceAction::Tick;
         match face.act(action) {
             Ok(reply) => {
                 if reply.state {
                     self.follow(&*face);
                 }
                 if let Some(key) = reply.notice {
+                    if tick {
+                        tracing::warn!("a held key's repeat was not sent");
+                    }
                     self.notice(Notice {
                         key,
                         module: None,

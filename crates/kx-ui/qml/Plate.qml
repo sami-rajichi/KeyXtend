@@ -78,6 +78,9 @@ Item {
                 res: body.res
                 s: body.s
                 onHit: back => body.win.tap(kv.id, back)
+                onHeld: body.win.hold.press(kv.id)
+                onLetGo: body.win.hold.letGo(kv.id)
+                onSlid: body.win.hold.leave()
                 onTip: (name, at) => body.win.hint(name, at)
             }
         }

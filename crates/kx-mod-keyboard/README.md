@@ -63,10 +63,10 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 `Face` is the `KeyboardFace` service the UI draws. The UI calls it from one thread, which also runs the relabel timer, so `Layouts::refresh` is only ever called from there. The module keeps its face across a settings restart, so the latches survive; `Face::renew` takes the new settings (`Typing::update`, `Sizer`, `Placer`) and drops a held key, ending its burst. A held key's times come from the kernel's clock (`Ports::clock`), so tests move a fake clock and never sleep.
 
-`board_json()` changes only with the size or the language key's design:
+`board_json()` changes only with the size or the settings, such as the language key's design or key repeat:
 
-- `size`, `preset`, `presets`, `relabel_ms`, `lang_key`, `bubble_corner`, and the `plate`, `bar` and `dpad` boxes (`x y w h`, logical pixels).
-- `keys`, each `id kind row side x y w h icon label name checkable dim tip`. The box is the key's cell; the UI draws the cap half the theme's `gap_px` (times the size) inside it.
+- `size`, `preset`, `presets`, `relabel_ms`, `repeat_delay_ms`, `repeat_every_ms`, `lang_key`, `bubble_corner`, and the `plate`, `bar` and `dpad` boxes (`x y w h`, logical pixels).
+- `keys`, each `id kind row side x y w h icon label name checkable dim tip repeat`. The box is the key's cell; the UI draws the cap half the theme's `gap_px` (times the size) inside it. `repeat` marks a key that repeats while held, so the UI sends `press` and `let_go` for it; with `repeat` off in the settings, no key has it.
 - `icon` is an `icons.toml` key (`keys.<id>`, `lang.cycle`, `lang.list`); the UI shows `label` when the theme has no such icon. `name`, `label` and `tip` are translation keys (`key.<id>`, `label.<id>`, `tip.later`).
 - A `later` key and the D-pad come with `dim: true` and the tip "Coming in a later version".
 

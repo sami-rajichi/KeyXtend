@@ -30,6 +30,7 @@ mod qt {
         "qml/Rescale.qml",
         "qml/Placing.qml",
         "qml/Guard.qml",
+        "qml/Hold.qml",
         "qml/Plate.qml",
         "qml/TopBar.qml",
         "qml/Chip.qml",

@@ -2,14 +2,16 @@
 //! pointer and the bubble's spot. Every call runs on the Qt thread, which also runs the relabel timer.
 
 use super::{hub, qs};
-use crate::geom::{Area, whole};
+use crate::geom::whole;
 use crate::guard::Run;
 use crate::hub::{Hub, NULL, Redraw, Resize, json};
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
 use kx_module_api::ports::{Corner, FaceAction, KeyId, Point, Rect};
-use std::pin::Pin;
 use std::sync::Arc;
+
+mod held;
+mod window;
 
 /// The cxx-qt bridge that makes `Keyboard` a QML type.
 #[cxx_qt::bridge]
@@ -38,6 +40,22 @@ pub mod qobject {
         /// A click on key `id`; `back` is the language key's back part. Every action answers `{board, state}`.
         #[qinvokable]
         fn tap(&self, id: &QString, back: bool) -> QString;
+
+        /// Key `id` goes down; one that repeats starts the hold.
+        #[qinvokable]
+        fn press(&self, id: &QString) -> QString;
+
+        /// The hold timer's beat: the held key may type again.
+        #[qinvokable]
+        fn tick(&self) -> QString;
+
+        /// Key `id` comes up over itself: a click unless it already repeated.
+        #[qinvokable]
+        fn let_go(&self, id: &QString) -> QString;
+
+        /// The pointer left the held key, or the window hid: the hold ends with nothing typed.
+        #[qinvokable]
+        fn leave(&self) -> QString;
 
         /// One size step smaller.
         #[qinvokable]
@@ -238,39 +256,6 @@ impl qobject::Keyboard {
             return qs(NULL);
         };
         self.with(NULL, |h| json(&h.bubble_at(at, corner)))
-    }
-
-    fn shape(&self, title: &QString, boxes: &QString, dpr: f64) -> bool {
-        let Ok(boxes) = serde_json::from_str::<Vec<Area>>(&boxes.to_string()) else {
-            tracing::warn!("QML sent boxes that do not read");
-            return false;
-        };
-        let title = title.to_string();
-        self.rust()
-            .hub
-            .as_deref()
-            .is_some_and(|h| h.shape(&title, &boxes, dpr))
-    }
-
-    fn lift_alone(&self, title: &QString) -> bool {
-        let title = title.to_string();
-        self.rust()
-            .hub
-            .as_deref()
-            .is_some_and(|h| h.lift_alone(&title))
-    }
-
-    fn guard(self: Pin<&mut Self>, top: &QString) -> bool {
-        let top = top.to_string();
-        let top = (!top.is_empty()).then_some(top.as_str());
-        // No borrow lives across the try: the guard port moves Qt's windows, whose handlers may call this object.
-        let (hub, attempt) = (self.rust().hub.clone(), self.rust().guard.next());
-        let Some(hub) = hub else {
-            return false;
-        };
-        let again = hub.guard(attempt, top);
-        self.rust_mut().guard.settle(attempt, again);
-        again
     }
 
     #[cfg(debug_assertions)]

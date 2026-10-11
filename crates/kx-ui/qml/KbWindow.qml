@@ -37,6 +37,8 @@ Window {
     readonly property bool resizing: !!body.item && body.item.resizing
     // The window's display scale, as its heal keeps it (Rescale).
     readonly property real ratio: rescale.ratio
+    // The held key's beat, which repeating keys press, let go and leave.
+    readonly property alias hold: beat
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -233,8 +235,11 @@ Window {
     // A click on key `id`; while the language list is open, its keys drive the list instead.
     function tap(id, back) {
         hint("", null);
-        const listing = st && st.list && st.list.keys.indexOf(id) >= 0;
-        redraw(listing ? keyboard.panelKey(id) : keyboard.tap(id, back));
+        redraw(listing(id) ? keyboard.panelKey(id) : keyboard.tap(id, back));
+    }
+    // Key `id` drives the open language list.
+    function listing(id) {
+        return !!(st && st.list && st.list.keys.indexOf(id) >= 0);
     }
     function flip() {
         if (ui.flipMode())
@@ -260,6 +265,10 @@ Window {
 
     Guard {
         id: guard
+        win: win
+    }
+    Hold {
+        id: beat
         win: win
     }
     // The labels follow the layout in front, at once as the keyboard shows, since the timer rests while it is hidden.
