@@ -78,8 +78,8 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     Ok((themes, common))
 }
 
-/// One theme table: its two mode tables, pressed as `press` unless they shade their own, then its look, whose marks
-/// take its Arabic fonts unless it names its own.
+/// One theme table: its two mode tables, pressed with the shared `press` unless they write their own, then its look,
+/// whose marks take its Arabic fonts unless it names its own.
 fn theme(mut t: toml::Table, press: Rgba) -> Result<Theme, String> {
     let id = t
         .get("id")
@@ -100,7 +100,8 @@ fn theme(mut t: toml::Table, press: Rgba) -> Result<Theme, String> {
     Ok(Theme { look, light, dark })
 }
 
-/// One mode table, with its plate text and its `press` shade defaulted and errors prefixed `<id>.<mode>`.
+/// One mode table, with its plate text and press shade defaulted and errors prefixed `<id>.<mode>`. Unless it writes
+/// its own, a light table lays the shared `press` over its darkening hover, so a press reads darker still.
 fn palette(
     id: &str,
     mode: Mode,
@@ -115,7 +116,10 @@ fn palette(
     });
     let mut p: Palette = table.try_into().map_err(|e| format!("{at}: {e}"))?;
     if !own {
-        p.press = press;
+        p.press = match mode {
+            Mode::Light => press.stack(p.hover),
+            Mode::Dark => press,
+        };
     }
     Ok(p)
 }

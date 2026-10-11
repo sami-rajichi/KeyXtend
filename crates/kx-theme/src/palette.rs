@@ -52,7 +52,7 @@ fn clear() -> Rgba {
 /// The plate text token, and the token whose value it takes when a mode table leaves it out.
 const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
 
-/// The press shade token, which a mode table writes only where it differs from `[common] press`.
+/// The press shade token, which a mode table writes only to replace the shade made from `[common] press`.
 const PRESS: &str = "press";
 
 /// True when mode table `t` writes its own press shade.
@@ -138,7 +138,7 @@ pub struct Palette {
     pub chip_bg: Rgba,
     /// Laid over a key under the pointer: darker on light, lighter on dark.
     pub hover: Rgba,
-    /// Laid over a pressed key, so it reads unlike the hover; a palette that leaves it out takes `[common] press`.
+    /// Laid over a pressed key, so it reads unlike the hover; left out, it comes from `[common] press` (theme.rs).
     #[serde(default = "clear")]
     pub press: Rgba,
     /// Every legend and icon on a pressed key; only high contrast sets one, so a theme's legends keep their colours.

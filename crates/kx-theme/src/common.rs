@@ -8,7 +8,7 @@ use crate::rgba::Rgba;
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Common {
-    /// Laid over a pressed D-pad arrow, and a pressed key whose palette has no press (mock-up `brightness(.94)`).
+    /// Laid over a pressed D-pad arrow and, through each palette's press, a pressed key (mock-up `brightness(.94)`).
     pub press: Rgba,
     /// The recording dot in the caption bar.
     pub rec_dot: Rgba,

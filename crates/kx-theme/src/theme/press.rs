@@ -13,6 +13,14 @@ fn load() -> Themes {
     Themes::shipped().expect("tokens load")
 }
 
+/// Native light's hover line, after which a test writes a token into Native light.
+const AT: &str = r##"hover = "#0000000F""##;
+
+/// The shipped file with `line` written into Native light.
+fn with(line: &str) -> String {
+    text().replacen(AT, &format!("{AT}\n{line}"), 1)
+}
+
 /// Every key colour of `p` that a hover or press lies on.
 fn fills(p: &Palette) -> [Rgba; 8] {
     [
@@ -36,6 +44,17 @@ fn a_press_reads_darker_than_the_hover_on_every_light_key() {
 }
 
 #[test]
+fn a_light_press_is_the_shared_press_laid_over_its_hover() {
+    let all = load();
+    for t in &all.list {
+        let p = &t.light;
+        assert_eq!(p.press, all.common.press.stack(p.hover), "{}", t.look.id);
+    }
+    let native = all.list[0].light.press;
+    assert_eq!(native, Rgba::parse("#0000001D").expect("as drawn"));
+}
+
+#[test]
 fn dark_keys_keep_the_shared_press_which_darkens_where_the_hover_lightens() {
     let all = load();
     for t in &all.list {
@@ -50,6 +69,13 @@ fn dark_keys_keep_the_shared_press_which_darkens_where_the_hover_lightens() {
 }
 
 #[test]
+fn a_mode_table_may_write_its_own_press() {
+    let (themes, _) = parse(&with(r##"press = "#00000030""##)).expect("press is a token");
+    let own = Rgba::parse("#00000030").expect("its own");
+    assert_eq!(themes[0].light.press, own);
+}
+
+#[test]
 fn a_theme_keeps_its_legend_colours_when_pressed() {
     for t in &load().list {
         assert!(t.light.press_ink.is_none() && t.dark.press_ink.is_none());
@@ -57,27 +83,7 @@ fn a_theme_keeps_its_legend_colours_when_pressed() {
 }
 
 #[test]
-fn a_mode_table_without_its_own_press_takes_the_shared_one() {
-    let shipped = load();
-    let native = &shipped.list[0].light;
-    assert_ne!(
-        native.press, shipped.common.press,
-        "Native light writes its own"
-    );
-    let mut file: toml::Table = toml::from_str(&text()).expect("themes.toml parses");
-    let themes = file.get_mut("theme").and_then(toml::Value::as_array_mut);
-    let light = themes.and_then(|t| t[0].get_mut("light")?.as_table_mut());
-    let dropped = light.and_then(|l| l.remove("press"));
-    assert!(dropped.is_some(), "the token was there");
-    let gone = toml::to_string(&file).expect("the file writes back");
-    let (themes, common) = parse(&gone).expect("the press token is optional");
-    assert_eq!(themes[0].light.press, common.press);
-}
-
-#[test]
 fn the_press_text_cannot_be_written() {
-    let at = "hover = \"#0000000F\"";
-    let typed = text().replacen(at, &format!("{at}\npress_ink = \"#FFFFFF\""), 1);
-    let e = parse(&typed).expect_err("only high contrast sets it");
+    let e = parse(&with(r##"press_ink = "#FFFFFF""##)).expect_err("only high contrast sets it");
     assert!(e.contains("native.light") && e.contains("press_ink"), "{e}");
 }

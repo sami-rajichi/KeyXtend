@@ -73,6 +73,29 @@ impl Rgba {
         }
     }
 
+    /// This tint laid over the tint `under`: one tint that draws as the two laid in turn (source over).
+    #[must_use]
+    pub fn stack(self, under: Rgba) -> Rgba {
+        let (top, low) = (self.share(), under.share() * (1.0 - self.share()));
+        let a = top + low;
+        if a <= 0.0 {
+            return Rgba::CLEAR;
+        }
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a blend of two bytes, clamped to a byte"
+        )]
+        let byte = |v: f32| v.round().clamp(0.0, f32::from(u8::MAX)) as u8;
+        let mix = |c: u8, d: u8| byte((top * f32::from(c) + low * f32::from(d)) / a);
+        Rgba {
+            r: mix(self.r, under.r),
+            g: mix(self.g, under.g),
+            b: mix(self.b, under.b),
+            a: byte(a * f32::from(u8::MAX)),
+        }
+    }
+
     /// Its opacity, from 0 (clear) to 1 (opaque).
     #[must_use]
     pub fn share(self) -> f32 {
@@ -171,6 +194,23 @@ mod tests {
         let laid = tint.on(Rgba::WHITE);
         assert_eq!(laid, Rgba::parse("#CCCCCC").expect("grey"));
         assert_eq!(Rgba::CLEAR.on(Rgba::WHITE), Rgba::WHITE, "no tint");
+    }
+
+    #[test]
+    fn a_tint_stacked_on_a_tint_draws_as_both_laid_in_turn() {
+        let hover = Rgba::parse("#0000000F").expect("hover");
+        assert_eq!(hover.stack(hover), Rgba::parse("#0000001D").expect("both"));
+        let top = Rgba::parse("#FFFFFF80").expect("half white");
+        for under in ["#FFFFFF", "#000000", "#3B3E43", "#F8F6F1"] {
+            let fill = Rgba::parse(under).expect("fill");
+            let (one, two) = (top.stack(hover).on(fill), top.on(hover.on(fill)));
+            let step = |a: u8, b: u8| a.abs_diff(b);
+            let most = [step(one.r, two.r), step(one.g, two.g), step(one.b, two.b)];
+            assert!(most.iter().all(|&s| s <= 1), "{under}: {one:?} {two:?}");
+        }
+        assert_eq!(Rgba::CLEAR.stack(hover), hover, "a clear top");
+        assert_eq!(Rgba::WHITE.stack(hover), Rgba::WHITE, "an opaque top");
+        assert_eq!(Rgba::CLEAR.stack(Rgba::CLEAR), Rgba::CLEAR);
     }
 
     #[test]

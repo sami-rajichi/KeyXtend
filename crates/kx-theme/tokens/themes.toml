@@ -4,14 +4,16 @@
 # Sizes all themes share are in shape.toml, timings in motion.toml and icons in icons.toml.
 # Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
 # legend_2_plate colours secondary text and icons on the plate; a palette writes it only where it differs from legend_2.
-# A palette writes press only where its keys need their own press shade; the others take [common] press.
+# A palette may write its own press; else a light one lays [common] press over its hover (the owner's choice of
+# 2026-10-11), and a dark one takes [common] press.
 
 # Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 # The drawn check (src/drawn.rs) keeps all drawn text at WCAG AA where it sits, except the Carousel's faded side names.
 # A colour marked "owner 2026-09-30", "2026-10-02" or "2026-10-11" was nudged just enough to pass it.
 
-# Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
-# recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
+# Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), which light
+# palettes lay over their hover, the caption's recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover)
+# and the snip overlay (.snip-dim, .snip-rect, .dims).
 [common]
 press = "#0000000F"
 rec_dot = "#E5484D"
@@ -85,7 +87,6 @@ pop_hover = "#0000000B"
 pop_sel = "#DCE9F7"
 chip_bg = "#0000000E"
 hover = "#0000000F"
-press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { inset = true, x = 0.0, y = -1.0, blur = 0.0, spread = 0.0, color = "#00000024" },
     { x = 0.0, y = 0.0, blur = 0.0, spread = 1.0, color = "#0000000B" },
@@ -202,7 +203,6 @@ pop_hover = "#0000000A"
 pop_sel = "#F3E7C0"
 chip_bg = "#F8F6F1"
 hover = "#0000000F"
-press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#3C322847" },
     { inset = true, x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#FFFFFFBF" },
@@ -327,7 +327,6 @@ pop_hover = "#0000000D"
 pop_sel = "#CBEDEE"
 chip_bg = "#D4D6D8"
 hover = "#0000000F"
-press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 1.0, spread = 0.0, color = "#00000040" },
 ]
