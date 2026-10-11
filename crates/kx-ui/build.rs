@@ -1,6 +1,10 @@
 //! Builds the QML module `KeyXtend.Ui`, its bridges and its fonts and icons when the `qt` feature is on (ADR-0013,
 //! ADR-0016). MSVC reads the generated C++ as UTF-8 through `.cargo/config.toml`, so this script holds no unsafe call.
 
+/// The Qt pin check and the build-kind header, shared with the Quick tests' plugin.
+#[cfg(feature = "qt")]
+mod qtbuild;
+
 fn main() {
     #[cfg(feature = "qt")]
     qt::build();
@@ -10,10 +14,10 @@ fn main() {
 /// The Qt build, with its file tables.
 #[cfg(feature = "qt")]
 mod qt {
+    use super::qtbuild;
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
     use kx_theme::assets::{Bundled, ICON_EXT, bundle, icon_url};
     use std::path::{Path, PathBuf};
-    use std::process::Command;
 
     /// QML module URI; its files land under `qrc:/qt/qml/<uri as folders>/`.
     const URI: &str = "KeyXtend.Ui";
@@ -76,29 +80,17 @@ mod qt {
         "src/bridges/tint.rs",
         "src/bridges/shadows.rs",
     ];
-    /// The soft shadows' adopter, which leans on how the pinned Qt makes `RectangularShadow`'s material.
-    const SHADOWS_H: &str = "cpp/shadows.h";
-    /// The hand-written C++ `QObject` classes, which moc reads.
-    const MOC: &[&str] = &[SHADOWS_H];
+    /// The hand-written C++ `QObject` classes, which moc reads: the soft shadows' adopter.
+    const MOC: &[&str] = &["cpp/shadows.h"];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
-    /// The variable naming Qt's qmake, as cxx-qt-build reads it, and the program it runs when that is unset.
-    const QMAKE_ENV: &str = "QMAKE";
-    const QMAKE: &str = "qmake";
-    /// qmake's keys for Qt's header folder and version: `rhi/qrhi.h` sits under `<headers>/QtGui/<version>/QtGui`.
+    /// qmake's key for Qt's header folder: `rhi/qrhi.h` sits under `<headers>/QtGui/<version>/QtGui`.
     const HEADERS_KEY: &str = "QT_INSTALL_HEADERS";
-    const VERSION_KEY: &str = "QT_VERSION";
     const GUI: &str = "QtGui";
-    /// The workspace manifest and the path of the one Qt version it pins, which the graphics device glue and the soft
-    /// shadows' adopter are checked for.
-    const WORKSPACE: &str = "../../Cargo.toml";
-    const PIN_PATH: [&str; 4] = ["workspace", "metadata", "stage", "qt_version"];
-    /// The hand-written C++ the bridges include.
+    /// The hand-written C++ the bridges include, and the build-kind header's own folder under `OUT_DIR`, with the macro
+    /// a debug build defines in it to turn on the test-only probes (ADR-0021).
     const CPP: &str = "cpp";
-    /// The header that tells that C++ the build kind, in its own folder under `OUT_DIR`, and the macro a debug build
-    /// defines in it to turn on the test-only device loss and window counts (ADR-0021).
     const KIND_DIR: &str = "kx-ui-build";
-    const KIND_H: &str = "kx-ui-build.h";
     const PROBES: &str = "KX_UI_PROBES";
     /// Cargo's variables for the build's output folder, and for debug assertions, set only when they are on.
     const OUT_ENV: &str = "OUT_DIR";
@@ -125,7 +117,7 @@ mod qt {
 
     /// Compiles the bridges, the QML, the fonts and the icons into the crate, and names their URLs.
     pub fn build() {
-        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?, kind_header()?)));
+        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?, kind_dir()?)));
         let (resources, fonts, rhi, kind) = match parts {
             Ok(done) => done,
             Err(e) => {
@@ -174,68 +166,21 @@ mod qt {
     }
 
     /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021); an error when
-    /// Qt is not the version the workspace pins, as that header and the shadows' adopter keep few promises across
-    /// versions.
+    /// Qt is not the version the workspace pins.
     fn rhi_headers() -> Result<PathBuf, String> {
-        println!("cargo::rerun-if-env-changed={QMAKE_ENV}");
-        let qmake = std::env::var_os(QMAKE_ENV).unwrap_or_else(|| QMAKE.into());
-        let (version, pinned) = (query(&qmake, VERSION_KEY)?, pinned_qt()?);
-        if version != pinned {
-            let (table, key) = PIN_PATH.split_at(PIN_PATH.len() - 1);
-            return Err(format!(
-                "Qt {version} is not the pinned {pinned}; check the graphics device glue (ADR-0021) and who frees \
-                 RectangularShadow's default material ({SHADOWS_H}) first, then change [{}] {} in the root Cargo.toml",
-                table.join("."),
-                key.join(".")
-            ));
-        }
-        let headers = PathBuf::from(query(&qmake, HEADERS_KEY)?);
+        let qmake = qtbuild::qmake();
+        let version = qtbuild::pinned_version(&qmake)?;
+        let headers = PathBuf::from(qtbuild::query(&qmake, HEADERS_KEY)?);
         Ok(headers.join(GUI).join(version).join(GUI))
     }
 
-    /// What `qmake -query key` answers; an error when qmake does not run, fails, or answers nothing.
-    fn query(qmake: &std::ffi::OsStr, key: &str) -> Result<String, String> {
-        let failed = |why: String| {
-            format!("qmake -query {key} failed: {why}; set {QMAKE_ENV} to Qt's qmake")
-        };
-        let out = Command::new(qmake).args(["-query", key]).output();
-        let out = out.map_err(|e| failed(e.to_string()))?;
-        let text = String::from_utf8(out.stdout).map_err(|e| failed(e.to_string()))?;
-        let text = text.trim();
-        if !out.status.success() || text.is_empty() {
-            return Err(failed(format!(
-                "it ended with {} and answered {text:?}",
-                out.status
-            )));
-        }
-        Ok(text.to_owned())
-    }
-
-    /// The Qt version the workspace manifest pins.
-    fn pinned_qt() -> Result<String, String> {
-        println!("cargo::rerun-if-changed={WORKSPACE}");
-        let text = std::fs::read_to_string(WORKSPACE).map_err(|e| format!("{WORKSPACE}: {e}"))?;
-        let table: toml::Table = text.parse().map_err(|e| format!("{WORKSPACE}: {e}"))?;
-        let root = toml::Value::Table(table);
-        let pin = PIN_PATH.iter().try_fold(&root, |v, key| v.get(key));
-        pin.and_then(toml::Value::as_str)
-            .map(str::to_owned)
-            .ok_or_else(|| format!("{WORKSPACE} pins no Qt version at {}", PIN_PATH.join(".")))
-    }
-
     /// Writes the build-kind header, which defines `PROBES` only with debug assertions, and gives its folder.
-    fn kind_header() -> Result<PathBuf, String> {
+    fn kind_dir() -> Result<PathBuf, String> {
         let out = std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?;
         let dir = PathBuf::from(out).join(KIND_DIR);
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
         let debug = std::env::var_os(DEBUG_ENV).is_some();
-        let probes = if debug {
-            format!("#define {PROBES} 1\n")
-        } else {
-            String::new()
-        };
-        let text = format!("#pragma once\n{probes}");
-        std::fs::write(dir.join(KIND_H), text).map_err(|e| e.to_string())?;
+        qtbuild::kind_header(&dir, debug.then_some(PROBES))?;
         Ok(dir)
     }
 

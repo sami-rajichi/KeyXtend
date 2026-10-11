@@ -19,3 +19,5 @@ crate-type = ["cdylib", "rlib"]
 cxx-qt-build.workspace = true
 # The provider's name, the icons' folder and their file type, as the app uses them.
 kx-theme = { path = "../../crates/kx-theme" }
+# Reads the Qt version the workspace manifest pins, through kx-ui's shared build file.
+toml.workspace = true

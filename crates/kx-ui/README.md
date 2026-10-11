@@ -8,7 +8,7 @@ The `qt` feature needs Qt 6.11.2: set `QMAKE` to its `qmake.exe` and put its `bi
 
 `cpp/` holds the C++ the bridges call where cxx-qt-lib has no binding; they include it as `kx-ui/cpp/…` through cxx-qt-build's crate include root, and `build.rs` rebuilds when it changes.
 
-`build.rs` also adds Qt's versioned `QtGui` header folder (from `qmake -query`), for `rhi/qrhi.h`, and writes `kx-ui-build.h` under `OUT_DIR`, which defines `KX_UI_PROBES` only with debug assertions, for the test-only probes and triggers.
+`build.rs` also adds Qt's versioned `QtGui` header folder (from `qmake -query`), for `rhi/qrhi.h`, and writes `kx-ui-build.h` under `OUT_DIR`, which defines `KX_UI_PROBES` only with debug assertions, for the test-only probes and triggers. `qtbuild.rs` holds the Qt pin check and that header's writer, which the Quick tests' plugin (`tools/kx-test-icons`) shares, so it also refuses an unpinned Qt and writes the header without probes.
 
 With debug assertions and `KX_UI_CHURN` set, the keyboard window churns through its own buttons' calls (`Churn.qml`, plan in `src/churn.rs`): theme rounds that each show every theme once, Caps Lock changes shown with no key sent (`FaceAction::FlipCaps`), then size steps up and down; the log then says `the churn ended`, for a memory check. It saves the theme and the size it steps through, and near the largest size the size ends smaller than it started. Only debug builds hold `Churn.qml`.
 

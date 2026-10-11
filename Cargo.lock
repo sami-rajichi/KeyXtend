@@ -612,6 +612,7 @@ version = "0.0.0"
 dependencies = [
  "cxx-qt-build",
  "kx-theme",
+ "toml",
 ]
 
 [[package]]

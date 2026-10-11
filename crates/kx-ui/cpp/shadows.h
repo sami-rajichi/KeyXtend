@@ -1,6 +1,6 @@
 // Qt 6.11's RectangularShadow makes its default material in its private constructor through Q_Q, before q_ptr is set,
 // so the material has no parent and nothing frees it. QML's soft shadow (Soft.qml) hands it to its shadow here, and
-// build.rs refuses any Qt but the pinned one and names this file, so each Qt upgrade rechecks who frees it.
+// every build of this file refuses any Qt but the pinned one (qtbuild.rs), so each Qt upgrade rechecks who frees it.
 #pragma once
 
 #include <QtCore/QObject>
