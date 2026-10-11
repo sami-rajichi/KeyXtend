@@ -17,6 +17,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{PCWSTR, w};
 
 use crate::apps::Ctx;
+use crate::guardrun;
 use crate::proc::Process;
 use crate::win::{self, size32};
 use crate::winfind::{self, Match};
@@ -64,20 +65,23 @@ fn wide(s: &OsStr) -> Vec<u16> {
     s.encode_wide().chain(std::iter::once(0)).collect()
 }
 
-/// Starts `exe` with `args` as administrator and returns once it has started.
+/// Starts `exe` with `args` as administrator and returns once it has started; the mouse guard lets go for the prompt.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    let started = shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)).map(drop);
-    started.map_err(|e| format!("start {} as administrator: {e}", exe.display()))
+    let started = guardrun::around_prompt(|| shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)));
+    started
+        .map(drop)
+        .map_err(|e| format!("start {} as administrator: {e}", exe.display()))
 }
 
-/// Starts `exe` with `args` as administrator and no window, so it covers no key and takes no focus; its process.
+/// Starts `exe` with `args` as administrator and no window, so it covers no key and takes no focus; its process. The
+/// mouse guard lets go for the prompt.
 #[allow(
     unsafe_code,
     reason = "Hands the shell's handle to the process that closes it."
 )]
 pub fn run_as_hidden(exe: &Path, args: &[String]) -> Result<Process, String> {
     let hidden = (RUN_AS, SW_HIDE, SEE_MASK_NOCLOSEPROCESS);
-    let h = kept(exe, args, hidden)
+    let h = guardrun::around_prompt(|| kept(exe, args, hidden))
         .map_err(|e| format!("start {} as administrator: {e}", exe.display()))?;
     // SAFETY: the shell gave `h` to us alone, and nothing else closes it.
     Ok(unsafe { Process::own(h) })

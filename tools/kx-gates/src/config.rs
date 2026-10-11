@@ -12,6 +12,7 @@ use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
 use crate::g8cfg::G8;
 use crate::g22cfg::G22;
 use crate::gatecfg::{AssistCfg, G1, G2, G3, G4, G5};
+use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
 use crate::probecfg::{G6, G12, Probes, Sim};
 use crate::text::Charsets;
@@ -81,6 +82,8 @@ pub struct GatesConfig {
     pub g13: G13,
     /// G26 settings.
     pub g26: G26,
+    /// The mouse guard, shared by every gate.
+    pub mouse_guard: MouseGuard,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -211,6 +214,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;
+    config.mouse_guard.check()?;
     p3cfg::check(&config)?;
     Ok(config)
 }

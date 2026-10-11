@@ -26,6 +26,16 @@ focus_wait_ms = 5000
 # Longest wait for the product to end after `close keyxtend` posts it Quit, in ms.
 quit_wait_ms = 10000
 
+# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and keeps only injected input, except
+# in the hand try, G13 and G23 (the owner's own mouse) and G26 (CI). It lets go when the gate ends, for an admin
+# prompt, after limit_ms, or once a physical button is held escape_ms; the last two stop the gate, which does not pass.
+[mouse_guard]
+on = true
+# Longest the guard holds the mouse in one run, in ms.
+limit_ms = 360000
+# How long a physical button is held to get the mouse back at once, in ms.
+escape_ms = 2000
+
 [keys]
 # Virtual-key combos: pressed in order, released in reverse.
 alt = [0x12]

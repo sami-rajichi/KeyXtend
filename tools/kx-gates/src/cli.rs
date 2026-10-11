@@ -7,7 +7,7 @@ use crate::apps::{AppKind, Ctx};
 use crate::usage::usage;
 use crate::{
     close, config, facearg, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g17, g18, g19,
-    g20, g21, g22, g23, g24, g25, g26, hand, out,
+    g20, g21, g22, g23, g24, g25, g26, guardrun, hand, out,
 };
 
 /// Gates whose runs take a random seed.
@@ -159,9 +159,14 @@ pub fn run(args: &Args) -> Result<Value, String> {
         out,
         base,
     };
-    let result = dispatch(&ctx, args).unwrap_or_else(
+    // The guard lets go when the gate ends; dropping `guard` lets go on a panic too.
+    let guard = guardrun::begin(&cfg.mouse_guard, &args.gate)?;
+    let result = dispatch(&ctx, args);
+    let ended = guard.finish(result.is_ok());
+    let mut result = result.unwrap_or_else(
         |e| json!({ "gate": args.gate.to_uppercase(), "name": args.name, "error": e }),
     );
+    guardrun::mark(&mut result, ended);
     out::save_result(&ctx.out, &result.to_string())?;
     Ok(result)
 }
