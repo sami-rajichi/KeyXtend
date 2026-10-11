@@ -98,7 +98,16 @@ fn a_first_repeat_sent_in_part_stops_the_burst_and_lets_shift_go() {
     r.press(A).unwrap();
     let part = InjectError::Refused { sent: 1, total: 2 };
     r.fakes.injector.set_error(Some(part));
-    assert_eq!(r.tick_in(delay).notice, Some(keys::KEYS_NOT_SENT));
+    let typed = FaceReply {
+        notice: Some(keys::KEYS_NOT_SENT),
+        repeated: true,
+        ..STATE
+    };
+    assert_eq!(
+        r.tick_in(delay),
+        typed,
+        "part of it typed, so no slide back types again"
+    );
     r.fakes.injector.set_error(None);
     assert_eq!(r.state()["keys"]["shift"]["on"], false, "part of it went");
     still(&r, 3);

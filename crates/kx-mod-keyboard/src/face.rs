@@ -94,7 +94,7 @@ impl Face {
     }
 
     /// The hold timer: a repeat that went out says so and redraws only when its burst ended, as the latches stay
-    /// latched until then; any other due repeat answers as a tap does.
+    /// latched until then; any other due repeat answers as a tap does, and one sent in part says it repeated too.
     fn tick(&self) -> Result<FaceReply, FaceError> {
         let Some(went) = self.lock().tick() else {
             return Ok(FaceReply::default());
@@ -106,7 +106,11 @@ impl Face {
                 ..FaceReply::default()
             });
         }
-        self.reply(went)
+        let reply = self.reply(went)?;
+        Ok(FaceReply {
+            repeated: went.tapped.is_err_and(TapError::reached),
+            ..reply
+        })
     }
 
     /// The pointer let go of key `id` on it: a click types it now, as a tap, and a burst ends.

@@ -28,6 +28,14 @@ pub enum TapError {
     Inject(#[from] InjectError),
 }
 
+impl TapError {
+    /// True when part of the send reached the app before the system refused the rest.
+    #[must_use]
+    pub fn reached(self) -> bool {
+        matches!(self, Self::Inject(e) if reached(Err(e)))
+    }
+}
+
 /// What a tap did, for the face to follow up.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Tapped {
