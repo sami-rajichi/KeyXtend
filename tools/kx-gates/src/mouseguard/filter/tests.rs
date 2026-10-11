@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use kx_module_api::US_PER_MS;
 
 use super::*;
-use crate::mouseguard::{LEFT, MIDDLE, RIGHT, X1, X2};
+use crate::mouseguard::{Counts, LEFT, MIDDLE, RIGHT, X1, X2};
 use crate::rng::Rng;
 
 fn shipped() -> MouseGuard {
@@ -20,7 +20,7 @@ fn at(ms: u64) -> Mono {
 }
 
 fn filter() -> Filter {
-    Filter::new(&shipped(), at(0), Duration::ZERO)
+    Filter::new(&shipped(), at(0), Duration::ZERO, Arc::default())
 }
 
 /// A filter that lets go after two physical presses within the shipped window.
@@ -29,7 +29,7 @@ fn two_clicks() -> Filter {
         escape_clicks: 2,
         ..shipped()
     };
-    Filter::new(&cfg, at(0), Duration::ZERO)
+    Filter::new(&cfg, at(0), Duration::ZERO, Arc::default())
 }
 
 /// A physical `kind` event at `ms`.
@@ -105,14 +105,15 @@ fn injected_events_pass_without_letting_go_and_physical_moves_drop() {
 
 #[test]
 fn the_filter_counts_the_hands_events_it_dropped_and_its_own_it_passed_but_nothing_else() {
-    let mut f = filter();
+    let tally = Arc::new(Tally::default());
+    let mut f = Filter::new(&shipped(), at(0), Duration::ZERO, Arc::clone(&tally));
     f.event(true, Kind::Other, at(1));
     f.event(true, LEFT_DOWN, at(1));
     physical(&mut f, Kind::Other, 2);
     physical(&mut f, LEFT_UP, 3);
     physical(&mut f, LEFT_DOWN, 4);
     assert_eq!(
-        f.counts(),
+        tally.counts(),
         Counts {
             dropped: 2,
             passed: 2
@@ -120,7 +121,7 @@ fn the_filter_counts_the_hands_events_it_dropped_and_its_own_it_passed_but_nothi
         "a release whose press came before the guard is neither"
     );
     physical(&mut f, Kind::Other, 5);
-    assert_eq!(f.counts().dropped, 2, "nothing drops once it let go");
+    assert_eq!(tally.counts().dropped, 2, "nothing drops once it let go");
 }
 
 #[test]
@@ -192,7 +193,7 @@ fn a_release_whose_press_came_before_the_guard_passes_so_no_button_sticks() {
 #[test]
 fn the_guard_lets_go_at_its_time_limit_counted_from_its_start() {
     let limit = shipped().limit_ms;
-    let mut f = Filter::new(&shipped(), at(500), Duration::ZERO);
+    let mut f = Filter::new(&shipped(), at(500), Duration::ZERO, Arc::default());
     assert_eq!(f.tick(at(500 + limit - 1)), None);
     assert_eq!(
         physical(&mut f, Kind::Other, 500 + limit - 1),
@@ -206,11 +207,11 @@ fn the_guard_lets_go_at_its_time_limit_counted_from_its_start() {
 fn a_guard_that_comes_back_holds_only_for_what_is_left_of_the_limit() {
     let limit = shipped().limit_ms;
     let used = Duration::from_millis(limit / 4);
-    let mut f = Filter::new(&shipped(), at(500), used);
+    let mut f = Filter::new(&shipped(), at(500), used, Arc::default());
     assert_eq!(f.tick(at(500 + limit - limit / 4 - 1)), None);
     assert_eq!(f.tick(at(500 + limit - limit / 4)), Some(End::Limit));
     let spent = Duration::from_millis(limit * 2);
-    let mut over = Filter::new(&shipped(), at(500), spent);
+    let mut over = Filter::new(&shipped(), at(500), spent, Arc::default());
     assert_eq!(over.tick(at(500)), Some(End::Limit), "no time left");
 }
 

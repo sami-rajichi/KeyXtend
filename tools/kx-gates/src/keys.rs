@@ -18,16 +18,26 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use crate::mouseguard;
 use crate::win::sleep_ms;
 
-/// Mouse flags that press a button or turn a wheel.
-const PRESSES: u32 = MOUSEEVENTF_LEFTDOWN.0
+/// Mouse flags that press a button.
+const DOWNS: u32 = MOUSEEVENTF_LEFTDOWN.0
     | MOUSEEVENTF_RIGHTDOWN.0
     | MOUSEEVENTF_MIDDLEDOWN.0
-    | MOUSEEVENTF_XDOWN.0
-    | MOUSEEVENTF_WHEEL.0
-    | MOUSEEVENTF_HWHEEL.0;
+    | MOUSEEVENTF_XDOWN.0;
+/// Mouse flags that press a button or turn a wheel.
+const PRESSES: u32 = DOWNS | MOUSEEVENTF_WHEEL.0 | MOUSEEVENTF_HWHEEL.0;
 /// Mouse flags that let a button go.
 const RELEASES: u32 =
     MOUSEEVENTF_LEFTUP.0 | MOUSEEVENTF_RIGHTUP.0 | MOUSEEVENTF_MIDDLEUP.0 | MOUSEEVENTF_XUP.0;
+
+/// The flags of `input` when it is mouse input.
+#[allow(unsafe_code, reason = "Reads the union member the input's type names.")]
+fn mouse_flags(input: &INPUT) -> Option<u32> {
+    if input.r#type != INPUT_MOUSE {
+        return None;
+    }
+    // SAFETY: the type says the mouse member is set.
+    Some(unsafe { input.Anonymous.mi }.dwFlags.0)
+}
 
 /// Whether `input` presses something and whether it lets something go; anything but a key or mouse input presses.
 #[allow(unsafe_code, reason = "Reads the union member the input's type names.")]
@@ -39,12 +49,20 @@ fn press_release(input: &INPUT) -> (bool, bool) {
             .contains(KEYEVENTF_KEYUP);
         return (!up, up);
     }
-    if input.r#type == INPUT_MOUSE {
-        // SAFETY: the type says the mouse member is set.
-        let flags = unsafe { input.Anonymous.mi }.dwFlags.0;
+    if let Some(flags) = mouse_flags(input) {
         return (flags & PRESSES != 0, flags & RELEASES != 0);
     }
     (true, false)
+}
+
+/// True when `inputs` press or release a mouse button, which every live low-level hook sees; a move may end where
+/// the pointer already is, which no hook sees.
+fn clicks(inputs: &[INPUT]) -> bool {
+    let buttons = DOWNS | RELEASES;
+    inputs
+        .iter()
+        .filter_map(mouse_flags)
+        .any(|f| f & buttons != 0)
 }
 
 /// True when `inputs` let something go and press nothing, so they still go out after the mouse guard stopped a gate.
@@ -97,10 +115,16 @@ fn outgoing(
 }
 
 /// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
-/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed.
+/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed; clicks also tell the guard its hook
+/// must count them.
 pub fn send_as(inputs: &[INPUT], after: After) -> Result<(), String> {
     let out = outgoing(inputs, mouseguard::allowed(), after)?;
-    inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()))
+    let send = || inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()));
+    if clicks(&out) {
+        mouseguard::own_input(send)
+    } else {
+        send()
+    }
 }
 
 /// `send_as`, keeping the pointer still after a stop.

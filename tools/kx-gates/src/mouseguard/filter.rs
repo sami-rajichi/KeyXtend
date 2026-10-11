@@ -1,11 +1,12 @@
 //! The guard's decisions over one hook's life: which events drop, and when it lets go.
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::time::Duration;
 
 use kx_module_api::Mono;
 
-use super::{Counts, End, Kind, MouseGuard, Verdict};
+use super::{End, Kind, MouseGuard, Tally, Verdict};
 
 /// The guard's decisions over one hook's life: which events drop, and when it lets go.
 #[derive(Debug, Clone)]
@@ -22,13 +23,14 @@ pub struct Filter {
     held: u8,
     /// Why it let go, once it has; every event then passes.
     out: Option<End>,
-    /// What it dropped and passed so far.
-    seen: Counts,
+    /// What it dropped and passed, shared with the run that reads it live.
+    tally: Arc<Tally>,
 }
 
 impl Filter {
-    /// A filter for `cfg` that starts at `start`, after the guard already held the mouse for `used` in this run.
-    pub fn new(cfg: &MouseGuard, start: Mono, used: Duration) -> Self {
+    /// A filter for `cfg` that starts at `start`, after the guard already held the mouse for `used` in this run; it
+    /// counts into `tally`.
+    pub fn new(cfg: &MouseGuard, start: Mono, used: Duration, tally: Arc<Tally>) -> Self {
         let left = Duration::from_millis(cfg.limit_ms).saturating_sub(used);
         let clicks = usize::from(cfg.escape_clicks);
         Self {
@@ -38,7 +40,7 @@ impl Filter {
             presses: VecDeque::with_capacity(clicks),
             held: 0,
             out: None,
-            seen: Counts::default(),
+            tally,
         }
     }
 
@@ -59,7 +61,7 @@ impl Filter {
     /// before the guard, so no button sticks. It counts what it drops and the own input it passes.
     pub fn event(&mut self, ours: bool, kind: Kind, now: Mono) -> Verdict {
         if ours {
-            self.seen.add(Counts::PASS);
+            self.tally.pass_one();
             return Verdict::Pass;
         }
         if self.tick(now).is_some() {
@@ -74,7 +76,7 @@ impl Filter {
             Kind::Up(b) => self.held &= !b,
             Kind::Other => {}
         }
-        self.seen.add(Counts::DROP);
+        self.tally.drop_one();
         Verdict::Drop
     }
 
@@ -89,11 +91,6 @@ impl Filter {
         if self.presses.len() >= self.clicks {
             self.out = Some(End::Owner);
         }
-    }
-
-    /// The hand's events it dropped and its own it passed so far.
-    pub fn counts(&self) -> Counts {
-        self.seen
     }
 
     /// How long until `tick` could let go: the time limit, as the owner's clicks let go in the event itself.

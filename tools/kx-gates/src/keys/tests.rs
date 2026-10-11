@@ -3,7 +3,7 @@
 use kx_platform_windows::keys::TAG;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYEVENTF_EXTENDEDKEY, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_MOVE,
-    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEINPUT,
+    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEINPUT,
 };
 
 use super::*;
@@ -107,6 +107,20 @@ fn a_stop_between_the_gates_press_and_its_release_still_lets_go_away_from_the_ke
     let again = outgoing(&[moved, down], mouseguard::allowed(), After::Away);
     assert!(again.is_err(), "no new press after the stop");
     assert!(scope.finish(true).is_some_and(|o| o.end.stops()));
+}
+
+#[test]
+fn only_a_batch_that_presses_or_releases_a_mouse_button_is_watched_as_own_clicks() {
+    let moved = at(MOUSE_EVENT_FLAGS(0));
+    let click = [moved, at(MOUSEEVENTF_LEFTDOWN), at(MOUSEEVENTF_LEFTUP)];
+    assert!(clicks(&click), "a click");
+    assert!(clicks(&[at(MOUSEEVENTF_RIGHTUP)]), "a release");
+    assert!(clicks(&[at(MOUSEEVENTF_XDOWN)]), "a side button");
+    assert!(!clicks(&[moved]), "a move may end where the pointer is");
+    let wheel = input(0, 0, MOUSEEVENTF_WHEEL, TAG);
+    assert!(!clicks(&[wheel]), "a wheel turn");
+    assert!(!clicks(&[tagged(0x41, false, TAG)]), "a key");
+    assert!(!clicks(&[]));
 }
 
 #[test]

@@ -1,22 +1,13 @@
 //! A run's mouse guard: it holds the mouse from the gate's start, lets go for an admin prompt, refuses new input once
-//! the owner or the time limit ended it, and always lets go when the gate ends, breaks off or panics.
-#![cfg(windows)]
+//! the owner, the time limit or a lost hook ended it, and always lets go when the gate ends, breaks off or panics.
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::Arc;
 use std::time::Duration;
 
 use kx_module_api::{Clock, Mono};
-use kx_platform_windows::QpcClock;
-use serde_json::{Value, json};
 
-use super::hook::WinHook;
-use super::{Counts, End, Filter, MouseGuard};
+use super::{Counts, End, Filter, MouseGuard, Tally, Watch};
 use crate::out::say;
-
-/// The result line's field that says how the guard ended.
-const FIELD: &str = "mouse_guard";
-/// The result line's verdict, which a stopped run fails.
-const PASS: &str = "pass";
 
 /// Starts hooks that apply a filter.
 pub trait Hook {
@@ -30,8 +21,8 @@ pub trait Hook {
 pub trait Live {
     /// Why it let go by itself, once it has: the owner or the time limit.
     fn ended(&self) -> Option<End>;
-    /// Removes the hook; why it had let go by itself, if it had, and what it counted.
-    fn stop(self) -> (Option<End>, Counts);
+    /// Removes the hook; why it had let go by itself, if it had.
+    fn stop(self) -> Option<End>;
 }
 
 /// How a run's guard ended, and what all its hooks counted.
@@ -57,15 +48,18 @@ pub struct Session<H: Hook, C: Clock> {
     early: Option<End>,
     /// True once the gate's pointer work is over, so the guard never comes back.
     idle: bool,
-    /// What the hooks that ended counted.
-    seen: Counts,
+    /// What every hook of this run counted, read live.
+    tally: Arc<Tally>,
+    /// Whether the running hook still counts kx-gates' own clicks.
+    watch: Watch,
 }
 
 impl<H: Hook, C: Clock> Session<H, C> {
     /// Starts holding the mouse.
     pub fn begin(hook: H, clock: C, cfg: &MouseGuard) -> Result<Self, String> {
-        let since = clock.now();
-        let live = hook.start(Filter::new(cfg, since, Duration::ZERO))?;
+        let (since, tally) = (clock.now(), Arc::new(Tally::default()));
+        let filter = Filter::new(cfg, since, Duration::ZERO, Arc::clone(&tally));
+        let live = hook.start(filter)?;
         say!("{}", cfg.line());
         Ok(Self {
             hook,
@@ -76,7 +70,8 @@ impl<H: Hook, C: Clock> Session<H, C> {
             live: Some(live),
             early: None,
             idle: false,
-            seen: Counts::default(),
+            tally,
+            watch: Watch::new(cfg),
         })
     }
 
@@ -85,11 +80,26 @@ impl<H: Hook, C: Clock> Session<H, C> {
         if self.early.is_none() {
             self.early = self.live.as_ref().and_then(Live::ended);
         }
+        self.check_alive();
         self.early.map_or(Ok(()), |e| Err(e.stopped()))
+    }
+
+    /// kx-gates' own events its hooks counted so far; read before sending clicks, for `sent`.
+    pub fn own(&self) -> u64 {
+        self.tally.passed()
+    }
+
+    /// Notes clicks kx-gates sent after its hooks had counted `base` own events; while a hook holds the mouse, it
+    /// must count one within `alive_ms`.
+    pub fn sent(&mut self, base: u64) {
+        if self.live.is_some() && self.early.is_none() {
+            self.watch.sent(self.clock.now(), base);
+        }
     }
 
     /// Lets go while an admin prompt is up.
     pub fn pause(&mut self) {
+        self.check_alive();
         self.unhook(End::Prompt);
     }
 
@@ -100,7 +110,7 @@ impl<H: Hook, C: Clock> Session<H, C> {
             return;
         }
         self.since = self.clock.now();
-        let mut filter = Filter::new(&self.cfg, self.since, self.used);
+        let mut filter = Filter::new(&self.cfg, self.since, self.used, Arc::clone(&self.tally));
         if let Some(end) = filter.tick(self.since) {
             say!("{}", end.line());
             self.early = Some(end);
@@ -120,28 +130,39 @@ impl<H: Hook, C: Clock> Session<H, C> {
 
     /// Lets go for the rest of the run, as the gate's pointer work is over.
     pub fn release(&mut self) {
+        self.check_alive();
         self.unhook(End::Idle);
         self.idle = true;
     }
 
     /// Lets go as the gate ends, `ok` or broken off; why the guard ended, an early end first, and what it counted.
     pub fn finish(mut self, ok: bool) -> Outcome {
+        self.check_alive();
         let why = if ok { End::Done } else { End::Error };
         self.unhook(why);
         Outcome {
             end: self.early.unwrap_or(why),
-            counts: self.seen,
+            counts: self.tally.counts(),
         }
     }
 
-    /// Removes a running hook and adds its time to `used` and its counts to `seen`, logging `why` unless it had let
-    /// go by itself (it logged that itself).
+    /// Lets go as lost when the running hook counted none of kx-gates' own clicks within `alive_ms`, as Windows
+    /// switched it off.
+    fn check_alive(&mut self) {
+        let held = self.live.is_some() && self.early.is_none();
+        if held && self.watch.lost(self.clock.now(), self.tally.passed()) {
+            self.unhook(End::Lost);
+            self.early = self.early.or(Some(End::Lost));
+        }
+    }
+
+    /// Removes a running hook and adds its time to `used`, logging `why` unless it had let go by itself (it logged
+    /// that itself). Clicks it has not counted yet are no longer judged.
     fn unhook(&mut self, why: End) {
         if let Some(live) = self.live.take() {
             self.used += self.clock.now().saturating_since(self.since);
-            let (own, counts) = live.stop();
-            self.seen.add(counts);
-            match own {
+            self.watch.clear();
+            match live.stop() {
                 Some(own) => self.early = self.early.or(Some(own)),
                 None => say!("{}", why.line()),
             }
@@ -157,135 +178,6 @@ impl<H: Hook, C: Clock> Drop for Session<H, C> {
             End::Error
         };
         self.unhook(why);
-    }
-}
-
-/// A session as this process's slot holds it, whatever its hook and clock.
-pub trait Held: Send {
-    /// See `Session::refusal`.
-    fn refusal(&mut self) -> Result<(), String>;
-    /// See `Session::pause`.
-    fn pause(&mut self);
-    /// See `Session::resume`.
-    fn resume(&mut self);
-    /// See `Session::release`.
-    fn release(&mut self);
-    /// See `Session::finish`.
-    fn finish(self: Box<Self>, ok: bool) -> Outcome;
-}
-
-impl<H, C> Held for Session<H, C>
-where
-    H: Hook + Send,
-    H::Live: Send,
-    C: Clock,
-{
-    fn refusal(&mut self) -> Result<(), String> {
-        Session::refusal(self)
-    }
-    fn pause(&mut self) {
-        Session::pause(self);
-    }
-    fn resume(&mut self) {
-        Session::resume(self);
-    }
-    fn release(&mut self) {
-        Session::release(self);
-    }
-    fn finish(self: Box<Self>, ok: bool) -> Outcome {
-        Session::finish(*self, ok)
-    }
-}
-
-/// This process's guard, which `keys`, `admin` and the presses reach without a run context.
-static RUN: Mutex<Option<Box<dyn Held>>> = Mutex::new(None);
-
-/// This process's guard; a poisoned lock still holds it, so it can always let go.
-fn slot() -> MutexGuard<'static, Option<Box<dyn Held>>> {
-    RUN.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-/// This run's hold on the mouse; dropping it lets go.
-pub struct Scope {
-    on: bool,
-}
-
-/// Puts `session` in this process's slot until the returned scope ends.
-pub(super) fn hold(session: Box<dyn Held>) -> Scope {
-    *slot() = Some(session);
-    Scope { on: true }
-}
-
-/// Starts the guard for a gate that `held` says holds the mouse, when `cfg` has the guard on.
-pub fn begin(cfg: &MouseGuard, held: bool) -> Result<Scope, String> {
-    if !(cfg.on && held) {
-        return Ok(Scope { on: false });
-    }
-    let clock = QpcClock::new().map_err(|e| format!("mouse guard: {e}"))?;
-    Ok(hold(Box::new(Session::begin(
-        WinHook::new(clock),
-        clock,
-        cfg,
-    )?)))
-}
-
-impl Scope {
-    /// Lets go as the gate ends, `ok` or broken off; how the guard ended and what it counted, when it held the mouse.
-    pub fn finish(mut self, ok: bool) -> Option<Outcome> {
-        if !std::mem::replace(&mut self.on, false) {
-            return None;
-        }
-        let session = slot().take();
-        session.map(|s| s.finish(ok))
-    }
-}
-
-impl Drop for Scope {
-    fn drop(&mut self) {
-        if self.on {
-            let session = slot().take();
-            drop(session);
-        }
-    }
-}
-
-/// Refuses new input once the guard let go early: the owner, the time limit, or a guard that could not come back.
-pub fn allowed() -> Result<(), String> {
-    slot().as_mut().map_or(Ok(()), |s| s.refusal())
-}
-
-/// Lets go of the mouse for the rest of the run, once the gate's pointer work is over.
-pub fn let_go() {
-    if let Some(s) = slot().as_mut() {
-        s.release();
-    }
-}
-
-/// Runs `prompt`, which may show Windows' admin prompt, with the mouse let go; the guard comes back after it. A gate
-/// the guard stopped shows no prompt.
-pub fn around_prompt<T>(prompt: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    allowed()?;
-    if let Some(s) = slot().as_mut() {
-        s.pause();
-    }
-    let out = prompt();
-    if let Some(s) = slot().as_mut() {
-        s.resume();
-    }
-    out
-}
-
-/// Adds how the guard ended and what it counted to result line `v`; an end that stops the gate also fails it.
-pub fn mark(v: &mut Value, outcome: Option<Outcome>) {
-    let (Some(Outcome { end, counts }), Some(fields)) = (outcome, v.as_object_mut()) else {
-        return;
-    };
-    let guard = json!({
-        "ended": end.name(), "why": end.why(), "dropped": counts.dropped, "passed": counts.passed,
-    });
-    fields.insert(FIELD.to_string(), guard);
-    if end.stops() {
-        fields.insert(PASS.to_string(), json!(false));
     }
 }
 

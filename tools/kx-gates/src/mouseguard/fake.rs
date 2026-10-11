@@ -7,8 +7,9 @@ use std::time::Duration;
 use kx_module_api::{Clock, Mono};
 use kx_platform_fake::FakeClock;
 
-use super::run::{self, Hook, Live, Scope, Session};
-use super::{Counts, End, Filter, Kind, LEFT, MouseGuard};
+use super::run::{Hook, Live, Session};
+use super::slot::{self, Scope};
+use super::{End, Filter, Kind, LEFT, MouseGuard};
 
 /// Serialises the tests that put a session in this process's slot.
 static SLOT_TESTS: Mutex<()> = Mutex::new(());
@@ -104,14 +105,10 @@ impl Live for Fake {
         self.seen().filter.as_mut()?.tick(now)
     }
 
-    fn stop(self) -> (Option<End>, Counts) {
+    fn stop(self) -> Option<End> {
         let own = self.ended();
-        let mut seen = self.seen();
-        seen.stops += 1;
-        (
-            own,
-            seen.filter.as_ref().map(Filter::counts).unwrap_or_default(),
-        )
+        self.seen().stops += 1;
+        own
     }
 }
 
@@ -134,5 +131,5 @@ pub fn slot_lock() -> MutexGuard<'static, ()> {
 
 /// Holds a session over `fake` in this process's slot until the scope ends; take `slot_lock` first.
 pub fn held(fake: &Fake) -> Scope {
-    run::hold(Box::new(begun(fake)))
+    slot::hold(Box::new(begun(fake)))
 }

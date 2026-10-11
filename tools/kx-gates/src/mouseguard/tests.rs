@@ -25,15 +25,20 @@ fn the_shipped_guard_is_on_with_the_owners_limit_and_one_click_escape() {
         (360_000, 1, 3_000),
         "owner, 2026-10-11"
     );
+    assert!(
+        g.alive_ms >= 2_000,
+        "twice Windows' longest wait for a low-level hook, 1 s"
+    );
     assert_eq!(g.check(), Ok(()));
 }
 
 #[test]
-fn a_zero_limit_no_escape_click_or_a_zero_window_is_refused() {
-    let bad: [fn(&mut MouseGuard); 3] = [
+fn a_zero_limit_no_escape_click_a_zero_window_or_a_zero_alive_time_is_refused() {
+    let bad: [fn(&mut MouseGuard); 4] = [
         |g| g.limit_ms = 0,
         |g| g.escape_clicks = 0,
         |g| g.escape_window_ms = 0,
+        |g| g.alive_ms = 0,
     ];
     for (i, f) in bad.iter().enumerate() {
         let mut g = shipped();

@@ -1,5 +1,6 @@
 //! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out or the owner clicks. `filter` decides, `hook` applies it and `run` runs it.
+//! ends, the time limit runs out, the owner clicks or Windows switches its hook off. `filter` decides, `hook` applies
+//! it, `run` runs it and `slot` holds this process's run.
 #![cfg(windows)]
 
 mod counts;
@@ -8,10 +9,13 @@ pub mod fake;
 mod filter;
 mod hook;
 mod run;
+mod slot;
+mod watch;
 
-pub use counts::Counts;
+pub use counts::{Counts, Tally};
 pub use filter::Filter;
-pub use run::{allowed, around_prompt, begin, let_go, mark};
+pub use slot::{allowed, around_prompt, begin, let_go, mark, own_input};
+use watch::Watch;
 
 use std::time::Duration;
 
@@ -54,14 +58,17 @@ pub struct MouseGuard {
     pub escape_clicks: u8,
     /// How close together those presses come, when more than one is set.
     pub escape_window_ms: u64,
+    /// How soon the hook must count kx-gates' own clicks; past it, Windows switched the hook off.
+    pub alive_ms: u64,
 }
 
 impl MouseGuard {
-    /// Refuses a zero limit, no escape click, or a zero window.
+    /// Refuses a zero limit, no escape click, a zero window or a zero alive time.
     pub fn check(&self) -> Result<(), String> {
-        if self.limit_ms == 0 || self.escape_clicks == 0 || self.escape_window_ms == 0 {
+        let times = [self.limit_ms, self.escape_window_ms, self.alive_ms];
+        if self.escape_clicks == 0 || times.contains(&0) {
             return Err(
-                "mouse_guard.limit_ms, escape_clicks and escape_window_ms must be above 0"
+                "mouse_guard.limit_ms, escape_clicks, escape_window_ms and alive_ms must be above 0"
                     .to_string(),
             );
         }
@@ -107,7 +114,8 @@ pub enum End {
     Owner,
     /// The time limit ran out.
     Limit,
-    /// The guard lost its hook: it could not come back after an admin prompt, or its thread could not wait.
+    /// The guard lost its hook: Windows switched it off, it could not come back after an admin prompt, or its thread
+    /// could not wait.
     Lost,
 }
 
@@ -136,11 +144,13 @@ impl End {
             Self::Idle => "the gate's pointer work is over",
             Self::Owner => "the owner clicked a mouse button, so the gate stops and does not pass",
             Self::Limit => "its time limit ran out, so the gate stops and does not pass",
-            Self::Lost => "it lost its hook, so the gate stops and does not pass",
+            Self::Lost => {
+                "Windows switched the mouse guard off or it could not come back, so the gate stops and does not pass"
+            }
         }
     }
 
-    /// True when the gate must stop: the owner, the limit, or a guard that could not come back.
+    /// True when the gate must stop: the owner, the limit, or a lost hook.
     pub fn stops(self) -> bool {
         matches!(self, Self::Owner | Self::Limit | Self::Lost)
     }
