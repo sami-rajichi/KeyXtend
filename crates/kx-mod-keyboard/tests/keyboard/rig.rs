@@ -22,6 +22,7 @@ pub const STATE: FaceReply = FaceReply {
     board: false,
     state: true,
     notice: None,
+    repeated: false,
 };
 
 /// A redraw of the board alone.
@@ -29,6 +30,15 @@ pub const BOARD: FaceReply = FaceReply {
     board: true,
     state: false,
     notice: None,
+    repeated: false,
+};
+
+/// A held key's repeat went out, with nothing to redraw.
+pub const REPEATED: FaceReply = FaceReply {
+    board: false,
+    state: false,
+    notice: None,
+    repeated: true,
 };
 
 /// The started module, its host and fakes, and the face it provides.

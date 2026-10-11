@@ -18,6 +18,8 @@ pub struct Redraw {
     pub board: bool,
     /// Read `state_json` again.
     pub state: bool,
+    /// A held key's repeat went out, so sliding off the key ends the press.
+    pub repeated: bool,
 }
 
 /// Which step of a resize the pointer is at.
@@ -76,6 +78,7 @@ impl Hub {
                 Redraw {
                     board: reply.board,
                     state: reply.state,
+                    repeated: reply.repeated,
                 }
             }
             Err(e) => {

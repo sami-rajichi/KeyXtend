@@ -21,6 +21,7 @@ const STATE: FaceReply = FaceReply {
     board: false,
     state: true,
     notice: None,
+    repeated: false,
 };
 
 /// The keyboard as the UI sees it: the typing state, size, place and language key behind one lock.
@@ -92,11 +93,19 @@ impl Face {
         Ok(self.lock().press(id))
     }
 
-    /// The hold timer: a due repeat answers as a tap does, and a burst that ends redraws its latches.
+    /// The hold timer: a repeat that went out says so and redraws only when its burst ended, as the latches stay
+    /// latched until then; any other due repeat answers as a tap does.
     fn tick(&self) -> Result<FaceReply, FaceError> {
         let Some(went) = self.lock().tick() else {
             return Ok(FaceReply::default());
         };
+        if matches!(went.tapped, Ok(Tapped::Done)) {
+            return Ok(FaceReply {
+                state: went.ended,
+                repeated: true,
+                ..FaceReply::default()
+            });
+        }
         self.reply(went)
     }
 

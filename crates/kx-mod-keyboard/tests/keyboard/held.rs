@@ -7,7 +7,7 @@
 )]
 
 use crate::host::GOLDEN;
-use crate::rig::{Rig, STATE};
+use crate::rig::{REPEATED, Rig, STATE};
 use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{FaceReply, LayoutTable, Scan, TextRoute};
@@ -54,10 +54,10 @@ fn a_hold_types_at_the_delay_then_once_a_beat_and_its_let_go_adds_none() {
     let r = Rig::new(&GOLDEN, None);
     let (delay, every) = times();
     r.press(A).unwrap();
-    assert_eq!(r.tick_in(delay), STATE);
+    assert_eq!(r.tick_in(delay), REPEATED, "it says so and redraws nothing");
     assert_eq!(r.tick_in(every / 2), FaceReply::default(), "between beats");
-    r.tick_in(every / 2);
-    r.tick_in(every);
+    assert_eq!(r.tick_in(every / 2), REPEATED);
+    assert_eq!(r.tick_in(every), REPEATED);
     r.let_go(A).unwrap();
     r.tick_in(every * 3);
     assert_eq!(
@@ -70,7 +70,12 @@ fn a_hold_types_at_the_delay_then_once_a_beat_and_its_let_go_adds_none() {
 fn with_shift_latched_each_repeat_is_capital_and_shift_lets_go_after_the_burst() {
     let r = Rig::new(&GOLDEN, None);
     r.tap("shift").unwrap();
-    hold(&r, A, 2);
+    hold(&r, A, 1);
+    assert_eq!(
+        r.tick_in(times().1),
+        REPEATED,
+        "Shift stays lit, so nothing redraws"
+    );
     assert_eq!(r.state()["keys"]["shift"]["on"], true, "down for the burst");
     assert_eq!(r.let_go(A), Ok(STATE));
     assert_eq!(r.state()["keys"]["shift"]["on"], false, "let go after it");

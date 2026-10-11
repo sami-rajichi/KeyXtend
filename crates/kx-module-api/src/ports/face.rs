@@ -128,6 +128,8 @@ pub struct FaceReply {
     pub state: bool,
     /// A notice to show, by translation key, such as a send or a language switch that failed.
     pub notice: Option<&'static str>,
+    /// A held key's repeat went out on this tick (spec §4.6), which a redraw alone does not say.
+    pub repeated: bool,
 }
 
 /// Why the keyboard could not do an action; a send or switch that failed is a notice in the reply instead.

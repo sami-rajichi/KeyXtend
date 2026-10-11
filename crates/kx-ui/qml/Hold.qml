@@ -11,7 +11,7 @@ Timer {
     property string held: ""
     // The delay has passed, so the beat keeps the pace.
     property bool paced: false
-    // A beat of this press found a repeat due, so sliding off ends the press.
+    // A repeat of this press went out, so sliding off ends the press.
     property bool repeated: false
     // The key the pointer slid off before any repeat; coming back onto it while still down holds it again.
     property string lost: ""
@@ -24,7 +24,7 @@ Timer {
     onTriggered: {
         paced = true;
         const answer = win.keyboard.tick();
-        repeated = repeated || !!JSON.parse(answer).state;
+        repeated = repeated || !!JSON.parse(answer).repeated;
         win.redraw(answer);
     }
     onLiveChanged: if (!live) leave()

@@ -79,13 +79,13 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 `lang()` names the language of the layout shown (`LangLabel::iso`), which the UI's keyboard texts follow (ADR-0020); it only reads, so any thread may ask.
 
-`act(action)` says what to redraw in a `FaceReply`, with a notice key for the banner above the keyboard:
+`act(action)` says what to redraw in a `FaceReply`, with a notice key for the banner above the keyboard and, for a tick, whether a repeat went out (`repeated`):
 
 | Action | Does | Reply |
 |---|---|---|
 | `tap {id, back}` | Types, latches, or clicks the language key; a burst left open ends first, so its latches never ride on the click | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
 | `press {id}` | The pointer went down on a repeating key (spec §4.6). It may repeat when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it and it is not a dead key (`Typing::repeats`); else it types once, on let-go | State only when a burst left over ended. `UnknownKey` off the board, which changes nothing. |
-| `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | As a tap: state, a stale refresh, or `notice.keys-not-sent` once. Nothing when no repeat is due. |
+| `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | `repeated` when the repeat went out, with state only when its burst ended, as the latches stay latched until then. Else as a tap: a stale refresh, or `notice.keys-not-sent` once. Nothing when no repeat is due. |
 | `let_go {id}` | The pointer let go on the key: a click types once as `tap`; after a repeat nothing more types, and the burst's latches let go (`Typing::release`) | As `tap` for a click; state when a burst ended. `UnknownKey` off the board, which changes nothing. |
 | `leave` | The pointer left the held key, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed. |

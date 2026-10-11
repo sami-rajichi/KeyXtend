@@ -1,6 +1,5 @@
 //! The keyboard side: the face's JSON and actions, redraws, the guard, the window's shape and the pointer.
 
-use crate::logs::warnings_of;
 use crate::{Rig, main_screen};
 use kx_module_api::keys;
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyId, Point, Rect};
@@ -25,18 +24,20 @@ fn the_face_draws_and_says_what_to_redraw() {
     assert_eq!(rig.hub.state_json(), r#"{"state":1}"#);
     face.answer(Ok(FaceReply {
         board: true,
-        state: false,
-        notice: None,
+        ..FaceReply::default()
     }));
     let redraw = rig.hub.act(FaceAction::Bigger);
     assert_eq!(
         redraw,
         Redraw {
             board: true,
-            state: false
+            ..Redraw::default()
         }
     );
-    assert_eq!(redraw.to_json(), r#"{"board":true,"state":false}"#);
+    assert_eq!(
+        redraw.to_json(),
+        r#"{"board":true,"state":false,"repeated":false}"#
+    );
     assert_eq!(face.acts(), [FaceAction::Bigger]);
 }
 
@@ -44,9 +45,9 @@ fn the_face_draws_and_says_what_to_redraw() {
 fn a_notice_in_the_reply_goes_to_the_banner() {
     let (rig, face, _host) = Rig::with_face();
     let reply = FaceReply {
-        board: false,
         state: true,
         notice: Some(keys::KEYS_NOT_SENT),
+        ..FaceReply::default()
     };
     face.answer(Ok(reply));
     let id = KeyId::new("a");
@@ -55,27 +56,6 @@ fn a_notice_in_the_reply_goes_to_the_banner() {
     let shown = rig.hub.take_notices();
     assert_eq!(shown.len(), 1);
     assert!(!shown[0].retry);
-}
-
-#[test]
-fn a_held_keys_failed_repeat_logs_one_warning_with_no_key() {
-    let (rig, face, _host) = Rig::with_face();
-    face.answer(Ok(FaceReply {
-        notice: Some(keys::KEYS_NOT_SENT),
-        ..FaceReply::default()
-    }));
-    let warned = warnings_of(|| {
-        rig.hub.act(FaceAction::Tick);
-    });
-    assert_eq!(warned, ["a held key's repeat was not sent"]);
-    let tap = FaceAction::Tap {
-        id: KeyId::new("a"),
-        back: false,
-    };
-    let warned = warnings_of(|| {
-        rig.hub.act(tap);
-    });
-    assert!(warned.is_empty(), "a click's banner is enough");
 }
 
 #[test]

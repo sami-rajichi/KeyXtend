@@ -58,7 +58,7 @@ impl Inner {
         let reply = FaceReply {
             board,
             state: self.placer.at() != Some(to),
-            notice: None,
+            ..FaceReply::default()
         };
         match saved {
             Ok(()) => reply,
@@ -104,7 +104,7 @@ impl Inner {
         let redraw = |board: bool| FaceReply {
             board: board || refit,
             state,
-            notice: None,
+            ..FaceReply::default()
         };
         changed.map(redraw).or_else(|e| match e {
             SizeError::NoPreset(index) => Err(FaceError::NoChoice(index)),

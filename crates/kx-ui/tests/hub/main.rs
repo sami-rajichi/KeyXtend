@@ -11,6 +11,7 @@ mod app;
 mod board;
 mod face;
 mod fonts;
+mod held;
 mod logs;
 mod look;
 mod memory;

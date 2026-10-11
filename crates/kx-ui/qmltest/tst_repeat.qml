@@ -93,13 +93,40 @@ Item {
             const win = make();
             const key = keyed(win, q);
             mousePress(key);
-            win.keyboard.reply = { board: false, state: true };
+            win.keyboard.reply = { board: false, state: false, repeated: true };
             win.hold.triggered();
             slideOff(win, key);
             mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
             verify(!win.hold.running, "no new hold");
             mouseRelease(key);
             compare(sent(win), ["press " + q, "tick", "leave"], "coming back types nothing");
+            win.visible = false;
+        }
+
+        function test_a_beat_that_only_redrew_leaves_the_key_free_to_come_back() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            win.keyboard.reply = { board: false, state: true, repeated: false };
+            const shown = win.st;
+            win.hold.triggered();
+            verify(win.st !== shown, "the state is read again");
+            slideOff(win, key);
+            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
+            compare(sent(win), ["press " + q, "tick", "leave", "press " + q], "nothing typed, so it holds again");
+            mouseRelease(key);
+            win.visible = false;
+        }
+
+        function test_a_beat_that_typed_reads_no_state() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            win.keyboard.reply = { board: false, state: false, repeated: true };
+            const shown = win.st;
+            win.hold.triggered();
+            verify(win.st === shown, "a plain repeat redraws nothing");
+            mouseRelease(key);
             win.visible = false;
         }
 
