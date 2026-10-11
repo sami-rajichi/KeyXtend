@@ -98,6 +98,32 @@ fn a_reading_that_fails_ends_the_churn_with_its_own_error() {
 }
 
 #[test]
+fn a_round_that_fails_mid_churn_keeps_the_readings_so_far_in_its_error_in_mb() {
+    let cases = [
+        (1, "98.0/138.0"),
+        (3, "98.0/138.0, 99.0/139.0, 100.0/140.0"),
+    ];
+    for (at, so_far) in cases {
+        let done = Cell::new(0);
+        let round = || {
+            done.set(done.get() + 1);
+            match done.get() {
+                r if r == at => Err("the theme cycle broke".to_string()),
+                _ => Ok(()),
+            }
+        };
+        // Each reading grows 1 MB a round from a little over a whole MB, so the error shows it rounded.
+        let read = || {
+            let r = f64::from(done.get());
+            Ok(mem(98.04 + r, 138.04 + r))
+        };
+        let e = readings(5, round, read).expect_err("a round failed");
+        assert!(e.starts_with("the theme cycle broke"), "{e}");
+        assert!(e.contains("MB") && e.ends_with(so_far), "{e}");
+    }
+}
+
+#[test]
 fn only_before_and_after_count_so_a_spike_that_ends_flat_passes_and_a_steady_climb_fails() {
     let g = shipped();
     let (before, over) = (mem(98.0, 138.0), g.churn_growth_mb + 1.0);

@@ -15,6 +15,9 @@ use crate::mouse;
 use crate::proc::{Memory, Process};
 use crate::win::sleep_ms;
 
+/// Decimals of each MB reading in a round's error: a tenth of an MB, finer than any growth budget.
+const MB_DECIMALS: usize = 1;
+
 /// What the churn did, and private memory around its measured rounds.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Churn {
@@ -98,7 +101,22 @@ pub fn check(g: &G8) -> Result<(), String> {
     }
 }
 
-/// Memory from `read` before `n` rounds of `round` and after each one, in order; the first error ends it.
+/// Round error `e` with the readings taken so far, `before` and then `each`, in MB, so a broken churn still shows them.
+fn so_far(e: &str, before: Memory, each: &[Memory]) -> String {
+    let mb = |m: &Memory| {
+        let (w, c) = (m.working_mb, m.commit_mb);
+        format!("{w:.MB_DECIMALS$}/{c:.MB_DECIMALS$}")
+    };
+    let taken = std::iter::once(&before)
+        .chain(each)
+        .map(mb)
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{e}; working/commit MB before the rounds, then after each: {taken}")
+}
+
+/// Memory from `read` before `n` rounds of `round` and after each one, in order; the first error ends it, and a
+/// round's error lists the readings taken so far.
 fn readings(
     n: usize,
     mut round: impl FnMut() -> Result<(), String>,
@@ -107,7 +125,7 @@ fn readings(
     let before = read()?;
     let mut each = Vec::with_capacity(n);
     for _ in 0..n {
-        round()?;
+        round().map_err(|e| so_far(&e, before, &each))?;
         each.push(read()?);
     }
     Ok((before, each))
