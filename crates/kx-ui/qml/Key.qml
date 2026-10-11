@@ -16,14 +16,12 @@ Item {
     required property var res
     required property real s
 
-    // A click; `back` is the language key's left part.
+    // A click, at the press (ADR-0024); `back` is the language key's left part.
     signal hit(bool back)
-    // A key that repeats while held (spec §4.6) went down, came up over itself, lost the pointer, or got it back while
-    // still down.
+    // A key that repeats while held (spec §4.6) went down, came up wherever the pointer is, or lost its press to Qt.
     signal held
     signal letGo
-    signal slid
-    signal reentered
+    signal lost
     // The pointer came onto a key with a tip (the tip) or left it (empty).
     signal tip(string name, Item at)
 
@@ -32,7 +30,7 @@ Item {
     readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
     readonly property bool dim: !!kv.dim
-    // It repeats while held, so the pointer's press and release drive it instead of a click.
+    // It repeats while held, so its press holds it and its let-go ends the hold.
     readonly property bool repeats: !!kv.repeat && !dim
     // This press holds the key instead of clicking it, as `repeats` said when the pointer went down.
     property bool holds: false
@@ -104,6 +102,17 @@ Item {
         const [group, id] = path ? path.split(".") : [];
         const set = group ? lk.icons[group] : null;
         return set && set[id] ? set[id] : "";
+    }
+    // The pointer went down on it at `at`: a repeating key holds, any other clicks, the language key on the part
+    // pressed; a dimmed key does nothing.
+    function act(at) {
+        if (dim)
+            return;
+        holds = repeats;
+        if (holds)
+            held();
+        else
+            hit(kv.kind === "lang" && at.x < width * lk.shape.lang.back_share);
     }
 
     Behavior on fillColour {
@@ -243,10 +252,12 @@ Item {
         }
     }
 
-    MouseArea {
+    // It acts at the press; where the pointer goes after changes nothing (ADR-0024).
+    Act {
         id: area
         anchors.fill: parent
         hoverEnabled: true
+        atPress: true
         onContainsMouseChanged: {
             const says = key.note ? key.res.noteTip(key.name, key.note) : key.icon ? key.name : "";
             if (containsMouse && says)
@@ -254,23 +265,9 @@ Item {
             else if (!containsMouse && key.tipped)
                 key.tip("", key);
             key.tipped = containsMouse && !!says;
-            if (pressed && key.holds) {
-                if (containsMouse)
-                    key.reentered();
-                else
-                    key.slid();
-            }
         }
-        onPressed: {
-            key.holds = key.repeats;
-            if (key.holds)
-                key.held();
-        }
-        onReleased: if (key.holds && containsMouse) key.letGo()
-        onCanceled: if (key.holds) key.slid()
-        onClicked: mouse => {
-            if (!key.dim && !key.holds)
-                key.hit(key.kv.kind === "lang" && mouse.x < width * key.lk.shape.lang.back_share);
-        }
+        onActed: at => key.act(at)
+        onReleased: if (key.holds) key.letGo()
+        onCanceled: if (key.holds) key.lost()
     }
 }

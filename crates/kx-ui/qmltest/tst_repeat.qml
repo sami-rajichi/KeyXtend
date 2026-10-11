@@ -1,5 +1,5 @@
-// A held key (spec §4.6) over stand-in bridges: a repeating key sends its press and let-go instead of a click, sliding
-// off or hiding sends leave, and the one hold timer runs only while a key is held; the test drives its ticks.
+// A held key (spec §4.6) over stand-in bridges: a repeating key sends its press and let-go instead of a click, Qt's
+// cancel or hiding sends leave, and the one hold timer runs only while a key is held; the test drives its ticks.
 import QtQuick
 import QtTest
 import "../qml"
@@ -20,9 +20,8 @@ Item {
         name: "repeat"
         when: windowShown
 
-        // The character keys at US "q" and "w", side by side.
+        // The character key at US "q".
         readonly property string q: "c-0x0010"
-        readonly property string w: "c-0x0011"
 
         // Any warning fails the test, so the run stays clean.
         function init() {
@@ -46,13 +45,6 @@ Item {
         function sent(win) {
             return win.keyboard.calls.filter(c => /^(tap|press|letGo|leave|tick|panelKey)\b/.test(c));
         }
-        // Slides the pointer, still down, from `key` onto the next key; returns that spot in `key`'s units.
-        function slideOff(win, key) {
-            const next = keyed(win, w);
-            const off = next.mapToItem(key, next.width / 2, next.height / 2);
-            mouseMove(key, off.x, off.y, -1, Qt.LeftButton);
-            return off;
-        }
 
         function test_a_click_on_a_repeating_key_sends_its_press_then_its_let_go_once() {
             const win = make();
@@ -64,57 +56,14 @@ Item {
             win.visible = false;
         }
 
-        function test_sliding_off_the_key_sends_leave_and_a_let_go_outside_sends_nothing() {
+        function test_a_beat_that_redrew_reads_the_state_again() {
             const win = make();
-            const key = keyed(win, q);
-            mousePress(key);
-            const off = slideOff(win, key);
-            compare(sent(win), ["press " + q, "leave"]);
-            mouseRelease(key, off.x, off.y);
-            compare(sent(win), ["press " + q, "leave"], "nothing more, and no click on the other key");
-            win.visible = false;
-        }
-
-        function test_sliding_off_and_back_before_a_repeat_holds_again_and_a_release_types_once() {
-            const win = make();
-            const key = keyed(win, q);
-            mousePress(key);
-            slideOff(win, key);
-            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
-            compare(sent(win), ["press " + q, "leave", "press " + q], "back on the key, it holds again");
-            verify(win.hold.running);
-            compare(win.hold.interval, Face.board.repeat_delay_ms, "after a fresh delay");
-            mouseRelease(key);
-            compare(sent(win), ["press " + q, "leave", "press " + q, "letGo " + q], "so it types once");
-            win.visible = false;
-        }
-
-        function test_once_it_repeated_sliding_off_ends_the_press() {
-            const win = make();
-            const key = keyed(win, q);
-            mousePress(key);
-            win.keyboard.reply = { board: false, state: false, repeated: true };
-            win.hold.triggered();
-            slideOff(win, key);
-            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
-            verify(!win.hold.running, "no new hold");
-            mouseRelease(key);
-            compare(sent(win), ["press " + q, "tick", "leave"], "coming back types nothing");
-            win.visible = false;
-        }
-
-        function test_a_beat_that_only_redrew_leaves_the_key_free_to_come_back() {
-            const win = make();
-            const key = keyed(win, q);
-            mousePress(key);
+            mousePress(keyed(win, q));
             win.keyboard.reply = { board: false, state: true, repeated: false };
             const shown = win.st;
             win.hold.triggered();
             verify(win.st !== shown, "the state is read again");
-            slideOff(win, key);
-            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
-            compare(sent(win), ["press " + q, "tick", "leave", "press " + q], "nothing typed, so it holds again");
-            mouseRelease(key);
+            mouseRelease(keyed(win, q));
             win.visible = false;
         }
 
@@ -142,6 +91,21 @@ Item {
             waitForRendering(list.contentItem);
             mouseRelease(down);
             compare(sent(win), ["press down", "letGo down"]);
+            win.visible = false;
+        }
+
+        function test_while_the_list_is_open_a_key_that_drives_it_acts_on_it_at_the_press() {
+            const win = make();
+            win.keyboard.state = Face.states.list;
+            win.restate();
+            const panel = [...win.data].find(o => o.item && o.item.win === win).item;
+            tryVerify(() => panel.visible, 2000, "the list shows");
+            const down = keyed(win, "down");
+            mousePress(down);
+            compare(sent(win), ["panelKey down"], "before the let-go");
+            verify(!win.hold.running, "it never holds");
+            mouseRelease(down);
+            compare(sent(win), ["panelKey down"], "the let-go adds nothing");
             win.visible = false;
         }
 
@@ -198,6 +162,13 @@ Item {
             keyed(win, q).Accessible.pressAction();
             compare(sent(win), ["tap " + q + " false"]);
             verify(!win.hold.running);
+            win.visible = false;
+        }
+
+        function test_a_readers_toggle_on_a_latch_still_clicks() {
+            const win = make();
+            keyed(win, "shift").Accessible.toggleAction();
+            compare(sent(win), ["tap shift false"]);
             win.visible = false;
         }
 

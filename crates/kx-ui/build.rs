@@ -68,6 +68,7 @@ mod qt {
         "qml/TrayMenu.qml",
         "qml/TrayPicture.qml",
         "qml/PressWatch.qml",
+        "qml/Act.qml",
     ];
     /// QML files only debug builds hold: the memory check's churn.
     const DEBUG_QML: &[&str] = &["qml/Churn.qml"];

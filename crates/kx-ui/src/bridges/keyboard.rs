@@ -42,7 +42,7 @@ pub mod qobject {
         #[qinvokable]
         fn tap(&self, id: &QString, back: bool) -> QString;
 
-        /// Key `id` goes down; one that repeats starts the hold.
+        /// Key `id` goes down: it types now, and one that repeats starts the hold.
         #[qinvokable]
         fn press(&self, id: &QString) -> QString;
 
@@ -50,11 +50,11 @@ pub mod qobject {
         #[qinvokable]
         fn tick(&self) -> QString;
 
-        /// Key `id` comes up over itself: a click unless it already repeated.
+        /// Key `id` comes up, wherever the pointer is: its hold ends.
         #[qinvokable]
         fn let_go(&self, id: &QString) -> QString;
 
-        /// The pointer left the held key, or the window hid: the hold ends with nothing typed.
+        /// Qt took the press away, or the window hid: the hold ends with nothing more typed.
         #[qinvokable]
         fn leave(&self) -> QString;
 
