@@ -77,6 +77,9 @@ churn_warm_rounds = 5
 churn_rounds = 20
 # Most growth of the working set and of the commit over those rounds, in MB.
 churn_growth_mb = 3.0
+# Growth is the median of the last this-many rounds' readings less the median of the first this-many, so one high
+# reading at either end does not decide it; at most half of churn_rounds.
+churn_median_rounds = 5
 # Keys hovered each round, by board id; each has an icon, so its tip shows (a test checks icons.toml).
 churn_tips = ["bksp", "enter", "shift"]
 # Rest on each key past the running copy's [ui] tip_ms, so its tip has shown, in ms.

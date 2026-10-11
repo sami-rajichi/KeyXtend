@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn memory_that_grew_under_churn_fails_g8() {
         let (g, mut m, o) = sample();
-        m.churn.after.commit_mb += g.churn_growth_mb + 1.0;
+        m.churn.last_median.commit_mb += g.churn_growth_mb + 1.0;
         assert_eq!(
             failed(&parts(&g, Some(420.0), &m, false, &o)),
             ["churn_commit_mb"]

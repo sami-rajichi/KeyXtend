@@ -1,6 +1,6 @@
 //! G8's churn (spec §10, no growth): rounds of key tips, the language list, the bubble and a full theme cycle
-//! (`g8pops`), with private memory read before them and after each one. It runs after `PresentMon`'s capture, so no
-//! frame counts.
+//! (`g8pops`), with private memory read before them and after each one; growth runs from the first rounds' median to
+//! the last rounds'. It runs after `PresentMon`'s capture, so no frame counts.
 #![cfg(windows)]
 
 use serde::Serialize;
@@ -13,6 +13,7 @@ use crate::g8pops::{self, Seen};
 use crate::keymap::Reader;
 use crate::mouse;
 use crate::proc::{Memory, Process};
+use crate::stats::{P50, percentile};
 use crate::win::sleep_ms;
 
 /// Decimals of each MB reading in a round's error: a tenth of an MB, finer than any growth budget.
@@ -25,12 +26,14 @@ pub struct Churn {
     pub rounds: usize,
     /// Memory before the first measured round.
     pub before: Memory,
-    /// Memory after the last one: the last of `per_round`.
-    pub after: Memory,
     /// Unmeasured rounds run first, from `[g8] churn_warm_rounds`.
     pub warm_rounds: usize,
     /// Memory after each measured round, in order, so a steady climb shows apart from one jump.
     pub per_round: Vec<Memory>,
+    /// The median of the first `[g8] churn_median_rounds` readings; `before` when there are none.
+    pub first_median: Memory,
+    /// The median of the last ones, which the growth compares with `first_median`.
+    pub last_median: Memory,
     /// Key hovers in the measured rounds.
     pub hovers: usize,
     /// Hovers that showed a tip.
@@ -48,11 +51,14 @@ pub struct Churn {
 impl Churn {
     /// `g`'s churn read as `before` and `per_round`, with no pop-up counted yet.
     fn measured(g: &G8, before: Memory, per_round: Vec<Memory>) -> Self {
+        let n = g.churn_median_rounds.min(per_round.len());
+        let (first, last) = (&per_round[..n], &per_round[per_round.len() - n..]);
         Self {
             rounds: g.churn_rounds,
             before,
-            after: per_round.last().copied().unwrap_or(before),
             warm_rounds: g.churn_warm_rounds,
+            first_median: median(first).unwrap_or(before),
+            last_median: median(last).unwrap_or(before),
             per_round,
             hovers: 0,
             tips: 0,
@@ -72,21 +78,41 @@ impl Churn {
     }
 }
 
-/// The growth of the working set and of the commit over the measured rounds, each against `[g8] churn_growth_mb`.
+/// The median working set and the median commit of `readings`, each on its own (nearest rank); none when empty.
+fn median(readings: &[Memory]) -> Option<Memory> {
+    let of = |mb: fn(&Memory) -> f64| {
+        let mut all: Vec<f64> = readings.iter().map(mb).collect();
+        all.sort_by(f64::total_cmp);
+        percentile(&all, P50)
+    };
+    Some(Memory {
+        working_mb: of(|m| m.working_mb)?,
+        commit_mb: of(|m| m.commit_mb)?,
+    })
+}
+
+/// The growth of the working set and of the commit, from the first rounds' medians to the last rounds', each against
+/// `[g8] churn_growth_mb`.
 pub fn parts(g: &G8, c: &Churn) -> [Part; 2] {
-    let (b, a, most) = (c.before, c.after, g.churn_growth_mb);
+    let (b, a, most) = (c.first_median, c.last_median, g.churn_growth_mb);
     [
         Part::at_most("churn_working_mb", Some(a.working_mb - b.working_mb), most),
         Part::at_most("churn_commit_mb", Some(a.commit_mb - b.commit_mb), most),
     ]
 }
 
-/// Refuses churn settings that could pass with nothing churned.
+/// Refuses churn settings that could pass with nothing churned, or whose two medians would share rounds.
 pub fn check(g: &G8) -> Result<(), String> {
     let most = g.churn_growth_mb;
     if g.churn_rounds == 0 || !most.is_finite() || most <= 0.0 {
         return Err(
             "g8.churn_rounds and g8.churn_growth_mb must be above 0 and finite".to_string(),
+        );
+    }
+    if g.churn_median_rounds == 0 || g.churn_median_rounds > g.churn_rounds / 2 {
+        return Err(
+            "g8.churn_median_rounds must be above 0 and at most half of g8.churn_rounds"
+                .to_string(),
         );
     }
     if g.churn_tips.is_empty() || g.churn_theme.is_empty() {
@@ -155,10 +181,9 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     })
 }
 
-/// A churn of `g`'s rounds from `before` to `after`, each round read as `after`, in which every pop-up showed, for
-/// tests.
+/// A churn of `g`'s rounds read as `before` and `per_round`, in which every pop-up showed, for tests.
 #[cfg(test)]
-pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
+pub fn whole_of(g: &G8, before: Memory, per_round: Vec<Memory>) -> Churn {
     let hovers = g.churn_rounds * g.churn_tips.len();
     Churn {
         hovers,
@@ -166,8 +191,17 @@ pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
         lists: Some(g.churn_rounds),
         bubbles: g.churn_rounds,
         returns: g.churn_rounds,
-        ..Churn::measured(g, before, vec![after; g.churn_rounds])
+        ..Churn::measured(g, before, per_round)
     }
+}
+
+/// A whole churn of `g`'s rounds whose first half reads `before` and second half `after`, so its medians are those two,
+/// for tests.
+#[cfg(test)]
+pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
+    let half = g.churn_rounds / 2;
+    let each = (0..g.churn_rounds).map(|r| if r < half { before } else { after });
+    whole_of(g, before, each.collect())
 }
 
 #[cfg(test)]

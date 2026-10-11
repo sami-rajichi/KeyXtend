@@ -90,6 +90,8 @@ pub struct G8 {
     pub churn_rounds: usize,
     /// Most growth of the working set and of the commit over those rounds, in MB.
     pub churn_growth_mb: f64,
+    /// Rounds at each end whose median readings the growth compares; at most half of `churn_rounds`.
+    pub churn_median_rounds: usize,
     /// Keys hovered each round, by board id; each has an icon, so its tip shows.
     pub churn_tips: Vec<String>,
     /// Rest on each key past the running copy's `[ui] tip_ms`, so its tip has shown.

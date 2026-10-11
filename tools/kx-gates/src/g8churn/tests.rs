@@ -35,13 +35,16 @@ fn climb(from: Memory, n: usize, step: f64) -> Vec<Memory> {
     (1..=n).map(at).collect()
 }
 
-/// A churn of the shipped rounds read as `per_round`, whose last reading is its `after`.
+/// A churn of the shipped rounds read as `per_round`, in which every pop-up showed.
 fn tracked(before: Memory, per_round: Vec<Memory>) -> Churn {
-    let after = *per_round.last().expect("a round");
-    Churn {
-        per_round,
-        ..churn(before, after)
-    }
+    whole_of(&shipped(), before, per_round)
+}
+
+/// `n` flat readings at `at`, with `high` MB more of both at round `spike`.
+fn flat_but(at: Memory, n: usize, spike: usize, high: f64) -> Vec<Memory> {
+    let mut each = vec![at; n];
+    each[spike] = mem(at.working_mb + high, at.commit_mb + high);
+    each
 }
 
 /// A round that only counts itself in `done`.
@@ -65,7 +68,15 @@ fn a_churn_reads_memory_before_its_rounds_and_after_each_one_and_its_result_list
     let listed = shown["per_round"].as_array().expect("a list");
     assert_eq!(listed.len(), n);
     assert_eq!(listed[0], json!({ "working_mb": 1.0, "commit_mb": 0.0 }));
-    assert_eq!(listed.last(), Some(&shown["after"]), "the last reading");
+    // Five rounds at each end of twenty: rounds 1-5 have the median 3, and rounds 16-20 the median 18.
+    assert_eq!(
+        shown["first_median"],
+        json!({ "working_mb": 3.0, "commit_mb": 0.0 })
+    );
+    assert_eq!(
+        shown["last_median"],
+        json!({ "working_mb": 18.0, "commit_mb": 0.0 })
+    );
 }
 
 #[test]
@@ -78,9 +89,12 @@ fn a_churn_records_its_warm_up_rounds_from_the_settings_beside_its_readings() {
     assert_eq!(shown["warm_rounds"], json!(g.churn_warm_rounds));
     let listed = shown["per_round"].as_array().expect("a list");
     assert_eq!(listed.len(), g.churn_rounds);
-    assert_eq!(c.after, c.per_round[g.churn_rounds - 1], "the last reading");
     let none = Churn::measured(&g, before, vec![]);
-    assert_eq!(none.after, before, "no round");
+    assert_eq!(
+        (none.first_median, none.last_median),
+        (before, before),
+        "no round"
+    );
 }
 
 #[test]
@@ -124,15 +138,36 @@ fn a_round_that_fails_mid_churn_keeps_the_readings_so_far_in_its_error_in_mb() {
 }
 
 #[test]
-fn only_before_and_after_count_so_a_spike_that_ends_flat_passes_and_a_steady_climb_fails() {
+fn growth_is_the_median_of_the_last_rounds_less_the_median_of_the_first_so_a_spike_that_falls_back_passes()
+ {
     let g = shipped();
     let (before, over) = (mem(98.0, 138.0), g.churn_growth_mb + 1.0);
-    let mut spike = vec![before; g.churn_rounds];
-    spike[g.churn_rounds / 2] = mem(before.working_mb + over, before.commit_mb + over);
-    assert!(failed(&tracked(before, spike)).is_empty(), "it ended flat");
-    let n = f64::from(u32::try_from(g.churn_rounds).expect("few rounds"));
-    let steady = climb(before, g.churn_rounds, over / n);
+    let spike = flat_but(before, g.churn_rounds, g.churn_rounds / 2, over);
+    assert!(failed(&tracked(before, spike)).is_empty(), "it fell back");
+    let jumped = mem(before.working_mb + over, before.commit_mb + over);
+    let c = tracked(before, vec![jumped; g.churn_rounds]);
+    assert!(
+        failed(&c).is_empty(),
+        "a jump before the first round is warm-up, not growth"
+    );
+}
+
+#[test]
+fn a_steady_climb_of_three_quarters_of_an_mb_a_round_fails() {
+    let before = mem(98.0, 138.0);
+    let steady = climb(before, shipped().churn_rounds, 0.75);
     assert_eq!(failed(&tracked(before, steady)), ["churn_working_mb"]);
+}
+
+#[test]
+fn one_high_reading_at_the_start_or_the_end_does_not_decide_the_growth() {
+    let (g, before) = (shipped(), mem(98.0, 138.0));
+    let over = g.churn_growth_mb + 1.0;
+    for spike in [0, g.churn_rounds - 1] {
+        let c = tracked(before, flat_but(before, g.churn_rounds, spike, over));
+        assert!(failed(&c).is_empty(), "round {spike}");
+        assert_eq!((c.first_median, c.last_median), (before, before));
+    }
 }
 
 #[test]
@@ -179,13 +214,15 @@ fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_c
 #[test]
 fn churn_settings_that_churn_nothing_are_refused() {
     assert_eq!(check(&shipped()), Ok(()));
-    let bad: [fn(&mut G8); 6] = [
+    let bad: [fn(&mut G8); 8] = [
         |g| g.churn_rounds = 0,
         |g| g.churn_growth_mb = 0.0,
         |g| g.churn_growth_mb = f64::INFINITY,
         |g| g.churn_tips.clear(),
         |g| g.churn_tips.push("c-0xFFFF".into()),
         |g| g.churn_theme.clear(),
+        |g| g.churn_median_rounds = 0,
+        |g| g.churn_median_rounds = g.churn_rounds / 2 + 1,
     ];
     for (i, f) in bad.iter().enumerate() {
         let mut g = shipped();
@@ -195,8 +232,27 @@ fn churn_settings_that_churn_nothing_are_refused() {
 }
 
 #[test]
+fn the_medians_may_take_half_the_rounds_each_but_no_more() {
+    let mut g = shipped();
+    g.churn_median_rounds = g.churn_rounds / 2;
+    assert_eq!(check(&g), Ok(()));
+    g.churn_median_rounds += 1;
+    let e = check(&g).expect_err("the two ends would share rounds");
+    assert!(e.contains("churn_median_rounds"), "{e}");
+}
+
+#[test]
 fn the_shipped_churn_warms_up_for_five_rounds_as_memory_settles_over_them() {
     assert_eq!(shipped().churn_warm_rounds, 5, "the owner's choice, P3.md");
+}
+
+#[test]
+fn the_shipped_churn_compares_the_medians_of_five_rounds_at_each_end() {
+    assert_eq!(
+        shipped().churn_median_rounds,
+        5,
+        "the owner's choice, P3.md"
+    );
 }
 
 #[test]
