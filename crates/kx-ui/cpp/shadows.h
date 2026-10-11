@@ -1,10 +1,10 @@
-// Qt 6.11's RectangularShadow makes its default material with no owner and never frees it, so each shadow dropped kept
-// one. QML's soft shadow (Soft.qml) hands that material to its shadow here, which then frees it.
+// Qt 6.11's RectangularShadow makes its default material in its private constructor through Q_Q, before q_ptr is set,
+// so the material has no parent and nothing frees it. QML's soft shadow (Soft.qml) hands it to its shadow here, and
+// build.rs refuses any Qt but the pinned one and names this file, so each Qt upgrade rechecks who frees it.
 #pragma once
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
-#include <QtCore/QtVersionChecks>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlContext>
 #include <QtQml/QQmlEngine>
@@ -18,9 +18,6 @@
 #if __has_include("kx-ui-build.h")
 #include "kx-ui-build.h"
 #endif
-
-// A Qt that frees the material itself would free it twice, so each Qt upgrade rechecks RectangularShadow first.
-static_assert(QT_VERSION < QT_VERSION_CHECK(6, 12, 0), "recheck who frees RectangularShadow's default material");
 
 namespace kxui {
 

@@ -76,8 +76,10 @@ mod qt {
         "src/bridges/tint.rs",
         "src/bridges/shadows.rs",
     ];
+    /// The soft shadows' adopter, which leans on how the pinned Qt makes RectangularShadow's material.
+    const SHADOWS_H: &str = "cpp/shadows.h";
     /// The hand-written C++ `QObject` classes, which moc reads.
-    const MOC: &[&str] = &["cpp/shadows.h"];
+    const MOC: &[&str] = &[SHADOWS_H];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
     /// The variable naming Qt's qmake, as cxx-qt-build reads it, and the program it runs when that is unset.
@@ -172,7 +174,8 @@ mod qt {
     }
 
     /// Qt's versioned `QtGui` header folder, which holds the graphics device's `rhi/qrhi.h` (ADR-0021); an error when
-    /// Qt is not the version the workspace pins, as that header keeps few promises across versions.
+    /// Qt is not the version the workspace pins, as that header and the shadows' adopter keep few promises across
+    /// versions.
     fn rhi_headers() -> Result<PathBuf, String> {
         println!("cargo::rerun-if-env-changed={QMAKE_ENV}");
         let qmake = std::env::var_os(QMAKE_ENV).unwrap_or_else(|| QMAKE.into());
@@ -180,8 +183,8 @@ mod qt {
         if version != pinned {
             let (table, key) = PIN_PATH.split_at(PIN_PATH.len() - 1);
             return Err(format!(
-                "Qt {version} is not the pinned {pinned}; check the graphics device glue first (ADR-0021), then change \
-                 [{}] {} in the root Cargo.toml",
+                "Qt {version} is not the pinned {pinned}; check the graphics device glue (ADR-0021) and who frees \
+                 RectangularShadow's default material ({SHADOWS_H}) first, then change [{}] {} in the root Cargo.toml",
                 table.join("."),
                 key.join(".")
             ));
