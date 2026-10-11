@@ -3,7 +3,7 @@
 
 use super::{Io, Typing};
 use crate::legend::LegendMods;
-use crate::plan::{Now, Plan, Wait, plan};
+use crate::plan::{Plan, Wait, plan};
 
 impl Typing {
     /// True when key `id` may repeat while held now: the board lets it, no Ctrl, Alt or Win acts on it, and it is
@@ -14,18 +14,12 @@ impl Typing {
         let Some(&(role, sc)) = known else {
             return false;
         };
-        let caps = io.source.caps_on();
-        if LegendMods::of(&self.latches, caps, &io.table.keys).shortcut {
+        // No app is asked: `key_apps` picks only how a key types, never whether it sends.
+        let none = || None;
+        let now = self.now(io, &[], &none);
+        if LegendMods::of(&self.latches, now.caps, &io.table.keys).shortcut {
             return false;
         }
-        let now = Now {
-            keys: &io.table.keys,
-            latches: &self.latches,
-            caps,
-            dead: self.dead,
-            apps: &[],
-            app: &|| None,
-        };
         matches!(plan(role, sc, &now), Plan::Send { wait, .. } if wait != Wait::Start)
     }
 

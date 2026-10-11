@@ -156,15 +156,8 @@ impl Typing {
     /// A send refused whole changes nothing; one taken in part moves the state as if it all went, never retried.
     pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, TapError> {
         let &(role, sc) = self.keys.get(id).ok_or(TapError::UnknownKey)?;
-        let now = Now {
-            keys: &io.table.keys,
-            latches: &self.latches,
-            caps: io.source.caps_on(),
-            dead: self.dead,
-            apps: &self.apps,
-            app: &|| io.injector.target_app(),
-        };
-        let planned = plan(role, sc, &now);
+        let app = || io.injector.target_app();
+        let planned = plan(role, sc, &self.now(io, &self.apps, &app));
         if keyed(role, &planned) && stale(io) {
             return Ok(Tapped::Stale);
         }
@@ -177,6 +170,24 @@ impl Typing {
             Plan::Empty => return Ok(Tapped::Empty),
         }
         Ok(Tapped::Done)
+    }
+
+    /// What a plan reads now: the layout shown, the latches, Caps Lock and a dead key's wait, with `apps` and the
+    /// app in front from `app`.
+    fn now<'a>(
+        &'a self,
+        io: &'a Io<'_>,
+        apps: &'a [String],
+        app: &'a dyn Fn() -> Option<String>,
+    ) -> Now<'a> {
+        Now {
+            keys: &io.table.keys,
+            latches: &self.latches,
+            caps: io.source.caps_on(),
+            dead: self.dead,
+            apps,
+            app,
+        }
     }
 
     /// Sends `route`; once any of it reached the app, the latches are used and the dead-key wait follows `wait`.

@@ -2,6 +2,7 @@
 //! once a beat, until the pointer lets go or leaves. It makes no OS call: each input brings the face clock's time.
 
 use kx_module_api::Mono;
+use std::borrow::Borrow;
 use std::fmt;
 use std::time::Duration;
 
@@ -84,9 +85,13 @@ impl<K: Clone + PartialEq> Repeat<K> {
     }
 
     /// The pointer let go of `key`: the key to type when it has not typed yet, as a click; a burst ends with nothing.
-    pub fn let_go(&mut self, key: &K) -> Option<K> {
+    pub fn let_go<Q>(&mut self, key: &Q) -> Option<K>
+    where
+        K: Borrow<Q>,
+        Q: PartialEq + ?Sized,
+    {
         match std::mem::replace(&mut self.phase, Phase::Idle) {
-            Phase::Held { key: held, .. } if held == *key => Some(held),
+            Phase::Held { key: held, .. } if held.borrow() == key => Some(held),
             _ => None,
         }
     }
@@ -96,9 +101,10 @@ impl<K: Clone + PartialEq> Repeat<K> {
         self.phase = Phase::Idle;
     }
 
-    /// True once the held key has typed and repeats on.
+    /// True once the held key has typed and repeats on; only the tests ask.
+    #[cfg(test)]
     #[must_use]
-    pub fn bursting(&self) -> bool {
+    pub(crate) fn bursting(&self) -> bool {
         matches!(self.phase, Phase::Repeating { .. })
     }
 }

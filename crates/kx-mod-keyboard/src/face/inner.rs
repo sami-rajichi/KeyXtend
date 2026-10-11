@@ -3,6 +3,8 @@
 mod fit;
 mod held;
 
+pub(super) use held::Beat;
+
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangClick, Turn, click};

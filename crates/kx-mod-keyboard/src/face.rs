@@ -9,7 +9,7 @@ use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::board_view;
-use inner::Inner;
+use inner::{Beat, Inner};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
 use std::collections::HashMap;
@@ -94,7 +94,7 @@ impl Face {
 
     /// The hold timer: a due repeat answers as a tap does, and a burst that ends redraws its latches.
     fn tick(&self) -> Result<FaceReply, FaceError> {
-        let Some((tapped, ended)) = self.lock().tick() else {
+        let Some(Beat { tapped, ended }) = self.lock().tick() else {
             return Ok(FaceReply::default());
         };
         let reply = self.answer(tapped)?;
@@ -160,8 +160,7 @@ impl Face {
     fn panel_key(&self, key: &str, rows: usize) -> Result<FaceReply, FaceError> {
         match self.navs.get(key) {
             Some(&nav) => self.lock().panel(nav, rows),
-            None if self.keys.iter().any(|k| k.id == key) => Ok(FaceReply::default()),
-            None => Err(FaceError::UnknownKey),
+            None => self.known(key).map(|()| FaceReply::default()),
         }
     }
 }

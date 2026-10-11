@@ -5,6 +5,14 @@ use super::{Inner, STATE};
 use crate::run::{TapError, Tapped};
 use kx_module_api::ports::FaceReply;
 
+/// One beat of the hold timer that found a repeat due.
+pub(in crate::face) struct Beat {
+    /// What typing the repeat did.
+    pub(in crate::face) tapped: Result<Tapped, TapError>,
+    /// The burst ended, and its latches let go.
+    pub(in crate::face) ended: bool,
+}
+
 impl Inner {
     /// The pointer went down on key `id`; it repeats only with repeat on, no list open, and a key that may repeat now.
     pub(in crate::face) fn press(&mut self, id: &str) -> FaceReply {
@@ -18,8 +26,8 @@ impl Inner {
     }
 
     /// The hold timer: when a repeat is due, types the held key with the latches kept down, and ends the burst once
-    /// the key cannot go on. The flag says the ended burst let its latches go.
-    pub(in crate::face) fn tick(&mut self) -> Option<(Result<Tapped, TapError>, bool)> {
+    /// the key cannot go on.
+    pub(in crate::face) fn tick(&mut self) -> Option<Beat> {
         let id = self.repeat.tick(self.ports.clock.now())?;
         self.typing.hold();
         let table = self.ports.layouts.current();
@@ -27,12 +35,12 @@ impl Inner {
         let tapped = self.typing.tap(&io, &id, false);
         let on = matches!(tapped, Ok(Tapped::Done)) && self.typing.repeats(&io, &id);
         let ended = !on && self.ended().state;
-        Some((tapped, ended))
+        Some(Beat { tapped, ended })
     }
 
     /// The pointer let go of key `id` on it: `None` for a click, which the face taps now, else the burst's end.
     pub(in crate::face) fn let_go(&mut self, id: &str) -> Option<FaceReply> {
-        match self.repeat.let_go(&id.to_owned()) {
+        match self.repeat.let_go(id) {
             Some(_) => None,
             None => Some(self.ended()),
         }

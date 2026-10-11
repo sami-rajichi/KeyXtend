@@ -135,7 +135,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
-- `repeat`: `Repeat` (`new`, `press`, `tick`, `let_go`, `leave`, `bursting`), the hold of one key, timed by the face's clock; its debug output shows only its phase.
+- `repeat`: `Repeat` (`new`, `press`, `tick`, `let_go`, `leave`), the hold of one key, timed by the face's clock; its debug output shows only its phase.
 - `run`: `Typing` (`new`, `update`, `tap`, `latches`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`, with the kernel's `clock`).
 - `geom`: `board`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
