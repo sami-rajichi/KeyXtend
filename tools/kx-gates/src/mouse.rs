@@ -13,6 +13,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, USER_DEFAULT_SCREEN_DPI};
 
+use crate::keys::After;
+
 /// Largest absolute mouse coordinate; the virtual desktop maps onto 0..=this.
 const ABS_MAX: f64 = 65535.0;
 
@@ -145,10 +147,11 @@ pub fn press_at(p: POINT) -> Result<(), String> {
     send(&[moved, down])
 }
 
-/// Moves to `p` (physical pixels) and lets the left button go there.
+/// Moves to `p` (physical pixels) and lets the left button go there; after a stop it still moves first, so a press the
+/// gate began never completes a click where the pointer is.
 pub fn release_at(p: POINT) -> Result<(), String> {
     let [moved, _, up] = events_at(p);
-    send(&[moved, up])
+    send_as(&[moved, up], After::Away)
 }
 
 /// A click's events at `p` (physical pixels), in the 0..=65535 absolute range of the desktop.
@@ -157,13 +160,18 @@ fn events_at(p: POINT) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
     click_events(normalise(p.x, left, width), normalise(p.y, top, height))
 }
 
-/// Sends `events`, each marked as ours, in one batch.
-fn send(events: &[(i32, i32, MOUSE_EVENT_FLAGS)]) -> Result<(), String> {
+/// Sends `events`, each marked as ours, in one batch, moved as `after` says once the mouse guard stopped the gate.
+fn send_as(events: &[(i32, i32, MOUSE_EVENT_FLAGS)], after: After) -> Result<(), String> {
     let inputs: Vec<INPUT> = events
         .iter()
         .map(|&(x, y, flags)| input(x, y, flags, TAG))
         .collect();
-    crate::keys::send(&inputs)
+    crate::keys::send_as(&inputs, after)
+}
+
+/// `send_as`, keeping the pointer still after a stop.
+fn send(events: &[(i32, i32, MOUSE_EVENT_FLAGS)]) -> Result<(), String> {
+    send_as(events, After::Still)
 }
 
 #[cfg(test)]

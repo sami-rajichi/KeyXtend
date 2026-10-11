@@ -72,19 +72,40 @@ fn bare(inputs: &[INPUT]) -> Vec<INPUT> {
     ups.map(|&i| without_move(i)).collect()
 }
 
+/// How a batch that only lets go goes out once the mouse guard stopped the gate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum After {
+    /// Without its move, so the pointer stays where it is.
+    Still,
+    /// With its move, so a press the gate began ends away from its key and clicks nothing.
+    Away,
+}
+
+/// What a batch of `inputs` sends as the guard `allows` new input or not: all of it, else only a batch that lets go,
+/// moved as `after` says, else the refusal.
+fn outgoing(
+    inputs: &[INPUT],
+    allows: Result<(), String>,
+    after: After,
+) -> Result<Vec<INPUT>, String> {
+    match allows {
+        Ok(()) => Ok(inputs.to_vec()),
+        Err(_) if only_lets_go(inputs) && after == After::Away => Ok(inputs.to_vec()),
+        Err(_) if only_lets_go(inputs) => Ok(bare(inputs)),
+        Err(e) => Err(e),
+    }
+}
+
 /// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
-/// a batch that lets go goes out, without its move, so nothing stays pressed and the pointer stays still.
+/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed.
+pub fn send_as(inputs: &[INPUT], after: After) -> Result<(), String> {
+    let out = outgoing(inputs, mouseguard::allowed(), after)?;
+    inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()))
+}
+
+/// `send_as`, keeping the pointer still after a stop.
 pub fn send(inputs: &[INPUT]) -> Result<(), String> {
-    let ups;
-    let inputs = match mouseguard::allowed() {
-        Ok(()) => inputs,
-        Err(_) if only_lets_go(inputs) => {
-            ups = bare(inputs);
-            &ups
-        }
-        Err(e) => return Err(e),
-    };
-    inject::send(inputs).map_err(|e| format!("{e}: {}", io::Error::last_os_error()))
+    send_as(inputs, After::Still)
 }
 
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
@@ -133,88 +154,4 @@ pub fn slow_combo(vks: &[u16], gap_ms: u64) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use kx_platform_windows::keys::TAG;
-    use windows::Win32::UI::Input::KeyboardAndMouse::{KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP};
-
-    #[allow(unsafe_code, reason = "Reads the keyboard member of a key input.")]
-    fn flags(vk: u16, up: bool) -> (bool, bool, usize) {
-        // SAFETY: reading the keyboard member of an input built as a keyboard input.
-        let ki = unsafe { tagged(vk, up, TAG).Anonymous.ki };
-        let (f, tag) = (ki.dwFlags, ki.dwExtraInfo);
-        (
-            f.contains(KEYEVENTF_EXTENDEDKEY),
-            f.contains(KEYEVENTF_KEYUP),
-            tag,
-        )
-    }
-
-    #[test]
-    fn navigation_keys_are_sent_as_extended_so_numlock_cannot_turn_them_into_digits() {
-        for vk in [0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x21, 0x22] {
-            assert_eq!(flags(vk, true), (true, true, TAG), "{vk:#04X}");
-        }
-    }
-
-    #[test]
-    fn letters_and_left_modifiers_are_not_extended() {
-        for vk in [0x41, 0x10, 0x11, 0x12] {
-            assert_eq!(flags(vk, false), (false, false, TAG), "{vk:#04X}");
-        }
-    }
-
-    #[test]
-    #[allow(unsafe_code, reason = "Reads the mouse member of a mouse input.")]
-    fn only_a_batch_that_lets_go_and_presses_nothing_passes_a_stopped_guard_without_its_move() {
-        use crate::mouse::input;
-        use windows::Win32::UI::Input::KeyboardAndMouse::{
-            MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
-            MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL,
-        };
-        let at = |flags: MOUSE_EVENT_FLAGS| {
-            input(5, 6, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | flags, TAG)
-        };
-        let (moved, down, up) = (
-            at(MOUSE_EVENT_FLAGS(0)),
-            at(MOUSEEVENTF_LEFTDOWN),
-            at(MOUSEEVENTF_LEFTUP),
-        );
-        assert!(only_lets_go(&[moved, up]), "a release where it moved");
-        assert!(only_lets_go(&[
-            tagged(0x10, true, TAG),
-            at(MOUSEEVENTF_RIGHTUP)
-        ]));
-        assert!(!only_lets_go(&[moved, down, up]), "a click");
-        assert!(!only_lets_go(&[moved]), "a move alone");
-        assert!(
-            !only_lets_go(&[input(0, 0, MOUSEEVENTF_WHEEL, TAG)]),
-            "a wheel turn"
-        );
-        assert!(!only_lets_go(&[tagged(0x41, false, TAG)]), "a key press");
-        assert!(!only_lets_go(&[]), "nothing to let go of");
-        let shift_up = tagged(0x10, true, TAG);
-        let ups = bare(&[moved, up, shift_up]);
-        assert_eq!(ups.len(), 2, "the move alone is gone");
-        // SAFETY: the first input is the mouse release, built as a mouse input.
-        let mi = unsafe { ups[0].Anonymous.mi };
-        assert_eq!((mi.dx, mi.dy, mi.dwExtraInfo), (0, 0, TAG));
-        assert_eq!(mi.dwFlags, MOUSEEVENTF_LEFTUP, "no move, no absolute");
-        assert_eq!(
-            press_release(&ups[1]),
-            (false, true),
-            "the key still goes up"
-        );
-    }
-
-    #[test]
-    fn a_combo_presses_in_order_and_releases_in_reverse() {
-        let got: Vec<_> = presses(&[0x11, 0x43]).iter().map(|e| e.up).collect();
-        assert_eq!(got, [false, false, true, true]);
-        let keys: Vec<_> = presses(&[0x11, 0x43]).iter().map(|e| e.key).collect();
-        assert_eq!(
-            keys,
-            [vk_key(0x11), vk_key(0x43), vk_key(0x43), vk_key(0x11)]
-        );
-    }
-}
+mod tests;

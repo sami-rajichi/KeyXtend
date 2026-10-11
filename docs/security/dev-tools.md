@@ -56,7 +56,7 @@
   - It lets go when the gate ends or breaks off, on a panic (a drop guard), while an admin prompt is up, once G8's pointer work is over, after `limit_ms` (6 minutes) of holding even if the gate hangs, and at once when a physical button is held `escape_ms` (2 s).
   - The limit, the hold and a guard that cannot come back after a prompt stop the gate: it then fails, shows no prompt and sends no new press, and only the steps that put things back still go out.
   - The hook lives on a thread of `kx-gates`, and Windows removes a low-level hook when its thread or process ends, so it never outlives a run; it changes no Windows setting.
-  - A release whose press came before the guard passes, so no button sticks, and after a stop the gate's own releases still go out, without their move.
+  - A release whose press came before the guard passes, so no button sticks. After a stop the gate's own releases still go out without their move, except one away from a key the gate pressed, so no click lands.
   - Gates that need the owner's own mouse, run on the CI runner or move nothing are marked free in the gate table in `tools/kx-gates/src/cli.rs`, so they are never guarded.
 - **Elevation:**
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
