@@ -14,11 +14,15 @@ use std::sync::{Arc, Mutex, PoisonError};
 const DOLCH: &[&str] = &["Rubik", "Noto Sans Arabic"];
 const ET66: &[&str] = &["IBM Plex Sans", "IBM Plex Sans Arabic"];
 
-/// What the fake book holds: each loaded file by its id, and the next id.
+/// How many times the warn-once test reads the look, as the windows of one wake do.
+const READS: usize = 4;
+
+/// What the fake book holds: each loaded file by its id, the next id, and how many loads it refused.
 #[derive(Default)]
 struct Shelf {
     loaded: BTreeMap<i32, String>,
     next: i32,
+    refused: usize,
 }
 
 /// A font book that loads every file but those it refuses, and keeps what it holds where the test reads it.
@@ -34,14 +38,23 @@ impl Book {
         let held = self.shelf.lock().unwrap_or_else(PoisonError::into_inner);
         held.loaded.values().cloned().collect()
     }
+
+    /// How many loads it refused so far.
+    fn refused(&self) -> usize {
+        self.shelf
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .refused
+    }
 }
 
 impl FontBook for Book {
     fn load(&mut self, name: &str) -> Option<i32> {
+        let mut held = self.shelf.lock().unwrap_or_else(PoisonError::into_inner);
         if self.refuse.iter().any(|r| r == name) {
+            held.refused += 1;
             return None;
         }
-        let mut held = self.shelf.lock().unwrap_or_else(PoisonError::into_inner);
         held.next += 1;
         let id = held.next;
         held.loaded.insert(id, name.to_owned());
@@ -196,6 +209,27 @@ fn a_file_that_does_not_load_hands_its_list_to_the_next_family_with_a_warning() 
         !warned.is_empty() && warned.iter().all(|w| w.contains("next family")),
         "{warned:?}"
     );
+}
+
+// Each read of the look loads the theme's fonts, so a family whose file did not load is not asked for again, and it
+// warns once.
+#[test]
+fn a_family_that_did_not_load_is_tried_once_however_often_the_look_is_read() {
+    let rig = Rig::new();
+    let book = Book {
+        refuse: files(&["Rubik"]).into_iter().collect(),
+        ..Book::default()
+    };
+    rig.hub.set_fonts(Box::new(book.clone()));
+    attach(&rig, "dolch");
+    let warned = warnings_of(|| {
+        for _ in 0..READS {
+            let _ = rig.hub.look_json();
+        }
+    });
+    assert_eq!(warned.len(), 1, "{warned:?}");
+    assert_eq!(book.refused(), 1, "asked for once");
+    assert_eq!(book.loaded(), files(&["Noto Sans Arabic"]));
 }
 
 #[test]

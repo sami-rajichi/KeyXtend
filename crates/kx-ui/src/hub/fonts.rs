@@ -17,14 +17,15 @@ pub trait FontBook: Send {
     fn unload(&mut self, id: i32);
 }
 
-/// The book, what it holds now by bundle name, the files the last load picked for the theme shown, and whether a
-/// load added files since the last drop.
+/// The book, what it holds now by bundle name, the files the last load picked for the theme shown, whether a load
+/// added files since the last drop, and the families whose files did not load, which are not asked for again.
 #[derive(Default)]
 pub(super) struct Fonts {
     book: Option<Box<dyn FontBook>>,
     loaded: BTreeMap<String, i32>,
     picked: BTreeSet<String>,
     added: bool,
+    failed: BTreeSet<String>,
 }
 
 impl Hub {
@@ -49,7 +50,12 @@ impl Hub {
     /// Call it on the Qt thread, before QML reads the new look.
     pub fn load_fonts(&self) -> bool {
         let theme = self.lock().settings.theme.clone();
-        let Some(look) = self.themes.find(&theme).map(|t| &t.look) else {
+        self.load_theme(&theme)
+    }
+
+    /// Loads the bundled files theme `id` needs, as `load_fonts` does for the theme shown.
+    pub(super) fn load_theme(&self, id: &str) -> bool {
+        let Some(look) = self.themes.find(id).map(|t| &t.look) else {
             return false;
         };
         let lists = [&look.latin_fonts, &look.arabic_fonts, &look.mark_fonts];
@@ -59,6 +65,7 @@ impl Hub {
             loaded,
             picked,
             added,
+            failed,
         } = &mut *fonts;
         let Some(book) = book.as_mut() else {
             return false;
@@ -66,7 +73,14 @@ impl Hub {
         let mut kept = BTreeMap::new();
         let mut now = false;
         for list in lists {
-            now |= pick(list, &self.font_files, book.as_mut(), loaded, &mut kept);
+            now |= pick(
+                list,
+                &self.font_files,
+                book.as_mut(),
+                loaded,
+                &mut kept,
+                failed,
+            );
         }
         *picked = kept.keys().cloned().collect();
         loaded.extend(kept);
@@ -83,6 +97,7 @@ impl Hub {
             loaded,
             picked,
             added,
+            ..
         } = &mut *fonts;
         let Some(book) = book.as_mut() else {
             return false;
@@ -101,18 +116,22 @@ impl Hub {
 }
 
 /// Keeps the first family of `list` that Windows ships, or whose bundled files all load, in `kept`, moving its files
-/// out of `loaded` or loading them; a family whose file did not load warns, and the next one is tried. True when it
-/// loaded a file.
+/// out of `loaded` or loading them; a family whose file did not load warns once, joins `failed`, and the next one is
+/// tried. True when it loaded a file.
 fn pick(
     list: &[String],
     table: &FontFiles,
     book: &mut dyn FontBook,
     loaded: &mut BTreeMap<String, i32>,
     kept: &mut BTreeMap<String, i32>,
+    failed: &mut BTreeSet<String>,
 ) -> bool {
     for family in list {
         if SYSTEM_FONTS.contains(&family.as_str()) {
             return false;
+        }
+        if failed.contains(family) {
+            continue;
         }
         let names = table.names(family).unwrap_or_default();
         let mut took = BTreeMap::new();
@@ -138,6 +157,7 @@ fn pick(
                 book.unload(id);
             }
         }
+        failed.insert(family.clone());
         tracing::warn!(family = %family, "a theme font did not load, so its next family is tried");
     }
     false

@@ -30,11 +30,11 @@ impl Hub {
     /// picks families Qt has; call it on the Qt thread. The accent is checked on the face's board row, so it waits.
     #[must_use]
     pub fn look_json(&self) -> String {
-        let _ = self.load_fonts();
         let (choice, sys, face) = {
             let live = self.lock();
             (live.settings.choice(), live.sys, live.face.clone())
         };
+        let _ = self.load_theme(&choice.theme);
         let row = face.map(|f| narrow(f.row_px()));
         let view = look_view(&self.themes, &choice, &sys, row);
         view.map_or_else(|| NULL.to_owned(), |v| json(&v))
