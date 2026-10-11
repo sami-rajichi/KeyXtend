@@ -70,7 +70,8 @@ quit_try_ms = 200
 # theme.
 # It moves the pointer but never clicks, and presses buttons by UI Automation.
 # Unmeasured rounds first, so each pop-up's first show, a one-time cost, is not counted as growth.
-churn_warm_rounds = 1
+# Five, as memory settles over about the first five (median growth +1.6 / +2.4 MB after five, +4.0 / +7.3 after one).
+churn_warm_rounds = 5
 # Measured rounds, with private memory read before and after them.
 churn_rounds = 20
 # Most growth of the working set and of the commit over those rounds, in MB.

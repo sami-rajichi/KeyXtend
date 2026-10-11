@@ -210,6 +210,11 @@ mod tests {
     }
 
     #[test]
+    fn the_shipped_churn_warms_up_for_five_rounds_as_memory_settles_over_them() {
+        assert_eq!(shipped().churn_warm_rounds, 5, "the owner's choice, P3.md");
+    }
+
+    #[test]
     fn each_hovered_key_has_an_icon_so_its_tip_shows() {
         // A key's tip shows its name when it has an icon (Key.qml); every theme shares icons.toml.
         let icons = Themes::shipped().expect("the tokens read").icons.keys;
