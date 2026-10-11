@@ -30,7 +30,7 @@ pub struct Measured {
     pub resizes: Vec<Resize>,
     /// G2's result line: click to character.
     pub g2: Value,
-    /// Why `dropped_frames` covers fewer steps, when `PresentMon`'s capture ended before G2 did.
+    /// Why `dropped_frames` may miss presses, when `PresentMon`'s capture ended before G2's last click.
     pub capture_cut: Option<&'static str>,
     /// Memory around rounds of pop-ups.
     pub churn: Churn,

@@ -36,11 +36,25 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
-/// The weak-mode job from `spike.toml [voice.weak]`, and the CPU time it allows in whole cores.
-fn weak_job(ctx: &Ctx) -> Result<(Job, f64), String> {
+/// In `weak` mode, the job from `spike.toml [voice.weak]` and the CPU time it allows in whole cores; else neither.
+fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
+    if !weak {
+        return Ok((None, None));
+    }
     let cpus = std::thread::available_parallelism().map_or(1, usize::from);
     let caps = Caps::from(&ctx.spike.voice.weak, cpus)?;
-    Ok((Job::new(Some(&caps))?, caps.cpu_cores(cpus)))
+    Ok((Some(Job::new(Some(&caps))?), Some(caps.cpu_cores(cpus))))
+}
+
+/// Refuses a run while the product is running, as G8 times a cold start.
+fn cold() -> Result<(), String> {
+    match product::running() {
+        Some(_) => Err(format!(
+            "close {} first: G8 times a cold start",
+            product::NAME
+        )),
+        None => Ok(()),
+    }
 }
 
 /// Private memory once `[g8] warm_ms` has passed since the keyboard showed, and the ms from show to the read.
@@ -168,19 +182,10 @@ fn broke(e: &str, recorder: Option<u32>, secs: u64, quit: Option<&Result<bool, S
 
 /// Runs G8: `name` is the product, or `weak` for weak mode. The product must not be running, as G8 times a cold start.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if product::running().is_some() {
-        return Err(format!(
-            "close {} first: G8 times a cold start",
-            product::NAME
-        ));
-    }
+    cold()?;
     let weak = name == WEAK;
     let program = ctx.cfg.program(&ctx.cfg.g8.program);
-    let (job, cpu_cores) = if weak {
-        weak_job(ctx).map(|(j, c)| (Some(j), Some(c)))?
-    } else {
-        (None, None)
-    };
+    let (job, cpu_cores) = weak_job(ctx, weak)?;
     let (since, origin_us) = (SystemTime::now(), now_us());
     let rec = g8frames::record(ctx, &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);

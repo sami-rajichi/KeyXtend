@@ -11,8 +11,8 @@ use crate::presentmon::{self, Frames};
 use crate::proc::Process;
 use crate::win::{self, sleep_ms};
 
-/// Why `dropped_frames` covers fewer steps than G8's run up to the churn.
-const CUT: &str = "PresentMon's capture ended before G2 did, so dropped_frames covers fewer steps; raise [g8] \
+/// Why `dropped_frames` may miss presses.
+const CUT: &str = "PresentMon's capture ended before G2's last click, so dropped_frames may miss presses; raise [g8] \
      presentmon_secs";
 
 /// `PresentMon` as G8 started it: its process, and when it started.

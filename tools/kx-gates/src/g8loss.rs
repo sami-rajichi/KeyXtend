@@ -129,6 +129,7 @@ pub fn losses(
     }
     let (mut out, mut seen) = (Losses::default(), HashSet::new());
     for (i, p) in presents.iter().enumerate() {
+        // Keyed by address alone, a chain re-made at a reused address is not skipped again, so it only counts more.
         let first = seen.insert(p.chain.as_str());
         if p.shown {
             continue;
