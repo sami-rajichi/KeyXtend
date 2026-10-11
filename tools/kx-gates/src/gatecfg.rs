@@ -62,7 +62,7 @@ impl G2 {
     pub fn holds_below(&self, settings: &KeyboardSettings) -> Result<(), String> {
         let (delay, held) = (
             settings.repeat_delay_ms,
-            self.press_ms + self.repeat_margin_ms,
+            self.press_ms.saturating_add(self.repeat_margin_ms),
         );
         if settings.repeat && held >= delay {
             return Err(format!(
@@ -196,5 +196,15 @@ mod tests {
             Ok(()),
             "a keyboard that never repeats"
         );
+    }
+
+    #[test]
+    fn a_margin_past_any_delay_is_refused_without_a_panic() {
+        let g = G2 {
+            repeat_margin_ms: u64::MAX,
+            ..g2()
+        };
+        let running = KeyboardSettings::from_defaults().expect("the defaults load");
+        assert!(g.holds_below(&running).is_err());
     }
 }
