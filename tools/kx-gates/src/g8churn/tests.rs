@@ -98,12 +98,12 @@ fn a_reading_that_fails_ends_the_churn_with_its_own_error() {
 }
 
 #[test]
-fn the_verdict_reads_only_before_and_after_so_a_settled_jump_passes_and_a_steady_climb_fails() {
+fn only_before_and_after_count_so_a_spike_that_ends_flat_passes_and_a_steady_climb_fails() {
     let g = shipped();
     let (before, over) = (mem(98.0, 138.0), g.churn_growth_mb + 1.0);
-    let mut jump = vec![before; g.churn_rounds];
-    jump[g.churn_rounds / 2] = mem(before.working_mb + over, before.commit_mb + over);
-    assert!(failed(&tracked(before, jump)).is_empty(), "it ended flat");
+    let mut spike = vec![before; g.churn_rounds];
+    spike[g.churn_rounds / 2] = mem(before.working_mb + over, before.commit_mb + over);
+    assert!(failed(&tracked(before, spike)).is_empty(), "it ended flat");
     let n = f64::from(u32::try_from(g.churn_rounds).expect("few rounds"));
     let steady = climb(before, g.churn_rounds, over / n);
     assert_eq!(failed(&tracked(before, steady)), ["churn_working_mb"]);
