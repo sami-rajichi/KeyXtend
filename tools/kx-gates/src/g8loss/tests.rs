@@ -110,22 +110,29 @@ fn a_press_window_runs_from_the_press_to_its_release_plus_the_rise() {
 }
 
 #[test]
-fn a_loss_while_a_key_g2_clicked_rises_counts() {
+fn a_loss_while_a_key_g2_held_or_its_rise_counts() {
     let click = RESIZE_MS.1 + 1_000.0;
+    let up = click + HELD_MS;
     let mut all = spans();
-    all.extend(clicks(&[us(click)], u64::from(RISE_MS)));
-    let (rising, after) = (click + f64::from(RISE_MS) - 10.0, click + 500.0);
+    all.extend(clicks(&[(us(click), us(up))], u64::from(RISE_MS)));
+    let held = click + HELD_MS / 2.0;
+    let (rising, after) = (
+        up + f64::from(RISE_MS) - 10.0,
+        up + f64::from(RISE_MS) + 100.0,
+    );
     let rows = [
+        row(CHAIN, held, false),
+        row(CHAIN, held + 30.0, true),
         row(CHAIN, rising, false),
         row(CHAIN, rising + 30.0, true),
         row(CHAIN, after, false),
         row(CHAIN, after + 30.0, true),
     ];
     let got = read_over(&rows, &all).expect("lines up");
+    let want = [loss(held, During::Press), loss(rising, During::Press)];
     assert_eq!(
-        got.counted,
-        [loss(rising, During::Press)],
-        "G2 presses and lets go at once"
+        got.counted, want,
+        "G2 holds the key, then it rises from the release"
     );
     assert_eq!(got.listed, [loss(after, During::Outside)]);
 }

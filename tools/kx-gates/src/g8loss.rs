@@ -64,11 +64,12 @@ impl Span {
     }
 }
 
-/// Press windows for G2's clicks at `clicks_us`: G2 presses and lets go in one batch, so each rise follows its click.
-pub fn clicks(clicks_us: &[i64], rise_ms: u64) -> Vec<Span> {
+/// Press windows for G2's clicks, each held from its press to its release in µs, as `[g2] press_ms` holds a click;
+/// each rise follows its release.
+pub fn clicks(clicks_us: &[(i64, i64)], rise_ms: u64) -> Vec<Span> {
     clicks_us
         .iter()
-        .map(|&us| Span::press(us, us, rise_ms))
+        .map(|&(at, up)| Span::press(at, up, rise_ms))
         .collect()
 }
 
