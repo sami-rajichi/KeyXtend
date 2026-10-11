@@ -57,7 +57,8 @@ impl Hub {
         }))
     }
 
-    /// Shows the next theme, in the order the theme button cycles, and saves it; false when it did not change.
+    /// Shows the next theme, in the order the theme button cycles, saves it and loads its fonts, keeping the last
+    /// theme's until `drop_fonts`; false when it did not change. Call it on the Qt thread, before QML reads the look.
     pub fn step_theme(&self) -> bool {
         let now = self.lock().settings.theme.clone();
         let list = &self.themes.list;
@@ -66,7 +67,11 @@ impl Hub {
         let Some(id) = list.get(next).map(|t| t.look.id.clone()) else {
             return false;
         };
-        self.save(THEME_KEY, Value::String(id.clone()), |s| s.theme = id)
+        let stepped = self.save(THEME_KEY, Value::String(id.clone()), |s| s.theme = id);
+        if stepped {
+            let _ = self.load_fonts();
+        }
+        stepped
     }
 
     /// Switches to light or dark, the other one from what shows now, and saves it; false when it did not change.

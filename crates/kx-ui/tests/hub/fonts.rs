@@ -1,5 +1,5 @@
 //! The theme's fonts (ADR-0021): only the bundled files of the theme shown stay loaded, a theme switch drops the last
-//! theme's, and a file that does not load hands its list to the next family, with a warning.
+//! theme's once QML reads the new one, and a file that does not load hands its list to the next family, with a warning.
 
 use crate::logs::warnings_of;
 use crate::{FakeFace, Rig};
@@ -8,6 +8,10 @@ use kx_theme::assets::FontFiles;
 use kx_ui::{FontBook, MANIFEST, UiSettings};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
+
+/// The families Dolch and ET66 load; Native loads none.
+const DOLCH: &[&str] = &["Rubik", "Noto Sans Arabic"];
+const ET66: &[&str] = &["IBM Plex Sans", "IBM Plex Sans Arabic"];
 
 /// What the fake book holds: each loaded file by its id, and the next id.
 #[derive(Default)]
@@ -59,8 +63,8 @@ fn files(families: &[&str]) -> BTreeSet<String> {
     names.flatten().collect()
 }
 
-/// Shows theme `id`, as a Settings-window change does, then syncs the fonts as the bridge does on its wake.
-fn show(rig: &Rig, id: &str) -> bool {
+/// Shows theme `id`, as a Settings-window change does, with no font loaded or dropped yet.
+fn attach(rig: &Rig, id: &str) {
     let settings = UiSettings {
         theme: id.to_owned(),
         ..UiSettings::from_defaults().unwrap()
@@ -68,6 +72,11 @@ fn show(rig: &Rig, id: &str) -> bool {
     let mut host = FakeHost::new(&MANIFEST);
     rig.hub
         .attach(settings, Arc::new(FakeFace::default()), host.handle());
+}
+
+/// Shows theme `id`, then loads and drops its fonts at once, as the app does before QML loads.
+fn show(rig: &Rig, id: &str) -> bool {
+    attach(rig, id);
     rig.hub.sync_fonts()
 }
 
@@ -86,16 +95,53 @@ fn each_theme_switch_keeps_only_that_themes_files() {
     let book = Book::default();
     rig.hub.set_fonts(Box::new(book.clone()));
     let steps: [(&str, &[&str]); 4] = [
-        ("dolch", &["Rubik", "Noto Sans Arabic"]),
-        ("et66", &["IBM Plex Sans", "IBM Plex Sans Arabic"]),
+        ("dolch", DOLCH),
+        ("et66", ET66),
         ("native", &[]),
-        ("dolch", &["Rubik", "Noto Sans Arabic"]),
+        ("dolch", DOLCH),
     ];
     for (id, families) in steps {
         assert!(show(&rig, id), "{id}: the fonts changed");
         assert_eq!(book.loaded(), files(families), "{id}");
     }
     assert!(!show(&rig, "dolch"), "the same theme loads nothing again");
+}
+
+// A text never asks Qt for a family it lacks, which makes Qt read every Windows font: the theme button loads the next
+// theme's files before QML reads its look, and the last theme's go only once dropped, after QML moved off them.
+#[test]
+fn a_theme_step_loads_the_next_themes_files_and_the_last_ones_go_once_dropped() {
+    let (rig, _face, _host) = Rig::with_face();
+    let book = Book::default();
+    rig.hub.set_fonts(Box::new(book.clone()));
+    assert!(rig.hub.step_theme(), "Native to ET66");
+    assert_eq!(book.loaded(), files(ET66), "loaded as the step returns");
+    assert!(
+        rig.hub.drop_fonts(),
+        "nothing to drop, but QML has new families to read"
+    );
+    assert_eq!(book.loaded(), files(ET66));
+    assert!(rig.hub.step_theme(), "ET66 to Dolch");
+    assert_eq!(book.loaded(), &files(ET66) | &files(DOLCH), "ET66's stay");
+    assert!(rig.hub.drop_fonts());
+    assert_eq!(book.loaded(), files(DOLCH));
+    assert!(!rig.hub.drop_fonts(), "nothing changed since");
+}
+
+// A theme the Settings window picks wakes the bridge, which loads its files before QML reads the look and drops the
+// last theme's after.
+#[test]
+fn a_wake_loads_the_theme_shown_first_and_drops_the_last_after() {
+    let rig = Rig::new();
+    let book = Book::default();
+    rig.hub.set_fonts(Box::new(book.clone()));
+    assert!(show(&rig, "dolch"));
+    attach(&rig, "et66");
+    assert!(rig.hub.load_fonts());
+    assert_eq!(book.loaded(), &files(DOLCH) | &files(ET66));
+    assert!(!rig.hub.load_fonts(), "loaded already");
+    assert!(rig.hub.drop_fonts());
+    assert_eq!(book.loaded(), files(ET66));
 }
 
 #[test]

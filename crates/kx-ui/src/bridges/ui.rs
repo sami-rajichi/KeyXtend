@@ -209,10 +209,11 @@ impl cxx_qt::Initialize for qobject::Ui {
     }
 }
 
-/// Tells QML what changed, on the Qt thread. A new theme's fonts load before QML reads the new look, so it picks their
-/// families at once; `fonts_changed` comes last, when the look is read already.
+/// Tells QML what changed, on the Qt thread: a new theme's fonts load before QML reads the new look and the last
+/// theme's go after, so no text asks Qt for a family it lacks; `fonts_changed` comes last.
 fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
-    let refont = matches!(wake, Wake::Settings | Wake::Look) && ui.with(false, Hub::sync_fonts);
+    let relook = matches!(wake, Wake::Settings | Wake::Look);
+    let loaded = relook && ui.with(false, Hub::load_fonts);
     match wake {
         Wake::Settings => ui.as_mut().settings_changed(),
         Wake::Texts => ui.as_mut().texts_changed(),
@@ -223,7 +224,8 @@ fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Tray(TrayEvent::Click(at)) => ui.as_mut().tray_clicked(at.x, at.y),
         Wake::Tray(TrayEvent::Away) => ui.as_mut().tray_away(),
     }
-    if refont {
+    let dropped = relook && ui.with(false, Hub::drop_fonts);
+    if loaded || dropped {
         ui.fonts_changed();
     }
 }

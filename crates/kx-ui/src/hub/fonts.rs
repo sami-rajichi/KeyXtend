@@ -1,9 +1,10 @@
-//! The fonts side of the hub (ADR-0021): only the bundled files of the theme shown stay loaded, and a file that does
-//! not load hands its list to the next family. The app's font book runs on the Qt thread.
+//! The fonts side of the hub (ADR-0021), whose book runs on the Qt thread: only the bundled files of the theme shown
+//! stay loaded, and a file that does not load hands its list to the next family. A switch loads the new files before
+//! QML reads the new look and drops the old ones after, so no text asks Qt for a family it lacks.
 
 use super::Hub;
 use kx_theme::assets::{FontFiles, SYSTEM_FONTS};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{MutexGuard, PoisonError};
 
 /// Loads and drops bundled font files; the app's book is Qt's font list, used on the Qt thread only.
@@ -16,11 +17,14 @@ pub trait FontBook: Send {
     fn unload(&mut self, id: i32);
 }
 
-/// The book and what it holds now, by bundle name.
+/// The book, what it holds now by bundle name, the files the last load picked for the theme shown, and whether a
+/// load added files since the last drop.
 #[derive(Default)]
 pub(super) struct Fonts {
     book: Option<Box<dyn FontBook>>,
     loaded: BTreeMap<String, i32>,
+    picked: BTreeSet<String>,
+    added: bool,
 }
 
 impl Hub {
@@ -37,26 +41,62 @@ impl Hub {
     /// Loads the bundled files the theme shown needs and drops the others; true when that changed what is loaded. Call
     /// it on the Qt thread, before QML reads the families again.
     pub fn sync_fonts(&self) -> bool {
+        let added = self.load_fonts();
+        self.drop_fonts() || added
+    }
+
+    /// Loads the bundled files the theme shown needs and keeps the others until `drop_fonts`; true when it loaded one.
+    /// Call it on the Qt thread, before QML reads the new look.
+    pub fn load_fonts(&self) -> bool {
         let theme = self.lock().settings.theme.clone();
         let Some(look) = self.themes.find(&theme).map(|t| &t.look) else {
             return false;
         };
         let lists = [&look.latin_fonts, &look.arabic_fonts, &look.mark_fonts];
         let mut fonts = self.fonts();
-        let Fonts { book, loaded } = &mut *fonts;
+        let Fonts {
+            book,
+            loaded,
+            picked,
+            added,
+        } = &mut *fonts;
         let Some(book) = book.as_mut() else {
             return false;
         };
         let mut kept = BTreeMap::new();
-        let mut added = false;
+        let mut now = false;
         for list in lists {
-            added |= pick(list, &self.font_files, book.as_mut(), loaded, &mut kept);
+            now |= pick(list, &self.font_files, book.as_mut(), loaded, &mut kept);
         }
-        let gone = std::mem::replace(loaded, kept);
-        for id in gone.values() {
+        *picked = kept.keys().cloned().collect();
+        loaded.extend(kept);
+        *added |= now;
+        now
+    }
+
+    /// Drops the bundled files the last `load_fonts` did not pick; true when the files changed since the last drop, so
+    /// QML reads the families again. Call it on the Qt thread, once QML reads the new look.
+    pub fn drop_fonts(&self) -> bool {
+        let mut fonts = self.fonts();
+        let Fonts {
+            book,
+            loaded,
+            picked,
+            added,
+        } = &mut *fonts;
+        let Some(book) = book.as_mut() else {
+            return false;
+        };
+        let gone: Vec<i32> = loaded
+            .iter()
+            .filter(|(name, _)| !picked.contains(*name))
+            .map(|(_, id)| *id)
+            .collect();
+        loaded.retain(|name, _| picked.contains(name));
+        for id in &gone {
             book.unload(*id);
         }
-        added || !gone.is_empty()
+        std::mem::take(added) || !gone.is_empty()
     }
 }
 
