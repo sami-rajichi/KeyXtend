@@ -7,9 +7,11 @@ use crate::presentmon;
 
 /// The product's program, as `PresentMon` names it.
 const PROGRAM: &str = "keyxtend.exe";
-/// The CSV's header: only the columns G8 reads.
+/// The CSV's header: only the columns G8 reads, by their `PresentMon` 2.6 names.
 const HEAD: &str =
-    "Application,SwapChainAddress,CPUStartQPCTime,MsBetweenPresents,MsUntilDisplayed\n";
+    "Application,SwapChainAddress,CPUStartTimeInMs,MsCPUBusy,MsBetweenPresents,MsUntilDisplayed\n";
+/// A frame's usual CPU time before its present, in ms.
+const BUSY_MS: f64 = 1.0;
 /// A 60 Hz screen: one refresh is 16.7 ms.
 const HZ: f64 = 60.0;
 /// G8's start, its one press with a 200 ms rise, and its one resize, on the QPC clock in ms.
@@ -29,10 +31,15 @@ fn us(ms: f64) -> i64 {
     (ms * 1_000.0) as i64
 }
 
-/// A present of the product on swap chain `chain` at QPC ms `ms`, shown or never shown.
+/// A present of the product on swap chain `chain` presented at QPC ms `ms`, shown or never shown.
 fn row(chain: &str, ms: f64, shown: bool) -> String {
+    row_from(chain, ms - BUSY_MS, BUSY_MS, shown)
+}
+
+/// A present whose CPU work started at QPC ms `start` and took `busy` ms before the present.
+fn row_from(chain: &str, start: f64, busy: f64, shown: bool) -> String {
     let display = if shown { "6.0" } else { "NA" };
-    format!("{PROGRAM},{chain},{ms},6.0,{display}\n")
+    format!("{PROGRAM},{chain},{start},{busy},6.0,{display}\n")
 }
 
 /// The chain's first frame, shown, and a frame shown inside the press, so the times line up.
@@ -123,6 +130,30 @@ fn a_frame_a_newer_one_replaced_within_a_refresh_never_counts() {
         read(&late).expect("lines up").counted.len(),
         1,
         "a refresh went by"
+    );
+}
+
+#[test]
+fn a_frame_after_an_idle_pause_counts_at_its_present_not_at_its_cpu_start() {
+    // After a pause, a frame's CPU start is the last present before the pause, long before the press.
+    let (start, at) = (PRESS_MS - 2_000.0, PRESS_MS + 50.0);
+    let rows = [
+        row_from(CHAIN, start, at - start, false),
+        row(CHAIN, at + 50.0, true),
+    ];
+    let got = read(&rows).expect("lines up");
+    assert_eq!(got.counted, [loss(at, During::Press)]);
+}
+
+#[test]
+fn a_frame_is_replaced_only_when_the_next_present_itself_comes_within_a_refresh() {
+    let at = PRESS_MS + 100.0;
+    let slow = [row(CHAIN, at, false), row_from(CHAIN, at, 30.0, true)];
+    let got = read(&slow).expect("lines up");
+    assert_eq!(
+        got.counted,
+        [loss(at, During::Press)],
+        "its CPU start is no present"
     );
 }
 

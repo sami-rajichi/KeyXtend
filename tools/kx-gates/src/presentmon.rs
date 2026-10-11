@@ -1,5 +1,5 @@
 //! G8's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with its swap
-//! chain, its time on the QPC clock and whether it showed, and the slowest gaps between presents.
+//! chain, when it was presented on the QPC clock and whether it showed, and the slowest gaps between presents.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -10,18 +10,20 @@ use serde::Serialize;
 use crate::admin::command_line;
 use crate::stats::{P99, US_PER_MS, percentile};
 
-/// The column that names the program, lower-cased.
-const APP: &str = "application";
+/// The column that names the program; every name is matched exactly.
+const APP: &str = "Application";
 /// The column that names a present's swap chain.
-const CHAIN: &str = "swapchainaddress";
-/// The text in the name of the column `QPC_ARG` writes, whatever the version calls it.
-const QPC: &str = "qpc";
-/// Asks `PresentMon` for each present's time on the QPC clock, in ms.
+const CHAIN: &str = "SwapChainAddress";
+/// Asks `PresentMon` for each frame's CPU start on the QPC clock, in ms.
 pub const QPC_ARG: &str = "--qpc_time_ms";
+/// Columns with a frame's CPU start, in ms: 2.6, then 2.0 to 2.5.
+const START: [&str; 2] = ["CPUStartTimeInMs", "CPUStartQPCTime"];
+/// Columns with the ms from a frame's CPU start to its present: 2.6, then 2.0 to 2.5.
+const BUSY: [&str; 2] = ["MsCPUBusy", "CPUBusy"];
 /// Columns with the time since the previous present, in ms: 2.6, then 2.0 to 2.5.
-const GAP: [&str; 2] = ["msbetweenpresents", "frametime"];
+const GAP: [&str; 2] = ["MsBetweenPresents", "FrameTime"];
 /// Columns that say when a frame reached the screen, `NA` when it never did: 2.6, then 2.0 to 2.5.
-const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
+const SHOWN: [&str; 2] = ["MsUntilDisplayed", "DisplayedTime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
 /// The UTF-8 byte order mark `PresentMon` 2.6 starts its CSV with.
@@ -65,7 +67,7 @@ pub fn how(program: &str, file: &Path, secs: u64) -> String {
 pub struct Present {
     /// Its swap chain's address, as the CSV writes it.
     pub chain: String,
-    /// When the CPU started it, on the QPC clock in µs.
+    /// When it was presented, its CPU start plus its CPU busy time, on the QPC clock in µs.
     pub at_us: i64,
     /// Whether it reached the screen.
     pub shown: bool,
@@ -89,43 +91,45 @@ pub struct Frames {
 struct Columns {
     app: usize,
     chain: usize,
-    time: usize,
-    gap: Option<usize>,
+    start: usize,
+    busy: usize,
+    gap: usize,
     shown: usize,
 }
 
 impl Columns {
     /// The columns of `header`; an error names what is missing.
     fn of(header: &str) -> Result<Self, String> {
-        let names: Vec<String> = header.split(',').map(|c| c.trim().to_lowercase()).collect();
-        let at = |want: &str| names.iter().position(|n| n == want);
-        let missing = |what: &str| format!("the CSV has no {what} column");
+        let names: Vec<&str> = header.split(',').map(str::trim).collect();
+        let one = |want: &[&str]| {
+            let at = want.iter().find_map(|w| names.iter().position(|n| n == w));
+            at.ok_or_else(|| format!("the CSV has no {} column", want.join(" or ")))
+        };
         Ok(Self {
-            app: at(APP).ok_or_else(|| missing("Application"))?,
-            chain: at(CHAIN).ok_or_else(|| missing("SwapChainAddress"))?,
-            time: names
-                .iter()
-                .position(|n| n.contains(QPC))
-                .ok_or_else(|| format!("{}; record with {QPC_ARG}", missing("QPC time")))?,
-            gap: GAP.iter().find_map(|g| at(g)),
-            shown: SHOWN
-                .iter()
-                .find_map(|s| at(s))
-                .ok_or_else(|| missing("display time"))?,
+            app: one(&[APP])?,
+            chain: one(&[CHAIN])?,
+            start: one(&START).map_err(|e| format!("{e}; record with {QPC_ARG}"))?,
+            busy: one(&BUSY)?,
+            gap: one(&GAP)?,
+            shown: one(&SHOWN)?,
         })
     }
 
-    /// The present in row `cells`; an error when it has no time.
+    /// The present in row `cells`; an error when it has no CPU start or busy time.
     fn present(&self, cells: &[&str]) -> Result<Present, String> {
         let cell = |i: usize| cells.get(i).copied().unwrap_or_default();
-        let ms = cell(self.time)
-            .parse::<f64>()
-            .ok()
-            .filter(|t| t.is_finite());
-        let ms = ms.ok_or_else(|| format!("a present has no QPC time: {}", cell(self.time)))?;
+        let ms = |i: usize| cell(i).parse::<f64>().ok().filter(|t| t.is_finite());
+        let at = ms(self.start).zip(ms(self.busy)).map(|(s, b)| s + b);
+        let why = || {
+            format!(
+                "a present has no CPU start or busy time: {}, {}",
+                cell(self.start),
+                cell(self.busy)
+            )
+        };
         Ok(Present {
             chain: cell(self.chain).to_string(),
-            at_us: us(ms),
+            at_us: us(at.ok_or_else(why)?),
             shown: cell(self.shown) != NOT_SHOWN,
         })
     }
@@ -157,8 +161,7 @@ pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
             continue;
         }
         presents.push(cols.present(&cells)?);
-        let gap = cols.gap.and_then(|g| cells.get(g)?.parse::<f64>().ok());
-        gaps.extend(gap);
+        gaps.extend(cells.get(cols.gap).and_then(|g| g.parse::<f64>().ok()));
     }
     presents.sort_by_key(|p| p.at_us);
     gaps.sort_by(f64::total_cmp);

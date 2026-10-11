@@ -1,6 +1,6 @@
 //! G8's frame rule (owner, 2026-10-11): `dropped_frames` counts only frames lost while a pressed key rises, from each
 //! G8 press to the end of its rise; losses in a resize or outside the presses are listed, not counted.
-// `PresentMon --qpc_time_ms` writes each present's time on the QPC clock that G8's `now_us` reads, so both line up.
+// Under `PresentMon --qpc_time_ms`, CPU start plus CPU busy is each frame's present time, on G8's `now_us` clock.
 #![cfg(windows)]
 
 use std::collections::HashSet;

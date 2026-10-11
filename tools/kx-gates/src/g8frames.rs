@@ -126,8 +126,8 @@ mod tests {
     use crate::config::{self, GatesConfig};
 
     /// Two frames of the product in `PresentMon` 2.x columns with QPC times; the second never showed.
-    const CSV: &str = "Application,SwapChainAddress,CPUStartQPCTime,FrameTime,DisplayedTime\n\
-        keyxtend.exe,0x1,5000.0,6.06,6.06\nkeyxtend.exe,0x1,5006.06,6.06,NA\n";
+    const CSV: &str = "Application,SwapChainAddress,CPUStartQPCTime,CPUBusy,FrameTime,DisplayedTime\n\
+        keyxtend.exe,0x1,5000.0,1.0,6.06,6.06\nkeyxtend.exe,0x1,5006.06,1.0,6.06,NA\n";
     /// The product's program, as G8 names it to `PresentMon`.
     const PROGRAM: &str = r"C:\kx\keyxtend.exe";
 

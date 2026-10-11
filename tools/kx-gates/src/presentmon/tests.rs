@@ -23,18 +23,22 @@ keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,16.1,NA,12.12,NA,0.1,1.0,NA,15.0
 16.1,0.0,NA,NA\r
 ";
 
-/// The 2.6 file as `--qpc_time_ms` would write it; the column's exact 2.6 name is unknown here, and any name with QPC
-/// in it is read.
-fn v2_6_qpc() -> String {
-    V2_6.replacen("CPUStartTimeInMs", "CPUStartQPCTimeInMs", 1)
-}
+/// The columns G8 needs, by their exact names in `PresentMon` 2.6's own header.
+const NEEDED: [&str; 6] = [
+    "Application",
+    "SwapChainAddress",
+    "CPUStartTimeInMs",
+    "MsCPUBusy",
+    "MsBetweenPresents",
+    "MsUntilDisplayed",
+];
 
 #[test]
-fn each_present_of_the_product_keeps_its_swap_chain_its_qpc_time_in_us_and_whether_it_showed() {
+fn each_present_is_timed_at_its_cpu_start_plus_its_cpu_busy_time_on_its_swap_chain() {
     let f = parse(V2, "keyxtend.exe").expect("reads");
     assert_eq!((f.presented, f.lost), (2, 1), "in any case, not explorer");
     assert_eq!(f.p99_ms, Some(12.12));
-    let want = [("0x1", 5_000_250, true), ("0x1", 5_006_310, false)];
+    let want = [("0x1", 5_001_250, true), ("0x1", 5_007_310, false)];
     let got = f
         .presents
         .iter()
@@ -43,21 +47,28 @@ fn each_present_of_the_product_keeps_its_swap_chain_its_qpc_time_in_us_and_wheth
 }
 
 #[test]
-fn version_2_6_files_read_with_or_without_the_byte_order_mark_they_start_with() {
-    for csv in [v2_6_qpc(), format!("\u{FEFF}{}", v2_6_qpc())] {
+fn version_2_6_files_read_by_their_own_column_names_with_or_without_the_byte_order_mark() {
+    for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}")] {
         let f = parse(&csv, "keyxtend.exe").expect("reads");
         assert_eq!((f.presented, f.lost), (2, 1));
         assert_eq!(f.p99_ms, Some(12.12));
-        assert_eq!(f.presents[1].at_us, 15_000, "CPU start, in µs");
+        let at: Vec<_> = f.presents.iter().map(|p| p.at_us).collect();
+        assert_eq!(at, [10_000, 16_000], "CPU start plus CPU busy, in µs");
     }
 }
 
 #[test]
-fn a_file_recorded_without_qpc_times_is_refused_and_names_the_flag() {
-    for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}")] {
-        let e = parse(&csv, "keyxtend.exe").expect_err("no QPC column");
-        assert!(e.contains(QPC_ARG), "{e}");
+fn a_file_without_a_needed_column_is_refused_and_names_it() {
+    for name in NEEDED {
+        let csv = V2_6.replacen(name, "Gone", 1);
+        let e = parse(&csv, "keyxtend.exe").expect_err("a column is missing");
+        assert!(e.contains(name), "{name}: {e}");
     }
+    let lower = V2_6.replacen("MsCPUBusy", "mscpubusy", 1);
+    assert!(
+        parse(&lower, "keyxtend.exe").is_err(),
+        "names match exactly"
+    );
 }
 
 #[test]
@@ -65,23 +76,20 @@ fn presents_are_read_in_time_order_and_a_present_without_a_time_is_an_error() {
     let swapped = V2.replacen("5000.25", "5009.0", 1);
     let f = parse(&swapped, "keyxtend.exe").expect("reads");
     let at: Vec<_> = f.presents.iter().map(|p| p.at_us).collect();
-    assert_eq!(at, [5_006_310, 5_009_000]);
-    let blank = V2.replacen("5000.25", "NA", 1);
-    assert!(parse(&blank, "keyxtend.exe").is_err());
+    assert_eq!(at, [5_007_310, 5_010_000]);
+    for blank in [
+        V2.replacen("5000.25", "NA", 1),
+        V2.replacen("6.06,1.0", "6.06,NA", 1),
+    ] {
+        assert!(parse(&blank, "keyxtend.exe").is_err(), "{blank}");
+    }
 }
 
 #[test]
-fn no_frames_of_the_product_read_as_none_and_a_csv_without_the_columns_is_an_error() {
+fn no_frames_of_the_product_read_as_none_and_an_empty_csv_is_an_error() {
     let none = parse(V2, "other.exe").expect("reads");
     assert_eq!((none.presented, none.lost), (0, 0));
     assert!(parse("", "keyxtend.exe").is_err());
-    let no_shown = "Application,SwapChainAddress,CPUStartQPCTime,FrameTime\n";
-    assert!(
-        parse(no_shown, "keyxtend.exe").is_err(),
-        "no display column"
-    );
-    let no_chain = "Application,CPUStartQPCTime,FrameTime,DisplayedTime\n";
-    assert!(parse(no_chain, "keyxtend.exe").is_err(), "no swap chain");
 }
 
 #[test]
