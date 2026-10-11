@@ -70,18 +70,17 @@ impl Hub {
         let Some(book) = book.as_mut() else {
             return false;
         };
-        let mut kept = BTreeMap::new();
+        let mut picker = Picker {
+            book: book.as_mut(),
+            loaded: &mut *loaded,
+            kept: BTreeMap::new(),
+            failed,
+        };
         let mut now = false;
         for list in lists {
-            now |= pick(
-                list,
-                &self.font_files,
-                book.as_mut(),
-                loaded,
-                &mut kept,
-                failed,
-            );
+            now |= picker.pick(list, &self.font_files);
         }
+        let kept = picker.kept;
         *picked = kept.keys().cloned().collect();
         loaded.extend(kept);
         *added |= now;
@@ -115,50 +114,63 @@ impl Hub {
     }
 }
 
-/// Keeps the first family of `list` that Windows ships, or whose bundled files all load, in `kept`, moving its files
-/// out of `loaded` or loading them; a family whose file did not load warns once, joins `failed`, and the next one is
-/// tried. True when it loaded a file.
-fn pick(
-    list: &[String],
-    table: &FontFiles,
-    book: &mut dyn FontBook,
-    loaded: &mut BTreeMap<String, i32>,
-    kept: &mut BTreeMap<String, i32>,
-    failed: &mut BTreeSet<String>,
-) -> bool {
-    for family in list {
-        if SYSTEM_FONTS.contains(&family.as_str()) {
-            return false;
+/// One load's pick: the book, the files loaded before it, the files it keeps for the theme, and the families whose
+/// files did not load.
+struct Picker<'a> {
+    book: &'a mut dyn FontBook,
+    loaded: &'a mut BTreeMap<String, i32>,
+    kept: BTreeMap<String, i32>,
+    failed: &'a mut BTreeSet<String>,
+}
+
+impl Picker<'_> {
+    /// Keeps the first family of `list` that Windows ships, or whose bundled files all load, moving its files out of
+    /// `loaded` or loading them; a family whose file did not load warns once, joins `failed`, and the next one is
+    /// tried. True when it loaded a file.
+    fn pick(&mut self, list: &[String], table: &FontFiles) -> bool {
+        for family in list {
+            if SYSTEM_FONTS.contains(&family.as_str()) {
+                return false;
+            }
+            if self.failed.contains(family) {
+                continue;
+            }
+            let names = table.names(family).unwrap_or_default();
+            if let Some(took) = self.take(&names) {
+                let added = took.keys().any(|n| self.new_file(n));
+                self.loaded.retain(|n, _| !took.contains_key(n));
+                self.kept.extend(took);
+                return added;
+            }
+            self.failed.insert(family.clone());
+            tracing::warn!(family = %family, "a theme font did not load, so its next family is tried");
         }
-        if failed.contains(family) {
-            continue;
-        }
-        let names = table.names(family).unwrap_or_default();
+        false
+    }
+
+    /// The id of each file in `names`, kept, loaded before or loaded now; `None` when there are none or one did not
+    /// load, after dropping the ones it loaded.
+    fn take(&mut self, names: &[String]) -> Option<BTreeMap<String, i32>> {
         let mut took = BTreeMap::new();
         let all = !names.is_empty()
             && names.iter().all(|name| {
-                let id = kept
-                    .get(name)
-                    .or(loaded.get(name))
-                    .copied()
-                    .or_else(|| book.load(name));
+                let had = self.kept.get(name).or(self.loaded.get(name)).copied();
+                let id = had.or_else(|| self.book.load(name));
                 id.map(|id| took.insert(name.clone(), id)).is_some()
             });
         if all {
-            let added = took
-                .keys()
-                .any(|n| !loaded.contains_key(n) && !kept.contains_key(n));
-            loaded.retain(|n, _| !took.contains_key(n));
-            kept.extend(took);
-            return added;
+            return Some(took);
         }
         for (name, id) in took {
-            if !loaded.contains_key(&name) && !kept.contains_key(&name) {
-                book.unload(id);
+            if self.new_file(&name) {
+                self.book.unload(id);
             }
         }
-        failed.insert(family.clone());
-        tracing::warn!(family = %family, "a theme font did not load, so its next family is tried");
+        None
     }
-    false
+
+    /// True when file `name` was neither loaded before this load nor kept by it yet.
+    fn new_file(&self, name: &str) -> bool {
+        !self.loaded.contains_key(name) && !self.kept.contains_key(name)
+    }
 }
