@@ -1,12 +1,19 @@
-// The motion wiring over the real look fixtures: full timings animate, reduced ones jump and never loop.
+// The motion wiring over the real look fixtures: full timings animate, reduced ones jump and never loop; a press shows
+// in full at once in every look.
 import QtQuick
 import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/assets.js" as Assets
+import "pointer.js" as Pointer
 import "../../kx-theme/fixtures/look-native-light.js" as F
 import "../../kx-theme/fixtures/look-native-light-reduced.js" as R
+import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
+import "../../kx-theme/fixtures/look-native-dark.js" as ND
+import "../../kx-theme/fixtures/look-et66-light.js" as E
+import "../../kx-theme/fixtures/look-et66-dark.js" as ED
 import "../../kx-theme/fixtures/look-dolch-light.js" as D
+import "../../kx-theme/fixtures/look-dolch-dark.js" as DD
 
 Item {
     id: root
@@ -28,6 +35,8 @@ Item {
     readonly property var lang1: Face.states.en.lang
     readonly property var lang2: Object.assign({}, Face.states.ar.lang, { turn: 1 })
     readonly property var lang3: Face.states.ar.lang
+    // Every look a press must show in, by name: each theme light and dark, high contrast and reduced motion.
+    readonly property var looks: [["Native", F.lk], ["Native dark", ND.lk], ["ET66", E.lk], ["ET66 dark", ED.lk], ["Dolch", D.lk], ["Dolch dark", DD.lk], ["high contrast", H.lk], ["reduced motion", R.lk]]
 
     // A key of `kind` in a cell at the top left.
     function kv(kind) {
@@ -58,6 +67,11 @@ Item {
         name: "motion"
         when: windowShown
 
+        // The keys sit in the test's own window, which the real pointer passes through, so a hand on the mouse keeps
+        // the hover the tests set.
+        function initTestCase() {
+            Pointer.through([Window.window]);
+        }
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
@@ -77,17 +91,32 @@ Item {
             const row = find(l, o => o.data !== undefined && o.data.some(turn));
             return row ? row.data.find(turn) : null;
         }
-        function test_press_eases_in_full_and_jumps_when_reduced() {
+        // Spec §10 and G8: the frame drawn next after a press on a hovered key shows the press in full, in every look.
+        function test_a_press_shows_in_full_on_the_next_frame_in_every_look() {
+            for (const [name, lk] of root.looks) {
+                const k = makeKey(lk, false);
+                mouseMove(k);
+                const hovered = grabImage(k);
+                mousePress(k);
+                compare(k.sink, 1, name + ": the cap sinks at once");
+                verify(!grabImage(k).equals(hovered), name + ": the next frame shows the press");
+                mouseRelease(k);
+            }
+        }
+        // The let-go eases back with full motion and jumps when reduced; a press while it eases shows in full at once.
+        function test_the_let_go_eases_and_a_press_cuts_it_short() {
             const k = makeKey(F.lk, false);
             mousePress(k);
-            verify(k.sink < 1, "the press eases in: " + k.sink);
-            tryCompare(k, "sink", 1, 1000);
+            mouseRelease(k);
+            verify(k.sink > 0, "the let-go eases back: " + k.sink);
+            mousePress(k);
+            compare(k.sink, 1, "a press while it eases");
             mouseRelease(k);
             tryCompare(k, "sink", 0, 1000);
             const r = makeKey(R.lk, false);
             mousePress(r);
-            tryCompare(r, "sink", 1, 50);
             mouseRelease(r);
+            compare(r.sink, 0, "reduced motion lets go at once");
         }
 
         function test_dolch_top_inset_follows_the_sink() {

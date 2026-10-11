@@ -16,7 +16,8 @@ wave = [0.45, 0.0, 0.55, 1.0]
 ease_in = [0.42, 0.0, 1.0, 1.0]
 
 [moves]
-# A cap sinking when pressed (.cap transform), and colours changing on keys, lights and the D-pad (.cap, .led, .dp).
+# A cap rising after a press, which sinks it at once so the next frame shows it (.cap transform, spec §10), and colours
+# changing on keys, lights and the D-pad (.cap, .led, .dp).
 press = { ms = 90, curve = "ease" }
 colour = { ms = 150, curve = "ease" }
 # The plate's colour on a theme or mode change (.kb background).
