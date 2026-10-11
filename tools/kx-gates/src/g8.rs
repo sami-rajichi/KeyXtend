@@ -8,6 +8,7 @@ use std::path::Path;
 use std::time::{Instant, SystemTime};
 
 use serde_json::{Value, json};
+use spike_core::clock::now_us;
 use spike_core::weak::{Caps, Job};
 use windows::Win32::System::Threading::GetCurrentProcess;
 
@@ -16,6 +17,7 @@ use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8churn;
 use crate::g8frames::{self, Recorder};
+use crate::g8loss::{self, Span};
 use crate::g8parts::{Measured, Outside, parts, verdict};
 use crate::g8start::{self, Started, log_span};
 use crate::out::say;
@@ -113,26 +115,36 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
         .map_or_else(|e| json!({ "error": e }), |v| json!(v))
 }
 
-/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames`, what G8 measured outside the product, and
-/// the bus and frames for the result line.
-fn outside(ctx: &Ctx, job: Option<Job>, frames: &Result<Frames, String>) -> (Outside, [Value; 2]) {
-    let bus = bench(ctx, job);
+/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames` against G8's press and resize `spans` from
+/// `origin_us`, what G8 measured outside the product, and the bus, frames and losses for the result line.
+fn outside(
+    ctx: &Ctx,
+    job: Option<Job>,
+    frames: &Result<Frames, String>,
+    spans: &[Span],
+    origin_us: i64,
+) -> (Outside, [Value; 3]) {
+    let (bus, hz) = (bench(ctx, job), g8ui::refresh_hz());
+    let frames_ok = frames.as_ref().map_err(Clone::clone);
+    let losses = frames_ok.and_then(|f| g8loss::losses(&f.presents, spans, hz, origin_us));
     #[allow(
         clippy::cast_precision_loss,
         reason = "Frame counts are far below 2^53."
     )]
-    let dropped = frames
-        .as_ref()
-        .ok()
-        .and_then(Frames::drops)
-        .map(|d| d as f64);
+    let dropped = losses.as_ref().ok().map(|l| l.counted.len() as f64);
     let bus_p99_us = bus.as_ref().ok().and_then(|b| b.p99_us);
     let o = Outside {
-        hz: g8ui::refresh_hz(),
+        hz,
         bus_p99_us,
         dropped,
     };
-    (o, [shown(&bus), shown(frames)])
+    (o, [shown(&bus), shown(frames), shown(&losses)])
+}
+
+/// G8's presses and resizes in `m`, for its frame rule.
+fn spans(m: &Measured) -> Vec<Span> {
+    let resized = m.resizes.iter().map(|r| r.span);
+    m.presses.spans.iter().copied().chain(resized).collect()
 }
 
 /// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
@@ -165,7 +177,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     } else {
         (None, None)
     };
-    let since = SystemTime::now();
+    let (since, origin_us) = (SystemTime::now(), now_us());
     let rec = g8frames::record(ctx, &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
     let s = g8start::start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
@@ -180,7 +192,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
-    let (o, [bus, frames]) = outside(ctx, job, &frames);
+    let (o, [bus, frames, losses]) = outside(ctx, job, &frames, &spans(&m), origin_us);
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();
@@ -188,8 +200,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
-        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "capture_cut": m.capture_cut, "parts": parts,
-        "quit": ended,
+        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": m.capture_cut,
+        "parts": parts, "quit": ended,
         "pass": verdict(weak, &m.churn, ended && budget::all_pass(&parts)),
     }))
 }

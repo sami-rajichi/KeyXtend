@@ -5,11 +5,13 @@
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
+use spike_core::clock::now_us;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Dwm::{DWM_TIMING_INFO, DwmGetCompositionTimingInfo};
 
 use crate::apps::Ctx;
 use crate::budget::ms;
+use crate::g8loss::Span;
 use crate::product::Keyboard;
 use crate::win::{self, size32, sleep_ms};
 use crate::{mouse, shot, simuser};
@@ -21,6 +23,9 @@ pub struct Presses {
     pub lit_ms: Vec<Option<f64>>,
     /// How long each screen copy took.
     pub copy_ms: Vec<f64>,
+    /// Each press and its key's rise, for G8's frame rule.
+    #[serde(skip)]
+    pub spans: Vec<Span>,
 }
 
 /// The screen's refresh rate in Hz, from the compositor.
@@ -82,7 +87,7 @@ fn or_release(
 }
 
 /// Presses `[g8] press_key` again and again and times how soon it lights; the pointer rests on it first, so the
-/// hover is already drawn.
+/// hover is already drawn, and the last key's rise ends before it returns.
 pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
     let g = &ctx.cfg.g8;
     let (r, on) = (kb.rect(&g.press_key)?, kb.at(&g.press_key)?);
@@ -92,12 +97,14 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
         mouse::move_to(on)?;
         sleep_ms(g.hover_settle_ms);
         let before = picture(&r)?;
-        let start = Instant::now();
+        let (start, at_us) = (Instant::now(), now_us());
         mouse::press_at(on)?;
+        out.spans.push(Span::press(at_us, g.rise_ms));
         let lit = watch(&r, &before, start, g.press_wait_ms, &mut out.copy_ms);
         or_release(mouse::release_at(away), simuser::release_all)?;
         out.lit_ms.push(lit?);
     }
+    sleep_ms(g.rise_wait_ms);
     Ok(out)
 }
 

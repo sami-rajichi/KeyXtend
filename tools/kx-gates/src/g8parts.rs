@@ -42,7 +42,7 @@ pub struct Outside {
     pub hz: Option<f64>,
     /// The bus publish's 99th percentile, in µs.
     pub bus_p99_us: Option<f64>,
-    /// Frames that never showed, from the `PresentMon` CSV.
+    /// Frames lost while a pressed key rose, by G8's frame rule on the `PresentMon` CSV.
     pub dropped: Option<f64>,
 }
 
@@ -112,6 +112,7 @@ mod tests {
             presses: Presses {
                 lit_ms: vec![Some(9.0), Some(12.5)],
                 copy_ms: vec![2.0, 2.5, 3.0],
+                ..Presses::default()
             },
             resizes: vec![],
             g2: json!({

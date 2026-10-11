@@ -48,6 +48,10 @@ pub struct G8 {
     pub hover_settle_ms: u64,
     /// Longest wait for a press to light its key.
     pub press_wait_ms: u64,
+    /// A pressed key's rise, from the press; only frames lost in it count as `dropped_frames`.
+    pub rise_ms: u64,
+    /// Wait after the last press before the resizes, so its rise has ended; at least `rise_ms`.
+    pub rise_wait_ms: u64,
     /// The top bar's grow button, by UI Automation id.
     pub grow: String,
     /// The top bar's shrink button, by UI Automation id.
@@ -128,6 +132,11 @@ impl G8 {
         if self.presentmon_secs == 0 || self.warm_ms == 0 {
             // PresentMon runs hidden as administrator, so it must stop by itself; memory is read after a warm-up.
             return Err("g8.presentmon_secs and g8.warm_ms must be above 0".to_string());
+        }
+        if self.rise_ms == 0 || self.rise_wait_ms < self.rise_ms {
+            return Err(
+                "g8.rise_ms must be above 0 and g8.rise_wait_ms at least rise_ms".to_string(),
+            );
         }
         if self.quit_tries == 0 || self.resize_slack_px < 0 {
             return Err(
@@ -253,7 +262,9 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 11] = [
+        let bad: [fn(&mut G8); 13] = [
+            |g| g.rise_ms = 0,
+            |g| g.rise_wait_ms = g.rise_ms - 1,
             |g| g.churn_rounds = 0,
             |g| g.memory_mb = 0.0,
             |g| g.commit_mb = f64::NAN,

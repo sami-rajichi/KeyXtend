@@ -4,11 +4,13 @@
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
+use spike_core::clock::now_us;
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::Ctx;
 use crate::budget::ms;
 use crate::g8cfg::G8;
+use crate::g8loss::Span;
 use crate::keymap::Reader;
 use crate::product;
 use crate::win::{self, sleep_ms};
@@ -20,6 +22,9 @@ pub struct Resize {
     pub button: String,
     /// Press to the box's last change.
     pub ms: Option<f64>,
+    /// From the press until the box settled or the wait ran out, for G8's frame rule.
+    #[serde(skip)]
+    pub span: Span,
 }
 
 /// One of the top bar's size buttons.
@@ -74,7 +79,7 @@ fn resize_with(
         Duration::from_millis(g.resize_settle_ms),
     );
     let mut last = win::rect(hwnd)?;
-    let start = Instant::now();
+    let (start, from_us) = (Instant::now(), now_us());
     press(reader, id)?;
     let mut changed: Option<Duration> = None;
     while start.elapsed() < wait {
@@ -89,6 +94,7 @@ fn resize_with(
     Ok(Resize {
         button: id.to_string(),
         ms: changed.map(ms),
+        span: Span::resize(from_us, now_us()),
     })
 }
 

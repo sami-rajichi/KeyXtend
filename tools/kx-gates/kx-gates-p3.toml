@@ -33,6 +33,10 @@ highlight_frames = 2.0
 # Pause with the pointer on the key before each press, and the longest wait for its light, in ms.
 hover_settle_ms = 500
 press_wait_ms = 500
+# A pressed key's rise (the theme's colour move, 150 ms, and a few frames): only frames lost in it are dropped_frames.
+rise_ms = 200
+# Wait after the last press so its rise has ended before the resizes, in ms; at least rise_ms.
+rise_wait_ms = 300
 # Resizing through the top bar's buttons (UI Automation ids); the box has settled after resize_settle_ms unchanged.
 grow = "bar.bigger"
 shrink = "bar.smaller"
@@ -48,7 +52,7 @@ char_ms = 30.0
 subscribers = 20
 publishes = 10000
 bus_share = 0.01
-# PresentMon's CSV in the out folder, recorded while G8 runs up to its churn.
+# PresentMon's CSV in the out folder, recorded with QPC times (--qpc_time_ms) while G8 runs up to its churn.
 presentmon = "g8-presentmon.csv"
 # How long that capture records, in seconds: G8's run up to the churn, about a minute. G8 waits for its end before the
 # churn, so a theme switch never counts as a dropped frame.

@@ -1,5 +1,5 @@
-//! G8's frame times from a `PresentMon` CSV: the product's frames, how many were dropped, and the slowest gaps. Both
-//! `PresentMon` 1.x columns and 2.x columns (with or without `--v1_metrics`) are read by name.
+//! G8's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with its swap
+//! chain, its time on the QPC clock and whether it showed, and the slowest gaps between presents.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -8,17 +8,19 @@ use std::time::Duration;
 use serde::Serialize;
 
 use crate::admin::command_line;
-use crate::stats::{P99, percentile};
+use crate::stats::{P99, US_PER_MS, percentile};
 
 /// The column that names the program, lower-cased.
 const APP: &str = "application";
-/// Columns with the time since the previous present, in ms: 1.x and 2.x `--v1_metrics`, then 2.x.
+/// The column that names a present's swap chain.
+const CHAIN: &str = "swapchainaddress";
+/// The text in the name of the column `QPC_ARG` writes, whatever the version calls it.
+const QPC: &str = "qpc";
+/// Asks `PresentMon` for each present's time on the QPC clock, in ms.
+pub const QPC_ARG: &str = "--qpc_time_ms";
+/// Columns with the time since the previous present, in ms: 2.6, then 2.0 to 2.5.
 const GAP: [&str; 2] = ["msbetweenpresents", "frametime"];
-/// The 1.x column that is 1 for a dropped frame.
-const DROPPED: &str = "dropped";
-/// The value of `DROPPED` for a dropped frame.
-const WAS_DROPPED: &str = "1";
-/// Columns that say when a frame reached the screen, `NA` when it never did: 1.x, then 2.x.
+/// Columns that say when a frame reached the screen, `NA` when it never did: 2.6, then 2.0 to 2.5.
 const SHOWN: [&str; 2] = ["msuntildisplayed", "displayedtime"];
 /// A frame that never reached the screen.
 const NOT_SHOWN: &str = "NA";
@@ -31,7 +33,8 @@ pub fn stop_wait(secs: u64, stop_ms: u64, gone: Duration) -> Duration {
     all.saturating_sub(gone)
 }
 
-/// `PresentMon`'s arguments that record `program`'s frames for `secs` seconds into CSV `file`, then stop.
+/// `PresentMon`'s arguments that record `program`'s frames with QPC times for `secs` seconds into CSV `file`, then
+/// stop.
 pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
     let file = file.display().to_string();
     let secs = secs.to_string();
@@ -40,6 +43,7 @@ pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
         program,
         "--output_file",
         &file,
+        QPC_ARG,
         "--timed",
         &secs,
         "--terminate_after_timed",
@@ -56,30 +60,38 @@ pub fn how(program: &str, file: &Path, secs: u64) -> String {
     )
 }
 
+/// One present of the product.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Present {
+    /// Its swap chain's address, as the CSV writes it.
+    pub chain: String,
+    /// When the CPU started it, on the QPC clock in µs.
+    pub at_us: i64,
+    /// Whether it reached the screen.
+    pub shown: bool,
+}
+
 /// What the CSV says about the product's frames.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Frames {
     /// Frames the product presented.
     pub presented: usize,
-    /// Frames that never reached the screen.
-    pub dropped: usize,
+    /// Frames that never reached the screen, whether G8's frame rule counts them or not.
+    pub lost: usize,
     /// The 99th percentile of the gaps between presents, in ms.
     pub p99_ms: Option<f64>,
-}
-
-impl Frames {
-    /// Frames that never showed; none when the product presented nothing, which proves nothing.
-    pub fn drops(&self) -> Option<usize> {
-        (self.presented > 0).then_some(self.dropped)
-    }
+    /// Every present, in time order.
+    #[serde(skip)]
+    pub presents: Vec<Present>,
 }
 
 /// Where each column we read sits.
 struct Columns {
     app: usize,
-    gap: usize,
-    dropped: Option<usize>,
-    shown: Option<usize>,
+    chain: usize,
+    time: usize,
+    gap: Option<usize>,
+    shown: usize,
 }
 
 impl Columns {
@@ -87,30 +99,45 @@ impl Columns {
     fn of(header: &str) -> Result<Self, String> {
         let names: Vec<String> = header.split(',').map(|c| c.trim().to_lowercase()).collect();
         let at = |want: &str| names.iter().position(|n| n == want);
-        let app = at(APP).ok_or("the CSV has no Application column")?;
-        let gap = GAP
-            .iter()
-            .find_map(|g| at(g))
-            .ok_or("the CSV has no frame-gap column")?;
-        let dropped = at(DROPPED);
-        let shown = SHOWN.iter().find_map(|s| at(s));
-        if dropped.is_none() && shown.is_none() {
-            return Err("the CSV says nothing about dropped frames".to_string());
-        }
+        let missing = |what: &str| format!("the CSV has no {what} column");
         Ok(Self {
-            app,
-            gap,
-            dropped,
-            shown,
+            app: at(APP).ok_or_else(|| missing("Application"))?,
+            chain: at(CHAIN).ok_or_else(|| missing("SwapChainAddress"))?,
+            time: names
+                .iter()
+                .position(|n| n.contains(QPC))
+                .ok_or_else(|| format!("{}; record with {QPC_ARG}", missing("QPC time")))?,
+            gap: GAP.iter().find_map(|g| at(g)),
+            shown: SHOWN
+                .iter()
+                .find_map(|s| at(s))
+                .ok_or_else(|| missing("display time"))?,
         })
     }
 
-    /// True when row `cells` is a frame that never reached the screen.
-    fn was_dropped(&self, cells: &[&str]) -> bool {
-        let is =
-            |i: Option<usize>, v: &str| i.and_then(|i| cells.get(i)).is_some_and(|c| c.trim() == v);
-        is(self.dropped, WAS_DROPPED) || is(self.shown, NOT_SHOWN)
+    /// The present in row `cells`; an error when it has no time.
+    fn present(&self, cells: &[&str]) -> Result<Present, String> {
+        let cell = |i: usize| cells.get(i).copied().unwrap_or_default();
+        let ms = cell(self.time)
+            .parse::<f64>()
+            .ok()
+            .filter(|t| t.is_finite());
+        let ms = ms.ok_or_else(|| format!("a present has no QPC time: {}", cell(self.time)))?;
+        Ok(Present {
+            chain: cell(self.chain).to_string(),
+            at_us: us(ms),
+            shown: cell(self.shown) != NOT_SHOWN,
+        })
     }
+}
+
+/// `ms` milliseconds in whole µs.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "QPC times in µs are far below 2^63."
+)]
+fn us(ms: f64) -> i64 {
+    (ms * US_PER_MS).round() as i64
 }
 
 /// The frames of `program` (its file name, any case) in `PresentMon`'s `csv`, after any byte order mark; a last row with
@@ -120,152 +147,28 @@ pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
     let whole = csv.rfind('\n').map_or(csv, |end| &csv[..=end]);
     let mut lines = whole.lines();
     let cols = Columns::of(lines.next().ok_or("the CSV is empty")?)?;
-    let (mut gaps, mut dropped) = (Vec::new(), 0);
+    let (mut gaps, mut presents) = (Vec::new(), Vec::new());
     for line in lines {
-        let cells: Vec<&str> = line.split(',').collect();
-        let ours = cells
+        let cells: Vec<&str> = line.split(',').map(str::trim).collect();
+        if !cells
             .get(cols.app)
-            .is_some_and(|a| a.trim().eq_ignore_ascii_case(program));
-        if !ours {
+            .is_some_and(|a| a.eq_ignore_ascii_case(program))
+        {
             continue;
         }
-        dropped += usize::from(cols.was_dropped(&cells));
-        if let Some(gap) = cells
-            .get(cols.gap)
-            .and_then(|g| g.trim().parse::<f64>().ok())
-        {
-            gaps.push(gap);
-        }
+        presents.push(cols.present(&cells)?);
+        let gap = cols.gap.and_then(|g| cells.get(g)?.parse::<f64>().ok());
+        gaps.extend(gap);
     }
-    let presented = gaps.len();
+    presents.sort_by_key(|p| p.at_us);
     gaps.sort_by(f64::total_cmp);
     Ok(Frames {
-        presented,
-        dropped,
+        presented: presents.len(),
+        lost: presents.iter().filter(|p| !p.shown).count(),
         p99_ms: percentile(&gaps, P99),
+        presents,
     })
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// `PresentMon` 1.x rows, as its README documents the columns.
-    const V1: &str = "\
-Application,ProcessID,SwapChainAddress,Runtime,SyncInterval,PresentFlags,AllowsTearing,PresentMode,Dropped,\
-TimeInSeconds,msInPresentAPI,msBetweenPresents,msUntilRenderComplete,msUntilDisplayed
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Hardware: Independent Flip,0,0.10,0.05,6.06,0.5,6.1
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Hardware: Independent Flip,1,0.11,0.05,12.12,0.5,NA
-explorer.exe,99,0x2,DXGI,1,0,0,Composed: Flip,1,0.12,0.05,40.0,0.5,NA
-KEYXTEND.EXE,1234,0x1,DXGI,1,0,0,Hardware: Independent Flip,0,0.12,0.05,6.06,0.5,6.0
-";
-
-    /// `PresentMon` 2.x rows: no Dropped column, `NA` display time for a frame that never showed.
-    const V2: &str = "\
-Application,ProcessID,SwapChainAddress,PresentRuntime,SyncInterval,PresentFlags,AllowsTearing,PresentMode,\
-FrameType,CPUStartTime,FrameTime,CPUBusy,DisplayedTime
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,10.0,6.06,1.0,6.06
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,Application,16.1,6.06,1.0,6.06
-";
-
-    /// `PresentMon` 2.6's own header line, from a real capture, and two rows: one shown, one never shown.
-    const V2_6: &str = "\
-Application,ProcessID,SwapChainAddress,PresentRuntime,SyncInterval,PresentFlags,AllowsTearing,PresentMode,TimeInMs,\
-MsBetweenSimulationStart,MsBetweenPresents,MsBetweenDisplayChange,MsInPresentAPI,MsRenderPresentLatency,\
-MsUntilDisplayed,CPUStartTimeInMs,MsBetweenAppStart,MsCPUBusy,MsCPUWait,MsGPULatency,MsGPUTime,MsGPUBusy,MsGPUWait,\
-MsAnimationError,AnimationTime,MsFlipDelay,MsAllInputToPhotonLatency,MsClickToPhotonLatency\r
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,10.0,NA,6.06,6.06,0.1,1.0,6.0,9.0,6.06,1.0,0.1,0.5,0.5,0.5,0.1,0.0,\
-10.0,0.0,NA,NA\r
-keyxtend.exe,1234,0x1,DXGI,1,0,0,Composed: Flip,16.1,NA,12.12,NA,0.1,1.0,NA,15.0,6.06,1.0,0.1,0.5,0.5,0.5,0.1,0.0,\
-16.1,0.0,NA,NA\r
-";
-
-    #[test]
-    fn version_2_6_files_read_with_or_without_the_byte_order_mark_they_start_with() {
-        for csv in [V2_6.to_string(), format!("\u{FEFF}{V2_6}")] {
-            let f = parse(&csv, "keyxtend.exe").expect("reads");
-            assert_eq!((f.presented, f.dropped), (2, 1));
-            assert_eq!(f.p99_ms, Some(12.12));
-        }
-    }
-
-    #[test]
-    fn version_1_rows_count_the_products_frames_and_drops_in_any_case() {
-        let f = parse(V1, "keyxtend.exe").expect("reads");
-        assert_eq!((f.presented, f.dropped), (3, 1));
-        assert_eq!(f.p99_ms, Some(12.12));
-        assert_eq!(f.drops(), Some(1), "a dropped frame counts");
-    }
-
-    #[test]
-    fn version_2_rows_pass_when_every_frame_showed() {
-        let f = parse(V2, "keyxtend.exe").expect("reads");
-        assert_eq!((f.presented, f.dropped), (2, 0));
-        assert_eq!(f.drops(), Some(0));
-        let dropped = V2.replacen(",6.06\nkeyxtend", ",NA\nkeyxtend", 1);
-        assert_eq!(parse(&dropped, "keyxtend.exe").expect("reads").dropped, 1);
-    }
-
-    #[test]
-    fn no_frames_of_the_product_fail_and_a_csv_without_the_columns_is_an_error() {
-        assert_eq!(
-            parse(V2, "other.exe").expect("reads").drops(),
-            None,
-            "nothing presented"
-        );
-        assert!(parse("", "keyxtend.exe").is_err());
-        assert!(
-            parse("Application,FrameTime\n", "keyxtend.exe").is_err(),
-            "no drop column"
-        );
-        assert!(parse("ProcessID,Dropped,msBetweenPresents\n", "x").is_err());
-    }
-
-    #[test]
-    fn a_last_row_still_being_written_is_left_out() {
-        let cut = V1
-            .trim_end_matches('\n')
-            .rsplit_once(",6.0")
-            .expect("the last row")
-            .0;
-        let f = parse(cut, "keyxtend.exe").expect("reads");
-        assert_eq!(
-            (f.presented, f.dropped),
-            (2, 1),
-            "the cut row is not counted"
-        );
-    }
-
-    #[test]
-    fn g8_starts_presentmon_with_the_arguments_the_how_to_names() {
-        let file = Path::new(r"C:\out\pm.csv");
-        let got = args("keyxtend.exe", file, 75);
-        let want = [
-            "--process_name",
-            "keyxtend.exe",
-            "--output_file",
-            r"C:\out\pm.csv",
-            "--timed",
-            "75",
-            "--terminate_after_timed",
-        ];
-        assert_eq!(got, want);
-        let text = how("keyxtend.exe", file, 75);
-        assert!(text.contains(&want.join(" ")), "{text}");
-        for part in ["presentmon_exe", "administrator"] {
-            assert!(text.contains(part), "{part}: {text}");
-        }
-    }
-
-    #[test]
-    fn g8_waits_out_the_recording_and_its_stop_time_from_its_start() {
-        let gone = |s| Duration::from_secs(s);
-        assert_eq!(stop_wait(90, 15_000, gone(60)), gone(45));
-        assert_eq!(stop_wait(90, 0, gone(30)), gone(60), "no stop time");
-        assert_eq!(
-            stop_wait(90, 15_000, gone(200)),
-            Duration::ZERO,
-            "long done"
-        );
-    }
-}
+mod tests;

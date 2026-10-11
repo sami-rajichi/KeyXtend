@@ -125,9 +125,9 @@ mod tests {
     use super::*;
     use crate::config::{self, GatesConfig};
 
-    /// Two frames of the product in `PresentMon` 2.x columns; the second never showed.
-    const CSV: &str =
-        "Application,FrameTime,DisplayedTime\nkeyxtend.exe,6.06,6.06\nkeyxtend.exe,6.06,NA\n";
+    /// Two frames of the product in `PresentMon` 2.x columns with QPC times; the second never showed.
+    const CSV: &str = "Application,SwapChainAddress,CPUStartQPCTime,FrameTime,DisplayedTime\n\
+        keyxtend.exe,0x1,5000.0,6.06,6.06\nkeyxtend.exe,0x1,5006.06,6.06,NA\n";
     /// The product's program, as G8 names it to `PresentMon`.
     const PROGRAM: &str = r"C:\kx\keyxtend.exe";
 
@@ -243,7 +243,7 @@ mod tests {
             let (_child, rec) = ended();
             for r in [Some(&rec), None] {
                 let f = frames(ctx, Path::new(PROGRAM), before_now(), r).expect("read");
-                assert_eq!((f.presented, f.dropped), (2, 1));
+                assert_eq!((f.presented, f.lost), (2, 1));
             }
         });
     }

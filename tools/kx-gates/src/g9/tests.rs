@@ -35,6 +35,7 @@ fn resized(ms: Option<f64>) -> Resize {
     Resize {
         button: "bar.bigger".into(),
         ms,
+        span: crate::g8loss::Span::resize(0, 0),
     }
 }
 
