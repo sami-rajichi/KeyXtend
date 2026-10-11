@@ -2,7 +2,7 @@
 //! unable to draw, Qt's loop ends, and the windows are made again over the same hub, at the face's place and size, on
 //! a device on the adapter picked anew, one try per turn of the loop, until `[ui] device_rebuilds` runs out.
 
-use crate::checks::iconed;
+use crate::checks::{adopted, iconed};
 use crate::face::HOME;
 use crate::rig::{GONE, GUARDED, Outcome, PICK, Rig, TICKS, pick_next, ticker, timer, wait};
 use cxx::UniquePtr;
@@ -132,8 +132,8 @@ pub(crate) fn watched() -> Outcome {
 
 /// The first loss, during a resize and with no ticker: the device's own exit ends Qt's loop, the resize ends, and the
 /// windows come back once, on one shared device made on the second try, after Qt's loop ran through the wait, as the
-/// first pick names a gone adapter; the pin is set again, the icons come from the provider again, the keyboard sits at
-/// the face's place and the new banner hears the hub. The keyboard's box.
+/// first pick names a gone adapter; the pin is set again, the icons come from the provider and the soft shadows from
+/// the adopter again, the keyboard sits at the face's place and the new banner hears the hub. The keyboard's box.
 pub(crate) fn once(
     app: &mut UniquePtr<QGuiApplication>,
     shell: &mut Shell,
@@ -144,7 +144,7 @@ pub(crate) fn once(
     if !rig.face.resizing() {
         return Err("the resize did not begin".into());
     }
-    let (was, made) = (marks(rig), kx_ui::icon_textures().0);
+    let (was, made, shadows) = (marks(rig), kx_ui::icon_textures().0, kx_ui::adopted());
     alone(app, tick, || shell.lose())?;
     if !shell.device().is_some_and(Device::lost) {
         return Err("Qt's loop ended before a frame found the loss".into());
@@ -154,6 +154,7 @@ pub(crate) fn once(
     back(app, rig, was)?;
     watched()?;
     iconed(rig, made)?;
+    adopted(shadows)?;
     if rig.face.resizing() || !qt_sees(ADAPTER_VAR) || rig.lines.count(Level::WARN, NOT_MADE) != 1 {
         return Err(
             "the resize ran on, or the gone adapter was not tried once with the pin kept".into(),

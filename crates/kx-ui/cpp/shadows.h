@@ -10,10 +10,29 @@
 #include <QtQml/QQmlEngine>
 #include <QtQuick/QQuickItem>
 
+#include <atomic>
+#include <cstddef>
+
+// The build kind, which sets `adopt` below, comes before it in every kx-ui file; the Quick tests' plugin has no such
+// header and builds without the probes.
+#if __has_include("kx-ui-build.h")
+#include "kx-ui-build.h"
+#endif
+
 // A Qt that frees the material itself would free it twice, so each Qt upgrade rechecks RectangularShadow first.
 static_assert(QT_VERSION < QT_VERSION_CHECK(6, 12, 0), "recheck who frees RectangularShadow's default material");
 
 namespace kxui {
+
+#if defined(KX_UI_PROBES)
+// How many materials the adopters gave their shadows so far; debug builds only.
+inline std::atomic<std::size_t> adoptions{0};
+
+inline std::size_t adopted_materials()
+{
+    return adoptions.load();
+}
+#endif
 
 // The name QML reaches the adopter by, and the shadow's property that holds its material.
 inline constexpr char SHADOWS[] = "shadows";
@@ -31,8 +50,12 @@ public:
     Q_INVOKABLE void adopt(QQuickItem *shadow) const
     {
         QQuickItem *material = shadow ? shadow->property(MATERIAL).value<QQuickItem *>() : nullptr;
-        if (material && !material->parent())
-            material->setParent(shadow);
+        if (!material || material->parent())
+            return;
+        material->setParent(shadow);
+#if defined(KX_UI_PROBES)
+        ++adoptions;
+#endif
     }
 };
 

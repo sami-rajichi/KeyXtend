@@ -34,9 +34,22 @@ pub(crate) fn iconed(rig: &Rig, made: u64) -> Outcome {
     }
 }
 
+/// The soft shadows took their materials through the app's adopter since it had adopted `was`: each engine, a rebuilt
+/// one too, serves it, as a missing one would only warn in QML and leak again.
+pub(crate) fn adopted(was: usize) -> Outcome {
+    let now = kx_ui::adopted();
+    if now > was {
+        Ok(())
+    } else {
+        Err(format!(
+            "the adopter took {now} materials, not more than {was}"
+        ))
+    }
+}
+
 /// The keyboard and its shadow, then the language list and its shadow, which a Loader makes later, all draw on the
 /// shared device, and every frame ends on the GUI thread; each has its scene graph errors heard, the icons come from
-/// the provider, and no device is made off that thread, where the pin stays.
+/// the provider, the soft shadows from the adopter, and no device is made off that thread, where the pin stays.
 pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &Rig) -> Outcome {
     let device = shell.device().ok_or("no shared device was made")?;
     wait(app, "the keyboard's first frame", || {
@@ -56,6 +69,7 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
     }
     watched()?;
     iconed(rig, 0)?;
+    adopted(0)?;
     elsewhere(rig)
 }
 
