@@ -87,10 +87,18 @@ impl Face {
         self.reply(went)
     }
 
-    /// The pointer went down on key `id` (spec §4.6): it types on let-go, or at the delay and on while held.
+    /// The pointer went down on key `id` (spec §4.6): it types now, answering as a tap does, and again at the delay
+    /// and on while held; while the list is open, a key that drives it waits for `panel_key`, as in `tap`.
     fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
-        Ok(self.lock().press(id))
+        let went = {
+            let mut inner = self.lock();
+            if inner.listing() && self.navs.contains_key(id) {
+                return Ok(FaceReply::default());
+            }
+            inner.press(id)
+        };
+        self.reply(went)
     }
 
     /// The hold timer: a repeat that went out says so and redraws only when its burst ended, as the latches stay
@@ -113,11 +121,10 @@ impl Face {
         })
     }
 
-    /// The pointer let go of key `id` on it: a click types it now, as a tap, and a burst ends.
+    /// The pointer let go of key `id`, wherever it is: it typed at the press, so only its burst ends.
     fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
-        let ended = self.lock().let_go(id);
-        ended.map_or_else(|| self.tap(id, false), Ok)
+        Ok(self.lock().leave())
     }
 
     /// Refuses a key that is not on the board, changing nothing, since the UI redraws nothing on an error.

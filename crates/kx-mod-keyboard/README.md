@@ -84,10 +84,10 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Action | Does | Reply |
 |---|---|---|
 | `tap {id, back}` | Types, latches, or clicks the language key; a burst left open ends first, so its latches never ride on the click | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
-| `press {id}` | The pointer went down on a repeating key (spec §4.6). It may repeat when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it and it is not a dead key (`Typing::repeats`); else it types once, on let-go | State only when a burst left over ended. `UnknownKey` off the board, which changes nothing. |
+| `press {id}` | The pointer went down on a key (spec §4.6): it types now, as `tap` with the front part. It holds, with the latches kept down until its burst ends, when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it, it is not a dead key (`Typing::repeats`) and it typed; else it acts once. While the list is open, a key that drives it waits for `panel_key` | As `tap`. `UnknownKey` off the board, which changes nothing. |
 | `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | `repeated` when the repeat went out, with state only when its burst ended, as the latches stay latched until then. Else as a tap: a stale refresh, or `notice.keys-not-sent` once, still `repeated` when part of it went out. Nothing when no repeat is due. |
-| `let_go {id}` | The pointer let go on the key: a click types once as `tap`; after a repeat nothing more types, and the burst's latches let go (`Typing::release`) | As `tap` for a click; state when a burst ended. `UnknownKey` off the board, which changes nothing. |
-| `leave` | The pointer left the held key, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
+| `let_go {id}` | The pointer let go, wherever it is: the key typed at the press, so nothing more types, and the burst's latches let go (`Typing::release`) | State when a burst ended. `UnknownKey` off the board, which changes nothing. |
+| `leave` | Qt took the press away, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
@@ -115,7 +115,7 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift
 | `size_step` | `0.05` | Change per smaller or bigger click; above 0, no wider than `size_max - size_min`, and with a finite reciprocal. |
 | `size_min`, `size_max` | `0.8`, `1.8` | The smallest and largest sizes; `size_min` is below `size_max`, and both stay within `SIZE_FLOOR` (every key cell 24 px across) and `SIZE_CEILING` in `settings.rs`. |
 | `relabel_ms` | `500` | How often the labels follow the layout of the app in front, in ms; within `RELABEL_MS` in `settings.rs`, so a hand-edited value can neither stall them nor poll for nothing. |
-| `repeat` | `true` | Held typing keys repeat (spec §4.6); with `false`, a held key types once, on let-go. |
+| `repeat` | `true` | Held typing keys repeat (spec §4.6); with `false`, a held key types once, at the press. |
 | `repeat_delay_ms` | `800` | How long a key is held before it repeats, in ms; within `REPEAT_DELAY_MS` in `settings.rs`, so a slow click never repeats. |
 | `repeat_every_ms` | `100` | The time between repeats, in ms; within `REPEAT_EVERY_MS` in `settings.rs`. |
 | `key_apps` | `[]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. |

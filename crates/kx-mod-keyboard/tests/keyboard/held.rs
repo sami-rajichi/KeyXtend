@@ -1,5 +1,6 @@
-//! A held key through the face (spec §4.6): a click types once on let-go, a hold types at the delay and then once a
-//! beat with the latches kept down, and the keys that act once: a shortcut, a dead key, an open list and repeat off.
+//! A held key through the face (spec §4.6): a press types at once, a hold adds one at the delay and then one a beat
+//! with the latches kept down, a let-go types nothing, and the keys that act once: a shortcut, a dead key, an open
+//! list and repeat off.
 
 #![allow(
     clippy::unwrap_used,
@@ -38,19 +39,19 @@ pub fn hold(r: &Rig, id: &str, beats: u64) {
 }
 
 #[test]
-fn a_short_click_types_once_on_let_go() {
+fn a_press_types_once_at_once_and_its_let_go_types_nothing() {
     let r = Rig::new(&GOLDEN, None);
     let (delay, _) = times();
-    assert_eq!(r.press(A), Ok(FaceReply::default()));
+    assert_eq!(r.press(A), Ok(STATE));
+    assert_eq!(r.fakes.injector.strokes(), [text("a")], "at the press");
     assert_eq!(r.tick_in(delay - 1), FaceReply::default());
-    assert!(r.fakes.injector.strokes().is_empty(), "nothing while held");
-    assert_eq!(r.let_go(A), Ok(STATE));
+    assert_eq!(r.let_go(A), Ok(STATE), "the burst ends");
     r.tick_in(delay * 2);
     assert_eq!(r.fakes.injector.strokes(), [text("a")]);
 }
 
 #[test]
-fn a_hold_types_at_the_delay_then_once_a_beat_and_its_let_go_adds_none() {
+fn a_hold_adds_one_at_the_delay_then_one_a_beat_and_its_let_go_adds_none() {
     let r = Rig::new(&GOLDEN, None);
     let (delay, every) = times();
     r.press(A).unwrap();
@@ -60,10 +61,27 @@ fn a_hold_types_at_the_delay_then_once_a_beat_and_its_let_go_adds_none() {
     assert_eq!(r.tick_in(every), REPEATED);
     r.let_go(A).unwrap();
     r.tick_in(every * 3);
-    assert_eq!(
-        r.fakes.injector.strokes(),
-        [text("a"), text("a"), text("a")]
-    );
+    assert_eq!(r.fakes.injector.strokes(), vec![text("a"); 4]);
+}
+
+#[test]
+fn a_double_click_types_twice_one_per_press() {
+    let r = Rig::new(&GOLDEN, None);
+    for _ in 0..2 {
+        r.press(A).unwrap();
+        r.let_go(A).unwrap();
+    }
+    assert_eq!(r.fakes.injector.strokes(), [text("a"), text("a")]);
+}
+
+#[test]
+fn with_shift_latched_a_click_types_a_capital_and_shift_lets_go_after_it() {
+    let r = Rig::new(&GOLDEN, None);
+    r.tap("shift").unwrap();
+    r.press(A).unwrap();
+    assert_eq!(r.fakes.injector.strokes(), [text("A")]);
+    assert_eq!(r.let_go(A), Ok(STATE));
+    assert_eq!(r.state()["keys"]["shift"]["on"], false);
 }
 
 #[test]
@@ -79,37 +97,32 @@ fn with_shift_latched_each_repeat_is_capital_and_shift_lets_go_after_the_burst()
     assert_eq!(r.state()["keys"]["shift"]["on"], true, "down for the burst");
     assert_eq!(r.let_go(A), Ok(STATE));
     assert_eq!(r.state()["keys"]["shift"]["on"], false, "let go after it");
-    assert_eq!(
-        r.fakes.injector.strokes(),
-        [text("A"), text("A"), text("A")]
-    );
+    assert_eq!(r.fakes.injector.strokes(), vec![text("A"); 4]);
 }
 
 #[test]
-fn with_ctrl_alt_or_win_latched_a_held_key_acts_once() {
+fn with_ctrl_alt_or_win_latched_a_held_key_acts_once_at_the_press() {
     let z = "c-0x002C";
     for (latch, code) in [("ctrl", 0x1D), ("alt", 0x38), ("win", 0xE05B)] {
         let r = Rig::new(&GOLDEN, None);
         r.tap(latch).unwrap();
-        hold(&r, z, 5);
-        assert!(
-            r.fakes.injector.strokes().is_empty(),
-            "{latch}: not while held"
-        );
-        r.let_go(z).unwrap();
-        let once = Stroke::Chord(vec![Scan::new(code)], Scan::new(0x2C));
-        assert_eq!(r.fakes.injector.strokes(), [once], "{latch}");
+        r.press(z).unwrap();
+        let once = [Stroke::Chord(vec![Scan::new(code)], Scan::new(0x2C))];
+        assert_eq!(r.fakes.injector.strokes(), once, "{latch}");
         assert_eq!(r.state()["keys"][latch]["on"], false, "{latch}");
+        r.tick_in(times().0 * 2);
+        r.let_go(z).unwrap();
+        assert_eq!(r.fakes.injector.strokes(), once, "{latch}: only once");
     }
 }
 
 #[test]
-fn altgr_acting_as_right_alt_acts_once() {
+fn altgr_acting_as_right_alt_acts_once_at_the_press() {
     // US English has no AltGr characters, so the latch sends Right Alt, which makes a shortcut.
     let r = Rig::new(&GOLDEN, None);
     r.tap("altgr").unwrap();
-    hold(&r, A, 5);
-    assert!(r.fakes.injector.strokes().is_empty(), "not while held");
+    r.press(A).unwrap();
+    r.tick_in(times().0 * 2);
     r.let_go(A).unwrap();
     let once = Stroke::Chord(vec![Scan::new(0xE038)], Scan::new(0x1E));
     assert_eq!(r.fakes.injector.strokes(), [once]);
@@ -117,20 +130,21 @@ fn altgr_acting_as_right_alt_acts_once() {
 }
 
 #[test]
-fn a_held_dead_key_types_once() {
+fn a_held_dead_key_types_once_at_the_press() {
     let r = Rig::new(&["fr-fr"], None);
     let hat = "c-0x001A";
-    hold(&r, hat, 3);
-    assert!(r.fakes.injector.strokes().is_empty());
+    r.press(hat).unwrap();
+    assert_eq!(r.fakes.injector.strokes(), [Stroke::Tap(Scan::new(0x1A))]);
+    r.tick_in(times().0 * 2);
     r.let_go(hat).unwrap();
     assert_eq!(r.fakes.injector.strokes(), [Stroke::Tap(Scan::new(0x1A))]);
 }
 
 #[test]
-fn a_key_held_after_a_dead_key_takes_the_accent_once_then_repeats_its_letter() {
+fn a_key_held_after_a_dead_key_takes_the_accent_at_the_press_then_repeats_its_letter() {
     let r = Rig::new(&["fr-fr"], None);
     r.tap("c-0x001A").unwrap();
-    hold(&r, "c-0x0012", 2);
+    hold(&r, "c-0x0012", 1);
     let hat = Stroke::Tap(Scan::new(0x1A));
     let e = Stroke::Tap(Scan::new(0x12));
     let want = [hat, e, text("e"), text("e")];
@@ -138,45 +152,42 @@ fn a_key_held_after_a_dead_key_takes_the_accent_once_then_repeats_its_letter() {
 }
 
 #[test]
-fn while_the_list_is_open_a_held_key_acts_once_and_its_keys_go_to_the_list() {
+fn while_the_list_is_open_its_keys_wait_for_the_list_and_a_character_types_once() {
     let r = Rig::new(&GOLDEN, Some(("lang_key", "list".into())));
     r.tap("lang").unwrap();
     let hi = r.state()["list"]["hi"].clone();
-    hold(&r, "down", 3);
+    assert_eq!(r.press("down"), Ok(FaceReply::default()));
+    r.tick_in(times().0 * 2);
     r.let_go("down").unwrap();
     assert!(r.fakes.injector.strokes().is_empty(), "never to the app");
     assert_eq!(r.state()["list"]["hi"], hi, "nor into the list");
     r.panel("down", 5).unwrap();
-    assert_ne!(
-        r.state()["list"]["hi"],
-        hi,
-        "the UI sends it there on let-go"
-    );
+    assert_ne!(r.state()["list"]["hi"], hi, "the UI sends it there");
     hold(&r, A, 3);
     r.let_go(A).unwrap();
     assert_eq!(r.fakes.injector.strokes(), [text("a")], "a character once");
 }
 
 #[test]
-fn with_repeat_off_a_hold_is_a_click() {
+fn with_repeat_off_a_press_types_once() {
     let r = Rig::new(&GOLDEN, Some(("repeat", false.into())));
-    hold(&r, A, 5);
-    assert!(r.fakes.injector.strokes().is_empty());
+    r.press(A).unwrap();
+    assert_eq!(r.fakes.injector.strokes(), [text("a")]);
+    r.tick_in(times().0 * 2);
     r.let_go(A).unwrap();
     assert_eq!(r.fakes.injector.strokes(), [text("a")]);
 }
 
 #[test]
-fn a_key_that_never_repeats_types_once_on_let_go() {
+fn a_key_that_never_repeats_types_once_at_the_press() {
     for (id, code) in [("esc", 0x01), ("tab", 0x0F), ("menu", 0xE05D)] {
         let r = Rig::new(&GOLDEN, None);
-        hold(&r, id, 3);
+        r.press(id).unwrap();
+        let once = [Stroke::Tap(Scan::new(code))];
+        assert_eq!(r.fakes.injector.strokes(), once, "{id}");
+        r.tick_in(times().0 * 2);
         r.let_go(id).unwrap();
-        assert_eq!(
-            r.fakes.injector.strokes(),
-            [Stroke::Tap(Scan::new(code))],
-            "{id}"
-        );
+        assert_eq!(r.fakes.injector.strokes(), once, "{id}");
     }
 }
 
@@ -186,15 +197,15 @@ fn french_and_arabic_repeat_their_own_characters_altgr_ones_too() {
     r.tap("altgr").unwrap();
     hold(&r, "c-0x0004", 1);
     r.let_go("c-0x0004").unwrap();
-    assert_eq!(r.fakes.injector.strokes(), [text("#"), text("#")]);
+    assert_eq!(r.fakes.injector.strokes(), vec![text("#"); 3]);
     assert_eq!(r.state()["keys"]["altgr"]["on"], false, "after the burst");
     let r = Rig::new(&["ar-tn"], None);
     let table = LayoutTable::from(&LayoutFile::golden("ar-tn").unwrap());
     let dad = &table.keys[&Scan::new(0x10)];
-    hold(&r, "c-0x0010", 1);
+    hold(&r, "c-0x0010", 0);
     r.let_go("c-0x0010").unwrap();
     r.tap("altgr").unwrap();
-    hold(&r, "c-0x0010", 1);
+    hold(&r, "c-0x0010", 0);
     r.let_go("c-0x0010").unwrap();
     let (base, altgr) = (text(&dad.base), text(&dad.altgr));
     let want = [base.clone(), base, altgr.clone(), altgr];
