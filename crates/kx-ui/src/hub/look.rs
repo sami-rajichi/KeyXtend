@@ -74,6 +74,12 @@ impl Hub {
         stepped
     }
 
+    /// How many themes the theme button cycles through.
+    #[must_use]
+    pub fn theme_count(&self) -> usize {
+        self.themes.list.len()
+    }
+
     /// Switches to light or dark, the other one from what shows now, and saves it; false when it did not change.
     pub fn flip_mode(&self) -> bool {
         let (choice, sys) = {

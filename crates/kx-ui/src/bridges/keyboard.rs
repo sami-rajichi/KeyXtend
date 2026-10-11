@@ -274,10 +274,10 @@ impl qobject::Keyboard {
     }
 
     #[cfg(debug_assertions)]
-    #[allow(clippy::unused_self, reason = "cxx-qt invokables take the object")]
     fn churn_plan(&self) -> QString {
         let value = std::env::var_os(crate::churn::CHURN_VAR);
-        qs(&crate::churn::plan(value.as_deref()))
+        let themes = self.rust().hub.as_deref().map_or(0, Hub::theme_count);
+        qs(&crate::churn::plan(value.as_deref(), themes))
     }
 
     #[cfg(debug_assertions)]
