@@ -24,6 +24,8 @@ pub struct Churn {
     pub before: Memory,
     /// Memory after the last one: the last of `per_round`.
     pub after: Memory,
+    /// Unmeasured rounds run first, from `[g8] churn_warm_rounds`.
+    pub warm_rounds: usize,
     /// Memory after each measured round, in order, so a steady climb shows apart from one jump.
     pub per_round: Vec<Memory>,
     /// Key hovers in the measured rounds.
@@ -41,6 +43,23 @@ pub struct Churn {
 }
 
 impl Churn {
+    /// `g`'s churn read as `before` and `per_round`, with no pop-up counted yet.
+    fn measured(g: &G8, before: Memory, per_round: Vec<Memory>) -> Self {
+        Self {
+            rounds: g.churn_rounds,
+            before,
+            after: per_round.last().copied().unwrap_or(before),
+            warm_rounds: g.churn_warm_rounds,
+            per_round,
+            hovers: 0,
+            tips: 0,
+            lists: None,
+            bubbles: 0,
+            returns: 0,
+            note: None,
+        }
+    }
+
     /// True when every hover showed a tip and every round showed the bubble, the keyboard again, and the list in the
     /// List design.
     pub fn whole(&self) -> bool {
@@ -107,19 +126,14 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     let mut seen = Seen::default();
     let round = || g8pops::round(g, &reader, &plan, &mut seen);
     let (before, per_round) = readings(g.churn_rounds, round, || p.memory())?;
-    let after = per_round.last().copied().unwrap_or(before);
-    let lists = plan.lang.as_ref().map(|_| seen.lists);
     Ok(Churn {
-        rounds: g.churn_rounds,
-        before,
-        after,
-        per_round,
         hovers: g.churn_rounds * plan.tips.len(),
         tips: seen.tips,
-        lists,
+        lists: plan.lang.as_ref().map(|_| seen.lists),
         bubbles: seen.bubbles,
         returns: seen.returns,
         note: plan.skip,
+        ..Churn::measured(g, before, per_round)
     })
 }
 
@@ -129,16 +143,12 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
 pub fn whole_over(g: &G8, before: Memory, after: Memory) -> Churn {
     let hovers = g.churn_rounds * g.churn_tips.len();
     Churn {
-        rounds: g.churn_rounds,
-        before,
-        after,
-        per_round: vec![after; g.churn_rounds],
         hovers,
         tips: hovers,
         lists: Some(g.churn_rounds),
         bubbles: g.churn_rounds,
         returns: g.churn_rounds,
-        note: None,
+        ..Churn::measured(g, before, vec![after; g.churn_rounds])
     }
 }
 

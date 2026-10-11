@@ -69,6 +69,21 @@ fn a_churn_reads_memory_before_its_rounds_and_after_each_one_and_its_result_list
 }
 
 #[test]
+fn a_churn_records_its_warm_up_rounds_from_the_settings_beside_its_readings() {
+    let mut g = shipped();
+    g.churn_warm_rounds += 2;
+    let before = mem(98.0, 138.0);
+    let c = Churn::measured(&g, before, climb(before, g.churn_rounds, 1.0));
+    let shown = serde_json::to_value(&c).expect("serialises");
+    assert_eq!(shown["warm_rounds"], json!(g.churn_warm_rounds));
+    let listed = shown["per_round"].as_array().expect("a list");
+    assert_eq!(listed.len(), g.churn_rounds);
+    assert_eq!(c.after, c.per_round[g.churn_rounds - 1], "the last reading");
+    let none = Churn::measured(&g, before, vec![]);
+    assert_eq!(none.after, before, "no round");
+}
+
+#[test]
 fn a_reading_that_fails_ends_the_churn_with_its_own_error() {
     for at in [0, 2] {
         let done = Cell::new(0);
