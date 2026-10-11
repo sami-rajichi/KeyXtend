@@ -163,10 +163,21 @@ pub(crate) fn hid(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcom
         "the menu dropping its graphics while hidden, and one give-back",
         || released_hidden() > hidden && rig.memory.calls() == calls + 1,
     )?;
+    settled(app, rig, calls + 1)?;
     rig.show(was);
     wait(app, "the first theme back, and one more give-back", || {
         rig.memory.calls() == calls + 2
-    })
+    })?;
+    settled(app, rig, calls + 2)
+}
+
+/// A few ticks later the give-backs still number `calls`, so each look change gave back once, and the app is quiet.
+fn settled(app: &mut UniquePtr<QGuiApplication>, rig: &Rig, calls: usize) -> Outcome {
+    ticks(app, QUIET);
+    match rig.memory.calls() {
+        n if n == calls => Ok(()),
+        n => Err(format!("{n} give-backs ran where {calls} were due")),
+    }
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.
