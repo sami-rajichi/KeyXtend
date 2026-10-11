@@ -1,5 +1,5 @@
-//! Any run of presses, ticks, let-gos and leaves on the face (spec §4.6): a tick types only while a key is held, and
-//! no latch outlives its burst.
+//! Any run of presses, ticks, let-gos and leaves on the face (spec §4.6): a tick types only while a key is held, a
+//! let-go or a leave types nothing, and no latch outlives its burst.
 
 #![allow(
     clippy::unwrap_used,
@@ -75,10 +75,12 @@ proptest! {
                 }
                 Input::LetGo(k) => {
                     r.let_go(KEYS[k]).unwrap();
+                    prop_assert_eq!(r.fakes.injector.strokes().len(), sent, "a let-go typed");
                     latches_went(&r, held.take())?;
                 }
                 Input::Leave => {
                     r.leave();
+                    prop_assert_eq!(r.fakes.injector.strokes().len(), sent, "a leave typed");
                     latches_went(&r, held.take())?;
                 }
             }
