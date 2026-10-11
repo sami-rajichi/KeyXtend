@@ -26,10 +26,11 @@ fn narrow(row_px: f64) -> f32 {
 }
 
 impl Hub {
-    /// The look to draw now, as JSON; `null` when the theme is missing. The accent is checked on the face's board
-    /// row, so it waits for the face.
+    /// The look to draw now, as JSON or `null` when the theme is missing, with its theme's fonts loaded first so QML
+    /// picks families Qt has; call it on the Qt thread. The accent is checked on the face's board row, so it waits.
     #[must_use]
     pub fn look_json(&self) -> String {
+        let _ = self.load_fonts();
         let (choice, sys, face) = {
             let live = self.lock();
             (live.settings.choice(), live.sys, live.face.clone())
@@ -58,8 +59,8 @@ impl Hub {
         }))
     }
 
-    /// Shows the next theme, in the order the theme button cycles, saves it and loads its fonts, keeping the last
-    /// theme's until `drop_fonts`; false when it did not change. Call it on the Qt thread, before QML reads the look.
+    /// Shows the next theme, in the order the theme button cycles, and saves it; false when it did not change. Its
+    /// fonts load as QML reads the look, and the last theme's stay until `drop_fonts`.
     pub fn step_theme(&self) -> bool {
         let now = self.lock().settings.theme.clone();
         let list = &self.themes.list;
@@ -68,11 +69,7 @@ impl Hub {
         let Some(id) = list.get(next).map(|t| t.look.id.clone()) else {
             return false;
         };
-        let stepped = self.save(THEME_KEY, Value::String(id.clone()), |s| s.theme = id);
-        if stepped {
-            let _ = self.load_fonts();
-        }
-        stepped
+        self.save(THEME_KEY, Value::String(id.clone()), |s| s.theme = id)
     }
 
     /// How many themes the theme button cycles through.

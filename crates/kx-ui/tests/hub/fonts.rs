@@ -1,5 +1,6 @@
-//! The theme's fonts (ADR-0021): only the bundled files of the theme shown stay loaded, a theme switch drops the last
-//! theme's once QML reads the new one, and a file that does not load hands its list to the next family, with a warning.
+//! The theme's fonts (ADR-0021): only the bundled files of the theme shown stay loaded, each read of the look loads its
+//! theme's first, a theme switch drops the last theme's once QML reads the new one, and a file that does not load hands
+//! its list to the next family, with a warning.
 
 use crate::logs::warnings_of;
 use crate::{FakeFace, Rig};
@@ -107,25 +108,56 @@ fn each_theme_switch_keeps_only_that_themes_files() {
     assert!(!show(&rig, "dolch"), "the same theme loads nothing again");
 }
 
-// A text never asks Qt for a family it lacks, which makes Qt read every Windows font: the theme button loads the next
-// theme's files before QML reads its look, and the last theme's go only once dropped, after QML moved off them.
+// A text never asks Qt for a family it lacks, which makes Qt read every Windows font: QML's read of the look after the
+// theme button loads the next theme's files, and the last theme's go only once dropped, after QML moved off them.
 #[test]
-fn a_theme_step_loads_the_next_themes_files_and_the_last_ones_go_once_dropped() {
+fn a_theme_steps_look_read_loads_the_next_themes_files_and_the_last_ones_go_once_dropped() {
     let (rig, _face, _host) = Rig::with_face();
     let book = Book::default();
     rig.hub.set_fonts(Box::new(book.clone()));
     assert!(rig.hub.step_theme(), "Native to ET66");
-    assert_eq!(book.loaded(), files(ET66), "loaded as the step returns");
+    let _ = rig.hub.look_json();
+    assert_eq!(book.loaded(), files(ET66), "loaded as QML reads the look");
     assert!(
         rig.hub.drop_fonts(),
         "nothing to drop, but QML has new families to read"
     );
     assert_eq!(book.loaded(), files(ET66));
     assert!(rig.hub.step_theme(), "ET66 to Dolch");
+    let _ = rig.hub.look_json();
     assert_eq!(book.loaded(), &files(ET66) | &files(DOLCH), "ET66's stay");
     assert!(rig.hub.drop_fonts());
     assert_eq!(book.loaded(), files(DOLCH));
     assert!(!rig.hub.drop_fonts(), "nothing changed since");
+}
+
+// The light or dark button reads the look at once, even while a theme the Settings window picked on another thread
+// waits for its wake: that read loads the theme's files first.
+#[test]
+fn the_light_or_dark_buttons_look_read_loads_a_theme_whose_wake_waits() {
+    let rig = Rig::new();
+    let book = Book::default();
+    rig.hub.set_fonts(Box::new(book.clone()));
+    attach(&rig, "dolch");
+    assert!(rig.hub.flip_mode());
+    let _ = rig.hub.look_json();
+    assert_eq!(book.loaded(), files(DOLCH));
+}
+
+// A second change that lands between a wake's load and its signal is read with its own files, and the first theme's
+// go with the wake's drop.
+#[test]
+fn a_second_change_inside_a_wake_is_read_with_its_own_files() {
+    let rig = Rig::new();
+    let book = Book::default();
+    rig.hub.set_fonts(Box::new(book.clone()));
+    attach(&rig, "dolch");
+    assert!(rig.hub.load_fonts(), "the wake's load");
+    attach(&rig, "et66");
+    let _ = rig.hub.look_json();
+    assert_eq!(book.loaded(), &files(DOLCH) | &files(ET66));
+    assert!(rig.hub.drop_fonts());
+    assert_eq!(book.loaded(), files(ET66));
 }
 
 // A theme the Settings window picks wakes the bridge, which loads its files before QML reads the look and drops the

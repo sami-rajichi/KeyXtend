@@ -1,6 +1,6 @@
 //! The fonts side of the hub (ADR-0021), whose book runs on the Qt thread: only the bundled files of the theme shown
-//! stay loaded, and a file that does not load hands its list to the next family. A switch loads the new files before
-//! QML reads the new look and drops the old ones after, so no text asks Qt for a family it lacks.
+//! stay loaded, and a file that does not load hands its list to the next family. Each read of the look loads its
+//! theme's files first and a wake drops the old ones after, so no text asks Qt for a family it lacks.
 
 use super::Hub;
 use kx_theme::assets::{FontFiles, SYSTEM_FONTS};
