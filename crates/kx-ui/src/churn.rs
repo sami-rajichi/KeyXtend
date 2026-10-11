@@ -18,8 +18,8 @@ struct Plan {
     sizes: u32,
 }
 
-/// G8's churn: ms between steps, rounds, Caps Lock changes and size changes. Each round shows every theme once and
-/// comes back to the first; Caps Lock comes back to off, and the sizes go up by half of them and down again.
+/// G8's churn: ms between steps, rounds, Caps Lock changes and size changes. Each round shows the pop-ups `Plan` names,
+/// then every theme once, back to the first; Caps Lock comes back to off, and the sizes go up by half and down again.
 const STEP_MS: u32 = 400;
 const ROUNDS: u32 = 1;
 const CAPS: u32 = 20;
