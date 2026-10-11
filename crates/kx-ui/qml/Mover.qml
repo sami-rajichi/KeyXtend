@@ -82,10 +82,12 @@ Item {
     }
 
     // A click on the keyboard itself ends it too, whatever lies below, at let-go wherever the pointer went (ADR-0024).
+    // The second click of a double click on the grip or corner is ignored, so a shaky start never ends at once.
     Act {
         anchors.fill: parent
         visible: mv.busy
         hoverEnabled: true
+        doubles: false
         Accessible.role: Accessible.Button
         Accessible.name: mv.name
         Accessible.id: mv.uid

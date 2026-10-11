@@ -22,6 +22,9 @@ Item {
         }
     }
 
+    Component { id: catchC; Catch {} }
+    Component { id: spyC; SignalSpy {} }
+
     TestCase {
         name: "letgo_window"
         when: windowShown
@@ -143,6 +146,31 @@ Item {
             verify(!win.mover.busy, "the second click ends it");
             compare(since(app.keyboard, 0).filter(c => c === "placed").length, placed + 1, "placed once");
             win.visible = false;
+        }
+
+        // A shaky double click on the grip starts the move and its second click never ends it (owner, 2026-10-11).
+        function test_the_second_click_of_a_double_click_on_the_grip_leaves_the_move_running() {
+            const app = make();
+            const win = app.face;
+            const grip = keyed(win, "bar.grip");
+            mouseDoubleClickSequence(grip, grip.width / 2, grip.height / 2);
+            verify(win.mover.busy, "still moving");
+            const pad = keyed(win, "catch");
+            mouseClick(pad, pad.width / 2, pad.height / 2);
+            verify(!win.mover.busy, "the next click ends it");
+            win.visible = false;
+        }
+
+        // A screen's catcher picks once on a double click, as its second click is ignored.
+        function test_a_catcher_ignores_the_second_click_of_a_double_click() {
+            const c = createTemporaryObject(catchC, root, { area: Qt.application.screens[0], uid: "catch", name: "catch" });
+            Pointer.through([c]);
+            c.visible = true;
+            waitForRendering(c.contentItem);
+            const picked = createTemporaryObject(spyC, root, { target: c, signalName: "picked" });
+            mouseDoubleClickSequence(c.contentItem, c.width / 2, c.height / 2);
+            compare(picked.count, 1);
+            c.visible = false;
         }
 
         function test_the_corner_starts_a_resize_once_and_a_catchers_click_that_slips_ends_it_once() {

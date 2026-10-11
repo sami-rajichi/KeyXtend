@@ -23,9 +23,10 @@ Window {
     width: area.width
     height: area.height - 1
 
-    // It acts at let-go, wherever the pointer went (ADR-0024).
+    // It acts at let-go, wherever the pointer went (ADR-0024); a double click's second click ends nothing more.
     Act {
         anchors.fill: parent
+        doubles: false
         Accessible.role: Accessible.Button
         Accessible.name: c.name
         Accessible.id: c.uid
