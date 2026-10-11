@@ -26,7 +26,7 @@ Decided by the owner on 2026-10-11.
 ## Consequences
 
 - A slip never loses or moves a click. Sliding off no longer takes a click back; for keys, as on a physical keyboard, nothing does.
-- The keyboard's face types on `Press`; `LetGo` only ends a burst, and `Leave` does the same.
+- The keyboard's face types on `Press` (a repeating key) or `Tap` (any other), both sent at the press; `LetGo` only ends a burst, and `Leave` does the same.
 - No new product setting. `kx-gates` gains `[g2] press_ms` and `slip_px`, both checked at load, and the hold stays below the default repeat delay.
 - G2 takes about `press_ms` longer per click, and G4 and G26 share its clicks. G2's raw click file gains each release time.
 - G8 still reads G2's clicks as one batch, so its press windows end too early; that is a P3 note.
