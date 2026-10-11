@@ -262,6 +262,16 @@ Window {
         id: guard
         win: win
     }
+    // Debug builds only: with `KX_UI_CHURN` set, the keyboard churns for a memory check (Churn).
+    Loader {
+        id: churn
+        readonly property string plan: win.keyboard.churnPlan ? win.keyboard.churnPlan() : ""
+        active: win.ready && plan !== ""
+        sourceComponent: Churn {
+            win: win
+            plan: JSON.parse(churn.plan)
+        }
+    }
     // The labels follow the layout in front, at once as the keyboard shows, since the timer rests while it is hidden.
     Timer {
         interval: win.ready ? win.board.relabel_ms : 0

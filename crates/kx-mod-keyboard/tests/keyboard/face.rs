@@ -112,6 +112,22 @@ fn relabel_redraws_only_when_the_layout_shown_changed() {
     assert_eq!(r.state()["keys"][Q]["main"], "a", "AZERTY");
 }
 
+/// Debug builds turn Caps Lock over on the face alone, for the memory churn: the key lights and the letters turn
+/// capital, and no key goes out.
+#[cfg(debug_assertions)]
+#[test]
+fn a_debug_caps_flip_lights_caps_lock_and_sends_nothing() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.state()["keys"]["caps"]["on"], false);
+    assert_eq!(r.act(FaceAction::FlipCaps), Ok(STATE));
+    let state = r.state();
+    assert_eq!(state["keys"]["caps"]["on"], true);
+    assert_eq!(state["keys"][Q]["main"], "Q");
+    r.act(FaceAction::FlipCaps).unwrap();
+    assert_eq!(r.state()["keys"][Q]["main"], "q", "and back");
+    assert!(r.fakes.injector.strokes().is_empty());
+}
+
 #[test]
 fn a_settings_change_keeps_the_latches_and_takes_the_new_rules() {
     let mut r = Rig::new(&GOLDEN, None);

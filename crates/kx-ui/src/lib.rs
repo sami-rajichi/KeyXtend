@@ -6,6 +6,8 @@
 
 #[cfg(feature = "qt")]
 mod bridges;
+#[cfg(all(feature = "qt", debug_assertions))]
+mod churn;
 pub mod device;
 mod geom;
 mod guard;

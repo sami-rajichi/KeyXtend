@@ -3,8 +3,8 @@
 use super::*;
 
 const KEY: &str = "key-q";
-/// The number of `FaceAction` variants; `row` fails to build when one is added.
-const VARIANTS: usize = 11;
+/// The number of `FaceAction` variants, debug builds' `FlipCaps` too; `row` fails to build when one is added.
+const VARIANTS: usize = if cfg!(debug_assertions) { 12 } else { 11 };
 
 /// Each variant's place in `wire`, by an exhaustive match.
 fn row(action: &FaceAction) -> usize {
@@ -20,6 +20,8 @@ fn row(action: &FaceAction) -> usize {
         FaceAction::Relabel => 8,
         FaceAction::LangPick { .. } => 9,
         FaceAction::PanelKey { .. } => 10,
+        #[cfg(debug_assertions)]
+        FaceAction::FlipCaps => 11,
     }
 }
 
@@ -82,6 +84,8 @@ fn wire() -> Vec<(FaceAction, &'static str)> {
             r#"{"act":"lang_pick","index":1}"#,
         ),
         (panel, r#"{"act":"panel_key","key":"key-q","rows":5}"#),
+        #[cfg(debug_assertions)]
+        (FaceAction::FlipCaps, r#"{"act":"flip_caps"}"#),
     ]
 }
 

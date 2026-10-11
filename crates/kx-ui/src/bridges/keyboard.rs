@@ -100,6 +100,21 @@ pub mod qobject {
         /// `guard_delay_ms`.
         #[qinvokable]
         fn guard(self: Pin<&mut Self>, top: &QString) -> bool;
+
+        /// Debug builds only: the churn plan as JSON while `KX_UI_CHURN` is set, else empty.
+        #[cfg(debug_assertions)]
+        #[qinvokable]
+        fn churn_plan(&self) -> QString;
+
+        /// Debug builds only: Caps Lock shows the other way round, with no key sent.
+        #[cfg(debug_assertions)]
+        #[qinvokable]
+        fn flip_caps(&self) -> QString;
+
+        /// Debug builds only: the churn ran to its end.
+        #[cfg(debug_assertions)]
+        #[qinvokable]
+        fn churned(&self);
     }
 }
 
@@ -256,5 +271,23 @@ impl qobject::Keyboard {
         let again = hub.guard(attempt, top);
         self.rust_mut().guard.settle(attempt, again);
         again
+    }
+
+    #[cfg(debug_assertions)]
+    #[allow(clippy::unused_self, reason = "cxx-qt invokables take the object")]
+    fn churn_plan(&self) -> QString {
+        let value = std::env::var_os(crate::churn::CHURN_VAR);
+        qs(&crate::churn::plan(value.as_deref()))
+    }
+
+    #[cfg(debug_assertions)]
+    fn flip_caps(&self) -> QString {
+        self.run(FaceAction::FlipCaps)
+    }
+
+    #[cfg(debug_assertions)]
+    #[allow(clippy::unused_self, reason = "cxx-qt invokables take the object")]
+    fn churned(&self) {
+        crate::churn::ended();
     }
 }

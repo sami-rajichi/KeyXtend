@@ -32,6 +32,9 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
+    /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
+    #[cfg(debug_assertions)]
+    caps_flipped: bool,
 }
 
 impl Inner {
@@ -54,6 +57,8 @@ impl Inner {
             plate,
             overhang: 0.0,
             list: None,
+            #[cfg(debug_assertions)]
+            caps_flipped: false,
         }
     }
 
@@ -185,7 +190,20 @@ impl Inner {
             FaceAction::Tap { .. } | FaceAction::Relabel | FaceAction::PanelKey { .. } => {
                 Ok(FaceReply::default())
             }
+            #[cfg(debug_assertions)]
+            FaceAction::FlipCaps => {
+                self.caps_flipped = !self.caps_flipped;
+                Ok(STATE)
+            }
         }
+    }
+
+    /// Whether Caps Lock shows lit: the system's state, turned over in debug builds by `FaceAction::FlipCaps`.
+    fn caps(&self) -> bool {
+        let on = self.ports.source.caps_on();
+        #[cfg(debug_assertions)]
+        let on = on != self.caps_flipped;
+        on
     }
 
     /// The settings and the size, which the board is drawn from.
@@ -202,7 +220,7 @@ impl Inner {
         state_view(&StateInput {
             keys,
             latches: self.typing.latches(),
-            caps: self.ports.source.caps_on(),
+            caps: self.caps(),
             table: &table,
             list: &list,
             turn: self.turn.turn(),

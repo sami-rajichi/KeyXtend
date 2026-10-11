@@ -100,6 +100,9 @@ pub enum FaceAction {
         /// Rows per page, which turning a page moves by.
         rows: usize,
     },
+    /// Debug builds only: Caps Lock shows the other way round, with no key sent, for the memory churn.
+    #[cfg(debug_assertions)]
+    FlipCaps,
 }
 
 /// What the UI must do after an action.
