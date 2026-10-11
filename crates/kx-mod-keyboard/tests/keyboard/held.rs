@@ -83,11 +83,12 @@ fn a_double_click_types_twice_one_per_press() {
 }
 
 #[test]
-fn with_shift_latched_a_click_types_a_capital_and_shift_lets_go_after_it() {
+fn with_shift_latched_a_click_types_a_capital_and_shift_lets_go_at_the_let_go() {
     let r = Rig::new(&GOLDEN, None);
     r.tap("shift").unwrap();
     r.press(A).unwrap();
     assert_eq!(r.fakes.injector.strokes(), [text("A")]);
+    assert_eq!(r.state()["keys"]["shift"]["on"], true, "lit while held");
     assert_eq!(r.let_go(A), Ok(STATE));
     assert_eq!(r.state()["keys"]["shift"]["on"], false);
 }
