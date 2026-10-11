@@ -33,8 +33,9 @@ impl Memory for WinMemory {
 mod tests {
     use super::*;
 
+    // Only Windows' answer is checked: what the heaps give back depends on the whole process.
     #[test]
-    fn free_pages_go_back_after_a_free() {
+    fn windows_accepts_the_give_back_after_a_free() {
         let freed: Vec<Vec<u8>> = (0..1024).map(|n| vec![0; n]).collect();
         drop(freed);
         assert_eq!(WinMemory.decommit(), Ok(()));
