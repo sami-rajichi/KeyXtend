@@ -168,6 +168,13 @@ pub(crate) fn wait(
         .ok_or_else(|| format!("{what} did not happen"))
 }
 
+/// Runs Qt's loop for `n` ticks, so a step can check that nothing happened meanwhile.
+pub(crate) fn ticks(app: &mut UniquePtr<QGuiApplication>, n: usize) {
+    for _ in 0..n {
+        app.as_mut().map(|a| a.exec());
+    }
+}
+
 /// Starts Qt as the app does, then checks the shared device, a theme picked through the wake, the losses, a window that
 /// cannot draw, the fonts, losses past the most, sharing turned off, the fallback and the End.
 pub(crate) fn run() -> Outcome {

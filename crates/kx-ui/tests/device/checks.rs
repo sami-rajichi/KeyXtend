@@ -1,7 +1,7 @@
 //! The device test's steps without a loss, each over the running app's windows.
 
 use crate::rebuild::watched;
-use crate::rig::{FIRST, GUARDED, Outcome, Rig, wait};
+use crate::rig::{FIRST, GUARDED, Outcome, Rig, ticks, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
 use kx_theme::Themes;
@@ -15,6 +15,8 @@ use tracing::Level;
 
 /// The themes the font step shows in turn: two with bundled fonts, then the one Windows draws, which loads none.
 const THEMES: [&str; 3] = ["dolch", "et66", "native"];
+/// Ticks a step runs to see that nothing happened meanwhile: many frames long.
+const QUIET: usize = 10;
 /// What a font that did not load logs, and what each warning of a device that could not be shared holds.
 const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
@@ -116,18 +118,23 @@ pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> O
     kept_look(app, rig)
 }
 
-/// A wake that leaves the look as it was, as the same settings handed again, asks no window to drop its graphics, so
-/// nothing is given back.
+/// A wake that leaves the look as it was, as the same settings handed again, asks no window to drop its graphics, and
+/// a few ticks later none did and nothing was given back.
 fn kept_look(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
     let (handled, relooks) = wakes();
+    let (calls, dropped) = (rig.memory.calls(), released());
     rig.show(rig.hub.settings());
     wait(app, "the wake of the same settings", || wakes().0 > handled)?;
-    match wakes().1.saturating_sub(relooks) {
-        0 => Ok(()),
-        n => Err(format!(
-            "a wake that kept the look asked the windows to drop their graphics {n} times"
-        )),
+    ticks(app, QUIET);
+    let asked = wakes().1.saturating_sub(relooks);
+    let gave = rig.memory.calls().saturating_sub(calls);
+    let freed = released().saturating_sub(dropped);
+    if asked == 0 && gave == 0 && freed == 0 {
+        return Ok(());
     }
+    Err(format!(
+        "a wake that kept the look asked {asked} times for a release; {freed} windows released, {gave} give-backs ran"
+    ))
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.
