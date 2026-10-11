@@ -81,8 +81,8 @@ Item {
         ended(was === Mover.Moving);
     }
 
-    // A click on the keyboard itself ends it too, whatever lies below.
-    MouseArea {
+    // A click on the keyboard itself ends it too, whatever lies below, at let-go wherever the pointer went (ADR-0024).
+    Act {
         anchors.fill: parent
         visible: mv.busy
         hoverEnabled: true
@@ -90,7 +90,7 @@ Item {
         Accessible.name: mv.name
         Accessible.id: mv.uid
         Accessible.onPressAction: mv.finish()
-        onClicked: mv.finish()
+        onActed: mv.finish()
     }
     // One catcher per screen, since screens may have different scales.
     Instantiator {

@@ -111,11 +111,12 @@ Item {
             tint: r.hot ? r.lk.sel_ink : r.p.ring
         }
     }
-    MouseArea {
+    // It acts at let-go, wherever the pointer went (ADR-0024).
+    Act {
         id: area
         anchors.fill: parent
         enabled: r.filled
         hoverEnabled: true
-        onClicked: r.picked()
+        onActed: r.picked()
     }
 }

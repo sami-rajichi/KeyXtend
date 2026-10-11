@@ -196,11 +196,12 @@ Window {
             px: box.pn.page_px[3] * box.s
             tint: box.lk.sel_ink
         }
-        MouseArea {
+        // It acts at let-go, wherever the pointer went (ADR-0024).
+        Act {
             id: area
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: if (pb.can) pb.clicked()
+            onActed: if (pb.can) pb.clicked()
         }
     }
 

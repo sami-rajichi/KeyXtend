@@ -99,12 +99,13 @@ Item {
             radius: height / 2
             color: b.hot && bar.lk.contrast ? bar.lk.sel_ink : bar.p.ring
         }
-        MouseArea {
+        // It acts at let-go, wherever the pointer went (ADR-0024).
+        Act {
             id: area
             anchors.fill: parent
             hoverEnabled: true
             onContainsMouseChanged: bar.tip(containsMouse ? b.name : "", b)
-            onClicked: {
+            onActed: {
                 bar.tip("", b);
                 b.clicked();
             }

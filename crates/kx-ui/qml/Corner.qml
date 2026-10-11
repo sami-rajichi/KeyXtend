@@ -45,11 +45,12 @@ Item {
         px: corner.px[1] * corner.s
         tint: corner.hot ? corner.lk.sel_ink : corner.lk.palette.legend_2_plate
     }
-    MouseArea {
+    // It acts at let-go, wherever the pointer went (ADR-0024).
+    Act {
         id: area
         anchors.fill: parent
         hoverEnabled: true
         onContainsMouseChanged: corner.tip(containsMouse ? corner.name : "", corner)
-        onClicked: corner.clicked()
+        onActed: corner.clicked()
     }
 }

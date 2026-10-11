@@ -244,13 +244,14 @@ Window {
             font.weight: note.sh.button_weight
             color: b.ink
         }
-        MouseArea {
+        // It acts at let-go, wherever the pointer went (ADR-0024).
+        Act {
             id: area
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: b.clicked()
             // The second click of a double click answers nothing, so a shaky click never skips the next notice.
-            onDoubleClicked: {}
+            doubles: false
+            onActed: b.clicked()
         }
     }
 

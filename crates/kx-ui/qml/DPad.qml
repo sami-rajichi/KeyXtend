@@ -141,14 +141,15 @@ Item {
                     px: arrow.icon
                     tint: arrow.ink
                 }
-                MouseArea {
+                // It acts at let-go, wherever the pointer went (ADR-0024).
+                Act {
                     id: hit
                     anchors.fill: parent
                     enabled: !pad.dim
                     containmentMask: arrow
                     hoverEnabled: true
                     onContainsMouseChanged: pad.tip(containsMouse ? arrow.name : "", glyph)
-                    onClicked: {
+                    onActed: {
                         pad.tip("", null);
                         pad.dir = arrow.lit ? -1 : arrow.index;
                     }
@@ -217,11 +218,11 @@ Item {
             px: pad.sh.stop_icon_px * pad.s
             tint: pad.d.stop_ink
         }
-        MouseArea {
+        Act {
             anchors.fill: parent
             hoverEnabled: true
             onContainsMouseChanged: pad.tip(containsMouse ? stop.Accessible.name : "", stop)
-            onClicked: {
+            onActed: {
                 pad.tip("", null);
                 pad.dir = -1;
             }

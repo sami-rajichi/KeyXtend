@@ -61,12 +61,13 @@ Window {
         // The disc is the plate, a window, so high contrast draws the icon in WindowText.
         tint: bub.lk.contrast ? bub.lk.palette.legend_2_plate : bub.lk.palette.legend
     }
-    MouseArea {
+    // It acts at let-go, wherever the pointer went (ADR-0024).
+    Act {
         id: area
         anchors.fill: parent
         hoverEnabled: true
         onContainsMouseChanged: tip.hint(containsMouse ? bub.name : "", disc)
-        onClicked: {
+        onActed: {
             tip.hint("", disc);
             bub.clicked();
         }

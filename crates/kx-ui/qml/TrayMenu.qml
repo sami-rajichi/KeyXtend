@@ -165,11 +165,12 @@ Window {
                 color: it.ink
             }
         }
-        MouseArea {
+        // It acts at let-go, wherever the pointer went (ADR-0024).
+        Act {
             id: area
             anchors.fill: parent
             hoverEnabled: true
-            onClicked: it.clicked()
+            onActed: it.clicked()
         }
     }
 

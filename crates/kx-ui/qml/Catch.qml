@@ -23,12 +23,13 @@ Window {
     width: area.width
     height: area.height - 1
 
-    MouseArea {
+    // It acts at let-go, wherever the pointer went (ADR-0024).
+    Act {
         anchors.fill: parent
         Accessible.role: Accessible.Button
         Accessible.name: c.name
         Accessible.id: c.uid
         Accessible.onPressAction: c.picked()
-        onClicked: c.picked()
+        onActed: c.picked()
     }
 }
