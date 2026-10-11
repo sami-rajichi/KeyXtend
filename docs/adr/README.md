@@ -26,5 +26,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0020 | [The keyboard's text follows the keyboard's language](0020-keyboard-text-follows-the-keyboard-language.md) | Accepted (2026-10-01). Supersedes ADR-0017's language choice for the keyboard's text. |
 | 0021 | [One graphics device for every window](0021-one-graphics-device-for-every-window.md) | Accepted (2026-10-10). Adds how ADR-0013's windows draw; sets spec §10's idle memory to 100 MB. |
 | 0022 | [Texts carry no bidi marks](0022-texts-carry-no-bidi-marks.md) | Accepted (2026-10-10). Supersedes ADR-0017's bidi rule and Arabic list join. |
+| 0023 | [Give freed heap pages back after a look change](0023-give-freed-heap-pages-back-after-a-look-change.md) | Accepted (2026-10-11). Adds to ADR-0021 how memory stays flat over G8's churn; its decision 6 stands. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
