@@ -12,7 +12,7 @@ var lk = {
     "danger_ink": "#FFF7F2EA",
     "legend": "#FF393B3B",
     "legend_mod": "#FFF7F2EA",
-    "legend_2": "#FF5F5F61",
+    "legend_2": "#FF575759",
     "legend_2_plate": "#FF4A4B4D",
     "legend_act": "#FFF7F2EA",
     "on": "#FF00797D",
@@ -34,6 +34,8 @@ var lk = {
     "pop_sel": "#FFCBEDEE",
     "chip_bg": "#FFD4D6D8",
     "hover": "#0F000000",
+    "press": "#1D000000",
+    "press_ink": null,
     "dim": "#FF959799",
     "dim_ink": "#FFD2D1D0",
     "key_shadow": [

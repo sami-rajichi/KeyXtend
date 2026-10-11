@@ -91,8 +91,25 @@ Item {
             const row = find(l, o => o.data !== undefined && o.data.some(turn));
             return row ? row.data.find(turn) : null;
         }
-        // Spec §10 and G8: the frame drawn next after a press on a hovered key shows the press in full, in every look.
-        // Each key hides and the pointer leaves it after, so the next look's key draws and hovers alone.
+        // The colour most of picture `img` shows, in 0-255 steps: a key's fill, past its legends and edges.
+        function fillOf(img) {
+            const [seen, best] = [{}, { n: 0, c: "" }];
+            for (let y = 0; y < img.height; y++)
+                for (let x = 0; x < img.width; x++) {
+                    const p = img.pixel(x, y);
+                    const c = [p.r, p.g, p.b].map(v => Math.round(v * 255)).join(",");
+                    seen[c] = (seen[c] || 0) + 1;
+                    if (seen[c] > best.n)
+                        [best.n, best.c] = [seen[c], c];
+                }
+            return best.c.split(",").map(Number);
+        }
+        // The largest step in any channel between fills `a` and `b`.
+        function step(a, b) {
+            return Math.max(...a.map((v, i) => Math.abs(v - b[i])));
+        }
+        // Spec §10 and G8: the frame drawn next after a press on a hovered key shows the press in full, in its own shade,
+        // in every look. Each key hides and the pointer leaves it after, so the next look's key draws and hovers alone.
         function test_a_press_shows_in_full_on_the_next_frame_in_every_look() {
             for (const [name, lk] of root.looks) {
                 const k = makeKey(lk, false);
@@ -102,7 +119,10 @@ Item {
                 verify(!hovered.equals(rest), name + ": the hover is drawn");
                 mousePress(k);
                 compare(k.sink, 1, name + ": the cap sinks at once");
-                verify(!grabImage(k).equals(hovered), name + ": the next frame shows the press");
+                const pressed = grabImage(k);
+                verify(!pressed.equals(hovered), name + ": the next frame shows the press");
+                const [r, h, d] = [fillOf(rest), fillOf(hovered), fillOf(pressed)];
+                verify(step(h, d) > 1 && step(r, d) > 1, name + ": its own shade, " + [r, h, d].join(" / "));
                 mouseRelease(k);
                 mouseMove(root, root.width - 1, root.height - 1);
                 k.visible = false;

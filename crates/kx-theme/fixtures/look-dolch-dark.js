@@ -34,6 +34,8 @@ var lk = {
     "pop_sel": "#FF1D4A4C",
     "chip_bg": "#FF3E4144",
     "hover": "#0AFFFFFF",
+    "press": "#0F000000",
+    "press_ink": null,
     "dim": "#FF2E3133",
     "dim_ink": "#FF787877",
     "key_shadow": [

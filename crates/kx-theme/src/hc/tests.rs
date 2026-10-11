@@ -49,6 +49,24 @@ fn high_contrast_uses_only_system_colours_in_every_theme_and_mode() {
 }
 
 #[test]
+fn a_pressed_key_takes_highlight_with_its_text_never_a_tint() {
+    let t = themes();
+    for base in t.list.iter().flat_map(|t| [&t.light, &t.dark]) {
+        let p = contrast_palette(base, &HC, t.shape.line.px);
+        assert_eq!(
+            p.press,
+            Rgba::from(HC.highlight),
+            "as Windows presses a button"
+        );
+        assert_eq!(
+            p.press_ink,
+            Some(Rgba::from(HC.highlight_text)),
+            "legends follow"
+        );
+    }
+}
+
+#[test]
 fn a_key_edge_is_a_hairline_wide() {
     let t = themes();
     for px in [t.shape.line.px, 2.5] {

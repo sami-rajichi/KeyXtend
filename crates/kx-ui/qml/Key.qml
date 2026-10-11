@@ -46,6 +46,8 @@ Item {
     property color fillColour: p[paint.fill]
     property color ink: p[paint.ink]
     property color skirt: p.skirt ? p.skirt[paint.skirt] : p[paint.fill]
+    // Legends and icons on a pressed key: high contrast's press text at once, else each keeps its colour.
+    readonly property var pressInk: down ? p.press_ink : null
     // How far the cap has sunk, 0 to 1, and how far a recording cap has brightened, 0 to 1.
     property real sink: down ? 1 : 0
     property real lift: 0
@@ -216,7 +218,7 @@ Item {
             lk: key.lk
             radius: key.radius
             visible: !key.dim && (area.containsMouse || key.down)
-            tint: key.down ? key.lk.common.press : key.p.hover
+            tint: key.down ? key.p.press : key.p.hover
         }
         KeyText {
             anchors.fill: parent
@@ -227,7 +229,8 @@ Item {
             design: key.design
             res: key.res
             s: key.s
-            ink: key.ink
+            ink: key.pressInk || key.ink
+            ink2: key.pressInk || key.p.legend_2
             icon: key.icon
             label: key.label
         }

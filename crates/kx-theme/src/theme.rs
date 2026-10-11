@@ -7,7 +7,8 @@ use serde::Deserialize;
 use crate::common::Common;
 use crate::look::Look;
 use crate::mode::Mode;
-use crate::palette::{Palette, plate_default};
+use crate::palette::{Palette, own_press, plate_default};
+use crate::rgba::Rgba;
 
 /// Text weights run from thin to black.
 pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
@@ -64,7 +65,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     } = toml::from_str(text).map_err(|e| e.to_string())?;
     let themes = tables
         .into_iter()
-        .map(theme)
+        .map(|t| theme(t, common.press))
         .collect::<Result<Vec<_>, _>>()?;
     if themes.is_empty() {
         return Err("no [[theme]] tables".into());
@@ -77,15 +78,16 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     Ok((themes, common))
 }
 
-/// One theme table: its two mode tables, then its look, whose marks take its Arabic fonts unless it names its own.
-fn theme(mut t: toml::Table) -> Result<Theme, String> {
+/// One theme table: its two mode tables, pressed as `press` unless they shade their own, then its look, whose marks
+/// take its Arabic fonts unless it names its own.
+fn theme(mut t: toml::Table, press: Rgba) -> Result<Theme, String> {
     let id = t
         .get("id")
         .and_then(toml::Value::as_str)
         .unwrap_or("?")
         .to_string();
-    let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()))?;
-    let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()))?;
+    let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()), press)?;
+    let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()), press)?;
     let mut look: Look = toml::Value::Table(t)
         .try_into()
         .map_err(|e| format!("{id}: {e}"))?;
@@ -98,15 +100,27 @@ fn theme(mut t: toml::Table) -> Result<Theme, String> {
     Ok(Theme { look, light, dark })
 }
 
-/// One mode table, with its plate text defaulted and errors prefixed `<id>.<mode>`.
-fn palette(id: &str, mode: Mode, table: Option<toml::Value>) -> Result<Palette, String> {
+/// One mode table, with its plate text and its `press` shade defaulted and errors prefixed `<id>.<mode>`.
+fn palette(
+    id: &str,
+    mode: Mode,
+    table: Option<toml::Value>,
+    press: Rgba,
+) -> Result<Palette, String> {
     let at = format!("{id}.{}", mode.key());
     let mut table = table.ok_or_else(|| format!("{at}: missing"))?;
-    if let Some(t) = table.as_table_mut() {
+    let own = table.as_table_mut().is_some_and(|t| {
         plate_default(t);
+        own_press(t)
+    });
+    let mut p: Palette = table.try_into().map_err(|e| format!("{at}: {e}"))?;
+    if !own {
+        p.press = press;
     }
-    table.try_into().map_err(|e| format!("{at}: {e}"))
+    Ok(p)
 }
 
+#[cfg(test)]
+mod press;
 #[cfg(test)]
 mod tests;

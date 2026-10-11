@@ -140,6 +140,21 @@ fn legends_are_checked_on_a_sculpted_caps_lit_top_and_under_hover_and_press() {
 }
 
 #[test]
+fn a_pressed_keys_legends_sit_on_its_own_press_shade_and_take_its_text_in_high_contrast() {
+    let t = themes();
+    for sys in [SysLook::default(), hc()] {
+        let v = look_view(&t, &choice("native", Mode::Light), &sys, None).expect("native");
+        let all = drawn(&v, TEST_ROW_PX);
+        let find = |n: &str| all.iter().find(|d| d.name == n).expect(n).clone();
+        let (hover, press) = (find("legend on key, hover"), find("legend on key, press"));
+        let p = &v.palette;
+        assert_eq!(press.bg, p.press.on(p.key), "contrast {}", v.contrast);
+        assert_ne!(press.bg, hover.bg, "a press reads unlike the hover");
+        assert_eq!(press.ink, p.press_ink.unwrap_or(p.legend));
+    }
+}
+
+#[test]
 fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() {
     let t = themes();
     let v = look_view(&t, &choice("dolch", Mode::Dark), &SysLook::default(), None).expect("dolch");

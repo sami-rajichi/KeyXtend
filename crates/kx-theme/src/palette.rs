@@ -52,6 +52,14 @@ fn clear() -> Rgba {
 /// The plate text token, and the token whose value it takes when a mode table leaves it out.
 const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
 
+/// The press shade token, which a mode table writes only where it differs from `[common] press`.
+const PRESS: &str = "press";
+
+/// True when mode table `t` writes its own press shade.
+pub(crate) fn own_press(t: &toml::Table) -> bool {
+    t.contains_key(PRESS)
+}
+
 /// Gives mode table `t` its plate text from `legend_2` when the file does not write one.
 pub(crate) fn plate_default(t: &mut toml::Table) {
     let (plate, from) = PLATE_TEXT;
@@ -130,6 +138,12 @@ pub struct Palette {
     pub chip_bg: Rgba,
     /// Laid over a key under the pointer: darker on light, lighter on dark.
     pub hover: Rgba,
+    /// Laid over a pressed key, so it reads unlike the hover; a palette that leaves it out takes `[common] press`.
+    #[serde(default = "clear")]
+    pub press: Rgba,
+    /// Every legend and icon on a pressed key; only high contrast sets one, so a theme's legends keep their colours.
+    #[serde(skip_deserializing, default)]
+    pub press_ink: Option<Rgba>,
     /// A key that comes in a later version: the side key faded over the plate, set from `shape.toml [dim]`.
     #[serde(skip_deserializing, default = "clear")]
     pub dim: Rgba,
@@ -163,7 +177,7 @@ impl Skirt {
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 34] {
+    pub fn named(&self) -> [(&'static str, Rgba); 35] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -197,6 +211,7 @@ impl Palette {
             ("pop_sel", self.pop_sel),
             ("chip_bg", self.chip_bg),
             ("hover", self.hover),
+            (PRESS, self.press),
             ("dim", self.dim),
             ("dim_ink", self.dim_ink),
         ]

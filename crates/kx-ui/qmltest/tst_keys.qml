@@ -164,6 +164,25 @@ Item {
             compare(find(plain, o => o.border !== undefined && o.tint !== undefined).border.width, 0, "no outline in a theme");
         }
 
+        // High contrast presses as Windows presses a button, in Highlight with every legend in HighlightText; a theme's
+        // legends keep their colours.
+        function test_high_contrast_presses_in_highlight_and_its_text() {
+            const k = makeKey("c-0x0002", H.lk);
+            mousePress(k);
+            const mark = find(k, o => o.border !== undefined && o.tint !== undefined);
+            verify(Qt.colorEqual(mark.color, H.lk.palette.press), "Highlight: " + mark.color);
+            const text = find(k, o => o.ink2 !== undefined);
+            const ink = H.lk.palette.press_ink;
+            verify(Qt.colorEqual(text.ink, ink) && Qt.colorEqual(text.ink2, ink), "HighlightText: " + text.ink + " " + text.ink2);
+            mouseRelease(k);
+            verify(Qt.colorEqual(text.ink2, H.lk.palette.legend_2), "back on the let-go");
+            const plain = makeKey("c-0x0003");
+            mousePress(plain);
+            const own = find(plain, o => o.ink2 !== undefined);
+            verify(Qt.colorEqual(own.ink, plain.ink) && Qt.colorEqual(own.ink2, N.lk.palette.legend_2), "a theme's own");
+            mouseRelease(plain);
+        }
+
         function test_a_dimmed_key_neither_sinks_nor_marks_the_hover() {
             const k = makeKey("mic");
             verify(Qt.colorEqual(k.fillColour, N.lk.palette.dim), "dimmed");

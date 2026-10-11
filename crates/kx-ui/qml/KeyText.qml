@@ -24,7 +24,8 @@ Loader {
     readonly property var lg: lk.shape.legend
     readonly property var mv: lk.motion.moves
     readonly property var amt: lk.motion.amount
-    readonly property color ink2: lk.palette.legend_2
+    // Second legends' colour; a pressed key in high contrast passes its press text.
+    property color ink2: lk.palette.legend_2
     // Dolch's sculpted caps lift centred legends to their lighter top's middle (mock-up line 217), and labels fit it.
     readonly property bool sculpted: look.cap.kind === "skirt"
     readonly property real lift: sculpted ? look.cap.legend_lift_px * s : 0

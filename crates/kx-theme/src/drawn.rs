@@ -147,16 +147,17 @@ fn states(v: &LookView, h: f32, mark: Mark, f: Fill) -> [Vec<Rgba>; 3] {
         down.extend(under(v, h, f.top, f.skirt, span, true));
     }
     let hover = rest.iter().map(|&s| v.palette.hover.on(s)).collect();
-    let press = down.into_iter().map(|s| v.common.press.on(s)).collect();
+    let press = down.into_iter().map(|s| v.palette.press.on(s)).collect();
     [rest, hover, press]
 }
 
-/// `l` on a key `h` high of `f` in every state.
+/// `l` on a key `h` high of `f` in every state; pressed, it takes the press text when the look has one.
 fn on_cap(v: &LookView, h: f32, l: &Legend, f: Fill) -> Vec<Drawn> {
     let states = states(v, h, l.mark, f);
-    let named = STATES.iter().zip(states.iter());
+    let inks = [l.ink, l.ink, v.palette.press_ink.unwrap_or(l.ink)];
+    let named = STATES.iter().zip(states.iter()).zip(inks);
     named
-        .map(|(state, bgs)| worst(&format!("{}, {state}", l.name), l.ink, l.share, bgs, l.min))
+        .map(|((state, bgs), ink)| worst(&format!("{}, {state}", l.name), ink, l.share, bgs, l.min))
         .collect()
 }
 

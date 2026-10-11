@@ -4,10 +4,11 @@
 # Sizes all themes share are in shape.toml, timings in motion.toml and icons in icons.toml.
 # Each palette's dim and dim_ink come from shape.toml [dim], so they are not written here.
 # legend_2_plate colours secondary text and icons on the plate; a palette writes it only where it differs from legend_2.
+# A palette writes press only where its keys need their own press shade; the others take [common] press.
 
 # Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 # The drawn check (src/drawn.rs) keeps all drawn text at WCAG AA where it sits, except the Carousel's faded side names.
-# A colour marked "owner 2026-09-30" or "2026-10-02" was nudged just enough to pass it.
+# A colour marked "owner 2026-09-30", "2026-10-02" or "2026-10-11" was nudged just enough to pass it.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), the caption's
 # recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover) and the snip overlay (.snip-dim, .snip-rect, .dims).
@@ -84,6 +85,7 @@ pop_hover = "#0000000B"
 pop_sel = "#DCE9F7"
 chip_bg = "#0000000E"
 hover = "#0000000F"
+press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { inset = true, x = 0.0, y = -1.0, blur = 0.0, spread = 0.0, color = "#00000024" },
     { x = 0.0, y = 0.0, blur = 0.0, spread = 1.0, color = "#0000000B" },
@@ -178,15 +180,15 @@ danger = "#CDBBA7"
 danger_ink = "#1D1B18"
 legend = "#1D1B18"
 legend_mod = "#1D1B18"
-legend_2 = "#666057"  # 2026-10-02: AA where it sits, hovered and pressed (was #6B655C)
+legend_2 = "#5D5850"  # 2026-10-11: AA under the press shade (was #666057, first #6B655C)
 legend_2_plate = "#69635B"  # owner 2026-09-30: nudged to AA on the plate (was #6B655C)
 legend_act = "#1D1B18"
 on = "#FFFFFF"
-on_ink = "#7A5E00"
+on_ink = "#795D00"  # 2026-10-11: AA under the press shade (was #7A5E00)
 lock = "#B39C83"
 lock_ink = "#1D1B18"
 rec = "#FFFFFF"
-rec_ink = "#7A5E00"
+rec_ink = "#795D00"  # 2026-10-11: AA under the press shade (was #7A5E00)
 led_off = "#D3CEC4"
 led_on = "#2F7A4C"
 ring = "#947700"  # 2026-10-02: 3:1 as a mark on the plate (was #A68600)
@@ -200,6 +202,7 @@ pop_hover = "#0000000A"
 pop_sel = "#F3E7C0"
 chip_bg = "#F8F6F1"
 hover = "#0000000F"
+press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#3C322847" },
     { inset = true, x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#FFFFFFBF" },
@@ -302,7 +305,7 @@ danger = "#B83262"
 danger_ink = "#F7F2EA"
 legend = "#393B3B"
 legend_mod = "#F7F2EA"
-legend_2 = "#5F5F61"  # 2026-10-02: AA where it sits (owner's #67686A, mock-up #6B6D6F)
+legend_2 = "#575759"  # 2026-10-11: AA under the press shade (was #5F5F61, owner's #67686A)
 legend_2_plate = "#4A4B4D"  # owner 2026-09-30: nudged to AA on the plate (was #6B6D6F)
 legend_act = "#F7F2EA"
 on = "#00797D"  # 2026-10-02: as enter (owner's #008488, mock-up #00A4A9)
@@ -324,6 +327,7 @@ pop_hover = "#0000000D"
 pop_sel = "#CBEDEE"
 chip_bg = "#D4D6D8"
 hover = "#0000000F"
+press = "#0000001D"  # the press shade laid over the hover, so a press reads darker (owner, 2026-10-11)
 key_shadow = [
     { x = 0.0, y = 1.0, blur = 1.0, spread = 0.0, color = "#00000040" },
 ]
