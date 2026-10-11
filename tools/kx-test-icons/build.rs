@@ -1,5 +1,5 @@
-//! Builds the Quick tests' QML plugin over kx-ui's icon provider, with the provider's name, the icons' folder and
-//! their file type from `kx_theme::assets`, so the tests ask for icons as the app does.
+//! Builds the Quick tests' QML plugin over kx-ui's icon provider and the soft shadows' adopter, with the provider's
+//! name, the icons' folder and their file type from `kx_theme::assets`, so the tests draw as the app does.
 #![allow(
     unsafe_code,
     reason = "cxx-qt-build sets C++ macros only through an unsafe call; a test tool may hold it"

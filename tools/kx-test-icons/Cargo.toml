@@ -1,6 +1,6 @@
 [package]
 name = "kx-test-icons"
-description = "Test tool: the Qt Quick tests' QML plugin, which serves the bundled icons in their tint as the app does."
+description = "Test tool: the Qt Quick tests' QML plugin, which serves the bundled icons in their tint and the soft shadows' adopter as the app does."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

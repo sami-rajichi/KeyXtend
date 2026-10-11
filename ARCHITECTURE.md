@@ -98,7 +98,8 @@ tools/
                          failed restore logs `# layout-kept`, and a killed window leaves the
                          session switched
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
-                         texts test lays out, so the tests draw icons as the app does
+                         texts test lays out, and the soft shadows' adopter, so the tests draw as
+                         the app does
 assets/                  fonts and icons with their licences, compiled into kx-ui (ADR-0016)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
