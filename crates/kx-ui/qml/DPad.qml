@@ -54,7 +54,6 @@ Item {
         model: pad.lk.palette.key_shadow.filter(l => !l.inset)
         delegate: Shade {
             required property var modelData
-            anchors.fill: parent
             shadow: modelData
             radius: pad.r
         }

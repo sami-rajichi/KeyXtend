@@ -49,7 +49,6 @@ Window {
             model: glow.lk ? glow.lk.palette.window_shadow.filter(l => !l.inset) : []
             delegate: Shade {
                 required property var modelData
-                anchors.fill: parent
                 shadow: modelData
                 radius: glow.radius
             }

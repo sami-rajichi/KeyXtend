@@ -130,8 +130,6 @@ Item {
         function centred(k, at) {
             const t = find(k, o => o.labelRoom !== undefined);
             const part = t.icon ? find(t, o => o.icon === t.icon && o.tint !== undefined) : find(t, o => o.text === t.label && o.visible);
-            // A row lays out once a frame; this one lays out now.
-            part.parent.forceLayout();
             if (t.icon) {
                 const x = part.mapToItem(t, 0, 0).x;
                 verify(Math.abs(x - Math.round(x)) < slack, at + " icon at " + x);

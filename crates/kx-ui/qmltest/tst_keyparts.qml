@@ -27,6 +27,7 @@ Item {
     readonly property var stepped: Object.assign({}, Face.states.ar.lang, { turn: 1 })
 
     Component { id: keyC; Key {} }
+    Component { id: faceC; KeyText {} }
 
     TestCase {
         name: "keyparts"
@@ -74,12 +75,24 @@ Item {
             compare(made(makeKey("space")), ["SpaceText"]);
             compare(texts(makeKey("space")), [root.res.space(Face.states.en.lang.space)]);
             compare(made(makeKey("bksp")), ["NamedFace", "Icon"], "an icon key");
-            compare(made(makeKey("esc")).filter(n => n !== "Icon"), ["NamedFace"]);
-            verify(all(makeKey("esc"), o => type(o) === "Icon" && o.visible).length === 0, "a label key shows no icon");
+            compare(texts(makeKey("bksp")), [], "and no label");
+            compare(made(makeKey("esc")), ["NamedFace"], "a label key makes no icon");
             compare(texts(makeKey("esc")), [En.texts["label.esc"]]);
             compare(made(makeKey("lang", "carousel")), ["LangFace"]);
             compare(made(makeKey("lang", "cycle")), ["LangFace", "LangCycle", "Icon"]);
             compare(made(makeKey("lang", "list")), ["LangFace", "Icon"]);
+        }
+
+        // A named face given an icon and a label shows both side by side, the label fitted to the room the icon leaves.
+        function test_a_named_face_can_show_an_icon_and_a_label() {
+            const key = makeKey("bksp");
+            const props = { kv: key.kv, ks: key.ks, lk: N.lk, lang: key.lang, design: key.design, res: root.res, s: 1 };
+            const f = createTemporaryObject(faceC, root, Object.assign(props, { ink: key.ink, icon: key.icon, label: "Back", width: key.width, height: key.height }));
+            compare(made(f), ["NamedFace", "Icon"]);
+            const icon = all(f, o => type(o) === "Icon")[0];
+            const legend = all(f, o => o.text === "Back")[0];
+            verify(legend.mapToItem(f, 0, 0).x >= icon.mapToItem(f, 0, 0).x + icon.width, "the label sits right of the icon");
+            fuzzyCompare(legend.width, f.item.labelRoom - icon.width - N.lk.shape.legend.gap_px, 1e-9, "the label's room");
         }
 
         // Edge cases 3 and 4: the board can turn a key into another kind, and the language key can change its design.
