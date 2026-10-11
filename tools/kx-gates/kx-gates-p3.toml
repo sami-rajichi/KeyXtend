@@ -22,7 +22,7 @@ alive_ms = 2000
 [fit]
 guard_headroom_ms = 120000
 # G8's capture must last through its counted steps up to its G2 clicks' end, plus this for its cold start, resizes and
-# the target window's start, in ms.
+# each target window's start, in ms.
 capture_headroom_ms = 30000
 
 # G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).

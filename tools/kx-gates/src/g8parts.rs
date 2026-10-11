@@ -75,6 +75,11 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     all
 }
 
+/// True when the product `ended`, its `presses` typed exactly their characters and every budget in `parts` passed.
+pub fn met(ended: bool, presses: &Presses, parts: &[Part]) -> bool {
+    ended && presses.typed_ok && budget::all_pass(parts)
+}
+
 /// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode or when not every churn
 /// pop-up showed; else false.
 pub fn verdict(weak: bool, churn: &Churn, met: bool) -> Value {
@@ -140,6 +145,20 @@ mod tests {
         let parts = parts(&g, Some(420.0), &m, false, &o);
         assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
         assert_eq!(parts.len(), 11, "one part per spec §10 budget G8 owns");
+    }
+
+    #[test]
+    fn presses_that_typed_wrong_or_a_product_left_running_fail_the_run() {
+        let (g, mut m, o) = sample();
+        m.presses.typed_ok = true;
+        let parts = parts(&g, Some(420.0), &m, false, &o);
+        assert!(met(true, &m.presses, &parts));
+        assert!(!met(false, &m.presses, &parts), "the product never quit");
+        m.presses.typed_ok = false;
+        assert!(
+            !met(true, &m.presses, &parts),
+            "the presses' characters did not all arrive alone"
+        );
     }
 
     #[test]

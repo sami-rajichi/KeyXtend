@@ -18,7 +18,7 @@ use crate::busbench::{self, BusTimes};
 use crate::g8churn;
 use crate::g8frames::{self, Recorder};
 use crate::g8loss::{self, Span};
-use crate::g8parts::{Measured, Outside, parts, verdict};
+use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, log_span};
 use crate::out::say;
 use crate::presentmon::Frames;
@@ -26,7 +26,7 @@ use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{close, g2, g2raw, mouseguard, out};
-use crate::{g8size, g8ui};
+use crate::{g8size, g8type, g8ui};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -90,7 +90,7 @@ fn measure(
     let core_pct = idle(ctx, &s.process)?;
     let folder = program.parent().ok_or("the program has no folder")?;
     let size_mb = proc::folder_mb(folder)?;
-    let presses = g8ui::presses(ctx, &kb)?;
+    let presses = g8type::presses(ctx, &kb)?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let capture_cut = g8frames::cut(ctx, since, rec);
@@ -211,7 +211,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": m.capture_cut,
         "parts": parts, "quit": ended,
-        "pass": verdict(weak, &m.churn, ended && budget::all_pass(&parts)),
+        "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
     }))
 }
 

@@ -15,7 +15,7 @@ use crate::gatecfg::G2;
 pub struct Fit {
     /// A guarded run's steps not counted here, such as starting apps, waits and clean-up.
     pub guard_headroom_ms: u64,
-    /// G8's steps before its G2 clicks end that are not counted here: the cold start, resizes and starting the target.
+    /// G8's steps before its G2 clicks end that are not counted here: the cold start, resizes and each target-window.
     pub capture_headroom_ms: u64,
 }
 
@@ -39,7 +39,7 @@ fn g8_ms(c: &GatesConfig) -> u64 {
 }
 
 /// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
-/// longest, the rise, and the clicks with their drain.
+/// longest, the rise and the presses' drain, and the clicks with theirs.
 fn g8_captured_ms(c: &GatesConfig) -> u64 {
     let g = &c.g8;
     let press = g.hover_settle_ms.saturating_add(g.press_wait_ms);
@@ -51,6 +51,7 @@ fn g8_captured_ms(c: &GatesConfig) -> u64 {
         g.idle_ms,
         presses,
         g.rise_wait_ms,
+        c.g2.drain_ms,
         clicks_ms(&c.g2, g.clicks),
         c.g2.drain_ms,
     ];

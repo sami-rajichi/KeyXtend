@@ -63,6 +63,7 @@ mod g8parts;
 mod g8pops;
 mod g8size;
 mod g8start;
+mod g8type;
 mod g8ui;
 mod g9;
 mod g9win;

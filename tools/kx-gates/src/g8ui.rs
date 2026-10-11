@@ -1,5 +1,6 @@
 //! G8's on-screen timings, read off the screen: how soon a pressed key lights up.
-//! Each press is let go away from its key, so no click lands and nothing is typed.
+//! Each press types its key's character at the press (ADR-0024) into the window G8 keeps in front, and is let go away
+//! from the key.
 #![cfg(windows)]
 
 use std::time::{Duration, Instant};
@@ -26,6 +27,12 @@ pub struct Presses {
     /// Each press and its key's rise, for G8's frame rule.
     #[serde(skip)]
     pub spans: Vec<Span>,
+    /// How many characters reached target-window.
+    pub arrived: usize,
+    /// True when exactly one press key character per press arrived there.
+    pub typed_ok: bool,
+    /// What the clean-up left open.
+    pub left_open: Vec<String>,
 }
 
 /// The screen's refresh rate in Hz, from the compositor.
@@ -92,9 +99,13 @@ fn or_release(
 }
 
 /// Presses `[g8] press_key` again and again and times how soon it lights; the pointer rests on it first, so the
-/// hover is already drawn, and the last key's rise ends before it returns. A stop by the mouse guard lets go away from
-/// the key at once, before a passing physical release could complete a click.
-pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
+/// hover is already drawn, and `front` keeps the window it types into in front before each press. The last key's rise
+/// ends before it returns, and a stop by the mouse guard lets go away from the key at once.
+pub fn presses(
+    ctx: &Ctx,
+    kb: &Keyboard,
+    front: impl Fn() -> Result<(), String>,
+) -> Result<Presses, String> {
     let g = &ctx.cfg.g8;
     let (r, on) = (kb.rect(&g.press_key)?, kb.at(&g.press_key)?);
     let away = away_from(win::rect(kb.hwnd)?, on, win::desktop().1);
@@ -102,6 +113,7 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
     for _ in 0..g.presses {
         mouse::move_to(on)?;
         sleep_ms(g.hover_settle_ms);
+        front()?;
         let before = picture(&r)?;
         let (start, at_us) = (Instant::now(), now_us());
         mouse::press_at(on)?;
