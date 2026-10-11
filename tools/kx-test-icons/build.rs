@@ -33,7 +33,8 @@ const QT_MODULES: [&str; 3] = ["Gui", "Qml", "Quick"];
 const DEFINES: [&str; 2] = ["QT_PLUGIN", "QT_NO_DEBUG"];
 /// Links all of the C++, so the entry points moc writes reach the DLL.
 const WHOLE: &str = "+whole-archive";
-/// MSVC switches that stop the DLL's link writing an import library, which nothing links and the linker announces.
+/// MSVC switches that stop the DLL's link, and its test binary's, writing an import library, which nothing links and
+/// the linker announces.
 const NO_IMPORT_LIB: [&str; 2] = ["/NOIMPLIB", "/NOEXP"];
 
 fn main() {
@@ -65,7 +66,7 @@ fn main() {
     builder.build();
     if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
         for arg in NO_IMPORT_LIB {
-            println!("cargo::rustc-link-arg-cdylib={arg}");
+            println!("cargo::rustc-link-arg={arg}");
         }
     }
     println!("cargo::rerun-if-changed={PLUGIN}");
