@@ -21,6 +21,8 @@ pub mod keys;
 pub mod langinfo;
 pub mod layouts;
 #[cfg(windows)]
+pub mod memory;
+#[cfg(windows)]
 mod platform;
 pub mod screen;
 pub mod strokes;
@@ -42,6 +44,8 @@ pub use inject::WinInjector;
 pub use instance::WinInstance;
 #[cfg(windows)]
 pub use layouts::WinLayouts;
+#[cfg(windows)]
+pub use memory::WinMemory;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 #[cfg(windows)]

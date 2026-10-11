@@ -72,26 +72,31 @@ fn elsewhere(rig: &Rig) -> Outcome {
 }
 
 /// A theme picked in the settings reaches the windows through the wake alone: it loads the theme's fonts, so Qt has its
-/// first Arabic family, and each shown window drops Qt's cached graphics once it drew the new look; going back drops
-/// those fonts.
+/// first Arabic family, and each shown window drops Qt's cached graphics once it drew the new look, then the free heap
+/// pages go back once; going back drops those fonts and gives back once more. Nothing went back at idle before.
 pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
     let themes = Themes::shipped().map_err(|e| e.to_string())?;
     let look = &themes.find(THEMES[0]).ok_or("no such theme")?.look;
     let arabic = look.arabic_fonts.first().ok_or("no Arabic family")?;
     let (was, before) = (rig.hub.settings(), released());
+    if rig.memory.calls() > 0 {
+        return Err("free memory went back at idle".into());
+    }
     rig.show(UiSettings {
         theme: THEMES[0].to_owned(),
         ..was.clone()
     });
     wait(
         app,
-        "the wake loading the fonts and a window dropping its graphics",
-        || released() > before && font_families().contains(arabic),
+        "the wake loading the fonts, a window dropping its graphics and one give-back",
+        || released() > before && font_families().contains(arabic) && rig.memory.calls() == 1,
     )?;
     rig.show(was);
-    wait(app, "the wake dropping the fonts", || {
-        !font_families().contains(arabic)
-    })
+    wait(
+        app,
+        "the wake dropping the fonts and one more give-back",
+        || !font_families().contains(arabic) && rig.memory.calls() == 2,
+    )
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.

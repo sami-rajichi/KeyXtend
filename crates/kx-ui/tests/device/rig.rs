@@ -6,7 +6,9 @@ use crate::{board, checks, left, rebuild};
 use cxx::UniquePtr;
 use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
-use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
+use kx_platform_fake::{
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+};
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Pick, Shell, UiPorts, UiSettings};
 use std::sync::Arc;
@@ -54,7 +56,8 @@ pub(crate) fn pick_next(adapter: u32) {
 /// A step's verdict; the error says what failed.
 pub(crate) type Outcome = Result<(), String>;
 
-/// What the test drives: the hub, its face, the window guard, the tray, the host behind its settings, and the log.
+/// What the test drives: the hub, its face, the window guard, the tray, the memory port, the host behind its settings,
+/// and the log.
 pub(crate) struct Rig {
     /// The hub the app's QML reads.
     pub(crate) hub: Arc<Hub>,
@@ -64,6 +67,8 @@ pub(crate) struct Rig {
     pub(crate) guard: Arc<FakeWindowGuard>,
     /// The tray its icon shows in.
     pub(crate) tray: Arc<FakeTray>,
+    /// The memory port that hears each give-back.
+    pub(crate) memory: Arc<FakeMemory>,
     /// The host behind the face's settings.
     pub(crate) host: FakeHost,
     /// Every log line so far.
@@ -83,12 +88,14 @@ impl Rig {
             Arc::new(FakeTray::new(TRAY_PX)),
             Arc::new(FakeWindowGuard::new(GUARDED)),
         );
+        let memory = Arc::new(FakeMemory::new());
         let ports = UiPorts {
             guard: guard.clone(),
             screens: Arc::new(FakeScreens::new(vec![screen], Point { x: 0, y: 0 })),
             look: Arc::new(FakeSystemLook::new()),
             backdrop: Arc::new(FakeBackdrop::new()),
             tray: tray.clone(),
+            memory: memory.clone(),
         };
         let (hub, _requests) = Hub::new(ports).map_err(|e| e.to_string())?;
         let face = Arc::new(Face::new(f64::from(board::row()))?);
@@ -98,6 +105,7 @@ impl Rig {
             face,
             guard,
             tray,
+            memory,
             host,
             lines,
         };

@@ -1,18 +1,22 @@
 //! The shared graphics device's glue (ADR-0021): the `QRhi` every Qt Quick window adopts before its first frame,
-//! whether a frame found it lost or drew off the GUI thread, and the watch for a window that could not start drawing.
-//! Debug builds can mark the device lost or a window failed, and count which windows draw on it, for tests.
+//! whether a frame found it lost or drew off the GUI thread, the watch for a window that could not start drawing, and
+//! the release of Qt's cached graphics after a look change, which then gives the freed memory back (ADR-0023). Debug
+//! builds can mark the device lost or a window failed, and count which windows draw on it, for tests.
 
 use super::harden::unpin_adapter;
+use super::installed;
 use crate::device::share;
 use cxx::UniquePtr;
 
 #[cxx_qt::bridge]
 mod ffi {
-    // SAFETY: `device.h` and the `watch.h` it includes declare exactly these functions, types and members with these
-    // types. `device_new` and `watch_new` make nothing off the thread of Qt's app object; every other call runs on that
-    // GUI thread, which owns the device, the watch and the windows, and the app drops every window before the device.
+    // SAFETY: `device.h`, the `watch.h` it includes and `release.h` declare exactly these functions, types and members
+    // with these types. `device_new` and `watch_new` make nothing off the thread of Qt's app object; every other call
+    // runs on that GUI thread, which owns the device, the watch and the windows, and the app drops every window before
+    // the device. The function `release_after_frame` keeps is a plain Rust function, valid for the whole run.
     unsafe extern "C++" {
         include!("kx-ui/cpp/device.h");
+        include!("kx-ui/cpp/release.h");
 
         /// The shared `QRhi` and the filter that hands it to each window.
         #[namespace = "kxui"]
@@ -56,9 +60,9 @@ mod ffi {
         #[namespace = "kxui"]
         fn wired_windows() -> usize;
 
-        /// Has each shown window drop Qt's cached graphics once its next frame ends.
+        /// Has each shown window drop Qt's cached graphics once its next frame ends; once none waits, `then` runs.
         #[namespace = "kxui"]
-        fn release_after_frame();
+        fn release_after_frame(then: fn());
 
         /// How many windows dropped Qt's cached graphics after a frame so far.
         #[cfg(debug_assertions)]
@@ -204,9 +208,16 @@ pub fn wired() -> usize {
 }
 
 /// Has each shown Qt Quick window drop Qt's cached graphics, such as the last look's pipelines and upload data, once
-/// its next frame ends; call it on the GUI thread after a look change.
+/// its next frame ends, then gives the freed heap pages back (ADR-0023); call it on the GUI thread after a look change.
 pub(crate) fn release_after_frame() {
-    ffi::release_after_frame();
+    ffi::release_after_frame(settled);
+}
+
+/// Every window dropped what it cached for the last look, so the hub gives the freed memory back.
+fn settled() {
+    if let Some(hub) = installed() {
+        hub.give_back();
+    }
 }
 
 /// How many windows dropped Qt's cached graphics after a frame so far; debug builds only, for tests.

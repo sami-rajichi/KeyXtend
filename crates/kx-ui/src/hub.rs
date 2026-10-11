@@ -22,12 +22,13 @@ use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
 };
 use kx_platform::ui::{
-    Backdrop, FocusToken, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
+    Backdrop, FocusToken, Memory, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
 };
 use kx_theme::assets::FontFiles;
 use kx_theme::{ThemeError, Themes};
 use notices::Notices;
 use serde::Serialize;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use texts::Texts;
@@ -45,6 +46,8 @@ pub struct UiPorts {
     pub backdrop: Arc<dyn Backdrop>,
     /// The tray icon, whose events come on the adapter's thread.
     pub tray: Arc<dyn Tray>,
+    /// Gives the heaps' free pages back after a look change (ADR-0023).
+    pub memory: Arc<dyn Memory>,
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
@@ -132,6 +135,8 @@ pub struct Hub {
     tray: Mutex<tray::TraySlot>,
     /// The font book and the files it holds; only the UI thread uses it.
     fonts: Mutex<fonts::Fonts>,
+    /// True once the memory port refused a give-back, which warns only the first time.
+    refused: AtomicBool,
 }
 
 impl Hub {
@@ -166,6 +171,7 @@ impl Hub {
             live: Mutex::new(live),
             tray: Mutex::default(),
             fonts: Mutex::default(),
+            refused: AtomicBool::default(),
         };
         Ok((Arc::new(hub), drain))
     }

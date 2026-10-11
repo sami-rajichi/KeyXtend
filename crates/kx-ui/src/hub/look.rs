@@ -1,5 +1,5 @@
 //! The look side of the hub: the look view QML draws, following the system look, the theme button, the light or
-//! dark switch and the backdrop.
+//! dark switch, the backdrop, and the free memory a look change leaves, which goes back to the system (ADR-0023).
 
 use super::{Hub, NULL, Wake, json};
 use crate::plate::{Plate, plate_after};
@@ -8,6 +8,7 @@ use kx_module_api::WriteError;
 use kx_platform::ui::{SysLook, UiError, WatchGuard};
 use kx_theme::{Mode, ModeChoice, look_view, mode_for};
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use toml::Value;
 
 /// The `[ui]` key of the theme.
@@ -113,6 +114,17 @@ impl Hub {
             tracing::warn!(error = %e, "backdrop refused; the plate stays solid");
         }
         plate_after(kind, tried) == Plate::SeeThrough
+    }
+
+    /// Gives the heaps' free pages back to the system, once every window dropped what it cached for the last look
+    /// (ADR-0023). A refusal warns only the first time and stops nothing.
+    pub fn give_back(&self) {
+        let Err(e) = self.ports.memory.give_back() else {
+            return;
+        };
+        if !self.refused.swap(true, Ordering::Relaxed) {
+            tracing::warn!(error = %e, "free memory could not go back to the system");
+        }
     }
 
     /// Saves `[ui]` `key` through the module's own handle, then `apply`s it; a save that failed still holds this run.

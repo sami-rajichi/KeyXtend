@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use kx_module_api::Clock;
 use kx_module_api::ports::{InputInjector, LayoutSource};
-use kx_platform::ui::{Backdrop, Instance, Screens, SystemLook, Tray, WindowGuard};
+use kx_platform::ui::{Backdrop, Instance, Memory, Screens, SystemLook, Tray, WindowGuard};
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinScreens, WinTray, dirs,
+    WinMemory, WinScreens, WinTray, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -86,6 +86,12 @@ impl WindowsPlatform {
     pub fn tray(&self) -> Arc<dyn Tray> {
         Arc::new(WinTray::new())
     }
+
+    /// Gives the heaps' free pages back to Windows after a look change.
+    #[must_use]
+    pub fn memory(&self) -> Arc<dyn Memory> {
+        Arc::new(WinMemory)
+    }
 }
 
 impl Platform for WindowsPlatform {
@@ -138,6 +144,13 @@ mod tests {
         let (areas, language, guarded) = answers.join().unwrap();
         assert!(!areas.is_empty() && !language.is_empty());
         assert_eq!(guarded, Ok(0), "no window of ours is shown");
+    }
+
+    #[test]
+    fn the_memory_port_gives_back_on_another_thread() {
+        let memory = WindowsPlatform::new().unwrap().memory();
+        let given = std::thread::spawn(move || memory.give_back()).join();
+        assert_eq!(given.ok(), Some(Ok(())));
     }
 
     #[test]

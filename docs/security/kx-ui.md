@@ -1,7 +1,7 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-10-10
+- **Last review:** 2026-10-11
 - **Status:** Reviewed
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
@@ -10,7 +10,7 @@
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `InputInjector`. | N/A |
 | `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). The face has no capability gate, so the `ui` module, which holds no capability, types through it (see Should fix). | The `ui` module fails and offers Try again; the rest keeps running. |
-| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, and the tray icon. | The windows take focus, the look stops following Windows, or a hidden keyboard has no way back but a second start. |
+| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`, `Memory`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, the tray icon, and giving the heaps' free pages back after a look change (ADR-0023). | The windows take focus, the look stops following Windows, a hidden keyboard has no way back but a second start, or look changes keep freed memory committed. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -47,6 +47,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
   - Guard tries stop at `guard_tries` per run, and equal notices are merged.
+  - The heaps' free pages go back once per look change, after every shown window dropped its cached graphics, never at idle; a refused give-back warns once and stops nothing (ADR-0023).
   - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
   - A lost graphics device, or a window whose scene graph cannot start, ends Qt's loop once and brings the windows back at most `[ui] device_rebuilds` times per run (0 to 10), so neither can loop. Past that, a loss leaves each window its own device, and a window that still cannot draw ends the app with one error and a failure code, where Qt would end it with no word. Each try at a new device counts, `device_retry_ms` (at most 5 s) apart; a timer times the wait, so the GUI thread never sleeps. A frame drawn off the GUI thread ends the sharing for the run, so no later rebuild makes a shared device; nor does one when the drawing variables did not read back. Only debug builds can mark a device lost, a frame off the thread or a window failed.

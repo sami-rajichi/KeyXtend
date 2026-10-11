@@ -112,6 +112,7 @@ fn ports(platform: &WindowsPlatform) -> UiPorts {
         look: platform.look(),
         backdrop: platform.backdrop(),
         tray: platform.tray(),
+        memory: platform.memory(),
     }
 }
 

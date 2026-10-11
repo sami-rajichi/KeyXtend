@@ -1,9 +1,9 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-11
 - **Status:** Reviewed
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), and the tray icon with its window and front-window hook (`tray`). It runs inside the uiAccess `keyxtend` process.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), and the heaps' free pages after a look change (`memory`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -58,6 +58,7 @@
 | The tray picture (RGBA from the UI) | `TrayImage` refuses a picture whose bytes do not fill its size; the colour bitmap is a DIB section of exactly that size, the pixels are copied only when their length matches it, the mask is built with rows padded to 16 bits, and both bitmaps are deleted once the icon holds its copies | None beyond `TrayImage`'s check; the UI sends the taskbar's small icon size | Unit tests of the byte order and mask size; a real test that the icon has the picture's size |
 | `CreateDXGIFactory1`, `EnumAdapters1`, `EnumAdapterByGpuPreference`, `GetDesc1` (`gpu`) | Only each adapter's LUID and software flag are read; a walk stops at DXGI's end of list or the first adapter it cannot describe, so every place stays right, and any failure picks nothing, so Qt keeps its own choice | Windows' own adapter count | Unit tests of the pick; a real test on Windows |
 | `DwmSetWindowAttribute`, `DwmExtendFrameIntoClientArea` | Set only on one of our own windows, found by title; the material goes first, so a refusal (a `UiError`) leaves the frame and tint as they were. The no-backdrop answer of old Windows is success for `None` | Fixed size | Unit tests of the kind table, the answer rule and the order of changes |
+| `HeapSetInformation` (`HeapOptimizeResources`, `memory`) | No heap handle is passed, so Windows itself picks the heaps with a low-fragmentation front end, which a heap without its own lock (`HEAP_NO_SERIALIZE`) never has; the struct and its exact size are local. It only decommits free pages, never pages in use and never the working set (ADR-0021, ADR-0023). A refusal is a `UiError` with the code | One call per look change | Real tests on Windows, on two threads |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a shell or parent process could set `LOCALAPPDATA` or `TEMP` to aim our data elsewhere. Mitigation: the folder comes from the known-folder API, not the environment.

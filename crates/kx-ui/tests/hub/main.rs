@@ -13,6 +13,7 @@ mod face;
 mod fonts;
 mod logs;
 mod look;
+mod memory;
 mod module;
 mod notices;
 mod spots;
@@ -23,7 +24,9 @@ use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyboardFace, KeyboardFaceKey, Point, Rect, Screen,
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
-use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
+use kx_platform_fake::{
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+};
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
 use std::sync::mpsc::Receiver;
@@ -103,6 +106,8 @@ struct Rig {
     backdrop: Arc<FakeBackdrop>,
     /// The fake tray.
     tray: Arc<FakeTray>,
+    /// The fake memory port.
+    memory: Arc<FakeMemory>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
 }
@@ -148,12 +153,14 @@ impl Rig {
         let look = Arc::new(FakeSystemLook::new());
         let backdrop = Arc::new(FakeBackdrop::new());
         let tray = Arc::new(FakeTray::new(TRAY_PX));
+        let memory = Arc::new(FakeMemory::new());
         let ports = UiPorts {
             guard: guard.clone(),
             screens: screens.clone(),
             look: look.clone(),
             backdrop: backdrop.clone(),
             tray: tray.clone(),
+            memory: memory.clone(),
         };
         let (hub, requests) = Hub::new(ports).expect("the hub starts");
         let wakes = Arc::new(Mutex::new(Vec::new()));
@@ -167,6 +174,7 @@ impl Rig {
             look,
             backdrop,
             tray,
+            memory,
             wakes,
         }
     }
@@ -179,6 +187,7 @@ impl Rig {
             look: self.look.clone(),
             backdrop: self.backdrop.clone(),
             tray: self.tray.clone(),
+            memory: self.memory.clone(),
         }
     }
 

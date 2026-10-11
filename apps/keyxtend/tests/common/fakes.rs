@@ -1,7 +1,9 @@
 //! Fake UI ports on one full-HD screen, shared by the app's test binaries and its unit tests.
 
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
-use kx_platform_fake::{FakeBackdrop, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard};
+use kx_platform_fake::{
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+};
 use kx_ui::UiPorts;
 use std::sync::Arc;
 
@@ -32,5 +34,6 @@ pub fn ports(tray: Arc<FakeTray>) -> UiPorts {
         look: Arc::new(FakeSystemLook::new()),
         backdrop: Arc::new(FakeBackdrop::new()),
         tray,
+        memory: Arc::new(FakeMemory::new()),
     }
 }
