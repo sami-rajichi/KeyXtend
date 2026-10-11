@@ -2,6 +2,12 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-11 22:09 — P3: the gates guard the owner's mouse and count frames only while keys animate
+While a gate drives the mouse, a guard drops the owner's own mouse input and counts it; one physical click gives the mouse back and stops the gate (owner's choice). The guard ends the gate when Windows silently drops its hook, which happened while osk.exe was running, and it stops after a time limit. G8 now counts lost frames only while a pressed key sinks and rises, timed by each frame's present, and the pop-up churn compares the medians of its first and last rounds.
+
+## 2026-10-11 19:53 — P3: a pressed key shows at once, in its own shade
+A pressed key sinks on the next frame, so a quick click always shows. Light looks and high contrast give it its own darker shade, made from one shared press token; the owner approved it from rendered pictures.
+
 ## 2026-10-11 17:10 — P3: hold a key to repeat it
 Holding a character key, Space, Enter, Backspace, Delete or an arrow types it again after 0.8 s, then 10 times a second, as on a real keyboard; with Ctrl, Alt or Win latched, a held key acts once. The delay, the speed and an off switch are settings (`[keyboard] repeat`, `repeat_delay_ms`, `repeat_every_ms`), which P13's settings window will explain in EN, FR and AR. A `Repeat` state machine with an injected clock decides each tick, and one timer per window ticks only while a key is held.
 
