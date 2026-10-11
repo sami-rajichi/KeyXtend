@@ -75,10 +75,11 @@ impl<H: Hook, C: Clock> Session<H, C> {
         })
     }
 
-    /// Refuses new input once the guard let go early, saying why.
+    /// Refuses new input once the guard let go early, saying why; the tally knows as soon as the hook's callback does.
     pub fn refusal(&mut self) -> Result<(), String> {
         if self.early.is_none() {
-            self.early = self.live.as_ref().and_then(Live::ended);
+            let own = || self.live.as_ref().and_then(Live::ended);
+            self.early = self.tally.ended().or_else(own);
         }
         self.check_alive();
         self.early.map_or(Ok(()), |e| Err(e.stopped()))

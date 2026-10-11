@@ -25,6 +25,8 @@ pub struct Seen {
     pub filter: Option<Filter>,
     /// The next start fails.
     pub fail: bool,
+    /// The hook thread has not yet noticed that its filter let go, as between the callback and its pump's return.
+    pub slow: bool,
 }
 
 /// A hook that lets go exactly when its filter says.
@@ -102,7 +104,11 @@ impl Hook for Fake {
 impl Live for Fake {
     fn ended(&self) -> Option<End> {
         let now = self.clock.now();
-        self.seen().filter.as_mut()?.tick(now)
+        let mut seen = self.seen();
+        if seen.slow {
+            return None;
+        }
+        seen.filter.as_mut()?.tick(now)
     }
 
     fn stop(self) -> Option<End> {

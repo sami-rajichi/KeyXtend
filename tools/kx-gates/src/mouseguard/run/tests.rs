@@ -15,6 +15,17 @@ fn send_clicks(s: &mut Session<Fake, FakeClock>) {
 }
 
 #[test]
+fn a_press_refuses_the_next_input_before_the_hook_thread_even_noticed_it() {
+    let fake = Fake::new();
+    let mut s = begun(&fake);
+    fake.seen().slow = true;
+    fake.press();
+    let e = s.refusal().expect_err("the callback already decided");
+    assert!(e.contains(End::Owner.why()), "{e}");
+    assert_eq!(s.finish(true).end, End::Owner);
+}
+
+#[test]
 fn own_clicks_the_hook_counts_in_time_keep_the_gate_going() {
     let (fake, alive) = (Fake::new(), cfg().alive_ms);
     let mut s = begun(&fake);

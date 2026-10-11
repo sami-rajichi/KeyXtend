@@ -139,6 +139,20 @@ fn one_physical_press_gives_the_mouse_back_at_once_and_its_release_then_passes()
 }
 
 #[test]
+fn the_filter_tells_the_tally_how_it_let_go_the_moment_it_decides() {
+    let tally = Arc::new(Tally::default());
+    let mut f = Filter::new(&shipped(), at(0), Duration::ZERO, Arc::clone(&tally));
+    physical(&mut f, Kind::Other, 1);
+    assert_eq!(tally.ended(), None);
+    physical(&mut f, LEFT_DOWN, 2);
+    assert_eq!(tally.ended(), Some(End::Owner), "inside the callback");
+    let tally = Arc::new(Tally::default());
+    let mut f = Filter::new(&shipped(), at(0), Duration::ZERO, Arc::clone(&tally));
+    f.tick(at(shipped().limit_ms));
+    assert_eq!(tally.ended(), Some(End::Limit));
+}
+
+#[test]
 fn with_two_clicks_set_one_press_does_not_let_go_and_two_within_the_window_do() {
     let window = shipped().escape_window_ms;
     let mut f = two_clicks();

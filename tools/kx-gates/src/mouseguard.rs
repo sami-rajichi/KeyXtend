@@ -131,7 +131,6 @@ pub enum Loss {
 
 impl End {
     /// Every end, each loss included.
-    #[cfg(test)]
     pub const ALL: [Self; 10] = [
         Self::Done,
         Self::Error,

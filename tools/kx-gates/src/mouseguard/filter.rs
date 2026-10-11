@@ -47,9 +47,16 @@ impl Filter {
     /// Why it lets go at `now`, if it does: the time limit, or the escape presses before it.
     pub fn tick(&mut self, now: Mono) -> Option<End> {
         if self.out.is_none() && now >= self.deadline {
-            self.out = Some(End::Limit);
+            self.let_go(End::Limit);
         }
         self.out
+    }
+
+    /// Lets go with `end`, and tells the tally at once, so the gate refuses its next input before the hook thread
+    /// even noticed.
+    fn let_go(&mut self, end: End) {
+        self.out = Some(end);
+        self.tally.end(end);
     }
 
     /// Why it let go, if it already has; unlike `tick`, it decides nothing new.
@@ -89,7 +96,7 @@ impl Filter {
         }
         self.presses.push_back(now);
         if self.presses.len() >= self.clicks {
-            self.out = Some(End::Owner);
+            self.let_go(End::Owner);
         }
     }
 
