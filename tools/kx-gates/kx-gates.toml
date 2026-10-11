@@ -39,7 +39,7 @@ escape_clicks = 1
 # How close together the presses must come when escape_clicks is above 1, in ms.
 escape_window_ms = 3000
 # How soon, in ms, the hook must count kx-gates' own clicks and moves; past it, Windows switched it off.
-# Windows waits at most 1 s for a low-level hook, so 2 s never cuts a live hook short.
+# Twice Windows' 1 s hook timeout.
 alive_ms = 2000
 
 [keys]

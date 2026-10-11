@@ -10,6 +10,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use super::*;
 
+/// Windows' longest wait for a low-level hook since Windows 10 1709, in ms (Microsoft's `LowLevelMouseProc` docs).
+const HOOK_TIMEOUT_MS: u64 = 1_000;
+
 fn shipped() -> MouseGuard {
     crate::config::load()
         .expect("kx-gates.toml loads")
@@ -26,8 +29,8 @@ fn the_shipped_guard_is_on_with_the_owners_limit_and_one_click_escape() {
         "owner, 2026-10-11"
     );
     assert!(
-        g.alive_ms >= 2_000,
-        "twice Windows' longest wait for a low-level hook, 1 s"
+        g.alive_ms >= 2 * HOOK_TIMEOUT_MS,
+        "twice Windows' 1 s hook timeout"
     );
     assert_eq!(g.check(), Ok(()));
 }
