@@ -2,24 +2,18 @@
 //! time.
 #![cfg(windows)]
 
-use std::fmt::Write;
-
 use serde_json::{Map, Value, json};
 
 use crate::apps::{self, Ctx, Opened};
 use crate::clicks::{self, Run, Tally, Usable};
+use crate::g2raw::{CLICKS_FILE, tsv};
 use crate::mouse;
 use crate::out::say;
 use crate::product::Keyboard;
-use crate::stats::{self, Click};
+use crate::stats;
 use crate::tlog::{self, Unit};
 use crate::win::sleep_ms;
 use crate::{launch, out};
-
-/// Suffix of the raw click file.
-const CLICKS_FILE: &str = "-clicks.tsv";
-/// First line of the raw click file.
-const TSV_HEADER: &str = "index\tcode\tclick_us\tlatency_us\n";
 
 /// What the target log shows after the clicks.
 struct Logged {
@@ -197,20 +191,10 @@ fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String])
     head
 }
 
-/// One line per click: index, scan code, click time and latency in µs.
-fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
-    let mut s = String::from(TSV_HEADER);
-    for (i, (c, l)) in clicks.iter().zip(lat).enumerate() {
-        let l = l.map(|v| v.to_string()).unwrap_or_default();
-        // Writing to a `String` cannot fail.
-        let _ = writeln!(s, "{i}\t{:#X}\t{}\t{l}", c.code, c.us);
-    }
-    s
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stats::Click;
 
     fn run(planned: u64, clicks: u64, matched: u64, focus_ok: bool) -> Value {
         json!({
@@ -272,17 +256,5 @@ mod tests {
         let caret = report(head(), &tally(3, 2), &logged(3), &[]);
         assert_eq!(caret["pass"], false, "a lost caret fails G2 on its own");
         assert!(out::failed(&caret));
-    }
-
-    #[test]
-    fn tsv_has_a_header_and_one_line_per_click() {
-        let click = |code, us| Click {
-            code,
-            us,
-            expect: vec![],
-        };
-        let got = tsv(&[click(0x1E, 100), click(0xE01D, 250)], &[Some(30), None]);
-        let want = "index\tcode\tclick_us\tlatency_us\n0\t0x1E\t100\t30\n1\t0xE01D\t250\t\n";
-        assert_eq!(got, want);
     }
 }
