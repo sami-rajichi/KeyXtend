@@ -14,7 +14,7 @@ use crate::budget::ms;
 use crate::g8loss::Span;
 use crate::product::Keyboard;
 use crate::win::{self, size32, sleep_ms};
-use crate::{mouse, shot, simuser};
+use crate::{mouse, mouseguard, shot, simuser};
 
 /// What the presses measured, in ms.
 #[derive(Debug, Default, Serialize)]
@@ -46,26 +46,31 @@ fn picture(r: &RECT) -> Result<Vec<u8>, String> {
     Ok(shot::of_box(r)?.bgra)
 }
 
-/// Copies box `r` until it differs from `before`, adding each copy's time to `copies`; the ms from `start`.
+/// Looks with `lit` until the key lights, `wait` from `start` is over, or `go_on` refuses because the mouse guard
+/// stopped the gate; the ms from `start` to the light.
 fn watch(
-    r: &RECT,
-    before: &[u8],
     start: Instant,
-    wait_ms: u64,
-    copies: &mut Vec<f64>,
+    wait: Duration,
+    mut lit: impl FnMut() -> Result<bool, String>,
+    go_on: impl Fn() -> Result<(), String>,
 ) -> Result<Option<f64>, String> {
-    let wait = Duration::from_millis(wait_ms);
     loop {
-        let copy = Instant::now();
-        let now = picture(r)?;
-        copies.push(ms(copy.elapsed()));
-        if now != before {
+        go_on()?;
+        if lit()? {
             return Ok(Some(ms(start.elapsed())));
         }
         if start.elapsed() >= wait {
             return Ok(None);
         }
     }
+}
+
+/// Copies box `r` and says whether it differs from `before`, adding the copy's time to `copies`.
+fn changed(r: &RECT, before: &[u8], copies: &mut Vec<f64>) -> Result<bool, String> {
+    let copy = Instant::now();
+    let now = picture(r)?;
+    copies.push(ms(copy.elapsed()));
+    Ok(now != before)
 }
 
 /// A point just above the keyboard's box, else just below it, where letting go clicks nothing.
@@ -87,19 +92,21 @@ fn or_release(
 }
 
 /// Presses `[g8] press_key` again and again and times how soon it lights; the pointer rests on it first, so the
-/// hover is already drawn, and the last key's rise ends before it returns.
+/// hover is already drawn, and the last key's rise ends before it returns. A stop by the mouse guard lets go away from
+/// the key at once, before a passing physical release could complete a click.
 pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
     let g = &ctx.cfg.g8;
     let (r, on) = (kb.rect(&g.press_key)?, kb.at(&g.press_key)?);
     let away = away_from(win::rect(kb.hwnd)?, on, win::desktop().1);
-    let mut out = Presses::default();
+    let (mut out, wait) = (Presses::default(), Duration::from_millis(g.press_wait_ms));
     for _ in 0..g.presses {
         mouse::move_to(on)?;
         sleep_ms(g.hover_settle_ms);
         let before = picture(&r)?;
         let (start, at_us) = (Instant::now(), now_us());
         mouse::press_at(on)?;
-        let lit = watch(&r, &before, start, g.press_wait_ms, &mut out.copy_ms);
+        let look = || changed(&r, &before, &mut out.copy_ms);
+        let lit = watch(start, wait, look, mouseguard::allowed);
         or_release(mouse::release_at(away), simuser::release_all)?;
         out.spans.push(Span::press(at_us, now_us(), g.rise_ms));
         out.lit_ms.push(lit?);
@@ -110,7 +117,38 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
     use super::*;
+
+    #[test]
+    fn the_light_wait_ends_at_once_when_the_mouse_guard_stops_the_gate() {
+        let looks = Cell::new(0);
+        let look = || {
+            looks.set(looks.get() + 1);
+            Ok(false)
+        };
+        let go_on = || match looks.get() {
+            0 | 1 => Ok(()),
+            _ => Err("stopped by the mouse guard".to_string()),
+        };
+        let e = watch(Instant::now(), Duration::MAX, look, go_on).expect_err("stopped");
+        assert!(e.contains("mouse guard"), "{e}");
+        assert_eq!(looks.get(), 2, "no look after the stop");
+    }
+
+    #[test]
+    fn the_light_wait_gives_the_time_to_the_light_or_none_once_its_wait_is_over() {
+        let looks = Cell::new(0);
+        let look = || {
+            looks.set(looks.get() + 1);
+            Ok(looks.get() == 3)
+        };
+        let lit = watch(Instant::now(), Duration::MAX, look, || Ok(()));
+        assert!(matches!(lit, Ok(Some(_))) && looks.get() == 3, "{lit:?}");
+        let never = watch(Instant::now(), Duration::ZERO, || Ok(false), || Ok(()));
+        assert_eq!(never, Ok(None));
+    }
 
     #[test]
     fn a_failed_release_lets_every_button_go_and_says_so() {
