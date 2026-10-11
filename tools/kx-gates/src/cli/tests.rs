@@ -144,7 +144,19 @@ fn the_p3_gates_take_no_option_and_only_their_names() {
 #[test]
 fn the_help_names_every_gate_that_takes_only_a_name() {
     let help = crate::usage::usage();
-    for (gate, _) in NAMED {
+    for (gate, ..) in GATES.iter().filter(|g| g.2.is_some()) {
         assert!(help.contains(&format!("kx-gates {gate} <")), "{gate}");
     }
+}
+
+#[test]
+fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
+    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g12", "g25"] {
+        assert_eq!(mouse(gate), Mouse::Held, "{gate}");
+    }
+    for gate in ["assist", "g13", "g23", "g26", "close", "g99"] {
+        assert_eq!(mouse(gate), Mouse::Free, "{gate}");
+    }
+    let names: std::collections::BTreeSet<_> = GATES.iter().map(|g| g.0).collect();
+    assert_eq!(names.len(), GATES.len(), "each gate once");
 }

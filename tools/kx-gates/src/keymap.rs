@@ -3,16 +3,18 @@
 #![cfg(windows)]
 
 use kx_platform_windows::com::Com;
+use spike_core::uia;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::Accessibility::{
-    CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
-    IUIAutomationInvokePattern, ToggleState_On, TreeScope_Descendants, UIA_AutomationIdPropertyId,
-    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
-    UIA_ToggleToggleStatePropertyId,
+    CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement, ToggleState_On,
+    TreeScope_Descendants, UIA_AutomationIdPropertyId, UIA_ButtonControlTypeId,
+    UIA_ControlTypePropertyId, UIA_InvokePatternId, UIA_ToggleToggleStatePropertyId,
 };
 use windows::core::{BSTR, Interface};
+
+use crate::mouseguard;
 
 /// What a screen reader meets on one button: its id, name and box, and whether it can be pressed.
 #[derive(Debug, Clone, PartialEq)]
@@ -113,19 +115,16 @@ impl Reader {
         Ok(keys)
     }
 
-    /// Presses the button with id `id` inside window `hwnd` through its Invoke pattern, as a screen reader does.
-    #[allow(
-        unsafe_code,
-        reason = "UI Automation calls on objects this client made."
-    )]
+    /// Presses the button with id `id` inside window `hwnd` through its Invoke pattern, as a screen reader does,
+    /// unless the mouse guard stopped the gate.
     pub fn invoke(&self, hwnd: HWND, id: &str) -> Result<(), String> {
-        let el = self.find(hwnd, id)?;
-        // SAFETY: plain calls on a live element; a missing pattern gives an error.
-        unsafe {
-            let pattern = el.GetCurrentPattern(UIA_InvokePatternId).map_err(err)?;
-            let invoke: IUIAutomationInvokePattern = pattern.cast().map_err(err)?;
-            invoke.Invoke().map_err(err)
-        }
+        mouseguard::allowed()?;
+        self.restore(hwnd, id)
+    }
+
+    /// Like `invoke`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
+    pub fn restore(&self, hwnd: HWND, id: &str) -> Result<(), String> {
+        uia::invoke(&self.find(hwnd, id)?)
     }
 
     /// Whether the button with id `id` inside window `hwnd` reads as on, as a screen reader reads a latched key;
@@ -177,6 +176,12 @@ impl Reader {
 fn toggle_state(v: &VARIANT) -> Option<bool> {
     let state = (v.vt() == VT_I4).then(|| i32::try_from(v).ok()).flatten()?;
     Some(state == ToggleState_On.0)
+}
+
+/// Presses element `el` as a screen reader does, unless the mouse guard stopped the gate; `uia::invoke` puts back.
+pub fn press(el: &IUIAutomationElement) -> Result<(), String> {
+    mouseguard::allowed()?;
+    uia::invoke(el)
 }
 
 /// A UI Automation error as text.

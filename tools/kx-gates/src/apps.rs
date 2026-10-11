@@ -176,7 +176,7 @@ fn close_tab(app: &Opened, in_front: bool, ctx: &Ctx) -> Option<String> {
         .as_deref()
         .is_some_and(|t| win::title(app.hwnd).contains(t));
     if in_front && ours {
-        let _ = keys::combo(&k.close_tab);
+        let _ = keys::restore_combo(&k.close_tab);
     }
     let m = Match {
         title_has: app.title_has.clone(),
@@ -209,7 +209,7 @@ fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
         if !is_test_page(&before, &pages) {
             break;
         }
-        let _ = keys::combo(&k.close_tab);
+        let _ = keys::restore_combo(&k.close_tab);
         let changed =
             || (!winfind::exists(app.hwnd) || win::title(app.hwnd) != before).then_some(());
         if win::poll_until(t.close_wait_ms, t.poll_ms, changed).is_none() {

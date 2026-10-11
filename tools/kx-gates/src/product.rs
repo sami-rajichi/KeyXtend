@@ -12,7 +12,7 @@ use kx_settings::{Files, peek, peek_section};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::keymap::{KeyMap, Reader};
-use crate::{apps, board, win};
+use crate::{apps, board, mouseguard, win};
 
 /// The product's name on the command line; its program is this name and the system's program suffix.
 pub const NAME: &str = "keyxtend";
@@ -83,11 +83,18 @@ pub fn shown() -> Vec<HWND> {
         .collect()
 }
 
-/// Presses the button with UI Automation id `id` in whichever shown product window has it.
+/// Presses the button with UI Automation id `id` in whichever shown product window has it, unless the mouse guard
+/// stopped the gate.
 pub fn invoke(reader: &Reader, id: &str) -> Result<(), String> {
+    mouseguard::allowed()?;
+    restore(reader, id)
+}
+
+/// Like `invoke`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
+pub fn restore(reader: &Reader, id: &str) -> Result<(), String> {
     let mut why = format!("no shown {NAME} window has {id}");
     for hwnd in shown() {
-        match reader.invoke(hwnd, id) {
+        match reader.restore(hwnd, id) {
             Ok(()) => return Ok(()),
             Err(e) => why = e,
         }

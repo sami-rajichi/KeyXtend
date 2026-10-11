@@ -9,9 +9,10 @@ use kx_platform_windows::WinInjector;
 use kx_platform_windows::inject::{self, send_keys, vk_key};
 use kx_platform_windows::strokes::{self, KeyEvent};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN,
-    MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_RIGHTDOWN,
-    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP,
+    INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSE_EVENT_FLAGS, MOUSEEVENTF_HWHEEL,
+    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
+    MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN,
+    MOUSEEVENTF_XUP,
 };
 
 use crate::mouseguard;
@@ -52,12 +53,37 @@ fn only_lets_go(inputs: &[INPUT]) -> bool {
     each.iter().any(|&(_, up)| up) && !each.iter().any(|&(down, _)| down)
 }
 
-/// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
-/// a batch that lets go goes out, so nothing stays pressed.
-pub fn send(inputs: &[INPUT]) -> Result<(), String> {
-    if !only_lets_go(inputs) {
-        mouseguard::allowed()?;
+/// `input` without its pointer move, so a release goes out where the pointer already is.
+#[allow(unsafe_code, reason = "Reads the union member the input's type names.")]
+fn without_move(mut input: INPUT) -> INPUT {
+    if input.r#type == INPUT_MOUSE {
+        // SAFETY: the type says the mouse member is set.
+        let mut mi = unsafe { input.Anonymous.mi };
+        mi.dwFlags = MOUSE_EVENT_FLAGS(mi.dwFlags.0 & RELEASES);
+        (mi.dx, mi.dy) = (0, 0);
+        input.Anonymous.mi = mi;
     }
+    input
+}
+
+/// Only the releases of `inputs`, without their moves.
+fn bare(inputs: &[INPUT]) -> Vec<INPUT> {
+    let ups = inputs.iter().filter(|i| press_release(i).1);
+    ups.map(|&i| without_move(i)).collect()
+}
+
+/// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
+/// a batch that lets go goes out, without its move, so nothing stays pressed and the pointer stays still.
+pub fn send(inputs: &[INPUT]) -> Result<(), String> {
+    let ups;
+    let inputs = match mouseguard::allowed() {
+        Ok(()) => inputs,
+        Err(_) if only_lets_go(inputs) => {
+            ups = bare(inputs);
+            &ups
+        }
+        Err(e) => return Err(e),
+    };
     inject::send(inputs).map_err(|e| format!("{e}: {}", io::Error::last_os_error()))
 }
 
@@ -84,6 +110,11 @@ fn presses(vks: &[u16]) -> Vec<KeyEvent> {
 /// Presses `vks` in order, then releases them in reverse; after a failed send it tries to let go of what went down.
 pub fn combo(vks: &[u16]) -> Result<(), String> {
     mouseguard::allowed()?;
+    restore_combo(vks)
+}
+
+/// Like `combo`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
+pub fn restore_combo(vks: &[u16]) -> Result<(), String> {
     send_keys(&presses(vks)).map_err(|e| e.to_string())
 }
 
@@ -134,7 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn only_a_batch_that_lets_go_and_presses_nothing_passes_a_stopped_guard() {
+    #[allow(unsafe_code, reason = "Reads the mouse member of a mouse input.")]
+    fn only_a_batch_that_lets_go_and_presses_nothing_passes_a_stopped_guard_without_its_move() {
         use crate::mouse::input;
         use windows::Win32::UI::Input::KeyboardAndMouse::{
             MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
@@ -161,6 +193,18 @@ mod tests {
         );
         assert!(!only_lets_go(&[tagged(0x41, false, TAG)]), "a key press");
         assert!(!only_lets_go(&[]), "nothing to let go of");
+        let shift_up = tagged(0x10, true, TAG);
+        let ups = bare(&[moved, up, shift_up]);
+        assert_eq!(ups.len(), 2, "the move alone is gone");
+        // SAFETY: the first input is the mouse release, built as a mouse input.
+        let mi = unsafe { ups[0].Anonymous.mi };
+        assert_eq!((mi.dx, mi.dy, mi.dwExtraInfo), (0, 0, TAG));
+        assert_eq!(mi.dwFlags, MOUSEEVENTF_LEFTUP, "no move, no absolute");
+        assert_eq!(
+            press_release(&ups[1]),
+            (false, true),
+            "the key still goes up"
+        );
     }
 
     #[test]

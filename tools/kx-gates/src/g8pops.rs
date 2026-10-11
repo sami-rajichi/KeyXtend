@@ -136,13 +136,14 @@ fn hover(plan: &Plan, seen: &mut Seen) -> Result<(), String> {
     mouse::move_to(plan.away)
 }
 
-/// Opens and closes the language list with its key, counting an open that showed a new window.
+/// Opens and closes the language list with its key, counting an open that showed a new window; the close still goes
+/// out after the mouse guard stopped the gate.
 fn list(g: &G8, reader: &Reader, lang: &str, seen: &mut Seen) -> Result<(), String> {
     let base = snapshot();
     product::invoke(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
     seen.lists += usize::from(any_new(&base, &shown_now()));
-    product::invoke(reader, lang)?;
+    product::restore(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
     Ok(())
 }
@@ -163,14 +164,14 @@ fn swapped(keyboard_shown: bool, bubble_shown: bool) -> Result<bool, String> {
 }
 
 /// Minimises the keyboard to its bubble and brings it back, counting a bubble that showed in its place and a keyboard
-/// that came back.
+/// that came back; bringing it back still goes out after the mouse guard stopped the gate.
 fn bubble(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), String> {
     product::invoke(reader, &plan.hide)?;
     sleep_ms(g.churn_settle_ms);
     let shown = product::shown();
     let bubble_shown = shown.iter().any(|&w| holds(reader, w, &plan.back));
     seen.bubbles += usize::from(swapped(shown.contains(&plan.keyboard), bubble_shown)?);
-    product::invoke(reader, &plan.back)?;
+    product::restore(reader, &plan.back)?;
     sleep_ms(g.churn_settle_ms);
     seen.returns += usize::from(product::shown().contains(&plan.keyboard));
     Ok(())

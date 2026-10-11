@@ -34,7 +34,7 @@
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
 | Manifest XML from `mt.exe` | Comments skipped; only `uiAccess` on `requestedExecutionLevel` (any prefix) is read; missing means fail | Developer-chosen file | No |
-| Mouse hook events (`kx-gates` mouse guard) | Only the message, the injected flag and the X button's number are read, never the position; any other message is a plain event that drops when physical | One event per call; the hook does no I/O or locking | Unit tests of the filter |
+| Mouse hook events (`kx-gates` mouse guard) | Only the message, the injected flag, the injection tag and the X button's number are read, never the position; any other message is a plain event that drops when physical | One event per call; the hook does no I/O or locking | Unit tests of the filter |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
@@ -52,11 +52,12 @@
   - `kx-gates g10` presses every key by UI Automation, as Narrator does, with only target-window in front, except a dead key or a key that types nothing in the layout in front. It presses Caps Lock twice, sends each modifier only with Enter, lets Win go with no key, and puts back a layout the language key changed. It also asks UI Automation which element is at each key's centre, as Narrator's mouse mode does, without moving the pointer. It records that element's class, control type, process and window, and the window under the point, but reads an element's id and name only when the keyboard shows it. `kx-gates g26` switches the session's input language through `kx-target-window --layout`, so it runs on the GitHub runner only.
 - **Logging / repudiation:** the tools print only thumbprints and paths; no secrets. The mouse guard prints one line when it starts and one when it ends, with why, never a position or a button.
 - **Information disclosure:** no network; the private key cannot be exported.
-- **Denial of service:** every step ends with an exit code. While a gate runs, `kx-gates` drops every physical mouse move, click and wheel turn and passes injected input (`[mouse_guard]` in `kx-gates.toml`), so it holds the owner's only input. Mitigations:
-  - It lets go when the gate ends or breaks off, on a panic (a drop guard), while an admin prompt is up, after `limit_ms` (6 minutes) even if the gate hangs, and at once when a physical button is held `escape_ms` (2 s); the last three stop the gate, which then does not pass.
+- **Denial of service:** every step ends with an exit code. While a gate runs, `kx-gates` drops every physical mouse move, click and wheel turn and passes only the input it injected and tagged itself (`[mouse_guard]` in `kx-gates.toml`), so it holds the owner's only input. Mitigations:
+  - It lets go when the gate ends or breaks off, on a panic (a drop guard), while an admin prompt is up, once G8's pointer work is over, after `limit_ms` (6 minutes) of holding even if the gate hangs, and at once when a physical button is held `escape_ms` (2 s).
+  - The limit, the hold and a guard that cannot come back after a prompt stop the gate: it then fails, shows no prompt and sends no new press, and only the steps that put things back still go out.
   - The hook lives on a thread of `kx-gates`, and Windows removes a low-level hook when its thread or process ends, so it never outlives a run; it changes no Windows setting.
-  - A release whose press came before the guard passes, so no button sticks, and the gate's own releases still go out after a stop.
-  - The hand try, G13 and G23 need the owner's own mouse and G26 runs on the CI runner, so they are never guarded.
+  - A release whose press came before the guard passes, so no button sticks, and after a stop the gate's own releases still go out, without their move.
+  - Gates that need the owner's own mouse, run on the CI runner or move nothing are marked free in the gate table in `tools/kx-gates/src/cli.rs`, so they are never guarded.
 - **Elevation:**
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
   - An elevated folder delete could hit the wrong folder. Mitigation: `dev-admin.ps1` checks every argument before the Windows prompt, and only touches a direct child of `Program Files\<install dir>`; `install_dir` must be a plain name.

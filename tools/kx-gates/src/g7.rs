@@ -16,7 +16,7 @@ use crate::apps::Ctx;
 use crate::featcfg::Move;
 use crate::simuser::in_front;
 use crate::win::{self, sleep_ms};
-use crate::{facetools, keys, mouse};
+use crate::{facetools, keymap, keys, mouse};
 
 /// A caret key's virtual key (adapter table).
 fn vk(m: Move) -> VIRTUAL_KEY {
@@ -72,7 +72,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if shown(ctx, pid).is_some() && !(uia::invoke(&key).is_ok() && gone(ctx, pid)) {
         return Err("a panel left open did not close".into());
     }
-    uia::invoke(&key)?;
+    keymap::press(&key)?;
     let panel = win::poll_until(ctx.cfg.g7.open_ms, t.poll_ms, || shown(ctx, pid))
         .ok_or("the panel did not open")?;
     let out = check(ctx, &uia, panel);

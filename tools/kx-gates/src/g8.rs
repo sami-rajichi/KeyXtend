@@ -24,7 +24,7 @@ use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, out};
+use crate::{close, g2, mouseguard, out};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -177,6 +177,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     );
     let measured = measure(ctx, &s, &program, (since, rec.as_ref()));
     let quit = close::quit_running(ctx).map(|(_, ended)| ended);
+    // The pointer work is over, so the bus bench runs with the owner's mouse free.
+    mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
     let (o, [bus, frames]) = outside(ctx, job, &frames);
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);

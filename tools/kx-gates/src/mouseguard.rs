@@ -2,23 +2,28 @@
 //! ends, the time limit runs out or the owner holds a button down. `hook` applies them; `run` runs them.
 #![cfg(windows)]
 
+#[cfg(test)]
+pub mod fake;
 mod hook;
 mod run;
 
-pub use run::{allowed, around_prompt, begin, mark};
+pub use run::{allowed, around_prompt, begin, let_go, mark};
 
 use std::time::Duration;
 
 use kx_module_api::{Mono, US_PER_MS};
+use kx_platform_windows::keys::TAG;
 use serde::Deserialize;
+use windows::Win32::System::Threading::INFINITE;
 use windows::Win32::UI::WindowsAndMessaging::{
-    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
-    WM_XBUTTONDOWN, WM_XBUTTONUP, XBUTTON1,
+    LLMHF_INJECTED, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN,
+    WM_RBUTTONUP, WM_XBUTTONDOWN, WM_XBUTTONUP, XBUTTON1,
 };
 
-/// Gates the guard never covers: the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI runner,
-/// and `close` moves nothing.
-const UNGUARDED: [&str; 5] = ["assist", "g13", "g23", "g26", "close"];
+use crate::hookio::SIM_TAG;
+
+/// The longest wait the hook thread asks for, in ms: one below `INFINITE`, so every wait ends.
+const LONGEST_WAIT_MS: u32 = INFINITE - 1;
 
 /// The left button's bit; one bit per button, so the guard knows which presses it dropped.
 pub const LEFT: u8 = 1;
@@ -57,11 +62,6 @@ impl MouseGuard {
         Ok(())
     }
 
-    /// True when the guard holds the mouse while `gate` runs.
-    pub fn covers(&self, gate: &str) -> bool {
-        self.on && !UNGUARDED.contains(&gate)
-    }
-
     /// The log line when the guard starts; it names no position or key.
     pub fn line(&self) -> String {
         format!(
@@ -83,6 +83,8 @@ pub enum End {
     Panic,
     /// An admin prompt is up; the guard comes back after it.
     Prompt,
+    /// The gate's pointer work is over, so the guard lets go for the rest of the run.
+    Idle,
     /// The owner held a physical button for the escape time.
     Owner,
     /// The time limit ran out.
@@ -99,6 +101,7 @@ impl End {
             Self::Error => "error",
             Self::Panic => "panic",
             Self::Prompt => "prompt",
+            Self::Idle => "idle",
             Self::Owner => "owner",
             Self::Limit => "limit",
             Self::Lost => "lost",
@@ -112,6 +115,7 @@ impl End {
             Self::Error => "the gate broke off",
             Self::Panic => "the gate panicked",
             Self::Prompt => "an admin prompt is up",
+            Self::Idle => "the gate's pointer work is over",
             Self::Owner => "the owner held a mouse button, so the gate stops and does not pass",
             Self::Limit => "its time limit ran out, so the gate stops and does not pass",
             Self::Lost => "it lost its hook, so the gate stops and does not pass",
@@ -143,6 +147,12 @@ pub enum Kind {
     Up(u8),
     /// A move, a wheel turn or anything else.
     Other,
+}
+
+/// True for a hook event with `flags` and `extra` info that kx-gates injected itself; other programs' injected input
+/// counts as the hand's.
+pub fn ours(flags: u32, extra: usize) -> bool {
+    flags & LLMHF_INJECTED != 0 && (extra == TAG || extra == SIM_TAG)
 }
 
 /// The event of low-level mouse message `msg` with mouse data `data`.
@@ -190,10 +200,11 @@ pub struct Filter {
 }
 
 impl Filter {
-    /// A filter for `cfg` whose time limit counts from `start`.
-    pub fn new(cfg: &MouseGuard, start: Mono) -> Self {
+    /// A filter for `cfg` that starts at `start`, after the guard already held the mouse for `used` in this run.
+    pub fn new(cfg: &MouseGuard, start: Mono, used: Duration) -> Self {
+        let left = Duration::from_millis(cfg.limit_ms).saturating_sub(used);
         Self {
-            deadline: start.saturating_add(Duration::from_millis(cfg.limit_ms)),
+            deadline: start.saturating_add(left),
             escape: Duration::from_millis(cfg.escape_ms),
             held: 0,
             since: None,
@@ -214,10 +225,15 @@ impl Filter {
         self.out
     }
 
-    /// Whether an event at `now` passes: injected input does, and so does a physical release whose press came before
-    /// the guard, so no button sticks.
-    pub fn event(&mut self, injected: bool, kind: Kind, now: Mono) -> Verdict {
-        if injected || self.tick(now).is_some() {
+    /// Why it let go, if it already has; unlike `tick`, it decides nothing new.
+    pub fn ended(&self) -> Option<End> {
+        self.out
+    }
+
+    /// Whether an event at `now` passes: kx-gates' own input does, and so does a physical release whose press came
+    /// before the guard, so no button sticks.
+    pub fn event(&mut self, ours: bool, kind: Kind, now: Mono) -> Verdict {
+        if ours || self.tick(now).is_some() {
             return Verdict::Pass;
         }
         match kind {
@@ -245,10 +261,10 @@ impl Filter {
     }
 }
 
-/// `d` in whole ms, rounded up, for a wait; the largest wait past that.
+/// `d` in whole ms, rounded up, for a wait; never `INFINITE`, so the hook thread always checks its time again.
 pub fn wait_ms(d: Duration) -> u32 {
     let ms = d.as_micros().div_ceil(u128::from(US_PER_MS));
-    u32::try_from(ms).unwrap_or(u32::MAX)
+    u32::try_from(ms).map_or(LONGEST_WAIT_MS, |ms| ms.min(LONGEST_WAIT_MS))
 }
 
 #[cfg(test)]

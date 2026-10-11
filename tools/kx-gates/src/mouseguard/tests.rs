@@ -24,7 +24,7 @@ fn at(ms: u64) -> Mono {
 }
 
 fn filter() -> Filter {
-    Filter::new(&shipped(), at(0))
+    Filter::new(&shipped(), at(0), Duration::ZERO)
 }
 
 /// A physical `kind` event at `ms`.
@@ -38,41 +38,6 @@ const LEFT_UP: Kind = Kind::Up(LEFT);
 const RUNS: u64 = 200;
 const STEPS: usize = 200;
 
-/// A plain reading of the rules the property test checks the filter against.
-#[derive(Default)]
-struct Model {
-    held: u8,
-    since: Option<u64>,
-    out: Option<End>,
-}
-
-impl Model {
-    /// The verdict on an event at `now`, ending first at the limit or after a hold of `escape_ms`.
-    fn event(&mut self, g: &MouseGuard, (injected, kind): (bool, Kind), now: u64) -> Verdict {
-        let owner = self.since.is_some_and(|t| now - t >= g.escape_ms);
-        let end = (now >= g.limit_ms)
-            .then_some(End::Limit)
-            .or(owner.then_some(End::Owner));
-        self.out = self.out.or(end);
-        if injected || self.out.is_some() {
-            return Verdict::Pass;
-        }
-        match kind {
-            Kind::Down(b) => {
-                self.since = self.since.or(Some(now));
-                self.held |= b;
-            }
-            Kind::Up(b) if self.held & b == 0 => return Verdict::Pass,
-            Kind::Up(b) => {
-                self.held &= !b;
-                self.since = self.since.filter(|_| self.held != 0);
-            }
-            Kind::Other => {}
-        }
-        Verdict::Drop
-    }
-}
-
 /// A random event, injected or not: a release or other event of a random button, or a press when `presses`.
 fn random_event(rng: &mut Rng, presses: bool) -> (bool, Kind) {
     let bit = [LEFT, RIGHT, MIDDLE, X1, X2][rng.below(5)];
@@ -82,26 +47,37 @@ fn random_event(rng: &mut Rng, presses: bool) -> (bool, Kind) {
 }
 
 #[test]
-fn over_random_input_the_filter_keeps_its_rules_and_once_it_lets_go_it_stays_let_go() {
+fn over_random_input_our_events_pass_a_held_mouse_drops_the_hands_and_a_guard_that_let_go_stays_let_go()
+ {
     let g = shipped();
     // Steps average one escape time; odd seeds press nothing, so both the limit and a hold end some runs.
     let step = usize::try_from(g.escape_ms * 2).expect("a short hold");
     let mut ends = BTreeSet::new();
     for seed in 0..RUNS {
-        let (mut rng, mut f, mut model, mut now) =
-            (Rng::new(seed), Filter::new(&g, at(0)), Model::default(), 0);
+        let (mut rng, mut f, mut now) = (Rng::new(seed), filter(), 0);
+        let (mut dropped, mut out) = (0u8, None);
         for _ in 0..STEPS {
             now += u64::try_from(rng.below(step)).expect("fits");
-            let ev = random_event(&mut rng, seed % 2 == 0);
-            let want = model.event(&g, ev, now);
-            assert_eq!(
-                f.event(ev.0, ev.1, at(now)),
-                want,
-                "seed {seed} at {now} ms"
-            );
-            assert_eq!(f.tick(at(now)), model.out, "seed {seed} at {now} ms");
+            let (mine, kind) = random_event(&mut rng, seed % 2 == 0);
+            let before = f.clone().tick(at(now));
+            let verdict = f.event(mine, kind, at(now));
+            let held = before.is_none();
+            let pressed = matches!(kind, Kind::Up(b) if dropped & b != 0);
+            let hand = !mine && held && (pressed || !matches!(kind, Kind::Up(_)));
+            let want = if hand { Verdict::Drop } else { Verdict::Pass };
+            assert_eq!(verdict, want, "seed {seed} at {now} ms: {kind:?}");
+            if hand {
+                dropped = match kind {
+                    Kind::Down(b) => dropped | b,
+                    Kind::Up(b) => dropped & !b,
+                    Kind::Other => dropped,
+                };
+            }
+            let end = f.tick(at(now));
+            assert!(out.is_none() || end == out, "seed {seed}: it stays let go");
+            out = end;
         }
-        ends.extend(model.out.map(End::name));
+        ends.extend(out.map(End::name));
     }
     assert!(ends.contains("owner") && ends.contains("limit"), "{ends:?}");
 }
@@ -133,16 +109,13 @@ fn a_zero_limit_or_hold_or_a_hold_the_limit_always_cuts_short_is_refused() {
 }
 
 #[test]
-fn every_gate_is_guarded_but_the_ones_that_need_the_owners_own_mouse() {
-    let g = shipped();
-    for gate in ["g1", "g2", "g8", "g9", "g12", "g25"] {
-        assert!(g.covers(gate), "{gate}");
-    }
-    for gate in ["assist", "g13", "g23", "g26", "close"] {
-        assert!(!g.covers(gate), "{gate}");
-    }
-    let off = MouseGuard { on: false, ..g };
-    assert!(!off.covers("g8"), "switched off");
+fn only_input_that_kx_gates_injected_and_tagged_counts_as_its_own() {
+    let injected = LLMHF_INJECTED;
+    assert!(ours(injected, TAG));
+    assert!(ours(injected, SIM_TAG));
+    assert!(!ours(injected, 0), "another program's injected input");
+    assert!(!ours(0, TAG), "a tag without the injected flag");
+    assert!(!ours(0, 0), "the hand");
 }
 
 #[test]
@@ -226,7 +199,7 @@ fn a_release_whose_press_came_before_the_guard_passes_so_no_button_sticks() {
 #[test]
 fn the_guard_lets_go_at_its_time_limit_counted_from_its_start() {
     let limit = shipped().limit_ms;
-    let mut f = Filter::new(&shipped(), at(500));
+    let mut f = Filter::new(&shipped(), at(500), Duration::ZERO);
     assert_eq!(f.tick(at(500 + limit - 1)), None);
     assert_eq!(
         physical(&mut f, Kind::Other, 500 + limit - 1),
@@ -234,6 +207,18 @@ fn the_guard_lets_go_at_its_time_limit_counted_from_its_start() {
     );
     assert_eq!(f.tick(at(500 + limit)), Some(End::Limit));
     assert_eq!(physical(&mut f, Kind::Other, 500 + limit), Verdict::Pass);
+}
+
+#[test]
+fn a_guard_that_comes_back_holds_only_for_what_is_left_of_the_limit() {
+    let limit = shipped().limit_ms;
+    let used = Duration::from_millis(limit / 4);
+    let mut f = Filter::new(&shipped(), at(500), used);
+    assert_eq!(f.tick(at(500 + limit - limit / 4 - 1)), None);
+    assert_eq!(f.tick(at(500 + limit - limit / 4)), Some(End::Limit));
+    let spent = Duration::from_millis(limit * 2);
+    let mut over = Filter::new(&shipped(), at(500), spent);
+    assert_eq!(over.tick(at(500)), Some(End::Limit), "no time left");
 }
 
 #[test]
@@ -257,7 +242,9 @@ fn a_wait_rounds_up_to_whole_ms_and_stops_at_the_largest_wait() {
     assert_eq!(wait_ms(Duration::from_micros(1)), 1);
     assert_eq!(wait_ms(Duration::from_millis(7)), 7);
     assert_eq!(wait_ms(Duration::ZERO), 0);
-    assert_eq!(wait_ms(Duration::from_secs(u64::MAX)), u32::MAX);
+    assert_eq!(wait_ms(Duration::from_secs(u64::MAX)), INFINITE - 1);
+    let endless = Duration::from_millis(u64::from(INFINITE));
+    assert_eq!(wait_ms(endless), INFINITE - 1, "never a wait without end");
 }
 
 #[test]
@@ -267,6 +254,7 @@ fn only_the_owner_the_limit_or_a_lost_guard_stops_the_gate_and_each_end_has_its_
         End::Error,
         End::Panic,
         End::Prompt,
+        End::Idle,
         End::Owner,
         End::Limit,
         End::Lost,

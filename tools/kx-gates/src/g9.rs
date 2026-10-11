@@ -240,7 +240,7 @@ fn undo(ctx: &Ctx, w: &Watch) -> Vec<String> {
     };
     let mut left = Vec::new();
     if w.did(HIDE) && !w.did(SHOW) {
-        if let Err(e) = product::invoke(&reader, &ctx.cfg.g9.bring_back) {
+        if let Err(e) = product::restore(&reader, &ctx.cfg.g9.bring_back) {
             left.push(format!("the keyboard stays hidden: {e}"));
         }
         sleep_ms(ctx.cfg.g9.settle_ms);

@@ -13,13 +13,13 @@ use windows::Win32::Foundation::{LPARAM, LRESULT, WAIT_FAILED, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, HC_ACTION, HHOOK, LLMHF_INJECTED, MSG, MSLLHOOKSTRUCT,
-    MsgWaitForMultipleObjects, PM_NOREMOVE, PM_REMOVE, PeekMessageW, PostThreadMessageW,
-    QS_ALLINPUT, SetWindowsHookExW, UnhookWindowsHookEx, WH_MOUSE_LL, WM_APP,
+    CallNextHookEx, HC_ACTION, HHOOK, MSG, MSLLHOOKSTRUCT, MsgWaitForMultipleObjects, PM_NOREMOVE,
+    PM_REMOVE, PeekMessageW, PostThreadMessageW, QS_ALLINPUT, SetWindowsHookExW,
+    UnhookWindowsHookEx, WH_MOUSE_LL, WM_APP,
 };
 
 use super::run::{Hook, Live};
-use super::{End, Filter, Verdict, kind_of, wait_ms};
+use super::{End, Filter, Verdict, kind_of, ours, wait_ms};
 use crate::out::say;
 
 /// Tells Windows to drop the event.
@@ -51,9 +51,9 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     if code == ACTION {
         // SAFETY: for HC_ACTION, `lparam` points to an MSLLHOOKSTRUCT that lives for this call.
         let info = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
-        let injected = info.flags & LLMHF_INJECTED != 0;
+        let mine = ours(info.flags, info.dwExtraInfo);
         let kind = kind_of(u32::try_from(wparam.0).unwrap_or_default(), info.mouseData);
-        let verdict = with_state(|s| s.filter.event(injected, kind, s.clock.now()));
+        let verdict = with_state(|s| s.filter.event(mine, kind, s.clock.now()));
         if verdict == Some(Verdict::Drop) {
             return SWALLOW;
         }
@@ -97,8 +97,8 @@ fn queue() -> u32 {
     }
 }
 
-/// Handles messages and hook calls until `STOP` comes or the filter lets go; why it let go, if it did. A wait that
-/// fails lets go too, as the guard could no longer check its time.
+/// Handles messages and hook calls until `STOP` comes or the filter lets go; why it let go, if it did, even when
+/// `STOP` came in the same batch. A wait that fails lets go too, as the guard could no longer check its time.
 #[allow(unsafe_code, reason = "This thread's own message queue.")]
 fn pump(clock: QpcClock) -> Option<End> {
     let mut msg = MSG::default();
@@ -106,7 +106,7 @@ fn pump(clock: QpcClock) -> Option<End> {
         // SAFETY: drains this thread's queue; hook calls run inside the peek.
         while unsafe { PeekMessageW(&raw mut msg, None, 0, 0, PM_REMOVE) }.as_bool() {
             if msg.message == STOP {
-                return None;
+                return with_state(|s| s.filter.ended()).flatten();
             }
         }
         let now = clock.now();

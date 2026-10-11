@@ -3,6 +3,7 @@
 #![cfg(windows)]
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
 use kx_module_api::{Clock, Mono};
 use kx_platform_windows::QpcClock;
@@ -38,26 +39,32 @@ pub struct Session<H: Hook, C: Clock> {
     hook: H,
     clock: C,
     cfg: MouseGuard,
-    /// When the guard first started; the time limit counts from here.
-    start: Mono,
+    /// How long earlier hooks held the mouse in this run; the time limit counts only held time.
+    used: Duration,
+    /// When the running hook started.
+    since: Mono,
     live: Option<H::Live>,
     /// Why it let go early, which stops the gate.
     early: Option<End>,
+    /// True once the gate's pointer work is over, so the guard never comes back.
+    idle: bool,
 }
 
 impl<H: Hook, C: Clock> Session<H, C> {
     /// Starts holding the mouse.
     pub fn begin(hook: H, clock: C, cfg: &MouseGuard) -> Result<Self, String> {
-        let start = clock.now();
-        let live = hook.start(Filter::new(cfg, start))?;
+        let since = clock.now();
+        let live = hook.start(Filter::new(cfg, since, Duration::ZERO))?;
         say!("{}", cfg.line());
         Ok(Self {
             hook,
             clock,
             cfg: cfg.clone(),
-            start,
+            used: Duration::ZERO,
+            since,
             live: Some(live),
             early: None,
+            idle: false,
         })
     }
 
@@ -71,16 +78,18 @@ impl<H: Hook, C: Clock> Session<H, C> {
 
     /// Lets go while an admin prompt is up.
     pub fn pause(&mut self) {
-        self.let_go(End::Prompt);
+        self.unhook(End::Prompt);
     }
 
-    /// Holds the mouse again after an admin prompt, unless it let go early; the time limit counts from the first start.
+    /// Holds the mouse again after an admin prompt, unless it let go early or for good; the prompt's time does not
+    /// count against the limit.
     pub fn resume(&mut self) {
-        if self.live.is_some() || self.early.is_some() {
+        if self.live.is_some() || self.early.is_some() || self.idle {
             return;
         }
-        let mut filter = Filter::new(&self.cfg, self.start);
-        if let Some(end) = filter.tick(self.clock.now()) {
+        self.since = self.clock.now();
+        let mut filter = Filter::new(&self.cfg, self.since, self.used);
+        if let Some(end) = filter.tick(self.since) {
             say!("{}", end.line());
             self.early = Some(end);
             return;
@@ -97,16 +106,24 @@ impl<H: Hook, C: Clock> Session<H, C> {
         }
     }
 
+    /// Lets go for the rest of the run, as the gate's pointer work is over.
+    pub fn release(&mut self) {
+        self.unhook(End::Idle);
+        self.idle = true;
+    }
+
     /// Lets go as the gate ends, `ok` or broken off; why the guard ended, an early end first.
     pub fn finish(mut self, ok: bool) -> End {
         let why = if ok { End::Done } else { End::Error };
-        self.let_go(why);
+        self.unhook(why);
         self.early.unwrap_or(why)
     }
 
-    /// Removes a running hook, logging `why` unless it had let go by itself (it logged that itself).
-    fn let_go(&mut self, why: End) {
+    /// Removes a running hook and adds its time to `used`, logging `why` unless it had let go by itself (it logged
+    /// that itself).
+    fn unhook(&mut self, why: End) {
         if let Some(live) = self.live.take() {
+            self.used += self.clock.now().saturating_since(self.since);
             match live.stop() {
                 Some(own) => self.early = self.early.or(Some(own)),
                 None => say!("{}", why.line()),
@@ -122,15 +139,52 @@ impl<H: Hook, C: Clock> Drop for Session<H, C> {
         } else {
             End::Error
         };
-        self.let_go(why);
+        self.unhook(why);
     }
 }
 
-/// This process's guard, which `keys` and `admin` reach without a run context.
-static RUN: Mutex<Option<Session<WinHook, QpcClock>>> = Mutex::new(None);
+/// A session as this process's slot holds it, whatever its hook and clock.
+pub trait Held: Send {
+    /// See `Session::refusal`.
+    fn refusal(&mut self) -> Result<(), String>;
+    /// See `Session::pause`.
+    fn pause(&mut self);
+    /// See `Session::resume`.
+    fn resume(&mut self);
+    /// See `Session::release`.
+    fn release(&mut self);
+    /// See `Session::finish`.
+    fn finish(self: Box<Self>, ok: bool) -> End;
+}
+
+impl<H, C> Held for Session<H, C>
+where
+    H: Hook + Send,
+    H::Live: Send,
+    C: Clock,
+{
+    fn refusal(&mut self) -> Result<(), String> {
+        Session::refusal(self)
+    }
+    fn pause(&mut self) {
+        Session::pause(self);
+    }
+    fn resume(&mut self) {
+        Session::resume(self);
+    }
+    fn release(&mut self) {
+        Session::release(self);
+    }
+    fn finish(self: Box<Self>, ok: bool) -> End {
+        Session::finish(*self, ok)
+    }
+}
+
+/// This process's guard, which `keys`, `admin` and the presses reach without a run context.
+static RUN: Mutex<Option<Box<dyn Held>>> = Mutex::new(None);
 
 /// This process's guard; a poisoned lock still holds it, so it can always let go.
-fn slot() -> MutexGuard<'static, Option<Session<WinHook, QpcClock>>> {
+fn slot() -> MutexGuard<'static, Option<Box<dyn Held>>> {
     RUN.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
@@ -139,15 +193,23 @@ pub struct Scope {
     on: bool,
 }
 
-/// Starts the guard for `gate`, when `cfg` covers it.
-pub fn begin(cfg: &MouseGuard, gate: &str) -> Result<Scope, String> {
-    if !cfg.covers(gate) {
+/// Puts `session` in this process's slot until the returned scope ends.
+pub(super) fn hold(session: Box<dyn Held>) -> Scope {
+    *slot() = Some(session);
+    Scope { on: true }
+}
+
+/// Starts the guard for a gate that `held` says holds the mouse, when `cfg` has the guard on.
+pub fn begin(cfg: &MouseGuard, held: bool) -> Result<Scope, String> {
+    if !(cfg.on && held) {
         return Ok(Scope { on: false });
     }
     let clock = QpcClock::new().map_err(|e| format!("mouse guard: {e}"))?;
-    let session = Session::begin(WinHook::new(clock), clock, cfg)?;
-    *slot() = Some(session);
-    Ok(Scope { on: true })
+    Ok(hold(Box::new(Session::begin(
+        WinHook::new(clock),
+        clock,
+        cfg,
+    )?)))
 }
 
 impl Scope {
@@ -172,11 +234,20 @@ impl Drop for Scope {
 
 /// Refuses new input once the guard let go early: the owner, the time limit, or a guard that could not come back.
 pub fn allowed() -> Result<(), String> {
-    slot().as_mut().map_or(Ok(()), Session::refusal)
+    slot().as_mut().map_or(Ok(()), |s| s.refusal())
 }
 
-/// Runs `prompt`, which may show Windows' admin prompt, with the mouse let go; the guard comes back after it.
-pub fn around_prompt<T>(prompt: impl FnOnce() -> T) -> T {
+/// Lets go of the mouse for the rest of the run, once the gate's pointer work is over.
+pub fn let_go() {
+    if let Some(s) = slot().as_mut() {
+        s.release();
+    }
+}
+
+/// Runs `prompt`, which may show Windows' admin prompt, with the mouse let go; the guard comes back after it. A gate
+/// the guard stopped shows no prompt.
+pub fn around_prompt<T>(prompt: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    allowed()?;
     if let Some(s) = slot().as_mut() {
         s.pause();
     }

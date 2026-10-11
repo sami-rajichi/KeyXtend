@@ -67,7 +67,8 @@ fn wide(s: &OsStr) -> Vec<u16> {
 
 /// Starts `exe` with `args` as administrator and returns once it has started; the mouse guard lets go for the prompt.
 pub fn run_as(exe: &Path, args: &[String]) -> Result<(), String> {
-    let started = mouseguard::around_prompt(|| shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)));
+    let shown = || shell(exe, args, (RUN_AS, SW_SHOWNORMAL, 0)).map_err(|e| e.to_string());
+    let started = mouseguard::around_prompt(shown);
     started
         .map(drop)
         .map_err(|e| format!("start {} as administrator: {e}", exe.display()))

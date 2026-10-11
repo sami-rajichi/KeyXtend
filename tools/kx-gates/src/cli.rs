@@ -77,33 +77,56 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 /// A gate run that takes only a name.
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
-/// Gates that take only a name: no count, no seed.
-const NAMED: [(&str, NamedRun); 20] = [
-    ("g5", g5::run),
-    ("g6", g6::run),
-    ("g7", g7::run),
-    ("g8", g8::run),
-    ("g9", g9::run),
-    ("g10", g10::run),
-    ("g11", g11::run),
-    ("g12", g12::run),
-    ("g13", g13::run),
-    ("g17", g17::run),
-    ("g18", g18::run),
-    ("g19", g19::run),
-    ("g20", g20::run),
-    ("g21", g21::run),
-    ("g22", g22::run),
-    ("g23", g23::run),
-    ("g24", g24::run),
-    ("g25", g25::run),
-    ("g26", g26::run),
-    ("close", close::run),
+/// Whether a gate's run holds the owner's mouse with the mouse guard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mouse {
+    /// The guard drops the hand's mouse input while the gate moves the pointer.
+    Held,
+    /// The gate needs the owner's own mouse, runs elsewhere or moves nothing.
+    Free,
+}
+
+/// Every gate: whether it holds the mouse, and its run when it takes only a name. The hand try, G13 and G23 wait on
+/// the owner's own mouse, G26 runs on the CI runner and `close` moves nothing.
+const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
+    ("g1", Mouse::Held, None),
+    ("g2", Mouse::Held, None),
+    ("g3", Mouse::Held, None),
+    ("g4", Mouse::Held, None),
+    ("assist", Mouse::Free, None),
+    ("g5", Mouse::Held, Some(g5::run)),
+    ("g6", Mouse::Held, Some(g6::run)),
+    ("g7", Mouse::Held, Some(g7::run)),
+    ("g8", Mouse::Held, Some(g8::run)),
+    ("g9", Mouse::Held, Some(g9::run)),
+    ("g10", Mouse::Held, Some(g10::run)),
+    ("g11", Mouse::Held, Some(g11::run)),
+    ("g12", Mouse::Held, Some(g12::run)),
+    ("g13", Mouse::Free, Some(g13::run)),
+    ("g17", Mouse::Held, Some(g17::run)),
+    ("g18", Mouse::Held, Some(g18::run)),
+    ("g19", Mouse::Held, Some(g19::run)),
+    ("g20", Mouse::Held, Some(g20::run)),
+    ("g21", Mouse::Held, Some(g21::run)),
+    ("g22", Mouse::Held, Some(g22::run)),
+    ("g23", Mouse::Free, Some(g23::run)),
+    ("g24", Mouse::Held, Some(g24::run)),
+    ("g25", Mouse::Held, Some(g25::run)),
+    ("g26", Mouse::Free, Some(g26::run)),
+    ("close", Mouse::Free, Some(close::run)),
 ];
 
 /// The run of `gate` when it takes only a name.
 fn named(gate: &str) -> Option<NamedRun> {
-    NAMED.iter().find(|(g, _)| *g == gate).map(|&(_, run)| run)
+    GATES.iter().find(|(g, ..)| *g == gate).and_then(|g| g.2)
+}
+
+/// Whether `gate` holds the mouse; an unknown gate never does.
+fn mouse(gate: &str) -> Mouse {
+    GATES
+        .iter()
+        .find(|(g, ..)| *g == gate)
+        .map_or(Mouse::Free, |g| g.1)
 }
 
 fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
@@ -160,7 +183,7 @@ pub fn run(args: &Args) -> Result<Value, String> {
         base,
     };
     // The guard lets go when the gate ends; dropping `guard` lets go on a panic too.
-    let guard = mouseguard::begin(&cfg.mouse_guard, &args.gate)?;
+    let guard = mouseguard::begin(&cfg.mouse_guard, mouse(&args.gate) == Mouse::Held)?;
     let result = dispatch(&ctx, args);
     let ended = guard.finish(result.is_ok());
     let mut result = result.unwrap_or_else(

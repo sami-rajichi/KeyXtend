@@ -141,8 +141,22 @@ pub fn after_grow(grew: bool) -> &'static [Size] {
     }
 }
 
+/// A press of a button by UI Automation id: `product::invoke`, or `product::restore` for a step that puts back.
+type Press = fn(&Reader, &str) -> Result<(), String>;
+
 /// Presses `size`'s button and waits for keyboard window `hwnd` to settle at its new box.
 pub fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, size: Size) -> Result<Resize, String> {
+    resize_with(ctx, reader, hwnd, size, product::invoke)
+}
+
+/// `resize`, pressing with `press`.
+fn resize_with(
+    ctx: &Ctx,
+    reader: &Reader,
+    hwnd: HWND,
+    size: Size,
+    press: Press,
+) -> Result<Resize, String> {
     let g = &ctx.cfg.g8;
     let id = size.button(g);
     let (wait, settle) = (
@@ -151,7 +165,7 @@ pub fn resize(ctx: &Ctx, reader: &Reader, hwnd: HWND, size: Size) -> Result<Resi
     );
     let mut last = win::rect(hwnd)?;
     let start = Instant::now();
-    product::invoke(reader, id)?;
+    press(reader, id)?;
     let mut changed: Option<Duration> = None;
     while start.elapsed() < wait {
         let now = win::rect(hwnd)?;
@@ -184,7 +198,8 @@ pub fn mend(first: i32, now: i32, slack: i32) -> Option<Size> {
     }
 }
 
-/// Sizes keyboard `hwnd` back toward `first` px wide when it is off by more than `[g8] resize_slack_px`; the press.
+/// Sizes keyboard `hwnd` back toward `first` px wide when it is off by more than `[g8] resize_slack_px`; the press,
+/// which still goes out after the mouse guard stopped the gate.
 pub fn size_back(
     ctx: &Ctx,
     reader: &Reader,
@@ -192,21 +207,27 @@ pub fn size_back(
     first: i32,
 ) -> Result<Option<Resize>, String> {
     match mend(first, width(hwnd)?, ctx.cfg.g8.resize_slack_px) {
-        Some(size) => resize(ctx, reader, hwnd, size).map(Some),
+        Some(size) => resize_with(ctx, reader, hwnd, size, product::restore).map(Some),
         None => Ok(None),
     }
 }
 
-/// One grow, then the presses of `after_grow` back to the first size, and one more if a press silently did nothing.
+/// One grow, then the presses of `after_grow` back to the first size.
+fn steps(ctx: &Ctx, reader: &Reader, hwnd: HWND) -> Result<Vec<Resize>, String> {
+    let mut all = vec![resize(ctx, reader, hwnd, Size::Grow)?];
+    for &size in after_grow(all[0].ms.is_some()) {
+        all.push(resize(ctx, reader, hwnd, size)?);
+    }
+    Ok(all)
+}
+
+/// G8's `steps`, then one more press if a press silently did nothing or the steps broke off.
 pub fn resizes(ctx: &Ctx, hwnd: HWND) -> Result<Vec<Resize>, String> {
     let (reader, first) = (Reader::new()?, width(hwnd)?);
-    let grew = resize(ctx, &reader, hwnd, Size::Grow)?;
-    let back = after_grow(grew.ms.is_some());
-    let mut all = vec![grew];
-    for &size in back {
-        all.push(resize(ctx, &reader, hwnd, size)?);
-    }
-    all.extend(size_back(ctx, &reader, hwnd, first)?);
+    let steps = steps(ctx, &reader, hwnd);
+    let back = size_back(ctx, &reader, hwnd, first);
+    let mut all = steps?;
+    all.extend(back?);
     Ok(all)
 }
 

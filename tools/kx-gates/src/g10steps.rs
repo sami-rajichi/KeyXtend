@@ -11,6 +11,7 @@ use spike_core::langkey;
 use crate::apps::{Ctx, Opened};
 use crate::g10keys::{self, LangWant, Step};
 use crate::keymap::Reader;
+use crate::mouseguard;
 use crate::product::{self, Keyboard};
 use crate::win::{poll_until, sleep_ms};
 use crate::{board, g25, tlog};
@@ -51,7 +52,13 @@ impl After {
 impl Desk<'_> {
     /// Presses board key `id` as a screen reader does, then waits G10's gap.
     fn press(&self, id: &str) -> Result<(), String> {
-        self.reader.invoke(self.kb.hwnd, id)?;
+        mouseguard::allowed()?;
+        self.restore(id)
+    }
+
+    /// Like `press`, but it still goes out after the mouse guard stopped the gate, to unlatch a key.
+    fn restore(&self, id: &str) -> Result<(), String> {
+        self.reader.restore(self.kb.hwnd, id)?;
         sleep_ms(self.ctx.cfg.g10.press_gap_ms);
         Ok(())
     }
@@ -111,7 +118,7 @@ fn one(d: &Desk, step: &Step) -> Result<(Value, bool), String> {
 /// latch's state after, `None` when it cannot be read.
 fn let_go(d: &Desk, step: &Step) -> Option<bool> {
     let on = d.latched(step).ok().flatten();
-    if !step.left_latched(on) || d.press(&step.key).is_err() {
+    if !step.left_latched(on) || d.restore(&step.key).is_err() {
         return on;
     }
     d.latched(step).ok().flatten()
@@ -128,10 +135,11 @@ fn stepped(d: &Desk) -> bool {
     stepped && back
 }
 
-/// List: the list opens as one more product window, and the panel's Esc key closes it again.
+/// List: the list opens as one more product window, and the panel's Esc key closes it again, even after the mouse
+/// guard stopped the gate.
 fn listed(d: &Desk, before: usize) -> Result<bool, String> {
     let opened = d.until(|| product::shown().len() > before);
-    d.press(&board::nav_key(Nav::Esc)?)?;
+    d.restore(&board::nav_key(Nav::Esc)?)?;
     let closed = d.until(|| product::shown().len() <= before);
     Ok(opened && closed)
 }

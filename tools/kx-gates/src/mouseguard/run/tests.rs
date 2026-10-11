@@ -1,99 +1,13 @@
 //! Tests of a run's mouse guard, through a fake hook that applies the filter on the fake clock; no real hook.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Duration;
 
-use kx_module_api::{Clock, Mono};
-use kx_platform_fake::FakeClock;
 use serde_json::json;
+use windows::Win32::Foundation::HWND;
 
 use super::*;
-use crate::mouseguard::{Kind, LEFT};
-
-/// What the fake hooks saw: starts, stops, the last filter, and whether the next start fails.
-#[derive(Default)]
-struct Seen {
-    starts: u32,
-    stops: u32,
-    filter: Option<Filter>,
-    fail: bool,
-}
-
-/// A hook that lets go exactly when its filter says, as a hook thread with a timely check would.
-#[derive(Clone)]
-struct Fake {
-    seen: Arc<Mutex<Seen>>,
-    clock: FakeClock,
-}
-
-impl Fake {
-    fn new() -> Self {
-        Self {
-            seen: Arc::default(),
-            clock: FakeClock::new(Mono::from_us(0)),
-        }
-    }
-
-    fn seen(&self) -> MutexGuard<'_, Seen> {
-        self.seen.lock().unwrap_or_else(PoisonError::into_inner)
-    }
-
-    /// Hooks started and stopped so far, read under one lock.
-    fn counts(&self) -> (u32, u32) {
-        let seen = self.seen();
-        (seen.starts, seen.stops)
-    }
-
-    /// A physical press of the left button now, as the hook would see it.
-    fn press(&self) {
-        let now = self.clock.now();
-        let mut seen = self.seen();
-        let filter = seen.filter.as_mut().expect("a started hook");
-        filter.event(false, Kind::Down(LEFT), now);
-    }
-
-    fn wait(&self, ms: u64) {
-        self.clock.advance(Duration::from_millis(ms));
-    }
-}
-
-impl Hook for Fake {
-    type Live = Fake;
-
-    fn start(&self, filter: Filter) -> Result<Fake, String> {
-        let mut seen = self.seen();
-        if seen.fail {
-            return Err("no hook today".to_string());
-        }
-        seen.starts += 1;
-        seen.filter = Some(filter);
-        Ok(self.clone())
-    }
-}
-
-impl Live for Fake {
-    fn ended(&self) -> Option<End> {
-        let now = self.clock.now();
-        self.seen().filter.as_mut()?.tick(now)
-    }
-
-    fn stop(self) -> Option<End> {
-        let own = self.ended();
-        self.seen().stops += 1;
-        own
-    }
-}
-
-fn cfg() -> MouseGuard {
-    crate::config::load()
-        .expect("kx-gates.toml loads")
-        .mouse_guard
-}
-
-fn begun(fake: &Fake) -> Session<Fake, FakeClock> {
-    Session::begin(fake.clone(), fake.clock.clone(), &cfg()).expect("the fake hook starts")
-}
+use crate::keymap::Reader;
+use crate::mouseguard::fake::{Fake, begun, cfg, held, slot_lock};
 
 #[test]
 fn the_guard_holds_the_mouse_from_the_start_and_lets_go_when_the_gate_ends() {
@@ -151,31 +65,22 @@ fn a_button_held_for_the_escape_time_stops_the_gate_as_the_owners() {
 }
 
 #[test]
-fn an_admin_prompt_lets_go_and_the_guard_comes_back_with_its_first_deadline() {
+fn an_admin_prompt_lets_go_and_its_time_does_not_count_against_the_limit() {
     let (fake, limit) = (Fake::new(), cfg().limit_ms);
     let mut s = begun(&fake);
     fake.wait(limit / 2);
     s.pause();
     assert_eq!(fake.counts(), (1, 1));
+    fake.wait(limit * 10);
     s.resume();
-    assert_eq!(fake.seen().starts, 2);
-    fake.wait(limit - limit / 2);
+    assert_eq!(fake.counts(), (2, 1), "it came back");
+    fake.wait(limit - limit / 2 - 1);
+    assert_eq!(s.refusal(), Ok(()), "only held time counts");
+    fake.wait(1);
     assert!(
         s.refusal().is_err(),
-        "the limit counts from the first start"
+        "the mouse was held for the whole limit"
     );
-    assert_eq!(s.finish(true), End::Limit);
-}
-
-#[test]
-fn a_prompt_that_outlasts_the_limit_leaves_the_guard_off_and_stops_the_gate() {
-    let fake = Fake::new();
-    let mut s = begun(&fake);
-    s.pause();
-    fake.wait(cfg().limit_ms);
-    s.resume();
-    assert_eq!(fake.seen().starts, 1, "it did not start again");
-    assert!(s.refusal().is_err());
     assert_eq!(s.finish(true), End::Limit);
 }
 
@@ -196,23 +101,69 @@ fn a_guard_that_cannot_start_refuses_the_gate_or_stops_it_after_a_prompt() {
 }
 
 #[test]
-fn a_guard_switched_off_starts_no_hook_and_refuses_nothing() {
-    // Only a switched-off guard is begun here, so no test can ever install a real hook.
+fn a_guard_let_go_after_the_pointer_work_never_comes_back_and_the_gate_goes_on() {
+    let fake = Fake::new();
+    let mut s = begun(&fake);
+    s.release();
+    assert_eq!(fake.counts(), (1, 1));
+    s.pause();
+    s.resume();
+    assert_eq!(fake.counts(), (1, 1), "no prompt brings it back");
+    assert_eq!(s.refusal(), Ok(()));
+    assert_eq!(s.finish(true), End::Done);
+}
+
+#[test]
+fn a_stopped_gate_is_refused_a_press_and_a_prompt_but_a_restore_still_goes_out() {
+    let _slot = slot_lock();
+    let fake = Fake::new();
+    let scope = held(&fake);
+    assert_eq!(around_prompt(|| Ok(7)), Ok(7), "the prompt ran");
+    assert_eq!(fake.counts(), (2, 1), "let go for it, then back");
+    fake.wait(cfg().limit_ms);
+    assert!(allowed().is_err());
+    let mut shown = false;
+    let prompt = around_prompt(|| {
+        shown = true;
+        Ok(())
+    });
+    assert!(prompt.is_err() && !shown, "no prompt once stopped");
+    // An empty id fails at the lookup, so neither call can press anything; only the press is refused before it.
+    let reader = Reader::new().expect("a UI Automation client");
+    let press = reader.invoke(HWND::default(), "").expect_err("refused");
+    assert!(press.contains(End::Limit.why()), "{press}");
+    let back = reader
+        .restore(HWND::default(), "")
+        .expect_err("no such key");
+    assert!(
+        !back.contains(End::Limit.why()),
+        "a restore is never refused: {back}"
+    );
+    assert_eq!(scope.finish(true), Some(End::Limit));
+    assert_eq!(allowed(), Ok(()), "the slot is empty again");
+}
+
+#[test]
+fn letting_go_after_the_pointer_work_frees_the_mouse_through_the_slot() {
+    let _slot = slot_lock();
+    let fake = Fake::new();
+    let scope = held(&fake);
+    let_go();
+    assert_eq!(fake.counts(), (1, 1));
+    assert_eq!(around_prompt(|| Ok(())), Ok(()));
+    assert_eq!(fake.counts(), (1, 1), "it stays let go");
+    assert_eq!(scope.finish(true), Some(End::Done));
+}
+
+#[test]
+fn a_guard_switched_off_or_a_free_gate_starts_no_hook_and_refuses_nothing() {
+    let _slot = slot_lock();
+    // Only begins that start no hook are tried here, so no test can ever install a real one.
     let off = MouseGuard { on: false, ..cfg() };
-    assert_eq!(
-        begin(&off, "g8").expect("no hook to start").finish(true),
-        None
-    );
+    assert_eq!(begin(&off, true).expect("no hook").finish(true), None);
+    assert_eq!(begin(&cfg(), false).expect("no hook").finish(true), None);
     assert_eq!(allowed(), Ok(()), "no guard, nothing refused");
-    let mut prompts = 0;
-    assert_eq!(
-        around_prompt(|| {
-            prompts += 1;
-            prompts
-        }),
-        1,
-        "the prompt runs once"
-    );
+    assert_eq!(around_prompt(|| Ok(1)), Ok(1), "the prompt runs once");
 }
 
 #[test]
