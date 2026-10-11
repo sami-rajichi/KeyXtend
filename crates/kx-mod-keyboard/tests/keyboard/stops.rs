@@ -7,11 +7,12 @@
 )]
 
 use crate::held::{A, hold, text, times};
-use crate::host::{GOLDEN, id};
+use crate::host::{Fakes, GOLDEN, id, table};
 use crate::rig::{Rig, STATE};
 use kx_module_api::keys;
 use kx_module_api::ports::{FaceError, FaceReply, InjectError, Scan};
-use kx_platform_fake::Stroke;
+use kx_platform_fake::{FakeLayouts, Stroke};
+use std::sync::Arc;
 
 /// Asserts that `beats` more ticks on `r` type nothing and ask for nothing.
 fn still(r: &Rig, beats: u64) {
@@ -131,6 +132,34 @@ fn a_press_sent_in_part_never_repeats_and_lets_shift_go() {
     r.tick_in(times().0);
     still(&r, 3);
     assert_eq!(r.let_go(A), Ok(FaceReply::default()));
+}
+
+#[test]
+fn a_repeat_on_a_stale_table_sends_nothing_refreshes_once_and_ends_the_burst() {
+    // A key the shown table lacks goes as its scan code, so the app's own layout must match the one shown.
+    let mut fakes = Fakes::golden(&["fr-fr", "en-us"]);
+    let mut fr = table("fr-fr");
+    fr.keys.remove(&Scan::new(0x56));
+    fakes.layouts = Arc::new(FakeLayouts::new(vec![fr, table("en-us")]));
+    let r = Rig::on(fakes, None);
+    r.tap("shift").unwrap();
+    let iso = "c-0x0056";
+    hold(&r, iso, 0);
+    let typed = r.fakes.injector.strokes();
+    assert_eq!(typed.len(), 2, "the press and the first repeat");
+    r.fakes.source.set_foreground(Some(id("en-us")));
+    r.fakes.layouts.switch(id("en-us"));
+    let refreshed = r.fakes.layouts.refreshes();
+    assert_eq!(r.tick_in(times().1), STATE, "it sends nothing and redraws");
+    assert_eq!(r.fakes.layouts.refreshes(), refreshed + 1, "one refresh");
+    still(&r, 3);
+    assert_eq!(r.let_go(iso), Ok(FaceReply::default()));
+    assert_eq!(r.fakes.injector.strokes(), typed, "nothing more types");
+    assert_eq!(
+        r.state()["keys"]["shift"]["on"],
+        false,
+        "the press used Shift, so it lets go with the burst"
+    );
 }
 
 #[test]

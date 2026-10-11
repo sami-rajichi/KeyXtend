@@ -48,19 +48,21 @@ pub fn id(name: &str) -> kx_module_api::ports::LayoutId {
     LayoutFile::golden(name).unwrap().id
 }
 
+/// The golden table `name`, named as the layouts module names it.
+pub fn table(name: &str) -> LayoutTable {
+    let file = LayoutFile::golden(name).unwrap();
+    let mut table = LayoutTable::from(&file);
+    let facts = &file.facts;
+    let short = SHORT.iter().find(|(iso, _)| *iso == facts.iso);
+    table.label.short = short.map_or_else(|| facts.iso.to_uppercase(), |s| s.1.to_owned());
+    table.label.name = vec![facts.native.clone(), facts.layout.clone()];
+    table.label.arabic = is_arabic(&facts.native);
+    table
+}
+
 /// A layouts service over the golden tables `names`, each named as the layouts module names it.
 pub fn labelled(names: &[&str]) -> FakeLayouts {
-    let table = |name: &&str| {
-        let file = LayoutFile::golden(name).unwrap();
-        let mut table = LayoutTable::from(&file);
-        let facts = &file.facts;
-        let short = SHORT.iter().find(|(iso, _)| *iso == facts.iso);
-        table.label.short = short.map_or_else(|| facts.iso.to_uppercase(), |s| s.1.to_owned());
-        table.label.name = vec![facts.native.clone(), facts.layout.clone()];
-        table.label.arabic = is_arabic(&facts.native);
-        table
-    };
-    FakeLayouts::new(names.iter().map(table).collect())
+    FakeLayouts::new(names.iter().map(|n| table(n)).collect())
 }
 
 /// The fakes behind the three typing services.

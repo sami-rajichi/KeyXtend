@@ -80,7 +80,11 @@ fn start(
 impl Rig {
     /// The module started on layouts `names`, the first shown, with `change` over the defaults.
     pub fn new(names: &[&str], change: Option<(&str, toml::Value)>) -> Self {
-        let fakes = Fakes::golden(names);
+        Self::on(Fakes::golden(names), change)
+    }
+
+    /// The module started over `fakes`, with `change` over the defaults.
+    pub fn on(fakes: Fakes, change: Option<(&str, toml::Value)>) -> Self {
         let mut module = KeyboardModule::default();
         let (host, face) = start(&mut module, &fakes, change);
         Self {
