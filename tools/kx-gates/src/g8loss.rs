@@ -1,5 +1,5 @@
 //! G8's frame rule (owner, 2026-10-11): `dropped_frames` counts only frames lost while a pressed key rises, from each
-//! G8 press to the end of its rise; losses in a resize or outside the presses are listed, not counted.
+//! G8 press or G2 click to the end of its rise; losses in a resize or outside the presses are listed, not counted.
 // Under `PresentMon --qpc_time_ms`, CPU start plus CPU busy is each frame's present time, on G8's `now_us` clock.
 #![cfg(windows)]
 
@@ -22,7 +22,7 @@ const APART: &str =
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum During {
-    /// A pressed key rose: from the press to the end of its rise.
+    /// A pressed key rose: from a G8 press or G2 click to the end of its rise.
     Press,
     /// The keyboard resized: from the size button's press until its box settled.
     Resize,
@@ -62,6 +62,14 @@ impl Span {
     fn holds(&self, at_us: i64) -> bool {
         (self.from_us..=self.to_us).contains(&at_us)
     }
+}
+
+/// Press windows for G2's clicks at `clicks_us`: G2 presses and lets go in one batch, so each rise follows its click.
+pub fn clicks(clicks_us: &[i64], rise_ms: u64) -> Vec<Span> {
+    clicks_us
+        .iter()
+        .map(|&us| Span::press(us, us, rise_ms))
+        .collect()
 }
 
 /// One frame that never reached the screen: when, in ms from G8's start, and what G8 was doing.

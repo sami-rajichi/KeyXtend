@@ -25,7 +25,7 @@ use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, mouseguard, out};
+use crate::{close, g2, g2raw, mouseguard, out};
 use crate::{g8size, g8ui};
 
 /// The name that runs G8 in weak mode.
@@ -115,18 +115,19 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
         .map_or_else(|e| json!({ "error": e }), |v| json!(v))
 }
 
-/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames` against G8's press and resize `spans` from
-/// `origin_us`, what G8 measured outside the product, and the bus, frames and losses for the result line.
+/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames` against the steps in `m` from `origin_us`,
+/// what G8 measured outside the product, and the bus, frames and losses for the result line.
 fn outside(
     ctx: &Ctx,
     job: Option<Job>,
+    m: &Measured,
     frames: &Result<Frames, String>,
-    spans: &[Span],
     origin_us: i64,
 ) -> (Outside, [Value; 3]) {
     let (bus, hz) = (bench(ctx, job), g8ui::refresh_hz());
     let frames_ok = frames.as_ref().map_err(Clone::clone);
-    let losses = frames_ok.and_then(|f| g8loss::losses(&f.presents, spans, hz, origin_us));
+    let losses =
+        frames_ok.and_then(|f| g8loss::losses(&f.presents, &spans(ctx, m)?, hz, origin_us));
     #[allow(
         clippy::cast_precision_loss,
         reason = "Frame counts are far below 2^53."
@@ -141,10 +142,13 @@ fn outside(
     (o, [shown(&bus), shown(frames), shown(&losses)])
 }
 
-/// G8's presses and resizes in `m`, for its frame rule.
-fn spans(m: &Measured) -> Vec<Span> {
+/// G8's presses, G2's clicks from the click file G2 wrote with `ctx`, and the resizes in `m`, for G8's frame rule.
+fn spans(ctx: &Ctx, m: &Measured) -> Result<Vec<Span>, String> {
+    let clicks = g2raw::read(&ctx.file(g2raw::CLICKS_FILE))?;
+    let clicked = g8loss::clicks(&clicks, ctx.cfg.g8.rise_ms);
     let resized = m.resizes.iter().map(|r| r.span);
-    m.presses.spans.iter().copied().chain(resized).collect()
+    let pressed = m.presses.spans.iter().copied();
+    Ok(pressed.chain(clicked).chain(resized).collect())
 }
 
 /// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
@@ -192,7 +196,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
-    let (o, [bus, frames, losses]) = outside(ctx, job, &frames, &spans(&m), origin_us);
+    let (o, [bus, frames, losses]) = outside(ctx, job, &m, &frames, origin_us);
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();

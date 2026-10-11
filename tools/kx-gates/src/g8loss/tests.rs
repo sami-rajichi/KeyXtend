@@ -111,6 +111,27 @@ fn a_press_window_runs_from_the_press_to_its_release_plus_the_rise() {
 }
 
 #[test]
+fn a_loss_while_a_key_g2_clicked_rises_counts() {
+    let click = RESIZE_MS.1 + 1_000.0;
+    let mut all = spans();
+    all.extend(clicks(&[us(click)], u64::from(RISE_MS)));
+    let (rising, after) = (click + f64::from(RISE_MS) - 10.0, click + 500.0);
+    let rows = [
+        row(CHAIN, rising, false),
+        row(CHAIN, rising + 30.0, true),
+        row(CHAIN, after, false),
+        row(CHAIN, after + 30.0, true),
+    ];
+    let got = read_over(&rows, &all).expect("lines up");
+    assert_eq!(
+        got.counted,
+        [loss(rising, During::Press)],
+        "G2 presses and lets go at once"
+    );
+    assert_eq!(got.listed, [loss(after, During::Outside)]);
+}
+
+#[test]
 fn a_swap_chains_first_frame_never_counts_even_inside_a_press() {
     let at = PRESS_MS + 20.0;
     let got = read(&[row(OTHER, at, false), row(OTHER, at + 50.0, true)]).expect("lines up");
