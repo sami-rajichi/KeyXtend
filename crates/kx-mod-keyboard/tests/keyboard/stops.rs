@@ -116,10 +116,16 @@ fn opening_the_list_stops_the_burst() {
 }
 
 #[test]
-fn a_key_not_on_the_board_is_refused() {
-    let r = Rig::new(&GOLDEN, None);
-    assert_eq!(r.press("nope"), Err(FaceError::UnknownKey));
-    assert_eq!(r.let_go("nope"), Err(FaceError::UnknownKey));
+fn a_key_not_on_the_board_is_refused_and_ends_a_burst() {
+    for bad in [Rig::press, Rig::let_go] {
+        let r = Rig::new(&GOLDEN, None);
+        r.tap("shift").unwrap();
+        hold(&r, A, 0);
+        assert_eq!(bad(&r, "nope"), Err(FaceError::UnknownKey));
+        still(&r, 3);
+        assert_eq!(r.state()["keys"]["shift"]["on"], false, "the burst ended");
+        assert_eq!(r.fakes.injector.strokes(), [text("A")]);
+    }
 }
 
 /// Keys a run holds: a letter, Backspace, a latch and a key that never repeats.

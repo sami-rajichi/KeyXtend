@@ -88,7 +88,7 @@ impl Face {
 
     /// The pointer went down on key `id` (spec §4.6): it types on let-go, or at the delay and on while held.
     fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
-        self.known(id)?;
+        self.held_known(id)?;
         Ok(self.lock().press(id))
     }
 
@@ -106,9 +106,16 @@ impl Face {
 
     /// The pointer let go of key `id` on it: a click types it now, as a tap, and a burst ends.
     fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
-        self.known(id)?;
+        self.held_known(id)?;
         let ended = self.lock().let_go(id);
         ended.map_or_else(|| self.tap(id, false), Ok)
+    }
+
+    /// Refuses a key that is not on the board; a press or let-go of one still ends the held key, so no burst lingers.
+    fn held_known(&self, id: &str) -> Result<(), FaceError> {
+        self.known(id).inspect_err(|_| {
+            self.lock().leave();
+        })
     }
 
     /// Refuses a key that is not on the board.
