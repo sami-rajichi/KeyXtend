@@ -117,7 +117,6 @@ Item {
             verify(win.hold.running, "the hold goes on");
             win.hold.triggered();
             win.hold.triggered();
-            mouseMove(a, a.width / 2, a.height / 2, -1, Qt.LeftButton);
             mouseRelease(a, on.x, on.y);
             compare(sent(win), ["press " + q, "tick", "tick", "letGo " + q], "nothing for the neighbour");
             verify(!win.hold.running);
