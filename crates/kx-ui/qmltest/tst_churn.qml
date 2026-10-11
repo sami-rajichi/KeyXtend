@@ -1,8 +1,10 @@
 // The debug churn steps the keyboard window as its buttons do: each theme switch, each Caps Lock change, then sizes
-// up and back down, in that order, and tells the keyboard once when it ends.
+// up and back down, in that order, and tells the keyboard once when it ends; the window starts the churn its keyboard
+// object plans.
 import QtQuick
 import QtTest
 import "../qml"
+import "kbwin.js" as Win
 
 Item {
     id: root
@@ -43,6 +45,26 @@ Item {
         id: churnC
         Churn {}
     }
+    Component {
+        id: uiC
+        FakeUi {}
+    }
+    // A keyboard object that plans two size steps, as a debug build with the churn's variable set does.
+    Component {
+        id: kbC
+        FakeKeyboard {
+            function churnPlan() {
+                return JSON.stringify({ step_ms: 1, themes: 0, caps: 0, sizes: 2 });
+            }
+            function churned() {
+                root.ended++;
+            }
+        }
+    }
+    Component {
+        id: winC
+        KbWindow {}
+    }
 
     TestCase {
         name: "churn"
@@ -60,6 +82,12 @@ Item {
             compare(root.did, "ttccc++--");
             compare(c.step, c.steps);
             verify(!c.data.find(o => o.interval !== undefined).running, "its timer stops");
+        }
+
+        function test_the_keyboard_window_starts_the_planned_churn() {
+            const made = Win.make(this, { ui: uiC, kb: kbC, win: winC }, root, Qt.point(300, 300));
+            tryCompare(root, "ended", 1, 1000);
+            compare(Win.heard(made.kb, "bigger") + Win.heard(made.kb, "smaller"), 2, "both size steps");
         }
     }
 }

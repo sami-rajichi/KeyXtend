@@ -26,7 +26,6 @@ mod qt {
         "qml/Rescale.qml",
         "qml/Placing.qml",
         "qml/Guard.qml",
-        "qml/Churn.qml",
         "qml/Plate.qml",
         "qml/TopBar.qml",
         "qml/Chip.qml",
@@ -65,6 +64,8 @@ mod qt {
         "qml/TrayPicture.qml",
         "qml/PressWatch.qml",
     ];
+    /// QML files only debug builds hold: the memory check's churn.
+    const DEBUG_QML: &[&str] = &["qml/Churn.qml"];
     /// The Rust files holding cxx-qt bridges.
     const BRIDGES: &[&str] = &[
         "src/bridges/ui.rs",
@@ -130,7 +131,9 @@ mod qt {
                 return;
             }
         };
-        let module = QmlModule::new(URI).qml_files(QML.iter().copied());
+        let debug = std::env::var_os(DEBUG_ENV).is_some();
+        let extra = if debug { DEBUG_QML } else { &[] };
+        let module = QmlModule::new(URI).qml_files(QML.iter().chain(extra).copied());
         let builder = CxxQtBuilder::new_qml_module(module)
             .files(BRIDGES.iter().copied())
             .cpp_files(MOC.iter().copied())
