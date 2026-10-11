@@ -46,9 +46,12 @@ Item {
         function sent(win) {
             return win.keyboard.calls.filter(c => /^(tap|press|letGo|leave|tick|panelKey)\b/.test(c));
         }
-        // The window's hold timer, which alone has a pace.
-        function holdOf(win) {
-            return [...win.data].find(o => o.paced !== undefined);
+        // Slides the pointer, still down, from `key` onto the next key; returns that spot in `key`'s units.
+        function slideOff(win, key) {
+            const next = keyed(win, w);
+            const off = next.mapToItem(key, next.width / 2, next.height / 2);
+            mouseMove(key, off.x, off.y, -1, Qt.LeftButton);
+            return off;
         }
 
         function test_a_click_on_a_repeating_key_sends_its_press_then_its_let_go_once() {
@@ -64,20 +67,61 @@ Item {
         function test_sliding_off_the_key_sends_leave_and_a_let_go_outside_sends_nothing() {
             const win = make();
             const key = keyed(win, q);
-            const next = keyed(win, w);
             mousePress(key);
-            const off = next.mapToItem(key, next.width / 2, next.height / 2);
-            mouseMove(key, off.x, off.y, -1, Qt.LeftButton);
+            const off = slideOff(win, key);
             compare(sent(win), ["press " + q, "leave"]);
             mouseRelease(key, off.x, off.y);
             compare(sent(win), ["press " + q, "leave"], "nothing more, and no click on the other key");
             win.visible = false;
         }
 
+        function test_sliding_off_and_back_before_a_repeat_holds_again_and_a_release_types_once() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            slideOff(win, key);
+            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
+            compare(sent(win), ["press " + q, "leave", "press " + q], "back on the key, it holds again");
+            verify(win.hold.running);
+            compare(win.hold.interval, Face.board.repeat_delay_ms, "after a fresh delay");
+            mouseRelease(key);
+            compare(sent(win), ["press " + q, "leave", "press " + q, "letGo " + q], "so it types once");
+            win.visible = false;
+        }
+
+        function test_once_it_repeated_sliding_off_ends_the_press() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            win.keyboard.reply = { board: false, state: true };
+            win.hold.triggered();
+            slideOff(win, key);
+            mouseMove(key, key.width / 2, key.height / 2, -1, Qt.LeftButton);
+            verify(!win.hold.running, "no new hold");
+            mouseRelease(key);
+            compare(sent(win), ["press " + q, "tick", "leave"], "coming back types nothing");
+            win.visible = false;
+        }
+
+        function test_a_key_held_as_the_list_opens_lets_go_and_never_drives_the_list() {
+            const win = make();
+            const down = keyed(win, "down");
+            mousePress(down);
+            win.keyboard.state = Face.states.list;
+            win.restate();
+            const panel = [...win.data].find(o => o.item && o.item.win === win).item;
+            const list = [...panel.data].find(o => o.view !== undefined);
+            tryVerify(() => list.visible && panel.visible, 2000, "the list shows");
+            waitForRendering(list.contentItem);
+            mouseRelease(down);
+            compare(sent(win), ["press down", "letGo down"]);
+            win.visible = false;
+        }
+
         function test_the_hold_timer_runs_only_while_a_key_is_held_at_the_delay_then_the_pace() {
             const win = make();
             const key = keyed(win, q);
-            const hold = holdOf(win);
+            const hold = win.hold;
             verify(!hold.running, "it rests while nothing is held");
             mousePress(key);
             verify(hold.running, "held");
@@ -99,7 +143,7 @@ Item {
             const win = make();
             mousePress(keyed(win, q));
             win.visible = false;
-            verify(!holdOf(win).running);
+            verify(!win.hold.running);
             compare(sent(win), ["press " + q, "leave"]);
         }
 
@@ -116,7 +160,7 @@ Item {
             const win = make(Object.assign({}, Face.board, { keys: keys }));
             mouseClick(keyed(win, q));
             compare(sent(win), ["tap " + q + " false"]);
-            verify(!holdOf(win).running);
+            verify(!win.hold.running);
             win.visible = false;
         }
     }

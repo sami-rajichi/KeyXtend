@@ -11,6 +11,10 @@ Timer {
     property string held: ""
     // The delay has passed, so the beat keeps the pace.
     property bool paced: false
+    // A beat of this press found a repeat due, so sliding off ends the press.
+    property bool repeated: false
+    // The key the pointer slid off before any repeat; coming back onto it while still down holds it again.
+    property string lost: ""
     // The keyboard shows and runs; a hold ends when it stops.
     readonly property bool live: win.ready && win.visible
 
@@ -19,7 +23,9 @@ Timer {
     repeat: true
     onTriggered: {
         paced = true;
-        win.redraw(win.keyboard.tick());
+        const answer = win.keyboard.tick();
+        repeated = repeated || !!JSON.parse(answer).state;
+        win.redraw(answer);
     }
     onLiveChanged: if (!live) leave()
 
@@ -27,23 +33,38 @@ Timer {
     // the keyboard timed the press, so its first tick is never early.
     function press(id) {
         win.hint("", null);
+        lost = "";
         if (win.listing(id))
             return;
         win.redraw(win.keyboard.press(id));
         paced = false;
+        repeated = false;
         held = id;
     }
-    // Key `id` came up over itself: the open list's key, or the held key's let-go.
+    // The pointer came back onto key `id` while still down: a key it slid off before any repeat holds again.
+    function reenter(id) {
+        if (lost === id)
+            press(id);
+    }
+    // Key `id` came up over itself: the held key's let-go, or the open list's key.
     function letGo(id) {
         const was = held === id;
         held = "";
-        if (win.listing(id))
-            win.tap(id, false);
-        else if (was)
+        lost = "";
+        if (was)
             win.redraw(win.keyboard.letGo(id));
+        else if (win.listing(id))
+            win.tap(id, false);
     }
-    // The pointer slid off the held key, or the keyboard hid or stopped: the hold ends with nothing typed.
+    // The pointer slid off the held key: before any repeat it may come back, after one the press ends.
+    function slide() {
+        const back = repeated ? "" : held;
+        leave();
+        lost = back;
+    }
+    // The keyboard hid or stopped, or the pointer slid off: the hold ends with nothing typed.
     function leave() {
+        lost = "";
         if (held === "")
             return;
         held = "";
