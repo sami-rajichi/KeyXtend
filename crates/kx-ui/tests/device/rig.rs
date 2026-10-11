@@ -23,6 +23,12 @@ const SCREEN: Rect = Rect {
     w: 1920,
     h: 1040,
 };
+/// Where the tray icon is clicked: on the taskbar below that work area, this far in from its corner.
+const TRAY_IN: i32 = 10;
+pub(crate) const TRAY_AT: Point = Point {
+    x: SCREEN.x + SCREEN.w - TRAY_IN,
+    y: SCREEN.y + SCREEN.h + TRAY_IN,
+};
 /// How many windows the fake guard reports, so each guard run ends at once.
 pub(crate) const GUARDED: usize = 2;
 /// The ticker ends Qt's loop at each tick, so the test can look between ticks; its period in ms, and where it says it

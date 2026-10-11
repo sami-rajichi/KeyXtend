@@ -1,10 +1,9 @@
 //! The device test's steps without a loss, each over the running app's windows.
 
 use crate::rebuild::watched;
-use crate::rig::{FIRST, GUARDED, Outcome, Rig, ticks, wait};
+use crate::rig::{FIRST, GUARDED, Outcome, Rig, TRAY_AT, ticks, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
-use kx_module_api::ports::Point;
 use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
 use kx_ui::{
@@ -19,8 +18,6 @@ use tracing::Level;
 const THEMES: [&str; 3] = ["dolch", "et66", "native"];
 /// Ticks a step runs to see that nothing happened meanwhile: many frames long.
 const QUIET: usize = 10;
-/// Where the tray icon is clicked: below the screen's work area, as on a taskbar.
-const TRAY_AT: Point = Point { x: 1700, y: 1050 };
 /// What a font that did not load logs, and what each warning of a device that could not be shared holds.
 const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
