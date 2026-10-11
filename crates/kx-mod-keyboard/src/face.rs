@@ -9,7 +9,7 @@ use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::board_view;
-use inner::{Beat, Inner};
+use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
 use std::collections::HashMap;
@@ -76,14 +76,14 @@ impl Face {
     /// A click on key `id`; while the list is open, a key that drives it does nothing here, as the UI sends it
     /// as `panel_key`, so it never reaches the app.
     fn tap(&self, id: &str, back: bool) -> Result<FaceReply, FaceError> {
-        let tapped = {
+        let went = {
             let mut inner = self.lock();
             if inner.listing() && self.navs.contains_key(id) {
                 return Ok(FaceReply::default());
             }
             inner.tap(id, back)
         };
-        self.answer(tapped)
+        self.reply(went)
     }
 
     /// The pointer went down on key `id` (spec §4.6): it types on let-go, or at the delay and on while held.
@@ -94,14 +94,10 @@ impl Face {
 
     /// The hold timer: a due repeat answers as a tap does, and a burst that ends redraws its latches.
     fn tick(&self) -> Result<FaceReply, FaceError> {
-        let Some(Beat { tapped, ended }) = self.lock().tick() else {
+        let Some(went) = self.lock().tick() else {
             return Ok(FaceReply::default());
         };
-        let reply = self.answer(tapped)?;
-        Ok(FaceReply {
-            state: reply.state || ended,
-            ..reply
-        })
+        self.reply(went)
     }
 
     /// The pointer let go of key `id` on it: a click types it now, as a tap, and a burst ends.
@@ -125,6 +121,15 @@ impl Face {
         } else {
             Err(FaceError::UnknownKey)
         }
+    }
+
+    /// What to redraw after `went`: as its typing says, and the state too when a burst ended.
+    fn reply(&self, went: Went) -> Result<FaceReply, FaceError> {
+        let reply = self.answer(went.tapped)?;
+        Ok(FaceReply {
+            state: reply.state || went.ended,
+            ..reply
+        })
     }
 
     /// What to redraw after a tap or a repeat did `tapped`.

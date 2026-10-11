@@ -3,7 +3,7 @@
 mod fit;
 mod held;
 
-pub(super) use held::Beat;
+pub(super) use held::Went;
 
 use super::STATE;
 use crate::geom::{Area, KeyBox};
@@ -11,7 +11,7 @@ use crate::langkey::{LangClick, Turn, click};
 use crate::panel::{LangList, Moved};
 use crate::place::Placer;
 use crate::repeat::Repeat;
-use crate::run::{Ports, TapError, Tapped, Typing};
+use crate::run::{Ports, Typing};
 use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
@@ -99,10 +99,12 @@ impl Inner {
         self.list.is_some()
     }
 
-    /// Types key `id` on the layout shown.
-    pub(super) fn tap(&mut self, id: &str, back: bool) -> Result<Tapped, TapError> {
+    /// Types key `id` on the layout shown, ending first a burst left open, so its latches never ride on this click.
+    pub(super) fn tap(&mut self, id: &str, back: bool) -> Went {
+        let ended = self.ended().state;
         let table = self.ports.layouts.current();
-        self.typing.tap(&self.ports.io(&table), id, back)
+        let tapped = self.typing.tap(&self.ports.io(&table), id, back);
+        Went { tapped, ended }
     }
 
     /// The layouts service, to refresh without the lock.

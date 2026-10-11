@@ -151,6 +151,23 @@ fn opening_the_list_stops_the_burst() {
 }
 
 #[test]
+fn a_click_ends_a_burst_left_open_so_its_latches_never_ride_on() {
+    // No leave came, as after a window rebuilt for a lost graphics device, or a reader's Invoke mid-burst.
+    let r = Rig::new(&GOLDEN, None);
+    r.tap("shift").unwrap();
+    hold(&r, A, 1);
+    assert_eq!(r.tap("tab"), Ok(STATE));
+    let strokes = r.fakes.injector.strokes();
+    assert_eq!(
+        strokes.last(),
+        Some(&Stroke::Tap(Scan::new(0x0F))),
+        "a plain Tab"
+    );
+    assert_eq!(r.state()["keys"]["shift"]["on"], false);
+    still(&r, 3);
+}
+
+#[test]
 fn a_key_not_on_the_board_is_refused_and_ends_a_burst() {
     for bad in [Rig::press, Rig::let_go] {
         let r = Rig::new(&GOLDEN, None);
