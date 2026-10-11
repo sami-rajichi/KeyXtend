@@ -5,15 +5,16 @@
 mod spots;
 mod texts;
 mod tray;
+mod wake;
 
-use super::device::release_after_frame;
 use super::{hub, qs};
-use crate::hub::{Hub, Mode, NULL, Wake, json};
+use crate::hub::{Hub, Mode, NULL, json};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
-use kx_platform::ui::{TrayEvent, WatchGuard};
+use kx_platform::ui::WatchGuard;
 use std::pin::Pin;
 use std::sync::Arc;
+use wake::woken;
 
 /// The cxx-qt bridge that makes `Ui` a QML type.
 #[cxx_qt::bridge]
@@ -182,13 +183,18 @@ pub struct UiRust {
     hub: Option<Arc<Hub>>,
     /// Keeps the system look watch running while the object lives.
     watch: Option<WatchGuard>,
+    /// The look the windows drew last, as QML reads it, so only a new one drops Qt's cached graphics.
+    drawn: String,
 }
 
 impl Default for UiRust {
     fn default() -> Self {
+        let hub = hub();
+        let drawn = hub.as_deref().map(Hub::look_json).unwrap_or_default();
         Self {
-            hub: hub(),
+            hub,
             watch: None,
+            drawn,
         }
     }
 }
@@ -207,31 +213,6 @@ impl cxx_qt::Initialize for qobject::Ui {
             Ok(watch) => self.as_mut().rust_mut().watch = Some(watch),
             Err(e) => tracing::warn!(error = %e, "the system look will not be followed"),
         }
-    }
-}
-
-/// Tells QML what changed, on the Qt thread: a new theme's fonts load before QML reads the new look and the last
-/// theme's go after, so no text asks Qt for a family it lacks. `fonts_changed` comes last, then each shown window drops
-/// what Qt cached for the last look once it drew the new one.
-fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
-    let relook = matches!(wake, Wake::Settings | Wake::Look);
-    let loaded = relook && ui.with(false, Hub::load_fonts);
-    match wake {
-        Wake::Settings => ui.as_mut().settings_changed(),
-        Wake::Texts => ui.as_mut().texts_changed(),
-        Wake::Look => ui.as_mut().look_changed(),
-        Wake::Notices => ui.as_mut().notices_waiting(),
-        Wake::Show => ui.as_mut().show_asked(),
-        Wake::End => ui.as_mut().quit_asked(),
-        Wake::Tray(TrayEvent::Click(at)) => ui.as_mut().tray_clicked(at.x, at.y),
-        Wake::Tray(TrayEvent::Away) => ui.as_mut().tray_away(),
-    }
-    let dropped = relook && ui.with(false, Hub::drop_fonts);
-    if loaded || dropped {
-        ui.fonts_changed();
-    }
-    if relook {
-        release_after_frame();
     }
 }
 

@@ -19,6 +19,8 @@ const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
 /// What a refused icon warns.
 const REFUSED: &str = "icon was refused";
+/// Ticks Qt's loop runs to show that nothing follows a wake, many more than a release and its give-back take.
+const QUIET: usize = 10;
 
 /// The windows drew icons through the provider since it had made `made` textures, and it refused none: each engine,
 /// a rebuilt one too, has the provider, as Qt finds no other.
@@ -73,7 +75,8 @@ fn elsewhere(rig: &Rig) -> Outcome {
 
 /// A theme picked in the settings reaches the windows through the wake alone: it loads the theme's fonts, so Qt has its
 /// first Arabic family, and each shown window drops Qt's cached graphics once it drew the new look, then the free heap
-/// pages go back once; going back drops those fonts and gives back once more. Nothing went back at idle before.
+/// pages go back once; going back drops those fonts and gives back once more. Nothing went back at idle before, and a
+/// wake that keeps the look drops and gives back nothing.
 pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
     let themes = Themes::shipped().map_err(|e| e.to_string())?;
     let look = &themes.find(THEMES[0]).ok_or("no such theme")?.look;
@@ -96,7 +99,25 @@ pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> O
         app,
         "the wake dropping the fonts and one more give-back",
         || !font_families().contains(arabic) && rig.memory.calls() == 2,
-    )
+    )?;
+    kept_look(app, rig)
+}
+
+/// A wake that leaves the look as it was, as a change of another setting, drops no graphics and gives nothing back.
+fn kept_look(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
+    let was = (released(), rig.memory.calls());
+    rig.show(rig.hub.settings());
+    for _ in 0..QUIET {
+        app.as_mut().map(|a| a.exec());
+    }
+    let now = (released(), rig.memory.calls());
+    if now == was {
+        Ok(())
+    } else {
+        Err(format!(
+            "a wake that kept the look released or gave back: {was:?} to {now:?}"
+        ))
+    }
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.
