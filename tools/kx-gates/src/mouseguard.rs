@@ -1,19 +1,21 @@
 //! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out or the owner holds a button down. `hook` applies them; `run` runs them.
+//! ends, the time limit runs out or the owner clicks. `filter` decides, `hook` applies it and `run` runs it.
 #![cfg(windows)]
 
 mod counts;
 #[cfg(test)]
 pub mod fake;
+mod filter;
 mod hook;
 mod run;
 
 pub use counts::Counts;
+pub use filter::Filter;
 pub use run::{allowed, around_prompt, begin, let_go, mark};
 
 use std::time::Duration;
 
-use kx_module_api::{Mono, US_PER_MS};
+use kx_module_api::US_PER_MS;
 use kx_platform_windows::keys::TAG;
 use serde::Deserialize;
 use windows::Win32::System::Threading::INFINITE;
@@ -48,16 +50,18 @@ pub struct MouseGuard {
     pub on: bool,
     /// Longest the guard holds the mouse in one run.
     pub limit_ms: u64,
-    /// A physical button held this long gives the mouse back and stops the gate.
-    pub escape_ms: u64,
+    /// Physical button presses that give the mouse back and stop the gate.
+    pub escape_clicks: u8,
+    /// How close together those presses come, when more than one is set.
+    pub escape_window_ms: u64,
 }
 
 impl MouseGuard {
-    /// Refuses a zero limit or hold, or a hold the limit always cuts short.
+    /// Refuses a zero limit, no escape click, or a zero window.
     pub fn check(&self) -> Result<(), String> {
-        if self.limit_ms == 0 || self.escape_ms == 0 || self.escape_ms >= self.limit_ms {
+        if self.limit_ms == 0 || self.escape_clicks == 0 || self.escape_window_ms == 0 {
             return Err(
-                "mouse_guard.limit_ms and escape_ms must be above 0, and escape_ms below limit_ms"
+                "mouse_guard.limit_ms, escape_clicks and escape_window_ms must be above 0"
                     .to_string(),
             );
         }
@@ -67,10 +71,22 @@ impl MouseGuard {
     /// The log line when the guard starts; it names no position or key.
     pub fn line(&self) -> String {
         format!(
-            "mouse guard on: physical mouse input is ignored for up to {} ms; hold a mouse button {} ms to get it \
-             back, which stops the gate",
-            self.limit_ms, self.escape_ms
+            "mouse guard on: physical mouse input is ignored for up to {} ms; {} to get it back, which stops the \
+             gate",
+            self.limit_ms,
+            self.escape()
         )
+    }
+
+    /// How the owner gets the mouse back, in words.
+    fn escape(&self) -> String {
+        match self.escape_clicks {
+            1 => "press any mouse button".to_string(),
+            n => format!(
+                "press a mouse button {n} times within {} ms",
+                self.escape_window_ms
+            ),
+        }
     }
 }
 
@@ -87,7 +103,7 @@ pub enum End {
     Prompt,
     /// The gate's pointer work is over, so the guard lets go for the rest of the run.
     Idle,
-    /// The owner held a physical button for the escape time.
+    /// The owner pressed a physical button the escape's number of times.
     Owner,
     /// The time limit ran out.
     Limit,
@@ -118,7 +134,7 @@ impl End {
             Self::Panic => "the gate panicked",
             Self::Prompt => "an admin prompt is up",
             Self::Idle => "the gate's pointer work is over",
-            Self::Owner => "the owner held a mouse button, so the gate stops and does not pass",
+            Self::Owner => "the owner clicked a mouse button, so the gate stops and does not pass",
             Self::Limit => "its time limit ran out, so the gate stops and does not pass",
             Self::Lost => "it lost its hook, so the gate stops and does not pass",
         }
@@ -184,96 +200,6 @@ pub enum Verdict {
     Pass,
     /// Nothing gets the event.
     Drop,
-}
-
-/// The guard's decisions over one hook's life: which events drop, and when it lets go.
-#[derive(Debug, Clone)]
-pub struct Filter {
-    /// When the time limit runs out.
-    deadline: Mono,
-    /// How long a held button takes to let go.
-    escape: Duration,
-    /// Buttons whose physical press the guard dropped.
-    held: u8,
-    /// When the first of them went down.
-    since: Option<Mono>,
-    /// Why it let go, once it has; every event then passes.
-    out: Option<End>,
-    /// What it dropped and passed so far.
-    seen: Counts,
-}
-
-impl Filter {
-    /// A filter for `cfg` that starts at `start`, after the guard already held the mouse for `used` in this run.
-    pub fn new(cfg: &MouseGuard, start: Mono, used: Duration) -> Self {
-        let left = Duration::from_millis(cfg.limit_ms).saturating_sub(used);
-        Self {
-            deadline: start.saturating_add(left),
-            escape: Duration::from_millis(cfg.escape_ms),
-            held: 0,
-            since: None,
-            out: None,
-            seen: Counts::default(),
-        }
-    }
-
-    /// Why it lets go at `now`, if it does: the time limit, or a button held for the escape time.
-    pub fn tick(&mut self, now: Mono) -> Option<End> {
-        if self.out.is_none() {
-            let held = self.since.map(|t| now.saturating_since(t));
-            if now >= self.deadline {
-                self.out = Some(End::Limit);
-            } else if held.is_some_and(|h| h >= self.escape) {
-                self.out = Some(End::Owner);
-            }
-        }
-        self.out
-    }
-
-    /// Why it let go, if it already has; unlike `tick`, it decides nothing new.
-    pub fn ended(&self) -> Option<End> {
-        self.out
-    }
-
-    /// Whether an event at `now` passes: kx-gates' own input does, and so does a physical release whose press came
-    /// before the guard, so no button sticks. It counts what it drops and the own input it passes.
-    pub fn event(&mut self, ours: bool, kind: Kind, now: Mono) -> Verdict {
-        if ours {
-            self.seen.add(Counts::PASS);
-            return Verdict::Pass;
-        }
-        if self.tick(now).is_some() {
-            return Verdict::Pass;
-        }
-        match kind {
-            Kind::Down(b) => {
-                self.since = self.since.or(Some(now));
-                self.held |= b;
-            }
-            Kind::Up(b) if self.held & b == 0 => return Verdict::Pass,
-            Kind::Up(b) => {
-                self.held &= !b;
-                self.since = self.since.filter(|_| self.held != 0);
-            }
-            Kind::Other => {}
-        }
-        self.seen.add(Counts::DROP);
-        Verdict::Drop
-    }
-
-    /// The hand's events it dropped and its own it passed so far.
-    pub fn counts(&self) -> Counts {
-        self.seen
-    }
-
-    /// How long until `tick` could let go: the time limit, or a held button's escape, whichever is first.
-    pub fn due_in(&self, now: Mono) -> Duration {
-        let limit = self.deadline.saturating_since(now);
-        let escape = self
-            .since
-            .map(|t| t.saturating_add(self.escape).saturating_since(now));
-        escape.map_or(limit, |e| e.min(limit))
-    }
 }
 
 /// `d` in whole ms, rounded up, for a wait; never `INFINITE`, so the hook thread always checks its time again.

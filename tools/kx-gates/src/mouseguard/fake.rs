@@ -57,18 +57,25 @@ impl Fake {
 
     /// A physical press of the left button now, as the hook would see it.
     pub fn press(&self) {
-        let now = self.clock.now();
-        let mut seen = self.seen();
-        let filter = seen.filter.as_mut().expect("a started hook");
-        filter.event(false, Kind::Down(LEFT), now);
+        self.event(false, Kind::Down(LEFT));
+    }
+
+    /// A physical move now, as the hook would see it.
+    pub fn moved(&self) {
+        self.event(false, Kind::Other);
     }
 
     /// A move kx-gates injected now, as the hook would see it.
     pub fn mine(&self) {
+        self.event(true, Kind::Other);
+    }
+
+    /// A `kind` event now, kx-gates' own when `ours`, through the last started hook's filter.
+    fn event(&self, ours: bool, kind: Kind) {
         let now = self.clock.now();
         let mut seen = self.seen();
         let filter = seen.filter.as_mut().expect("a started hook");
-        filter.event(true, Kind::Other, now);
+        filter.event(ours, kind, now);
     }
 
     /// Moves the fake clock on by `ms`.

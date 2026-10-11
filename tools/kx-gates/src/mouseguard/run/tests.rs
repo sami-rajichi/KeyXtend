@@ -53,12 +53,13 @@ fn the_guard_lets_go_at_its_time_limit_and_the_gate_then_stops() {
 }
 
 #[test]
-fn a_button_held_for_the_escape_time_stops_the_gate_as_the_owners() {
+fn one_click_stops_the_gate_at_once_as_the_owners() {
     let fake = Fake::new();
     let mut s = begun(&fake);
     fake.wait(1_000);
+    fake.moved();
+    assert_eq!(s.refusal(), Ok(()), "a move is no escape");
     fake.press();
-    fake.wait(cfg().escape_ms);
     let e = s.refusal().expect_err("the owner took the mouse back");
     assert!(e.contains(End::Owner.why()), "{e}");
     assert_eq!(s.finish(false).end, End::Owner, "the owner's stop wins");
@@ -176,7 +177,7 @@ fn outcome(end: End, dropped: u32, passed: u32) -> Outcome {
 fn the_guard_adds_up_what_each_of_its_hooks_counted_and_gives_it_when_the_gate_ends() {
     let fake = Fake::new();
     let mut s = begun(&fake);
-    fake.press();
+    fake.moved();
     fake.mine();
     s.pause();
     s.resume();
