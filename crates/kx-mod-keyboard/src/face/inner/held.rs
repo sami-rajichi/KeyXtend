@@ -57,6 +57,11 @@ impl Inner {
         self.ended()
     }
 
+    /// True while a key is held, so the UI keeps its beat.
+    pub(in crate::face) fn holding(&self) -> bool {
+        self.repeat.held()
+    }
+
     /// Drops the held key and ends its burst; the state redraws when the burst's latches let go.
     pub(super) fn ended(&mut self) -> FaceReply {
         self.repeat.leave();

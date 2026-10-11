@@ -22,7 +22,7 @@ pub const STATE: FaceReply = FaceReply {
     board: false,
     state: true,
     notice: None,
-    repeated: false,
+    holding: false,
 };
 
 /// A redraw of the board alone.
@@ -30,15 +30,23 @@ pub const BOARD: FaceReply = FaceReply {
     board: true,
     state: false,
     notice: None,
-    repeated: false,
+    holding: false,
 };
 
-/// A held key's repeat went out, with nothing to redraw.
-pub const REPEATED: FaceReply = FaceReply {
+/// The face still holds the pressed key, so the beat goes on, with nothing to redraw.
+pub const HOLDING: FaceReply = FaceReply {
     board: false,
     state: false,
     notice: None,
-    repeated: true,
+    holding: true,
+};
+
+/// A press that typed and holds its key: the state redraws and the beat starts.
+pub const HELD: FaceReply = FaceReply {
+    board: false,
+    state: true,
+    notice: None,
+    holding: true,
 };
 
 /// The started module, its host and fakes, and the face it provides.

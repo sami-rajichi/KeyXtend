@@ -181,7 +181,7 @@ fn debug_never_shows_which_key_was_pressed() {
 #[test]
 fn a_reply_redraws_nothing_by_default() {
     let reply = FaceReply::default();
-    assert!(!reply.board && !reply.state && reply.notice.is_none() && !reply.repeated);
+    assert!(!reply.board && !reply.state && reply.notice.is_none() && !reply.holding);
 }
 
 #[test]

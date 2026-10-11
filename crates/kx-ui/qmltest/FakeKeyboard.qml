@@ -41,11 +41,16 @@ QtObject {
     function tap(id, back) {
         return note("tap " + id + " " + back);
     }
+    // A press or a beat answers that the keyboard still holds the key, unless `reply` says otherwise.
+    function held(call) {
+        note(call);
+        return JSON.stringify(Object.assign({ holding: true }, reply));
+    }
     function press(id) {
-        return note("press " + id);
+        return held("press " + id);
     }
     function tick() {
-        return note("tick");
+        return held("tick");
     }
     function letGo(id) {
         return note("letGo " + id);

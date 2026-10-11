@@ -20,7 +20,7 @@ const STATE: FaceReply = FaceReply {
     board: false,
     state: true,
     notice: None,
-    repeated: false,
+    holding: false,
 };
 
 /// The text of `key` in shipped language `tag`.

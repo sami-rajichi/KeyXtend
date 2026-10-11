@@ -114,11 +114,7 @@ fn a_repeat_sent_in_part_stops_the_burst_and_lets_shift_go() {
     r.press(A).unwrap();
     let part = InjectError::Refused { sent: 1, total: 2 };
     r.fakes.injector.set_error(Some(part));
-    let typed = FaceReply {
-        repeated: true,
-        ..WARNED
-    };
-    assert_eq!(r.tick_in(delay), typed, "part of it typed, so it says so");
+    assert_eq!(r.tick_in(delay), WARNED, "one notice, and the beat stops");
     r.fakes.injector.set_error(None);
     assert_eq!(r.state()["keys"]["shift"]["on"], false, "part of it went");
     still(&r, 3);

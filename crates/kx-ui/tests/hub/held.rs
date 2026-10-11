@@ -1,5 +1,5 @@
-//! A held key through the hub (spec §4.6): a repeat that went out says so apart from a redraw, and a failed one
-//! logs one warning with no key.
+//! A held key through the hub (spec §4.6): a reply says apart from a redraw whether the keyboard still holds the key,
+//! and a failed repeat logs one warning with no key.
 
 use crate::Rig;
 use crate::logs::warnings_of;
@@ -7,17 +7,22 @@ use kx_module_api::keys;
 use kx_module_api::ports::{FaceAction, FaceReply, KeyId};
 
 #[test]
-fn a_repeat_that_went_out_says_so_apart_from_a_redraw() {
+fn a_key_still_held_says_so_apart_from_a_redraw() {
     let (rig, face, _host) = Rig::with_face();
     face.answer(Ok(FaceReply {
-        repeated: true,
+        holding: true,
         ..FaceReply::default()
     }));
     let redraw = rig.hub.act(FaceAction::Tick);
-    assert!(redraw.repeated && !redraw.state && !redraw.board);
+    assert!(redraw.holding && !redraw.state && !redraw.board);
     assert_eq!(
         redraw.to_json(),
-        r#"{"board":false,"state":false,"repeated":true}"#
+        r#"{"board":false,"state":false,"holding":true}"#
+    );
+    face.answer(Ok(FaceReply::default()));
+    assert!(
+        !rig.hub.act(FaceAction::Tick).holding,
+        "the keyboard let it go"
     );
 }
 

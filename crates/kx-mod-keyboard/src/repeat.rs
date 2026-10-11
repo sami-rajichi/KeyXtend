@@ -72,10 +72,9 @@ impl<K: Clone> Repeat<K> {
         self.phase = Phase::Idle;
     }
 
-    /// True while a key is held; only the tests ask.
-    #[cfg(test)]
+    /// True while a key is held.
     #[must_use]
-    pub(crate) fn held(&self) -> bool {
+    pub fn held(&self) -> bool {
         matches!(self.phase, Phase::Held { .. })
     }
 }

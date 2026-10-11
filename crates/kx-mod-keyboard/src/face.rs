@@ -21,7 +21,7 @@ const STATE: FaceReply = FaceReply {
     board: false,
     state: true,
     notice: None,
-    repeated: false,
+    holding: false,
 };
 
 /// The keyboard as the UI sees it: the typing state, size, place and language key behind one lock.
@@ -87,37 +87,48 @@ impl Face {
         self.reply(went)
     }
 
-    /// The pointer went down on key `id` (spec §4.6): it types now, answering as a tap does, and again at the delay
-    /// and on while held; while the list is open, a key that drives it waits for `panel_key`, as in `tap`.
+    /// The pointer went down on key `id` (spec §4.6): it types now, answering as a tap does and saying whether it
+    /// holds; while the list is open, a key that drives it waits for `panel_key`, as in `tap`.
     fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
-        let went = {
+        let (went, holding) = {
             let mut inner = self.lock();
             if inner.listing() && self.navs.contains_key(id) {
                 return Ok(FaceReply::default());
             }
-            inner.press(id)
+            let went = inner.press(id);
+            (went, inner.holding())
         };
-        self.reply(went)
+        Ok(FaceReply {
+            holding,
+            ..self.reply(went)?
+        })
     }
 
-    /// The hold timer: a repeat that went out says so and redraws only when its burst ended, as the latches stay
-    /// latched until then; any other due repeat answers as a tap does, and one sent in part says it repeated too.
+    /// The hold timer: a repeat that went out redraws only when its burst ended, as the latches stay latched until
+    /// then; any other due repeat answers as a tap does. Each reply says whether the key is still held.
     fn tick(&self) -> Result<FaceReply, FaceError> {
-        let Some(went) = self.lock().tick() else {
-            return Ok(FaceReply::default());
+        let (went, holding) = {
+            let mut inner = self.lock();
+            let went = inner.tick();
+            (went, inner.holding())
+        };
+        let Some(went) = went else {
+            return Ok(FaceReply {
+                holding,
+                ..FaceReply::default()
+            });
         };
         if matches!(went.tapped, Ok(Tapped::Done)) {
             return Ok(FaceReply {
                 state: went.ended,
-                repeated: true,
+                holding,
                 ..FaceReply::default()
             });
         }
-        let reply = self.reply(went)?;
         Ok(FaceReply {
-            repeated: went.tapped.is_err_and(TapError::reached),
-            ..reply
+            holding,
+            ..self.reply(went)?
         })
     }
 

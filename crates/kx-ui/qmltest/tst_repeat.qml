@@ -1,5 +1,6 @@
 // A held key (spec §4.6) over stand-in bridges: a repeating key sends its press and let-go instead of a click, Qt's
-// cancel or hiding sends leave, and the one hold timer runs only while a key is held; the test drives its ticks.
+// cancel, hiding or the list showing sends leave, and the one hold timer runs only while the keyboard holds the key;
+// the test drives its ticks.
 import QtQuick
 import QtTest
 import "../qml"
@@ -59,7 +60,7 @@ Item {
         function test_a_beat_that_redrew_reads_the_state_again() {
             const win = make();
             mousePress(keyed(win, q));
-            win.keyboard.reply = { board: false, state: true, repeated: false };
+            win.keyboard.reply = { board: false, state: true, holding: true };
             const shown = win.st;
             win.hold.triggered();
             verify(win.st !== shown, "the state is read again");
@@ -71,7 +72,7 @@ Item {
             const win = make();
             const key = keyed(win, q);
             mousePress(key);
-            win.keyboard.reply = { board: false, state: false, repeated: true };
+            win.keyboard.reply = { board: false, state: false, holding: true };
             const shown = win.st;
             win.hold.triggered();
             verify(win.st === shown, "a plain repeat redraws nothing");
@@ -79,18 +80,45 @@ Item {
             win.visible = false;
         }
 
-        function test_a_key_held_as_the_list_opens_lets_go_and_never_drives_the_list() {
+        function test_a_key_held_as_the_list_opens_stops_its_beat_and_never_drives_the_list() {
             const win = make();
             const down = keyed(win, "down");
             mousePress(down);
             win.keyboard.state = Face.states.list;
             win.restate();
+            verify(!win.hold.running, "the beat stops once the list shows");
+            compare(sent(win), ["press down", "leave"]);
             const panel = [...win.data].find(o => o.item && o.item.win === win).item;
             const list = [...panel.data].find(o => o.view !== undefined);
             tryVerify(() => list.visible && panel.visible, 2000, "the list shows");
             waitForRendering(list.contentItem);
             mouseRelease(down);
-            compare(sent(win), ["press down", "letGo down"]);
+            compare(sent(win), ["press down", "leave"], "the let-go adds nothing");
+            win.visible = false;
+        }
+
+        // Ctrl latched, a dead key, or a press not sent: the keyboard types once and holds nothing, so no beat starts.
+        function test_a_press_the_keyboard_does_not_hold_starts_no_beat() {
+            const win = make();
+            const key = keyed(win, q);
+            win.keyboard.reply = { board: false, state: true, holding: false };
+            mousePress(key);
+            verify(!win.hold.running, "no beat");
+            mouseRelease(key);
+            compare(sent(win), ["press " + q], "the let-go adds nothing");
+            win.visible = false;
+        }
+
+        // A repeat that is stale, refused, or turns into a shortcut ends the keyboard's hold, so the beat stops.
+        function test_the_beat_stops_once_the_keyboard_stops_holding() {
+            const win = make();
+            const key = keyed(win, q);
+            mousePress(key);
+            win.keyboard.reply = { board: false, state: true, holding: false };
+            win.hold.triggered();
+            verify(!win.hold.running, "the beat stops");
+            mouseRelease(key);
+            compare(sent(win), ["press " + q, "tick"], "the let-go adds nothing");
             win.visible = false;
         }
 

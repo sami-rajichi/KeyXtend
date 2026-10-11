@@ -1,6 +1,6 @@
 //! A held key through the face (spec §4.6): a press types at once, a hold adds one at the delay and then one a beat
-//! with the latches kept down, a let-go types nothing, and the keys that act once: a shortcut, a dead key, an open
-//! list and repeat off.
+//! with the latches kept down, a let-go types nothing, and the keys that act once and so start no beat: a shortcut,
+//! a dead key, an open list and repeat off.
 
 #![allow(
     clippy::unwrap_used,
@@ -8,7 +8,7 @@
 )]
 
 use crate::host::GOLDEN;
-use crate::rig::{REPEATED, Rig, STATE};
+use crate::rig::{HELD, HOLDING, Rig, STATE};
 use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{FaceReply, LayoutTable, Scan, TextRoute};
@@ -42,9 +42,13 @@ pub fn hold(r: &Rig, id: &str, beats: u64) {
 fn a_press_types_once_at_once_and_its_let_go_types_nothing() {
     let r = Rig::new(&GOLDEN, None);
     let (delay, _) = times();
-    assert_eq!(r.press(A), Ok(STATE));
+    assert_eq!(r.press(A), Ok(HELD), "it holds, so the beat starts");
     assert_eq!(r.fakes.injector.strokes(), [text("a")], "at the press");
-    assert_eq!(r.tick_in(delay - 1), FaceReply::default());
+    assert_eq!(
+        r.tick_in(delay - 1),
+        HOLDING,
+        "no repeat yet, the beat goes on"
+    );
     assert_eq!(r.let_go(A), Ok(STATE), "the burst ends");
     r.tick_in(delay * 2);
     assert_eq!(r.fakes.injector.strokes(), [text("a")]);
@@ -54,12 +58,16 @@ fn a_press_types_once_at_once_and_its_let_go_types_nothing() {
 fn a_hold_adds_one_at_the_delay_then_one_a_beat_and_its_let_go_adds_none() {
     let r = Rig::new(&GOLDEN, None);
     let (delay, every) = times();
+    let typed = || r.fakes.injector.strokes().len();
     r.press(A).unwrap();
-    assert_eq!(r.tick_in(delay), REPEATED, "it says so and redraws nothing");
-    assert_eq!(r.tick_in(every / 2), FaceReply::default(), "between beats");
-    assert_eq!(r.tick_in(every / 2), REPEATED);
-    assert_eq!(r.tick_in(every), REPEATED);
-    r.let_go(A).unwrap();
+    assert_eq!(r.tick_in(delay), HOLDING, "it holds on and redraws nothing");
+    assert_eq!(typed(), 2, "one at the delay");
+    assert_eq!(r.tick_in(every / 2), HOLDING, "between beats");
+    assert_eq!(typed(), 2);
+    assert_eq!(r.tick_in(every / 2), HOLDING);
+    assert_eq!(r.tick_in(every), HOLDING);
+    assert_eq!(typed(), 4, "one a beat");
+    assert_eq!(r.let_go(A), Ok(STATE), "the beat ends");
     r.tick_in(every * 3);
     assert_eq!(r.fakes.injector.strokes(), vec![text("a"); 4]);
 }
@@ -91,7 +99,7 @@ fn with_shift_latched_each_repeat_is_capital_and_shift_lets_go_after_the_burst()
     hold(&r, A, 1);
     assert_eq!(
         r.tick_in(times().1),
-        REPEATED,
+        HOLDING,
         "Shift stays lit, so nothing redraws"
     );
     assert_eq!(r.state()["keys"]["shift"]["on"], true, "down for the burst");
@@ -106,7 +114,7 @@ fn with_ctrl_alt_or_win_latched_a_held_key_acts_once_at_the_press() {
     for (latch, code) in [("ctrl", 0x1D), ("alt", 0x38), ("win", 0xE05B)] {
         let r = Rig::new(&GOLDEN, None);
         r.tap(latch).unwrap();
-        r.press(z).unwrap();
+        assert_eq!(r.press(z), Ok(STATE), "{latch}: no beat starts");
         let once = [Stroke::Chord(vec![Scan::new(code)], Scan::new(0x2C))];
         assert_eq!(r.fakes.injector.strokes(), once, "{latch}");
         assert_eq!(r.state()["keys"][latch]["on"], false, "{latch}");
@@ -133,7 +141,7 @@ fn altgr_acting_as_right_alt_acts_once_at_the_press() {
 fn a_held_dead_key_types_once_at_the_press() {
     let r = Rig::new(&["fr-fr"], None);
     let hat = "c-0x001A";
-    r.press(hat).unwrap();
+    assert!(!r.press(hat).unwrap().holding, "no beat starts");
     assert_eq!(r.fakes.injector.strokes(), [Stroke::Tap(Scan::new(0x1A))]);
     r.tick_in(times().0 * 2);
     r.let_go(hat).unwrap();
@@ -171,7 +179,7 @@ fn while_the_list_is_open_its_keys_wait_for_the_list_and_a_character_types_once(
 #[test]
 fn with_repeat_off_a_press_types_once() {
     let r = Rig::new(&GOLDEN, Some(("repeat", false.into())));
-    r.press(A).unwrap();
+    assert_eq!(r.press(A), Ok(STATE), "no beat starts");
     assert_eq!(r.fakes.injector.strokes(), [text("a")]);
     r.tick_in(times().0 * 2);
     r.let_go(A).unwrap();
@@ -182,7 +190,7 @@ fn with_repeat_off_a_press_types_once() {
 fn a_key_that_never_repeats_types_once_at_the_press() {
     for (id, code) in [("esc", 0x01), ("tab", 0x0F), ("menu", 0xE05D)] {
         let r = Rig::new(&GOLDEN, None);
-        r.press(id).unwrap();
+        assert_eq!(r.press(id), Ok(STATE), "{id}: no beat starts");
         let once = [Stroke::Tap(Scan::new(code))];
         assert_eq!(r.fakes.injector.strokes(), once, "{id}");
         r.tick_in(times().0 * 2);

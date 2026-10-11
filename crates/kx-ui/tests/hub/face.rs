@@ -36,7 +36,7 @@ fn the_face_draws_and_says_what_to_redraw() {
     );
     assert_eq!(
         redraw.to_json(),
-        r#"{"board":true,"state":false,"repeated":false}"#
+        r#"{"board":true,"state":false,"holding":false}"#
     );
     assert_eq!(face.acts(), [FaceAction::Bigger]);
 }

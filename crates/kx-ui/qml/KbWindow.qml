@@ -183,13 +183,14 @@ Window {
         if (st && st.at && !(mover && mover.busy))
             moveTo(st.at);
     }
-    // Rereads what an action's `json` answer asks for, and the state and place too when `always`.
+    // Rereads what an action's `json` answer asks for, and the state and place too when `always`; returns the answer.
     function redraw(json, always) {
-        const r = JSON.parse(json);
-        if (r && r.board)
+        const r = JSON.parse(json) || {};
+        if (r.board)
             board = JSON.parse(keyboard.boardJson());
-        if (always || (r && (r.state || r.board)))
+        if (always || r.state || r.board)
             restate();
+        return r;
     }
     function moveTo(p) {
         const l = spots.logical(p.x, p.y);
