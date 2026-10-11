@@ -13,6 +13,12 @@ size_min = 0.8
 size_max = 1.8
 # How often the labels follow the layout of the app in front, in ms.
 relabel_ms = 500
+# Held typing keys repeat, as on a physical keyboard; with false, a held key types once, on let-go.
+repeat = true
+# How long a key is held before it repeats, in ms.
+repeat_delay_ms = 800
+# The time between repeats, in ms.
+repeat_every_ms = 100
 # Apps that get text as key presses in their own layout, by file name such as "app.exe".
 key_apps = []
 # Where the user last put the keyboard, in physical pixels; used only when `placed` is true.

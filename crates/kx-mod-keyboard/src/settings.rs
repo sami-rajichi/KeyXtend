@@ -1,4 +1,4 @@
-//! The `[keyboard]` settings: modifiers, the language key, size, place and the bubble corner.
+//! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place and the bubble corner.
 
 pub use kx_module_api::ports::Corner;
 
@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 /// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
 /// hand-edited value from stalling them.
 pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
+/// How long a key is held before it repeats, in ms: a slow click never repeats, and a held key never waits for long.
+pub(crate) const REPEAT_DELAY_MS: RangeInclusive<u64> = 300..=3_000;
+/// The time between repeats, in ms: from about 30 a second to one a second.
+pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
 /// The smallest `size_min` the settings take: the lowest size step where every key cell is still 24 px across
 /// (the spacing rule of WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
@@ -81,6 +85,12 @@ pub struct KeyboardSettings {
     pub size_max: f64,
     /// How often the labels follow the layout of the app in front, in ms.
     pub relabel_ms: u64,
+    /// Held typing keys repeat.
+    pub repeat: bool,
+    /// How long a key is held before it repeats, in ms.
+    pub repeat_delay_ms: u64,
+    /// The time between repeats, in ms.
+    pub repeat_every_ms: u64,
     /// Apps that get text as key presses in their own layout, by file name.
     pub key_apps: Vec<String>,
     /// The saved left edge, in physical pixels.
@@ -121,10 +131,9 @@ impl Settings for KeyboardSettings {
                 "size_min and size_max must be from {low} to {high}"
             )));
         }
-        if !RELABEL_MS.contains(&self.relabel_ms) {
-            let (low, high) = (RELABEL_MS.start(), RELABEL_MS.end());
-            return Err(invalid(&format!("relabel_ms must be from {low} to {high}")));
-        }
+        within("relabel_ms", self.relabel_ms, &RELABEL_MS)?;
+        within("repeat_delay_ms", self.repeat_delay_ms, &REPEAT_DELAY_MS)?;
+        within("repeat_every_ms", self.repeat_every_ms, &REPEAT_EVERY_MS)?;
         if self.key_apps.iter().any(|a| a.trim().is_empty()) {
             return Err(invalid(BLANK_APP));
         }
@@ -162,6 +171,15 @@ impl KeyboardSettings {
 /// A broken rule as a settings error.
 fn invalid(why: &str) -> SettingsError {
     SettingsError::Invalid(why.to_owned())
+}
+
+/// Refuses `value` of `key` outside `range`, naming the range.
+fn within(key: &str, value: u64, range: &RangeInclusive<u64>) -> Result<(), SettingsError> {
+    if range.contains(&value) {
+        return Ok(());
+    }
+    let (low, high) = (range.start(), range.end());
+    Err(invalid(&format!("{key} must be from {low} to {high}")))
 }
 
 #[cfg(test)]
