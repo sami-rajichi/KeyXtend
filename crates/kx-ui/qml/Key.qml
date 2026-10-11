@@ -119,8 +119,8 @@ Item {
             move: key.mv.colour
         }
     }
-    // A press sinks the cap at once, so the next frame shows it (spec §10); only the rise back eases. The gate reads the
-    // target, not `down`, which updates it and `sink` in no set order.
+    // A press sinks the cap at once, so the next frame shows it (spec §10); only the rise back eases. It reads the
+    // target, since `down` and `sink` change in no set order.
     Behavior on sink {
         enabled: targetValue < key.sink
         Tween {

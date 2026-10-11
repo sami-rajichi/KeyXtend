@@ -92,15 +92,20 @@ Item {
             return row ? row.data.find(turn) : null;
         }
         // Spec §10 and G8: the frame drawn next after a press on a hovered key shows the press in full, in every look.
+        // Each key hides and the pointer leaves it after, so the next look's key draws and hovers alone.
         function test_a_press_shows_in_full_on_the_next_frame_in_every_look() {
             for (const [name, lk] of root.looks) {
                 const k = makeKey(lk, false);
+                const rest = grabImage(k);
                 mouseMove(k);
                 const hovered = grabImage(k);
+                verify(!hovered.equals(rest), name + ": the hover is drawn");
                 mousePress(k);
                 compare(k.sink, 1, name + ": the cap sinks at once");
                 verify(!grabImage(k).equals(hovered), name + ": the next frame shows the press");
                 mouseRelease(k);
+                mouseMove(root, root.width - 1, root.height - 1);
+                k.visible = false;
             }
         }
         // The let-go eases back with full motion and jumps when reduced; a press while it eases shows in full at once.
@@ -109,6 +114,7 @@ Item {
             mousePress(k);
             mouseRelease(k);
             verify(k.sink > 0, "the let-go eases back: " + k.sink);
+            tryVerify(() => k.sink < 1, 1000, "the rise has begun");
             mousePress(k);
             compare(k.sink, 1, "a press while it eases");
             mouseRelease(k);
