@@ -141,7 +141,7 @@ pub fn around_prompt<T>(prompt: impl FnOnce() -> Result<T, String>) -> Result<T,
     out
 }
 
-/// Sends kx-gates' own clicks through `send`; while the guard holds the mouse, its hook must count them within
+/// Sends kx-gates' own clicks or moves through `send`; while the guard holds the mouse, its hook must count them within
 /// `alive_ms`, or the gate stops as lost.
 pub fn own_input<T>(send: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
     let base = slot().as_ref().map(|s| s.own());

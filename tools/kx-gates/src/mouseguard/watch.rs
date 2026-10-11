@@ -1,5 +1,5 @@
-//! Whether the guard's hook still runs: Windows may remove a low-level hook without a word, so kx-gates' own clicks,
-//! which every live hook counts, must be counted within `alive_ms`.
+//! Whether the guard's hook still runs: Windows may remove a low-level hook without a word, so kx-gates' own clicks
+//! and moves, which every live hook counts, must be counted within `alive_ms`.
 
 use std::time::Duration;
 
@@ -14,7 +14,7 @@ struct Sent {
     base: u64,
 }
 
-/// Watches that the running hook counts kx-gates' own clicks in time.
+/// Watches that the running hook counts kx-gates' own clicks and moves in time.
 #[derive(Debug, Clone)]
 pub struct Watch {
     /// How soon a live hook counts them.
@@ -32,7 +32,7 @@ impl Watch {
         }
     }
 
-    /// Notes clicks sent at `at` after the hooks had counted `base` own events; an older send still uncounted stays
+    /// Notes clicks or moves sent at `at` after the hooks had counted `base` own events; an older send still uncounted stays
     /// the one watched.
     pub fn sent(&mut self, at: Mono, base: u64) {
         if self.pending.is_none_or(|p| p.base != base) {

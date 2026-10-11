@@ -3,11 +3,11 @@
 use kx_platform_windows::keys::TAG;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYEVENTF_EXTENDEDKEY, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_MOVE,
-    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEINPUT,
+    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEINPUT,
 };
 
 use super::*;
-use crate::mouse::input;
+use crate::mouse::{input, normalise};
 use crate::mouseguard::fake::{Fake, cfg, held, slot_lock};
 
 #[allow(unsafe_code, reason = "Reads the keyboard member of a key input.")]
@@ -121,6 +121,34 @@ fn only_a_batch_that_presses_or_releases_a_mouse_button_is_watched_as_own_clicks
     assert!(!clicks(&[wheel]), "a wheel turn");
     assert!(!clicks(&[tagged(0x41, false, TAG)]), "a key");
     assert!(!clicks(&[]));
+}
+
+#[test]
+fn a_move_that_lands_far_enough_from_the_pointer_is_watched_and_one_beside_it_is_not() {
+    let desk = (-1920, 0, 3840, 1080);
+    let (left, _, width, height) = desk;
+    let to = |x, y| {
+        let (x, y) = (normalise(x, left, width), normalise(y, 0, height));
+        let flags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
+        input(x, y, flags, TAG)
+    };
+    let (at, near, far) = (-100, -100 + SURE_MOVE_PX - 1, -100 + SURE_MOVE_PX);
+    let here = POINT { x: at, y: 500 };
+    assert!(!moves_far(&[to(at, 500)], here, desk), "where it is");
+    assert!(
+        !moves_far(&[to(near, 500)], here, desk),
+        "may round onto it"
+    );
+    assert!(moves_far(&[to(far, 500)], here, desk));
+    assert!(moves_far(&[to(at, 500 - SURE_MOVE_PX)], here, desk));
+    assert!(
+        moves_far(&[to(at, 500), to(far, 500)], here, desk),
+        "a later step"
+    );
+    let relative = input(5, 5, MOUSEEVENTF_MOVE, TAG);
+    let after = [relative, to(far, 500)];
+    assert!(!moves_far(&after, here, desk), "the pointer is unknown");
+    assert!(!moves_far(&[tagged(0x41, false, TAG)], here, desk), "a key");
 }
 
 #[test]

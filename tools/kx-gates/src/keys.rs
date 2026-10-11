@@ -7,16 +7,18 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{InputInjector, TextRoute};
 use kx_platform_windows::WinInjector;
 use kx_platform_windows::inject::{self, send_keys, vk_key};
+use kx_platform_windows::screen::cursor;
 use kx_platform_windows::strokes::{self, KeyEvent};
+use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSE_EVENT_FLAGS, MOUSEEVENTF_HWHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
-    MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN,
-    MOUSEEVENTF_XUP,
+    INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE,
+    MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN,
+    MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
+    MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT,
 };
 
-use crate::mouseguard;
-use crate::win::sleep_ms;
+use crate::win::{self, sleep_ms};
+use crate::{mouse, mouseguard};
 
 /// Mouse flags that press a button.
 const DOWNS: u32 = MOUSEEVENTF_LEFTDOWN.0
@@ -28,15 +30,23 @@ const PRESSES: u32 = DOWNS | MOUSEEVENTF_WHEEL.0 | MOUSEEVENTF_HWHEEL.0;
 /// Mouse flags that let a button go.
 const RELEASES: u32 =
     MOUSEEVENTF_LEFTUP.0 | MOUSEEVENTF_RIGHTUP.0 | MOUSEEVENTF_MIDDLEUP.0 | MOUSEEVENTF_XUP.0;
+/// A move this many pixels or more from the pointer surely moves it, as Windows rounds an absolute target by up to
+/// a pixel; a move that ends where the pointer is reaches no low-level hook.
+const SURE_MOVE_PX: i32 = 2;
 
-/// The flags of `input` when it is mouse input.
+/// The mouse part of `input` when it is mouse input.
 #[allow(unsafe_code, reason = "Reads the union member the input's type names.")]
-fn mouse_flags(input: &INPUT) -> Option<u32> {
+fn as_mouse(input: &INPUT) -> Option<MOUSEINPUT> {
     if input.r#type != INPUT_MOUSE {
         return None;
     }
     // SAFETY: the type says the mouse member is set.
-    Some(unsafe { input.Anonymous.mi }.dwFlags.0)
+    Some(unsafe { input.Anonymous.mi })
+}
+
+/// The flags of `input` when it is mouse input.
+fn mouse_flags(input: &INPUT) -> Option<u32> {
+    as_mouse(input).map(|mi| mi.dwFlags.0)
 }
 
 /// Whether `input` presses something and whether it lets something go; anything but a key or mouse input presses.
@@ -55,14 +65,46 @@ fn press_release(input: &INPUT) -> (bool, bool) {
     (true, false)
 }
 
-/// True when `inputs` press or release a mouse button, which every live low-level hook sees; a move may end where
-/// the pointer already is, which no hook sees.
+/// True when `inputs` press or release a mouse button, which every live low-level hook sees.
 fn clicks(inputs: &[INPUT]) -> bool {
     let buttons = DOWNS | RELEASES;
     inputs
         .iter()
         .filter_map(mouse_flags)
         .any(|f| f & buttons != 0)
+}
+
+/// True when a virtual-desktop move in `inputs` lands `SURE_MOVE_PX` or more from where the pointer was before it,
+/// starting at `at` on desktop `desk` (left, top, width, height); after a relative move the pointer is unknown.
+fn moves_far(inputs: &[INPUT], at: POINT, desk: (i32, i32, i32, i32)) -> bool {
+    let (left, top, width, height) = desk;
+    let to_desk = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
+    let mut was = at;
+    for mi in inputs.iter().filter_map(as_mouse) {
+        if !mi.dwFlags.contains(MOUSEEVENTF_MOVE) {
+            continue;
+        }
+        if !mi.dwFlags.contains(to_desk) {
+            return false;
+        }
+        let to = (
+            mouse::pixel(mi.dx, left, width),
+            mouse::pixel(mi.dy, top, height),
+        );
+        if (to.0 - was.x).abs().max((to.1 - was.y).abs()) >= SURE_MOVE_PX {
+            return true;
+        }
+        was = POINT { x: to.0, y: to.1 };
+    }
+    false
+}
+
+/// True when every live low-level hook surely sees `inputs`: a mouse button goes down or up, or the pointer moves
+/// far enough from where it is now.
+fn hooks_see(inputs: &[INPUT]) -> bool {
+    let far =
+        || cursor().is_ok_and(|p| moves_far(inputs, POINT { x: p.x, y: p.y }, win::desktop()));
+    clicks(inputs) || far()
 }
 
 /// True when `inputs` let something go and press nothing, so they still go out after the mouse guard stopped a gate.
@@ -115,12 +157,12 @@ fn outgoing(
 }
 
 /// Sends mouse or key `inputs` in one batch; the error adds Windows' reason. Once the mouse guard stopped the gate, only
-/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed; clicks also tell the guard its hook
-/// must count them.
+/// a batch that lets go goes out, moved as `after` says, so nothing stays pressed; input every hook sees tells the
+/// guard its hook must count it.
 pub fn send_as(inputs: &[INPUT], after: After) -> Result<(), String> {
     let out = outgoing(inputs, mouseguard::allowed(), after)?;
     let send = || inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()));
-    if clicks(&out) {
+    if hooks_see(&out) {
         mouseguard::own_input(send)
     } else {
         send()

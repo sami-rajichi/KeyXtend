@@ -85,6 +85,11 @@ pub fn normalise(v: i32, start: i32, size: i32) -> i32 {
     round_px(f64::from(v - start) * ABS_MAX / f64::from((size - 1).max(1)))
 }
 
+/// The pixel over `start..start+size` that absolute coordinate `v` names; the inverse of `normalise`.
+pub fn pixel(v: i32, start: i32, size: i32) -> i32 {
+    start + round_px(f64::from(v) * f64::from((size - 1).max(1)) / ABS_MAX)
+}
+
 /// A mouse input at absolute (`dx`, `dy`) with `flags`, marked `tag`.
 pub fn input(dx: i32, dy: i32, flags: MOUSE_EVENT_FLAGS, tag: usize) -> INPUT {
     INPUT {
@@ -198,6 +203,16 @@ mod tests {
         assert_eq!(normalise(0, 0, 1920), 0);
         assert_eq!(normalise(1919, 0, 1920), 65535);
         assert_eq!(normalise(-1920, -1920, 3840), 0);
+    }
+
+    #[test]
+    fn pixel_reads_back_the_pixel_that_normalise_aimed_at() {
+        for (start, size) in [(0, 1920), (-1920, 3840), (100, 768)] {
+            for v in [start, start + 1, start + size / 2, start + size - 1] {
+                let abs = normalise(v, start, size);
+                assert_eq!(pixel(abs, start, size), v, "{v} over {start}+{size}");
+            }
+        }
     }
 
     #[test]

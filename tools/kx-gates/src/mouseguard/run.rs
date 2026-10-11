@@ -50,7 +50,7 @@ pub struct Session<H: Hook, C: Clock> {
     idle: bool,
     /// What every hook of this run counted, read live.
     tally: Arc<Tally>,
-    /// Whether the running hook still counts kx-gates' own clicks.
+    /// Whether the running hook still counts kx-gates' own clicks and moves.
     watch: Watch,
 }
 
@@ -84,12 +84,12 @@ impl<H: Hook, C: Clock> Session<H, C> {
         self.early.map_or(Ok(()), |e| Err(e.stopped()))
     }
 
-    /// kx-gates' own events its hooks counted so far; read before sending clicks, for `sent`.
+    /// kx-gates' own events its hooks counted so far; read before sending clicks or moves, for `sent`.
     pub fn own(&self) -> u64 {
         self.tally.passed()
     }
 
-    /// Notes clicks kx-gates sent after its hooks had counted `base` own events; while a hook holds the mouse, it
+    /// Notes clicks or moves kx-gates sent after its hooks had counted `base` own events; while a hook holds the mouse, it
     /// must count one within `alive_ms`.
     pub fn sent(&mut self, base: u64) {
         if self.live.is_some() && self.early.is_none() {
@@ -146,7 +146,7 @@ impl<H: Hook, C: Clock> Session<H, C> {
         }
     }
 
-    /// Lets go as lost when the running hook counted none of kx-gates' own clicks within `alive_ms`, as Windows
+    /// Lets go as lost when the running hook counted none of kx-gates' own clicks or moves within `alive_ms`, as Windows
     /// switched it off.
     fn check_alive(&mut self) {
         let held = self.live.is_some() && self.early.is_none();

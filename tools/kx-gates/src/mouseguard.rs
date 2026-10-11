@@ -58,7 +58,7 @@ pub struct MouseGuard {
     pub escape_clicks: u8,
     /// How close together those presses come, when more than one is set.
     pub escape_window_ms: u64,
-    /// How soon the hook must count kx-gates' own clicks; past it, Windows switched the hook off.
+    /// How soon the hook must count kx-gates' own clicks and moves; past it, Windows switched the hook off.
     pub alive_ms: u64,
 }
 
