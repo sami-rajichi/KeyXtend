@@ -19,14 +19,20 @@
 namespace kxui {
 
 #if defined(KX_UI_PROBES)
-// How many windows dropped Qt's cached graphics after a frame so far, and how many went while they waited for it;
-// debug builds only.
+// How many windows dropped Qt's cached graphics so far, how many of them while hidden, as a window that hid before its
+// frame does, and how many went while they waited; debug builds only.
 inline std::atomic<std::size_t> releases{0};
+inline std::atomic<std::size_t> hidden{0};
 inline std::atomic<std::size_t> gone{0};
 
 inline std::size_t released_windows()
 {
     return releases.load();
+}
+
+inline std::size_t hidden_windows()
+{
+    return hidden.load();
 }
 
 inline std::size_t gone_windows()
@@ -35,7 +41,7 @@ inline std::size_t gone_windows()
 }
 #endif
 
-// The property that marks a window waiting for the frame after which it drops Qt's cached graphics.
+// The property that marks a window waiting to drop Qt's cached graphics after its frame or on hiding.
 inline constexpr char RELEASING[] = "kxReleasing";
 
 // What runs once no window waits to drop its cached graphics after a look change: the freed memory goes back.
@@ -100,6 +106,8 @@ private:
         window->releaseResources();
 #if defined(KX_UI_PROBES)
         ++releases;
+        if (!window->isVisible())
+            ++hidden;
 #endif
         deleteLater();
         settle();
@@ -112,8 +120,8 @@ private:
     bool done = false;
 };
 
-// Has each shown Qt Quick window not waiting yet drop Qt's cached graphics after its next frame: pipelines, shaders and
-// upload data, which look changes would otherwise pile up. Once none waits, `then` runs once, the last look change's.
+// Has each shown Qt Quick window not waiting yet drop Qt's cached graphics after its next frame, or once it hides:
+// pipelines, shaders and upload data, which look changes would otherwise pile up. Once none waits, `then` runs once.
 inline void release_after_frame(Settled then)
 {
     Release::after(then);

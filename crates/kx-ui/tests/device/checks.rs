@@ -4,19 +4,23 @@ use crate::rebuild::watched;
 use crate::rig::{FIRST, GUARDED, Outcome, Rig, ticks, wait};
 use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
+use kx_module_api::ports::Point;
 use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
 use kx_ui::{
     ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees, released,
-    wakes,
+    released_hidden, wakes,
 };
 use std::thread;
 use tracing::Level;
 
-/// The themes the font step shows in turn: two with bundled fonts, then the one Windows draws, which loads none.
+/// The themes the font step shows in turn: two with bundled fonts, then the one Windows draws, which loads none. The
+/// look steps switch between the first two.
 const THEMES: [&str; 3] = ["dolch", "et66", "native"];
 /// Ticks a step runs to see that nothing happened meanwhile: many frames long.
 const QUIET: usize = 10;
+/// Where the tray icon is clicked: below the screen's work area, as on a taskbar.
+const TRAY_AT: Point = Point { x: 1700, y: 1050 };
 /// What a font that did not load logs, and what each warning of a device that could not be shared holds.
 const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
@@ -135,6 +139,34 @@ fn kept_look(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
     Err(format!(
         "a wake that kept the look asked {asked} times for a release; {freed} windows released, {gave} give-backs ran"
     ))
+}
+
+/// A window that hides before it draws a new look still drops its graphics, and the free pages still go back once:
+/// a theme lands while the tray menu is open, and in the same tick another program comes to the front, which shuts it.
+pub(crate) fn hid(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
+    let was = rig.hub.settings();
+    rig.show(UiSettings {
+        tray_grace_ms: 0,
+        ..was.clone()
+    });
+    let shown = drawing().0;
+    rig.tray.click(TRAY_AT);
+    wait(app, "the tray menu's first frame", || drawing().0 > shown)?;
+    let (calls, hidden) = (rig.memory.calls(), released_hidden());
+    rig.show(UiSettings {
+        theme: THEMES[1].to_owned(),
+        ..rig.hub.settings()
+    });
+    rig.tray.away();
+    wait(
+        app,
+        "the menu dropping its graphics while hidden, and one give-back",
+        || released_hidden() > hidden && rig.memory.calls() == calls + 1,
+    )?;
+    rig.show(was);
+    wait(app, "the first theme back, and one more give-back", || {
+        rig.memory.calls() == calls + 2
+    })
 }
 
 /// Shows theme `id` and loads its fonts; true when that changed what Qt holds.

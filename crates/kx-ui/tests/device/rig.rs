@@ -175,8 +175,9 @@ pub(crate) fn ticks(app: &mut UniquePtr<QGuiApplication>, n: usize) {
     }
 }
 
-/// Starts Qt as the app does, then checks the shared device, a theme picked through the wake, the losses, a window that
-/// cannot draw, the fonts, losses past the most, sharing turned off, the fallback and the End.
+/// Starts Qt as the app does, then checks the shared device, a theme picked through the wake, a window hiding before
+/// it draws one, the losses, a window that cannot draw, the fonts, losses past the most, sharing turned off, the
+/// fallback and the End.
 pub(crate) fn run() -> Outcome {
     let lines = Lines::install().ok_or("a log capture was set already")?;
     if !kx_ui::pin_drawing() || !kx_ui::pin_adapter(GONE) {
@@ -194,6 +195,7 @@ pub(crate) fn run() -> Outcome {
     }
     checks::shared(&mut app, &shell, &rig)?;
     checks::relooked(&mut app, &mut rig)?;
+    checks::hid(&mut app, &mut rig)?;
     let kept = rebuild::once(&mut app, &mut shell, &rig, &mut tick)?;
     left::away(&mut app, &mut shell, &rig)?;
     left::minimised(&mut app, &mut shell, &rig)?;

@@ -60,16 +60,21 @@ mod ffi {
         #[namespace = "kxui"]
         fn wired_windows() -> usize;
 
-        /// Has each shown window drop Qt's cached graphics once its next frame ends; once none waits, `then` runs.
+        /// Has each shown window drop Qt's cached graphics after its frame or on hiding; once none waits, `then` runs.
         #[namespace = "kxui"]
         fn release_after_frame(then: fn());
 
-        /// How many windows dropped Qt's cached graphics after a frame so far.
+        /// How many windows dropped Qt's cached graphics so far, after their frame or on hiding.
         #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn released_windows() -> usize;
 
-        /// How many windows went while they waited for that frame.
+        /// How many of them dropped it while hidden, as a window that hid before that frame does.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn hidden_windows() -> usize;
+
+        /// How many windows went while they waited to drop it.
         #[cfg(debug_assertions)]
         #[namespace = "kxui"]
         fn gone_windows() -> usize;
@@ -213,7 +218,8 @@ pub fn wired() -> usize {
 }
 
 /// Has each shown Qt Quick window drop Qt's cached graphics, such as the last look's pipelines and upload data, once
-/// its next frame ends, then gives the freed heap pages back (ADR-0023); call it on the GUI thread after a look change.
+/// its next frame ends or it hides, then gives the freed heap pages back (ADR-0023); call it on the GUI thread after a
+/// look change.
 pub(crate) fn release_after_frame() {
     ffi::release_after_frame(settled);
 }
@@ -225,11 +231,19 @@ fn settled() {
     }
 }
 
-/// How many windows dropped Qt's cached graphics after a frame so far; debug builds only, for tests.
+/// How many windows dropped Qt's cached graphics so far, after their frame or on hiding; debug builds only, for tests.
 #[cfg(debug_assertions)]
 #[must_use]
 pub fn released() -> usize {
     ffi::released_windows()
+}
+
+/// How many windows dropped Qt's cached graphics while hidden, as one that hid before its frame does; debug builds
+/// only, for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn released_hidden() -> usize {
+    ffi::hidden_windows()
 }
 
 /// How many windows went while they waited to drop their cached graphics; debug builds only, for tests.
