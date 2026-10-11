@@ -213,12 +213,12 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 
 ### 4.6 Key repeat (owner, 2026-10-11)
 
-- Holding a typing key types it again and again until the pointer lets go, as a physical keyboard does. A short click types once, on let-go, as before.
-- The calm defaults suit a pointer: the first repeat after 0.8 s, then 10 a second (`[keyboard] repeat_delay_ms`, `repeat_every_ms`). Each user can change both, or turn repeat off (`repeat`); a held key then types once on let-go.
+- Holding a typing key types it again and again until the pointer lets go, as a physical keyboard does. A short click types once, at the press, so a slip of the hand never cancels it (ADR-0024).
+- The calm defaults suit a pointer: the first repeat after 0.8 s, then 10 a second (`[keyboard] repeat_delay_ms`, `repeat_every_ms`). Each user can change both, or turn repeat off (`repeat`); a held key then types once, at the press.
 - **Repeating keys:** characters (letters, digits, symbols), which always repeat, and the named keys marked `repeat` in `board.toml`: Space, Enter, Backspace, Delete and the four arrows.
 - **Never repeating:** Shift, Ctrl, Alt, AltGr, Win, Caps Lock, Tab, Esc, Menu, the language key, accent (dead) keys, dimmed keys and the top-bar buttons.
 - Latched modifiers stay down for the whole burst and let go when it ends, so Shift with a held "a" types "AAAA". With Ctrl, Alt or Win latched (or AltGr acting as Right Alt), a held key types once, so a shortcut such as Ctrl+W never fires many times.
-- The burst stops when the pointer lets go or leaves the key, the keyboard hides, one of our panels opens, or a key does not reach the app; a pointer that slips off and back before any repeat still holds the key. While a panel is open, keys go to the panel and do not repeat.
+- The burst stops when the pointer lets go, the keyboard hides, one of our panels opens, or a key does not reach the app; a slip anywhere while held changes nothing, and a key slipped onto never acts. While a panel is open, keys go to the panel and do not repeat.
 
 ---
 
