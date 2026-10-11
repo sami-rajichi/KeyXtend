@@ -110,15 +110,17 @@ impl BoardSpec {
         Ok(())
     }
 
-    /// Refuses a named or side key whose role is `char`, and a key that sends a scan code when its role sends none, or the reverse.
+    /// Refuses a named or side key whose role is `char`, a key that sends a scan code when its role sends none, or the
+    /// reverse, and a key that repeats but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
         let named = self.rows.iter().flatten().filter_map(|i| match i {
-            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some())),
+            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some(), k.repeat)),
             RowItem::Chars(_) => None,
         });
-        let side = self.side.iter().map(|s| (&s.id, s.role, false));
-        for (id, role, has_code) in named.chain(side) {
-            if role == Role::Char || role.sends() != has_code {
+        let side = self.side.iter().map(|s| (&s.id, s.role, false, false));
+        for (id, role, has_code, repeat) in named.chain(side) {
+            let stray = repeat && role != Role::Send;
+            if role == Role::Char || role.sends() != has_code || stray {
                 return Err(BoardError::Role(id.clone()));
             }
         }

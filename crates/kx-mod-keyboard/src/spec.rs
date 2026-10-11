@@ -2,16 +2,16 @@
 
 mod check;
 mod error;
+mod keys;
 
 pub use error::BoardError;
+pub use keys::{RowKey, char_id};
 
 use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
 
 /// The board, compiled in so it is never read from disk.
 const BOARD: &str = include_str!("../board.toml");
-/// What starts a character key's id, `c-` and its scan code.
-const CHAR_PREFIX: &str = "c";
 
 /// What a key is, which sets its colours.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,6 +111,9 @@ pub struct KeySpec {
     /// What it does in an open panel, if anything.
     #[serde(default)]
     pub nav: Option<Nav>,
+    /// It repeats while held; only a `send` key may.
+    #[serde(default)]
+    pub repeat: bool,
 }
 
 /// A run of one-unit character keys, by scan code.
@@ -222,69 +225,6 @@ impl BoardSpec {
         )]
         (exact && fits).then_some(whole as u16)
     }
-}
-
-/// One key of a main row, as `rows` lists it.
-#[derive(Clone, Debug, PartialEq)]
-pub enum RowKey<'a> {
-    /// A named key.
-    Named(&'a KeySpec),
-    /// A character key.
-    Char {
-        /// Its id, `c-` and its scan code, such as `c-0x002C`.
-        id: String,
-        /// Its scan code.
-        sc: Scan,
-    },
-}
-
-impl BoardSpec {
-    /// The keys of main row `row`, left to right.
-    #[must_use]
-    pub fn row_keys(&self, row: usize) -> Vec<RowKey<'_>> {
-        let Some(items) = self.rows.get(row) else {
-            return Vec::new();
-        };
-        let mut keys = Vec::new();
-        for item in items {
-            match item {
-                RowItem::Key(k) => keys.push(RowKey::Named(k)),
-                RowItem::Chars(c) => keys.extend(c.chars.iter().map(|&sc| RowKey::Char {
-                    id: char_id(sc),
-                    sc,
-                })),
-            }
-        }
-        keys
-    }
-
-    /// The scan codes of every character key, row by row, left to right.
-    #[must_use]
-    pub fn char_scans(&self) -> Vec<Scan> {
-        let runs = self.rows.iter().flatten().filter_map(|i| match i {
-            RowItem::Chars(c) => Some(c.chars.iter().copied()),
-            RowItem::Key(_) => None,
-        });
-        runs.flatten().collect()
-    }
-
-    /// Every key's id, role and scan code: the main rows left to right, then the side keys.
-    #[must_use]
-    pub fn roles(&self) -> Vec<(String, Role, Option<Scan>)> {
-        let main = (0..self.rows.len()).flat_map(|r| self.row_keys(r));
-        let main = main.map(|k| match k {
-            RowKey::Named(n) => (n.id.clone(), n.role, n.sc),
-            RowKey::Char { id, sc } => (id, Role::Char, Some(sc)),
-        });
-        let side = self.side.iter().map(|s| (s.id.clone(), s.role, None));
-        main.chain(side).collect()
-    }
-}
-
-/// The id of the character key that sends `sc`; it stays when keys are added or moved.
-#[must_use]
-pub fn char_id(sc: Scan) -> String {
-    format!("{CHAR_PREFIX}-{sc}")
 }
 
 #[cfg(test)]

@@ -211,6 +211,15 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - **Per-app fallback:** some apps drop `VK_PACKET` events. For these, map the character back to a scan code in the target's layout (`VkKeyScanEx`).
 - Every injected event carries our signature in `dwExtraInfo`, so our own hooks can ignore our own injections.
 
+### 4.6 Key repeat (owner, 2026-10-11)
+
+- Holding a typing key types it again and again until the pointer lets go, as a physical keyboard does. A short click types once, on let-go, as before.
+- The calm defaults suit a pointer: the first repeat after 0.8 s, then 10 a second (`[keyboard] repeat_delay_ms`, `repeat_every_ms`). Each user can change both, or turn repeat off (`repeat`); a held key then types once on let-go.
+- **Repeating keys:** characters (letters, digits, symbols), Space, Enter, Backspace, Delete and the four arrows (`repeat` in `board.toml`).
+- **Never repeating:** Shift, Ctrl, Alt, AltGr, Win, Caps Lock, Tab, Esc, Menu, the language key, accent (dead) keys, dimmed keys and the top-bar buttons.
+- Latched modifiers stay down for the whole burst and let go when it ends, so Shift with a held "a" types "AAAA". With Ctrl, Alt or Win latched, a held key types once, so a shortcut such as Ctrl+W never fires many times.
+- The burst stops when the pointer lets go or leaves the key, the keyboard hides, or a key does not reach the app. While one of our panels is open, keys go to the panel and do not repeat.
+
 ---
 
 ## 5. Mouse assist
@@ -384,6 +393,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
   - theme and mode, size and "Reset size", bubble corner;
   - language key design, modifier behaviour;
   - hold time, sounds;
+  - key repeat: on or off, its delay and its speed, each explained in plain words (§4.6);
   - clipboard retention;
   - voice engine, model, forced language and keys;
   - vault export and import;

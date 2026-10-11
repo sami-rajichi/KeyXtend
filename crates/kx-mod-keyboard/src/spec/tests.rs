@@ -266,3 +266,4 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
 }
 
 mod ids;
+mod repeat;
