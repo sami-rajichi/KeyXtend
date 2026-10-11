@@ -76,7 +76,7 @@ mod qt {
         "src/bridges/tint.rs",
         "src/bridges/shadows.rs",
     ];
-    /// The soft shadows' adopter, which leans on how the pinned Qt makes RectangularShadow's material.
+    /// The soft shadows' adopter, which leans on how the pinned Qt makes `RectangularShadow`'s material.
     const SHADOWS_H: &str = "cpp/shadows.h";
     /// The hand-written C++ `QObject` classes, which moc reads.
     const MOC: &[&str] = &[SHADOWS_H];
@@ -89,8 +89,8 @@ mod qt {
     const HEADERS_KEY: &str = "QT_INSTALL_HEADERS";
     const VERSION_KEY: &str = "QT_VERSION";
     const GUI: &str = "QtGui";
-    /// The workspace manifest and the path of the one Qt version it pins, which the graphics device glue is checked
-    /// for.
+    /// The workspace manifest and the path of the one Qt version it pins, which the graphics device glue and the soft
+    /// shadows' adopter are checked for.
     const WORKSPACE: &str = "../../Cargo.toml";
     const PIN_PATH: [&str; 4] = ["workspace", "metadata", "stage", "qt_version"];
     /// The hand-written C++ the bridges include.
