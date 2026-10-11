@@ -18,13 +18,13 @@ use crate::g8churn;
 use crate::g8frames::{self, Recorder};
 use crate::g8parts::{Measured, Outside, parts, verdict};
 use crate::g8start::{self, Started, log_span};
-use crate::g8ui;
 use crate::out::say;
 use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{close, g2, mouseguard, out};
+use crate::{g8size, g8ui};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -75,7 +75,7 @@ fn measure(
     let folder = program.parent().ok_or("the program has no folder")?;
     let size_mb = proc::folder_mb(folder)?;
     let presses = g8ui::presses(ctx, &kb)?;
-    let resizes = g8ui::resizes(ctx, kb.hwnd)?;
+    let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let capture_cut = g8frames::cut(ctx, since, rec);
     let frames = g8frames::frames(ctx, program, since, rec);

@@ -14,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::apps::{self, Ctx};
-use crate::g8ui::{self, Resize, Size, after_grow};
+use crate::g8size::{self, Resize, Size, after_grow};
 use crate::g9win::{self, Guard, ex_of, guard_of, owner_of};
 use crate::keymap::Reader;
 use crate::launch;
@@ -199,12 +199,12 @@ fn plan<'a>(ctx: &'a Ctx) -> [(&'static str, Act<'a>); 6] {
 
 /// Grows the keyboard and sizes it back as G8 does, with a look after each press; an error when no press resized it.
 fn sizes(ctx: &Ctx, w: &mut Watch, reader: &Reader) -> Result<(), String> {
-    w.width = Some(g8ui::width(w.keyboard)?);
-    let grew = g8ui::resize(ctx, reader, w.keyboard, Size::Grow)?;
+    w.width = Some(g8size::width(w.keyboard)?);
+    let grew = g8size::resize(ctx, reader, w.keyboard, Size::Grow)?;
     w.look(ctx, GROW);
     let mut presses = vec![];
     for (size, step) in back(grew.ms.is_some()) {
-        presses.push(g8ui::resize(ctx, reader, w.keyboard, size)?);
+        presses.push(g8size::resize(ctx, reader, w.keyboard, size)?);
         w.look(ctx, step);
     }
     presses.push(grew);
@@ -246,7 +246,7 @@ fn undo(ctx: &Ctx, w: &Watch) -> Vec<String> {
         sleep_ms(ctx.cfg.g9.settle_ms);
     }
     if let Some(first) = w.width
-        && let Err(e) = g8ui::size_back(ctx, &reader, w.keyboard, first)
+        && let Err(e) = g8size::size_back(ctx, &reader, w.keyboard, first)
     {
         left.push(format!("the size was not put back: {e}"));
     }

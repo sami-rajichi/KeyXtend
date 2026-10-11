@@ -7,7 +7,8 @@ use crate::budget::{self, Part};
 use crate::g2;
 use crate::g8cfg::G8;
 use crate::g8churn::{self, Churn};
-use crate::g8ui::{Presses, Resize};
+use crate::g8size::Resize;
+use crate::g8ui::Presses;
 use crate::out;
 use crate::proc::Memory;
 
