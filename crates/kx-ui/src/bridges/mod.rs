@@ -17,6 +17,9 @@ pub mod shadows;
 pub mod tint;
 mod ui;
 
+#[cfg(debug_assertions)]
+pub use ui::wakes;
+
 use crate::hub::Hub;
 use cxx_qt_lib::QString;
 use std::sync::{Arc, OnceLock};

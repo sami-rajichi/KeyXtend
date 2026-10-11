@@ -14,6 +14,8 @@ use cxx_qt_lib::QString;
 use kx_platform::ui::WatchGuard;
 use std::pin::Pin;
 use std::sync::Arc;
+#[cfg(debug_assertions)]
+pub use wake::wakes;
 use wake::woken;
 
 /// The cxx-qt bridge that makes `Ui` a QML type.

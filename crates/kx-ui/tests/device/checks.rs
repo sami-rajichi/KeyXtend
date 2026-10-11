@@ -8,6 +8,7 @@ use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
 use kx_ui::{
     ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees, released,
+    wakes,
 };
 use std::thread;
 use tracing::Level;
@@ -19,8 +20,6 @@ const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
 /// What a refused icon warns.
 const REFUSED: &str = "icon was refused";
-/// Ticks Qt's loop runs to show that nothing follows a wake, many more than a release and its give-back take.
-const QUIET: usize = 10;
 
 /// The windows drew icons through the provider since it had made `made` textures, and it refused none: each engine,
 /// a rebuilt one too, has the provider, as Qt finds no other.
@@ -117,20 +116,17 @@ pub(crate) fn relooked(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> O
     kept_look(app, rig)
 }
 
-/// A wake that leaves the look as it was, as a change of another setting, drops no graphics and gives nothing back.
+/// A wake that leaves the look as it was, as the same settings handed again, asks no window to drop its graphics, so
+/// nothing is given back.
 fn kept_look(app: &mut UniquePtr<QGuiApplication>, rig: &mut Rig) -> Outcome {
-    let was = (released(), rig.memory.calls());
+    let (handled, relooks) = wakes();
     rig.show(rig.hub.settings());
-    for _ in 0..QUIET {
-        app.as_mut().map(|a| a.exec());
-    }
-    let now = (released(), rig.memory.calls());
-    if now == was {
-        Ok(())
-    } else {
-        Err(format!(
-            "a wake that kept the look released or gave back: {was:?} to {now:?}"
-        ))
+    wait(app, "the wake of the same settings", || wakes().0 > handled)?;
+    match wakes().1.saturating_sub(relooks) {
+        0 => Ok(()),
+        n => Err(format!(
+            "a wake that kept the look asked the windows to drop their graphics {n} times"
+        )),
     }
 }
 

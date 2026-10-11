@@ -39,6 +39,7 @@ pub use bridges::{
     fonts::font_families,
     shadows::adopted,
     tint::{icon_mask, icon_pixels, icon_textures},
+    wakes,
 };
 pub use geom::Area;
 pub use hub::{
