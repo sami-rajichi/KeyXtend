@@ -2,16 +2,36 @@
 //! nothing types into any other window, and checks that exactly one `[g8] press_key` character per press arrived.
 #![cfg(windows)]
 
+use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::ports::LayoutSource;
 use kx_platform_windows::WinLayouts;
 use kx_platform_windows::window::foreground;
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, Ctx};
+use crate::g8cfg::G8;
 use crate::g8ui::{self, Presses};
+use crate::gatecfg::{G2, below_delay};
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
 use crate::{launch, tlog, walk};
+
+/// Refuses G8's G2 clicks and its presses, held up to `press_wait_ms` when a key never lights, when either hold with
+/// `[g2] repeat_margin_ms` reaches the repeat delay of a keyboard with `settings`.
+fn holds_below(g8: &G8, g2: &G2, settings: &KeyboardSettings) -> Result<(), String> {
+    g2.holds_below(settings)?;
+    below_delay(
+        "g8.press_wait_ms",
+        g8.press_wait_ms,
+        g2.repeat_margin_ms,
+        settings,
+    )
+}
+
+/// `holds_below` with the running keyboard's settings, so a short repeat delay stops G8 before it measures anything.
+pub fn check_running(ctx: &Ctx) -> Result<(), String> {
+    holds_below(&ctx.cfg.g8, &ctx.cfg.g2, &product::keyboard()?)
+}
 
 /// What key `id` types at once in the layout of the app in front.
 fn typed_by_key(id: &str) -> Result<String, String> {
@@ -76,5 +96,25 @@ mod tests {
         assert!(!exact("aab", "a", 3), "a stray character");
         assert!(exact("", "a", 0), "no press, nothing typed");
         assert!(exact("لالا", "لا", 2), "a key that types two characters");
+    }
+
+    #[test]
+    fn g8s_presses_and_g2s_clicks_stay_a_margin_below_the_running_repeat_delay() {
+        let c = crate::config::load().expect("loads");
+        let (g8, g2) = (&c.g8, &c.g2);
+        let mut running = KeyboardSettings::from_defaults().expect("the defaults load");
+        assert_eq!(holds_below(g8, g2, &running), Ok(()));
+        running.repeat_delay_ms = g8.press_wait_ms + g2.repeat_margin_ms;
+        let e = holds_below(g8, g2, &running).expect_err("a press that never lit would repeat");
+        assert!(e.contains("g8.press_wait_ms"), "{e}");
+        let quick = G8 {
+            press_wait_ms: 0,
+            ..g8.clone()
+        };
+        running.repeat_delay_ms = g2.press_ms + g2.repeat_margin_ms;
+        let e = holds_below(&quick, g2, &running).expect_err("G8's G2 clicks would repeat");
+        assert!(e.contains("g2.press_ms"), "{e}");
+        running.repeat = false;
+        assert_eq!(holds_below(g8, g2, &running), Ok(()), "nothing repeats");
     }
 }

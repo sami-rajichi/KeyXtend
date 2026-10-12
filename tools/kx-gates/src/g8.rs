@@ -75,8 +75,9 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
     Ok(budget::core_pct(used, budget::ms(at.elapsed())))
 }
 
-/// Everything G8 measures on the started product, in order: start-up log, memory, idle, folder, presses, resizes and
-/// G2; then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
+/// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
+/// memory, idle, folder, presses, resizes and G2; then `PresentMon`'s frames once its capture ends, and only then the
+/// churn, whose theme switches never count.
 fn measure(
     ctx: &Ctx,
     s: &Started,
@@ -84,6 +85,7 @@ fn measure(
     (since, rec): (SystemTime, Option<&Recorder>),
 ) -> Result<(Measured, Result<Frames, String>), String> {
     let g = &ctx.cfg.g8;
+    g8type::check_running(ctx)?;
     let log = log_span(ctx, program, s.at_us)?;
     let kb = Keyboard::find()?;
     let (memory, memory_at_ms) = warm(ctx, s)?;

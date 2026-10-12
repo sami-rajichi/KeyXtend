@@ -60,18 +60,31 @@ impl G2 {
     /// Refuses a hold that, with its margin, reaches the repeat delay of a keyboard with `settings`, as each click
     /// would then repeat.
     pub fn holds_below(&self, settings: &KeyboardSettings) -> Result<(), String> {
-        let (delay, held) = (
-            settings.repeat_delay_ms,
-            self.press_ms.saturating_add(self.repeat_margin_ms),
-        );
-        if settings.repeat && held >= delay {
-            return Err(format!(
-                "g2.press_ms plus repeat_margin_ms is {held} ms, not below the keyboard's repeat delay of {delay} ms: \
-                 each click would repeat"
-            ));
-        }
-        Ok(())
+        below_delay(
+            "g2.press_ms",
+            self.press_ms,
+            self.repeat_margin_ms,
+            settings,
+        )
     }
+}
+
+/// Refuses setting `name`, a hold of `hold_ms`, that with `margin_ms` reaches the repeat delay of a keyboard with
+/// `settings`, as each press would then repeat.
+pub fn below_delay(
+    name: &str,
+    hold_ms: u64,
+    margin_ms: u64,
+    settings: &KeyboardSettings,
+) -> Result<(), String> {
+    let (delay, held) = (settings.repeat_delay_ms, hold_ms.saturating_add(margin_ms));
+    if settings.repeat && held >= delay {
+        return Err(format!(
+            "{name} plus g2.repeat_margin_ms is {held} ms, not below the keyboard's repeat delay of {delay} ms: \
+             each press would repeat"
+        ));
+    }
+    Ok(())
 }
 
 /// G3 top-band settings.
