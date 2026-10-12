@@ -40,7 +40,7 @@ pub use bridges::tint::serve_icons;
 pub use bridges::{
     device::{drawing, released, released_hidden, unreleased, wired},
     fonts::font_families,
-    frames::draw_window,
+    frames::{draw_window, mid_frame_draws},
     shadows::adopted,
     tint::{icon_mask, icon_pixels, icon_textures},
     wakes,

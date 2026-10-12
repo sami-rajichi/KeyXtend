@@ -9,7 +9,7 @@ use kx_theme::assets::FontFiles;
 use kx_ui::i18n::keys::WINDOW_KEYBOARD;
 use kx_ui::{
     ADAPTER_VAR, Device, FrameLog, Shell, UiSettings, draw_window, drawing, font_families,
-    pin_adapter, qt_sees, released, released_hidden, wakes,
+    mid_frame_draws, pin_adapter, qt_sees, released, released_hidden, wakes,
 };
 use std::thread;
 use tracing::Level;
@@ -98,13 +98,22 @@ fn frames_logged(rig: &Rig) -> Outcome {
     Err("the frame log missed a frame while it ran, or logged one after it stopped".into())
 }
 
-/// A press frame drawn at once (`press_frame = "now"`) finds the shown keyboard by its title, and no window by another.
+/// A press frame drawn at once (`press_frame = "now"`) finds the shown keyboard by its title, and no window by another;
+/// asked again from inside that frame, it refuses, so no frame starts within another.
 fn drawn_now(rig: &Rig) -> Outcome {
     let title = rig.hub.i18n().text(WINDOW_KEYBOARD);
-    if draw_window(&title) && !draw_window(NO_WINDOW) {
-        return Ok(());
+    if !draw_window(&title) || draw_window(NO_WINDOW) {
+        return Err(
+            "the keyboard was not drawn at once by its title, or a window by a title none has"
+                .into(),
+        );
     }
-    Err("the keyboard was not drawn at once by its title, or a window by a title none has".into())
+    match mid_frame_draws(&title).as_slice() {
+        [false] => Ok(()),
+        answers => Err(format!(
+            "asked from inside a frame, drawing at once answered {answers:?}"
+        )),
+    }
 }
 
 /// Off the GUI thread no device is made, and the adapter pin stays with no warning.

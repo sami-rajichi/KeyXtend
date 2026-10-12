@@ -1,5 +1,5 @@
-//! The keyboard's own frames on the Qt GUI thread: a press frame drawn at once (`press_frame = "now"`), and the frame
-//! log (`frame_log`), which logs one line per press and per frame, with times only.
+//! The keyboard's own frames on the Qt GUI thread: a press frame drawn at once (`press_frame = "now"`), never inside
+//! another frame, and the frame log (`frame_log`), which logs one line per press and per frame, with times only.
 
 use crate::bridges::harden::drawing_pinned;
 use crate::frames::{Frame, FrameTimes, Log, Mark, PressTimes};
@@ -10,8 +10,8 @@ use std::sync::{Mutex, PoisonError};
 #[cxx_qt::bridge]
 mod ffi {
     // SAFETY: `frames.h` and `framelog.h` declare exactly these items with these types; QString is cxx-qt-lib's own
-    // binding. QML and the app call them on the Qt GUI thread, outside a frame, and the watch calls back on that
-    // thread, so its plain Rust functions run where Qt draws.
+    // binding. QML and the app call them on the Qt GUI thread, and `draw_now` refuses inside a frame; the watch calls
+    // back on that thread, so its plain Rust functions run where Qt draws.
     unsafe extern "C++" {
         include!("kx-ui/cpp/frames.h");
         include!("kx-ui/cpp/framelog.h");
@@ -19,9 +19,15 @@ mod ffi {
         /// Qt string.
         type QString = cxx_qt_lib::QString;
 
-        /// Draws our shown Quick window titled `title` now, as its next update would; false when none shows.
+        /// Draws our shown Quick window titled `title` now, as its next update would; false when none shows or it is
+        /// mid-frame.
         #[namespace = "kxui"]
         fn draw_now(title: &QString) -> bool;
+
+        /// Draws window `title` at once and asks for it again from inside that frame; the inner answers.
+        #[cfg(debug_assertions)]
+        #[namespace = "kxui"]
+        fn mid_frame_draws(title: &QString) -> Vec<bool>;
 
         /// Times each press and frame of our Quick windows while it lives.
         #[namespace = "kxui"]
@@ -51,7 +57,7 @@ mod ffi {
 /// The frame log while one runs.
 static LOG: Mutex<Option<Log>> = Mutex::new(None);
 
-/// Draws our shown Quick window titled `title` now, as its next update would; false when none shows.
+/// Draws our shown Quick window titled `title` now, as its next update would; false when none shows or it is mid-frame.
 pub(crate) fn draw_now(title: &QString) -> bool {
     ffi::draw_now(title)
 }
@@ -61,6 +67,14 @@ pub(crate) fn draw_now(title: &QString) -> bool {
 #[must_use]
 pub fn draw_window(title: &str) -> bool {
     draw_now(&QString::from(title))
+}
+
+/// Draws window `title` at once and asks for it again from inside that frame; the inner answers. Debug builds only,
+/// for tests.
+#[cfg(debug_assertions)]
+#[must_use]
+pub fn mid_frame_draws(title: &str) -> Vec<bool> {
+    ffi::mid_frame_draws(&QString::from(title))
 }
 
 /// The frame log: while it lives, each press and each frame of our windows logs one line of times (`[ui] frame_log`).
