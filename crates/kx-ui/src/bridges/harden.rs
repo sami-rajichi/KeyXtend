@@ -1,8 +1,9 @@
-//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter and the
-//! drawing variables the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the app's own folders
-//! give plugins and QML modules.
+//! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter, the drawing
+//! variables and the frame timing the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the
+//! app's own folders give plugins and QML modules.
 
-use crate::harden::{DRAW_VARS, qt_names};
+use crate::UiSettings;
+use crate::harden::{DRAW_VARS, qt_names, swap_interval, timing_vars};
 use cxx_qt_lib::{QQmlApplicationEngine, QString, QStringList};
 use std::path::{MAIN_SEPARATOR, Path};
 use std::pin::Pin;
@@ -56,6 +57,14 @@ mod ffi {
         #[namespace = "kxui"]
         fn no_shader_cache();
 
+        /// Every Qt Quick window made from now on asks for swap interval `interval`.
+        #[namespace = "kxui"]
+        fn set_swap_interval(interval: i32);
+
+        /// The swap interval a new Qt Quick window asks for.
+        #[namespace = "kxui"]
+        fn swap_interval() -> i32;
+
         /// Qt loads plugins only from `paths` and the app's folder.
         #[namespace = "kxui"]
         fn set_library_paths(paths: &QStringList);
@@ -97,6 +106,24 @@ pub fn pin_drawing() -> bool {
         .iter()
         .filter(|(name, value)| !ffi::set_env(name, value));
     failed.count() == 0
+}
+
+/// Sets Qt's frame timing from the `[ui]` settings `s`: the variables of `timing_vars` and every window's swap interval.
+/// Call it after `harden_qt` and before Qt's app object exists; false when a variable could not be set.
+#[must_use]
+pub fn pin_timing(s: &UiSettings) -> bool {
+    ffi::set_swap_interval(swap_interval(s));
+    let vars = timing_vars(s);
+    let failed = vars
+        .iter()
+        .filter(|(name, value)| !ffi::set_env(name, value));
+    failed.count() == 0
+}
+
+/// The swap interval a new Qt Quick window asks for, as `pin_timing` set it.
+#[must_use]
+pub fn swap_interval_set() -> i32 {
+    ffi::swap_interval()
 }
 
 /// True when Qt's byte read gives every variable of `DRAW_VARS` the app's value, so every window draws on the GUI

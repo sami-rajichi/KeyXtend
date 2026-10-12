@@ -5,6 +5,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QStringList>
 #include <QtCore/qtenvironmentvariables.h>
+#include <QtGui/QSurfaceFormat>
 
 #include <cstddef>
 #include <cstdint>
@@ -91,6 +92,21 @@ inline rust::String qt_value(rust::Str name)
 {
     const std::string text(name.data(), name.size());
     return rust::String(qgetenv(text.c_str()).toStdString());
+}
+
+// Every Qt Quick window made from now on asks for swap interval `interval`: 1 shows each frame at a screen refresh,
+// 0 at once.
+inline void set_swap_interval(std::int32_t interval)
+{
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setSwapInterval(interval);
+    QSurfaceFormat::setDefaultFormat(format);
+}
+
+// The swap interval a new Qt Quick window asks for.
+inline std::int32_t swap_interval()
+{
+    return QSurfaceFormat::defaultFormat().swapInterval();
 }
 
 // Qt Quick neither reads nor writes its shader pipeline cache on disk.

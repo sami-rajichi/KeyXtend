@@ -23,6 +23,51 @@ fn every_drawing_variable_is_a_qt_one_so_the_clear_drops_an_outside_value_first(
     }
 }
 
+/// What Qt 6.11.2 does alone: two frames may wait, the vblank thread runs, and the update timer waits 5 ms.
+const QT_OWN: [(&str, &str); 3] = [(LATENCY_VAR, "2"), (NO_VBLANK_VAR, "0"), (IDLE_VAR, "5")];
+
+/// The `[ui]` defaults.
+fn defaults() -> UiSettings {
+    UiSettings::from_defaults().unwrap()
+}
+
+#[test]
+fn the_default_timing_variables_say_what_qt_does_alone() {
+    let set = timing_vars(&defaults());
+    let set: Vec<(&str, &str)> = set.iter().map(|(n, v)| (*n, v.as_str())).collect();
+    assert_eq!(set, QT_OWN);
+    assert_eq!(
+        swap_interval(&defaults()),
+        1,
+        "each frame waits for the refresh"
+    );
+}
+
+#[test]
+fn every_timing_variable_is_a_qt_one_so_the_clear_drops_an_outside_value_first() {
+    for (name, _) in timing_vars(&defaults()) {
+        assert!(is_qt(name.as_bytes()), "{name}");
+    }
+}
+
+#[test]
+fn each_knob_sets_its_own_variable() {
+    let s = UiSettings {
+        frame_latency: 0,
+        vblank_updates: false,
+        update_idle_ms: 0,
+        present_vsync: false,
+        ..defaults()
+    };
+    let set = timing_vars(&s);
+    let set: Vec<(&str, &str)> = set.iter().map(|(n, v)| (*n, v.as_str())).collect();
+    assert_eq!(
+        set,
+        [(LATENCY_VAR, "0"), (NO_VBLANK_VAR, "1"), (IDLE_VAR, "0")]
+    );
+    assert_eq!(swap_interval(&s), 0, "each frame shows at once");
+}
+
 #[test]
 fn case_does_not_matter_as_windows_ignores_it() {
     for name in ["qt_plugin_path", "Qml2_Import_Path", "qsg_info"] {

@@ -1,6 +1,8 @@
 //! The variables Qt reads at start. Another program of the same user could set them to load its own code into the
 //! uiAccess process, so the app clears them before Qt starts (see `harden_qt`).
 
+use crate::settings::UiSettings;
+
 /// The name prefixes of the variables Qt, Qt Quick and the QML engine read.
 pub const QT_PREFIXES: [&str; 4] = ["QT_", "QML", "QSG_", "QV4_"];
 
@@ -9,8 +11,31 @@ pub const QT_PREFIXES: [&str; 4] = ["QT_", "QML", "QSG_", "QV4_"];
 pub const DRAW_VARS: [(&str, &str); 2] =
     [("QSG_RENDER_LOOP", "basic"), ("QSG_NO_DEPTH_BUFFER", "1")];
 
+/// How many frames may wait to show, read as Qt's Direct3D device is made (`[ui] frame_latency`).
+pub const LATENCY_VAR: &str = "QT_D3D_MAX_FRAME_LATENCY";
+/// "1" turns off Qt's thread that starts frames on the screen's refresh (`[ui] vblank_updates`).
+pub const NO_VBLANK_VAR: &str = "QT_D3D_NO_VBLANK_THREAD";
+/// Qt's update timer in ms, where frames do not follow the refresh (`[ui] update_idle_ms`).
+pub const IDLE_VAR: &str = "QT_QPA_UPDATE_IDLE_TIME";
+
 /// Ends each name in a list of names, as it ends a C string.
 pub const NAME_END: u8 = 0;
+
+/// The frame timing variables the app sets after the clear, from the `[ui]` settings `s`; the defaults are Qt's own.
+#[must_use]
+pub fn timing_vars(s: &UiSettings) -> [(&'static str, String); 3] {
+    [
+        (LATENCY_VAR, s.frame_latency.to_string()),
+        (NO_VBLANK_VAR, u8::from(!s.vblank_updates).to_string()),
+        (IDLE_VAR, s.update_idle_ms.to_string()),
+    ]
+}
+
+/// The swap interval every Qt Quick window asks for under `s`: 1 shows each frame at a screen refresh, 0 at once.
+#[must_use]
+pub fn swap_interval(s: &UiSettings) -> i32 {
+    i32::from(s.present_vsync)
+}
 
 /// True for a variable Qt may read: a name that starts with a prefix, in any case, as Windows ignores case. The rest
 /// may be any bytes, so every name with a Qt prefix goes, whatever the code page made of it.

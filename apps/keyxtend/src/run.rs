@@ -90,7 +90,7 @@ fn run(
         Err(e) => return fail(&e),
     };
     let pinned = UI_ACCESS.then(|| platform.dirs().exe_dir.as_path());
-    crate::qt::run(pinned, gpu::low_power_adapter, || {
+    crate::qt::run(pinned, gpu::low_power_adapter, &hub.settings(), || {
         let _ = drain::stop(&hub, kernel_thread);
     })
 }

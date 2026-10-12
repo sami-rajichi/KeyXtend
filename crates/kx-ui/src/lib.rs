@@ -25,7 +25,7 @@ pub use bridges::device::Device;
 #[cfg(feature = "qt")]
 pub use bridges::harden::{
     ADAPTER_VAR, QML_DIR, drawing_pinned, harden_qt, pin_adapter, pin_drawing, pin_imports,
-    qt_reads, qt_sees,
+    pin_timing, qt_reads, qt_sees, swap_interval_set,
 };
 #[cfg(feature = "qt")]
 pub use bridges::install;

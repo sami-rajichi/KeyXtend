@@ -1,15 +1,17 @@
 //! Qt on the main thread: hardened first, kept on the lowest-power graphics adapter and drawing every window on this
-//! thread, then the app object, the shared graphics device with the root QML over the installed hub, and the event
-//! loop, run again each time the windows are made again or wait for the next try at a device.
+//! thread with the `[ui]` frame timing, then the app object, the shared graphics device with the root QML over the
+//! installed hub, and the event loop, run again each time the windows are made again or wait for the next try at a
+//! device.
 
 use cxx_qt_lib::QGuiApplication;
-use kx_ui::{After, Pick, Shell, harden_qt, pin_adapter, pin_drawing};
+use kx_ui::{After, Pick, Shell, UiSettings, harden_qt, pin_adapter, pin_drawing, pin_timing};
 use std::path::Path;
 use std::process::ExitCode;
 
 /// Loads the root QML and runs Qt's loop until the UI ends; `end` runs after the loop, while Qt's objects still live.
-/// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `pick` finds.
-pub fn run(pinned: Option<&Path>, pick: Pick, end: impl FnOnce()) -> ExitCode {
+/// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `pick` finds, with
+/// the frame timing of the `[ui]` settings `ui`.
+pub fn run(pinned: Option<&Path>, pick: Pick, ui: &UiSettings, end: impl FnOnce()) -> ExitCode {
     let cleared = harden_qt(pinned);
     if cleared > 0 {
         tracing::info!(cleared, "Qt variables were cleared before Qt started");
@@ -18,6 +20,7 @@ pub fn run(pinned: Option<&Path>, pick: Pick, end: impl FnOnce()) -> ExitCode {
     if !pin_drawing() {
         tracing::warn!("Qt's drawing variables could not be set, so each window draws as Qt picks");
     }
+    timing(ui);
     let mut app = QGuiApplication::new();
     let mut shell = Shell::open(pinned, pick);
     let exec = || app.as_mut().map(QGuiApplication::exec);
@@ -55,6 +58,20 @@ fn looped(mut exec: impl FnMut() -> Option<i32>, shell: &mut impl Rebuild) -> Op
             After::Failed => return None,
         }
     }
+}
+
+/// Sets Qt's frame timing from `ui` and logs it, so a measured run says which timing it had.
+fn timing(ui: &UiSettings) {
+    if !pin_timing(ui) {
+        tracing::warn!("Qt's frame timing could not be set, so some of it stays Qt's own");
+    }
+    tracing::info!(
+        frame_latency = ui.frame_latency,
+        vblank_updates = ui.vblank_updates,
+        update_idle_ms = ui.update_idle_ms,
+        present_vsync = ui.present_vsync,
+        "Qt's frame timing is set"
+    );
 }
 
 /// Has Qt draw on `adapter`, its place in DXGI's adapter list; with none, Qt picks its own.

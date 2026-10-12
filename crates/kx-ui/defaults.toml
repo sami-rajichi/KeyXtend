@@ -28,6 +28,14 @@ tray_grace_ms = 500
 device_rebuilds = 3
 # How long to wait before trying again when a new graphics device could not be made yet, as a driver resets, in ms.
 device_retry_ms = 500
+# How many frames may wait to show before the next one starts; 0 never waits. Qt's own value; read at start.
+frame_latency = 2
+# Frames start on the screen's refresh; false starts them update_idle_ms after a change. Read at start.
+vblank_updates = true
+# That wait, in ms, for windows whose frames do not follow the refresh. Qt's own value; read at start.
+update_idle_ms = 5
+# Each frame shows at a screen refresh; false shows it at once. Read at start.
+present_vsync = true
 # Rows per page in every list.
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.

@@ -170,6 +170,38 @@ fn the_device_retry_may_be_at_once_but_not_past_its_range() {
     assert!(unparsed(&with("device_retry_ms", -1)));
 }
 
+/// Qt 6.11.2's own frame latency (`QRhiD3D11::maxFrameLatency`) and update timer (`QPlatformWindow::requestUpdate`).
+const QT_LATENCY: u32 = 2;
+const QT_IDLE_MS: u64 = 5;
+
+#[test]
+fn the_frame_timing_knobs_default_to_what_qt_does_alone() {
+    let s = UiSettings::from_defaults().unwrap();
+    assert_eq!(
+        (s.frame_latency, s.update_idle_ms),
+        (QT_LATENCY, QT_IDLE_MS)
+    );
+    assert!(s.vblank_updates && s.present_vsync);
+}
+
+#[test]
+fn the_frame_timing_numbers_may_be_zero_but_not_past_their_range() {
+    for (key, end) in [
+        ("frame_latency", i64::from(*FRAME_LATENCY.end())),
+        (
+            "update_idle_ms",
+            i64::try_from(*UPDATE_IDLE_MS.end()).unwrap(),
+        ),
+    ] {
+        assert_eq!(validate_as::<UiSettings>(&with(key, 0)), Ok(()), "{key}");
+        assert_eq!(validate_as::<UiSettings>(&with(key, end)), Ok(()), "{key}");
+        assert!(invalid(&with(key, end + 1)), "{key}");
+        assert!(unparsed(&with(key, -1)), "{key}");
+    }
+    assert!(unparsed(&with("vblank_updates", "no")));
+    assert!(unparsed(&with("present_vsync", 0)));
+}
+
 #[test]
 fn page_rows_default_to_the_adr_0008_page() {
     assert!(PAGE_ROWS.contains(&UiSettings::from_defaults().unwrap().page_rows));
