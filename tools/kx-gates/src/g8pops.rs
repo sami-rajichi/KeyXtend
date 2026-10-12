@@ -3,6 +3,7 @@
 #![cfg(windows)]
 
 use std::collections::HashSet;
+use std::time::Instant;
 
 use kx_mod_keyboard::langkey::lone;
 use kx_mod_keyboard::{LangKey, Role};
@@ -13,6 +14,7 @@ use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::Ctx;
 use crate::g8cfg::G8;
+use crate::g8tips::{self, Hover, Keys};
 use crate::keymap::Reader;
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
@@ -37,6 +39,8 @@ pub struct Plan {
     pub away: POINT,
     /// The pointer's rest on each key: the running copy's tip time and `[g8] churn_tip_ms`.
     hover_ms: u64,
+    /// How often each rest looks for a new window: `[timing] poll_ms`.
+    poll_ms: u64,
     /// The language key's id, when it opens the list.
     pub lang: Option<String>,
     /// Why the list step is skipped, when it is.
@@ -86,6 +90,7 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
         tips,
         away,
         hover_ms: look.tip_ms + g.churn_tip_ms,
+        poll_ms: ctx.cfg.timing.poll_ms,
         lang,
         skip,
         themes: themes.list.len(),
@@ -99,14 +104,24 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
 /// What showed in the rounds.
 #[derive(Default)]
 pub struct Seen {
-    /// Hovers that showed a new window.
+    /// Hovers that showed a new window at the rest's end.
     pub tips: usize,
+    /// Each tip key's hovers, in `[g8] churn_tips` order.
+    pub keys: Keys,
     /// List opens that showed a new window.
     pub lists: usize,
     /// Minimises that hid the keyboard and showed the bubble.
     pub bubbles: usize,
     /// Bubble presses that brought the keyboard back.
     pub returns: usize,
+}
+
+impl Seen {
+    /// Counts hover `h` on tip key number `i`; the total takes only a tip showing at the rest's end, as before.
+    fn tip(&mut self, i: usize, h: Hover) {
+        self.tips += usize::from(h.hit);
+        self.keys.add(i, h);
+    }
 }
 
 /// The product's shown windows now, as plain numbers.
@@ -124,14 +139,17 @@ fn snapshot() -> HashSet<isize> {
     shown_now().into_iter().collect()
 }
 
-/// Rests the pointer on each tip key, counting each hover that showed a new window, then moves it away.
+/// Rests the pointer on each tip key, looking for a new window through the rest, then moves it away.
 fn hover(plan: &Plan, seen: &mut Seen) -> Result<(), String> {
     // The pointer rests away from the keys, so no tip shows yet.
     let base = snapshot();
-    for &at in &plan.tips {
+    for (i, &at) in plan.tips.iter().enumerate() {
         mouse::move_to(at)?;
-        sleep_ms(plan.hover_ms);
-        seen.tips += usize::from(any_new(&base, &shown_now()));
+        let moved = Instant::now();
+        let since = || win::ms_since(moved);
+        let shown = || any_new(&base, &shown_now());
+        let polls = g8tips::rest(plan.hover_ms, plan.poll_ms, since, sleep_ms, shown);
+        seen.tip(i, Hover::of(&polls));
     }
     mouse::move_to(plan.away)
 }
@@ -211,66 +229,4 @@ pub fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<()
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_pop_up_counts_by_a_window_new_since_the_step_began_not_by_how_many_show() {
-        let base: HashSet<isize> = [1, 2, 3].into();
-        assert!(!any_new(&base, &[1, 2, 3]), "nothing new");
-        assert!(!any_new(&base, &[1, 2]), "a banner that hid is no pop-up");
-        assert!(
-            any_new(&base, &[1, 2, 9]),
-            "a tip that showed as a banner hid"
-        );
-    }
-
-    #[test]
-    fn a_minimise_counts_a_swap_or_a_miss_and_stops_with_its_cause_when_no_bubble_showed() {
-        assert_eq!(
-            swapped(false, true),
-            Ok(true),
-            "the bubble took the keyboard's place"
-        );
-        assert_eq!(swapped(true, true), Ok(false), "a slow hide is a miss");
-        for keyboard in [true, false] {
-            let e = swapped(keyboard, false).expect_err("nothing to press back");
-            assert!(
-                e.contains("no bubble") && e.contains("churn_settle_ms"),
-                "{e}"
-            );
-        }
-    }
-
-    #[test]
-    fn the_list_step_runs_only_in_the_list_design_with_two_layouts_and_says_why_not() {
-        assert_eq!(skip_list(LangKey::List, 2), None);
-        let one = skip_list(LangKey::List, 1).expect("one layout opens no list");
-        assert!(one.contains("one layout"), "{one}");
-        let carousel = skip_list(LangKey::Carousel, 3).expect("the Carousel has no list");
-        assert!(carousel.contains("not the List design"), "{carousel}");
-    }
-
-    #[test]
-    fn a_theme_cycle_that_ends_elsewhere_stops_the_churn_and_says_how_to_undo_it() {
-        assert_eq!(back_to("native", "native"), Ok(()));
-        let e = back_to("native", "et66").expect_err("the owner's theme moved");
-        assert!(e.contains("native") && e.contains("et66"), "{e}");
-        assert!(e.contains(THEME_LEFT), "{e}");
-    }
-
-    /// The windows whose buttons the bubble step presses.
-    // Workspace paths from `tools/kx-gates/src`; a moved file breaks the build here, never silently.
-    const TOP_BAR_QML: &str = include_str!("../../../crates/kx-ui/qml/TopBar.qml");
-    const BUBBLE_QML: &str = include_str!("../../../crates/kx-ui/qml/Bubble.qml");
-
-    #[test]
-    fn the_bubble_step_presses_the_top_bars_minimise_and_the_bubbles_own_button() {
-        let g9 = crate::config::load().expect("kx-gates.toml loads").g9;
-        let hide = g9.put_away.strip_prefix("bar.").expect("a top-bar id");
-        assert!(TOP_BAR_QML.contains(&format!("part: \"{hide}\"")), "{hide}");
-        let (group, part) = g9.bring_back.split_once('.').expect("group.part");
-        let uid = format!("uid(\"{group}\", \"{part}\")");
-        assert!(BUBBLE_QML.contains(&uid), "{uid}");
-    }
-}
+mod tests;

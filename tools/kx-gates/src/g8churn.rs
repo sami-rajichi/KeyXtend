@@ -10,6 +10,9 @@ use crate::board;
 use crate::budget::Part;
 use crate::g8cfg::G8;
 use crate::g8pops::{self, Seen};
+use crate::g8tips::KeyTips;
+#[cfg(test)]
+use crate::g8tips::{Hover, Keys};
 use crate::keymap::Reader;
 use crate::mouse;
 use crate::proc::{Memory, Process};
@@ -38,6 +41,10 @@ pub struct Churn {
     pub hovers: usize,
     /// Hovers that showed a tip.
     pub tips: usize,
+    /// Each tip key's hits, tips that hid again and show times in the measured rounds, in `[g8] churn_tips` order.
+    pub tip_keys: Vec<KeyTips>,
+    /// The same in the warm-up rounds, whose first round alone follows no theme cycle.
+    pub warm_tip_keys: Vec<KeyTips>,
     /// Rounds that showed the language list; none when the list step was skipped.
     pub lists: Option<usize>,
     /// Rounds whose minimise hid the keyboard and showed the bubble.
@@ -62,6 +69,8 @@ impl Churn {
             per_round,
             hovers: 0,
             tips: 0,
+            tip_keys: Vec::new(),
+            warm_tip_keys: Vec::new(),
             lists: None,
             bubbles: 0,
             returns: 0,
@@ -164,8 +173,9 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
     mouse::move_to(plan.away)?;
     sleep_ms(g.churn_settle_ms);
+    let mut warm = Seen::default();
     for _ in 0..g.churn_warm_rounds {
-        g8pops::round(g, &reader, &plan, &mut Seen::default())?;
+        g8pops::round(g, &reader, &plan, &mut warm)?;
     }
     let mut seen = Seen::default();
     let round = || g8pops::round(g, &reader, &plan, &mut seen);
@@ -173,6 +183,8 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     Ok(Churn {
         hovers: g.churn_rounds * plan.tips.len(),
         tips: seen.tips,
+        tip_keys: seen.keys.report(&g.churn_tips),
+        warm_tip_keys: warm.keys.report(&g.churn_tips),
         lists: plan.lang.as_ref().map(|_| seen.lists),
         bubbles: seen.bubbles,
         returns: seen.returns,
@@ -185,9 +197,18 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
 #[cfg(test)]
 pub fn whole_of(g: &G8, before: Memory, per_round: Vec<Memory>) -> Churn {
     let hovers = g.churn_rounds * g.churn_tips.len();
+    let mut keys = Keys::default();
+    let hit = Hover {
+        hit: true,
+        shown_ms: None,
+    };
+    for i in (0..g.churn_rounds).flat_map(|_| 0..g.churn_tips.len()) {
+        keys.add(i, hit);
+    }
     Churn {
         hovers,
         tips: hovers,
+        tip_keys: keys.report(&g.churn_tips),
         lists: Some(g.churn_rounds),
         bubbles: g.churn_rounds,
         returns: g.churn_rounds,
