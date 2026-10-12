@@ -20,13 +20,15 @@ use crate::g8frames::{self, Recorder};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, log_span};
+use crate::g8type::Expect;
+use crate::g8ui::Spot;
 use crate::out::say;
 use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{close, g2, g2raw, mouseguard, out};
-use crate::{g8size, g8type, g8ui};
+use crate::{g8lit, g8size, g8type, g8ui};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -92,7 +94,8 @@ fn measure(
     let core_pct = idle(ctx, &s.process)?;
     let folder = program.parent().ok_or("the program has no folder")?;
     let size_mb = proc::folder_mb(folder)?;
-    let presses = g8type::presses(ctx, &kb)?;
+    let spot = Spot::of(&kb, &g.press_key)?;
+    let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
@@ -201,8 +204,12 @@ fn broke(e: &str, recorder: Option<u32>, secs: u64, quit: Option<&Result<bool, S
     format!("{e}{}{product}", left.unwrap_or_default())
 }
 
-/// Runs G8: `name` is the product, or `weak` for weak mode. The product must not be running, as G8 times a cold start.
+/// Runs G8: `name` is the product, or `weak` for weak mode, and the product must not be running, as G8 times a cold
+/// start; `lit` and `osk` time only the key light (`g8lit`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
+    if let Some(lit) = g8lit::run(ctx, name) {
+        return lit;
+    }
     cold()?;
     let weak = name == WEAK;
     let program = ctx.cfg.program(&ctx.cfg.g8.program);

@@ -1,5 +1,6 @@
 //! G8's presses type, as keys act at the press (ADR-0024): G8 keeps target-window in front while it presses, so
-//! nothing types into any other window, and checks that exactly one `[g8] press_key` character per press arrived.
+//! nothing types into any other window, and checks that exactly one character per press arrived: the product key's
+//! own, or for another keyboard the same one each time.
 #![cfg(windows)]
 
 use kx_mod_keyboard::KeyboardSettings;
@@ -10,9 +11,9 @@ use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, Ctx};
 use crate::g8cfg::G8;
-use crate::g8ui::{self, Presses};
+use crate::g8ui::{self, Presses, Spot};
 use crate::gatecfg::{G2, below_delay};
-use crate::product::{self, Keyboard};
+use crate::product;
 use crate::win::{self, sleep_ms};
 use crate::{launch, tlog, walk};
 
@@ -33,6 +34,15 @@ pub fn check_running(ctx: &Ctx) -> Result<(), String> {
     holds_below(&ctx.cfg.g8, &ctx.cfg.g2, &product::keyboard()?)
 }
 
+/// What G8's presses must type into target-window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Expect<'a> {
+    /// What product key `id` types at once in the layout in front, once the keyboard shows that layout.
+    Key(&'a str),
+    /// One character per press, the same each time, from a keyboard whose layout G8 does not read.
+    Same,
+}
+
 /// What key `id` types at once in the layout of the app in front.
 fn typed_by_key(id: &str) -> Result<String, String> {
     let layout = WinLayouts
@@ -46,6 +56,13 @@ fn typed_by_key(id: &str) -> Result<String, String> {
 /// True when `text` is `one` typed once per press and nothing else.
 fn exact(text: &str, one: &str, presses: usize) -> bool {
     text == one.repeat(presses)
+}
+
+/// True when `text` is one character per press, the same each time, and nothing else.
+fn same_each(text: &str, presses: usize) -> bool {
+    let mut chars = text.chars();
+    let first = chars.next();
+    text.chars().count() == presses && chars.all(|c| Some(c) == first)
 }
 
 /// Ok while `target` is in front, bringing it back if it left; an error when it cannot, so no press types elsewhere.
@@ -73,22 +90,31 @@ fn arrived(ctx: &Ctx) -> Result<String, String> {
     Ok(tlog::decode(&tlog::parse(&log)))
 }
 
-/// G8's presses into target-window `target`, once the keyboard shows its layout, and what arrived there.
-fn into(ctx: &Ctx, kb: &Keyboard, target: HWND) -> Result<Presses, String> {
+/// The product key's character once the keyboard shows the layout in front, read with `target` in front; none for
+/// `Expect::Same`, after checking `target` is in front.
+fn expected_for(ctx: &Ctx, expect: Expect, target: HWND) -> Result<Option<String>, String> {
+    let Expect::Key(id) = expect else {
+        return in_front(ctx, target).map(|()| None);
+    };
     sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
-    let read = || typed_by_key(&ctx.cfg.g8.press_key);
-    let one = expected(|| in_front(ctx, target), read)?;
-    let mut out = g8ui::presses(ctx, kb, || in_front(ctx, target))?;
+    expected(|| in_front(ctx, target), || typed_by_key(id)).map(Some)
+}
+
+/// G8's presses at `spot` into target-window `target`, and what arrived there against `expect`.
+fn into(ctx: &Ctx, spot: &Spot, expect: Expect, target: HWND) -> Result<Presses, String> {
+    let one = expected_for(ctx, expect, target)?;
+    let mut out = g8ui::presses(ctx, spot, || in_front(ctx, target))?;
     let text = arrived(ctx)?;
+    let n = ctx.cfg.g8.presses;
     out.arrived = text.chars().count();
-    out.typed_ok = exact(&text, &one, ctx.cfg.g8.presses);
+    out.typed_ok = one.map_or_else(|| same_each(&text, n), |one| exact(&text, &one, n));
     Ok(out)
 }
 
-/// G8's presses on keyboard `kb`, typing into a target-window it starts in front and closes at the end.
-pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
+/// G8's presses at `spot`, typing into a target-window it starts in front and closes at the end.
+pub fn presses(ctx: &Ctx, spot: &Spot, expect: Expect) -> Result<Presses, String> {
     let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
-    let out = into(ctx, kb, target.hwnd);
+    let out = into(ctx, spot, expect, target.hwnd);
     let left_open = apps::clean_up(ctx, target);
     let mut out = out.map_err(|e| format!("{e}; left open: {left_open:?}"))?;
     out.left_open = left_open;
@@ -127,6 +153,16 @@ mod tests {
         assert!(!exact("aab", "a", 3), "a stray character");
         assert!(exact("", "a", 0), "no press, nothing typed");
         assert!(exact("لالا", "لا", 2), "a key that types two characters");
+    }
+
+    #[test]
+    fn another_keyboard_passes_with_one_same_character_per_press_and_nothing_else() {
+        assert!(same_each("aaa", 3));
+        assert!(same_each("AAA", 3), "its own letter case");
+        assert!(!same_each("aa", 3), "a press typed nothing");
+        assert!(!same_each("aaaa", 3), "a press repeated");
+        assert!(!same_each("aAa", 3), "a stray Shift");
+        assert!(same_each("", 0), "no press, nothing typed");
     }
 
     #[test]

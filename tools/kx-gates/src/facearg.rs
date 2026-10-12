@@ -5,7 +5,7 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g19, g22, g22bench, g22type, product};
+use crate::{g8, g8lit, g19, g22, g22bench, g22type, product};
 
 /// Gates aimed at the product, which take its name.
 pub(crate) const PRODUCT_GATES: [&str; 10] = [
@@ -24,7 +24,7 @@ fn keyboards(gate: &str) -> Vec<&'static str> {
 /// Names besides a keyboard that `gate` takes.
 fn own_names(gate: &str) -> &'static [&'static str] {
     match gate {
-        "g8" => &[g8::WEAK],
+        "g8" => &[g8::WEAK, g8lit::LIT, g8lit::OSK],
         "g19" => &[g19::CORE],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
@@ -94,8 +94,10 @@ mod tests {
             assert!(check("g2", name).is_err(), "g2 {name}");
         }
         assert!(check("g7", g19::CORE).is_err());
-        assert!(check("g8", g8::WEAK).is_ok());
-        assert!(check("g9", g8::WEAK).is_err(), "weak mode is G8's");
+        for name in [g8::WEAK, g8lit::LIT, g8lit::OSK] {
+            assert!(check("g8", name).is_ok(), "g8 {name}");
+            assert!(check("g9", name).is_err(), "{name} is G8's");
+        }
     }
 
     #[test]

@@ -49,10 +49,6 @@ pub struct Outside {
 /// The budgets of spec §10 against a start shown after `shown_ms` and what G8 measured.
 pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outside) -> Vec<Part> {
     let start = if weak { g.weak_start_ms } else { g.start_ms };
-    let lit: Option<Vec<f64>> = m.presses.lit_ms.iter().copied().collect();
-    let worst = lit.and_then(|l| l.into_iter().reduce(f64::max));
-    let lit_in =
-        o.hz.and_then(|hz| budget::lit_within_ms(hz, g.highlight_frames, &m.presses.copy_ms));
     let char_p99 = m.g2["latency_ms"]["p99"]
         .as_f64()
         .filter(|_| g2::typed_intact(&m.g2));
@@ -62,17 +58,26 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         Part::at_most("commit_mb", Some(m.memory.commit_mb), g.commit_mb),
         Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
         Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
-        Part::at_most(
-            "highlight_ms",
-            worst.filter(|_| lit_in.is_some()),
-            lit_in.unwrap_or_default(),
-        ),
+        highlight(g, &m.presses, o.hz),
         Part::at_most("char_p99_ms", char_p99, g.char_ms),
         Part::at_most("bus_p99_us", o.bus_p99_us, g.bus_p99_us()),
         Part::at_most("dropped_frames", o.dropped, 0.0),
     ];
     all.extend(g8churn::parts(g, &m.churn));
     all
+}
+
+/// The key light's budget: the slowest press's light, within `highlight_frames` frames at `hz` and the median screen
+/// copy; a key that never lit, or no refresh rate, fails it.
+pub fn highlight(g: &G8, presses: &Presses, hz: Option<f64>) -> Part {
+    let lit: Option<Vec<f64>> = presses.lit_ms.iter().copied().collect();
+    let worst = lit.and_then(|l| l.into_iter().reduce(f64::max));
+    let within = hz.and_then(|hz| budget::lit_within_ms(hz, g.highlight_frames, &presses.copy_ms));
+    Part::at_most(
+        "highlight_ms",
+        worst.filter(|_| within.is_some()),
+        within.unwrap_or_default(),
+    )
 }
 
 /// True when the product `ended`, its `presses` typed exactly their characters and every budget in `parts` passed.

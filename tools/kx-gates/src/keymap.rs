@@ -60,7 +60,7 @@ fn wanted(id: &str) -> Result<&str, String> {
 }
 
 /// The centre of box `r`.
-fn centre(r: &RECT) -> POINT {
+pub fn centre(r: &RECT) -> POINT {
     POINT {
         x: r.left + (r.right - r.left) / 2,
         y: r.top + (r.bottom - r.top) / 2,

@@ -58,6 +58,7 @@ mod g8;
 mod g8cfg;
 mod g8churn;
 mod g8frames;
+mod g8lit;
 mod g8loss;
 mod g8parts;
 mod g8pops;

@@ -5,7 +5,9 @@ use spike_core::config::FACE;
 
 use crate::apps::AppKind;
 use crate::product::NAME;
-use crate::{capture, g5, g6, g8, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand};
+use crate::{
+    capture, g5, g6, g8, g8lit, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand,
+};
 
 /// The program's name in the help.
 const PROG: &str = env!("CARGO_PKG_NAME");
@@ -17,12 +19,12 @@ fn names(apps: &[AppKind]) -> String {
 
 /// The help lines of the gates aimed at the product.
 fn product_lines() -> String {
-    let weak = g8::WEAK;
+    let (weak, lit, osk) = (g8::WEAK, g8lit::LIT, g8lit::OSK);
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
        {PROG} g4 <{NAME}> [--clicks N] [--seed S]
-       {PROG} g8 <{NAME}|{weak}>
+       {PROG} g8 <{NAME}|{weak}|{lit}|{osk}>
        {PROG} g9 <{NAME}>
        {PROG} g10 <{NAME}>
        {PROG} g11 <{NAME}>
@@ -64,7 +66,8 @@ pub fn usage() -> String {
        {PROG} g25 <{}>
        {PROG} {}
 --attach types into the app's window already open; --pause sets the gap between characters.
-{NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.",
+{NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
+g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.",
         names(&AppKind::ALL),
         product_lines(),
         g5::PLAIN,
@@ -80,6 +83,8 @@ pub fn usage() -> String {
         names(&g25::APPS),
         capture::COMMAND,
         g8::WEAK,
+        g8lit::LIT,
+        g8lit::OSK,
     )
 }
 

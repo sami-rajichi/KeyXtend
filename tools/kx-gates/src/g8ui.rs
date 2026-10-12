@@ -17,6 +17,28 @@ use crate::product::Keyboard;
 use crate::win::{self, size32, sleep_ms};
 use crate::{mouse, mouseguard, shot, simuser};
 
+/// Where G8 presses: the key's screen box and centre, and its keyboard window's box, in physical pixels.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Spot {
+    /// The key's box, which G8 copies to see it light.
+    pub key: RECT,
+    /// Where the pointer presses it.
+    pub at: POINT,
+    /// The keyboard window's box, which the release goes past.
+    pub window: RECT,
+}
+
+impl Spot {
+    /// Key `id` of the product keyboard `kb`.
+    pub fn of(kb: &Keyboard, id: &str) -> Result<Self, String> {
+        Ok(Self {
+            key: kb.rect(id)?,
+            at: kb.at(id)?,
+            window: win::rect(kb.hwnd)?,
+        })
+    }
+}
+
 /// What the presses measured, in ms.
 #[derive(Debug, Default, Serialize)]
 pub struct Presses {
@@ -98,17 +120,17 @@ fn or_release(
     released.map_err(|e| format!("{e}; buttons let go: {:?}", release()))
 }
 
-/// Presses `[g8] press_key` again and again and times how soon it lights; the pointer rests on it first, so the
+/// Presses the key at `spot` `[g8] presses` times and times how soon it lights; the pointer rests on it first, so the
 /// hover is already drawn, and `front` keeps the window it types into in front before each press. The last key's rise
 /// ends before it returns, and a stop by the mouse guard lets go away from the key at once.
 pub fn presses(
     ctx: &Ctx,
-    kb: &Keyboard,
+    spot: &Spot,
     front: impl Fn() -> Result<(), String>,
 ) -> Result<Presses, String> {
     let g = &ctx.cfg.g8;
-    let (r, on) = (kb.rect(&g.press_key)?, kb.at(&g.press_key)?);
-    let away = away_from(win::rect(kb.hwnd)?, on, win::desktop().1);
+    let (r, on) = (spot.key, spot.at);
+    let away = away_from(spot.window, on, win::desktop().1);
     let (mut out, wait) = (Presses::default(), Duration::from_millis(g.press_wait_ms));
     for _ in 0..g.presses {
         mouse::move_to(on)?;

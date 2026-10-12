@@ -11,6 +11,7 @@ use crate::cfgfile::{self, FILE, P3_FILE};
 use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
+use crate::g8lit::Osk;
 use crate::g22cfg::G22;
 use crate::gatecfg::{AssistCfg, G1, G2, G3, G4, G5};
 use crate::mouseguard::MouseGuard;
@@ -83,6 +84,8 @@ pub struct GatesConfig {
     pub g13: G13,
     /// G26 settings.
     pub g26: G26,
+    /// The On-Screen Keyboard that `g8 osk` times.
+    pub osk: Osk,
     /// The mouse guard, shared by every gate.
     pub mouse_guard: MouseGuard,
     /// What a run spends beyond its counted steps, for the run-length checks.
@@ -218,6 +221,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;
+    config.osk.check()?;
     config.mouse_guard.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;
