@@ -115,6 +115,8 @@ Item {
             mouseClick(keyed(win, "c-0x0010"));
             const lang = keyed(win, "lang");
             mouseClick(lang, lang.width * 0.1, lang.height / 2);
+            // By default a key acts once its press frame is drawn (ADR-0025).
+            tryCompare(win.presses, "waiting", null);
             // A key that repeats while held sends its press and let-go instead of a tap.
             const taps = () => win.keyboard.calls.filter(c => /^(tap|press|letGo)\b/.test(c));
             compare(taps(), ["press c-0x0010", "letGo c-0x0010", "tap lang true"]);

@@ -203,9 +203,9 @@ fn the_frame_timing_numbers_may_be_zero_but_not_past_their_range() {
 }
 
 #[test]
-fn a_pressed_key_draws_after_typing_as_before_unless_set() {
+fn a_pressed_key_draws_its_frame_first_unless_set() {
     let s = UiSettings::from_defaults().unwrap();
-    assert_eq!(s.press_frame, PressFrame::After);
+    assert_eq!(s.press_frame, PressFrame::Now, "ADR-0025");
     for word in ["after", "first", "now"] {
         let s: UiSettings = parse_as(&with("press_frame", word)).unwrap();
         assert_eq!(serde_json::to_value(s.press_frame).unwrap(), word);

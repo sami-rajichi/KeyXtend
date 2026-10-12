@@ -58,19 +58,28 @@ Item {
         function outside(win, key) {
             return key.mapFromItem(win.contentItem, -win.contentItem.width / 2, win.contentItem.height / 2);
         }
+        // Waits until the last press acted, as by default its frame is drawn first (ADR-0025).
+        function acted(win) {
+            tryCompare(win.presses, "waiting", null);
+        }
+        // Presses `key` of `win`, at `x`, `y` when given, and waits until it acted.
+        function press(win, key, x, y) {
+            mousePress(key, x, y);
+            acted(win);
+        }
         // Presses `key` at its middle, slips the still-down pointer to `to` and lets go there.
-        function slip(key, to) {
-            mousePress(key, key.width / 2, key.height / 2);
+        function slip(win, key, to) {
+            press(win, key, key.width / 2, key.height / 2);
             mouseMove(key, to.x, to.y, -1, Qt.LeftButton);
             mouseRelease(key, to.x, to.y);
         }
 
         function test_a_key_acts_at_the_press_before_the_let_go() {
             const win = make();
-            mousePress(keyed(win, q));
+            press(win, keyed(win, q));
             compare(sent(win), ["press " + q], "a repeating key types at the press");
             mouseRelease(keyed(win, q));
-            mousePress(keyed(win, tab));
+            press(win, keyed(win, tab));
             compare(sent(win), ["press " + q, "letGo " + q, "tap tab false"], "and any other key too");
             mouseRelease(keyed(win, tab));
             compare(sent(win).length, 3, "its let-go adds nothing");
@@ -91,9 +100,9 @@ Item {
         function test_a_slip_onto_a_neighbour_acts_once_and_the_neighbour_never() {
             const win = make();
             const a = keyed(win, q);
-            slip(a, onto(win, a, w));
+            slip(win, a, onto(win, a, w));
             const t = keyed(win, tab);
-            slip(t, onto(win, t, q));
+            slip(win, t, onto(win, t, q));
             compare(sent(win), ["press " + q, "letGo " + q, "tap tab false"]);
             win.visible = false;
         }
@@ -101,9 +110,9 @@ Item {
         function test_a_slip_off_the_keyboard_acts_once_and_its_release_is_ignored() {
             const win = make();
             const a = keyed(win, q);
-            slip(a, outside(win, a));
+            slip(win, a, outside(win, a));
             const t = keyed(win, tab);
-            slip(t, outside(win, t));
+            slip(win, t, outside(win, t));
             compare(sent(win), ["press " + q, "letGo " + q, "tap tab false"]);
             win.visible = false;
         }
@@ -111,7 +120,7 @@ Item {
         function test_a_hold_that_slips_onto_a_neighbour_repeats_until_let_go() {
             const win = make();
             const a = keyed(win, q);
-            mousePress(a);
+            press(win, a);
             const on = onto(win, a, w);
             mouseMove(a, on.x, on.y, -1, Qt.LeftButton);
             verify(win.hold.running, "the hold goes on");
@@ -127,6 +136,7 @@ Item {
             const win = make();
             mouseDoubleClickSequence(keyed(win, q));
             mouseDoubleClickSequence(keyed(win, tab));
+            acted(win);
             const twice = ["press " + q, "letGo " + q, "press " + q, "letGo " + q, "tap tab false", "tap tab false"];
             compare(sent(win), twice);
             win.visible = false;
@@ -137,10 +147,10 @@ Item {
             const lang = keyed(win, "lang");
             const back = lang.width * lang.lk.shape.lang.back_share;
             const y = lang.height / 2;
-            mousePress(lang, back / 2, y);
+            press(win, lang, back / 2, y);
             mouseMove(lang, (back + lang.width) / 2, y, -1, Qt.LeftButton);
             mouseRelease(lang, (back + lang.width) / 2, y);
-            mousePress(lang, (back + lang.width) / 2, y);
+            press(win, lang, (back + lang.width) / 2, y);
             mouseMove(lang, back / 2, y, -1, Qt.LeftButton);
             mouseRelease(lang, back / 2, y);
             compare(sent(win), ["tap lang true", "tap lang false"]);
@@ -153,7 +163,7 @@ Item {
             const win = make();
             const a = keyed(win, q);
             const at = { x: a.width - 1, y: a.height / 2 };
-            mousePress(a, at.x, at.y);
+            press(win, a, at.x, at.y);
             verify(win.hold.running && win.hold.interval > pressMs, "no repeat within the owner's press");
             for (const px of slips) {
                 at.x += px;

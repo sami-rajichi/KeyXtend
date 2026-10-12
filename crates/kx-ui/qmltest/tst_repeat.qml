@@ -46,11 +46,24 @@ Item {
         function sent(win) {
             return win.keyboard.calls.filter(c => /^(tap|press|letGo|leave|tick|panelKey)\b/.test(c));
         }
+        // Waits until the last press acted, as by default its frame is drawn first (ADR-0025).
+        function acted(win) {
+            tryCompare(win.presses, "waiting", null);
+        }
+        // Presses `key` of `win`, or clicks it, and waits until it acted.
+        function press(win, key) {
+            mousePress(key);
+            acted(win);
+        }
+        function click(win, key) {
+            mouseClick(key);
+            acted(win);
+        }
 
         function test_a_click_on_a_repeating_key_sends_its_press_then_its_let_go_once() {
             const win = make();
             const key = keyed(win, q);
-            mousePress(key);
+            press(win, key);
             compare(sent(win), ["press " + q]);
             mouseRelease(key);
             compare(sent(win), ["press " + q, "letGo " + q], "one let-go, so it types once");
@@ -59,7 +72,7 @@ Item {
 
         function test_a_beat_that_redrew_reads_the_state_again() {
             const win = make();
-            mousePress(keyed(win, q));
+            press(win, keyed(win, q));
             win.keyboard.reply = { board: false, state: true, holding: true };
             const shown = win.st;
             win.hold.triggered();
@@ -71,7 +84,7 @@ Item {
         function test_a_beat_that_typed_reads_no_state() {
             const win = make();
             const key = keyed(win, q);
-            mousePress(key);
+            press(win, key);
             win.keyboard.reply = { board: false, state: false, holding: true };
             const shown = win.st;
             win.hold.triggered();
@@ -83,7 +96,7 @@ Item {
         function test_a_key_held_as_the_list_opens_stops_its_beat_and_never_drives_the_list() {
             const win = make();
             const down = keyed(win, "down");
-            mousePress(down);
+            press(win, down);
             win.keyboard.state = Face.states.list;
             win.restate();
             verify(!win.hold.running, "the beat stops once the list shows");
@@ -103,7 +116,7 @@ Item {
             const win = make();
             const key = keyed(win, q);
             win.keyboard.reply = { board: false, state: true, holding: false };
-            mousePress(key);
+            press(win, key);
             verify(!win.hold.running, "no beat");
             mouseRelease(key);
             compare(sent(win), ["press " + q], "the let-go adds nothing");
@@ -114,7 +127,7 @@ Item {
         function test_the_beat_stops_once_the_keyboard_stops_holding() {
             const win = make();
             const key = keyed(win, q);
-            mousePress(key);
+            press(win, key);
             win.keyboard.reply = { board: false, state: true, holding: false };
             win.hold.triggered();
             verify(!win.hold.running, "the beat stops");
@@ -130,7 +143,7 @@ Item {
             const panel = [...win.data].find(o => o.item && o.item.win === win).item;
             tryVerify(() => panel.visible, 2000, "the list shows");
             const down = keyed(win, "down");
-            mousePress(down);
+            press(win, down);
             compare(sent(win), ["panelKey down"], "before the let-go");
             verify(!win.hold.running, "it never holds");
             mouseRelease(down);
@@ -143,7 +156,7 @@ Item {
             const key = keyed(win, q);
             const hold = win.hold;
             verify(!hold.running, "it rests while nothing is held");
-            mousePress(key);
+            press(win, key);
             verify(hold.running, "held");
             compare(hold.interval, Face.board.repeat_delay_ms, "first the delay");
             hold.triggered();
@@ -153,7 +166,7 @@ Item {
             mouseRelease(key);
             verify(!hold.running, "it rests again");
             compare(sent(win), ["press " + q, "tick", "tick", "letGo " + q]);
-            mousePress(key);
+            press(win, key);
             compare(hold.interval, Face.board.repeat_delay_ms, "a new hold waits the delay again");
             mouseRelease(key);
             win.visible = false;
@@ -161,7 +174,7 @@ Item {
 
         function test_hiding_the_keyboard_while_a_key_is_held_stops_the_repeat() {
             const win = make();
-            mousePress(keyed(win, q));
+            press(win, keyed(win, q));
             win.visible = false;
             verify(!win.hold.running);
             compare(sent(win), ["press " + q, "leave"]);
@@ -169,7 +182,7 @@ Item {
 
         function test_a_stopped_keyboard_ends_the_hold() {
             const win = make();
-            mousePress(keyed(win, q));
+            press(win, keyed(win, q));
             win.board = null;
             verify(!win.hold.running);
             compare(sent(win), ["press " + q, "leave"]);
@@ -179,7 +192,7 @@ Item {
         function test_a_press_qt_cancels_sends_leave() {
             const win = make();
             const key = keyed(win, q);
-            mousePress(key);
+            press(win, key);
             Board.all(key, o => o.containsMouse !== undefined)[0].canceled();
             compare(sent(win), ["press " + q, "leave"]);
             verify(!win.hold.running);
@@ -189,6 +202,7 @@ Item {
         function test_a_readers_press_on_a_repeating_key_still_clicks() {
             const win = make();
             keyed(win, q).Accessible.pressAction();
+            acted(win);
             compare(sent(win), ["tap " + q + " false"]);
             verify(!win.hold.running);
             win.visible = false;
@@ -197,6 +211,7 @@ Item {
         function test_a_readers_toggle_on_a_latch_still_clicks() {
             const win = make();
             keyed(win, "shift").Accessible.toggleAction();
+            acted(win);
             compare(sent(win), ["tap shift false"]);
             win.visible = false;
         }
@@ -204,7 +219,7 @@ Item {
         function test_the_language_key_named_keys_and_dimmed_keys_keep_their_click() {
             const win = make();
             for (const id of ["lang", "esc", "mic"])
-                mouseClick(keyed(win, id));
+                click(win, keyed(win, id));
             compare(sent(win), ["tap lang false", "tap esc false"], "the dimmed key sends nothing");
             win.visible = false;
         }
@@ -212,7 +227,7 @@ Item {
         function test_with_repeat_off_every_key_clicks() {
             const keys = Face.board.keys.map(k => Object.assign({}, k, { repeat: false }));
             const win = make(Object.assign({}, Face.board, { keys: keys }));
-            mouseClick(keyed(win, q));
+            click(win, keyed(win, q));
             compare(sent(win), ["tap " + q + " false"]);
             verify(!win.hold.running);
             win.visible = false;

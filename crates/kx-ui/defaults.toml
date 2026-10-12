@@ -36,8 +36,8 @@ vblank_updates = true
 update_idle_ms = 5
 # Each frame shows at a screen refresh; false shows it at once. Read at start.
 present_vsync = true
-# A pressed key types, then draws its press ("after"); "first" types once that frame is out, "now" draws it at once.
-press_frame = "after"
+# A pressed key draws its press frame at once, then types ("now", ADR-0025); "after" types first, "first" once it's out.
+press_frame = "now"
 # The longest "first" waits for the press's frame before it types anyway, in ms.
 press_frame_ms = 50
 # Logs the times of each press and frame, never a key or text, to measure the key light. Read at start.

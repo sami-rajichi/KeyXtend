@@ -1,5 +1,5 @@
-// When a pressed key acts against the frame that shows it pressed (`press_frame`), over stand-in bridges: at once by
-// default, once that frame is out or its wait ends, or once it is drawn at once; a let-go always follows its press.
+// When a pressed key acts against the frame that shows it pressed (`press_frame`), over stand-in bridges: once that
+// frame is drawn at once by default, at once, or once that frame is out or its wait ends; a let-go follows its press.
 import QtQuick
 import QtTest
 import "../qml"
@@ -49,8 +49,18 @@ Item {
             return win.keyboard.calls.filter(c => /^(drawNow|pressStart|pressEnd|tap|press|letGo|leave)\b/.test(c));
         }
 
-        function test_by_default_a_key_acts_at_its_press() {
+        function test_by_default_a_key_draws_its_press_then_acts_before_the_let_go() {
             const win = make(En.settings.pressFrame);
+            const key = keyed(win, esc);
+            mousePress(key);
+            tryCompare(win.presses, "waiting", null);
+            compare(sent(win), ["drawNow", "tap esc false"], "drawn first, still at the press (ADR-0025)");
+            mouseRelease(key);
+            win.visible = false;
+        }
+
+        function test_after_acts_inside_the_press() {
+            const win = make("after");
             const key = keyed(win, esc);
             mousePress(key);
             compare(sent(win), ["tap esc false"], "inside the press");
@@ -105,8 +115,10 @@ Item {
             const win = make(En.settings.pressFrame, true);
             const key = keyed(win, q);
             mousePress(key);
+            tryCompare(win.presses, "waiting", null);
             mouseRelease(key);
-            compare(sent(win), ["pressStart", "press " + q, "pressEnd", "letGo " + q], "the let-go is no action");
+            const marked = ["drawNow", "pressStart", "press " + q, "pressEnd", "letGo " + q];
+            compare(sent(win), marked, "the press frame and the let-go are no action");
             win.visible = false;
             const quiet = make("first");
             mousePress(keyed(quiet, esc));
