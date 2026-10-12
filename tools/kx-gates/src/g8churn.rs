@@ -1,6 +1,6 @@
 //! G8's churn (spec §10, no growth): rounds of key tips, the language list, the bubble and a full theme cycle
-//! (`g8pops`), with private memory read before them and after each one; growth runs from the first rounds' median to
-//! the last rounds'. It runs after `PresentMon`'s capture, so no frame counts.
+//! (`g8pops`), with private memory read before them and after each one and each of its steps; growth runs from the
+//! first rounds' median to the last rounds'. It runs after `PresentMon`'s capture, so no frame counts.
 #![cfg(windows)]
 
 use serde::Serialize;
@@ -9,7 +9,8 @@ use crate::apps::Ctx;
 use crate::board;
 use crate::budget::Part;
 use crate::g8cfg::G8;
-use crate::g8pops::{self, Seen};
+use crate::g8pops::{self, Plan, Seen};
+use crate::g8steps::{self, Step, StepGrowth, slopes};
 use crate::g8tips::KeyTips;
 #[cfg(test)]
 use crate::g8tips::{Hover, Keys};
@@ -37,6 +38,10 @@ pub struct Churn {
     pub first_median: Memory,
     /// The median of the last ones, which the growth compares with `first_median`.
     pub last_median: Memory,
+    /// The least-squares slope of `per_round`, in MB per round; evidence only, as the growth decides.
+    pub round_slope: Option<Memory>,
+    /// What each step of the measured rounds changed, and its slope; the steps' slopes add up to about `round_slope`.
+    pub step_growth: Vec<StepGrowth>,
     /// Key hovers in the measured rounds.
     pub hovers: usize,
     /// Hovers that showed a tip.
@@ -66,6 +71,8 @@ impl Churn {
             warm_rounds: g.churn_warm_rounds,
             first_median: median(first).unwrap_or(before),
             last_median: median(last).unwrap_or(before),
+            round_slope: slopes(&per_round),
+            step_growth: Vec::new(),
             per_round,
             hovers: 0,
             tips: 0,
@@ -166,8 +173,24 @@ fn readings(
     Ok((before, each))
 }
 
+/// One measured round with `reader` and `plan`, reading `p`'s memory after each step into a new list of `steps`.
+fn stepped(
+    g: &G8,
+    (reader, plan): (&Reader, &Plan),
+    seen: &mut Seen,
+    p: &Process,
+    steps: &mut Vec<Vec<(Step, Memory)>>,
+) -> Result<(), String> {
+    let mut now = Vec::new();
+    let done = g8pops::round(g, reader, plan, seen, &mut |s| {
+        p.memory().map(|m| now.push((s, m)))
+    });
+    steps.push(now);
+    done
+}
+
 /// Runs `[g8] churn_warm_rounds` unmeasured rounds, then `churn_rounds` measured ones, reading `p`'s memory before
-/// them and after each. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
+/// them and after each one and each step. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
 pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     let g = &ctx.cfg.g8;
     let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
@@ -175,12 +198,13 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     sleep_ms(g.churn_settle_ms);
     let mut warm = Seen::default();
     for _ in 0..g.churn_warm_rounds {
-        g8pops::round(g, &reader, &plan, &mut warm)?;
+        g8pops::round(g, &reader, &plan, &mut warm, &mut |_| Ok(()))?;
     }
-    let mut seen = Seen::default();
-    let round = || g8pops::round(g, &reader, &plan, &mut seen);
+    let (mut seen, mut steps) = (Seen::default(), Vec::new());
+    let round = || stepped(g, (&reader, &plan), &mut seen, p, &mut steps);
     let (before, per_round) = readings(g.churn_rounds, round, || p.memory())?;
     Ok(Churn {
+        step_growth: g8steps::growth(before, &per_round, &steps),
         hovers: g.churn_rounds * plan.tips.len(),
         tips: seen.tips,
         tip_keys: seen.keys.report(&g.churn_tips),

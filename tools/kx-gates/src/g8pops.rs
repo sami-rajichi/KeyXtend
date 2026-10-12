@@ -14,6 +14,7 @@ use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::Ctx;
 use crate::g8cfg::G8;
+use crate::g8steps::Step;
 use crate::g8tips::{self, Hover, Keys};
 use crate::keymap::Reader;
 use crate::product::{self, Keyboard};
@@ -217,15 +218,26 @@ fn themes(g: &G8, reader: &Reader, plan: &Plan) -> Result<(), String> {
     back_to(&plan.theme, &uilook::running()?.theme)
 }
 
-/// One round: the tips, the list when the language key opens one, the bubble, and a full theme cycle.
-pub fn round(g: &G8, reader: &Reader, plan: &Plan, seen: &mut Seen) -> Result<(), String> {
+/// One round: the tips, the list when the language key opens one, the bubble, and a full theme cycle; `after` runs
+/// after each step, as when it reads memory.
+pub fn round(
+    g: &G8,
+    reader: &Reader,
+    plan: &Plan,
+    seen: &mut Seen,
+    after: &mut dyn FnMut(Step) -> Result<(), String>,
+) -> Result<(), String> {
     hover(plan, seen)?;
     sleep_ms(g.churn_settle_ms);
+    after(Step::Tips)?;
     if let Some(lang) = &plan.lang {
         list(g, reader, lang, seen)?;
+        after(Step::List)?;
     }
     bubble(g, reader, plan, seen)?;
-    themes(g, reader, plan)
+    after(Step::Bubble)?;
+    themes(g, reader, plan)?;
+    after(Step::Themes)
 }
 
 #[cfg(test)]
