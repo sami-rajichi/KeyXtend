@@ -111,6 +111,27 @@ Item {
             compare(sent(win), []);
         }
 
+        function test_now_a_press_waiting_as_the_window_hides_never_acts() {
+            const win = make("now");
+            mousePress(keyed(win, esc));
+            compare(sent(win), [], "its frame is not drawn yet");
+            win.visible = false;
+            tryCompare(win.presses, "waiting", null);
+            const acts = win.keyboard.calls.filter(c => /^(tap|press)\b/.test(c));
+            compare(acts, [], "a hidden keyboard types nothing");
+        }
+
+        function test_now_a_qt_cancel_before_the_frame_lets_the_press_act_then_ends_it() {
+            const win = make("now");
+            const key = keyed(win, q);
+            mousePress(key);
+            compare(sent(win), [], "its frame is not drawn yet");
+            Board.all(key, o => o.containsMouse !== undefined)[0].canceled();
+            compare(sent(win), ["press " + q, "leave"]);
+            verify(win.presses.waiting === null && !win.hold.running, "nothing waits or repeats");
+            win.visible = false;
+        }
+
         function test_the_frame_log_marks_each_action_only_while_it_logs() {
             const win = make(En.settings.pressFrame, true);
             const key = keyed(win, q);
