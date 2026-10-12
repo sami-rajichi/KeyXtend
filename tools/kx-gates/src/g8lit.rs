@@ -7,13 +7,13 @@ use serde_json::{Value, json};
 use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::apps::Ctx;
+use crate::budget;
 use crate::g8cfg::G8;
 use crate::g8parts::highlight;
 use crate::g8type::{self, Expect};
 use crate::g8ui::{self, Presses, Spot};
 use crate::keymap::{KeyRead, Reader, centre};
 use crate::product::Keyboard;
-use crate::stats::{P50, percentile};
 use crate::win;
 
 /// The name that times the running product's key light.
@@ -110,15 +110,13 @@ fn pick(keys: &[KeyRead], want: &str) -> Option<RECT> {
     keys.iter().filter(named).find(shown).map(|k| k.rect)
 }
 
-/// The result line of keyboard `name`'s `presses` on a screen of `hz`: each light, its median and the slowest against
-/// G8's highlight budget, and whether every press typed one character.
+/// The result line of keyboard `name`'s `presses` on a screen of `hz`: each light, G8's two key light parts (the median
+/// and the slowest), and whether every press typed one character.
 fn summary(g: &G8, name: &str, presses: &Presses, hz: Option<f64>) -> Value {
-    let mut lit: Vec<f64> = presses.lit_ms.iter().flatten().copied().collect();
-    lit.sort_by(f64::total_cmp);
-    let part = highlight(g, presses, hz);
+    let parts = highlight(g, presses, hz);
     json!({
-        "gate": "G8", "keyboard": name, "hz": hz, "presses": presses, "p50_ms": percentile(&lit, P50),
-        "highlight_ms": part.got, "limit_ms": part.limit, "pass": part.pass && presses.typed_ok,
+        "gate": "G8", "keyboard": name, "hz": hz, "presses": presses, "parts": parts,
+        "pass": budget::all_pass(&parts) && presses.typed_ok,
     })
 }
 
@@ -127,6 +125,7 @@ mod tests {
     use kx_module_api::MS_PER_S;
 
     use super::*;
+    use crate::g8parts::{LIT_P50, LIT_WORST};
 
     fn key(id: &str, name: &str, rect: RECT) -> KeyRead {
         KeyRead {
@@ -154,37 +153,68 @@ mod tests {
         assert_eq!(pick(&keys, "z"), None);
     }
 
+    /// Part `i` of result `v`: its name, what it got and its limit.
+    fn part(v: &Value, i: usize) -> (&str, Option<f64>, f64) {
+        let p = &v["parts"][i];
+        let name = p["name"].as_str().expect("a name");
+        (
+            name,
+            p["got"].as_f64(),
+            p["limit"].as_f64().expect("a limit"),
+        )
+    }
+
     #[test]
-    fn the_summary_judges_the_slowest_light_and_the_typing() {
+    fn the_summary_judges_the_median_and_the_slowest_light_as_g8_does() {
         let g = crate::config::load().expect("loads").g8;
-        let mut p = Presses {
+        let p = Presses {
             lit_ms: vec![Some(9.0), Some(14.0), Some(11.0)],
             copy_ms: vec![2.0],
             typed_ok: true,
             ..Presses::default()
         };
         let v = summary(&g, OSK, &p, Some(60.0));
-        assert_eq!(
-            (v["highlight_ms"].as_f64(), v["p50_ms"].as_f64()),
-            (Some(14.0), Some(11.0))
-        );
-        let limit = g.highlight_frames * f64::from(MS_PER_S) / 60.0 + 2.0;
-        assert!((v["limit_ms"].as_f64().expect("a limit") - limit).abs() < 1e-9);
+        let within = |frames: f64| frames * f64::from(MS_PER_S) / 60.0 + 2.0;
+        let (median, slowest) = (part(&v, 0), part(&v, 1));
+        assert_eq!((median.0, median.1), (LIT_P50, Some(11.0)));
+        assert_eq!((slowest.0, slowest.1), (LIT_WORST, Some(14.0)));
+        assert!((median.2 - within(g.highlight_frames)).abs() < 1e-9);
+        assert!((slowest.2 - within(g.highlight_worst_frames)).abs() < 1e-9);
         assert_eq!(v["pass"], true);
-        p.typed_ok = false;
+        let late = |lit: [f64; 3]| Presses {
+            lit_ms: lit.map(Some).to_vec(),
+            copy_ms: vec![2.0],
+            typed_ok: true,
+            ..Presses::default()
+        };
+        let slow_median = late([within(g.highlight_frames) + 1.0; 3]);
+        assert_eq!(summary(&g, OSK, &slow_median, Some(60.0))["pass"], false);
+        let slow_one = late([9.0, 11.0, within(g.highlight_worst_frames) + 1.0]);
+        assert_eq!(summary(&g, OSK, &slow_one, Some(60.0))["pass"], false);
+    }
+
+    #[test]
+    fn the_summary_fails_a_lost_character_an_unlit_key_or_no_refresh_rate() {
+        let g = crate::config::load().expect("loads").g8;
+        let mut p = Presses {
+            lit_ms: vec![Some(9.0), Some(14.0), Some(11.0)],
+            copy_ms: vec![2.0],
+            typed_ok: false,
+            ..Presses::default()
+        };
         assert_eq!(
             summary(&g, OSK, &p, Some(60.0))["pass"],
             false,
             "a lost character"
         );
         p.typed_ok = true;
+        assert_eq!(summary(&g, OSK, &p, None)["pass"], false, "no refresh rate");
         p.lit_ms.push(None);
         assert_eq!(
             summary(&g, OSK, &p, Some(60.0))["pass"],
             false,
             "a key that never lit"
         );
-        assert_eq!(summary(&g, OSK, &p, None)["pass"], false, "no refresh rate");
     }
 
     #[test]

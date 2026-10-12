@@ -51,10 +51,13 @@ commit_mb = 140.0
 idle_core_pct = 0.5
 # The program folder's budget is the stage's own `max_mb` (root Cargo.toml); a test keeps the two equal.
 size_mb = 80.0
-# A press lights its key on the next frame (spec §10): within this many frames, the one being drawn and the next.
+# The key G8 presses, by board id, and how many times.
 press_key = "c-0x001E"
 presses = 20
+# A press lights its key as Windows' On-Screen Keyboard does (spec §10, ADR-0025), each plus the median screen copy:
+# the median press within this many frames, the one being drawn and the next, and the slowest within one refresh more.
 highlight_frames = 2.0
+highlight_worst_frames = 3.0
 # Pause with the pointer on the key before each press, and the longest wait for its light, in ms.
 hover_settle_ms = 500
 press_wait_ms = 500

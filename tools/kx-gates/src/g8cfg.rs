@@ -42,8 +42,10 @@ pub struct G8 {
     pub press_key: String,
     /// How many presses are timed.
     pub presses: usize,
-    /// Screen frames a press may take to light its key.
+    /// Screen frames the median press may take to light its key (ADR-0025).
     pub highlight_frames: f64,
+    /// Screen frames the slowest press may take to light its key; at least `highlight_frames`.
+    pub highlight_worst_frames: f64,
     /// Wait with the pointer on the key before a press, so the hover has settled.
     pub hover_settle_ms: u64,
     /// Longest wait for a press to light its key.
@@ -107,23 +109,10 @@ pub struct G8 {
 }
 
 impl G8 {
-    /// Refuses a zero count or warm-up, a budget that is not above 0, a negative slack, a pressed key the board does not
-    /// have, or a churn that churns nothing.
+    /// Refuses a zero count or warm-up, a bad budget, a negative slack, a pressed key the board does not have, or a
+    /// churn that churns nothing.
     pub fn check(&self) -> Result<(), String> {
-        let budgets = [
-            self.start_ms,
-            self.weak_start_ms,
-            self.memory_mb,
-            self.commit_mb,
-            self.idle_core_pct,
-            self.size_mb,
-            self.highlight_frames,
-            self.char_ms,
-            self.bus_share,
-        ];
-        if budgets.iter().any(|b| b.is_nan() || *b <= 0.0) {
-            return Err("every g8 budget must be above 0".to_string());
-        }
+        self.check_budgets()?;
         if [self.presses, self.clicks, self.subscribers, self.publishes].contains(&0) {
             return Err(
                 "g8 presses, clicks, subscribers and publishes must be above 0".to_string(),
@@ -150,6 +139,29 @@ impl G8 {
             ));
         }
         crate::g8churn::check(self)
+    }
+
+    /// Refuses a budget that is not above 0, or a slowest light allowed fewer frames than the median.
+    fn check_budgets(&self) -> Result<(), String> {
+        let budgets = [
+            self.start_ms,
+            self.weak_start_ms,
+            self.memory_mb,
+            self.commit_mb,
+            self.idle_core_pct,
+            self.size_mb,
+            self.highlight_frames,
+            self.highlight_worst_frames,
+            self.char_ms,
+            self.bus_share,
+        ];
+        if budgets.iter().any(|b| b.is_nan() || *b <= 0.0) {
+            return Err("every g8 budget must be above 0".to_string());
+        }
+        if self.highlight_worst_frames < self.highlight_frames {
+            return Err("g8.highlight_worst_frames must be at least highlight_frames".to_string());
+        }
+        Ok(())
     }
 
     /// The bus publish budget, in µs: `bus_share` of the click-to-character budget.
@@ -218,6 +230,11 @@ mod tests {
             spec_limits("Download size, without voice models"),
             [g.size_mb]
         );
+        assert_eq!(
+            spec_limits("Key click to key highlight"),
+            [g.highlight_frames, g.highlight_worst_frames],
+            "the median press, then the slowest (ADR-0025)"
+        );
         assert!(g.start_ms < g.weak_start_ms, "weak mode may start slower");
         assert!(
             g.presentmon_exe.is_empty(),
@@ -262,7 +279,8 @@ mod tests {
 
     #[test]
     fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-        let bad: [fn(&mut G8); 13] = [
+        let bad: [fn(&mut G8); 14] = [
+            |g| g.highlight_worst_frames = f64::NAN,
             |g| g.rise_ms = 0,
             |g| g.rise_wait_ms = g.rise_ms - 1,
             |g| g.churn_rounds = 0,
@@ -282,5 +300,23 @@ mod tests {
             f(&mut g);
             assert!(g.check().is_err());
         }
+    }
+
+    #[test]
+    fn the_slowest_light_may_take_no_fewer_frames_than_the_median() {
+        let g = shipped();
+        let even = G8 {
+            highlight_worst_frames: g.highlight_frames,
+            ..g.clone()
+        };
+        assert_eq!(even.check(), Ok(()));
+        let short = G8 {
+            highlight_worst_frames: g.highlight_frames / 2.0,
+            ..g
+        };
+        let e = short
+            .check()
+            .expect_err("a slowest budget under the median's");
+        assert!(e.contains("highlight_worst_frames"), "{e}");
     }
 }

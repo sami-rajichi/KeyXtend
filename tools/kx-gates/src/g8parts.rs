@@ -11,6 +11,7 @@ use crate::g8size::Resize;
 use crate::g8ui::Presses;
 use crate::out;
 use crate::proc::Memory;
+use crate::stats::{P50, percentile};
 
 /// What the product did while G8 measured it.
 pub struct Measured {
@@ -52,13 +53,15 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     let char_p99 = m.g2["latency_ms"]["p99"]
         .as_f64()
         .filter(|_| g2::typed_intact(&m.g2));
+    let [lit_p50, lit_worst] = highlight(g, &m.presses, o.hz);
     let mut all = vec![
         Part::at_most("start_ms", shown_ms, start),
         Part::at_most("memory_mb", Some(m.memory.working_mb), g.memory_mb),
         Part::at_most("commit_mb", Some(m.memory.commit_mb), g.commit_mb),
         Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
         Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
-        highlight(g, &m.presses, o.hz),
+        lit_p50,
+        lit_worst,
         Part::at_most("char_p99_ms", char_p99, g.char_ms),
         Part::at_most("bus_p99_us", o.bus_p99_us, g.bus_p99_us()),
         Part::at_most("dropped_frames", o.dropped, 0.0),
@@ -67,17 +70,29 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
     all
 }
 
-/// The key light's budget: the slowest press's light, within `highlight_frames` frames at `hz` and the median screen
-/// copy; a key that never lit, or no refresh rate, fails it.
-pub fn highlight(g: &G8, presses: &Presses, hz: Option<f64>) -> Part {
+/// The key light's part for the median press.
+pub const LIT_P50: &str = "highlight_p50_ms";
+/// The key light's part for the slowest press.
+pub const LIT_WORST: &str = "highlight_worst_ms";
+
+/// The key light's two budgets at `hz`, each plus the median screen copy: the median press within `highlight_frames`
+/// frames and the slowest within `highlight_worst_frames` (ADR-0025); a key that never lit, or no rate, fails both.
+pub fn highlight(g: &G8, presses: &Presses, hz: Option<f64>) -> [Part; 2] {
     let lit: Option<Vec<f64>> = presses.lit_ms.iter().copied().collect();
-    let worst = lit.and_then(|l| l.into_iter().reduce(f64::max));
-    let within = hz.and_then(|hz| budget::lit_within_ms(hz, g.highlight_frames, &presses.copy_ms));
-    Part::at_most(
-        "highlight_ms",
-        worst.filter(|_| within.is_some()),
-        within.unwrap_or_default(),
-    )
+    let mut lit = lit.unwrap_or_default();
+    lit.sort_by(f64::total_cmp);
+    let part = |name, got: Option<f64>, frames| {
+        let within = hz.and_then(|hz| budget::lit_within_ms(hz, frames, &presses.copy_ms));
+        Part::at_most(
+            name,
+            got.filter(|_| within.is_some()),
+            within.unwrap_or_default(),
+        )
+    };
+    [
+        part(LIT_P50, percentile(&lit, P50), g.highlight_frames),
+        part(LIT_WORST, lit.last().copied(), g.highlight_worst_frames),
+    ]
 }
 
 /// True when the product `ended`, its `presses` typed exactly their characters and every budget in `parts` passed.
@@ -149,7 +164,11 @@ mod tests {
         let (g, m, o) = sample();
         let parts = parts(&g, Some(420.0), &m, false, &o);
         assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
-        assert_eq!(parts.len(), 11, "one part per spec §10 budget G8 owns");
+        assert_eq!(
+            parts.len(),
+            12,
+            "one part per spec §10 budget G8 owns, and two for the key light"
+        );
     }
 
     #[test]
@@ -209,19 +228,39 @@ mod tests {
     }
 
     #[test]
-    fn a_late_light_a_lost_press_or_no_presentmon_csv_fails_its_part() {
-        let (g, mut m, mut o) = sample();
-        m.presses.lit_ms.push(Some(20.0));
+    fn the_slowest_light_may_come_one_refresh_after_the_median() {
+        let (g, mut m, o) = sample();
+        // At 165 Hz with a 2.5 ms median copy: 14.6 ms for the median and 20.7 ms for the slowest.
+        m.presses.lit_ms = vec![Some(9.0), Some(12.5), Some(20.0)];
+        assert!(budget::all_pass(&parts(&g, Some(420.0), &m, false, &o)));
+        m.presses.lit_ms.push(Some(21.0));
         assert_eq!(
             failed(&parts(&g, Some(420.0), &m, false, &o)),
-            ["highlight_ms"],
+            [LIT_WORST],
+            "three frames at 165 Hz plus a copy"
+        );
+        m.presses.lit_ms = vec![Some(15.0), Some(15.0), Some(16.0)];
+        assert_eq!(
+            failed(&parts(&g, Some(420.0), &m, false, &o)),
+            [LIT_P50],
             "two frames at 165 Hz plus a copy"
         );
+    }
+
+    #[test]
+    fn a_lost_press_no_refresh_rate_or_no_presentmon_csv_fails_its_parts() {
+        let (g, mut m, mut o) = sample();
         m.presses.lit_ms = vec![Some(5.0), None];
         o.dropped = None;
         assert_eq!(
             failed(&parts(&g, Some(420.0), &m, false, &o)),
-            ["highlight_ms", "dropped_frames"]
+            [LIT_P50, LIT_WORST, "dropped_frames"]
+        );
+        let (_, m, _) = sample();
+        let no_hz = highlight(&g, &m.presses, None);
+        assert!(
+            no_hz.iter().all(|p| !p.pass && p.got.is_none()),
+            "{no_hz:?}"
         );
     }
 
