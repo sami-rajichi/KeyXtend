@@ -97,7 +97,8 @@ Item {
             win.visible = false;
         }
 
-        // Ctrl latched, a dead key, or a press not sent: the keyboard types once and holds nothing, so no beat starts.
+        // Ctrl latched, a dead key, or a press not sent: the keyboard types at most once and holds nothing, so no beat
+        // starts.
         function test_a_press_the_keyboard_does_not_hold_starts_no_beat() {
             const win = make();
             const key = keyed(win, q);
