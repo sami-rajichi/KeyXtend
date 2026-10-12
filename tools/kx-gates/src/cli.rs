@@ -4,10 +4,11 @@
 use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx};
+use crate::config::GatesConfig;
 use crate::usage::usage;
 use crate::{
-    close, config, facearg, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g17, g18, g19,
-    g20, g21, g22, g23, g24, g25, g26, hand, mouseguard, out,
+    close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g17, g18,
+    g19, g20, g21, g22, g23, g24, g25, g26, hand, mouseguard, out,
 };
 
 /// Gates whose runs take a random seed.
@@ -129,6 +130,19 @@ fn mouse(gate: &str) -> Mouse {
         .map_or(Mouse::Free, |g| g.1)
 }
 
+/// The clicks of a G2 or G4 run, `--clicks` or else the gate's setting; refused when the run would pass the mouse
+/// guard's limit.
+fn clicks(cfg: &GatesConfig, args: &Args) -> Result<usize, String> {
+    let set = if args.gate == "g4" {
+        cfg.g4.clicks
+    } else {
+        cfg.g2.clicks
+    };
+    let count = args.count.unwrap_or(set);
+    fit::clicks_fit(cfg, &args.gate, count)?;
+    Ok(count)
+}
+
 fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
     if let Some(run) = named(&args.gate) {
         return run(ctx, &args.name);
@@ -146,18 +160,8 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
             };
             g1::run(ctx, kind, &run)
         }
-        "g2" => g2::run(
-            ctx,
-            &args.name,
-            args.count.unwrap_or(ctx.cfg.g2.clicks),
-            seed,
-        ),
-        "g4" => g4::run(
-            ctx,
-            &args.name,
-            args.count.unwrap_or(ctx.cfg.g4.clicks),
-            seed,
-        ),
+        "g2" => g2::run(ctx, &args.name, clicks(ctx.cfg, args)?, seed),
+        "g4" => g4::run(ctx, &args.name, clicks(ctx.cfg, args)?, seed),
         "assist" => hand::run(
             ctx,
             &args.name,

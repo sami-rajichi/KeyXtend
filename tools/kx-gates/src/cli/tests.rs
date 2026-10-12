@@ -41,6 +41,17 @@ fn parses_each_gate() {
 }
 
 #[test]
+fn a_click_run_counts_its_option_or_setting_and_refuses_one_past_the_guards_limit() {
+    let cfg = config::load().expect("loads");
+    let count = |s: &str| clicks(&cfg, &parse(&args(s)).expect("parses"));
+    assert_eq!(count("g2 keyxtend --clicks 5"), Ok(5));
+    assert_eq!(count("g2 keyxtend"), Ok(cfg.g2.clicks));
+    assert_eq!(count("g4 keyxtend"), Ok(cfg.g4.clicks));
+    let e = count("g4 keyxtend --clicks 100000").expect_err("past the limit");
+    assert!(e.contains("g4") && e.contains("limit"), "{e}");
+}
+
+#[test]
 fn parses_gates_that_take_only_a_name() {
     for probe in [
         "g6 chrome",

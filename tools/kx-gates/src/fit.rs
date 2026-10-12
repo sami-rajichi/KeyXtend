@@ -70,29 +70,34 @@ fn check_capture(c: &GatesConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// Refuses a guarded run whose counted steps and headroom pass the guard's limit, as the guard would stop it midway,
-/// and a G8 capture that would end before its G2 clicks.
-pub fn check(c: &GatesConfig) -> Result<(), String> {
-    check_capture(c)?;
-    if !c.mouse_guard.on {
-        return Ok(());
-    }
-    let limit = c.mouse_guard.limit_ms;
-    let runs = [
-        ("g2", clicks_ms(&c.g2, c.g2.clicks)),
-        ("g4", clicks_ms(&c.g2, c.g4.clicks)),
-        ("g8", g8_ms(c)),
-    ];
-    for (gate, ms) in runs {
-        let need = ms.saturating_add(c.fit.guard_headroom_ms);
-        if need > limit {
-            return Err(format!(
-                "{gate} holds the mouse at least {need} ms with fit.guard_headroom_ms, past mouse_guard.limit_ms \
-                 {limit}: count fewer clicks or raise the limit"
-            ));
-        }
+/// Refuses a run of `gate` that holds the mouse `ms` and, with `[fit] guard_headroom_ms`, passes the guard's limit, as
+/// the guard would stop it midway; with the guard off, nothing is held.
+fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
+    let (need, limit) = (
+        ms.saturating_add(c.fit.guard_headroom_ms),
+        c.mouse_guard.limit_ms,
+    );
+    if c.mouse_guard.on && need > limit {
+        return Err(format!(
+            "{gate} holds the mouse at least {need} ms with fit.guard_headroom_ms, past mouse_guard.limit_ms \
+             {limit}: count fewer clicks or raise the limit"
+        ));
     }
     Ok(())
+}
+
+/// Refuses `clicks` clicks of `gate`, G2 or G4, that would pass the guard's limit, such as a `--clicks` count.
+pub fn clicks_fit(c: &GatesConfig, gate: &str, clicks: usize) -> Result<(), String> {
+    held_fits(c, gate, clicks_ms(&c.g2, clicks))
+}
+
+/// Refuses a guarded run of the settings that would pass the guard's limit, and a G8 capture that would end before its
+/// G2 clicks.
+pub fn check(c: &GatesConfig) -> Result<(), String> {
+    check_capture(c)?;
+    clicks_fit(c, "g2", c.g2.clicks)?;
+    clicks_fit(c, "g4", c.g4.clicks)?;
+    held_fits(c, "g8", g8_ms(c))
 }
 
 #[cfg(test)]
@@ -150,6 +155,18 @@ mod tests {
         let more = with(|c| c.g8.clicks *= 10);
         let e = check(&more).expect_err("the capture would end before the clicks");
         assert!(e.contains("presentmon_secs"), "{e}");
+    }
+
+    #[test]
+    fn a_click_count_past_the_guards_limit_is_refused_for_its_gate() {
+        let c = load().expect("loads");
+        assert_eq!(clicks_fit(&c, "g4", c.g4.clicks), Ok(()));
+        let each = c.g2.press_ms + c.g2.click_gap_ms;
+        let past = usize::try_from(c.mouse_guard.limit_ms / each).expect("fits");
+        let e = clicks_fit(&c, "g2", past).expect_err("too long");
+        assert!(e.contains("g2"), "{e}");
+        let off = with(|c| c.mouse_guard.on = false);
+        assert_eq!(clicks_fit(&off, "g2", past), Ok(()), "nothing is held");
     }
 
     #[test]
