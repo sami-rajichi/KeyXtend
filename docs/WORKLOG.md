@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 08:30 — P3: keys act at the press, so a slip never cancels them (ADR-0024)
+A key now types the moment the button goes down, as on a real keyboard and Windows' On-Screen Keyboard, so a hand that slips while the button is down no longer cancels or redirects it; a held key repeats until let-go wherever the pointer slips. Every other control acts at let-go wherever the release lands, and the move grip and corner ignore a double click's second click. G2 now clicks like a person, each press held 0.4 s with a 2 px slip, and the owner's hands-on check passed with natural slips in English, French and Arabic.
+
 ## 2026-10-11 22:09 — P3: the gates guard the owner's mouse and count frames only while keys animate
 While a gate drives the mouse, a guard drops the owner's own mouse input and counts it; one physical click gives the mouse back and stops the gate (owner's choice). The guard ends the gate when Windows silently drops its hook, which happened while osk.exe was running, and it stops after a time limit. G8 now counts lost frames only while a pressed key sinks and rises, timed by each frame's present, and the pop-up churn compares the medians of its first and last rounds.
 
