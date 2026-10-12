@@ -77,6 +77,15 @@ impl<K: Clone> Repeat<K> {
     pub fn held(&self) -> bool {
         matches!(self.phase, Phase::Held { .. })
     }
+
+    /// The key held, or none.
+    #[must_use]
+    pub fn key(&self) -> Option<&K> {
+        match &self.phase {
+            Phase::Held { key, .. } => Some(key),
+            Phase::Idle => None,
+        }
+    }
 }
 
 /// The first beat after `now` on the pace that starts at `due`.

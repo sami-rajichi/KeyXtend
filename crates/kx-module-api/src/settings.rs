@@ -2,6 +2,8 @@
 
 use crate::SettingsError;
 use serde::{Serialize, de::DeserializeOwned};
+use std::fmt::Display;
+use std::ops::RangeInclusive;
 
 /// A module's settings type: read and written with serde (the Settings window writes values back),
 /// plus rules serde cannot express.
@@ -75,6 +77,24 @@ pub fn parse_as<T: Settings>(table: &toml::Table) -> Result<T, SettingsError> {
     let value = T::deserialize(table.clone()).map_err(|e| SettingsError::Parse(e.to_string()))?;
     value.check()?;
     Ok(value)
+}
+
+/// Refuses `value` of setting `key` outside `range`, naming the range; NaN is outside every range.
+///
+/// # Errors
+/// `SettingsError::Invalid` when `value` is outside `range`.
+pub fn within<T: Copy + PartialOrd + Display>(
+    key: &str,
+    value: T,
+    range: &RangeInclusive<T>,
+) -> Result<(), SettingsError> {
+    if range.contains(&value) {
+        return Ok(());
+    }
+    let (lo, hi) = (range.start(), range.end());
+    Err(SettingsError::Invalid(format!(
+        "{key} must be from {lo} to {hi}"
+    )))
 }
 
 #[cfg(test)]
@@ -180,6 +200,18 @@ mod tests {
             parse_as::<Plain>(&table("speed = 99")).map(|p| p.speed),
             Ok(99)
         );
+    }
+
+    #[test]
+    fn within_takes_both_ends_and_names_the_range_when_out() {
+        assert_eq!(within("speed", 1, &(1..=MAX_SPEED)), Ok(()));
+        assert_eq!(within("speed", MAX_SPEED, &(1..=MAX_SPEED)), Ok(()));
+        let why = "speed must be from 1 to 10".to_owned();
+        assert_eq!(
+            within("speed", 0, &(1..=MAX_SPEED)),
+            Err(SettingsError::Invalid(why))
+        );
+        assert!(within("ratio", f32::NAN, &(0.0..=1.0)).is_err(), "NaN");
     }
 
     #[test]

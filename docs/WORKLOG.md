@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 22:34 — P3: the branch review's three fixes
+A let-go now ends a key's hold only when that key is the one held, so a late let-go from another key never stops a repeat. Both settings files now share one range check in `kx-module-api`. The frame log's setting and the kx-ui security note now say its press times show the typing rhythm, so it stays off while typing anything private.
+
 ## 2026-10-12 22:20 — P3 done: the keyboard core (v0.1)
 The keyboard types English, French and Arabic from a no-focus uiAccess window, with modifiers, key repeat, act on press, three looks, the bubble and the tray. The owner passed every hands-on check, and G1–G4, G9–G11 and G25 passed; G13 and G8 are partial with the owner's acceptance (test report 2026-10-12). Start-up at about 527 ms against 500 and a frame count that disagrees with the screen after a reboot go to P14; a tip that misses after a look change goes to P13.
 

@@ -132,10 +132,11 @@ impl Face {
         })
     }
 
-    /// The pointer let go of key `id`, wherever it is: it typed at the press, so only its burst ends.
+    /// The pointer let go of key `id`, wherever it is: it typed at the press, so only its burst ends, and only when
+    /// `id` is the key held.
     fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
-        Ok(self.lock().leave())
+        Ok(self.lock().let_go(id))
     }
 
     /// Refuses a key that is not on the board, changing nothing, since the UI redraws nothing on an error.

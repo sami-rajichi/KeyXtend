@@ -73,6 +73,22 @@ fn a_hold_adds_one_at_the_delay_then_one_a_beat_and_its_let_go_adds_none() {
 }
 
 #[test]
+fn a_let_go_of_another_key_leaves_the_hold() {
+    let r = Rig::new(&GOLDEN, None);
+    let (delay, every) = times();
+    r.press(A).unwrap();
+    assert_eq!(
+        r.let_go("bksp"),
+        Ok(FaceReply::default()),
+        "not the held key"
+    );
+    assert_eq!(r.tick_in(delay), HOLDING, "A still repeats");
+    assert_eq!(r.let_go(A), Ok(STATE), "its own let-go ends it");
+    r.tick_in(every * 2);
+    assert_eq!(r.fakes.injector.strokes(), vec![text("a"); 2]);
+}
+
+#[test]
 fn a_double_click_types_twice_one_per_press() {
     let r = Rig::new(&GOLDEN, None);
     for _ in 0..2 {

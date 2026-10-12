@@ -33,4 +33,4 @@ pub use notice::{ModuleState, ModuleStateChanged, Notice, NoticeArg, SettingsCha
 pub use redacted::{REDACTED_MARKER, Redacted};
 pub use script::{ARABIC_BLOCKS, is_arabic};
 pub use service::ServiceKey;
-pub use settings::{Migration, Settings, SettingsSpec, parse_as, validate_as};
+pub use settings::{Migration, Settings, SettingsSpec, parse_as, validate_as, within};

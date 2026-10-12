@@ -5,7 +5,7 @@ pub use kx_module_api::ports::Corner;
 use std::ops::RangeInclusive;
 
 use kx_module_api::ports::{MAX_PRESETS, Point};
-use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
+use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
 /// How often the labels may follow the app in front, in ms. The floor spares CPU time, and the ceiling keeps a
@@ -171,15 +171,6 @@ impl KeyboardSettings {
 /// A broken rule as a settings error.
 fn invalid(why: &str) -> SettingsError {
     SettingsError::Invalid(why.to_owned())
-}
-
-/// Refuses `value` of `key` outside `range`, naming the range.
-fn within(key: &str, value: u64, range: &RangeInclusive<u64>) -> Result<(), SettingsError> {
-    if range.contains(&value) {
-        return Ok(());
-    }
-    let (low, high) = (range.start(), range.end());
-    Err(invalid(&format!("{key} must be from {low} to {high}")))
 }
 
 #[cfg(test)]

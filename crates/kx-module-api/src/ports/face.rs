@@ -107,7 +107,8 @@ pub enum FaceAction {
     },
     /// The hold timer asks whether a held key's repeat is due.
     Tick,
-    /// The pointer let go of key `id`, wherever it is: its repeat ends, and nothing more types.
+    /// The pointer let go of key `id`, wherever it is: its repeat ends and nothing more types; another key's hold
+    /// stays.
     LetGo {
         /// The key.
         id: KeyId,

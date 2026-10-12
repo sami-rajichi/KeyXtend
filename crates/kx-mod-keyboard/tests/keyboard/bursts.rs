@@ -76,7 +76,10 @@ proptest! {
                 Input::LetGo(k) => {
                     r.let_go(KEYS[k]).unwrap();
                     prop_assert_eq!(r.fakes.injector.strokes().len(), sent, "a let-go typed");
-                    latches_went(&r, held.take())?;
+                    // Only the held key's own let-go ends its burst.
+                    if held.is_some_and(|(h, _)| h == k) {
+                        latches_went(&r, held.take())?;
+                    }
                 }
                 Input::Leave => {
                     r.leave();

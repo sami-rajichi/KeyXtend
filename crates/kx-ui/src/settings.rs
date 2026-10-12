@@ -1,12 +1,11 @@
 //! The `[ui]` settings: the look, the language, tips, timings and paging, with every number's limits in one place.
 
 use crate::i18n::{AUTO, find};
-use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
+use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use kx_platform::ui::BackdropKind;
 use kx_theme::contrast::MIN_CONTRAST;
 use kx_theme::{LookChoice, ModeChoice, Themes};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::sync::OnceLock;
 
@@ -196,19 +195,6 @@ impl Settings for UiSettings {
         }
         Ok(())
     }
-}
-
-/// Refuses `value` of setting `key` outside `range`.
-fn within<T: Copy + PartialOrd + Display>(
-    key: &str,
-    value: T,
-    range: &RangeInclusive<T>,
-) -> Result<(), SettingsError> {
-    if range.contains(&value) {
-        return Ok(());
-    }
-    let (lo, hi) = (range.start(), range.end());
-    Err(invalid(&format!("{key} must be from {lo} to {hi}")))
 }
 
 /// The shipped theme ids, read from the compiled-in tokens once per run; the error names what broke.

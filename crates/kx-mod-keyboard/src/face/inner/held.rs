@@ -57,6 +57,15 @@ impl Inner {
         self.ended()
     }
 
+    /// The pointer let go of key `id`: its hold ends; a let-go of a key not held changes nothing.
+    pub(in crate::face) fn let_go(&mut self, id: &str) -> FaceReply {
+        if self.repeat.key().is_some_and(|k| k == id) {
+            self.ended()
+        } else {
+            FaceReply::default()
+        }
+    }
+
     /// True while a key is held, so the UI keeps its beat.
     pub(in crate::face) fn holding(&self) -> bool {
         self.repeat.held()

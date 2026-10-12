@@ -37,6 +37,16 @@ fn a_press_repeats_nothing_before_the_delay() {
 }
 
 #[test]
+fn the_key_held_is_the_last_one_pressed_until_the_hold_ends() {
+    let mut r = pressed();
+    assert_eq!(r.key(), Some(&A));
+    r.press(B, at(1));
+    assert_eq!(r.key(), Some(&B));
+    r.leave();
+    assert_eq!(r.key(), None);
+}
+
+#[test]
 fn a_hold_types_at_the_delay_then_every_interval() {
     let mut r = pressed();
     assert_eq!(r.tick(at(DELAY_MS)), Some(A));
