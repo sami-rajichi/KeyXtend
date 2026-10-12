@@ -448,7 +448,7 @@ Measured on the development PC and in weak mode (2 cores at a low CPU rate, 4 GB
 | Main process memory, idle | ≤ 100 MB private working set and ≤ 140 MB private commit (ADR-0021, owner, 2026-10-10) |
 | Memory after 8 hours of use | No growth |
 | Cold start to visible keyboard | ≤ 500 ms |
-| Key click to key highlight | Next screen frame |
+| Key click to key highlight | Median within the next frame (≤ 2 frames) and slowest one refresh later (≤ 3 frames), as Windows' On-Screen Keyboard (ADR-0025, owner, 2026-10-12) |
 | Key click to character in target app | ≤ 30 ms |
 | Animations | No dropped frames (PresentMon) |
 | Mouse hook callback | ≤ 1 ms (p99) |
