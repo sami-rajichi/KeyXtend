@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 13:20 — P3: letters type into scrcpy, the phone mirror
+scrcpy reads letters and numbers only as real key presses, so the keyboard's text never reached the phone while Space, Enter and Backspace did. `[keyboard] key_apps` now lists `scrcpy.exe` by default, so it gets key presses in its own layout, and the owner confirmed typing in WhatsApp through it. A one-click switch to add any app to that list is saved for P13.
+
 ## 2026-10-12 08:30 — P3: keys act at the press, so a slip never cancels them (ADR-0024)
 A key now types the moment the button goes down, as on a real keyboard and Windows' On-Screen Keyboard, so a hand that slips while the button is down no longer cancels or redirects it; a held key repeats until let-go wherever the pointer slips. Every other control acts at let-go wherever the release lands, and the move grip and corner ignore a double click's second click. G2 now clicks like a person, each press held 0.4 s with a 2 px slip, and the owner's hands-on check passed with natural slips in English, French and Arabic.
 

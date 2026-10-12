@@ -45,7 +45,12 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
         (1.0, [1.0, 1.25, 1.5].as_slice())
     );
     assert_eq!((s.size_step, s.size_min, s.size_max), (0.05, 0.8, 1.8));
-    assert_eq!((s.relabel_ms, s.key_apps.len()), (500, 0));
+    assert_eq!(s.relabel_ms, 500);
+    assert_eq!(
+        s.key_apps,
+        ["scrcpy.exe"],
+        "scrcpy reads letters only as key presses"
+    );
     assert_eq!((s.x, s.y, s.placed), (0, 0, false));
     assert_eq!(s.bubble_corner, Corner::Right);
 }

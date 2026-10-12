@@ -118,7 +118,7 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift
 | `repeat` | `true` | Held typing keys repeat (spec §4.6); with `false`, a held key types once, at the press. |
 | `repeat_delay_ms` | `800` | How long a key is held before it repeats, in ms; within `REPEAT_DELAY_MS` in `settings.rs`, so a slow click never repeats. |
 | `repeat_every_ms` | `100` | The time between repeats, in ms; within `REPEAT_EVERY_MS` in `settings.rs`. |
-| `key_apps` | `[]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. |
+| `key_apps` | `["scrcpy.exe"]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. scrcpy reads letters only as key presses. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |
 
