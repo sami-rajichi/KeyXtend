@@ -108,6 +108,15 @@ Item {
                 compare(t.renderType, Text.CurveRendering, t.text);
         }
 
+        // At 100 % scale, hinted widths made Dolch's AltGr shrink and its _ touch the 8 (CI, 2026-10-12).
+        function test_every_text_is_laid_out_unhinted_as_it_is_drawn() {
+            const win = make();
+            const texts = all(win.contentItem, o => o.renderType !== undefined && o.font !== undefined);
+            verify(texts.length > 50, "the legends: " + texts.length);
+            for (const t of texts)
+                compare(t.font.hintingPreference, Font.PreferNoHinting, t.text);
+        }
+
         function test_a_click_sends_the_key_and_the_back_part_of_the_language_key() {
             const win = make();
             win.visible = true;

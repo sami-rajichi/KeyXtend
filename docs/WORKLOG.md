@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 23:48 — P3: text measures the same at every display scale
+The first CI run of the Qt Quick tests, at 100 % scale, found Dolch's AltGr label shrunk a step and its `_` touching the 8 on the French and Arabic boards. Labels are drawn as exact curves, but Qt still measured them with pixel-snapped (hinted) widths, which only differ at 100 %; every label is now laid out unhinted, as it is drawn. All 345 Qt Quick tests pass at 125 % and at 100 %, and the board's pictures at 125 % are pixel for pixel the same as before.
+
 ## 2026-10-12 22:53 — P3: property tests for the UI's state machines, and screen-reader names
 The device rebuilds, the guard's tries, the tray slot and the app's mode, Quit and waker lifecycle each gained a property test over any sequence of their inputs, with limits read from the `[ui]` defaults. The Qt Quick tests now find a chip by the word it shows, in English and Arabic, and check the bubble's and the move catcher's accessible names. No property test found a product bug.
 

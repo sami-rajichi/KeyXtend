@@ -59,6 +59,7 @@
 7. G8's tip count is 40 of 60 with the shipped order: whichever key is hovered third, about 1.6 s into a round, misses its tip after the round's bubble and theme steps (20 of 20), while Shift first with longer rests gave 60 of 60. The owner's own tip check passed; the cause is open in P13.
 8. Admin prompts do not show on this PC (UAC raises rights without asking), so the hold check took the mouse away with the lock screen instead.
 9. Caps Lock pressed outside KeyXtend left its light unchanged until the next key click: reading the state worked, but nothing asked for a redraw. The relabel tick now also redraws on a Caps Lock change (build 5c4bd81, installed and checked on and off).
+10. CI's first Qt Quick run, at 100 % display scale, found Dolch's AltGr label shrunk and its `_` touching the 8; labels are now laid out unhinted, as they are drawn. The board's pictures at this PC's 125 % are pixel for pixel the same, so the results above stand.
 
 ## Clean-up
 - Gate logs, screenshots, PresentMon captures and timing scripts are deleted when P3 is recorded; only these numbers are kept.
