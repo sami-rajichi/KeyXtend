@@ -5,6 +5,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 ## 2026-10-12 22:53 — P3: property tests for the UI's state machines, and screen-reader names
 The device rebuilds, the guard's tries, the tray slot and the app's mode, Quit and waker lifecycle each gained a property test over any sequence of their inputs, with limits read from the `[ui]` defaults. The Qt Quick tests now find a chip by the word it shows, in English and Arabic, and check the bubble's and the move catcher's accessible names. No property test found a product bug.
 
+## 2026-10-12 23:20 — P3: the first CI run's two failures
+GitHub's Windows runner keeps its temp folder under a short (8.3) name, so the dev shortcut's remove step, which compared paths as text, missed its own shortcut; it now compares long paths, and its tests compare resolved paths. On Ubuntu a kx-ui test missed a warning because `tracing` cached a log line as unheard while another test thread installed its own capture; one capture now serves the whole test binary and sorts warnings by thread. The full suite passes here with a short temp folder, and the capture tests passed 40 runs in a row.
+
 ## 2026-10-12 22:52 — P3: the Caps Lock light follows a press outside the keyboard
 The owner's hand check found that Caps Lock pressed outside KeyXtend left its light unchanged until the next key click, as nothing asked for a redraw. The relabel tick now also redraws the state when Caps Lock changed since the last state shown, so the light follows within `relabel_ms`. Narrator read the keys and top-bar buttons clearly in the same check.
 

@@ -1,7 +1,9 @@
-//! A log capture for one test thread: it keeps each warning's message.
+//! A log capture for one test thread: it keeps each warning's message. One capture serves the whole test binary, so
+//! `tracing` never caches a log line as unheard while another test thread starts its own.
 
+use std::cell::RefCell;
 use std::fmt;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::Once;
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Level, Metadata, Subscriber};
@@ -11,19 +13,27 @@ const SPAN_ID: u64 = 1;
 /// The field that holds a log line's message.
 const MESSAGE: &str = "message";
 
-/// Keeps the messages of the warnings logged on this thread.
-#[derive(Clone, Default)]
-struct Warnings(Arc<Mutex<Vec<String>>>);
+thread_local! {
+    /// The warnings logged on this thread while `warnings_of` runs here, else nothing.
+    static SEEN: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
+}
+
+/// Installs the capture for the whole test binary, once.
+static INSTALL: Once = Once::new();
 
 /// The warnings `f` logs on this thread, in order.
 pub fn warnings_of(f: impl FnOnce()) -> Vec<String> {
-    let seen = Warnings::default();
-    tracing::subscriber::with_default(seen.clone(), f);
-    seen.0
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .clone()
+    INSTALL.call_once(|| {
+        // Only this file sets a capture in these test binaries, so the first call always installs it.
+        let _ = tracing::subscriber::set_global_default(Warnings);
+    });
+    SEEN.with(|seen| *seen.borrow_mut() = Some(Vec::new()));
+    f();
+    SEEN.with(|seen| seen.borrow_mut().take().unwrap_or_default())
 }
+
+/// Hands each warning to the thread that logs it.
+struct Warnings;
 
 /// Reads a line's message.
 #[derive(Default)]
@@ -51,14 +61,16 @@ impl Subscriber for Warnings {
     fn record_follows_from(&self, _: &Id, _: &Id) {}
 
     fn event(&self, event: &Event<'_>) {
-        if *event.metadata().level() == Level::WARN {
-            let mut message = Message::default();
-            event.record(&mut message);
-            self.0
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push(message.0);
+        if *event.metadata().level() != Level::WARN {
+            return;
         }
+        let mut message = Message::default();
+        event.record(&mut message);
+        SEEN.with(|seen| {
+            if let Some(lines) = seen.borrow_mut().as_mut() {
+                lines.push(message.0);
+            }
+        });
     }
 
     fn enter(&self, _: &Id) {}

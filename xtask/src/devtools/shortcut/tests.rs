@@ -93,6 +93,11 @@ mod script_runs {
         act(script::FIND, link, Path::new("")).trim().to_string()
     }
 
+    /// `path` as Windows resolves it, with long folder names, so a short (8.3) temp folder still compares equal.
+    fn real(path: impl AsRef<Path>) -> PathBuf {
+        std::fs::canonicalize(path).unwrap()
+    }
+
     /// A temp folder with two programs and the link path.
     fn folder() -> (TempDir, PathBuf, PathBuf, PathBuf) {
         let dir = TempDir::new("shortcut");
@@ -107,9 +112,9 @@ mod script_runs {
     fn a_second_add_replaces_the_shortcut() {
         let (_dir, a, b, link) = folder();
         act(script::ADD, &link, &a);
-        assert_eq!(target(&link), paths::text(&a));
+        assert_eq!(real(target(&link)), real(&a));
         act(script::ADD, &link, &b);
-        assert_eq!(target(&link), paths::text(&b));
+        assert_eq!(real(target(&link)), real(&b));
     }
 
     #[test]
@@ -126,6 +131,6 @@ mod script_runs {
         let (_dir, a, b, link) = folder();
         act(script::ADD, &link, &b);
         assert_eq!(remove(&setup(), &link, &a), Ok(false));
-        assert_eq!(target(&link), paths::text(&b));
+        assert_eq!(real(target(&link)), real(&b));
     }
 }
