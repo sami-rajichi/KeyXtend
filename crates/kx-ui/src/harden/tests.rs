@@ -32,14 +32,14 @@ fn defaults() -> UiSettings {
 }
 
 #[test]
-fn the_default_timing_variables_say_what_qt_does_alone_and_frames_show_at_once() {
+fn the_default_timing_variables_say_what_qt_does_alone_and_frames_wait_for_the_refresh() {
     let set = timing_vars(&defaults());
     let set: Vec<(&str, &str)> = set.iter().map(|(n, v)| (*n, v.as_str())).collect();
     assert_eq!(set, QT_OWN);
     assert_eq!(
         swap_interval(&defaults()),
-        0,
-        "no frame waits for the refresh (ADR-0025)"
+        1,
+        "each frame waits for the refresh (ADR-0026)"
     );
 }
 
@@ -56,7 +56,7 @@ fn each_knob_sets_its_own_variable() {
         frame_latency: 0,
         vblank_updates: false,
         update_idle_ms: 0,
-        present_vsync: true,
+        present_vsync: false,
         ..defaults()
     };
     let set = timing_vars(&s);
@@ -65,7 +65,7 @@ fn each_knob_sets_its_own_variable() {
         set,
         [(LATENCY_VAR, "0"), (NO_VBLANK_VAR, "1"), (IDLE_VAR, "0")]
     );
-    assert_eq!(swap_interval(&s), 1, "each frame waits for the refresh");
+    assert_eq!(swap_interval(&s), 0, "no frame waits for the refresh");
 }
 
 #[test]

@@ -185,13 +185,13 @@ fn the_frame_timing_knobs_default_to_what_qt_does_alone() {
 }
 
 #[test]
-fn frames_present_without_vsync_unless_set() {
+fn frames_wait_for_the_refresh_unless_set() {
     assert!(
-        !UiSettings::from_defaults().unwrap().present_vsync,
-        "ADR-0025"
+        UiSettings::from_defaults().unwrap().present_vsync,
+        "ADR-0026"
     );
-    let s: UiSettings = parse_as(&with("present_vsync", true)).unwrap();
-    assert!(s.present_vsync);
+    let s: UiSettings = parse_as(&with("present_vsync", false)).unwrap();
+    assert!(!s.present_vsync);
 }
 
 #[test]
