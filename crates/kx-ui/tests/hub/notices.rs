@@ -66,5 +66,6 @@ fn qml_reads_the_timings_and_paging_and_the_language_apart() {
     assert_eq!(v["pageRows"], s.page_rows);
     assert_eq!(v["pressFrame"], "after");
     assert_eq!(v["pressFrameMs"], s.press_frame_ms);
+    assert_eq!(v["frameLog"], false, "the frame log is off unless set");
     assert!(v.get("lang").is_none() && v.get("sizes").is_none(), "{v}");
 }

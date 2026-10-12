@@ -8,8 +8,8 @@ use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
 use kx_ui::i18n::keys::WINDOW_KEYBOARD;
 use kx_ui::{
-    ADAPTER_VAR, Device, Shell, UiSettings, draw_window, drawing, font_families, pin_adapter,
-    qt_sees, released, released_hidden, wakes,
+    ADAPTER_VAR, Device, FrameLog, Shell, UiSettings, draw_window, drawing, font_families,
+    pin_adapter, qt_sees, released, released_hidden, wakes,
 };
 use std::thread;
 use tracing::Level;
@@ -26,6 +26,8 @@ const GRAPHICS: &str = "graphics";
 const REFUSED: &str = "icon was refused";
 /// A title none of our windows has.
 const NO_WINDOW: &str = "no such window";
+/// What the frame log logs for each frame.
+const FRAME_LINE: &str = "frame timed";
 
 /// The windows drew icons through the provider since it had made `made` textures, and it refused none: each engine,
 /// a rebuilt one too, has the provider, as Qt finds no other.
@@ -76,7 +78,24 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
     iconed(rig, 0)?;
     adopted(0)?;
     drawn_now(rig)?;
+    frames_logged(rig)?;
     elsewhere(rig)
+}
+
+/// While the frame log runs, a frame drawn logs its line; once it stops, none does.
+fn frames_logged(rig: &Rig) -> Outcome {
+    let title = rig.hub.i18n().text(WINDOW_KEYBOARD);
+    let log = FrameLog::start();
+    let before = rig.lines.count(Level::INFO, FRAME_LINE);
+    let drawn = draw_window(&title);
+    let logged = rig.lines.count(Level::INFO, FRAME_LINE);
+    drop(log);
+    let again = draw_window(&title);
+    let quiet = rig.lines.count(Level::INFO, FRAME_LINE) == logged;
+    if drawn && again && logged > before && quiet {
+        return Ok(());
+    }
+    Err("the frame log missed a frame while it ran, or logged one after it stopped".into())
 }
 
 /// A press frame drawn at once (`press_frame = "now"`) finds the shown keyboard by its title, and no window by another.

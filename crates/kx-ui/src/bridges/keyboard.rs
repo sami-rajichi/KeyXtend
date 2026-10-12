@@ -120,6 +120,14 @@ pub mod qobject {
         #[qinvokable]
         fn draw_now(&self, title: &QString) -> bool;
 
+        /// The frame log's mark: a key's action starts.
+        #[qinvokable]
+        fn press_start(&self);
+
+        /// The frame log's mark: a key's action and its redraw ended.
+        #[qinvokable]
+        fn press_end(&self);
+
         /// One guard try, with our window titled `top` (empty for none) landing in front; true to try again after
         /// `guard_delay_ms`.
         #[qinvokable]
@@ -193,7 +201,7 @@ impl qobject::Keyboard {
 
     fn tap(&self, id: &QString, back: bool) -> QString {
         let id = KeyId::new(id.to_string());
-        self.run(FaceAction::Tap { id, back })
+        self.sent(FaceAction::Tap { id, back })
     }
 
     fn smaller(&self) -> QString {

@@ -59,6 +59,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - `pin_drawing` then sets `QSG_RENDER_LOOP=basic` and `QSG_NO_DEPTH_BUFFER=1` (`harden::DRAW_VARS`), so the one shared `QRhi` is used on the GUI thread only; the app shares it only when both read back through Qt's byte read, as Qt Quick reads them, and makes it only on the thread of Qt's app object (ADR-0021).
   - `pin_timing` then sets three more fixed Qt names, `QT_D3D_MAX_FRAME_LATENCY`, `QT_D3D_NO_VBLANK_THREAD` and `QT_QPA_UPDATE_IDLE_TIME`, and the default swap interval, from the checked `[ui]` settings: whole numbers within their ranges and two flags, never outside text. The defaults are Qt's own values; an outside value of the same name is cleared first.
   - `Keyboard.drawNow` (`press_frame = "now"`) sends one update event to our own shown Quick window of that title on the GUI thread, outside a frame; it reads no key and draws nothing Qt would not draw at its next update.
+  - The frame log (`[ui] frame_log`, off by default) logs times only: its watch reads each event's type and a Windows message's id, never a key, a position or text, and the action's marks carry no key id. While on, it logs one info line per frame and per press into the user's log file.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

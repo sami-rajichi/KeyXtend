@@ -8,7 +8,7 @@ use kx_module_api::ports::{FaceAction, KeyId};
 impl qobject::Keyboard {
     pub(super) fn press(&self, id: &QString) -> QString {
         let id = KeyId::new(id.to_string());
-        self.run(FaceAction::Press { id })
+        self.sent(FaceAction::Press { id })
     }
 
     pub(super) fn tick(&self) -> QString {

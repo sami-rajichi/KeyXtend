@@ -4,13 +4,15 @@
 //! device.
 
 use cxx_qt_lib::QGuiApplication;
-use kx_ui::{After, Pick, Shell, UiSettings, harden_qt, pin_adapter, pin_drawing, pin_timing};
+use kx_ui::{
+    After, FrameLog, Pick, Shell, UiSettings, harden_qt, pin_adapter, pin_drawing, pin_timing,
+};
 use std::path::Path;
 use std::process::ExitCode;
 
 /// Loads the root QML and runs Qt's loop until the UI ends; `end` runs after the loop, while Qt's objects still live.
 /// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `pick` finds, with
-/// the frame timing of the `[ui]` settings `ui`.
+/// the frame timing of the `[ui]` settings `ui`, and logs each press's and frame's times when they say so.
 pub fn run(pinned: Option<&Path>, pick: Pick, ui: &UiSettings, end: impl FnOnce()) -> ExitCode {
     let cleared = harden_qt(pinned);
     if cleared > 0 {
@@ -22,11 +24,13 @@ pub fn run(pinned: Option<&Path>, pick: Pick, ui: &UiSettings, end: impl FnOnce(
     }
     timing(ui);
     let mut app = QGuiApplication::new();
+    let frames = ui.frame_log.then(FrameLog::start);
     let mut shell = Shell::open(pinned, pick);
     let exec = || app.as_mut().map(QGuiApplication::exec);
     let code = shell.as_mut().and_then(|s| looped(exec, s));
     end();
     drop(shell);
+    drop(frames);
     drop(app);
     if code == Some(0) {
         ExitCode::SUCCESS
@@ -70,6 +74,8 @@ fn timing(ui: &UiSettings) {
         vblank_updates = ui.vblank_updates,
         update_idle_ms = ui.update_idle_ms,
         present_vsync = ui.present_vsync,
+        press_frame = ?ui.press_frame,
+        frame_log = ui.frame_log,
         "Qt's frame timing is set"
     );
 }

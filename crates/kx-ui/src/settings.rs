@@ -135,6 +135,8 @@ pub struct UiSettings {
     pub press_frame: PressFrame,
     /// The longest `PressFrame::First` waits for that frame, in ms.
     pub press_frame_ms: u64,
+    /// Each press and frame logs its times, never a key or text (`FrameLog`).
+    pub frame_log: bool,
     /// Rows per page in every list.
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.

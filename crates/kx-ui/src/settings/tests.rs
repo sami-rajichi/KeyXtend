@@ -229,6 +229,14 @@ fn the_press_frame_wait_stays_in_its_range() {
 }
 
 #[test]
+fn the_frame_log_is_off_unless_set() {
+    assert!(!UiSettings::from_defaults().unwrap().frame_log);
+    let s: UiSettings = parse_as(&with("frame_log", true)).unwrap();
+    assert!(s.frame_log);
+    assert!(unparsed(&with("frame_log", "on")));
+}
+
+#[test]
 fn page_rows_default_to_the_adr_0008_page() {
     assert!(PAGE_ROWS.contains(&UiSettings::from_defaults().unwrap().page_rows));
 }

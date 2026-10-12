@@ -9,6 +9,7 @@ mod bridges;
 #[cfg(all(feature = "qt", debug_assertions))]
 mod churn;
 pub mod device;
+pub mod frames;
 mod geom;
 mod guard;
 pub mod harden;
@@ -22,6 +23,8 @@ mod ui_module;
 
 #[cfg(feature = "qt")]
 pub use bridges::device::Device;
+#[cfg(feature = "qt")]
+pub use bridges::frames::FrameLog;
 #[cfg(feature = "qt")]
 pub use bridges::harden::{
     ADAPTER_VAR, QML_DIR, drawing_pinned, harden_qt, pin_adapter, pin_drawing, pin_imports,

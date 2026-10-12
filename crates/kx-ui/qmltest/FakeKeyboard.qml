@@ -112,6 +112,12 @@ QtObject {
         note("drawNow");
         return true;
     }
+    function pressStart() {
+        note("pressStart");
+    }
+    function pressEnd() {
+        note("pressEnd");
+    }
     function liftAlone(title) {
         note("liftAlone " + title);
         lifted(title);

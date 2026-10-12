@@ -92,7 +92,7 @@ pub enum HubError {
     Theme(#[from] ThemeError),
 }
 
-/// The timings, paging and press frame QML reads, as JSON.
+/// The timings, paging, press frame and frame log QML reads, as JSON.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct QmlSettings {
@@ -103,6 +103,7 @@ struct QmlSettings {
     page_rows: usize,
     press_frame: PressFrame,
     press_frame_ms: u64,
+    frame_log: bool,
 }
 
 /// What changes while the app runs.
@@ -216,7 +217,7 @@ impl Hub {
         self.lock().settings.clone()
     }
 
-    /// The timings, paging and press frame QML reads, as JSON; the language comes apart, in `lang_json`.
+    /// The timings, paging, press frame and frame log QML reads, as JSON; the language comes apart, in `lang_json`.
     #[must_use]
     pub fn settings_json(&self) -> String {
         let s = self.settings();
@@ -228,6 +229,7 @@ impl Hub {
             page_rows: s.page_rows,
             press_frame: s.press_frame,
             press_frame_ms: s.press_frame_ms,
+            frame_log: s.frame_log,
         })
     }
 

@@ -28,9 +28,10 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A shown keyboard window over fresh stand-ins, its presses acting as `mode` says; the real pointer passes.
-        function make(mode) {
-            const settings = Object.assign({}, En.settings, { pressFrame: mode });
+        // A shown keyboard window over fresh stand-ins, its presses acting as `mode` says, logged when `logs`; the real
+        // pointer passes.
+        function make(mode, logs) {
+            const settings = Object.assign({}, En.settings, { pressFrame: mode, frameLog: !!logs });
             const ui = createTemporaryObject(uiC, root, { settings: settings });
             const kb = createTemporaryObject(kbC, root);
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
@@ -43,9 +44,9 @@ Item {
         function keyed(win, id) {
             return Board.all(win.contentItem, o => o.Accessible.id === id)[0];
         }
-        // The keyboard calls that draw, type, hold or let go, in order.
+        // The keyboard calls that draw, mark, type, hold or let go, in order.
         function sent(win) {
-            return win.keyboard.calls.filter(c => /^(drawNow|tap|press|letGo|leave)\b/.test(c));
+            return win.keyboard.calls.filter(c => /^(drawNow|pressStart|pressEnd|tap|press|letGo|leave)\b/.test(c));
         }
 
         function test_by_default_a_key_acts_at_its_press() {
@@ -98,6 +99,20 @@ Item {
             win.visible = false;
             win.presses.triggered();
             compare(sent(win), []);
+        }
+
+        function test_the_frame_log_marks_each_action_only_while_it_logs() {
+            const win = make(En.settings.pressFrame, true);
+            const key = keyed(win, q);
+            mousePress(key);
+            mouseRelease(key);
+            compare(sent(win), ["pressStart", "press " + q, "pressEnd", "letGo " + q], "the let-go is no action");
+            win.visible = false;
+            const quiet = make("first");
+            mousePress(keyed(quiet, esc));
+            quiet.presses.triggered();
+            compare(sent(quiet), ["tap esc false"], "no marks while it does not log");
+            quiet.visible = false;
         }
 
         function test_now_draws_the_pressed_key_then_it_acts() {

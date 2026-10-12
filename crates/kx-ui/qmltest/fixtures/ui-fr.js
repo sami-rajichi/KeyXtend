@@ -1,6 +1,7 @@
 .pragma library
 // Written by kx-ui's texts test; do not edit.
 var settings = {
+  "frameLog": false,
   "guardDelayMs": 300,
   "pageRows": 5,
   "pollMs": 16,

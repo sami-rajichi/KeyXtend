@@ -40,6 +40,8 @@ present_vsync = true
 press_frame = "after"
 # The longest "first" waits for the press's frame before it types anyway, in ms.
 press_frame_ms = 50
+# Logs the times of each press and frame, never a key or text, to measure the key light. Read at start.
+frame_log = false
 # Rows per page in every list.
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.

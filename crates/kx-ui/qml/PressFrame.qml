@@ -10,6 +10,8 @@ Timer {
     // The press waiting for its frame, as a function, or null.
     property var waiting: null
     readonly property string mode: win.cfg ? win.cfg.pressFrame : "after"
+    // The frame log marks each press's action (`[ui] frame_log`).
+    readonly property bool logs: win.cfg ? win.cfg.frameLog : false
 
     // Once the frame showing the press is out, the press acts, after Qt's frame ends.
     property Connections swaps: Connections {
@@ -45,7 +47,7 @@ Timer {
     function run(act) {
         settle();
         if (mode === "after") {
-            act();
+            timed(act);
             return;
         }
         waiting = act;
@@ -68,6 +70,14 @@ Timer {
         const act = waiting;
         waiting = null;
         if (act && win.visible)
-            act();
+            timed(act);
+    }
+    // Runs press `act`, between the frame log's marks while it logs.
+    function timed(act) {
+        if (logs)
+            win.keyboard.pressStart();
+        act();
+        if (logs)
+            win.keyboard.pressEnd();
     }
 }
