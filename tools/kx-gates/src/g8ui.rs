@@ -120,8 +120,19 @@ fn or_release(
     released.map_err(|e| format!("{e}; buttons let go: {:?}", release()))
 }
 
+/// The pointer's way onto a key: the window typed into comes in front first, as a keyboard that types on hover would
+/// type at the rest, then the pointer rests on the key, then that window is checked in front again for the press.
+fn approach(
+    front: impl Fn() -> Result<(), String>,
+    rest: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    front()?;
+    rest()?;
+    front()
+}
+
 /// Presses the key at `spot` `[g8] presses` times and times how soon it lights; the pointer rests on it first, so the
-/// hover is already drawn, and `front` keeps the window it types into in front before each press. The last key's rise
+/// hover is already drawn, and `front` keeps the window it types into in front before that rest and each press. The last key's rise
 /// ends before it returns, and a stop by the mouse guard lets go away from the key at once.
 pub fn presses(
     ctx: &Ctx,
@@ -132,10 +143,13 @@ pub fn presses(
     let (r, on) = (spot.key, spot.at);
     let away = away_from(spot.window, on, win::desktop().1);
     let (mut out, wait) = (Presses::default(), Duration::from_millis(g.press_wait_ms));
-    for _ in 0..g.presses {
+    let rest = || {
         mouse::move_to(on)?;
         sleep_ms(g.hover_settle_ms);
-        front()?;
+        Ok(())
+    };
+    for _ in 0..g.presses {
+        approach(&front, rest)?;
         let before = picture(&r)?;
         let (start, at_us) = (Instant::now(), now_us());
         mouse::press_at(on)?;
@@ -151,9 +165,31 @@ pub fn presses(
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
+    use std::cell::{Cell, RefCell};
 
     use super::*;
+
+    #[test]
+    fn the_window_typed_into_is_in_front_before_the_pointer_rests_on_the_key_and_again_before_the_press()
+     {
+        let steps = RefCell::new(Vec::new());
+        let front = || {
+            steps.borrow_mut().push("front");
+            Ok(())
+        };
+        let rest = || {
+            steps.borrow_mut().push("rest");
+            Ok(())
+        };
+        assert_eq!(approach(front, rest), Ok(()));
+        assert_eq!(*steps.borrow(), ["front", "rest", "front"]);
+        let gone = || Err("target-window left the front".to_string());
+        let never = || -> Result<(), String> { panic!("rested with another window in front") };
+        assert!(
+            approach(gone, never).is_err(),
+            "a hover keyboard would type elsewhere"
+        );
+    }
 
     #[test]
     fn the_light_wait_ends_at_once_when_the_mouse_guard_stops_the_gate() {
