@@ -177,3 +177,6 @@ languages = ["de-DE", "ru-RU", "he-IL", "fa-IR"]
 clicks = 100
 # Longest wait for the keyboard to show, in ms; the runner starts a cold debug build just before.
 show_wait_ms = 60000
+# Longest wait, in ms, for every character key to be listed and named after a new layout; G26 reports the time taken
+# (`labels_ms`). On the runner's cold debug build, Hebrew's keys took longer than one follow wait (2026-10-13).
+label_wait_ms = 10000

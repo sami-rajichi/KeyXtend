@@ -3,6 +3,8 @@
 //! session's input language through `kx-target-window --layout`, so it runs on GitHub's Windows runner only.
 #![cfg(windows)]
 
+use std::time::Instant;
+
 use kx_module_api::ports::LayoutId;
 use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
@@ -39,15 +41,36 @@ fn labels(read: &[KeyRead], want: &[walk::CharKey]) -> Labels {
     (walk::misnamed(read, want), walk::missing(read, &ids))
 }
 
-/// The character keys of keyboard `kb` not named after `layout` or not listed, read after one follow wait.
-fn misnamed(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<Labels, String> {
-    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
-    let read = Reader::new()?.walk(kb.hwnd)?;
-    Ok(labels(&read, &walk::char_keys(layout)?))
+/// Calls `read` every `poll_ms` until every key is listed and named right, or `wait_ms` has passed; the last read
+/// counts, so a failed read fails only when no later one came right.
+fn settle(
+    wait_ms: u64,
+    poll_ms: u64,
+    mut read: impl FnMut() -> Result<Labels, String>,
+) -> Result<Labels, String> {
+    // `poll_until` calls at least once, so the first read always replaces this.
+    let mut last = Err(String::new());
+    win::poll_until(wait_ms, poll_ms, || {
+        last = read();
+        let right = |(m, missing): &Labels| m.is_empty() && missing.is_empty();
+        last.as_ref().is_ok_and(right).then_some(())
+    });
+    last
 }
 
-/// Target-window, in front, in `layout`, and its key labels; it is closed if reading them fails.
-fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, Labels), String> {
+/// The character keys of keyboard `kb` not named after `layout` or not listed, from one follow wait until they are
+/// right or `[g26] label_wait_ms` has passed, and the ms that took.
+fn misnamed(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Labels, u64), String> {
+    let t = Instant::now();
+    sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
+    let (reader, want) = (Reader::new()?, walk::char_keys(layout)?);
+    let read = || Ok(labels(&reader.walk(kb.hwnd)?, &want));
+    let got = settle(ctx.cfg.g26.label_wait_ms, ctx.cfg.timing.poll_ms, read)?;
+    Ok((got, win::ms_since(t)))
+}
+
+/// Target-window, in front, in `layout`, its key labels and the ms they took; it is closed if reading them fails.
+fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, (Labels, u64)), String> {
     let args = [ctx.target.layout_arg.clone(), layout.to_string()];
     let target = launch::to_front(ctx, launch::start_target_with(ctx, &args)?)?;
     match misnamed(ctx, kb, layout) {
@@ -64,7 +87,7 @@ fn open_in(ctx: &Ctx, kb: &Keyboard, layout: LayoutId) -> Result<(Opened, Labels
 fn one(ctx: &Ctx, kb: &Keyboard, tag: &str) -> Result<Value, String> {
     let layout = capture::find(&WinLayouts, language(tag))
         .ok_or_else(|| format!("no installed {tag} layout"))?;
-    let (target, (misnamed, missing)) = open_in(ctx, kb, layout)?;
+    let (target, ((misnamed, missing), labels_ms)) = open_in(ctx, kb, layout)?;
     let lang_ctx = Ctx {
         out: ctx.out.clone(),
         base: format!("{}-{tag}", ctx.base),
@@ -80,8 +103,8 @@ fn one(ctx: &Ctx, kb: &Keyboard, tag: &str) -> Result<Value, String> {
     let back = put_back(&typed, log.as_deref());
     let pass = misnamed.is_empty() && missing.is_empty() && g2::typed_intact(&typed) && back;
     Ok(json!({
-        "language": tag, "layout": layout.to_string(), "misnamed": misnamed, "missing": missing, "typed": typed,
-        "layout_put_back": back, "pass": pass,
+        "language": tag, "layout": layout.to_string(), "misnamed": misnamed, "missing": missing, "labels_ms": labels_ms,
+        "typed": typed, "layout_put_back": back, "pass": pass,
     }))
 }
 
@@ -138,6 +161,53 @@ mod tests {
         let (misnamed, missing) = labels(&read, &want);
         assert!(misnamed.is_empty());
         assert_eq!(missing, ["c-0x0011"]);
+    }
+
+    /// Labels with `missing` keys not listed and none misnamed.
+    fn with_missing(missing: &[&str]) -> Labels {
+        (
+            Vec::new(),
+            missing.iter().map(ToString::to_string).collect(),
+        )
+    }
+
+    #[test]
+    fn the_labels_are_read_again_until_every_key_is_listed_and_named_right() {
+        let mut reads = vec![
+            with_missing(&[]),
+            with_missing(&["c-0x0010"]),
+            with_missing(&["c-0x0010", "c-0x0011"]),
+        ];
+        let mut calls = 0;
+        let got = settle(60_000, 0, || {
+            calls += 1;
+            Ok(reads.pop().expect("a read is left"))
+        });
+        assert_eq!((got, calls), (Ok(with_missing(&[])), 3));
+    }
+
+    #[test]
+    fn the_last_read_counts_when_the_labels_never_come_right_in_time() {
+        let mut calls = 0;
+        let got = settle(0, u64::MAX, || {
+            calls += 1;
+            Ok(with_missing(&["c-0x0010"]))
+        });
+        assert_eq!((got, calls), (Ok(with_missing(&["c-0x0010"])), 1));
+    }
+
+    #[test]
+    fn a_failed_read_is_tried_again_and_fails_the_language_only_when_it_is_the_last() {
+        let mut reads = vec![
+            Ok(with_missing(&[])),
+            Err("UI Automation: busy".to_string()),
+        ];
+        assert_eq!(
+            settle(60_000, 0, || reads.pop().expect("a read is left")),
+            Ok(with_missing(&[]))
+        );
+        let got = settle(0, u64::MAX, || Err("UI Automation: busy".to_string()));
+        assert_eq!(got, Err("UI Automation: busy".to_string()));
     }
 
     #[test]

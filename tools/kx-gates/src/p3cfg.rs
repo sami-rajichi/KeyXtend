@@ -70,6 +70,8 @@ pub struct G26 {
     pub clicks: usize,
     /// Longest wait for the keyboard to show, in ms; the runner starts it just before.
     pub show_wait_ms: u64,
+    /// Longest wait, in ms, for every character key to be listed and named after a new layout.
+    pub label_wait_ms: u64,
 }
 
 /// Refuses settings that could pass with nothing checked.
