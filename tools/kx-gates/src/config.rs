@@ -221,7 +221,6 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;
-    config.osk.check()?;
     config.mouse_guard.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;

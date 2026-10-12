@@ -1,5 +1,5 @@
 //! Settings of the gates P3 adds besides G8: G9 window flags, G10 screen readers, G11 DPI, G13 themes and G26 other
-//! languages, from `[g9]` to `[g26]` of `kx-gates-p3.toml`.
+//! languages, from `[g9]` to `[g26]` of `kx-gates-p3.toml`; the check covers G8's `[osk]` too.
 #![cfg(windows)]
 
 use serde::Deserialize;
@@ -74,6 +74,7 @@ pub struct G26 {
 
 /// Refuses settings that could pass with nothing checked.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
+    c.osk.check()?;
     let (g9, g11) = (&c.g9, &c.g11);
     if g9.put_away.is_empty() || g9.bring_back.is_empty() {
         return Err("g9.put_away and g9.bring_back must name a button".to_string());
@@ -145,7 +146,8 @@ mod tests {
 
     #[test]
     fn settings_that_check_nothing_are_refused() {
-        let bad: [fn(&mut GatesConfig); 13] = [
+        let bad: [fn(&mut GatesConfig); 14] = [
+            |c| c.osk.key.clear(),
             |c| c.g9.put_away.clear(),
             |c| c.g9.bring_back.clear(),
             |c| c.g10.probe = "shift".into(),
