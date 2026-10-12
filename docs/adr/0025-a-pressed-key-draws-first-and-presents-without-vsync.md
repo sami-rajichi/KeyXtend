@@ -27,7 +27,7 @@ Decided by the owner on 2026-10-12.
 - Each press draws one frame more: the press frame, then the redraw after the key acted.
 - Typing now waits one event-loop turn for the press frame, about 2.5 ms after the click, still far inside spec §10's 30 ms from click to character.
 - With no wait at Present, animations may draw more frames than the screen shows.
-- The fall-back: if the full G8 shows dropped frames, or idle CPU over its budget, with `present_vsync = false`, that default goes back to `true` in one line; `press_frame` stays `"now"`.
+- The fall-back: if the full G8 shows dropped frames, or idle CPU over its budget, with `present_vsync = false`, that default goes back to `true`: its one line in `defaults.toml`, with the tests and docs that state it (`docs/items/P3.md` lists them); `press_frame` stays `"now"`.
 - ADR-0021's one device and basic render loop stay: the press frame is drawn on the GUI thread through `Keyboard.drawNow`, which refuses inside another frame.
 - G8's result has `highlight_p50_ms` and `highlight_worst_ms` in place of the one `highlight_ms`.
 - Each press still re-reads the whole keyboard state (`restate`, about 4.4 ms on the development PC); a partial update is a P13 note.
