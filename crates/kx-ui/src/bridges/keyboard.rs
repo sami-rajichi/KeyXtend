@@ -11,6 +11,7 @@ use cxx_qt_lib::QString;
 use kx_module_api::ports::{Corner, FaceAction, KeyId, Point, Rect};
 use std::sync::Arc;
 
+mod frame;
 mod held;
 mod window;
 
@@ -114,6 +115,10 @@ pub mod qobject {
         /// Lifts our shown windows titled `title` alone in front of our others, as a tip does; false until one shows.
         #[qinvokable]
         fn lift_alone(&self, title: &QString) -> bool;
+
+        /// Draws window `title` at once, so a press shows before its key acts; false while it does not show.
+        #[qinvokable]
+        fn draw_now(&self, title: &QString) -> bool;
 
         /// One guard try, with our window titled `top` (empty for none) landing in front; true to try again after
         /// `guard_delay_ms`.

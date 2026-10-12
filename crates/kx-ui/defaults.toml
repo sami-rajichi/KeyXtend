@@ -36,6 +36,10 @@ vblank_updates = true
 update_idle_ms = 5
 # Each frame shows at a screen refresh; false shows it at once. Read at start.
 present_vsync = true
+# A pressed key types, then draws its press ("after"); "first" types once that frame is out, "now" draws it at once.
+press_frame = "after"
+# The longest "first" waits for the press's frame before it types anyway, in ms.
+press_frame_ms = 50
 # Rows per page in every list.
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.

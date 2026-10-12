@@ -39,6 +39,8 @@ Window {
     readonly property real ratio: rescale.ratio
     // The held key's beat, which repeating keys press, let go and leave.
     readonly property alias hold: beat
+    // When a pressed key acts against the frame that shows it pressed.
+    readonly property alias presses: frame
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -270,6 +272,10 @@ Window {
     }
     Hold {
         id: beat
+        win: win
+    }
+    PressFrame {
+        id: frame
         win: win
     }
     // The labels follow the layout in front, at once as the keyboard shows, since the timer rests while it is hidden.

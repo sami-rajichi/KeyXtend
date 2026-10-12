@@ -37,6 +37,7 @@ pub use bridges::tint::serve_icons;
 pub use bridges::{
     device::{drawing, released, released_hidden, unreleased, wired},
     fonts::font_families,
+    frames::draw_window,
     shadows::adopted,
     tint::{icon_mask, icon_pixels, icon_textures},
     wakes,
@@ -46,7 +47,7 @@ pub use hub::{
     FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker,
 };
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
-pub use settings::{Backdrop, SPEC, UiSettings};
+pub use settings::{Backdrop, PressFrame, SPEC, UiSettings};
 #[cfg(feature = "qt")]
 pub use shell::{After, Pick, Shell};
 pub use ui_module::{ID, MANIFEST, UiModule};

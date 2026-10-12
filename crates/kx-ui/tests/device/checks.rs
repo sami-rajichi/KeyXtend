@@ -6,9 +6,10 @@ use cxx::UniquePtr;
 use cxx_qt_lib::QGuiApplication;
 use kx_theme::Themes;
 use kx_theme::assets::FontFiles;
+use kx_ui::i18n::keys::WINDOW_KEYBOARD;
 use kx_ui::{
-    ADAPTER_VAR, Device, Shell, UiSettings, drawing, font_families, pin_adapter, qt_sees, released,
-    released_hidden, wakes,
+    ADAPTER_VAR, Device, Shell, UiSettings, draw_window, drawing, font_families, pin_adapter,
+    qt_sees, released, released_hidden, wakes,
 };
 use std::thread;
 use tracing::Level;
@@ -23,6 +24,8 @@ const NOT_LOADED: &str = "did not load";
 const GRAPHICS: &str = "graphics";
 /// What a refused icon warns.
 const REFUSED: &str = "icon was refused";
+/// A title none of our windows has.
+const NO_WINDOW: &str = "no such window";
 
 /// The windows drew icons through the provider since it had made `made` textures, and it refused none: each engine,
 /// a rebuilt one too, has the provider, as Qt finds no other.
@@ -72,7 +75,17 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
     watched()?;
     iconed(rig, 0)?;
     adopted(0)?;
+    drawn_now(rig)?;
     elsewhere(rig)
+}
+
+/// A press frame drawn at once (`press_frame = "now"`) finds the shown keyboard by its title, and no window by another.
+fn drawn_now(rig: &Rig) -> Outcome {
+    let title = rig.hub.i18n().text(WINDOW_KEYBOARD);
+    if draw_window(&title) && !draw_window(NO_WINDOW) {
+        return Ok(());
+    }
+    Err("the keyboard was not drawn at once by its title, or a window by a title none has".into())
 }
 
 /// Off the GUI thread no device is made, and the adapter pin stays with no warning.

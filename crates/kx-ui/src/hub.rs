@@ -16,7 +16,7 @@ pub use face::{Redraw, Resize};
 pub use fonts::FontBook;
 pub use notices::Shown;
 
-use crate::settings::UiSettings;
+use crate::settings::{PressFrame, UiSettings};
 use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
@@ -92,7 +92,7 @@ pub enum HubError {
     Theme(#[from] ThemeError),
 }
 
-/// The timings and paging QML reads, as JSON.
+/// The timings, paging and press frame QML reads, as JSON.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct QmlSettings {
@@ -101,6 +101,8 @@ struct QmlSettings {
     guard_delay_ms: u64,
     tray_grace_ms: u64,
     page_rows: usize,
+    press_frame: PressFrame,
+    press_frame_ms: u64,
 }
 
 /// What changes while the app runs.
@@ -214,7 +216,7 @@ impl Hub {
         self.lock().settings.clone()
     }
 
-    /// The timings and paging QML reads, as JSON; the language comes apart, in `lang_json`.
+    /// The timings, paging and press frame QML reads, as JSON; the language comes apart, in `lang_json`.
     #[must_use]
     pub fn settings_json(&self) -> String {
         let s = self.settings();
@@ -224,6 +226,8 @@ impl Hub {
             guard_delay_ms: s.guard_delay_ms,
             tray_grace_ms: s.tray_grace_ms,
             page_rows: s.page_rows,
+            press_frame: s.press_frame,
+            press_frame_ms: s.press_frame_ms,
         })
     }
 

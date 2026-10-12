@@ -32,6 +32,8 @@ pub(crate) const DEVICE_RETRY_MS: RangeInclusive<u64> = 0..=5_000;
 pub(crate) const FRAME_LATENCY: RangeInclusive<u32> = 0..=3;
 /// How long Qt's update timer may wait before a frame, in ms; 0 starts it at once.
 pub(crate) const UPDATE_IDLE_MS: RangeInclusive<u64> = 0..=50;
+/// How long a press may wait for its frame before it types anyway, in ms.
+pub(crate) const PRESS_FRAME_MS: RangeInclusive<u64> = 1..=1_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 
@@ -68,6 +70,18 @@ impl Backdrop {
             Self::Acrylic => BackdropKind::Acrylic,
         }
     }
+}
+
+/// When a pressed key types, against the frame that shows it pressed (ADR-0024 keys act at the press).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PressFrame {
+    /// It types at once, and the press shows in the next frame after.
+    After,
+    /// It types once the frame showing the press is out, or after `press_frame_ms`.
+    First,
+    /// The frame showing the press is drawn at once, then it types.
+    Now,
 }
 
 /// The ui module's settings; every value comes from `defaults.toml` or the user's file.
@@ -117,6 +131,10 @@ pub struct UiSettings {
     pub update_idle_ms: u64,
     /// Each frame shows at a screen refresh (swap interval 1); false shows it at once (0).
     pub present_vsync: bool,
+    /// When a pressed key types, against the frame that shows it pressed.
+    pub press_frame: PressFrame,
+    /// The longest `PressFrame::First` waits for that frame, in ms.
+    pub press_frame_ms: u64,
     /// Rows per page in every list.
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.
@@ -157,6 +175,7 @@ impl UiSettings {
         within("device_retry_ms", self.device_retry_ms, &DEVICE_RETRY_MS)?;
         within("frame_latency", self.frame_latency, &FRAME_LATENCY)?;
         within("update_idle_ms", self.update_idle_ms, &UPDATE_IDLE_MS)?;
+        within("press_frame_ms", self.press_frame_ms, &PRESS_FRAME_MS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }
 }

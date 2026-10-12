@@ -69,6 +69,7 @@ mod qt {
         "qml/TrayPicture.qml",
         "qml/PressWatch.qml",
         "qml/Act.qml",
+        "qml/PressFrame.qml",
     ];
     /// QML files only debug builds hold: the memory check's churn.
     const DEBUG_QML: &[&str] = &["qml/Churn.qml"];
@@ -81,6 +82,7 @@ mod qt {
         "src/bridges/fonts.rs",
         "src/bridges/tint.rs",
         "src/bridges/shadows.rs",
+        "src/bridges/frames.rs",
     ];
     /// The hand-written C++ `QObject` classes, which moc reads: the soft shadows' adopter.
     const MOC: &[&str] = &["cpp/shadows.h"];

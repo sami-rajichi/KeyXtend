@@ -77,10 +77,10 @@ Item {
                 design: body.board.lang_key
                 res: body.res
                 s: body.s
-                onHit: back => body.win.tap(kv.id, back)
-                onHeld: body.win.hold.press(kv.id)
-                onLetGo: body.win.hold.letGo(kv.id)
-                onLost: body.win.hold.leave()
+                onHit: back => body.win.presses.tap(kv.id, back)
+                onHeld: body.win.presses.hold(kv.id)
+                onLetGo: body.win.presses.letGo(kv.id)
+                onLost: body.win.presses.leave()
                 onTip: (name, at) => body.win.hint(name, at)
             }
         }

@@ -4,6 +4,8 @@ var settings = {
   "guardDelayMs": 300,
   "pageRows": 5,
   "pollMs": 16,
+  "pressFrame": "after",
+  "pressFrameMs": 50,
   "tipMs": 500,
   "trayGraceMs": 500
 };

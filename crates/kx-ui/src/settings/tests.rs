@@ -203,6 +203,32 @@ fn the_frame_timing_numbers_may_be_zero_but_not_past_their_range() {
 }
 
 #[test]
+fn a_pressed_key_draws_after_typing_as_before_unless_set() {
+    let s = UiSettings::from_defaults().unwrap();
+    assert_eq!(s.press_frame, PressFrame::After);
+    for word in ["after", "first", "now"] {
+        let s: UiSettings = parse_as(&with("press_frame", word)).unwrap();
+        assert_eq!(serde_json::to_value(s.press_frame).unwrap(), word);
+    }
+    assert!(unparsed(&with("press_frame", "later")));
+}
+
+#[test]
+fn the_press_frame_wait_stays_in_its_range() {
+    let end = i64::try_from(*PRESS_FRAME_MS.end()).unwrap();
+    assert!(PRESS_FRAME_MS.contains(&UiSettings::from_defaults().unwrap().press_frame_ms));
+    assert_eq!(
+        validate_as::<UiSettings>(&with("press_frame_ms", end)),
+        Ok(())
+    );
+    assert!(
+        invalid(&with("press_frame_ms", 0)),
+        "a wait of 0 never sees the frame"
+    );
+    assert!(invalid(&with("press_frame_ms", end + 1)));
+}
+
+#[test]
 fn page_rows_default_to_the_adr_0008_page() {
     assert!(PAGE_ROWS.contains(&UiSettings::from_defaults().unwrap().page_rows));
 }

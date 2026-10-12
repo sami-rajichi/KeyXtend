@@ -27,6 +27,8 @@ QtObject {
     signal lifted(string title)
     // A guard try runs, as the call starts.
     signal guarding
+    // A window asked to be drawn at once, as the call starts.
+    signal drawing
 
     function note(call) {
         calls = calls.concat([call]);
@@ -103,6 +105,11 @@ QtObject {
     function shape(title, boxes, dpr) {
         shapeDpr = dpr;
         note("shape " + title);
+        return true;
+    }
+    function drawNow(title) {
+        drawing();
+        note("drawNow");
         return true;
     }
     function liftAlone(title) {
