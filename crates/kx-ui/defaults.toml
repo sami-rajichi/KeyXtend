@@ -35,7 +35,7 @@ vblank_updates = true
 # That wait, in ms, for windows whose frames do not follow the refresh. Qt's own value; read at start.
 update_idle_ms = 5
 # Each frame shows at a screen refresh; false shows it at once. Read at start.
-present_vsync = true
+present_vsync = false
 # A pressed key draws its press frame at once, then types ("now", ADR-0025); "after" types first, "first" once it's out.
 press_frame = "now"
 # The longest "first" waits for the press's frame before it types anyway, in ms.

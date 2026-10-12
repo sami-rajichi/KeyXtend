@@ -181,7 +181,17 @@ fn the_frame_timing_knobs_default_to_what_qt_does_alone() {
         (s.frame_latency, s.update_idle_ms),
         (QT_LATENCY, QT_IDLE_MS)
     );
-    assert!(s.vblank_updates && s.present_vsync);
+    assert!(s.vblank_updates);
+}
+
+#[test]
+fn frames_present_without_vsync_unless_set() {
+    assert!(
+        !UiSettings::from_defaults().unwrap().present_vsync,
+        "ADR-0025"
+    );
+    let s: UiSettings = parse_as(&with("present_vsync", true)).unwrap();
+    assert!(s.present_vsync);
 }
 
 #[test]

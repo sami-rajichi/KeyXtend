@@ -214,7 +214,7 @@ fn drawing() -> Outcome {
 }
 
 /// After the drawing pins, Qt reads the frame timing of the `[ui]` defaults, Qt's own values, in place of an outside
-/// one, and every window asks for its frames at a screen refresh.
+/// one, and every window asks for the defaults' swap interval.
 fn timing() -> Outcome {
     let s = UiSettings::from_defaults().map_err(|e| e.to_string())?;
     if !kx_ui::pin_timing(&s) {
