@@ -85,7 +85,7 @@ pub(crate) fn shared(app: &mut UniquePtr<QGuiApplication>, shell: &Shell, rig: &
 /// While the frame log runs, a frame drawn logs its line; once it stops, none does.
 fn frames_logged(rig: &Rig) -> Outcome {
     let title = rig.hub.i18n().text(WINDOW_KEYBOARD);
-    let log = FrameLog::start();
+    let log = FrameLog::start().ok_or("the frame log did not start with drawing pinned")?;
     let before = rig.lines.count(Level::INFO, FRAME_LINE);
     let drawn = draw_window(&title);
     let logged = rig.lines.count(Level::INFO, FRAME_LINE);

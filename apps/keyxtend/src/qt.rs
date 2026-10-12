@@ -24,7 +24,7 @@ pub fn run(pinned: Option<&Path>, pick: Pick, ui: &UiSettings, end: impl FnOnce(
     }
     timing(ui);
     let mut app = QGuiApplication::new();
-    let frames = ui.frame_log.then(FrameLog::start);
+    let frames = ui.frame_log.then(log_frames).flatten();
     let mut shell = Shell::open(pinned, pick);
     let exec = || app.as_mut().map(QGuiApplication::exec);
     let code = shell.as_mut().and_then(|s| looped(exec, s));
@@ -78,6 +78,15 @@ fn timing(ui: &UiSettings) {
         frame_log = ui.frame_log,
         "Qt's frame timing is set"
     );
+}
+
+/// Starts the frame log, or says once why it stays off.
+fn log_frames() -> Option<FrameLog> {
+    let log = FrameLog::start();
+    if log.is_none() {
+        tracing::warn!("the frame log stays off, as Qt may draw off the GUI thread");
+    }
+    log
 }
 
 /// Has Qt draw on `adapter`, its place in DXGI's adapter list; with none, Qt picks its own.

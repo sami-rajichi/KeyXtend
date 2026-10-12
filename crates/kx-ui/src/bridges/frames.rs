@@ -1,6 +1,7 @@
 //! The keyboard's own frames on the Qt GUI thread: a press frame drawn at once (`press_frame = "now"`), and the frame
 //! log (`frame_log`), which logs one line per press and per frame, with times only.
 
+use crate::bridges::harden::drawing_pinned;
 use crate::frames::{Frame, FrameTimes, Log, Mark, PressTimes};
 use cxx::UniquePtr;
 use cxx_qt_lib::QString;
@@ -68,13 +69,17 @@ pub struct FrameLog {
 }
 
 impl FrameLog {
-    /// Starts the log; call it on the Qt GUI thread once Qt's app object exists.
+    /// Starts the log once Qt's app object exists, on its GUI thread; `None` unless drawing is pinned there, as the watch
+    /// keeps its times on that thread only.
     #[must_use]
-    pub fn start() -> Self {
-        *LOG.lock().unwrap_or_else(PoisonError::into_inner) = Some(Log::new());
-        Self {
-            _watch: ffi::frame_watch_new(pressed, framed),
+    pub fn start() -> Option<Self> {
+        if !drawing_pinned() {
+            return None;
         }
+        *LOG.lock().unwrap_or_else(PoisonError::into_inner) = Some(Log::new());
+        Some(Self {
+            _watch: ffi::frame_watch_new(pressed, framed),
+        })
     }
 }
 

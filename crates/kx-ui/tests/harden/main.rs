@@ -1,12 +1,13 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
 //! QML import paths, nor Qt's narrow or wide reads, pinned plugins and imports hold only the app's folders and the
 //! compiled-in modules, and only the graphics adapter, the drawing variables and the frame timing the app picks reach
-//! Qt. The variables must be set before the process starts, so the test runs itself again, as a child, with them set.
+//! Qt; the frame log starts only once drawing is pinned. The variables must be set before the process starts, so the
+//! test runs itself again, as a child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
 use kx_test_support::tempdir::TempDir;
-use kx_ui::UiSettings;
 use kx_ui::harden::{DRAW_VARS, LATENCY_VAR, is_qt, swap_interval, timing_vars};
+use kx_ui::{FrameLog, UiSettings};
 use std::env;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::pin::Pin;
@@ -138,10 +139,16 @@ fn child(planted: &Path, pinned: &Path) -> Outcome {
     if after.iter().any(|(_, set)| *set) {
         return Err(format!("Qt still sees an alias: {after:?}"));
     }
+    if FrameLog::start().is_some() {
+        return Err("the frame log started while Qt may draw off the GUI thread".into());
+    }
     adapter()?;
     drawing()?;
     timing()?;
     let app = QGuiApplication::new();
+    if FrameLog::start().is_none() {
+        return Err("the frame log did not start once drawing was pinned".into());
+    }
     let paths = app
         .as_ref()
         .map(QGuiApplication::library_paths)
