@@ -208,6 +208,19 @@ fn a_loss_after_the_last_step_or_between_steps_is_listed_and_not_counted() {
 }
 
 #[test]
+fn a_capture_that_ends_inside_a_press_window_fails_and_one_after_them_all_is_a_note() {
+    let (press_end, ran) = (us(PRESS_MS + f64::from(RISE_MS)), us(RESIZE_MS.1));
+    let e = cut(&spans(), press_end - 1, ran).expect_err("a press window was cut");
+    assert!(e.contains("presentmon_secs"), "{e}");
+    assert_eq!(
+        cut(&spans(), press_end, ran),
+        Ok(Some(CUT_AFTER)),
+        "only the resize after it was cut"
+    );
+    assert_eq!(cut(&spans(), ran, ran), Ok(None), "it saw the whole run");
+}
+
+#[test]
 fn times_that_do_not_line_up_or_a_missing_refresh_rate_are_errors_not_passes() {
     let csv = format!("{HEAD}{}", row(CHAIN, START_MS, true));
     let f = presentmon::parse(&csv, PROGRAM).expect("reads");

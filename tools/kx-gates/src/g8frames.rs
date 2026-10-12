@@ -3,7 +3,10 @@
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Instant, SystemTime};
+
+use kx_module_api::US_PER_S;
+use spike_core::clock::now_us;
 
 use crate::admin;
 use crate::apps::Ctx;
@@ -11,14 +14,11 @@ use crate::presentmon::{self, Frames};
 use crate::proc::Process;
 use crate::win::{self, sleep_ms};
 
-/// Why `dropped_frames` may miss presses.
-const CUT: &str = "PresentMon's capture ended before G2's last click, so dropped_frames may miss presses; raise [g8] \
-     presentmon_secs";
-
-/// `PresentMon` as G8 started it: its process, and when it started.
+/// `PresentMon` as G8 started it: its process, and when it started, also on G8's QPC clock in µs.
 pub struct Recorder {
     process: Process,
     at: Instant,
+    at_us: i64,
 }
 
 impl Recorder {
@@ -45,9 +45,9 @@ pub fn record(ctx: &Ctx, program: &Path) -> Result<Option<Recorder>, String> {
     let file = ctx.out.join(&g.presentmon);
     let args = presentmon::args(&exe_name(program), &file, g.presentmon_secs);
     let process = admin::run_as_hidden(&ctx.cfg.program(&g.presentmon_exe), &args)?;
-    let at = Instant::now();
+    let (at, at_us) = (Instant::now(), now_us());
     sleep_ms(g.presentmon_wait_ms);
-    Ok(Some(Recorder { process, at }))
+    Ok(Some(Recorder { process, at, at_us }))
 }
 
 /// Waits for the `PresentMon` G8 started to stop, at most its recording time plus `[g8] presentmon_stop_ms`.
@@ -71,17 +71,12 @@ fn owner_done(ctx: &Ctx, since: SystemTime) {
     }
 }
 
-/// True when a capture of `secs` s that started `age` ago has already ended.
-fn over(secs: u64, age: Duration) -> bool {
-    age > Duration::from_secs(secs)
-}
-
-/// A note when the capture, G8's own or the owner's from about `since`, has already ended, so it missed the last
-/// steps before now.
-pub fn cut(ctx: &Ctx, since: SystemTime, rec: Option<&Recorder>) -> Option<&'static str> {
-    let owners = || SystemTime::now().duration_since(since).unwrap_or_default();
-    let age = rec.map_or_else(owners, |r| r.at.elapsed());
-    over(ctx.cfg.g8.presentmon_secs, age).then_some(CUT)
+/// When a capture of `secs` s ends on G8's QPC clock, in µs: counted from when G8 started `rec`, else from G8's
+/// start at `origin_us` for the owner's capture, started just before.
+pub fn end_us(secs: u64, rec: Option<&Recorder>, origin_us: i64) -> i64 {
+    let from = rec.map_or(origin_us, |r| r.at_us);
+    let secs = i64::try_from(secs).unwrap_or(i64::MAX);
+    from.saturating_add(secs.saturating_mul(i64::from(US_PER_S)))
 }
 
 /// `program`'s frames from this run's CSV, written since `since`, read once the recording stopped; else why not.
@@ -119,6 +114,7 @@ pub fn frames(
 #[cfg(test)]
 mod tests {
     use std::process::{Child, Command, Stdio};
+    use std::time::Duration;
 
     use kx_test_support::tempdir::TempDir;
 
@@ -166,6 +162,7 @@ mod tests {
             Recorder {
                 process,
                 at: Instant::now(),
+                at_us: now_us(),
             },
         )
     }
@@ -176,16 +173,11 @@ mod tests {
     }
 
     #[test]
-    fn a_capture_that_ended_before_the_run_up_to_the_churn_did_is_noted() {
-        assert!(!over(90, Duration::from_secs(89)), "still recording");
-        assert!(
-            over(90, Duration::from_secs(91)),
-            "it missed the last steps"
-        );
-        with_ctx(|ctx| {
-            let note = cut(ctx, before_now(), None).expect("a 0 s capture has ended");
-            assert!(note.contains("presentmon_secs"), "{note}");
-        });
+    fn the_capture_ends_its_seconds_after_g8_started_presentmon_or_else_after_g8_began() {
+        let (_child, rec) = ended();
+        let secs_us = 90 * i64::from(US_PER_S);
+        assert_eq!(end_us(90, Some(&rec), 0), rec.at_us + secs_us);
+        assert_eq!(end_us(90, None, 5), 5 + secs_us, "the owner's capture");
     }
 
     #[test]
@@ -212,6 +204,7 @@ mod tests {
             let rec = Recorder {
                 process,
                 at: Instant::now(),
+                at_us: now_us(),
             };
             let got = frames(ctx, Path::new(PROGRAM), before_now(), Some(&rec));
             assert!(

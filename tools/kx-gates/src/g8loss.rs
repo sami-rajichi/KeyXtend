@@ -14,6 +14,12 @@ use crate::stats::{US_PER_MS_INT, ms};
 /// Why no frame can be judged when the screen's refresh rate is unknown.
 const NO_HZ: &str =
     "no refresh rate, so a frame replaced within a refresh cannot be told from a lost one";
+/// Why G8 fails when its capture ended inside a press window.
+const CUT_PRESS: &str = "PresentMon's capture ended inside a press window, so frames lost there would go uncounted; \
+     raise [g8] presentmon_secs";
+/// The note when the capture ended after every press window but before G2 ended.
+const CUT_AFTER: &str = "PresentMon's capture ended after the last press window but before G2 ended, so only losses \
+     outside the presses may be missing; raise [g8] presentmon_secs";
 /// Why no frame can be judged when no present falls in a press.
 const APART: &str =
     "no present of the product falls in a G8 press, so PresentMon's times do not line up with G8's";
@@ -71,6 +77,20 @@ pub fn clicks(clicks_us: &[(i64, i64)], rise_ms: u64) -> Vec<Span> {
         .iter()
         .map(|&(at, up)| Span::press(at, up, rise_ms))
         .collect()
+}
+
+/// How a capture ending at `end_us` met G8's run, whose G2 ended at `ran_us`: an error when a press window in `spans`
+/// ends after it, so G8 never counts fewer frames; a note when it ended before `ran_us`; else none.
+pub fn cut(spans: &[Span], end_us: i64, ran_us: i64) -> Result<Option<&'static str>, String> {
+    let presses = spans.iter().filter(|s| s.during == During::Press);
+    if presses
+        .map(|s| s.to_us)
+        .max()
+        .is_some_and(|last| last > end_us)
+    {
+        return Err(CUT_PRESS.to_string());
+    }
+    Ok((end_us < ran_us).then_some(CUT_AFTER))
 }
 
 /// One frame that never reached the screen: when, in ms from G8's start, and what G8 was doing.

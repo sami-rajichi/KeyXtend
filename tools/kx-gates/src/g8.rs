@@ -17,7 +17,7 @@ use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8churn;
 use crate::g8frames::{self, Recorder};
-use crate::g8loss::{self, Span};
+use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, log_span};
 use crate::out::say;
@@ -95,7 +95,7 @@ fn measure(
     let presses = g8type::presses(ctx, &kb)?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
-    let capture_cut = g8frames::cut(ctx, since, rec);
+    let ran_us = now_us();
     let frames = g8frames::frames(ctx, program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
     let m = Measured {
@@ -107,7 +107,7 @@ fn measure(
         presses,
         resizes,
         g2,
-        capture_cut,
+        ran_us,
         churn,
     };
     Ok((m, frames))
@@ -131,19 +131,38 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
         .map_or_else(|e| json!({ "error": e }), |v| json!(v))
 }
 
-/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames` against the steps in `m` from `origin_us`,
-/// what G8 measured outside the product, and the bus, frames and losses for the result line.
+/// The losses in `PresentMon`'s `frames` against G8's `spans`, on a screen of `hz`, with times from `origin_us`; and
+/// how the capture ending at `end_us` met a run whose G2 ended at `ran_us`, as a cut press window fails the losses.
+fn judged(
+    spans: Result<Vec<Span>, String>,
+    ran_us: i64,
+    frames: &Result<Frames, String>,
+    hz: Option<f64>,
+    (origin_us, end_us): (i64, i64),
+) -> (Result<Losses, String>, Result<Option<&'static str>, String>) {
+    let cut = spans
+        .as_ref()
+        .map_err(Clone::clone)
+        .and_then(|s| g8loss::cut(s, end_us, ran_us));
+    let losses = frames.as_ref().map_err(Clone::clone).and_then(|f| {
+        cut.clone()?;
+        g8loss::losses(&f.presents, &spans?, hz, origin_us)
+    });
+    (losses, cut)
+}
+
+/// Times the bus and reads the refresh rate; with `PresentMon`'s `frames` judged against the steps in `m` at `times`
+/// (G8's start and the capture's end), what G8 measured outside the product, and the bus, frames, losses and the
+/// capture's cut for the result line.
 fn outside(
     ctx: &Ctx,
     job: Option<Job>,
     m: &Measured,
     frames: &Result<Frames, String>,
-    origin_us: i64,
-) -> (Outside, [Value; 3]) {
+    times: (i64, i64),
+) -> (Outside, [Value; 4]) {
     let (bus, hz) = (bench(ctx, job), g8ui::refresh_hz());
-    let frames_ok = frames.as_ref().map_err(Clone::clone);
-    let losses =
-        frames_ok.and_then(|f| g8loss::losses(&f.presents, &spans(ctx, m)?, hz, origin_us));
+    let (losses, cut) = judged(spans(ctx, m), m.ran_us, frames, hz, times);
     #[allow(
         clippy::cast_precision_loss,
         reason = "Frame counts are far below 2^53."
@@ -155,7 +174,7 @@ fn outside(
         bus_p99_us,
         dropped,
     };
-    (o, [shown(&bus), shown(frames), shown(&losses)])
+    (o, [shown(&bus), shown(frames), shown(&losses), shown(&cut)])
 }
 
 /// G8's presses, G2's clicks from the click file G2 wrote with `ctx`, and the resizes in `m`, for G8's frame rule.
@@ -203,7 +222,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
-    let (o, [bus, frames, losses]) = outside(ctx, job, &m, &frames, origin_us);
+    let end_us = g8frames::end_us(secs, rec.as_ref(), origin_us);
+    let (o, [bus, frames, losses, cut]) = outside(ctx, job, &m, &frames, (origin_us, end_us));
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();
@@ -211,7 +231,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
-        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": m.capture_cut,
+        "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
         "parts": parts, "quit": ended,
         "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
     }))
@@ -220,6 +240,32 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::presentmon::Present;
+
+    #[test]
+    fn a_capture_cut_inside_a_press_window_fails_the_losses_and_one_after_it_only_notes() {
+        let (at_us, rise_ms, ran_us) = (1_000_000, 200, 5_000_000);
+        let spans = vec![Span::press(at_us, at_us, rise_ms)];
+        let shown = Present {
+            chain: "0x1".into(),
+            at_us: at_us + 1,
+            shown: true,
+        };
+        let frames = Ok(Frames {
+            presented: 1,
+            lost: 0,
+            p99_ms: None,
+            presents: vec![shown],
+        });
+        let press_end = at_us + 200_000;
+        let hz = Some(60.0);
+        let (losses, cut) = judged(Ok(spans.clone()), ran_us, &frames, hz, (0, press_end - 1));
+        let e = losses.expect_err("it fails closed");
+        assert!(e.contains("presentmon_secs") && cut.is_err(), "{e}");
+        let (losses, cut) = judged(Ok(spans), ran_us, &frames, hz, (0, press_end));
+        assert!(losses.is_ok_and(|l| l.counted.is_empty()));
+        assert!(cut.expect("judged").is_some(), "a note only");
+    }
 
     #[test]
     fn a_run_that_broke_off_names_the_presentmon_it_left_and_whether_the_product_quit() {

@@ -30,8 +30,8 @@ pub struct Measured {
     pub resizes: Vec<Resize>,
     /// G2's result line: click to character.
     pub g2: Value,
-    /// Why `dropped_frames` may miss presses, when `PresentMon`'s capture ended before G2's last click.
-    pub capture_cut: Option<&'static str>,
+    /// When G2 ended, on G8's QPC clock in µs, which the capture's end is set against.
+    pub ran_us: i64,
     /// Memory around rounds of pop-ups.
     pub churn: Churn,
 }
@@ -124,7 +124,7 @@ mod tests {
                 "planned": 100, "clicks": 100, "matched": 100, "focus_ok": true, "caret_kept": 100,
                 "latency_ms": { "p50": 4.2, "p99": 13.1 },
             }),
-            capture_cut: None,
+            ran_us: 0,
             churn,
         };
         let o = Outside {
