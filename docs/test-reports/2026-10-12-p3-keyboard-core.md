@@ -44,6 +44,9 @@
 | 17 | Largest size (`size_max` = `size` = 4) | Fits the screen; every top-bar button reachable | Pass | S shrank it |
 | 18 | Hold Backspace while the screen locks | The repeat stops; a click then deletes one character | Pass | See note 8 |
 | 19 | High contrast (Desert): a letter, Enter, a lit Shift | Each press reads as a press | Pass | |
+| 20 | Narrator on: rest the pointer on a letter, Backspace and the language key | Each key's name is read | Pass | G10's listening part; NVDA moves to P14 |
+| 21 | Narrator on: rest the pointer on two top-bar buttons | Each is named clearly | Pass | |
+| 22 | Caps Lock pressed outside the keyboard, on then off | The Caps light and the letters follow, with no click | Pass | Failed on the first build; fixed in 5c4bd81, see note 9 |
 
 ## Notes
 1. G8 on default settings, build 1e73f75, nine runs on 2026-10-12: start 350–788 ms (median 527, budget 500), slower under memory pressure; working set 98.5–102.7 MB (median 99.0, budget 100) and commit 134.6–138.8 MB (budget 140); char p99 12.5–20.3 ms; churn growth 0.4–3.0 / −0.3–2.8 MB, one run at 3.04 over the 3.0 limit. Dropped frames were 0–1 before a reboot (32 in one run under memory pressure); after it PresentMon marked 43–49 frames unseen while G8's screen copies saw all 20 presses lit within 15 ms. The owner accepted the results, and P14 tracks start-up and the frame count. The owner's Dolch at size 0.8 idles at 121.8 / 171.6 MB, which P13 records.
@@ -54,6 +57,7 @@
 6. The saved pictures differ from the 2026-10-10 baseline in 49 of them, all explained: icon edges by 1 step of 255 (icons tinted in one place), ET66 and Dolch light's second legends and space bar name 8 steps darker to keep AA under the press shade, and the approved press shade itself.
 7. G8's tip count is 40 of 60 with the shipped order: whichever key is hovered third, about 1.6 s into a round, misses its tip after the round's bubble and theme steps (20 of 20), while Shift first with longer rests gave 60 of 60. The owner's own tip check passed; the cause is open in P13.
 8. Admin prompts do not show on this PC (UAC raises rights without asking), so the hold check took the mouse away with the lock screen instead.
+9. Caps Lock pressed outside KeyXtend left its light unchanged until the next key click: reading the state worked, but nothing asked for a redraw. The relabel tick now also redraws on a Caps Lock change (build 5c4bd81, installed and checked on and off).
 
 ## Clean-up
 - Gate logs, screenshots, PresentMon captures and timing scripts are deleted when P3 is recorded; only these numbers are kept.

@@ -68,7 +68,7 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
 - Done (Task 20): with `QT_PLUGIN_PATH`, `QT_QPA_PLATFORM_PLUGIN_PATH`, `QML_IMPORT_PATH`, `QML2_IMPORT_PATH` and fullwidth aliases (`ＱＴ_PLUGIN_PATH`, `ＱＴ_QPA_PLATFORM_PLUGIN_PATH`, `ＱＭＬ2_IMPORT_PATH`) planted, the app loaded nothing from their folders.
 - Done (Task 20): copies of `Qt6Svg.dll`, `Qt6Network.dll` and `d3dcompiler_47.dll` in the working folder were never loaded.
 - Done (Task 20): `%LOCALAPPDATA%\KeyXtend` (shader and `.qmlc` caches) was never created; the copy wrote only its portable log.
-- Open (manual test): typing under the planted variables, since a test click would move the owner's mouse.
+- Open (P14): typing under the planted variables, since a test click would move the owner's mouse; nothing loading from them is confirmed above.
 - Open (P14): the MSVC runtime is not staged and loads from System32, where the Visual C++ redistributable puts it. On a PC without it Windows would look in the working folder and `PATH`, so the installer must provide it.
 - Open (P14, before any signed build leaves the development PC): COM may read a per-user registration (`HKCU\Software\Classes\CLSID`) before the machine's for a process that is not elevated, and a uiAccess process is not. On the staged signed build, list the in-process classes it activates (Process Monitor) and check that a planted `HKCU` override for each never loads (`docs/items/P14.md`).
 - Open (P14): pin the QML disk cache off in the uiAccess build, with Qt's own cache option in `harden_qt` and a stage check that refuses `.qml`, `.js` and `.mjs` files (`docs/items/P14.md`).
