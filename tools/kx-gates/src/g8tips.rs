@@ -9,7 +9,7 @@ use crate::stats;
 /// One look during a rest: ms since the pointer moved, and whether a new product window showed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Poll {
-    /// Ms since the pointer moved onto the key.
+    /// Ms since the pointer moved onto the key, taken just after the look, so a slow look counts toward the rest.
     pub ms: u64,
     /// A product window showed that was not shown before the round's first hover.
     pub shown: bool,
@@ -42,7 +42,7 @@ impl Hover {
 }
 
 /// Polls `shown` every `poll_ms` until `rest_ms` after the move, with `since` giving the ms since the move and `wait`
-/// waiting; the last poll comes at the rest's end.
+/// waiting; the last poll ends at or just past the rest's end, and nothing runs after it.
 pub fn rest(
     rest_ms: u64,
     poll_ms: u64,
@@ -53,8 +53,9 @@ pub fn rest(
     let mut polls = Vec::new();
     loop {
         wait(rest_ms.saturating_sub(since()).min(poll_ms));
+        let seen = shown();
         let ms = since();
-        polls.push(Poll { ms, shown: shown() });
+        polls.push(Poll { ms, shown: seen });
         if ms >= rest_ms {
             return polls;
         }

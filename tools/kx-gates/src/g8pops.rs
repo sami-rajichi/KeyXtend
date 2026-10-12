@@ -42,6 +42,8 @@ pub struct Plan {
     hover_ms: u64,
     /// How often each rest looks for a new window: `[timing] poll_ms`.
     poll_ms: u64,
+    /// The product's process, whose windows each look lists.
+    pid: u32,
     /// The language key's id, when it opens the list.
     pub lang: Option<String>,
     /// Why the list step is skipped, when it is.
@@ -92,6 +94,7 @@ pub fn plan(ctx: &Ctx) -> Result<Plan, String> {
         away,
         hover_ms: look.tip_ms + g.churn_tip_ms,
         poll_ms: ctx.cfg.timing.poll_ms,
+        pid: win::owner(kb.hwnd).0,
         lang,
         skip,
         themes: themes.list.len(),
@@ -125,9 +128,9 @@ impl Seen {
     }
 }
 
-/// The product's shown windows now, as plain numbers.
-fn shown_now() -> Vec<isize> {
-    product::shown().into_iter().map(win::key).collect()
+/// The shown windows of the product's process `pid` now, as plain numbers.
+fn shown_now(pid: u32) -> Vec<isize> {
+    product::shown_by(pid).into_iter().map(win::key).collect()
 }
 
 /// True when a window in `now` was not shown in `base`; a window that hid meanwhile, such as a banner, never counts.
@@ -135,20 +138,20 @@ fn any_new(base: &HashSet<isize>, now: &[isize]) -> bool {
     now.iter().any(|w| !base.contains(w))
 }
 
-/// The product's shown windows now, to spot a pop-up later.
-fn snapshot() -> HashSet<isize> {
-    shown_now().into_iter().collect()
+/// The shown windows of the product's process `pid` now, to spot a pop-up later.
+fn snapshot(pid: u32) -> HashSet<isize> {
+    shown_now(pid).into_iter().collect()
 }
 
 /// Rests the pointer on each tip key, looking for a new window through the rest, then moves it away.
 fn hover(plan: &Plan, seen: &mut Seen) -> Result<(), String> {
     // The pointer rests away from the keys, so no tip shows yet.
-    let base = snapshot();
+    let base = snapshot(plan.pid);
     for (i, &at) in plan.tips.iter().enumerate() {
         mouse::move_to(at)?;
         let moved = Instant::now();
         let since = || win::ms_since(moved);
-        let shown = || any_new(&base, &shown_now());
+        let shown = || any_new(&base, &shown_now(plan.pid));
         let polls = g8tips::rest(plan.hover_ms, plan.poll_ms, since, sleep_ms, shown);
         seen.tip(i, Hover::of(&polls));
     }
@@ -157,11 +160,11 @@ fn hover(plan: &Plan, seen: &mut Seen) -> Result<(), String> {
 
 /// Opens and closes the language list with its key, counting an open that showed a new window; the close still goes
 /// out after the mouse guard stopped the gate.
-fn list(g: &G8, reader: &Reader, lang: &str, seen: &mut Seen) -> Result<(), String> {
-    let base = snapshot();
+fn list(g: &G8, reader: &Reader, plan: &Plan, lang: &str, seen: &mut Seen) -> Result<(), String> {
+    let base = snapshot(plan.pid);
     product::invoke(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
-    seen.lists += usize::from(any_new(&base, &shown_now()));
+    seen.lists += usize::from(any_new(&base, &shown_now(plan.pid)));
     product::restore(reader, lang)?;
     sleep_ms(g.churn_settle_ms);
     Ok(())
@@ -231,7 +234,7 @@ pub fn round(
     sleep_ms(g.churn_settle_ms);
     after(Step::Tips)?;
     if let Some(lang) = &plan.lang {
-        list(g, reader, lang, seen)?;
+        list(g, reader, plan, lang, seen)?;
         after(Step::List)?;
     }
     bubble(g, reader, plan, seen)?;

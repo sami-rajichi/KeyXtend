@@ -100,12 +100,28 @@ fn a_round_starts_from_the_reading_after_the_round_before_so_nothing_between_rou
             (Step::Themes, mem(101.0, 140.0)),
         ],
     ];
-    // The second round's own reading came a little later than its last step's.
+    // The first round's own reading came a little later than its last step's.
     let per_round = vec![mem(100.0, 139.0), mem(101.0, 140.0)];
     let steps = growth(before, &per_round, &after);
     assert_eq!(steps[0].per_round, [mem(1.0, 0.0), mem(1.0, 1.0)]);
     assert_eq!(steps[1].per_round, [mem(0.0, 1.0), mem(0.0, 0.0)]);
     assert!(growth(before, &[], &[]).is_empty(), "no round");
+}
+
+#[test]
+fn a_failed_reading_after_a_step_names_the_step() {
+    assert_eq!(
+        Step::Bubble.to_string(),
+        "bubble",
+        "as the result writes it"
+    );
+    let failed = read_after(Step::Themes, Err("access denied".to_string()));
+    assert_eq!(
+        failed,
+        Err("memory after the themes step: access denied".to_string())
+    );
+    let m = mem(98.0, 138.0);
+    assert_eq!(read_after(Step::Tips, Ok(m)), Ok((Step::Tips, m)));
 }
 
 #[test]

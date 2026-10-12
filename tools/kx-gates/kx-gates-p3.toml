@@ -106,6 +106,7 @@ quit_try_ms = 200
 churn_warm_rounds = 5
 # Measured rounds, with private memory read before them and after each one. The result's churn lists each round's
 # reading in `per_round`, so a failed run shows a steady climb (a leak) or one jump (settling).
+# Memory is also read after each step; `step_growth` lists each step's change and slope, `round_slope` the round's.
 churn_rounds = 20
 # Most growth of the working set and of the commit over those rounds, in MB.
 churn_growth_mb = 3.0

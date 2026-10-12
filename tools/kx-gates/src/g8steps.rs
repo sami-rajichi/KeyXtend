@@ -2,6 +2,8 @@
 //! for the round and for each step, so one run shows which step grows.
 #![cfg(windows)]
 
+use std::fmt;
+
 use serde::Serialize;
 
 use crate::proc::Memory;
@@ -18,6 +20,21 @@ pub enum Step {
     Bubble,
     /// A full theme cycle.
     Themes,
+}
+
+impl fmt::Display for Step {
+    /// The step's name as G8's result writes it.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let named = serde_json::to_value(self).map_err(|_| fmt::Error)?;
+        f.write_str(named.as_str().unwrap_or_default())
+    }
+}
+
+/// The `reading` after `step`, kept with it; a failed one says which step it followed.
+pub fn read_after(step: Step, reading: Result<Memory, String>) -> Result<(Step, Memory), String> {
+    reading
+        .map(|m| (step, m))
+        .map_err(|e| format!("memory after the {step} step: {e}"))
 }
 
 /// One step's growth over the measured rounds.

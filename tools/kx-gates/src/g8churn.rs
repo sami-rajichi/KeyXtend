@@ -10,7 +10,7 @@ use crate::board;
 use crate::budget::Part;
 use crate::g8cfg::G8;
 use crate::g8pops::{self, Plan, Seen};
-use crate::g8steps::{self, Step, StepGrowth, slopes};
+use crate::g8steps::{self, Step, StepGrowth, read_after, slopes};
 use crate::g8tips::KeyTips;
 #[cfg(test)]
 use crate::g8tips::{Hover, Keys};
@@ -48,7 +48,9 @@ pub struct Churn {
     pub tips: usize,
     /// Each tip key's hits, tips that hid again and show times in the measured rounds, in `[g8] churn_tips` order.
     pub tip_keys: Vec<KeyTips>,
-    /// The same in the warm-up rounds, whose first round alone follows no theme cycle.
+    /// The same in the first warm-up round, the only round that follows no theme cycle.
+    pub first_tip_keys: Vec<KeyTips>,
+    /// The same in the later warm-up rounds, each right after a theme cycle.
     pub warm_tip_keys: Vec<KeyTips>,
     /// Rounds that showed the language list; none when the list step was skipped.
     pub lists: Option<usize>,
@@ -77,6 +79,7 @@ impl Churn {
             hovers: 0,
             tips: 0,
             tip_keys: Vec::new(),
+            first_tip_keys: Vec::new(),
             warm_tip_keys: Vec::new(),
             lists: None,
             bubbles: 0,
@@ -183,7 +186,7 @@ fn stepped(
 ) -> Result<(), String> {
     let mut now = Vec::new();
     let done = g8pops::round(g, reader, plan, seen, &mut |s| {
-        p.memory().map(|m| now.push((s, m)))
+        read_after(s, p.memory()).map(|read| now.push(read))
     });
     steps.push(now);
     done
@@ -196,9 +199,10 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
     let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
     mouse::move_to(plan.away)?;
     sleep_ms(g.churn_settle_ms);
-    let mut warm = Seen::default();
-    for _ in 0..g.churn_warm_rounds {
-        g8pops::round(g, &reader, &plan, &mut warm, &mut |_| Ok(()))?;
+    let (mut first, mut warm) = (Seen::default(), Seen::default());
+    for r in 0..g.churn_warm_rounds {
+        let into = if r == 0 { &mut first } else { &mut warm };
+        g8pops::round(g, &reader, &plan, into, &mut |_| Ok(()))?;
     }
     let (mut seen, mut steps) = (Seen::default(), Vec::new());
     let round = || stepped(g, (&reader, &plan), &mut seen, p, &mut steps);
@@ -208,6 +212,7 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
         hovers: g.churn_rounds * plan.tips.len(),
         tips: seen.tips,
         tip_keys: seen.keys.report(&g.churn_tips),
+        first_tip_keys: first.keys.report(&g.churn_tips),
         warm_tip_keys: warm.keys.report(&g.churn_tips),
         lists: plan.lang.as_ref().map(|_| seen.lists),
         bubbles: seen.bubbles,

@@ -83,6 +83,20 @@ pub fn shown() -> Vec<HWND> {
         .collect()
 }
 
+/// Those of `windows` whose `owner` process is `pid`, in their order.
+pub fn owned_by<T: Copy>(windows: &[T], pid: u32, owner: impl Fn(T) -> u32) -> Vec<T> {
+    windows
+        .iter()
+        .copied()
+        .filter(|&w| owner(w) == pid)
+        .collect()
+}
+
+/// The shown windows of the product's process `pid`, topmost first; quicker than `shown`, as it opens no process.
+pub fn shown_by(pid: u32) -> Vec<HWND> {
+    owned_by(&win::seen_windows(), pid, |w| win::owner(w).0)
+}
+
 /// Presses the button with UI Automation id `id` in whichever shown product window has it, unless the mouse guard
 /// stopped the gate.
 pub fn invoke(reader: &Reader, id: &str) -> Result<(), String> {
@@ -171,6 +185,14 @@ mod tests {
         assert!(!is_ours(r"C:\Program Files\KeyXtend-dev\qt-kb\qt-kb.exe"));
         assert!(!is_ours(r"C:\x\keyxtend.exe.bak"));
         assert!(!is_ours(""));
+    }
+
+    #[test]
+    fn a_quick_look_keeps_the_windows_of_the_products_process_in_their_order() {
+        let windows = [4, 1, 2, 3];
+        let owner = |w: i32| if w % 2 == 0 { 7 } else { 9 };
+        assert_eq!(owned_by(&windows, 7, owner), [4, 2]);
+        assert!(owned_by(&windows, 5, owner).is_empty());
     }
 
     fn table(text: &str) -> toml::Table {
