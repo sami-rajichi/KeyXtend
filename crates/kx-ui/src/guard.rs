@@ -51,6 +51,9 @@ impl Run {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::{GUARD_TRIES, UiSettings};
+    use proptest::collection::vec;
+    use proptest::prelude::*;
 
     #[test]
     fn the_guard_tries_again_only_while_no_window_shows() {
@@ -84,5 +87,44 @@ mod tests {
     fn a_try_past_the_last_never_tries_again() {
         assert_eq!(next(&Ok(0), 4, 3), Next::Done);
         assert_eq!(next(&Ok(0), u32::MAX, 1), Next::Done);
+    }
+
+    /// Any allowed `[ui] guard_tries`, often no more than the default, so runs reach their last try.
+    fn tries() -> impl Strategy<Value = u32> {
+        let most = UiSettings::from_defaults().unwrap().guard_tries;
+        prop_oneof![*GUARD_TRIES.start()..=most, GUARD_TRIES]
+    }
+
+    /// What one try finds: mostly no window yet, else windows guarded or a refusal.
+    fn found() -> impl Strategy<Value = Result<usize, UiError>> {
+        prop_oneof![
+            4 => Just(Ok(0)),
+            1 => (1..=usize::MAX).prop_map(Ok),
+            1 => any::<i32>().prop_map(|code| Err(UiError::Refused(code))),
+            1 => Just(Err(UiError::NoWindow)),
+        ]
+    }
+
+    proptest! {
+        #[test]
+        fn a_run_counts_from_one_never_passes_its_last_try_and_ends_once_a_window_shows(
+            tries in tries(),
+            found in vec(found(), 0..60),
+        ) {
+            let (mut run, mut since) = (Run::default(), 0);
+            for result in found {
+                let attempt = run.next();
+                prop_assert_eq!(attempt, since + 1, "a run counts its tries from 1");
+                prop_assert!(attempt <= tries, "try {} of {}", attempt, tries);
+                let again = next(&result, attempt, tries) == Next::Again;
+                if matches!(result, Ok(0)) {
+                    prop_assert_eq!(again, attempt < tries, "no window yet tries again until the last try");
+                } else {
+                    prop_assert!(!again, "a guarded or failed try ends the run");
+                }
+                run.settle(attempt, again);
+                since = if again { attempt } else { 0 };
+            }
+        }
     }
 }

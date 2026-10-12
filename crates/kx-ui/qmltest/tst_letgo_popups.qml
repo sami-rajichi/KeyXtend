@@ -122,10 +122,14 @@ Item {
             compare(ui.calls, ["retry 7", "dismiss 8"]);
         }
 
+        // Each chip is found by its word, as a screen reader finds it.
         function test_a_chip_acts_once_after_a_slip_onto_the_next_chip() {
-            const chip = { text: "Hello", icon: N.lk.icons.keys.clip };
-            const a = createTemporaryObject(chipC, root, { chip: chip, lk: N.lk, res: root.res, s: 1, radius: 4 });
-            const b = createTemporaryObject(chipC, root, { chip: chip, lk: N.lk, res: root.res, s: 1, radius: 4, x: a.width * 2 });
+            const words = [En.texts["key.clip"], En.texts["key.fill"]];
+            const make = (word, x) => createTemporaryObject(chipC, root, { chip: { text: word, icon: N.lk.icons.keys.clip }, lk: N.lk, res: root.res, s: 1, radius: 4, x: x });
+            const first = make(words[0], 0);
+            make(words[1], first.width * 2);
+            const [a, b] = words.map(w => named(root, Accessible.Button, w));
+            verify(a === first && b && b !== a, "each chip by its word");
             const [sa, sb] = [spy(a, "clicked"), spy(b, "clicked")];
             slip(a, onto(a, b));
             compare([sa.count, sb.count], [1, 0]);

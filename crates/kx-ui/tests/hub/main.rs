@@ -12,6 +12,7 @@ mod board;
 mod face;
 mod fonts;
 mod held;
+mod lifecycle;
 mod logs;
 mod look;
 mod memory;

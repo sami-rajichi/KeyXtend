@@ -106,6 +106,7 @@ Item {
             compare(cover.title, En.texts["catch"], "UI Automation names the full-screen cover");
             const area = all(cover.contentItem, o => o.Accessible.role === Accessible.Button)[0];
             compare(area.Accessible.id, "catch");
+            compare(area.Accessible.name, En.texts["catch"], "a screen reader names the cover's button");
         }
 
         // Every other control's id is its text key too: the size buttons, the resize corner, the D-pad.
@@ -142,6 +143,7 @@ Item {
                 compare(keyed(win, "bar." + part).Accessible.name, En.texts["bar." + part]);
             const disc = all(bubble(win).contentItem, o => o.Accessible.role === Accessible.Button)[0];
             compare(disc.Accessible.id, "bar.bubble");
+            compare(disc.Accessible.name, En.texts["bar.bubble"], "a screen reader names the bubble");
         }
     }
 }

@@ -5,6 +5,7 @@ import QtTest
 import "../qml"
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-ar.js" as Ar
 import "fixtures/assets.js" as Assets
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as H
@@ -204,6 +205,17 @@ Item {
             const c = createTemporaryObject(chipC, root, { chip: { text: "Hello", icon: H.lk.icons.keys.clip }, lk: H.lk, res: root.res, s: 1, radius: 4 });
             const icon = find(c, o => o.tint !== undefined && o.icon !== undefined);
             verify(Qt.colorEqual(icon.tint, H.lk.palette.legend), "the chip's own text colour");
+        }
+
+        // A screen reader finds a chip, a button, by the word it shows, in Arabic as in English.
+        function test_a_chip_is_found_by_the_word_it_shows() {
+            for (const [word, ar] of [[En.texts["key.clip"], false], [Ar.texts["key.clip"], true]]) {
+                const c = createTemporaryObject(chipC, root, { chip: { text: word, icon: N.lk.icons.keys.clip, ar: ar }, lk: N.lk, res: root.res, s: 1, radius: 4 });
+                const hits = all(root, o => o.Accessible.role === Accessible.Button && o.Accessible.name === word);
+                compare(hits.length, 1, word);
+                verify(hits[0] === c, "the chip itself");
+                verify(find(c, o => o.font !== undefined && o.text === word), "it shows the word it is named by");
+            }
         }
 
         function test_a_dimmed_key_tip_says_when_it_comes() {
