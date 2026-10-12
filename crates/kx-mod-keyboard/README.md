@@ -88,7 +88,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | `holding` while the key is still held, due or not. A repeat that went out redraws the state only when its burst ended, as the latches stay latched until then; else as a tap: a stale refresh, or `notice.keys-not-sent` once. |
 | `let_go {id}` | The pointer let go, wherever it is: the key typed at the press, so nothing more types, and the burst's latches let go (`Typing::release`); a let-go of a key not held changes nothing | State when a burst ended. `UnknownKey` off the board, which changes nothing. |
 | `leave` | Qt took the press away, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
-| `relabel` | Refreshes the layouts | State when the layout changed. |
+| `relabel` | Refreshes the layouts | State when the layout changed, or Caps Lock changed outside the keyboard. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
 | `smaller`, `bigger`, `preset`, `resize_begin`, `resize_at`, `resize_end` | Sizes the keyboard within the room on its screen; the size is saved in one write | Board, and state when the window moved to stay on its screen; `notice.settings-unsaved` when it could not be saved. |

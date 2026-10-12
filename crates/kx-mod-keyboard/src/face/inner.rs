@@ -39,6 +39,8 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
+    /// The Caps Lock state the last state view showed, so a press outside the keyboard redraws it.
+    shown_caps: Option<bool>,
     /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
     #[cfg(debug_assertions)]
     caps_flipped: bool,
@@ -65,6 +67,7 @@ impl Inner {
             plate,
             overhang: 0.0,
             list: None,
+            shown_caps: None,
             #[cfg(debug_assertions)]
             caps_flipped: false,
         }
@@ -215,6 +218,11 @@ impl Inner {
         }
     }
 
+    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard.
+    pub(super) fn caps_moved(&self) -> bool {
+        self.shown_caps.is_some_and(|shown| shown != self.caps())
+    }
+
     /// Whether Caps Lock shows lit: the system's state, turned over in debug builds by `FaceAction::FlipCaps`.
     fn caps(&self) -> bool {
         let on = self.ports.source.caps_on();
@@ -232,12 +240,14 @@ impl Inner {
     /// in its change event already sees the names' turn.
     pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[(String, Nav)]) -> StateView {
         self.seen();
+        let caps = self.caps();
+        self.shown_caps = Some(caps);
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();
         state_view(&StateInput {
             keys,
             latches: self.typing.latches(),
-            caps: self.caps(),
+            caps,
             table: &table,
             list: &list,
             turn: self.turn.turn(),

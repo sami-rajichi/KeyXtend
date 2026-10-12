@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 22:52 — P3: the Caps Lock light follows a press outside the keyboard
+The owner's hand check found that Caps Lock pressed outside KeyXtend left its light unchanged until the next key click, as nothing asked for a redraw. The relabel tick now also redraws the state when Caps Lock changed since the last state shown, so the light follows within `relabel_ms`. Narrator read the keys and top-bar buttons clearly in the same check.
+
 ## 2026-10-12 22:34 — P3: the branch review's three fixes
 A let-go now ends a key's hold only when that key is the one held, so a late let-go from another key never stops a repeat. Both settings files now share one range check in `kx-module-api`. The frame log's setting and the kx-ui security note now say its press times show the typing rhythm, so it stays off while typing anything private.
 

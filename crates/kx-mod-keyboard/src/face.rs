@@ -175,11 +175,15 @@ impl Face {
         }
     }
 
-    /// Reads the layouts again, without the lock, since the change event may call back into the face.
+    /// Reads the layouts again, without the lock, since the change event may call back into the face; the state also
+    /// redraws when Caps Lock changed outside the keyboard.
     fn refresh(&self) -> FaceReply {
         let layouts = self.lock().layouts();
         let changed = layouts.refresh();
-        let moved = self.lock().seen();
+        let moved = {
+            let mut inner = self.lock();
+            inner.seen() || inner.caps_moved()
+        };
         FaceReply {
             state: changed || moved,
             ..FaceReply::default()

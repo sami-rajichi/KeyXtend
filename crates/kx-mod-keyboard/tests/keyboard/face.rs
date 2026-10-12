@@ -112,6 +112,24 @@ fn relabel_redraws_only_when_the_layout_shown_changed() {
     assert_eq!(r.state()["keys"][Q]["main"], "a", "AZERTY");
 }
 
+#[test]
+fn relabel_redraws_when_caps_lock_changed_outside() {
+    let r = Rig::new(&GOLDEN, None);
+    assert_eq!(r.state()["keys"]["caps"]["on"], false);
+    r.fakes.source.set_caps(true);
+    assert_eq!(
+        r.act(FaceAction::Relabel),
+        Ok(STATE),
+        "a real Caps Lock press"
+    );
+    assert_eq!(r.state()["keys"]["caps"]["on"], true);
+    assert_eq!(
+        r.act(FaceAction::Relabel),
+        Ok(FaceReply::default()),
+        "already shown"
+    );
+}
+
 /// Debug builds turn Caps Lock over on the face alone, for the memory churn: the key lights and the letters turn
 /// capital, and no key goes out.
 #[cfg(debug_assertions)]

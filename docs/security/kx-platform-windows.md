@@ -109,7 +109,7 @@ Another program can put our tag on its own input so that our hooks skip it. The 
 
 `ToUnicodeEx`'s no-state-change flag needs Windows 10 1607 or later, and builds before it are long out of support; on them, reading a dead key could leave it waiting in our own thread only.
 
-`caps_on` reads Caps Lock with `GetKeyState`, the spike's method; it is this thread's view of the toggle, so the manual check of the non-activating keyboard must confirm it follows the key.
+`caps_on` reads Caps Lock with `GetKeyState`, the spike's method, which is this thread's view of the toggle. The P3 hand check confirmed that it follows a press outside the non-activating keyboard; the keyboard's relabel tick redraws on that change.
 
 Windows does not report input that UIPI blocks (a window above our integrity level), so `SendInput` may count it as sent. The uiAccess build is allowed to reach those windows, which is why the app runs with uiAccess.
 
