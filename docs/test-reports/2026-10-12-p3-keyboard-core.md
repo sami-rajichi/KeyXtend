@@ -47,6 +47,7 @@
 | 20 | Narrator on: rest the pointer on a letter, Backspace and the language key | Each key's name is read | Pass | G10's listening part; NVDA moves to P14 |
 | 21 | Narrator on: rest the pointer on two top-bar buttons | Each is named clearly | Pass | |
 | 22 | Caps Lock pressed outside the keyboard, on then off | The Caps light and the letters follow, with no click | Pass | Failed on the first build; fixed in 5c4bd81, see note 9 |
+| 23 | Portable NVDA on: rest the pointer on a letter, Backspace and a top-bar button | Each is named | Not run here | The portable copy has no uiAccess, so Windows keeps it from our windows (it read the taskbar); the installed NVDA moves to P14 |
 
 ## Notes
 1. G8 on default settings, build 1e73f75, nine runs on 2026-10-12: start 350–788 ms (median 527, budget 500), slower under memory pressure; working set 98.5–102.7 MB (median 99.0, budget 100) and commit 134.6–138.8 MB (budget 140); char p99 12.5–20.3 ms; churn growth 0.4–3.0 / −0.3–2.8 MB, one run at 3.04 over the 3.0 limit. Dropped frames were 0–1 before a reboot (32 in one run under memory pressure); after it PresentMon marked 43–49 frames unseen while G8's screen copies saw all 20 presses lit within 15 ms. The owner accepted the results, and P14 tracks start-up and the frame count. The owner's Dolch at size 0.8 idles at 121.8 / 171.6 MB, which P13 records.
