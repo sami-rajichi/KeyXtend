@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 15:11 — P3: a pressed key lights as fast as Windows' own keyboard (ADR-0025, ADR-0026)
+A pressed key now draws its press frame first and types right after, so its light shows in a median of 14.2–14.6 ms on the 144 Hz development PC, against 28.1 ms before and 14.2–14.5 ms for Windows' On-Screen Keyboard measured the same way. G8's rule now matches Windows' keyboard: the median within 2 frames and the slowest within 3, each plus the median screen copy. Frames keep the refresh wait, as showing them at once dropped 142 frames in G8 (ADR-0026). A frame log (`[ui] frame_log`) times each step of a press for later work.
+
 ## 2026-10-12 13:20 — P3: letters type into scrcpy, the phone mirror
 scrcpy reads letters and numbers only as real key presses, so the keyboard's text never reached the phone while Space, Enter and Backspace did. `[keyboard] key_apps` now lists `scrcpy.exe` by default, so it gets key presses in its own layout, and the owner confirmed typing in WhatsApp through it. A one-click switch to add any app to that list is saved for P13.
 
