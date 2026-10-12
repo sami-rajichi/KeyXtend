@@ -121,7 +121,8 @@ Item {
             const taps = () => win.keyboard.calls.filter(c => /^(tap|press|letGo)\b/.test(c));
             compare(taps(), ["press c-0x0010", "letGo c-0x0010", "tap lang true"]);
             mouseClick(keyed(win, "mic"));
-            compare(taps().length, 3, "a dimmed key sends nothing");
+            tryCompare(win.presses, "waiting", null);
+            compare(taps().length, 3, "a dimmed key sends nothing, not even once its frame is drawn");
             win.visible = false;
         }
 

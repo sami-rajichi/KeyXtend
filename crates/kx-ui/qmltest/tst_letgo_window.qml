@@ -117,6 +117,8 @@ Item {
             slip(close, onto(close, keyed(app.face, "bar.minimise")));
             verify(app.away && !app.face.visible, "put away");
             verify(!app.bubble.visible, "never minimised");
+            // A key press waiting for its frame would be dropped by the hide, so none may wait (ADR-0025).
+            verify(app.face.presses.waiting === null, "no key press waits");
             compare(since(app.keyboard, calls).filter(c => /^(tap|press|letGo)\b/.test(c)), [], "no key got it");
         }
 
@@ -126,6 +128,7 @@ Item {
             const min = keyed(app.face, "bar.minimise");
             slip(min, onto(min, keyed(app.face, "bar.close")));
             verify(app.minimised && app.bubble.visible, "minimised");
+            verify(app.face.presses.waiting === null, "no key press waits, which the hide would drop");
             compare(since(app.keyboard, calls).filter(c => /^(tap|press|letGo)\b/.test(c)), [], "no key got it");
             waitForRendering(app.bubble.contentItem);
             const disc = app.bubble.contentItem;
