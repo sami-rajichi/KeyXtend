@@ -2,6 +2,12 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-12 22:20 — P3 done: the keyboard core (v0.1)
+The keyboard types English, French and Arabic from a no-focus uiAccess window, with modifiers, key repeat, act on press, three looks, the bubble and the tray. The owner passed every hands-on check, and G1–G4, G9–G11 and G25 passed; G13 and G8 are partial with the owner's acceptance (test report 2026-10-12). Start-up at about 527 ms against 500 and a frame count that disagrees with the screen after a reboot go to P14; a tip that misses after a look change goes to P13.
+
+## 2026-10-12 17:46 — P3: G8 says which tip key misses and which churn step grows
+G8's churn now polls through each tip rest and reports each key's hits and show times, with warm-up round 1 kept apart, and reads memory after each step of a round with a fitted slope. It showed the miss is whichever key is hovered third after the bubble and theme steps, not Shift, and that the themes step carries most of the commit growth.
+
 ## 2026-10-12 15:11 — P3: a pressed key lights as fast as Windows' own keyboard (ADR-0025, ADR-0026)
 A pressed key now draws its press frame first and types right after, so its light shows in a median of 14.2–14.6 ms on the 144 Hz development PC, against 28.1 ms before and 14.2–14.5 ms for Windows' On-Screen Keyboard measured the same way. G8's rule now matches Windows' keyboard: the median within 2 frames and the slowest within 3, each plus the median screen copy. Frames keep the refresh wait, as showing them at once dropped 142 frames in G8 (ADR-0026). A frame log (`[ui] frame_log`) times each step of a press for later work.
 

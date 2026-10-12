@@ -36,7 +36,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** no IPC or network. A key acts on a click or a UI Automation Invoke from any program UIPI lets through, and the face cannot tell who sent it; the P3 manual check must confirm that a normal program's click and Invoke type nothing in the signed uiAccess build (`docs/items/P3.md`).
+- **Spoofing:** no IPC or network. A key acts on a click or a UI Automation Invoke from any program UIPI lets through, and the face cannot tell who sent it; P3's manual check confirmed that a normal program's click and Invoke type nothing in the signed uiAccess build (test report 2026-10-12, row 11).
 - **Tampering:** a hand-edited value is checked, and a bad one resets alone (kernel repair). Sizes stop at `SIZE_FLOOR` and `SIZE_CEILING`, so a hand-edited size can neither shrink the keys past clicking nor open the keyboard off every screen, and a place off every screen brings the keyboard back to the bottom centre.
 - **Logging / repudiation:** the module never logs; a held key's failed repeat is one `keys-not-sent` notice, which kx-ui's hub also logs as one warning, with no key. Typed text that reached a log through a field named for it is redacted (the app's log test), and `kx-review` check 4 refuses a `tracing` call on an input path that could carry it.
 - **Information disclosure:** the settings are not sensitive; typed text is `Redacted` and never logged. The face's debug output shows no key, place or typing state.
@@ -51,7 +51,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 
 ## Findings
 ### Must fix (blocks Definition of Done)
-- **Who can press a key (manual check):** only UIPI keeps a normal program from making the uiAccess keyboard type into an admin window, since a key acts on any click or Invoke Windows lets through. The P3 manual check must confirm it in the signed build (`docs/items/P3.md`); if a normal program can type, P3 is not done.
+- **Who can press a key (manual check):** only UIPI keeps a normal program from making the uiAccess keyboard type into an admin window, since a key acts on any click or Invoke Windows lets through. P3's manual check confirmed it in the signed build: a normal program's `SendInput` and Invoke typed nothing, and its `SetWindowPos` was denied (test report 2026-10-12, row 11).
 - Done (P3, c163124 and 5dcce0e): `size_max`, `size` and `size_step` had no ceiling, so a hand-edited `size_max = 1000` opened the keyboard off every screen on each start. `SIZE_CEILING` and `SIZE_FLOOR` now bound every size at load.
 ### Should fix (tracked issue)
 - **The face has no capability gate (P7):** `KeyboardFaceKey` carries none, yet a `Tap` types, as do `Press`, `Tick` and `LetGo`, so any module that requires the face types without `InjectInput`. Today only `ui` requires it (`docs/items/P7.md`).
