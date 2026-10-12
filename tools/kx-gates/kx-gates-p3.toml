@@ -1,5 +1,5 @@
-# Settings P3 adds: the mouse guard, and gates G8-G11, G13 and G26. kx-gates reads them with kx-gates.toml, from
-# its folder.
+# Settings P3 adds: the mouse guard, the run-length checks ([fit]), and gates G8-G11, G13 and G26. kx-gates reads
+# them with kx-gates.toml, from its folder.
 
 # The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input;
 # the gate table in src/cli.rs marks the gates it never holds. It lets go when the gate ends, for an admin prompt,

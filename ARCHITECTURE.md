@@ -87,7 +87,8 @@ crates/
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml and, beside it, kx-gates-p3.toml (the P3
-                         gates); uses spike-core widely until its gates are
+                         gates, the mouse guard and the run-length checks); uses
+                         spike-core widely until its gates are
                          aimed at the product; `capture-layouts` writes the fake's golden
                          layout tables from the layouts installed on the PC
   kx-target-window/      test window that logs every character it receives (CI); a library plus
