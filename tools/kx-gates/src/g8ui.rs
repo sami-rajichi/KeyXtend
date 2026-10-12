@@ -132,8 +132,8 @@ fn approach(
 }
 
 /// Presses the key at `spot` `[g8] presses` times and times how soon it lights; the pointer rests on it first, so the
-/// hover is already drawn, and `front` keeps the window it types into in front before that rest and each press. The last key's rise
-/// ends before it returns, and a stop by the mouse guard lets go away from the key at once.
+/// hover is already drawn, and `front` keeps the window it types into in front before that rest and each press. The
+/// last key's rise ends before it returns, and a stop by the mouse guard lets go away from the key at once.
 pub fn presses(
     ctx: &Ctx,
     spot: &Spot,
@@ -170,8 +170,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_window_typed_into_is_in_front_before_the_pointer_rests_on_the_key_and_again_before_the_press()
-     {
+    fn the_target_is_in_front_before_the_rest_and_the_press() {
         let steps = RefCell::new(Vec::new());
         let front = || {
             steps.borrow_mut().push("front");
