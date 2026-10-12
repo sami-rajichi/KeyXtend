@@ -56,6 +56,16 @@ fn in_front(ctx: &Ctx, target: HWND) -> Result<(), String> {
     Err("target-window left the front and did not come back, so G8 stopped pressing".to_string())
 }
 
+/// What a press will type, read by `read` only once `front` confirmed target-window in front, as the layout read is
+/// the front app's.
+fn expected(
+    front: impl FnOnce() -> Result<(), String>,
+    read: impl FnOnce() -> Result<String, String>,
+) -> Result<String, String> {
+    front()?;
+    read()
+}
+
 /// What target-window got, read once `[g2] drain_ms` has passed.
 fn arrived(ctx: &Ctx) -> Result<String, String> {
     sleep_ms(ctx.cfg.g2.drain_ms);
@@ -66,7 +76,8 @@ fn arrived(ctx: &Ctx) -> Result<String, String> {
 /// G8's presses into target-window `target`, once the keyboard shows its layout, and what arrived there.
 fn into(ctx: &Ctx, kb: &Keyboard, target: HWND) -> Result<Presses, String> {
     sleep_ms(product::follow_ms(ctx.cfg.timing.poll_ms)?);
-    let one = typed_by_key(&ctx.cfg.g8.press_key)?;
+    let read = || typed_by_key(&ctx.cfg.g8.press_key);
+    let one = expected(|| in_front(ctx, target), read)?;
     let mut out = g8ui::presses(ctx, kb, || in_front(ctx, target))?;
     let text = arrived(ctx)?;
     out.arrived = text.chars().count();
@@ -86,7 +97,27 @@ pub fn presses(ctx: &Ctx, kb: &Keyboard) -> Result<Presses, String> {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use super::*;
+
+    #[test]
+    fn the_expected_character_is_read_only_once_the_window_is_in_front() {
+        let steps = RefCell::new(Vec::new());
+        let front = || {
+            steps.borrow_mut().push("front");
+            Ok(())
+        };
+        let read = || {
+            steps.borrow_mut().push("read");
+            Ok("a".to_string())
+        };
+        assert_eq!(expected(front, read), Ok("a".to_string()));
+        assert_eq!(*steps.borrow(), ["front", "read"]);
+        let gone = || Err("target-window left the front".to_string());
+        let never = || -> Result<String, String> { panic!("read with another window in front") };
+        assert!(expected(gone, never).is_err());
+    }
 
     #[test]
     fn exactly_one_character_per_press_and_nothing_else_passes() {
