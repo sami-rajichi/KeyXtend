@@ -28,7 +28,7 @@ pub(crate) const TRAY_GRACE_MS: RangeInclusive<u64> = 0..=5_000;
 pub(crate) const DEVICE_REBUILDS: RangeInclusive<u32> = 0..=10;
 /// How long one may wait before trying again at a graphics device that could not be made, in ms.
 pub(crate) const DEVICE_RETRY_MS: RangeInclusive<u64> = 0..=5_000;
-/// How many frames may wait to show; 0 never waits, and Direct3D goes no higher than Qt allows.
+/// How many frames Qt lets queue before it waits at a frame's start; 0 drops that wait, not Direct3D's own queue.
 pub(crate) const FRAME_LATENCY: RangeInclusive<u32> = 0..=3;
 /// How long Qt's update timer may wait before a frame, in ms; 0 starts it at once.
 pub(crate) const UPDATE_IDLE_MS: RangeInclusive<u64> = 0..=50;
@@ -123,7 +123,7 @@ pub struct UiSettings {
     pub device_rebuilds: u32,
     /// How long to wait before trying again at a new graphics device that could not be made, as a driver resets, in ms.
     pub device_retry_ms: u64,
-    /// How many frames may wait to show before a new one starts (`QT_D3D_MAX_FRAME_LATENCY`); 0 never waits.
+    /// How many frames Qt lets queue before it waits at a frame's start (`QT_D3D_MAX_FRAME_LATENCY`); 0 drops that wait.
     pub frame_latency: u32,
     /// Frames start on the screen's refresh (Qt's vblank thread); false starts them on Qt's update timer.
     pub vblank_updates: bool,

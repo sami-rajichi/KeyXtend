@@ -28,7 +28,7 @@ tray_grace_ms = 500
 device_rebuilds = 3
 # How long to wait before trying again when a new graphics device could not be made yet, as a driver resets, in ms.
 device_retry_ms = 500
-# How many frames may wait to show before the next one starts; 0 never waits. Qt's own value; read at start.
+# Frames Qt lets queue before it waits to start the next (Qt's own value, read at start); 0 drops that wait only.
 frame_latency = 2
 # Frames start on the screen's refresh; false starts them update_idle_ms after a change. Read at start.
 vblank_updates = true

@@ -17,7 +17,7 @@ fn frame(from: i64, gap: i64) -> Frame {
 }
 
 #[test]
-fn a_frame_line_splits_its_cpu_time_into_steps() {
+fn a_frame_line_splits_its_time_into_steps_and_gives_it_without_the_start_wait() {
     let mut log = Log::new();
     let (line, press) = log.framed(KB, frame(1_000, 10));
     assert_eq!(press, None, "no press is open");
@@ -30,6 +30,7 @@ fn a_frame_line_splits_its_cpu_time_into_steps() {
             render_us: Some(10),
             present_us: Some(10),
             busy_us: Some(50),
+            work_us: Some(40),
         }
     );
 }
@@ -44,6 +45,18 @@ fn a_frame_drawn_without_an_update_request_starts_at_its_begin() {
     let (line, _) = log.framed(KB, f);
     assert_eq!((line.at_us, line.polish_us), (1_010, None));
     assert_eq!(line.busy_us, Some(40));
+    let begun = Frame {
+        sync: 0,
+        rendered: 0,
+        swap: 0,
+        ..f
+    };
+    let (line, _) = log.framed(KB, begun);
+    assert_eq!(
+        (line.wait_us, line.work_us),
+        (None, line.busy_us),
+        "with no wait measured, the work is the whole frame"
+    );
 }
 
 #[test]

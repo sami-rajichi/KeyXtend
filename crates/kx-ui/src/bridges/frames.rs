@@ -139,6 +139,7 @@ fn frame_line(f: &FrameTimes) {
         render_us = f.render_us,
         present_us = f.present_us,
         busy_us = f.busy_us,
+        work_us = f.work_us,
         "frame timed"
     );
 }

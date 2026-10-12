@@ -37,7 +37,8 @@ pub enum Mark {
     End,
 }
 
-/// A frame line, in µs: when it started, then each step's share of its CPU time; `None` where a step was missing.
+/// A frame line, in µs: when it started, then each step's share of its time on the GUI thread; `None` where a step was
+/// missing.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameTimes {
     /// Its first step on Qt's clock.
@@ -50,8 +51,10 @@ pub struct FrameTimes {
     pub render_us: Option<i64>,
     /// Drawn to handed to the screen.
     pub present_us: Option<i64>,
-    /// The whole frame.
+    /// The whole frame on the GUI thread as wall time, its waits and Present included.
     pub busy_us: Option<i64>,
+    /// The whole frame without the wait at its start.
+    pub work_us: Option<i64>,
 }
 
 /// A press line: when Qt got the press's message (or, unseen, the press), then each step from it in µs.
@@ -168,14 +171,16 @@ impl Log {
                 p.frame = Some(f);
             }
         }
-        let first = f.first();
+        let (first, wait_us) = (f.first(), gap(f.begin, f.sync));
+        let busy_us = gap(first, f.done);
         let line = FrameTimes {
             at_us: first,
             polish_us: gap(f.update, f.begin),
-            wait_us: gap(f.begin, f.sync),
+            wait_us,
             render_us: gap(f.sync, f.rendered),
             present_us: gap(f.rendered, f.swap),
-            busy_us: gap(first, f.done),
+            busy_us,
+            work_us: busy_us.map(|b| b - wait_us.unwrap_or_default()),
         };
         (line, self.whole())
     }
