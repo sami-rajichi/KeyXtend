@@ -33,7 +33,8 @@ fn ms_of(secs: u64) -> u64 {
 /// The least time G8 holds the mouse: until its `PresentMon` capture ends, then each churn round resting on each tip.
 fn g8_ms(c: &GatesConfig) -> u64 {
     let g = &c.g8;
-    let rests = (g.churn_warm_rounds + g.churn_rounds).saturating_mul(g.churn_tips.len());
+    let rounds = g.churn_warm_rounds.saturating_add(g.churn_rounds);
+    let rests = rounds.saturating_mul(g.churn_tips.len());
     let churn = u64::try_from(rests).map_or(u64::MAX, |n| n.saturating_mul(g.churn_tip_ms));
     ms_of(g.presentmon_secs).saturating_add(churn)
 }
@@ -102,6 +103,8 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    use kx_module_api::MS_PER_S;
+
     use super::*;
     use crate::config::load;
 
@@ -139,7 +142,7 @@ mod tests {
         assert!(e.contains("g2"), "{e}");
         let g4 = with(|c| c.g4.clicks = past(c));
         assert!(check(&g4).expect_err("G4 too").contains("g4"));
-        let g8 = with(|c| c.g8.presentmon_secs = c.mouse_guard.limit_ms / 1000);
+        let g8 = with(|c| c.g8.presentmon_secs = c.mouse_guard.limit_ms / u64::from(MS_PER_S));
         assert!(check(&g8).expect_err("G8 too").contains("g8"));
     }
 
@@ -167,6 +170,12 @@ mod tests {
         assert!(e.contains("g2"), "{e}");
         let off = with(|c| c.mouse_guard.on = false);
         assert_eq!(clicks_fit(&off, "g2", past), Ok(()), "nothing is held");
+    }
+
+    #[test]
+    fn churn_rounds_past_any_count_are_refused_without_a_panic() {
+        let c = with(|c| (c.g8.churn_warm_rounds, c.g8.churn_rounds) = (usize::MAX, 1));
+        assert!(check(&c).expect_err("G8 too long").contains("g8"));
     }
 
     #[test]
