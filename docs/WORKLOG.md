@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 12:57 — P4: a fake mouse hook, and `max_acts` on the engine port
+`kx-platform-fake` now has `FakePointerHook`, a stand-in for the Windows mouse hook that the mouse module's tests drive on their own thread, with time only from the test. It runs the engine's `on` then `settle` for each fed event and records the input they send in order, counts starts, stops and wakes, and calls `release` when the run is dropped. The engine port gained `max_acts`, the most input one call may push, so a host reserves its buffer once; the fake panics when an engine pushes past it.
+
 ## 2026-10-13 12:16 — P4: the hold engine with Grab at once and modifier + click
 `kx-mod-mouse` now has the pure hold engine: a still hold right-clicks, Grab picks up at the next press with no wait and drops on the next click, and a click on our windows, Esc or a toggle cancels a carry, with Right-click coming back after. The keyboard's latched modifiers go down around the next left click outside our windows in any mode, a latch change mid-click never alters that click, and the still radius scales by the press's DPI. Property tests over random input found that a late hold's right-click could reach the app after the press that revealed it; that press now follows it. The engine also lets go of stale modifiers or an awaited release when the hook misses one, and its hot path never allocates.
 

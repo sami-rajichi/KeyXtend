@@ -50,6 +50,10 @@ impl PointerEngine for Holder {
     fn release(&mut self, acts: &mut Vec<PointerAct>) {
         acts.push(LET_GO);
     }
+
+    fn max_acts(&self) -> usize {
+        [LET_GO].len()
+    }
 }
 
 /// What the fake runs did: wakes, drops and the input their drops let go.

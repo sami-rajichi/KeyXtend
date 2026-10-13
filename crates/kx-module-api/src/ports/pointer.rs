@@ -77,6 +77,10 @@ pub trait PointerEngine: Send {
     /// Lets go of everything held, such as a latched button or pressed modifiers; the host sends `acts` before it
     /// stops.
     fn release(&mut self, acts: &mut Vec<PointerAct>);
+
+    /// The most acts one `on`, `settle` or `release` call may push; a host reserves the lent buffer with it once, so
+    /// pushes never allocate.
+    fn max_acts(&self) -> usize;
 }
 
 /// How the host runs; the module fills it from its settings.
