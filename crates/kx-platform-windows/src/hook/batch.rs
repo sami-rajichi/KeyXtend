@@ -77,13 +77,3 @@ pub(crate) fn batch(acts: &[PointerAct], desk: Desk) -> Vec<Input> {
         })
         .collect()
 }
-
-/// True when `acts` hold mouse input, which comes back through the mouse hook.
-pub(crate) fn has_mouse(acts: &[PointerAct]) -> bool {
-    acts.iter().any(|act| {
-        matches!(
-            act,
-            PointerAct::Move(_) | PointerAct::Down(..) | PointerAct::Up(..)
-        )
-    })
-}

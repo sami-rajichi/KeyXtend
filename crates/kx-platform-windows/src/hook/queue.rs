@@ -145,10 +145,10 @@ pub(crate) enum Wait {
     Lost,
 }
 
-/// The wait for our own mouse input to come back through the hook.
+/// The wait for our own input to come back through a hook.
 #[derive(Debug)]
 pub(crate) struct Echo {
-    /// When our last mouse input went out.
+    /// When our last batch went out.
     since: Option<Mono>,
     /// How long it may take.
     wait: Duration,
@@ -163,7 +163,7 @@ impl Echo {
         }
     }
 
-    /// Our mouse input went out at `at`; later input waits until it comes back.
+    /// Our input went out at `at`; later input waits until it comes back.
     pub(crate) fn sent(&mut self, at: Mono) {
         self.since = Some(at);
     }

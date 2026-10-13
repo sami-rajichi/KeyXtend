@@ -11,7 +11,7 @@ use std::sync::Arc;
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Kind, Take, esc, key_up, kind, take};
+use super::accept::{Kind, Take, esc, key_echo, key_up, kind, take};
 use super::health::Health;
 use super::held::Held;
 use super::queue::{Echo, Queue, Wait};
@@ -182,6 +182,9 @@ impl<O: Os> Host<O> {
 
     fn on_key(&mut self, msg: u32, vk: u32, mark: Mark) {
         let stamp = self.stamp(mark);
+        if key_echo(mark.extra) {
+            self.echo.clear();
+        }
         if esc(self.source, msg, vk, mark.injected, mark.extra) {
             // Esc is never dropped, whatever the engine answers.
             let _ = self.decide(PointerEvent::Esc, stamp);

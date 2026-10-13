@@ -4,16 +4,47 @@ use kx_module_api::ports::{Button, PointerAct, Scan};
 
 use super::fake::Call;
 use super::run::sends;
-use super::{A, B, CTRL, KEY_UP, LEFT_UP, MOVE, OTHER, Rig, SHIFT, rig};
+use super::{A, B, CTRL, KEY_DOWN, KEY_UP, LEFT_UP, MOVE, OTHER, Rig, SHIFT, rig};
 use crate::hook::Source;
 use crate::hook::accept::{key_up, sent_scan};
 use crate::keys::{REPLAY, SIM_TAG, TAG};
 
-/// `WM_SYSKEYUP`, `WM_KEYDOWN`, and `VK_CONTROL` and `VK_SHIFT`.
+/// `WM_SYSKEYUP`.
 const SYS_UP: u32 = 0x0105;
-const KEY_DOWN: u32 = 0x0100;
+/// `VK_CONTROL` and `VK_SHIFT`.
 const VK_CONTROL: u32 = 0x11;
 const VK_SHIFT: u32 = 0x10;
+
+/// A rig whose engine sent only a Ctrl press at a settle, which no echo has followed yet.
+fn ctrl_in_flight() -> Rig {
+    let mut rig = rig(Source::Physical);
+    rig.plan().settle_acts = vec![PointerAct::KeyDown(CTRL)];
+    rig.host.turn();
+    rig.plan().settle_acts.clear();
+    rig.world.take();
+    rig
+}
+
+#[test]
+fn a_key_only_batch_in_flight_keeps_the_record_against_the_hands_key_up() {
+    let mut rig = ctrl_in_flight();
+    let hand = rig.mark(false, 0);
+    rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
+    rig.host.stop();
+    assert_eq!(sends(&rig.world.take()), [vec![PointerAct::KeyUp(CTRL)]]);
+}
+
+#[test]
+fn a_key_only_batchs_echo_ends_the_wait() {
+    let mut rig = ctrl_in_flight();
+    let echo = rig.mark(true, REPLAY);
+    rig.host.key(KEY_DOWN, VK_CONTROL, CTRL, echo);
+    assert!(!rig.hand(MOVE, A), "nothing waits");
+    let hand = rig.mark(false, 0);
+    rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
+    rig.host.stop();
+    assert!(sends(&rig.world.take()).is_empty(), "the hand let it go");
+}
 
 /// A rig whose engine pressed `acts` at a settle, with our echo back, so nothing of ours is in flight.
 fn pressed(acts: Vec<PointerAct>) -> Rig {

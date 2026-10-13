@@ -6,13 +6,13 @@ use kx_module_api::ports::{Button, MAX_HELD_KEYS, Point, PointerAct, Scan};
 /// One slot per `Button`; each arm of `slot` checks at build time that its slot is below it.
 pub(crate) const SLOTS: usize = 3;
 
-/// The slot of `button`. The match is exhaustive and every arm goes through `below_slots` at build time, so a new
-/// button cannot build until it has a slot below `SLOTS`.
+/// The slot of `button`: its own discriminant, so slots never repeat. The match is exhaustive and every arm goes
+/// through `below_slots` at build time, so a new button cannot build until its slot is below `SLOTS`.
 pub(crate) const fn slot(button: Button) -> usize {
     match button {
-        Button::Left => const { below_slots(0) },
-        Button::Right => const { below_slots(1) },
-        Button::Middle => const { below_slots(2) },
+        Button::Left => const { below_slots(Button::Left as usize) },
+        Button::Right => const { below_slots(Button::Right as usize) },
+        Button::Middle => const { below_slots(Button::Middle as usize) },
     }
 }
 

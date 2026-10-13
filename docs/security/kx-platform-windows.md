@@ -85,7 +85,7 @@
   - The icon's thread deletes the icon as its window ends, after any add it had queued, so no dead icon stays behind while the app runs.
   - The front-window hook, the only hook in P3, runs out of context with our process skipped; it reads one class name and queues a wake inside `catch_unwind`, so it cannot stall anyone's input.
 - **Spoofing (pointer hook):** another program can put our tags on its input.
-  - `TAG` or `REPLAY` hides that input from the engine. A forged mouse event with either tag also ends the wait for our echo early, so the hand's next event may overtake our input: an ordering effect only.
+  - `TAG` or `REPLAY` hides that input from the engine. A forged mouse event with either tag, or a forged `REPLAY` key, also ends the wait for our echo early, so the hand's next event may overtake our input. It can also make the record of held input drop a press of ours that is still in flight (see Accepted).
   - A forged `TAG` Esc can only end a hold.
   - `SIM_TAG` acts only in the simulated mode, which exists only in builds with the `sim-input` feature (the gate tool's, never the shipped app). In the physical mode no injected input acts.
   - The health check counts the hooks current up to the tick when a callback ran, never the event's own stamp, so a forward-dated event cannot hide lagging hooks.
@@ -144,7 +144,7 @@ The guard calls the procedure kept in its window property (`KeyXtend.Guard`). An
 
 `inject::send`, `input`, `send_keys` and `vk_key` are public for the gate tools, and `send` takes raw inputs with any tag and no recovery. Modules cannot depend on the adapter (tidy), and the app never calls them.
 
-The host's record of held input counts a hand's press that our input replayed, such as a held press that Right-click lets through. The hand's own Up clears it, but only when it reaches the OS with nothing of ours in flight. So a replayed press the hand still holds is let go at a stop or when the engine is done, which can end that drag. That is the safe side: a missed Up would leave the button down. Another program that forges our tags can end the echo wait early, and then a hand's Up can clear the record while our press is still in flight.
+The host's record of held input counts a hand's press that our input replayed, such as a held press that Right-click lets through. The hand's own Up clears it, but only when it reaches the OS with nothing of ours in flight. So a replayed press the hand still holds is let go at a stop or when the engine is done, which can end that drag. That is the safe side: a missed Up would leave the button down. Another program that forges our tags can end the echo wait early, and then a hand's Up can clear the record while our press is still in flight. That button of ours may then stay down past a stop. This is accepted because a program that can inject input could already hold a button down itself.
 
 A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 

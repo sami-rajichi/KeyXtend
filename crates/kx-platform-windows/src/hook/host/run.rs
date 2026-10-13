@@ -7,7 +7,6 @@ use kx_module_api::ports::PointerAct;
 
 use super::{Host, Trust};
 use crate::hook::Os;
-use crate::hook::batch::has_mouse;
 use crate::hook::held::Held;
 use crate::hook::queue::Echo;
 use crate::hook::stats::Stats;
@@ -153,7 +152,7 @@ impl<O: Os> Host<O> {
     }
 }
 
-/// Sends `acts` in one batch and notes what the taken part holds down. Mouse input starts the wait for its echo; a
+/// Sends `acts` in one batch and notes what the taken part holds down. Any batch starts the wait for its echo; a
 /// batch the OS cut counts, and then no echo is awaited.
 fn out<O: Os>(
     os: &O,
@@ -167,9 +166,7 @@ fn out<O: Os>(
     if total == 0 {
         return Sent::default();
     }
-    if has_mouse(acts) {
-        echo.sent(now);
-    }
+    echo.sent(now);
     let took = os.send(acts).min(total);
     held.sent(acts.get(..took).unwrap_or_default());
     if took < total {

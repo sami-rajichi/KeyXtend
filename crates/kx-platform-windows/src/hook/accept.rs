@@ -66,6 +66,12 @@ pub(crate) fn esc(source: Source, msg: u32, vk: u32, injected: bool, extra: usiz
     press && (ours || heard(source, injected, extra))
 }
 
+/// True for our engine's own key input coming back through the keyboard hook; our keyboard's `TAG` keys are not the
+/// host's.
+pub(crate) fn key_echo(extra: usize) -> bool {
+    extra == REPLAY
+}
+
 /// True for a key the user let go in `source`: the hand's, or in simulated mode the gate tool's.
 pub(crate) fn key_up(source: Source, msg: u32, injected: bool, extra: usize) -> bool {
     KEY_UPS.contains(&msg) && heard(source, injected, extra)
