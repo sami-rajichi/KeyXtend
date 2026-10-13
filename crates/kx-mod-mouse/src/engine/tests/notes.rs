@@ -119,10 +119,10 @@ fn needs_hook_is_false_only_when_everything_is_idle() {
 }
 
 #[test]
-fn the_hot_path_never_grows_the_note_buffer() {
+fn the_hot_path_never_grows_its_buffers() {
     let mut e = eng(true);
-    e.set_latches(vec![SHIFT, CTRL]);
-    let room = e.notes.capacity();
+    e.set_latches((0x70_u16..).take(MAX_LATCHES).map(Scan::new).collect());
+    let (room, mods_room) = (e.notes.capacity(), e.mods.capacity());
     for i in 0..1_000_u64 {
         let at = p(i32::try_from(i % 97).unwrap(), 5);
         let t = i * HOLD;
@@ -134,8 +134,18 @@ fn the_hot_path_never_grows_the_note_buffer() {
             toggle(&mut e, Toggle::Grab);
         }
     }
-    assert_eq!(e.notes.capacity(), room);
+    assert_eq!((e.notes.capacity(), e.mods.capacity()), (room, mods_room));
     assert!(e.notes.len() <= room);
+}
+
+#[test]
+fn the_worst_call_pushes_exactly_max_acts() {
+    let mut e = eng(true);
+    e.set_latches((0x70_u16..).take(MAX_LATCHES).map(Scan::new).collect());
+    on(&mut e, down(p(1, 1)), 0);
+    let (dropped, acts) = on(&mut e, press(Right, p(2, 2), DPI), HOLD);
+    assert!(dropped);
+    assert_eq!(acts.len(), MAX_ACTS);
 }
 
 #[test]

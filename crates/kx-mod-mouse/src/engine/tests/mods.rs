@@ -23,6 +23,16 @@ fn latches_go_around_the_next_click_outside_even_with_both_modes_off() {
 }
 
 #[test]
+fn a_click_carries_at_most_max_latches_in_their_order() {
+    let many: Vec<Scan> = (0x70_u16..).take(MAX_LATCHES + 1).map(Scan::new).collect();
+    let mut e = latched(false, &many);
+    let p0 = p(1, 1);
+    let mut want: Vec<PointerAct> = many[..MAX_LATCHES].iter().map(|&k| A::KeyDown(k)).collect();
+    want.push(A::Down(Left, p0));
+    assert_eq!(on(&mut e, down(p0), 0), eat(want));
+}
+
+#[test]
 fn latches_stay_for_later_clicks_until_the_keyboard_changes_them() {
     let mut e = latched(false, &[SHIFT]);
     for (i, x) in (1..=2).enumerate() {

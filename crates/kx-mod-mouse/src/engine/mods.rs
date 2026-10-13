@@ -8,7 +8,7 @@ impl Engine {
     /// Takes the click's modifiers from the latches, so a later latch change never alters this click.
     pub(super) fn snap_mods(&mut self) {
         self.mods.clear();
-        // `set_latches` reserved room for every latch, so this never allocates.
+        // `new` reserved room for `MAX_LATCHES`, and `set_latches` keeps no more, so this never allocates.
         self.mods.extend_from_slice(&self.latches);
     }
 

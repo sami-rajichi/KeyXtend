@@ -31,20 +31,15 @@ impl Engine {
             PointerEvent::Down {
                 button: Button::Left,
                 at,
-                ours: false,
+                ours,
                 ..
             } => {
-                self.note(Note::Dropped { at });
-                self.let_go(at, true, acts);
-                true
-            }
-            PointerEvent::Down {
-                button: Button::Left,
-                at,
-                ours: true,
-                ..
-            } => {
-                self.cancel(at, true, acts);
+                if ours {
+                    self.cancel(at, true, acts);
+                } else {
+                    self.note(Note::Dropped { at });
+                    self.let_go(at, true, acts);
+                }
                 true
             }
             PointerEvent::Esc => {

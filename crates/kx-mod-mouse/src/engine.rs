@@ -16,6 +16,13 @@ use kx_module_api::{Mono, US_PER_MS};
 /// The Esc key's scan code (PC set 1), sent to cancel a carry.
 pub const ESC: Scan = Scan::new(0x01);
 
+/// The most latched modifiers a click carries: left and right Shift, Ctrl, Alt and Win.
+pub const MAX_LATCHES: usize = 8;
+
+/// The most input one call pushes: a late right-click inside every modifier (2 per latch, plus 2), then the event
+/// it revealed.
+pub const MAX_ACTS: usize = 2 * MAX_LATCHES + 3;
+
 /// How many notes the buffer holds; the host drains it after every callback, and a full buffer drops new notes.
 const NOTE_ROOM: usize = 32;
 
@@ -97,7 +104,7 @@ impl Engine {
             state: State::Idle,
             last: Point::default(),
             latches: Vec::new(),
-            mods: Vec::new(),
+            mods: Vec::with_capacity(MAX_LATCHES),
             mods_down: false,
             notes: Vec::with_capacity(NOTE_ROOM),
         }
@@ -151,17 +158,12 @@ impl Engine {
         self.track(event);
         let mut dropped = match self.state {
             State::Idle => self.idle(event, now, acts),
-            State::Pending { p0, r, .. } => self.pending(event, p0, r, acts),
+            State::Pending { p0, r, .. } => self.pending(event, p0, r, now, acts),
             State::AwaitUp => self.await_up(event, now, acts),
             State::Carrying { held } => self.carrying(event, held, acts),
         };
-        // A passed event would reach the app before the late right-click, so it follows it instead; Esc still passes.
-        if fired
-            && !dropped
-            && let Some(act) = act_of(event)
-        {
-            acts.push(act);
-            dropped = true;
+        if fired {
+            dropped = behind(event, dropped, acts);
         }
         self.note_state(before);
         dropped
@@ -237,14 +239,18 @@ impl Engine {
     }
 }
 
-/// The input that sends `event` again; Esc has none, as it is never dropped.
-fn act_of(event: PointerEvent) -> Option<PointerAct> {
-    match event {
-        PointerEvent::Down { button, at, .. } => Some(PointerAct::Down(button, at)),
-        PointerEvent::Up { button, at } => Some(PointerAct::Up(button, at)),
-        PointerEvent::Move { at } => Some(PointerAct::Move(at)),
-        PointerEvent::Esc => None,
-    }
+/// Our input so far must reach the app first, so a passed `event` is sent again behind it; Esc still passes, as it
+/// is never dropped. Returns whether the event is dropped.
+fn behind(event: PointerEvent, dropped: bool, acts: &mut Vec<PointerAct>) -> bool {
+    let again = match event {
+        _ if dropped => return true,
+        PointerEvent::Down { button, at, .. } => PointerAct::Down(button, at),
+        PointerEvent::Up { button, at } => PointerAct::Up(button, at),
+        PointerEvent::Move { at } => PointerAct::Move(at),
+        PointerEvent::Esc => return false,
+    };
+    acts.push(again);
+    true
 }
 
 #[cfg(test)]

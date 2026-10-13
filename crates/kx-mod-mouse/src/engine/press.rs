@@ -1,9 +1,9 @@
 //! A left press outside our windows: held back in Right-click mode until it turns into a click, a drag or a
 //! right-click; picked up by Grab; or sent inside its modifiers.
 
-use super::{Engine, Mode, Note, State};
+use super::{Engine, Mode, Note, State, behind};
 use kx_module_api::Mono;
-use kx_module_api::ports::{Button, Point, PointerAct, PointerEvent, physical};
+use kx_module_api::ports::{BASE_DPI, Button, Point, PointerAct, PointerEvent, physical};
 
 impl Engine {
     /// Nothing held back: a left press outside our windows starts a hold, a pick-up or a click with modifiers.
@@ -41,6 +41,8 @@ impl Engine {
             Mode::Off => return self.press_through(at, acts),
             Mode::RightClick => {}
         }
+        // A screen that reports no DPI counts as 100 %.
+        let dpi = if dpi == 0 { BASE_DPI } else { dpi };
         let r = physical(f64::from(self.still_px), dpi);
         self.state = State::Pending { t0: now, p0: at, r };
         self.note(Note::HoldStart { at });
@@ -53,6 +55,7 @@ impl Engine {
         event: PointerEvent,
         p0: Point,
         r: i32,
+        now: Mono,
         acts: &mut Vec<PointerAct>,
     ) -> bool {
         match event {
@@ -60,10 +63,17 @@ impl Engine {
                 button: Button::Left,
                 ..
             } => {
-                self.replay(p0, acts);
-                acts.push(PointerAct::Up(Button::Left, p0));
-                self.mods_up(acts);
+                self.click_at(p0, acts);
                 true
+            }
+            PointerEvent::Down {
+                button: Button::Left,
+                ..
+            } => {
+                // A second left press shows the hook missed the release: the held click goes first, then this press.
+                self.click_at(p0, acts);
+                let dropped = self.idle(event, now, acts);
+                behind(event, dropped, acts)
             }
             PointerEvent::Move { at } if far(p0, at, r) => {
                 self.replay(p0, acts);
@@ -77,6 +87,13 @@ impl Engine {
             }
             _ => false,
         }
+    }
+
+    /// The held press was a click: it goes through at `p0` inside its modifiers.
+    fn click_at(&mut self, p0: Point, acts: &mut Vec<PointerAct>) {
+        self.replay(p0, acts);
+        acts.push(PointerAct::Up(Button::Left, p0));
+        self.mods_up(acts);
     }
 
     /// Lets the held press through at `p0` inside its modifiers; the hold ends.

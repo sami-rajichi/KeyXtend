@@ -1,6 +1,6 @@
 //! The commands the module sends between events: the mode toggles, Right-click, the latches and letting go.
 
-use super::{Engine, Mode, Note, State};
+use super::{Engine, MAX_LATCHES, Mode, Note, State};
 use kx_module_api::ports::{PointerAct, Scan, Toggle};
 
 impl Engine {
@@ -33,11 +33,10 @@ impl Engine {
         }
     }
 
-    /// Takes the keyboard's latched modifiers for the next click; a click in progress keeps its own.
-    pub fn set_latches(&mut self, latches: Vec<Scan>) {
-        // Room for every latch, so the next press copies them without allocating.
-        self.mods
-            .reserve(latches.len().saturating_sub(self.mods.len()));
+    /// Takes the keyboard's latched modifiers for the next click, the first `MAX_LATCHES` in order; a click in
+    /// progress keeps its own.
+    pub fn set_latches(&mut self, mut latches: Vec<Scan>) {
+        latches.truncate(MAX_LATCHES);
         self.latches = latches;
     }
 

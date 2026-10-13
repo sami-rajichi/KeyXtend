@@ -188,6 +188,17 @@ fn at_125_percent_the_radius_scales_to_9_px() {
 }
 
 #[test]
+fn a_screen_with_no_dpi_counts_as_100_percent() {
+    let p0 = p(100, 100);
+    let mut e = eng(true);
+    on(&mut e, press(Left, p0, 0), 0);
+    assert_eq!(on(&mut e, mv(p(107, 100)), 10), pass(vec![]));
+    let to = p(108, 100);
+    let want = vec![A::Down(Left, p0), A::Move(to)];
+    assert_eq!(on(&mut e, mv(to), 20), eat(want));
+}
+
+#[test]
 fn a_second_button_replays_the_held_press_first() {
     let mut e = eng(true);
     let (p0, p1) = (p(1, 1), p(2, 2));

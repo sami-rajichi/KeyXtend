@@ -53,6 +53,39 @@ fn a_press_while_a_release_is_awaited_starts_afresh() {
 }
 
 #[test]
+fn a_press_while_a_press_is_held_back_clicks_the_first_then_holds_the_second() {
+    let mut e = eng(true);
+    e.set_latches(vec![SHIFT]);
+    let (p0, p1) = (p(10, 10), p(40, 40));
+    on(&mut e, down(p0), 0);
+    let click = vec![
+        A::KeyDown(SHIFT),
+        A::Down(Left, p0),
+        A::Up(Left, p0),
+        A::KeyUp(SHIFT),
+    ];
+    assert_eq!(on(&mut e, down(p1), 10), eat(click));
+    assert_eq!(e.deadline(), Some(mono(10 + HOLD)));
+    let fire = [
+        vec![A::KeyDown(SHIFT)],
+        right_click(p1),
+        vec![A::KeyUp(SHIFT)],
+    ];
+    assert_eq!(tick(&mut e, 10 + HOLD), fire.concat());
+}
+
+#[test]
+fn a_press_on_our_window_while_a_press_is_held_back_follows_its_click() {
+    let mut e = eng(true);
+    let (p0, key) = (p(10, 10), p(500, 900));
+    on(&mut e, down(p0), 0);
+    let want = vec![A::Down(Left, p0), A::Up(Left, p0), A::Down(Left, key)];
+    assert_eq!(on(&mut e, ours(key), 10), eat(want));
+    assert_eq!(on(&mut e, up(key), 20), pass(vec![]));
+    assert_eq!(e.deadline(), None);
+}
+
+#[test]
 fn a_huge_hold_time_or_a_far_move_never_overflows() {
     let cfg = EngineCfg {
         hold_us: u64::MAX,

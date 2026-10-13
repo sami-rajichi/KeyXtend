@@ -8,7 +8,7 @@ mod engine;
 mod manifest;
 mod settings;
 
-pub use engine::{ESC, Engine, EngineCfg, Note};
+pub use engine::{ESC, Engine, EngineCfg, MAX_ACTS, MAX_LATCHES, Note};
 pub use manifest::{ID, MANIFEST};
 pub use settings::MouseSettings;
 
