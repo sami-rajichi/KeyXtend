@@ -4,7 +4,7 @@
 - **Windows:** Windows 11 Home Single Language 26H2, build 26300.9457.
 - **Display:** 1920×1080, 125 % (120 DPI), 144 Hz; Ryzen 7 7735HS with Radeon graphics (Qt draws on it), RTX 4060, 24 GB.
 - **Builds:** `keyxtend` and `kx-gates`, release, signed and installed under `Program Files\KeyXtend-dev` (uiAccess: secure folder, trusted signature and manifest checked by `cargo xtask check-uiaccess`); `kx-target-window` debug.
-- **Scope:** the P3 gates (G1–G4, G8–G11, G13, G25), the plans' manual checks (key repeat, act on press) and the item's manual-check notes.
+- **Scope:** the P3 gates (G1–G4, G8–G11, G13, G25, and G26 on GitHub's Windows runner), the plans' manual checks (key repeat, act on press) and the item's manual-check notes.
 
 ## Gates on the final build
 
@@ -20,6 +20,7 @@
 | 8 | `g8 keyxtend`, default settings | Spec §10 budgets | Partial; owner accepts | See notes 1 and 7 |
 | 9 | `g11 keyxtend` at 100, 150 and 175 % | Size and sharpness kept | Pass | Drawn at 96, 144 and 168 DPI; 544×164 logical at each, gap 0 px |
 | 10 | `g13 keyxtend` | Follows dark mode, accent and high contrast live | Partial; owner accepts | See note 5 |
+| 11 | `g26 keyxtend`, GitHub's Windows runner, debug build | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact | Pass | 100/100 each; see note 11 |
 
 ## Hands-on checks (owner)
 
@@ -60,6 +61,7 @@
 8. Admin prompts do not show on this PC (UAC raises rights without asking), so the hold check took the mouse away with the lock screen instead.
 9. Caps Lock pressed outside KeyXtend left its light unchanged until the next key click: reading the state worked, but nothing asked for a redraw. The relabel tick now also redraws on a Caps Lock change (build 5c4bd81, installed and checked on and off).
 10. CI's first Qt Quick run, at 100 % display scale, found Dolch's AltGr label shrunk and its `_` touching the 8; labels are now laid out unhinted, as they are drawn. The board's pictures at this PC's 125 % are pixel for pixel the same, so the results above stand.
+11. G26's labels were right after 0.64 s (German), 0.65 s (Russian), 0.68 s (Persian) and 7.4 s (Hebrew, which no bundled font covers). Its first run read once at 550 ms and failed Hebrew, so the gate now reads until the labels are right (`label_wait_ms`); P14 holds the slow first switch.
 
 ## Clean-up
 - Gate logs, screenshots, PresentMon captures and timing scripts are deleted when P3 is recorded; only these numbers are kept.

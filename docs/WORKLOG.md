@@ -3,7 +3,7 @@
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
 ## 2026-10-13 00:35 — P3: G26 waits for the labels instead of reading them once
-G26's first CI run passed German, Russian and Persian, but read Hebrew's keys once, 550 ms after the switch, while the runner's cold debug build had not yet listed them; seconds later all 48 keys were found and 100 Hebrew characters typed intact. The gate now reads again until every key is listed and named right, up to `[g26] label_wait_ms`, and reports the time taken as `labels_ms`. The keys are not rebuilt on a layout change, so the cause of the delay is still open; the next run's time will show it.
+G26's first CI run passed German, Russian and Persian, but read Hebrew's keys once, 550 ms after the switch, while the runner's cold debug build had not yet listed them; seconds later all 48 keys were found and 100 Hebrew characters typed intact. The gate now reads again until every key is listed and named right, up to `[g26] label_wait_ms`, and reports the time taken as `labels_ms`. The next run passed all four: Hebrew's labels were right after 7.4 s against 0.64–0.68 s for the others, and P14 holds that slow first switch.
 
 ## 2026-10-12 23:48 — P3: text measures the same at every display scale
 The first CI run of the Qt Quick tests, at 100 % scale, found Dolch's AltGr label shrunk a step and its `_` touching the 8 on the French and Arabic boards. Labels are drawn as exact curves, but Qt still measured them with pixel-snapped (hinted) widths, which only differ at 100 %; every label is now laid out unhinted, as it is drawn. All 345 Qt Quick tests pass at 125 % and at 100 %, and the board's pictures at 125 % are pixel for pixel the same as before.
