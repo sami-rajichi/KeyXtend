@@ -1,5 +1,5 @@
-//! The built app asks for uiAccess in its manifest exactly in the build that pins where code loads from, which is also
-//! the build that opens no console window; only the gate-only build holds its flag.
+//! The built app asks for uiAccess in its manifest exactly in the build that pins where code loads from, opens no
+//! console exactly in the release build, and only the gate-only build holds its flag.
 #![cfg(windows)]
 #![allow(clippy::unwrap_used, reason = "a failed read should fail the test")]
 
@@ -41,8 +41,14 @@ fn the_exe_asks_for_ui_access_exactly_when_the_app_pins_its_folders() {
 }
 
 #[test]
-fn only_the_ui_access_build_opens_no_console() {
-    assert_eq!(subsystem(&exe()) == WINDOWS_APP, keyxtend::UI_ACCESS);
+fn the_no_console_build_opens_no_console_and_holds_every_ui_access_build() {
+    let exe = exe();
+    let no_console = subsystem(&exe) == WINDOWS_APP;
+    assert_eq!(no_console, keyxtend::NO_CONSOLE);
+    assert!(
+        !holds(&exe, ASKS) || no_console,
+        "a uiAccess exe opens no console"
+    );
 }
 
 #[test]

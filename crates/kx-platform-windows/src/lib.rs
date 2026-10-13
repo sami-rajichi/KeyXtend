@@ -117,4 +117,7 @@ pub enum PlatformError {
     /// Windows did not limit where libraries load from.
     #[error("Windows did not limit where libraries load from: {0}")]
     DllDirs(io::Error),
+    /// Windows did not say whether the process has uiAccess.
+    #[error("Windows did not say whether the process has uiAccess: {0}")]
+    UiAccess(io::Error),
 }

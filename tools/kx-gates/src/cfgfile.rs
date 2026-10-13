@@ -24,13 +24,17 @@ pub const ALL: [&str; 5] = [
 ];
 
 /// The folder kx-gates' own settings are read from, for an exe in `exe_dir`; `present` says whether a file sits beside
-/// it. With `ui_access`, every file in `ALL` must sit there; without, `FILE` beside it wins over `crate_dir`.
+/// it. With `ui_access`, every file in `ALL` must sit there; without, `FILE` beside it wins over `crate_dir`; unknown,
+/// none is read.
 pub fn choose(
     exe_dir: Option<&Path>,
     crate_dir: &Path,
-    ui_access: bool,
+    ui_access: Result<bool, String>,
     present: impl Fn(&str) -> bool,
 ) -> Result<PathBuf, String> {
+    let ui_access = ui_access.map_err(|e| {
+        format!("kx-gates reads no settings without knowing whether it has uiAccess: {e}")
+    })?;
     if !ui_access {
         let beside = exe_dir.filter(|_| present(FILE));
         return Ok(beside.unwrap_or(crate_dir).to_path_buf());
@@ -55,7 +59,8 @@ pub fn path() -> Result<PathBuf, String> {
     let exe_dir = exe.as_deref().and_then(Path::parent);
     let present = |name: &str| exe_dir.is_some_and(|dir| dir.join(name).is_file());
     let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    Ok(choose(exe_dir, crate_dir, uiaccess::active(), present)?.join(FILE))
+    let ui_access = uiaccess::check().map_err(|e| e.to_string());
+    Ok(choose(exe_dir, crate_dir, ui_access, present)?.join(FILE))
 }
 
 #[cfg(test)]
@@ -170,9 +175,22 @@ mod tests {
     /// Where `choose` reads the settings for an exe folder, uiAccess or not, and the files beside the exe.
     fn chosen(exe: bool, ui_access: bool, beside: &[&str]) -> Result<PathBuf, String> {
         let exe_dir = exe.then(|| Path::new(EXE_DIR));
-        choose(exe_dir, Path::new(CRATE_DIR), ui_access, |n| {
+        choose(exe_dir, Path::new(CRATE_DIR), Ok(ui_access), |n| {
             beside.contains(&n)
         })
+    }
+
+    #[test]
+    fn an_unknown_ui_access_reads_no_settings() {
+        let why = "the token said nothing";
+        let e = choose(
+            Some(Path::new(EXE_DIR)),
+            Path::new(CRATE_DIR),
+            Err(why.into()),
+            |_| true,
+        )
+        .expect_err("fails closed");
+        assert!(e.contains(why) && e.contains("uiAccess"), "{e}");
     }
 
     #[test]

@@ -15,12 +15,13 @@ use kx_settings::{peek, peek_section};
 use spike_core::weak::Job;
 
 pub use parts::Closed;
-use parts::{holds, to_restore, warned};
+use parts::{SLOW, START_MENU, holds, not_back, plain, to_restore, warned};
 
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
 use crate::hooklog::{self, HookLine};
 use crate::keymap::Reader;
+use crate::out::say;
 use crate::proc::Process;
 use crate::product::{self, Keyboard, NAME};
 use crate::{admin, board, close, g8start, mouse, out, win};
@@ -42,13 +43,7 @@ impl<'a> TestBuild<'a> {
     /// Starts the test build, in `job` when given, once the running copy quit; it is ready when its keyboard shows and
     /// its log holds the gate warning. Refused under uiAccess, which the test build would inherit.
     pub fn open(ctx: &'a Ctx<'a>, job: Option<&Job>) -> Result<Self, String> {
-        if uiaccess::active() {
-            return Err(
-                "this kx-gates has uiAccess, which the test build would inherit; run the driving gates from the \
-                 plain kx-gates"
-                    .to_string(),
-            );
-        }
+        plain(uiaccess::check().map_err(|e| e.to_string()))?;
         let program = checked(ctx)?;
         let folder = program.parent().ok_or("the test build has no folder")?;
         let data = folder.join(PORTABLE_DIR);
@@ -152,11 +147,15 @@ impl<'a> TestBuild<'a> {
         hooklog::since(&text, self.since_us, &self.ctx.cfg.gate_input.hook_line)
     }
 
-    /// Starts the owner's copy again through the shell, once, but only after the test build ended; whether it started,
-    /// none when it closed no copy.
+    /// Starts the owner's copy again through the shell, once, but only after the test build ended, else says to start it
+    /// by hand; whether it started, none when it closed no copy.
     fn restore(&mut self, quit: bool) -> Option<bool> {
         let owner = self.owner.take()?;
-        Some(quit && admin::start_shown(&owner, &[]).is_ok())
+        let back = quit && admin::start_shown(&owner, &[]).is_ok();
+        if !back {
+            say!("{}", not_back(quit));
+        }
+        Some(back)
     }
 }
 
@@ -195,7 +194,7 @@ fn quit_running(ctx: &Ctx, program: &Path) -> Result<Option<PathBuf>, String> {
     })?;
     if !ended {
         return Err(format!(
-            "the running {NAME} did not quit in time; close it and try again"
+            "the running {NAME} {SLOW} and is not started again; close it, try again, then {START_MENU}"
         ));
     }
     Ok(to_restore(Some(&exe), program))

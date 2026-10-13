@@ -1,4 +1,5 @@
-//! The test build's pure parts: is a program a gate-input build, which copy to start again, did it warn, how it ended.
+//! The test build's pure parts: may it start, is a program a gate-input build, which copy to start again and what to
+//! say when none is, did it warn, how it ended.
 
 use std::path::{Path, PathBuf};
 
@@ -6,6 +7,7 @@ use serde_json::{Value, json};
 
 use crate::budget::stamp_us;
 use crate::hooklog::HookLine;
+use crate::product::NAME;
 
 /// True when `bytes` hold `text`; an empty text is never held.
 pub fn holds(bytes: &[u8], text: &str) -> bool {
@@ -18,6 +20,35 @@ pub fn holds(bytes: &[u8], text: &str) -> bool {
 pub fn to_restore(running: Option<&str>, test_build: &Path) -> Option<PathBuf> {
     let same = |p: &str| p.to_lowercase() == test_build.to_string_lossy().to_lowercase();
     running.filter(|p| !same(p)).map(PathBuf::from)
+}
+
+/// What a copy that did not quit in time is said to have done.
+pub const SLOW: &str = "did not quit in time";
+/// What the owner is told to do when their copy is not started again.
+pub const START_MENU: &str = "start it from the Start menu";
+
+/// Refuses to start the test build unless this kx-gates surely lacks uiAccess, which the test build would inherit.
+pub fn plain(ui_access: Result<bool, String>) -> Result<(), String> {
+    match ui_access {
+        Ok(false) => Ok(()),
+        Ok(true) => Err("this kx-gates has uiAccess, which the test build would inherit; run the driving gates from \
+                         the plain kx-gates"
+            .to_string()),
+        Err(e) => Err(format!(
+            "the test build starts only from a kx-gates known to lack uiAccess: {e}"
+        )),
+    }
+}
+
+/// The one line said when the owner's copy is not started again, by whether the test build quit in time.
+pub fn not_back(quit: bool) -> String {
+    if quit {
+        format!("{NAME} did not start again; {START_MENU}")
+    } else {
+        format!(
+            "the test build {SLOW}, so {NAME} is not started again; {START_MENU} once the test build has ended"
+        )
+    }
 }
 
 /// True when `log` holds `warn_line` on a line stamped at or after `since_us`.
@@ -82,6 +113,24 @@ mod tests {
         let upper = TEST_BUILD.to_uppercase();
         assert_eq!(to_restore(Some(&upper), test_build), None, "any case");
         assert_eq!(to_restore(Some(TEST_BUILD), test_build), None);
+    }
+
+    #[test]
+    fn only_a_kx_gates_known_to_lack_ui_access_starts_the_test_build() {
+        assert_eq!(plain(Ok(false)), Ok(()));
+        assert!(plain(Ok(true)).is_err(), "it would inherit uiAccess");
+        let why = "the token said nothing";
+        let e = plain(Err(why.into())).expect_err("fails closed");
+        assert!(e.contains(why) && e.contains("uiAccess"), "{e}");
+    }
+
+    #[test]
+    fn a_copy_not_started_again_is_left_to_the_start_menu() {
+        for quit in [true, false] {
+            let line = not_back(quit);
+            assert!(line.contains(START_MENU) && !line.contains('\n'), "{line}");
+            assert_eq!(line.contains(SLOW), !quit, "{line}");
+        }
     }
 
     #[test]

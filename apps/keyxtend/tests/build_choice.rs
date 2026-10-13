@@ -1,5 +1,5 @@
 //! The build script's choice: only a release build without the gate-only feature asks for uiAccess, so the gate-input
-//! test build runs unsigned and can never hold it.
+//! test build runs unsigned and can never hold it; every release build opens no console.
 
 #[path = "../build/choice.rs"]
 mod choice;
@@ -15,7 +15,7 @@ const DEBUG: &str = "debug";
 
 #[test]
 fn only_a_release_build_without_the_gate_feature_asks_for_ui_access() {
-    let release = choice::UI_ACCESS_PROFILE;
+    let release = choice::RELEASE;
     assert!(choice::ui_access(release, false));
     assert!(
         !choice::ui_access(release, true),
@@ -23,6 +23,21 @@ fn only_a_release_build_without_the_gate_feature_asks_for_ui_access() {
     );
     assert!(!choice::ui_access(DEBUG, false));
     assert!(!choice::ui_access(DEBUG, true));
+}
+
+#[test]
+fn every_release_build_opens_no_console_and_ui_access_needs_that() {
+    assert!(choice::no_console(choice::RELEASE));
+    assert!(!choice::no_console(DEBUG));
+    for profile in [choice::RELEASE, DEBUG] {
+        for gate_input in [false, true] {
+            let asks = choice::ui_access(profile, gate_input);
+            assert!(
+                !asks || choice::no_console(profile),
+                "{profile} {gate_input}"
+            );
+        }
+    }
 }
 
 #[test]

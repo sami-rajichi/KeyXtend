@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 01:30 — P4: no console for any release build, review fixes
+Every release build, the gate-input test build too, now opens no console window, which would have taken the foreground; a second build flag (`kx_no_console`) carries this, and the uiAccess flag keeps only the manifest and the load pinning. kx-gates now refuses to read its settings or start the test build when Windows will not say whether it has uiAccess. When the owner's copy is not started again after the test build, kx-gates prints one line saying to start it from the Start menu. Nested `target` folders are now ignored by git.
+
 ## 2026-10-14 00:30 — P4: the gates' test build, the p4 settings and the guard's replay rule
 kx-gates can now start the product's gate-input test build, from the plain kx-gates only and with a data folder of its own, after asking the running copy to quit, and starts that copy again when the test build ends. It reads the test build's settings, turns its mode and latch keys on by clicking them, and reads the hook's numbers from its log; the new `kx-gates-p4.toml` holds these settings. With uiAccess, kx-gates now reads its five settings files only beside its exe, the gate-input build never asks for uiAccess, and the mouse guard passes the test build's replayed presses only for the gates that drive it (G5, G12, G17 and G18).
 
