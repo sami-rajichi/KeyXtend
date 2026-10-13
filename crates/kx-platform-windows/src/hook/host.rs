@@ -138,8 +138,10 @@ impl<O: Os> Host<O> {
     }
 
     /// The panic hook's let-go: sends the queue, the engine's release and what our input still holds; the hooks stay.
+    /// It asks for a turn, so the engine's notes and its idle state go out at once.
     pub(crate) fn release(&mut self) {
         let _ = self.guard(Self::run_release);
+        self.wake();
     }
 
     /// Sends the queue, the engine's release and what our input still holds, and only then stops the timer and removes

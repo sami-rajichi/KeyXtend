@@ -164,6 +164,16 @@ fn a_release_lets_go_of_the_queue_the_engine_and_our_held_input_and_keeps_the_ho
 }
 
 #[test]
+fn a_release_asks_for_a_turn_so_the_engines_notes_go_out_at_once() {
+    let mut rig = holding();
+    rig.host.release();
+    let calls = rig.world.take();
+    assert_eq!(calls.last(), Some(&Call::Wake), "{calls:?}");
+    rig.host.turn();
+    assert_eq!(rig.heard().last(), Some(&Heard::Settle(rig.now())));
+}
+
+#[test]
 fn after_a_release_the_run_keeps_hearing_the_hand() {
     let mut rig = holding();
     rig.host.release();

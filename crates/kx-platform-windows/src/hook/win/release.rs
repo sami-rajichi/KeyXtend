@@ -60,7 +60,58 @@ pub(super) fn forget_asks() {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+
+    use kx_module_api::Mono;
+    use kx_module_api::ports::{HookConfig, PointerAct, PointerEngine, PointerEvent};
+
+    use super::super::os::WinOs;
+    use super::super::{HOST, drop_host};
     use super::*;
+    use crate::QpcClock;
+    use crate::hook::Source;
+    use crate::hook::stats::Stats;
+
+    /// The module's default checks; this host never installs its hooks.
+    const CFG: HookConfig = HookConfig {
+        health_ms: 1_000,
+        health_slack_ms: 500,
+        echo_ms: 250,
+    };
+
+    /// An engine that never acts and counts its releases.
+    struct Count(Arc<AtomicUsize>);
+
+    impl PointerEngine for Count {
+        fn on(&mut self, _: PointerEvent, _: Mono, _: &mut Vec<PointerAct>) -> bool {
+            false
+        }
+
+        fn settle(&mut self, _: Mono, _: &mut Vec<PointerAct>) {}
+
+        fn deadline(&self) -> Option<Mono> {
+            None
+        }
+
+        fn release(&mut self, _: &mut Vec<PointerAct>) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+
+        fn max_acts(&self) -> usize {
+            1
+        }
+    }
+
+    /// Puts a host with a counting engine on this thread, as the hook thread holds one; it sends nothing.
+    fn seed() -> Arc<AtomicUsize> {
+        let released = Arc::new(AtomicUsize::new(0));
+        let os = WinOs::new(0, QpcClock::new().unwrap(), Arc::default());
+        let engine = Box::new(Count(Arc::clone(&released)));
+        let host = Host::new(os, engine, Source::Physical, &CFG, Arc::new(Stats::new()));
+        HOST.with(|h| *h.borrow_mut() = Some(host));
+        released
+    }
 
     #[test]
     fn release_now_without_a_live_hook_returns_at_once() {
@@ -70,16 +121,20 @@ mod tests {
     }
 
     #[test]
-    fn only_an_ask_moves_the_answer_and_a_start_voids_old_asks() {
+    fn a_let_go_nobody_asked_for_runs_no_release_and_an_ask_runs_one() {
+        let released = seed();
         forget_asks();
-        let before = DONE.load(Ordering::SeqCst);
         assert_eq!(let_go(), None);
-        assert_eq!(DONE.load(Ordering::SeqCst), before, "nobody asked");
+        assert_eq!(released.load(Ordering::SeqCst), 0, "nobody asked");
         let ticket = ASKED.fetch_add(1, Ordering::SeqCst) + 1;
-        let _ = let_go();
-        assert!(DONE.load(Ordering::SeqCst) >= ticket, "the ask is answered");
+        assert_eq!(let_go(), Some(()));
+        assert_eq!(released.load(Ordering::SeqCst), 1, "the ask's one release");
+        assert!(DONE.load(Ordering::SeqCst) >= ticket, "and its answer");
+        assert_eq!(let_go(), None, "answered asks run no more");
         ASKED.fetch_add(1, Ordering::SeqCst);
         forget_asks();
-        assert_eq!(DONE.load(Ordering::SeqCst), ASKED.load(Ordering::SeqCst));
+        assert_eq!(let_go(), None, "a start voids unanswered asks");
+        assert_eq!(released.load(Ordering::SeqCst), 1);
+        drop_host();
     }
 }

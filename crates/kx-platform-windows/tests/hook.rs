@@ -4,8 +4,8 @@
 #![cfg(all(windows, feature = "sim-input"))]
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc::{self, Sender};
+use std::time::Duration;
 
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, HookError, PointerAct, PointerEngine, PointerEvent};
@@ -17,9 +17,11 @@ const CFG: HookConfig = HookConfig {
     health_slack_ms: 500,
     echo_ms: 250,
 };
+/// How long the test waits for a release; far past `RELEASE_WAIT`, so a stalled runner cannot fail it.
+const WAIT: Duration = Duration::from_secs(10);
 
-/// An engine that never acts and counts its releases.
-struct Quiet(Arc<AtomicUsize>);
+/// An engine that never acts and says each release.
+struct Quiet(Sender<()>);
 
 impl PointerEngine for Quiet {
     fn on(&mut self, _: PointerEvent, _: Mono, _: &mut Vec<PointerAct>) -> bool {
@@ -33,7 +35,7 @@ impl PointerEngine for Quiet {
     }
 
     fn release(&mut self, _: &mut Vec<PointerAct>) {
-        self.0.fetch_add(1, Ordering::SeqCst);
+        let _ = self.0.send(());
     }
 
     fn max_acts(&self) -> usize {
@@ -44,26 +46,17 @@ impl PointerEngine for Quiet {
 #[test]
 fn the_hooks_go_in_let_go_on_release_now_and_stay_until_the_drop_lets_go_again() {
     let hook = WindowsPlatform::new().unwrap().sim_pointer_hook();
-    let released = Arc::new(AtomicUsize::new(0));
-    let run = hook
-        .start(Box::new(Quiet(Arc::clone(&released))), CFG)
-        .unwrap();
-    let again = hook.start(Box::new(Quiet(Arc::default())), CFG);
+    let (said, released) = mpsc::channel();
+    let run = hook.start(Box::new(Quiet(said)), CFG).unwrap();
+    let again = hook.start(Box::new(Quiet(mpsc::channel().0)), CFG);
     assert!(matches!(again, Err(HookError::Busy)), "one run per process");
     run.wake();
     assert_eq!(run.stats().events, 0);
     release_now();
-    assert_eq!(
-        released.load(Ordering::SeqCst),
-        1,
-        "let go before it returned"
-    );
-    let still = hook.start(Box::new(Quiet(Arc::default())), CFG);
+    assert!(released.recv_timeout(WAIT).is_ok(), "release_now let go");
+    let still = hook.start(Box::new(Quiet(mpsc::channel().0)), CFG);
     assert!(matches!(still, Err(HookError::Busy)), "the run goes on");
     drop(run);
-    assert_eq!(
-        released.load(Ordering::SeqCst),
-        2,
-        "let go again before the drop returned"
-    );
+    assert!(released.recv_timeout(WAIT).is_ok(), "the drop let go again");
+    assert!(released.try_recv().is_err(), "and nothing more");
 }
