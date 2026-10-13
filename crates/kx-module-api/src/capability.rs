@@ -44,16 +44,18 @@ capabilities! {
     SecretStore => "secret-store",
 }
 
+/// True for a kebab-case name, as capability and event names must be.
+#[cfg(test)]
+pub(crate) fn is_kebab(name: &str) -> bool {
+    let edges_ok = !name.starts_with('-') && !name.ends_with('-');
+    let chars_ok = name.chars().all(|c| c.is_ascii_lowercase() || c == '-');
+    !name.is_empty() && edges_ok && chars_ok && !name.contains("--")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashSet;
-
-    fn is_kebab(name: &str) -> bool {
-        let edges_ok = !name.starts_with('-') && !name.ends_with('-');
-        let chars_ok = name.chars().all(|c| c.is_ascii_lowercase() || c == '-');
-        !name.is_empty() && edges_ok && chars_ok && !name.contains("--")
-    }
 
     #[test]
     fn names_are_kebab_case() {

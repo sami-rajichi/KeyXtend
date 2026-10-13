@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 11:34 — P4: the pointer hook port and the mouse-assist bus events
+`kx-module-api` now has the `PointerHook` port of ADR-0027: a module hands its `PointerEngine` to the platform, which runs it on the hook thread, and dropping the returned `HookRun` is the only way to stop. Eight new bus events let the keyboard, the mouse module and the UI talk without calling each other; the toggle and latch events need `InjectInput`. A click's point can show what was clicked, so the notes and the pointer move hide every point in their debug output, and the latch event shows only how many are held.
+
 ## 2026-10-13 11:03 — P4: sound candidates tool (`cargo xtask sounds`)
 `cargo xtask sounds render` turns the recipes in `assets/sounds/recipes.toml` into WAV candidates from filtered noise and damped partials, with three jittered variants per key sound, the same bytes on every run. `sounds import` turns an 8, 16 or 24-bit or float, mono or stereo WAV into the shipping format, 48 kHz 16-bit mono, trimmed, faded and peak-normalised, and refuses a damaged file without a panic. Ten first recipes (four keys, two clicks, two pick-ups, two drops) wait for the owner's ear beside the CC0 recordings. The owner chose four CC0 recordings, now in `assets/sounds/`: a Cherry key in six takes, a mouse click joined from press and release with the new `sounds join`, a mouse press for pick-up and a card laid down for drop.
 
