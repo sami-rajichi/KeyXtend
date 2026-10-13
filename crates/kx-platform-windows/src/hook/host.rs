@@ -2,15 +2,16 @@
 //! input waits behind our own, the loop sends the engine's input, lagging hooks go back and the stop lets go. It is
 //! generic over `Os`, so a fake drives it in tests.
 
+mod hand;
 mod run;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use kx_module_api::Mono;
-use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent};
+use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Kind, Take, esc, kind, take};
+use super::accept::{Kind, Take, esc, key_up, kind, take};
 use super::health::Health;
 use super::held::Held;
 use super::queue::{Echo, Queue, Wait};
@@ -104,21 +105,26 @@ impl<O: Os> Host<O> {
     }
 
     /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken, and
-    /// a hand's event that passes ahead of acts already queued is noted, so its Up never leaves a queued press held.
+    /// a hand's event that passes untouched is noted for the queue and the record of held input.
     pub(crate) fn mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
         self.at = Some(at);
         let queued = !self.queue.is_empty();
         let dropped = self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false);
         let heard = take(self.source, mark.injected, mark.extra) == Take::Engine;
-        if let (true, false, true, Some(kind)) = (queued, dropped, heard, kind(msg)) {
-            self.queue.passed(kind, at);
+        if let (false, true, Some(kind)) = (dropped, heard, kind(msg)) {
+            self.passed(kind, at, queued);
         }
         dropped
     }
 
-    /// Hears key message `msg` for `vk`: an Esc press reaches the engine, and every key passes on.
-    pub(crate) fn key(&mut self, msg: u32, vk: u32, mark: Mark) {
+    /// Hears key message `msg` for `vk`, whose scan code reads as `scan`: an Esc press reaches the engine, and every
+    /// key passes on.
+    pub(crate) fn key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
         let _ = self.guard(|h| h.on_key(msg, vk, mark));
+        if key_up(self.source, msg, mark.injected, mark.extra) && self.idle() {
+            // The hand let the key go itself, so the record must not send it up again.
+            self.held.forget_key(scan);
+        }
     }
 
     /// A turn, on a wake or the deadline timer.

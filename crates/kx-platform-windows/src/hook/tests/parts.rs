@@ -4,7 +4,7 @@ use kx_module_api::ports::{Button, HookConfig, Point, PointerAct, Scan};
 use kx_module_api::{Mono, US_PER_MS};
 
 use crate::hook::Source;
-use crate::hook::accept::{Kind, Take, esc, kind, take};
+use crate::hook::accept::{Kind, Take, esc, key_up, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::health::Health;
 use crate::hook::queue::{Echo, Wait};
@@ -243,8 +243,8 @@ fn the_echo_wait_ends_when_our_input_comes_back_or_after_echo_ms() {
 fn the_message_tables_match_windows() {
     use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
     use windows::Win32::UI::WindowsAndMessaging::{
-        WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
-        WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
+        WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+        WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
     };
     let pairs = [
         (WM_MOUSEMOVE, Kind::Move),
@@ -262,4 +262,6 @@ fn the_message_tables_match_windows() {
     let vk = u32::from(VK_ESCAPE.0);
     assert!(esc(Source::Physical, WM_KEYDOWN, vk, false, 0));
     assert!(esc(Source::Physical, WM_SYSKEYDOWN, vk, false, 0));
+    assert!(key_up(Source::Physical, WM_KEYUP, false, 0));
+    assert!(key_up(Source::Physical, WM_SYSKEYUP, false, 0));
 }

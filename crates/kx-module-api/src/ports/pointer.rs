@@ -96,6 +96,9 @@ pub trait PointerEngine: Send {
     fn max_acts(&self) -> usize;
 }
 
+/// The most keys an engine may hold down at once; a host keeps room for this many in its record of held input.
+pub const MAX_HELD_KEYS: usize = 16;
+
 /// How the host runs; the module fills it from its settings.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct HookConfig {

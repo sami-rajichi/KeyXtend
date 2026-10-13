@@ -13,7 +13,7 @@ pub const REPLAY: usize = 0x4B58_5352;
 pub const SIM_TAG: usize = 0x4B58_5553;
 
 /// Prefix bytes `MapVirtualKeyExW` puts on extended scan codes (`0xE0`, `0xE1`).
-const EXTENDED_PREFIXES: [u8; 2] = [0xE0, 0xE1];
+pub(crate) const EXTENDED_PREFIXES: [u8; 2] = [0xE0, 0xE1];
 
 /// Virtual keys Windows documents as extended, though `MapVirtualKeyExW` gives their numpad scan code:
 /// Page Up, Page Down, End, Home, the four arrows, Insert and Delete.

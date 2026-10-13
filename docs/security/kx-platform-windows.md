@@ -91,7 +91,7 @@
   - The health check counts the hooks current up to the tick when a callback ran, never the event's own stamp, so a forward-dated event cannot hide lagging hooks.
 - **Denial of service (pointer hook):**
   - A panic in the engine or the callback is caught before it reaches Windows; events then pass untouched, and the engine lets go once. Only the engine's fall asks for a turn, so a fault that recurs never loops.
-  - The host keeps its own fixed record of the buttons and keys its sent input holds down. When the engine is done (it panicked, even in its `release`) and when the host stops, it sends an Up or KeyUp for each one still held.
+  - The host keeps its own fixed record of the buttons and keys its sent input holds down, sized by the port's `MAX_HELD_KEYS`. A hand's own Up or key-up that reaches the OS untouched, with nothing of ours in flight, clears it there too. When the engine is done (it panicked, even in its `release`) and when the host stops, it sends an Up or KeyUp for each one still held.
   - The callback never waits or allocates: the engine's buffer is reserved once, and acts past the room are dropped and logged at the stop, counts only. The queue is bounded: moves coalesce into the newest, and buttons and keys keep a headroom of their own, so they stay in order.
   - When even the headroom is full, events pass without the engine, and it lets go at the next turn. A hand's Up that went ahead of its press, still queued, ends the queue's own batch, so no button stays held; the same holds for a broken engine.
   - Windows drops a hook that answers late; the health check puts it back after the engine lets go. The hook thread runs one step above normal priority, so this is less likely under load.
@@ -144,7 +144,7 @@ The guard calls the procedure kept in its window property (`KeyXtend.Guard`). An
 
 `inject::send`, `input`, `send_keys` and `vk_key` are public for the gate tools, and `send` takes raw inputs with any tag and no recovery. Modules cannot depend on the adapter (tidy), and the app never calls them.
 
-The host's record of held input counts a hand's press it re-sent from the queue, so the stop may send an Up for a button the hand already let go. A stray Up does nothing, while a missed one would leave a button down.
+The host's record of held input counts a hand's press that our input replayed, such as a held press that Right-click lets through. The hand's own Up clears it, but only when it reaches the OS with nothing of ours in flight. So a replayed press the hand still holds is let go at a stop or when the engine is done, which can end that drag. That is the safe side: a missed Up would leave the button down. Another program that forges our tags can end the echo wait early, and then a hand's Up can clear the record while our press is still in flight.
 
 A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 

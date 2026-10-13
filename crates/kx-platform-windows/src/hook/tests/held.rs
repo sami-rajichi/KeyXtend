@@ -1,21 +1,14 @@
 //! Tests of the host's own record of what its sent input holds down.
 
-use kx_module_api::ports::{Button, Point, PointerAct, Scan};
+use kx_module_api::ports::{Button, MAX_HELD_KEYS, Point, PointerAct, Scan};
 
-use crate::hook::held::{HELD_KEYS, Held, SLOTS, slot};
+use crate::hook::held::Held;
 
 /// Left Ctrl and Left Shift.
 const CTRL: Scan = Scan::new(0x1D);
 const SHIFT: Scan = Scan::new(0x2A);
 const A: Point = Point { x: 1, y: 2 };
 const B: Point = Point { x: 3, y: 4 };
-
-#[test]
-fn every_button_has_its_own_slot() {
-    let slots = [Button::Left, Button::Right, Button::Middle].map(slot);
-    assert!(slots.iter().all(|&s| s < SLOTS));
-    assert_eq!(slots, [0, 1, 2]);
-}
 
 #[test]
 fn the_record_lets_go_of_what_sent_input_still_holds_buttons_first() {
@@ -48,9 +41,23 @@ fn a_key_pressed_twice_is_held_once_and_the_record_never_grows() {
     held.sent(&[PointerAct::KeyDown(CTRL), PointerAct::KeyDown(CTRL)]);
     assert_eq!(held.release(None), [PointerAct::KeyUp(CTRL)]);
     let many: Vec<PointerAct> = (0x70_u16..)
-        .take(HELD_KEYS + 4)
+        .take(MAX_HELD_KEYS + 4)
         .map(|code| PointerAct::KeyDown(Scan::new(code)))
         .collect();
     held.sent(&many);
-    assert_eq!(held.release(None).len(), HELD_KEYS);
+    assert_eq!(held.release(None).len(), MAX_HELD_KEYS);
+}
+
+#[test]
+fn the_hand_letting_go_itself_clears_the_record() {
+    let mut held = Held::default();
+    held.sent(&[
+        PointerAct::KeyDown(CTRL),
+        PointerAct::KeyDown(SHIFT),
+        PointerAct::Down(Button::Left, A),
+    ]);
+    held.forget_button(Button::Left);
+    held.forget_key(CTRL);
+    held.forget_key(Scan::new(0x38));
+    assert_eq!(held.release(None), [PointerAct::KeyUp(SHIFT)]);
 }

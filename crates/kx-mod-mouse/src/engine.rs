@@ -10,7 +10,9 @@ mod press;
 pub use note::Note;
 
 use crate::MouseSettings;
-use kx_module_api::ports::{Button, GrabState, Point, PointerAct, PointerEvent, Scan};
+use kx_module_api::ports::{
+    Button, GrabState, MAX_HELD_KEYS, Point, PointerAct, PointerEvent, Scan,
+};
 use kx_module_api::{Mono, US_PER_MS};
 
 /// The Esc key's scan code (PC set 1), sent to cancel a carry.
@@ -18,6 +20,13 @@ pub const ESC: Scan = Scan::new(0x01);
 
 /// The most latched modifiers a click carries: left and right Shift, Ctrl, Alt and Win.
 pub const MAX_LATCHES: usize = 8;
+
+/// The most keys the engine holds down at once: every latch, and Esc for a moment.
+const HELD_AT_ONCE: usize = MAX_LATCHES + 1;
+const _: () = assert!(
+    HELD_AT_ONCE <= MAX_HELD_KEYS,
+    "the engine's held keys must fit the host's record"
+);
 
 /// The most input one call pushes: a late right-click inside every modifier (2 per latch, plus 2), then the event
 /// it revealed.

@@ -1,7 +1,8 @@
 //! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the queue
-//! in `order`, the record of held input in `held`, and the other pure parts in `parts`.
+//! in `order`, the record of held input in `held` and against the hand in `hand`, and the other pure parts in `parts`.
 
 mod fake;
+mod hand;
 mod held;
 mod limits;
 mod order;
@@ -38,6 +39,8 @@ const OTHER: usize = 0x1234;
 /// Left Shift and Left Ctrl, which the scripted engine pushes.
 const SHIFT: Scan = Scan::new(0x2A);
 const CTRL: Scan = Scan::new(0x1D);
+/// The Esc key's scan code.
+const ESC: Scan = Scan::new(0x01);
 const A: Point = Point { x: 1, y: 2 };
 const B: Point = Point { x: 3, y: 4 };
 
@@ -241,10 +244,10 @@ fn esc_from_the_hand_or_our_keyboard_reaches_the_engine_and_others_do_not() {
     let marks = [(false, 0), (true, TAG), (true, OTHER), (true, REPLAY)];
     for (injected, extra) in marks {
         let mark = rig.mark(injected, extra);
-        rig.host.key(KEY_DOWN, VK_ESC, mark);
+        rig.host.key(KEY_DOWN, VK_ESC, ESC, mark);
     }
     let up = rig.mark(false, 0);
-    rig.host.key(KEY_UP, VK_ESC, up);
+    rig.host.key(KEY_UP, VK_ESC, ESC, up);
     let esc = Heard::On(PointerEvent::Esc, rig.now());
     assert_eq!(rig.heard(), [esc.clone(), esc]);
 }

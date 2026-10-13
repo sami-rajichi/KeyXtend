@@ -6,11 +6,13 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use kx_module_api::ports::Point;
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_INJECTED, LLMHF_INJECTED, MSLLHOOKSTRUCT,
+    CallNextHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, LLKHF_INJECTED, LLMHF_INJECTED,
+    MSLLHOOKSTRUCT,
 };
 
 use super::with_host;
 use crate::hook::Mark;
+use crate::hook::accept::sent_scan;
 
 /// Tells Windows to drop the event.
 const SWALLOW: LRESULT = LRESULT(1);
@@ -73,7 +75,8 @@ fn key(msg: u32, info: &KBDLLHOOKSTRUCT) {
         extra: info.dwExtraInfo,
         time: info.time,
     };
-    let _ = shield(|| with_host(|h| h.key(msg, info.vkCode, mark)));
+    let scan = sent_scan(info.scanCode, info.flags.contains(LLKHF_EXTENDED));
+    let _ = shield(|| with_host(|h| h.key(msg, info.vkCode, scan, mark)));
 }
 
 /// Runs `call` so that no panic crosses into Windows, which would end the program.

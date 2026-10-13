@@ -168,6 +168,11 @@ impl Echo {
         self.since = Some(at);
     }
 
+    /// True when no echo is awaited.
+    pub(crate) fn is_clear(&self) -> bool {
+        self.since.is_none()
+    }
+
     /// Our input came back, or never will: the wait ends.
     pub(crate) fn clear(&mut self) {
         self.since = None;

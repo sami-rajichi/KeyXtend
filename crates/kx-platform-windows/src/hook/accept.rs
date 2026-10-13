@@ -1,9 +1,9 @@
 //! Whose input reaches the engine, and hook messages as engine events (ADR-0027 decision 3).
 
-use kx_module_api::ports::Button;
+use kx_module_api::ports::{Button, Scan};
 
 use super::Source;
-use crate::keys::{REPLAY, TAG};
+use crate::keys::{EXTENDED_PREFIXES, REPLAY, REPORTED_EXTENDED, TAG};
 
 /// What a mouse message does.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -29,6 +29,8 @@ const MOUSE: [(u32, Kind); 7] = [
 ];
 /// `WM_KEYDOWN` and `WM_SYSKEYDOWN`: a key press, plain or with Alt held.
 const KEY_DOWNS: [u32; 2] = [0x0100, 0x0104];
+/// `WM_KEYUP` and `WM_SYSKEYUP`: a key let go, plain or with Alt held.
+const KEY_UPS: [u32; 2] = [0x0101, 0x0105];
 /// `VK_ESCAPE`.
 const VK_ESCAPE: u32 = 0x1B;
 
@@ -62,6 +64,23 @@ pub(crate) fn esc(source: Source, msg: u32, vk: u32, injected: bool, extra: usiz
     let press = KEY_DOWNS.contains(&msg) && vk == VK_ESCAPE;
     let ours = source == Source::Physical && extra == TAG;
     press && (ours || heard(source, injected, extra))
+}
+
+/// True for a key the user let go in `source`: the hand's, or in simulated mode the gate tool's.
+pub(crate) fn key_up(source: Source, msg: u32, injected: bool, extra: usize) -> bool {
+    KEY_UPS.contains(&msg) && heard(source, injected, extra)
+}
+
+/// The key a key hook event names, as we send it: the low byte of `code`, with the `E0` prefix when the event is
+/// `extended`, unless Windows only reports that plain key as extended (right Shift).
+pub(crate) fn sent_scan(code: u32, extended: bool) -> Scan {
+    let [low, ..] = code.to_le_bytes();
+    let plain = u16::from(low);
+    if !extended || REPORTED_EXTENDED.contains(&plain) {
+        Scan::new(plain)
+    } else {
+        Scan::new(u16::from_be_bytes([EXTENDED_PREFIXES[0], low]))
+    }
 }
 
 /// True when input with these marks stands for the user in `source`.

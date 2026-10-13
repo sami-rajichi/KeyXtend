@@ -1,20 +1,25 @@
-//! What our own sent input holds down (ledger ruling 21), so the host lets go itself when the engine cannot. The record
-//! is fixed in size and never allocates.
+//! What our own sent input holds down (ledger rulings 21 and 22), so the host lets go itself when the engine cannot.
+//! The record is fixed in size, so noting input never allocates; letting go, on the loop side only, builds one batch.
 
-use kx_module_api::ports::{Button, Point, PointerAct, Scan};
+use kx_module_api::ports::{Button, MAX_HELD_KEYS, Point, PointerAct, Scan};
 
-/// Keys our input can hold at once: the engine's latched modifiers (eight in `kx-mod-mouse`), with as many again spare.
-pub(crate) const HELD_KEYS: usize = 16;
-/// One slot per `Button`; `slot` keeps every button below it.
+/// One slot per `Button`; each arm of `slot` checks at build time that its slot is below it.
 pub(crate) const SLOTS: usize = 3;
 
-/// The slot of `button`. The match is exhaustive, so a new button fails to compile until it has a slot.
+/// The slot of `button`. The match is exhaustive and every arm goes through `below_slots` at build time, so a new
+/// button cannot build until it has a slot below `SLOTS`.
 pub(crate) const fn slot(button: Button) -> usize {
     match button {
-        Button::Left => 0,
-        Button::Right => 1,
-        Button::Middle => 2,
+        Button::Left => const { below_slots(0) },
+        Button::Right => const { below_slots(1) },
+        Button::Middle => const { below_slots(2) },
     }
+}
+
+/// `slot` as given, or a failed build when it is not below `SLOTS`.
+const fn below_slots(slot: usize) -> usize {
+    assert!(slot < SLOTS, "every button needs a slot below SLOTS");
+    slot
 }
 
 /// The buttons and keys our sent input pressed and has not let go.
@@ -23,7 +28,7 @@ pub(crate) struct Held {
     /// Per slot, the button and where it went down.
     buttons: [Option<(Button, Point)>; SLOTS],
     /// The keys held, packed in the order they went down; a key past the room is not kept.
-    keys: [Option<Scan>; HELD_KEYS],
+    keys: [Option<Scan>; MAX_HELD_KEYS],
 }
 
 impl Held {
@@ -38,6 +43,16 @@ impl Held {
                 PointerAct::Move(_) => {}
             }
         }
+    }
+
+    /// The hand let `button` go itself, with nothing of ours in flight.
+    pub(crate) fn forget_button(&mut self, button: Button) {
+        self.set(button, None);
+    }
+
+    /// The hand let `scan` go itself, with nothing of ours in flight.
+    pub(crate) fn forget_key(&mut self, scan: Scan) {
+        self.lift(scan);
     }
 
     /// An Up for each button still held, at `at` or else where it went down, then a key-up for each key, newest first.

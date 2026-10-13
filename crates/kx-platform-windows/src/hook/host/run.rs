@@ -60,13 +60,13 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// The stop's input: the queue, the release, then whatever our input still holds; a cut send and dropped acts are
-    /// logged, counts only.
+    /// The stop's input: the queue, the release, then, once, whatever our input still holds; a cut send and dropped
+    /// acts are logged, counts only.
     pub(super) fn finish(&mut self) {
         let now = self.os.now();
         let sent = self
             .flush(now)
-            .and(self.let_go(now))
+            .and(self.release_engine(now))
             .and(self.let_held_go(now));
         if sent.took < sent.total {
             tracing::warn!(
@@ -96,9 +96,18 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// Calls the engine's `release` and sends its acts; a broken engine gets this once. An engine that ends there, or
-    /// panics in it, is done, and the host lets go of what our input still holds.
+    /// Lets the engine go; once that leaves it done, lets go of what our input still holds too.
     fn let_go(&mut self, now: Mono) -> Sent {
+        let sent = self.release_engine(now);
+        match self.trust {
+            Trust::Done => sent.and(self.let_held_go(now)),
+            _ => sent,
+        }
+    }
+
+    /// Calls the engine's `release` and sends its acts; a broken engine gets this once, and one that panics in it is
+    /// done.
+    fn release_engine(&mut self, now: Mono) -> Sent {
         self.trust = match self.trust {
             Trust::Done => return Sent::default(),
             Trust::Broken => Trust::Done,
@@ -110,11 +119,7 @@ impl<O: Os> Host<O> {
             self.lent.clear();
             self.trust = Trust::Done;
         }
-        let sent = self.send_lent(now);
-        match self.trust {
-            Trust::Done => sent.and(self.let_held_go(now)),
-            _ => sent,
-        }
+        self.send_lent(now)
     }
 
     /// Sends an Up for each button and a key-up for each key our input still holds.

@@ -22,6 +22,6 @@ pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
 pub use pointer::{
-    Button, HookConfig, HookError, HookRun, HookStats, PointerAct, PointerEngine, PointerEvent,
-    PointerHook, PointerHookKey,
+    Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
+    PointerEvent, PointerHook, PointerHookKey,
 };
