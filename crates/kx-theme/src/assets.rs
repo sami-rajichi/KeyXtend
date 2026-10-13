@@ -109,12 +109,14 @@ pub struct SoundFile {
 }
 
 /// Everything the app bundles from the `assets` folder.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Bundle {
     /// Each icon the tokens name, once, in name order.
     pub icons: Vec<Bundled>,
     /// Every font file, each under its family folder with a name that needs no escaping in a URL.
     pub fonts: Vec<Bundled>,
+    /// The checked sound tokens the sounds were read with.
+    pub sound_tokens: Sounds,
     /// Each sound `sounds.toml` names, once, in the order first named.
     pub sounds: Vec<SoundFile>,
 }
@@ -136,11 +138,12 @@ pub fn bundle(assets: &Path) -> Result<Bundle, String> {
     let icons = names.into_iter().map(icon).collect::<Result<_, String>>()?;
     let files = font_files(assets).map_err(|e| format!("{FONT_DIR}: {e}"))?;
     let fonts = files.into_iter().map(font).collect();
-    let tokens = Sounds::shipped().map_err(|e| e.to_string())?;
-    let sounds = sound_files(assets, &tokens)?;
+    let sound_tokens = Sounds::shipped().map_err(|e| e.to_string())?;
+    let sounds = sound_files(assets, &sound_tokens)?;
     Ok(Bundle {
         icons,
         fonts,
+        sound_tokens,
         sounds,
     })
 }
@@ -154,8 +157,13 @@ pub fn bundle(assets: &Path) -> Result<Bundle, String> {
 pub fn sound_files(assets: &Path, sounds: &Sounds) -> Result<Vec<SoundFile>, String> {
     let read = |name: &str| {
         let at = |why: String| format!("{SOUND_DIR}/{name}: {why}");
-        let bytes =
-            std::fs::read(assets.join(SOUND_DIR).join(name)).map_err(|e| at(e.to_string()))?;
+        let path = assets.join(SOUND_DIR).join(name);
+        // The size comes first, so a huge file is refused before it fills memory.
+        let len = std::fs::metadata(&path)
+            .map_err(|e| at(e.to_string()))?
+            .len();
+        wav::check_size(len, &sounds.format).map_err(|e| at(e.to_string()))?;
+        let bytes = std::fs::read(&path).map_err(|e| at(e.to_string()))?;
         let samples = wav::samples(&bytes, &sounds.format).map_err(|e| at(e.to_string()))?;
         let (name, samples) = (name.to_owned(), samples.to_vec());
         Ok(SoundFile { name, samples })

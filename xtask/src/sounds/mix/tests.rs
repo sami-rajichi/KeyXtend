@@ -65,6 +65,14 @@ fn only_files_in_the_shipping_format_are_joined() {
     }
     let good = encode(TAG_PCM, 48_000, 16, &mono(&tone));
     assert_eq!(shipping(&book, "x.wav", &good).unwrap().len(), tone.len());
+    // kx-ui's build refuses a wrong byte rate and a sound over the limit, so the join does too.
+    let mut rate = good.clone();
+    rate[28..32].copy_from_slice(&48_000u32.to_le_bytes());
+    let long = encode(TAG_PCM, 48_000, 16, &mono(&sine(440.0, 48_000, 401, 0.5)));
+    for wav in [rate, long] {
+        let err = shipping(&book, "x.wav", &wav).unwrap_err();
+        assert!(matches!(err, SoundError::NotShipping(_)), "got: {err}");
+    }
     assert!(matches!(
         shipping(&book, "x.wav", b"junk"),
         Err(SoundError::Wav(_))

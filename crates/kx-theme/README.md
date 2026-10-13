@@ -54,7 +54,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 `assets` names where the bundled fonts, icons and sounds sit in the repo's `assets/` folder (`ICON_DIRS`, `FONT_DIR`, `SOUND_DIR`) and finds them (`icon_file`, `font_files`, `sound_files`). `bundle` lists the files the app holds, under the names they take there (`ICONS_AT`, one folder of icons), and each sound's samples. kx-ui's build script uses it to compile them in, and the asset tests use it to check them, so the layout is written once. The app never reads these folders.
 
-`sounds::wav` reads a shipped sound strictly: RIFF/WAVE, a `fmt ` chunk of PCM in exactly the format's channels, bits and rate, and a `data` chunk of whole frames, from one frame to `max_ms`; every size is checked, so no file can make it panic. Its chunk walker is the one `cargo xtask sounds` reads recordings with.
+`sounds::wav` reads a shipped sound strictly: RIFF/WAVE, one basic `fmt ` chunk of PCM in exactly the format's channels, bits, rate and byte rate, then one `data` chunk of whole frames, from one frame to `max_ms`, and nothing after; every size is checked, so no file can make it panic, and `sound_files` checks a file's size before it reads it. Its chunk walker, which is lenient, is the one `cargo xtask sounds` reads recordings with. The format's rate must be one every speaker plays (`Clip::RATES`), and `SOUNDS_PATH` names the `sounds.toml` compiled in, which kx-ui's build watches.
 
 ## QML look fixtures
 

@@ -58,7 +58,8 @@ pub fn clips() -> Vec<Clip> {
         .collect()
 }
 
-/// What `event` plays; `None` when no sound is compiled in.
+/// What `event` plays; `None` when no sound is compiled in. It allocates and computes the gain, so callers build each
+/// event's cue once at start, never per play.
 #[must_use]
 pub fn cue(event: Event) -> Option<Cue> {
     let (_, names, gain_db) = table::EVENTS.iter().find(|(e, ..)| *e == event.name())?;

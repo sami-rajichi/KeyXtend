@@ -648,6 +648,7 @@ version = "0.0.0"
 dependencies = [
  "kx-platform",
  "kx-test-support",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

@@ -1,18 +1,20 @@
 //! The strict reader gives a shipped sound's sample bytes and refuses anything else as an error, never a panic.
 
 use kx_theme::sounds::Format;
-use kx_theme::sounds::wav::{DATA, WavError, samples};
+use kx_theme::sounds::wav::{DATA, HEADER_SLACK, PCM, WavError, check_size, samples};
 
-/// Format tags of integer PCM and IEEE float.
-pub const PCM: u16 = 1;
+/// Format tags of IEEE float and of the extensible header.
 const FLOAT: u16 = 3;
+const EXTENSIBLE: u16 = 0xFFFE;
+/// Where the byte rate sits in a file `wav` writes.
+const BYTE_RATE_AT: usize = 12 + 8 + 8;
 /// The small format's rate.
-const RATE: u32 = 8_000;
+pub const RATE: u32 = 8_000;
 /// Eight 16-bit mono frames: the longest sound `format` allows.
 const FULL: [u8; 16] = [1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0];
 
 /// A small format: 16-bit mono at 8 kHz, at most 1 ms (8 frames).
-fn format() -> Format {
+pub fn format() -> Format {
     Format {
         rate: RATE,
         bits: 16,
@@ -47,7 +49,7 @@ pub fn riff(chunks: &[(&[u8; 4], &[u8])]) -> Vec<u8> {
 }
 
 /// A basic `fmt ` chunk's content.
-fn fmt(tag: u16, channels: u16, rate: u32, bits: u16) -> Vec<u8> {
+pub fn fmt(tag: u16, channels: u16, rate: u32, bits: u16) -> Vec<u8> {
     let align = channels * bits / 8;
     let mut out = Vec::new();
     out.extend(tag.to_le_bytes());
@@ -149,6 +151,67 @@ fn a_file_over_the_length_limit_is_refused() {
     let err = samples(&wav(PCM, 1, RATE, 16, &long), &format()).unwrap_err();
     assert!(matches!(err, WavError::TooLong(_)), "{err}");
     assert!(err.to_string().contains("1 ms"), "{err}");
+}
+
+#[test]
+fn an_extended_fmt_chunk_or_a_wrong_byte_rate_is_refused() {
+    let mut ext = fmt(EXTENSIBLE, 1, RATE, 16);
+    // The extension's size, valid bits, channel mask, then a sub-format whose tag is PCM.
+    ext.extend([22, 0, 16, 0, 4, 0, 0, 0]);
+    ext.extend(PCM.to_le_bytes());
+    ext.extend([0; 14]);
+    let mut long = fmt(PCM, 1, RATE, 16);
+    long.extend([0, 0]);
+    for (what, f) in [("extensible", ext), ("18-byte fmt", long)] {
+        let err = samples(&riff(&[(b"fmt ", &f), (b"data", &FULL)]), &format()).unwrap_err();
+        assert!(matches!(err, WavError::Unsupported(_)), "{what}: {err}");
+    }
+    let mut file = good();
+    file[BYTE_RATE_AT..BYTE_RATE_AT + 4].copy_from_slice(&RATE.to_le_bytes());
+    let err = samples(&file, &format()).unwrap_err();
+    assert!(err.to_string().contains("byte rate"), "{err}");
+}
+
+#[test]
+fn data_before_fmt_or_a_repeated_chunk_is_refused() {
+    let f = fmt(PCM, 1, RATE, 16);
+    let cases = [
+        ("data first", riff(&[(b"data", &FULL), (b"fmt ", &f)])),
+        (
+            "two data",
+            riff(&[(b"fmt ", &f), (b"data", &FULL), (b"data", &FULL)]),
+        ),
+        (
+            "two fmt",
+            riff(&[(b"fmt ", &f), (b"fmt ", &f), (b"data", &FULL)]),
+        ),
+    ];
+    for (what, file) in cases {
+        let err = samples(&file, &format()).unwrap_err();
+        assert!(matches!(err, WavError::Malformed(_)), "{what}: {err}");
+    }
+}
+
+#[test]
+fn bytes_past_the_riff_size_are_refused() {
+    let padded = [good(), vec![0, 0]].concat();
+    let chunk = [good(), b"LIST".to_vec(), vec![0; 4]].concat();
+    for (what, file) in [("padding", padded), ("a chunk", chunk)] {
+        let err = samples(&file, &format()).unwrap_err();
+        assert!(matches!(err, WavError::Malformed(_)), "{what}: {err}");
+    }
+}
+
+#[test]
+fn a_file_larger_than_any_sound_is_refused_before_its_chunks_are_read() {
+    let max = u64::try_from(FULL.len() + HEADER_SLACK).expect("a small size");
+    assert_eq!(check_size(max, &format()), Ok(()));
+    assert_eq!(check_size(max + 1, &format()), Err(WavError::TooBig(max)));
+    assert!(check_size(u64::MAX, &format()).is_err());
+    let notes = vec![0; HEADER_SLACK];
+    let f = fmt(PCM, 1, RATE, 16);
+    let big = riff(&[(b"LIST", &notes), (b"fmt ", &f), (b"data", &FULL)]);
+    assert_eq!(samples(&big, &format()), Err(WavError::TooBig(max)));
 }
 
 #[test]

@@ -1,18 +1,17 @@
 //! Joining two sounds in the shipping format, the second starting a set time after the first.
 
+use kx_theme::sounds::wav::samples as shipped_samples;
+
 use super::recipe::Book;
 use super::units::samples;
 use super::{FULL_GAIN_DB, Sound, SoundError, finish, wav};
 
-/// The samples of the WAV file `bytes`, named `name`, which must already be in `book`'s shipping format.
+/// The samples of the WAV file `bytes`, named `name`, which must be a sound kx-ui's build takes in `book`'s format.
 pub(crate) fn shipping(book: &Book, name: &str, bytes: &[u8]) -> Result<Vec<f64>, SoundError> {
     let audio = wav::read(bytes)?;
-    let format = &book.format;
-    let layout = (audio.rate, audio.channels, audio.bits);
-    if layout == (format.rate, format.channels, format.bits) {
-        Ok(audio.samples)
-    } else {
-        Err(SoundError::NotShipping(name.to_string()))
+    match shipped_samples(bytes, &book.format) {
+        Ok(_) => Ok(audio.samples),
+        Err(_) => Err(SoundError::NotShipping(name.to_string())),
     }
 }
 
@@ -23,10 +22,9 @@ pub(crate) fn join(
     second: &[f64],
     at_ms: u32,
 ) -> Result<Sound, SoundError> {
-    let rate = f64::from(book.format.rate);
-    let at = samples(f64::from(at_ms), rate);
+    let at = samples(f64::from(at_ms), f64::from(book.format.rate));
     let len = first.len().max(at.saturating_add(second.len()));
-    if len > samples(book.format.max_ms, rate) {
+    if len > book.format.max_frames() {
         return Err(SoundError::TooLong(book.format.max_ms));
     }
     let mut mix = vec![0.0; len];

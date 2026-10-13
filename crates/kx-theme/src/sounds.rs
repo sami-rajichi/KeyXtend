@@ -90,7 +90,9 @@ impl Format {
     /// Refuses a layout the speaker cannot play and values out of range; NaN fails each.
     fn check(&self) -> Result<(), String> {
         let (channels, bits) = (Clip::CHANNELS, Clip::SAMPLE_BYTES * BYTE_BITS);
-        check(self.rate > 0, "rate must be above 0")?;
+        let (low, high) = (Clip::RATES.start(), Clip::RATES.end());
+        let rate = format!("rate must be from {low} to {high}, as every speaker plays");
+        check(Clip::RATES.contains(&self.rate), rate)?;
         let pcm16 = format!("bits must be {bits}, as the speaker plays");
         check(self.bits == bits, pcm16)?;
         let mono = format!("channels must be {channels}, as the speaker plays");

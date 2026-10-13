@@ -17,6 +17,7 @@ fn main() {
 mod qt {
     use super::qtbuild;
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
+    use kx_theme::SOUNDS_PATH;
     use kx_theme::assets::{Bundle, Bundled, ICON_EXT, SoundFile, bundle, icon_url};
     use kx_theme::sounds::{Cue, Event, Sounds};
     use std::path::{Path, PathBuf};
@@ -117,8 +118,6 @@ mod qt {
     const QRC_SCHEME: &str = "qrc";
     /// The variable that hands the icons' URL, icon type and font files, as JSON, to the crate.
     const ASSETS_ENV: &str = "KX_UI_ASSETS";
-    /// The sound tokens, from this crate; the sounds themselves sit in `ASSETS`.
-    const SOUND_TOKENS: &str = "../kx-theme/tokens/sounds.toml";
     /// The Rust file `src/sounds.rs` includes, and the folder of the samples it embeds, under `OUT_DIR`.
     const SOUNDS_RS: &str = "sounds.rs";
     const SOUNDS_DIR: &str = "kx-ui-sounds";
@@ -131,9 +130,9 @@ mod qt {
     /// Compiles the bridges, the QML, the fonts, the icons and the sounds into the crate, and names their URLs.
     pub fn build() {
         println!("cargo::rerun-if-changed={ASSETS}");
-        println!("cargo::rerun-if-changed={SOUND_TOKENS}");
+        println!("cargo::rerun-if-changed={SOUNDS_PATH}");
         let parts = bundle(Path::new(ASSETS)).and_then(|b| {
-            embed(&b.sounds)?;
+            embed(&b.sound_tokens, &b.sounds)?;
             Ok((resources(&b)?, rhi_headers()?, kind_dir()?))
         });
         let ((resources, fonts), rhi, kind) = match parts {
@@ -219,16 +218,16 @@ mod qt {
     }
 
     /// Writes each sound's checked samples under `OUT_DIR`, and the Rust file that embeds them aligned, with each
-    /// event's clips and balance, the rate and the voices.
-    fn embed(sounds: &[SoundFile]) -> Result<(), String> {
-        let tokens = Sounds::shipped().map_err(|e| e.to_string())?;
+    /// event's clips and balance from `tokens`, the rate and the voices.
+    fn embed(tokens: &Sounds, sounds: &[SoundFile]) -> Result<(), String> {
         let out = PathBuf::from(std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?);
-        std::fs::create_dir_all(out.join(SOUNDS_DIR)).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(out.join(SOUNDS_DIR)).map_err(failed(SOUNDS_DIR))?;
         let mut clips = Vec::with_capacity(sounds.len());
         for (i, s) in sounds.iter().enumerate() {
             let file = format!("{i}.{PCM_EXT}");
-            let failed = |e: std::io::Error| format!("{}: {e}", s.name);
-            std::fs::write(out.join(SOUNDS_DIR).join(&file), &s.samples).map_err(failed)?;
+            let samples = format!("{SOUNDS_DIR}/{file} ({})", s.name);
+            std::fs::write(out.join(SOUNDS_DIR).join(&file), &s.samples)
+                .map_err(failed(&samples))?;
             let bytes =
                 format!("include_bytes!(concat!(env!({OUT_ENV:?}), \"/{SOUNDS_DIR}/{file}\"))");
             clips.push(format!("    ({:?}, &Aligned(*{bytes})),", s.name));
@@ -238,7 +237,12 @@ mod qt {
         };
         let events: Vec<String> = tokens.cues.iter().map(event).collect();
         let text = table_rs(&clips, &events, tokens.format.rate, tokens.play.voices);
-        std::fs::write(out.join(SOUNDS_RS), text).map_err(|e| e.to_string())
+        std::fs::write(out.join(SOUNDS_RS), text).map_err(failed(SOUNDS_RS))
+    }
+
+    /// A file error that names the file `at`, under `OUT_DIR`.
+    fn failed(at: &str) -> impl Fn(std::io::Error) -> String + '_ {
+        move |e| format!("{at}: {e}")
     }
 
     /// The source of the sound table: the clips and events as rows of Rust, then the rate and voices.

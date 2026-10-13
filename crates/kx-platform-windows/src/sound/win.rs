@@ -286,11 +286,13 @@ mod tests {
     }
 
     #[test]
-    fn the_voices_take_mono_pcm16_at_the_clip_rate() {
+    fn the_voices_take_mono_pcm16_at_the_clip_rate_and_every_rate_the_port_names() {
         let f = pcm(48_000);
         let (tag, channels, rate) = (f.wFormatTag, f.nChannels, f.nSamplesPerSec);
         let (per_second, block, bits) = (f.nAvgBytesPerSec, f.nBlockAlign, f.wBitsPerSample);
         assert_eq!((tag, channels, rate), (1, 1, 48_000));
         assert_eq!((per_second, block, bits), (96_000, 2, 16));
+        let (low, high) = (Clip::RATES.start(), Clip::RATES.end());
+        assert!(WinOs::RATES.contains(low) && WinOs::RATES.contains(high));
     }
 }

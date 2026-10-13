@@ -10,8 +10,11 @@ use crate::test_support::TempDir;
 
 /// The recipe file the project ships.
 const SHIPPED: &str = include_str!("../../../assets/sounds/recipes.toml");
-/// The sounds file the project ships, which holds the format.
-const SHIPPED_FORMAT: &str = include_str!("../../../crates/kx-theme/tokens/sounds.toml");
+
+/// The sounds file kx-theme compiles in, which holds the format.
+fn shipped_format() -> String {
+    std::fs::read_to_string(kx_theme::SOUNDS_PATH).unwrap()
+}
 
 fn book() -> Book {
     parse(BOOK, FORMAT).unwrap()
@@ -44,7 +47,9 @@ fn assert_shipping(book: &Book, wav: &[u8]) -> Vec<i16> {
     assert_eq!(rate, book.format.rate);
     let pcm = pcm(wav);
     assert_eq!(data as usize, pcm.len() * 2);
-    assert!(pcm.len() <= samples(book.format.max_ms, f64::from(rate)));
+    assert!(pcm.len() <= book.format.max_frames());
+    let taken = kx_theme::sounds::wav::samples(wav, &book.format);
+    assert!(taken.is_ok(), "kx-ui's build refuses it: {taken:?}");
     assert!(
         f64::from(peak(&pcm)) <= ceiling(book),
         "the peak is over the ceiling"
@@ -207,7 +212,7 @@ fn import_refuses_an_empty_window_silence_and_bad_files() {
 
 #[test]
 fn the_shipped_recipes_parse_and_render_within_the_format_limits() {
-    let book = parse(SHIPPED, SHIPPED_FORMAT).unwrap();
+    let book = parse(SHIPPED, &shipped_format()).unwrap();
     let names: HashSet<&str> = book.recipes.iter().map(|r| r.name.as_str()).collect();
     assert_eq!(names.len(), book.recipes.len(), "recipe names repeat");
     for (stem, sound) in render_every(&book) {
@@ -221,8 +226,9 @@ fn the_workspace_names_the_sounds_file_kx_ui_builds_from() {
     let manifest: toml::Table = toml::from_str(include_str!("../../../Cargo.toml")).unwrap();
     let rel = manifest["workspace"]["metadata"][SECTION]["format"].as_str();
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let text = std::fs::read_to_string(join_rel(root, rel.unwrap())).unwrap();
-    assert_eq!(text, SHIPPED_FORMAT);
+    let named = join_rel(root, rel.unwrap()).canonicalize().unwrap();
+    let compiled = Path::new(kx_theme::SOUNDS_PATH).canonicalize().unwrap();
+    assert_eq!(named, compiled, "the file kx-theme compiles in");
 }
 
 /// `cargo metadata` JSON whose `[workspace.metadata.sounds]` is `section`.

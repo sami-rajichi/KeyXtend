@@ -219,6 +219,6 @@ fn import_clip(book: &Book, bytes: &[u8], cut: Cut) -> Result<Sound, SoundError>
         part
     };
     let mut clip = resample::resample(span, from, to, &book.resample);
-    clip.truncate(cap(to));
+    clip.truncate(book.format.max_frames());
     finish::master(&mut clip, &book.format, FULL_GAIN_DB)
 }

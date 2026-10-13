@@ -143,10 +143,9 @@ fn zero_channels_are_refused() {
 }
 
 #[test]
-fn a_read_reports_the_file_layout() {
-    let audio = read(&small()).unwrap();
-    assert_eq!((audio.rate, audio.channels, audio.bits), (8_000, 1, 16));
+fn a_read_reports_the_rate_and_mixes_each_frame_to_one_sample() {
+    assert_eq!(read(&small()).unwrap().rate, 8_000);
     let stereo = encode(TAG_PCM, 44_100, 24, &[vec![0.5, 0.25]]);
     let audio = read(&stereo).unwrap();
-    assert_eq!((audio.rate, audio.channels, audio.bits), (44_100, 2, 24));
+    assert_eq!((audio.rate, audio.samples.len()), (44_100, 1));
 }

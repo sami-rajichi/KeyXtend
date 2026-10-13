@@ -6,8 +6,12 @@ use kx_theme::sounds::wav::{
     CHUNK_HEAD, Chunks, DATA, FMT, FMT_LEN, Fmt, ID_LEN, PCM, RIFF, WAVE, chunks, u16_at,
 };
 
-/// Bits per sample the writer makes.
-pub(crate) const BITS: u16 = 16;
+/// Bits per sample the writer makes: those of its `i16` samples.
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "i16 has 16 bits, which u16 holds."
+)]
+pub(crate) const BITS: u16 = i16::BITS as u16;
 /// Channels the writer makes.
 pub(crate) const CHANNELS: u16 = 1;
 /// The limit a write too long for a WAV file names.
@@ -38,10 +42,6 @@ const SIGN_BIT: u8 = 0x80;
 pub(crate) struct Audio {
     /// Samples per second.
     pub(crate) rate: u32,
-    /// The file's channels, before the mix to mono.
-    pub(crate) channels: u16,
-    /// The file's bits per sample.
-    pub(crate) bits: u16,
     /// The mono samples.
     pub(crate) samples: Vec<f64>,
 }
@@ -84,8 +84,6 @@ pub(crate) fn read(bytes: &[u8]) -> Result<Audio, WavError> {
     let spec = Spec::parse(fmt)?;
     Ok(Audio {
         rate: spec.rate,
-        channels: spec.channels,
-        bits: spec.bits,
         samples: decode(&spec, data)?,
     })
 }
@@ -108,8 +106,6 @@ struct Spec {
     rate: u32,
     /// Channels.
     channels: u16,
-    /// Bits per sample.
-    bits: u16,
     /// Bytes per sample.
     width: usize,
     /// How samples are stored.
@@ -125,6 +121,7 @@ impl Spec {
             rate,
             align,
             bits,
+            ..
         } = Fmt::parse(fmt)?;
         if tag == EXTENSIBLE {
             let none = WavError::Malformed("the extensible fmt chunk has no sub-format");
@@ -151,7 +148,6 @@ impl Spec {
         Ok(Self {
             rate,
             channels,
-            bits,
             width,
             kind,
         })

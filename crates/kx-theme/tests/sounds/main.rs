@@ -6,24 +6,29 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+mod fuzz;
 mod wav;
 
 use std::path::{Path, PathBuf};
 
 use kx_platform::ui::Clip;
 use kx_test_support::tempdir::TempDir;
+use kx_theme::SOUNDS_PATH;
 use kx_theme::assets::{SOUND_DIR, bundle, sound_files};
-use kx_theme::sounds::wav::{Fmt, chunks, samples};
+use kx_theme::sounds::wav::{Fmt, HEADER_SLACK, PCM, chunks, samples};
 use kx_theme::sounds::{Cue, Event, Sounds};
 
-/// The shipped sound tokens, as written.
-const SHIPPED: &str = include_str!("../../tokens/sounds.toml");
 /// Bits in a byte.
 const BYTE_BITS: u16 = 8;
 
 /// The repo's `assets/` folder.
 fn assets() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets")
+}
+
+/// The shipped sound tokens, as written in the file kx-theme compiles in.
+fn shipped_text() -> String {
+    std::fs::read_to_string(SOUNDS_PATH).expect("sounds.toml reads")
 }
 
 /// The shipped tokens, loaded.
@@ -33,8 +38,9 @@ fn shipped() -> Sounds {
 
 /// The shipped tokens with the first `from` replaced by `to`; `from` must occur in them.
 fn edited(from: &str, to: &str) -> String {
-    assert!(SHIPPED.contains(from), "sounds.toml lacks {from:?}");
-    SHIPPED.replacen(from, to, 1)
+    let text = shipped_text();
+    assert!(text.contains(from), "sounds.toml lacks {from:?}");
+    text.replacen(from, to, 1)
 }
 
 /// Asserts `text` is refused with a message that names `word`.
@@ -64,14 +70,16 @@ fn the_shipped_tokens_load_the_owners_four_sounds_in_order() {
         ["key", "rclick", "pick", "drop"],
         "the tables sounds.toml holds"
     );
+    let read = Sounds::parse(&shipped_text()).expect("the file at SOUNDS_PATH loads");
+    assert_eq!(read, s, "SOUNDS_PATH names the file compiled in");
 }
 
 #[test]
-fn the_format_is_the_ports_mono_pcm16_at_48_khz() {
+fn the_format_is_the_ports_mono_pcm16_at_a_rate_every_speaker_plays() {
     let f = shipped().format;
     assert_eq!(f.channels, Clip::CHANNELS);
     assert_eq!(f.bits, Clip::SAMPLE_BYTES * BYTE_BITS);
-    assert_eq!(f.rate, 48_000);
+    assert!(Clip::RATES.contains(&f.rate), "{} Hz", f.rate);
     assert_eq!(f.frame_bytes(), usize::from(Clip::SAMPLE_BYTES));
 }
 
@@ -111,14 +119,15 @@ fn a_gain_above_zero_or_not_a_number_is_refused() {
 
 #[test]
 fn an_event_needs_a_file_and_every_event_is_there() {
-    let start = SHIPPED.find("files = [").expect("a file list");
-    let end = start + SHIPPED[start..].find(']').expect("its end");
+    let text = shipped_text();
+    let start = text.find("files = [").expect("a file list");
+    let end = start + text[start..].find(']').expect("its end");
     refused_text(
-        &format!("{}files = []{}", &SHIPPED[..start], &SHIPPED[end + 1..]),
+        &format!("{}files = []{}", &text[..start], &text[end + 1..]),
         "files",
     );
-    let drop = SHIPPED.find("\n[drop]").expect("the drop table");
-    refused_text(&SHIPPED[..drop], "drop");
+    let drop = text.find("\n[drop]").expect("the drop table");
+    refused_text(&text[..drop], "drop");
     refused("[play]", "[ply]", "play");
 }
 
@@ -142,7 +151,10 @@ fn a_file_that_is_not_a_plain_wav_name_is_refused() {
 fn a_format_the_port_cannot_play_is_refused() {
     refused("bits = 16", "bits = 24", "bits");
     refused("channels = 1", "channels = 2", "channels");
-    refused("rate = 48000", "rate = 0", "rate");
+    let (low, high) = (Clip::RATES.start() - 1, Clip::RATES.end() + 1);
+    for rate in [0, low, high] {
+        refused("rate = 48000", &format!("rate = {rate}"), "rate");
+    }
     refused("ceiling_db = -3.0", "ceiling_db = 1.0", "ceiling_db");
     refused("trim_db = -50.0", "trim_db = 0.0", "trim_db");
     refused("max_ms = 400", "max_ms = 0", "max_ms");
@@ -164,6 +176,7 @@ fn each_file_is_listed_once_in_the_order_first_named() {
 fn the_bundle_holds_each_named_sound_once_with_its_samples() {
     let b = bundle(&assets()).expect("the bundle is found");
     let s = shipped();
+    assert_eq!(b.sound_tokens, s, "the tokens the sounds were read with");
     let names: Vec<&str> = b.sounds.iter().map(|f| f.name.as_str()).collect();
     assert_eq!(names, s.files());
     for f in &b.sounds {
@@ -184,9 +197,15 @@ fn a_named_sound_missing_or_invalid_is_an_error_naming_it() {
     std::fs::create_dir(&folder).expect("the sounds folder");
     let good = std::fs::read(assets().join(SOUND_DIR).join("mouse-press.wav")).expect("it reads");
     std::fs::write(folder.join("good.wav"), &good).expect("written");
-    let stereo = wav::wav(wav::PCM, 2, 48_000, 16, &[0; 8]);
+    let stereo = wav::wav(PCM, 2, 48_000, 16, &[0; 8]);
     std::fs::write(folder.join("bad.wav"), stereo).expect("written");
     std::fs::write(folder.join("notes.txt"), "not a sound").expect("written");
+    // One byte over the largest sound, so its size refuses it before it is read.
+    let f = shipped().format;
+    let max = f.max_frames() * f.frame_bytes() + HEADER_SLACK;
+    std::fs::File::create(folder.join("big.wav"))
+        .and_then(|big| big.set_len(u64::try_from(max + 1).expect("a small size")))
+        .expect("sized");
     let with = |name: &str| Sounds {
         cues: vec![(
             Event::Key,
@@ -199,8 +218,10 @@ fn a_named_sound_missing_or_invalid_is_an_error_naming_it() {
     };
     let found = sound_files(dir.path(), &with("good.wav")).expect("an unnamed file is fine");
     assert_eq!(found.len(), 1);
-    for name in ["bad.wav", "gone.wav"] {
+    for name in ["bad.wav", "gone.wav", "big.wav"] {
         let err = sound_files(dir.path(), &with(name)).expect_err("refused");
         assert!(err.contains(name), "{err}");
     }
+    let err = sound_files(dir.path(), &with("big.wav")).expect_err("refused");
+    assert!(err.contains("larger than"), "{err}");
 }

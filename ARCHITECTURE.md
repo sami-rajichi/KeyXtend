@@ -108,6 +108,7 @@ spike/                   tested P1 code, moved out phase by phase (ADR-0014, doc
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), stage (the release app with its Qt files),
                          dev-cert / dev-install / check-uiaccess (uiAccess test builds),
+                         sounds (recipes, import, join; format and RIFF walker from kx-theme),
                          sign (P14), sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)

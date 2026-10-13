@@ -1,5 +1,7 @@
 //! The speaker port: short clips that play at once, so the UI never waits on audio.
 
+use std::ops::RangeInclusive;
+
 /// Names one clip; the app picks the values.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ClipId(u16);
@@ -34,6 +36,8 @@ impl Clip {
     pub const CHANNELS: u16 = 1;
     /// Bytes in one sample: 16-bit PCM.
     pub const SAMPLE_BYTES: u16 = 2;
+    /// The rates, in samples per second, that every speaker adapter must play.
+    pub const RATES: RangeInclusive<u32> = 8_000..=192_000;
 }
 
 /// Shows the clip's size, never its samples.
@@ -68,6 +72,13 @@ pub trait Speaker: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_adapter_plays_the_common_rates() {
+        for rate in [8_000, 16_000, 44_100, 48_000, 96_000, 192_000] {
+            assert!(Clip::RATES.contains(&rate), "{rate} Hz");
+        }
+    }
 
     #[test]
     fn a_clip_id_keeps_its_raw_value() {

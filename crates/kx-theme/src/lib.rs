@@ -57,8 +57,16 @@ const SHAPE: &str = include_str!("../tokens/shape.toml");
 const MOTION: &str = include_str!("../tokens/motion.toml");
 /// The icon names, compiled in.
 const ICONS: &str = include_str!("../tokens/icons.toml");
+/// The sound tokens' file, written once for `include_str!` and `SOUNDS_PATH`.
+macro_rules! sounds_path {
+    () => {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/tokens/sounds.toml")
+    };
+}
+/// Where the sound tokens sit, so kx-ui's build and the sound tool watch and read the file compiled in.
+pub const SOUNDS_PATH: &str = sounds_path!();
 /// The sound format, voices and events, compiled in.
-const SOUNDS: &str = include_str!("../tokens/sounds.toml");
+const SOUNDS: &str = include_str!(sounds_path!());
 
 /// A token file that does not load, and why; the texts name only tokens, never user data.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
