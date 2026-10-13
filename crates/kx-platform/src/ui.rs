@@ -1,10 +1,12 @@
-//! UI ports: the window guard, screens, the system look, backdrops, the one running copy, the tray icon and the heaps'
-//! free memory. The data types are OS-neutral; adapters keep their own handles behind them.
+//! UI ports: the window guard, screens, the system look, backdrops, the one running copy, the tray icon, the heaps'
+//! free memory and the speaker. The data types are OS-neutral; adapters keep their own handles behind them.
 
 mod memory;
+mod sound;
 mod tray;
 
 pub use memory::Memory;
+pub use sound::{Clip, ClipId, Speaker, SpeakerConfig};
 pub use tray::{BadImage, OnTray, Tray, TrayEvent, TrayIcon, TrayImage};
 
 use kx_module_api::ports::{Point, Rect, Screen};

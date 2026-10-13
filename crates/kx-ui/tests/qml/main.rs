@@ -8,7 +8,7 @@ use cxx_qt_lib::{QByteArray, QGuiApplication, QQmlApplicationEngine, QUrl};
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Screen};
 use kx_platform::ui::SysLook;
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
 };
 use kx_ui::{ASSETS, Hub, MAIN_QML, UiPorts};
 use std::process::ExitCode;
@@ -40,6 +40,7 @@ fn hub() -> Option<(Arc<Hub>, Arc<FakeSystemLook>, Arc<FakeTray>)> {
         backdrop: Arc::new(FakeBackdrop::new()),
         tray: tray.clone(),
         memory: Arc::new(FakeMemory::new()),
+        speaker: Arc::new(FakeSpeaker::new()),
     };
     Hub::new(ports)
         .ok()

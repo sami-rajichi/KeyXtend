@@ -22,7 +22,8 @@ use kx_module_api::{
     Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
 };
 use kx_platform::ui::{
-    Backdrop, FocusToken, Memory, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
+    Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
+    WindowGuard,
 };
 use kx_theme::assets::FontFiles;
 use kx_theme::{ThemeError, Themes};
@@ -48,6 +49,8 @@ pub struct UiPorts {
     pub tray: Arc<dyn Tray>,
     /// Gives the heaps' free pages back after a look change (ADR-0023).
     pub memory: Arc<dyn Memory>,
+    /// Plays the sounds; any thread may call it, since it never blocks.
+    pub speaker: Arc<dyn Speaker>,
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.

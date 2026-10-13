@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 18:30 — P4: a Speaker port with an XAudio2 adapter
+A new `Speaker` UI port plays compiled-in mono PCM16 clips: `play` only sends a message, so the UI never waits on audio, and `UiPorts` now carries it (nothing calls it until the sounds are wired). On Windows a thread of its own loads `XAudio2` from System32 at the first play, keeps a few voices per clip so quick plays overlap, and stops the engine after the configured silence. A lost device rebuilds the engine once per play, each failure kind warns once until a play succeeds, and dropping the speaker destroys the voices before the engine. Tests drive every rule over a fake system and never play sound; the fake speaker records what it was asked.
+
 ## 2026-10-13 17:15 — P4: the app turns mouse assist on, with a panic release and a gate-only build
 The app now ships the mouse module by default and hands it Windows' mouse hook, and its panic hook asks that hook to let go while it keeps running, so a panic during a Grab carry never leaves a button down and one the kernel catches never ends mouse assist. A gate-only build (`gate-input`) takes `--sim-input`, which makes the engine act on the gate tool's input instead of the hand's and logs a warning; every other build refuses that flag like any unknown argument. The stage check refuses a program that holds the flag, `dev-install` refuses to sign one, and CI now runs the real-hook test and the gate build's tests.
 
