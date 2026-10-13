@@ -165,6 +165,7 @@ notice =
     .module-failed = La partie « { $module } » s’est arrêtée après une erreur. Tout le reste fonctionne toujours.
     .keys-not-sent = Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.
     .lang-not-switched = L’application au premier plan n’a pas pu changer de langue.
+    .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =

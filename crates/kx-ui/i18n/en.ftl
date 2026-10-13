@@ -165,6 +165,7 @@ notice =
     .module-failed = { $module } stopped after an error. Everything else still works.
     .keys-not-sent = Some keys did not reach the app in front. Check what was typed.
     .lang-not-switched = The app in front could not switch the language.
+    .mouse-hook-failed = Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.
 
 ## Module names by module id; an id not listed shows itself.
 module =

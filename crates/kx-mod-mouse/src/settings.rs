@@ -19,6 +19,9 @@ pub(crate) const HEALTH_SLACK_MS: RangeInclusive<u32> = 100..=5_000;
 /// How long input waits behind our own before it goes on anyway, in ms.
 pub(crate) const ECHO_MS: RangeInclusive<u32> = 20..=2_000;
 
+/// The key of Right-click mode, which the module writes on each toggle.
+pub(crate) const RCLICK_KEY: &str = "rclick";
+
 /// Why a ring at or past the shortest hold was refused.
 const RING_LATE: &str = "ring_after_ms must stay below the shortest hold_ms";
 

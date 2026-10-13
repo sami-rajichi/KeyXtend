@@ -38,7 +38,7 @@ impl Event for Notice {
     const NAME: &'static str = "notice";
 }
 
-/// Translation keys of the notices the kernel and the keyboard face show.
+/// Translation keys of the notices the kernel and the modules show.
 pub mod keys {
     /// Some settings values were bad and went back to their defaults.
     pub const SETTINGS_RESET: &str = "notice.settings-reset";
@@ -58,9 +58,11 @@ pub mod keys {
     pub const KEYS_NOT_SENT: &str = "notice.keys-not-sent";
     /// The app in front could not be asked to switch language.
     pub const LANG_NOT_SWITCHED: &str = "notice.lang-not-switched";
+    /// The OS refused the mouse module's hook, so its modes stay off; the next toggle tries again.
+    pub const MOUSE_HOOK_FAILED: &str = "notice.mouse-hook-failed";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 9] = [
+    pub const ALL_KEYS: [&str; 10] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -70,6 +72,7 @@ pub mod keys {
         MODULE_FAILED,
         KEYS_NOT_SENT,
         LANG_NOT_SWITCHED,
+        MOUSE_HOOK_FAILED,
     ];
 }
 

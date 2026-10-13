@@ -1,16 +1,28 @@
-//! The module's start through the shared fake host, which gates services as the kernel does.
+//! The module's start through the shared fake host, which gates services as the kernel does, and its actor thread
+//! over the bus.
 
+use crate::rig::{RCLICK, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
-    HookConfig, HookError, HookRun, PointerEngine, PointerHook, PointerHookKey,
+    AssistAsk, AssistChanged, AssistToggle, GrabState, HookConfig, HookError, HookRun, LatchesAsk,
+    LatchesChanged, PointerEngine, PointerHook, PointerHookKey, Scan, Toggle,
 };
 use kx_module_api::{
-    Capability, Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError,
+    Bus, Capability, Event, Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError,
+    Subscription,
 };
+use kx_platform_fake::FakePointerHook;
 use kx_test_support::host::{FakeHost, Stored};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver};
+use std::time::Duration;
 
-/// A hook that never starts; the module only keeps it at start.
+/// The longest a threaded test waits for the actor; it never sleeps.
+const WAIT: Duration = Duration::from_secs(10);
+/// Left Shift.
+const SHIFT: Scan = Scan::new(0x2A);
+
+/// A hook that never starts.
 struct Idle;
 
 impl PointerHook for Idle {
@@ -23,16 +35,20 @@ impl PointerHook for Idle {
     }
 }
 
-/// A host on the defaults granting `granted`, holding a hook when `with_hook`.
-fn host(granted: &[Capability], with_hook: bool) -> FakeHost {
+/// A host on the defaults granting `granted`, holding `hook` if any.
+fn host(granted: &[Capability], hook: Option<Arc<dyn PointerHook>>) -> FakeHost {
     let mut host = FakeHost::new(&MANIFEST);
     host.granted = granted.to_vec();
-    if with_hook {
-        let hook: Arc<dyn PointerHook> = Arc::new(Idle);
+    if let Some(hook) = hook {
         let stored: Stored = (PointerHookKey::CAPABILITY, Box::new(hook));
         host.services.insert(PointerHookKey::ID, stored);
     }
     host
+}
+
+/// A host granting everything, holding a hook that never starts.
+fn idle(granted: &[Capability]) -> FakeHost {
+    host(granted, Some(Arc::new(Idle)))
 }
 
 /// Starts the module on `host`.
@@ -45,12 +61,12 @@ const ALL: [Capability; 2] = [Capability::PointerHook, Capability::InjectInput];
 
 #[test]
 fn it_starts_on_the_defaults_with_the_hook_granted() {
-    assert_eq!(start(&mut host(&ALL, true)), Ok(()));
+    assert_eq!(start(&mut idle(&ALL)), Ok(()));
 }
 
 #[test]
 fn without_the_pointer_hook_grant_it_cannot_reach_the_hook() {
-    let mut host = host(&[Capability::InjectInput], true);
+    let mut host = idle(&[Capability::InjectInput]);
     let refused = ServiceError::NotGranted(PointerHookKey::ID, Capability::PointerHook);
     assert_eq!(start(&mut host), Err(ModuleError::Service(refused)));
 }
@@ -59,16 +75,130 @@ fn without_the_pointer_hook_grant_it_cannot_reach_the_hook() {
 fn without_a_hook_it_fails_to_start() {
     let missing = ServiceError::Missing(PointerHookKey::ID);
     let refused = Err(ModuleError::Service(missing));
-    assert_eq!(start(&mut host(&ALL, false)), refused);
+    assert_eq!(start(&mut host(&ALL, None)), refused);
 }
 
 #[test]
 fn a_bad_value_fails_the_start() {
-    let mut host = host(&ALL, true);
+    let mut host = idle(&ALL);
     host.put("hold_ms", 9_000.into());
     let err = start(&mut host);
     assert!(
         matches!(err, Err(ModuleError::Settings(SettingsError::Invalid(_)))),
         "{err:?}"
     );
+}
+
+/// A running module on a fake hook, and an unlimited bus to talk to it.
+struct Live {
+    host: FakeHost,
+    hook: Arc<FakePointerHook>,
+    module: MouseModule,
+    bus: Bus,
+}
+
+impl Live {
+    /// Starts the module on a host that `setup` changes, after `listen` subscribes on its bus.
+    fn start<T>(setup: impl FnOnce(&mut FakeHost), listen: impl FnOnce(&Bus) -> T) -> (Self, T) {
+        let hook = Arc::new(FakePointerHook::new());
+        let mut host = host(&ALL, Some(hook.clone()));
+        setup(&mut host);
+        let bus = Bus::new(Arc::clone(&host.core));
+        let heard = listen(&bus);
+        let mut module = MouseModule::default();
+        module.start(&mut ModuleCx::new(&mut host)).unwrap();
+        let live = Self {
+            host,
+            hook,
+            module,
+            bus,
+        };
+        (live, heard)
+    }
+
+    /// Stops the module as the kernel does: its handlers leave the bus first.
+    fn stop(&mut self) {
+        self.host.held.clear();
+        self.module.stop();
+    }
+}
+
+/// Sends every `E` published on `bus` to the returned channel.
+fn hear<E: Event + Clone>(bus: &Bus) -> (Subscription, Receiver<E>) {
+    let (tx, rx) = mpsc::channel();
+    let sub = bus
+        .subscribe(move |e: &E| {
+            let _ = tx.send(e.clone());
+        })
+        .unwrap();
+    (sub, rx)
+}
+
+/// The live state with `rclick` and Grab off.
+fn on(rclick: bool) -> AssistChanged {
+    let grab = GrabState::Off;
+    AssistChanged {
+        live: true,
+        rclick,
+        grab,
+    }
+}
+
+#[test]
+fn the_actor_thread_says_it_is_live_hears_a_toggle_and_stops_with_the_module() {
+    let (mut live, (_ear, told)) = Live::start(|_| {}, hear::<AssistChanged>);
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)));
+    live.bus
+        .publish(&AssistToggle {
+            which: Toggle::RightClick,
+        })
+        .unwrap();
+    live.bus.publish(&AssistAsk).unwrap();
+    assert_eq!(
+        told.recv_timeout(WAIT),
+        Ok(on(false)),
+        "asked after the toggle"
+    );
+    assert!(live.hook.running(), "the toggle started the hook");
+    live.hook.settle(T0);
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(true)));
+    live.stop();
+    assert!(
+        !live.hook.running(),
+        "the stop joined the thread, whose run let go"
+    );
+    let off = AssistChanged {
+        live: false,
+        ..on(true)
+    };
+    assert_eq!(told.try_recv(), Ok(off));
+}
+
+#[test]
+fn the_actor_thread_asks_for_latches_and_a_latch_starts_the_hook() {
+    let listen = |bus: &Bus| (hear::<AssistChanged>(bus), hear::<LatchesAsk>(bus));
+    let (mut live, ((_e1, told), (_e2, asked))) = Live::start(|_| {}, listen);
+    assert_eq!(asked.recv_timeout(WAIT), Ok(LatchesAsk));
+    let held = vec![SHIFT];
+    live.bus.publish(&LatchesChanged { held }).unwrap();
+    live.bus.publish(&AssistAsk).unwrap();
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)));
+    assert_eq!(
+        told.recv_timeout(WAIT),
+        Ok(on(false)),
+        "asked after the latch"
+    );
+    assert!(live.hook.running());
+    live.stop();
+    assert_eq!(live.hook.stops(), 1);
+}
+
+#[test]
+fn a_saved_right_click_runs_the_hook_from_the_start() {
+    let saved = |host: &mut FakeHost| host.put(RCLICK, true.into());
+    let (mut live, (_ear, told)) = Live::start(saved, hear::<AssistChanged>);
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(true)));
+    assert!(live.hook.running());
+    live.stop();
+    assert!(!live.hook.running());
 }

@@ -544,6 +544,7 @@ dependencies = [
  "proptest",
  "serde",
  "toml",
+ "tracing",
 ]
 
 [[package]]

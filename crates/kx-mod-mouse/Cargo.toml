@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
 serde.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }

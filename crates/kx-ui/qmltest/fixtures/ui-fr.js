@@ -137,6 +137,7 @@ var texts = {
   "notice.keys-not-sent": "Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.",
   "notice.lang-not-switched": "L’application au premier plan n’a pas pu changer de langue.",
   "notice.module-failed": "La partie « {$module} » s’est arrêtée après une erreur. Tout le reste fonctionne toujours.",
+  "notice.mouse-hook-failed": "L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.",
   "notice.settings-defaults": "Aucun fichier de paramètres n’était utilisable ; les paramètres par défaut sont utilisés.",
   "notice.settings-locked": "Un autre programme utilise le fichier de paramètres. Les paramètres par défaut sont utilisés et rien n’est enregistré.",
   "notice.settings-newer": "Les paramètres de « {$module} » viennent d’une version plus récente. Ils sont conservés et les valeurs par défaut sont utilisées pour l’instant.",

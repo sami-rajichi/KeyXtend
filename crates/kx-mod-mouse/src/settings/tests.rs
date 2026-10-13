@@ -105,3 +105,12 @@ fn a_missing_or_unknown_key_does_not_parse() {
     assert!(unparsed(&with("grab", true)), "Grab is never remembered");
     assert!(unparsed(&with("rclick", 1)), "a mode is on or off");
 }
+
+#[test]
+fn the_key_the_module_writes_is_right_click_mode() {
+    assert_eq!(
+        defaults().get(RCLICK_KEY),
+        Some(&toml::Value::Boolean(false))
+    );
+    assert!(check(&with(RCLICK_KEY, true)).is_ok());
+}
