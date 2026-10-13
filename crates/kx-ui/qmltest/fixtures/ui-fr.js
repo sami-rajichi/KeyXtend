@@ -189,10 +189,12 @@ var more = [
   "12 autres notifications"
 ];
 var assist = {
+  "area": null,
   "burst": null,
   "grab": "off",
   "live": false,
   "point": null,
+  "pointerBase": 32,
   "pointerPx": 32,
   "rclick": false,
   "ring": null,

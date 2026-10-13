@@ -18,6 +18,8 @@ QtObject {
     property var trayTexts: En.texts
     property var look: Look.lk
     property var assist: En.assist
+    // How often QML read the overlay's state.
+    property int assistReads: 0
     // The backdrop answer, and every call so far.
     property bool frosted: false
     property var calls: []
@@ -77,6 +79,7 @@ QtObject {
         return JSON.stringify(look);
     }
     function assistJson() {
+        assistReads++;
         return JSON.stringify(assist);
     }
     // The bundle as the app holds it: fonts the texts test lays out, and icons the tests' icon plugin serves.

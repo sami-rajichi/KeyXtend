@@ -9,6 +9,9 @@ Glow {
     // The keyboard window, whose state, look and keyboard the list reads and calls.
     required property Window win
 
+    // The list's own window, which the pointer overlay's badge hides over.
+    readonly property alias list: list
+
     lk: win.lk
     box: Qt.rect(list.x, list.y, list.width, list.height)
     radius: list.radius

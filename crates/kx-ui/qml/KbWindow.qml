@@ -41,6 +41,8 @@ Window {
     readonly property alias hold: beat
     // When a pressed key acts against the frame that shows it pressed.
     readonly property alias presses: frame
+    // The language list with its shadow while it shows, else null.
+    readonly property alias panel: lists.item
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -84,24 +86,8 @@ Window {
     onVisibleChanged: if (visible) Qt.callLater(shown)
     Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
 
-    Connections {
-        target: win.ui
-        function onSettingsChanged() {
-            win.reread();
-        }
-        function onLookChanged() {
-            win.relook();
-        }
-        function onTextsChanged() {
-            win.retext();
-        }
-        function onFontsChanged() {
-            win.faces++;
-        }
-        // A mouse mode or a used latch changed the keys on the bus: their lights show now, not at the next relabel.
-        function onKeysChanged() {
-            win.restate();
-        }
+    KbWakes {
+        win: win
     }
     // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
     Rescale {
@@ -126,6 +112,7 @@ Window {
     }
     // The List design's language list, while the state holds one; the list and its shadow stay above the keyboard.
     Loader {
+        id: lists
         active: win.ready && win.visible && !!win.st.list
         sourceComponent: LangPanel {
             win: win

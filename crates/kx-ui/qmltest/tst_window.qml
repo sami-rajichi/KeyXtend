@@ -229,6 +229,35 @@ Item {
             compare(win.keyboard.calls.indexOf("relabel"), -1, "no relabel tick ran");
         }
 
+        // While mouse assist is off its keys take the dim paint from the state: they press as a dimmed key does, send
+        // nothing and keep the tip that says why; once it runs, they act.
+        function test_a_mouse_key_dimmed_by_its_state_sends_nothing_and_keeps_its_tip() {
+            const win = make({}, { state: JSON.parse(JSON.stringify(Face.states.en)) });
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const taps = id => win.keyboard.calls.filter(c => c.indexOf("tap " + id) === 0).length;
+            for (const id of ["rclick", "grab"]) {
+                const key = keyed(win, id);
+                verify(Qt.colorEqual(key.fillColour, win.lk.palette.dim), id + " is dimmed");
+                mouseMove(key, key.width / 2, key.height / 2);
+                const says = En.texts["key." + id] + "\n" + En.texts["tip.mouse-off"];
+                compare(tipOf(win).name, says, id);
+                mousePress(key);
+                verify(!key.down && key.sink === 0, id + " does not sink");
+                mouseRelease(key);
+                tryCompare(win.presses, "waiting", null);
+                compare(taps(id), 0, id + " sends nothing");
+                compare(tipOf(win).name, says, id + " keeps its tip");
+            }
+            const keys = win.keyboard.state.keys;
+            keys.rclick = Object.assign({}, keys.rclick, { paint: keys.esc.paint, tip: "tip.rclick" });
+            win.ui.keysChanged();
+            mouseClick(keyed(win, "rclick"));
+            tryCompare(win.presses, "waiting", null);
+            compare(taps("rclick"), 1, "a live key acts");
+            win.visible = false;
+        }
+
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {
             const ui = createTemporaryObject(uiC, root);
             const kb = createTemporaryObject(kbC, root, { board: null, state: null });

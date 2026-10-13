@@ -1,6 +1,6 @@
 // The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner and the tray
-// menu, each over a click-through shadow window, and the tray icon's picture. A shadow window owns its window, so
-// Windows keeps the window just above it; owners show first.
+// menu, each over a click-through shadow window, the pointer overlay and the tray icon's picture. A shadow window owns
+// its window, so Windows keeps the window just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -49,6 +49,9 @@ QtObject {
         }
         function onSettingsChanged() {
             Qt.callLater(app.trayPicture.draw);
+        }
+        function onAssistChanged() {
+            app.assistRead.running = true;
         }
     }
 
@@ -134,6 +137,30 @@ QtObject {
             onQuitApp: app.ui.quit()
         }
     }
+    // The pointer overlay's state as last read. A wake reads it on the next frame, never in a poll, and only a read lets
+    // the next change wake, so the reader stays here, outside the overlay's Loader.
+    property var assist: null
+    property FrameAnimation assistRead: FrameAnimation {
+        running: true
+        onTriggered: {
+            running = false;
+            app.assist = JSON.parse(app.ui.assistJson());
+        }
+    }
+    // The pointer overlay, made while a mode is on or a hold plays, and freed once every mode is off.
+    property Loader pointer: Loader {
+        readonly property var st: app.assist
+        active: !!face.lk && !!st && st.live && (st.rclick || st.grab !== "off" || !!st.ring || !!st.burst)
+        sourceComponent: Overlay {
+            id: overlay
+            lk: face.lk
+            res: face.res
+            st: app.assist
+            spots: face.spots
+            ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null]
+            onVisibleChanged: if (visible) app.lift(overlay)
+        }
+    }
     // Draws the tray icon's picture in the look and hands it to the Ui object.
     property TrayPicture trayPicture: TrayPicture {
         ui: app.ui
@@ -169,12 +196,15 @@ QtObject {
         }
     }
 
-    // Shows or hides a pop-up's shadow with it. Pop-up window `top` shows again where it was, so its guard run puts it
-    // in front; the bubble's tip hides first, as the keyboard's does.
+    // Shows or hides a pop-up's shadow with it, and lifts a shown one.
     function shadow(glow, on, top) {
         glow.visible = on;
-        if (!on)
-            return;
+        if (on)
+            lift(top);
+    }
+    // Our window `top` shows again where it was, so its guard run puts it in front; the bubble's tip hides first, as the
+    // keyboard's does.
+    function lift(top) {
         bubble.hideTip();
         face.guardRun(top);
     }

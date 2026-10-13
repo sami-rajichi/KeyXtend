@@ -1,10 +1,12 @@
 //! The pointer overlay's state through the hub: the mouse modes, the pointer, the hold ring and its burst as one JSON,
 //! with at most one wake in flight until QML reads it, and no point in any log.
 
-use crate::Rig;
 use crate::app::keeper;
 use crate::logs::lines_of;
-use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, Point, PointerMoved};
+use crate::{DPI, Rig, main_screen};
+use kx_module_api::ports::{
+    AssistChanged, AssistNote, GrabState, Point, PointerMoved, Rect, Screen,
+};
 use kx_module_api::{Bus, Subscription};
 use kx_platform::ui::SysLook;
 use kx_test_support::host::FakeCore;
@@ -64,9 +66,33 @@ fn the_state_starts_off_with_nothing_shown_and_the_usual_pointer() {
     let rig = Rig::new();
     let want = json!({
         "live": false, "rclick": false, "grab": "off", "point": null, "ring": null, "burst": null,
-        "pointerPx": SysLook::POINTER_PX, "seq": 0
+        "pointerPx": SysLook::POINTER_PX, "pointerBase": SysLook::POINTER_PX, "area": null, "seq": 0
     });
     assert_eq!(state(&rig), want);
+}
+
+/// The badge stays inside the work area under the pointer; on a taskbar, the one nearest it.
+#[test]
+fn the_state_carries_the_work_area_nearest_the_point() {
+    let (rig, bus, _subs) = rclick_on();
+    let rect = Rect {
+        x: 1920,
+        y: 0,
+        w: 2560,
+        h: 1400,
+    };
+    let side = Screen {
+        rect,
+        dpi: DPI * 3 / 2,
+        primary: false,
+    };
+    rig.screens.set_areas(vec![main_screen(), side]);
+    let on_side = Point { x: 3001, y: 701 };
+    let over_main_taskbar = Point { x: 101, y: 1071 };
+    for (at, area) in [(on_side, rect), (over_main_taskbar, main_screen().rect)] {
+        bus.publish(&PointerMoved { at }).unwrap();
+        assert_eq!(state(&rig)["area"], json!(area), "{at:?}");
+    }
 }
 
 #[test]

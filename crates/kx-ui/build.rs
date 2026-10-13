@@ -73,6 +73,10 @@ mod qt {
         "qml/PressWatch.qml",
         "qml/Act.qml",
         "qml/PressFrame.qml",
+        "qml/KbWakes.qml",
+        "qml/Overlay.qml",
+        "qml/HoldRing.qml",
+        "qml/Badge.qml",
     ];
     /// QML files only debug builds hold: the memory check's churn.
     const DEBUG_QML: &[&str] = &["qml/Churn.qml"];

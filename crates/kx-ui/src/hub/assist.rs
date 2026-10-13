@@ -3,7 +3,9 @@
 //! logs.
 
 use super::{Hub, Wake, json};
-use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, Point};
+use crate::geom::screen_near;
+use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, Point, Rect};
+use kx_platform::ui::SysLook;
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -66,13 +68,16 @@ impl Shown {
     }
 }
 
-/// The state as QML reads it, with the pointer's size.
+/// The state as QML reads it, with the pointer's size, Windows' default size, which the badge's offsets suit, and the
+/// work area nearest the point, which the badge stays inside.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct View {
     #[serde(flatten)]
     shown: Shown,
     pointer_px: u32,
+    pointer_base: u32,
+    area: Option<Rect>,
 }
 
 /// The overlay's state, and whether a wake waits for QML to read it.
@@ -95,7 +100,16 @@ impl Hub {
         self.assist.waiting.store(false, Ordering::SeqCst);
         let shown = *self.assist.lock();
         let pointer_px = self.lock().sys.pointer_px;
-        json(&View { shown, pointer_px })
+        let area = shown.point.and_then(|at| {
+            let screens = self.ports.screens.work_areas();
+            screen_near(at, &screens).map(|s| s.rect)
+        });
+        json(&View {
+            shown,
+            pointer_px,
+            pointer_base: SysLook::POINTER_PX,
+            area,
+        })
     }
 
     /// Takes the mouse module's state; with no mode on, the point, ring and burst go.
