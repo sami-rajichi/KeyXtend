@@ -4,6 +4,8 @@ mod sounds;
 
 use std::fmt;
 
+pub(crate) use self::sounds::SoundsAction;
+
 /// Exit code for a successful run.
 pub(crate) const EXIT_SUCCESS: u8 = 0;
 /// Exit code when a subcommand finds a problem.
@@ -84,22 +86,8 @@ pub(crate) enum Command {
         /// The installed program.
         exe: String,
     },
-    /// Render every sound recipe to WAV files.
-    SoundsRender {
-        /// The output folder; without it, the one `[workspace.metadata.sounds]` names.
-        out: Option<String>,
-    },
-    /// Convert a recording to the shipping sound format.
-    SoundsImport {
-        /// The recording.
-        input: String,
-        /// The converted file.
-        output: String,
-        /// Where the kept window starts, in ms.
-        start_ms: Option<u32>,
-        /// The kept window's length, in ms.
-        len_ms: Option<u32>,
-    },
+    /// Render, import or join sounds.
+    Sounds(SoundsAction),
 }
 
 /// A command-line usage error. Its `Display` is the usage line.
@@ -140,7 +128,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, UsageError> {
         [name, exe] if name == SUB_CHECK_UIACCESS => {
             Ok(Command::CheckUiAccess { exe: exe.clone() })
         }
-        [name, rest @ ..] if name == SUB_SOUNDS => sounds::parse(rest),
+        [name, rest @ ..] if name == SUB_SOUNDS => sounds::parse(rest).map(Command::Sounds),
         _ => Err(UsageError),
     }
 }

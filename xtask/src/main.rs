@@ -53,8 +53,15 @@ fn run(command: &cli::Command) -> ExitCode {
         cli::Command::CheckUiAccess { exe } => {
             devtools::check::run(exe).map_or_else(fail, exit_for)
         }
-        cli::Command::SoundsRender { out } => finish(sounds::render(out.as_deref())),
-        cli::Command::SoundsImport {
+        cli::Command::Sounds(action) => finish(run_sounds(action)),
+    }
+}
+
+/// Runs one `cargo xtask sounds` action.
+fn run_sounds(action: &cli::SoundsAction) -> Result<(), sounds::SoundError> {
+    match action {
+        cli::SoundsAction::Render { out } => sounds::render(out.as_deref()),
+        cli::SoundsAction::Import {
             input,
             output,
             start_ms,
@@ -64,8 +71,14 @@ fn run(command: &cli::Command) -> ExitCode {
                 start_ms: *start_ms,
                 len_ms: *len_ms,
             };
-            finish(sounds::import(input, output, cut))
+            sounds::import(input, output, cut)
         }
+        cli::SoundsAction::Join {
+            first,
+            second,
+            output,
+            at_ms,
+        } => sounds::join(first, second, output, *at_ms),
     }
 }
 

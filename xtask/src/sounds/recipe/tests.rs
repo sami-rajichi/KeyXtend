@@ -82,3 +82,26 @@ fn frequencies_stay_below_nyquist_after_jitter_and_glide() {
     let fits = parse(&edited("hz = 3000", "hz = 19000")).unwrap();
     assert_eq!(fits.recipes.len(), 2);
 }
+
+#[test]
+fn a_recipe_writes_its_name_or_one_stem_per_variant() {
+    let book = parse(BOOK).unwrap();
+    assert_eq!(book.recipes[0].stems(), ["tap-1", "tap-2", "tap-3"]);
+    assert_eq!(book.recipes[1].stems(), ["thud"]);
+}
+
+#[test]
+fn two_recipes_may_not_write_the_same_file() {
+    refused("name = \"thud\"", "name = \"tap-2\"", "\"tap-2\"");
+}
+
+#[test]
+fn a_recipe_whose_layers_are_all_silent_is_refused() {
+    let silent = "level = 0.0\nglide = { ratio = 0.8";
+    refused("level = 1.0\nglide = { ratio = 0.8", silent, "thud");
+    let quiet_partials = edited("level = 1.0 },", "level = 0.0 },")
+        .replacen("level = 0.5 },", "level = 0.0 },", 1)
+        .replacen("level = 0.5\n", "level = 0.0\n", 1);
+    let err = parse(&quiet_partials).unwrap_err();
+    assert!(err.to_string().contains("tap"), "got: {err}");
+}

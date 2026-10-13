@@ -125,3 +125,28 @@ proptest! {
         let _ = read(&wav);
     }
 }
+
+#[test]
+fn a_file_without_a_data_chunk_is_refused() {
+    let mut wav = small();
+    wav.truncate(36);
+    let riff = u32::try_from(wav.len() - 8).unwrap();
+    wav[4..8].copy_from_slice(&riff.to_le_bytes());
+    assert_eq!(read(&wav).unwrap_err(), WavError::Missing(DATA));
+}
+
+#[test]
+fn zero_channels_are_refused() {
+    let mut wav = small();
+    wav[22..24].copy_from_slice(&0u16.to_le_bytes());
+    assert!(matches!(read(&wav).unwrap_err(), WavError::Unsupported(_)));
+}
+
+#[test]
+fn a_read_reports_the_file_layout() {
+    let audio = read(&small()).unwrap();
+    assert_eq!((audio.rate, audio.channels, audio.bits), (8_000, 1, 16));
+    let stereo = encode(TAG_PCM, 44_100, 24, &[vec![0.5, 0.25]]);
+    let audio = read(&stereo).unwrap();
+    assert_eq!((audio.rate, audio.channels, audio.bits), (44_100, 2, 24));
+}

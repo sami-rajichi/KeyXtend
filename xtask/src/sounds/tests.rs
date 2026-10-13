@@ -24,8 +24,8 @@ fn ceiling(book: &Book) -> f64 {
 fn render_every(book: &Book) -> Vec<(String, Sound)> {
     let mut out = Vec::new();
     for recipe in &book.recipes {
-        for (stem, jitter) in stems(recipe, &book.variants) {
-            let sound = render_clip(book, recipe, &stem, jitter).unwrap();
+        for stem in recipe.stems() {
+            let sound = render_clip(book, recipe, &stem).unwrap();
             out.push((stem, sound));
         }
     }
@@ -54,8 +54,8 @@ fn assert_shipping(book: &Book, wav: &[u8]) -> Vec<i16> {
 fn a_recipe_renders_the_same_bytes_twice() {
     let book = book();
     let thud = &book.recipes[1];
-    let first = render_clip(&book, thud, "thud", None).unwrap();
-    let second = render_clip(&book, thud, "thud", None).unwrap();
+    let first = render_clip(&book, thud, "thud").unwrap();
+    let second = render_clip(&book, thud, "thud").unwrap();
     assert_eq!(first.bytes, second.bytes);
 }
 
@@ -116,13 +116,15 @@ fn import_turns_a_44k_stereo_24_bit_sine_into_48k_mono_16_bit_at_the_same_pitch(
     let frames: Vec<Vec<f64>> = signal.iter().map(|s| vec![s * 0.5, s * 0.25]).collect();
     let sound = import_clip(&book, &encode(TAG_PCM, 44_100, 24, &frames), Cut::default()).unwrap();
     let pcm = assert_shipping(&book, &sound.bytes);
+    // The tone is 300 ms from phase zero, so a trim keeps all of it but its first, silent sample.
+    let tone_len = samples(300.0, 48_000.0);
     assert!(
-        (index(pcm.len()) - 14_400.0).abs() <= 48.0,
+        pcm.len().abs_diff(tone_len) <= 2,
         "trimmed to {}",
         pcm.len()
     );
     let hz = index(crossings(&pcm)) / 2.0 / (index(pcm.len()) / 48_000.0);
-    assert!((hz - 1_000.0).abs() < 10.0, "pitch {hz} Hz");
+    assert!((hz - 1_000.0).abs() < 3.0, "pitch {hz} Hz");
     assert!(
         f64::from(peak(&pcm)) >= ceiling(&book) - 1.0,
         "not normalised"
@@ -144,6 +146,36 @@ fn import_cuts_the_given_window_and_caps_the_length() {
     let whole = import_clip(&book, &wav, Cut::default()).unwrap();
     assert_eq!(pcm(&whole.bytes).len(), 19_200);
     assert!((whole.ms - 400.0).abs() < 1e-9);
+}
+
+#[test]
+fn trim_mode_caps_the_length_across_a_rate_change() {
+    let book = book();
+    let wav = encode(TAG_PCM, 44_100, 16, &mono(&sine(440.0, 44_100, 1_000, 0.3)));
+    let sound = import_clip(&book, &wav, Cut::default()).unwrap();
+    assert_eq!(pcm(&sound.bytes).len(), 19_200);
+}
+
+#[test]
+fn a_window_longer_than_the_limit_is_refused() {
+    let book = book();
+    let wav = encode(TAG_PCM, 44_100, 16, &mono(&sine(440.0, 44_100, 1_000, 0.3)));
+    for (start_ms, len_ms) in [(Some(0), Some(500)), (Some(100), None), (None, Some(401))] {
+        let err = import_clip(&book, &wav, Cut { start_ms, len_ms }).unwrap_err();
+        assert!(
+            matches!(err, SoundError::TooLong(_)),
+            "{start_ms:?} {len_ms:?}"
+        );
+        assert!(err.to_string().contains("400"), "{err}");
+    }
+    let fits = Cut {
+        start_ms: Some(600),
+        len_ms: Some(400),
+    };
+    assert_eq!(
+        pcm(&import_clip(&book, &wav, fits).unwrap().bytes).len(),
+        19_200
+    );
 }
 
 #[test]

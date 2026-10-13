@@ -110,7 +110,7 @@ pub(crate) fn crossings(samples: &[i16]) -> usize {
 
 /// A sine of `hz` at `rate`, `ms` long, with `amp` amplitude, starting at phase zero.
 pub(crate) fn sine(hz: f64, rate: u32, ms: u32, amp: f64) -> Vec<f64> {
-    let n = rate / 1000 * ms;
+    let n = rate * ms / 1000;
     (0..n)
         .map(|i| amp * (TAU * hz * f64::from(i) / f64::from(rate)).sin())
         .collect()

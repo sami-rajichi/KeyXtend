@@ -165,6 +165,17 @@ pub(crate) enum Filter {
     Bandpass,
 }
 
+impl Recipe {
+    /// The file stems this recipe writes: its name, or `name-1` to `name-n` with variants.
+    pub(crate) fn stems(&self) -> Vec<String> {
+        let name = &self.name;
+        match self.variants {
+            None => vec![name.clone()],
+            Some(n) => (1..=n).map(|i| format!("{name}{NAME_SEP}{i}")).collect(),
+        }
+    }
+}
+
 /// Parses and checks a recipe file.
 pub(crate) fn parse(text: &str) -> Result<Book, SoundError> {
     let book: Book = toml::from_str(text).map_err(|err| SoundError::Recipe(err.to_string()))?;

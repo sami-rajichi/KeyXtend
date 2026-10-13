@@ -49,6 +49,10 @@ const SIGN_BIT: u8 = 0x80;
 pub(crate) struct Audio {
     /// Samples per second.
     pub(crate) rate: u32,
+    /// The file's channels, before the mix to mono.
+    pub(crate) channels: u16,
+    /// The file's bits per sample.
+    pub(crate) bits: u16,
     /// The mono samples.
     pub(crate) samples: Vec<f64>,
 }
@@ -124,6 +128,8 @@ pub(crate) fn read(bytes: &[u8]) -> Result<Audio, WavError> {
     let spec = Spec::parse(fmt)?;
     Ok(Audio {
         rate: spec.rate,
+        channels: spec.channels,
+        bits: spec.bits,
         samples: decode(&spec, data)?,
     })
 }
@@ -189,6 +195,8 @@ struct Spec {
     rate: u32,
     /// Channels.
     channels: u16,
+    /// Bits per sample.
+    bits: u16,
     /// Bytes per sample.
     width: usize,
     /// How samples are stored.
@@ -227,6 +235,7 @@ impl Spec {
         Ok(Self {
             rate,
             channels,
+            bits,
             width,
             kind,
         })

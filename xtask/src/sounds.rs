@@ -1,8 +1,9 @@
-//! The `sounds` subcommand: renders the recipe candidates and imports recordings in the shipping format.
+//! The `sounds` subcommand: renders the recipe candidates, imports recordings in the shipping format and joins two sounds.
 
 mod finish;
 #[cfg(test)]
 mod fixture;
+mod mix;
 mod recipe;
 mod resample;
 mod synth;
@@ -16,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use self::recipe::{Book, Jitter, NAME_SEP, Recipe};
+use self::recipe::{Book, Recipe};
 use self::units::samples;
 use crate::devtools::paths::{is_relative_plain, join_rel, text};
 use crate::workspace::{self, LoadError};
@@ -25,8 +26,8 @@ use crate::workspace::{self, LoadError};
 const SECTION: &str = "sounds";
 /// The extension of every written sound.
 const EXT: &str = "wav";
-/// An imported recording peaks at the ceiling itself.
-const IMPORT_GAIN_DB: f64 = 0.0;
+/// An imported or joined sound peaks at the ceiling itself.
+const FULL_GAIN_DB: f64 = 0.0;
 
 /// Why a `sounds` command failed.
 #[derive(Debug)]
@@ -43,6 +44,10 @@ pub(crate) enum SoundError {
     Window,
     /// The sound is silent, so it cannot be normalised.
     Silent,
+    /// The sound would be longer than the limit, in ms.
+    TooLong(f64),
+    /// A file to join is not in the shipping format.
+    NotShipping(String),
 }
 
 impl From<LoadError> for SoundError {
@@ -66,6 +71,10 @@ impl fmt::Display for SoundError {
             Self::Wav(err) => write!(f, "{err}"),
             Self::Window => write!(f, "the window holds no sample of the recording"),
             Self::Silent => write!(f, "the sound is silent"),
+            Self::TooLong(max_ms) => write!(f, "the sound would be longer than {max_ms} ms"),
+            Self::NotShipping(name) => {
+                write!(f, "{name} is not in the shipping format; import it first")
+            }
         }
     }
 }
@@ -125,10 +134,28 @@ pub(crate) fn render(out: Option<&str>) -> Result<(), SoundError> {
 pub(crate) fn import(input: &str, output: &str, cut: Cut) -> Result<(), SoundError> {
     let (root, config) = load(&workspace::metadata_json()?)?;
     let book = read_book(&root, &config)?;
-    let bytes = std::fs::read(input).map_err(|err| io_error(Path::new(input), &err))?;
-    let sound = import_clip(&book, &bytes, cut)?;
-    std::fs::write(output, &sound.bytes).map_err(|err| io_error(Path::new(output), &err))?;
-    println!("wrote {output} ({:.1} ms)", sound.ms);
+    let sound = import_clip(&book, &read_file(input)?, cut)?;
+    write_sound(output, &sound)
+}
+
+/// Runs `cargo xtask sounds join`: mixes `second` into `first` from `at_ms` and writes `output`.
+pub(crate) fn join(first: &str, second: &str, output: &str, at_ms: u32) -> Result<(), SoundError> {
+    let (root, config) = load(&workspace::metadata_json()?)?;
+    let book = read_book(&root, &config)?;
+    let part = |path: &str| mix::shipping(&book, path, &read_file(path)?);
+    let sound = mix::join(&book, &part(first)?, &part(second)?, at_ms)?;
+    write_sound(output, &sound)
+}
+
+/// The bytes of the file at `path`.
+fn read_file(path: &str) -> Result<Vec<u8>, SoundError> {
+    std::fs::read(path).map_err(|err| io_error(Path::new(path), &err))
+}
+
+/// Writes `sound` to `path` and says so.
+fn write_sound(path: &str, sound: &Sound) -> Result<(), SoundError> {
+    std::fs::write(path, &sound.bytes).map_err(|err| io_error(Path::new(path), &err))?;
+    println!("wrote {path} ({:.1} ms)", sound.ms);
     Ok(())
 }
 
@@ -149,8 +176,8 @@ fn render_all(book: &Book, dir: &Path) -> Result<Vec<(PathBuf, f64)>, SoundError
     std::fs::create_dir_all(dir).map_err(|err| io_error(dir, &err))?;
     let mut written = Vec::new();
     for recipe in &book.recipes {
-        for (stem, jitter) in stems(recipe, &book.variants) {
-            let sound = render_clip(book, recipe, &stem, jitter)?;
+        for stem in recipe.stems() {
+            let sound = render_clip(book, recipe, &stem)?;
             let path = dir.join(format!("{stem}.{EXT}"));
             std::fs::write(&path, &sound.bytes).map_err(|err| io_error(&path, &err))?;
             written.push((path, sound.ms));
@@ -159,24 +186,9 @@ fn render_all(book: &Book, dir: &Path) -> Result<Vec<(PathBuf, f64)>, SoundError
     Ok(written)
 }
 
-/// The file stems of `recipe`, each with the jitter it takes: `name`, or `name-1` to `name-n`.
-fn stems<'a>(recipe: &Recipe, jitter: &'a Jitter) -> Vec<(String, Option<&'a Jitter>)> {
-    let name = &recipe.name;
-    match recipe.variants {
-        None => vec![(name.clone(), None)],
-        Some(n) => (1..=n)
-            .map(|i| (format!("{name}{NAME_SEP}{i}"), Some(jitter)))
-            .collect(),
-    }
-}
-
-/// Renders the file `stem` of `recipe` in `book`'s format.
-fn render_clip(
-    book: &Book,
-    recipe: &Recipe,
-    stem: &str,
-    jitter: Option<&Jitter>,
-) -> Result<Sound, SoundError> {
+/// Renders the file `stem` of `recipe` in `book`'s format, jittered when the recipe has variants.
+fn render_clip(book: &Book, recipe: &Recipe, stem: &str) -> Result<Sound, SoundError> {
+    let jitter = recipe.variants.map(|_| &book.variants);
     let mut voice = synth::Voice::new(stem, jitter);
     let mut mix = synth::render(recipe, f64::from(book.format.rate), &mut voice);
     finish::master(&mut mix, &book.format, recipe.gain_db + voice.level_db)
@@ -184,18 +196,22 @@ fn render_clip(
 
 /// Converts the WAV file `bytes` to `book`'s format, keeping the part `cut` names.
 ///
-/// The cut and the length cap happen at the recording's own rate, so only the kept part is resampled.
+/// A trimmed recording is cut to the length limit, but a longer window is refused; both happen before resampling.
 fn import_clip(book: &Book, bytes: &[u8], cut: Cut) -> Result<Sound, SoundError> {
     let audio = wav::read(bytes)?;
     let (from, to) = (audio.rate, book.format.rate);
-    let span = if cut.start_ms.is_none() && cut.len_ms.is_none() {
-        finish::trim(&audio.samples, book.format.trim_db)
-    } else {
-        finish::window(&audio.samples, f64::from(from), cut)?
-    };
     let cap = |rate: u32| samples(book.format.max_ms, f64::from(rate));
-    let span = &span[..span.len().min(cap(from))];
+    let span = if cut.start_ms.is_none() && cut.len_ms.is_none() {
+        let loud = finish::trim(&audio.samples, book.format.trim_db);
+        &loud[..loud.len().min(cap(from))]
+    } else {
+        let part = finish::window(&audio.samples, f64::from(from), cut)?;
+        if part.len() > cap(from) {
+            return Err(SoundError::TooLong(book.format.max_ms));
+        }
+        part
+    };
     let mut clip = resample::resample(span, from, to, &book.resample);
     clip.truncate(cap(to));
-    finish::master(&mut clip, &book.format, IMPORT_GAIN_DB)
+    finish::master(&mut clip, &book.format, FULL_GAIN_DB)
 }

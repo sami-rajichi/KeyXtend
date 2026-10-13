@@ -1,34 +1,71 @@
-//! Parsing of `cargo xtask sounds render|import`.
+//! Parsing of `cargo xtask sounds render|import|join`.
 
-use super::{Command, UsageError};
+use super::UsageError;
 
 /// Renders every recipe to WAV files.
 const RENDER: &str = "render";
 /// Converts a recording to the shipping format.
 const IMPORT: &str = "import";
+/// Mixes two shipping-format files into one.
+const JOIN: &str = "join";
 /// Flag naming the folder `render` writes to.
 const FLAG_OUT: &str = "--out";
 /// Flag giving where `import`'s window starts, in ms.
 const FLAG_START_MS: &str = "--start-ms";
 /// Flag giving `import`'s window length, in ms.
 const FLAG_LEN_MS: &str = "--len-ms";
+/// Flag giving where `join`'s second file starts, in ms after the first.
+const FLAG_AT_MS: &str = "--at-ms";
 /// Prefix of every flag; a path argument never starts with it.
 const FLAG_PREFIX: &str = "--";
 
+/// What `cargo xtask sounds` does.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum SoundsAction {
+    /// Render every sound recipe to WAV files.
+    Render {
+        /// The output folder; without it, the one `[workspace.metadata.sounds]` names.
+        out: Option<String>,
+    },
+    /// Convert a recording to the shipping sound format.
+    Import {
+        /// The recording.
+        input: String,
+        /// The converted file.
+        output: String,
+        /// Where the kept window starts, in ms.
+        start_ms: Option<u32>,
+        /// The kept window's length, in ms.
+        len_ms: Option<u32>,
+    },
+    /// Mix two shipping-format files, the second starting `at_ms` after the first.
+    Join {
+        /// The file that starts at zero.
+        first: String,
+        /// The file that starts at `at_ms`.
+        second: String,
+        /// The mixed file.
+        output: String,
+        /// Where the second file starts, in ms.
+        at_ms: u32,
+    },
+}
+
 /// The usage forms of the `sounds` subcommand, named `sub`.
-pub(super) fn forms(sub: &str) -> [String; 2] {
+pub(super) fn forms(sub: &str) -> [String; 3] {
     [
         format!("{sub} {RENDER} [{FLAG_OUT} <dir>]"),
         format!("{sub} {IMPORT} <in.wav> <out.wav> [{FLAG_START_MS} <ms>] [{FLAG_LEN_MS} <ms>]"),
+        format!("{sub} {JOIN} <first.wav> <second.wav> <out.wav> {FLAG_AT_MS} <ms>"),
     ]
 }
 
 /// Parses the arguments that follow `sounds`.
-pub(super) fn parse(args: &[String]) -> Result<Command, UsageError> {
+pub(super) fn parse(args: &[String]) -> Result<SoundsAction, UsageError> {
     match args {
-        [action] if action == RENDER => Ok(Command::SoundsRender { out: None }),
+        [action] if action == RENDER => Ok(SoundsAction::Render { out: None }),
         [action, flag, dir] if action == RENDER && flag == FLAG_OUT && is_path(dir) => {
-            Ok(Command::SoundsRender {
+            Ok(SoundsAction::Render {
                 out: Some(dir.clone()),
             })
         }
@@ -36,6 +73,18 @@ pub(super) fn parse(args: &[String]) -> Result<Command, UsageError> {
             if action == IMPORT && is_path(input) && is_path(output) =>
         {
             import(input, output, flags)
+        }
+        [action, first, second, output, flag, at]
+            if action == JOIN
+                && flag == FLAG_AT_MS
+                && [first, second, output].iter().all(|path| is_path(path)) =>
+        {
+            Ok(SoundsAction::Join {
+                first: first.clone(),
+                second: second.clone(),
+                output: output.clone(),
+                at_ms: ms(at)?,
+            })
         }
         _ => Err(UsageError),
     }
@@ -46,8 +95,13 @@ fn is_path(arg: &str) -> bool {
     !arg.is_empty() && !arg.starts_with(FLAG_PREFIX)
 }
 
-/// Builds the import command from its paths and its `--start-ms`/`--len-ms` pairs, each given at most once.
-fn import(input: &str, output: &str, flags: &[String]) -> Result<Command, UsageError> {
+/// A whole number of milliseconds, or a usage error.
+fn ms(value: &str) -> Result<u32, UsageError> {
+    value.parse().map_err(|_| UsageError)
+}
+
+/// Builds the import action from its paths and its `--start-ms`/`--len-ms` pairs, each given at most once.
+fn import(input: &str, output: &str, flags: &[String]) -> Result<SoundsAction, UsageError> {
     let (mut start_ms, mut len_ms) = (None, None);
     for pair in flags.chunks(2) {
         let [flag, value] = pair else {
@@ -61,9 +115,9 @@ fn import(input: &str, output: &str, flags: &[String]) -> Result<Command, UsageE
         if slot.is_some() {
             return Err(UsageError);
         }
-        *slot = Some(value.parse::<u32>().map_err(|_| UsageError)?);
+        *slot = Some(ms(value)?);
     }
-    Ok(Command::SoundsImport {
+    Ok(SoundsAction::Import {
         input: input.to_string(),
         output: output.to_string(),
         start_ms,
@@ -72,92 +126,4 @@ fn import(input: &str, output: &str, flags: &[String]) -> Result<Command, UsageE
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::parse as parse_all;
-    use super::*;
-
-    fn args(values: &[&str]) -> Vec<String> {
-        values.iter().map(|v| (*v).to_string()).collect()
-    }
-
-    fn import_of(start_ms: Option<u32>, len_ms: Option<u32>) -> Command {
-        Command::SoundsImport {
-            input: "in.wav".into(),
-            output: "out.wav".into(),
-            start_ms,
-            len_ms,
-        }
-    }
-
-    #[test]
-    fn render_parses_with_and_without_a_folder() {
-        assert_eq!(
-            parse_all(&args(&["sounds", "render"])),
-            Ok(Command::SoundsRender { out: None })
-        );
-        assert_eq!(
-            parse_all(&args(&["sounds", "render", "--out", "x"])),
-            Ok(Command::SoundsRender {
-                out: Some("x".into())
-            })
-        );
-    }
-
-    #[test]
-    fn render_with_a_bad_flag_or_no_folder_is_a_usage_error() {
-        for bad in [
-            &["sounds"][..],
-            &["sounds", "render", "--out"],
-            &["sounds", "render", "--dir", "x"],
-            &["sounds", "render", "--out", "--len-ms"],
-            &["sounds", "render", "--out", "x", "y"],
-        ] {
-            assert_eq!(parse_all(&args(bad)), Err(UsageError), "{bad:?}");
-        }
-    }
-
-    #[test]
-    fn import_parses_its_paths_and_flags_in_any_order() {
-        let base = ["sounds", "import", "in.wav", "out.wav"];
-        assert_eq!(parse_all(&args(&base)), Ok(import_of(None, None)));
-        let both = [&base[..], &["--len-ms", "80", "--start-ms", "12"]].concat();
-        assert_eq!(parse_all(&args(&both)), Ok(import_of(Some(12), Some(80))));
-        let start = [&base[..], &["--start-ms", "0"]].concat();
-        assert_eq!(parse_all(&args(&start)), Ok(import_of(Some(0), None)));
-    }
-
-    #[test]
-    fn import_with_bad_flags_is_a_usage_error() {
-        let base = ["sounds", "import", "in.wav", "out.wav"];
-        for extra in [
-            &["--start-ms"][..],
-            &["--start-ms", "-5"],
-            &["--start-ms", "ten"],
-            &["--start-ms", "1", "--start-ms", "2"],
-            &["--fade-ms", "5"],
-        ] {
-            let all = [&base[..], extra].concat();
-            assert_eq!(parse_all(&args(&all)), Err(UsageError), "{extra:?}");
-        }
-    }
-
-    #[test]
-    fn import_needs_two_paths_that_are_not_flags() {
-        for bad in [
-            &["sounds", "import"][..],
-            &["sounds", "import", "in.wav"],
-            &["sounds", "import", "--start-ms", "5", "out.wav"],
-            &["sounds", "import", "in.wav", "--len-ms", "5"],
-        ] {
-            assert_eq!(parse_all(&args(bad)), Err(UsageError), "{bad:?}");
-        }
-    }
-
-    #[test]
-    fn usage_names_both_actions_and_every_flag() {
-        let message = UsageError.to_string();
-        for name in [RENDER, IMPORT, FLAG_OUT, FLAG_START_MS, FLAG_LEN_MS] {
-            assert!(message.contains(name), "usage message missing {name}");
-        }
-    }
-}
+mod tests;

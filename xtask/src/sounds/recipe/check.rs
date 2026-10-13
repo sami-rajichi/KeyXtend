@@ -25,13 +25,19 @@ impl Book {
     pub(super) fn validate(&self) -> Result<(), SoundError> {
         self.check_settings().map_err(SoundError::Recipe)?;
         check(!self.recipes.is_empty(), "the file has no recipe").map_err(SoundError::Recipe)?;
-        let mut names = HashSet::new();
+        let (mut names, mut stems) = (HashSet::new(), HashSet::new());
         for recipe in &self.recipes {
             let name = &recipe.name;
+            // Variants add `-n` to the name, so two recipes could still write the same file.
+            let clash = recipe
+                .stems()
+                .into_iter()
+                .find(|s| !stems.insert(s.clone()));
             check(
                 names.insert(name.as_str()),
                 format!("{name:?} is used twice"),
             )
+            .and_then(|()| clash.map_or(Ok(()), |s| Err(format!("{s:?} is written twice"))))
             .and_then(|()| recipe.check(self))
             .map_err(|why| SoundError::Recipe(format!("{name}: {why}")))?;
         }
@@ -93,11 +99,23 @@ impl Recipe {
         let top = nyquist / (cents / CENTS_PER_OCTAVE).exp2();
         self.layers
             .iter()
-            .try_for_each(|layer| layer.check(self.length_ms, top))
+            .try_for_each(|layer| layer.check(self.length_ms, top))?;
+        check(
+            self.layers.iter().any(Layer::audible),
+            "every layer is silent",
+        )
     }
 }
 
 impl Layer {
+    /// True if the layer makes a sound: its level, and for modes a partial's, is above zero.
+    fn audible(&self) -> bool {
+        match self {
+            Self::Noise(n) => n.level > 0.0,
+            Self::Modes(m) => m.level > 0.0 && m.partials.iter().any(|p| p.level > 0.0),
+        }
+    }
+
     /// Checks the layer's values; `top` is the highest frequency it may reach.
     fn check(&self, length_ms: f64, top: f64) -> Result<(), String> {
         let (start_ms, attack_ms, level, glide) = match self {
