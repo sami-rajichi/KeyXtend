@@ -86,13 +86,6 @@ fn removing_hooks_that_are_not_there_does_nothing() {
 }
 
 #[test]
-fn release_now_without_a_live_hook_returns_at_once() {
-    let start = std::time::Instant::now();
-    crate::hook::release_now();
-    assert!(start.elapsed() < super::super::RELEASE_WAIT);
-}
-
-#[test]
 #[allow(unsafe_code, reason = "Reads the calling thread's own priority.")]
 fn the_hook_thread_runs_one_step_above_normal() {
     use windows::Win32::System::Threading::{GetCurrentThread, GetThreadPriority};

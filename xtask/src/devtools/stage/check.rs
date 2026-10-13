@@ -40,8 +40,7 @@ pub(crate) fn check(
     if !files.contains(&program) {
         return Err(StageError::NoExe(paths::text(stage)).into());
     }
-    let bytes = std::fs::read(stage.join(&program))?;
-    refuse_gate(&bytes, &config.gate_flag, &program)?;
+    refuse_gate_exe(&stage.join(&program), &program, &config.gate_flag)?;
     let libs = libraries(&files);
     let found = |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib);
     let resolves = |lib: &str| paths::is_plain_name(lib) && found(lib);
@@ -78,6 +77,12 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
         .iter()
         .find(|f| f.parent().is_some_and(|dir| dir.iter().any(is_banned)));
     found.map_or(Ok(()), |f| Err(StageError::Banned(paths::text(f)).into()))
+}
+
+/// Reads the program at `path` and fails, naming it `exe`, when it holds the gate-only `flag`.
+pub(crate) fn refuse_gate_exe(path: &Path, exe: &Path, flag: &str) -> Result<(), DevError> {
+    let bytes = std::fs::read(path)?;
+    refuse_gate(&bytes, flag, exe).map_err(DevError::from)
 }
 
 /// Fails when `bytes`, the program `exe`, hold the gate-only `flag` anywhere; an empty flag fails every program.

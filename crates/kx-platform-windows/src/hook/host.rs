@@ -137,6 +137,11 @@ impl<O: Os> Host<O> {
         let _ = self.guard(Self::run_check);
     }
 
+    /// The panic hook's let-go: sends the queue, the engine's release and what our input still holds; the hooks stay.
+    pub(crate) fn release(&mut self) {
+        let _ = self.guard(Self::run_release);
+    }
+
     /// Sends the queue, the engine's release and what our input still holds, and only then stops the timer and removes
     /// the hooks, whatever failed.
     pub(crate) fn stop(&mut self) {

@@ -1,15 +1,16 @@
-//! The Win32 side of the pointer hook: its thread with both low-level hooks, the message loop, and `release_now` for
-//! the panic hook. One run lives per process.
+//! The Win32 side of the pointer hook: its thread with both low-level hooks, the message loop, and `release_now`, with
+//! which the panic hook lets go and keeps the run. One run lives per process.
 
 mod os;
 mod procs;
+mod release;
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use kx_module_api::ports::{HookConfig, HookError, HookRun, HookStats, PointerEngine, PointerHook};
 use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_APP, WM_QUIT, WM_TIMER};
@@ -17,9 +18,10 @@ use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_APP, WM_QUIT,
 use super::Source;
 use super::host::Host;
 use crate::QpcClock;
-use os::{
-    Ctl, WinOs, kill_timer, own_queue, post, raise_priority, set_timer, this_thread, unhook_all,
-};
+use os::{Ctl, WinOs, kill_timer, own_queue, post, raise_priority, set_timer, unhook_all};
+use release::{LET_GO, forget_asks, let_go};
+
+pub use release::release_now;
 
 /// Asks the hook thread for a turn.
 const WAKE: u32 = WM_APP + 1;
@@ -31,17 +33,11 @@ const STARTING: u32 = u32::MAX;
 const START_WAIT: Duration = Duration::from_secs(2);
 /// How long dropping a run waits for its thread to let go and stop.
 const STOP_WAIT: Duration = Duration::from_secs(1);
-/// How long `release_now` waits for the thread to let go.
-const RELEASE_WAIT: Duration = Duration::from_millis(200);
-/// How often `release_now` looks while it waits.
-const RELEASE_POLL: Duration = Duration::from_millis(1);
 /// The hook thread's name.
 const THREAD: &str = "kx-pointer-hook";
 
 /// The live hook thread's id, `NONE` or `STARTING`; `release_now` finds the thread here.
 static LIVE: AtomicU32 = AtomicU32::new(NONE);
-/// The thread `release_now` asked to stop.
-static RELEASE: AtomicU32 = AtomicU32::new(NONE);
 
 thread_local! {
     /// The host, on the hook thread only.
@@ -78,7 +74,7 @@ impl PointerHook for WinPointerHook {
         {
             return Err(HookError::Busy);
         }
-        RELEASE.store(NONE, Ordering::SeqCst);
+        forget_asks();
         let ctl = Arc::new(Ctl::default());
         let (ready, answer) = mpsc::channel();
         let (done, ended) = mpsc::channel();
@@ -204,7 +200,7 @@ impl Job {
         let health = set_timer(config.health_ms);
         LIVE.store(tid, Ordering::SeqCst);
         let _ = ready.send(Ok(tid));
-        pump(&ctl, tid, health);
+        pump(&ctl, health);
         kill_timer(health);
         let _ = with_host(Host::stop);
         drop_host();
@@ -233,43 +229,29 @@ impl Drop for Ending {
     }
 }
 
-/// Runs this thread's queue until our own stop: the run's drop, a start that gave up, or `release_now`. Another
-/// program's `WM_QUIT` is ignored.
+/// Runs this thread's queue until our own stop: the run's drop or a start that gave up. Another program's `WM_QUIT` is
+/// ignored.
 #[allow(unsafe_code, reason = "The message loop of this thread's own queue.")]
-fn pump(ctl: &Ctl, tid: u32, health: usize) {
+fn pump(ctl: &Ctl, health: usize) {
     let mut msg = MSG::default();
-    while !stopping(ctl, tid) {
+    while !stopping(ctl) {
         // SAFETY: the loop of this thread's own queue; `msg` is a local it fills.
         let got = unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0;
-        if got < 0 || stopping(ctl, tid) {
+        if got < 0 || stopping(ctl) {
             break;
         }
         match msg.message {
             WM_TIMER if msg.wParam.0 == health => with_host(Host::check),
             WAKE | WM_TIMER => with_host(Host::turn),
+            LET_GO => let_go(),
             _ => None,
         };
     }
 }
 
-/// True once our stop was asked for this thread.
-fn stopping(ctl: &Ctl, tid: u32) -> bool {
-    ctl.stop.load(Ordering::SeqCst) || RELEASE.load(Ordering::SeqCst) == tid
-}
-
-/// Asks a live hook thread to let go of everything and stop, and waits at most `RELEASE_WAIT`; for the app's panic
-/// hook. It never panics, and does nothing with no live hook or on the hook thread itself.
-pub fn release_now() {
-    let tid = LIVE.load(Ordering::SeqCst);
-    if tid == NONE || tid == STARTING || tid == this_thread() {
-        return;
-    }
-    RELEASE.store(tid, Ordering::SeqCst);
-    let _ = post(tid, WM_QUIT);
-    let start = Instant::now();
-    while LIVE.load(Ordering::SeqCst) == tid && start.elapsed() < RELEASE_WAIT {
-        thread::sleep(RELEASE_POLL);
-    }
+/// True once our stop was asked for.
+fn stopping(ctl: &Ctl) -> bool {
+    ctl.stop.load(Ordering::SeqCst)
 }
 
 /// Runs `f` on this thread's host; `None` with no host, or while it is busy.

@@ -1,4 +1,5 @@
-//! The host's loop side: turns, the health check, the reinstall and the stop, and how a batch goes out.
+//! The host's loop side: turns, the health check, the reinstall, the panic hook's let-go and the stop, and how a batch
+//! goes out.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -59,14 +60,17 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// The stop's input: the queue, the release, then, once, whatever our input still holds; a cut send and dropped
-    /// acts are logged, counts only.
-    pub(super) fn finish(&mut self) {
+    /// The queue, the release, then whatever our input still holds, in that order, so no queued press follows its Up.
+    pub(super) fn run_release(&mut self) -> Sent {
         let now = self.os.now();
-        let sent = self
-            .flush(now)
+        self.flush(now)
             .and(self.release_engine(now))
-            .and(self.let_held_go(now));
+            .and(self.let_held_go(now))
+    }
+
+    /// The stop's input, as `run_release` sends it; a cut send and dropped acts are logged, counts only.
+    pub(super) fn finish(&mut self) {
+        let sent = self.run_release();
         if sent.took < sent.total {
             tracing::warn!(
                 sent = sent.took,

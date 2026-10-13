@@ -1,6 +1,6 @@
-//! The quiet panic hook. A panic's message may quote what the user typed, so the hook logs only where it happened;
-//! the kernel still catches module panics, which would otherwise print through Rust's own hook. Then the mouse hook
-//! lets go, so no button stays down.
+//! The quiet panic hook: a panic's message may quote what the user typed, so it logs only where the panic happened,
+//! then has the mouse hook let go, so no button stays down. The kernel still catches module panics, which would
+//! otherwise print through Rust's own hook.
 
 use std::io::{self, Write};
 use std::panic::{self, Location};

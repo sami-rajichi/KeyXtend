@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use kx_module_api::Mono;
-use kx_module_api::ports::{Button, PointerAct};
+use kx_module_api::ports::{Button, PointerAct, PointerEvent};
 
 use super::fake::{Call, Fake, Heard, Plan, Script, World};
 use super::{A, B, CFG, CTRL, MOVE, OTHER, Rig, rig};
@@ -142,6 +142,42 @@ fn a_panic_outside_the_engine_asks_for_one_turn_never_a_loop() {
         rig.host.turn();
         assert!(!rig.world.take().contains(&Call::Wake), "no wake loop");
     }
+}
+
+#[test]
+fn a_release_lets_go_of_the_queue_the_engine_and_our_held_input_and_keeps_the_hooks() {
+    let mut rig = holding();
+    rig.plan().settle_acts = vec![PointerAct::KeyDown(CTRL)];
+    rig.host.turn();
+    rig.plan().settle_acts.clear();
+    assert!(rig.hand(MOVE, B), "held back behind our Ctrl");
+    rig.world.take();
+    rig.heard();
+    rig.host.release();
+    let want = [
+        Call::Send(vec![PointerAct::Move(B)]),
+        Call::Send(vec![PointerAct::Up(Button::Left, A)]),
+        Call::Send(vec![PointerAct::KeyUp(CTRL)]),
+    ];
+    assert_eq!(rig.world.take(), want, "no unhook, no stopped timer");
+    assert_eq!(rig.heard(), [Heard::Release]);
+}
+
+#[test]
+fn after_a_release_the_run_keeps_hearing_the_hand() {
+    let mut rig = holding();
+    rig.host.release();
+    rig.world.pass(CFG.echo_ms + 1);
+    rig.heard();
+    rig.world.take();
+    assert!(!rig.hand(MOVE, A));
+    assert_eq!(
+        rig.heard(),
+        [Heard::On(PointerEvent::Move { at: A }, rig.now())]
+    );
+    rig.host.turn();
+    assert_eq!(rig.heard(), [Heard::Settle(rig.now())]);
+    assert!(!rig.world.take().contains(&Call::Unhook));
 }
 
 #[test]

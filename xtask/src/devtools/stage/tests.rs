@@ -1,4 +1,5 @@
 use super::*;
+use crate::config::ConfigError;
 use crate::test_support::{TempDir, stage_config as config, stage_json};
 
 /// The error `validate` gives after `change` is applied to the test settings.

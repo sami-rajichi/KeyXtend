@@ -33,12 +33,12 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a later copy speaks only through the adapter's command window, which acts on its fixed codes. A same-user program that holds `Local\KeyXtend.Running` without a command window makes the next copy stop with "another copy runs but did not answer", after its tries; it never starts a second keyboard. Each try claims again first, so a copy that quits meanwhile leaves the session to the new one.
-- **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag.
+- **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag, or, in the gate-only build only, `--sim-input` alone or before `--show`.
 - **Logging / repudiation:**
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
   - The panic hook replaces Rust's default one and logs only the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
-  - Then it calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down. It waits at most 200 ms, and returns at once on the hook's own thread, where the callback's own recovery lets go.
+  - Then it calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down. The hook lets go and keeps running, so a panic the kernel catches never ends mouse assist; it waits at most the adapter's `RELEASE_WAIT`, and returns at once on the hook's own thread, where the callback's own recovery lets go.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004). Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
@@ -59,7 +59,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 ## Gate-only input
 - **What:** the `gate-input` feature turns on the adapter's `sim-input` and adds `--sim-input`, with which the mouse engine acts on the gate tool's tagged input instead of the hand's (ADR-0027 decision 3). The run logs one warning that it is a gate build.
 - **Why it never ships:** in the uiAccess app, any program of the session could send that tagged input and steer our clicks into admin windows. The feature is off by default, and nothing in the workspace turns it on.
-- **How it is enforced:** the stage check, which `cargo xtask stage` and `dev-install` both run, refuses a program that holds the flag's text (`[workspace.metadata.stage] gate_flag`, which the app's agree test pins). A test reads the built exe: only the gate build holds the flag.
+- **How it is enforced:** the stage check (`cargo xtask stage`, and `dev-install` on an app folder) refuses a program that holds the flag's text (`[workspace.metadata.stage] gate_flag`, which the app's agree test pins), and `dev-install` refuses to sign any exe that holds it. The gate build's warning logs the flag as a field, which keeps its text whole in a release exe, and a test reads the built exe: only the gate build holds the flag.
 
 ## Findings
 ### Must fix (blocks any signed build)

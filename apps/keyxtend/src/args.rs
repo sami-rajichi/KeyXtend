@@ -1,6 +1,6 @@
-//! The command line: nothing or `--show` shows the keyboard, and `--quit` ends a running copy. Anything else is refused
-//! before Qt starts, so no Qt option (such as a plugin path) reaches the uiAccess process. Only the gate-only build
-//! (`gate-input`) also takes `--sim-input`, alone or before `--show`.
+//! The command line: nothing or `--show` shows the keyboard, `--quit` ends a running copy, and only the gate-only build
+//! (`gate-input`) also takes `--sim-input`, alone or before `--show`. Anything else is refused before Qt starts, so no
+//! Qt option (such as a plugin path) reaches the uiAccess process.
 
 use kx_platform::ui::Command;
 use kx_platform_windows::instance::{flag, from_flag};

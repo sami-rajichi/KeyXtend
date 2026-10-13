@@ -66,6 +66,24 @@ fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
 }
 
 #[test]
+fn dev_install_refuses_any_program_it_would_sign_that_holds_the_gate_flag() {
+    let dir = TempDir::new("gate-exes");
+    let flag = stage_config().gate_flag;
+    let (tool, gate) = (dir.path().join("tool.exe"), dir.path().join("other.exe"));
+    std::fs::write(&tool, b"MZ --show").unwrap();
+    std::fs::write(&gate, format!("MZ {flag} x")).unwrap();
+    let programs = exes(dir.path()).unwrap();
+    let exe = paths::text(&gate);
+    let refused = StageError::GateFlag {
+        exe,
+        flag: flag.clone(),
+    };
+    assert_eq!(refuse_gate_builds(&programs, &flag), Err(refused.into()));
+    std::fs::write(&gate, b"MZ --quit").unwrap();
+    assert_eq!(refuse_gate_builds(&programs, &flag), Ok(()));
+}
+
+#[test]
 fn a_folder_without_the_app_is_not_stage_checked() {
     let (dir, setup) = tls_folder("vet-other", "other.exe");
     let windows = |_: &str| Some(paths::text(dir.path()));

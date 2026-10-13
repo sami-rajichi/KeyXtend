@@ -120,7 +120,8 @@ fn pointer(platform: &WindowsPlatform, input: Input) -> Arc<dyn PointerHook> {
     }
 }
 
-/// Warns once that the engine takes the gate tool's input; only the gate-only build can.
+/// Warns once that the engine takes the gate tool's input; only the gate-only build can. Its `flag` field keeps the
+/// flag's text whole in a release exe, which is what the stage check looks for.
 #[cfg(feature = "gate-input")]
 fn warn_gate(input: Input) {
     if input == Input::Sim {
