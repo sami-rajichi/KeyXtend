@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 const CASES: u32 = 512;
 /// Most steps in one run.
 const MAX_STEPS: usize = 60;
-/// Longest gap between two steps, in Âµs: past the longest hold the settings allow, so holds fire.
+/// Longest gap between two steps, in µs: past the longest hold the settings allow, so holds fire.
 const MAX_GAP_US: u64 = 4_000_000;
 /// Farthest one move goes on each axis, in pixels: past the still radius, and within it.
 const REACH: i32 = 30;

@@ -34,8 +34,17 @@ impl Actor {
         self.tell_state();
         if grab == GrabState::Off && rclick != self.saved {
             self.saved = rclick;
-            // The kernel's store tells the user once per run when it cannot save, so a failure needs nothing here.
-            let _ = self.store.set(RCLICK_KEY, rclick.into());
+            self.save(rclick);
+        }
+    }
+
+    /// Saves Right-click. A file left unsaved is the kernel's to tell, once per run; a refused write is logged by
+    /// its kind only, as its text may quote a value.
+    fn save(&self, rclick: bool) {
+        if let Err(error) = self.store.set(RCLICK_KEY, rclick.into())
+            && !error.holds()
+        {
+            tracing::warn!(kind = error.kind(), "mouse setting not written");
         }
     }
 

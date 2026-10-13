@@ -51,11 +51,15 @@ pub fn lines_of(f: impl FnOnce()) -> Vec<(Level, Fields)> {
 /// Hands each line to the thread that logs it.
 struct Lines;
 
-/// Reads a line's fields, each as its debug text.
+/// Reads a line's fields: text as it is, anything else as its debug text.
 #[derive(Default)]
 struct Recorder(Fields);
 
 impl Visit for Recorder {
+    fn record_str(&mut self, field: &Field, value: &str) {
+        self.0.insert(field.name(), value.to_owned());
+    }
+
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         self.0.insert(field.name(), format!("{value:?}"));
     }

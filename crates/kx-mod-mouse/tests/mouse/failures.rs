@@ -5,7 +5,7 @@ use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown};
 use kx_mod_mouse::{ID, Msg};
 use kx_module_api::ports::GrabState::Off;
 use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
-use kx_module_api::{Notice, NoticeArg, WriteError, args, keys};
+use kx_module_api::{Notice, NoticeArg, SettingsError, WriteError, args, keys};
 use tracing::Level;
 
 /// The OS error code a refused hook carries.
@@ -25,6 +25,10 @@ const STATS: HookStats = HookStats {
 
 /// Left Shift.
 const SHIFT: Scan = Scan::new(0x2A);
+/// The field that names a refused write's kind.
+const KIND: &str = "kind";
+/// A value a refusal's text quotes, which no log line may show.
+const QUOTED: &str = "rclick = 4321";
 
 /// How many warnings `lines` holds.
 fn warnings(lines: &[(Level, Fields)]) -> usize {
@@ -107,18 +111,46 @@ fn a_mouse_key_refused_after_a_latch_failure_still_tells_the_user() {
 
 #[test]
 fn a_right_click_that_cannot_be_saved_still_works_and_adds_no_notice() {
-    let mut rig = Rig::new();
-    rig.begin();
-    rig.take();
-    rig.host.sink.refuse(Some(WriteError::Unsaved));
-    rig.toggle(Toggle::RightClick);
-    rig.settle(T0);
-    // The kernel's store tells the user once per run that settings are not saved.
-    assert_eq!(rig.take(), [shown(true, Off)]);
-    rig.toggle(Toggle::RightClick);
-    rig.settle(T1);
-    assert_eq!(rig.take(), [shown(false, Off)]);
-    assert!(!rig.hook.running(), "the toggle works in memory");
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.begin();
+        rig.take();
+        rig.host.sink.refuse(Some(WriteError::Unsaved));
+        rig.toggle(Toggle::RightClick);
+        rig.settle(T0);
+        // The kernel's store tells the user once per run that settings are not saved.
+        assert_eq!(rig.take(), [shown(true, Off)]);
+        rig.toggle(Toggle::RightClick);
+        rig.settle(T1);
+        assert_eq!(rig.take(), [shown(false, Off)]);
+        assert!(!rig.hook.running(), "the toggle works in memory");
+    });
+    assert_eq!(warnings(&lines), 0, "the kernel already said it: {lines:?}");
+}
+
+#[test]
+fn a_refused_right_click_write_logs_only_its_kind_and_tells_no_one() {
+    let invalid = WriteError::Invalid(SettingsError::Invalid(QUOTED.to_owned()));
+    for error in [WriteError::Refused(ID), invalid] {
+        let kind = error.kind();
+        let lines = lines_of(|| {
+            let mut rig = Rig::new();
+            rig.begin();
+            rig.take();
+            rig.host.sink.refuse(Some(error.clone()));
+            rig.toggle(Toggle::RightClick);
+            rig.settle(T0);
+            assert_eq!(rig.take(), [shown(true, Off)], "no notice");
+            assert!(rig.hook.running(), "the toggle works in memory");
+        });
+        let warned: Vec<_> = lines.iter().filter(|(l, _)| *l == Level::WARN).collect();
+        assert_eq!(warned.len(), 1, "{lines:?}");
+        let fields = &warned[0].1;
+        assert_eq!(fields.get(KIND).map(String::as_str), Some(kind));
+        let names: Vec<_> = fields.keys().copied().collect();
+        assert_eq!(names, [KIND, MESSAGE], "only the kind");
+        assert!(fields.values().all(|v| !v.contains(QUOTED)), "{fields:?}");
+    }
 }
 
 #[test]
