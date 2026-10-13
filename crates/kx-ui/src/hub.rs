@@ -3,6 +3,7 @@
 //! lock is held while a face call, a port call or a waker runs.
 
 mod app;
+mod bus;
 mod face;
 mod fonts;
 mod look;
@@ -18,10 +19,8 @@ pub use fonts::FontBook;
 pub use notices::Shown;
 
 use crate::settings::{PressFrame, UiSettings};
-use kx_module_api::ports::{AssistNote, KeyboardFace};
-use kx_module_api::{
-    Bus, Event, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
-};
+use kx_module_api::ports::KeyboardFace;
+use kx_module_api::{ModuleId, Notice, SettingsError, SettingsHandle};
 use kx_platform::ui::{
     Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
     WindowGuard,
@@ -248,37 +247,6 @@ impl Hub {
         if self.lock().notices.push(notice) {
             self.wake(Wake::Notices);
         }
-    }
-
-    /// Hears every notice and mouse-assist note on `bus` until the subscriptions drop; the app calls it before the
-    /// kernel loads.
-    ///
-    /// # Errors
-    /// `EventError` when the bus refuses a subscription.
-    pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Vec<Subscription>, EventError> {
-        Ok(vec![
-            self.hear(bus, |hub, notice: &Notice| hub.notice(notice.clone()))?,
-            self.hear(bus, Self::note)?,
-        ])
-    }
-
-    /// Calls `f` on the hub for every `E` on `bus`, holding the hub weakly.
-    fn hear<E: Event>(
-        self: &Arc<Self>,
-        bus: &Bus,
-        f: impl Fn(&Self, &E) + Send + Sync + 'static,
-    ) -> Result<Subscription, EventError> {
-        let hub = Arc::downgrade(self);
-        bus.subscribe(move |event: &E| {
-            if let Some(hub) = hub.upgrade() {
-                f(&hub, event);
-            }
-        })
-    }
-
-    /// Hands a mouse-assist note to each part of the hub that follows one.
-    fn note(&self, note: &AssistNote) {
-        sound::on_note(self, note);
     }
 
     /// The waiting notices in the keyboard's language; the banner shows them from now on.

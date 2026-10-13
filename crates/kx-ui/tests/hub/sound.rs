@@ -10,7 +10,7 @@ use kx_theme::sounds::Event;
 use kx_ui::{MANIFEST, UiSettings, sounds};
 use std::sync::Arc;
 
-/// The volume that plays each sound at its own level.
+/// The volume that plays each sound at its own level; it mirrors the end of kx-ui's private `SOUND_VOLUME` range.
 const FULL: f32 = 100.0;
 /// How far two gains may differ and still be one.
 const SAME_GAIN: f32 = 1e-6;

@@ -38,8 +38,8 @@ pub(crate) const PRESS_FRAME_MS: RangeInclusive<u64> = 1..=1_000;
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
 /// Our volume, in percent of each sound's own level; the end plays it as made, and 0 is silent.
 pub(crate) const SOUND_VOLUME: RangeInclusive<u8> = 0..=100;
-/// How long the speaker stays ready after the last sound, in ms. The floor is twice the longest sound `sounds.toml`
-/// allows plus about 100 ms of device latency, as 500 ms would only just equal those two.
+/// How long the speaker stays ready after the last sound, in ms. The floor is twice the sum of the longest sound
+/// `sounds.toml` allows and about 100 ms of device latency, as 500 ms would only just equal that sum.
 pub(crate) const SOUND_IDLE_MS: RangeInclusive<u32> = 1_000..=60_000;
 
 /// Why `language` was refused.

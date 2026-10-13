@@ -28,7 +28,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing or row count outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
+| `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing, row count or volume outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
 | Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
 | The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown, broken or missing tag gives English. Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
