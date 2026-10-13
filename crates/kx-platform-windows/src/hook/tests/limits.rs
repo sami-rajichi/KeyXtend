@@ -76,8 +76,9 @@ fn a_queued_press_whose_release_passed_in_an_overflow_ends_released() {
     rig.world.take();
     rig.host.turn();
     let sent = sends(&rig.world.take());
-    assert_eq!(sent[0][0], PointerAct::Down(Button::Left, A));
-    assert_eq!(sent[1], [PointerAct::Up(Button::Left, B)], "right after it");
+    assert_eq!(sent[0].first(), Some(&PointerAct::Down(Button::Left, A)));
+    let up = PointerAct::Up(Button::Left, B);
+    assert_eq!(sent[0].last(), Some(&up), "in the queue's own batch");
 }
 
 #[test]
@@ -91,8 +92,11 @@ fn a_queued_press_whose_release_passed_a_broken_engine_ends_released() {
     rig.world.take();
     rig.host.turn();
     let sent = sends(&rig.world.take());
-    assert_eq!(sent[0], [PointerAct::Down(Button::Left, A)]);
-    assert_eq!(sent[1], [PointerAct::Up(Button::Left, B)]);
+    let want = [
+        PointerAct::Down(Button::Left, A),
+        PointerAct::Up(Button::Left, B),
+    ];
+    assert_eq!(sent[0], want, "one batch");
 }
 
 #[test]
@@ -101,12 +105,20 @@ fn an_engine_that_pushes_past_max_acts_is_cut_and_counted_and_the_queue_never_gr
     let room = rig.host.room();
     let extra = 3;
     rig.plan().on_acts = vec![PointerAct::KeyDown(SHIFT); MAX_ACTS + extra];
-    // A debug build also treats this as the engine's panic, after the cut.
     rig.hand(LEFT_DOWN, A);
-    assert_eq!(rig.stats.overruns(), u32::try_from(extra).unwrap());
+    assert_eq!(rig.stats.dropped(), u32::try_from(extra).unwrap());
     assert_eq!(rig.host.room().1, room.1, "the queue never grew");
+    rig.heard();
     rig.host.turn();
-    assert!(sends(&rig.world.take()).iter().all(|s| s.len() <= MAX_ACTS));
+    let sent = sends(&rig.world.take());
+    if cfg!(debug_assertions) {
+        // The debug assert fails as the engine's panic: nothing it pushed goes out, and it gets its one release.
+        assert!(sent.is_empty(), "{sent:?}");
+        assert_eq!(rig.heard(), [Heard::Release]);
+    } else {
+        assert_eq!(sent, [vec![PointerAct::KeyDown(SHIFT); MAX_ACTS]]);
+        assert_eq!(rig.heard(), [Heard::Settle(rig.now())]);
+    }
 }
 
 #[test]

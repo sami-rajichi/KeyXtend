@@ -49,7 +49,8 @@ thread_local! {
 }
 
 /// The Windows pointer hook: `WH_MOUSE_LL` and `WH_KEYBOARD_LL` on a thread of their own, one run per process.
-/// Dropping a run blocks until that thread has let go, sent that input and removed the hooks, or for `STOP_WAIT` at most.
+/// Dropping a run blocks until that thread has let go, sent that input and removed the hooks, or for `STOP_WAIT`
+/// at most.
 #[derive(Clone, Copy, Debug)]
 pub struct WinPointerHook {
     clock: QpcClock,

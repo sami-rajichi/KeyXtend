@@ -7,7 +7,7 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{Button, PointerAct};
 
 use super::fake::{Call, Fake, Heard, Plan, Script, World};
-use super::{A, B, CFG, MOVE, OTHER, Rig, rig};
+use super::{A, B, CFG, CTRL, MOVE, OTHER, Rig, rig};
 use crate::hook::host::Host;
 use crate::hook::stats::Stats;
 use crate::hook::{Mark, Source};
@@ -94,6 +94,54 @@ fn stopping_sends_the_queue_then_the_release_and_only_then_unhooks() {
     ];
     assert_eq!(rig.world.take(), want);
     assert_eq!(rig.heard(), [Heard::Release]);
+}
+
+#[test]
+fn stopping_lets_go_of_what_our_input_still_holds_before_it_unhooks() {
+    let mut rig = rig(Source::Physical);
+    rig.plan().settle_acts = vec![PointerAct::KeyDown(CTRL), PointerAct::Down(Button::Left, A)];
+    rig.host.turn();
+    rig.plan().settle_acts.clear();
+    rig.world.take();
+    rig.host.stop();
+    let want = [
+        Call::Send(vec![
+            PointerAct::Up(Button::Left, A),
+            PointerAct::KeyUp(CTRL),
+        ]),
+        Call::Arm(None),
+        Call::Unhook,
+    ];
+    assert_eq!(rig.world.take(), want);
+}
+
+#[test]
+fn a_broken_engine_whose_release_panics_still_ends_with_ctrl_and_left_up() {
+    let mut rig = rig(Source::Physical);
+    rig.plan().settle_acts = vec![PointerAct::KeyDown(CTRL), PointerAct::Down(Button::Left, A)];
+    rig.host.turn();
+    rig.plan().panic = true;
+    assert!(!rig.hand(MOVE, B), "the engine panics, so the move passes");
+    rig.world.take();
+    rig.host.turn();
+    let want = vec![PointerAct::Up(Button::Left, B), PointerAct::KeyUp(CTRL)];
+    assert_eq!(sends(&rig.world.take()), [want]);
+    assert_eq!(rig.heard().last(), Some(&Heard::Release), "its one release");
+}
+
+#[test]
+fn a_panic_outside_the_engine_asks_for_one_turn_never_a_loop() {
+    let mut rig = rig(Source::Physical);
+    rig.world.panic_arm.set(true);
+    rig.host.turn();
+    assert!(
+        rig.world.take().contains(&Call::Wake),
+        "the fall asks for a turn"
+    );
+    for _ in 0..3 {
+        rig.host.turn();
+        assert!(!rig.world.take().contains(&Call::Wake), "no wake loop");
+    }
 }
 
 #[test]

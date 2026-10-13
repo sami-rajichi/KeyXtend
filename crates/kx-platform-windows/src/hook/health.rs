@@ -1,15 +1,15 @@
 //! The health check (ADR-0027 decision 6): Windows silently removes a low-level hook that runs too long, so the host
-//! compares Windows' last input with the newest event its hooks saw, and puts the hooks back when they lag.
+//! compares Windows' last input with the tick when its hooks last ran a callback, and puts them back when they lag.
 
 use std::time::Duration;
 
 use kx_module_api::Mono;
 use kx_module_api::ports::HookConfig;
 
-/// When the hooks last saw input, and when they last went back.
+/// When the hooks last ran a callback, and when they last went back.
 #[derive(Debug)]
 pub(crate) struct Health {
-    /// The tick time of the newest event any of our hooks saw.
+    /// The tick count when one of our hooks last ran a callback; never an event's own stamp.
     seen: u32,
     /// When the hooks last went back.
     fixed: Option<Mono>,
@@ -30,10 +30,10 @@ impl Health {
         }
     }
 
-    /// One of our hooks saw an event stamped `time`; an older stamp leaves the newest.
-    pub(crate) fn saw(&mut self, time: u32) {
-        if newer(time, self.seen) > 0 {
-            self.seen = time;
+    /// One of our hooks ran a callback at tick `tick`; an older tick leaves the newest.
+    pub(crate) fn saw(&mut self, tick: u32) {
+        if newer(tick, self.seen) > 0 {
+            self.seen = tick;
         }
     }
 

@@ -12,6 +12,7 @@
 mod accept;
 mod batch;
 mod health;
+mod held;
 mod host;
 mod queue;
 mod stats;

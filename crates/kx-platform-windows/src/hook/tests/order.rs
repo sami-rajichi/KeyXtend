@@ -4,6 +4,7 @@
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
 use crate::hook::accept::Kind;
+use crate::hook::held::SLOTS;
 use crate::hook::queue::{HEADROOM, QUEUE_ROOM, Queue};
 
 /// The most acts the engine pushes in one call.
@@ -40,7 +41,8 @@ fn the_queue_reserves_its_room_once_and_is_full_before_a_call_could_overflow_it(
         assert!(q.put(key()));
         pushed += 1;
     }
-    assert!(room - pushed <= MAX_ACTS, "{room} {pushed}");
+    // Left over: less than one call's room, and an Up per button for `seal`.
+    assert!(room - pushed <= MAX_ACTS + SLOTS, "{room} {pushed}");
     let _ = q.extend(&[key(); MAX_ACTS]);
     assert_eq!(q.room(), room, "never reallocated");
     assert!(q.overflow() && !q.overflow(), "counted once");
@@ -91,22 +93,47 @@ fn buttons_and_keys_past_the_reserve_are_cut_and_never_allocated() {
     assert_eq!(q.room(), room);
 }
 
-#[test]
-fn an_up_that_passed_ahead_of_its_queued_down_follows_the_queue() {
+/// A queue holding a left press at `at(1)`.
+fn pressed() -> Queue {
     let mut q = Queue::new(MAX_ACTS);
     q.put(PointerAct::Down(Button::Left, at(1)));
+    q
+}
+
+#[test]
+fn an_up_that_passed_ahead_of_its_queued_down_ends_the_queues_batch() {
+    let mut q = pressed();
     q.put(PointerAct::Down(Button::Right, at(1)));
     q.passed(Kind::Up(Button::Left), at(7));
     q.passed(Kind::Up(Button::Middle), at(7));
     q.passed(Kind::Move, at(8));
-    assert_eq!(q.ups(), [PointerAct::Up(Button::Left, at(7))]);
-    q.passed(Kind::Down(Button::Left), at(8));
-    assert!(q.ups().is_empty(), "pressed again, so the hand holds it");
-    q.passed(Kind::Up(Button::Left), at(9));
-    q.put(PointerAct::Up(Button::Left, at(3)));
-    assert!(q.ups().is_empty(), "the queue lets go itself");
-    q.clear();
-    assert!(q.ups().is_empty());
+    q.seal();
+    let want = [
+        PointerAct::Down(Button::Left, at(1)),
+        PointerAct::Down(Button::Right, at(1)),
+        PointerAct::Up(Button::Left, at(7)),
+    ];
+    assert_eq!(q.acts(), want);
+}
+
+#[test]
+fn a_press_after_the_passed_up_or_a_queued_up_needs_no_fix() {
+    let mut again = pressed();
+    again.passed(Kind::Up(Button::Left), at(7));
+    again.passed(Kind::Down(Button::Left), at(8));
+    again.seal();
+    assert_eq!(again.acts().len(), 1, "pressed again, so the hand holds it");
+    let mut lets_go = pressed();
+    lets_go.passed(Kind::Up(Button::Left), at(9));
+    lets_go.put(PointerAct::Up(Button::Left, at(3)));
+    lets_go.seal();
+    assert_eq!(lets_go.acts().len(), 2, "the queue lets go itself");
+    let mut cleared = pressed();
+    cleared.passed(Kind::Up(Button::Left), at(9));
+    cleared.clear();
+    cleared.put(PointerAct::Down(Button::Left, at(1)));
+    cleared.seal();
+    assert_eq!(cleared.acts().len(), 1, "a clear forgets what passed");
 }
 
 #[test]
@@ -114,5 +141,26 @@ fn an_up_that_passed_with_nothing_queued_needs_no_fix() {
     let mut q = Queue::new(MAX_ACTS);
     q.passed(Kind::Up(Button::Left), at(1));
     q.put(PointerAct::Down(Button::Left, at(2)));
-    assert!(q.ups().is_empty());
+    q.seal();
+    assert_eq!(q.acts().len(), 1);
+}
+
+#[test]
+fn a_full_queue_still_has_room_for_every_buttons_up() {
+    let mut q = Queue::new(MAX_ACTS);
+    let room = q.room();
+    let presses = [Button::Left, Button::Right, Button::Middle];
+    for button in presses {
+        q.put(PointerAct::Down(button, at(1)));
+    }
+    while q.put(key()) {}
+    for button in presses {
+        q.passed(Kind::Up(button), at(2));
+    }
+    q.seal();
+    assert!(
+        q.acts()
+            .ends_with(&presses.map(|b| PointerAct::Up(b, at(2))))
+    );
+    assert_eq!(q.room(), room, "never reallocated");
 }

@@ -90,9 +90,10 @@
   - `SIM_TAG` acts only in the simulated mode, which exists only in builds with the `sim-input` feature (the gate tool's, never the shipped app). In the physical mode no injected input acts.
   - The health check counts the hooks current up to the tick when a callback ran, never the event's own stamp, so a forward-dated event cannot hide lagging hooks.
 - **Denial of service (pointer hook):**
-  - A panic in the engine or the callback is caught before it reaches Windows; events then pass untouched, a turn is asked for at once, and the engine lets go once.
-  - The callback never waits or allocates: the engine's buffer is reserved once, and acts past its `max_acts` are dropped and logged at the stop. The queue is bounded: moves coalesce into the newest, and buttons and keys keep a headroom of their own, so they stay in order.
-  - When even the headroom is full, events pass without the engine, and it lets go at the next turn. A hand's Up that went ahead of its press, still queued, is sent again right after the queue, so no button stays held; the same holds for a broken engine.
+  - A panic in the engine or the callback is caught before it reaches Windows; events then pass untouched, and the engine lets go once. Only the engine's fall asks for a turn, so a fault that recurs never loops.
+  - The host keeps its own fixed record of the buttons and keys its sent input holds down. When the engine is done (it panicked, even in its `release`) and when the host stops, it sends an Up or KeyUp for each one still held.
+  - The callback never waits or allocates: the engine's buffer is reserved once, and acts past the room are dropped and logged at the stop, counts only. The queue is bounded: moves coalesce into the newest, and buttons and keys keep a headroom of their own, so they stay in order.
+  - When even the headroom is full, events pass without the engine, and it lets go at the next turn. A hand's Up that went ahead of its press, still queued, ends the queue's own batch, so no button stays held; the same holds for a broken engine.
   - Windows drops a hook that answers late; the health check puts it back after the engine lets go. The hook thread runs one step above normal priority, so this is less likely under load.
   - Dropping a run sends the release before it removes the hooks and waits at most one second; past that, the dropping thread removes them itself and warns. `release_now` (the panic hook) waits at most 200 ms, and another program's `WM_QUIT` to the hook thread is ignored.
 - **Elevation (libraries):** `dll::pin` limits libraries named without a folder to the app's folder and System32, so the working folder and `PATH` can no longer lend one to the uiAccess process. It does not cover the libraries the exe imports, which load before `main`; those must sit beside the exe.
@@ -142,6 +143,8 @@ A monitor whose DPI Windows cannot give reads as 96, so a window there may be si
 The guard calls the procedure kept in its window property (`KeyXtend.Guard`). Another process's `SetPropW` passes UIPI only at our integrity level or above, and such a program can already write into our process.
 
 `inject::send`, `input`, `send_keys` and `vk_key` are public for the gate tools, and `send` takes raw inputs with any tag and no recovery. Modules cannot depend on the adapter (tidy), and the app never calls them.
+
+The host's record of held input counts a hand's press it re-sent from the queue, so the stop may send an Up for a button the hand already let go. A stray Up does nothing, while a missed one would leave a button down.
 
 A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 

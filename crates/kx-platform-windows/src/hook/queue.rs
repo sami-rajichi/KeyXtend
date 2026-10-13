@@ -8,26 +8,25 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{Button, Point, PointerAct};
 
 use super::accept::Kind;
+use super::held::{SLOTS, slot};
 
 /// Acts of any kind the queue holds: a quarter second of input at 1000 Hz.
 pub(crate) const QUEUE_ROOM: usize = 256;
 /// Room past `QUEUE_ROOM` that only buttons and keys use, so they stay in order once moves filled the rest.
 pub(crate) const HEADROOM: usize = 16;
-/// The buttons, in the order of `Queue::passed`.
-const BUTTONS: [Button; 3] = [Button::Left, Button::Right, Button::Middle];
 
 /// The acts waiting for the hook thread's next turn.
 #[derive(Debug)]
 pub(crate) struct Queue {
     acts: Vec<PointerAct>,
-    /// The most acts it holds: `QUEUE_ROOM`, the headroom and one engine call.
+    /// The most acts it takes: `QUEUE_ROOM`, the headroom and one engine call. `seal` may add one Up per button.
     limit: usize,
     /// The room one engine call needs: its acts and the event it lets through.
     call: usize,
     /// An overflow was counted since the queue last went out.
     over: bool,
-    /// Per button, where the hand let it go while its press waited here; a later press clears it.
-    passed: [Option<Point>; BUTTONS.len()],
+    /// Per button slot, the button and where the hand let it go while its press waited here; a later press clears it.
+    passed: [Option<(Button, Point)>; SLOTS],
 }
 
 impl Queue {
@@ -36,11 +35,11 @@ impl Queue {
         let call = max_acts.saturating_add(1);
         let limit = QUEUE_ROOM.saturating_add(HEADROOM).saturating_add(call);
         Self {
-            acts: Vec::with_capacity(limit),
+            acts: Vec::with_capacity(limit.saturating_add(SLOTS)),
             limit,
             call,
             over: false,
-            passed: [None; BUTTONS.len()],
+            passed: [None; SLOTS],
         }
     }
 
@@ -84,23 +83,22 @@ impl Queue {
         }
         let (button, up) = match kind {
             Kind::Down(button) => (button, None),
-            Kind::Up(button) => (button, Some(at)),
+            Kind::Up(button) => (button, Some((button, at))),
             Kind::Move => return,
         };
-        if let Some(slot) = BUTTONS.iter().position(|&b| b == button) {
-            self.passed[slot] = up;
+        if let Some(cell) = self.passed.get_mut(slot(button)) {
+            *cell = up;
         }
     }
 
-    /// An Up for each button whose press is the last act here for it and whose release already passed.
-    pub(crate) fn ups(&self) -> Vec<PointerAct> {
-        BUTTONS
-            .iter()
-            .zip(self.passed)
-            .filter_map(|(&button, up)| Some((button, up?)))
-            .filter(|&(button, _)| self.pressed(button))
-            .map(|(button, at)| PointerAct::Up(button, at))
-            .collect()
+    /// Ends the batch with an Up for each button whose press is its last act here and whose release already passed.
+    /// The room for these was reserved, so this never allocates.
+    pub(crate) fn seal(&mut self) {
+        for (button, at) in self.passed.into_iter().flatten() {
+            if self.pressed(button) {
+                self.acts.push(PointerAct::Up(button, at));
+            }
+        }
     }
 
     /// True when the last act here for `button` is its press.
@@ -126,7 +124,7 @@ impl Queue {
     pub(crate) fn clear(&mut self) {
         self.acts.clear();
         self.over = false;
-        self.passed = [None; BUTTONS.len()];
+        self.passed = [None; SLOTS];
     }
 
     /// The room reserved at the start.

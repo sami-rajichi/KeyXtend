@@ -12,6 +12,7 @@ use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, Pointer
 
 use super::accept::{Kind, Take, esc, kind, take};
 use super::health::Health;
+use super::held::Held;
 use super::queue::{Echo, Queue, Wait};
 use super::stats::Stats;
 use super::timing::event_at;
@@ -30,6 +31,10 @@ pub(crate) struct Host<O: Os> {
     echo: Echo,
     health: Health,
     stats: Arc<Stats>,
+    /// What our sent input holds down, for the host's own let-go.
+    held: Held,
+    /// The newest point the hook saw.
+    at: Option<Point>,
     trust: Trust,
     /// A wake is posted and its turn has not run yet.
     woken: bool,
@@ -82,6 +87,8 @@ impl<O: Os> Host<O> {
             engine,
             source,
             stats,
+            held: Held::default(),
+            at: None,
             trust: Trust::Whole,
             woken: false,
             warned: false,
@@ -99,6 +106,7 @@ impl<O: Os> Host<O> {
     /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken, and
     /// a hand's event that passes ahead of acts already queued is noted, so its Up never leaves a queued press held.
     pub(crate) fn mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
+        self.at = Some(at);
         let queued = !self.queue.is_empty();
         let dropped = self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false);
         let heard = take(self.source, mark.injected, mark.extra) == Take::Engine;
@@ -123,7 +131,8 @@ impl<O: Os> Host<O> {
         let _ = self.guard(Self::run_check);
     }
 
-    /// Sends the queue, then the engine's release, and only then stops the timer and removes the hooks, whatever failed.
+    /// Sends the queue, the engine's release and what our input still holds, and only then stops the timer and removes
+    /// the hooks, whatever failed.
     pub(crate) fn stop(&mut self) {
         let _ = self.guard(Self::finish);
         self.os.arm(None);
@@ -136,15 +145,16 @@ impl<O: Os> Host<O> {
         (self.lent.capacity(), self.queue.room())
     }
 
-    /// Runs `call`; a panic marks the engine broken instead of reaching Windows, and asks for the turn that lets go.
+    /// Runs `call`; a panic marks the engine broken instead of reaching Windows. Only that fall asks for the turn that
+    /// lets go, so a fault that recurs never loops.
     fn guard<T>(&mut self, call: impl FnOnce(&mut Self) -> T) -> Option<T> {
         let out = catch_unwind(AssertUnwindSafe(|| call(self))).ok();
         if out.is_none() {
             self.lent.clear();
             if matches!(self.trust, Trust::Whole | Trust::Stale) {
                 self.trust = Trust::Broken;
+                self.wake();
             }
-            self.wake();
         }
         out
     }
@@ -224,7 +234,7 @@ impl<O: Os> Host<O> {
             dropped = true;
         }
         let cut = self.queue.extend(&self.lent);
-        self.stats.overran(cut);
+        self.stats.drop_acts(cut);
         if !self.queue.is_empty() || self.engine.deadline() != before {
             self.wake();
         }
@@ -237,7 +247,7 @@ impl<O: Os> Host<O> {
     fn trim(&mut self) {
         let over = self.lent.len().saturating_sub(self.max);
         if over > 0 {
-            self.stats.overran(over);
+            self.stats.drop_acts(over);
             self.lent.truncate(self.max);
         }
         debug_assert!(over == 0, "the pointer engine pushed past its max_acts");

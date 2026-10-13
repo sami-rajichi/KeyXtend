@@ -1,7 +1,8 @@
 //! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the queue
-//! in `order`, and the other pure parts in `parts`.
+//! in `order`, the record of held input in `held`, and the other pure parts in `parts`.
 
 mod fake;
+mod held;
 mod limits;
 mod order;
 mod parts;
@@ -34,8 +35,9 @@ const KEY_UP: u32 = 0x0101;
 const VK_ESC: u32 = 0x1B;
 /// Another program's tag.
 const OTHER: usize = 0x1234;
-/// Left Shift, which the scripted engine pushes.
+/// Left Shift and Left Ctrl, which the scripted engine pushes.
 const SHIFT: Scan = Scan::new(0x2A);
+const CTRL: Scan = Scan::new(0x1D);
 const A: Point = Point { x: 1, y: 2 };
 const B: Point = Point { x: 3, y: 4 };
 
