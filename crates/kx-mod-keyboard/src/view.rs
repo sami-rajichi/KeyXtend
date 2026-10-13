@@ -5,7 +5,7 @@ mod assist;
 mod board;
 mod paint;
 
-pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP, UNHEARD};
+pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP};
 pub use board::board_view;
 pub use paint::{DIM, Paint, paint};
 

@@ -48,6 +48,15 @@ pub struct AssistChanged {
     pub grab: GrabState,
 }
 
+impl AssistChanged {
+    /// The mouse module not running, with every mode off: before it speaks, and after it stops or fails.
+    pub const OFF: Self = Self {
+        live: false,
+        rclick: false,
+        grab: GrabState::Off,
+    };
+}
+
 impl Event for AssistChanged {
     const NAME: &'static str = "assist-changed";
 }

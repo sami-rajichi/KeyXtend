@@ -16,7 +16,7 @@ pub use manifest::{ID, MANIFEST};
 pub use settings::MouseSettings;
 
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, GrabState, LatchesChanged, PointerHookKey,
+    AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError};
 use std::sync::mpsc::{self, Sender};
@@ -26,12 +26,6 @@ use std::thread::{self, JoinHandle};
 const THREAD: &str = "kx-mouse";
 /// Why the start failed when the actor's thread did not start.
 const NO_THREAD: &str = "the mouse actor's thread did not start";
-/// What the module says for an actor that panicked and so could not: not live, every mode off.
-const DEAD: AssistChanged = AssistChanged {
-    live: false,
-    rclick: false,
-    grab: GrabState::Off,
-};
 
 /// The mouse module: it reads `[mouse]` and runs its actor, which starts the hook only while needed.
 #[derive(Default)]
@@ -90,7 +84,7 @@ impl MouseModule {
             if thread.join().is_err() {
                 tracing::warn!("mouse actor panicked");
                 // `AssistChanged` needs no capability, so this cannot be refused.
-                let _ = bus.publish(&DEAD);
+                let _ = bus.publish(&AssistChanged::OFF);
             }
         }
     }

@@ -159,7 +159,7 @@ fn latched(l: Latch, code: u16) -> Latches {
 }
 
 fn state(latches: &Latches, caps: bool, open: Option<&LangList>) -> StateView {
-    state_of(latches, caps, open, UNHEARD)
+    state_of(latches, caps, open, AssistChanged::OFF)
 }
 
 /// The state with the mouse module in state `assist`.

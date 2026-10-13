@@ -32,7 +32,7 @@ fn until_the_mouse_module_runs_both_keys_are_dim_and_say_it_is_off() {
         live: false,
         ..live(true, GrabState::Carrying)
     };
-    for s in [with(UNHEARD), with(stopped)] {
+    for s in [with(AssistChanged::OFF), with(stopped)] {
         for id in ["rclick", "grab"] {
             let k = &s.keys[id];
             assert_eq!((k.paint, k.tip, k.on), (DIM, Some(MOUSE_OFF_TIP), false));

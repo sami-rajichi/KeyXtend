@@ -17,7 +17,7 @@ use crate::run::{Ports, Typing};
 use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
-use crate::view::{StateInput, StateView, UNHEARD, state_view};
+use crate::view::{StateInput, StateView, state_view};
 use kx_module_api::ports::{
     AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen,
 };
@@ -76,7 +76,7 @@ impl Inner {
             overhang: 0.0,
             list: None,
             shown_caps: None,
-            assist: UNHEARD,
+            assist: AssistChanged::OFF,
             unshown: false,
             #[cfg(debug_assertions)]
             caps_flipped: false,

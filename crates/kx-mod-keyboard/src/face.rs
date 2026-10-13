@@ -73,10 +73,9 @@ impl Face {
     }
 
     /// Takes new services and settings after a restart, keeping the latches, a dead key's wait, the mouse module's
-    /// state and an open list whose design stays; the bus hears the latches if a held key's end let them go.
+    /// state and an open list whose design stays; the start then tells the bus the latches.
     pub fn renew(&self, ports: Ports, settings: KeyboardSettings, store: SettingsHandle) {
         self.lock().renew(ports, settings, store);
-        self.tell(false);
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {

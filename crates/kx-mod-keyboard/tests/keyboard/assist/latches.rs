@@ -4,6 +4,7 @@
 use super::{Bench, Said, scans};
 use crate::rig::STATE;
 use kx_module_api::ports::{FaceAction, FaceReply, LatchesAsk, LatchesChanged, LatchesUsed};
+use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
@@ -125,6 +126,26 @@ fn a_listener_that_asks_inside_its_handler_hears_the_set_again_with_no_deadlock(
     b.rig.tap("win").unwrap();
     let win = Said::Latches(scans(&[0xE05B]));
     assert_eq!(b.said(), [win.clone(), win]);
+}
+
+/// The payload of the panic a test listener plans.
+struct Planned;
+
+#[test]
+fn a_listener_that_panicked_never_stops_the_set_going_out_later() {
+    let b = Bench::quiet(None);
+    let armed = AtomicBool::new(true);
+    let boom = move |_: &LatchesChanged| {
+        if armed.swap(false, Ordering::SeqCst) {
+            panic::panic_any(Planned);
+        }
+    };
+    let _ear = b.bus.subscribe(boom).unwrap();
+    let tap = panic::catch_unwind(AssertUnwindSafe(|| b.rig.tap("shift")));
+    assert!(tap.is_err(), "a test bus lets the panic through");
+    b.said();
+    b.rig.tap("ctrl").unwrap();
+    assert_eq!(b.said(), [Said::Latches(scans(&[0x2A, 0x1D]))]);
 }
 
 #[test]

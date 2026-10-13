@@ -24,6 +24,15 @@ pub(super) struct Told {
     last: Mutex<Vec<Scan>>,
 }
 
+/// Clears the `sending` flag when the sending thread stops, even by a panic, so later sets still go out.
+struct Sending<'a>(&'a AtomicBool);
+
+impl Drop for Sending<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, SeqCst);
+    }
+}
+
 impl Face {
     /// Sends the latched set when it changed since last sent, or always when `again`. One thread sends at a time and
     /// takes every request made before it stops, so the bus hears the newest set last, and a handler may ask again.
@@ -40,10 +49,11 @@ impl Face {
             {
                 return;
             }
+            let sending = Sending(&t.sending);
             while t.due.swap(false, SeqCst) {
                 self.send(t.again.swap(false, SeqCst));
             }
-            t.sending.store(false, SeqCst);
+            drop(sending);
             // A request made after the last check but before the stop found the sender busy, so it is ours.
             if !t.due.load(SeqCst) {
                 return;

@@ -12,13 +12,6 @@ pub const RCLICK_TIP: &str = "tip.rclick";
 /// Grab's tip while it can be used: "Press to pick up, move, then click to drop".
 pub const GRAB_TIP: &str = "tip.grab";
 
-/// The mouse module's state before the bus tells it: not running, every mode off.
-pub const UNHEARD: AssistChanged = AssistChanged {
-    live: false,
-    rclick: false,
-    grab: GrabState::Off,
-};
-
 /// Side key `a` of `kind` while the mouse module is in state `s`.
 pub(super) fn assist_state(s: AssistChanged, a: Assist, kind: KeyKind) -> KeyState {
     if !s.live {

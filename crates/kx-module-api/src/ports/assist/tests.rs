@@ -110,3 +110,10 @@ fn latches_show_only_how_many_are_held() {
     hides(&text, &HELD_TEXT);
     assert_eq!(text, "LatchesChanged { count: 2 }");
 }
+
+#[test]
+fn off_is_a_module_that_does_not_run_with_every_mode_off() {
+    let off = AssistChanged::OFF;
+    assert!(!off.live && !off.rclick);
+    assert_eq!(off.grab, GrabState::Off);
+}
