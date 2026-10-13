@@ -1,10 +1,10 @@
 //! What goes wrong: a hook the OS refuses, a setting that cannot be saved, a stop mid-carry, and the log lines.
 
-use crate::logs::{MESSAGE, lines_of};
+use crate::logs::{Fields, MESSAGE, lines_of};
 use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown};
 use kx_mod_mouse::{ID, Msg};
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Toggle};
+use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
 use kx_module_api::{Notice, NoticeArg, WriteError, args, keys};
 use tracing::Level;
 
@@ -22,6 +22,14 @@ const STATS: HookStats = HookStats {
     send_errors: 6,
     lost_echoes: 7,
 };
+
+/// Left Shift.
+const SHIFT: Scan = Scan::new(0x2A);
+
+/// How many warnings `lines` holds.
+fn warnings(lines: &[(Level, Fields)]) -> usize {
+    lines.iter().filter(|(l, _)| *l == Level::WARN).count()
+}
 
 /// The notice a refused hook publishes.
 fn hook_failed() -> Heard {
@@ -48,32 +56,69 @@ fn a_refused_hook_tells_the_user_keeps_the_keys_off_and_the_next_toggle_tries_ag
 }
 
 #[test]
-fn a_saved_right_click_the_hook_refuses_starts_off() {
-    let mut rig = Rig::saved_rclick();
-    rig.hook.fail_next(HookError::Thread);
-    rig.begin();
-    let told = [hook_failed(), shown(false, Off), Heard::AskLatches];
-    assert_eq!(rig.take(), told);
-    assert!(
-        rig.host.sink.writes().is_empty(),
-        "the saved value waits for the next start"
-    );
+fn a_saved_right_click_the_hook_refuses_starts_off_with_no_notice() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::saved_rclick();
+        rig.hook.fail_next(HookError::Thread);
+        rig.begin();
+        let told = [shown(false, Off), Heard::AskLatches];
+        assert_eq!(rig.take(), told, "the user pressed no mouse key");
+        assert!(
+            rig.host.sink.writes().is_empty(),
+            "the saved value waits for the next start"
+        );
+    });
+    assert_eq!(warnings(&lines), 1);
 }
 
 #[test]
-fn a_right_click_that_cannot_be_saved_tells_settings_unsaved() {
+fn a_hook_refused_for_latches_tells_no_one_and_warns_once_per_streak() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.begin();
+        rig.take();
+        for _ in 0..2 {
+            rig.hook.fail_next(HookError::Refused(CODE));
+            rig.send(Msg::Latches(vec![SHIFT]));
+        }
+        assert!(rig.take().is_empty(), "the user pressed no mouse key");
+        rig.send(Msg::Latches(vec![SHIFT]));
+        assert!(rig.hook.running(), "a start that works ends the streak");
+        rig.send(Msg::Latches(Vec::new()));
+        rig.settle(T0);
+        rig.hook.fail_next(HookError::Refused(CODE));
+        rig.send(Msg::Latches(vec![SHIFT]));
+        assert!(rig.take().is_empty());
+    });
+    assert_eq!(warnings(&lines), 2, "one per streak: {lines:?}");
+}
+
+#[test]
+fn a_mouse_key_refused_after_a_latch_failure_still_tells_the_user() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.take();
+    rig.hook.fail_next(HookError::Refused(CODE));
+    rig.send(Msg::Latches(vec![SHIFT]));
+    rig.hook.fail_next(HookError::Refused(CODE));
+    rig.toggle(Toggle::Grab);
+    assert_eq!(rig.take(), [hook_failed()]);
+}
+
+#[test]
+fn a_right_click_that_cannot_be_saved_still_works_and_adds_no_notice() {
     let mut rig = Rig::new();
     rig.begin();
     rig.take();
     rig.host.sink.refuse(Some(WriteError::Unsaved));
     rig.toggle(Toggle::RightClick);
     rig.settle(T0);
-    let unsaved = Notice {
-        key: keys::SETTINGS_UNSAVED,
-        module: None,
-        args: Vec::new(),
-    };
-    assert_eq!(rig.take(), [shown(true, Off), Heard::Notice(unsaved)]);
+    // The kernel's store tells the user once per run that settings are not saved.
+    assert_eq!(rig.take(), [shown(true, Off)]);
+    rig.toggle(Toggle::RightClick);
+    rig.settle(T1);
+    assert_eq!(rig.take(), [shown(false, Off)]);
+    assert!(!rig.hook.running(), "the toggle works in memory");
 }
 
 #[test]

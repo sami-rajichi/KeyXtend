@@ -103,13 +103,13 @@ impl HookEngine {
     fn tell(&mut self) {
         self.engine.take_notes(&mut self.notes);
         for note in self.notes.drain(..) {
-            let msg = match note {
-                Note::Moved { at } if !self.moves.put(at) => continue,
-                Note::Moved { .. } => Msg::Moved,
-                other => Msg::Note(other),
-            };
+            if let Note::Moved { at } = note
+                && !self.moves.put(at)
+            {
+                continue;
+            }
             // The actor outlives every run it starts, so only a stopping actor misses this.
-            let _ = self.actor.send(msg);
+            let _ = self.actor.send(Msg::Note(note));
         }
     }
 

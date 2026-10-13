@@ -20,10 +20,8 @@ pub enum Msg {
     Latches(Vec<Scan>),
     /// A module asks for the state.
     Ask,
-    /// The engine noted something.
+    /// The engine noted something; for a move, the latest point waits in the shared move slot.
     Note(Note),
-    /// The pointer moved; the latest point waits in the shared move slot.
-    Moved,
     /// The engine no longer needs the hook, after applying this many queued commands.
     Idle(u64),
     /// The module stops.
@@ -54,6 +52,8 @@ pub struct Actor {
     /// The keyboard's latched modifiers.
     latches: Vec<Scan>,
     live: Option<Live>,
+    /// The last start failed; until one works, a start no mouse key asked for fails without a word.
+    failing: bool,
 }
 
 impl Actor {
@@ -79,6 +79,7 @@ impl Actor {
             grab: GrabState::Off,
             latches: Vec::new(),
             live: None,
+            failing: false,
         }
     }
 
@@ -111,7 +112,6 @@ impl Actor {
             Msg::Latches(held) => self.latch(held),
             Msg::Ask => self.tell_state(),
             Msg::Note(note) => self.note(note),
-            Msg::Moved => self.moved(),
             Msg::Idle(applied) => self.idle(applied),
             Msg::Stop => {
                 self.stop();
@@ -160,6 +160,7 @@ impl Actor {
             ..base
         });
         engine.set_latches(self.latches.clone());
+        let by_key = matches!(first, Some(Cmd::Toggle(_)));
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         let engine = HookEngine::new(engine, first, cmds, self.inbox.clone(), moves);
@@ -169,24 +170,31 @@ impl Actor {
         {
             Ok(run) => {
                 run.wake();
+                self.failing = false;
                 self.live = Some(Live {
                     run,
                     queue,
                     sent: 0,
                 });
             }
-            Err(error) => self.refused(error),
+            Err(error) => self.refused(error, by_key),
         }
     }
 
-    /// Tells the user the hook did not start; the modes stay off, and the next toggle tries again.
-    fn refused(&self, error: HookError) {
-        tracing::warn!(%error, "mouse hook did not start");
-        self.publish(&Notice {
-            key: keys::MOUSE_HOOK_FAILED,
-            module: Some(ID),
-            args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-        });
+    /// The hook did not start, so the modes stay off. Only a mouse key's start tells the user, who can press it
+    /// again; other starts warn once per streak of failures.
+    fn refused(&mut self, error: HookError, by_key: bool) {
+        if by_key || !self.failing {
+            tracing::warn!(%error, "mouse hook did not start");
+        }
+        self.failing = true;
+        if by_key {
+            self.publish(&Notice {
+                key: keys::MOUSE_HOOK_FAILED,
+                module: Some(ID),
+                args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
+            });
+        }
     }
 
     /// Stops the hook once the engine reported idle after every command sent so far.

@@ -3,8 +3,8 @@
 use super::Actor;
 use crate::Note;
 use crate::settings::RCLICK_KEY;
+use kx_module_api::Event;
 use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, LatchesUsed, PointerMoved};
-use kx_module_api::{Event, Notice, keys};
 
 impl Actor {
     /// Turns an engine note into its bus event.
@@ -34,18 +34,13 @@ impl Actor {
         self.tell_state();
         if grab == GrabState::Off && rclick != self.saved {
             self.saved = rclick;
-            if self.store.set(RCLICK_KEY, rclick.into()).is_err() {
-                self.publish(&Notice {
-                    key: keys::SETTINGS_UNSAVED,
-                    module: None,
-                    args: Vec::new(),
-                });
-            }
+            // The kernel's store tells the user once per run when it cannot save, so a failure needs nothing here.
+            let _ = self.store.set(RCLICK_KEY, rclick.into());
         }
     }
 
-    /// Publishes the latest pointer point, and lets the next move through.
-    pub(super) fn moved(&self) {
+    /// Publishes the latest pointer point, which may be newer than the note's, and lets the next move through.
+    fn moved(&self) {
         let at = self.moves.take();
         self.publish(&PointerMoved { at });
     }

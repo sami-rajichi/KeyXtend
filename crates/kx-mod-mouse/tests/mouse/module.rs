@@ -1,6 +1,7 @@
 //! The module's start through the shared fake host, which gates services as the kernel does, and its actor thread
 //! over the bus.
 
+use crate::logs::{MESSAGE, Planned, lines_of};
 use crate::rig::{RCLICK, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
@@ -16,6 +17,7 @@ use kx_test_support::host::{FakeHost, Stored};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
+use tracing::Level;
 
 /// The longest a threaded test waits for the actor; it never sleeps.
 const WAIT: Duration = Duration::from_secs(10);
@@ -32,6 +34,19 @@ impl PointerHook for Idle {
         _: HookConfig,
     ) -> Result<Box<dyn HookRun>, HookError> {
         Err(HookError::Thread)
+    }
+}
+
+/// A hook whose start panics, as a platform bug would.
+struct Broken;
+
+impl PointerHook for Broken {
+    fn start(
+        &self,
+        _: Box<dyn PointerEngine>,
+        _: HookConfig,
+    ) -> Result<Box<dyn HookRun>, HookError> {
+        std::panic::panic_any(Planned)
     }
 }
 
@@ -201,4 +216,20 @@ fn a_saved_right_click_runs_the_hook_from_the_start() {
     assert!(live.hook.running());
     live.stop();
     assert!(!live.hook.running());
+}
+
+#[test]
+fn an_actor_that_panicked_is_logged_once_when_the_module_stops() {
+    let lines = lines_of(|| {
+        let mut host = host(&ALL, Some(Arc::new(Broken)));
+        host.put(RCLICK, true.into());
+        let mut module = MouseModule::default();
+        module.start(&mut ModuleCx::new(&mut host)).unwrap();
+        host.held.clear();
+        module.stop();
+    });
+    let warned: Vec<_> = lines.iter().filter(|(l, _)| *l == Level::WARN).collect();
+    assert_eq!(warned.len(), 1, "{lines:?}");
+    let fields: Vec<_> = warned[0].1.keys().copied().collect();
+    assert_eq!(fields, [MESSAGE], "the line holds no point or key");
 }

@@ -1,9 +1,12 @@
 //! A log capture for one test thread: each line's level and fields. One capture serves the whole test binary, so
-//! `tracing` never caches a log line as unheard while another test thread starts its own.
+//! `tracing` never caches a log line as unheard while another test thread starts its own. It also hushes planned
+//! panics.
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::panic;
 use std::sync::Once;
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
@@ -22,12 +25,21 @@ thread_local! {
     static SEEN: RefCell<Option<Vec<(Level, Fields)>>> = const { RefCell::new(None) };
 }
 
-/// Installs the capture for the whole test binary, once.
+/// Installs the capture and the quiet panic hook for the whole test binary, once.
 static INSTALL: Once = Once::new();
+
+/// The payload of a panic a test plans; the panic hook prints nothing for it.
+pub struct Planned;
 
 /// The lines `f` logs on this thread, in order.
 pub fn lines_of(f: impl FnOnce()) -> Vec<(Level, Fields)> {
     INSTALL.call_once(|| {
+        let usual = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            if !<dyn Any + Send>::is::<Planned>(info.payload()) {
+                usual(info);
+            }
+        }));
         // Only this file sets a capture in this test binary, so the first call always installs it.
         let _ = tracing::subscriber::set_global_default(Lines);
     });

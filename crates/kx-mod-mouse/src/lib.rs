@@ -67,11 +67,13 @@ impl Drop for MouseModule {
 }
 
 impl MouseModule {
-    /// Tells the actor to stop and waits for its thread to end.
+    /// Tells the actor to stop and waits for its thread to end; a panic there is logged, with no point or key.
     fn halt(&mut self) {
         if let Some((tx, thread)) = self.actor.take() {
             let _ = tx.send(Msg::Stop);
-            let _ = thread.join();
+            if thread.join().is_err() {
+                tracing::warn!("mouse actor panicked");
+            }
         }
     }
 }
