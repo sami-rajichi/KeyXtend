@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 11:03 — P4: sound candidates tool (`cargo xtask sounds`)
+`cargo xtask sounds render` turns the recipes in `assets/sounds/recipes.toml` into WAV candidates from filtered noise and damped partials, with three jittered variants per key sound, the same bytes on every run. `sounds import` turns an 8, 16 or 24-bit or float, mono or stereo WAV into the shipping format, 48 kHz 16-bit mono, trimmed, faded and peak-normalised, and refuses a damaged file without a panic. Ten first recipes (four keys, two clicks, two pick-ups, two drops) wait for the owner's ear beside the CC0 recordings.
+
 ## 2026-10-13 00:35 — P3: G26 waits for the labels instead of reading them once
 G26's first CI run passed German, Russian and Persian, but read Hebrew's keys once, 550 ms after the switch, while the runner's cold debug build had not yet listed them; seconds later all 48 keys were found and 100 Hebrew characters typed intact. The gate now reads again until every key is listed and named right, up to `[g26] label_wait_ms`, and reports the time taken as `labels_ms`. The next run passed all four: Hebrew's labels were right after 7.4 s against 0.64–0.68 s for the others, and P14 holds that slow first switch.
 

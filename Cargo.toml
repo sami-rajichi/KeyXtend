@@ -192,3 +192,9 @@ network = { lib = "Qt6Network.dll", by = ["Qt6Qml.dll", "Qt6Quick.dll"] }
 api_sets = ["api-ms-", "ext-ms-"]
 # Windows' system folder, under the folder `devtools.shell_root_env` names; an import found there resolves.
 system_dir = "System32"
+
+[workspace.metadata.sounds]
+# The sound recipes and shipping format that `cargo xtask sounds` reads, under the workspace root.
+recipes = "assets/sounds/recipes.toml"
+# Folder, under the workspace root, that `cargo xtask sounds render` writes to unless given `--out`.
+out_dir = "target/sounds"

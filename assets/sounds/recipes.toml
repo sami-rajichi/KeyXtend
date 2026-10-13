@@ -1,0 +1,459 @@
+# Sound recipes for `cargo xtask sounds render`, and the shipping format both render and import write.
+# A layer is a filtered noise burst or a set of damped sine partials; times are in ms, levels are relative.
+# `decay_ms` is the time a layer or partial takes to fall 60 dB after its rise.
+
+[format]
+# Samples per second of every shipped sound.
+rate = 48000
+# Bits per sample.
+bits = 16
+# Channels.
+channels = 1
+# The highest peak, in dBFS.
+ceiling_db = -3.0
+# The fade at the end of every sound, in ms.
+fade_ms = 5
+# Import trims leading and trailing audio quieter than this, in dB below the peak.
+trim_db = -50.0
+# The longest sound, in ms.
+max_ms = 400
+
+[variants]
+# The largest pitch change of a variant, up or down, in cents (100 is a semitone).
+pitch_cents = 35
+# The largest level drop of a variant, in dB.
+level_db = 1.0
+
+[resample]
+# Sinc zero crossings on each side of a sample.
+half_taps = 32
+# The cutoff, as a share of the lower Nyquist frequency.
+rolloff = 0.94
+
+# A soft scissor laptop key: a light tick and a short, high plastic body.
+[[recipe]]
+name = "key-laptop"
+length_ms = 70
+gain_db = -1
+variants = 3
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 4200
+q = 0.8
+start_ms = 0
+attack_ms = 0.2
+decay_ms = 4
+level = 0.6
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 2200
+q = 1.3
+start_ms = 0.5
+attack_ms = 0.4
+decay_ms = 20
+level = 1.0
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 600
+q = 1.2
+start_ms = 0.5
+attack_ms = 0.8
+decay_ms = 24
+level = 0.6
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0.5
+attack_ms = 0.4
+level = 0.35
+partials = [
+    { hz = 1850, decay_ms = 18, level = 1.0 },
+    { hz = 2700, decay_ms = 12, level = 0.6 },
+    { hz = 1150, decay_ms = 24, level = 0.5 },
+]
+
+# A muted desktop membrane key: a dull rubber-dome press with little high end.
+[[recipe]]
+name = "key-membrane"
+length_ms = 90
+gain_db = -2
+variants = 3
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 2500
+q = 0.7
+start_ms = 0
+attack_ms = 0.6
+decay_ms = 7
+level = 0.9
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 900
+q = 1.8
+start_ms = 1
+attack_ms = 1.2
+decay_ms = 32
+level = 0.9
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 380
+q = 1.4
+start_ms = 1
+attack_ms = 1.5
+decay_ms = 34
+level = 0.6
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 1
+attack_ms = 1
+level = 0.2
+partials = [
+    { hz = 720, decay_ms = 30, level = 1.0 },
+    { hz = 1240, decay_ms = 20, level = 0.6 },
+]
+
+# A dampened mechanical key: a soft keycap touch, then a cushioned bottom-out clack.
+[[recipe]]
+name = "key-mech-soft"
+length_ms = 110
+gain_db = 0
+variants = 3
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 3000
+q = 1.2
+start_ms = 0
+attack_ms = 0.3
+decay_ms = 3
+level = 0.4
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 3600
+q = 0.9
+start_ms = 5
+attack_ms = 0.25
+decay_ms = 5
+level = 0.7
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 1500
+q = 1.3
+start_ms = 5
+attack_ms = 0.4
+decay_ms = 26
+level = 0.9
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 600
+q = 1.6
+start_ms = 5
+attack_ms = 0.8
+decay_ms = 36
+level = 0.6
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 5
+attack_ms = 0.5
+level = 0.25
+partials = [
+    { hz = 980, decay_ms = 32, level = 1.0 },
+    { hz = 1650, decay_ms = 22, level = 0.7 },
+    { hz = 2500, decay_ms = 14, level = 0.4 },
+]
+
+# A deep, lubed mechanical "thock": a muted touch and a low, rounded case resonance.
+[[recipe]]
+name = "key-thock"
+length_ms = 140
+gain_db = -2
+variants = 3
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 2200
+q = 0.7
+start_ms = 0
+attack_ms = 0.5
+decay_ms = 6
+level = 0.9
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 520
+q = 1.6
+start_ms = 1
+attack_ms = 1.2
+decay_ms = 45
+level = 1.0
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 300
+q = 1.8
+start_ms = 1
+attack_ms = 1.5
+decay_ms = 50
+level = 0.6
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 1
+attack_ms = 1
+level = 0.35
+glide = { ratio = 0.97, ms = 25 }
+partials = [
+    { hz = 340, decay_ms = 60, level = 1.0 },
+    { hz = 560, decay_ms = 48, level = 0.8 },
+    { hz = 900, decay_ms = 34, level = 0.45 },
+    { hz = 1400, decay_ms = 22, level = 0.2 },
+]
+
+# A quiet mouse micro-switch: a short resonant click over a small plastic shell.
+[[recipe]]
+name = "click-soft"
+length_ms = 50
+gain_db = 0
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 3400
+q = 2.0
+start_ms = 0
+attack_ms = 0.1
+decay_ms = 3
+level = 1.0
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0
+attack_ms = 0.15
+level = 0.35
+partials = [
+    { hz = 3300, decay_ms = 9, level = 1.0 },
+    { hz = 2700, decay_ms = 8, level = 0.5 },
+]
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 1100
+q = 1.8
+start_ms = 0.3
+attack_ms = 0.4
+decay_ms = 14
+level = 0.6
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0.3
+attack_ms = 0.4
+level = 0.15
+partials = [
+    { hz = 1050, decay_ms = 16, level = 1.0 },
+    { hz = 1600, decay_ms = 12, level = 0.5 },
+]
+
+# A "silent" mouse switch: a damped, low tap with almost no click.
+[[recipe]]
+name = "click-muted"
+length_ms = 45
+gain_db = -4
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 1800
+q = 0.7
+start_ms = 0
+attack_ms = 0.4
+decay_ms = 6
+level = 0.8
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 800
+q = 1.6
+start_ms = 0.2
+attack_ms = 0.6
+decay_ms = 16
+level = 0.8
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0.2
+attack_ms = 0.6
+level = 0.15
+partials = [
+    { hz = 760, decay_ms = 16, level = 1.0 },
+    { hz = 1200, decay_ms = 9, level = 0.5 },
+]
+
+# A soft lift, like picking a card off a table: a rising brush of air and a faint release.
+[[recipe]]
+name = "pick-lift"
+length_ms = 140
+gain_db = -6
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 700
+q = 1.1
+start_ms = 0
+attack_ms = 25
+decay_ms = 80
+level = 0.8
+glide = { ratio = 2.6, ms = 80 }
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 600
+q = 0.7
+start_ms = 0
+attack_ms = 2
+decay_ms = 18
+level = 0.3
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 2500
+q = 1.5
+start_ms = 55
+attack_ms = 0.5
+decay_ms = 6
+level = 0.2
+
+# A short, soft rising pluck, like a muted string plucked upward.
+[[recipe]]
+name = "pick-pluck"
+length_ms = 180
+gain_db = -5
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0
+attack_ms = 3
+level = 0.8
+glide = { ratio = 1.3, ms = 45 }
+partials = [
+    { hz = 640, decay_ms = 110, level = 1.0 },
+    { hz = 1280, decay_ms = 60, level = 0.3 },
+    { hz = 1920, decay_ms = 35, level = 0.1 },
+]
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 2400
+q = 0.7
+start_ms = 0
+attack_ms = 0.8
+decay_ms = 8
+level = 0.25
+
+# A soft placing tap on wood: a rounded contact and short wooden resonances.
+[[recipe]]
+name = "drop-place"
+length_ms = 140
+gain_db = -4
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 3000
+q = 0.7
+start_ms = 0
+attack_ms = 0.4
+decay_ms = 5
+level = 0.8
+
+[[recipe.layer]]
+kind = "noise"
+filter = "bandpass"
+hz = 1100
+q = 1.5
+start_ms = 0
+attack_ms = 0.6
+decay_ms = 22
+level = 0.9
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0.3
+attack_ms = 0.6
+level = 0.3
+partials = [
+    { hz = 380, decay_ms = 50, level = 0.6 },
+    { hz = 720, decay_ms = 40, level = 1.0 },
+    { hz = 1210, decay_ms = 30, level = 0.6 },
+    { hz = 1850, decay_ms = 20, level = 0.3 },
+    { hz = 2650, decay_ms = 12, level = 0.15 },
+]
+
+# A muffled small thud: a low, padded knock that settles downward.
+[[recipe]]
+name = "drop-thud"
+length_ms = 180
+gain_db = -1
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 1000
+q = 0.7
+start_ms = 0
+attack_ms = 1.5
+decay_ms = 45
+level = 1.0
+
+[[recipe.layer]]
+kind = "modes"
+start_ms = 0
+attack_ms = 2
+level = 0.5
+glide = { ratio = 0.9, ms = 40 }
+partials = [
+    { hz = 280, decay_ms = 70, level = 1.0 },
+    { hz = 450, decay_ms = 55, level = 0.8 },
+    { hz = 700, decay_ms = 38, level = 0.45 },
+    { hz = 1050, decay_ms = 24, level = 0.2 },
+]
+
+[[recipe.layer]]
+kind = "noise"
+filter = "lowpass"
+hz = 1800
+q = 0.6
+start_ms = 0
+attack_ms = 0.6
+decay_ms = 6
+level = 0.35

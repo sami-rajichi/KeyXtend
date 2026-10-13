@@ -10,6 +10,7 @@ mod dco;
 mod devtools;
 mod dist;
 mod licences;
+mod sounds;
 #[cfg(test)]
 mod test_support;
 mod text;
@@ -52,6 +53,19 @@ fn run(command: &cli::Command) -> ExitCode {
         cli::Command::CheckUiAccess { exe } => {
             devtools::check::run(exe).map_or_else(fail, exit_for)
         }
+        cli::Command::SoundsRender { out } => finish(sounds::render(out.as_deref())),
+        cli::Command::SoundsImport {
+            input,
+            output,
+            start_ms,
+            len_ms,
+        } => {
+            let cut = sounds::Cut {
+                start_ms: *start_ms,
+                len_ms: *len_ms,
+            };
+            finish(sounds::import(input, output, cut))
+        }
     }
 }
 
@@ -77,11 +91,12 @@ fn finish(result: Result<(), impl Display>) -> ExitCode {
 
 /// Runs `cargo xtask tidy`: loads the real workspace, runs every rule and prints the report.
 ///
-/// It also validates the real dev-tools and stage settings, so CI catches a bad value there.
+/// It also validates the real dev-tools, stage and sounds settings, so CI catches a bad value there.
 fn run_tidy() -> ExitCode {
     let loaded = workspace::metadata_json().and_then(|json| {
         devtools::config::load(&json)?;
         devtools::stage::load(&json)?;
+        sounds::load(&json)?;
         workspace::load(&json)
     });
     match loaded {
