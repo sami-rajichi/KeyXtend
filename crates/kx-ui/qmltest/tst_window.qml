@@ -8,6 +8,7 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
 import "pointer.js" as Pointer
+import "board.js" as Board
 
 Item {
     id: root
@@ -69,13 +70,6 @@ Item {
             const hits = buttons(win).filter(o => o.Accessible.name === name);
             compare(hits.length, 1, name);
             return hits[0];
-        }
-        // The window's tooltip.
-        function tipOf(win) {
-            for (let i = 0; i < win.data.length; i++)
-                if (win.data[i].item && win.data[i].item.hint)
-                    return win.data[i].item;
-            return null;
         }
         // What the texts call board key `k`, or its character from the English state.
         function nameOf(k) {
@@ -189,7 +183,7 @@ Item {
             const win = make();
             win.visible = true;
             waitForRendering(win.contentItem);
-            const tip = tipOf(win);
+            const tip = Board.tipOf(win);
             const said = [[keyed(win, "mic"), "key.mic"], [named(win, En.texts["key.dpad"]), "key.dpad"]];
             for (const [it, name] of said) {
                 mouseMove(it, it.width / 2, it.height / 2);
@@ -210,7 +204,7 @@ Item {
             const key = keyed(win, "lang");
             compare(key.Accessible.description, En.texts["tip.one-lang"]);
             mouseMove(key, key.width / 2, key.height / 2);
-            compare(tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
+            compare(Board.tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
             win.visible = false;
         }
 
@@ -250,13 +244,13 @@ Item {
                 verify(Qt.colorEqual(key.fillColour, win.lk.palette.dim), id + " is dimmed");
                 mouseMove(key, key.width / 2, key.height / 2);
                 const says = En.texts["key." + id] + "\n" + En.texts["tip.mouse-off"];
-                compare(tipOf(win).name, says, id);
+                compare(Board.tipOf(win).name, says, id);
                 mousePress(key);
                 verify(!key.down && key.sink === 0, id + " does not sink");
                 mouseRelease(key);
                 tryCompare(win.presses, "waiting", null);
                 compare(taps(id), 0, id + " sends nothing");
-                compare(tipOf(win).name, says, id + " keeps its tip");
+                compare(Board.tipOf(win).name, says, id + " keeps its tip");
             }
             const keys = win.keyboard.state.keys;
             keys.rclick = Object.assign({}, keys.rclick, { paint: keys.esc.paint, tip: "tip.rclick" });

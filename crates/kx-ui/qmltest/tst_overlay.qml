@@ -234,8 +234,8 @@ Item {
 
         function test_one_click_through_window_on_top_that_never_takes_focus() {
             const o = overlay(screen(1), state(px(100, 100, 1), null));
-            const flags = [Qt.Tool, Qt.WindowTransparentForInput, Qt.WindowDoesNotAcceptFocus, Qt.WindowStaysOnTopHint, Qt.FramelessWindowHint];
-            for (const f of flags)
+            compare(o.flags & Qt.WindowType_Mask, Qt.Tool, "a tool window");
+            for (const f of [Qt.WindowTransparentForInput, Qt.WindowDoesNotAcceptFocus, Qt.WindowStaysOnTopHint, Qt.FramelessWindowHint])
                 verify((o.flags & f) === f, "flag " + f);
             compare(o.title, En.texts["window.pointer"]);
             compare(o.transientParent, null, "unowned, so it shows while the keyboard is away");

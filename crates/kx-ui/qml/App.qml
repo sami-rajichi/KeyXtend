@@ -157,7 +157,7 @@ QtObject {
             st: app.assist
             spots: face.spots
             ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null]
-            // A quiet run: never in front of our windows, it leaves a key's tip and a pop-up's place alone.
+            // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }
     }

@@ -209,8 +209,8 @@ Window {
         hint("", null);
         guard.run(top);
     }
-    // Guards our shown windows without hiding a tip or changing the window the run puts in front, for a window that never
-    // goes in front of ours, as the pointer overlay.
+    // Guards our shown windows without hiding a tip or changing the window the run puts in front, for a window that draws
+    // nothing over ours, as the pointer overlay.
     function guardQuiet() {
         guard.run(null);
     }

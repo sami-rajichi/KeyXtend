@@ -10,6 +10,7 @@ import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-dolch-light.js" as Dolch
 import "pointer.js" as Pointer
+import "board.js" as Board
 
 Item {
     id: root
@@ -59,8 +60,8 @@ Item {
             app.ui.settings = Object.assign({}, En.settings, { tipMs: waitMs });
             tryVerify(() => app.face.visible, 2000, "the keyboard shows");
             waitForRendering(app.face.contentItem);
-            compare(tipOf(app.face).ms, waitMs, "the wait comes from the settings");
-            compare(tipOf(app.bubble).ms, waitMs, "the bubble's wait too");
+            compare(Board.tipOf(app.face).ms, waitMs, "the wait comes from the settings");
+            compare(Board.tipOf(app.bubble).ms, waitMs, "the bubble's wait too");
             return app;
         }
         // True when a `tip`-sized box at `p` lies on screen `sc`.
@@ -81,13 +82,9 @@ Item {
             verify(tip.flags & Qt.WindowTransparentForInput, at + "click-through");
             compare(tip.flags & Qt.WindowType_Mask, Qt.ToolTip, at + "a tool-tip window");
         }
-        // The tip window `win` shows, made directly or by a Loader.
-        function tipOf(win) {
-            return [...win.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && o.hint && o.ms !== undefined);
-        }
         // The tip on screen now, of either window; null when none shows.
         function shown(app) {
-            return [app.face, app.bubble].map(tipOf).find(t => t && t.visible) || null;
+            return [app.face, app.bubble].map(Board.tipOf).find(t => t && t.visible) || null;
         }
         // The face's board at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
         function scaled(size) {
@@ -125,7 +122,7 @@ Item {
         // Moves straight from control to control, as a quick hand does: each tip waits, then shows its text over its
         // control and stays on the keyboard's screen.
         function pass(app, t, where) {
-            const tip = tipOf(app.face);
+            const tip = Board.tipOf(app.face);
             const list = tipped(app, t);
             verify(list.some(c => c.item.part !== undefined), where + "the top bar is in the list");
             for (const c of list) {
@@ -142,7 +139,7 @@ Item {
         function speak(app, t) {
             app.ui.lang = t.lang;
             app.ui.texts = t.texts;
-            const tip = tipOf(app.face);
+            const tip = Board.tipOf(app.face);
             verify(!tip.visible && tip.name === "", t.lang.tag + ": the last tip closes");
         }
 
@@ -164,7 +161,7 @@ Item {
             speak(app, Ar);
             pass(app, Ar, "ar small dolch: ");
             // A key that prints its word has no tip, and the next icon key still shows its own.
-            const tip = tipOf(app.face);
+            const tip = Board.tipOf(app.face);
             const esc = named(app.face.contentItem, Ar.texts["key.esc"]);
             mouseMove(esc, esc.width / 2, esc.height / 2);
             verify(!tip.visible && tip.at === null, "no tip on a key that prints its word");
@@ -226,7 +223,7 @@ Item {
         // A quick hand crosses several keys without resting: only the last one's tip shows, once, after the wait.
         function test_a_quick_sweep_shows_one_tip_over_the_last_key() {
             const app = make();
-            const tip = tipOf(app.face);
+            const tip = Board.tipOf(app.face);
             const keys = tipped(app, En).filter(c => c.item.part === undefined).slice(0, 4);
             const seen = createTemporaryObject(spyC, root, { target: tip, signalName: "visibleChanged" });
             for (const c of keys) {
@@ -244,7 +241,7 @@ Item {
         // button, and a button on no screen keeps it on its window's screen.
         function test_a_tip_stays_on_the_screen_under_its_button() {
             const app = make();
-            const tip = tipOf(app.face);
+            const tip = Board.tipOf(app.face);
             const a = tip.area;
             const left = { virtualX: a.x, virtualY: a.y, width: a.width, height: a.height };
             const right = { virtualX: a.x + a.width, virtualY: a.y + a.height / 4, width: a.width, height: a.height };
