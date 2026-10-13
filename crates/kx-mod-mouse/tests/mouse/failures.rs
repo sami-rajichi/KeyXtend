@@ -56,13 +56,13 @@ fn a_refused_hook_tells_the_user_keeps_the_keys_off_and_the_next_toggle_tries_ag
 }
 
 #[test]
-fn a_saved_right_click_the_hook_refuses_starts_off_with_no_notice() {
+fn a_saved_right_click_the_hook_refuses_starts_off_and_says_why() {
     let lines = lines_of(|| {
         let mut rig = Rig::saved_rclick();
         rig.hook.fail_next(HookError::Thread);
         rig.begin();
-        let told = [shown(false, Off), Heard::AskLatches];
-        assert_eq!(rig.take(), told, "the user pressed no mouse key");
+        let told = [hook_failed(), shown(false, Off), Heard::AskLatches];
+        assert_eq!(rig.take(), told, "the user expects Right-click on");
         assert!(
             rig.host.sink.writes().is_empty(),
             "the saved value waits for the next start"

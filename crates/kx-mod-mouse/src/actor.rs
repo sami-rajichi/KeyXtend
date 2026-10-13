@@ -52,7 +52,7 @@ pub struct Actor {
     /// The keyboard's latched modifiers.
     latches: Vec<Scan>,
     live: Option<Live>,
-    /// The last start failed; until one works, a start no mouse key asked for fails without a word.
+    /// The last start failed; until one works, a start for latches fails without a word.
     failing: bool,
 }
 
@@ -160,7 +160,8 @@ impl Actor {
             ..base
         });
         engine.set_latches(self.latches.clone());
-        let by_key = matches!(first, Some(Cmd::Toggle(_)));
+        // Only latches start quietly: a mouse key or a restored Right-click is a mode the user expects on.
+        let expected = !matches!(first, Some(Cmd::Latches(_)));
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         let engine = HookEngine::new(engine, first, cmds, self.inbox.clone(), moves);
@@ -177,18 +178,18 @@ impl Actor {
                     sent: 0,
                 });
             }
-            Err(error) => self.refused(error, by_key),
+            Err(error) => self.refused(error, expected),
         }
     }
 
-    /// The hook did not start, so the modes stay off. Only a mouse key's start tells the user, who can press it
-    /// again; other starts warn once per streak of failures.
-    fn refused(&mut self, error: HookError, by_key: bool) {
-        if by_key || !self.failing {
+    /// The hook did not start, so the modes stay off. A mode the user `expected` on tells them, and they can press
+    /// its key again; a start for latches warns once per streak of failures.
+    fn refused(&mut self, error: HookError, expected: bool) {
+        if expected || !self.failing {
             tracing::warn!(%error, "mouse hook did not start");
         }
         self.failing = true;
-        if by_key {
+        if expected {
             self.publish(&Notice {
                 key: keys::MOUSE_HOOK_FAILED,
                 module: Some(ID),
