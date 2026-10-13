@@ -30,5 +30,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0024 | [Controls act on the press they got](0024-controls-act-on-the-press-they-got.md) | Accepted (2026-10-11) |
 | 0025 | [A pressed key draws first and presents without vsync](0025-a-pressed-key-draws-first-and-presents-without-vsync.md) | Accepted (2026-10-12). Changes spec §10's key light target. Its `present_vsync = false` is superseded by ADR-0026. |
 | 0026 | [Frames keep the refresh wait; a press still draws first](0026-frames-keep-the-refresh-wait.md) | Accepted (2026-10-12). Supersedes ADR-0025's `present_vsync = false`. |
+| 0027 | [The hold engine decides in the hook, behind a port](0027-the-hold-engine-decides-in-the-hook-behind-a-port.md) | Accepted (2026-10-13). Changes spec §5.1's hook discipline. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
