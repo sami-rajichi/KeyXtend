@@ -61,9 +61,10 @@ crates/
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
                          language, the tray's in the system's (ADR-0020)
-  kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
+  kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view,
                          WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
-                         and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
+                         the high-contrast palette, and the strict reader kx-ui's build checks sounds with; no
+                         Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
@@ -102,7 +103,7 @@ tools/
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
                          texts test lays out, and the soft shadows' adopter, so the tests draw as
                          the app does
-assets/                  fonts and icons with their licences, compiled into kx-ui (ADR-0016)
+assets/                  fonts, icons and sounds with their licences, compiled into kx-ui (ADR-0016)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), stage (the release app with its Qt files),
@@ -172,7 +173,7 @@ pub trait Module: Send + 'static {
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.
-   - Colours, fonts, spacing, motion and icon names live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`).
+   - Colours, fonts, spacing, motion, icon names and sounds live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`, `sounds.toml`).
    - User-visible text lives in translation files.
    - OS mappings live in adapter tables.
    - `kx-review` checks this.

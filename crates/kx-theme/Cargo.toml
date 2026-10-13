@@ -1,6 +1,6 @@
 [package]
 name = "kx-theme"
-description = "The theme tokens, compiled in: colours, sizes, motion and icons, the look a face draws now, contrast and high contrast."
+description = "The theme tokens, compiled in: colours, sizes, motion, icons and sounds, the look a face draws now, contrast and high contrast."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

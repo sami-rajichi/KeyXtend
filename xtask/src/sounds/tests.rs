@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde_json::json;
 
-use super::fixture::{BOOK, TAG_PCM, crossings, encode, header, mono, pcm, peak, sine};
+use super::fixture::{BOOK, FORMAT, TAG_PCM, crossings, encode, header, mono, pcm, peak, sine};
 use super::recipe::{Book, parse};
 use super::units::{db_gain, index, samples};
 use super::*;
@@ -10,9 +10,11 @@ use crate::test_support::TempDir;
 
 /// The recipe file the project ships.
 const SHIPPED: &str = include_str!("../../../assets/sounds/recipes.toml");
+/// The sounds file the project ships, which holds the format.
+const SHIPPED_FORMAT: &str = include_str!("../../../crates/kx-theme/tokens/sounds.toml");
 
 fn book() -> Book {
-    parse(BOOK).unwrap()
+    parse(BOOK, FORMAT).unwrap()
 }
 
 /// The highest 16-bit value the ceiling allows.
@@ -205,7 +207,7 @@ fn import_refuses_an_empty_window_silence_and_bad_files() {
 
 #[test]
 fn the_shipped_recipes_parse_and_render_within_the_format_limits() {
-    let book = parse(SHIPPED).unwrap();
+    let book = parse(SHIPPED, SHIPPED_FORMAT).unwrap();
     let names: HashSet<&str> = book.recipes.iter().map(|r| r.name.as_str()).collect();
     assert_eq!(names.len(), book.recipes.len(), "recipe names repeat");
     for (stem, sound) in render_every(&book) {
@@ -214,27 +216,68 @@ fn the_shipped_recipes_parse_and_render_within_the_format_limits() {
     }
 }
 
+#[test]
+fn the_workspace_names_the_sounds_file_kx_ui_builds_from() {
+    let manifest: toml::Table = toml::from_str(include_str!("../../../Cargo.toml")).unwrap();
+    let rel = manifest["workspace"]["metadata"][SECTION]["format"].as_str();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let text = std::fs::read_to_string(join_rel(root, rel.unwrap())).unwrap();
+    assert_eq!(text, SHIPPED_FORMAT);
+}
+
 /// `cargo metadata` JSON whose `[workspace.metadata.sounds]` is `section`.
 fn metadata(section: &serde_json::Value) -> String {
     json!({ "workspace_root": "/ws", "metadata": { "sounds": section } }).to_string()
 }
 
+/// A sounds section naming `recipes`, `format` and `out_dir`.
+fn section(recipes: &str, format: &str, out_dir: &str) -> serde_json::Value {
+    json!({ "recipes": recipes, "format": format, "out_dir": out_dir })
+}
+
 #[test]
 fn the_sounds_section_loads_with_the_workspace_root() {
-    let section = json!({ "recipes": "assets/sounds/recipes.toml", "out_dir": "target/sounds" });
-    let (root, config) = load(&metadata(&section)).unwrap();
+    let tokens = "crates/kx-theme/tokens/sounds.toml";
+    let good = section("assets/sounds/recipes.toml", tokens, "target/sounds");
+    let (root, config) = load(&metadata(&good)).unwrap();
     assert_eq!(root, PathBuf::from("/ws"));
     assert_eq!(config.recipes, "assets/sounds/recipes.toml");
+    assert_eq!(config.format, tokens);
     assert_eq!(config.out_dir, "target/sounds");
+}
+
+#[test]
+fn the_book_takes_its_recipes_and_its_format_from_the_files_the_section_names() {
+    let dir = TempDir::new("sounds-book");
+    std::fs::create_dir_all(dir.path().join("a")).unwrap();
+    std::fs::write(dir.path().join("a/r.toml"), BOOK).unwrap();
+    let slow = FORMAT.replacen("rate = 48000", "rate = 44100", 1);
+    std::fs::write(dir.path().join("f.toml"), slow).unwrap();
+    let config = SoundsConfig {
+        recipes: "a/r.toml".into(),
+        format: "f.toml".into(),
+        out_dir: "o".into(),
+    };
+    let book = read_book(dir.path(), &config).unwrap();
+    assert_eq!((book.format.rate, book.recipes.len()), (44_100, 2));
+    let gone = SoundsConfig {
+        format: "none.toml".into(),
+        ..config
+    };
+    let err = read_book(dir.path(), &gone).unwrap_err();
+    assert!(matches!(err, SoundError::Io(_)), "{err}");
 }
 
 #[test]
 fn a_bad_or_missing_sounds_section_is_refused() {
     for bad in [
-        json!({ "recipes": "../r.toml", "out_dir": "target/sounds" }),
-        json!({ "recipes": "r.toml", "out_dir": "C:/sounds" }),
-        json!({ "recipes": "r.toml" }),
-        json!({ "recipes": "r.toml", "out_dir": "o", "extra": 1 }),
+        section("../r.toml", "f.toml", "target/sounds"),
+        section("r.toml", "f.toml", "C:/sounds"),
+        section("r.toml", "../f.toml", "o"),
+        section("r.toml", "D:/f.toml", "o"),
+        json!({ "recipes": "r.toml", "out_dir": "o" }),
+        json!({ "recipes": "r.toml", "format": "f.toml" }),
+        json!({ "recipes": "r.toml", "format": "f.toml", "out_dir": "o", "extra": 1 }),
     ] {
         let err = load(&metadata(&bad)).unwrap_err();
         assert!(matches!(err, LoadError::BadConfig(_)), "{bad}: {err}");

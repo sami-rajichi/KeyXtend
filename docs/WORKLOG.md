@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 19:30 — P4: sounds as checked, compiled-in data
+A new token file, kx-theme's `sounds.toml`, holds the shipping format, the speaker's voices and each sound event's files and balance: the key's six Cherry takes in turn, the mouse click, the mouse press and the card laid down. kx-ui's build reads each named file with a strict reader that refuses anything but whole 16-bit mono PCM frames at the token rate within the length limit, fails naming the file, and embeds the samples 2-byte aligned with a table of events, so the app never reads audio at run time. `cargo xtask sounds` now reads the format from that file through the same checks and reads recordings with the same RIFF chunk walker, and a recipe file that still holds `[format]` is refused.
+
 ## 2026-10-13 18:30 — P4: a Speaker port with an XAudio2 adapter
 A new `Speaker` UI port plays compiled-in mono PCM16 clips: `play` only puts a message on a bounded queue, so the UI never waits on audio, and `UiPorts` now carries it (nothing calls it until the sounds are wired). On Windows a thread of its own loads `XAudio2` from System32 at the first play, keeps a few voices per clip so quick plays overlap, replaces a busy voice rather than queue behind it, and stops the engine after the configured silence. A lost device or a failed start rebuilds the engine once per play, a bad clip is skipped, each failure kind warns once, and dropping the speaker destroys the voices before the engine, waiting a second at most. Tests drive every rule over a fake system and never play sound; the fake speaker records what it was asked.
 

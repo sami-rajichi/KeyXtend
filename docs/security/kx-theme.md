@@ -25,11 +25,12 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 | `SysLook` from the `SystemLook` port | Every value is a valid colour (four bytes) or flag, so nothing can fail; an unknown theme id gives no look, never a panic | Fixed size | No |
 | `LookChoice.min_contrast` and the system accent | A legend on the accent reaches at least `WCAG_AA` whatever the value, NaN included; a higher value is best effort, and the `[ui]` check refuses values outside `MIN_CONTRAST`. The accent is kept only when every pair the keyboard draws still passes; otherwise the theme keeps its own colours | N/A | No; a sweep of accents |
 | The board's row height (`row_px`, from the keyboard's face) | The drawn check measures each legend on it; a row that is not a finite number above 0 tries no accent | N/A | No |
+| Sound files in `assets/sounds/` (kx-ui's build and the tests only) | `sounds::wav::samples` takes only RIFF/WAVE with a PCM `fmt ` chunk in exactly the `sounds.toml` format and a `data` chunk of whole frames; every size is checked, so no file can make it panic, and a bad or missing file fails the build with its name | One frame to `max_ms` per file | No; every truncation, each byte set to six values, and fixed pseudo-random buffers |
 | Fonts | The bundled fonts are compiled into kx-ui; Native names Windows' own Segoe UI (`SYSTEM_FONTS`), and Qt falls back to system fonts for a glyph no theme font has (`keyxtend.md`, Accepted) | N/A | No |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.
-- **Tampering:** a token file swapped on disk changes nothing, since the tokens are compiled in. Icon names are plain file names (lower-case letters, digits and `-`), so a name can never point outside the icon folder when `kx-ui` builds its resource path.
+- **Tampering:** a token file swapped on disk changes nothing, since the tokens are compiled in. Icon names are plain file names (lower-case letters, digits and `-`), so a name can never point outside the icon folder when `kx-ui` builds its resource path, and sound names are the same plus `.wav`.
 - **Logging / repudiation:** the crate never logs; its errors name only token files and tokens.
 - **Information disclosure:** the system look is not sensitive.
 - **Denial of service:** loading is a fixed, small parse at start-up; the look view and the drawn check are pure and bounded by the token count.

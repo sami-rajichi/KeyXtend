@@ -1,5 +1,5 @@
-//! The theme tokens, compiled in: three themes in light and soft dark, the sizes, motion and icons they share, and the
-//! look a face draws now, with contrast and high contrast. It has no Qt, so its tests run everywhere.
+//! The theme tokens, compiled in: three themes in light and soft dark, the sizes, motion, icons and sounds they share,
+//! and the look a face draws now, with contrast and high contrast. It has no Qt, so its tests run everywhere.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -19,6 +19,7 @@ mod palette;
 mod rgba;
 mod ringmove;
 mod shape;
+pub mod sounds;
 mod theme;
 mod view;
 
@@ -46,6 +47,8 @@ const SHAPE_FILE: &str = "shape.toml";
 const MOTION_FILE: &str = "motion.toml";
 /// Name of the icons file, for errors.
 const ICONS_FILE: &str = "icons.toml";
+/// Name of the sounds file, for errors.
+const SOUNDS_FILE: &str = "sounds.toml";
 /// The themes, compiled in so the app reads nothing it draws from disk (ADR-0016).
 const THEMES: &str = include_str!("../tokens/themes.toml");
 /// The shared sizes, compiled in.
@@ -54,6 +57,8 @@ const SHAPE: &str = include_str!("../tokens/shape.toml");
 const MOTION: &str = include_str!("../tokens/motion.toml");
 /// The icon names, compiled in.
 const ICONS: &str = include_str!("../tokens/icons.toml");
+/// The sound format, voices and events, compiled in.
+const SOUNDS: &str = include_str!("../tokens/sounds.toml");
 
 /// A token file that does not load, and why; the texts name only tokens, never user data.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]

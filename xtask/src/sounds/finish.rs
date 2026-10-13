@@ -2,7 +2,8 @@
 
 use std::f64::consts::PI;
 
-use super::recipe::Format;
+use kx_theme::sounds::Format;
+
 use super::units::{db_gain, index, ms_at, samples};
 use super::{Cut, Sound, SoundError, wav};
 

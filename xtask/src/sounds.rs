@@ -38,6 +38,8 @@ pub(crate) enum SoundError {
     Io(String),
     /// The recipe file is invalid.
     Recipe(String),
+    /// The sounds file that holds the shipping format is invalid.
+    Format(String),
     /// The recording is not a WAV file the importer reads.
     Wav(wav::WavError),
     /// The import window holds no sample.
@@ -68,6 +70,7 @@ impl fmt::Display for SoundError {
             Self::Workspace(why) => write!(f, "workspace: {why}"),
             Self::Io(why) => write!(f, "file error: {why}"),
             Self::Recipe(why) => write!(f, "recipes: {why}"),
+            Self::Format(why) => write!(f, "sound format: {why}"),
             Self::Wav(err) => write!(f, "{err}"),
             Self::Window => write!(f, "the window holds no sample of the recording"),
             Self::Silent => write!(f, "the sound is silent"),
@@ -103,6 +106,8 @@ pub(crate) struct Sound {
 pub(crate) struct SoundsConfig {
     /// The recipe file, under the workspace root.
     recipes: String,
+    /// The sounds file that holds the shipping format, under the workspace root.
+    format: String,
     /// The folder `render` writes to unless given one, under the workspace root.
     out_dir: String,
 }
@@ -110,7 +115,7 @@ pub(crate) struct SoundsConfig {
 /// Loads and checks `[workspace.metadata.sounds]` from `cargo metadata` JSON, with the workspace root.
 pub(crate) fn load(json: &str) -> Result<(PathBuf, SoundsConfig), LoadError> {
     let (root, config): (PathBuf, SoundsConfig) = workspace::root_and_section(json, SECTION)?;
-    for rel in [&config.recipes, &config.out_dir] {
+    for rel in [&config.recipes, &config.format, &config.out_dir] {
         if !is_relative_plain(rel) {
             let why = format!("{SECTION}: {rel:?} is not a relative path of plain names");
             return Err(LoadError::BadConfig(why));
@@ -159,11 +164,13 @@ fn write_sound(path: &str, sound: &Sound) -> Result<(), SoundError> {
     Ok(())
 }
 
-/// Reads and checks the recipe file that `config` names under the workspace `root`.
+/// Reads and checks the recipe and sounds files that `config` names under the workspace `root`.
 fn read_book(root: &Path, config: &SoundsConfig) -> Result<Book, SoundError> {
-    let path = join_rel(root.to_path_buf(), &config.recipes);
-    let source = std::fs::read_to_string(&path).map_err(|err| io_error(&path, &err))?;
-    recipe::parse(&source)
+    let read = |rel: &str| {
+        let path = join_rel(root.to_path_buf(), rel);
+        std::fs::read_to_string(&path).map_err(|err| io_error(&path, &err))
+    };
+    recipe::parse(&read(&config.recipes)?, &read(&config.format)?)
 }
 
 /// A file error that names the file.

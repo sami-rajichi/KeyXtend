@@ -1,19 +1,20 @@
 # kx-theme
 
-The theme tokens and the look: three themes (Native Adaptive, ET66, Modern Dolch), each light and soft dark, the sizes, motion and icons they share, contrast checks and the high-contrast palette. It has no Qt and is not a module (it has no manifest, services or settings of its own), so its tests run on every system and the spike can use it. The `ui` module in `kx-ui` calls it (ADR-0016).
+The theme tokens and the look: three themes (Native Adaptive, ET66, Modern Dolch), each light and soft dark, the sizes, motion, icons and sounds they share, contrast checks and the high-contrast palette. It has no Qt and is not a module (it has no manifest, services or settings of its own), so its tests run on every system and the spike can use it. The `ui` module in `kx-ui` calls it (ADR-0016).
 
 ## Tokens
 
-The four files in `tokens/` are compiled in with `include_str!`, never read from disk, so the uiAccess app reads nothing it draws from a file (ADR-0016). Values come from `design/keyboard-style-lab.html`, and each comment names the mock-up rule and line; where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
+The files in `tokens/` are compiled in with `include_str!`, never read from disk, so the uiAccess app reads nothing it draws from a file (ADR-0016). Values come from `design/keyboard-style-lab.html`, and each comment names the mock-up rule and line; where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 
 | File | What it holds |
 |---|---|
 | `themes.toml` | Each theme's shape and type (radii, gap, legend sizes, fonts and their metrics, the font for marks on a dotted circle (`mark_fonts`), cap build (a sculpted cap also says how far a label may spill onto its skirt), D-pad colours, whether it can take the system accent) and its `light` and `dark` palettes; the `[common]` colours every theme shares. |
 | `shape.toml` | Sizes all themes share, at size 1: the top bar, chips, legends, LED, the named-key labels, which shrink to fit their cap (`label_pad_px`, `label_min_px`), the language key (Carousel, `[lang.cycle]`, `[lang.list]`), D-pad, press, tooltips, the bubble and corner, hairlines, dimmed keys (`[dim]`), the high-contrast hover outline (`[hc_outline]`), the plate's share over a system backdrop (`[backdrop]`), the notice banner, the tray menu and the tray icon's drawing (`[tray]`), the language list and the later windows (pill, caption, snip, panel, hold ring). |
 | `motion.toml` | Each animation's length and curve, its amounts, and the hold ring's curves; reduced motion keeps the curves with every length 0, except the ring's waves, which show the hold time. |
+| `sounds.toml` | The shipping format of every sound file (`[format]`, which `cargo xtask sounds` writes in too), the speaker's voices per clip (`[play]`), and for each event (`key`, `rclick`, `pick`, `drop`) its files in `assets/sounds/`, played in turn, and its balance in dB. |
 | `icons.toml` | The icon each part shows, as a file name in `assets/icons/lucide/` (Lucide) or `assets/icons/` (our own drawings): named keys by board id, the top bar (the theme button shows `palette`), the D-pad, the language key designs and the list's tick, paged lists' page buttons (`[page]`), the notice banner's icon, and the tray icon's glyph and menu items (`[tray]`). |
 
-`Themes::shipped()` loads and checks all four; an error names the file and the token. Unknown or missing tokens, weights outside 100–900, shares outside 0–1, a curve that runs back in time, a burst that leaves the ring window, an accent on sculpted caps and an icon name that is not a plain file name are refused.
+`Themes::shipped()` loads and checks the first four, and `Sounds::shipped()` the sounds; an error names the file and the token. Unknown or missing tokens, weights outside 100–900, shares outside 0–1, a curve that runs back in time, a burst that leaves the ring window, an accent on sculpted caps, an icon or sound name that is not a plain file name, a sound format the speaker cannot play (16-bit mono PCM), an event with no file and a balance above 0 dB are refused.
 
 A palette's `legend_2_plate` (secondary text and icons on the plate) takes its `legend_2` unless the palette writes its own, which it does only where the two differ.
 
@@ -51,7 +52,9 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Assets
 
-`assets` names where the bundled fonts and icons sit in the repo's `assets/` folder (`ICON_DIRS`, `FONT_DIR`) and finds them (`icon_file`, `font_files`). `bundle` lists the files the app holds, under the names they take there (`ICONS_AT`, one folder of icons). kx-ui's build script uses it to compile them in, and the asset tests use it to check them, so the layout is written once. The app never reads these folders.
+`assets` names where the bundled fonts, icons and sounds sit in the repo's `assets/` folder (`ICON_DIRS`, `FONT_DIR`, `SOUND_DIR`) and finds them (`icon_file`, `font_files`, `sound_files`). `bundle` lists the files the app holds, under the names they take there (`ICONS_AT`, one folder of icons), and each sound's samples. kx-ui's build script uses it to compile them in, and the asset tests use it to check them, so the layout is written once. The app never reads these folders.
+
+`sounds::wav` reads a shipped sound strictly: RIFF/WAVE, a `fmt ` chunk of PCM in exactly the format's channels, bits and rate, and a `data` chunk of whole frames, from one frame to `max_ms`; every size is checked, so no file can make it panic. Its chunk walker is the one `cargo xtask sounds` reads recordings with.
 
 ## QML look fixtures
 
@@ -59,7 +62,7 @@ Dimmed keys (keys that come in a later version) have no colours of their own: ev
 
 ## Public API
 
-`Themes` (`shipped`, `find`), `ThemeError`, `Theme`, `Look`, `Cap`, `Gradient`, `DpadRefs`, `Dpad`, `Palette`, `Skirt`, `Shadow`, `Rgba` (`parse`, `over`, `on`, `share`, `CLEAR`, `BLACK`, `WHITE`), `Common`, `Shape`, `Motions`, `Motion`, `Timed`, `Amounts`, `MOVES`, `RingMotion`, `RingAmounts`, `Icons` (`names`) with `BarIcons`, `DpadIcons`, `LangIcons`, `PageIcons`, `NoticeIcons` and `TrayIcons`, `Mode`, `ModeChoice`, `mode_for`, `LookChoice`, `LookView`, `look_view`, `reach`, `accent_fill`, `with_accent`, `contrast_palette`, `contrast_common`, `hover_line`; the `contrast` module; the `drawn` module (`Drawn`, `drawn`, `low`, `EXCEPTION`, `WINDOWS`); and the `assets` module (`Bundle`, `Bundled`, `bundle`, `icon_file`, `font_files`, `is_font`, `ICON_DIRS`, `ICON_EXT`, `ICONS_AT`, `FONT_DIR`, `FONT_EXTS`, `SYSTEM_FONTS`, `MARK_CIRCLE`, `MARKS`).
+`Themes` (`shipped`, `find`), `ThemeError`, `Theme`, `Look`, `Cap`, `Gradient`, `DpadRefs`, `Dpad`, `Palette`, `Skirt`, `Shadow`, `Rgba` (`parse`, `over`, `on`, `share`, `CLEAR`, `BLACK`, `WHITE`), `Common`, `Shape`, `Motions`, `Motion`, `Timed`, `Amounts`, `MOVES`, `RingMotion`, `RingAmounts`, `Icons` (`names`) with `BarIcons`, `DpadIcons`, `LangIcons`, `PageIcons`, `NoticeIcons` and `TrayIcons`, `Mode`, `ModeChoice`, `mode_for`, `LookChoice`, `LookView`, `look_view`, `reach`, `accent_fill`, `with_accent`, `contrast_palette`, `contrast_common`, `hover_line`; the `contrast` module; the `drawn` module (`Drawn`, `drawn`, `low`, `EXCEPTION`, `WINDOWS`); the `assets` module (`Bundle`, `Bundled`, `SoundFile`, `bundle`, `icon_file`, `font_files`, `sound_files`, `is_font`, `ICON_DIRS`, `ICON_EXT`, `ICONS_AT`, `FONT_DIR`, `FONT_EXTS`, `SOUND_DIR`, `SYSTEM_FONTS`, `MARK_CIRCLE`, `MARKS`); and the `sounds` module (`Sounds` with `shipped`, `parse` and `files`, `Format`, `Play`, `Cue`, `Event`, `SOUND_EXT`, and `wav` with `samples`, `chunks`, `Chunks`, `Fmt`, `WavError`, `u16_at` and the RIFF ids).
 
 ## Security
 

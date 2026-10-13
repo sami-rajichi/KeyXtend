@@ -1,22 +1,6 @@
-# Sound recipes for `cargo xtask sounds render`, and the shipping format both render and import write.
-# A layer is a filtered noise burst or a set of damped sine partials; times are in ms, levels are relative.
-# `decay_ms` is the time a layer or partial takes to fall 60 dB after its rise.
-
-[format]
-# Samples per second of every shipped sound.
-rate = 48000
-# Bits per sample.
-bits = 16
-# Channels.
-channels = 1
-# The highest peak, in dBFS.
-ceiling_db = -3.0
-# The fade at the end of every sound, in ms.
-fade_ms = 5
-# Import trims leading and trailing audio quieter than this, in dB below the peak.
-trim_db = -50.0
-# The longest sound, in ms.
-max_ms = 400
+# Sound recipes for `cargo xtask sounds render`, the variants' jitter and the importer's resampler; the shipping format
+# is `[format]` in crates/kx-theme/tokens/sounds.toml. A layer is a filtered noise burst or a set of damped sine
+# partials; times are in ms, levels are relative, and `decay_ms` is the time to fall 60 dB after the rise.
 
 [variants]
 # The largest pitch change of a variant, up or down, in cents (100 is a semitone).

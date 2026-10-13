@@ -1,5 +1,5 @@
 use super::*;
-use crate::sounds::fixture::{BOOK, TAG_FLOAT, TAG_PCM, encode, mono, pcm, sine};
+use crate::sounds::fixture::{BOOK, FORMAT, TAG_FLOAT, TAG_PCM, encode, mono, pcm, sine};
 use crate::sounds::recipe::parse;
 use crate::sounds::units::samples;
 use crate::sounds::{Cut, import_clip};
@@ -7,14 +7,14 @@ use crate::sounds::{Cut, import_clip};
 /// A file in the shipping format: a sine of `hz`, `ms` long, imported so it peaks at the ceiling.
 fn part(hz: f64, ms: u32) -> Vec<u8> {
     let wav = encode(TAG_PCM, 48_000, 16, &mono(&sine(hz, 48_000, ms, 0.5)));
-    import_clip(&parse(BOOK).unwrap(), &wav, Cut::default())
+    import_clip(&parse(BOOK, FORMAT).unwrap(), &wav, Cut::default())
         .unwrap()
         .bytes
 }
 
 #[test]
 fn a_join_without_overlap_keeps_both_parts_and_a_silent_gap() {
-    let book = parse(BOOK).unwrap();
+    let book = parse(BOOK, FORMAT).unwrap();
     let (a, b) = (part(1_000.0, 20), part(500.0, 30));
     let first = shipping(&book, "a.wav", &a).unwrap();
     let second = shipping(&book, "b.wav", &b).unwrap();
@@ -37,7 +37,7 @@ fn a_join_without_overlap_keeps_both_parts_and_a_silent_gap() {
 
 #[test]
 fn a_join_longer_than_the_limit_is_refused() {
-    let book = parse(BOOK).unwrap();
+    let book = parse(BOOK, FORMAT).unwrap();
     let long = shipping(&book, "a.wav", &part(440.0, 300)).unwrap();
     let err = join(&book, &long, &long, 200).unwrap_err();
     assert!(matches!(err, SoundError::TooLong(_)), "got: {err}");
@@ -50,7 +50,7 @@ fn a_join_longer_than_the_limit_is_refused() {
 
 #[test]
 fn only_files_in_the_shipping_format_are_joined() {
-    let book = parse(BOOK).unwrap();
+    let book = parse(BOOK, FORMAT).unwrap();
     let tone = sine(440.0, 48_000, 10, 0.5);
     let stereo: Vec<Vec<f64>> = tone.iter().map(|s| vec![*s, *s]).collect();
     for wav in [

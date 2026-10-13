@@ -44,28 +44,15 @@ impl Book {
         Ok(())
     }
 
-    /// Checks `[format]`, `[variants]` and `[resample]`.
+    /// Checks that the writer makes the format (the sounds file checks its other values), then `[variants]` and
+    /// `[resample]`.
     fn check_settings(&self) -> Result<(), String> {
         let (format, jitter, setup) = (&self.format, &self.variants, &self.resample);
         let made = |what: &str, value: u16| format!("[format] {what} must be {value}, as written");
-        check(format.rate > 0, "[format] rate must be above 0")?;
         check(format.bits == wav::BITS, made("bits", wav::BITS))?;
         check(
             format.channels == wav::CHANNELS,
             made("channels", wav::CHANNELS),
-        )?;
-        check(
-            non_negative(-format.ceiling_db),
-            "[format] ceiling_db must be 0 or less",
-        )?;
-        check(
-            positive(-format.trim_db),
-            "[format] trim_db must be below 0",
-        )?;
-        check(positive(format.max_ms), "[format] max_ms must be above 0")?;
-        check(
-            non_negative(format.fade_ms) && format.fade_ms <= format.max_ms,
-            "[format] fade_ms must be from 0 to max_ms",
         )?;
         check(
             non_negative(jitter.pitch_cents) && non_negative(jitter.level_db),

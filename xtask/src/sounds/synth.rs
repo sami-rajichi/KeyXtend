@@ -177,12 +177,12 @@ impl Biquad {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sounds::fixture::BOOK;
+    use crate::sounds::fixture::{BOOK, FORMAT};
     use crate::sounds::recipe::parse;
 
     #[test]
     fn the_same_stem_gives_the_same_mix_and_another_stem_another() {
-        let book = parse(BOOK).unwrap();
+        let book = parse(BOOK, FORMAT).unwrap();
         let tap = &book.recipes[0];
         let mix = |stem| render(tap, 48_000.0, &mut Voice::new(stem, Some(&book.variants)));
         assert_eq!(mix("tap-1"), mix("tap-1"));
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn a_jittered_voice_stays_within_the_jitter() {
-        let book = parse(BOOK).unwrap();
+        let book = parse(BOOK, FORMAT).unwrap();
         for i in 0..50 {
             let voice = Voice::new(&format!("v-{i}"), Some(&book.variants));
             assert!((-1.5..=0.0).contains(&voice.level_db));

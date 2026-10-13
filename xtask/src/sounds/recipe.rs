@@ -1,8 +1,11 @@
-//! The recipe file: the shipping format, the variant jitter, the resampler settings and the sound recipes.
+//! The recipe book: the shipping format from the sounds file, and the recipe file's variant jitter, resampler settings
+//! and sound recipes.
 
 mod check;
 
+use kx_theme::sounds::{Format, Sounds};
 use serde::Deserialize;
+use serde::de::IgnoredAny;
 
 use super::SoundError;
 
@@ -10,10 +13,12 @@ use super::SoundError;
 pub(crate) const CENTS_PER_OCTAVE: f64 = 1200.0;
 /// Joins a recipe name and a variant number; also the only mark a name may hold besides letters and digits.
 pub(crate) const NAME_SEP: char = '-';
+/// Why a recipe file may not hold `[format]`.
+const FORMAT_MOVED: &str =
+    "[format] lives in the file [workspace.metadata.sounds] names as `format`; remove it here";
 
-/// The whole recipe file.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+/// The shipping format and the whole recipe file.
+#[derive(Debug)]
 pub(crate) struct Book {
     /// The shipping format every sound is written in.
     pub(crate) format: Format,
@@ -22,28 +27,22 @@ pub(crate) struct Book {
     /// The importer's resampler.
     pub(crate) resample: Resample,
     /// The sound recipes.
-    #[serde(rename = "recipe")]
     pub(crate) recipes: Vec<Recipe>,
 }
 
-/// The shipping format.
-#[derive(Debug, Deserialize)]
+/// The recipe file as written.
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Format {
-    /// Samples per second.
-    pub(crate) rate: u32,
-    /// Bits per sample.
-    pub(crate) bits: u16,
-    /// Channels.
-    pub(crate) channels: u16,
-    /// The highest peak, in dBFS.
-    pub(crate) ceiling_db: f64,
-    /// The fade at the end of every sound, in ms.
-    pub(crate) fade_ms: f64,
-    /// Import trims audio quieter than this, in dB below the peak.
-    pub(crate) trim_db: f64,
-    /// The longest sound, in ms.
-    pub(crate) max_ms: f64,
+struct RecipeFile {
+    /// The old place of the format, read only to refuse it.
+    format: Option<IgnoredAny>,
+    /// How much the variants of one recipe differ.
+    variants: Jitter,
+    /// The importer's resampler.
+    resample: Resample,
+    /// The sound recipes.
+    #[serde(rename = "recipe")]
+    recipes: Vec<Recipe>,
 }
 
 /// How much the variants of one recipe differ.
@@ -176,9 +175,20 @@ impl Recipe {
     }
 }
 
-/// Parses and checks a recipe file.
-pub(crate) fn parse(text: &str) -> Result<Book, SoundError> {
-    let book: Book = toml::from_str(text).map_err(|err| SoundError::Recipe(err.to_string()))?;
+/// Parses and checks a recipe file, `recipes`, with the shipping format from the sounds file, `sounds`.
+pub(crate) fn parse(recipes: &str, sounds: &str) -> Result<Book, SoundError> {
+    let format = Sounds::parse(sounds).map_err(SoundError::Format)?.format;
+    let file: RecipeFile =
+        toml::from_str(recipes).map_err(|err| SoundError::Recipe(err.to_string()))?;
+    if file.format.is_some() {
+        return Err(SoundError::Recipe(FORMAT_MOVED.into()));
+    }
+    let book = Book {
+        format,
+        variants: file.variants,
+        resample: file.resample,
+        recipes: file.recipes,
+    };
     book.validate()?;
     Ok(book)
 }

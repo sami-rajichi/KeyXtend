@@ -1,9 +1,9 @@
-//! Test fixtures: a small recipe book and helpers that build and inspect WAV files.
+//! Test fixtures: a small sounds file and recipe book, and helpers that build and inspect WAV files.
 
 use std::f64::consts::TAU;
 
-/// A small valid recipe book: one recipe with three variants, one without.
-pub(crate) const BOOK: &str = r#"
+/// A small valid sounds file: the shipping format the book renders in, and one file per event.
+pub(crate) const FORMAT: &str = r#"
 [format]
 rate = 48000
 bits = 16
@@ -13,6 +13,28 @@ fade_ms = 5
 trim_db = -50.0
 max_ms = 400
 
+[play]
+voices = 1
+
+[key]
+files = ["tap-1.wav"]
+gain_db = 0
+
+[rclick]
+files = ["thud.wav"]
+gain_db = 0
+
+[pick]
+files = ["thud.wav"]
+gain_db = 0
+
+[drop]
+files = ["thud.wav"]
+gain_db = 0
+"#;
+
+/// A small valid recipe book: one recipe with three variants, one without.
+pub(crate) const BOOK: &str = r#"
 [variants]
 pitch_cents = 40
 level_db = 1.5

@@ -1,0 +1,51 @@
+# The sounds the app plays (spec §3.2): the shipping format of every file in assets/sounds/, how the speaker plays, and
+# each event's files and balance. kx-ui's build checks each named file and compiles its samples in (ADR-0016).
+
+[format]
+# Samples per second of every shipped sound.
+rate = 48000
+# Bits per sample; the speaker takes 16-bit PCM.
+bits = 16
+# Channels; the speaker takes mono.
+channels = 1
+# The highest peak `cargo xtask sounds` writes, in dBFS.
+ceiling_db = -3.0
+# The fade at the end of every sound, in ms.
+fade_ms = 5
+# Import trims leading and trailing audio quieter than this, in dB below the peak.
+trim_db = -50.0
+# The longest sound, in ms.
+max_ms = 400
+
+[play]
+# Voices per clip, so quick plays of one sound overlap (1 or more).
+voices = 3
+
+# One table per event: `files` in assets/sounds/, played in turn, and `gain_db`, the event's balance (0 or less).
+
+# A key press: a Cherry KC 1000 key in six takes, as the owner heard them.
+[key]
+files = [
+    "cherry-key-1.wav",
+    "cherry-key-2.wav",
+    "cherry-key-3.wav",
+    "cherry-key-4.wav",
+    "cherry-key-5.wav",
+    "cherry-key-6.wav",
+]
+gain_db = 0
+
+# A hold fires the right-click: a mouse button pressed and released.
+[rclick]
+files = ["mouse-click.wav"]
+gain_db = 0
+
+# Grab picks the window up: a mouse button pressed.
+[pick]
+files = ["mouse-press.wav"]
+gain_db = 0
+
+# Grab drops the window: a playing card laid down.
+[drop]
+files = ["card-down.wav"]
+gain_db = 0

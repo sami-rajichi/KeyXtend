@@ -196,7 +196,9 @@ system_dir = "System32"
 gate_flag = "--sim-input"
 
 [workspace.metadata.sounds]
-# The sound recipes and shipping format that `cargo xtask sounds` reads, under the workspace root.
+# The sound recipes, variant jitter and resampler that `cargo xtask sounds` reads, under the workspace root.
 recipes = "assets/sounds/recipes.toml"
+# The sound tokens whose `[format]` the tool writes in and kx-ui's build checks against, under the workspace root.
+format = "crates/kx-theme/tokens/sounds.toml"
 # Folder, under the workspace root, that `cargo xtask sounds render` writes to unless given `--out`.
 out_dir = "target/sounds"
