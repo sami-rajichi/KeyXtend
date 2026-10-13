@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 22:15 — P4: the keys light after the keyboard, review fixes
+The keyboard's wake on a mouse mode change or a used latch is now heard only while a keyboard is attached, by handlers added after the keyboard's own, so the window always reads the new state instead of sometimes waiting for the next relabel. A hold or a fire that comes while no mode is on no longer shows a ring or a burst. The pointer badge loses its radius size, as a pill takes half its height, and a test checks that the mouse module's stop comes before the UI ends.
+
 ## 2026-10-13 21:30 — P4: the pointer overlay's state, and keys that light at once
 The hub now keeps what the pointer overlay will draw: the mouse modes, the pointer while a mode is on, a hold's ring (its waves run for the hold time less the ring's delay) and the burst when it fires, read by QML as one JSON with the Windows pointer size, newly read from `CursorBaseSize`. A run of pointer moves costs one wake per read of that state, nothing is kept while no mode is on, and no point reaches a log. A mouse mode change or a used latch now wakes the keyboard window, which reads its state at once instead of at the next relabel. The badge's sizes and fade, and the texts "Pointer helper" and "Holding" in English, French and Arabic, are ready for the overlay itself.
 

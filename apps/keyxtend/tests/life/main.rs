@@ -124,5 +124,11 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     let seen: Vec<Wake> = wakes.lock().unwrap().iter().filter(own).copied().collect();
     let order = [Wake::Settings, Wake::End];
     assert_eq!(seen, order, "the modules stop, then the UI ends");
+    let last = wakes.lock().unwrap().last().copied();
+    assert_eq!(
+        last,
+        Some(Wake::End),
+        "the mouse module told its stop first"
+    );
     assert_eq!(hub.board_json(), NULL, "Quit stopped the modules");
 }

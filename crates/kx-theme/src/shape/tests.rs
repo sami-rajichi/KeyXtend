@@ -176,7 +176,6 @@ fn the_pointer_badge_takes_the_mock_up_sizes() {
         ".badge padding, .i, gap"
     );
     assert_eq!((b.font_px, b.weight), (10.5, 600), ".badge font");
-    assert_eq!(b.radius_px, 9.5, "a pill: half of 3 + 13 + 3");
     assert_eq!(b.offset_px, [16.0, 18.0], "updateBadge");
     assert_eq!(b.edge_px, 8.0, "placePop's least gap to the edge");
 }
@@ -192,6 +191,10 @@ fn in_badge(from: &str, to: &str) -> String {
 fn an_unknown_or_odd_badge_size_is_refused() {
     let e = parse(&in_badge("\nicon_px", "\nhue = 1.0\nicon_px")).expect_err("unknown");
     assert!(e.contains("hue"), "{e}");
+    // A pill (mock-up border-radius: 999px): QML rounds it by half its height, so no radius can drift from its size.
+    let pill = in_badge("\nicon_px", "\nradius_px = 9.5\nicon_px");
+    let e = parse(&pill).expect_err("no radius token");
+    assert!(e.contains("unknown field `radius_px`"), "{e}");
     for (from, to, says) in [
         ("weight = 600", "weight = 950", "badge.weight"),
         ("edge_px = 8.0", "edge_px = -1.0", "badge.edge_px"),

@@ -15,6 +15,7 @@ mod face;
 mod fonts;
 mod held;
 mod lifecycle;
+mod lights;
 mod logs;
 mod look;
 mod memory;

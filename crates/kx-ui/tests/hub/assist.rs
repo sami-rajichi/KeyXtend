@@ -1,13 +1,10 @@
 //! The pointer overlay's state through the hub: the mouse modes, the pointer, the hold ring and its burst as one JSON,
-//! with at most one wake in flight until QML reads it, the keyboard woken on each mode or latch change, and no point in
-//! any log.
+//! with at most one wake in flight until QML reads it, and no point in any log.
 
 use crate::Rig;
 use crate::app::keeper;
 use crate::logs::lines_of;
-use kx_module_api::ports::{
-    AssistChanged, AssistNote, GrabState, LatchesUsed, Point, PointerMoved,
-};
+use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, Point, PointerMoved};
 use kx_module_api::{Bus, Subscription};
 use kx_platform::ui::SysLook;
 use kx_test_support::host::FakeCore;
@@ -20,14 +17,14 @@ const AT: Point = Point { x: 4321, y: 8765 };
 /// Where the pointer went next.
 const TO: Point = Point { x: 4329, y: 8771 };
 /// Right-click on, with the mouse module running.
-const RCLICK: AssistChanged = AssistChanged {
+pub const RCLICK: AssistChanged = AssistChanged {
     live: true,
     rclick: true,
     grab: GrabState::Off,
 };
 
 /// A rig whose hub hears a fresh bus, the bus, and the subscriptions that keep it hearing.
-fn heard() -> (Rig, Bus, Vec<Subscription>) {
+pub fn heard() -> (Rig, Bus, Vec<Subscription>) {
     let rig = Rig::new();
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let subs = rig.hub.listen(&bus).unwrap();
@@ -49,7 +46,7 @@ fn state(rig: &Rig) -> Value {
 }
 
 /// How many times the rig woke for `what` since the last look; it forgets every wake.
-fn woke(rig: &Rig, what: Wake) -> usize {
+pub fn woke(rig: &Rig, what: Wake) -> usize {
     rig.wakes().iter().filter(|w| **w == what).count()
 }
 
@@ -206,19 +203,22 @@ fn the_pointer_size_follows_the_system_and_wakes() {
 }
 
 #[test]
-fn a_mode_change_or_used_latches_wake_the_keyboard_every_time() {
-    let (rig, bus, _subs) = heard();
-    for _ in 0..2 {
-        bus.publish(&RCLICK).unwrap();
-        bus.publish(&LatchesUsed).unwrap();
+fn a_hold_or_a_fire_with_no_mode_on_shows_nothing() {
+    for live in [false, true] {
+        let (rig, bus, _subs) = heard();
+        let off = AssistChanged {
+            live,
+            ..AssistChanged::OFF
+        };
+        bus.publish(&off).unwrap();
+        let _ = state(&rig);
+        rig.wakes();
+        bus.publish(&hold(150, 1_500)).unwrap();
+        bus.publish(&AssistNote::Fired { at: AT }).unwrap();
+        assert_eq!(woke(&rig, Wake::Assist), 0, "live {live}");
+        let s = state(&rig);
+        assert_eq!((&s["ring"], &s["burst"]), (&Value::Null, &Value::Null));
     }
-    bus.publish(&PointerMoved { at: AT }).unwrap();
-    bus.publish(&hold(150, 1_500)).unwrap();
-    assert_eq!(
-        woke(&rig, Wake::Keys),
-        4,
-        "the keyboard reads its state at once"
-    );
 }
 
 #[test]

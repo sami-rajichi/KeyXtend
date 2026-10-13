@@ -254,13 +254,12 @@ fly_px = [6.0, 30.0]
 
 [badge]
 # The mode badge beside the pointer (mock-up .badge), not scaled with the keyboard: padding (top and bottom, sides), icon
-# size, icon-to-text gap, text size and weight, and radius, half its 3 + 13 + 3 px height, so it is a pill.
+# size, icon-to-text gap, text size and weight. It is a pill (border-radius: 999px), so QML rounds it by half its height.
 pad_px = [3.0, 7.0]
 icon_px = 13.0
 gap_px = 4.0
 font_px = 10.5
 weight = 600
-radius_px = 9.5
 # Where it sits from the pointer's tip, right and down (mock-up updateBadge), and the least gap it keeps to a screen
 # edge (placePop's, as the panel keeps).
 offset_px = [16.0, 18.0]

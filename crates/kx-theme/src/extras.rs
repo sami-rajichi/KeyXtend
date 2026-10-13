@@ -217,7 +217,8 @@ pub struct ListShape {
     pub icon_px: f32,
 }
 
-/// The mode badge beside the pointer (mock-up `.badge`); it does not grow with the keyboard.
+/// The mode badge beside the pointer (mock-up `.badge`); it does not grow with the keyboard, and as a pill it has no
+/// radius token: QML rounds it by half its height.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BadgeShape {
@@ -231,8 +232,6 @@ pub struct BadgeShape {
     pub font_px: f32,
     /// Text weight.
     pub weight: u16,
-    /// Corner radius.
-    pub radius_px: f32,
     /// Where the badge sits from the pointer's tip: right, down.
     pub offset_px: [f32; 2],
     /// The least gap it keeps to a screen edge.

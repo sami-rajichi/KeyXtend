@@ -388,7 +388,6 @@ var lk = {
       "gap_px": 4.0,
       "font_px": 10.5,
       "weight": 600,
-      "radius_px": 9.5,
       "offset_px": [
         16.0,
         18.0

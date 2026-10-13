@@ -98,8 +98,7 @@ impl Hub {
         json(&View { shown, pointer_px })
     }
 
-    /// Takes the mouse module's state; with no mode on, the point, ring and burst go. The keyboard reads its state
-    /// again.
+    /// Takes the mouse module's state; with no mode on, the point, ring and burst go.
     pub(super) fn assist_changed(&self, now: AssistChanged) {
         self.change(|s, _| {
             (s.live, s.rclick, s.grab) = (now.live, now.rclick, now.grab.into());
@@ -107,7 +106,6 @@ impl Hub {
                 (s.point, s.ring, s.burst) = (None, None, None);
             }
         });
-        self.wake(Wake::Keys);
     }
 
     /// Keeps the pointer's point while a mode is on.
@@ -119,10 +117,11 @@ impl Hub {
         });
     }
 
-    /// Follows a hold: its start rings for the time left after the ring shows, its fire bursts in place of the ring,
-    /// and its end or a cancelled carry clears the ring.
+    /// Follows a hold while a mode is on: its start rings for the time left after the ring shows, its fire bursts in
+    /// place of the ring, and its end or a cancelled carry clears the ring.
     pub(super) fn assist_note(&self, note: &AssistNote) {
         self.change(|s, seq| match *note {
+            _ if s.idle() => {}
             AssistNote::HoldStart {
                 at,
                 ring_after_ms,

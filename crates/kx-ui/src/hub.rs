@@ -152,6 +152,8 @@ pub struct Hub {
     sounds: sound::Sounds,
     /// The pointer overlay's state.
     assist: assist::Assist,
+    /// The kernel's bus and the keyboard's wake handlers.
+    heard: Mutex<bus::Heard>,
 }
 
 impl Hub {
@@ -190,6 +192,7 @@ impl Hub {
             refused: AtomicBool::default(),
             sounds,
             assist: assist::Assist::default(),
+            heard: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -199,8 +202,15 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows, and a new `sound_idle_ms` prepares the speaker again.
-    pub fn attach(&self, settings: UiSettings, face: Arc<dyn KeyboardFace>, store: SettingsHandle) {
+    /// follow the language of the layout the face shows, and a new `sound_idle_ms` prepares the speaker again. The
+    /// keyboard's wake is heard from now on, after the face's own handlers.
+    pub fn attach(
+        self: &Arc<Self>,
+        settings: UiSettings,
+        face: Arc<dyn KeyboardFace>,
+        store: SettingsHandle,
+    ) {
+        self.hear_keys();
         let texts = Texts::new(
             &settings.language,
             &face.lang(),
@@ -218,8 +228,9 @@ impl Hub {
         self.wake(Wake::Settings);
     }
 
-    /// Lets the face and the handle go when the `ui` module stops; the last settings stay.
+    /// Lets the face, the handle and the keyboard's wake go when the `ui` module stops; the last settings stay.
     pub fn detach(&self) {
+        self.unhear_keys();
         {
             let mut live = self.lock();
             live.face = None;
