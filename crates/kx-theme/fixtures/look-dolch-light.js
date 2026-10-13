@@ -66,6 +66,16 @@ var lk = {
         "color": "#14000000"
       }
     ],
+    "badge_shadow": [
+      {
+        "inset": false,
+        "x": 0.0,
+        "y": 3.0,
+        "blur": 10.0,
+        "spread": 0.0,
+        "color": "#47000000"
+      }
+    ],
     "skirt": {
       "key": "#FFC5C7CA",
       "key_mod": "#FF4A4C4C",
@@ -792,5 +802,6 @@ var lk = {
   "contrast": false,
   "sel_ink": "#FF393B3B",
   "hover_line": "#00000000",
-  "margin": 48.0
+  "margin": 48.0,
+  "badge_margin": 13.0
 };

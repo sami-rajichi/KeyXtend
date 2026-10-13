@@ -209,6 +209,11 @@ Window {
         hint("", null);
         guard.run(top);
     }
+    // Guards our shown windows without hiding a tip or changing the window the run puts in front, for a window that never
+    // goes in front of ours, as the pointer overlay.
+    function guardQuiet() {
+        guard.run(null);
+    }
 
     // Where the minimise bubble goes, in Qt units: a bottom corner of this window's screen; null when none is known.
     function bubbleSpot() {

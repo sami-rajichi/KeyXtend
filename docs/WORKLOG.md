@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 23:40 — P4: the overlay keeps the tip, a badge-sized shadow
+Showing the pointer overlay now joins a quiet guard run, so a key's tip the owner is reading stays and a banner or list keeps its place in front. The badge casts the mock-up's own small shadow, a new `[common] badge_shadow` token each palette takes and high contrast drops, and the overlay window only leaves room for it. Flipped near an edge, the badge keeps the base offset, and the ring's timing tests now check the animation lengths directly.
+
 ## 2026-10-13 23:05 — P4: the pointer overlay, its ring and badge
 While Right-click or Grab is on, one click-through window follows the pointer: the hold ring (moved from the test build) plays once per hold, its waves running the hold time less the ring's delay in the theme's ring colour, and bursts once when it fires, with the burst skipped in reduced motion. A pill badge beside the pointer shows the mode's key icon, adds "Holding" while Grab carries, moves out with a large Windows pointer, flips near the work area's edges (which the hub now sends with the state) and fades out over our windows. The app reads the state once on the frame after each wake and makes the window only while a mode is on; Right-click and Grab, dimmed while mouse assist is off, no longer press or send.
 

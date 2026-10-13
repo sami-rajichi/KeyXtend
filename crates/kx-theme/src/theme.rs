@@ -8,7 +8,6 @@ use crate::common::Common;
 use crate::look::Look;
 use crate::mode::Mode;
 use crate::palette::{Palette, own_press, plate_default};
-use crate::rgba::Rgba;
 
 /// Text weights run from thin to black.
 pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
@@ -65,7 +64,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     } = toml::from_str(text).map_err(|e| e.to_string())?;
     let themes = tables
         .into_iter()
-        .map(|t| theme(t, common.press))
+        .map(|t| theme(t, &common))
         .collect::<Result<Vec<_>, _>>()?;
     if themes.is_empty() {
         return Err("no [[theme]] tables".into());
@@ -78,16 +77,16 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     Ok((themes, common))
 }
 
-/// One theme table: its two mode tables, pressed with the shared `press` unless they write their own, then its look,
-/// whose marks take its Arabic fonts unless it names its own.
-fn theme(mut t: toml::Table, press: Rgba) -> Result<Theme, String> {
+/// One theme table: its two mode tables, with the `common` press unless they write their own and the badge's shadow,
+/// then its look, whose marks take its Arabic fonts unless it names its own.
+fn theme(mut t: toml::Table, common: &Common) -> Result<Theme, String> {
     let id = t
         .get("id")
         .and_then(toml::Value::as_str)
         .unwrap_or("?")
         .to_string();
-    let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()), press)?;
-    let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()), press)?;
+    let light = palette(&id, Mode::Light, t.remove(Mode::Light.key()), common)?;
+    let dark = palette(&id, Mode::Dark, t.remove(Mode::Dark.key()), common)?;
     let mut look: Look = toml::Value::Table(t)
         .try_into()
         .map_err(|e| format!("{id}: {e}"))?;
@@ -100,13 +99,14 @@ fn theme(mut t: toml::Table, press: Rgba) -> Result<Theme, String> {
     Ok(Theme { look, light, dark })
 }
 
-/// One mode table, with its plate text and press shade defaulted and errors prefixed `<id>.<mode>`. Unless it writes
-/// its own, a light table lays the shared `press` over its darkening hover, so a press reads darker still.
+/// One mode table, with its plate text and press shade defaulted, the shared badge shadow, and errors prefixed
+/// `<id>.<mode>`. Unless it writes its own, a light table lays the shared press over its darkening hover, so a press
+/// reads darker still.
 fn palette(
     id: &str,
     mode: Mode,
     table: Option<toml::Value>,
-    press: Rgba,
+    common: &Common,
 ) -> Result<Palette, String> {
     let at = format!("{id}.{}", mode.key());
     let mut table = table.ok_or_else(|| format!("{at}: missing"))?;
@@ -117,10 +117,11 @@ fn palette(
     let mut p: Palette = table.try_into().map_err(|e| format!("{at}: {e}"))?;
     if !own {
         p.press = match mode {
-            Mode::Light => press.stack(p.hover),
-            Mode::Dark => press,
+            Mode::Light => common.press.stack(p.hover),
+            Mode::Dark => common.press,
         };
     }
+    p.badge_shadow = vec![common.badge_shadow];
     Ok(p)
 }
 

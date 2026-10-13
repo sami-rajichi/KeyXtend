@@ -23,9 +23,17 @@ Item {
         name: "window"
         when: windowShown
 
+        // The window the test made last, hidden after it even when an assertion stops it.
+        property Window made: null
+
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
+        }
+        function cleanup() {
+            if (made)
+                made.visible = false;
+            made = null;
         }
         // A keyboard window over fresh stand-ins, laid out and not shown; the real pointer passes through it.
         function make(props, kbProps) {
@@ -34,6 +42,7 @@ Item {
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
             Pointer.through([win]);
+            made = win;
             return win;
         }
         // Every item under `item` for which `ok` holds.
@@ -255,7 +264,6 @@ Item {
             mouseClick(keyed(win, "rclick"));
             tryCompare(win.presses, "waiting", null);
             compare(taps("rclick"), 1, "a live key acts");
-            win.visible = false;
         }
 
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {

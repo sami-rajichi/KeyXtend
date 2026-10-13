@@ -7,7 +7,9 @@ import "../qml"
 import "board.js" as Board
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
+import "pointer.js" as Pointer
 import "../../kx-theme/fixtures/look-native-light.js" as N
+import "../../kx-theme/fixtures/look-native-light-contrast.js" as NC
 
 Item {
     id: root
@@ -100,10 +102,12 @@ Item {
         function pill(b) {
             return find(b, o => o.radius !== undefined && o.color !== undefined && Qt.colorEqual(o.color, N.lk.palette.badge_bg));
         }
-        // The app over fresh stand-ins, once its keyboard shows and the state was read at start.
+        // The app over fresh stand-ins, once its keyboard shows and the state was read at start; the real pointer passes
+        // through its keyboard.
         function app() {
             const a = createTemporaryObject(appC, root);
             tryVerify(() => a.face.visible && a.assist !== null, 2000, "the keyboard shows");
+            Pointer.through([a.face, a.bubble]);
             return a;
         }
 
@@ -133,6 +137,17 @@ Item {
             tryCompare(b, "opacity", 0, 2000, "it fades out");
         }
 
+        // Its own small shadow (mock-up .badge box-shadow), not the windows' wide one; high contrast drops it.
+        function test_the_badge_casts_its_own_small_shadow() {
+            const fields = l => ["inset", "x", "y", "blur", "spread", "color"].map(k => String(l[k])).join(" ");
+            for (const look of [N.lk, NC.lk]) {
+                const b = createTemporaryObject(badgeC, root, { lk: look, res: Board.resOf(look, En), rclick: true, grab: "off", shown: true });
+                const shades = Board.all(b, o => o.shadow !== undefined && o.modelData !== undefined).map(o => fields(o.shadow));
+                compare(shades, look.palette.badge_shadow.map(fields), look.contrast ? "contrast" : "native");
+            }
+            verify(N.lk.palette.badge_shadow.length > 0 && NC.lk.palette.badge_shadow.length === 0);
+        }
+
         // Windows draws the pointer at the screen's scale, so the badge clears it in Qt units at every ratio.
         function test_the_badge_sits_beside_the_pointer_and_a_big_pointer_pushes_it_out() {
             for (const d of ratios) {
@@ -148,20 +163,22 @@ Item {
             }
         }
 
-        // Flipped, it keeps its offset on the other side of the pointer; over the taskbar it also stays above it.
+        // Flipped, it keeps the base offset on the other side, where the pointer's body is not; over the taskbar it also
+        // stays above it.
         function test_near_the_right_and_bottom_edges_the_badge_flips_and_stays_in_the_work_area() {
             const [w, h, e, near] = [4000, 3000 - bar, sh.edge_px, 20];
             const [ox, oy] = sh.offset_px;
             const spots = [[1000, 800, false, false], [w - near, 800, true, false], [1000, h - near, false, true],
                            [w - near, h - near, true, true], [1000, h + bar / 2, false, true]];
-            for (const d of ratios) {
+            for (const [d, grow] of [[1, 1], [1.5, 1], [1.5, 4]]) {
                 const s = screen(d);
                 for (const [x, y, left, up] of spots) {
-                    const o = overlay(s, state(px(x, y, d), s.area));
+                    const o = overlay(s, state(px(x, y, d), s.area, { pointerPx: En.assist.pointerBase * grow }));
                     const b = Qt.rect(o.badgeAt.x, o.badgeAt.y, o.badge.width, o.badge.height);
-                    const tag = "ratio " + d + " at " + x + ", " + y;
-                    verify(left ? b.x + b.width <= x - ox : b.x >= x + ox, tag + (left ? ": flipped left" : ": right"));
-                    verify(up ? b.y + b.height <= y - oy : b.y >= y + oy, tag + (up ? ": flipped up" : ": below"));
+                    const tag = "ratio " + d + ", grow " + grow + " at " + x + ", " + y;
+                    const [gx, gy, bottom] = [b.x - x - ox * grow, b.y - y - oy * grow, b.y + b.height];
+                    verify(left ? Math.abs(b.x + b.width - (x - ox)) < 0.001 : gx >= -0.001, tag + (left ? ": left" : ": right"));
+                    verify(up ? (y > h ? bottom <= y - oy : Math.abs(bottom - (y - oy)) < 0.001) : gy >= -0.001, tag + ": up or down");
                     verify(b.x >= e && b.x + b.width <= w - e, tag + ": inside across");
                     verify(b.y >= e && b.y + b.height <= h - e, tag + ": inside down");
                 }
@@ -217,13 +234,18 @@ Item {
 
         function test_one_click_through_window_on_top_that_never_takes_focus() {
             const o = overlay(screen(1), state(px(100, 100, 1), null));
-            for (const f of [Qt.WindowTransparentForInput, Qt.WindowDoesNotAcceptFocus, Qt.WindowStaysOnTopHint, Qt.FramelessWindowHint])
+            const flags = [Qt.Tool, Qt.WindowTransparentForInput, Qt.WindowDoesNotAcceptFocus, Qt.WindowStaysOnTopHint, Qt.FramelessWindowHint];
+            for (const f of flags)
                 verify((o.flags & f) === f, "flag " + f);
             compare(o.title, En.texts["window.pointer"]);
             compare(o.transientParent, null, "unowned, so it shows while the keyboard is away");
             verify(o.visible && Qt.colorEqual(o.color, "transparent"));
             compare([o.x, o.y], [o.frame.x, o.frame.y], "it sits where it means to");
             compare([o.badge.x, o.badge.y], [o.badgeAt.x - o.frame.x, o.badgeAt.y - o.frame.y]);
+            const [m, a] = [N.lk.badge_margin, o.badgeAt];
+            const [x0, y0] = [Math.floor(a.x - m), Math.floor(a.y - m)];
+            const [x1, y1] = [Math.ceil(a.x + o.badge.width + m), Math.ceil(a.y + o.badge.height + m)];
+            compare(o.frame, Qt.rect(x0, y0, x1 - x0, y1 - y0), "just the badge and its shadow's room");
         }
 
         function test_the_overlay_is_made_only_while_a_mode_is_on_and_freed_after() {
@@ -256,17 +278,23 @@ Item {
             compare(a.assist.seq, 7, "the newest state");
         }
 
-        function test_the_badge_hides_over_the_keyboard_and_shows_beside_it_once_guarded() {
-            const a = app();
-            const f = a.face;
+        // Its guard run is a quiet one: a key's tip the hand is reading stays, and no pop-up loses its place in front.
+        function test_the_badge_hides_over_the_keyboard_and_its_guard_keeps_a_shown_tip() {
+            const a = app(), f = a.face, tip = Board.tipOf(f);
+            const guards = () => a.keyboard.calls.filter(c => c.indexOf("guard") === 0).length;
+            tryVerify(() => guards() > 0, 2000, "the keyboard's own run");
+            f.hint(En.texts["key.rclick"], f.contentItem);
+            tryVerify(() => tip.visible, 2000, "a key's tip shows");
+            const n = guards();
             a.ui.assist = state(f.spots.physical(f.x + f.width / 2, f.y + f.height / 2), null);
-            tryVerify(() => a.pointer.item !== null && a.pointer.item.at !== null, 2000);
+            tryVerify(() => a.pointer.item !== null && a.pointer.item.visible, 2000);
             const o = a.pointer.item;
             verify(!o.badge.shown, "over the keyboard");
+            tryVerify(() => guards() > n, 2000, "guarded once shown");
+            verify(tip.visible, "the tip stays");
+            compare(a.keyboard.calls.indexOf("guard " + En.texts["window.pointer"]), -1, "never put in front");
             a.ui.assist = state(f.spots.physical(f.x + f.width / 2, f.y - f.height), null);
             tryVerify(() => o.badge.shown, 2000, "beside it");
-            const guarded = "guard " + En.texts["window.pointer"];
-            tryVerify(() => a.keyboard.calls.indexOf(guarded) >= 0, 2000, "guarded in front once shown");
         }
     }
 }

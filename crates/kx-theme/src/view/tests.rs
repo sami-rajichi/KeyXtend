@@ -199,6 +199,30 @@ fn the_margin_fits_the_widest_outer_shadow() {
 }
 
 #[test]
+fn every_badge_casts_the_mock_ups_small_shadow_and_gets_its_room() {
+    let t = themes();
+    let small = Shadow {
+        inset: false,
+        x: 0.0,
+        y: 3.0,
+        blur: 10.0,
+        spread: 0.0,
+        color: rgb("#00000047"),
+    };
+    for theme in &t.list {
+        for mode in [ModeChoice::Light, ModeChoice::Dark] {
+            let id = &theme.look.id;
+            let v = look_view(&t, &choice(id, mode), &SysLook::default(), ROWS).expect("a theme");
+            assert_eq!(v.palette.badge_shadow, [small], "{id}: .badge box-shadow");
+            assert!(
+                (v.badge_margin - 13.0).abs() < f32::EPSILON,
+                "{id}: 3 down plus 10 blur"
+            );
+        }
+    }
+}
+
+#[test]
 fn a_key_under_the_pointer_gets_an_outline_only_in_high_contrast() {
     let t = themes();
     let plain = look_view(

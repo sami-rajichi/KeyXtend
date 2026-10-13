@@ -28,6 +28,7 @@ pub fn contrast_palette(base: &Palette, s: &SysColors, edge_px: f32) -> Palette 
     panels(&mut p, s);
     p.key_shadow = vec![outline(s.button_text.into(), edge_px)];
     p.window_shadow = Vec::new();
+    p.badge_shadow = Vec::new();
     p.skirt = None;
     p
 }
@@ -131,6 +132,8 @@ pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
             a: common.snip_tag.a,
             ..window
         },
+        // A face never reads it here; `contrast_palette` drops each palette's copy.
+        badge_shadow: common.badge_shadow,
     }
 }
 

@@ -13,6 +13,11 @@ function all(item, ok, found) {
     return found;
 }
 
+// The tooltip window that window `win` owns, made by its loader.
+function tipOf(win) {
+    return [...win.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && o.hint && o.ms !== undefined);
+}
+
 // The space bar's text as the hub joins `parts`: each layout after the language through `lang.space` in `texts`,
 // whose variables the texts test leaves as Fluent shows them, as `{$name}`.
 function spaceOf(texts) {

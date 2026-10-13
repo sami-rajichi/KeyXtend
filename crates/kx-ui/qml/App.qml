@@ -147,18 +147,18 @@ QtObject {
             app.assist = JSON.parse(app.ui.assistJson());
         }
     }
-    // The pointer overlay, made while a mode is on or a hold plays, and freed once every mode is off.
+    // The pointer overlay, made while a mode is on and freed once every mode is off; the hub drops a ring with the modes.
     property Loader pointer: Loader {
         readonly property var st: app.assist
-        active: !!face.lk && !!st && st.live && (st.rclick || st.grab !== "off" || !!st.ring || !!st.burst)
+        active: !!face.lk && !!st && st.live && (st.rclick || st.grab !== "off")
         sourceComponent: Overlay {
-            id: overlay
             lk: face.lk
             res: face.res
             st: app.assist
             spots: face.spots
             ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null]
-            onVisibleChanged: if (visible) app.lift(overlay)
+            // A quiet run: never in front of our windows, it leaves a key's tip and a pop-up's place alone.
+            onVisibleChanged: if (visible) face.guardQuiet()
         }
     }
     // Draws the tray icon's picture in the look and hands it to the Ui object.
@@ -196,15 +196,12 @@ QtObject {
         }
     }
 
-    // Shows or hides a pop-up's shadow with it, and lifts a shown one.
+    // Shows or hides a pop-up's shadow with it. Pop-up window `top` shows again where it was, so its guard run puts it
+    // in front; the bubble's tip hides first, as the keyboard's does.
     function shadow(glow, on, top) {
         glow.visible = on;
-        if (on)
-            lift(top);
-    }
-    // Our window `top` shows again where it was, so its guard run puts it in front; the bubble's tip hides first, as the
-    // keyboard's does.
-    function lift(top) {
+        if (!on)
+            return;
         bubble.hideTip();
         face.guardRun(top);
     }

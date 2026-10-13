@@ -56,14 +56,18 @@ Item {
         function waving(p) {
             return [p.w1, p.w2, p.core].some(o => o.opacity > 0);
         }
-        // Plays waves after `after` ms over `len` ms, and checks nothing shows before the wait nor ends before the hold.
+        // Plays waves after `after` ms over `len` ms: the wait, then the first wave and the core over the rest of the hold
+        // and the second wave ending with them, once; nothing shows before the wait nor ends before the hold.
         function hold(after, len) {
             const f = make(F.lk);
             const p = parts(f);
             const t0 = Date.now();
             f.wave(after, len);
             verify(!waving(p), "nothing at once");
-            compare([f.waves.animations[0].duration, f.waves.loops], [after, 1], "one wait, one run");
+            const [wait, run] = f.waves.animations;
+            const [first, second, grow, fade] = run.animations;
+            compare([wait.duration, first.len, grow.duration, fade.duration, f.waves.loops], [after, len, len, len, 1]);
+            fuzzyCompare(second.animations[0].duration + second.animations[1].len, len, 1, "the second wave ends too, in whole ms");
             tryVerify(() => waving(p), after + lateMs, "the waves show");
             verify(Date.now() - t0 >= after, "not before the wait");
             tryVerify(() => !f.waves.running, after + len + lateMs, "the waves end");

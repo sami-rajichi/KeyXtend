@@ -73,17 +73,18 @@ Window {
         return Qt.point(l.x, l.y);
     }
     // The badge's top-left for pointer `p`: below and right, its offset grown with a pointer bigger than Windows'
-    // default. Near the work area's right or bottom edge it flips to the other side, and it stays inside.
+    // default. Near the work area's right or bottom edge it flips to the side the pointer's body is not on, at the base
+    // offset, and it stays inside.
     function spot(p, w, h) {
         const grow = st.pointerPx / st.pointerBase;
-        const [ox, oy] = sh.offset_px.map(v => v * grow);
-        const [x, y] = [p.x + ox, p.y + oy];
+        const [bx, by] = sh.offset_px;
+        const [x, y] = [p.x + bx * grow, p.y + by * grow];
         if (!st.area)
             return Qt.point(x, y);
         const a = area(st.area), e = sh.edge_px;
         const fit = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
-        const fx = x + w > a.x + a.width - e ? p.x - ox - w : x;
-        const fy = y + h > a.y + a.height - e ? p.y - oy - h : y;
+        const fx = x + w > a.x + a.width - e ? p.x - bx - w : x;
+        const fy = y + h > a.y + a.height - e ? p.y - by - h : y;
         return Qt.point(fit(fx, a.x + e, a.x + a.width - e - w), fit(fy, a.y + e, a.y + a.height - e - h));
     }
     // Physical rect `r` in Qt units, at the scale of the screen holding its corner.
@@ -103,7 +104,7 @@ Window {
         return Qt.rect(ringAt.x - ring.width / 2, ringAt.y - ring.height / 2, ring.width, ring.height);
     }
     function badgeBox() {
-        const m = lk.margin;
+        const m = lk.badge_margin;
         return Qt.rect(badgeAt.x - m, badgeAt.y - m, badge.width + 2 * m, badge.height + 2 * m);
     }
     // The smallest box in whole Qt units around the `boxes` given; the ring's while none is, as nothing shows then.

@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::palette::Shadow;
 use crate::rgba::Rgba;
 
 /// The shared colours, from `[common]` in `themes.toml`.
@@ -20,6 +21,10 @@ pub struct Common {
     pub snip_edge: Rgba,
     /// Behind the snip region's size text.
     pub snip_tag: Rgba,
+    /// The mode badge's shadow (mock-up `.badge` box-shadow). Each palette takes it as `badge_shadow`, so a face reads
+    /// it there, where high contrast drops it.
+    #[serde(skip_serializing)]
+    pub badge_shadow: Shadow,
 }
 
 impl Common {

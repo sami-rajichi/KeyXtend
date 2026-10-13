@@ -32,9 +32,9 @@ Item {
         }
     }
 
-    // The theme's pop-up shadow, which high contrast drops.
+    // Its own small shadow (mock-up .badge box-shadow), which high contrast drops.
     Repeater {
-        model: badge.lk.palette.window_shadow.filter(l => !l.inset)
+        model: badge.lk.palette.badge_shadow.filter(l => !l.inset)
         delegate: Shade {
             required property var modelData
             shadow: modelData

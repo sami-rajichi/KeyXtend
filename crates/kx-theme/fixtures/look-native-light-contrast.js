@@ -49,6 +49,7 @@ var lk = {
       }
     ],
     "window_shadow": [],
+    "badge_shadow": [],
     "skirt": null
   },
   "common": {
@@ -748,5 +749,6 @@ var lk = {
   "contrast": true,
   "sel_ink": "#FF050505",
   "hover_line": "#FF1AEBFF",
-  "margin": 0.0
+  "margin": 0.0,
+  "badge_margin": 0.0
 };
