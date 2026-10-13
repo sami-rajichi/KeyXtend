@@ -18,7 +18,7 @@ impl ClipId {
     }
 }
 
-/// A sound compiled into the app: mono PCM16 little-endian samples, 2-byte aligned, never copied or parsed.
+/// A sound compiled into the app: mono PCM16 little-endian samples, never copied or parsed.
 #[derive(Copy, Clone)]
 pub struct Clip {
     /// Its name for `play`.

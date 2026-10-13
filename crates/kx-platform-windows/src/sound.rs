@@ -8,25 +8,26 @@
     )
 )]
 
+mod actor;
+mod rig;
 #[cfg(test)]
 mod tests;
 #[cfg(windows)]
 mod win;
 
-use std::sync::Arc;
+use std::ops::RangeInclusive;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use kx_module_api::{Clock, Mono, US_PER_S};
-use kx_platform::ui::{Clip, ClipId, Speaker, SpeakerConfig};
+use kx_module_api::{Mono, US_PER_S};
+use kx_platform::ui::{Clip, ClipId, SpeakerConfig};
 
+use rig::Rig;
+
+pub(crate) use actor::Actor;
 #[cfg(windows)]
 pub use win::WinSpeaker;
 
-/// The speaker thread's name.
-const THREAD: &str = "kx-speaker";
 /// The lowest and highest gain a play takes.
 const SILENT: f32 = 0.0;
 const FULL: f32 = 1.0;
@@ -58,6 +59,10 @@ pub(crate) enum Warn {
     Rebuild,
     /// A play failed and was dropped.
     Play,
+    /// A clip was skipped: it has no bytes, or not whole samples.
+    Bytes,
+    /// A clip was skipped: the engine takes no such sample rate.
+    Rate,
 }
 
 /// What the speaker thread asks of the system: `XAudio2` and the log on Windows, a recorder in tests. Each handle
@@ -69,6 +74,9 @@ pub(crate) trait Os {
     type Master;
     /// A source voice; dropping it destroys the voice.
     type Voice;
+
+    /// The sample rates a source voice takes.
+    const RATES: RangeInclusive<u32>;
 
     /// Makes the engine.
     fn engine(&self) -> Result<Self::Engine, Fault>;
@@ -85,87 +93,18 @@ pub(crate) trait Os {
     /// Stops audio processing, so the idle engine costs no processor time.
     fn stop(&self, engine: &Self::Engine);
 
-    /// Restarts `voice` on `samples` at `gain`, cutting what it played.
+    /// Plays `samples` at `gain` on `voice`, which has nothing queued.
     fn play(&self, voice: &Self::Voice, samples: &'static [u8], gain: f32) -> Result<(), Fault>;
 
     /// True while `voice` still has samples queued.
     fn busy(&self, voice: &Self::Voice) -> bool;
 
-    /// Logs `warn` with the system's error `code`.
-    fn warn(&self, warn: Warn, code: i32);
+    /// Logs `warn`, with the system's error `code` when a call failed.
+    fn warn(&self, warn: Warn, code: Option<i32>);
 }
 
 /// How many kinds of `Warn` there are: the last one's index plus one.
-const WARNS: usize = Warn::Play as usize + 1;
-
-/// One source voice and when its last play started.
-struct Slot<V> {
-    voice: V,
-    started: Mono,
-}
-
-/// One clip's samples and its voices.
-type Pool<V> = (&'static [u8], Vec<Slot<V>>);
-
-/// The engine and its voices. Fields drop in order: the source voices, the mastering voice, then the engine, as
-/// `XAudio2` requires.
-struct Rig<O: Os> {
-    /// One pool per clip, in the clips' order.
-    pools: Vec<Pool<O::Voice>>,
-    /// Kept for its drop: the source voices send to it.
-    _master: O::Master,
-    engine: O::Engine,
-    /// When the running engine may stop; `None` while it is stopped.
-    stop_at: Option<Mono>,
-}
-
-impl<O: Os> Rig<O> {
-    /// The engine, its mastering voice and `voices` source voices per clip, stopped; a failure leaves nothing made.
-    fn new(os: &O, clips: &[Clip], voices: usize) -> Result<Self, Fault> {
-        // Locals drop in reverse, so a failure gives back the voices made, then the master, then the engine.
-        let engine = os.engine()?;
-        let master = os.master(&engine)?;
-        let mut pools = Vec::with_capacity(clips.len());
-        for clip in clips {
-            let slot = |_| {
-                let voice = os.voice(&engine, clip.rate)?;
-                Ok(Slot {
-                    voice,
-                    started: Mono::default(),
-                })
-            };
-            pools.push((
-                clip.samples,
-                (0..voices).map(slot).collect::<Result<_, Fault>>()?,
-            ));
-        }
-        Ok(Self {
-            pools,
-            _master: master,
-            engine,
-            stop_at: None,
-        })
-    }
-
-    /// Starts the engine if it stopped, then restarts the chosen voice of pool `at` at `gain`.
-    fn sound(&mut self, os: &O, at: usize, gain: f32, now: Mono) -> Result<(), Fault> {
-        if self.stop_at.is_none() {
-            os.start(&self.engine)?;
-            // Running from now, so a play that fails here lets it stop at the next turn.
-            self.stop_at = Some(now);
-        }
-        let Some((samples, pool)) = self.pools.get_mut(at) else {
-            return Ok(());
-        };
-        let chosen = pick(pool.iter().map(|s| (os.busy(&s.voice), s.started)));
-        let Some(slot) = chosen.and_then(|i| pool.get_mut(i)) else {
-            return Ok(());
-        };
-        os.play(&slot.voice, samples, gain)?;
-        slot.started = now;
-        Ok(())
-    }
-}
+const WARNS: usize = Warn::Rate as usize + 1;
 
 /// The speaker thread's state: the clips, the engine once a play built it, and the warnings given.
 pub(crate) struct Mixer<O: Os> {
@@ -192,12 +131,25 @@ impl<O: Os> Mixer<O> {
         }
     }
 
-    /// Keeps `clips` and `config`; the old engine goes, and the next play builds one for them.
+    /// Keeps the playable `clips` and `config`; the old engine goes, and the next play builds one for them.
     pub(crate) fn prepare(&mut self, clips: Vec<Clip>, config: SpeakerConfig) {
         self.rig = None;
-        self.clips = clips;
+        self.clips = clips.into_iter().filter(|c| self.fits(c)).collect();
         self.voices = config.voices;
         self.idle = Duration::from_millis(u64::from(config.idle_ms));
+    }
+
+    /// True if the engine takes `clip`; otherwise its kind warns once, and the other clips still play.
+    fn fits(&self, clip: &Clip) -> bool {
+        let bytes = clip.samples.len();
+        let warn = if bytes == 0 || !bytes.is_multiple_of(frame()) {
+            Some(Warn::Bytes)
+        } else if !O::RATES.contains(&clip.rate) {
+            Some(Warn::Rate)
+        } else {
+            None
+        };
+        warn.inspect(|&w| self.fail(w, None)).is_none()
     }
 
     /// Plays clip `id` at `gain`. A lost device rebuilds the engine and retries once; a second failure drops the play.
@@ -222,7 +174,7 @@ impl<O: Os> Mixer<O> {
         }
         match tried {
             Ok(()) => self.played(at, now),
-            Err(fault) => self.fail(Warn::Play, fault),
+            Err(fault) => self.fail(Warn::Play, Some(fault.code())),
         }
     }
 
@@ -248,7 +200,7 @@ impl<O: Os> Mixer<O> {
         self.rig = None;
         match Rig::new(&self.os, &self.clips, self.voices) {
             Ok(rig) => self.rig = Some(rig),
-            Err(fault) => self.fail(warn, fault),
+            Err(fault) => self.fail(warn, Some(fault.code())),
         }
     }
 
@@ -264,10 +216,10 @@ impl<O: Os> Mixer<O> {
         }
     }
 
-    /// Logs `warn` with `fault`'s code, once until a play succeeds.
-    fn fail(&self, warn: Warn, fault: Fault) {
+    /// Logs `warn` with its error `code`, once until a play succeeds.
+    fn fail(&self, warn: Warn, code: Option<i32>) {
         if !self.warned[warn as usize].swap(true, Ordering::Relaxed) {
-            self.os.warn(warn, fault.code());
+            self.os.warn(warn, code);
         }
     }
 }
@@ -277,96 +229,30 @@ pub(crate) fn level(gain: f32) -> Option<f32> {
     (!gain.is_nan()).then(|| gain.clamp(SILENT, FULL))
 }
 
-/// The voice a new play takes: the first idle one, else the one that started earliest; `None` with no voice.
-pub(crate) fn pick(voices: impl IntoIterator<Item = (bool, Mono)>) -> Option<usize> {
+/// The voice a new play takes, and whether it still plays: the first idle one, else the one that started earliest;
+/// `None` with no voice.
+pub(crate) fn pick(voices: impl IntoIterator<Item = (bool, Mono)>) -> Option<(usize, bool)> {
     let mut earliest: Option<(usize, Mono)> = None;
     for (i, (busy, started)) in voices.into_iter().enumerate() {
         if !busy {
-            return Some(i);
+            return Some((i, false));
         }
         if earliest.is_none_or(|(_, first)| started < first) {
             earliest = Some((i, started));
         }
     }
-    earliest.map(|(i, _)| i)
+    earliest.map(|(i, _)| (i, true))
+}
+
+/// The bytes of one sample frame across the channels.
+fn frame() -> usize {
+    usize::from(Clip::CHANNELS * Clip::SAMPLE_BYTES)
 }
 
 /// How long `clip` plays.
 fn length(clip: &Clip) -> Duration {
-    let frames = clip.samples.len() / usize::from(Clip::CHANNELS * Clip::SAMPLE_BYTES);
+    let frames = clip.samples.len() / frame();
     let us = u64::try_from(frames).map_or(u64::MAX, |f| f.saturating_mul(u64::from(US_PER_S)));
     us.checked_div(u64::from(clip.rate))
         .map_or(Duration::ZERO, Duration::from_micros)
-}
-
-/// A request to the speaker thread.
-enum Ask {
-    Prepare(Vec<Clip>, SpeakerConfig),
-    Play(ClipId, f32),
-}
-
-/// The speaker thread and its queue, so `Speaker` calls only send. Dropping it closes the queue and joins the thread,
-/// which drops the voices, then the engine.
-#[derive(Debug)]
-pub(crate) struct Actor(Option<(Sender<Ask>, JoinHandle<()>)>);
-
-impl Actor {
-    /// Starts the thread, which makes its system with `make` and reads the time from `clock`; without it nothing plays.
-    pub(crate) fn spawn<O: Os + 'static>(
-        make: impl FnOnce() -> O + Send + 'static,
-        clock: Arc<dyn Clock>,
-    ) -> Self {
-        let (asks, queue) = mpsc::channel();
-        let spawned = thread::Builder::new()
-            .name(THREAD.to_owned())
-            .spawn(move || run(make(), &queue, clock.as_ref()))
-            .inspect_err(
-                |e| tracing::warn!(error = %e, "no sound: the speaker thread did not start"),
-            );
-        Self(spawned.ok().map(|join| (asks, join)))
-    }
-
-    /// Queues `ask`; a thread that ended drops it, and the call still returns at once.
-    fn send(&self, ask: Ask) {
-        if let Some((asks, _)) = &self.0 {
-            let _ = asks.send(ask);
-        }
-    }
-}
-
-impl Speaker for Actor {
-    fn prepare(&self, clips: Vec<Clip>, config: SpeakerConfig) {
-        self.send(Ask::Prepare(clips, config));
-    }
-
-    fn play(&self, id: ClipId, gain: f32) {
-        self.send(Ask::Play(id, gain));
-    }
-}
-
-impl Drop for Actor {
-    fn drop(&mut self) {
-        if let Some((asks, join)) = self.0.take() {
-            drop(asks);
-            let _ = join.join();
-        }
-    }
-}
-
-/// The thread: it serves asks and stops the idle engine until the queue closes, then drops the voices and the engine.
-fn run<O: Os>(os: O, queue: &Receiver<Ask>, clock: &dyn Clock) {
-    let mut mixer = Mixer::new(os);
-    loop {
-        let ask = match mixer.wait(clock.now()) {
-            Some(wait) => queue.recv_timeout(wait),
-            None => queue.recv().map_err(|_| RecvTimeoutError::Disconnected),
-        };
-        match ask {
-            Ok(Ask::Prepare(clips, config)) => mixer.prepare(clips, config),
-            Ok(Ask::Play(id, gain)) => mixer.play(id, gain, clock.now()),
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => return,
-        }
-        mixer.idle(clock.now());
-    }
 }

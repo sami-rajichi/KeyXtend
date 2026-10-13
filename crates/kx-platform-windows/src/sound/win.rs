@@ -1,6 +1,7 @@
 //! The `XAudio2` side of the speaker: the engine, its mastering voice on the default device and the source voices, each
 //! undone on drop, on a thread in COM's multithreaded apartment.
 
+use std::ops::RangeInclusive;
 use std::sync::{Arc, OnceLock};
 
 use kx_platform::ui::{Clip, ClipId, Speaker, SpeakerConfig};
@@ -9,7 +10,8 @@ use windows::Win32::Media::Audio::XAudio2::{
     IXAudio2, IXAudio2MasteringVoice, IXAudio2SourceVoice, IXAudio2VoiceCallback, XAUDIO2_BUFFER,
     XAUDIO2_COMMIT_NOW, XAUDIO2_DEFAULT_CHANNELS, XAUDIO2_DEFAULT_FREQ_RATIO,
     XAUDIO2_DEFAULT_SAMPLERATE, XAUDIO2_E_DEVICE_INVALIDATED, XAUDIO2_END_OF_STREAM,
-    XAUDIO2_USE_DEFAULT_PROCESSOR, XAUDIO2_VOICE_NOSAMPLESPLAYED, XAUDIO2_VOICE_STATE,
+    XAUDIO2_MAX_SAMPLE_RATE, XAUDIO2_MIN_SAMPLE_RATE, XAUDIO2_USE_DEFAULT_PROCESSOR,
+    XAUDIO2_VOICE_NOSAMPLESPLAYED, XAUDIO2_VOICE_STATE,
 };
 use windows::Win32::Media::Audio::{
     AUDCLNT_E_DEVICE_INVALIDATED, AUDIO_STREAM_CATEGORY, AudioCategory_SoundEffects,
@@ -107,6 +109,8 @@ impl Os for WinOs {
     type Master = Master;
     type Voice = Voice;
 
+    const RATES: RangeInclusive<u32> = XAUDIO2_MIN_SAMPLE_RATE..=XAUDIO2_MAX_SAMPLE_RATE;
+
     #[allow(unsafe_code, reason = "Calls XAudio2's factory.")]
     fn engine(&self) -> Result<Engine, Fault> {
         let create = factory().map_err(Fault::Failed)?;
@@ -179,7 +183,7 @@ impl Os for WinOs {
             pAudioData: samples.as_ptr(),
             ..Default::default()
         };
-        restart(&voice.0, &buffer, gain).map_err(|e| fault(&e))
+        submit(&voice.0, &buffer, gain).map_err(|e| fault(&e))
     }
 
     #[allow(unsafe_code, reason = "Reads a voice's queue.")]
@@ -190,19 +194,25 @@ impl Os for WinOs {
         state.BuffersQueued > 0
     }
 
-    fn warn(&self, warn: Warn, code: i32) {
+    fn warn(&self, warn: Warn, code: Option<i32>) {
         let why = match warn {
             Warn::Open => "no sound: the audio engine could not start",
             Warn::Rebuild => "no sound: the audio engine could not be rebuilt",
             Warn::Play => "a sound was dropped: the audio device refused it",
+            Warn::Bytes => "a sound was skipped: its data is empty or not whole samples",
+            Warn::Rate => "a sound was skipped: the audio engine takes no such sample rate",
         };
-        tracing::warn!(code, "{why}");
+        if let Some(code) = code {
+            tracing::warn!(code, "{why}");
+        } else {
+            tracing::warn!("{why}");
+        }
     }
 }
 
-/// Cuts what `voice` plays and starts it again on `buffer` at `gain`.
-#[allow(unsafe_code, reason = "Restarts a source voice on static samples.")]
-fn restart(
+/// Plays `buffer` at `gain` on `voice`, which has nothing queued; starting a voice that runs already does nothing.
+#[allow(unsafe_code, reason = "Plays static samples on a source voice.")]
+fn submit(
     voice: &IXAudio2SourceVoice,
     buffer: &XAUDIO2_BUFFER,
     gain: f32,
@@ -210,8 +220,6 @@ fn restart(
     // SAFETY: the voice lives as long as its handle; the buffer points at static samples, which outlive any play, and
     // XAudio2 copies the struct itself during the call.
     unsafe {
-        voice.Stop(0, XAUDIO2_COMMIT_NOW)?;
-        voice.FlushSourceBuffers()?;
         voice.SetVolume(gain, XAUDIO2_COMMIT_NOW)?;
         voice.SubmitSourceBuffer(buffer, None)?;
         voice.Start(0, XAUDIO2_COMMIT_NOW)

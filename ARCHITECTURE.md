@@ -50,8 +50,9 @@ crates/
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth (P8)
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
                          (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray: ADR-0019,
-                         Memory: ADR-0023); hooks (P4)
-  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray
+                         Memory: ADR-0023, Speaker: P4); hooks (P4)
+  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
+                         sound
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
