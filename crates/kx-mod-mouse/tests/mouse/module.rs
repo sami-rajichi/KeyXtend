@@ -233,3 +233,23 @@ fn an_actor_that_panicked_is_logged_once_when_the_module_stops() {
     let fields: Vec<_> = warned[0].1.keys().copied().collect();
     assert_eq!(fields, [MESSAGE], "the line holds no point or key");
 }
+
+#[test]
+fn an_actor_that_panicked_says_the_module_is_not_live_when_it_stops() {
+    let mut host = host(&ALL, Some(Arc::new(Broken)));
+    host.put(RCLICK, true.into());
+    let (_ear, told) = hear::<AssistChanged>(&Bus::new(Arc::clone(&host.core)));
+    let mut module = MouseModule::default();
+    module.start(&mut ModuleCx::new(&mut host)).unwrap();
+    host.held.clear();
+    module.stop();
+    let off = AssistChanged {
+        live: false,
+        ..on(false)
+    };
+    assert_eq!(
+        told.try_iter().collect::<Vec<_>>(),
+        [off],
+        "so the keyboard dims its keys"
+    );
+}

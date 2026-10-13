@@ -15,8 +15,10 @@ pub use engine::{ESC, Engine, EngineCfg, MAX_ACTS, MAX_LATCHES, Note};
 pub use manifest::{ID, MANIFEST};
 pub use settings::MouseSettings;
 
-use kx_module_api::ports::{AssistAsk, AssistToggle, LatchesChanged, PointerHookKey};
-use kx_module_api::{Event, EventError, Manifest, Module, ModuleCx, ModuleError};
+use kx_module_api::ports::{
+    AssistAsk, AssistChanged, AssistToggle, GrabState, LatchesChanged, PointerHookKey,
+};
+use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError};
 use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -24,12 +26,18 @@ use std::thread::{self, JoinHandle};
 const THREAD: &str = "kx-mouse";
 /// Why the start failed when the actor's thread did not start.
 const NO_THREAD: &str = "the mouse actor's thread did not start";
+/// What the module says for an actor that panicked and so could not: not live, every mode off.
+const DEAD: AssistChanged = AssistChanged {
+    live: false,
+    rclick: false,
+    grab: GrabState::Off,
+};
 
 /// The mouse module: it reads `[mouse]` and runs its actor, which starts the hook only while needed.
 #[derive(Default)]
 pub struct MouseModule {
-    /// The running actor's inbox and thread, from start to stop.
-    actor: Option<(Sender<Msg>, JoinHandle<()>)>,
+    /// The running actor's inbox and thread, and the bus it talks on, from start to stop.
+    actor: Option<(Sender<Msg>, JoinHandle<()>, Bus)>,
 }
 
 impl Module for MouseModule {
@@ -45,12 +53,19 @@ impl Module for MouseModule {
         relay(cx, &tx, |e: &AssistToggle| Msg::Toggle(e.which))?;
         relay(cx, &tx, |_: &AssistAsk| Msg::Ask)?;
         relay(cx, &tx, |e: &LatchesChanged| Msg::Latches(e.held.clone()))?;
-        let actor = Actor::new(hook, cx.bus(), cx.settings_handle(), settings, tx.clone());
+        let bus = cx.bus();
+        let actor = Actor::new(
+            hook,
+            bus.clone(),
+            cx.settings_handle(),
+            settings,
+            tx.clone(),
+        );
         let thread = thread::Builder::new()
             .name(THREAD.to_owned())
             .spawn(move || actor.run(&inbox))
             .map_err(|_| ModuleError::Start(NO_THREAD))?;
-        self.actor = Some((tx, thread));
+        self.actor = Some((tx, thread, bus));
         Ok(())
     }
 
@@ -67,12 +82,15 @@ impl Drop for MouseModule {
 }
 
 impl MouseModule {
-    /// Tells the actor to stop and waits for its thread to end; a panic there is logged, with no point or key.
+    /// Tells the actor to stop and waits for its thread to end. A panic there is logged, with no point or key, and the
+    /// module says it is not live, as the actor could not, so the keyboard dims its keys.
     fn halt(&mut self) {
-        if let Some((tx, thread)) = self.actor.take() {
+        if let Some((tx, thread, bus)) = self.actor.take() {
             let _ = tx.send(Msg::Stop);
             if thread.join().is_err() {
                 tracing::warn!("mouse actor panicked");
+                // `AssistChanged` needs no capability, so this cannot be refused.
+                let _ = bus.publish(&DEAD);
             }
         }
     }
