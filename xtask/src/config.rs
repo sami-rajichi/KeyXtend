@@ -1,5 +1,6 @@
 //! Tidy and DCO config, deserialized from `[workspace.metadata]` in `Cargo.toml`, and the shared config errors.
 
+use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::Deserialize;
@@ -34,14 +35,22 @@ pub(crate) struct TidyConfig {
     pub banned_network: Vec<String>,
     /// Media-decoding crates banned from the app.
     pub banned_media: Vec<String>,
+    /// Crate features no package may turn on, listed by crate name.
+    pub banned_features: BTreeMap<String, Vec<String>>,
     /// Attribute every non-platform crate root must carry.
     pub unsafe_attr: String,
-    /// Attribute a test tool's crate roots may carry instead of `unsafe_attr`.
-    pub tool_unsafe_attr: String,
+    /// Attribute a test tool's or the bridge crate's roots may carry instead of `unsafe_attr`.
+    pub deny_attr: String,
     /// Target kinds counted as a crate root for the unsafe-attribute rule.
     pub root_kinds: Vec<String>,
     /// Crates only tests and tools may depend on.
     pub test_only: Vec<String>,
+    /// The one crate beside the platform adapters that holds `unsafe`: the cxx-qt bridges.
+    pub bridge_crate: String,
+    /// The folder, relative to that crate, that alone may hold `unsafe`.
+    pub bridge_dir: String,
+    /// The comment that must stand above each `unsafe` in the bridge folder.
+    pub safety_tag: String,
 }
 
 impl TidyConfig {
@@ -59,8 +68,14 @@ impl TidyConfig {
         if self.tool_dir.trim().is_empty() {
             return Err(ConfigError::EmptyValue("tool_dir"));
         }
-        if self.tool_unsafe_attr.trim().is_empty() {
-            return Err(ConfigError::EmptyValue("tool_unsafe_attr"));
+        let texts = [
+            ("deny_attr", &self.deny_attr),
+            ("bridge_crate", &self.bridge_crate),
+            ("bridge_dir", &self.bridge_dir),
+            ("safety_tag", &self.safety_tag),
+        ];
+        if let Some((name, _)) = texts.iter().find(|(_, v)| v.trim().is_empty()) {
+            return Err(ConfigError::EmptyValue(name));
         }
         Ok(())
     }
@@ -99,6 +114,10 @@ pub(crate) enum ConfigError {
     NotPlain(&'static str),
     /// A value must be a relative `/`-separated path of plain names.
     NotRelative(&'static str),
+    /// The first value must name only entries of the second list.
+    NotListed(&'static str, &'static str),
+    /// A list must hold only files with the given extension.
+    NotType(&'static str, &'static str),
 }
 
 impl fmt::Display for ConfigError {
@@ -113,6 +132,8 @@ impl fmt::Display for ConfigError {
             Self::Same(a, b) => write!(f, "{a} and {b} must differ"),
             Self::NotPlain(name) => write!(f, "{name} must be one plain name"),
             Self::NotRelative(name) => write!(f, "{name} must be a relative path of plain names"),
+            Self::NotListed(name, list) => write!(f, "{name} must name only entries of {list}"),
+            Self::NotType(name, ext) => write!(f, "{name} must hold only .{ext} files"),
         }
     }
 }
@@ -163,13 +184,30 @@ mod tests {
     }
 
     #[test]
-    fn blank_tool_unsafe_attr_is_rejected() {
+    fn blank_deny_attr_is_rejected() {
         let mut config = tidy();
-        config.tool_unsafe_attr = "  ".to_string();
+        config.deny_attr = "  ".to_string();
+        assert_eq!(config.validate(), Err(ConfigError::EmptyValue("deny_attr")));
+    }
+
+    #[test]
+    fn blank_bridge_values_are_rejected() {
+        let mut config = tidy();
+        config.bridge_dir = String::new();
         assert_eq!(
             config.validate(),
-            Err(ConfigError::EmptyValue("tool_unsafe_attr"))
+            Err(ConfigError::EmptyValue("bridge_dir"))
         );
+        let mut config = tidy();
+        config.safety_tag = " ".to_string();
+        assert_eq!(
+            config.validate(),
+            Err(ConfigError::EmptyValue("safety_tag"))
+        );
+        let mut config = tidy();
+        config.bridge_crate = String::new();
+        let want = Err(ConfigError::EmptyValue("bridge_crate"));
+        assert_eq!(config.validate(), want);
     }
 
     #[test]
@@ -194,6 +232,14 @@ mod tests {
             ConfigError::Same("a", "b").to_string(),
             "a and b must differ"
         );
+        assert_eq!(
+            ConfigError::NotListed("a", "b").to_string(),
+            "a must name only entries of b"
+        );
+        assert_eq!(
+            ConfigError::NotType("a", "dll").to_string(),
+            "a must hold only .dll files"
+        );
     }
 
     #[test]
@@ -204,8 +250,9 @@ mod tests {
             "app_dir": "apps", "tool_dir": "tools",
             "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
             "module_allowed": [], "app": "keyxtend",
-            "banned_network": [], "banned_media": [], "unsafe_attr": "x",
-            "tool_unsafe_attr": "y", "root_kinds": [], "test_only": [], "bogus": 1
+            "banned_network": [], "banned_media": [], "banned_features": {}, "unsafe_attr": "x",
+            "deny_attr": "y", "root_kinds": [], "test_only": [], "bridge_crate": "b",
+            "bridge_dir": "d", "safety_tag": "t", "bogus": 1
         }"#;
         assert!(serde_json::from_str::<TidyConfig>(json).is_err());
     }

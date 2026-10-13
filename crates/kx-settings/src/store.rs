@@ -35,6 +35,9 @@ pub enum StoreError {
     /// The version key belongs to the store, not to the module.
     #[error("{} is the section version, not a setting", VERSION_KEY)]
     Reserved,
+    /// Another program held the settings file at load, so this run never writes it.
+    #[error("the settings file was locked at start, so it is not saved this run")]
+    Locked,
     /// The module's validator refused the change.
     #[error(transparent)]
     Settings(#[from] SettingsError),
@@ -70,6 +73,8 @@ pub struct Store {
     unsaved: bool,
     /// True when the user was told that saving failed, until a save succeeds.
     warned: bool,
+    /// True when the file was locked at load, so this run must never write it.
+    locked: bool,
 }
 
 /// One top-level entry of the written file.
@@ -107,6 +112,7 @@ impl Store {
             kept: Table::new(),
             unsaved: matches!(loaded.outcome, Outcome::Restored | Outcome::Defaults),
             warned: false,
+            locked: loaded.outcome == Outcome::Locked,
         };
         let mut report = LoadReport {
             notices: loaded.notices,
@@ -142,8 +148,16 @@ impl Store {
     /// Sets one value when the module's validator accepts the result; true when the stored value changed.
     ///
     /// # Errors
-    /// `Unknown`, `Newer`, `Reserved`, `Panicked`, or the validator's `Settings` error; nothing changes then.
+    /// As `set_all`; nothing changes then.
     pub fn set(&mut self, module: ModuleId, key: &str, value: Value) -> Result<bool, StoreError> {
+        self.set_all(module, Table::from_iter([(key.to_owned(), value)]))
+    }
+
+    /// Sets every value of `values` when the validator accepts them together; true when the stored values changed.
+    ///
+    /// # Errors
+    /// `Unknown`, `Newer`, `Reserved`, `Panicked`, or the validator's `Settings` error; nothing changes then.
+    pub fn set_all(&mut self, module: ModuleId, values: Table) -> Result<bool, StoreError> {
         let section = self
             .sections
             .get_mut(&module)
@@ -151,20 +165,21 @@ impl Store {
         if section.newer.is_some() {
             return Err(StoreError::Newer(module));
         }
-        if key == VERSION_KEY {
+        if values.contains_key(VERSION_KEY) {
             return Err(StoreError::Reserved);
         }
         // Nothing changes before the validator returns, so a panic leaves the section as it was.
-        let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set(key, value)))
+        let changed = panic::catch_unwind(AssertUnwindSafe(|| section.set_all(values)))
             .map_err(|_| StoreError::Panicked(module))??;
         self.unsaved |= changed;
         Ok(changed)
     }
 
     /// True when the file does not match the store yet, after a repair at load or a change.
+    /// Never true while the file was locked at load, since this run must not write it.
     #[must_use]
     pub fn needs_save(&self) -> bool {
-        self.unsaved
+        self.unsaved && !self.locked
     }
 
     /// The file text: each module's changes after its version, and every kept entry as it was.
@@ -192,7 +207,15 @@ impl Store {
     ///
     /// # Errors
     /// `Unsaved` with the cause, and a notice the first time since the last success.
+    /// A file locked at load refuses with `Locked` and no notice, as the load already told the user.
     pub fn save(&mut self) -> Result<(), Unsaved> {
+        if self.locked {
+            let error = StoreError::Locked;
+            return Err(Unsaved {
+                error,
+                notice: None,
+            });
+        }
         let saved = self
             .to_text()
             .and_then(|text| Ok(file::save(&self.files, &text)?));

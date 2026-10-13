@@ -2,6 +2,8 @@
 // Its window reaches past the bar by the shadow's room, which is safe since clicks pass through.
 pragma ComponentBehavior: Bound
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Window {
     id: bar

@@ -43,6 +43,9 @@ This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, w
 7. **Work items** come from `docs/FEATURES.md` (P0–P15 for v1, then F1+), one item per session. The owner types `/kx-feature P<n>` or `/kx-feature F<n>`.
    - Each item's notes and the owner's saved ideas live in `docs/items/<id>.md`. Read it first; a finding for another item goes into that item's file.
    - When the owner says "idea for P13: …", save it there and carry on. `/kx-feature P13` builds saved ideas later.
+8. **The owner's chosen model does the work.**
+   - Opus writes all code, tests, settings, designs, plans and reviews, itself or through subagents dispatched with `model: "opus"`.
+   - Sonnet may only run small syntax checks or pure documentation edits. Never pick a cheaper model to save cost, whatever a skill says.
 
 ## How we work
 

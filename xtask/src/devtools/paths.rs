@@ -14,6 +14,8 @@ const NUMBERED: [&str; 2] = ["COM", "LPT"];
 const DEVICE_DIGITS: &str = "123456789¹²³";
 /// Separator of the relative folders in the settings.
 const SETTINGS_SEP: char = '/';
+/// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
+pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
 
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {
@@ -112,6 +114,32 @@ pub(crate) fn folder_size(dir: &Path) -> Result<u64, DevError> {
         }
     }
     Ok(total)
+}
+
+/// Every file under `dir`, relative to it and sorted; a link or junction is refused, since a copy would follow it.
+pub(crate) fn files(dir: &Path) -> Result<Vec<PathBuf>, DevError> {
+    let mut found = Vec::new();
+    walk(dir, Path::new(""), &mut found)?;
+    found.sort();
+    Ok(found)
+}
+
+/// Adds the files under `base/rel` to `found`, as paths relative to `base`.
+fn walk(base: &Path, rel: &Path, found: &mut Vec<PathBuf>) -> Result<(), DevError> {
+    for entry in std::fs::read_dir(base.join(rel))? {
+        let entry = entry?;
+        let path = rel.join(entry.file_name());
+        let meta = std::fs::symlink_metadata(entry.path())?;
+        if meta.file_type().is_symlink() {
+            return Err(DevError::Link(text(&entry.path())));
+        }
+        if meta.is_dir() {
+            walk(base, &path, found)?;
+        } else if meta.is_file() {
+            found.push(path);
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

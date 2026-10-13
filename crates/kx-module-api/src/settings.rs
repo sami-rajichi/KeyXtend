@@ -2,6 +2,8 @@
 
 use crate::SettingsError;
 use serde::{Serialize, de::DeserializeOwned};
+use std::fmt::Display;
+use std::ops::RangeInclusive;
 
 /// A module's settings type: read and written with serde (the Settings window writes values back),
 /// plus rules serde cannot express.
@@ -45,6 +47,18 @@ impl SettingsSpec {
             .and_then(|n| usize::try_from(n).ok());
         steps == Some(self.migrations.len())
     }
+
+    /// The embedded defaults read as `T` and checked.
+    ///
+    /// # Errors
+    /// `SettingsError::Parse` when the defaults do not parse, or the error from `check`.
+    pub fn defaults_as<T: Settings>(&self) -> Result<T, SettingsError> {
+        let table: toml::Table = self
+            .defaults
+            .parse()
+            .map_err(|e: toml::de::Error| SettingsError::Parse(e.to_string()))?;
+        parse_as(&table)
+    }
 }
 
 /// Checks `table` by reading it as `T` and running `T::check`.
@@ -63,6 +77,24 @@ pub fn parse_as<T: Settings>(table: &toml::Table) -> Result<T, SettingsError> {
     let value = T::deserialize(table.clone()).map_err(|e| SettingsError::Parse(e.to_string()))?;
     value.check()?;
     Ok(value)
+}
+
+/// Refuses `value` of setting `key` outside `range`, naming the range; NaN is outside every range.
+///
+/// # Errors
+/// `SettingsError::Invalid` when `value` is outside `range`.
+pub fn within<T: Copy + PartialOrd + Display>(
+    key: &str,
+    value: T,
+    range: &RangeInclusive<T>,
+) -> Result<(), SettingsError> {
+    if range.contains(&value) {
+        return Ok(());
+    }
+    let (lo, hi) = (range.start(), range.end());
+    Err(SettingsError::Invalid(format!(
+        "{key} must be from {lo} to {hi}"
+    )))
 }
 
 #[cfg(test)]
@@ -171,8 +203,38 @@ mod tests {
     }
 
     #[test]
+    fn within_takes_both_ends_and_names_the_range_when_out() {
+        assert_eq!(within("speed", 1, &(1..=MAX_SPEED)), Ok(()));
+        assert_eq!(within("speed", MAX_SPEED, &(1..=MAX_SPEED)), Ok(()));
+        let why = "speed must be from 1 to 10".to_owned();
+        assert_eq!(
+            within("speed", 0, &(1..=MAX_SPEED)),
+            Err(SettingsError::Invalid(why))
+        );
+        assert!(within("ratio", f32::NAN, &(0.0..=1.0)).is_err(), "NaN");
+    }
+
+    #[test]
     fn the_spec_validates_its_defaults() {
         let spec = spec(1, &[]);
         assert_eq!((spec.validate)(&table(spec.defaults)), Ok(()));
+    }
+
+    #[test]
+    fn the_defaults_read_as_the_settings_type() {
+        let speed = spec(1, &[]).defaults_as::<Demo>().map(|d| d.speed);
+        assert_eq!(speed, Ok(3));
+        let broken = SettingsSpec {
+            defaults: "speed = [",
+            ..spec(1, &[])
+        };
+        let err = broken.defaults_as::<Demo>().err();
+        assert!(matches!(err, Some(SettingsError::Parse(_))), "{err:?}");
+        let fast = SettingsSpec {
+            defaults: "speed = 99",
+            ..spec(1, &[])
+        };
+        let err = fast.defaults_as::<Demo>().err();
+        assert!(matches!(err, Some(SettingsError::Invalid(_))), "{err:?}");
     }
 }

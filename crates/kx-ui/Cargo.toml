@@ -1,0 +1,78 @@
+[package]
+name = "kx-ui"
+description = "The UI: its texts in English, French and Arabic, the QML module KeyXtend.Ui with its bridges, and the ui module."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Qt: the QML module and its bridges. Without it the texts, settings and ui module still build and test (Linux CI).
+default = ["qt"]
+qt = ["dep:cxx", "dep:cxx-qt", "dep:cxx-qt-lib", "dep:cxx-qt-build"]
+
+[dependencies]
+# Fluent: the translation files, their plural rules and language matching (ADR-0017).
+fluent-bundle.workspace = true
+fluent-langneg.workspace = true
+unic-langid.workspace = true
+# Notice keys, the keyboard face port and the module contract.
+kx-module-api = { path = "../kx-module-api" }
+# The UI ports: window guard, screens, system look and backdrops.
+kx-platform = { path = "../kx-platform" }
+# Theme ids, the look view and the contrast floor.
+kx-theme = { path = "../kx-theme" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+cxx = { workspace = true, optional = true }
+cxx-qt = { workspace = true, optional = true }
+cxx-qt-lib = { workspace = true, optional = true }
+
+[build-dependencies]
+cxx-qt-build = { workspace = true, optional = true }
+# The icons the tokens name and where the bundled assets sit, so the build compiles in only what QML shows.
+kx-theme = { path = "../kx-theme" }
+serde_json.workspace = true
+# Reads the Qt version the workspace manifest pins.
+toml.workspace = true
+
+[dev-dependencies]
+kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true
+
+# The Qt Quick tests' QML plugin, which the texts test lays out beside the icons (Windows, where they run).
+[target.'cfg(windows)'.dev-dependencies]
+kx-test-icons = { path = "../../tools/kx-test-icons" }
+
+# Loads the root QML file; Qt wants its app object on the main thread, so it runs without the harness.
+[[test]]
+name = "qml"
+harness = false
+required-features = ["qt"]
+
+# Every window shares one graphics device over the app's QML and a fake face; Qt's loop runs on the main thread.
+[[test]]
+name = "device"
+harness = false
+required-features = ["qt"]
+
+# Qt's start ignores planted Qt variables; it runs itself again with them set, so it needs no harness either.
+[[test]]
+name = "harden"
+harness = false
+required-features = ["qt"]
+
+# The icon provider tints the bundled icons; Qt wants its app object on the main thread, so it runs without the harness.
+[[test]]
+name = "tint"
+harness = false
+required-features = ["qt"]

@@ -23,17 +23,9 @@ pub const MAX_FILE_BYTES: u64 = 1024 * 1024;
 /// The key that holds a section's version.
 pub const VERSION_KEY: &str = "version";
 
-/// The notice argument naming the module.
-pub const ARG_MODULE: &str = "module";
-/// The notice argument listing the keys that went back to their defaults.
-pub const ARG_KEYS: &str = "keys";
-/// The notice argument counting the reset keys that `ARG_KEYS` leaves out; absent when it names all.
-pub const ARG_MORE: &str = "more";
-/// What joins the keys in `ARG_KEYS`.
-pub const KEYS_SEPARATOR: &str = ", ";
 /// The most keys one notice names, so a huge file never makes a huge notice.
 pub const MAX_NAMED_KEYS: usize = 10;
-/// The longest key name a notice shows; a longer one is counted in `ARG_MORE` instead.
+/// The longest key name a notice shows; a longer one is counted in `args::MORE` instead.
 pub const MAX_KEY_CHARS: usize = 64;
 
 /// The paths of the files in the data folder.
@@ -117,14 +109,6 @@ mod tests {
         ];
         let unique: HashSet<_> = all.iter().collect();
         assert_eq!(unique.len(), all.len());
-    }
-
-    #[test]
-    fn notice_arguments_keep_the_names_translations_use() {
-        assert_eq!(
-            (ARG_MODULE, ARG_KEYS, ARG_MORE, KEYS_SEPARATOR),
-            ("module", "keys", "more", ", ")
-        );
     }
 
     #[test]

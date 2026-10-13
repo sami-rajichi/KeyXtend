@@ -1,0 +1,335 @@
+# Captured from an installed layout by `kx-gates capture-layouts`; capture again rather than edit.
+id = "0x00000000040C040C"
+controls = ["0x0001", "0x000E", "0x000F", "0x001C", "0x0039"]
+
+[facts]
+iso = "fr"
+native = "français"
+layout = "French (Legacy, AZERTY)"
+rtl = false
+
+[keys.0x0002]
+base = "&"
+shift = "1"
+caps = "1"
+caps_shift = "&"
+
+[keys.0x0003]
+base = "é"
+shift = "2"
+altgr = "~"
+caps = "2"
+caps_shift = "é"
+dead = ["altgr"]
+
+[keys.0x0004]
+base = '"'
+shift = "3"
+altgr = "#"
+caps = "3"
+caps_shift = '"'
+
+[keys.0x0005]
+base = "'"
+shift = "4"
+altgr = "{"
+caps = "4"
+caps_shift = "'"
+
+[keys.0x0006]
+base = "("
+shift = "5"
+altgr = "["
+caps = "5"
+caps_shift = "("
+
+[keys.0x0007]
+base = "-"
+shift = "6"
+altgr = "|"
+caps = "6"
+caps_shift = "-"
+
+[keys.0x0008]
+base = "è"
+shift = "7"
+altgr = "`"
+caps = "7"
+caps_shift = "è"
+dead = ["altgr"]
+
+[keys.0x0009]
+base = "_"
+shift = "8"
+altgr = '\'
+caps = "8"
+caps_shift = "_"
+
+[keys.0x000A]
+base = "ç"
+shift = "9"
+altgr = "^"
+caps = "9"
+caps_shift = "ç"
+
+[keys.0x000B]
+base = "à"
+shift = "0"
+altgr = "@"
+caps = "0"
+caps_shift = "à"
+
+[keys.0x000C]
+base = ")"
+shift = "°"
+altgr = "]"
+caps = "°"
+caps_shift = ")"
+
+[keys.0x000D]
+base = "="
+shift = "+"
+altgr = "}"
+caps = "+"
+caps_shift = "="
+
+[keys.0x0010]
+base = "a"
+shift = "A"
+caps = "A"
+caps_shift = "a"
+
+[keys.0x0011]
+base = "z"
+shift = "Z"
+caps = "Z"
+caps_shift = "z"
+
+[keys.0x0012]
+base = "e"
+shift = "E"
+altgr = "€"
+caps = "E"
+caps_shift = "e"
+
+[keys.0x0013]
+base = "r"
+shift = "R"
+caps = "R"
+caps_shift = "r"
+
+[keys.0x0014]
+base = "t"
+shift = "T"
+caps = "T"
+caps_shift = "t"
+
+[keys.0x0015]
+base = "y"
+shift = "Y"
+caps = "Y"
+caps_shift = "y"
+
+[keys.0x0016]
+base = "u"
+shift = "U"
+caps = "U"
+caps_shift = "u"
+
+[keys.0x0017]
+base = "i"
+shift = "I"
+caps = "I"
+caps_shift = "i"
+
+[keys.0x0018]
+base = "o"
+shift = "O"
+caps = "O"
+caps_shift = "o"
+
+[keys.0x0019]
+base = "p"
+shift = "P"
+caps = "P"
+caps_shift = "p"
+
+[keys.0x001A]
+base = "^"
+shift = "¨"
+caps = "¨"
+caps_shift = "^"
+dead = ["base", "shift", "caps", "caps_shift"]
+
+[keys.0x001B]
+base = "$"
+shift = "£"
+altgr = "¤"
+caps = "£"
+caps_shift = "$"
+
+[keys.0x001E]
+base = "q"
+shift = "Q"
+caps = "Q"
+caps_shift = "q"
+
+[keys.0x001F]
+base = "s"
+shift = "S"
+caps = "S"
+caps_shift = "s"
+
+[keys.0x0020]
+base = "d"
+shift = "D"
+caps = "D"
+caps_shift = "d"
+
+[keys.0x0021]
+base = "f"
+shift = "F"
+caps = "F"
+caps_shift = "f"
+
+[keys.0x0022]
+base = "g"
+shift = "G"
+caps = "G"
+caps_shift = "g"
+
+[keys.0x0023]
+base = "h"
+shift = "H"
+caps = "H"
+caps_shift = "h"
+
+[keys.0x0024]
+base = "j"
+shift = "J"
+caps = "J"
+caps_shift = "j"
+
+[keys.0x0025]
+base = "k"
+shift = "K"
+caps = "K"
+caps_shift = "k"
+
+[keys.0x0026]
+base = "l"
+shift = "L"
+caps = "L"
+caps_shift = "l"
+
+[keys.0x0027]
+base = "m"
+shift = "M"
+caps = "M"
+caps_shift = "m"
+
+[keys.0x0028]
+base = "ù"
+shift = "%"
+caps = "%"
+caps_shift = "ù"
+
+[keys.0x0029]
+base = "²"
+caps = "²"
+
+[keys.0x002B]
+base = "*"
+shift = "µ"
+caps = "µ"
+caps_shift = "*"
+
+[keys.0x002C]
+base = "w"
+shift = "W"
+caps = "W"
+caps_shift = "w"
+
+[keys.0x002D]
+base = "x"
+shift = "X"
+caps = "X"
+caps_shift = "x"
+
+[keys.0x002E]
+base = "c"
+shift = "C"
+caps = "C"
+caps_shift = "c"
+
+[keys.0x002F]
+base = "v"
+shift = "V"
+caps = "V"
+caps_shift = "v"
+
+[keys.0x0030]
+base = "b"
+shift = "B"
+caps = "B"
+caps_shift = "b"
+
+[keys.0x0031]
+base = "n"
+shift = "N"
+caps = "N"
+caps_shift = "n"
+
+[keys.0x0032]
+base = ","
+shift = "?"
+caps = "?"
+caps_shift = ","
+
+[keys.0x0033]
+base = ";"
+shift = "."
+caps = "."
+caps_shift = ";"
+
+[keys.0x0034]
+base = ":"
+shift = "/"
+caps = "/"
+caps_shift = ":"
+
+[keys.0x0035]
+base = "!"
+shift = "§"
+caps = "§"
+caps_shift = "!"
+
+[keys.0x0037]
+base = "*"
+shift = "*"
+caps = "*"
+caps_shift = "*"
+
+[keys.0x004A]
+base = "-"
+shift = "-"
+caps = "-"
+caps_shift = "-"
+
+[keys.0x004E]
+base = "+"
+shift = "+"
+caps = "+"
+caps_shift = "+"
+
+[keys.0x0056]
+base = "<"
+shift = ">"
+caps = "<"
+caps_shift = ">"
+
+[keys.0xE035]
+base = "/"
+shift = "/"
+caps = "/"
+caps_shift = "/"

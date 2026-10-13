@@ -5,12 +5,14 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
 
 # Theme work
 
-- Tokens live in three files, loaded and checked by the theme loader in `kx-ui` (ADR-0013):
+- Tokens live in four files in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
   - `themes.toml`: each theme's colours for light and dark, fonts and shape;
   - `shape.toml`: sizes all themes share;
-  - `motion.toml`: each animation's length and curve, plus the reduced set.
+  - `motion.toml`: each animation's length and curve, plus the reduced set;
+  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`).
 - The reference values are in `design/keyboard-style-lab.html`, in the CSS blocks `[data-style=...][data-mode=...]`. Cite the mock-up line in the token's comment.
 - QML reads tokens only through the look object; it never writes a colour, size or time itself.
+- After a token change, run `cargo test -p kx-theme` with `KX_BLESS=1` to rewrite the QML look fixtures.
 
 ## Rules
 1. **Every theme has light and soft dark.** Soft dark means:
@@ -18,15 +20,18 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - off-white legends (#E3E5E8 / #EDE8DF / #EDEAE4);
    - accents a little desaturated (Material dark-theme guidance; GitHub Dark dimmed).
 2. **Contrast:**
-   - legends ≥ 4.5:1 against their key colour (target 7:1); secondary legends ≥ 3:1;
+   - legends ≥ 4.5:1 against their key colour, secondary legends too (target 7:1);
+   - secondary text and icons on the plate use `legend_2_plate` (4.5:1 on the plate), which takes `legend_2` unless a palette writes its own (only where it differs);
    - shapes that carry meaning (the hold ring, icons) ≥ 3:1 against a plain window of their mode (WCAG 1.4.11);
-   - the theme tests compute these; never change an owner-approved colour without asking.
+   - the theme tests compute these; never change an owner-approved colour without asking;
+   - one owner-approved exception: the Carousel's side names keep their fade as decoration (owner, 2026-10-02; `drawn::EXCEPTION`). Every other pair reaches its minimum, and the owner's nudges to reach it (2026-09-30, 2026-10-02) are marked in `themes.toml`;
+   - where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 3. **Colour means function** (ET66 rule): modifiers, Enter, danger keys (Esc/Backspace) and "on/locked" states each have a distinct token, in every theme.
 4. **Fonts:**
    - Native: the system UI font plus Noto Sans Arabic;
    - ET66: IBM Plex Sans + IBM Plex Sans Arabic;
-   - Dolch: Rubik (Latin) with Noto Sans Arabic.
-   - All are OFL; bundle them with the licence (`kx-licence-check`).
+   - Dolch: Rubik for Latin and Arabic, with Noto Sans Arabic as fallback.
+   - The bundled fonts are OFL; bundle them with the licence (`kx-licence-check`).
    - Arabic legends are about 1.1× larger than Latin ones.
 5. **Icons:** Lucide (ISC) only, platform-specific where it matters (Windows logo vs ⌘ vs Super). No emoji as icons.
 6. **Scale:** every size is multiplied by the keyboard's scale. Panels use the panel scale, which never goes below 0.8.

@@ -1,16 +1,17 @@
 //! One registered module's section: its version, the migrations it needs, and repair against the defaults.
 
 use crate::merge::{self, Repair};
-use crate::names::{
-    ARG_KEYS, ARG_MODULE, ARG_MORE, KEYS_SEPARATOR, MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY,
-};
-use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
+use crate::names::{MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY};
+use kx_module_api::{ModuleId, Notice, NoticeArg, SettingsError, SettingsSpec, args, keys};
 use std::cmp::Ordering;
 use std::panic;
 use toml::{Table, Value};
 
-/// A notice's arguments, as name and text.
-type Args = Vec<(&'static str, String)>;
+/// A notice's arguments, as name and value.
+type Args = Vec<(&'static str, NoticeArg)>;
+
+/// Why a change was refused: it names a key the module's defaults lack.
+pub const NOT_A_SETTING: &str = "a key is not one of the module's settings";
 
 /// A registered module's settings.
 #[derive(Debug)]
@@ -75,9 +76,9 @@ fn read(id: ModuleId, spec: &'static SettingsSpec, defaults: Table, raw: Option<
         return Read::quiet(Section::fresh(spec, defaults));
     };
     let Value::Table(mut values) = raw else {
-        return Read::bad(id, Section::fresh(spec, defaults), reset_args(id, &[]));
+        return Read::bad(id, Section::fresh(spec, defaults), reset_args(&[]));
     };
-    let named = key_list(&values, id);
+    let named = key_list(&values);
     match age(&values, spec.version) {
         Age::Newer => Read::newer(id, Section::fresh(spec, defaults), Value::Table(values)),
         Age::Bad => Read::bad(id, Section::fresh(spec, defaults), named),
@@ -121,44 +122,42 @@ fn strip(mut values: Table) -> Table {
     values
 }
 
-/// Notice arguments naming the section's setting keys, or the section name when none can be named.
-fn key_list(values: &Table, id: ModuleId) -> Args {
+/// Notice arguments naming the section's setting keys.
+fn key_list(values: &Table) -> Args {
     let named: Vec<&str> = values
         .keys()
         .map(String::as_str)
         .filter(|k| *k != VERSION_KEY)
         .collect();
-    reset_args(id, &named)
+    reset_args(&named)
 }
 
-/// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show.
-/// The keys left out are counted, and the module's name stands in when none can be shown.
-fn reset_args(id: ModuleId, keys: &[&str]) -> Args {
-    let mut shown: Vec<&str> = keys
+/// Notice arguments naming at most `MAX_NAMED_KEYS` of the `keys` short enough to show, and counting the rest.
+/// A notice that can name none counts at least the one bad value, so its text always says something.
+fn reset_args(keys: &[&str]) -> Args {
+    let shown: Vec<String> = keys
         .iter()
-        .copied()
         .filter(|k| k.chars().count() <= MAX_KEY_CHARS)
         .take(MAX_NAMED_KEYS)
+        .map(|k| (*k).to_owned())
         .collect();
-    let more = keys.len() - shown.len();
-    if shown.is_empty() {
-        shown.push(id.as_str());
-    }
-    let mut args = vec![(ARG_KEYS, shown.join(KEYS_SEPARATOR))];
+    let left = keys.len() - shown.len();
+    let more = if shown.is_empty() { left.max(1) } else { left };
+    let mut named = vec![(args::KEYS, NoticeArg::List(shown))];
     if more > 0 {
-        args.push((ARG_MORE, more.to_string()));
+        named.push((args::MORE, NoticeArg::Count(more)));
     }
-    args
+    named
 }
 
 /// A notice about the module, with the module argument before `extra`.
 fn notice(key: &'static str, id: ModuleId, extra: Args) -> Notice {
-    let mut args = vec![(ARG_MODULE, id.to_string())];
-    args.extend(extra);
+    let mut all = vec![(args::MODULE, NoticeArg::Text(id.to_string()))];
+    all.extend(extra);
     Notice {
         key,
         module: Some(id),
-        args,
+        args: all,
     }
 }
 
@@ -199,7 +198,7 @@ impl Read {
         } = merge::repair(&defaults, user, spec.validate);
         let changes = merge::changes(&effective, &defaults);
         let names: Vec<&str> = rejected.iter().map(String::as_str).collect();
-        let reset = (!rejected.is_empty()).then(|| reset_args(id, &names));
+        let reset = (!rejected.is_empty()).then(|| reset_args(&names));
         Self {
             notice: reset.map(|named| notice(keys::SETTINGS_RESET, id, named)),
             repaired: !rejected.is_empty(),
@@ -231,18 +230,25 @@ impl Section {
         self.spec.version
     }
 
-    /// Sets `key` when the spec accepts the result, and says whether anything changed.
-    pub(crate) fn set(&mut self, key: &str, value: Value) -> Result<bool, SettingsError> {
-        let next = merge::with(&self.effective, key, value.clone());
+    /// Sets every key of `values` when the spec accepts them together, and says whether anything changed.
+    /// A key the defaults lack is refused, as a load's repair would reset it, even when the validator lets it through.
+    pub(crate) fn set_all(&mut self, values: Table) -> Result<bool, SettingsError> {
+        let mut next = self.effective.clone();
+        next.extend(values.clone());
         (self.spec.validate)(&next)?;
+        if values.keys().any(|key| !self.defaults.contains_key(key)) {
+            return Err(SettingsError::Invalid(NOT_A_SETTING.to_owned()));
+        }
         if next == self.effective {
             return Ok(false);
         }
         self.effective = next;
-        if self.defaults.get(key) == Some(&value) {
-            self.changes.remove(key);
-        } else {
-            self.changes.insert(key.to_owned(), value);
+        for (key, value) in values {
+            if self.defaults.get(&key) == Some(&value) {
+                self.changes.remove(&key);
+            } else {
+                self.changes.insert(key, value);
+            }
         }
         Ok(true)
     }

@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{TempDir, devtools_config, make_dir_link};
+use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, stage_config};
 
 const TP: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
 
@@ -33,10 +33,86 @@ fn only_top_level_exes_are_signed() {
 }
 
 #[test]
+fn only_a_folder_with_the_app_gets_a_shortcut() {
+    let dir = TempDir::new("app");
+    assert!(!holds_app(dir.path(), "keyxtend.exe"));
+    std::fs::write(dir.path().join("keyxtend.exe"), b"").unwrap();
+    assert!(holds_app(dir.path(), "keyxtend.exe"));
+}
+
+/// A folder holding `program` and a TLS plugin, with settings rooted there.
+fn tls_folder(label: &str, program: &str) -> (TempDir, DevSetup) {
+    let dir = TempDir::new(label);
+    std::fs::write(dir.path().join(program), b"").unwrap();
+    std::fs::create_dir_all(dir.path().join("tls")).unwrap();
+    std::fs::write(dir.path().join("tls").join("x.dll"), b"").unwrap();
+    let setup = DevSetup {
+        root: dir.path().to_path_buf(),
+        config: devtools_config(),
+    };
+    (dir, setup)
+}
+
+#[test]
+fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
+    let stage = stage_config();
+    let (dir, setup) = tls_folder("vet-app", &stage.program());
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let result = vet(dir.path(), &setup, &stage, windows);
+    assert!(
+        matches!(result, Err(DevError::Stage(StageError::Banned(_)))),
+        "{result:?}"
+    );
+}
+
+#[test]
+fn a_folder_without_the_app_is_not_stage_checked() {
+    let (dir, setup) = tls_folder("vet-other", "other.exe");
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    assert_eq!(vet(dir.path(), &setup, &stage_config(), windows), Ok(()));
+}
+
+/// A folder holding the app, and an environment whose roaming folder is `menu` and whose profile is `u`, both in it.
+fn app_with_menu(label: &str, menu: &str) -> (TempDir, impl Fn(&str) -> Option<String>) {
+    let dir = TempDir::new(label);
+    std::fs::write(dir.path().join(stage_config().program()), b"").unwrap();
+    let at = |rel: &str| paths::join_rel(dir.path().to_path_buf(), rel);
+    let env = fake_env(vec![("APPDATA", at(menu)), ("USERPROFILE", at("u"))]);
+    (dir, env)
+}
+
+#[test]
+fn an_app_folder_gets_its_shortcut_worked_out_up_front() {
+    let (dir, env) = app_with_menu("link-app", "u/AppData/Roaming");
+    let (config, program) = (devtools_config(), stage_config().program());
+    let link = link_for(dir.path(), &program, &config, &env);
+    assert_eq!(link, Ok(Some(shortcut::link(&config, &env).unwrap())));
+}
+
+#[test]
+fn an_app_folder_whose_shortcut_leaves_the_profile_is_refused() {
+    let (dir, env) = app_with_menu("link-out", "ProgramData");
+    let program = stage_config().program();
+    let link = link_for(dir.path(), &program, &devtools_config(), env);
+    assert!(matches!(link, Err(DevError::NotInProfile(_))), "{link:?}");
+}
+
+#[test]
+fn a_folder_without_the_app_needs_no_shortcut() {
+    let dir = TempDir::new("link-none");
+    let program = stage_config().program();
+    let link = link_for(dir.path(), &program, &devtools_config(), fake_env(vec![]));
+    assert_eq!(link, Ok(None));
+}
+
+#[test]
 fn a_folder_without_programs_is_refused() {
     let dir = TempDir::new("no-exe");
     std::fs::write(dir.path().join("c.dll"), b"").unwrap();
-    assert!(matches!(exes(dir.path()), Err(DevError::NoExe(_))));
+    assert!(matches!(
+        exes(dir.path()),
+        Err(DevError::Stage(StageError::NoExe(_)))
+    ));
 }
 
 #[test]
@@ -73,7 +149,7 @@ fn a_source_over_the_limit_is_refused() {
     let dir = TempDir::new("big");
     let source = dir.path().join("kb");
     std::fs::create_dir_all(&source).unwrap();
-    let size = usize::try_from(BYTES_PER_MB).unwrap() + 1;
+    let size = usize::try_from(paths::BYTES_PER_MB).unwrap() + 1;
     std::fs::write(source.join("big.bin"), vec![0u8; size]).unwrap();
     let target = dir.path().join("target");
     assert_eq!(

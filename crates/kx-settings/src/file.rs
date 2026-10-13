@@ -1,11 +1,13 @@
 //! The whole settings file: read it back, repairing damage, and save it without ever losing the old copy.
 //! A save never leaves the settings file missing: the good file is copied, then replaced in one step.
 
-use crate::names::{Files, MAX_FILE_BYTES};
-use kx_module_api::{Notice, keys};
+use crate::names::Files;
+use crate::section;
+use kx_module_api::{ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, parse_as};
+use read::{Problem, read_table};
 use std::fs::{self, File};
-use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::{self, Write};
+use std::path::PathBuf;
 use thiserror::Error;
 
 /// Where the loaded table came from.
@@ -19,6 +21,8 @@ pub enum Outcome {
     Fresh,
     /// Nothing was usable, so it starts empty and a damaged copy was kept.
     Defaults,
+    /// Another program holds the settings file, so it starts empty and must not save this run.
+    Locked,
 }
 
 /// The whole-file table and what happened while reading it.
@@ -74,31 +78,6 @@ pub enum SaveError {
     },
 }
 
-/// Why a file gave no table.
-enum Problem {
-    /// The file does not exist.
-    Missing,
-    /// The file is too big, unreadable, not UTF-8 or not TOML.
-    Damaged,
-}
-
-/// Reads one file as a table, never reading more than `MAX_FILE_BYTES` and one byte.
-fn read_table(path: &Path) -> Result<toml::Table, Problem> {
-    let file = File::open(path).map_err(|e| match e.kind() {
-        io::ErrorKind::NotFound => Problem::Missing,
-        _ => Problem::Damaged,
-    })?;
-    let mut bytes = Vec::new();
-    file.take(MAX_FILE_BYTES + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| Problem::Damaged)?;
-    if u64::try_from(bytes.len()).map_or(true, |len| len > MAX_FILE_BYTES) {
-        return Err(Problem::Damaged);
-    }
-    let text = String::from_utf8(bytes).map_err(|_| Problem::Damaged)?;
-    text.parse().map_err(|_| Problem::Damaged)
-}
-
 /// A notice with only its key, about no module.
 pub(crate) fn notice(key: &'static str) -> Notice {
     Notice {
@@ -130,22 +109,53 @@ fn fallback(files: &Files, damaged: bool) -> Loaded {
     }
 }
 
+/// The settings file's table as it is, for a later copy of the app that must not change it: nothing when it is
+/// missing, held, too big or damaged. It never repairs, moves or writes a file.
+#[must_use]
+pub fn peek(files: &Files) -> Option<toml::Table> {
+    read_table(&files.settings).ok()
+}
+
+/// Module `id`'s section of a peeked settings table `file`, read as the store reads it, for a later copy of the app:
+/// migrated, repaired value by value, and the defaults for a newer version or any fault.
+///
+/// # Errors
+/// When `spec`'s own defaults do not read as `T`.
+pub fn peek_section<T: Settings>(
+    file: Option<&toml::Table>,
+    id: ModuleId,
+    spec: &'static SettingsSpec,
+) -> Result<T, SettingsError> {
+    let defaults = spec.defaults_as::<T>()?;
+    let raw = file.and_then(|f| f.get(id.as_str())).cloned();
+    let read = section::guarded_read(id, spec, raw);
+    let effective = read.and_then(|r| parse_as::<T>(&r.section.effective).ok());
+    Ok(effective.unwrap_or(defaults))
+}
+
 /// Reads the settings file and repairs it when it is damaged.
 ///
-/// A damaged file is moved to the broken copy, so the next save cannot make it the previous copy.
+/// A damaged file is moved to the broken copy, so the next save cannot make it the previous copy; a locked file is
+/// left alone, nothing is restored and the store must not save this run.
 #[must_use]
 pub fn load(files: &Files) -> Loaded {
-    match read_table(&files.settings) {
-        Ok(table) => Loaded {
-            table,
-            outcome: Outcome::Main,
-            notices: Vec::new(),
-        },
-        Err(Problem::Missing) => fallback(files, false),
+    let (table, outcome, notices) = match read_table(&files.settings) {
+        Ok(table) => (table, Outcome::Main, Vec::new()),
+        Err(Problem::Missing) => return fallback(files, false),
         Err(Problem::Damaged) => {
             set_aside(files);
-            fallback(files, true)
+            return fallback(files, true);
         }
+        Err(Problem::Locked) => (
+            toml::Table::new(),
+            Outcome::Locked,
+            vec![notice(keys::SETTINGS_LOCKED)],
+        ),
+    };
+    Loaded {
+        table,
+        outcome,
+        notices,
     }
 }
 
@@ -163,10 +173,11 @@ fn write_temp(files: &Files, text: &str) -> io::Result<()> {
 
 /// Copies a settings file that reads well to the previous copy; the file itself stays where it is.
 ///
-/// A damaged file is moved to the broken copy instead, so it never replaces a good previous copy.
+/// A damaged file is moved to the broken copy instead, so it never replaces a good previous copy; a locked file fails
+/// the copy, so the save stops and the file stays as it was.
 fn keep_previous(files: &Files) -> Result<(), SaveError> {
     match read_table(&files.settings) {
-        Ok(_) => {}
+        Ok(_) | Err(Problem::Locked) => {}
         Err(Problem::Missing) => return Ok(()),
         Err(Problem::Damaged) => {
             set_aside(files);
@@ -212,6 +223,8 @@ pub fn save(files: &Files, text: &str) -> Result<(), SaveError> {
     }
     result
 }
+
+mod read;
 
 #[cfg(test)]
 mod tests;

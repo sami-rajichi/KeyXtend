@@ -19,6 +19,7 @@
     "nodes": [
       {
         "id": "path+file:///C:/repo/xtask#0.0.0",
+        "features": ["default"],
         "deps": [
           {
             "pkg": "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
@@ -43,10 +44,14 @@
       "app": "keyxtend",
       "banned_network": ["reqwest", "hyper", "ureq", "rustls", "native-tls"],
       "banned_media": ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"],
+      "banned_features": { "toml": ["unbounded"] },
       "unsafe_attr": "#![forbid(unsafe_code)]",
-      "tool_unsafe_attr": "#![deny(unsafe_code)]",
+      "deny_attr": "#![deny(unsafe_code)]",
       "root_kinds": ["lib", "bin", "proc-macro"],
-      "test_only": ["kx-test-support", "kx-platform-fake"]
+      "test_only": ["kx-test-support", "kx-platform-fake"],
+      "bridge_crate": "kx-ui",
+      "bridge_dir": "src/bridges",
+      "safety_tag": "// SAFETY:"
     },
     "dco": {
       "trailer": "Signed-off-by",

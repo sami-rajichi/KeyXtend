@@ -18,6 +18,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - ADR-0014 and `docs/spike-move-map.md`: the tested test-round code moves into the product, phase by phase.
 - The kernel and module system (P2): module lifecycle, dependency order, event bus, capability-gated services, a settings store that repairs itself, and a redacted local log (ADR-0015).
 - The Windows test tools `kx-gates` and `kx-target-window`, moved in from the toolkit test round.
+- The keyboard core (P3): typing in English, French and Arabic from a no-focus uiAccess window, modifiers, key repeat and act on press, the Native, ET66 and Dolch looks, the bubble and the tray (ADR-0016 to ADR-0026).
 
 ### Removed
 - The Slint and Tauri prototype keyboards from the toolkit test round.

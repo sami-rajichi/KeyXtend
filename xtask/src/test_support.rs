@@ -1,10 +1,12 @@
 //! Shared helpers for unit tests: unique temp folders and test configs.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::config::{DcoConfig, TidyConfig};
 use crate::devtools::config::DevToolsConfig;
+use crate::devtools::stage::StageConfig;
 
 static UNIQUE: AtomicU32 = AtomicU32::new(0);
 
@@ -56,6 +58,16 @@ pub(crate) fn make_dir_link(link: &Path, target: &Path) {
     assert!(output.status.success(), "mklink /J failed: {output:?}");
 }
 
+/// An environment with `pairs` set and nothing else.
+pub(crate) fn fake_env(pairs: Vec<(&'static str, PathBuf)>) -> impl Fn(&str) -> Option<String> {
+    move |k| {
+        pairs
+            .iter()
+            .find(|(key, _)| *key == k)
+            .map(|(_, v)| crate::devtools::paths::text(v))
+    }
+}
+
 /// A trimmed copy of the project's tidy config: the same limits, prefixes and app, but shorter lists.
 pub(crate) fn tidy_config() -> TidyConfig {
     TidyConfig {
@@ -72,8 +84,9 @@ pub(crate) fn tidy_config() -> TidyConfig {
         app: "keyxtend".to_string(),
         banned_network: vec!["reqwest".to_string()],
         banned_media: vec!["image".to_string()],
+        banned_features: BTreeMap::from([("toml".to_string(), vec!["unbounded".to_string()])]),
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
-        tool_unsafe_attr: "#![deny(unsafe_code)]".to_string(),
+        deny_attr: "#![deny(unsafe_code)]".to_string(),
         root_kinds: vec![
             "lib".to_string(),
             "bin".to_string(),
@@ -83,6 +96,9 @@ pub(crate) fn tidy_config() -> TidyConfig {
             "kx-test-support".to_string(),
             "kx-platform-fake".to_string(),
         ],
+        bridge_crate: "kx-ui".to_string(),
+        bridge_dir: "src/bridges".to_string(),
+        safety_tag: "// SAFETY:".to_string(),
     }
 }
 
@@ -116,13 +132,42 @@ pub(crate) fn devtools_json() -> serde_json::Value {
         "ui_access_attr": "uiAccess",
         "ui_access_on": "true",
         "cancel_code": 1223,
-        "fail_code": 1
+        "fail_code": 1,
+        "start_menu_env": "APPDATA",
+        "start_menu_dir": "Microsoft/Windows/Start Menu/Programs",
+        "shortcut": "KeyXtend (dev).lnk",
+        "shortcut_script": "dev-shortcut.ps1",
+        "profile_env": "USERPROFILE"
     })
 }
 
 /// The test dev-tools settings, deserialized.
 pub(crate) fn devtools_config() -> DevToolsConfig {
     serde_json::from_value(devtools_json()).expect("the test settings are valid")
+}
+
+/// Test stage settings as `cargo metadata` prints them, with shorter lists than the project's.
+pub(crate) fn stage_json() -> serde_json::Value {
+    serde_json::json!({
+        "app": "keyxtend",
+        "out_dir": "target/stage",
+        "max_mb": 80,
+        "qmake_env": "QMAKE",
+        "qt_version": "6.11.2",
+        "libs": ["Qt6Core.dll", "Qt6Qml.dll", "Qt6Quick.dll", "Qt6Network.dll"],
+        "plugins": ["platforms/qwindows.dll"],
+        "qml": ["QtQuick/qmldir", "QtQuick/qtquick2plugin.dll"],
+        "qml_dir": "qml",
+        "banned": ["tls", "networkinformation", "qmltooling"],
+        "network": { "lib": "Qt6Network.dll", "by": ["Qt6Qml.dll", "Qt6Quick.dll"] },
+        "api_sets": ["api-ms-", "ext-ms-"],
+        "system_dir": "System32"
+    })
+}
+
+/// The test stage settings, deserialized.
+pub(crate) fn stage_config() -> StageConfig {
+    serde_json::from_value(stage_json()).expect("the test settings are valid")
 }
 
 /// The project's DCO config: the `Signed-off-by` trailer, with `dependabot[bot]` exempt.

@@ -5,10 +5,10 @@
 
 use std::path::Path;
 
+use kx_platform_windows::dirs;
 use kx_test_support::ringstats::{self, FrameReport};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::folders;
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
@@ -19,7 +19,7 @@ use crate::g12pts::{grid, logged, ring_over};
 use crate::out::say;
 use crate::tlog;
 use crate::win::{self, sleep_ms};
-use crate::{launch, mouse};
+use crate::{keymap, launch, mouse};
 
 /// Target-window's text box on screen: its client area, in physical pixels.
 fn text_box(target: HWND) -> Result<RECT, String> {
@@ -75,7 +75,7 @@ fn click_all(ctx: &Ctx, ring: HWND, target: HWND, points: &[POINT]) -> Result<Ta
 fn drop_stats(file: &Path) {
     let _ = std::fs::remove_file(file);
     let _ = std::fs::remove_file(ringstats::part_file(file));
-    let root = folders::local_data().ok();
+    let root = dirs::local_data().ok();
     if let Some(dir) = file.parent().filter(|d| root.as_deref() != Some(*d)) {
         let _ = std::fs::remove_dir(dir);
     }
@@ -91,7 +91,8 @@ fn take_stats(ctx: &Ctx, file: &Path) -> Result<FrameReport, String> {
     got.ok_or_else(|| format!("no frame stats at {}", file.display()))
 }
 
-/// Sets the ring test on or off with the strip's switch; true once the ring shows as asked.
+/// Sets the ring test on or off with the strip's switch; true once the ring shows as asked. Turning it off still
+/// goes out after the mouse guard stopped the gate.
 fn flip(ctx: &Ctx, switch: &IUIAutomationElement, pid: u32, on: bool) -> bool {
     let (t, title) = (&ctx.cfg.timing, &ctx.spike.ring.title);
     let showing = || facetools::shown_by(pid, title).is_some();
@@ -104,7 +105,12 @@ fn flip(ctx: &Ctx, switch: &IUIAutomationElement, pid: u32, on: bool) -> bool {
         t.close_wait_ms
     };
     let as_asked = || (showing() == on).then_some(());
-    uia::invoke(switch).is_ok() && win::poll_until(wait, t.poll_ms, as_asked).is_some()
+    let pressed = if on {
+        keymap::press(switch)
+    } else {
+        uia::invoke(switch)
+    };
+    pressed.is_ok() && win::poll_until(wait, t.poll_ms, as_asked).is_some()
 }
 
 /// Clicks every grid point under the running ring, then turns it off and reads what it measured.

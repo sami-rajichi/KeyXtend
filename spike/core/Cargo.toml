@@ -1,35 +1,32 @@
 [package]
 name = "spike-core"
-description = "P1 spike core: injection, window guard, layouts, hold engine, UI Automation, pill, Hello fill, snip and the face side of voice."
+description = "P1 spike core: the hold engine, UI Automation, pill, Hello fill, snip, voice and the gates' face facts."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
 license.workspace = true
 
 [dependencies]
+# The clock, the input and layout ports and the screen boxes moved here in P2 and P3 (ADR-0014).
+kx-module-api = { path = "../../crates/kx-module-api" }
+# The board's boxes (`Area`), the placement maths and the Arabic test moved here in P3 (ADR-0014).
+kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
+# The UI port errors the screen spots use (P3).
+kx-platform = { path = "../../crates/kx-platform" }
+# COM, folders, input, layouts, the window guard and screens moved here in P3 (ADR-0014).
+kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 windows-future.workspace = true
-# UI Automation for the pill and probes, DPI, Windows Hello for quick-fill, job objects for the voice server,
-# the system look: accent (UISettings), dark mode (registry), DWM backdrops, locale names for the language key,
-# and known folders for files kx-gates reads.
+# UI Automation for the pill and probes, Windows Hello for quick-fill and job objects for the voice server.
 windows = { workspace = true, features = [
     "Foundation",
     "Security_Credentials_UI",
-    "UI",
-    "UI_ViewManagement",
-    "Win32_Globalization",
-    "Win32_Graphics_Dwm",
-    "Win32_System_Registry",
-    "Win32_UI_Controls",
     "Win32_System_Com",
-    "Win32_System_Console",
     "Win32_System_JobObjects",
     "Win32_System_Ole",
     "Win32_System_Variant",
     "Win32_System_WinRT",
     "Win32_UI_Accessibility",
-    "Win32_UI_HiDpi",
-    "Win32_UI_Shell",
 ] }

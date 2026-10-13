@@ -2,6 +2,8 @@
 // and gate G12's ring test.
 // They take the keyboard's theme, light or dark, like the mock-up's .selpill, .capbar and .snip-*.
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 import KeyXtend.Spike
 
 Item {

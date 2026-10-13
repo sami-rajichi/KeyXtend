@@ -1,0 +1,49 @@
+# The theme, by kx-theme's themes.toml id: "native", "et66" or "dolch".
+theme = "native"
+# "light", "dark", or "auto" to follow the Windows app mode.
+mode = "auto"
+# Themes that can take the Windows accent take it on Enter, on and locked keys.
+follow_accent = false
+# Turns every animation off except the hold ring.
+reduced_motion = false
+# What sits behind the keyboard: "none" (a solid plate), "mica" or "acrylic".
+backdrop = "none"
+# The keyboard's language: "auto" follows the layout in front, "en", "fr" or "ar" pins it; the tray follows Windows.
+language = "auto"
+# How long the pointer rests on a button before its tip shows, in ms.
+tip_ms = 500
+# How often a move or resize follows the pointer, in ms.
+poll_ms = 16
+# How long the window guard waits before each try, in ms, and how many times it tries.
+guard_delay_ms = 300
+guard_tries = 10
+# How many times a second copy tries to hand Show or Quit to the running one, and the wait between tries, in ms.
+# A second copy reads these from the settings file without changing it.
+send_tries = 10
+send_wait_ms = 100
+# How long the tray menu stays open when another window comes to the front just after it opens, in ms; 0 turns it off.
+tray_grace_ms = 500
+# How many times one run tries to make the windows again on a new graphics device after the device is lost or a window
+# cannot draw; past it, each window draws on its own device, as Qt makes them.
+device_rebuilds = 3
+# How long to wait before trying again when a new graphics device could not be made yet, as a driver resets, in ms.
+device_retry_ms = 500
+# Frames Qt lets queue before it waits to start the next (Qt's own value, read at start); 0 drops that wait only.
+frame_latency = 2
+# Frames start on the screen's refresh; false starts them update_idle_ms after a change. Read at start.
+vblank_updates = true
+# That wait, in ms, for windows whose frames do not follow the refresh. Qt's own value; read at start.
+update_idle_ms = 5
+# Each frame shows at a screen refresh; false shows it at once, but frames then go unseen (ADR-0026). Read at start.
+present_vsync = true
+# A pressed key draws its press frame at once, then types ("now", ADR-0025); "after" types first, "first" once it's out.
+press_frame = "now"
+# The longest "first" waits for the press's frame before it types anyway, in ms.
+press_frame_ms = 50
+# Logs the times of each press and frame, never a key or text, to measure the key light. Read at start; the times show
+# the typing rhythm, so keep it off while typing anything private.
+frame_log = false
+# Rows per page in every list.
+page_rows = 5
+# The contrast a legend keeps when its key takes the accent; never below WCAG AA.
+min_contrast = 4.5

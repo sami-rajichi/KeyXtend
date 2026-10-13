@@ -45,11 +45,16 @@ fn bus() -> Bus {
     Bus::new(Arc::new(KernelBus::new()))
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "a test helper; a failed setup fails the test"
+)]
 fn stamp(bus: &Bus, order: i32, tag: &'static str) -> Subscription {
     bus.add_interceptor(order, move |trace: &mut Trace| {
         trace.0.push(tag);
         Flow::Continue
     })
+    .unwrap()
 }
 
 #[test]
@@ -60,12 +65,12 @@ fn a_panicking_notify_handler_lets_later_handlers_run() {
         move |_: &Trace| log.lock().unwrap_or_else(PoisonError::into_inner).push(tag)
     };
     let _subs = [
-        bus.subscribe(tagged("before")),
-        bus.subscribe(|_: &Trace| fail()),
-        bus.subscribe(tagged("after")),
+        bus.subscribe(tagged("before")).unwrap(),
+        bus.subscribe(|_: &Trace| fail()).unwrap(),
+        bus.subscribe(tagged("after")).unwrap(),
     ];
-    bus.publish(&Trace::default());
-    bus.publish(&Trace::default());
+    bus.publish(&Trace::default()).unwrap();
+    bus.publish(&Trace::default()).unwrap();
     assert_eq!(*log.lock().unwrap(), ["before", "after", "before", "after"]);
 }
 
@@ -74,11 +79,12 @@ fn a_panicking_interceptor_counts_as_continue() {
     let bus = bus();
     let _subs = [
         stamp(&bus, 1, "before"),
-        bus.add_interceptor(2, |_: &mut Trace| -> Flow { fail() }),
+        bus.add_interceptor(2, |_: &mut Trace| -> Flow { fail() })
+            .unwrap(),
         stamp(&bus, 3, "after"),
     ];
     let mut trace = Trace::default();
-    assert_eq!(bus.intercept(&mut trace), Flow::Continue);
+    assert_eq!(bus.intercept(&mut trace).unwrap(), Flow::Continue);
     assert_eq!(trace.0, ["before", "after"]);
 }
 

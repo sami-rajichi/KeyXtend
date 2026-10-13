@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
-use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
@@ -20,8 +20,8 @@ const LINE_ENDS: [char; 2] = ['\r', '\n'];
 const SENT_FILE: &str = "-sent.txt";
 /// Suffix of the file with the text we read back.
 const RECEIVED_FILE: &str = "-received.txt";
-/// Suffix of the screenshot taken at the first problem.
-const SCREEN_FILE: &str = "-screen.bmp";
+/// Suffix of the screenshot taken at the first problem, before `shot`'s extension.
+const SCREEN: &str = "-screen";
 
 /// One G1 run: how many characters, the random seed, and how to type them.
 pub struct Run {
@@ -109,7 +109,7 @@ fn type_text(
         if let Err(e) = ready(app, want) {
             return (typed, Some(format!("blocked: {e}")));
         }
-        if let Err(e) = spike_core::inject::text(&chunk.iter().collect::<String>()) {
+        if let Err(e) = crate::keys::text(&chunk.iter().collect::<String>()) {
             return (typed, Some(e));
         }
         typed += chunk.len();
@@ -118,9 +118,14 @@ fn type_text(
     (typed, None)
 }
 
+/// True when the text read back equals what was sent, typing never stopped and the read worked (roadmap G1).
+fn passed(equal: bool, stopped: Option<&str>, read_error: Option<&str>) -> bool {
+    equal && stopped.is_none() && read_error.is_none()
+}
+
 /// The app's pop-ups, what is in front, and a screenshot, for a blocked run.
 fn evidence(ctx: &Ctx, hwnd: HWND) -> Value {
-    let file = ctx.file(SCREEN_FILE);
+    let file = ctx.file(&shot::named(SCREEN));
     let screenshot = match shot::save(&file, ctx.spike.tools.shot_cap()) {
         Ok(()) => json!(file),
         Err(e) => json!({ "error": e }),
@@ -201,8 +206,9 @@ pub fn run(ctx: &Ctx, kind: AppKind, run: &Run) -> Result<Value, String> {
     out::write(&received_file, received)?;
     let diff = diff::compare(&sent, received, ctx.cfg.g1.context_chars);
     report(&t, run.count, read_error.as_deref(), &diff, &left_open);
+    let pass = passed(diff.equal, t.stopped.as_deref(), read_error.as_deref());
     Ok(json!({
-        "gate": "G1", "app": kind.name(), "seed": run.seed, "count": run.count, "typed": t.typed,
+        "gate": "G1", "app": kind.name(), "seed": run.seed, "count": run.count, "typed": t.typed, "pass": pass,
         "pause_ms": run.pause_ms, "attached": run.attach,
         "stopped": t.stopped, "read_error": read_error, "focus": t.focus, "evidence": t.evidence,
         "trimmed_line_ends": raw.chars().count() - received.chars().count(),
@@ -270,6 +276,17 @@ mod tests {
         assert!(focus_ok(true, "Chrome_WidgetWin_1", None));
         assert!(!focus_ok(false, "NUIDialog", None));
         assert!(!focus_ok(false, "_WwG", Some("_WwG")));
+    }
+
+    #[test]
+    fn g1_passes_only_when_all_text_arrived_and_nothing_stopped_or_failed() {
+        assert!(passed(true, None, None));
+        assert!(!passed(false, None, None), "the text differs");
+        assert!(!passed(true, Some("blocked"), None), "typing stopped");
+        assert!(
+            !passed(true, None, Some("no clipboard")),
+            "nothing read back"
+        );
     }
 
     #[test]

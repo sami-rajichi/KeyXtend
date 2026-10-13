@@ -1,0 +1,225 @@
+//! The keyboard always fits the screen it is on, so its size buttons on the top bar's right stay reachable.
+
+#![allow(
+    clippy::unwrap_used,
+    reason = "these fixtures run only in tests, where a failed setup should fail the test"
+)]
+
+use crate::host::{GOLDEN, saved};
+use crate::rig::Rig;
+use kx_mod_keyboard::KeyboardSettings;
+use kx_module_api::ports::{BASE_DPI, FaceAction, Point, Rect, Screen, physical};
+
+/// A 150 % screen.
+const HIGH_DPI: u32 = 144;
+/// How far the resize corner hangs past the plate at size 1: half the shipped themes' 20 px corner.
+const OVERHANG: f64 = 10.0;
+/// A small work area, narrower than the size-1 board at 150 %.
+const SMALL: Rect = Rect {
+    x: 0,
+    y: 0,
+    w: 1000,
+    h: 600,
+};
+/// A full-HD work area above a taskbar.
+const WIDE: Rect = Rect {
+    x: 0,
+    y: 0,
+    w: 1920,
+    h: 1040,
+};
+
+fn screen(rect: Rect, dpi: u32) -> Screen {
+    Screen {
+        rect,
+        dpi,
+        primary: true,
+    }
+}
+
+fn placed(x: i32, y: i32, s: Screen) -> FaceAction {
+    let rect = Rect { x, y, w: 1, h: 1 };
+    FaceAction::Placed {
+        rect,
+        screens: vec![s],
+        overhang: 0.0,
+    }
+}
+
+/// The plate's size on screen `s`, in its physical pixels.
+fn plate_on(r: &Rig, s: &Screen) -> (i32, i32) {
+    let plate = &r.board()["plate"];
+    let side = |k: &str| physical(plate[k].as_f64().unwrap(), s.dpi);
+    (side("w"), side("h"))
+}
+
+/// Where the window is, in physical pixels.
+fn at(r: &Rig) -> Point {
+    serde_json::from_value(r.state()["at"].clone()).unwrap()
+}
+
+/// True when the whole plate lies in `s`'s work area.
+fn on_screen(r: &Rig, s: &Screen) -> bool {
+    let (from, (wide, high)) = (at(r), plate_on(r, s));
+    let work = s.rect;
+    from.x >= work.x
+        && from.y >= work.y
+        && from.x + wide <= work.x + work.w
+        && from.y + high <= work.y + work.h
+}
+
+#[test]
+fn an_oversized_keyboard_shrinks_to_its_screen_and_keeps_its_saved_size() {
+    let r = Rig::new(&GOLDEN, Some(("size", 1.8.into())));
+    let small = screen(SMALL, HIGH_DPI);
+    let reply = r.act(placed(0, 0, small)).unwrap();
+    assert!(
+        reply.board,
+        "the board is drawn again at the size that fits"
+    );
+    assert!(
+        on_screen(&r, &small),
+        "plate {:?} at {:?}",
+        plate_on(&r, &small),
+        at(&r)
+    );
+    assert!(r.host.sink.writes().is_empty(), "the saved size stays");
+    r.act(FaceAction::Bigger).unwrap();
+    r.act(FaceAction::Preset { index: 2 }).unwrap();
+    assert!(on_screen(&r, &small), "no step grows it past the screen");
+}
+
+#[test]
+fn a_resize_on_a_screen_below_the_floor_writes_nothing_and_shows_no_notice() {
+    let r = Rig::new(&GOLDEN, None);
+    let tiny = Rect { w: 500, ..SMALL };
+    r.act(placed(0, 0, screen(tiny, BASE_DPI))).unwrap();
+    let floor = KeyboardSettings::from_defaults().unwrap().size_min;
+    assert!(
+        r.board()["size"].as_f64().unwrap() < floor,
+        "capped below size_min"
+    );
+    r.act(FaceAction::ResizeBegin { x: 0, y: 0 }).unwrap();
+    let end = r.act(FaceAction::ResizeEnd).unwrap();
+    assert_eq!(end.notice, None, "no false settings notice");
+    assert!(r.host.sink.writes().is_empty(), "the saved size stays");
+}
+
+#[test]
+fn an_oversized_keyboard_shrinks_until_its_resize_corner_fits_too() {
+    let r = Rig::new(&GOLDEN, Some(("size", 1.8.into())));
+    let rect = Rect {
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1,
+    };
+    let (screens, overhang) = (vec![screen(SMALL, HIGH_DPI)], OVERHANG);
+    r.act(FaceAction::Placed {
+        rect,
+        screens,
+        overhang,
+    })
+    .unwrap();
+    let (scale, p) = (r.board()["size"].as_f64().unwrap(), at(&r));
+    let plate = r.board()["plate"].clone();
+    let reach = |k: &str| physical(plate[k].as_f64().unwrap() + OVERHANG * scale, HIGH_DPI);
+    let inside = p.x >= 0 && p.y >= 0 && p.x + reach("w") <= SMALL.w && p.y + reach("h") <= SMALL.h;
+    assert!(inside, "window {}x{} at {p:?}", reach("w"), reach("h"));
+}
+
+#[test]
+fn a_bigger_step_by_the_right_edge_keeps_the_keyboard_on_its_screen() {
+    let r = Rig::new(&GOLDEN, None);
+    let wide = screen(WIDE, BASE_DPI);
+    r.act(placed(0, 0, wide)).unwrap();
+    let edge = WIDE.w - plate_on(&r, &wide).0;
+    r.act(placed(edge, 200, wide)).unwrap();
+    assert_eq!(at(&r), Point { x: edge, y: 200 });
+    let reply = r.act(FaceAction::Bigger).unwrap();
+    assert!(reply.board && reply.state, "{reply:?}");
+    assert!(
+        on_screen(&r, &wide),
+        "plate {:?} at {:?}",
+        plate_on(&r, &wide),
+        at(&r)
+    );
+    r.act(FaceAction::Preset { index: 2 }).unwrap();
+    assert!(on_screen(&r, &wide), "a preset too");
+    assert_eq!(
+        saved(&r.host).place(),
+        Some(Point { x: edge, y: 200 }),
+        "only the move saved a place"
+    );
+}
+
+/// A 250 % screen, dense enough that a grown keyboard's larger share falls on it.
+const DENSE_DPI: u32 = 240;
+
+#[test]
+fn a_preset_that_tips_it_onto_a_denser_screen_fits_it_there() {
+    let r = Rig::new(&GOLDEN, None);
+    let wide = screen(WIDE, BASE_DPI);
+    r.act(placed(0, 0, wide)).unwrap();
+    let unit = plate_on(&r, &wide).0;
+    // Three size-1 widths at 250 %: the larger share of a size-1.5 board, yet too narrow to hold it.
+    let rect = Rect {
+        x: WIDE.w,
+        w: 3 * unit,
+        ..WIDE
+    };
+    let dense = Screen {
+        rect,
+        dpi: DENSE_DPI,
+        primary: false,
+    };
+    let put = |x: i32| FaceAction::Placed {
+        rect: Rect {
+            x,
+            y: 0,
+            w: 1,
+            h: 1,
+        },
+        screens: vec![wide, dense],
+        overhang: 0.0,
+    };
+    r.act(put(WIDE.w - unit)).unwrap();
+    assert!(on_screen(&r, &wide), "it starts by the right edge");
+    let reply = r.act(FaceAction::Preset { index: 2 }).unwrap();
+    assert!(reply.board && reply.state, "{reply:?}");
+    assert!(
+        on_screen(&r, &dense),
+        "plate {:?} at {:?}",
+        plate_on(&r, &dense),
+        at(&r)
+    );
+}
+
+#[test]
+fn a_move_to_a_smaller_screen_fits_it_there() {
+    let r = Rig::new(&GOLDEN, Some(("size", 1.5.into())));
+    let wide = screen(WIDE, BASE_DPI);
+    let mut small = screen(SMALL, HIGH_DPI);
+    small.rect.x = WIDE.w;
+    small.primary = false;
+    let both = vec![wide, small];
+    let place = |x: i32| FaceAction::Placed {
+        rect: Rect {
+            x,
+            y: 0,
+            w: 1,
+            h: 1,
+        },
+        screens: both.clone(),
+        overhang: 0.0,
+    };
+    r.act(place(0)).unwrap();
+    assert!(on_screen(&r, &wide));
+    r.act(place(WIDE.w + 10)).unwrap();
+    assert!(
+        on_screen(&r, &small),
+        "plate {:?} at {:?}",
+        plate_on(&r, &small),
+        at(&r)
+    );
+}

@@ -32,7 +32,7 @@ fn bus() -> Bus {
 }
 
 fn push(log: &Log, tag: &'static str) {
-    log.lock().unwrap_or_else(PoisonError::into_inner).push(tag);
+    lock(log).push(tag);
 }
 
 fn seen(log: &Log) -> Vec<&'static str> {
@@ -52,6 +52,7 @@ fn stamp(bus: &Bus, order: i32, tag: &'static str, flow: Flow) -> Subscription {
         trace.0.push(tag);
         flow
     })
+    .unwrap()
 }
 
 #[test]
@@ -62,13 +63,13 @@ fn publish_reaches_subscribers_in_order_and_skips_other_types() {
         move |_: &Ping| push(&log, tag)
     };
     let _subs = [
-        bus.subscribe(tagged("a")),
-        bus.subscribe(tagged("b")),
-        bus.subscribe(tagged("c")),
+        bus.subscribe(tagged("a")).unwrap(),
+        bus.subscribe(tagged("b")).unwrap(),
+        bus.subscribe(tagged("c")).unwrap(),
     ];
     let other = Arc::clone(&log);
-    let _pong = bus.subscribe(move |_: &Pong| push(&other, "pong"));
-    bus.publish(&Ping);
+    let _pong = bus.subscribe(move |_: &Pong| push(&other, "pong")).unwrap();
+    bus.publish(&Ping).unwrap();
     assert_eq!(seen(&log), ["a", "b", "c"]);
 }
 
@@ -123,10 +124,12 @@ fn bus_passes_the_type_and_name_to_the_core() {
     let bus = Bus::new(Arc::clone(&spy) as Arc<dyn BusCore>);
     let count = Count::default();
     let hits = Arc::clone(&count);
-    let _sub = bus.subscribe(move |_: &Ping| tick(&hits));
-    let _chain = bus.add_interceptor(0, |_: &mut Ping| Flow::Continue);
-    bus.publish(&Ping);
-    assert_eq!(bus.intercept(&mut Ping), Flow::Continue);
+    let _sub = bus.subscribe(move |_: &Ping| tick(&hits)).unwrap();
+    let _chain = bus
+        .add_interceptor(0, |_: &mut Ping| Flow::Continue)
+        .unwrap();
+    bus.publish(&Ping).unwrap();
+    assert_eq!(bus.intercept(&mut Ping).unwrap(), Flow::Continue);
     let ping = (TypeId::of::<Ping>(), Ping::NAME);
     assert_eq!(*spy.seen.lock().unwrap(), [ping; 4]);
     assert_eq!(ticks(&count), 1);
@@ -142,7 +145,7 @@ fn interceptors_run_by_order_then_insertion() {
         stamp(&bus, 0, "middle", Flow::Continue),
     ];
     let mut trace = Trace::default();
-    assert_eq!(bus.intercept(&mut trace), Flow::Continue);
+    assert_eq!(bus.intercept(&mut trace).unwrap(), Flow::Continue);
     assert_eq!(trace.0, ["first", "middle", "late-1", "late-2"]);
 }
 
@@ -155,7 +158,7 @@ fn stop_ends_the_chain_and_is_returned() {
         stamp(&bus, 2, "stop", Flow::Stop),
     ];
     let mut trace = Trace::default();
-    assert_eq!(bus.intercept(&mut trace), Flow::Stop);
+    assert_eq!(bus.intercept(&mut trace).unwrap(), Flow::Stop);
     assert_eq!(trace.0, ["go", "stop"]);
 }
 
@@ -163,38 +166,45 @@ fn stop_ends_the_chain_and_is_returned() {
 fn an_interceptor_may_publish_and_unsubscribe_then_stop() {
     let (bus, count) = (bus(), Count::default());
     let hits = Arc::clone(&count);
-    let _ping = bus.subscribe(move |_: &Ping| tick(&hits));
+    let _ping = bus.subscribe(move |_: &Ping| tick(&hits)).unwrap();
     let slot: Arc<Mutex<Option<Subscription>>> = Arc::default();
     let pongs = Arc::clone(&count);
-    *slot.lock().unwrap() = Some(bus.subscribe(move |_: &Pong| tick(&pongs)));
+    *slot.lock().unwrap() = Some(bus.subscribe(move |_: &Pong| tick(&pongs)).unwrap());
     let (inner, own) = (bus.clone(), Arc::clone(&slot));
-    let _first = bus.add_interceptor(0, move |trace: &mut Trace| {
-        trace.0.push("re-enter");
-        inner.publish(&Ping);
-        own.lock().unwrap_or_else(PoisonError::into_inner).take();
-        Flow::Stop
-    });
+    let _first = bus
+        .add_interceptor(0, move |trace: &mut Trace| {
+            trace.0.push("re-enter");
+            inner.publish(&Ping).unwrap();
+            lock(&own).take();
+            Flow::Stop
+        })
+        .unwrap();
     let _after = stamp(&bus, 1, "after", Flow::Continue);
     let mut trace = Trace::default();
-    assert_eq!(bus.intercept(&mut trace), Flow::Stop);
+    assert_eq!(bus.intercept(&mut trace).unwrap(), Flow::Stop);
     assert_eq!(trace.0, ["re-enter"]);
-    bus.publish(&Pong);
+    bus.publish(&Pong).unwrap();
     assert_eq!(ticks(&count), 1);
 }
 
 #[test]
 fn an_empty_chain_continues() {
-    assert_eq!(bus().intercept(&mut Trace::default()), Flow::Continue);
+    assert_eq!(
+        bus().intercept(&mut Trace::default()).unwrap(),
+        Flow::Continue
+    );
 }
 
 #[test]
 fn a_handler_may_publish_another_event() {
     let (bus, count) = (bus(), Count::default());
     let hits = Arc::clone(&count);
-    let _pong = bus.subscribe(move |_: &Pong| tick(&hits));
+    let _pong = bus.subscribe(move |_: &Pong| tick(&hits)).unwrap();
     let inner = bus.clone();
-    let _ping = bus.subscribe(move |_: &Ping| inner.publish(&Pong));
-    bus.publish(&Ping);
+    let _ping = bus
+        .subscribe(move |_: &Ping| inner.publish(&Pong).unwrap())
+        .unwrap();
+    bus.publish(&Ping).unwrap();
     assert_eq!(ticks(&count), 1);
 }
 
@@ -203,16 +213,18 @@ fn a_handler_may_subscribe_and_the_new_handler_waits_for_the_next_publish() {
     let (bus, count) = (bus(), Count::default());
     let slot: Arc<Mutex<Option<Subscription>>> = Arc::default();
     let (inner, keep, hits) = (bus.clone(), Arc::clone(&slot), Arc::clone(&count));
-    let _adder = bus.subscribe(move |_: &Ping| {
-        let mut keep = keep.lock().unwrap_or_else(PoisonError::into_inner);
-        if keep.is_none() {
-            let hits = Arc::clone(&hits);
-            *keep = Some(inner.subscribe(move |_: &Ping| tick(&hits)));
-        }
-    });
-    bus.publish(&Ping);
+    let _adder = bus
+        .subscribe(move |_: &Ping| {
+            let mut keep = lock(&keep);
+            if keep.is_none() {
+                let hits = Arc::clone(&hits);
+                *keep = Some(inner.subscribe(move |_: &Ping| tick(&hits)).unwrap());
+            }
+        })
+        .unwrap();
+    bus.publish(&Ping).unwrap();
     assert_eq!(ticks(&count), 0);
-    bus.publish(&Ping);
+    bus.publish(&Ping).unwrap();
     assert_eq!(ticks(&count), 1);
     assert!(slot.lock().unwrap().is_some());
 }
@@ -222,13 +234,15 @@ fn a_handler_may_drop_its_own_subscription() {
     let (bus, count) = (bus(), Count::default());
     let slot: Arc<Mutex<Option<Subscription>>> = Arc::default();
     let (own, hits) = (Arc::clone(&slot), Arc::clone(&count));
-    let sub = bus.subscribe(move |_: &Ping| {
-        tick(&hits);
-        own.lock().unwrap_or_else(PoisonError::into_inner).take();
-    });
+    let sub = bus
+        .subscribe(move |_: &Ping| {
+            tick(&hits);
+            lock(&own).take();
+        })
+        .unwrap();
     *slot.lock().unwrap() = Some(sub);
-    bus.publish(&Ping);
-    bus.publish(&Ping);
+    bus.publish(&Ping).unwrap();
+    bus.publish(&Ping).unwrap();
     assert_eq!(ticks(&count), 1);
 }
 
@@ -236,20 +250,22 @@ fn a_handler_may_drop_its_own_subscription() {
 fn a_dropped_handler_may_own_a_subscription_that_reenters_unsubscribe() {
     let (bus, count) = (bus(), Count::default());
     let hits = Arc::clone(&count);
-    let keep = bus.subscribe(move |_: &Ping| tick(&hits));
+    let keep = bus.subscribe(move |_: &Ping| tick(&hits)).unwrap();
     // The owner handler holds `keep`, so dropping the owner drops `keep` too.
-    let owner = bus.subscribe(move |_: &Pong| {
-        let _ = &keep;
-    });
+    let owner = bus
+        .subscribe(move |_: &Pong| {
+            let _ = &keep;
+        })
+        .unwrap();
     drop(owner);
-    bus.publish(&Ping);
+    bus.publish(&Ping).unwrap();
     assert_eq!(ticks(&count), 0);
 }
 
 #[test]
 fn a_subscription_dropped_after_the_bus_is_quiet() {
     let bus = bus();
-    let sub = bus.subscribe(|_: &Ping| {});
+    let sub = bus.subscribe(|_: &Ping| {}).unwrap();
     drop(bus);
     drop(sub);
 }
@@ -258,9 +274,9 @@ fn a_subscription_dropped_after_the_bus_is_quiet() {
 fn a_bus_clone_publishes_from_another_thread() {
     let (bus, count) = (bus(), Count::default());
     let hits = Arc::clone(&count);
-    let _sub = bus.subscribe(move |_: &Ping| tick(&hits));
+    let _sub = bus.subscribe(move |_: &Ping| tick(&hits)).unwrap();
     let remote = bus.clone();
-    std::thread::spawn(move || remote.publish(&Ping))
+    std::thread::spawn(move || remote.publish(&Ping).unwrap())
         .join()
         .unwrap();
     assert_eq!(ticks(&count), 1);

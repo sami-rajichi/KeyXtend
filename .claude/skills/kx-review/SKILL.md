@@ -14,7 +14,7 @@ Review **every** changed file: `git diff --name-only main...HEAD` plus uncommitt
 | 1 | **Pattern** | It breaks the hexagonal layering, module isolation, the enum state machine or the actor/handle pattern (ARCHITECTURE.md), or it duplicates logic that already exists |
 | 2 | **Correct** | Logic errors, unhandled `Result`, a panic on outside input, races, a blocking call in the mouse hook or on the UI thread |
 | 3 | **Tested** | New logic has no unit test, a state machine has no property test, an edge case listed in the plan has no test, or a test sleeps |
-| 4 | **Secure** | It fails anything in `kx-security-check` §3: `unsafe`, logging secrets, unchecked sizes, network or untrusted parsing in `keyxtend`, missing zeroize |
+| 4 | **Secure** | It fails anything in `kx-security-check` §3: `unsafe`, logging secrets, unchecked sizes, network or untrusted parsing in `keyxtend`, missing zeroize. Or a `tracing` call on an input path (typing, injection, layouts, key clicks, hooks) could log typed text: text formatted into the message, a field `kx_kernel::log::SENSITIVE` does not hide by its snake_case name parts, or a key id, `Scan` or character; such text stays in `Redacted<T>` |
 | 5 | **No hardcode** | A literal timing, size, colour, font, speed, limit, path, URL or user-visible string appears outside settings defaults, theme tokens, translation files or adapter tables. `0`, `1` and obvious indices are fine |
 | 6 | **Short** | A name is unclear or overly long; a comment, doc string, log line or UI text is longer than 2 sentences |
 | 7 | **Small** | A file is over 400 lines (aim ≤ 300) or a function is over 40 lines |

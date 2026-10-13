@@ -53,12 +53,14 @@ pub(super) struct RawResolve {
     pub(super) nodes: Vec<RawNode>,
 }
 
-/// One package's resolved dependencies.
+/// One package's resolved dependencies and turned-on features.
 #[derive(Deserialize)]
 pub(super) struct RawNode {
     pub(super) id: String,
     #[serde(default)]
     pub(super) deps: Vec<RawNodeDep>,
+    #[serde(default)]
+    pub(super) features: Vec<String>,
 }
 
 /// One resolved dependency edge, before it is split by kind.
@@ -82,4 +84,10 @@ pub(super) struct RawSections {
     pub(super) workspace_root: String,
     #[serde(default)]
     pub(super) metadata: Option<Map<String, Value>>,
+}
+
+/// Just cargo's output folder.
+#[derive(Deserialize)]
+pub(super) struct RawTargetDir {
+    pub(super) target_directory: String,
 }

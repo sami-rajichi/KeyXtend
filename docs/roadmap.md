@@ -37,7 +37,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 **Output:** an empty but strict workspace.
 
-- `git init` in `D:\Projects\KeyXtend`. Create the GitHub repo and remote only after the owner's yes; then protect `main` and add a DCO check.
+- `git init` in the project folder. Create the GitHub repo and remote only after the owner's yes; then protect `main` and add a DCO check.
 - Workspace `Cargo.toml`, `rust-toolchain.toml` (pinned stable), `deny.toml`, `rustfmt.toml`, `clippy.toml`.
 - `xtask`: `tidy` (enforces the ARCHITECTURE.md invariants), `licences`, `dist` (stub).
 - CI (GitHub Actions on `windows-latest` and `ubuntu-latest`): fmt, clippy, tests, cargo-deny, cargo-audit, tidy, Dependabot for Cargo and Actions, secret scanning.
@@ -78,11 +78,11 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
 | G5 Hold engine (core) | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
 | G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
-| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Noto Sans Arabic for Dolch), a mirrored right-to-left panel, and an Arabic text field whose caret moves correctly |
-| G8 Budgets | Spec §10 targets on the development PC and in weak mode. Frame times measured with PresentMon; a pressed key lights up on the next frame |
+| G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
+| G8 Budgets | Spec §10 targets on the development PC and in weak mode: after a warm-up, at most 100 MB of private working set and 140 MB of private commit, staying flat while tips, the language list and themes come and go (churn, ADR-0021). Frame times measured with PresentMon; a pressed key lights up within the next frame at the median and one refresh later at worst, as Windows' On-Screen Keyboard (ADR-0025) |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
-| G10 Screen readers | Narrator and NVDA read and activate every key |
-| G11 DPI | 100/150/200 % on the development PC's one screen keep the size and sharpness. The move between mixed-DPI monitors is checked in P3 |
+| G10 Screen readers | Narrator and NVDA read and activate every key. Each key is also hit-tested at its centre, as Narrator's mouse mode reads what is under the pointer, and must be found there |
+| G11 DPI | 100 %, 150 % and the largest scale Windows offers on the development PC's one screen (175 % at 1920×1080) keep the size and sharpness. The move between mixed-DPI monitors is checked by beta testers in P14 |
 | G12 Overlay | The pointer ring runs at 60 Hz without dropping clicks underneath it |
 | G13 Themes | Native Adaptive in light and dark matches the mock-up side by side and follows the system accent, dark mode and high contrast live. Two frosted-glass tricks are tried on the inactive window; otherwise the plate is solid. A sampler row of ET66 and Dolch keys (colour marks, LED, pressed inset) matches the mock-up |
 | G14 Soak | 4 hours of automatic typing, both keyboards in the same session: memory does not grow and nothing crashes |
@@ -97,7 +97,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G23 Quick-fill | Windows Hello opens from the no-focus keyboard; after Yes, test User and Password values are typed into a login page; after Cancel nothing is typed |
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
 | G25 Language and shortcuts (core) | The language key also switches the target app's input language; Ctrl+C/V/Z, Win+V and Alt+Tab work from the keyboard |
-| G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact; a Japanese IME fed key presses produces 日本 |
+| G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact. The Japanese IME part (key presses produce 日本) moved to F16 |
 
 **Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, and the spike code (ADR-0014). **Deleted:** screenshots, logs, scratch scripts and virtual PCs. The owner decides when the test certificate and the Program Files test install go.
 
@@ -125,22 +125,30 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 3 — Keyboard core — v0.1 "it types"
 
-- `kx-mod-layouts`: reads installed layouts, label tables for EN/FR/AR, `ToUnicodeEx` with flag 0x4.
-- `kx-mod-keyboard`: key model (§4.1), modifiers kx-style (§4.4), Caps, layers, language key (carousel, cycle or list), panel key routing.
-- `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the no-activate topmost window, per-monitor DPI v2.
-- `kx-ui` (Qt Quick, ADR-0013): all three themes' tokens from the spike, the Native Adaptive look first (light + soft dark), keyboard view, top bar, move (click, move, click), minimise to bubble, size S/M/L plus steps.
+- `kx-mod-layouts`: reads installed layouts, label tables for EN/FR/AR, `ToUnicodeEx` with flag 0x4; the list, step and pick, and short names (`[layouts] short`).
+- `kx-mod-keyboard`: key model (§4.1) with the side block dimmed until its phases, modifiers kx-style (§4.4), Caps, the language key (Carousel, Cycle or List), panel key routing for the language list, size and place per screen DPI, and the face the UI draws.
+- `kx-platform-windows`: `SendInput` Unicode + VK, `dwExtraInfo` tag, the key-press route for `key_apps`, the no-activate topmost window and its guard, per-monitor DPI v2, the system look, backdrops, one running copy and the tray icon.
+- `kx-theme`: all three themes' tokens from the spike, the look view, WCAG contrast and the high-contrast palette, with no Qt (ADR-0016).
+- `kx-ui` (Qt Quick, ADR-0013): the keyboard view in all three themes (light + soft dark), top bar with a theme button (a trial), sun/moon, move (click, move, click), resize, minimise to bubble, size S/M/L plus steps, tips, the notice banner, the tray menu, and EN/FR/AR texts in the keyboard's language (ADR-0017, ADR-0020).
+- `apps/keyxtend`: the app over the kernel and Qt, with the log, the panic hook, `--show` and `--quit`, and a hardened Qt start for the uiAccess build.
 - **Moves in:** the keyboard, layouts, window guard, theme and Qt face parts of the spike (move map, P3).
-- **Gates to pass here:** G8 budgets (development PC and weak mode), G9 window flags, G10 Narrator and NVDA, G11 DPI, G13 live following of accent, dark mode and high contrast plus the frosted-glass tries, G26 other languages.
+- **Gates to pass here:** G8 budgets (development PC and weak mode), G9 window flags, G10 Narrator and NVDA, G11 DPI, G13 live following of accent, dark mode and high contrast plus the frosted-glass tries, G26 other languages. G1–G4 and G25's language part run on the product.
 - **Remembers its state:** size, position, theme, light or dark and mode survive a restart or shutdown (`kx-settings`); the bubble sits in a bottom corner of the screen.
-- `kx-crypto` (needed later, but it is small and foundational).
+- `kx-crypto` moved to P8, its first user (owner, 2026-09-29).
 - **Edge cases:**
-  - modifiers + AltGr on AZERTY;
-  - Arabic shifted harakat;
+  - modifiers + AltGr on AZERTY; AltGr on a layout without AltGr acts as Right Alt;
+  - Arabic shifted harakat shown on ◌ and typed bare; `لا` types two code points;
   - a layout added or removed while running;
-  - a target window that drops `VK_PACKET`;
-  - multi-monitor with mixed DPI;
-  - moving the keyboard off-screen;
-  - a key click while a modifier is held in "Stay held" mode.
+  - an app listed in `key_apps` gets key presses in its own layout (the answer to a target that drops `VK_PACKET`);
+  - a saved place on a missing or mixed-DPI screen comes back on screen, sized for that screen;
+  - moving the keyboard off-screen stops at the screen edge;
+  - a key click while a modifier is held in "Stay held" mode keeps it held;
+  - a dead key, then Space, an unrelated letter or a language switch;
+  - only one layout installed: the language key stays still and says so;
+  - a second launch shows the running keyboard, and `--quit` ends it;
+  - a locked settings file; a log file that cannot open (the run logs to standard error and says so once);
+  - a UI language other than EN, FR or AR falls back to English;
+  - high contrast on: system colours only, with a hover outline.
 
 ## Phase 4 — Mouse assist — v0.2
 
@@ -180,7 +188,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 8 — Clipboard history — v0.5
 
-- `kx-mod-clipboard` plus the `media` worker (thumbnails).
+- `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
 - The encrypted store, retention, exclusion formats, the paged panel, multi-paste, and pasting files and images.
 - **Edge cases:**
   - a 200 MB image;
@@ -223,11 +231,11 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 13 — Themes, settings, i18n — v0.9
 
-- ET66 and Modern Dolch (light + soft dark).
+- ET66 and Modern Dolch (light + soft dark): built in P3; here the theme choice moves into Settings.
 - The complete settings window (paged, steppers): a separate window with its own icon, in the keyboard's language, carrying each theme's character as strongly as the keyboard does (owner, 2026-09-29).
 - The paged list panel rebuilt to the full mock-up design.
 - The quick settings strip (theme, light or dark, size), shown only when asked; "Reset size" and the bubble corner in Settings.
-- UI translations in EN/FR/AR, with an RTL settings window.
+- UI translations in EN/FR/AR; the settings window's Arabic text reads right to left in place (ADR-0020).
 
 ## Phase 14 — Release pipeline — v1.0 (Windows)
 

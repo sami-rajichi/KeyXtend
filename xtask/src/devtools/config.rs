@@ -11,7 +11,7 @@ use crate::workspace::{self, LoadError};
 /// The section name under `workspace.metadata`.
 const SECTION: &str = "devtools";
 
-/// Settings for `dev-cert`, `dev-install` and `check-uiaccess`.
+/// Settings for `dev-cert`, `dev-install` and `check-uiaccess`, and the Windows folder for `stage`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct DevToolsConfig {
@@ -71,6 +71,16 @@ pub(crate) struct DevToolsConfig {
     pub cancel_code: i32,
     /// Exit code for any other script failure.
     pub fail_code: i32,
+    /// Env var naming the user's roaming folder, which holds their own Start menu.
+    pub start_menu_env: String,
+    /// The user's Start-menu programs folder, under that folder.
+    pub start_menu_dir: String,
+    /// The shortcut `dev-install` adds there for the installed app.
+    pub shortcut: String,
+    /// User-level shortcut script.
+    pub shortcut_script: String,
+    /// Env var naming the user's profile folder, which must hold the shortcut.
+    pub profile_env: String,
 }
 
 impl DevToolsConfig {
@@ -125,6 +135,8 @@ impl DevToolsConfig {
             ("ui_access_tag", &self.ui_access_tag),
             ("ui_access_attr", &self.ui_access_attr),
             ("ui_access_on", &self.ui_access_on),
+            ("start_menu_env", &self.start_menu_env),
+            ("profile_env", &self.profile_env),
         ];
         first_failing(&texts, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
         if !launcher::is_quotable(&self.cert_subject) {
@@ -140,7 +152,7 @@ impl DevToolsConfig {
     }
 
     /// Values that must be one plain file or folder name.
-    fn names(&self) -> [(&'static str, &String); 12] {
+    fn names(&self) -> [(&'static str, &String); 14] {
         [
             ("user_store", &self.user_store),
             ("cert_file", &self.cert_file),
@@ -154,15 +166,18 @@ impl DevToolsConfig {
             ("sdk_arch", &self.sdk_arch),
             ("signtool", &self.signtool),
             ("mt", &self.mt),
+            ("shortcut", &self.shortcut),
+            ("shortcut_script", &self.shortcut_script),
         ]
     }
 
     /// Values that must be relative `/`-separated paths of plain names.
-    fn rel_paths(&self) -> [(&'static str, &String); 3] {
+    fn rel_paths(&self) -> [(&'static str, &String); 4] {
         [
             ("out_dir", &self.out_dir),
             ("scripts_dir", &self.scripts_dir),
             ("powershell", &self.powershell),
+            ("start_menu_dir", &self.start_menu_dir),
         ]
     }
 
@@ -195,7 +210,7 @@ impl DevToolsConfig {
 }
 
 /// The error for the first value that fails `ok`, if any.
-fn first_failing(
+pub(crate) fn first_failing(
     values: &[(&'static str, &String)],
     ok: impl Fn(&str) -> bool,
     error: impl Fn(&'static str) -> ConfigError,
@@ -231,17 +246,24 @@ impl DevSetup {
         self.path(&self.config.scripts_dir).join(file)
     }
 
+    /// The Windows folder named by the environment.
+    pub(crate) fn windows(
+        &self,
+        env: impl Fn(&str) -> Option<String>,
+    ) -> Result<PathBuf, DevError> {
+        let key = &self.config.shell_root_env;
+        env(key)
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .ok_or_else(|| DevError::MissingEnv(key.clone()))
+    }
+
     /// The PowerShell program inside the Windows folder named by the environment.
     pub(crate) fn powershell(
         &self,
         env: impl Fn(&str) -> Option<String>,
     ) -> Result<PathBuf, DevError> {
-        let key = &self.config.shell_root_env;
-        let root = env(key)
-            .map(PathBuf::from)
-            .filter(|path| path.is_absolute())
-            .ok_or_else(|| DevError::MissingEnv(key.clone()))?;
-        Ok(paths::join_rel(root, &self.config.powershell))
+        Ok(paths::join_rel(self.windows(env)?, &self.config.powershell))
     }
 }
 

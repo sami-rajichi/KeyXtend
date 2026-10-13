@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::SpikeConfig;
-use crate::facecfg::BarButton;
-use crate::legend::is_arabic;
+use kx_module_api::is_arabic;
 
 /// Where the page text puts this page's number.
 const PAGE_AT: &str = "{n}";
@@ -12,6 +11,16 @@ const PAGE_AT: &str = "{n}";
 const PAGE_COUNT: &str = "{count}";
 /// The most rows a list page may have (ADR-0008).
 const MOST_ROWS: usize = 5;
+
+/// One panel button: its Lucide icon and its name for screen readers.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PanelButton {
+    /// Lucide icon name.
+    pub icon: String,
+    /// Name for screen readers.
+    pub name: String,
+}
 
 /// The panel's texts, icons and list.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -32,11 +41,11 @@ pub struct PanelConfig {
     /// Shown in the empty text field.
     pub hint: String,
     /// The close, previous-page and next-page buttons.
-    pub close: BarButton,
+    pub close: PanelButton,
     /// See `close`.
-    pub prev: BarButton,
+    pub prev: PanelButton,
     /// See `close`.
-    pub next: BarButton,
+    pub next: PanelButton,
 }
 
 impl PanelConfig {
@@ -73,7 +82,6 @@ pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
         &tools.pill_title,
         &tools.overlay_title,
         &cfg.voice.caption.title,
-        &cfg.bar.bubble_title,
         &cfg.ring.title,
     ];
     std::iter::once(&cfg.keyboard.title).chain(named).collect()
@@ -91,7 +99,7 @@ pub fn check_titles(cfg: &SpikeConfig) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::legend::is_arabic;
+    use kx_module_api::is_arabic;
 
     fn panel() -> super::PanelConfig {
         crate::config::load().expect("spike.toml loads").panel
@@ -152,8 +160,8 @@ mod tests {
             "the ring's"
         );
         assert!(
-            with(&|c| c.ring.title = c.bar.bubble_title.clone()).is_err(),
-            "ring and bubble"
+            with(&|c| c.ring.title = c.voice.caption.title.clone()).is_err(),
+            "ring and caption"
         );
         assert!(with(&|c| c.ring.title.clear()).is_err(), "untitled windows");
     }

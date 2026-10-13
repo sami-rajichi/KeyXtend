@@ -4,12 +4,12 @@
 use std::path::{Path, PathBuf};
 use std::process::Child;
 
+use kx_platform_windows::window::foreground;
 use kx_target_window::config::TargetConfig;
 use spike_core::config::SpikeConfig;
-use spike_core::window::foreground;
 use windows::Win32::Foundation::HWND;
 
-use crate::config::{AppConfig, GatesConfig, Timing};
+use crate::config::{AppConfig, GatesConfig};
 use crate::keys;
 use crate::win;
 use crate::winfind::{self, Match};
@@ -109,8 +109,8 @@ fn attach_class<'a>(name: &str, app: &'a AppConfig) -> Result<&'a str, String> {
         .ok_or_else(|| format!("--attach needs a class in [apps.{name}]"))
 }
 
-/// True if the program at `image` has the file name of `exe`, ignoring case.
-fn same_program(image: &str, exe: &str) -> bool {
+/// True if the program at `image` has the file name of `exe`, ignoring case; the one rule the gates match programs by.
+pub(crate) fn same_program(image: &str, exe: &str) -> bool {
     let name = |p: &str| {
         Path::new(p)
             .file_name()
@@ -149,7 +149,7 @@ pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
     let in_front = foreground() == app.hwnd;
     let mut left = Vec::new();
     match app.kind {
-        AppKind::Target => left.extend(close_target(app.hwnd, &mut child, t)),
+        AppKind::Target => left.extend(close_target(ctx, app.hwnd, &mut child)),
         AppKind::Notepad | AppKind::Explorer => left.extend(close_tab(&app, in_front, ctx)),
         AppKind::Word if app.file.is_some() => {
             // Word gets a file only when it opens a prepared one; we only read it, so no save prompt.
@@ -176,7 +176,7 @@ fn close_tab(app: &Opened, in_front: bool, ctx: &Ctx) -> Option<String> {
         .as_deref()
         .is_some_and(|t| win::title(app.hwnd).contains(t));
     if in_front && ours {
-        let _ = keys::combo(&k.close_tab);
+        let _ = keys::restore_combo(&k.close_tab);
     }
     let m = Match {
         title_has: app.title_has.clone(),
@@ -209,7 +209,7 @@ fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
         if !is_test_page(&before, &pages) {
             break;
         }
-        let _ = keys::combo(&k.close_tab);
+        let _ = keys::restore_combo(&k.close_tab);
         let changed =
             || (!winfind::exists(app.hwnd) || win::title(app.hwnd) != before).then_some(());
         if win::poll_until(t.close_wait_ms, t.poll_ms, changed).is_none() {
@@ -219,14 +219,27 @@ fn close_pages(app: &Opened, ctx: &Ctx) -> Option<String> {
     winfind::exists(app.hwnd).then(|| format!("left open: {}", win::describe(app.hwnd)))
 }
 
-/// Closes target-window and kills it if it does not end in time; returns a note if killed.
-fn close_target(hwnd: HWND, child: &mut Child, t: &Timing) -> Option<String> {
-    let _ = win::close(hwnd);
+/// Closes target-window and kills it if it does not end in time; returns a note if it had to be killed.
+/// A window still there comes to the front first, since it puts back a `--layout` switch only while it has the
+/// keyboard; a gone one gets no Alt taps, which would reach the app in front.
+fn close_target(ctx: &Ctx, hwnd: HWND, child: &mut Child) -> Option<String> {
+    let t = &ctx.cfg.timing;
+    if winfind::exists(hwnd) {
+        let _ = win::front(hwnd, t, &ctx.cfg.keys);
+        let _ = win::close(hwnd);
+    }
     if wait_exit(child, t.close_wait_ms, t.poll_ms) {
         return None;
     }
-    let _ = child.kill();
-    Some("target-window did not close; killed it".to_string())
+    Some(kill_note(child.kill()))
+}
+
+/// What a kill of target-window, with result `killed`, leaves to report.
+fn kill_note(killed: std::io::Result<()>) -> String {
+    match killed {
+        Ok(()) => "target-window did not close; killed it".to_string(),
+        Err(e) => format!("target-window did not close and could not be killed: {e}"),
+    }
 }
 
 /// Waits up to `timeout_ms` for `child` to end; true if it did.
@@ -236,65 +249,4 @@ fn wait_exit(child: &mut Child, timeout_ms: u64, poll_ms: u64) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn app(args: &[&str], class: Option<&str>) -> AppConfig {
-        AppConfig {
-            exe: "x.exe".into(),
-            args: args.iter().map(ToString::to_string).collect(),
-            class: class.map(String::from),
-            focus_class: None,
-            new_window: true,
-            wait_ms: 0,
-            ready_ms: 0,
-            done_ms: 0,
-        }
-    }
-
-    #[test]
-    fn attach_needs_a_class_and_no_prepared_input() {
-        let word = app(&["/q", "/w"], Some("OpusApp"));
-        assert_eq!(attach_class("word", &word), Ok("OpusApp"));
-        let notepad = app(&[INPUT], Some("Notepad"));
-        assert!(attach_class("notepad", &notepad).is_err());
-        let chrome = app(&["--new-window", INPUT], Some("Chrome_WidgetWin_1"));
-        assert!(attach_class("chrome", &chrome).is_err());
-        assert!(attach_class("target", &app(&[], None)).is_err());
-    }
-
-    #[test]
-    fn only_word_can_be_attached_with_the_shipped_file() {
-        let cfg = crate::config::load().expect("kx-gates.toml loads");
-        let ok: Vec<&str> = AppKind::ALL
-            .iter()
-            .map(|k| k.name())
-            .filter(|&n| attach_class(n, cfg.app(n).expect("app")).is_ok())
-            .collect();
-        assert_eq!(ok, [AppKind::Word.name()]);
-    }
-
-    #[test]
-    fn only_titles_that_start_with_a_test_page_count() {
-        let pages = ["KeyXtend probe page", ""];
-        assert!(is_test_page(
-            "KeyXtend probe page g6-x - Google Chrome",
-            &pages
-        ));
-        assert!(!is_test_page("News - KeyXtend probe page", &pages));
-        assert!(!is_test_page("Mail - Google Chrome", &pages));
-        assert!(!is_test_page("anything", &[""]));
-    }
-
-    #[test]
-    fn same_program_compares_file_names_ignoring_case() {
-        let word = r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE";
-        assert!(same_program(
-            r"C:\Program Files\Microsoft Office\root\Office16\winword.exe",
-            word
-        ));
-        assert!(same_program(r"D:\Other\WinWord.exe", "WINWORD.EXE"));
-        assert!(!same_program(r"C:\Windows\notepad.exe", word));
-        assert!(!same_program("", word));
-    }
-}
+mod tests;

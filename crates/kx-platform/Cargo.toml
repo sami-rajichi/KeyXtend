@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform"
-description = "The platform port: what an OS adapter hands the kernel, and the data folder rule."
+description = "The platform ports: what an OS adapter hands the kernel and the UI, and the data folder rule."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
+thiserror.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }

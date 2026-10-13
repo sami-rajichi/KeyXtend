@@ -1,28 +1,35 @@
-//! G25: the language key cycles the layouts of the app in front, and the common shortcuts work.
+//! G25: the product's language key cycles the layouts of the app in front, and the common shortcuts work.
 #![cfg(windows)]
 
 use std::collections::HashSet;
 
+use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
+use kx_module_api::ports::{LayoutId, LayoutSource};
+use kx_platform_windows::WinLayouts;
+use kx_platform_windows::langinfo::lang_id;
+use kx_platform_windows::window::foreground;
+use kx_theme::Themes;
 use serde_json::{Value, json};
 use spike_core::langkey;
-use spike_core::layout::installed_layouts;
-use spike_core::window::foreground;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::probe;
+use crate::facetools::click_on;
+use crate::mouse::round_px;
+use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{clip, clipkeep, cliptext, keys, readback, winclip};
+use crate::{board, clip, clipkeep, cliptext, keys, probe, product, readback, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
-/// Bits of a layout handle that hold its language id.
-const LANG_MASK: isize = 0xFFFF;
+/// Why the language part is skipped with the List design.
+const LIST_SKIP: &str = "the List design opens a list on a click";
 
-/// A layout's language id in hex, such as `0409` for English (US).
+/// A layout's language id in hex, such as `0409` for English (US); the handle keeps its sign extension.
 fn lang(layout: isize) -> String {
-    format!("{:04X}", layout & LANG_MASK)
+    let raw = u64::try_from(layout.cast_unsigned()).unwrap_or_default();
+    format!("{:04X}", lang_id(LayoutId::new(raw)))
 }
 
 /// Waits until `f` holds, up to G25's switch wait.
@@ -32,7 +39,7 @@ fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
 }
 
 /// True once the app's focus shows `layout`.
-fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
+pub(crate) fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
     until(ctx, || langkey::layout_of(app.hwnd) == Some(layout))
 }
 
@@ -41,30 +48,92 @@ pub(crate) fn switch_to(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
     langkey::ask(app.hwnd, layout).is_ok() && shows(ctx, app, layout)
 }
 
-/// One press of the language key: the layout asked for and whether the app took it, or the error.
-fn step(ctx: &Ctx, app: &Opened) -> Value {
-    match keys_ours(app).and_then(|()| langkey::ask_next(app.hwnd)) {
-        Ok(want) => json!({ "to": lang(want), "ok": shows(ctx, app, want) }),
+/// The layout one step on from the app's own, as the product steps; `None` when the app's focus has none.
+fn next(app: &Opened) -> Option<isize> {
+    let cur = langkey::layout_of(app.hwnd)?;
+    langkey::step_from(&langkey::installed(), cur, 1)
+}
+
+/// Why design `design` cannot be stepped by a click, if it cannot.
+fn skip_reason(design: LangKey) -> Option<&'static str> {
+    (design == LangKey::List).then_some(LIST_SKIP)
+}
+
+/// The middle of the part of language key `r` that steps on: a click on its first `back_share`, from the left, goes
+/// back.
+fn forward(r: &RECT, back_share: f32) -> POINT {
+    let width = f64::from(r.right - r.left);
+    POINT {
+        x: round_px(f64::from(r.left) + width * (1.0 + f64::from(back_share)) / 2.0),
+        y: r.top + (r.bottom - r.top) / 2,
+    }
+}
+
+/// The product's language key: its keyboard's window, where a click steps on, and how long the keyboard takes to
+/// follow the layout in front, which each click waits first, since the key steps from the layout the keyboard shows.
+struct LangButton {
+    hwnd: HWND,
+    at: POINT,
+    follow_ms: u64,
+}
+
+impl LangButton {
+    /// The language key of the product keyboard on screen, whose copy has `settings`.
+    fn find(ctx: &Ctx, settings: &KeyboardSettings) -> Result<Self, String> {
+        let kb = Keyboard::find()?;
+        let shape = Themes::shipped().map_err(|e| format!("theme {e}"))?.shape;
+        Ok(Self {
+            hwnd: kb.hwnd,
+            at: forward(&kb.rect(&board::id_of(Role::Lang)?)?, shape.lang.back_share),
+            follow_ms: product::follow_after(settings, ctx.cfg.timing.poll_ms),
+        })
+    }
+}
+
+/// The language key to click, or why the language part from layout `from` cannot run, as its result.
+fn ready(ctx: &Ctx, from: &str) -> Result<LangButton, Value> {
+    let fail = |e: String| json!({ "from": from, "error": e, "ok": false });
+    let settings = product::keyboard().map_err(fail)?;
+    if let Some(why) = skip_reason(settings.lang_key) {
+        let design = settings.lang_key;
+        return Err(json!({ "from": from, "skipped": why, "lang_key": design, "ok": false }));
+    }
+    LangButton::find(ctx, &settings).map_err(fail)
+}
+
+/// One click on the product's language key: the layout the product steps to and whether the app took it, or the
+/// error.
+fn step(ctx: &Ctx, app: &Opened, key: &LangButton) -> Value {
+    sleep_ms(key.follow_ms);
+    let Some(want) = next(app) else {
+        return json!({ "ok": false, "error": "no layout for the app's focus" });
+    };
+    match keys_ours(app).and_then(|()| click_on(key.hwnd, key.at)) {
+        Ok(()) => json!({ "to": lang(want), "ok": shows(ctx, app, want) }),
         Err(e) => json!({ "ok": false, "error": e }),
     }
 }
 
-/// Asks for the next layout once per installed layout, so the list wraps; the first layout is always put back.
+/// Clicks the language key once per installed layout, so the list wraps; the first layout is always put back.
 fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     let Some(start) = langkey::layout_of(app.hwnd) else {
         return json!({ "error": "no layout for the app's focus", "ok": false });
     };
-    let count = installed_layouts().len();
+    let count = WinLayouts.installed().len();
     if count < 2 {
         return json!({ "from": lang(start), "skipped": "needs two layouts", "ok": false });
     }
-    let steps: Vec<Value> = (0..count).map(|_| step(ctx, app)).collect();
+    let key = match ready(ctx, &lang(start)) {
+        Ok(key) => key,
+        Err(why) => return why,
+    };
+    let steps: Vec<Value> = (0..count).map(|_| step(ctx, app, &key)).collect();
     let wrapped = langkey::layout_of(app.hwnd) == Some(start);
     let restored = wrapped || switch_to(ctx, app, start);
     let all = steps.iter().all(|s| s["ok"] == true);
     json!({
         "from": lang(start), "steps": steps, "wrapped": wrapped, "restored": restored,
-        "ok": all && wrapped,
+        "follow_ms": key.follow_ms, "ok": all && wrapped,
     })
 }
 
@@ -185,11 +254,38 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_click_lands_in_the_middle_of_the_part_that_steps_on() {
+        let key = RECT {
+            left: 100,
+            top: 10,
+            right: 400,
+            bottom: 40,
+        };
+        let share = 0.3333;
+        let p = forward(&key, share);
+        assert_eq!((p.x, p.y), (300, 25));
+        assert!(
+            f64::from(p.x) > 100.0 + 300.0 * f64::from(share),
+            "past the back part"
+        );
+        assert_eq!(forward(&key, 0.0).x, 250, "no back part: the middle");
+    }
+
+    #[test]
+    fn only_the_list_design_is_skipped_since_a_click_opens_the_list() {
+        assert_eq!(skip_reason(LangKey::Carousel), None);
+        assert_eq!(skip_reason(LangKey::Cycle), None);
+        assert!(skip_reason(LangKey::List).is_some());
+    }
+
+    #[test]
     fn lang_is_the_low_word_in_hex() {
         assert_eq!(lang(0x0409_0409), "0409");
         assert_eq!(
             lang(isize::try_from(0xF002_1C01_u32).expect("fits")),
             "1C01"
         );
+        let extended = isize::try_from(0xFFFF_FFFF_F029_1C01_u64.cast_signed()).expect("64-bit");
+        assert_eq!(lang(extended), "1C01", "a sign-extended handle");
     }
 }

@@ -1,7 +1,7 @@
 # Security note: kernel, settings and log
 
 - **Owner:** product owner
-- **Last review:** 2026-09-29
+- **Last review:** 2026-10-02 (P3)
 - **Status:** Reviewed
 - **Scope:** `kx-module-api`, `kx-kernel` (lifecycle, order, bus, registry, grants, `Kernel`, log), `kx-settings`, `kx-platform`. They run inside the uiAccess `keyxtend` process from P3 on. The test crates (`kx-platform-fake`, `kx-test-support`) and the tools never ship.
 
@@ -11,6 +11,7 @@
 | None | The kernel enforces capabilities for modules; it needs none itself. | N/A |
 
 - A service is gated by the capability its provider stored, and a provider must itself hold that capability. Only the kernel builds `Grants`.
+- An event may name a capability (`Event::CAPABILITY`). To subscribe to, intercept or publish it, a module needs that grant, on its `ModuleCx` and on every clone of its `Bus`; only the kernel's own handle is unlimited.
 - Capabilities are policy inside one process, not a sandbox (ADR-0005).
 
 ## Data handled
@@ -23,18 +24,21 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES` (1 MiB); repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` (10) keys of at most `MAX_KEY_CHARS` (64) characters; nesting capped by the `toml` parser | Property tests only (see Should fix) |
-| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from 1 to 100; no empty ids in `disabled` | As above | Property tests only |
+| `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES`; repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` keys of at most `MAX_KEY_CHARS` characters; nesting capped at 80 levels (toml's default) | Property tests only (see Should fix) |
+| A later copy's and the gates' read (`peek`, `peek_section`) | The same size cap; it never repairs, moves or writes the file. `peek_section` checks a section as the store does: a bad value gives its default, and a fault gives the defaults | `MAX_FILE_BYTES` | Unit tests |
+| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from `MIN_LOG_MB` to `MAX_LOG_MB`; no empty ids in `disabled` | As above | Property tests only |
 | Module code (validators, migrations, `start`, `stop`, bus handlers) | Each call runs inside `catch_unwind`; a panic fails that module alone | N/A | N/A |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network in these crates. Module ids are fixed strings in the binary; a duplicate or reserved id is refused at `Kernel::add`.
 - **Tampering:** a hand-edited or damaged settings file.
-  - Each value is checked, and only a bad value resets. An unreadable or oversized file is set aside as the broken copy, and the last good copy comes back.
+  - Each value is checked, and only a bad value resets. A damaged or oversized file is set aside as the broken copy, and the last good copy comes back.
+  - A file another program holds or refuses (access denied, busy, or a Windows sharing or lock violation) is not damage: the app runs on defaults in memory, says so once, and never writes the file that run. Any other read error except "not found" still counts as damage.
+  - A module writes only through its `SettingsHandle`, which `ModuleCx` binds to the module's own id, so it can never change another section or `[kernel]`. Each write passes the module's validator before it is stored and saved; `set_all` checks its values together and stores all or none.
   - Saving writes a temp file, copies the good file to the previous copy, then renames the temp file over it in one step, so a crash never leaves half a file and the settings file is never missing. A file damaged while the app runs is kept as the broken copy, not overwritten.
 - **Logging / repudiation:**
   - The redacting formatter prints `‹redacted›` for any field whose name contains a `SENSITIVE` part (`text`, `typed`, `chars`, `clipboard`, `password`, `secret`, `api_key`, `token`, `transcript`), whatever its case or separators.
-  - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line.
+  - Control characters, line separators and bidi controls (including the Arabic letter mark) are escaped, so no value can fake or reorder a log line. The table is `kx_module_api::HIDDEN_MARKS`, shared with notices.
   - The kernel logs a settings error by its kind only, never the file value; the bus logs only the event name and subscription id.
 - **Information disclosure:** nothing is sent anywhere. Logs stay in the data folder.
 - **Denial of service:**
@@ -50,15 +54,18 @@
 - Done: sensitive field names matched only exactly; they now match by name part, ignoring case and separators.
 - Done: bidi controls and line separators are escaped in log lines.
 - Done: settings errors could quote a file value into the log; only the error kind is logged.
+- Done (P3): a settings file locked by another program counted as damaged and could be set aside; it now runs on defaults and is never written that run.
+- Done (P3): any module could subscribe to, intercept or publish any event; an event can now require a capability.
 
 ### Should fix (tracked issue)
 - A fuzz target for `Store::load` and the repair path (needs a nightly toolchain, so it waits for the owner's yes to install it). Until then, property tests cover repair and ordering.
-- Bus events have no capability gate: any module can subscribe to, intercept or publish any event. P3 decides it before any typed-text event exists (`docs/items/P3.md`).
-- A settings file that cannot be opened for a reason other than "not found" (for example another program's lock) counts as damaged. P3 treats it as "run on defaults in memory and do not save" (`docs/items/P3.md`).
-- The app must install a quiet panic hook, because caught panics still print their message through the default hook (`docs/items/P3.md`).
-- Redaction works by field name only, so text formatted into a log message prints in clear. P3 keeps typed text in `Redacted<T>` and adds a check for input modules (`docs/items/P3.md`).
+- Done (P3, acf5816 and a22eb92): a file nested past toml's limit reads as damaged, never a stack overflow that would abort the uiAccess process at every start. Tidy D6 refuses any package that turns on toml's `unbounded` feature, which feature unification would spread to the whole workspace.
+- Done (P3): the app installs a quiet panic hook that logs only the place, never the payload (`keyxtend.md`).
+- Done (P3): redaction works by field name only, so text formatted into a log message would print in clear; typed text stays in `Redacted<T>`, and `kx-review` check 4 refuses such a `tracing` call on an input path.
 
 ### Accepted (with reason)
 - Settings and logs are not encrypted: in P2 they hold no Secret or Sensitive data. ADR-0010 applies when a module stores such data.
 - A same-user program can edit the settings file. It can already act as the user; the file is fully validated, so the worst case is a reset setting and a notice.
 - Containment needs unwinding: no build profile may set `panic = "abort"` (ARCHITECTURE.md).
+- A same-user program can turn `settings.toml`, its copies or `logs` into a link or junction. The app then reads and writes with the user's own rights, which that program already has; uiAccess gives no extra file access.
+- A settings path that blocks a read (a link to a pipe, a held oplock) stalls start-up before any window. It is no worse than a same-user program editing the file.

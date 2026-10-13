@@ -1,9 +1,10 @@
-//! The `Host` a module sees while it starts: services, bus, clock and settings.
+//! The `Host` a module sees while it starts: services, bus, clock, settings and the settings sink.
 
 use crate::grants::Grants;
 use crate::registry::{Owner, Registry, Service};
 use kx_module_api::{
-    Bus, Capability, Clock, Host, Manifest, ModuleId, ServiceError, ServiceId, Subscription,
+    Bus, Capability, Clock, Host, Manifest, ModuleId, ServiceError, ServiceId, SettingsSink,
+    Subscription,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -44,25 +45,29 @@ pub struct StartHost<'a> {
     bus: Bus,
     clock: Arc<dyn Clock>,
     settings: toml::Table,
+    sink: Arc<dyn SettingsSink>,
     held: Held,
 }
 
 impl<'a> StartHost<'a> {
     /// A host for `manifest`'s module; a module without settings gets an empty table.
+    /// `bus` is the kernel's own handle; the module gets one limited to its grants.
     #[must_use]
     pub fn new(
         manifest: &'static Manifest,
         registry: &'a mut Registry,
         grants: Grants,
-        bus: Bus,
+        bus: &Bus,
         clock: Arc<dyn Clock>,
         settings: Option<toml::Table>,
+        sink: Arc<dyn SettingsSink>,
     ) -> Self {
         let held = Held {
             module: manifest.id,
             guards: Vec::new(),
             provided: Vec::new(),
         };
+        let bus = bus.restricted(grants.granted());
         Self {
             manifest,
             registry,
@@ -70,6 +75,7 @@ impl<'a> StartHost<'a> {
             bus,
             clock,
             settings: settings.unwrap_or_default(),
+            sink,
             held,
         }
     }
@@ -119,6 +125,10 @@ impl Host for StartHost<'_> {
 
     fn settings(&self) -> &toml::Table {
         &self.settings
+    }
+
+    fn settings_sink(&self) -> Arc<dyn SettingsSink> {
+        Arc::clone(&self.sink)
     }
 
     fn hold(&mut self, guard: Subscription) {

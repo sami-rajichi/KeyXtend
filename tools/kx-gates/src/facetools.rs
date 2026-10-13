@@ -1,11 +1,11 @@
 //! The running face's tool buttons, pill and overlay: found by title, clicked only where they are on top.
 #![cfg(windows)]
 
-use serde_json::{Value, json};
+use kx_mod_keyboard::Area;
+use kx_platform_windows::screen;
 use spike_core::config::ToolButton;
 use spike_core::hold::Pt;
-use spike_core::place::{self, Place};
-use spike_core::screen;
+use spike_core::place;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
@@ -14,7 +14,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::apps::Ctx;
 use crate::mouse::{self, Face};
 use crate::win;
-use crate::winfind;
 
 /// A running face window and where it is.
 pub struct FaceWin {
@@ -39,7 +38,7 @@ impl FaceWin {
     pub fn parked(ctx: &Ctx, name: &str) -> Result<FaceWin, String> {
         let hwnd = mouse::find_face(ctx.spike, name)?;
         let r = win::rect(hwnd)?;
-        let p = corner(&r, &screen::work_area(&r)?);
+        let p = corner(&r, &screen::work_area(&r).map_err(|e| e.to_string())?);
         // SAFETY: plain call on our own face window; a failure is returned.
         unsafe {
             SetWindowPos(
@@ -59,12 +58,7 @@ impl FaceWin {
     /// The screen centre of tool button `b`.
     pub fn button(&self, ctx: &Ctx, b: ToolButton) -> POINT {
         let places = place::tools(&ctx.spike.keyboard, ToolButton::ALL.len());
-        let at = places.get(b.index()).copied().unwrap_or(Place {
-            x: 0.0,
-            y: 0.0,
-            w: 0.0,
-            h: 0.0,
-        });
+        let at = places.get(b.index()).copied().unwrap_or_default();
         mouse::centre(&at, self.face.origin, self.face.dpi)
     }
 
@@ -72,11 +66,11 @@ impl FaceWin {
     pub fn quiet_spot(&self, ctx: &Ctx) -> POINT {
         let kb = &ctx.spike.keyboard;
         let (_, top) = place::face_size(kb);
-        let line = Place {
-            x: kb.gap_px,
+        let line = Area {
+            x: f64::from(kb.gap_px),
             y: top,
-            w: kb.key_px,
-            h: kb.font_px,
+            w: f64::from(kb.key_px),
+            h: f64::from(kb.font_px),
         };
         mouse::centre(&line, self.face.origin, self.face.dpi)
     }
@@ -107,15 +101,6 @@ pub fn click_on(owner: HWND, p: POINT) -> Result<(), String> {
         return Err(format!("{} covers {},{}", win::describe(top), p.x, p.y));
     }
     mouse::click_at(p)
-}
-
-/// Closes the running face `name` and waits until its window is gone; needs the uiAccess kx-gates.
-pub fn close(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let hwnd = mouse::find_face(ctx.spike, name)?;
-    win::close(hwnd)?;
-    let t = &ctx.cfg.timing;
-    let closed = winfind::wait_gone(hwnd, t.close_wait_ms, t.poll_ms);
-    Ok(json!({ "gate": "close", "face": name, "pass": closed }))
 }
 
 /// The window called `title` while it shows: visible and not cloaked.

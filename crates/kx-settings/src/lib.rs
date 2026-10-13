@@ -9,9 +9,7 @@ mod names;
 mod section;
 mod store;
 
-pub use file::{Loaded, Outcome, SaveError, load, save};
-pub use names::{
-    ARG_KEYS, ARG_MODULE, ARG_MORE, Files, KEYS_SEPARATOR, MAX_FILE_BYTES, MAX_KEY_CHARS,
-    MAX_NAMED_KEYS, VERSION_KEY,
-};
+pub use file::{Loaded, Outcome, SaveError, load, peek, peek_section, save};
+pub use names::{Files, MAX_FILE_BYTES, MAX_KEY_CHARS, MAX_NAMED_KEYS, VERSION_KEY};
+pub use section::NOT_A_SETTING;
 pub use store::{LoadReport, Store, StoreError, Unsaved};

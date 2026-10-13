@@ -1,5 +1,5 @@
-//! Boot: load settings, plan the order, block what cannot start (quietly when it is off),
-//! skip what is off, start the rest.
+//! Boot in two steps. `load` reads the settings, plans the order and blocks what cannot start
+//! (quietly when it is off); `start` skips what is off and starts the rest.
 
 use super::{KERNEL, Kernel, KernelError, Phase, SPEC, switched_off};
 use crate::lifecycle::Step;
@@ -13,18 +13,40 @@ use std::iter;
 const SPEC_BROKEN: &str = "its settings spec is broken";
 
 impl Kernel {
-    /// Loads the settings and starts every module it can, in dependency order.
+    /// Loads, then starts: every module it can, in dependency order, with all their notices.
     /// Every notice it returns also went on the bus, as did every state change.
     ///
     /// # Errors
     /// `WrongPhase` unless the kernel is in setup, so it boots once.
     pub fn boot(&mut self) -> Result<Vec<Notice>, KernelError> {
+        let mut notices = self.load()?;
+        notices.extend(self.start()?);
+        Ok(notices)
+    }
+
+    /// Reads the settings, plans the order and fails each module that can never start; none starts.
+    /// The app can then read `kernel_settings` and open its log before any module runs.
+    ///
+    /// # Errors
+    /// `WrongPhase` unless the kernel is in setup, so it loads once.
+    pub fn load(&mut self) -> Result<Vec<Notice>, KernelError> {
         self.expect(Phase::Setup)?;
-        self.phase = Phase::Running;
-        self.told = Some(Vec::new());
-        let broken = self.load();
+        self.phase = Phase::Loaded;
+        self.store.collect();
+        let broken = self.read_settings();
         self.plan = self.plan_order();
         self.block(&broken);
+        Ok(self.store.collected())
+    }
+
+    /// Starts every loaded module it can, in dependency order, skipping what is switched off.
+    ///
+    /// # Errors
+    /// `WrongPhase` unless the kernel has loaded and not started yet.
+    pub fn start(&mut self) -> Result<Vec<Notice>, KernelError> {
+        self.expect(Phase::Loaded)?;
+        self.phase = Phase::Running;
+        self.store.collect();
         let skip = self.skipped();
         for id in self.plan.start().to_vec() {
             let Some(at) = self.find(id) else { continue };
@@ -34,22 +56,22 @@ impl Kernel {
             if skip.contains(&id) {
                 self.step(at, Step::Skip);
             } else {
-                self.start(at);
+                self.start_at(at);
             }
         }
         self.save();
-        Ok(self.told.take().unwrap_or_default())
+        Ok(self.store.collected())
     }
 
     /// Loads the store, kernel section first, tells its notices and returns the broken specs.
-    fn load(&mut self) -> Vec<ModuleId> {
+    fn read_settings(&mut self) -> Vec<ModuleId> {
         let files = Files::new(self.platform.dirs().data_dir().path());
         let modules = self.slots.iter();
         let specs: Vec<_> = iter::once((KERNEL, &SPEC))
             .chain(modules.filter_map(|s| Some((s.manifest.id, s.manifest.settings?))))
             .collect();
         let (store, report) = Store::load(files, &specs);
-        self.store = Some(store);
+        self.store.put(store);
         for notice in report.notices {
             self.notify(notice);
         }
@@ -136,17 +158,8 @@ impl Kernel {
 
     /// Saves when the file is behind; the first failed save since a success tells the user.
     pub(super) fn save(&mut self) {
-        let Some(store) = self.store.as_mut() else {
-            return;
-        };
-        if !store.needs_save() {
-            return;
-        }
-        if let Err(unsaved) = store.save() {
-            tracing::warn!(error = %unsaved.error, "settings not saved");
-            if let Some(notice) = unsaved.notice {
-                self.notify(notice);
-            }
+        if let Err(Some(notice)) = self.store.save() {
+            self.notify(notice);
         }
     }
 }

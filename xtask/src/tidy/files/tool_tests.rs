@@ -1,4 +1,4 @@
-//! Tests for F1 and F2 on test tools: they are scanned, and may carry the deny attribute.
+//! Tests for F1 and F2 on test tools and the bridge crate: they are scanned, and may carry the deny attribute.
 
 use std::fs;
 
@@ -29,14 +29,19 @@ fn long_file_under_tools_is_an_f1_error() {
 
 /// Runs F2 on one package whose lib root holds `source`, under `sub_dir` (`tools` or `crates`).
 fn f2_for_lib(label: &str, sub_dir: &str, source: &str) -> Vec<Violation> {
+    f2_for_named(label, "kx-foo", sub_dir, source)
+}
+
+/// Runs F2 on package `name`, whose lib root under `sub_dir` holds `source`.
+fn f2_for_named(label: &str, name: &str, sub_dir: &str, source: &str) -> Vec<Violation> {
     let root = unique_temp_dir(label);
-    let rel = format!("{sub_dir}/kx-foo/src/lib.rs");
+    let rel = format!("{sub_dir}/{name}/src/lib.rs");
     fs::create_dir_all(root.join(&rel).parent().unwrap()).unwrap();
     fs::write(root.join(&rel), source).unwrap();
 
     let ws = WorkspaceBuilder::new()
         .root(root.clone())
-        .member("kx-foo", sub_dir, vec![])
+        .member(name, sub_dir, vec![])
         .target(&["lib"], &rel)
         .build();
     let violations = f2_unsafe_attr(&ws);
@@ -82,4 +87,24 @@ fn non_tool_root_with_only_the_deny_attr_is_an_f2_error() {
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].rule, F2);
     assert_eq!(violations[0].message, "missing #![forbid(unsafe_code)]");
+}
+
+#[test]
+fn the_bridge_crate_root_may_carry_the_deny_attr() {
+    let deny = "#![deny(unsafe_code)]
+mod bridges;
+";
+    assert_eq!(f2_for_named("f2-bridge", "kx-ui", "crates", deny), vec![]);
+    let none = f2_for_named(
+        "f2-bridge-none",
+        "kx-ui",
+        "crates",
+        "mod bridges;
+",
+    );
+    assert_eq!(none.len(), 1);
+    assert_eq!(
+        none[0].message,
+        "missing #![deny(unsafe_code)] or #![forbid(unsafe_code)]"
+    );
 }

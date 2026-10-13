@@ -1,7 +1,7 @@
 //! The typed `Bus` over a fake core: round trips, the intercept chain and subscription guards.
 
-use crate::fakes::FakeCore;
 use kx_module_api::{Bus, Event, Flow, Subscription};
+use kx_test_support::host::FakeCore;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
@@ -25,6 +25,10 @@ fn bus() -> (Arc<FakeCore>, Bus) {
     (Arc::clone(&core), Bus::new(core))
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "a test helper; a failed setup fails the test"
+)]
 fn record(bus: &Bus) -> (Seen, Subscription) {
     let seen = Seen::default();
     let log = Arc::clone(&seen);
@@ -32,42 +36,48 @@ fn record(bus: &Bus) -> (Seen, Subscription) {
         let mut log = log.lock().unwrap_or_else(PoisonError::into_inner);
         log.push(ping.0);
     });
-    (seen, sub)
+    (seen, sub.unwrap())
 }
 
 #[test]
 fn publish_reaches_a_subscriber_with_the_value() {
     let (_core, bus) = bus();
     let (seen, _sub) = record(&bus);
-    bus.publish(&Ping(7));
+    bus.publish(&Ping(7)).unwrap();
     assert_eq!(*seen.lock().unwrap(), [7]);
 }
 
 #[test]
 fn intercept_returns_stop_when_a_handler_stops() {
     let (_core, bus) = bus();
-    let _late = bus.add_interceptor(2, |ping: &mut Ping| {
-        ping.0 += 100;
-        Flow::Continue
-    });
-    let _stop = bus.add_interceptor(1, |ping: &mut Ping| {
-        ping.0 += 1;
-        Flow::Stop
-    });
+    let _late = bus
+        .add_interceptor(2, |ping: &mut Ping| {
+            ping.0 += 100;
+            Flow::Continue
+        })
+        .unwrap();
+    let _stop = bus
+        .add_interceptor(1, |ping: &mut Ping| {
+            ping.0 += 1;
+            Flow::Stop
+        })
+        .unwrap();
     let mut ping = Ping(0);
-    assert_eq!(bus.intercept(&mut ping), Flow::Stop);
+    assert_eq!(bus.intercept(&mut ping), Ok(Flow::Stop));
     assert_eq!(ping, Ping(1));
 }
 
 #[test]
 fn intercept_without_a_stop_continues_with_the_changes() {
     let (_core, bus) = bus();
-    let _double = bus.add_interceptor(0, |ping: &mut Ping| {
-        ping.0 *= 2;
-        Flow::Continue
-    });
+    let _double = bus
+        .add_interceptor(0, |ping: &mut Ping| {
+            ping.0 *= 2;
+            Flow::Continue
+        })
+        .unwrap();
     let mut ping = Ping(4);
-    assert_eq!(bus.intercept(&mut ping), Flow::Continue);
+    assert_eq!(bus.intercept(&mut ping), Ok(Flow::Continue));
     assert_eq!(ping, Ping(8));
 }
 
@@ -76,12 +86,14 @@ fn a_handler_for_another_event_type_is_skipped() {
     let (_core, bus) = bus();
     let pongs = Arc::new(AtomicUsize::new(0));
     let count = Arc::clone(&pongs);
-    let _sub = bus.subscribe(move |_: &Pong| {
-        count.fetch_add(1, Ordering::SeqCst);
-    });
-    let _stop = bus.add_interceptor(0, |_: &mut Pong| Flow::Stop);
-    bus.publish(&Ping(1));
-    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Continue);
+    let _sub = bus
+        .subscribe(move |_: &Pong| {
+            count.fetch_add(1, Ordering::SeqCst);
+        })
+        .unwrap();
+    let _stop = bus.add_interceptor(0, |_: &mut Pong| Flow::Stop).unwrap();
+    bus.publish(&Ping(1)).unwrap();
+    assert_eq!(bus.intercept(&mut Ping(1)), Ok(Flow::Continue));
     assert_eq!(pongs.load(Ordering::SeqCst), 0);
 }
 
@@ -89,12 +101,12 @@ fn a_handler_for_another_event_type_is_skipped() {
 fn dropping_a_subscription_unsubscribes_it() {
     let (core, bus) = bus();
     let (seen, sub) = record(&bus);
-    let stop = bus.add_interceptor(0, |_: &mut Ping| Flow::Stop);
+    let stop = bus.add_interceptor(0, |_: &mut Ping| Flow::Stop).unwrap();
     assert_eq!(core.count(), 2);
     drop((sub, stop));
     assert_eq!(core.count(), 0);
-    bus.publish(&Ping(1));
-    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Continue);
+    bus.publish(&Ping(1)).unwrap();
+    assert_eq!(bus.intercept(&mut Ping(1)), Ok(Flow::Continue));
     assert!(seen.lock().unwrap().is_empty());
 }
 
@@ -112,9 +124,11 @@ fn a_subscription_outliving_its_core_drops_quietly() {
 fn a_handler_keeping_a_subscription_makes_no_cycle() {
     let (core, bus) = bus();
     let (_seen, inner) = record(&bus);
-    let _outer = bus.subscribe(move |_: &Pong| {
-        let _keep = &inner;
-    });
+    let _outer = bus
+        .subscribe(move |_: &Pong| {
+            let _keep = &inner;
+        })
+        .unwrap();
     let weak = Arc::downgrade(&core);
     drop((bus, core));
     assert!(weak.upgrade().is_none());
@@ -125,10 +139,12 @@ fn a_handler_may_drop_a_subscription_while_it_runs() {
     let (core, bus) = bus();
     let (_seen, victim) = record(&bus);
     let slot = Mutex::new(Some(victim));
-    let _dropper = bus.subscribe(move |_: &Ping| {
-        slot.lock().unwrap_or_else(PoisonError::into_inner).take();
-    });
-    bus.publish(&Ping(1));
+    let _dropper = bus
+        .subscribe(move |_: &Ping| {
+            slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+        })
+        .unwrap();
+    bus.publish(&Ping(1)).unwrap();
     assert_eq!(core.count(), 1);
 }
 
@@ -137,11 +153,13 @@ fn an_interceptor_may_drop_a_subscription_while_it_runs() {
     let (core, bus) = bus();
     let (_seen, victim) = record(&bus);
     let slot = Mutex::new(Some(victim));
-    let _dropper = bus.add_interceptor(0, move |_: &mut Ping| {
-        slot.lock().unwrap_or_else(PoisonError::into_inner).take();
-        Flow::Continue
-    });
-    assert_eq!(bus.intercept(&mut Ping(1)), Flow::Continue);
+    let _dropper = bus
+        .add_interceptor(0, move |_: &mut Ping| {
+            slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+            Flow::Continue
+        })
+        .unwrap();
+    assert_eq!(bus.intercept(&mut Ping(1)), Ok(Flow::Continue));
     assert_eq!(core.count(), 1);
 }
 
@@ -152,6 +170,7 @@ fn a_cloned_bus_publishes_from_a_worker_thread() {
     let worker = bus.clone();
     std::thread::spawn(move || worker.publish(&Ping(3)))
         .join()
+        .unwrap()
         .unwrap();
     assert_eq!(*seen.lock().unwrap(), [3]);
 }

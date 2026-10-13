@@ -10,11 +10,12 @@ use crate::samples::Shape;
 use kx_kernel::Policy;
 use kx_kernel::{KERNEL, Kernel};
 use kx_module_api::{
-    Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, Subscription, keys,
+    Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, NoticeArg, Subscription, args,
+    keys,
 };
 use kx_platform::AppDirs;
 use kx_platform_fake::FakePlatform;
-use kx_settings::{ARG_MODULE, Files};
+use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use std::fs;
 use std::path::PathBuf;
@@ -31,7 +32,7 @@ pub fn failed(id: ModuleId) -> Notice {
     Notice {
         key: keys::MODULE_FAILED,
         module: Some(id),
-        args: vec![(ARG_MODULE, id.to_string())],
+        args: vec![(args::MODULE, NoticeArg::Text(id.to_string()))],
     }
 }
 
@@ -44,7 +45,9 @@ impl<E: Event + Clone> Seen<E> {
     pub fn watch(bus: &Bus) -> (Self, Subscription) {
         let seen = Self(Arc::new(Mutex::new(Vec::new())));
         let keep = seen.clone();
-        let guard = bus.subscribe(move |e: &E| keep.0.lock().unwrap().push(e.clone()));
+        let guard = bus
+            .subscribe(move |e: &E| keep.0.lock().unwrap().push(e.clone()))
+            .unwrap();
         (seen, guard)
     }
 

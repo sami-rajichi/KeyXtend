@@ -160,7 +160,7 @@ fn describe(notice: &Notice) -> String {
     let args = notice
         .args
         .iter()
-        .map(|(name, value)| format!("{name}={value}"));
+        .map(|(name, value)| format!("{name}={value:?}"));
     let parts: Vec<String> = module.into_iter().chain(args).collect();
     if parts.is_empty() {
         format!("notice: {}", notice.key)
@@ -192,7 +192,7 @@ struct Unsaved {
 
 impl Unsaved {
     /// Watches the kernel's bus from now on.
-    fn watch(kernel: &Kernel) -> Self {
+    fn watch(kernel: &Kernel) -> Result<Self, String> {
         let failed = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&failed);
         let guard = kernel.bus().subscribe(move |notice: &Notice| {
@@ -200,10 +200,10 @@ impl Unsaved {
                 flag.store(true, Ordering::Relaxed);
             }
         });
-        Self {
+        Ok(Self {
             failed,
-            _guard: guard,
-        }
+            _guard: guard.map_err(|e| e.to_string())?,
+        })
     }
 
     fn happened(&self) -> bool {
@@ -258,7 +258,7 @@ fn run(folder: &Path, change: Option<i64>) -> Result<(), String> {
     kernel.add(Box::new(keyboard)).map_err(|e| e.to_string())?;
     kernel.add(Box::new(mouse)).map_err(|e| e.to_string())?;
 
-    let unsaved = Unsaved::watch(&kernel);
+    let unsaved = Unsaved::watch(&kernel)?;
     let notices = kernel.boot().map_err(|e| e.to_string())?;
     report(&kernel, &notices);
     change.map_or(Ok(()), |ms| save(&mut kernel, &files, ms, &unsaved))

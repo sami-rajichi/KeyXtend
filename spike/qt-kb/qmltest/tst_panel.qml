@@ -10,7 +10,7 @@ Item {
     width: 520
     height: 360
 
-    readonly property var res: ({ fam: { latin: "Segoe UI", arabic: "Segoe UI" }, icons: Qt.resolvedUrl("../../../target/spike-stage/qt-kb/assets/icons"), ext: "svg" })
+    readonly property var res: ({ fam: { latin: "Segoe UI", arabic: "Segoe UI" }, icons: Qt.resolvedUrl("../../../assets/icons/lucide"), ext: "svg" })
     readonly property var fx: ({ title: "list", rows: 5, rtl: true, prev: { icon: "chevron-up", name: "prev" }, next: { icon: "chevron-down", name: "next" } })
     readonly property var pg2: ({ rows: ["a", "b", null, null, null], at: 1, count: 2, label: "2 من 2" })
 
@@ -122,7 +122,7 @@ Item {
             const prev = p.pager.children[0];
             verify(same(prev.color, hc.palette.pop_bg), "a framed button rests on the panel colour");
             mouseMove(prev, 5, 5);
-            tryVerify(() => same(prev.children[0].color, hc.sel_ink));
+            tryVerify(() => same(prev.children[0].tint, hc.sel_ink));
             mouseMove(p.cells[0], 10, 10);
             tryVerify(() => same(p.cells[0].children[0].color, hc.sel_ink));
             verify(same(p.cells[1].children[0].color, hc.palette.pop_ink), "a row at rest");

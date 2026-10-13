@@ -2,6 +2,210 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 00:35 — P3: G26 waits for the labels instead of reading them once
+G26's first CI run passed German, Russian and Persian, but read Hebrew's keys once, 550 ms after the switch, while the runner's cold debug build had not yet listed them; seconds later all 48 keys were found and 100 Hebrew characters typed intact. The gate now reads again until every key is listed and named right, up to `[g26] label_wait_ms`, and reports the time taken as `labels_ms`. The next run passed all four: Hebrew's labels were right after 7.4 s against 0.64–0.68 s for the others, and P14 holds that slow first switch.
+
+## 2026-10-12 23:48 — P3: text measures the same at every display scale
+The first CI run of the Qt Quick tests, at 100 % scale, found Dolch's AltGr label shrunk a step and its `_` touching the 8 on the French and Arabic boards. Labels are drawn as exact curves, but Qt still measured them with pixel-snapped (hinted) widths, which only differ at 100 %; every label is now laid out unhinted, as it is drawn. All 345 Qt Quick tests pass at 125 % and at 100 %, and the board's pictures at 125 % are pixel for pixel the same as before.
+
+## 2026-10-12 22:53 — P3: property tests for the UI's state machines, and screen-reader names
+The device rebuilds, the guard's tries, the tray slot and the app's mode, Quit and waker lifecycle each gained a property test over any sequence of their inputs, with limits read from the `[ui]` defaults. The Qt Quick tests now find a chip by the word it shows, in English and Arabic, and check the bubble's and the move catcher's accessible names. No property test found a product bug.
+
+## 2026-10-12 23:20 — P3: the first CI run's two failures
+GitHub's Windows runner keeps its temp folder under a short (8.3) name, so the dev shortcut's remove step, which compared paths as text, missed its own shortcut; it now compares long paths, and its tests compare resolved paths. On Ubuntu a kx-ui test missed a warning because `tracing` cached a log line as unheard while another test thread installed its own capture; one capture now serves the whole test binary and sorts warnings by thread. The full suite passes here with a short temp folder, and the capture tests passed 40 runs in a row.
+
+## 2026-10-12 22:52 — P3: the Caps Lock light follows a press outside the keyboard
+The owner's hand check found that Caps Lock pressed outside KeyXtend left its light unchanged until the next key click, as nothing asked for a redraw. The relabel tick now also redraws the state when Caps Lock changed since the last state shown, so the light follows within `relabel_ms`. Narrator read the keys and top-bar buttons clearly in the same check.
+
+## 2026-10-12 22:34 — P3: the branch review's three fixes
+A let-go now ends a key's hold only when that key is the one held, so a late let-go from another key never stops a repeat. Both settings files now share one range check in `kx-module-api`. The frame log's setting and the kx-ui security note now say its press times show the typing rhythm, so it stays off while typing anything private.
+
+## 2026-10-12 22:20 — P3 done: the keyboard core (v0.1)
+The keyboard types English, French and Arabic from a no-focus uiAccess window, with modifiers, key repeat, act on press, three looks, the bubble and the tray. The owner passed every hands-on check, and G1–G4, G9–G11 and G25 passed; G13 and G8 are partial with the owner's acceptance (test report 2026-10-12). Start-up at about 527 ms against 500 and a frame count that disagrees with the screen after a reboot go to P14; a tip that misses after a look change goes to P13.
+
+## 2026-10-12 17:46 — P3: G8 says which tip key misses and which churn step grows
+G8's churn now polls through each tip rest and reports each key's hits and show times, with warm-up round 1 kept apart, and reads memory after each step of a round with a fitted slope. It showed the miss is whichever key is hovered third after the bubble and theme steps, not Shift, and that the themes step carries most of the commit growth.
+
+## 2026-10-12 15:11 — P3: a pressed key lights as fast as Windows' own keyboard (ADR-0025, ADR-0026)
+A pressed key now draws its press frame first and types right after, so its light shows in a median of 14.2–14.6 ms on the 144 Hz development PC, against 28.1 ms before and 14.2–14.5 ms for Windows' On-Screen Keyboard measured the same way. G8's rule now matches Windows' keyboard: the median within 2 frames and the slowest within 3, each plus the median screen copy. Frames keep the refresh wait, as showing them at once dropped 142 frames in G8 (ADR-0026). A frame log (`[ui] frame_log`) times each step of a press for later work.
+
+## 2026-10-12 13:20 — P3: letters type into scrcpy, the phone mirror
+scrcpy reads letters and numbers only as real key presses, so the keyboard's text never reached the phone while Space, Enter and Backspace did. `[keyboard] key_apps` now lists `scrcpy.exe` by default, so it gets key presses in its own layout, and the owner confirmed typing in WhatsApp through it. A one-click switch to add any app to that list is saved for P13.
+
+## 2026-10-12 08:30 — P3: keys act at the press, so a slip never cancels them (ADR-0024)
+A key now types the moment the button goes down, as on a real keyboard and Windows' On-Screen Keyboard, so a hand that slips while the button is down no longer cancels or redirects it; a held key repeats until let-go wherever the pointer slips. Every other control acts at let-go wherever the release lands, and the move grip and corner ignore a double click's second click. G2 now clicks like a person, each press held 0.4 s with a 2 px slip, and the owner's hands-on check passed with natural slips in English, French and Arabic.
+
+## 2026-10-11 22:09 — P3: the gates guard the owner's mouse and count frames only while keys animate
+While a gate drives the mouse, a guard drops the owner's own mouse input and counts it; one physical click gives the mouse back and stops the gate (owner's choice). The guard ends the gate when Windows silently drops its hook, which happened while osk.exe was running, and it stops after a time limit. G8 now counts lost frames only while a pressed key sinks and rises, timed by each frame's present, and the pop-up churn compares the medians of its first and last rounds.
+
+## 2026-10-11 19:53 — P3: a pressed key shows at once, in its own shade
+A pressed key sinks on the next frame, so a quick click always shows. Light looks and high contrast give it its own darker shade, made from one shared press token; the owner approved it from rendered pictures.
+
+## 2026-10-11 17:10 — P3: hold a key to repeat it
+Holding a character key, Space, Enter, Backspace, Delete or an arrow types it again after 0.8 s, then 10 times a second, as on a real keyboard; with Ctrl, Alt or Win latched, a held key acts once. The delay, the speed and an off switch are settings (`[keyboard] repeat`, `repeat_delay_ms`, `repeat_every_ms`), which P13's settings window will explain in EN, FR and AR. A `Repeat` state machine with an injected clock decides each tick, and one timer per window ticks only while a key is held.
+
+## 2026-10-11 16:20 — P3: G8's churn warms up for five rounds and lists each round
+G8's pop-up churn now runs five warm-up rounds before it measures (owner's decision), and its result lists the memory after each measured round, so a failed run shows a steady climb or a single jump. A round that fails keeps the readings taken so far, and the app's debug churn shows a key's tip, the language list and the bubble each round.
+
+## 2026-10-11 11:40 — P3: freed heap pages go back after a look change (ADR-0023)
+After a theme or light/dark change, the app asks Windows once to give back the heap pages the old look freed, through the platform's memory port. The first look change still keeps about 19 / 31 MB in Native, which P13 investigates.
+
+## 2026-10-11 10:43 — P3: three leaks fixed in the theme switch
+Qt 6.11's soft shadow never freed its default material, a theme switch let QML read the new look before its fonts loaded, and each shown window kept the old look's cached graphics. All three are fixed, and only debug builds hold the churn's test QML.
+
+## 2026-10-11 01:20 — P3: the key diet, each key makes only what it shows
+Each key builds only the parts its kind needs, an icon provider tints the icons so no icon needs its own effect, and glows and lights exist only while they show. Each icon is a texture of its own, so the saved pictures repeat exactly.
+
+## 2026-10-10 23:15 — P3: texts carry no hidden bidi marks (ADR-0022)
+Texts no longer carry LRM and RLM marks, which made Qt search every font for them. The language list draws OS names plainly, and Arabic joins a list with و, so Latin names keep their order.
+
+## 2026-10-10 20:50 — P3: one graphics device for every window (ADR-0021)
+All windows share one graphics device and draw on the GUI thread, which took idle memory from about 215 MB to about 127 MB in a harness and stopped each pop-up from adding a device of its own. Only the look's fonts load, from Rust before QML, and a lost graphics device rebuilds the windows where the user left them. The budget is now 100 MB working set and 140 MB commit (G8).
+
+## 2026-10-10 18:00 — P3: fix round F, windows and G9
+After a scale or screen change, the keyboard keeps its place in pixels and is placed again from fresh screens, also when the change comes during a move or resize, so a moved keyboard is never lost off-screen. The shadow hides during a live resize instead of trailing it, and the guard brings back a dropped window's whole family, owners included, and checks again after another program's call ends. G10 keeps no other app's labels, and G9 records each window's owner and guard state; G9's pass waits for the next installed run.
+
+## 2026-10-10 17:30 — P3: fix round F, key faces in Arabic and Dolch
+Arabic letters sit centred again, and a key whose base is an Arabic letter shows no AltGr corner, as on Windows' own keyboard; the owner chose this from rendered pictures. A key that types nothing with Shift or AltGr shows empty and a click sends nothing, from one rule in the OS-free core, while a Ctrl, Alt or Win latch still sends the shortcut. Corner legends are 20 % smaller with their own top, bottom and side margins, a Quick test fails when any corner touches a main legend, and a new picture test (`KX_PICTURES`) renders every theme for review.
+
+## 2026-10-10 16:10 — P3: G8 measures commit, a warm-up and pop-up churn
+G8 now reads private commit beside the working set and judges both (100 MB and 140 MB, ADR-0021), after a set warm-up and never trimming. A churn of tips, the bubble, the theme cycle and the List design's language list checks that memory stays flat, after PresentMon's capture so frame drops are judged as before. G11's top scale is 175 %, the largest Windows offers on the development PC's screen.
+
+## 2026-10-10 12:50 — P3: fix round E, display scale, Arabic marks and legends, and the GPU
+The windows now keep their size and place across a display scale change: Qt left each native window as it was, so a new `Rescale` part sets the bound values again, and the keyboard cuts itself and is placed again in the new pixels. In Dolch, marks on their dotted circle take Noto Sans Arabic (Rubik lacks U+25CC), and a wide Arabic letter over an AltGr legend rises 6 px so they no longer touch. The app now pins Qt to the lowest-power GPU through DXGI; it was already on the AMD iGPU here, and the large memory comes from one Direct3D device per shown window, a finding for a later ADR.
+
+## 2026-10-10 11:08 — P3: fix round D, the last fixes before the module-done gate
+The window guard now stops a repeat lift per window, so a window dropped inside another window's lift is lifted back too, the likely cause of G9's lost shadow, and G10 matches right Shift as Windows reports it. A resize saves only a size it changed and never one the settings refuse, the Keys route sends `AltGr` as left Ctrl and right Alt, the D-pad stays inside its columns, and placement keeps the resize corner on the work area. A key takes its tip back on leave even when its note went, a failed G10 step lets its latch go, and G13 finds the keyboard before it reads the look settings. G10's texts now name the keys it skips, and the keyboard's security note says the P3 manual check must still confirm who can press a key.
+
+## 2026-10-10 10:30 — P3: screen readers can toggle latch keys and language rows
+UI Automation's Toggle on a checkable control asks Qt for its toggle action, not the press, so a reader that toggled Shift or a language row did nothing. Keys and rows now answer both actions the same way, and a dimmed key still ignores both. The reader checks moved into their own Quick test file.
+
+## 2026-10-02 14:18 — P3: kx-review fixes for the gates, the test window and the docs
+G10 now presses every key the way a screen reader does, except dead keys and keys that type nothing in the layout in front, and checks what reaches the test window, and G13 stops early when the keys cannot take the accent and compares only the keys' solid faces. G1 to G3 now give a verdict (G2 also checks the caret), G19 and G23 report partial when part of the gate did not run, and G23 now tests the password. The test window logs each key and has a name screen readers read, G26 types every character key, and G9 and the launchers put back or close exactly what they changed or opened. The security notes are marked reviewed, later work is in the item files, and the move map shows where P3 left each spike part.
+
+## 2026-10-02 13:04 — P3: round B's second pass, a size floor and one row source
+A hand-edited `size_min` now has a floor (0.8, where every key cell stays 24 px across), as `size_max` has a ceiling; a value past either goes back to its default with the reset notice, and the keyboard's defaults name both bounds. A size step that lands on another screen fits that screen, the fake sink refuses a key the defaults lack as the store does, and a `Legend`'s debug print hides what Shift and Caps Lock show. The drawn check takes the board's row from the keyboard face instead of a copy in the theme, so the accent waits for the face, and the theme README names the check's limit at the capital height. The stage errors moved into their own `StageError`.
+
+## 2026-10-02 12:24 — P3: the look's contrast measured where the text sits
+The drawn check now places every legend as the keyboard lays it out, from the board's row, the theme's gap and its font's metrics, so it no longer asks for colours darker than readability needs. Every colour the owner approved is back unless it still fails where its text sits, and those moved by the smallest step that passes: the light rings, the Dolch teals, some legend_2 greys, and Dolch dark's hover at 4 % (Native and ET66 keep 8 %). The lit size letter is plain text with a ring-coloured pill under it, Cycle's current dot is larger, and the bubble's icon, the tray menu's icons and a hovered row's badge are checked too. The plain-text check reads one-line and quoted text elements, and the README accepts the see-through plate until Settings turns it on (P13).
+
+## 2026-10-02 11:25 — P3: kx-review fixes for the modules, kernel, platform and tools
+The keyboard now opens no larger than its screen: `size_max` has a ceiling, the size step and presets must fit and rise, and a size too big for the screen it lands on is shrunk for the run without being saved. Debug output hides latches and Caps Lock, both modules share one Arabic script table, a property run pins the dead-key wait and what each key types, and the bubble comes back when the keyboard module restarts while minimised. Settings refuse a key the defaults lack, a file nested too deep counts as damaged, tidy D6 bans toml's `unbounded` feature, kernel errors are logged by kind, and the fake host and sink refuse what the kernel refuses. On Windows the guard refuses kept styles that never land, the tray reports a message it cannot queue, a hidden window's loop ends once stopping, and the stage check refuses any file off its list.
+
+## 2026-10-02 10:05 — P3: kx-review fixes for the keyboard's look and QML
+kx-theme now checks every text, icon and mark the keyboard really draws, on its cap's gradient, under hover and press and on the see-through plate, and the Dolch, ET66 and Native tokens were nudged until all pass; the Carousel's faded side names are the owner's one named exception. A system accent stays only while the keyboard stays readable, and high contrast draws flat caps with Windows' own colour pairs. Every control now gives UI Automation its text key as its id, the move catcher's title is translated, `close` became `putAway`, and new Quick tests cover the two-click move and resize and units on a scaled screen. A static test keeps all QML text plain, the guard holds no borrow while it moves windows, and an open language list closes on a click even with one layout left.
+
+## 2026-10-02 00:30 — P3: final review fixes for saving, the language key and tests
+After a save fails on a locked settings file, moving or resizing the keyboard back now changes the value the store keeps, so stop no longer saves the abandoned one. With one layout installed, the language key does nothing in every design, the List included, and its Arabic tip reads «لا يوجد سوى لغة واحدة مثبّتة للوحة المفاتيح». A full message queue can no longer hang quitting, a refused `[ui]` value is logged by its kind, and `Typing`'s debug print hides the typing state. Several tests now prove what they claim (the locked file, a poisoned lock, a blocked module, NaN pixels, the plate token, golden layout ids), and the window tests find keys by their UI Automation id.
+
+## 2026-10-01 23:57 — P3: final review fixes for tools, docs and item notes
+The stage now counts its 80 MB budget in MB of 10⁶ bytes, as G8 and spec §10 do, and a test keeps G8's folder limit equal to the stage's. G10 and G26 now expect a key that types Arabic marks to be named as the product names it, in words or on a dotted circle, and two long tests, a G9 comment and the spike clock's unit are tidied. The roadmap, spec, security notes, ADR-0016, CONTRIBUTING, credits and work log wording follow the review. P3's item file now lists the owner's look, tray, tip and Arabic AltGr checks and G8's accepted weak-mode `partial`, and the notes for later items moved to P6, P7, P11, P13 and P14.
+
+## 2026-10-01 23:40 — P3: final review fixes for Arabic marks and the language key
+Arabic AltGr marks now sit on a dotted circle in the Arabic font, and screen readers name mark keys by their Arabic names. With one layout installed, the language key's tip and description say so. The keyboard relabels as soon as it shows, the window guard reads the pop-up's title at each try, and relabel_ms takes 50 ms at the fastest. Small review gaps are closed: a second-Quit test, a tip-alone z-order test, a Qt wide-environment probe and several doc fixes.
+
+## 2026-10-01 — P3: the docs pass
+The spec, roadmap, architecture map, move map, README and CONTRIBUTING now describe the keyboard as built, with the Qt set-up and the P3 edge cases. The three P3 security notes are corrected, and docs name settings instead of repeating their values. `kx-review` now fails a `tracing` call on an input path that could log typed text. Each P3 item note is marked handled or waiting for the manual check, or moved to the item that owns it.
+
+## 2026-10-01 — P3: the late review's fixes for gates G8–G26
+G8 now keeps the PresentMon it starts and reads the CSV only once PresentMon has stopped, and a copy it cannot open or cap gets Quit until it listens or ends. G8 and G9 size the keyboard back after every run, and G9 fails when no size press changed anything. G9 also writes click-through on to every window, and the guard must refuse it where the window took clicks at first. G13 joins a part that changed while the keyboard followed, and the G26 job prints its logs after any failure or timeout.
+
+## 2026-10-01 — P3: the guard keeps the keyboard on top and clickable, and settings are peeked safely
+The window guard now lifts a guarded window straight back when another program drops it out of the topmost band, which `HWND_NOTOPMOST` does without `WM_STYLECHANGING`. It keeps click-through only on windows that had it when first guarded, so no program can make the keyboard click-through. `kx_settings::peek_section` reads a section through the store's own reader, so migrations run, a bad value takes its default and a newer version gives the defaults; `[keyboard] relabel_ms` gets a ceiling, so a hand-edited value cannot stall the labels or the gates.
+
+## 2026-10-01 — P3: the review's fixes for gates G8–G26
+Weak mode now caps the job at 30 % of each allowed core's time, and the spike's voice worker gets the same fix; `g8 weak` reports `partial`, never a pass, until software drawing is decided. G8 measures idle CPU per core and memory in MB, fails lost characters, starts PresentMon itself when `[g8] presentmon_exe` names it, and asks a copy it could not cap to quit. G13 needs dark mode, the accent and high contrast to each change, G9 sizes the keyboard back to its first size and toggles click-through only where it was, and G11 judges one build's series. The G26 CI job prints the logs after a failure, and the roadmap points G26's Japanese part to F16.
+
+## 2026-10-01 — P3: the gate review's fixes for `close` and G25
+`kx-gates close keyxtend` now posts Quit to the running copy's command window and starts nothing, so no program can borrow the gates' uiAccess rights. G2, G4, G10 and G25 wait one relabel period read from the running copy's own settings, and record that wait in their result lines. G25 clicks past the language key's back part, using the theme's `back_share`, and skips the List design with a reason. A new `kx_settings::peek_section` reads one section the way a later copy of the app does, and both the app and the gates use it.
+
+## 2026-10-01 — P3: gates G8–G11, G13 and G26
+G8 times the product's start-up from its own log, idle memory and CPU, its folder size, key highlights, resizes, click-to-character and a bus publish against spec §10, with a `weak` mode capped like the spike's, and reads a PresentMon CSV when the owner records one. G9 checks the window flags after outside changes, hiding, showing and resizing; G10 walks and presses every key by UI Automation; G11 records size and sharpness per display scale; G13 times how fast the keyboard follows Windows' look and saves pictures for the owner. G26 checks German, Russian, Hebrew and Persian labels and typing on GitHub's Windows runner, where `--layout` now reports a layout that did not come back. The top bar's buttons and the bubble give UI Automation their `bar.<id>`, and `capture-layouts` follows the layouts module's scan list.
+
+## 2026-10-01 — P3: gates G2–G4 and G25 aim at the product
+Each key now gives UI Automation its board id (`esc`, `c-0x001E`, `lang`), and gates G2, G3 and G4 find the product keyboard and click each key at the centre of the box UI Automation reports, so the top bar no longer shifts their clicks. G25 clicks the product's language key, after one relabel period so the key steps from the layout in front. `kx-gates close keyxtend` runs the app's own `--quit` and waits for its process to end, while `close qt` still closes the frozen spike face; the `--quit` flag now comes from the one command table the app and the gates share.
+
+## 2026-10-01 — P3: the spike keeps no keyboard part
+The spike's keyboard controller (`kbctl`), `sysui`, `langinfo`, `facecfg` and `lookcfg` are deleted, with the face-only helpers left in `layout`, `screen`, `window` and `place`. `spike.toml` drops `[look]`, `[size]`, `[keys]`, `[bar]`, `[assets]` and the guard lines, and keeps `[keyboard]` only as the frozen face's title and stage-1 geometry for the gates and the tools row. Gate G7 now reads the face's Settings key name from `kx-gates.toml [g7] opener`, and spike-core no longer depends on kx-theme or kx-mod-layouts.
+
+## 2026-10-01 — P3: CI builds and tests the Qt app
+The Windows check now installs the Qt that the stage settings pin (a pinned action over the reviewed aqtinstall), sets `QMAKE`, runs every workspace test, the Qt Quick tests (any warning fails the job) and `cargo xtask stage`. The Linux check names its packages in lists that must cover the workspace, builds kx-ui without Qt and leaves the app out. Tests that need a font Windows ships share one rule that skips them by name on an image without it, and the label-fit test moved to `tst_fit.qml`. A G26 job stays skipped until its gate exists.
+
+## 2026-10-01 — P3: pop-ups land in front, and tips hide for the guard
+The window guard port now takes a `top` title, so a banner or tray menu that shows again at its old place lands in front of the keyboard; a native test shows a menu shown again under the keyboard and in front once named. A shown tip now hides as a guard run starts, since a guard run that lifts it also lifts the keyboard over the banner, which a second native test pins. A tip's lift is now checked to find the tip shown, and static checks keep the window titles distinct across the three languages and every window file topmost. The keyboard's place helpers moved to `Spots.qml`, so `KbWindow.qml` has room again.
+
+## 2026-10-01 — P3: the stage review's small fixes
+`dev-install` now works out the Start-menu shortcut before it signs, installs or removes anything, so an `APPDATA` outside the user's profile stops it with nothing changed. The stage settings refuse `libs` or `plugins` that are not `.dll` files, which the check would never read, and a network library or importer missing from `libs`, so a rename cannot leave the guard idle. The agree test now finds the app's own QML module by the URI kx-ui exports, and requires every plugin a staged `qmldir` names, optional ones too, unless a library the program links registers that module (today only Qt Qml).
+
+## 2026-10-01 — P3: tips in front of every window, and a steady guard test
+A tip now lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`, through the window guard port), so a top-bar tip no longer hides under the banner or the language list that the guard lifted after the keyboard; a native test shows the old bug and that the keyboard stays under the banner. Each tip now stays on the screen under its button, so a keyboard across two monitors keeps every tip by its key. The flaky guard test now starts its window topmost, as Qt makes ours: under load it failed 1958 of 3000 rounds before and 0 of 5000 after, and 2000 runs of the window tests passed. A Qt Quick test checks that every guarded window asks Qt to stay on top, a rule now in the guard's doc and `ARCHITECTURE.md`.
+
+## 2026-10-01 — P3: the stage review fixes
+The stage check now lets only Qt Qml and Qt Quick import Qt's network library, takes only the reviewed Qt 6.11.2, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML. A stage that fails its copy or check is removed, and `dev-install` re-runs the check on an app folder before it signs anything. An agree test maps every QML import to a staged `qmldir`, and the dev shortcut must land inside the user's profile.
+
+## 2026-10-01 — P3: the tip fix pinned by a native test
+A Windows test now lets the guard lift a window over two hidden tips and checks that only the tip it owns stays above it; it fails when the tip has no owner. The Qt Quick tests also check each tip's no-focus, click-through and tool-tip flags, a quick sweep over four keys, and the bubble's wait and screen, and every hover test lets the real pointer pass through its windows (`pointer.js`). Each tip now stays on its own window's screen, so the bubble's tip no longer borrows the keyboard's. Top-bar tips under the banner or the language list are noted in `docs/items/P3.md`.
+
+## 2026-10-01 — P3: `cargo xtask stage` and the Start-menu shortcut
+`cargo xtask stage` builds KeyXtend in release and stages it in `target/stage/keyxtend` with only the 21 Qt files it was measured to load (46 MB of the 80 MB budget), replacing the spike's PowerShell staging. Its check reads every staged program's import table and refuses TLS, network-information and QML debugging plugins, any import found neither in the stage nor in System32, and any library nothing imports. A run of the staged release app loaded everything from the stage and nothing from planted Qt paths, `PATH` or the working folder, and wrote nothing to `%LOCALAPPDATA%`. `dev-install` now adds a "KeyXtend (dev)" shortcut to the user's own Start menu, and `--remove` deletes it.
+
+## 2026-10-01 — P3: key tips no longer hide behind the keyboard
+Each run of the window guard (when the keyboard, a banner, a menu, the list or the bubble shows) lifts the keyboard above every other window, and the tip window, owned by no window, then showed behind it, so the tips of keys, the D-pad and the resize corner vanished. The keyboard now owns its tip and the bubble owns its own, so Windows keeps each tip above its window (ADR-0013); a new language still closes both. Qt Quick tests check the owners and hover every tipped control in English, French and Arabic, at the smallest size and in another theme.
+
+## 2026-10-01 — P3: key icons back on whole pixels
+Only named keys that show a label are now centred exactly; keys that show an icon are centred by anchors again, so their icons sit on whole pixels of their key, as in P1. A test checks both at each size preset in every theme, and that a key centres again when a theme drops or brings back its icon. The label fit test now also runs each preset, in case one sits off the size steps.
+
+## 2026-10-01 — P3: Qt's variables cleared by the names Qt reads
+Qt reads the C runtime's narrow copy of the environment, where the ANSI code page can turn a fullwidth `ＱＴ_` or a non-ASCII last letter into a plain Qt name, so such names could slip past the clearing. The app now clears every name with a Qt prefix in that copy, and its manifest names the UTF-8 code page outright, under which no name narrows to a Qt one; tests check both. One cfg from the build script, set with the manifest's uiAccess, now also turns on the pinned load paths and hides the console.
+
+## 2026-10-01 — P3: the keyboard speaks the language of the layout in front
+The words on keys, tips, screen-reader names, the banner, the language list and the size letters now follow the language of the layout in front, so an English layout shows Esc and Del even on a French Windows; the tray icon and its menu keep the system's language. A layout language without texts gets English, as does the time before a layout names one, and `[ui] language` can still pin one. Arabic now flips text only: no bar, list, banner or menu mirrors. ADR-0020 records the owner's decision and supersedes ADR-0017's language rule.
+
+## 2026-10-01 — P3: the app's start hardened for uiAccess
+The app now clears Qt's variables before Qt starts and turns off Qt Quick's shader cache on disk, so no other program of the user can load code into the uiAccess process or leave a cache it reads. Release builds load libraries only from the app's folder and System32, and Qt's plugins and QML modules only from the app's folder. A later copy now honours the user's `[ui] send_tries` and `send_wait_ms` and runs itself when the running copy quits meanwhile, a failed boot is logged at the kernel's defaults, and a panic's place reaches standard error until the log opens.
+
+## 2026-10-01 — P3: the first real app types
+`apps/keyxtend` now runs the kernel, the layouts, keyboard and UI modules and Qt over the Windows adapter, and types into other apps without taking focus. A second copy hands Show or Quit to the running one, with tries timed by the new `[ui] send_tries` and `send_wait_ms`, and stops when no copy answers. The log opens between the settings load and the modules' start, a panic logs only its place, and Quit stops the modules, ends the UI and removes the tray icon. Tests cover the start-to-stop order over fakes, the texts, icons, paints and scan codes the board needs, and that the language shown always matches the legends.
+
+## 2026-10-01 — P3: key labels centred exactly
+Named-key labels are now centred by hand, since anchors rounded their centre to whole pixels and pushed some labels up to 0.8 px past Dolch's top face. The fit test now checks every size step from the smallest to the largest, in one hidden window per theme and language. The size preset limit moved to the keyboard face port, so the UI no longer depends on the keyboard module.
+
+## 2026-09-30 — P3: tray menu review fixes
+The tray menu now stays open for `[ui] tray_grace_ms` (500 ms) when another window comes to the front just after it opens, as the Windows 11 hidden icons can do, and a press on the banner or the language list closes it too. The icon's changes go to the taskbar from its own thread, so a hung Explorer can no longer freeze the keyboard, and the icon is sized and redrawn for the taskbar screen's scale. Arabic rows in the language list no longer clip, and the root's wiring moved into `App.qml`, where Qt Quick tests check every way the menu closes. ADR-0019 records the tray decision, and ADR-0016 is back to its accepted text.
+
+## 2026-09-30 — P3: labels fit Dolch's top face
+On Dolch's sculpted caps, a named key's label now fits the lighter top, plus a 1 px allowance per side from a theme token, which is how far P1's AltGr already ran. The fit test covers every size preset and the largest size, and checks that the theme's own font draws each label. The keyboard's settings now refuse more size presets than the top bar names.
+
+## 2026-09-30 — P3: notice banner, tray icon, language list and theme button
+The keyboard now shows notices in a themed banner that queues them, counts what waits and offers Try again only when the app can restart what failed. A tray icon, drawn as a theme badge, opens a menu with Show keyboard and Quit, through a new `Tray` port with a Windows adapter and a fake. The language key gains its Cycle design (globe, name, one dot per layout) and its List design, whose list pages five rows and is driven by the board's arrows, Enter and Esc; the top bar gains a theme button. A press on the keyboard also closes the menu, and the Arabic UI mirrors the banner, the menu and the list.
+
+## 2026-09-30 — P3: size buttons and key labels fixed
+After a Smaller or Bigger step between presets, no size button stays lit, and each preset in the settings gets its own button. English and Arabic keys print the P1 words again (Caps, AltGr, Back), and every label shrinks to fit its cap, down to a theme token's size, so French words such as "Échap" stay on the key's face. The Qt Quick tests now load the bundled fonts and icons as the app holds them, and any warning fails them.
+
+## 2026-09-30 — P3: Quit stays the last request
+Try again now reaches the app while the hub holds its lock, so a second copy's Quit can no longer overtake it, and a race test pins the order. If the app's request thread is gone, Quit now ends the keyboard's windows itself. The supply-chain notes and the security note were corrected.
+
+## 2026-09-30 — P3: the keyboard's views move into the product
+The keyboard window, its keys, top bar, D-pad, resize corner, bubble and tooltips moved from the test build into `kx-ui` with the same look, now drawn from the keyboard module's board and the translated texts. Keys that come later are dimmed and say "Coming in a later version", the Arabic UI mirrors the top bar, and fonts and icons are compiled into the app. Three P1 findings are fixed: text is gray-edged without ClearType fringes, hover shows a Highlight outline in high contrast, and icons are tinted with public Qt Quick only. Qt Quick tests now check the views over the real look, texts and board.
+
+## 2026-09-30 — P3: UI review fixes: one quit path
+Quit now has one path, from the tray or from a second copy: it reaches the app once and then closes the request queue, so the hidden keyboard process can always end. ADR-0018 records the one set-once hub the QML objects share. Tidy F3 now finds allows written over several lines and is not fooled by raw strings or nested comments, with property tests. The guard starts from its first try on each run, silent failures now warn, and `cargo deny` is clean.
+
+## 2026-09-30 — P3: one table of hidden marks
+The log and the notices now share one table of the characters that can split or reorder a line (`kx_module_api::HIDDEN_MARKS`, with `is_hidden` adding every control character). The log escapes them as before; notices now drop line breaks and control characters too, not only bidi controls, so a setting name holding a line break can no longer split a notice.
+
+## 2026-09-30 — P3: the UI's Qt build and the `ui` module
+`kx-ui` now builds the QML module `KeyXtend.Ui` with two bridge objects moved from the test keyboard: `Ui` for the look, texts, notices and commands, and `Keyboard` for the board, clicks, the no-focus guard and the window's shape. A new `ui` module owns the `[ui]` settings (theme, mode, language, timings and the contrast floor, which can never go below WCAG AA) and a hub that shows notices in the user's language and hands Try again and Quit to the app. Tidy's new rule F3 allows unsafe code in `kx-ui` only in its bridges, each block with a `// SAFETY:` comment. The texts, settings and hub still build and test without Qt, for the Linux checks.
+
+## 2026-09-30 — P3: text review fixes
+Arabic tips and screen-reader names now call keys that print a Latin word "مفتاح" and that word (مفتاح Esc, مفتاح Shift), keeping Microsoft's terms for the rest; the kernel's settings carry the name KeyXtend. French notices name the part in guillemets, and a reset that can name no setting now says only how many. Bidi controls inside names are dropped before they reach a text, and ADR-0017 was corrected on Qt Linguist, plurals and language choice.
+
+## 2026-09-30 — P3: English, French and Arabic texts
+Every text the keyboard shows now comes from one Fluent file per language, compiled into the new `kx-ui` crate: key names and labels, the top bar, the tray menu, notices, and module and theme names (ADR-0017). The UI follows the Windows display language (EN, FR or AR, else English), and a text missing in French or Arabic falls back to English. French keys print French words (Échap, Suppr, Verr. Maj) and Arabic keys the English words Arabic keyboards print; Arabic counts follow CLDR's plural forms, with a fix for a library bug from 103 up. Notice arguments are now typed (text, count, list), and the theme names and the space bar's joiner moved into the translations.
+
+## 2026-09-30 — P3: the keyboard face and the language key
+The keyboard now gives the screen everything it draws: each key's box, name and icon, the legends and lights, and dimmed side keys marked "Coming in a later version". The language key works in all three designs: Carousel, Cycle, and a List the arrows, Enter and Esc drive, five rows a page, with Arabic shown right to left. A click made while the app's layout just changed sends nothing and redraws, so the user clicks again, and failed sends or switches show a notice. Golden files pin the English, French and Arabic views for the Qt screens to come.
+
 ## 2026-09-29 — P2 done: kernel, settings and test tools
 The kernel starts the feature modules in dependency order, keeps a failed or crashing module from stopping the rest, and offers Try again; modules talk through a typed event bus and share services gated by capabilities. Settings live in one readable `settings.toml` in the data folder that holds only the user's changes (ADR-0015): a bad value resets alone, a damaged file is set aside and the last good copy comes back, and the log keeps this run and the previous one with sensitive fields hidden. The P1 test tools moved into `tools/kx-gates` and `tools/kx-target-window`, and the Slint and Tauri prototypes are gone. Reviews found and fixed about 60 issues, 720 tests pass, and on Windows G1, G2, G5 and G12 passed again and the owner confirmed the settings file and its repair.
 
@@ -66,7 +270,7 @@ The README, spec §1 and the project docs now describe KeyXtend and its target u
 Three research passes re-checked the UI toolkit for all three systems. Qt 6 Quick with a Rust core is now recommended over Slint, and Tauri is rejected on evidence (WebView2 fails under uiAccess, and it uses about 200–320 MB of memory). Phase 1 became a measured test round (ADR-0011): Qt vs Slint, with a quick Tauri check, on the development PC, in weak mode, on GitHub's Mac and Linux machines and in a Linux virtual PC. The owner set a download limit of 80 MB, chose the system accent colour for Native Adaptive, and made the Linux helpers opt-in.
 
 ## 2026-09-26 — Project named, moved to D:, rules added
-The project is now called KeyXtend ("the eXtended keyboard"): Claude's recommendation, built on the owner's "Extended Keyboard" idea, and the owner can still rename it. The code prefix is `kx-` and the project root is `D:\Projects\KeyXtend`. New rules were added: nothing hardcoded, short texts, small files, review every file, plans without code, and push only with the owner's yes. New skills: `kx-review`, `kx-plan`, `kx-feature`. The future features F1–F12 are listed in `docs/FEATURES.md`.
+The project is now called KeyXtend ("the eXtended keyboard"): Claude's recommendation, built on the owner's "Extended Keyboard" idea, and the owner can still rename it. The code prefix is `kx-`. New rules were added: nothing hardcoded, short texts, small files, review every file, plans without code, and push only with the owner's yes. New skills: `kx-review`, `kx-plan`, `kx-feature`. The future features F1–F12 are listed in `docs/FEATURES.md`.
 
 ## 2026-09-26 — Stack and architecture verified
 Three research passes verified Rust + Slint (no Windows showstopper), free local AI (whisper.cpp), licences (GPL-3.0-or-later) and free signing (SignPath). The keyboard process itself must hold uiAccess, so untrusted data and the network moved to worker processes. The spec, `ARCHITECTURE.md`, ADRs 0001–0010 and the roadmap (P0–P15) were written.

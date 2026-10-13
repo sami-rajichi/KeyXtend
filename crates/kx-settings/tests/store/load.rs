@@ -1,8 +1,8 @@
 //! Loading: missing, bad, older and newer sections, per-value repair, kept entries and broken specs.
 
 use crate::spec::{
-    DEFAULTS, HOLD, Hold, SPEC, VERSION, defaults_with, folder, newer, open, reset, table,
-    with_file,
+    DEFAULTS, HOLD, Hold, SPEC, VERSION, defaults_with, folder, newer, open, reset, reset_count,
+    table, with_file,
 };
 use kx_module_api::{ModuleId, SettingsSpec, validate_as};
 use kx_settings::Store;
@@ -32,7 +32,7 @@ fn one_bad_value_resets_alone_and_is_named() {
     let (_dir, files) = with_file("onebad", text);
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&defaults_with("max_ms = 900")));
-    assert_eq!(report.notices, vec![reset("sound")]);
+    assert_eq!(report.notices, vec![reset(&["sound"])]);
     assert!(store.needs_save());
     assert_eq!(
         store.to_text().unwrap(),
@@ -60,7 +60,7 @@ fn a_pair_valid_only_together_survives_one_bad_value() {
     let (mut store, report) = open(&files);
     let pair = defaults_with("min_ms = 6000\nmax_ms = 9000");
     assert_eq!(store.get(HOLD), Some(&pair));
-    assert_eq!(report.notices, vec![reset("sound")]);
+    assert_eq!(report.notices, vec![reset(&["sound"])]);
     store.save().unwrap();
     let saved = fs::read_to_string(&files.settings).unwrap();
     assert_eq!(saved, "[hold]\nversion = 3\nmax_ms = 9000\nmin_ms = 6000\n");
@@ -76,7 +76,7 @@ fn a_value_that_fits_only_beside_another_survives_a_bad_value() {
         store.get(HOLD),
         Some(&defaults_with("min_ms = 10\nmax_ms = 50"))
     );
-    assert_eq!(report.notices, vec![reset("sound")]);
+    assert_eq!(report.notices, vec![reset(&["sound"])]);
     assert_eq!(
         store.to_text().unwrap(),
         "[hold]\nversion = 3\nmax_ms = 50\nmin_ms = 10\n"
@@ -91,7 +91,7 @@ fn a_value_that_fits_only_beside_another_survives_two_bad_values() {
     let (store, report) = open(&files);
     let pair = defaults_with("min_ms = 10\nmax_ms = 50");
     assert_eq!(store.get(HOLD), Some(&pair));
-    assert_eq!(report.notices, vec![reset("extra, sound")]);
+    assert_eq!(report.notices, vec![reset(&["extra", "sound"])]);
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn several_bad_values_share_one_notice_in_key_order() {
     let (_dir, files) = with_file("several", text);
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&defaults_with("max_ms = 700")));
-    assert_eq!(report.notices, vec![reset("extra, min_ms, sound")]);
+    assert_eq!(report.notices, vec![reset(&["extra", "min_ms", "sound"])]);
 }
 
 #[test]
@@ -116,11 +116,11 @@ fn a_section_without_a_version_counts_as_current() {
 }
 
 #[test]
-fn a_section_that_is_not_a_table_is_a_bad_section() {
+fn a_section_that_is_not_a_table_is_a_bad_section_counted_as_one() {
     let (_dir, files) = with_file("notable", "hold = 5\n");
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)));
-    assert_eq!(report.notices, vec![reset("hold")]);
+    assert_eq!(report.notices, vec![reset_count(1)]);
     assert!(store.needs_save());
     assert_eq!(store.to_text().unwrap(), "");
 }
@@ -132,16 +132,20 @@ fn a_version_that_is_not_a_positive_integer_is_a_bad_section() {
         let (_dir, files) = with_file("badversion", &text);
         let (store, report) = open(&files);
         assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)), "{version}");
-        assert_eq!(report.notices, vec![reset("max_ms, sound")], "{version}");
+        assert_eq!(
+            report.notices,
+            vec![reset(&["max_ms", "sound"])],
+            "{version}"
+        );
         assert_eq!(store.to_text().unwrap(), "", "{version}");
     }
 }
 
 #[test]
-fn a_bad_section_with_only_a_version_names_the_section() {
+fn a_bad_section_with_only_a_version_counts_one_and_names_none() {
     let (_dir, files) = with_file("onlyversion", "[hold]\nversion = 0\n");
     let (_, report) = open(&files);
-    assert_eq!(report.notices, vec![reset("hold")]);
+    assert_eq!(report.notices, vec![reset_count(1)]);
 }
 
 #[test]
@@ -166,7 +170,7 @@ fn a_v2_section_runs_only_the_last_migration() {
     let (_dir, files) = with_file("v2", text);
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&defaults_with("min_ms = 300")));
-    assert_eq!(report.notices, vec![reset("delay_s")]);
+    assert_eq!(report.notices, vec![reset(&["delay_s"])]);
 }
 
 #[test]
@@ -175,7 +179,7 @@ fn a_failing_migration_gives_a_bad_section() {
     let (_dir, files) = with_file("migfail", text);
     let (store, report) = open(&files);
     assert_eq!(store.get(HOLD), Some(&table(DEFAULTS)));
-    assert_eq!(report.notices, vec![reset("delay_s, max_ms")]);
+    assert_eq!(report.notices, vec![reset(&["delay_s", "max_ms"])]);
     assert!(store.needs_save());
     assert_eq!(store.to_text().unwrap(), "");
 }

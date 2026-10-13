@@ -1,7 +1,7 @@
 //! Sample modules, service keys and services for the kernel tests.
 //! A sample subscribes, provides, requires and reads its settings, then acts on its switch.
 
-use crate::record::{Did, Log, Mode, SamplePanic, Switch};
+use crate::record::{Did, Grab, Log, Mode, SamplePanic, Switch};
 use kx_module_api::{
     Bus, Capability, Event, Manifest, Module, ModuleCx, ModuleError, ModuleId, ServiceError,
     ServiceId, ServiceKey, Settings, SettingsError, SettingsSpec, validate_as,
@@ -137,7 +137,6 @@ fn accept_all(_: &toml::Table) -> Result<(), SettingsError> {
 }
 
 /// A spec whose checker accepts anything, so the sample's own read is what fails.
-#[allow(dead_code, reason = "only the panics test binary uses it")]
 pub static LOOSE_SPEC: SettingsSpec = SettingsSpec {
     validate: accept_all,
     ..LEVEL_SPEC
@@ -148,6 +147,7 @@ struct Sample {
     manifest: &'static Manifest,
     switch: Switch,
     strict: bool,
+    grab: Option<Grab>,
     log: Log,
     bus: Option<Bus>,
 }
@@ -174,8 +174,11 @@ impl Module for Sample {
         let me = self.manifest.id;
         self.log.push(Did::Start(me));
         self.bus = Some(cx.bus());
+        if let Some(grab) = &self.grab {
+            grab.put(cx.settings_handle());
+        }
         let log = self.log.clone();
-        cx.subscribe(move |_: &Ping| log.push(Did::Ping(me)));
+        cx.subscribe(move |_: &Ping| log.push(Did::Ping(me)))?;
         for &id in self.manifest.provides {
             provide(cx, id, service(id, me.as_str(), &self.log))?;
         }
@@ -197,7 +200,10 @@ impl Module for Sample {
         self.log.push(Did::Stop(self.manifest.id));
         match (self.switch.get(), &self.bus) {
             (Mode::PanicInStop, _) => panic::panic_any(SamplePanic),
-            (Mode::PingInStop, Some(bus)) => bus.publish(&Ping),
+            (Mode::PingInStop, Some(bus)) => {
+                // `Ping` needs no capability, so the bus never refuses it; the test checks who hears it.
+                let _ = bus.publish(&Ping);
+            }
             _ => {}
         }
     }
@@ -208,6 +214,7 @@ pub struct Shape {
     manifest: Manifest,
     switch: Switch,
     strict: bool,
+    grab: Option<Grab>,
 }
 
 /// A sample that needs nothing, provides nothing and starts fine.
@@ -225,6 +232,7 @@ pub fn sample(id: ModuleId) -> Shape {
         manifest,
         switch,
         strict,
+        grab: None,
     }
 }
 
@@ -259,6 +267,12 @@ impl Shape {
         self.switch(&Switch::new(mode))
     }
 
+    /// Leaves its settings handle in `grab` at each start.
+    pub fn grab(mut self, grab: &Grab) -> Self {
+        self.grab = Some(grab.clone());
+        self
+    }
+
     /// A tolerant sample logs a refused service and starts anyway.
     pub fn tolerant(mut self) -> Self {
         self.strict = false;
@@ -271,6 +285,7 @@ impl Shape {
             manifest: Box::leak(Box::new(self.manifest)),
             switch: self.switch,
             strict: self.strict,
+            grab: self.grab,
             log: log.clone(),
             bus: None,
         })

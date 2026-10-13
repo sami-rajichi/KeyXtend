@@ -1,6 +1,8 @@
 // The selection pill (mock-up .selpill): one Copy button with its icon next to selected text, in the theme's badge colours;
 // it never takes focus.
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Window {
     id: pill

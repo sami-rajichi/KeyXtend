@@ -7,7 +7,6 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use spike_core::hold::{Act, Mode};
-use spike_core::inject;
 use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{PostThreadMessageW, WM_QUIT};
 
@@ -15,6 +14,7 @@ use crate::hookhost;
 use crate::hookio::{self, SIM_TAG, Source};
 use crate::hookstate::{Call, Cmd, WAKE};
 pub use crate::hookstate::{Live, Report};
+use crate::keys;
 use crate::win;
 
 /// How the engine runs and whose input it acts on.
@@ -29,6 +29,8 @@ pub struct Setup {
     pub own: Vec<RECT>,
     /// Longest wait for the hook thread to start or answer, in ms.
     pub reply_ms: u64,
+    /// Most hook timings kept for the p99; later calls still run but are not timed.
+    pub samples: usize,
 }
 
 /// The running engine and its hook thread.
@@ -117,5 +119,5 @@ impl Drop for Assist {
 
 /// Plays `acts` as the simulated user, whom automated runs act on.
 pub fn as_user(acts: &[Act]) -> Result<(), String> {
-    inject::send(&hookio::inputs(acts, win::desktop(), SIM_TAG))
+    keys::send(&hookio::inputs(acts, win::desktop(), SIM_TAG))
 }

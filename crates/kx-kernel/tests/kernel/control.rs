@@ -1,12 +1,14 @@
-//! Try again, stop order and switching modules off and on, saved in `[kernel] disabled`.
+//! Try again, stop order, switching modules off and on (saved in `[kernel] disabled`), and a blocked module's
+//! new value.
 
 use crate::record::{Did, Mode, Switch};
 use crate::rig::{Rig, failed};
-use crate::samples::{Alpha, Beta, Gamma, sample};
+use crate::samples::{Alpha, Beta, Gamma, LEVEL_KEY, LEVEL_SPEC, NEW_LEVEL, sample};
 use kx_kernel::{KERNEL, KernelError, Phase};
 use kx_module_api::ModuleState::{Active, Failed, Starting, Stopped};
 use kx_module_api::{ModuleId, ServiceKey};
 use std::fs;
+use toml::Value;
 
 const A: ModuleId = ModuleId::new("a");
 const B: ModuleId = ModuleId::new("b");
@@ -102,6 +104,29 @@ fn try_again_restarts_the_module_and_the_dependents_that_failed_with_it() {
     assert_eq!(rig.log.starts(), [A, B, C]);
     assert!(rig.log.all().contains(&Did::Got(B, A.as_str())));
     assert!([A, B, C, D].iter().all(|&m| rig.state(m) == Some(Active)));
+}
+
+/// B's plan blocks it as a second provider of Alpha, so it waits for nothing and only the block keeps it still.
+#[test]
+fn a_new_value_for_a_blocked_module_is_saved_and_starts_nothing() {
+    let mut rig = Rig::new();
+    rig.add(sample(A).provides(&[Alpha::ID]));
+    rig.add(sample(B).provides(&[Alpha::ID]).settings(&LEVEL_SPEC));
+    rig.kernel.boot().unwrap();
+    let told = rig.notices();
+    rig.log.clear();
+    let set = rig
+        .kernel
+        .set_setting(B, LEVEL_KEY, Value::Integer(NEW_LEVEL));
+    assert!(set.is_ok(), "{set:?}");
+    assert_eq!(rig.state(B), Some(Failed), "its plan still blocks it");
+    assert_eq!(
+        (rig.log.all(), rig.notices()),
+        (vec![], told),
+        "nothing ran"
+    );
+    let text = fs::read_to_string(rig.files().settings).unwrap();
+    assert_eq!(text, format!("[b]\nversion = 1\nlevel = {NEW_LEVEL}\n"));
 }
 
 #[test]

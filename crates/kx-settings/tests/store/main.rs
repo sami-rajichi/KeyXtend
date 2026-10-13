@@ -2,6 +2,7 @@
 
 mod change;
 mod load;
+mod peeked;
 mod props;
 mod recover;
 mod repair;

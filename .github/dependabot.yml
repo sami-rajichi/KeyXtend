@@ -13,7 +13,8 @@ updates:
       prefix: "build(deps)"
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # The workflows, and the local Qt action that pins the Qt installer.
+    directories: ["/", "/.github/actions/qt"]
     schedule:
       interval: "weekly"
     cooldown:

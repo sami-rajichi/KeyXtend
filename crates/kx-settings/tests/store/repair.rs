@@ -1,7 +1,9 @@
 //! Repair bounds: unknown keys are set aside first, and a notice names a bounded number of short keys.
 
-use crate::spec::{DEFAULTS, HOLD, defaults_with, open, reset, reset_more, table, with_file};
-use kx_settings::{KEYS_SEPARATOR, MAX_KEY_CHARS, MAX_NAMED_KEYS};
+use crate::spec::{
+    DEFAULTS, HOLD, defaults_with, open, reset, reset_count, reset_more, table, with_file,
+};
+use kx_settings::{MAX_KEY_CHARS, MAX_NAMED_KEYS};
 
 /// Unknown keys in the long tests: five more than one notice names.
 const TYPOS: usize = MAX_NAMED_KEYS + 5;
@@ -17,10 +19,9 @@ fn typos(count: usize) -> String {
     lines.concat()
 }
 
-/// The unknown keys `0..count`, joined as a notice joins them.
-fn named(count: usize) -> String {
-    let names: Vec<String> = (0..count).map(typo).collect();
-    names.join(KEYS_SEPARATOR)
+/// The unknown keys `0..count`, as a notice lists them.
+fn named(count: usize) -> Vec<String> {
+    (0..count).map(typo).collect()
 }
 
 #[test]
@@ -30,7 +31,7 @@ fn a_typo_beside_a_pair_valid_only_together_rejects_only_the_typo() {
     let (store, report) = open(&files);
     let pair = defaults_with("min_ms = 6000\nmax_ms = 9000");
     assert_eq!(store.get(HOLD), Some(&pair));
-    assert_eq!(report.notices, vec![reset("mni_ms")]);
+    assert_eq!(report.notices, vec![reset(&["mni_ms"])]);
 }
 
 #[test]
@@ -41,7 +42,7 @@ fn a_typo_and_a_bad_value_beside_a_pair_keep_the_pair() {
     let (store, report) = open(&files);
     let pair = defaults_with("min_ms = 6000\nmax_ms = 9000");
     assert_eq!(store.get(HOLD), Some(&pair));
-    assert_eq!(report.notices, vec![reset("extra, sound")]);
+    assert_eq!(report.notices, vec![reset(&["extra", "sound"])]);
 }
 
 #[test]
@@ -76,15 +77,16 @@ fn a_key_name_at_the_length_limit_is_named() {
     let exact = "k".repeat(MAX_KEY_CHARS);
     let (_dir, files) = with_file("exactkey", &format!("[hold]\n{exact} = 1\n"));
     let (_, report) = open(&files);
-    assert_eq!(report.notices, vec![reset(&exact)]);
+    assert_eq!(report.notices, vec![reset(&[exact])]);
 }
 
 #[test]
-fn a_section_of_only_over_long_keys_names_the_module() {
+fn a_section_of_only_over_long_keys_counts_them_and_names_none() {
     let long = "k".repeat(MAX_KEY_CHARS + 1);
-    let (_dir, files) = with_file("alllong", &format!("[hold]\n{long} = 1\n"));
+    let text = format!("[hold]\n{long}a = 1\n{long}b = 2\n");
+    let (_dir, files) = with_file("alllong", &text);
     let (_, report) = open(&files);
-    assert_eq!(report.notices, vec![reset_more(HOLD.as_str(), 1)]);
+    assert_eq!(report.notices, vec![reset_count(2)]);
 }
 
 #[test]

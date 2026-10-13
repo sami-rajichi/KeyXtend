@@ -1,0 +1,77 @@
+# The keyboard's board (spec §3.1; design/keyboard-style-lab.html lines 145-168, 241-242, 927-1006), in logical pixels
+# at size 1. It holds key ids and roles only: names come from the translations and icons from the theme.
+
+# One key unit wide, and one row high.
+unit_px = 33.0
+row_px = 31.0
+# The main block is this many units wide; a key `w` units wide spans `w * columns_per_unit` grid columns.
+main_units = 16.0
+columns_per_unit = 4
+# Side block: this many columns, each `side_unit` units wide.
+side_columns = 3
+side_unit = 1.22
+# Gap between the main and side blocks; plate padding (top, right, bottom, left); top bar height and the gap under it.
+body_gap_px = 8.0
+plate_pad_px = [6.0, 7.0, 7.0, 7.0]
+top_bar_px = 24.0
+top_gap_px = 4.0
+# The D-pad: its cells as first col, first row, last col, last row (1-based, inclusive), and its largest width in units;
+# it is min(units, its rows) wide, less one gap. Scrolling comes in a later version, so it is dimmed until then.
+dpad = { cell = [1, 2, 2, 4], units = 2.44, later = true }
+
+# Main rows, top to bottom: named keys with their width in units, kind (colours), scan code (0xE0xx is extended) and role,
+# and runs of one-unit character keys by scan code.
+rows = [
+    # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
+    # "lang", or "later" (dimmed, coming in a later version). `repeat` makes a "send" key repeat while held (spec §4.6);
+    # character keys always do.
+    [
+        # `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter"
+        # or "esc"; such a click goes to the panel, never to the app, and every other key types as usual.
+        { id = "esc", w = 1.0, kind = "danger", sc = 0x01, role = "send", nav = "esc" },
+        { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] },
+        { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E, role = "send", repeat = true },
+    ],
+    [
+        { id = "tab", w = 1.5, kind = "mod", sc = 0x0F, role = "send" },
+        { chars = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B] },
+        { id = "del", w = 1.5, kind = "mod", sc = 0xE053, role = "send", repeat = true },
+    ],
+    [
+        { id = "caps", w = 1.75, kind = "mod", sc = 0x3A, role = "caps" },
+        { chars = [0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28] },
+        { id = "enter", w = 3.25, kind = "enter", sc = 0x1C, role = "send", nav = "enter", repeat = true },
+    ],
+    # Row 4 is ISO: a short left Shift and the key 0x56 (FR < >, AR |) before Z, as on real French keyboards.
+    [
+        { id = "shift", w = 1.25, kind = "mod", sc = 0x2A, role = { latch = "shift" } },
+        { chars = [0x56, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35] },
+        { id = "rshift", w = 1.75, kind = "mod", sc = 0x36, role = { latch = "shift" } },
+        { id = "up", w = 1.0, kind = "mod", sc = 0xE048, role = "send", nav = "up", repeat = true },
+        { id = "menu", w = 1.0, kind = "mod", sc = 0xE05D, role = "send" },
+    ],
+    [
+        { id = "ctrl", w = 1.25, kind = "mod", sc = 0x1D, role = { latch = "ctrl" } },
+        { id = "win", w = 1.0, kind = "mod", sc = 0xE05B, role = { latch = "win" } },
+        { id = "alt", w = 1.0, kind = "mod", sc = 0x38, role = { latch = "alt" } },
+        { id = "lang", w = 1.75, kind = "lang", role = "lang" },
+        { id = "space", w = 7.0, kind = "space", sc = 0x39, role = "send", repeat = true },
+        { id = "altgr", w = 1.0, kind = "mod", sc = 0xE038, role = { latch = "altgr" } },
+        { id = "left", w = 1.0, kind = "mod", sc = 0xE04B, role = "send", nav = "left", repeat = true },
+        { id = "down", w = 1.0, kind = "mod", sc = 0xE050, role = "send", nav = "down", repeat = true },
+        { id = "right", w = 1.0, kind = "mod", sc = 0xE04D, role = "send", nav = "right", repeat = true },
+    ],
+]
+
+# Side keys by column and row (1-based); each comes in a later version (owner, 2026-09-29), so all are dimmed for now.
+side = [
+    { id = "rclick", col = 1, row = 1, role = "later" },
+    { id = "grab", col = 2, row = 1, role = "later" },
+    { id = "shortcuts", col = 3, row = 1, role = "later" },
+    { id = "mic", col = 3, row = 2, role = "later" },
+    { id = "clip", col = 3, row = 3, role = "later" },
+    { id = "snip", col = 3, row = 4, role = "later" },
+    { id = "fill", col = 1, row = 5, role = "later" },
+    { id = "settings", col = 2, row = 5, role = "later" },
+    { id = "power", col = 3, row = 5, role = "later" },
+]

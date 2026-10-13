@@ -14,9 +14,6 @@ use crate::win::{self, sleep_ms};
 use crate::winfind::{self, Match};
 use crate::{admin, out};
 
-/// G1's page body: one text box that fills the page.
-const TEXT_BOX: &str =
-    "<textarea autofocus spellcheck=\"false\" style=\"width:95vw;height:90vh\"></textarea>";
 /// Suffix of Notepad's test file.
 const NOTEPAD_FILE: &str = ".txt";
 /// Suffix of Chrome's test page.
@@ -118,12 +115,14 @@ pub fn opened(
 }
 
 /// Closes old target windows and deletes the log; returns target-window's program and title.
+/// Each comes to the front first, since it puts back a `--layout` switch only while it has the keyboard.
 fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
     let (t, title) = (&ctx.cfg.timing, ctx.target.title.clone());
     for w in win::top_windows()
         .into_iter()
         .filter(|&w| win::title(w) == title)
     {
+        let _ = win::front(w, t, &ctx.cfg.keys);
         let _ = win::close(w);
         if !winfind::wait_gone(w, t.close_wait_ms, t.poll_ms) {
             return Err(format!(
@@ -155,6 +154,15 @@ pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
     start_target_with(ctx, &[])
 }
 
+/// Brings target-window `target` to the front, or closes it and says so.
+pub fn to_front(ctx: &Ctx, target: Opened) -> Result<Opened, String> {
+    if win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
+        return Ok(target);
+    }
+    crate::apps::clean_up(ctx, target);
+    Err("could not bring target-window to the front".to_string())
+}
+
 /// Like `start_target`, with `extra` arguments, such as the ones that make a password box.
 pub fn start_target_with(ctx: &Ctx, extra: &[String]) -> Result<Opened, String> {
     let (_, title) = prepare_target(ctx)?;
@@ -170,8 +178,13 @@ pub fn start_target_admin(ctx: &Ctx) -> Result<Opened, String> {
     let app = ctx.cfg.app(AppKind::Target.name())?;
     let m = window_match(app, Some(title));
     admin::run_as(&exe, &[])?;
-    let hwnd = winfind::wait_for(&m, app.wait_ms, ctx.cfg.timing.poll_ms)
-        .ok_or_else(|| format!("no admin target window after {} ms", app.wait_ms))?;
+    let Some(hwnd) = winfind::wait_for(&m, app.wait_ms, ctx.cfg.timing.poll_ms) else {
+        let late = admin::late_window(ctx, &m);
+        return Err(format!(
+            "no admin target window after {} ms; {late}",
+            app.wait_ms
+        ));
+    };
     sleep_ms(app.ready_ms);
     Ok(Opened {
         kind: AppKind::Target,
@@ -211,7 +224,10 @@ pub fn open(ctx: &Ctx, kind: AppKind) -> Result<Opened, String> {
         AppKind::Target => return start_target(ctx),
         AppKind::Notepad => open_notepad(ctx, "")?,
         AppKind::Word => opened(kind, launch(ctx, kind.name(), "", None)?, None, None),
-        AppKind::Chrome => open_page(ctx, &page_title(ctx, &ctx.cfg.g1.page_title), TEXT_BOX)?.0,
+        AppKind::Chrome => {
+            let title = page_title(ctx, &ctx.cfg.g1.page_title);
+            open_page(ctx, &title, &ctx.cfg.g1.page_body)?.0
+        }
         AppKind::Terminal => launchterm::open_terminal(ctx)?,
         AppKind::Explorer => return Err("Explorer is a probe app, not a G1 app".to_string()),
     };
@@ -222,6 +238,15 @@ pub fn open(ctx: &Ctx, kind: AppKind) -> Result<Opened, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_g1_page_body_is_one_text_box_that_takes_the_focus() {
+        let body = crate::config::load().expect("loads").g1.page_body;
+        assert!(
+            body.starts_with("<textarea") && body.contains("autofocus"),
+            "{body}"
+        );
+    }
 
     #[test]
     fn page_escapes_the_title_but_keeps_the_body_html() {

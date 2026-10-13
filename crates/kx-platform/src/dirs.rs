@@ -5,6 +5,9 @@ use std::path::{Path, PathBuf};
 /// Name of the folder that, when it sits beside the program, makes the edition portable.
 pub const PORTABLE_DIR: &str = "data";
 
+/// Name of the program's folder inside the OS per-user data folder.
+pub const APP_DIR_NAME: &str = "KeyXtend";
+
 /// The folders an OS adapter reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppDirs {

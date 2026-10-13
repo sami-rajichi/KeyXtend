@@ -3,12 +3,12 @@
 
 use std::time::Instant;
 
+use kx_platform_windows::screen::{self, work_area};
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::hold::Pt;
-use spike_core::screen::{self, work_area};
 use spike_core::selwatch::{self, PillPx};
 use spike_core::uia::{self, Uia};
-use spike_core::window::foreground;
 use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -21,7 +21,7 @@ use crate::{clip, clipkeep, cliptext, g19, probe, simuser};
 fn expected(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Pt, String> {
     let sel = g19::read_sel(ctx, uia, app)?;
     let first = *sel.boxes.first().ok_or("the selection has no box")?;
-    let screen = work_area(&first)?;
+    let screen = work_area(&first).map_err(|e| e.to_string())?;
     let pill = PillPx(ctx.spike.tools.pill_px).at(screen::dpi_of(&first));
     selwatch::place(&sel.boxes, &screen, pill).ok_or_else(|| "no pill place".into())
 }
@@ -29,7 +29,7 @@ fn expected(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Pt, String> {
 /// Waits until the pill shows (`show`) or hides; returns the ms since `t0`, the step that should cause it.
 fn wait_pill(ctx: &Ctx, show: bool, t0: Instant) -> Option<u128> {
     let title = &ctx.spike.tools.pill_title;
-    let spent = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let spent = win::ms_since(t0);
     let left = ctx.cfg.g19.pill_wait_ms.saturating_sub(spent);
     let done = || (facetools::shown(title).is_some() == show).then(|| t0.elapsed().as_millis());
     win::poll_until(left, ctx.cfg.timing.poll_ms, done)

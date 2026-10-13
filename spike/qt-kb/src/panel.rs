@@ -93,19 +93,19 @@ impl qobject::PanelData {
     }
 
     fn spot(&self, plate_w: f64, w: f64, h: f64) -> QString {
-        let size = [w as f32, h as f32];
-        let gaps = themes().shape.panel.gap_px;
+        let size = [w, h];
+        let gaps = themes().shape.panel.gap_px.map(f64::from);
         let title = &config().keyboard.title;
         let rtl = self.rust().cfg.rtl();
-        spot(screen::pop_for(title, plate_w as f32, size, gaps, rtl))
+        spot(screen::pop_for(title, plate_w, size, gaps, rtl))
     }
 
     fn opened(mut self: Pin<&mut Self>) {
-        self.as_mut().rust_mut().prev = window::foreground();
+        self.as_mut().rust_mut().prev = kx_platform_windows::window::foreground();
     }
 
     fn closed(&self) {
-        window::give_back(self.rust().prev);
+        kx_platform_windows::window::give_back(self.rust().prev);
     }
 }
 

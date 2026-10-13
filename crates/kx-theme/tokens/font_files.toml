@@ -1,0 +1,11 @@
+# Each bundled font family and its files under assets/fonts/ (ADR-0021). The app loads a family's files only while the
+# theme shown names it, and drops them on a theme switch. Windows' own families (assets.rs SYSTEM_FONTS) have no files,
+# so Native's Segoe UI is not listed.
+"IBM Plex Sans" = ["ibmplexsans/IBMPlexSans[wdth,wght].ttf"]
+"IBM Plex Sans Arabic" = [
+    "ibmplexsansarabic/IBMPlexSansArabic-Medium.ttf",
+    "ibmplexsansarabic/IBMPlexSansArabic-Regular.ttf",
+    "ibmplexsansarabic/IBMPlexSansArabic-SemiBold.ttf",
+]
+"Noto Sans Arabic" = ["notosansarabic/NotoSansArabic[wdth,wght].ttf"]
+"Rubik" = ["rubik/Rubik[wght].ttf"]

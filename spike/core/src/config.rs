@@ -6,49 +6,28 @@ use serde::Deserialize;
 
 /// File name of the spike settings.
 const FILE: &str = "spike.toml";
-/// The test face's name: the face argument of kx-gates and part of the error file's name.
+/// The test face's name: the face argument of kx-gates.
 pub const FACE: &str = "qt";
-/// Error file the face writes in TEMP; `{face}` becomes the face name.
-const ERROR_FILE: &str = "kx-spike-{face}-error.txt";
-/// Placeholder for the face name in `ERROR_FILE`.
-const FACE_SLOT: &str = "{face}";
 
-/// All spike settings.
+/// The spike settings its later-phase parts and the gates read; the P3 sections moved to the product.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SpikeConfig {
-    /// Keyboard block and sizes.
+    /// The face's title and stage-1 geometry, which the gates and the tools row aim with.
     pub keyboard: KeyboardConfig,
     /// The tools row, the selection pill, quick-fill and snip.
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
     pub voice: crate::voicecfg::VoiceConfig,
-    /// The stage-2 keyboard's geometry.
-    pub layout: crate::kbgeom::LayoutConfig,
-    /// Keyboard size steps, presets and limits.
-    pub size: crate::sizer::SizeConfig,
-    /// Theme, mode, frosted plate and tooltip delay.
-    pub look: crate::lookcfg::LookConfig,
-    /// How each named key looks and what side keys do.
-    pub keys: crate::facecfg::KeysConfig,
-    /// The top bar and the test strip.
-    pub bar: crate::facecfg::BarConfig,
-    /// Where fonts and icons are.
-    pub assets: crate::facecfg::AssetsConfig,
-    /// Short language names and the space bar's joiner.
-    pub lang: crate::langinfo::LangConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
     /// The hold a still press waits for, and when its ring shows.
     pub hold: crate::holdcfg::HoldConfig,
     /// Gate G12's ring test.
     pub ring: crate::holdcfg::RingTest,
-    /// Folder the file was read from; relative paths start here.
-    #[serde(skip)]
-    pub dir: PathBuf,
 }
 
-/// Keyboard block and sizes.
+/// The face's title and stage-1 geometry; the keyboard itself is kx-mod-keyboard's since P3.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyboardConfig {
@@ -60,15 +39,9 @@ pub struct KeyboardConfig {
     pub gap_px: f32,
     /// Label font size in logical pixels.
     pub font_px: f32,
-    /// Wait after the window appears before guarding it, and between retries, in ms.
-    pub guard_delay_ms: u64,
-    /// Guard tries before giving up while no window of ours is visible yet.
-    pub guard_tries: u32,
-    /// How often labels follow the foreground layout, in ms.
-    pub relabel_ms: u64,
     /// Rows of scan codes; `0xE0xx` marks an extended key.
     pub rows: Vec<Vec<u32>>,
-    /// `[scan code, width]` pairs; other keys are `layout::DEFAULT_WIDTH` wide.
+    /// `[scan code, width]` pairs; other keys are `place::DEFAULT_WIDTH` wide.
     pub widths: Vec<(u32, f32)>,
 }
 
@@ -184,13 +157,6 @@ impl ToolsConfig {
     }
 }
 
-impl SpikeConfig {
-    /// `rel` resolved against the settings folder.
-    pub fn resolve(&self, rel: &str) -> PathBuf {
-        self.dir.join(rel)
-    }
-}
-
 /// Where the settings file `name` is: beside the exe, else in the spike folder.
 pub fn settings_path(name: &str) -> PathBuf {
     let beside = std::env::current_exe()
@@ -202,41 +168,17 @@ pub fn settings_path(name: &str) -> PathBuf {
     }
 }
 
-/// Reads settings file `name` and parses it with `parse`; an error starts with the file's path.
-pub fn read_settings<T>(
-    name: &str,
-    parse: impl FnOnce(&str) -> Result<T, String>,
-) -> Result<T, String> {
-    let file = settings_path(name);
-    let at = |e: String| format!("{}: {e}", file.display());
-    let text = std::fs::read_to_string(&file).map_err(|e| at(e.to_string()))?;
-    parse(&text).map_err(at)
-}
-
-/// Prints `err` and saves it in TEMP, since release faces have no console to show it.
-pub fn report_error(err: &str) {
-    eprintln!("{err}");
-    let file = std::env::temp_dir().join(ERROR_FILE.replace(FACE_SLOT, FACE));
-    let _ = std::fs::write(file, err);
-}
-
 /// Loads and parses the settings.
 pub fn load() -> Result<SpikeConfig, String> {
     let file = settings_path(FILE);
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let at = |e: String| format!("{}: {e}", file.display());
-    let mut config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
-    config.layout.check().map_err(at)?;
-    config.size.check().map_err(at)?;
-    config.look.check().map_err(at)?;
+    let config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
     config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
     crate::panelcfg::check_titles(&config).map_err(at)?;
     config.hold.check().map_err(at)?;
     config.ring.check().map_err(at)?;
-    crate::facecfg::check_keys(&config.keys, &config.layout).map_err(at)?;
-    crate::facecfg::check_bar(&config.bar, config.size.presets.len()).map_err(at)?;
-    config.dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
     Ok(config)
 }
 

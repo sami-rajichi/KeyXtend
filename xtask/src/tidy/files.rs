@@ -1,4 +1,4 @@
-//! F1-F2: the file-size and unsafe-attribute rules from `ARCHITECTURE.md`.
+//! F1-F2: the file-size and unsafe-attribute rules from `ARCHITECTURE.md`, and the file walk F3 shares.
 
 use std::fs::{self, FileType};
 use std::path::{Path, PathBuf};
@@ -82,8 +82,8 @@ fn walk_source_files(root: &Path, tidy: &TidyConfig) -> (Vec<PathBuf>, Vec<Viola
     (files, violations)
 }
 
-/// Recursive step of [`walk_source_files`]; never panics on an unreadable directory.
-fn walk_dir(
+/// Recursive step of [`walk_source_files`], also used by F3; never panics on an unreadable directory.
+pub(super) fn walk_dir(
     dir: &Path,
     root: &Path,
     tidy: &TidyConfig,
@@ -147,7 +147,7 @@ fn has_scanned_extension(path: &Path, tidy: &TidyConfig) -> bool {
         .is_some_and(|ext| tidy.extensions.iter().any(|e| e == ext))
 }
 
-/// F2: every non-platform crate root must carry `unsafe_attr`; a tool may carry `tool_unsafe_attr`.
+/// F2: every non-platform crate root must carry `unsafe_attr`; a tool or the bridge crate may carry `deny_attr`.
 /// A `test_only` crate is checked even with the platform prefix, since it holds no platform code.
 pub(crate) fn f2_unsafe_attr(ws: &Workspace) -> Vec<Violation> {
     let platform = |p: &Package| p.name.starts_with(ws.tidy.platform_prefix.as_str());
@@ -165,11 +165,11 @@ fn check_package(package: &Package, ws: &Workspace) -> Vec<Violation> {
         .collect()
 }
 
-/// The attributes `package`'s crate roots may carry, the tool one first for a tool.
+/// The attributes `package`'s crate roots may carry, the deny one first for a tool or the bridge crate.
 fn accepted_attrs<'a>(package: &Package, ws: &'a Workspace) -> Vec<&'a str> {
     let tidy = &ws.tidy;
-    if ws.is_tool(package) {
-        vec![&tidy.tool_unsafe_attr, &tidy.unsafe_attr]
+    if ws.is_tool(package) || package.name == tidy.bridge_crate {
+        vec![&tidy.deny_attr, &tidy.unsafe_attr]
     } else {
         vec![&tidy.unsafe_attr]
     }
@@ -249,7 +249,7 @@ fn block_prefix<'a>(line: &'a str, idx: usize, in_block: &mut bool) -> &'a str {
 }
 
 /// `path` relative to `root`, with forward slashes; used as-is if it's not under `root`.
-fn relative_place(path: &Path, root: &Path) -> String {
+pub(super) fn relative_place(path: &Path, root: &Path) -> String {
     let rel = path.strip_prefix(root).unwrap_or(path);
     rel.to_string_lossy().replace('\\', "/")
 }

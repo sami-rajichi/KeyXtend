@@ -6,6 +6,8 @@ pub const COMMENT: &str = "#";
 pub const START: &str = "# start";
 /// The text box lost the keyboard focus: `# focus-lost\t<µs>`.
 pub const FOCUS_LOST: &str = "# focus-lost";
+/// The layout from before `--layout` did not come back at close: `# layout-kept\t<µs>`.
+pub const LAYOUT_KEPT: &str = "# layout-kept";
 /// Field separator.
 pub const SEP: char = '\t';
 
@@ -19,6 +21,15 @@ pub fn data(us: i64, unit: u16) -> String {
 #[must_use]
 pub fn mark(mark: &str, us: i64) -> String {
     format!("{mark}{SEP}{us}")
+}
+
+/// A key went down: `# key\t<µs>\t<virtual key>\t<scan code>`, both in hex; an extended key's scan code is `E0xx`.
+pub const KEY: &str = "# key";
+
+/// A key line for virtual key `vk` with scan code `scan`, going down at `us`.
+#[must_use]
+pub fn key(us: i64, vk: u16, scan: u16) -> String {
+    format!("{KEY}{SEP}{us}{SEP}{vk:02X}{SEP}{scan:04X}")
 }
 
 /// A mouse press: `# mouse\t<press>\t<µs>\t<x>\t<y>`, in screen pixels.
@@ -89,9 +100,17 @@ mod tests {
     }
 
     #[test]
+    fn key_lines_have_the_documented_shape() {
+        assert_eq!(key(7, 0x0D, 0xE01C), "# key\t7\t0D\tE01C");
+        assert_eq!(key(8, 0xA0, 0x2A), "# key\t8\tA0\t002A");
+        assert!(KEY.starts_with(COMMENT));
+    }
+
+    #[test]
     fn lines_have_the_documented_shape() {
         assert_eq!(data(12, 0x0644), "12\t0644");
         assert_eq!(mark(FOCUS_LOST, 7), "# focus-lost\t7");
         assert!(START.starts_with(COMMENT) && FOCUS_LOST.starts_with(COMMENT));
+        assert!(LAYOUT_KEPT.starts_with(COMMENT));
     }
 }

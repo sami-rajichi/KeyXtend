@@ -1,4 +1,4 @@
-//! A Windows job for a child process: it dies with us, and in weak mode it is capped in cores, CPU share and memory.
+//! A Windows job for a child process: it dies with us, and in weak mode it is capped in cores, CPU time and memory.
 
 use std::os::windows::io::AsRawHandle;
 use std::process::Child;
@@ -18,7 +18,7 @@ use crate::voicecfg::WeakConfig;
 
 /// The job's CPU rate is in hundredths of a percent.
 const RATE_PER_PCT: u32 = 100;
-/// Highest CPU share, in percent.
+/// Highest CPU time per allowed core, in percent of one core.
 const MAX_PCT: u32 = 100;
 
 /// Weak-mode limits in the units the job takes.
@@ -26,13 +26,26 @@ const MAX_PCT: u32 = 100;
 pub struct Caps {
     /// One bit per allowed core, lowest cores first.
     pub affinity: usize,
-    /// CPU share in hundredths of a percent.
+    /// CPU share of the whole PC, in hundredths of a percent: `cores × rate_pct` % of one core in all.
     pub cpu_rate: u32,
     /// Memory cap for the whole job.
     pub mem_bytes: usize,
 }
 
+/// The job rate on a PC with `cpus` cores that allows `pct` % of one core's time per allowed core, `cores` of them; at
+/// least 1.
+fn rate_of(pct: u32, cores: usize, cpus: usize) -> u32 {
+    let whole = u128::from(pct * RATE_PER_PCT) * cores as u128 / cpus.max(1) as u128;
+    u32::try_from(whole).unwrap_or(u32::MAX).max(1)
+}
+
 impl Caps {
+    /// The CPU time the job allows on a PC with `cpus` cores, in whole cores.
+    #[allow(clippy::cast_precision_loss, reason = "Core counts are tiny.")]
+    pub fn cpu_cores(&self, cpus: usize) -> f64 {
+        f64::from(self.cpu_rate) * cpus as f64 / f64::from(RATE_PER_PCT * MAX_PCT)
+    }
+
     /// Checks `w` and converts it for a PC with `cpus` logical cores.
     pub fn from(w: &WeakConfig, cpus: usize) -> Result<Caps, String> {
         let bits = usize::BITS as usize;
@@ -48,7 +61,7 @@ impl Caps {
         }
         if w.rate_pct == 0 || w.rate_pct > MAX_PCT {
             return Err(format!(
-                "weak CPU share must be 1 to {MAX_PCT} %, got {}",
+                "weak rate_pct must be 1 to {MAX_PCT} % of a core, got {}",
                 w.rate_pct
             ));
         }
@@ -62,7 +75,7 @@ impl Caps {
             .saturating_mul(MIB);
         Ok(Caps {
             affinity,
-            cpu_rate: w.rate_pct * RATE_PER_PCT,
+            cpu_rate: rate_of(w.rate_pct, cores, cpus),
             mem_bytes,
         })
     }
@@ -103,8 +116,13 @@ impl Job {
 
     /// Puts `child` in the job.
     pub fn assign(&self, child: &Child) -> Result<(), String> {
-        let process = HANDLE(child.as_raw_handle());
-        // SAFETY: both handles are open for the duration of the call; `child` still owns its handle.
+        // `child` still owns its handle, which stays open for the call.
+        self.assign_handle(HANDLE(child.as_raw_handle()))
+    }
+
+    /// Puts the process behind `process` in the job; the handle needs the set-quota and terminate rights.
+    pub fn assign_handle(&self, process: HANDLE) -> Result<(), String> {
+        // SAFETY: the job handle is ours and open; the caller keeps `process` open for the call.
         unsafe { AssignProcessToJobObject(self.0, process) }.map_err(|e| format!("job: {e}"))
     }
 
@@ -138,10 +156,23 @@ mod tests {
 
     #[test]
     fn caps_turn_settings_into_job_values() {
-        let c = Caps::from(&weak(2, 30), 8).expect("valid");
+        let c = Caps::from(&weak(2, 30), 16).expect("valid");
         assert_eq!(c.affinity, 0b11);
-        assert_eq!(c.cpu_rate, 3000, "hundredths of a percent");
+        assert_eq!(
+            c.cpu_rate, 375,
+            "2 of 16 CPUs at 30 %, in hundredths of a percent of the PC"
+        );
         assert_eq!(c.mem_bytes, 4096 * 1024 * 1024);
+    }
+
+    #[test]
+    fn each_allowed_core_runs_at_the_share_on_any_pc() {
+        for cpus in [2, 8, 16] {
+            let c = Caps::from(&weak(2, 30), cpus).expect("valid");
+            assert!((c.cpu_cores(cpus) - 0.6).abs() < 1e-9, "{cpus} CPUs");
+        }
+        let tiny = Caps::from(&weak(1, 1), 256).expect("valid");
+        assert_eq!(tiny.cpu_rate, 1, "never 0, which Windows refuses");
     }
 
     #[test]
@@ -170,6 +201,23 @@ mod tests {
         assert!(Caps::from(&weak(0, 30), 8).is_err());
         assert!(Caps::from(&weak(2, 0), 8).is_err());
         assert!(Caps::from(&weak(2, 101), 8).is_err());
+    }
+
+    #[test]
+    fn a_child_joins_a_job_by_its_handle() {
+        use std::process::{Command, Stdio};
+        let job = Job::new(None).expect("a job");
+        // `findstr` waits for its input until we close it, so it cannot end before it joins.
+        let mut child = Command::new("findstr")
+            .arg("x")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("starts");
+        let joined = job.assign_handle(HANDLE(child.as_raw_handle()));
+        drop(child.stdin.take());
+        let _ = child.wait();
+        assert_eq!(joined, Ok(()));
     }
 
     #[test]

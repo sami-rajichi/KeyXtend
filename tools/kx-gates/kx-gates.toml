@@ -1,8 +1,10 @@
-# Every number and path the gate runner uses, read beside the exe first, else from tools/kx-gates.
-# Relative paths start at this file's folder, and a test keeps them inside the repo.
+# Every number and path the gate runner uses, with kx-gates-p3.toml beside it for the mouse guard and the gates P3
+# adds; both are read beside the exe first, else from tools/kx-gates. Relative paths start at this file's folder, and
+# a test keeps them inside the repo.
 
 [paths]
-# Sent and received texts, raw click data, screenshots of blocked runs, and results.jsonl.
+# Sent and received texts, raw click data, screenshots of blocked runs, G11's and G13's pictures, G8's PresentMon CSV,
+# and results.jsonl.
 out = "../../target/gate-logs"
 
 [timing]
@@ -21,6 +23,8 @@ read_wait_ms = 5000
 close_wait_ms = 3000
 # Longest wait for an app's text box to take the keyboard before typing, in ms.
 focus_wait_ms = 5000
+# Longest wait for the product to end after `close keyxtend` posts it Quit, in ms.
+quit_wait_ms = 10000
 
 [keys]
 # Virtual-key combos: pressed in order, released in reverse.
@@ -47,8 +51,9 @@ count = 1000
 # Characters per SendInput call, and the pause between calls, in ms.
 chunk_chars = 1
 chunk_pause_ms = 20
-# Title of the Chrome test page, used to find its window.
+# Title of the Chrome test page, used to find its window, and its body: one text box that fills the page.
 page_title = "KeyXtend G1 page"
+page_body = "<textarea autofocus spellcheck=\"false\" style=\"width:95vw;height:90vh\"></textarea>"
 # Characters shown on each side of the first difference.
 context_chars = 10
 # Longest clipboard text we read back or save for the owner, in characters; more is an error.
@@ -125,6 +130,7 @@ wait_ms = 15000
 ready_ms = 500
 done_ms = 1000
 
+# G2 and G4 click the product keyboard's character keys, which UI Automation finds by board id.
 [g2]
 clicks = 1000
 # Pause after each click before checking focus and caret, in ms.
@@ -136,12 +142,18 @@ drain_ms = 1000
 # Failures listed in the report, and failures that stop the run.
 failures_shown = 5
 max_failures = 20
+# Each click holds the button as the owner's hand does, below the keyboard's repeat delay, in ms.
+press_ms = 400
+# Each click slips right and down while the button is down, inside the key, in physical px.
+slip_px = 2
+# Each click's hold stays this far below the running keyboard's repeat delay, so it never repeats, in ms.
+repeat_margin_ms = 200
 
 [g3]
 # Wait after opening a surface before probing, in ms.
 open_wait_ms = 1500
-# Keys whose centres are probed: first, middle and last of the block.
-probe_codes = [0x29, 0x22, 0xE01D]
+# Keys whose centres are probed, by board id: the product keyboard's first key, a middle one and its last.
+probe_keys = ["esc", "c-0x0022", "power"]
 
 # Each surface: keys that open it, keys that close it, or a window class to send WM_CLOSE.
 [[g3.surfaces]]
@@ -167,6 +179,8 @@ reply_ms = 2000
 try_secs = 90
 # How often the Grab hand try turns Grab back on after a drop, in ms; keep it below spike.toml [hold] ms.
 rearm_ms = 250
+# Most hook timings kept for G5's p99; later calls still run but are not timed.
+hook_samples = 65536
 
 [sim]
 # The simulated user (G5 and the probes): pause between steps, a short click, and how far past hold_ms a long hold lasts, in ms.
@@ -330,6 +344,11 @@ win_v = [0x5B, 0x56]
 esc = [0x1B]
 alt_tab = [0x12, 0x09]
 
+[capture]
+# `capture-layouts` writes one golden table per language, from the first installed layout of each. The keys it reads
+# are kx-mod-layouts' scans.toml, the table the product reads, so the range lives in one place.
+languages = ["en", "fr", "ar"]
+
 [g22]
 # Read aloud, one per Mic press, in this order; Notepad switches to each layout (LANGID) first.
 sentences = [
@@ -355,6 +374,8 @@ answer_wait_ms = 120000
 type_gaps_ms = [0, 2, 10]
 
 [g7]
+# The frozen spike face's name for its Settings key, which opens the panel (spike.toml [keys] ended in P3 Task 22).
+opener = "Settings"
 # The Arabic panel check: marhaban with harakat is typed into the panel's field, then these caret keys are pressed.
 # They cross every letter both ways and push once past each end; timing.key_settle_ms follows each key.
 word = "مَرْحَبًا"

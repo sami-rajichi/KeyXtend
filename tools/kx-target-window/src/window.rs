@@ -3,7 +3,9 @@
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 
+use kx_platform_windows::{PlatformError, QpcClock};
 use kx_target_window::config::{self, ConfigError, TargetConfig};
+use kx_target_window::layout::{self, LayoutError};
 use thiserror::Error;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, WPARAM};
 use windows::Win32::Graphics::Gdi::{
@@ -20,7 +22,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
-use crate::procs;
+use crate::{name, procs, switch};
 
 /// Window class of the main window; the gate runner finds the window by its title.
 const CLASS: PCWSTR = w!("KxsTargetWindow");
@@ -48,22 +50,39 @@ pub enum StartError {
     /// A Windows call failed.
     #[error(transparent)]
     Windows(#[from] windows::core::Error),
+    /// The QPC clock could not start.
+    #[error(transparent)]
+    Clock(PlatformError),
     /// The edit box could not be subclassed.
     #[error("SetWindowSubclass failed: characters would not be logged")]
     Subclass,
+    /// The text box could not be given its accessible name.
+    #[error("the text box's accessible name: {0}")]
+    Name(String),
+    /// The `--layout` id is bad, not installed, or Windows did not switch to it.
+    #[error(transparent)]
+    Layout(#[from] LayoutError),
 }
 
-/// Loads the settings and shows the window until it is closed.
+/// Loads the settings and shows the window until it is closed, in the `--layout` layout when one is given.
 pub fn run() -> Result<(), StartError> {
     let cfg = config::load()?;
-    procs::start_log(open_log(&cfg.log)?);
-    let password = std::env::args().any(|a| a == cfg.password_arg);
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let wanted = layout::parse(&args, &cfg.layout_arg)?;
+    wanted.map(switch::check).transpose()?;
+    let clock = QpcClock::new().map_err(StartError::Clock)?;
+    procs::start_log(open_log(&cfg.log)?, clock);
+    let password = args.contains(&cfg.password_arg);
     procs::set_password(password);
     let inst = module()?;
     let main = create_main(&cfg, inst)?;
     let edit = create_edit(main, inst, password)?;
     set_font(edit, &cfg);
+    name::set(edit, &cfg.edit_name).map_err(StartError::Name)?;
     procs::focus(edit);
+    if let Some(id) = wanted {
+        switch::apply(id).inspect_err(procs::note_layout)?;
+    }
     message_loop();
     Ok(())
 }
@@ -249,6 +268,17 @@ mod tests {
         writeln!(open_log(&file).unwrap(), "first").unwrap();
         writeln!(open_log(&file).unwrap(), "second").unwrap();
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "first\nsecond\n");
+    }
+
+    #[test]
+    fn a_layout_error_is_its_own_start_error_naming_the_layout() {
+        let id = kx_module_api::ports::LayoutId::new(0x0419_0419);
+        let err = StartError::from(LayoutError::NotInstalled(id));
+        assert!(matches!(
+            err,
+            StartError::Layout(LayoutError::NotInstalled(_))
+        ));
+        assert!(err.to_string().contains(&id.to_string()), "{err}");
     }
 
     #[test]

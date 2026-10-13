@@ -29,7 +29,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **No scrolling, dragging or right-click anywhere in its own UI** (ADR-0008).
   - Lists are paged, five rows at a time, and numbers use −/+ steppers instead of sliders.
   - The keyboard's own arrow keys drive every panel, and the keyboard moves by click, move, click.
-- **Any installed language.** English, French and Arabic come first, with correct Arabic: joined letters, harakat, `لا` as one key, and a right-to-left settings window.
+- **Any installed language.** English, French and Arabic come first, with correct Arabic: joined letters, harakat, `لا` as one key, and Arabic text that reads right to left in a settings window that keeps its places.
 - **Private and local.**
   - Voice typing runs free on your PC.
   - Clipboard history, the vault, learned words and transcripts are encrypted.
@@ -54,7 +54,16 @@ Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab
 
 ## Status
 
-Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done; the keyboard core (P3) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, and the keyboard core (P3) types English, French and Arabic; mouse assist (P4) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+
+## Using the keyboard
+
+- **Type** by clicking keys: the text goes to the app you were typing in, which keeps the focus.
+- **Shift, Ctrl, Alt, AltGr and Win** stay held for the next key, then let go; a setting keeps them held until you click them again.
+- **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
+- **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
+- **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
+- **Starting KeyXtend again** shows the running keyboard, and `keyxtend --quit` ends it.
 
 ## Where your settings live
 

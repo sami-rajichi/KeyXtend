@@ -1,8 +1,8 @@
 //! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
 #![cfg(windows)]
 
+use kx_platform_windows::screen::{self, work_area};
 use serde_json::{Value, json};
-use spike_core::screen::{self, work_area};
 use spike_core::selwatch::PillPx;
 use spike_core::uia::{self, Sel, Uia};
 
@@ -10,12 +10,14 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{clip, keys, launch, simuser};
+use crate::{clip, keys, launch, out, simuser};
 
 /// G19's run name: detection only, before the pill exists.
 pub const CORE: &str = "core";
 /// The apps G19 selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
+/// The apps the roadmap names for G19; Word waits for P10, as its sign-in dialog blocked it.
+const ROADMAP_APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Word, AppKind::Chrome];
 
 /// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
@@ -149,12 +151,45 @@ fn one(ctx: &Ctx, kind: AppKind) -> Value {
     }
 }
 
+/// The roadmap's apps G19 does not run yet.
+fn left_out() -> Vec<AppKind> {
+    ROADMAP_APPS
+        .into_iter()
+        .filter(|k| !APPS.contains(k))
+        .collect()
+}
+
+/// G19 core's `pass`: false if an app failed, only partial while `left` apps are not run, else true.
+fn verdict(all_ok: bool, left: &[AppKind]) -> Value {
+    out::pass(all_ok, left.is_empty())
+}
+
 /// Runs G19 detection in Notepad, then Chrome; any other name is a face whose pill is checked.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name != CORE {
         return crate::g19pill::run(ctx, name);
     }
     let apps: Vec<Value> = APPS.iter().map(|&k| one(ctx, k)).collect();
-    let pass = apps.iter().all(|a| a["ok"] == true);
-    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps }))
+    let left = left_out();
+    let pass = verdict(apps.iter().all(|a| a["ok"] == true), &left);
+    let not_run: Vec<&str> = left.iter().map(|k| k.name()).collect();
+    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps, "not_run": not_run }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn g19_core_is_at_most_partial_while_a_roadmap_app_is_not_run() {
+        let left = left_out();
+        assert_eq!(
+            left,
+            vec![AppKind::Word],
+            "the roadmap names Notepad, Word and Chrome"
+        );
+        assert_eq!(verdict(true, &left), json!(out::PARTIAL));
+        assert_eq!(verdict(false, &left), json!(false));
+        assert_eq!(verdict(true, &[]), json!(true));
+    }
 }

@@ -52,6 +52,14 @@ fn minimal_fixture_loads_the_package_and_config() {
 }
 
 #[test]
+fn minimal_fixture_loads_the_resolved_features_and_the_banned_ones() {
+    let workspace = load(MINIMAL).unwrap();
+    assert_eq!(workspace.packages[0].features, vec!["default".to_string()]);
+    let banned = &workspace.tidy.banned_features["toml"];
+    assert_eq!(banned, &vec!["unbounded".to_string()]);
+}
+
+#[test]
 fn missing_tidy_section_names_it() {
     let err = load(MISSING_TIDY).unwrap_err();
     assert!(
@@ -116,4 +124,16 @@ fn app_and_tool_follow_the_manifest_folder() {
     assert_eq!(flags("keyxtend"), (true, false));
     assert_eq!(flags("kx-tool"), (false, true));
     assert_eq!(flags("kx-lib"), (false, false));
+}
+
+#[test]
+fn target_dir_reads_cargo_output_folder() {
+    let json = r#"{"workspace_root": "/ws", "target_directory": "/ws/target"}"#;
+    assert_eq!(target_dir(json).unwrap(), PathBuf::from("/ws/target"));
+}
+
+#[test]
+fn target_dir_without_the_folder_is_a_json_error() {
+    let err = target_dir(r#"{"workspace_root": "/ws"}"#).unwrap_err();
+    assert!(matches!(err, LoadError::Json(_)), "got: {err}");
 }

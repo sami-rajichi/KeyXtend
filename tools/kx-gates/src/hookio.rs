@@ -1,8 +1,8 @@
 //! What the assist hooks read and write: whose input counts, hook messages as engine events, acts as input.
 #![cfg(windows)]
 
+use kx_platform_windows::keys::TAG;
 use spike_core::hold::{Act, Button, Event, Pt};
-use spike_core::inject::TAG;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,

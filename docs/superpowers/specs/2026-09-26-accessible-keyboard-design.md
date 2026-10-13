@@ -77,12 +77,13 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - **Floating only.** The keyboard is **always on top of every window**, including the Start menu, Search and Task Manager. This is a mandatory priority and needs Windows uiAccess (ADR-0003).
 - **Never takes focus.** Clicking a key never activates our window; the target app keeps the caret. Windows: `WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW`, with `WM_MOUSEACTIVATE` returning `MA_NOACTIVATE`. macOS: non-activating `NSPanel`.
 - **Clicks pass around it.** The shadow and any empty space around the keyboard never block a click on the app behind.
-- **Size:** small by default. Presets S = 1.00×, M = 1.25×, L = 1.50×, plus fine steps of 0.05× between 0.80× and 1.80×. Icon keys never show labels under the icon; at every size, hovering any icon button shows its name in a small tooltip.
-- **Move** without dragging: click the grip, move the pointer, click to place.
+- **Size:** small by default. Presets S, M and L, plus fine steps between a smallest and a largest size (`[keyboard]` `presets`, `size_step`, `size_min`, `size_max`). Icon keys never show labels under the icon; at every size, hovering any icon button shows its name in a small tooltip.
+- **Move** without dragging: click the grip, move the pointer, click to place. The keyboard stays wholly on one screen, so a move past the edge stops there, and its size follows that screen's DPI.
 - **Resize** the same way with the corner handle. There is no Esc to undo: Esc belongs to the app, so Settings has "Reset size" (owner, 2026-09-28).
-- **Minimise** puts a bubble in a bottom corner of the keyboard's screen, above the taskbar, wherever the keyboard was: right by default, left as a setting, never the top (owner, 2026-09-28).
-- **Remembers its state:** size, position, theme, mode and every setting survive a restart or shutdown.
-- **Top bar:** grip, suggestion chips, light/dark toggle (sun/moon), size buttons (lens −/+ and S/M/L), minimise-to-bubble (−), close-to-tray.
+- **Minimise** puts a bubble in a bottom corner of the keyboard's screen, above the taskbar, wherever the keyboard was: right by default, left as a setting (`[keyboard] bubble_corner`), never the top (owner, 2026-09-28).
+- **Remembers its state:** size, position, theme, mode and every setting survive a restart or shutdown. A saved place on a screen that is gone brings the keyboard back to the bottom centre of the main screen.
+- **Top bar:** grip, suggestion chips (P7), light/dark toggle (sun/moon), a theme button (a trial; P13 decides), size buttons (lens −/+ and S/M/L), minimise-to-bubble (−), close-to-tray (×).
+- **Tray and one copy:** × hides the keyboard; the tray icon's menu shows it again or quits. One copy runs per user session: starting it again shows the keyboard, and `keyxtend --quit` ends it.
 - **Fade when idle** was dropped (owner, 2026-09-28): minimise-to-bubble does the job better.
 
 ### 3.2 Feedback
@@ -121,21 +122,24 @@ Three themes. Each has a **light** version and a **soft dark** version:
 
 References: Material dark-theme guidance, GitHub "Dark dimmed".
 
-| Theme | Idea | Fonts (all OFL) |
+| Theme | Idea | Fonts (the bundled ones OFL) |
 |---|---|---|
-| **Native Adaptive (default, light)** | Looks like part of the OS: Fluent geometry (4 px keys in an 8 px window), Mica-like plate, its own blue (system accent as an option) | System UI font + Noto Sans Arabic |
+| **Native Adaptive (default, light)** | Looks like part of the OS: Fluent geometry (4 px keys in an 8 px window), a solid plate or Mica or Acrylic as an option, its own blue (system accent as an option, `[ui] follow_accent`) | System UI font (Segoe UI) + Noto Sans Arabic |
 | ET66 | Braun ET66: colour marks function. Brown = modifiers, yellow = Enter, a green LED = on/locked | IBM Plex Sans + IBM Plex Sans Arabic |
-| Modern Dolch | GMK Modern Dolch keycaps: grey letters, dark modifiers, teal Enter, rose Esc/Backspace, pressable inset | Rubik |
+| Modern Dolch | GMK Modern Dolch keycaps: grey letters, dark modifiers, teal Enter, rose Esc/Backspace, pressable inset | Rubik + Noto Sans Arabic |
 
-- Light, dark, or **follow system** can be chosen in Settings or from the keyboard's sun/moon button.
+- Light, dark, or **follow system** (the default) is chosen in Settings (`[ui] mode`); the keyboard's sun/moon button switches between light and dark, which stops following the system.
+- **Behind the plate** (`[ui] backdrop`): a solid plate by default, or Mica or Acrylic through a see-through plate where Windows draws them.
+- **High contrast** on: system colours only, with a hover outline in the system's highlight colour. Animations, except the hold ring, stop when Windows turns them off or `[ui] reduced_motion` is on.
 - Icons: **Lucide** (ISC). The icons are platform-specific: the Windows logo on Windows, ⌘⌥⌃ on macOS, "Super" on Linux.
-- Exact colour tokens come from the mock-up file (`design/keyboard-style-lab.html`, CSS `[data-style][data-mode]` blocks) and live in `themes.toml`, with shared sizes in `shape.toml` and motion in `motion.toml` (ADR-0013).
+- Exact colour tokens come from the mock-up file (`design/keyboard-style-lab.html`, CSS `[data-style][data-mode]` blocks) and live in `kx-theme`'s `themes.toml`, with shared sizes in `shape.toml`, motion in `motion.toml` and icon names in `icons.toml`, all compiled in (ADR-0013, ADR-0016).
 
 ### 3.6 Languages of the UI
 
-- The keyboard's own UI text (settings, tooltips) is translatable from day one, from one translation file per language.
-- v1 ships EN, FR and AR, including right-to-left layout of the settings window for Arabic.
-- Qt mirrors layouts for right-to-left (`LayoutMirroring`) and edits Arabic text with a correct caret (gate G7, ADR-0013).
+- The keyboard's own UI text (settings, tooltips) is translatable from day one, from one Fluent file per language, compiled in (ADR-0017).
+- v1 ships EN, FR and AR. The keyboard's text, and later the settings window's, follows the language of the layout in front; the tray follows the system's (ADR-0020). `[ui] language` can pin EN, FR or AR, and a language without texts falls back to English.
+- Key labels read as real keyboards print them: French shows Échap, Suppr, Verr. Maj and Alt Gr, while English and Arabic keep Esc, Back, Caps and AltGr. Tips and screen-reader names are fully translated (owner, 2026-09-30).
+- Arabic flips text only: windows and controls keep their places, Arabic text reads right to left, and Qt edits it with a correct caret (gate G7, ADR-0013, ADR-0020).
 - Our UI still prefers pickers and steppers over text fields, since they need fewer clicks.
 
 ---
@@ -175,15 +179,20 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 ### 4.3 Languages and layouts
 
 - Detect every input language installed in the OS. Windows: `GetKeyboardLayoutList`. Labels are read per layout with `ToUnicodeEx`, flag `0x4` (does not change kernel keyboard state).
+- The labels follow the layout of the app in front, checked every `[keyboard] relabel_ms`, so a layout added or removed while running shows at the next check. A key that must go as a scan code while the labels lag the app's layout sends nothing; the keyboard redraws, and the user clicks again.
 - v1 must render and type **English (US QWERTY)**, **French (AZERTY)** and **Arabic (101)** correctly:
   - AltGr level on AZERTY (e.g. `€ ~ # { [ | \` \\ ^ @ ] }`);
-  - Arabic shifted level with harakat shown on a dotted circle `◌`;
+  - Arabic shifted level with harakat shown on a dotted circle `◌` and typed bare;
   - `لا` as one key that types two code points.
+- P3 was tested on US, French (Legacy, AZERTY) and Arabic (102) AZERTY; Arabic (101) is type-tested before v1 (P14).
+- On a layout without AltGr characters, AltGr acts as Right Alt.
 - Keys show **only the active language**.
+- Apps listed in `[keyboard] key_apps` get text as key presses in their own layout instead of Unicode (§4.5).
 - **Language key** — three designs are prototyped; the owner's pick is saved from the mock-up:
   - **Carousel (default):** shows previous · current · next. Click the left third = previous, anywhere else = next. It swipes with animation.
   - **Cycle:** globe icon plus the current language and dots.
-  - **List:** a popover listing all languages.
+  - **List:** a popover listing all languages, one page of `[ui] page_rows` rows, driven by the keyboard's arrows, Enter and Esc.
+  - With one layout installed, the key shows only its name, a click changes nothing, and its tip and screen-reader text say so.
 - Changing language switches our labels **and** asks the target window to switch too (`WM_INPUTLANGCHANGEREQUEST`), so the OS indicator and IMEs stay in sync.
 
 ### 4.4 Modifiers (osk.exe behaviour, decided in round 6)
@@ -191,7 +200,7 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - Shift, Ctrl, Alt, Win and AltGr: **one click = held**, shown filled with the LED on. **Click again = released.**
 - **Release after next key** (default): a held modifier releases automatically after the next non-modifier key. Setting **"Stay held"**: it stays down until clicked again.
 - There is no third "lock" state; the owner found it confusing.
-- **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift.
+- **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift ("Verr. Maj" in French, §3.6).
 - **Modifier + mouse:** while a modifier is held, the next mouse click is sent with that modifier down, so Shift+click extends a selection and Ctrl+click multi-selects. This is essential for one-button users.
 - Keys pressed while one of our panels is open go to that panel (§3.3), not to the target app.
 
@@ -201,6 +210,15 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - **Shortcuts, navigation keys and modifiers:** virtual-key/scan-code events, for example Ctrl+C = `VK_CONTROL` + `VK_C`, because many apps ignore Unicode events when combined with Ctrl.
 - **Per-app fallback:** some apps drop `VK_PACKET` events. For these, map the character back to a scan code in the target's layout (`VkKeyScanEx`).
 - Every injected event carries our signature in `dwExtraInfo`, so our own hooks can ignore our own injections.
+
+### 4.6 Key repeat (owner, 2026-10-11)
+
+- Holding a typing key types it again and again until the pointer lets go, as a physical keyboard does. A short click types once, at the press, so a slip of the hand never cancels it (ADR-0024).
+- The calm defaults suit a pointer: the first repeat after 0.8 s, then 10 a second (`[keyboard] repeat_delay_ms`, `repeat_every_ms`). Each user can change both, or turn repeat off (`repeat`); a held key then types once, at the press.
+- **Repeating keys:** characters (letters, digits, symbols), which always repeat, and the named keys marked `repeat` in `board.toml`: Space, Enter, Backspace, Delete and the four arrows.
+- **Never repeating:** Shift, Ctrl, Alt, AltGr, Win, Caps Lock, Tab, Esc, Menu, the language key, accent (dead) keys, dimmed keys and the top-bar buttons.
+- Latched modifiers stay down for the whole burst and let go when it ends, so Shift with a held "a" types "AAAA". With Ctrl, Alt or Win latched (or AltGr acting as Right Alt), a held key types once, so a shortcut such as Ctrl+W never fires many times.
+- The burst stops when the pointer lets go, the keyboard hides, one of our panels opens, or a key does not reach the app; a slip anywhere while held changes nothing, and a key slipped onto never acts. While a panel is open, keys go to the panel and do not repeat.
 
 ---
 
@@ -375,6 +393,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
   - theme and mode, size and "Reset size", bubble corner;
   - language key design, modifier behaviour;
   - hold time, sounds;
+  - key repeat: on or off, its delay and its speed, each explained in plain words (§4.6);
   - clipboard retention;
   - voice engine, model, forced language and keys;
   - vault export and import;
@@ -426,10 +445,10 @@ Measured on the development PC and in weak mode (2 cores at a low CPU rate, 4 GB
 | Metric | Target |
 |---|---|
 | Download size, without voice models | ≤ 80 MB (owner's limit, 2026-09-26) |
-| Main process memory, idle | ≤ 80 MB |
+| Main process memory, idle | ≤ 100 MB private working set and ≤ 140 MB private commit (ADR-0021, owner, 2026-10-10) |
 | Memory after 8 hours of use | No growth |
 | Cold start to visible keyboard | ≤ 500 ms |
-| Key click to key highlight | Next screen frame |
+| Key click to key highlight | Median within the next frame (≤ 2 frames) and slowest one refresh later (≤ 3 frames), as Windows' On-Screen Keyboard (ADR-0025, owner, 2026-10-12) |
 | Key click to character in target app | ≤ 30 ms |
 | Animations | No dropped frames (PresentMon) |
 | Mouse hook callback | ≤ 1 ms (p99) |

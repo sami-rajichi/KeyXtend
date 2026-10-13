@@ -1,7 +1,7 @@
 # 14. Keep the tested spike code and move it into the product
 
 - **Date:** 2026-09-29
-- **Status:** Accepted. Supersedes ADR-0011's "No leftovers" rule for code; its rules for screenshots, logs and virtual PCs stay.
+- **Status:** Accepted. Supersedes ADR-0011's "No leftovers" rule for code; its rules for screenshots, logs and virtual PCs stay. Its "the spike keeps building" rule is superseded for `qt-kb` by ADR-0016.
 
 ## Context
 

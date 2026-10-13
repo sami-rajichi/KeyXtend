@@ -1,5 +1,7 @@
 //! The face's side of voice: the Mic button, what the caption bar shows, and one session per face.
 
+use kx_platform_windows::screen::{dpi_of, work_area};
+use kx_platform_windows::{langinfo, layouts};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
 
@@ -10,7 +12,7 @@ use crate::typer::Typer;
 use crate::voicecfg::VoiceConfig;
 pub use crate::voiceproto::{Cmd, Event};
 use crate::voiceworker::{WORKER_GONE, Worker};
-use crate::{inject, layout, screen};
+use crate::{screen, sendkeys};
 
 /// Where the Mic button is in its cycle.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -177,7 +179,7 @@ impl Session {
             cfg: cfg.voice.clone(),
             button: MicButton::default(),
             worker: Worker::start(cfg, face_args, on_event),
-            typer: Typer::start(cfg.voice.type_gap_ms, Box::new(inject::text_paced)),
+            typer: Typer::start(cfg.voice.type_gap_ms, Box::new(sendkeys::text_paced)),
         }
     }
 
@@ -221,8 +223,8 @@ impl Session {
 
 /// The spoken language for the layout of the app in front.
 pub fn front_lang(v: &VoiceConfig) -> String {
-    let hkl = layout::foreground_layout().0 as isize;
-    v.language(layout::lang_id(hkl)).to_string()
+    let layout = layouts::id(crate::layout::front_layout());
+    v.language(langinfo::lang_id(layout)).to_string()
 }
 
 /// Where the caption bar goes and its size, in physical pixels, on the screen of the app in front.
@@ -231,8 +233,8 @@ pub fn bar_place(px: [f32; 3]) -> Result<(Pt, (i32, i32)), String> {
     let mut r = RECT::default();
     // SAFETY: plain query; on failure `r` stays empty and the nearest screen is used.
     let _ = unsafe { GetWindowRect(GetForegroundWindow(), &mut r) };
-    let work = screen::work_area(&r)?;
-    let size = PillPx(px).at(screen::dpi_of(&r));
+    let work = work_area(&r).map_err(|e| e.to_string())?;
+    let size = PillPx(px).at(dpi_of(&r));
     let at = screen::bottom_centre(&work, (size.w, size.h), size.gap);
     Ok((at, (size.w, size.h)))
 }

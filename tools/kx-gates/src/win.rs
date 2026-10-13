@@ -11,14 +11,14 @@ use windows::Win32::System::Threading::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GA_ROOT, GUITHREADINFO, GetAncestor, GetClassNameW, GetGUIThreadInfo,
-    GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsChild, IsIconic, IsWindowVisible,
-    PostMessageW, SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
+    GetWindowRect, GetWindowThreadProcessId, IsChild, IsIconic, IsWindowVisible, PostMessageW,
+    SW_RESTORE, SetForegroundWindow, ShowWindow, WM_CLOSE, WindowFromPoint,
 };
 use windows::core::{BOOL, PWSTR};
 
 use crate::config::{Keys, Timing};
 
-/// Longest window title or class we read.
+/// Longest window class we read.
 const TEXT_CAP: usize = 512;
 /// Longest program path we read: the Windows long-path limit.
 const PATH_CAP: u32 = 32_768;
@@ -35,6 +35,11 @@ pub const fn size32<T>() -> u32 {
 /// Sleeps `ms` milliseconds.
 pub fn sleep_ms(ms: u64) {
     std::thread::sleep(Duration::from_millis(ms));
+}
+
+/// Milliseconds since `t`.
+pub fn ms_since(t: Instant) -> u64 {
+    u64::try_from(t.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Calls `f` every `poll_ms` until it gives a value or `timeout_ms` has passed.
@@ -56,22 +61,26 @@ pub fn key(hwnd: HWND) -> isize {
     hwnd.0 as isize
 }
 
-/// Every visible top-level window, topmost first.
+/// Every top-level window, shown or hidden, topmost first.
 #[allow(unsafe_code, reason = "`found` is the `Vec` alive for the call.")]
-pub fn top_windows() -> Vec<HWND> {
+pub fn all_windows() -> Vec<HWND> {
     unsafe extern "system" fn collect(hwnd: HWND, found: LPARAM) -> BOOL {
         // SAFETY: `found` is the `Vec` passed below, alive for the whole call.
-        unsafe {
-            if IsWindowVisible(hwnd).as_bool() {
-                (*(found.0 as *mut Vec<HWND>)).push(hwnd);
-            }
-        }
+        unsafe { (*(found.0 as *mut Vec<HWND>)).push(hwnd) };
         BOOL(1)
     }
     let mut found: Vec<HWND> = Vec::new();
     // SAFETY: the callback only touches `found`, which outlives the call.
     let _ = unsafe { EnumWindows(Some(collect), LPARAM((&raw mut found) as isize)) };
     found
+}
+
+/// Every visible top-level window, topmost first.
+#[allow(unsafe_code, reason = "A plain query per window.")]
+pub fn top_windows() -> Vec<HWND> {
+    // SAFETY: a plain query; any handle value is allowed.
+    let shown = |w: &HWND| unsafe { IsWindowVisible(*w) }.as_bool();
+    all_windows().into_iter().filter(shown).collect()
 }
 
 /// True when the compositor hides `hwnd` though it counts as visible, like a closed system panel.
@@ -94,14 +103,7 @@ pub fn snapshot() -> HashSet<isize> {
     top_windows().into_iter().map(key).collect()
 }
 
-/// The window title.
-#[allow(unsafe_code, reason = "The buffer is valid for its whole length.")]
-pub fn title(hwnd: HWND) -> String {
-    let mut buf = [0u16; TEXT_CAP];
-    // SAFETY: the buffer is valid for its whole length.
-    let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
-    String::from_utf16_lossy(&buf[..usize::try_from(n).unwrap_or(0)])
-}
+pub use kx_platform_windows::window::title;
 
 /// The window class name.
 #[allow(unsafe_code, reason = "The buffer is valid for its whole length.")]
@@ -109,7 +111,8 @@ pub fn class(hwnd: HWND) -> String {
     let mut buf = [0u16; TEXT_CAP];
     // SAFETY: the buffer is valid for its whole length.
     let n = unsafe { GetClassNameW(hwnd, &mut buf) };
-    String::from_utf16_lossy(&buf[..usize::try_from(n).unwrap_or(0)])
+    let n = usize::try_from(n).unwrap_or_default();
+    String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
 
 /// `[class] of program`, for reports.
@@ -124,9 +127,7 @@ pub fn describe(hwnd: HWND) -> String {
 
 /// The file name of the program that owns `hwnd`, such as `notepad.exe`.
 pub fn program_name(hwnd: HWND) -> Option<String> {
-    let path = program(hwnd).ok()?;
-    let name = std::path::Path::new(&path).file_name()?;
-    Some(name.to_string_lossy().into_owned())
+    kx_platform_windows::front::app_of(owner(hwnd).0)
 }
 
 /// The process and thread that own `hwnd`.
@@ -182,11 +183,18 @@ pub fn focus(hwnd: HWND) -> HWND {
     thread_info(owner(hwnd).1).hwndFocus
 }
 
+/// The window under screen point `p`, child windows included, or a null handle.
+#[allow(unsafe_code, reason = "Plain query.")]
+pub fn under(p: POINT) -> HWND {
+    // SAFETY: plain query; any point is allowed.
+    unsafe { WindowFromPoint(p) }
+}
+
 /// The top-level window under screen point `p`, or a null handle.
-#[allow(unsafe_code, reason = "Plain queries.")]
+#[allow(unsafe_code, reason = "Plain query.")]
 pub fn root_at(p: POINT) -> HWND {
-    // SAFETY: plain queries; a null result is handled by the caller's comparison.
-    unsafe { GetAncestor(WindowFromPoint(p), GA_ROOT) }
+    // SAFETY: plain query; a null result is handled by the caller's comparison.
+    unsafe { GetAncestor(under(p), GA_ROOT) }
 }
 
 /// True if `w` is `parent` itself or one of its child windows.
@@ -229,7 +237,7 @@ pub fn close(hwnd: HWND) -> Result<(), String> {
 #[allow(unsafe_code, reason = "Plain calls on a window handle.")]
 pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
     for _ in 0..t.front_tries.max(1) {
-        if spike_core::window::foreground() == hwnd {
+        if kx_platform_windows::window::foreground() == hwnd {
             return true;
         }
         // SAFETY: plain calls on a window handle; failures are checked below.
@@ -244,7 +252,7 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
         let _ = unsafe { SetForegroundWindow(hwnd) };
         sleep_ms(t.front_wait_ms);
     }
-    spike_core::window::foreground() == hwnd
+    kx_platform_windows::window::foreground() == hwnd
 }
 
 #[cfg(test)]
@@ -259,6 +267,19 @@ mod tests {
             Some(7)
         });
         assert_eq!((got, calls), (Some(7), 1));
+    }
+
+    #[test]
+    fn a_window_that_does_not_exist_reads_as_nothing() {
+        let none = HWND::default();
+        assert_eq!((title(none), class(none)), (String::new(), String::new()));
+        assert_eq!(program_name(none), None);
+    }
+
+    #[test]
+    fn ms_since_counts_up_from_its_start() {
+        let t = Instant::now();
+        assert!(ms_since(t) <= ms_since(t));
     }
 
     #[test]

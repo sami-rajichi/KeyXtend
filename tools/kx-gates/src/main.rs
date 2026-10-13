@@ -1,11 +1,14 @@
-//! kx-gates: the Windows gate runner for gates G1-G7, G12, G17-G25 and the hand try;
-//! it prints one JSON line per run. It moves the real mouse and types into real apps,
-//! so run it only when the owner agrees.
+//! kx-gates: the Windows gate runner for gates G1-G13, G17-G26 and the hand try; it prints one JSON line per run.
+//! It moves the real mouse and types into real apps, so it runs only with the owner's yes; `capture-layouts` only reads.
 #![deny(unsafe_code)]
 
 mod admin;
 mod apps;
 mod assist;
+mod board;
+mod budget;
+mod busbench;
+mod capture;
 mod cfgfile;
 mod cli;
 mod clicks;
@@ -13,14 +16,22 @@ mod clip;
 mod clipkeep;
 mod cliplisten;
 mod cliptext;
+mod close;
 mod config;
 mod diff;
 mod facearg;
 mod facetools;
 mod featcfg;
+mod fit;
 mod g1;
+mod g10;
+mod g10keys;
+mod g10point;
+mod g10steps;
+mod g11;
 mod g12;
 mod g12pts;
+mod g13;
 mod g17;
 mod g18;
 mod g19;
@@ -35,24 +46,49 @@ mod g22type;
 mod g23;
 mod g24;
 mod g25;
+mod g26;
+mod g2hand;
+mod g2raw;
 mod g3;
 mod g4;
 mod g5;
 mod g6;
 mod g7;
+mod g8;
+mod g8cfg;
+mod g8churn;
+mod g8frames;
+mod g8lit;
+mod g8loss;
+mod g8parts;
+mod g8pops;
+mod g8size;
+mod g8start;
+mod g8steps;
+mod g8tips;
+mod g8type;
+mod g8ui;
+mod g9;
+mod g9win;
 mod gatecfg;
 mod hand;
 mod hookhost;
 mod hookio;
 mod hookstate;
+mod keymap;
 mod keys;
 mod launch;
 mod launchterm;
 mod mouse;
+mod mouseguard;
 mod out;
+mod p3cfg;
+mod presentmon;
 mod probe;
 mod probecfg;
 mod probetext;
+mod proc;
+mod product;
 mod readback;
 mod rng;
 mod scroll;
@@ -61,7 +97,9 @@ mod simuser;
 mod stats;
 mod text;
 mod tlog;
+mod uilook;
 mod usage;
+mod walk;
 mod wer;
 mod win;
 mod winclip;
@@ -97,11 +135,16 @@ fn main() -> ExitCode {
     // Per-monitor DPI awareness comes from the manifest that build.rs embeds.
     keep_stdio_private();
     let raw: Vec<String> = std::env::args().skip(1).collect();
-    let result = cli::parse(&raw).and_then(|args| cli::run(&args));
+    let result = match raw.as_slice() {
+        [command] if command == capture::COMMAND => {
+            config::load().and_then(|cfg| capture::run(&cfg.capture))
+        }
+        _ => cli::parse(&raw).and_then(|args| cli::run(&args)),
+    };
     match result {
         Ok(v) => {
             out::say!("{v}");
-            if v.get("error").is_some() {
+            if out::failed(&v) {
                 ExitCode::FAILURE
             } else {
                 ExitCode::SUCCESS

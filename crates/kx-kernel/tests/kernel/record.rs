@@ -1,11 +1,12 @@
-//! What the samples record, in order, and the switch that tells them how to behave.
+//! What the samples record, in order, the switch that tells them how to behave and the slot
+//! where they leave their settings handle.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixture helpers run only in tests, where a failed setup should fail the test"
 )]
 
-use kx_module_api::{ModuleId, ServiceError, ServiceId};
+use kx_module_api::{ModuleId, ServiceError, ServiceId, SettingsHandle};
 use std::sync::{Arc, Mutex, PoisonError};
 
 /// What a sample did.
@@ -91,5 +92,20 @@ impl Switch {
 
     pub fn get(&self) -> Mode {
         *self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// Where a sample leaves its settings handle at each start, so a test can write through it.
+#[derive(Clone, Default)]
+pub struct Grab(Arc<Mutex<Option<SettingsHandle>>>);
+
+impl Grab {
+    pub fn put(&self, handle: SettingsHandle) {
+        *self.0.lock().unwrap_or_else(PoisonError::into_inner) = Some(handle);
+    }
+
+    /// The handle from the sample's last start.
+    pub fn get(&self) -> SettingsHandle {
+        self.0.lock().unwrap().clone().unwrap()
     }
 }

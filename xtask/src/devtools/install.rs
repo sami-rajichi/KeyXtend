@@ -1,10 +1,12 @@
-//! `cargo xtask dev-install`: signs a test build and copies it into Program Files.
+//! `cargo xtask dev-install`: signs a test build, copies it into Program Files and adds its Start-menu shortcut.
 
 use std::path::{Path, PathBuf};
 
 use super::cert::{CertStore, ScriptStore};
 use super::config::{self, DevSetup, DevToolsConfig};
-use super::{DevError, admin, paths, ps, sdk};
+use super::stage::{self, StageError};
+use super::{DevError, admin, paths, ps, sdk, shortcut};
+use crate::workspace;
 
 /// `signtool` subcommand that signs files.
 const SIGN: &str = "sign";
@@ -16,8 +18,6 @@ const SHA1_FLAG: &str = "/sha1";
 const DIGEST_FLAG: &str = "/fd";
 /// File extension of the programs that get signed.
 const EXE_EXT: &str = "exe";
-/// Bytes in one MB, for the size limit.
-const BYTES_PER_MB: u64 = 1024 * 1024;
 
 /// Accepts `name` only if it is one plain folder name.
 pub(crate) fn plain(name: &str) -> Result<String, DevError> {
@@ -58,7 +58,7 @@ pub(crate) fn exes(folder: &Path) -> Result<Vec<PathBuf>, DevError> {
         .filter(|path| path.is_file() && is_exe(path))
         .collect();
     if found.is_empty() {
-        return Err(DevError::NoExe(paths::text(folder)));
+        return Err(StageError::NoExe(paths::text(folder)).into());
     }
     found.sort();
     Ok(found)
@@ -76,11 +76,44 @@ pub(crate) fn check_source(source: &Path, target: &Path, max_mb: u64) -> Result<
     if paths::overlaps(source, target) {
         return Err(DevError::Overlap(paths::text(source)));
     }
-    let mb = paths::folder_size(source)?.div_ceil(BYTES_PER_MB);
+    let mb = paths::folder_size(source)?.div_ceil(paths::BYTES_PER_MB);
     if mb > max_mb {
         return Err(DevError::TooBig { mb, max: max_mb });
     }
     Ok(())
+}
+
+/// True if `folder` holds the app's `program` directly, so its install gets the shortcut.
+pub(crate) fn holds_app(folder: &Path, program: &str) -> bool {
+    folder.join(program).is_file()
+}
+
+/// Runs the stage check on `source` when it holds the app, so a refused stage, or one holding a file off its list, is
+/// never signed.
+pub(crate) fn vet(
+    source: &Path,
+    setup: &DevSetup,
+    stage: &stage::StageConfig,
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<(), DevError> {
+    if holds_app(source, &stage.program()) {
+        stage::verify(setup, stage, source, env)?;
+    }
+    Ok(())
+}
+
+/// The shortcut `source`'s install gets, worked out before anything changes; none when it does not hold the app.
+pub(crate) fn link_for(
+    source: &Path,
+    program: &str,
+    config: &DevToolsConfig,
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<Option<PathBuf>, DevError> {
+    if holds_app(source, program) {
+        shortcut::link(config, env).map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 /// The thumbprint of the test certificate, or a hint to run `dev-cert` first.
@@ -88,23 +121,32 @@ fn require_cert(setup: &DevSetup) -> Result<String, DevError> {
     ScriptStore { setup }.find()?.ok_or(DevError::NoCert)
 }
 
-/// Loads the settings and the install target for `name`.
-fn prepare(name: &str) -> Result<(DevSetup, PathBuf), DevError> {
-    let setup = config::from_cargo()?;
-    let root = setup.config.install_root(|key| std::env::var(key).ok())?;
+/// The settings, the stage settings and the install target for `name`.
+fn prepare(name: &str) -> Result<(DevSetup, stage::StageConfig, PathBuf), DevError> {
+    let json = workspace::metadata_json()?;
+    let (setup, stage) = (config::load(&json)?, stage::load(&json)?);
+    let root = setup.config.install_root(env)?;
     let target = target_dir(&root, &setup.config, name);
     std::fs::create_dir_all(setup.out(""))?;
-    Ok((setup, target))
+    Ok((setup, stage, target))
 }
 
-/// Runs `cargo xtask dev-install <folder>`: signs every exe, then copies the folder.
+/// The process environment.
+fn env(key: &str) -> Option<String> {
+    std::env::var(key).ok()
+}
+
+/// Runs `cargo xtask dev-install <folder>`: signs every exe, copies the folder, then adds the app's shortcut.
 pub(crate) fn run(folder: &str) -> Result<(), DevError> {
     let source = paths::normalize(&std::path::absolute(folder)?);
     if !source.is_dir() {
         return Err(DevError::NotAFolder(folder.to_string()));
     }
-    let (setup, target) = prepare(&install_name(&source)?)?;
+    let (setup, stage, target) = prepare(&install_name(&source)?)?;
     check_source(&source, &target, setup.config.install_max_mb)?;
+    vet(&source, &setup, &stage, env)?;
+    let program = stage.program();
+    let link = link_for(&source, &program, &setup.config, env)?;
     let programs = exes(&source)?;
     let thumbprint = require_cert(&setup)?;
     let signtool = sdk::find_tool(&setup.config, &setup.config.signtool)?;
@@ -117,18 +159,28 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
         admin::build_params(&setup.config, Some(&source), &target),
     )?;
     println!("Installed to {}.", paths::text(&target));
+    if let Some(link) = link {
+        shortcut::add(&setup, &link, &target.join(&program))?;
+        println!("Start-menu shortcut: {}.", paths::text(&link));
+    }
     Ok(())
 }
 
-/// Runs `cargo xtask dev-install --remove <name>`: deletes that install, with no prompt if it is absent.
+/// Runs `cargo xtask dev-install --remove <name>`: deletes that install, with no prompt if it is absent, then its
+/// shortcut, whose path is worked out first.
 pub(crate) fn remove(name: &str) -> Result<(), DevError> {
-    let (setup, target) = prepare(&plain(name)?)?;
-    if !target.exists() {
+    let (setup, stage, target) = prepare(&plain(name)?)?;
+    let program = stage.program();
+    let link = shortcut::link(&setup.config, env)?;
+    if target.exists() {
+        admin::run(&setup, admin::build_params(&setup.config, None, &target))?;
+        println!("Removed {}.", paths::text(&target));
+    } else {
         println!("{} is not installed.", paths::text(&target));
-        return Ok(());
     }
-    admin::run(&setup, admin::build_params(&setup.config, None, &target))?;
-    println!("Removed {}.", paths::text(&target));
+    if shortcut::remove(&setup, &link, &target.join(&program))? {
+        println!("Removed its Start-menu shortcut.");
+    }
     Ok(())
 }
 

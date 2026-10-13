@@ -6,9 +6,10 @@
 )]
 
 use kx_module_api::{
-    MS_PER_S, ModuleId, Notice, Settings, SettingsError, SettingsSpec, keys, validate_as,
+    MS_PER_S, ModuleId, Notice, NoticeArg, Settings, SettingsError, SettingsSpec, args, keys,
+    validate_as,
 };
-use kx_settings::{ARG_KEYS, ARG_MODULE, ARG_MORE, Files, LoadReport, Store};
+use kx_settings::{Files, LoadReport, Store};
 use kx_test_support::tempdir::TempDir;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -113,20 +114,31 @@ pub fn defaults_with(text: &str) -> Table {
     all
 }
 
-/// The notice for sample-module values that went back to their defaults.
-pub fn reset(keys_text: &str) -> Notice {
+/// The sample module as a notice argument.
+fn module() -> (&'static str, NoticeArg) {
+    (args::MODULE, NoticeArg::Text(HOLD.to_string()))
+}
+
+/// The notice for sample-module values that went back to their defaults, naming `names`.
+pub fn reset<S: AsRef<str>>(names: &[S]) -> Notice {
+    let list = names.iter().map(|n| n.as_ref().to_owned()).collect();
     Notice {
         key: keys::SETTINGS_RESET,
         module: Some(HOLD),
-        args: vec![(ARG_MODULE, HOLD.to_string()), (ARG_KEYS, keys_text.into())],
+        args: vec![module(), (args::KEYS, NoticeArg::List(list))],
     }
 }
 
 /// The reset notice naming `named`, with the count of the `more` keys it leaves out.
-pub fn reset_more(named: &str, more: usize) -> Notice {
+pub fn reset_more<S: AsRef<str>>(named: &[S], more: usize) -> Notice {
     let mut notice = reset(named);
-    notice.args.push((ARG_MORE, more.to_string()));
+    notice.args.push((args::MORE, NoticeArg::Count(more)));
     notice
+}
+
+/// The reset notice that names no key and counts the `more` bad values.
+pub fn reset_count(more: usize) -> Notice {
+    reset_more::<&str>(&[], more)
 }
 
 /// The notice for a sample-module section from a newer version.
@@ -134,6 +146,6 @@ pub fn newer() -> Notice {
     Notice {
         key: keys::SETTINGS_NEWER,
         module: Some(HOLD),
-        args: vec![(ARG_MODULE, HOLD.to_string())],
+        args: vec![module()],
     }
 }

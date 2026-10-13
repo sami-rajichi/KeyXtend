@@ -1,0 +1,182 @@
+# Settings P3 adds: the mouse guard, the run-length checks ([fit]), gates G8-G11, G13 and G26, and G8's On-Screen
+# Keyboard baseline ([osk]). kx-gates reads them with kx-gates.toml, from its folder.
+
+# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input;
+# the gate table in src/cli.rs marks the gates it never holds. It lets go when the gate ends, for an admin prompt,
+# after limit_ms of holding, at the owner's escape clicks, or once Windows switched its hook off; the last three stop
+# the gate, which fails.
+[mouse_guard]
+on = true
+# Longest the guard holds the mouse in one run, in ms: 15 minutes, as G2's 1000 held clicks take over 8 (owner).
+limit_ms = 900000
+# Physical button presses that give the mouse back at once and stop the gate; the press drops and its release passes.
+escape_clicks = 1
+# How close together the presses must come when escape_clicks is above 1, in ms.
+escape_window_ms = 3000
+# How soon, in ms, the hook must count kx-gates' own clicks and moves; past it, Windows switched it off.
+# Twice Windows' 1 s hook timeout.
+alive_ms = 2000
+
+# Run lengths checked at load: a guarded run's counted steps (its clicks, G8's capture and churn rests) plus
+# guard_headroom_ms must fit [mouse_guard] limit_ms; the headroom covers starting apps, waits and clean-up, in ms.
+[fit]
+guard_headroom_ms = 120000
+# G8's capture must last through its counted steps up to its G2 clicks' end, plus this for its cold start, resizes and
+# each target window's start, in ms.
+capture_headroom_ms = 30000
+
+# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
+[g8]
+# The copy G8 starts, through the shell: the signed uiAccess one beside the installed kx-gates, where
+# `cargo xtask dev-install` puts both; a relative path starts at this file's folder.
+program = "../keyxtend/keyxtend.exe"
+# Cold start to a shown keyboard, in ms: on this PC, and in weak mode (spec §10).
+start_ms = 500.0
+weak_start_ms = 1000.0
+# Longest wait for the keyboard and the log's guard line, and how often the start and each resize are looked at, in ms.
+start_wait_ms = 10000
+look_ms = 2
+# The product's log lines that open and close its start-up (apps/keyxtend run.rs, kx-ui hub/face.rs).
+log_start = "KeyXtend started"
+log_guarded = "windows guarded"
+# Settle, then measure the idle product for this long, in ms.
+idle_settle_ms = 3000
+idle_ms = 10000
+# Memory is read this long after the keyboard shows, in ms: a fixed warm-up so runs compare. G8 never trims (ADR-0021).
+warm_ms = 10000
+# Idle private working set and private commit (ADR-0021), and the program folder below, in MB of 10⁶ bytes (spec §10);
+# idle CPU in percent of one core in both modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
+memory_mb = 100.0
+commit_mb = 140.0
+idle_core_pct = 0.5
+# The program folder's budget is the stage's own `max_mb` (root Cargo.toml); a test keeps the two equal.
+size_mb = 80.0
+# The key G8 presses, by board id, and how many times.
+press_key = "c-0x001E"
+presses = 20
+# A press lights its key as Windows' On-Screen Keyboard does (spec §10, ADR-0025), each plus the median screen copy:
+# the median press within this many frames, the one being drawn and the next, and the slowest within one refresh more.
+highlight_frames = 2.0
+highlight_worst_frames = 3.0
+# Pause with the pointer on the key before each press, and the longest wait for its light, in ms.
+hover_settle_ms = 500
+press_wait_ms = 500
+# A key's rise after its release (colour move 150 ms, plus a few frames); frames lost from press to its end are dropped.
+rise_ms = 200
+# Wait after the last press so its rise has ended before the resizes, in ms; at least rise_ms.
+rise_wait_ms = 300
+# Resizing through the top bar's buttons (UI Automation ids); the box has settled after resize_settle_ms unchanged.
+grow = "bar.bigger"
+shrink = "bar.smaller"
+resize_settle_ms = 200
+resize_wait_ms = 3000
+# Keyboard widths this many px apart count as one size (DPI rounding); past it, G8 and G9 press once more to size back.
+resize_slack_px = 2
+# Click to character: G2's clicks on the copy G8 started; their 99th percentile, in ms (spec §10).
+clicks = 100
+char_ms = 30.0
+# Bus publish: handlers on one event (about one per module) and publishes timed. A publish is one step of a key click,
+# so its 99th percentile may take this share of char_ms (docs/items/P3.md: else the bus copies its list less).
+subscribers = 20
+publishes = 10000
+bus_share = 0.01
+# PresentMon's CSV in the out folder, recorded with QPC times (--qpc_time_ms) while G8 runs up to its churn.
+presentmon = "g8-presentmon.csv"
+# How long that capture records, in seconds: G8's run up to the churn with its held G2 clicks, about two minutes, as
+# [fit] checks. G8 waits for its end before the churn, so a theme switch never counts as a dropped frame.
+presentmon_secs = 150
+# The PresentMon program G8 starts as administrator, with no window, just before the product; empty, G8 says how to
+# record. Each PC names its own copy in the installed settings.
+presentmon_exe = ""
+# Wait after starting PresentMon, in ms, so its start-up does not slow the cold start.
+presentmon_wait_ms = 2000
+# Longest wait past the recording time for PresentMon to stop and write its last rows, in ms, whether G8 or the
+# owner started it.
+presentmon_stop_ms = 15000
+# A copy G8 started but could not open or cap gets Quit up to quit_tries times, quit_try_ms apart, as its command
+# window may not exist yet.
+quit_tries = 50
+quit_try_ms = 200
+# Churn (spec §10, no growth), last in a G8 run: each round hovers keys for their tips, opens and closes the language
+# list in the List design, minimises to the bubble and back with [g9]'s buttons, and presses the theme button once per
+# theme.
+# It moves the pointer but never clicks, and presses buttons by UI Automation.
+# Unmeasured rounds first, so each pop-up's first show, a one-time cost, is not counted as growth. As many as memory
+# takes to settle; ADR-0023 gives the owner's choice and the runs behind it.
+churn_warm_rounds = 5
+# Measured rounds, with private memory read before them and after each one. The result's churn lists each round's
+# reading in `per_round`, so a failed run shows a steady climb (a leak) or one jump (settling).
+# Memory is also read after each step; `step_growth` lists each step's change and slope, `round_slope` the round's.
+churn_rounds = 20
+# Most growth of the working set and of the commit over those rounds, in MB.
+churn_growth_mb = 3.0
+# Growth is the median of the last this-many rounds' readings less the median of the first this-many, so one high
+# reading at either end does not decide it; at most half of churn_rounds.
+churn_median_rounds = 5
+# Keys hovered each round, by board id; each has an icon, so its tip shows (a test checks icons.toml).
+churn_tips = ["bksp", "enter", "shift"]
+# Rest on each key past the running copy's [ui] tip_ms, so its tip has shown, in ms.
+churn_tip_ms = 300
+# The top bar's theme button, pressed once per theme each round, so the theme ends where it started.
+churn_theme = "bar.theme"
+# Wait after each list, bubble or theme press, so its windows have shown or gone, in ms.
+churn_settle_ms = 500
+
+# Windows' On-Screen Keyboard, which `g8 osk` times as a baseline by G8's screen copy; G8 never starts or closes it.
+[osk]
+program = "osk.exe"
+# The key it presses, by UI Automation name or id in any letter case: one that types a character at once.
+key = "a"
+
+# G9 window flags: the flags stay set after hide and show, a topmost toggle, a click-through toggle and a resize.
+# G9 writes click-through on to every window: the guard keeps it on a click-through glow and refuses it elsewhere.
+[g9]
+put_away = "bar.minimise"
+bring_back = "bar.bubble"
+# Wait after each step before the flags are read, in ms.
+settle_ms = 500
+
+# G10 screen readers: every key is named, found at its centre by point and can be pressed the way Narrator and NVDA
+# find and press it.
+[g10]
+# Pause after each press through UI Automation, and the wait for the last character, in ms.
+press_gap_ms = 100
+drain_ms = 1000
+# Wait after each key step (every key that types no character at once) for its keys to reach target-window, in ms.
+step_wait_ms = 300
+# The send key pressed after each modifier latches, so the modifier goes out with it; Enter changes nothing outside
+# target-window.
+probe = "enter"
+# Keys that failed the check by point listed in full in the result; all of them are counted.
+failures_shown = 5
+
+# G11 DPI: one run at each scale the owner sets in Windows; the keyboard keeps its logical size within slack_px.
+# The top scale is the largest Windows offers on the development PC's 1920x1080 screen (175 %, not 200 %).
+[g11]
+scales = [100, 150, 175]
+slack_px = 2.0
+
+# G13 themes: the gate watches while the owner changes dark mode, the accent and high contrast in Windows.
+[g13]
+watch_secs = 180
+# Following live: the keyboard redraws within this time of a change, in ms.
+follow_ms = 1000
+changes = 6
+# Each of these parts of Windows' look must change at least once (roadmap G13). The accent needs [ui] follow_accent on
+# a theme that takes it (Native); G13 stops at the start and says so otherwise.
+needs = ["dark", "accent", "contrast"]
+# Only each key's solid face is compared: this share of its width and height is left out on every side, so the
+# window's clear margin, the plate's corners and a backdrop never count as a redraw.
+key_inset = 0.25
+
+# G26 other languages (CI runner only): each language's first installed layout, its labels and its typed text.
+[g26]
+# Language tags; the CI job adds each to the runner's languages, and G26 uses the first layout of its language part.
+languages = ["de-DE", "ru-RU", "he-IL", "fa-IR"]
+# Clicks on character keys per language; pauses and limits come from [g2].
+clicks = 100
+# Longest wait for the keyboard to show, in ms; the runner starts a cold debug build just before.
+show_wait_ms = 60000
+# Longest wait, in ms, for every character key to be listed and named after a new layout; G26 reports the time taken
+# (`labels_ms`). On the runner's cold debug build, Hebrew's keys took longer than one follow wait (2026-10-13).
+label_wait_ms = 10000

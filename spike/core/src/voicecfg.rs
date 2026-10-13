@@ -105,7 +105,7 @@ pub struct CloudConfig {
 pub struct WeakConfig {
     /// Cores it may use.
     pub cores: u32,
-    /// CPU share, in percent of the whole machine.
+    /// CPU time per allowed core, in percent of one core: the job gets `cores × rate_pct` % of one core in all.
     pub rate_pct: u32,
     /// Memory cap, in MiB.
     pub mem_mb: u64,

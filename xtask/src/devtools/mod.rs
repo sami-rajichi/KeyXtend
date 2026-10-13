@@ -1,4 +1,4 @@
-//! Tools for uiAccess test builds: a test certificate, a Program Files install and a check.
+//! Tools for uiAccess test builds: the stage, a test certificate, a Program Files install with its shortcut, and a check.
 
 pub(crate) mod admin;
 pub(crate) mod cert;
@@ -10,14 +10,17 @@ pub(crate) mod paths;
 pub(crate) mod ps;
 pub(crate) mod script;
 pub(crate) mod sdk;
+pub(crate) mod shortcut;
+pub(crate) mod stage;
 
 use std::fmt;
 
+use self::stage::StageError;
 use crate::cli::SUB_DEV_CERT as DEV_CERT;
 use crate::workspace::LoadError;
 
 /// Why a dev-tools subcommand failed.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum DevError {
     /// The dev-tools settings could not be loaded.
     Config(String),
@@ -69,8 +72,12 @@ pub(crate) enum DevError {
     },
     /// The build folder holds a link or junction, which the copy would follow.
     Link(String),
-    /// The build folder has no program directly inside it.
-    NoExe(String),
+    /// The stage, or the build folder an install copies, was refused.
+    Stage(StageError),
+    /// The stage failed and was removed, so it never looks installable.
+    StageRemoved(Box<DevError>),
+    /// The shortcut would land outside the user's profile.
+    NotInProfile(String),
 }
 
 impl From<LoadError> for DevError {
@@ -103,14 +110,11 @@ impl fmt::Display for DevError {
             Self::NotAFolder(path) => write!(f, "{path} is not a folder"),
             Self::NotAFile(path) => write!(f, "{path} is not a file"),
             Self::Overlap(path) => write!(f, "{path} overlaps the install target; build elsewhere"),
-            Self::TooBig { mb, max } => {
-                write!(f, "the build folder is {mb} MB; the limit is {max} MB")
-            }
+            Self::TooBig { mb, max } => write!(f, "{mb} MB is over the {max} MB limit"),
             Self::Link(path) => write!(f, "{path} is a link; remove it from the build folder"),
-            Self::NoExe(path) => write!(
-                f,
-                "no program directly inside {path}; pick the build output"
-            ),
+            Self::Stage(why) => write!(f, "{why}"),
+            Self::StageRemoved(why) => write!(f, "{why}; the stage was removed"),
+            Self::NotInProfile(path) => write!(f, "{path} is outside the user's profile"),
         }
     }
 }

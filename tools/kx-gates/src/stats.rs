@@ -25,6 +25,16 @@ pub fn ratio(part: usize, whole: usize) -> f64 {
     part as f64 / whole as f64
 }
 
+/// The median of `sorted`: its middle value, or the mean of its two middle values for an even count; none when empty.
+pub fn median(sorted: &[f64]) -> Option<f64> {
+    let mid = sorted.len() / 2;
+    match sorted.len() {
+        0 => None,
+        n if n % 2 == 1 => Some(sorted[mid]),
+        _ => Some(f64::midpoint(sorted[mid - 1], sorted[mid])),
+    }
+}
+
 /// Percentiles reported by G2 and G5: name in the results, and rank (0-100).
 pub const PERCENTILES: [(&str, f64); 3] = [("p50", P50), ("p95", 95.0), ("p99", P99)];
 
@@ -104,6 +114,14 @@ mod tests {
             us,
             expect: expect.to_vec(),
         }
+    }
+
+    #[test]
+    fn a_median_is_the_middle_reading_or_the_mean_of_the_two_middle_ones() {
+        assert_eq!(median(&[1.0, 2.0, 9.0]), Some(2.0));
+        assert_eq!(median(&[1.0, 2.0, 4.0, 9.0]), Some(3.0), "even count");
+        assert_eq!(median(&[5.0]), Some(5.0));
+        assert_eq!(median(&[]), None);
     }
 
     #[test]

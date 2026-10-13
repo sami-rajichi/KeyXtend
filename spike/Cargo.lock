@@ -255,6 +255,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-keyboard"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "toml",
+]
+
+[[package]]
+name = "kx-module-api"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+ "toml",
+]
+
+[[package]]
+name = "kx-platform"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "kx-platform-windows"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform",
+ "thiserror 2.0.21",
+ "windows",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -592,6 +630,10 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 name = "spike-core"
 version = "0.0.0"
 dependencies = [
+ "kx-mod-keyboard",
+ "kx-module-api",
+ "kx-platform",
+ "kx-platform-windows",
  "serde",
  "serde_json",
  "toml",

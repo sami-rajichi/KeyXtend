@@ -3,10 +3,9 @@
 //! It opens the panel with the Settings key and types into it, and presses keys only while the panel is in front.
 #![cfg(windows)]
 
+use kx_mod_keyboard::legend::is_mark;
 use serde_json::{Value, json};
-use spike_core::legend::is_mark;
 use spike_core::uia::{self, Uia};
-use spike_core::{inject, window};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -17,10 +16,7 @@ use crate::apps::Ctx;
 use crate::featcfg::Move;
 use crate::simuser::in_front;
 use crate::win::{self, sleep_ms};
-use crate::{facetools, keys, mouse};
-
-/// The side key that opens and closes the panel.
-const OPENER: &str = "settings";
+use crate::{facetools, keymap, keys, mouse};
 
 /// A caret key's virtual key (adapter table).
 fn vk(m: Move) -> VIRTUAL_KEY {
@@ -69,15 +65,14 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let uia = Uia::new()?;
     let face = mouse::find_face(ctx.spike, name)?;
     let pid = win::owner(face).0;
-    let opener = ctx.spike.keys.get(OPENER).ok_or("no Settings key")?;
     let key = uia
-        .named(face, &opener.name)
+        .named(face, &ctx.cfg.g7.opener)
         .ok_or("the Settings key has no UIA element")?;
     // The key toggles the panel, so one left open is closed first.
     if shown(ctx, pid).is_some() && !(uia::invoke(&key).is_ok() && gone(ctx, pid)) {
         return Err("a panel left open did not close".into());
     }
-    uia::invoke(&key)?;
+    keymap::press(&key)?;
     let panel = win::poll_until(ctx.cfg.g7.open_ms, t.poll_ms, || shown(ctx, pid))
         .ok_or("the panel did not open")?;
     let out = check(ctx, &uia, panel);
@@ -108,10 +103,10 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
         .ok_or("the panel has no text field")?;
     uia::focus(&field)?;
     // Brought forward without keys: an Alt tap would reach the app in front.
-    let forward = || (window::foreground() == panel || window::bring_back(panel, 0)).then_some(());
+    let forward = || spike_core::window::bring_back(panel, 0).then_some(());
     let _ = win::poll_until(t.focus_wait_ms, t.poll_ms, forward);
     in_front(panel)?;
-    inject::text(&g.word)?;
+    keys::text(&g.word)?;
     let typed = || (uia::value(&field).as_deref() == Some(g.word.as_str())).then_some(());
     let typed_ok = win::poll_until(t.read_wait_ms, t.poll_ms, typed).is_some();
     let tp = uia.text_of(&field).ok_or("the field has no TextPattern")?;

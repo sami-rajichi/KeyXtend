@@ -1,6 +1,6 @@
-//! Errors a module meets while it starts: services, settings and its own start.
+//! Errors a module meets: services, settings, its own start and its own settings writes.
 
-use crate::{Capability, ServiceId};
+use crate::{Capability, ModuleId, ServiceId};
 use thiserror::Error;
 
 /// Why a service could not be got or provided.
@@ -27,6 +27,14 @@ pub enum ServiceError {
     /// The request names another capability than the one stored with the service.
     #[error("service {0} was requested with another capability than its provider's")]
     CapabilityMismatch(ServiceId),
+}
+
+/// Why a module could not use an event.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
+pub enum EventError {
+    /// The event needs a capability the module was not granted.
+    #[error("event {0} needs the {cap} capability, which is not granted", cap = .1.name())]
+    NotGranted(&'static str, Capability),
 }
 
 /// Why a settings section could not be read, upgraded or accepted.
@@ -73,12 +81,52 @@ pub enum ModuleError {
     /// A service could not be got or provided.
     #[error(transparent)]
     Service(#[from] ServiceError),
+    /// An event needs a capability the module lacks.
+    #[error(transparent)]
+    Event(#[from] EventError),
     /// The module's settings were unusable.
     #[error(transparent)]
     Settings(#[from] SettingsError),
     /// The module's own start failed; the reason is a short fixed text and never holds user data.
     #[error("start failed: {0}")]
     Start(&'static str),
+}
+
+/// Why a module's own settings write failed; log it by `kind`, since an `Invalid` text may quote a settings value.
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum WriteError {
+    /// The module's validator refused the key or the value; nothing changed.
+    #[error(transparent)]
+    Invalid(#[from] SettingsError),
+    /// The section cannot change: no settings, a newer version, the version key, or a panic.
+    #[error("the settings of module {0} cannot change")]
+    Refused(ModuleId),
+    /// The value holds for this run, but the settings file could not be saved.
+    #[error("the settings were not saved")]
+    Unsaved,
+}
+
+/// The log name of a `WriteError::Refused`.
+const REFUSED_KIND: &str = "settings cannot change";
+/// The log name of a `WriteError::Unsaved`.
+const UNSAVED_KIND: &str = "settings not saved";
+
+impl WriteError {
+    /// A short fixed name of the error's kind, safe to log: an `Invalid` write gives its `SettingsError::kind`.
+    #[must_use]
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::Invalid(e) => e.kind(),
+            Self::Refused(_) => REFUSED_KIND,
+            Self::Unsaved => UNSAVED_KIND,
+        }
+    }
+
+    /// True when the values still hold for this run: the store took them, and only the file was not saved.
+    #[must_use]
+    pub fn holds(&self) -> bool {
+        matches!(self, Self::Unsaved)
+    }
 }
 
 #[cfg(test)]
@@ -120,6 +168,29 @@ mod tests {
         let kinds: Vec<&str> = all.iter().map(SettingsError::kind).collect();
         assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
         assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
+    }
+
+    #[test]
+    fn a_write_error_is_logged_by_a_fixed_kind() {
+        let value = "hunter2";
+        let invalid = SettingsError::Invalid(value.into());
+        let all = [
+            WriteError::Invalid(invalid.clone()),
+            WriteError::Refused(ModuleId::new("a")),
+            WriteError::Unsaved,
+        ];
+        let kinds: Vec<&str> = all.iter().map(WriteError::kind).collect();
+        assert_eq!(kinds[0], invalid.kind());
+        assert!(kinds.iter().all(|k| !k.is_empty() && !k.contains(value)));
+        assert!(kinds[0] != kinds[1] && kinds[1] != kinds[2] && kinds[0] != kinds[2]);
+    }
+
+    #[test]
+    fn only_an_unsaved_write_still_holds() {
+        let refused = WriteError::Refused(ModuleId::new("a"));
+        let invalid = WriteError::Invalid(SettingsError::Invalid("bad".into()));
+        assert!(WriteError::Unsaved.holds());
+        assert!(!refused.holds() && !invalid.holds());
     }
 
     #[test]

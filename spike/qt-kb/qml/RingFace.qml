@@ -2,6 +2,8 @@
 // burst out; `loop` repeats this until stopped.
 pragma ComponentBehavior: Bound
 import QtQuick
+// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
+import "../../../crates/kx-ui/qml"
 
 Item {
     id: face

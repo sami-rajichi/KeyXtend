@@ -1,25 +1,19 @@
-//! G2 no focus: random clicks on face keys; the target keeps focus and caret; click-to-character time.
+//! G2 no focus: random clicks on the product keyboard's keys; the target keeps focus and caret; click-to-character
+//! time.
 #![cfg(windows)]
 
-use std::fmt::Write;
-
 use serde_json::{Map, Value, json};
-use spike_core::place;
-use windows::Win32::Foundation::HWND;
 
 use crate::apps::{self, Ctx, Opened};
-use crate::clicks::{self, Key, Tally};
-use crate::mouse::{self, Face};
+use crate::clicks::{self, Run, Tally, Usable};
+use crate::g2raw::{CLICKS_FILE, tsv};
+use crate::mouse;
 use crate::out::say;
-use crate::stats::{self, Click};
+use crate::product::Keyboard;
+use crate::stats;
 use crate::tlog::{self, Unit};
-use crate::win::{self, sleep_ms};
+use crate::win::sleep_ms;
 use crate::{launch, out};
-
-/// Suffix of the raw click file.
-const CLICKS_FILE: &str = "-clicks.tsv";
-/// First line of the raw click file.
-const TSV_HEADER: &str = "index\tcode\tclick_us\tlatency_us\n";
 
 /// What the target log shows after the clicks.
 struct Logged {
@@ -33,15 +27,11 @@ struct Logged {
     error: Option<String>,
 }
 
-/// Starts target-window in front and lists the uncovered keys it can type; cleans up on failure.
-fn setup(ctx: &Ctx, face: &Face, hwnd: HWND) -> Result<(Opened, Vec<Key>, Vec<String>), String> {
-    let target = launch::start_target(ctx)?;
-    if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
-        apps::clean_up(ctx, target);
-        return Err("could not bring target-window to the front".to_string());
-    }
-    match clicks::usable(ctx, face, hwnd) {
-        Ok((keys, hidden)) => Ok((target, keys, hidden)),
+/// Brings `target` to the front and lists the uncovered keys it can type; cleans up on failure.
+fn setup(ctx: &Ctx, kb: &Keyboard, target: Opened) -> Result<(Opened, Usable), String> {
+    let target = launch::to_front(ctx, target)?;
+    match clicks::usable(ctx, kb) {
+        Ok(usable) => Ok((target, usable)),
         Err(e) => {
             apps::clean_up(ctx, target);
             Err(e)
@@ -70,30 +60,66 @@ fn measure(ctx: &Ctx, tally: &Tally) -> Logged {
     }
 }
 
-/// Runs G2 on the face called `name` with `count` clicks from `seed`.
+/// Runs G2 on the product keyboard, called `name`, with `count` clicks from `seed`.
 pub fn run(ctx: &Ctx, name: &str, count: usize, seed: u64) -> Result<Value, String> {
-    let face_hwnd = mouse::find_face(ctx.spike, name)?;
-    let face = mouse::face(face_hwnd)?;
+    let kb = Keyboard::find()?;
+    let target = launch::start_target(ctx)?;
+    let run = Run {
+        count,
+        seed,
+        sweep: false,
+    };
+    on_target(ctx, name, &kb, target, run)
+}
+
+/// G2 on keyboard `kb` into `target`, already started (G26 starts it in a layout), with the clicks `run` says.
+/// The target is closed at the end.
+pub fn on_target(
+    ctx: &Ctx,
+    name: &str,
+    kb: &Keyboard,
+    target: Opened,
+    run: Run,
+) -> Result<Value, String> {
+    let place = match mouse::face(kb.hwnd) {
+        Ok(place) => place,
+        Err(e) => {
+            apps::clean_up(ctx, target);
+            return Err(e);
+        }
+    };
     // Keys another window already covers are left out and named, never clicked.
-    let (target, keys, hidden) = setup(ctx, &face, face_hwnd)?;
-    let block = place::block_size(&ctx.spike.keyboard);
+    let (target, usable) = setup(ctx, kb, target)?;
+    let (count, seed) = (run.count, run.seed);
     say!(
-        "G2 {name}: {count} clicks on {} keys, seed {seed}; face dpi {}, client {:?}, block {block:?} logical",
-        keys.len(),
-        face.dpi,
-        face.client
+        "G2 {name}: {count} clicks on {} keys, seed {seed}; keyboard dpi {}, client {:?}",
+        usable.keys.len(),
+        place.dpi,
+        place.client
     );
-    let tally = clicks::click_loop(ctx, &target, face_hwnd, &keys, (count, seed));
+    let tally = clicks::click_loop(ctx, &target, kb.hwnd, &usable.keys, run);
     sleep_ms(ctx.cfg.g2.drain_ms);
     let logged = measure(ctx, &tally);
     let left_open = apps::clean_up(ctx, target);
     let raw = ctx.file(CLICKS_FILE);
-    out::write(&raw, &tsv(&tally.clicks, &logged.lat))?;
+    out::write(&raw, &tsv(&tally.clicks, &tally.released, &logged.lat))?;
+    let g = &ctx.cfg.g2;
     let head = json!({
-        "gate": "G2", "face": name, "seed": seed, "planned": count, "dpi": face.dpi, "raw": raw,
-        "hidden_keys": hidden,
+        "gate": "G2", "keyboard": name, "seed": seed, "planned": count, "sweep": run.sweep, "dpi": place.dpi,
+        "raw": raw, "press_ms": g.press_ms, "slip_px": g.slip_px,
+        "hidden_keys": usable.hidden, "follow_ms": usable.follow_ms,
     });
     Ok(report(head, &tally, &logged, &left_open))
+}
+
+/// True when G2's result line `v` says every planned click typed its character and the target kept the focus and
+/// its caret after each one (roadmap G2).
+pub fn typed_intact(v: &Value) -> bool {
+    let clicks = v["clicks"].as_u64().unwrap_or_default();
+    let every = clicks > 0 && v["planned"].as_u64() == Some(clicks);
+    let matched = v["matched"].as_u64() == Some(clicks);
+    let caret = v["caret_kept"].as_u64() == Some(clicks);
+    v.get("error").is_none() && every && matched && caret && v["focus_ok"] == true
 }
 
 /// True when the target kept the keyboard for every click and never lost it.
@@ -118,8 +144,13 @@ fn print(tally: &Tally, logged: &Logged) {
         .collect();
     let matched = logged.lat.iter().flatten().count();
     say!("latency ms {}; matched {matched}", lat.join(" "));
-    let ok = if focus_ok(tally, logged) { "yes" } else { "no" };
-    say!("focus ok: {ok}");
+    let yes = |b: bool| if b { "yes" } else { "no" };
+    let caret = tally.caret_kept == tally.clicks.len();
+    say!(
+        "focus ok: {}; caret ok: {}",
+        yes(focus_ok(tally, logged)),
+        yes(caret)
+    );
     if tally.covered > 0 {
         say!(
             "skipped {} covered keys; covered by {}",
@@ -135,7 +166,7 @@ fn print(tally: &Tally, logged: &Logged) {
     }
 }
 
-/// Prints the run and adds its numbers to `head`, the result line.
+/// Prints the run and adds its numbers and its verdict to `head`, the result line.
 fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String]) -> Value {
     print(tally, logged);
     let latency: Map<String, Value> = stats::summary_ms(&logged.lat)
@@ -157,33 +188,74 @@ fn report(mut head: Value, tally: &Tally, logged: &Logged, left_open: &[String])
     if let Some(e) = &logged.error {
         head["error"] = json!(e);
     }
+    head["pass"] = json!(typed_intact(&head));
     head
-}
-
-/// One line per click: index, scan code, click time and latency in µs.
-fn tsv(clicks: &[Click], lat: &[Option<i64>]) -> String {
-    let mut s = String::from(TSV_HEADER);
-    for (i, (c, l)) in clicks.iter().zip(lat).enumerate() {
-        let l = l.map(|v| v.to_string()).unwrap_or_default();
-        // Writing to a `String` cannot fail.
-        let _ = writeln!(s, "{i}\t{:#X}\t{}\t{l}", c.code, c.us);
-    }
-    s
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stats::Click;
+
+    fn run(planned: u64, clicks: u64, matched: u64, focus_ok: bool) -> Value {
+        json!({
+            "gate": "G2", "planned": planned, "clicks": clicks, "matched": matched, "focus_ok": focus_ok,
+            "caret_kept": clicks, "left_open": [],
+        })
+    }
 
     #[test]
-    fn tsv_has_a_header_and_one_line_per_click() {
-        let click = |code, us| Click {
-            code,
-            us,
+    fn typing_is_intact_only_when_every_planned_click_matched_and_the_focus_stayed() {
+        assert!(typed_intact(&run(100, 100, 100, true)));
+        assert!(!typed_intact(&run(100, 100, 99, true)), "a lost character");
+        assert!(
+            !typed_intact(&run(100, 100, 100, false)),
+            "the target lost the focus"
+        );
+        assert!(
+            !typed_intact(&run(0, 0, 0, true)),
+            "no click checks nothing"
+        );
+        assert!(
+            !typed_intact(&run(100, 40, 40, true)),
+            "the clicks stopped short"
+        );
+        let mut broke = run(5, 5, 5, true);
+        broke["error"] = json!("target log");
+        assert!(!typed_intact(&broke));
+        let mut moved = run(100, 100, 100, true);
+        moved["caret_kept"] = json!(99);
+        assert!(!typed_intact(&moved), "the caret moved once");
+    }
+
+    /// A tally of `clicks` clicks after which the focus stayed every time and the caret `caret` times.
+    fn tally(clicks: usize, caret: usize) -> Tally {
+        let click = Click {
+            code: 0x1E,
+            us: 0,
             expect: vec![],
         };
-        let got = tsv(&[click(0x1E, 100), click(0xE01D, 250)], &[Some(30), None]);
-        let want = "index\tcode\tclick_us\tlatency_us\n0\t0x1E\t100\t30\n1\t0xE01D\t250\t\n";
-        assert_eq!(got, want);
+        Tally {
+            clicks: vec![click; clicks],
+            focus_kept: clicks,
+            caret_kept: caret,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn the_result_line_carries_g2s_verdict_on_focus_caret_and_text() {
+        let logged = |n: usize| Logged {
+            units: Vec::new(),
+            lat: vec![Some(10); n],
+            focus_lost: 0,
+            error: None,
+        };
+        let head = || json!({ "gate": "G2", "planned": 3 });
+        let good = report(head(), &tally(3, 3), &logged(3), &[]);
+        assert_eq!(good["pass"], true);
+        let caret = report(head(), &tally(3, 2), &logged(3), &[]);
+        assert_eq!(caret["pass"], false, "a lost caret fails G2 on its own");
+        assert!(out::failed(&caret));
     }
 }

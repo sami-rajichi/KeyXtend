@@ -40,5 +40,5 @@ Skills are instruction packs that Claude loads for a type of task. There are two
 ## Suggested later
 
 - **`kx-spike-report`:** turns spike findings into ADR updates.
-- **`kx-i18n`:** adding or reviewing EN/FR/AR UI strings and RTL mirroring.
+- **`kx-i18n`:** adding or reviewing EN/FR/AR UI strings and right-to-left Arabic text, which never mirrors the layout (ADR-0020).
 - **`kx-perf-budget`:** measures size, memory, start time and latency against spec §10 and fails when a budget is exceeded.

@@ -1,7 +1,7 @@
 # 13. Qt 6 Quick with a Rust core for every window
 
 - **Date:** 2026-09-29
-- **Status:** Accepted. Supersedes ADR-0002 and ADR-0006's Slint notes. Records the result of the test round in ADR-0011.
+- **Status:** Accepted. Supersedes ADR-0002 and ADR-0006's Slint notes. Records the result of the test round in ADR-0011. Partly superseded by ADR-0016, which moves the theme loader to `kx-theme`.
 
 ## Context
 

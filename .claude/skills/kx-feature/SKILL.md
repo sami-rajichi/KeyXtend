@@ -24,7 +24,7 @@ description: Use when the owner types /kx-feature P<n> or /kx-feature F<n>, or a
 1. **Understand.** Read the item's notes, its feature entry, the linked spec sections and `ARCHITECTURE.md`. In Improve mode, ask which saved ideas to build now (multi-select pop-up).
 2. **Ask.** Use `superpowers:brainstorming` with AskUserQuestion pop-ups: several questions per round, each with a recommended option. For parts already built, ask only about what is new or what the owner wants changed. Stop when the behaviour is clear.
 3. **Plan.** Write the plan with `kx-plan` (steps only, no code). Get the owner's approval.
-4. **Build.** If the feature needs a new module, use `kx-new-module`. Implement test-first (`superpowers:test-driven-development`), task by task (`superpowers:subagent-driven-development`). All values go in settings, tokens or translations; nothing is hardcoded.
+4. **Build.** If the feature needs a new module, use `kx-new-module`. Implement test-first (`superpowers:test-driven-development`), task by task (`superpowers:subagent-driven-development`). Every implementer, reviewer and fixer runs on Opus (`model: "opus"`, Owner's rule 8), whatever that skill's model advice says. All values go in settings, tokens or translations; nothing is hardcoded.
 5. **Review.** Run `kx-review` on every changed file, then `kx-security-check` for the feature. Fix every finding.
 6. **Check on Windows.** Run `kx-windows-manual-test` with the owner.
 7. **Done gate.** Run `kx-module-done`, and paste the evidence.

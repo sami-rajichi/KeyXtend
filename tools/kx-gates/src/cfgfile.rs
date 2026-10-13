@@ -7,6 +7,8 @@ use kx_target_window::config::locate;
 
 /// File name of the gate settings.
 pub const FILE: &str = "kx-gates.toml";
+/// File name of the settings of the gates P3 adds; it is read only from the folder of `FILE`.
+pub const P3_FILE: &str = "kx-gates-p3.toml";
 
 /// Where the settings file is: beside the running exe, else in the crate folder.
 pub fn path() -> PathBuf {
@@ -25,6 +27,25 @@ mod tests {
 
     /// The shipped settings file.
     const SHIPPED: &str = include_str!("../kx-gates.toml");
+    /// The shipped settings of the gates P3 adds.
+    const SHIPPED_P3: &str = include_str!("../kx-gates-p3.toml");
+    /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
+    const WORKSPACE: &str = include_str!("../../../Cargo.toml");
+
+    #[test]
+    fn each_shipped_settings_file_stays_within_the_size_rule() {
+        let ws: toml::Table = WORKSPACE.parse().expect("parses");
+        let max = ws["workspace"]["metadata"]["tidy"]["max_file_lines"]
+            .as_integer()
+            .expect("a number");
+        for (name, text) in [(FILE, SHIPPED), (P3_FILE, SHIPPED_P3)] {
+            let lines = i64::try_from(text.lines().count()).expect("fits");
+            assert!(
+                lines <= max,
+                "{name} has {lines} lines: move a section to its own file"
+            );
+        }
+    }
 
     /// Cargo's build folder, in the repo root.
     const BUILD_DIR: &str = "target";
@@ -76,6 +97,22 @@ mod tests {
         }
     }
 
+    /// The CI workflow, whose G26 job prints the logs in the gates' out folder; a workspace path from this file.
+    const CI: &str = include_str!("../../../.github/workflows/ci.yml");
+    /// The G26 job's variable that names that folder.
+    const GATE_LOGS: &str = "GATE_LOGS: ";
+
+    #[test]
+    fn the_g26_job_prints_the_logs_of_the_gates_out_folder() {
+        let cfg = config::load().expect("kx-gates.toml loads");
+        let named = CI.lines().find_map(|l| l.trim().strip_prefix(GATE_LOGS));
+        let out = fold(&cfg.out_dir());
+        assert_eq!(repo_root().join(named.expect("the G26 job names it")), out);
+        let target = kx_target_window::config::load().expect("target config loads");
+        let log_dir = fold(target.log.parent().expect("a folder"));
+        assert_eq!(log_dir, out, "target-window's log is there too");
+    }
+
     #[test]
     fn the_crate_folder_is_used_when_no_file_sits_beside_the_exe() {
         assert_eq!(
@@ -111,7 +148,9 @@ mod tests {
         let mut paths = vec![cfg.out_dir(), cfg.dir.join(&cfg.g22.worker_dir)];
         paths.extend(cfg.apps.values().map(|app| cfg.program(&app.exe)));
         let mut strings = Vec::new();
-        dotted(&toml::from_str(SHIPPED).expect("parses"), &mut strings);
+        for shipped in [SHIPPED, SHIPPED_P3] {
+            dotted(&toml::from_str(shipped).expect("parses"), &mut strings);
+        }
         paths.extend(strings.iter().map(|s| cfg.dir.join(s)));
         let root = repo_root();
         for p in paths.iter().filter(|p| p.starts_with(&cfg.dir)) {

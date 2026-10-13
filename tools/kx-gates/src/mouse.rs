@@ -1,8 +1,9 @@
-//! Key centres on screen from spike.toml, and real mouse moves and clicks through `SendInput`.
+//! The frozen face's window and its tools' centres, and real mouse moves and clicks through `SendInput`.
 #![cfg(windows)]
 
-use spike_core::config::{KeyboardConfig, SpikeConfig};
-use spike_core::place::{Place, places};
+use kx_mod_keyboard::Area;
+use kx_platform_windows::keys::TAG;
+use spike_core::config::SpikeConfig;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
@@ -12,10 +13,12 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, USER_DEFAULT_SCREEN_DPI};
 
+use crate::keys::After;
+
 /// Largest absolute mouse coordinate; the virtual desktop maps onto 0..=this.
 const ABS_MAX: f64 = 65535.0;
 
-/// Where the face is: client origin in physical pixels, its DPI and client size.
+/// Where a keyboard window is: client origin in physical pixels, its DPI and client size.
 #[derive(Debug, Clone, Copy)]
 pub struct Face {
     /// Top-left corner of the client area, in physical pixels.
@@ -26,25 +29,19 @@ pub struct Face {
     pub client: (i32, i32),
 }
 
-/// Every key's scan code and box, row by row, as the faces lay them out.
-pub fn key_places(kb: &KeyboardConfig) -> Vec<(u32, Place)> {
-    let codes = kb.rows.iter().flatten().copied();
-    codes.zip(places(kb).into_iter().flatten()).collect()
-}
-
 /// `v` rounded to a whole pixel.
 #[allow(
     clippy::cast_possible_truncation,
     reason = "Screen coordinates are far inside `i32`."
 )]
-fn round_px(v: f64) -> i32 {
+pub fn round_px(v: f64) -> i32 {
     v.round() as i32
 }
 
 /// The physical screen centre of `place` for a face at `origin` and `dpi`.
-pub fn centre(place: &Place, origin: POINT, dpi: u32) -> POINT {
+pub fn centre(place: &Area, origin: POINT, dpi: u32) -> POINT {
     let scale = f64::from(dpi) / f64::from(USER_DEFAULT_SCREEN_DPI);
-    let mid = |start: f32, size: f32| round_px((f64::from(start) + f64::from(size) / 2.0) * scale);
+    let mid = |start: f64, size: f64| round_px((start + size / 2.0) * scale);
     POINT {
         x: origin.x + mid(place.x, place.w),
         y: origin.y + mid(place.y, place.h),
@@ -60,7 +57,7 @@ pub fn find_face(spike: &SpikeConfig, name: &str) -> Result<HWND, String> {
         .ok_or_else(|| format!("face window {title:?} not found; start the {name} face first"))
 }
 
-/// Reads where the face window's client area is and its DPI.
+/// Reads where a keyboard window's client area is and its DPI.
 #[allow(unsafe_code, reason = "Queries into locals on a live window.")]
 pub fn face(hwnd: HWND) -> Result<Face, String> {
     let mut origin = POINT::default();
@@ -86,6 +83,11 @@ pub fn face(hwnd: HWND) -> Result<Face, String> {
 /// Maps a pixel to the 0..=65535 absolute range over `start..start+size`.
 pub fn normalise(v: i32, start: i32, size: i32) -> i32 {
     round_px(f64::from(v - start) * ABS_MAX / f64::from((size - 1).max(1)))
+}
+
+/// The pixel over `start..start+size` that absolute coordinate `v` names; the inverse of `normalise`.
+pub fn pixel(v: i32, start: i32, size: i32) -> i32 {
+    start + round_px(f64::from(v) * f64::from((size - 1).max(1)) / ABS_MAX)
 }
 
 /// A mouse input at absolute (`dx`, `dy`) with `flags`, marked `tag`.
@@ -135,71 +137,64 @@ fn click_events(x: i32, y: i32) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
 
 /// Moves the pointer to `p` (physical pixels) without pressing: the first of a click's events.
 pub fn move_to(p: POINT) -> Result<(), String> {
-    let (left, top, width, height) = crate::win::desktop();
-    let at = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
-    let (x, y, flags) = at[0];
-    spike_core::inject::send(&[input(x, y, flags, spike_core::inject::TAG)])
+    let [moved, ..] = events_at(p);
+    send(&[moved])
 }
 
 /// Clicks at `p` (physical pixels) in one `SendInput` batch, which a hand on the mouse cannot split.
 pub fn click_at(p: POINT) -> Result<(), String> {
+    send(&events_at(p))
+}
+
+/// Presses the left button at `p` (physical pixels) and holds it.
+pub fn press_at(p: POINT) -> Result<(), String> {
+    let [moved, down, _] = events_at(p);
+    send(&[moved, down])
+}
+
+/// Moves to `p` (physical pixels) and lets the left button go there; after a stop it still moves first, so a press the
+/// gate began never completes a click where the pointer is.
+pub fn release_at(p: POINT) -> Result<(), String> {
+    let [moved, _, up] = events_at(p);
+    send_as(&[moved, up], After::Away)
+}
+
+/// A click's events at `p` (physical pixels), in the 0..=65535 absolute range of the desktop.
+fn events_at(p: POINT) -> [(i32, i32, MOUSE_EVENT_FLAGS); 3] {
     let (left, top, width, height) = crate::win::desktop();
-    let events = click_events(normalise(p.x, left, width), normalise(p.y, top, height));
-    let tag = spike_core::inject::TAG;
-    spike_core::inject::send(&events.map(|(x, y, flags)| input(x, y, flags, tag)))
+    click_events(normalise(p.x, left, width), normalise(p.y, top, height))
+}
+
+/// Sends `events`, each marked as ours, in one batch, moved as `after` says once the mouse guard stopped the gate.
+fn send_as(events: &[(i32, i32, MOUSE_EVENT_FLAGS)], after: After) -> Result<(), String> {
+    let inputs: Vec<INPUT> = events
+        .iter()
+        .map(|&(x, y, flags)| input(x, y, flags, TAG))
+        .collect();
+    crate::keys::send_as(&inputs, after)
+}
+
+/// `send_as`, keeping the pointer still after a stop.
+fn send(events: &[(i32, i32, MOUSE_EVENT_FLAGS)]) -> Result<(), String> {
+    send_as(events, After::Still)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn kb() -> KeyboardConfig {
-        KeyboardConfig {
-            title: String::new(),
-            key_px: 48.0,
-            gap_px: 4.0,
-            font_px: 16.0,
-            guard_delay_ms: 0,
-            guard_tries: 1,
-            relabel_ms: 0,
-            rows: vec![vec![0x29, 0x02], vec![0x0F, 0x10], vec![0x39, 0xE038]],
-            widths: vec![(0x0F, 1.5), (0x39, 6.25)],
-        }
-    }
-
-    #[test]
-    fn key_places_pair_each_code_with_its_box() {
-        let got: Vec<(u32, f32, f32)> = key_places(&kb())
-            .into_iter()
-            .map(|(code, p)| (code, p.x, p.y))
-            .collect();
-        assert_eq!(got[0], (0x29, 4.0, 4.0));
-        assert_eq!(got[2], (0x0F, 4.0, 56.0));
-        assert_eq!(got[5], (0xE038, 329.0, 108.0));
-        assert_eq!(got.len(), 6);
-    }
-
     #[test]
     fn centres_scale_to_dpi_144() {
-        let keys = key_places(&kb());
+        let place = Area {
+            x: 4.0,
+            y: 4.0,
+            w: 48.0,
+            h: 48.0,
+        };
         let origin = POINT { x: 100, y: 200 };
-        let got: Vec<(i32, i32)> = keys
-            .iter()
-            .map(|(_, p)| centre(p, origin, 144))
-            .map(|p| (p.x, p.y))
-            .collect();
-        assert_eq!(
-            got,
-            vec![
-                (142, 242),
-                (220, 242),
-                (162, 320),
-                (259, 320),
-                (347, 398),
-                (630, 398)
-            ]
-        );
-        let p = centre(&keys[0].1, origin, 96);
+        let p = centre(&place, origin, 144);
+        assert_eq!((p.x, p.y), (142, 242));
+        let p = centre(&place, origin, 96);
         assert_eq!((p.x, p.y), (128, 228));
     }
 
@@ -208,6 +203,16 @@ mod tests {
         assert_eq!(normalise(0, 0, 1920), 0);
         assert_eq!(normalise(1919, 0, 1920), 65535);
         assert_eq!(normalise(-1920, -1920, 3840), 0);
+    }
+
+    #[test]
+    fn pixel_reads_back_the_pixel_that_normalise_aimed_at() {
+        for (start, size) in [(0, 1920), (-1920, 3840), (100, 768)] {
+            for v in [start, start + 1, start + size / 2, start + size - 1] {
+                let abs = normalise(v, start, size);
+                assert_eq!(pixel(abs, start, size), v, "{v} over {start}+{size}");
+            }
+        }
     }
 
     #[test]

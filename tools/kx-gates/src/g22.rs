@@ -3,29 +3,30 @@
 
 use std::time::{Duration, Instant};
 
+use kx_module_api::MS_PER_S;
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::langkey;
 use spike_core::uia::Uia;
 use spike_core::voicecfg::VoiceConfig;
-use spike_core::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
 use crate::g22cfg::{self, G22, Sentence};
 use crate::simuser::keys_ours;
-use crate::win::{self, sleep_ms};
+use crate::win::{self, ms_since, sleep_ms};
 use crate::winfind;
 use crate::{g22bench, g22type, g25, probe, readback, wer};
 
 /// Name that runs the bench instead of a face.
 pub const BENCH: &str = "bench";
-/// Milliseconds in a second.
-const MS_PER_S: u64 = 1000;
 
 /// Refuses waits that would let a recording stop by itself or give up before an engine does.
 fn fits(g: &G22, v: &VoiceConfig) -> Result<(), String> {
-    if g.record_ms.saturating_add(g.stop_wait_ms) >= v.record_max_s.saturating_mul(MS_PER_S) {
+    if g.record_ms.saturating_add(g.stop_wait_ms)
+        >= v.record_max_s.saturating_mul(u64::from(MS_PER_S))
+    {
         return Err("g22.record_ms plus stop_wait_ms must stay below voice.record_max_s".into());
     }
     if g.text_wait_ms <= v.local.timeout_ms.max(v.cloud.timeout_ms) {
@@ -40,11 +41,6 @@ pub(crate) fn added(before: &str, now: &str) -> String {
         .unwrap_or(now)
         .trim()
         .to_string()
-}
-
-/// Milliseconds since `t`.
-pub(crate) fn ms_since(t: Instant) -> u64 {
-    u64::try_from(t.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Clicks Mic again until the click lands or `stop_wait_ms` runs out; the last error when it never landed.
@@ -186,10 +182,10 @@ mod tests {
         let v = spike_core::config::load().expect("spike.toml loads").voice;
         assert!(fits(&h.g22, &v).is_ok());
         let mut g = h.g22.clone();
-        g.record_ms = v.record_max_s * MS_PER_S;
+        g.record_ms = v.record_max_s * u64::from(MS_PER_S);
         assert!(fits(&g, &v).is_err(), "the recording would stop by itself");
         let mut g = h.g22.clone();
-        g.stop_wait_ms = v.record_max_s * MS_PER_S - g.record_ms;
+        g.stop_wait_ms = v.record_max_s * u64::from(MS_PER_S) - g.record_ms;
         assert!(
             fits(&g, &v).is_err(),
             "a retried stop click could start a new recording"

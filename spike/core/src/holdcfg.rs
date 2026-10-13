@@ -80,7 +80,8 @@ impl RingTest {
 
     /// The frame stats file.
     pub fn stats_path(&self) -> Result<PathBuf, String> {
-        Ok(crate::folders::local_data()?.join(&self.stats))
+        let root = kx_platform_windows::dirs::local_data().map_err(|e| e.to_string())?;
+        Ok(root.join(&self.stats))
     }
 }
 

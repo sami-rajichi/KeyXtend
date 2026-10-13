@@ -4,11 +4,12 @@
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime};
 
+use kx_platform_windows::screen;
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::capture::{self, Shot};
 use spike_core::config::ToolButton;
-use spike_core::window::foreground;
-use spike_core::{screen, snip, uia};
+use spike_core::{snip, uia};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::FindWindowW;
 use windows::core::HSTRING;
@@ -131,7 +132,7 @@ fn compare(saved: Option<&Shot>, own: &Shot) -> Result<f64, String> {
 /// Types the pattern, snips the region with two clicks, and compares the file with kx-gates' own copy.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened, since: SystemTime) -> Result<Value, String> {
     keys_ours(app)?;
-    spike_core::inject::text(&ctx.cfg.g24.text)?;
+    crate::keys::text(&ctx.cfg.g24.text)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     let r = region(ctx, app)?;
     let own = capture::screen(ctx.spike.tools.shot_cap())?

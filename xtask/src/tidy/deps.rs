@@ -1,5 +1,6 @@
-//! D1-D5: the dependency-shape rules from `ARCHITECTURE.md`; D5 lives in [`testonly`].
+//! D1-D6: the dependency-shape rules from `ARCHITECTURE.md`; D5 lives in [`testonly`], D6 in [`features`].
 
+pub(crate) mod features;
 pub(crate) mod testonly;
 
 use std::collections::HashSet;

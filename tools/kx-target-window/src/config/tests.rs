@@ -34,6 +34,11 @@ fn with(key: &str, value: &str) -> String {
 fn the_shipped_file_parses() {
     let cfg = parse(SHIPPED, file()).expect("the shipped file parses");
     assert!(!cfg.title.is_empty() && !cfg.password_arg.is_empty());
+    assert!(!cfg.layout_arg.is_empty() && cfg.layout_arg != cfg.password_arg);
+    assert!(
+        !cfg.edit_name.is_empty(),
+        "a screen reader names the text box"
+    );
     assert!(cfg.font_px > 0 && cfg.width_px > 0 && cfg.height_px > 0);
 }
 
@@ -58,13 +63,28 @@ fn a_missing_key_fails() {
 
 #[test]
 fn an_empty_text_value_fails() {
-    for key in ["title", "log", "font", "password_arg"] {
+    for key in [
+        "title",
+        "log",
+        "font",
+        "edit_name",
+        "password_arg",
+        "layout_arg",
+    ] {
         let err = parse(&with(key, "\"\""), file()).expect_err(key);
         assert!(
             matches!(err, ConfigError::Empty { key: k, .. } if k == key),
             "{err}"
         );
     }
+}
+
+#[test]
+fn the_password_and_layout_switches_must_differ() {
+    let err =
+        parse(&with("layout_arg", "\"--password\""), file()).expect_err("one switch for both");
+    assert!(matches!(err, ConfigError::SameSwitch { .. }), "{err}");
+    assert!(err.to_string().contains("kx-target-window.toml"), "{err}");
 }
 
 #[test]

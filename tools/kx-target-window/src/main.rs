@@ -4,7 +4,11 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
 #[cfg(windows)]
+mod name;
+#[cfg(windows)]
 mod procs;
+#[cfg(windows)]
+mod switch;
 #[cfg(windows)]
 mod window;
 

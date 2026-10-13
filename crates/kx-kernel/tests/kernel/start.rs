@@ -29,7 +29,7 @@ fn a_failed_start_is_contained_and_rolled_back() {
         rig.log.all().contains(&Did::Dropped(Alpha::ID)),
         "its service left the registry"
     );
-    rig.kernel.bus().publish(&Ping);
+    rig.kernel.bus().publish(&Ping).unwrap();
     assert_eq!(rig.log.pings(), [B], "its subscription is gone");
 }
 

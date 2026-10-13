@@ -8,8 +8,9 @@ use std::time::Duration;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 
+use kx_platform_windows::screen;
+
 use crate::hold::Pt;
-use crate::screen;
 use crate::uia::{self, Pill, Uia};
 
 /// Characters read to tell a selection from a bare caret; the text itself is dropped at once.

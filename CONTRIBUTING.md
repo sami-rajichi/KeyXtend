@@ -9,6 +9,13 @@ We welcome issues, ideas and test reports. Until the long-term licence is final 
 - Read `ARCHITECTURE.md` and the design spec in `docs/superpowers/specs/`.
 - For a new feature, open an issue first. Large changes need an ADR (`docs/adr/`).
 
+## Set up a Windows build
+- Install Visual Studio 2022 Build Tools with the C++ workload (MSVC), and Rust through `rustup`; `rust-toolchain.toml` pins the toolchain.
+- Install Qt 6.11.2 for MSVC 2022 64-bit (`win64_msvc2022_64`), the version `qt_version` in the root `Cargo.toml` pins; CI installs it with aqtinstall (`.github/actions/qt`).
+- In each shell that builds, set `QMAKE` to Qt's `bin\qmake.exe` and put that `bin` folder first in `PATH`. Any folder works, a portable one too; nothing goes in the registry.
+- For the Qt Quick tests, run `cargo test -p kx-ui --test texts` first, then `qmltestrunner -input crates/kx-ui/qmltest` with `QML_DISABLE_DISK_CACHE=1`.
+- Without Qt, leave out the app and build `kx-ui` with `--no-default-features`, as CI's Linux job does.
+
 ## Rules
 - **Tests first.** Logic is tested without the OS, using `kx-platform-fake` and an injected clock. UI is tested with Qt Quick Test (`qmltestrunner`), finding controls by accessible name.
 - The required checks are the jobs in `.github/workflows/ci.yml`; run the same commands locally before you push.
@@ -28,3 +35,4 @@ CI cannot test uiAccess, admin windows or real apps. Follow `.claude/skills/kx-w
 - Build the two test tools with `cargo build -p kx-target-window -p kx-gates`.
 - The gates move the real mouse and keyboard, so run them only when the owner agrees. `kx-gates` with no arguments prints its commands.
 - Gates that click the Qt keyboard need uiAccess on both sides. Install the keyboard and a release `kx-gates` with `cargo xtask dev-install <folder>`, then run `kx-gates` from there.
+- The installed `kx-gates` reads `kx-gates.toml` and `kx-gates-p3.toml` beside it, else from `tools/kx-gates`. A relative path starts at its file's folder, so in copies beside the installed exe write the repo paths (`[paths] out`, `[apps.target] exe`, `[g22] worker_dir`) in full; `[g8] program` already points at the installed app.

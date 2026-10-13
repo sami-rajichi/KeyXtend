@@ -6,9 +6,9 @@
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 
+use kx_platform_windows::keys::TAG;
 use spike_core::clock::now_us;
 use spike_core::hold::{Act, Engine, Event, Mode, Pt};
-use spike_core::inject::TAG;
 use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 use windows::Win32::System::SystemInformation::GetTickCount;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -24,8 +24,6 @@ use crate::stats::US_PER_MS_INT;
 pub const WAKE: u32 = WM_APP + 1;
 /// One extra ms, so the hold timer never fires before its deadline.
 const ROUND_UP_MS: i64 = 1;
-/// Most hook timings kept; later calls still run but are not timed.
-const HOOK_SAMPLES: usize = 1 << 16;
 
 /// A request to the hook thread.
 pub enum Cmd {
@@ -77,6 +75,8 @@ pub struct Host {
     echo_since: Option<i64>,
     /// How long to wait for that, in µs.
     echo_wait_us: i64,
+    /// Most hook timings kept; later calls still run but are not timed.
+    samples: usize,
 }
 
 /// Milliseconds from `now` until `due` (both µs), rounded up so the timer is never early.
@@ -103,11 +103,12 @@ impl Host {
             acts: Vec::new(),
             timer: 0,
             report: Report {
-                hook_us: Vec::with_capacity(HOOK_SAMPLES),
+                hook_us: Vec::with_capacity(setup.samples),
                 ..Report::default()
             },
             echo_since: None,
             echo_wait_us: us(setup.reply_ms),
+            samples: setup.samples,
         }
     }
 
@@ -180,7 +181,7 @@ impl Host {
     /// Counts an event and remembers the last point outside our windows; never waits for the lock.
     fn note(&mut self, pt: Option<(Pt, bool)>, took_us: i64) {
         self.report.seen += 1;
-        if self.report.hook_us.len() < HOOK_SAMPLES {
+        if self.report.hook_us.len() < self.samples {
             self.report.hook_us.push(took_us);
         }
         if let Ok(mut live) = self.live.try_lock() {

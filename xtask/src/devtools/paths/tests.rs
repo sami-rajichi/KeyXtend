@@ -83,6 +83,24 @@ fn folder_size_refuses_a_folder_link() {
     assert!(matches!(folder_size(dir.path()), Err(DevError::Link(_))));
 }
 
+#[test]
+fn files_lists_nested_files_relative_and_sorted() {
+    let dir = TempDir::new("files");
+    std::fs::create_dir_all(dir.path().join("sub")).unwrap();
+    std::fs::write(dir.path().join("b.dll"), b"").unwrap();
+    std::fs::write(dir.path().join("sub").join("a.dll"), b"").unwrap();
+    let expected = vec![PathBuf::from("b.dll"), Path::new("sub").join("a.dll")];
+    assert_eq!(files(dir.path()), Ok(expected));
+}
+
+#[test]
+fn files_refuses_a_folder_link() {
+    let dir = TempDir::new("files-link");
+    let outside = TempDir::new("files-outside");
+    make_dir_link(&dir.path().join("link"), outside.path());
+    assert!(matches!(files(dir.path()), Err(DevError::Link(_))));
+}
+
 #[cfg(windows)]
 mod windows {
     use super::*;
