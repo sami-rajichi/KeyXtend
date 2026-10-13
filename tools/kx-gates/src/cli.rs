@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx};
 use crate::config::GatesConfig;
+use crate::mouseguard::Mouse;
 use crate::usage::usage;
 use crate::{
     close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g17, g18,
@@ -78,34 +79,25 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 /// A gate run that takes only a name.
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
-/// Whether a gate's run holds the owner's mouse with the mouse guard.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Mouse {
-    /// The guard drops the hand's mouse input while the gate moves the pointer.
-    Held,
-    /// The gate needs the owner's own mouse, runs elsewhere or moves nothing.
-    Free,
-}
-
-/// Every gate: whether it holds the mouse, and its run when it takes only a name. The hand try, G13 and G23 wait on
-/// the owner's own mouse, G26 runs on the CI runner and `close` moves nothing.
+/// Every gate: whether it holds the mouse, and its run when it takes only a name. G5, G12, G17 and G18 drive the test
+/// build; the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI runner and `close` moves nothing.
 const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("g1", Mouse::Held, None),
     ("g2", Mouse::Held, None),
     ("g3", Mouse::Held, None),
     ("g4", Mouse::Held, None),
     ("assist", Mouse::Free, None),
-    ("g5", Mouse::Held, Some(g5::run)),
+    ("g5", Mouse::Drives, Some(g5::run)),
     ("g6", Mouse::Held, Some(g6::run)),
     ("g7", Mouse::Held, Some(g7::run)),
     ("g8", Mouse::Held, Some(g8::run)),
     ("g9", Mouse::Held, Some(g9::run)),
     ("g10", Mouse::Held, Some(g10::run)),
     ("g11", Mouse::Held, Some(g11::run)),
-    ("g12", Mouse::Held, Some(g12::run)),
+    ("g12", Mouse::Drives, Some(g12::run)),
     ("g13", Mouse::Free, Some(g13::run)),
-    ("g17", Mouse::Held, Some(g17::run)),
-    ("g18", Mouse::Held, Some(g18::run)),
+    ("g17", Mouse::Drives, Some(g17::run)),
+    ("g18", Mouse::Drives, Some(g18::run)),
     ("g19", Mouse::Held, Some(g19::run)),
     ("g20", Mouse::Held, Some(g20::run)),
     ("g21", Mouse::Held, Some(g21::run)),
@@ -187,7 +179,7 @@ pub fn run(args: &Args) -> Result<Value, String> {
         base,
     };
     // The guard lets go when the gate ends; dropping `guard` lets go on a panic too.
-    let guard = mouseguard::begin(&cfg.mouse_guard, mouse(&args.gate) == Mouse::Held)?;
+    let guard = mouseguard::begin(&cfg.mouse_guard, mouse(&args.gate))?;
     let result = dispatch(&ctx, args);
     let ended = guard.finish(result.is_ok());
     let mut result = result.unwrap_or_else(

@@ -59,12 +59,17 @@ fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
     job.assign_handle(process.handle()).map_err(uncapped)
 }
 
-/// Starts the product through the shell, in `job` when given, and waits for its first shown window.
+/// Starts the product through the shell with `args`, in `job` when given, and waits for its first shown window.
 /// A copy it cannot open gets Quit with the same tries, so the next run still starts cold.
-pub fn start(ctx: &Ctx, program: &Path, job: Option<&Job>) -> Result<Started, String> {
+pub fn start(
+    ctx: &Ctx,
+    program: &Path,
+    args: &[String],
+    job: Option<&Job>,
+) -> Result<Started, String> {
     let g = &ctx.cfg.g8;
     let (at_us, at) = (now_us(), Instant::now());
-    let given = admin::start_shown(program, &[])?;
+    let given = admin::start_shown(program, args)?;
     // The shell's handle lacks the rights to measure, so the process is opened again.
     let unmeasured = |e| {
         format!(

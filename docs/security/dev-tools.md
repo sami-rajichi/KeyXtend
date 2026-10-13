@@ -1,7 +1,7 @@
 # Security note: uiAccess dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-14
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, and `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`. Developer tools only; never shipped.
 
@@ -35,6 +35,7 @@
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
 | Manifest XML from `mt.exe` | Comments skipped; only `uiAccess` on `requestedExecutionLevel` (any prefix) is read; missing means fail | Developer-chosen file | No |
 | Mouse hook events (`kx-gates` mouse guard) | Only the message, the injected flag, the injection tag and the X button's number are read, never the position; any other message is a plain event that drops when physical | One event per call; the hook does no I/O, locking or allocation, and counts with atomics | Unit tests of the filter |
+| The test build's stats lines (`kx-gates`, its log's `[gate_input] hook_line`) | Only lines stamped since its start are read; each named field must be a whole number, else the read fails naming it, and nothing else on the line is kept | The log's own `log_max_mb` | Unit tests |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
@@ -44,7 +45,8 @@
   - A staged file the check never reads, or a network name the guard never meets. Mitigation: `libs` and `plugins` may name only `.dll` files, which the check reads, and the network library and its importers must be listed in `libs`.
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - A gate-only build (the app's `gate-input`, which acts on another program's tagged input) getting signed and uiAccess. Mitigation: the stage check refuses a program holding `[workspace.metadata.stage] gate_flag`, and `dev-install` refuses to sign any exe that holds it.
-  - The signed uiAccess `kx-gates` reads `kx-gates.toml`, and `kx-gates-p3.toml` from the same folder, beside its exe, else from the repo's `tools/kx-gates` (user-writable); they name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its uiAccess token. `dev-install` copies every file of the build folder, so put both files there first and keep them beside the installed exe. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml` and `kx-gates-p4.toml` from the same folder, beside its exe, else from the repo's `tools/kx-gates` (user-writable); they name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its token. With uiAccess it reads all five of its settings files (those three, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program. `dev-install` copies every file of the build folder, so put the five files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+  - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input. It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself, so only the plain kx-gates starts it. It starts only a program whose bytes hold the gate flag, makes a `data` folder beside it so it never reads or writes the owner's settings or log, and quits it at once when its log lacks the gate warning. It asks the running copy to quit first and starts that copy again afterwards; a uiAccess copy refuses the plain kx-gates, which then stops and says to close it from the installed kx-gates.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap gets Quit.
   - When `[g8] presentmon_exe` names PresentMon, `kx-gates g8` starts it as administrator, as G4 and G5 do, but with no window. It records for `presentmon_secs` and stops itself, and G8 waits for that before it reads the CSV.
@@ -62,6 +64,7 @@
   - The hook lives on a thread of `kx-gates`, and Windows removes a low-level hook when its thread or process ends, so it never outlives a run; it changes no Windows setting.
   - A release whose press came before the guard passes, so no button sticks. After a stop the gate's own releases still go out without their move, except one away from a key the gate pressed, so no click lands.
   - Gates that need the owner's own mouse, run on the CI runner or move nothing are marked free in the gate table in `tools/kx-gates/src/cli.rs`, so they are never guarded.
+  - The test build's hook sits ahead of the guard's and replays a held press tagged `REPLAY`, so the guard passes `REPLAY` input only for the gates the table marks as driving it (G5, G12, G17, G18). For every other gate a `REPLAY` press is the hand's: it drops and gives the mouse back. A `REPLAY` value on input that was not injected is always the hand's.
 - **Elevation:**
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
   - An elevated folder delete could hit the wrong folder. Mitigation: `dev-admin.ps1` checks every argument before the Windows prompt, and only touches a direct child of `Program Files\<install dir>`; `install_dir` must be a plain name.
@@ -76,7 +79,7 @@
 - Done: an `install_dir` that is not a plain folder name is rejected, in the settings and in `dev-admin.ps1`.
 
 ### Should fix (tracked issue)
-The uiAccess `kx-gates` falls back to the repo's user-writable `kx-gates.toml` when no copy sits beside its exe, so an edited config could hand uiAccess to any program, with no admin prompt (P4, `docs/items/P4.md`). Until P4 reads it only beside the exe when the token has uiAccess, the manual check copies both files beside the installed exe.
+- Done (P4): with uiAccess, `kx-gates` reads its settings only beside its exe, all five files, and refuses to run when one is missing, so the repo's user-writable copies can no longer hand uiAccess to a program.
 
 ### Accepted (with reason)
 A same-user attacker who can edit files in the repo can already act as the owner. The launchers and scripts run only on the owner's own development PC, and Windows shows its admin prompt each time.

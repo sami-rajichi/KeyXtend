@@ -217,7 +217,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let (since, origin_us) = (SystemTime::now(), now_us());
     let rec = g8frames::record(ctx, &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
-    let s = g8start::start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
+    let s =
+        g8start::start(ctx, &program, &[], job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
     let shown_ms = s.shown_ms();
     say!(
         "G8 {name}: started {} (pid {}); shown after {shown_ms:?} ms",

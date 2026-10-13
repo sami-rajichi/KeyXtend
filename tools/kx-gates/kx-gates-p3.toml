@@ -1,10 +1,10 @@
 # Settings P3 adds: the mouse guard, the run-length checks ([fit]), gates G8-G11, G13 and G26, and G8's On-Screen
 # Keyboard baseline ([osk]). kx-gates reads them with kx-gates.toml, from its folder.
 
-# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input;
-# the gate table in src/cli.rs marks the gates it never holds. It lets go when the gate ends, for an admin prompt,
-# after limit_ms of holding, at the owner's escape clicks, or once Windows switched its hook off; the last three stop
-# the gate, which fails.
+# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input,
+# plus the test build's REPLAY input for the gates that drive it; the gate table in src/cli.rs marks both kinds and the
+# gates it never holds. It lets go when the gate ends, for an admin prompt, after limit_ms of holding, at the owner's
+# escape clicks, or once Windows switched its hook off; the last three stop the gate, which fails.
 [mouse_guard]
 on = true
 # Longest the guard holds the mouse in one run, in ms: 15 minutes, as G2's 1000 held clicks take over 8 (owner).

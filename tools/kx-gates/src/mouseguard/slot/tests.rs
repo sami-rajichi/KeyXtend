@@ -6,7 +6,7 @@ use windows::Win32::Foundation::HWND;
 use super::*;
 use crate::keymap::Reader;
 use crate::mouseguard::fake::{Fake, cfg, held, slot_lock};
-use crate::mouseguard::{Counts, End, Loss};
+use crate::mouseguard::{Counts, End, Loss, Mouse};
 
 #[test]
 fn a_stopped_gate_is_refused_a_press_and_a_prompt_but_a_restore_still_goes_out() {
@@ -55,8 +55,13 @@ fn a_guard_switched_off_or_a_free_gate_starts_no_hook_and_refuses_nothing() {
     let _slot = slot_lock();
     // Only begins that start no hook are tried here, so no test can ever install a real one.
     let off = MouseGuard { on: false, ..cfg() };
-    assert_eq!(begin(&off, true).expect("no hook").finish(true), None);
-    assert_eq!(begin(&cfg(), false).expect("no hook").finish(true), None);
+    for mouse in [Mouse::Held, Mouse::Drives] {
+        assert_eq!(begin(&off, mouse).expect("no hook").finish(true), None);
+    }
+    assert_eq!(
+        begin(&cfg(), Mouse::Free).expect("no hook").finish(true),
+        None
+    );
     assert_eq!(allowed(), Ok(()), "no guard, nothing refused");
     assert_eq!(around_prompt(|| Ok(1)), Ok(1), "the prompt runs once");
     assert_eq!(own_input(|| Ok(2)), Ok(2), "a send without a guard");

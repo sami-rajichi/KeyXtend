@@ -5,7 +5,7 @@ use kx_target_window::log::Press;
 use spike_core::hold::Pt;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
-use crate::hookio::inside;
+use crate::simin::inside;
 use crate::tlog::Mouse;
 use crate::win;
 

@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use kx_module_api::Mono;
 
-use super::{End, Kind, MouseGuard, Tally, Verdict};
+use super::{End, Kind, MouseGuard, Tally, Verdict, Whose};
 
 /// The guard's decisions over one hook's life: which events drop, and when it lets go.
 #[derive(Debug, Clone)]
@@ -25,12 +25,20 @@ pub struct Filter {
     out: Option<End>,
     /// What it dropped and passed, shared with the run that reads it live.
     tally: Arc<Tally>,
+    /// The test build's `REPLAY` input counts as kx-gates' own, as the gate drives that build.
+    replay: bool,
 }
 
 impl Filter {
     /// A filter for `cfg` that starts at `start`, after the guard already held the mouse for `used` in this run; it
-    /// counts into `tally`.
-    pub fn new(cfg: &MouseGuard, start: Mono, used: Duration, tally: Arc<Tally>) -> Self {
+    /// counts into `tally`, and passes `REPLAY` input as kx-gates' own when `replay`.
+    pub fn new(
+        cfg: &MouseGuard,
+        start: Mono,
+        used: Duration,
+        tally: Arc<Tally>,
+        replay: bool,
+    ) -> Self {
         let left = Duration::from_millis(cfg.limit_ms).saturating_sub(used);
         let clicks = usize::from(cfg.escape_clicks);
         Self {
@@ -41,6 +49,7 @@ impl Filter {
             held: 0,
             out: None,
             tally,
+            replay,
         }
     }
 
@@ -64,10 +73,19 @@ impl Filter {
         self.out
     }
 
+    /// True when `whose` input is kx-gates' own: its tagged input, and the test build's replays while a gate drives it.
+    fn own(&self, whose: Whose) -> bool {
+        match whose {
+            Whose::Own => true,
+            Whose::Replay => self.replay,
+            Whose::Hand => false,
+        }
+    }
+
     /// Whether an event at `now` passes: kx-gates' own input does, and so does a physical release whose press came
     /// before the guard, so no button sticks. It counts what it drops and the own input it passes.
-    pub fn event(&mut self, ours: bool, kind: Kind, now: Mono) -> Verdict {
-        if ours {
+    pub fn event(&mut self, whose: Whose, kind: Kind, now: Mono) -> Verdict {
+        if self.own(whose) {
             self.tally.pass_one();
             return Verdict::Pass;
         }

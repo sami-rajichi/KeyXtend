@@ -6,7 +6,7 @@ use kx_platform_fake::FakeClock;
 
 use super::*;
 use crate::mouseguard::Loss;
-use crate::mouseguard::fake::{Fake, begun, cfg};
+use crate::mouseguard::fake::{Fake, begun, begun_with, cfg};
 
 /// Clicks kx-gates sends now, noted as `slot::own_input` notes them.
 fn send_clicks(s: &mut Session<Fake, FakeClock>) {
@@ -162,7 +162,7 @@ fn an_admin_prompt_lets_go_and_its_time_does_not_count_against_the_limit() {
 fn a_guard_that_cannot_start_refuses_the_gate_or_stops_it_after_a_prompt() {
     let fake = Fake::new();
     fake.seen().fail = true;
-    let refused = Session::begin(fake.clone(), fake.clock.clone(), &cfg());
+    let refused = Session::begin(fake.clone(), fake.clock.clone(), &cfg(), false);
     assert!(refused.is_err());
     fake.seen().fail = false;
     let mut s = begun(&fake);
@@ -203,4 +203,22 @@ fn the_guard_adds_up_what_each_of_its_hooks_counted_and_gives_it_when_the_gate_e
     };
     let end = End::Done;
     assert_eq!(s.finish(true), Outcome { end, counts });
+}
+
+#[test]
+fn the_replay_rule_survives_an_admin_prompt() {
+    for replay in [false, true] {
+        let fake = Fake::new();
+        let mut s = begun_with(&fake, replay);
+        s.pause();
+        s.resume();
+        assert_eq!(fake.counts(), (2, 1), "it came back");
+        fake.replayed();
+        let want = if replay {
+            Ok(())
+        } else {
+            Err(End::Owner.stopped())
+        };
+        assert_eq!(s.refusal(), want, "replay: {replay}");
+    }
 }

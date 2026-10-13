@@ -7,9 +7,9 @@ use kx_module_api::Clock;
 use kx_platform_windows::QpcClock;
 use serde_json::{Value, json};
 
-use super::MouseGuard;
 use super::hook::WinHook;
 use super::run::{Hook, Outcome, Session};
+use super::{Mouse, MouseGuard};
 
 /// The result line's field that says how the guard ended.
 const FIELD: &str = "mouse_guard";
@@ -82,17 +82,15 @@ pub(super) fn hold(session: Box<dyn Held>) -> Scope {
     Scope { on: true }
 }
 
-/// Starts the guard for a gate that `held` says holds the mouse, when `cfg` has the guard on.
-pub fn begin(cfg: &MouseGuard, held: bool) -> Result<Scope, String> {
-    if !(cfg.on && held) {
+/// Starts the guard for a gate whose run holds the mouse as `mouse` says, when `cfg` has the guard on.
+pub fn begin(cfg: &MouseGuard, mouse: Mouse) -> Result<Scope, String> {
+    if !cfg.on || mouse == Mouse::Free {
         return Ok(Scope { on: false });
     }
     let clock = QpcClock::new().map_err(|e| format!("mouse guard: {e}"))?;
-    Ok(hold(Box::new(Session::begin(
-        WinHook::new(clock),
-        clock,
-        cfg,
-    )?)))
+    let replay = mouse == Mouse::Drives;
+    let session = Session::begin(WinHook::new(clock), clock, cfg, replay)?;
+    Ok(hold(Box::new(session)))
 }
 
 impl Scope {

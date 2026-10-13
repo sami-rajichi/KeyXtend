@@ -27,6 +27,8 @@ kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The scan list the product reads labels for, which `capture-layouts` follows.
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
+# The mouse settings (`SPEC`) the gates read from the product's test build.
+kx-mod-mouse = { path = "../../crates/kx-mod-mouse" }
 # The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.

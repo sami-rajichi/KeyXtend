@@ -52,13 +52,15 @@ pub struct Session<H: Hook, C: Clock> {
     tally: Arc<Tally>,
     /// Whether the running hook still counts kx-gates' own clicks and moves.
     watch: Watch,
+    /// The gate drives the test build, so each filter passes its `REPLAY` input; kept for the filter after a prompt.
+    replay: bool,
 }
 
 impl<H: Hook, C: Clock> Session<H, C> {
-    /// Starts holding the mouse.
-    pub fn begin(hook: H, clock: C, cfg: &MouseGuard) -> Result<Self, String> {
+    /// Starts holding the mouse, passing the test build's `REPLAY` input when `replay`.
+    pub fn begin(hook: H, clock: C, cfg: &MouseGuard, replay: bool) -> Result<Self, String> {
         let (since, tally) = (clock.now(), Arc::new(Tally::default()));
-        let filter = Filter::new(cfg, since, Duration::ZERO, Arc::clone(&tally));
+        let filter = Filter::new(cfg, since, Duration::ZERO, Arc::clone(&tally), replay);
         let live = hook.start(filter)?;
         say!("{}", cfg.line());
         Ok(Self {
@@ -72,6 +74,7 @@ impl<H: Hook, C: Clock> Session<H, C> {
             idle: false,
             tally,
             watch: Watch::new(cfg),
+            replay,
         })
     }
 
@@ -111,7 +114,8 @@ impl<H: Hook, C: Clock> Session<H, C> {
             return;
         }
         self.since = self.clock.now();
-        let mut filter = Filter::new(&self.cfg, self.since, self.used, Arc::clone(&self.tally));
+        let tally = Arc::clone(&self.tally);
+        let mut filter = Filter::new(&self.cfg, self.since, self.used, tally, self.replay);
         if let Some(end) = filter.tick(self.since) {
             say!("{}", end.line());
             self.early = Some(end);

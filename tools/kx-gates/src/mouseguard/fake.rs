@@ -9,7 +9,7 @@ use kx_platform_fake::FakeClock;
 
 use super::run::{Hook, Live, Session};
 use super::slot::{self, Scope};
-use super::{End, Filter, Kind, LEFT, MouseGuard};
+use super::{End, Filter, Kind, LEFT, MouseGuard, Whose};
 
 /// Serialises the tests that put a session in this process's slot.
 static SLOT_TESTS: Mutex<()> = Mutex::new(());
@@ -60,25 +60,30 @@ impl Fake {
 
     /// A physical press of the left button now, as the hook would see it.
     pub fn press(&self) {
-        self.event(false, Kind::Down(LEFT));
+        self.event(Whose::Hand, Kind::Down(LEFT));
     }
 
     /// A physical move now, as the hook would see it.
     pub fn moved(&self) {
-        self.event(false, Kind::Other);
+        self.event(Whose::Hand, Kind::Other);
     }
 
     /// A move kx-gates injected now, as the hook would see it.
     pub fn mine(&self) {
-        self.event(true, Kind::Other);
+        self.event(Whose::Own, Kind::Other);
     }
 
-    /// A `kind` event now, kx-gates' own when `ours`, through the last started hook's filter.
-    fn event(&self, ours: bool, kind: Kind) {
+    /// A left press the test build's hook replayed now, as the hook would see it.
+    pub fn replayed(&self) {
+        self.event(Whose::Replay, Kind::Down(LEFT));
+    }
+
+    /// A `kind` event of `whose` now, through the last started hook's filter.
+    fn event(&self, whose: Whose, kind: Kind) {
         let now = self.clock.now();
         let mut seen = self.seen();
         let filter = seen.filter.as_mut().expect("a started hook");
-        filter.event(ours, kind, now);
+        filter.event(whose, kind, now);
     }
 
     /// Moves the fake clock on by `ms`.
@@ -125,9 +130,15 @@ pub fn cfg() -> MouseGuard {
         .mouse_guard
 }
 
-/// A session over `fake`.
+/// A session over `fake` for a gate that holds the mouse.
 pub fn begun(fake: &Fake) -> Session<Fake, FakeClock> {
-    Session::begin(fake.clone(), fake.clock.clone(), &cfg()).expect("the fake hook starts")
+    begun_with(fake, false)
+}
+
+/// A session over `fake` that passes the test build's replays when `replay`.
+pub fn begun_with(fake: &Fake, replay: bool) -> Session<Fake, FakeClock> {
+    let cfg = cfg();
+    Session::begin(fake.clone(), fake.clock.clone(), &cfg, replay).expect("the fake hook starts")
 }
 
 /// The lock for tests that use this process's slot; a failed test does not block the others.

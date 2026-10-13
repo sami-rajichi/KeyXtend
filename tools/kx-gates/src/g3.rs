@@ -15,10 +15,10 @@ use windows::Win32::System::Threading::{
 
 use crate::apps::Ctx;
 use crate::gatecfg::Surface;
-use crate::hookio::inside;
 use crate::keys;
 use crate::out::say;
 use crate::product::Keyboard;
+use crate::simin::inside;
 use crate::win::{self, root_at, size32, sleep_ms};
 use crate::winfind::{self, Match};
 

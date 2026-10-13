@@ -1,4 +1,5 @@
-//! Loads and checks `kx-gates.toml` and `kx-gates-p3.toml`; `cfgfile` finds the first, and the second sits beside it.
+//! Loads and checks `kx-gates.toml`, `kx-gates-p3.toml` and `kx-gates-p4.toml`; `cfgfile` finds their folder and
+//! `cfgload` reads them.
 #![cfg(windows)]
 
 use std::collections::BTreeMap;
@@ -7,7 +8,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::capture::Capture;
-use crate::cfgfile::{self, FILE, P3_FILE};
+use crate::cfgfile::{self, FILE, OWN};
+use crate::cfgload;
 use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
@@ -16,6 +18,7 @@ use crate::g22cfg::G22;
 use crate::gatecfg::{AssistCfg, G1, G2, G3, G4, G5};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
+use crate::p4cfg::GateInput;
 use crate::probecfg::{G6, G12, Probes, Sim};
 use crate::text::Charsets;
 
@@ -90,6 +93,8 @@ pub struct GatesConfig {
     pub mouse_guard: MouseGuard,
     /// What a run spends beyond its counted steps, for the run-length checks.
     pub fit: Fit,
+    /// The product's test build, which P4's gates drive.
+    pub gate_input: GateInput,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -189,31 +194,13 @@ impl GatesConfig {
     }
 }
 
-/// The settings file at `path`, parsed.
-fn read_table(path: &Path) -> Result<toml::Table, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    text.parse().map_err(|e| format!("{}: {e}", path.display()))
-}
-
-/// `main` with the sections of `extra`, which may not repeat one.
-fn merge(mut main: toml::Table, extra: toml::Table) -> Result<toml::Table, String> {
-    for (name, section) in extra {
-        if main.contains_key(&name) {
-            return Err(format!("[{name}] is in both {FILE} and {P3_FILE}"));
-        }
-        main.insert(name, section);
-    }
-    Ok(main)
-}
-
-/// Loads and parses the settings: `kx-gates.toml`, then `kx-gates-p3.toml` from the same folder.
+/// Loads and parses the settings: `kx-gates.toml`, then `kx-gates-p3.toml` and `kx-gates-p4.toml` from its folder.
 pub fn load() -> Result<GatesConfig, String> {
-    let file = cfgfile::path();
+    let file = cfgfile::path()?;
     let dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
-    let table = merge(read_table(&file)?, read_table(&dir.join(P3_FILE))?)?;
-    let mut config: GatesConfig = table
+    let mut config: GatesConfig = cfgload::read(&dir)?
         .try_into()
-        .map_err(|e| format!("{} or {P3_FILE}: {e}", file.display()))?;
+        .map_err(|e| format!("{} ({}): {e}", dir.display(), OWN.join(", ")))?;
     config.dir = dir;
     config.text.validate()?;
     featcfg::check(&config)?;
@@ -222,6 +209,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g12.check()?;
     config.g8.check()?;
     config.mouse_guard.check()?;
+    config.gate_input.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;
     Ok(config)
@@ -250,17 +238,6 @@ mod tests {
         }
         assert!(cfg.probes.move_steps > 0 && cfg.g6.notches > 0);
         assert!(!cfg.g25.panel_classes.is_empty());
-    }
-
-    #[test]
-    fn the_p3_file_adds_sections_and_never_replaces_one() {
-        let table = |text: &str| text.parse::<toml::Table>().expect("parses");
-        let both =
-            merge(table("[g2]\nclicks = 1\n"), table("[g8]\nclicks = 2\n")).expect("no overlap");
-        assert_eq!(both.keys().collect::<Vec<_>>(), ["g2", "g8"]);
-        let e =
-            merge(table("[g2]\nclicks = 1\n"), table("[g2]\nclicks = 3\n")).expect_err("g2 twice");
-        assert!(e.contains("[g2]"), "{e}");
     }
 
     #[test]

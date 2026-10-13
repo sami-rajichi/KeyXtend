@@ -10,6 +10,7 @@ mod budget;
 mod busbench;
 mod capture;
 mod cfgfile;
+mod cfgload;
 mod cli;
 mod clicks;
 mod clip;
@@ -74,6 +75,11 @@ mod gatecfg;
 mod hand;
 mod hookhost;
 mod hookio;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "Task 14b's gates read the stats lines.")
+)]
+mod hooklog;
 mod hookstate;
 mod keymap;
 mod keys;
@@ -83,6 +89,7 @@ mod mouse;
 mod mouseguard;
 mod out;
 mod p3cfg;
+mod p4cfg;
 mod presentmon;
 mod probe;
 mod probecfg;
@@ -93,8 +100,11 @@ mod readback;
 mod rng;
 mod scroll;
 mod shot;
+mod simin;
 mod simuser;
 mod stats;
+#[expect(dead_code, reason = "Task 14b's gates drive the test build.")]
+mod testbuild;
 mod text;
 mod tlog;
 mod uilook;

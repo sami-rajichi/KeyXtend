@@ -68,13 +68,25 @@ fn the_start_line_says_how_many_clicks_give_the_mouse_back_and_never_asks_for_a_
 }
 
 #[test]
-fn only_input_that_kx_gates_injected_and_tagged_counts_as_its_own() {
+fn each_flag_and_tag_pair_is_kx_gates_own_the_test_builds_replay_or_the_hands() {
     let injected = LLMHF_INJECTED;
-    assert!(ours(injected, TAG));
-    assert!(ours(injected, SIM_TAG));
-    assert!(!ours(injected, 0), "another program's injected input");
-    assert!(!ours(0, TAG), "a tag without the injected flag");
-    assert!(!ours(0, 0), "the hand");
+    let pairs = [
+        (injected, TAG, Whose::Own),
+        (injected, SIM_TAG, Whose::Own),
+        (injected, REPLAY, Whose::Replay),
+        (injected, 0, Whose::Hand),
+        (0, TAG, Whose::Hand),
+        (0, SIM_TAG, Whose::Hand),
+        (0, REPLAY, Whose::Hand),
+        (0, 0, Whose::Hand),
+    ];
+    for (flags, extra, want) in pairs {
+        assert_eq!(
+            from(flags, extra),
+            want,
+            "flags {flags:#x}, extra {extra:#x}"
+        );
+    }
 }
 
 #[test]

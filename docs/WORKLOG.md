@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 00:30 — P4: the gates' test build, the p4 settings and the guard's replay rule
+kx-gates can now start the product's gate-input test build, from the plain kx-gates only and with a data folder of its own, after asking the running copy to quit, and starts that copy again when the test build ends. It reads the test build's settings, turns its mode and latch keys on by clicking them, and reads the hook's numbers from its log; the new `kx-gates-p4.toml` holds these settings. With uiAccess, kx-gates now reads its five settings files only beside its exe, the gate-input build never asks for uiAccess, and the mouse guard passes the test build's replayed presses only for the gates that drive it (G5, G12, G17 and G18).
+
 ## 2026-10-13 23:40 — P4: the overlay keeps the tip, a badge-sized shadow
 Showing the pointer overlay now joins a quiet guard run, so a key's tip the owner is reading stays and a banner or list keeps its place in front. The badge casts the mock-up's own small shadow, a new `[common] badge_shadow` token each palette takes and high contrast drops, and the overlay window only leaves room for it. Flipped near an edge, the badge keeps the base offset, and the ring's timing tests now check the animation lengths directly.
 

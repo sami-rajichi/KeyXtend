@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 /// File name of the spike settings.
-const FILE: &str = "spike.toml";
+pub const FILE: &str = "spike.toml";
 /// The test face's name: the face argument of kx-gates.
 pub const FACE: &str = "qt";
 

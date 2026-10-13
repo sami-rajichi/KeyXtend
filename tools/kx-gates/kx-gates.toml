@@ -1,6 +1,6 @@
-# Every number and path the gate runner uses, with kx-gates-p3.toml beside it for the mouse guard and the gates P3
-# adds; both are read beside the exe first, else from tools/kx-gates. Relative paths start at this file's folder, and
-# a test keeps them inside the repo.
+# Every number and path the gate runner uses, with kx-gates-p3.toml and kx-gates-p4.toml beside it for what P3 and P4
+# add; all three are read beside the exe first, else from tools/kx-gates, and only beside the exe under uiAccess.
+# Relative paths start at this file's folder, and a test keeps them inside the repo.
 
 [paths]
 # Sent and received texts, raw click data, screenshots of blocked runs, G11's and G13's pictures, G8's PresentMon CSV,

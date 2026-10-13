@@ -1,0 +1,19 @@
+# Settings P4 adds: the product's test build, which P4's gates start and drive. kx-gates reads them with kx-gates.toml,
+# from its folder; a section sits in one file only.
+
+# The test build: the app built with its gate-input feature, so with `flag` its engine hears only kx-gates' SIM_TAG
+# input. Build it with `cargo build -p keyxtend --release --features gate-input --target-dir target/gate-input`; it never
+# asks for uiAccess, so it runs unsigned and only the plain kx-gates starts it, with a data folder of its own.
+[gate_input]
+# The test build, relative to this file's folder.
+program = "../../target/gate-input/release/keyxtend.exe"
+# The flag that makes its engine act on SIM_TAG input only (apps/keyxtend/src/args.rs); kx-gates' code never holds it.
+flag = "--sim-input"
+# The warning it logs at start with the flag (apps/keyxtend/src/run.rs); without it, its engine might act on the hand.
+warn_line = "simulated mouse input: a gate build, never for daily use"
+# The line the mouse module logs with the hook's numbers at each hook stop (crates/kx-mod-mouse/src/actor.rs).
+hook_line = "mouse hook stopped"
+# Longest wait for its keyboard and its warning line after its start, in ms.
+start_ms = 15000
+# Longest wait for a mode or latch key to read on or off after its click, in ms.
+lit_ms = 3000

@@ -162,8 +162,11 @@ fn the_help_names_every_gate_that_takes_only_a_name() {
 
 #[test]
 fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
-    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g12", "g25"] {
+    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g25"] {
         assert_eq!(mouse(gate), Mouse::Held, "{gate}");
+    }
+    for gate in ["g5", "g12", "g17", "g18"] {
+        assert_eq!(mouse(gate), Mouse::Drives, "{gate} drives the test build");
     }
     for gate in ["assist", "g13", "g23", "g26", "close", "g99"] {
         assert_eq!(mouse(gate), Mouse::Free, "{gate}");

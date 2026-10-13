@@ -3,15 +3,16 @@
 
 use kx_platform_windows::keys::TAG;
 use kx_platform_windows::window::foreground;
-use spike_core::hold::{Act, Button, ESC, Pt};
+use spike_core::hold::{ESC, Pt};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,
 };
 
 use crate::apps::{Ctx, Opened};
-use crate::assist::{self, Assist, Setup};
+use crate::assist::{Assist, Setup};
 use crate::hookio::Source;
+use crate::simin::{self, Act, Button};
 use crate::win::{self, sleep_ms};
 use crate::{keys, mouse};
 
@@ -79,7 +80,7 @@ pub fn path(from: Pt, to: Pt, steps: i32) -> Vec<Pt> {
 /// The pointer glides from `from` to `to`.
 fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
     for at in path(from, to, ctx.cfg.probes.move_steps) {
-        assist::as_user(&[Act::Move(at)])?;
+        simin::as_user(&[Act::Move(at)])?;
         sleep_ms(ctx.cfg.sim.step_ms);
     }
     Ok(())
@@ -89,11 +90,11 @@ fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
 pub fn click(ctx: &Ctx, app: &Opened, p: Pt) -> Result<(), String> {
     let sim = &ctx.cfg.sim;
     guard(app, &[p])?;
-    assist::as_user(&[Act::Move(p)])?;
+    simin::as_user(&[Act::Move(p)])?;
     sleep_ms(sim.step_ms);
-    assist::as_user(&[Act::Down(Button::Left, p)])?;
+    simin::as_user(&[Act::Down(Button::Left, p)])?;
     sleep_ms(sim.click_ms);
-    let up = assist::as_user(&[Act::Up(Button::Left, p)]);
+    let up = simin::as_user(&[Act::Up(Button::Left, p)]);
     sleep_ms(ctx.cfg.probes.settle_ms);
     up
 }
@@ -102,11 +103,11 @@ pub fn click(ctx: &Ctx, app: &Opened, p: Pt) -> Result<(), String> {
 pub fn grab(ctx: &Ctx, app: &Opened, from: Pt, to: Pt) -> Result<(), String> {
     let sim = &ctx.cfg.sim;
     guard(app, &[from, to])?;
-    assist::as_user(&[Act::Move(from)])?;
+    simin::as_user(&[Act::Move(from)])?;
     sleep_ms(sim.step_ms);
-    assist::as_user(&[Act::Down(Button::Left, from)])?;
+    simin::as_user(&[Act::Down(Button::Left, from)])?;
     sleep_ms(ctx.spike.hold.ms + sim.hold_margin_ms);
-    assist::as_user(&[Act::Up(Button::Left, from)])?;
+    simin::as_user(&[Act::Up(Button::Left, from)])?;
     sleep_ms(sim.step_ms);
     glide(ctx, from, to)
 }
@@ -114,7 +115,7 @@ pub fn grab(ctx: &Ctx, app: &Opened, from: Pt, to: Pt) -> Result<(), String> {
 /// Taps Esc, only while our window is in front.
 pub fn esc(app: &Opened) -> Result<(), String> {
     keys_ours(app)?;
-    assist::as_user(&[Act::KeyDown(ESC), Act::KeyUp(ESC)])
+    simin::as_user(&[Act::KeyDown(ESC), Act::KeyUp(ESC)])
 }
 
 /// True when virtual key `vk`, a key or a mouse button, is up now.

@@ -476,6 +476,7 @@ dependencies = [
  "kx-kernel",
  "kx-mod-keyboard",
  "kx-mod-layouts",
+ "kx-mod-mouse",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",

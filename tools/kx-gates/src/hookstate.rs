@@ -18,6 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::assist::Setup;
 use crate::hookio::{self, Source};
+use crate::simin;
 use crate::stats::US_PER_MS_INT;
 
 /// Wakes the hook thread: commands or injections are waiting.
@@ -208,7 +209,7 @@ impl Host {
             x: info.pt.x,
             y: info.pt.y,
         };
-        let ours = self.own.iter().any(|r| hookio::inside(r, pt));
+        let ours = self.own.iter().any(|r| simin::inside(r, pt));
         let Some(event) = hookio::event_of(msg, pt, ours) else {
             return false;
         };

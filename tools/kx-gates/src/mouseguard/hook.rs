@@ -19,7 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::run::{Hook, Live};
-use super::{End, Filter, Loss, Verdict, kind_of, ours, wait_ms};
+use super::{End, Filter, Loss, Verdict, from, kind_of, wait_ms};
 use crate::out::say;
 
 /// Tells Windows to drop the event.
@@ -51,9 +51,9 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
     if code == ACTION {
         // SAFETY: for HC_ACTION, `lparam` points to an MSLLHOOKSTRUCT that lives for this call.
         let info = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
-        let mine = ours(info.flags, info.dwExtraInfo);
+        let whose = from(info.flags, info.dwExtraInfo);
         let kind = kind_of(u32::try_from(wparam.0).unwrap_or_default(), info.mouseData);
-        let verdict = with_state(|s| s.filter.event(mine, kind, s.clock.now()));
+        let verdict = with_state(|s| s.filter.event(whose, kind, s.clock.now()));
         if verdict == Some(Verdict::Drop) {
             return SWALLOW;
         }

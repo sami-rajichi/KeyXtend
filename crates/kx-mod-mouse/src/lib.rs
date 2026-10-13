@@ -13,7 +13,7 @@ mod settings;
 pub use actor::{Actor, Msg};
 pub use engine::{ESC, Engine, EngineCfg, MAX_ACTS, MAX_LATCHES, Note};
 pub use manifest::{ID, MANIFEST};
-pub use settings::MouseSettings;
+pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey,
