@@ -18,7 +18,7 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
      - The struct derives serde with `#[serde(deny_unknown_fields)]`, implements `Settings` (`check` holds the range rules) and has **no `Default` values**.
      - `defaults.toml`, beside `Cargo.toml`, is the only place the defaults live: every setting, no `version` key.
    - `src/logic/`: pure state machines and algorithms. No I/O. Time comes from `Clock`.
-   - `tests/`: integration tests against `kx-platform-fake`. Golden files go through `kx_test_support::golden` (`assert_golden`), not `insta`.
+   - `tests/`: integration tests through `kx_test_support::host::FakeHost`, with `kx-platform-fake` services. Golden files go through `kx_test_support::golden` (`assert_golden`), not `insta`.
    - `README.md`: a purpose paragraph, the services used and provided, the capabilities with a one-line reason each, and the settings.
 2. **Wire it up:**
    - add it to the workspace `members`;

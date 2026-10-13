@@ -1,6 +1,6 @@
 # kx-mod-mouse
 
-The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS. The engine and its runtime come in later P4 steps; for now the module reads `[mouse]` and keeps the hook.
+The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS.
 
 ## Services
 
