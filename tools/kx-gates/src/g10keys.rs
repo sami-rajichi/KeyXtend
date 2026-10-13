@@ -45,6 +45,8 @@ pub struct Step {
     pub expect: Expect,
     /// True when the key must read as latched after its first press, and as let go after the last.
     pub toggles: bool,
+    /// True when the last press puts the key's mode back, so it goes out even after the mouse guard stopped the gate.
+    pub puts_back: bool,
 }
 
 impl Step {
@@ -90,6 +92,7 @@ fn step(id: &str, presses: &[&str], expect: Expect, toggles: bool) -> Step {
         presses: presses.iter().map(ToString::to_string).collect(),
         expect,
         toggles,
+        puts_back: false,
     }
 }
 
@@ -117,7 +120,10 @@ fn step_for(
             Some(step(id, presses, keys, true))
         }
         // A mouse-assist key flips its mode and back; its light follows the mouse module's answer, so it is not read.
-        (Role::Assist(_), _) => Some(step(id, &[id, id], Expect::Nothing, false)),
+        (Role::Assist(_), _) => Some(Step {
+            puts_back: true,
+            ..step(id, &[id, id], Expect::Nothing, false)
+        }),
         (Role::Later, _) => Some(step(id, &[id], Expect::Nothing, false)),
         _ => None,
     }

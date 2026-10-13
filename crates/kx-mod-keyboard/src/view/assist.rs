@@ -5,11 +5,11 @@ use super::{DIM, KeyState, paint};
 use crate::spec::{Assist, KeyKind};
 use kx_module_api::ports::{AssistChanged, GrabState};
 
-/// The tip of both keys while the mouse module is not running: "Mouse assist is off."
+/// The tip of both keys while the mouse module is not running: "Mouse assist is off".
 pub const MOUSE_OFF_TIP: &str = "tip.mouse-off";
-/// Right-click's tip while it can be used: "Hold still to right-click; short clicks stay normal."
+/// Right-click's tip while it can be used: "Hold still to right-click; short clicks stay normal".
 pub const RCLICK_TIP: &str = "tip.rclick";
-/// Grab's tip while it can be used: "Press to pick up, move, then click to drop."
+/// Grab's tip while it can be used: "Press to pick up, move, then click to drop".
 pub const GRAB_TIP: &str = "tip.grab";
 
 /// The mouse module's state before the bus tells it: not running, every mode off.

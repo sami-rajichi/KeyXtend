@@ -109,8 +109,8 @@ The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift
 
 The keyboard never depends on the mouse module; they talk only through `kx_module_api::ports::assist` events, so each starts without the other.
 
-- **Side keys:** `rclick` and `grab` light from `AssistChanged` (Grab while armed or carrying). Until the mouse module says it is `live`, or after it stops, they show the `dim` paint with `tip.mouse-off`, and a click does nothing. A live click publishes `AssistToggle`; it sends nothing to the app and keeps the latches. At start the module publishes `AssistAsk`, so a mouse module that started first tells its state again.
-- **Latches:** every change of the latched set publishes `LatchesChanged` with `Latches::held`, in its fixed order; `LatchesAsk` publishes it again, and `LatchesUsed` (a click used them) lets them go as `modifiers` says, publishing only a change. The sets go out one sender at a time, newest last, from the UI thread or the mouse module's.
+- **Side keys:** `rclick` and `grab` light from `AssistChanged` (Grab while armed or carrying). Until the mouse module says it is `live`, or after it stops, they show the `dim` paint with `tip.mouse-off`, and a click does nothing. A live click publishes `AssistToggle`; it sends nothing to the app and keeps the latches. At start the module publishes its latched set and `AssistAsk`, so neither side keeps what it missed while the other was stopped.
+- **Latches:** every change of the latched set publishes `LatchesChanged` with `Latches::held`, in its fixed order; `LatchesAsk` publishes it again, and `LatchesUsed` (a click used them) lets them go as `modifiers` says, publishing only a change. The sets go out one sender at a time, newest last, from the UI thread or the mouse module's; a thread that finds another sending leaves its request to it.
 - **Redraw:** a change from the bus marks the state unshown, so the next `relabel` answers state until the UI reads it; a click's own changes redraw at once, as before.
 
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.

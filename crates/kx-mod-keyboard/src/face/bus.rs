@@ -7,42 +7,66 @@ use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan, Toggle,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, TryLockError};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
+use std::sync::{Arc, Mutex, PoisonError};
 
-/// The latched set the bus last heard, so it hears each change once and in order, from any thread.
+/// The latched set the bus last heard, so it hears each change once and the newest set last, from any thread.
 #[derive(Default)]
 pub(super) struct Told {
-    /// A thread asks for the set to be checked; the thread holding `last` checks it.
+    /// A thread asks for the set to be checked.
     due: AtomicBool,
-    /// `LatchesAsk` came, so the set goes out even if unchanged.
+    /// `LatchesAsk` came, or the module started, so the set goes out even if unchanged.
     again: AtomicBool,
-    /// The set last sent, held by the one thread sending.
+    /// One thread is sending; the others leave their requests to it.
+    sending: AtomicBool,
+    /// The set last sent, which only the sending thread touches.
     last: Mutex<Vec<Scan>>,
 }
 
 impl Face {
-    /// Sends the latched set when it changed since last sent, or always when `again`. A thread already sending
-    /// sends it instead, so the bus hears the sets in the order they were held, and a handler may ask again.
+    /// Sends the latched set when it changed since last sent, or always when `again`. One thread sends at a time and
+    /// takes every request made before it stops, so the bus hears the newest set last, and a handler may ask again.
     pub(super) fn tell(&self, again: bool) {
         let t = &self.told;
-        t.again.fetch_or(again, Ordering::AcqRel);
-        t.due.store(true, Ordering::Release);
-        while t.due.load(Ordering::Acquire) {
-            let mut last = match t.last.try_lock() {
-                Ok(last) => last,
-                Err(TryLockError::Poisoned(p)) => p.into_inner(),
-                Err(TryLockError::WouldBlock) => return,
-            };
-            t.due.store(false, Ordering::Release);
-            let held = self.lock().held();
-            if t.again.swap(false, Ordering::AcqRel) || *last != held {
-                last.clone_from(&held);
-                let bus = self.lock().bus();
-                // The module holds `InjectInput`, which this event needs, or its start would have failed.
-                let _ = bus.publish(&LatchesChanged { held });
+        if again {
+            t.again.store(true, SeqCst);
+        }
+        t.due.store(true, SeqCst);
+        loop {
+            if t.sending
+                .compare_exchange(false, true, SeqCst, SeqCst)
+                .is_err()
+            {
+                return;
+            }
+            while t.due.swap(false, SeqCst) {
+                self.send(t.again.swap(false, SeqCst));
+            }
+            t.sending.store(false, SeqCst);
+            // A request made after the last check but before the stop found the sender busy, so it is ours.
+            if !t.due.load(SeqCst) {
+                return;
             }
         }
+    }
+
+    /// Sends the latched set when it differs from the last one sent, or when `again`; only the sending thread calls it.
+    fn send(&self, again: bool) {
+        let held = self.lock().held();
+        let mut last = self
+            .told
+            .last
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if !again && *last == held {
+            return;
+        }
+        last.clone_from(&held);
+        drop(last);
+        let bus = self.lock().bus();
+        // The module holds `InjectInput`, which this event needs, or its start would have failed.
+        let _ = bus.publish(&LatchesChanged { held });
     }
 
     /// A click on a mouse-assist side key: asks the mouse module to flip `which` while it runs, else does nothing.
@@ -64,8 +88,8 @@ impl Face {
     }
 }
 
-/// Hears the mouse module's state and its latch events for `face` until the module stops, then asks the mouse
-/// module for its state, as it may have started first.
+/// Hears the mouse module's state and its latch events for `face` until the module stops, then tells the latched set
+/// and asks the mouse module for its state, as either may have missed the other while one was stopped.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -73,6 +97,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
+    face.tell(true);
     cx.bus().publish(&AssistAsk)
 }
 

@@ -69,9 +69,9 @@ label =
 tip =
     .later = Coming in a later version
     .one-lang = Only one keyboard language is installed
-    .mouse-off = Mouse assist is off.
-    .rclick = Hold still to right-click; short clicks stay normal.
-    .grab = Press to pick up, move, then click to drop.
+    .mouse-off = Mouse assist is off
+    .rclick = Hold still to right-click; short clicks stay normal
+    .grab = Press to pick up, move, then click to drop
 
 ## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
 mark =

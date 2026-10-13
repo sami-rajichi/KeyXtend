@@ -98,8 +98,13 @@ fn one(d: &Desk, step: &Step) -> Result<(Value, bool), String> {
     let (first, rest) = step.presses.split_first().ok_or("a step presses nothing")?;
     d.press(first)?;
     let latched = d.latched(step)?;
-    for id in rest {
-        d.press(id)?;
+    for (i, id) in rest.iter().enumerate() {
+        // A last press that puts a mode back goes out even after the mouse guard stopped the gate.
+        if step.puts_back && i + 1 == rest.len() {
+            d.restore(id)?;
+        } else {
+            d.press(id)?;
+        }
     }
     let still = d.latched(step)?;
     let after = d.after(t0)?;

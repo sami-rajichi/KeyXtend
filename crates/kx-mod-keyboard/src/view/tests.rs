@@ -241,8 +241,13 @@ fn with_one_layout_the_language_key_says_so_and_no_other_key_does() {
     assert_eq!(s.lang.count, 1, "the case this test is for");
     assert_eq!(s.keys["lang"].tip, Some(LONE_TIP));
     let others = s.keys.iter().filter(|(id, _)| *id != "lang");
-    let mouse = |k: &KeyState| k.tip == Some(MOUSE_OFF_TIP);
-    assert!(others.into_iter().all(|(_, k)| k.tip.is_none() || mouse(k)));
+    let mouse =
+        |id: &str, k: &KeyState| ["rclick", "grab"].contains(&id) && k.tip == Some(MOUSE_OFF_TIP);
+    assert!(
+        others
+            .into_iter()
+            .all(|(id, k)| k.tip.is_none() || mouse(id, k))
+    );
 }
 
 #[test]

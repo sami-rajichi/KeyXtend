@@ -133,11 +133,13 @@ fn the_board_makes_both_keys_checkable_and_never_dims_them_and_the_other_side_ke
 }
 
 #[test]
-fn the_module_asks_the_mouse_module_for_its_state_at_start_and_after_a_restart() {
+fn the_module_tells_its_latches_and_asks_the_mouse_module_for_its_state_at_start_and_after_a_restart()
+ {
+    let none = Said::Latches(Vec::new());
     let mut b = Bench::new(None);
-    assert_eq!(b.said(), [Said::Ask]);
+    assert_eq!(b.said(), [none.clone(), Said::Ask]);
     b.rig.restart(Some(("lang_key", "cycle".into())));
-    assert_eq!(b.said(), [Said::Ask]);
+    assert_eq!(b.said(), [none, Said::Ask]);
 }
 
 #[test]

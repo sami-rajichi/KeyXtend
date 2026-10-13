@@ -62,6 +62,17 @@ fn a_held_key_tells_the_set_let_go_only_when_its_burst_ends() {
 }
 
 #[test]
+fn a_restarted_keyboard_tells_the_set_it_kept_even_unchanged() {
+    // A mouse module that restarted while the keyboard was stopped asked in vain, and still needs the set.
+    let stay = Some(("modifiers", "stay".into()));
+    let mut b = Bench::quiet(stay.clone());
+    b.rig.tap("shift").unwrap();
+    b.said();
+    b.rig.restart(stay);
+    assert_eq!(b.said(), [Said::Latches(scans(&[0x2A])), Said::Ask]);
+}
+
+#[test]
 fn latches_ask_tells_the_set_again() {
     let b = Bench::quiet(None);
     b.send(&LatchesAsk);
