@@ -38,7 +38,7 @@ tracing-subscriber = { version = "0.3.23", default-features = false, features = 
 windows = "0.62.2"
 embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
-fluent-langneg = "0.13.1"
+fluent-langneg = "0.14.2"
 unic-langid = "0.9.6"
 # Qt through cxx-qt, pinned: every upgrade is reviewed (ADR-0013).
 cxx = "1.0.202"
