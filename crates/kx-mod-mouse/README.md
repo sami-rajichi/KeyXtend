@@ -33,7 +33,7 @@ The ranges are named constants in `src/settings.rs`; the defaults live only in `
 
 ## Public API
 
-`MouseModule`, `ID`, `MANIFEST`, `MouseSettings` (with `from_defaults` and `hook_config`).
+`MouseModule`, `ID`, `MANIFEST`, `MouseSettings` (with `from_defaults` and `hook_config`), and the pure hold engine: `Engine`, `EngineCfg` (built `From<&MouseSettings>`), `Note` and `ESC`.
 
 ## Security
 

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 12:16 — P4: the hold engine with Grab at once and modifier + click
+`kx-mod-mouse` now has the pure hold engine: a still hold right-clicks, Grab picks up at the next press with no wait and drops on the next click, and a click on our windows, Esc or a toggle cancels a carry, with Right-click coming back after. The keyboard's latched modifiers go down around the next left click outside our windows in any mode, a latch change mid-click never alters that click, and the still radius scales by the press's DPI. Property tests over random input found that a late hold's right-click could reach the app after the press that revealed it; that press now follows it. The engine also lets go of stale modifiers or an awaited release when the hook misses one, and its hot path never allocates.
+
 ## 2026-10-13 12:10 — P4: the mouse module's crate and its `[mouse]` settings
 The new `kx-mod-mouse` crate declares the mouse module: it needs the pointer hook and holds the `PointerHook` and `InjectInput` capabilities, and its start reads `[mouse]` and keeps the hook for the engine to come. `[mouse]` holds Right-click mode, the hold time (0.5 s to 3.0 s, 1.5 s by default), the still radius, the ring's delay and the hook's health and echo times, each with a range, and the ring must always show before the shortest hold. The crate joined the workspace and CI's Linux list, with a README and a draft security note. The `kx-new-module` skill now names `boot.rs` and the flat `qml/` folder.
 

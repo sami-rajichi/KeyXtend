@@ -4,9 +4,11 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod engine;
 mod manifest;
 mod settings;
 
+pub use engine::{ESC, Engine, EngineCfg, Note};
 pub use manifest::{ID, MANIFEST};
 pub use settings::MouseSettings;
 
