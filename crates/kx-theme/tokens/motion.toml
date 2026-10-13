@@ -39,6 +39,8 @@ panel = { ms = 180, curve = "swift" }
 shimmer = { ms = 1000, curve = "linear" }
 # The burst when a hold fires (.burst .b-ring, .b-dot).
 burst = { ms = 420, curve = "ease_out" }
+# The mode badge beside the pointer fading in and out; the mock-up shows it at once, so WinUI's ControlFastAnimationDuration.
+badge = { ms = 167, curve = "ease_out" }
 # The notice banner dropping in (.toast toastIn, lines 399-401) and the tray menu opening (.ctx ctxIn, lines 360-361).
 notice = { ms = 200, curve = "ease_out" }
 menu = { ms = 140, curve = "ease_out" }

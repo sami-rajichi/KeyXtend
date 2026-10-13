@@ -121,7 +121,7 @@ pub struct SysColors {
 }
 
 /// The system look right now.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SysLook {
     /// Apps use the dark mode.
     pub dark: bool,
@@ -131,6 +131,26 @@ pub struct SysLook {
     pub contrast: Option<SysColors>,
     /// The system's animation effects are off.
     pub anim_off: bool,
+    /// The pointer's size in physical pixels at 100 % scale.
+    pub pointer_px: u32,
+}
+
+impl SysLook {
+    /// The pointer's size when the system cannot say: Windows' default, its smallest.
+    pub const POINTER_PX: u32 = 32;
+}
+
+/// Light, with no accent or high contrast, animations on and the usual pointer.
+impl Default for SysLook {
+    fn default() -> Self {
+        Self {
+            dark: false,
+            accent: None,
+            contrast: None,
+            anim_off: false,
+            pointer_px: Self::POINTER_PX,
+        }
+    }
 }
 
 /// Keeps a watch running; dropping it stops the watch once a running callback returns. A `Send + Sync` service may hold it.
@@ -263,10 +283,12 @@ mod tests {
     }
 
     #[test]
-    fn the_default_look_is_light_with_nothing_set() {
+    fn the_default_look_is_light_with_nothing_set_and_the_usual_pointer() {
         let look = SysLook::default();
         assert!(!look.dark && !look.anim_off);
         assert!(look.accent.is_none() && look.contrast.is_none());
+        assert_eq!(look.pointer_px, SysLook::POINTER_PX);
+        assert_eq!(SysLook::POINTER_PX, 32, "Windows' default pointer size");
     }
 
     #[test]

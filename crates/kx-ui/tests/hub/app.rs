@@ -102,7 +102,7 @@ fn a_second_waker_takes_the_wakes_and_warns() {
 }
 
 /// A waker that keeps every wake in `seen`.
-fn keeper(seen: &Arc<Mutex<Vec<Wake>>>) -> kx_ui::Waker {
+pub fn keeper(seen: &Arc<Mutex<Vec<Wake>>>) -> kx_ui::Waker {
     let log = Arc::clone(seen);
     Box::new(move |w| log.lock().unwrap().push(w))
 }

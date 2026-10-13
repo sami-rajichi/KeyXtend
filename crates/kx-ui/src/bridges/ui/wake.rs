@@ -41,6 +41,8 @@ pub(super) fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::End => ui.as_mut().quit_asked(),
         Wake::Tray(TrayEvent::Click(at)) => ui.as_mut().tray_clicked(at.x, at.y),
         Wake::Tray(TrayEvent::Away) => ui.as_mut().tray_away(),
+        Wake::Assist => ui.as_mut().assist_changed(),
+        Wake::Keys => ui.as_mut().keys_changed(),
     }
     let dropped = relook && ui.with(false, Hub::drop_fonts);
     if loaded || dropped {

@@ -22,8 +22,9 @@
 | `[ui]` settings | Public | `settings.toml` through the kernel | No | Until changed |
 | The focus token (a window handle) | Public | Memory only | N/A | Until the app quits |
 | The tray picture (our own drawing of the theme badge) and where a tray click happened | Public | Memory only; the adapter keeps the picture while the icon shows | N/A | Until the icon hides |
+| The pointer overlay's state: the pointer, a hold's press point and where it fired | Sensitive (a run of clicks on an on-screen PIN pad shows what was typed) | Memory only, in the hub and in QML while it draws | N/A | The last point only; it goes when every mode is off |
 
-Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes.
+Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes; no line holds a pointer point, and `assist_json` is never logged.
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -32,7 +33,9 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
 | The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown, broken or missing tag gives English. Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
-| `AssistNote` events from the bus | Only the kind is read: a fired hold, a pick-up or a drop plays one compiled-in sound, and the point is never read or logged | One play per note, a send the speaker's bounded queue drops when full | No; hub tests cover each kind |
+| `AssistNote` events from the bus | A fired hold, a pick-up or a drop plays one compiled-in sound; a hold's start, end, fire and a cancelled carry set or clear the overlay's ring and burst, whose points are kept but never logged | One play per note, a send the speaker's bounded queue drops when full; one ring and one burst kept | No; hub tests cover each kind and capture the logs |
+| `AssistChanged`, `PointerMoved` and `LatchesUsed` events from the bus (the mouse module's thread) | Typed values only; the handler stores and wakes, never blocks, and holds the hub weakly. A point is kept only while a mode is on | At most one `Wake::Assist` waits for QML's read, so a run of moves costs one wake per read; one `Wake::Keys` per mode or latch change | No; hub tests |
+| The pointer size (`SystemLook`, `CursorBaseSize`) | The adapter keeps a value Settings offers (32 to 256) and reads anything else as 32 | One number | Unit tests |
 | Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms`, within its range in `settings.rs` | One wake per event | No |
 | Icon ids QML asks the icon provider for (`<rrggbb>/<name>.svg`, `cpp/tint.h`) | The tint must be six hex digits and the name plain ASCII (letters, digits, `-`, `_` and dots, no leading dot) of the icon type, so it only names a file in the compiled-in icons folder; anything else gives a clear image and one warning | One image of the asked size | No; the tint test tries `..`, slashes, a drive, `%` escapes, other types and bad tints |
 | `KX_UI_CHURN` (debug builds only) | Set and not empty, it starts a fixed churn through the app's own calls: a key's tip, the language key, minimise to the bubble and back, then theme, Caps Lock and size changes. The language key is pressed only in the List design, where it opens a list and switches no layout, and Caps Lock changes only on the face (`FlipCaps`), so no key is sent. Release builds have neither the variable, the calls nor `Churn.qml` | One plan: a round of the pop-ups and every theme, 20 Caps Lock and 24 size steps | Unit test, `tst_churn` |
@@ -49,6 +52,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
   - Guard tries stop at `guard_tries` per run, and equal notices are merged.
+  - The overlay's bus handlers only store and wake, and its wake is never queued twice before QML reads, so a moving pointer cannot flood the Qt thread.
   - A sound is a send to the speaker that never waits. The key sound reads only whether an action is a tap or a press, never its key, and no play logs; `[ui] sound_volume` and `sound_idle_ms` stay within their ranges in `settings.rs`.
   - The heaps' free pages go back once after a look change, or once for back-to-back changes, after every shown window dropped its cached graphics, never at idle; a refused give-back warns once and stops nothing (ADR-0023).
   - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.

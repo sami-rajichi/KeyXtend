@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "Saisi",
   "banner.more": "{$more} autres notifications",
   "bar.bigger": "Plus grand",
   "bar.bubble": "Afficher le clavier",
@@ -169,6 +170,7 @@ var texts = {
   "window.list": "Langues du clavier",
   "window.menu": "Menu de KeyXtend",
   "window.notice": "Notification de KeyXtend",
+  "window.pointer": "Aide au pointeur",
   "window.tip": "Info-bulle de KeyXtend"
 };
 var more = [
@@ -186,3 +188,13 @@ var more = [
   "11 autres notifications",
   "12 autres notifications"
 ];
+var assist = {
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "point": null,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

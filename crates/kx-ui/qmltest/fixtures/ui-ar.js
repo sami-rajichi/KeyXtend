@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "قيد الإمساك",
   "banner.more": "{$more} إشعار آخر",
   "bar.bigger": "أكبر",
   "bar.bubble": "إظهار لوحة المفاتيح",
@@ -169,6 +170,7 @@ var texts = {
   "window.list": "لغات لوحة المفاتيح",
   "window.menu": "قائمة KeyXtend",
   "window.notice": "إشعار KeyXtend",
+  "window.pointer": "مساعد المؤشر",
   "window.tip": "تلميح KeyXtend"
 };
 var more = [
@@ -186,3 +188,13 @@ var more = [
   "11 إشعارًا آخر",
   "12 إشعارًا آخر"
 ];
+var assist = {
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "point": null,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

@@ -217,6 +217,18 @@ Item {
             }
         }
 
+        // A mouse mode or a latch the mouse used changes the keys from the bus: the hub's wake has the window read its
+        // state at once, with no relabel tick (the window is hidden, so its timer rests).
+        function test_a_mode_change_on_the_bus_lights_its_key_at_once() {
+            const win = make({}, { state: JSON.parse(JSON.stringify(Face.states.en)) });
+            // Changed in place, so no binding sees it: the real keyboard's state is read only by a call.
+            win.keyboard.state.keys.rclick.on = true;
+            verify(!keyed(win, "rclick").Accessible.checked, "not read yet");
+            win.ui.keysChanged();
+            verify(keyed(win, "rclick").Accessible.checked, "lit at once");
+            compare(win.keyboard.calls.indexOf("relabel"), -1, "no relabel tick ran");
+        }
+
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {
             const ui = createTemporaryObject(uiC, root);
             const kb = createTemporaryObject(kbC, root, { board: null, state: null });

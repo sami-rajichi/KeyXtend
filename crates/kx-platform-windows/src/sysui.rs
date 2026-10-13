@@ -1,7 +1,8 @@
-//! What Windows says about the look: dark apps, the accent pair, the high-contrast colours, animations and the
-//! display language. Reading Windows' answers is pure and tested everywhere; the queries are in `win`.
+//! What Windows says about the look: dark apps, the accent pair, the high-contrast colours, animations, the pointer
+//! size and the display language. Reading Windows' answers is pure and tested everywhere; the queries are in `win`.
 
-use kx_platform::ui::Rgba;
+use kx_platform::ui::{Rgba, SysLook};
+use std::ops::RangeInclusive;
 
 #[cfg(windows)]
 mod win;
@@ -13,6 +14,16 @@ pub use win::{WinLook, ui_language};
 
 /// `HCF_HIGHCONTRASTON`: the high-contrast flag that says it is on.
 const HCF_HIGHCONTRASTON: u32 = 0x1;
+
+/// The sizes `CursorBaseSize` takes: Settings' pointer sizes 1 to 15 run from 32 to 256 pixels.
+const POINTER_SIZES: RangeInclusive<u32> = SysLook::POINTER_PX..=256;
+
+/// The pointer size from `CursorBaseSize`; a missing or out-of-range value is Windows' default.
+#[must_use]
+pub fn pointer_px(base: Option<u32>) -> u32 {
+    base.filter(|b| POINTER_SIZES.contains(b))
+        .unwrap_or(SysLook::POINTER_PX)
+}
 
 /// True when `AppsUseLightTheme` says dark; a missing value is Windows' default, light.
 #[must_use]
@@ -53,6 +64,16 @@ mod tests {
             [0, 0, 0, u8::MAX],
             "the top byte is not a colour"
         );
+    }
+
+    #[test]
+    fn a_pointer_size_in_range_is_kept_and_any_other_is_the_default() {
+        assert_eq!(pointer_px(Some(48)), 48);
+        let (lo, hi) = (*POINTER_SIZES.start(), *POINTER_SIZES.end());
+        assert_eq!((pointer_px(Some(lo)), pointer_px(Some(hi))), (lo, hi));
+        for odd in [None, Some(0), Some(lo - 1), Some(hi + 1), Some(u32::MAX)] {
+            assert_eq!(pointer_px(odd), SysLook::POINTER_PX, "{odd:?}");
+        }
     }
 
     #[test]

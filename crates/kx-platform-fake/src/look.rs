@@ -150,6 +150,11 @@ mod tests {
     }
 
     #[test]
+    fn a_new_fake_shows_the_usual_pointer_size() {
+        assert_eq!(FakeSystemLook::new().read().pointer_px, SysLook::POINTER_PX);
+    }
+
+    #[test]
     fn the_ui_language_is_the_one_set() {
         let fake = FakeSystemLook::new();
         assert_eq!(fake.ui_language(), DEFAULT_LANGUAGE);

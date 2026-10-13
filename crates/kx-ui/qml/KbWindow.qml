@@ -98,6 +98,10 @@ Window {
         function onFontsChanged() {
             win.faces++;
         }
+        // A mouse mode or a used latch changed the keys on the bus: their lights show now, not at the next relabel.
+        function onKeysChanged() {
+            win.restate();
+        }
     }
     // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
     Rescale {

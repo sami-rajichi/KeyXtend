@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "Holding",
   "banner.more": "{$more} more notices",
   "bar.bigger": "Bigger",
   "bar.bubble": "Show the keyboard",
@@ -169,6 +170,7 @@ var texts = {
   "window.list": "Keyboard languages",
   "window.menu": "KeyXtend menu",
   "window.notice": "KeyXtend notice",
+  "window.pointer": "Pointer helper",
   "window.tip": "KeyXtend tip"
 };
 var more = [
@@ -186,3 +188,13 @@ var more = [
   "11 more notices",
   "12 more notices"
 ];
+var assist = {
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "point": null,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

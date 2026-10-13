@@ -379,6 +379,22 @@ var lk = {
         30.0
       ]
     },
+    "badge": {
+      "pad_px": [
+        3.0,
+        7.0
+      ],
+      "icon_px": 13.0,
+      "gap_px": 4.0,
+      "font_px": 10.5,
+      "weight": 600,
+      "radius_px": 9.5,
+      "offset_px": [
+        16.0,
+        18.0
+      ],
+      "edge_px": 8.0
+    },
     "dim": {
       "share": 0.4
     },
@@ -453,6 +469,17 @@ var lk = {
   },
   "motion": {
     "moves": {
+      "badge": {
+        "ms": 0,
+        "bez": [
+          0.0,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
       "burst": {
         "ms": 0,
         "bez": [

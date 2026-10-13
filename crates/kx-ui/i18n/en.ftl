@@ -130,9 +130,14 @@ window =
     .menu = { -app } menu
     .list = Keyboard languages
     .tip = { -app } tip
+    .pointer = Pointer helper
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
+
+## The mode badge beside the pointer: its word while Grab holds a press down.
+badge =
+    .holding = Holding
 
 tray =
     .show = Show keyboard

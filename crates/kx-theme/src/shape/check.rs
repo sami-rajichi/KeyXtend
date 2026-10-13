@@ -5,8 +5,8 @@ use crate::theme::{FONT_WEIGHTS, outside_unit};
 
 impl Shape {
     /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, row or mark
-    /// of 0 or less, a panel gap, label padding or mark gap below 0, and a lit dot no larger than the others, naming the
-    /// size.
+    /// of 0 or less, a panel gap, label padding, mark gap or badge place below 0, and a lit dot no larger than the
+    /// others, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -43,6 +43,7 @@ impl Shape {
             ("panel.count_weight", self.panel.count_weight),
             ("notice.button_weight", self.notice.button_weight),
             ("list.badge_weight", self.list.badge_weight),
+            ("badge.weight", self.badge.weight),
         ];
         match weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
             Some((n, w)) => {
@@ -54,7 +55,7 @@ impl Shape {
     }
 
     /// The shimmer span, the outline, the smallest label and the mark's size must be above 0, and the panel
-    /// gaps, the label padding, the language icon's gap and the mark's 0 or more, all finite.
+    /// gaps, the label padding, the language icon's gap, the mark's and the badge's place 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -67,10 +68,12 @@ impl Shape {
             return Err(format!("shape: {n} {v} must be above 0"));
         }
         let gaps = self.panel.gap_px.iter().map(|g| ("panel.gap_px", *g));
-        let mut zero_up = gaps.chain([
+        let offsets = self.badge.offset_px.iter().map(|o| ("badge.offset_px", *o));
+        let mut zero_up = gaps.chain(offsets).chain([
             ("legend.label_pad_px", self.legend.label_pad_px),
             ("lang.icon_gap_px", self.lang.icon_gap_px),
             ("bar.mark_px", self.bar.mark_px[2]),
+            ("badge.edge_px", self.badge.edge_px),
         ]);
         match zero_up.find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
             Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),

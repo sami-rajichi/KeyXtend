@@ -9,13 +9,15 @@ import "../../kx-theme/fixtures/look-native-light.js" as Look
 QtObject {
     id: stub
 
-    // What the hub gives: settings, the keyboard's language and texts, the tray's texts, and the look; setting one
-    // sends its change signal. Setting `texts` last switches the keyboard's language as the hub does (`textsChanged`).
+    // What the hub gives: settings, the keyboard's language and texts, the tray's texts, the look and the pointer
+    // overlay's state; setting one sends its change signal. Setting `texts` last switches the keyboard's language as the
+    // hub does (`textsChanged`).
     property var settings: En.settings
     property var lang: En.lang
     property var texts: En.texts
     property var trayTexts: En.texts
     property var look: Look.lk
+    property var assist: En.assist
     // The backdrop answer, and every call so far.
     property bool frosted: false
     property var calls: []
@@ -59,6 +61,8 @@ QtObject {
     signal noticesWaiting
     signal trayClicked(int x, int y)
     signal trayAway
+    // A mouse mode changed or a latch let go, so the keyboard reads its state again.
+    signal keysChanged
 
     function note(call) {
         calls = calls.concat([call]);
@@ -71,6 +75,9 @@ QtObject {
     }
     function lookJson() {
         return JSON.stringify(look);
+    }
+    function assistJson() {
+        return JSON.stringify(assist);
     }
     // The bundle as the app holds it: fonts the texts test lays out, and icons the tests' icon plugin serves.
     function assets() {

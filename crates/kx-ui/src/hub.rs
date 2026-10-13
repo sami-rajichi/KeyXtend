@@ -1,8 +1,9 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, sounds, the tray icon, and the requests the app drains on its own thread. No
-//! lock is held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the pointer overlay, the tray icon, and the requests the app drains on
+//! its own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
+mod assist;
 mod bus;
 mod face;
 mod fonts;
@@ -79,6 +80,10 @@ pub enum Wake {
     End,
     /// The tray icon heard a click, with where its menu opens, or a click elsewhere.
     Tray(TrayEvent),
+    /// The pointer overlay's state changed; no other comes until QML reads it.
+    Assist,
+    /// A mouse mode changed or a latch let go: the keyboard reads its state again.
+    Keys,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -145,6 +150,8 @@ pub struct Hub {
     refused: AtomicBool,
     /// Each sound's cue and turn.
     sounds: sound::Sounds,
+    /// The pointer overlay's state.
+    assist: assist::Assist,
 }
 
 impl Hub {
@@ -182,6 +189,7 @@ impl Hub {
             fonts: Mutex::default(),
             refused: AtomicBool::default(),
             sounds,
+            assist: assist::Assist::default(),
         };
         Ok((Arc::new(hub), drain))
     }

@@ -1,5 +1,5 @@
-//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look and
-//! the sounds.
+//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
+//! sounds and the pointer overlay.
 
 #![allow(
     clippy::expect_used,
@@ -8,6 +8,7 @@
 )]
 
 mod app;
+mod assist;
 #[path = "../shared/board.rs"]
 mod board;
 mod face;

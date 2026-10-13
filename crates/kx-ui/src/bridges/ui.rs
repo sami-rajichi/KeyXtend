@@ -130,6 +130,10 @@ pub mod qobject {
         #[qinvokable]
         fn mode_json(&self) -> QString;
 
+        /// The pointer overlay's state as JSON; reading it lets the next change send `assist_changed`.
+        #[qinvokable]
+        fn assist_json(&self) -> QString;
+
         /// Keeps how the user left the keyboard: away after Close or Minimise, minimised behind the bubble.
         #[qinvokable]
         fn keep_mode(&self, away: bool, minimised: bool);
@@ -174,6 +178,14 @@ pub mod qobject {
         /// Another window came to the front, so the tray menu closes.
         #[qsignal]
         fn tray_away(self: Pin<&mut Self>);
+
+        /// The pointer overlay's state changed: read `assist_json`.
+        #[qsignal]
+        fn assist_changed(self: Pin<&mut Self>);
+
+        /// A mouse mode changed or a latch let go: the keyboard reads its state again.
+        #[qsignal]
+        fn keys_changed(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}
@@ -269,6 +281,10 @@ impl qobject::Ui {
 
     fn keep_mode(&self, away: bool, minimised: bool) {
         self.with((), |h| h.keep_mode(Mode::of(away, minimised)));
+    }
+
+    fn assist_json(&self) -> QString {
+        qs(&self.with(NULL.to_owned(), Hub::assist_json))
     }
 
     fn quit(&self) -> bool {
