@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 14:25 — P4: the keyboard's Right-click and Grab keys, and its latches on the bus
+The side keys Right-click and Grab now ask the mouse module to flip its mode over the bus, light while it is on, and stay dimmed with the tip "Mouse assist is off." until that module says it runs; the keyboard asks for its state at start and never depends on it. Every change of the latched modifiers goes out on the bus, newest last from any thread, and a mouse click that used them lets them go as the `modifiers` setting says. A change from the bus redraws at the next relabel, and the new tips read naturally in English, French and Arabic.
+
 ## 2026-10-13 13:26 — P4: the mouse module runs its engine on the hook only while needed
 The mouse module now runs an actor thread that starts the pointer hook when Right-click, Grab or a latched modifier needs it, and stops it once the engine is idle, logging the hook's numbers and never a point. It hears the keyboard's toggles, latches and state requests over the bus, and tells the keyboard and the UI the state, hold, grab and pointer notes; moves coalesce to one in flight, always at the latest point. Right-click is saved when the user changes it, not while Grab pauses it, and comes back at once after a restart. When Windows refuses the hook for a mouse key or a restored Right-click, a new notice in English, French and Arabic says to press the key again; a refusal for a latch only logs a warning, once per streak.
 

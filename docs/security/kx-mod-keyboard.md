@@ -8,7 +8,7 @@
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| `InjectInput` | It gates the three services typing needs: `InputInjector` (send keys and text, name the app in front), `LayoutSource` (Caps Lock, whether a key types) and `Layouts` (the table shown). | The module does not start. |
+| `InjectInput` | It gates the three services typing needs: `InputInjector` (send keys and text, name the app in front), `LayoutSource` (Caps Lock, whether a key types) and `Layouts` (the table shown). It also gates the bus events `AssistToggle`, `LatchesChanged`, `LatchesUsed` and `LatchesAsk`. | The module does not start. |
 
 - Besides its settings, the module writes only its own `size`, `x`, `y` and `placed`.
 
@@ -20,6 +20,7 @@
 | The text of each click, built from the layout table | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted<String>`, until the injector takes it; not zeroised (`kx-platform-windows.md`) | No | One click |
 | Typing state: the latched modifiers and the dead-key wait | Sensitive together with the clicks around it (the latches alone show on screen and to screen readers) | Memory only; kept across a module restart | No | Until a click lets go of it, or the app quits |
 | The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
+| The latched set on the bus (`LatchesChanged`), for modifier + click | Sensitive together with the clicks around it | Memory only; heard only by modules granted `InjectInput`; its debug output shows only a count | No | Until the next change |
 | The held key's id and its next repeat time | Sensitive together with the clicks around it | Memory only (`Repeat`) | No | Until the pointer lets go or leaves, the keyboard hides, the list opens, a repeat fails, is stale or types nothing, the next press, or a restart |
 
 Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text and legends (`Route`, `Plan`, `Legend`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
@@ -33,6 +34,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
 | Held-key actions from the UI: `press`, `tick`, `let_go`, `leave` (spec §4.6) | A pressed or let-go key must be on the board (`UnknownKey`, which changes nothing); a press types once, a tick types only while a key is held and a repeat is due, and a late tick types once; a let-go types nothing | One repeat per `repeat_every_ms` (33 ms or more) | Property tests (`Repeat` runs; face runs of presses, ticks, let-gos and leaves) |
+| Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go, and `AssistChanged` only lights or dims two keys | — | Thread runs (latches told newest last) |
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)

@@ -12,7 +12,8 @@ use kx_module_api::Capability::InjectInput;
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey,
 };
-use kx_module_api::{Module, ModuleCx, ServiceKey};
+use kx_module_api::{BusCore, Module, ModuleCx, ServiceKey};
+use kx_test_support::host::FakeCore;
 use serde_json::Value;
 use std::sync::Arc;
 use std::time::Duration;
@@ -59,15 +60,20 @@ pub struct Rig {
     pub module: KeyboardModule,
     /// The face, as the UI takes it.
     pub face: Arc<dyn KeyboardFace>,
+    /// The bus the module talks on, kept across restarts as the kernel keeps its own.
+    pub core: Arc<dyn BusCore>,
 }
 
-/// Starts `module` on a host with `change` over the defaults and `fakes` stored; returns the host and the face.
+/// Starts `module` on a host over bus `core` with `change` over the defaults and `fakes` stored; returns the host and
+/// the face.
 fn start(
     module: &mut KeyboardModule,
     fakes: &Fakes,
     change: Option<(&str, toml::Value)>,
+    core: &Arc<dyn BusCore>,
 ) -> (FakeHost, Arc<dyn KeyboardFace>) {
     let mut host = fake(change);
+    host.core = Arc::clone(core);
     fakes.store(&mut host, None);
     host.granted = vec![InjectInput];
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
@@ -85,20 +91,32 @@ impl Rig {
 
     /// The module started over `fakes`, with `change` over the defaults.
     pub fn on(fakes: Fakes, change: Option<(&str, toml::Value)>) -> Self {
+        Self::on_bus(fakes, change, Arc::new(FakeCore::default()))
+    }
+
+    /// The module started over `fakes` on bus `core`, with `change` over the defaults.
+    pub fn on_bus(
+        fakes: Fakes,
+        change: Option<(&str, toml::Value)>,
+        core: Arc<dyn BusCore>,
+    ) -> Self {
         let mut module = KeyboardModule::default();
-        let (host, face) = start(&mut module, &fakes, change);
+        let (host, face) = start(&mut module, &fakes, change, &core);
         Self {
             host,
             fakes,
             module,
             face,
+            core,
         }
     }
 
-    /// Restarts the module as a settings change does, with `change` over the defaults.
+    /// Restarts the module as a settings change does, with `change` over the defaults; as in the kernel, its bus
+    /// handlers go before its stop.
     pub fn restart(&mut self, change: Option<(&str, toml::Value)>) {
+        self.host.held.clear();
         self.module.stop();
-        let (host, face) = start(&mut self.module, &self.fakes, change);
+        let (host, face) = start(&mut self.module, &self.fakes, change, &self.core);
         self.host = host;
         self.face = face;
     }

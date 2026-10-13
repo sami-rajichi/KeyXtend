@@ -1,9 +1,11 @@
 //! What the UI draws, as the face's JSON: the board (boxes, names, dimmed keys and the size), which changes with
 //! the size, and the state (legends, lights, the language key, the list and the place), which changes as keys are used.
 
+mod assist;
 mod board;
 mod paint;
 
+pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP, UNHEARD};
 pub use board::board_view;
 pub use paint::{DIM, Paint, paint};
 
@@ -14,7 +16,7 @@ use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typ
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
-use kx_module_api::ports::{LangLabel, LayoutTable, Point};
+use kx_module_api::ports::{AssistChanged, LangLabel, LayoutTable, Point};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -62,7 +64,7 @@ pub struct KeyView {
     pub label: Option<String>,
     /// Its name for screen readers and tips, by translation key; a character key's comes with the state.
     pub name: Option<String>,
-    /// It latches or locks, so screen readers hear it as checkable.
+    /// It latches, locks or turns a mode on, so screen readers hear it as checkable.
     pub checkable: bool,
     /// It comes in a later version: drawn dimmed and does nothing.
     pub dim: bool,
@@ -131,7 +133,8 @@ pub struct KeyState {
     pub on: bool,
     /// Its colours now, by palette token.
     pub paint: Paint,
-    /// What it says after its name now, by translation key, shown in its tip; the language key's `LONE_TIP`.
+    /// What it says after its name now, by translation key, shown in its tip: the language key's `LONE_TIP`, or a
+    /// mouse-assist key's.
     pub tip: Option<&'static str>,
 }
 
@@ -186,6 +189,8 @@ pub struct StateInput<'a> {
     pub panel_keys: &'a [(String, Nav)],
     /// Where the window goes.
     pub at: Option<Point>,
+    /// The mouse module's state, as the bus last told it.
+    pub assist: AssistChanged,
 }
 
 /// Every key's state, the language key, the list and the place.
@@ -209,11 +214,15 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
 /// Key `k`'s legends, light, paint and tip with the legend modifiers `mods` on a layout written right to left when
 /// `rtl`; the language key says so when one layout, or none, is installed.
 fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> KeyState {
-    if k.role == Role::Later {
-        return KeyState {
-            paint: DIM,
-            ..KeyState::default()
-        };
+    match k.role {
+        Role::Later => {
+            return KeyState {
+                paint: DIM,
+                ..KeyState::default()
+            };
+        }
+        Role::Assist(a) => return assist::assist_state(i.assist, a, k.kind),
+        _ => {}
     }
     let chars = k.sc.filter(|_| k.role == Role::Char);
     if let Some(c) = chars.and_then(|sc| i.table.keys.get(&sc)) {

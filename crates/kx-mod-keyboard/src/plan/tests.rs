@@ -1,6 +1,7 @@
 use super::*;
 use crate::legend::testkeys::{dead, letter, plain};
 use crate::settings::Modifiers;
+use crate::spec::Assist;
 use std::cell::Cell;
 
 mod apps;
@@ -103,6 +104,8 @@ fn named_keys_send_latch_tap_caps_or_ask_the_face() {
     assert_eq!(g.plan(Role::Lang, None), Plan::Lang);
     assert_eq!(g.plan(Role::Later, None), Plan::Later);
     assert_eq!(g.plan(Role::Send, None), Plan::Later, "no code to send");
+    let grab = g.plan(Role::Assist(Assist::Grab), None);
+    assert_eq!(grab, Plan::Assist(Toggle::Grab), "the face asks the mouse");
 }
 
 #[test]

@@ -116,13 +116,15 @@ fn step_for(
             };
             Some(step(id, presses, keys, true))
         }
+        // A mouse-assist key flips its mode and back; its light follows the mouse module's answer, so it is not read.
+        (Role::Assist(_), _) => Some(step(id, &[id, id], Expect::Nothing, false)),
         (Role::Later, _) => Some(step(id, &[id], Expect::Nothing, false)),
         _ => None,
     }
 }
 
 /// The steps for the board's `roles`, in board order: send keys, Caps Lock, the modifiers with `probe` after each,
-/// and the keys of later versions. `stay` is true when modifiers stay latched after a key.
+/// the mouse-assist keys twice, and the keys of later versions. `stay` is true when modifiers stay latched after a key.
 pub fn plan(
     roles: &[(String, Role, Option<Scan>)],
     probe: &str,

@@ -69,6 +69,9 @@ label =
 tip =
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
+    .mouse-off = L’aide à la souris est désactivée.
+    .rclick = Restez appuyé sans bouger pour faire un clic droit ; les clics brefs restent normaux.
+    .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer.
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =

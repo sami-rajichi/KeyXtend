@@ -11,7 +11,7 @@ use kx_mod_keyboard::{
     BoardSpec, Io, KeyboardSettings, Latch, Modifiers, TapError, Tapped, Typing,
 };
 use kx_module_api::Redacted;
-use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute};
+use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute, Toggle};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, LayoutFile, Stroke};
 
 /// One layout's fakes and a typing state on the shipped board.
@@ -210,7 +210,7 @@ fn a_key_app_gets_text_as_key_presses_matched_without_case() {
 }
 
 #[test]
-fn the_language_key_and_later_keys_send_nothing() {
+fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
     let mut r = Rig::new("en-us", |_| ());
     let io = Io {
         injector: &r.injector,
@@ -222,6 +222,7 @@ fn the_language_key_and_later_keys_send_nothing() {
         Ok(Tapped::Lang { back: true })
     );
     assert_eq!(r.tap("mic"), Ok(Tapped::Later));
+    assert_eq!(r.tap("rclick"), Ok(Tapped::Assist(Toggle::RightClick)));
     assert_eq!(r.tap("no-such-key"), Err(TapError::UnknownKey));
     assert!(r.sent().is_empty());
 }

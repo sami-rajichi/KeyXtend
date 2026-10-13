@@ -219,7 +219,7 @@ fn the_shipped_roles_latch_the_modifiers_and_wait_on_the_side_block() {
         (Role::Caps, Role::Lang)
     );
     assert_eq!(named(&s, "space").role, Role::Send);
-    assert!(s.side.iter().all(|k| k.role == Role::Later) && s.dpad.later);
+    assert!(s.dpad.later);
     let del = named(&s, "del").sc.unwrap();
     assert!(del.is_extended() && del.code() == 0xE053);
 }

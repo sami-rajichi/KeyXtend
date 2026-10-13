@@ -96,8 +96,8 @@ Item {
             return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
         }
         // Every keyboard control with a tip and the tip it shows in texts `t` (spec: hovering any icon button shows its
-        // name): icon keys their name, dimmed keys and the D-pad their name and when they come, the top bar and the corner
-        // their name.
+        // name): icon keys their name, dimmed keys and the D-pad their name and when they come, a key with a state tip its
+        // name and that tip, and the top bar and the corner their name.
         function tipped(app, t) {
             const face = app.face.contentItem;
             const icons = app.face.lk.icons;
@@ -108,7 +108,8 @@ Item {
             };
             const out = [];
             for (const k of app.face.board.keys) {
-                const says = k.dim ? later(t.texts[k.name], k.tip) : drawn(k) ? t.texts[k.name] : "";
+                const tip = k.dim ? k.tip : app.face.st.keys[k.id].tip;
+                const says = tip ? later(t.texts[k.name], tip) : drawn(k) ? t.texts[k.name] : "";
                 if (says)
                     out.push({ item: named(face, t.texts[k.name]), says: says });
             }

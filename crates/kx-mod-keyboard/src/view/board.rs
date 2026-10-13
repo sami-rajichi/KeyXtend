@@ -63,7 +63,7 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
         icon,
         label,
         name,
-        checkable: matches!(k.role, Role::Latch(_) | Role::Caps),
+        checkable: matches!(k.role, Role::Latch(_) | Role::Caps | Role::Assist(_)),
         dim,
         tip: dim.then_some(LATER_TIP),
         repeat,

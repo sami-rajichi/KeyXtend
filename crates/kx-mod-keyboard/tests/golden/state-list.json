@@ -1262,7 +1262,7 @@
       "third": "",
       "third_ar": false,
       "third_mark": false,
-      "tip": null
+      "tip": "tip.mouse-off"
     },
     "lang": {
       "blank": null,
@@ -1388,7 +1388,7 @@
       "third": "",
       "third_ar": false,
       "third_mark": false,
-      "tip": null
+      "tip": "tip.mouse-off"
     },
     "right": {
       "blank": null,

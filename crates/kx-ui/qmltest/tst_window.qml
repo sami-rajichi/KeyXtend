@@ -82,21 +82,23 @@ Item {
             verify(named(win, En.texts["key.dpad"]), "the D-pad");
         }
 
-        function test_only_latches_and_caps_are_checkable() {
+        function test_only_latches_caps_and_the_mouse_modes_are_checkable() {
             const win = make();
             const checkable = buttons(win).filter(o => o.Accessible.checkable).map(o => o.Accessible.id).sort();
             const latches = Face.board.keys.filter(k => k.checkable).map(k => k.id).sort();
             compare(checkable, latches);
             verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
-            for (const k of Face.board.keys.filter(k => k.side))
-                verify(!keyed(win, k.id).Accessible.checkable, "side key " + k.id);
+            const side = Face.board.keys.filter(k => k.side && k.checkable).map(k => k.id).sort();
+            compare(side, ["grab", "rclick"], "Right-click and Grab are the side keys that turn on");
         }
 
-        function test_dimmed_keys_announce_coming_in_a_later_version() {
+        function test_dimmed_keys_announce_coming_in_a_later_version_and_others_their_state_tip() {
             const win = make();
             const later = En.texts["tip.later"];
-            for (const k of Face.board.keys)
-                compare(keyed(win, k.id).Accessible.description, k.dim ? later : "", k.id);
+            for (const k of Face.board.keys) {
+                const tip = win.st.keys[k.id].tip;
+                compare(keyed(win, k.id).Accessible.description, k.dim ? later : tip ? En.texts[tip] : "", k.id);
+            }
             compare(named(win, En.texts["key.dpad"]).Accessible.description, later, "the D-pad");
         }
 
