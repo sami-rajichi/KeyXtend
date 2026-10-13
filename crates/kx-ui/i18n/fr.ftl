@@ -175,6 +175,7 @@ module =
     .kernel = { -app }
     .keyboard = Clavier
     .layouts = Dispositions de clavier
+    .mouse = Aide à la souris
     .ui = Apparence
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.

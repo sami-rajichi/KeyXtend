@@ -1,5 +1,6 @@
-//! The stage check: no banned plugin, every import found in the stage or the system folder, the network library
-//! imported only by the listed Qt libraries, no library that nothing imports, no file off the list, and the size cap.
+//! The stage check: no banned plugin, no gate-only build, every import found in the stage or the system folder, the
+//! network library imported only by the listed Qt libraries, no library that nothing imports, no file off the list,
+//! and the size cap.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -35,9 +36,12 @@ pub(crate) fn check(
 ) -> Result<Summary, DevError> {
     let files = paths::files(stage)?;
     refuse_banned(&files, &config.banned)?;
-    if !files.contains(&PathBuf::from(config.program())) {
+    let program = PathBuf::from(config.program());
+    if !files.contains(&program) {
         return Err(StageError::NoExe(paths::text(stage)).into());
     }
+    let bytes = std::fs::read(stage.join(&program))?;
+    refuse_gate(&bytes, &config.gate_flag, &program)?;
     let libs = libraries(&files);
     let found = |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib);
     let resolves = |lib: &str| paths::is_plain_name(lib) && found(lib);
@@ -74,6 +78,16 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
         .iter()
         .find(|f| f.parent().is_some_and(|dir| dir.iter().any(is_banned)));
     found.map_or(Ok(()), |f| Err(StageError::Banned(paths::text(f)).into()))
+}
+
+/// Fails when `bytes`, the program `exe`, hold the gate-only `flag` anywhere; an empty flag fails every program.
+fn refuse_gate(bytes: &[u8], flag: &str, exe: &Path) -> Result<(), StageError> {
+    let flag_bytes = flag.as_bytes();
+    if flag.is_empty() || bytes.windows(flag_bytes.len()).any(|w| w == flag_bytes) {
+        let (exe, flag) = (paths::text(exe), flag.to_string());
+        return Err(StageError::GateFlag { exe, flag });
+    }
+    Ok(())
 }
 
 /// Fails on the first file that is not one of the `planned` paths, in any letter case, so no unlisted file is signed.

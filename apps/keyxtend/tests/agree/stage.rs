@@ -1,5 +1,6 @@
-//! The stage settings in the root `Cargo.toml` name this app and the QML folder kx-ui pins, and list each QML module
-//! the app imports with every plugin Qt loads for it, so `cargo xtask stage` ships what the uiAccess build loads.
+//! The stage settings in the root `Cargo.toml` name this app, its gate-only flag and the QML folder kx-ui pins, and list
+//! each QML module the app imports with every plugin Qt loads for it, so `cargo xtask stage` ships what the uiAccess
+//! build loads.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 
@@ -22,6 +23,14 @@ fn the_stage_puts_qml_modules_where_the_app_pins_them() {
 #[test]
 fn the_stage_builds_this_app() {
     assert_eq!(stage()["app"].as_str(), Some(env!("CARGO_PKG_NAME")));
+}
+
+#[test]
+fn the_stage_refuses_the_apps_gate_flag() {
+    assert_eq!(
+        stage()["gate_flag"].as_str(),
+        Some(keyxtend::args::SIM_INPUT)
+    );
 }
 
 /// QML modules that need no staged file because a library Qt Quick loads registers them (measured in P3 Task 20).

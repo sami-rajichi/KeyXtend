@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-02
 - **Status:** Reviewed
-- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
+- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -24,7 +24,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Command line | At most one argument, `--show` or `--quit`; anything else, a non-Unicode argument or any Qt option (`-platform`, `-qmljsdebugger`), stops the app before Qt starts, so Qt only ever sees a checked argument | One argument | Property test |
+| Command line | At most one argument, `--show` or `--quit`; anything else, a non-Unicode argument or any Qt option (`-platform`, `-qmljsdebugger`), stops the app before Qt starts, so Qt only ever sees a checked argument. Only the gate-only build also takes `--sim-input`, alone or before `--show` (see Gate-only input) | One argument, two in the gate-only build | Property test |
 | A later copy's Show or Quit (the command window, see `kx-platform-windows.md`) | Only the adapter's fixed codes reach the app; until the hub exists they wait in order, then go to `Hub::command` | Tries stop at `[ui] send_tries`, `send_wait_ms` apart, each bounded by kx-ui's settings check | Unit tests with a fake instance |
 | `[ui] send_tries`, `send_wait_ms` in a later copy | `kx_settings::peek` reads the file with the settings' size cap and never repairs or writes it; `peek_section` reads the `[ui]` section as the store does: migrated, a bad value back to its default, and the defaults for a newer version or any fault | `MAX_FILE_BYTES` | Unit tests |
 | `[kernel] log_level`, `log_max_mb` | Checked by the kernel's settings; the kernel's defaults open the log when they did not load | As the kernel's note | Property tests (kernel) |
@@ -38,6 +38,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
   - The panic hook replaces Rust's default one and logs only the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
+  - Then it calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down. It waits at most 200 ms, and returns at once on the hook's own thread, where the callback's own recovery lets go.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004). Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
@@ -54,6 +55,11 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The clearing runs on the main thread after the adapter's threads start: Windows locks both environments, and no thread of the app writes them.
   - The uiAccess build pins Qt's plugin folders to the app's folder, and the QML imports to the compiled-in modules and the app's `qml` folder; each module's plugin still loads from beside its `qmldir`. Debug builds use the installed Qt.
   - The manifest asks for uiAccess only in release, with `asInvoker`, PerMonitorV2 and the UTF-8 code page; the linker writes no import library or exports file (`/NOIMPLIB /NOEXP`). The app's code forbids `unsafe`; the hardening calls live in `kx-platform-windows` and in a `kx-ui` bridge.
+
+## Gate-only input
+- **What:** the `gate-input` feature turns on the adapter's `sim-input` and adds `--sim-input`, with which the mouse engine acts on the gate tool's tagged input instead of the hand's (ADR-0027 decision 3). The run logs one warning that it is a gate build.
+- **Why it never ships:** in the uiAccess app, any program of the session could send that tagged input and steer our clicks into admin windows. The feature is off by default, and nothing in the workspace turns it on.
+- **How it is enforced:** the stage check, which `cargo xtask stage` and `dev-install` both run, refuses a program that holds the flag's text (`[workspace.metadata.stage] gate_flag`, which the app's agree test pins). A test reads the built exe: only the gate build holds the flag.
 
 ## Findings
 ### Must fix (blocks any signed build)

@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+mod gate;
 mod listed;
 
 use super::*;

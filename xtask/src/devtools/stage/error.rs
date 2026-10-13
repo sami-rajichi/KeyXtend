@@ -31,6 +31,13 @@ pub(crate) enum StageError {
         /// The network library it names.
         lib: String,
     },
+    /// The program holds the gate-only build's flag, so it would act on another program's input.
+    GateFlag {
+        /// The program, relative to the stage.
+        exe: String,
+        /// The flag it holds.
+        flag: String,
+    },
     /// `QMAKE` names a Qt other than the reviewed one.
     QtVersion {
         /// The version qmake reports.
@@ -62,6 +69,12 @@ impl fmt::Display for StageError {
             Self::BadPe(path) => write!(f, "{path} is not a readable Windows program or library"),
             Self::NetworkImport { by, lib } => {
                 write!(f, "{by} imports {lib}; only the listed Qt libraries may")
+            }
+            Self::GateFlag { exe, flag } => {
+                write!(
+                    f,
+                    "{exe} holds {flag}: a gate-only build, which never ships"
+                )
             }
             Self::QtVersion { found, want } => {
                 write!(f, "qmake reports Qt {found}; only Qt {want} is reviewed")

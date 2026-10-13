@@ -1,5 +1,5 @@
 //! The built app asks for uiAccess in its manifest exactly in the build that pins where code loads from, which is also
-//! the build that opens no console window.
+//! the build that opens no console window; only the gate-only build holds its flag.
 #![cfg(windows)]
 #![allow(clippy::unwrap_used, reason = "a failed read should fail the test")]
 
@@ -48,4 +48,10 @@ fn only_the_ui_access_build_opens_no_console() {
 #[test]
 fn the_exe_reads_narrow_text_as_utf8() {
     assert!(holds(&exe(), UTF8));
+}
+
+#[test]
+fn only_the_gate_build_holds_the_gate_flag() {
+    let held = holds(&exe(), keyxtend::args::SIM_INPUT.as_bytes());
+    assert_eq!(held, cfg!(feature = "gate-input"));
 }

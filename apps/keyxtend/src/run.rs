@@ -2,14 +2,16 @@
 //! kernel thread, then hardened Qt on the lowest-power graphics adapter. It stops as Quit stops the modules and ends
 //! the UI, then `drain::stop` hides the tray icon and joins the kernel's thread.
 
+use keyxtend::args::{self, Input};
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, args, drain, log, quiet};
+use keyxtend::{UI_ACCESS, drain, log, quiet};
 use kx_kernel::KernelSettings;
+use kx_module_api::ports::PointerHook;
 use kx_platform::Platform;
 use kx_platform::ui::UiError;
-use kx_platform_windows::{WindowsPlatform, dll, gpu, uiaccess};
+use kx_platform_windows::{WindowsPlatform, dll, gpu, release_now, uiaccess};
 use kx_settings::{Files, peek};
 use kx_ui::{Hub, UiPorts};
 use std::env;
@@ -25,11 +27,11 @@ pub fn main() -> ExitCode {
     if let Err(e) = UI_ACCESS.then(dll::pin).transpose() {
         return fail(&e);
     }
-    let command = match args::parse(env::args_os().skip(1)) {
-        Ok(command) => command,
+    let (command, input) = match args::parse(env::args_os().skip(1)) {
+        Ok(parsed) => parsed,
         Err(e) => return fail(&e),
     };
-    quiet::install();
+    quiet::install(release_now);
     let platform = match WindowsPlatform::new() {
         Ok(platform) => Arc::new(platform),
         Err(e) => return fail(&e),
@@ -47,20 +49,22 @@ pub fn main() -> ExitCode {
     let relay = Arc::new(Relay::default());
     let heard = Arc::clone(&relay);
     let listened = claim.listen(Box::new(move |c| heard.hear(c)));
-    let code = run(&platform, &files, &relay, listened);
+    let code = run(&platform, &files, &relay, listened, input);
     drop(claim);
     tracing::info!("KeyXtend ended");
     code
 }
 
-/// Boots the kernel and the hub over `platform`, logging into `files`, then runs Qt until the UI ends.
+/// Boots the kernel and the hub over `platform`, the mouse engine on `input`, logging into `files`, then runs Qt until
+/// the UI ends.
 fn run(
     platform: &Arc<WindowsPlatform>,
     files: &Files,
     relay: &Relay,
     listened: Result<(), UiError>,
+    input: Input,
 ) -> ExitCode {
-    let mut boot = match boot(platform) {
+    let mut boot = match boot(platform, input) {
         Ok(boot) => boot,
         Err(e) => {
             start_log(None, files);
@@ -71,6 +75,8 @@ fn run(
     start_log(boot.kernel.kernel_settings(), files);
     let ui_access = uiaccess::active();
     tracing::info!(version = VERSION, ui_access, "KeyXtend started");
+    #[cfg(feature = "gate-input")]
+    warn_gate(input);
     if let Err(e) = listened {
         tracing::warn!(error = %e, "a second copy cannot reach this one");
     }
@@ -96,12 +102,34 @@ fn run(
 }
 
 /// The hub and the kernel over `platform`, with every module added and the settings loaded.
-fn boot(platform: &Arc<WindowsPlatform>) -> Result<Boot, BootError> {
+fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError> {
     let services = Services {
         injector: platform.injector(),
         layouts: platform.layouts(),
+        pointer: pointer(platform, input),
     };
     Boot::load(platform.clone(), services, ports(platform))
+}
+
+/// The mouse hook on `input`: the hand's, or in the gate-only build the gate tool's.
+fn pointer(platform: &WindowsPlatform, input: Input) -> Arc<dyn PointerHook> {
+    match input {
+        Input::Hand => platform.pointer_hook(),
+        #[cfg(feature = "gate-input")]
+        Input::Sim => platform.sim_pointer_hook(),
+    }
+}
+
+/// Warns once that the engine takes the gate tool's input; only the gate-only build can.
+#[cfg(feature = "gate-input")]
+fn warn_gate(input: Input) {
+    if input == Input::Sim {
+        let flag = args::SIM_INPUT;
+        tracing::warn!(
+            flag,
+            "simulated mouse input: a gate build, never for daily use"
+        );
+    }
 }
 
 /// Every UI port from the Windows adapter, the tray icon too.

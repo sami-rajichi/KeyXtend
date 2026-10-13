@@ -26,14 +26,19 @@ use rig::{Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 3] = [kx_mod_layouts::ID, kx_mod_keyboard::ID, kx_ui::ID];
+const SHIPPED: [ModuleId; 4] = [
+    kx_mod_layouts::ID,
+    kx_mod_keyboard::ID,
+    kx_mod_mouse::ID,
+    kx_ui::ID,
+];
 /// The home row's first letter key: `a` in English, `q` in French.
 const A_KEY: u16 = 0x1E;
 /// What JSON says for nothing.
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_the_layouts_keyboard_and_ui_modules() {
+fn the_app_ships_the_layouts_keyboard_mouse_and_ui_modules() {
     let boot = Rig::new().load();
     let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);

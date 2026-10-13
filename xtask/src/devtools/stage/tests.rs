@@ -93,6 +93,14 @@ fn the_qmake_variable_and_qt_version_must_be_named() {
 }
 
 #[test]
+fn the_gate_flag_must_be_named() {
+    assert_eq!(
+        invalid(|c| c.gate_flag = " ".to_string()),
+        Err(ConfigError::EmptyValue("gate_flag"))
+    );
+}
+
+#[test]
 fn the_network_library_and_its_importers_must_be_plain_names() {
     assert_eq!(
         invalid(|c| c.network.lib = "bin/Qt6Network.dll".to_string()),

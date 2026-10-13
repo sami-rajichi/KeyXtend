@@ -175,6 +175,7 @@ module =
     .kernel = { -app }
     .keyboard = Keyboard
     .layouts = Keyboard layouts
+    .mouse = Mouse assist
     .ui = Appearance
 
 ## The language key's designs, by [keyboard] lang_key value.

@@ -133,6 +133,7 @@ var texts = {
   "module.kernel": "KeyXtend",
   "module.keyboard": "لوحة المفاتيح",
   "module.layouts": "تخطيطات لوحة المفاتيح",
+  "module.mouse": "مساعد الماوس",
   "module.ui": "المظهر",
   "notice.keys-not-sent": "لم تصل بعض المفاتيح إلى التطبيق النشط. تحقّق مما كُتب.",
   "notice.lang-not-switched": "تعذّر على التطبيق النشط تبديل اللغة.",

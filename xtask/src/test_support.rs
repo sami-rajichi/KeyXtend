@@ -161,7 +161,8 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "banned": ["tls", "networkinformation", "qmltooling"],
         "network": { "lib": "Qt6Network.dll", "by": ["Qt6Qml.dll", "Qt6Quick.dll"] },
         "api_sets": ["api-ms-", "ext-ms-"],
-        "system_dir": "System32"
+        "system_dir": "System32",
+        "gate_flag": "--sim-input"
     })
 }
 

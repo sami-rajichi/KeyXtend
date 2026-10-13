@@ -43,6 +43,12 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
+      # The gate-only input: the real-hook test needs the adapter's `sim-input`, and the app's `gate-input` parser tests
+      # and exe check need theirs. The stage below builds without them and refuses a program holding the flag.
+      - run: cargo clippy -p kx-platform-windows --all-targets --features sim-input --locked -- -D warnings
+      - run: cargo clippy -p keyxtend --all-targets --features gate-input --locked -- -D warnings
+      - run: cargo test -p kx-platform-windows --features sim-input --locked
+      - run: cargo test -p keyxtend --features gate-input --locked
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
       - run: cargo test -p kx-ui --test texts --locked

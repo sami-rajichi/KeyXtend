@@ -179,6 +179,7 @@ module =
     .kernel = { -app }
     .keyboard = لوحة المفاتيح
     .layouts = تخطيطات لوحة المفاتيح
+    .mouse = مساعد الماوس
     .ui = المظهر
 
 ## أشكال مفتاح اللغة حسب قيمة lang_key في [keyboard].

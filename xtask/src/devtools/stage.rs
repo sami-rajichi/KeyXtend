@@ -54,6 +54,8 @@ pub(crate) struct StageConfig {
     pub api_sets: Vec<String>,
     /// Windows' system folder, under the Windows folder.
     pub system_dir: String,
+    /// The gate-only build's flag; the check refuses a program that holds its text.
+    pub gate_flag: String,
 }
 
 /// Qt's network library and its allowed importers.
@@ -75,6 +77,7 @@ impl StageConfig {
         let texts = [
             ("qmake_env", &self.qmake_env),
             ("qt_version", &self.qt_version),
+            ("gate_flag", &self.gate_flag),
         ];
         first_failing(&texts, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
         let names = [

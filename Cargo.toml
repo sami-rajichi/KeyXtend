@@ -192,6 +192,8 @@ network = { lib = "Qt6Network.dll", by = ["Qt6Qml.dll", "Qt6Quick.dll"] }
 api_sets = ["api-ms-", "ext-ms-"]
 # Windows' system folder, under the folder `devtools.shell_root_env` names; an import found there resolves.
 system_dir = "System32"
+# The flag only the app's gate-only build (`gate-input`) takes; the check refuses a program holding its text. The app's agree test pins it.
+gate_flag = "--sim-input"
 
 [workspace.metadata.sounds]
 # The sound recipes and shipping format that `cargo xtask sounds` reads, under the workspace root.

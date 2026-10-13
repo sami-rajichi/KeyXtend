@@ -1,5 +1,6 @@
 //! The quiet panic hook. A panic's message may quote what the user typed, so the hook logs only where it happened;
-//! the kernel still catches module panics, which would otherwise print through Rust's own hook.
+//! the kernel still catches module panics, which would otherwise print through Rust's own hook. Then the mouse hook
+//! lets go, so no button stays down.
 
 use std::io::{self, Write};
 use std::panic::{self, Location};
@@ -9,9 +10,13 @@ const PANIC_AT: &str = "KeyXtend: a panic happened at";
 /// The place when Rust gives none.
 const UNKNOWN: &str = "an unknown place";
 
-/// Replaces Rust's panic hook for the whole process with `report` to standard error.
-pub fn install() {
-    panic::set_hook(Box::new(|info| report(info.location(), &mut io::stderr())));
+/// Replaces Rust's panic hook for the whole process with `report` to standard error, then `release`, which lets go of
+/// anything the mouse hook holds. `release` must never panic; it may run on the hook's own thread.
+pub fn install(release: fn()) {
+    panic::set_hook(Box::new(move |info| {
+        report(info.location(), &mut io::stderr());
+        release();
+    }));
 }
 
 /// Logs one error line naming the panic's place, `at`; never its message. Until the run's log is set up, it also

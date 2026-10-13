@@ -133,6 +133,7 @@ var texts = {
   "module.kernel": "KeyXtend",
   "module.keyboard": "Keyboard",
   "module.layouts": "Keyboard layouts",
+  "module.mouse": "Mouse assist",
   "module.ui": "Appearance",
   "notice.keys-not-sent": "Some keys did not reach the app in front. Check what was typed.",
   "notice.lang-not-switched": "The app in front could not switch the language.",
