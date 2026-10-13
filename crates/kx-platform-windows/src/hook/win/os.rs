@@ -10,7 +10,10 @@ use kx_module_api::{Clock, Mono};
 use windows::Win32::Foundation::{LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::SystemInformation::GetTickCount;
-use windows::Win32::System::Threading::GetCurrentThreadId;
+use windows::Win32::System::Threading::{
+    GetCurrentThread, GetCurrentThreadId, SetThreadPriority, THREAD_PRIORITY,
+    THREAD_PRIORITY_ABOVE_NORMAL,
+};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetLastInputInfo, INPUT, INPUT_0, INPUT_MOUSE, LASTINPUTINFO, MOUSE_EVENT_FLAGS,
     MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN,
@@ -33,6 +36,9 @@ use crate::hook::stats::Stats;
 use crate::inject;
 use crate::screen::dpi_of;
 use crate::window::is_ours;
+
+/// The hook thread's priority: one step above normal.
+const PRIORITY: THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
 
 /// Each button's flags going down and up.
 const BUTTONS: [(Button, MOUSE_EVENT_FLAGS, MOUSE_EVENT_FLAGS); 3] = [
@@ -243,6 +249,13 @@ pub(super) fn own_queue() -> u32 {
         let _ = PeekMessageW(&raw mut msg, None, 0, 0, PM_NOREMOVE);
         GetCurrentThreadId()
     }
+}
+
+/// Raises this thread one step, so Windows is less likely to drop a hook under load; a refusal changes nothing.
+#[allow(unsafe_code, reason = "Sets the calling thread's own priority.")]
+pub(super) fn raise_priority() {
+    // SAFETY: the pseudo handle of the calling thread, which needs no closing.
+    let _ = unsafe { SetThreadPriority(GetCurrentThread(), PRIORITY) };
 }
 
 /// This thread's id.

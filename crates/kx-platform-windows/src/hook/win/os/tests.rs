@@ -93,6 +93,20 @@ fn release_now_without_a_live_hook_returns_at_once() {
 }
 
 #[test]
+#[allow(unsafe_code, reason = "Reads the calling thread's own priority.")]
+fn the_hook_thread_runs_one_step_above_normal() {
+    use windows::Win32::System::Threading::{GetCurrentThread, GetThreadPriority};
+    let got = std::thread::spawn(|| {
+        raise_priority();
+        // SAFETY: the pseudo handle of the calling thread, which needs no closing.
+        unsafe { GetThreadPriority(GetCurrentThread()) }
+    })
+    .join()
+    .unwrap();
+    assert_eq!(got, PRIORITY.0);
+}
+
+#[test]
 fn the_deadline_timer_is_set_and_stopped_on_this_thread() {
     let os = WinOs::new(0, QpcClock::new().unwrap(), Arc::default());
     os.arm(Some(60_000));

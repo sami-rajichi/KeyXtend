@@ -1,8 +1,9 @@
-//! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, and the
-//! pure parts in `parts`.
+//! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the queue
+//! in `order`, and the other pure parts in `parts`.
 
 mod fake;
 mod limits;
+mod order;
 mod parts;
 mod run;
 
@@ -24,9 +25,10 @@ const CFG: HookConfig = HookConfig {
     health_slack_ms: 500,
     echo_ms: 250,
 };
-/// `WM_MOUSEMOVE`, `WM_LBUTTONDOWN`, `WM_KEYDOWN`, `WM_KEYUP` and `VK_ESCAPE`.
+/// `WM_MOUSEMOVE`, `WM_LBUTTONDOWN`, `WM_LBUTTONUP`, `WM_KEYDOWN`, `WM_KEYUP` and `VK_ESCAPE`.
 const MOVE: u32 = 0x0200;
 const LEFT_DOWN: u32 = 0x0201;
+const LEFT_UP: u32 = 0x0202;
 const KEY_DOWN: u32 = 0x0100;
 const KEY_UP: u32 = 0x0101;
 const VK_ESC: u32 = 0x1B;

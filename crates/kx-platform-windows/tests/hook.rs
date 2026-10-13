@@ -1,7 +1,7 @@
 //! The real mouse and keyboard hooks go in and come out again. The hook acts only on the gate tool's simulated input,
 //! so a hand on the mouse never reaches the engine; nothing is sent and the pointer never moves. One test per binary,
-//! as one hook runs per process.
-#![cfg(windows)]
+//! as one hook runs per process. It needs the `sim-input` feature.
+#![cfg(all(windows, feature = "sim-input"))]
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
 use std::sync::Arc;

@@ -3,7 +3,7 @@
 use kx_module_api::ports::Button;
 
 use super::Source;
-use crate::keys::{REPLAY, SIM_TAG, TAG};
+use crate::keys::{REPLAY, TAG};
 
 /// What a mouse message does.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -66,9 +66,18 @@ pub(crate) fn esc(source: Source, msg: u32, vk: u32, injected: bool, extra: usiz
 
 /// True when input with these marks stands for the user in `source`.
 fn heard(source: Source, injected: bool, extra: usize) -> bool {
+    match sim_tag(source) {
+        None => !injected,
+        Some(tag) => injected && extra == tag,
+    }
+}
+
+/// The tag the user's input carries in `source`; the hand's input carries none.
+const fn sim_tag(source: Source) -> Option<usize> {
     match source {
-        Source::Physical => !injected,
-        Source::Simulated => injected && extra == SIM_TAG,
+        Source::Physical => None,
+        #[cfg(any(test, feature = "sim-input"))]
+        Source::Simulated => Some(crate::keys::SIM_TAG),
     }
 }
 

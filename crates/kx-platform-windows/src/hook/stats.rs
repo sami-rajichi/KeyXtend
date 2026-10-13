@@ -14,6 +14,8 @@ pub(crate) struct Stats {
     reinstalls: AtomicU32,
     send_errors: AtomicU32,
     lost_echoes: AtomicU32,
+    /// Acts an engine pushed past its `max_acts`, dropped; logged at the stop, as the port has no field for it.
+    overruns: AtomicU32,
 }
 
 impl Stats {
@@ -26,6 +28,7 @@ impl Stats {
             reinstalls: AtomicU32::new(0),
             send_errors: AtomicU32::new(0),
             lost_echoes: AtomicU32::new(0),
+            overruns: AtomicU32::new(0),
         }
     }
 
@@ -53,6 +56,24 @@ impl Stats {
     /// Counts our input not coming back in time, or a queue too full to keep waiting.
     pub(crate) fn echo_lost(&self) {
         bump(&self.lost_echoes);
+    }
+
+    /// Counts `n` acts an engine pushed past its `max_acts`, or the queue had no room for.
+    pub(crate) fn overran(&self, n: usize) {
+        if n == 0 {
+            return;
+        }
+        let n = u32::try_from(n).unwrap_or(u32::MAX);
+        let _ = self
+            .overruns
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| {
+                Some(v.saturating_add(n))
+            });
+    }
+
+    /// The acts dropped so far for going past `max_acts`.
+    pub(crate) fn overruns(&self) -> u32 {
+        self.overruns.load(Ordering::Relaxed)
     }
 
     /// The numbers so far.

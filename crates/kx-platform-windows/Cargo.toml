@@ -11,6 +11,11 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# The pointer hook's simulated source, which acts only on the gate tool's `SIM_TAG` input. Test builds only; the
+# shipped app never turns it on (ledger ruling 20).
+sim-input = []
+
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }

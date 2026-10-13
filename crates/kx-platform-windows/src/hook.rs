@@ -32,7 +32,9 @@ pub use win::{WinPointerHook, release_now};
 pub enum Source {
     /// The hand on the mouse: physical input only, as the product runs.
     Physical,
-    /// The gate tool's input tagged `SIM_TAG`, in a test build only; the hand's input then passes untouched.
+    /// The gate tool's input tagged `SIM_TAG`; the hand's input then passes untouched. It exists only with the
+    /// `sim-input` feature, and in this crate's unit tests.
+    #[cfg(any(test, feature = "sim-input"))]
     Simulated,
 }
 

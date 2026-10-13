@@ -17,7 +17,9 @@ use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_APP, WM_QUIT,
 use super::Source;
 use super::host::Host;
 use crate::QpcClock;
-use os::{Ctl, WinOs, kill_timer, own_queue, post, set_timer, this_thread, unhook_all};
+use os::{
+    Ctl, WinOs, kill_timer, own_queue, post, raise_priority, set_timer, this_thread, unhook_all,
+};
 
 /// Asks the hook thread for a turn.
 const WAKE: u32 = WM_APP + 1;
@@ -47,6 +49,7 @@ thread_local! {
 }
 
 /// The Windows pointer hook: `WH_MOUSE_LL` and `WH_KEYBOARD_LL` on a thread of their own, one run per process.
+/// Dropping a run blocks until that thread has let go, sent that input and removed the hooks, or for `STOP_WAIT` at most.
 #[derive(Clone, Copy, Debug)]
 pub struct WinPointerHook {
     clock: QpcClock,
@@ -54,7 +57,8 @@ pub struct WinPointerHook {
 }
 
 impl WinPointerHook {
-    /// A hook whose engine acts on `source`'s input, timed by the platform's `clock`.
+    /// A hook whose engine acts on `source`'s input, timed by the platform's `clock`; only the hand's without the
+    /// `sim-input` feature.
     #[must_use]
     pub fn new(clock: QpcClock, source: Source) -> Self {
         Self { clock, source }
@@ -179,6 +183,7 @@ impl Job {
     /// The hook thread: installs both hooks and answers, loops until stopped, then lets go and removes them.
     fn run(self) {
         let _ending = Ending(Arc::clone(&self.ctl));
+        raise_priority();
         let tid = own_queue();
         let Self {
             engine,

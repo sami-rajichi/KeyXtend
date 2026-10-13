@@ -7,7 +7,7 @@ use crate::hook::Source;
 use crate::hook::accept::{Kind, Take, esc, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::health::Health;
-use crate::hook::queue::{Echo, Queue, Wait};
+use crate::hook::queue::{Echo, Wait};
 use crate::hook::timing::{Histogram, event_at, timer_ms};
 use crate::keys::{REPLAY, SIM_TAG, TAG};
 use crate::strokes::Key;
@@ -223,24 +223,6 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_all_tagged_replay() {
         },
     ];
     assert_eq!(batch(&acts, desk), want);
-}
-
-#[test]
-fn the_queue_reserves_its_room_once_and_is_full_before_a_call_could_overflow_it() {
-    let max_acts = 3;
-    let mut q = Queue::new(max_acts);
-    let room = q.room();
-    let mut pushed = 0;
-    while !q.full() {
-        q.push(PointerAct::Move(Point::default()));
-        pushed += 1;
-    }
-    assert!(room - pushed <= max_acts, "{room} {pushed}");
-    q.extend(&[PointerAct::Move(Point::default()); 3]);
-    assert_eq!(q.room(), room, "never reallocated");
-    assert!(q.overflow() && !q.overflow(), "counted once");
-    q.clear();
-    assert!(q.is_empty() && !q.full() && q.overflow(), "a new episode");
 }
 
 #[test]

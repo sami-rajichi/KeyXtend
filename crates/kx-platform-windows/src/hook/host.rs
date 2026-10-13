@@ -24,6 +24,8 @@ pub(crate) struct Host<O: Os> {
     source: Source,
     /// Lent to every engine call; reserved once with its `max_acts`, so pushes never allocate.
     lent: Vec<PointerAct>,
+    /// The engine's `max_acts`.
+    max: usize,
     queue: Queue,
     echo: Echo,
     health: Health,
@@ -33,6 +35,17 @@ pub(crate) struct Host<O: Os> {
     woken: bool,
     /// A refused reinstall was logged.
     warned: bool,
+}
+
+/// When a callback ran, and the event's own stamp.
+#[derive(Copy, Clone, Debug)]
+struct Stamp {
+    /// The platform clock as the callback began.
+    t0: Mono,
+    /// Windows' tick count then.
+    tick: u32,
+    /// The event's own tick stamp.
+    time: u32,
 }
 
 /// How far the engine's view of the buttons can be trusted.
@@ -61,6 +74,7 @@ impl<O: Os> Host<O> {
         let seen = os.last_input().unwrap_or_else(|| os.tick());
         Self {
             lent: Vec::with_capacity(max),
+            max,
             queue: Queue::new(max),
             echo: Echo::new(cfg.echo_ms),
             health: Health::new(cfg, seen),
@@ -82,9 +96,16 @@ impl<O: Os> Host<O> {
         self.os.hook()
     }
 
-    /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken.
+    /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken, and
+    /// a hand's event that passes ahead of acts already queued is noted, so its Up never leaves a queued press held.
     pub(crate) fn mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
-        self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false)
+        let queued = !self.queue.is_empty();
+        let dropped = self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false);
+        let heard = take(self.source, mark.injected, mark.extra) == Take::Engine;
+        if let (true, false, true, Some(kind)) = (queued, dropped, heard, kind(msg)) {
+            self.queue.passed(kind, at);
+        }
+        dropped
     }
 
     /// Hears key message `msg` for `vk`: an Esc press reaches the engine, and every key passes on.
@@ -115,7 +136,7 @@ impl<O: Os> Host<O> {
         (self.lent.capacity(), self.queue.room())
     }
 
-    /// Runs `call`; a panic marks the engine broken instead of reaching Windows.
+    /// Runs `call`; a panic marks the engine broken instead of reaching Windows, and asks for the turn that lets go.
     fn guard<T>(&mut self, call: impl FnOnce(&mut Self) -> T) -> Option<T> {
         let out = catch_unwind(AssertUnwindSafe(|| call(self))).ok();
         if out.is_none() {
@@ -123,13 +144,13 @@ impl<O: Os> Host<O> {
             if matches!(self.trust, Trust::Whole | Trust::Stale) {
                 self.trust = Trust::Broken;
             }
+            self.wake();
         }
         out
     }
 
     fn on_mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
-        let t0 = self.os.now();
-        self.health.saw(mark.time);
+        let stamp = self.stamp(mark);
         match (take(self.source, mark.injected, mark.extra), kind(msg)) {
             (Take::Echo, _) => {
                 self.echo.clear();
@@ -137,19 +158,30 @@ impl<O: Os> Host<O> {
             }
             (Take::Engine, Some(kind)) => {
                 let event = self.event(kind, at);
-                self.decide(event, mark, t0)
+                self.decide(event, stamp)
             }
             _ => false,
         }
     }
 
     fn on_key(&mut self, msg: u32, vk: u32, mark: Mark) {
-        let t0 = self.os.now();
-        self.health.saw(mark.time);
+        let stamp = self.stamp(mark);
         if esc(self.source, msg, vk, mark.injected, mark.extra) {
             // Esc is never dropped, whatever the engine answers.
-            let _ = self.decide(PointerEvent::Esc, mark, t0);
+            let _ = self.decide(PointerEvent::Esc, stamp);
         }
+    }
+
+    /// When the callback runs. The hooks count as current up to this tick, never up to the event's own stamp, which a
+    /// program that injects input can date ahead.
+    fn stamp(&mut self, mark: Mark) -> Stamp {
+        let stamp = Stamp {
+            t0: self.os.now(),
+            tick: self.os.tick(),
+            time: mark.time,
+        };
+        self.health.saw(stamp.tick);
+        stamp
     }
 
     /// The event for `kind` at `at`; a press says whether it landed on our window, and its screen's DPI.
@@ -168,7 +200,7 @@ impl<O: Os> Host<O> {
 
     /// Gives `event` to the engine at its own time and queues what must wait behind our input; true to drop it. A full
     /// queue lets it pass without the engine, which then lets go at the next turn.
-    fn decide(&mut self, event: PointerEvent, mark: Mark, t0: Mono) -> bool {
+    fn decide(&mut self, event: PointerEvent, stamp: Stamp) -> bool {
         if matches!(self.trust, Trust::Broken | Trust::Done) {
             return false;
         }
@@ -176,26 +208,39 @@ impl<O: Os> Host<O> {
             self.overflow();
             return false;
         }
-        let (at, waited) = event_at(t0, self.os.tick(), mark.time);
+        let (at, waited) = event_at(stamp.t0, stamp.tick, stamp.time);
         self.stats.waited(waited);
-        let behind = self.behind(t0);
+        let behind = self.behind(stamp.t0);
         let before = self.engine.deadline();
         self.lent.clear();
         let mut dropped = self.engine.on(event, at, &mut self.lent);
+        self.trim();
         if behind
             && !dropped
             && let Some(again) = event.act()
         {
-            self.queue.push(again);
+            // A move with no room left is dropped too; the next move, or a button's own point, takes its place.
+            let _ = self.queue.put(again);
             dropped = true;
         }
-        self.queue.extend(&self.lent);
+        let cut = self.queue.extend(&self.lent);
+        self.stats.overran(cut);
         if !self.queue.is_empty() || self.engine.deadline() != before {
             self.wake();
         }
-        let took = self.os.now().saturating_since(t0).as_micros();
+        let took = self.os.now().saturating_since(stamp.t0).as_micros();
         self.stats.timed(u64::try_from(took).unwrap_or(u64::MAX));
         dropped
+    }
+
+    /// Drops and counts what the engine pushed past its `max_acts`; a debug build then fails as if it panicked.
+    fn trim(&mut self) {
+        let over = self.lent.len().saturating_sub(self.max);
+        if over > 0 {
+            self.stats.overran(over);
+            self.lent.truncate(self.max);
+        }
+        debug_assert!(over == 0, "the pointer engine pushed past its max_acts");
     }
 
     /// True while our input is queued or not back yet; a wait past `echo_ms` ends and counts as a lost echo.

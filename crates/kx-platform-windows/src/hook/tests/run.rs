@@ -7,10 +7,13 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{Button, PointerAct};
 
 use super::fake::{Call, Fake, Heard, Plan, Script, World};
-use super::{A, B, CFG, MOVE, Rig, rig};
-use crate::hook::Source;
+use super::{A, B, CFG, MOVE, OTHER, Rig, rig};
 use crate::hook::host::Host;
 use crate::hook::stats::Stats;
+use crate::hook::{Mark, Source};
+
+/// How far ahead another program dates its input: about a week.
+const FORWARD_MS: u32 = 600_000_000;
 
 /// The calls that sent input, in order.
 pub(super) fn sends(calls: &[Call]) -> Vec<Vec<PointerAct>> {
@@ -138,6 +141,20 @@ fn lagging_hooks_go_back_once_after_letting_go() {
     assert_eq!(rig.stats().reinstalls, 1);
     rig.host.check();
     assert!(!rig.world.take().contains(&Call::Unhook), "once per period");
+}
+
+#[test]
+fn a_forward_dated_injected_event_cannot_hide_lagging_hooks() {
+    let mut rig = rig(Source::Physical);
+    let future = Mark {
+        time: rig.world.tick.get().wrapping_add(FORWARD_MS),
+        ..rig.mark(true, OTHER)
+    };
+    assert!(!rig.host.mouse(MOVE, A, future));
+    rig.world.pass(2_000);
+    rig.world.last_input.set(Some(rig.world.tick.get()));
+    rig.host.check();
+    assert_eq!(rig.stats().reinstalls, 1);
 }
 
 #[test]

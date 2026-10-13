@@ -57,7 +57,7 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// The stop's input: the queue, then the release; a cut send is logged with its counts.
+    /// The stop's input: the queue, then the release; a cut send and an engine's overruns are logged, counts only.
     pub(super) fn finish(&mut self) {
         let now = self.os.now();
         let sent = self.flush(now).and(self.let_go(now));
@@ -67,6 +67,10 @@ impl<O: Os> Host<O> {
                 total = sent.total,
                 "the pointer hook could not send all its input as it stopped"
             );
+        }
+        let dropped = self.stats.overruns();
+        if dropped > 0 {
+            tracing::warn!(dropped, "the pointer engine pushed past its max_acts");
         }
     }
 
@@ -97,15 +101,12 @@ impl<O: Os> Host<O> {
         self.send_lent(now)
     }
 
-    /// Sends the queue in one batch.
+    /// Sends the queue in one batch, then an Up for each queued press whose release went ahead of it.
     fn flush(&mut self, now: Mono) -> Sent {
-        let sent = out(
-            &self.os,
-            &mut self.echo,
-            &self.stats,
-            self.queue.acts(),
-            now,
-        );
+        let ups = self.queue.ups();
+        let (os, echo, stats) = (&self.os, &mut self.echo, &self.stats);
+        let sent =
+            out(os, echo, stats, self.queue.acts(), now).and(out(os, echo, stats, &ups, now));
         self.queue.clear();
         sent
     }

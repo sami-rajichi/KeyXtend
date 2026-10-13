@@ -100,7 +100,8 @@ impl WindowsPlatform {
         Arc::new(WinPointerHook::new(self.clock, Source::Physical))
     }
 
-    /// The mouse hook on the gate tool's simulated input instead of the hand's: for a gate-only build, never daily use.
+    /// The mouse hook on the gate tool's simulated input instead of the hand's; only with the `sim-input` feature.
+    #[cfg(feature = "sim-input")]
     #[must_use]
     pub fn sim_pointer_hook(&self) -> Arc<dyn PointerHook> {
         Arc::new(WinPointerHook::new(self.clock, Source::Simulated))
