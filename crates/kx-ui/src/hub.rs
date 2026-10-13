@@ -1,12 +1,13 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, the tray icon, and the requests the app drains on its own thread. No lock is
-//! held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the tray icon, and the requests the app drains on its own thread. No
+//! lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod face;
 mod fonts;
 mod look;
 mod notices;
+mod sound;
 mod spots;
 mod texts;
 mod tray;
@@ -17,9 +18,9 @@ pub use fonts::FontBook;
 pub use notices::Shown;
 
 use crate::settings::{PressFrame, UiSettings};
-use kx_module_api::ports::KeyboardFace;
+use kx_module_api::ports::{AssistNote, KeyboardFace};
 use kx_module_api::{
-    Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
+    Bus, Event, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
 };
 use kx_platform::ui::{
     Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
@@ -143,6 +144,8 @@ pub struct Hub {
     fonts: Mutex<fonts::Fonts>,
     /// True once the memory port refused a give-back, which warns only the first time.
     refused: AtomicBool,
+    /// Each sound's cue and turn.
+    sounds: sound::Sounds,
 }
 
 impl Hub {
@@ -155,6 +158,7 @@ impl Hub {
         let settings = UiSettings::from_defaults()?;
         let themes = Themes::shipped()?;
         let font_files = FontFiles::shipped()?;
+        let sounds = sound::Sounds::new(&*ports.speaker, settings.sound_idle_ms);
         let (requests, drain) = mpsc::channel();
         let live = Live {
             texts: Texts::new(&settings.language, "", &ports.look.ui_language()),
@@ -178,6 +182,7 @@ impl Hub {
             tray: Mutex::default(),
             fonts: Mutex::default(),
             refused: AtomicBool::default(),
+            sounds,
         };
         Ok((Arc::new(hub), drain))
     }
@@ -187,20 +192,22 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows.
+    /// follow the language of the layout the face shows, and a new `sound_idle_ms` prepares the speaker again.
     pub fn attach(&self, settings: UiSettings, face: Arc<dyn KeyboardFace>, store: SettingsHandle) {
         let texts = Texts::new(
             &settings.language,
             &face.lang(),
             &self.ports.look.ui_language(),
         );
-        {
+        let idle = settings.sound_idle_ms;
+        let before = {
             let mut live = self.lock();
-            live.settings = settings;
             live.texts = texts;
             live.face = Some(face);
             live.store = Some(store);
-        }
+            std::mem::replace(&mut live.settings, settings).sound_idle_ms
+        };
+        self.idle_changed(before, idle);
         self.wake(Wake::Settings);
     }
 
@@ -243,17 +250,35 @@ impl Hub {
         }
     }
 
-    /// Hears every notice on `bus` until the subscription drops; the app calls it before the kernel loads.
+    /// Hears every notice and mouse-assist note on `bus` until the subscriptions drop; the app calls it before the
+    /// kernel loads.
     ///
     /// # Errors
-    /// `EventError` when the bus refuses the subscription.
-    pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Subscription, EventError> {
+    /// `EventError` when the bus refuses a subscription.
+    pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Vec<Subscription>, EventError> {
+        Ok(vec![
+            self.hear(bus, |hub, notice: &Notice| hub.notice(notice.clone()))?,
+            self.hear(bus, Self::note)?,
+        ])
+    }
+
+    /// Calls `f` on the hub for every `E` on `bus`, holding the hub weakly.
+    fn hear<E: Event>(
+        self: &Arc<Self>,
+        bus: &Bus,
+        f: impl Fn(&Self, &E) + Send + Sync + 'static,
+    ) -> Result<Subscription, EventError> {
         let hub = Arc::downgrade(self);
-        bus.subscribe(move |notice: &Notice| {
+        bus.subscribe(move |event: &E| {
             if let Some(hub) = hub.upgrade() {
-                hub.notice(notice.clone());
+                f(&hub, event);
             }
         })
+    }
+
+    /// Hands a mouse-assist note to each part of the hub that follows one.
+    fn note(&self, note: &AssistNote) {
+        sound::on_note(self, note);
     }
 
     /// The waiting notices in the keyboard's language; the banner shows them from now on.

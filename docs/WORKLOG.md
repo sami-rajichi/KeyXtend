@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 20:35 — P4: key and mouse sounds
+Every key press on the keyboard now plays the key sound once, after the key went out, taking the six Cherry takes in turn; a held key's repeat, the top bar and the language list stay silent. A hold that fires, Grab's pick-up and its drop play their own sounds from the mouse module's notes on the bus. Each sound has its own `[ui]` switch (all on), `sound_volume` (50) scales every gain under the Windows volume, and `sound_idle_ms` sets how long the speaker stays ready, with a floor of one second so it never rests under a sound.
+
 ## 2026-10-13 19:30 — P4: sounds as checked, compiled-in data
 A new token file, kx-theme's `sounds.toml`, holds the shipping format, the speaker's voices and each sound event's files and balance: the key's six Cherry takes in turn, the mouse click, the mouse press and the card laid down. kx-ui's build reads each named file with a strict reader that refuses anything but whole 16-bit mono PCM frames at the token rate within the length limit, fails naming the file, and embeds the samples 2-byte aligned with a table of events, so the app never reads audio at run time. `cargo xtask sounds` now reads the format from that file through the same checks and reads recordings with the same RIFF chunk walker, and a recipe file that still holds `[format]` is refused.
 

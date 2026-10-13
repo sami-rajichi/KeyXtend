@@ -1,4 +1,5 @@
-//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard and the look.
+//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look and
+//! the sounds.
 
 #![allow(
     clippy::expect_used,
@@ -18,6 +19,7 @@ mod look;
 mod memory;
 mod module;
 mod notices;
+mod sound;
 mod spots;
 mod texts;
 mod tray;

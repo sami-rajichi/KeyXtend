@@ -1,4 +1,5 @@
-//! The `[ui]` settings: the look, the language, tips, timings and paging, with every number's limits in one place.
+//! The `[ui]` settings: the look, the language, tips, timings, paging and sounds, with every number's limits in one
+//! place.
 
 use crate::i18n::{AUTO, find};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
@@ -35,6 +36,11 @@ pub(crate) const UPDATE_IDLE_MS: RangeInclusive<u64> = 0..=50;
 pub(crate) const PRESS_FRAME_MS: RangeInclusive<u64> = 1..=1_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
+/// Our volume, in percent of each sound's own level; the end plays it as made, and 0 is silent.
+pub(crate) const SOUND_VOLUME: RangeInclusive<u8> = 0..=100;
+/// How long the speaker stays ready after the last sound, in ms. The floor is twice the longest sound `sounds.toml`
+/// allows plus about 100 ms of device latency, as 500 ms would only just equal those two.
+pub(crate) const SOUND_IDLE_MS: RangeInclusive<u32> = 1_000..=60_000;
 
 /// Why `language` was refused.
 const NO_LANGUAGE: &str = "language must be auto or a language the keyboard speaks";
@@ -140,6 +146,18 @@ pub struct UiSettings {
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.
     pub min_contrast: f32,
+    /// A key press sounds.
+    pub sound_key: bool,
+    /// A hold's right-click sounds.
+    pub sound_rclick: bool,
+    /// Grab's pick-up sounds.
+    pub sound_pick: bool,
+    /// Grab's drop sounds.
+    pub sound_drop: bool,
+    /// Our volume for every sound, in percent of its own level, under the Windows volume.
+    pub sound_volume: u8,
+    /// How long the speaker stays ready after the last sound, in ms; the next sound after that wakes it.
+    pub sound_idle_ms: u32,
 }
 
 impl UiSettings {
@@ -177,6 +195,8 @@ impl UiSettings {
         within("frame_latency", self.frame_latency, &FRAME_LATENCY)?;
         within("update_idle_ms", self.update_idle_ms, &UPDATE_IDLE_MS)?;
         within("press_frame_ms", self.press_frame_ms, &PRESS_FRAME_MS)?;
+        within("sound_volume", self.sound_volume, &SOUND_VOLUME)?;
+        within("sound_idle_ms", self.sound_idle_ms, &SOUND_IDLE_MS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }
 }
