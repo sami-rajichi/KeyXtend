@@ -535,6 +535,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-mouse"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "kx-test-support",
+ "proptest",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [

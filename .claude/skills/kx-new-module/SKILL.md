@@ -23,7 +23,7 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
 2. **Wire it up:**
    - add it to the workspace `members`;
    - add a Cargo feature `mod-<name>` in `apps/keyxtend/Cargo.toml` (on by default only if the spec says so);
-   - register the module in `apps/keyxtend/src/modules.rs` behind that feature.
+   - register the module in `picked()` in `apps/keyxtend/src/boot.rs` behind that feature.
 3. **Security note:** copy `docs/security/TEMPLATE.md` to `docs/security/<name>.md` and fill in the capability table now. The threats get filled in later with `kx-security-check`.
 4. **Check** that the ARCHITECTURE.md code map lists the crate; add a line if it does not.
 5. **Run** `cargo xtask tidy` and `cargo test -p kx-mod-<name>`. Both must pass with the empty module.
@@ -31,4 +31,4 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
 
 ## Rules
 - A module never talks to the OS. If it needs something new from the OS, add a **port** (a trait) to `kx-module-api`, implement it in `kx-platform-fake` first (with tests), and only then in `kx-platform-windows`.
-- UI for the module goes in `crates/kx-ui/qml/views/<Name>.qml`, with one cxx-qt bridge object in `crates/kx-ui/src/bridges/`. Its lists are paged, 5 rows per page (ADR-0008).
+- UI for the module goes in `crates/kx-ui/qml/<Name>.qml` (the folder is flat), with one cxx-qt bridge object in `crates/kx-ui/src/bridges/`. Its lists are paged, 5 rows per page (ADR-0008).

@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 12:10 — P4: the mouse module's crate and its `[mouse]` settings
+The new `kx-mod-mouse` crate declares the mouse module: it needs the pointer hook and holds the `PointerHook` and `InjectInput` capabilities, and its start reads `[mouse]` and keeps the hook for the engine to come. `[mouse]` holds Right-click mode, the hold time (0.5 s to 3.0 s, 1.5 s by default), the still radius, the ring's delay and the hook's health and echo times, each with a range, and the ring must always show before the shortest hold. The crate joined the workspace and CI's Linux list, with a README and a draft security note. The `kx-new-module` skill now names `boot.rs` and the flat `qml/` folder.
+
 ## 2026-10-13 11:34 — P4: the pointer hook port and the mouse-assist bus events
 `kx-module-api` now has the `PointerHook` port of ADR-0027: a module hands its `PointerEngine` to the platform, which runs it on the hook thread, and dropping the returned `HookRun` is the only way to stop. Eight new bus events let the keyboard, the mouse module and the UI talk without calling each other; the toggle and latch events need `InjectInput`. A click's point can show what was clicked, so the notes and the pointer move hide every point in their debug output, and the latch event shows only how many are held.
 
