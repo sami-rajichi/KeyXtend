@@ -28,6 +28,9 @@ Everything we ship or bundle that we did not write ourselves. Updated by the `kx
 | IBM Plex Sans / Sans Arabic | 3.201 / 1.101 (Google Fonts) | OFL-1.1, Reserved Font Name "Plex" | https://github.com/IBM/plex | ET66 theme | yes, unmodified |
 | Noto Sans Arabic | 2.012 (Google Fonts) | OFL-1.1 | https://github.com/notofonts/arabic | Arabic fallback in all three themes (the Latin Noto Sans is not bundled: Native uses Segoe UI on Windows) | yes |
 | Rubik | 2.300 (Google Fonts) | OFL-1.1 | https://github.com/googlefonts/rubik | Dolch theme, Latin and Arabic (Noto Sans Arabic is its Arabic fallback) | yes |
+| Keystrokes of a Cherry KC 1000 keyboard: "Keyboard Soundpack #1 [Typing and Single Keystrokes]" by unicaegames, six single keys as `assets/sounds/cherry-key-1.wav` … `-6.wav` | – | CC0-1.0 | https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes | The key sound (P4) | yes, built into the app from P4 |
+| "Middle Mouse Click" by 1j01, as `assets/sounds/mouse-click.wav` and `mouse-press.wav` | – | CC0-1.0 | https://opengameart.org/node/186493 | The right-click and pick-up sounds (P4) | yes, built into the app from P4 |
+| "Playing Card Sounds" by BMacZero (Brian MacIntosh), `contact2.wav` as `assets/sounds/card-down.wav` | – | CC0-1.0 | https://opengameart.org/node/118338 | The drop sound (P4) | yes, built into the app from P4 |
 | whisper.cpp + Whisper weights | – | MIT | https://github.com/ggml-org/whisper.cpp | Local voice typing | models downloaded on demand |
 | whisper.cpp Windows build (`whisper-server`) | b5130 (v1.9.4) | MIT; the bundle also has `SDL2.dll` (Zlib) | https://github.com/ggml-org/whisper.cpp | Local speech server in the voice worker (tested in G22) | P11 decides: shipped or downloaded |
 | cpal | 0.18.2 | Apache-2.0 | https://github.com/RustAudio/cpal | Microphone in the voice worker (tested in G22) | yes, built into the worker (P11) |
