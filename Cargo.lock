@@ -589,6 +589,7 @@ dependencies = [
  "kx-test-support",
  "proptest",
  "thiserror 2.0.21",
+ "tracing",
  "windows",
 ]
 

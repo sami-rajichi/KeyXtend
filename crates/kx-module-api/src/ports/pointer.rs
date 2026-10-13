@@ -46,6 +46,19 @@ pub enum PointerEvent {
     Esc,
 }
 
+impl PointerEvent {
+    /// The act that sends this event again behind our own input; Esc has none, as it is never dropped.
+    #[must_use]
+    pub const fn act(self) -> Option<PointerAct> {
+        match self {
+            Self::Down { button, at, .. } => Some(PointerAct::Down(button, at)),
+            Self::Up { button, at } => Some(PointerAct::Up(button, at)),
+            Self::Move { at } => Some(PointerAct::Move(at)),
+            Self::Esc => None,
+        }
+    }
+}
+
 /// Input the host sends, in order, after the callback returns.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum PointerAct {
@@ -97,13 +110,13 @@ pub struct HookConfig {
 /// A running hook's numbers, never a point or a key.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct HookStats {
-    /// Events the hooks saw.
+    /// Events the hooks gave the engine.
     pub events: u64,
     /// The 99th percentile of the callback's time, in microseconds.
     pub p99_us: u32,
     /// The longest callback, in microseconds.
     pub max_us: u32,
-    /// The longest time input waited behind our own, in milliseconds.
+    /// The longest time an event waited before the hook saw it, in milliseconds.
     pub max_wait_ms: u32,
     /// How many times the health check put the hooks back.
     pub reinstalls: u32,
@@ -127,8 +140,8 @@ pub enum HookError {
     Thread,
 }
 
-/// A running hook. Dropping it is the only way to stop: the host calls `release`, sends that input, removes the
-/// hooks and ends its thread.
+/// A running hook. Dropping it is the only way to stop, and the drop returns once the host has called `release`, sent
+/// that input and removed the hooks, or after a bounded wait.
 pub trait HookRun: Send + Sync {
     /// Asks the host to call `settle` soon; never blocks.
     fn wake(&self);
@@ -168,6 +181,25 @@ mod tests {
     fn a_refusal_names_the_os_code() {
         let text = HookError::Refused(1428).to_string();
         assert!(text.contains("1428"), "{text}");
+    }
+
+    #[test]
+    fn a_passed_event_is_sent_again_as_its_own_act_and_esc_has_none() {
+        let at = Point { x: -3, y: 9 };
+        let down = PointerEvent::Down {
+            button: Button::Right,
+            at,
+            ours: true,
+            dpi: 144,
+        };
+        assert_eq!(down.act(), Some(PointerAct::Down(Button::Right, at)));
+        let up = PointerEvent::Up {
+            button: Button::Middle,
+            at,
+        };
+        assert_eq!(up.act(), Some(PointerAct::Up(Button::Middle, at)));
+        assert_eq!(PointerEvent::Move { at }.act(), Some(PointerAct::Move(at)));
+        assert_eq!(PointerEvent::Esc.act(), None, "Esc is never dropped");
     }
 
     #[test]

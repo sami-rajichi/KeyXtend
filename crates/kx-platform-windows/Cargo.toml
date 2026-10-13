@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, layouts, windows, the system look and the heaps' free memory."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, the mouse hook, layouts, windows, the system look and the heaps' free memory."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,11 +15,14 @@ workspace = true
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
 thiserror.workspace = true
+# The pointer hook logs a refused reinstall and a cut release at the stop, counts only.
+tracing.workspace = true
 
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
 [target.'cfg(windows)'.dependencies]
 # The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops, DXGI ranks the
-# graphics adapters by power, and the heap calls give free pages back (`System_Memory`, `System_SystemServices`).
+# graphics adapters by power, the heap calls give free pages back (`System_Memory`, `System_SystemServices`), and the
+# mouse hook reads the tick count (`System_SystemInformation`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -35,6 +38,7 @@ windows = { workspace = true, features = [
     "Win32_System_Memory",
     "Win32_System_Performance",
     "Win32_System_Registry",
+    "Win32_System_SystemInformation",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_UI_Accessibility",

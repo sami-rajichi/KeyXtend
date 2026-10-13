@@ -15,6 +15,7 @@ pub mod front;
 pub mod gpu;
 #[cfg(windows)]
 mod hidden;
+pub mod hook;
 pub mod inject;
 pub mod instance;
 pub mod keys;
@@ -38,6 +39,8 @@ pub use backdrop::WinBackdrop;
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
+#[cfg(windows)]
+pub use hook::{WinPointerHook, release_now};
 #[cfg(windows)]
 pub use inject::WinInjector;
 #[cfg(windows)]

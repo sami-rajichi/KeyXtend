@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-11
 - **Status:** Reviewed
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), and the heaps' free pages after a look change (`memory`). It runs inside the uiAccess `keyxtend` process.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard and window queries (`window`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), the heaps' free pages after a look change (`memory`), and the mouse and keyboard hooks that host the hold engine (`hook`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -25,6 +25,7 @@
 | The system look (dark apps, accent, high-contrast colours, animations) and the display language tag | Public | Memory only; the watcher keeps the last reading to spot a change | N/A | Until the watch ends |
 | Commands from a later copy (`show`, `quit`) | Public (a code from a fixed table) | Memory only | N/A | Not kept |
 | The tray icon's picture and tooltip; where a tray click happened; the class name of the window that comes to the front | Public (our own drawing and text; a point; a class name, never a title) | Memory only; the picture is kept to add the icon again after the taskbar restarts, and the class name is read into a stack buffer and dropped at once | N/A | The picture until the icon drops |
+| Points, button presses and Esc presses the hooks hear; the hook's numbers (`hook`) | Sensitive (where the user clicks; never typed text) | Memory only; an event lives for one engine call, or in the bounded queue until it is sent again; the numbers are counts and times | N/A | Not kept |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -59,11 +60,15 @@
 | `CreateDXGIFactory1`, `EnumAdapters1`, `EnumAdapterByGpuPreference`, `GetDesc1` (`gpu`) | Only each adapter's LUID and software flag are read; a walk stops at DXGI's end of list or the first adapter it cannot describe, so every place stays right, and any failure picks nothing, so Qt keeps its own choice | Windows' own adapter count | Unit tests of the pick; a real test on Windows |
 | `DwmSetWindowAttribute`, `DwmExtendFrameIntoClientArea` | Set only on one of our own windows, found by title; the material goes first, so a refusal (a `UiError`) leaves the frame and tint as they were. The no-backdrop answer of old Windows is success for `None` | Fixed size | Unit tests of the kind table, the answer rule and the order of changes |
 | `HeapSetInformation` (`HeapOptimizeResources`, `memory`) | No heap handle is passed, so Windows itself picks the heaps with a low-fragmentation front end, which a heap without its own lock (`HEAP_NO_SERIALIZE`) never has; the struct and its exact size are local. It only decommits free pages and never trims pages in use from the working set (ADR-0021, ADR-0023). A refusal is a `UiError` with the code | At most one call per look change; back-to-back changes share one | Real tests on Windows, on two threads |
+| `WH_MOUSE_LL` and `WH_KEYBOARD_LL` callbacks (`hook`) | Only `HC_ACTION` is read, and the struct once by value. `dwExtraInfo` decides: `TAG` or `REPLAY` is our own echo and passes; in the physical mode only input Windows marks as not injected reaches the engine, in the simulated mode only injected input tagged `SIM_TAG`. The keyboard hook hears only an Esc press (the hand's, or our keyboard's `TAG`) and passes every key on; wheels and side buttons pass untouched. The callback never allocates, logs or waits on a lock, and catches any panic | One engine call per event; at most 256 events plus one call's input wait in the queue, and a full queue lets events pass without the engine | Unit tests of every rule over a fake OS; one real test that only installs and removes the hooks |
+| `GetLastInputInfo`, `GetTickCount` (hook health) | Compared with the newest tick a hook saw, with wrapping maths; a failed call skips the check. Lagging hooks go back at most once per `health_ms`, after the engine lets go | One check per period | Unit tests, one across a tick wrap |
+| `WindowFromPoint` and the screen's DPI on a press (`hook`) | Only whether the window is ours and the DPI are read, never a title | Fixed size | Unit and real query tests |
+| The engine's input (`hook`) | Sent from the hook thread, never inside a callback, tagged `REPLAY`, as absolute points on the virtual desktop and keys as scan codes; a short send is counted and ends the wait for its echo | At most the engine's `max_acts` per call | Unit tests of the batch |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a shell or parent process could set `LOCALAPPDATA` or `TEMP` to aim our data elsewhere. Mitigation: the folder comes from the known-folder API, not the environment.
-- **Tampering:** our own injected input could loop back through our own hooks (P4) and be acted on twice. Mitigation: every event carries `keys::TAG` in `dwExtraInfo`, and our hooks skip it; the tag is pinned by a test.
-- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector, the layout source and the window, look, tray and memory parts log nothing, `UiError` holds at most an OS error code, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
+- **Tampering:** our own injected input could loop back through our own hooks (P4) and be acted on twice. Mitigation: every event carries `keys::TAG` (the keyboard) or `keys::REPLAY` (the hold engine) in `dwExtraInfo`, and our hooks never act on either; the tags are pinned by a test.
+- **Logging / repudiation:** `PlatformError` never holds a path, and `InjectError` holds only counts. The injector, the layout source and the window, look, tray and memory parts log nothing; the pointer hook logs only counts, never a point or a key; `UiError` holds at most an OS error code, and the debug output of key events and decoded keys never shows a key or unit. Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
 - **Information disclosure:** no network; nothing leaves the process. Text is read only through `Redacted::expose` to build the send.
 - **Denial of service:** start-up fails with a typed error, never a panic, when Windows refuses the clock or a folder. After a partial send it tries to release every key still held, and once more one event at a time for what Windows refuses, so no modifier should stay stuck down; a mask key (`keys::MASK_VK`, unassigned) goes first when Alt or Win is released, so neither opens the menu bar or Start.
 - **Elevation (layouts):** `request` posts only `WM_INPUTLANGCHANGEREQUEST`, with a layout checked against the installed list, to the window that has the keyboard; that window decides whether to switch. With uiAccess the post may reach a window above our integrity level, which is why the port needs `InjectInput`. The adapter never loads, activates, adds or removes a layout; only the test window's `--layout` activates one (see Accepted).
@@ -79,9 +84,15 @@
   - Adds and changes run from the icon's own queue and no lock is held during a taskbar call, so a message that arrives inside the call cannot deadlock the thread, and neither `show` nor `set` waits on the taskbar: a hung Explorer stalls only the icon's thread, never the keyboard. A change queued behind an add, or behind a taskbar restart, follows the add.
   - The icon's thread deletes the icon as its window ends, after any add it had queued, so no dead icon stays behind while the app runs.
   - The front-window hook, the only hook in P3, runs out of context with our process skipped; it reads one class name and queues a wake inside `catch_unwind`, so it cannot stall anyone's input.
+- **Spoofing (pointer hook):** another program can put our tags on its input. `TAG` or `REPLAY` only hides that input from the engine, and a forged `TAG` Esc can only end a hold. `SIM_TAG` acts only in the simulated mode, which only the gate tool builds (`sim_pointer_hook`); in the physical mode no injected input acts.
+- **Denial of service (pointer hook):**
+  - A panic in the engine or the callback is caught before it reaches Windows; events then pass untouched, and the engine lets go once.
+  - The callback never waits: the engine's buffer is reserved once and the queue is bounded, so a flood only lets events pass and the engine lets go at the next turn.
+  - Windows drops a hook that answers late; the health check puts it back after the engine lets go, so no button stays held.
+  - Dropping a run sends the release before it removes the hooks and waits at most one second; past that, the dropping thread removes them itself and warns. `release_now` (the panic hook) waits at most 200 ms, and another program's `WM_QUIT` to the hook thread is ignored.
 - **Elevation (libraries):** `dll::pin` limits libraries named without a folder to the app's folder and System32, so the working folder and `PATH` can no longer lend one to the uiAccess process. It does not cover the libraries the exe imports, which load before `main`; those must sit beside the exe.
 - **Elevation (focus):** `give_back` moves the focus only from one of our windows to another app's live window. The adapter never asks for the focus for our own windows (ADR-0013); only the spike and the test tools keep such a request.
-- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, checked exactly only on the golden layouts, where dead keys are known (see Should fix): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, Windows-allocated strings freed once, the message structs Windows passes our window procedure, or the procedure kept in our window's property (see Accepted).
+- **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port. The Keys route types exactly the text or sends nothing, checked exactly only on the golden layouts, where dead keys are known (see Should fix): Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send. Every `unsafe` block is scoped, has a `// SAFETY:` comment, and touches only locals, our own token, handles we close, Windows-allocated strings freed once, the message structs Windows passes our window procedure, the event structs it passes our hook callbacks, or the procedure kept in our window's property (see Accepted).
 
 ## Findings
 ### Must fix (blocks Definition of Done)
@@ -105,7 +116,7 @@ Done (P3, ed424ef): the tray's class reader sliced its buffer by Windows' count 
 
 `SHGetKnownFolderPath` in the `windows` crate drops the out-string on failure without `CoTaskMemFree`; Windows returns no string then, so nothing leaks in practice.
 
-Another program can put our tag on its own input so that our hooks skip it. The tag only keeps us from acting on our own input; it is not a trust boundary, and forging it only hides that input from KeyXtend.
+Another program can put our tags (`TAG`, `REPLAY`) on its own input so that our hooks skip it. The tags only keep us from acting on our own input; it is not a trust boundary, and forging it only hides that input from KeyXtend.
 
 `ToUnicodeEx`'s no-state-change flag needs Windows 10 1607 or later, and builds before it are long out of support; on them, reading a dead key could leave it waiting in our own thread only.
 
@@ -126,5 +137,7 @@ A monitor whose DPI Windows cannot give reads as 96, so a window there may be si
 The guard calls the procedure kept in its window property (`KeyXtend.Guard`). Another process's `SetPropW` passes UIPI only at our integrity level or above, and such a program can already write into our process.
 
 `inject::send`, `input`, `send_keys` and `vk_key` are public for the gate tools, and `send` takes raw inputs with any tag and no recovery. Modules cannot depend on the adapter (tidy), and the app never calls them.
+
+A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 
 Typed text is not zeroised: one click's text, at most 32 UTF-16 units, lives for one send, and Windows keeps its own copies in the input queue.

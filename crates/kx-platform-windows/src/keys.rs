@@ -1,5 +1,5 @@
-//! Key tables: the tag on our own input, keys Windows sends or reports as extended, how `VkKeyScanEx` names
-//! the modifiers a character needs, the keys `ToUnicodeEx` reads held down, and the menu mask key.
+//! Key tables: the tags on input, keys Windows sends or reports as extended, how `VkKeyScanEx` names the
+//! modifiers a character needs, the keys `ToUnicodeEx` reads held down, and the menu mask key.
 
 use std::fmt;
 
@@ -7,6 +7,10 @@ use kx_module_api::REDACTED_MARKER;
 
 /// Marks input we inject (`dwExtraInfo`, "KXSP"), so our own hooks can skip it.
 pub const TAG: usize = 0x4B58_5350;
+/// Marks the input the pointer hook sends for its engine ("KXSR"), which our hooks skip and the gate guard can tell.
+pub const REPLAY: usize = 0x4B58_5352;
+/// Marks the gate tool's simulated hand ("KXUS"); only a pointer hook built for simulated input acts on it.
+pub const SIM_TAG: usize = 0x4B58_5553;
 
 /// Prefix bytes `MapVirtualKeyExW` puts on extended scan codes (`0xE0`, `0xE1`).
 const EXTENDED_PREFIXES: [u8; 2] = [0xE0, 0xE1];
@@ -153,8 +157,11 @@ mod tests {
     }
 
     #[test]
-    fn the_tag_spells_kxsp() {
-        assert_eq!(&TAG.to_be_bytes()[size_of::<usize>() - 4..], b"KXSP");
+    fn the_tags_spell_their_names_and_differ() {
+        let name = |tag: usize| tag.to_be_bytes()[size_of::<usize>() - 4..].to_vec();
+        assert_eq!(name(TAG), b"KXSP");
+        assert_eq!(name(REPLAY), b"KXSR");
+        assert_eq!(name(SIM_TAG), b"KXUS");
     }
 
     #[test]

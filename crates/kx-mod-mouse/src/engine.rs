@@ -242,12 +242,11 @@ impl Engine {
 /// Our input so far must reach the app first, so a passed `event` is sent again behind it; Esc still passes, as it
 /// is never dropped. Returns whether the event is dropped.
 fn behind(event: PointerEvent, dropped: bool, acts: &mut Vec<PointerAct>) -> bool {
-    let again = match event {
-        _ if dropped => return true,
-        PointerEvent::Down { button, at, .. } => PointerAct::Down(button, at),
-        PointerEvent::Up { button, at } => PointerAct::Up(button, at),
-        PointerEvent::Move { at } => PointerAct::Move(at),
-        PointerEvent::Esc => return false,
+    if dropped {
+        return true;
+    }
+    let Some(again) = event.act() else {
+        return false;
     };
     acts.push(again);
     true

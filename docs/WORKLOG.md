@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-13 15:32 — P4: the Windows mouse hook host for the hold engine
+`kx-platform-windows` now runs the hold engine on real low-level mouse and keyboard hooks, on a thread of their own: the hand's input, or the gate tool's `SIM_TAG` input in the simulated mode, reaches the engine, and our own `TAG` and `REPLAY` input only ends the wait for its echo. Input the engine lets through waits in a bounded queue behind our unechoed input, an Esc press from the hand or our keyboard reaches the engine, and the engine's input goes out tagged `REPLAY`. Lagging hooks go back after the engine lets go, a panic never reaches Windows, and dropping a run sends the release before removing the hooks, waiting at most one second. Tests drive every rule over a fake OS; the one real test only installs and removes the hooks.
+
 ## 2026-10-13 14:25 — P4: the keyboard's Right-click and Grab keys, and its latches on the bus
 The side keys Right-click and Grab now ask the mouse module to flip its mode over the bus, light while it is on, and stay dimmed with the tip "Mouse assist is off" until that module says it runs; at start the keyboard tells its latches and asks for that state, and it never depends on the mouse module. Every change of the latched modifiers goes out on the bus, newest last from any thread, and a mouse click that used them lets them go as the `modifiers` setting says. A change from the bus redraws at the next relabel, and the new tips read naturally in English, French and Arabic.
 

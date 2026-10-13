@@ -3,13 +3,14 @@
 use std::sync::Arc;
 
 use kx_module_api::Clock;
-use kx_module_api::ports::{InputInjector, LayoutSource};
+use kx_module_api::ports::{InputInjector, LayoutSource, PointerHook};
 use kx_platform::ui::{Backdrop, Instance, Memory, Screens, SystemLook, Tray, WindowGuard};
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
+use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinMemory, WinScreens, WinTray, dirs,
+    WinMemory, WinPointerHook, WinScreens, WinTray, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -91,6 +92,18 @@ impl WindowsPlatform {
     #[must_use]
     pub fn memory(&self) -> Arc<dyn Memory> {
         Arc::new(WinMemory)
+    }
+
+    /// The mouse hook on the hand's input, for the app to register under `PointerHookKey`.
+    #[must_use]
+    pub fn pointer_hook(&self) -> Arc<dyn PointerHook> {
+        Arc::new(WinPointerHook::new(self.clock, Source::Physical))
+    }
+
+    /// The mouse hook on the gate tool's simulated input instead of the hand's: for a gate-only build, never daily use.
+    #[must_use]
+    pub fn sim_pointer_hook(&self) -> Arc<dyn PointerHook> {
+        Arc::new(WinPointerHook::new(self.clock, Source::Simulated))
     }
 }
 
