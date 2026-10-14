@@ -10,8 +10,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-# The sound tokens' format check and the RIFF chunk walker, which the app's build shares.
-kx-theme = { path = "../crates/kx-theme" }
+# The sound tokens' format check and the RIFF chunk walker, which the app's build shares; `files` turns on the readers.
+kx-theme = { path = "../crates/kx-theme", features = ["files"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }

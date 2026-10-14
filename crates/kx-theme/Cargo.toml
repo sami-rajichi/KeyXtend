@@ -11,6 +11,11 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# The readers of the `assets` folder and the WAV reader, for kx-ui's build and xtask only: the uiAccess app parses no
+# media (ADR-0004), so `cargo xtask tidy` refuses this feature in its tree.
+files = []
+
 [dependencies]
 # The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations; and the speaker's clip
 # layout and rates (`Clip`, `Clip::RATES`).
@@ -23,3 +28,12 @@ toml.workspace = true
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 serde_json.workspace = true
+
+# These test the readers behind `files`: run them with `--features files`, as a workspace run does through xtask.
+[[test]]
+name = "assets"
+required-features = ["files"]
+
+[[test]]
+name = "sounds"
+required-features = ["files"]

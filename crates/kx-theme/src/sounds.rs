@@ -1,5 +1,6 @@
 //! `sounds.toml`: the format of every shipped sound file, how the speaker plays, and each event's files and balance.
 
+#[cfg(feature = "files")]
 pub mod wav;
 
 use kx_platform::ui::Clip;
