@@ -18,8 +18,11 @@ QtObject {
     property var trayTexts: En.texts
     property var look: Look.lk
     property var assist: En.assist
-    // How often QML read the overlay's state.
+    // How often QML read the overlay's state, the newest state a read returns, and whether a `change` wake waits for a
+    // read, as the hub keeps it.
     property int assistReads: 0
+    property var newest: En.assist
+    property bool waiting: false
     // The backdrop answer, and every call so far.
     property bool frosted: false
     property var calls: []
@@ -39,6 +42,7 @@ QtObject {
 
     onLangChanged: said.lang = lang
     onTextsChanged: said.texts = texts
+    onAssistChanged: newest = assist
     Component.onCompleted: {
         said.lang = lang;
         said.texts = texts;
@@ -78,9 +82,19 @@ QtObject {
     function lookJson() {
         return JSON.stringify(look);
     }
+    // Changes the overlay's state as the hub does: it wakes QML only when no wake waits for a read, unlike setting
+    // `assist`, which wakes each time.
+    function change(state) {
+        newest = state;
+        if (waiting)
+            return;
+        waiting = true;
+        assist = state;
+    }
     function assistJson() {
         assistReads++;
-        return JSON.stringify(assist);
+        waiting = false;
+        return JSON.stringify(newest);
     }
     // The bundle as the app holds it: fonts the texts test lays out, and icons the tests' icon plugin serves.
     function assets() {

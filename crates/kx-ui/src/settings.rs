@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 
 /// How long the pointer may rest before a tip shows, in ms.
 pub(crate) const TIP_MS: RangeInclusive<u64> = 1..=10_000;
-/// How often a move or resize may follow the pointer, in ms.
+/// How often a move or resize, or the pointer overlay, may follow the pointer, in ms.
 pub(crate) const POLL_MS: RangeInclusive<u64> = 1..=1_000;
 /// How long the window guard may wait before each try, in ms.
 pub(crate) const GUARD_DELAY_MS: RangeInclusive<u64> = 1..=10_000;
@@ -111,7 +111,7 @@ pub struct UiSettings {
     pub language: String,
     /// How long the pointer rests before a tip shows, in ms.
     pub tip_ms: u64,
-    /// How often a move or resize follows the pointer, in ms.
+    /// How often a move or resize follows the pointer, and the least time between the pointer overlay's reads, in ms.
     pub poll_ms: u64,
     /// How long the window guard waits before each try, in ms.
     pub guard_delay_ms: u64,

@@ -1,5 +1,6 @@
-// The pointer overlay inside the app (spec §5.3): made only while the hub names a mode, read once on the frame after
-// each wake, and its badge hidden over each of our windows, whose guard run keeps a shown tip.
+// The pointer overlay inside the app (spec §5.3): made only while the hub names a mode, read once soon after each wake
+// with no frame needed and at most once per `poll_ms`, and its badge hidden over each of our windows, whose guard run
+// keeps a shown tip.
 import QtQuick
 import QtTest
 import "../qml"
@@ -33,10 +34,14 @@ Item {
         function state(p, extra) {
             return Object.assign({}, En.assist, { live: true, rclick: true, mode: "rclick", point: p }, extra || {});
         }
-        // The app over fresh stand-ins, once its keyboard shows and the state was read at start; the real pointer passes
-        // through its keyboard.
-        function app() {
-            const a = createTemporaryObject(appC, root);
+        // The hub's state with no mode on, numbered `seq`.
+        function numbered(seq) {
+            return Object.assign({}, En.assist, { seq: seq });
+        }
+        // The app over fresh stand-ins with its `props`, once its keyboard shows and the state was read at start; the
+        // real pointer passes through its keyboard.
+        function app(props) {
+            const a = createTemporaryObject(appC, root, props || {});
             tryVerify(() => a.face.visible && a.assist !== null, 2000, "the keyboard shows");
             Pointer.through([a.face, a.bubble]);
             return a;
@@ -78,17 +83,58 @@ Item {
             tryCompare(a.pointer, "item", null, 2000, "the hub's mode alone decides");
         }
 
-        function test_a_wake_reads_the_state_once_on_the_next_frame_then_rests() {
-            const a = app();
-            tryVerify(() => !a.assistRead.running, 2000, "the read at start");
+        // With the keyboard away no window of ours draws, yet a wake reads on the event loop's next pass: wait(0) runs
+        // that pass once and never sleeps, too soon for any frame or timer.
+        function test_a_wake_reads_on_the_next_pass_with_no_frame() {
+            let t = 1000;
+            const a = app({ now: () => t });
+            a.hide();
+            t += a.face.cfg.pollMs;
             const n = a.ui.assistReads;
-            a.ui.assist = state(null);
-            a.ui.assist = state(null, { seq: 7 });
+            a.ui.assist = numbered(6);
+            a.ui.assist = numbered(7);
             compare(a.ui.assistReads, n, "never in the wake's handler");
-            verify(a.assistRead.running);
-            tryVerify(() => !a.assistRead.running, 2000);
-            compare(a.ui.assistReads, n + 1, "two wakes before a frame read once");
+            wait(0);
+            compare(a.ui.assistReads, n + 1, "two wakes in one pass read once");
             compare(a.assist.seq, 7, "the newest state");
+            verify(!a.assistRead.pace.running, "no timer");
+        }
+
+        // While changes stream, a wake within poll_ms of the last read waits out the rest of it, more wakes add
+        // nothing, and the one read then takes the newest state; after it nothing runs.
+        function test_wakes_within_the_pace_wait_out_its_rest_and_read_once() {
+            let t = 1000;
+            const a = app({ now: () => t }), ms = a.face.cfg.pollMs;
+            const n = a.ui.assistReads;
+            t += ms / 4;
+            a.ui.assist = numbered(1);
+            a.ui.assist = numbered(2);
+            wait(0);
+            compare(a.ui.assistReads, n, "held within the pace");
+            compare(a.assistRead.pace.interval, ms * 3 / 4, "for the rest of it");
+            a.ui.assist = numbered(3);
+            tryCompare(a.ui, "assistReads", n + 1, 2000, "read once the pace is up");
+            compare(a.assist.seq, 3, "the newest state");
+            verify(!a.assistRead.pace.running, "then nothing runs");
+        }
+
+        // The hub wakes once until QML reads; that read lets the next change wake, so no change is lost.
+        function test_a_change_after_a_read_wakes_again() {
+            let t = 1000;
+            const a = app({ now: () => t }), ms = a.face.cfg.pollMs;
+            const n = a.ui.assistReads;
+            t += ms;
+            a.ui.change(numbered(1));
+            a.ui.change(numbered(2));
+            wait(0);
+            compare([a.ui.assistReads, a.assist.seq], [n + 1, 2], "one wake, one read of the newest");
+            t += ms;
+            a.ui.change(numbered(3));
+            wait(0);
+            compare([a.ui.assistReads, a.assist.seq], [n + 2, 3], "the read let it wake again");
+            a.ui.change(numbered(4));
+            tryCompare(a.ui, "assistReads", n + 3, 2000, "and again within the pace");
+            compare(a.assist.seq, 4);
         }
 
         // Its guard run is a quiet one: a key's tip the hand is reading stays, and no pop-up loses its place in front.

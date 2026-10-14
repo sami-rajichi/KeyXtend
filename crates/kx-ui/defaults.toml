@@ -12,7 +12,7 @@ backdrop = "none"
 language = "auto"
 # How long the pointer rests on a button before its tip shows, in ms.
 tip_ms = 500
-# How often a move or resize follows the pointer, in ms.
+# How often a move or resize follows the pointer, and the least time between the pointer overlay's reads, in ms.
 poll_ms = 16
 # How long the window guard waits before each try, in ms, and how many times it tries.
 guard_delay_ms = 300

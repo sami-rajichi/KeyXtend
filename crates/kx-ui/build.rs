@@ -74,6 +74,7 @@ mod qt {
         "qml/Act.qml",
         "qml/PressFrame.qml",
         "qml/KbWakes.qml",
+        "qml/AssistRead.qml",
         "qml/Overlay.qml",
         "qml/HoldRing.qml",
         "qml/Badge.qml",
