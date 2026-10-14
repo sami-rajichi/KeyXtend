@@ -26,7 +26,7 @@ It provides no service; it talks to the keyboard and the UI over the bus (`kx_mo
 | `still_px` | `7` | Moves up to this many logical pixels, scaled by the screen's DPI, still count as still; within `STILL_PX`. |
 | `ring_after_ms` | `150` | The ring shows this long after the press, in ms; within `RING_AFTER_MS`, and always below the shortest hold. |
 | `health_ms` | `1000` | How often the health check runs while the hook runs, in ms; within `HEALTH_MS`. |
-| `health_slack_ms` | `500` | How long the hooks may miss input before they are put back, in ms; within `HEALTH_SLACK_MS`. |
+| `health_slack_ms` | `500` | How far Windows' last input may run ahead of the hooks before a check counts them as lagging, in ms; within `HEALTH_SLACK_MS`. Two lagging checks in a row put them back. |
 | `echo_ms` | `250` | How long input waits behind our own before it goes on anyway, in ms; within `ECHO_MS`. |
 
 The ranges are named constants in `src/settings.rs`; the defaults live only in `defaults.toml`. `MouseSettings::hook_config` hands the last three to the hook's host.

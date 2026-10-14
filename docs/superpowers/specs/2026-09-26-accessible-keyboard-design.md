@@ -236,7 +236,7 @@ A low-level mouse hook (`WH_MOUSE_LL`) watches the physical left button (ADR-002
 - The callback runs only the engine's pure step: no waiting on locks, no I/O, no logging and no allocation. It returns within 1 ms at p99 (§10, gate G8).
 - Our clicks go out after the callback returns, on the hook's own thread.
 - Only physical input counts, plus our own keyboard's Esc, which can only cancel a carry. Injected input, ours or another program's, passes untouched, so no program can borrow our rights through the hook.
-- Windows silently removes a hook that exceeds `LowLevelHooksTimeout`. Every `[mouse] health_ms` (one second), a health check compares Windows' last-input time with the last event the hooks saw, and reinstalls them when they missed input (§11).
+- Windows silently removes a hook that exceeds `LowLevelHooksTimeout`, so every `[mouse] health_ms` (one second) a health check compares Windows' last-input time with the last time a hook callback ran or our own input went out (§11). It reinstalls the hooks only after two lagging checks in a row, and skips while another desktop, such as the lock screen, is in front.
 
 **State machine** (pure Rust, clock injected, fully unit-tested)
 

@@ -129,7 +129,8 @@ fn hide<T>(
     tuple.field(&Redacted::new(value)).finish()
 }
 
-/// A module's decisions, run by the platform on its hook thread.
+/// A module's decisions, run by the platform on its hook thread. After a panic the host calls `release` once, or not at
+/// all when `release` itself panicked, then drops the engine while the run goes on, so its `Drop` tells the module.
 pub trait PointerEngine: Send {
     /// Decides `event` inside the hook callback: pushes input to send into the lent `acts` and returns true to drop
     /// the event. No blocking, no allocation beyond `acts`, no logging and no I/O.
@@ -164,7 +165,8 @@ pub const MAX_HELD_KEYS: usize = 16;
 pub struct HookConfig {
     /// The health check's period, in milliseconds.
     pub health_ms: u32,
-    /// How long the hooks may miss input before they are put back, in milliseconds.
+    /// How far Windows' last input may run ahead of the hooks before a check counts them as lagging, in milliseconds;
+    /// two lagging checks in a row put them back.
     pub health_slack_ms: u32,
     /// How long input waits behind our own before it goes on, in milliseconds.
     pub echo_ms: u32,
@@ -203,8 +205,8 @@ pub enum HookError {
     Thread,
 }
 
-/// A running hook. Dropping it is the only way to stop, and the drop returns once the host has called `release`, sent
-/// that input and removed the hooks, or after a bounded wait.
+/// A running hook. Dropping it is the only way to stop, and the drop returns once the host has called `release` (never
+/// again for an engine it gave up), sent that input and removed the hooks, or after a bounded wait.
 pub trait HookRun: Send + Sync {
     /// Asks the host to call `settle` soon; never blocks.
     fn wake(&self);

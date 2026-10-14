@@ -47,7 +47,8 @@ pub struct MouseSettings {
     pub ring_after_ms: u32,
     /// How often the health check runs while the hook runs, in ms.
     pub health_ms: u32,
-    /// How long the hooks may miss input before they are put back, in ms.
+    /// How far Windows' last input may run ahead of the hooks before a check counts them as lagging, in ms; two lagging
+    /// checks in a row put them back.
     pub health_slack_ms: u32,
     /// How long input waits behind our own before it goes on anyway, in ms.
     pub echo_ms: u32,
