@@ -1,5 +1,5 @@
 //! The host's loop side: turns, the health check, the reinstall, the panic hook's let-go and the stop. Each puts its
-//! input in one batch, so the first echo proves all of it passed (ledger ruling 36).
+//! input in one batch, so the first echo proves all of it passed and nothing of the hand's can come between.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -18,8 +18,8 @@ pub(super) struct Sent {
 }
 
 impl<O: Os> Host<O> {
-    /// Sends owed Ups, the queue, the stale engine's let-go and its settle as one batch, then re-arms the deadline
-    /// timer.
+    /// Sends owed Ups, the queue, the stale engine's let-go and its settle as one batch, then sets the deadline timer
+    /// when the deadline changed.
     pub(super) fn run_turn(&mut self) {
         self.woken = false;
         let now = self.os.now();
@@ -39,7 +39,15 @@ impl<O: Os> Host<O> {
             Trust::Whole => self.engine.deadline(),
             _ => None,
         };
-        self.os.arm(due.map(|due| timer_ms(due, now)));
+        self.arm(due, now);
+    }
+
+    /// Sets the deadline timer for `due`, or stops it, only when that changed; a refused timer is asked for again at
+    /// the next turn.
+    fn arm(&mut self, due: Option<Mono>, now: Mono) {
+        if due != self.armed && self.os.arm(due.map(|due| timer_ms(due, now))) {
+            self.armed = due;
+        }
     }
 
     /// After `on`: asks for a turn when input waits, the deadline moved from `before` or the engine holds notes. The

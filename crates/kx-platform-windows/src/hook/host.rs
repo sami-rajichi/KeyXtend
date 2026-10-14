@@ -47,6 +47,8 @@ pub(crate) struct Host<O: Os> {
     /// The newest point the hook saw.
     at: Option<Point>,
     trust: Trust,
+    /// The deadline the timer is set for.
+    armed: Option<Mono>,
     /// A wake is posted and its turn has not run yet.
     woken: bool,
     /// A refused reinstall was logged.
@@ -108,6 +110,7 @@ impl<O: Os> Host<O> {
             owed: Held::default(),
             at: None,
             trust: Trust::Whole,
+            armed: None,
             woken: false,
             warned: false,
         }
@@ -143,9 +146,15 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// A turn, on a wake or the deadline timer.
+    /// A turn, on a wake.
     pub(crate) fn turn(&mut self) {
         let _ = self.guard(Self::run_turn);
+    }
+
+    /// The deadline timer fired, so a turn sets it again for a deadline still to come.
+    pub(crate) fn fired(&mut self) {
+        self.armed = None;
+        self.turn();
     }
 
     /// The health timer: a turn, then the health check.

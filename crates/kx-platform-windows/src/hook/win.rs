@@ -257,7 +257,8 @@ fn pump(ctl: &Ctl, health: usize) {
         }
         match msg.message {
             WM_TIMER if msg.wParam.0 == health => with_host(Host::check),
-            WAKE | WM_TIMER => with_host(Host::turn),
+            WAKE => with_host(Host::turn),
+            WM_TIMER => with_host(Host::fired),
             LET_GO => let_go(),
             _ => None,
         };

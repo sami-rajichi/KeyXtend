@@ -154,11 +154,11 @@ impl Os for WinOs {
         }
     }
 
-    fn arm(&self, ms: Option<u32>) {
+    fn arm(&self, ms: Option<u32>) -> bool {
         kill_timer(self.timer.take());
-        if let Some(ms) = ms {
-            self.timer.set(set_timer(ms));
-        }
+        let id = ms.map_or(0, set_timer);
+        self.timer.set(id);
+        ms.is_none() || id != 0
     }
 
     fn hook(&self) -> Result<(), i32> {

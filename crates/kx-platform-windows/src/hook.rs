@@ -78,8 +78,8 @@ pub(crate) trait Os {
     /// Sends `acts` in one batch tagged `REPLAY` and returns how many the OS took.
     fn send(&self, acts: &[PointerAct]) -> usize;
 
-    /// Sets the one deadline timer to fire after `ms`, or stops it.
-    fn arm(&self, ms: Option<u32>);
+    /// Sets the one deadline timer to fire every `ms`, or stops it; false when Windows refused the timer.
+    fn arm(&self, ms: Option<u32>) -> bool;
 
     /// Installs both hooks, or neither; the OS error code when refused.
     ///

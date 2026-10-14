@@ -48,6 +48,8 @@ pub(super) struct World {
     pub refuse: Cell<Option<i32>>,
     /// Setting the deadline timer panics, as a fault outside the engine would.
     pub panic_arm: Cell<bool>,
+    /// Setting the deadline timer is refused.
+    pub refuse_timer: Cell<bool>,
 }
 
 impl Default for World {
@@ -62,6 +64,7 @@ impl Default for World {
             away: Cell::new(false),
             refuse: Cell::new(None),
             panic_arm: Cell::new(false),
+            refuse_timer: Cell::new(false),
         }
     }
 }
@@ -126,9 +129,10 @@ impl Os for Fake {
         took
     }
 
-    fn arm(&self, ms: Option<u32>) {
+    fn arm(&self, ms: Option<u32>) -> bool {
         assert!(!self.0.panic_arm.get(), "the fake timer panics");
         self.0.note(Call::Arm(ms));
+        ms.is_none() || !self.0.refuse_timer.get()
     }
 
     fn hook(&self) -> Result<(), i32> {

@@ -105,9 +105,9 @@ fn the_hook_thread_runs_one_step_above_normal() {
 #[test]
 fn the_deadline_timer_is_set_and_stopped_on_this_thread() {
     let os = WinOs::new(0, QpcClock::new().unwrap(), Arc::default());
-    os.arm(Some(60_000));
+    assert!(os.arm(Some(60_000)));
     assert_ne!(os.timer.get(), 0);
-    os.arm(None);
+    assert!(os.arm(None));
     assert_eq!(os.timer.get(), 0);
 }
 

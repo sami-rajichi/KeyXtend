@@ -3,14 +3,17 @@
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use kx_module_api::Mono;
 use kx_module_api::ports::{Button, PointerAct, PointerEvent};
+use kx_module_api::{Mono, US_PER_MS};
 
 use super::fake::{Call, Fake, Heard, Plan, Script, World};
 use super::{A, B, CFG, CTRL, MOVE, Rig, rig};
 use crate::hook::Source;
 use crate::hook::host::Host;
 use crate::hook::stats::Stats;
+
+/// How far ahead the pending press's deadline lies, in ms.
+const DUE_MS: u32 = 600;
 
 /// The calls that sent input, in order.
 pub(super) fn sends(calls: &[Call]) -> Vec<Vec<PointerAct>> {
@@ -50,11 +53,49 @@ fn a_turn_sends_the_queue_then_settles_and_arms_the_deadline_rounded_up() {
     assert_eq!(rig.heard(), [Heard::Settle(rig.now())]);
 }
 
+/// A rig whose engine holds a press back until a deadline `DUE_MS` from now.
+fn pending() -> Rig {
+    let rig = rig(Source::Physical);
+    let due = rig.now().as_us() + u64::from(DUE_MS) * u64::from(US_PER_MS);
+    rig.plan().deadline = Some(Mono::from_us(due));
+    rig
+}
+
 #[test]
-fn a_turn_with_no_deadline_stops_the_timer() {
-    let mut rig = rig(Source::Physical);
+fn the_timer_is_set_and_stopped_only_when_the_deadline_changes() {
+    let mut rig = pending();
+    rig.host.turn();
+    assert_eq!(rig.world.take(), [Call::Arm(Some(DUE_MS + 1))]);
+    rig.host.turn();
+    assert!(rig.world.take().is_empty(), "the same deadline");
+    rig.plan().deadline = None;
     rig.host.turn();
     assert_eq!(rig.world.take(), [Call::Arm(None)]);
+    rig.host.turn();
+    assert!(rig.world.take().is_empty(), "still none");
+}
+
+#[test]
+fn a_fired_timer_is_set_again_for_a_deadline_still_to_come() {
+    let mut rig = pending();
+    rig.host.turn();
+    rig.world.take();
+    rig.host.fired();
+    assert_eq!(rig.world.take(), [Call::Arm(Some(DUE_MS + 1))]);
+}
+
+#[test]
+fn a_refused_timer_is_asked_for_again_at_the_next_turn() {
+    let mut rig = pending();
+    rig.world.refuse_timer.set(true);
+    rig.host.turn();
+    rig.host.turn();
+    let arms = |calls: Vec<Call>| calls.iter().filter(|c| matches!(c, Call::Arm(_))).count();
+    assert_eq!(arms(rig.world.take()), 2);
+    rig.world.refuse_timer.set(false);
+    rig.host.turn();
+    rig.host.turn();
+    assert_eq!(arms(rig.world.take()), 1, "set at last");
 }
 
 #[test]
@@ -140,7 +181,7 @@ fn a_broken_engine_whose_release_panics_still_ends_with_ctrl_and_left_up() {
 
 #[test]
 fn a_panic_outside_the_engine_asks_for_one_turn_never_a_loop() {
-    let mut rig = rig(Source::Physical);
+    let mut rig = pending();
     rig.world.panic_arm.set(true);
     rig.host.turn();
     assert!(
