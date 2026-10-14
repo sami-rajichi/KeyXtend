@@ -18,8 +18,6 @@ pub struct GateInput {
     pub flag: String,
     /// The warning it logs at start with the flag; without it, its engine might act on the hand.
     pub warn_line: String,
-    /// The line its mouse module logs with the hook's numbers at each hook stop.
-    pub hook_line: String,
     /// Longest wait for its keyboard and its warning line after its start, in ms.
     pub start_ms: u64,
     /// Longest wait for a mode or latch key to read on or off after its click, in ms.
@@ -33,7 +31,6 @@ impl GateInput {
             ("program", &self.program),
             ("flag", &self.flag),
             ("warn_line", &self.warn_line),
-            ("hook_line", &self.hook_line),
         ];
         if let Some((key, _)) = texts.iter().find(|(_, text)| text.is_empty()) {
             return Err(format!("gate_input.{key} must not be empty"));

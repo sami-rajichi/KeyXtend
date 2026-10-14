@@ -1,6 +1,7 @@
 //! The test build's stats lines: the numbers its mouse module logs at each hook stop, read back from its log.
 #![cfg(windows)]
 
+use kx_mod_mouse::STOPPED_LINE;
 use kx_module_api::US_PER_MS;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -48,33 +49,31 @@ fn value_of<'a>(line: &'a str, name: &str) -> Option<&'a str> {
     line.split_whitespace().find_map(at)
 }
 
-/// The numbers of `line` when it is a stats line (it holds `hook_line`); none for any other line, and an error naming
-/// a field that is missing or not a number.
-pub fn parse(line: &str, hook_line: &str) -> Result<Option<HookLine>, String> {
-    if !line.contains(hook_line) {
+/// The numbers of `line` when it is a stats line (it holds the mouse module's `STOPPED_LINE`); none for any other line,
+/// and an error naming a field that is missing or not a number.
+pub fn parse(line: &str) -> Result<Option<HookLine>, String> {
+    if !line.contains(STOPPED_LINE) {
         return Ok(None);
     }
     let mut fields = Map::new();
     for name in names() {
-        let value = value_of(line, &name).ok_or_else(|| format!("{hook_line}: no {name}"))?;
+        let value = value_of(line, &name).ok_or_else(|| format!("{STOPPED_LINE}: no {name}"))?;
         let number: u64 = value
             .parse()
-            .map_err(|_| format!("{hook_line}: {name} is not a number"))?;
+            .map_err(|_| format!("{STOPPED_LINE}: {name} is not a number"))?;
         fields.insert(name, number.into());
     }
     serde_json::from_value(Value::Object(fields))
         .map(Some)
-        .map_err(|e| format!("{hook_line}: {e}"))
+        .map_err(|e| format!("{STOPPED_LINE}: {e}"))
 }
 
 /// The stats lines of `log` stamped at or after `since_us`, oldest first.
-pub fn since(log: &str, since_us: i64, hook_line: &str) -> Result<Vec<HookLine>, String> {
+pub fn since(log: &str, since_us: i64) -> Result<Vec<HookLine>, String> {
     let fresh = log
         .lines()
         .filter(|l| stamp_us(l).is_some_and(|at| at >= since_us));
-    let parsed: Vec<Option<HookLine>> = fresh
-        .map(|l| parse(l, hook_line))
-        .collect::<Result<_, _>>()?;
+    let parsed: Vec<Option<HookLine>> = fresh.map(parse).collect::<Result<_, _>>()?;
     Ok(parsed.into_iter().flatten().collect())
 }
 
@@ -105,20 +104,17 @@ pub fn summed(lines: &[HookLine]) -> Value {
 mod tests {
     use super::*;
 
+    // A workspace path from `tools/kx-gates/src`; a moved file breaks the build here, never silently.
+    /// The mouse module's actor, which logs the hook's numbers at each hook stop.
+    const ACTOR_RS: &str = include_str!("../../../crates/kx-mod-mouse/src/actor.rs");
+
     /// A stamp of the kernel's log format, and one a second later.
     const EARLY: &str = "2026-10-14T08:00:01.000000Z";
     const LATE: &str = "2026-10-14T08:00:02.000000Z";
 
-    fn hook() -> String {
-        crate::config::load()
-            .expect("kx-gates.toml loads")
-            .gate_input
-            .hook_line
-    }
-
     /// A stats line stamped `at` with `fields`, as the kernel writes it.
     fn line(at: &str, fields: &str) -> String {
-        format!("{at}  INFO kx_mod_mouse::actor: {} {fields}", hook())
+        format!("{at}  INFO kx_mod_mouse::actor: {STOPPED_LINE} {fields}")
     }
 
     const FIELDS: &str =
@@ -139,31 +135,38 @@ mod tests {
     }
 
     #[test]
+    fn the_fields_are_the_ones_the_mouse_module_logs() {
+        let fields = names();
+        assert!(!fields.is_empty());
+        for name in fields {
+            let logged = format!("{name} = s.{name}");
+            assert!(ACTOR_RS.contains(&logged), "actor.rs logs no {logged}");
+        }
+    }
+
+    #[test]
     fn a_stats_line_parses_in_any_field_order() {
-        let hook = hook();
-        assert_eq!(parse(&line(EARLY, FIELDS), &hook), Ok(Some(sample())));
-        assert_eq!(parse(&line(EARLY, SHUFFLED), &hook), Ok(Some(sample())));
+        assert_eq!(parse(&line(EARLY, FIELDS)), Ok(Some(sample())));
+        assert_eq!(parse(&line(EARLY, SHUFFLED)), Ok(Some(sample())));
     }
 
     #[test]
     fn a_missing_or_non_number_field_is_an_error_naming_it() {
-        let hook = hook();
         let gone = FIELDS.replace("p99_us=40 ", "");
-        let e = parse(&line(EARLY, &gone), &hook).expect_err("no p99");
+        let e = parse(&line(EARLY, &gone)).expect_err("no p99");
         assert!(e.contains("p99_us"), "{e}");
         let word = FIELDS.replace("events=12", "events=many");
-        let e = parse(&line(EARLY, &word), &hook).expect_err("not a number");
+        let e = parse(&line(EARLY, &word)).expect_err("not a number");
         assert!(e.contains("events"), "{e}");
     }
 
     #[test]
     fn other_lines_and_older_stamps_are_skipped() {
-        let hook = hook();
         let other = format!("{LATE}  WARN keyxtend::run: something else events=1");
         let text = [line(EARLY, FIELDS), other, line(LATE, SHUFFLED)].join("\n");
         let since_us = stamp_us(LATE).expect("a stamp");
-        assert_eq!(since(&text, since_us, &hook), Ok(vec![sample()]));
-        assert_eq!(parse("no stamp, no line", &hook), Ok(None));
+        assert_eq!(since(&text, since_us), Ok(vec![sample()]));
+        assert_eq!(parse("no stamp, no line"), Ok(None));
     }
 
     #[test]

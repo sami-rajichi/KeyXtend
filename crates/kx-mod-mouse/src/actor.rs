@@ -12,6 +12,9 @@ use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 
+/// The message of the line logged with the hook's numbers each time the hook stops; kx-gates reads that line back.
+pub const STOPPED_LINE: &str = "mouse hook stopped";
+
 /// A message for the actor, from the bus, the hook's engine or the module; it has no `Debug`, as latches are keys.
 pub enum Msg {
     /// The keyboard flips a mode.
@@ -240,7 +243,7 @@ impl Actor {
             reinstalls = s.reinstalls,
             send_errors = s.send_errors,
             lost_echoes = s.lost_echoes,
-            "mouse hook stopped"
+            "{STOPPED_LINE}"
         );
     }
 }

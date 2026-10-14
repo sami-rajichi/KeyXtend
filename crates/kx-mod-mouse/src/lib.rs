@@ -10,7 +10,7 @@ mod hook_engine;
 mod manifest;
 mod settings;
 
-pub use actor::{Actor, Msg};
+pub use actor::{Actor, Msg, STOPPED_LINE};
 pub use engine::{ESC, Engine, EngineCfg, MAX_ACTS, MAX_LATCHES, Note};
 pub use manifest::{ID, MANIFEST};
 pub use settings::{MouseSettings, SPEC};

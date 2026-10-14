@@ -167,7 +167,7 @@ impl<'a> TestBuild<'a> {
     fn lines(&self) -> Result<Vec<HookLine>, String> {
         let log = product::files(&self.program)?.log;
         let text = std::fs::read_to_string(&log).map_err(|e| format!("{}: {e}", log.display()))?;
-        hooklog::since(&text, self.since_us, &self.ctx.cfg.gate_input.hook_line)
+        hooklog::since(&text, self.since_us)
     }
 
     /// Starts the owner's copy again through the shell, once, but only after the test build `ended`, else says to start

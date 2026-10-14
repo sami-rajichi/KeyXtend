@@ -2,7 +2,7 @@
 
 use crate::logs::{Fields, MESSAGE, lines_of};
 use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown};
-use kx_mod_mouse::{ESC, ID, Msg};
+use kx_mod_mouse::{ESC, ID, Msg, STOPPED_LINE};
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
 use kx_module_api::{Notice, NoticeArg, SettingsError, WriteError, args, keys};
@@ -10,8 +10,6 @@ use tracing::Level;
 
 /// The OS error code a refused hook carries.
 const CODE: i32 = 1428;
-/// The message of the line that logs a stopped hook's numbers.
-const STOPPED: &str = "mouse hook stopped";
 /// Stats whose numbers appear nowhere else.
 const STATS: HookStats = HookStats {
     events: 101,
@@ -252,7 +250,7 @@ fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
     });
     let stopped: Vec<_> = lines
         .iter()
-        .filter(|(_, f)| f[MESSAGE] == STOPPED)
+        .filter(|(_, f)| f[MESSAGE] == STOPPED_LINE)
         .collect();
     assert_eq!(stopped.len(), 1, "{lines:?}");
     let (level, fields) = stopped[0];
@@ -267,7 +265,7 @@ fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
         ("lost_echoes", STATS.lost_echoes.into()),
     ];
     let mut want: Vec<_> = numbers.map(|(k, v)| (k, v.to_string())).to_vec();
-    want.push((MESSAGE, STOPPED.to_owned()));
+    want.push((MESSAGE, STOPPED_LINE.to_owned()));
     want.sort_unstable();
     let got: Vec<_> = fields.iter().map(|(k, v)| (*k, v.clone())).collect();
     assert_eq!(got, want);

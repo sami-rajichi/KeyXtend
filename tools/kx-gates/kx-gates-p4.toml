@@ -11,8 +11,6 @@ program = "../../target/gate-input/release/keyxtend.exe"
 flag = "--sim-input"
 # The warning it logs at start with the flag (apps/keyxtend/src/run.rs); without it, its engine might act on the hand.
 warn_line = "simulated mouse input: a gate build, never for daily use"
-# The line the mouse module logs with the hook's numbers at each hook stop (crates/kx-mod-mouse/src/actor.rs).
-hook_line = "mouse hook stopped"
 # Longest wait for its keyboard and its warning line after its start, in ms.
 start_ms = 15000
 # Longest wait for a mode or latch key to read on or off after its click, in ms.

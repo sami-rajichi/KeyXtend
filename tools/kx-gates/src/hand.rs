@@ -45,14 +45,8 @@ fn owners_copy(ctx: &Ctx) -> Result<PathBuf, String> {
 
 /// The result: the mode, the seconds, each stats line of `log` stamped since `since_us`, their sum, and a note when
 /// none came.
-fn report(
-    mode: &str,
-    secs: u64,
-    log: &str,
-    since_us: i64,
-    hook_line: &str,
-) -> Result<Value, String> {
-    let lines = hooklog::since(log, since_us, hook_line)?;
+fn report(mode: &str, secs: u64, log: &str, since_us: i64) -> Result<Value, String> {
+    let lines = hooklog::since(log, since_us)?;
     let note = lines.is_empty().then_some(NO_LINE);
     Ok(json!({
         "gate": "assist", "mode": mode, "secs": secs, "lines": lines, "sum": hooklog::sum(&lines), "note": note,
@@ -70,31 +64,24 @@ pub fn run(ctx: &Ctx, name: &str, secs: u64) -> Result<Value, String> {
     );
     std::thread::sleep(Duration::from_secs(secs));
     let text = std::fs::read_to_string(&log).map_err(|e| format!("{}: {e}", log.display()))?;
-    report(mode, secs, &text, since_us, &ctx.cfg.gate_input.hook_line)
+    report(mode, secs, &text, since_us)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::budget::stamp_us;
+    use kx_mod_mouse::STOPPED_LINE;
 
     /// A stamp of the kernel's log format, and one a second later.
     const EARLY: &str = "2026-10-14T08:00:01.000000Z";
     const LATE: &str = "2026-10-14T08:00:02.000000Z";
 
-    fn hook() -> String {
-        crate::config::load()
-            .expect("kx-gates.toml loads")
-            .gate_input
-            .hook_line
-    }
-
     /// A stats line stamped `at` with `events`, as the kernel writes it.
     fn line(at: &str, events: u64) -> String {
         format!(
-            "{at}  INFO kx_mod_mouse::actor: {} events={events} p99_us=40 max_us=90 max_wait_ms=3 reinstalls=0 \
-             send_errors=0 lost_echoes=0",
-            hook()
+            "{at}  INFO kx_mod_mouse::actor: {STOPPED_LINE} events={events} p99_us=40 max_us=90 max_wait_ms=3 \
+             reinstalls=0 send_errors=0 lost_echoes=0"
         )
     }
 
@@ -102,7 +89,7 @@ mod tests {
     fn the_lines_logged_since_the_start_and_their_sum_make_the_result() {
         let log = [line(EARLY, 99), line(LATE, 12), line(LATE, 5)].join("\n");
         let since = stamp_us(LATE).expect("a stamp");
-        let v = report("Grab", 30, &log, since, &hook()).expect("reads");
+        let v = report("Grab", 30, &log, since).expect("reads");
         assert_eq!(v["lines"].as_array().map(Vec::len), Some(2), "{v}");
         assert_eq!(v["sum"]["events"].as_u64(), Some(17));
         assert_eq!(
@@ -115,7 +102,7 @@ mod tests {
     #[test]
     fn with_no_line_the_note_says_a_mode_still_on_logs_once_turned_off() {
         let since = stamp_us(LATE).expect("a stamp");
-        let v = report("Grab", 30, &line(EARLY, 4), since, &hook()).expect("reads");
+        let v = report("Grab", 30, &line(EARLY, 4), since).expect("reads");
         assert_eq!(v["note"].as_str(), Some(NO_LINE));
         assert_eq!(v["lines"].as_array().map(Vec::len), Some(0));
     }

@@ -3,15 +3,12 @@
 use std::path::{Path, PathBuf};
 
 use super::*;
-use crate::hooklog::HookLine;
 
 // Workspace paths from `tools/kx-gates/src/p4cfg`; a moved file breaks the build here, never silently.
 /// The app's command line, which names the gate flag.
 const ARGS_RS: &str = include_str!("../../../../apps/keyxtend/src/args.rs");
 /// The app's start, which logs the test build's warning.
 const RUN_RS: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
-/// The mouse module's actor, which logs the hook's numbers at each hook stop.
-const ACTOR_RS: &str = include_str!("../../../../crates/kx-mod-mouse/src/actor.rs");
 
 fn shipped() -> GateInput {
     crate::config::load()
@@ -31,11 +28,10 @@ fn the_shipped_section_checks() {
 
 #[test]
 fn an_empty_text_or_a_zero_wait_is_refused() {
-    let bad: [fn(&mut GateInput); 6] = [
+    let bad: [fn(&mut GateInput); 5] = [
         |g| g.program.clear(),
         |g| g.flag.clear(),
         |g| g.warn_line.clear(),
-        |g| g.hook_line.clear(),
         |g| g.start_ms = 0,
         |g| g.lit_ms = 0,
     ];
@@ -51,19 +47,6 @@ fn the_flag_and_the_warning_are_the_ones_the_test_build_takes_and_logs() {
     let g = shipped();
     assert!(ARGS_RS.contains(&quoted(&g.flag)), "the app's flag");
     assert!(RUN_RS.contains(&quoted(&g.warn_line)), "the app's warning");
-}
-
-#[test]
-fn the_hook_line_and_its_fields_are_the_ones_the_mouse_module_logs() {
-    let g = shipped();
-    assert!(ACTOR_RS.contains(&quoted(&g.hook_line)), "{}", g.hook_line);
-    let line = serde_json::to_value(HookLine::default()).expect("serialises");
-    let fields = line.as_object().expect("an object");
-    assert!(!fields.is_empty());
-    for name in fields.keys() {
-        let logged = format!("{name} = s.{name}");
-        assert!(ACTOR_RS.contains(&logged), "actor.rs logs no {logged}");
-    }
 }
 
 /// Every Rust file under `dir`, at any depth.
