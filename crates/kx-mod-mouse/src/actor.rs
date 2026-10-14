@@ -220,9 +220,9 @@ impl Actor {
         }
     }
 
-    /// The host gave up the live run's engine after a panic, so the run goes, both modes turn off for this session and
-    /// the user hears why. A mode key starts afresh, and held latches get one fresh run at once, only once until the
-    /// user taps a mode key or changes a latch, so a fault that repeats never loops. Another run's engine just ended.
+    /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
+    /// session and the user hears why. Held latches then get one fresh run at once, and no more until a mode tap or a
+    /// latch change, so a fault that repeats never loops.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
