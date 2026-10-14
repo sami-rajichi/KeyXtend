@@ -1,4 +1,4 @@
-//! The commands the module sends between events: the mode toggles, Right-click, the latches and letting go.
+//! The commands the module sends between events: the mode toggles, the latches and letting go.
 
 use super::{Engine, MAX_LATCHES, Mode, Note, State};
 use kx_module_api::ports::{PointerAct, Scan, Toggle};
@@ -23,8 +23,9 @@ impl Engine {
         self.note_state(before);
     }
 
-    /// Sets Right-click as the user sees it; off also stops it coming back after Grab.
-    pub fn set_rclick(&mut self, on: bool, acts: &mut Vec<PointerAct>) {
+    /// Sets Right-click as the user sees it; off also stops it coming back after Grab. Only the tests use it.
+    #[cfg(test)]
+    pub(super) fn set_rclick(&mut self, on: bool, acts: &mut Vec<PointerAct>) {
         if self.rclick() != on {
             self.toggle(Toggle::RightClick, acts);
         }

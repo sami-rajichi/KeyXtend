@@ -1,5 +1,5 @@
-//! Properties over random toggles, latches, asks and physical input: the hook runs while a mode or a latch needs it,
-//! the keyboard's state is off whenever it does not, and a stop leaves no key or button down that the hand let go.
+//! Properties over random toggles, latches, asks and physical input: the hook runs only while a mode, a latch or a
+//! press needs it, the keys show off whenever it does not run, and a stop leaves no key or button down the hand let go.
 
 use crate::rig::{DPI, Heard, Rig, T0};
 use kx_mod_mouse::{MAX_LATCHES, Msg};
@@ -192,6 +192,8 @@ proptest! {
             let on = state.rclick || state.grab != GrabState::Off;
             prop_assert!(!(on || held) || rig.hook.running(), "a mode or a latch needs the hook");
             prop_assert!(rig.hook.running() || !on, "the keys show off while no hook runs");
+            let needed = on || held || hand.down;
+            prop_assert!(needed || !rig.hook.running(), "no mode, latch, carry or press needs the hook");
             prop_assert_eq!(rig.hook.starts() - rig.hook.stops(), usize::from(rig.hook.running()));
         }
         prop_assert!(!rig.send(Msg::Stop));

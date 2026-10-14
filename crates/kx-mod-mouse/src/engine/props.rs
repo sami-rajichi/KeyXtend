@@ -1,5 +1,5 @@
-//! Properties over random input and commands, checked against what the OS sees: the events passed and the input
-//! sent. Every engine call is also checked against `MAX_ACTS`.
+//! Properties over random input and commands, checked against what the OS sees and the notes the ring follows.
+//! Every engine call is also checked against `MAX_ACTS`.
 
 mod rig;
 
@@ -90,6 +90,21 @@ fn rough(lapses: Vec<Step>) -> impl Strategy<Value = Vec<(u64, Step)>> {
     run(prop_oneof![6 => physical(), 2 => command(), 1 => select(lapses)])
 }
 
+/// Whether each `HoldStart` in `notes` is closed by exactly one `HoldEnd` or `Fired` before the next, none left open.
+fn rings_pair(notes: &[Note]) -> bool {
+    let mut open = false;
+    for note in notes {
+        match note {
+            Note::HoldStart { .. } if open => return false,
+            Note::HoldEnd | Note::Fired { .. } if !open => return false,
+            Note::HoldStart { .. } => open = true,
+            Note::HoldEnd | Note::Fired { .. } => open = false,
+            _ => {}
+        }
+    }
+    !open
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
@@ -162,5 +177,24 @@ proptest! {
         let mut rig = Rig::play(&steps, rclick, Model::Misses);
         rig.recover();
         prop_assert!(rig.os.idle());
+    }
+
+    /// Each hold's ring is closed once, by an end or a fire, before the next starts, so the overlay never keeps one.
+    #[test]
+    fn each_ring_closes_once(rclick in any::<bool>(), steps in mixed()) {
+        let mut rig = Rig::play(&steps, rclick, Model::Strict);
+        rig.finish();
+        prop_assert!(rings_pair(&rig.notes), "{:?}", rig.notes);
+    }
+
+    /// The same after host stops and releases the hook missed.
+    #[test]
+    fn each_ring_closes_once_after_lapses(
+        rclick in any::<bool>(),
+        steps in rough(vec![Step::Release, Step::Miss]),
+    ) {
+        let mut rig = Rig::play(&steps, rclick, Model::Misses);
+        rig.finish();
+        prop_assert!(rings_pair(&rig.notes), "{:?}", rig.notes);
     }
 }
