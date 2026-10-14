@@ -1,11 +1,12 @@
-//! What goes wrong: a hook the OS refuses, a setting that cannot be saved, a stop mid-carry, and the log lines.
+//! What goes wrong: a hook the OS refuses, a setting that cannot be saved, a stop mid-carry, and the log lines; an
+//! engine the hook gave up is in `reset`.
 
 use crate::logs::{Fields, MESSAGE, lines_of};
-use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown};
+use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown, told};
 use kx_mod_mouse::{ESC, ID, Msg, STOPPED_LINE};
-use kx_module_api::ports::GrabState::{Armed, Off};
+use kx_module_api::ports::GrabState::Off;
 use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
-use kx_module_api::{Notice, NoticeArg, SettingsError, WriteError, args, keys};
+use kx_module_api::{SettingsError, WriteError, keys};
 use tracing::Level;
 
 /// The OS error code a refused hook carries.
@@ -31,15 +32,6 @@ const QUOTED: &str = "rclick = 4321";
 /// How many warnings `lines` holds.
 fn warnings(lines: &[(Level, Fields)]) -> usize {
     lines.iter().filter(|(l, _)| *l == Level::WARN).count()
-}
-
-/// The mouse module's notice `key`.
-fn told(key: &'static str) -> Heard {
-    Heard::Notice(Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-    })
 }
 
 /// The notice a refused hook publishes.
@@ -179,47 +171,6 @@ fn stopping_during_a_carry_cancels_it_with_esc_and_lets_go_of_the_button() {
         grab: Off,
     };
     assert_eq!(rig.take(), [Heard::Changed(off)]);
-}
-
-#[test]
-fn an_engine_the_hook_gave_up_turns_the_modes_off_for_now_and_a_tap_starts_afresh() {
-    let mut rig = Rig::saved_rclick();
-    rig.begin();
-    rig.take();
-    rig.hook.give_up();
-    rig.pump();
-    assert_eq!(rig.take(), [shown(false, Off), told(keys::MOUSE_RESET)]);
-    assert!(!rig.hook.running(), "the run is dropped");
-    assert!(!rig.ended, "the actor stays live");
-    for _ in 0..2 {
-        rig.toggle(Toggle::Grab);
-        rig.settle(T0);
-    }
-    assert!(
-        rig.host.sink.writes().is_empty(),
-        "the saved Right-click stays"
-    );
-    rig.toggle(Toggle::RightClick);
-    rig.settle(T1);
-    assert!(rig.hook.running(), "a fresh run");
-    let after = [shown(false, Armed), shown(false, Off), shown(true, Off)];
-    assert_eq!(rig.take(), after);
-}
-
-#[test]
-fn a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone() {
-    let mut rig = Rig::new();
-    rig.begin();
-    rig.toggle(Toggle::RightClick);
-    rig.settle(T0);
-    rig.toggle(Toggle::RightClick);
-    rig.settle(T0);
-    rig.toggle(Toggle::RightClick);
-    rig.take();
-    // The first run's engine, dropped with its run, says so again as the second runs.
-    rig.send(Msg::Lost(1));
-    assert!(rig.hook.running() && !rig.ended);
-    assert!(rig.take().is_empty());
 }
 
 #[test]

@@ -208,7 +208,8 @@ impl Actor {
     }
 
     /// The host gave up the live run's engine after a panic, so the run goes, both modes turn off for this session and
-    /// the user hears why; a mode key starts afresh. Another run's engine just ended.
+    /// the user hears why; a mode key starts afresh, and held latches get one fresh run at once. Another run's engine
+    /// just ended.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
@@ -217,6 +218,10 @@ impl Actor {
         self.drop_run();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
+        if !self.latches.is_empty() {
+            // A start for latches, so a refusal takes their quiet path.
+            self.start(Some(Cmd::Latches(self.latches.clone())));
+        }
         self.tell_state();
         self.publish(&notice(keys::MOUSE_RESET));
     }

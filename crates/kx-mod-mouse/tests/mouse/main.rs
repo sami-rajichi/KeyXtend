@@ -9,6 +9,7 @@ mod failures;
 mod logs;
 mod module;
 mod props;
+mod reset;
 mod rig;
 mod runtime;
 mod wakes;

@@ -1,12 +1,14 @@
 //! A rig for the actor: the shared fake host's bus and settings sink, the fake hook, and every event the actor
 //! publishes. The test thread pumps the hook engine's messages into the actor, so no test needs a thread.
 
-use kx_mod_mouse::{Actor, MANIFEST, MouseSettings, Msg};
+use kx_mod_mouse::{Actor, ID, MANIFEST, MouseSettings, Msg};
 use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
     PointerHook, PointerMoved, Toggle,
 };
-use kx_module_api::{Bus, Event, ModuleCx, Mono, Notice, Subscription, US_PER_MS, parse_as};
+use kx_module_api::{
+    Bus, Event, ModuleCx, Mono, Notice, NoticeArg, Subscription, US_PER_MS, args, parse_as,
+};
 use kx_platform_fake::FakePointerHook;
 use kx_test_support::host::FakeHost;
 use std::sync::mpsc::{self, Receiver};
@@ -40,6 +42,15 @@ pub enum Heard {
 pub fn shown(rclick: bool, grab: GrabState) -> Heard {
     let live = true;
     Heard::Changed(AssistChanged { live, rclick, grab })
+}
+
+/// The mouse module's notice `key`.
+pub fn told(key: &'static str) -> Heard {
+    Heard::Notice(Notice {
+        key,
+        module: Some(ID),
+        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
+    })
 }
 
 /// A left press outside our windows at `at`.
