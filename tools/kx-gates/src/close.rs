@@ -11,10 +11,38 @@ use crate::proc::Process;
 use crate::product::{self, NAME};
 use crate::{mouse, win, winfind};
 
+/// Why the running copy was not asked to quit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unasked {
+    /// Why, in words.
+    pub why: String,
+    /// Windows refused the Quit, as it does a plain kx-gates' Quit to a uiAccess copy.
+    pub refused: bool,
+}
+
+impl From<String> for Unasked {
+    fn from(why: String) -> Self {
+        Self {
+            why,
+            refused: false,
+        }
+    }
+}
+
+impl From<UiError> for Unasked {
+    fn from(e: UiError) -> Self {
+        let refused = matches!(e, UiError::Refused(_));
+        Self {
+            why: why_not(e),
+            refused,
+        }
+    }
+}
+
 /// Runs `close` on `name`: the product or the frozen face.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name == NAME {
-        let (exe, ended) = quit_running(ctx)?;
+        let (exe, ended) = quit_running(ctx).map_err(|e| e.why)?;
         Ok(result(&exe, ended))
     } else {
         close_face(ctx, name)
@@ -39,8 +67,8 @@ fn why_not(e: UiError) -> String {
 }
 
 /// Posts Quit to the copy that holds the session in `instance`.
-fn ask_quit(instance: &dyn Instance) -> Result<(), String> {
-    instance.send(Command::Quit).map_err(why_not)
+fn ask_quit(instance: &dyn Instance) -> Result<(), Unasked> {
+    instance.send(Command::Quit).map_err(Unasked::from)
 }
 
 /// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
@@ -71,7 +99,7 @@ pub fn ended_within(ctx: &Ctx, process: &Process) -> bool {
     win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(())).is_some()
 }
 
-/// Posts Quit to a copy G8 just started, trying `[g8] quit_tries` times as its command window may not exist yet;
+/// Posts Quit to a copy a gate just started, trying `[g8] quit_tries` times as its command window may not exist yet;
 /// whether `process` ended within `[timing] quit_wait_ms`.
 pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
     let g = &ctx.cfg.g8;
@@ -85,7 +113,7 @@ pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
 
 /// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
 /// `[timing] quit_wait_ms`.
-pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), String> {
+pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), Unasked> {
     let not_running = || format!("{NAME} is not running");
     let (pid, exe) = product::running().ok_or_else(not_running)?;
     // Opened before the quit, so the id cannot name another process by the time we look.
@@ -153,12 +181,14 @@ mod tests {
     #[test]
     fn a_copy_that_cannot_hear_quit_says_why() {
         let none = ask_quit(&FakeInstance::new()).expect_err("no copy listens");
-        assert!(none.contains("command window"), "{none}");
-        let refused = why_not(UiError::Refused(5));
         assert!(
-            refused.contains("code 5") && refused.contains("uiAccess"),
-            "{refused}"
+            none.why.contains("command window") && !none.refused,
+            "{none:?}"
         );
+        let refused = Unasked::from(UiError::Refused(5));
+        assert!(refused.refused, "{refused:?}");
+        let why = refused.why;
+        assert!(why.contains("code 5") && why.contains("uiAccess"), "{why}");
     }
 
     #[test]

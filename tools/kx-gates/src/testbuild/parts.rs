@@ -1,11 +1,12 @@
-//! The test build's pure parts: may it start, is a program a gate-input build, which copy to start again and what to
-//! say when none is, did it warn, how it ended.
+//! The test build's pure parts: may it start, is a program a gate-input build, which copy to start again, when and what
+//! to say when none is, did it warn, how it ended.
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
 use crate::budget::stamp_us;
+use crate::close::Unasked;
 use crate::hooklog::HookLine;
 use crate::product::NAME;
 
@@ -37,6 +38,26 @@ pub fn plain(ui_access: Result<bool, String>) -> Result<(), String> {
         Err(e) => Err(format!(
             "the test build starts only from a kx-gates known to lack uiAccess: {e}"
         )),
+    }
+}
+
+/// Whether the test build is gone, so the owner's copy may start again: its quit's answer, `asked`, when it was held;
+/// else no copy may still run, as a start that failed after its launch may have left it running.
+pub fn gone(asked: Option<bool>, running: impl FnOnce() -> bool) -> bool {
+    asked.unwrap_or_else(|| !running())
+}
+
+/// What to say when the running copy was not asked to quit; only a refusal adds to close it from the installed
+/// kx-gates, as a copy that is not listening yet only needs another try.
+pub fn not_asked(e: Unasked) -> String {
+    if e.refused {
+        format!(
+            "{}; close it with `kx-gates close {NAME}` from the installed kx-gates first, and start it again after \
+             this gate",
+            e.why
+        )
+    } else {
+        e.why
     }
 }
 
@@ -78,6 +99,12 @@ impl Closed {
         json!({
             "quit": self.quit, "owner_back": self.owner_back, "hook_lines": lines, "hook_error": error,
         })
+    }
+
+    /// A gate's verdict from its own checks, `ok`: it passes only when the test build also quit in time, as a quit that
+    /// hangs, such as on a stuck hook join, is a mouse-assist bug.
+    pub fn pass(&self, ok: bool) -> bool {
+        ok && self.quit
     }
 
     /// Error `e` of a run that broke off, with what it left open and how the test build ended.
@@ -179,6 +206,47 @@ mod tests {
         let v = broke.json();
         assert!(v["owner_back"].is_null() && v["hook_lines"].is_null());
         assert_eq!(v["hook_error"].as_str(), Some("no line"));
+    }
+
+    #[test]
+    fn the_owners_copy_comes_back_only_once_the_test_build_is_gone() {
+        assert!(gone(Some(true), || true), "it quit when asked");
+        assert!(!gone(Some(false), || false), "it did not quit in time");
+        assert!(gone(None, || false), "none was held and no copy runs");
+        assert!(
+            !gone(None, || true),
+            "a start that failed may have left it running"
+        );
+    }
+
+    #[test]
+    fn only_a_refused_quit_says_to_close_the_copy_from_the_installed_kx_gates() {
+        let refused = Unasked {
+            why: "refused".into(),
+            refused: true,
+        };
+        let e = not_asked(refused);
+        assert!(
+            e.starts_with("refused") && e.contains("installed kx-gates"),
+            "{e}"
+        );
+        let early = Unasked {
+            why: "try again once it shows".into(),
+            refused: false,
+        };
+        assert_eq!(not_asked(early), "try again once it shows");
+    }
+
+    #[test]
+    fn a_gate_passes_only_when_its_checks_held_and_the_test_build_quit() {
+        let ended = |quit| Closed {
+            quit,
+            owner_back: None,
+            lines: Ok(Vec::new()),
+        };
+        assert!(ended(true).pass(true));
+        assert!(!ended(false).pass(true), "a quit that hung");
+        assert!(!ended(true).pass(false));
     }
 
     #[test]

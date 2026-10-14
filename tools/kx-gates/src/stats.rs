@@ -19,6 +19,13 @@ pub fn ms(us: i64) -> f64 {
     us as f64 / US_PER_MS
 }
 
+/// `ms` milliseconds in microseconds, saturating.
+pub fn us_of(ms: u64) -> i64 {
+    i64::try_from(ms)
+        .unwrap_or(i64::MAX)
+        .saturating_mul(US_PER_MS_INT)
+}
+
 /// `part` over `whole`; the counts are far below 2^53.
 #[allow(clippy::cast_precision_loss, reason = "Counts are far below 2^53.")]
 pub fn ratio(part: usize, whole: usize) -> f64 {
@@ -114,6 +121,12 @@ mod tests {
             us,
             expect: expect.to_vec(),
         }
+    }
+
+    #[test]
+    fn milliseconds_turn_into_microseconds_and_saturate() {
+        assert_eq!(us_of(3), 3_000);
+        assert_eq!(us_of(u64::MAX), i64::MAX);
     }
 
     #[test]

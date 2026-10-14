@@ -16,12 +16,12 @@ use crate::g5::{self, RCLICK};
 use crate::g8frames::{self, Capture, Recorder};
 use crate::g12frames::{self, Ring, Span};
 use crate::g12pts::{Pace, free, grid, logged, overlay_at, pace};
-use crate::out::say;
+use crate::out::{say, shown};
 use crate::p4cfg::G12;
 use crate::presentmon::Frames;
 use crate::product::{self, Keyboard};
 use crate::simin::{self, Act};
-use crate::stats::US_PER_MS_INT;
+use crate::stats::us_of;
 use crate::testbuild::{Closed, TestBuild};
 use crate::win::{self, sleep_ms};
 use crate::{g8ui, launch, mouse, mouseguard, probe, tlog};
@@ -119,8 +119,7 @@ fn press(ctx: &Ctx, w: &Wins, p: POINT, pace: Pace) -> Result<Pressed, String> {
         );
     }
     simin::as_user(&[Act::Up(at)])?;
-    let ring_us = i64::try_from(pace.ring_after_ms).unwrap_or(i64::MAX);
-    let from_us = start_us.saturating_add(ring_us.saturating_mul(US_PER_MS_INT));
+    let from_us = start_us.saturating_add(us_of(pace.ring_after_ms));
     let span = Span {
         from_us,
         to_us: now_us(),
@@ -217,12 +216,6 @@ fn drive(
     (rec, counted)
 }
 
-/// `r` for the result line: its value, or its error.
-fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
-    r.as_ref()
-        .map_or_else(|e| json!({ "error": e }), |v| json!(v))
-}
-
 /// G12's result line. It passes when every click reached target-window under the overlay with nothing blocked or left
 /// out, the ring drew in every span at `min_fps` and `p99_ms` with no frame lost by G8's rule, over a capture that
 /// covered every span, and the test build quit.
@@ -236,7 +229,7 @@ fn result(g: &G12, d: &Driven, ring: &Result<Ring, String>, closed: &Closed) -> 
     json!({
         "gate": GATE, "keyboard": product::NAME, "clicks": n, "reached": d.reached, "covered": t.covered,
         "blocked": t.blocked, "left_out": d.left_out, "frames": shown(ring), "test_build": closed.json(),
-        "pass": n > 0 && all_hit && smooth && closed.quit,
+        "pass": closed.pass(n > 0 && all_hit && smooth),
     })
 }
 
@@ -270,7 +263,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let unread = frames.as_ref().ok().map(|f| f.unread);
     let end_us = g8frames::end_us(cap.secs, rec.as_ref(), origin_us);
     let (spans, hz) = (&d.tally.spans, g8ui::refresh_hz());
-    let judged = |f: Frames| g12frames::judge(&f.presents, spans, hz);
+    let judged = |f: Frames| g12frames::judge(&f.presents, spans, hz, ctx.cfg.g12.show_ms);
     let ring = g12frames::cut(spans, end_us).and_then(|()| judged(frames?));
     let mut v = result(&ctx.cfg.g12, &d, &ring, &closed);
     (v["press_ms"], v["unread_rows"], v["hz"]) = (json!(pace.press_ms), json!(unread), json!(hz));

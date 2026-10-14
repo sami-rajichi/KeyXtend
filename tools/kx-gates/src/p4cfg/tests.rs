@@ -133,13 +133,14 @@ fn the_shipped_g12_grid_holds_the_roadmaps_200_clicks_and_checks() {
 
 #[test]
 fn g12_refuses_an_empty_grid_bad_limits_no_ring_no_capture_and_a_csv_off_the_out_folder() {
-    let bad: [fn(&mut G12); 11] = [
+    let bad: [fn(&mut G12); 12] = [
         |g| g.grid[1] = 0,
         |g| g.inset_px = -1,
         |g| g.slack_px = -1,
         |g| g.min_fps = f64::NAN,
         |g| g.p99_ms = 0.0,
         |g| g.ring_ms = 0,
+        |g| g.show_ms = g.ring_ms,
         |g| g.presentmon_secs = 0,
         |g| g.presentmon.clear(),
         |g| g.presentmon = r"..\g12.csv".into(),

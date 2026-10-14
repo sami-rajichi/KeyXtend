@@ -2,12 +2,13 @@
 //! lets go, and the latch key reads off.
 #![cfg(windows)]
 
-use kx_mod_keyboard::{Assist, KeyboardSettings, Latch, Modifiers, Role};
+use kx_mod_keyboard::{KeyboardSettings, Latch, Modifiers, Role};
 use serde_json::{Value, json};
 use spike_core::uia::{self, Uia};
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_SHIFT};
 
 use crate::apps::{AppKind, Ctx};
+use crate::g5::RCLICK;
 use crate::out::say;
 use crate::probe::{self, Doc};
 use crate::simuser::{self, is_up};
@@ -17,8 +18,6 @@ use crate::{clipkeep, winclip};
 
 /// The apps G18 probes.
 pub const APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Chrome, AppKind::Explorer];
-/// The key that turns Right-click on, so each click takes the held-back path.
-const RCLICK: Role = Role::Assist(Assist::RClick);
 /// The Shift latch key.
 const SHIFT: Role = Role::Latch(Latch::Shift);
 /// The Ctrl latch key.
@@ -67,7 +66,7 @@ fn ctrl(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, Str
     Ok(line(("ctrl_click", VK_CONTROL.0), ok, latch_off, &note))
 }
 
-/// Runs the app's case with Right-click on.
+/// Runs the app's case with Right-click on, so each click takes the held-back path.
 fn drive(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, String> {
     probe::front(ctx, &doc.app)?;
     build.set(RCLICK, true)?;
@@ -77,7 +76,8 @@ fn drive(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, St
     }
 }
 
-/// Runs G18 on the app called `name`, under the test build, and turns Right-click off after it.
+/// Runs G18 on the app called `name`, under the test build, and turns Right-click off after it; it passes when its case
+/// did and the test build quit.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
     let uia = Uia::new()?;
@@ -105,7 +105,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         )
     })?;
     notes.extend(off);
-    let pass = case["ok"] == json!(true);
+    let pass = closed.pass(case["ok"] == json!(true));
     say!("G18 {name}: pass {pass}; {case}");
     Ok(json!({
         "gate": "G18", "app": name, "pass": pass, "case": case, "clean_up": notes, "history_removed": history,

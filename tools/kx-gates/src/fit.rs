@@ -258,8 +258,8 @@ mod tests {
         let (g, s) = (&c.g5, &c.sim);
         let short = 2 * s.step_ms + s.click_ms + g.settle_ms;
         let long = 2 * s.step_ms + hold_ms() + s.hold_margin_ms + g.settle_ms;
-        // Click, drag and the short move; the hold and the wiggle; the hung hold.
-        let round = 3 * short + 2 * long + (long + g.hang_ms);
+        // Click, drag and the short move; the hold, the wiggle and the held drag; the hung hold.
+        let round = 3 * short + 3 * long + (long + g.hang_ms);
         assert_eq!(rounds_ms(&c, 1, hold_ms()), round);
         assert_eq!(rounds_ms(&c, 4, hold_ms()), 4 * round);
     }

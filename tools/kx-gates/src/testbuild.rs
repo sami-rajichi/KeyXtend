@@ -15,7 +15,7 @@ use kx_settings::{peek, peek_section};
 use spike_core::weak::Job;
 
 pub use parts::{Closed, holds};
-use parts::{SLOW, START_MENU, not_back, plain, to_restore, warned};
+use parts::{SLOW, START_MENU, gone, not_asked, not_back, plain, to_restore, warned};
 
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
@@ -103,13 +103,14 @@ impl<'a> TestBuild<'a> {
     }
 
     /// Turns the key with `role` on or off with a `TAG` click, unless it already reads so, and waits up to `lit_ms` for
-    /// it to read so; a mode key lights only once the hook's engine applied the toggle.
+    /// it to read so; a mode key lights only once the hook's engine applied the toggle. Refused when another window
+    /// covers the key.
     pub fn set(&self, role: Role, on: bool) -> Result<(), String> {
         let key = Key::of(role)?;
         if key.on()? == on {
             return Ok(());
         }
-        mouse::click_at(key.keyboard.at(&key.id)?)?;
+        mouse::click_at(key.keyboard.top_at(&key.id)?)?;
         self.wait(&key, on)
     }
 
@@ -184,8 +185,10 @@ impl<'a> TestBuild<'a> {
 
 impl Drop for TestBuild<'_> {
     fn drop(&mut self) {
-        let quit = self.process.is_none() || self.quit().0;
-        let _ = self.restore(quit);
+        let asked = self.process.is_some().then(|| self.quit().0);
+        if self.owner.is_some() {
+            let _ = self.restore(gone(asked, || product::running().is_some()));
+        }
     }
 }
 
@@ -233,12 +236,7 @@ fn quit_running(ctx: &Ctx, program: &Path) -> Result<Option<PathBuf>, String> {
     if product::running().is_none() {
         return Ok(None);
     }
-    let (exe, ended) = close::quit_running(ctx).map_err(|e| {
-        format!(
-            "{e}: close it with `kx-gates close {NAME}` from the installed kx-gates first, and start it again after \
-             this gate"
-        )
-    })?;
+    let (exe, ended) = close::quit_running(ctx).map_err(not_asked)?;
     if !ended {
         return Err(format!(
             "the running {NAME} {SLOW} and is not started again; close it, try again, then {START_MENU}"

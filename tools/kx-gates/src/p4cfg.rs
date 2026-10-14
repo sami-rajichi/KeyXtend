@@ -103,6 +103,8 @@ pub struct G12 {
     pub inset_px: i32,
     /// Each press lasts the test build's `ring_after_ms` plus this, so its ring shows.
     pub ring_ms: u64,
+    /// The ring may take this long to draw its first frame; the quiet time past it counts against `min_fps`.
+    pub show_ms: u64,
     /// A press plus this must stay within the test build's `hold_ms`, so it stays a click.
     pub spare_ms: u64,
     /// Wait after each release.
@@ -120,8 +122,8 @@ pub struct G12 {
 }
 
 impl G12 {
-    /// Refuses an empty grid, a negative inset or slack, limits not above 0, no ring time, no capture time, and a CSV
-    /// that is not a plain file name, as it must stay in the out folder.
+    /// Refuses an empty grid, a negative inset or slack, limits not above 0, no ring time or one the show takes whole,
+    /// no capture time, and a CSV that is not a plain file name, as it must stay in the out folder.
     pub fn check(&self) -> Result<(), String> {
         let grid = self.grid.iter().all(|&n| n > 0);
         let limits = self.min_fps > 0.0 && self.p99_ms > 0.0;
@@ -134,6 +136,9 @@ impl G12 {
         }
         if self.ring_ms == 0 || self.presentmon_secs == 0 {
             return Err("g12.ring_ms and g12.presentmon_secs must be above 0".into());
+        }
+        if self.show_ms >= self.ring_ms {
+            return Err("g12.show_ms must stay below g12.ring_ms, or no frame is judged".into());
         }
         let plain = Path::new(&self.presentmon).file_name() == Some(OsStr::new(&self.presentmon));
         if !plain {

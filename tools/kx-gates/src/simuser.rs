@@ -1,5 +1,6 @@
-//! The probes' simulated user: moves, clicks and grabs, each only on our own window and tab, and clicks on the product's
-//! keys; all of it `SIM_TAG` input, which only the test build's engine hears.
+//! The probes' simulated user: moves, clicks and grabs, each only on our own window and tab, and clicks on the
+//! product's keys, all as `SIM_TAG` input, which only the test build's engine hears; the safety net's releases go out
+//! tagged `TAG`.
 #![cfg(windows)]
 
 use kx_platform_windows::keys::TAG;
@@ -104,11 +105,7 @@ pub fn grab(ctx: &Ctx, app: &Opened, from: Pt, to: Pt) -> Result<(), String> {
 /// A short click at the centre of the product's key `id`, once that point shows the keyboard window, then a pause to
 /// settle. In the test build a click on our window cancels a carry, and the engine sends Esc itself.
 pub fn click_key(ctx: &Ctx, kb: &Keyboard, id: &str) -> Result<(), String> {
-    let at = kb.at(id)?;
-    let top = win::root_at(at);
-    if top != kb.hwnd {
-        return Err(format!("{} covers the key to click", win::describe(top)));
-    }
+    let at = kb.top_at(id)?;
     let clicked = press(ctx, Pt { x: at.x, y: at.y });
     sleep_ms(ctx.cfg.probes.settle_ms);
     clicked

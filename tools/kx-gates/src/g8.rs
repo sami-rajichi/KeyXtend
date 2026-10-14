@@ -23,7 +23,7 @@ use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, log_span};
 use crate::g8type::Expect;
 use crate::g8ui::Spot;
-use crate::out::say;
+use crate::out::{say, shown};
 use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
@@ -129,12 +129,6 @@ fn bench(ctx: &Ctx, job: Option<Job>) -> Result<BusTimes, String> {
     busbench::time(ctx.cfg.g8.subscribers, ctx.cfg.g8.publishes)
 }
 
-/// `r` for the result line: its value, or its error.
-fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
-    r.as_ref()
-        .map_or_else(|e| json!({ "error": e }), |v| json!(v))
-}
-
 /// The losses in `PresentMon`'s `frames` against G8's `spans`, on a screen of `hz`, with times from `origin_us`; and
 /// how the capture ending at `end_us` met a run whose G2 ended at `ran_us`, as a cut press window fails the losses.
 fn judged(
@@ -227,7 +221,9 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         s.process.pid(),
     );
     let measured = measure(ctx, &s, &program, (since, rec.as_ref()));
-    let quit = close::quit_running(ctx).map(|(_, ended)| ended);
+    let quit = close::quit_running(ctx)
+        .map(|(_, ended)| ended)
+        .map_err(|e| e.why);
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;

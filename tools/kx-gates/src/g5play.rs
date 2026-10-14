@@ -65,8 +65,12 @@ pub struct Case {
     pub want: &'static [Press],
 }
 
-/// The six cases; the wiggle stays inside the still radius `radius_px` and the short move just leaves it.
-pub fn cases(g: &G5, radius_px: i32) -> [Case; 6] {
+/// How many cases a round plays.
+pub const CASES: usize = 7;
+
+/// The cases; the wiggle stays inside the still radius `radius_px`, the short move just leaves it, and the held drag
+/// leaves it, then holds past the hold time, as over a drop target.
+pub fn cases(g: &G5, radius_px: i32) -> [Case; CASES] {
     let case = |name, dx, long, hang, want| Case {
         name,
         dx,
@@ -92,12 +96,14 @@ pub fn cases(g: &G5, radius_px: i32) -> [Case; 6] {
             false,
             LEFT,
         ),
+        case("held_drag", g.drag_px, true, false, LEFT),
         case("hung_hold", 0, true, true, RIGHT),
     ]
 }
 
-/// True when the log shows exactly the wanted presses: a hold all at `p`, a click from `p` to `dx` px right.
-fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32) -> bool {
+/// True when the log shows exactly the wanted presses: a right-click all at `p`, a click or drag from `p` to `dx` px
+/// right.
+fn case_ok(want: &[Press], got: &[Mouse], p: Pt, dx: i32, slack: i32) -> bool {
     let near = |m: &Mouse, q: Pt| (m.x - q.x).abs() <= slack && (m.y - q.y).abs() <= slack;
     let end = Pt {
         x: p.x + dx,
@@ -105,7 +111,7 @@ fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32
     };
     let kinds_ok = got.iter().map(|m| m.press).eq(want.iter().copied());
     let start_ok = got.first().is_some_and(|m| near(m, p));
-    let end_ok = if long {
+    let end_ok = if want == RIGHT {
         got.iter().all(|m| near(m, p))
     } else {
         got.last().is_some_and(|m| near(m, end))
@@ -224,7 +230,7 @@ pub fn play_all(
             let since = now_us();
             play(ctx, target, &case, p, hold)?;
             let got = tlog::mouse_since(ctx, since)?;
-            let ok = case_ok(case.want, case.long, &got, p, case.dx, g.point_slack_px);
+            let ok = case_ok(case.want, &got, p, case.dx, g.point_slack_px);
             let seen = offsets(&got, p);
             say!(
                 "{round} {}: {} {}",

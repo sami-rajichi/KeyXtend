@@ -16,15 +16,15 @@ start_ms = 15000
 # Longest wait for a mode or latch key to read on or off after its click, in ms.
 lit_ms = 3000
 
-# G5 on the test build: target-window parked at its screen's top-left, Right-click on, six cases a round. The hold time
-# and still radius are the test build's [mouse] hold_ms and still_px, the radius scaled by the test point's DPI.
+# G5 on the test build: target-window parked at its screen's top-left, Right-click on, seven cases a round. The hold
+# time and still radius are the test build's [mouse] hold_ms and still_px, the radius scaled by the test point's DPI.
 [g5]
 # A drag while pressed, in px; G5 refuses one that does not pass the still radius plus still_margin_px at the test
 # point's DPI. A wiggle stays still_margin_px inside the still radius, another move that far past it, and
 # still_margin_px must be above point_slack_px.
 drag_px = 40
 still_margin_px = 2
-# How many times the six cases run.
+# How many times the seven cases run.
 rounds = 4
 # Wait for the target log after each case, in ms.
 settle_ms = 400
@@ -59,6 +59,9 @@ slack_px = 1
 # within p99_ms (two frames).
 min_fps = 57.0
 p99_ms = 34.0
+# The ring may take show_ms to draw its first frame (the wake to Qt and two refreshes at 60 Hz); the quiet time past it,
+# and after its last frame until the release, counts in its frame rate, so a ring that stalls fails.
+show_ms = 50
 # G12's PresentMon CSV in the out folder, a plain file name, and how long it records, in seconds: [fit] checks it covers
 # every press at its longest, hold_ms less spare_ms. PresentMon's program and waits are [g8]'s, one PresentMon per PC.
 presentmon = "g12-presentmon.csv"

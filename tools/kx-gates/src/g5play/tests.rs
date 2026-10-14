@@ -18,10 +18,10 @@ fn g5() -> G5 {
 #[test]
 fn a_drag_must_start_at_the_press_and_end_where_it_moved() {
     let got = [at(Press::LeftDown, 100, 50), at(Press::LeftUp, 130, 51)];
-    assert!(case_ok(LEFT, false, &got, P, 30, 1));
-    assert!(!case_ok(LEFT, false, &got, P, 0, 1));
+    assert!(case_ok(LEFT, &got, P, 30, 1));
+    assert!(!case_ok(LEFT, &got, P, 0, 1));
     let late = [at(Press::LeftDown, 103, 50), at(Press::LeftUp, 130, 50)];
-    assert!(!case_ok(LEFT, false, &late, P, 30, 1));
+    assert!(!case_ok(LEFT, &late, P, 30, 1));
 }
 
 #[test]
@@ -31,12 +31,12 @@ fn a_hold_must_log_a_right_click_all_at_the_press() {
         at(Press::RightUp, 100, 50),
         at(Press::Menu, 100, 50),
     ];
-    assert!(case_ok(RIGHT, true, &right, P, 6, 1));
+    assert!(case_ok(RIGHT, &right, P, 6, 1));
     let moved = [right[0], at(Press::RightUp, 106, 50), right[2]];
-    assert!(!case_ok(RIGHT, true, &moved, P, 6, 1));
+    assert!(!case_ok(RIGHT, &moved, P, 6, 1));
     let also_left = [at(Press::LeftDown, 100, 50), right[0], right[1], right[2]];
-    assert!(!case_ok(RIGHT, true, &also_left, P, 0, 1));
-    assert!(!case_ok(RIGHT, true, &[], P, 0, 1));
+    assert!(!case_ok(RIGHT, &also_left, P, 0, 1));
+    assert!(!case_ok(RIGHT, &[], P, 0, 1));
 }
 
 #[test]
@@ -55,7 +55,13 @@ fn at_each_dpi_the_cases_straddle_the_physical_still_radius_by_more_than_the_sla
     let still = MouseSettings::from_defaults().expect("defaults").still_px;
     for dpi in DPIS {
         let r = radius(still, dpi);
-        let [_, drag, _, wiggle, past, _] = cases(&g, r);
+        let all = cases(&g, r);
+        let named = |n: &str| {
+            all.iter()
+                .find(|c| c.name == n)
+                .expect("a case of that name")
+        };
+        let (drag, wiggle, past) = (named("drag"), named("wiggle_hold"), named("past_still"));
         assert!(
             r - wiggle.dx > g.point_slack_px,
             "{dpi}: the wiggle stays inside"
@@ -73,6 +79,31 @@ fn the_radius_scales_with_the_dpi_as_the_engine_measures_it() {
     assert_eq!(radius(7, BASE_DPI), 7);
     assert_eq!(radius(7, 144), 11, "10.5 rounds up");
     assert_eq!(radius(7, 0), radius(7, BASE_DPI), "no DPI reads as 100 %");
+}
+
+#[test]
+fn a_drag_held_past_the_hold_time_wants_a_plain_drag_to_where_it_moved() {
+    let g = g5();
+    let all = cases(&g, 9);
+    let held: Vec<&Case> = all.iter().filter(|c| c.long && c.want == LEFT).collect();
+    let [case] = held.as_slice() else {
+        panic!("one long drag")
+    };
+    assert!(
+        case.dx == g.drag_px && !case.hang,
+        "it moves past the radius"
+    );
+    let drag = [at(Press::LeftDown, 100, 50), at(Press::LeftUp, 140, 50)];
+    assert!(case_ok(case.want, &drag, P, 40, 1));
+    let fired = [
+        at(Press::RightDown, 100, 50),
+        at(Press::RightUp, 100, 50),
+        at(Press::Menu, 100, 50),
+    ];
+    assert!(
+        !case_ok(case.want, &fired, P, 40, 1),
+        "an engine that ignores the radius"
+    );
 }
 
 #[test]

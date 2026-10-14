@@ -55,6 +55,7 @@ fn smooth(g: &G12) -> Ring {
         gaps: N,
         drawn: N,
         fps: Some(g.min_fps),
+        quiet_ms: 0.0,
         p99_ms: Some(g.p99_ms),
         lost: 0,
     }

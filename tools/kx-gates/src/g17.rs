@@ -9,6 +9,7 @@ use spike_core::uia::Uia;
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_LBUTTON;
 
 use crate::apps::{AppKind, Ctx};
+use crate::g5::RCLICK;
 use crate::out::say;
 use crate::probe::{self, Doc};
 use crate::product::Keyboard;
@@ -26,8 +27,6 @@ pub const APPS: [AppKind; 4] = [
 ];
 /// The key that turns Grab on.
 const GRAB: Role = Role::Assist(Assist::Grab);
-/// The key that turns Right-click off, so each press picks up at once.
-const RCLICK: Role = Role::Assist(Assist::RClick);
 
 /// The id of the board's key that sends the engine's Esc.
 fn esc_id() -> Result<String, String> {
@@ -118,7 +117,8 @@ fn open(ctx: &Ctx, kind: AppKind) -> Result<Doc, String> {
     }
 }
 
-/// Runs G17 on the app called `name`, under the test build with Right-click off.
+/// Runs G17 on the app called `name`, under the test build with Right-click off, so each press picks up at once; it
+/// passes when every case did and the test build quit.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
     let uia = Uia::new()?;
@@ -138,7 +138,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
             closed.json()
         )
     })?;
-    let pass = cases.iter().all(|c| c["ok"] == json!(true));
+    let pass = closed.pass(cases.iter().all(|c| c["ok"] == json!(true)));
     say!("G17 {name}: pass {pass}; {}", json!(cases));
     Ok(json!({
         "gate": "G17", "app": name, "pass": pass, "cases": cases, "clean_up": notes, "history_removed": history,
