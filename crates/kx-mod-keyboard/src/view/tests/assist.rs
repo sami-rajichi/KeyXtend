@@ -36,6 +36,7 @@ fn until_the_mouse_module_runs_both_keys_are_dim_and_say_it_is_off() {
         for id in ["rclick", "grab"] {
             let k = &s.keys[id];
             assert_eq!((k.paint, k.tip, k.on), (DIM, Some(MOUSE_OFF_TIP), false));
+            assert!(k.dim, "{id} does nothing");
         }
     }
 }
@@ -48,6 +49,7 @@ fn a_running_mouse_module_lights_each_key_by_its_mode_with_its_own_tip() {
     assert_eq!(rclick.paint, paint(KeyKind::Act, true));
     assert_eq!((grab.on, grab.tip), (false, Some(GRAB_TIP)));
     assert_eq!(grab.paint, paint(KeyKind::Act, false));
+    assert!(!rclick.dim && !grab.dim, "both act");
     for g in [GrabState::Armed, GrabState::Carrying] {
         let s = with(live(false, g));
         assert!(s.keys["grab"].on && !s.keys["rclick"].on, "{g:?}");
@@ -57,5 +59,6 @@ fn a_running_mouse_module_lights_each_key_by_its_mode_with_its_own_tip() {
 #[test]
 fn the_other_side_keys_stay_dim_with_no_tip_whatever_the_mouse_module_says() {
     let s = with(live(true, GrabState::Armed));
-    assert_eq!((s.keys["mic"].paint, s.keys["mic"].tip), (DIM, None));
+    let mic = &s.keys["mic"];
+    assert_eq!((mic.paint, mic.tip, mic.dim), (DIM, None, true));
 }

@@ -108,9 +108,9 @@ pub fn scans(codes: &[u16]) -> Vec<Scan> {
     codes.iter().map(|&c| Scan::new(c)).collect()
 }
 
-/// True when key state `k` shows the dim paint with the mouse-off tip.
+/// True when key state `k` does nothing and shows the dim paint with the mouse-off tip.
 fn off(k: &Value) -> bool {
-    k["paint"]["fill"] == "dim" && k["tip"] == MOUSE_OFF_TIP && k["on"] == false
+    k["dim"] == true && k["paint"]["fill"] == "dim" && k["tip"] == MOUSE_OFF_TIP && k["on"] == false
 }
 
 #[test]

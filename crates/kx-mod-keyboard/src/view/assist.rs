@@ -1,5 +1,5 @@
-//! The mouse-assist side keys as the state draws them (spec §4.2): lit while their mode is on, and dimmed with a tip
-//! while the mouse module is not running, as the bus last told.
+//! The mouse-assist side keys as the state draws them (spec §4.2): lit while their mode is on, and dimmed with a tip,
+//! doing nothing, while the mouse module is not running, as the bus last told.
 
 use super::{DIM, KeyState, paint};
 use crate::spec::{Assist, KeyKind};
@@ -16,6 +16,7 @@ pub const GRAB_TIP: &str = "tip.grab";
 pub(super) fn assist_state(s: AssistChanged, a: Assist, kind: KeyKind) -> KeyState {
     if !s.live {
         return KeyState {
+            dim: true,
             paint: DIM,
             tip: Some(MOUSE_OFF_TIP),
             ..KeyState::default()

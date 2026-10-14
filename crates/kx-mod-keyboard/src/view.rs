@@ -131,6 +131,8 @@ pub struct KeyState {
     pub blank: Option<&'static str>,
     /// Latched, or Caps Lock while it is on.
     pub on: bool,
+    /// It does nothing now: a later key, or a mouse-assist key while the mouse module is not running.
+    pub dim: bool,
     /// Its colours now, by palette token.
     pub paint: Paint,
     /// What it says after its name now, by translation key, shown in its tip: the language key's `LONE_TIP`, or a
@@ -217,6 +219,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
     match k.role {
         Role::Later => {
             return KeyState {
+                dim: true,
                 paint: DIM,
                 ..KeyState::default()
             };
@@ -233,6 +236,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             marks: mark_names(text),
             blank: is_empty(c, mods).then_some(EMPTY_NAME),
             on: false,
+            dim: false,
             paint: paint(k.kind, false),
             tip: None,
         };
