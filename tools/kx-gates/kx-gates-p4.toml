@@ -36,6 +36,8 @@ min_events_per_case = 2
 # hangs; keep hang_ms within kx-target-window.toml's hang_max_ms, and hang_lead_ms below hang_ms.
 hang_ms = 1000
 hang_lead_ms = 300
+# Most lost echoes the hook's stats lines may count, also for g8 hook; a dropped act id would lose every echo.
+max_lost_echoes = 0
 
 # The owner's hand try (`kx-gates assist`) on the running keyboard: it reads the stats lines its hook logs meanwhile.
 [hand]
@@ -68,7 +70,7 @@ presentmon = "g12-presentmon.csv"
 presentmon_secs = 300
 
 # G8's hook part (`g8 hook`, `g8 hook-weak` in weak mode): G5's cases on the test build, rounds times, judged by the
-# p99 its hook logs when Right-click turns off.
+# p99 its hook logs when Right-click turns off and by [g5] max_lost_echoes.
 [g8_hook]
 # The hook callback's 99th percentile may take this long, in ms (spec §10, checked).
 p99_ms = 1.0

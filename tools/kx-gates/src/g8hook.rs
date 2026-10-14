@@ -1,5 +1,6 @@
 //! G8's hook part (spec §10, "Mouse hook callback"): `g8 hook` and `g8 hook-weak` drive the product's test build with
-//! G5's cases and judge the p99 its hook logs when it stops. Only the test build's engine hears automated input.
+//! G5's cases and judge the p99 and lost echoes its hook logs when it stops. Only the test build's engine hears
+//! automated input.
 #![cfg(windows)]
 
 use serde_json::{Value, json};
@@ -40,10 +41,21 @@ fn part(sum: &HookLine, g: &G8Hook) -> Part {
     Part::at_most(BUDGET, got, g.p99_ms)
 }
 
-/// The result line: the budget decides, once the test build quit in time; the cases' own results are reported only.
-fn result(weak: bool, played: &Played, closed: &Closed, g: &G8Hook, left_open: &[String]) -> Value {
+/// The result line: the p99 budget and at most `max_lost` lost echoes decide, once the test build quit in time; the
+/// cases' own results are reported only.
+fn result(
+    weak: bool,
+    played: &Played,
+    closed: &Closed,
+    g: &G8Hook,
+    max_lost: u32,
+    left_open: &[String],
+) -> Value {
     let lines = closed.lines.as_deref().unwrap_or_default();
-    let parts = [part(&hooklog::sum(lines), g)];
+    let parts = [
+        part(&hooklog::sum(lines), g),
+        hooklog::lost(lines, max_lost),
+    ];
     json!({
         "gate": GATE, "keyboard": product::NAME, "part": PART, "weak": weak, "hook": hooklog::summed(lines),
         "hook_lines": lines.len(), "cases": { "played": played.count, "matched": played.ok },
@@ -75,7 +87,14 @@ fn hook(ctx: &Ctx, weak: bool) -> Result<Value, String> {
     let (closed, released) = build.close_in(job);
     left_open.extend(released);
     let (_, played) = driven.map_err(|e| closed.failed(&e, &left_open))?;
-    let v = result(weak, &played, &closed, g, &left_open);
+    let v = result(
+        weak,
+        &played,
+        &closed,
+        g,
+        ctx.cfg.g5.max_lost_echoes,
+        &left_open,
+    );
     say!("G8 hook {}; pass {}", v["hook"], v["pass"]);
     Ok(v)
 }
@@ -86,6 +105,10 @@ mod tests {
 
     fn hook() -> G8Hook {
         crate::config::load().expect("kx-gates.toml loads").g8_hook
+    }
+
+    fn g5() -> crate::p4cfg::G5 {
+        crate::config::load().expect("kx-gates.toml loads").g5
     }
 
     fn line(events: u64, p99_us: u32) -> HookLine {
@@ -122,7 +145,7 @@ mod tests {
             owner_back: None,
             lines: Ok(vec![line(g.min_events, 10)]),
         };
-        let v = result(true, &played, &closed, &g, &[]);
+        let v = result(true, &played, &closed, &g, 0, &[]);
         assert_eq!(
             v["pass"],
             json!(true),
@@ -138,13 +161,39 @@ mod tests {
             quit: false,
             ..closed.clone()
         };
-        let v = result(true, &played, &hung, &g, &[]);
+        let v = result(true, &played, &hung, &g, 0, &[]);
         assert_eq!(v["pass"], json!(false), "the test build did not quit");
         let unread = Closed {
             lines: Err("no log".into()),
             ..closed
         };
-        let v = result(false, &played, &unread, &g, &[]);
+        let v = result(false, &played, &unread, &g, 0, &[]);
         assert_eq!(v["pass"], json!(false), "no line, not measured");
+    }
+
+    #[test]
+    fn lost_echoes_pass_at_g5s_limit_and_fail_over_it_naming_the_count() {
+        let (g, max) = (hook(), g5().max_lost_echoes);
+        let played = Played {
+            lines: Vec::new(),
+            ok: 1,
+            count: 1,
+        };
+        let lost = |lost_echoes| Closed {
+            quit: true,
+            owner_back: None,
+            lines: Ok(vec![HookLine {
+                lost_echoes,
+                ..line(g.min_events, 10)
+            }]),
+        };
+        let at = result(false, &played, &lost(max), &g, max, &[]);
+        assert_eq!(at["pass"], json!(true), "at the limit");
+        let over = result(false, &played, &lost(max + 1), &g, max, &[]);
+        assert_eq!(over["pass"], json!(false), "over it");
+        let parts = over["parts"].as_array().cloned().unwrap_or_default();
+        let named = parts.iter().find(|p| p["name"] == hooklog::LOST);
+        let count = f64::from(max + 1);
+        assert_eq!(named.and_then(|p| p["got"].as_f64()), Some(count));
     }
 }

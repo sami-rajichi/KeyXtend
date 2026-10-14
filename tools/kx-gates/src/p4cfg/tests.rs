@@ -115,6 +115,19 @@ fn g5_refuses_a_lead_past_the_hang_no_round_no_event_and_a_margin_within_the_sla
 }
 
 #[test]
+fn a_g5_table_without_max_lost_echoes_is_refused() {
+    let file: toml::Table = include_str!("../../kx-gates-p4.toml")
+        .parse()
+        .expect("is TOML");
+    let mut g5 = file["g5"].as_table().expect("a [g5] table").clone();
+    let read = |t: toml::Table| toml::Value::Table(t).try_into::<G5>();
+    assert!(read(g5.clone()).is_ok(), "the shipped table reads");
+    g5.remove("max_lost_echoes");
+    let e = read(g5).expect_err("max_lost_echoes is needed");
+    assert!(e.to_string().contains("max_lost_echoes"), "{e}");
+}
+
+#[test]
 fn the_hand_try_runs_a_while() {
     let hand = crate::config::load().expect("kx-gates.toml loads").hand;
     assert!(hand.try_secs > 0);

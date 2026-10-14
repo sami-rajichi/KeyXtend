@@ -1,5 +1,6 @@
 //! G5 hold engine on the product's test build: with Right-click on, short clicks and drags stay normal, a still hold
-//! right-clicks, even into a hung target, and the hook never times out. Plain targets only; admin windows are manual.
+//! right-clicks, even into a hung target, and the hook never times out or loses its echoes. Plain targets only; admin
+//! windows are manual.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{Assist, Role};
@@ -97,14 +98,17 @@ struct Run {
 }
 
 /// The result line: the verdict, which needs the test build to have quit, the cases, the summed stats line with its
-/// p99, and how the test build ended.
-fn result(run: &Run, closed: &Closed, per_case: u64) -> Value {
+/// p99, the lost-echo check with its count, and how the test build ended.
+fn result(run: &Run, closed: &Closed, g: &G5) -> Value {
     let lines = closed.lines.as_deref().unwrap_or_default();
-    let pass = closed.pass(run.played.matched() && hook_ok(lines, run.played.count, per_case));
+    let echoes = hooklog::lost(lines, g.max_lost_echoes);
+    let hook = hook_ok(lines, run.played.count, g.min_events_per_case) && echoes.pass;
+    let pass = closed.pass(run.played.matched() && hook);
     json!({
         "gate": "G5", "target": PLAIN, "hold_ms": run.hold.ms, "still_px": run.still_px,
         "radius_px": run.hold.radius_px, "pass": pass, "cases": run.played.lines, "hook": hooklog::summed(lines),
-        "hook_lines": lines.len(), "admin": ADMIN_NOTE, "test_build": closed.json(), "left_open": run.left_open,
+        "hook_lines": lines.len(), "echoes": echoes, "admin": ADMIN_NOTE, "test_build": closed.json(),
+        "left_open": run.left_open,
     })
 }
 
@@ -167,7 +171,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         played,
         left_open,
     };
-    let v = result(&run, &closed, ctx.cfg.g5.min_events_per_case);
+    let v = result(&run, &closed, &ctx.cfg.g5);
     say!("G5 hook {}; pass {}", v["hook"], v["pass"]);
     Ok(v)
 }

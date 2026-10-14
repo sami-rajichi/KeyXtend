@@ -62,6 +62,8 @@ pub struct G5 {
     pub hang_ms: u64,
     /// How long before the hold time the hung case asks target-window to sleep.
     pub hang_lead_ms: u64,
+    /// The most lost echoes the hook's stats lines may count, here and in G8's hook part.
+    pub max_lost_echoes: u32,
 }
 
 impl G5 {
@@ -148,7 +150,7 @@ impl G12 {
     }
 }
 
-/// `[g8_hook]`: G8's hook part, G5's cases on the test build judged by the hook's p99.
+/// `[g8_hook]`: G8's hook part, G5's cases on the test build judged by the hook's p99 and G5's lost-echo limit.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct G8Hook {

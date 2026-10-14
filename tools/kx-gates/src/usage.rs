@@ -69,7 +69,7 @@ pub fn usage() -> String {
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
 g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.
-g8 {} and {} judge the hook's p99 on the product's test build, driven with G5's cases; the second in weak mode.
+g8 {} and {} judge the hook's p99 and lost echoes on the product's test build, driven with G5's cases; the second in weak mode.
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
         product_lines(),

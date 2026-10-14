@@ -116,29 +116,53 @@ fn admin_is_the_owners_manual_check_and_every_plain_result_says_so() {
     assert_eq!(target_of(PLAIN), Ok(()));
     assert_eq!(target_of(ADMIN), Err(ADMIN_NOTE.to_string()));
     assert!(target_of("x").is_err());
-    let (per, run) = (g5().min_events_per_case, matched());
+    let (g, run) = (g5(), matched());
+    let per = g.min_events_per_case;
     let closed = |lines| ended(true, lines);
     let good = closed(Ok(vec![line(per * PLAYED as u64, 0, 0)]));
-    let v = result(&run, &good, per);
+    let v = result(&run, &good, &g);
     assert_eq!(v["admin"].as_str(), Some(ADMIN_NOTE));
     assert_eq!(
         (v["pass"].as_bool(), v["hook_lines"].as_u64()),
         (Some(true), Some(1))
     );
     assert_eq!(v["test_build"]["quit"].as_bool(), Some(true));
-    let unread = result(&run, &closed(Err("no log".into())), per);
+    let unread = result(&run, &closed(Err("no log".into())), &g);
     assert_eq!(unread["pass"].as_bool(), Some(false), "no line, no pass");
     assert_eq!(unread["admin"].as_str(), Some(ADMIN_NOTE));
 }
 
 #[test]
 fn a_test_build_that_did_not_quit_fails_g5() {
-    let per = g5().min_events_per_case;
-    let lines = || Ok(vec![line(per * PLAYED as u64, 0, 0)]);
+    let g = g5();
+    let lines = || Ok(vec![line(g.min_events_per_case * PLAYED as u64, 0, 0)]);
     assert_eq!(
-        result(&matched(), &ended(true, lines()), per)["pass"],
+        result(&matched(), &ended(true, lines()), &g)["pass"],
         json!(true)
     );
-    let hung = result(&matched(), &ended(false, lines()), per);
+    let hung = result(&matched(), &ended(false, lines()), &g);
     assert_eq!(hung["pass"], json!(false), "a quit that hung");
+}
+
+#[test]
+fn lost_echoes_pass_at_max_lost_echoes_and_fail_over_it_naming_the_count() {
+    let g = g5();
+    let lost = |lost_echoes| {
+        let enough = line(g.min_events_per_case * PLAYED as u64, 0, 0);
+        ended(
+            true,
+            Ok(vec![HookLine {
+                lost_echoes,
+                ..enough
+            }]),
+        )
+    };
+    let at = result(&matched(), &lost(g.max_lost_echoes), &g);
+    assert_eq!(at["pass"], json!(true), "at the limit");
+    let over = result(&matched(), &lost(g.max_lost_echoes + 1), &g);
+    assert_eq!(over["pass"], json!(false), "over it");
+    let echoes = &over["echoes"];
+    let count = f64::from(g.max_lost_echoes + 1);
+    let named = (echoes["name"].as_str(), echoes["got"].as_f64());
+    assert_eq!(named, (Some(hooklog::LOST), Some(count)));
 }

@@ -6,7 +6,10 @@ use kx_module_api::US_PER_MS;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::budget::stamp_us;
+use crate::budget::{Part, stamp_us};
+
+/// The lost-echo check's name in a result line: the field it reads.
+pub const LOST: &str = "lost_echoes";
 
 /// One stats line's numbers; each field has the name the product logs it under.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -88,6 +91,13 @@ pub fn sum(lines: &[HookLine]) -> HookLine {
         send_errors: a.send_errors.saturating_add(b.send_errors),
         lost_echoes: a.lost_echoes.saturating_add(b.lost_echoes),
     })
+}
+
+/// The lost-echo check: `lines` may count at most `max` lost echoes, as an act id Windows dropped would lose every echo.
+/// With no line, nothing is measured, so it fails.
+pub fn lost(lines: &[HookLine], max: u32) -> Part {
+    let got = (!lines.is_empty()).then(|| f64::from(sum(lines).lost_echoes));
+    Part::at_most(LOST, got, f64::from(max))
 }
 
 /// `lines` summed for a result line, with the p99 also in ms.
@@ -199,6 +209,23 @@ mod tests {
         let v = summed(&[sample(), sample()]);
         assert_eq!(v["events"].as_u64(), Some(24));
         assert_eq!(v["p99_ms"].as_f64(), Some(sample().p99_ms()));
+    }
+
+    #[test]
+    fn lost_echoes_pass_at_the_limit_and_fail_over_it_or_with_no_line() {
+        assert!(names().iter().any(|n| n == LOST), "the field it names");
+        let with = |lost_echoes| HookLine {
+            lost_echoes,
+            ..sample()
+        };
+        let at = lost(&[with(1), with(2)], 3);
+        assert_eq!(
+            (at.name, at.got, at.limit, at.pass),
+            (LOST, Some(3.0), 3.0, true)
+        );
+        let over = lost(&[with(4)], 3);
+        assert_eq!((over.got, over.pass), (Some(4.0), false), "names the count");
+        assert!(!lost(&[], 0).pass, "no line, not measured");
     }
 
     #[test]
