@@ -42,12 +42,14 @@ impl<O: Os> Host<O> {
         self.arm(due, now);
     }
 
-    /// Sets the deadline timer for `due`, or stops it, only when that changed; a refused timer is asked for again at
-    /// the next turn.
+    /// Sets the deadline timer for `due`, or stops it, only when that changed or the timer fired; a refused timer is
+    /// asked for again at the next turn.
     fn arm(&mut self, due: Option<Mono>, now: Mono) {
-        if due != self.armed && self.os.arm(due.map(|due| timer_ms(due, now))) {
-            self.armed = due;
+        if due == self.armed && !self.rearm {
+            return;
         }
+        let set = self.os.arm(due.map(|due| timer_ms(due, now)));
+        (self.armed, self.rearm) = (due, !set);
     }
 
     /// After `on`: asks for a turn when input waits, the deadline moved from `before` or the engine holds notes. The

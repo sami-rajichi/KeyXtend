@@ -85,6 +85,16 @@ fn a_fired_timer_is_set_again_for_a_deadline_still_to_come() {
 }
 
 #[test]
+fn a_fire_that_used_up_the_deadline_stops_the_timer() {
+    let mut rig = pending();
+    rig.host.turn();
+    rig.world.take();
+    rig.plan().deadline = None;
+    rig.host.fired();
+    assert_eq!(rig.world.take(), [Call::Arm(None)], "it would fire again");
+}
+
+#[test]
 fn a_refused_timer_is_asked_for_again_at_the_next_turn() {
     let mut rig = pending();
     rig.world.refuse_timer.set(true);

@@ -52,6 +52,8 @@ pub(crate) struct Host<O: Os> {
     trust: Trust,
     /// The deadline the timer is set for.
     armed: Option<Mono>,
+    /// The timer fired or Windows refused it, so the next turn sets or stops it whatever the deadline.
+    rearm: bool,
     /// A wake is posted and its turn has not run yet.
     woken: bool,
     /// A refused reinstall was logged.
@@ -115,6 +117,7 @@ impl<O: Os> Host<O> {
             at: None,
             trust: Trust::Whole,
             armed: None,
+            rearm: false,
             woken: false,
             warned: false,
         }
@@ -155,9 +158,9 @@ impl<O: Os> Host<O> {
         let _ = self.guard(Self::run_turn);
     }
 
-    /// The deadline timer fired, so a turn sets it again for a deadline still to come.
+    /// The deadline timer fired and repeats, so a turn sets it again for a deadline still to come, or stops it.
     pub(crate) fn fired(&mut self) {
-        self.armed = None;
+        self.rearm = true;
         self.turn();
     }
 
