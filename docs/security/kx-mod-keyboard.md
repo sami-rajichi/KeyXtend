@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-11 (key repeat)
+- **Last review:** 2026-10-14 (mouse-assist keys)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -34,7 +34,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
 | Held-key actions from the UI: `press`, `tick`, `let_go`, `leave` (spec §4.6) | A pressed or let-go key must be on the board (`UnknownKey`, which changes nothing); a press types once, a tick types only while a key is held and a repeat is due, and a late tick types once; a let-go types nothing | One repeat per `repeat_every_ms` (33 ms or more) | Property tests (`Repeat` runs; face runs of presses, ticks, let-gos and leaves) |
-| Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go, and `AssistChanged` only lights or dims two keys | — | Thread runs (latches told newest last) |
+| Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go, and `AssistChanged` only lights or dims (`dim`) two keys | — | Thread runs (latches told newest last); both start orders, one with the mouse module already running (`a_mouse_module_already_running_lights_the_keys_at_start`) |
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)

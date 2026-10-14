@@ -1,7 +1,7 @@
 # Security note: kx-theme
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-14
 - **Status:** Reviewed
 - **Scope:** `crates/kx-theme`, a library with no Qt and no module of its own; the `ui` module in the uiAccess `keyxtend` process calls it from P3 on.
 
@@ -21,7 +21,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Token files | Compiled in with `include_str!`, never read from disk (ADR-0016); parsed with `deny_unknown_fields` and range checks, and a broken file fails `Themes::shipped` with the file and token named | Fixed at build time | No; tests cover each rule |
+| Token files | Compiled in with `include_str!`, never read from disk (ADR-0016); parsed with `deny_unknown_fields` and range checks, and a broken file fails `Themes::shipped` or `Sounds::shipped` with the file and token named. The sound format must be one every speaker plays (`Clip::RATES`, `Clip::CHANNELS`, `Clip::SAMPLE_BYTES`) | Fixed at build time | No; tests cover each rule |
 | `SysLook` from the `SystemLook` port | Every value is a valid colour (four bytes) or flag, so nothing can fail; an unknown theme id gives no look, never a panic | Fixed size | No |
 | `LookChoice.min_contrast` and the system accent | A legend on the accent reaches at least `WCAG_AA` whatever the value, NaN included; a higher value is best effort, and the `[ui]` check refuses values outside `MIN_CONTRAST`. The accent is kept only when every pair the keyboard draws still passes; otherwise the theme keeps its own colours | N/A | No; a sweep of accents |
 | The board's row height (`row_px`, from the keyboard's face) | The drawn check measures each legend on it; a row that is not a finite number above 0 tries no accent | N/A | No |

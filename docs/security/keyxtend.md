@@ -1,7 +1,7 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-14
 - **Status:** Reviewed
 - **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
@@ -37,8 +37,9 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 - **Logging / repudiation:**
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
-  - The panic hook replaces Rust's default one and logs only the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
-  - Then it calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down. The hook lets go and keeps running, so a panic the kernel catches never ends mouse assist; it waits at most the adapter's `RELEASE_WAIT`, and returns at once on the hook's own thread, where the callback's own recovery lets go.
+  - The panic hook replaces Rust's default one. It first calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down (`tests/quiet.rs` checks it lets go before it logs).
+  - Only then does it log the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
+  - The hook lets go and keeps running, so a panic the kernel catches never ends mouse assist. `release_now` waits at most the adapter's `RELEASE_WAIT`, and returns at once on the hook's own thread, where the callback's own recovery lets go.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004). Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
