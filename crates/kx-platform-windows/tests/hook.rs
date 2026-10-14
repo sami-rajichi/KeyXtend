@@ -11,7 +11,7 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, HookError, PointerAct, PointerEngine, PointerEvent};
 use kx_platform_windows::{WindowsPlatform, release_now};
 
-/// A check every second with half a second of slack, and a quarter second for an echo: the module's defaults.
+/// A check every second with half a second of slack, and a quarter second for an echo: sample values.
 const CFG: HookConfig = HookConfig {
     health_ms: 1_000,
     health_slack_ms: 500,

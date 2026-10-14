@@ -73,7 +73,7 @@ mod tests {
     use crate::hook::Source;
     use crate::hook::stats::Stats;
 
-    /// The module's default checks; this host never installs its hooks.
+    /// Sample checks; this host never installs its hooks.
     const CFG: HookConfig = HookConfig {
         health_ms: 1_000,
         health_slack_ms: 500,
