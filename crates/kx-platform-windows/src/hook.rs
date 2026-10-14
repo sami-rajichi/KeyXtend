@@ -62,6 +62,10 @@ pub(crate) trait Os {
     /// The tick of the last input Windows saw; `None` when it will not say.
     fn last_input(&self) -> Option<u32>;
 
+    /// True while the input desktop is not ours, as on the secure desktop or the lock screen; the hooks see no input
+    /// there.
+    fn away(&self) -> bool;
+
     /// True when the window at `at` belongs to this process.
     fn ours(&self, at: Point) -> bool;
 

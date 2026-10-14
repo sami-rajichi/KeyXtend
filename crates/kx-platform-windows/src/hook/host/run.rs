@@ -53,7 +53,8 @@ impl<O: Os> Host<O> {
     pub(super) fn run_check(&mut self) {
         self.run_turn();
         let now = self.os.now();
-        if self.health.due(now, self.os.last_input()) {
+        let away = self.os.away();
+        if self.health.due(now, self.os.last_input(), away) {
             self.reinstall(now);
         }
     }
@@ -146,7 +147,8 @@ impl<O: Os> Host<O> {
         self.out.extend(after.release(self.at));
     }
 
-    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo; a cut batch counts.
+    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo; a cut batch counts. Input
+    /// the OS took moves Windows' last input time before the hooks see it, so it counts as seen.
     fn ship(&mut self, now: Mono) -> Sent {
         let total = self.out.len();
         if total == 0 {
@@ -156,6 +158,9 @@ impl<O: Os> Host<O> {
         let taken = self.out.get(..took).unwrap_or_default();
         self.held.sent(taken);
         self.echo.sent(taken, now);
+        if took > 0 {
+            self.health.saw(self.os.tick());
+        }
         if took < total {
             self.stats.send_failed();
         }

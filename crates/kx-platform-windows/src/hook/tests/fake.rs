@@ -42,6 +42,8 @@ pub(super) struct World {
     pub ours: Cell<bool>,
     /// How many acts each send takes; `None` takes them all.
     pub takes: Cell<Option<usize>>,
+    /// The input desktop is not ours.
+    pub away: Cell<bool>,
     /// The next hook install is refused with this code.
     pub refuse: Cell<Option<i32>>,
     /// Setting the deadline timer panics, as a fault outside the engine would.
@@ -57,6 +59,7 @@ impl Default for World {
             last_input: Cell::new(Some(1_000)),
             ours: Cell::new(false),
             takes: Cell::new(None),
+            away: Cell::new(false),
             refuse: Cell::new(None),
             panic_arm: Cell::new(false),
         }
@@ -104,14 +107,23 @@ impl Os for Fake {
         DPI
     }
 
+    fn away(&self) -> bool {
+        self.0.away.get()
+    }
+
     fn wake(&self) -> bool {
         self.0.note(Call::Wake);
         true
     }
 
+    /// Like Windows, input the OS took moves the last input time.
     fn send(&self, acts: &[PointerAct]) -> usize {
         self.0.note(Call::Send(acts.to_vec()));
-        self.0.takes.get().map_or(acts.len(), |n| n.min(acts.len()))
+        let took = self.0.takes.get().map_or(acts.len(), |n| n.min(acts.len()));
+        if took > 0 {
+            self.0.last_input.set(Some(self.0.tick.get()));
+        }
+        took
     }
 
     fn arm(&self, ms: Option<u32>) {

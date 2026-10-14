@@ -155,6 +155,10 @@ fn a_p99_past_the_last_bucket_reads_the_longest_callback() {
     assert_eq!((h.p99(), h.max_us()), (50_000, 50_000));
 }
 
+/// Whether the input desktop is another one, which the hooks cannot see.
+const AWAY: bool = true;
+const HOME: bool = false;
+
 /// A check every second that allows the hooks half a second behind.
 fn health(last_input: u32) -> Health {
     let cfg = HookConfig {
@@ -169,27 +173,49 @@ fn health(last_input: u32) -> Health {
 fn hooks_that_see_the_input_stay() {
     let mut h = health(100);
     h.saw(2_000);
-    assert!(!h.due(ms(3_000), Some(2_400)), "inside the slack");
-    assert!(!h.due(ms(4_000), Some(2_000)));
-    assert!(!h.due(ms(5_000), None), "Windows would not say");
+    assert!(!h.due(ms(3_000), Some(2_400), HOME), "inside the slack");
+    assert!(!h.due(ms(4_000), Some(2_000), HOME));
+    assert!(!h.due(ms(5_000), None, HOME), "Windows would not say");
 }
 
 #[test]
 fn hooks_that_miss_input_go_back_once_per_period() {
     let mut h = health(100);
     h.saw(1_000);
-    assert!(h.due(ms(2_000), Some(1_600)), "past the slack");
-    assert!(!h.due(ms(2_000), Some(1_600)), "that input is handled");
-    assert!(!h.due(ms(2_500), Some(9_000)), "not twice in a period");
-    assert!(h.due(ms(3_000), Some(9_000)), "the next period");
+    assert!(h.due(ms(2_000), Some(1_600), HOME), "past the slack");
+    assert!(
+        !h.due(ms(2_000), Some(1_600), HOME),
+        "that input is handled"
+    );
+    assert!(
+        !h.due(ms(2_500), Some(9_000), HOME),
+        "not twice in a period"
+    );
+    assert!(h.due(ms(3_000), Some(9_000), HOME), "the next period");
+}
+
+#[test]
+fn input_on_another_desktop_is_not_lag_there_nor_at_the_first_check_back() {
+    let mut h = health(100);
+    h.saw(1_000);
+    assert!(!h.due(ms(2_000), Some(1_600), AWAY), "the secure desktop");
+    assert!(!h.due(ms(3_000), Some(2_600), AWAY));
+    assert!(
+        !h.due(ms(4_000), Some(3_600), HOME),
+        "input there just before the switch"
+    );
+    assert!(
+        h.due(ms(5_000), Some(4_600), HOME),
+        "home again, lag counts"
+    );
 }
 
 #[test]
 fn a_hook_stamp_across_the_ticks_wrap_is_current() {
     let mut h = health(u32::MAX - 10);
     h.saw(5);
-    assert!(!h.due(ms(2_000), Some(u32::MAX - 10)), "older input");
-    assert!(!h.due(ms(3_000), Some(300)));
+    assert!(!h.due(ms(2_000), Some(u32::MAX - 10), HOME), "older input");
+    assert!(!h.due(ms(3_000), Some(300), HOME));
 }
 
 #[test]

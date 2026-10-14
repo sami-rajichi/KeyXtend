@@ -9,6 +9,9 @@ use kx_module_api::ports::{Button, InjectError, Point, PointerAct};
 use kx_module_api::{Clock, Mono};
 use windows::Win32::Foundation::{LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::System::StationsAndDesktops::{
+    CloseDesktop, DESKTOP_CONTROL_FLAGS, DESKTOP_READOBJECTS, OpenInputDesktop,
+};
 use windows::Win32::System::SystemInformation::GetTickCount;
 use windows::Win32::System::Threading::{
     GetCurrentThread, GetCurrentThreadId, SetThreadPriority, THREAD_PRIORITY,
@@ -99,6 +102,24 @@ impl Os for WinOs {
         // SAFETY: `info` is a local sized for the call, which fills it.
         let ok = unsafe { GetLastInputInfo(&raw mut info) }.as_bool();
         ok.then_some(info.dwTime)
+    }
+
+    /// Windows refuses to open the secure desktop and the lock screen to a user's program.
+    #[allow(
+        unsafe_code,
+        reason = "Opens the input desktop to test it, then closes it."
+    )]
+    fn away(&self) -> bool {
+        // SAFETY: a plain query that returns a handle we own, or nothing.
+        let desk = unsafe {
+            OpenInputDesktop(DESKTOP_CONTROL_FLAGS::default(), false, DESKTOP_READOBJECTS)
+        };
+        let Ok(desk) = desk else {
+            return true;
+        };
+        // SAFETY: the handle opened above, closed once.
+        let _ = unsafe { CloseDesktop(desk) };
+        false
     }
 
     #[allow(unsafe_code, reason = "A plain window query.")]

@@ -23,6 +23,39 @@ fn current_hooks_stay() {
 }
 
 #[test]
+fn our_own_input_counts_as_seen_but_later_input_the_hooks_miss_does_not() {
+    let mut rig = rig(Source::Physical);
+    rig.world.pass(2_000);
+    rig.plan().settle_acts = vec![PointerAct::Down(Button::Left, A)];
+    rig.host.check();
+    assert_eq!(rig.world.last_input.get(), Some(rig.world.tick.get()));
+    assert_eq!(rig.stats().reinstalls, 0, "a hold that came due is not lag");
+    rig.plan().settle_acts.clear();
+    rig.world.pass(2_000);
+    rig.world.last_input.set(Some(rig.world.tick.get()));
+    rig.host.check();
+    assert_eq!(rig.stats().reinstalls, 1);
+}
+
+#[test]
+fn input_on_another_desktop_which_the_hooks_cannot_see_is_not_lag() {
+    let mut rig = rig(Source::Physical);
+    rig.world.away.set(true);
+    rig.world.pass(2_000);
+    rig.world.last_input.set(Some(rig.world.tick.get()));
+    rig.host.check();
+    rig.world.pass(1_000);
+    rig.world.last_input.set(Some(rig.world.tick.get()));
+    rig.world.away.set(false);
+    rig.host.check();
+    assert_eq!(rig.stats().reinstalls, 0, "away, then the first check back");
+    rig.world.pass(2_000);
+    rig.world.last_input.set(Some(rig.world.tick.get()));
+    rig.host.check();
+    assert_eq!(rig.stats().reinstalls, 1, "home again");
+}
+
+#[test]
 fn lagging_hooks_go_back_once_after_letting_go() {
     let mut rig = holding();
     rig.world.pass(2_000);

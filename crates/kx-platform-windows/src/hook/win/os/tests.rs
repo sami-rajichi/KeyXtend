@@ -8,6 +8,9 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use super::*;
 use crate::keys::REPLAY;
 
+/// How many desktop queries show that none leaks a handle; tests running beside it open far fewer.
+const QUERIES: u32 = 1_000;
+
 /// The mouse fields of `one`, which must be a mouse input.
 #[allow(unsafe_code, reason = "Reads the member the type field names.")]
 fn mouse_of(one: &INPUT) -> MOUSEINPUT {
@@ -106,4 +109,22 @@ fn the_deadline_timer_is_set_and_stopped_on_this_thread() {
     assert_ne!(os.timer.get(), 0);
     os.arm(None);
     assert_eq!(os.timer.get(), 0);
+}
+
+#[test]
+#[allow(unsafe_code, reason = "Reads this process's handle count.")]
+fn the_desktop_query_closes_the_handle_it_opens() {
+    use windows::Win32::System::Threading::{GetCurrentProcess, GetProcessHandleCount};
+    let count = || {
+        let mut n = 0;
+        // SAFETY: the pseudo handle of this process, which needs no closing, and a local the call fills.
+        unsafe { GetProcessHandleCount(GetCurrentProcess(), &raw mut n) }.unwrap();
+        n
+    };
+    let os = WinOs::new(0, QpcClock::new().unwrap(), Arc::default());
+    let before = count();
+    for _ in 0..QUERIES {
+        let _ = os.away();
+    }
+    assert!(count() < before.saturating_add(QUERIES / 2));
 }

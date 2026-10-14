@@ -1,5 +1,6 @@
 //! The health check (ADR-0027 decision 6): Windows silently removes a low-level hook that runs too long, so the host
 //! compares Windows' last input with the tick when its hooks last ran a callback, and puts them back when they lag.
+//! Input on another desktop, such as the secure desktop or the lock screen, never reaches the hooks, so it is not lag.
 
 use std::time::Duration;
 
@@ -9,8 +10,10 @@ use kx_module_api::ports::HookConfig;
 /// When the hooks last ran a callback, and when they last went back.
 #[derive(Debug)]
 pub(crate) struct Health {
-    /// The tick count when one of our hooks last ran a callback; never an event's own stamp.
+    /// The tick count when one of our hooks last ran a callback or our input went out; never an event's own stamp.
     seen: u32,
+    /// The input desktop was another one at the last check.
+    away: bool,
     /// When the hooks last went back.
     fixed: Option<Mono>,
     /// The check's period.
@@ -24,13 +27,14 @@ impl Health {
     pub(crate) fn new(cfg: &HookConfig, seen: u32) -> Self {
         Self {
             seen,
+            away: false,
             fixed: None,
             period: Duration::from_millis(u64::from(cfg.health_ms)),
             slack_ms: cfg.health_slack_ms,
         }
     }
 
-    /// One of our hooks ran a callback at tick `tick`; an older tick leaves the newest.
+    /// One of our hooks ran a callback, or our input went out, at tick `tick`; an older tick leaves the newest.
     pub(crate) fn saw(&mut self, tick: u32) {
         if newer(tick, self.seen) > 0 {
             self.seen = tick;
@@ -38,11 +42,17 @@ impl Health {
     }
 
     /// True when the hooks must go back at `now`: Windows' last input is newer than theirs by more than the slack,
-    /// and none went back within the period. That input then counts as handled.
-    pub(crate) fn due(&mut self, now: Mono, last_input: Option<u32>) -> bool {
+    /// and none went back within the period. That input then counts as handled, as it does while the input desktop is
+    /// another one (`away`) and at the first check back.
+    pub(crate) fn due(&mut self, now: Mono, last_input: Option<u32>, away: bool) -> bool {
+        let was = std::mem::replace(&mut self.away, away);
         let Some(last) = last_input else {
             return false;
         };
+        if away || was {
+            self.saw(last);
+            return false;
+        }
         let lag = newer(last, self.seen);
         let late = lag > 0 && lag.unsigned_abs() > self.slack_ms;
         let rested = self
