@@ -23,6 +23,6 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 - `sounds/cherry-key-1.wav` … `-6.wav`: the key sound, a Cherry KC 1000 key in six takes, from "Keyboard Soundpack #1" by unicaegames (https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes).
 - `sounds/mouse-click.wav`, `sounds/mouse-press.wav`: the right-click and pick-up sounds, from "Middle Mouse Click" by 1j01 (https://opengameart.org/node/186493).
 - `sounds/card-down.wav`: the drop sound, from "Playing Card Sounds" by BMacZero (https://opengameart.org/node/118338).
-- `sounds/recipes.toml`: KeyXtend's own candidate recipes; the shipping format is in kx-theme's `tokens/sounds.toml`.
+- `sounds/recipes.toml`: KeyXtend's own candidate recipes, GPL-3.0-or-later like the code; the shipping format is in kx-theme's `tokens/sounds.toml`.
 
 Add a font, icon or sound only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

@@ -12,7 +12,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-# The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations.
+# The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations; and the speaker's clip
+# layout and rates (`Clip`, `Clip::RATES`).
 kx-platform = { path = "../kx-platform" }
 serde.workspace = true
 thiserror.workspace = true
