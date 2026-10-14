@@ -20,7 +20,7 @@ sim-input = []
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
 thiserror.workspace = true
-# The pointer hook logs a refused reinstall and a cut release at the stop, counts only.
+# The pointer hook and the speaker log counts, error codes and waits only.
 tracing.workspace = true
 
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
