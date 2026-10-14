@@ -553,6 +553,7 @@ dependencies = [
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
+ "kx-platform-fake",
  "kx-test-support",
  "proptest",
  "serde",

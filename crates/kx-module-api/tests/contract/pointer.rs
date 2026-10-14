@@ -1,17 +1,18 @@
-//! The pointer hook port and the mouse-assist events: their gates, and a run that stops only when dropped.
+//! The pointer hook port and the mouse-assist events: their gates, and a run reached through the gate, on the shared
+//! fake hook, that stops only when dropped.
 
 use kx_module_api::Capability::{InjectInput, PointerHook as Hook};
 use kx_module_api::ports::{
-    AssistChanged, AssistToggle, Button, GrabState, HookConfig, HookError, HookRun, HookStats,
-    Point, PointerAct, PointerEngine, PointerEvent, PointerHook, PointerHookKey, Toggle,
+    AssistChanged, AssistToggle, Button, GrabState, HookConfig, HookStats, Point, PointerAct,
+    PointerEngine, PointerEvent, PointerHook, PointerHookKey, Toggle,
 };
 use kx_module_api::{
     Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Mono, ServiceError,
     ServiceKey,
 };
+use kx_platform_fake::FakePointerHook;
 use kx_test_support::host::FakeHost;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 
 /// A mouse module declaring both capabilities it needs; each test grants it some, as the kernel's policy would.
 static MOUSE: Manifest = Manifest {
@@ -60,70 +61,15 @@ impl PointerEngine for Holder {
     }
 }
 
-/// What the fake runs did: wakes, drops and the input their drops let go.
-#[derive(Default)]
-struct Log {
-    wakes: AtomicUsize,
-    drops: AtomicUsize,
-    sent: Mutex<Vec<PointerAct>>,
-}
-
-/// A run that keeps its engine and lets go only when dropped, as a real host does.
-struct FakeRun {
-    engine: Mutex<Box<dyn PointerEngine>>,
-    log: Arc<Log>,
-}
-
-impl HookRun for FakeRun {
-    fn wake(&self) {
-        self.log.wakes.fetch_add(1, Ordering::SeqCst);
-    }
-
-    fn stats(&self) -> HookStats {
-        HookStats::default()
-    }
-}
-
-impl Drop for FakeRun {
-    fn drop(&mut self) {
-        let engine = self
-            .engine
-            .get_mut()
-            .unwrap_or_else(PoisonError::into_inner);
-        let mut sent = self.log.sent.lock().unwrap_or_else(PoisonError::into_inner);
-        engine.release(&mut sent);
-        self.log.drops.fetch_add(1, Ordering::SeqCst);
-    }
-}
-
-/// A hook whose runs all write to one log.
-#[derive(Default)]
-struct FakeHook {
-    log: Arc<Log>,
-}
-
-impl PointerHook for FakeHook {
-    fn start(
-        &self,
-        engine: Box<dyn PointerEngine>,
-        _: HookConfig,
-    ) -> Result<Box<dyn HookRun>, HookError> {
-        let engine = Mutex::new(engine);
-        let log = Arc::clone(&self.log);
-        Ok(Box::new(FakeRun { engine, log }))
-    }
-}
-
-/// A mouse host granted `granted`, holding the fake hook as the platform would provide it.
-fn host(granted: &[Capability]) -> (FakeHost, Arc<Log>) {
-    let hook = FakeHook::default();
-    let log = Arc::clone(&hook.log);
-    let api: Arc<dyn PointerHook> = Arc::new(hook);
+/// A mouse host granted `granted`, holding the shared fake hook as the platform would provide it.
+fn host(granted: &[Capability]) -> (FakeHost, Arc<FakePointerHook>) {
+    let hook = Arc::new(FakePointerHook::new());
+    let api: Arc<dyn PointerHook> = hook.clone();
     let mut host = FakeHost::new(&MOUSE);
     host.granted.extend(granted);
     let stored = (PointerHookKey::CAPABILITY, Box::new(api) as _);
     host.services.insert(PointerHookKey::ID, stored);
-    (host, log)
+    (host, hook)
 }
 
 #[test]
@@ -134,15 +80,15 @@ fn the_hook_is_named_and_gated_by_pointer_hook() {
 
 #[test]
 fn a_module_without_pointer_hook_cannot_get_the_hook() {
-    let (mut host, _log) = host(&[InjectInput]);
+    let (mut host, _fake) = host(&[InjectInput]);
     let cx = ModuleCx::new(&mut host);
     let refused = ServiceError::NotGranted(PointerHookKey::ID, Hook);
     assert_eq!(cx.service::<PointerHookKey>().err(), Some(refused));
 }
 
 #[test]
-fn a_run_stops_only_when_dropped() {
-    let (mut host, log) = host(&[Hook]);
+fn a_run_reached_through_the_gate_stops_only_when_dropped() {
+    let (mut host, fake) = host(&[Hook]);
     let hook = ModuleCx::new(&mut host)
         .service::<PointerHookKey>()
         .unwrap();
@@ -150,16 +96,16 @@ fn a_run_stops_only_when_dropped() {
     run.wake();
     run.wake();
     assert_eq!(run.stats(), HookStats::default());
-    assert_eq!(log.drops.load(Ordering::SeqCst), 0, "a wake never stops it");
+    assert!(fake.running(), "a wake never stops it");
     drop(run);
-    let counts = [&log.wakes, &log.drops].map(|n| n.load(Ordering::SeqCst));
-    assert_eq!(counts, [2, 1], "two wakes, one drop");
-    assert_eq!(*log.sent.lock().unwrap(), [LET_GO], "the drop let go");
+    let counts = (fake.wakes(), fake.stops(), fake.running());
+    assert_eq!(counts, (2, 1, false), "two wakes, one drop");
+    assert_eq!(fake.sent(), [LET_GO], "the drop let go");
 }
 
 #[test]
 fn a_module_without_inject_input_cannot_publish_a_toggle() {
-    let (host, _log) = host(&[Hook]);
+    let (host, _fake) = host(&[Hook]);
     let toggle = AssistToggle {
         which: Toggle::Grab,
     };
@@ -175,7 +121,7 @@ fn a_module_without_inject_input_cannot_publish_a_toggle() {
 
 #[test]
 fn a_granted_toggle_reaches_its_subscriber() {
-    let (host, _log) = host(&[InjectInput]);
+    let (host, _fake) = host(&[InjectInput]);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let log = Arc::clone(&seen);
     let _sub = host
