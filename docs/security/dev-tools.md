@@ -52,7 +52,7 @@
   - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input.
     - It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself or Windows will not say, so only the plain kx-gates starts it.
     - kx-gates starts only a program whose bytes hold the gate flag, with a `data` folder beside it, so it never reads or writes the owner's settings or log. It quits the test build at once when its log lacks the gate warning.
-    - It asks the running copy to quit first, and the gate stops when the copy was not asked. Only a refused Quit, which a uiAccess copy gives the plain kx-gates, adds the advice to close it from the installed kx-gates.
+    - It asks the running copy to quit first, and the gate stops when that ask fails. Only a refused Quit, which a uiAccess copy gives the plain kx-gates, adds the advice to close it from the installed kx-gates.
     - It starts the owner's copy again only once the test build is gone: it quit in time, or no copy runs after a start that failed. Otherwise it prints a line to start it from the Start menu.
     - It clicks a test build key only while the keyboard is the window on top there, so a key another window covers is refused.
     - It never kills the test build, which could leave an injected button down. The one exception is `g8 hook-weak`: when its test build does not quit in time or fails to start, closing its job ends it, and kx-gates then lets go of either button and the modifiers.

@@ -21,7 +21,7 @@
 | Latched modifiers' scan codes: the keyboard's latches (`LatchesChanged`) and a click's own modifiers | Sensitive together with the clicks around them | Memory only, at most `MAX_LATCHES` | No | Until the keyboard changes them, or the click's release |
 | The hook's numbers (`HookStats`) | Public (counts and times) | The log, one line per stop (`STOPPED_LINE`) | No | As the log |
 
-No point or scan code is stored or logged. Debug output hides them: `Note` and the port's `PointerEvent`, `PointerAct`, `AssistNote` and `PointerMoved` show each one as `Redacted`, `LatchesChanged` shows only a count, and `Msg` and `Cmd` have no `Debug`.
+No point or scan code is written to disk or logged. Debug output hides them: `Note` and the port's `PointerEvent`, `PointerAct`, `AssistNote` and `PointerMoved` show each one as `Redacted`, `LatchesChanged` shows only a count, and `Msg` and `Cmd` have no `Debug`.
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |

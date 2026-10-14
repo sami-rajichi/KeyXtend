@@ -189,7 +189,10 @@ pub trait Module: Send + 'static {
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
 
-**CI** (`.github/workflows/ci.yml`): Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage. Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016). Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own, and the stage then refuses that flag (ADR-0027).
+**CI** (`.github/workflows/ci.yml`):
+- Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
+- Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
+- Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
 
 ## Cross-cutting patterns
 
