@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 06:30 — P4: G12 judges lost frames as G8 does
+G12 now counts the ring's lost frames by G8's frame rule, through the same helper. It skips a swap chain's first present and one replaced within a refresh, so the overlay's first frame no longer fails a smooth ring. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job, lets go of anything left down, and then starts the owner's copy again. It also ends the job and lets go when the test build fails to start.
+
 ## 2026-10-14 06:00 — P4: G12 needs every ring to draw, review fixes
 G12 now fails unless the overlay drew frames in every press and none of them went unshown, and it leaves out any point a test build window already covers before Right-click turns on. Its PresentMon capture is checked at load to cover every press at its longest, and G5's and G8 hook's rounds to fit the mouse guard's limit. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job and then lets go of either button and the modifiers. PresentMon rows without a time are now skipped and counted in the result.
 

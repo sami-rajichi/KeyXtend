@@ -66,7 +66,7 @@ fn ask_quit_tries(
 }
 
 /// True when `process` ended within `[timing] quit_wait_ms`.
-fn ended_within(ctx: &Ctx, process: &Process) -> bool {
+pub fn ended_within(ctx: &Ctx, process: &Process) -> bool {
     let t = &ctx.cfg.timing;
     win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(())).is_some()
 }

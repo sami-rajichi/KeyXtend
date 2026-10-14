@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use kx_module_api::MS_PER_S;
 use serde::Serialize;
 
+use crate::g8loss::{refresh_us, unshown};
 use crate::presentmon::Present;
 use crate::stats::{P99, ms, percentile};
 
@@ -41,7 +42,8 @@ pub struct Ring {
     pub fps: Option<f64>,
     /// The 99th percentile of those gaps, in ms.
     pub p99_ms: Option<f64>,
-    /// Its presents inside the spans that never reached the screen.
+    /// Its presents inside the spans lost under G8's frame rule, which skips the chain's first present and one replaced
+    /// within a refresh.
     pub lost: usize,
 }
 
@@ -71,8 +73,9 @@ fn per_s(gaps: usize, sum_ms: f64) -> Option<f64> {
     (sum_ms > 0.0).then(|| gaps as f64 * f64::from(MS_PER_S) / sum_ms)
 }
 
-/// `chain`'s frames inside `spans`, from `presents` in time order: a gap counts only between two presents of one span.
-pub fn ring(presents: &[Present], chain: &str, spans: &[Span]) -> Ring {
+/// `chain`'s frames inside `spans`, from `presents` in time order on a screen refreshing every `refresh_us`: a gap
+/// counts only between two presents of one span.
+pub fn ring(presents: &[Present], chain: &str, spans: &[Span], refresh_us: f64) -> Ring {
     let mine = presents.iter().filter(|p| p.chain == chain);
     let inside: Vec<(usize, &Present)> = mine
         .filter_map(|p| Some((span_of(spans, p.at_us)?, p)))
@@ -84,6 +87,11 @@ pub fn ring(presents: &[Present], chain: &str, spans: &[Span]) -> Ring {
         .map(|w| ms(w[1].1.at_us - w[0].1.at_us))
         .collect();
     gaps.sort_by(f64::total_cmp);
+    let lost = unshown(presents, refresh_us)
+        .0
+        .into_iter()
+        .map(|i| &presents[i]);
+    let lost = lost.filter(|p| p.chain == chain && span_of(spans, p.at_us).is_some());
     Ring {
         chain: chain.to_string(),
         frames: inside.len(),
@@ -91,14 +99,16 @@ pub fn ring(presents: &[Present], chain: &str, spans: &[Span]) -> Ring {
         drawn: drawn.len(),
         fps: per_s(gaps.len(), gaps.iter().sum()),
         p99_ms: percentile(&gaps, P99),
-        lost: inside.iter().filter(|(_, p)| !p.shown).count(),
+        lost: lost.count(),
     }
 }
 
-/// The overlay's frames among `presents` (in time order) inside `spans`; an error when no present falls in a span.
-pub fn judge(presents: &[Present], spans: &[Span]) -> Result<Ring, String> {
+/// The overlay's frames among `presents` (in time order) inside `spans`, on a screen of `hz`; an error when the rate is
+/// unknown or no present falls in a span.
+pub fn judge(presents: &[Present], spans: &[Span], hz: Option<f64>) -> Result<Ring, String> {
+    let refresh_us = refresh_us(hz)?;
     let c = chain(presents, spans).ok_or(APART)?;
-    Ok(ring(presents, &c, spans))
+    Ok(ring(presents, &c, spans, refresh_us))
 }
 
 /// An error when a span in `spans` ends after the capture's end at `end_us`, so G12 never judges fewer frames.

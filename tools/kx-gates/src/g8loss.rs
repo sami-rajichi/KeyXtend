@@ -130,6 +130,32 @@ fn replaced(presents: &[Present], i: usize, refresh_us: f64) -> bool {
     next.is_some_and(|q| (q.at_us - p.at_us) as f64 <= refresh_us)
 }
 
+/// One refresh of a screen of `hz`, in µs; an error when the rate is unknown.
+pub fn refresh_us(hz: Option<f64>) -> Result<f64, String> {
+    hz.filter(|h| *h > 0.0)
+        .map(|h| f64::from(US_PER_S) / h)
+        .ok_or_else(|| NO_HZ.to_string())
+}
+
+/// The indexes of `presents` (in time order) lost under G8's frame rule, and how many unshown ones it skipped: a swap
+/// chain's first present, and one a newer present of its chain replaced within `refresh_us`.
+pub fn unshown(presents: &[Present], refresh_us: f64) -> (Vec<usize>, usize) {
+    let (mut lost, mut skipped, mut seen) = (Vec::new(), 0, HashSet::new());
+    for (i, p) in presents.iter().enumerate() {
+        // Keyed by address alone, a chain re-made at a reused address is not skipped again, so it only counts more.
+        let first = seen.insert(p.chain.as_str());
+        if p.shown {
+            continue;
+        }
+        if first || replaced(presents, i, refresh_us) {
+            skipped += 1;
+        } else {
+            lost.push(i);
+        }
+    }
+    (lost, skipped)
+}
+
 /// The losses among `presents` (in time order) against G8's `spans`, on a screen of `hz`, with times from `origin_us`;
 /// an error when the times cannot be judged, so a run never passes on frames it could not place.
 pub fn losses(
@@ -138,27 +164,19 @@ pub fn losses(
     hz: Option<f64>,
     origin_us: i64,
 ) -> Result<Losses, String> {
-    let refresh_us = hz
-        .filter(|h| *h > 0.0)
-        .map(|h| f64::from(US_PER_S) / h)
-        .ok_or(NO_HZ)?;
+    let refresh_us = refresh_us(hz)?;
     if !presents
         .iter()
         .any(|p| during(spans, p.at_us) == During::Press)
     {
         return Err(APART.to_string());
     }
-    let (mut out, mut seen) = (Losses::default(), HashSet::new());
-    for (i, p) in presents.iter().enumerate() {
-        // Keyed by address alone, a chain re-made at a reused address is not skipped again, so it only counts more.
-        let first = seen.insert(p.chain.as_str());
-        if p.shown {
-            continue;
-        }
-        if first || replaced(presents, i, refresh_us) {
-            out.skipped += 1;
-            continue;
-        }
+    let (gone, skipped) = unshown(presents, refresh_us);
+    let mut out = Losses {
+        skipped,
+        ..Losses::default()
+    };
+    for p in gone.into_iter().map(|i| &presents[i]) {
         let at = during(spans, p.at_us);
         let loss = Loss {
             at_ms: ms(p.at_us - origin_us),

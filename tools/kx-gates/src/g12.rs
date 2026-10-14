@@ -18,12 +18,13 @@ use crate::g12frames::{self, Ring, Span};
 use crate::g12pts::{Pace, free, grid, logged, overlay_at, pace};
 use crate::out::say;
 use crate::p4cfg::G12;
+use crate::presentmon::Frames;
 use crate::product::{self, Keyboard};
 use crate::simin::{self, Act};
 use crate::stats::US_PER_MS_INT;
 use crate::testbuild::{Closed, TestBuild};
 use crate::win::{self, sleep_ms};
-use crate::{launch, mouse, mouseguard, probe, tlog};
+use crate::{g8ui, launch, mouse, mouseguard, probe, tlog};
 
 /// G12's name in its result and in `PresentMon`'s how-to.
 const GATE: &str = "G12";
@@ -164,7 +165,7 @@ struct Driven {
     tally: Tally,
     /// Clicks target-window logged.
     reached: usize,
-    /// Grid points where Windows put another window than target-window.
+    /// Grid points where Windows put another window than target-window, or a test build window sat over it.
     left_out: usize,
 }
 
@@ -223,8 +224,8 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
 }
 
 /// G12's result line. It passes when every click reached target-window under the overlay with nothing blocked or left
-/// out, the ring drew in every span at `min_fps` and `p99_ms` with every frame shown, over a capture that covered every
-/// span, and the test build quit.
+/// out, the ring drew in every span at `min_fps` and `p99_ms` with no frame lost by G8's rule, over a capture that
+/// covered every span, and the test build quit.
 fn result(g: &G12, d: &Driven, ring: &Result<Ring, String>, closed: &Closed) -> Value {
     let (t, n) = (&d.tally, d.tally.clicked.len());
     let all_hit = d.left_out == 0 && d.reached == n && t.covered == n && t.blocked == 0;
@@ -268,11 +269,11 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let frames = g8frames::frames(ctx, &cap, &test_build(ctx.cfg), since, rec.as_ref());
     let unread = frames.as_ref().ok().map(|f| f.unread);
     let end_us = g8frames::end_us(cap.secs, rec.as_ref(), origin_us);
-    let spans = &d.tally.spans;
-    let ring =
-        g12frames::cut(spans, end_us).and_then(|()| g12frames::judge(&frames?.presents, spans));
+    let (spans, hz) = (&d.tally.spans, g8ui::refresh_hz());
+    let judged = |f: Frames| g12frames::judge(&f.presents, spans, hz);
+    let ring = g12frames::cut(spans, end_us).and_then(|()| judged(frames?));
     let mut v = result(&ctx.cfg.g12, &d, &ring, &closed);
-    (v["press_ms"], v["unread_rows"]) = (json!(pace.press_ms), json!(unread));
+    (v["press_ms"], v["unread_rows"], v["hz"]) = (json!(pace.press_ms), json!(unread), json!(hz));
     v["left_open"] = json!(left_open);
     say!("G12 {name}: pass {}", v["pass"]);
     Ok(v)

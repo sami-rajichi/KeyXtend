@@ -3,6 +3,7 @@
 #![cfg(windows)]
 
 use serde_json::{Value, json};
+use spike_core::weak::Job;
 
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
@@ -50,20 +51,28 @@ fn result(weak: bool, played: &Played, closed: &Closed, g: &G8Hook, left_open: &
     })
 }
 
+/// Closes `job`, which ends a test build that failed to start, then lets go of anything left down; what it let go.
+fn ended(job: Option<Job>) -> Vec<String> {
+    drop(job);
+    probe::released()
+}
+
 /// Opens the test build, in weak mode inside `g8 weak`'s job, plays G5's cases `[g8_hook] rounds` times on
-/// target-window, then closes it and judges its stats lines. The job outlives the test build; when it did not quit,
-/// closing the job ends it, and any button it left down is let go.
+/// target-window, then closes it and judges its stats lines. When it does not quit, or fails to start, closing the job
+/// ends it and any button it left down is let go.
 fn hook(ctx: &Ctx, weak: bool) -> Result<Value, String> {
     let (job, _) = g8::weak_job(ctx, weak)?;
-    let build = TestBuild::open(ctx, job.as_ref())?;
-    let mouse = build.mouse()?;
+    let build = match TestBuild::open(ctx, job.as_ref()) {
+        Ok(build) => build,
+        Err(e) => return Err(format!("{e}; left open: {:?}", ended(job))),
+    };
     let g = &ctx.cfg.g8_hook;
-    let (driven, mut left_open) = g5::on_target(ctx, &build, &mouse, g.rounds);
-    let closed = build.close();
-    if !closed.quit {
-        drop(job);
-        left_open.extend(probe::released());
-    }
+    let (driven, mut left_open) = match build.mouse() {
+        Ok(mouse) => g5::on_target(ctx, &build, &mouse, g.rounds),
+        Err(e) => (Err(e), Vec::new()),
+    };
+    let (closed, released) = build.close_in(job);
+    left_open.extend(released);
     let (_, played) = driven.map_err(|e| closed.failed(&e, &left_open))?;
     let v = result(weak, &played, &closed, g, &left_open);
     say!("G8 hook {}; pass {}", v["hook"], v["pass"]);

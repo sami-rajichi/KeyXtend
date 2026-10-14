@@ -24,7 +24,7 @@ use crate::keymap::Reader;
 use crate::out::say;
 use crate::proc::Process;
 use crate::product::{self, Keyboard, NAME};
-use crate::{admin, board, close, g8start, mouse, out, win};
+use crate::{admin, board, close, g8start, mouse, out, probe, win};
 
 /// The product's test build while it runs; dropping it quits it and starts the owner's copy again, best effort.
 pub struct TestBuild<'a> {
@@ -129,9 +129,24 @@ impl<'a> TestBuild<'a> {
 
     /// Quits it, reads its stats lines logged since its start, then starts the owner's copy again.
     pub fn close(mut self) -> Closed {
-        let quit = self.quit();
+        let (quit, _) = self.quit();
+        self.closed(quit, quit)
+    }
+
+    /// As `close`, but when it does not quit in time, closing `job`, the one it started in, ends it. Any button or key
+    /// left down is then let go, and once it has ended the owner's copy starts again; what was let go.
+    pub fn close_in(mut self, job: Option<Job>) -> (Closed, Vec<String>) {
+        let (quit, still) = self.quit();
+        drop(job);
+        let ended = quit || still.is_some_and(|p| close::ended_within(self.ctx, &p));
+        let released = if quit { Vec::new() } else { probe::released() };
+        (self.closed(quit, ended), released)
+    }
+
+    /// How it ended: whether it `quit`, its stats lines, and the owner's copy started again when it has `ended`.
+    fn closed(&mut self, quit: bool, ended: bool) -> Closed {
         let lines = self.lines();
-        let owner_back = self.restore(quit);
+        let owner_back = self.restore(ended);
         Closed {
             quit,
             owner_back,
@@ -139,10 +154,13 @@ impl<'a> TestBuild<'a> {
         }
     }
 
-    /// Asks it to quit, once; whether it ended in time.
-    fn quit(&mut self) -> bool {
-        let process = self.process.take();
-        process.is_some_and(|p| close::quit_started(self.ctx, &p).unwrap_or(false))
+    /// Asks it to quit, once; whether it ended in time, and its process while it still runs.
+    fn quit(&mut self) -> (bool, Option<Process>) {
+        let Some(p) = self.process.take() else {
+            return (false, None);
+        };
+        let quit = close::quit_started(self.ctx, &p).unwrap_or(false);
+        (quit, (!quit).then_some(p))
     }
 
     /// Its stats lines since its start.
@@ -152,13 +170,13 @@ impl<'a> TestBuild<'a> {
         hooklog::since(&text, self.since_us, &self.ctx.cfg.gate_input.hook_line)
     }
 
-    /// Starts the owner's copy again through the shell, once, but only after the test build ended, else says to start it
-    /// by hand; whether it started, none when it closed no copy.
-    fn restore(&mut self, quit: bool) -> Option<bool> {
+    /// Starts the owner's copy again through the shell, once, but only after the test build `ended`, else says to start
+    /// it by hand; whether it started, none when it closed no copy.
+    fn restore(&mut self, ended: bool) -> Option<bool> {
         let owner = self.owner.take()?;
-        let back = quit && admin::start_shown(&owner, &[]).is_ok();
+        let back = ended && admin::start_shown(&owner, &[]).is_ok();
         if !back {
-            say!("{}", not_back(quit));
+            say!("{}", not_back(ended));
         }
         Some(back)
     }
@@ -166,7 +184,7 @@ impl<'a> TestBuild<'a> {
 
 impl Drop for TestBuild<'_> {
     fn drop(&mut self) {
-        let quit = self.process.is_none() || self.quit();
+        let quit = self.process.is_none() || self.quit().0;
         let _ = self.restore(quit);
     }
 }
