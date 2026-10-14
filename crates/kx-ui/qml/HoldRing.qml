@@ -14,8 +14,11 @@ Item {
     readonly property alias waves: waves
     // The waves show, running or holding their last frame until the hold ends or fires.
     property bool waving: false
-    // Something shows: the waves or the burst.
-    readonly property bool busy: waving || pop.running
+    // The burst plays.
+    property bool bursting: false
+    // Something shows: the waves or the burst. Each call turns the next part on before the last one off, so `busy` never
+    // drops in the middle of a call and the overlay window never hides and shows again.
+    readonly property bool busy: waving || bursting
     readonly property var sh: lk.shape.ring
     readonly property var mo: lk.motion.ring
     readonly property var amount: mo.amount
@@ -31,25 +34,29 @@ Item {
     // Plays the waves once, ending a burst still playing: after `after` ms they shrink in over `len` ms, then keep their
     // last frame.
     function wave(after, len) {
-        pop.stop();
-        rest();
+        waving = true;
+        unburst();
+        hide();
         afterMs = after;
         waveMs = len;
-        waving = true;
         waves.restart();
     }
     // The hold fired: the waves go and the burst plays once; reduced motion makes its move 0 ms, so it is skipped.
     function fire() {
         waves.stop();
-        rest();
-        if (burstMove.ms > 0)
+        hide();
+        burst = 1;
+        bursting = burstMove.ms > 0;
+        if (bursting)
             pop.restart();
+        waving = false;
     }
     // The hold ended without firing: everything hides at once.
     function clear() {
         waves.stop();
-        pop.stop();
-        rest();
+        hide();
+        unburst();
+        waving = false;
     }
     // Hides the waves and the core.
     function hide() {
@@ -57,10 +64,10 @@ Item {
         w2.opacity = 0;
         core.opacity = 0;
     }
-    // Hides everything, the burst too.
-    function rest() {
-        hide();
-        waving = false;
+    // Ends and hides the burst.
+    function unburst() {
+        pop.stop();
+        bursting = false;
         burst = 1;
     }
 
@@ -198,5 +205,6 @@ Item {
         from: 0
         to: 1
         move: face.burstMove
+        onFinished: face.bursting = false
     }
 }

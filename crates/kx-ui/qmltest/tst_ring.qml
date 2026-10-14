@@ -25,6 +25,10 @@ Item {
         id: bursts
         signalName: "burstChanged"
     }
+    SignalSpy {
+        id: busies
+        signalName: "busyChanged"
+    }
 
     TestCase {
         name: "HoldRing"
@@ -167,6 +171,22 @@ Item {
             f.fire();
             verify(!waving(p) && !f.busy, "the waves go and nothing waits");
             compare(bursts.count, 0, "the burst never shows");
+        }
+
+        // One run after another keeps `busy` on through the call, so the overlay window never hides and shows again.
+        function test_busy_stays_on_from_one_run_to_the_next() {
+            const f = make(F.lk);
+            f.wave(0, 1000);
+            busies.clear();
+            busies.target = f;
+            f.fire();
+            f.fire();
+            f.wave(0, 1000);
+            f.fire();
+            verify(f.busy, "the last burst plays");
+            compare(busies.count, 0, "busy never dropped");
+            f.clear();
+            verify(!f.busy && busies.count === 1, "a clear ends it once");
         }
 
         function test_a_cleared_ring_hides_at_once() {
