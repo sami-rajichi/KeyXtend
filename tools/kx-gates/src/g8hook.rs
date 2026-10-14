@@ -40,14 +40,15 @@ fn part(sum: &HookLine, g: &G8Hook) -> Part {
     Part::at_most(BUDGET, got, g.p99_ms)
 }
 
-/// The result line: the budget alone decides; the cases' own results are reported only.
+/// The result line: the budget decides, once the test build quit in time; the cases' own results are reported only.
 fn result(weak: bool, played: &Played, closed: &Closed, g: &G8Hook, left_open: &[String]) -> Value {
     let lines = closed.lines.as_deref().unwrap_or_default();
     let parts = [part(&hooklog::sum(lines), g)];
     json!({
         "gate": GATE, "keyboard": product::NAME, "part": PART, "weak": weak, "hook": hooklog::summed(lines),
         "hook_lines": lines.len(), "cases": { "played": played.count, "matched": played.ok },
-        "test_build": closed.json(), "left_open": left_open, "parts": parts, "pass": budget::all_pass(&parts),
+        "test_build": closed.json(), "left_open": left_open, "parts": parts,
+        "pass": closed.pass(budget::all_pass(&parts)),
     })
 }
 
@@ -109,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn the_verdict_is_the_hooks_p99_and_the_cases_are_reported_only() {
+    fn the_verdict_is_the_hooks_p99_once_the_test_build_quit_and_the_cases_are_reported_only() {
         let g = hook();
         let played = Played {
             lines: Vec::new(),
@@ -133,6 +134,12 @@ mod tests {
             (v["cases"]["matched"].as_u64(), v["hook_lines"].as_u64()),
             (Some(5), Some(1))
         );
+        let hung = Closed {
+            quit: false,
+            ..closed.clone()
+        };
+        let v = result(true, &played, &hung, &g, &[]);
+        assert_eq!(v["pass"], json!(false), "the test build did not quit");
         let unread = Closed {
             lines: Err("no log".into()),
             ..closed

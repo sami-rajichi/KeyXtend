@@ -16,6 +16,7 @@ use windows::core::HSTRING;
 
 use crate::apps::{self, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
+use crate::out::shown;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
 use crate::{launch, probe, scroll};
@@ -143,7 +144,7 @@ fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened, since: SystemTime) -> Result<Val
     let back = foreground() == app.hwnd;
     let [face, bar] = s.above;
     let ok = s.covered_ms.is_some() && diff == Ok(0.0) && s.closed && back;
-    let diff = diff.map_or_else(|e| json!({ "error": e }), |d| json!(d));
+    let diff = shown(&diff);
     Ok(json!({
         "ok": ok, "above_face": face, "above_taskbar": bar, "covered_ms": s.covered_ms,
         "size": [own.width, own.height],
