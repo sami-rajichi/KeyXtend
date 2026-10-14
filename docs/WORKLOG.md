@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 09:59 — P4: the gates check that our echoes come back
+Each act the hook sends now names itself in the upper half of `dwExtraInfo`, and no unit test can show that Windows keeps it without injecting input. So G5, `g8 hook` and `g8 hook-weak` now fail, naming the count, when the hook's stats lines show more lost echoes than the new `[g5] max_lost_echoes` (0), and T16 reads it on the real PC. The platform security note now also accepts the stray Up that an Esc or a Grab toggle can leave while the user still holds a picked-up press, never a Down and never a stuck button.
+
 ## 2026-10-14 09:38 — P4: our echoes name their acts, and the hold timer stops
 Every act the hook sends now carries its own id beside the `REPLAY` mark, so its echo names it: a swallowed echo is a gap that no longer shifts later matches, and a late echo settles only its own act, even past the room the host keeps. The 09:08 fix kept given-up acts out but still matched echoes by kind, so one lost echo could slow the hand's input for the rest of a run, and a very late echo past that room could end a newer wait; both are gone. A deadline timer that fired with no deadline left now stops instead of running empty turns until the next press. kx-gates' guard reads the mark with the same helper, and the property tests add swallowed echoes.
 

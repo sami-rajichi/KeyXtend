@@ -58,6 +58,7 @@
     - It never kills the test build, which could leave an injected button down. The one exception is `g8 hook-weak`: when its test build does not quit in time or fails to start, closing its job ends it, and kx-gates then lets go of either button and the modifiers.
   - G5 (`plain` only), G12, G17, G18, `g8 hook` and `g8 hook-weak` drive the test build: they turn its modes and latches on with its own keys and send only `SIM_TAG` input. `g8 hook-weak` starts it in `g8 weak`'s job object.
     - Each of them fails when the test build did not quit in time, as a quit that hangs is a mouse-assist bug (`Closed::pass`).
+    - G5, `g8 hook` and `g8 hook-weak` also fail, naming the count, when the hook's stats lines show more `lost_echoes` than `[g5] max_lost_echoes`, as an act id Windows dropped from `dwExtraInfo` would lose every echo (`hooklog::lost`).
     - G5's cases (`g5play::CASES`) include a drag held past the hold time, which must stay a drag. Its admin-window case is the owner's manual check on the installed product, as the test build never holds uiAccess.
     - G5's hung case posts target-window a private message (`WM_APP` plus an offset) that makes it sleep, capped by its `hang_max_ms`, which must stay below Windows' 5 s hung-window mark. So each message from any program on the desktop pauses that test window at most that long.
     - G12's frame rate counts each ring's quiet time before its first frame, past `[g12] show_ms`, and after its last, so a ring that stalls fails.

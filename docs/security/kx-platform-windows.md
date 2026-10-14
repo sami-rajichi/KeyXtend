@@ -185,7 +185,7 @@ The host's record of held input counts a hand's press that our input replayed, s
 
 When every echo of our newest batch is lost (another program swallowed them, or Windows dropped a hook), the hand's input waits `echo_ms` for that batch once, and nothing stays down.
 
-The record of the hand's presses is not cleared when Windows drops the hooks, so a release the hooks missed leaves it stale. A later release the engine drops can then add one extra Up at the host's let-go, which at worst ends a drag the hand holds then and never leaves a button down.
+The record of the hand's presses is not cleared when Windows drops the hooks, so a release the hooks missed leaves it stale, and an Esc or a Grab toggle while the user still holds the picked-up press leaves that press recorded. The next let-go may then send one stray Up, never a Down and never a stuck button, which at worst ends a drag the hand holds then.
 
 A panic inside a hook callback runs the app's panic hook there, which lets go first, as `release_now` returns at once on the hook thread, then writes one log line with only the panic's place. It comes once per run in practice, as the panicking engine is then given up.
 
