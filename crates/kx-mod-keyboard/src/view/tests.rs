@@ -49,7 +49,7 @@ fn named_keys_carry_translation_and_icon_keys_and_character_keys_none() {
 }
 
 #[test]
-fn side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
+fn later_side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
     let v = board_view(&spec(), &settings(), 1.0);
     let mic = key(&v, "mic");
     assert!(mic.dim && mic.side);

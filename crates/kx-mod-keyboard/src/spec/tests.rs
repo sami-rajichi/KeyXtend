@@ -201,7 +201,7 @@ fn a_role_must_fit_its_key() {
 }
 
 #[test]
-fn the_shipped_roles_latch_the_modifiers_and_wait_on_the_side_block() {
+fn the_shipped_roles_latch_the_modifiers_and_the_dpad_comes_later() {
     let s = spec();
     let latches = [
         ("shift", Latch::Shift),

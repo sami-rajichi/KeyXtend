@@ -55,16 +55,25 @@ fn ear<E: Event>(
 impl Bench {
     /// The module on the golden layouts with `change` over the defaults, heard from before it starts.
     pub fn new(change: Option<(&str, toml::Value)>) -> Self {
+        Self::after(change, |_| Vec::new())
+    }
+
+    /// The same, with `mouse`'s handlers on the bus before the module starts, as a mouse module that already runs.
+    pub fn after(
+        change: Option<(&str, toml::Value)>,
+        mouse: impl FnOnce(&Bus) -> Vec<Subscription>,
+    ) -> Self {
         let core: Arc<dyn BusCore> = Arc::new(FakeCore::default());
         let bus = Bus::new(Arc::clone(&core));
         let said = Arc::default();
-        let ears = vec![
+        let mut ears = vec![
             ear(&bus, &said, |_: &AssistAsk| Said::Ask),
             ear(&bus, &said, |e: &AssistToggle| Said::Toggle(e.which)),
             ear(&bus, &said, |e: &LatchesChanged| {
                 Said::Latches(e.held.clone())
             }),
         ];
+        ears.extend(mouse(&bus));
         let rig = Rig::on_bus(Fakes::golden(&GOLDEN), change, core);
         Self {
             rig,
@@ -133,13 +142,32 @@ fn the_board_makes_both_keys_checkable_and_never_dims_them_and_the_other_side_ke
 }
 
 #[test]
-fn the_module_tells_its_latches_and_asks_the_mouse_module_for_its_state_at_start_and_after_a_restart()
- {
+fn start_and_restart_tell_the_latches_and_ask_the_mouse_state() {
     let none = Said::Latches(Vec::new());
     let mut b = Bench::new(None);
     assert_eq!(b.said(), [none.clone(), Said::Ask]);
     b.rig.restart(Some(("lang_key", "cycle".into())));
     assert_eq!(b.said(), [none, Said::Ask]);
+}
+
+/// Plan edge case 18: the keyboard subscribes before it asks, so a mouse module that answers at once is heard.
+#[test]
+fn a_mouse_module_already_running_lights_the_keys_at_start() {
+    let b = Bench::after(None, |bus| {
+        let reply = bus.clone();
+        let live = AssistChanged {
+            live: true,
+            rclick: true,
+            grab: GrabState::Off,
+        };
+        let answer = move |_: &AssistAsk| reply.publish(&live).unwrap();
+        vec![bus.subscribe(answer).unwrap()]
+    });
+    for id in ["rclick", "grab"] {
+        let k = b.key(id);
+        assert!(k["dim"] == false && k["tip"] != MOUSE_OFF_TIP, "{id}: {k}");
+    }
+    assert_eq!(b.key("rclick")["on"], true);
 }
 
 #[test]
@@ -203,7 +231,7 @@ fn a_mouse_module_that_stops_dims_both_keys_again_and_their_taps_do_nothing() {
 }
 
 #[test]
-fn a_bus_change_redraws_the_state_at_the_next_relabel_once() {
+fn a_bus_change_redraws_at_each_relabel_until_the_ui_reads_the_state() {
     let b = Bench::quiet(None);
     let relabel = || b.rig.act(FaceAction::Relabel).unwrap();
     assert_eq!(relabel(), FaceReply::default());
