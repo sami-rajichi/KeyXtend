@@ -1,6 +1,5 @@
-//! G12 ring overlay (roadmap G12): with Right-click on in the product's test build, one press at each grid point of
-//! target-window lasts long enough for the overlay's ring to play, yet stays a click. Every click must reach
-//! target-window, and `PresentMon` must see the ring keep 60 Hz. It moves the pointer, so only with the owner's yes.
+//! G12 ring overlay (roadmap G12): under the test build with Right-click on, each click on target-window shows the ring
+//! yet still arrives, and `PresentMon` sees the ring keep 60 Hz. It moves the pointer, so only with the owner's yes.
 #![cfg(windows)]
 
 use std::path::PathBuf;
@@ -16,7 +15,7 @@ use crate::config::GatesConfig;
 use crate::g5::{self, RCLICK};
 use crate::g8frames::{self, Capture, Recorder};
 use crate::g12frames::{self, Ring, Span};
-use crate::g12pts::{Pace, grid, logged, overlay_at, pace};
+use crate::g12pts::{Pace, free, grid, logged, overlay_at, pace};
 use crate::out::say;
 use crate::p4cfg::G12;
 use crate::product::{self, Keyboard};
@@ -169,22 +168,22 @@ struct Driven {
     left_out: usize,
 }
 
-/// Parks target-window in front and spreads the grid over its text box; the points where Windows puts target-window,
-/// how many were left out, and the windows a press looks at.
+/// Parks target-window in front and spreads the grid over its text box, before any mode is on; the points that are
+/// `free`, how many were left out, and the windows a press looks at.
 fn aim(ctx: &Ctx, target: HWND) -> Result<(Vec<POINT>, usize, Wins), String> {
     launch::park_target(target)?;
     if !win::front(target, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring target-window to the front".to_string());
     }
-    let g = &ctx.cfg.g12;
+    let (g, wins) = (&ctx.cfg.g12, Wins::find(target)?);
     let all = grid(text_box(target)?, g.grid, g.inset_px);
     let points: Vec<POINT> = all
         .iter()
         .copied()
-        .filter(|&p| win::root_at(p) == target)
+        .filter(|&p| free(target, win::root_at(p), wins.overlay(p)))
         .collect();
     let left_out = all.len() - points.len();
-    Ok((points, left_out, Wins::find(target)?))
+    Ok((points, left_out, wins))
 }
 
 /// Aims, turns Right-click on, starts `PresentMon`, presses every point and turns Right-click off, even after a failed
@@ -224,13 +223,15 @@ fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
 }
 
 /// G12's result line. It passes when every click reached target-window under the overlay with nothing blocked or left
-/// out, the ring kept `min_fps` and `p99_ms` over a capture that covered every span, and the test build quit.
+/// out, the ring drew in every span at `min_fps` and `p99_ms` with every frame shown, over a capture that covered every
+/// span, and the test build quit.
 fn result(g: &G12, d: &Driven, ring: &Result<Ring, String>, closed: &Closed) -> Value {
     let (t, n) = (&d.tally, d.tally.clicked.len());
     let all_hit = d.left_out == 0 && d.reached == n && t.covered == n && t.blocked == 0;
     let fast = |r: &Ring| r.fps.is_some_and(|f| f >= g.min_fps);
     let even = |r: &Ring| r.p99_ms.is_some_and(|p| p <= g.p99_ms);
-    let smooth = ring.as_ref().is_ok_and(|r| fast(r) && even(r));
+    let whole = |r: &Ring| r.drawn == t.spans.len() && r.lost == 0;
+    let smooth = ring.as_ref().is_ok_and(|r| fast(r) && even(r) && whole(r));
     json!({
         "gate": GATE, "keyboard": product::NAME, "clicks": n, "reached": d.reached, "covered": t.covered,
         "blocked": t.blocked, "left_out": d.left_out, "frames": shown(ring), "test_build": closed.json(),
@@ -265,12 +266,13 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let pm = still_recording(rec.as_ref(), cap.secs);
     let d = driven.map_err(|e| closed.failed(&format!("{e}{pm}"), &left_open))?;
     let frames = g8frames::frames(ctx, &cap, &test_build(ctx.cfg), since, rec.as_ref());
+    let unread = frames.as_ref().ok().map(|f| f.unread);
     let end_us = g8frames::end_us(cap.secs, rec.as_ref(), origin_us);
     let spans = &d.tally.spans;
     let ring =
         g12frames::cut(spans, end_us).and_then(|()| g12frames::judge(&frames?.presents, spans));
     let mut v = result(&ctx.cfg.g12, &d, &ring, &closed);
-    v["press_ms"] = json!(pace.press_ms);
+    (v["press_ms"], v["unread_rows"]) = (json!(pace.press_ms), json!(unread));
     v["left_open"] = json!(left_open);
     say!("G12 {name}: pass {}", v["pass"]);
     Ok(v)

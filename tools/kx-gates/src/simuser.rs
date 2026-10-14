@@ -7,7 +7,8 @@ use kx_platform_windows::window::foreground;
 use spike_core::hold::Pt;
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,
+    GetAsyncKeyState, INPUT, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTUP, VK_CONTROL, VK_LBUTTON,
+    VK_LWIN, VK_MENU, VK_RBUTTON, VK_SHIFT,
 };
 
 use crate::apps::{Ctx, Opened};
@@ -121,17 +122,27 @@ pub fn is_up(vk: u16) -> bool {
     state & KEY_DOWN == 0
 }
 
-/// A last safety net: lets go of the left button, Shift, Ctrl, Alt and Win if one is still down; true if it had to.
+/// The releases of each button or key `down` names: the left button, the right one the engine injects for a
+/// right-click, then Shift, Ctrl, Alt and Win.
+fn releases(down: impl Fn(u16) -> bool) -> Vec<INPUT> {
+    let buttons = [
+        (VK_LBUTTON.0, MOUSEEVENTF_LEFTUP),
+        (VK_RBUTTON.0, MOUSEEVENTF_RIGHTUP),
+    ];
+    let ups = buttons.into_iter().filter(|&(vk, _)| down(vk));
+    let mut inputs: Vec<INPUT> = ups.map(|(_, up)| mouse::input(0, 0, up, TAG)).collect();
+    let mods = [VK_SHIFT.0, VK_CONTROL.0, VK_MENU.0, VK_LWIN.0];
+    inputs.extend(
+        mods.into_iter()
+            .filter(|&vk| down(vk))
+            .map(|vk| keys::tagged(vk, true, TAG)),
+    );
+    inputs
+}
+
+/// A last safety net: lets go of either button, Shift, Ctrl, Alt and Win if one is still down; true if it had to.
 pub fn release_all() -> Result<bool, String> {
-    let mut inputs = Vec::new();
-    if !is_up(VK_LBUTTON.0) {
-        inputs.push(mouse::input(0, 0, MOUSEEVENTF_LEFTUP, TAG));
-    }
-    for vk in [VK_SHIFT.0, VK_CONTROL.0, VK_MENU.0, VK_LWIN.0] {
-        if !is_up(vk) {
-            inputs.push(keys::tagged(vk, true, TAG));
-        }
-    }
+    let inputs = releases(|vk| !is_up(vk));
     if inputs.is_empty() {
         return Ok(false);
     }
@@ -140,6 +151,8 @@ pub fn release_all() -> Result<bool, String> {
 
 #[cfg(test)]
 mod tests {
+    use windows::Win32::UI::Input::KeyboardAndMouse::INPUT_MOUSE;
+
     use super::*;
 
     #[test]
@@ -152,5 +165,18 @@ mod tests {
             path(Pt::default(), Pt { x: 3, y: 3 }, 0),
             [Pt { x: 3, y: 3 }]
         );
+    }
+
+    #[allow(unsafe_code, reason = "Reads the union variant of the checked type.")]
+    #[test]
+    fn the_right_button_the_engine_injects_is_let_go_too() {
+        assert!(releases(|_| false).is_empty(), "nothing is down");
+        let right = releases(|vk| vk == VK_RBUTTON.0);
+        assert_eq!(right.len(), 1);
+        assert_eq!(right[0].r#type, INPUT_MOUSE);
+        // SAFETY: mouse input, as checked above.
+        let mi = unsafe { right[0].Anonymous.mi };
+        assert_eq!((mi.dwFlags, mi.dwExtraInfo), (MOUSEEVENTF_RIGHTUP, TAG));
+        assert_eq!(releases(|_| true).len(), 6, "two buttons and four keys");
     }
 }

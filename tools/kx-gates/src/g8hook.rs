@@ -7,12 +7,13 @@ use serde_json::{Value, json};
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
 use crate::g5play::Played;
+use crate::g8frames::GATE;
 use crate::hooklog::{self, HookLine};
 use crate::out::say;
 use crate::p4cfg::G8Hook;
-use crate::product;
 use crate::testbuild::{Closed, TestBuild};
 use crate::{g5, g8};
+use crate::{probe, product};
 
 /// The name that judges the hook on this PC.
 pub const HOOK: &str = "hook";
@@ -43,21 +44,26 @@ fn result(weak: bool, played: &Played, closed: &Closed, g: &G8Hook, left_open: &
     let lines = closed.lines.as_deref().unwrap_or_default();
     let parts = [part(&hooklog::sum(lines), g)];
     json!({
-        "gate": "G8", "keyboard": product::NAME, "part": PART, "weak": weak, "hook": hooklog::summed(lines),
+        "gate": GATE, "keyboard": product::NAME, "part": PART, "weak": weak, "hook": hooklog::summed(lines),
         "hook_lines": lines.len(), "cases": { "played": played.count, "matched": played.ok },
         "test_build": closed.json(), "left_open": left_open, "parts": parts, "pass": budget::all_pass(&parts),
     })
 }
 
 /// Opens the test build, in weak mode inside `g8 weak`'s job, plays G5's cases `[g8_hook] rounds` times on
-/// target-window, then closes it and judges its stats lines. The job outlives the test build.
+/// target-window, then closes it and judges its stats lines. The job outlives the test build; when it did not quit,
+/// closing the job ends it, and any button it left down is let go.
 fn hook(ctx: &Ctx, weak: bool) -> Result<Value, String> {
     let (job, _) = g8::weak_job(ctx, weak)?;
     let build = TestBuild::open(ctx, job.as_ref())?;
     let mouse = build.mouse()?;
     let g = &ctx.cfg.g8_hook;
-    let (driven, left_open) = g5::on_target(ctx, &build, &mouse, g.rounds);
+    let (driven, mut left_open) = g5::on_target(ctx, &build, &mouse, g.rounds);
     let closed = build.close();
+    if !closed.quit {
+        drop(job);
+        left_open.extend(probe::released());
+    }
     let (_, played) = driven.map_err(|e| closed.failed(&e, &left_open))?;
     let v = result(weak, &played, &closed, g, &left_open);
     say!("G8 hook {}; pass {}", v["hook"], v["pass"]);

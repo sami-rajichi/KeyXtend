@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 06:00 — P4: G12 needs every ring to draw, review fixes
+G12 now fails unless the overlay drew frames in every press and none of them went unshown, and it leaves out any point a test build window already covers before Right-click turns on. Its PresentMon capture is checked at load to cover every press at its longest, and G5's and G8 hook's rounds to fit the mouse guard's limit. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job and then lets go of either button and the modifiers. PresentMon rows without a time are now skipped and counted in the result.
+
 ## 2026-10-14 05:00 — P4: G12 under the product's overlay, and G8's hook p99
 G12 now presses 200 points of target-window under the test build's own pointer overlay, each press long enough for the ring to play yet still a click, and checks every click arrives and nothing blocks it. PresentMon, shared with G8, records the test build, and the overlay's frames are judged only inside the ring's time, so the keyboard's frames never count. The new `g8 hook` and `g8 hook-weak` run G5's cases on the test build and hold the hook's logged p99 to spec §10's 1 ms. G6's face sizes are now checked at load, and a G18 error no longer shows an empty part.
 

@@ -61,10 +61,10 @@ slack_px = 1
 # within p99_ms (two frames).
 min_fps = 57.0
 p99_ms = 34.0
-# G12's PresentMon CSV in the out folder, a plain file name, and how long it records, in seconds: about three minutes
-# of clicks plus room. PresentMon's program and waits are [g8]'s, as each PC names one PresentMon.
+# G12's PresentMon CSV in the out folder, a plain file name, and how long it records, in seconds: [fit] checks it covers
+# every press at its longest, hold_ms less spare_ms. PresentMon's program and waits are [g8]'s, one PresentMon per PC.
 presentmon = "g12-presentmon.csv"
-presentmon_secs = 240
+presentmon_secs = 300
 
 # G8's hook part (`g8 hook`, `g8 hook-weak` in weak mode): G5's cases on the test build, rounds times, judged by the
 # p99 its hook logs when Right-click turns off.

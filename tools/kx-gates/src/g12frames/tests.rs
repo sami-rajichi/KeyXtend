@@ -106,6 +106,39 @@ fn a_present_never_shown_counts_as_lost() {
     );
 }
 
+/// The overlay's spans 0 to 40, 100 to 140 and 200 to 240 ms.
+fn three() -> [Span; 3] {
+    [span(0, 40), span(100, 140), span(200, 240)]
+}
+
+#[test]
+fn a_span_with_no_gap_of_the_chain_is_not_drawn() {
+    let rows = [
+        (OVERLAY, 10.0, true),
+        (OVERLAY, 26.0, true),
+        (OVERLAY, 110.0, true),
+        (OVERLAY, 126.0, true),
+        (OVERLAY, 210.0, true),
+    ];
+    let r = ring(&presents(&rows), OVERLAY, &three());
+    assert_eq!(
+        (r.frames, r.drawn),
+        (5, 2),
+        "one present alone draws no gap"
+    );
+    let r = ring(&presents(&rows[..4]), OVERLAY, &three());
+    assert_eq!(r.drawn, 2, "the last span holds no present");
+}
+
+#[test]
+fn a_swap_chain_that_changed_address_leaves_its_later_spans_undrawn() {
+    let at = [10.0, 20.0, 30.0, 110.0, 120.0, 130.0];
+    let mut rows: Vec<Row> = at.iter().map(|&ms| (OVERLAY, ms, true)).collect();
+    rows.extend([(KEYBOARD, 210.0, true), (KEYBOARD, 220.0, true)]);
+    let r = judge(&presents(&rows), &three()).expect("judged");
+    assert_eq!((r.chain.as_str(), r.drawn), (OVERLAY, 2));
+}
+
 #[test]
 fn the_overlays_frames_are_judged_and_none_in_a_span_is_an_error() {
     let rows = [(OVERLAY, 10.0, true), (OVERLAY, 26.0, true)];

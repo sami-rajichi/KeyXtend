@@ -89,16 +89,20 @@ fn a_file_without_a_needed_column_is_refused_and_names_it() {
 }
 
 #[test]
-fn presents_are_read_in_time_order_and_a_present_without_a_time_is_an_error() {
+fn presents_are_read_in_time_order_and_a_present_without_a_time_is_skipped_and_counted() {
     let swapped = V2.replacen("5000.25", "5009.0", 1);
     let f = parse(&swapped, "keyxtend.exe").expect("reads");
     let at: Vec<_> = f.presents.iter().map(|p| p.at_us).collect();
     assert_eq!(at, [5_007_310, 5_010_000]);
+    assert_eq!(f.unread, 0);
     for blank in [
         V2.replacen("5000.25", "NA", 1),
         V2.replacen("6.06,1.0", "6.06,NA", 1),
+        V2.replacen("5000.25,6.06,1.0,6.06", "5000.25", 1),
     ] {
-        assert!(parse(&blank, "keyxtend.exe").is_err(), "{blank}");
+        let f = parse(&blank, "keyxtend.exe").expect("the readable rows still count");
+        assert_eq!((f.presented, f.unread), (1, 1), "{blank}");
+        assert_eq!(f.presents[0].at_us, 5_007_310, "{blank}");
     }
 }
 

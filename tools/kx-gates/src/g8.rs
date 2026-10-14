@@ -264,6 +264,7 @@ mod tests {
             presented: 1,
             lost: 0,
             p99_ms: None,
+            unread: 0,
             presents: vec![shown],
         });
         let press_end = at_us + 200_000;

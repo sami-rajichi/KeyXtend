@@ -75,6 +75,12 @@ pub fn overlay_at(
     ours.iter().find(over).map(|&(w, _)| w)
 }
 
+/// True when Windows puts `target` at a point (`root`) and no test build window sits over it (`over`). Read before any
+/// mode is on, so a window there, such as the keyboard's click-through shadow, could later pass as the overlay.
+pub fn free(target: HWND, root: HWND, over: Option<HWND>) -> bool {
+    root == target && over.is_none()
+}
+
 /// Each G12 press's timing, in ms.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pace {
@@ -233,6 +239,20 @@ mod tests {
         assert_eq!(at(&[(over, AWAY)]), None, "its box lacks the point");
         let hidden = overlay_at(&[kb, target], &[(over, HOLDS)], kb, target, P);
         assert_eq!(hidden, None, "not shown");
+    }
+
+    #[test]
+    fn a_point_under_a_test_build_window_before_any_mode_is_left_out() {
+        let (kb, shadow, target, other) = (hwnd(1), hwnd(2), hwnd(3), hwnd(4));
+        let front = [kb, shadow, target];
+        let over = |ours: &[(HWND, RECT)]| overlay_at(&front, ours, kb, target, P);
+        assert!(free(target, target, over(&[(kb, AWAY)])));
+        let shadowed = over(&[(kb, AWAY), (shadow, HOLDS)]);
+        assert!(
+            !free(target, target, shadowed),
+            "a click-through shadow would pass as the overlay"
+        );
+        assert!(!free(target, other, None), "another window is there");
     }
 
     fn cfg() -> crate::config::GatesConfig {

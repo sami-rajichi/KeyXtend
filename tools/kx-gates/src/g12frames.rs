@@ -3,7 +3,7 @@
 //! the spans is the overlay's; the result names it, so a wrong pick shows.
 #![cfg(windows)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use kx_module_api::MS_PER_S;
 use serde::Serialize;
@@ -35,6 +35,8 @@ pub struct Ring {
     pub frames: usize,
     /// The gaps between its consecutive presents inside one span.
     pub gaps: usize,
+    /// The spans holding at least one of those gaps; one with none never drew the ring.
+    pub drawn: usize,
     /// Those gaps over their summed time, per second.
     pub fps: Option<f64>,
     /// The 99th percentile of those gaps, in ms.
@@ -75,13 +77,18 @@ pub fn ring(presents: &[Present], chain: &str, spans: &[Span]) -> Ring {
     let inside: Vec<(usize, &Present)> = mine
         .filter_map(|p| Some((span_of(spans, p.at_us)?, p)))
         .collect();
-    let same = inside.windows(2).filter(|w| w[0].0 == w[1].0);
-    let mut gaps: Vec<f64> = same.map(|w| ms(w[1].1.at_us - w[0].1.at_us)).collect();
+    let same: Vec<_> = inside.windows(2).filter(|w| w[0].0 == w[1].0).collect();
+    let drawn: BTreeSet<usize> = same.iter().map(|w| w[0].0).collect();
+    let mut gaps: Vec<f64> = same
+        .iter()
+        .map(|w| ms(w[1].1.at_us - w[0].1.at_us))
+        .collect();
     gaps.sort_by(f64::total_cmp);
     Ring {
         chain: chain.to_string(),
         frames: inside.len(),
         gaps: gaps.len(),
+        drawn: drawn.len(),
         fps: per_s(gaps.len(), gaps.iter().sum()),
         p99_ms: percentile(&gaps, P99),
         lost: inside.iter().filter(|(_, p)| !p.shown).count(),

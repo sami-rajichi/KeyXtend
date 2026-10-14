@@ -1,12 +1,14 @@
-//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, and G8's capture
-//! covers its steps through its G2 clicks, as each click now holds the button for `[g2] press_ms`.
+//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, G8's capture covers
+//! its steps through its G2 clicks, and G12's covers every press at its longest.
 #![cfg(windows)]
 
 use std::time::Duration;
 
+use kx_mod_mouse::MouseSettings;
 use serde::Deserialize;
 
 use crate::config::GatesConfig;
+use crate::g5play::{Case, cases};
 use crate::gatecfg::G2;
 
 /// `[fit]`: what a run spends beyond the steps counted here; times in ms.
@@ -71,6 +73,52 @@ fn check_capture(c: &GatesConfig) -> Result<(), String> {
     Ok(())
 }
 
+/// The sum of `parts`, at most `u64::MAX`.
+fn total(parts: &[u64]) -> u64 {
+    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
+}
+
+/// G12's counted steps from `PresentMon`'s start: its wait, then each press at its longest, `hold_ms` less
+/// `[g12] spare_ms`, with the move before it, the settle after it and a poll's lateness.
+fn g12_ms(c: &GatesConfig, hold_ms: u64) -> u64 {
+    let g = &c.g12;
+    let press = hold_ms.saturating_sub(g.spare_ms);
+    let each = total(&[c.sim.step_ms, press, g.settle_ms, c.timing.poll_ms]);
+    let clicks = u64::from(g.grid[0]).saturating_mul(u64::from(g.grid[1]));
+    clicks
+        .saturating_mul(each)
+        .saturating_add(c.g8.presentmon_wait_ms)
+}
+
+/// The time `rounds` rounds of G5's cases take under a hold of `hold_ms`, counted generously: each case's two steps,
+/// its click or its hold with the margin, its settle, and the hung case's hang.
+fn rounds_ms(c: &GatesConfig, rounds: usize, hold_ms: u64) -> u64 {
+    let (g, s) = (&c.g5, &c.sim);
+    let case = |k: &Case| {
+        let press = if k.long {
+            hold_ms.saturating_add(s.hold_margin_ms)
+        } else {
+            s.click_ms
+        };
+        let hang = if k.hang { g.hang_ms } else { 0 };
+        total(&[s.step_ms, s.step_ms, press, g.settle_ms, hang])
+    };
+    let round = total(&cases(g, 0).iter().map(case).collect::<Vec<_>>());
+    u64::try_from(rounds).map_or(u64::MAX, |n| n.saturating_mul(round))
+}
+
+/// Refuses a G12 capture that would end before its presses, so their frames would go unseen, or a G12 run past the
+/// guard's limit.
+fn check_g12(c: &GatesConfig, hold_ms: u64) -> Result<(), String> {
+    let (need, secs) = (g12_ms(c, hold_ms), c.g12.presentmon_secs);
+    if ms_of(secs) < need {
+        return Err(format!(
+            "g12.presentmon_secs ({secs} s) ends before G12's presses end, {need} ms in: raise it"
+        ));
+    }
+    held_fits(c, "g12", need)
+}
+
 /// Refuses a run of `gate` that holds the mouse `ms` and, with `[fit] guard_headroom_ms`, passes the guard's limit, as
 /// the guard would stop it midway; with the guard off, nothing is held.
 fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
@@ -92,12 +140,18 @@ pub fn clicks_fit(c: &GatesConfig, gate: &str, clicks: usize) -> Result<(), Stri
     held_fits(c, gate, clicks_ms(&c.g2, clicks))
 }
 
-/// Refuses a guarded run of the settings that would pass the guard's limit, and a G8 capture that would end before its
-/// G2 clicks.
+/// Refuses a guarded run of the settings that would pass the guard's limit, and a G8 or G12 capture that would end
+/// before its steps; G5's and G12's holds are the mouse module's defaults.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
+    let hold_ms = MouseSettings::from_defaults()
+        .map(|m| u64::from(m.hold_ms))
+        .map_err(|e| format!("the mouse defaults: {e}"))?;
     check_capture(c)?;
+    check_g12(c, hold_ms)?;
     clicks_fit(c, "g2", c.g2.clicks)?;
     clicks_fit(c, "g4", c.g4.clicks)?;
+    held_fits(c, "g5", rounds_ms(c, c.g5.rounds, hold_ms))?;
+    held_fits(c, "g8 hook", rounds_ms(c, c.g8_hook.rounds, hold_ms))?;
     held_fits(c, "g8", g8_ms(c))
 }
 
@@ -176,6 +230,52 @@ mod tests {
     fn churn_rounds_past_any_count_are_refused_without_a_panic() {
         let c = with(|c| (c.g8.churn_warm_rounds, c.g8.churn_rounds) = (usize::MAX, 1));
         assert!(check(&c).expect_err("G8 too long").contains("g8"));
+    }
+
+    /// The default hold time, in ms.
+    fn hold_ms() -> u64 {
+        let m = MouseSettings::from_defaults().expect("the mouse defaults");
+        u64::from(m.hold_ms)
+    }
+
+    #[test]
+    fn g12s_capture_covers_every_press_at_its_longest() {
+        let c = load().expect("loads");
+        let g = &c.g12;
+        let clicks = u64::from(g.grid[0] * g.grid[1]);
+        let each = c.sim.step_ms + hold_ms() - g.spare_ms + g.settle_ms + c.timing.poll_ms;
+        let need = clicks * each + c.g8.presentmon_wait_ms;
+        assert_eq!(g12_ms(&c, hold_ms()), need);
+        assert!(ms_of(g.presentmon_secs) >= need, "{need} ms to cover");
+        let short = with(|c| c.g12.presentmon_secs = 1);
+        let e = check(&short).expect_err("the capture ends before the presses");
+        assert!(e.contains("g12.presentmon_secs"), "{e}");
+    }
+
+    #[test]
+    fn a_g5_round_takes_each_case_with_its_hold_and_its_hang() {
+        let c = load().expect("loads");
+        let (g, s) = (&c.g5, &c.sim);
+        let short = 2 * s.step_ms + s.click_ms + g.settle_ms;
+        let long = 2 * s.step_ms + hold_ms() + s.hold_margin_ms + g.settle_ms;
+        // Click, drag and the short move; the hold and the wiggle; the hung hold.
+        let round = 3 * short + 2 * long + (long + g.hang_ms);
+        assert_eq!(rounds_ms(&c, 1, hold_ms()), round);
+        assert_eq!(rounds_ms(&c, 4, hold_ms()), 4 * round);
+    }
+
+    #[test]
+    fn g12_g5_or_g8s_hook_part_past_the_guards_limit_is_refused() {
+        let wide = with(|c| {
+            c.g12.grid = [200, 100];
+            c.g12.presentmon_secs = c.mouse_guard.limit_ms;
+        });
+        assert!(check(&wide).expect_err("G12 too long").contains("g12"));
+        let g5 = with(|c| c.g5.rounds = 1000);
+        assert!(check(&g5).expect_err("G5 too long").contains("g5"));
+        let hook = with(|c| c.g8_hook.rounds = 1000);
+        let e = check(&hook).expect_err("G8's hook part too long");
+        assert!(e.contains("g8 hook"), "{e}");
     }
 
     #[test]
