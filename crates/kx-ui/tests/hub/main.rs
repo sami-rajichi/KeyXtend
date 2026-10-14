@@ -21,6 +21,8 @@ mod look;
 mod memory;
 mod module;
 mod notices;
+// Without `qt` the sound table is empty, so these tests would check no play.
+#[cfg(feature = "qt")]
 mod sound;
 mod spots;
 mod texts;

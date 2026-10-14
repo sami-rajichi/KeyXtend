@@ -30,11 +30,14 @@ fn tap(id: &str) -> FaceAction {
     }
 }
 
+/// `event`'s cue; every event has clips, so no test passes on an empty table.
+fn cue(event: Event) -> sounds::Cue {
+    sounds::cue(event).expect("every event has clips")
+}
+
 /// `event`'s first `n` plays at `volume`: its takes in turn, each at the event's gain times the volume.
 fn takes(event: Event, n: usize, volume: u8) -> Vec<(ClipId, f32)> {
-    let Some(cue) = sounds::cue(event) else {
-        return Vec::new();
-    };
+    let cue = cue(event);
     let gain = cue.gain * f32::from(volume) / FULL;
     cue.clips
         .iter()
@@ -134,7 +137,7 @@ fn a_tap_plays_the_key_sound_once_after_its_frame_mark() {
 #[test]
 fn taps_on_any_key_play_the_key_takes_in_turn_then_start_again() {
     let (rig, _face, _host) = Rig::with_face();
-    let n = sounds::cue(Event::Key).map_or(0, |c| c.clips.len()) + 1;
+    let n = cue(Event::Key).clips.len() + 1;
     for id in ["a", "rclick", "grab"].into_iter().cycle().take(n) {
         rig.hub.sent(tap(id), || {});
     }
@@ -235,7 +238,7 @@ fn volume_0_never_plays_and_50_plays_at_half_each_gain() {
     assert!(rig.speaker.plays().is_empty());
     let (rig, _face, _host) = rig_with(|s| s.sound_volume = 50);
     sound_all(&rig);
-    let half = Event::ALL.into_iter().filter_map(sounds::cue);
+    let half = Event::ALL.into_iter().map(cue);
     let half: Vec<_> = half.map(|c| (c.clips[0], c.gain / 2.0)).collect();
     assert_plays(&rig.speaker.take_plays(), &half);
 }
