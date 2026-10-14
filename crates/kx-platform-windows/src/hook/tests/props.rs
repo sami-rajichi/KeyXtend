@@ -1,5 +1,6 @@
-//! Properties of the host over random runs: the hand, the engine's plans, turns, our input's echoes in order, late or
-//! swallowed, cut sends, missed events and panics, then a stop, all checked on what reached the apps.
+//! Properties of the host over random runs: the hand, the engine's plans, turns, our input's echoes in order, late,
+//! swallowed or heard inside our send, cut sends, missed events and panics, then a stop, all checked on what reached the
+//! apps.
 
 mod sim;
 mod steps;
@@ -81,9 +82,9 @@ struct End {
     lost: u32,
 }
 
-/// Runs `steps`, then stops.
-fn play(steps: &[Step]) -> End {
-    let mut sim = Sim::new();
+/// Runs `steps`, then stops; with `inside`, our hooks hear our input inside each send.
+fn play(steps: &[Step], inside: bool) -> End {
+    let mut sim = Sim::new(inside);
     for step in steps {
         match step {
             Step::Hand(g) => sim.gesture(*g),
@@ -216,7 +217,7 @@ proptest! {
     fn a_calm_run_keeps_the_hands_order_and_leaves_nothing_of_ours_held(
         steps in vec(calm(), 0..=CALM_STEPS),
     ) {
-        let end = play(&steps);
+        let end = play(&steps, false);
         prop_assert!(in_hand_order(&end), "{:?}", end.apps);
         if !steps.iter().any(|s| matches!(s, Step::Swallow)) {
             prop_assert_eq!(end.lost, 0, "every echo came back, so no wait is lost");
@@ -228,7 +229,26 @@ proptest! {
     /// With full queues, missed events and panics too, nothing of ours stays held, and a given-up engine is dropped once.
     #[test]
     fn a_rough_run_leaves_nothing_of_ours_held(steps in vec(rough(), 0..=ROUGH_STEPS)) {
-        common(&play(&steps))?;
+        common(&play(&steps, false))?;
+    }
+
+    /// With every echo heard inside our send, as Windows runs our hooks there, a calm run keeps the hand's order and
+    /// loses no wait at all, and nothing the hand let go stays down.
+    #[test]
+    fn a_calm_run_with_echoes_inside_our_send_loses_no_wait(steps in vec(calm(), 0..=CALM_STEPS)) {
+        let end = play(&steps, true);
+        prop_assert!(in_hand_order(&end), "{:?}", end.apps);
+        prop_assert_eq!(end.lost, 0, "each send's echoes are settled right after it");
+        prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
+        common(&end)?;
+    }
+
+    /// With echoes inside our send and full queues, missed events and panics too, nothing of ours stays held.
+    #[test]
+    fn a_rough_run_with_echoes_inside_our_send_leaves_nothing_of_ours_held(
+        steps in vec(rough(), 0..=ROUGH_STEPS),
+    ) {
+        common(&play(&steps, true))?;
     }
 }
 
@@ -243,7 +263,7 @@ proptest! {
         mut steps in vec(flooded(), 0..=FLOODED_STEPS),
     ) {
         steps.insert(0, start);
-        let end = play(&steps);
+        let end = play(&steps, false);
         prop_assert!(no_press_after_its_release(&end), "{:?}", end.apps);
         prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;

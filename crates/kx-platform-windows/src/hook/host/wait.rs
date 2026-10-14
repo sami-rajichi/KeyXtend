@@ -32,4 +32,10 @@ impl<O: Os> Host<O> {
         }
         self.wake();
     }
+
+    /// True when no echo of ours is awaited.
+    #[cfg(test)]
+    pub(crate) fn is_clear(&self) -> bool {
+        self.echo.is_clear()
+    }
 }

@@ -1,6 +1,7 @@
 //! The Win32 side of the pointer hook: its thread with both low-level hooks, the message loop, and `release_now`, with
 //! which the panic hook lets go and keeps the run. One run lives per process.
 
+mod lend;
 mod os;
 mod procs;
 mod release;

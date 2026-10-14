@@ -167,20 +167,26 @@ impl<O: Os> Host<O> {
         self.out.extend(after.release(self.at));
     }
 
-    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo; a cut batch counts. Input
-    /// the OS took moves Windows' last input time before the hooks see it, so it counts as seen.
+    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo, and settles the echoes
+    /// heard inside the send, in order; a cut batch counts. Input the OS took moves Windows' last input time before the
+    /// hooks see it, so it counts as seen.
     fn ship(&mut self, now: Mono) -> Sent {
         let total = self.out.len();
         if total == 0 {
             return Sent::default();
         }
-        let took = self.os.send(&self.out, self.echo.next()).min(total);
+        let first = self.echo.next();
+        let took = self.os.send(&self.out, first, &mut self.inbox).min(total);
         let taken = self.out.get(..took).unwrap_or_default();
         self.held.sent(taken);
         for &act in taken {
             self.owed.forget(act);
         }
         self.echo.sent(taken, now);
+        for heard in self.inbox.drain() {
+            self.echo.back(heard.id);
+            self.at = heard.at.or(self.at);
+        }
         if took > 0 {
             self.health.saw(self.os.tick());
         }

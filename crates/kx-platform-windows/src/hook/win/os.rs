@@ -30,12 +30,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WH_MOUSE_LL, WINDOWS_HOOK_ID, WindowFromPoint,
 };
 
-use super::WAKE;
 use super::procs::{key_proc, mouse_proc};
+use super::{WAKE, lend::lent};
 use crate::QpcClock;
-use crate::hook::Os;
 use crate::hook::batch::{Desk, Input, batch};
 use crate::hook::stats::Stats;
+use crate::hook::{Os, inbox::Inbox};
 use crate::inject;
 use crate::screen::dpi_of;
 use crate::window::is_ours;
@@ -145,10 +145,10 @@ impl Os for WinOs {
         post(self.tid, WAKE)
     }
 
-    fn send(&self, acts: &[PointerAct], first: u16) -> usize {
+    fn send(&self, acts: &[PointerAct], first: u16, inbox: &mut Inbox) -> usize {
         let all = batch(acts, desktop(), first);
         let inputs: Vec<INPUT> = all.into_iter().map(input).collect();
-        match inject::send(&inputs) {
+        match lent(inbox, || inject::send(&inputs)) {
             Ok(()) => inputs.len(),
             Err(InjectError::Refused { sent, .. }) => sent,
             Err(InjectError::Unmappable) => 0,

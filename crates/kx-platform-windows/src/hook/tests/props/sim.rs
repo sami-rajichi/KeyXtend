@@ -2,6 +2,7 @@
 //! of ours tagged with its id, what reached the apps, and a hand that lets go only of what it holds.
 
 use std::collections::VecDeque;
+use std::sync::PoisonError;
 
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
@@ -39,15 +40,17 @@ pub(super) struct Sim {
     hand: Hand,
     /// A gesture that lands right after our next batch, as a hand acting while the host sends.
     slip: Option<Gesture>,
-    room: (usize, usize, usize),
+    room: (usize, usize, usize, usize),
     grew: bool,
     ours_dropped: bool,
 }
 
 impl Sim {
-    /// A started host with a scripted engine, an empty stream and a hand that holds nothing.
-    pub(super) fn new() -> Self {
+    /// A started host with a scripted engine, an empty stream and a hand that holds nothing; with `inside`, our hooks
+    /// hear our input inside each send, as on Windows.
+    pub(super) fn new(inside: bool) -> Self {
         let rig = rig(Source::Physical);
+        rig.world.inside.set(inside);
         let room = rig.host.room();
         Self {
             rig,
@@ -135,12 +138,7 @@ impl Sim {
         let lost = self.rig.stats().lost_echoes;
         let Rig { host, plan, .. } = self.rig;
         drop(host);
-        let heard = std::mem::take(
-            &mut plan
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .heard,
-        );
+        let heard = std::mem::take(&mut plan.lock().unwrap_or_else(PoisonError::into_inner).heard);
         End {
             apps: self.apps,
             settled,
@@ -257,8 +255,8 @@ impl Sim {
         }
     }
 
-    /// Takes the host's OS calls: the taken part of each batch joins the stream, a slipped gesture lands after it, and
-    /// the hooks go in or out.
+    /// Takes the host's OS calls: the taken part of each batch joins the stream, or reaches the apps when our hooks heard
+    /// it inside the send, a slipped gesture lands after it, and the hooks go in or out.
     fn collect(&mut self) {
         for call in self.rig.world.take() {
             match call {
@@ -276,7 +274,11 @@ impl Sim {
                         id,
                         unseen: false,
                     });
-                    self.stream.extend(sent);
+                    if self.rig.world.inside.get() {
+                        self.apps.extend(sent);
+                    } else {
+                        self.stream.extend(sent);
+                    }
                     if let Some(g) = self.slip.take() {
                         self.gesture(g);
                     }

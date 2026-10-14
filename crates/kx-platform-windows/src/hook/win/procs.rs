@@ -1,5 +1,6 @@
 //! The hooks' callbacks: each reads what Windows passes, asks the host, and passes the event on unless the engine
-//! drops a mouse event. No panic crosses into Windows, and with no host every event passes.
+//! drops a mouse event. No panic crosses into Windows, with no host every event passes, and a busy host is inside our
+//! own send, so our echo goes to the inbox it lent.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -10,6 +11,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     MSLLHOOKSTRUCT,
 };
 
+use super::lend::hear;
 use super::with_host;
 use crate::hook::Mark;
 use crate::hook::accept::sent_scan;
@@ -65,7 +67,10 @@ fn mouse(msg: u32, info: &MSLLHOOKSTRUCT) -> bool {
         extra: info.dwExtraInfo,
         time: info.time,
     };
-    shield(|| with_host(|h| h.mouse(msg, at, mark))).is_some_and(|dropped| dropped)
+    let answer = ask(mark.extra, Some(at), || {
+        with_host(|h| h.mouse(msg, at, mark))
+    });
+    answer.is_some_and(|dropped| dropped)
 }
 
 /// Hands a key event to the host; it always passes on.
@@ -76,12 +81,22 @@ fn key(msg: u32, info: &KBDLLHOOKSTRUCT) {
         time: info.time,
     };
     let scan = sent_scan(info.scanCode, info.flags.contains(LLKHF_EXTENDED));
-    let _ = shield(|| with_host(|h| h.key(msg, info.vkCode, scan, mark)));
+    let _ = ask(mark.extra, None, || {
+        with_host(|h| h.key(msg, info.vkCode, scan, mark))
+    });
 }
 
-/// Runs `call` so that no panic crosses into Windows, which would end the program.
-fn shield<T>(call: impl FnOnce() -> Option<T>) -> Option<T> {
-    catch_unwind(AssertUnwindSafe(call)).ok().flatten()
+/// Runs the host's `call` so that no panic crosses into Windows, which would end the program. When the host does not
+/// answer, our echo tagged `extra`, at `at` for a mouse event, goes to the inbox our send lent, if any.
+fn ask<T>(extra: usize, at: Option<Point>, call: impl FnOnce() -> Option<T>) -> Option<T> {
+    let run = || {
+        let answer = call();
+        if answer.is_none() {
+            hear(extra, at);
+        }
+        answer
+    };
+    catch_unwind(AssertUnwindSafe(run)).ok().flatten()
 }
 
 /// The message id a hook passes in `wparam`; 0, which no event uses, if it does not fit.

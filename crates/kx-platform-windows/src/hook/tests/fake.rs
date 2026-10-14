@@ -8,6 +8,8 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{Point, PointerAct, PointerEngine, PointerEvent};
 
 use crate::hook::Os;
+use crate::hook::inbox::Inbox;
+use crate::keys::replay_tag;
 
 /// The most acts the scripted engine pushes in one call.
 pub(super) const MAX_ACTS: usize = 4;
@@ -52,6 +54,10 @@ pub(super) struct World {
     pub refuse_timer: Cell<bool>,
     /// Each act the OS took, with its id, oldest first; an echo takes its own out.
     pub ids: RefCell<Vec<(PointerAct, u16)>>,
+    /// Each send echoes the acts it took inside the call, in Windows' order, as our hooks then hear them.
+    pub inside: Cell<bool>,
+    /// Echoes of these ids are heard inside each send, before its own.
+    pub strays: RefCell<Vec<u16>>,
 }
 
 impl Default for World {
@@ -68,6 +74,8 @@ impl Default for World {
             panic_arm: Cell::new(false),
             refuse_timer: Cell::new(false),
             ids: RefCell::default(),
+            inside: Cell::new(false),
+            strays: RefCell::default(),
         }
     }
 }
@@ -123,14 +131,20 @@ impl Os for Fake {
     }
 
     /// Like Windows, input the OS took moves the last input time.
-    fn send(&self, acts: &[PointerAct], first: u16) -> usize {
+    fn send(&self, acts: &[PointerAct], first: u16, inbox: &mut Inbox) -> usize {
         self.0.note(Call::Send(acts.to_vec()));
         let took = self.0.takes.get().map_or(acts.len(), |n| n.min(acts.len()));
         if took > 0 {
             self.0.last_input.set(Some(self.0.tick.get()));
         }
         let ids = std::iter::successors(Some(first), |id| Some(id.wrapping_add(1)));
-        let taken = acts.iter().copied().zip(ids).take(took);
+        let taken: Vec<_> = acts.iter().copied().zip(ids).take(took).collect();
+        for &id in self.0.strays.borrow().iter() {
+            inbox.hear(replay_tag(id), None);
+        }
+        if self.0.inside.get() {
+            echo_inside(&taken, inbox);
+        }
         self.0.ids.borrow_mut().extend(taken);
         took
     }
@@ -148,6 +162,29 @@ impl Os for Fake {
 
     fn unhook(&self) {
         self.0.note(Call::Unhook);
+    }
+}
+
+/// Echoes `taken` into `inbox` as Windows does inside `SendInput`: the move of each pointed act, then each button and
+/// key, in the batch's order.
+fn echo_inside(taken: &[(PointerAct, u16)], inbox: &mut Inbox) {
+    let moves = taken
+        .iter()
+        .filter_map(|&(act, id)| point(act).map(|at| (id, Some(at))));
+    let rest = taken
+        .iter()
+        .filter(|(act, _)| !matches!(act, PointerAct::Move(_)))
+        .map(|&(act, id)| (id, point(act)));
+    for (id, at) in moves.chain(rest) {
+        inbox.hear(replay_tag(id), at);
+    }
+}
+
+/// The point of mouse act `act`.
+fn point(act: PointerAct) -> Option<Point> {
+    match act {
+        PointerAct::Move(at) | PointerAct::Down(_, at) | PointerAct::Up(_, at) => Some(at),
+        PointerAct::KeyDown(_) | PointerAct::KeyUp(_) => None,
     }
 }
 

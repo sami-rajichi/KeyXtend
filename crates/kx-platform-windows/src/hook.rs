@@ -15,6 +15,7 @@ mod echo;
 mod health;
 mod held;
 mod host;
+mod inbox;
 mod queue;
 mod stats;
 #[cfg(test)]
@@ -25,6 +26,8 @@ mod win;
 
 use kx_module_api::Mono;
 use kx_module_api::ports::{Point, PointerAct};
+
+use inbox::Inbox;
 
 #[cfg(windows)]
 pub use win::{WinPointerHook, release_now};
@@ -76,8 +79,8 @@ pub(crate) trait Os {
     fn wake(&self) -> bool;
 
     /// Sends `acts` in one batch, each tagged `REPLAY` with its own id counted from `first`, wrapping, and returns how
-    /// many the OS took.
-    fn send(&self, acts: &[PointerAct], first: u16) -> usize;
+    /// many the OS took. Echoes our hooks hear during the send go to `inbox`, as the host is busy then.
+    fn send(&self, acts: &[PointerAct], first: u16, inbox: &mut Inbox) -> usize;
 
     /// Sets the one deadline timer to fire every `ms`, or stops it; false when Windows refused the timer.
     fn arm(&self, ms: Option<u32>) -> bool;

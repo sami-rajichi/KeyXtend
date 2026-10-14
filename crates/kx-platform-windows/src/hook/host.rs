@@ -16,6 +16,7 @@ use super::accept::{Take, esc, kind, take, user_key};
 use super::echo::Echo;
 use super::health::Health;
 use super::held::{Held, LET_GO};
+use super::inbox::Inbox;
 use super::queue::Queue;
 use super::stats::Stats;
 use super::timing::event_at;
@@ -35,14 +36,14 @@ pub(crate) struct Host<O: Os> {
     /// The engine's `max_acts`.
     max: usize,
     queue: Queue,
-    /// A turn's input, which goes out as one batch; reserved once for owed Ups, a queue, a release, a let-go and a
-    /// settle.
+    /// A turn's input, sent as one batch; reserved once for owed Ups, a queue, a release, a let-go and a settle.
     out: Vec<PointerAct>,
     echo: Echo,
+    /// Lent to every send for the echoes heard inside it; reserved once for a batch.
+    inbox: Inbox,
     health: Health,
     stats: Arc<Stats>,
-    /// What our sent input holds down, and the hand's presses whose release the engine dropped, for the host's own
-    /// let-go.
+    /// What our sent input holds down, and the hand's presses whose release the engine dropped, for our own let-go.
     held: Held,
     /// The hand's own presses that reached the OS untouched and are not let go yet.
     hand: Held,
@@ -107,6 +108,7 @@ impl<O: Os> Host<O> {
             queue,
             out: Vec::with_capacity(out),
             echo: Echo::new(cfg.echo_ms, out.saturating_mul(FLIGHTS)),
+            inbox: Inbox::new(out),
             health: Health::new(cfg, seen),
             os,
             engine,
@@ -185,10 +187,11 @@ impl<O: Os> Host<O> {
         self.os.unhook();
     }
 
-    /// The room of the lent buffer, the queue and the batch.
+    /// The room of the lent buffer, the queue, the batch and the inbox.
     #[cfg(test)]
-    pub(crate) fn room(&self) -> (usize, usize, usize) {
-        (self.lent.capacity(), self.queue.room(), self.out.capacity())
+    pub(crate) fn room(&self) -> (usize, usize, usize, usize) {
+        let (lent, out) = (self.lent.capacity(), self.out.capacity());
+        (lent, self.queue.room(), out, self.inbox.room())
     }
 
     /// Runs `call`; a panic marks the engine broken instead of reaching Windows. Only that fall asks for the turn that
