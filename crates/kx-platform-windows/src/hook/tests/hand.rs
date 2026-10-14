@@ -1,12 +1,13 @@
-//! Tests of the record of held input against the hand's own Ups, and of reading a key event's scan code.
+//! Tests of the record of held input against the hand's own Ups, which may pass ahead of our press, and of reading a
+//! key event's scan code.
 
 use kx_module_api::ports::{Button, PointerAct, Scan};
 
 use super::fake::Call;
 use super::run::sends;
-use super::{A, B, CTRL, KEY_DOWN, KEY_UP, LEFT_UP, MOVE, OTHER, Rig, SHIFT, rig};
+use super::{A, B, CFG, CTRL, KEY_DOWN, KEY_UP, LEFT_DOWN, LEFT_UP, MOVE, OTHER, Rig, SHIFT, rig};
 use crate::hook::Source;
-use crate::hook::accept::{key_up, sent_scan};
+use crate::hook::accept::{sent_scan, user_key};
 use crate::keys::{REPLAY, SIM_TAG, TAG};
 
 /// `WM_SYSKEYUP`.
@@ -32,6 +33,72 @@ fn a_key_only_batch_in_flight_keeps_the_record_against_the_hands_key_up() {
     rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
     rig.host.stop();
     assert_eq!(sends(&rig.world.take()), [vec![PointerAct::KeyUp(CTRL)]]);
+}
+
+#[test]
+fn a_key_up_ahead_of_our_unechoed_press_is_owed_at_once_and_a_new_press_cancels_it() {
+    let mut rig = ctrl_in_flight();
+    let hand = rig.mark(false, 0);
+    rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
+    assert_eq!(rig.world.take(), [Call::Wake]);
+    rig.host.turn();
+    assert_eq!(sends(&rig.world.take()), [vec![PointerAct::KeyUp(CTRL)]]);
+    let mut rig = ctrl_in_flight();
+    rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
+    rig.host.key(KEY_DOWN, VK_CONTROL, CTRL, hand);
+    rig.host.turn();
+    assert!(
+        sends(&rig.world.take()).is_empty(),
+        "the hand holds Ctrl again"
+    );
+}
+
+#[test]
+fn a_press_whose_echo_was_lost_stays_in_doubt_against_the_hands_release() {
+    let mut rig = ctrl_in_flight();
+    rig.world.pass(CFG.echo_ms + 1);
+    assert!(!rig.hand(MOVE, A), "the wait ends as lost");
+    let hand = rig.mark(false, 0);
+    rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
+    rig.host.turn();
+    assert_eq!(sends(&rig.world.take()), [vec![PointerAct::KeyUp(CTRL)]]);
+}
+
+/// A rig whose engine pressed Left at a settle, then filled the queue behind that unechoed press.
+fn left_in_flight_and_full() -> Rig {
+    let mut rig = rig(Source::Physical);
+    rig.plan().settle_acts = vec![PointerAct::Down(Button::Left, A)];
+    rig.host.turn();
+    rig.plan().settle_acts.clear();
+    rig.plan().on_acts = vec![PointerAct::KeyDown(SHIFT)];
+    while rig.hand(MOVE, A) {}
+    rig
+}
+
+#[test]
+fn an_up_that_passes_a_full_queue_ahead_of_our_unechoed_down_is_owed_first_in_the_next_batch() {
+    let mut rig = left_in_flight_and_full();
+    assert!(!rig.hand(LEFT_UP, B), "the queue is full, so it passes");
+    rig.world.take();
+    rig.host.turn();
+    let sent = sends(&rig.world.take());
+    let up = PointerAct::Up(Button::Left, B);
+    assert_eq!(
+        sent[0].first(),
+        Some(&up),
+        "before what was queued after it"
+    );
+}
+
+#[test]
+fn a_press_that_passes_after_it_cancels_the_owed_up() {
+    let mut rig = left_in_flight_and_full();
+    assert!(!rig.hand(LEFT_UP, B));
+    assert!(!rig.hand(LEFT_DOWN, B), "the hand holds Left again");
+    rig.world.take();
+    rig.host.turn();
+    let ups = |act: &PointerAct| matches!(act, PointerAct::Up(Button::Left, _));
+    assert!(!sends(&rig.world.take()).concat().iter().any(ups));
 }
 
 #[test]
@@ -107,13 +174,17 @@ fn the_hands_own_key_up_clears_the_record_and_another_programs_does_not() {
 }
 
 #[test]
-fn a_key_up_counts_only_from_the_users_source() {
-    assert!(key_up(Source::Physical, KEY_UP, false, 0));
-    assert!(key_up(Source::Physical, SYS_UP, false, 0));
-    assert!(!key_up(Source::Physical, KEY_DOWN, false, 0));
-    assert!(!key_up(Source::Physical, KEY_UP, true, TAG));
-    assert!(key_up(Source::Simulated, KEY_UP, true, SIM_TAG));
-    assert!(!key_up(Source::Simulated, KEY_UP, false, 0));
+fn a_key_counts_only_from_the_users_source() {
+    let (up, down) = (
+        Some(PointerAct::KeyUp(CTRL)),
+        Some(PointerAct::KeyDown(CTRL)),
+    );
+    assert_eq!(user_key(Source::Physical, KEY_UP, CTRL, false, 0), up);
+    assert_eq!(user_key(Source::Physical, SYS_UP, CTRL, false, 0), up);
+    assert_eq!(user_key(Source::Physical, KEY_DOWN, CTRL, false, 0), down);
+    assert_eq!(user_key(Source::Physical, KEY_UP, CTRL, true, TAG), None);
+    assert_eq!(user_key(Source::Simulated, KEY_UP, CTRL, true, SIM_TAG), up);
+    assert_eq!(user_key(Source::Simulated, KEY_UP, CTRL, false, 0), None);
 }
 
 #[test]

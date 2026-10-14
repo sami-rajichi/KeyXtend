@@ -12,7 +12,7 @@ use std::sync::Arc;
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Kind, Take, act, esc, key_act, key_up, kind, replayed, take};
+use super::accept::{Kind, Take, act, esc, key_act, kind, replayed, take, user_key};
 use super::echo::Echo;
 use super::health::Health;
 use super::held::{Held, LET_GO};
@@ -34,13 +34,16 @@ pub(crate) struct Host<O: Os> {
     /// The engine's `max_acts`.
     max: usize,
     queue: Queue,
-    /// A turn's input, which goes out as one batch; reserved once for a queue, a release, a let-go and a settle.
+    /// A turn's input, which goes out as one batch; reserved once for owed Ups, a queue, a release, a let-go and a
+    /// settle.
     out: Vec<PointerAct>,
     echo: Echo,
     health: Health,
     stats: Arc<Stats>,
     /// What our sent input holds down, for the host's own let-go.
     held: Held,
+    /// Presses the next batch owes an Up first: the hand let them go before ours was proven ahead.
+    owed: Held,
     /// The newest point the hook saw.
     at: Option<Point>,
     trust: Trust,
@@ -89,7 +92,7 @@ impl<O: Os> Host<O> {
         let out = queue
             .room()
             .saturating_add(max.saturating_mul(2))
-            .saturating_add(LET_GO);
+            .saturating_add(LET_GO.saturating_mul(2));
         Self {
             lent: Vec::with_capacity(max),
             max,
@@ -102,6 +105,7 @@ impl<O: Os> Host<O> {
             source,
             stats,
             held: Held::default(),
+            owed: Held::default(),
             at: None,
             trust: Trust::Whole,
             woken: false,
@@ -134,9 +138,8 @@ impl<O: Os> Host<O> {
     /// key passes on.
     pub(crate) fn key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
         let _ = self.guard(|h| h.on_key(msg, vk, scan, mark));
-        if key_up(self.source, msg, mark.injected, mark.extra) && self.idle() {
-            // The hand let the key go itself, so the record must not send it up again.
-            self.held.forget_key(scan);
+        if let Some(act) = user_key(self.source, msg, scan, mark.injected, mark.extra) {
+            self.hand_key(act);
         }
     }
 

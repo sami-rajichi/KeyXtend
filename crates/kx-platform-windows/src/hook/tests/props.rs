@@ -2,138 +2,77 @@
 //! events and panics, then a stop, all checked on what reached the apps.
 
 mod sim;
+mod steps;
 
 use std::collections::HashMap;
 
-use kx_module_api::ports::{Button, Point, PointerAct};
+use kx_module_api::ports::{Button, PointerAct};
 use proptest::collection::vec;
 use proptest::prelude::*;
-use proptest::sample::select;
 
-use super::fake::{Heard, MAX_ACTS, Plan};
-use super::{CFG, CTRL, SHIFT};
+use super::fake::{Heard, MAX_ACTS};
 use crate::hook::host::Host;
 use crate::hook::queue::QUEUE_ROOM;
-use sim::{End, Ev, Gesture, Sim};
+use sim::Sim;
+use steps::{Step, busy, calm, flooded, rough};
 
 /// Random runs per property.
 const CASES: u32 = 1_024;
+/// Random runs of the flooded property, whose race needs several steps in a row to come up.
+const FLOODED_CASES: u32 = 2 * CASES;
 /// Most steps of a calm run: too few for the queue to fill, as a full queue lets input pass ahead by design.
 const CALM_STEPS: usize = QUEUE_ROOM / (MAX_ACTS + 1);
 /// Most steps of a rough run.
 const ROUGH_STEPS: usize = 160;
-/// Most moves the hand makes at once, past what the queue holds.
-const FLOOD: usize = QUEUE_ROOM;
-/// Longest pause, past the health period, so lagging hooks go back.
-const MAX_PASS_MS: u32 = 2 * CFG.health_ms;
-/// Where the engine's own acts land, off the hand's row.
-const ENGINE_AT: Point = Point { x: -1, y: -1 };
+/// Most steps of a flooded run, whose floods make each step long.
+const FLOODED_STEPS: usize = ROUGH_STEPS / 2;
 const BUTTONS: [Button; 3] = [Button::Left, Button::Right, Button::Middle];
 
-/// One thing that happens.
-#[derive(Clone, Debug)]
-enum Step {
-    /// The hand acts, and its event joins the stream.
-    Hand(Gesture),
-    /// The hand acts while the host sends: its event lands right after our next batch.
-    Slip(Gesture),
-    /// The stream's next event goes through the hooks.
-    Rit,
-    /// The stream's next event passes the hooks by, as when Windows dropped them.
-    Miss,
-    /// The stream catches up, then time passes.
-    Pass(u32),
-    /// A wake or the deadline timer.
-    Turn,
-    /// The health timer.
-    Check,
-    /// The panic hook's let-go.
-    Release,
-    /// The OS takes this many acts of each batch, or all.
-    Takes(Option<usize>),
-    /// The engine follows a new plan.
-    Plan(Script),
-    /// The hand moves this many times at once.
-    Flood(usize),
-    /// The engine panics from now on, or stops.
-    Panic(bool),
+/// What the hand does.
+#[derive(Copy, Clone, Debug)]
+enum Gesture {
+    /// Presses a button it does not hold, else lets it go.
+    Flip(Button),
+    /// Moves.
+    Move,
+    /// Presses Ctrl when up, else lets it go.
+    Ctrl,
+    /// Taps Esc.
+    Esc,
 }
 
-/// What the engine does with each call.
-#[derive(Clone, Debug)]
-struct Script {
-    drop: bool,
-    on: Vec<PointerAct>,
-    settle: Vec<PointerAct>,
-    release: Vec<PointerAct>,
-    notes: bool,
+/// One event of the stream, and whether we sent it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct Ev {
+    act: PointerAct,
+    ours: bool,
 }
 
-impl Script {
-    fn apply(&self, plan: &mut Plan) {
-        plan.drop = self.drop;
-        plan.on_acts.clone_from(&self.on);
-        plan.settle_acts.clone_from(&self.settle);
-        plan.release_acts.clone_from(&self.release);
-        plan.notes = self.notes;
-    }
+/// What became of one of the hand's events.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Fate {
+    /// It reached the apps, by itself or as our copy.
+    Kept,
+    /// The engine dropped it, or the OS refused our copy, so a later copy is not the hand's.
+    Lost,
+    /// Our copy went out in a batch the OS cut after it, which may have cut what let it go.
+    Cut,
 }
 
-fn gesture() -> impl Strategy<Value = Gesture> {
-    prop_oneof![
-        3 => select(BUTTONS.to_vec()).prop_map(Gesture::Flip),
-        3 => Just(Gesture::Move),
-        1 => Just(Gesture::Ctrl),
-        1 => Just(Gesture::Esc),
-    ]
-}
-
-fn acts() -> impl Strategy<Value = Vec<PointerAct>> {
-    let act = prop_oneof![
-        Just(PointerAct::Move(ENGINE_AT)),
-        select(BUTTONS.to_vec()).prop_map(|b| PointerAct::Down(b, ENGINE_AT)),
-        select(BUTTONS.to_vec()).prop_map(|b| PointerAct::Up(b, ENGINE_AT)),
-        select(vec![CTRL, SHIFT]).prop_map(PointerAct::KeyDown),
-        select(vec![CTRL, SHIFT]).prop_map(PointerAct::KeyUp),
-    ];
-    vec(act, 0..=MAX_ACTS)
-}
-
-fn script() -> impl Strategy<Value = Script> {
-    (any::<bool>(), acts(), acts(), acts(), any::<bool>()).prop_map(
-        |(drop, on, settle, release, notes)| Script {
-            drop,
-            on,
-            settle,
-            release,
-            notes,
-        },
-    )
-}
-
-/// Steps where the queue never fills and the engine never fails.
-fn calm() -> impl Strategy<Value = Step> {
-    prop_oneof![
-        4 => gesture().prop_map(Step::Hand),
-        1 => gesture().prop_map(Step::Slip),
-        4 => Just(Step::Rit),
-        1 => (0..=MAX_PASS_MS).prop_map(Step::Pass),
-        2 => Just(Step::Turn),
-        1 => Just(Step::Check),
-        1 => Just(Step::Release),
-        1 => prop_oneof![Just(None), (0..=MAX_ACTS).prop_map(Some)].prop_map(Step::Takes),
-        1 => script().prop_map(Step::Plan),
-    ]
-}
-
-/// Calm steps with floods, missed events and panics.
-fn rough() -> impl Strategy<Value = Step> {
-    prop_oneof![
-        12 => calm(),
-        1 => (1..=FLOOD).prop_map(Step::Flood),
-        1 => Just(Step::Miss),
-        1 => any::<bool>().prop_map(Step::Panic),
-    ]
+/// What a run left: the apps' stream, the hand's mouse events in the order it made them, and what the engine heard.
+#[derive(Debug)]
+struct End {
+    apps: Vec<Ev>,
+    /// How many of `apps` came before the stop, once a last turn went out.
+    settled: usize,
+    made: Vec<PointerAct>,
+    /// Per event of `made`.
+    fate: Vec<Fate>,
+    heard: Vec<Heard>,
+    /// The host's room changed.
+    grew: bool,
+    /// A hook dropped our own input.
+    ours_dropped: bool,
 }
 
 /// Runs `steps`, then stops.
@@ -152,6 +91,10 @@ fn play(steps: &[Step]) -> End {
             Step::Takes(n) => sim.takes(*n),
             Step::Plan(s) => s.apply(&mut sim.plan()),
             Step::Flood(n) => (0..*n).for_each(|_| sim.gesture(Gesture::Move)),
+            Step::Rush(n, g) => {
+                (0..*n).for_each(|_| sim.gesture(Gesture::Move));
+                sim.gesture(*g);
+            }
             Step::Panic(on) => sim.plan().panic = *on,
         }
     }
@@ -177,7 +120,7 @@ fn ours_held(apps: &[Ev]) -> Option<PointerAct> {
 /// True when the hand's events first reach the apps in the order it made them, each sent by itself or by us. A later
 /// copy, or one of a lost event, is our let-go at the hand's newest point.
 fn in_hand_order(end: &End) -> bool {
-    let mut seen = end.lost.clone();
+    let mut seen: Vec<bool> = end.fate.iter().map(|f| *f == Fate::Lost).collect();
     let mut newest = None;
     for ev in &end.apps {
         let Some(k) = end.made.iter().position(|m| *m == ev.act) else {
@@ -192,6 +135,40 @@ fn in_hand_order(end: &End) -> bool {
         newest = Some(k);
     }
     true
+}
+
+/// True when, before the stop, no button is left down by our copy of the hand's press after its own release reached
+/// the apps, while the hand still lets it go: no Down followed its own Up. A release the engine dropped or the OS
+/// refused, or a press whose batch the OS cut after it, excuses it.
+fn no_press_after_its_release(end: &End) -> bool {
+    let apps = end.apps.get(..end.settled).unwrap_or_default();
+    BUTTONS.iter().all(|&b| {
+        let last = apps.iter().rev().find(|ev| button_of(ev.act) == Some(b));
+        let Some(Ev {
+            act: act @ PointerAct::Down(..),
+            ours: true,
+        }) = last.copied()
+        else {
+            return true;
+        };
+        let Some(k) = end.made.iter().position(|m| *m == act) else {
+            return true;
+        };
+        let up = |m: &PointerAct| matches!(m, PointerAct::Up(x, _) if *x == b);
+        let own = end.made.iter().skip(k).position(up).map(|j| k + j);
+        let last = end.made.iter().rposition(|m| button_of(*m) == Some(b));
+        let kept = |i: Option<usize>| i.is_some_and(|i| end.fate.get(i) != Some(&Fate::Lost));
+        let let_go = last.is_some_and(|u| end.made.get(u).is_some_and(up));
+        end.fate.get(k) == Some(&Fate::Cut) || !(kept(own) && kept(last) && let_go)
+    })
+}
+
+/// The button `act` presses or lets go.
+fn button_of(act: PointerAct) -> Option<Button> {
+    match act {
+        PointerAct::Down(b, _) | PointerAct::Up(b, _) => Some(b),
+        _ => None,
+    }
 }
 
 /// Every run ends with nothing of ours held, the room as reserved, our input never dropped, and the engine dropped
@@ -224,5 +201,22 @@ proptest! {
     #[test]
     fn a_rough_run_leaves_nothing_of_ours_held(steps in vec(rough(), 0..=ROUGH_STEPS)) {
         common(&play(&steps))?;
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(FLOODED_CASES))]
+
+    /// With full queues and panics, where the hand's release may pass ahead of our copy of its press, no press of ours
+    /// follows its own release once a turn went out.
+    #[test]
+    fn a_flooded_run_lets_no_press_of_ours_follow_its_own_release(
+        start in busy(),
+        mut steps in vec(flooded(), 0..=FLOODED_STEPS),
+    ) {
+        steps.insert(0, start);
+        let end = play(&steps);
+        prop_assert!(no_press_after_its_release(&end), "{:?}", end.apps);
+        common(&end)?;
     }
 }

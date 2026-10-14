@@ -89,9 +89,15 @@ pub(crate) fn key_act(msg: u32, scan: Scan) -> Option<PointerAct> {
     }
 }
 
-/// True for a key the user let go in `source`: the hand's, or in simulated mode the gate tool's.
-pub(crate) fn key_up(source: Source, msg: u32, injected: bool, extra: usize) -> bool {
-    KEY_UPS.contains(&msg) && heard(source, injected, extra)
+/// The press or release of a key by the user in `source`, the hand or in simulated mode the gate tool, as an act.
+pub(crate) fn user_key(
+    source: Source,
+    msg: u32,
+    scan: Scan,
+    injected: bool,
+    extra: usize,
+) -> Option<PointerAct> {
+    key_act(msg, scan).filter(|_| heard(source, injected, extra))
 }
 
 /// The key a key hook event names, as we send it: the low byte of `code`, with the `E0` prefix when the event is

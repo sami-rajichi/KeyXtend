@@ -5,8 +5,9 @@ use std::collections::VecDeque;
 
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
-use super::super::fake::{Call, Fake, Heard, Plan};
+use super::super::fake::{Call, Fake, Plan};
 use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, Rig, SHIFT, VK_ESC, mouse_msg, rig};
+use super::{End, Ev, Fate, Gesture};
 use crate::hook::host::Host;
 use crate::hook::{Mark, Source};
 use crate::keys::REPLAY;
@@ -18,40 +19,6 @@ const VK_CONTROL: u32 = 0x11;
 const VK_SHIFT: u32 = 0x10;
 /// Each key's virtual-key code.
 const VKS: [(Scan, u32); 3] = [(ESC, VK_ESC), (CTRL, VK_CONTROL), (SHIFT, VK_SHIFT)];
-
-/// What the hand does.
-#[derive(Copy, Clone, Debug)]
-pub(super) enum Gesture {
-    /// Presses a button it does not hold, else lets it go.
-    Flip(Button),
-    /// Moves.
-    Move,
-    /// Presses Ctrl when up, else lets it go.
-    Ctrl,
-    /// Taps Esc.
-    Esc,
-}
-
-/// One event of the stream, and whether we sent it.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(super) struct Ev {
-    pub act: PointerAct,
-    pub ours: bool,
-}
-
-/// What a run left: the apps' stream, the hand's mouse events in the order it made them, and what the engine heard.
-#[derive(Debug)]
-pub(super) struct End {
-    pub apps: Vec<Ev>,
-    pub made: Vec<PointerAct>,
-    /// Per event of `made`, the engine dropped it or the OS refused our copy, so a later copy is not the hand's.
-    pub lost: Vec<bool>,
-    pub heard: Vec<Heard>,
-    /// The host's room changed.
-    pub grew: bool,
-    /// A hook dropped our own input.
-    pub ours_dropped: bool,
-}
 
 /// What the hand holds.
 #[derive(Debug, Default)]
@@ -67,7 +34,7 @@ pub(super) struct Sim {
     stream: VecDeque<Ev>,
     apps: Vec<Ev>,
     made: Vec<PointerAct>,
-    lost: Vec<bool>,
+    fate: Vec<Fate>,
     hooked: bool,
     hand: Hand,
     /// A gesture that lands right after our next batch, as a hand acting while the host sends.
@@ -87,7 +54,7 @@ impl Sim {
             stream: VecDeque::new(),
             apps: Vec::new(),
             made: Vec::new(),
-            lost: Vec::new(),
+            fate: Vec::new(),
             hooked: true,
             hand: Hand::default(),
             slip: None,
@@ -142,10 +109,15 @@ impl Sim {
         self.collect();
     }
 
-    /// The stream catches up, the host stops with every batch taken, the rest reaches the apps and the host is dropped.
+    /// The stream catches up, a last turn goes out whole, then the host stops, the rest reaches the apps and the host
+    /// is dropped.
     pub(super) fn end(mut self) -> End {
+        self.slip = None;
         self.drain();
         self.takes(None);
+        self.call(Host::turn);
+        self.drain();
+        let settled = self.apps.len();
         self.call(Host::stop);
         self.drain();
         let Rig { host, plan, .. } = self.rig;
@@ -158,8 +130,9 @@ impl Sim {
         );
         End {
             apps: self.apps,
+            settled,
             made: self.made,
-            lost: self.lost,
+            fate: self.fate,
             heard,
             grew: self.grew,
             ours_dropped: self.ours_dropped,
@@ -204,7 +177,7 @@ impl Sim {
     fn push_hand(&mut self, act: PointerAct) {
         if !matches!(act, PointerAct::KeyDown(_) | PointerAct::KeyUp(_)) {
             self.made.push(act);
-            self.lost.push(false);
+            self.fate.push(Fate::Kept);
         }
         self.stream.push_back(Ev { act, ours: false });
         let tick = self.rig.world.tick.get();
@@ -245,14 +218,19 @@ impl Sim {
         let dropped = plan.heard.len() > heard && plan.drop && !plan.panic;
         drop(plan);
         if dropped && !ev.ours {
-            self.lose(ev.act);
+            self.mark(ev.act, Fate::Lost);
         }
     }
 
-    /// Notes the hand's event `act` lost, if it is one.
-    fn lose(&mut self, act: PointerAct) {
-        if let Some(k) = self.made.iter().position(|m| *m == act) {
-            self.lost[k] = true;
+    /// Notes what became of the hand's event `act`, if it is one; a lost event stays lost.
+    fn mark(&mut self, act: PointerAct, fate: Fate) {
+        let k = self.made.iter().position(|m| *m == act);
+        if let Some(cell) = k.and_then(|k| self.fate.get_mut(k)) {
+            *cell = if *cell == Fate::Lost {
+                Fate::Lost
+            } else {
+                fate
+            };
         }
     }
 
@@ -262,13 +240,12 @@ impl Sim {
         for call in self.rig.world.take() {
             match call {
                 Call::Send(acts) => {
-                    let took = self
-                        .rig
-                        .world
-                        .takes
-                        .get()
-                        .map_or(acts.len(), |n| n.min(acts.len()));
-                    acts.iter().skip(took).for_each(|act| self.lose(*act));
+                    let (takes, len) = (self.rig.world.takes.get(), acts.len());
+                    let took = takes.map_or(len, |n| n.min(len));
+                    let fate = if took < len { Fate::Cut } else { Fate::Kept };
+                    for (i, act) in acts.iter().enumerate() {
+                        self.mark(*act, if i < took { fate } else { Fate::Lost });
+                    }
                     let sent = acts
                         .into_iter()
                         .take(took)

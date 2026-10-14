@@ -2,20 +2,15 @@
 //! echo ends the wait, and input waits behind it.
 
 use kx_module_api::ports::{Button, PointerAct};
-use kx_module_api::{Mono, US_PER_MS};
 
 use super::fake::Call;
-use super::{A, B, CFG, CTRL, KEY_DOWN, LEFT_DOWN, MOVE, SHIFT, rig};
+use super::{A, B, CFG, CTRL, KEY_DOWN, LEFT_DOWN, MOVE, SHIFT, ms, rig};
 use crate::hook::Source;
 use crate::hook::echo::{Echo, Wait};
 use crate::keys::{REPLAY, TAG};
 
 /// Room for a few acts.
 const ROOM: usize = 8;
-
-fn ms(n: u64) -> Mono {
-    Mono::from_us(n * u64::from(US_PER_MS))
-}
 
 #[test]
 fn the_wait_ends_when_our_input_comes_back_or_after_echo_ms() {
@@ -80,6 +75,23 @@ fn a_press_or_key_passes_by_acts_whose_echo_never_came() {
     assert!(!echo.is_clear(), "a move matches only the next act");
     echo.back(PointerAct::Up(Button::Left, A));
     assert!(echo.is_clear());
+}
+
+#[test]
+fn a_press_whose_echo_was_lost_stays_out_until_it_comes_back_or_an_up_is_owed() {
+    let mut echo = Echo::new(CFG.echo_ms, ROOM);
+    let press = PointerAct::Down(Button::Left, A);
+    echo.sent(&[press, PointerAct::Move(B)], ms(10));
+    assert!(echo.out(press));
+    assert_eq!(echo.check(ms(300)), Wait::Lost);
+    assert!(echo.out(press), "lost on its way, so in doubt");
+    assert!(!echo.out(PointerAct::Down(Button::Right, A)));
+    echo.back(PointerAct::Down(Button::Left, B));
+    assert!(!echo.out(press), "it came back late");
+    echo.sent(&[press], ms(400));
+    assert_eq!(echo.check(ms(700)), Wait::Lost);
+    echo.owed(press);
+    assert!(!echo.out(press), "an Up owed after it");
 }
 
 #[test]

@@ -61,8 +61,9 @@ fn the_hand_letting_go_itself_clears_the_record() {
         PointerAct::KeyDown(SHIFT),
         PointerAct::Down(Button::Left, A),
     ]);
-    held.forget_button(Button::Left);
-    held.forget_key(CTRL);
-    held.forget_key(Scan::new(0x38));
+    held.forget(PointerAct::Up(Button::Left, A));
+    held.forget(PointerAct::KeyUp(CTRL));
+    held.forget(PointerAct::KeyUp(Scan::new(0x38)));
+    held.forget(PointerAct::KeyDown(SHIFT));
     assert_eq!(ups(&held, None), [PointerAct::KeyUp(SHIFT)]);
 }

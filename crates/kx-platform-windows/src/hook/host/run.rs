@@ -18,10 +18,12 @@ pub(super) struct Sent {
 }
 
 impl<O: Os> Host<O> {
-    /// Sends the queue, the stale engine's let-go and its settle as one batch, then re-arms the deadline timer.
+    /// Sends owed Ups, the queue, the stale engine's let-go and its settle as one batch, then re-arms the deadline
+    /// timer.
     pub(super) fn run_turn(&mut self) {
         self.woken = false;
         let now = self.os.now();
+        self.take_owed();
         self.take_queue();
         if matches!(self.trust, Trust::Stale | Trust::Broken) {
             self.take_let_go();
@@ -59,10 +61,11 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// The queue, the release, then whatever our input still holds, in that order and in one batch, so no queued press
-    /// follows its Up.
+    /// Owed Ups, the queue, the release, then whatever our input still holds, in that order and in one batch, so no
+    /// queued press follows its Up.
     pub(super) fn run_release(&mut self) -> Sent {
         let now = self.os.now();
+        self.take_owed();
         self.take_queue();
         self.take_release();
         self.take_held();
@@ -89,6 +92,7 @@ impl<O: Os> Host<O> {
     /// notes of that let-go.
     fn reinstall(&mut self, now: Mono) {
         self.os.unhook();
+        self.take_owed();
         self.take_queue();
         self.take_let_go();
         let _ = self.ship(now);
@@ -101,6 +105,12 @@ impl<O: Os> Host<O> {
             Err(_) => {}
         }
         self.wake();
+    }
+
+    /// Adds an Up for each press of ours the hand let go before it was proven ahead; first, so nothing queued after
+    /// that release is let go. Each stays owed until the OS takes an Up for it.
+    fn take_owed(&mut self) {
+        self.out.extend(self.owed.release(self.at));
     }
 
     /// Adds the queue, which ends with an Up for each queued press whose release went ahead of it.
@@ -157,6 +167,9 @@ impl<O: Os> Host<O> {
         let took = self.os.send(&self.out).min(total);
         let taken = self.out.get(..took).unwrap_or_default();
         self.held.sent(taken);
+        for &act in taken {
+            self.owed.forget(act);
+        }
         self.echo.sent(taken, now);
         if took > 0 {
             self.health.saw(self.os.tick());

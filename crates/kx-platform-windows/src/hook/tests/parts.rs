@@ -1,12 +1,12 @@
-//! Tests of the host's pure parts: whose input counts, messages as events, timing, health and the batch.
+//! Tests of the host's pure parts: whose input counts, messages as events, timing and the batch.
 
-use kx_module_api::ports::{Button, HookConfig, Point, PointerAct, Scan};
-use kx_module_api::{Mono, US_PER_MS};
+use kx_module_api::Mono;
+use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
+use super::ms;
 use crate::hook::Source;
 use crate::hook::accept::{Kind, Take, act, esc, key_act, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
-use crate::hook::health::Health;
 use crate::hook::timing::{Histogram, event_at, timer_ms};
 use crate::keys::{REPLAY, SIM_TAG, TAG};
 use crate::strokes::Key;
@@ -23,10 +23,6 @@ const VK_ENTER: u32 = 0x0D;
 /// A callback well inside the budget, and one near its end, in µs.
 const FAST_US: u64 = 25;
 const SLOW_US: u64 = 900;
-
-fn ms(n: u64) -> Mono {
-    Mono::from_us(n * u64::from(US_PER_MS))
-}
 
 #[test]
 fn our_input_passes_as_an_echo_whatever_the_source() {
@@ -155,69 +151,6 @@ fn a_p99_past_the_last_bucket_reads_the_longest_callback() {
     assert_eq!((h.p99(), h.max_us()), (50_000, 50_000));
 }
 
-/// Whether the input desktop is another one, which the hooks cannot see.
-const AWAY: bool = true;
-const HOME: bool = false;
-
-/// A check every second that allows the hooks half a second behind.
-fn health(last_input: u32) -> Health {
-    let cfg = HookConfig {
-        health_ms: 1_000,
-        health_slack_ms: 500,
-        echo_ms: 250,
-    };
-    Health::new(&cfg, last_input)
-}
-
-#[test]
-fn hooks_that_see_the_input_stay() {
-    let mut h = health(100);
-    h.saw(2_000);
-    assert!(!h.due(ms(3_000), Some(2_400), HOME), "inside the slack");
-    assert!(!h.due(ms(4_000), Some(2_000), HOME));
-    assert!(!h.due(ms(5_000), None, HOME), "Windows would not say");
-}
-
-#[test]
-fn hooks_that_miss_input_go_back_once_per_period() {
-    let mut h = health(100);
-    h.saw(1_000);
-    assert!(h.due(ms(2_000), Some(1_600), HOME), "past the slack");
-    assert!(
-        !h.due(ms(2_000), Some(1_600), HOME),
-        "that input is handled"
-    );
-    assert!(
-        !h.due(ms(2_500), Some(9_000), HOME),
-        "not twice in a period"
-    );
-    assert!(h.due(ms(3_000), Some(9_000), HOME), "the next period");
-}
-
-#[test]
-fn input_on_another_desktop_is_not_lag_there_nor_at_the_first_check_back() {
-    let mut h = health(100);
-    h.saw(1_000);
-    assert!(!h.due(ms(2_000), Some(1_600), AWAY), "the secure desktop");
-    assert!(!h.due(ms(3_000), Some(2_600), AWAY));
-    assert!(
-        !h.due(ms(4_000), Some(3_600), HOME),
-        "input there just before the switch"
-    );
-    assert!(
-        h.due(ms(5_000), Some(4_600), HOME),
-        "home again, lag counts"
-    );
-}
-
-#[test]
-fn a_hook_stamp_across_the_ticks_wrap_is_current() {
-    let mut h = health(u32::MAX - 10);
-    h.saw(5);
-    assert!(!h.due(ms(2_000), Some(u32::MAX - 10), HOME), "older input");
-    assert!(!h.due(ms(3_000), Some(300), HOME));
-}
-
 #[test]
 fn normalise_maps_the_desktop_edges() {
     assert_eq!(normalise(0, 0, 1920), 0);
@@ -267,7 +200,7 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_all_tagged_replay() {
 #[cfg(windows)]
 #[test]
 fn the_message_tables_match_windows() {
-    use crate::hook::accept::key_up;
+    use crate::hook::accept::user_key;
     use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
     use windows::Win32::UI::WindowsAndMessaging::{
         WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
@@ -289,6 +222,11 @@ fn the_message_tables_match_windows() {
     let vk = u32::from(VK_ESCAPE.0);
     assert!(esc(Source::Physical, WM_KEYDOWN, vk, false, 0));
     assert!(esc(Source::Physical, WM_SYSKEYDOWN, vk, false, 0));
-    assert!(key_up(Source::Physical, WM_KEYUP, false, 0));
-    assert!(key_up(Source::Physical, WM_SYSKEYUP, false, 0));
+    let esc_key = Scan::new(0x01);
+    let up = Some(PointerAct::KeyUp(esc_key));
+    assert_eq!(user_key(Source::Physical, WM_KEYUP, esc_key, false, 0), up);
+    assert_eq!(
+        user_key(Source::Physical, WM_SYSKEYUP, esc_key, false, 0),
+        up
+    );
 }

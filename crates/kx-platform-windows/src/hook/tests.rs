@@ -16,8 +16,8 @@ mod run;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use kx_module_api::Mono;
 use kx_module_api::ports::{Button, HookConfig, HookStats, Point, PointerAct, PointerEvent, Scan};
+use kx_module_api::{Mono, US_PER_MS};
 
 use super::host::Host;
 use super::stats::Stats;
@@ -53,6 +53,11 @@ const CTRL: Scan = Scan::new(0x1D);
 const ESC: Scan = Scan::new(0x01);
 const A: Point = Point { x: 1, y: 2 };
 const B: Point = Point { x: 3, y: 4 };
+
+/// The platform clock at `n` ms.
+fn ms(n: u64) -> Mono {
+    Mono::from_us(n * u64::from(US_PER_MS))
+}
 
 /// A started host with its fake world, its engine's plan and its numbers.
 struct Rig {

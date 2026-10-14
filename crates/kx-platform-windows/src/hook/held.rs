@@ -47,14 +47,26 @@ impl Held {
         }
     }
 
-    /// The hand let `button` go itself, with nothing of ours in flight.
-    pub(crate) fn forget_button(&mut self, button: Button) {
-        self.set(button, None);
+    /// The press of ours, held here, that `release` lets go: a Down for an Up, a key press for a key-up.
+    pub(crate) fn holds(&self, release: PointerAct) -> Option<PointerAct> {
+        match release {
+            PointerAct::Up(button, _) => {
+                let (button, at) = self.buttons.get(slot(button)).copied().flatten()?;
+                Some(PointerAct::Down(button, at))
+            }
+            PointerAct::KeyUp(scan) => self
+                .keys
+                .contains(&Some(scan))
+                .then_some(PointerAct::KeyDown(scan)),
+            _ => None,
+        }
     }
 
-    /// The hand let `scan` go itself, with nothing of ours in flight.
-    pub(crate) fn forget_key(&mut self, scan: Scan) {
-        self.lift(scan);
+    /// Lets go of what `release`, an Up or a key-up, lets go, without sending it: the hand let it go itself.
+    pub(crate) fn forget(&mut self, release: PointerAct) {
+        if matches!(release, PointerAct::Up(..) | PointerAct::KeyUp(_)) {
+            self.sent(&[release]);
+        }
     }
 
     /// An Up for each button still held, at `at` or else where it went down, then a key-up for each key, newest first.

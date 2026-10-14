@@ -22,11 +22,6 @@ impl<O: Os> Host<O> {
         wait == Wait::Waiting
     }
 
-    /// True when nothing of ours is in flight: nothing is queued and no echo is awaited.
-    pub(super) fn idle(&self) -> bool {
-        self.queue.is_empty() && self.echo.is_clear()
-    }
-
     /// The queue is full: events pass in order without the engine, whose view is then stale; counted once per overflow.
     pub(super) fn overflow(&mut self) {
         if self.queue.overflow() {

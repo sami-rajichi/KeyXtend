@@ -1,6 +1,7 @@
 //! The health check (ADR-0027 decision 6): Windows silently removes a low-level hook that runs too long, so the host
 //! compares Windows' last input with the tick when its hooks last ran a callback, and puts them back when they lag.
 //! Input on another desktop, such as the secure desktop or the lock screen, never reaches the hooks, so it is not lag.
+//! Only two lagging checks in a row count, so a callback that runs just after a check never puts the hooks back.
 
 use std::time::Duration;
 
@@ -14,6 +15,8 @@ pub(crate) struct Health {
     seen: u32,
     /// The input desktop was another one at the last check.
     away: bool,
+    /// The last check saw lag.
+    lagged: bool,
     /// When the hooks last went back.
     fixed: Option<Mono>,
     /// The check's period.
@@ -28,6 +31,7 @@ impl Health {
         Self {
             seen,
             away: false,
+            lagged: false,
             fixed: None,
             period: Duration::from_millis(u64::from(cfg.health_ms)),
             slack_ms: cfg.health_slack_ms,
@@ -41,11 +45,12 @@ impl Health {
         }
     }
 
-    /// True when the hooks must go back at `now`: Windows' last input is newer than theirs by more than the slack,
-    /// and none went back within the period. That input then counts as handled, as it does while the input desktop is
-    /// another one (`away`) and at the first check back.
+    /// True when the hooks must go back at `now`: Windows' last input is newer than theirs by more than the slack at
+    /// this check and the last, and none went back within the period. That input then counts as handled, as it does
+    /// while the input desktop is another one (`away`) and at the first check back.
     pub(crate) fn due(&mut self, now: Mono, last_input: Option<u32>, away: bool) -> bool {
         let was = std::mem::replace(&mut self.away, away);
+        let lagged = std::mem::take(&mut self.lagged);
         let Some(last) = last_input else {
             return false;
         };
@@ -54,11 +59,14 @@ impl Health {
             return false;
         }
         let lag = newer(last, self.seen);
-        let late = lag > 0 && lag.unsigned_abs() > self.slack_ms;
+        if lag <= 0 || lag.unsigned_abs() <= self.slack_ms {
+            return false;
+        }
         let rested = self
             .fixed
             .is_none_or(|t| now.saturating_since(t) >= self.period);
-        if !(late && rested) {
+        if !(lagged && rested) {
+            self.lagged = true;
             return false;
         }
         self.fixed = Some(now);
