@@ -8,6 +8,7 @@ use kx_module_api::ports::{PointerAct, PointerEngine, PointerEvent};
 
 use super::{Host, Trust};
 use crate::hook::Os;
+use crate::hook::batch::point;
 use crate::hook::timing::timer_ms;
 
 /// How many acts the OS took out of how many were sent.
@@ -98,8 +99,8 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// Puts both hooks back. The engine missed input, so the queue and its let-go go out first; a turn then takes the
-    /// notes of that let-go.
+    /// Puts both hooks back. The engine missed input, so the queue and its let-go go out first, settled at once as no
+    /// hook of ours can echo them, and a turn then takes the notes of that let-go.
     fn reinstall(&mut self, now: Mono) {
         self.os.unhook();
         self.take_owed();
@@ -167,25 +168,29 @@ impl<O: Os> Host<O> {
         self.out.extend(after.release(self.at));
     }
 
-    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo, and settles the echoes
-    /// heard inside the send, in order; a cut batch counts. Input the OS took moves Windows' last input time before the
-    /// hooks see it, so it counts as seen.
+    /// Sends the batch, notes what its taken part holds down and where it leaves the pointer, and settles the echoes
+    /// heard inside the send, or that whole part when no hook of ours is in to echo it; a cut batch counts. Input the OS
+    /// took moves Windows' last input time before the hooks see it, so it counts as seen.
     fn ship(&mut self, now: Mono) -> Sent {
         let total = self.out.len();
         if total == 0 {
             return Sent::default();
         }
+        let hooked = self.os.hooked();
         let first = self.echo.next();
         let took = self.os.send(&self.out, first, &mut self.inbox).min(total);
         let taken = self.out.get(..took).unwrap_or_default();
+        self.at = taken.iter().rev().copied().find_map(point).or(self.at);
         self.held.sent(taken);
         for &act in taken {
             self.owed.forget(act);
         }
         self.echo.sent(taken, now);
-        for heard in self.inbox.drain() {
-            self.echo.back(heard.id);
-            self.at = heard.at.or(self.at);
+        if took > 0 && !hooked {
+            self.echo.passed();
+        }
+        for id in self.inbox.drain() {
+            self.echo.back(id);
         }
         if took > 0 {
             self.health.saw(self.os.tick());

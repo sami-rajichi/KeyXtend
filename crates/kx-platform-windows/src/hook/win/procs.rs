@@ -67,9 +67,7 @@ fn mouse(msg: u32, info: &MSLLHOOKSTRUCT) -> bool {
         extra: info.dwExtraInfo,
         time: info.time,
     };
-    let answer = ask(mark.extra, Some(at), || {
-        with_host(|h| h.mouse(msg, at, mark))
-    });
+    let answer = ask(mark.extra, || with_host(|h| h.mouse(msg, at, mark)));
     answer.is_some_and(|dropped| dropped)
 }
 
@@ -81,18 +79,18 @@ fn key(msg: u32, info: &KBDLLHOOKSTRUCT) {
         time: info.time,
     };
     let scan = sent_scan(info.scanCode, info.flags.contains(LLKHF_EXTENDED));
-    let _ = ask(mark.extra, None, || {
+    let _ = ask(mark.extra, || {
         with_host(|h| h.key(msg, info.vkCode, scan, mark))
     });
 }
 
 /// Runs the host's `call` so that no panic crosses into Windows, which would end the program. When the host does not
-/// answer, our echo tagged `extra`, at `at` for a mouse event, goes to the inbox our send lent, if any.
-fn ask<T>(extra: usize, at: Option<Point>, call: impl FnOnce() -> Option<T>) -> Option<T> {
+/// answer, the id of our echo tagged `extra` goes to the inbox our send lent, if any.
+fn ask<T>(extra: usize, call: impl FnOnce() -> Option<T>) -> Option<T> {
     let run = || {
         let answer = call();
         if answer.is_none() {
-            hear(extra, at);
+            hear(extra);
         }
         answer
     };
@@ -102,4 +100,43 @@ fn ask<T>(extra: usize, at: Option<Point>, call: impl FnOnce() -> Option<T>) -> 
 /// The message id a hook passes in `wparam`; 0, which no event uses, if it does not fit.
 fn msg_id(wparam: WPARAM) -> u32 {
     u32::try_from(wparam.0).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use windows::Win32::Foundation::POINT;
+    use windows::Win32::UI::WindowsAndMessaging::{WM_KEYDOWN, WM_MOUSEMOVE};
+
+    use super::super::lend::with_inbox;
+    use super::*;
+    use crate::hook::inbox::Inbox;
+    use crate::keys::replay_tag;
+
+    /// Room for every event this test hears, so only a missing tag keeps one out.
+    const ACTS: usize = 2;
+
+    #[test]
+    fn with_no_host_to_answer_our_echoes_pass_and_go_to_the_lent_inbox_in_order() {
+        let ours = MSLLHOOKSTRUCT {
+            pt: POINT { x: 1, y: 2 },
+            flags: LLMHF_INJECTED,
+            dwExtraInfo: replay_tag(3),
+            ..MSLLHOOKSTRUCT::default()
+        };
+        let our_key = KBDLLHOOKSTRUCT {
+            flags: LLKHF_INJECTED,
+            dwExtraInfo: replay_tag(4),
+            ..KBDLLHOOKSTRUCT::default()
+        };
+        let mut inbox = Inbox::new(ACTS);
+        with_inbox(&mut inbox, || {
+            assert!(!mouse(WM_MOUSEMOVE, &ours), "our echo passes");
+            key(WM_KEYDOWN, &our_key);
+            let hand = MSLLHOOKSTRUCT::default();
+            assert!(!mouse(WM_MOUSEMOVE, &hand), "the hand's event passes");
+            key(WM_KEYDOWN, &KBDLLHOOKSTRUCT::default());
+        });
+        let ids: Vec<_> = inbox.drain().collect();
+        assert_eq!(ids, [3, 4], "untagged events keep nothing");
+    }
 }

@@ -1,5 +1,5 @@
 //! The wait for our own input: the hand's input waits behind it until the newest batch's first echo, and a full queue
-//! lets it pass.
+//! lets it pass. Tests read the wait and the room reserved for it here.
 
 use kx_module_api::Mono;
 
@@ -37,5 +37,12 @@ impl<O: Os> Host<O> {
     #[cfg(test)]
     pub(crate) fn is_clear(&self) -> bool {
         self.echo.is_clear()
+    }
+
+    /// The room of the lent buffer, the queue, the batch and the inbox.
+    #[cfg(test)]
+    pub(crate) fn room(&self) -> (usize, usize, usize, usize) {
+        let (lent, out) = (self.lent.capacity(), self.out.capacity());
+        (lent, self.queue.room(), out, self.inbox.room())
     }
 }

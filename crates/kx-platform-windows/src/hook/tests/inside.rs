@@ -1,7 +1,7 @@
 //! Tests of the echoes heard inside our own send: Windows runs our hooks inside `SendInput`, while the host is busy,
 //! so the host settles them right after it notes the batch sent.
 
-use kx_module_api::ports::{Button, Point, PointerAct};
+use kx_module_api::ports::{Button, PointerAct};
 
 use super::run::sends;
 use super::{A, B, CFG, CTRL, KEY_UP, LEFT_DOWN, LEFT_UP, MOVE, Rig, SHIFT, rig};
@@ -12,8 +12,6 @@ use crate::keys::{TAG, replay_tag};
 /// An id no act out ever has in these tests, which send only a few acts from 0.
 const STRAY: u16 = u16::MAX / 2;
 const LEFT_A: PointerAct = PointerAct::Down(Button::Left, A);
-/// A point whose numbers stand out in debug output.
-const FAR: Point = Point { x: 4_321, y: 8_765 };
 
 /// A rig whose sends echo the acts they take inside the call, as Windows does.
 fn inside() -> Rig {
@@ -129,44 +127,51 @@ fn a_full_inbox_drops_the_rest_keeps_its_room_and_the_wait_ends_lost() {
 }
 
 #[test]
-fn a_mouse_echo_inside_our_send_moves_the_newest_point() {
-    let mut rig = rig(Source::Physical);
-    rig.settle(&[LEFT_A]);
-    rig.echo(&[LEFT_A]);
-    rig.world.inside.set(true);
-    rig.settle(&[PointerAct::Move(B)]);
+fn a_send_leaves_the_newest_point_at_its_newest_pointed_act_not_at_an_echo() {
+    let mut rig = inside();
+    rig.settle(&[LEFT_A, PointerAct::Move(B)]);
     rig.host.stop();
     let want = vec![PointerAct::Up(Button::Left, B)];
     assert_eq!(
         sends(&rig.world.take()),
         [want],
-        "let go where the pointer is"
+        "let go where the pointer went, though Down's echo came last"
+    );
+}
+
+#[test]
+fn a_panic_inside_our_send_leaves_no_stale_echo_for_the_next_batch() {
+    let mut rig = rig(Source::Physical);
+    rig.world.strays.replace(vec![0]);
+    rig.world.panic_send.set(true);
+    rig.settle(&[LEFT_A]);
+    rig.world.strays.replace(Vec::new());
+    rig.world.panic_send.set(false);
+    rig.plan().release_acts = vec![PointerAct::Move(B)];
+    rig.host.turn();
+    assert!(
+        !rig.host.is_clear(),
+        "the next batch takes id 0 again, and only its own echo settles it"
     );
 }
 
 #[test]
 fn the_inbox_keeps_only_our_echoes_within_its_room() {
     let mut inbox = Inbox::new(1);
-    assert!(
-        !inbox.hear(TAG, None),
-        "our keyboard's input is not an echo"
-    );
+    assert!(!inbox.hear(TAG), "our keyboard's input is not an echo");
     for id in 0..3 {
-        let kept = inbox.hear(replay_tag(id), Some(A));
+        let kept = inbox.hear(replay_tag(id));
         assert_eq!(kept, usize::from(id) < ECHOES_PER_ACT, "{id}");
     }
-    assert_eq!(inbox.room(), ECHOES_PER_ACT);
-    let ids: Vec<_> = inbox.drain().map(|e| e.id).collect();
+    let ids: Vec<_> = inbox.drain().collect();
     assert_eq!(ids, [0, 1], "oldest first");
     assert_eq!(inbox.room(), ECHOES_PER_ACT, "drained, the room stays");
+    inbox.hear(replay_tag(5));
+    inbox.clear();
+    assert_eq!(inbox.drain().count(), 0);
+    assert_eq!(inbox.room(), ECHOES_PER_ACT, "cleared, the room stays");
     assert!(
-        !Inbox::none().hear(replay_tag(0), None),
+        !Inbox::none().hear(replay_tag(0)),
         "nothing lent keeps nothing"
-    );
-    inbox.hear(replay_tag(0), Some(FAR));
-    let shown = format!("{inbox:?}");
-    assert!(
-        !shown.contains("4321") && !shown.contains("8765"),
-        "{shown}"
     );
 }

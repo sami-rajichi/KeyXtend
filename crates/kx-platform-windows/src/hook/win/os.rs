@@ -31,7 +31,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::procs::{key_proc, mouse_proc};
-use super::{WAKE, lend::lent};
+use super::{WAKE, lend::with_inbox};
 use crate::QpcClock;
 use crate::hook::batch::{Desk, Input, batch};
 use crate::hook::stats::Stats;
@@ -107,10 +107,7 @@ impl Os for WinOs {
     }
 
     /// Windows refuses to open the secure desktop and the lock screen to a user's program.
-    #[allow(
-        unsafe_code,
-        reason = "Opens the input desktop to test it, then closes it."
-    )]
+    #[allow(unsafe_code, reason = "Opens the input desktop, then closes it.")]
     fn away(&self) -> bool {
         // SAFETY: a plain query that returns a handle we own, or nothing.
         let desk = unsafe {
@@ -148,7 +145,7 @@ impl Os for WinOs {
     fn send(&self, acts: &[PointerAct], first: u16, inbox: &mut Inbox) -> usize {
         let all = batch(acts, desktop(), first);
         let inputs: Vec<INPUT> = all.into_iter().map(input).collect();
-        match lent(inbox, || inject::send(&inputs)) {
+        match with_inbox(inbox, || inject::send(&inputs)) {
             Ok(()) => inputs.len(),
             Err(InjectError::Refused { sent, .. }) => sent,
             Err(InjectError::Unmappable) => 0,
@@ -167,6 +164,10 @@ impl Os for WinOs {
 
     fn unhook(&self) {
         unhook_all(&self.ctl);
+    }
+
+    fn hooked(&self) -> bool {
+        self.ctl.hooks.iter().all(|h| h.load(Ordering::SeqCst) != 0)
     }
 }
 
@@ -261,10 +262,7 @@ fn flags(press: Option<(Button, bool)>) -> MOUSE_EVENT_FLAGS {
 }
 
 /// Creates this thread's message queue before anyone posts to it, and gives the thread's id.
-#[allow(
-    unsafe_code,
-    reason = "Creates this thread's queue, then a plain query."
-)]
+#[allow(unsafe_code, reason = "Creates this thread's queue, then a query.")]
 pub(super) fn own_queue() -> u32 {
     let mut msg = MSG::default();
     // SAFETY: a peek into a local that only creates this thread's queue, then a plain query.

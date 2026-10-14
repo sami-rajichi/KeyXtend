@@ -4,8 +4,8 @@
 use kx_module_api::ports::{Button, PointerAct};
 
 use super::fake::Call;
-use super::run::holding;
-use super::{A, CFG, MOVE, OTHER, Rig, ms, rig};
+use super::run::{holding, sends};
+use super::{A, B, CFG, LEFT_UP, MOVE, OTHER, Rig, ms, rig};
 use crate::hook::health::Health;
 use crate::hook::{Mark, Source};
 
@@ -199,18 +199,22 @@ fn a_forward_dated_injected_event_cannot_hide_lagging_hooks() {
 }
 
 #[test]
-fn after_a_reinstall_input_waits_for_the_let_gos_echo() {
-    let mut rig = holding();
+fn a_reinstalls_batch_sent_with_the_hooks_out_is_settled_at_once() {
+    let mut rig = rig(Source::Physical);
+    rig.world.inside.set(true);
+    rig.plan().release_acts = vec![PointerAct::Down(Button::Left, A)];
     missed(&rig);
     check_twice(&mut rig);
-    assert!(
-        rig.hand(MOVE, A),
-        "behind the let-go, which the hooks put back can see"
-    );
-    rig.echo(&[PointerAct::Up(Button::Left, A)]);
+    assert_eq!(rig.stats().reinstalls, 1);
+    assert!(rig.host.is_clear(), "no hook of ours could echo it");
+    rig.world.pass(CFG.echo_ms + 1);
+    assert!(!rig.hand(LEFT_UP, B), "the hand's release passes");
+    rig.world.take();
     rig.host.turn();
-    rig.echo(&[PointerAct::Move(A)]);
-    assert!(!rig.hand(MOVE, A), "its echo ended the wait");
+    let sent = sends(&rig.world.take()).concat();
+    let ups = sent.iter().filter(|a| matches!(a, PointerAct::Up(..)));
+    assert_eq!(ups.count(), 0, "no Up is owed for our press");
+    assert_eq!(rig.stats().lost_echoes, 0);
 }
 
 #[test]

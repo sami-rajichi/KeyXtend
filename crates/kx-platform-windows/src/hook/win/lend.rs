@@ -3,8 +3,6 @@
 
 use std::cell::RefCell;
 
-use kx_module_api::ports::Point;
-
 use crate::hook::inbox::Inbox;
 
 thread_local! {
@@ -13,14 +11,14 @@ thread_local! {
 }
 
 /// Runs `send` with `inbox` lent to this thread's hooks, and takes it back after, even after a panic.
-pub(super) fn lent<T>(inbox: &mut Inbox, send: impl FnOnce() -> T) -> T {
+pub(super) fn with_inbox<T>(inbox: &mut Inbox, send: impl FnOnce() -> T) -> T {
     let _lend = Lend::new(inbox);
     send()
 }
 
-/// Notes our echo tagged `extra`, with a mouse echo's point `at`, in the lent inbox while it has room.
-pub(super) fn hear(extra: usize, at: Option<Point>) {
-    let _ = LENT.try_with(|slot| slot.try_borrow_mut().map(|mut inbox| inbox.hear(extra, at)));
+/// Notes the id of our echo tagged `extra` in the lent inbox while it has room.
+pub(super) fn hear(extra: usize) {
+    let _ = LENT.try_with(|slot| slot.try_borrow_mut().map(|mut inbox| inbox.hear(extra)));
 }
 
 /// The host's inbox, lent until this is dropped.
@@ -64,31 +62,29 @@ mod tests {
     use crate::hook::inbox::ECHOES_PER_ACT;
     use crate::keys::{TAG, replay_tag};
 
-    const A: Point = Point { x: 1, y: 2 };
-
     #[test]
     fn echoes_heard_while_lent_reach_the_inbox_within_its_room_and_none_after() {
         let mut inbox = Inbox::new(1);
-        hear(replay_tag(7), None);
-        lent(&mut inbox, || {
-            hear(replay_tag(1), Some(A));
-            hear(TAG, None);
-            hear(replay_tag(2), None);
-            hear(replay_tag(3), None);
+        hear(replay_tag(7));
+        with_inbox(&mut inbox, || {
+            hear(replay_tag(1));
+            hear(TAG);
+            hear(replay_tag(2));
+            hear(replay_tag(3));
         });
-        hear(replay_tag(4), None);
-        let heard: Vec<_> = inbox.drain().map(|e| (e.id, e.at)).collect();
-        assert_eq!(heard, [(1, Some(A)), (2, None)]);
+        hear(replay_tag(4));
+        let heard: Vec<_> = inbox.drain().collect();
+        assert_eq!(heard, [1, 2]);
         assert_eq!(inbox.room(), ECHOES_PER_ACT);
     }
 
     #[test]
     fn a_panic_inside_the_send_still_takes_the_inbox_back() {
         let mut inbox = Inbox::new(1);
-        let send = || lent(&mut inbox, || panic!("the send panics"));
+        let send = || with_inbox(&mut inbox, || panic!("the send panics"));
         assert!(catch_unwind(AssertUnwindSafe(send)).is_err());
         assert_eq!(inbox.room(), ECHOES_PER_ACT, "back, with its room");
-        hear(replay_tag(1), None);
+        hear(replay_tag(1));
         assert_eq!(inbox.drain().count(), 0, "nothing stays lent");
     }
 }

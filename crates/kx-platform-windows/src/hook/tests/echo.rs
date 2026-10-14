@@ -152,6 +152,18 @@ fn a_press_made_room_for_stays_in_doubt_until_an_up_is_owed() {
 }
 
 #[test]
+fn a_batch_passed_with_no_hook_in_settles_each_act_and_doubts_only_older_ones() {
+    let mut echo = Echo::new(CFG.echo_ms, ROOM);
+    send(&mut echo, &[LEFT_A], ms(10));
+    let right = PointerAct::Down(Button::Right, B);
+    send(&mut echo, &[PointerAct::KeyDown(CTRL), right], ms(11));
+    echo.passed();
+    assert!(echo.is_clear());
+    assert!(!echo.out(PointerAct::KeyDown(CTRL)) && !echo.out(right));
+    assert!(echo.out(LEFT_A), "the older press's echo never came");
+}
+
+#[test]
 fn an_echo_naming_no_act_out_changes_nothing() {
     let mut echo = Echo::new(CFG.echo_ms, ROOM);
     let id = send(&mut echo, &[LEFT_A], ms(10));

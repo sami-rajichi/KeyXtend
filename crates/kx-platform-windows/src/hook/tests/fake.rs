@@ -8,6 +8,7 @@ use kx_module_api::Mono;
 use kx_module_api::ports::{Point, PointerAct, PointerEngine, PointerEvent};
 
 use crate::hook::Os;
+use crate::hook::batch::point;
 use crate::hook::inbox::Inbox;
 use crate::keys::replay_tag;
 
@@ -52,12 +53,16 @@ pub(super) struct World {
     pub panic_arm: Cell<bool>,
     /// Setting the deadline timer is refused.
     pub refuse_timer: Cell<bool>,
+    /// Sending panics once the echoes heard inside the call are in, as a fault inside `SendInput` would.
+    pub panic_send: Cell<bool>,
     /// Each act the OS took, with its id, oldest first; an echo takes its own out.
     pub ids: RefCell<Vec<(PointerAct, u16)>>,
     /// Each send echoes the acts it took inside the call, in Windows' order, as our hooks then hear them.
     pub inside: Cell<bool>,
     /// Echoes of these ids are heard inside each send, before its own.
     pub strays: RefCell<Vec<u16>>,
+    /// Both hooks are in, so they hear what a send echoes inside the call.
+    pub hooked: Cell<bool>,
 }
 
 impl Default for World {
@@ -73,9 +78,11 @@ impl Default for World {
             refuse: Cell::new(None),
             panic_arm: Cell::new(false),
             refuse_timer: Cell::new(false),
+            panic_send: Cell::new(false),
             ids: RefCell::default(),
             inside: Cell::new(false),
             strays: RefCell::default(),
+            hooked: Cell::new(false),
         }
     }
 }
@@ -139,12 +146,15 @@ impl Os for Fake {
         }
         let ids = std::iter::successors(Some(first), |id| Some(id.wrapping_add(1)));
         let taken: Vec<_> = acts.iter().copied().zip(ids).take(took).collect();
-        for &id in self.0.strays.borrow().iter() {
-            inbox.hear(replay_tag(id), None);
+        if self.0.hooked.get() {
+            for &id in self.0.strays.borrow().iter() {
+                inbox.hear(replay_tag(id));
+            }
         }
-        if self.0.inside.get() {
+        if self.0.inside.get() && self.0.hooked.get() {
             echo_inside(&taken, inbox);
         }
+        assert!(!self.0.panic_send.get(), "the fake send panics");
         self.0.ids.borrow_mut().extend(taken);
         took
     }
@@ -157,34 +167,30 @@ impl Os for Fake {
 
     fn hook(&self) -> Result<(), i32> {
         self.0.note(Call::Hook);
-        self.0.refuse.take().map_or(Ok(()), Err)
+        let answer = self.0.refuse.take().map_or(Ok(()), Err);
+        self.0.hooked.set(answer.is_ok());
+        answer
     }
 
     fn unhook(&self) {
         self.0.note(Call::Unhook);
+        self.0.hooked.set(false);
+    }
+
+    fn hooked(&self) -> bool {
+        self.0.hooked.get()
     }
 }
 
 /// Echoes `taken` into `inbox` as Windows does inside `SendInput`: the move of each pointed act, then each button and
 /// key, in the batch's order.
 fn echo_inside(taken: &[(PointerAct, u16)], inbox: &mut Inbox) {
-    let moves = taken
-        .iter()
-        .filter_map(|&(act, id)| point(act).map(|at| (id, Some(at))));
+    let moves = taken.iter().filter(|(act, _)| point(*act).is_some());
     let rest = taken
         .iter()
-        .filter(|(act, _)| !matches!(act, PointerAct::Move(_)))
-        .map(|&(act, id)| (id, point(act)));
-    for (id, at) in moves.chain(rest) {
-        inbox.hear(replay_tag(id), at);
-    }
-}
-
-/// The point of mouse act `act`.
-fn point(act: PointerAct) -> Option<Point> {
-    match act {
-        PointerAct::Move(at) | PointerAct::Down(_, at) | PointerAct::Up(_, at) => Some(at),
-        PointerAct::KeyDown(_) | PointerAct::KeyUp(_) => None,
+        .filter(|(act, _)| !matches!(act, PointerAct::Move(_)));
+    for &(_, id) in moves.chain(rest) {
+        inbox.hear(replay_tag(id));
     }
 }
 

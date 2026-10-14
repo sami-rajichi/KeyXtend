@@ -93,4 +93,7 @@ pub(crate) trait Os {
 
     /// Removes both hooks; removing none is fine.
     fn unhook(&self);
+
+    /// True while both hooks are in, so they can hear our input's echoes.
+    fn hooked(&self) -> bool;
 }

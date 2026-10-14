@@ -78,6 +78,14 @@ pub(crate) fn normalise(v: i32, start: i32, size: i32) -> i32 {
     (f64::from(v.saturating_sub(start)) * ABS_MAX / span).round() as i32
 }
 
+/// The point mouse act `act` goes to; `None` for a key.
+pub(crate) fn point(act: PointerAct) -> Option<Point> {
+    match act {
+        PointerAct::Move(at) | PointerAct::Down(_, at) | PointerAct::Up(_, at) => Some(at),
+        PointerAct::KeyDown(_) | PointerAct::KeyUp(_) => None,
+    }
+}
+
 /// `acts` as one batch for the virtual desktop `desk`, each event tagged `REPLAY` with its id, counted from `first`.
 pub(crate) fn batch(acts: &[PointerAct], desk: Desk, first: u16) -> Vec<Input> {
     let mouse = |p: Point, press, tag| Input::Mouse {

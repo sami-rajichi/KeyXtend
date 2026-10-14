@@ -100,6 +100,15 @@ impl Echo {
         }
     }
 
+    /// The newest batch went out while no hook of ours could echo it, and `SendInput` passed it on, so each of its acts
+    /// is settled in order, as if it came back.
+    pub(crate) fn passed(&mut self) {
+        let len = self.flight.len();
+        for k in self.newest..len {
+            self.back(self.next.wrapping_sub(count(len - k)));
+        }
+    }
+
     /// True when no echo is awaited.
     #[cfg(test)]
     pub(crate) fn is_clear(&self) -> bool {

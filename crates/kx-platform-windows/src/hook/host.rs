@@ -49,7 +49,7 @@ pub(crate) struct Host<O: Os> {
     hand: Held,
     /// Presses the next batch owes an Up first: the hand let them go before ours was proven ahead.
     owed: Held,
-    /// The newest point the hook saw.
+    /// The newest point the hook saw or our sent input went to.
     at: Option<Point>,
     trust: Trust,
     /// The deadline the timer is set for.
@@ -187,19 +187,13 @@ impl<O: Os> Host<O> {
         self.os.unhook();
     }
 
-    /// The room of the lent buffer, the queue, the batch and the inbox.
-    #[cfg(test)]
-    pub(crate) fn room(&self) -> (usize, usize, usize, usize) {
-        let (lent, out) = (self.lent.capacity(), self.out.capacity());
-        (lent, self.queue.room(), out, self.inbox.room())
-    }
-
-    /// Runs `call`; a panic marks the engine broken instead of reaching Windows. Only that fall asks for the turn that
-    /// lets go, so a fault that recurs never loops.
+    /// Runs `call`; a panic marks the engine broken instead of reaching Windows, and drops what the lent buffer and the
+    /// inbox held. Only that fall asks for the turn that lets go, so a fault that recurs never loops.
     fn guard<T>(&mut self, call: impl FnOnce(&mut Self) -> T) -> Option<T> {
         let out = catch_unwind(AssertUnwindSafe(|| call(self))).ok();
         if out.is_none() {
             self.lent.clear();
+            self.inbox.clear();
             if matches!(self.trust, Trust::Whole | Trust::Stale) {
                 self.trust = Trust::Broken;
                 self.wake();
