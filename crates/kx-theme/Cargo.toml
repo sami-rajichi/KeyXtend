@@ -12,8 +12,8 @@ repository.workspace = true
 workspace = true
 
 [features]
-# The readers of the `assets` folder and the WAV reader, for kx-ui's build and xtask only: the uiAccess app parses no
-# media (ADR-0004), so `cargo xtask tidy` refuses this feature in its tree.
+# The readers of the `assets` folder and the WAV reader, for kx-ui's build and tests and xtask only: the uiAccess app
+# parses no media (ADR-0004), so `cargo xtask tidy` refuses this feature in its tree.
 files = []
 
 [dependencies]

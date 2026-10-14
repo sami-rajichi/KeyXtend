@@ -8,7 +8,7 @@
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| None | It only turns tokens and the system look into colours, sizes and motion, and sends no input. The app's code reads no files: `assets::bundle` walks the repo's `assets/` folder only for kx-ui's build script and the tests. | N/A |
+| None | It only turns tokens and the system look into colours, sizes and motion, and sends no input. The file readers (`assets::bundle`, `sounds::wav`) build only with the `files` feature, which kx-ui's build and tests and xtask turn on and tidy D7 refuses in the app's tree, so the app's code reads no files. | N/A |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -25,7 +25,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 | `SysLook` from the `SystemLook` port | Every value is a valid colour (four bytes) or flag, so nothing can fail; an unknown theme id gives no look, never a panic | Fixed size | No |
 | `LookChoice.min_contrast` and the system accent | A legend on the accent reaches at least `WCAG_AA` whatever the value, NaN included; a higher value is best effort, and the `[ui]` check refuses values outside `MIN_CONTRAST`. The accent is kept only when every pair the keyboard draws still passes; otherwise the theme keeps its own colours | N/A | No; a sweep of accents |
 | The board's row height (`row_px`, from the keyboard's face) | The drawn check measures each legend on it; a row that is not a finite number above 0 tries no accent | N/A | No |
-| Sound files in `assets/sounds/` (kx-ui's build and the tests only) | `sounds::wav::samples` takes only RIFF/WAVE with one basic 16-byte PCM `fmt ` chunk in exactly the `sounds.toml` format, its byte rate included, before one `data` chunk of whole frames, and nothing after the RIFF chunk; every size is checked, so no file can make it panic, and a bad or missing file fails the build with its name | One frame to `max_ms` per file; a file over the longest samples plus `HEADER_SLACK` is refused by its size before it is read | Property tests (proptest): any bytes, and generated RIFF files with random chunk ids, sizes and order and near-valid `fmt ` fields, where a taken file gives exactly its one `data` chunk; plus every truncation and each byte set to six values |
+| Sound files in `assets/sounds/` (kx-ui's build, the tests and xtask, through the `files` feature only) | `sounds::wav::samples` takes only RIFF/WAVE with one basic 16-byte PCM `fmt ` chunk in exactly the `sounds.toml` format, its byte rate included, before one `data` chunk of whole frames, and nothing after the RIFF chunk; every size is checked, so no file can make it panic, and a bad or missing file fails the build with its name | One frame to `max_ms` per file; a file over the longest samples plus `HEADER_SLACK` is refused by its size before it is read | Property tests (proptest): any bytes, and generated RIFF files with random chunk ids, sizes and order and near-valid `fmt ` fields, where a taken file gives exactly its one `data` chunk; plus every truncation and each byte set to six values |
 | Fonts | The bundled fonts are compiled into kx-ui; Native names Windows' own Segoe UI (`SYSTEM_FONTS`), and Qt falls back to system fonts for a glyph no theme font has (`keyxtend.md`, Accepted) | N/A | No |
 
 ## Threats (STRIDE-lite)
@@ -34,7 +34,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 - **Logging / repudiation:** the crate never logs; its errors name only token files and tokens.
 - **Information disclosure:** the system look is not sensitive.
 - **Denial of service:** loading is a fixed, small parse at start-up; the look view and the drawn check are pure and bounded by the token count.
-- **Elevation:** none; the crate runs no code from its input and `#![forbid(unsafe_code)]` holds.
+- **Elevation:** none; the crate runs no code from its input and `#![forbid(unsafe_code)]` holds. The WAV reader is not even built into the uiAccess app, as tidy D7 refuses `files` in its tree (ADR-0004).
 
 ## Findings
 ### Must fix (blocks Definition of Done)
@@ -42,7 +42,8 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 - Done (P3, 302c48b, 658a5a8): the system accent replaced the theme's colours unchecked. `with_accent` keeps it only when every drawn pair still passes on the keyboard's rows, and without a measurable row the theme keeps its own colours.
 - Done (P3, a049b94): high contrast kept the caps' gradient tints and mixed system pairs. It now draws flat caps and only pairs Windows makes readable.
 ### Should fix (tracked issue)
-- None.
+- None open.
+- Done (P4 final review, 6b01c28, 9666b52): the WAV reader and the asset readers were public in a crate the uiAccess app links, so ADR-0004 held only by convention. They now build only with `files`, which tidy D7 refuses in the app's normal tree.
 ### Accepted (with reason)
 - Dimmed keys read at about 1.9:1 to 3.0:1 against their faded cap: WCAG sets no minimum for inactive parts (1.4.3), their names say "Coming in a later version", and high contrast shows them in `GrayText`. The owner confirms the look at the P3 look check.
 - The Carousel's side names keep the mock-up's 45 % fade as decoration, below 4.5:1 (owner's ruling, 2026-10-02); the current layout's name beside them stays opaque. `drawn::EXCEPTION` names this one pair, and a test fails as soon as any other falls below its minimum.

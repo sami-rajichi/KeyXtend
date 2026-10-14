@@ -1,6 +1,6 @@
 //! Where the bundled fonts, icons and sounds sit in the repo's `assets/` folder and under which names the app bundles
 //! them, and which files each bundled font family has. The app never reads these folders: kx-ui compiles the files in,
-//! and only its build and xtask turn on the `files` feature that reads them (ADR-0004).
+//! and only its build and tests and xtask turn on the `files` feature that reads them (ADR-0004).
 
 #[cfg(feature = "files")]
 mod read;
