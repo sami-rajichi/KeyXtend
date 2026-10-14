@@ -177,14 +177,16 @@ fn several_modifiers_go_down_in_order_and_up_in_reverse() {
 }
 
 #[test]
-fn release_lets_go_of_a_carry_and_its_modifiers() {
+fn release_cancels_a_carry_with_esc_then_lets_go_of_it_and_its_modifiers() {
     let mut e = latched(false, &[SHIFT]);
     toggle(&mut e, Toggle::Grab);
     let (p0, p3) = (p(10, 10), p(40, 40));
     on(&mut e, down(p0), 0);
     on(&mut e, up(p0), 1);
     on(&mut e, mv(p3), 2);
-    assert_eq!(release(&mut e), vec![A::Up(Left, p3), A::KeyUp(SHIFT)]);
+    let esc = [A::KeyDown(ESC), A::KeyUp(ESC)];
+    let want = [&esc[..], &[A::Up(Left, p3), A::KeyUp(SHIFT)]].concat();
+    assert_eq!(release(&mut e), want, "never a drop where the pointer is");
     assert_eq!((e.grab(), e.deadline()), (GrabState::Off, None));
     assert_eq!(release(&mut e), vec![]);
 }

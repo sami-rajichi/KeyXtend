@@ -91,8 +91,9 @@ pub trait PointerEngine: Send {
     /// never blocks or allocates.
     fn has_notes(&self) -> bool;
 
-    /// Lets go of everything held, such as a latched button or pressed modifiers; the host sends `acts` before it
-    /// stops.
+    /// Lets go of everything held, such as a carried button or pressed modifiers; the host sends `acts` at once. It may
+    /// come while the run goes on, after a health reinstall or the panic hook's let-go, and the engine then works on
+    /// from a clean state.
     fn release(&mut self, acts: &mut Vec<PointerAct>);
 
     /// The most acts one `on`, `settle` or `release` call may push; a host reserves the lent buffer with it once, so

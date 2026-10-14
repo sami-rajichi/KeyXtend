@@ -40,15 +40,13 @@ impl Engine {
         self.latches = latches;
     }
 
-    /// Lets go of a carried button and pressed modifiers, so nothing stays down; a held-back press is forgotten.
+    /// Lets go of everything held, so nothing stays down: a carry is cancelled with Esc first, as `cancel` does, so it
+    /// never drops where the pointer is, and a held-back press is forgotten.
     pub fn release(&mut self, acts: &mut Vec<PointerAct>) {
         let before = self.view();
         match self.state {
             State::Pending { .. } => self.note(Note::HoldEnd),
-            State::Carrying { .. } => {
-                self.note(Note::Cancelled);
-                self.let_go(self.last, false, acts);
-            }
+            State::Carrying { .. } => self.cancel(self.last, false, acts),
             State::Idle | State::AwaitUp => {}
         }
         self.mods_up(acts);

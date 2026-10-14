@@ -2,7 +2,7 @@
 
 use crate::logs::{Fields, MESSAGE, lines_of};
 use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown};
-use kx_mod_mouse::{ID, Msg};
+use kx_mod_mouse::{ESC, ID, Msg};
 use kx_module_api::ports::GrabState::Off;
 use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
 use kx_module_api::{Notice, NoticeArg, SettingsError, WriteError, args, keys};
@@ -154,7 +154,7 @@ fn a_refused_right_click_write_logs_only_its_kind_and_tells_no_one() {
 }
 
 #[test]
-fn stopping_during_a_carry_lets_go_of_the_button() {
+fn stopping_during_a_carry_cancels_it_with_esc_and_lets_go_of_the_button() {
     let mut rig = Rig::new();
     rig.begin();
     rig.toggle(Toggle::Grab);
@@ -164,7 +164,12 @@ fn stopping_during_a_carry_lets_go_of_the_button() {
     let _ = rig.hook.take_sent();
     assert!(!rig.send(Msg::Stop), "the actor is done");
     assert!(!rig.hook.running());
-    assert_eq!(rig.hook.take_sent(), [PointerAct::Up(Button::Left, A)]);
+    let cancel = [
+        PointerAct::KeyDown(ESC),
+        PointerAct::KeyUp(ESC),
+        PointerAct::Up(Button::Left, A),
+    ];
+    assert_eq!(rig.hook.take_sent(), cancel);
     let off = AssistChanged {
         live: false,
         rclick: false,
