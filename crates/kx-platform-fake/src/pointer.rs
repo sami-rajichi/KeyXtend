@@ -21,6 +21,8 @@ struct Log {
     acts: Vec<PointerAct>,
     /// Its capacity at the start; any change is an engine bug.
     room: usize,
+    /// The engine's `max_acts` at the start; one call pushing more is an engine bug, even within the buffer's slack.
+    max_acts: usize,
     sent: Vec<PointerAct>,
     config: Option<HookConfig>,
     stats: HookStats,
@@ -36,9 +38,9 @@ impl Log {
     /// Lends the buffer to one engine call, then sends what it pushed, in order.
     fn lend<R>(&mut self, call: impl FnOnce(&mut Vec<PointerAct>) -> R) -> R {
         let out = call(&mut self.acts);
-        let grew = self.acts.capacity() != self.room;
+        let over = self.acts.len() > self.max_acts || self.acts.capacity() != self.room;
         self.sent.append(&mut self.acts);
-        if grew {
+        if over {
             // A fresh buffer first, so the run can still stop after the test catches this.
             self.acts = Vec::with_capacity(self.room);
             panic!("{OVERRUN}");
@@ -211,7 +213,8 @@ impl PointerHook for FakePointerHook {
         if let Some(error) = log.fail.take() {
             return Err(error);
         }
-        log.acts = Vec::with_capacity(engine.max_acts());
+        log.max_acts = engine.max_acts();
+        log.acts = Vec::with_capacity(log.max_acts);
         log.room = log.acts.capacity();
         log.config = Some(config);
         log.starts += 1;

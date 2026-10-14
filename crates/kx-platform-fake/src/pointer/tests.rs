@@ -230,6 +230,20 @@ fn an_engine_that_pushes_past_max_acts_panics() {
 }
 
 #[test]
+fn an_overrun_inside_the_buffers_slack_still_panics() {
+    // As if the allocator gave more room than asked, so the capacity alone would not show it.
+    let mut log = Log {
+        acts: Vec::with_capacity(CLICK.len()),
+        max_acts: CLICK.len() - 1,
+        ..Log::default()
+    };
+    log.room = log.acts.capacity();
+    let text = panic_text(|| log.lend(|acts| acts.extend(CLICK)));
+    assert!(text.contains(OVERRUN), "{text}");
+    assert_eq!(log.sent, CLICK, "what it pushed still goes out");
+}
+
+#[test]
 fn a_call_with_no_live_engine_panics() {
     let hook = FakePointerHook::new();
     let text = panic_text(|| hook.settle(T1));
