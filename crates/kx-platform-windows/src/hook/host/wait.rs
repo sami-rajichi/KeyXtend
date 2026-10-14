@@ -13,7 +13,7 @@ impl<O: Os> Host<O> {
         self.waiting(now) || !self.queue.is_empty()
     }
 
-    /// True while our last batch is not back; a wait past `echo_ms` ends and counts as a lost echo.
+    /// True while our newest batch is not back; a wait past `echo_ms` ends and counts as a lost echo.
     pub(super) fn waiting(&mut self, now: Mono) -> bool {
         let wait = self.echo.check(now);
         if wait == Wait::Lost {

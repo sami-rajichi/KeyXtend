@@ -47,8 +47,9 @@ pub(super) struct End {
     /// Per event of `made`, the engine dropped it or the OS refused our copy, so a later copy is not the hand's.
     pub lost: Vec<bool>,
     pub heard: Vec<Heard>,
-    /// The host's room changed, or a hook dropped our own input.
+    /// The host's room changed.
     pub grew: bool,
+    /// A hook dropped our own input.
     pub ours_dropped: bool,
 }
 
@@ -77,7 +78,7 @@ pub(super) struct Sim {
 }
 
 impl Sim {
-    /// A started host whose scripted engine follows `plan`.
+    /// A started host with a scripted engine, an empty stream and a hand that holds nothing.
     pub(super) fn new() -> Self {
         let rig = rig(Source::Physical);
         let room = rig.host.room();
