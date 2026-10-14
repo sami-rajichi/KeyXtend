@@ -97,8 +97,7 @@ fn own_rect(title: &str) -> Result<RECT, String> {
 
 /// Where the mouse pointer is, in physical pixels.
 pub fn cursor() -> Result<Pt, String> {
-    let p = kx_platform_windows::screen::cursor().map_err(text)?;
-    Ok(Pt { x: p.x, y: p.y })
+    Ok(pt(kx_platform_windows::screen::cursor().map_err(text)?))
 }
 
 #[cfg(test)]

@@ -110,7 +110,7 @@ Item {
         lk: ex.lk
         res: ex.res
     }
-    Overlay {
+    SnipOverlay {
         id: over
         title: tl.overlayTitle
         lk: ex.lk

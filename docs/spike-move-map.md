@@ -83,7 +83,7 @@ Only gates `g1`–`g4` and `g25`'s language part are aimed at the product in P3;
 | P11 Voice | `worker/src/http.rs` (WinHTTP) | `kx-platform-net`, used only by the worker; P11 adds it to tidy's banned-network list for `keyxtend` (ADR-0004) |
 | P11 Voice | Gates `g22` (with `g22cfg`), `g22bench`, `g22type`, `wer` | Aimed at the product app |
 | P11 Voice | `core/src/langkey.rs` G22 helpers (`installed_for`, `layout_for`, `layout_of`) | Gate `g22`'s own code in `tools/kx-gates`, over `kx-platform-windows` |
-| P12 Snip | `core/src/{capture,capture/tests,snip}.rs`, `core/src/screen.rs` `cursor`, the snip part of `qt-kb/qml/Extras.qml`, `qt-kb/qml/Overlay.qml`, `qt-kb/src/tools.rs` snip part, `spike.toml` `[tools]` snip lines | `kx-mod-snip` logic, `kx-platform-windows` screen capture, `kx-ui`; gate `g24` |
+| P12 Snip | `core/src/{capture,capture/tests,snip}.rs`, `core/src/screen.rs` `cursor`, the snip part of `qt-kb/qml/Extras.qml`, `qt-kb/qml/SnipOverlay.qml` (kx-ui already has an `Overlay`, the pointer overlay, so the snip's needs its own name), `qt-kb/src/tools.rs` snip part, `spike.toml` `[tools]` snip lines | `kx-mod-snip` logic, `kx-platform-windows` screen capture, `kx-ui`; gate `g24` |
 
 ## P13 — Themes, settings, languages
 
