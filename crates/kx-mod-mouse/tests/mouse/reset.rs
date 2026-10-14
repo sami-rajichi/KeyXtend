@@ -1,5 +1,5 @@
-//! An engine the hook gave up (ruling 39): the modes turn off for this session, held latches get one fresh run at
-//! once, and a late word from an older run changes nothing.
+//! An engine the hook gave up: the modes turn off for this session, so one tap on a mode key starts afresh, and held
+//! latches get one fresh run at once, once until the user acts again; a late word from an older run changes nothing.
 
 use crate::rig::{A, Heard, Rig, T0, T1, down, shown, told, up};
 use kx_mod_mouse::Msg;
@@ -78,6 +78,39 @@ fn a_fresh_run_for_latches_the_hook_refuses_is_tried_once_and_adds_no_notice() {
     assert!(!rig.hook.running(), "tried once");
     rig.send(Msg::Latches(vec![SHIFT]));
     assert!(rig.hook.running(), "the next latch change tries again");
+}
+
+#[test]
+fn a_give_up_that_repeats_restarts_for_latches_once_until_a_latch_changes() {
+    let mut rig = latched();
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    for _ in 0..2 {
+        rig.hook.give_up();
+        rig.pump();
+        assert_eq!(rig.take(), reset);
+    }
+    assert!(!rig.hook.running(), "the second give-up starts nothing");
+    assert_eq!(rig.hook.starts(), 2, "one fresh run, never a loop");
+    rig.send(Msg::Latches(vec![SHIFT]));
+    assert!(rig.hook.running(), "a latch change starts afresh");
+    rig.hook.give_up();
+    rig.pump();
+    assert_eq!(rig.hook.starts(), 4, "and earns one more fresh run");
+}
+
+#[test]
+fn a_mode_tap_after_a_repeated_give_up_earns_the_latches_one_more_fresh_run() {
+    let mut rig = latched();
+    for _ in 0..2 {
+        rig.hook.give_up();
+        rig.pump();
+    }
+    rig.toggle(Toggle::RightClick);
+    assert_eq!(rig.hook.starts(), 3, "the tap starts a run");
+    rig.hook.give_up();
+    rig.pump();
+    assert!(rig.hook.running(), "the latch still gets its fresh run");
+    assert_eq!(rig.hook.starts(), 4);
 }
 
 #[test]

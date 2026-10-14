@@ -42,6 +42,10 @@ struct Live {
 }
 
 /// The mouse module's runtime: one per start, on its own thread.
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact kept between messages: Right-click saved and shown, a failing start, a spent restart."
+)]
 pub struct Actor {
     hook: Arc<dyn PointerHook>,
     bus: Bus,
@@ -62,6 +66,8 @@ pub struct Actor {
     runs: u64,
     /// The last start failed; until one works, a start for latches fails without a word.
     failing: bool,
+    /// A give-up already restarted for latches; until a mode tap or a latch change, the next one starts nothing.
+    restarted: bool,
 }
 
 impl Actor {
@@ -89,6 +95,7 @@ impl Actor {
             live: None,
             runs: 0,
             failing: false,
+            restarted: false,
         }
     }
 
@@ -117,8 +124,14 @@ impl Actor {
     /// Handles one message; false after `Stop`, when the actor is done.
     pub fn handle(&mut self, msg: Msg) -> bool {
         match msg {
-            Msg::Toggle(which) => self.command(Cmd::Toggle(which)),
-            Msg::Latches(held) => self.latch(held),
+            Msg::Toggle(which) => {
+                self.restarted = false;
+                self.command(Cmd::Toggle(which));
+            }
+            Msg::Latches(held) => {
+                self.restarted = false;
+                self.latch(held);
+            }
             Msg::Ask => self.tell_state(),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
@@ -208,8 +221,8 @@ impl Actor {
     }
 
     /// The host gave up the live run's engine after a panic, so the run goes, both modes turn off for this session and
-    /// the user hears why; a mode key starts afresh, and held latches get one fresh run at once. Another run's engine
-    /// just ended.
+    /// the user hears why. A mode key starts afresh, and held latches get one fresh run at once, only once until the
+    /// user taps a mode key or changes a latch, so a fault that repeats never loops. Another run's engine just ended.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
@@ -218,7 +231,7 @@ impl Actor {
         self.drop_run();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
-        if !self.latches.is_empty() {
+        if !self.latches.is_empty() && !std::mem::replace(&mut self.restarted, true) {
             // A start for latches, so a refusal takes their quiet path.
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
