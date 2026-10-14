@@ -2,25 +2,46 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
-## 2026-10-14 07:00 — P4: the spike's hold engine and ring test deleted
+## 2026-10-14 07:35 — P4: the docs match the final code
+`kx-mod-mouse`'s security note is now complete: its data, inputs and threats, every path that lets go of held input, and the reset after a failed engine, each with its tests. The other security notes, the spec, ADR-0027's row, the plan, the move map and the code map now match the code as built, and name constants instead of repeating their values. The review findings that belong to later items went to P5, P7, P10 and P11, and eight work-log times now match their commits.
+
+## 2026-10-14 07:18 — P4: the panic hook lets go first, and the gates judge stalls and quits
+The panic hook now has the mouse hook let go before it logs, and the sound recipes take one table per layer, in fewer than half the lines and with the same rendered bytes. G12 now counts the time a ring draws nothing in its frame rate, G5 adds a drag held past the hold time, and every gate that drives the test build fails when that build does not quit in time. kx-gates refuses to click a test-build key another window covers, starts the owner's copy again only once the test build is gone, and gives the installed-kx-gates advice only for a refused Quit. The recipes' licence, kx-theme's README and the spike's snip overlay name were also put right.
+
+## 2026-10-14 06:46 — P4: the overlay's mode, the keys' dim flag and a steady ring
+The hub now names the mode the overlay shows, which QML reads instead of working it out again, and the keyboard's state flags a key that does nothing (`dim`), which a key reads instead of its paint name. The hold ring stays busy from one run to the next, so the overlay no longer blinks between the waves and the burst. New tests check that the badge hides over the bubble and the open language list and that a mouse module already running lights the keys at start, and a property test covers the overlay state's wakes. The READMEs name the new calls, and the sound tests run only with Qt.
+
+## 2026-10-14 06:13 — P4: a failed engine resets the modes, and nothing shows a point
+An engine the hook gave up now turns Right-click and Grab off for this session only, with a new notice that a tap on a mode key starts them again, and held latches get a fresh run at once so a click keeps its modifier. Only a panic on the mouse module's own thread now dims its keys, with a notice to restart KeyXtend; both notices are in English, French and Arabic. The port's pointer events and acts hide every point and key in debug output, and the stopped line's text is one constant that kx-gates reads. New properties check that each ring closes once and that the hook stops when nothing needs it.
+
+## 2026-10-14 05:46 — P4: the hook's echoes, batches and health check
+Each turn, release, stop and reinstall now sends its input as one batch, and each echo of our input matches the act it echoes, so an older batch's late echo never lets the hand's input overtake a newer one. When the hand lets go of a button or key while our own press of it may still be on its way, the next batch first sends an Up for it, so nothing stays down. The health check counts our own input as seen, skips the lock screen and the secure desktop, and puts the hooks back only after two lagging checks in a row, and posts reach only the live hook thread. A property test now drives the host through random hand input, engine plans, echoes, cut sends, floods and panics.
+
+## 2026-10-14 03:56 — P4: the badge follows the pointer, and a failed engine or actor speaks up
+The hook now asks for a turn whenever the engine holds notes, one wake at a time, so the badge follows the pointer at once instead of at the next health check. An engine the hook gave up after a panic is now dropped after its one release, so the mouse module hears of it, and a panic on the module's own thread turns its keys off at once. A let-go during a Grab carry now sends Esc before the button's Up, so a stop or a reinstall never drops a file where the pointer is. The fake hook gained `let_go` and `give_up`, and wakes as the real host does.
+
+## 2026-10-14 03:32 — P4: the speaker port states its rules
+The `Speaker` port now holds its own rules: a clip plays only when it is whole samples at a rate every speaker plays (`Clip::RATES`), and `level` clamps a gain, so the Windows speaker and the fake keep one contract. The Windows speaker now also skips a clip outside those rates, and a new test checks that XAudio2's factory loads from System32 and makes an engine without playing anything. Its warning kinds are listed once, and the crate map names the hook, the speaker and the memory port.
+
+## 2026-10-14 02:55 — P4: the spike's hold engine and ring test deleted
 No gate uses the spike's hold engine, its `[hold]` and `[ring]` settings, its ring test or kx-test-support's frame stats any more, so they are deleted. The screen point `Pt` that the spike and kx-gates still share moved into its own spike file. The spike's test strip lost its ring switch, and the move map and the P4 notes now say G12 times the product overlay with PresentMon.
 
-## 2026-10-14 06:30 — P4: G12 judges lost frames as G8 does
+## 2026-10-14 02:45 — P4: G12 judges lost frames as G8 does
 G12 now counts the ring's lost frames by G8's frame rule, through the same helper. It skips a swap chain's first present and one replaced within a refresh, so the overlay's first frame no longer fails a smooth ring. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job, lets go of anything left down, and then starts the owner's copy again. It also ends the job and lets go when the test build fails to start.
 
-## 2026-10-14 06:00 — P4: G12 needs every ring to draw, review fixes
+## 2026-10-14 02:33 — P4: G12 needs every ring to draw, review fixes
 G12 now fails unless the overlay drew frames in every press and none of them went unshown, and it leaves out any point a test build window already covers before Right-click turns on. Its PresentMon capture is checked at load to cover every press at its longest, and G5's and G8 hook's rounds to fit the mouse guard's limit. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job and then lets go of either button and the modifiers. PresentMon rows without a time are now skipped and counted in the result.
 
-## 2026-10-14 05:00 — P4: G12 under the product's overlay, and G8's hook p99
+## 2026-10-14 02:13 — P4: G12 under the product's overlay, and G8's hook p99
 G12 now presses 200 points of target-window under the test build's own pointer overlay, each press long enough for the ring to play yet still a click, and checks every click arrives and nothing blocks it. PresentMon, shared with G8, records the test build, and the overlay's frames are judged only inside the ring's time, so the keyboard's frames never count. The new `g8 hook` and `g8 hook-weak` run G5's cases on the test build and hold the hook's logged p99 to spec §10's 1 ms. G6's face sizes are now checked at load, and a G18 error no longer shows an empty part.
 
-## 2026-10-14 04:00 — P4: G6 scrolls in the document, cleanup on every path
+## 2026-10-14 01:39 — P4: G6 scrolls in the document, cleanup on every path
 G6's stand-in face now sits over the document's lower part, as the keyboard does, so its scroll point lands in the document's body, and G6 stops when that point is off the document; with no UI Automation scroll pattern there it skips only that route, and its result gives the point as an offset in the window. G5 and G18 turn Right-click off even after a failed case, and G18 reads the latch at once after its click. G5 also refuses a drag inside the still radius at the screen's DPI, and target-window refuses a hang cap at Windows' hung-window mark.
 
-## 2026-10-14 03:00 — P4: G5, G17, G18, G6 and the hand try drive the product
+## 2026-10-14 01:21 — P4: G5, G17, G18, G6 and the hand try drive the product
 G5, G17 and G18 now drive the product's test build, turning Right-click, Grab and the latches on with its own keys, and kx-gates' own copy of the hold engine is gone. G5 parks target-window clear of the keyboard, measures the still radius at the screen's DPI, adds a hung-target case, and judges the hook by its logged numbers; its admin-window case is now the owner's manual check. G6 polls the pointer for its scroll target until the product's tracker comes in P5, and the hand try reads the hook's numbers from the owner's running copy.
 
-## 2026-10-14 01:30 — P4: no console for any release build, review fixes
+## 2026-10-14 00:57 — P4: no console for any release build, review fixes
 Every release build, the gate-input test build too, now opens no console window, which would have taken the foreground; a second build flag (`kx_no_console`) carries this, and the uiAccess flag keeps only the manifest and the load pinning. kx-gates now refuses to read its settings or start the test build when Windows will not say whether it has uiAccess. When the owner's copy is not started again after the test build, kx-gates prints one line saying to start it from the Start menu. Nested `target` folders are now ignored by git.
 
 ## 2026-10-14 00:30 — P4: the gates' test build, the p4 settings and the guard's replay rule
@@ -65,7 +86,7 @@ The mouse module now runs an actor thread that starts the pointer hook when Righ
 ## 2026-10-13 12:16 — P4: the hold engine with Grab at once and modifier + click
 `kx-mod-mouse` now has the pure hold engine: a still hold right-clicks, Grab picks up at the next press with no wait and drops on the next click, and a click on our windows, Esc or a toggle cancels a carry, with Right-click coming back after. The keyboard's latched modifiers go down around the next left click outside our windows in any mode, a latch change mid-click never alters that click, and the still radius scales by the press's DPI. Property tests over random input found that a late hold's right-click could reach the app after the press that revealed it; that press now follows it. The engine also lets go of stale modifiers or an awaited release when the hook misses one, and its hot path never allocates.
 
-## 2026-10-13 12:10 — P4: the mouse module's crate and its `[mouse]` settings
+## 2026-10-13 11:45 — P4: the mouse module's crate and its `[mouse]` settings
 The new `kx-mod-mouse` crate declares the mouse module: it needs the pointer hook and holds the `PointerHook` and `InjectInput` capabilities, and its start reads `[mouse]` and keeps the hook for the engine to come. `[mouse]` holds Right-click mode, the hold time (0.5 s to 3.0 s, 1.5 s by default), the still radius, the ring's delay and the hook's health and echo times, each with a range, and the ring must always show before the shortest hold. The crate joined the workspace and CI's Linux list, with a README and a draft security note. The `kx-new-module` skill now names `boot.rs` and the flat `qml/` folder.
 
 ## 2026-10-13 11:34 — P4: the pointer hook port and the mouse-assist bus events
