@@ -1,18 +1,18 @@
-//! The probes' simulated user: moves, clicks, grabs and Esc, each only on our own window and tab.
+//! The probes' simulated user: moves, clicks and grabs, each only on our own window and tab, and clicks on the product's
+//! keys; all of it `SIM_TAG` input, which only the test build's engine hears.
 #![cfg(windows)]
 
 use kx_platform_windows::keys::TAG;
 use kx_platform_windows::window::foreground;
-use spike_core::hold::{ESC, Pt};
-use windows::Win32::Foundation::{HWND, POINT, RECT};
+use spike_core::hold::Pt;
+use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, MOUSEEVENTF_LEFTUP, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_SHIFT,
 };
 
 use crate::apps::{Ctx, Opened};
-use crate::assist::{Assist, Setup};
-use crate::hookio::Source;
-use crate::simin::{self, Act, Button};
+use crate::product::Keyboard;
+use crate::simin::{self, Act};
 use crate::win::{self, sleep_ms};
 use crate::{keys, mouse};
 
@@ -53,19 +53,6 @@ pub fn in_front(hwnd: HWND) -> Result<(), String> {
     Ok(())
 }
 
-/// Starts the engine on the simulated user's input; presses inside `own` are never held.
-pub fn start_assist(ctx: &Ctx, own: Vec<RECT>) -> Result<Assist, String> {
-    let h = &ctx.spike.hold;
-    Assist::start(Setup {
-        hold_ms: h.ms,
-        still_px: h.still_px,
-        source: Source::Simulated,
-        own,
-        reply_ms: ctx.cfg.assist.reply_ms,
-        samples: ctx.cfg.assist.hook_samples,
-    })
-}
-
 /// `steps` even points from just after `from` to exactly `to`.
 pub fn path(from: Pt, to: Pt, steps: i32) -> Vec<Pt> {
     let n = steps.max(1);
@@ -86,36 +73,44 @@ fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
     Ok(())
 }
 
-/// A short left click at `p` on our window, then a pause to settle.
-pub fn click(ctx: &Ctx, app: &Opened, p: Pt) -> Result<(), String> {
+/// A short left click at `p`.
+fn press(ctx: &Ctx, p: Pt) -> Result<(), String> {
     let sim = &ctx.cfg.sim;
-    guard(app, &[p])?;
     simin::as_user(&[Act::Move(p)])?;
     sleep_ms(sim.step_ms);
-    simin::as_user(&[Act::Down(Button::Left, p)])?;
+    simin::as_user(&[Act::Down(p)])?;
     sleep_ms(sim.click_ms);
-    let up = simin::as_user(&[Act::Up(Button::Left, p)]);
-    sleep_ms(ctx.cfg.probes.settle_ms);
-    up
+    simin::as_user(&[Act::Up(p)])
 }
 
-/// Holds still at `from` past the hold time, lets go, then glides to `to`: Grab now carries from `from`.
+/// A short left click at `p` on our window, then a pause to settle.
+pub fn click(ctx: &Ctx, app: &Opened, p: Pt) -> Result<(), String> {
+    guard(app, &[p])?;
+    let clicked = press(ctx, p);
+    sleep_ms(ctx.cfg.probes.settle_ms);
+    clicked
+}
+
+/// A short click at `from`, then a glide to `to`: Grab picks up at the press and drops its release, so it carries from
+/// `from`.
 pub fn grab(ctx: &Ctx, app: &Opened, from: Pt, to: Pt) -> Result<(), String> {
-    let sim = &ctx.cfg.sim;
     guard(app, &[from, to])?;
-    simin::as_user(&[Act::Move(from)])?;
-    sleep_ms(sim.step_ms);
-    simin::as_user(&[Act::Down(Button::Left, from)])?;
-    sleep_ms(ctx.spike.hold.ms + sim.hold_margin_ms);
-    simin::as_user(&[Act::Up(Button::Left, from)])?;
-    sleep_ms(sim.step_ms);
+    press(ctx, from)?;
+    sleep_ms(ctx.cfg.sim.step_ms);
     glide(ctx, from, to)
 }
 
-/// Taps Esc, only while our window is in front.
-pub fn esc(app: &Opened) -> Result<(), String> {
-    keys_ours(app)?;
-    simin::as_user(&[Act::KeyDown(ESC), Act::KeyUp(ESC)])
+/// A short click at the centre of the product's key `id`, once that point shows the keyboard window, then a pause to
+/// settle. In the test build a click on our window cancels a carry, and the engine sends Esc itself.
+pub fn click_key(ctx: &Ctx, kb: &Keyboard, id: &str) -> Result<(), String> {
+    let at = kb.at(id)?;
+    let top = win::root_at(at);
+    if top != kb.hwnd {
+        return Err(format!("{} covers key {id}", win::describe(top)));
+    }
+    let clicked = press(ctx, Pt { x: at.x, y: at.y });
+    sleep_ms(ctx.cfg.probes.settle_ms);
+    clicked
 }
 
 /// True when virtual key `vk`, a key or a mouse button, is up now.

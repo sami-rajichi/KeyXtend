@@ -1,5 +1,5 @@
-# Settings P4 adds: the product's test build, which P4's gates start and drive. kx-gates reads them with kx-gates.toml,
-# from its folder; a section sits in one file only.
+# Settings P4 adds: the product's test build, which P4's gates start and drive, G5 and the hand try. kx-gates reads them
+# with kx-gates.toml, from its folder; a section sits in one file only.
 
 # The test build: the app built with its gate-input feature, so with `flag` its engine hears only kx-gates' SIM_TAG
 # input. Build it with `cargo build -p keyxtend --release --features gate-input --target-dir target/gate-input`; it never
@@ -17,3 +17,27 @@ hook_line = "mouse hook stopped"
 start_ms = 15000
 # Longest wait for a mode or latch key to read on or off after its click, in ms.
 lit_ms = 3000
+
+# G5 on the test build: target-window parked at its screen's top-left, Right-click on, six cases a round. The hold time
+# and still radius are the test build's [mouse] hold_ms and still_px, the radius scaled by the test point's DPI.
+[g5]
+# A drag while pressed, in px; a wiggle stays still_margin_px inside the still radius, another move that far past it.
+drag_px = 30
+still_margin_px = 2
+# How many times the six cases run.
+rounds = 4
+# Wait for the target log after each case, in ms.
+settle_ms = 400
+# A logged point may be this far from where we pressed, in px.
+point_slack_px = 1
+# The hook must hand the engine at least this many events per case played: its press and its release.
+min_events_per_case = 2
+# The hung case: hang_lead_ms before the hold time, target-window sleeps hang_ms, so the right-click lands while it
+# hangs; keep hang_ms within kx-target-window.toml's hang_max_ms, and hang_lead_ms below hang_ms.
+hang_ms = 1000
+hang_lead_ms = 300
+
+# The owner's hand try (`kx-gates assist`) on the running keyboard: it reads the stats lines its hook logs meanwhile.
+[hand]
+# How long it runs unless --secs says otherwise, in seconds.
+try_secs = 90

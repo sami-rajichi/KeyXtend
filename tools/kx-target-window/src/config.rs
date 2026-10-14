@@ -31,6 +31,8 @@ pub struct TargetConfig {
     /// Command-line switch, followed by an installed layout id, that switches the whole session's input language to
     /// that layout.
     pub layout_arg: String,
+    /// Longest a gate's hang message makes the window sleep, in ms.
+    pub hang_max_ms: u64,
 }
 
 /// Why the settings could not be loaded; each message names the file.

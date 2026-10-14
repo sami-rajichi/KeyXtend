@@ -6,46 +6,21 @@ use spike_core::hold::Pt;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
-    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN,
-    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK,
+    MOUSEEVENTF_MOVE, MOUSEEVENTF_VIRTUALDESK,
 };
 
 use crate::mouse::{self, normalise};
 use crate::{keys, win};
 
-/// A mouse button the simulated user presses.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Button {
-    /// The main button.
-    Left,
-    /// The context-menu button.
-    Right,
-    /// The wheel button.
-    Middle,
-}
-
-/// One step of the simulated user's input.
+/// One step of the simulated user's input; the simulated user only ever presses the left button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Act {
     /// Moves the pointer there.
     Move(Pt),
-    /// Presses a button there.
-    Down(Button, Pt),
-    /// Releases a button there.
-    Up(Button, Pt),
-    /// Presses a virtual key.
-    KeyDown(u16),
-    /// Releases a virtual key.
-    KeyUp(u16),
-}
-
-/// The press and release flags of `button`.
-fn flags(button: Button) -> (MOUSE_EVENT_FLAGS, MOUSE_EVENT_FLAGS) {
-    match button {
-        Button::Left => (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP),
-        Button::Right => (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP),
-        Button::Middle => (MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP),
-    }
+    /// Presses the left button there.
+    Down(Pt),
+    /// Releases the left button there.
+    Up(Pt),
 }
 
 /// `acts` as one `SendInput` batch marked `tag`, for the virtual desktop `(left, top, width, height)`.
@@ -59,10 +34,8 @@ pub fn inputs(acts: &[Act], desktop: (i32, i32, i32, i32), tag: usize) -> Vec<IN
     acts.iter()
         .map(|&act| match act {
             Act::Move(p) => at(p, MOUSE_EVENT_FLAGS(0)),
-            Act::Down(b, p) => at(p, flags(b).0),
-            Act::Up(b, p) => at(p, flags(b).1),
-            Act::KeyDown(vk) => keys::tagged(vk, false, tag),
-            Act::KeyUp(vk) => keys::tagged(vk, true, tag),
+            Act::Down(p) => at(p, MOUSEEVENTF_LEFTDOWN),
+            Act::Up(p) => at(p, MOUSEEVENTF_LEFTUP),
         })
         .collect()
 }
@@ -82,9 +55,7 @@ mod tests {
     use kx_platform_windows::keys::TAG;
 
     use super::*;
-    use windows::Win32::UI::Input::KeyboardAndMouse::{
-        INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP,
-    };
+    use windows::Win32::UI::Input::KeyboardAndMouse::INPUT_MOUSE;
 
     const P: Pt = Pt { x: 5, y: 6 };
 
@@ -103,37 +74,33 @@ mod tests {
 
     #[allow(unsafe_code, reason = "Reads the union variant of the checked type.")]
     #[test]
-    fn acts_become_tagged_absolute_mouse_and_key_input() {
-        let acts = [Act::Down(Button::Right, P), Act::KeyUp(0x10)];
+    fn acts_become_tagged_absolute_left_button_input() {
+        let acts = [Act::Down(P), Act::Up(P)];
         let got = inputs(&acts, (0, 0, 11, 11), SIM_TAG);
         assert_eq!(got.len(), 2);
-        assert_eq!(got[0].r#type, INPUT_MOUSE);
-        // SAFETY: the union variant matches the type checked above.
-        let mi = unsafe { got[0].Anonymous.mi };
+        assert!(got.iter().all(|i| i.r#type == INPUT_MOUSE));
+        // SAFETY: both are mouse input, as checked above.
+        let (down, up) = unsafe { (got[0].Anonymous.mi, got[1].Anonymous.mi) };
         let at = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
-        assert_eq!(mi.dwFlags, at | MOUSEEVENTF_RIGHTDOWN);
-        assert_eq!((mi.dx, mi.dy, mi.dwExtraInfo), (32768, 39321, SIM_TAG));
-        assert_eq!(got[1].r#type, INPUT_KEYBOARD);
-        // SAFETY: the union variant matches the type checked above.
-        let ki = unsafe { got[1].Anonymous.ki };
-        assert_eq!((ki.wVk.0, ki.dwExtraInfo), (0x10, SIM_TAG));
-        assert!(ki.dwFlags.contains(KEYEVENTF_KEYUP));
+        assert_eq!(down.dwFlags, at | MOUSEEVENTF_LEFTDOWN);
+        assert_eq!(up.dwFlags, at | MOUSEEVENTF_LEFTUP);
+        assert_eq!(
+            (down.dx, down.dy, down.dwExtraInfo),
+            (32768, 39321, SIM_TAG)
+        );
     }
 
     #[allow(unsafe_code, reason = "Reads the union variant of the checked type.")]
     #[test]
     fn each_act_carries_the_tag_it_is_sent_with() {
-        let acts = [Act::Move(P), Act::Up(Button::Middle, P), Act::KeyDown(0x11)];
+        let acts = [Act::Move(P), Act::Down(P), Act::Up(P)];
         for tag in [TAG, SIM_TAG] {
             let got = inputs(&acts, (-10, -20, 30, 40), tag);
-            // SAFETY: the first two are mouse input and the last is key input, as their acts say.
-            let extras = unsafe {
-                [
-                    got[0].Anonymous.mi.dwExtraInfo,
-                    got[1].Anonymous.mi.dwExtraInfo,
-                    got[2].Anonymous.ki.dwExtraInfo,
-                ]
-            };
+            // SAFETY: every act is mouse input.
+            let extras: Vec<usize> = got
+                .iter()
+                .map(|i| unsafe { i.Anonymous.mi.dwExtraInfo })
+                .collect();
             assert_eq!(extras, [tag; 3], "tag {tag:#x}");
         }
     }

@@ -4,7 +4,6 @@
 
 mod admin;
 mod apps;
-mod assist;
 mod board;
 mod budget;
 mod busbench;
@@ -53,6 +52,7 @@ mod g2raw;
 mod g3;
 mod g4;
 mod g5;
+mod g5play;
 mod g6;
 mod g7;
 mod g8;
@@ -73,14 +73,7 @@ mod g9;
 mod g9win;
 mod gatecfg;
 mod hand;
-mod hookhost;
-mod hookio;
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "Task 14b's gates read the stats lines.")
-)]
 mod hooklog;
-mod hookstate;
 mod keymap;
 mod keys;
 mod launch;
@@ -103,7 +96,6 @@ mod shot;
 mod simin;
 mod simuser;
 mod stats;
-#[expect(dead_code, reason = "Task 14b's gates drive the test build.")]
 mod testbuild;
 mod text;
 mod tlog;

@@ -74,6 +74,7 @@ pub fn run() -> Result<(), StartError> {
     procs::start_log(open_log(&cfg.log)?, clock);
     let password = args.contains(&cfg.password_arg);
     procs::set_password(password);
+    procs::set_hang_max(cfg.hang_max_ms);
     let inst = module()?;
     let main = create_main(&cfg, inst)?;
     let edit = create_edit(main, inst, password)?;

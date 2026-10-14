@@ -17,3 +17,6 @@ password_arg = "--password"
 # Switch, followed by an installed layout id such as 0x00000000040C040C, that switches the whole session to it.
 # The window puts the previous layout back at close only while it holds the keyboard (ARCHITECTURE.md has the rest).
 layout_arg = "--layout"
+# Longest a gate's hang message (G5's hung target) makes the window sleep, in ms; kept below Windows' 5 s hung-window
+# mark, so Windows never swaps in its ghost window.
+hang_max_ms = 3000

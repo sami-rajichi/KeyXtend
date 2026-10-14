@@ -55,7 +55,7 @@ pub fn usage() -> String {
     format!(
         "usage: {PROG} g1 <{}> [--count N] [--seed S] [--pause MS] [--attach]
 {}
-       {PROG} g5 <{}|{}>
+       {PROG} g5 <{}>
        {PROG} assist <{}|{}> [--secs N]
        {PROG} g17 <{}>
        {PROG} g18 <{}>
@@ -67,11 +67,11 @@ pub fn usage() -> String {
        {PROG} {}
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
-g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.",
+g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.
+g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
         product_lines(),
         g5::PLAIN,
-        g5::ADMIN,
         hand::RIGHT,
         hand::GRAB,
         names(&g17::APPS),
@@ -85,6 +85,7 @@ g8 {} times the running product's key light only; g8 {} times the shown On-Scree
         g8::WEAK,
         g8lit::LIT,
         g8lit::OSK,
+        g5::ADMIN,
     )
 }
 
@@ -96,6 +97,16 @@ mod tests {
     fn usage_lists_every_g1_app() {
         let names: Vec<&str> = AppKind::ALL.iter().map(|a| a.name()).collect();
         assert!(usage().contains(&format!("g1 <{}>", names.join("|"))));
+    }
+
+    #[test]
+    fn g5_runs_plain_and_names_admin_as_the_owners_manual_check() {
+        let text = usage();
+        assert!(text.contains(&format!("g5 <{}>", g5::PLAIN)), "{text}");
+        let admin = text
+            .lines()
+            .find(|l| l.contains(&format!("g5 {}", g5::ADMIN)));
+        assert!(admin.is_some_and(|l| l.contains("manual")), "{text}");
     }
 
     #[test]

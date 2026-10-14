@@ -40,6 +40,7 @@ fn the_shipped_file_parses() {
         "a screen reader names the text box"
     );
     assert!(cfg.font_px > 0 && cfg.width_px > 0 && cfg.height_px > 0);
+    assert!(cfg.hang_max_ms > 0, "a gate's hang must take effect");
 }
 
 #[test]

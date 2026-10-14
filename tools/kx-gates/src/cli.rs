@@ -157,7 +157,7 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
         "assist" => hand::run(
             ctx,
             &args.name,
-            args.count.map_or(ctx.cfg.assist.try_secs, |n| n as u64),
+            args.count.map_or(ctx.cfg.hand.try_secs, |n| n as u64),
         ),
         "g3" => g3::run(ctx, &args.name),
         _ => Err(usage()),

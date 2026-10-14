@@ -5,14 +5,18 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 
+use kx_platform_windows::screen;
 use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::{
+    SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
+};
 
 use crate::apps::{AppKind, Ctx, INPUT, Opened};
 use crate::config::AppConfig;
 use crate::launchterm;
+use crate::out;
 use crate::win::{self, sleep_ms};
 use crate::winfind::{self, Match};
-use crate::{admin, out};
 
 /// Suffix of Notepad's test file.
 const NOTEPAD_FILE: &str = ".txt";
@@ -114,9 +118,9 @@ pub fn opened(
     }
 }
 
-/// Closes old target windows and deletes the log; returns target-window's program and title.
+/// Closes old target windows, deletes the log and checks target-window's program is built; returns its title.
 /// Each comes to the front first, since it puts back a `--layout` switch only while it has the keyboard.
-fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
+fn prepare_target(ctx: &Ctx) -> Result<String, String> {
     let (t, title) = (&ctx.cfg.timing, ctx.target.title.clone());
     for w in win::top_windows()
         .into_iter()
@@ -146,7 +150,7 @@ fn prepare_target(ctx: &Ctx) -> Result<(PathBuf, String), String> {
             exe.display()
         ));
     }
-    Ok((exe, title))
+    Ok(title)
 }
 
 /// Closes old target windows, deletes the log, starts target-window and waits for it.
@@ -165,34 +169,22 @@ pub fn to_front(ctx: &Ctx, target: Opened) -> Result<Opened, String> {
 
 /// Like `start_target`, with `extra` arguments, such as the ones that make a password box.
 pub fn start_target_with(ctx: &Ctx, extra: &[String]) -> Result<Opened, String> {
-    let (_, title) = prepare_target(ctx)?;
+    let title = prepare_target(ctx)?;
     let name = AppKind::Target.name();
     let started = launch_with(ctx, name, "", Some(title), extra)?;
     sleep_ms(ctx.cfg.app(name)?.ready_ms);
     Ok(opened(AppKind::Target, started, None, None))
 }
 
-/// Like `start_target`, but as administrator; we hold no process handle, so the caller closes its window.
-pub fn start_target_admin(ctx: &Ctx) -> Result<Opened, String> {
-    let (exe, title) = prepare_target(ctx)?;
-    let app = ctx.cfg.app(AppKind::Target.name())?;
-    let m = window_match(app, Some(title));
-    admin::run_as(&exe, &[])?;
-    let Some(hwnd) = winfind::wait_for(&m, app.wait_ms, ctx.cfg.timing.poll_ms) else {
-        let late = admin::late_window(ctx, &m);
-        return Err(format!(
-            "no admin target window after {} ms; {late}",
-            app.wait_ms
-        ));
-    };
-    sleep_ms(app.ready_ms);
-    Ok(Opened {
-        kind: AppKind::Target,
-        hwnd,
-        child: None,
-        file: None,
-        title_has: None,
-    })
+/// Moves target-window `hwnd` to the top-left of its screen's work area without activating it, so the product's
+/// keyboard at the bottom never covers a test point.
+#[allow(unsafe_code, reason = "Moves our own test window.")]
+pub fn park_target(hwnd: HWND) -> Result<(), String> {
+    let area = screen::work_area(&win::rect(hwnd)?).map_err(|e| e.to_string())?;
+    let keep = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
+    // SAFETY: a plain move of a window handle; a bad handle only gives an error.
+    unsafe { SetWindowPos(hwnd, None, area.left, area.top, 0, 0, keep) }
+        .map_err(|e| format!("park {}: {e}", win::describe(hwnd)))
 }
 
 /// Notepad on a fresh text file holding `text`, spotted by the file name in its title.

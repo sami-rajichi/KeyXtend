@@ -96,3 +96,42 @@ fn only_the_settings_file_holds_the_flag_so_dev_install_still_signs_kx_gates() {
         );
     }
 }
+
+fn g5() -> G5 {
+    crate::config::load().expect("kx-gates.toml loads").g5
+}
+
+#[test]
+fn the_shipped_g5_checks_and_its_hang_stays_within_target_windows_cap() {
+    let g = g5();
+    assert_eq!(g.check(), Ok(()));
+    let cap = kx_target_window::config::load()
+        .expect("kx-target-window.toml loads")
+        .hang_max_ms;
+    assert!(
+        g.hang_ms <= cap,
+        "{} ms past the cap of {cap} ms",
+        g.hang_ms
+    );
+}
+
+#[test]
+fn g5_refuses_a_lead_at_or_past_the_hang_no_round_and_no_event_per_case() {
+    let bad: [fn(&mut G5); 4] = [
+        |g| g.hang_lead_ms = g.hang_ms,
+        |g| g.hang_lead_ms = g.hang_ms + 1,
+        |g| g.rounds = 0,
+        |g| g.min_events_per_case = 0,
+    ];
+    for (i, f) in bad.iter().enumerate() {
+        let mut g = g5();
+        f(&mut g);
+        assert!(g.check().is_err(), "case {i}");
+    }
+}
+
+#[test]
+fn the_hand_try_runs_a_while() {
+    let hand = crate::config::load().expect("kx-gates.toml loads").hand;
+    assert!(hand.try_secs > 0);
+}

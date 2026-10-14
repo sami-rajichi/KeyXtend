@@ -1,19 +1,20 @@
 //! G6 scroll: which route scrolls Notepad, Chrome, Explorer and Word, each way, while the pointer rests on the face.
+//! It polls the pointer for the last point outside the face until P5 brings the product's tracker.
 #![cfg(windows)]
 
+use kx_platform_windows::screen;
 use serde_json::{Value, json};
-use spike_core::hold::{Act, Pt};
-use windows::Win32::Foundation::RECT;
+use spike_core::hold::Pt;
+use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 
 use crate::apps::{AppKind, Ctx};
-use crate::assist;
 use crate::out::say;
 use crate::probe::{self, Doc};
-use crate::probetext;
 use crate::scroll::{self, Dir, Route};
 use crate::simuser::{self, guard};
 use crate::win::{self, sleep_ms};
+use crate::{mouse, probetext, simin};
 use spike_core::uia::{self, Uia};
 
 /// The apps G6 probes.
@@ -45,20 +46,51 @@ fn face(size: i32) -> RECT {
     }
 }
 
-/// Points at the window's centre, then rests on the face; returns the hook's last point outside it, and the rest point.
+/// The pointer's last point outside the face, as the product's tracker will keep it.
+#[derive(Debug, Clone, Copy)]
+struct Track {
+    face: RECT,
+    last: Option<Pt>,
+}
+
+impl Track {
+    /// A track that has seen no point outside `face` yet.
+    fn new(face: RECT) -> Self {
+        Self { face, last: None }
+    }
+
+    /// Takes the pointer at `p`; a point inside the face is ignored.
+    fn see(&mut self, p: Pt) {
+        if !simin::inside(&self.face, p) {
+            self.last = Some(p);
+        }
+    }
+
+    /// The last point seen outside the face, if any.
+    fn last(&self) -> Option<Pt> {
+        self.last
+    }
+}
+
+/// Glides from the window's centre to rest on the face, reading the pointer after each step; returns the last point
+/// outside the face, and the rest point.
 fn target(ctx: &Ctx, doc: &Doc) -> Result<(Pt, Pt), String> {
     let p = uia::centre(&win::rect(doc.app.hwnd)?);
     guard(&doc.app, &[p])?;
     let f = face(ctx.cfg.g6.face_px);
     let rest = uia::centre(&f);
-    let assist = simuser::start_assist(ctx, vec![f])?;
-    assist::as_user(&[Act::Move(p)])?;
-    sleep_ms(ctx.cfg.sim.step_ms);
-    assist::as_user(&[Act::Move(rest)])?;
+    let mut track = Track::new(f);
+    for at in std::iter::once(p).chain(simuser::path(p, rest, ctx.cfg.probes.move_steps)) {
+        mouse::move_to(POINT { x: at.x, y: at.y })?;
+        sleep_ms(ctx.cfg.sim.step_ms);
+        let now = screen::cursor().map_err(|e| e.to_string())?;
+        track.see(Pt { x: now.x, y: now.y });
+    }
     sleep_ms(ctx.cfg.probes.settle_ms);
-    let last = assist.live().last_outside;
-    assist.stop()?;
-    Ok((last.ok_or("the hook saw no point outside the face")?, rest))
+    let last = track
+        .last()
+        .ok_or("the pointer was never outside the face")?;
+    Ok((last, rest))
 }
 
 /// Scrolls once and compares the window's picture and UIA percent before and after.
@@ -202,5 +234,38 @@ mod tests {
         assert_eq!(worked["post"], json!(["down"]));
         let both = [t(Route::Uia, Dir::Down, true), t(Route::Uia, Dir::Up, true)];
         assert!(summary(&both).0);
+    }
+
+    /// A face square at 0,0, 10 px wide.
+    const FACE: RECT = RECT {
+        left: 0,
+        top: 0,
+        right: 10,
+        bottom: 10,
+    };
+
+    #[test]
+    fn the_track_keeps_the_last_point_outside_the_face_and_ignores_points_inside() {
+        let mut track = Track::new(FACE);
+        for p in [
+            Pt { x: 50, y: 40 },
+            Pt { x: 10, y: 3 },
+            Pt { x: 9, y: 9 },
+            Pt { x: 0, y: 0 },
+        ] {
+            track.see(p);
+        }
+        assert_eq!(
+            track.last(),
+            Some(Pt { x: 10, y: 3 }),
+            "the right edge is outside"
+        );
+    }
+
+    #[test]
+    fn the_track_gives_none_when_the_pointer_never_left_the_face() {
+        let mut track = Track::new(FACE);
+        track.see(Pt { x: 5, y: 5 });
+        assert_eq!(track.last(), None);
     }
 }

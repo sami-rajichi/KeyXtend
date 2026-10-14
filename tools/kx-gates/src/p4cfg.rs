@@ -1,4 +1,5 @@
-//! `[gate_input]` in `kx-gates-p4.toml`: the product's test build, which P4's gates start and drive.
+//! `kx-gates-p4.toml`: the product's test build (`[gate_input]`), which P4's gates start and drive, G5 on it, and
+//! the owner's hand try.
 #![cfg(windows)]
 
 use serde::Deserialize;
@@ -39,6 +40,54 @@ impl GateInput {
         }
         Ok(())
     }
+}
+
+/// `[g5]`: G5's cases on target-window under the test build's hold; times in ms, distances in physical px.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G5 {
+    /// A drag while pressed.
+    pub drag_px: i32,
+    /// How far inside and outside the still radius the wiggle and the short move go.
+    pub still_margin_px: i32,
+    /// How many times the cases run.
+    pub rounds: usize,
+    /// Wait for the target log after each case.
+    pub settle_ms: u64,
+    /// How far a logged point may be from where we pressed.
+    pub point_slack_px: i32,
+    /// The hook must hand the engine at least this many events per case played.
+    pub min_events_per_case: u64,
+    /// How long the hung case makes target-window sleep.
+    pub hang_ms: u64,
+    /// How long before the hold time the hung case asks target-window to sleep.
+    pub hang_lead_ms: u64,
+}
+
+impl G5 {
+    /// Refuses no round, no event per case, and a lead at or past the hang, as target-window would wake before the
+    /// right-click.
+    pub fn check(&self) -> Result<(), String> {
+        if self.rounds == 0 || self.min_events_per_case == 0 {
+            return Err("g5.rounds and min_events_per_case must be above 0".to_string());
+        }
+        if self.hang_lead_ms >= self.hang_ms {
+            return Err(format!(
+                "g5.hang_lead_ms ({} ms) must stay below hang_ms ({} ms), or target-window wakes before the \
+                 right-click",
+                self.hang_lead_ms, self.hang_ms
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// `[hand]`: the owner's hand try on the running keyboard.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Hand {
+    /// How long the hand try runs, in seconds, unless `--secs` says otherwise.
+    pub try_secs: u64,
 }
 
 #[cfg(test)]

@@ -31,8 +31,8 @@ impl Started {
     }
 }
 
-/// Microseconds since 1970 now.
-fn now_us() -> i64 {
+/// Microseconds since 1970 now, the time base of the product's log stamps.
+pub fn now_us() -> i64 {
     let since = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();

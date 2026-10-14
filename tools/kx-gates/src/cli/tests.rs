@@ -30,7 +30,8 @@ fn parses_each_gate() {
         Some(10)
     );
     assert_eq!(parse(&args("g3 keyxtend")).expect("parses").count, None);
-    assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
+    assert_eq!(parse(&args("g5 plain")).expect("parses").name, "plain");
+    assert_eq!(parse(&args("g5 admin")).expect("parses").name, "admin");
     let a = parse(&args("assist right --secs 30")).expect("parses");
     assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
     let a = parse(&args("g4 keyxtend --clicks 50 --seed 3")).expect("parses");

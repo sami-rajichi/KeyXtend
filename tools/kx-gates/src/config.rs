@@ -15,10 +15,10 @@ use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
 use crate::g22cfg::G22;
-use crate::gatecfg::{AssistCfg, G1, G2, G3, G4, G5};
+use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
-use crate::p4cfg::GateInput;
+use crate::p4cfg::{G5, GateInput, Hand};
 use crate::probecfg::{G6, G12, Probes, Sim};
 use crate::text::Charsets;
 
@@ -43,8 +43,8 @@ pub struct GatesConfig {
     pub g3: G3,
     /// G4 settings.
     pub g4: G4,
-    /// Hold engine settings.
-    pub assist: AssistCfg,
+    /// The owner's hand try.
+    pub hand: Hand,
     /// The simulated user's timing.
     pub sim: Sim,
     /// G5 settings.
@@ -210,6 +210,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g8.check()?;
     config.mouse_guard.check()?;
     config.gate_input.check()?;
+    config.g5.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;
     Ok(config)
@@ -227,12 +228,7 @@ mod tests {
         }
         assert_eq!(cfg.g3.probe_keys.len(), 3);
         assert!(cfg.g4.clicks > 0 && cfg.timing.quit_wait_ms > 0);
-        let hold = spike_core::config::load().expect("spike.toml loads").hold;
-        assert!(cfg.assist.rearm_ms > 0 && cfg.assist.rearm_ms < hold.ms);
-        assert!(
-            cfg.assist.hook_samples > 0,
-            "with no timing kept, G5's p99 always fails"
-        );
+        assert!(cfg.hand.try_secs > 0 && cfg.g5.rounds > 0);
         for app in ["explorer", "word_file"] {
             assert!(cfg.app(app).is_ok(), "missing app {app}");
         }

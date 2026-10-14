@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 03:00 — P4: G5, G17, G18, G6 and the hand try drive the product
+G5, G17 and G18 now drive the product's test build, turning Right-click, Grab and the latches on with its own keys, and kx-gates' own copy of the hold engine is gone. G5 parks target-window clear of the keyboard, measures the still radius at the screen's DPI, adds a hung-target case, and judges the hook by its logged numbers; its admin-window case is now the owner's manual check. G6 polls the pointer for its scroll target until the product's tracker comes in P5, and the hand try reads the hook's numbers from the owner's running copy.
+
 ## 2026-10-14 01:30 — P4: no console for any release build, review fixes
 Every release build, the gate-input test build too, now opens no console window, which would have taken the foreground; a second build flag (`kx_no_console`) carries this, and the uiAccess flag keeps only the manifest and the load pinning. kx-gates now refuses to read its settings or start the test build when Windows will not say whether it has uiAccess. When the owner's copy is not started again after the test build, kx-gates prints one line saying to start it from the Start menu. Nested `target` folders are now ignored by git.
 

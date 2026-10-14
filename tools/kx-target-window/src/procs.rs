@@ -2,11 +2,13 @@
 
 use std::fs::File;
 use std::io::Write;
-use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
 
 use kx_module_api::{Clock, Mono};
 use kx_platform_windows::QpcClock;
+use kx_target_window::hang;
 use kx_target_window::layout::LayoutError;
 use kx_target_window::log::{self, Press};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
@@ -29,6 +31,8 @@ static CLOCK: OnceLock<QpcClock> = OnceLock::new();
 static EDIT: AtomicIsize = AtomicIsize::new(0);
 /// Set in password mode: typed characters are never logged.
 static PASSWORD: AtomicBool = AtomicBool::new(false);
+/// The longest sleep a hang message may ask for, in ms; 0 until `set_hang_max`.
+static HANG_MAX_MS: AtomicU64 = AtomicU64::new(0);
 /// Bits in one word of a mouse message's `lparam`: x sits in the low word, y in the next.
 const WORD_BITS: u32 = 16;
 /// The prefix byte of an extended key's scan code, as `kx_module_api::ports::Scan` writes it (`0xE0xx`).
@@ -63,6 +67,18 @@ pub fn note_layout(e: &LayoutError) {
 /// Turns password mode on or off.
 pub fn set_password(on: bool) {
     PASSWORD.store(on, Ordering::Relaxed);
+}
+
+/// Sets the longest sleep a gate's hang message may ask for, in ms.
+pub fn set_hang_max(ms: u64) {
+    HANG_MAX_MS.store(ms, Ordering::Relaxed);
+}
+
+/// Sleeps the time a hang message asks in `wparam`, capped by `set_hang_max`, as a hung app does.
+fn hang_for(wparam: WPARAM) {
+    let asked = u64::try_from(wparam.0).unwrap_or(u64::MAX);
+    let ms = hang::capped(asked, HANG_MAX_MS.load(Ordering::Relaxed));
+    std::thread::sleep(Duration::from_millis(ms));
 }
 
 /// Remembers `edit` as the logging edit box.
@@ -193,7 +209,8 @@ pub fn fit_edit(main: HWND) {
     }
 }
 
-/// The main window's procedure: keeps the edit box sized and focused; on close it puts the layout back and ends the loop.
+/// The main window's procedure: keeps the edit box sized and focused, sleeps when a gate asks, and on close puts the
+/// layout back and ends the loop.
 #[allow(
     unsafe_code,
     reason = "Win32 window procedure with standard calls on our own windows."
@@ -215,6 +232,10 @@ pub extern "system" fn main_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: L
             }
             // SAFETY: the default handling of a message our own window received.
             unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+        }
+        m if m == hang::MESSAGE => {
+            hang_for(wparam);
+            LRESULT(0)
         }
         WM_DESTROY => {
             // SAFETY: posts the quit message to this thread's own loop.

@@ -14,8 +14,8 @@ use kx_platform_windows::uiaccess;
 use kx_settings::{peek, peek_section};
 use spike_core::weak::Job;
 
-pub use parts::Closed;
-use parts::{SLOW, START_MENU, holds, not_back, plain, to_restore, warned};
+pub use parts::{Closed, holds};
+use parts::{SLOW, START_MENU, not_back, plain, to_restore, warned};
 
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
@@ -105,21 +105,26 @@ impl<'a> TestBuild<'a> {
     /// Turns the key with `role` on or off with a `TAG` click, unless it already reads so, and waits up to `lit_ms` for
     /// it to read so; a mode key lights only once the hook's engine applied the toggle.
     pub fn set(&self, role: Role, on: bool) -> Result<(), String> {
-        let (g, poll_ms) = (&self.ctx.cfg.gate_input, self.ctx.cfg.timing.poll_ms);
-        let id = board::id_of(role)?;
-        let (reader, keyboard) = (Reader::new()?, Keyboard::find()?);
-        let state = || {
-            let read = reader.toggled(keyboard.hwnd, &id)?;
-            read.ok_or_else(|| format!("key {id} has no on or off state"))
-        };
-        if state()? == on {
+        let key = Key::of(role)?;
+        if key.on()? == on {
             return Ok(());
         }
-        mouse::click_at(keyboard.at(&id)?)?;
-        let lit = || state().ok().filter(|now| *now == on).map(drop);
+        mouse::click_at(key.keyboard.at(&key.id)?)?;
+        self.wait(&key, on)
+    }
+
+    /// Waits up to `lit_ms` for the key with `role` to read `on`, as after the product changed it itself.
+    pub fn reads(&self, role: Role, on: bool) -> Result<(), String> {
+        self.wait(&Key::of(role)?, on)
+    }
+
+    /// Waits up to `lit_ms` for `key` to read `on`.
+    fn wait(&self, key: &Key, on: bool) -> Result<(), String> {
+        let (g, poll_ms) = (&self.ctx.cfg.gate_input, self.ctx.cfg.timing.poll_ms);
+        let lit = || key.on().ok().filter(|now| *now == on).map(drop);
         let word = if on { "on" } else { "off" };
         win::poll_until(g.lit_ms, poll_ms, lit)
-            .ok_or_else(|| format!("key {id} did not read {word} within {} ms", g.lit_ms))
+            .ok_or_else(|| format!("key {} did not read {word} within {} ms", key.id, g.lit_ms))
     }
 
     /// Quits it, reads its stats lines logged since its start, then starts the owner's copy again.
@@ -163,6 +168,30 @@ impl Drop for TestBuild<'_> {
     fn drop(&mut self) {
         let quit = self.process.is_none() || self.quit();
         let _ = self.restore(quit);
+    }
+}
+
+/// A key of the shown keyboard, read through UI Automation.
+struct Key {
+    id: String,
+    reader: Reader,
+    keyboard: Keyboard,
+}
+
+impl Key {
+    /// The key with `role` on the keyboard shown now.
+    fn of(role: Role) -> Result<Self, String> {
+        Ok(Self {
+            id: board::id_of(role)?,
+            reader: Reader::new()?,
+            keyboard: Keyboard::find()?,
+        })
+    }
+
+    /// Whether it reads on now.
+    fn on(&self) -> Result<bool, String> {
+        let read = self.reader.toggled(self.keyboard.hwnd, &self.id)?;
+        read.ok_or_else(|| format!("key {} has no on or off state", self.id))
     }
 }
 
