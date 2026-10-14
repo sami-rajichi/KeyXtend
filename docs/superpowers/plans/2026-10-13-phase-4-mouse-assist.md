@@ -28,7 +28,7 @@
   - `release_now` for the panic hook.
 - **`Speaker` port** (`kx-platform/src/ui/sound.rs`, in `UiPorts`): `prepare(clips)`, `play(id, gain)`. Windows: an XAudio2 actor thread (COM MTA) with a small voice pool per clip; the engine stops after `[ui] sound_idle_ms`, and a changed default device rebuilds it. Fake: records plays.
 - **Sounds as data:** `crates/kx-theme/tokens/sounds.toml` (event to file and gain), files in `assets/sounds/` with their licences; `kx-ui`'s build checks each is PCM16 mono 48 kHz and embeds the samples, so nothing parses audio at run time.
-- **Overlay (`kx-ui`):** `Overlay.qml` (one click-through window, made on first need, unowned), `HoldRing.qml` (from the spike's `RingFace.qml`), `Badge.qml`; the hub keeps the assist state, the notes and the last pointer point, and wakes Qt (`Wake::Assist`); pointer moves coalesce to one wake in flight.
+- **Overlay (`kx-ui`):** `Overlay.qml` (one click-through window, made while a mode is on, unowned), `HoldRing.qml` (from the spike's `RingFace.qml`), `Badge.qml`; the hub keeps the assist state, the notes and the last pointer point, and wakes Qt (`Wake::Assist`); pointer moves coalesce to one wake in flight.
 - **Keyboard:** side keys get `role = { assist = "rclick" | "grab" }`, lit from `AssistChanged`, dimmed with a tip while the mouse module is not live; a tap publishes `AssistToggle`. The latches publish `LatchesChanged` and handle `LatchesUsed` and `LatchesAsk`.
 - **Settings `[mouse]`:** `rclick = false`, `hold_ms = 1500` (500–3000), `still_px = 7` (logical, scaled by the press's DPI), `ring_after_ms = 150` (below the shortest hold), `health_ms = 1000`, `health_slack_ms = 500`, `echo_ms = 250`.
 - **Settings `[ui]`:** `sound_key`, `sound_rclick`, `sound_pick`, `sound_drop` (true), `sound_volume = 50` (0–100), `sound_idle_ms = 3000`.
@@ -54,7 +54,7 @@
    - *Verify:* `cargo test -p kx-mod-mouse`; `cargo xtask tidy`.
 4. **The engine.**
    - *Files:* `kx-mod-mouse/src/engine.rs` with `engine/tests.rs` and property tests.
-   - *Test first:* every spike case, the roadmap's edge cases, and Grab at once; properties: after `reset` no button or modifier stays down, and every swallowed press gets its release.
+   - *Test first:* every spike case, the roadmap's edge cases, and Grab at once; properties: after `release` no button or modifier stays down, and every swallowed press gets its release.
    - *Implement:* the §5.1 machine with latched modifiers by `Scan`, the DPI-scaled still radius, and notes for the UI.
    - *Verify:* `cargo test -p kx-mod-mouse engine`.
 5. **The fake hook.**
@@ -98,7 +98,7 @@
     - *Implement:* the hand-off to the `Speaker`, which never blocks.
     - *Verify:* `cargo test -p kx-ui --test hub`.
 13. **The overlay.**
-    - *Files:* `kx-ui/qml/{Overlay,HoldRing,Badge}.qml`, `App.qml`, `build.rs`, `src/hub/assist.rs`, `src/bridges/ui/wake.rs`, tokens, the `.ftl` files, `qmltest/tst_overlay.qml`, and the moved `tst_ring.qml` with its look fixtures.
+    - *Files:* `kx-ui/qml/{Overlay,HoldRing,Badge}.qml`, `App.qml`, `build.rs`, `src/hub/assist.rs`, `src/bridges/ui/wake.rs`, tokens, the `.ftl` files, `qmltest/tst_overlay.qml` and `tst_overlay_app.qml`, and the moved `tst_ring.qml` with its look fixtures.
     - *Test first:* the ring's waves last the hold less `ring_after_ms` and take the ring colour in every theme; reduced motion keeps the ring; the badge shows per mode, hides over our windows and stays on screen; the window is click-through, topmost and made only when needed.
     - *Implement:* the window, its pieces and the hub side, and the pointer size from `SystemLook`.
     - *Verify:* `qmltestrunner` (both scalings); `cargo test -p kx-ui`.
@@ -110,7 +110,7 @@
 15. **Review and security.**
     - `kx-review` on every changed file, `kx-security-check` (new `kx-mod-mouse.md`; updates to `kx-platform-windows.md`, `kx-ui.md`, `keyxtend.md`), `/code-review` and `/security-review`; fix every finding.
 16. **Gates, manual check, done.**
-    - The controller runs G5, G12, G17, G18 and G8 with a heads-up, then `kx-windows-manual-test` with the owner, then `kx-module-done` and the records.
+    - The controller runs G5, G6, G12, G17, G18, G8 and the hand try with a heads-up, then `kx-windows-manual-test` with the owner, then `kx-module-done` and the records.
 
 ## Edge cases
 1. A press on our own window is never held; a held Backspace repeats with Right-click on.
@@ -129,7 +129,7 @@
 14. Injected input from another program never acts.
 15. The hook removed by Windows comes back; a false alarm reinstalls at most once per period.
 16. The hook cannot start: a notice, and the keys stay off.
-17. Mouse module off or failed: the keys dim with a tip, and typing is unchanged.
+17. Mouse module off or its actor failed: the keys dim with a tip, and typing is unchanged. An engine the hook gave up turns the modes off for the session with a notice, and one tap starts them again.
 18. Either start order of keyboard and mouse.
 19. A late timer fires the hold on the next event; a huge hold time or a far move never overflows.
 20. Two screens with different DPI.
@@ -141,7 +141,7 @@
 ## Security
 - Capabilities: `PointerHook` and `InjectInput` (mouse); none new for the UI.
 - Data: pointer points and modifier scan codes, never logged; the stats line holds numbers only.
-- Threats: a confused deputy (only physical input acts; `gate-input` never ships); a stuck button (every stop and the panic path let go); the hook timing out (the health check); a hostile sound file (build-time checks, compiled in).
+- Threats: a confused deputy (only physical input acts, and our keyboard's Esc only cancels a carry; `gate-input` never ships); a stuck button (every stop and the panic path let go); the hook timing out (the health check); a hostile sound file (build-time checks, compiled in).
 
 ## Manual Windows check
 - Right-click: its light, the badge, a still hold in Explorer and Notepad (ring, burst, click sound, menu), short clicks and drags unchanged, the hold at 0.5 s and 3.0 s.

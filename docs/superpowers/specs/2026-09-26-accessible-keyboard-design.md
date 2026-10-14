@@ -235,7 +235,7 @@ A low-level mouse hook (`WH_MOUSE_LL`) watches the physical left button (ADR-002
 - The hook runs only while it is needed: a mode is on, a modifier is latched, or a carry is in progress.
 - The callback runs only the engine's pure step: no waiting on locks, no I/O, no logging and no allocation. It returns within 1 ms at p99 (§10, gate G8).
 - Our clicks go out after the callback returns, on the hook's own thread.
-- Only physical input counts. Injected input, ours or another program's, passes untouched, so no program can borrow our rights through the hook.
+- Only physical input counts, plus our own keyboard's Esc, which can only cancel a carry. Injected input, ours or another program's, passes untouched, so no program can borrow our rights through the hook.
 - Windows silently removes a hook that exceeds `LowLevelHooksTimeout`. Every `[mouse] health_ms` (one second), a health check compares Windows' last-input time with the last event the hooks saw, and reinstalls them when they missed input (§11).
 
 **State machine** (pure Rust, clock injected, fully unit-tested)
@@ -259,6 +259,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **Grab grabs at the next press, with no wait** (owner, 2026-10-13), as the drag tools of Dwell Clicker 2, Grid 3 and Windows Eye Control do.
 - Grab turns Right-click off while it is active. After a drop, Grab turns itself off and **Right-click comes back** if it was on before.
 - **Drop = one single click** on the target. The Grab key again, a click on any of our windows, or Esc cancels a carry: Esc goes to the app, then the button is let go.
+- A let-go during a carry (a stop, a hook reinstall or the panic path) also sends Esc before the Up, so nothing drops where the pointer happens to be.
 - Holds that start on our own keyboard, panels or overlays are never intercepted, so a held key repeats (§4.6).
 - Grab covers **drag-and-drop** (files, windows, images) and **text selection**: press at the start, move, click at the end. A selection made this way is then offered to the Selection helper (§8.3, P10).
 - **Modifier + click** (§4.4): a latched modifier goes down with the next click outside our windows, in any mode, and lets go after its release. With "Release after next key" it then unlatches, as after a key.
@@ -280,7 +281,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 
 - The ring, burst and mode badge are drawn in **one click-through Qt window** that never takes focus (`Qt.WindowTransparentForInput`, guarded by the Windows adapter).
 - Gate G12 proved it: 200 of 200 clicks under the ring reached the app, at the screen's full rate (ADR-0013).
-- It is made the first time it is needed. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
+- It is made while a mode is on and freed when every mode is off. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
 
 ---
 

@@ -21,7 +21,7 @@ Where each tested spike part goes, and in which phase (ADR-0014). Paths are unde
 | `core/src/targetlog.rs`, `target-window/`, `spike.toml` `[target]` | `tools/kx-target-window`, the CI test window (spec §12); it reads `kx-target-window.toml` | Move |
 | `harness/` whole, `harness.toml` | `tools/kx-gates`, the Windows gate runner; it reads `kx-gates.toml` and keeps testing the spike face (since P3, its last staged copy) until each phase aims its gates at the product | Move |
 
-After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to `target/gate-logs`, and the Qt stage the gates use is `target/spike-stage/qt-kb`, the spike face's last stage, which nothing rebuilds since P3; gates aimed at the product use `target/stage/keyxtend` from `cargo xtask stage`.
+After P2, the harness rows below name files in `tools/kx-gates`. Gate logs go to `target/gate-logs`, and the Qt stage the gates use is `target/spike-stage/qt-kb`, the spike face's last stage, which nothing rebuilds since P3; gates aimed at the product use `target/stage/keyxtend` from `cargo xtask stage`, and P4's driving gates use the gate-input test build in `target/gate-input`.
 
 ## P3 — Keyboard core
 
