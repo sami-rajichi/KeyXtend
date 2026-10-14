@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 09:08 — P4: the final review's fixes, and the docs to match
+A wait the hook gave up now keeps its acts, so after an input stall a late echo matches its own act and can no longer prove a newer press and leave the left button down; the 05:46 entry's claim that an older batch's late echo never lets the hand's input overtake a newer one was wrong until this fix. The host now also lets go of a Grab pick-up's press when the engine's release panics, a repeated engine fault restarts held latches only once until the user acts, the hook's records and the engine's state hide points and keys in debug output, and the deadline timer is set only when the deadline changes. kx-theme's asset and WAV readers now build only with a `files` feature that tidy refuses in the app's tree, so the uiAccess app links no media parser. The port, spec §5.1, ADR-0027's row and the security notes now state these rules, the health check's two lagging checks and the speaker's COM activation for P14's check.
+
 ## 2026-10-14 07:35 — P4: the docs match the final code
 `kx-mod-mouse`'s security note is now complete: its data, inputs and threats, every path that lets go of held input, and the reset after a failed engine, each with its tests. The other security notes, the spec, ADR-0027's row, the plan, the move map and the code map now match the code as built, and name constants instead of repeating their values. The review findings that belong to later items went to P5, P7, P10 and P11, and eight work-log times now match their commits.
 
