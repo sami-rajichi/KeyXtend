@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 09:38 — P4: our echoes name their acts, and the hold timer stops
+Every act the hook sends now carries its own id beside the `REPLAY` mark, so its echo names it: a swallowed echo is a gap that no longer shifts later matches, and a late echo settles only its own act, even past the room the host keeps. The 09:08 fix kept given-up acts out but still matched echoes by kind, so one lost echo could slow the hand's input for the rest of a run, and a very late echo past that room could end a newer wait; both are gone. A deadline timer that fired with no deadline left now stops instead of running empty turns until the next press. kx-gates' guard reads the mark with the same helper, and the property tests add swallowed echoes.
+
 ## 2026-10-14 09:08 — P4: the final review's fixes, and the docs to match
 A wait the hook gave up now keeps its acts, so after an input stall a late echo matches its own act and can no longer prove a newer press and leave the left button down; the 05:46 entry's claim that an older batch's late echo never lets the hand's input overtake a newer one was wrong until this fix. The host now also lets go of a Grab pick-up's press when the engine's release panics, a repeated engine fault restarts held latches only once until the user acts, the hook's records and the engine's state hide points and keys in debug output, and the deadline timer is set only when the deadline changes. kx-theme's asset and WAV readers now build only with a `files` feature that tidy refuses in the app's tree, so the uiAccess app links no media parser. The port, spec §5.1, ADR-0027's row and the security notes now state these rules, the health check's two lagging checks and the speaker's COM activation for P14's check.
 
