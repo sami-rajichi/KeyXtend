@@ -75,6 +75,9 @@ banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
 banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
+# Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
+# WAV files, which the uiAccess app never does (ADR-0004).
+build_only_features = { kx-theme = ["files"] }
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
 # Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.

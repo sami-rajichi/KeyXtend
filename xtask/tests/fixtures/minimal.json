@@ -5,12 +5,13 @@
       "name": "xtask",
       "manifest_path": "C:\\repo\\xtask\\Cargo.toml",
       "dependencies": [
-        { "name": "serde", "kind": null },
+        { "name": "serde", "kind": null, "features": ["derive"] },
         { "name": "proptest", "kind": "dev" }
       ],
       "targets": [
         { "kind": ["bin"], "src_path": "C:\\repo\\xtask\\src\\main.rs" }
-      ]
+      ],
+      "features": { "default": ["std"], "std": [] }
     }
   ],
   "workspace_members": ["path+file:///C:/repo/xtask#0.0.0"],
@@ -45,6 +46,7 @@
       "banned_network": ["reqwest", "hyper", "ureq", "rustls", "native-tls"],
       "banned_media": ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"],
       "banned_features": { "toml": ["unbounded"] },
+      "build_only_features": { "kx-theme": ["files"] },
       "unsafe_attr": "#![forbid(unsafe_code)]",
       "deny_attr": "#![deny(unsafe_code)]",
       "root_kinds": ["lib", "bin", "proc-macro"],

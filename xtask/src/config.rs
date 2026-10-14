@@ -37,6 +37,8 @@ pub(crate) struct TidyConfig {
     pub banned_media: Vec<String>,
     /// Crate features no package may turn on, listed by crate name.
     pub banned_features: BTreeMap<String, Vec<String>>,
+    /// Crate features only builds, tests and tools may turn on, listed by crate name; the app's tree never does.
+    pub build_only_features: BTreeMap<String, Vec<String>>,
     /// Attribute every non-platform crate root must carry.
     pub unsafe_attr: String,
     /// Attribute a test tool's or the bridge crate's roots may carry instead of `unsafe_attr`.
@@ -250,7 +252,8 @@ mod tests {
             "app_dir": "apps", "tool_dir": "tools",
             "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
             "module_allowed": [], "app": "keyxtend",
-            "banned_network": [], "banned_media": [], "banned_features": {}, "unsafe_attr": "x",
+            "banned_network": [], "banned_media": [], "banned_features": {},
+            "build_only_features": {}, "unsafe_attr": "x",
             "deny_attr": "y", "root_kinds": [], "test_only": [], "bridge_crate": "b",
             "bridge_dir": "d", "safety_tag": "t", "bogus": 1
         }"#;

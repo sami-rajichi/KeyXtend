@@ -188,6 +188,7 @@ pub trait Module: Send + 'static {
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
+13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files`, the assets readers and the WAV reader, which only kx-ui's build and xtask use, so the uiAccess app parses no media (invariant 5).
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.

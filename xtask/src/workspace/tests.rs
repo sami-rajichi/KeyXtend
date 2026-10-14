@@ -34,11 +34,13 @@ fn minimal_fixture_loads_the_package_and_config() {
         vec![
             Dependency {
                 name: "serde".into(),
-                kind: DependencyKind::Normal
+                kind: DependencyKind::Normal,
+                features: vec!["derive".into()],
             },
             Dependency {
                 name: "proptest".into(),
-                kind: DependencyKind::Dev
+                kind: DependencyKind::Dev,
+                features: Vec::new(),
             },
         ]
     );
@@ -57,6 +59,16 @@ fn minimal_fixture_loads_the_resolved_features_and_the_banned_ones() {
     assert_eq!(workspace.packages[0].features, vec!["default".to_string()]);
     let banned = &workspace.tidy.banned_features["toml"];
     assert_eq!(banned, &vec!["unbounded".to_string()]);
+    let build_only = &workspace.tidy.build_only_features["kx-theme"];
+    assert_eq!(build_only, &vec!["files".to_string()]);
+}
+
+#[test]
+fn minimal_fixture_loads_the_declared_feature_table() {
+    let workspace = load(MINIMAL).unwrap();
+    let declared = &workspace.packages[0].declared;
+    assert_eq!(declared["default"], vec!["std".to_string()]);
+    assert!(declared["std"].is_empty());
 }
 
 #[test]
