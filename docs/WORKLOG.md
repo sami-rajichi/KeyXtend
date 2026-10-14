@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-15 00:20 — P4: the overlay reads its state on a wake, not on the next frame
+G12 on the real PC showed the overlay reading its state only on the next frame, which came up to a second late when nothing drew, so a short press after a pause often never showed its ring. A wake now reads on the event loop's next pass, with no frame needed, and changes that stream, such as the pointer moving with a mode on, still read at most once per `[ui] poll_ms`, which now also paces the overlay. The reader moved into its own small `AssistRead.qml`, and Qt Quick tests show a wake read with no window drawing, many wakes read once and each read let the next change wake.
+
 ## 2026-10-14 18:56 — P4: a send with our hooks out settles at once, and the pointer's point follows our input
 A reinstall sends its batch while our hooks are out, so no echo of it can come, and each one lost a wait and could leave a press of ours in doubt, owing a second Up. A batch sent with our hooks out now settles at once, as `SendInput` has passed it on when it returns. The host's newest point now comes from the newest pointed act it sent, never from an echo of ours, even a late one, so a let-go lands where the pointer went. The inbox keeps act ids only, and a panic during a send clears it.
 
