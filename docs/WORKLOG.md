@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 17:50 — P4: echoes heard inside our own send are noted
+The gates still lost 32 echoes per G5 run because Windows runs our hooks inside our own `SendInput`, while the host is busy, so every echo passed unnoted, each wait ended as lost and the held drag sent a second Up. The host now lends a reserved inbox to each send: the hooks put our echoes there without allocating, and the host settles them right after it notes the batch sent. The fake can now echo inside the send in Windows' order, moves first, and new unit and property tests show such a batch leaves no wait and owes no Up.
+
 ## 2026-10-14 15:46 — P4: the act id fits a mouse hook's 32 bits, and a failed test build start is said at once
 The real gates showed that Windows hands a mouse hook only the low 32 bits of `dwExtraInfo`, so the 09:38 act ids above them read as 0, every mouse batch's wait ended as lost and G5's held drag got a second Up. The replay mark now takes the upper 16 of those 32 bits and the act's id the lower 16, compared wrap-aware with at most half the ids out, and the property tests cut a mouse extra as Windows does, so a lost wait with no swallowed echo now fails a calm run. kx-gates now reports a test build that ends during its start with its exit code, naming a missing DLL, instead of waiting for its warning line.
 
