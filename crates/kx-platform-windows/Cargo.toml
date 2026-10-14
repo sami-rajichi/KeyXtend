@@ -12,8 +12,8 @@ repository.workspace = true
 workspace = true
 
 [features]
-# The pointer hook's simulated source, which acts only on the gate tool's `SIM_TAG` input. Test builds only; the
-# shipped app never turns it on (ledger ruling 20).
+# The pointer hook's simulated source, which acts only on the gate tool's `SIM_TAG` input. Test builds only: the shipped
+# app never turns it on, so the code is not even built there, on top of the stage check that refuses the flag.
 sim-input = []
 
 [dependencies]
