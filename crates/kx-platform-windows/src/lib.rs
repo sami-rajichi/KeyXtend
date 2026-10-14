@@ -85,7 +85,6 @@ fn failed() -> kx_platform::ui::UiError {
 }
 
 /// Locks `m`, taking the value even when a panicking thread poisoned it.
-#[cfg(windows)]
 fn lock<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }

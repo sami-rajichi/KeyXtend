@@ -2,7 +2,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -10,6 +10,7 @@ use kx_module_api::Clock;
 use kx_platform::ui::{Clip, ClipId, Speaker, SpeakerConfig};
 
 use super::{Mixer, Os};
+use crate::lock;
 
 /// The speaker thread's name.
 const THREAD: &str = "kx-speaker";
@@ -161,9 +162,4 @@ fn run<O: Os>(os: O, queue: &Receiver<Ask>, shared: &Shared, clock: &dyn Clock) 
         }
         mixer.idle(clock.now());
     }
-}
-
-/// Locks `mutex`, even after a panic elsewhere, since its value stays whole.
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }

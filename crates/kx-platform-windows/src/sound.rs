@@ -1,5 +1,5 @@
 //! The speaker: a thread of its own owns the audio engine, so `play` only sends a message. The voice choice, the idle
-//! stop, the rebuild-once policy and the gain clamp are pure and tested everywhere; `win` calls `XAudio2`.
+//! stop, the rebuild-once policy and the port's clip and gain rules are tested everywhere; `win` calls `XAudio2`.
 #![cfg_attr(
     not(windows),
     allow(
@@ -20,17 +20,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use kx_module_api::{Mono, US_PER_S};
-use kx_platform::ui::{Clip, ClipId, SpeakerConfig};
+use kx_platform::ui::{Clip, ClipId, SpeakerConfig, level};
 
 use rig::Rig;
 
+#[cfg(any(windows, test))]
 pub(crate) use actor::Actor;
 #[cfg(windows)]
 pub use win::WinSpeaker;
-
-/// The lowest and highest gain a play takes.
-const SILENT: f32 = 0.0;
-const FULL: f32 = 1.0;
 
 /// A failed audio call, with the system's error code for the log.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -61,9 +58,43 @@ pub(crate) enum Warn {
     Play,
     /// A clip was skipped: it has no bytes, or not whole samples.
     Bytes,
-    /// A clip was skipped: the engine takes no such sample rate.
+    /// A clip was skipped: its sample rate is outside `Clip::RATES` or what the engine takes.
     Rate,
 }
+
+impl Warn {
+    /// Every kind, each at its `index`.
+    const ALL: [Self; 5] = [
+        Self::Open,
+        Self::Rebuild,
+        Self::Play,
+        Self::Bytes,
+        Self::Rate,
+    ];
+
+    /// This kind's place in `ALL`; the match makes a new kind take a place.
+    const fn index(self) -> usize {
+        match self {
+            Self::Open => 0,
+            Self::Rebuild => 1,
+            Self::Play => 2,
+            Self::Bytes => 3,
+            Self::Rate => 4,
+        }
+    }
+}
+
+/// How many kinds of `Warn` there are.
+const WARNS: usize = Warn::ALL.len();
+
+// Each kind in `ALL` sits at its own index, so no two kinds share a flag.
+const _: () = {
+    let mut i = 0;
+    while i < WARNS {
+        assert!(Warn::ALL[i].index() == i, "Warn::ALL is out of order");
+        i += 1;
+    }
+};
 
 /// What the speaker thread asks of the system: `XAudio2` and the log on Windows, a recorder in tests. Each handle
 /// undoes itself when dropped.
@@ -103,9 +134,6 @@ pub(crate) trait Os {
     fn warn(&self, warn: Warn, code: Option<i32>);
 }
 
-/// How many kinds of `Warn` there are: the last one's index plus one.
-const WARNS: usize = Warn::Rate as usize + 1;
-
 /// The speaker thread's state: the clips, the engine once a play built it, and the warnings given.
 pub(crate) struct Mixer<O: Os> {
     /// Declared before `os`, so it drops first: on Windows, COM must outlive the engine.
@@ -139,12 +167,11 @@ impl<O: Os> Mixer<O> {
         self.idle = Duration::from_millis(u64::from(config.idle_ms));
     }
 
-    /// True if the engine takes `clip`; otherwise its kind warns once, and the other clips still play.
+    /// True if the port and the engine take `clip`; otherwise its kind warns once, and the other clips still play.
     fn fits(&self, clip: &Clip) -> bool {
-        let bytes = clip.samples.len();
-        let warn = if bytes == 0 || !bytes.is_multiple_of(frame()) {
+        let warn = if !clip.whole() {
             Some(Warn::Bytes)
-        } else if !O::RATES.contains(&clip.rate) {
+        } else if !clip.playable() || !O::RATES.contains(&clip.rate) {
             Some(Warn::Rate)
         } else {
             None
@@ -216,17 +243,13 @@ impl<O: Os> Mixer<O> {
         }
     }
 
-    /// Logs `warn` with its error `code`, once until a play succeeds.
+    /// Logs `warn` with its error `code`, once until a play succeeds; a kind left out of `Warn::ALL` warns each time.
     fn fail(&self, warn: Warn, code: Option<i32>) {
-        if !self.warned[warn as usize].swap(true, Ordering::Relaxed) {
+        let flag = self.warned.get(warn.index());
+        if !flag.is_some_and(|f| f.swap(true, Ordering::Relaxed)) {
             self.os.warn(warn, code);
         }
     }
-}
-
-/// `gain` within 0.0 and 1.0; `None` for NaN, which plays nothing.
-pub(crate) fn level(gain: f32) -> Option<f32> {
-    (!gain.is_nan()).then(|| gain.clamp(SILENT, FULL))
 }
 
 /// The voice a new play takes, and whether it still plays: the first idle one, else the one that started earliest;

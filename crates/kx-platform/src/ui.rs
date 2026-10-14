@@ -6,7 +6,7 @@ mod sound;
 mod tray;
 
 pub use memory::Memory;
-pub use sound::{Clip, ClipId, Speaker, SpeakerConfig};
+pub use sound::{Clip, ClipId, Speaker, SpeakerConfig, level};
 pub use tray::{BadImage, OnTray, Tray, TrayEvent, TrayIcon, TrayImage};
 
 use kx_module_api::ports::{Point, Rect, Screen};

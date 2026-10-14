@@ -200,7 +200,7 @@ impl Os for WinOs {
             Warn::Rebuild => "no sound: the audio engine could not be rebuilt",
             Warn::Play => "a sound was dropped: the audio device refused it",
             Warn::Bytes => "a sound was skipped: its data is empty or not whole samples",
-            Warn::Rate => "a sound was skipped: the audio engine takes no such sample rate",
+            Warn::Rate => "a sound was skipped: the speaker plays no such sample rate",
         };
         if let Some(code) = code {
             tracing::warn!(code, "{why}");
@@ -273,26 +273,4 @@ fn pcm(rate: u32) -> WAVEFORMATEX {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use windows::Win32::Foundation::E_FAIL;
-
-    #[test]
-    fn a_lost_or_changed_device_is_a_loss_and_any_other_error_a_failure() {
-        for code in LOST {
-            assert_eq!(fault(&code.into()), Fault::Lost(code.0));
-        }
-        assert_eq!(fault(&E_FAIL.into()), Fault::Failed(E_FAIL.0));
-    }
-
-    #[test]
-    fn the_voices_take_mono_pcm16_at_the_clip_rate_and_every_rate_the_port_names() {
-        let f = pcm(48_000);
-        let (tag, channels, rate) = (f.wFormatTag, f.nChannels, f.nSamplesPerSec);
-        let (per_second, block, bits) = (f.nAvgBytesPerSec, f.nBlockAlign, f.wBitsPerSample);
-        assert_eq!((tag, channels, rate), (1, 1, 48_000));
-        assert_eq!((per_second, block, bits), (96_000, 2, 16));
-        let (low, high) = (Clip::RATES.start(), Clip::RATES.end());
-        assert!(WinOs::RATES.contains(low) && WinOs::RATES.contains(high));
-    }
-}
+mod tests;

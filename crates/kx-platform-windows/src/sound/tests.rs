@@ -8,14 +8,14 @@ use std::time::Duration;
 use kx_module_api::{Mono, US_PER_MS};
 use kx_platform::ui::{Clip, ClipId, SpeakerConfig};
 
-use super::{Fault, Mixer, Warn, level, pick};
+use super::{Fault, Mixer, Warn, pick};
 use fake::{Call, Part, World};
 
 const KEY: ClipId = ClipId::new(1);
 const DROP: ClipId = ClipId::new(2);
-/// The fake clips' rate: 1 kHz, so their 20 bytes play for 10 ms.
-const RATE: u32 = 1_000;
-static SAMPLES: [u8; 20] = [0; 20];
+/// The fake clips' rate: 8 kHz, so their 160 bytes play for 10 ms.
+const RATE: u32 = 8_000;
+static SAMPLES: [u8; 160] = [0; 160];
 const IDLE_MS: u32 = 500;
 /// A lost device, and no device, with the fake's codes.
 const LOST: Fault = Fault::Lost(-1);
@@ -68,7 +68,7 @@ fn warns(calls: Vec<Call>) -> Vec<Call> {
 }
 
 #[test]
-fn quick_plays_of_one_clip_use_each_voice_then_restart_the_earliest() {
+fn quick_plays_of_one_clip_use_each_voice_then_replace_the_earliest() {
     let (mut mixer, world) = mixer(2);
     for t in 0..3 {
         mixer.play(KEY, 1.0, ms(t));
@@ -138,9 +138,16 @@ fn prepare_skips_a_bad_clip_and_warns_each_kind_once_while_the_others_play() {
     static ODD: [u8; 19] = [0; 19];
     let world = World::default();
     let mut mixer = Mixer::new(world.clone());
-    let fast = *fake::RATES.end() + 1;
-    let bad: [(&'static [u8], u32); 4] =
-        [(&ODD, RATE), (&[], RATE), (&SAMPLES, fast), (&SAMPLES, 0)];
+    // Too fast for the engine, and too slow for the port though the engine takes it.
+    let (fast, slow) = (*fake::RATES.end() + 1, Clip::RATES.start() - 1);
+    assert!(fake::RATES.contains(&slow));
+    let bad: [(&'static [u8], u32); 5] = [
+        (&ODD, RATE),
+        (&[], RATE),
+        (&SAMPLES, fast),
+        (&SAMPLES, slow),
+        (&SAMPLES, 0),
+    ];
     let mut clips = vec![clip(KEY)];
     clips.extend(bad.map(|(samples, rate)| Clip {
         id: ClipId::new(9),
@@ -164,6 +171,33 @@ fn prepare_skips_a_bad_clip_and_warns_each_kind_once_while_the_others_play() {
     let mut want: Vec<Call> = made.into_iter().map(Call::Make).collect();
     want.extend([Call::Start, Call::Play(1, 1.0), Call::Play(2, 1.0)]);
     assert_eq!(world.take(), want, "the good clips play");
+}
+
+#[test]
+fn a_prepare_after_a_play_tears_the_engine_down_and_the_next_play_builds_afresh() {
+    let (mut mixer, world) = mixer(1);
+    mixer.play(KEY, 1.0, ms(0));
+    world.take();
+    let longer = SpeakerConfig {
+        idle_ms: 2 * IDLE_MS,
+        ..config(1)
+    };
+    mixer.prepare(vec![clip(KEY), clip(DROP)], longer);
+    // Two voices, the master and the engine go; the rest is the next build.
+    let mut gone = rebuilt(1, 2);
+    let made = gone.split_off(4);
+    assert_eq!(
+        world.take(),
+        gone,
+        "the voices, the master, then the engine"
+    );
+    assert_eq!(mixer.wait(ms(1)), None, "no engine, no timer");
+    mixer.play(KEY, 1.0, ms(2));
+    let mut want = made;
+    want.extend([Call::Start, Call::Play(3, 1.0)]);
+    assert_eq!(world.take(), want, "made afresh at the next play");
+    // The clip's 10 ms, then the new idle time.
+    assert_eq!(mixer.wait(ms(2)), Some(Duration::from_millis(1_010)));
 }
 
 #[test]
@@ -237,11 +271,6 @@ fn with_no_device_each_kind_warns_once_until_a_play_succeeds() {
 
 #[test]
 fn a_gain_out_of_range_is_clamped_and_nan_or_an_unknown_clip_plays_nothing() {
-    assert_eq!(level(2.0), Some(1.0));
-    assert_eq!(level(-0.5), Some(0.0));
-    assert_eq!(level(0.25), Some(0.25));
-    assert_eq!(level(f32::INFINITY), Some(1.0));
-    assert_eq!(level(f32::NAN), None);
     let (mut mixer, world) = mixer(1);
     mixer.play(KEY, f32::NAN, ms(0));
     mixer.play(ClipId::new(9), 1.0, ms(0));
