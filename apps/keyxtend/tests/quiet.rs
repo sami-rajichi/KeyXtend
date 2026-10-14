@@ -50,7 +50,7 @@ fn fail(at: &mut Option<Location<'static>>) {
 }
 
 #[test]
-fn a_panic_logs_its_place_and_never_its_payload_then_lets_the_mouse_go() {
+fn a_panic_lets_the_mouse_go_then_logs_its_place_never_its_payload() {
     let dir = TempDir::new("app-quiet").unwrap();
     let files = Files::new(dir.path());
     let settings = KernelSettings {
