@@ -238,6 +238,30 @@ fn a_moved_deadline_wakes_the_thread() {
 }
 
 #[test]
+fn notes_wake_the_thread_once_until_their_turn() {
+    let mut rig = rig(Source::Physical);
+    rig.plan().notes = true;
+    for _ in 0..3 {
+        assert!(!rig.hand(MOVE, A));
+    }
+    assert_eq!(
+        rig.world.take(),
+        [Call::Wake],
+        "a fast mouse posts one wake"
+    );
+    rig.host.turn();
+    let settled = Heard::Settle(rig.now());
+    assert_eq!(
+        rig.heard().last(),
+        Some(&settled),
+        "the turn takes the notes"
+    );
+    rig.world.take();
+    rig.hand(MOVE, A);
+    assert_eq!(rig.world.take(), [Call::Wake], "a new turn, a new wake");
+}
+
+#[test]
 fn esc_from_the_hand_or_our_keyboard_reaches_the_engine_and_others_do_not() {
     let mut rig = rig(Source::Physical);
     rig.plan().drop = true;

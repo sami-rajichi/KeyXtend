@@ -5,6 +5,8 @@ use kx_module_api::ports::{Button, Point};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+mod turns;
+
 /// Test values; the real ones come from the mouse module's settings.
 const CONFIG: HookConfig = HookConfig {
     health_ms: 1,
@@ -71,6 +73,10 @@ impl PointerEngine for Probe {
         self.due
     }
 
+    fn has_notes(&self) -> bool {
+        false
+    }
+
     fn release(&mut self, acts: &mut Vec<PointerAct>) {
         self.calls.lock().unwrap().push(Call::Release);
         acts.push(LET_GO);
@@ -106,6 +112,10 @@ impl PointerEngine for Greedy {
 
     fn deadline(&self) -> Option<Mono> {
         None
+    }
+
+    fn has_notes(&self) -> bool {
+        false
     }
 
     fn release(&mut self, _: &mut Vec<PointerAct>) {}

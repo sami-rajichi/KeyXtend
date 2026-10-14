@@ -94,6 +94,10 @@ mod tests {
             None
         }
 
+        fn has_notes(&self) -> bool {
+            false
+        }
+
         fn release(&mut self, _: &mut Vec<PointerAct>) {
             self.0.fetch_add(1, Ordering::SeqCst);
         }

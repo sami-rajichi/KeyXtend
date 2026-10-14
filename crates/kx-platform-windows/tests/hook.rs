@@ -34,6 +34,10 @@ impl PointerEngine for Quiet {
         None
     }
 
+    fn has_notes(&self) -> bool {
+        false
+    }
+
     fn release(&mut self, _: &mut Vec<PointerAct>) {
         let _ = self.0.send(());
     }

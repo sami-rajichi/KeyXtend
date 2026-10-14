@@ -51,6 +51,15 @@ impl<O: Os> Host<O> {
         self.os.arm(due.map(|due| timer_ms(due, now)));
     }
 
+    /// After `on`: asks for a turn when input waits, the deadline moved from `before` or the engine holds notes. The
+    /// wake stays one until its turn runs, so a fast mouse posts no flood.
+    pub(super) fn ask_turn(&mut self, before: Option<Mono>) {
+        let moved = self.engine.deadline() != before;
+        if !self.queue.is_empty() || moved || self.engine.has_notes() {
+            self.wake();
+        }
+    }
+
     /// A turn, then the health check.
     pub(super) fn run_check(&mut self) {
         self.run_turn();
@@ -84,7 +93,8 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// Puts both hooks back. The engine missed input, so it lets go first, and no hook can see that input come back.
+    /// Puts both hooks back. The engine missed input, so it lets go first, and no hook can see that input come back;
+    /// a turn then takes the notes of that let-go.
     fn reinstall(&mut self, now: Mono) {
         self.os.unhook();
         self.let_go(now);
@@ -97,6 +107,7 @@ impl<O: Os> Host<O> {
             }
             Err(_) => {}
         }
+        self.wake();
     }
 
     /// Lets the engine go; once that leaves it done, lets go of what our input still holds too.

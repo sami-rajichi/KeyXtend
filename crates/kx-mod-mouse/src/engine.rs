@@ -154,6 +154,12 @@ impl Engine {
         }
     }
 
+    /// True while notes wait for `take_notes`.
+    #[must_use]
+    pub fn has_notes(&self) -> bool {
+        !self.notes.is_empty()
+    }
+
     /// Moves the notes since the last call into `out`.
     pub fn take_notes(&mut self, out: &mut Vec<Note>) {
         out.append(&mut self.notes);

@@ -144,6 +144,12 @@ impl PointerEngine for HookEngine {
         self.engine.deadline()
     }
 
+    /// Notes wait, or the engine went idle since its last idle report.
+    fn has_notes(&self) -> bool {
+        let idle = !self.engine.needs_hook() && self.idle_at != Some(self.applied);
+        self.engine.has_notes() || idle
+    }
+
     fn release(&mut self, acts: &mut Vec<PointerAct>) {
         self.engine.release(acts);
     }
@@ -156,6 +162,39 @@ impl PointerEngine for HookEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EngineCfg;
+    use std::sync::mpsc;
+
+    /// A hook engine with Right-click as given and no command waiting.
+    fn hooked(rclick: bool) -> HookEngine {
+        let (_, queue) = mpsc::channel();
+        let (actor, _) = mpsc::channel();
+        let cfg = EngineCfg {
+            hold_us: 1,
+            still_px: 1,
+            rclick,
+        };
+        HookEngine::new(Engine::new(cfg), None, queue, actor, Arc::default())
+    }
+
+    #[test]
+    fn a_move_with_a_mode_on_asks_for_a_turn_until_settled() {
+        let (mut hook, mut acts) = (hooked(true), Vec::new());
+        assert!(!hook.has_notes(), "nothing noted yet");
+        let at = Point::default();
+        assert!(!hook.on(PointerEvent::Move { at }, Mono::default(), &mut acts));
+        assert!(hook.has_notes(), "the badge's move waits");
+        hook.settle(Mono::default(), &mut acts);
+        assert!(!hook.has_notes(), "told");
+    }
+
+    #[test]
+    fn an_idle_engine_asks_for_a_turn_until_it_reported() {
+        let (mut hook, mut acts) = (hooked(false), Vec::new());
+        assert!(hook.has_notes(), "its idle report waits");
+        hook.settle(Mono::default(), &mut acts);
+        assert!(!hook.has_notes(), "reported once");
+    }
 
     #[test]
     fn a_move_slot_keeps_the_latest_point_at_any_sign_and_size() {

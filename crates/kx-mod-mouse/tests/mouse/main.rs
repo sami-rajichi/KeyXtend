@@ -11,3 +11,4 @@ mod module;
 mod props;
 mod rig;
 mod runtime;
+mod wakes;

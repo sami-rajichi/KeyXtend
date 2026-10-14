@@ -251,9 +251,7 @@ impl<O: Os> Host<O> {
         }
         let cut = self.queue.extend(&self.lent);
         self.stats.drop_acts(cut);
-        if !self.queue.is_empty() || self.engine.deadline() != before {
-            self.wake();
-        }
+        self.ask_turn(before);
         let took = self.os.now().saturating_since(stamp.t0).as_micros();
         self.stats.timed(u64::try_from(took).unwrap_or(u64::MAX));
         dropped

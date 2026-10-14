@@ -77,12 +77,17 @@ impl FakePointerHook {
         lock(&self.shared.log).stats = stats;
     }
 
-    /// Runs `on` as the hook callback would, sends its acts, then runs `settle`; true when the event was dropped.
+    /// Runs `on` as the hook callback would and sends its acts, then `settle` only when the host would wake: for input,
+    /// a moved deadline or notes. True when the event was dropped.
     #[must_use]
     pub fn feed(&self, event: PointerEvent, now: Mono) -> bool {
         self.drive(|engine, log| {
+            let (before, sent) = (engine.deadline(), log.sent.len());
             let dropped = log.lend(|acts| engine.on(event, now, acts));
-            log.lend(|acts| engine.settle(now, acts));
+            let woken = log.sent.len() > sent || engine.deadline() != before;
+            if woken || engine.has_notes() {
+                log.lend(|acts| engine.settle(now, acts));
+            }
             dropped
         })
     }

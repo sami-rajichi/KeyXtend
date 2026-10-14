@@ -47,6 +47,10 @@ impl PointerEngine for Holder {
         None
     }
 
+    fn has_notes(&self) -> bool {
+        false
+    }
+
     fn release(&mut self, acts: &mut Vec<PointerAct>) {
         acts.push(LET_GO);
     }

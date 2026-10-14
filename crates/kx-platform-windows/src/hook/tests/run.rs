@@ -230,8 +230,9 @@ fn lagging_hooks_go_back_once_after_letting_go() {
         Call::Unhook,
         Call::Send(vec![PointerAct::Up(Button::Left, A)]),
         Call::Hook,
+        Call::Wake,
     ];
-    assert_eq!(calls[at..], want, "let go before the hooks go back");
+    assert_eq!(calls[at..], want, "let go, hooks back, then a turn");
     assert_eq!(rig.stats().reinstalls, 1);
     rig.host.check();
     assert!(!rig.world.take().contains(&Call::Unhook), "once per period");

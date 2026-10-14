@@ -149,6 +149,8 @@ pub(super) struct Plan {
     pub deadline: Option<Mono>,
     /// `on` moves the deadline here.
     pub arm_on: Option<Mono>,
+    /// The engine says it holds notes for the module.
+    pub notes: bool,
     /// `on` and `release` panic.
     pub panic: bool,
     pub heard: Vec<Heard>,
@@ -183,6 +185,10 @@ impl PointerEngine for Script {
 
     fn deadline(&self) -> Option<Mono> {
         self.plan().deadline
+    }
+
+    fn has_notes(&self) -> bool {
+        self.plan().notes
     }
 
     fn release(&mut self, acts: &mut Vec<PointerAct>) {

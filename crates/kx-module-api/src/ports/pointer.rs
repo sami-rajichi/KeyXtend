@@ -87,6 +87,10 @@ pub trait PointerEngine: Send {
     /// When the host must call `settle` next; `None` when nothing is due.
     fn deadline(&self) -> Option<Mono>;
 
+    /// True while `settle` has notes for the module, so the host asks for a turn. The callback asks it after `on`, so it
+    /// never blocks or allocates.
+    fn has_notes(&self) -> bool;
+
     /// Lets go of everything held, such as a latched button or pressed modifiers; the host sends `acts` before it
     /// stops.
     fn release(&mut self, acts: &mut Vec<PointerAct>);
