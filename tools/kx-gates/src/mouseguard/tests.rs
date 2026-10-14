@@ -3,6 +3,7 @@
 use std::collections::BTreeSet;
 use std::time::Duration;
 
+use kx_platform_windows::keys::{REPLAY, replay_tag};
 use windows::Win32::UI::WindowsAndMessaging::{
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_XBUTTONDOWN,
     WM_XBUTTONUP, XBUTTON1,
@@ -74,10 +75,13 @@ fn each_flag_and_tag_pair_is_kx_gates_own_the_test_builds_replay_or_the_hands() 
         (injected, TAG, Whose::Own),
         (injected, SIM_TAG, Whose::Own),
         (injected, REPLAY, Whose::Replay),
+        (injected, replay_tag(41), Whose::Replay),
+        (injected, TAG | (1 << 40), Whose::Hand),
         (injected, 0, Whose::Hand),
         (0, TAG, Whose::Hand),
         (0, SIM_TAG, Whose::Hand),
         (0, REPLAY, Whose::Hand),
+        (0, replay_tag(41), Whose::Hand),
         (0, 0, Whose::Hand),
     ];
     for (flags, extra, want) in pairs {

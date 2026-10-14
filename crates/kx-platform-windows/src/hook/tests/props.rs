@@ -1,5 +1,5 @@
-//! Properties of the host over random runs: the hand, the engine's plans, turns, our input's echoes, cut sends, missed
-//! events and panics, then a stop, all checked on what reached the apps.
+//! Properties of the host over random runs: the hand, the engine's plans, turns, our input's echoes in order, late or
+//! swallowed, cut sends, missed events and panics, then a stop, all checked on what reached the apps.
 
 mod sim;
 mod steps;
@@ -41,11 +41,13 @@ enum Gesture {
     Esc,
 }
 
-/// One event of the stream, and whether we sent it.
+/// One event of the stream, whether we sent it and with which id, and whether it passes our hooks by.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Ev {
     act: PointerAct,
     ours: bool,
+    id: u32,
+    unseen: bool,
 }
 
 /// What became of one of the hand's events.
@@ -88,6 +90,7 @@ fn play(steps: &[Step]) -> End {
             Step::Miss => sim.step(false),
             Step::Pass(ms) => sim.pass(*ms),
             Step::Stall(ms) => sim.stall(*ms),
+            Step::Swallow => sim.swallow(),
             Step::Turn => sim.call(Host::turn),
             Step::Check => sim.call(Host::check),
             Step::Release => sim.call(Host::release),
@@ -150,6 +153,7 @@ fn no_press_after_its_release(end: &End) -> bool {
         let Some(Ev {
             act: act @ PointerAct::Down(..),
             ours: true,
+            ..
         }) = last.copied()
         else {
             return true;

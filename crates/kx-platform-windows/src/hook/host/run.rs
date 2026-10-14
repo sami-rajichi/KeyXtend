@@ -174,7 +174,7 @@ impl<O: Os> Host<O> {
         if total == 0 {
             return Sent::default();
         }
-        let took = self.os.send(&self.out).min(total);
+        let took = self.os.send(&self.out, self.echo.next()).min(total);
         let taken = self.out.get(..took).unwrap_or_default();
         self.held.sent(taken);
         for &act in taken {

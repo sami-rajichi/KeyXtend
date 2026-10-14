@@ -1,12 +1,12 @@
 //! The engine's acts as one batch of input: mouse acts at absolute virtual-desktop points, keys by scan code, and
-//! every event tagged `REPLAY`. `win` turns each one into a Windows `INPUT`.
+//! every event tagged `REPLAY` with its own id. `win` turns each one into a Windows `INPUT`.
 
 use std::fmt;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Button, Point, PointerAct};
 
-use crate::keys::REPLAY;
+use crate::keys::replay_tag;
 use crate::strokes::{Key, KeyEvent};
 
 /// The largest absolute mouse coordinate; the virtual desktop maps onto 0..=this.
@@ -78,25 +78,27 @@ pub(crate) fn normalise(v: i32, start: i32, size: i32) -> i32 {
     (f64::from(v.saturating_sub(start)) * ABS_MAX / span).round() as i32
 }
 
-/// `acts` as one batch for the virtual desktop `desk`, each event tagged `REPLAY`.
-pub(crate) fn batch(acts: &[PointerAct], desk: Desk) -> Vec<Input> {
-    let mouse = |p: Point, press| Input::Mouse {
+/// `acts` as one batch for the virtual desktop `desk`, each event tagged `REPLAY` with its id, counted from `first`.
+pub(crate) fn batch(acts: &[PointerAct], desk: Desk, first: u32) -> Vec<Input> {
+    let mouse = |p: Point, press, tag| Input::Mouse {
         dx: normalise(p.x, desk.left, desk.width),
         dy: normalise(p.y, desk.top, desk.height),
         press,
-        tag: REPLAY,
+        tag,
     };
-    let key = |scan, up| Input::Key {
+    let key = |scan, up, tag| Input::Key {
         event: Key::Scan(scan).event(up),
-        tag: REPLAY,
+        tag,
     };
+    let ids = std::iter::successors(Some(first), |id| Some(id.wrapping_add(1)));
     acts.iter()
-        .map(|&act| match act {
-            PointerAct::Move(p) => mouse(p, None),
-            PointerAct::Down(b, p) => mouse(p, Some((b, false))),
-            PointerAct::Up(b, p) => mouse(p, Some((b, true))),
-            PointerAct::KeyDown(scan) => key(scan, false),
-            PointerAct::KeyUp(scan) => key(scan, true),
+        .zip(ids.map(replay_tag))
+        .map(|(&act, tag)| match act {
+            PointerAct::Move(p) => mouse(p, None, tag),
+            PointerAct::Down(b, p) => mouse(p, Some((b, false)), tag),
+            PointerAct::Up(b, p) => mouse(p, Some((b, true)), tag),
+            PointerAct::KeyDown(scan) => key(scan, false, tag),
+            PointerAct::KeyUp(scan) => key(scan, true, tag),
         })
         .collect()
 }

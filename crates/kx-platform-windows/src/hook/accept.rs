@@ -3,7 +3,7 @@
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
 use super::Source;
-use crate::keys::{EXTENDED_PREFIXES, REPLAY, REPORTED_EXTENDED, TAG};
+use crate::keys::{EXTENDED_PREFIXES, REPORTED_EXTENDED, TAG, is_replay};
 
 /// What a mouse message does.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -45,10 +45,10 @@ pub(crate) enum Take {
     Engine,
 }
 
-/// What happens to a mouse event with these marks. Ours (`TAG`, `REPLAY`) is an echo; the engine hears only the
-/// hand, or in simulated mode only the gate tool's `SIM_TAG`.
+/// What happens to a mouse event with these marks. Ours (`TAG`, or `REPLAY` with any id) is an echo; the engine hears
+/// only the hand, or in simulated mode only the gate tool's `SIM_TAG`.
 pub(crate) fn take(source: Source, injected: bool, extra: usize) -> Take {
-    if extra == TAG || extra == REPLAY {
+    if extra == TAG || is_replay(extra) {
         return Take::Echo;
     }
     if heard(source, injected, extra) {
@@ -64,11 +64,6 @@ pub(crate) fn esc(source: Source, msg: u32, vk: u32, injected: bool, extra: usiz
     let press = KEY_DOWNS.contains(&msg) && vk == VK_ESCAPE;
     let ours = source == Source::Physical && extra == TAG;
     press && (ours || heard(source, injected, extra))
-}
-
-/// True for the host's own input coming back through a hook; our keyboard's `TAG` input is not the host's.
-pub(crate) fn replayed(extra: usize) -> bool {
-    extra == REPLAY
 }
 
 /// A mouse event of `kind` at `at` as an act.

@@ -8,7 +8,7 @@ use crate::hook::Source;
 use crate::hook::accept::{Kind, Take, act, esc, key_act, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::timing::{Histogram, event_at, timer_ms};
-use crate::keys::{REPLAY, SIM_TAG, TAG};
+use crate::keys::{REPLAY, SIM_TAG, TAG, replay_tag};
 use crate::strokes::Key;
 
 /// Another program's tag.
@@ -25,9 +25,9 @@ const FAST_US: u64 = 25;
 const SLOW_US: u64 = 900;
 
 #[test]
-fn our_input_passes_as_an_echo_whatever_the_source() {
+fn our_input_passes_as_an_echo_whatever_the_source_and_whatever_act_it_names() {
     for source in [Source::Physical, Source::Simulated] {
-        for tag in [TAG, REPLAY] {
+        for tag in [TAG, REPLAY, replay_tag(7), replay_tag(u32::MAX)] {
             assert_eq!(take(source, true, tag), Take::Echo, "{source:?}");
             assert_eq!(take(source, false, tag), Take::Echo, "{source:?}");
         }
@@ -37,7 +37,7 @@ fn our_input_passes_as_an_echo_whatever_the_source() {
 #[test]
 fn only_the_hand_reaches_the_engine_in_physical_mode() {
     assert_eq!(take(Source::Physical, false, 0), Take::Engine);
-    for tag in [0, OTHER, SIM_TAG] {
+    for tag in [0, OTHER, SIM_TAG, TAG | (1 << 40)] {
         assert_eq!(take(Source::Physical, true, tag), Take::Pass, "{tag:#x}");
     }
 }
@@ -160,7 +160,7 @@ fn normalise_maps_the_desktop_edges() {
 }
 
 #[test]
-fn a_batch_is_absolute_mouse_and_scan_code_keys_all_tagged_replay() {
+fn a_batch_is_absolute_mouse_and_scan_code_keys_each_tagged_replay_with_its_id() {
     let desk = Desk {
         left: -1920,
         top: 0,
@@ -175,26 +175,26 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_all_tagged_replay() {
         PointerAct::Up(Button::Right, p),
         PointerAct::KeyUp(shift),
     ];
-    let mouse = |press| Input::Mouse {
+    let mouse = |press, id| Input::Mouse {
         dx: 0,
         dy: 65535,
         press,
-        tag: REPLAY,
+        tag: replay_tag(id),
     };
     let want = [
         Input::Key {
             event: Key::Scan(shift).event(false),
-            tag: REPLAY,
+            tag: replay_tag(u32::MAX - 1),
         },
-        mouse(None),
-        mouse(Some((Button::Right, false))),
-        mouse(Some((Button::Right, true))),
+        mouse(None, u32::MAX),
+        mouse(Some((Button::Right, false)), 0),
+        mouse(Some((Button::Right, true)), 1),
         Input::Key {
             event: Key::Scan(shift).event(true),
-            tag: REPLAY,
+            tag: replay_tag(2),
         },
     ];
-    assert_eq!(batch(&acts, desk), want);
+    assert_eq!(batch(&acts, desk, u32::MAX - 1), want, "ids wrap");
 }
 
 #[cfg(windows)]

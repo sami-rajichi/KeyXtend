@@ -1,7 +1,5 @@
-//! Our input on its way back through the hooks, so input of the hand never overtakes ours. The host keeps the acts it
-//! sent, in order, and each echo matches the next act of its kind, so it knows which batch came back; input waits until
-//! the newest batch's first echo, which proves all of it passed. A wait given up keeps its acts, so their late echoes
-//! still match them and never end a newer batch's wait.
+//! Our input on its way back through the hooks, so input of the hand never overtakes ours. Each act we send carries its
+//! own id, so its echo settles it and every older act still out, and only an echo of the newest batch ends the wait.
 
 use std::time::Duration;
 
@@ -21,19 +19,21 @@ pub(crate) enum Wait {
     Lost,
 }
 
-/// The acts sent and not back yet, and the wait for the newest batch.
+/// The acts sent and not settled yet, and the wait for the newest batch.
 #[derive(Debug)]
 pub(crate) struct Echo {
-    /// Every act sent and not back, oldest first, given-up ones too; only the loop side adds to it, within its room.
+    /// Every act sent and not settled, oldest first, given-up ones too; only the loop side adds to it, within its room.
     flight: Vec<PointerAct>,
-    /// How many acts of `flight` came back or were passed by.
+    /// The id the next act sent gets; `flight` holds the ids just below it.
+    next: u32,
+    /// How many acts at the start of `flight` are settled: back, or passed by a newer act's echo.
     back: usize,
     /// Where the newest batch starts in `flight`.
     newest: usize,
-    /// When the newest batch went out, until its first echo or `echo_ms`.
+    /// When the newest batch went out, until an echo of it or `echo_ms`.
     since: Option<Mono>,
-    /// Presses trimmed for room while still out, one per kind, in room reserved for a let-go; older than `flight`.
-    doubt: Vec<PointerAct>,
+    /// Presses whose echo never came, one per kind with the newest one's id, in room reserved for a let-go.
+    doubt: Vec<(u32, PointerAct)>,
     /// How long that may take.
     wait: Duration,
 }
@@ -43,6 +43,7 @@ impl Echo {
     pub(crate) fn new(echo_ms: u32, room: usize) -> Self {
         Self {
             flight: Vec::with_capacity(room),
+            next: 0,
             back: 0,
             newest: 0,
             since: None,
@@ -51,8 +52,13 @@ impl Echo {
         }
     }
 
-    /// Our batch `acts`, all taken by the OS, went out at `at`; later input waits for its first echo. The oldest acts
-    /// out make room for it when it would not fit, their presses kept in doubt.
+    /// The id the next batch's first act gets.
+    pub(crate) fn next(&self) -> u32 {
+        self.next
+    }
+
+    /// Our batch `acts`, all taken by the OS, went out at `at` with ids from `next`; later input waits for its echo. The
+    /// oldest acts out make room for it when it would not fit, their presses kept in doubt.
     pub(crate) fn sent(&mut self, acts: &[PointerAct], at: Mono) {
         if acts.is_empty() {
             return;
@@ -62,29 +68,23 @@ impl Echo {
         self.trim(acts.len());
         self.newest = self.flight.len();
         self.flight.extend_from_slice(acts);
+        self.next = self.next.wrapping_add(count(acts.len()));
         self.since = Some(at);
     }
 
-    /// One of our events came back as `act`. A press in doubt is older than every act out, so it takes its own echo;
-    /// otherwise the echo matches our next act of its kind. A move matches only the next act, as a press sent with a
-    /// move may echo a move first; a press or key passes by acts whose echo never came.
-    pub(crate) fn back(&mut self, act: PointerAct) {
-        if is_press(act) && self.forget(act) {
+    /// Our act `id` came back: it and every older act still out are settled, and those older presses stay in doubt, as
+    /// their echo never came. An echo of the newest batch ends the wait, and one that names no act out changes nothing.
+    pub(crate) fn back(&mut self, id: u32) {
+        self.doubt.retain(|(d, _)| *d != id);
+        let Some(at) = self.index(id).filter(|at| *at >= self.back) else {
             return;
-        }
-        let rest = self.flight.get(self.back..).unwrap_or_default();
-        let step = match act {
-            PointerAct::Move(_) => rest
-                .first()
-                .is_some_and(|next| alike(*next, act))
-                .then_some(0),
-            _ => rest.iter().position(|next| alike(*next, act)),
         };
-        if let Some(step) = step {
-            self.back += step + 1;
-            if self.back > self.newest {
-                self.since = None;
-            }
+        for k in self.back..at {
+            self.doubt_press(k);
+        }
+        self.back = at + 1;
+        if at >= self.newest {
+            self.since = None;
         }
     }
 
@@ -94,15 +94,16 @@ impl Echo {
         self.since.is_none()
     }
 
-    /// True while our `press` may still be out: sent and not back, or trimmed in doubt.
+    /// True while our `press` may still be out: sent and not settled, or in doubt.
     pub(crate) fn out(&self, press: PointerAct) -> bool {
         let rest = self.flight.get(self.back..).unwrap_or_default();
-        rest.iter().chain(&self.doubt).any(|act| alike(*act, press))
+        let doubt = self.doubt.iter().map(|(_, act)| act);
+        rest.iter().chain(doubt).any(|act| alike(*act, press))
     }
 
     /// An Up is owed for `press` after all we sent, so its doubt no longer matters.
     pub(crate) fn owed(&mut self, press: PointerAct) {
-        self.forget(press);
+        self.doubt.retain(|(_, act)| !alike(*act, press));
     }
 
     /// The room reserved at the start.
@@ -111,8 +112,14 @@ impl Echo {
         self.flight.capacity()
     }
 
+    /// The next act sent gets `id`, as after many sends.
+    #[cfg(test)]
+    pub(crate) fn skip_to(&mut self, id: u32) {
+        self.next = id;
+    }
+
     /// Whether input waits at `now`. A wait past `echo_ms` ends as `Lost`; its acts stay out, so a late echo still
-    /// matches its own act.
+    /// settles them.
     pub(crate) fn check(&mut self, now: Mono) -> Wait {
         match self.since {
             None => Wait::Clear,
@@ -124,33 +131,42 @@ impl Echo {
         }
     }
 
+    /// Where act `id` sits in `flight`, if it is there.
+    fn index(&self, id: u32) -> Option<usize> {
+        let len = self.flight.len();
+        let age = usize::try_from(self.next.wrapping_sub(id)).ok()?;
+        (1..=len).contains(&age).then(|| len - age)
+    }
+
     /// Drops the oldest acts out until `more` fit in the room reserved, keeping their presses in doubt.
     fn trim(&mut self, more: usize) {
         let room = self.flight.capacity();
         let over = self.flight.len().saturating_add(more).saturating_sub(room);
         let over = over.min(self.flight.len());
-        for i in 0..over {
-            if let Some(&act) = self.flight.get(i) {
-                self.doubt_press(act);
-            }
+        for k in 0..over {
+            self.doubt_press(k);
         }
         self.flight.drain(..over);
     }
 
-    /// Keeps `act` in doubt when it is a press, one per kind, while the room reserved for them lasts.
-    fn doubt_press(&mut self, act: PointerAct) {
-        let new = !self.doubt.iter().any(|d| alike(*d, act));
-        if is_press(act) && new && self.doubt.len() < self.doubt.capacity() {
-            self.doubt.push(act);
+    /// Keeps act `k` of `flight` in doubt when it is a press: one per kind with the newest one's id, while the room
+    /// reserved for them lasts.
+    fn doubt_press(&mut self, k: usize) {
+        let Some(&act) = self.flight.get(k).filter(|act| is_press(**act)) else {
+            return;
+        };
+        let id = self.next.wrapping_sub(count(self.flight.len() - k));
+        if let Some(slot) = self.doubt.iter_mut().find(|(_, d)| alike(*d, act)) {
+            *slot = (id, act);
+        } else if self.doubt.len() < self.doubt.capacity() {
+            self.doubt.push((id, act));
         }
     }
+}
 
-    /// Takes the press of `press`'s kind out of doubt; true when one was there.
-    fn forget(&mut self, press: PointerAct) -> bool {
-        let before = self.doubt.len();
-        self.doubt.retain(|d| !alike(*d, press));
-        self.doubt.len() < before
-    }
+/// `n` acts as a count of ids; a batch is far smaller than `u32::MAX`.
+fn count(n: usize) -> u32 {
+    u32::try_from(n).unwrap_or(u32::MAX)
 }
 
 /// True for a button press or a key press.

@@ -6,8 +6,10 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 
 use super::*;
-use crate::keys::REPLAY;
+use crate::keys::replay_tag;
 
+/// The first act's id in the batch test.
+const ID: u32 = 41;
 /// How many desktop queries show that none leaks a handle; tests running beside it open far fewer.
 const QUERIES: u32 = 1_000;
 
@@ -43,7 +45,7 @@ fn each_button_goes_down_and_up_by_its_own_flag_at_an_absolute_point() {
 }
 
 #[test]
-fn a_batch_goes_out_as_absolute_mouse_and_scan_code_keys_tagged_replay() {
+fn a_batch_goes_out_as_absolute_mouse_and_scan_code_keys_tagged_replay_with_ids() {
     let p = Point { x: 5, y: 6 };
     let right_alt = Scan::new(0xE038);
     let acts = [
@@ -56,12 +58,18 @@ fn a_batch_goes_out_as_absolute_mouse_and_scan_code_keys_tagged_replay() {
         width: 11,
         height: 11,
     };
-    let got: Vec<INPUT> = batch(&acts, desk).into_iter().map(input).collect();
+    let got: Vec<INPUT> = batch(&acts, desk, ID).into_iter().map(input).collect();
     let mi = mouse_of(&got[0]);
-    assert_eq!((mi.dx, mi.dy, mi.dwExtraInfo), (32768, 39321, REPLAY));
+    assert_eq!(
+        (mi.dx, mi.dy, mi.dwExtraInfo),
+        (32768, 39321, replay_tag(ID))
+    );
     assert_eq!(mi.dwFlags, flags(Some((Button::Right, false))));
     let ki = key_of(&got[1]);
-    assert_eq!((ki.wVk.0, ki.wScan, ki.dwExtraInfo), (0, 0x38, REPLAY));
+    assert_eq!(
+        (ki.wVk.0, ki.wScan, ki.dwExtraInfo),
+        (0, 0x38, replay_tag(ID + 1))
+    );
     let up = KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
     assert_eq!(ki.dwFlags, up);
 }

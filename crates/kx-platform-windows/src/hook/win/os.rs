@@ -145,8 +145,9 @@ impl Os for WinOs {
         post(self.tid, WAKE)
     }
 
-    fn send(&self, acts: &[PointerAct]) -> usize {
-        let inputs: Vec<INPUT> = batch(acts, desktop()).into_iter().map(input).collect();
+    fn send(&self, acts: &[PointerAct], first: u32) -> usize {
+        let all = batch(acts, desktop(), first);
+        let inputs: Vec<INPUT> = all.into_iter().map(input).collect();
         match inject::send(&inputs) {
             Ok(()) => inputs.len(),
             Err(InjectError::Refused { sent, .. }) => sent,
@@ -156,9 +157,8 @@ impl Os for WinOs {
 
     fn arm(&self, ms: Option<u32>) -> bool {
         kill_timer(self.timer.take());
-        let id = ms.map_or(0, set_timer);
-        self.timer.set(id);
-        ms.is_none() || id != 0
+        self.timer.set(ms.map_or(0, set_timer));
+        ms.is_none() || self.timer.get() != 0
     }
 
     fn hook(&self) -> Result<(), i32> {

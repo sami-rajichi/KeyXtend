@@ -1,5 +1,5 @@
-//! The world the properties drive: Windows' one input stream, which passes each event through our hooks in order, what
-//! reached the apps, and a hand that lets go only of what it holds.
+//! The world the properties drive: Windows' one input stream, which passes each event through our hooks in order, each
+//! of ours tagged with its id, what reached the apps, and a hand that lets go only of what it holds.
 
 use std::collections::VecDeque;
 
@@ -10,7 +10,7 @@ use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, Rig, SHIFT, VK_ESC, mouse_msg, r
 use super::{End, Ev, Fate, Gesture};
 use crate::hook::host::Host;
 use crate::hook::{Mark, Source};
-use crate::keys::REPLAY;
+use crate::keys::replay_tag;
 
 /// The row the hand's events lie on; each takes a new column, so its point names it.
 const HAND_Y: i32 = 1;
@@ -91,7 +91,7 @@ impl Sim {
         let Some(ev) = self.stream.pop_front() else {
             return;
         };
-        if !self.hooked || !seen || self.through(ev) {
+        if !self.hooked || !seen || ev.unseen || self.through(ev) {
             self.apps.push(ev);
         }
         self.collect();
@@ -106,6 +106,13 @@ impl Sim {
     /// `ms` pass while the stream stalls: what waits in it, our input too, reaches the hooks late.
     pub(super) fn stall(&self, ms: u32) {
         self.rig.world.pass(ms);
+    }
+
+    /// Our next event in the stream passes our hooks by, as when another program's hook swallows its echo.
+    pub(super) fn swallow(&mut self) {
+        if let Some(ev) = self.stream.iter_mut().find(|ev| ev.ours && !ev.unseen) {
+            ev.unseen = true;
+        }
     }
 
     /// Runs a host call on the loop side.
@@ -185,7 +192,12 @@ impl Sim {
             self.made.push(act);
             self.fate.push(Fate::Kept);
         }
-        self.stream.push_back(Ev { act, ours: false });
+        self.stream.push_back(Ev {
+            act,
+            ours: false,
+            id: 0,
+            unseen: false,
+        });
         let tick = self.rig.world.tick.get();
         self.rig.world.last_input.set(Some(tick));
     }
@@ -194,7 +206,7 @@ impl Sim {
     fn through(&mut self, ev: Ev) -> bool {
         let mark = Mark {
             injected: ev.ours,
-            extra: if ev.ours { REPLAY } else { 0 },
+            extra: if ev.ours { replay_tag(ev.id) } else { 0 },
             time: self.rig.world.tick.get(),
         };
         let dropped = match ev.act {
@@ -253,10 +265,13 @@ impl Sim {
                     for (i, act) in acts.iter().enumerate() {
                         self.mark(*act, if i < took { fate } else { Fate::Lost });
                     }
-                    let sent = acts
-                        .into_iter()
-                        .take(took)
-                        .map(|act| Ev { act, ours: true });
+                    let ours: Vec<_> = self.rig.world.ids.borrow_mut().drain(..took).collect();
+                    let sent = ours.into_iter().map(|(act, id)| Ev {
+                        act,
+                        ours: true,
+                        id,
+                        unseen: false,
+                    });
                     self.stream.extend(sent);
                     if let Some(g) = self.slip.take() {
                         self.gesture(g);

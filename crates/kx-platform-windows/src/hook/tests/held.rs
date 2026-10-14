@@ -92,7 +92,7 @@ fn the_records_and_a_batch_hide_every_point_and_key_in_debug() {
     let mut queue = Queue::new(1);
     assert!(queue.put(press));
     queue.passed(Kind::Up(Button::Left), SECRET);
-    let inputs = batch(&[press, key], DESK);
+    let inputs = batch(&[press, key], DESK, 0);
     let text = format!("{held:?} {queue:?} {inputs:?}");
     assert!(text.contains(REDACTED_MARKER), "{text}");
     let dx = normalise(SECRET.x, DESK.left, DESK.width).to_string();

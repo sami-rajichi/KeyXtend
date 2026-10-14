@@ -50,6 +50,8 @@ pub(super) struct World {
     pub panic_arm: Cell<bool>,
     /// Setting the deadline timer is refused.
     pub refuse_timer: Cell<bool>,
+    /// Each act the OS took, with its id, oldest first; an echo takes its own out.
+    pub ids: RefCell<Vec<(PointerAct, u32)>>,
 }
 
 impl Default for World {
@@ -65,6 +67,7 @@ impl Default for World {
             refuse: Cell::new(None),
             panic_arm: Cell::new(false),
             refuse_timer: Cell::new(false),
+            ids: RefCell::default(),
         }
     }
 }
@@ -120,12 +123,15 @@ impl Os for Fake {
     }
 
     /// Like Windows, input the OS took moves the last input time.
-    fn send(&self, acts: &[PointerAct]) -> usize {
+    fn send(&self, acts: &[PointerAct], first: u32) -> usize {
         self.0.note(Call::Send(acts.to_vec()));
         let took = self.0.takes.get().map_or(acts.len(), |n| n.min(acts.len()));
         if took > 0 {
             self.0.last_input.set(Some(self.0.tick.get()));
         }
+        let ids = std::iter::successors(Some(first), |id| Some(id.wrapping_add(1)));
+        let taken = acts.iter().copied().zip(ids).take(took);
+        self.0.ids.borrow_mut().extend(taken);
         took
     }
 

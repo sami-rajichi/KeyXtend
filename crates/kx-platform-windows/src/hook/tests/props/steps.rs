@@ -36,6 +36,8 @@ pub(super) enum Step {
     Pass(u32),
     /// Time passes while the stream stalls, so what waits in it reaches the hooks late.
     Stall(u32),
+    /// Our next event in the stream passes our hooks by, so its echo is lost.
+    Swallow,
     /// A wake or the deadline timer.
     Turn,
     /// The health timer.
@@ -129,7 +131,7 @@ pub(super) fn busy() -> impl Strategy<Value = Step> {
     })
 }
 
-/// Steps where the queue never fills and the engine never fails.
+/// Steps where the queue never fills and the engine never fails; an echo of ours may be swallowed.
 pub(super) fn calm() -> impl Strategy<Value = Step> {
     prop_oneof![
         4 => gesture().prop_map(Step::Hand),
@@ -141,6 +143,7 @@ pub(super) fn calm() -> impl Strategy<Value = Step> {
         1 => Just(Step::Release),
         1 => prop_oneof![Just(None), (0..=MAX_ACTS).prop_map(Some)].prop_map(Step::Takes),
         1 => script().prop_map(Step::Plan),
+        1 => Just(Step::Swallow),
     ]
 }
 
@@ -149,7 +152,7 @@ fn stall() -> impl Strategy<Value = Step> {
     (MIN_STALL_MS..=MAX_STALL_MS).prop_map(Step::Stall)
 }
 
-/// Calm steps with busy plans, floods, stalls and panics, where the hand's input may pass ahead of ours.
+/// Calm steps with busy plans, floods, stalls, swallowed echoes and panics, where the hand's input may pass ahead of ours.
 pub(super) fn flooded() -> impl Strategy<Value = Step> {
     prop_oneof![
         24 => calm(),
@@ -157,6 +160,7 @@ pub(super) fn flooded() -> impl Strategy<Value = Step> {
         4 => (1..=FLOOD).prop_map(Step::Flood),
         4 => (FLOOD / 2..=FLOOD, gesture()).prop_map(|(n, g)| Step::Rush(n, g)),
         4 => stall(),
+        3 => Just(Step::Swallow),
         1 => any::<bool>().prop_map(Step::Panic),
     ]
 }

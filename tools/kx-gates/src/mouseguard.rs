@@ -20,7 +20,7 @@ use watch::Watch;
 use std::time::Duration;
 
 use kx_module_api::US_PER_MS;
-use kx_platform_windows::keys::{REPLAY, SIM_TAG, TAG};
+use kx_platform_windows::keys::{SIM_TAG, TAG, is_replay};
 use serde::Deserialize;
 use windows::Win32::System::Threading::INFINITE;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -222,7 +222,7 @@ pub enum Kind {
 pub enum Whose {
     /// kx-gates injected it, tagged `TAG` or `SIM_TAG`.
     Own,
-    /// It was injected tagged `REPLAY`, as the test build replays a press its hook held back.
+    /// It was injected tagged `REPLAY` with any act's id, as the test build replays a press its hook held back.
     Replay,
     /// Anything else: the hand, or another program's input.
     Hand,
@@ -235,7 +235,7 @@ pub fn from(flags: u32, extra: usize) -> Whose {
     }
     match extra {
         TAG | SIM_TAG => Whose::Own,
-        REPLAY => Whose::Replay,
+        _ if is_replay(extra) => Whose::Replay,
         _ => Whose::Hand,
     }
 }

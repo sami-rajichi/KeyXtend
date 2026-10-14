@@ -22,7 +22,7 @@ use kx_module_api::{Mono, US_PER_MS};
 use super::host::Host;
 use super::stats::Stats;
 use super::{Mark, Source};
-use crate::keys::{REPLAY, SIM_TAG, TAG};
+use crate::keys::{REPLAY, SIM_TAG, TAG, replay_tag};
 use fake::{Call, DPI, Fake, Heard, Plan, Script, World};
 
 /// A check every second with half a second of slack, and a quarter second for our input to come back.
@@ -123,10 +123,14 @@ impl Rig {
         self.host.mouse(msg, at, mark)
     }
 
-    /// Our sent `acts` come back through the hooks.
+    /// Our sent `acts` come back through the hooks, each tagged with the id the oldest such act went out with.
     fn echo(&mut self, acts: &[PointerAct]) {
         for &act in acts {
-            let mark = self.mark(true, REPLAY);
+            let mut ids = self.world.ids.borrow_mut();
+            let k = ids.iter().position(|(sent, _)| *sent == act).unwrap();
+            let (_, id) = ids.remove(k);
+            drop(ids);
+            let mark = self.mark(true, replay_tag(id));
             match act {
                 PointerAct::KeyDown(scan) => self.host.key(KEY_DOWN, 0, scan, mark),
                 PointerAct::KeyUp(scan) => self.host.key(KEY_UP, 0, scan, mark),

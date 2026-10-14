@@ -12,7 +12,7 @@ use std::sync::Arc;
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Take, act, esc, key_act, kind, replayed, take, user_key};
+use super::accept::{Take, esc, kind, take, user_key};
 use super::echo::Echo;
 use super::health::Health;
 use super::held::{Held, LET_GO};
@@ -20,8 +20,9 @@ use super::queue::Queue;
 use super::stats::Stats;
 use super::timing::event_at;
 use super::{Mark, Os, Source};
+use crate::keys::{is_replay, replay_id};
 
-/// Batches that may be out at once before the record of them grows.
+/// Batches that may be out at once before the oldest acts make room.
 const FLIGHTS: usize = 2;
 
 /// The hook thread's state: the engine and its lent buffer, the input behind our own, the health check and the numbers.
@@ -147,7 +148,7 @@ impl<O: Os> Host<O> {
     /// Hears key message `msg` for `vk`, whose scan code reads as `scan`: an Esc press reaches the engine, and every
     /// key passes on.
     pub(crate) fn key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
-        let _ = self.guard(|h| h.on_key(msg, vk, scan, mark));
+        let _ = self.guard(|h| h.on_key(msg, vk, mark));
         if let Some(act) = user_key(self.source, msg, scan, mark.injected, mark.extra) {
             self.hand_key(act);
         }
@@ -207,9 +208,9 @@ impl<O: Os> Host<O> {
     fn on_mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
         let stamp = self.stamp(mark);
         match (take(self.source, mark.injected, mark.extra), kind(msg)) {
-            (Take::Echo, kind) => {
-                if let (true, Some(kind)) = (replayed(mark.extra), kind) {
-                    self.echo.back(act(kind, at));
+            (Take::Echo, _) => {
+                if is_replay(mark.extra) {
+                    self.echo.back(replay_id(mark.extra));
                 }
                 false
             }
@@ -221,12 +222,10 @@ impl<O: Os> Host<O> {
         }
     }
 
-    fn on_key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
+    fn on_key(&mut self, msg: u32, vk: u32, mark: Mark) {
         let stamp = self.stamp(mark);
-        if replayed(mark.extra)
-            && let Some(act) = key_act(msg, scan)
-        {
-            self.echo.back(act);
+        if is_replay(mark.extra) {
+            self.echo.back(replay_id(mark.extra));
         }
         if esc(self.source, msg, vk, mark.injected, mark.extra) {
             // Esc is never dropped, whatever the engine answers.
