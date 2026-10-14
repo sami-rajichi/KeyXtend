@@ -140,6 +140,8 @@ var texts = {
   "notice.lang-not-switched": "The app in front could not switch the language.",
   "notice.module-failed": "{$module} stopped after an error. Everything else still works.",
   "notice.mouse-hook-failed": "Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.",
+  "notice.mouse-reset": "Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.",
+  "notice.mouse-stopped": "Mouse assist stopped after an error. Restart KeyXtend to use it again.",
   "notice.settings-defaults": "No settings file could be used, so the default settings are in use.",
   "notice.settings-locked": "Another program is using the settings file. Default settings are in use, and nothing is saved.",
   "notice.settings-newer": "The {$module} settings come from a newer version. They are kept, and the defaults are used for now.",

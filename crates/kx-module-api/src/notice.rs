@@ -60,9 +60,13 @@ pub mod keys {
     pub const LANG_NOT_SWITCHED: &str = "notice.lang-not-switched";
     /// The OS refused the mouse module's hook, so its modes stay off; the next toggle tries again.
     pub const MOUSE_HOOK_FAILED: &str = "notice.mouse-hook-failed";
+    /// An error turned the mouse modes off for this session; a tap on a mode key starts them again.
+    pub const MOUSE_RESET: &str = "notice.mouse-reset";
+    /// The mouse module stopped after an error; it comes back when the app restarts.
+    pub const MOUSE_STOPPED: &str = "notice.mouse-stopped";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 10] = [
+    pub const ALL_KEYS: [&str; 12] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -73,6 +77,8 @@ pub mod keys {
         KEYS_NOT_SENT,
         LANG_NOT_SWITCHED,
         MOUSE_HOOK_FAILED,
+        MOUSE_RESET,
+        MOUSE_STOPPED,
     ];
 }
 

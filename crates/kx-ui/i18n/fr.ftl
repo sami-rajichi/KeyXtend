@@ -174,6 +174,8 @@ notice =
     .keys-not-sent = Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.
     .lang-not-switched = L’application au premier plan n’a pas pu changer de langue.
     .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
+    .mouse-reset = L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.
+    .mouse-stopped = L’aide à la souris s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =

@@ -18,7 +18,7 @@ pub use settings::{MouseSettings, SPEC};
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError};
+use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -88,12 +88,13 @@ impl MouseModule {
     }
 }
 
-/// The actor's thread. A panic there says at once that the module is not live, so the keyboard dims its keys, and
-/// then goes on to `halt`.
+/// The actor's thread. A panic there says at once that the module is not live, so the keyboard dims its keys, tells
+/// the user, and then goes on to `halt`.
 fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
-        // `AssistChanged` needs no capability, so this cannot be refused.
+        // Neither event needs a capability, so neither can be refused.
         let _ = bus.publish(&AssistChanged::OFF);
+        let _ = bus.publish(&actor::notice(keys::MOUSE_STOPPED));
         resume_unwind(panic);
     }
 }

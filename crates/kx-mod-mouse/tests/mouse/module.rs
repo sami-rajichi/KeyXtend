@@ -9,8 +9,8 @@ use kx_module_api::ports::{
     LatchesChanged, PointerEngine, PointerHook, PointerHookKey, Scan, Toggle,
 };
 use kx_module_api::{
-    Bus, Capability, Event, Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError,
-    Subscription,
+    Bus, Capability, Event, Module, ModuleCx, ModuleError, Notice, ServiceError, ServiceKey,
+    SettingsError, Subscription, keys,
 };
 use kx_platform_fake::FakePointerHook;
 use kx_test_support::host::{FakeHost, Stored};
@@ -235,10 +235,11 @@ fn an_actor_that_panicked_is_logged_once_when_the_module_stops() {
 }
 
 #[test]
-fn an_actor_that_panics_mid_run_says_at_once_that_the_module_is_not_live() {
+fn an_actor_that_panics_mid_run_says_at_once_that_the_module_stopped() {
     let mut host = host(&ALL, Some(Arc::new(Broken)));
     let bus = Bus::new(Arc::clone(&host.core));
     let (_ear, told) = hear::<AssistChanged>(&bus);
+    let (_notes, notices) = hear::<Notice>(&bus);
     let mut module = MouseModule::default();
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
     assert_eq!(told.recv_timeout(WAIT), Ok(on(false)), "live");
@@ -250,7 +251,10 @@ fn an_actor_that_panics_mid_run_says_at_once_that_the_module_is_not_live() {
         off,
         "the keyboard dims its keys now"
     );
+    let key = notices.recv_timeout(WAIT).map(|n| n.key);
+    assert_eq!(key, Ok(keys::MOUSE_STOPPED), "the user hears why");
     host.held.clear();
     module.stop();
     assert!(told.try_recv().is_err(), "said once");
+    assert!(notices.try_recv().is_err(), "told once");
 }

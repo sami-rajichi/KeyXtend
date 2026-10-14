@@ -174,6 +174,8 @@ notice =
     .keys-not-sent = Some keys did not reach the app in front. Check what was typed.
     .lang-not-switched = The app in front could not switch the language.
     .mouse-hook-failed = Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.
+    .mouse-reset = Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.
+    .mouse-stopped = Mouse assist stopped after an error. Restart { -app } to use it again.
 
 ## Module names by module id; an id not listed shows itself.
 module =

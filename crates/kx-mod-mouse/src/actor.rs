@@ -47,7 +47,7 @@ pub struct Actor {
     /// The actor's own inbox, which each hook engine writes to.
     inbox: Sender<Msg>,
     moves: Arc<Moves>,
-    /// Right-click as saved: Grab turns it off only for a while.
+    /// Right-click as saved, or off until the next start after a failure; Grab turns it off only for a while.
     saved: bool,
     /// Right-click and Grab as the keyboard shows them.
     rclick: bool,
@@ -119,7 +119,7 @@ impl Actor {
             Msg::Ask => self.tell_state(),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
-            Msg::Lost(run) => return self.lost(run),
+            Msg::Lost(run) => self.lost(run),
             Msg::Stop => {
                 self.stop();
                 return false;
@@ -200,29 +200,22 @@ impl Actor {
         }
         self.failing = true;
         if expected {
-            self.tell_failed();
+            self.publish(&notice(keys::MOUSE_HOOK_FAILED));
         }
     }
 
-    /// Tells the user the hook failed, so they know why the modes are off.
-    fn tell_failed(&self) {
-        self.publish(&Notice {
-            key: keys::MOUSE_HOOK_FAILED,
-            module: Some(ID),
-            args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-        });
-    }
-
-    /// The host gave up the live run's engine after a panic, so the module says it is not live, tells the user and is
-    /// done; another run's engine just ended. False once the actor is done.
-    fn lost(&mut self, run: u64) -> bool {
+    /// The host gave up the live run's engine after a panic, so the run goes, both modes turn off for this session and
+    /// the user hears why; a mode key starts afresh. Another run's engine just ended.
+    fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
-            return true;
+            return;
         }
         tracing::warn!("mouse hook gave up its engine");
-        self.stop();
-        self.tell_failed();
-        false
+        self.drop_run();
+        // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
+        (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
+        self.tell_state();
+        self.publish(&notice(keys::MOUSE_RESET));
     }
 
     /// Stops the hook once the engine reported idle after every command sent so far.
@@ -249,5 +242,14 @@ impl Actor {
             lost_echoes = s.lost_echoes,
             "mouse hook stopped"
         );
+    }
+}
+
+/// The mouse module's notice `key`, naming the module.
+pub(crate) fn notice(key: &'static str) -> Notice {
+    Notice {
+        key,
+        module: Some(ID),
+        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
 }
