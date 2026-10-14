@@ -71,6 +71,12 @@ fn the_shipped_budgets_are_spec_10s() {
 }
 
 #[test]
+fn the_hook_budget_is_spec_10s() {
+    let hook = crate::config::load().expect("kx-gates.toml loads").g8_hook;
+    assert_eq!(spec_limits("Mouse hook callback"), [hook.p99_ms]);
+}
+
+#[test]
 fn the_log_lines_g8_waits_for_are_the_ones_the_product_writes() {
     let g = shipped();
     let quoted = |s: &str| format!("\"{s}\"");

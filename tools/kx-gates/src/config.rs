@@ -18,8 +18,8 @@ use crate::g22cfg::G22;
 use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
-use crate::p4cfg::{G5, GateInput, Hand};
-use crate::probecfg::{G6, G12, Probes, Sim};
+use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
+use crate::probecfg::{G6, Probes, Sim};
 use crate::text::Charsets;
 
 /// All gate settings.
@@ -77,6 +77,8 @@ pub struct GatesConfig {
     pub capture: Capture,
     /// G8 settings.
     pub g8: G8,
+    /// G8's hook part, on the test build.
+    pub g8_hook: G8Hook,
     /// G9 settings.
     pub g9: G9,
     /// G10 settings.
@@ -206,11 +208,13 @@ pub fn load() -> Result<GatesConfig, String> {
     featcfg::check(&config)?;
     config.g2.check()?;
     config.g3.check()?;
+    config.g6.check()?;
     config.g12.check()?;
     config.g8.check()?;
     config.mouse_guard.check()?;
     config.gate_input.check()?;
     config.g5.check()?;
+    config.g8_hook.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;
     Ok(config)

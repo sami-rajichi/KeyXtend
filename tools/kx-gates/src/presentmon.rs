@@ -1,5 +1,5 @@
-//! G8's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with its swap
-//! chain, when it was presented on the QPC clock and whether it showed, and the slowest gaps between presents.
+//! G8's and G12's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with
+//! its swap chain, when it was presented on the QPC clock and whether it showed, and the slowest gaps between presents.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -54,11 +54,11 @@ pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
     parts.map(String::from).to_vec()
 }
 
-/// How to get the CSV `file` of `program`'s frames over `secs` seconds, for the result line.
-pub fn how(program: &str, file: &Path, secs: u64) -> String {
+/// How `gate` gets its CSV `file` of `program`'s frames over `secs` seconds, for the result line.
+pub fn how(gate: &str, program: &str, file: &Path, secs: u64) -> String {
     format!(
-        "name PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) in [g8] presentmon_exe and G8 \
-         starts it, or start it as administrator just before G8: PresentMon {}",
+        "name PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) in [g8] presentmon_exe and \
+         {gate} starts it, or start it as administrator just before {gate}: PresentMon {}",
         command_line(&args(program, file, secs))
     )
 }

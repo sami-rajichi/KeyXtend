@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 05:00 — P4: G12 under the product's overlay, and G8's hook p99
+G12 now presses 200 points of target-window under the test build's own pointer overlay, each press long enough for the ring to play yet still a click, and checks every click arrives and nothing blocks it. PresentMon, shared with G8, records the test build, and the overlay's frames are judged only inside the ring's time, so the keyboard's frames never count. The new `g8 hook` and `g8 hook-weak` run G5's cases on the test build and hold the hook's logged p99 to spec §10's 1 ms. G6's face sizes are now checked at load, and a G18 error no longer shows an empty part.
+
 ## 2026-10-14 04:00 — P4: G6 scrolls in the document, cleanup on every path
 G6's stand-in face now sits over the document's lower part, as the keyboard does, so its scroll point lands in the document's body, and G6 stops when that point is off the document; with no UI Automation scroll pattern there it skips only that route, and its result gives the point as an offset in the window. G5 and G18 turn Right-click off even after a failed case, and G18 reads the latch at once after its click. G5 also refuses a drag inside the still radius at the screen's DPI, and target-window refuses a hang cap at Windows' hung-window mark.
 

@@ -2,6 +2,7 @@
 //! click to character, a bus publish, `PresentMon`'s dropped frames and memory growth under pop-up churn against
 //! them, and times resizes.
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`); it clicks, so only with the owner's yes.
+//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`).
 #![cfg(windows)]
 
 use std::path::Path;
@@ -16,7 +17,7 @@ use crate::apps::Ctx;
 use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8churn;
-use crate::g8frames::{self, Recorder};
+use crate::g8frames::{self, Capture, Recorder};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, log_span};
@@ -27,7 +28,7 @@ use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, g2raw, mouseguard, out};
+use crate::{close, g2, g2raw, g8hook, mouseguard, out};
 use crate::{g8lit, g8size, g8type, g8ui};
 
 /// The name that runs G8 in weak mode.
@@ -39,7 +40,7 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
 /// In `weak` mode, the job from `spike.toml [voice.weak]` and the CPU time it allows in whole cores; else neither.
-fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
+pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
     if !weak {
         return Ok((None, None));
     }
@@ -99,7 +100,7 @@ fn measure(
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
-    let frames = g8frames::frames(ctx, program, since, rec);
+    let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
     let m = Measured {
         log,
@@ -205,17 +206,17 @@ fn broke(e: &str, recorder: Option<u32>, secs: u64, quit: Option<&Result<bool, S
 }
 
 /// Runs G8: `name` is the product, or `weak` for weak mode, and the product must not be running, as G8 times a cold
-/// start; `lit` and `osk` time only the key light (`g8lit`).
+/// start; `lit` and `osk` time only the key light (`g8lit`), and `hook` and `hook-weak` only the hook (`g8hook`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if let Some(lit) = g8lit::run(ctx, name) {
-        return lit;
+    if let Some(part) = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name)) {
+        return part;
     }
     cold()?;
     let weak = name == WEAK;
     let program = ctx.cfg.program(&ctx.cfg.g8.program);
     let (job, cpu_cores) = weak_job(ctx, weak)?;
     let (since, origin_us) = (SystemTime::now(), now_us());
-    let rec = g8frames::record(ctx, &program)?;
+    let rec = g8frames::record(ctx, &Capture::of_g8(&ctx.cfg.g8), &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
     let s =
         g8start::start(ctx, &program, &[], job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;

@@ -5,14 +5,14 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g8lit, g19, g22, g22bench, g22type, product};
+use crate::{g8, g8hook, g8lit, g19, g22, g22bench, g22type, product};
 
 /// Gates aimed at the product, which take its name.
-pub(crate) const PRODUCT_GATES: [&str; 10] = [
-    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g13", "g26", "close",
+pub(crate) const PRODUCT_GATES: [&str; 11] = [
+    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g26", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
-pub(crate) const FACE_GATES: [&str; 7] = ["g7", "g12", "g19", "g22", "g23", "g24", "close"];
+pub(crate) const FACE_GATES: [&str; 6] = ["g7", "g19", "g22", "g23", "g24", "close"];
 
 /// The keyboards `gate` takes: the product, the frozen face, both or none.
 fn keyboards(gate: &str) -> Vec<&'static str> {
@@ -24,7 +24,13 @@ fn keyboards(gate: &str) -> Vec<&'static str> {
 /// Names besides a keyboard that `gate` takes.
 fn own_names(gate: &str) -> &'static [&'static str] {
     match gate {
-        "g8" => &[g8::WEAK, g8lit::LIT, g8lit::OSK],
+        "g8" => &[
+            g8::WEAK,
+            g8lit::LIT,
+            g8lit::OSK,
+            g8hook::HOOK,
+            g8hook::HOOK_WEAK,
+        ],
         "g19" => &[g19::CORE],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
@@ -94,10 +100,22 @@ mod tests {
             assert!(check("g2", name).is_err(), "g2 {name}");
         }
         assert!(check("g7", g19::CORE).is_err());
-        for name in [g8::WEAK, g8lit::LIT, g8lit::OSK] {
+        for name in [
+            g8::WEAK,
+            g8lit::LIT,
+            g8lit::OSK,
+            g8hook::HOOK,
+            g8hook::HOOK_WEAK,
+        ] {
             assert!(check("g8", name).is_ok(), "g8 {name}");
             assert!(check("g9", name).is_err(), "{name} is G8's");
         }
+    }
+
+    #[test]
+    fn g12_takes_the_product_now_and_refuses_the_frozen_face() {
+        assert!(check("g12", product::NAME).is_ok());
+        assert!(check("g12", FACE).is_err());
     }
 
     #[test]

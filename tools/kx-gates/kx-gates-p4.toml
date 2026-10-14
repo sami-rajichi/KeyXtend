@@ -1,5 +1,5 @@
-# Settings P4 adds: the product's test build, which P4's gates start and drive, G5 and the hand try. kx-gates reads them
-# with kx-gates.toml, from its folder; a section sits in one file only.
+# Settings P4 adds: the product's test build, which P4's gates start and drive, G5, G12, G8's hook part and the hand
+# try. kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
 
 # The test build: the app built with its gate-input feature, so with `flag` its engine hears only kx-gates' SIM_TAG
 # input. Build it with `cargo build -p keyxtend --release --features gate-input --target-dir target/gate-input`; it never
@@ -43,3 +43,34 @@ hang_lead_ms = 300
 [hand]
 # How long it runs unless --secs says otherwise, in seconds.
 try_secs = 90
+
+# G12 (roadmap G12: the ring runs at 60 Hz without dropping clicks under it). With Right-click on, one click goes to
+# each point of a grid (columns, rows; 200 clicks) kept inset_px inside target-window's text box, clear of its scroll
+# bars, with target-window parked at its screen's top-left.
+[g12]
+grid = [20, 10]
+inset_px = 60
+# Each press lasts the test build's ring_after_ms plus ring_ms, so its ring plays; with spare_ms more it must stay
+# within the test build's hold_ms, so it stays a click. Wait settle_ms after each release. All in ms.
+ring_ms = 600
+spare_ms = 300
+settle_ms = 60
+# A logged press may be this far from where we clicked, in px.
+slack_px = 1
+# Inside each ring span the ring must draw at least min_fps frames a second (60 Hz less 5 %), and 99 in 100 frame gaps
+# within p99_ms (two frames).
+min_fps = 57.0
+p99_ms = 34.0
+# G12's PresentMon CSV in the out folder, a plain file name, and how long it records, in seconds: about three minutes
+# of clicks plus room. PresentMon's program and waits are [g8]'s, as each PC names one PresentMon.
+presentmon = "g12-presentmon.csv"
+presentmon_secs = 240
+
+# G8's hook part (`g8 hook`, `g8 hook-weak` in weak mode): G5's cases on the test build, rounds times, judged by the
+# p99 its hook logs when Right-click turns off.
+[g8_hook]
+# The hook callback's 99th percentile may take this long, in ms (spec §10, checked).
+p99_ms = 1.0
+rounds = 20
+# Fewer events than this over the run leave the p99 not measured, so it fails.
+min_events = 200

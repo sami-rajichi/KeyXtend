@@ -191,21 +191,34 @@ fn offsets(got: &[Mouse], p: Pt) -> Vec<String> {
 pub struct Played {
     /// One line per case played: its round, name, verdict and what target-window logged.
     pub lines: Vec<Value>,
-    /// Every case logged what it wanted.
-    pub matched: bool,
+    /// How many cases logged what they wanted.
+    pub ok: usize,
     /// How many cases played.
     pub count: usize,
 }
 
-/// Plays every case at `p` on `target`, round after round, checking the log after each.
-pub fn play_all(ctx: &Ctx, target: HWND, p: Pt, hold: Hold) -> Result<Played, String> {
+impl Played {
+    /// True when every case played logged what it wanted.
+    pub fn matched(&self) -> bool {
+        self.ok == self.count
+    }
+}
+
+/// Plays every case at `p` on `target` for `rounds` rounds, checking the log after each.
+pub fn play_all(
+    ctx: &Ctx,
+    target: HWND,
+    p: Pt,
+    hold: Hold,
+    rounds: usize,
+) -> Result<Played, String> {
     let g = &ctx.cfg.g5;
     let mut played = Played {
         lines: Vec::new(),
-        matched: true,
+        ok: 0,
         count: 0,
     };
-    for round in 0..g.rounds {
+    for round in 0..rounds {
         for case in cases(g, hold.radius_px) {
             uncovered(target, p)?;
             let since = now_us();
@@ -222,7 +235,7 @@ pub fn play_all(ctx: &Ctx, target: HWND, p: Pt, hold: Hold) -> Result<Played, St
             played
                 .lines
                 .push(json!({ "round": round, "case": case.name, "ok": ok, "got": seen }));
-            played.matched &= ok;
+            played.ok += usize::from(ok);
             played.count += 1;
         }
     }

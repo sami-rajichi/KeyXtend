@@ -6,7 +6,7 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g8, g8lit, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand,
+    capture, g5, g6, g8, g8hook, g8lit, g17, g18, g19, g20, g21, g22, g22bench, g22type, g25, hand,
 };
 
 /// The program's name in the help.
@@ -20,14 +20,16 @@ fn names(apps: &[AppKind]) -> String {
 /// The help lines of the gates aimed at the product.
 fn product_lines() -> String {
     let (weak, lit, osk) = (g8::WEAK, g8lit::LIT, g8lit::OSK);
+    let (hook, hook_weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
        {PROG} g4 <{NAME}> [--clicks N] [--seed S]
-       {PROG} g8 <{NAME}|{weak}|{lit}|{osk}>
+       {PROG} g8 <{NAME}|{weak}|{lit}|{osk}|{hook}|{hook_weak}>
        {PROG} g9 <{NAME}>
        {PROG} g10 <{NAME}>
        {PROG} g11 <{NAME}>
+       {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
        {PROG} g26 <{NAME}>"
     )
@@ -37,7 +39,6 @@ fn product_lines() -> String {
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g12 <{FACE}>
        {PROG} g19 <{}|{FACE}>
        {PROG} g22 <{FACE}|{}|{}|{}>
        {PROG} g23 <{FACE}>
@@ -68,6 +69,7 @@ pub fn usage() -> String {
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
 g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.
+g8 {} and {} judge the hook's p99 on the product's test build, driven with G5's cases; the second in weak mode.
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
         product_lines(),
@@ -85,6 +87,8 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         g8::WEAK,
         g8lit::LIT,
         g8lit::OSK,
+        g8hook::HOOK,
+        g8hook::HOOK_WEAK,
         g5::ADMIN,
     )
 }
@@ -107,6 +111,23 @@ mod tests {
             .lines()
             .find(|l| l.contains(&format!("g5 {}", g5::ADMIN)));
         assert!(admin.is_some_and(|l| l.contains("manual")), "{text}");
+    }
+
+    #[test]
+    fn g12_runs_on_the_product_and_g8_lists_its_hook_names() {
+        let text = usage();
+        assert!(text.contains(&format!("g12 <{NAME}>")), "{text}");
+        let (hook, weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
+        let g8 = format!("|{hook}|{weak}>");
+        assert!(
+            text.lines().any(|l| l.contains("g8 <") && l.contains(&g8)),
+            "{text}"
+        );
+        let told = text.lines().find(|l| l.contains(&format!("g8 {hook}")));
+        assert!(
+            told.is_some_and(|l| l.contains(weak) && l.contains("test build")),
+            "{text}"
+        );
     }
 
     #[test]

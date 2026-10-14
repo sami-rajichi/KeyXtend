@@ -3,8 +3,8 @@
 # Relative paths start at this file's folder, and a test keeps them inside the repo.
 
 [paths]
-# Sent and received texts, raw click data, screenshots of blocked runs, G11's and G13's pictures, G8's PresentMon CSV,
-# and results.jsonl.
+# Sent and received texts, raw click data, screenshots of blocked runs, G11's and G13's pictures, G8's and G12's
+# PresentMon CSVs, and results.jsonl.
 out = "../../target/gate-logs"
 
 [timing]
@@ -226,22 +226,6 @@ face_px = 120
 face_overlap_px = 160
 # A window picture counts as changed when more than this share of its pixels changed.
 min_changed = 0.02
-
-[g12]
-# The ring overlay check (roadmap G12): with the face parked and its ring test on, one click goes to each point of a grid
-# (columns, rows; 200 clicks) kept inset_px inside target-window's text box, clear of its scroll bars.
-grid = [20, 10]
-inset_px = 60
-# After each move, wait up to follow_ms for the ring to cover the point; wait settle_ms after each click.
-follow_ms = 500
-settle_ms = 60
-# A logged press may be this far from where we clicked, in px.
-slack_px = 1
-# The ring must draw at least min_fps frames a second (60 Hz less 5 %), and 99 in 100 frame gaps within p99_ms (two frames).
-min_fps = 57.0
-p99_ms = 34.0
-# Longest wait for the ring window to open, in ms.
-open_ms = 3000
 
 [edit_keys]
 # Shortcuts the stage-1b probes press: Ctrl+Home, Ctrl+End, Home, Shift+End, Down, Ctrl+V, Ctrl+Z.

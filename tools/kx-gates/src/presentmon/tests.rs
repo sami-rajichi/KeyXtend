@@ -121,7 +121,7 @@ fn a_last_row_still_being_written_is_left_out() {
 }
 
 #[test]
-fn g8_starts_presentmon_with_qpc_times_and_the_arguments_the_how_to_names() {
+fn a_gate_starts_presentmon_with_qpc_times_and_the_arguments_its_how_to_names() {
     let file = Path::new(r"C:\out\pm.csv");
     let got = args("keyxtend.exe", file, 75);
     let want = [
@@ -135,9 +135,9 @@ fn g8_starts_presentmon_with_qpc_times_and_the_arguments_the_how_to_names() {
         "--terminate_after_timed",
     ];
     assert_eq!(got, want);
-    let text = how("keyxtend.exe", file, 75);
+    let text = how("G12", "keyxtend.exe", file, 75);
     assert!(text.contains(&want.join(" ")), "{text}");
-    for part in ["presentmon_exe", "administrator"] {
+    for part in ["presentmon_exe", "administrator", "before G12"] {
         assert!(text.contains(part), "{part}: {text}");
     }
 }

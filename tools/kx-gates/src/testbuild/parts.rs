@@ -79,6 +79,11 @@ impl Closed {
             "quit": self.quit, "owner_back": self.owner_back, "hook_lines": lines, "hook_error": error,
         })
     }
+
+    /// Error `e` of a run that broke off, with what it left open and how the test build ended.
+    pub fn failed(&self, e: &str, left_open: &[String]) -> String {
+        format!("{e}; left open: {left_open:?}; test build: {}", self.json())
+    }
 }
 
 #[cfg(test)]
@@ -174,5 +179,20 @@ mod tests {
         let v = broke.json();
         assert!(v["owner_back"].is_null() && v["hook_lines"].is_null());
         assert_eq!(v["hook_error"].as_str(), Some("no line"));
+    }
+
+    #[test]
+    fn a_run_that_broke_off_names_what_was_left_open_and_how_the_test_build_ended() {
+        let closed = Closed {
+            quit: false,
+            owner_back: None,
+            lines: Ok(Vec::new()),
+        };
+        let e = closed.failed("no keyboard", &["left open: x".to_string()]);
+        assert!(e.starts_with("no keyboard; left open: "), "{e}");
+        assert!(
+            e.ends_with(&format!("test build: {}", closed.json())),
+            "{e}"
+        );
     }
 }

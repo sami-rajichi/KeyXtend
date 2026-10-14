@@ -1,6 +1,9 @@
-//! `kx-gates-p4.toml`: the product's test build (`[gate_input]`), which P4's gates start and drive, G5 on it, and
-//! the owner's hand try.
+//! `kx-gates-p4.toml`: the product's test build (`[gate_input]`), which P4's gates start and drive, G5, G12 and G8's
+//! hook part on it, and the owner's hand try.
 #![cfg(windows)]
+
+use std::ffi::OsStr;
+use std::path::Path;
 
 use serde::Deserialize;
 
@@ -91,6 +94,81 @@ impl G5 {
 pub struct Hand {
     /// How long the hand try runs, in seconds, unless `--secs` says otherwise.
     pub try_secs: u64,
+}
+
+/// `[g12]`: G12's clicks under the test build's pointer overlay; times in ms, distances in physical px.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G12 {
+    /// Click grid columns and rows over target-window's text box; each point is clicked once.
+    pub grid: [u32; 2],
+    /// The grid stays this far inside the text box's edges.
+    pub inset_px: i32,
+    /// Each press lasts the test build's `ring_after_ms` plus this, so its ring shows.
+    pub ring_ms: u64,
+    /// A press plus this must stay within the test build's `hold_ms`, so it stays a click.
+    pub spare_ms: u64,
+    /// Wait after each release.
+    pub settle_ms: u64,
+    /// A logged press may be this far from where we clicked.
+    pub slack_px: i32,
+    /// Least frames a second the ring must draw.
+    pub min_fps: f64,
+    /// 99 in 100 frame gaps must be this long or shorter.
+    pub p99_ms: f64,
+    /// G12's `PresentMon` CSV: a plain file name in the out folder.
+    pub presentmon: String,
+    /// How long that capture records, in seconds.
+    pub presentmon_secs: u64,
+}
+
+impl G12 {
+    /// Refuses an empty grid, a negative inset or slack, limits not above 0, no ring time, no capture time, and a CSV
+    /// that is not a plain file name, as it must stay in the out folder.
+    pub fn check(&self) -> Result<(), String> {
+        let grid = self.grid.iter().all(|&n| n > 0);
+        let limits = self.min_fps > 0.0 && self.p99_ms > 0.0;
+        let room = self.inset_px >= 0 && self.slack_px >= 0;
+        if !grid || !limits || !room {
+            return Err(
+                "g12: grid, min_fps and p99_ms must be above 0, inset_px and slack_px 0 or more"
+                    .into(),
+            );
+        }
+        if self.ring_ms == 0 || self.presentmon_secs == 0 {
+            return Err("g12.ring_ms and g12.presentmon_secs must be above 0".into());
+        }
+        let plain = Path::new(&self.presentmon).file_name() == Some(OsStr::new(&self.presentmon));
+        if !plain {
+            return Err("g12.presentmon must be a plain file name, in the out folder".into());
+        }
+        Ok(())
+    }
+}
+
+/// `[g8_hook]`: G8's hook part, G5's cases on the test build judged by the hook's p99.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct G8Hook {
+    /// The hook callback's 99th percentile may take this long, in ms (spec §10).
+    pub p99_ms: f64,
+    /// How many times G5's cases run.
+    pub rounds: usize,
+    /// Fewer events than this over the run leave the p99 not measured.
+    pub min_events: u64,
+}
+
+impl G8Hook {
+    /// Refuses a budget not above 0, no round and no event, as the p99 would then rest on nothing.
+    pub fn check(&self) -> Result<(), String> {
+        if self.p99_ms.is_nan() || self.p99_ms <= 0.0 {
+            return Err("g8_hook.p99_ms must be above 0".into());
+        }
+        if self.rounds == 0 || self.min_events == 0 {
+            return Err("g8_hook.rounds and min_events must be above 0".into());
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

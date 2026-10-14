@@ -98,9 +98,9 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let history = probe::forget_copies(ctx, since, &|t| probe::probe_copy(ctx, t));
     let closed = build.close();
     let (case, mut notes) = result.map_err(|e| {
-        let off = off.as_deref().unwrap_or_default();
+        let off = off.as_deref().map(|o| format!("; {o}")).unwrap_or_default();
         format!(
-            "{e}; {off}; history removed: {history}; test build: {}",
+            "{e}{off}; history removed: {history}; test build: {}",
             closed.json()
         )
     })?;

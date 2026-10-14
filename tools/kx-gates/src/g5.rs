@@ -28,7 +28,7 @@ pub const ADMIN_NOTE: &str = "The admin-window case is the owner's manual check 
                               uiAccess, and the test build is never staged, signed or installed, so Windows blocks \
                               its input into admin windows.";
 /// The key that turns Right-click on and off.
-const RCLICK: Role = Role::Assist(Assist::RClick);
+pub(crate) const RCLICK: Role = Role::Assist(Assist::RClick);
 
 /// Refuses every name but `plain`; `admin` gives the reason it is the owner's manual check.
 fn target_of(name: &str) -> Result<(), String> {
@@ -72,7 +72,7 @@ fn refuse(hold: Hold, alive_ms: u64, g: &G5, hang_max_ms: u64) -> Result<(), Str
 }
 
 /// `first`'s value, or the errors of `first` and `then` joined, so a step that puts things back always reports.
-fn both<T>(first: Result<T, String>, then: Result<(), String>) -> Result<T, String> {
+pub(crate) fn both<T>(first: Result<T, String>, then: Result<(), String>) -> Result<T, String> {
     match (first, then) {
         (Ok(v), Ok(())) => Ok(v),
         (Err(e), Ok(())) | (Ok(_), Err(e)) => Err(e),
@@ -99,26 +99,22 @@ struct Run {
 /// The result line: the verdict, the cases, the summed stats line with its p99, and how the test build ended.
 fn result(run: &Run, closed: &Closed, per_case: u64) -> Value {
     let lines = closed.lines.as_deref().unwrap_or_default();
-    let pass = run.played.matched && hook_ok(lines, run.played.count, per_case);
-    let sum = hooklog::sum(lines);
-    let mut hook = serde_json::to_value(sum).unwrap_or_default();
-    if let Some(fields) = hook.as_object_mut() {
-        fields.insert("p99_ms".to_string(), json!(sum.p99_ms()));
-    }
+    let pass = run.played.matched() && hook_ok(lines, run.played.count, per_case);
     json!({
         "gate": "G5", "target": PLAIN, "hold_ms": run.hold.ms, "still_px": run.still_px,
-        "radius_px": run.hold.radius_px, "pass": pass, "cases": run.played.lines, "hook": hook,
+        "radius_px": run.hold.radius_px, "pass": pass, "cases": run.played.lines, "hook": hooklog::summed(lines),
         "hook_lines": lines.len(), "admin": ADMIN_NOTE, "test_build": closed.json(), "left_open": run.left_open,
     })
 }
 
 /// Parks target-window in front, refuses rules this screen breaks, turns Right-click on, plays every case at its
-/// centre, then turns Right-click off, even after a failed case.
+/// centre `rounds` times, then turns Right-click off, even after a failed case.
 fn drive(
     ctx: &Ctx,
     build: &TestBuild,
     target: &Opened,
     mouse: &MouseSettings,
+    rounds: usize,
 ) -> Result<(Hold, Played), String> {
     launch::park_target(target.hwnd)?;
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
@@ -132,9 +128,28 @@ fn drive(
     let (alive_ms, hang_max_ms) = (ctx.cfg.mouse_guard.alive_ms, ctx.target.hang_max_ms);
     refuse(hold, alive_ms, &ctx.cfg.g5, hang_max_ms)?;
     build.set(RCLICK, true)?;
-    let played = g5play::play_all(ctx, target.hwnd, p, hold);
+    let played = g5play::play_all(ctx, target.hwnd, p, hold, rounds);
     let played = both(played, build.set(RCLICK, false))?;
     Ok((hold, played))
+}
+
+/// Starts target-window and drives G5's cases on it `rounds` times under `build`, then closes it, noting what was left
+/// open; G5 and G8's hook part share it.
+pub(crate) fn on_target(
+    ctx: &Ctx,
+    build: &TestBuild,
+    mouse: &MouseSettings,
+    rounds: usize,
+) -> (Result<(Hold, Played), String>, Vec<String>) {
+    let target = match launch::start_target(ctx) {
+        Ok(t) => t,
+        Err(e) => return (Err(e), Vec::new()),
+    };
+    say!("G5's cases on {}", win::describe(target.hwnd));
+    let driven = drive(ctx, build, &target, mouse, rounds);
+    let mut left_open = probe::released();
+    left_open.extend(apps::clean_up(ctx, target));
+    (driven, left_open)
 }
 
 /// Runs G5 on target-window under the test build: `plain` only, as `admin` is the owner's manual check.
@@ -142,18 +157,9 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     target_of(name)?;
     let build = TestBuild::open(ctx, None)?;
     let mouse = build.mouse()?;
-    let target = launch::start_target(ctx)?;
-    say!("G5 {name}: {}", win::describe(target.hwnd));
-    let driven = drive(ctx, &build, &target, &mouse);
-    let mut left_open = probe::released();
-    left_open.extend(apps::clean_up(ctx, target));
+    let (driven, left_open) = on_target(ctx, &build, &mouse, ctx.cfg.g5.rounds);
     let closed = build.close();
-    let (hold, played) = driven.map_err(|e| {
-        format!(
-            "{e}; left open: {left_open:?}; test build: {}",
-            closed.json()
-        )
-    })?;
+    let (hold, played) = driven.map_err(|e| closed.failed(&e, &left_open))?;
     let run = Run {
         hold,
         still_px: mouse.still_px,
@@ -266,7 +272,7 @@ mod tests {
             still_px: 7,
             played: Played {
                 lines: Vec::new(),
-                matched: true,
+                ok: PLAYED,
                 count: PLAYED,
             },
             left_open: Vec::new(),

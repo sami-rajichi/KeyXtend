@@ -78,7 +78,7 @@ pub struct G8 {
     pub presentmon: String,
     /// How long `PresentMon` records, in seconds; long enough to cover G8's run up to the churn.
     pub presentmon_secs: u64,
-    /// The `PresentMon` program G8 starts as administrator; empty when G8 only says how to record.
+    /// The `PresentMon` program G8 and G12 start as administrator; empty when they only say how to record.
     pub presentmon_exe: String,
     /// Wait after starting `PresentMon`, so its start-up does not slow the cold start.
     pub presentmon_wait_ms: u64,

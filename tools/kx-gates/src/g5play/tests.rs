@@ -83,3 +83,15 @@ fn the_hung_case_holds_still_and_wants_a_right_click() {
     };
     assert!(case.long && case.dx == 0 && case.want == RIGHT);
 }
+
+#[test]
+fn the_cases_match_only_when_every_one_played_was_ok() {
+    let played = |ok, count| Played {
+        lines: Vec::new(),
+        ok,
+        count,
+    };
+    assert!(played(6, 6).matched());
+    assert!(!played(5, 6).matched());
+    assert!(played(0, 0).matched(), "nothing played, nothing failed");
+}

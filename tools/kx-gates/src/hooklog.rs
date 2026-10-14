@@ -91,6 +91,16 @@ pub fn sum(lines: &[HookLine]) -> HookLine {
     })
 }
 
+/// `lines` summed for a result line, with the p99 also in ms.
+pub fn summed(lines: &[HookLine]) -> Value {
+    let sum = self::sum(lines);
+    let mut v = serde_json::to_value(sum).unwrap_or_default();
+    if let Some(fields) = v.as_object_mut() {
+        fields.insert("p99_ms".to_string(), sum.p99_ms().into());
+    }
+    v
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,6 +189,13 @@ mod tests {
         };
         assert_eq!(sum(&[a, b]), want);
         assert_eq!(sum(&[]), HookLine::default());
+    }
+
+    #[test]
+    fn the_summed_line_for_a_result_adds_its_p99_in_ms() {
+        let v = summed(&[sample(), sample()]);
+        assert_eq!(v["events"].as_u64(), Some(24));
+        assert_eq!(v["p99_ms"].as_f64(), Some(sample().p99_ms()));
     }
 
     #[test]

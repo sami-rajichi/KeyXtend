@@ -136,3 +136,56 @@ fn the_hand_try_runs_a_while() {
     let hand = crate::config::load().expect("kx-gates.toml loads").hand;
     assert!(hand.try_secs > 0);
 }
+
+fn g12() -> G12 {
+    crate::config::load().expect("kx-gates.toml loads").g12
+}
+
+#[test]
+fn the_shipped_g12_grid_holds_the_roadmaps_200_clicks_and_checks() {
+    let g = g12();
+    assert_eq!(g.grid[0] * g.grid[1], 200);
+    assert_eq!(g.check(), Ok(()));
+}
+
+#[test]
+fn g12_refuses_an_empty_grid_bad_limits_no_ring_no_capture_and_a_csv_off_the_out_folder() {
+    let bad: [fn(&mut G12); 11] = [
+        |g| g.grid[1] = 0,
+        |g| g.inset_px = -1,
+        |g| g.slack_px = -1,
+        |g| g.min_fps = f64::NAN,
+        |g| g.p99_ms = 0.0,
+        |g| g.ring_ms = 0,
+        |g| g.presentmon_secs = 0,
+        |g| g.presentmon.clear(),
+        |g| g.presentmon = r"..\g12.csv".into(),
+        |g| g.presentmon = "out/g12.csv".into(),
+        |g| g.presentmon = r"C:\g12.csv".into(),
+    ];
+    for (i, f) in bad.iter().enumerate() {
+        let mut g = g12();
+        f(&mut g);
+        assert!(g.check().is_err(), "case {i}");
+    }
+}
+
+fn g8_hook() -> G8Hook {
+    crate::config::load().expect("kx-gates.toml loads").g8_hook
+}
+
+#[test]
+fn g8_hook_refuses_no_round_no_event_and_a_budget_not_above_0() {
+    assert_eq!(g8_hook().check(), Ok(()));
+    let bad: [fn(&mut G8Hook); 4] = [
+        |g| g.rounds = 0,
+        |g| g.min_events = 0,
+        |g| g.p99_ms = 0.0,
+        |g| g.p99_ms = f64::NAN,
+    ];
+    for (i, f) in bad.iter().enumerate() {
+        let mut g = g8_hook();
+        f(&mut g);
+        assert!(g.check().is_err(), "case {i}");
+    }
+}
