@@ -4,7 +4,7 @@ use kx_module_api::ports::{Button, HookConfig, Point, PointerAct, Scan};
 use kx_module_api::{Mono, US_PER_MS};
 
 use crate::hook::Source;
-use crate::hook::accept::{Kind, Take, esc, key_up, kind, take};
+use crate::hook::accept::{Kind, Take, esc, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::health::Health;
 use crate::hook::queue::{Echo, Wait};
@@ -241,6 +241,7 @@ fn the_echo_wait_ends_when_our_input_comes_back_or_after_echo_ms() {
 #[cfg(windows)]
 #[test]
 fn the_message_tables_match_windows() {
+    use crate::hook::accept::key_up;
     use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
     use windows::Win32::UI::WindowsAndMessaging::{
         WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
