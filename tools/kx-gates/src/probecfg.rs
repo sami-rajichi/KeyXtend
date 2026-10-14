@@ -70,8 +70,10 @@ pub struct G6 {
     pub wheel_delta: i32,
     /// Notches, or UIA small steps, per scroll.
     pub notches: u32,
-    /// The stand-in face: a square this big at the desktop's top-left corner, in px.
+    /// The stand-in face: a square this big, in px.
     pub face_px: i32,
+    /// How far above the document window's lower edge the face's top sits, in px, clear of a status bar.
+    pub face_overlap_px: i32,
     /// A picture counts as changed when more than this share of its pixels changed.
     pub min_changed: f64,
 }

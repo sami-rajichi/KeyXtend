@@ -54,6 +54,7 @@ mod g4;
 mod g5;
 mod g5play;
 mod g6;
+mod g6track;
 mod g7;
 mod g8;
 mod g8cfg;

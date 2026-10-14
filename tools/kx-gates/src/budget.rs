@@ -2,7 +2,7 @@
 //! one core and the highlight's frame budget.
 #![cfg(windows)]
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use kx_module_api::{MS_PER_S, US_PER_S};
 use serde::Serialize;
@@ -66,6 +66,14 @@ fn num(text: &str, at: usize, len: usize) -> Option<i64> {
     let part = text.get(at..at + len)?;
     part.bytes().all(|b| b.is_ascii_digit()).then_some(())?;
     part.parse().ok()
+}
+
+/// Microseconds since 1970 now, the time base of the product's log stamps.
+pub fn now_us() -> i64 {
+    let since = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    i64::try_from(since.as_micros()).unwrap_or(i64::MAX)
 }
 
 /// Microseconds since 1970 of the UTC stamp that starts a log line, such as `2026-10-01T18:29:22.924463Z`.

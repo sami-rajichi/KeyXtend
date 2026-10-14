@@ -65,11 +65,14 @@ pub struct G5 {
 }
 
 impl G5 {
-    /// Refuses no round, no event per case, and a lead at or past the hang, as target-window would wake before the
-    /// right-click.
+    /// Refuses no round, no event per case, a still margin within the point slack, as the wiggle and the short move
+    /// could then land on the radius, and a lead at or past the hang, as target-window would wake before the right-click.
     pub fn check(&self) -> Result<(), String> {
         if self.rounds == 0 || self.min_events_per_case == 0 {
             return Err("g5.rounds and min_events_per_case must be above 0".to_string());
+        }
+        if self.still_margin_px <= self.point_slack_px {
+            return Err("g5.still_margin_px must be above point_slack_px".to_string());
         }
         if self.hang_lead_ms >= self.hang_ms {
             return Err(format!(

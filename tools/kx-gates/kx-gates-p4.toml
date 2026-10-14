@@ -21,8 +21,10 @@ lit_ms = 3000
 # G5 on the test build: target-window parked at its screen's top-left, Right-click on, six cases a round. The hold time
 # and still radius are the test build's [mouse] hold_ms and still_px, the radius scaled by the test point's DPI.
 [g5]
-# A drag while pressed, in px; a wiggle stays still_margin_px inside the still radius, another move that far past it.
-drag_px = 30
+# A drag while pressed, in px; G5 refuses one that does not pass the still radius plus still_margin_px at the test
+# point's DPI. A wiggle stays still_margin_px inside the still radius, another move that far past it, and
+# still_margin_px must be above point_slack_px.
+drag_px = 40
 still_margin_px = 2
 # How many times the six cases run.
 rounds = 4

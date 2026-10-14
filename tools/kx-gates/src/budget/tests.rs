@@ -92,3 +92,9 @@ fn durations_turn_into_ms_by_the_products_own_units() {
     let one_s = i64::from(kx_module_api::US_PER_S);
     assert!((ms_between(0, one_s) - f64::from(MS_PER_S)).abs() < 1e-9);
 }
+
+#[test]
+fn the_clock_counts_from_1970_as_the_log_stamps_do() {
+    let earlier = stamp_us(LOG).expect("a stamp");
+    assert!(now_us() > earlier, "{} is not after {earlier}", now_us());
+}

@@ -35,8 +35,7 @@ fn latches_release(s: &KeyboardSettings) -> Result<(), String> {
 }
 
 /// One case's line; it passes only when its check passed, the modifier `vk` is up and its latch key read off.
-fn line(build: &TestBuild, (case, latch, vk): (&str, Role, u16), ok: bool, note: &Value) -> Value {
-    let latch_off = build.reads(latch, false).is_ok();
+fn line((case, vk): (&str, u16), ok: bool, latch_off: bool, note: &Value) -> Value {
     let up = is_up(vk);
     json!({ "case": case, "ok": ok && up && latch_off, "key_up": up, "latch_off": latch_off, "note": note })
 }
@@ -48,8 +47,9 @@ fn shift(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, St
     simuser::click(ctx, app, start)?;
     build.set(SHIFT, true)?;
     simuser::click(ctx, app, mid)?;
+    let latch_off = build.reads(SHIFT, false).is_ok();
     let (ok, note) = probe::copied(ctx, app);
-    Ok(line(build, ("shift_click", SHIFT, VK_SHIFT.0), ok, &note))
+    Ok(line(("shift_click", VK_SHIFT.0), ok, latch_off, &note))
 }
 
 /// Clicks one file, latches Ctrl, clicks the other; passes when both are selected.
@@ -60,10 +60,11 @@ fn ctrl(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, Str
     simuser::click(ctx, app, pa)?;
     build.set(CTRL, true)?;
     simuser::click(ctx, app, pb)?;
+    let latch_off = build.reads(CTRL, false).is_ok();
     let both = uia::selected(&a).and_then(|x| Ok(x && uia::selected(&b)?));
     let ok = both.as_ref().is_ok_and(|&s| s);
     let note = json!({ "both_selected": both.map_or_else(|e| json!(e), |s| json!(s)) });
-    Ok(line(build, ("ctrl_click", CTRL, VK_CONTROL.0), ok, &note))
+    Ok(line(("ctrl_click", VK_CONTROL.0), ok, latch_off, &note))
 }
 
 /// Runs the app's case with Right-click on.
@@ -76,7 +77,7 @@ fn drive(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, St
     }
 }
 
-/// Runs G18 on the app called `name`, under the test build.
+/// Runs G18 on the app called `name`, under the test build, and turns Right-click off after it.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
     let uia = Uia::new()?;
@@ -91,15 +92,19 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let since = winclip::now();
     let run = |d: &Doc| clipkeep::keep(ctx.cfg, || drive(ctx, &uia, &build, d));
     let result = probe::run_on(ctx, doc, run);
+    let off = build.set(RCLICK, false).err();
+    let off = off.map(|e| format!("Right-click stayed on: {e}"));
     // Clean the history even when the run failed.
     let history = probe::forget_copies(ctx, since, &|t| probe::probe_copy(ctx, t));
     let closed = build.close();
-    let (case, notes) = result.map_err(|e| {
+    let (case, mut notes) = result.map_err(|e| {
+        let off = off.as_deref().unwrap_or_default();
         format!(
-            "{e}; history removed: {history}; test build: {}",
+            "{e}; {off}; history removed: {history}; test build: {}",
             closed.json()
         )
     })?;
+    notes.extend(off);
     let pass = case["ok"] == json!(true);
     say!("G18 {name}: pass {pass}; {case}");
     Ok(json!({

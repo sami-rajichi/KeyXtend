@@ -116,12 +116,13 @@ fn the_shipped_g5_checks_and_its_hang_stays_within_target_windows_cap() {
 }
 
 #[test]
-fn g5_refuses_a_lead_at_or_past_the_hang_no_round_and_no_event_per_case() {
-    let bad: [fn(&mut G5); 4] = [
+fn g5_refuses_a_lead_past_the_hang_no_round_no_event_and_a_margin_within_the_slack() {
+    let bad: [fn(&mut G5); 5] = [
         |g| g.hang_lead_ms = g.hang_ms,
         |g| g.hang_lead_ms = g.hang_ms + 1,
         |g| g.rounds = 0,
         |g| g.min_events_per_case = 0,
+        |g| g.still_margin_px = g.point_slack_px,
     ];
     for (i, f) in bad.iter().enumerate() {
         let mut g = g5();

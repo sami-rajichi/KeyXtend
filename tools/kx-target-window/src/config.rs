@@ -7,6 +7,9 @@ use thiserror::Error;
 
 /// File name of the settings.
 pub const FILE: &str = "kx-target-window.toml";
+/// Windows' hung-window mark, in ms: an app that reads no message for this long counts as hung, and Windows swaps in
+/// its ghost window (`IsHungAppWindow`).
+pub const HUNG_MARK_MS: u64 = 5_000;
 
 /// The window's settings.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -68,6 +71,12 @@ pub enum ConfigError {
         /// The settings file.
         file: PathBuf,
     },
+    /// The hang cap reaches Windows' hung-window mark, so a gate's hang would ghost the window.
+    #[error("{}: hang_max_ms must stay below Windows' {HUNG_MARK_MS} ms hung-window mark", .file.display())]
+    HangPastHungMark {
+        /// The settings file.
+        file: PathBuf,
+    },
     /// A size is zero or negative.
     #[error("{}: {key} must be above zero", .file.display())]
     NotPositive {
@@ -93,7 +102,8 @@ pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     Ok(cfg)
 }
 
-/// Refuses an empty title, log, font, name or switch, one text for both switches, and a size that is not above zero.
+/// Refuses an empty title, log, font, name or switch, one text for both switches, a hang cap at Windows' hung-window
+/// mark, and a size that is not above zero.
 fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
     let texts = [
         ("title", cfg.title.is_empty()),
@@ -111,6 +121,11 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
     }
     if cfg.password_arg == cfg.layout_arg {
         return Err(ConfigError::SameSwitch {
+            file: file.to_path_buf(),
+        });
+    }
+    if cfg.hang_max_ms >= HUNG_MARK_MS {
+        return Err(ConfigError::HangPastHungMark {
             file: file.to_path_buf(),
         });
     }

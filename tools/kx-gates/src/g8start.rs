@@ -3,7 +3,7 @@
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use spike_core::weak::Job;
 
@@ -29,14 +29,6 @@ impl Started {
         self.shown_at
             .map(|t| budget::ms(t.saturating_duration_since(self.at)))
     }
-}
-
-/// Microseconds since 1970 now, the time base of the product's log stamps.
-pub fn now_us() -> i64 {
-    let since = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    i64::try_from(since.as_micros()).unwrap_or(i64::MAX)
 }
 
 /// Asks the copy G8 just started, held as `process`, to quit; what is left of it, for the error.
@@ -68,7 +60,7 @@ pub fn start(
     job: Option<&Job>,
 ) -> Result<Started, String> {
     let g = &ctx.cfg.g8;
-    let (at_us, at) = (now_us(), Instant::now());
+    let (at_us, at) = (budget::now_us(), Instant::now());
     let given = admin::start_shown(program, args)?;
     // The shell's handle lacks the rights to measure, so the process is opened again.
     let unmeasured = |e| {

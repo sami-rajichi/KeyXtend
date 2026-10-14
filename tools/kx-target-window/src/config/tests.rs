@@ -174,3 +174,12 @@ fn a_missing_file_gives_the_read_error_naming_its_path() {
         "{err}"
     );
 }
+
+#[test]
+fn a_hang_cap_at_or_past_windows_hung_mark_fails() {
+    let at_mark = with("hang_max_ms", &HUNG_MARK_MS.to_string());
+    let err = parse(&at_mark, file()).expect_err("Windows would ghost the window");
+    assert!(matches!(err, ConfigError::HangPastHungMark { .. }), "{err}");
+    let below = with("hang_max_ms", &(HUNG_MARK_MS - 1).to_string());
+    assert!(parse(&below, file()).is_ok());
+}

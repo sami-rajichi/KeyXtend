@@ -29,7 +29,7 @@ pub fn guard(app: &Opened, pts: &[Pt]) -> Result<(), String> {
     for p in pts {
         let top = win::root_at(POINT { x: p.x, y: p.y });
         if top != app.hwnd {
-            return Err(format!("{} covers {},{}", win::describe(top), p.x, p.y));
+            return Err(format!("{} covers a test point", win::describe(top)));
         }
     }
     Ok(())
@@ -106,7 +106,7 @@ pub fn click_key(ctx: &Ctx, kb: &Keyboard, id: &str) -> Result<(), String> {
     let at = kb.at(id)?;
     let top = win::root_at(at);
     if top != kb.hwnd {
-        return Err(format!("{} covers key {id}", win::describe(top)));
+        return Err(format!("{} covers the key to click", win::describe(top)));
     }
     let clicked = press(ctx, Pt { x: at.x, y: at.y });
     sleep_ms(ctx.cfg.probes.settle_ms);

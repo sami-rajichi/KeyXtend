@@ -14,6 +14,7 @@ use crate::hooklog::{self, HookLine};
 use crate::launch;
 use crate::out::say;
 use crate::p4cfg::G5;
+use crate::probe;
 use crate::testbuild::{Closed, TestBuild};
 use crate::win;
 
@@ -38,9 +39,10 @@ fn target_of(name: &str) -> Result<(), String> {
     }
 }
 
-/// Refuses a hold the mouse guard would take for a lost hook, a hang past target-window's `hang_max_ms`, and a hang
-/// lead at or past the hold time.
-fn refuse(hold_ms: u64, alive_ms: u64, g: &G5, hang_max_ms: u64) -> Result<(), String> {
+/// Refuses a hold the mouse guard would take for a lost hook, a hang past target-window's `hang_max_ms`, a hang lead
+/// at or past the hold time, and a drag that stays within the still radius and its margin.
+fn refuse(hold: Hold, alive_ms: u64, g: &G5, hang_max_ms: u64) -> Result<(), String> {
+    let hold_ms = hold.ms;
     if hold_ms >= alive_ms {
         return Err(format!(
             "the test build's hold_ms ({hold_ms} ms) must stay below [mouse_guard] alive_ms ({alive_ms} ms): its hook \
@@ -59,7 +61,23 @@ fn refuse(hold_ms: u64, alive_ms: u64, g: &G5, hang_max_ms: u64) -> Result<(), S
             g.hang_lead_ms
         ));
     }
+    let room = hold.radius_px.saturating_add(g.still_margin_px);
+    if g.drag_px <= room {
+        return Err(format!(
+            "g5.drag_px ({} px) must pass the still radius plus still_margin_px ({room} px) at this DPI",
+            g.drag_px
+        ));
+    }
     Ok(())
+}
+
+/// `first`'s value, or the errors of `first` and `then` joined, so a step that puts things back always reports.
+fn both<T>(first: Result<T, String>, then: Result<(), String>) -> Result<T, String> {
+    match (first, then) {
+        (Ok(v), Ok(())) => Ok(v),
+        (Err(e), Ok(())) | (Ok(_), Err(e)) => Err(e),
+        (Err(a), Err(b)) => Err(format!("{a}; {b}")),
+    }
 }
 
 /// True when the hook never timed out: at least one stats line, no reinstall, no send error, and at least `per_case`
@@ -94,7 +112,8 @@ fn result(run: &Run, closed: &Closed, per_case: u64) -> Value {
     })
 }
 
-/// Parks target-window in front, turns Right-click on, plays every case at its centre, then turns Right-click off.
+/// Parks target-window in front, refuses rules this screen breaks, turns Right-click on, plays every case at its
+/// centre, then turns Right-click off, even after a failed case.
 fn drive(
     ctx: &Ctx,
     build: &TestBuild,
@@ -110,9 +129,11 @@ fn drive(
         ms: u64::from(mouse.hold_ms),
         radius_px: g5play::radius(mouse.still_px, screen::dpi_of(&g5play::dot(p))),
     };
+    let (alive_ms, hang_max_ms) = (ctx.cfg.mouse_guard.alive_ms, ctx.target.hang_max_ms);
+    refuse(hold, alive_ms, &ctx.cfg.g5, hang_max_ms)?;
     build.set(RCLICK, true)?;
-    let played = g5play::play_all(ctx, target.hwnd, p, hold)?;
-    build.set(RCLICK, false)?;
+    let played = g5play::play_all(ctx, target.hwnd, p, hold);
+    let played = both(played, build.set(RCLICK, false))?;
     Ok((hold, played))
 }
 
@@ -121,17 +142,11 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     target_of(name)?;
     let build = TestBuild::open(ctx, None)?;
     let mouse = build.mouse()?;
-    let alive_ms = ctx.cfg.mouse_guard.alive_ms;
-    refuse(
-        u64::from(mouse.hold_ms),
-        alive_ms,
-        &ctx.cfg.g5,
-        ctx.target.hang_max_ms,
-    )?;
     let target = launch::start_target(ctx)?;
     say!("G5 {name}: {}", win::describe(target.hwnd));
     let driven = drive(ctx, &build, &target, &mouse);
-    let left_open = apps::clean_up(ctx, target);
+    let mut left_open = probe::released();
+    left_open.extend(apps::clean_up(ctx, target));
     let closed = build.close();
     let (hold, played) = driven.map_err(|e| {
         format!(
@@ -183,24 +198,58 @@ mod tests {
         assert!(!hook_ok(&[line(enough - 1, 0, 0)], PLAYED, per), "too few");
     }
 
+    /// A hold of `ms` with the default still radius at 100 %.
+    fn held(ms: u64) -> Hold {
+        Hold { ms, radius_px: 7 }
+    }
+
     #[test]
     fn a_hold_the_guard_would_take_for_a_lost_hook_is_refused() {
         let g = g5();
         let (alive, cap) = (2_000, g.hang_ms);
-        let e = refuse(alive, alive, &g, cap).expect_err("as long as the alive watch");
+        let e = refuse(held(alive), alive, &g, cap).expect_err("as long as the alive watch");
         assert!(e.contains("alive_ms"), "{e}");
-        assert!(refuse(alive + 1, alive, &g, cap).is_err());
-        assert_eq!(refuse(alive - 1, alive, &g, cap), Ok(()));
+        assert!(refuse(held(alive + 1), alive, &g, cap).is_err());
+        assert_eq!(refuse(held(alive - 1), alive, &g, cap), Ok(()));
     }
 
     #[test]
     fn a_hang_past_target_windows_cap_or_a_lead_past_the_hold_is_refused() {
         let g = g5();
-        let (hold, alive) = (1_500, 2_000);
-        let e = refuse(hold, alive, &g, g.hang_ms - 1).expect_err("past the cap");
+        let alive = 2_000;
+        let e = refuse(held(1_500), alive, &g, g.hang_ms - 1).expect_err("past the cap");
         assert!(e.contains("hang_max_ms"), "{e}");
-        let e = refuse(g.hang_lead_ms, alive, &g, g.hang_ms).expect_err("lead past the hold");
+        let e = refuse(held(g.hang_lead_ms), alive, &g, g.hang_ms).expect_err("lead past the hold");
         assert!(e.contains("hang_lead_ms"), "{e}");
+    }
+
+    #[test]
+    fn a_drag_that_stays_within_the_radius_and_its_margin_is_refused() {
+        let g = g5();
+        let (alive, cap) = (2_000, g.hang_ms);
+        let wide = Hold {
+            ms: 1_500,
+            radius_px: g.drag_px - g.still_margin_px,
+        };
+        let e = refuse(wide, alive, &g, cap).expect_err("the drag would stay still");
+        assert!(e.contains("drag_px"), "{e}");
+        let fits = Hold {
+            radius_px: wide.radius_px - 1,
+            ..wide
+        };
+        assert_eq!(refuse(fits, alive, &g, cap), Ok(()));
+    }
+
+    #[test]
+    fn a_failed_play_and_a_failed_switch_off_both_show() {
+        let (play, off) = (
+            || Err::<u8, _>("play".to_string()),
+            || Err("off".to_string()),
+        );
+        assert_eq!(both(Ok(1), Ok(())), Ok(1));
+        assert_eq!(both(play(), Ok(())), play());
+        assert_eq!(both(Ok(1), off()), Err("off".to_string()));
+        assert_eq!(both(play(), off()), Err("play; off".to_string()));
     }
 
     #[test]

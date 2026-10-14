@@ -4,8 +4,8 @@ use super::*;
 use kx_mod_mouse::MouseSettings;
 
 const P: Pt = Pt { x: 100, y: 50 };
-/// Screens at 100 %, 125 % and 150 %.
-const DPIS: [u32; 3] = [96, 120, 144];
+/// Screens at 100 %, 125 %, 150 %, 200 %, 300 %, 400 % and 500 %.
+const DPIS: [u32; 7] = [96, 120, 144, 192, 288, 384, 480];
 
 fn at(press: Press, x: i32, y: i32) -> Mouse {
     Mouse { press, us: 0, x, y }
