@@ -10,7 +10,7 @@ use windows::Win32::System::ProcessStatus::{
     GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX2,
 };
 use windows::Win32::System::Threading::{
-    GetProcessId, GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS,
+    GetExitCodeProcess, GetProcessId, GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS,
     PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
     PROCESS_VM_READ, WaitForSingleObject,
 };
@@ -84,6 +84,18 @@ impl Process {
     pub fn ended(&self) -> bool {
         // SAFETY: our live handle; a wait of zero ms never blocks.
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
+    }
+
+    /// Its exit code once it has ended; none while it runs, or when Windows cannot say.
+    #[allow(unsafe_code, reason = "Fills a local from our own handle.")]
+    pub fn exit_code(&self) -> Option<u32> {
+        if !self.ended() {
+            return None;
+        }
+        let mut code = 0;
+        // SAFETY: our live handle and a local the call fills.
+        unsafe { GetExitCodeProcess(self.handle, &raw mut code) }.ok()?;
+        Some(code)
     }
 
     /// Its private working set and private commit, read only; nothing here ever trims the working set.
@@ -247,6 +259,25 @@ mod tests {
         child.wait().expect("ends");
         // `child` keeps its handle until it drops, so its id still names it.
         assert!(Process::to_wait(child.id()).expect("opens").ended());
+    }
+
+    #[test]
+    fn an_ended_process_gives_its_exit_code_and_a_running_one_none() {
+        let mut child = Command::new("cmd")
+            .args(["/C", "exit", "7"])
+            .spawn()
+            .expect("starts");
+        child.wait().expect("ends");
+        assert_eq!(
+            Process::to_wait(child.id()).expect("opens").exit_code(),
+            Some(7)
+        );
+        assert_eq!(
+            Process::to_wait(std::process::id())
+                .expect("opens")
+                .exit_code(),
+            None
+        );
     }
 
     #[test]

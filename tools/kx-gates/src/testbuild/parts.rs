@@ -4,6 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
+use windows::Win32::Foundation::STATUS_DLL_NOT_FOUND;
 
 use crate::budget::stamp_us;
 use crate::close::Unasked;
@@ -70,6 +71,16 @@ pub fn not_back(quit: bool) -> String {
             "the test build {SLOW}, so {NAME} is not started again; {START_MENU} once the test build has ended"
         )
     }
+}
+
+/// Says the test build ended during its start, with its exit code, and names a missing DLL, such as Qt's off the PATH.
+pub fn ended_at_start(code: u32) -> String {
+    let dll = if code == STATUS_DLL_NOT_FOUND.0.cast_unsigned() {
+        ": a DLL it needs was not found"
+    } else {
+        ""
+    };
+    format!("the test build ended during its start with exit code {code:#010x}{dll}")
 }
 
 /// True when `log` holds `warn_line` on a line stamped at or after `since_us`.
@@ -262,5 +273,18 @@ mod tests {
             e.ends_with(&format!("test build: {}", closed.json())),
             "{e}"
         );
+    }
+
+    #[test]
+    fn a_test_build_that_ended_at_start_says_its_exit_code_and_names_a_missing_dll() {
+        let missing = STATUS_DLL_NOT_FOUND.0.cast_unsigned();
+        assert!(
+            ended_at_start(1).contains("0x00000001"),
+            "{}",
+            ended_at_start(1)
+        );
+        assert!(!ended_at_start(1).contains("DLL"));
+        assert!(ended_at_start(missing).contains("0xc0000135"));
+        assert!(ended_at_start(missing).contains("DLL"));
     }
 }

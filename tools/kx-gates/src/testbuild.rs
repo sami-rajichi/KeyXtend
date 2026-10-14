@@ -15,7 +15,9 @@ use kx_settings::{peek, peek_section};
 use spike_core::weak::Job;
 
 pub use parts::{Closed, holds};
-use parts::{SLOW, START_MENU, gone, not_asked, not_back, plain, to_restore, warned};
+use parts::{
+    SLOW, START_MENU, ended_at_start, gone, not_asked, not_back, plain, to_restore, warned,
+};
 
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
@@ -64,16 +66,19 @@ impl<'a> TestBuild<'a> {
         Ok(build)
     }
 
-    /// Waits up to `start_ms` for its gate warning and its keyboard. Without the warning it fails, as its engine might
-    /// act on the hand, and the drop quits it.
+    /// Waits up to `start_ms` for its gate warning and its keyboard, and fails at once with its exit code if it ended.
+    /// Without the warning it fails, as its engine might act on the hand, and the drop quits it.
     fn ready(&self) -> Result<(), String> {
         let (g, poll_ms) = (&self.ctx.cfg.gate_input, self.ctx.cfg.timing.poll_ms);
         let log = product::files(&self.program)?.log;
         let warns =
             || std::fs::read_to_string(&log).is_ok_and(|t| warned(&t, self.since_us, &g.warn_line));
-        let shown = || (warns() && Keyboard::find().is_ok()).then_some(());
-        match win::poll_until(g.start_ms, poll_ms, shown) {
-            Some(()) => Ok(()),
+        let state = || match self.process.as_ref().and_then(Process::exit_code) {
+            Some(code) => Some(Err(ended_at_start(code))),
+            None => (warns() && Keyboard::find().is_ok()).then_some(Ok(())),
+        };
+        match win::poll_until(g.start_ms, poll_ms, state) {
+            Some(done) => done,
             None if !warns() => Err(format!(
                 "the test build logged no gate warning within {} ms, so its engine might act on the hand; it quits",
                 g.start_ms
