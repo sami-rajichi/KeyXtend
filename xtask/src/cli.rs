@@ -25,7 +25,7 @@ pub(crate) const SUB_DEV_CERT: &str = "dev-cert";
 const SUB_DEV_INSTALL: &str = "dev-install";
 /// Checks the Windows conditions for uiAccess.
 const SUB_CHECK_UIACCESS: &str = "check-uiaccess";
-/// Renders the sound recipes or imports a recording.
+/// Renders, imports or joins sounds.
 const SUB_SOUNDS: &str = "sounds";
 /// Flag that turns `dev-cert` and `dev-install` into their undo.
 const FLAG_REMOVE: &str = "--remove";

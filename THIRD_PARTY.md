@@ -69,6 +69,6 @@ Each runs only on GitHub's runners, pinned to a full commit SHA; Dependabot prop
 |---|---|---|---|---|
 | actions/checkout | 7.0.1 | MIT | https://github.com/actions/checkout | Fetches the repo |
 | Swatinem/rust-cache | 2.9.2 | LGPL-3.0 | https://github.com/Swatinem/rust-cache | Caches cargo's builds between runs |
-| taiki-e/install-action | 2.87.21 | Apache-2.0 OR MIT | https://github.com/taiki-e/install-action | Installs cargo-deny and cargo-audit |
+| taiki-e/install-action | 2.87.26 | Apache-2.0 OR MIT | https://github.com/taiki-e/install-action | Installs cargo-deny and cargo-audit |
 | jurplel/install-qt-action | 4.4.1 | MIT | https://github.com/jurplel/install-qt-action | Installs Qt through aqtinstall on the Windows jobs (P3) |
 | actions/setup-python | 6.3.0, pinned inside install-qt-action | MIT | https://github.com/actions/setup-python | Python for aqtinstall |
