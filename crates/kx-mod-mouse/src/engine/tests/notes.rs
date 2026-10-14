@@ -161,3 +161,15 @@ fn a_note_s_debug_hides_its_point() {
         assert!(!text.contains("1234") && !text.contains("5678"), "{text}");
     }
 }
+
+#[test]
+fn a_held_back_press_s_state_hides_its_point_in_debug() {
+    let state = State::Pending {
+        t0: Mono::from_us(1),
+        p0: p(1234, 5678),
+        r: 9,
+    };
+    let text = format!("{state:?}");
+    assert!(text.contains(REDACTED_MARKER), "{text}");
+    assert!(!text.contains("1234") && !text.contains("5678"), "{text}");
+}

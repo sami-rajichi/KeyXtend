@@ -1,6 +1,10 @@
-//! What our own sent input holds down (ledger rulings 21 and 22), so the host lets go itself when the engine cannot.
-//! The record is fixed in size, so noting input and letting go never allocate.
+//! What stays down that the host must let go itself when the engine cannot, even after a release that panics: our own
+//! sent input, and the hand's presses whose release the engine dropped. The record is fixed in size, so noting input
+//! and letting go never allocate.
 
+use std::fmt;
+
+use kx_module_api::Redacted;
 use kx_module_api::ports::{Button, MAX_HELD_KEYS, Point, PointerAct, Scan};
 
 /// One slot per `Button`; each arm of `slot` checks at build time that its slot is below it.
@@ -24,8 +28,8 @@ const fn below_slots(slot: usize) -> usize {
     slot
 }
 
-/// The buttons and keys our sent input pressed and has not let go.
-#[derive(Copy, Clone, Debug, Default)]
+/// The buttons and keys pressed and not let go; its `Debug` hides each point and key.
+#[derive(Copy, Clone, Default)]
 pub(crate) struct Held {
     /// Per slot, the button and where it went down.
     buttons: [Option<(Button, Point)>; SLOTS],
@@ -110,5 +114,19 @@ impl Held {
         if let Some(last) = self.keys.last_mut() {
             *last = None;
         }
+    }
+}
+
+/// Shows which buttons are held only: a point can show what was clicked, and a key what was typed.
+impl fmt::Debug for Held {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let buttons = self
+            .buttons
+            .map(|held| held.map(|(b, at)| (b, Redacted::new(at))));
+        let keys = self.keys.map(|key| key.map(Redacted::new));
+        f.debug_struct("Held")
+            .field("buttons", &buttons)
+            .field("keys", &keys)
+            .finish()
     }
 }

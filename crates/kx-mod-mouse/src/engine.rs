@@ -9,11 +9,13 @@ mod press;
 
 pub use note::Note;
 
+use std::fmt;
+
 use crate::MouseSettings;
 use kx_module_api::ports::{
     Button, GrabState, MAX_HELD_KEYS, Point, PointerAct, PointerEvent, Scan,
 };
-use kx_module_api::{Mono, US_PER_MS};
+use kx_module_api::{Mono, Redacted, US_PER_MS};
 
 /// The Esc key's scan code (PC set 1), sent to cancel a carry.
 pub const ESC: Scan = Scan::new(0x01);
@@ -67,8 +69,8 @@ enum Mode {
     Grab { back: bool },
 }
 
-/// Where the engine is between events.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Where the engine is between events; its `Debug` hides the held-back press's point.
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum State {
     /// Nothing is held back.
     Idle,
@@ -78,6 +80,23 @@ enum State {
     AwaitUp,
     /// Grab holds the left button down; `held` while the grabbing press is still physically down.
     Carrying { held: bool },
+}
+
+/// Shows the state with the press's point hidden, as a click's point can show what was clicked.
+impl fmt::Debug for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::Idle => f.write_str("Idle"),
+            Self::Pending { t0, p0, r } => f
+                .debug_struct("Pending")
+                .field("t0", &t0)
+                .field("p0", &Redacted::new(p0))
+                .field("r", &r)
+                .finish(),
+            Self::AwaitUp => f.write_str("AwaitUp"),
+            Self::Carrying { held } => f.debug_struct("Carrying").field("held", &held).finish(),
+        }
+    }
 }
 
 /// The §5.1 state machine: Right-click, Grab and modifier + click.

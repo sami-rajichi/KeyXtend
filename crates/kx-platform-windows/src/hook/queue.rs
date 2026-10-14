@@ -2,6 +2,9 @@
 //! nothing overtakes it. Moves coalesce, buttons and keys keep a headroom, and the room is reserved once, so a callback
 //! never allocates.
 
+use std::fmt;
+
+use kx_module_api::Redacted;
 use kx_module_api::ports::{Button, Point, PointerAct};
 
 use super::accept::Kind;
@@ -12,8 +15,7 @@ pub(crate) const QUEUE_ROOM: usize = 256;
 /// Room past `QUEUE_ROOM` that only buttons and keys use, so they stay in order once moves filled the rest.
 pub(crate) const HEADROOM: usize = 16;
 
-/// The acts waiting for the hook thread's next turn.
-#[derive(Debug)]
+/// The acts waiting for the hook thread's next turn; its `Debug` hides each point.
 pub(crate) struct Queue {
     acts: Vec<PointerAct>,
     /// The most acts it takes: `QUEUE_ROOM`, the headroom and one engine call. `seal` may add one Up per button.
@@ -127,5 +129,21 @@ impl Queue {
     /// The room reserved at the start.
     pub(crate) fn room(&self) -> usize {
         self.acts.capacity()
+    }
+}
+
+/// Shows the acts, which hide their own points and keys, and the buttons let go ahead without their points.
+impl fmt::Debug for Queue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let passed = self
+            .passed
+            .map(|up| up.map(|(b, at)| (b, Redacted::new(at))));
+        f.debug_struct("Queue")
+            .field("acts", &self.acts)
+            .field("limit", &self.limit)
+            .field("call", &self.call)
+            .field("over", &self.over)
+            .field("passed", &passed)
+            .finish()
     }
 }

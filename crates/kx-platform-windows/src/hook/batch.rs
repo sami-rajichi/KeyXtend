@@ -1,6 +1,9 @@
 //! The engine's acts as one batch of input: mouse acts at absolute virtual-desktop points, keys by scan code, and
 //! every event tagged `REPLAY`. `win` turns each one into a Windows `INPUT`.
 
+use std::fmt;
+
+use kx_module_api::Redacted;
 use kx_module_api::ports::{Button, Point, PointerAct};
 
 use crate::keys::REPLAY;
@@ -22,8 +25,8 @@ pub(crate) struct Desk {
     pub height: i32,
 }
 
-/// One input of a batch, before `win` makes it a Windows `INPUT`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// One input of a batch, before `win` makes it a Windows `INPUT`; its `Debug` hides each point and key.
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub(crate) enum Input {
     /// The pointer goes to absolute (`dx`, `dy`), with a button pressed there, or released when its flag is set.
     Mouse {
@@ -43,6 +46,26 @@ pub(crate) enum Input {
         /// The `dwExtraInfo` mark.
         tag: usize,
     },
+}
+
+/// Shows the button and tag only: a point can show what was clicked, and a key what was typed.
+impl fmt::Debug for Input {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::Mouse { dx, dy, press, tag } => f
+                .debug_struct("Mouse")
+                .field("dx", &Redacted::new(dx))
+                .field("dy", &Redacted::new(dy))
+                .field("press", &press)
+                .field("tag", &tag)
+                .finish(),
+            Self::Key { event, tag } => f
+                .debug_struct("Key")
+                .field("event", &Redacted::new(event))
+                .field("tag", &tag)
+                .finish(),
+        }
+    }
 }
 
 /// Maps pixel `v` over `start..start+size` to the 0..=65535 absolute range (P1's `normalise`).
