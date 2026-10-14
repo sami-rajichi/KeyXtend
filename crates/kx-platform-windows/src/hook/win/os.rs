@@ -3,7 +3,7 @@
 
 use std::cell::Cell;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 
 use kx_module_api::ports::{Button, InjectError, Point, PointerAct};
 use kx_module_api::{Clock, Mono};
@@ -57,6 +57,8 @@ pub(super) struct Ctl {
     pub stats: Arc<Stats>,
     /// The mouse and keyboard hooks' handles; 0 once removed, so each is removed once, from whichever thread.
     pub hooks: [AtomicUsize; 2],
+    /// The hook thread's id once its queue exists; 0 before.
+    pub tid: AtomicU32,
     /// Set by the run's drop or a start that gave up; the loop ends at its next message.
     pub stop: AtomicBool,
 }
@@ -289,7 +291,8 @@ pub(super) fn this_thread() -> u32 {
 /// Posts `msg` to thread `tid`; false when Windows refused it.
 #[allow(unsafe_code, reason = "Posts a message that carries no pointer.")]
 pub(super) fn post(tid: u32, msg: u32) -> bool {
-    // SAFETY: the message carries no pointer; a thread that is gone just refuses it.
+    // SAFETY: the message carries no pointer, so it is sound whichever thread gets it, even one that took the id of a
+    // thread that ended.
     unsafe { PostThreadMessageW(tid, msg, WPARAM(0), LPARAM(0)) }.is_ok()
 }
 

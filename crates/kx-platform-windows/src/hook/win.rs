@@ -7,7 +7,7 @@ mod release;
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -100,15 +100,14 @@ impl PointerHook for WinPointerHook {
 
 /// The started run once the thread answers; a refusal waits for the thread to end, and silence asks it to stop.
 fn wait_ready(
-    answer: &Receiver<Result<u32, HookError>>,
+    answer: &Receiver<Result<(), HookError>>,
     ctl: Arc<Ctl>,
     ended: Receiver<()>,
     join: JoinHandle<()>,
 ) -> Result<Box<dyn HookRun>, HookError> {
     match answer.recv_timeout(START_WAIT) {
-        Ok(Ok(tid)) => Ok(Box::new(WinRun {
+        Ok(Ok(())) => Ok(Box::new(WinRun {
             ctl,
-            tid,
             ended: Mutex::new(ended),
             join: Some(join),
         })),
@@ -117,16 +116,29 @@ fn wait_ready(
             Err(error)
         }
         Err(_) => {
-            ctl.stop.store(true, Ordering::SeqCst);
+            ask_stop(&ctl, &LIVE, &ended);
             Err(HookError::Thread)
         }
     }
 }
 
+/// Asks the run's thread to stop, and wakes it with `WM_QUIT` unless it ended, so a thread that answered late stops
+/// too.
+fn ask_stop(ctl: &Ctl, live: &AtomicU32, ended: &Receiver<()>) {
+    ctl.stop.store(true, Ordering::SeqCst);
+    if !matches!(ended.try_recv(), Err(TryRecvError::Disconnected)) {
+        let _ = post_live(live, ctl.tid.load(Ordering::SeqCst), WM_QUIT);
+    }
+}
+
+/// Posts `msg` to the run's thread `tid` only while `live` holds that id, so a thread that ended gets nothing.
+fn post_live(live: &AtomicU32, tid: u32, msg: u32) -> bool {
+    tid != NONE && live.load(Ordering::SeqCst) == tid && post(tid, msg)
+}
+
 /// A live run; see `Drop`.
 struct WinRun {
     ctl: Arc<Ctl>,
-    tid: u32,
     /// Hears the thread end; in a `Mutex` only so the run is `Sync`.
     ended: Mutex<Receiver<()>>,
     join: Option<JoinHandle<()>>,
@@ -134,7 +146,7 @@ struct WinRun {
 
 impl HookRun for WinRun {
     fn wake(&self) {
-        let _ = post(self.tid, WAKE);
+        let _ = post_live(&LIVE, self.ctl.tid.load(Ordering::SeqCst), WAKE);
     }
 
     fn stats(&self) -> HookStats {
@@ -146,9 +158,8 @@ impl Drop for WinRun {
     /// Blocks until the thread has let go, sent that input and removed the hooks. After `STOP_WAIT` it removes the
     /// hooks itself, warns once and leaves the thread, so a module's stop never hangs.
     fn drop(&mut self) {
-        self.ctl.stop.store(true, Ordering::SeqCst);
-        let _ = post(self.tid, WM_QUIT);
         let ended = self.ended.get_mut().unwrap_or_else(PoisonError::into_inner);
+        ask_stop(&self.ctl, &LIVE, ended);
         if matches!(
             ended.recv_timeout(STOP_WAIT),
             Err(RecvTimeoutError::Timeout)
@@ -171,7 +182,7 @@ struct Job {
     source: Source,
     clock: QpcClock,
     ctl: Arc<Ctl>,
-    ready: Sender<Result<u32, HookError>>,
+    ready: Sender<Result<(), HookError>>,
     /// Dropped as the thread ends, which the run's drop hears.
     _done: Sender<()>,
 }
@@ -182,6 +193,7 @@ impl Job {
         let _ending = Ending(Arc::clone(&self.ctl));
         raise_priority();
         let tid = own_queue();
+        self.ctl.tid.store(tid, Ordering::SeqCst);
         let Self {
             engine,
             config,
@@ -198,8 +210,11 @@ impl Job {
             return;
         }
         let health = set_timer(config.health_ms);
+        if health == 0 {
+            tracing::warn!("the pointer hook's health check could not start");
+        }
         LIVE.store(tid, Ordering::SeqCst);
-        let _ = ready.send(Ok(tid));
+        let _ = ready.send(Ok(()));
         pump(&ctl, health);
         kill_timer(health);
         let _ = with_host(Host::stop);
@@ -265,3 +280,6 @@ fn with_host<T>(f: impl FnOnce(&mut Host<WinOs>) -> T) -> Option<T> {
 fn drop_host() {
     let _ = HOST.try_with(|h| h.try_borrow_mut().map(|mut host| host.take()));
 }
+
+#[cfg(test)]
+mod tests;
