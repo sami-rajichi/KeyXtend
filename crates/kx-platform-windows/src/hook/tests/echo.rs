@@ -1,5 +1,5 @@
 //! Tests of the wait for our own input: each echo matches our next act of its kind, so only the newest batch's first
-//! echo ends the wait, and input waits behind it.
+//! echo ends the wait, and input waits behind it; a given-up batch's late echo still matches its own acts.
 
 use kx_module_api::ports::{Button, PointerAct};
 
@@ -11,6 +11,8 @@ use crate::keys::{REPLAY, TAG};
 
 /// Room for a few acts.
 const ROOM: usize = 8;
+/// Room for two acts, so a third makes room.
+const TIGHT: usize = 2;
 
 #[test]
 fn the_wait_ends_when_our_input_comes_back_or_after_echo_ms() {
@@ -78,20 +80,56 @@ fn a_press_or_key_passes_by_acts_whose_echo_never_came() {
 }
 
 #[test]
-fn a_press_whose_echo_was_lost_stays_out_until_it_comes_back_or_an_up_is_owed() {
+fn a_press_whose_wait_was_given_up_stays_out_until_it_comes_back() {
     let mut echo = Echo::new(CFG.echo_ms, ROOM);
     let press = PointerAct::Down(Button::Left, A);
     echo.sent(&[press, PointerAct::Move(B)], ms(10));
     assert!(echo.out(press));
     assert_eq!(echo.check(ms(300)), Wait::Lost);
-    assert!(echo.out(press), "lost on its way, so in doubt");
+    assert!(echo.out(press), "given up, still on its way");
     assert!(!echo.out(PointerAct::Down(Button::Right, A)));
     echo.back(PointerAct::Down(Button::Left, B));
     assert!(!echo.out(press), "it came back late");
-    echo.sent(&[press], ms(400));
-    assert_eq!(echo.check(ms(700)), Wait::Lost);
-    echo.owed(press);
-    assert!(!echo.out(press), "an Up owed after it");
+}
+
+#[test]
+fn a_given_up_batchs_late_echo_never_ends_a_newer_wait_or_clears_its_press() {
+    let mut echo = Echo::new(CFG.echo_ms, ROOM);
+    let click = [
+        PointerAct::Down(Button::Left, A),
+        PointerAct::Up(Button::Left, A),
+    ];
+    echo.sent(&click, ms(10));
+    assert_eq!(echo.check(ms(300)), Wait::Lost);
+    let press = PointerAct::Down(Button::Left, B);
+    echo.sent(&[press, PointerAct::Move(B)], ms(310));
+    for act in click {
+        echo.back(act);
+    }
+    assert!(!echo.is_clear(), "the older click came back, not ours");
+    assert!(echo.out(press));
+    echo.back(press);
+    assert!(echo.is_clear());
+    assert!(!echo.out(press));
+}
+
+#[test]
+fn the_oldest_acts_make_room_and_their_presses_stay_in_doubt_until_back_or_owed() {
+    let mut echo = Echo::new(CFG.echo_ms, TIGHT);
+    let press = PointerAct::Down(Button::Left, A);
+    echo.sent(&[press, PointerAct::Move(A)], ms(10));
+    echo.sent(&[PointerAct::KeyDown(CTRL)], ms(11));
+    assert_eq!(echo.room(), TIGHT, "the oldest act made room");
+    assert!(echo.out(press), "in doubt");
+    echo.back(PointerAct::Down(Button::Left, B));
+    assert!(!echo.out(press), "it came back");
+    assert!(!echo.is_clear(), "and took only its doubt");
+    echo.sent(&[PointerAct::Down(Button::Right, B)], ms(12));
+    echo.sent(&[PointerAct::Move(B), PointerAct::Move(B)], ms(13));
+    let right = PointerAct::Down(Button::Right, A);
+    assert!(echo.out(right));
+    echo.owed(right);
+    assert!(!echo.out(right), "an Up owed after it");
 }
 
 #[test]

@@ -103,6 +103,11 @@ impl Sim {
         self.rig.world.pass(ms);
     }
 
+    /// `ms` pass while the stream stalls: what waits in it, our input too, reaches the hooks late.
+    pub(super) fn stall(&self, ms: u32) {
+        self.rig.world.pass(ms);
+    }
+
     /// Runs a host call on the loop side.
     pub(super) fn call(&mut self, f: impl FnOnce(&mut Host<Fake>)) {
         f(&mut self.rig.host);
@@ -133,6 +138,7 @@ impl Sim {
             settled,
             made: self.made,
             fate: self.fate,
+            holds: self.hand.held,
             heard,
             grew: self.grew,
             ours_dropped: self.ours_dropped,
@@ -215,7 +221,8 @@ impl Sim {
     /// Notes the hand's `ev` lost when the engine, which had heard `heard` events, dropped it.
     fn decided(&mut self, ev: Ev, heard: usize) {
         let plan = self.rig.plan();
-        let dropped = plan.heard.len() > heard && plan.drop && !plan.panic;
+        let up = matches!(ev.act, PointerAct::Up(..));
+        let dropped = plan.heard.len() > heard && plan.drops(up) && !plan.panic;
         drop(plan);
         if dropped && !ev.ours {
             self.mark(ev.act, Fate::Lost);

@@ -14,6 +14,10 @@ use crate::hook::queue::QUEUE_ROOM;
 const FLOOD: usize = QUEUE_ROOM;
 /// Longest pause, past the health period, so lagging hooks go back.
 const MAX_PASS_MS: u32 = 2 * CFG.health_ms;
+/// Shortest stall: just past the wait for our echo, so a wait it holds up ends as lost.
+const MIN_STALL_MS: u32 = CFG.echo_ms + 1;
+/// Longest stall: two waits for our echo, so a newer batch's wait can end as lost too.
+const MAX_STALL_MS: u32 = 2 * CFG.echo_ms;
 /// Where the engine's own acts land, off the hand's row.
 const ENGINE_AT: Point = Point { x: -1, y: -1 };
 
@@ -30,6 +34,8 @@ pub(super) enum Step {
     Miss,
     /// The stream catches up, then time passes.
     Pass(u32),
+    /// Time passes while the stream stalls, so what waits in it reaches the hooks late.
+    Stall(u32),
     /// A wake or the deadline timer.
     Turn,
     /// The health timer.
@@ -52,6 +58,8 @@ pub(super) enum Step {
 #[derive(Clone, Debug)]
 pub(super) struct Script {
     drop: bool,
+    /// Drops only releases, as a carry does.
+    carry: bool,
     on: Vec<PointerAct>,
     settle: Vec<PointerAct>,
     release: Vec<PointerAct>,
@@ -62,6 +70,7 @@ impl Script {
     /// Makes `plan` follow this script.
     pub(super) fn apply(&self, plan: &mut Plan) {
         plan.drop = self.drop;
+        plan.drop_ups = self.carry;
         plan.on_acts.clone_from(&self.on);
         plan.settle_acts.clone_from(&self.settle);
         plan.release_acts.clone_from(&self.release);
@@ -93,24 +102,25 @@ fn acts() -> impl Strategy<Value = Vec<PointerAct>> {
 }
 
 fn script() -> impl Strategy<Value = Script> {
-    (any::<bool>(), acts(), acts(), acts(), any::<bool>()).prop_map(
-        |(drop, on, settle, release, notes)| Script {
-            drop,
-            on,
-            settle,
-            release,
-            notes,
-        },
-    )
+    let flags = (any::<bool>(), any::<bool>(), any::<bool>());
+    (flags, acts(), acts(), acts()).prop_map(|((drop, carry, notes), on, settle, release)| Script {
+        drop,
+        carry,
+        on,
+        settle,
+        release,
+        notes,
+    })
 }
 
 /// A plan that pushes acts at each call and each settle, so our input is often out and a flood fills the queue.
 pub(super) fn busy() -> impl Strategy<Value = Step> {
     let some = || vec(act(), 1..=MAX_ACTS);
-    (some(), some()).prop_map(|(on, settle)| {
+    (some(), some(), any::<bool>()).prop_map(|(on, settle, carry)| {
         let (drop, notes, release) = (false, false, Vec::new());
         Step::Plan(Script {
             drop,
+            carry,
             on,
             settle,
             release,
@@ -134,22 +144,29 @@ pub(super) fn calm() -> impl Strategy<Value = Step> {
     ]
 }
 
-/// Calm steps with busy plans, floods and panics, where the hand's input may pass ahead of ours.
+/// A stall long enough that a wait it holds up ends as lost.
+fn stall() -> impl Strategy<Value = Step> {
+    (MIN_STALL_MS..=MAX_STALL_MS).prop_map(Step::Stall)
+}
+
+/// Calm steps with busy plans, floods, stalls and panics, where the hand's input may pass ahead of ours.
 pub(super) fn flooded() -> impl Strategy<Value = Step> {
     prop_oneof![
         24 => calm(),
         4 => busy(),
         4 => (1..=FLOOD).prop_map(Step::Flood),
         4 => (FLOOD / 2..=FLOOD, gesture()).prop_map(|(n, g)| Step::Rush(n, g)),
+        4 => stall(),
         1 => any::<bool>().prop_map(Step::Panic),
     ]
 }
 
-/// Calm steps with floods, missed events and panics.
+/// Calm steps with floods, stalls, missed events and panics.
 pub(super) fn rough() -> impl Strategy<Value = Step> {
     prop_oneof![
         12 => calm(),
         1 => (1..=FLOOD).prop_map(Step::Flood),
+        1 => stall(),
         1 => Just(Step::Miss),
         1 => any::<bool>().prop_map(Step::Panic),
     ]

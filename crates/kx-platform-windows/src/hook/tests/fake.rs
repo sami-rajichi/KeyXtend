@@ -157,9 +157,15 @@ pub(super) enum Heard {
 
 /// What the scripted engine does, and what it heard.
 #[derive(Debug, Default)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one knob a test turns on the scripted engine."
+)]
 pub(super) struct Plan {
     /// `on` drops every event.
     pub drop: bool,
+    /// `on` drops each release, as a carry drops the release of the press that picked up.
+    pub drop_ups: bool,
     /// What each call pushes.
     pub on_acts: Vec<PointerAct>,
     pub settle_acts: Vec<PointerAct>,
@@ -172,6 +178,13 @@ pub(super) struct Plan {
     /// `on` and `release` panic.
     pub panic: bool,
     pub heard: Vec<Heard>,
+}
+
+impl Plan {
+    /// True when `on` drops an event, a release when `up`.
+    pub(super) fn drops(&self, up: bool) -> bool {
+        self.drop || (self.drop_ups && up)
+    }
 }
 
 /// An engine that follows its plan.
@@ -192,7 +205,7 @@ impl PointerEngine for Script {
             plan.deadline = Some(due);
         }
         acts.extend_from_slice(&plan.on_acts);
-        plan.drop
+        plan.drops(matches!(event, PointerEvent::Up { .. }))
     }
 
     fn settle(&mut self, now: Mono, acts: &mut Vec<PointerAct>) {

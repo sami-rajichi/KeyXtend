@@ -113,6 +113,47 @@ fn a_key_only_batchs_echo_ends_the_wait() {
     assert!(sends(&rig.world.take()).is_empty(), "the hand let it go");
 }
 
+/// A rig whose engine clicked Left, a wait given up in a stall, then pressed Left again for the hand's held-back press;
+/// that click's late echo is back, so only the newer press is out.
+fn late_click_then_newer_press() -> Rig {
+    let mut rig = rig(Source::Physical);
+    let click = [
+        PointerAct::Down(Button::Left, A),
+        PointerAct::Up(Button::Left, A),
+    ];
+    rig.plan().settle_acts = click.to_vec();
+    rig.host.turn();
+    rig.plan().settle_acts.clear();
+    rig.world.pass(CFG.echo_ms + 1);
+    rig.plan().drop = true;
+    rig.plan().on_acts = vec![PointerAct::Down(Button::Left, B), PointerAct::Move(B)];
+    assert!(
+        rig.hand(LEFT_DOWN, B),
+        "the wait ends as lost, and the engine holds it back"
+    );
+    (rig.plan().drop, rig.plan().on_acts) = (false, Vec::new());
+    rig.host.turn();
+    rig.echo(&click);
+    rig.world.take();
+    rig
+}
+
+#[test]
+fn a_given_up_clicks_late_echo_keeps_the_hands_up_behind_our_newer_press() {
+    let mut rig = late_click_then_newer_press();
+    assert!(rig.hand(LEFT_UP, B), "it waits behind our press");
+}
+
+#[test]
+fn an_up_that_passes_our_newer_press_after_a_late_echo_is_owed_first() {
+    let mut rig = late_click_then_newer_press();
+    rig.world.pass(CFG.echo_ms + 1);
+    assert!(!rig.hand(LEFT_UP, B), "a second lost wait lets it pass");
+    rig.host.turn();
+    let first = sends(&rig.world.take()).concat().first().copied();
+    assert_eq!(first, Some(PointerAct::Up(Button::Left, B)));
+}
+
 /// A rig whose engine pressed `acts` at a settle, with our echo back, so nothing of ours is in flight.
 fn pressed(acts: &[PointerAct]) -> Rig {
     let mut rig = rig(Source::Physical);
@@ -146,6 +187,37 @@ fn an_up_that_passes_while_our_down_is_in_flight_keeps_the_record() {
     rig.host.stop();
     let want = vec![PointerAct::Up(Button::Left, B)];
     assert_eq!(sends(&rig.world.take()), [want]);
+}
+
+/// A rig whose engine carries: the hand's press passed and its release was dropped.
+fn carrying() -> Rig {
+    let mut rig = rig(Source::Physical);
+    rig.plan().drop_ups = true;
+    assert!(!rig.hand(LEFT_DOWN, A), "the pick-up passes");
+    assert!(rig.hand(LEFT_UP, A), "its release is dropped");
+    rig.world.take();
+    rig
+}
+
+#[test]
+fn a_carried_press_is_let_go_by_the_host_even_when_the_engines_release_panics() {
+    let mut rig = carrying();
+    rig.plan().panic = true;
+    rig.host.stop();
+    let want = vec![PointerAct::Up(Button::Left, A)];
+    assert_eq!(sends(&rig.world.take()), [want]);
+}
+
+#[test]
+fn the_hands_next_release_lets_the_carried_press_go_so_a_stop_sends_nothing_more() {
+    let mut rig = carrying();
+    rig.plan().drop_ups = false;
+    assert!(!rig.hand(LEFT_DOWN, B));
+    assert!(!rig.hand(LEFT_UP, B));
+    rig.plan().panic = true;
+    rig.world.take();
+    rig.host.stop();
+    assert!(sends(&rig.world.take()).is_empty());
 }
 
 #[test]

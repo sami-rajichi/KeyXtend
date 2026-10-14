@@ -68,6 +68,8 @@ struct End {
     made: Vec<PointerAct>,
     /// Per event of `made`.
     fate: Vec<Fate>,
+    /// The buttons the hand still holds at the end.
+    holds: Vec<Button>,
     heard: Vec<Heard>,
     /// The host's room changed.
     grew: bool,
@@ -85,6 +87,7 @@ fn play(steps: &[Step]) -> End {
             Step::Rit => sim.step(true),
             Step::Miss => sim.step(false),
             Step::Pass(ms) => sim.pass(*ms),
+            Step::Stall(ms) => sim.stall(*ms),
             Step::Turn => sim.call(Host::turn),
             Step::Check => sim.call(Host::check),
             Step::Release => sim.call(Host::release),
@@ -163,6 +166,21 @@ fn no_press_after_its_release(end: &End) -> bool {
     })
 }
 
+/// True when, after the stop, no button the hand let go stays down, even one whose release the engine dropped before
+/// its own release panicked.
+fn nothing_the_hand_let_go_stays_down(end: &End) -> bool {
+    let let_go = BUTTONS.iter().filter(|b| !end.holds.contains(b));
+    let down = |b: Button| {
+        let last = end
+            .apps
+            .iter()
+            .rev()
+            .find(|ev| button_of(ev.act) == Some(b));
+        last.is_some_and(|ev| matches!(ev.act, PointerAct::Down(..)))
+    };
+    let_go.copied().all(|b| !down(b))
+}
+
 /// The button `act` presses or lets go.
 fn button_of(act: PointerAct) -> Option<Button> {
     match act {
@@ -187,13 +205,14 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
     /// With room in the queue and a whole engine, the hand's events reach the apps in its order, so no Down follows its
-    /// own Up.
+    /// own Up, and nothing the hand let go stays down.
     #[test]
     fn a_calm_run_keeps_the_hands_order_and_leaves_nothing_of_ours_held(
         steps in vec(calm(), 0..=CALM_STEPS),
     ) {
         let end = play(&steps);
         prop_assert!(in_hand_order(&end), "{:?}", end.apps);
+        prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;
     }
 
@@ -207,8 +226,8 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(FLOODED_CASES))]
 
-    /// With full queues and panics, where the hand's release may pass ahead of our copy of its press, no press of ours
-    /// follows its own release once a turn went out.
+    /// With full queues, stalls, carries and panics, where the hand's release may pass ahead of our copy of its press, no
+    /// press of ours follows its own release once a turn went out, and nothing the hand let go stays down.
     #[test]
     fn a_flooded_run_lets_no_press_of_ours_follow_its_own_release(
         start in busy(),
@@ -217,6 +236,7 @@ proptest! {
         steps.insert(0, start);
         let end = play(&steps);
         prop_assert!(no_press_after_its_release(&end), "{:?}", end.apps);
+        prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;
     }
 }

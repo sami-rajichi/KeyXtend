@@ -12,7 +12,7 @@ use std::sync::Arc;
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Kind, Take, act, esc, key_act, kind, replayed, take, user_key};
+use super::accept::{Take, act, esc, key_act, kind, replayed, take, user_key};
 use super::echo::Echo;
 use super::health::Health;
 use super::held::{Held, LET_GO};
@@ -40,8 +40,11 @@ pub(crate) struct Host<O: Os> {
     echo: Echo,
     health: Health,
     stats: Arc<Stats>,
-    /// What our sent input holds down, for the host's own let-go.
+    /// What our sent input holds down, and the hand's presses whose release the engine dropped, for the host's own
+    /// let-go.
     held: Held,
+    /// The hand's own presses that reached the OS untouched and are not let go yet.
+    hand: Held,
     /// Presses the next batch owes an Up first: the hand let them go before ours was proven ahead.
     owed: Held,
     /// The newest point the hook saw.
@@ -107,6 +110,7 @@ impl<O: Os> Host<O> {
             source,
             stats,
             held: Held::default(),
+            hand: Held::default(),
             owed: Held::default(),
             at: None,
             trust: Trust::Whole,
@@ -125,14 +129,14 @@ impl<O: Os> Host<O> {
     }
 
     /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken, and
-    /// a hand's event that passes untouched is noted for the queue and the record of held input.
+    /// the hand's event is noted for the queue and the record of held input.
     pub(crate) fn mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
         self.at = Some(at);
         let queued = !self.queue.is_empty();
         let dropped = self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false);
         let heard = take(self.source, mark.injected, mark.extra) == Take::Engine;
-        if let (false, true, Some(kind)) = (dropped, heard, kind(msg)) {
-            self.passed(kind, at, queued);
+        if let (true, Some(kind)) = (heard, kind(msg)) {
+            self.heard(kind, at, queued, dropped);
         }
         dropped
     }
@@ -237,20 +241,6 @@ impl<O: Os> Host<O> {
         };
         self.health.saw(stamp.tick);
         stamp
-    }
-
-    /// The event for `kind` at `at`; a press says whether it landed on our window, and its screen's DPI.
-    fn event(&self, kind: Kind, at: Point) -> PointerEvent {
-        match kind {
-            Kind::Down(button) => PointerEvent::Down {
-                button,
-                at,
-                ours: self.os.ours(at),
-                dpi: self.os.dpi(at),
-            },
-            Kind::Up(button) => PointerEvent::Up { button, at },
-            Kind::Move => PointerEvent::Move { at },
-        }
     }
 
     /// Gives `event` to the engine at its own time and queues what must wait behind our input; true to drop it. A full
