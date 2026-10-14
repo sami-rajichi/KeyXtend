@@ -235,21 +235,22 @@ fn an_actor_that_panicked_is_logged_once_when_the_module_stops() {
 }
 
 #[test]
-fn an_actor_that_panicked_says_the_module_is_not_live_when_it_stops() {
+fn an_actor_that_panics_mid_run_says_at_once_that_the_module_is_not_live() {
     let mut host = host(&ALL, Some(Arc::new(Broken)));
-    host.put(RCLICK, true.into());
-    let (_ear, told) = hear::<AssistChanged>(&Bus::new(Arc::clone(&host.core)));
+    let bus = Bus::new(Arc::clone(&host.core));
+    let (_ear, told) = hear::<AssistChanged>(&bus);
     let mut module = MouseModule::default();
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)), "live");
+    let which = Toggle::RightClick;
+    bus.publish(&AssistToggle { which }).unwrap();
+    let off = Ok(AssistChanged::OFF);
+    assert_eq!(
+        told.recv_timeout(WAIT),
+        off,
+        "the keyboard dims its keys now"
+    );
     host.held.clear();
     module.stop();
-    let off = AssistChanged {
-        live: false,
-        ..on(false)
-    };
-    assert_eq!(
-        told.try_iter().collect::<Vec<_>>(),
-        [off],
-        "so the keyboard dims its keys"
-    );
+    assert!(told.try_recv().is_err(), "said once");
 }
