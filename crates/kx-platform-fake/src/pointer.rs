@@ -28,6 +28,8 @@ struct Log {
     starts: usize,
     stops: usize,
     wakes: usize,
+    /// A run is held, from its start until the module drops it, even once its engine is given up.
+    live: bool,
 }
 
 impl Log {
@@ -52,9 +54,19 @@ struct Shared {
     log: Mutex<Log>,
 }
 
+impl Shared {
+    /// Takes the engine out and lets it go once, sending its acts; the caller drops it once the locks are free.
+    fn release(&self) -> Option<Box<dyn PointerEngine>> {
+        let mut engine = lock(&self.engine).take()?;
+        lock(&self.log).lend(|acts| engine.release(acts));
+        Some(engine)
+    }
+}
+
 /// A pointer hook the test drives on its own thread, with no OS and no timer.
 ///
-/// A call that needs a live engine panics without one, as does an engine that pushes past its `max_acts`.
+/// A call that needs a live run panics without one, as does an engine that pushes past its `max_acts`. Once the engine
+/// is given up, events pass and nothing is called, as on the real host.
 #[derive(Default)]
 pub struct FakePointerHook {
     shared: Arc<Shared>,
@@ -81,7 +93,7 @@ impl FakePointerHook {
     /// a moved deadline or notes. True when the event was dropped.
     #[must_use]
     pub fn feed(&self, event: PointerEvent, now: Mono) -> bool {
-        self.drive(|engine, log| {
+        let fed = self.drive(|engine, log| {
             let (before, sent) = (engine.deadline(), log.sent.len());
             let dropped = log.lend(|acts| engine.on(event, now, acts));
             let woken = log.sent.len() > sent || engine.deadline() != before;
@@ -89,24 +101,35 @@ impl FakePointerHook {
                 log.lend(|acts| engine.settle(now, acts));
             }
             dropped
-        })
+        });
+        fed.unwrap_or(false)
     }
 
     /// Runs `settle` as a wake or a due deadline would, and sends its acts.
     pub fn settle(&self, now: Mono) {
-        self.drive(|engine, log| log.lend(|acts| engine.settle(now, acts)));
+        let _ = self.drive(|engine, log| log.lend(|acts| engine.settle(now, acts)));
     }
 
     /// When the live engine wants `settle` next.
     #[must_use]
     pub fn deadline(&self) -> Option<Mono> {
-        self.drive(|engine, _| engine.deadline())
+        self.drive(|engine, _| engine.deadline()).flatten()
     }
 
-    /// Whether a run is live.
+    /// Gives up the engine as the host does after it panicked: one `release` with its acts sent, then the engine
+    /// drops, while the run stays until the module drops it.
+    ///
+    /// # Panics
+    /// Without a live run.
+    pub fn give_up(&self) {
+        assert!(lock(&self.shared.log).live, "{NO_RUN}");
+        drop(self.shared.release());
+    }
+
+    /// Whether a run is live, from its start until the module drops it.
     #[must_use]
     pub fn running(&self) -> bool {
-        lock(&self.shared.engine).is_some()
+        lock(&self.shared.log).live
     }
 
     /// How many starts succeeded.
@@ -145,13 +168,13 @@ impl FakePointerHook {
         std::mem::take(&mut lock(&self.shared.log).sent)
     }
 
-    /// Runs `call` on the live engine and the log.
-    fn drive<R>(&self, call: impl FnOnce(&mut dyn PointerEngine, &mut Log) -> R) -> R {
-        let mut live = lock(&self.shared.engine);
-        let Some(engine) = live.as_mut() else {
-            panic!("{NO_RUN}");
-        };
-        call(engine.as_mut(), &mut lock(&self.shared.log))
+    /// Runs `call` on the live engine and the log; `None` once the engine is given up.
+    fn drive<R>(&self, call: impl FnOnce(&mut dyn PointerEngine, &mut Log) -> R) -> Option<R> {
+        let mut slot = lock(&self.shared.engine);
+        let mut log = lock(&self.shared.log);
+        assert!(log.live, "{NO_RUN}");
+        let engine = slot.as_mut()?;
+        Some(call(engine.as_mut(), &mut log))
     }
 }
 
@@ -171,11 +194,11 @@ impl PointerHook for FakePointerHook {
         engine: Box<dyn PointerEngine>,
         config: HookConfig,
     ) -> Result<Box<dyn HookRun>, HookError> {
-        let mut live = lock(&self.shared.engine);
-        if live.is_some() {
+        let mut slot = lock(&self.shared.engine);
+        let mut log = lock(&self.shared.log);
+        if log.live {
             return Err(HookError::Busy);
         }
-        let mut log = lock(&self.shared.log);
         if let Some(error) = log.fail.take() {
             return Err(error);
         }
@@ -183,13 +206,14 @@ impl PointerHook for FakePointerHook {
         log.room = log.acts.capacity();
         log.config = Some(config);
         log.starts += 1;
-        *live = Some(engine);
+        log.live = true;
+        *slot = Some(engine);
         let shared = Arc::clone(&self.shared);
         Ok(Box::new(FakeRun { shared }))
     }
 }
 
-/// A live fake run; dropping it releases the engine and stops.
+/// A live fake run; dropping it releases the engine, unless it was given up, and stops.
 struct FakeRun {
     shared: Arc<Shared>,
 }
@@ -207,12 +231,12 @@ impl HookRun for FakeRun {
 
 impl Drop for FakeRun {
     fn drop(&mut self) {
-        let Some(mut engine) = lock(&self.shared.engine).take() else {
-            return;
-        };
+        let gone = self.shared.release();
         let mut log = lock(&self.shared.log);
-        log.lend(|acts| engine.release(acts));
+        log.live = false;
         log.stops += 1;
+        drop(log);
+        drop(gone);
     }
 }
 

@@ -174,6 +174,39 @@ fn stopping_during_a_carry_lets_go_of_the_button() {
 }
 
 #[test]
+fn an_engine_the_hook_gave_up_turns_the_keys_off_tells_the_user_and_ends_the_actor() {
+    let mut rig = Rig::saved_rclick();
+    rig.begin();
+    rig.take();
+    rig.hook.give_up();
+    rig.pump();
+    let off = AssistChanged {
+        live: false,
+        rclick: true,
+        grab: Off,
+    };
+    assert_eq!(rig.take(), [Heard::Changed(off), hook_failed()]);
+    assert!(!rig.hook.running(), "the run is dropped");
+    assert!(rig.ended, "nothing can bring the modes back in this run");
+}
+
+#[test]
+fn a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.toggle(Toggle::RightClick);
+    rig.settle(T0);
+    rig.toggle(Toggle::RightClick);
+    rig.settle(T0);
+    rig.toggle(Toggle::RightClick);
+    rig.take();
+    // The first run's engine, dropped with its run, says so again as the second runs.
+    rig.send(Msg::Lost(1));
+    assert!(rig.hook.running() && !rig.ended);
+    assert!(rig.take().is_empty());
+}
+
+#[test]
 fn a_stop_keeps_the_saved_right_click_in_its_last_word() {
     let mut rig = Rig::saved_rclick();
     rig.begin();

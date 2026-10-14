@@ -73,17 +73,20 @@ pub(crate) struct HookEngine {
     applied: u64,
     /// The `applied` count last reported idle, while the engine stays idle.
     idle_at: Option<u64>,
+    /// The actor's number for the run this engine serves.
+    run: u64,
 }
 
 impl HookEngine {
-    /// Wraps a fresh `engine` and applies `first` to it at once, so the first event already sees it. A fresh engine
-    /// holds nothing, so that command pushes no input.
+    /// Wraps a fresh `engine` for the actor's run number `run` and applies `first` to it at once, so the first event
+    /// already sees it. A fresh engine holds nothing, so that command pushes no input.
     pub(crate) fn new(
         mut engine: Engine,
         first: Option<Cmd>,
         queue: Receiver<Cmd>,
         actor: Sender<Msg>,
         moves: Arc<Moves>,
+        run: u64,
     ) -> Self {
         if let Some(cmd) = first {
             cmd.apply(&mut engine, &mut Vec::new());
@@ -96,6 +99,7 @@ impl HookEngine {
             notes: Vec::new(),
             applied: 0,
             idle_at: None,
+            run,
         }
     }
 
@@ -159,6 +163,13 @@ impl PointerEngine for HookEngine {
     }
 }
 
+impl Drop for HookEngine {
+    /// Tells the actor this run's engine is gone: the host drops it as the run stops, or once it gave up after a panic.
+    fn drop(&mut self) {
+        let _ = self.actor.send(Msg::Lost(self.run));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,7 +185,7 @@ mod tests {
             still_px: 1,
             rclick,
         };
-        HookEngine::new(Engine::new(cfg), None, queue, actor, Arc::default())
+        HookEngine::new(Engine::new(cfg), None, queue, actor, Arc::default(), 1)
     }
 
     #[test]

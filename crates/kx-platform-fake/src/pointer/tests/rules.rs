@@ -1,4 +1,5 @@
-//! The fake's turns follow the real host: a feed settles only when the host would wake.
+//! The fake keeps the real host's rules: a feed settles only when the host would wake, and a given-up engine drops
+//! while its run stays.
 
 use super::*;
 
@@ -13,9 +14,11 @@ struct Plan {
     notes: bool,
     due: Option<Mono>,
     settles: usize,
+    /// The host dropped the engine.
+    dropped: bool,
 }
 
-/// An engine that passes every event and does only what its plan says.
+/// An engine that drops every event and does only what its plan says.
 struct Still(Arc<Mutex<Plan>>);
 
 impl Still {
@@ -31,7 +34,7 @@ impl PointerEngine for Still {
             acts.push(SEEN);
         }
         plan.due = plan.arm.or(plan.due);
-        false
+        true
     }
 
     fn settle(&mut self, _: Mono, _: &mut Vec<PointerAct>) {
@@ -54,6 +57,12 @@ impl PointerEngine for Still {
 
     fn max_acts(&self) -> usize {
         [SEEN].len()
+    }
+}
+
+impl Drop for Still {
+    fn drop(&mut self) {
+        self.plan().dropped = true;
     }
 }
 
@@ -88,4 +97,20 @@ fn a_feed_settles_only_when_the_host_would_wake() {
         let _ = hook.feed(MOVE, T1);
         assert_eq!(lock(&kept).settles, settles, "{given:?}");
     }
+}
+
+#[test]
+fn a_given_up_engine_lets_go_once_and_drops_while_its_run_stays() {
+    let (hook, run, kept) = started(Plan::default());
+    hook.give_up();
+    assert_eq!(hook.take_sent(), [LET_GO], "its one release");
+    assert!(lock(&kept).dropped, "dropped at once");
+    assert!(hook.running(), "the run stays until the module drops it");
+    assert_eq!(hook.start(probe().0, CONFIG).err(), Some(HookError::Busy));
+    assert!(!hook.feed(MOVE, T1), "events pass untouched");
+    hook.settle(T1);
+    assert_eq!((hook.deadline(), lock(&kept).settles), (None, 0));
+    drop(run);
+    assert!(hook.sent().is_empty(), "no second release");
+    assert_eq!((hook.stops(), hook.running()), (1, false));
 }

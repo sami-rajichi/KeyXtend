@@ -135,6 +135,8 @@ pub(super) enum Heard {
     On(PointerEvent, Mono),
     Settle(Mono),
     Release,
+    /// The host dropped the engine.
+    Dropped,
 }
 
 /// What the scripted engine does, and what it heard.
@@ -200,5 +202,11 @@ impl PointerEngine for Script {
 
     fn max_acts(&self) -> usize {
         MAX_ACTS
+    }
+}
+
+impl Drop for Script {
+    fn drop(&mut self) {
+        self.plan().heard.push(Heard::Dropped);
     }
 }

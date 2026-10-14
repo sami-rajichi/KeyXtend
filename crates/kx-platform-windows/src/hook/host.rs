@@ -63,7 +63,7 @@ pub(super) enum Trust {
     Stale,
     /// It panicked: events pass untouched, and it lets go once at the next turn.
     Broken,
-    /// It panicked and had its one release; it is never called again.
+    /// It panicked and had its one release; the host dropped it.
     Done,
 }
 

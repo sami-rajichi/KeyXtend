@@ -24,13 +24,16 @@ pub enum Msg {
     Note(Note),
     /// The engine no longer needs the hook, after applying this many queued commands.
     Idle(u64),
+    /// The engine of the run with this number is gone: the host dropped it as the run stopped, or gave it up.
+    Lost(u64),
     /// The module stops.
     Stop,
 }
 
-/// A running hook, the queue to its engine, and how many commands went into that queue.
+/// A running hook, its number, the queue to its engine, and how many commands went into that queue.
 struct Live {
     run: Box<dyn HookRun>,
+    id: u64,
     queue: Sender<Cmd>,
     sent: u64,
 }
@@ -52,6 +55,8 @@ pub struct Actor {
     /// The keyboard's latched modifiers.
     latches: Vec<Scan>,
     live: Option<Live>,
+    /// How many engines were made; each run carries its number.
+    runs: u64,
     /// The last start failed; until one works, a start for latches fails without a word.
     failing: bool,
 }
@@ -79,6 +84,7 @@ impl Actor {
             grab: GrabState::Off,
             latches: Vec::new(),
             live: None,
+            runs: 0,
             failing: false,
         }
     }
@@ -113,6 +119,7 @@ impl Actor {
             Msg::Ask => self.tell_state(),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
+            Msg::Lost(run) => return self.lost(run),
             Msg::Stop => {
                 self.stop();
                 return false;
@@ -164,7 +171,9 @@ impl Actor {
         let expected = !matches!(first, Some(Cmd::Latches(_)));
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
-        let engine = HookEngine::new(engine, first, cmds, self.inbox.clone(), moves);
+        self.runs += 1;
+        let id = self.runs;
+        let engine = HookEngine::new(engine, first, cmds, self.inbox.clone(), moves, id);
         match self
             .hook
             .start(Box::new(engine), self.settings.hook_config())
@@ -174,6 +183,7 @@ impl Actor {
                 self.failing = false;
                 self.live = Some(Live {
                     run,
+                    id,
                     queue,
                     sent: 0,
                 });
@@ -190,12 +200,29 @@ impl Actor {
         }
         self.failing = true;
         if expected {
-            self.publish(&Notice {
-                key: keys::MOUSE_HOOK_FAILED,
-                module: Some(ID),
-                args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-            });
+            self.tell_failed();
         }
+    }
+
+    /// Tells the user the hook failed, so they know why the modes are off.
+    fn tell_failed(&self) {
+        self.publish(&Notice {
+            key: keys::MOUSE_HOOK_FAILED,
+            module: Some(ID),
+            args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
+        });
+    }
+
+    /// The host gave up the live run's engine after a panic, so the module says it is not live, tells the user and is
+    /// done; another run's engine just ended. False once the actor is done.
+    fn lost(&mut self, run: u64) -> bool {
+        if self.live.as_ref().is_none_or(|live| live.id != run) {
+            return true;
+        }
+        tracing::warn!("mouse hook gave up its engine");
+        self.stop();
+        self.tell_failed();
+        false
     }
 
     /// Stops the hook once the engine reported idle after every command sent so far.

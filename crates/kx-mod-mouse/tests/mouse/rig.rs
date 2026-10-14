@@ -76,6 +76,8 @@ pub struct Rig {
     pub hook: Arc<FakePointerHook>,
     pub actor: Actor,
     pub settings: MouseSettings,
+    /// The actor said it is done, as its thread would end.
+    pub ended: bool,
     inbox: Receiver<Msg>,
     heard: Arc<Mutex<Vec<Heard>>>,
     _ears: Vec<Subscription>,
@@ -111,6 +113,7 @@ impl Rig {
             hook,
             actor,
             settings,
+            ended: false,
             inbox,
             heard,
             _ears: ears,
@@ -153,7 +156,7 @@ impl Rig {
     /// Hands the hook engine's messages to the actor until none wait.
     pub fn pump(&mut self) {
         while let Ok(msg) = self.inbox.try_recv() {
-            self.actor.handle(msg);
+            self.ended |= !self.actor.handle(msg);
         }
     }
 

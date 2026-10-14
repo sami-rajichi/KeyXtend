@@ -5,7 +5,7 @@ use kx_module_api::ports::{Button, Point};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-mod turns;
+mod rules;
 
 /// Test values; the real ones come from the mouse module's settings.
 const CONFIG: HookConfig = HookConfig {

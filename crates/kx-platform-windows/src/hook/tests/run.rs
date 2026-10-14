@@ -126,7 +126,11 @@ fn a_broken_engine_whose_release_panics_still_ends_with_ctrl_and_left_up() {
     rig.host.turn();
     let want = vec![PointerAct::Up(Button::Left, B), PointerAct::KeyUp(CTRL)];
     assert_eq!(sends(&rig.world.take()), [want]);
-    assert_eq!(rig.heard().last(), Some(&Heard::Release), "its one release");
+    let last = [Heard::Release, Heard::Dropped];
+    assert!(
+        rig.heard().ends_with(&last),
+        "its one release, then the drop"
+    );
 }
 
 #[test]

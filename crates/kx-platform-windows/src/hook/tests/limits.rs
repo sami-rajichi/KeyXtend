@@ -114,7 +114,7 @@ fn an_engine_that_pushes_past_max_acts_is_cut_and_counted_and_the_queue_never_gr
     if cfg!(debug_assertions) {
         // The debug assert fails as the engine's panic: nothing it pushed goes out, and it gets its one release.
         assert!(sent.is_empty(), "{sent:?}");
-        assert_eq!(rig.heard(), [Heard::Release]);
+        assert_eq!(rig.heard(), [Heard::Release, Heard::Dropped]);
     } else {
         assert_eq!(sent, [vec![PointerAct::KeyDown(SHIFT); MAX_ACTS]]);
         assert_eq!(rig.heard(), [Heard::Settle(rig.now())]);
@@ -136,4 +136,21 @@ fn a_panicking_engine_passes_the_event_and_gets_one_release_at_once() {
     rig.host.stop();
     assert!(rig.heard().is_empty(), "a broken engine hears no more");
     assert_eq!(rig.world.take().last(), Some(&Call::Unhook));
+}
+
+#[test]
+fn a_broken_engine_is_dropped_right_after_its_one_release_so_its_module_learns() {
+    for release_panics in [false, true] {
+        let mut rig = rig(Source::Physical);
+        rig.plan().panic = true;
+        assert!(!rig.hand(MOVE, A));
+        rig.plan().panic = release_panics;
+        rig.heard();
+        rig.host.turn();
+        let want = [Heard::Release, Heard::Dropped];
+        assert_eq!(rig.heard(), want, "release panics: {release_panics}");
+        rig.host.turn();
+        rig.host.stop();
+        assert!(rig.heard().is_empty(), "dropped once, never called again");
+    }
 }

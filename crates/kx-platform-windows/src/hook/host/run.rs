@@ -4,7 +4,7 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use kx_module_api::Mono;
-use kx_module_api::ports::PointerAct;
+use kx_module_api::ports::{PointerAct, PointerEngine, PointerEvent};
 
 use super::{Host, Trust};
 use crate::hook::Os;
@@ -119,8 +119,8 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// Calls the engine's `release` and sends its acts; a broken engine gets this once, and one that panics in it is
-    /// done.
+    /// Calls the engine's `release` and sends its acts. A broken engine gets this once, and one done then, or by a panic
+    /// in it, is dropped here on the loop side, so its module learns the run lost it.
     fn release_engine(&mut self, now: Mono) -> Sent {
         self.trust = match self.trust {
             Trust::Done => return Sent::default(),
@@ -133,7 +133,12 @@ impl<O: Os> Host<O> {
             self.lent.clear();
             self.trust = Trust::Done;
         }
-        self.send_lent(now)
+        let sent = self.send_lent(now);
+        if self.trust == Trust::Done {
+            // A zero-sized engine, so this allocates nothing.
+            drop(std::mem::replace(&mut self.engine, Box::new(Spent)));
+        }
+        sent
     }
 
     /// Sends an Up for each button and a key-up for each key our input still holds.
@@ -164,6 +169,31 @@ impl<O: Os> Host<O> {
         let sent = out(os, echo, held, &self.stats, &self.lent, now);
         self.lent.clear();
         sent
+    }
+}
+
+/// What takes a given-up engine's place; the host never calls it.
+struct Spent;
+
+impl PointerEngine for Spent {
+    fn on(&mut self, _: PointerEvent, _: Mono, _: &mut Vec<PointerAct>) -> bool {
+        false
+    }
+
+    fn settle(&mut self, _: Mono, _: &mut Vec<PointerAct>) {}
+
+    fn deadline(&self) -> Option<Mono> {
+        None
+    }
+
+    fn has_notes(&self) -> bool {
+        false
+    }
+
+    fn release(&mut self, _: &mut Vec<PointerAct>) {}
+
+    fn max_acts(&self) -> usize {
+        0
     }
 }
 
