@@ -2,6 +2,9 @@
 
 Newest first. One entry per implemented feature or fixed issue: a timestamp plus 3–4 sentences at most.
 
+## 2026-10-14 07:00 — P4: the spike's hold engine and ring test deleted
+No gate uses the spike's hold engine, its `[hold]` and `[ring]` settings, its ring test or kx-test-support's frame stats any more, so they are deleted. The screen point `Pt` that the spike and kx-gates still share moved into its own spike file. The spike's test strip lost its ring switch, and the move map and the P4 notes now say G12 times the product overlay with PresentMon.
+
 ## 2026-10-14 06:30 — P4: G12 judges lost frames as G8 does
 G12 now counts the ring's lost frames by G8's frame rule, through the same helper. It skips a swap chain's first present and one replaced within a refresh, so the overlay's first frame no longer fails a smooth ring. When `g8 hook-weak`'s test build does not quit, kx-gates ends its job, lets go of anything left down, and then starts the owner's copy again. It also ends the job and lets go when the test build fails to start.
 

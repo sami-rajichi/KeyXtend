@@ -8,7 +8,7 @@ use cxx_qt_lib::{QString, QUrl};
 use serde_json::{Value, json};
 use spike_core::config::{SpikeConfig, ToolButton};
 use spike_core::fill;
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use spike_core::note::{self, Note};
 use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::{self, Snip};

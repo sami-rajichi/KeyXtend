@@ -82,7 +82,6 @@ pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
         &tools.pill_title,
         &tools.overlay_title,
         &cfg.voice.caption.title,
-        &cfg.ring.title,
     ];
     std::iter::once(&cfg.keyboard.title).chain(named).collect()
 }
@@ -156,14 +155,9 @@ mod tests {
             "the keyboard's"
         );
         assert!(
-            with(&|c| c.panel.title = c.ring.title.clone()).is_err(),
-            "the ring's"
+            with(&|c| c.voice.caption.title.clear()).is_err(),
+            "untitled windows"
         );
-        assert!(
-            with(&|c| c.ring.title = c.voice.caption.title.clone()).is_err(),
-            "ring and caption"
-        );
-        assert!(with(&|c| c.ring.title.clear()).is_err(), "untitled windows");
     }
 
     #[test]

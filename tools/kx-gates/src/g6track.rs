@@ -2,7 +2,7 @@
 //! below a document, and the track keeps the last point outside it, as P5's tracker will.
 #![cfg(windows)]
 
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use spike_core::uia;
 use windows::Win32::Foundation::RECT;
 

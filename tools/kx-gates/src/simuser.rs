@@ -4,7 +4,7 @@
 
 use kx_platform_windows::keys::TAG;
 use kx_platform_windows::window::foreground;
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, INPUT, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_RIGHTUP, VK_CONTROL, VK_LBUTTON,

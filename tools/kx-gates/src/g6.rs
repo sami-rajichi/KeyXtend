@@ -4,7 +4,7 @@
 
 use kx_platform_windows::screen;
 use serde_json::{Value, json};
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 

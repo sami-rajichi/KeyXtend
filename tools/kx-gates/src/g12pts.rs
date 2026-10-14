@@ -4,7 +4,7 @@
 
 use kx_mod_mouse::MouseSettings;
 use kx_target_window::log::Press;
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::p4cfg::G12;

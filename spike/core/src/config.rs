@@ -21,10 +21,6 @@ pub struct SpikeConfig {
     pub voice: crate::voicecfg::VoiceConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
-    /// The hold a still press waits for, and when its ring shows.
-    pub hold: crate::holdcfg::HoldConfig,
-    /// Gate G12's ring test.
-    pub ring: crate::holdcfg::RingTest,
 }
 
 /// The face's title and stage-1 geometry; the keyboard itself is kx-mod-keyboard's since P3.
@@ -177,8 +173,6 @@ pub fn load() -> Result<SpikeConfig, String> {
     config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
     crate::panelcfg::check_titles(&config).map_err(at)?;
-    config.hold.check().map_err(at)?;
-    config.ring.check().map_err(at)?;
     Ok(config)
 }
 

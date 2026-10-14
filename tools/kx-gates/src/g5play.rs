@@ -8,7 +8,7 @@ use kx_target_window::hang;
 use kx_target_window::log::Press;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
 

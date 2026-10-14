@@ -5,7 +5,7 @@ use std::pin::Pin;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use serde_json::{Value, json};
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use kx_module_api::is_arabic;
 use spike_core::voice::{self, Caption, Event, Session, Update};
 

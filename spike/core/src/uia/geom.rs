@@ -2,7 +2,7 @@
 
 use windows::Win32::Foundation::RECT;
 
-use crate::hold::Pt;
+use crate::pt::Pt;
 
 /// Numbers per box from `GetBoundingRectangles`: left, top, width, height.
 const BOX: usize = 4;

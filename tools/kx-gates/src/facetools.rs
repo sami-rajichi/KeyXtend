@@ -4,8 +4,8 @@
 use kx_mod_keyboard::Area;
 use kx_platform_windows::screen;
 use spike_core::config::ToolButton;
-use spike_core::hold::Pt;
 use spike_core::place;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,

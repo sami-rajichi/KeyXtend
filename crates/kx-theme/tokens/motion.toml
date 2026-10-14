@@ -59,7 +59,7 @@ pop_scale = 0.98
 menu_scale = 0.96
 
 [ring]
-# The hold ring (mock-up .ring): its waves shrink on wave_curve over the hold less spike.toml [hold] ring_after_ms, even with
+# The hold ring (mock-up .ring): its waves shrink on wave_curve over the hold less [mouse] ring_after_ms, even with
 # reduced motion, and its core fades in on core_curve.
 wave_curve = "wave"
 core_curve = "ease_in"

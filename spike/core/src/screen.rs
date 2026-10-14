@@ -9,8 +9,8 @@ use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, rect_of, work_area};
 use kx_platform_windows::window::own_bounds;
 use windows::Win32::Foundation::RECT;
 
-use crate::hold::Pt;
 use crate::popspot::pop_spot;
+use crate::pt::Pt;
 
 /// Error when the window a panel belongs to is not shown.
 const NOT_SHOWN: &str = "the keyboard window is not shown";

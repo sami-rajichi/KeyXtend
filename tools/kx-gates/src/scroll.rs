@@ -2,7 +2,7 @@
 #![cfg(windows)]
 
 use kx_platform_windows::keys::TAG;
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use spike_core::{capture, uia};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::Accessibility::{

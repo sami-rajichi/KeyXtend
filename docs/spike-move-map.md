@@ -58,8 +58,8 @@ Only gates `g1`–`g4` and `g25`'s language part are aimed at the product in P3;
 
 | Spike | Product |
 |---|---|
-| `core/src/{hold,hold/tests,holdcfg}.rs`, `spike.toml` `[hold]`, `[ring]` | `kx-mod-mouse`, settings schema |
-| `qt-kb/qml/{Ring,RingFace}.qml`, the ring-test part of `qt-kb/qml/Extras.qml`, `qt-kb/src/ring.rs` | `kx-ui` overlay; frame stats only behind a test feature, so no shipped crate depends on `kx-test-support`. The ring's motion tokens (`ringmove`) are already in `kx-theme` |
+| `core/src/{hold,hold/tests,holdcfg}.rs`, `spike.toml` `[hold]`, `[ring]` | `kx-mod-mouse`, settings schema. The spike copies are deleted; `Pt` stays in `core/src/pt.rs` for the spike's later parts and kx-gates |
+| `qt-kb/qml/{Ring,RingFace}.qml`, the ring-test part of `qt-kb/qml/{Extras,ThemeStrip}.qml`, `qt-kb/src/ring.rs` | `kx-ui` overlay. G12 times the product overlay's frames with PresentMon, with no stats file or test feature, so `kx-test-support`'s `ringstats` is deleted. The ring's motion tokens (`ringmove`) are already in `kx-theme` |
 | `tools/kx-gates` `{assist,hookhost,hookio,hookstate}.rs` | `kx-platform-windows` hooks |
 | `qt-kb/qmltest/tst_ring.qml`, `look-ring-full.js`, `look-ring-reduced.js` | `kx-ui` Qt Quick Tests |
 | Gates `g5`, `g12` (with `g12pts`), `g17`, `g18`, `hand` | Aimed at the product app |
