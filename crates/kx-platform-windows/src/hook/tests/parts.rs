@@ -4,10 +4,9 @@ use kx_module_api::ports::{Button, HookConfig, Point, PointerAct, Scan};
 use kx_module_api::{Mono, US_PER_MS};
 
 use crate::hook::Source;
-use crate::hook::accept::{Kind, Take, esc, kind, take};
+use crate::hook::accept::{Kind, Take, act, esc, key_act, kind, take};
 use crate::hook::batch::{Desk, Input, batch, normalise};
 use crate::hook::health::Health;
-use crate::hook::queue::{Echo, Wait};
 use crate::hook::timing::{Histogram, event_at, timer_ms};
 use crate::keys::{REPLAY, SIM_TAG, TAG};
 use crate::strokes::Key;
@@ -85,6 +84,20 @@ fn mouse_messages_become_kinds_and_wheels_have_none() {
     for wheel_or_side in [0x020A, 0x020B, 0x020E, 0] {
         assert_eq!(kind(wheel_or_side), None, "{wheel_or_side:#x}");
     }
+}
+
+#[test]
+fn our_events_coming_back_read_as_the_acts_we_sent() {
+    let (at, shift) = (Point { x: 5, y: 6 }, Scan::new(0x2A));
+    assert_eq!(
+        act(Kind::Up(Button::Middle), at),
+        PointerAct::Up(Button::Middle, at)
+    );
+    assert_eq!(act(Kind::Move, at), PointerAct::Move(at));
+    assert_eq!(key_act(KEY_DOWN, shift), Some(PointerAct::KeyDown(shift)));
+    assert_eq!(key_act(SYS_DOWN, shift), Some(PointerAct::KeyDown(shift)));
+    assert_eq!(key_act(KEY_UP, shift), Some(PointerAct::KeyUp(shift)));
+    assert_eq!(key_act(0x0102, shift), None, "WM_CHAR");
 }
 
 #[test]
@@ -223,19 +236,6 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_all_tagged_replay() {
         },
     ];
     assert_eq!(batch(&acts, desk), want);
-}
-
-#[test]
-fn the_echo_wait_ends_when_our_input_comes_back_or_after_echo_ms() {
-    let mut echo = Echo::new(250);
-    assert_eq!(echo.check(ms(1)), Wait::Clear);
-    echo.sent(ms(10));
-    assert_eq!(echo.check(ms(260)), Wait::Waiting);
-    echo.clear();
-    assert_eq!(echo.check(ms(261)), Wait::Clear);
-    echo.sent(ms(300));
-    assert_eq!(echo.check(ms(551)), Wait::Lost);
-    assert_eq!(echo.check(ms(552)), Wait::Clear, "counted once");
 }
 
 #[cfg(windows)]

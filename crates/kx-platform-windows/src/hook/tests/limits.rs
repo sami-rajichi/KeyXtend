@@ -17,7 +17,7 @@ fn crowding() -> Rig {
 }
 
 #[test]
-fn the_lent_buffer_and_the_queue_keep_the_room_reserved_at_the_start() {
+fn the_lent_buffer_the_queue_and_the_batch_keep_the_room_reserved_at_the_start() {
     let mut rig = crowding();
     let room = rig.host.room();
     assert_eq!(room.0, MAX_ACTS);
@@ -59,12 +59,18 @@ fn a_full_queue_lets_events_pass_without_the_engine_and_lets_go_at_the_next_turn
     assert!(rig.heard().is_empty());
     assert_eq!(rig.stats().lost_echoes, 1, "once per overflow");
     rig.plan().release_acts = vec![PointerAct::Up(Button::Left, B)];
+    rig.plan().settle_acts = vec![PointerAct::Move(A)];
     rig.world.take();
     rig.host.turn();
     assert!(rig.heard().contains(&Heard::Release), "its view is stale");
     let sent = sends(&rig.world.take());
-    assert_eq!(sent.len(), 2, "the queue, then the release");
-    assert_eq!(sent[1], [PointerAct::Up(Button::Left, B)]);
+    assert_eq!(
+        sent.len(),
+        1,
+        "the queue, the release and the settle in one batch"
+    );
+    let tail = [PointerAct::Up(Button::Left, B), PointerAct::Move(A)];
+    assert!(sent[0].ends_with(&tail), "{:?}", sent[0]);
 }
 
 #[test]

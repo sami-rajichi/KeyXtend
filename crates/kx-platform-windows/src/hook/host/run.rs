@@ -1,5 +1,5 @@
-//! The host's loop side: turns, the health check, the reinstall, the panic hook's let-go and the stop, and how a batch
-//! goes out.
+//! The host's loop side: turns, the health check, the reinstall, the panic hook's let-go and the stop. Each puts its
+//! input in one batch, so the first echo proves all of it passed (ledger ruling 36).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -8,9 +8,6 @@ use kx_module_api::ports::{PointerAct, PointerEngine, PointerEvent};
 
 use super::{Host, Trust};
 use crate::hook::Os;
-use crate::hook::held::Held;
-use crate::hook::queue::Echo;
-use crate::hook::stats::Stats;
 use crate::hook::timing::timer_ms;
 
 /// How many acts the OS took out of how many were sent.
@@ -20,30 +17,22 @@ pub(super) struct Sent {
     total: usize,
 }
 
-impl Sent {
-    /// Both counts together.
-    fn and(self, other: Self) -> Self {
-        Self {
-            took: self.took.saturating_add(other.took),
-            total: self.total.saturating_add(other.total),
-        }
-    }
-}
-
 impl<O: Os> Host<O> {
-    /// Sends the queue, lets go when the engine is stale, settles it and re-arms the deadline timer.
+    /// Sends the queue, the stale engine's let-go and its settle as one batch, then re-arms the deadline timer.
     pub(super) fn run_turn(&mut self) {
         self.woken = false;
         let now = self.os.now();
-        self.flush(now);
+        self.take_queue();
         if matches!(self.trust, Trust::Stale | Trust::Broken) {
-            self.let_go(now);
+            self.take_let_go();
         }
         if self.trust == Trust::Whole {
             self.lent.clear();
             self.engine.settle(now, &mut self.lent);
-            self.send_lent(now);
+            self.out.extend_from_slice(&self.lent);
+            self.lent.clear();
         }
+        let _ = self.ship(now);
         let due = match self.trust {
             Trust::Whole => self.engine.deadline(),
             _ => None,
@@ -69,12 +58,14 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// The queue, the release, then whatever our input still holds, in that order, so no queued press follows its Up.
+    /// The queue, the release, then whatever our input still holds, in that order and in one batch, so no queued press
+    /// follows its Up.
     pub(super) fn run_release(&mut self) -> Sent {
         let now = self.os.now();
-        self.flush(now)
-            .and(self.release_engine(now))
-            .and(self.let_held_go(now))
+        self.take_queue();
+        self.take_release();
+        self.take_held();
+        self.ship(now)
     }
 
     /// The stop's input, as `run_release` sends it; a cut send and dropped acts are logged, counts only.
@@ -93,12 +84,13 @@ impl<O: Os> Host<O> {
         }
     }
 
-    /// Puts both hooks back. The engine missed input, so it lets go first, and no hook can see that input come back;
-    /// a turn then takes the notes of that let-go.
+    /// Puts both hooks back. The engine missed input, so the queue and its let-go go out first; a turn then takes the
+    /// notes of that let-go.
     fn reinstall(&mut self, now: Mono) {
         self.os.unhook();
-        self.let_go(now);
-        self.echo.clear();
+        self.take_queue();
+        self.take_let_go();
+        let _ = self.ship(now);
         match self.os.hook() {
             Ok(()) => self.stats.reinstalled(),
             Err(code) if !self.warned => {
@@ -110,20 +102,26 @@ impl<O: Os> Host<O> {
         self.wake();
     }
 
-    /// Lets the engine go; once that leaves it done, lets go of what our input still holds too.
-    fn let_go(&mut self, now: Mono) -> Sent {
-        let sent = self.release_engine(now);
-        match self.trust {
-            Trust::Done => sent.and(self.let_held_go(now)),
-            _ => sent,
+    /// Adds the queue, which ends with an Up for each queued press whose release went ahead of it.
+    fn take_queue(&mut self) {
+        self.queue.seal();
+        self.out.extend_from_slice(self.queue.acts());
+        self.queue.clear();
+    }
+
+    /// Adds the engine's release; once that leaves it done, adds a let-go of what our input then still holds.
+    fn take_let_go(&mut self) {
+        self.take_release();
+        if self.trust == Trust::Done {
+            self.take_held();
         }
     }
 
-    /// Calls the engine's `release` and sends its acts. A broken engine gets this once, and one done then, or by a panic
-    /// in it, is dropped here on the loop side, so its module learns the run lost it.
-    fn release_engine(&mut self, now: Mono) -> Sent {
+    /// Adds the engine's `release`. A broken engine gets this once, and one done then, or by a panic in it, is dropped
+    /// here on the loop side, so its module learns the run lost it.
+    fn take_release(&mut self) {
         self.trust = match self.trust {
-            Trust::Done => return Sent::default(),
+            Trust::Done => return,
             Trust::Broken => Trust::Done,
             Trust::Whole | Trust::Stale => Trust::Whole,
         };
@@ -133,42 +131,36 @@ impl<O: Os> Host<O> {
             self.lent.clear();
             self.trust = Trust::Done;
         }
-        let sent = self.send_lent(now);
+        self.out.extend_from_slice(&self.lent);
+        self.lent.clear();
         if self.trust == Trust::Done {
             // A zero-sized engine, so this allocates nothing.
             drop(std::mem::replace(&mut self.engine, Box::new(Spent)));
         }
-        sent
     }
 
-    /// Sends an Up for each button and a key-up for each key our input still holds.
-    fn let_held_go(&mut self, now: Mono) -> Sent {
-        let acts = self.held.release(self.at);
-        out(
-            &self.os,
-            &mut self.echo,
-            &mut self.held,
-            &self.stats,
-            &acts,
-            now,
-        )
+    /// Adds an Up for each button and a key-up for each key our input holds once the batch so far went out.
+    fn take_held(&mut self) {
+        let mut after = self.held;
+        after.sent(&self.out);
+        self.out.extend(after.release(self.at));
     }
 
-    /// Sends the queue in one batch, which ends with an Up for each queued press whose release went ahead of it.
-    fn flush(&mut self, now: Mono) -> Sent {
-        self.queue.seal();
-        let (os, echo, held) = (&self.os, &mut self.echo, &mut self.held);
-        let sent = out(os, echo, held, &self.stats, self.queue.acts(), now);
-        self.queue.clear();
-        sent
-    }
-
-    /// Sends what the engine pushed into the lent buffer.
-    fn send_lent(&mut self, now: Mono) -> Sent {
-        let (os, echo, held) = (&self.os, &mut self.echo, &mut self.held);
-        let sent = out(os, echo, held, &self.stats, &self.lent, now);
-        self.lent.clear();
-        sent
+    /// Sends the batch, then notes what its taken part holds down and awaits that part's echo; a cut batch counts.
+    fn ship(&mut self, now: Mono) -> Sent {
+        let total = self.out.len();
+        if total == 0 {
+            return Sent::default();
+        }
+        let took = self.os.send(&self.out).min(total);
+        let taken = self.out.get(..took).unwrap_or_default();
+        self.held.sent(taken);
+        self.echo.sent(taken, now);
+        if took < total {
+            self.stats.send_failed();
+        }
+        self.out.clear();
+        Sent { took, total }
     }
 }
 
@@ -195,28 +187,4 @@ impl PointerEngine for Spent {
     fn max_acts(&self) -> usize {
         0
     }
-}
-
-/// Sends `acts` in one batch and notes what the taken part holds down. Any batch starts the wait for its echo; a
-/// batch the OS cut counts, and then no echo is awaited.
-fn out<O: Os>(
-    os: &O,
-    echo: &mut Echo,
-    held: &mut Held,
-    stats: &Stats,
-    acts: &[PointerAct],
-    now: Mono,
-) -> Sent {
-    let total = acts.len();
-    if total == 0 {
-        return Sent::default();
-    }
-    echo.sent(now);
-    let took = os.send(acts).min(total);
-    held.sent(acts.get(..took).unwrap_or_default());
-    if took < total {
-        stats.send_failed();
-        echo.clear();
-    }
-    Sent { took, total }
 }

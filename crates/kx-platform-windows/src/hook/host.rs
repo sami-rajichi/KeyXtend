@@ -4,6 +4,7 @@
 
 mod hand;
 mod run;
+mod wait;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
@@ -11,13 +12,17 @@ use std::sync::Arc;
 use kx_module_api::Mono;
 use kx_module_api::ports::{HookConfig, Point, PointerAct, PointerEngine, PointerEvent, Scan};
 
-use super::accept::{Kind, Take, esc, key_echo, key_up, kind, take};
+use super::accept::{Kind, Take, act, esc, key_act, key_up, kind, replayed, take};
+use super::echo::Echo;
 use super::health::Health;
-use super::held::Held;
-use super::queue::{Echo, Queue, Wait};
+use super::held::{Held, LET_GO};
+use super::queue::Queue;
 use super::stats::Stats;
 use super::timing::event_at;
 use super::{Mark, Os, Source};
+
+/// Batches that may be out at once before the record of them grows.
+const FLIGHTS: usize = 2;
 
 /// The hook thread's state: the engine and its lent buffer, the input behind our own, the health check and the numbers.
 pub(crate) struct Host<O: Os> {
@@ -29,6 +34,8 @@ pub(crate) struct Host<O: Os> {
     /// The engine's `max_acts`.
     max: usize,
     queue: Queue,
+    /// A turn's input, which goes out as one batch; reserved once for a queue, a release, a let-go and a settle.
+    out: Vec<PointerAct>,
     echo: Echo,
     health: Health,
     stats: Arc<Stats>,
@@ -78,11 +85,17 @@ impl<O: Os> Host<O> {
     ) -> Self {
         let max = engine.max_acts();
         let seen = os.last_input().unwrap_or_else(|| os.tick());
+        let queue = Queue::new(max);
+        let out = queue
+            .room()
+            .saturating_add(max.saturating_mul(2))
+            .saturating_add(LET_GO);
         Self {
             lent: Vec::with_capacity(max),
             max,
-            queue: Queue::new(max),
-            echo: Echo::new(cfg.echo_ms),
+            queue,
+            out: Vec::with_capacity(out),
+            echo: Echo::new(cfg.echo_ms, out.saturating_mul(FLIGHTS)),
             health: Health::new(cfg, seen),
             os,
             engine,
@@ -120,7 +133,7 @@ impl<O: Os> Host<O> {
     /// Hears key message `msg` for `vk`, whose scan code reads as `scan`: an Esc press reaches the engine, and every
     /// key passes on.
     pub(crate) fn key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
-        let _ = self.guard(|h| h.on_key(msg, vk, mark));
+        let _ = self.guard(|h| h.on_key(msg, vk, scan, mark));
         if key_up(self.source, msg, mark.injected, mark.extra) && self.idle() {
             // The hand let the key go itself, so the record must not send it up again.
             self.held.forget_key(scan);
@@ -152,10 +165,10 @@ impl<O: Os> Host<O> {
         self.os.unhook();
     }
 
-    /// The lent buffer's and the queue's room.
+    /// The room of the lent buffer, the queue and the batch.
     #[cfg(test)]
-    pub(crate) fn room(&self) -> (usize, usize) {
-        (self.lent.capacity(), self.queue.room())
+    pub(crate) fn room(&self) -> (usize, usize, usize) {
+        (self.lent.capacity(), self.queue.room(), self.out.capacity())
     }
 
     /// Runs `call`; a panic marks the engine broken instead of reaching Windows. Only that fall asks for the turn that
@@ -175,8 +188,10 @@ impl<O: Os> Host<O> {
     fn on_mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
         let stamp = self.stamp(mark);
         match (take(self.source, mark.injected, mark.extra), kind(msg)) {
-            (Take::Echo, _) => {
-                self.echo.clear();
+            (Take::Echo, kind) => {
+                if let (true, Some(kind)) = (replayed(mark.extra), kind) {
+                    self.echo.back(act(kind, at));
+                }
                 false
             }
             (Take::Engine, Some(kind)) => {
@@ -187,10 +202,12 @@ impl<O: Os> Host<O> {
         }
     }
 
-    fn on_key(&mut self, msg: u32, vk: u32, mark: Mark) {
+    fn on_key(&mut self, msg: u32, vk: u32, scan: Scan, mark: Mark) {
         let stamp = self.stamp(mark);
-        if key_echo(mark.extra) {
-            self.echo.clear();
+        if replayed(mark.extra)
+            && let Some(act) = key_act(msg, scan)
+        {
+            self.echo.back(act);
         }
         if esc(self.source, msg, vk, mark.injected, mark.extra) {
             // Esc is never dropped, whatever the engine answers.
@@ -265,26 +282,6 @@ impl<O: Os> Host<O> {
             self.lent.truncate(self.max);
         }
         debug_assert!(over == 0, "the pointer engine pushed past its max_acts");
-    }
-
-    /// True while our input is queued or not back yet; a wait past `echo_ms` ends and counts as a lost echo.
-    fn behind(&mut self, now: Mono) -> bool {
-        let wait = self.echo.check(now);
-        if wait == Wait::Lost {
-            self.stats.echo_lost();
-        }
-        wait == Wait::Waiting || !self.queue.is_empty()
-    }
-
-    /// The queue is full: events pass in order without the engine, whose view is then stale; counted once per overflow.
-    fn overflow(&mut self) {
-        if self.queue.overflow() {
-            self.stats.echo_lost();
-        }
-        if self.trust == Trust::Whole {
-            self.trust = Trust::Stale;
-        }
-        self.wake();
     }
 
     /// Asks for a turn, once until it runs.

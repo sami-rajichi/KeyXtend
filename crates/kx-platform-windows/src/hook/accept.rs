@@ -1,6 +1,6 @@
 //! Whose input reaches the engine, and hook messages as engine events (ADR-0027 decision 3).
 
-use kx_module_api::ports::{Button, Scan};
+use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
 use super::Source;
 use crate::keys::{EXTENDED_PREFIXES, REPLAY, REPORTED_EXTENDED, TAG};
@@ -66,10 +66,27 @@ pub(crate) fn esc(source: Source, msg: u32, vk: u32, injected: bool, extra: usiz
     press && (ours || heard(source, injected, extra))
 }
 
-/// True for our engine's own key input coming back through the keyboard hook; our keyboard's `TAG` keys are not the
-/// host's.
-pub(crate) fn key_echo(extra: usize) -> bool {
+/// True for the host's own input coming back through a hook; our keyboard's `TAG` input is not the host's.
+pub(crate) fn replayed(extra: usize) -> bool {
     extra == REPLAY
+}
+
+/// A mouse event of `kind` at `at` as an act.
+pub(crate) fn act(kind: Kind, at: Point) -> PointerAct {
+    match kind {
+        Kind::Down(button) => PointerAct::Down(button, at),
+        Kind::Up(button) => PointerAct::Up(button, at),
+        Kind::Move => PointerAct::Move(at),
+    }
+}
+
+/// Key message `msg` for `scan` as an act; `None` for a message that is neither a press nor a release.
+pub(crate) fn key_act(msg: u32, scan: Scan) -> Option<PointerAct> {
+    if KEY_DOWNS.contains(&msg) {
+        Some(PointerAct::KeyDown(scan))
+    } else {
+        KEY_UPS.contains(&msg).then_some(PointerAct::KeyUp(scan))
+    }
 }
 
 /// True for a key the user let go in `source`: the hand's, or in simulated mode the gate tool's.

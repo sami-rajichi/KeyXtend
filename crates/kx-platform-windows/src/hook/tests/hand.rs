@@ -47,19 +47,21 @@ fn a_key_only_batchs_echo_ends_the_wait() {
 }
 
 /// A rig whose engine pressed `acts` at a settle, with our echo back, so nothing of ours is in flight.
-fn pressed(acts: Vec<PointerAct>) -> Rig {
+fn pressed(acts: &[PointerAct]) -> Rig {
     let mut rig = rig(Source::Physical);
-    rig.plan().settle_acts = acts;
+    rig.plan().settle_acts = acts.to_vec();
     rig.host.turn();
     rig.plan().settle_acts.clear();
-    assert!(!rig.injected(MOVE, A, REPLAY), "our echo is back");
+    rig.echo(acts);
+    assert!(!rig.hand(MOVE, A), "our echo is back");
     rig.world.take();
+    rig.heard();
     rig
 }
 
 #[test]
 fn the_hands_own_up_with_nothing_in_flight_clears_the_record() {
-    let mut rig = pressed(vec![PointerAct::Down(Button::Left, A)]);
+    let mut rig = pressed(&[PointerAct::Down(Button::Left, A)]);
     assert!(!rig.hand(LEFT_UP, B), "the engine lets it through");
     rig.host.stop();
     let want = [Call::Arm(None), Call::Unhook];
@@ -95,7 +97,7 @@ fn a_stop_tries_the_records_let_go_once_even_when_it_is_refused() {
 
 #[test]
 fn the_hands_own_key_up_clears_the_record_and_another_programs_does_not() {
-    let mut rig = pressed(vec![PointerAct::KeyDown(CTRL), PointerAct::KeyDown(SHIFT)]);
+    let mut rig = pressed(&[PointerAct::KeyDown(CTRL), PointerAct::KeyDown(SHIFT)]);
     let hand = rig.mark(false, 0);
     rig.host.key(KEY_UP, VK_CONTROL, CTRL, hand);
     let other = rig.mark(true, OTHER);

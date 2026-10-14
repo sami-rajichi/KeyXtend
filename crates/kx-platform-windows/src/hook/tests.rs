@@ -1,8 +1,11 @@
-//! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the queue
-//! in `order`, the record of held input in `held` and against the hand in `hand`, and the other pure parts in `parts`.
+//! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the health
+//! check in `health`, the queue in `order`, the wait for our echo in `echo`, the record of held input in `held` and
+//! against the hand in `hand`, and the other pure parts in `parts`.
 
+mod echo;
 mod fake;
 mod hand;
+mod health;
 mod held;
 mod limits;
 mod order;
@@ -31,6 +34,12 @@ const CFG: HookConfig = HookConfig {
 const MOVE: u32 = 0x0200;
 const LEFT_DOWN: u32 = 0x0201;
 const LEFT_UP: u32 = 0x0202;
+/// Each button's down and up message.
+const BUTTONS: [(Button, u32, u32); 3] = [
+    (Button::Left, LEFT_DOWN, LEFT_UP),
+    (Button::Right, 0x0204, 0x0205),
+    (Button::Middle, 0x0207, 0x0208),
+];
 const KEY_DOWN: u32 = 0x0100;
 const KEY_UP: u32 = 0x0101;
 const VK_ESC: u32 = 0x1B;
@@ -108,6 +117,21 @@ impl Rig {
         self.host.mouse(msg, at, mark)
     }
 
+    /// Our sent `acts` come back through the hooks.
+    fn echo(&mut self, acts: &[PointerAct]) {
+        for &act in acts {
+            let mark = self.mark(true, REPLAY);
+            match act {
+                PointerAct::KeyDown(scan) => self.host.key(KEY_DOWN, 0, scan, mark),
+                PointerAct::KeyUp(scan) => self.host.key(KEY_UP, 0, scan, mark),
+                act => {
+                    let (msg, at) = mouse_msg(act);
+                    assert!(!self.host.mouse(msg, at, mark), "our input passes");
+                }
+            }
+        }
+    }
+
     /// A turn that sends a move of ours, so later input waits for its echo.
     fn send_ours(&mut self) {
         self.plan().settle_acts = vec![PointerAct::Move(B)];
@@ -115,6 +139,20 @@ impl Rig {
         self.plan().settle_acts.clear();
         self.heard();
         self.world.take();
+    }
+}
+
+/// The message and point of mouse act `act`.
+fn mouse_msg(act: PointerAct) -> (u32, Point) {
+    let msg = |b: Button, up: bool| {
+        let row = BUTTONS.iter().find(|(x, ..)| *x == b);
+        row.map_or(MOVE, |&(_, down, lift)| if up { lift } else { down })
+    };
+    match act {
+        PointerAct::Down(b, at) => (msg(b, false), at),
+        PointerAct::Up(b, at) => (msg(b, true), at),
+        PointerAct::Move(at) => (MOVE, at),
+        PointerAct::KeyDown(_) | PointerAct::KeyUp(_) => (0, Point::default()),
     }
 }
 
@@ -164,46 +202,6 @@ fn in_simulated_mode_only_the_gate_tools_input_reaches_the_engine() {
     assert!(rig.heard().is_empty());
     assert!(rig.injected(MOVE, A, SIM_TAG));
     assert_eq!(rig.heard().len(), 1);
-}
-
-#[test]
-fn our_input_passes_and_ends_the_wait_for_it() {
-    for tag in [REPLAY, TAG] {
-        let mut rig = rig(Source::Physical);
-        rig.send_ours();
-        assert!(!rig.injected(MOVE, B, tag));
-        assert!(rig.heard().is_empty(), "never reaches the engine");
-        assert!(!rig.hand(MOVE, A), "nothing to wait for");
-        rig.host.turn();
-        assert!(!rig.world.take().iter().any(|c| matches!(c, Call::Send(_))));
-    }
-}
-
-#[test]
-fn let_through_input_waits_behind_our_unechoed_input_in_order() {
-    let mut rig = rig(Source::Physical);
-    rig.send_ours();
-    assert!(rig.hand(MOVE, A), "held back");
-    rig.plan().on_acts = vec![PointerAct::KeyUp(SHIFT)];
-    assert!(rig.hand(LEFT_DOWN, B), "held back");
-    assert_eq!(rig.world.take(), [Call::Wake], "one wake");
-    rig.host.turn();
-    let want = vec![
-        PointerAct::Move(A),
-        PointerAct::Down(Button::Left, B),
-        PointerAct::KeyUp(SHIFT),
-    ];
-    assert_eq!(rig.world.take().first(), Some(&Call::Send(want)));
-}
-
-#[test]
-fn after_echo_ms_the_wait_ends_and_counts_a_lost_echo() {
-    let mut rig = rig(Source::Physical);
-    rig.send_ours();
-    rig.world.pass(CFG.echo_ms + 1);
-    assert!(!rig.hand(MOVE, A), "the wait is over");
-    assert!(!rig.hand(MOVE, A));
-    assert_eq!(rig.stats().lost_echoes, 1);
 }
 
 #[test]

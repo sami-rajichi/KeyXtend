@@ -20,9 +20,4 @@ impl<O: Os> Host<O> {
             self.held.forget_button(button);
         }
     }
-
-    /// True when nothing of ours is in flight: nothing is queued and no echo is awaited.
-    pub(super) fn idle(&self) -> bool {
-        self.queue.is_empty() && self.echo.is_clear()
-    }
 }

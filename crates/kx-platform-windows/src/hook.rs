@@ -11,6 +11,7 @@
 
 mod accept;
 mod batch;
+mod echo;
 mod health;
 mod held;
 mod host;

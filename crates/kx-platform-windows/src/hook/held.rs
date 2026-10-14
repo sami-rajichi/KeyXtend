@@ -1,10 +1,12 @@
 //! What our own sent input holds down (ledger rulings 21 and 22), so the host lets go itself when the engine cannot.
-//! The record is fixed in size, so noting input never allocates; letting go, on the loop side only, builds one batch.
+//! The record is fixed in size, so noting input and letting go never allocate.
 
 use kx_module_api::ports::{Button, MAX_HELD_KEYS, Point, PointerAct, Scan};
 
 /// One slot per `Button`; each arm of `slot` checks at build time that its slot is below it.
 pub(crate) const SLOTS: usize = 3;
+/// The most acts a let-go adds: an Up per button and a key-up per key.
+pub(crate) const LET_GO: usize = SLOTS + MAX_HELD_KEYS;
 
 /// The slot of `button`: its own discriminant, so slots never repeat. The match is exhaustive and every arm goes
 /// through `below_slots` at build time, so a new button cannot build until its slot is below `SLOTS`.
@@ -23,7 +25,7 @@ const fn below_slots(slot: usize) -> usize {
 }
 
 /// The buttons and keys our sent input pressed and has not let go.
-#[derive(Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub(crate) struct Held {
     /// Per slot, the button and where it went down.
     buttons: [Option<(Button, Point)>; SLOTS],
@@ -56,16 +58,16 @@ impl Held {
     }
 
     /// An Up for each button still held, at `at` or else where it went down, then a key-up for each key, newest first.
-    pub(crate) fn release(&self, at: Option<Point>) -> Vec<PointerAct> {
+    pub(crate) fn release(&self, at: Option<Point>) -> impl Iterator<Item = PointerAct> + '_ {
         let buttons = self.buttons.iter().flatten();
-        let ups = buttons.map(|&(button, down)| PointerAct::Up(button, at.unwrap_or(down)));
+        let ups = buttons.map(move |&(button, down)| PointerAct::Up(button, at.unwrap_or(down)));
         let keys = self
             .keys
             .iter()
             .rev()
             .flatten()
             .map(|&scan| PointerAct::KeyUp(scan));
-        ups.chain(keys).collect()
+        ups.chain(keys)
     }
 
     /// Notes `button` down at a point, or up.

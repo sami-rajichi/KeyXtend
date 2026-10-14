@@ -2,9 +2,6 @@
 //! nothing overtakes it. Moves coalesce, buttons and keys keep a headroom, and the room is reserved once, so a callback
 //! never allocates.
 
-use std::time::Duration;
-
-use kx_module_api::Mono;
 use kx_module_api::ports::{Button, Point, PointerAct};
 
 use super::accept::Kind;
@@ -128,65 +125,7 @@ impl Queue {
     }
 
     /// The room reserved at the start.
-    #[cfg(test)]
     pub(crate) fn room(&self) -> usize {
         self.acts.capacity()
-    }
-}
-
-/// Whether input must still wait for our own.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum Wait {
-    /// Nothing of ours is out.
-    Clear,
-    /// Our input has not come back yet.
-    Waiting,
-    /// It did not come back within `echo_ms`; the wait ended now.
-    Lost,
-}
-
-/// The wait for our own input to come back through a hook.
-#[derive(Debug)]
-pub(crate) struct Echo {
-    /// When our last batch went out.
-    since: Option<Mono>,
-    /// How long it may take.
-    wait: Duration,
-}
-
-impl Echo {
-    /// No wait, and `echo_ms` for each one.
-    pub(crate) fn new(echo_ms: u32) -> Self {
-        Self {
-            since: None,
-            wait: Duration::from_millis(u64::from(echo_ms)),
-        }
-    }
-
-    /// Our input went out at `at`; later input waits until it comes back.
-    pub(crate) fn sent(&mut self, at: Mono) {
-        self.since = Some(at);
-    }
-
-    /// True when no echo is awaited.
-    pub(crate) fn is_clear(&self) -> bool {
-        self.since.is_none()
-    }
-
-    /// Our input came back, or never will: the wait ends.
-    pub(crate) fn clear(&mut self) {
-        self.since = None;
-    }
-
-    /// Whether input waits at `now`; a wait past `echo_ms` ends as `Lost`.
-    pub(crate) fn check(&mut self, now: Mono) -> Wait {
-        match self.since {
-            None => Wait::Clear,
-            Some(at) if now.saturating_since(at) > self.wait => {
-                self.since = None;
-                Wait::Lost
-            }
-            Some(_) => Wait::Waiting,
-        }
     }
 }
