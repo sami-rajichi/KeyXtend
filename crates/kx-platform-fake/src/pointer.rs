@@ -116,6 +116,15 @@ impl FakePointerHook {
         self.drive(|engine, _| engine.deadline()).flatten()
     }
 
+    /// Lets go mid-run as the host's reinstall or the panic hook's let-go does: `release` with its acts sent, and the run
+    /// goes on. Then it settles at `now`, as the turn the host asks for would.
+    pub fn let_go(&self, now: Mono) {
+        let _ = self.drive(|engine, log| {
+            log.lend(|acts| engine.release(acts));
+            log.lend(|acts| engine.settle(now, acts));
+        });
+    }
+
     /// Gives up the engine as the host does after it panicked: one `release` with its acts sent, then the engine
     /// drops, while the run stays until the module drops it.
     ///
