@@ -33,7 +33,7 @@ No point or scan code is stored or logged. Debug output hides them: `Note` and t
 | Hook events (`PointerEvent`) from the platform | In the shipped app only the hand's input, plus our keyboard's `TAG` Esc, which only cancels a carry (`kx-platform-windows.md`). Point and time maths saturate, and a DPI of 0 counts as `BASE_DPI` | At most `MAX_ACTS` acts per call; notes within `NOTE_ROOM`, and moves coalesce | Property tests (`engine/props.rs`: random runs, lapses, missed releases) |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** the engine hears only what the hook hands it: the hand's input, and our keyboard's `TAG` Esc, which can only cancel a carry (ADR-0027 decision 3, ledger ruling 12). Another program's input passes untouched, and the gate-only `--sim-input` build never ships (`keyxtend.md`).
+- **Spoofing:** the engine hears only what the hook hands it: the hand's input, and our keyboard's `TAG` Esc, which can only cancel a carry (ADR-0027 decision 3, spec §5.1). Another program's input passes untouched, and the gate-only `--sim-input` build never ships (`keyxtend.md`).
   - Toggle and latch events need `InjectInput`, which the kernel grants only to first-party modules that declare it. A forged `AssistAsk` only sends the state again.
 - **Tampering:** a hand-edited `[mouse]` value is checked and resets alone, so a still press can neither fire at once nor never. A saved `rclick = true` only turns Right-click on at start, which its lit key shows.
 - **Logging / repudiation:** the module logs a refused hook start with its `HookError` (an OS code at most), a given-up engine, a refused `rclick` write by its kind only, and an actor panic. At each stop it logs `STOPPED_LINE` with the hook's numbers only (`the_stopped_line_logs_the_hook_numbers_and_no_point`).
@@ -47,10 +47,10 @@ No point or scan code is stored or logged. Debug output hides them: `Note` and t
   - A refused start for a mode key shows `notice.mouse-hook-failed` and the key stays off; one for latches warns once per streak.
 - **Elevation:** with uiAccess the engine's input reaches admin windows, but it only reshapes the hand's own clicks there. It lets a held press through, right-clicks at the press point, picks up and drops for Grab, puts the latches around a click, and sends Esc to cancel a carry.
 - **Stuck input:** every path lets go of the button and the modifiers.
-  - `release` cancels a carry with Esc, then the Up, then the modifiers, and forgets a held-back press (ledger ruling 29; `release_cancels_a_carry_with_esc_then_lets_go_of_it_and_its_modifiers`, properties `nothing_stays_down_after_release` and `nothing_sticks_after_a_stop_mid_run`).
+  - `release` cancels a carry with Esc, then the Up, then the modifiers, and forgets a held-back press (`release_cancels_a_carry_with_esc_then_lets_go_of_it_and_its_modifiers`, properties `nothing_stays_down_after_release` and `nothing_sticks_after_a_stop_mid_run`).
   - The host calls it at a stop, a health reinstall and the panic hook's let-go, and the run goes on after the last two (`stopping_during_a_carry_cancels_it_with_esc_and_lets_go_of_the_button`, `a_let_go_mid_run_cancels_a_carry_tells_the_new_state_and_the_engine_works_on`).
   - Every dropped press gets its release, and the next click recovers from a missed one (properties `every_dropped_press_gets_its_release`, `the_next_click_recovers_from_a_missed_release`).
-- **An engine the host gave up (ledger ruling 39):** after its one release, the host drops a panicked engine, whose drop tells the actor (`Msg::Lost`). The actor drops the run, turns both modes off for this session only (the saved `rclick` stays), stays live and shows `notice.mouse-reset`.
+- **An engine the host gave up:** after its one release, the host drops a panicked engine, whose drop tells the actor (`Msg::Lost`). The actor drops the run, turns both modes off for this session only (the saved `rclick` stays), stays live and shows `notice.mouse-reset`.
   - A mode key starts a fresh run, and held latches get one at once, so a click keeps its modifier; a refused one takes the quiet latch path (`tests/mouse/reset.rs`).
   - A late word from an older run's engine changes nothing (`a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone`).
 - **An actor panic:** the thread publishes `AssistChanged::OFF` (`live: false`) at once, so the keyboard dims its keys, then `notice.mouse-stopped`. The run drops as the thread unwinds, which lets go (`an_actor_that_panics_mid_run_says_at_once_that_the_module_stopped`).
@@ -65,7 +65,7 @@ No point or scan code is stored or logged. Debug output hides them: `Note` and t
 - None open.
 - Done (P4 review, 175f4f9): the port's `PointerEvent` and `PointerAct` derived `Debug`, which would print points and scan codes. Both now hide them.
 ### Accepted (with reason)
-- **Points on the bus with no gate (ledger ruling 30):** `AssistNote` and `PointerMoved` carry click points, and neither names a capability, so any module could hear them. Every module is first-party and compiled in, and a new capability would change spec §9.4; P7 decides it with the face's gate (`kx-ui.md`, `docs/items/P7.md`).
+- **Points on the bus with no gate:** `AssistNote` and `PointerMoved` carry click points, and neither names a capability, so any module could hear them. Every module is first-party and compiled in, and a new capability would change spec §9.4; P7 decides it with the face's gate (`kx-ui.md`, `docs/items/P7.md`).
 - **Unbounded inboxes:** the actor's inbox and the engine's command queue have no bound. Only the bus fills them, one message per toggle, latch change, ask or coalesced move, from first-party modules.
 - **A forged `TAG` Esc:** another program that tags its Esc as our keyboard's can cancel a carry (`kx-platform-windows.md`). It only lets the item go after an Esc, and the user picks it up again.
 - **An engine that keeps failing:** each mode tap after a reset starts a fresh run, so a repeating fault shows `notice.mouse-reset` each time. Nothing stays held, as each give-up lets go first.

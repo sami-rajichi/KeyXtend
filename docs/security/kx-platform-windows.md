@@ -161,7 +161,7 @@ The guard calls the procedure kept in its window property (`KeyXtend.Guard`). An
 
 The host's record of held input counts a hand's press that our input replayed, such as a held press that Right-click lets through. The hand's own Up clears it, but only once our press is proven ahead of it. So a replayed press the hand still holds is let go at a stop or when the engine is done, which can end that drag. That is the safe side: a missed Up would leave the button down. Another program that forges our `REPLAY` tag can end the echo wait early, and then a hand's Up can clear the record while our press is still in flight. That button of ours may then stay down past a stop. This is accepted because a program that can inject input could already hold a button down itself.
 
-A panic inside a hook callback runs the app's panic hook there (ledger ruling 37). It lets go first, as `release_now` returns at once on the hook thread, then writes one log line with the panic's place inside the callback. This comes once per run in practice, as the panicking engine is then given up, and the line holds a place only.
+A panic inside a hook callback runs the app's panic hook there. It lets go first, as `release_now` returns at once on the hook thread, then writes one log line with the panic's place inside the callback. This comes once per run in practice, as the panicking engine is then given up, and the line holds a place only.
 
 A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 
