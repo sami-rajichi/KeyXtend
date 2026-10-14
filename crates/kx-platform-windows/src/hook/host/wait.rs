@@ -1,5 +1,5 @@
 //! The wait for our own input: the hand's input waits behind it until the newest batch's first echo, and a full queue
-//! lets it pass. Tests read the wait and the room reserved for it here.
+//! lets it pass. Tests read the wait and the host's reserved room here.
 
 use kx_module_api::Mono;
 

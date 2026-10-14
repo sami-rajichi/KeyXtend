@@ -140,6 +140,20 @@ fn a_send_leaves_the_newest_point_at_its_newest_pointed_act_not_at_an_echo() {
 }
 
 #[test]
+fn a_late_echo_of_ours_after_the_send_keeps_the_newest_point() {
+    let mut rig = rig(Source::Physical);
+    rig.settle(&[LEFT_A, PointerAct::Move(B)]);
+    rig.echo(&[LEFT_A]);
+    rig.host.stop();
+    let want = vec![PointerAct::Up(Button::Left, B)];
+    assert_eq!(
+        sends(&rig.world.take()),
+        [want],
+        "the Down's late echo at A does not move the pointer back"
+    );
+}
+
+#[test]
 fn a_panic_inside_our_send_leaves_no_stale_echo_for_the_next_batch() {
     let mut rig = rig(Source::Physical);
     rig.world.strays.replace(vec![0]);

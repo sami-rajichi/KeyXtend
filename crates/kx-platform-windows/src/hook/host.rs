@@ -49,7 +49,7 @@ pub(crate) struct Host<O: Os> {
     hand: Held,
     /// Presses the next batch owes an Up first: the hand let them go before ours was proven ahead.
     owed: Held,
-    /// The newest point the hook saw or our sent input went to.
+    /// The newest point our sent input went to, or the hook saw in an event that is not our own echo.
     at: Option<Point>,
     trust: Trust,
     /// The deadline the timer is set for.
@@ -137,7 +137,9 @@ impl<O: Os> Host<O> {
     /// Decides mouse message `msg` at `at`; true to drop it. A panic passes the event and marks the engine broken, and
     /// the hand's event is noted for the queue and the record of held input.
     pub(crate) fn mouse(&mut self, msg: u32, at: Point, mark: Mark) -> bool {
-        self.at = Some(at);
+        if !is_replay(mark.extra) {
+            self.at = Some(at);
+        }
         let queued = !self.queue.is_empty();
         let dropped = self.guard(|h| h.on_mouse(msg, at, mark)).unwrap_or(false);
         let heard = take(self.source, mark.injected, mark.extra) == Take::Engine;
