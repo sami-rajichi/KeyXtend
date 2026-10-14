@@ -25,3 +25,13 @@ pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
     PointerEvent, PointerHook, PointerHookKey,
 };
+
+use crate::Redacted;
+use std::fmt;
+
+/// Writes `name` with its point `at` hidden, as a click's point can show what was clicked.
+fn hide_at(f: &mut fmt::Formatter<'_>, name: &str, at: Point) -> fmt::Result {
+    f.debug_struct(name)
+        .field("at", &Redacted::new(at))
+        .finish()
+}

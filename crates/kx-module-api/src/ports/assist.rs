@@ -1,7 +1,7 @@
 //! Mouse-assist events on the kernel's bus, so the keyboard, the mouse module and the UI never call each other.
 //! A click's point can show what was clicked (an on-screen PIN pad), so no event here prints a point or a key.
 
-use super::{Point, Scan};
+use super::{Point, Scan, hide_at};
 use crate::{Capability, Event, Redacted};
 use std::fmt;
 
@@ -126,13 +126,6 @@ impl fmt::Debug for AssistNote {
             Self::Cancelled => f.write_str("Cancelled"),
         }
     }
-}
-
-/// Writes `name` with its point `at` hidden.
-fn hide_at(f: &mut fmt::Formatter<'_>, name: &str, at: Point) -> fmt::Result {
-    f.debug_struct(name)
-        .field("at", &Redacted::new(at))
-        .finish()
 }
 
 /// The latest pointer point, for the badge; its `Debug` hides it.

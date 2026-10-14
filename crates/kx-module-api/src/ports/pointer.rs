@@ -1,8 +1,9 @@
 //! The pointer hook: a module's engine runs on the platform's hook thread and decides each mouse event there
 //! (ADR-0027).
 
-use super::{Point, Scan};
-use crate::{Capability, Mono, ServiceId, ServiceKey};
+use super::{Point, Scan, hide_at};
+use crate::{Capability, Mono, Redacted, ServiceId, ServiceKey};
+use std::fmt;
 use thiserror::Error;
 
 /// A mouse button.
@@ -16,8 +17,8 @@ pub enum Button {
     Middle,
 }
 
-/// One event the hook saw, in physical pixels; it never leaves the hook thread.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// One event the hook saw, in physical pixels; it never leaves the hook thread, and its `Debug` hides every point.
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum PointerEvent {
     /// A button went down.
     Down {
@@ -59,8 +60,8 @@ impl PointerEvent {
     }
 }
 
-/// Input the host sends, in order, after the callback returns.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Input the host sends, in order, after the callback returns; its `Debug` hides every point and key.
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum PointerAct {
     /// Moves the pointer to the point.
     Move(Point),
@@ -72,6 +73,60 @@ pub enum PointerAct {
     KeyDown(Scan),
     /// Lets go of a key.
     KeyUp(Scan),
+}
+
+/// Shows the button and flags only: a click's point can show what was clicked (an on-screen PIN pad).
+impl fmt::Debug for PointerEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::Down {
+                button,
+                at,
+                ours,
+                dpi,
+            } => f
+                .debug_struct("Down")
+                .field("button", &button)
+                .field("at", &Redacted::new(at))
+                .field("ours", &ours)
+                .field("dpi", &dpi)
+                .finish(),
+            Self::Up { button, at } => f
+                .debug_struct("Up")
+                .field("button", &button)
+                .field("at", &Redacted::new(at))
+                .finish(),
+            Self::Move { at } => hide_at(f, "Move", at),
+            Self::Esc => f.write_str("Esc"),
+        }
+    }
+}
+
+/// Shows the button only: a point can show what was clicked, and a run of keys what was typed.
+impl fmt::Debug for PointerAct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::Move(at) => hide(f, "Move", None, at),
+            Self::Down(button, at) => hide(f, "Down", Some(button), at),
+            Self::Up(button, at) => hide(f, "Up", Some(button), at),
+            Self::KeyDown(key) => hide(f, "KeyDown", None, key),
+            Self::KeyUp(key) => hide(f, "KeyUp", None, key),
+        }
+    }
+}
+
+/// Writes the act `name`: its `button`, if any, then `value` hidden.
+fn hide<T>(
+    f: &mut fmt::Formatter<'_>,
+    name: &str,
+    button: Option<Button>,
+    value: T,
+) -> fmt::Result {
+    let mut tuple = f.debug_tuple(name);
+    if let Some(button) = button {
+        tuple.field(&button);
+    }
+    tuple.field(&Redacted::new(value)).finish()
 }
 
 /// A module's decisions, run by the platform on its hook thread.
@@ -181,39 +236,4 @@ impl ServiceKey for PointerHookKey {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashSet;
-
-    #[test]
-    fn a_refusal_names_the_os_code() {
-        let text = HookError::Refused(1428).to_string();
-        assert!(text.contains("1428"), "{text}");
-    }
-
-    #[test]
-    fn a_passed_event_is_sent_again_as_its_own_act_and_esc_has_none() {
-        let at = Point { x: -3, y: 9 };
-        let down = PointerEvent::Down {
-            button: Button::Right,
-            at,
-            ours: true,
-            dpi: 144,
-        };
-        assert_eq!(down.act(), Some(PointerAct::Down(Button::Right, at)));
-        let up = PointerEvent::Up {
-            button: Button::Middle,
-            at,
-        };
-        assert_eq!(up.act(), Some(PointerAct::Up(Button::Middle, at)));
-        assert_eq!(PointerEvent::Move { at }.act(), Some(PointerAct::Move(at)));
-        assert_eq!(PointerEvent::Esc.act(), None, "Esc is never dropped");
-    }
-
-    #[test]
-    fn each_error_says_something_else() {
-        let errors = [HookError::Busy, HookError::Refused(0), HookError::Thread];
-        let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();
-        assert_eq!(texts.len(), errors.len());
-    }
-}
+mod tests;
