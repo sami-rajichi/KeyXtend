@@ -1,6 +1,6 @@
 //! Tests of the host over a fake OS: callbacks here, its limits in `limits`, the loop and the stop in `run`, the health
 //! check in `health`, the queue in `order`, the wait for our echo in `echo`, the record of held input in `held` and
-//! against the hand in `hand`, and the other pure parts in `parts`.
+//! against the hand in `hand`, the other pure parts in `parts`, and properties over random runs in `props`.
 
 mod echo;
 mod fake;
@@ -10,6 +10,7 @@ mod held;
 mod limits;
 mod order;
 mod parts;
+mod props;
 mod run;
 
 use std::rc::Rc;
