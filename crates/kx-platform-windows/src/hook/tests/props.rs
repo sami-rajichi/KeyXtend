@@ -46,7 +46,7 @@ enum Gesture {
 struct Ev {
     act: PointerAct,
     ours: bool,
-    id: u32,
+    id: u16,
     unseen: bool,
 }
 
@@ -77,6 +77,8 @@ struct End {
     grew: bool,
     /// A hook dropped our own input.
     ours_dropped: bool,
+    /// Waits for our echo that ended as lost.
+    lost: u32,
 }
 
 /// Runs `steps`, then stops.
@@ -209,13 +211,16 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
     /// With room in the queue and a whole engine, the hand's events reach the apps in its order, so no Down follows its
-    /// own Up, and nothing the hand let go stays down.
+    /// own Up, nothing the hand let go stays down, and no wait is lost unless an echo was swallowed.
     #[test]
     fn a_calm_run_keeps_the_hands_order_and_leaves_nothing_of_ours_held(
         steps in vec(calm(), 0..=CALM_STEPS),
     ) {
         let end = play(&steps);
         prop_assert!(in_hand_order(&end), "{:?}", end.apps);
+        if !steps.iter().any(|s| matches!(s, Step::Swallow)) {
+            prop_assert_eq!(end.lost, 0, "every echo came back, so no wait is lost");
+        }
         prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;
     }

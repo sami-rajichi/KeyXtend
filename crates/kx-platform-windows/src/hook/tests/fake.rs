@@ -51,7 +51,7 @@ pub(super) struct World {
     /// Setting the deadline timer is refused.
     pub refuse_timer: Cell<bool>,
     /// Each act the OS took, with its id, oldest first; an echo takes its own out.
-    pub ids: RefCell<Vec<(PointerAct, u32)>>,
+    pub ids: RefCell<Vec<(PointerAct, u16)>>,
 }
 
 impl Default for World {
@@ -123,7 +123,7 @@ impl Os for Fake {
     }
 
     /// Like Windows, input the OS took moves the last input time.
-    fn send(&self, acts: &[PointerAct], first: u32) -> usize {
+    fn send(&self, acts: &[PointerAct], first: u16) -> usize {
         self.0.note(Call::Send(acts.to_vec()));
         let took = self.0.takes.get().map_or(acts.len(), |n| n.min(acts.len()));
         if took > 0 {

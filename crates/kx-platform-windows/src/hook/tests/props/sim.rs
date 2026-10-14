@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
 use super::super::fake::{Call, Fake, Plan};
-use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, Rig, SHIFT, VK_ESC, mouse_msg, rig};
+use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, MOUSE_KEPT, Rig, SHIFT, VK_ESC, mouse_msg, rig};
 use super::{End, Ev, Fate, Gesture};
 use crate::hook::host::Host;
 use crate::hook::{Mark, Source};
@@ -132,6 +132,7 @@ impl Sim {
         let settled = self.apps.len();
         self.call(Host::stop);
         self.drain();
+        let lost = self.rig.stats().lost_echoes;
         let Rig { host, plan, .. } = self.rig;
         drop(host);
         let heard = std::mem::take(
@@ -149,6 +150,7 @@ impl Sim {
             heard,
             grew: self.grew,
             ours_dropped: self.ours_dropped,
+            lost,
         }
     }
 
@@ -202,11 +204,13 @@ impl Sim {
         self.rig.world.last_input.set(Some(tick));
     }
 
-    /// Gives `ev` to its hook; true when it passes on.
+    /// Gives `ev` to its hook, a mouse event's extra cut to its low 32 bits as Windows does; true when it passes on.
     fn through(&mut self, ev: Ev) -> bool {
+        let key = matches!(ev.act, PointerAct::KeyDown(_) | PointerAct::KeyUp(_));
+        let extra = if ev.ours { replay_tag(ev.id) } else { 0 };
         let mark = Mark {
             injected: ev.ours,
-            extra: if ev.ours { replay_tag(ev.id) } else { 0 },
+            extra: if key { extra } else { extra & MOUSE_KEPT },
             time: self.rig.world.tick.get(),
         };
         let dropped = match ev.act {

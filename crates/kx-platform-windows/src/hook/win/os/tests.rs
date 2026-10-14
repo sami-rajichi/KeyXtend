@@ -9,7 +9,7 @@ use super::*;
 use crate::keys::replay_tag;
 
 /// The first act's id in the batch test.
-const ID: u32 = 41;
+const ID: u16 = 41;
 /// How many desktop queries show that none leaks a handle; tests running beside it open far fewer.
 const QUERIES: u32 = 1_000;
 

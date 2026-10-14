@@ -8,6 +8,9 @@ use kx_module_api::ports::PointerAct;
 
 use super::held::LET_GO;
 
+/// The most acts out at once: half the 16-bit id space, so a wrap-aware compare reads every id out right.
+const MOST_OUT: usize = 1 << (u16::BITS - 1);
+
 /// Whether input must still wait for our own.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Wait {
@@ -22,10 +25,12 @@ pub(crate) enum Wait {
 /// The acts sent and not settled yet, and the wait for the newest batch.
 #[derive(Debug)]
 pub(crate) struct Echo {
-    /// Every act sent and not settled, oldest first, given-up ones too; only the loop side adds to it, within its room.
+    /// Every act sent and not settled, oldest first, given-up ones too; only the loop side adds to it, within `room`.
     flight: Vec<PointerAct>,
-    /// The id the next act sent gets; `flight` holds the ids just below it.
-    next: u32,
+    /// The most acts `flight` holds, never past `MOST_OUT`.
+    room: usize,
+    /// The id the next act sent gets; `flight` holds the ids just below it, wrapping.
+    next: u16,
     /// How many acts at the start of `flight` are settled: back, or passed by a newer act's echo.
     back: usize,
     /// Where the newest batch starts in `flight`.
@@ -33,16 +38,18 @@ pub(crate) struct Echo {
     /// When the newest batch went out, until an echo of it or `echo_ms`.
     since: Option<Mono>,
     /// Presses whose echo never came, one per kind with the newest one's id, in room reserved for a let-go.
-    doubt: Vec<(u32, PointerAct)>,
+    doubt: Vec<(u16, PointerAct)>,
     /// How long that may take.
     wait: Duration,
 }
 
 impl Echo {
-    /// No wait, `echo_ms` for each one, and room for `room` acts out at once.
+    /// No wait, `echo_ms` for each one, and room for `room` acts out at once, at most `MOST_OUT`.
     pub(crate) fn new(echo_ms: u32, room: usize) -> Self {
+        let room = room.min(MOST_OUT);
         Self {
             flight: Vec::with_capacity(room),
+            room,
             next: 0,
             back: 0,
             newest: 0,
@@ -53,7 +60,7 @@ impl Echo {
     }
 
     /// The id the next batch's first act gets.
-    pub(crate) fn next(&self) -> u32 {
+    pub(crate) fn next(&self) -> u16 {
         self.next
     }
 
@@ -66,21 +73,26 @@ impl Echo {
         let back = std::mem::take(&mut self.back);
         self.flight.drain(..back.min(self.flight.len()));
         self.trim(acts.len());
+        let skip = acts.len().saturating_sub(self.room);
+        for (i, &act) in acts.iter().take(skip).enumerate() {
+            self.doubt_press(self.next.wrapping_add(count(i)), act);
+        }
         self.newest = self.flight.len();
-        self.flight.extend_from_slice(acts);
+        self.flight
+            .extend_from_slice(acts.get(skip..).unwrap_or_default());
         self.next = self.next.wrapping_add(count(acts.len()));
         self.since = Some(at);
     }
 
     /// Our act `id` came back: it and every older act still out are settled, and those older presses stay in doubt, as
     /// their echo never came. An echo of the newest batch ends the wait, and one that names no act out changes nothing.
-    pub(crate) fn back(&mut self, id: u32) {
+    pub(crate) fn back(&mut self, id: u16) {
         self.doubt.retain(|(d, _)| *d != id);
         let Some(at) = self.index(id).filter(|at| *at >= self.back) else {
             return;
         };
         for k in self.back..at {
-            self.doubt_press(k);
+            self.doubt_at(k);
         }
         self.back = at + 1;
         if at >= self.newest {
@@ -112,9 +124,15 @@ impl Echo {
         self.flight.capacity()
     }
 
+    /// The most acts out at once.
+    #[cfg(test)]
+    pub(crate) fn most(&self) -> usize {
+        self.room
+    }
+
     /// The next act sent gets `id`, as after many sends.
     #[cfg(test)]
-    pub(crate) fn skip_to(&mut self, id: u32) {
+    pub(crate) fn skip_to(&mut self, id: u16) {
         self.next = id;
     }
 
@@ -131,31 +149,42 @@ impl Echo {
         }
     }
 
-    /// Where act `id` sits in `flight`, if it is there.
-    fn index(&self, id: u32) -> Option<usize> {
+    /// Where act `id` sits in `flight`, if it is there; the ids out span at most `MOST_OUT`, so the wrapping age is
+    /// exact.
+    fn index(&self, id: u16) -> Option<usize> {
         let len = self.flight.len();
-        let age = usize::try_from(self.next.wrapping_sub(id)).ok()?;
+        let age = usize::from(self.next.wrapping_sub(id));
         (1..=len).contains(&age).then(|| len - age)
     }
 
-    /// Drops the oldest acts out until `more` fit in the room reserved, keeping their presses in doubt.
+    /// Drops the oldest acts out until `more` fit in the room, keeping their presses in doubt.
     fn trim(&mut self, more: usize) {
-        let room = self.flight.capacity();
-        let over = self.flight.len().saturating_add(more).saturating_sub(room);
+        let over = self
+            .flight
+            .len()
+            .saturating_add(more)
+            .saturating_sub(self.room);
         let over = over.min(self.flight.len());
         for k in 0..over {
-            self.doubt_press(k);
+            self.doubt_at(k);
         }
         self.flight.drain(..over);
     }
 
-    /// Keeps act `k` of `flight` in doubt when it is a press: one per kind with the newest one's id, while the room
-    /// reserved for them lasts.
-    fn doubt_press(&mut self, k: usize) {
-        let Some(&act) = self.flight.get(k).filter(|act| is_press(**act)) else {
+    /// Keeps act `k` of `flight` in doubt when it is a press.
+    fn doubt_at(&mut self, k: usize) {
+        if let Some(&act) = self.flight.get(k) {
+            let id = self.next.wrapping_sub(count(self.flight.len() - k));
+            self.doubt_press(id, act);
+        }
+    }
+
+    /// Keeps our act `id` in doubt when it is a press: one per kind with the newest one's id, while the room reserved
+    /// for them lasts.
+    fn doubt_press(&mut self, id: u16, act: PointerAct) {
+        if !is_press(act) {
             return;
-        };
-        let id = self.next.wrapping_sub(count(self.flight.len() - k));
+        }
         if let Some(slot) = self.doubt.iter_mut().find(|(_, d)| alike(*d, act)) {
             *slot = (id, act);
         } else if self.doubt.len() < self.doubt.capacity() {
@@ -164,9 +193,9 @@ impl Echo {
     }
 }
 
-/// `n` acts as a count of ids; a batch is far smaller than `u32::MAX`.
-fn count(n: usize) -> u32 {
-    u32::try_from(n).unwrap_or(u32::MAX)
+/// `n` acts as a count of ids, which wrap at 16 bits.
+fn count(n: usize) -> u16 {
+    u16::try_from(n & usize::from(u16::MAX)).unwrap_or_default()
 }
 
 /// True for a button press or a key press.

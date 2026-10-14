@@ -79,7 +79,7 @@ pub(crate) fn normalise(v: i32, start: i32, size: i32) -> i32 {
 }
 
 /// `acts` as one batch for the virtual desktop `desk`, each event tagged `REPLAY` with its id, counted from `first`.
-pub(crate) fn batch(acts: &[PointerAct], desk: Desk, first: u32) -> Vec<Input> {
+pub(crate) fn batch(acts: &[PointerAct], desk: Desk, first: u16) -> Vec<Input> {
     let mouse = |p: Point, press, tag| Input::Mouse {
         dx: normalise(p.x, desk.left, desk.width),
         dy: normalise(p.y, desk.top, desk.height),

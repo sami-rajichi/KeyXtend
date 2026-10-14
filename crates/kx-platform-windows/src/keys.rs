@@ -7,36 +7,39 @@ use kx_module_api::REDACTED_MARKER;
 
 /// Marks input we inject (`dwExtraInfo`, "KXSP"), so our own hooks can skip it.
 pub const TAG: usize = 0x4B58_5350;
-/// Marks the input the pointer hook sends for its engine ("KXSR") in the low 32 bits of `dwExtraInfo`, the act's id in
-/// the high 32; our hooks skip it and the gate guard can tell it.
-pub const REPLAY: usize = 0x4B58_5352;
+/// Marks the input the pointer hook sends for its engine: "KR" in the upper 16 of `dwExtraInfo`'s low 32 bits and the
+/// act's id in the lower 16, as a mouse hook gets only those 32 bits; our hooks skip it and the gate guard can tell it.
+pub const REPLAY: usize = 0x4B52_0000;
 /// Marks the gate tool's simulated hand ("KXUS"); only a pointer hook built for simulated input acts on it.
 pub const SIM_TAG: usize = 0x4B58_5553;
-/// Where a replayed act's id sits in `dwExtraInfo`: the high 32 bits, above `REPLAY`.
-const ID_SHIFT: u32 = 32;
-/// The low 32 bits of `dwExtraInfo`, which hold `REPLAY`.
-const MARK_MASK: usize = (1 << ID_SHIFT) - 1;
-// The id needs the high half of a 64-bit `dwExtraInfo`, so this crate builds only for 64-bit Windows.
+/// The low 16 bits of a replay tag, which hold the act's id.
+const ID_MASK: usize = 0xFFFF;
+/// The bits of `dwExtraInfo` that Windows hands a mouse hook: the low 32.
+const MOUSE_BITS: usize = 0xFFFF_FFFF;
+// The replay mark leaves the id's bits free, stays in the 32 bits a mouse hook gets, and differs from the whole tags.
 const _: () = assert!(
-    usize::BITS == 2 * ID_SHIFT,
-    "the replay tag needs a 64-bit dwExtraInfo"
+    REPLAY & ID_MASK == 0
+        && REPLAY & !MOUSE_BITS == 0
+        && REPLAY >> u16::BITS != TAG >> u16::BITS
+        && REPLAY >> u16::BITS != SIM_TAG >> u16::BITS,
+    "the replay mark must leave the id free, fit 32 bits and differ from the other tags"
 );
 
-/// The `dwExtraInfo` of our replayed act `id`: `REPLAY` in the low 32 bits and `id` in the high 32.
+/// The `dwExtraInfo` of our replayed act `id`: `REPLAY` with `id` in its low 16 bits.
 #[must_use]
-pub fn replay_tag(id: u32) -> usize {
-    (usize::try_from(id).unwrap_or_default() << ID_SHIFT) | REPLAY
+pub fn replay_tag(id: u16) -> usize {
+    REPLAY | usize::from(id)
 }
 
 /// True when `extra` marks input the pointer hook replayed, whatever act it names; `TAG` and `SIM_TAG` stay whole.
 #[must_use]
 pub fn is_replay(extra: usize) -> bool {
-    extra & MARK_MASK == REPLAY
+    extra & !ID_MASK == REPLAY
 }
 
 /// The act id in our replay tag `extra`.
-pub(crate) fn replay_id(extra: usize) -> u32 {
-    u32::try_from(extra >> ID_SHIFT).unwrap_or(u32::MAX)
+pub(crate) fn replay_id(extra: usize) -> u16 {
+    u16::try_from(extra & ID_MASK).unwrap_or_default()
 }
 
 /// Prefix bytes `MapVirtualKeyExW` puts on extended scan codes (`0xE0`, `0xE1`).

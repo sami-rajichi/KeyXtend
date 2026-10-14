@@ -27,7 +27,7 @@ const SLOW_US: u64 = 900;
 #[test]
 fn our_input_passes_as_an_echo_whatever_the_source_and_whatever_act_it_names() {
     for source in [Source::Physical, Source::Simulated] {
-        for tag in [TAG, REPLAY, replay_tag(7), replay_tag(u32::MAX)] {
+        for tag in [TAG, REPLAY, replay_tag(7), replay_tag(u16::MAX)] {
             assert_eq!(take(source, true, tag), Take::Echo, "{source:?}");
             assert_eq!(take(source, false, tag), Take::Echo, "{source:?}");
         }
@@ -184,9 +184,9 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_each_tagged_replay_with_its_id()
     let want = [
         Input::Key {
             event: Key::Scan(shift).event(false),
-            tag: replay_tag(u32::MAX - 1),
+            tag: replay_tag(u16::MAX - 1),
         },
-        mouse(None, u32::MAX),
+        mouse(None, u16::MAX),
         mouse(Some((Button::Right, false)), 0),
         mouse(Some((Button::Right, true)), 1),
         Input::Key {
@@ -194,7 +194,7 @@ fn a_batch_is_absolute_mouse_and_scan_code_keys_each_tagged_replay_with_its_id()
             tag: replay_tag(2),
         },
     ];
-    assert_eq!(batch(&acts, desk, u32::MAX - 1), want, "ids wrap");
+    assert_eq!(batch(&acts, desk, u16::MAX - 1), want, "ids wrap");
 }
 
 #[cfg(windows)]

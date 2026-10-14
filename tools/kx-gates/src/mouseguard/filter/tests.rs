@@ -262,7 +262,7 @@ fn while_a_gate_drives_the_test_build_its_replayed_press_passes_as_kx_gates_own(
     let tally = Arc::new(Tally::default());
     let mut f = Filter::new(&shipped(), at(0), Duration::ZERO, Arc::clone(&tally), true);
     for kind in [LEFT_DOWN, LEFT_UP, Kind::Other] {
-        let verdict = f.event(from(LLMHF_INJECTED, replay_tag(u32::MAX)), kind, at(1));
+        let verdict = f.event(from(LLMHF_INJECTED, replay_tag(u16::MAX)), kind, at(1));
         assert_eq!(verdict, Verdict::Pass, "{kind:?}");
     }
     assert_eq!(f.ended(), None, "a replayed press is no escape");
@@ -282,7 +282,7 @@ fn otherwise_a_replayed_press_is_the_hands_and_gives_the_mouse_back() {
     };
     let tally = Arc::new(Tally::default());
     let mut f = Filter::new(&cfg, at(0), Duration::ZERO, Arc::clone(&tally), false);
-    let verdict = f.event(from(LLMHF_INJECTED, replay_tag(u32::MAX)), LEFT_DOWN, at(1));
+    let verdict = f.event(from(LLMHF_INJECTED, replay_tag(u16::MAX)), LEFT_DOWN, at(1));
     assert_eq!(verdict, Verdict::Drop);
     assert_eq!(f.ended(), Some(End::Owner));
     assert_eq!(tally.counts().dropped, 1);
@@ -292,7 +292,7 @@ fn otherwise_a_replayed_press_is_the_hands_and_gives_the_mouse_back() {
 fn a_replay_value_without_the_injected_flag_is_the_hands_either_way() {
     for replay in [false, true] {
         let mut f = guard(&shipped(), replay);
-        let verdict = f.event(from(0, replay_tag(u32::MAX)), LEFT_DOWN, at(1));
+        let verdict = f.event(from(0, replay_tag(u16::MAX)), LEFT_DOWN, at(1));
         assert_eq!(verdict, Verdict::Drop, "replay: {replay}");
         assert_eq!(f.ended(), Some(End::Owner), "replay: {replay}");
     }

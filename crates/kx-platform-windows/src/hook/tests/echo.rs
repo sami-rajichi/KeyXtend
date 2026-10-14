@@ -18,7 +18,7 @@ const LEFT_A: PointerAct = PointerAct::Down(Button::Left, A);
 const LEFT_B: PointerAct = PointerAct::Down(Button::Left, B);
 
 /// Sends `acts` at `at`, as the host does, and gives their first act's id.
-fn send(echo: &mut Echo, acts: &[PointerAct], at: Mono) -> u32 {
+fn send(echo: &mut Echo, acts: &[PointerAct], at: Mono) -> u16 {
     let first = echo.next();
     echo.sent(acts, at);
     first
@@ -155,7 +155,7 @@ fn a_press_made_room_for_stays_in_doubt_until_an_up_is_owed() {
 fn an_echo_naming_no_act_out_changes_nothing() {
     let mut echo = Echo::new(CFG.echo_ms, ROOM);
     let id = send(&mut echo, &[LEFT_A], ms(10));
-    for other in [id.wrapping_add(1), id.wrapping_sub(1), u32::MAX / 2] {
+    for other in [id.wrapping_add(1), id.wrapping_sub(1), u16::MAX / 2] {
         echo.back(other);
     }
     assert!(!echo.is_clear());
@@ -165,12 +165,31 @@ fn an_echo_naming_no_act_out_changes_nothing() {
 #[test]
 fn ids_wrap_past_the_largest() {
     let mut echo = Echo::new(CFG.echo_ms, ROOM);
-    echo.skip_to(u32::MAX);
+    echo.skip_to(u16::MAX);
     let first = send(&mut echo, &[PointerAct::Move(A), LEFT_A], ms(10));
     assert_eq!(first.wrapping_add(1), 0);
     echo.back(0);
     assert!(echo.is_clear());
     assert!(!echo.out(LEFT_A));
+}
+
+#[test]
+fn a_batch_past_the_room_keeps_its_newest_acts_and_its_dropped_press_in_doubt() {
+    let mut echo = Echo::new(CFG.echo_ms, TIGHT);
+    let moves = [PointerAct::Move(A), PointerAct::Move(B)];
+    let first = send(&mut echo, &[&[LEFT_A][..], &moves].concat(), ms(10));
+    assert_eq!(echo.room(), TIGHT, "the room holds");
+    assert!(echo.out(LEFT_A), "in doubt");
+    echo.back(first.wrapping_add(2));
+    assert!(echo.is_clear(), "the newest act names itself");
+    echo.back(first);
+    assert!(!echo.out(LEFT_A), "its own late echo clears its doubt");
+}
+
+#[test]
+fn the_acts_out_never_span_half_the_id_space() {
+    let echo = Echo::new(CFG.echo_ms, usize::MAX);
+    assert_eq!(echo.most(), 1 << (u16::BITS - 1));
 }
 
 #[test]

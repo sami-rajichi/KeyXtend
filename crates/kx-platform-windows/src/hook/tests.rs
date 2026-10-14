@@ -46,6 +46,8 @@ const KEY_UP: u32 = 0x0101;
 const VK_ESC: u32 = 0x1B;
 /// Another program's tag.
 const OTHER: usize = 0x1234;
+/// The bits of a mouse input's `dwExtraInfo` that Windows hands the hooks: the low 32 only; a key's keeps all 64.
+const MOUSE_KEPT: usize = 0xFFFF_FFFF;
 /// Left Shift and Left Ctrl, which the scripted engine pushes.
 const SHIFT: Scan = Scan::new(0x2A);
 const CTRL: Scan = Scan::new(0x1D);
@@ -117,9 +119,9 @@ impl Rig {
         self.host.mouse(msg, at, mark)
     }
 
-    /// An injected mouse message tagged `extra`; true when it is dropped.
+    /// An injected mouse message tagged `extra`, cut as Windows cuts it; true when it is dropped.
     fn injected(&mut self, msg: u32, at: Point, extra: usize) -> bool {
-        let mark = self.mark(true, extra);
+        let mark = self.mark(true, extra & MOUSE_KEPT);
         self.host.mouse(msg, at, mark)
     }
 
@@ -136,7 +138,7 @@ impl Rig {
                 PointerAct::KeyUp(scan) => self.host.key(KEY_UP, 0, scan, mark),
                 act => {
                     let (msg, at) = mouse_msg(act);
-                    assert!(!self.host.mouse(msg, at, mark), "our input passes");
+                    assert!(!self.injected(msg, at, mark.extra), "our input passes");
                 }
             }
         }

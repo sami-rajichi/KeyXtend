@@ -21,7 +21,7 @@ fn debug_output_never_shows_the_key() {
 fn the_tags_spell_their_names_and_differ() {
     let name = |tag: usize| tag.to_be_bytes()[size_of::<usize>() - 4..].to_vec();
     assert_eq!(name(TAG), b"KXSP");
-    assert_eq!(name(REPLAY), b"KXSR");
+    assert_eq!(name(REPLAY)[..2], *b"KR", "its low half holds the id");
     assert_eq!(name(SIM_TAG), b"KXUS");
 }
 
@@ -143,11 +143,11 @@ fn the_tables_match_windows() {
 
 #[test]
 fn a_replay_tag_carries_its_acts_id_beside_the_replay_mark() {
-    for id in [0, 1, 0xDEAD_BEEF, u32::MAX] {
+    for id in [0, 1, 0x8000, u16::MAX] {
         let tag = replay_tag(id);
         assert!(is_replay(tag), "{id:#x}");
         assert_eq!(replay_id(tag), id);
-        assert_eq!(tag & 0xFFFF_FFFF, REPLAY);
+        assert_eq!(tag & !0xFFFF, REPLAY);
     }
 }
 
@@ -155,7 +155,20 @@ fn a_replay_tag_carries_its_acts_id_beside_the_replay_mark() {
 fn only_the_replay_mark_takes_an_id_and_the_other_tags_stay_whole() {
     assert!(is_replay(REPLAY), "id 0");
     let high = 1 << 40;
-    for whole in [TAG, SIM_TAG, 0, TAG | high, SIM_TAG | high] {
+    for whole in [TAG, SIM_TAG, 0, TAG | high, SIM_TAG | high, REPLAY | high] {
         assert!(!is_replay(whole), "{whole:#x}");
+    }
+}
+
+#[test]
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "Windows keeps only the low 32 bits of a mouse input's extra, as this cast does."
+)]
+fn an_id_survives_windows_cutting_a_mouse_inputs_extra_to_32_bits() {
+    for id in [0, 1, 0x7FFF, 0x8000, 0xFFFE, 0xFFFF] {
+        let cut = replay_tag(id) as u32 as usize;
+        assert!(is_replay(cut), "{id:#x}");
+        assert_eq!(replay_id(cut), id, "{id:#x}");
     }
 }

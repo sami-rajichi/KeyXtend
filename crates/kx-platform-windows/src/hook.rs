@@ -75,9 +75,9 @@ pub(crate) trait Os {
     /// Asks the hook thread for a turn; false when the request was refused.
     fn wake(&self) -> bool;
 
-    /// Sends `acts` in one batch, each tagged `REPLAY` with its own id counted from `first`, and returns how many the OS
-    /// took.
-    fn send(&self, acts: &[PointerAct], first: u32) -> usize;
+    /// Sends `acts` in one batch, each tagged `REPLAY` with its own id counted from `first`, wrapping, and returns how
+    /// many the OS took.
+    fn send(&self, acts: &[PointerAct], first: u16) -> usize;
 
     /// Sets the one deadline timer to fire every `ms`, or stops it; false when Windows refused the timer.
     fn arm(&self, ms: Option<u32>) -> bool;

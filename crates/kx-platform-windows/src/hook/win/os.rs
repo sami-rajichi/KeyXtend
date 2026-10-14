@@ -145,7 +145,7 @@ impl Os for WinOs {
         post(self.tid, WAKE)
     }
 
-    fn send(&self, acts: &[PointerAct], first: u32) -> usize {
+    fn send(&self, acts: &[PointerAct], first: u16) -> usize {
         let all = batch(acts, desktop(), first);
         let inputs: Vec<INPUT> = all.into_iter().map(input).collect();
         match inject::send(&inputs) {
