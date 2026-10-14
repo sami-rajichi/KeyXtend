@@ -1,6 +1,8 @@
 //! The pointer overlay's state through the hub: the mouse modes, the pointer, the hold ring and its burst as one JSON,
 //! with at most one wake in flight until QML reads it, and no point in any log.
 
+mod props;
+
 use crate::app::keeper;
 use crate::logs::lines_of;
 use crate::{DPI, Rig, main_screen};
@@ -65,7 +67,8 @@ fn hold(ring_after_ms: u32, hold_ms: u32) -> AssistNote {
 fn the_state_starts_off_with_nothing_shown_and_the_usual_pointer() {
     let rig = Rig::new();
     let want = json!({
-        "live": false, "rclick": false, "grab": "off", "point": null, "ring": null, "burst": null,
+        "live": false, "rclick": false, "grab": "off", "mode": null,
+        "point": null, "ring": null, "burst": null,
         "pointerPx": SysLook::POINTER_PX, "pointerBase": SysLook::POINTER_PX, "area": null, "seq": 0
     });
     assert_eq!(state(&rig), want);
@@ -95,6 +98,7 @@ fn the_state_carries_the_work_area_nearest_the_point() {
     }
 }
 
+/// The hub names the mode the overlay shows: Grab before Right-click.
 #[test]
 fn a_mode_change_shows_in_the_state_and_wakes_once() {
     let (rig, bus, _subs) = heard();
@@ -102,8 +106,8 @@ fn a_mode_change_shows_in_the_state_and_wakes_once() {
     assert_eq!(woke(&rig, Wake::Assist), 1);
     let s = state(&rig);
     assert_eq!(
-        (&s["live"], &s["rclick"], &s["grab"]),
-        (&json!(true), &json!(true), &json!("off"))
+        (&s["live"], &s["rclick"], &s["grab"], &s["mode"]),
+        (&json!(true), &json!(true), &json!("off"), &json!("rclick"))
     );
     for (grab, name) in [
         (GrabState::Armed, "armed"),
@@ -111,7 +115,8 @@ fn a_mode_change_shows_in_the_state_and_wakes_once() {
     ] {
         bus.publish(&AssistChanged { grab, ..RCLICK }).unwrap();
         assert_eq!(woke(&rig, Wake::Assist), 1, "{name}");
-        assert_eq!(state(&rig)["grab"], name);
+        let s = state(&rig);
+        assert_eq!((&s["grab"], &s["mode"]), (&json!(name), &json!("grab")));
     }
     let again = AssistChanged {
         grab: GrabState::Carrying,
@@ -205,7 +210,7 @@ fn every_mode_off_or_a_stopped_module_forgets_the_point_ring_and_burst() {
         bus.publish(&end).unwrap();
         let s = state(&rig);
         assert_eq!(shown(&s), [false; 3], "{end:?}");
-        assert_eq!(s["live"], end.live);
+        assert_eq!((&s["live"], &s["mode"]), (&json!(end.live), &Value::Null));
     }
 }
 

@@ -147,10 +147,10 @@ QtObject {
             app.assist = JSON.parse(app.ui.assistJson());
         }
     }
-    // The pointer overlay, made while a mode is on and freed once every mode is off; the hub drops a ring with the modes.
+    // The pointer overlay, made while the hub names a mode and freed once it names none; a ring goes with the modes.
     property Loader pointer: Loader {
         readonly property var st: app.assist
-        active: !!face.lk && !!st && st.live && (st.rclick || st.grab !== "off")
+        active: !!face.lk && !!st && !!st.mode
         sourceComponent: Overlay {
             lk: face.lk
             res: face.res

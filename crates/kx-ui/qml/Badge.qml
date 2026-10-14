@@ -5,17 +5,15 @@ import QtQuick
 Item {
     id: badge
 
-    // The look, fonts, icons and texts, the mouse modes as the hub gives them (Grab "off", "armed" or "carrying"), and
-    // whether it may show.
+    // The look, fonts, icons and texts, the mode the hub shows by its side key's id (empty for none), Grab's state
+    // ("off", "armed" or "carrying"), and whether it may show.
     required property var lk
     required property var res
-    required property bool rclick
+    required property string mode
     required property string grab
     required property bool shown
 
     readonly property var sh: lk.shape.badge
-    // The mode it shows, by the side key's id: Grab while it is on, else Right-click, else none.
-    readonly property string mode: grab !== "off" ? "grab" : rclick ? "rclick" : ""
     readonly property bool carrying: grab === "carrying"
 
     width: 2 * sh.pad_px[1] + sh.icon_px + (carrying ? sh.gap_px + word.implicitWidth : 0)

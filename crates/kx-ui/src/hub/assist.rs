@@ -49,6 +49,14 @@ impl From<GrabState> for Grab {
     }
 }
 
+/// The mode the overlay shows, by its side key's id.
+#[derive(Copy, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum Active {
+    Rclick,
+    Grab,
+}
+
 /// What the overlay shows; `seq` grows on each change.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize)]
 struct Shown {
@@ -62,19 +70,31 @@ struct Shown {
 }
 
 impl Shown {
-    /// True while no mode is on or the mouse module is not running, so nothing shows.
+    /// The mode the overlay shows: Grab while it is on, else Right-click; none while the mouse module is not running.
+    fn active(&self) -> Option<Active> {
+        if !self.live {
+            None
+        } else if self.grab != Grab::Off {
+            Some(Active::Grab)
+        } else {
+            self.rclick.then_some(Active::Rclick)
+        }
+    }
+
+    /// True while no mode shows, so nothing does.
     fn idle(&self) -> bool {
-        !self.live || (!self.rclick && self.grab == Grab::Off)
+        self.active().is_none()
     }
 }
 
-/// The state as QML reads it, with the pointer's size, Windows' default size, which the badge's offsets suit, and the
-/// work area nearest the point, which the badge stays inside.
+/// The state as QML reads it, with the mode it shows, the pointer's size, Windows' default size, which the badge's
+/// offsets suit, and the work area nearest the point, which the badge stays inside.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct View {
     #[serde(flatten)]
     shown: Shown,
+    mode: Option<Active>,
     pointer_px: u32,
     pointer_base: u32,
     area: Option<Rect>,
@@ -106,6 +126,7 @@ impl Hub {
         });
         json(&View {
             shown,
+            mode: shown.active(),
             pointer_px,
             pointer_base: SysLook::POINTER_PX,
             area,

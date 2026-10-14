@@ -195,6 +195,7 @@ var assist = {
   "burst": null,
   "grab": "off",
   "live": false,
+  "mode": null,
   "point": null,
   "pointerBase": 32,
   "pointerPx": 32,

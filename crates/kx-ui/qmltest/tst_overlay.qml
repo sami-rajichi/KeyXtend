@@ -1,13 +1,12 @@
 // The pointer overlay (spec §3.2, §5.3): the badge per mode, beside the pointer and clear of its size, flipped inside the
 // work area at a 1.0 and a 1.5 screen ratio, hidden over our windows; the ring at the press, once per seq; and one
-// click-through window, made only while a mode is on and read once on the frame after each wake.
+// click-through window that stays shown from the waves to the burst. tst_overlay_app checks it inside the app.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
-import "pointer.js" as Pointer
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as NC
 
@@ -49,19 +48,17 @@ Item {
             property var boxes: undefined
         }
     }
-    Component {
-        id: appC
-        App {
-            ui: FakeUi {}
-            keyboard: FakeKeyboard {}
-        }
+    SignalSpy {
+        id: shows
+        signalName: "visibleChanged"
     }
 
     TestCase {
         name: "overlay"
         when: windowShown
 
-        // The badge's tokens, the two screen ratios each placement runs at (ruling 9), and the stand-in taskbar's height.
+        // The badge's tokens, the screen ratios each placement runs at, and the stand-in taskbar's height. `harden` strips
+        // QT_SCALE_FACTOR, so both ratios run in this process over stand-in screens, as tst_scale's.
         readonly property var sh: N.lk.shape.badge
         readonly property var ratios: [1, 1.5]
         readonly property int bar: 48
@@ -75,7 +72,8 @@ Item {
         }
         // The hub's state: Right-click on, the pointer at physical `p` in work area `area`, then `extra`.
         function state(p, area, extra) {
-            return Object.assign({}, En.assist, { live: true, rclick: true, point: p, area: area }, extra || {});
+            const on = { live: true, rclick: true, mode: "rclick", point: p, area: area };
+            return Object.assign({}, En.assist, on, extra || {});
         }
         // Physical pixels for Qt point (x, y) on a stand-in screen at ratio `d`.
         function px(x, y, d) {
@@ -91,9 +89,9 @@ Item {
             const res = Board.resOf(N.lk, En);
             return createTemporaryObject(overC, root, { lk: N.lk, res: res, spots: s.spots, ours: ours || [], st: st });
         }
-        function badge(ui, grab) {
+        function badge(ui, mode, grab) {
             const res = Board.resOf(N.lk, ui);
-            return createTemporaryObject(badgeC, root, { lk: N.lk, res: res, rclick: grab === "off", grab: grab, shown: true });
+            return createTemporaryObject(badgeC, root, { lk: N.lk, res: res, mode: mode, grab: grab, shown: true });
         }
         // The badge's text and its pill.
         function word(b) {
@@ -102,18 +100,9 @@ Item {
         function pill(b) {
             return find(b, o => o.radius !== undefined && o.color !== undefined && Qt.colorEqual(o.color, N.lk.palette.badge_bg));
         }
-        // The app over fresh stand-ins, once its keyboard shows and the state was read at start; the real pointer passes
-        // through its keyboard.
-        function app() {
-            const a = createTemporaryObject(appC, root);
-            tryVerify(() => a.face.visible && a.assist !== null, 2000, "the keyboard shows");
-            Pointer.through([a.face, a.bubble]);
-            return a;
-        }
-
         function test_each_mode_shows_its_icon_and_carrying_adds_the_word() {
             for (const [grab, mode, said] of [["off", "rclick", false], ["armed", "grab", false], ["carrying", "grab", true]]) {
-                const b = badge(En, grab);
+                const b = badge(En, mode, grab);
                 const icon = find(b, o => o.icon !== undefined && o.tint !== undefined);
                 compare(icon.icon, N.lk.icons.keys[mode], grab);
                 verify(Qt.colorEqual(icon.tint, N.lk.palette.badge_ink), grab);
@@ -128,7 +117,7 @@ Item {
 
         // A pill (mock-up .badge, border-radius 999px) in the badge colours; its word is in the keyboard's language.
         function test_the_badge_is_a_pill_in_its_colours_and_speaks_the_keyboards_language() {
-            const b = badge(Ar, "carrying");
+            const b = badge(Ar, "grab", "carrying");
             compare(pill(b).radius, b.height / 2);
             compare(word(b).text, Ar.texts["badge.holding"]);
             compare(word(b).font.family, Board.resOf(N.lk, Ar).fam.ui);
@@ -141,7 +130,7 @@ Item {
         function test_the_badge_casts_its_own_small_shadow() {
             const fields = l => ["inset", "x", "y", "blur", "spread", "color"].map(k => String(l[k])).join(" ");
             for (const look of [N.lk, NC.lk]) {
-                const b = createTemporaryObject(badgeC, root, { lk: look, res: Board.resOf(look, En), rclick: true, grab: "off", shown: true });
+                const b = createTemporaryObject(badgeC, root, { lk: look, res: Board.resOf(look, En), mode: "rclick", grab: "off", shown: true });
                 const shades = Board.all(b, o => o.shadow !== undefined && o.modelData !== undefined).map(o => fields(o.shadow));
                 compare(shades, look.palette.badge_shadow.map(fields), look.contrast ? "contrast" : "native");
             }
@@ -248,53 +237,22 @@ Item {
             compare(o.frame, Qt.rect(x0, y0, x1 - x0, y1 - y0), "just the badge and its shadow's room");
         }
 
-        function test_the_overlay_is_made_only_while_a_mode_is_on_and_freed_after() {
-            const a = app();
-            compare(a.pointer.item, null, "no mode, no ring");
-            const on = state(null, null);
-            a.ui.assist = on;
-            tryVerify(() => a.pointer.item !== null, 2000, "made with Right-click on");
-            a.ui.assist = Object.assign({}, on, { rclick: false, grab: "armed" });
-            tryVerify(() => a.assist.grab === "armed", 2000);
-            verify(a.pointer.item !== null, "kept while Grab is on");
-            a.ui.assist = Object.assign({}, on, { live: false });
-            tryCompare(a.pointer, "item", null, 2000, "freed when the mouse module stops");
-            a.ui.assist = on;
-            tryVerify(() => a.pointer.item !== null, 2000);
-            a.ui.assist = Object.assign({}, on, { rclick: false });
-            tryCompare(a.pointer, "item", null, 2000, "freed with every mode off");
-        }
-
-        function test_a_wake_reads_the_state_once_on_the_next_frame_then_rests() {
-            const a = app();
-            tryVerify(() => !a.assistRead.running, 2000, "the read at start");
-            const n = a.ui.assistReads;
-            a.ui.assist = state(null, null);
-            a.ui.assist = state(null, null, { seq: 7 });
-            compare(a.ui.assistReads, n, "never in the wake's handler");
-            verify(a.assistRead.running);
-            tryVerify(() => !a.assistRead.running, 2000);
-            compare(a.ui.assistReads, n + 1, "two wakes before a frame read once");
-            compare(a.assist.seq, 7, "the newest state");
-        }
-
-        // Its guard run is a quiet one: a key's tip the hand is reading stays, and no pop-up loses its place in front.
-        function test_the_badge_hides_over_the_keyboard_and_its_guard_keeps_a_shown_tip() {
-            const a = app(), f = a.face, tip = Board.tipOf(f);
-            const guards = () => a.keyboard.calls.filter(c => c.indexOf("guard") === 0).length;
-            tryVerify(() => guards() > 0, 2000, "the keyboard's own run");
-            f.hint(En.texts["key.rclick"], f.contentItem);
-            tryVerify(() => tip.visible, 2000, "a key's tip shows");
-            const n = guards();
-            a.ui.assist = state(f.spots.physical(f.x + f.width / 2, f.y + f.height / 2), null);
-            tryVerify(() => a.pointer.item !== null && a.pointer.item.visible, 2000);
-            const o = a.pointer.item;
-            verify(!o.badge.shown, "over the keyboard");
-            tryVerify(() => guards() > n, 2000, "guarded once shown");
-            verify(tip.visible, "the tip stays");
-            compare(a.keyboard.calls.indexOf("guard " + En.texts["window.pointer"]), -1, "never put in front");
-            a.ui.assist = state(f.spots.physical(f.x + f.width / 2, f.y - f.height), null);
-            tryVerify(() => o.badge.shown, 2000, "beside it");
+        // With no pointer point yet, as a saved mode before any move, the ring alone shows the window: it stays shown from
+        // the waves to the burst, and from one burst to the next hold's waves.
+        function test_the_window_stays_shown_from_the_waves_to_the_burst() {
+            const s = screen(1);
+            const [ring, burst] = [{ x: 100, y: 100, afterMs: 0, waveMs: 1000, seq: 1 }, { x: 100, y: 100, seq: 2 }];
+            const o = overlay(s, state(null, s.area, { ring: ring }));
+            verify(o.visible && o.ring.waving, "the waves show it");
+            shows.clear();
+            shows.target = o;
+            o.st = state(null, s.area, { burst: burst });
+            verify(o.visible && o.ring.busy, "the burst plays");
+            o.st = state(null, s.area, { burst: burst, ring: Object.assign({}, ring, { seq: 3 }) });
+            verify(o.visible && o.ring.waving, "the next hold's waves");
+            compare(shows.count, 0, "it never hid between");
+            o.st = state(null, s.area);
+            verify(!o.visible && shows.count === 1, "a cleared ring hides it");
         }
     }
 }

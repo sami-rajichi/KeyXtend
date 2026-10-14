@@ -10,8 +10,8 @@ QtObject {
     id: stub
 
     // What the hub gives: settings, the keyboard's language and texts, the tray's texts, the look and the pointer
-    // overlay's state; setting one sends its change signal. Setting `texts` last switches the keyboard's language as the
-    // hub does (`textsChanged`).
+    // overlay's state (the tests set its `mode` as the hub names it); setting one sends its change signal. Setting
+    // `texts` last switches the keyboard's language as the hub does (`textsChanged`).
     property var settings: En.settings
     property var lang: En.lang
     property var texts: En.texts

@@ -133,7 +133,7 @@ Window {
         id: badge
         lk: over.lk
         res: over.res
-        rclick: over.st.rclick
+        mode: over.st.mode || ""
         grab: over.st.grab
         shown: !!over.at && !over.covered
         x: over.badgeAt.x - over.frame.x
