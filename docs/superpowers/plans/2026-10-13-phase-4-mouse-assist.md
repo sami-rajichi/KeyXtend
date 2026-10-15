@@ -105,7 +105,7 @@
 14. **Gates aimed at the product, spike copies deleted.**
     - *Files:* `tools/kx-gates/src/{g5,g12,g17,g18,hand,g6,simuser,mouseguard,config,cfgfile}.rs`, `kx-gates-p4.toml`, `spike/core` (hold out, `Pt` kept), `spike.toml`, `spike/qt-kb` ring parts, `docs/security/dev-tools.md`.
     - *Test first:* config checks; the guard drops `REPLAY` input unless the gate drives the engine; under uiAccess the config is read only beside the exe.
-    - *Implement:* G5, G17 and G18 drive the `gate-input` build; G18 latches by the product's own keys; G12 clicks under the overlay and times its frames with PresentMon; `hand` reads the stats lines; G6 tracks the pointer by polling until P5; G8 adds the hook's p99.
+    - *Implement:* G5, G17 and G18 drive the `gate-input` build; G18 latches by the product's own keys; G12 clicks under the overlay and times its frames with PresentMon; `hand` reads the stats lines; G6 tracks the pointer by polling until P5; G8 adds the hook's p99, a memory reading after use and a run with Arabic in front (ADR-0028).
     - *Verify:* `cargo test -p kx-gates`; `cargo xtask tidy`.
 15. **Review and security.**
     - `kx-review` on every changed file, `kx-security-check` (new `kx-mod-mouse.md`; updates to `kx-platform-windows.md`, `kx-ui.md`, `keyxtend.md`), `/code-review` and `/security-review`; fix every finding.
