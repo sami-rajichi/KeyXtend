@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 00:56 — P4: `g8 arabic` keeps its own window in front and puts the layout back after a stop
+The real `g8 arabic` run read English at the reading after use, as the keyboard follows the app in front and that app's layout may lag the session's. G8 now keeps a target-window in Arabic in front from the cold start, brings a fresh one back after the presses and after G2, and judges `layout_held` from the reading and from its own fresh window at the end; a fresh window in another layout stops the run. The owner's layout is read and put back in G8's own window, which the put-back brings forward with the Alt tap that still goes out after the mouse guard's stop. Tests cover the taps, the held window, the holds and the end-of-run judgement.
+
 ## 2026-10-16 00:28 — P4: G8 reads after use before the theme rounds, and `g8 arabic` switches through target-window
 A traced G8 grew about 5 MB over warm-up, presses, resizes and G2, then about 20 MB at the churn's first theme rounds, so the reading after use now comes right after G2 and before PresentMon's wait and the churn, and the theme cost stays with P13. `g8 arabic` failed on the PC because it asked whichever app was in front for the layout, and that app never switched. It now starts target-window in front, asks it as the language hotkey does, and closes it, so Windows switches the whole session; the owner's layout comes back the same way. Tests cover the new order in G8's hold, and a switch that asks only G8's own window and closes it even when refused.
 
