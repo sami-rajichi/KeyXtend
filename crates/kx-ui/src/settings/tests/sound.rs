@@ -1,4 +1,5 @@
-//! The `[ui]` sound settings: every sound on at half volume, and the volume and the idle time within their ranges.
+//! The `[ui]` sound settings: every sound on at the owner's soft volume, and the volume and the idle time within their
+//! ranges.
 
 use super::*;
 use kx_theme::sounds::Sounds;
@@ -16,11 +17,14 @@ fn switches(s: &UiSettings) -> [bool; 4] {
     [s.sound_key, s.sound_rclick, s.sound_pick, s.sound_drop]
 }
 
+/// The volume the owner picked by ear on 2026-10-15, as 50, 35 and 25 were too loud.
+const SOFT: u8 = 15;
+
 #[test]
-fn every_sound_starts_on_at_half_volume_and_each_turns_off_alone() {
+fn every_sound_starts_on_at_a_soft_volume_and_each_turns_off_alone() {
     let s = UiSettings::from_defaults().unwrap();
     assert_eq!(switches(&s), [true; 4]);
-    assert_eq!((s.sound_volume, s.sound_idle_ms), (50, 3_000));
+    assert_eq!((s.sound_volume, s.sound_idle_ms), (SOFT, 3_000));
     let keys = ["sound_key", "sound_rclick", "sound_pick", "sound_drop"];
     for (i, key) in keys.into_iter().enumerate() {
         let off: UiSettings = parse_as(&with(key, false)).unwrap();

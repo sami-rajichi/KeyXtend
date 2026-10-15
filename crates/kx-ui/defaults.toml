@@ -55,6 +55,6 @@ sound_rclick = true
 sound_pick = true
 sound_drop = true
 # Our volume for every sound, in percent of its own level, under the Windows volume; 0 is silent.
-sound_volume = 50
+sound_volume = 15
 # How long the speaker stays ready after the last sound, in ms; the next sound after that wakes it.
 sound_idle_ms = 3000
