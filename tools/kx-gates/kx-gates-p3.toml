@@ -123,8 +123,9 @@ churn_tip_ms = 300
 churn_theme = "bar.theme"
 # Wait after each list, bubble or theme press, so its windows have shown or gone, in ms.
 churn_settle_ms = 500
-# After use (ADR-0028), last before G8 quits: the mode key turns its mode on with a click, the pointer rests once on
-# every key of the board without clicking, and warm_ms later memory is judged by memory_mb and commit_mb again.
+# After use (ADR-0028), right after G2 and before the churn, so no theme round counts: the mode key turns its mode on
+# with a click, the pointer rests once on every key without clicking, and warm_ms later memory is judged by memory_mb
+# and commit_mb again.
 # Then the key puts the mode back as it was, so the next cold start is as before.
 # The mode key, by board id: a mouse-assist key, so its light and its mode are part of the use.
 use_mode = "rclick"

@@ -82,8 +82,8 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 }
 
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
-/// memory, idle, folder, presses, resizes and G2; then `PresentMon`'s frames once its capture ends, and only then the
-/// churn, whose theme switches never count, and the memory after use.
+/// memory, idle, folder, presses, resizes, G2 and the memory after use, before any theme round (owner, 2026-10-16);
+/// then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
 fn measure(
     ctx: &Ctx,
     s: &Started,
@@ -103,9 +103,9 @@ fn measure(
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
+    let used = g8use::run(ctx, &s.process);
     let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
-    let used = g8use::run(ctx, &s.process);
     let m = Measured {
         log,
         memory,

@@ -1,6 +1,6 @@
-//! G8's reading after use (ADR-0028), last before it quits: the mode key turns its mode on with a click, the pointer
-//! rests once on every key of the board without clicking, and after the warm-up's wait memory is judged by the cold
-//! budgets again. Then the key puts the mode back as it was, even when a step failed.
+//! G8's reading after use (ADR-0028), right after G2 and before the churn's theme rounds: the mode key turns its mode
+//! on with a click, the pointer rests once on every key of the board without clicking, and after the warm-up's wait
+//! memory is judged by the cold budgets again. Then the key puts the mode back as it was, even when a step failed.
 #![cfg(windows)]
 
 use kx_mod_keyboard::Role;
