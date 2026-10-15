@@ -135,7 +135,8 @@ use_hover_ms = 100
 use_lit_ms = 3000
 # `g8 arabic` puts this language's first installed layout in front before the cold start (ISO 639 code), and the
 # owner's layout back after, even when the run breaks. Each time it starts target-window in front and asks it, as the
-# language hotkey asks; Windows switches the whole session, and the layout stays once target-window closes.
+# language hotkey asks; Windows switches the whole session. As the keyboard follows the app in front, a target-window
+# in that layout stays in front from the cold start, and again after the presses and after G2.
 arabic = "ar"
 # Longest wait for target-window to type in a layout G8 asks it for, in ms.
 layout_wait_ms = 2000

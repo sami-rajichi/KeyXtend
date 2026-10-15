@@ -20,7 +20,7 @@ use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8churn;
 use crate::g8frames::{self, Capture, Recorder};
-use crate::g8lang::{self, WinFront};
+use crate::g8lang::{self, WinTarget};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
 use crate::g8start::{self, Started, broke, log_span};
@@ -84,10 +84,11 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
 /// memory, idle, folder, presses, resizes, G2 and the memory after use, before any theme round (owner, 2026-10-16);
 /// then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
+/// `hold` runs after the presses and after G2, each of which closed its target-window.
 fn measure(
     ctx: &Ctx,
     s: &Started,
-    program: &Path,
+    (program, hold): (&Path, Hold),
     (since, rec): (SystemTime, Option<&Recorder>),
 ) -> Result<(Measured, Result<Frames, String>), String> {
     let g = &ctx.cfg.g8;
@@ -100,9 +101,11 @@ fn measure(
     let size_mb = proc::folder_mb(folder)?;
     let spot = Spot::of(&kb, &g.press_key)?;
     let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
+    hold()?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
+    hold()?;
     let used = g8use::run(ctx, &s.process);
     let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
@@ -198,13 +201,16 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     }
     cold()?;
     match g8lang::wanted(&WinLayouts, &ctx.cfg.g8, name)? {
-        Some(to) => g8lang::within(&WinFront::of(ctx), to, || started(ctx, name)),
-        None => started(ctx, name),
+        Some(to) => g8lang::within(&WinTarget::of(ctx), to, |hold| started(ctx, name, hold)),
+        None => started(ctx, name, &|| Ok(())),
     }
 }
 
-/// G8 from its cold start to its result line, in weak mode for `weak`.
-fn started(ctx: &Ctx, name: &str) -> Result<Value, String> {
+/// What G8 runs after each step that closed its target-window: `g8 arabic` brings its own back to the front.
+type Hold<'a> = &'a dyn Fn() -> Result<(), String>;
+
+/// G8 from its cold start to its result line, in weak mode for `weak`, running `hold` as `measure` says.
+fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
     let weak = name == WEAK;
     let program = ctx.cfg.program(&ctx.cfg.g8.program);
     let (job, cpu_cores) = weak_job(ctx, weak)?;
@@ -219,7 +225,7 @@ fn started(ctx: &Ctx, name: &str) -> Result<Value, String> {
         program.display(),
         s.process.pid(),
     );
-    let measured = measure(ctx, &s, &program, (since, rec.as_ref()));
+    let measured = measure(ctx, &s, (&program, hold), (since, rec.as_ref()));
     let quit = close::quit_running(ctx)
         .map(|(_, ended)| ended)
         .map_err(|e| e.why);

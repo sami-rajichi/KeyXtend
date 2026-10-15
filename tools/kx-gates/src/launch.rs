@@ -160,7 +160,12 @@ pub fn start_target(ctx: &Ctx) -> Result<Opened, String> {
 
 /// Brings target-window `target` to the front, or closes it and says so.
 pub fn to_front(ctx: &Ctx, target: Opened) -> Result<Opened, String> {
-    if win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
+    to_front_by(ctx, target, win::front)
+}
+
+/// Like `to_front`, through `front`, such as `win::front_back` for a step that puts things back.
+pub fn to_front_by(ctx: &Ctx, target: Opened, front: win::Front) -> Result<Opened, String> {
+    if front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Ok(target);
     }
     crate::apps::clean_up(ctx, target);

@@ -1,4 +1,5 @@
-//! Tests of `g8 arabic`: which layout it asks for, and that the owner's comes back however the run ends.
+//! Tests of `g8 arabic`: which layout it asks for, that it reads and holds layouts only through its own windows, and
+//! that the owner's comes back however the run ends.
 
 use std::cell::{Cell, RefCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -10,70 +11,57 @@ use super::*;
 /// The owner's layout, US English, and Arabic (102) AZERTY on Arabic (Tunisia), sign-extended.
 const OWNER: LayoutId = LayoutId::new(0x0409_0409);
 const AR: LayoutId = LayoutId::new(0xFFFF_FFFF_F029_1C01);
-
-/// An app in front whose layout switches at once, unless the switch is to a layout it `refuses`.
-struct Fake {
-    now: Cell<Option<LayoutId>>,
-    refuses: Vec<LayoutId>,
-    asked: RefCell<Vec<LayoutId>>,
-}
-
-impl Fake {
-    fn on(now: Option<LayoutId>, refuses: &[LayoutId]) -> Self {
-        Self {
-            now: Cell::new(now),
-            refuses: refuses.to_vec(),
-            asked: RefCell::new(Vec::new()),
-        }
-    }
-}
-
-impl Front for Fake {
-    fn layout(&self) -> Option<LayoutId> {
-        self.now.get()
-    }
-
-    fn switch(&self, id: LayoutId) -> Result<(), String> {
-        self.asked.borrow_mut().push(id);
-        if self.refuses.contains(&id) {
-            return Err(REFUSED.into());
-        }
-        self.now.set(Some(id));
-        Ok(())
-    }
-}
-
 /// Why the fake switch failed.
 const REFUSED: &str = "it never typed in it";
 
-/// G8's own windows, numbered as they open, which take each request unless `deaf`; each request and each close.
-#[derive(Default)]
-struct Windows {
-    deaf: bool,
-    opened: Cell<u8>,
-    asked: RefCell<Vec<(u8, LayoutId)>>,
-    closed: RefCell<Vec<u8>>,
+/// A session whose layout each target-window types in, numbered as they open; the app in front lags at `OWNER`.
+struct World {
+    session: Cell<Option<LayoutId>>,
+    refuses: Vec<LayoutId>,
+    taps: RefCell<Vec<Tap>>,
+    asked: RefCell<Vec<(usize, LayoutId)>>,
+    closed: RefCell<Vec<usize>>,
 }
 
-impl Own for Windows {
-    type Window = u8;
-
-    fn open(&self) -> Result<u8, String> {
-        self.opened.set(self.opened.get() + 1);
-        Ok(self.opened.get())
-    }
-
-    fn ask(&self, w: &u8, id: LayoutId) -> Result<(), String> {
-        self.asked.borrow_mut().push((*w, id));
-        if self.deaf {
-            Err(REFUSED.into())
-        } else {
-            Ok(())
+impl World {
+    fn on(session: Option<LayoutId>, refuses: &[LayoutId]) -> Self {
+        Self {
+            session: Cell::new(session),
+            refuses: refuses.to_vec(),
+            taps: RefCell::default(),
+            asked: RefCell::default(),
+            closed: RefCell::default(),
         }
     }
+}
 
-    fn close(&self, w: u8) {
+impl Own for World {
+    type Window = usize;
+
+    fn open(&self, tap: Tap) -> Result<usize, String> {
+        self.taps.borrow_mut().push(tap);
+        Ok(self.taps.borrow().len())
+    }
+
+    fn layout(&self, _: &usize) -> Option<LayoutId> {
+        self.session.get()
+    }
+
+    fn ask(&self, w: &usize, id: LayoutId) -> Result<(), String> {
+        self.asked.borrow_mut().push((*w, id));
+        if self.refuses.contains(&id) {
+            return Err(REFUSED.into());
+        }
+        self.session.set(Some(id));
+        Ok(())
+    }
+
+    fn close(&self, w: usize) {
         self.closed.borrow_mut().push(w);
+    }
+
+    fn in_front(&self) -> Option<LayoutId> {
+        Some(OWNER)
     }
 }
 
@@ -88,72 +76,124 @@ fn shipped() -> G8 {
 
 #[test]
 fn a_run_that_breaks_puts_the_owners_layout_back_and_says_so() {
-    let front = Fake::on(Some(OWNER), &[]);
-    let e = within(&front, AR, || Err("no keyboard".into())).expect_err("broke");
+    let world = World::on(Some(OWNER), &[]);
+    let e = within(&world, AR, |_| Err("no keyboard".into())).expect_err("broke");
     assert!(e.starts_with("no keyboard") && e.contains(BACK), "{e}");
-    assert_eq!(front.now.get(), Some(OWNER));
-    assert_eq!(*front.asked.borrow(), [AR, OWNER]);
+    assert_eq!(world.session.get(), Some(OWNER));
+    assert_eq!(*world.asked.borrow(), [(1, AR), (2, OWNER)]);
 }
 
 #[test]
 fn a_run_that_panics_still_puts_the_owners_layout_back() {
-    let front = Fake::on(Some(OWNER), &[]);
-    let run = || -> Result<Value, String> { panic!("a gate bug") };
-    let caught = catch_unwind(AssertUnwindSafe(|| within(&front, AR, run)));
+    let world = World::on(Some(OWNER), &[]);
+    let run =
+        |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> { panic!("a gate bug") };
+    let caught = catch_unwind(AssertUnwindSafe(|| within(&world, AR, run)));
     assert!(caught.is_err(), "the panic goes on");
-    assert_eq!(front.now.get(), Some(OWNER));
+    assert_eq!(world.session.get(), Some(OWNER));
+    assert_eq!(*world.taps.borrow(), [Tap::Plain, Tap::PutBack]);
 }
 
 #[test]
-fn a_run_that_held_names_its_layout_and_passes_only_when_it_held_and_the_owners_came_back() {
-    let front = Fake::on(Some(OWNER), &[]);
-    let v = within(&front, AR, || Ok(result(AR))).expect("ran");
-    assert_eq!(v["layout"], json!(AR.to_string()));
+fn only_the_put_back_brings_its_window_forward_with_the_tap_that_still_goes_after_a_stop() {
+    let world = World::on(Some(OWNER), &[]);
+    let v = within(&world, AR, |hold| hold().map(|()| result(AR))).expect("ran");
+    assert_eq!(v["layout_back"], json!(true));
+    let taps = [Tap::Plain, Tap::Plain, Tap::PutBack];
+    assert_eq!(*world.taps.borrow(), taps, "switch, hold, put-back");
+    let refused = World::on(Some(OWNER), &[AR]);
+    let never = |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> { panic!("ran") };
+    within(&refused, AR, never).expect_err("stopped");
+    assert_eq!(*refused.taps.borrow(), [Tap::Plain, Tap::PutBack]);
+}
+
+#[test]
+fn the_layout_held_only_when_the_reading_and_g8s_own_window_at_the_end_both_typed_in_it() {
+    let world = World::on(Some(OWNER), &[]);
+    let v = within(&world, AR, |_| Ok(result(AR))).expect("ran");
     let flags = (&v["layout_held"], &v["layout_back"], &v["pass"]);
-    assert_eq!(flags, (&json!(true), &json!(true), &json!(true)));
-    let english = within(&front, AR, || Ok(result(OWNER))).expect("ran");
-    assert_eq!(english["layout_held"], json!(false), "measured in English");
-    assert_eq!(english["pass"], json!(false));
-    let stuck = Fake::on(Some(OWNER), &[OWNER]);
-    let v = within(&stuck, AR, || Ok(result(AR))).expect("ran");
     assert_eq!(
-        (&v["layout_back"], &v["pass"]),
-        (&json!(false), &json!(false))
+        flags,
+        (&json!(true), &json!(true), &json!(true)),
+        "the app in front lagged"
     );
+    assert_eq!(v["layout_end"], json!(AR.to_string()));
+    let lost = World::on(Some(OWNER), &[]);
+    let v = within(&lost, AR, |_| {
+        lost.session.set(Some(OWNER));
+        Ok(result(AR))
+    })
+    .expect("ran");
+    let end = (&v["layout_held"], &v["layout_end"], &v["pass"]);
+    assert_eq!(
+        end,
+        (&json!(false), &json!(OWNER.to_string()), &json!(false))
+    );
+    let english = within(&World::on(Some(OWNER), &[]), AR, |_| Ok(result(OWNER)));
+    assert_eq!(english.expect("ran")["layout_held"], json!(false));
+}
+
+#[test]
+fn a_put_back_that_does_not_take_fails_the_run() {
+    let stuck = World::on(Some(OWNER), &[OWNER]);
+    let v = within(&stuck, AR, |_| Ok(result(AR))).expect("ran");
+    let flags = (&v["layout_back"], &v["pass"]);
+    assert_eq!(flags, (&json!(false), &json!(false)));
 }
 
 #[test]
 fn a_layout_that_never_shows_stops_before_the_run_and_puts_the_owners_back() {
-    let front = Fake::on(Some(OWNER), &[AR]);
-    let never = || -> Result<Value, String> { panic!("ran with the owner's layout in front") };
-    let e = within(&front, AR, never).expect_err("stopped");
+    let world = World::on(Some(OWNER), &[AR]);
+    let never = |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> {
+        panic!("ran with the owner's layout in front")
+    };
+    let e = within(&world, AR, never).expect_err("stopped");
     assert!(e.contains(&AR.to_string()) && e.contains(BACK), "{e}");
     assert!(e.contains(REFUSED), "says why: {e}");
-    assert_eq!(*front.asked.borrow(), [AR, OWNER]);
+    assert_eq!(*world.asked.borrow(), [(1, AR), (2, OWNER)]);
+    assert_eq!(*world.closed.borrow(), [1, 2]);
 }
 
 #[test]
-fn each_switch_asks_only_a_window_g8_opened_in_front_and_closes_it_even_when_refused() {
-    // The failed run asked the app that happened to be in front, which never took the request.
-    let own = Windows::default();
-    assert_eq!(through(&own, AR), Ok(()));
-    assert_eq!(through(&own, OWNER), Ok(()));
-    assert_eq!(*own.asked.borrow(), [(1, AR), (2, OWNER)]);
-    assert_eq!(*own.closed.borrow(), [1, 2]);
-    let deaf = Windows {
-        deaf: true,
-        ..Windows::default()
-    };
-    assert_eq!(through(&deaf, AR), Err(REFUSED.to_string()));
-    assert_eq!(*deaf.closed.borrow(), [1], "closed after a refusal too");
+fn a_window_that_reads_no_layout_changes_nothing() {
+    let world = World::on(None, &[]);
+    let e = within(&world, AR, |_| Ok(result(AR))).expect_err("nothing to read");
+    assert_eq!(e, NO_LAYOUT);
+    assert!(world.asked.borrow().is_empty());
+    assert_eq!(*world.closed.borrow(), [1]);
 }
 
 #[test]
-fn with_no_app_in_front_nothing_is_asked_for() {
-    let front = Fake::on(None, &[]);
-    let e = within(&front, AR, || Ok(result(AR))).expect_err("nothing to ask");
-    assert_eq!(e, NO_FRONT);
-    assert!(front.asked.borrow().is_empty());
+fn the_switchs_window_stays_for_the_cold_start_and_each_hold_names_the_layout_it_found_in_front() {
+    let world = World::on(Some(OWNER), &[]);
+    let v = within(&world, AR, |hold| {
+        assert!(world.closed.borrow().is_empty(), "still in front");
+        hold()?;
+        hold()?;
+        Ok(result(AR))
+    })
+    .expect("ran");
+    let lagged = OWNER.to_string();
+    assert_eq!(v["layout_behind"], json!([lagged, lagged]));
+    assert_eq!(*world.closed.borrow(), [4], "only the put-back's");
+}
+
+#[test]
+fn a_hold_that_finds_the_session_out_of_the_layout_fails_and_closes_its_window() {
+    let world = World::on(Some(OWNER), &[]);
+    let e = hold(&world, AR).expect_err("the session lost it");
+    assert_eq!(
+        e,
+        format!("the session types in layout {OWNER} instead of {AR}")
+    );
+    assert_eq!(*world.closed.borrow(), [1]);
+    world.session.set(Some(AR));
+    assert_eq!(
+        hold(&world, AR),
+        Ok(Some(OWNER)),
+        "what the app in front showed"
+    );
+    assert_eq!(*world.closed.borrow(), [1], "kept in front");
 }
 
 #[test]
