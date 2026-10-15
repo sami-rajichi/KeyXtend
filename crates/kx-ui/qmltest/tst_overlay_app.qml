@@ -1,12 +1,14 @@
 // The pointer overlay inside the app (spec §5.3): made only while the hub names a mode, read once soon after each wake
-// with no frame needed and at most once per `poll_ms`, and its badge hidden over each of our windows, whose guard run
-// keeps a shown tip.
+// with no frame needed and at most once per `poll_ms`, its badge hidden over each of our windows, whose guard run
+// keeps a shown tip, and its window grown only for a wider badge word as the keyboard's language changes.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
 import "fixtures/face.js" as Face
+import "fixtures/ui-ar.js" as Ar
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "pointer.js" as Pointer
 
 Item {
@@ -20,6 +22,15 @@ Item {
             ui: FakeUi {}
             keyboard: FakeKeyboard {}
         }
+    }
+
+    SignalSpy {
+        id: widths
+        signalName: "widthChanged"
+    }
+    SignalSpy {
+        id: heights
+        signalName: "heightChanged"
     }
 
     TestCase {
@@ -52,6 +63,32 @@ Item {
         }
         function beside(a, w) {
             return a.face.spots.physical(w.x - w.width / 2, w.y + w.height / 2);
+        }
+        // Every bundled font the stand-in loads is in, so no font load widens a word later.
+        function fontsIn(a) {
+            const l = a.ui.loaders, all = Array.from({ length: l.count }, (_, i) => l.objectAt(i));
+            return all.length > 0 && all.every(f => f.status === FontLoader.Ready);
+        }
+        // Switches the keyboard's language to `t`, a ui-*.js fixture, as the hub does.
+        function say(a, t) {
+            a.ui.lang = t.lang;
+            a.ui.texts = t.texts;
+        }
+        // The overlay, made in language `t` with a mode on and its size spies set.
+        function madeIn(a, t, on) {
+            say(a, t);
+            a.ui.assist = on;
+            tryVerify(() => a.pointer.item !== null, 2000, "made");
+            for (const spy of [widths, heights]) {
+                spy.clear();
+                spy.target = a.pointer.item;
+            }
+            return a.pointer.item;
+        }
+        // Frees the overlay with every mode off.
+        function free(a, on) {
+            a.ui.assist = Object.assign({}, on, { rclick: false, mode: null });
+            tryCompare(a.pointer, "item", null, 2000, "freed");
         }
         // Opens the List design's language list, as tst_app does, and answers it through the alias the overlay reads.
         function openList(a) {
@@ -154,6 +191,39 @@ Item {
             compare(a.keyboard.calls.indexOf("guard " + En.texts["window.pointer"]), -1, "never put in front");
             a.ui.assist = state(f.spots.physical(f.x + f.width / 2, f.y - f.height));
             tryVerify(() => o.badge.shown, 2000, "beside it");
+        }
+
+        // A resize stalls Qt's frames, so the badge word's room only grows while a mode is on, from each word once set:
+        // a narrower word keeps the window's size, a wider one grows it once, and back and forth then never resizes it.
+        function test_the_window_grows_only_for_a_wider_badge_word() {
+            const a = app(), on = state(beside(a, a.face));
+            tryVerify(() => fontsIn(a), 5000, "the bundled fonts load");
+            const o = madeIn(a, En, on);
+            const words = [En, Fr, Ar].map(t => {
+                say(a, t);
+                return { t: t, w: o.badge.widest };
+            }).sort((p, q) => p.w - q.w);
+            const [narrow, mid, wide] = words.map(word => word.t);
+            verify(words[2].w > words[0].w + 1, "the words differ, so the test means something");
+            free(a, on);
+            const first = madeIn(a, wide, on), size = [first.width, first.height];
+            say(a, narrow);
+            wait(0);
+            compare([first.width, first.height], size, "a narrower word keeps the size");
+            compare(widths.count + heights.count, 0);
+            free(a, on);
+            const next = madeIn(a, narrow, on), small = [next.width, next.height];
+            say(a, wide);
+            wait(0);
+            verify(next.width > small[0] && next.height === small[1], "a wider word grows it");
+            compare([widths.count, heights.count], [1, 0], "once");
+            const grown = [next.width, next.height];
+            for (const t of [narrow, mid, wide, mid, narrow, wide]) {
+                say(a, t);
+                wait(0);
+            }
+            compare([next.width, next.height], grown, "back and forth keeps it");
+            compare([widths.count, heights.count], [1, 0], "never resized again");
         }
 
         // The minimise bubble and the open language list hide the badge too, each shown in turn.

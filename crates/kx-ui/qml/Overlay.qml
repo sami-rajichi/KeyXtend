@@ -33,12 +33,15 @@ Window {
     property var ringSeq: null
     property var burstSeq: null
     property bool made: false
+    // The badge's widest settled width once made: its word follows the keyboard's language, and its room only grows,
+    // on the next pass, so a narrower word or a half-set one (new text, old font) never resizes the window.
+    property real widest: 0
     // The window's one size in whole Qt units: the ring's box and the widest badge with its shadow's room on either
     // side of the pointer, for the pointer anywhere inside the ring's box as a hold keeps it, and a unit for rounding.
     readonly property size room: {
-        const [bx, by] = sh.offset_px, m = lk.badge_margin;
+        const [bx, by] = sh.offset_px, m = lk.badge_margin, wide = made ? widest : badge.widest;
         const side = (o, len) => Math.max(span(o * grow - m, o * grow + len + m), span(-o - len - m, -o + m));
-        return Qt.size(Math.ceil(side(bx, badge.widest)) + 1, Math.ceil(side(by, badge.height)) + 1);
+        return Qt.size(Math.ceil(side(bx, wide)) + 1, Math.ceil(side(by, badge.height)) + 1);
     }
     // Where the window sits, in whole Qt units, with its one size: around the ring's box while it plays and the badge
     // with its shadow's room.
@@ -58,6 +61,7 @@ Window {
     // A burst already in the state when the overlay is made played before it, so it never plays.
     Component.onCompleted: {
         burstSeq = st.burst ? st.burst.seq : null;
+        widen();
         made = true;
         follow();
     }
@@ -77,6 +81,10 @@ Window {
         } else if (!r && ring.waving) {
             ring.clear();
         }
+    }
+    // Keeps the badge's width when it is the widest yet.
+    function widen() {
+        widest = Math.max(widest, badge.widest);
     }
     // Physical point `p` in Qt units.
     function pointOf(p) {
@@ -162,5 +170,6 @@ Window {
         shown: !!over.at && !over.covered
         x: over.badgeAt.x - over.frame.x
         y: over.badgeAt.y - over.frame.y
+        onWidestChanged: Qt.callLater(over.widen)
     }
 }

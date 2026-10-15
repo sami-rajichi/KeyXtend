@@ -233,14 +233,14 @@ Item {
 
         // Sized from the tokens, it holds the ring's box and the widest badge with its shadow's room for the pointer
         // anywhere inside the ring's box, as a hold keeps it within its still radius: on either side, near every edge
-        // and over the taskbar, with a big pointer too.
+        // and over the taskbar to its far edge, with a big pointer too.
         function test_a_hold_keeps_the_ring_and_the_badge_inside_it() {
             const [w, h, near, half] = [4000, 3000 - bar, 40, N.lk.shape.ring.box_px / 2];
             const [rs, ra] = [N.lk.shape.ring, N.lk.motion.ring.amount];
             verify(rs.burst_px[0] * ra.burst_scale[1] <= rs.box_px, "the burst's ring stays in the ring's box");
             verify(rs.fly_px[1] + rs.dot_px / 2 <= half, "and so do its dots");
             const spots = [[1000, 800], [w - near, 800], [1000, h - near], [w - near, h - near], [near, near],
-                           [1000, h + bar / 2]];
+                           [1000, h + bar / 2], [1000, h + bar - 1]];
             const moves = [[0, 0], [-half, -half], [half, half], [-half, half], [half, -half]];
             for (const [d, grow] of [[1, 1], [1.5, 1], [1.5, 4]]) {
                 const s = screen(d);
