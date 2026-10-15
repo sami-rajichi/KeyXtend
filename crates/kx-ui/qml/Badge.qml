@@ -15,8 +15,10 @@ Item {
 
     readonly property var sh: lk.shape.badge
     readonly property bool carrying: grab === "carrying"
+    // Its width with the word, the widest it gets, which the overlay's window keeps room for.
+    readonly property real widest: 2 * sh.pad_px[1] + sh.icon_px + sh.gap_px + word.implicitWidth
 
-    width: 2 * sh.pad_px[1] + sh.icon_px + (carrying ? sh.gap_px + word.implicitWidth : 0)
+    width: carrying ? widest : 2 * sh.pad_px[1] + sh.icon_px
     height: sh.icon_px + 2 * sh.pad_px[0]
     opacity: shown && mode !== "" ? 1 : 0
 

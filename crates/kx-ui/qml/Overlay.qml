@@ -1,5 +1,6 @@
 // The pointer overlay (spec §5.3): one click-through window at the pointer that draws the hold ring where a press began
-// and the mode badge beside the pointer. It never takes a click or the focus (ADR-0013), and it moves only on a read.
+// and the mode badge beside the pointer. It never takes a click or the focus (ADR-0013), and it keeps one size, as a
+// resize stalls Qt's frames, so a read only moves it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -17,6 +18,8 @@ Window {
     readonly property alias ring: ring
     readonly property alias badge: badge
     readonly property var sh: lk.shape.badge
+    // How much bigger than Windows' default the pointer is, which pushes the badge out.
+    readonly property real grow: st.pointerPx / st.pointerBase
     // The pointer in Qt units, null until it moves with a mode on, and the badge's top-left beside it. The spots may go
     // first as the windows are torn down.
     readonly property var at: st.point && spots ? spots.logical(st.point.x, st.point.y) : null
@@ -30,8 +33,16 @@ Window {
     property var ringSeq: null
     property var burstSeq: null
     property bool made: false
-    // What the window covers, in whole Qt units: the ring while it plays, and the badge with its shadow's room.
-    readonly property rect frame: cover([ring.busy ? ringBox() : null, at ? badgeBox() : null])
+    // The window's one size in whole Qt units: the ring's box and the widest badge with its shadow's room on either
+    // side of the pointer, for the pointer anywhere inside the ring's box as a hold keeps it, and a unit for rounding.
+    readonly property size room: {
+        const [bx, by] = sh.offset_px, m = lk.badge_margin;
+        const side = (o, len) => Math.max(span(o * grow - m, o * grow + len + m), span(-o - len - m, -o + m));
+        return Qt.size(Math.ceil(side(bx, badge.widest)) + 1, Math.ceil(side(by, badge.height)) + 1);
+    }
+    // Where the window sits, in whole Qt units, with its one size: around the ring's box while it plays and the badge
+    // with its shadow's room.
+    readonly property rect frame: place(ring.busy ? ringBox() : null, at ? badgeBox() : null)
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput
     transientParent: null
@@ -40,8 +51,8 @@ Window {
     visible: ring.busy || !!at
     x: rescale.keep(frame.x)
     y: rescale.keep(frame.y)
-    width: rescale.keep(frame.width)
-    height: rescale.keep(frame.height)
+    width: rescale.keep(room.width)
+    height: rescale.keep(room.height)
 
     onStChanged: if (made) follow()
     // A burst already in the state when the overlay is made played before it, so it never plays.
@@ -76,7 +87,6 @@ Window {
     // default. Near the work area's right or bottom edge it flips to the side the pointer's body is not on, at the base
     // offset, and it stays inside.
     function spot(p, w, h) {
-        const grow = st.pointerPx / st.pointerBase;
         const [bx, by] = sh.offset_px;
         const [x, y] = [p.x + bx * grow, p.y + by * grow];
         if (!st.area)
@@ -107,16 +117,30 @@ Window {
         const m = lk.badge_margin;
         return Qt.rect(badgeAt.x - m, badgeAt.y - m, badge.width + 2 * m, badge.height + 2 * m);
     }
-    // The smallest box in whole Qt units around the `boxes` given; the ring's while none is, as nothing shows then.
-    function cover(boxes) {
-        const b = boxes.filter(r => r !== null);
+    // How far the ring's box and a box from `lo` to `hi` beside the pointer reach along one side together, with the
+    // pointer anywhere inside the ring's box.
+    function span(lo, hi) {
+        const half = ring.width / 2;
+        return Math.max(...[-half, half].map(d => Math.max(half, d + hi) - Math.min(-half, d + lo)));
+    }
+    // The window centred on the ring's box `rb` and the badge's `bb` that show; when both do not fit, as the pointer
+    // races away from a burst, it keeps the badge whole and the burst is cut at its edge. The ring's box while none
+    // shows, as nothing does then.
+    function place(rb, bb) {
+        const b = [rb, bb].filter(r => r !== null);
         if (b.length === 0)
             b.push(ringBox());
-        const left = Math.floor(Math.min(...b.map(r => r.x)));
-        const top = Math.floor(Math.min(...b.map(r => r.y)));
-        const right = Math.ceil(Math.max(...b.map(r => r.x + r.width)));
-        const bottom = Math.ceil(Math.max(...b.map(r => r.y + r.height)));
-        return Qt.rect(left, top, right - left, bottom - top);
+        const lo = k => Math.min(...b.map(r => r[k]));
+        const hi = (k, len) => Math.max(...b.map(r => r[k] + r[len]));
+        const x = start(lo("x"), hi("x", "width"), room.width, bb ? [bb.x, bb.x + bb.width] : null);
+        const y = start(lo("y"), hi("y", "height"), room.height, bb ? [bb.y, bb.y + bb.height] : null);
+        return Qt.rect(x, y, room.width, room.height);
+    }
+    // Where a window side `size` long starts, in whole Qt units: centred on `lo` to `hi`, holding all of it when it
+    // fits, and always the span `keep` when given.
+    function start(lo, hi, size, keep) {
+        const from = Math.min(Math.max(Math.floor((lo + hi - size) / 2), Math.ceil(hi) - size), Math.floor(lo));
+        return keep ? Math.min(Math.max(from, Math.ceil(keep[1]) - size), Math.floor(keep[0])) : from;
     }
 
     // Keeps the size and place above across display scale changes.

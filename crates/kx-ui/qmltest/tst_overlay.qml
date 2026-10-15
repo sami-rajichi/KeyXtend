@@ -1,21 +1,19 @@
-// The pointer overlay (spec §3.2, §5.3): the badge per mode, beside the pointer and clear of its size, flipped inside the
-// work area at a 1.0 and a 1.5 screen ratio, hidden over our windows; the ring at the press, once per seq; and one
-// click-through window that stays shown from the waves to the burst. tst_overlay_app checks it inside the app.
+// The pointer overlay (spec §3.2, §5.3): the badge beside the pointer and clear of its size, flipped inside the work
+// area at a 1.0 and a 1.5 screen ratio, hidden over our windows; the ring at the press, once per seq; and one
+// click-through window of one size that only moves and stays shown from the waves to the burst. tst_badge checks the
+// badge alone, tst_overlay_app the overlay inside the app.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
 import "fixtures/ui-en.js" as En
-import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
-import "../../kx-theme/fixtures/look-native-light-contrast.js" as NC
 
 Item {
     id: root
     width: 200
     height: 100
 
-    Component { id: badgeC; Badge {} }
     Component { id: overC; Overlay {} }
     Component { id: spotsC; Spots {} }
     // The hidden keyboard window the spots belong to; the overlay reads only their screens.
@@ -52,6 +50,14 @@ Item {
         id: shows
         signalName: "visibleChanged"
     }
+    SignalSpy {
+        id: widths
+        signalName: "widthChanged"
+    }
+    SignalSpy {
+        id: heights
+        signalName: "heightChanged"
+    }
 
     TestCase {
         name: "overlay"
@@ -66,9 +72,6 @@ Item {
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
-        }
-        function find(item, ok) {
-            return Board.all(item, ok)[0] || null;
         }
         // The hub's state: Right-click on, the pointer at physical `p` in work area `area`, then `extra`.
         function state(p, area, extra) {
@@ -89,54 +92,18 @@ Item {
             const res = Board.resOf(N.lk, En);
             return createTemporaryObject(overC, root, { lk: N.lk, res: res, spots: s.spots, ours: ours || [], st: st });
         }
-        function badge(ui, mode, grab) {
-            const res = Board.resOf(N.lk, ui);
-            return createTemporaryObject(badgeC, root, { lk: N.lk, res: res, mode: mode, grab: grab, shown: true });
+        // Whether a box at (x, y), w by h, in the overlay's own units, lies inside its window.
+        function inside(o, x, y, w, h) {
+            return x >= 0 && y >= 0 && x + w <= o.width && y + h <= o.height;
         }
-        // The badge's text and its pill.
-        function word(b) {
-            return find(b, o => o.font !== undefined && o.text !== undefined);
+        function ringIn(o) {
+            return inside(o, o.ring.x, o.ring.y, o.ring.width, o.ring.height);
         }
-        function pill(b) {
-            return find(b, o => o.radius !== undefined && o.color !== undefined && Qt.colorEqual(o.color, N.lk.palette.badge_bg));
+        // The badge with its shadow's room.
+        function badgeIn(o) {
+            const m = N.lk.badge_margin;
+            return inside(o, o.badge.x - m, o.badge.y - m, o.badge.width + 2 * m, o.badge.height + 2 * m);
         }
-        function test_each_mode_shows_its_icon_and_carrying_adds_the_word() {
-            for (const [grab, mode, said] of [["off", "rclick", false], ["armed", "grab", false], ["carrying", "grab", true]]) {
-                const b = badge(En, mode, grab);
-                const icon = find(b, o => o.icon !== undefined && o.tint !== undefined);
-                compare(icon.icon, N.lk.icons.keys[mode], grab);
-                verify(Qt.colorEqual(icon.tint, N.lk.palette.badge_ink), grab);
-                compare(word(b).visible, said, grab);
-                compare(b.Accessible.name, En.texts["label." + mode], "readers hear the mode");
-                compare(b.Accessible.description, said ? En.texts["badge.holding"] : "");
-                const wide = said ? sh.gap_px + word(b).implicitWidth : 0;
-                fuzzyCompare(b.width, 2 * sh.pad_px[1] + sh.icon_px + wide, 0.01, grab);
-                compare(b.height, sh.icon_px + 2 * sh.pad_px[0], grab);
-            }
-        }
-
-        // A pill (mock-up .badge, border-radius 999px) in the badge colours; its word is in the keyboard's language.
-        function test_the_badge_is_a_pill_in_its_colours_and_speaks_the_keyboards_language() {
-            const b = badge(Ar, "grab", "carrying");
-            compare(pill(b).radius, b.height / 2);
-            compare(word(b).text, Ar.texts["badge.holding"]);
-            compare(word(b).font.family, Board.resOf(N.lk, Ar).fam.ui);
-            verify(Qt.colorEqual(word(b).color, N.lk.palette.badge_ink));
-            b.shown = false;
-            tryCompare(b, "opacity", 0, 2000, "it fades out");
-        }
-
-        // Its own small shadow (mock-up .badge box-shadow), not the windows' wide one; high contrast drops it.
-        function test_the_badge_casts_its_own_small_shadow() {
-            const fields = l => ["inset", "x", "y", "blur", "spread", "color"].map(k => String(l[k])).join(" ");
-            for (const look of [N.lk, NC.lk]) {
-                const b = createTemporaryObject(badgeC, root, { lk: look, res: Board.resOf(look, En), mode: "rclick", grab: "off", shown: true });
-                const shades = Board.all(b, o => o.shadow !== undefined && o.modelData !== undefined).map(o => fields(o.shadow));
-                compare(shades, look.palette.badge_shadow.map(fields), look.contrast ? "contrast" : "native");
-            }
-            verify(N.lk.palette.badge_shadow.length > 0 && NC.lk.palette.badge_shadow.length === 0);
-        }
-
         // Windows draws the pointer at the screen's scale, so the badge clears it in Qt units at every ratio.
         function test_the_badge_sits_beside_the_pointer_and_a_big_pointer_pushes_it_out() {
             for (const d of ratios) {
@@ -231,10 +198,83 @@ Item {
             verify(o.visible && Qt.colorEqual(o.color, "transparent"));
             compare([o.x, o.y], [o.frame.x, o.frame.y], "it sits where it means to");
             compare([o.badge.x, o.badge.y], [o.badgeAt.x - o.frame.x, o.badgeAt.y - o.frame.y]);
-            const [m, a] = [N.lk.badge_margin, o.badgeAt];
-            const [x0, y0] = [Math.floor(a.x - m), Math.floor(a.y - m)];
-            const [x1, y1] = [Math.ceil(a.x + o.badge.width + m), Math.ceil(a.y + o.badge.height + m)];
-            compare(o.frame, Qt.rect(x0, y0, x1 - x0, y1 - y0), "just the badge and its shadow's room");
+            // As small as the tokens allow: the ring's box, the badge's offset and widest width with its shadow's room,
+            // and one unit for rounding.
+            const [ring, m, [ox, oy]] = [N.lk.shape.ring.box_px, N.lk.badge_margin, sh.offset_px];
+            const room = [Math.ceil(ring + ox + o.badge.widest + m) + 1, Math.ceil(ring + oy + o.badge.height + m) + 1];
+            compare([o.width, o.height], room, "the ring's and the widest badge's room");
+            compare([o.frame.width, o.frame.height], room);
+        }
+
+        // A resize stalls Qt's frames, so from its first read the window keeps one size through moves, a hold's waves
+        // and end, a burst with the pointer racing away and Grab's wider badge; it only moves.
+        function test_the_window_keeps_one_size_and_only_moves() {
+            for (const d of ratios) {
+                const s = screen(d);
+                const at = (x, y, extra) => state(px(x, y, d), s.area, extra);
+                const ring = seq => ({ x: 1000 * d, y: 800 * d, afterMs: 0, waveMs: 1000, seq: seq });
+                const o = overlay(s, at(990, 790));
+                const [size, start] = [[o.width, o.height], [o.frame.x, o.frame.y]];
+                for (const spy of [widths, heights]) {
+                    spy.clear();
+                    spy.target = o;
+                }
+                const steps = [at(1000, 800), at(1000, 800, { ring: ring(1) }), at(1004, 803, { ring: ring(1) }),
+                               at(1004, 803), at(1000, 800, { ring: ring(2) }), at(1001, 801, { burst: ring(3) }),
+                               at(1600, 1300, { burst: ring(3) }), at(1700, 1350, { mode: "grab", grab: "carrying" })];
+                for (const [i, st] of steps.entries()) {
+                    o.st = st;
+                    compare([o.width, o.height], size, "ratio " + d + ", step " + i);
+                }
+                compare(widths.count + heights.count, 0, "never resized");
+                verify(o.frame.x !== start[0] && o.frame.y !== start[1], "it moved");
+            }
+        }
+
+        // Sized from the tokens, it holds the ring's box and the widest badge with its shadow's room for the pointer
+        // anywhere inside the ring's box, as a hold keeps it within its still radius: on either side, near every edge
+        // and over the taskbar, with a big pointer too.
+        function test_a_hold_keeps_the_ring_and_the_badge_inside_it() {
+            const [w, h, near, half] = [4000, 3000 - bar, 40, N.lk.shape.ring.box_px / 2];
+            const [rs, ra] = [N.lk.shape.ring, N.lk.motion.ring.amount];
+            verify(rs.burst_px[0] * ra.burst_scale[1] <= rs.box_px, "the burst's ring stays in the ring's box");
+            verify(rs.fly_px[1] + rs.dot_px / 2 <= half, "and so do its dots");
+            const spots = [[1000, 800], [w - near, 800], [1000, h - near], [w - near, h - near], [near, near],
+                           [1000, h + bar / 2]];
+            const moves = [[0, 0], [-half, -half], [half, half], [-half, half], [half, -half]];
+            for (const [d, grow] of [[1, 1], [1.5, 1], [1.5, 4]]) {
+                const s = screen(d);
+                const big = { pointerPx: En.assist.pointerBase * grow, mode: "grab", grab: "carrying" };
+                const o = overlay(s, state(px(1000, 800, d), s.area, big));
+                let seq = 0;
+                for (const [x, y] of spots) {
+                    for (const [dx, dy] of moves.filter(m => y + m[1] < 3000)) {
+                        const ring = { x: x * d, y: y * d, afterMs: 0, waveMs: 1000, seq: ++seq };
+                        o.st = state(px(x + dx, y + dy, d), s.area, Object.assign({ ring: ring }, big));
+                        const tag = "ratio " + d + ", grow " + grow + ", press " + x + ", " + y + ", moved " + dx + ", " + dy;
+                        fuzzyCompare(o.frame.x + o.ring.x + o.ring.width / 2, x, 0.001, tag + ": the ring at the press");
+                        fuzzyCompare(o.frame.y + o.ring.y + o.ring.height / 2, y, 0.001, tag);
+                        fuzzyCompare(o.frame.x + o.badge.x, o.badgeAt.x, 0.001, tag + ": the badge at its spot");
+                        fuzzyCompare(o.frame.y + o.badge.y, o.badgeAt.y, 0.001, tag);
+                        verify(ringIn(o), tag + ": the ring inside");
+                        verify(badgeIn(o), tag + ": the badge inside");
+                    }
+                }
+            }
+        }
+
+        // Racing away during a burst, the pointer keeps the badge whole and the burst may be cut at the window's edge,
+        // as it fades out within its short move anyway.
+        function test_a_pointer_racing_away_from_a_burst_keeps_the_badge_whole() {
+            const s = screen(1);
+            const burst = { x: 1000, y: 800, seq: 1 };
+            const o = overlay(s, state(px(1000, 800, 1), s.area));
+            o.st = state(px(1000, 800, 1), s.area, { burst: burst });
+            verify(o.ring.bursting && ringIn(o) && badgeIn(o), "both at the fire");
+            o.st = state(px(1600, 1300, 1), s.area, { burst: burst });
+            verify(o.ring.bursting, "the burst still plays");
+            verify(badgeIn(o), "the badge whole");
+            verify(!ringIn(o), "the burst left behind");
         }
 
         // With no pointer point yet, as a saved mode before any move, the ring alone shows the window: it stays shown from
