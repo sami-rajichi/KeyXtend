@@ -133,10 +133,11 @@ use_mode = "rclick"
 use_hover_ms = 100
 # Longest wait for the mode key to read on or off after its click, in ms.
 use_lit_ms = 3000
-# `g8 arabic` puts this language's first installed layout in front before the cold start (ISO 639 code), as the
-# language hotkey does, and puts the owner's layout back after, even when the run breaks.
+# `g8 arabic` puts this language's first installed layout in front before the cold start (ISO 639 code), and the
+# owner's layout back after, even when the run breaks. Each time it starts target-window in front and asks it, as the
+# language hotkey asks; Windows switches the whole session, and the layout stays once target-window closes.
 arabic = "ar"
-# Longest wait for a layout G8 asks for to show in the app in front, in ms.
+# Longest wait for target-window to type in a layout G8 asks it for, in ms.
 layout_wait_ms = 2000
 
 # Windows' On-Screen Keyboard, which `g8 osk` times as a baseline by G8's screen copy; G8 never starts or closes it.

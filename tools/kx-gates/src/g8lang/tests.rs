@@ -33,13 +33,47 @@ impl Front for Fake {
         self.now.get()
     }
 
-    fn switch(&self, id: LayoutId) -> bool {
+    fn switch(&self, id: LayoutId) -> Result<(), String> {
         self.asked.borrow_mut().push(id);
-        let shows = !self.refuses.contains(&id);
-        if shows {
-            self.now.set(Some(id));
+        if self.refuses.contains(&id) {
+            return Err(REFUSED.into());
         }
-        shows
+        self.now.set(Some(id));
+        Ok(())
+    }
+}
+
+/// Why the fake switch failed.
+const REFUSED: &str = "it never typed in it";
+
+/// G8's own windows, numbered as they open, which take each request unless `deaf`; each request and each close.
+#[derive(Default)]
+struct Windows {
+    deaf: bool,
+    opened: Cell<u8>,
+    asked: RefCell<Vec<(u8, LayoutId)>>,
+    closed: RefCell<Vec<u8>>,
+}
+
+impl Own for Windows {
+    type Window = u8;
+
+    fn open(&self) -> Result<u8, String> {
+        self.opened.set(self.opened.get() + 1);
+        Ok(self.opened.get())
+    }
+
+    fn ask(&self, w: &u8, id: LayoutId) -> Result<(), String> {
+        self.asked.borrow_mut().push((*w, id));
+        if self.deaf {
+            Err(REFUSED.into())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn close(&self, w: u8) {
+        self.closed.borrow_mut().push(w);
     }
 }
 
@@ -94,7 +128,24 @@ fn a_layout_that_never_shows_stops_before_the_run_and_puts_the_owners_back() {
     let never = || -> Result<Value, String> { panic!("ran with the owner's layout in front") };
     let e = within(&front, AR, never).expect_err("stopped");
     assert!(e.contains(&AR.to_string()) && e.contains(BACK), "{e}");
+    assert!(e.contains(REFUSED), "says why: {e}");
     assert_eq!(*front.asked.borrow(), [AR, OWNER]);
+}
+
+#[test]
+fn each_switch_asks_only_a_window_g8_opened_in_front_and_closes_it_even_when_refused() {
+    // The failed run asked the app that happened to be in front, which never took the request.
+    let own = Windows::default();
+    assert_eq!(through(&own, AR), Ok(()));
+    assert_eq!(through(&own, OWNER), Ok(()));
+    assert_eq!(*own.asked.borrow(), [(1, AR), (2, OWNER)]);
+    assert_eq!(*own.closed.borrow(), [1, 2]);
+    let deaf = Windows {
+        deaf: true,
+        ..Windows::default()
+    };
+    assert_eq!(through(&deaf, AR), Err(REFUSED.to_string()));
+    assert_eq!(*deaf.closed.borrow(), [1], "closed after a refusal too");
 }
 
 #[test]

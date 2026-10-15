@@ -114,7 +114,7 @@ pub struct G8 {
     pub use_lit_ms: u64,
     /// The language whose first installed layout `g8 arabic` puts in front, by ISO 639 code.
     pub arabic: String,
-    /// Longest wait for a layout G8 asks for to show in the app in front.
+    /// Longest wait for target-window to type in a layout G8 asks it for.
     pub layout_wait_ms: u64,
 }
 
