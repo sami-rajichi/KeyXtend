@@ -3,6 +3,7 @@ use kx_module_api::parse_as;
 use kx_theme::contrast::{MAX_CONTRAST, WCAG_AA};
 use toml::{Table, Value};
 
+mod pool;
 mod sound;
 
 /// The defaults with `key` set to `value`.

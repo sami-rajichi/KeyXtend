@@ -1,7 +1,7 @@
 //! Qt on the main thread: hardened first, kept on the lowest-power graphics adapter and drawing every window on this
-//! thread with the `[ui]` frame timing, then the app object, the shared graphics device with the root QML over the
-//! installed hub, and the event loop, run again each time the windows are made again or wait for the next try at a
-//! device.
+//! thread with the `[ui]` frame timing and buffer pool, then the app object, the shared graphics device with the root
+//! QML over the installed hub, and the event loop, run again each time the windows are made again or wait for the next
+//! try at a device.
 
 use cxx_qt_lib::QGuiApplication;
 use kx_ui::{
@@ -12,7 +12,8 @@ use std::process::ExitCode;
 
 /// Loads the root QML and runs Qt's loop until the UI ends; `end` runs after the loop, while Qt's objects still live.
 /// With `pinned`, Qt loads plugins and QML modules only from that folder; it draws on the adapter `pick` finds, with
-/// the frame timing of the `[ui]` settings `ui`, and logs each press's and frame's times when they say so.
+/// the frame timing and buffer pool of the `[ui]` settings `ui`, and logs each press's and frame's times when they say
+/// so.
 pub fn run(pinned: Option<&Path>, pick: Pick, ui: &UiSettings, end: impl FnOnce()) -> ExitCode {
     let cleared = harden_qt(pinned);
     if cleared > 0 {
@@ -64,10 +65,12 @@ fn looped(mut exec: impl FnMut() -> Option<i32>, shell: &mut impl Rebuild) -> Op
     }
 }
 
-/// Sets Qt's frame timing from `ui` and logs it, so a measured run says which timing it had.
+/// Sets Qt's frame timing and buffer pool from `ui` and logs them, so a measured run says which it had.
 fn timing(ui: &UiSettings) {
     if !pin_timing(ui) {
-        tracing::warn!("Qt's frame timing could not be set, so some of it stays Qt's own");
+        tracing::warn!(
+            "Qt's frame timing or buffer pool could not be set, so some of it stays Qt's own"
+        );
     }
     tracing::info!(
         frame_latency = ui.frame_latency,
@@ -76,7 +79,8 @@ fn timing(ui: &UiSettings) {
         present_vsync = ui.present_vsync,
         press_frame = ?ui.press_frame,
         frame_log = ui.frame_log,
-        "Qt's frame timing is set"
+        buffer_pool_bytes = ui.buffer_pool_bytes,
+        "Qt's frame timing and buffer pool are set"
     );
 }
 

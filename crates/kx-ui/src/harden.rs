@@ -17,17 +17,23 @@ pub const LATENCY_VAR: &str = "QT_D3D_MAX_FRAME_LATENCY";
 pub const NO_VBLANK_VAR: &str = "QT_D3D_NO_VBLANK_THREAD";
 /// Qt's update timer in ms, where frames do not follow the refresh (`[ui] update_idle_ms`).
 pub const IDLE_VAR: &str = "QT_QPA_UPDATE_IDLE_TIME";
+/// The bytes of each buffer kind a window's renderer keeps to reuse, read as it is made (`[ui] buffer_pool_bytes`).
+pub const POOL_VAR: &str = "QSG_RENDERER_BUFFER_POOL_LIMIT";
+/// What Qt 6.11.2 keeps of each buffer kind per window when `POOL_VAR` is not set (`DEFAULT_BUFFER_POOL_SIZE_LIMIT`).
+pub const QT_POOL_BYTES: u32 = 2 * 1024 * 1024;
 
 /// Ends each name in a list of names, as it ends a C string.
 pub const NAME_END: u8 = 0;
 
-/// The frame timing variables the app sets after the clear, from the `[ui]` settings `s`; the defaults are Qt's own.
+/// The frame timing and buffer pool variables the app sets after the clear, from the `[ui]` settings `s`. The timing
+/// defaults are Qt's own, and the pool's keeps no spare buffer (ADR-0028).
 #[must_use]
-pub fn timing_vars(s: &UiSettings) -> [(&'static str, String); 3] {
+pub fn timing_vars(s: &UiSettings) -> [(&'static str, String); 4] {
     [
         (LATENCY_VAR, s.frame_latency.to_string()),
         (NO_VBLANK_VAR, u8::from(!s.vblank_updates).to_string()),
         (IDLE_VAR, s.update_idle_ms.to_string()),
+        (POOL_VAR, s.buffer_pool_bytes.to_string()),
     ]
 }
 

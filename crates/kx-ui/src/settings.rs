@@ -1,6 +1,7 @@
 //! The `[ui]` settings: the look, the language, tips, timings, paging and sounds, with every number's limits in one
 //! place.
 
+use crate::harden::QT_POOL_BYTES;
 use crate::i18n::{AUTO, find};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use kx_platform::ui::BackdropKind;
@@ -32,6 +33,8 @@ pub(crate) const DEVICE_RETRY_MS: RangeInclusive<u64> = 0..=5_000;
 pub(crate) const FRAME_LATENCY: RangeInclusive<u32> = 0..=3;
 /// How long Qt's update timer may wait before a frame, in ms; 0 starts it at once.
 pub(crate) const UPDATE_IDLE_MS: RangeInclusive<u64> = 0..=50;
+/// How many bytes of each buffer kind a window's renderer may keep to reuse: none, up to four times Qt's own.
+pub(crate) const BUFFER_POOL_BYTES: RangeInclusive<u32> = 0..=4 * QT_POOL_BYTES;
 /// How long a press may wait for its frame before it types anyway, in ms.
 pub(crate) const PRESS_FRAME_MS: RangeInclusive<u64> = 1..=1_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
@@ -136,6 +139,9 @@ pub struct UiSettings {
     pub update_idle_ms: u64,
     /// Each frame shows at a screen refresh (swap interval 1); false shows it at once (0).
     pub present_vsync: bool,
+    /// How many bytes of freed vertex buffers, and as many of index buffers, each window's renderer keeps to reuse
+    /// (`QSG_RENDERER_BUFFER_POOL_LIMIT`, ADR-0028); 0 keeps none.
+    pub buffer_pool_bytes: u32,
     /// When a pressed key types, against the frame that shows it pressed.
     pub press_frame: PressFrame,
     /// The longest `PressFrame::First` waits for that frame, in ms.
@@ -194,6 +200,11 @@ impl UiSettings {
         within("device_retry_ms", self.device_retry_ms, &DEVICE_RETRY_MS)?;
         within("frame_latency", self.frame_latency, &FRAME_LATENCY)?;
         within("update_idle_ms", self.update_idle_ms, &UPDATE_IDLE_MS)?;
+        within(
+            "buffer_pool_bytes",
+            self.buffer_pool_bytes,
+            &BUFFER_POOL_BYTES,
+        )?;
         within("press_frame_ms", self.press_frame_ms, &PRESS_FRAME_MS)?;
         within("sound_volume", self.sound_volume, &SOUND_VOLUME)?;
         within("sound_idle_ms", self.sound_idle_ms, &SOUND_IDLE_MS)?;

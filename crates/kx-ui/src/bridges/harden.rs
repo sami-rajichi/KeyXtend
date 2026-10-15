@@ -1,6 +1,6 @@
 //! Qt's start, hardened for the uiAccess process: no variable Qt reads survives but the graphics adapter, the drawing
-//! variables and the frame timing the app picks, Qt Quick keeps no shader cache on disk, and when pinned only the
-//! app's own folders give plugins and QML modules.
+//! variables and the frame timing and buffer pool the app picks, Qt Quick keeps no shader cache on disk, and when
+//! pinned only the app's own folders give plugins and QML modules.
 
 use crate::UiSettings;
 use crate::harden::{DRAW_VARS, qt_names, swap_interval, timing_vars};
@@ -108,8 +108,8 @@ pub fn pin_drawing() -> bool {
     failed.count() == 0
 }
 
-/// Sets Qt's frame timing from the `[ui]` settings `s`: the variables of `timing_vars` and every window's swap interval.
-/// Call it after `harden_qt` and before Qt's app object exists; false when a variable could not be set.
+/// Sets Qt's frame timing and buffer pool from the `[ui]` settings `s`: the variables of `timing_vars` and every
+/// window's swap interval. Call it after `harden_qt` and before Qt's app object exists; false when one was not set.
 #[must_use]
 pub fn pin_timing(s: &UiSettings) -> bool {
     ffi::set_swap_interval(swap_interval(s));
