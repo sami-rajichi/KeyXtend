@@ -1,4 +1,4 @@
-//! Tests of G8's reading after use: its settings, its two parts, the sweep's order and how a broken step ends.
+//! Tests of G8's reading after use: its settings, its two parts, its sweep and how a broken step ends.
 
 use kx_mod_keyboard::Assist;
 use serde_json::json;
@@ -76,8 +76,8 @@ fn no_reading_fails_both_parts_as_not_measured() {
 }
 
 #[test]
-fn the_sweep_rests_on_each_key_in_order_and_counts_those_with_no_box() {
-    let ids = ["esc", "c-0x0010", "lang", "rclick"].map(String::from);
+fn the_sweep_rests_on_each_key_in_the_order_given() {
+    let ids = ["rclick", "esc", "lang"].map(String::from);
     let p = |x, y| POINT { x, y };
     let at = |id: &str| match id {
         "esc" => Some(p(5, 9)),
@@ -85,9 +85,16 @@ fn the_sweep_rests_on_each_key_in_order_and_counts_those_with_no_box() {
         "rclick" => Some(p(900, 40)),
         _ => None,
     };
-    let (points, missed) = sweep(&ids, at);
-    assert_eq!(points, [p(5, 9), p(300, 200), p(900, 40)]);
-    assert_eq!(missed, 1, "the key with no box");
+    assert_eq!(sweep(&ids, at), Ok(vec![p(900, 40), p(5, 9), p(300, 200)]));
+}
+
+#[test]
+fn a_key_with_no_box_fails_the_sweep_rather_than_read_too_low() {
+    let ids = ["esc", "c-0x0010", "lang"].map(String::from);
+    let at = |id: &str| (id != "c-0x0010").then_some(POINT { x: 1, y: 1 });
+    let e = sweep(&ids, at).expect_err("a part sweep");
+    assert!(e.starts_with("1 of 3 board keys"), "{e}");
+    assert!(!e.contains("c-0x0010"), "names no key: {e}");
 }
 
 #[test]
@@ -99,8 +106,8 @@ fn the_sweep_takes_every_key_of_the_board_once_in_board_order() {
             .and_then(|i| i32::try_from(i).ok())
             .map(|x| POINT { x, y: 0 })
     };
-    let (points, missed) = sweep(&ids, at);
-    assert_eq!((points.len(), missed), (ids.len(), 0));
+    let points = sweep(&ids, at).expect("every key has a box");
+    assert_eq!(points.len(), ids.len());
     assert!(points.windows(2).all(|w| w[0].x < w[1].x), "board order");
 }
 

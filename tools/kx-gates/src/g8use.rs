@@ -36,10 +36,8 @@ const READ_LEFT_OUT: &str = "the reading after use is left out";
 /// What the use did, and private memory once it settled.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Used {
-    /// Keys the pointer rested on, once each.
+    /// Keys the pointer rested on, once each: every key of the board.
     pub hovers: usize,
-    /// Board keys with no box on screen, so not hovered.
-    pub missed: usize,
     /// The mode was on already, so it stays on.
     pub mode_was_on: bool,
     /// The layout of the app in front at the reading, so `g8 arabic` shows its layout held.
@@ -79,11 +77,17 @@ pub fn layout_in(v: &Value) -> Option<String> {
     v[FIELD]["layout"].as_str().map(String::from)
 }
 
-/// The screen centres of the keys `ids` names, in that order, as `at` finds them, and how many it found none for.
-pub fn sweep(ids: &[String], at: impl Fn(&str) -> Option<POINT>) -> (Vec<POINT>, usize) {
+/// The screen centres of the keys `ids` names, in that order, as `at` finds them; refused when any has none, as every
+/// board key has a box (G10), so a part sweep would read too low.
+pub fn sweep(ids: &[String], at: impl Fn(&str) -> Option<POINT>) -> Result<Vec<POINT>, String> {
     let points: Vec<POINT> = ids.iter().filter_map(|id| at(id)).collect();
-    let missed = ids.len() - points.len();
-    (points, missed)
+    match ids.len() - points.len() {
+        0 => Ok(points),
+        missed => Err(format!(
+            "{missed} of {} board keys have no box on screen, so a part sweep would read too low",
+            ids.len()
+        )),
+    }
 }
 
 /// The use's result once the mode was put `back`: an error says whether the mode went back, and a failed put-back
@@ -98,10 +102,10 @@ fn joined<T>(used: Result<T, String>, back: Result<(), String>) -> Result<T, Str
     }
 }
 
-/// Rests the pointer once on each board key with a box, in board order, then moves it off the keyboard, so no hover
-/// stays; the keys hovered and missed.
-fn hover(g: &G8, kb: &Keyboard) -> Result<(usize, usize), String> {
-    let (points, missed) = sweep(&board::ids()?, |id| kb.at(id).ok());
+/// Rests the pointer once on each board key, in board order, then moves it off the keyboard, so no hover stays; the
+/// keys hovered. Refused before any move when a key has no box.
+fn hover(g: &G8, kb: &Keyboard) -> Result<usize, String> {
+    let points = sweep(&board::ids()?, |id| kb.at(id).ok())?;
     let first = *points
         .first()
         .ok_or("no key of the board has a box on screen")?;
@@ -111,16 +115,15 @@ fn hover(g: &G8, kb: &Keyboard) -> Result<(usize, usize), String> {
     }
     let away = g8ui::away_from(win::rect(kb.hwnd)?, first, win::desktop().1);
     mouse::move_to(away)?;
-    Ok((points.len(), missed))
+    Ok(points.len())
 }
 
 /// The sweep, the warm-up's wait, then the reading of `p`, with the mode on since `was` or since the step began.
 fn read_after(g: &G8, kb: &Keyboard, p: &Process, was: bool) -> Result<Used, String> {
-    let (hovers, missed) = hover(g, kb)?;
+    let hovers = hover(g, kb)?;
     sleep_ms(g.warm_ms);
     Ok(Used {
         hovers,
-        missed,
         mode_was_on: was,
         layout: WinLayouts.foreground().map(|l| l.to_string()),
         memory: p.memory()?,
@@ -148,7 +151,6 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Used, String> {
 pub fn read_as(memory: Memory) -> Used {
     Used {
         hovers: 1,
-        missed: 0,
         mode_was_on: false,
         layout: None,
         memory,
