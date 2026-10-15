@@ -31,7 +31,7 @@
 - **Overlay (`kx-ui`):** `Overlay.qml` (one click-through window, made while a mode is on, unowned), `HoldRing.qml` (from the spike's `RingFace.qml`), `Badge.qml`; the hub keeps the assist state, the notes and the last pointer point, and wakes Qt (`Wake::Assist`); pointer moves coalesce to one wake in flight.
 - **Keyboard:** side keys get `role = { assist = "rclick" | "grab" }`, lit from `AssistChanged`, dimmed with a tip while the mouse module is not live; a tap publishes `AssistToggle`. The latches publish `LatchesChanged` and handle `LatchesUsed` and `LatchesAsk`.
 - **Settings `[mouse]`:** `rclick = false`, `hold_ms = 1500` (500–3000), `still_px = 7` (logical, scaled by the press's DPI), `ring_after_ms = 150` (below the shortest hold), `health_ms = 1000`, `health_slack_ms = 500`, `echo_ms = 250`.
-- **Settings `[ui]`:** `sound_key`, `sound_rclick`, `sound_pick`, `sound_drop` (true), `sound_volume = 50` (0–100), `sound_idle_ms = 3000`.
+- **Settings `[ui]`:** `sound_key`, `sound_rclick`, `sound_pick`, `sound_drop` (true), `sound_volume = 15` (0–100, the owner's ear), `sound_idle_ms = 3000`; `buffer_pool_bytes = 0` (ADR-0028).
 - **Tokens:** `shape.toml [badge]` (padding, icon, gap, text size, edge margin), `motion.toml` `badge` fade; the ring's existing tokens; `sounds.toml`.
 - **Texts (EN, FR, AR):** `tip.rclick`, `tip.grab`, `tip.mouse-off`, `badge.holding`, `window.pointer`, `module.mouse`, notice `mouse-hook-failed`.
 - **Test build:** the app's `gate-input` feature adds `--sim-input`: the engine then acts only on the gate tool's tagged input, never on the hand's. Stage refuses an exe that holds it.
