@@ -76,7 +76,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G2 No focus | 1,000 clicks on keys; the target app keeps focus and its caret every time |
 | G3 Top band | The signed, Program Files, uiAccess build, started by a standard user, stays above the Start menu, Search and Task Manager |
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
-| G5 Hold engine (core) | With Right-click on, over normal and admin windows: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
+| G5 Hold engine (core) | With Right-click on, over normal windows by the gate and over an admin window in the owner's hands-on check: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
 | G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
 | G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode: after a warm-up, and again after a sweep over every key with a mouse mode on (ADR-0028), at most 100 MB of private working set and 140 MB of private commit, staying flat while tips, the language list and themes come and go (churn, ADR-0021). One run has the Arabic layout in front. Frame times measured with PresentMon; a pressed key lights up within the next frame at the median and one refresh later at worst, as Windows' On-Screen Keyboard (ADR-0025) |
@@ -153,7 +153,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 4 — Mouse assist — v0.2
 
 - `kx-mod-mouse`: the hold engine (§5.1) with a fake clock; Right-click toggle; Grab for drag-drop and text selection; modifier+click.
-- Overlay: the ring and burst in a click-through Qt window (proven by G12), and the badge. Sounds (CC0, generated).
+- Overlay: the ring and burst in a click-through Qt window (proven by G12), and the badge. Sounds (CC0 recordings, `THIRD_PARTY.md`).
 - **Health monitor:** detects when Windows removes the hook and reinstalls it.
 - **Edge cases:**
   - press on our own window;
