@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 00:28 — P4: G8 reads after use before the theme rounds, and `g8 arabic` switches through target-window
+A traced G8 grew about 5 MB over warm-up, presses, resizes and G2, then about 20 MB at the churn's first theme rounds, so the reading after use now comes right after G2 and before PresentMon's wait and the churn, and the theme cost stays with P13. `g8 arabic` failed on the PC because it asked whichever app was in front for the layout, and that app never switched. It now starts target-window in front, asks it as the language hotkey does, and closes it, so Windows switches the whole session; the owner's layout comes back the same way. Tests cover the new order in G8's hold, and a switch that asks only G8's own window and closes it even when refused.
+
 ## 2026-10-15 10:50 — P4: G8 also reads memory after use, and once with Arabic in front
 G8 read memory only on a keyboard nobody had touched, so it missed what the renderer keeps after hovers and a lit mode light. Last before it quits, G8 now turns `[g8] use_mode` (Right-click) on with its key, rests the pointer once on every key (a key with no box fails the step), waits the warm-up again and judges `used_memory_mb` and `used_commit_mb` by the same budgets, then puts the mode back as it was, even after a failed step (ADR-0028). `g8 arabic` asks the app in front for the first installed `[g8] arabic` layout before the cold start, as the language hotkey does, and puts the owner's layout back after, even when the run breaks; it stops before any change when none is installed. Unit tests cover the new settings, both parts passing, failing and missing, the sweep's board order and gaps, the mode's put-back and the layout's put-back on an error or a panic.
 
