@@ -32,13 +32,15 @@ fn ms_of(secs: u64) -> u64 {
     u64::try_from(Duration::from_secs(secs).as_millis()).unwrap_or(u64::MAX)
 }
 
-/// The least time G8 holds the mouse: until its `PresentMon` capture ends, then each churn round resting on each tip.
-fn g8_ms(c: &GatesConfig) -> u64 {
+/// The least time G8 holds the mouse: until its `PresentMon` capture ends, then each churn round resting on each tip,
+/// then the use step's rest on each of the board's `keys` and its wait before the reading.
+fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
     let g = &c.g8;
     let rounds = g.churn_warm_rounds.saturating_add(g.churn_rounds);
     let rests = rounds.saturating_mul(g.churn_tips.len());
     let churn = u64::try_from(rests).map_or(u64::MAX, |n| n.saturating_mul(g.churn_tip_ms));
-    ms_of(g.presentmon_secs).saturating_add(churn)
+    let hovers = u64::try_from(keys).map_or(u64::MAX, |n| n.saturating_mul(g.use_hover_ms));
+    total(&[ms_of(g.presentmon_secs), churn, hovers, g.warm_ms])
 }
 
 /// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
@@ -152,7 +154,7 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     clicks_fit(c, "g4", c.g4.clicks)?;
     held_fits(c, "g5", rounds_ms(c, c.g5.rounds, hold_ms))?;
     held_fits(c, "g8 hook", rounds_ms(c, c.g8_hook.rounds, hold_ms))?;
-    held_fits(c, "g8", g8_ms(c))
+    held_fits(c, "g8", g8_ms(c, crate::board::ids()?.len()))
 }
 
 #[cfg(test)]
@@ -224,6 +226,15 @@ mod tests {
         assert!(e.contains("g2"), "{e}");
         let off = with(|c| c.mouse_guard.on = false);
         assert_eq!(clicks_fit(&off, "g2", past), Ok(()), "nothing is held");
+    }
+
+    #[test]
+    fn g8s_hold_counts_the_use_steps_rest_on_each_key_and_its_wait() {
+        let c = load().expect("loads");
+        assert_eq!(g8_ms(&c, 10) - g8_ms(&c, 0), 10 * c.g8.use_hover_ms);
+        assert!(g8_ms(&c, 0) >= ms_of(c.g8.presentmon_secs) + c.g8.warm_ms);
+        let slow = with(|c| c.g8.use_hover_ms = c.mouse_guard.limit_ms);
+        assert!(check(&slow).expect_err("G8 too long").contains("g8"));
     }
 
     #[test]

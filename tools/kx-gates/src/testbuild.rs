@@ -22,11 +22,11 @@ use parts::{
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
 use crate::hooklog::{self, HookLine};
-use crate::keymap::Reader;
+use crate::modekey::{ModeKey, Wait};
 use crate::out::say;
 use crate::proc::Process;
 use crate::product::{self, Keyboard, NAME};
-use crate::{admin, board, close, g8start, mouse, out, probe, win};
+use crate::{admin, close, g8start, out, probe, win};
 
 /// The product's test build while it runs; dropping it quits it and starts the owner's copy again, best effort.
 pub struct TestBuild<'a> {
@@ -111,26 +111,20 @@ impl<'a> TestBuild<'a> {
     /// it to read so; a mode key lights only once the hook's engine applied the toggle. Refused when another window
     /// covers the key.
     pub fn set(&self, role: Role, on: bool) -> Result<(), String> {
-        let key = Key::of(role)?;
-        if key.on()? == on {
-            return Ok(());
-        }
-        mouse::click_at(key.keyboard.top_at(&key.id)?)?;
-        self.wait(&key, on)
+        ModeKey::of(role)?.set(on, self.lit())
     }
 
     /// Waits up to `lit_ms` for the key with `role` to read `on`, as after the product changed it itself.
     pub fn reads(&self, role: Role, on: bool) -> Result<(), String> {
-        self.wait(&Key::of(role)?, on)
+        ModeKey::of(role)?.wait(on, self.lit())
     }
 
-    /// Waits up to `lit_ms` for `key` to read `on`.
-    fn wait(&self, key: &Key, on: bool) -> Result<(), String> {
-        let (g, poll_ms) = (&self.ctx.cfg.gate_input, self.ctx.cfg.timing.poll_ms);
-        let lit = || key.on().ok().filter(|now| *now == on).map(drop);
-        let word = if on { "on" } else { "off" };
-        win::poll_until(g.lit_ms, poll_ms, lit)
-            .ok_or_else(|| format!("key {} did not read {word} within {} ms", key.id, g.lit_ms))
+    /// The wait for a key to read on or off: `[gate_input] lit_ms`.
+    fn lit(&self) -> Wait {
+        Wait {
+            lit_ms: self.ctx.cfg.gate_input.lit_ms,
+            poll_ms: self.ctx.cfg.timing.poll_ms,
+        }
     }
 
     /// Quits it, reads its stats lines logged since its start, then starts the owner's copy again.
@@ -194,30 +188,6 @@ impl Drop for TestBuild<'_> {
         if self.owner.is_some() {
             let _ = self.restore(gone(asked, || product::running().is_some()));
         }
-    }
-}
-
-/// A key of the shown keyboard, read through UI Automation.
-struct Key {
-    id: String,
-    reader: Reader,
-    keyboard: Keyboard,
-}
-
-impl Key {
-    /// The key with `role` on the keyboard shown now.
-    fn of(role: Role) -> Result<Self, String> {
-        Ok(Self {
-            id: board::id_of(role)?,
-            reader: Reader::new()?,
-            keyboard: Keyboard::find()?,
-        })
-    }
-
-    /// Whether it reads on now.
-    fn on(&self) -> Result<bool, String> {
-        let read = self.reader.toggled(self.keyboard.hwnd, &self.id)?;
-        read.ok_or_else(|| format!("key {} has no on or off state", self.id))
     }
 }
 

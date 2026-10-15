@@ -75,6 +75,7 @@ fn parses_gates_that_take_only_a_name() {
         "close keyxtend",
         "g8 keyxtend",
         "g8 weak",
+        "g8 arabic",
         "g8 hook",
         "g8 hook-weak",
         "g9 keyxtend",
@@ -191,4 +192,5 @@ fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
     }
     assert_eq!(mouse("g8", crate::product::NAME), Mouse::Held);
     assert_eq!(mouse("g8", crate::g8::WEAK), Mouse::Held);
+    assert_eq!(mouse("g8", crate::g8lang::ARABIC), Mouse::Held);
 }

@@ -25,7 +25,8 @@ guard_headroom_ms = 120000
 # each target window's start, in ms.
 capture_headroom_ms = 30000
 
-# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
+# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product),
+# `g8 arabic` with an Arabic layout in front.
 [g8]
 # The copy G8 starts, through the shell: the signed uiAccess one beside the installed kx-gates, where
 # `cargo xtask dev-install` puts both; a relative path starts at this file's folder.
@@ -42,7 +43,8 @@ log_guarded = "windows guarded"
 # Settle, then measure the idle product for this long, in ms.
 idle_settle_ms = 3000
 idle_ms = 10000
-# Memory is read this long after the keyboard shows, in ms: a fixed warm-up so runs compare. G8 never trims (ADR-0021).
+# Memory is read this long after the keyboard shows, and again this long after the use below, in ms: a fixed warm-up so
+# runs compare. G8 never trims (ADR-0021).
 warm_ms = 10000
 # Idle private working set and private commit (ADR-0021), and the program folder below, in MB of 10⁶ bytes (spec §10);
 # idle CPU in percent of one core in both modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
@@ -121,6 +123,20 @@ churn_tip_ms = 300
 churn_theme = "bar.theme"
 # Wait after each list, bubble or theme press, so its windows have shown or gone, in ms.
 churn_settle_ms = 500
+# After use (ADR-0028), last before G8 quits: the mode key turns its mode on with a click, the pointer rests once on
+# every key of the board without clicking, and warm_ms later memory is judged by memory_mb and commit_mb again.
+# Then the key puts the mode back as it was, so the next cold start is as before.
+# The mode key, by board id: a mouse-assist key, so its light and its mode are part of the use.
+use_mode = "rclick"
+# The pointer's rest on each key, in ms: a few frames so its hover draws, below [ui] tip_ms so no tip shows.
+use_hover_ms = 100
+# Longest wait for the mode key to read on or off after its click, in ms.
+use_lit_ms = 3000
+# `g8 arabic` puts this language's first installed layout in front before the cold start (ISO 639 code), as the
+# language hotkey does, and puts the owner's layout back after, even when the run breaks.
+arabic = "ar"
+# Longest wait for a layout G8 asks for to show in the app in front, in ms.
+layout_wait_ms = 2000
 
 # Windows' On-Screen Keyboard, which `g8 osk` times as a baseline by G8's screen copy; G8 never starts or closes it.
 [osk]

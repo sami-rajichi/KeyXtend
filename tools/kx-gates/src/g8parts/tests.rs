@@ -1,4 +1,5 @@
-//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, and when a run passes.
+//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, the memory's after use, and when a run
+//! passes.
 
 use serde_json::json;
 
@@ -38,6 +39,7 @@ fn sample() -> (G8, Measured, Outside) {
         }),
         ran_us: 0,
         churn,
+        used: Ok(g8use::read_as(still)),
     };
     let o = Outside {
         hz: Some(165.0),
@@ -58,8 +60,43 @@ fn a_run_within_every_budget_passes() {
     assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
     assert_eq!(
         parts.len(),
-        12,
-        "one part per spec §10 budget G8 owns, and two for the key light"
+        14,
+        "one part per spec §10 budget G8 owns, two for the key light and two for the memory after use"
+    );
+}
+
+#[test]
+fn memory_over_its_budget_after_use_fails_its_own_part_and_the_run() {
+    let (g, mut m, o) = sample();
+    m.presses.typed_ok = true;
+    if let Ok(u) = m.used.as_mut() {
+        u.memory.commit_mb = g.commit_mb + 1.0;
+    }
+    let parts = parts(&g, Some(420.0), &m, false, &o);
+    assert_eq!(failed(&parts), [g8use::COMMIT]);
+    assert_eq!(
+        verdict(false, &m.churn, met(true, &m.presses, &parts)),
+        json!(false)
+    );
+}
+
+#[test]
+fn a_reading_after_use_that_was_not_taken_fails_both_its_parts_and_the_run() {
+    let (g, mut m, o) = sample();
+    m.presses.typed_ok = true;
+    let whole = parts(&g, Some(420.0), &m, false, &o);
+    assert_eq!(
+        verdict(false, &m.churn, met(true, &m.presses, &whole)),
+        json!(true)
+    );
+    m.used = Err("the mode key did not read on within 3000 ms".into());
+    let parts = parts(&g, Some(420.0), &m, false, &o);
+    assert_eq!(failed(&parts), [g8use::MEMORY, g8use::COMMIT]);
+    let missing = parts.iter().filter(|p| !p.pass).all(|p| p.got.is_none());
+    assert!(missing, "not measured");
+    assert_eq!(
+        verdict(false, &m.churn, met(true, &m.presses, &parts)),
+        json!(false)
     );
 }
 
