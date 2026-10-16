@@ -1,5 +1,5 @@
-//! One run's course on its target: the part of a step carried to the next tick, and the fallback to UI Automation's
-//! steps when wheel steps move nothing.
+//! One run's course on its target: the part of a step carried to the next tick, the fallback to UI Automation's steps
+//! when a notch of wheel steps moves nothing, and the end those steps cannot pass.
 
 use std::time::Duration;
 
@@ -68,30 +68,59 @@ impl Carry {
     }
 }
 
-/// Watches the percent under wheel steps, for the fallback.
+/// What the latest turn went by, which sets how much must go out before a still percent counts.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Mode {
+    /// Wheel delta, with a notch of this size.
+    Wheel(u32),
+    /// UI Automation's line steps.
+    Steps,
+}
+
+impl Mode {
+    /// The steps that must go out: a whole notch of delta, or one line step.
+    fn need(self) -> u64 {
+        match self {
+            Self::Wheel(notch) => u64::from(notch).max(1),
+            Self::Steps => 1,
+        }
+    }
+}
+
+/// How long a percent must stay still, and the gap between reads that starts the wait afresh.
+#[derive(Copy, Clone, Debug)]
+struct Times {
+    /// `check_ms`.
+    check: Duration,
+    /// `check_ms` plus `read_ms`: a later read follows a pause.
+    stale: Duration,
+}
+
+/// Watches the percent under steps: the base it has stayed at, and what went out since.
 #[derive(Copy, Clone, Debug, Default)]
 struct Watch {
-    /// The percent last read short of the end, and since when it has not moved under wheel steps.
+    /// The percent last read short of the end, and since when it has stayed there.
     base: Option<(f64, Mono)>,
-    /// Wheel steps went out since the last read.
-    stepped: bool,
+    /// The steps sent since then, in the latest mode's unit.
+    sent: u64,
+    /// The previous read.
+    last: Option<Mono>,
 }
 
 impl Watch {
-    /// Takes a percent read at `now`, none unless short of the end; true when it stayed still under wheel steps for
-    /// `check`. A read after no wheel steps starts the wait afresh, so a hung window never trips.
-    fn still(&mut self, now: Mono, pct: Option<f64>, check: Duration) -> bool {
-        let stepped = std::mem::take(&mut self.stepped);
-        let Some(pct) = pct else {
-            self.base = None;
-            return false;
-        };
-        match self.base {
-            Some((was, since)) if stepped && was.total_cmp(&pct).is_eq() => {
-                now.saturating_since(since) >= check
+    /// Takes a percent read at `now`, none unless short of the end; true when it stayed still for `check` while
+    /// `need` steps went out. A moved percent, none, or a read after a pause starts the wait afresh.
+    fn still(&mut self, now: Mono, pct: Option<f64>, need: u64, times: Times) -> bool {
+        let paused = self
+            .last
+            .is_none_or(|t| now.saturating_since(t) > times.stale);
+        self.last = Some(now);
+        match (self.base, pct) {
+            (Some((was, since)), Some(pct)) if !paused && was.total_cmp(&pct).is_eq() => {
+                now.saturating_since(since) >= times.check && self.sent >= need
             }
             _ => {
-                self.base = Some((pct, now));
+                (self.base, self.sent) = (pct.map(|p| (p, now)), 0);
                 false
             }
         }
@@ -101,14 +130,16 @@ impl Watch {
 /// One run's state on its target and way; a new target or way starts the carry and the watch afresh.
 #[derive(Clone, Debug)]
 pub struct Course {
-    /// How long a percent may stay still under wheel steps, short of the end, before the target trips.
-    check: Duration,
+    /// The watch's times.
+    times: Times,
     /// The target and way the carry and the watch belong to.
     on: Option<(TargetId, Dir)>,
     /// The part of a step carried to the next tick.
     carry: Carry,
-    /// The fallback's watch.
+    /// The fallback's and the end's watch.
     watch: Watch,
+    /// What the latest turn went by; none before the first.
+    mode: Option<Mode>,
     /// The target moves by UI Automation's steps until it changes.
     tripped: bool,
 }
@@ -117,39 +148,55 @@ impl Course {
     /// A course for a run opened with `config`.
     #[must_use]
     pub fn new(config: ScrollConfig) -> Self {
+        let ms = |n: u32| Duration::from_millis(u64::from(n));
+        let times = Times {
+            check: ms(config.check_ms),
+            stale: ms(config.check_ms.saturating_add(config.read_ms)),
+        };
         Self {
-            check: Duration::from_millis(u64::from(config.check_ms)),
+            times,
             on: None,
             carry: Carry::default(),
             watch: Watch::default(),
+            mode: None,
             tripped: false,
         }
     }
 
     /// This tick's turn of `lines` towards `dir` at `aim`, by the user's `wheel`; none while less than a whole step is
-    /// owed.
+    /// owed. Call it only for a step that will really go out, so a hung window's skipped tick never counts.
     pub fn turn(&mut self, aim: &Aim, dir: Dir, lines: f64, wheel: Wheel) -> Option<Turn> {
         self.follow(aim.id, dir);
         let per_line = wheel.per_line(dir).filter(|_| !self.tripped);
+        let mode = per_line.map_or(Mode::Steps, |_| Mode::Wheel(wheel.notch));
+        if self.mode.replace(mode).is_some_and(|was| was != mode) {
+            self.watch = Watch::default();
+        }
         let route = route(aim.on_pointer, per_line.is_some());
         let count = self.carry.take(lines, per_line.unwrap_or(STEPS_PER_LINE));
         if count == 0 {
             return None;
         }
-        self.watch.stepped |= route != Route::Uia;
+        self.watch.sent = self.watch.sent.saturating_add(u64::from(count));
         Some(Turn { route, count })
     }
 
-    /// Takes UI Automation's percent pair at `aim`, read at `now`, and says how far `dir` can still go. A percent that
-    /// stays still under wheel steps for `check_ms`, short of the end, trips this target to UI Automation's steps.
+    /// Takes UI Automation's percent pair at `aim`, read at `now`, and says how far `dir` can still go. A percent still
+    /// for `check_ms` short of the end trips the target after a notch of wheel steps, and reads as the end after a
+    /// UI Automation step.
     pub fn read(&mut self, aim: &Aim, dir: Dir, now: Mono, pair: Option<(f64, f64)>) -> Reach {
         self.follow(aim.id, dir);
         let pct = pair.and_then(|p| along(dir, p));
         let reach = reach(dir, pct);
         let short = pct.filter(|_| reach == Reach::More);
-        if !self.tripped && self.watch.still(now, short, self.check) {
-            self.tripped = true;
+        let need = self.mode.map_or(u64::MAX, Mode::need);
+        if !self.watch.still(now, short, need, self.times) {
+            return reach;
         }
+        if self.mode == Some(Mode::Steps) {
+            return Reach::End;
+        }
+        self.tripped = true;
         reach
     }
 
@@ -159,7 +206,8 @@ impl Course {
         self.tripped
     }
 
-    /// Moves to target `id` and way `dir`: a new one drops the carry and the watch, and a new target its fallback.
+    /// Moves to target `id` and way `dir`: a new one starts the carry, the watch and the mode afresh, and a new
+    /// target its fallback.
     fn follow(&mut self, id: TargetId, dir: Dir) {
         if self.on == Some((id, dir)) {
             return;
@@ -167,9 +215,12 @@ impl Course {
         if self.on.is_none_or(|(was, _)| was != id) {
             self.tripped = false;
         }
-        (self.on, self.carry, self.watch) = (Some((id, dir)), Carry::default(), Watch::default());
+        self.on = Some((id, dir));
+        (self.carry, self.watch, self.mode) = (Carry::default(), Watch::default(), None);
     }
 }
 
+#[cfg(test)]
+mod props;
 #[cfg(test)]
 mod tests;

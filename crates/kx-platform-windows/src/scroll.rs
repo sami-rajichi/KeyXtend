@@ -1,5 +1,5 @@
-//! Scrolling other apps (ADR-0029): wheel deltas from lines, the route each tick takes, UI Automation's percents and
-//! the fallback to its steps. All of it is pure and tested everywhere; only the OS parts call Windows.
+//! Scrolling other apps (ADR-0029): wheel deltas from lines, the route each tick takes, UI Automation's percents, the
+//! fallback to its steps and the point before the keyboard. All pure and tested everywhere; the OS parts call Windows.
 
 use kx_module_api::ports::{Dir, Point, Reach};
 
@@ -12,6 +12,8 @@ pub use course::{Course, MAX_TURN, Turn};
 pub const PAGE_SCROLL: u32 = u32::MAX;
 /// UI Automation's scroll percents run from 0 to this.
 pub const FULL: f64 = 100.0;
+/// How far from 0 or `FULL` a percent may round and still be there.
+pub const END_SLACK: f64 = 1e-9;
 
 /// The user's wheel, as Windows reports it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -103,12 +105,13 @@ pub fn point_lparam(p: Point) -> isize {
     words.cast_signed()
 }
 
-/// The percent towards `dir` from UI Automation's (horizontal, vertical) pair; none when that way cannot scroll (-1)
-/// or the value is no percent.
+/// The percent towards `dir` from UI Automation's (horizontal, vertical) pair, a rounding past its range kept in it;
+/// none when that way cannot scroll (-1) or the value is no percent.
 #[must_use]
 pub fn along(dir: Dir, (h, v): (f64, f64)) -> Option<f64> {
     let pct = if dir.sideways() { h } else { v };
-    (0.0..=FULL).contains(&pct).then_some(pct)
+    let range = -END_SLACK..=FULL + END_SLACK;
+    range.contains(&pct).then(|| pct.clamp(0.0, FULL))
 }
 
 /// True when the percent grows towards `dir`: down and right.
@@ -126,17 +129,19 @@ pub fn percent_moved(dir: Dir, before: Option<(f64, f64)>, after: Option<(f64, f
     if grows(dir) { to > from } else { to < from }
 }
 
-/// How far `dir` can still go at percent `pct`: its end at 0 or `FULL`, unknown without a percent.
+/// How far `dir` can still go at percent `pct`: its end at 0 or `FULL` (within `END_SLACK`), unknown without one.
 #[must_use]
 pub fn reach(dir: Dir, pct: Option<f64>) -> Reach {
     let Some(pct) = pct else {
         return Reach::Unknown;
     };
-    let end = if grows(dir) { pct >= FULL } else { pct <= 0.0 };
+    let end = if grows(dir) {
+        pct >= FULL - END_SLACK
+    } else {
+        pct <= END_SLACK
+    };
     if end { Reach::End } else { Reach::More }
 }
 
-#[cfg(test)]
-mod props;
 #[cfg(test)]
 mod tests;

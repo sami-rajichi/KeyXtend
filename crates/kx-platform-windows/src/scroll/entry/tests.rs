@@ -1,28 +1,50 @@
-//! The point before the keyboard, on a desk of two screens: the main one, and one left of it and higher.
+//! The point before the keyboard, on two screens with dead zones between them: the main one, and one left of it and
+//! higher.
 
 use super::*;
 
-/// The virtual screen in physical pixels: a 2560 × 1440 main screen at 125 %, and a 1920 × 1080 one at 100 % to its
-/// left, 360 pixels higher.
-const DESK: Rect = Rect {
+/// The main screen's work area at 125 %, in physical pixels: 2560 × 1440 with a 40-pixel taskbar at the bottom.
+const MAIN: Rect = Rect {
+    x: 0,
+    y: 0,
+    w: 2560,
+    h: 1400,
+};
+/// The left screen's work area at 100 %, 360 pixels higher: y runs from -360 to 719.
+const LEFT: Rect = Rect {
     x: -1920,
     y: -360,
-    w: 4480,
-    h: 1800,
+    w: 1920,
+    h: 1080,
 };
-/// The keyboard near the bottom of the main screen: x 400 to 1999, y 1000 to 1399.
+/// The keyboard near the bottom of the main screen: x 400 to 1999, y 1000 to 1359.
 const KB: Rect = Rect {
     x: 400,
     y: 1000,
     w: 1600,
-    h: 400,
+    h: 360,
 };
 /// The `[scroll]` default `edge_px`.
 const EDGE: i32 = 8;
 
-/// The push with the default edge.
+/// Both screens.
+fn screens() -> [Screen; 2] {
+    let main = Screen {
+        rect: MAIN,
+        dpi: 120,
+        primary: true,
+    };
+    let left = Screen {
+        rect: LEFT,
+        dpi: 96,
+        primary: false,
+    };
+    [main, left]
+}
+
+/// The push on both screens with the default edge.
 fn push(x: i32, y: i32, kb: Rect) -> Option<Point> {
-    pushed_out(Point { x, y }, kb, DESK, EDGE.unsigned_abs())
+    pushed_out(Point { x, y }, kb, &screens(), EDGE.unsigned_abs())
 }
 
 /// A point found.
@@ -51,15 +73,27 @@ fn history_words_above_i16_max_are_negative() {
 fn the_newest_history_point_outside_the_keyboard_wins() {
     let left_screen = (63716, 65216);
     let history = [(800, 1100), (800, 1001), left_screen, (500, 500)];
-    let got = last_outside(history, KB, DESK);
+    let got = last_outside(history, KB, &screens());
     assert_eq!(got, Some(Point { x: -1820, y: -320 }));
 }
 
 #[test]
-fn a_history_inside_the_keyboard_or_off_the_screen_misses() {
-    assert_eq!(last_outside([], KB, DESK), None);
-    assert_eq!(last_outside([(800, 1100), (400, 1000)], KB, DESK), None);
-    assert_eq!(last_outside([(3000, 100), (-100, 1500)], KB, DESK), None);
+fn a_history_inside_the_keyboard_or_off_every_work_area_misses() {
+    let all = screens();
+    assert_eq!(last_outside([], KB, &all), None);
+    assert_eq!(last_outside([(800, 1100), (400, 1000)], KB, &all), None);
+    let off = [(3000, 100), (-100, 1000), (100, -100), (900, 1420)];
+    assert_eq!(
+        last_outside(off, KB, &all),
+        None,
+        "past, dead zones, taskbar"
+    );
+    let after = [(900, 1420), (900, 500)];
+    assert_eq!(
+        last_outside(after, KB, &all),
+        p(900, 500),
+        "older than the taskbar"
+    );
 }
 
 #[test]
@@ -67,101 +101,105 @@ fn a_miss_pushes_the_entry_point_edge_px_past_the_nearest_edge() {
     assert_eq!(push(900, 1002, KB), p(900, 1000 - EDGE), "top");
     assert_eq!(push(403, 1200, KB), p(400 - EDGE, 1200), "left");
     assert_eq!(push(1998, 1200, KB), p(1999 + EDGE, 1200), "right");
-    assert_eq!(push(900, 1397, KB), p(900, 1399 + EDGE), "bottom");
-}
-
-#[test]
-fn a_push_off_the_screen_goes_past_the_opposite_edge() {
-    let low = Rect {
-        y: 1100,
-        h: 340,
-        ..KB
-    };
-    assert_eq!(
-        push(900, 1438, low),
-        p(900, 1100 - EDGE),
-        "the screen's bottom"
-    );
-    let left = Rect {
-        x: -1920,
-        y: 0,
-        w: 1000,
-        h: 500,
-    };
-    assert_eq!(
-        push(-1919, 200, left),
-        p(-921 + EDGE, 200),
-        "the desk's left"
-    );
-}
-
-#[test]
-fn a_keyboard_as_wide_as_the_screen_goes_past_its_top() {
-    let wide = Rect {
-        x: -1920,
-        y: 1100,
-        w: 4480,
-        h: 340,
-    };
-    assert_eq!(push(-1918, 1300, wide), p(-1918, 1100 - EDGE));
-}
-
-#[test]
-fn with_no_room_for_edge_px_the_point_squeezes_onto_the_screen() {
-    let most = Rect {
-        y: -357,
-        h: 1797,
-        ..DESK
-    };
-    assert_eq!(push(0, 0, most), p(0, -360), "three pixels left at the top");
-}
-
-#[test]
-fn a_keyboard_over_the_whole_screen_leaves_no_point() {
-    assert_eq!(push(0, 0, DESK), None);
-    let more = Rect {
-        x: -2000,
-        y: -400,
-        w: 5000,
-        h: 2000,
-    };
-    assert_eq!(push(0, 0, more), None);
-    let none = Rect { w: 0, ..DESK };
-    assert_eq!(pushed_out(Point::default(), KB, none, 8), None, "no screen");
-}
-
-#[test]
-fn an_entry_off_the_screen_still_lands_on_it() {
+    assert_eq!(push(900, 1357, KB), p(900, 1359 + EDGE), "bottom");
     assert_eq!(
         push(9000, 1002, KB),
         p(1999 + EDGE, 1002),
-        "past the right edge"
+        "an entry past the right"
     );
-    let wide = Rect {
-        x: -1920,
+}
+
+#[test]
+fn a_push_off_every_work_area_takes_the_next_nearest_edge() {
+    let low = Rect {
         y: 1100,
-        w: 4480,
-        h: 340,
+        h: 300,
+        ..KB
     };
     assert_eq!(
-        push(9000, 1300, wide),
-        p(2559, 1100 - EDGE),
-        "x kept on the screen"
+        push(900, 1398, low),
+        p(900, 1100 - EDGE),
+        "not onto the taskbar"
+    );
+}
+
+#[test]
+fn a_push_into_a_dead_zone_between_screens_takes_the_next_nearest_edge() {
+    let kb = Rect {
+        x: 0,
+        y: 1000,
+        w: 1600,
+        h: 400,
+    };
+    assert_eq!(
+        push(5, 1300, kb),
+        p(5, 1000 - EDGE),
+        "(-8, 1300) is on no screen"
+    );
+}
+
+#[test]
+fn a_miss_with_no_screen_past_any_edge_finds_none() {
+    assert_eq!(
+        push(5, 1000, MAIN),
+        None,
+        "dead zones, the taskbar and past the right"
+    );
+    assert_eq!(
+        pushed_out(Point { x: 900, y: 1002 }, KB, &[], 8),
+        None,
+        "no screen"
     );
 }
 
 #[test]
 fn an_edge_of_0_still_leaves_the_keyboard() {
-    let got = pushed_out(Point { x: 900, y: 1002 }, KB, DESK, 0);
+    let got = pushed_out(Point { x: 900, y: 1002 }, KB, &screens(), 0);
     assert_eq!(got, p(900, 999));
 }
 
 #[test]
+fn boxes_at_the_ends_of_the_range_never_panic() {
+    let far = Rect {
+        x: i32::MAX - 4,
+        y: i32::MAX - 4,
+        w: 100,
+        h: 100,
+    };
+    let near = Rect {
+        x: i32::MIN,
+        y: i32::MIN,
+        w: 3,
+        h: 3,
+    };
+    let rim = Rect {
+        x: i32::MAX,
+        y: i32::MAX,
+        w: 5,
+        h: 5,
+    };
+    let at = |x, y| Point { x, y };
+    let screens = [far, near, rim].map(|rect| Screen {
+        rect,
+        ..screens()[0]
+    });
+    let (top, bottom) = (at(i32::MAX, i32::MAX), at(i32::MIN, i32::MIN));
+    for (entry, kb) in [(top, far), (bottom, near), (top, rim)] {
+        for edge in [0, EDGE.unsigned_abs(), u32::MAX] {
+            let got = pushed_out(entry, kb, &screens, edge);
+            assert!(got.is_none_or(|p| !contains(kb, p)), "{edge}");
+        }
+    }
+    let got = pushed_out(at(i32::MAX - 2, 0), near, &screens, EDGE.unsigned_abs());
+    assert!(got.is_none_or(|p| screens.iter().any(|s| contains(s.rect, p))));
+}
+
+#[test]
 fn the_target_takes_the_history_before_the_push() {
-    let entry = Point { x: 900, y: 1002 };
+    let (entry, all) = (Point { x: 900, y: 1002 }, screens());
     let edge = EDGE.unsigned_abs();
-    assert_eq!(target(&[(500, 500)], entry, KB, DESK, edge), p(500, 500));
-    assert_eq!(target(&[], entry, KB, DESK, edge), p(900, 1000 - EDGE));
+    assert_eq!(target(&[(500, 500)], entry, KB, &all, edge), p(500, 500));
+    assert_eq!(target(&[], entry, KB, &all, edge), p(900, 1000 - EDGE));
     let inside = [(800, 1100)];
-    assert_eq!(target(&inside, entry, KB, DESK, edge), p(900, 1000 - EDGE));
+    assert_eq!(target(&inside, entry, KB, &all, edge), p(900, 1000 - EDGE));
 }

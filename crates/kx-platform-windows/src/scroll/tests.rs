@@ -203,6 +203,14 @@ fn bad_percents_are_refused() {
 }
 
 #[test]
+fn a_percent_rounded_just_past_its_range_is_its_end() {
+    let (over, under) = (FULL + END_SLACK / 2.0, -END_SLACK / 2.0);
+    assert_eq!(along(Dir::Down, (0.0, over)), Some(FULL));
+    assert_eq!(along(Dir::Right, (under, 0.0)), Some(0.0));
+    assert_eq!(along(Dir::Down, (0.0, FULL + END_SLACK * 2.0)), None);
+}
+
+#[test]
 fn the_end_reads_from_the_percent() {
     assert_eq!(reach(Dir::Down, Some(FULL)), Reach::End);
     assert_eq!(reach(Dir::Right, Some(FULL)), Reach::End);
@@ -211,6 +219,9 @@ fn the_end_reads_from_the_percent() {
     assert_eq!(reach(Dir::Left, Some(0.0)), Reach::End);
     assert_eq!(reach(Dir::Up, Some(0.5)), Reach::More);
     assert_eq!(reach(Dir::Up, None), Reach::Unknown);
+    assert_eq!(reach(Dir::Down, Some(FULL - END_SLACK / 2.0)), Reach::End);
+    assert_eq!(reach(Dir::Left, Some(END_SLACK / 2.0)), Reach::End);
+    assert_eq!(reach(Dir::Down, Some(FULL - END_SLACK * 2.0)), Reach::More);
 }
 
 #[test]
