@@ -90,7 +90,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 
 - **Wave ring:** during a hold, a ring in the theme's ring colour appears after 150 ms and shrinks into the pointer over the rest of the hold time, whatever hold time the user set. When the hold fires, a burst of 6 dots appears.
 - **Hover:** a key under the pointer turns a little darker in light mode and lighter in dark mode.
-- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on: Right-click, Grab, Holding (a carry), and later the scroll direction and speed (P5) and recording (P11). It hides while the pointer is over one of our windows.
+- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on: Right-click, Grab, Holding (a carry), the scroll direction with "slow" or "fast" beside them (§5.2), and later recording (P11). It hides while the pointer is over one of our windows.
 - **No banner** when Right-click or Grab turns on: the key's light, its tip and the badge show the mode (owner, 2026-10-13).
 - **Sounds**, realistic, soft and never harsh (owner, 2026-10-13):
   - a key-press sound like a real keyboard's on every key of the keyboard, not on the top-bar buttons; a held, repeating key sounds once, at the press;
@@ -105,7 +105,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - **Lists** (clipboard, quick-fill, settings lists) show exactly **5 rows per page**.
 - Every list has large **▲/▼ page buttons** and a "page n of m" indicator. A short last page is padded so paging lands on whole pages.
 - While a panel is open, the keyboard's own keys drive it: **↑/↓** move the highlight, **←/→** switch tabs, **Enter** activates, **Space** ticks, **Esc** closes.
-- The scroll pad can also scroll any list.
+- The scroll pad turns one page of any of our lists per tap (§5.2).
 - No sliders. Every numeric setting uses **−/+ steppers**.
 
 ### 3.4 Scaling and placement
@@ -268,14 +268,20 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 
 ### 5.2 Scroll pad
 
-- A round pad with ▲ ▼ ◀ ▶ (PlayStation-style) and a centre **Stop** button that appears only while scrolling.
-- **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two level dots show the current speed.
+- A round pad with ▲ ▼ ◀ ▶ and a centre **Stop** button that appears only while scrolling. Each arrow sits in the middle of its quarter of the ring, like the iPod click wheel's labels (owner, 2026-10-16).
+- **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two dots under Stop's square show the current speed.
 - Tapping another direction switches direction at slow speed.
-- **Target:** the scrollable thing under the pointer, including long text fields and our own panel lists. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**. The target gets a subtle outline.
-- **Windows mechanism, in priority order** (proven by gate G6, ADR-0013):
-  1. UI Automation `ScrollPattern` on the element at the target point.
-  2. `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` posted to the window at the target point.
-  3. `SendInput` wheel events, when the pointer itself is on the target.
+- The page **glides**: many small steps a second, slow 3 and fast 10 lines a second by default (`[scroll] slow`, `fast`; owner, 2026-10-16).
+- **It also stops** at the end of the content, at any press outside our windows, `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes. Each of the first two can be switched off. A tap with nothing to scroll there, or already at the end, stops at once with a short notice.
+- **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
+- **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.
+- **Our own lists:** when the target is one of our paged lists, each tap turns one page, with no speeds and no Stop.
+- **Badge:** the pointer badge shows the direction's arrow and "slow" or "fast", beside a Right-click or Grab icon (§3.2).
+- **Every platform** fills one OS-neutral port (`ScrollTarget`); the rules live in `kx-mod-scroll` (ADR-0029).
+- **Windows mechanism** (ADR-0029, which reorders P1's list proven by gate G6, ADR-0013):
+  1. Small `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` deltas posted to the window at the target point, or `SendInput` wheel events while the pointer itself is on the target.
+  2. UI Automation finds the scrollable element, its box and its position, and moves it by `ScrollPattern` steps when the window ignores wheel messages.
+  3. The point before the keyboard comes from Windows' pointer history when the pointer enters the keyboard.
 
 ### 5.3 Overlays
 
