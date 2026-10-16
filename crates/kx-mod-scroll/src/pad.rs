@@ -32,7 +32,7 @@ pub enum Change {
 }
 
 impl Change {
-    /// The tap set a new way, so the tap's checks run (`Halt::unaimed`, `Halt::blocked`).
+    /// The tap set a new way, so the tap's checks run (`Halt::unaimed`, `Stops::blocked`).
     #[must_use]
     pub const fn new_way(self) -> bool {
         matches!(self, Self::Began | Self::Turned)

@@ -15,7 +15,7 @@ pub enum Halt {
     NoPoint,
     /// Nothing there moves either way, or the window there closed ("nothing to scroll there").
     Nothing,
-    /// The target is already at its end that way ("already at the end").
+    /// The target is already at its end that way, with `stop_at_end` on ("already at the end").
     AtEnd,
     /// The target reached its end while scrolling.
     End,
@@ -44,19 +44,6 @@ impl Halt {
         }
     }
 
-    /// Why a tap that sets a new way cannot start, from the target's reach `ahead` and, read only when that is the
-    /// end, `back` the other way; `Unknown` counts as able to move.
-    pub fn blocked(ahead: Reach, back: impl FnOnce() -> Reach) -> Option<Self> {
-        if ahead != Reach::End {
-            return None;
-        }
-        Some(if back() == Reach::End {
-            Self::Nothing
-        } else {
-            Self::AtEnd
-        })
-    }
-
     /// Why a failed aim or turn ends a running scroll. `Refused` never does: the actor tries again next tick and drops
     /// that tick's lines, so nothing piles up, and the limit ends a scroll that stays refused.
     #[must_use]
@@ -68,7 +55,8 @@ impl Halt {
     }
 }
 
-/// The stop rules of a running scroll, from `[scroll]`; the actor calls `tapped` at every pad tap.
+/// The stop rules that depend on `[scroll]`: a tap's reach check and a running scroll's stops. The actor calls
+/// `tapped` at every pad tap.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Stops {
     /// Stop when the target reaches its end.
@@ -97,6 +85,20 @@ impl Stops {
     /// A pad tap at `now` restarts the limit's count.
     pub fn tapped(&mut self, now: Mono) {
         self.last_tap = now;
+    }
+
+    /// Why a tap that sets a new way cannot start, from the target's reach `ahead` and, read only when that is the
+    /// end, `back` the other way; `Unknown` counts as able to move. With `stop_at_end` off, an end only that way
+    /// starts, as a feed may load more there.
+    pub fn blocked(&self, ahead: Reach, back: impl FnOnce() -> Reach) -> Option<Halt> {
+        if ahead != Reach::End {
+            return None;
+        }
+        match back() {
+            Reach::End => Some(Halt::Nothing),
+            _ if self.at_end => Some(Halt::AtEnd),
+            _ => None,
+        }
     }
 
     /// Whether reaching `reach` ends the scroll: only the end, and only with `stop_at_end` on.

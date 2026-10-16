@@ -104,7 +104,7 @@ fn rule(pad: &mut Pad, stops: &mut Stops, step: Step, now: Mono) -> Option<Halt>
             if !pad.tap(dir).new_way() {
                 return None;
             }
-            aim.map_or_else(|| Halt::blocked(ahead, || back), Halt::unaimed)
+            aim.map_or_else(|| stops.blocked(ahead, || back), Halt::unaimed)
         }
         Step::Stop => {
             pad.stop();
@@ -127,19 +127,25 @@ fn want(s: &ScrollSettings, before: Pad, step: Step, since: Duration) -> Option<
             aim,
             ahead,
             back,
-        } if after.tap(dir).new_way() => tap_cause(aim, ahead, back),
+        } if after.tap(dir).new_way() => tap_cause(s, aim, ahead, back),
         Step::Tap { .. } => None,
         _ if before.scrolling() => cause(s, step, since),
         _ => None,
     }
 }
 
-/// The halt a tap that sets a new way allows, from the aim's error and the reach each way.
-fn tap_cause(aim: Option<ScrollError>, ahead: Reach, back: Reach) -> Option<Halt> {
+/// The halt a tap that sets a new way allows under `s`, from the aim's error and the reach each way; with
+/// `stop_at_end` off, an end only that way starts, as a feed may load more there.
+fn tap_cause(
+    s: &ScrollSettings,
+    aim: Option<ScrollError>,
+    ahead: Reach,
+    back: Reach,
+) -> Option<Halt> {
     match (aim, ahead, back) {
         (Some(ScrollError::NoTarget), ..) => Some(Halt::NoPoint),
         (Some(ScrollError::Gone), ..) | (None, Reach::End, Reach::End) => Some(Halt::Nothing),
-        (None, Reach::End, _) => Some(Halt::AtEnd),
+        (None, Reach::End, _) if s.stop_at_end => Some(Halt::AtEnd),
         _ => None,
     }
 }

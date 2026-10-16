@@ -12,6 +12,14 @@ pub(super) fn defaults() -> ScrollSettings {
     ScrollSettings::from_defaults().unwrap()
 }
 
+/// The defaults with `stop_at_end` off, as for a feed that loads more at its end.
+fn no_end_stop() -> ScrollSettings {
+    ScrollSettings {
+        stop_at_end: false,
+        ..defaults()
+    }
+}
+
 /// The point `n` s after the start.
 fn secs(n: u64) -> Mono {
     Mono::from_us(n * u64::from(US_PER_S))
@@ -49,30 +57,50 @@ fn a_refused_aim_at_a_tap_does_not_stop() {
 
 #[test]
 fn the_end_both_ways_says_nothing_to_scroll() {
-    assert_eq!(Halt::blocked(Reach::End, || Reach::End), Some(Nothing));
+    let stops = Stops::from(&defaults());
+    assert_eq!(stops.blocked(Reach::End, || Reach::End), Some(Nothing));
 }
 
 #[test]
 fn the_end_only_that_way_says_already_at_the_end() {
-    assert_eq!(Halt::blocked(Reach::End, || More), Some(AtEnd));
-    assert_eq!(Halt::blocked(Reach::End, || Unknown), Some(AtEnd));
+    let stops = Stops::from(&defaults());
+    assert_eq!(stops.blocked(Reach::End, || More), Some(AtEnd));
+    assert_eq!(stops.blocked(Reach::End, || Unknown), Some(AtEnd));
+}
+
+#[test]
+fn with_stop_at_end_off_the_end_only_that_way_starts_quietly() {
+    let stops = Stops::from(&no_end_stop());
+    assert_eq!(stops.blocked(Reach::End, || More), None);
+    assert_eq!(stops.blocked(Reach::End, || Unknown), None);
+}
+
+#[test]
+fn with_stop_at_end_off_the_end_both_ways_still_says_nothing_to_scroll() {
+    let stops = Stops::from(&no_end_stop());
+    assert_eq!(stops.blocked(Reach::End, || Reach::End), Some(Nothing));
 }
 
 #[test]
 fn a_target_that_can_move_that_way_starts_without_reading_the_other() {
-    assert_eq!(Halt::blocked(More, unread), None);
-    assert_eq!(Halt::blocked(Unknown, unread), None);
+    for s in [defaults(), no_end_stop()] {
+        let stops = Stops::from(&s);
+        assert_eq!(stops.blocked(More, unread), None);
+        assert_eq!(stops.blocked(Unknown, unread), None);
+    }
 }
 
 #[test]
 fn the_other_way_is_read_once_at_most() {
-    let reads = Cell::new(0);
-    let back = || {
-        reads.set(reads.get() + 1);
-        More
-    };
-    Halt::blocked(Reach::End, back);
-    assert_eq!(reads.get(), 1);
+    for s in [defaults(), no_end_stop()] {
+        let reads = Cell::new(0);
+        let back = || {
+            reads.set(reads.get() + 1);
+            More
+        };
+        Stops::from(&s).blocked(Reach::End, back);
+        assert_eq!(reads.get(), 1);
+    }
 }
 
 #[test]
@@ -93,11 +121,7 @@ fn reaching_the_end_stops_quietly() {
 
 #[test]
 fn with_stop_at_end_off_the_end_goes_on() {
-    let stops = Stops::from(&ScrollSettings {
-        stop_at_end: false,
-        ..defaults()
-    });
-    assert_eq!(stops.reached(Reach::End), None);
+    assert_eq!(Stops::from(&no_end_stop()).reached(Reach::End), None);
 }
 
 #[test]
