@@ -1,5 +1,5 @@
-//! The language list in the face's state (spec §3.3): the language key opens and steps it, the board's keys and the
-//! scroll pad move it, and a pick switches the layout.
+//! The language list in the face's state (spec §3.3): the language key opens and steps it, the board's keys move it,
+//! and a pick switches the layout.
 
 use super::{Inner, notice};
 use crate::face::STATE;
@@ -40,7 +40,6 @@ impl Inner {
 
     /// Key `nav` for the open list, at `rows` rows per page; with no list open it does nothing.
     pub(in crate::face) fn panel(&mut self, nav: Nav, rows: usize) -> Result<FaceReply, FaceError> {
-        self.rows = Some(rows);
         let len = self.ports.layouts.list().len();
         let Some(list) = self.list.as_mut() else {
             return Ok(FaceReply::default());
@@ -66,19 +65,5 @@ impl Inner {
             Ok(()) => STATE,
             Err(_) => notice(keys::LANG_NOT_SWITCHED, STATE),
         })
-    }
-
-    /// Turns the open list a page back or on for the scroll pad, as its page buttons do, at the page size the UI
-    /// last gave; with no list open, or no size yet, it does nothing. The next relabel redraws a turn.
-    pub(in crate::face) fn page(&mut self, back: bool) {
-        let Some(rows) = self.rows.filter(|_| self.list.is_some()) else {
-            return;
-        };
-        let len = self.ports.layouts.list().len();
-        if let Some(list) = self.list.as_mut()
-            && list.turn(back, rows, len) == Moved::Hi
-        {
-            self.unshown = true;
-        }
     }
 }

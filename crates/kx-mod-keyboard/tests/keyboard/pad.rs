@@ -6,8 +6,6 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-mod pages;
-
 use crate::assist::{Bench, ear};
 use crate::rig::STATE;
 use kx_mod_keyboard::view::{DPAD_NAME, SCROLL_OFF_TIP};

@@ -46,8 +46,6 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
-    /// The list's page size, as the UI last gave it with a list key.
-    rows: Option<usize>,
     /// The Caps Lock state the last state view showed, so a press outside the keyboard redraws it.
     shown_caps: Option<bool>,
     /// The mouse module's state, as the bus last told it.
@@ -84,7 +82,6 @@ impl Inner {
             plate,
             overhang: 0.0,
             list: None,
-            rows: None,
             shown_caps: None,
             assist: AssistChanged::OFF,
             scroll: ScrollChanged::OFF,

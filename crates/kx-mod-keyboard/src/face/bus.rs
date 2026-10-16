@@ -5,7 +5,7 @@
 use super::Face;
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan,
-    ScrollAsk, ScrollChanged, ScrollPage, Toggle,
+    ScrollAsk, ScrollChanged, Toggle,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -99,8 +99,8 @@ impl Face {
     }
 }
 
-/// Hears the mouse and scroll modules' states, the latch events and our list's page turns for `face` until the module
-/// stops, then tells the latched set and asks both modules for their states, as each may have missed the other.
+/// Hears the mouse and scroll modules' states and the latch events for `face` until the module stops, then tells the
+/// latched set and asks both modules for their states, as each may have missed the other while one was stopped.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -109,7 +109,6 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
     on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
-    on(cx, face, |f, e: &ScrollPage| f.lock().page(e.back))?;
     face.tell(true);
     cx.bus().publish(&AssistAsk)?;
     cx.bus().publish(&ScrollAsk)

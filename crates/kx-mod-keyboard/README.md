@@ -91,7 +91,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `let_go {id}` | The pointer let go, wherever it is: the key typed at the press, so nothing more types, and the burst's latches let go (`Typing::release`); a let-go of a key not held changes nothing | State when a burst ended. `UnknownKey` off the board, which changes nothing. |
 | `leave` | Qt took the press away, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed, Caps Lock changed outside the keyboard, or the bus changed what the state shows since it was last read. |
-| `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`), which the face keeps for the pad's page turns | State when it moved. |
+| `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
 | `pad {dir}` | An arrow publishes `ScrollTap`, and Stop (`dir` null) `ScrollStop`, while the scroll module is live; else nothing | Nothing; the module's answer redraws on `relabel`. |
 | `pad_hover {on}` | The pointer went onto the pad or off it: each change publishes `ScrollPeek` while the scroll module is live | Nothing. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
@@ -125,7 +125,7 @@ The keyboard never depends on the scroll module either; they talk only through `
 
 - **State:** the pad follows `ScrollChanged`; a change marks the state unshown, as the mouse module's does. The keyboard asks for it with `ScrollAsk` at start.
 - **Clicks and hover:** `pad` and `pad_hover` publish as above; the UI never publishes them itself. A module that comes live while the pointer rests on the pad hears `ScrollPeek` at once.
-- **Our list:** `ScrollPage` turns the open list a page back or on, as its page buttons do (`LangList::turn`), at the page size of the last `panel_key`; with no list open, or no size yet, it does nothing.
+- **Our list:** the keyboard ignores `ScrollPage`; `kx-ui`'s hub turns it into the list's own page-button `panel_key`, as only the hub knows `[ui] page_rows`.
 
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.
 
@@ -155,7 +155,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
-- `panel`: `LangList` (with `turn`), `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
+- `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
 - `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
