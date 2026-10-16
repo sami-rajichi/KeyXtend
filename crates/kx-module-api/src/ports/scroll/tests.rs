@@ -27,12 +27,13 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The scroll events, in the order `events_have_their_names_and_no_gate` checks.
-fn scroll() -> [(&'static str, Option<Capability>); 6] {
+fn scroll() -> [(&'static str, Option<Capability>); 7] {
     [
         row::<ScrollTap>(),
         row::<ScrollStop>(),
         row::<ScrollPeek>(),
         row::<ScrollChanged>(),
+        row::<ScrollAsk>(),
         row::<ScrollAimed>(),
         row::<ScrollPage>(),
     ]
@@ -82,12 +83,13 @@ fn events_have_their_names_and_no_gate() {
         "scroll-stop",
         "scroll-peek",
         "scroll-changed",
+        "scroll-ask",
         "scroll-aimed",
         "scroll-page",
     ];
     assert_eq!(scroll().map(|r| r.0), want);
     let gates = scroll().map(|r| r.1);
-    assert_eq!(gates, [None; 6], "the keyboard and the UI hold no Scroll");
+    assert_eq!(gates, [None; 7], "the keyboard and the UI hold no Scroll");
 }
 
 #[test]

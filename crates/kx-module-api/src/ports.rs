@@ -27,8 +27,8 @@ pub use pointer::{
     PointerEvent, PointerHook, PointerHookKey,
 };
 pub use scroll::{
-    Aim, Dir, Reach, ScrollAimed, ScrollChanged, ScrollConfig, ScrollError, ScrollPage, ScrollPeek,
-    ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
+    Aim, Dir, Reach, ScrollAimed, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError, ScrollPage,
+    ScrollPeek, ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
 };
 
 use crate::Redacted;

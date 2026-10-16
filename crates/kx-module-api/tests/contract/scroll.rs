@@ -3,13 +3,13 @@
 
 use kx_module_api::Capability::{InjectInput, Scroll};
 use kx_module_api::ports::{
-    Aim, Dir, Point, Reach, ScrollChanged, ScrollConfig, ScrollError, ScrollPage, ScrollRun,
-    ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
+    Aim, Dir, Point, PointerPressed, Reach, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError,
+    ScrollPage, ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
 };
 use kx_module_api::{Capability, Host, Manifest, ModuleCx, ModuleId, ServiceError, ServiceKey};
 use kx_test_support::host::FakeHost;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 /// A scroll module declaring `Scroll` and `InjectInput`; each test grants it some, as the kernel's policy would.
 static SCROLLER: Manifest = Manifest {
@@ -125,4 +125,18 @@ fn the_pads_events_pass_on_a_bus_with_no_grants() {
     assert_eq!(bus.publish(&ScrollStop), Ok(()));
     assert_eq!(bus.publish(&ScrollPage { back: true }), Ok(()));
     assert_eq!(bus.publish(&ScrollChanged::OFF), Ok(()));
+    assert_eq!(bus.publish(&ScrollAsk), Ok(()));
+}
+
+#[test]
+fn a_module_holding_only_scroll_hears_a_press() {
+    let (host, _open) = host(&[Scroll]);
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = Arc::clone(&seen);
+    let _sub = host
+        .bus()
+        .subscribe(move |p: &PointerPressed| log.lock().unwrap().push(p.ours))
+        .unwrap();
+    host.bus().publish(&PointerPressed { ours: false }).unwrap();
+    assert_eq!(*seen.lock().unwrap(), [false]);
 }
