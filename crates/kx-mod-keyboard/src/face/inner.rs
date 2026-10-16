@@ -54,6 +54,8 @@ pub(super) struct Inner {
     scroll: ScrollChanged,
     /// The pointer is on the scroll pad.
     hover: bool,
+    /// Counts the scroll module's live runs, so a module that started again hears the pointer anew.
+    run: u64,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
     /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
@@ -86,6 +88,7 @@ impl Inner {
             assist: AssistChanged::OFF,
             scroll: ScrollChanged::OFF,
             hover: false,
+            run: 0,
             unshown: false,
             #[cfg(debug_assertions)]
             caps_flipped: false,

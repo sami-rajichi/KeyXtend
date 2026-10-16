@@ -125,7 +125,7 @@ The keyboard never depends on the scroll module either; they talk only through `
 
 - **State:** the pad follows `ScrollChanged`; a change marks the state unshown, as the mouse module's does. The keyboard asks for it with `ScrollAsk` at start.
 - **Clicks and hover:** `pad` and `pad_hover` publish as above; the UI never publishes them itself. A module that comes live while the pointer rests on the pad hears `ScrollPeek` at once, and one that stops forgets it.
-- **One sender:** peeks go out one thread at a time through the same `Outbox` as the latched set, each re-reading the pointer, so the last peek the module hears is where the pointer is.
+- **One sender:** peeks go out one thread at a time through their own `Outbox` (the latched set has another), each re-reading the pointer and the module's run, so the last peek the module hears is where the pointer is, even after a quick restart.
 - **Our list:** the keyboard ignores `ScrollPage`; `kx-ui`'s hub turns it into the list's own page-button `panel_key`, as only the hub knows `[ui] page_rows`.
 
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.

@@ -5,8 +5,11 @@ use super::Inner;
 use kx_module_api::ports::ScrollChanged;
 
 impl Inner {
-    /// Takes the scroll module's new state; the next relabel redraws when it changed.
+    /// Takes the scroll module's new state, starting a new run when it comes live; the next relabel redraws a change.
     pub(in crate::face) fn heard_scroll(&mut self, now: ScrollChanged) {
+        if now.live && !self.scroll.live {
+            self.run = self.run.wrapping_add(1);
+        }
         if self.scroll != now {
             self.scroll = now;
             self.unshown = true;
@@ -26,5 +29,10 @@ impl Inner {
     /// True while the pointer is on the pad.
     pub(in crate::face) fn hovering(&self) -> bool {
         self.hover
+    }
+
+    /// The scroll module's current run, counted each time it comes live.
+    pub(in crate::face) fn scroll_run(&self) -> u64 {
+        self.run
     }
 }

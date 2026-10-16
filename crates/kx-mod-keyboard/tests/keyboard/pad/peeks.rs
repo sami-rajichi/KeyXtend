@@ -22,38 +22,76 @@ const LIVE: ScrollChanged = ScrollChanged {
     fast: false,
 };
 
-/// The scroll module comes live on its own thread while the pointer rests on the pad, and its `Peek(true)` is held
-/// on the bus while the UI thread hears the pointer leave; the leave must still be heard last.
+/// A pad whose first `ScrollPeek` waits inside its bus handler until `go`, with each peek logged as it is heard.
+struct Held {
+    p: Pad,
+    /// Says the first peek is waiting.
+    entered: mpsc::Receiver<()>,
+    /// Lets it go on.
+    go: mpsc::Sender<()>,
+    /// Each peek's `on`, in the order the handler finished.
+    order: Arc<Mutex<Vec<bool>>>,
+}
+
+impl Held {
+    /// The module with the pointer on the pad and the scroll module off.
+    fn new() -> Self {
+        let (inside, entered) = mpsc::channel();
+        let (go, gate) = mpsc::channel::<()>();
+        let gate = Mutex::new(gate);
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let log = Arc::clone(&order);
+        let first = AtomicBool::new(true);
+        let p = Pad::after(None, move |bus| {
+            let held = move |e: &ScrollPeek| {
+                if first.swap(false, SeqCst) {
+                    inside.send(()).unwrap();
+                    gate.lock().unwrap().recv_timeout(WAIT).unwrap();
+                }
+                log.lock().unwrap().push(e.on);
+            };
+            vec![bus.subscribe(held).unwrap()]
+        });
+        p.hover(true);
+        Self {
+            p,
+            entered,
+            go,
+            order,
+        }
+    }
+
+    /// The scroll module comes live on its own thread, whose `Peek(true)` waits; `then` runs meanwhile on this
+    /// thread, and the peeks heard come back once both are done.
+    fn while_held(&self, then: impl FnOnce(&Pad)) -> Vec<bool> {
+        let bus = self.p.b.bus.clone();
+        let scroll = thread::spawn(move || bus.publish(&LIVE).unwrap());
+        self.entered.recv_timeout(WAIT).unwrap();
+        then(&self.p);
+        self.go.send(()).unwrap();
+        scroll.join().unwrap();
+        self.order.lock().unwrap().clone()
+    }
+}
+
+/// The pointer leaves while the scroll thread's `Peek(true)` is held on the bus; the leave must still be heard last.
 #[test]
 fn a_peek_held_on_another_thread_never_lands_after_a_later_leave() {
-    let (inside, entered) = mpsc::channel();
-    let (go, gate) = mpsc::channel::<()>();
-    let gate = Mutex::new(gate);
-    let order = Arc::new(Mutex::new(Vec::new()));
-    let log = Arc::clone(&order);
-    let first = AtomicBool::new(true);
-    let p = Pad::after(None, move |bus| {
-        let held = move |e: &ScrollPeek| {
-            if first.swap(false, SeqCst) {
-                inside.send(()).unwrap();
-                gate.lock().unwrap().recv_timeout(WAIT).unwrap();
-            }
-            log.lock().unwrap().push(e.on);
-        };
-        vec![bus.subscribe(held).unwrap()]
+    let order = Held::new().while_held(|p| {
+        p.hover(false);
     });
-    p.hover(true);
-    let bus = p.b.bus.clone();
-    let scroll = thread::spawn(move || bus.publish(&LIVE).unwrap());
-    entered.recv_timeout(WAIT).unwrap();
-    p.hover(false);
-    go.send(()).unwrap();
-    scroll.join().unwrap();
-    assert_eq!(
-        *order.lock().unwrap(),
-        [true, false],
-        "the leave comes last"
-    );
+    assert_eq!(order, [true, false], "the leave comes last");
+}
+
+/// The scroll module restarts while its `Peek(true)` is held: the stop and the new start merge into one send, and the
+/// new run must still hear that the pointer is on the pad.
+#[test]
+fn a_quick_restart_while_a_peek_is_held_still_tells_the_new_run() {
+    let order = Held::new().while_held(|p| {
+        p.b.send(&ScrollChanged::OFF);
+        p.b.send(&LIVE);
+    });
+    assert_eq!(order, [true, true], "the new run hears it");
 }
 
 /// One thing that happens to the pad.

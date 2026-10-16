@@ -23,8 +23,8 @@ impl Drop for Sending<'_> {
 }
 
 impl Outbox {
-    /// Asks for a send: runs `send` once for each request made before it stops, unless another thread is sending,
-    /// which then takes this request too. `send` may ask again, as a bus handler may.
+    /// Asks for a send. Requests made while one runs merge into one more send by the thread already sending, which
+    /// drops the caller's `send`, so every caller of one outbox must pass the same work; `send` may post again.
     pub(super) fn post(&self, send: impl Fn()) {
         self.due.store(true, SeqCst);
         loop {
