@@ -4,6 +4,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+#[cfg(test)]
+mod fixture;
 mod glide;
 mod manifest;
 mod pad;

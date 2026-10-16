@@ -75,10 +75,14 @@ fn a_bad_value_fails_the_start() {
 }
 
 #[test]
-fn it_starts_again_after_a_stop() {
-    let mut host = shut(&ALL);
+fn a_stop_lets_go_of_the_target_and_it_starts_again() {
+    let target: Arc<dyn ScrollTarget> = Arc::new(Shut);
+    let mut host = host(&ALL, Some(Arc::clone(&target)));
+    let unheld = Arc::strong_count(&target);
     let mut module = ScrollModule::default();
     start(&mut module, &mut host).unwrap();
+    assert!(Arc::strong_count(&target) > unheld, "the module holds it");
     module.stop();
+    assert_eq!(Arc::strong_count(&target), unheld, "the stop let go");
     assert_eq!(start(&mut module, &mut host), Ok(()));
 }

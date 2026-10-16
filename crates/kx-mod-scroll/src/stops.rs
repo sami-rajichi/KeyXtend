@@ -57,7 +57,7 @@ impl Halt {
 
 /// The stop rules that depend on `[scroll]`: a tap's reach check and a running scroll's stops. The actor calls
 /// `tapped` at every pad tap.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stops {
     /// Stop when the target reaches its end.
     at_end: bool,
@@ -90,6 +90,7 @@ impl Stops {
     /// Why a tap that sets a new way cannot start, from the target's reach `ahead` and, read only when that is the
     /// end, `back` the other way; `Unknown` counts as able to move. With `stop_at_end` off, an end only that way
     /// starts, as a feed may load more there.
+    #[must_use]
     pub fn blocked(&self, ahead: Reach, back: impl FnOnce() -> Reach) -> Option<Halt> {
         if ahead != Reach::End {
             return None;

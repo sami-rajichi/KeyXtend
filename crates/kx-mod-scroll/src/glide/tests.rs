@@ -1,14 +1,19 @@
 //! The lines owed per tick, the cap on a long gap, and the restarts.
 
 use super::*;
+use crate::fixture;
 use kx_module_api::US_PER_MS;
 
 /// How close two line counts must be: far below any wheel step.
 pub(super) const EPS: f64 = 1e-9;
 
-/// The default speeds and check: 3 and 10 lines a second, 250 ms.
-fn cfg() -> GlideCfg {
-    GlideCfg::from(&ScrollSettings::from_defaults().unwrap())
+/// Test speeds and check: 3 and 10 lines a second, 250 ms.
+const fn cfg() -> GlideCfg {
+    GlideCfg {
+        slow: 3,
+        fast: 10,
+        cap: Duration::from_millis(250),
+    }
 }
 
 /// The point `n` ms after the start.
@@ -23,9 +28,11 @@ fn same(got: f64, want: f64) -> bool {
 
 #[test]
 fn the_settings_give_both_speeds_and_the_cap() {
-    let c = cfg();
-    assert_eq!((c.slow, c.fast, c.cap), (3, 10, Duration::from_millis(250)));
-    assert_eq!((c.speed(false), c.speed(true)), (3, 10));
+    let s = fixture::settings();
+    let c = GlideCfg::from(&s);
+    let cap = Duration::from_millis(u64::from(s.check_ms));
+    assert_eq!((c.slow, c.fast, c.cap), (s.slow, s.fast, cap));
+    assert_eq!((c.speed(false), c.speed(true)), (s.slow, s.fast));
 }
 
 #[test]

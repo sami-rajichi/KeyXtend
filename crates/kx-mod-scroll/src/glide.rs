@@ -36,7 +36,7 @@ impl GlideCfg {
 }
 
 /// One scroll's glide: its speed and where its reckoning stands.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Glide {
     /// The speeds and the cap.
     cfg: GlideCfg,
@@ -59,6 +59,7 @@ impl Glide {
 
     /// The lines owed since the last reckoning, which moves to `now`; always finite and at least 0. A time before
     /// the last reckoning owes nothing and leaves it where it is.
+    #[must_use]
     pub fn tick(&mut self, now: Mono) -> f64 {
         let gap = now.saturating_since(self.last).min(self.cfg.cap);
         self.last = self.last.max(now);

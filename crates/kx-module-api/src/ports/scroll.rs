@@ -1,8 +1,6 @@
-//! Scrolling other apps from the pad: the target port the platform provides, and the pad's events on the bus
-//! (ADR-0029). A target's point and box can show what the user looks at, so no `Debug` here prints them.
-//!
-//! No event here is gated: the keyboard and the UI send and hear them, and only the scroll module holds `Scroll`,
-//! which `ScrollTargetKey` guards.
+//! Scrolling other apps from the pad (ADR-0029): the target port, which only `Scroll` reaches, and the pad's bus
+//! events, which need no capability. A target's point and box can show what the user looks at, so no `Debug` here
+//! prints them.
 
 use super::{Point, Rect};
 use crate::{Capability, Event, Redacted, ServiceId, ServiceKey};
@@ -138,7 +136,8 @@ pub trait ScrollRun: Send {
     /// `NoTarget` when no point is known yet, `Gone` when the window there closed, `Refused` when the OS refuses.
     fn aim(&mut self) -> Result<Aim, ScrollError>;
 
-    /// Turns the target at `aim` by `lines` lines, a fraction too, towards `dir`; it never waits on a hung app.
+    /// Turns the target at `aim` towards `dir` by `lines`, which is finite and at least 0 and may be a fraction; it
+    /// never waits on a hung app.
     ///
     /// # Errors
     /// `Gone` when the target closed, `Refused` when the OS refuses the step.

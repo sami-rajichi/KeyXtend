@@ -1,9 +1,9 @@
 //! Properties over any run of taps, readings, presses, failures and waits, under any stop settings: each stop has its
 //! cause, and every stop leaves the pad still.
 
-use super::tests::defaults;
 use super::*;
 use crate::Pad;
+use crate::fixture::settings as fixture;
 use crate::settings::{LIMIT_S, NO_LIMIT};
 use kx_module_api::US_PER_S;
 use kx_module_api::ports::Dir;
@@ -85,7 +85,7 @@ fn settings() -> impl Strategy<Value = ScrollSettings> {
             limit_s,
             stop_at_end,
             stop_on_press,
-            ..defaults()
+            ..fixture()
         }
     })
 }
