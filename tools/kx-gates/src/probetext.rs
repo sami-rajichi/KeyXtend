@@ -7,8 +7,8 @@ use std::fmt::Write;
 const RTF_PAR: &str = r"\par ";
 /// End of the RTF file.
 const RTF_TAIL: &str = "}";
-/// Letters that fill the scroll lines.
-const FILLER: &str = "abcdefghijklmnopqrstuvwxyz";
+/// Where the scroll documents break a line; Notepad, Chrome's `<pre>` and RTF read a plain LF as one.
+const LF: &str = "\n";
 
 /// `text` as RTF in `font` at `half_points`, one paragraph per line; specials escaped, other than ASCII as `\uN?`.
 pub fn rtf(text: &str, font: &str, half_points: u32) -> String {
@@ -35,14 +35,9 @@ pub fn rtf(text: &str, font: &str, half_points: u32) -> String {
     out
 }
 
-/// `rows` numbered lines of `cols` characters each, for the scroll documents.
+/// `rows` numbered lines of `cols` characters each, for the scroll documents: target-window's fill lines.
 pub fn scroll_text(rows: usize, cols: usize) -> String {
-    let line = |i: usize| {
-        let head = format!("{i:04} ");
-        let fill = FILLER.chars().cycle().take(cols.saturating_sub(head.len()));
-        head.chars().chain(fill).take(cols).collect::<String>()
-    };
-    (1..=rows).map(line).collect::<Vec<_>>().join("\n")
+    kx_target_window::fill::lines(rows, cols).join(LF)
 }
 
 #[cfg(test)]

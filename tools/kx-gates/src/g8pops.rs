@@ -1,5 +1,6 @@
-//! One round of G8's churn: key tips, the language list in the List design, the bubble and a full theme cycle. It
-//! moves the real pointer but never clicks, presses buttons by UI Automation and counts what showed.
+//! One round of G8's churn: key tips, the language list in the List design, the bubble, a full theme cycle and a
+//! scroll (`g8scroll`). It moves the real pointer but never clicks, presses buttons by UI Automation and counts what
+//! showed.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -14,6 +15,7 @@ use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::Ctx;
 use crate::g8cfg::G8;
+use crate::g8scroll::Scroller;
 use crate::g8steps::Step;
 use crate::g8tips::{self, Hover, Keys};
 use crate::keymap::Reader;
@@ -118,6 +120,10 @@ pub struct Seen {
     pub bubbles: usize,
     /// Bubble presses that brought the keyboard back.
     pub returns: usize,
+    /// Scrolls whose pad lit.
+    pub scrolls: usize,
+    /// Scrolls whose outline showed every edge.
+    pub outlines: usize,
 }
 
 impl Seen {
@@ -221,12 +227,19 @@ fn themes(g: &G8, reader: &Reader, plan: &Plan) -> Result<(), String> {
     back_to(&plan.theme, &uilook::running()?.theme)
 }
 
-/// One round: the tips, the list when the language key opens one, the bubble, and a full theme cycle; `after` runs
-/// after each step, as when it reads memory.
+/// Scrolls once with `scroller`, counting a pad that lit and an outline that showed.
+fn scroll(scroller: &Scroller, seen: &mut Seen) -> Result<(), String> {
+    let done = scroller.once()?;
+    seen.scrolls += usize::from(done.lit);
+    seen.outlines += usize::from(done.outlined);
+    Ok(())
+}
+
+/// One round: the tips, the list when the language key opens one, the bubble, a full theme cycle, and a scroll when
+/// there is a `scroller`; `after` runs after each step, as when it reads memory.
 pub fn round(
-    g: &G8,
-    reader: &Reader,
-    plan: &Plan,
+    (g, reader, plan): (&G8, &Reader, &Plan),
+    scroller: Option<&Scroller>,
     seen: &mut Seen,
     after: &mut dyn FnMut(Step) -> Result<(), String>,
 ) -> Result<(), String> {
@@ -240,7 +253,12 @@ pub fn round(
     bubble(g, reader, plan, seen)?;
     after(Step::Bubble)?;
     themes(g, reader, plan)?;
-    after(Step::Themes)
+    after(Step::Themes)?;
+    if let Some(s) = scroller {
+        scroll(s, seen)?;
+        after(Step::Scroll)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

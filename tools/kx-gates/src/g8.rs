@@ -1,6 +1,6 @@
 //! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, folder size, key highlight,
 //! click to character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
-//! use against them, and times resizes.
+//! use and after a scroll (`g8scroll`) against them, times resizes and logs the machine's memory (`g8host`).
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
 //! layout in front (`g8lang`); it clicks, so only with the owner's yes.
 //! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`).
@@ -23,15 +23,17 @@ use crate::g8frames::{self, Capture, Recorder};
 use crate::g8lang::{self, WinTarget};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
+use crate::g8scroll::{self, Scroller};
 use crate::g8start::{self, Started, broke, log_span};
 use crate::g8type::Expect;
 use crate::g8ui::Spot;
+
 use crate::out::{say, shown};
 use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, g2raw, g8hook, mouseguard, out};
+use crate::{close, g2, g2raw, g8hook, g8host, mouseguard, out};
 use crate::{g8lit, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
@@ -82,9 +84,9 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 }
 
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
-/// memory, idle, folder, presses, resizes, G2 and the memory after use, before any theme round (owner, 2026-10-16);
-/// then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
-/// `hold` runs after the presses and after G2, each of which closed its target-window.
+/// memory, idle, folder, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
+/// 2026-10-16); then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never
+/// count. `hold` runs after the presses, after G2 and after the scroll, each of which changed the window in front.
 fn measure(
     ctx: &Ctx,
     s: &Started,
@@ -107,8 +109,11 @@ fn measure(
     let ran_us = now_us();
     hold()?;
     let used = g8use::run(ctx, &s.process);
+    let (scrolled, pad) = g8scroll::taken(ctx, &s.process, hold)?;
     let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
-    let churn = g8churn::run(ctx, &s.process)?;
+    let churn = g8churn::run(ctx, &s.process, pad.as_ref());
+    let scroll_left = pad.map(Scroller::close).unwrap_or_default();
+    let churn = churn?;
     let m = Measured {
         log,
         memory,
@@ -121,6 +126,8 @@ fn measure(
         ran_us,
         churn,
         used,
+        scrolled,
+        scroll_left,
     };
     Ok((m, frames))
 }
@@ -211,7 +218,8 @@ type Hold<'a> = &'a dyn Fn() -> Result<(), String>;
 
 /// G8 from its cold start to its result line, in weak mode for `weak`, running `hold` as `measure` says.
 fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
-    let weak = name == WEAK;
+    let (weak, host) = (name == WEAK, g8host::read(ctx));
+    say!("G8 {name}: the machine before: {}", json!(host));
     let program = ctx.cfg.program(&ctx.cfg.g8.program);
     let (job, cpu_cores) = weak_job(ctx, weak)?;
     let (since, origin_us) = (SystemTime::now(), now_us());
@@ -242,7 +250,8 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
-        "parts": parts, "quit": ended,
+        "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts, "quit": ended,
+        "host": { "before": host, "after": g8host::read(ctx) },
         "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
     });
     v[g8use::FIELD] = shown(&m.used);

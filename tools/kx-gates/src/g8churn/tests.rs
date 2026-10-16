@@ -209,11 +209,13 @@ fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_c
     };
     assert!(no_list.whole(), "the default Carousel design opens no list");
     let short = full.rounds - 1;
-    let missed: [fn(&mut Churn, usize); 4] = [
+    let missed: [fn(&mut Churn, usize); 6] = [
         |c, n| c.tips = n,
         |c, n| c.lists = Some(n),
         |c, n| c.bubbles = n,
         |c, n| c.returns = n,
+        |c, n| c.scrolls = n,
+        |c, n| c.outlines = n,
     ];
     for (i, miss) in missed.iter().enumerate() {
         let mut c = full.clone();

@@ -6,8 +6,8 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g8, g8hook, g8lang, g8lit, g17, g18, g19, g20, g21, g22, g22bench, g22type,
-    g25, hand,
+    capture, g5, g6, g6rec, g8, g8hook, g8lang, g8lit, g17, g18, g19, g20, g21, g22, g22bench,
+    g22type, g25, hand,
 };
 
 /// The program's name in the help.
@@ -18,14 +18,16 @@ fn names(apps: &[AppKind]) -> String {
     apps.iter().map(|a| a.name()).collect::<Vec<_>>().join("|")
 }
 
-/// The help lines of the gates aimed at the product.
+/// The help lines of the gates aimed at the product or its test build.
 fn product_lines() -> String {
     let (weak, arabic, lit, osk) = (g8::WEAK, g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
     let (hook, hook_weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
+    let (apps, records) = (names(&g6::APPS), g6rec::NAMES.join("|"));
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
        {PROG} g4 <{NAME}> [--clicks N] [--seed S]
+       {PROG} g6 <{apps}|{records}>
        {PROG} g8 <{NAME}|{weak}|{arabic}|{lit}|{osk}|{hook}|{hook_weak}>
        {PROG} g9 <{NAME}>
        {PROG} g10 <{NAME}>
@@ -61,7 +63,6 @@ pub fn usage() -> String {
        {PROG} assist <{}|{}> [--secs N]
        {PROG} g17 <{}>
        {PROG} g18 <{}>
-       {PROG} g6 <{}>
 {}
        {PROG} g20 <{}>
        {PROG} g21 <{}>
@@ -80,7 +81,6 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         hand::GRAB,
         names(&g17::APPS),
         names(&g18::APPS),
-        names(&g6::APPS),
         face_lines(),
         names(&g20::APPS),
         g21::NAMES.join("|"),
@@ -104,6 +104,20 @@ mod tests {
     fn usage_lists_every_g1_app() {
         let names: Vec<&str> = AppKind::ALL.iter().map(|a| a.name()).collect();
         assert!(usage().contains(&format!("g1 <{}>", names.join("|"))));
+    }
+
+    #[test]
+    fn g6_lists_its_apps_and_its_records_but_never_word() {
+        let text = usage();
+        let line = text
+            .lines()
+            .find(|l| l.contains("g6 <"))
+            .unwrap_or_default();
+        let apps = g6::APPS.iter().map(|a| a.name());
+        for name in apps.chain(g6rec::NAMES) {
+            assert!(line.contains(name), "{text}");
+        }
+        assert!(!line.contains(AppKind::Word.name()), "{line}");
     }
 
     #[test]

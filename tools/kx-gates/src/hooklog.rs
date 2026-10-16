@@ -3,6 +3,7 @@
 
 use kx_mod_mouse::STOPPED_LINE;
 use kx_module_api::US_PER_MS;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -40,9 +41,9 @@ impl HookLine {
     }
 }
 
-/// The field names, as `HookLine` serialises them.
-fn names() -> Vec<String> {
-    let line = serde_json::to_value(HookLine::default()).unwrap_or_default();
+/// The field names, as `T` serialises them.
+fn names<T: Serialize + Default>() -> Vec<String> {
+    let line = serde_json::to_value(T::default()).unwrap_or_default();
     line.as_object()
         .map(|fields| fields.keys().cloned().collect())
         .unwrap_or_default()
@@ -54,32 +55,50 @@ fn value_of<'a>(line: &'a str, name: &str) -> Option<&'a str> {
     line.split_whitespace().find_map(at)
 }
 
-/// The numbers of `line` when it is a stats line (it holds the mouse module's `STOPPED_LINE`); none for any other line,
-/// and an error naming a field that is missing or not a number.
-pub fn parse(line: &str) -> Result<Option<HookLine>, String> {
-    if !line.contains(STOPPED_LINE) {
+/// The numbers of `line` as `T`'s fields when it holds `marker`; none for any other line, and an error naming a field
+/// that is missing or not a number. Nothing else on the line is kept.
+pub fn numbers<T: Serialize + DeserializeOwned + Default>(
+    line: &str,
+    marker: &str,
+) -> Result<Option<T>, String> {
+    if !line.contains(marker) {
         return Ok(None);
     }
     let mut fields = Map::new();
-    for name in names() {
-        let value = value_of(line, &name).ok_or_else(|| format!("{STOPPED_LINE}: no {name}"))?;
+    for name in names::<T>() {
+        let value = value_of(line, &name).ok_or_else(|| format!("{marker}: no {name}"))?;
         let number: u64 = value
             .parse()
-            .map_err(|_| format!("{STOPPED_LINE}: {name} is not a number"))?;
+            .map_err(|_| format!("{marker}: {name} is not a number"))?;
         fields.insert(name, number.into());
     }
     serde_json::from_value(Value::Object(fields))
         .map(Some)
-        .map_err(|e| format!("{STOPPED_LINE}: {e}"))
+        .map_err(|e| format!("{marker}: {e}"))
+}
+
+/// The numbers of `line` when it is a stats line (it holds the mouse module's `STOPPED_LINE`); none for any other line,
+/// and an error naming a field that is missing or not a number.
+pub fn parse(line: &str) -> Result<Option<HookLine>, String> {
+    numbers(line, STOPPED_LINE)
+}
+
+/// The lines of `log` stamped at or after `since_us` that `read` takes, oldest first.
+pub fn read_since<T>(
+    log: &str,
+    since_us: i64,
+    read: impl Fn(&str) -> Result<Option<T>, String>,
+) -> Result<Vec<T>, String> {
+    let fresh = log
+        .lines()
+        .filter(|l| stamp_us(l).is_some_and(|at| at >= since_us));
+    let parsed: Vec<Option<T>> = fresh.map(read).collect::<Result<_, _>>()?;
+    Ok(parsed.into_iter().flatten().collect())
 }
 
 /// The stats lines of `log` stamped at or after `since_us`, oldest first.
 pub fn since(log: &str, since_us: i64) -> Result<Vec<HookLine>, String> {
-    let fresh = log
-        .lines()
-        .filter(|l| stamp_us(l).is_some_and(|at| at >= since_us));
-    let parsed: Vec<Option<HookLine>> = fresh.map(parse).collect::<Result<_, _>>()?;
-    Ok(parsed.into_iter().flatten().collect())
+    read_since(log, since_us, parse)
 }
 
 /// `lines` as one: the counts add up, and each time is the largest.
@@ -150,7 +169,7 @@ mod tests {
 
     #[test]
     fn the_fields_are_the_ones_the_mouse_module_logs() {
-        let fields = names();
+        let fields = names::<HookLine>();
         assert!(!fields.is_empty());
         for name in fields {
             let logged = format!("{name} = s.{name}");
@@ -219,7 +238,10 @@ mod tests {
 
     #[test]
     fn lost_echoes_pass_at_the_limit_and_fail_over_it_or_with_no_line() {
-        assert!(names().iter().any(|n| n == LOST), "the field it names");
+        assert!(
+            names::<HookLine>().iter().any(|n| n == LOST),
+            "the field it names"
+        );
         let with = |lost_echoes| HookLine {
             lost_echoes,
             ..sample()

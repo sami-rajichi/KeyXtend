@@ -1,5 +1,5 @@
-//! Loads and checks `kx-gates.toml`, `kx-gates-p3.toml` and `kx-gates-p4.toml`; `cfgfile` finds their folder and
-//! `cfgload` reads them.
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p5.toml`);
+//! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
 use std::collections::BTreeMap;
@@ -19,7 +19,8 @@ use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
 use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
-use crate::probecfg::{G6, Probes, Sim};
+use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
+use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 
 /// All gate settings.
@@ -51,8 +52,16 @@ pub struct GatesConfig {
     pub g5: G5,
     /// G17, G18 and G6 documents and moves.
     pub probes: Probes,
-    /// G6 settings.
+    /// G6 settings, on the test build.
     pub g6: G6,
+    /// The scroll pad's parts, which G6, G9 and G10 tap and press.
+    pub pad: Pad,
+    /// G9's outline steps.
+    pub outline: Outline,
+    /// G8's scroll steps.
+    pub g8_scroll: G8Scroll,
+    /// What G8 logs of the machine beside its numbers.
+    pub host: Host,
     /// G12 settings.
     pub g12: G12,
     /// Editing shortcuts of the stage-1b probes.
@@ -196,7 +205,7 @@ impl GatesConfig {
     }
 }
 
-/// Loads and parses the settings: `kx-gates.toml`, then `kx-gates-p3.toml` and `kx-gates-p4.toml` from its folder.
+/// Loads and parses the settings: `kx-gates.toml`, then each phase's file from its folder.
 pub fn load() -> Result<GatesConfig, String> {
     let file = cfgfile::path()?;
     let dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -208,7 +217,6 @@ pub fn load() -> Result<GatesConfig, String> {
     featcfg::check(&config)?;
     config.g2.check()?;
     config.g3.check()?;
-    config.g6.check()?;
     config.g12.check()?;
     config.g8.check()?;
     config.mouse_guard.check()?;
@@ -217,6 +225,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g8_hook.check()?;
     fit::check(&config)?;
     p3cfg::check(&config)?;
+    p5cfg::check(&config)?;
     Ok(config)
 }
 
@@ -236,7 +245,7 @@ mod tests {
         for app in ["explorer", "word_file"] {
             assert!(cfg.app(app).is_ok(), "missing app {app}");
         }
-        assert!(cfg.probes.move_steps > 0 && cfg.g6.notches > 0);
+        assert!(cfg.probes.move_steps > 0 && cfg.g6.phase_ms > 0);
         assert!(!cfg.g25.panel_classes.is_empty());
     }
 

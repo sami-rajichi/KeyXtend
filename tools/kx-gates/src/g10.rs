@@ -1,7 +1,8 @@
 //! G10 screen readers, the automatic part (roadmap G10): every key is found by UI Automation, named (character keys
 //! after the layout in front, ADR-0020), pressable, and the element at its centre as Narrator's mouse mode reads it
 //! (`g10point`); Narrator and NVDA themselves are the owner's. Invoke then activates every key into target-window but
-//! a dead key or one that types nothing in the layout in front: the character keys here and the others in `g10steps`.
+//! a dead key or one that types nothing in the layout in front: the character keys here, the others in `g10steps` and
+//! the scroll pad over the filled target-window in `g10pad`.
 #![cfg(windows)]
 
 use kx_module_api::ports::LayoutSource;
@@ -12,7 +13,7 @@ use crate::apps::{self, Ctx, Opened};
 use crate::keymap::{KeyRead, Reader};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{board, g10point, g10steps, launch, tlog, walk};
+use crate::{board, g10pad, g10point, g10steps, launch, tlog, walk};
 
 /// What the walk found wrong, by board key.
 #[derive(Debug, Default, PartialEq, serde::Serialize)]
@@ -89,22 +90,25 @@ fn check(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     let got = press_all(ctx, kb, &pressed)?;
     let typed = typed_all(&expected, &got);
     let keys = g10steps::run(ctx, kb, target)?;
+    let pad = g10pad::run(ctx, kb, target, &read)?;
     let names: Vec<(&str, &str)> = read
         .iter()
         .map(|k| (k.id.as_str(), k.name.as_str()))
         .collect();
-    let pass = found.clean() && by_point["ok"] == true && typed && keys["ok"] == true;
+    let pass =
+        found.clean() && by_point["ok"] == true && typed && keys["ok"] == true && pad["ok"] == true;
     Ok(json!({
         "layout": layout.to_string(), "found": found, "by_point": by_point, "pressed": pressed.len(),
-        "typed_ok": typed, "expected": expected, "got": got, "keys": keys, "names": names, "follow_ms": follow_ms,
-        "pass": pass,
+        "typed_ok": typed, "expected": expected, "got": got, "keys": keys, "pad": pad, "names": names,
+        "follow_ms": follow_ms, "pass": pass,
     }))
 }
 
 /// Runs G10 on the product, called `name`; the names it records are for the owner to read in each language.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kb = Keyboard::find()?;
-    let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
+    let filled = [ctx.target.fill_arg.clone()];
+    let target = launch::to_front(ctx, launch::start_target_with(ctx, &filled)?)?;
     let out = check(ctx, &kb, &target);
     let left_open = apps::clean_up(ctx, target);
     let mut v = out.map_err(|e| format!("{e}; left open: {left_open:?}"))?;

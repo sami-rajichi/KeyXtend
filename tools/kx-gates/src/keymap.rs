@@ -8,9 +8,10 @@ use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::Accessibility::{
-    CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement, ToggleState_On,
-    TreeScope_Descendants, UIA_AutomationIdPropertyId, UIA_ButtonControlTypeId,
-    UIA_ControlTypePropertyId, UIA_InvokePatternId, UIA_ToggleToggleStatePropertyId,
+    CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
+    IUIAutomationElement6, ToggleState_On, TreeScope_Descendants, UIA_AutomationIdPropertyId,
+    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
+    UIA_ToggleToggleStatePropertyId,
 };
 use windows::core::{BSTR, Interface};
 
@@ -138,6 +139,26 @@ impl Reader {
         Ok(toggle_state(&v))
     }
 
+    /// The screen box of the element with id `id` inside window `hwnd`, such as the pad, which is no button.
+    pub fn rect(&self, hwnd: HWND, id: &str) -> Result<RECT, String> {
+        uia::rect(&self.find(hwnd, id)?)
+    }
+
+    /// What a screen reader reads as the description of the element with id `id` inside window `hwnd`.
+    pub fn described(&self, hwnd: HWND, id: &str) -> Result<String, String> {
+        let (full, help) = texts_of(&self.find(hwnd, id)?);
+        Ok(description(full, help))
+    }
+
+    /// The UI Automation id of the element at screen point `p`; the pointer never moves.
+    #[allow(unsafe_code, reason = "A UI Automation call on a live element.")]
+    pub fn id_at(&self, p: POINT) -> Result<String, String> {
+        let el = self.at(p)?;
+        // SAFETY: a plain property read on a live element.
+        let id = unsafe { el.CurrentAutomationId() }.map_err(err)?;
+        Ok(id.to_string())
+    }
+
     /// The element UI Automation finds at screen point `p`, as Narrator's mouse mode reads what is under the pointer.
     #[allow(unsafe_code, reason = "A UI Automation call on this client.")]
     pub fn at(&self, p: POINT) -> Result<IUIAutomationElement, String> {
@@ -178,6 +199,24 @@ fn toggle_state(v: &VARIANT) -> Option<bool> {
     Some(state == ToggleState_On.0)
 }
 
+/// What a screen reader reads as a part's description: UI Automation's full description, else its help text, which
+/// some Qt versions fill from `Accessible.description`.
+fn description(full: Option<String>, help: Option<String>) -> String {
+    full.filter(|d| !d.is_empty()).or(help).unwrap_or_default()
+}
+
+/// The full description and the help text of `el`, as far as it gives them.
+#[allow(unsafe_code, reason = "UI Automation calls on a live element.")]
+fn texts_of(el: &IUIAutomationElement) -> (Option<String>, Option<String>) {
+    let full = el.cast::<IUIAutomationElement6>().ok().and_then(|el6| {
+        // SAFETY: a plain property read on a live element.
+        unsafe { el6.CurrentFullDescription() }.ok()
+    });
+    // SAFETY: a plain property read on a live element.
+    let help = unsafe { el.CurrentHelpText() }.ok();
+    (full.map(|b| b.to_string()), help.map(|b| b.to_string()))
+}
+
 /// Presses element `el` as a screen reader does, unless the mouse guard stopped the gate; `uia::invoke` puts back.
 pub fn press(el: &IUIAutomationElement) -> Result<(), String> {
     mouseguard::allowed()?;
@@ -207,76 +246,4 @@ fn read_one(el: &IUIAutomationElement) -> Result<KeyRead, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn bx(left: i32, top: i32, right: i32, bottom: i32) -> RECT {
-        RECT {
-            left,
-            top,
-            right,
-            bottom,
-        }
-    }
-
-    #[test]
-    fn a_key_is_aimed_at_the_centre_of_the_box_ui_automation_gives_for_its_id() {
-        let keys = KeyMap::new(vec![
-            ("bar.grip".into(), bx(0, 0, 400, 24)),
-            ("c-0x001E".into(), bx(100, 200, 148, 248)),
-        ]);
-        let p = keys.at("c-0x001E").expect("found");
-        assert_eq!((p.x, p.y), (124, 224));
-        assert!(
-            keys.at("c-0x001F").is_none(),
-            "a key UI Automation did not list"
-        );
-    }
-
-    #[test]
-    fn the_aim_follows_the_box_ui_automation_reports() {
-        let at = |down: i32| {
-            let keys = KeyMap::new(vec![("esc".into(), bx(8, 30 + down, 40, 62 + down))]);
-            keys.at("esc").map(|p| p.y)
-        };
-        assert_eq!(at(0), Some(46));
-        assert_eq!(
-            at(24),
-            Some(70),
-            "the box comes from the keyboard, not from a key map"
-        );
-    }
-
-    #[test]
-    fn a_toggle_state_reads_as_on_or_off_and_a_button_without_one_as_none() {
-        use windows::Win32::UI::Accessibility::{ToggleState_Off, ToggleState_On};
-        assert_eq!(toggle_state(&VARIANT::from(ToggleState_On.0)), Some(true));
-        assert_eq!(toggle_state(&VARIANT::from(ToggleState_Off.0)), Some(false));
-        assert_eq!(toggle_state(&VARIANT::default()), None, "no Toggle pattern");
-        assert_eq!(
-            toggle_state(&VARIANT::from(true)),
-            None,
-            "not a toggle state"
-        );
-    }
-
-    #[test]
-    fn an_empty_id_names_no_button_so_it_is_refused_before_ui_automation() {
-        assert_eq!(wanted("esc"), Ok("esc"));
-        let e = wanted("").expect_err("the S, M and L buttons have no id");
-        assert!(e.contains("empty"), "{e}");
-    }
-
-    #[test]
-    fn a_box_with_no_area_is_not_on_screen_and_the_first_of_two_ids_wins() {
-        let keys = KeyMap::new(vec![
-            ("lang".into(), bx(5, 5, 5, 30)),
-            ("esc".into(), bx(0, 0, 10, 10)),
-            ("esc".into(), bx(50, 50, 60, 60)),
-        ]);
-        assert!(keys.at("lang").is_none());
-        let p = keys.at("esc").expect("found");
-        assert_eq!((p.x, p.y), (5, 5));
-        assert!(keys.at("").is_none());
-    }
-}
+mod tests;

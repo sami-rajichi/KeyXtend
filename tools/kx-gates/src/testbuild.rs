@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use kx_mod_keyboard::{KeyboardSettings, Role};
 use kx_mod_mouse::MouseSettings;
+use kx_mod_scroll::ScrollSettings;
 use kx_module_api::{ModuleId, Settings, SettingsSpec};
 use kx_platform::PORTABLE_DIR;
 use kx_platform_windows::uiaccess;
@@ -98,6 +99,16 @@ impl<'a> TestBuild<'a> {
     /// Its `[keyboard]` settings, read from its data folder without changing them.
     pub fn keyboard(&self) -> Result<KeyboardSettings, String> {
         self.section(kx_mod_keyboard::ID, &kx_mod_keyboard::SPEC)
+    }
+
+    /// Its `[scroll]` settings, read from its data folder without changing them.
+    pub fn scroll(&self) -> Result<ScrollSettings, String> {
+        self.section(kx_mod_scroll::ID, &kx_mod_scroll::SPEC)
+    }
+
+    /// Its log file and its start in µs since 1970, so its own lines can be read after it quit.
+    pub fn log(&self) -> Result<(PathBuf, i64), String> {
+        Ok((product::files(&self.program)?.log, self.since_us))
     }
 
     /// Module `id`'s section of its settings, as a later copy of the app reads it.

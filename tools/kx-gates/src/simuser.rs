@@ -75,8 +75,8 @@ fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
     Ok(())
 }
 
-/// A short left click at `p`.
-fn press(ctx: &Ctx, p: Pt) -> Result<(), String> {
+/// A short left click at `p`, wherever it lands; callers check the window there first.
+pub fn press(ctx: &Ctx, p: Pt) -> Result<(), String> {
     let sim = &ctx.cfg.sim;
     simin::as_user(&[Act::Move(p)])?;
     sleep_ms(sim.step_ms);

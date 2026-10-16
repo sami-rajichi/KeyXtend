@@ -79,9 +79,9 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 /// A gate run that takes only a name.
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
-/// Every gate: whether it holds the mouse, and its run when it takes only a name. G5, G12, G17 and G18 drive the test
-/// build, as `DRIVEN`'s names do; the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI runner
-/// and `close` moves nothing.
+/// Every gate: whether it holds the mouse, and its run when it takes only a name. G5, G6, G12, G17 and G18 drive the
+/// test build, as `DRIVEN`'s names do; the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI
+/// runner and `close` moves nothing.
 const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("g1", Mouse::Held, None),
     ("g2", Mouse::Held, None),
@@ -89,7 +89,7 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("g4", Mouse::Held, None),
     ("assist", Mouse::Free, None),
     ("g5", Mouse::Drives, Some(g5::run)),
-    ("g6", Mouse::Held, Some(g6::run)),
+    ("g6", Mouse::Drives, Some(g6::run)),
     ("g7", Mouse::Held, Some(g7::run)),
     ("g8", Mouse::Held, Some(g8::run)),
     ("g9", Mouse::Held, Some(g9::run)),

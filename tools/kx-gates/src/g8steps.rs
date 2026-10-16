@@ -20,6 +20,8 @@ pub enum Step {
     Bubble,
     /// A full theme cycle.
     Themes,
+    /// One scroll with the outline shown, then Stop.
+    Scroll,
 }
 
 impl fmt::Display for Step {

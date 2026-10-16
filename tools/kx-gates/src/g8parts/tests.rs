@@ -1,5 +1,5 @@
-//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, the memory's after use, and when a run
-//! passes.
+//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, the memory's after use and after a scroll,
+//! and when a run passes.
 
 use serde_json::json;
 
@@ -40,6 +40,8 @@ fn sample() -> (G8, Measured, Outside) {
         ran_us: 0,
         churn,
         used: Ok(g8use::read_as(still)),
+        scrolled: Ok(g8scroll::read_as(still)),
+        scroll_left: Vec::new(),
     };
     let o = Outside {
         hz: Some(165.0),
@@ -60,8 +62,22 @@ fn a_run_within_every_budget_passes() {
     assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
     assert_eq!(
         parts.len(),
-        14,
-        "one part per spec §10 budget G8 owns, two for the key light and two for the memory after use"
+        16,
+        "one part per spec §10 budget G8 owns, two for the key light, two for the memory after use and two after a \
+         scroll"
+    );
+}
+
+#[test]
+fn a_reading_after_a_scroll_that_was_not_taken_fails_both_its_parts_and_the_run() {
+    let (g, mut m, o) = sample();
+    m.presses.typed_ok = true;
+    m.scrolled = Err("the scroll pad has no box".into());
+    let parts = parts(&g, Some(420.0), &m, false, &o);
+    assert_eq!(failed(&parts), [g8scroll::MEMORY, g8scroll::COMMIT]);
+    assert_eq!(
+        verdict(false, &m.churn, met(true, &m.presses, &parts)),
+        json!(false)
     );
 }
 

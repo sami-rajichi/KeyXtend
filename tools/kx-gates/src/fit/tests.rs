@@ -89,6 +89,18 @@ fn g8s_use_step_follows_its_g2_clicks_inside_the_capture_and_comes_before_the_ch
 }
 
 #[test]
+fn g8s_scroll_after_use_and_each_rounds_scroll_count_in_its_hold() {
+    let base = with(|c| c.g8.presentmon_secs = 0);
+    let longer = with(|c| {
+        c.g8.presentmon_secs = 0;
+        c.g8_scroll.scroll_ms += 1_000;
+    });
+    let rounds = base.g8.churn_warm_rounds + base.g8.churn_rounds;
+    let scrolls = u64::try_from(rounds + 1).expect("a few rounds");
+    assert_eq!(g8_ms(&longer, 0) - g8_ms(&base, 0), scrolls * 1_000);
+}
+
+#[test]
 fn churn_rounds_past_any_count_are_refused_without_a_panic() {
     let c = with(|c| (c.g8.churn_warm_rounds, c.g8.churn_rounds) = (usize::MAX, 1));
     assert!(check(&c).expect_err("G8 too long").contains("g8"));
