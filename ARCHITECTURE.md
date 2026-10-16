@@ -81,7 +81,7 @@ crates/
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`
   kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4)
-  kx-mod-scroll/        scroll controller (2 speeds, target tracking) (P5)
+  kx-mod-scroll/        scroll controller (2 speeds, stops, target tracking) over the `ScrollTarget` port (P5)
   kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions (P7)
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)

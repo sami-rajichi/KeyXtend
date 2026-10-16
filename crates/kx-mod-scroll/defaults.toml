@@ -1,0 +1,18 @@
+# The first tap's speed, in lines a second.
+slow = 3
+# The second tap's speed, in lines a second; always above slow.
+fast = 10
+# Scrolling stops this many seconds after the last pad tap; 0 means no limit.
+limit_s = 120
+# Scrolling stops when the target reaches its end.
+stop_at_end = true
+# Scrolling stops at a press outside our windows.
+stop_on_press = true
+# How often the glide steps while scrolling, in ms; always below check_ms.
+tick_ms = 16
+# How long a target may stay still under our steps, short of its end, before the platform tries another way, in ms.
+check_ms = 250
+# The longest one read of a target may take, in ms.
+read_ms = 300
+# How far past the keyboard's nearest edge the target point goes when the pointer's path is unknown, in physical pixels.
+edge_px = 8

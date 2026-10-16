@@ -82,9 +82,9 @@ jobs:
     env:
       # Every workspace package sits in exactly one list; the first step fails when a package is missing or extra.
       PACKAGES: >-
-        -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-mod-mouse -p kx-module-api
-        -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support
-        -p kx-theme -p xtask
+        -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-scroll
+        -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window
+        -p kx-test-support -p kx-theme -p xtask
       NO_QT: -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 11:52 — P5: the scroll module's crate and its `[scroll]` settings
+The new `kx-mod-scroll` crate declares the scroll module: it needs the scroll target and holds only the `Scroll` capability, and its start reads `[scroll]` and keeps the target for the runtime to come. `[scroll]` holds the two speeds (3 and 10 lines a second, 1 to 60, fast always above slow), the time limit after the last pad tap (2 minutes, 0 for none, else 10 s to 30 min), the end and press stop switches, and the tick, check, read and edge values the platform uses, with each tick shorter than a check. The crate joined the workspace and CI's Linux list, with a README and a draft security note.
+
 ## 2026-10-16 11:36 — P5: the scroll target port and the pad's bus events
 `kx-module-api` now has the `ScrollTarget` port of ADR-0029, gated by the new `Scroll` capability: a module opens a run, asks it for the target, turns it by a fraction of lines in one of four directions and asks whether it can go further, and dropping the run closes it. Seven new bus events carry the pad's taps, Stop and hover, the scroll state and a request for it, the box to outline and a page turn for our own lists; none is gated, as the keyboard and the UI hold no `Scroll`. The new ungated `PointerPressed` says whether a press landed on our windows, and the face gained the pad's click and hover actions. A target's point and box never show in debug output.
 
