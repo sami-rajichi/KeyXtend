@@ -24,7 +24,7 @@ use kx_module_api::ports::{
     PointerPressed, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPeek, ScrollStop, ScrollTap,
     ScrollTargetKey,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError};
+use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -90,13 +90,14 @@ impl ScrollModule {
     }
 }
 
-/// The actor's thread. A panic there says at once that the module is not live and hides the outline, so the pad dims
-/// with its tip; then `halt` logs it.
+/// The actor's thread. A panic there says at once that the module is not live, hides the outline and tells the user,
+/// so the pad dims with its tip; then `halt` logs it.
 fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
-        // Neither event needs a capability, so neither can be refused.
+        // None of these events needs a capability, so none can be refused.
         let _ = bus.publish(&ScrollChanged::OFF);
         let _ = bus.publish(&ScrollAimed { area: None });
+        let _ = bus.publish(&actor::notice(keys::SCROLL_STOPPED));
         resume_unwind(panic);
     }
 }

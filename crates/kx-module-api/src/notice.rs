@@ -70,9 +70,13 @@ pub mod keys {
     pub const SCROLL_NONE: &str = "notice.scroll-none";
     /// The pointed target is already at its end that way.
     pub const SCROLL_END: &str = "notice.scroll-end";
+    /// The platform's scroll target did not open at a pad tap; the next tap tries again.
+    pub const SCROLL_FAILED: &str = "notice.scroll-failed";
+    /// The scroll module stopped after an error; it comes back when the app restarts.
+    pub const SCROLL_STOPPED: &str = "notice.scroll-stopped";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 15] = [
+    pub const ALL_KEYS: [&str; 17] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -88,6 +92,8 @@ pub mod keys {
         SCROLL_POINT,
         SCROLL_NONE,
         SCROLL_END,
+        SCROLL_FAILED,
+        SCROLL_STOPPED,
     ];
 }
 

@@ -3,7 +3,7 @@
 use crate::rig::{APP, Rig, after, hidden, state, still, told};
 use kx_mod_scroll::Msg;
 use kx_module_api::MS_PER_S;
-use kx_module_api::keys::{SCROLL_END, SCROLL_NONE};
+use kx_module_api::keys::{SCROLL_END, SCROLL_NONE, SCROLL_POINT};
 use kx_module_api::ports::Dir::{Down, Up};
 use kx_module_api::ports::{Reach, ScrollError};
 
@@ -146,4 +146,19 @@ fn a_turn_where_the_window_closed_stops_and_says_nothing_to_scroll() {
     rig.target.push_aim(Err(ScrollError::Gone));
     rig.tap_at(Up, after(1));
     assert_eq!(rig.take(), [still(), hidden(), told(SCROLL_NONE)]);
+}
+
+#[test]
+fn a_faster_tap_whose_aim_fails_stops_and_says_why() {
+    for (err, key) in [
+        (ScrollError::Gone, SCROLL_NONE),
+        (ScrollError::NoTarget, SCROLL_POINT),
+    ] {
+        let mut rig = Rig::new();
+        rig.scrolling(Down);
+        rig.target.push_aim(Err(err));
+        rig.tap_at(Down, after(1));
+        assert_eq!(rig.take(), [still(), hidden(), told(key)], "{err:?}");
+        assert_eq!(rig.actor.wait(), None);
+    }
 }

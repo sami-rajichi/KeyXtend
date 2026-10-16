@@ -1,13 +1,14 @@
 //! A pad tap: while still it starts slow, pages our list or says why it cannot; while scrolling it goes fast, turns
 //! or stops, settling the owed lines the old way first.
 
+use super::notes::notice;
 use super::{Actor, Scroll};
 use crate::{Change, Glide, Halt};
-use kx_module_api::Mono;
 use kx_module_api::ports::{Aim, Dir, ScrollPage};
+use kx_module_api::{Mono, keys};
 
 impl Actor {
-    /// A pad tap: it restarts the limit's count, then acts on the pad's state.
+    /// A pad tap: it restarts the limit's count, then acts on the pad's state; a run that does not open says so.
     pub(super) fn tap(&mut self, dir: Dir) {
         let now = self.clock.now();
         self.stats.taps += 1;
@@ -16,7 +17,7 @@ impl Actor {
             return self.tap_on(dir, now);
         }
         let Some(found) = self.find() else {
-            return;
+            return self.publish(&notice(keys::SCROLL_FAILED));
         };
         match found {
             Ok(aim) if aim.ours => self.page(dir),
@@ -38,7 +39,7 @@ impl Actor {
         self.pad.tap(dir);
         let glide = Glide::start(self.cfg, self.pad.fast(), now);
         let due = if aim.is_some() {
-            now.saturating_add(self.check)
+            now.saturating_add(self.check_every)
         } else {
             now
         };
@@ -54,18 +55,17 @@ impl Actor {
     }
 
     /// A tap while scrolling: the same way again goes fast or stops, another way turns slow. The owed lines go the old
-    /// way first, then it aims again, and a new way runs a first tap's checks.
+    /// way first, then it aims again, and a new way runs a first tap's reach check.
     fn tap_on(&mut self, dir: Dir, now: Mono) {
         let old = self.pad.dir();
         let change = self.pad.tap(dir);
         if change == Change::Stopped {
             return self.end(None);
         }
-        let new_way = change.new_way();
         let halt = self
             .settle(old, now)
-            .or_else(|| self.tap_aim(new_way, now))
-            .or_else(|| new_way.then(|| self.blocked_here(dir)).flatten());
+            .or_else(|| self.tap_aim(now))
+            .or_else(|| change.new_way().then(|| self.blocked_here(dir)).flatten());
         match halt {
             Some(halt) => self.end(Some(halt)),
             None => self.tell_state(),
@@ -79,16 +79,10 @@ impl Actor {
         self.turn(old?, owed)
     }
 
-    /// Aims at a tap while scrolling, which restarts the check's count. A new way's failure says why, as at a first
-    /// tap; a faster tap's stops quietly.
-    fn tap_aim(&mut self, new_way: bool, now: Mono) -> Option<Halt> {
-        self.scroll.as_mut()?.due = now.saturating_add(self.check);
-        let err = self.retarget().err()?;
-        if new_way {
-            Halt::unaimed(err)
-        } else {
-            Halt::failed(err)
-        }
+    /// Aims at a tap while scrolling, which restarts the check's count; a failure says why, as at a first tap.
+    fn tap_aim(&mut self, now: Mono) -> Option<Halt> {
+        self.scroll.as_mut()?.due = now.saturating_add(self.check_every);
+        Halt::unaimed(self.retarget().err()?)
     }
 
     /// Why the scroll's target cannot move towards `dir`; none with no target yet.

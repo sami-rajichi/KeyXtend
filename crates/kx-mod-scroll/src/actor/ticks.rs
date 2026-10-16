@@ -26,7 +26,7 @@ impl Actor {
         if now < scroll.due {
             return None;
         }
-        scroll.due = now.saturating_add(self.check);
+        scroll.due = now.saturating_add(self.check_every);
         self.stops
             .timed_out(now)
             .or_else(|| self.retarget().err().and_then(Halt::failed))

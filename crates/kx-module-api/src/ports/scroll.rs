@@ -219,7 +219,8 @@ impl Event for ScrollChanged {
     const NAME: &'static str = "scroll-changed";
 }
 
-/// Asks the scroll module to send `ScrollChanged` now, for a module or the UI that starts later.
+/// Asks the scroll module to send its state (`ScrollChanged`) and its outline (`ScrollAimed`) again, for a module or
+/// the UI that starts later.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ScrollAsk;
 

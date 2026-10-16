@@ -3,7 +3,7 @@
 use crate::logs::lines_of;
 use crate::rig::{APP, LIST, Rig, T0, after, hidden, outline, state, still, told};
 use kx_mod_scroll::Msg;
-use kx_module_api::keys::{SCROLL_END, SCROLL_NONE, SCROLL_POINT};
+use kx_module_api::keys::{SCROLL_END, SCROLL_FAILED, SCROLL_NONE, SCROLL_POINT};
 use kx_module_api::ports::Dir::{Down, Left, Right, Up};
 use kx_module_api::ports::{Reach, ScrollError, ScrollPage};
 use tracing::Level;
@@ -164,7 +164,7 @@ fn a_tap_while_peeking_keeps_the_outline_it_shows() {
 }
 
 #[test]
-fn a_target_that_does_not_open_leaves_the_pad_still_and_logs_once() {
+fn a_target_that_does_not_open_tells_each_tap_and_logs_once() {
     let mut rig = Rig::new();
     rig.point(APP);
     let lines = lines_of(|| {
@@ -173,12 +173,22 @@ fn a_target_that_does_not_open_leaves_the_pad_still_and_logs_once() {
             rig.tap_at(Down, at);
         }
     });
-    assert_eq!(rig.take(), [], "no notice");
+    let failed = told(SCROLL_FAILED);
+    assert_eq!(rig.take(), [failed.clone(), failed], "each tap hears why");
     let warned: Vec<_> = lines.iter().filter(|(l, _)| *l == Level::WARN).collect();
     assert_eq!(warned.len(), 1, "once per streak: {lines:?}");
     assert_eq!(rig.actor.wait(), None);
     rig.tap_at(Down, after(2));
     assert_eq!(rig.take(), [state(Some(Down), false), outline(APP)]);
+}
+
+#[test]
+fn a_peek_at_a_target_that_does_not_open_only_hides_the_outline() {
+    let mut rig = Rig::new();
+    rig.point(APP);
+    rig.target.fail_next(ScrollError::Refused);
+    rig.send(Msg::Peek(true));
+    assert_eq!(rig.take(), [hidden()], "no notice for a hover");
 }
 
 #[test]

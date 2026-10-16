@@ -8,7 +8,9 @@ use kx_module_api::ports::{
     Dir, Reach, ScrollAimed, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError, ScrollPeek,
     ScrollRun, ScrollTap, ScrollTarget, ScrollTargetKey,
 };
-use kx_module_api::{Bus, Event, Module, ModuleCx, ServiceKey, Subscription, parse_as};
+use kx_module_api::{
+    Bus, Event, Module, ModuleCx, Notice, ServiceKey, Subscription, keys, parse_as,
+};
 use kx_platform_fake::{FakeClock, FakeScrollTarget};
 use kx_test_support::host::{FakeHost, Stored};
 use std::sync::Arc;
@@ -141,15 +143,22 @@ fn a_scroll_ticks_on_the_thread_until_the_end() {
 #[test]
 fn an_actor_that_panics_says_at_once_the_module_is_off_and_is_logged_once() {
     let lines = lines_of(|| {
-        let listen = |bus: &Bus| (hear::<ScrollChanged>(bus), hear::<ScrollAimed>(bus));
-        let (mut run, ((_e1, told), (_e2, aimed))) = Live::start(Arc::new(Broken), listen);
+        let listen = |bus: &Bus| {
+            let heard = (hear::<ScrollChanged>(bus), hear::<ScrollAimed>(bus));
+            (heard, hear::<Notice>(bus))
+        };
+        let (mut run, (((_e1, told), (_e2, aimed)), (_e3, notes))) =
+            Live::start(Arc::new(Broken), listen);
         assert_eq!(told.recv_timeout(WAIT), Ok(live(None)));
         run.send(&ScrollPeek { on: true });
         let off = Ok(ScrollChanged::OFF);
         assert_eq!(told.recv_timeout(WAIT), off, "the pad dims now");
         assert_eq!(aimed.recv_timeout(WAIT), Ok(ScrollAimed { area: None }));
+        let key = notes.recv_timeout(WAIT).map(|n| n.key);
+        assert_eq!(key, Ok(keys::SCROLL_STOPPED), "the user hears why");
         run.stop();
         assert!(told.try_recv().is_err(), "said once");
+        assert!(notes.try_recv().is_err(), "told once");
     });
     let warned: Vec<_> = lines.iter().filter(|(l, _)| *l == Level::WARN).collect();
     assert_eq!(warned.len(), 1, "{lines:?}");

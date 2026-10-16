@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
 
+pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
 
 /// A message for the actor, from the bus or the module; it carries no point.
@@ -56,9 +57,9 @@ pub struct Actor {
     /// The glide's speeds and cap.
     cfg: GlideCfg,
     /// The glide's step period.
-    tick: Duration,
+    tick_every: Duration,
     /// How often a scroll aims again, reads the reach and checks the limit.
-    check: Duration,
+    check_every: Duration,
     /// The platform's run, opened on first need and kept until the module stops.
     run: Option<Box<dyn ScrollRun>>,
     /// The last open failed; until one works, a failure logs nothing more.
@@ -89,8 +90,8 @@ impl Actor {
             bus,
             clock,
             cfg: GlideCfg::from(settings),
-            tick: ms(settings.tick_ms),
-            check: ms(settings.check_ms),
+            tick_every: ms(settings.tick_ms),
+            check_every: ms(settings.check_ms),
             stops: Stops::from(settings),
             config: settings.scroll_config(),
             run: None,
@@ -112,8 +113,13 @@ impl Actor {
                 None => inbox.recv().map_err(|_| RecvTimeoutError::Disconnected),
             };
             match next {
-                Ok(msg) if !self.handle(msg) => return,
-                Ok(_) | Err(RecvTimeoutError::Timeout) => self.tick(),
+                Ok(msg) => {
+                    if !self.handle(msg) {
+                        return;
+                    }
+                    self.tick();
+                }
+                Err(RecvTimeoutError::Timeout) => self.tick(),
                 Err(RecvTimeoutError::Disconnected) => return self.quit(),
             }
         }
@@ -153,7 +159,7 @@ impl Actor {
     /// How long the loop waits for a message before it ticks: one tick while scrolling, and no limit while still.
     #[must_use]
     pub fn wait(&self) -> Option<Duration> {
-        self.pad.scrolling().then_some(self.tick)
+        self.pad.scrolling().then_some(self.tick_every)
     }
 
     /// Lets go of the run, says the module is off with no outline, and logs the counts.
@@ -176,7 +182,7 @@ impl Actor {
         Some(found)
     }
 
-    /// The run, opened on first need. A failed open tells no one and logs once per streak, so a tap just does nothing.
+    /// The run, opened on first need; a failed open logs once per streak, and the caller decides whom to tell.
     fn open(&mut self) -> Option<&mut Box<dyn ScrollRun>> {
         if self.run.is_none() {
             match self.target.open(self.config) {

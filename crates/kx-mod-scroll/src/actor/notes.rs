@@ -97,7 +97,7 @@ pub(super) const fn told(halt: Halt) -> Option<&'static str> {
 }
 
 /// The scroll module's notice `key`, naming the module.
-fn notice(key: &'static str) -> Notice {
+pub(crate) fn notice(key: &'static str) -> Notice {
     Notice {
         key,
         module: Some(ID),

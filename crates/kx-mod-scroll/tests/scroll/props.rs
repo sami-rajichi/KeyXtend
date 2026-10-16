@@ -14,10 +14,10 @@ use std::time::Duration;
 const CASES: u32 = 512;
 /// Most steps in one run.
 const MAX_STEPS: usize = 80;
-/// The longest short wait, in µs: past one check, so checks happen.
-const SHORT_US: u64 = 600_000;
-/// The longest long wait, in µs: past the default limit of 120 s, so some runs time out.
-const LONG_US: u64 = 150_000_000;
+/// How many checks the longest short wait spans, so checks happen.
+const SHORT_CHECKS: u64 = 2;
+/// How many limits the longest long wait spans, so some runs time out.
+const LONG_LIMITS: u64 = 2;
 
 /// One thing that happens to the actor.
 #[derive(Clone, Debug)]
@@ -56,7 +56,17 @@ fn msg() -> impl Strategy<Value = Msg> {
     ]
 }
 
+/// The longest short and long waits in µs, from the rig's `check_ms` and `limit_s`.
+fn waits() -> (u64, u64) {
+    let s = Rig::new().settings;
+    let check = Duration::from_millis(s.check_ms.into());
+    let limit = Duration::from_secs(s.limit_s.into());
+    let us = |d: Duration| u64::try_from(d.as_micros()).unwrap();
+    (SHORT_CHECKS * us(check), LONG_LIMITS * us(limit))
+}
+
 fn step() -> impl Strategy<Value = Step> {
+    let (short, long) = waits();
     let aim = select(vec![APP, OTHER, LIST]).prop_map(Ok);
     let reach = select(vec![Reach::More, Reach::End, Reach::Unknown]);
     prop_oneof![
@@ -64,8 +74,8 @@ fn step() -> impl Strategy<Value = Step> {
         2 => prop_oneof![3 => aim, 1 => error().prop_map(Err)].prop_map(Step::Point),
         1 => (dir(), reach).prop_map(|(d, r)| Step::Reach(d, r)),
         1 => proptest::option::of(error()).prop_map(Step::Fail),
-        5 => (0..=SHORT_US).prop_map(Step::Wait),
-        1 => (0..=LONG_US).prop_map(Step::Wait),
+        5 => (0..=short).prop_map(Step::Wait),
+        1 => (0..=long).prop_map(Step::Wait),
     ]
 }
 

@@ -179,6 +179,8 @@ notice =
     .scroll-point = Pointez ce que vous voulez faire défiler, puis touchez une flèche.
     .scroll-none = Rien à faire défiler ici.
     .scroll-end = Déjà à la fin.
+    .scroll-failed = Le pavé de défilement a rencontré une erreur. Touchez une flèche pour réessayer.
+    .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
