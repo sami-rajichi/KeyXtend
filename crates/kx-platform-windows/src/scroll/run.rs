@@ -23,6 +23,18 @@ pub enum Whose {
     Theirs,
 }
 
+impl Whose {
+    /// Whose a root window is: the keyboard only when it is ours and watched, so another app's mark counts for nothing.
+    #[must_use]
+    pub const fn of(ours: bool, watched: bool) -> Self {
+        match (ours, watched) {
+            (true, true) => Self::Keyboard,
+            (true, false) => Self::Ours,
+            (false, _) => Self::Theirs,
+        }
+    }
+}
+
 /// The window at a point: its raw id and whose it is.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Spot {
@@ -66,8 +78,10 @@ pub trait Desk {
     fn whole(&self) -> Rect;
     /// True while `window` exists.
     fn alive(&self, window: u64) -> bool;
-    /// True while the system reports `window`'s app as hung.
+    /// True while the system reports `window`'s app as hung, or `window` left a ping unanswered for too long.
     fn hung(&self, window: u64) -> bool;
+    /// Asks whether `window` still answers its messages, never waiting; one ask is out at a time.
+    fn ping(&self, window: u64);
     /// The user's wheel settings.
     fn wheel(&self) -> Wheel;
     /// Posts a wheel turn of `delta` on `dir`'s wheel to `window`, at `at`.
@@ -141,9 +155,15 @@ impl<D: Desk> Run<D> {
         Ok((at, false, self.desk.spot(at).ok_or(ScrollError::Gone)?))
     }
 
-    /// The box of target `id` at `at`, from this check's read; a read that misses keeps the target's last box.
+    /// The box of target `id` at `at`, from this check's read; a read that misses, or a busy target, keeps the
+    /// target's last box.
     fn look(&mut self, id: TargetId, at: Point) -> Option<Rect> {
-        let area = match self.read(id, at) {
+        let read = if self.desk.hung(id.get()) {
+            None
+        } else {
+            self.read(id, at)
+        };
+        let area = match read {
             Some(read) => read.area.and_then(|edges| area(edges, self.desk.whole())),
             None => self.last.filter(|(was, _)| *was == id).and_then(|(_, a)| a),
         };
@@ -151,15 +171,10 @@ impl<D: Desk> Run<D> {
         area
     }
 
-    /// Reads target `id` at `at` within `read_ms`, unless its app hangs, and keeps it as this check's read with one
-    /// clock reading.
+    /// Reads target `id` at `at` within `read_ms`, and keeps it as this check's read with one clock reading.
     fn read(&mut self, id: TargetId, at: Point) -> Option<Read> {
         let cap = Duration::from_millis(u64::from(self.config.read_ms));
-        let read = if self.desk.hung(id.get()) {
-            None
-        } else {
-            self.desk.read(at, cap)
-        };
+        let read = self.desk.read(at, cap);
         let pair = read.and_then(|r| r.pair);
         self.fresh = Some(Fresh {
             id,
@@ -187,6 +202,9 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         let (at, on_pointer, spot) = self.locate()?;
         let id = TargetId::new(spot.window);
         let ours = spot.whose != Whose::Theirs;
+        if !ours {
+            self.desk.ping(id.get());
+        }
         if !ours && self.wheel_for.replace(id) != Some(id) {
             self.wheel = self.desk.wheel();
         }
@@ -217,17 +235,17 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         self.fresh = None;
         let delta = turn.delta(dir);
         match turn.route {
-            Route::Uia => {
-                self.desk.steps(aim.at, dir, turn.count);
-                Ok(())
+            Route::Uia if self.desk.steps(aim.at, dir, turn.count) => Ok(()),
+            Route::Uia => Err(ScrollError::Refused),
+            Route::Send if self.wheel.at_pointer && self.under_pointer(window) => {
+                self.desk.send(dir, delta)
             }
-            Route::Send if self.under_pointer(window) => self.desk.send(dir, delta),
             Route::Send | Route::Post => self.desk.post(window, aim.at, dir, delta),
         }
     }
 
     fn reach(&mut self, aim: &Aim, dir: Dir) -> Reach {
-        if aim.ours {
+        if aim.ours || self.desk.hung(aim.id.get()) {
             return Reach::Unknown;
         }
         if self.fresh.is_none_or(|f| f.id != aim.id) {

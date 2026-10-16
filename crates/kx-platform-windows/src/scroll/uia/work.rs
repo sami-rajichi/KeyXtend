@@ -2,7 +2,7 @@
 //! counts as done before it answers, so a caller that got its answer finds the thread free.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
 use kx_module_api::ports::Dir;
@@ -19,18 +19,16 @@ use super::{Job, Read, Seek};
 use crate::com::Com;
 
 /// The pattern of what scrolls at a place, kept for the steps that follow a read there.
-type Kept = Option<(Seek, IUIAutomationScrollPattern)>;
+pub(super) type Kept = Option<(Seek, IUIAutomationScrollPattern)>;
 
-/// Makes the client, says it is ready, then runs each job in turn until the handle drops; a job past its time is
-/// dropped unstarted.
-pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32, ready: &Sender<()>) {
+/// Makes the client, then runs each job in turn until the handle drops; a job past its time is dropped unstarted.
+pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32) {
     let Ok(_com) = Com::start() else {
         return tracing::warn!("no UI Automation: COM did not start");
     };
     let Some(auto) = client(read_ms) else {
         return tracing::warn!("no UI Automation: its client did not start");
     };
-    let _ = ready.send(());
     let mut kept: Kept = None;
     for job in inbox {
         match job {
@@ -54,7 +52,7 @@ pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32, re
 
 /// The system's client, with its connection and call timeouts at `read_ms`.
 #[allow(unsafe_code, reason = "Makes and sets up the UI Automation client.")]
-fn client(read_ms: u32) -> Option<IUIAutomation> {
+pub(super) fn client(read_ms: u32) -> Option<IUIAutomation> {
     // SAFETY: makes the system's UI Automation client on this thread, where COM runs.
     let auto: IUIAutomation =
         unsafe { CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER) }.ok()?;
@@ -138,10 +136,18 @@ fn look(auto: &IUIAutomation, seek: Seek, by: Instant, kept: &mut Kept) -> Optio
     }
 }
 
-/// Takes `count` small steps towards `dir` on what scrolls at `seek`, by the kept pattern there if any; a failed step,
-/// or `by`, stops them.
+/// Takes `count` small steps towards `dir` on what scrolls at `seek`, by the kept pattern there if any; past `by` it
+/// looks nothing up, and a failed step stops them.
 #[allow(unsafe_code, reason = "UI Automation scroll calls.")]
-fn step(auto: &IUIAutomation, (seek, dir, count): (Seek, Dir, u16), by: Instant, kept: &mut Kept) {
+pub(super) fn step(
+    auto: &IUIAutomation,
+    (seek, dir, count): (Seek, Dir, u16),
+    by: Instant,
+    kept: &mut Kept,
+) {
+    if Instant::now() > by {
+        return;
+    }
     if kept.as_ref().is_none_or(|(at, _)| *at != seek) {
         let found = element(auto, seek).and_then(|el| scroller(auto, el, by));
         *kept = found.map(|(_, pattern)| (seek, pattern));

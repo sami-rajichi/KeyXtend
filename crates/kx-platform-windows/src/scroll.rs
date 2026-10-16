@@ -5,6 +5,7 @@ use kx_module_api::ports::{Dir, Point, Reach, Rect};
 
 mod course;
 pub mod entry;
+mod ping;
 mod run;
 #[cfg(test)]
 #[cfg(windows)]
@@ -15,6 +16,7 @@ mod uia;
 mod win;
 
 pub use course::{Course, MAX_TURN, Turn};
+pub use ping::Pings;
 pub use run::{Desk, Read, Run, Spot, Whose};
 #[cfg(windows)]
 pub use win::WinScroll;
@@ -35,6 +37,9 @@ pub struct Wheel {
     pub lines: u32,
     /// Characters a notch scrolls sideways (`SPI_GETWHEELSCROLLCHARS`).
     pub chars: u32,
+    /// True when Windows gives a wheel turn to the window under the pointer (`SPI_GETMOUSEWHEELROUTING`), not to the
+    /// focus, so a sent turn reaches the target.
+    pub at_pointer: bool,
 }
 
 impl Wheel {

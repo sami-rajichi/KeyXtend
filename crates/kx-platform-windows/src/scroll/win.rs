@@ -10,16 +10,19 @@ use kx_module_api::ports::{
 use kx_module_api::{Clock, Mono};
 use kx_platform::ui::Screens;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
+use windows::Win32::UI::HiDpi::PhysicalToLogicalPointForPerMonitorDPI;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_MOUSE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_WHEEL, MOUSEINPUT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GA_ROOT, GetAncestor, GetSystemMetrics, IsHungAppWindow, IsWindow, PostMessageW,
-    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
-    SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES, SYSTEM_PARAMETERS_INFO_ACTION,
-    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW, WHEEL_DELTA, WM_MOUSEHWHEEL,
-    WM_MOUSEWHEEL, WindowFromPoint,
+    GA_ROOT, GetAncestor, GetSystemMetrics, IsHungAppWindow, IsWindow,
+    MOUSEWHEEL_ROUTING_MOUSE_POS, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SPI_GETMOUSEWHEELROUTING, SPI_GETWHEELSCROLLCHARS,
+    SPI_GETWHEELSCROLLLINES, SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+    SystemParametersInfoW, WHEEL_DELTA, WM_MOUSEHWHEEL, WM_MOUSEWHEEL, WindowFromPoint,
 };
+
+mod pinger;
 
 use super::entry::Kept;
 use super::uia::{Seek, Uia};
@@ -27,6 +30,7 @@ use super::{Desk, Read, Run, Spot, Wheel, Whose, point_lparam, wheel_wparam};
 use crate::keys::TAG;
 use crate::window::{entry, from_raw, is_ours};
 use crate::{QpcClock, WinScreens, screen};
+use pinger::Pinger;
 
 /// The Windows scroll target: each run reads and turns windows where the user pointed.
 #[derive(Clone, Copy, Debug)]
@@ -44,18 +48,27 @@ impl WinScroll {
 
 impl ScrollTarget for WinScroll {
     fn open(&self, config: ScrollConfig) -> Result<Box<dyn ScrollRun>, ScrollError> {
-        let desk = WinDesk {
-            clock: self.clock,
-            uia: Uia::start(config.read_ms),
-        };
+        let desk = WinDesk::new(self.clock, config);
         Ok(Box::new(Run::new(desk, config)))
     }
 }
 
-/// Windows' side of one run: the crate's clock and the run's UI Automation thread.
+/// Windows' side of one run: the crate's clock, and the run's UI Automation and ping threads.
 struct WinDesk {
     clock: QpcClock,
     uia: Uia,
+    pinger: Pinger,
+}
+
+impl WinDesk {
+    /// The desk for a run as `config` says, with its threads started.
+    fn new(clock: QpcClock, config: ScrollConfig) -> Self {
+        Self {
+            clock,
+            uia: Uia::start(config.read_ms),
+            pinger: Pinger::start(config.read_ms, config.check_ms),
+        }
+    }
 }
 
 impl Desk for WinDesk {
@@ -84,7 +97,11 @@ impl Desk for WinDesk {
     }
 
     fn hung(&self, window: u64) -> bool {
-        hung(window)
+        hung(window) || self.pinger.busy(window)
+    }
+
+    fn ping(&self, window: u64) {
+        self.pinger.ask(window);
     }
 
     fn wheel(&self) -> Wheel {
@@ -137,13 +154,7 @@ fn spot(p: Point) -> Option<Spot> {
     if hwnd.is_invalid() {
         return None;
     }
-    let whose = if entry::watched(root) {
-        Whose::Keyboard
-    } else if is_ours(root) {
-        Whose::Ours
-    } else {
-        Whose::Theirs
-    };
+    let whose = Whose::of(is_ours(root), entry::watched(root));
     let window = id_of(hwnd);
     Some(Spot { window, whose })
 }
@@ -181,10 +192,11 @@ fn wheel() -> Wheel {
         notch: WHEEL_DELTA,
         lines: setting(SPI_GETWHEELSCROLLLINES),
         chars: setting(SPI_GETWHEELSCROLLCHARS),
+        at_pointer: setting(SPI_GETMOUSEWHEELROUTING) == MOUSEWHEEL_ROUTING_MOUSE_POS,
     }
 }
 
-/// One wheel setting; 0 when Windows will not say, which goes by UI Automation's steps.
+/// One wheel setting; 0 when Windows will not say, which goes by UI Automation's steps and the focus's routing.
 #[allow(unsafe_code, reason = "A system setting read into a local.")]
 fn setting(action: SYSTEM_PARAMETERS_INFO_ACTION) -> u32 {
     let mut value = 0u32;
@@ -195,7 +207,7 @@ fn setting(action: SYSTEM_PARAMETERS_INFO_ACTION) -> u32 {
     if read.is_ok() { value } else { 0 }
 }
 
-/// Posts a wheel turn of `delta` on `dir`'s wheel to `window`, at screen point `at`.
+/// Posts a wheel turn of `delta` on `dir`'s wheel to `window`, at screen point `at` in the window's own pixels.
 #[allow(unsafe_code, reason = "Posts a message with no pointers.")]
 fn post(window: u64, at: Point, dir: Dir, delta: i32) -> Result<(), ScrollError> {
     let msg = if dir.sideways() {
@@ -203,6 +215,7 @@ fn post(window: u64, at: Point, dir: Dir, delta: i32) -> Result<(), ScrollError>
     } else {
         WM_MOUSEWHEEL
     };
+    let at = logical(window, at);
     let (w, l) = (WPARAM(wheel_wparam(delta)), LPARAM(point_lparam(at)));
     // SAFETY: the message carries only numbers; a gone window refuses it.
     let posted = unsafe { PostMessageW(Some(handle(window)), msg, w, l) };
@@ -213,6 +226,19 @@ fn post(window: u64, at: Point, dir: Dir, delta: i32) -> Result<(), ScrollError>
             ScrollError::Gone
         }
     })
+}
+
+/// Physical point `at` in the pixels of `window`, which may not be DPI aware; as it is when Windows cannot say.
+#[allow(unsafe_code, reason = "A point conversion into a local.")]
+fn logical(window: u64, at: Point) -> Point {
+    let mut p = POINT { x: at.x, y: at.y };
+    // SAFETY: a local point and a plain query; a gone window refuses it.
+    let done = unsafe { PhysicalToLogicalPointForPerMonitorDPI(Some(handle(window)), &raw mut p) };
+    if done.as_bool() {
+        Point { x: p.x, y: p.y }
+    } else {
+        at
+    }
 }
 
 /// One wheel turn of `delta` on `dir`'s wheel at the pointer, tagged as ours so our hook lets it pass.

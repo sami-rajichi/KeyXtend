@@ -6,7 +6,7 @@ mod work;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -18,6 +18,9 @@ use super::Read;
 const THREAD: &str = "kx-scroll-uia";
 /// How many jobs a read may wait behind: the running one.
 const BEHIND: usize = 1;
+
+/// The thread's body: it serves the jobs in its inbox, counting each one done.
+type Body = fn(&Receiver<Job>, &AtomicUsize, u32);
 
 /// Where a job looks: at a screen point, or in tests at a window, which may be hidden.
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -56,18 +59,21 @@ pub(crate) struct Uia {
 }
 
 impl Uia {
-    /// Starts the thread and waits up to `read_ms` for its client; UI Automation's own timeouts become `read_ms`, so a
-    /// stuck call ends soon after a read gives up on it.
+    /// Starts the thread; UI Automation's own timeouts become `read_ms`, so a stuck call ends soon after a read gives
+    /// up on it.
     pub(crate) fn start(read_ms: u32) -> Self {
+        Self::spawn(read_ms, work::run)
+    }
+
+    /// Starts `body` as the thread, never waiting for it: jobs queue behind its client's start, each within its cap.
+    fn spawn(read_ms: u32, body: Body) -> Self {
         let cap = Duration::from_millis(u64::from(read_ms));
         let (jobs, inbox) = mpsc::channel();
-        let (ready, started) = mpsc::channel();
         let pending = Arc::new(AtomicUsize::new(0));
         let theirs = Arc::clone(&pending);
-        let body = move || work::run(&inbox, &theirs, read_ms, &ready);
-        match thread::Builder::new().name(THREAD.to_owned()).spawn(body) {
-            Ok(_) => drop(started.recv_timeout(cap)),
-            Err(e) => tracing::warn!(error = %e, "no UI Automation: its thread did not start"),
+        let run = move || body(&inbox, &theirs, read_ms);
+        if let Err(e) = thread::Builder::new().name(THREAD.to_owned()).spawn(run) {
+            tracing::warn!(error = %e, "no UI Automation: its thread did not start");
         }
         Self { jobs, pending, cap }
     }

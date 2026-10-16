@@ -82,7 +82,7 @@ proptest! {
         sideways in any::<bool>(),
         ticks in vec((0.0..=MAX_LINES, any::<bool>()), 0..=MAX_TICKS),
     ) {
-        let wheel = Wheel { notch, lines: setting, chars: setting };
+        let wheel = Wheel { notch, lines: setting, chars: setting, at_pointer: true };
         let dir = if sideways { Dir::Left } else { Dir::Down };
         let mut course = Course::new(CONFIG);
         let (mut sum, mut lines) = (0_u32, 0.0);
@@ -107,7 +107,7 @@ proptest! {
         tick in TICK_MS,
         reads in vec(vec(0.0..=MAX_LINES, 1..=MAX_TICKS_PER_READ), 1..=MAX_READS),
     ) {
-        let wheel = Wheel { notch, lines: setting, chars: setting };
+        let wheel = Wheel { notch, lines: setting, chars: setting, at_pointer: true };
         let need = if glides(setting) { notch } else { 1 };
         let (dir, a) = (if sideways { Dir::Left } else { Dir::Down }, aim(1, false));
         let (mut c, mut now, mut sent, mut prev) = (Course::new(CONFIG), 0, 0_u32, 0_u32);
@@ -134,7 +134,7 @@ proptest! {
         owed in vec(0.0..=MAX_LINES, 1..=MAX_TICKS),
         pct in 0.0..START,
     ) {
-        let w = Wheel { notch: NOTCH, lines: setting, chars: setting };
+        let w = Wheel { notch: NOTCH, lines: setting, chars: setting, at_pointer: true };
         let need = if glides(setting) { NOTCH } else { 1 };
         let a = aim(1, false);
         let (mut c, mut now, mut sent, mut prev) = (Course::new(CONFIG), 0, 0_u32, 0_u32);
@@ -157,7 +157,7 @@ proptest! {
         setting in setting(),
         ticks in vec((prop_oneof![9 => Just(1_u64), 1 => Just(2)], any::<bool>(), any::<bool>(), 0.0..=MAX_LINES), 1..=MAX_TICKS),
     ) {
-        let w = Wheel { notch: NOTCH, lines: setting, chars: setting };
+        let w = Wheel { notch: NOTCH, lines: setting, chars: setting, at_pointer: true };
         let (mut c, mut now) = (Course::new(CONFIG), 0);
         for (id, on_pointer, read, lines) in ticks {
             let a = aim(id, on_pointer);

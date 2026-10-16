@@ -192,6 +192,11 @@ impl TestWin {
         crate::window::from_raw(self.raw)
     }
 
+    /// Lets a stuck window's thread read its messages again.
+    pub fn release(&mut self) {
+        drop(self.release.take());
+    }
+
     /// The window's raw handle.
     pub const fn raw(&self) -> isize {
         self.raw

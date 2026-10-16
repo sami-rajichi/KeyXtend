@@ -1,5 +1,5 @@
-//! The Windows desk over hidden test windows: a posted turn reaches its window, closed and hung windows read as such,
-//! and a sent turn is one tagged wheel. No test moves the pointer or sends real input.
+//! The Windows desk over hidden test windows: a posted turn reaches its window in its own pixels, closed, hung and
+//! silent windows read as such, and a sent turn is one tagged wheel. No test moves the pointer or sends real input.
 #![allow(
     unsafe_code,
     reason = "The tests read the union of the input they build."
@@ -7,7 +7,10 @@
 
 use super::*;
 use crate::screen::contains;
-use crate::scroll::testwin::TestWin;
+use crate::scroll::lparam_point;
+use crate::scroll::testwin::{TestWin, WAIT, one_client};
+use kx_module_api::ports::{Aim, TargetId};
+use windows::Win32::UI::HiDpi::LogicalToPhysicalPointForPerMonitorDPI;
 
 /// The test window's box.
 const BOX: Rect = Rect {
@@ -16,10 +19,26 @@ const BOX: Rect = Rect {
     w: 300,
     h: 200,
 };
-/// A point on it.
-const AT: Point = Point { x: 150, y: 160 };
+/// A point on it at every common display scale, whose pixels divide evenly by each.
+const AT: Point = Point { x: 210, y: 315 };
 /// A third of a notch.
 const THIRD: i32 = 40;
+/// A notch at Windows' default of three lines.
+const LINES: f64 = 3.0;
+/// `[scroll]` with a short read, so a window that stopped reading costs the tests little.
+const QUICK: ScrollConfig = ScrollConfig {
+    check_ms: 250,
+    read_ms: 100,
+    edge_px: 8,
+};
+
+/// Point `p` in the pixels of `hwnd` back on the screen's physical pixels.
+fn physical(hwnd: HWND, p: Point) -> Point {
+    let mut at = POINT { x: p.x, y: p.y };
+    // SAFETY: a local point and the test's own window.
+    assert!(unsafe { LogicalToPhysicalPointForPerMonitorDPI(Some(hwnd), &raw mut at) }.as_bool());
+    Point { x: at.x, y: at.y }
+}
 
 #[test]
 fn a_posted_turn_reaches_the_window_at_its_point() {
@@ -27,21 +46,51 @@ fn a_posted_turn_reaches_the_window_at_its_point() {
     let window = id_of(win.hwnd());
     post(window, AT, Dir::Down, -THIRD).unwrap();
     post(window, AT, Dir::Right, THIRD).unwrap();
-    let want = [
-        (
-            win.raw(),
-            WM_MOUSEWHEEL,
-            wheel_wparam(-THIRD),
-            point_lparam(AT),
-        ),
-        (
-            win.raw(),
-            WM_MOUSEHWHEEL,
-            wheel_wparam(THIRD),
-            point_lparam(AT),
-        ),
-    ];
-    assert_eq!(win.wheels(), want);
+    let got = win.wheels();
+    let raw = win.raw();
+    let turns: Vec<_> = got.iter().map(|s| (s.0, s.1, s.2)).collect();
+    let down = (raw, WM_MOUSEWHEEL, wheel_wparam(-THIRD));
+    assert_eq!(turns, [down, (raw, WM_MOUSEHWHEEL, wheel_wparam(THIRD))]);
+    for (.., l) in got {
+        assert_eq!(physical(win.hwnd(), lparam_point(l)), AT, "its own pixels");
+    }
+}
+
+#[test]
+fn a_window_that_stopped_reading_gets_no_post_after_its_first_unanswered_ping() {
+    let _one = one_client();
+    let mut stuck = TestWin::start(BOX, true);
+    let window = id_of(stuck.hwnd());
+    let desk = WinDesk::new(QpcClock::new().unwrap(), QUICK);
+    desk.ping(window);
+    desk.pinger.settle(WAIT);
+    assert!(
+        desk.hung(window) && !hung(window),
+        "busy before Windows says hung"
+    );
+    let mut run = Run::new(desk, QUICK);
+    let id = TargetId::new(window);
+    let (on_pointer, area, ours) = (false, None, false);
+    let aim = Aim {
+        at: AT,
+        on_pointer,
+        area,
+        ours,
+        id,
+    };
+    assert_eq!(run.turn(&aim, Dir::Down, LINES), Ok(()));
+    stuck.release();
+    assert!(stuck.wheels().is_empty(), "nothing was posted");
+}
+
+#[test]
+fn a_window_that_answers_its_ping_is_not_busy() {
+    let win = TestWin::start(BOX, false);
+    let window = id_of(win.hwnd());
+    let pinger = Pinger::start(QUICK.read_ms, QUICK.check_ms);
+    pinger.ask(window);
+    pinger.settle(WAIT);
+    assert!(!pinger.busy(window));
 }
 
 #[test]

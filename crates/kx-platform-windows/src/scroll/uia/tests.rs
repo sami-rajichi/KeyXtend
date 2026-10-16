@@ -1,8 +1,9 @@
 //! UI Automation on hidden test windows: a read within its cap, steps that move the bars, nothing that scrolls, and a
 //! window that stopped reading its messages, which a read gives up on at its cap.
 
-use super::work::amounts;
+use super::work::{amounts, client, step};
 use super::*;
+use crate::com::Com;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
 use kx_module_api::ports::Rect;
 use windows::Win32::UI::Accessibility::{
@@ -23,16 +24,31 @@ const SHORT: Duration = Duration::from_millis(100);
 /// Steps that move a bar of 90 positions by a tenth.
 const TENTH: u16 = 9;
 
+/// A cap no test should reach.
+const LONG_MS: u32 = 1000;
+
 /// `READ_MS` as a cap.
 fn cap() -> Duration {
     Duration::from_millis(u64::from(READ_MS))
+}
+
+/// The thread once its client has started: the first read at `win` may wait for it.
+fn started(win: &TestWin) -> Uia {
+    let uia = Uia::start(READ_MS);
+    let _ = uia.read(Seek::Window(win.raw()), WAIT);
+    uia
+}
+
+/// A body that takes no job until its handle drops, as a client slow to start.
+fn slow(inbox: &mpsc::Receiver<Job>, _: &AtomicUsize, _: u32) {
+    let _ = inbox.recv();
 }
 
 #[test]
 fn a_read_finds_the_box_and_percents_within_its_cap() {
     let _one = one_client();
     let win = TestWin::start(BOX, false);
-    let uia = Uia::start(READ_MS);
+    let uia = started(&win);
     let read = uia.read(Seek::Window(win.raw()), cap()).expect("a read");
     assert_eq!(read.area, Some(crate::screen::edges(BOX)));
     assert_eq!(read.pair, Some((50.0, 50.0)), "both bars half way");
@@ -43,7 +59,7 @@ fn a_read_finds_the_box_and_percents_within_its_cap() {
 fn steps_move_the_bars_and_a_read_behind_them_sees_it() {
     let _one = one_client();
     let win = TestWin::start(BOX, false);
-    let uia = Uia::start(READ_MS);
+    let uia = started(&win);
     let seek = Seek::Window(win.raw());
     assert!(uia.steps(seek, Dir::Down, TENTH));
     let down = uia.read(seek, cap()).and_then(|r| r.pair);
@@ -57,7 +73,7 @@ fn steps_move_the_bars_and_a_read_behind_them_sees_it() {
 fn a_window_with_nothing_that_scrolls_reads_no_box() {
     let _one = one_client();
     let win = TestWin::plain(BOX);
-    let uia = Uia::start(READ_MS);
+    let uia = started(&win);
     let read = uia.read(Seek::Window(win.raw()), cap()).expect("a read");
     assert_eq!((read.area, read.pair), (None, None));
 }
@@ -102,6 +118,31 @@ fn a_read_waits_behind_one_job_at_most_and_steps_go_only_to_a_free_thread() {
         "behind two, it gives up at once"
     );
     assert!(quick.elapsed() < WAIT);
+}
+
+#[test]
+fn starting_never_waits_for_the_client() {
+    let begun = Instant::now();
+    let uia = Uia::spawn(LONG_MS, slow);
+    assert!(begun.elapsed() < Duration::from_millis(u64::from(LONG_MS)));
+    let seek = Seek::At(Point::default());
+    assert!(uia.read(seek, SHORT).is_none(), "it waits its cap at most");
+}
+
+#[test]
+fn steps_past_their_time_look_nothing_up() {
+    let _one = one_client();
+    let (a, b) = (TestWin::start(BOX, false), TestWin::start(BOX, false));
+    let _com = Com::start().unwrap();
+    let auto = client(READ_MS).unwrap();
+    let (at_a, at_b) = (Seek::Window(a.raw()), Seek::Window(b.raw()));
+    let mut kept = None;
+    step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut kept);
+    let kept_a = |k: &work::Kept| k.as_ref().is_some_and(|(s, _)| *s == at_a);
+    assert!(kept_a(&kept), "a lookup in time");
+    let past = Instant::now().checked_sub(SHORT).unwrap();
+    step(&auto, (at_b, Dir::Down, TENTH), past, &mut kept);
+    assert!(kept_a(&kept), "none past its time");
 }
 
 #[test]

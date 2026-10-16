@@ -1,5 +1,5 @@
 //! The entry watch on hidden windows of the test thread: the guard keeps the newest history point outside the watched
-//! window, once per entry. The history comes from the test, and no test moves the pointer.
+//! window, once per entry. The history, the pointer's place and the capture come from the test; none moves the pointer.
 
 use std::sync::{Mutex, PoisonError};
 
@@ -8,10 +8,11 @@ use kx_platform::ui::{Screens, UiError, WindowGuard};
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
-    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetWindowPos, WM_MOUSEMOVE,
+    MSG, PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetWindowPos,
+    WM_MOUSEMOVE,
 };
 
-use super::super::entry::{enter, kept, mark, watched};
+use super::super::entry::{enter, kept, left_with, mark, mark_with, watched};
 use super::super::guard::guard;
 use super::{Hidden, WinGuard};
 use crate::WinScreens;
@@ -122,4 +123,103 @@ fn an_unwatched_window_keeps_nothing_and_a_hidden_one_cannot_be_watched() {
     assert!(!watched(plain.0));
     let hidden = WinGuard.watch_entries("KeyXtend test: unwatched");
     assert_eq!(hidden, Err(UiError::NoWindow));
+}
+
+/// How many leaves Windows queued for `window`, taken from the queue.
+#[allow(unsafe_code, reason = "Reads the test thread's own queue.")]
+fn leaves(window: &Hidden) -> usize {
+    let mut msg = MSG::default();
+    let mut count = 0;
+    // SAFETY: takes the test window's own queued leaves into a local.
+    while unsafe {
+        PeekMessageW(
+            &raw mut msg,
+            Some(window.0),
+            WM_MOUSELEAVE,
+            WM_MOUSELEAVE,
+            PM_REMOVE,
+        )
+    }
+    .as_bool()
+    {
+        count += 1;
+    }
+    count
+}
+
+/// A hidden guarded window at `kb`, watched with the pointer `on` it or not.
+fn watched_at(title: &str, kb: Rect, on: bool) -> Hidden {
+    let window = Hidden::new(title);
+    place(&window, kb);
+    guard(window.0).unwrap();
+    mark_with(window.0, on).unwrap();
+    window
+}
+
+#[test]
+fn a_pointer_already_on_the_window_when_marked_is_no_entry() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = spot_on_main();
+    let window = watched_at("KeyXtend test: under the pointer", kb, true);
+    let was = kept();
+    move_to(&window, Point { x: 5, y: 6 });
+    assert_eq!(kept(), was, "no entry yet");
+    left_with(window.0, false);
+    move_to(&window, Point { x: 7, y: 8 });
+    let entry = Point {
+        x: kb.x + 7,
+        y: kb.y + 8,
+    };
+    assert_eq!(kept().map(|k| k.entry), Some(entry));
+}
+
+#[test]
+fn a_leave_under_capture_keeps_the_entry_and_any_other_ends_it() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = spot_on_main();
+    let window = watched_at("KeyXtend test: captured", kb, false);
+    let screen = |x, y| Point {
+        x: kb.x + x,
+        y: kb.y + y,
+    };
+    move_to(&window, Point { x: 5, y: 6 });
+    left_with(window.0, true);
+    move_to(&window, Point { x: 7, y: 8 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)), "still inside");
+    left_with(window.0, false);
+    move_to(&window, Point { x: 9, y: 10 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
+}
+
+/// Windows answers a leave request for a window the pointer is not on at once, so each request queues one leave.
+#[test]
+fn each_move_inside_asks_for_the_leave_again_and_a_leave_under_capture_once() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let window = watched_at("KeyXtend test: asks", spot_on_main(), false);
+    move_to(&window, Point { x: 1, y: 1 });
+    assert_eq!(leaves(&window), 1, "the entry asks");
+    move_to(&window, Point { x: 2, y: 2 });
+    assert_eq!(leaves(&window), 1, "each move asks again");
+    left_with(window.0, true);
+    assert_eq!(leaves(&window), 1, "a leave under capture asks again");
+    left_with(window.0, true);
+    assert_eq!(leaves(&window), 0, "but once until the next move");
+}
+
+#[test]
+fn the_kept_entry_goes_with_the_watched_window() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let window = watched_at("KeyXtend test: going", spot_on_main(), false);
+    move_to(&window, Point { x: 1, y: 1 });
+    assert!(kept().is_some());
+    drop(window);
+    assert_eq!(kept(), None);
+}
+
+#[test]
+fn only_a_guarded_window_can_be_watched() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let plain = Hidden::new("KeyXtend test: not guarded");
+    assert!(matches!(mark(plain.0), Err(UiError::Refused(_))));
+    assert!(!watched(plain.0));
 }

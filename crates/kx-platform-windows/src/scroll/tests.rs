@@ -29,6 +29,7 @@ pub(super) const fn wheel(lines: u32, chars: u32) -> Wheel {
         notch: NOTCH,
         lines,
         chars,
+        at_pointer: true,
     }
 }
 
@@ -95,6 +96,7 @@ fn sideways_reads_the_character_setting_by_the_same_rule() {
         notch: NOTCH,
         lines: PAGE_SCROLL,
         chars: 1,
+        at_pointer: true,
     };
     assert_eq!(w.per_line(Dir::Left), Some(f64::from(NOTCH)));
     assert_eq!(w.per_line(Dir::Right), Some(f64::from(NOTCH)));

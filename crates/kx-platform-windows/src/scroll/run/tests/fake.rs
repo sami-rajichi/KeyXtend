@@ -23,12 +23,16 @@ pub(super) struct State {
     pub whole: Rect,
     pub gone: Vec<u64>,
     pub hung: Vec<u64>,
+    /// Windows that owe a ping past its time.
+    pub owing: Vec<u64>,
+    pub pings: Vec<u64>,
     pub wheel: Option<Wheel>,
     pub wheel_reads: usize,
     /// What each read gives; none is a read that took too long.
     pub read: Option<Read>,
     pub reads: Vec<(Point, Duration)>,
     pub busy: bool,
+    pub steps_refused: bool,
     pub post_error: Option<ScrollError>,
     pub sent: Vec<(Dir, i32)>,
     pub posted: Vec<(u64, Point, Dir, i32)>,
@@ -76,7 +80,11 @@ impl Desk for Fake {
     }
 
     fn hung(&self, window: u64) -> bool {
-        self.with(|s| s.hung.contains(&window))
+        self.with(|s| s.hung.contains(&window) || s.owing.contains(&window))
+    }
+
+    fn ping(&self, window: u64) {
+        self.with(|s| s.pings.push(window));
     }
 
     fn wheel(&self) -> Wheel {
@@ -112,6 +120,9 @@ impl Desk for Fake {
     fn steps(&self, at: Point, dir: Dir, count: u16) -> bool {
         self.with(|s| {
             assert!(!s.busy, "steps only go to a free reader");
+            if s.steps_refused {
+                return false;
+            }
             s.steps.push((at, dir, count));
             true
         })
