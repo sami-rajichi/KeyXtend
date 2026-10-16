@@ -6,7 +6,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use windows::Win32::Foundation::{LPARAM, WPARAM};
+use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, GetLastError, LPARAM, WIN32_ERROR, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     SMTO_ABORTIFHUNG, SMTO_ERRORONEXIT, SendMessageTimeoutW, WM_NULL,
 };
@@ -90,5 +90,12 @@ fn answers(window: u64, read_ms: u32) -> bool {
     let (w, l) = (WPARAM(0), LPARAM(0));
     // SAFETY: the message carries no data, and the wait ends after `read_ms` at most.
     let sent = unsafe { SendMessageTimeoutW(handle(window), WM_NULL, w, l, flags, read_ms, None) };
-    sent.0 != 0
+    // SAFETY: reads this thread's last error, set by the call just made.
+    answered(sent.0 != 0, unsafe { GetLastError() })
+}
+
+/// Whether a ping that was `sent`, or failed with `error`, counts as answered: one that Windows blocks (UIPI) does,
+/// so the turn's own failure tells instead.
+pub(super) fn answered(sent: bool, error: WIN32_ERROR) -> bool {
+    sent || error == ERROR_ACCESS_DENIED
 }

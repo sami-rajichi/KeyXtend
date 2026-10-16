@@ -9,10 +9,10 @@ use windows::Win32::Foundation::{LPARAM, WPARAM};
 use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
     MSG, PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetWindowPos,
-    WM_MOUSEMOVE,
+    WM_CAPTURECHANGED, WM_MOUSEMOVE,
 };
 
-use super::super::entry::{enter, kept, left_with, mark, mark_with, watched};
+use super::super::entry::{enter, kept, left_with, mark, mark_with, released_with, watched};
 use super::super::guard::guard;
 use super::{Hidden, WinGuard};
 use crate::WinScreens;
@@ -125,6 +125,13 @@ fn an_unwatched_window_keeps_nothing_and_a_hidden_one_cannot_be_watched() {
     assert_eq!(hidden, Err(UiError::NoWindow));
 }
 
+/// Tells `window` it lost the capture, as Windows does; the hidden window is never under the pointer.
+#[allow(unsafe_code, reason = "Sends a message to the test's own window.")]
+fn lose_capture(window: &Hidden) {
+    // SAFETY: the message carries no pointer.
+    unsafe { SendMessageW(window.0, WM_CAPTURECHANGED, None, None) };
+}
+
 /// How many leaves Windows queued for `window`, taken from the queue.
 #[allow(unsafe_code, reason = "Reads the test thread's own queue.")]
 fn leaves(window: &Hidden) -> usize {
@@ -222,4 +229,23 @@ fn only_a_guarded_window_can_be_watched() {
     let plain = Hidden::new("KeyXtend test: not guarded");
     assert!(matches!(mark(plain.0), Err(UiError::Refused(_))));
     assert!(!watched(plain.0));
+}
+
+/// A press dragged off the keyboard and let go there leaves no leave to come, so the lost capture ends the entry.
+#[test]
+fn a_capture_lost_off_the_window_ends_the_entry_and_one_lost_on_it_keeps_it() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = spot_on_main();
+    let window = watched_at("KeyXtend test: released", kb, false);
+    let screen = |x, y| Point {
+        x: kb.x + x,
+        y: kb.y + y,
+    };
+    move_to(&window, Point { x: 5, y: 6 });
+    released_with(window.0, true);
+    move_to(&window, Point { x: 7, y: 8 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)), "still inside");
+    lose_capture(&window);
+    move_to(&window, Point { x: 9, y: 10 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
 }

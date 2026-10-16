@@ -226,6 +226,7 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         if !self.desk.alive(window) {
             return Err(ScrollError::Gone);
         }
+        self.desk.ping(window);
         if self.desk.hung(window) || self.reader_busy(aim, dir) {
             return Ok(());
         }
@@ -245,7 +246,11 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
     }
 
     fn reach(&mut self, aim: &Aim, dir: Dir) -> Reach {
-        if aim.ours || self.desk.hung(aim.id.get()) {
+        if aim.ours {
+            return Reach::Unknown;
+        }
+        self.desk.ping(aim.id.get());
+        if self.desk.hung(aim.id.get()) {
             return Reach::Unknown;
         }
         if self.fresh.is_none_or(|f| f.id != aim.id) {

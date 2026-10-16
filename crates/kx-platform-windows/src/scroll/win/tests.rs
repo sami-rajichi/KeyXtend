@@ -10,6 +10,8 @@ use crate::screen::contains;
 use crate::scroll::lparam_point;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
 use kx_module_api::ports::{Aim, TargetId};
+use pinger::answered;
+use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_INVALID_WINDOW_HANDLE, ERROR_TIMEOUT};
 use windows::Win32::UI::HiDpi::LogicalToPhysicalPointForPerMonitorDPI;
 
 /// The test window's box.
@@ -148,4 +150,15 @@ fn the_window_under_the_pointer_is_another_apps() {
     let found = spot(p).expect("a window is everywhere on the desk");
     assert_eq!(found.whose, Whose::Theirs, "the tests show no window");
     assert!(alive(found.window));
+}
+
+#[test]
+fn a_ping_windows_blocks_counts_as_answered_and_a_late_one_does_not() {
+    assert!(answered(true, ERROR_TIMEOUT));
+    assert!(
+        answered(false, ERROR_ACCESS_DENIED),
+        "the turn's own failure tells"
+    );
+    assert!(!answered(false, ERROR_TIMEOUT));
+    assert!(!answered(false, ERROR_INVALID_WINDOW_HANDLE));
 }

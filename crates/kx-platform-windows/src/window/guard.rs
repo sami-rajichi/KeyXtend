@@ -8,8 +8,8 @@ use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW,
     MA_NOACTIVATE, RemovePropW, STYLESTRUCT, SWP_NOACTIVATE, SetPropW, SetWindowLongPtrW,
-    WINDOWPOS, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED,
-    WM_WINDOWPOSCHANGING, WNDPROC,
+    WINDOWPOS, WM_CAPTURECHANGED, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCDESTROY, WM_STYLECHANGING,
+    WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING, WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
@@ -199,6 +199,7 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         }
         WM_MOUSEMOVE => entry::moved(hwnd, lparam),
         WM_MOUSELEAVE => entry::left(hwnd),
+        WM_CAPTURECHANGED => entry::released(hwnd),
         WM_NCDESTROY => unhook(hwnd, own),
         _ => {}
     }

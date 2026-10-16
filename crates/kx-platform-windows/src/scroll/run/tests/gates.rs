@@ -20,6 +20,21 @@ fn each_aim_at_another_apps_window_pings_it_and_ours_never() {
 }
 
 #[test]
+fn reach_and_each_turn_ping_the_last_target_with_the_pointer_on_our_list() {
+    let fake = desk();
+    let mut r = run(&fake);
+    let aim = r.aim().unwrap();
+    fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
+    r.reach(&aim, Dir::Down);
+    r.turn(&aim, Dir::Down, NOTCH_LINES).unwrap();
+    fake.with(|s| s.owing.push(APP_ID));
+    r.turn(&aim, Dir::Down, NOTCH_LINES).unwrap();
+    let pings = fake.with(|s| s.pings.clone());
+    assert_eq!(pings, [APP_ID; 4], "a busy target is asked again");
+    assert_eq!(fake.with(|s| s.posted.len()), 1, "the busy spell is seen");
+}
+
+#[test]
 fn a_window_that_owes_a_ping_gets_no_turn_or_read_and_its_course_waits() {
     let fake = desk();
     let mut r = run(&fake);

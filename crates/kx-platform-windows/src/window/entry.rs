@@ -123,6 +123,24 @@ pub(super) fn left_with(hwnd: HWND, captured: bool) {
     }
 }
 
+/// Our guarded window `hwnd` lost the capture.
+pub(super) fn released(hwnd: HWND) {
+    released_with(hwnd, pointer_on(hwnd));
+}
+
+/// A capture of our guarded window `hwnd` ended with the pointer `on` it or not: off it, as after a press dragged
+/// away, no leave is due, so the entry ends; on it, the leave is asked for again.
+pub(super) fn released_with(hwnd: HWND, on: bool) {
+    if !watched(hwnd) {
+        return;
+    }
+    if !on {
+        clear(hwnd, INSIDE);
+    } else if value(hwnd, INSIDE) != 0 && put(hwnd, INSIDE, MOVED).is_ok() {
+        track(hwnd);
+    }
+}
+
 /// Drops the watch's marks from `hwnd` as it goes, and the entry it kept.
 pub(super) fn forget(hwnd: HWND) {
     if watched(hwnd) {
