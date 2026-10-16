@@ -1,10 +1,12 @@
 //! The CI test window: a text box that logs each character it receives, with a microsecond timestamp.
-//! It logs focus losses and mouse presses too; the log format is in the library.
+//! It logs focus losses, mouse presses and wheel turns too; the log format is in the library.
 #![deny(unsafe_code)]
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
 #[cfg(windows)]
 mod name;
+#[cfg(windows)]
+mod pointer;
 #[cfg(windows)]
 mod procs;
 #[cfg(windows)]

@@ -85,6 +85,25 @@ pub fn mouse(press: Press, us: i64, x: i32, y: i32) -> String {
     format!("{MOUSE}{SEP}{}{SEP}{us}{SEP}{x}{SEP}{y}", press.name())
 }
 
+/// A wheel turn the box received: `# wheel\t<µs>\t<axis>\t<delta>\t<x>\t<y>`, with the point the message carried as it
+/// came; the axis is `UPRIGHT` or `SIDEWAYS`.
+pub const WHEEL: &str = "# wheel";
+/// The axis of the upright wheel.
+pub const UPRIGHT: &str = "v";
+/// The axis of the sideways wheel.
+pub const SIDEWAYS: &str = "h";
+/// A gate's hang began: `# hung\t<µs>`.
+pub const HUNG: &str = "# hung";
+/// The window woke from a gate's hang and reads its messages again: `# woke\t<µs>`.
+pub const WOKE: &str = "# woke";
+
+/// A wheel line for a turn of `delta` at `us`, `sideways` or upright, carrying point (`x`, `y`).
+#[must_use]
+pub fn wheel(us: i64, sideways: bool, delta: i32, x: i32, y: i32) -> String {
+    let axis = if sideways { SIDEWAYS } else { UPRIGHT };
+    format!("{WHEEL}{SEP}{us}{SEP}{axis}{SEP}{delta}{SEP}{x}{SEP}{y}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,6 +123,16 @@ mod tests {
         assert_eq!(key(7, 0x0D, 0xE01C), "# key\t7\t0D\tE01C");
         assert_eq!(key(8, 0xA0, 0x2A), "# key\t8\tA0\t002A");
         assert!(KEY.starts_with(COMMENT));
+    }
+
+    #[test]
+    fn wheel_lines_have_the_documented_shape() {
+        assert_eq!(wheel(7, false, -40, 10, -3), "# wheel\t7\tv\t-40\t10\t-3");
+        assert_eq!(wheel(8, true, 120, 0, 5), "# wheel\t8\th\t120\t0\t5");
+        assert!(
+            WHEEL.starts_with(COMMENT) && HUNG.starts_with(COMMENT) && WOKE.starts_with(COMMENT)
+        );
+        assert_eq!(mark(WOKE, 9), "# woke\t9");
     }
 
     #[test]

@@ -13,12 +13,13 @@ use windows::Win32::Graphics::Gdi::{
     OUT_DEFAULT_PRECIS,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::HiDpi::{DPI_AWARENESS_CONTEXT_UNAWARE, SetThreadDpiAwarenessContext};
 use windows::Win32::UI::Shell::SetWindowSubclass;
 use windows::Win32::UI::WindowsAndMessaging::{
     CW_USEDEFAULT, CreateWindowExW, DispatchMessageW, ES_AUTOHSCROLL, ES_AUTOVSCROLL, ES_MULTILINE,
     ES_PASSWORD, ES_WANTRETURN, GetMessageW, IDC_IBEAM, LoadCursorW, MSG, RegisterClassW,
-    SendMessageW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_SETFONT, WNDCLASSW, WS_CHILD,
-    WS_EX_CLIENTEDGE, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
+    SendMessageW, SetWindowTextW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_SETFONT,
+    WNDCLASSW, WS_CHILD, WS_EX_CLIENTEDGE, WS_HSCROLL, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -64,7 +65,8 @@ pub enum StartError {
     Layout(#[from] LayoutError),
 }
 
-/// Loads the settings and shows the window until it is closed, in the `--layout` layout when one is given.
+/// Loads the settings and shows the window until it is closed, in the `--layout` layout when one is given, filled or
+/// DPI-unaware when the switches ask.
 pub fn run() -> Result<(), StartError> {
     let cfg = config::load()?;
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -75,10 +77,17 @@ pub fn run() -> Result<(), StartError> {
     let password = args.contains(&cfg.password_arg);
     procs::set_password(password);
     procs::set_hang_max(cfg.hang_max_ms);
+    let filled = !password && args.contains(&cfg.fill_arg);
+    if args.contains(&cfg.unaware_arg) {
+        unaware()?;
+    }
     let inst = module()?;
     let main = create_main(&cfg, inst)?;
-    let edit = create_edit(main, inst, password)?;
+    let edit = create_edit(main, inst, password, filled)?;
     set_font(edit, &cfg);
+    if filled {
+        fill(edit, &cfg)?;
+    }
     name::set(edit, &cfg.edit_name).map_err(StartError::Name)?;
     procs::focus(edit);
     if let Some(id) = wanted {
@@ -151,15 +160,47 @@ fn create_main(cfg: &TargetConfig, inst: HINSTANCE) -> Result<HWND, StartError> 
     Ok(main)
 }
 
-/// The edit box style: multi-line, or a single-line password box (Windows ignores `ES_PASSWORD` on multi-line boxes).
-fn edit_style(password: bool) -> WINDOW_STYLE {
+/// The edit box style: multi-line, unwrapped when `fill`ed, or a single-line password box (Windows ignores
+/// `ES_PASSWORD` on multi-line boxes).
+fn edit_style(password: bool, fill: bool) -> WINDOW_STYLE {
     if password {
         return WS_CHILD
             | WS_VISIBLE
             | WINDOW_STYLE((ES_PASSWORD | ES_AUTOHSCROLL).cast_unsigned());
     }
     let own = ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN;
-    WS_CHILD | WS_VISIBLE | WS_VSCROLL | WINDOW_STYLE(own.cast_unsigned())
+    let style = WS_CHILD | WS_VISIBLE | WS_VSCROLL | WINDOW_STYLE(own.cast_unsigned());
+    if fill {
+        style | WS_HSCROLL | WINDOW_STYLE(ES_AUTOHSCROLL.cast_unsigned())
+    } else {
+        style
+    }
+}
+
+/// Makes this thread's windows DPI-unaware, as an old app's are, so Windows scales them and their points.
+#[allow(
+    unsafe_code,
+    reason = "Sets this thread's DPI awareness before it makes a window."
+)]
+fn unaware() -> Result<(), StartError> {
+    // SAFETY: a plain call on this thread; it makes no window and keeps no pointer.
+    let was = unsafe { SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) };
+    if was.is_invalid() {
+        return Err(StartError::Windows(windows::core::Error::from_thread()));
+    }
+    Ok(())
+}
+
+/// Fills `edit` with the fill switch's numbered lines; they are never logged.
+#[allow(unsafe_code, reason = "Sets the text of our own edit box.")]
+fn fill(edit: HWND, cfg: &TargetConfig) -> Result<(), StartError> {
+    let text = HSTRING::from(kx_target_window::fill::text(
+        cfg.fill_lines as usize,
+        cfg.fill_cols as usize,
+    ));
+    // SAFETY: plain call on our own edit box; the text outlives it.
+    unsafe { SetWindowTextW(edit, &text) }?;
+    Ok(())
 }
 
 /// Creates the logging edit box inside `main`, sized to its client area.
@@ -167,8 +208,13 @@ fn edit_style(password: bool) -> WINDOW_STYLE {
     unsafe_code,
     reason = "Win32 window creation and subclassing on the UI thread."
 )]
-fn create_edit(main: HWND, inst: HINSTANCE, password: bool) -> Result<HWND, StartError> {
-    let style = edit_style(password);
+fn create_edit(
+    main: HWND,
+    inst: HINSTANCE,
+    password: bool,
+    fill: bool,
+) -> Result<HWND, StartError> {
+    let style = edit_style(password, fill);
     // SAFETY: called on the UI thread; `main` is our live window.
     let edit = unsafe {
         CreateWindowExW(
@@ -244,51 +290,4 @@ fn message_loop() {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use kx_test_support::tempdir::TempDir;
-    use std::io::Write;
-
-    /// The folder and file name of the log inside the temp folder.
-    const LOG_DIR: &str = "logs";
-    const LOG_FILE: &str = "target.log";
-
-    #[test]
-    fn the_password_box_is_single_line_with_the_password_style() {
-        let has = |s: WINDOW_STYLE, bits: i32| s.0 & bits.cast_unsigned() != 0;
-        assert!(has(edit_style(true), ES_PASSWORD));
-        assert!(!has(edit_style(true), ES_MULTILINE));
-        assert!(has(edit_style(false), ES_MULTILINE));
-        assert!(!has(edit_style(false), ES_PASSWORD));
-    }
-
-    #[test]
-    fn the_log_makes_its_folder_and_keeps_what_earlier_opens_wrote() {
-        let dir = TempDir::new("tw-log").unwrap();
-        let file = dir.path().join(LOG_DIR).join(LOG_FILE);
-        writeln!(open_log(&file).unwrap(), "first").unwrap();
-        writeln!(open_log(&file).unwrap(), "second").unwrap();
-        assert_eq!(std::fs::read_to_string(&file).unwrap(), "first\nsecond\n");
-    }
-
-    #[test]
-    fn a_layout_error_is_its_own_start_error_naming_the_layout() {
-        let id = kx_module_api::ports::LayoutId::new(0x0419_0419);
-        let err = StartError::from(LayoutError::NotInstalled(id));
-        assert!(matches!(
-            err,
-            StartError::Layout(LayoutError::NotInstalled(_))
-        ));
-        assert!(err.to_string().contains(&id.to_string()), "{err}");
-    }
-
-    #[test]
-    fn a_log_that_cannot_open_names_its_file() {
-        let dir = TempDir::new("tw-log-bad").unwrap();
-        let blocker = dir.path().join(LOG_DIR);
-        std::fs::write(&blocker, "a file where the folder should be").unwrap();
-        let file = blocker.join(LOG_FILE);
-        let err = open_log(&file).unwrap_err();
-        assert!(matches!(&err, StartError::Log { file: f, .. } if *f == file));
-    }
-}
+mod tests;

@@ -71,6 +71,8 @@ fn an_empty_text_value_fails() {
         "edit_name",
         "password_arg",
         "layout_arg",
+        "fill_arg",
+        "unaware_arg",
     ] {
         let err = parse(&with(key, "\"\""), file()).expect_err(key);
         assert!(
@@ -85,6 +87,44 @@ fn the_password_and_layout_switches_must_differ() {
     let err =
         parse(&with("layout_arg", "\"--password\""), file()).expect_err("one switch for both");
     assert!(matches!(err, ConfigError::SameSwitch { .. }), "{err}");
+    assert!(err.to_string().contains("kx-target-window.toml"), "{err}");
+}
+
+#[test]
+fn every_switch_must_differ_from_the_others() {
+    let same = [
+        ("fill_arg", "\"--password\""),
+        ("unaware_arg", "\"--layout\""),
+        ("unaware_arg", "\"--fill\""),
+    ];
+    for (key, value) in same {
+        let err = parse(&with(key, value), file()).expect_err(key);
+        assert!(
+            matches!(err, ConfigError::SameSwitch { .. }),
+            "{key}: {err}"
+        );
+    }
+}
+
+#[test]
+fn a_fill_with_no_line_or_column_fails() {
+    for key in ["fill_lines", "fill_cols"] {
+        let err = parse(&with(key, "0"), file()).expect_err(key);
+        let named = matches!(err, ConfigError::NotPositive { key: k, .. } if k == key);
+        assert!(named, "{key}: {err}");
+    }
+}
+
+#[test]
+fn a_fill_too_long_to_type_in_fails() {
+    let cfg = parse(SHIPPED, file()).expect("parses");
+    let each = cfg.fill_cols as usize + crate::fill::LINE_END.len();
+    assert!(
+        cfg.fill_lines as usize * each <= TYPE_MAX,
+        "the shipped fill fits"
+    );
+    let err = parse(&with("fill_lines", "100000"), file()).expect_err("too long");
+    assert!(matches!(err, ConfigError::FillTooLong { .. }), "{err}");
     assert!(err.to_string().contains("kx-target-window.toml"), "{err}");
 }
 
