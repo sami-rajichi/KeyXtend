@@ -5,15 +5,12 @@ use super::Inner;
 use kx_module_api::ports::ScrollChanged;
 
 impl Inner {
-    /// Takes the scroll module's new state, and the next relabel redraws when it changed. True when the module came
-    /// live while the pointer rests on the pad, so it must hear that.
-    pub(in crate::face) fn heard_scroll(&mut self, now: ScrollChanged) -> bool {
-        let woke = now.live && !self.scroll.live && self.hover;
+    /// Takes the scroll module's new state; the next relabel redraws when it changed.
+    pub(in crate::face) fn heard_scroll(&mut self, now: ScrollChanged) {
         if self.scroll != now {
             self.scroll = now;
             self.unshown = true;
         }
-        woke
     }
 
     /// True while the scroll module runs, so the pad works.
@@ -21,10 +18,13 @@ impl Inner {
         self.scroll.live
     }
 
-    /// Notes the pointer on the pad or off it; true when the running scroll module must hear the change.
-    pub(in crate::face) fn hovered(&mut self, on: bool) -> bool {
-        let changed = self.hover != on;
+    /// Notes the pointer on the pad or off it.
+    pub(in crate::face) fn hovered(&mut self, on: bool) {
         self.hover = on;
-        changed && self.scrolls()
+    }
+
+    /// True while the pointer is on the pad.
+    pub(in crate::face) fn hovering(&self) -> bool {
+        self.hover
     }
 }

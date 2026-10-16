@@ -3,6 +3,7 @@
 //! sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
+use super::outbox::Outbox;
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan,
     ScrollAsk, ScrollChanged, Toggle,
@@ -15,51 +16,23 @@ use std::sync::{Arc, Mutex, PoisonError};
 /// The latched set the bus last heard, so it hears each change once and the newest set last, from any thread.
 #[derive(Default)]
 pub(super) struct Told {
-    /// A thread asks for the set to be checked.
-    due: AtomicBool,
+    /// Requests to check the set, one sending thread at a time.
+    outbox: Outbox,
     /// `LatchesAsk` came, or the module started, so the set goes out even if unchanged.
     again: AtomicBool,
-    /// One thread is sending; the others leave their requests to it.
-    sending: AtomicBool,
     /// The set last sent, which only the sending thread touches.
     last: Mutex<Vec<Scan>>,
 }
 
-/// Clears the `sending` flag when the sending thread stops, even by a panic, so later sets still go out.
-struct Sending<'a>(&'a AtomicBool);
-
-impl Drop for Sending<'_> {
-    fn drop(&mut self) {
-        self.0.store(false, SeqCst);
-    }
-}
-
 impl Face {
-    /// Sends the latched set when it changed since last sent, or always when `again`. One thread sends at a time and
-    /// takes every request made before it stops, so the bus hears the newest set last, and a handler may ask again.
+    /// Sends the latched set when it changed since last sent, or always when `again`, through the outbox, so the bus
+    /// hears the newest set last and a handler may ask again.
     pub(super) fn tell(&self, again: bool) {
         let t = &self.told;
         if again {
             t.again.store(true, SeqCst);
         }
-        t.due.store(true, SeqCst);
-        loop {
-            if t.sending
-                .compare_exchange(false, true, SeqCst, SeqCst)
-                .is_err()
-            {
-                return;
-            }
-            let sending = Sending(&t.sending);
-            while t.due.swap(false, SeqCst) {
-                self.send(t.again.swap(false, SeqCst));
-            }
-            drop(sending);
-            // A request made after the last check but before the stop found the sender busy, so it is ours.
-            if !t.due.load(SeqCst) {
-                return;
-            }
-        }
+        t.outbox.post(|| self.send(t.again.swap(false, SeqCst)));
     }
 
     /// Sends the latched set when it differs from the last one sent, or when `again`; only the sending thread calls it.

@@ -4,6 +4,7 @@
 
 mod bus;
 mod inner;
+mod outbox;
 mod pad;
 
 pub(crate) use bus::listen;
@@ -18,6 +19,7 @@ use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
+use pad::Peeks;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -42,6 +44,8 @@ pub struct Face {
     inner: Mutex<Inner>,
     /// The latched set the bus last heard.
     told: Told,
+    /// What the scroll module last heard of the pointer on the pad.
+    peeks: Peeks,
 }
 
 /// Shows no key, place or typing state.
@@ -70,6 +74,7 @@ impl Face {
             spec,
             inner: Mutex::new(inner),
             told: Told::default(),
+            peeks: Peeks::default(),
         }
     }
 

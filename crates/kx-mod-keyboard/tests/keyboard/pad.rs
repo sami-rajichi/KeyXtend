@@ -1,10 +1,12 @@
 //! The scroll pad from the keyboard's side, over the bus: live while the scroll module says so, else dimmed with a tip;
-//! its clicks and hover go out, and the module's state and our list's page turns come back.
+//! its clicks and hover go out, and the module's state comes back.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
+
+mod peeks;
 
 use crate::assist::{Bench, ear};
 use crate::rig::STATE;
