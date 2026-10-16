@@ -122,8 +122,9 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     let text = std::fs::read_to_string(&files.log).unwrap();
     assert!(text.contains("try again was refused"), "{text}");
     assert!(text.contains("keyboard"), "it names the module: {text}");
-    // The mouse module's state comes from its own thread, at start and at stop, with the overlay's and keys' wakes.
-    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys);
+    // The mouse and scroll modules' states come from their own threads, at start and at stop, with the overlay's,
+    // keys' and scroll's wakes.
+    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys | Wake::Scroll);
     let seen: Vec<Wake> = wakes.lock().unwrap().iter().filter(own).copied().collect();
     let order = [Wake::Settings, Wake::End];
     assert_eq!(seen, order, "the modules stop, then the UI ends");

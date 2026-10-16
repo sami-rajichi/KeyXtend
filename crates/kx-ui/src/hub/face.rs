@@ -34,7 +34,7 @@ pub enum Resize {
 }
 
 impl Hub {
-    fn face(&self) -> Option<Arc<dyn KeyboardFace>> {
+    pub(super) fn face(&self) -> Option<Arc<dyn KeyboardFace>> {
         self.lock().face.clone()
     }
 
@@ -151,21 +151,19 @@ impl Hub {
     /// Call it on the UI thread.
     pub fn shape(&self, title: &str, boxes: &[Area], dpr: f64) -> bool {
         let rects: Vec<Rect> = boxes.iter().map(|b| outward(b, dpr)).collect();
-        match self.ports.guard.shape(title, &rects) {
-            Ok(()) => true,
-            Err(UiError::NoWindow) => false,
-            Err(e) => log("the window could not be shaped")(e),
-        }
+        done(
+            self.ports.guard.shape(title, &rects),
+            "the window could not be shaped",
+        )
     }
 
     /// Lifts our shown windows titled `title` alone in front of our others, as a tip does when it shows; false when none
     /// shows or it was refused. Call it on the UI thread.
     pub fn lift_alone(&self, title: &str) -> bool {
-        match self.ports.guard.lift_alone(title) {
-            Ok(()) => true,
-            Err(UiError::NoWindow) => false,
-            Err(e) => log("the window could not be lifted")(e),
-        }
+        done(
+            self.ports.guard.lift_alone(title),
+            "the window could not be lifted",
+        )
     }
 
     /// Guard try number `attempt` (from 1), with the window titled `top` landing in front: true to try again after
@@ -190,6 +188,15 @@ fn log(what: &'static str) -> impl Fn(UiError) -> bool {
     move |e| {
         tracing::warn!(error = %e, "{what}");
         false
+    }
+}
+
+/// True for a done window call; a window not shown yet gives false quietly, and a refusal warns with `what`.
+pub(super) fn done(result: Result<(), UiError>, what: &'static str) -> bool {
+    match result {
+        Ok(()) => true,
+        Err(UiError::NoWindow) => false,
+        Err(e) => log(what)(e),
     }
 }
 

@@ -208,5 +208,12 @@ var assist = {
   "pointerPx": 32,
   "rclick": false,
   "ring": null,
+  "scroll": null,
   "seq": 0
+};
+var scroll = {
+  "area": null,
+  "dir": null,
+  "fast": false,
+  "live": false
 };

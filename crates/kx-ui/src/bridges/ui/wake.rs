@@ -43,6 +43,8 @@ pub(super) fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Tray(TrayEvent::Away) => ui.as_mut().tray_away(),
         Wake::Assist => ui.as_mut().assist_changed(),
         Wake::Keys => ui.as_mut().keys_changed(),
+        Wake::Scroll => ui.as_mut().scroll_changed(),
+        Wake::Page { back } => ui.with((), |h| h.turn_page(back)),
     }
     let dropped = relook && ui.with(false, Hub::drop_fonts);
     if loaded || dropped {

@@ -1,9 +1,10 @@
-//! The keyboard's wake from the bus: a mouse mode change or a used latch wakes it once, only while a face is attached,
-//! and only after the face's own handler ran, so the window reads the new state.
+//! The keyboard's wake from the bus: a mouse mode change, a used latch or a scroll change wakes it once, only while a
+//! face is attached, and only after the face's own handler ran, so the window reads the new state.
 
 use crate::assist::{RCLICK, heard, woke};
+use crate::scroll::DOWN;
 use crate::{FakeFace, Rig};
-use kx_module_api::ports::{AssistChanged, LatchesUsed};
+use kx_module_api::ports::{AssistChanged, LatchesUsed, ScrollChanged};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_test_support::host::FakeHost;
 use kx_ui::{MANIFEST, Wake};
@@ -16,10 +17,11 @@ fn attach(rig: &Rig) -> FakeHost {
     host
 }
 
-/// Sends a mode change and a used latch on `bus`.
-fn both(bus: &Bus) {
+/// Sends a mode change, a used latch and a scroll change on `bus`.
+fn all(bus: &Bus) {
     bus.publish(&RCLICK).unwrap();
     bus.publish(&LatchesUsed).unwrap();
+    bus.publish(&DOWN).unwrap();
 }
 
 /// A stand-in for the face's handler of `E`, subscribed now as the keyboard's start does: each run notes whether the
@@ -40,6 +42,7 @@ fn the_keyboard_wakes_only_after_the_faces_own_handler_ran() {
     let _face = [
         face_on::<AssistChanged>(&rig, &bus, &early),
         face_on::<LatchesUsed>(&rig, &bus, &early),
+        face_on::<ScrollChanged>(&rig, &bus, &early),
     ];
     let _host = attach(&rig);
     rig.wakes();
@@ -47,23 +50,25 @@ fn the_keyboard_wakes_only_after_the_faces_own_handler_ran() {
     assert_eq!(woke(&rig, Wake::Keys), 1);
     bus.publish(&LatchesUsed).unwrap();
     assert_eq!(woke(&rig, Wake::Keys), 1);
-    assert_eq!(*early.lock().unwrap(), [false; 2], "the face ran first");
+    bus.publish(&DOWN).unwrap();
+    assert_eq!(woke(&rig, Wake::Keys), 1, "the pad lights at once");
+    assert_eq!(*early.lock().unwrap(), [false; 3], "the face ran first");
 }
 
 #[test]
 fn the_keyboard_wakes_once_per_change_and_only_while_a_face_is_attached() {
     let (rig, bus, _subs) = heard();
-    both(&bus);
+    all(&bus);
     assert_eq!(woke(&rig, Wake::Keys), 0, "no face yet");
     let _host = attach(&rig);
     let _again = attach(&rig);
-    both(&bus);
+    all(&bus);
     assert_eq!(
         woke(&rig, Wake::Keys),
-        2,
+        3,
         "one each, after a second attach too"
     );
     rig.hub.detach();
-    both(&bus);
+    all(&bus);
     assert_eq!(woke(&rig, Wake::Keys), 0, "the face went");
 }

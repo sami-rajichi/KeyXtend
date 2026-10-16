@@ -1,5 +1,5 @@
 //! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
-//! sounds and the pointer overlay.
+//! sounds, the pointer overlay and the scroll pad.
 
 #![allow(
     clippy::expect_used,
@@ -21,6 +21,7 @@ mod look;
 mod memory;
 mod module;
 mod notices;
+mod scroll;
 // Without `qt` the sound table is empty, so these tests would check no play.
 #[cfg(feature = "qt")]
 mod sound;
@@ -46,6 +47,7 @@ struct FakeFace {
     acts: Mutex<Vec<FaceAction>>,
     reply: Mutex<Option<Result<FaceReply, FaceError>>>,
     lang: Mutex<String>,
+    state: Mutex<Option<String>>,
 }
 
 impl FakeFace {
@@ -66,6 +68,11 @@ impl FakeFace {
     fn set_lang(&self, iso: &str) {
         iso.clone_into(&mut self.lang.lock().unwrap_or_else(PoisonError::into_inner));
     }
+
+    /// Answers `state_json` with `json` from now on.
+    fn set_state(&self, json: String) {
+        *self.state.lock().unwrap_or_else(PoisonError::into_inner) = Some(json);
+    }
 }
 
 impl KeyboardFace for FakeFace {
@@ -74,7 +81,8 @@ impl KeyboardFace for FakeFace {
     }
 
     fn state_json(&self) -> String {
-        r#"{"state":1}"#.to_owned()
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.clone().unwrap_or_else(|| r#"{"state":1}"#.to_owned())
     }
 
     fn lang(&self) -> String {

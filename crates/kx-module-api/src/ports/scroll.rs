@@ -248,7 +248,7 @@ impl fmt::Debug for ScrollAimed {
     }
 }
 
-/// The scroll module asks the keyboard to turn its open list one page: back for left and up, on for right and down.
+/// The scroll module asks the UI to turn our open list one page, back for left and up and on for right and down.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ScrollPage {
     /// Turn back a page.

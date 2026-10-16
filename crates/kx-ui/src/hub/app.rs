@@ -60,8 +60,8 @@ impl Hub {
         })
     }
 
-    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, and an overlay wake QML
-    /// has not read. A second waker replaces the first, which then hears nothing; that is a bug, so it warns.
+    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, and an overlay or scroll
+    /// wake QML has not read. A second waker replaces the first, which then hears nothing; that is a bug, so it warns.
     pub fn set_waker(&self, waker: Waker) {
         let (pending, replaced) = {
             let mut live = self.lock();
@@ -75,6 +75,7 @@ impl Hub {
             self.wake(wake);
         }
         self.rewake_assist();
+        self.rewake_scroll();
     }
 
     /// Lets the waker go before the windows are made again: `Show` and `End` wait for the next `Ui` object, and an `End`

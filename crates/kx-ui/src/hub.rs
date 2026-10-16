@@ -1,6 +1,6 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, sounds, the pointer overlay, the tray icon, and the requests the app drains on
-//! its own thread. No lock is held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the tray icon, and the requests
+//! the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod assist;
@@ -9,10 +9,12 @@ mod face;
 mod fonts;
 mod look;
 mod notices;
+mod scroll;
 mod sound;
 mod spots;
 mod texts;
 mod tray;
+mod unread;
 
 pub use app::Mode;
 pub use face::{Redraw, Resize};
@@ -21,7 +23,7 @@ pub use notices::Shown;
 
 use crate::settings::{PressFrame, UiSettings};
 use kx_module_api::ports::KeyboardFace;
-use kx_module_api::{ModuleId, Notice, SettingsError, SettingsHandle};
+use kx_module_api::{ModuleId, SettingsError, SettingsHandle};
 use kx_platform::ui::{
     Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
     WindowGuard,
@@ -82,8 +84,15 @@ pub enum Wake {
     Tray(TrayEvent),
     /// The pointer overlay's state changed; no other comes until QML reads it.
     Assist,
-    /// A mouse mode changed or a latch let go: the keyboard reads its state again.
+    /// A mouse mode, a used latch, the scroll pad or a page turn changed the keyboard: it reads its state again.
     Keys,
+    /// The scroll state or its outline changed; no other comes until QML reads it.
+    Scroll,
+    /// The pad turns our open list a page, back or on: call `turn_page` on the Qt thread.
+    Page {
+        /// Turn back a page.
+        back: bool,
+    },
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -152,6 +161,8 @@ pub struct Hub {
     sounds: sound::Sounds,
     /// The pointer overlay's state.
     assist: assist::Assist,
+    /// The scroll state and the box to outline.
+    scroll: scroll::Scroll,
     /// The kernel's bus and the keyboard's wake handlers.
     heard: Mutex<bus::Heard>,
 }
@@ -192,6 +203,7 @@ impl Hub {
             refused: AtomicBool::default(),
             sounds,
             assist: assist::Assist::default(),
+            scroll: scroll::Scroll::default(),
             heard: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
@@ -259,26 +271,6 @@ impl Hub {
             press_frame_ms: s.press_frame_ms,
             frame_log: s.frame_log,
         })
-    }
-
-    /// Queues `notice` for the banner, unless the same one waits or shows.
-    pub fn notice(&self, notice: Notice) {
-        if self.lock().notices.push(notice) {
-            self.wake(Wake::Notices);
-        }
-    }
-
-    /// The waiting notices in the keyboard's language; the banner shows them from now on.
-    #[must_use]
-    pub fn take_notices(&self) -> Vec<Shown> {
-        let mut live = self.lock();
-        let Live { texts, notices, .. } = &mut *live;
-        notices.take(texts.keyboard())
-    }
-
-    /// OK on shown notice `id`: it closes.
-    pub fn dismiss(&self, id: u64) {
-        let _ = self.lock().notices.close(id);
     }
 
     /// Calls the waker, if any, outside the lock.

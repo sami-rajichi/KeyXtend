@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 18:51 — P5: the UI hub carries the scroll pad
+The hub now keeps the scroll module's state and the box to outline for QML, with one wake per read, and a module that stops leaves no outline; it asks the module for its state when it starts listening, so any start order works. The pointer badge gains a scroll part, the way and the speed, which follows the pointer while the mouse module runs, and a scroll change wakes the keyboard at once, so the pad lights without waiting. When the pad aims at our open list, the hub turns it a page on the Qt thread with the list's own page button, never past either end. The QML objects gain the pad's taps and hover, and the guard calls that watch the keyboard's entries and lay the outline under it.
+
 ## 2026-10-16 17:58 — P5: the app ships the scroll module
 The app now ships the scroll module by default (`mod-scroll`) and hands it Windows' scroll target, and only the scroll module holds `Scroll`, as only the mouse module holds `PointerHook`. Its `[scroll]` section loads like every other, so the user's values reach the platform's run, and the module is named "Scroll pad" in English, French and Arabic. Tests over the fake platform tap the pad through the keyboard and quit mid-scroll: the run closes, the outline goes and the mouse hook lets go.
 

@@ -1,13 +1,13 @@
-//! The pointer overlay's state: the mouse modes, the last pointer point, the hold ring and its burst, which QML reads
-//! as one JSON. A bus call only stores and wakes, at most one `Wake::Assist` waits for QML's read, and nothing here
-//! logs.
+//! The pointer overlay's state: the mouse modes, the scroll pad's way, the last pointer point, the hold ring and its
+//! burst, which QML reads as one JSON. A bus call only stores and wakes, at most one `Wake::Assist` waits for QML's
+//! read, and nothing here logs.
 
+use super::unread::Unread;
 use super::{Hub, Wake, json};
 use crate::geom::screen_near;
-use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, Point, Rect};
+use kx_module_api::ports::{AssistChanged, AssistNote, Dir, GrabState, Point, Rect, ScrollChanged};
 use kx_platform::ui::SysLook;
 use serde::Serialize;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 /// A hold's ring: where the press began, when the ring shows and how long its waves run, in ms.
@@ -57,12 +57,24 @@ enum Active {
     Grab,
 }
 
+/// The badge's scroll part, which QML reads as `scroll`.
+#[derive(Copy, Clone, PartialEq, Eq, Serialize)]
+struct Scrolling {
+    /// The way the pad scrolls: `up`, `down`, `left` or `right`.
+    dir: Dir,
+    /// It scrolls at the fast speed.
+    fast: bool,
+}
+
 /// What the overlay shows; `seq` grows on each change.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize)]
 struct Shown {
     live: bool,
     rclick: bool,
     grab: Grab,
+    /// The pad's way while it scrolls, which shows only while the mouse module runs, as it sends the moves.
+    #[serde(skip)]
+    scrolling: Option<Scrolling>,
     point: Option<Point>,
     ring: Option<Ring>,
     burst: Option<Burst>,
@@ -81,20 +93,36 @@ impl Shown {
         }
     }
 
-    /// True while no mode shows, so nothing does.
+    /// The scroll part the badge shows: the pad's way while it scrolls and the mouse module runs.
+    fn scroll(&self) -> Option<Scrolling> {
+        self.scrolling.filter(|_| self.live)
+    }
+
+    /// True while no mode or scroll part shows, so nothing does.
     fn idle(&self) -> bool {
-        self.active().is_none()
+        self.active().is_none() && self.scroll().is_none()
+    }
+
+    /// Forgets what no longer shows: the ring and burst go with the modes, the point once nothing shows.
+    fn settle(&mut self) {
+        if self.active().is_none() {
+            (self.ring, self.burst) = (None, None);
+        }
+        if self.idle() {
+            self.point = None;
+        }
     }
 }
 
-/// The state as QML reads it, with the mode it shows, the pointer's size, Windows' default size, which the badge's
-/// offsets suit, and the work area nearest the point, which the badge stays inside.
+/// The state as QML reads it, with the mode and scroll part it shows, the pointer's size, Windows' default size, which
+/// the badge's offsets suit, and the work area nearest the point, which the badge stays inside.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct View {
     #[serde(flatten)]
     shown: Shown,
     mode: Option<Active>,
+    scroll: Option<Scrolling>,
     pointer_px: u32,
     pointer_base: u32,
     area: Option<Rect>,
@@ -104,7 +132,7 @@ struct View {
 #[derive(Default)]
 pub(super) struct Assist {
     shown: Mutex<Shown>,
-    waiting: AtomicBool,
+    unread: Unread,
 }
 
 impl Assist {
@@ -117,7 +145,7 @@ impl Hub {
     /// The overlay's state as JSON for QML, which lets the next change wake again; it holds points, so never log it.
     #[must_use]
     pub fn assist_json(&self) -> String {
-        self.assist.waiting.store(false, Ordering::SeqCst);
+        self.assist.unread.read();
         let shown = *self.assist.lock();
         let pointer_px = self.lock().sys.pointer_px;
         let area = shown.point.and_then(|at| {
@@ -127,23 +155,37 @@ impl Hub {
         json(&View {
             shown,
             mode: shown.active(),
+            scroll: shown.scroll(),
             pointer_px,
             pointer_base: SysLook::POINTER_PX,
             area,
         })
     }
 
-    /// Takes the mouse module's state; with no mode on, the point, ring and burst go.
+    /// Takes the mouse module's state; with no mode on the ring and burst go, and with nothing shown the point too.
     pub(super) fn assist_changed(&self, now: AssistChanged) {
         self.change(|s, _| {
             (s.live, s.rclick, s.grab) = (now.live, now.rclick, now.grab.into());
-            if s.idle() {
-                (s.point, s.ring, s.burst) = (None, None, None);
-            }
+            s.settle();
         });
     }
 
-    /// Keeps the pointer's point while a mode is on.
+    /// Takes the scroll module's state for the badge's scroll part; once nothing shows, the point goes.
+    pub(super) fn badge_scrolled(&self, now: ScrollChanged) {
+        let scrolling = match now.dir {
+            Some(dir) if now.live => Some(Scrolling {
+                dir,
+                fast: now.fast,
+            }),
+            _ => None,
+        };
+        self.change(|s, _| {
+            s.scrolling = scrolling;
+            s.settle();
+        });
+    }
+
+    /// Keeps the pointer's point while a mode or the scroll part shows.
     pub(super) fn pointer_moved(&self, at: Point) {
         self.change(|s, _| {
             if !s.idle() {
@@ -156,7 +198,7 @@ impl Hub {
     /// place of the ring, and its end or a cancelled carry clears the ring.
     pub(super) fn assist_note(&self, note: &AssistNote) {
         self.change(|s, seq| match *note {
-            _ if s.idle() => {}
+            _ if s.active().is_none() => {}
             AssistNote::HoldStart {
                 at,
                 ring_after_ms,
@@ -193,7 +235,7 @@ impl Hub {
 
     /// Hands a new waker the overlay wake still waiting for a read, as the last waker's QML may never have read it.
     pub(super) fn rewake_assist(&self) {
-        if self.assist.waiting.load(Ordering::SeqCst) {
+        if self.assist.unread.waits() {
             self.wake(Wake::Assist);
         }
     }
@@ -217,7 +259,7 @@ impl Hub {
 
     /// Wakes QML for the overlay unless a wake already waits for its read.
     fn nudge(&self) {
-        if !self.assist.waiting.swap(true, Ordering::SeqCst) {
+        if self.assist.unread.arm() {
             self.wake(Wake::Assist);
         }
     }

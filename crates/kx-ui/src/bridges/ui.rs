@@ -1,14 +1,16 @@
-//! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go and the
-//! app's commands. It follows the system look and hears the hub's wakes on the Qt thread, so make one per app, in the
-//! root file.
+//! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go, the
+//! overlay and scroll states and the app's commands. It follows the system look and hears the hub's wakes on the Qt
+//! thread, so make one per app, in the root file.
 
+mod notices;
+mod scroll;
 mod spots;
 mod texts;
 mod tray;
 mod wake;
 
 use super::{hub, qs};
-use crate::hub::{Hub, Mode, NULL, json};
+use crate::hub::{Hub, Mode, NULL};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
 use kx_platform::ui::WatchGuard;
@@ -134,6 +136,18 @@ pub mod qobject {
         #[qinvokable]
         fn assist_json(&self) -> QString;
 
+        /// The scroll state and the box to outline as JSON; reading it lets the next change send `scroll_changed`.
+        #[qinvokable]
+        fn scroll_json(&self) -> QString;
+
+        /// Keeps the pointer's last point outside window `title` at each entry, for the scroll pad; false until shown.
+        #[qinvokable]
+        fn watch_entries(&self, title: &QString) -> bool;
+
+        /// Puts window `title` just under window `under`, as the outline goes under the keyboard; false until shown.
+        #[qinvokable]
+        fn lay_under(&self, title: &QString, under: &QString) -> bool;
+
         /// Keeps how the user left the keyboard: away after Close or Minimise, minimised behind the bubble.
         #[qinvokable]
         fn keep_mode(&self, away: bool, minimised: bool);
@@ -183,9 +197,13 @@ pub mod qobject {
         #[qsignal]
         fn assist_changed(self: Pin<&mut Self>);
 
-        /// A mouse mode changed or a latch let go: the keyboard reads its state again.
+        /// The keyboard's state changed from the bus: it reads it again.
         #[qsignal]
         fn keys_changed(self: Pin<&mut Self>);
+
+        /// The scroll state or its outline changed: read `scroll_json`.
+        #[qsignal]
+        fn scroll_changed(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}
@@ -244,24 +262,6 @@ impl qobject::Ui {
         qs(&self.with(NULL.to_owned(), Hub::look_json))
     }
 
-    fn take_notices(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), |h| json(&h.take_notices())))
-    }
-
-    fn shown_notices(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), |h| json(&h.shown_notices())))
-    }
-
-    fn retry(&self, id: i64) -> bool {
-        let id = u64::try_from(id).unwrap_or_default();
-        self.with(false, |h| h.retry(id))
-    }
-
-    fn dismiss(&self, id: i64) {
-        let id = u64::try_from(id).unwrap_or_default();
-        self.with((), |h| h.dismiss(id));
-    }
-
     fn step_theme(&self) -> bool {
         self.with(false, Hub::step_theme)
     }
@@ -281,10 +281,6 @@ impl qobject::Ui {
 
     fn keep_mode(&self, away: bool, minimised: bool) {
         self.with((), |h| h.keep_mode(Mode::of(away, minimised)));
-    }
-
-    fn assist_json(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), Hub::assist_json))
     }
 
     fn quit(&self) -> bool {
