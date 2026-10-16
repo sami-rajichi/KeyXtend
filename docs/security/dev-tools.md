@@ -1,9 +1,9 @@
-# Security note: uiAccess dev tools
+# Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14
+- **Last review:** 2026-10-16
 - **Status:** Reviewed
-- **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
+- **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -33,6 +33,7 @@
 | The running copy's `settings.toml`, for the gates | Gates read its `[keyboard]` and `[ui]` sections through `kx_settings::peek` (size cap, never writes) and `peek_section`, which checks it as the store does: a bad value gives its default, and a section that does not check gives the defaults | `MAX_FILE_BYTES`; `relabel_ms` capped by the keyboard's settings check | Unit tests |
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
+| Recordings and recipes for `cargo xtask sounds` (`import`, `join`, `render`) | WAV files are read through kx-theme's chunk walker: 8, 16 or 24-bit PCM or 32-bit float, one or two channels, every size checked, and a truncated file, a bad header, a partial frame or a NaN sample is refused without a panic; the recipe and format files refuse unknown fields | A window or a join longer than the format's `max_ms` is refused, and a trimmed recording is cut to it | Property tests: any bytes, and damaged files |
 | Manifest XML from `mt.exe` | Comments skipped; only `uiAccess` on `requestedExecutionLevel` (any prefix) is read; missing means fail | Developer-chosen file | No |
 | Mouse hook events (`kx-gates` mouse guard) | Only the message, the injected flag, the injection tag and the X button's number are read, never the position; any other message is a plain event that drops when physical | One event per call; the hook does no I/O, locking or allocation, and counts with atomics | Unit tests of the filter |
 | The hook's stats lines (`kx-gates`: lines holding `kx_mod_mouse::STOPPED_LINE` in the test build's log, or in the running copy's for the hand try) | Only lines stamped since the test build or the hand try started are read; each named field must be a whole number, else the read fails naming it, and nothing else on the line is kept | The log's own `log_max_mb` | Unit tests |
