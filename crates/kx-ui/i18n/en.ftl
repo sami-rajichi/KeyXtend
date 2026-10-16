@@ -189,6 +189,7 @@ module =
     .keyboard = Keyboard
     .layouts = Keyboard layouts
     .mouse = Mouse assist
+    .scroll = Scroll pad
     .ui = Appearance
 
 ## The language key's designs, by [keyboard] lang_key value.

@@ -189,6 +189,7 @@ module =
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
+    .scroll = Pavé de défilement
     .ui = Apparence
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.

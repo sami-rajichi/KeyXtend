@@ -5,6 +5,7 @@
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, PointerHook, PointerHookKey,
+    ScrollTarget, ScrollTargetKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -24,6 +25,8 @@ pub struct Services {
     pub layouts: Arc<dyn LayoutSource>,
     /// The mouse hook the mouse module's hold engine runs on.
     pub pointer: Arc<dyn PointerHook>,
+    /// Scrolls what the user pointed at, for the scroll module.
+    pub scroll: Arc<dyn ScrollTarget>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -48,6 +51,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_keyboard::KeyboardModule::default()));
     #[cfg(feature = "mod-mouse")]
     list.push(Box::new(kx_mod_mouse::MouseModule::default()));
+    #[cfg(feature = "mod-scroll")]
+    list.push(Box::new(kx_mod_scroll::ScrollModule::default()));
     list
 }
 
@@ -86,6 +91,7 @@ impl Boot {
         kernel.provide_platform::<InputInjectorKey>(services.injector)?;
         kernel.provide_platform::<LayoutSourceKey>(services.layouts)?;
         kernel.provide_platform::<PointerHookKey>(services.pointer)?;
+        kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
         for module in modules {
             kernel.add(module)?;
         }

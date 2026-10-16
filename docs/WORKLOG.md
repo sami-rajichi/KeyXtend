@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 17:58 — P5: the app ships the scroll module
+The app now ships the scroll module by default (`mod-scroll`) and hands it Windows' scroll target, and only the scroll module holds `Scroll`, as only the mouse module holds `PointerHook`. Its `[scroll]` section loads like every other, so the user's values reach the platform's run, and the module is named "Scroll pad" in English, French and Arabic. Tests over the fake platform tap the pad through the keyboard and quit mid-scroll: the run closes, the outline goes and the mouse hook lets go.
+
 ## 2026-10-16 17:24 — P5: the scroll target holds back busy apps, and the entry watch's edge cases
 Each aim, turn and end check now pings the target with `WM_NULL` from a thread of the run's own, and a window that leaves a ping unanswered gets no turn or read until it answers, so turns no longer pile up behind a busy app in the seconds before Windows calls it hung; a ping Windows blocks counts as answered. A wheel is sent only when Windows routes wheels to the pointer, a posted wheel carries its point in the target's own pixels for apps that are not DPI aware, a step UI Automation does not take is refused, and the UI Automation thread starts without a wait. The entry watch now takes only our guarded keyboard, counts no entry for a pointer already on it, keeps the entry through a leave under capture, ends it when the capture is lost off the keyboard, asks for the leave at every move, and drops the kept point with the keyboard.
 
