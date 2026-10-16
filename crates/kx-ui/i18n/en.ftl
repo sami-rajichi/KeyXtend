@@ -70,6 +70,7 @@ tip =
     .later = Coming in a later version
     .one-lang = Only one keyboard language is installed
     .mouse-off = Mouse assist is off
+    .scroll-off = The scroll pad is off
     .rclick = Hold still to right-click; short clicks stay normal
     .grab = Press to pick up, move, then click to drop
 

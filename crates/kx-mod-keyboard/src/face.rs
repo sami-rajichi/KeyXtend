@@ -4,6 +4,7 @@
 
 mod bus;
 mod inner;
+mod pad;
 
 pub(crate) use bus::listen;
 
@@ -220,6 +221,8 @@ impl Face {
             FaceAction::Leave => Ok(self.lock().leave()),
             FaceAction::Relabel => Ok(self.refresh()),
             FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
+            FaceAction::Pad { dir } => Ok(self.pad(dir)),
+            FaceAction::PadHover { on } => Ok(self.hover(on)),
             other => self.lock().act(other),
         }
     }

@@ -7,10 +7,8 @@
   },
   "bubble_corner": "right",
   "dpad": {
-    "dim": true,
     "h": 80.52,
     "name": "key.dpad",
-    "tip": "tip.later",
     "w": 80.52,
     "x": 543.0,
     "y": 71.24000000000001

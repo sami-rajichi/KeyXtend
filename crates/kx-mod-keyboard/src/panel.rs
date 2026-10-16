@@ -68,6 +68,17 @@ impl LangList {
         self.hi = to;
         if to == hi { Moved::Stay } else { Moved::Hi }
     }
+
+    /// Turns a page back or on, as the list's page buttons do (the scroll pad's taps): nothing on the first or last
+    /// page, where the UI dims the button.
+    pub fn turn(&mut self, back: bool, rows: usize, len: usize) -> Moved {
+        let rows = rows.max(1);
+        let (page, last) = (self.hi(len) / rows, len.saturating_sub(1) / rows);
+        if (back && page == 0) || (!back && page >= last) {
+            return Moved::Stay;
+        }
+        self.key(if back { PAGE_BACK } else { PAGE_ON }, rows, len)
+    }
 }
 
 /// The board keys that drive an open panel, by id, in board order.

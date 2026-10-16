@@ -7,7 +7,7 @@ import QtQuick.Shapes
 Item {
     id: pad
 
-    // Its cell, name and tip (board JSON), the look, fonts, icons and texts, and size.
+    // Its cell and name (board JSON) with its dim and tip (state JSON), the look, fonts, icons and texts, and size.
     required property var box
     required property var lk
     required property var res

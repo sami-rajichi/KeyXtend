@@ -170,6 +170,7 @@ var texts = {
   "tip.mouse-off": "Mouse assist is off",
   "tip.one-lang": "Only one keyboard language is installed",
   "tip.rclick": "Hold still to right-click; short clicks stay normal",
+  "tip.scroll-off": "The scroll pad is off",
   "tray.quit": "Quit",
   "tray.show": "Show keyboard",
   "window.bubble": "KeyXtend keyboard (minimised)",

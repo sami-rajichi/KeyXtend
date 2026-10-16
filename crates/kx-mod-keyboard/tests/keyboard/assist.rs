@@ -42,10 +42,10 @@ pub struct Bench {
 }
 
 /// Records each `E` on `bus` into `said` as `as_said` makes it.
-fn ear<E: Event>(
+pub fn ear<E: Event, T: Send + 'static>(
     bus: &Bus,
-    said: &Arc<Mutex<Vec<Said>>>,
-    as_said: impl Fn(&E) -> Said + Send + Sync + 'static,
+    said: &Arc<Mutex<Vec<T>>>,
+    as_said: impl Fn(&E) -> T + Send + Sync + 'static,
 ) -> Subscription {
     let said = Arc::clone(said);
     let add = move |e: &E| said.lock().unwrap().push(as_said(e));

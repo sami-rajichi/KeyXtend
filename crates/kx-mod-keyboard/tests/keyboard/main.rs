@@ -11,6 +11,7 @@ mod host;
 mod lang;
 mod latches;
 mod module;
+mod pad;
 mod place;
 mod rig;
 mod size;

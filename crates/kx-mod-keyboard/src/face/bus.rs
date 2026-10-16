@@ -1,10 +1,11 @@
-//! The face on the kernel's bus (spec §4.4, §5.1): the side keys ask the mouse module to flip a mode, its state comes
-//! back, and the latched set goes out for modifier + click. Handlers run on the sender's thread, so nothing is sent
-//! while the face's lock is held.
+//! The face on the kernel's bus (spec §4.4, §5.1, §5.2): the side keys ask the mouse module to flip a mode, the
+//! mouse and scroll modules' states come back, and the latched set goes out for modifier + click. Handlers run on the
+//! sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan, Toggle,
+    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan,
+    ScrollAsk, ScrollChanged, ScrollPage, Toggle,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -98,8 +99,8 @@ impl Face {
     }
 }
 
-/// Hears the mouse module's state and its latch events for `face` until the module stops, then tells the latched set
-/// and asks the mouse module for its state, as either may have missed the other while one was stopped.
+/// Hears the mouse and scroll modules' states, the latch events and our list's page turns for `face` until the module
+/// stops, then tells the latched set and asks both modules for their states, as each may have missed the other.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -107,8 +108,11 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
+    on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
+    on(cx, face, |f, e: &ScrollPage| f.lock().page(e.back))?;
     face.tell(true);
-    cx.bus().publish(&AssistAsk)
+    cx.bus().publish(&AssistAsk)?;
+    cx.bus().publish(&ScrollAsk)
 }
 
 /// Calls `then` with the face for each `E` on the bus, while the face lives.

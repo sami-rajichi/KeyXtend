@@ -1,12 +1,15 @@
 //! What the UI draws, as the face's JSON: the board (boxes, names, dimmed keys and the size), which changes with
-//! the size, and the state (legends, lights, the language key, the list and the place), which changes as keys are used.
+//! the size, and the state (legends, lights, the language key, the list, the place and the pad), which changes as
+//! keys are used.
 
 mod assist;
 mod board;
+mod pad;
 mod paint;
 
 pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP};
 pub use board::board_view;
+pub use pad::{PadState, SCROLL_OFF_TIP, pad_state};
 pub use paint::{DIM, Paint, paint};
 
 use crate::geom::{Area, KeyBox};
@@ -16,7 +19,7 @@ use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typ
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
-use kx_module_api::ports::{AssistChanged, LangLabel, LayoutTable, Point};
+use kx_module_api::ports::{AssistChanged, LangLabel, LayoutTable, Point, ScrollChanged};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -74,18 +77,14 @@ pub struct KeyView {
     pub repeat: bool,
 }
 
-/// The D-pad's round face.
+/// The D-pad's round face; whether it works, and how it scrolls, come with the state.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct DpadView {
     /// Its box in logical pixels, inset like a key's cell.
     #[serde(flatten)]
     pub area: Area,
-    /// Scrolling comes in a later version.
-    pub dim: bool,
     /// Its name, by translation key.
     pub name: &'static str,
-    /// Its tip while dimmed, by translation key.
-    pub tip: Option<&'static str>,
 }
 
 /// The keyboard at one size.
@@ -151,6 +150,8 @@ pub struct StateView {
     pub list: Option<ListView>,
     /// Where the window goes, in physical pixels, once the UI has said where it can be.
     pub at: Option<Point>,
+    /// The scroll pad.
+    pub dpad: PadState,
 }
 
 /// Shows no field: its legends and lights tell the latches and Caps Lock, as `Latches` hides them.
@@ -193,9 +194,11 @@ pub struct StateInput<'a> {
     pub at: Option<Point>,
     /// The mouse module's state, as the bus last told it.
     pub assist: AssistChanged,
+    /// The scroll module's state, as the bus last told it.
+    pub scroll: ScrollChanged,
 }
 
-/// Every key's state, the language key, the list and the place.
+/// Every key's state, the language key, the list, the place and the pad.
 #[must_use]
 pub fn state_view(i: &StateInput<'_>) -> StateView {
     let mods = LegendMods::of(i.latches, i.caps, &i.table.keys);
@@ -210,6 +213,7 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
         lang: lang_view(i.list, cur, i.turn),
         list: i.open.map(|l| list_view(l, i.list, cur.id, i.panel_keys)),
         at: i.at,
+        dpad: pad_state(i.scroll),
     }
 }
 

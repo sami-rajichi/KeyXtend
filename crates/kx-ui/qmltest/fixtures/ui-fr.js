@@ -170,6 +170,7 @@ var texts = {
   "tip.mouse-off": "L’aide à la souris est désactivée",
   "tip.one-lang": "Une seule langue de clavier est installée",
   "tip.rclick": "Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux",
+  "tip.scroll-off": "Le pavé de défilement est désactivé",
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "window.bubble": "Clavier KeyXtend (réduit)",

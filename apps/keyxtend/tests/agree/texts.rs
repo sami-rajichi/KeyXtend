@@ -7,7 +7,7 @@ use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
-use kx_mod_keyboard::view::{EMPTY_NAME, LONE_TIP};
+use kx_mod_keyboard::view::{EMPTY_NAME, LONE_TIP, SCROLL_OFF_TIP};
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
@@ -25,7 +25,8 @@ fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
 
 #[test]
 fn every_name_label_and_tip_the_face_draws_has_its_text() {
-    let mut wanted = BTreeSet::from([LONE_TIP.to_owned(), EMPTY_NAME.to_owned()]);
+    let fixed = [LONE_TIP, EMPTY_NAME, SCROLL_OFF_TIP];
+    let mut wanted: BTreeSet<String> = fixed.map(str::to_owned).into();
     for design in designs() {
         let view = board(design);
         for k in &view.keys {
@@ -33,7 +34,6 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
             wanted.extend([k.name.clone(), k.label.clone(), tip].into_iter().flatten());
         }
         wanted.insert(view.dpad.name.to_owned());
-        wanted.extend(view.dpad.tip.map(str::to_owned));
     }
     assert!(
         wanted.len() > LANGS.len(),

@@ -13,7 +13,7 @@ fn live(rclick: bool, grab: GrabState) -> AssistChanged {
 }
 
 fn with(assist: AssistChanged) -> StateView {
-    state_of(&none(), false, None, assist)
+    state_of(&none(), false, None, assist, ScrollChanged::OFF)
 }
 
 #[test]

@@ -160,7 +160,53 @@ fn the_page_keys_are_named_once_for_the_list_and_its_buttons() {
     );
 }
 
+#[test]
+fn a_page_turn_moves_as_the_page_buttons_do_and_not_past_the_first_or_last_page() {
+    let (mut l, len) = seven(2);
+    assert_eq!(l.turn(true, 5, len), Moved::Stay, "the first page");
+    assert_eq!(l.hi(len), 2, "the highlight stays");
+    assert_eq!(l.turn(false, 5, len), Moved::Hi);
+    assert_eq!(l.hi(len), 5, "page 2 starts at row 6");
+    let (mut l, len) = seven(6);
+    assert_eq!(l.turn(false, 5, len), Moved::Stay, "the last page");
+    assert_eq!(l.hi(len), 6);
+    assert_eq!(l.turn(true, 3, len), Moved::Hi);
+    assert_eq!(l.hi(len), 3, "three-row pages: back from page 3 to row 4");
+}
+
+#[test]
+fn a_page_turn_on_an_empty_list_or_at_a_page_size_of_0_is_safe() {
+    let mut l = LangList::open(0);
+    assert_eq!(l.turn(false, 5, 0), Moved::Stay);
+    assert_eq!(l.turn(true, 5, 0), Moved::Stay);
+    let (mut l, len) = seven(0);
+    assert_eq!(l.turn(false, 0, len), Moved::Hi, "0 counts as 1");
+    assert_eq!(l.hi(len), 1);
+    let (mut l, len) = seven(6);
+    assert_eq!(l.turn(true, usize::MAX, len), Moved::Stay, "one page");
+}
+
 proptest! {
+    #[test]
+    fn a_page_turn_moves_one_page_to_its_first_row_or_stays_at_an_end(
+        len in 1usize..20,
+        rows in 0usize..8,
+        at in 0usize..20,
+        back: bool,
+    ) {
+        let mut l = LangList::open(at);
+        let (size, before) = (rows.max(1), l.hi(len));
+        let (page, last) = (before / size, (len - 1) / size);
+        let end = if back { page == 0 } else { page == last };
+        let moved = l.turn(back, rows, len);
+        if end {
+            prop_assert_eq!((moved, l.hi(len)), (Moved::Stay, before));
+        } else {
+            let want = if back { page - 1 } else { page + 1 };
+            prop_assert_eq!((moved, l.hi(len)), (Moved::Hi, want * size));
+        }
+    }
+
     #[test]
     fn any_keys_keep_the_highlight_on_a_row(
         len in 1usize..20,

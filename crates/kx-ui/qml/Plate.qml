@@ -85,7 +85,8 @@ Item {
             }
         }
         DPad {
-            box: body.board.dpad
+            // Its box and name come with the board; whether it works, and how it scrolls, with the state.
+            box: Object.assign({}, body.board.dpad, body.st.dpad)
             lk: body.lk
             res: body.res
             s: body.s

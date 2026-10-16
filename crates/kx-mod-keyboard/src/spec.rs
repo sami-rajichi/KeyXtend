@@ -177,8 +177,6 @@ pub struct DpadSpec {
     pub cell: [u16; 4],
     /// Largest width in key units.
     pub units: f64,
-    /// It comes in a later version, so it is drawn dimmed.
-    pub later: bool,
 }
 
 /// `board.toml`, in logical pixels at size 1.

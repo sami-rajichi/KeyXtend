@@ -201,7 +201,7 @@ fn a_role_must_fit_its_key() {
 }
 
 #[test]
-fn the_shipped_roles_latch_the_modifiers_and_the_dpad_comes_later() {
+fn the_shipped_board_gives_each_named_key_its_role() {
     let s = spec();
     let latches = [
         ("shift", Latch::Shift),
@@ -219,7 +219,6 @@ fn the_shipped_roles_latch_the_modifiers_and_the_dpad_comes_later() {
         (Role::Caps, Role::Lang)
     );
     assert_eq!(named(&s, "space").role, Role::Send);
-    assert!(s.dpad.later);
     let del = named(&s, "del").sc.unwrap();
     assert!(del.is_extended() && del.code() == 0xE053);
 }

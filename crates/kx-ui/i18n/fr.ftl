@@ -70,6 +70,7 @@ tip =
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
     .mouse-off = L’aide à la souris est désactivée
+    .scroll-off = Le pavé de défilement est désactivé
     .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
     .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
 
