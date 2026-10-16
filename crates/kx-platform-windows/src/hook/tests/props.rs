@@ -233,17 +233,17 @@ proptest! {
         common(&play(&steps, false))?;
     }
 
-    /// With every echo heard inside our send, as Windows runs our hooks there, a calm run keeps the hand's order and
-    /// loses no wait unless our hooks missed an echo, and nothing the hand let go stays down.
+    /// With every echo heard inside our send, as Windows runs our hooks there, a calm run keeps the hand's order, loses
+    /// at most one wait per echo our hooks missed, and leaves nothing down that the hand let go.
     #[test]
     fn a_calm_run_with_echoes_inside_our_send_loses_only_a_missed_echo(
         steps in vec(calm(), 0..=CALM_STEPS),
     ) {
         let end = play(&steps, true);
         prop_assert!(in_hand_order(&end), "{:?}", end.apps);
-        if !steps.iter().any(|s| matches!(s, Step::Lose(_))) {
-            prop_assert_eq!(end.lost, 0, "each send's echoes are settled right after it");
-        }
+        let missed = steps.iter().filter(|s| matches!(s, Step::Lose(_))).count();
+        let lost = usize::try_from(end.lost).unwrap_or(usize::MAX);
+        prop_assert!(lost <= missed, "{} waits lost for {} missed echoes", lost, missed);
         prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;
     }

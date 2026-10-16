@@ -69,7 +69,7 @@ pub struct Actor {
     live: Option<Live>,
     /// How many engines were made; each run carries its number.
     runs: u64,
-    /// The last start failed; until one works, a start for latches fails without a word.
+    /// The last start failed; until one works, a quiet start (latches or scrolling) fails without a word.
     failing: bool,
     /// A give-up already restarted; until a mode tap, a latch change or a scroll change, the next one starts nothing.
     restarted: bool,
@@ -230,7 +230,7 @@ impl Actor {
     }
 
     /// The hook did not start, so the modes stay off. A mode the user `expected` on tells them, and they can press
-    /// its key again; a start for latches warns once per streak of failures.
+    /// its key again; a quiet start (latches or scrolling) warns once per streak of failures.
     fn refused(&mut self, error: HookError, expected: bool) {
         if expected || !self.failing {
             tracing::warn!(%error, "mouse hook did not start");
