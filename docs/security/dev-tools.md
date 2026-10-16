@@ -37,6 +37,8 @@
 | Manifest XML from `mt.exe` | Comments skipped; only `uiAccess` on `requestedExecutionLevel` (any prefix) is read; missing means fail | Developer-chosen file | No |
 | Mouse hook events (`kx-gates` mouse guard) | Only the message, the injected flag, the injection tag and the X button's number are read, never the position; any other message is a plain event that drops when physical | One event per call; the hook does no I/O, locking or allocation, and counts with atomics | Unit tests of the filter |
 | The hook's stats lines (`kx-gates`: lines holding `kx_mod_mouse::STOPPED_LINE` in the test build's log, or in the running copy's for the hand try) | Only lines stamped since the test build or the hand try started are read; each named field must be a whole number, else the read fails naming it, and nothing else on the line is kept | The log's own `log_max_mb` | Unit tests |
+| The scroll pad's stats lines (`kx-gates` G6: lines holding `kx_mod_scroll::STOPPED_LINE` in the test build's log) | As the hook's: only lines since the test build started, each named field a whole number, counts only | The log's own `log_max_mb` | Unit tests |
+| target-window's wheel, `HUNG` and `WOKE` lines (G6's records) | Each field must parse, else the line is skipped; only times, turns and the first point's offset are kept | One run's log | Unit tests |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a same-user program could edit a launcher or `dev-admin.ps1` before the owner opens it, and so run code as admin. This is a known risk; see Accepted.
@@ -46,10 +48,10 @@
   - A staged file the check never reads, or a network name the guard never meets. Mitigation: `libs` and `plugins` may name only `.dll` files, which the check reads, and the network library and its importers must be listed in `libs`.
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - A gate-only build (the app's `gate-input`, which acts on another program's tagged input) getting signed and uiAccess. Mitigation: the stage check refuses a program holding `[workspace.metadata.stage] gate_flag`, and `dev-install` refuses to sign any exe that holds it.
-  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml` and `kx-gates-p4.toml` from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
+  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml` and `kx-gates-p5.toml` from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
     - They name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its token. It reads none when Windows will not say whether it has uiAccess.
-    - With uiAccess it reads all five of its settings files (those three, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
-    - `dev-install` copies every file of the build folder, so put the five files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+    - With uiAccess it reads all six of its settings files (those four, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
+    - `dev-install` copies every file of the build folder, so put the six files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
   - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input.
     - It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself or Windows will not say, so only the plain kx-gates starts it.
     - kx-gates starts only a program whose bytes hold the gate flag, with a `data` folder beside it, so it never reads or writes the owner's settings or log. It quits the test build at once when its log lacks the gate warning.
@@ -63,6 +65,14 @@
     - G5's cases (`g5play::CASES`) include a drag held past the hold time, which must stay a drag. Its admin-window case is the owner's manual check on the installed product, as the test build never holds uiAccess.
     - G5's hung case posts target-window a private message (`WM_APP` plus an offset) that makes it sleep, capped by its `hang_max_ms`, which must stay below Windows' 5 s hung-window mark. So each message from any program on the desktop pauses that test window at most that long.
     - G12's frame rate counts each ring's quiet time before its first frame, past `[g12] show_ms`, and after its last, so a ring that stalls fails.
+  - `kx-gates g6 notepad`, `chrome` and `explorer` drive the test build's scroll pad (P5) on the gate's own scroll text or folder of empty files, never Word.
+    - G6 lays that window under the keyboard and puts it back after, then glides the pointer onto the pad with `SIM_TAG` moves. It taps the pad only while the keyboard is on top there.
+    - Its only other input is Ctrl+End to the document in front, and clicks on the document's spot outside the keyboard for the press-stop case, only while that app is on top there. It never turns a wheel; it takes one `ScrollPattern` step itself to record the percent lag.
+    - Its pictures of the document stay in memory, and its result holds shares, percents, counts and the wheel-routing setting, never a point or a box.
+  - `kx-gates g6 hang` and `g6 unaware` run the same pad on target-window, started with `--fill` (numbered filler lines) and, for `unaware`, `--dpi-unaware`. `hang` posts G5's capped hang message.
+    - target-window logs each wheel message's time, turn and point, and a `HUNG` and `WOKE` line around a hang. G6 keeps only counts and the offset between the point aimed and the point received.
+  - G8, G9 and G10 add the scroll pad on the product app, pressed by UI Automation with the real pointer moved but never clicked; each lays a filled target-window under the keyboard and closes it after.
+    - G8 reads memory once after a scroll and scrolls once per churn round, and its result logs the machine's free RAM and its VMs' working sets (`[host] vm`, by PDH counter name, no process handle). G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language. G10 presses each arrow and Stop, and puts Stop back after a failed step.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap gets Quit.

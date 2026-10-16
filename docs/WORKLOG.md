@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 00:43 — P5: the gates aimed at the scroll pad
+G6 now drives the test build's pad in Notepad, Chrome and Explorer, never Word, and judges the aim, down and up, sideways where the page overflows, the fast ÷ slow ratio, each stop, the end and press-stop from pictures and UI Automation percents; it records Chrome's end percents and percent lag, the wheel routing, a hung target-window and a DPI-unaware one. G8 reads memory after a scroll, scrolls in every churn round and logs free RAM and the VMs' memory; G9 checks the outline's flags while hovered and scrolling; G10 presses each arrow and Stop. The gates' own wheel routes and `g6track` are deleted, and every new value is in `kx-gates-p5.toml` with its checks.
+
 ## 2026-10-16 20:52 — P5: the scroll pad's look, badge and outline
 Each arrow now sits in the middle of its quarter of the ring, as the iPod click wheel's labels, Stop shows the speed with two dots under its square and takes only taps on its disc, and a pressed arrow takes the keys' press colours, so a press shows on a hovered arrow too; a pad tap sounds like a key. The badge shows the arrow and "slow" or "fast", after a faded dot beside a mode, and the overlay is made while the pad scrolls too. The target's outline is four thin click-through windows in the ring colour, Highlight in high contrast, made only while the hub names a box, cut to its screen, faded in, faded out to move to a new box and back in, and laid just under the keyboard. The keyboard asks the guard once to watch its entries, and the pad tells the keyboard when the pointer comes on or leaves, also when the window hides or the pad is made again.
 
