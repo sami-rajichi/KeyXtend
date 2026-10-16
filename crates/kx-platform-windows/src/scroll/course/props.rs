@@ -1,5 +1,6 @@
-//! Properties over random runs: carried steps never drift by a whole step, a target that moves once a notch never
-//! trips, and one that ignores the wheel trips once `check_ms` and a whole notch have passed.
+//! Properties over random runs: carried steps never drift by a whole step, a target that moves at each notch or step
+//! is never judged still, even when it shows them a read late, and one that stays still is judged once `check_ms` passed
+//! and its steps had a whole read to show.
 
 use super::*;
 use crate::scroll::tests::{CONFIG, NOTCH, aim, at, wheel};
@@ -23,10 +24,12 @@ const MAX_NOTCH: u32 = NOTCH * 10;
 const TICK_MS: std::ops::RangeInclusive<u32> = 8..=100;
 /// Where a moving percent starts.
 const START: f64 = 50.0;
-/// How far a percent moves a notch: `MAX_TICKS` notches at most leave it short of either end.
+/// How far a percent moves a notch or a step: the most a run sends leaves it short of either end.
 const NUDGE: f64 = 1.0 / 16.0;
-/// Most percent reads in one walk; this many one-point steps from `START` stay short of either end.
+/// Most percent reads in one run; a walk of this many one-point steps from `START` stays short of either end.
 const MAX_READS: usize = 40;
+/// Most ticks between two reads, so some reads come more than `check_ms` apart.
+const MAX_TICKS_PER_READ: usize = 4;
 
 /// A wheel setting: mostly lines, sometimes none or a page.
 fn setting() -> impl Strategy<Value = u32> {
@@ -96,42 +99,53 @@ proptest! {
     }
 
     #[test]
-    fn a_target_that_moves_once_a_notch_never_trips(
+    fn a_target_that_moves_at_each_notch_or_step_is_never_judged_still(
         notch in 1..=MAX_NOTCH,
-        setting in 1..=MAX_SETTING,
+        setting in setting(),
         sideways in any::<bool>(),
+        late in any::<bool>(),
         tick in TICK_MS,
-        owed in vec(0.0..=MAX_LINES, 1..=MAX_TICKS),
+        reads in vec(vec(0.0..=MAX_LINES, 1..=MAX_TICKS_PER_READ), 1..=MAX_READS),
     ) {
         let wheel = Wheel { notch, lines: setting, chars: setting };
+        let need = if glides(setting) { notch } else { 1 };
         let (dir, a) = (if sideways { Dir::Left } else { Dir::Down }, aim(1, false));
-        let (mut c, mut now, mut sent) = (Course::new(CONFIG), 0, 0_u32);
-        for lines in owed {
-            let pct = START + f64::from(sent / notch) * NUDGE;
+        let (mut c, mut now, mut sent, mut prev) = (Course::new(CONFIG), 0, 0_u32, 0_u32);
+        for ticks in reads {
+            // A late target shows a step only at the read after the one that followed it.
+            let shown = if late { prev } else { sent };
+            let pct = START + f64::from(shown / need) * NUDGE;
             prop_assert_eq!(c.read(&a, dir, at(now), pair(dir, pct)), Reach::More);
-            if let Some(turn) = c.turn(&a, dir, lines, wheel) {
-                sent += u32::from(turn.count);
+            prev = sent;
+            for &lines in &ticks {
+                if let Some(turn) = c.turn(&a, dir, lines, wheel) {
+                    sent += u32::from(turn.count);
+                }
             }
-            now += tick;
+            now += tick * u32::try_from(ticks.len()).unwrap();
         }
         prop_assert!(!c.tripped(), "it moved at every notch");
     }
 
     #[test]
-    fn a_target_that_ignores_the_wheel_trips_once_check_ms_and_a_notch_passed(
-        setting in 1..=MAX_SETTING,
+    fn a_still_target_is_judged_once_check_ms_passed_and_its_steps_had_a_read_to_show(
+        setting in setting(),
         tick in TICK_MS,
         owed in vec(0.0..=MAX_LINES, 1..=MAX_TICKS),
         pct in 0.0..START,
     ) {
         let w = Wheel { notch: NOTCH, lines: setting, chars: setting };
+        let need = if glides(setting) { NOTCH } else { 1 };
         let a = aim(1, false);
-        let (mut c, mut now, mut sent) = (Course::new(CONFIG), 0, 0_u32);
+        let (mut c, mut now, mut sent, mut prev) = (Course::new(CONFIG), 0, 0_u32, 0_u32);
         for lines in owed {
-            c.read(&a, Dir::Down, at(now), pair(Dir::Down, pct));
-            let due = now >= CONFIG.check_ms && sent >= NOTCH;
-            prop_assert_eq!(c.tripped(), due, "at {} ms after {} delta", now, sent);
-            if let Some(turn) = c.turn(&a, Dir::Down, lines, w).filter(|t| t.route != Route::Uia) {
+            let due = now >= CONFIG.check_ms && prev >= need;
+            let reach = c.read(&a, Dir::Down, at(now), pair(Dir::Down, pct));
+            let judged = if glides(setting) { c.tripped() } else { reach == Reach::End };
+            prop_assert_eq!(judged, due, "at {} ms after {} sent", now, prev);
+            prev = sent;
+            let ours = |t: &Turn| !glides(setting) || t.route != Route::Uia;
+            if let Some(turn) = c.turn(&a, Dir::Down, lines, w).filter(ours) {
                 sent += u32::from(turn.count);
             }
             now += tick;

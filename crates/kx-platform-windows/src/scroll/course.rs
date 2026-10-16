@@ -12,6 +12,9 @@ use super::{Route, Wheel, along, reach, route, sign};
 pub const MAX_TURN: u16 = i16::MAX.unsigned_abs();
 /// One `ScrollPattern` small step scrolls one line.
 const STEPS_PER_LINE: f64 = 1.0;
+/// Reads may come this many `check_ms` apart, plus one `read_ms`, before the gap is a pause; a tick never outlasts a
+/// check, so a late tick and a slow read still fit.
+const PAUSE_CHECKS: u32 = 2;
 
 /// One tick's turn: its route and how far.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -92,7 +95,7 @@ impl Mode {
 struct Times {
     /// `check_ms`.
     check: Duration,
-    /// `check_ms` plus `read_ms`: a later read follows a pause.
+    /// `PAUSE_CHECKS` times `check_ms`, plus `read_ms`: a later read follows a pause.
     stale: Duration,
 }
 
@@ -103,24 +106,27 @@ struct Watch {
     base: Option<(f64, Mono)>,
     /// The steps sent since then, in the latest mode's unit.
     sent: u64,
+    /// The steps sent since then up to the previous read: only these had a whole read to show.
+    shown: u64,
     /// The previous read.
     last: Option<Mono>,
 }
 
 impl Watch {
     /// Takes a percent read at `now`, none unless short of the end; true when it stayed still for `check` while
-    /// `need` steps went out. A moved percent, none, or a read after a pause starts the wait afresh.
+    /// `need` steps went out before the previous read. A moved percent, none, or a read after a pause starts afresh.
     fn still(&mut self, now: Mono, pct: Option<f64>, need: u64, times: Times) -> bool {
         let paused = self
             .last
             .is_none_or(|t| now.saturating_since(t) > times.stale);
         self.last = Some(now);
+        let judged = std::mem::replace(&mut self.shown, self.sent);
         match (self.base, pct) {
             (Some((was, since)), Some(pct)) if !paused && was.total_cmp(&pct).is_eq() => {
-                now.saturating_since(since) >= times.check && self.sent >= need
+                now.saturating_since(since) >= times.check && judged >= need
             }
             _ => {
-                (self.base, self.sent) = (pct.map(|p| (p, now)), 0);
+                (self.base, self.sent, self.shown) = (pct.map(|p| (p, now)), 0, 0);
                 false
             }
         }
@@ -151,7 +157,10 @@ impl Course {
         let ms = |n: u32| Duration::from_millis(u64::from(n));
         let times = Times {
             check: ms(config.check_ms),
-            stale: ms(config.check_ms.saturating_add(config.read_ms)),
+            stale: ms(config
+                .check_ms
+                .saturating_mul(PAUSE_CHECKS)
+                .saturating_add(config.read_ms)),
         };
         Self {
             times,
@@ -182,8 +191,8 @@ impl Course {
     }
 
     /// Takes UI Automation's percent pair at `aim`, read at `now`, and says how far `dir` can still go. A percent still
-    /// for `check_ms` short of the end trips the target after a notch of wheel steps, and reads as the end after a
-    /// UI Automation step.
+    /// for `check_ms` short of the end, after a notch of wheel delta or a UI Automation step sent before the previous
+    /// read, trips the target or reads as the end.
     pub fn read(&mut self, aim: &Aim, dir: Dir, now: Mono, pair: Option<(f64, f64)>) -> Reach {
         self.follow(aim.id, dir);
         let pct = pair.and_then(|p| along(dir, p));
