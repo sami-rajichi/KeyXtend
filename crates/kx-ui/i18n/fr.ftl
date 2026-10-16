@@ -132,13 +132,16 @@ window =
     .list = Langues du clavier
     .tip = Info-bulle de { -app }
     .pointer = Aide au pointeur
+    .outline = Contour de défilement
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
 
-## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui.
+## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui, et la vitesse du pavé de défilement.
 badge =
     .holding = Saisi
+    .slow = lent
+    .fast = rapide
 
 tray =
     .show = Afficher le clavier

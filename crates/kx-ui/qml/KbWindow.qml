@@ -32,6 +32,8 @@ Window {
     property bool frosted: false
     // The keyboard has placed the window (Placing).
     property alias placed: placing.placed
+    // The guard keeps the pointer's last point outside this window at each entry, for the scroll pad's target.
+    property bool watched: false
     // The plate's mover while the plate is drawn, and whether a live resize runs: its shadow then draws nothing.
     readonly property var mover: body.item ? body.item.mover : null
     readonly property bool resizing: !!body.item && body.item.resizing
@@ -213,6 +215,11 @@ Window {
     // nothing over ours, as the pointer overlay.
     function guardQuiet() {
         guard.run(null);
+    }
+    // Asks once, after a guard try holds this window, for the pointer's entries to be watched (ADR-0029).
+    function watch() {
+        if (!watched && visible)
+            watched = ui.watchEntries(title);
     }
 
     // Where the minimise bubble goes, in Qt units: a bottom corner of this window's screen; null when none is known.

@@ -49,6 +49,7 @@ mod qt {
         "qml/Inset.qml",
         "qml/Led.qml",
         "qml/DPad.qml",
+        "qml/Stop.qml",
         "qml/Corner.qml",
         "qml/Mover.qml",
         "qml/Catch.qml",
@@ -78,6 +79,8 @@ mod qt {
         "qml/Overlay.qml",
         "qml/HoldRing.qml",
         "qml/Badge.qml",
+        "qml/Outline.qml",
+        "qml/Edge.qml",
     ];
     /// QML files only debug builds hold: the memory check's churn.
     const DEBUG_QML: &[&str] = &["qml/Churn.qml"];

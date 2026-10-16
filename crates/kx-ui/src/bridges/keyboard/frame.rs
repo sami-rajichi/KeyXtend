@@ -23,8 +23,8 @@ impl qobject::Keyboard {
         frames::mark(Mark::End);
     }
 
-    /// Does a tap or a key's first press and answers what to redraw, as `run` does, with the frame log's mark once
-    /// the key went out, then the key sound.
+    /// Does a tap, a key's first press or a pad tap and answers what to redraw, as `run` does, with the frame log's
+    /// mark once the key went out, then the key sound; a pad tap has no press open, so its mark is dropped.
     pub(super) fn sent(&self, action: FaceAction) -> QString {
         self.redraw(|h| h.sent(action, || frames::mark(Mark::Sent)))
     }

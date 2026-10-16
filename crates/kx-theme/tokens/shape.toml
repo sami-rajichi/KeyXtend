@@ -77,14 +77,21 @@ icon_px = 11.0
 icon_share = 0.7
 
 [dpad]
-# D-pad: gap between arrows, arrow icon, icon padding, hub and Stop insets (shares of the pad), Stop icon, grid turn.
+# D-pad: gap between arrows, arrow icon, where each arrow sits across the ring from the hub's edge (0) to the pad's edge (1),
+# hub and Stop insets (shares of the pad), Stop icon, grid turn. 0.5 centres each arrow in its quarter, as the iPod click
+# wheel's labels (owner, 2026-10-16).
 gap_px = 2.0
 icon_px = 15.0
-icon_pad = 0.22
+reach = 0.5
 hub = 0.34
 stop = 0.36
 stop_icon_px = 10.0
 turn_deg = 45.0
+# Stop's speed dots under its icon, one lit for slow and both for fast (mock-up .lv): diameter and gap as .lv i, and an unlit
+# dot's opacity, raised from the mock-up's .25 so its place shows while a lit dot keeps 3:1 against it in every palette.
+dot_px = 3.0
+dot_gap_px = 2.0
+dot_off = 0.3
 
 [press]
 # A pressed cap sinks and shrinks (the theme's `press` colour darkens it); the ring while moving or resizing.
@@ -113,6 +120,11 @@ share = 0.4
 [hc_outline]
 # In high contrast a key under the pointer gets an inner outline this wide in Highlight, since a tint is not a system
 # colour (mock-up .scroll-target outline, line 83); not scaled.
+px = 2.0
+
+[outline]
+# The scroll pad's target outline, inside its box in the ring colour (Highlight in high contrast; mock-up .scroll-target, line
+# 83); not scaled.
 px = 2.0
 
 [backdrop]
@@ -264,6 +276,10 @@ weight = 600
 # edge (placePop's, as the panel keeps).
 offset_px = [16.0, 18.0]
 edge_px = 8.0
+# The dot between the mode part and the scroll part (mock-up updateBadge's · at opacity .4): diameter, about a 10.5 px middle
+# dot, and opacity.
+sep_px = 2.0
+sep_share = 0.4
 
 [extra]
 # The resize corner (diameter, icon; not in the mock-up), the bubble (diameter, icon, inset from the screen corner; mock-up .kb-bubble),

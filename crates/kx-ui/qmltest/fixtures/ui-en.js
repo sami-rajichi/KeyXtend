@@ -36,7 +36,9 @@ var lang = {
   }
 };
 var texts = {
+  "badge.fast": "fast",
   "badge.holding": "Holding",
+  "badge.slow": "slow",
   "banner.more": "{$more} more notices",
   "bar.bigger": "Bigger",
   "bar.bubble": "Show the keyboard",
@@ -179,6 +181,7 @@ var texts = {
   "window.list": "Keyboard languages",
   "window.menu": "KeyXtend menu",
   "window.notice": "KeyXtend notice",
+  "window.outline": "Scroll outline",
   "window.pointer": "Pointer helper",
   "window.tip": "KeyXtend tip"
 };

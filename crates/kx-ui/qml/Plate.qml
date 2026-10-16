@@ -91,6 +91,8 @@ Item {
             res: body.res
             s: body.s
             onTip: (name, at) => body.win.hint(name, at)
+            onTapped: dir => body.win.redraw(body.win.keyboard.pad(dir))
+            onHovered: on => body.win.redraw(body.win.keyboard.padHover(on))
         }
         Corner {
             x: parent.width - width / 2

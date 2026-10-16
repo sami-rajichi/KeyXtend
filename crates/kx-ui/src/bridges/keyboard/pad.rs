@@ -1,5 +1,5 @@
-//! The keyboard window's scroll pad: its clicks and the pointer on it go to the face, which publishes them on the bus,
-//! each answering `{board, state}`.
+//! The keyboard window's scroll pad: its clicks, which sound like a key, and the pointer on it go to the face, which
+//! publishes them on the bus, each answering `{board, state}`.
 
 use super::qobject;
 use crate::bridges::qs;
@@ -13,7 +13,7 @@ impl qobject::Keyboard {
             tracing::warn!("QML named no scroll pad arrow");
             return qs(&Redraw::default().to_json());
         };
-        self.run(FaceAction::Pad { dir })
+        self.sent(FaceAction::Pad { dir })
     }
 
     pub(super) fn pad_hover(&self, on: bool) -> QString {

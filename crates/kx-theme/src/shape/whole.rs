@@ -1,4 +1,4 @@
-//! Sizes that apply across the look: hairlines, dimmed keys, the high-contrast outline and the plate over a backdrop.
+//! Sizes that apply across the look: hairlines, dimmed keys, the outlines and the plate over a backdrop.
 
 use serde::{Deserialize, Serialize};
 
@@ -22,6 +22,14 @@ pub struct DimShape {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct OutlineShape {
+    /// Width, not scaled with the keyboard.
+    pub px: f32,
+}
+
+/// The outline around the scroll pad's target, drawn inside its box by four thin windows.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct TargetShape {
     /// Width, not scaled with the keyboard.
     pub px: f32,
 }

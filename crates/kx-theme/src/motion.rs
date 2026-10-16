@@ -8,9 +8,9 @@ use crate::ringmove::{RingFile, RingMotion};
 use crate::theme::{bez, outside_unit};
 
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 17] = [
+pub const MOVES: [&str; 18] = [
     "press", "colour", "plate", "led", "glow", "dot", "carousel", "legends", "stop", "pill",
-    "caption", "panel", "shimmer", "burst", "notice", "menu", "badge",
+    "caption", "panel", "shimmer", "burst", "notice", "menu", "badge", "outline",
 ];
 
 /// The file as written.

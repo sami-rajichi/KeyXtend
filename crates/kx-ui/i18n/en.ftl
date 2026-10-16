@@ -132,13 +132,16 @@ window =
     .list = Keyboard languages
     .tip = { -app } tip
     .pointer = Pointer helper
+    .outline = Scroll outline
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
 
-## The mode badge beside the pointer: its word while Grab holds a press down.
+## The mode badge beside the pointer: its word while Grab holds a press down, and the scroll pad's speed.
 badge =
     .holding = Holding
+    .slow = slow
+    .fast = fast
 
 tray =
     .show = Show keyboard

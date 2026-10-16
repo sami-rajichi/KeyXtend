@@ -10,7 +10,7 @@ use crate::extras::{
 mod check;
 mod whole;
 
-pub use whole::{BackdropShape, DimShape, LineShape, OutlineShape};
+pub use whole::{BackdropShape, DimShape, LineShape, OutlineShape, TargetShape};
 
 /// Top-bar buttons (`.tb`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -147,8 +147,8 @@ pub struct DpadShape {
     pub gap_px: f32,
     /// Arrow icon size.
     pub icon_px: f32,
-    /// Arrow icon padding, as a share of the pad.
-    pub icon_pad: f32,
+    /// Where each arrow sits across the ring of arrows, from the hub's edge (0) to the pad's edge (1).
+    pub reach: f32,
     /// Hub inset, as a share of the pad.
     pub hub: f32,
     /// Stop button inset, as a share of the pad.
@@ -157,6 +157,12 @@ pub struct DpadShape {
     pub stop_icon_px: f32,
     /// Turn of the arrow grid, in degrees.
     pub turn_deg: f32,
+    /// Stop's speed dots under its icon: diameter.
+    pub dot_px: f32,
+    /// Gap between the dots, and between them and the icon.
+    pub dot_gap_px: f32,
+    /// Opacity of a dot whose speed is not on.
+    pub dot_off: f32,
 }
 
 /// Pointer feedback (`.down`) and the move ring.
@@ -243,6 +249,8 @@ pub struct Shape {
     pub dim: DimShape,
     /// The hover outline in high contrast.
     pub hc_outline: OutlineShape,
+    /// The outline around the scroll pad's target.
+    pub outline: TargetShape,
     /// The plate over a system backdrop.
     pub backdrop: BackdropShape,
     /// The notice banner.

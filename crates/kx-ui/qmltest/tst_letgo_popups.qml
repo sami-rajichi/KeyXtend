@@ -137,8 +137,9 @@ Item {
 
         // A working pad, as P5 brings: an arrow slipped off its quarter, or Stop slipped off the pad, acts once.
         function test_a_dpad_arrow_and_stop_act_once_after_a_slip() {
-            const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null });
+            const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null, dir: null, fast: false });
             const pad = createTemporaryObject(padC, root, { box: box, lk: N.lk, res: root.res, s: 1 });
+            const taps = spy(pad, "tapped");
             waitForRendering(pad);
             const arrow = id => Board.all(pad, o => o.Accessible.id === "dpad." + id)[0];
             const hit = a => Board.all(a, o => o.containsMouse !== undefined)[0];
@@ -146,12 +147,13 @@ Item {
             const up = hit(arrow("up"));
             const start = onto(up, glyph(arrow("up")));
             slip(up, onto(up, glyph(arrow("down"))), start);
-            compare(pad.dir, 0, "up scrolls, down never");
+            compare(taps.signalArguments.map(a => a[0]), ["up"], "up scrolls, down never");
+            pad.box = Object.assign({}, box, { dir: "up" });
             const stop = arrow("stop");
             tryCompare(stop, "scale", 1, 2000, "Stop pops in");
             const area = hit(stop);
             slip(area, Qt.point(-pad.width, area.height / 2));
-            compare(pad.dir, -1, "Stop, once");
+            compare(taps.signalArguments.map(a => a[0]), ["up", ""], "Stop, once");
         }
     }
 }

@@ -36,7 +36,9 @@ var lang = {
   }
 };
 var texts = {
+  "badge.fast": "سريع",
   "badge.holding": "قيد الإمساك",
+  "badge.slow": "بطيء",
   "banner.more": "{$more} إشعار آخر",
   "bar.bigger": "أكبر",
   "bar.bubble": "إظهار لوحة المفاتيح",
@@ -179,6 +181,7 @@ var texts = {
   "window.list": "لغات لوحة المفاتيح",
   "window.menu": "قائمة KeyXtend",
   "window.notice": "إشعار KeyXtend",
+  "window.outline": "إطار التمرير",
   "window.pointer": "مساعد المؤشر",
   "window.tip": "تلميح KeyXtend"
 };

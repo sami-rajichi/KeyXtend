@@ -276,3 +276,6 @@ fn an_odd_tray_share_or_label_size_is_refused() {
         ),
     ]);
 }
+
+/// The scroll pad's arrows, Stop's speed dots and the target's outline.
+mod pad;

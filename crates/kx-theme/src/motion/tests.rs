@@ -143,3 +143,13 @@ fn the_notice_and_the_menu_pop_in_as_the_mock_up_does() {
     let bad = text().replacen("menu_scale = 0.96", "menu_scale = 1.5", 1);
     assert!(parse(&bad).expect_err("above 1").contains("menu_scale"));
 }
+
+#[test]
+fn the_scroll_outline_fades_in_with_the_badge_and_must_be_in_the_file() {
+    assert!(MOVES.contains(&"outline"), "a move the faces play");
+    let m = load().expect("motion.toml loads").full;
+    assert_eq!(m.moves["outline"], m.moves["badge"], "they show together");
+    let gone = text().replacen("outline = {", "outlines = {", 1);
+    let e = parse(&gone).expect_err("outline is missing");
+    assert!(e.contains("moves.outline"), "{e}");
+}

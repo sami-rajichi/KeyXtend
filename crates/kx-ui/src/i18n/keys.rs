@@ -50,6 +50,12 @@ pub const WINDOW_LIST: &str = "window.list";
 pub const WINDOW_TIP: &str = "window.tip";
 /// The pointer helper's title: the hold ring and the mode badge.
 pub const WINDOW_POINTER: &str = "window.pointer";
+/// The title of the scroll pad's outline windows.
+pub const WINDOW_OUTLINE: &str = "window.outline";
+/// The badge's word while the pad scrolls slowly.
+pub const BADGE_SLOW: &str = "badge.slow";
+/// The badge's word while the pad scrolls fast.
+pub const BADGE_FAST: &str = "badge.fast";
 /// The mode badge's word while Grab holds a press down.
 pub const BADGE_HOLDING: &str = "badge.holding";
 /// How many more notices wait behind the one the banner shows: `$more`.

@@ -4,9 +4,9 @@ use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, row or mark
-    /// of 0 or less, a panel gap, label padding, mark gap or badge place below 0, and a lit dot no larger than the
-    /// others, naming the size.
+    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark or dot
+    /// of 0 or less, a panel gap, label padding, mark or dot gap or badge place below 0, and a lit Cycle dot no larger
+    /// than the others, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -54,8 +54,9 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outline, the smallest label and the mark's size must be above 0, and the panel
-    /// gaps, the label padding, the language icon's gap, the mark's and the badge's place 0 or more, all finite.
+    /// The shimmer span, the outlines, the smallest label, the mark's and the dots' sizes must be above 0, and the
+    /// panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the speed dots'
+    /// gap 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -63,6 +64,9 @@ impl Shape {
             ("legend.label_min_px", self.legend.label_min_px),
             ("bar.mark_px", self.bar.mark_px[0]),
             ("bar.mark_px", self.bar.mark_px[1]),
+            ("dpad.dot_px", self.dpad.dot_px),
+            ("badge.sep_px", self.badge.sep_px),
+            ("outline.px", self.outline.px),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
@@ -74,6 +78,7 @@ impl Shape {
             ("lang.icon_gap_px", self.lang.icon_gap_px),
             ("bar.mark_px", self.bar.mark_px[2]),
             ("badge.edge_px", self.badge.edge_px),
+            ("dpad.dot_gap_px", self.dpad.dot_gap_px),
         ]);
         match zero_up.find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
             Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),
@@ -89,7 +94,8 @@ impl Shape {
             ("legend.corner_scale", self.legend.corner_scale[1]),
             ("lang.side", self.lang.side[1]),
             ("lang.back_share", self.lang.back_share),
-            ("dpad.icon_pad", self.dpad.icon_pad),
+            ("dpad.reach", self.dpad.reach),
+            ("dpad.dot_off", self.dpad.dot_off),
             ("dpad.hub", self.dpad.hub),
             ("dpad.stop", self.dpad.stop),
             ("press.scale", self.press.scale),
@@ -105,6 +111,7 @@ impl Shape {
             ("tray.radius_share", self.tray.radius_share),
             ("tray.glyph_share", self.tray.glyph_share),
             ("backdrop.plate", self.backdrop.plate),
+            ("badge.sep_share", self.badge.sep_share),
         ];
         match outside_unit(&shares) {
             Some((n, v)) => Err(format!("shape: {n} {v} is not 0 to 1")),

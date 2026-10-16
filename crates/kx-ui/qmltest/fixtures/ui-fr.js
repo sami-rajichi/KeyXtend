@@ -36,7 +36,9 @@ var lang = {
   }
 };
 var texts = {
+  "badge.fast": "rapide",
   "badge.holding": "Saisi",
+  "badge.slow": "lent",
   "banner.more": "{$more} autres notifications",
   "bar.bigger": "Plus grand",
   "bar.bubble": "Afficher le clavier",
@@ -179,6 +181,7 @@ var texts = {
   "window.list": "Langues du clavier",
   "window.menu": "Menu de KeyXtend",
   "window.notice": "Notification de KeyXtend",
+  "window.outline": "Contour de défilement",
   "window.pointer": "Aide au pointeur",
   "window.tip": "Info-bulle de KeyXtend"
 };

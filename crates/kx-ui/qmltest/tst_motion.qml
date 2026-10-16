@@ -209,15 +209,16 @@ Item {
         }
 
         function test_stop_pops_in_with_a_spring() {
-            const p = createTemporaryObject(padC, root, { box: { x: 200, y: 10, w: 120, h: 120, dim: false, name: "key.dpad", tip: null }, lk: F.lk, res: root.res, s: 1 });
+            const box = { x: 200, y: 10, w: 120, h: 120, dim: false, name: "key.dpad", tip: null, dir: null, fast: false };
+            const p = createTemporaryObject(padC, root, { box: box, lk: F.lk, res: root.res, s: 1 });
             const stop = find(p, o => o.scale === 0);
             verify(stop, "Stop starts at scale 0");
-            p.dir = 1;
+            p.box = Object.assign({}, box, { dir: "right" });
             verify(stop.scale < 1, "it grows");
             let over = false;
             tryVerify(() => { over = over || stop.scale > 1; return stop.scale === 1; }, 1000);
             verify(over, "the spring overshoots");
-            p.dir = -1;
+            p.box = box;
             tryVerify(() => !stop.visible, 1000);
         }
     }
