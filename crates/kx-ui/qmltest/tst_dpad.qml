@@ -116,18 +116,20 @@ Item {
             }
         }
 
-        // High contrast has no faded colour, so an unlit dot is a hollow ring in Stop's ink and a lit one is filled.
-        function test_in_high_contrast_an_unlit_dot_is_a_hollow_ring() {
-            const p = pad(NC.lk, 1, { dir: "up" }), stop = arrow(p, "stop");
-            tryCompare(stop, "scale", 1, 2000);
-            const [on, off] = Board.all(stop, o => o.lit !== undefined && o.radius !== undefined);
-            const ink = NC.lk.dpad.stop_ink;
-            compare([on.lit, off.lit], [true, false], "slow");
-            compare([on.opacity, off.opacity], [1, 1], "nothing faded");
-            verify(Qt.colorEqual(on.color, ink) && on.border.width === 0, "lit: filled");
-            verify(Qt.colorEqual(off.color, "transparent"), "unlit: hollow");
-            verify(Qt.colorEqual(off.border.color, ink), "in Stop's ink");
-            compare(off.border.width, NC.lk.shape.line.px, "a hairline");
+        // In high contrast an unlit dot is faded as Cycle's are, since a hollow ring that small reads as filled; kx-theme
+        // keeps it 3:1 from a lit one.
+        function test_in_high_contrast_an_unlit_dot_is_faded_as_cycles_are() {
+            for (const s of [Face.sizeMin, 1]) {
+                const p = pad(NC.lk, s, { dir: "up" }), stop = arrow(p, "stop"), d = NC.lk.dpad;
+                tryCompare(stop, "scale", 1, 2000);
+                const [on, off] = Board.all(stop, o => o.lit !== undefined && o.radius !== undefined);
+                compare([on.lit, off.lit], [true, false], "slow");
+                for (const dot of [on, off])
+                    verify(Qt.colorEqual(dot.color, d.stop_ink), "filled in Stop's ink, not a ring");
+                compare([on.opacity, off.opacity], [1, NC.lk.shape.dpad.dot_off], "the unlit one faded");
+                const ink = Qt.color(d.stop_ink), seen = Qt.tint(d.stop, Qt.rgba(ink.r, ink.g, ink.b, off.opacity));
+                verify(!Qt.colorEqual(seen, d.stop_ink), "an unlit dot shows apart from a lit one at " + s);
+            }
         }
 
         // Stop takes only taps on its disc, so a tap just outside the hub, on a corner of Stop's square, takes the arrow.

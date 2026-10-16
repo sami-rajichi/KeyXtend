@@ -1,5 +1,5 @@
 //! The scroll pad as drawn: a pressed arrow on the keys' press shade with their press text, and Stop's speed dots,
-//! hollow when unlit in high contrast.
+//! whose unlit one is faded in high contrast too, as Cycle's.
 
 use super::*;
 
@@ -36,15 +36,11 @@ fn a_pressed_arrow_sits_on_the_keys_press_shade_and_takes_their_press_text() {
 #[test]
 fn a_lit_speed_dot_stands_out_from_an_unlit_one_in_every_look() {
     let t = themes();
-    for (at, v) in views(&t, &SysLook::default()) {
+    // High contrast fades it too, as Cycle's dots, since a hollow ring that small reads as filled.
+    for (at, v) in every_view(&t) {
         let (d, share) = (&v.dpad, v.shape.dpad.dot_off);
         let unlit = d.stop_ink.over(d.stop, share);
         let ratio = contrast(d.stop_ink, unlit);
         assert!(ratio >= WCAG_SHAPES, "{at}: {ratio:.2}:1");
-    }
-    // High contrast has no faded colour, so an unlit dot is a hollow ring in Stop's ink, on Stop.
-    for (at, v) in views(&t, &hc()) {
-        let ratio = contrast(v.dpad.stop_ink, v.dpad.stop);
-        assert!(ratio >= WCAG_SHAPES, "{at} hc: {ratio:.2}:1");
     }
 }

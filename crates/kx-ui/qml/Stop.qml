@@ -49,19 +49,16 @@ Rectangle {
         model: stop.pad.speeds
         delegate: Rectangle {
             required property int index
-            // Lit up to the speed it scrolls at; an unlit dot keeps its place, faded, or hollow in high contrast, which
-            // has no faded colour.
+            // Lit up to the speed it scrolls at; an unlit dot keeps its place, faded, in high contrast too, as Cycle's
+            // dots, since a hollow ring that small reads as filled.
             readonly property bool lit: index <= stop.pad.pace
-            readonly property bool hollow: !lit && stop.pad.lk.contrast
             x: (stop.width - stop.row) / 2 + index * (stop.dot + stop.gap)
             y: stop.head + stop.icon + stop.gap
             width: stop.dot
             height: stop.dot
             radius: stop.dot / 2
-            color: hollow ? "transparent" : stop.pad.d.stop_ink
-            border.width: hollow ? stop.pad.lk.shape.line.px : 0
-            border.color: stop.pad.d.stop_ink
-            opacity: lit || hollow ? 1 : stop.sh.dot_off
+            color: stop.pad.d.stop_ink
+            opacity: lit ? 1 : stop.sh.dot_off
         }
     }
     Act {
