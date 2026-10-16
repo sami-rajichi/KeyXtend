@@ -206,8 +206,8 @@ pub fn hold<O: Own>(own: &O, to: LayoutId) -> Result<Option<LayoutId>, String> {
 
 /// Runs `run` with layout `to` in front and puts the owner's back after, even when it fails; `run` gets the hold to
 /// call after each step that closed its target-window. The result line gains the layout, the session's at the end, the
-/// layout each hold found in front, and whether the owner's came back. It passes only when the reading after use and
-/// the session at the end were both in `to` and the owner's came back.
+/// layout each hold found in front and whether the owner's came back; it passes only when the reading after use and the
+/// session at the end were both in `to` and the owner's came back.
 pub fn within<O: Own>(
     own: &O,
     to: LayoutId,
