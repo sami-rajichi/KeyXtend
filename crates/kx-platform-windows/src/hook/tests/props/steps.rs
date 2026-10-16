@@ -38,6 +38,8 @@ pub(super) enum Step {
     Stall(u32),
     /// Our next event in the stream passes our hooks by, so its echo is lost.
     Swallow,
+    /// Our hooks miss the echo at this place, wrapping, of the next send that echoes inside the call.
+    Lose(usize),
     /// A wake or the deadline timer.
     Turn,
     /// The health timer.
@@ -131,7 +133,7 @@ pub(super) fn busy() -> impl Strategy<Value = Step> {
     })
 }
 
-/// Steps where the queue never fills and the engine never fails; an echo of ours may be swallowed.
+/// Steps where the queue never fills and the engine never fails; an echo of ours may be swallowed or dropped.
 pub(super) fn calm() -> impl Strategy<Value = Step> {
     prop_oneof![
         4 => gesture().prop_map(Step::Hand),
@@ -144,6 +146,7 @@ pub(super) fn calm() -> impl Strategy<Value = Step> {
         1 => prop_oneof![Just(None), (0..=MAX_ACTS).prop_map(Some)].prop_map(Step::Takes),
         1 => script().prop_map(Step::Plan),
         1 => Just(Step::Swallow),
+        1 => any::<usize>().prop_map(Step::Lose),
     ]
 }
 

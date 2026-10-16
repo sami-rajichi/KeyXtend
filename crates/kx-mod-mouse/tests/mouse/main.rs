@@ -12,4 +12,5 @@ mod props;
 mod reset;
 mod rig;
 mod runtime;
+mod scroll;
 mod wakes;

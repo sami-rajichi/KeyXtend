@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 14:46 — P5: the mouse module while the pad scrolls, and two hook notes
+The mouse module now keeps its hook on while the scroll pad scrolls, which it hears from the scroll module's state and asks for once at start, so any start order works. While the pad scrolls the badge follows the pointer and each physical press goes out as `PointerPressed`, saying whether it landed on our windows; scrolling alone lets every event pass untouched, and Right-click and Grab work as before. The hook's stats line gains `passed_inside`, the user's events heard inside our own send, which pass without the engine, and kx-gates reads it by name. The hook's property tests now drop an echo heard inside our send, and the hand's order and the let-go still hold.
+
 ## 2026-10-16 13:53 — P5: the keyboard's scroll pad goes live
 The pad no longer comes "in a later version": it works while the scroll module runs, and otherwise it is dimmed with the tip "The scroll pad is off" in English, French and Arabic. An arrow asks the module to scroll and Stop to stop, the pointer on the pad asks once per change for the outline, newest last from any thread, and the state now carries the pad's way and speed for the view to light. The keyboard asks for the module's state at start and survives either start order, and a scroll module that comes live under the pointer still outlines its target.
 

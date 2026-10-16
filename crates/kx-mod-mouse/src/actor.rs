@@ -1,12 +1,13 @@
-//! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands to the
-//! engine, and turns the engine's notes into bus events. A plain struct driven by messages, plus a thread loop.
+//! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands and the pad's
+//! scrolling to the engine, and turns the engine's notes into bus events. A plain struct driven by messages, plus a
+//! thread loop.
 
 mod notes;
 
 use crate::hook_engine::{Cmd, HookEngine, Moves};
 use crate::{Engine, EngineCfg, ID, MouseSettings, Note};
 use kx_module_api::ports::{
-    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, Scan, Toggle,
+    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, Scan, ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
 use std::sync::Arc;
@@ -23,6 +24,8 @@ pub enum Msg {
     Latches(Vec<Scan>),
     /// A module asks for the state.
     Ask,
+    /// The pad started or stopped scrolling.
+    Scroll(bool),
     /// The engine noted something; for a move, the latest point waits in the shared move slot.
     Note(Note),
     /// The engine no longer needs the hook, after applying this many queued commands.
@@ -61,12 +64,14 @@ pub struct Actor {
     grab: GrabState,
     /// The keyboard's latched modifiers.
     latches: Vec<Scan>,
+    /// The scroll pad scrolls.
+    scrolling: bool,
     live: Option<Live>,
     /// How many engines were made; each run carries its number.
     runs: u64,
     /// The last start failed; until one works, a start for latches fails without a word.
     failing: bool,
-    /// A give-up already restarted for latches; until a mode tap or a latch change, the next one starts nothing.
+    /// A give-up already restarted; until a mode tap, a latch change or a scroll change, the next one starts nothing.
     restarted: bool,
 }
 
@@ -92,6 +97,7 @@ impl Actor {
             rclick: saved,
             grab: GrabState::Off,
             latches: Vec::new(),
+            scrolling: false,
             live: None,
             runs: 0,
             failing: false,
@@ -109,7 +115,8 @@ impl Actor {
         }
     }
 
-    /// Starts the hook at once for a saved Right-click, then tells the state and asks the keyboard for its latches.
+    /// Starts the hook at once for a saved Right-click, then tells the state and asks for the latches and the pad's
+    /// state, so any start order works.
     pub fn begin(&mut self) {
         if self.saved {
             self.start(None);
@@ -119,6 +126,7 @@ impl Actor {
         }
         self.tell_state();
         self.publish(&LatchesAsk);
+        self.publish(&ScrollAsk);
     }
 
     /// Handles one message; false after `Stop`, when the actor is done.
@@ -133,6 +141,7 @@ impl Actor {
                 self.latch(held);
             }
             Msg::Ask => self.tell_state(),
+            Msg::Scroll(on) => self.scroll(on),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
             Msg::Lost(run) => self.lost(run),
@@ -175,6 +184,17 @@ impl Actor {
         }
     }
 
+    /// Keeps whether the pad scrolls: scrolling starts the hook, and a change goes to the running engine.
+    fn scroll(&mut self, on: bool) {
+        let changed = std::mem::replace(&mut self.scrolling, on) != on;
+        self.restarted &= !changed;
+        match self.live {
+            Some(_) if changed => self.command(Cmd::Scroll(on)),
+            None if on => self.start(Some(Cmd::Scroll(on))),
+            _ => {}
+        }
+    }
+
     /// Starts the hook with a fresh engine in the wanted state, given `first` at once.
     fn start(&mut self, first: Option<Cmd>) {
         let base = EngineCfg::from(&self.settings);
@@ -183,8 +203,9 @@ impl Actor {
             ..base
         });
         engine.set_latches(self.latches.clone());
-        // Only latches start quietly: a mouse key or a restored Right-click is a mode the user expects on.
-        let expected = !matches!(first, Some(Cmd::Latches(_)));
+        engine.set_scrolling(self.scrolling);
+        // A mouse key or a restored Right-click is a mode the user expects on; latches and scrolling start quietly.
+        let expected = !first.as_ref().is_some_and(Cmd::quiet);
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         self.runs += 1;
@@ -221,8 +242,8 @@ impl Actor {
     }
 
     /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
-    /// session and the user hears why. Held latches then get one fresh run at once, and no more until a mode tap or a
-    /// latch change, so a fault that repeats never loops.
+    /// session and the user hears why. Held latches or scrolling then get one fresh run at once, and no more until the
+    /// user acts again, so a fault that repeats never loops.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
@@ -231,8 +252,9 @@ impl Actor {
         self.drop_run();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
-        if !self.latches.is_empty() && !std::mem::replace(&mut self.restarted, true) {
-            // A start for latches, so a refusal takes their quiet path.
+        let wanted = self.scrolling || !self.latches.is_empty();
+        if wanted && !std::mem::replace(&mut self.restarted, true) {
+            // A quiet start: the engine takes the latches and scrolling as they stand.
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
         self.tell_state();
@@ -261,6 +283,7 @@ impl Actor {
             reinstalls = s.reinstalls,
             send_errors = s.send_errors,
             lost_echoes = s.lost_echoes,
+            passed_inside = s.passed_inside,
             "{STOPPED_LINE}"
         );
     }

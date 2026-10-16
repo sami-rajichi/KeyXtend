@@ -8,6 +8,7 @@ use kx_module_api::ports::Toggle;
 mod grab;
 mod mods;
 mod notes;
+mod scroll;
 mod timing;
 
 /// The default hold, 1.5 s, in µs.

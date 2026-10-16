@@ -108,7 +108,7 @@ impl<O: Os> Host<O> {
             queue,
             out: Vec::with_capacity(out),
             echo: Echo::new(cfg.echo_ms, out.saturating_mul(FLIGHTS)),
-            inbox: Inbox::new(out),
+            inbox: Inbox::new(out, source),
             health: Health::new(cfg, seen),
             os,
             engine,

@@ -3,11 +3,12 @@
 
 use kx_module_api::ports::{Button, PointerAct};
 
+use super::fake::Heard;
 use super::run::sends;
-use super::{A, B, CFG, CTRL, KEY_UP, LEFT_DOWN, LEFT_UP, MOVE, Rig, SHIFT, rig};
+use super::{A, B, CFG, CTRL, KEY_UP, LEFT_DOWN, LEFT_UP, MOVE, OTHER, Rig, SHIFT, rig};
 use crate::hook::Source;
 use crate::hook::inbox::{ECHOES_PER_ACT, Inbox};
-use crate::keys::{TAG, replay_tag};
+use crate::keys::{SIM_TAG, TAG, replay_tag};
 
 /// An id no act out ever has in these tests, which send only a few acts from 0.
 const STRAY: u16 = u16::MAX / 2;
@@ -170,8 +171,64 @@ fn a_panic_inside_our_send_leaves_no_stale_echo_for_the_next_batch() {
 }
 
 #[test]
+fn the_hands_events_heard_inside_our_send_pass_without_the_engine_and_are_counted() {
+    let mut rig = inside();
+    rig.world.hand_inside.set(2);
+    rig.plan().settle_acts = vec![LEFT_A];
+    rig.host.turn();
+    assert_eq!(
+        rig.heard(),
+        [Heard::Settle(rig.now())],
+        "the engine heard none"
+    );
+    assert_eq!(rig.stats().passed_inside, 2);
+    rig.host.turn();
+    assert_eq!(rig.stats().passed_inside, 4, "each send adds its own");
+    rig.plan().settle_acts.clear();
+    rig.host.turn();
+    assert_eq!(
+        rig.stats().passed_inside,
+        4,
+        "no send, nothing heard inside"
+    );
+}
+
+#[test]
+fn a_dropped_echo_inside_our_send_ends_its_wait_as_lost_unless_a_newer_one_came() {
+    let mut rig = inside();
+    rig.world.lose.set(Some(0));
+    rig.settle(&[PointerAct::Move(A)]);
+    assert!(!rig.host.is_clear(), "its only echo was dropped");
+    rig.world.pass(CFG.echo_ms + 1);
+    assert!(!rig.hand(MOVE, B), "the wait ends at echo_ms");
+    assert_eq!(rig.stats().lost_echoes, 1);
+    rig.world.lose.set(Some(0));
+    rig.settle(&[LEFT_A, PointerAct::Move(B)]);
+    assert!(rig.host.is_clear(), "a newer echo of the batch came");
+    assert_eq!(rig.stats().lost_echoes, 1);
+}
+
+#[test]
+fn the_inbox_counts_only_the_users_events_for_its_source() {
+    let mut hand = Inbox::new(1, Source::Physical);
+    hand.user(false, 0);
+    for extra in [OTHER, replay_tag(1), TAG, SIM_TAG] {
+        hand.user(true, extra);
+    }
+    assert_eq!(hand.take_passed(), 1, "only the hand's");
+    assert_eq!(hand.take_passed(), 0, "taken");
+    let mut sim = Inbox::new(1, Source::Simulated);
+    sim.user(false, 0);
+    sim.user(true, SIM_TAG);
+    assert_eq!(sim.take_passed(), 1, "only the gate tool's");
+    let mut none = Inbox::none();
+    none.user(false, 0);
+    assert_eq!(none.take_passed(), 0, "nothing lent counts nothing");
+}
+
+#[test]
 fn the_inbox_keeps_only_our_echoes_within_its_room() {
-    let mut inbox = Inbox::new(1);
+    let mut inbox = Inbox::new(1, Source::Physical);
     assert!(!inbox.hear(TAG), "our keyboard's input is not an echo");
     for id in 0..3 {
         let kept = inbox.hear(replay_tag(id));

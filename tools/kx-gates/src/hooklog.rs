@@ -29,6 +29,8 @@ pub struct HookLine {
     pub send_errors: u32,
     /// How many times its own input did not come back through the hook in time.
     pub lost_echoes: u32,
+    /// The user's events heard inside the hook's own send, which passed without it.
+    pub passed_inside: u32,
 }
 
 impl HookLine {
@@ -90,6 +92,7 @@ pub fn sum(lines: &[HookLine]) -> HookLine {
         reinstalls: a.reinstalls.saturating_add(b.reinstalls),
         send_errors: a.send_errors.saturating_add(b.send_errors),
         lost_echoes: a.lost_echoes.saturating_add(b.lost_echoes),
+        passed_inside: a.passed_inside.saturating_add(b.passed_inside),
     })
 }
 
@@ -127,10 +130,10 @@ mod tests {
         format!("{at}  INFO kx_mod_mouse::actor: {STOPPED_LINE} {fields}")
     }
 
-    const FIELDS: &str =
-        "events=12 p99_us=40 max_us=90 max_wait_ms=3 reinstalls=0 send_errors=0 lost_echoes=1";
-    const SHUFFLED: &str =
-        "lost_echoes=1 max_us=90 events=12 send_errors=0 p99_us=40 reinstalls=0 max_wait_ms=3";
+    const FIELDS: &str = "events=12 p99_us=40 max_us=90 max_wait_ms=3 reinstalls=0 send_errors=0 \
+                          lost_echoes=1 passed_inside=2";
+    const SHUFFLED: &str = "passed_inside=2 lost_echoes=1 max_us=90 events=12 send_errors=0 \
+                            p99_us=40 reinstalls=0 max_wait_ms=3";
 
     fn sample() -> HookLine {
         HookLine {
@@ -141,6 +144,7 @@ mod tests {
             reinstalls: 0,
             send_errors: 0,
             lost_echoes: 1,
+            passed_inside: 2,
         }
     }
 
@@ -190,6 +194,7 @@ mod tests {
             reinstalls: 1,
             send_errors: 2,
             lost_echoes: 3,
+            passed_inside: 5,
         };
         let want = HookLine {
             events: 17,
@@ -199,6 +204,7 @@ mod tests {
             reinstalls: 1,
             send_errors: 2,
             lost_echoes: 4,
+            passed_inside: 7,
         };
         assert_eq!(sum(&[a, b]), want);
         assert_eq!(sum(&[]), HookLine::default());

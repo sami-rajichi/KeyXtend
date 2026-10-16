@@ -61,6 +61,10 @@ pub(super) struct World {
     pub inside: Cell<bool>,
     /// Echoes of these ids are heard inside each send, before its own.
     pub strays: RefCell<Vec<u16>>,
+    /// The next send that echoes inside the call drops its echo at this place in Windows' order, wrapping.
+    pub lose: Cell<Option<usize>>,
+    /// The hand's events heard inside each send; they pass without the host.
+    pub hand_inside: Cell<usize>,
     /// Both hooks are in, so they hear what a send echoes inside the call.
     pub hooked: Cell<bool>,
 }
@@ -82,6 +86,8 @@ impl Default for World {
             ids: RefCell::default(),
             inside: Cell::new(false),
             strays: RefCell::default(),
+            lose: Cell::new(None),
+            hand_inside: Cell::new(0),
             hooked: Cell::new(false),
         }
     }
@@ -150,9 +156,10 @@ impl Os for Fake {
             for &id in self.0.strays.borrow().iter() {
                 inbox.hear(replay_tag(id));
             }
+            (0..self.0.hand_inside.get()).for_each(|_| inbox.user(false, 0));
         }
-        if self.0.inside.get() && self.0.hooked.get() {
-            echo_inside(&taken, inbox);
+        if self.0.inside.get() && self.0.hooked.get() && !taken.is_empty() {
+            echo_inside(&taken, inbox, self.0.lose.take());
         }
         assert!(!self.0.panic_send.get(), "the fake send panics");
         self.0.ids.borrow_mut().extend(taken);
@@ -183,13 +190,16 @@ impl Os for Fake {
 }
 
 /// Echoes `taken` into `inbox` as Windows does inside `SendInput`: the move of each pointed act, then each button and
-/// key, in the batch's order.
-fn echo_inside(taken: &[(PointerAct, u16)], inbox: &mut Inbox) {
+/// key, in the batch's order. The echo at place `lose`, wrapping, never reaches the inbox.
+fn echo_inside(taken: &[(PointerAct, u16)], inbox: &mut Inbox, lose: Option<usize>) {
     let moves = taken.iter().filter(|(act, _)| point(*act).is_some());
     let rest = taken
         .iter()
         .filter(|(act, _)| !matches!(act, PointerAct::Move(_)));
-    for &(_, id) in moves.chain(rest) {
+    let ids: Vec<u16> = moves.chain(rest).map(|&(_, id)| id).collect();
+    let gone = lose.map(|k| k % ids.len());
+    let kept = ids.iter().enumerate().filter(|&(k, _)| gone != Some(k));
+    for (_, &id) in kept {
         inbox.hear(replay_tag(id));
     }
 }

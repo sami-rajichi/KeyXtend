@@ -35,6 +35,7 @@ fn the_hook_starts_only_when_a_mode_needs_it_and_stops_once_idle() {
     let told = [
         shown(false, Off),
         Heard::AskLatches,
+        Heard::AskScroll,
         shown(true, Off),
         shown(false, Off),
     ];
@@ -54,7 +55,8 @@ fn a_right_click_toggle_is_saved_and_a_restart_brings_it_back() {
     let mut again = Rig::with(|host| host.put(RCLICK, saved.rclick.into()));
     again.begin();
     assert!(again.hook.running(), "the hook starts at once");
-    assert_eq!(again.take(), [shown(true, Off), Heard::AskLatches]);
+    let told = [shown(true, Off), Heard::AskLatches, Heard::AskScroll];
+    assert_eq!(again.take(), told);
     assert!(again.host.sink.writes().is_empty());
 }
 
@@ -133,7 +135,7 @@ fn latches_start_the_hook_and_go_around_the_next_click() {
 fn an_ask_publishes_the_state_again_so_either_start_order_ends_right() {
     let mut rig = Rig::new();
     rig.begin();
-    let first = [shown(false, Off), Heard::AskLatches];
+    let first = [shown(false, Off), Heard::AskLatches, Heard::AskScroll];
     assert_eq!(
         rig.take(),
         first,

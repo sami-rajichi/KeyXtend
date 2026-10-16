@@ -50,6 +50,8 @@ enum Step {
     Rclick(bool),
     /// The latches change.
     Latch(Vec<Scan>),
+    /// Scrolling starts or ends.
+    Scroll(bool),
     /// The host stops mid-run and starts again with the same engine.
     Release,
     /// The hook misses the left button's release.
@@ -72,6 +74,7 @@ fn command() -> impl Strategy<Value = Step> {
         select(vec![Toggle::RightClick, Toggle::Grab]).prop_map(Step::Toggle),
         any::<bool>().prop_map(Step::Rclick),
         subsequence(mods, 0..=MODS).prop_map(Step::Latch),
+        any::<bool>().prop_map(Step::Scroll),
     ]
 }
 
@@ -103,6 +106,14 @@ fn rings_pair(notes: &[Note]) -> bool {
         }
     }
     !open
+}
+
+/// How many presses `notes` tell.
+fn presses(notes: &[Note]) -> usize {
+    notes
+        .iter()
+        .filter(|n| matches!(n, Note::Pressed { .. }))
+        .count()
 }
 
 proptest! {
@@ -177,6 +188,26 @@ proptest! {
         let mut rig = Rig::play(&steps, rclick, Model::Misses);
         rig.recover();
         prop_assert!(rig.os.idle());
+    }
+
+    /// While scrolling with no mode and no latch, every event passes, nothing is sent, and each press is noted once.
+    #[test]
+    fn scrolling_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
+        let mut rig = Rig::play(&[(0, Step::Scroll(true))], false, Model::Strict);
+        rig.more(&steps);
+        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert!(rig.e.needs_hook());
+        prop_assert_eq!(presses(&rig.notes), rig.pressed);
+        let badge = |n: &Note| matches!(n, Note::Pressed { .. } | Note::Moved { .. });
+        prop_assert!(rig.notes.iter().all(badge), "{:?}", rig.notes);
+    }
+
+    /// Each physical press is noted once while scrolling and never otherwise, whatever the modes do with it.
+    #[test]
+    fn presses_are_noted_once_and_only_while_scrolling(rclick in any::<bool>(), steps in mixed()) {
+        let mut rig = Rig::play(&steps, rclick, Model::Strict);
+        rig.finish();
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
     }
 
     /// Each hold's ring is closed once, by an end or a fire, before the next starts, so the overlay never keeps one.

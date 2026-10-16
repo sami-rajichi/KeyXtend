@@ -5,8 +5,9 @@ use crate::logs::{MESSAGE, Planned, lines_of};
 use crate::rig::{RCLICK, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, GrabState, HookConfig, HookError, HookRun, LatchesAsk,
-    LatchesChanged, PointerEngine, PointerHook, PointerHookKey, Scan, Toggle,
+    AssistAsk, AssistChanged, AssistToggle, Dir, GrabState, HookConfig, HookError, HookRun,
+    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, Scan, ScrollAsk,
+    ScrollChanged, Toggle,
 };
 use kx_module_api::{
     Bus, Capability, Event, Module, ModuleCx, ModuleError, Notice, ServiceError, ServiceKey,
@@ -206,6 +207,43 @@ fn the_actor_thread_asks_for_latches_and_a_latch_starts_the_hook() {
     assert!(live.hook.running());
     live.stop();
     assert_eq!(live.hook.stops(), 1);
+}
+
+/// Waits until the actor handled every message sent before this ask.
+fn synced(live: &Live, told: &Receiver<AssistChanged>) {
+    live.bus.publish(&AssistAsk).unwrap();
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)));
+}
+
+#[test]
+fn the_actor_thread_asks_for_the_scroll_state_and_scrolling_runs_the_hook() {
+    let listen = |bus: &Bus| (hear::<AssistChanged>(bus), hear::<ScrollAsk>(bus));
+    let (mut live, ((_e1, told), (_e2, asked))) = Live::start(|_| {}, listen);
+    assert_eq!(asked.recv_timeout(WAIT), Ok(ScrollAsk));
+    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)));
+    let dir = Some(Dir::Down);
+    let (fast, still) = (false, None);
+    live.bus
+        .publish(&ScrollChanged {
+            live: true,
+            dir,
+            fast,
+        })
+        .unwrap();
+    synced(&live, &told);
+    assert!(live.hook.running(), "scrolling starts the hook");
+    let idle = ScrollChanged {
+        live: true,
+        dir: still,
+        fast,
+    };
+    live.bus.publish(&idle).unwrap();
+    synced(&live, &told);
+    live.hook.settle(T0);
+    synced(&live, &told);
+    assert!(!live.hook.running(), "a still pad lets it go");
+    assert!(asked.try_recv().is_err(), "asked once");
+    live.stop();
 }
 
 #[test]

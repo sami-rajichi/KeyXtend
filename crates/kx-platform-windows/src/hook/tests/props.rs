@@ -94,10 +94,11 @@ fn play(steps: &[Step], inside: bool) -> End {
             Step::Pass(ms) => sim.pass(*ms),
             Step::Stall(ms) => sim.stall(*ms),
             Step::Swallow => sim.swallow(),
+            Step::Lose(k) => sim.world().lose.set(Some(*k)),
             Step::Turn => sim.call(Host::turn),
             Step::Check => sim.call(Host::check),
             Step::Release => sim.call(Host::release),
-            Step::Takes(n) => sim.takes(*n),
+            Step::Takes(n) => sim.world().takes.set(*n),
             Step::Plan(s) => s.apply(&mut sim.plan()),
             Step::Flood(n) => (0..*n).for_each(|_| sim.gesture(Gesture::Move)),
             Step::Rush(n, g) => {
@@ -233,12 +234,16 @@ proptest! {
     }
 
     /// With every echo heard inside our send, as Windows runs our hooks there, a calm run keeps the hand's order and
-    /// loses no wait at all, and nothing the hand let go stays down.
+    /// loses no wait unless our hooks missed an echo, and nothing the hand let go stays down.
     #[test]
-    fn a_calm_run_with_echoes_inside_our_send_loses_no_wait(steps in vec(calm(), 0..=CALM_STEPS)) {
+    fn a_calm_run_with_echoes_inside_our_send_loses_only_a_missed_echo(
+        steps in vec(calm(), 0..=CALM_STEPS),
+    ) {
         let end = play(&steps, true);
         prop_assert!(in_hand_order(&end), "{:?}", end.apps);
-        prop_assert_eq!(end.lost, 0, "each send's echoes are settled right after it");
+        if !steps.iter().any(|s| matches!(s, Step::Lose(_))) {
+            prop_assert_eq!(end.lost, 0, "each send's echoes are settled right after it");
+        }
         prop_assert!(nothing_the_hand_let_go_stays_down(&end), "{:?}", end.apps);
         common(&end)?;
     }

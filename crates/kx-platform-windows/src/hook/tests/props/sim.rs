@@ -6,7 +6,7 @@ use std::sync::PoisonError;
 
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
-use super::super::fake::{Call, Fake, Plan};
+use super::super::fake::{Call, Fake, Plan, World};
 use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, MOUSE_KEPT, Rig, SHIFT, VK_ESC, mouse_msg, rig};
 use super::{End, Ev, Fate, Gesture};
 use crate::hook::host::Host;
@@ -72,9 +72,9 @@ impl Sim {
         self.rig.plan()
     }
 
-    /// The OS takes this many acts of each batch, or all.
-    pub(super) fn takes(&self, n: Option<usize>) {
-        self.rig.world.takes.set(n);
+    /// The fake OS's world, for its knobs.
+    pub(super) fn world(&self) -> &World {
+        &self.rig.world
     }
 
     /// The hand's gesture enters the stream now.
@@ -129,7 +129,7 @@ impl Sim {
     pub(super) fn end(mut self) -> End {
         self.slip = None;
         self.drain();
-        self.takes(None);
+        self.rig.world.takes.set(None);
         self.call(Host::turn);
         self.drain();
         let settled = self.apps.len();

@@ -16,7 +16,7 @@ pub use manifest::{ID, MANIFEST};
 pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey,
+    AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey, ScrollChanged,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
@@ -48,6 +48,10 @@ impl Module for MouseModule {
         relay(cx, &tx, |e: &AssistToggle| Msg::Toggle(e.which))?;
         relay(cx, &tx, |_: &AssistAsk| Msg::Ask)?;
         relay(cx, &tx, |e: &LatchesChanged| Msg::Latches(e.held.clone()))?;
+        // The pad scrolls while the scroll module runs and has a way; still, or stopped, it does not.
+        relay(cx, &tx, |e: &ScrollChanged| {
+            Msg::Scroll(e.live && e.dir.is_some())
+        })?;
         let bus = cx.bus();
         let actor = Actor::new(
             hook,

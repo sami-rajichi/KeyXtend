@@ -20,6 +20,7 @@ const STATS: HookStats = HookStats {
     reinstalls: 5,
     send_errors: 6,
     lost_echoes: 7,
+    passed_inside: 8,
 };
 
 /// Left Shift.
@@ -60,7 +61,12 @@ fn a_saved_right_click_the_hook_refuses_starts_off_and_says_why() {
         let mut rig = Rig::saved_rclick();
         rig.hook.fail_next(HookError::Thread);
         rig.begin();
-        let told = [hook_failed(), shown(false, Off), Heard::AskLatches];
+        let told = [
+            hook_failed(),
+            shown(false, Off),
+            Heard::AskLatches,
+            Heard::AskScroll,
+        ];
         assert_eq!(rig.take(), told, "the user expects Right-click on");
         assert!(
             rig.host.sink.writes().is_empty(),
@@ -214,6 +220,7 @@ fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
         ("reinstalls", STATS.reinstalls.into()),
         ("send_errors", STATS.send_errors.into()),
         ("lost_echoes", STATS.lost_echoes.into()),
+        ("passed_inside", STATS.passed_inside.into()),
     ];
     let mut want: Vec<_> = numbers.map(|(k, v)| (k, v.to_string())).to_vec();
     want.push((MESSAGE, STOPPED_LINE.to_owned()));

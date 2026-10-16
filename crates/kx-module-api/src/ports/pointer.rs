@@ -189,6 +189,8 @@ pub struct HookStats {
     pub send_errors: u32,
     /// How many times our input did not come back through the hook in time.
     pub lost_echoes: u32,
+    /// The user's events heard inside our own send, which passed without the host.
+    pub passed_inside: u32,
 }
 
 /// Why the pointer hook did not start.
