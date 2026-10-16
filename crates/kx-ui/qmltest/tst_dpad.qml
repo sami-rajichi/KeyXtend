@@ -116,6 +116,33 @@ Item {
             }
         }
 
+        // High contrast has no faded colour, so an unlit dot is a hollow ring in Stop's ink and a lit one is filled.
+        function test_in_high_contrast_an_unlit_dot_is_a_hollow_ring() {
+            const p = pad(NC.lk, 1, { dir: "up" }), stop = arrow(p, "stop");
+            tryCompare(stop, "scale", 1, 2000);
+            const [on, off] = Board.all(stop, o => o.lit !== undefined && o.radius !== undefined);
+            const ink = NC.lk.dpad.stop_ink;
+            compare([on.lit, off.lit], [true, false], "slow");
+            compare([on.opacity, off.opacity], [1, 1], "nothing faded");
+            verify(Qt.colorEqual(on.color, ink) && on.border.width === 0, "lit: filled");
+            verify(Qt.colorEqual(off.color, "transparent"), "unlit: hollow");
+            verify(Qt.colorEqual(off.border.color, ink), "in Stop's ink");
+            compare(off.border.width, NC.lk.shape.line.px, "a hairline");
+        }
+
+        // Stop takes only taps on its disc, so a tap just outside the hub, on a corner of Stop's square, takes the arrow.
+        function test_a_tap_beside_stop_and_outside_the_hub_takes_the_arrow() {
+            for (const s of [Face.sizeMin, 1, Face.sizeMax]) {
+                const p = pad(N.lk, s, { dir: "up" }), taps = spy(p, "tapped"), sh = N.lk.shape.dpad;
+                tryCompare(arrow(p, "stop"), "scale", 1, 2000);
+                const r = p.width / 2, hub = r * (1 - 2 * sh.hub), half = r * (1 - 2 * sh.stop);
+                const [dx, dy] = [half * 0.95, half * 0.75], d = Math.hypot(dx, dy);
+                verify(d > hub && d > half && (dx - dy) * Math.SQRT1_2 > p.g, "outside the hub and Stop's disc, off the gap");
+                mouseClick(p, r + dx, r + dy);
+                compare(taps.signalArguments.map(a => a[0]), ["right"], "at " + s);
+            }
+        }
+
         // Pressed, an arrow takes the keys' press shade and, in high contrast, their press text, at once; hovered, the
         // keys' tint, so a press shows on a hovered arrow too.
         function test_a_pressed_arrow_takes_the_keys_press_colours() {
@@ -186,6 +213,31 @@ Item {
             // The pad goes before its window, so nothing in it reads a parent the window took away.
             p.destroy();
             wait(0);
+        }
+
+        // Shown again after the pointer left while it was away, the pad tells nothing; a pad gone with the pointer on it
+        // tells that it left.
+        function test_a_pad_shown_again_or_gone_tells_where_the_pointer_is() {
+            const win = createTemporaryObject(winC, root);
+            Pointer.through([win]);
+            const p = pad(N.lk, 1, null, win.contentItem), told = [];
+            p.hovered.connect(on => told.push(on));
+            const on = middle(glyph(arrow(p, "up")), p);
+            mouseMove(p, on.x, on.y);
+            tryVerify(() => told.length === 1, 2000);
+            win.visible = false;
+            tryVerify(() => told.length === 2, 2000, "the window hid");
+            mouseMove(root, root.width - 1, root.height - 1);
+            win.visible = true;
+            tryVerify(() => p.shown, 2000);
+            waitForRendering(p);
+            wait(0);
+            compare(told, [true, false], "the pointer is elsewhere");
+            mouseMove(p, on.x + 1, on.y);
+            tryVerify(() => told.length === 3, 2000, "back on the pad");
+            p.destroy();
+            wait(0);
+            compare(told, [true, false, true, false], "gone with the pointer on it");
         }
     }
 }

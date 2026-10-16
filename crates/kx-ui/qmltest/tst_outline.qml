@@ -9,6 +9,7 @@ import "fixtures/ui-en.js" as En
 import "pointer.js" as Pointer
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-contrast.js" as NC
+import "../../kx-theme/fixtures/look-native-light-reduced.js" as NR
 
 Item {
     id: root
@@ -96,6 +97,23 @@ Item {
         function frame(x, y, w, h) {
             return [[x, y, w, px], [x, y + h - px, w, px], [x, y + px, px, h - 2 * px], [x + w - px, y + px, px, h - 2 * px]];
         }
+        function at(o, x, y, w, h) {
+            return JSON.stringify(boxes(o)) === JSON.stringify(frame(x, y, w, h));
+        }
+        // Shown edges on box `a`, faded in; each new place they take notes how much of them showed, and each window
+        // change, which Windows reports a frame later, is noted too.
+        function settled(t, a) {
+            aim(t, a);
+            tryCompare(t.o.edges, "count", 4, 2000);
+            const all = edges(t.o), seen = [], moved = [];
+            for (const e of all) {
+                tryCompare(e.paint, "opacity", 1, 2000, "faded in");
+                e.spotChanged.connect(() => seen.push(e.paint.opacity));
+                for (const s of [e.xChanged, e.yChanged, e.widthChanged, e.heightChanged])
+                    s.connect(() => moved.push(e));
+            }
+            return { all: all, seen: seen, moved: moved, reads: t.ui.scrollReads };
+        }
 
         function test_no_edge_window_until_the_hub_names_a_box_and_none_after_a_stop() {
             const t = make([{ d: 1 }]);
@@ -160,6 +178,38 @@ Item {
             t.face.visible = true;
             tryCompare(t.o.edges, "count", 4, 2000);
             tryVerify(() => laid() === 2, 2000, "under the keyboard shown again");
+        }
+
+        // A new box fades the edges out with the outline's move, moves them while unseen, and fades them back in.
+        function test_a_moved_box_fades_out_moves_unseen_and_fades_back_in() {
+            const t = make([{ d: 1 }]), s = settled(t, { x: 100, y: 100, w: 400, h: 300 });
+            aim(t, { x: 200, y: 150, w: 300, h: 200 });
+            tryCompare(t.ui, "scrollReads", s.reads + 1, 2000);
+            verify(s.all.every(e => e.moving), "each edge fades out first");
+            verify(at(t.o, 100, 100, 400, 300), "still in place while it shows");
+            tryVerify(() => at(t.o, 200, 150, 300, 200) && s.all.every(e => e.paint.opacity === 1 && !e.moving), 2000);
+            compare(s.seen, [0, 0, 0, 0], "each moved once, while unseen");
+            verify(s.moved.length > 0, "the windows moved");
+        }
+
+        // Each read makes a new box; one with the same values moves and fades nothing.
+        function test_an_unchanged_box_moves_nothing() {
+            const t = make([{ d: 1 }]), s = settled(t, { x: 100, y: 100, w: 400, h: 300 });
+            aim(t, { x: 100, y: 100, w: 400, h: 300 });
+            tryCompare(t.ui, "scrollReads", s.reads + 1, 2000);
+            verify(s.all.every(e => !e.moving && e.paint.opacity === 1), "still shown");
+            compare([s.seen.length, s.moved.length], [0, 0], "not moved");
+        }
+
+        // With reduced motion the edges move at once, and show as they are made.
+        function test_reduced_motion_moves_the_edges_at_once() {
+            const t = make([{ d: 1 }], NR.lk);
+            verify(NR.lk.motion.moves.outline.ms === 0);
+            const s = settled(t, { x: 100, y: 100, w: 400, h: 300 });
+            aim(t, { x: 200, y: 150, w: 300, h: 200 });
+            tryCompare(t.ui, "scrollReads", s.reads + 1, 2000);
+            verify(at(t.o, 200, 150, 300, 200), "moved at the read");
+            verify(s.all.every(e => !e.moving && e.paint.opacity === 1), "never faded");
         }
 
         // In the app, the outline follows the hub's scroll state, and the keyboard asks once for its entries once shown.

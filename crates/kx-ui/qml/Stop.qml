@@ -1,5 +1,6 @@
 // The D-pad's Stop: it pops in while an arrow scrolls and out after (mock-up .dp-stop), a spring curve overshooting a
-// little, with one dot per speed under its square, the first lit for slow and both for fast (spec §5.2).
+// little, with one dot per speed under its square, the first lit for slow and both for fast (spec §5.2). It takes only
+// taps on its disc, so the arrows keep their inner corners.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -48,20 +49,29 @@ Rectangle {
         model: stop.pad.speeds
         delegate: Rectangle {
             required property int index
-            // Lit up to the speed it scrolls at; an unlit dot keeps its place, faded.
+            // Lit up to the speed it scrolls at; an unlit dot keeps its place, faded, or hollow in high contrast, which
+            // has no faded colour.
             readonly property bool lit: index <= stop.pad.pace
+            readonly property bool hollow: !lit && stop.pad.lk.contrast
             x: (stop.width - stop.row) / 2 + index * (stop.dot + stop.gap)
             y: stop.head + stop.icon + stop.gap
             width: stop.dot
             height: stop.dot
             radius: stop.dot / 2
-            color: stop.pad.d.stop_ink
-            opacity: lit ? 1 : stop.sh.dot_off
+            color: hollow ? "transparent" : stop.pad.d.stop_ink
+            border.width: hollow ? stop.pad.lk.shape.line.px : 0
+            border.color: stop.pad.d.stop_ink
+            opacity: lit || hollow ? 1 : stop.sh.dot_off
         }
     }
     Act {
         anchors.fill: parent
         hoverEnabled: true
+        containmentMask: QtObject {
+            function contains(point: point): bool {
+                return Math.hypot(point.x - stop.radius, point.y - stop.radius) < stop.radius;
+            }
+        }
         onContainsMouseChanged: stop.pad.tip(containsMouse ? stop.Accessible.name : "", stop)
         onActed: {
             stop.pad.tip("", null);

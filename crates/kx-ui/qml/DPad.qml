@@ -68,6 +68,8 @@ Item {
 
     // Told once the event's changes settled, so moving between arrows, gaps and the hub tells nothing.
     onOverChanged: Qt.callLater(pad.tell)
+    // A pad made again, as for a new board, leaves no pointer told on the old one.
+    Component.onDestruction: if (told) hovered(false)
     function tell() {
         if (over === told)
             return;
