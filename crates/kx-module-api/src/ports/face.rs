@@ -1,6 +1,6 @@
 //! The keyboard face: what the UI draws and the clicks it sends back.
 
-use super::{Rect, Screen};
+use super::{Dir, Rect, Screen};
 use crate::{Capability, REDACTED_MARKER, ServiceId, ServiceKey};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -115,6 +115,16 @@ pub enum FaceAction {
     },
     /// Qt took the press away, or the keyboard hid: the repeat stops and nothing more types.
     Leave,
+    /// A click on the scroll pad: an arrow, or Stop when `dir` is none.
+    Pad {
+        /// The arrow; none for the Stop button.
+        dir: Option<Dir>,
+    },
+    /// The pointer went onto the scroll pad or off it.
+    PadHover {
+        /// The pointer is on the pad.
+        on: bool,
+    },
     /// Debug builds only: Caps Lock shows the other way round, with no key sent, for the memory churn.
     #[cfg(debug_assertions)]
     FlipCaps,

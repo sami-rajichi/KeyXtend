@@ -219,7 +219,9 @@ impl Inner {
             | FaceAction::Press { .. }
             | FaceAction::Tick
             | FaceAction::LetGo { .. }
-            | FaceAction::Leave => Ok(FaceReply::default()),
+            | FaceAction::Leave
+            | FaceAction::Pad { .. }
+            | FaceAction::PadHover { .. } => Ok(FaceReply::default()),
             #[cfg(debug_assertions)]
             FaceAction::FlipCaps => {
                 self.caps_flipped = !self.caps_flipped;

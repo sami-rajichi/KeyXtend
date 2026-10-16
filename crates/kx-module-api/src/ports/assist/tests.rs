@@ -16,20 +16,23 @@ const HELD: [Scan; 2] = [Scan::new(0x2A), Scan::new(0xE01D)];
 const HELD_TEXT: [&str; 7] = ["42", "2A", "2a", "57373", "E01D", "e01d", "Scan"];
 /// The `InjectInput` gate.
 const INJECT: Option<Capability> = Some(Capability::InjectInput);
+/// The `PointerHook` gate.
+const HOOK: Option<Capability> = Some(Capability::PointerHook);
 
 /// An event's name and gate.
 fn row<E: Event>() -> (&'static str, Option<Capability>) {
     (E::NAME, E::CAPABILITY)
 }
 
-/// The assist events, in the order `gates_are_inject_input_for_toggles_and_latches_only` checks.
-fn assist() -> [(&'static str, Option<Capability>); 8] {
+/// The assist events, in the order `toggles_and_latches_need_inject_input_and_presses_the_hook` checks.
+fn assist() -> [(&'static str, Option<Capability>); 9] {
     [
         row::<AssistToggle>(),
         row::<AssistChanged>(),
         row::<AssistAsk>(),
         row::<AssistNote>(),
         row::<PointerMoved>(),
+        row::<PointerPressed>(),
         row::<LatchesChanged>(),
         row::<LatchesUsed>(),
         row::<LatchesAsk>(),
@@ -58,9 +61,9 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
 }
 
 #[test]
-fn gates_are_inject_input_for_toggles_and_latches_only() {
+fn toggles_and_latches_need_inject_input_and_presses_the_hook() {
     let gates = assist().map(|r| r.1);
-    let want = [INJECT, None, None, None, None, INJECT, INJECT, INJECT];
+    let want = [INJECT, None, None, None, None, HOOK, INJECT, INJECT, INJECT];
     assert_eq!(gates, want);
 }
 
@@ -102,6 +105,13 @@ fn a_pointer_move_hides_its_point() {
     let text = format!("{:?}", PointerMoved { at: AT });
     hides(&text, &AT_TEXT);
     assert_eq!(text, format!("PointerMoved {{ at: {REDACTED_MARKER} }}"));
+}
+
+#[test]
+fn a_press_is_named_and_shows_only_whether_it_was_ours() {
+    assert_eq!(PointerPressed::NAME, "pointer-pressed");
+    let text = format!("{:?}", PointerPressed { ours: true });
+    assert_eq!(text, "PointerPressed { ours: true }");
 }
 
 #[test]
