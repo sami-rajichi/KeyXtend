@@ -36,7 +36,7 @@ The ranges are named constants in `src/settings.rs`; the defaults live only in `
 
 ## Public API
 
-`ScrollModule`, `ID`, `MANIFEST`, `ScrollSettings` (with `from_defaults` and `scroll_config`) and its `SPEC`.
+`ScrollModule`, `ID`, `MANIFEST`, `ScrollSettings` (with `from_defaults` and `scroll_config`), its `SPEC`, and the pure rules: the tap machine `Pad` with its `Change`, the glide `Glide` with `GlideCfg`, and the stop rules `Stops` (both built `From<&ScrollSettings>`) with their `Halt`.
 
 ## Security
 

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 12:12 — P5: the pad's tap machine, the glide and the stop rules
+`kx-mod-scroll` now has the pure rules of the scroll pad: a tap goes slow, the same tap goes fast, a third stops, another way goes slow there, and each tap says what changed. The glide owes the speed times the time since its last reckoning, with every gap capped at `check_ms` so a late tick never jumps, and a speed or way change settles what is owed before it restarts. The stop rules say why a tap cannot scroll (no point yet, nothing there, already at the end), and when a running scroll stops: the end, a press outside our windows, the limit after the last tap, or a lost target; a refused step never stops it, as the limit bounds it. Property tests over random taps, ticks and stops check each rule, and seven deliberate breaks each failed one.
+
 ## 2026-10-16 11:52 — P5: the scroll module's crate and its `[scroll]` settings
 The new `kx-mod-scroll` crate declares the scroll module: it needs the scroll target and holds only the `Scroll` capability, and its start reads `[scroll]` and keeps the target for the runtime to come. `[scroll]` holds the two speeds (3 and 10 lines a second, 1 to 60, fast always above slow), the time limit after the last pad tap (2 minutes, 0 for none, else 10 s to 30 min), the end and press stop switches, and the tick, check, read and edge values the platform uses, with each tick shorter than a check. The crate joined the workspace and CI's Linux list, with a README and a draft security note.
 

@@ -4,11 +4,17 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod glide;
 mod manifest;
+mod pad;
 mod settings;
+mod stops;
 
+pub use glide::{Glide, GlideCfg};
 pub use manifest::{ID, MANIFEST};
+pub use pad::{Change, Pad};
 pub use settings::{SPEC, ScrollSettings};
+pub use stops::{Halt, Stops};
 
 use kx_module_api::ports::{ScrollTarget, ScrollTargetKey};
 use kx_module_api::{Manifest, Module, ModuleCx, ModuleError};
