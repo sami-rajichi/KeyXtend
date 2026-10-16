@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 12:26 — P5: a fake scroll target
+`kx-platform-fake` now has `FakeScrollTarget`, the stand-in for the platform's scroll target that the scroll module's tests and the app's life tests drive. A test queues what each `aim` returns, the latest repeating once the queue runs out, sets the reach per way or per target (`Unknown` by default), and can refuse the next open or every turn. The fake records each turn's target, way and lines, counts opens and closes (a dropped run closes) and keeps the latest config; a turn by lines that are not finite or below zero panics, as the port forbids them. Eight deliberate breaks of the fake each failed a test.
+
 ## 2026-10-16 12:12 — P5: the pad's tap machine, the glide and the stop rules
 `kx-mod-scroll` now has the pure rules of the scroll pad: a tap goes slow, the same tap goes fast, a third stops, another way goes slow there, and each tap says what changed. The glide owes the speed times the time since its last reckoning, with every gap capped at `check_ms` so a late tick never jumps, and a speed or way change settles what is owed before it restarts. The stop rules say why a tap cannot scroll (no point yet, nothing there, or already at the end, which with `stop_at_end` off starts anyway, as a feed may load more), and when a running scroll stops: the end, a press outside our windows, the limit after the last tap, or a lost target; a refused step never stops it, as the limit bounds it. Property tests over random taps, ticks and stops check each rule, and seven deliberate breaks each failed one.
 
