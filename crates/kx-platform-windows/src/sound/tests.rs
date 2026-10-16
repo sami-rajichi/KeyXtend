@@ -1,7 +1,9 @@
-//! Tests of the speaker's rules over a fake system at set times; the thread's tests are in `actor`.
+//! Tests of the speaker's rules over a fake system at set times; the thread's tests are in `actor`, and properties
+//! over random runs in `props`.
 
 mod actor;
 mod fake;
+mod props;
 
 use std::time::Duration;
 
