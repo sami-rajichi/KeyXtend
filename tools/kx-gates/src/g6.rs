@@ -117,7 +117,8 @@ fn try_one(
         sp.and_then(uia::percent),
     );
     let share = scroll::changed_share(&pic, &pic2);
-    let seen = share.is_some_and(|s| s > g.min_changed) || scroll::percent_moved(dir, pct, pct2);
+    let seen =
+        share.is_some_and(|s| s > g.min_changed) || scroll::percent_moved(dir.port(), pct, pct2);
     let error = match (done, share) {
         (Err(e), _) => Some(e),
         (Ok(()), None) => Some("the window moved or changed size".to_string()),

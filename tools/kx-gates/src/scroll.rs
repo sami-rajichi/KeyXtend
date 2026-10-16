@@ -1,7 +1,10 @@
-//! G6 scroll routes: UI Automation's `ScrollPattern`, a posted wheel message, and a `SendInput` wheel.
+//! G6 scroll routes: UI Automation's `ScrollPattern`, a posted wheel message, and a `SendInput` wheel. The route
+//! enum, the wheel's sign and words, and the percent judge are the product's (`kx_platform_windows::scroll`).
 #![cfg(windows)]
 
+use kx_module_api::ports::{self, Point};
 use kx_platform_windows::keys::TAG;
+use kx_platform_windows::scroll::{point_lparam, sign, wheel_wparam};
 use spike_core::pt::Pt;
 use spike_core::{capture, uia};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
@@ -19,10 +22,10 @@ use crate::simin::{self, Act};
 use crate::stats;
 use crate::{keys, mouse, win};
 
+pub use kx_platform_windows::scroll::{Route, percent_moved};
+
 /// Bytes per screen pixel in a picture.
 const PIXEL: usize = capture::BYTES_PP as usize;
-/// Bits of the low word in a message parameter.
-const WORD_BITS: u32 = 16;
 
 /// A scroll direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,15 +54,13 @@ impl Dir {
         }
     }
 
-    fn sideways(self) -> bool {
-        matches!(self, Dir::Right | Dir::Left)
-    }
-
-    /// The wheel's sign: positive turns scroll up, or right on the sideways wheel.
-    fn sign(self) -> i32 {
+    /// The product's direction.
+    pub fn port(self) -> ports::Dir {
         match self {
-            Dir::Down | Dir::Left => -1,
-            Dir::Up | Dir::Right => 1,
+            Dir::Down => ports::Dir::Down,
+            Dir::Up => ports::Dir::Up,
+            Dir::Right => ports::Dir::Right,
+            Dir::Left => ports::Dir::Left,
         }
     }
 
@@ -79,48 +80,6 @@ impl Dir {
     }
 }
 
-/// A way to scroll a window that is not under the pointer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Route {
-    /// UI Automation's `ScrollPattern`.
-    Uia,
-    /// A wheel message posted to the window at the target.
-    Post,
-    /// A `SendInput` wheel, with the pointer moved to the target and back.
-    Send,
-}
-
-impl Route {
-    /// Every route.
-    pub const ALL: [Route; 3] = [Route::Uia, Route::Post, Route::Send];
-
-    /// Name in the report.
-    pub fn name(self) -> &'static str {
-        match self {
-            Route::Uia => "uia",
-            Route::Post => "post",
-            Route::Send => "send",
-        }
-    }
-}
-
-/// The low 16 bits of `n`, which is all a message word keeps.
-fn low_word(n: i32) -> u16 {
-    let [lo, hi, ..] = n.to_le_bytes();
-    u16::from_le_bytes([lo, hi])
-}
-
-/// A wheel message's wParam: the turn in the high word, no keys held in the low word.
-pub fn wheel_wparam(delta: i32) -> usize {
-    usize::from(low_word(delta)) << WORD_BITS
-}
-
-/// A screen point as a message lParam: x in the low word, y in the high word.
-pub fn point_lparam(p: Pt) -> isize {
-    let words = (usize::from(low_word(p.y)) << WORD_BITS) | usize::from(low_word(p.x));
-    words.cast_signed()
-}
-
 /// Posts wheel messages to the window at `p`, which must be `ours` or inside it; the pointer stays put.
 #[allow(unsafe_code, reason = "A plain query.")]
 fn post(ours: HWND, p: Pt, dir: Dir, g: &G6) -> Result<(), String> {
@@ -132,12 +91,16 @@ fn post(ours: HWND, p: Pt, dir: Dir, g: &G6) -> Result<(), String> {
             win::describe(hwnd)
         ));
     }
-    let msg = if dir.sideways() {
+    let msg = if dir.port().sideways() {
         WM_MOUSEHWHEEL
     } else {
         WM_MOUSEWHEEL
     };
-    let (w, l) = (wheel_wparam(dir.sign() * g.wheel_delta), point_lparam(p));
+    let at = Point { x: p.x, y: p.y };
+    let (w, l) = (
+        wheel_wparam(sign(dir.port()) * g.wheel_delta),
+        point_lparam(at),
+    );
     for _ in 0..g.notches {
         // SAFETY: posting to a live window of ours, checked above.
         unsafe { PostMessageW(Some(hwnd), msg, WPARAM(w), LPARAM(l)) }
@@ -149,14 +112,14 @@ fn post(ours: HWND, p: Pt, dir: Dir, g: &G6) -> Result<(), String> {
 /// Turns the wheel at `p` with `SendInput`: the pointer visits `p`, then goes back to `rest`.
 fn send(p: Pt, rest: Pt, dir: Dir, g: &G6) -> Result<(), String> {
     let desk = win::desktop();
-    let flags = if dir.sideways() {
+    let flags = if dir.port().sideways() {
         MOUSEEVENTF_HWHEEL
     } else {
         MOUSEEVENTF_WHEEL
     };
     let mut inputs = simin::inputs(&[Act::Move(p)], desk, TAG);
     for _ in 0..g.notches {
-        inputs.push(mouse::wheel(dir.sign() * g.wheel_delta, flags, TAG));
+        inputs.push(mouse::wheel(sign(dir.port()) * g.wheel_delta, flags, TAG));
     }
     inputs.extend(simin::inputs(&[Act::Move(rest)], desk, TAG));
     keys::send(&inputs)
@@ -202,42 +165,20 @@ pub fn changed_share(a: &[u8], b: &[u8]) -> Option<f64> {
     Some(stats::ratio(changed, a.len() / PIXEL))
 }
 
-/// True when UIA's percents moved the way `dir` scrolls; a missing or "cannot scroll" read never counts.
-pub fn percent_moved(dir: Dir, before: Option<(f64, f64)>, after: Option<(f64, f64)>) -> bool {
-    let (Some(b), Some(a)) = (before, after) else {
-        return false;
-    };
-    let (from, to) = if dir.sideways() {
-        (b.0, a.0)
-    } else {
-        (b.1, a.1)
-    };
-    if from < 0.0 || to < 0.0 {
-        return false;
-    }
-    // Down and right grow a percent; up and left shrink it.
-    if matches!(dir, Dir::Down | Dir::Right) {
-        to > from
-    } else {
-        to < from
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn wheel_params_pack_signed_words() {
-        assert_eq!(wheel_wparam(-120), 0xFF88_0000);
-        assert_eq!(wheel_wparam(120), 0x0078_0000);
-        assert_eq!(point_lparam(Pt { x: -1, y: 2 }), 0x0002_FFFF);
+    fn each_gate_direction_is_the_products_of_the_same_name() {
+        for dir in Dir::ALL {
+            let name = serde_json::to_value(dir.port()).unwrap();
+            assert_eq!(name, dir.name(), "{dir:?}");
+        }
     }
 
     #[test]
-    fn directions_turn_the_right_wheel_the_right_way() {
-        assert_eq!((Dir::Down.sign(), Dir::Down.sideways()), (-1, false));
-        assert_eq!((Dir::Right.sign(), Dir::Right.sideways()), (1, true));
+    fn directions_take_the_right_uia_steps() {
         assert_eq!(
             Dir::Up.amounts(),
             (ScrollAmount_NoAmount, ScrollAmount_SmallDecrement)
@@ -256,20 +197,5 @@ mod tests {
         assert_eq!(changed_share(&a, &b), Some(0.25));
         assert_eq!(changed_share(&a, &a), Some(0.0));
         assert_eq!(changed_share(&a, &b[..8]), None);
-    }
-
-    #[test]
-    fn percents_count_only_when_they_move_the_scroll_way() {
-        let (top, lower) = (Some((0.0, 0.0)), Some((0.0, 4.0)));
-        assert!(percent_moved(Dir::Down, top, lower));
-        assert!(!percent_moved(Dir::Up, top, lower));
-        assert!(percent_moved(Dir::Up, lower, top));
-        assert!(!percent_moved(Dir::Right, top, lower));
-        assert!(!percent_moved(Dir::Down, top, None));
-        assert!(!percent_moved(
-            Dir::Down,
-            Some((0.0, -1.0)),
-            Some((0.0, 3.0))
-        ));
     }
 }

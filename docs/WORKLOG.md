@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 15:21 — P5: the Windows scroll adapter's pure rules
+`kx-platform-windows` now has the scroll pad's pure rules: a line becomes wheel delta from the user's wheel setting, and a setting of 0 or a page goes by UI Automation's line steps instead. Each tick takes one route, sent while the pointer is on the target and posted elsewhere, the part of a step left over carries to the next tick, and a percent still under wheel steps for `check_ms` short of the end trips that target to UI Automation's steps. The point before the keyboard comes from the pointer history's 16-bit points, else the entry point goes `edge_px` past the keyboard's nearest edge, always on the screen. Property tests check that the steps never drift, the fallback trips only as that rule says, and the point never lands off the screen or on the keyboard; 19 deliberate breaks each failed a test, and kx-gates now uses the moved wheel and route helpers.
+
 ## 2026-10-16 14:46 — P5: the mouse module while the pad scrolls, and two hook notes
 The mouse module now keeps its hook on while the scroll pad scrolls, which it hears from the scroll module's state and asks for once at start, so any start order works. While the pad scrolls the badge follows the pointer and each physical press goes out as `PointerPressed`, saying whether it landed on our windows; scrolling alone lets every event pass untouched, and Right-click and Grab work as before. The hook's stats line gains `passed_inside`, the user's events heard inside our own send, which pass without the engine, and kx-gates reads it by name. The hook's property tests now drop an echo heard inside our send, and the hand's order and the let-go still hold.
 

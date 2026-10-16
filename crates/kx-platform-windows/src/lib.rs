@@ -26,6 +26,7 @@ pub mod memory;
 #[cfg(windows)]
 mod platform;
 pub mod screen;
+pub mod scroll;
 pub mod sound;
 pub mod strokes;
 pub mod sysui;
