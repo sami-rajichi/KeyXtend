@@ -40,11 +40,14 @@ struct Log {
     config: Option<ScrollConfig>,
     opens: usize,
     closes: usize,
+    aimed: usize,
+    read: usize,
 }
 
 impl Log {
     /// The next scripted aim, or the latest once they run out; `NoTarget` before any.
     fn aim(&mut self) -> Found {
+        self.aimed += 1;
         if let Some(next) = self.aims.pop_front() {
             self.last = Some(next);
         }
@@ -52,7 +55,8 @@ impl Log {
     }
 
     /// The target's own reach that way, else the way's, else `Unknown`.
-    fn reach(&self, id: TargetId, dir: Dir) -> Reach {
+    fn reach(&mut self, id: TargetId, dir: Dir) -> Reach {
+        self.read += 1;
         let own = self.reach.get(&(Some(id), dir));
         let any = || self.reach.get(&(None, dir));
         own.or_else(any).copied().unwrap_or(Reach::Unknown)
@@ -117,6 +121,18 @@ impl FakeScrollTarget {
     #[must_use]
     pub fn closes(&self) -> usize {
         lock(&self.log).closes
+    }
+
+    /// How many aims the runs took, errors too.
+    #[must_use]
+    pub fn aims(&self) -> usize {
+        lock(&self.log).aimed
+    }
+
+    /// How many reaches the runs read.
+    #[must_use]
+    pub fn reaches(&self) -> usize {
+        lock(&self.log).read
     }
 
     /// The config the latest open took, kept after it closes.

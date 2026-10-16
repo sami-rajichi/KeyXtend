@@ -176,6 +176,9 @@ notice =
     .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
     .mouse-reset = L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.
     .mouse-stopped = L’aide à la souris s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
+    .scroll-point = Pointez ce que vous voulez faire défiler, puis touchez une flèche.
+    .scroll-none = Rien à faire défiler ici.
+    .scroll-end = Déjà à la fin.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-16 13:00 — P5: the scroll module's actor, stops and notices
+The scroll module now runs an actor thread that opens the platform's scroll run at the first peek or tap and keeps it until the module stops; while still it only waits for a message, and while scrolling it ticks every `tick_ms`, turning the owed lines on the latest target, and every `check_ms` aims again, reads the reach and checks the limit. A tap goes slow, fast or stops, a speed or way change first turns the owed lines the old way, a tap aimed at our open list turns it one page, and the outline shows while the pointer is on the pad and while scrolling, moving when the target or its box changes. A tap with no point yet, nothing to scroll there or a target already at its end gets a new notice in English, French and Arabic, while the end, a press outside our windows, the limit and a closed target stop quietly, and a refused step never stops. A quit or a panic says the module is off and hides the outline, and a quit logs one line of counts with no point or box.
+
 ## 2026-10-16 12:26 — P5: a fake scroll target
 `kx-platform-fake` now has `FakeScrollTarget`, the stand-in for the platform's scroll target that the scroll module's tests and the app's life tests drive. A test queues what each `aim` returns, the latest repeating once the queue runs out, sets the reach per way or per target (`Unknown` by default), and can refuse the next open or every turn. The fake records each turn's target, way and lines, counts opens and closes (a dropped run closes) and keeps the latest config; a turn by lines that are not finite or below zero panics, as the port forbids them. Eight deliberate breaks of the fake each failed a test.
 

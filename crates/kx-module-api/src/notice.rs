@@ -64,9 +64,15 @@ pub mod keys {
     pub const MOUSE_RESET: &str = "notice.mouse-reset";
     /// The mouse module stopped after an error; it comes back when the app restarts.
     pub const MOUSE_STOPPED: &str = "notice.mouse-stopped";
+    /// A pad tap came before the pointer left the keyboard, so there is nothing to scroll yet.
+    pub const SCROLL_POINT: &str = "notice.scroll-point";
+    /// Nothing at the pointed place can scroll, or its window closed.
+    pub const SCROLL_NONE: &str = "notice.scroll-none";
+    /// The pointed target is already at its end that way.
+    pub const SCROLL_END: &str = "notice.scroll-end";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 12] = [
+    pub const ALL_KEYS: [&str; 15] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -79,6 +85,9 @@ pub mod keys {
         MOUSE_HOOK_FAILED,
         MOUSE_RESET,
         MOUSE_STOPPED,
+        SCROLL_POINT,
+        SCROLL_NONE,
+        SCROLL_END,
     ];
 }
 

@@ -176,6 +176,9 @@ notice =
     .mouse-hook-failed = Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.
     .mouse-reset = Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.
     .mouse-stopped = Mouse assist stopped after an error. Restart { -app } to use it again.
+    .scroll-point = Point at what you want to scroll, then tap an arrow.
+    .scroll-none = Nothing to scroll there.
+    .scroll-end = Already at the end.
 
 ## Module names by module id; an id not listed shows itself.
 module =

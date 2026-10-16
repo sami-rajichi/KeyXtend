@@ -74,6 +74,18 @@ fn reaches_are_unknown_until_set_and_a_target_one_wins() {
 }
 
 #[test]
+fn each_aim_and_reach_is_counted_errors_too() {
+    let target = FakeScrollTarget::new();
+    let mut run = target.open(CONFIG).unwrap();
+    assert_eq!((target.aims(), target.reaches()), (0, 0));
+    let _ = run.aim();
+    target.push_aim(Ok(A));
+    let _ = run.aim();
+    let _ = run.reach(&A, Dir::Up);
+    assert_eq!((target.aims(), target.reaches()), (2, 1));
+}
+
+#[test]
 fn turns_are_recorded_in_order_and_taken_once() {
     let target = FakeScrollTarget::new();
     let mut run = target.open(CONFIG).unwrap();
