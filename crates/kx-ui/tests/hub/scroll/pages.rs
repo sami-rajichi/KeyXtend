@@ -2,10 +2,11 @@
 //! list's own page button with `[ui] page_rows`, never past either end, and nothing with no list open.
 
 use super::listened;
-use crate::{FakeFace, Rig};
+use crate::{FakeFace, Rig, provide};
 use kx_module_api::ports::{FaceAction, FaceReply, KeyId, ScrollPage};
+use kx_module_api::{Module, ModuleCx};
 use kx_test_support::host::FakeHost;
-use kx_ui::Wake;
+use kx_ui::{MANIFEST, UiModule, Wake};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -62,11 +63,33 @@ fn a_page_turn_sends_the_lists_own_page_button_with_the_page_rows() {
     assert_eq!(face.acts(), [button(BACK, rows), button(ON, rows)]);
 }
 
+/// A page size other than the default, set in `[ui]`, places the page and goes with the key.
+#[test]
+fn the_page_size_comes_from_the_ui_settings() {
+    let rows = rows() + 1;
+    let (rig, face) = (Rig::new(), Arc::new(FakeFace::default()));
+    let mut host = FakeHost::new(&MANIFEST);
+    host.put("page_rows", i64::try_from(rows).unwrap().into());
+    provide(&mut host, Arc::clone(&face));
+    let mut module = UiModule::new(Arc::clone(&rig.hub));
+    module.start(&mut ModuleCx::new(&mut host)).unwrap();
+    let last_of_first = rows - 1;
+    face.set_state(listing(2 * rows, last_of_first, Some(BACK), Some(ON)));
+    rig.hub.turn_page(true);
+    rig.hub.turn_page(false);
+    let want = [button(ON, rows)];
+    assert_eq!(
+        face.acts(),
+        want,
+        "row {last_of_first} is on the first page"
+    );
+}
+
 /// Page on at the last page would move the highlight, so neither end turns.
 #[test]
 fn no_page_turns_past_either_end() {
     let rows = rows();
-    let len = 2 * rows + 1;
+    let len = 2 * rows + 2;
     for (hi, back) in [
         (0, true),
         (rows - 1, true),
@@ -93,7 +116,12 @@ fn a_turned_page_wakes_the_keyboard_to_read_its_state() {
     rig.hub.turn_page(false);
     assert_eq!(rig.wakes(), [Wake::Keys]);
     face.answer(Ok(FaceReply::default()));
-    rig.hub.turn_page(true);
+    rig.hub.turn_page(false);
+    assert_eq!(
+        face.acts().len(),
+        2,
+        "the fake's list stays on the first page"
+    );
     assert!(rig.wakes().is_empty(), "nothing changed");
 }
 

@@ -73,6 +73,8 @@ struct State {
 
 impl List {
     /// The key of the page button that turns back or on, as the list's own button sends it; none at that end.
+    /// The same page maths lives in `qml/LangList.qml` (`pages`, `at`) and kx-mod-keyboard's `LangList::key`, so change
+    /// all three together.
     fn button(self, back: bool, rows: usize) -> Option<String> {
         let per = rows.max(1);
         let pages = self.rows.len().div_ceil(per).max(1);
