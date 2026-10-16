@@ -1,5 +1,5 @@
-//! The mouse guard's rules: while a gate runs, physical mouse input drops and injected input passes, until the gate
-//! ends, the time limit runs out, a button is pressed or Windows switches its hook off. `filter` decides, `hook`
+//! The mouse guard's rules: while a gate runs, physical mouse input drops and kx-gates' own input passes, until the
+//! gate ends, the time limit runs out, a button is pressed or Windows switches its hook off. `filter` decides, `hook`
 //! applies it, `run` runs it and `slot` holds this process's run.
 #![cfg(windows)]
 
@@ -20,15 +20,13 @@ use watch::Watch;
 use std::time::Duration;
 
 use kx_module_api::US_PER_MS;
-use kx_platform_windows::keys::TAG;
+use kx_platform_windows::keys::{SIM_TAG, TAG, is_replay};
 use serde::Deserialize;
 use windows::Win32::System::Threading::INFINITE;
 use windows::Win32::UI::WindowsAndMessaging::{
     LLMHF_INJECTED, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN,
     WM_RBUTTONUP, WM_XBUTTONDOWN, WM_XBUTTONUP, XBUTTON1,
 };
-
-use crate::hookio::SIM_TAG;
 
 /// The longest wait the hook thread asks for, in ms: one below `INFINITE`, so every wait ends.
 const LONGEST_WAIT_MS: u32 = INFINITE - 1;
@@ -45,6 +43,18 @@ pub const X1: u8 = 1 << 3;
 pub const X2: u8 = 1 << 4;
 /// The X button's number sits in the high word of a hook's mouse data.
 const X_SHIFT: u32 = 16;
+
+/// Whether a gate's run holds the owner's mouse with the guard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mouse {
+    /// The guard drops the hand's mouse input while the gate moves the pointer.
+    Held,
+    /// As `Held`, passing `REPLAY` input too: the test build's hook sits ahead of the guard's, swallows a held press
+    /// and replays it tagged `REPLAY`, so that input is the guard's only sign of the press.
+    Drives,
+    /// The gate needs the owner's own mouse, runs elsewhere or moves nothing.
+    Free,
+}
 
 /// `[mouse_guard]` in `kx-gates-p3.toml`, shared by every gate; times in ms.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -207,10 +217,27 @@ pub enum Kind {
     Other,
 }
 
-/// True for a hook event with `flags` and `extra` info that kx-gates injected itself; other programs' injected input
-/// counts as the hand's.
-pub fn ours(flags: u32, extra: usize) -> bool {
-    flags & LLMHF_INJECTED != 0 && (extra == TAG || extra == SIM_TAG)
+/// Whose a mouse event is, as the guard judges it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Whose {
+    /// kx-gates injected it, tagged `TAG` or `SIM_TAG`.
+    Own,
+    /// It was injected tagged `REPLAY` with any act's id, as the test build replays a press its hook held back.
+    Replay,
+    /// Anything else: the hand, or another program's input.
+    Hand,
+}
+
+/// Whose a hook event with `flags` and `extra` info is; a tag on input that was not injected is still the hand's.
+pub fn from(flags: u32, extra: usize) -> Whose {
+    if flags & LLMHF_INJECTED == 0 {
+        return Whose::Hand;
+    }
+    match extra {
+        TAG | SIM_TAG => Whose::Own,
+        _ if is_replay(extra) => Whose::Replay,
+        _ => Whose::Hand,
+    }
 }
 
 /// The event of low-level mouse message `msg` with mouse data `data`.

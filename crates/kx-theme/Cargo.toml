@@ -1,6 +1,6 @@
 [package]
 name = "kx-theme"
-description = "The theme tokens, compiled in: colours, sizes, motion and icons, the look a face draws now, contrast and high contrast."
+description = "The theme tokens, compiled in: colours, sizes, motion, icons and sounds, the look a face draws now, contrast and high contrast."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,8 +11,14 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# The readers of the `assets` folder and the WAV reader, for kx-ui's build and tests and xtask only: the uiAccess app
+# parses no media (ADR-0004), so `cargo xtask tidy` refuses this feature in its tree.
+files = []
+
 [dependencies]
-# The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations.
+# The system look port (`SysLook`): dark mode, the accent, high-contrast colours and animations; and the speaker's clip
+# layout and rates (`Clip`, `Clip::RATES`).
 kx-platform = { path = "../kx-platform" }
 serde.workspace = true
 thiserror.workspace = true
@@ -20,4 +26,14 @@ toml.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true
 serde_json.workspace = true
+
+# These test the readers behind `files`: run them with `--features files`, as a workspace run does through xtask.
+[[test]]
+name = "assets"
+required-features = ["files"]
+
+[[test]]
+name = "sounds"
+required-features = ["files"]

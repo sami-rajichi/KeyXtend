@@ -1,0 +1,14 @@
+# Right-click mode; the module writes it on each toggle, so it survives a restart.
+rclick = false
+# A still press right-clicks after this, in ms.
+hold_ms = 1500
+# Moves up to this many logical pixels (scaled by the screen's DPI) still count as still.
+still_px = 7
+# The ring shows this long after the press, in ms.
+ring_after_ms = 150
+# How often the health check runs while the hook runs, in ms.
+health_ms = 1000
+# How long the hooks may miss input before they are put back, in ms.
+health_slack_ms = 500
+# How long input waits behind our own before it goes on anyway, in ms.
+echo_ms = 250

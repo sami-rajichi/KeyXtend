@@ -161,6 +161,18 @@ impl Keyboard {
     pub fn rect(&self, id: &str) -> Result<RECT, String> {
         self.keys.rect(id).ok_or_else(|| missing(id))
     }
+
+    /// The screen centre of key `id`, refused unless the keyboard is the window on top there, so a click reaches it.
+    pub fn top_at(&self, id: &str) -> Result<POINT, String> {
+        let at = self.at(id)?;
+        clear(at, win::root_at(at), &self.hwnd)
+            .map_err(|top| format!("{} covers the key to click", win::describe(top)))
+    }
+}
+
+/// `at` when window `top` there is `ours`; else `top`, which would take a click there.
+fn clear<W: PartialEq>(at: POINT, top: W, ours: &W) -> Result<POINT, W> {
+    if top == *ours { Ok(at) } else { Err(top) }
 }
 
 /// Why key `id` has no place.
@@ -185,6 +197,13 @@ mod tests {
         assert!(!is_ours(r"C:\Program Files\KeyXtend-dev\qt-kb\qt-kb.exe"));
         assert!(!is_ours(r"C:\x\keyxtend.exe.bak"));
         assert!(!is_ours(""));
+    }
+
+    #[test]
+    fn a_key_is_clicked_only_where_the_keyboard_is_on_top() {
+        let at = POINT { x: 3, y: 4 };
+        assert_eq!(clear(at, 7, &7), Ok(at));
+        assert_eq!(clear(at, 9, &7), Err(9), "a toast over the key");
     }
 
     #[test]

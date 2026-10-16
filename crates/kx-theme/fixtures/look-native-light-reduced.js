@@ -74,6 +74,16 @@ var lk = {
         "color": "#14000000"
       }
     ],
+    "badge_shadow": [
+      {
+        "inset": false,
+        "x": 0.0,
+        "y": 3.0,
+        "blur": 10.0,
+        "spread": 0.0,
+        "color": "#47000000"
+      }
+    ],
     "skirt": null
   },
   "common": {
@@ -379,6 +389,21 @@ var lk = {
         30.0
       ]
     },
+    "badge": {
+      "pad_px": [
+        3.0,
+        7.0
+      ],
+      "icon_px": 13.0,
+      "gap_px": 4.0,
+      "font_px": 10.5,
+      "weight": 600,
+      "offset_px": [
+        16.0,
+        18.0
+      ],
+      "edge_px": 8.0
+    },
     "dim": {
       "share": 0.4
     },
@@ -453,6 +478,17 @@ var lk = {
   },
   "motion": {
     "moves": {
+      "badge": {
+        "ms": 0,
+        "bez": [
+          0.0,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
       "burst": {
         "ms": 0,
         "bez": [
@@ -747,5 +783,6 @@ var lk = {
   "contrast": false,
   "sel_ink": "#FF1B1B1B",
   "hover_line": "#00000000",
-  "margin": 44.0
+  "margin": 44.0,
+  "badge_margin": 13.0
 };

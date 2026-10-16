@@ -102,6 +102,24 @@ fn an_amount_outside_its_range_is_refused() {
 }
 
 #[test]
+fn the_pointer_badge_fades_briefly_and_must_be_in_the_file() {
+    assert!(MOVES.contains(&"badge"), "a move the faces play");
+    let m = load().expect("motion.toml loads").full;
+    let ease_out = [0.0, 0.0, 0.58, 1.0, 1.0, 1.0];
+    assert_eq!(
+        m.moves["badge"],
+        Timed {
+            ms: 167,
+            bez: ease_out
+        },
+        "WinUI's ControlFastAnimationDuration"
+    );
+    let gone = text().replacen("badge = {", "badges = {", 1);
+    let e = parse(&gone).expect_err("badge is missing");
+    assert!(e.contains("moves.badge"), "{e}");
+}
+
+#[test]
 fn the_notice_and_the_menu_pop_in_as_the_mock_up_does() {
     let m = load().expect("motion.toml loads").full;
     let ease_out = [0.0, 0.0, 0.58, 1.0, 1.0, 1.0];

@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, layouts, windows, the system look and the heaps' free memory."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, the mouse hook, layouts, windows, the system look, the heaps' free memory and sound."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,15 +11,24 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+# The pointer hook's simulated source, which acts only on the gate tool's `SIM_TAG` input. Test builds only: the shipped
+# app never turns it on, so the code is not even built there, on top of the stage check that refuses the flag.
+sim-input = []
+
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
 thiserror.workspace = true
+# The pointer hook and the speaker log counts, error codes and waits only.
+tracing.workspace = true
 
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
 [target.'cfg(windows)'.dependencies]
 # The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops, DXGI ranks the
-# graphics adapters by power, and the heap calls give free pages back (`System_Memory`, `System_SystemServices`).
+# graphics adapters by power, the heap calls give free pages back (`System_Memory`, `System_SystemServices`), the
+# mouse hook reads the tick count (`System_SystemInformation`) and tests the input desktop
+# (`System_StationsAndDesktops`), and the speaker plays through XAudio2.
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -28,6 +37,7 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Dxgi",
     "Win32_Graphics_Gdi",
+    "Win32_Media_Audio_XAudio2",
     "Win32_Security",
     "Win32_System_Com",
     "Win32_System_Console",
@@ -35,6 +45,8 @@ windows = { workspace = true, features = [
     "Win32_System_Memory",
     "Win32_System_Performance",
     "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_StationsAndDesktops",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_UI_Accessibility",

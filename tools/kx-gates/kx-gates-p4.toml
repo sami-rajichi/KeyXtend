@@ -1,0 +1,79 @@
+# Settings P4 adds: the product's test build, which P4's gates start and drive, G5, G12, G8's hook part and the hand
+# try. kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
+
+# The test build: the app built with its gate-input feature, so with `flag` its engine hears only kx-gates' SIM_TAG
+# input. Build it with `cargo build -p keyxtend --release --features gate-input --target-dir target/gate-input`; it never
+# asks for uiAccess, so it runs unsigned and only the plain kx-gates starts it, with a data folder of its own.
+[gate_input]
+# The test build, relative to this file's folder.
+program = "../../target/gate-input/release/keyxtend.exe"
+# The flag that makes its engine act on SIM_TAG input only (apps/keyxtend/src/args.rs); kx-gates' code never holds it.
+flag = "--sim-input"
+# The warning it logs at start with the flag (apps/keyxtend/src/run.rs); without it, its engine might act on the hand.
+warn_line = "simulated mouse input: a gate build, never for daily use"
+# Longest wait for its keyboard and its warning line after its start, in ms.
+start_ms = 15000
+# Longest wait for a mode or latch key to read on or off after its click, in ms.
+lit_ms = 3000
+
+# G5 on the test build: target-window parked at its screen's top-left, Right-click on, seven cases a round. The hold
+# time and still radius are the test build's [mouse] hold_ms and still_px, the radius scaled by the test point's DPI.
+[g5]
+# A drag while pressed, in px; G5 refuses one that does not pass the still radius plus still_margin_px at the test
+# point's DPI. A wiggle stays still_margin_px inside the still radius, another move that far past it, and
+# still_margin_px must be above point_slack_px.
+drag_px = 40
+still_margin_px = 2
+# How many times the seven cases run.
+rounds = 4
+# Wait for the target log after each case, in ms.
+settle_ms = 400
+# A logged point may be this far from where we pressed, in px.
+point_slack_px = 1
+# The hook must hand the engine at least this many events per case played: its press and its release.
+min_events_per_case = 2
+# The hung case: hang_lead_ms before the hold time, target-window sleeps hang_ms, so the right-click lands while it
+# hangs; keep hang_ms within kx-target-window.toml's hang_max_ms, and hang_lead_ms below hang_ms.
+hang_ms = 1000
+hang_lead_ms = 300
+# Most lost echoes the hook's stats lines may count, also for g8 hook; a dropped act id would lose every echo.
+max_lost_echoes = 0
+
+# The owner's hand try (`kx-gates assist`) on the running keyboard: it reads the stats lines its hook logs meanwhile.
+[hand]
+# How long it runs unless --secs says otherwise, in seconds.
+try_secs = 90
+
+# G12 (roadmap G12: the ring runs at 60 Hz without dropping clicks under it). With Right-click on, one click goes to
+# each point of a grid (columns, rows; 200 clicks) kept inset_px inside target-window's text box, clear of its scroll
+# bars, with target-window parked at its screen's top-left.
+[g12]
+grid = [20, 10]
+inset_px = 60
+# Each press lasts the test build's ring_after_ms plus ring_ms, so its ring plays; with spare_ms more it must stay
+# within the test build's hold_ms, so it stays a click. Wait settle_ms after each release. All in ms.
+ring_ms = 600
+spare_ms = 300
+settle_ms = 60
+# A logged press may be this far from where we clicked, in px.
+slack_px = 1
+# Inside each ring span the ring must draw at least min_fps frames a second (60 Hz less 5 %), and 99 in 100 frame gaps
+# within p99_ms (two frames).
+min_fps = 57.0
+p99_ms = 34.0
+# The ring may take show_ms to draw its first frame (the wake to Qt and two refreshes at 60 Hz); the quiet time past it,
+# and after its last frame until the release, counts in its frame rate, so a ring that stalls fails.
+show_ms = 50
+# G12's PresentMon CSV in the out folder, a plain file name, and how long it records, in seconds: [fit] checks it covers
+# every press at its longest, hold_ms less spare_ms. PresentMon's program and waits are [g8]'s, one PresentMon per PC.
+presentmon = "g12-presentmon.csv"
+presentmon_secs = 300
+
+# G8's hook part (`g8 hook`, `g8 hook-weak` in weak mode): G5's cases on the test build, rounds times, judged by the
+# p99 its hook logs when Right-click turns off and by [g5] max_lost_echoes.
+[g8_hook]
+# The hook callback's 99th percentile may take this long, in ms (spec §10, checked).
+p99_ms = 1.0
+rounds = 20
+# Fewer events than this over the run leave the p99 not measured, so it fails.
+min_events = 200

@@ -1,286 +1,180 @@
-//! G5 hold engine: with Right-click on, short clicks and drags stay normal and a still hold right-clicks.
+//! G5 hold engine on the product's test build: with Right-click on, short clicks and drags stay normal, a still hold
+//! right-clicks, even into a hung target, and the hook never times out or loses its echoes. Plain targets only; admin
+//! windows are manual.
 #![cfg(windows)]
 
-use kx_platform_windows::uiaccess;
-use kx_target_window::log::Press;
+use kx_mod_keyboard::{Assist, Role};
+use kx_mod_mouse::MouseSettings;
+use kx_platform_windows::screen;
 use serde_json::{Value, json};
-use spike_core::clock::now_us;
-use spike_core::hold::{Act, Button, Mode, Pt};
 use spike_core::uia;
-use windows::Win32::Foundation::{HWND, POINT};
 
 use crate::apps::{self, Ctx, Opened};
-use crate::assist::{self, Assist, Report, Setup};
-use crate::gatecfg::G5;
-use crate::hookio::Source;
+use crate::g5play::{self, Hold, Played};
+use crate::hooklog::{self, HookLine};
+use crate::launch;
 use crate::out::say;
-use crate::tlog::{self, Mouse};
-use crate::win::{self, sleep_ms};
-use crate::winfind;
-use crate::{launch, stats};
+use crate::p4cfg::G5;
+use crate::probe;
+use crate::testbuild::{Closed, TestBuild};
+use crate::win;
 
-/// What a normal click or drag logs.
-const LEFT: &[Press] = &[Press::LeftDown, Press::LeftUp];
-/// What a right-click logs; target-window swallows the menu it asks for.
-const RIGHT: &[Press] = &[Press::RightDown, Press::RightUp, Press::Menu];
 /// G5 targets: target-window as is.
 pub const PLAIN: &str = "plain";
-/// G5 targets: target-window as administrator.
+/// The admin-window case, which `g5` only explains.
 pub const ADMIN: &str = "admin";
+/// Why the admin-window case is the owner's manual check: the test build lacks uiAccess, so Windows keeps its input out
+/// of admin windows. `g5 admin` says it and every `plain` result carries it.
+pub const ADMIN_NOTE: &str = "The admin-window case is the owner's manual check on the installed product: it needs \
+                              uiAccess, and the test build is never staged, signed or installed, so Windows blocks \
+                              its input into admin windows.";
+/// The key that turns Right-click on and off.
+pub(crate) const RCLICK: Role = Role::Assist(Assist::RClick);
 
-/// One scripted press: move `dx` px right while pressed, then a long hold or a short click.
-struct Case {
-    name: &'static str,
-    dx: i32,
-    long: bool,
-    want: &'static [Press],
-}
-
-/// The five cases; the wiggle stays inside the still radius and the short move just leaves it.
-fn cases(g: &G5, still_px: i32) -> [Case; 5] {
-    let case = |name, dx, long, want| Case {
-        name,
-        dx,
-        long,
-        want,
-    };
-    [
-        case("click", 0, false, LEFT),
-        case("drag", g.drag_px, false, LEFT),
-        case("hold", 0, true, RIGHT),
-        case("wiggle_hold", still_px - g.still_margin_px, true, RIGHT),
-        case("past_still", still_px + g.still_margin_px, false, LEFT),
-    ]
-}
-
-/// True when the log shows exactly the wanted presses: a hold all at `p`, a click from `p` to `dx` px right.
-fn case_ok(want: &[Press], long: bool, got: &[Mouse], p: Pt, dx: i32, slack: i32) -> bool {
-    let near = |m: &Mouse, q: Pt| (m.x - q.x).abs() <= slack && (m.y - q.y).abs() <= slack;
-    let end = Pt {
-        x: p.x + dx,
-        y: p.y,
-    };
-    let kinds_ok = got.iter().map(|m| m.press).eq(want.iter().copied());
-    let start_ok = got.first().is_some_and(|m| near(m, p));
-    let end_ok = if long {
-        got.iter().all(|m| near(m, p))
-    } else {
-        got.last().is_some_and(|m| near(m, end))
-    };
-    kinds_ok && start_ok && end_ok
-}
-
-/// Plays `case` at `p` as the simulated user; once pressed, the button is always released.
-fn play(ctx: &Ctx, case: &Case, p: Pt) -> Result<(), String> {
-    let (g, sim, hold_ms) = (&ctx.cfg.g5, &ctx.cfg.sim, ctx.spike.hold.ms);
-    let end = Pt {
-        x: p.x + case.dx,
-        y: p.y,
-    };
-    assist::as_user(&[Act::Move(p)])?;
-    sleep_ms(sim.step_ms);
-    assist::as_user(&[Act::Down(Button::Left, p)])?;
-    sleep_ms(sim.step_ms);
-    let moved = match case.dx {
-        0 => Ok(()),
-        _ => assist::as_user(&[Act::Move(end)]),
-    };
-    sleep_ms(if case.long {
-        hold_ms + sim.hold_margin_ms
-    } else {
-        sim.click_ms
-    });
-    let released = assist::as_user(&[Act::Up(Button::Left, end)]);
-    sleep_ms(g.settle_ms);
-    moved.and(released)
-}
-
-/// `Err` naming the window over `p`, unless it is `target`.
-fn uncovered(target: HWND, p: Pt) -> Result<(), String> {
-    let top = win::root_at(POINT { x: p.x, y: p.y });
-    if top == target {
-        Ok(())
-    } else {
-        Err(format!("{} covers the test point", win::describe(top)))
+/// Refuses every name but `plain`; `admin` gives the reason it is the owner's manual check.
+fn target_of(name: &str) -> Result<(), String> {
+    match name {
+        PLAIN => Ok(()),
+        ADMIN => Err(ADMIN_NOTE.to_string()),
+        _ => Err(format!("G5 runs on {PLAIN}, not {name}")),
     }
 }
 
-/// Plays every case at `p`, round after round, checking the log after each; returns the lines and the verdict.
-fn play_all(ctx: &Ctx, target: HWND, p: Pt) -> Result<(Vec<Value>, bool), String> {
-    let g = &ctx.cfg.g5;
-    let (mut lines, mut passed) = (Vec::new(), true);
-    for round in 0..g.rounds {
-        for case in cases(g, ctx.spike.hold.still_px) {
-            uncovered(target, p)?;
-            let since = now_us();
-            play(ctx, &case, p)?;
-            let got = tlog::mouse_since(ctx, since)?;
-            let ok = case_ok(case.want, case.long, &got, p, case.dx, g.point_slack_px);
-            passed &= ok;
-            let seen: Vec<String> = got
-                .iter()
-                .map(|m| format!("{}@{},{}", m.press.name(), m.x, m.y))
-                .collect();
-            let verdict = if ok { "ok" } else { "FAIL" };
-            say!("{round} {}: {verdict} {}", case.name, seen.join(" "));
-            lines.push(json!({ "round": round, "case": case.name, "ok": ok, "got": seen }));
-        }
+/// Refuses a hold the mouse guard would take for a lost hook, a hang past target-window's `hang_max_ms`, a hang lead
+/// at or past the hold time, and a drag that stays within the still radius and its margin.
+fn refuse(hold: Hold, alive_ms: u64, g: &G5, hang_max_ms: u64) -> Result<(), String> {
+    let hold_ms = hold.ms;
+    if hold_ms >= alive_ms {
+        return Err(format!(
+            "the test build's hold_ms ({hold_ms} ms) must stay below [mouse_guard] alive_ms ({alive_ms} ms): its hook \
+             holds the press back, so the guard sees nothing until the right-click"
+        ));
     }
-    Ok((lines, passed))
+    if g.hang_ms > hang_max_ms {
+        return Err(format!(
+            "g5.hang_ms ({} ms) passes kx-target-window.toml's hang_max_ms ({hang_max_ms} ms)",
+            g.hang_ms
+        ));
+    }
+    if g.hang_lead_ms >= hold_ms {
+        return Err(format!(
+            "g5.hang_lead_ms ({} ms) must stay below the test build's hold_ms ({hold_ms} ms)",
+            g.hang_lead_ms
+        ));
+    }
+    let room = hold.radius_px.saturating_add(g.still_margin_px);
+    if g.drag_px <= room {
+        return Err(format!(
+            "g5.drag_px ({} px) must pass the still radius plus still_margin_px ({room} px) at this DPI",
+            g.drag_px
+        ));
+    }
+    Ok(())
 }
 
-/// What one run of the cases gave.
-struct Drive {
-    cases: Vec<Value>,
-    passed: bool,
-    report: Report,
-    /// The hook still saw input after the last case.
-    alive: bool,
+/// `first`'s value, or the errors of `first` and `then` joined, so a step that puts things back always reports.
+pub(crate) fn both<T>(first: Result<T, String>, then: Result<(), String>) -> Result<T, String> {
+    match (first, then) {
+        (Ok(v), Ok(())) => Ok(v),
+        (Err(e), Ok(())) | (Ok(_), Err(e)) => Err(e),
+        (Err(a), Err(b)) => Err(format!("{a}; {b}")),
+    }
 }
 
-/// Turns Right-click on and plays every case on the target, then checks the hook still runs.
-fn drive(ctx: &Ctx, target: &Opened) -> Result<Drive, String> {
-    let (a, g) = (&ctx.cfg.assist, &ctx.cfg.g5);
+/// True when the hook never timed out: at least one stats line, no reinstall, no send error, and at least `per_case`
+/// events for each of the `played` cases.
+fn hook_ok(lines: &[HookLine], played: usize, per_case: u64) -> bool {
+    let sum = hooklog::sum(lines);
+    let want = per_case.saturating_mul(u64::try_from(played).unwrap_or(u64::MAX));
+    !lines.is_empty() && sum.reinstalls == 0 && sum.send_errors == 0 && sum.events >= want
+}
+
+/// What one G5 run gave, before the test build closed.
+struct Run {
+    hold: Hold,
+    still_px: u32,
+    played: Played,
+    left_open: Vec<String>,
+}
+
+/// The result line: the verdict, which needs the test build to have quit, the cases, the summed stats line with its
+/// p99, the lost-echo check with its count, and how the test build ended.
+fn result(run: &Run, closed: &Closed, g: &G5) -> Value {
+    let lines = closed.lines.as_deref().unwrap_or_default();
+    let echoes = hooklog::lost(lines, g.max_lost_echoes);
+    let hook = hook_ok(lines, run.played.count, g.min_events_per_case) && echoes.pass;
+    let pass = closed.pass(run.played.matched() && hook);
+    json!({
+        "gate": "G5", "target": PLAIN, "hold_ms": run.hold.ms, "still_px": run.still_px,
+        "radius_px": run.hold.radius_px, "pass": pass, "cases": run.played.lines, "hook": hooklog::summed(lines),
+        "hook_lines": lines.len(), "echoes": echoes, "admin": ADMIN_NOTE, "test_build": closed.json(),
+        "left_open": run.left_open,
+    })
+}
+
+/// Parks target-window in front, refuses rules this screen breaks, turns Right-click on, plays every case at its
+/// centre `rounds` times, then turns Right-click off, even after a failed case.
+fn drive(
+    ctx: &Ctx,
+    build: &TestBuild,
+    target: &Opened,
+    mouse: &MouseSettings,
+    rounds: usize,
+) -> Result<(Hold, Played), String> {
+    launch::park_target(target.hwnd)?;
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring target-window to the front".to_string());
     }
     let p = uia::centre(&win::rect(target.hwnd)?);
-    let assist = Assist::start(Setup {
-        hold_ms: ctx.spike.hold.ms,
-        still_px: ctx.spike.hold.still_px,
-        source: Source::Simulated,
-        own: Vec::new(),
-        reply_ms: a.reply_ms,
-        samples: a.hook_samples,
-    })?;
-    assist.set_mode(Mode::RightClick)?;
-    let (cases_out, passed) = play_all(ctx, target.hwnd, p)?;
-    let before = assist.live().seen;
-    assist::as_user(&[Act::Move(p)])?;
-    sleep_ms(g.settle_ms);
-    let alive = assist.live().seen > before;
-    let report = assist.stop()?;
-    Ok(Drive {
-        cases: cases_out,
-        passed,
-        report,
-        alive,
-    })
+    let hold = Hold {
+        ms: u64::from(mouse.hold_ms),
+        radius_px: g5play::radius(mouse.still_px, screen::dpi_of(&g5play::dot(p))),
+    };
+    let (alive_ms, hang_max_ms) = (ctx.cfg.mouse_guard.alive_ms, ctx.target.hang_max_ms);
+    refuse(hold, alive_ms, &ctx.cfg.g5, hang_max_ms)?;
+    build.set(RCLICK, true)?;
+    let played = g5play::play_all(ctx, target.hwnd, p, hold, rounds);
+    let played = both(played, build.set(RCLICK, false))?;
+    Ok((hold, played))
 }
 
-/// Hook call times in ms: the p99, and every percentile plus the longest and the count.
-fn hook_ms(us: &[i64]) -> (Option<f64>, Value) {
-    let mut times: Vec<f64> = us.iter().map(|&u| stats::ms(u)).collect();
-    times.sort_by(f64::total_cmp);
-    let mut out = serde_json::Map::new();
-    for (name, rank) in stats::PERCENTILES {
-        out.insert(name.to_string(), json!(stats::percentile(&times, rank)));
-    }
-    out.insert("max".to_string(), json!(times.last()));
-    out.insert("calls".to_string(), json!(times.len()));
-    (stats::percentile(&times, stats::P99), Value::Object(out))
+/// Starts target-window and drives G5's cases on it `rounds` times under `build`, then closes it, noting what was left
+/// open; G5 and G8's hook part share it.
+pub(crate) fn on_target(
+    ctx: &Ctx,
+    build: &TestBuild,
+    mouse: &MouseSettings,
+    rounds: usize,
+) -> (Result<(Hold, Played), String>, Vec<String>) {
+    let target = match launch::start_target(ctx) {
+        Ok(t) => t,
+        Err(e) => return (Err(e), Vec::new()),
+    };
+    say!("G5's cases on {}", win::describe(target.hwnd));
+    let driven = drive(ctx, build, &target, mouse, rounds);
+    let mut left_open = probe::released();
+    left_open.extend(apps::clean_up(ctx, target));
+    (driven, left_open)
 }
 
-/// Closes target-window; one started as administrator is closed through its window.
-fn close(ctx: &Ctx, target: Opened) -> Vec<String> {
-    if target.child.is_some() {
-        return apps::clean_up(ctx, target);
-    }
-    let t = &ctx.cfg.timing;
-    let _ = win::close(target.hwnd);
-    if winfind::wait_gone(target.hwnd, t.close_wait_ms, t.poll_ms) {
-        Vec::new()
-    } else {
-        vec![format!("left open: {}", win::describe(target.hwnd))]
-    }
-}
-
-/// Starts the target called `name`; the admin one needs uiAccess, or we could not close it.
-fn start(ctx: &Ctx, name: &str) -> Result<Opened, String> {
-    match name {
-        PLAIN => launch::start_target(ctx),
-        ADMIN if !uiaccess::active() => {
-            Err("G5 admin needs the installed uiAccess kx-gates to close its window".to_string())
-        }
-        ADMIN => launch::start_target_admin(ctx),
-        _ => Err(format!("G5 runs on {PLAIN} or {ADMIN}, not {name}")),
-    }
-}
-
-/// Runs G5 on target-window, `plain` or `admin`.
+/// Runs G5 on target-window under the test build: `plain` only, as `admin` is the owner's manual check.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let target = start(ctx, name)?;
-    say!("G5 {name}: {}", win::describe(target.hwnd));
-    let driven = drive(ctx, &target);
-    let left_open = close(ctx, target);
-    let d = driven.map_err(|e| format!("{e}; left open: {left_open:?}"))?;
-    let (p99, hook) = hook_ms(&d.report.hook_us);
-    let fast = p99.is_some_and(|ms| ms <= ctx.cfg.g5.hook_p99_ms);
-    let pass = d.passed && d.alive && fast && d.report.errors.is_empty();
-    say!("hook ms {hook}; alive {}; pass {pass}", d.alive);
-    Ok(json!({
-        "gate": "G5", "target": name, "hold_ms": ctx.spike.hold.ms, "pass": pass,
-        "cases": d.cases, "hook_ms": hook, "hook_alive": d.alive, "seen": d.report.seen,
-        "max_wait_ms": d.report.max_wait_ms,
-        "errors": d.report.errors, "left_open": left_open,
-    }))
+    target_of(name)?;
+    let build = TestBuild::open(ctx, None)?;
+    let mouse = build.mouse()?;
+    let (driven, left_open) = on_target(ctx, &build, &mouse, ctx.cfg.g5.rounds);
+    let closed = build.close();
+    let (hold, played) = driven.map_err(|e| closed.failed(&e, &left_open))?;
+    let run = Run {
+        hold,
+        still_px: mouse.still_px,
+        played,
+        left_open,
+    };
+    let v = result(&run, &closed, &ctx.cfg.g5);
+    say!("G5 hook {}; pass {}", v["hook"], v["pass"]);
+    Ok(v)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const P: Pt = Pt { x: 100, y: 50 };
-
-    fn at(press: Press, x: i32, y: i32) -> Mouse {
-        Mouse { press, us: 0, x, y }
-    }
-
-    #[test]
-    fn a_drag_must_start_at_the_press_and_end_where_it_moved() {
-        let got = [at(Press::LeftDown, 100, 50), at(Press::LeftUp, 130, 51)];
-        assert!(case_ok(LEFT, false, &got, P, 30, 1));
-        assert!(!case_ok(LEFT, false, &got, P, 0, 1));
-        let late = [at(Press::LeftDown, 103, 50), at(Press::LeftUp, 130, 50)];
-        assert!(!case_ok(LEFT, false, &late, P, 30, 1));
-    }
-
-    #[test]
-    fn a_hold_must_log_a_right_click_all_at_the_press() {
-        let right = [
-            at(Press::RightDown, 100, 50),
-            at(Press::RightUp, 100, 50),
-            at(Press::Menu, 100, 50),
-        ];
-        assert!(case_ok(RIGHT, true, &right, P, 6, 1));
-        let moved = [right[0], at(Press::RightUp, 106, 50), right[2]];
-        assert!(!case_ok(RIGHT, true, &moved, P, 6, 1));
-        let also_left = [at(Press::LeftDown, 100, 50), right[0], right[1], right[2]];
-        assert!(!case_ok(RIGHT, true, &also_left, P, 0, 1));
-        assert!(!case_ok(RIGHT, true, &[], P, 0, 1));
-    }
-
-    #[test]
-    fn the_cases_straddle_the_still_radius_by_more_than_the_slack() {
-        let cfg = crate::config::load().expect("kx-gates.toml loads");
-        let still = spike_core::config::load()
-            .expect("spike.toml loads")
-            .hold
-            .still_px;
-        let g = &cfg.g5;
-        let [_, drag, _, wiggle, past] = cases(g, still);
-        assert!(g.still_margin_px > g.point_slack_px);
-        assert!(wiggle.dx > 0 && wiggle.dx < still);
-        assert!(past.dx > still && drag.dx > past.dx);
-    }
-
-    #[test]
-    fn hook_ms_reports_a_true_p99_over_many_calls() {
-        let us: Vec<i64> = (1..=200).collect();
-        let (p99, all) = hook_ms(&us);
-        assert_eq!(p99, Some(0.198));
-        assert_eq!(all["calls"], json!(200));
-        assert_eq!(all["max"], json!(0.2));
-        assert_eq!(hook_ms(&[]).0, None);
-    }
-}
+mod tests;

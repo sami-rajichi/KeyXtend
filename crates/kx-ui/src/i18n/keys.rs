@@ -48,6 +48,10 @@ pub const WINDOW_MENU: &str = "window.menu";
 pub const WINDOW_LIST: &str = "window.list";
 /// A tip's title, by which it lifts itself in front of our windows as it shows.
 pub const WINDOW_TIP: &str = "window.tip";
+/// The pointer helper's title: the hold ring and the mode badge.
+pub const WINDOW_POINTER: &str = "window.pointer";
+/// The mode badge's word while Grab holds a press down.
+pub const BADGE_HOLDING: &str = "badge.holding";
 /// How many more notices wait behind the one the banner shows: `$more`.
 pub const BANNER_MORE: &str = "banner.more";
 /// A pager's number: page `$at` of `$count`.

@@ -12,7 +12,7 @@ backdrop = "none"
 language = "auto"
 # How long the pointer rests on a button before its tip shows, in ms.
 tip_ms = 500
-# How often a move or resize follows the pointer, in ms.
+# How often a move or resize follows the pointer, and the least time between the pointer overlay's reads, in ms.
 poll_ms = 16
 # How long the window guard waits before each try, in ms, and how many times it tries.
 guard_delay_ms = 300
@@ -36,6 +36,8 @@ vblank_updates = true
 update_idle_ms = 5
 # Each frame shows at a screen refresh; false shows it at once, but frames then go unseen (ADR-0026). Read at start.
 present_vsync = true
+# Freed vertex and index buffers each window keeps, in bytes of each; 0 keeps none (ADR-0028), Qt 2 MiB. Read at start.
+buffer_pool_bytes = 0
 # A pressed key draws its press frame at once, then types ("now", ADR-0025); "after" types first, "first" once it's out.
 press_frame = "now"
 # The longest "first" waits for the press's frame before it types anyway, in ms.
@@ -47,3 +49,12 @@ frame_log = false
 page_rows = 5
 # The contrast a legend keeps when its key takes the accent; never below WCAG AA.
 min_contrast = 4.5
+# Sounds: a key press, a hold's right-click, Grab's pick-up and its drop; each can be switched off.
+sound_key = true
+sound_rclick = true
+sound_pick = true
+sound_drop = true
+# Our volume for every sound, in percent of its own level, under the Windows volume; 0 is silent.
+sound_volume = 15
+# How long the speaker stays ready after the last sound, in ms; the next sound after that wakes it.
+sound_idle_ms = 3000

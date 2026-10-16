@@ -1,6 +1,6 @@
 //! Builds small [`Workspace`] values in code, for the tidy rule tests (plan edge cases 1-12).
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 use crate::config::TidyConfig;
@@ -11,10 +11,21 @@ use crate::workspace::{
 
 /// Shorthand for building one [`Dependency`].
 pub(crate) fn dep(name: &str, kind: DependencyKind) -> Dependency {
+    dep_with(name, kind, &[])
+}
+
+/// One [`Dependency`] that turns on `features` in it.
+pub(crate) fn dep_with(name: &str, kind: DependencyKind, features: &[&str]) -> Dependency {
     Dependency {
         name: name.to_string(),
         kind,
+        features: strings(features),
     }
+}
+
+/// `items` as owned strings.
+fn strings(items: &[&str]) -> Vec<String> {
+    items.iter().map(|i| (*i).to_string()).collect()
 }
 
 /// Builds a [`Workspace`] from packages and resolved edges added one at a time.
@@ -55,6 +66,7 @@ impl WorkspaceBuilder {
             dependencies: deps,
             targets: Vec::new(),
             features: Vec::new(),
+            declared: BTreeMap::new(),
         });
         self.member_ids.push(id);
         self
@@ -69,6 +81,7 @@ impl WorkspaceBuilder {
             dependencies: Vec::new(),
             targets: Vec::new(),
             features: Vec::new(),
+            declared: BTreeMap::new(),
         });
         self
     }
@@ -91,6 +104,16 @@ impl WorkspaceBuilder {
     pub(crate) fn features(mut self, features: &[&str]) -> Self {
         if let Some(package) = self.packages.last_mut() {
             package.features = features.iter().map(|f| (*f).to_string()).collect();
+        }
+        self
+    }
+
+    /// Declares `feature` on the most recently added package, turning on `enables`.
+    pub(crate) fn declares(mut self, feature: &str, enables: &[&str]) -> Self {
+        if let Some(package) = self.packages.last_mut() {
+            package
+                .declared
+                .insert(feature.to_string(), strings(enables));
         }
         self
     }

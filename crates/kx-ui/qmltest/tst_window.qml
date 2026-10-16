@@ -8,6 +8,7 @@ import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-ar.js" as Ar
 import "pointer.js" as Pointer
+import "board.js" as Board
 
 Item {
     id: root
@@ -23,9 +24,17 @@ Item {
         name: "window"
         when: windowShown
 
+        // The window the test made last, hidden after it even when an assertion stops it.
+        property Window made: null
+
         // Any warning fails the test, so the run stays clean.
         function init() {
             failOnWarning(/./);
+        }
+        function cleanup() {
+            if (made)
+                made.visible = false;
+            made = null;
         }
         // A keyboard window over fresh stand-ins, laid out and not shown; the real pointer passes through it.
         function make(props, kbProps) {
@@ -34,6 +43,7 @@ Item {
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
             Pointer.through([win]);
+            made = win;
             return win;
         }
         // Every item under `item` for which `ok` holds.
@@ -61,13 +71,6 @@ Item {
             compare(hits.length, 1, name);
             return hits[0];
         }
-        // The window's tooltip.
-        function tipOf(win) {
-            for (let i = 0; i < win.data.length; i++)
-                if (win.data[i].item && win.data[i].item.hint)
-                    return win.data[i].item;
-            return null;
-        }
         // What the texts call board key `k`, or its character from the English state.
         function nameOf(k) {
             return k.name ? En.texts[k.name] : Face.states.en.keys[k.id].name;
@@ -82,21 +85,23 @@ Item {
             verify(named(win, En.texts["key.dpad"]), "the D-pad");
         }
 
-        function test_only_latches_and_caps_are_checkable() {
+        function test_only_latches_caps_and_the_mouse_modes_are_checkable() {
             const win = make();
             const checkable = buttons(win).filter(o => o.Accessible.checkable).map(o => o.Accessible.id).sort();
             const latches = Face.board.keys.filter(k => k.checkable).map(k => k.id).sort();
             compare(checkable, latches);
             verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
-            for (const k of Face.board.keys.filter(k => k.side))
-                verify(!keyed(win, k.id).Accessible.checkable, "side key " + k.id);
+            const side = Face.board.keys.filter(k => k.side && k.checkable).map(k => k.id).sort();
+            compare(side, ["grab", "rclick"], "Right-click and Grab are the side keys that turn on");
         }
 
-        function test_dimmed_keys_announce_coming_in_a_later_version() {
+        function test_dimmed_keys_announce_coming_in_a_later_version_and_others_their_state_tip() {
             const win = make();
             const later = En.texts["tip.later"];
-            for (const k of Face.board.keys)
-                compare(keyed(win, k.id).Accessible.description, k.dim ? later : "", k.id);
+            for (const k of Face.board.keys) {
+                const tip = win.st.keys[k.id].tip;
+                compare(keyed(win, k.id).Accessible.description, k.dim ? later : tip ? En.texts[tip] : "", k.id);
+            }
             compare(named(win, En.texts["key.dpad"]).Accessible.description, later, "the D-pad");
         }
 
@@ -178,7 +183,7 @@ Item {
             const win = make();
             win.visible = true;
             waitForRendering(win.contentItem);
-            const tip = tipOf(win);
+            const tip = Board.tipOf(win);
             const said = [[keyed(win, "mic"), "key.mic"], [named(win, En.texts["key.dpad"]), "key.dpad"]];
             for (const [it, name] of said) {
                 mouseMove(it, it.width / 2, it.height / 2);
@@ -199,7 +204,7 @@ Item {
             const key = keyed(win, "lang");
             compare(key.Accessible.description, En.texts["tip.one-lang"]);
             mouseMove(key, key.width / 2, key.height / 2);
-            compare(tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
+            compare(Board.tipOf(win).name, En.texts["key.lang"] + "\n" + En.texts["tip.one-lang"]);
             win.visible = false;
         }
 
@@ -213,6 +218,46 @@ Item {
                 tryVerify(() => relabels() === n, wait, "show " + n);
                 win.visible = false;
             }
+        }
+
+        // A mouse mode or a latch the mouse used changes the keys from the bus: the hub's wake has the window read its
+        // state at once, with no relabel tick (the window is hidden, so its timer rests).
+        function test_a_mode_change_on_the_bus_lights_its_key_at_once() {
+            const win = make({}, { state: JSON.parse(JSON.stringify(Face.states.en)) });
+            // Changed in place, so no binding sees it: the real keyboard's state is read only by a call.
+            win.keyboard.state.keys.rclick.on = true;
+            verify(!keyed(win, "rclick").Accessible.checked, "not read yet");
+            win.ui.keysChanged();
+            verify(keyed(win, "rclick").Accessible.checked, "lit at once");
+            compare(win.keyboard.calls.indexOf("relabel"), -1, "no relabel tick ran");
+        }
+
+        // While mouse assist is off the state dims its keys: they press as a dimmed key does, send nothing and keep the
+        // tip that says why. The state's flag decides, not the paint, and once it clears they act.
+        function test_a_mouse_key_dimmed_by_its_state_sends_nothing_and_keeps_its_tip() {
+            const win = make({}, { state: JSON.parse(JSON.stringify(Face.states.en)) });
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const taps = id => win.keyboard.calls.filter(c => c.indexOf("tap " + id) === 0).length;
+            for (const id of ["rclick", "grab"]) {
+                const key = keyed(win, id);
+                verify(key.dim && Qt.colorEqual(key.fillColour, win.lk.palette.dim), id + " is dimmed");
+                mouseMove(key, key.width / 2, key.height / 2);
+                const says = En.texts["key." + id] + "\n" + En.texts["tip.mouse-off"];
+                compare(Board.tipOf(win).name, says, id);
+                mousePress(key);
+                verify(!key.down && key.sink === 0, id + " does not sink");
+                mouseRelease(key);
+                tryCompare(win.presses, "waiting", null);
+                compare(taps(id), 0, id + " sends nothing");
+                compare(Board.tipOf(win).name, says, id + " keeps its tip");
+            }
+            const keys = win.keyboard.state.keys;
+            keys.rclick = Object.assign({}, keys.rclick, { dim: false, tip: "tip.rclick" });
+            win.ui.keysChanged();
+            mouseClick(keyed(win, "rclick"));
+            tryCompare(win.presses, "waiting", null);
+            compare(taps("rclick"), 1, "a live key acts");
         }
 
         function test_a_stopped_keyboard_draws_nothing_until_it_runs() {

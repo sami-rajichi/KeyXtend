@@ -33,6 +33,7 @@
       "banned_network": ["reqwest"],
       "banned_media": ["image"],
       "banned_features": { "toml": ["unbounded"] },
+      "build_only_features": { "kx-theme": ["files"] },
       "unsafe_attr": "#![forbid(unsafe_code)]",
       "deny_attr": "#![deny(unsafe_code)]",
       "root_kinds": ["lib", "bin", "proc-macro"],

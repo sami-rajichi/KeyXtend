@@ -1,12 +1,15 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, the tray icon, and the requests the app drains on its own thread. No lock is
-//! held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the pointer overlay, the tray icon, and the requests the app drains on
+//! its own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
+mod assist;
+mod bus;
 mod face;
 mod fonts;
 mod look;
 mod notices;
+mod sound;
 mod spots;
 mod texts;
 mod tray;
@@ -18,11 +21,10 @@ pub use notices::Shown;
 
 use crate::settings::{PressFrame, UiSettings};
 use kx_module_api::ports::KeyboardFace;
-use kx_module_api::{
-    Bus, EventError, ModuleId, Notice, SettingsError, SettingsHandle, Subscription,
-};
+use kx_module_api::{ModuleId, Notice, SettingsError, SettingsHandle};
 use kx_platform::ui::{
-    Backdrop, FocusToken, Memory, Screens, SysLook, SystemLook, Tray, TrayEvent, WindowGuard,
+    Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
+    WindowGuard,
 };
 use kx_theme::assets::FontFiles;
 use kx_theme::{ThemeError, Themes};
@@ -48,6 +50,8 @@ pub struct UiPorts {
     pub tray: Arc<dyn Tray>,
     /// Gives the heaps' free pages back after a look change (ADR-0023).
     pub memory: Arc<dyn Memory>,
+    /// Plays the sounds; any thread may call it, since it never blocks.
+    pub speaker: Arc<dyn Speaker>,
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
@@ -76,6 +80,10 @@ pub enum Wake {
     End,
     /// The tray icon heard a click, with where its menu opens, or a click elsewhere.
     Tray(TrayEvent),
+    /// The pointer overlay's state changed; no other comes until QML reads it.
+    Assist,
+    /// A mouse mode changed or a latch let go: the keyboard reads its state again.
+    Keys,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -140,6 +148,12 @@ pub struct Hub {
     fonts: Mutex<fonts::Fonts>,
     /// True once the memory port refused a give-back, which warns only the first time.
     refused: AtomicBool,
+    /// Each sound's cue and turn.
+    sounds: sound::Sounds,
+    /// The pointer overlay's state.
+    assist: assist::Assist,
+    /// The kernel's bus and the keyboard's wake handlers.
+    heard: Mutex<bus::Heard>,
 }
 
 impl Hub {
@@ -152,6 +166,7 @@ impl Hub {
         let settings = UiSettings::from_defaults()?;
         let themes = Themes::shipped()?;
         let font_files = FontFiles::shipped()?;
+        let sounds = sound::Sounds::new(&*ports.speaker, settings.sound_idle_ms);
         let (requests, drain) = mpsc::channel();
         let live = Live {
             texts: Texts::new(&settings.language, "", &ports.look.ui_language()),
@@ -175,6 +190,9 @@ impl Hub {
             tray: Mutex::default(),
             fonts: Mutex::default(),
             refused: AtomicBool::default(),
+            sounds,
+            assist: assist::Assist::default(),
+            heard: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -184,25 +202,35 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows.
-    pub fn attach(&self, settings: UiSettings, face: Arc<dyn KeyboardFace>, store: SettingsHandle) {
+    /// follow the language of the layout the face shows, and a new `sound_idle_ms` prepares the speaker again. The
+    /// keyboard's wake is heard from now on, after the face's own handlers.
+    pub fn attach(
+        self: &Arc<Self>,
+        settings: UiSettings,
+        face: Arc<dyn KeyboardFace>,
+        store: SettingsHandle,
+    ) {
+        self.hear_keys();
         let texts = Texts::new(
             &settings.language,
             &face.lang(),
             &self.ports.look.ui_language(),
         );
-        {
+        let idle = settings.sound_idle_ms;
+        let before = {
             let mut live = self.lock();
-            live.settings = settings;
             live.texts = texts;
             live.face = Some(face);
             live.store = Some(store);
-        }
+            std::mem::replace(&mut live.settings, settings).sound_idle_ms
+        };
+        self.idle_changed(before, idle);
         self.wake(Wake::Settings);
     }
 
-    /// Lets the face and the handle go when the `ui` module stops; the last settings stay.
+    /// Lets the face, the handle and the keyboard's wake go when the `ui` module stops; the last settings stay.
     pub fn detach(&self) {
+        self.unhear_keys();
         {
             let mut live = self.lock();
             live.face = None;
@@ -238,19 +266,6 @@ impl Hub {
         if self.lock().notices.push(notice) {
             self.wake(Wake::Notices);
         }
-    }
-
-    /// Hears every notice on `bus` until the subscription drops; the app calls it before the kernel loads.
-    ///
-    /// # Errors
-    /// `EventError` when the bus refuses the subscription.
-    pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Subscription, EventError> {
-        let hub = Arc::downgrade(self);
-        bus.subscribe(move |notice: &Notice| {
-            if let Some(hub) = hub.upgrade() {
-                hub.notice(notice.clone());
-            }
-        })
     }
 
     /// The waiting notices in the keyboard's language; the banner shows them from now on.

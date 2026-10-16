@@ -89,16 +89,20 @@ fn a_file_without_a_needed_column_is_refused_and_names_it() {
 }
 
 #[test]
-fn presents_are_read_in_time_order_and_a_present_without_a_time_is_an_error() {
+fn presents_are_read_in_time_order_and_a_present_without_a_time_is_skipped_and_counted() {
     let swapped = V2.replacen("5000.25", "5009.0", 1);
     let f = parse(&swapped, "keyxtend.exe").expect("reads");
     let at: Vec<_> = f.presents.iter().map(|p| p.at_us).collect();
     assert_eq!(at, [5_007_310, 5_010_000]);
+    assert_eq!(f.unread, 0);
     for blank in [
         V2.replacen("5000.25", "NA", 1),
         V2.replacen("6.06,1.0", "6.06,NA", 1),
+        V2.replacen("5000.25,6.06,1.0,6.06", "5000.25", 1),
     ] {
-        assert!(parse(&blank, "keyxtend.exe").is_err(), "{blank}");
+        let f = parse(&blank, "keyxtend.exe").expect("the readable rows still count");
+        assert_eq!((f.presented, f.unread), (1, 1), "{blank}");
+        assert_eq!(f.presents[0].at_us, 5_007_310, "{blank}");
     }
 }
 
@@ -121,7 +125,7 @@ fn a_last_row_still_being_written_is_left_out() {
 }
 
 #[test]
-fn g8_starts_presentmon_with_qpc_times_and_the_arguments_the_how_to_names() {
+fn a_gate_starts_presentmon_with_qpc_times_and_the_arguments_its_how_to_names() {
     let file = Path::new(r"C:\out\pm.csv");
     let got = args("keyxtend.exe", file, 75);
     let want = [
@@ -135,9 +139,9 @@ fn g8_starts_presentmon_with_qpc_times_and_the_arguments_the_how_to_names() {
         "--terminate_after_timed",
     ];
     assert_eq!(got, want);
-    let text = how("keyxtend.exe", file, 75);
+    let text = how("G12", "keyxtend.exe", file, 75);
     assert!(text.contains(&want.join(" ")), "{text}");
-    for part in ["presentmon_exe", "administrator"] {
+    for part in ["presentmon_exe", "administrator", "before G12"] {
         assert!(text.contains(part), "{part}: {text}");
     }
 }

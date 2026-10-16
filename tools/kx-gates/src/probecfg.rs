@@ -1,4 +1,4 @@
-//! Settings of the mouse-helper probes G17, G18 and G6, and of the ring check G12, from `[probes]`, `[g6]` and `[g12]`.
+//! Settings of the mouse-helper probes G17, G18 and G6, from `[probes]`, `[sim]` and `[g6]`.
 #![cfg(windows)]
 
 use serde::Deserialize;
@@ -70,45 +70,45 @@ pub struct G6 {
     pub wheel_delta: i32,
     /// Notches, or UIA small steps, per scroll.
     pub notches: u32,
-    /// The stand-in face: a square this big at the desktop's top-left corner, in px.
+    /// The stand-in face: a square this big, in px.
     pub face_px: i32,
+    /// How far above the document window's lower edge the face's top sits, in px, clear of a status bar.
+    pub face_overlap_px: i32,
     /// A picture counts as changed when more than this share of its pixels changed.
     pub min_changed: f64,
 }
 
-/// Ring overlay check settings (gate G12); times in ms, distances in px.
-#[derive(Debug, Clone, Deserialize)]
-pub struct G12 {
-    /// Click grid columns and rows over target-window's text box; each point is clicked once.
-    pub grid: [u32; 2],
-    /// The grid stays this far inside the text box's edges.
-    pub inset_px: i32,
-    /// Longest wait after a move for the ring to follow the pointer.
-    pub follow_ms: u64,
-    /// Wait after each click, and after the last before reading the log.
-    pub settle_ms: u64,
-    /// A logged press may be this far from where we clicked.
-    pub slack_px: i32,
-    /// Least frames a second the ring must draw.
-    pub min_fps: f64,
-    /// 99 in 100 frame gaps must be this long or shorter.
-    pub p99_ms: f64,
-    /// Longest wait for the ring window to open.
-    pub open_ms: u64,
-}
-
-impl G12 {
-    /// Refuses an empty grid, a negative inset or slack, or limits that are not above 0.
+impl G6 {
+    /// Refuses a face or an overlap that is not above 0, as the scroll point would then miss the document's body.
     pub fn check(&self) -> Result<(), String> {
-        let grid = self.grid.iter().all(|&n| n > 0);
-        let limits = self.min_fps > 0.0 && self.p99_ms > 0.0;
-        let room = self.inset_px >= 0 && self.slack_px >= 0;
-        if !grid || !limits || !room {
-            return Err(
-                "g12: grid, min_fps and p99_ms must be above 0, inset_px and slack_px 0 or more"
-                    .into(),
-            );
+        if self.face_px <= 0 || self.face_overlap_px <= 0 {
+            return Err("g6.face_px and g6.face_overlap_px must be above 0".into());
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn g6() -> G6 {
+        crate::config::load().expect("kx-gates.toml loads").g6
+    }
+
+    #[test]
+    fn g6_checks_and_refuses_a_face_or_overlap_not_above_0() {
+        assert_eq!(g6().check(), Ok(()));
+        let bad: [fn(&mut G6); 4] = [
+            |g| g.face_px = 0,
+            |g| g.face_px = -1,
+            |g| g.face_overlap_px = 0,
+            |g| g.face_overlap_px = -1,
+        ];
+        for (i, f) in bad.iter().enumerate() {
+            let mut g = g6();
+            f(&mut g);
+            assert!(g.check().is_err(), "case {i}");
+        }
     }
 }

@@ -1,12 +1,12 @@
 //! Qt's start in the uiAccess process: Qt variables another program planted reach neither Qt's plugin folders nor the
 //! QML import paths, nor Qt's narrow or wide reads, pinned plugins and imports hold only the app's folders and the
-//! compiled-in modules, and only the graphics adapter, the drawing variables and the frame timing the app picks reach
-//! Qt; the frame log starts only once drawing is pinned. The variables must be set before the process starts, so the
-//! test runs itself again, as a child, with them set.
+//! compiled-in modules, and only the graphics adapter, the drawing variables and the frame timing and buffer pool the
+//! app picks reach Qt; the frame log starts only once drawing is pinned. The variables must be set before the process
+//! starts, so the test runs itself again, as a child, with them set.
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QStringList};
 use kx_test_support::tempdir::TempDir;
-use kx_ui::harden::{DRAW_VARS, LATENCY_VAR, is_qt, swap_interval, timing_vars};
+use kx_ui::harden::{DRAW_VARS, LATENCY_VAR, POOL_VAR, is_qt, swap_interval, timing_vars};
 use kx_ui::{FrameLog, UiSettings};
 use std::env;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
@@ -30,6 +30,10 @@ const ADAPTER: u32 = 1;
 const OUTSIDE: (&str, &str) = ("QSG_RENDER_LOOP", "threaded");
 /// A frame latency another program chose, which the `[ui]` setting must replace.
 const LATE: (&str, &str) = (LATENCY_VAR, "0");
+/// A buffer pool another program chose, which the `[ui]` setting must replace (ADR-0028).
+const POOL: (&str, &str) = (POOL_VAR, "65536");
+/// Another scene graph variable from outside; nothing of ours sets it, so it must stay cleared.
+const STRAY: (&str, &str) = ("QSG_VISUALIZE", "overdraw");
 /// Names the C runtime narrows to a Qt variable with the ANSI code page's best fit: a fullwidth `ＱＴ`, and a
 /// non-ASCII last letter. Each pairs the planted name with the name Qt then reads.
 const ALIASES: [(&str, &str); 2] = [
@@ -76,7 +80,9 @@ fn parent() -> Outcome {
     std::fs::copy(from, pinned.path().join(folder).join(plugin)).map_err(|e| e.to_string())?;
     let mut run = Command::new(env::current_exe().map_err(|e| e.to_string())?);
     run.env(CHILD, planted.path()).env(PINNED, pinned.path());
-    run.env(OUTSIDE.0, OUTSIDE.1).env(LATE.0, LATE.1);
+    for (name, value) in [OUTSIDE, LATE, POOL, STRAY] {
+        run.env(name, value);
+    }
     for name in PLANTED.into_iter().chain(ALIASES.map(|(alias, _)| alias)) {
         run.env(name, planted.path());
     }
@@ -171,13 +177,8 @@ fn adapter() -> Outcome {
     Ok(())
 }
 
-/// After the clear and the pins, Qt reads exactly the adapter and the drawing variables, with the app's values, so the
-/// outside render loop is replaced.
-fn drawing() -> Outcome {
-    if !kx_ui::pin_drawing() {
-        return Err("the drawing variables were not set".into());
-    }
-    let names = DRAW_VARS.map(|(name, _)| name);
+/// Qt's ASCII variables are exactly the adapter and `names`, so no other one from outside came back.
+fn exactly(names: &[&str]) -> Outcome {
     let mut want: Vec<String> = names
         .iter()
         .chain([&kx_ui::ADAPTER_VAR])
@@ -194,6 +195,16 @@ fn drawing() -> Outcome {
     if set != want {
         return Err(format!("Qt reads {set:?}, not {want:?}"));
     }
+    Ok(())
+}
+
+/// After the clear and the pins, Qt reads exactly the adapter and the drawing variables, with the app's values, so the
+/// outside render loop is replaced.
+fn drawing() -> Outcome {
+    if !kx_ui::pin_drawing() {
+        return Err("the drawing variables were not set".into());
+    }
+    exactly(&DRAW_VARS.map(|(name, _)| name))?;
     let wrong: Vec<&str> = DRAW_VARS
         .iter()
         .filter(|(name, value)| {
@@ -213,8 +224,8 @@ fn drawing() -> Outcome {
     Ok(())
 }
 
-/// After the drawing pins, Qt reads the frame timing of the `[ui]` defaults, Qt's own values, in place of an outside
-/// one, and every window asks for the defaults' swap interval.
+/// After the drawing pins, Qt reads the frame timing and buffer pool of the `[ui]` defaults in place of outside ones,
+/// every window asks for the defaults' swap interval, and no other Qt variable from outside, as `STRAY`, came back.
 fn timing() -> Outcome {
     let s = UiSettings::from_defaults().map_err(|e| e.to_string())?;
     if !kx_ui::pin_timing(&s) {
@@ -229,16 +240,22 @@ fn timing() -> Outcome {
         .map(|(name, _)| *name)
         .collect();
     let interval = kx_ui::swap_interval_set();
-    let replaced = vars
-        .iter()
-        .any(|(name, value)| *name == LATE.0 && value != LATE.1);
-    if !wrong.is_empty() || !replaced || interval != swap_interval(&s) {
+    let kept: Vec<&str> = [LATE, POOL]
+        .into_iter()
+        .filter(|(out, planted)| !vars.iter().any(|(name, v)| name == out && v != planted))
+        .map(|(out, _)| out)
+        .collect();
+    if !wrong.is_empty() || !kept.is_empty() || interval != swap_interval(&s) {
         return Err(format!(
-            "{wrong:?} hold other values, {} was not replaced, or the swap interval is {interval}",
-            LATE.0
+            "{wrong:?} hold other values, {kept:?} were not replaced, or the swap interval is {interval}"
         ));
     }
-    Ok(())
+    let ours = DRAW_VARS.map(|(name, _)| name).into_iter();
+    exactly(
+        &ours
+            .chain(vars.iter().map(|(name, _)| *name))
+            .collect::<Vec<_>>(),
+    )
 }
 
 /// Qt's plugin folders hold the pinned folder, and neither the planted one nor Qt's own.

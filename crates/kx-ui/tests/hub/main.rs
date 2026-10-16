@@ -1,4 +1,5 @@
-//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard and the look.
+//! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
+//! sounds and the pointer overlay.
 
 #![allow(
     clippy::expect_used,
@@ -7,17 +8,22 @@
 )]
 
 mod app;
+mod assist;
 #[path = "../shared/board.rs"]
 mod board;
 mod face;
 mod fonts;
 mod held;
 mod lifecycle;
+mod lights;
 mod logs;
 mod look;
 mod memory;
 mod module;
 mod notices;
+// Without `qt` the sound table is empty, so these tests would check no play.
+#[cfg(feature = "qt")]
+mod sound;
 mod spots;
 mod texts;
 mod tray;
@@ -27,7 +33,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
 };
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
@@ -110,6 +116,8 @@ struct Rig {
     tray: Arc<FakeTray>,
     /// The fake memory port.
     memory: Arc<FakeMemory>,
+    /// The fake speaker.
+    speaker: Arc<FakeSpeaker>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
 }
@@ -156,6 +164,7 @@ impl Rig {
         let backdrop = Arc::new(FakeBackdrop::new());
         let tray = Arc::new(FakeTray::new(TRAY_PX));
         let memory = Arc::new(FakeMemory::new());
+        let speaker = Arc::new(FakeSpeaker::new());
         let ports = UiPorts {
             guard: guard.clone(),
             screens: screens.clone(),
@@ -163,6 +172,7 @@ impl Rig {
             backdrop: backdrop.clone(),
             tray: tray.clone(),
             memory: memory.clone(),
+            speaker: speaker.clone(),
         };
         let (hub, requests) = Hub::new(ports).expect("the hub starts");
         let wakes = Arc::new(Mutex::new(Vec::new()));
@@ -177,6 +187,7 @@ impl Rig {
             backdrop,
             tray,
             memory,
+            speaker,
             wakes,
         }
     }
@@ -190,6 +201,7 @@ impl Rig {
             backdrop: self.backdrop.clone(),
             tray: self.tray.clone(),
             memory: self.memory.clone(),
+            speaker: self.speaker.clone(),
         }
     }
 

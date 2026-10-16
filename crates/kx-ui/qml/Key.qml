@@ -29,7 +29,8 @@ Item {
     readonly property var look: lk.look
     readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
-    readonly property bool dim: !!kv.dim
+    // Dimmed by the board, as a later key, or by its state, as a mouse key while mouse assist is off: it does nothing.
+    readonly property bool dim: !!kv.dim || !!(ks && ks.dim)
     // It repeats while held, so its press holds it and its let-go ends the hold.
     readonly property bool repeats: !!kv.repeat && !dim
     // This press holds the key instead of clicking it, as `repeats` said when the pointer went down.

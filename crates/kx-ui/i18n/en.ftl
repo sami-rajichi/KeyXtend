@@ -69,6 +69,9 @@ label =
 tip =
     .later = Coming in a later version
     .one-lang = Only one keyboard language is installed
+    .mouse-off = Mouse assist is off
+    .rclick = Hold still to right-click; short clicks stay normal
+    .grab = Press to pick up, move, then click to drop
 
 ## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
 mark =
@@ -127,9 +130,14 @@ window =
     .menu = { -app } menu
     .list = Keyboard languages
     .tip = { -app } tip
+    .pointer = Pointer helper
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
+
+## The mode badge beside the pointer: its word while Grab holds a press down.
+badge =
+    .holding = Holding
 
 tray =
     .show = Show keyboard
@@ -165,12 +173,16 @@ notice =
     .module-failed = { $module } stopped after an error. Everything else still works.
     .keys-not-sent = Some keys did not reach the app in front. Check what was typed.
     .lang-not-switched = The app in front could not switch the language.
+    .mouse-hook-failed = Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.
+    .mouse-reset = Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.
+    .mouse-stopped = Mouse assist stopped after an error. Restart { -app } to use it again.
 
 ## Module names by module id; an id not listed shows itself.
 module =
     .kernel = { -app }
     .keyboard = Keyboard
     .layouts = Keyboard layouts
+    .mouse = Mouse assist
     .ui = Appearance
 
 ## The language key's designs, by [keyboard] lang_key value.

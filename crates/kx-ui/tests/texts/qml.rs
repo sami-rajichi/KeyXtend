@@ -8,7 +8,7 @@ use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect, Screen,
 };
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
 };
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
@@ -108,15 +108,18 @@ fn system(tag: &str) -> Arc<Hub> {
         backdrop: Arc::new(FakeBackdrop::new()),
         tray: Arc::new(FakeTray::new(TRAY_PX)),
         memory: Arc::new(FakeMemory::new()),
+        speaker: Arc::new(FakeSpeaker::new()),
     };
     Hub::new(ports).expect("the hub starts").0
 }
 
-/// Language `tag`'s settings and language JSON, every text by key, and the banner's counts by how many wait.
+/// Language `tag`'s settings and language JSON, every text by key, the banner's counts by how many wait, and the pointer
+/// overlay's state as the hub starts.
 fn ui(tag: &str) -> String {
     let (hub, _host) = hub(tag);
     let settings: Value = serde_json::from_str(&hub.settings_json()).expect("settings JSON");
     let lang: Value = serde_json::from_str(&hub.lang_json()).expect("language JSON");
+    let assist: Value = serde_json::from_str(&hub.assist_json()).expect("overlay JSON");
     let t: Arc<I18n> = hub.i18n();
     let texts: Map<String, Value> = keys_of(t.lang().ftl)
         .into_iter()
@@ -128,11 +131,12 @@ fn ui(tag: &str) -> String {
     let texts = Value::Object(texts);
     let more: Vec<Value> = (0..=MORE_UP_TO).map(|n| Value::String(t.more(n))).collect();
     format!(
-        "{HEAD}{}{}{}{}",
+        "{HEAD}{}{}{}{}{}",
         var("settings", &settings, true),
         var("lang", &lang, true),
         var("texts", &texts, true),
-        var("more", &Value::Array(more), true)
+        var("more", &Value::Array(more), true),
+        var("assist", &assist, true)
     )
 }
 

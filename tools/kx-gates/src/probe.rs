@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::{self, AppKind, Ctx, Opened};

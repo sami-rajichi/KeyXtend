@@ -1,5 +1,4 @@
-// Stage-1 extras: the Copy pill, the voice caption and the snip overlay, with the tools and voice worker behind them,
-// and gate G12's ring test.
+// Stage-1 extras: the Copy pill, the voice caption and the snip overlay, with the tools and voice worker behind them.
 // They take the keyboard's theme, light or dark, like the mock-up's .selpill, .capbar and .snip-*.
 import QtQuick
 // The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
@@ -9,17 +8,13 @@ import KeyXtend.Spike
 Item {
     id: ex
 
-    // Qt units for a physical point (the keyboard's `logical`), the pointer as `{x, y}` or `{note}`, and the look and fonts.
+    // Qt units for a physical point (the keyboard's `logical`), and the look and fonts.
     required property var logical
-    required property var cursor
     required property var lk
     required property var res
 
     // The mic is recording.
     readonly property bool recording: vc.recording
-    // The ring test's switch label, and whether the test runs.
-    readonly property string ringLabel: ring.label
-    readonly property bool ringOn: ring.visible
 
     // A note for the status line.
     signal note(string text)
@@ -39,13 +34,6 @@ Item {
     // Guards our windows and lifts the one called `title` to the top.
     function guard(title) {
         say(tl.guard(title));
-    }
-
-    // Starts or stops the ring test, lifting its window above ours.
-    function flipRing() {
-        ring.toggle();
-        if (ring.visible)
-            guard(ring.title);
     }
 
     // Runs side tool `i` and shows what it says.
@@ -122,7 +110,7 @@ Item {
         lk: ex.lk
         res: ex.res
     }
-    Overlay {
+    SnipOverlay {
         id: over
         title: tl.overlayTitle
         lk: ex.lk
@@ -137,13 +125,6 @@ Item {
                 ex.say(n);
             }
         }
-    }
-    Ring {
-        id: ring
-        logical: ex.logical
-        cursor: ex.cursor
-        lk: ex.lk
-        onNote: text => ex.say(text)
     }
     Timer {
         interval: tl.pollMs

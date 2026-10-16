@@ -1,6 +1,6 @@
 // The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner and the tray
-// menu, each over a click-through shadow window, and the tray icon's picture. A shadow window owns its window, so
-// Windows keeps the window just above it; owners show first.
+// menu, each over a click-through shadow window, the pointer overlay and the tray icon's picture. A shadow window owns
+// its window, so Windows keeps the window just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -10,7 +10,7 @@ QtObject {
     // The hub's Ui and Keyboard objects, or the tests' stand-ins.
     required property QtObject ui
     required property QtObject keyboard
-    // The tray menu's clock in ms; tests set their own.
+    // The clock in ms for the tray menu and the overlay's reads; tests set their own.
     property var now: () => Date.now()
     // Minimise or Close put the keyboard away; it comes back from the bubble or a second copy's Show.
     property bool away: false
@@ -49,6 +49,9 @@ QtObject {
         }
         function onSettingsChanged() {
             Qt.callLater(app.trayPicture.draw);
+        }
+        function onAssistChanged() {
+            reader.woke();
         }
     }
 
@@ -132,6 +135,29 @@ QtObject {
             onShowing: on => app.shadow(app.menuGlow, on, trayMenu)
             onShowKeyboard: app.open()
             onQuitApp: app.ui.quit()
+        }
+    }
+    // The pointer overlay's state as last read: a wake reads it on the event loop's next pass, never on a frame, at
+    // most once per `poll_ms`. Only a read lets the next change wake, so the reader stays here, outside the Loader.
+    readonly property alias assist: reader.state
+    property AssistRead assistRead: AssistRead {
+        id: reader
+        ui: app.ui
+        paceMs: face.cfg ? face.cfg.pollMs : 0
+        now: app.now
+    }
+    // The pointer overlay, made while the hub names a mode and freed once it names none; a ring goes with the modes.
+    property Loader pointer: Loader {
+        readonly property var st: app.assist
+        active: !!face.lk && !!st && !!st.mode
+        sourceComponent: Overlay {
+            lk: face.lk
+            res: face.res
+            st: app.assist
+            spots: face.spots
+            ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null]
+            // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
+            onVisibleChanged: if (visible) face.guardQuiet()
         }
     }
     // Draws the tray icon's picture in the look and hands it to the Ui object.
@@ -257,7 +283,7 @@ QtObject {
     }
 
     // After every handler here has run, so the keyboard has its place, it shows, stays away or gets its bubble, as the
-    // hub keeps it; the tray icon is drawn once the look is in.
+    // hub keeps it; the tray icon is drawn once the look is in, and the overlay's state is read once.
     Component.onCompleted: {
         const kept = JSON.parse(ui.modeJson()) || {};
         away = !!kept.away;
@@ -265,5 +291,6 @@ QtObject {
         restored = true;
         Qt.callLater(follow);
         Qt.callLater(app.trayPicture.draw);
+        Qt.callLater(reader.read);
     }
 }

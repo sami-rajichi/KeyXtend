@@ -22,7 +22,7 @@ pub use act::{caret, focus, invoke};
 pub use geom::{Pill, anchor, centre, line_points, rects_of};
 pub use read::{Sel, boxes, is_password, lines, password_flag, selection};
 
-use crate::hold::Pt;
+use crate::pt::Pt;
 
 /// Most ancestors walked when looking for a pattern above an element.
 const MAX_DEPTH: usize = 32;

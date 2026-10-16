@@ -1,25 +1,33 @@
-//! G12 ring overlay: with the face's ring test on, clicks under the ring all reach target-window, and the ring keeps 60 Hz.
-//!
-//! It moves the real mouse and clicks, so it runs only with the owner's yes.
+//! G12 ring overlay (roadmap G12): under the test build with Right-click on, each click on target-window shows the ring
+//! yet still arrives, and `PresentMon` sees the ring keep 60 Hz. It moves the pointer, so only with the owner's yes.
 #![cfg(windows)]
 
-use std::path::Path;
+use std::path::PathBuf;
+use std::time::{Instant, SystemTime};
 
-use kx_platform_windows::dirs;
-use kx_test_support::ringstats::{self, FrameReport};
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::uia::{self, Uia};
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
-use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::{self, Ctx};
-use crate::facetools::{self, FaceWin};
-use crate::g12pts::{grid, logged, ring_over};
-use crate::out::say;
-use crate::tlog;
+use crate::config::GatesConfig;
+use crate::g5::{self, RCLICK};
+use crate::g8frames::{self, Capture, Recorder};
+use crate::g12frames::{self, Ring, Span};
+use crate::g12pts::{Pace, free, grid, logged, overlay_at, pace};
+use crate::out::{say, shown};
+use crate::p4cfg::G12;
+use crate::presentmon::Frames;
+use crate::product::{self, Keyboard};
+use crate::simin::{self, Act};
+use crate::stats::us_of;
+use crate::testbuild::{Closed, TestBuild};
 use crate::win::{self, sleep_ms};
-use crate::{keymap, launch, mouse};
+use crate::{g8ui, launch, mouse, mouseguard, probe, tlog};
+
+/// G12's name in its result and in `PresentMon`'s how-to.
+const GATE: &str = "G12";
 
 /// Target-window's text box on screen: its client area, in physical pixels.
 fn text_box(target: HWND) -> Result<RECT, String> {
@@ -33,167 +41,236 @@ fn text_box(target: HWND) -> Result<RECT, String> {
     })
 }
 
-/// What the clicks found.
-#[derive(Default)]
+/// G12's capture: its CSV and length from `[g12]`, `PresentMon`'s program and waits from `[g8]`.
+fn capture(cfg: &GatesConfig) -> Capture {
+    Capture {
+        gate: GATE,
+        csv: cfg.g12.presentmon.clone(),
+        secs: cfg.g12.presentmon_secs,
+        ..Capture::of_g8(&cfg.g8)
+    }
+}
+
+/// The test build's program, whose file name `PresentMon` records.
+fn test_build(cfg: &GatesConfig) -> PathBuf {
+    cfg.program(&cfg.gate_input.program)
+}
+
+/// The windows a press looks at: the test build's process and keyboard, and target-window.
+struct Wins {
+    pid: u32,
+    keyboard: HWND,
+    target: HWND,
+}
+
+impl Wins {
+    /// The test build's, found by its shown keyboard, and `target`.
+    fn find(target: HWND) -> Result<Self, String> {
+        let keyboard = Keyboard::find()?.hwnd;
+        let pid = win::owner(keyboard).0;
+        Ok(Self {
+            pid,
+            keyboard,
+            target,
+        })
+    }
+
+    /// The overlay window over `p` now, if any.
+    fn overlay(&self, p: POINT) -> Option<HWND> {
+        let boxed = |w: HWND| win::rect(w).ok().map(|r| (w, r));
+        let ours: Vec<(HWND, RECT)> = product::shown_by(self.pid)
+            .into_iter()
+            .filter_map(boxed)
+            .collect();
+        overlay_at(&win::top_windows(), &ours, self.keyboard, self.target, p)
+    }
+}
+
+/// What one press found: its ring span, whether the overlay covered the point, and whether it took the click.
+struct Pressed {
+    span: Span,
+    covered: bool,
+    blocked: bool,
+}
+
+/// Presses at `p` as the simulated user for `pace.press_ms`, looking every `poll_ms` for the overlay over `p`, then
+/// lets go; any window at `p` but target-window or the overlay stops the run before the press.
+fn press(ctx: &Ctx, w: &Wins, p: POINT, pace: Pace) -> Result<Pressed, String> {
+    let (at, poll_ms) = (Pt { x: p.x, y: p.y }, ctx.cfg.timing.poll_ms);
+    simin::as_user(&[Act::Move(at)])?;
+    sleep_ms(ctx.cfg.sim.step_ms);
+    let (top, over) = (win::root_at(p), w.overlay(p));
+    if top != w.target && Some(top) != over {
+        return Err(format!("{} covers the test point", win::describe(top)));
+    }
+    let mut blocked = Some(top) == over;
+    simin::as_user(&[Act::Down(at)])?;
+    let (start, start_us) = (Instant::now(), now_us());
+    let mut covered = false;
+    while win::ms_since(start) < pace.press_ms {
+        if let Some(o) = w.overlay(p) {
+            covered = true;
+            blocked |= win::root_at(p) == o;
+        }
+        sleep_ms(
+            pace.press_ms
+                .saturating_sub(win::ms_since(start))
+                .min(poll_ms),
+        );
+    }
+    simin::as_user(&[Act::Up(at)])?;
+    let from_us = start_us.saturating_add(us_of(pace.ring_after_ms));
+    let span = Span {
+        from_us,
+        to_us: now_us(),
+    };
+    sleep_ms(ctx.cfg.g12.settle_ms);
+    Ok(Pressed {
+        span,
+        covered,
+        blocked,
+    })
+}
+
+/// What the presses found.
+#[derive(Debug, Default, PartialEq)]
 struct Tally {
-    /// Points clicked, in order.
+    /// Points pressed, in order.
     clicked: Vec<POINT>,
-    /// Clicks with the ring shown above target-window and over the point.
+    /// Their ring spans.
+    spans: Vec<Span>,
+    /// Presses the overlay covered.
     covered: usize,
-    /// Clicks where Windows put our ring, not target-window, at the point.
+    /// Presses where Windows put the overlay, not target-window, at the point.
     blocked: usize,
 }
 
-/// Clicks each of `points`; before each click, waits for the ring to follow and checks nothing else is in the way.
-fn click_all(ctx: &Ctx, ring: HWND, target: HWND, points: &[POINT]) -> Result<Tally, String> {
-    let (g, t) = (&ctx.cfg.g12, &ctx.cfg.timing);
-    let mut tally = Tally::default();
+/// Presses each of `points` in turn.
+fn click_all(ctx: &Ctx, w: &Wins, points: &[POINT], pace: Pace) -> Result<Tally, String> {
+    let mut t = Tally::default();
     for &p in points {
-        mouse::move_to(p)?;
-        // A hand on the mouse may pull the ring away, so the pointer is put back until the ring follows.
-        let follow = || {
-            if ring_over(&win::top_windows(), ring, target, p) {
-                return Some(());
-            }
-            let _ = mouse::move_to(p);
-            None
-        };
-        tally.covered += usize::from(win::poll_until(g.follow_ms, t.poll_ms, follow).is_some());
-        let top = win::root_at(p);
-        if top != target && top != ring {
-            return Err(format!("{} covers the test point", win::describe(top)));
-        }
-        tally.blocked += usize::from(top == ring);
-        mouse::click_at(p)?;
-        tally.clicked.push(p);
-        sleep_ms(g.settle_ms);
+        let got = press(ctx, w, p, pace)?;
+        t.clicked.push(p);
+        t.spans.push(got.span);
+        t.covered += usize::from(got.covered);
+        t.blocked += usize::from(got.blocked);
     }
-    Ok(tally)
+    Ok(t)
 }
 
-/// Removes the stats file and any part file, and their folder when it is empty and not the app-data folder itself.
-fn drop_stats(file: &Path) {
-    let _ = std::fs::remove_file(file);
-    let _ = std::fs::remove_file(ringstats::part_file(file));
-    let root = dirs::local_data().ok();
-    if let Some(dir) = file.parent().filter(|d| root.as_deref() != Some(*d)) {
-        let _ = std::fs::remove_dir(dir);
+/// What the run gave before the test build closed.
+#[derive(Debug, PartialEq)]
+struct Driven {
+    tally: Tally,
+    /// Clicks target-window logged.
+    reached: usize,
+    /// Grid points where Windows put another window than target-window, or a test build window sat over it.
+    left_out: usize,
+}
+
+/// Parks target-window in front and spreads the grid over its text box, before any mode is on; the points that are
+/// `free`, how many were left out, and the windows a press looks at.
+fn aim(ctx: &Ctx, target: HWND) -> Result<(Vec<POINT>, usize, Wins), String> {
+    launch::park_target(target)?;
+    if !win::front(target, &ctx.cfg.timing, &ctx.cfg.keys) {
+        return Err("could not bring target-window to the front".to_string());
     }
-}
-
-/// Waits for the face to write whole frame stats, reads them, then drops the file.
-fn take_stats(ctx: &Ctx, file: &Path) -> Result<FrameReport, String> {
-    let t = &ctx.cfg.timing;
-    let parse = |text: String| serde_json::from_str::<FrameReport>(&text).ok();
-    let read = || std::fs::read_to_string(file).ok().and_then(parse);
-    let got = win::poll_until(t.read_wait_ms, t.poll_ms, read);
-    drop_stats(file);
-    got.ok_or_else(|| format!("no frame stats at {}", file.display()))
-}
-
-/// Sets the ring test on or off with the strip's switch; true once the ring shows as asked. Turning it off still
-/// goes out after the mouse guard stopped the gate.
-fn flip(ctx: &Ctx, switch: &IUIAutomationElement, pid: u32, on: bool) -> bool {
-    let (t, title) = (&ctx.cfg.timing, &ctx.spike.ring.title);
-    let showing = || facetools::shown_by(pid, title).is_some();
-    if showing() == on {
-        return true;
-    }
-    let wait = if on {
-        ctx.cfg.g12.open_ms
-    } else {
-        t.close_wait_ms
-    };
-    let as_asked = || (showing() == on).then_some(());
-    let pressed = if on {
-        keymap::press(switch)
-    } else {
-        uia::invoke(switch)
-    };
-    pressed.is_ok() && win::poll_until(wait, t.poll_ms, as_asked).is_some()
-}
-
-/// Clicks every grid point under the running ring, then turns it off and reads what it measured.
-fn drive(
-    ctx: &Ctx,
-    switch: &IUIAutomationElement,
-    pid: u32,
-    target: HWND,
-) -> Result<Value, String> {
-    let (g, file) = (&ctx.cfg.g12, ctx.spike.ring.stats_path()?);
+    let (g, wins) = (&ctx.cfg.g12, Wins::find(target)?);
     let all = grid(text_box(target)?, g.grid, g.inset_px);
     let points: Vec<POINT> = all
         .iter()
         .copied()
-        .filter(|&p| win::root_at(p) == target)
+        .filter(|&p| free(target, win::root_at(p), wins.overlay(p)))
         .collect();
-    let opened = flip(ctx, switch, pid, true);
-    let Some(ring) = facetools::shown_by(pid, &ctx.spike.ring.title).filter(|_| opened) else {
-        let off = flip(ctx, switch, pid, false);
-        drop_stats(&file);
-        return Err(format!("the ring did not open; turned off again: {off}"));
-    };
-    let since = now_us();
-    let clicks = click_all(ctx, ring, target, &points);
-    let closed = flip(ctx, switch, pid, false);
-    // Read even after a failed click, so the stats file never stays behind.
-    let stats = take_stats(ctx, &file).map_err(|e| format!("{e}; ring closed: {closed}"));
-    let t = clicks.map_err(|e| format!("{e}; ring closed: {closed}"))?;
-    let f = stats?;
-    sleep_ms(g.settle_ms);
-    let reached = logged(&tlog::mouse_since(ctx, since)?, &t.clicked, g.slack_px);
-    let smooth = f.fps >= g.min_fps && f.p99_ms <= g.p99_ms && !f.capped;
-    let (n, left_out) = (t.clicked.len(), all.len() - points.len());
-    let all_hit = left_out == 0 && reached == n && t.covered == n && t.blocked == 0;
-    Ok(json!({
-        "gate": "G12", "clicks": n, "reached": reached, "covered": t.covered, "blocked": t.blocked,
-        "left_out": left_out, "frames": f, "closed": closed, "pass": closed && smooth && all_hit,
-    }))
+    let left_out = all.len() - points.len();
+    Ok((points, left_out, wins))
 }
 
-/// Runs G12 on face `name`: the face is parked, target-window opens, the ring test runs over it, then both close.
+/// Aims, turns Right-click on, starts `PresentMon`, presses every point and turns Right-click off, even after a failed
+/// press, then counts the clicks target-window logged; with the `PresentMon` it started, also on an error.
+fn drive(
+    ctx: &Ctx,
+    build: &TestBuild,
+    target: HWND,
+    pace: Pace,
+) -> (Option<Recorder>, Result<Driven, String>) {
+    let aimed = aim(ctx, target).and_then(|a| build.set(RCLICK, true).map(|()| a));
+    let (points, left_out, wins) = match aimed {
+        Ok(a) => a,
+        Err(e) => return (None, Err(e)),
+    };
+    let (rec, since) = match g8frames::record(ctx, &capture(ctx.cfg), &test_build(ctx.cfg)) {
+        Ok(rec) => (rec, now_us()),
+        Err(e) => return (None, g5::both(Err(e), build.set(RCLICK, false))),
+    };
+    let pressed = click_all(ctx, &wins, &points, pace);
+    let counted = g5::both(pressed, build.set(RCLICK, false)).and_then(|tally| {
+        let got = tlog::mouse_since(ctx, since)?;
+        let reached = logged(&got, &tally.clicked, ctx.cfg.g12.slack_px);
+        Ok(Driven {
+            tally,
+            reached,
+            left_out,
+        })
+    });
+    (rec, counted)
+}
+
+/// G12's result line. It passes when every click reached target-window under the overlay with nothing blocked or left
+/// out, the ring drew in every span at `min_fps` and `p99_ms` with no frame lost by G8's rule, over a capture that
+/// covered every span, and the test build quit.
+fn result(g: &G12, d: &Driven, ring: &Result<Ring, String>, closed: &Closed) -> Value {
+    let (t, n) = (&d.tally, d.tally.clicked.len());
+    let all_hit = d.left_out == 0 && d.reached == n && t.covered == n && t.blocked == 0;
+    let fast = |r: &Ring| r.fps.is_some_and(|f| f >= g.min_fps);
+    let even = |r: &Ring| r.p99_ms.is_some_and(|p| p <= g.p99_ms);
+    let whole = |r: &Ring| r.drawn == t.spans.len() && r.lost == 0;
+    let smooth = ring.as_ref().is_ok_and(|r| fast(r) && even(r) && whole(r));
+    json!({
+        "gate": GATE, "keyboard": product::NAME, "clicks": n, "reached": d.reached, "covered": t.covered,
+        "blocked": t.blocked, "left_out": d.left_out, "frames": shown(ring), "test_build": closed.json(),
+        "pass": closed.pass(n > 0 && all_hit && smooth),
+    })
+}
+
+/// The note for an error after G12 started `PresentMon` as `rec`, which records for `secs` s from its start.
+fn still_recording(rec: Option<&Recorder>, secs: u64) -> String {
+    let note = |r: &Recorder| {
+        format!(
+            "; PresentMon (pid {}) records for up to {secs} s from its start",
+            r.pid()
+        )
+    };
+    rec.map(note).unwrap_or_default()
+}
+
+/// Runs G12 on the product's test build: target-window opens, every grid point is pressed under the overlay, both
+/// close, and `PresentMon`'s frames are judged once its capture ends, with the owner's mouse already free.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let uia = Uia::new()?;
-    let face = FaceWin::parked(ctx, name)?.hwnd;
-    let pid = win::owner(face).0;
-    let switch = uia
-        .named(face, &ctx.spike.ring.label)
-        .ok_or("the strip has no ring test switch")?;
-    // A test left on is stopped first and its stats dropped.
-    if !flip(ctx, &switch, pid, false) {
-        return Err("a ring test left on did not stop".into());
-    }
-    drop_stats(&ctx.spike.ring.stats_path()?);
+    let (since, origin_us, cap) = (SystemTime::now(), now_us(), capture(ctx.cfg));
+    let build = TestBuild::open(ctx, None)?;
+    let pace = pace(&build.mouse()?, &ctx.cfg.g12, ctx.cfg.mouse_guard.alive_ms)?;
     let target = launch::start_target(ctx)?;
     say!("G12 {name}: {}", win::describe(target.hwnd));
-    let out = drive(ctx, &switch, pid, target.hwnd);
-    let left_open = apps::clean_up(ctx, target);
-    let mut v = out.map_err(|e| format!("{e}; left open: {left_open:?}"))?;
-    v["face"] = json!(name);
+    let (rec, driven) = drive(ctx, &build, target.hwnd, pace);
+    let mut left_open = probe::released();
+    left_open.extend(apps::clean_up(ctx, target));
+    let closed = build.close();
+    mouseguard::let_go();
+    let pm = still_recording(rec.as_ref(), cap.secs);
+    let d = driven.map_err(|e| closed.failed(&format!("{e}{pm}"), &left_open))?;
+    let frames = g8frames::frames(ctx, &cap, &test_build(ctx.cfg), since, rec.as_ref());
+    let unread = frames.as_ref().ok().map(|f| f.unread);
+    let end_us = g8frames::end_us(cap.secs, rec.as_ref(), origin_us);
+    let (spans, hz) = (&d.tally.spans, g8ui::refresh_hz());
+    let judged = |f: Frames| g12frames::judge(&f.presents, spans, hz, ctx.cfg.g12.show_ms);
+    let ring = g12frames::cut(spans, end_us).and_then(|()| judged(frames?));
+    let mut v = result(&ctx.cfg.g12, &d, &ring, &closed);
+    (v["press_ms"], v["unread_rows"], v["hz"]) = (json!(pace.press_ms), json!(unread), json!(hz));
     v["left_open"] = json!(left_open);
+    say!("G12 {name}: pass {}", v["pass"]);
     Ok(v)
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::probecfg::G12;
-
-    #[test]
-    fn the_configured_grid_holds_the_roadmaps_200_clicks_and_bad_settings_are_refused() {
-        let g = crate::config::load().expect("kx-gates.toml loads").g12;
-        assert_eq!(g.grid[0] * g.grid[1], 200);
-        assert_eq!(g.check(), Ok(()));
-        let bad: [fn(&mut G12); 5] = [
-            |b| b.grid[1] = 0,
-            |b| b.inset_px = -1,
-            |b| b.slack_px = -1,
-            |b| b.min_fps = f64::NAN,
-            |b| b.p99_ms = 0.0,
-        ];
-        for f in bad {
-            let mut b = g.clone();
-            f(&mut b);
-            assert!(b.check().is_err());
-        }
-    }
-}
+mod tests;

@@ -167,6 +167,44 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     );
 }
 
+#[test]
+fn the_pointer_badge_takes_the_mock_up_sizes() {
+    let b = load().expect("shape.toml loads").badge;
+    assert_eq!(
+        (b.pad_px, b.icon_px, b.gap_px),
+        ([3.0, 7.0], 13.0, 4.0),
+        ".badge padding, .i, gap"
+    );
+    assert_eq!((b.font_px, b.weight), (10.5, 600), ".badge font");
+    assert_eq!(b.offset_px, [16.0, 18.0], "updateBadge");
+    assert_eq!(b.edge_px, 8.0, "placePop's least gap to the edge");
+}
+
+/// The shipped file with `from` replaced by `to` in the `[badge]` section only.
+fn in_badge(from: &str, to: &str) -> String {
+    let all = text();
+    let (head, tail) = all.split_once("[badge]").expect("a [badge] section");
+    format!("{head}[badge]{}", tail.replacen(from, to, 1))
+}
+
+#[test]
+fn an_unknown_or_odd_badge_size_is_refused() {
+    let e = parse(&in_badge("\nicon_px", "\nhue = 1.0\nicon_px")).expect_err("unknown");
+    assert!(e.contains("hue"), "{e}");
+    // A pill (mock-up border-radius: 999px): QML rounds it by half its height, so no radius can drift from its size.
+    let pill = in_badge("\nicon_px", "\nradius_px = 9.5\nicon_px");
+    let e = parse(&pill).expect_err("no radius token");
+    assert!(e.contains("unknown field `radius_px`"), "{e}");
+    for (from, to, says) in [
+        ("weight = 600", "weight = 950", "badge.weight"),
+        ("edge_px = 8.0", "edge_px = -1.0", "badge.edge_px"),
+        ("[16.0, 18.0]", "[16.0, nan]", "badge.offset_px"),
+    ] {
+        let e = parse(&in_badge(from, to)).expect_err(to);
+        assert!(e.contains(says), "{to}: {e}");
+    }
+}
+
 /// A token line as shipped, a bad value for it, and the name the error must give.
 type Bad = (&'static str, &'static str, &'static str);
 

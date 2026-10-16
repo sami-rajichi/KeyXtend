@@ -2,7 +2,7 @@
 #![cfg(windows)]
 
 use kx_platform_windows::keys::TAG;
-use spike_core::hold::{Act, Pt};
+use spike_core::pt::Pt;
 use spike_core::{capture, uia};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::Accessibility::{
@@ -15,8 +15,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::probecfg::G6;
+use crate::simin::{self, Act};
 use crate::stats;
-use crate::{hookio, keys, mouse, win};
+use crate::{keys, mouse, win};
 
 /// Bytes per screen pixel in a picture.
 const PIXEL: usize = capture::BYTES_PP as usize;
@@ -153,11 +154,11 @@ fn send(p: Pt, rest: Pt, dir: Dir, g: &G6) -> Result<(), String> {
     } else {
         MOUSEEVENTF_WHEEL
     };
-    let mut inputs = hookio::inputs(&[Act::Move(p)], desk, TAG);
+    let mut inputs = simin::inputs(&[Act::Move(p)], desk, TAG);
     for _ in 0..g.notches {
         inputs.push(mouse::wheel(dir.sign() * g.wheel_delta, flags, TAG));
     }
-    inputs.extend(hookio::inputs(&[Act::Move(rest)], desk, TAG));
+    inputs.extend(simin::inputs(&[Act::Move(rest)], desk, TAG));
     keys::send(&inputs)
 }
 

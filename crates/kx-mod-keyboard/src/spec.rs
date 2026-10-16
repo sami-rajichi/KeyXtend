@@ -7,7 +7,7 @@ mod keys;
 pub use error::BoardError;
 pub use keys::{RowKey, char_id};
 
-use kx_module_api::ports::Scan;
+use kx_module_api::ports::{Scan, Toggle};
 use serde::{Deserialize, Serialize};
 
 /// The board, compiled in so it is never read from disk.
@@ -49,6 +49,25 @@ pub enum Latch {
     Win,
 }
 
+/// A mouse-assist mode a side key flips; the mouse module runs it (spec §5.1).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Assist {
+    /// Right-click by holding still.
+    RClick,
+    /// Pick up at the next press, drop at the next click.
+    Grab,
+}
+
+impl From<Assist> for Toggle {
+    fn from(a: Assist) -> Self {
+        match a {
+            Assist::RClick => Self::RightClick,
+            Assist::Grab => Self::Grab,
+        }
+    }
+}
+
 /// What a click on a key does.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -63,6 +82,8 @@ pub enum Role {
     Latch(Latch),
     /// Steps through or picks the layouts.
     Lang,
+    /// Asks the mouse module to flip a mode; lit while it is on, dimmed while that module is not running.
+    Assist(Assist),
     /// Comes in a later version: drawn dimmed and does nothing.
     Later,
 }

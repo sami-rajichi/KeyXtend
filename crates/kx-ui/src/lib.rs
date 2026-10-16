@@ -19,6 +19,7 @@ mod plate;
 mod settings;
 #[cfg(feature = "qt")]
 mod shell;
+pub mod sounds;
 mod ui_module;
 
 #[cfg(feature = "qt")]

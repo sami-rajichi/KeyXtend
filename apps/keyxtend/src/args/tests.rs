@@ -5,17 +5,22 @@ fn args(list: &[&str]) -> Vec<OsString> {
     list.iter().map(OsString::from).collect()
 }
 
+/// `command` with the hand's input.
+fn hand(command: Command) -> (Command, Input) {
+    (command, Input::Hand)
+}
+
 #[test]
 fn nothing_or_show_shows_and_quit_quits() {
-    assert_eq!(parse(args(&[])), Ok(Command::Show));
-    assert_eq!(parse(args(&["--show"])), Ok(Command::Show));
-    assert_eq!(parse(args(&["--quit"])), Ok(Command::Quit));
+    assert_eq!(parse(args(&[])), Ok(hand(Command::Show)));
+    assert_eq!(parse(args(&["--show"])), Ok(hand(Command::Show)));
+    assert_eq!(parse(args(&["--quit"])), Ok(hand(Command::Quit)));
 }
 
 #[test]
 fn each_flag_reads_back_as_its_command() {
     for command in COMMANDS {
-        assert_eq!(parse([OsString::from(flag(command))]), Ok(command));
+        assert_eq!(parse([OsString::from(flag(command))]), Ok(hand(command)));
     }
     assert_eq!(flag(Command::Show), "--show");
     assert_eq!(flag(Command::Quit), "--quit");
@@ -73,11 +78,48 @@ fn an_argument_that_is_not_unicode_is_refused() {
     assert!(matches!(parse([lone_surrogate]), Err(ArgError::Unknown(_))));
 }
 
+#[cfg(not(feature = "gate-input"))]
+#[test]
+fn without_the_gate_build_the_gate_flag_is_unknown() {
+    let refused = Err(ArgError::Unknown(SIM_INPUT.to_owned()));
+    assert_eq!(parse(args(&[SIM_INPUT])), refused);
+    assert_eq!(parse(args(&[SIM_INPUT, "--show"])), Err(ArgError::Many));
+}
+
+#[cfg(feature = "gate-input")]
+#[test]
+fn the_gate_build_takes_the_gate_flag_alone_or_before_show() {
+    let sim = Ok((Command::Show, Input::Sim));
+    assert_eq!(parse(args(&[SIM_INPUT])), sim);
+    assert_eq!(parse(args(&[SIM_INPUT, "--show"])), sim);
+    assert_eq!(parse(args(&["--show"])), Ok(hand(Command::Show)));
+    assert_eq!(parse(args(&["--quit"])), Ok(hand(Command::Quit)));
+}
+
+#[cfg(feature = "gate-input")]
+#[test]
+fn the_gate_build_still_refuses_anything_else() {
+    for many in [
+        &[SIM_INPUT, "--quit"][..],
+        &["--show", SIM_INPUT],
+        &[SIM_INPUT, SIM_INPUT],
+        &[SIM_INPUT, "--show", "--show"],
+        &[SIM_INPUT, "-platform"],
+    ] {
+        assert_eq!(parse(args(many)), Err(ArgError::Many), "{many:?}");
+    }
+    for bad in ["--sim-input=1", "--Sim-Input", "-sim-input", "--sim-input "] {
+        let refused = Err(ArgError::Unknown(bad.to_owned()));
+        assert_eq!(parse(args(&[bad])), refused, "{bad:?}");
+    }
+}
+
 proptest::proptest! {
     #[test]
-    fn only_the_two_flags_pass(text in r"\PC{0,16}") {
+    fn only_the_known_flags_pass(text in r"\PC{0,16}") {
         let got = parse([OsString::from(&text)]);
-        let known = text == "--show" || text == "--quit";
+        let gate = cfg!(feature = "gate-input") && text == SIM_INPUT;
+        let known = text == "--show" || text == "--quit" || gate;
         proptest::prop_assert_eq!(got.is_ok(), known, "{:?}", text);
     }
 }

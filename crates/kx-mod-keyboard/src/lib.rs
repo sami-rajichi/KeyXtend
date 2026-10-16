@@ -33,7 +33,7 @@ pub use repeat::Repeat;
 pub use run::{Io, Ports, TapError, Tapped, Typing};
 pub use settings::{Corner, KeyboardSettings, LangKey, Modifiers, SPEC};
 pub use sizer::{Limits, Resize, SizeError, Sizer};
-pub use spec::{BoardError, BoardSpec, KeyKind, Latch, Nav, Role};
+pub use spec::{Assist, BoardError, BoardSpec, KeyKind, Latch, Nav, Role};
 pub use view::{BoardView, KeyState, KeyView, StateView};
 
 use kx_module_api::ports::KeyboardFaceKey;
@@ -65,6 +65,7 @@ impl Module for KeyboardModule {
             None => Arc::new(Face::new(spec, ports, settings, store)),
         };
         cx.provide::<KeyboardFaceKey>(face.clone())?;
+        face::listen(cx, &face)?;
         self.face = Some(face);
         Ok(())
     }

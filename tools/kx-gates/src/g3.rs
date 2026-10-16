@@ -6,7 +6,7 @@ use std::ffi::c_void;
 
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, POINT};
 use windows::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TokenUIAccess};
 use windows::Win32::System::Threading::{
@@ -15,10 +15,10 @@ use windows::Win32::System::Threading::{
 
 use crate::apps::Ctx;
 use crate::gatecfg::Surface;
-use crate::hookio::inside;
 use crate::keys;
 use crate::out::say;
 use crate::product::Keyboard;
+use crate::simin::inside;
 use crate::win::{self, root_at, size32, sleep_ms};
 use crate::winfind::{self, Match};
 

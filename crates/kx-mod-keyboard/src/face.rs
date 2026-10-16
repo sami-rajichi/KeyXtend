@@ -1,7 +1,11 @@
 //! The `KeyboardFace` service: the board and state JSON the UI draws, and each click the UI forwards. The UI calls
-//! it from one thread, which runs the relabel timer too, so `Layouts::refresh` is only ever called from there.
+//! it from one thread, which runs the relabel timer too, so `Layouts::refresh` is only ever called from there; bus
+//! handlers take the lock briefly from the sender's thread.
 
+mod bus;
 mod inner;
+
+pub(crate) use bus::listen;
 
 use crate::geom::{KeyBox, board};
 use crate::panel::navs;
@@ -9,6 +13,7 @@ use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::board_view;
+use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
@@ -34,6 +39,8 @@ pub struct Face {
     /// The same keys in board order, which the state lists.
     nav_keys: Vec<(String, Nav)>,
     inner: Mutex<Inner>,
+    /// The latched set the bus last heard.
+    told: Told,
 }
 
 /// Shows no key, place or typing state.
@@ -61,11 +68,12 @@ impl Face {
             nav_keys: navs,
             spec,
             inner: Mutex::new(inner),
+            told: Told::default(),
         }
     }
 
-    /// Takes new services and settings after a restart, keeping the latches, a dead key's wait and an open list
-    /// whose design stays.
+    /// Takes new services and settings after a restart, keeping the latches, a dead key's wait, the mouse module's
+    /// state and an open list whose design stays; the start then tells the bus the latches.
     pub fn renew(&self, ports: Ports, settings: KeyboardSettings, store: SettingsHandle) {
         self.lock().renew(ports, settings, store);
     }
@@ -162,6 +170,10 @@ impl Face {
         match tapped {
             Ok(Tapped::Done) => Ok(STATE),
             Ok(Tapped::Later | Tapped::Empty) => Ok(FaceReply::default()),
+            Ok(Tapped::Assist(which)) => {
+                self.toggle(which);
+                Ok(FaceReply::default())
+            }
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),
             Ok(Tapped::Stale) => Ok(FaceReply {
                 state: true,
@@ -176,13 +188,13 @@ impl Face {
     }
 
     /// Reads the layouts again, without the lock, since the change event may call back into the face; the state also
-    /// redraws when Caps Lock changed outside the keyboard.
+    /// redraws when Caps Lock changed outside the keyboard or the bus changed what it shows.
     fn refresh(&self) -> FaceReply {
         let layouts = self.lock().layouts();
         let changed = layouts.refresh();
         let moved = {
             let mut inner = self.lock();
-            inner.seen() || inner.caps_moved()
+            inner.seen() || inner.caps_moved() || inner.unshown()
         };
         FaceReply {
             state: changed || moved,
@@ -195,6 +207,20 @@ impl Face {
         match self.navs.get(key) {
             Some(&nav) => self.lock().panel(nav, rows),
             None => self.known(key).map(|()| FaceReply::default()),
+        }
+    }
+
+    /// Hands `action` to the part of the face that does it.
+    fn route(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
+        match action {
+            FaceAction::Tap { id, back } => self.tap(id.as_str(), back),
+            FaceAction::Press { id } => self.press(id.as_str()),
+            FaceAction::Tick => self.tick(),
+            FaceAction::LetGo { id } => self.let_go(id.as_str()),
+            FaceAction::Leave => Ok(self.lock().leave()),
+            FaceAction::Relabel => Ok(self.refresh()),
+            FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
+            other => self.lock().act(other),
         }
     }
 }
@@ -218,17 +244,11 @@ impl KeyboardFace for Face {
         self.spec.row_px
     }
 
+    /// Does `action`, then tells the bus the latched set if it changed.
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
-        match action {
-            FaceAction::Tap { id, back } => self.tap(id.as_str(), back),
-            FaceAction::Press { id } => self.press(id.as_str()),
-            FaceAction::Tick => self.tick(),
-            FaceAction::LetGo { id } => self.let_go(id.as_str()),
-            FaceAction::Leave => Ok(self.lock().leave()),
-            FaceAction::Relabel => Ok(self.refresh()),
-            FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
-            other => self.lock().act(other),
-        }
+        let reply = self.route(action);
+        self.tell(false);
+        reply
     }
 }
 

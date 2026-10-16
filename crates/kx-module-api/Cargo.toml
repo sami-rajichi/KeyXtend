@@ -17,7 +17,8 @@ thiserror.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-# The shared fake host; it depends on this crate, which Cargo allows for tests.
+# The shared fake host and fake platform; both depend on this crate, which Cargo allows for tests.
+kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 serde_json.workspace = true

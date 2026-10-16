@@ -1,5 +1,7 @@
-//! The `[ui]` settings: the look, the language, tips, timings and paging, with every number's limits in one place.
+//! The `[ui]` settings: the look, the language, tips, timings, paging and sounds, with every number's limits in one
+//! place.
 
+use crate::harden::QT_POOL_BYTES;
 use crate::i18n::{AUTO, find};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use kx_platform::ui::BackdropKind;
@@ -11,7 +13,7 @@ use std::sync::OnceLock;
 
 /// How long the pointer may rest before a tip shows, in ms.
 pub(crate) const TIP_MS: RangeInclusive<u64> = 1..=10_000;
-/// How often a move or resize may follow the pointer, in ms.
+/// How often a move or resize, or the pointer overlay, may follow the pointer, in ms.
 pub(crate) const POLL_MS: RangeInclusive<u64> = 1..=1_000;
 /// How long the window guard may wait before each try, in ms.
 pub(crate) const GUARD_DELAY_MS: RangeInclusive<u64> = 1..=10_000;
@@ -31,10 +33,17 @@ pub(crate) const DEVICE_RETRY_MS: RangeInclusive<u64> = 0..=5_000;
 pub(crate) const FRAME_LATENCY: RangeInclusive<u32> = 0..=3;
 /// How long Qt's update timer may wait before a frame, in ms; 0 starts it at once.
 pub(crate) const UPDATE_IDLE_MS: RangeInclusive<u64> = 0..=50;
+/// How many bytes of each buffer kind a window's renderer may keep to reuse: none, up to four times Qt's own.
+pub(crate) const BUFFER_POOL_BYTES: RangeInclusive<u32> = 0..=4 * QT_POOL_BYTES;
 /// How long a press may wait for its frame before it types anyway, in ms.
 pub(crate) const PRESS_FRAME_MS: RangeInclusive<u64> = 1..=1_000;
 /// How many rows a list page may show; every list is paged (ADR-0008).
 pub(crate) const PAGE_ROWS: RangeInclusive<usize> = 1..=10;
+/// Our volume, in percent of each sound's own level; the end plays it as made, and 0 is silent.
+pub(crate) const SOUND_VOLUME: RangeInclusive<u8> = 0..=100;
+/// How long the speaker stays ready after the last sound, in ms. The floor is twice the sum of the longest sound
+/// `sounds.toml` allows and about 100 ms of device latency, as 500 ms would only just equal that sum.
+pub(crate) const SOUND_IDLE_MS: RangeInclusive<u32> = 1_000..=60_000;
 
 /// Why `language` was refused.
 const NO_LANGUAGE: &str = "language must be auto or a language the keyboard speaks";
@@ -105,7 +114,7 @@ pub struct UiSettings {
     pub language: String,
     /// How long the pointer rests before a tip shows, in ms.
     pub tip_ms: u64,
-    /// How often a move or resize follows the pointer, in ms.
+    /// How often a move or resize follows the pointer, and the least time between the pointer overlay's reads, in ms.
     pub poll_ms: u64,
     /// How long the window guard waits before each try, in ms.
     pub guard_delay_ms: u64,
@@ -130,6 +139,9 @@ pub struct UiSettings {
     pub update_idle_ms: u64,
     /// Each frame shows at a screen refresh (swap interval 1); false shows it at once (0).
     pub present_vsync: bool,
+    /// How many bytes of freed vertex buffers, and as many of index buffers, each window's renderer keeps to reuse
+    /// (`QSG_RENDERER_BUFFER_POOL_LIMIT`, ADR-0028); 0 keeps none.
+    pub buffer_pool_bytes: u32,
     /// When a pressed key types, against the frame that shows it pressed.
     pub press_frame: PressFrame,
     /// The longest `PressFrame::First` waits for that frame, in ms.
@@ -140,6 +152,18 @@ pub struct UiSettings {
     pub page_rows: usize,
     /// The contrast a legend keeps when its key takes the accent.
     pub min_contrast: f32,
+    /// A key press sounds.
+    pub sound_key: bool,
+    /// A hold's right-click sounds.
+    pub sound_rclick: bool,
+    /// Grab's pick-up sounds.
+    pub sound_pick: bool,
+    /// Grab's drop sounds.
+    pub sound_drop: bool,
+    /// Our volume for every sound, in percent of its own level, under the Windows volume.
+    pub sound_volume: u8,
+    /// How long the speaker stays ready after the last sound, in ms; the next sound after that wakes it.
+    pub sound_idle_ms: u32,
 }
 
 impl UiSettings {
@@ -176,7 +200,14 @@ impl UiSettings {
         within("device_retry_ms", self.device_retry_ms, &DEVICE_RETRY_MS)?;
         within("frame_latency", self.frame_latency, &FRAME_LATENCY)?;
         within("update_idle_ms", self.update_idle_ms, &UPDATE_IDLE_MS)?;
+        within(
+            "buffer_pool_bytes",
+            self.buffer_pool_bytes,
+            &BUFFER_POOL_BYTES,
+        )?;
         within("press_frame_ms", self.press_frame_ms, &PRESS_FRAME_MS)?;
+        within("sound_volume", self.sound_volume, &SOUND_VOLUME)?;
+        within("sound_idle_ms", self.sound_idle_ms, &SOUND_IDLE_MS)?;
         within("page_rows", self.page_rows, &PAGE_ROWS)
     }
 }

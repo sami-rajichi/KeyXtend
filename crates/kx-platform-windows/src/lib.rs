@@ -15,6 +15,7 @@ pub mod front;
 pub mod gpu;
 #[cfg(windows)]
 mod hidden;
+pub mod hook;
 pub mod inject;
 pub mod instance;
 pub mod keys;
@@ -25,6 +26,7 @@ pub mod memory;
 #[cfg(windows)]
 mod platform;
 pub mod screen;
+pub mod sound;
 pub mod strokes;
 pub mod sysui;
 pub mod tray;
@@ -39,6 +41,8 @@ pub use backdrop::WinBackdrop;
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
+pub use hook::{WinPointerHook, release_now};
+#[cfg(windows)]
 pub use inject::WinInjector;
 #[cfg(windows)]
 pub use instance::WinInstance;
@@ -50,6 +54,8 @@ pub use memory::WinMemory;
 pub use platform::WindowsPlatform;
 #[cfg(windows)]
 pub use screen::WinScreens;
+#[cfg(windows)]
+pub use sound::WinSpeaker;
 #[cfg(windows)]
 pub use sysui::WinLook;
 #[cfg(windows)]
@@ -79,7 +85,6 @@ fn failed() -> kx_platform::ui::UiError {
 }
 
 /// Locks `m`, taking the value even when a panicking thread poisoned it.
-#[cfg(windows)]
 fn lock<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
@@ -111,4 +116,7 @@ pub enum PlatformError {
     /// Windows did not limit where libraries load from.
     #[error("Windows did not limit where libraries load from: {0}")]
     DllDirs(io::Error),
+    /// Windows did not say whether the process has uiAccess.
+    #[error("Windows did not say whether the process has uiAccess: {0}")]
+    UiAccess(io::Error),
 }

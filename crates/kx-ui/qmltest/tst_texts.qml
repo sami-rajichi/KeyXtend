@@ -8,6 +8,7 @@ import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "pointer.js" as Pointer
+import "board.js" as Board
 import "fonts.js" as Fonts
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-et66-light.js" as E
@@ -73,10 +74,6 @@ Item {
             app.ui.lang = Object.assign({}, t.lang, { tray: sys.lang.tray });
             app.ui.texts = t.texts;
         }
-        // The keyboard window's tooltip.
-        function tipOf(app) {
-            return [...app.face.data].find(o => o.item && o.item.hint).item;
-        }
         // The keys that show a word.
         function labelled(app) {
             return all(app.face.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
@@ -99,11 +96,11 @@ Item {
             compare(labelled(app).map(k => k.label), labelled(app).map(k => t.texts[k.kv.label]), where + "the words");
             verify(button(app, t.texts["key.esc"]), where + "readers hear the keys in it");
             compare(sizeButtons(app).map(b => b.text), t.lang.sizes.map(z => z.label), where + "the size letters");
-            compare(tipOf(app).name, "", where + "a tip in the last language closes");
+            compare(Board.tipOf(app.face).name, "", where + "a tip in the last language closes");
             const mic = button(app, t.texts["key.mic"]);
             mouseMove(app.face.contentItem, 1, 1);
             mouseMove(mic, mic.width / 2, mic.height / 2);
-            compare(tipOf(app).name, t.texts["key.mic"] + "\n" + t.texts["tip.later"], where + "the tip");
+            compare(Board.tipOf(app.face).name, t.texts["key.mic"] + "\n" + t.texts["tip.later"], where + "the tip");
             compare(app.notice.shown.text, t.texts[noticeKey], where + "the banner");
             verify(named(app.notice.contentItem, Accessible.Button, t.texts["button.ok"]), where + "its button");
             compare(app.face.title, t.texts["window.keyboard"], where + "the window's name");

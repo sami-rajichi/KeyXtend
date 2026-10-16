@@ -5,10 +5,11 @@ use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx};
 use crate::config::GatesConfig;
+use crate::mouseguard::Mouse;
 use crate::usage::usage;
 use crate::{
-    close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g17, g18,
-    g19, g20, g21, g22, g23, g24, g25, g26, hand, mouseguard, out,
+    close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g8hook, g9, g10, g11, g12, g13,
+    g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, hand, mouseguard, out,
 };
 
 /// Gates whose runs take a random seed.
@@ -78,34 +79,26 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 /// A gate run that takes only a name.
 type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 
-/// Whether a gate's run holds the owner's mouse with the mouse guard.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Mouse {
-    /// The guard drops the hand's mouse input while the gate moves the pointer.
-    Held,
-    /// The gate needs the owner's own mouse, runs elsewhere or moves nothing.
-    Free,
-}
-
-/// Every gate: whether it holds the mouse, and its run when it takes only a name. The hand try, G13 and G23 wait on
-/// the owner's own mouse, G26 runs on the CI runner and `close` moves nothing.
+/// Every gate: whether it holds the mouse, and its run when it takes only a name. G5, G12, G17 and G18 drive the test
+/// build, as `DRIVEN`'s names do; the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI runner
+/// and `close` moves nothing.
 const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("g1", Mouse::Held, None),
     ("g2", Mouse::Held, None),
     ("g3", Mouse::Held, None),
     ("g4", Mouse::Held, None),
     ("assist", Mouse::Free, None),
-    ("g5", Mouse::Held, Some(g5::run)),
+    ("g5", Mouse::Drives, Some(g5::run)),
     ("g6", Mouse::Held, Some(g6::run)),
     ("g7", Mouse::Held, Some(g7::run)),
     ("g8", Mouse::Held, Some(g8::run)),
     ("g9", Mouse::Held, Some(g9::run)),
     ("g10", Mouse::Held, Some(g10::run)),
     ("g11", Mouse::Held, Some(g11::run)),
-    ("g12", Mouse::Held, Some(g12::run)),
+    ("g12", Mouse::Drives, Some(g12::run)),
     ("g13", Mouse::Free, Some(g13::run)),
-    ("g17", Mouse::Held, Some(g17::run)),
-    ("g18", Mouse::Held, Some(g18::run)),
+    ("g17", Mouse::Drives, Some(g17::run)),
+    ("g18", Mouse::Drives, Some(g18::run)),
     ("g19", Mouse::Held, Some(g19::run)),
     ("g20", Mouse::Held, Some(g20::run)),
     ("g21", Mouse::Held, Some(g21::run)),
@@ -117,13 +110,19 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("close", Mouse::Free, Some(close::run)),
 ];
 
+/// A gate's names that drive the test build, though the gate itself holds the mouse.
+const DRIVEN: [(&str, &str); 2] = [("g8", g8hook::HOOK), ("g8", g8hook::HOOK_WEAK)];
+
 /// The run of `gate` when it takes only a name.
 fn named(gate: &str) -> Option<NamedRun> {
     GATES.iter().find(|(g, ..)| *g == gate).and_then(|g| g.2)
 }
 
-/// Whether `gate` holds the mouse; an unknown gate never does.
-fn mouse(gate: &str) -> Mouse {
+/// Whether `gate` run on `name` holds the mouse, and how; an unknown gate never does.
+fn mouse(gate: &str, name: &str) -> Mouse {
+    if DRIVEN.contains(&(gate, name)) {
+        return Mouse::Drives;
+    }
     GATES
         .iter()
         .find(|(g, ..)| *g == gate)
@@ -165,7 +164,7 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
         "assist" => hand::run(
             ctx,
             &args.name,
-            args.count.map_or(ctx.cfg.assist.try_secs, |n| n as u64),
+            args.count.map_or(ctx.cfg.hand.try_secs, |n| n as u64),
         ),
         "g3" => g3::run(ctx, &args.name),
         _ => Err(usage()),
@@ -187,7 +186,7 @@ pub fn run(args: &Args) -> Result<Value, String> {
         base,
     };
     // The guard lets go when the gate ends; dropping `guard` lets go on a panic too.
-    let guard = mouseguard::begin(&cfg.mouse_guard, mouse(&args.gate) == Mouse::Held)?;
+    let guard = mouseguard::begin(&cfg.mouse_guard, mouse(&args.gate, &args.name))?;
     let result = dispatch(&ctx, args);
     let ended = guard.finish(result.is_ok());
     let mut result = result.unwrap_or_else(

@@ -108,8 +108,9 @@ fn moves_absolute(inputs: &[INPUT]) -> bool {
         .any(|mi| mi.dwFlags.contains(absolute))
 }
 
-/// True when every live low-level hook surely sees `inputs`: a mouse button goes down or up, or the pointer moves
-/// far enough from where it is now. Only a batch with an absolute move reads the pointer and the screen.
+/// True when every live low-level hook surely sees `inputs`: a mouse button goes down or up, or an absolute move takes
+/// the pointer far enough from where it is now. The test build's hook sits ahead of the guard's and swallows a held
+/// press, so the guard sees that press only when the test build replays it tagged `REPLAY`.
 fn hooks_see(inputs: &[INPUT]) -> bool {
     let far =
         || cursor().is_ok_and(|p| moves_far(inputs, POINT { x: p.x, y: p.y }, win::desktop()));

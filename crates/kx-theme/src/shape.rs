@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::extras::{
-    CaptionShape, ListShape, MenuShape, NoticeShape, PanelShape, PillShape, RingShape, SnipShape,
-    TrayShape,
+    BadgeShape, CaptionShape, ListShape, MenuShape, NoticeShape, PanelShape, PillShape, RingShape,
+    SnipShape, TrayShape,
 };
 
 mod check;
@@ -237,6 +237,8 @@ pub struct Shape {
     pub panel: PanelShape,
     /// The hold ring.
     pub ring: RingShape,
+    /// The mode badge beside the pointer.
+    pub badge: BadgeShape,
     /// Keys that come in a later version.
     pub dim: DimShape,
     /// The hover outline in high contrast.

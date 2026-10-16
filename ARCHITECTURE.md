@@ -39,30 +39,38 @@ deny.toml                cargo-deny: licences, advisories, bans, sources
 apps/
   keyxtend/              composition root: picks the platform adapter and the enabled modules
                          (one Cargo feature per module); the command line, one running copy,
-                         the log, the panic hook and Qt's hardened start
+                         the log, the panic hook and Qt's hardened start; `gate-input` makes the
+                         gate-only test build (`--sim-input`, no uiAccess, refused by the stage
+                         and `dev-install`; ADR-0027)
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update) (P8)
 crates/
-  kx-module-api/        Module trait, Manifest, Capability, ports (service traits), events,
-                         Clock and Mono, settings contract, notices, Redacted<T>
+  kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer
+                         hook's too: ADR-0027), events, Clock and Mono, settings contract,
+                         notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth (P8)
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
                          (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray: ADR-0019,
-                         Memory: ADR-0023); hooks (P4)
-  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray
+                         Memory: ADR-0023, Speaker: P4)
+  kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
+                         sound
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
-                         golden layout tables, a layouts service)
+                         golden layout tables, a layouts service, the UI ports and the speaker);
+                         `FakePointerHook` runs an engine on the test's thread, and its `let_go`
+                         and `give_up` act as the real host does; kx-module-api's contract test
+                         uses it too
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
                          language, the tray's in the system's (ADR-0020)
-  kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons), the look view,
+  kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view,
                          WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
-                         and the high-contrast palette; no Qt, so it tests everywhere (ADR-0016)
+                         the high-contrast palette, and the strict reader kx-ui's build checks sounds with; no
+                         Qt, so it tests everywhere (ADR-0016)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
                          any size, size steps and presets, and the place on screen per DPI;
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
@@ -87,7 +95,8 @@ crates/
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml and, beside it, kx-gates-p3.toml (the P3
-                         gates, the mouse guard and the run-length checks); uses
+                         gates, the mouse guard and the run-length checks) and kx-gates-p4.toml
+                         (the test build and P4's gates); uses
                          spike-core widely until its gates are
                          aimed at the product; `capture-layouts` writes the fake's golden
                          layout tables from the layouts installed on the PC
@@ -101,11 +110,12 @@ tools/
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
                          texts test lays out, and the soft shadows' adopter, so the tests draw as
                          the app does
-assets/                  fonts and icons with their licences, compiled into kx-ui (ADR-0016)
+assets/                  fonts, icons and sounds with their licences, compiled into kx-ui (ADR-0016)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
                          dist (stub until P14), stage (the release app with its Qt files),
                          dev-cert / dev-install / check-uiaccess (uiAccess test builds),
+                         sounds (recipes, import, join; format and RIFF walker from kx-theme),
                          sign (P14), sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
@@ -171,15 +181,19 @@ pub trait Module: Send + 'static {
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.
-   - Colours, fonts, spacing, motion and icon names live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`).
+   - Colours, fonts, spacing, motion, icon names and sounds live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`, `sounds.toml`).
    - User-visible text lives in translation files.
    - OS mappings live in adapter tables.
    - `kx-review` checks this.
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
+13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5).
 
-**CI** (`.github/workflows/ci.yml`): Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage. Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
+**CI** (`.github/workflows/ci.yml`):
+- Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
+- Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
+- Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
 
 ## Cross-cutting patterns
 

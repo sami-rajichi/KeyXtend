@@ -1,6 +1,6 @@
 [package]
 name = "spike-core"
-description = "P1 spike core: the hold engine, UI Automation, pill, Hello fill, snip, voice and the gates' face facts."
+description = "P1 spike core: UI Automation, pill, Hello fill, snip, voice and the gates' face facts."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true

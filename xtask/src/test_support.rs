@@ -85,6 +85,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
         banned_network: vec!["reqwest".to_string()],
         banned_media: vec!["image".to_string()],
         banned_features: BTreeMap::from([("toml".to_string(), vec!["unbounded".to_string()])]),
+        build_only_features: BTreeMap::from([("kx-theme".to_string(), vec!["files".to_string()])]),
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
         deny_attr: "#![deny(unsafe_code)]".to_string(),
         root_kinds: vec![
@@ -161,7 +162,8 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "banned": ["tls", "networkinformation", "qmltooling"],
         "network": { "lib": "Qt6Network.dll", "by": ["Qt6Qml.dll", "Qt6Quick.dll"] },
         "api_sets": ["api-ms-", "ext-ms-"],
-        "system_dir": "System32"
+        "system_dir": "System32",
+        "gate_flag": "--sim-input"
     })
 }
 

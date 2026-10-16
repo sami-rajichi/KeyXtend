@@ -1,9 +1,9 @@
 //! G8's cold start: it starts the product through the shell, times it to its first shown window and its log's
-//! start-up lines, and says when the warm-up before the memory sample ends.
+//! start-up lines, says when the warm-up before the memory sample ends, and what a run that broke off left.
 #![cfg(windows)]
 
 use std::path::Path;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use spike_core::weak::Job;
 
@@ -31,14 +31,6 @@ impl Started {
     }
 }
 
-/// Microseconds since 1970 now.
-fn now_us() -> i64 {
-    let since = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    i64::try_from(since.as_micros()).unwrap_or(i64::MAX)
-}
-
 /// Asks the copy G8 just started, held as `process`, to quit; what is left of it, for the error.
 fn quit_left(ctx: &Ctx, process: &Process) -> String {
     match close::quit_started(ctx, process) {
@@ -59,12 +51,17 @@ fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
     job.assign_handle(process.handle()).map_err(uncapped)
 }
 
-/// Starts the product through the shell, in `job` when given, and waits for its first shown window.
+/// Starts the product through the shell with `args`, in `job` when given, and waits for its first shown window.
 /// A copy it cannot open gets Quit with the same tries, so the next run still starts cold.
-pub fn start(ctx: &Ctx, program: &Path, job: Option<&Job>) -> Result<Started, String> {
+pub fn start(
+    ctx: &Ctx,
+    program: &Path,
+    args: &[String],
+    job: Option<&Job>,
+) -> Result<Started, String> {
     let g = &ctx.cfg.g8;
-    let (at_us, at) = (now_us(), Instant::now());
-    let given = admin::start_shown(program, &[])?;
+    let (at_us, at) = (budget::now_us(), Instant::now());
+    let given = admin::start_shown(program, args)?;
     // The shell's handle lacks the rights to measure, so the process is opened again.
     let unmeasured = |e| {
         format!(
@@ -117,6 +114,26 @@ pub fn warm_left(from: Instant, warm_ms: u64, now: Instant) -> Duration {
     (from + Duration::from_millis(warm_ms)).saturating_duration_since(now)
 }
 
+/// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
+/// and whether the product quit after `quit`.
+pub fn broke(
+    e: &str,
+    recorder: Option<u32>,
+    secs: u64,
+    quit: Option<&Result<bool, String>>,
+) -> String {
+    let left = recorder.map(|pid| {
+        format!("; PresentMon (pid {pid}) records for up to {secs} s from its start, then stops")
+    });
+    let product = match quit {
+        Some(Ok(true)) => "; the product quit".to_string(),
+        Some(Ok(false)) => "; the product still runs; close it".to_string(),
+        Some(Err(q)) => format!("; the product still runs ({q}); close it"),
+        None => String::new(),
+    };
+    format!("{e}{}{product}", left.unwrap_or_default())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,5 +158,24 @@ mod tests {
             Duration::ZERO,
             "a late look reads at once"
         );
+    }
+
+    #[test]
+    fn a_run_that_broke_off_names_the_presentmon_it_left_and_whether_the_product_quit() {
+        let e = broke("no keyboard", Some(4242), 90, Some(&Ok(false)));
+        assert!(e.starts_with("no keyboard"), "{e}");
+        assert!(
+            e.contains("PresentMon (pid 4242)") && e.contains("90 s"),
+            "{e}"
+        );
+        assert!(e.contains("still runs"), "{e}");
+        let quit = broke("no keyboard", None, 90, Some(&Ok(true)));
+        assert!(
+            !quit.contains("PresentMon") && quit.contains("quit"),
+            "{quit}"
+        );
+        let refused = broke("x", None, 90, Some(&Err("no command window".into())));
+        assert!(refused.contains("no command window"), "{refused}");
+        assert_eq!(broke("x", None, 90, None), "x", "nothing left to name");
     }
 }

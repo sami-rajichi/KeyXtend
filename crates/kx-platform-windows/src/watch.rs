@@ -42,4 +42,14 @@ mod tests {
         assert_eq!(changed(&mut last, dark()), None, "the same change again");
         assert_eq!(last, Some(dark()));
     }
+
+    #[test]
+    fn a_new_pointer_size_alone_is_a_change() {
+        let mut last = Some(dark());
+        let bigger = SysLook {
+            pointer_px: dark().pointer_px * 2,
+            ..dark()
+        };
+        assert_eq!(changed(&mut last, bigger), Some(bigger));
+    }
 }

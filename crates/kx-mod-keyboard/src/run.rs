@@ -9,9 +9,9 @@ use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Role};
 use kx_module_api::ports::{
     InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
-    Layouts, LayoutsKey, Scan,
+    Layouts, LayoutsKey, Scan, Toggle,
 };
-use kx_module_api::{Clock, ModuleCx, ServiceError};
+use kx_module_api::{Bus, Clock, ModuleCx, ServiceError};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
@@ -38,6 +38,8 @@ pub enum Tapped {
         /// The click landed on the key's back part.
         back: bool,
     },
+    /// A mouse-assist side key: nothing was sent and the latches stay; the face asks the mouse module to flip this.
+    Assist(Toggle),
     /// A key from a later version: nothing happened.
     Later,
     /// A character key that types nothing with the latched Shift or `AltGr`: nothing happened.
@@ -58,7 +60,7 @@ pub struct Io<'a> {
     pub table: &'a LayoutTable,
 }
 
-/// The services typing needs, as the kernel hands them out, and the kernel's clock.
+/// The services typing needs, as the kernel hands them out, the kernel's clock and its bus.
 #[derive(Clone)]
 pub struct Ports {
     /// The input injector.
@@ -69,10 +71,12 @@ pub struct Ports {
     pub layouts: Arc<dyn Layouts>,
     /// The kernel's clock, which times a held key's repeats.
     pub clock: Arc<dyn Clock>,
+    /// The kernel's bus, limited to the module's grants, which carries mouse assist's events.
+    pub bus: Bus,
 }
 
 impl Ports {
-    /// The three services and the clock from the kernel.
+    /// The three services, the clock and the bus from the kernel.
     ///
     /// # Errors
     /// The `ServiceError` of the first service the module cannot have.
@@ -82,6 +86,7 @@ impl Ports {
             source: cx.service::<LayoutSourceKey>()?,
             layouts: cx.service::<LayoutsKey>()?,
             clock: cx.clock(),
+            bus: cx.bus(),
         })
     }
 
@@ -136,6 +141,13 @@ impl Typing {
         &self.latches
     }
 
+    /// A mouse click used the latches (modifier + click): they let go as their mode says. True when any let go.
+    pub fn clicked(&mut self) -> bool {
+        let before = self.latches.clone();
+        self.latches.used();
+        self.latches != before
+    }
+
     /// Takes a new `modifiers` mode and `key_apps` list, keeping the latched modifiers and a dead key's wait.
     pub fn update(&mut self, settings: &KeyboardSettings) {
         self.apps.clone_from(&settings.key_apps);
@@ -166,6 +178,7 @@ impl Typing {
             Plan::Caps(key) => io.injector.tap(key)?,
             Plan::Latch(l, key) => self.latches.toggle(l, key),
             Plan::Lang => return Ok(Tapped::Lang { back }),
+            Plan::Assist(which) => return Ok(Tapped::Assist(which)),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),
         }

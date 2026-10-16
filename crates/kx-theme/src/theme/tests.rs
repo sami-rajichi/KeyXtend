@@ -252,14 +252,6 @@ fn dimmed_keys_are_side_keys_faded_over_the_plate() {
 }
 
 #[test]
-fn dim_colours_come_from_the_share_and_cannot_be_written() {
-    let at = "hover = \"#0000000F\"";
-    let typed = text().replacen(at, &format!("{at}\ndim = \"#FFFFFF\""), 1);
-    let e = parse(&typed).expect_err("dim is derived");
-    assert!(e.contains("native.light") && e.contains("dim"), "{e}");
-}
-
-#[test]
 fn sculpted_caps_cannot_take_the_accent() {
     let at = "so Dolch never takes the accent.\naccent = ";
     let e = parse(&text().replacen(&format!("{at}false"), &format!("{at}true"), 1));

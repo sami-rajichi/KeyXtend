@@ -61,6 +61,8 @@ pub struct LookView<'a> {
     pub hover_line: Rgba,
     /// Room the window shadow needs around the plate, at size 1.
     pub margin: f32,
+    /// Room the badge's shadow needs around the mode badge.
+    pub badge_margin: f32,
 }
 
 /// How far `layers` reach past the shape they sit under.
@@ -116,6 +118,7 @@ pub fn look_view<'a>(
     let hover_line = hc.map_or(Rgba::CLEAR, hover_line);
     let mut view = LookView {
         margin: reach(&palette.window_shadow),
+        badge_margin: reach(&palette.badge_shadow),
         sel_ink,
         hover_line,
         palette,

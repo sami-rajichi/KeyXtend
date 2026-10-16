@@ -1,10 +1,10 @@
 # Settings P3 adds: the mouse guard, the run-length checks ([fit]), gates G8-G11, G13 and G26, and G8's On-Screen
 # Keyboard baseline ([osk]). kx-gates reads them with kx-gates.toml, from its folder.
 
-# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input;
-# the gate table in src/cli.rs marks the gates it never holds. It lets go when the gate ends, for an admin prompt,
-# after limit_ms of holding, at the owner's escape clicks, or once Windows switched its hook off; the last three stop
-# the gate, which fails.
+# The mouse guard: while a gate runs, kx-gates drops the physical mouse's input and passes only its own injected input,
+# plus the test build's REPLAY input for the gates that drive it; the gate table in src/cli.rs marks both kinds and the
+# gates it never holds. It lets go when the gate ends, for an admin prompt, after limit_ms of holding, at the owner's
+# escape clicks, or once Windows switched its hook off; the last three stop the gate, which fails.
 [mouse_guard]
 on = true
 # Longest the guard holds the mouse in one run, in ms: 15 minutes, as G2's 1000 held clicks take over 8 (owner).
@@ -25,7 +25,8 @@ guard_headroom_ms = 120000
 # each target window's start, in ms.
 capture_headroom_ms = 30000
 
-# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product).
+# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product),
+# `g8 arabic` with an Arabic layout in front.
 [g8]
 # The copy G8 starts, through the shell: the signed uiAccess one beside the installed kx-gates, where
 # `cargo xtask dev-install` puts both; a relative path starts at this file's folder.
@@ -42,7 +43,8 @@ log_guarded = "windows guarded"
 # Settle, then measure the idle product for this long, in ms.
 idle_settle_ms = 3000
 idle_ms = 10000
-# Memory is read this long after the keyboard shows, in ms: a fixed warm-up so runs compare. G8 never trims (ADR-0021).
+# Memory is read this long after the keyboard shows, and again this long after the use below, in ms: a fixed warm-up so
+# runs compare. G8 never trims (ADR-0021).
 warm_ms = 10000
 # Idle private working set and private commit (ADR-0021), and the program folder below, in MB of 10⁶ bytes (spec §10);
 # idle CPU in percent of one core in both modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
@@ -85,8 +87,8 @@ presentmon = "g8-presentmon.csv"
 # How long that capture records, in seconds: G8's run up to the churn with its held G2 clicks, about two minutes, as
 # [fit] checks. G8 waits for its end before the churn, so a theme switch never counts as a dropped frame.
 presentmon_secs = 150
-# The PresentMon program G8 starts as administrator, with no window, just before the product; empty, G8 says how to
-# record. Each PC names its own copy in the installed settings.
+# The PresentMon program G8 starts as administrator, with no window, just before the product, and G12 too; empty,
+# each says how to record. Each PC names its own copy in the installed settings.
 presentmon_exe = ""
 # Wait after starting PresentMon, in ms, so its start-up does not slow the cold start.
 presentmon_wait_ms = 2000
@@ -121,6 +123,22 @@ churn_tip_ms = 300
 churn_theme = "bar.theme"
 # Wait after each list, bubble or theme press, so its windows have shown or gone, in ms.
 churn_settle_ms = 500
+# After use (ADR-0028), right after G2 and before the churn, so no theme round counts: the mode key turns its mode on
+# with a click, the pointer rests once on every key without clicking, and warm_ms later memory is judged by memory_mb
+# and commit_mb again.
+# Then the key puts the mode back as it was, so the next cold start is as before.
+# The mode key, by board id: a mouse-assist key, so its light and its mode are part of the use.
+use_mode = "rclick"
+# The pointer's rest on each key, in ms: a few frames so its hover draws, below [ui] tip_ms so no tip shows.
+use_hover_ms = 100
+# Longest wait for the mode key to read on or off after its click, in ms.
+use_lit_ms = 3000
+# `g8 arabic` puts this language's first installed layout in front before the cold start (ISO 639 code), and the
+# owner's layout back after, even when the run breaks. A target-window in that layout stays in front from the cold
+# start, and again after the presses and after G2, as the keyboard follows the app in front.
+arabic = "ar"
+# Longest wait for target-window to type in a layout G8 asks it for, in ms.
+layout_wait_ms = 2000
 
 # Windows' On-Screen Keyboard, which `g8 osk` times as a baseline by G8's screen copy; G8 never starts or closes it.
 [osk]

@@ -156,7 +156,7 @@ impl Icons {
 }
 
 /// True for a plain file name: lower-case ASCII letters, digits and `-`, never empty.
-fn plain(name: &str) -> bool {
+pub(crate) fn plain(name: &str) -> bool {
     !name.is_empty()
         && name
             .bytes()

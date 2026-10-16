@@ -4,7 +4,7 @@
 use crate::latch::Latches;
 use crate::legend::{LegendMods, slot};
 use crate::spec::{Latch, Role};
-use kx_module_api::ports::{KeyChars, Scan, Slot, TextRoute};
+use kx_module_api::ports::{KeyChars, Scan, Slot, TextRoute, Toggle};
 use kx_module_api::{REDACTED_MARKER, Redacted};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -58,6 +58,8 @@ pub enum Plan {
     Latch(Latch, Scan),
     /// The language key: the face steps or opens the list.
     Lang,
+    /// A mouse-assist side key: the face asks the mouse module to flip this mode; nothing goes to the app.
+    Assist(Toggle),
     /// A key from a later version, or one without the code its role needs: nothing.
     Later,
     /// A character key that types nothing with the latched Shift or `AltGr`: nothing, and the latches and wait stay.
@@ -76,6 +78,7 @@ impl fmt::Debug for Plan {
             Self::Caps(_) => f.write_str("Caps"),
             Self::Latch(l, _) => write!(f, "Latch({l:?})"),
             Self::Lang => f.write_str("Lang"),
+            Self::Assist(t) => write!(f, "Assist({t:?})"),
             Self::Later => f.write_str("Later"),
             Self::Empty => f.write_str("Empty"),
         }
@@ -108,6 +111,7 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Caps, Some(sc)) => Plan::Caps(sc),
         (Role::Latch(l), Some(sc)) => Plan::Latch(l, sc),
         (Role::Lang, _) => Plan::Lang,
+        (Role::Assist(a), _) => Plan::Assist(a.into()),
         _ => Plan::Later,
     }
 }

@@ -38,14 +38,17 @@ cxx-qt-lib = { workspace = true, optional = true }
 
 [build-dependencies]
 cxx-qt-build = { workspace = true, optional = true }
-# The icons the tokens name and where the bundled assets sit, so the build compiles in only what QML shows.
-kx-theme = { path = "../kx-theme" }
+# The icons the tokens name and where the bundled assets sit, so the build compiles in only what QML shows; it reads
+# the assets folder, so only the build turns on `files`.
+kx-theme = { path = "../kx-theme", features = ["files"] }
 serde_json.workspace = true
 # Reads the Qt version the workspace manifest pins.
 toml.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }
+# The tests read the bundled sounds and assets as the build does.
+kx-theme = { path = "../kx-theme", features = ["files"] }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 

@@ -1,19 +1,21 @@
 //! G6 scroll: which route scrolls Notepad, Chrome, Explorer and Word, each way, while the pointer rests on the face.
+//! It polls the pointer for the last point outside a stand-in face until P5 brings the product's tracker.
 #![cfg(windows)]
 
+use kx_platform_windows::screen;
 use serde_json::{Value, json};
-use spike_core::hold::{Act, Pt};
-use windows::Win32::Foundation::RECT;
+use spike_core::pt::Pt;
+use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 
 use crate::apps::{AppKind, Ctx};
-use crate::assist;
+use crate::g6track::{self, Track};
 use crate::out::say;
 use crate::probe::{self, Doc};
-use crate::probetext;
 use crate::scroll::{self, Dir, Route};
-use crate::simuser::{self, guard};
+use crate::simuser::guard;
 use crate::win::{self, sleep_ms};
+use crate::{mouse, probetext};
 use spike_core::uia::{self, Uia};
 
 /// The apps G6 probes.
@@ -34,31 +36,64 @@ struct Try {
     error: Option<String>,
 }
 
-/// The stand-in face: a square at the desktop's top-left corner.
-fn face(size: i32) -> RECT {
-    let (x, y, _, _) = win::desktop();
-    RECT {
-        left: x,
-        top: y,
-        right: x + size,
-        bottom: y + size,
+/// Where G6 scrolls: the last point outside the face, the rest point on the face, what UI Automation can scroll there,
+/// if anything, and the point as an offset from the document window's top-left.
+struct Aim {
+    at: Pt,
+    rest: Pt,
+    sp: Option<IUIAutomationScrollPattern>,
+    offset: [i32; 2],
+}
+
+/// Refuses a scroll point whose root window `root` is not the document's window `doc`; `there` names that window.
+fn on_document(root: HWND, doc: HWND, there: impl FnOnce(HWND) -> String) -> Result<(), String> {
+    if root == doc {
+        Ok(())
+    } else {
+        Err(format!(
+            "the scroll point is not on the document: {} is there",
+            there(root)
+        ))
     }
 }
 
-/// Points at the window's centre, then rests on the face; returns the hook's last point outside it, and the rest point.
-fn target(ctx: &Ctx, doc: &Doc) -> Result<(Pt, Pt), String> {
-    let p = uia::centre(&win::rect(doc.app.hwnd)?);
+/// The routes G6 tries: all of them, or all but UI Automation's when nothing there has a scroll pattern.
+fn routes(scrolls: bool) -> Vec<Route> {
+    Route::ALL
+        .into_iter()
+        .filter(|r| scrolls || *r != Route::Uia)
+        .collect()
+}
+
+/// Glides from the document's centre to rest on the stand-in face, reading the pointer after each step; the last point
+/// outside the face must be on the document.
+fn target(ctx: &Ctx, ui: &Uia, doc: &Doc) -> Result<Aim, String> {
+    let r = win::rect(doc.app.hwnd)?;
+    let p = uia::centre(&r);
     guard(&doc.app, &[p])?;
-    let f = face(ctx.cfg.g6.face_px);
-    let rest = uia::centre(&f);
-    let assist = simuser::start_assist(ctx, vec![f])?;
-    assist::as_user(&[Act::Move(p)])?;
-    sleep_ms(ctx.cfg.sim.step_ms);
-    assist::as_user(&[Act::Move(rest)])?;
+    let work = screen::work_area(&r).map_err(|e| e.to_string())?;
+    let f = g6track::face(&r, &work, &ctx.cfg.g6);
+    let mut track = Track::new(f);
+    for at in g6track::glide(p, &f, ctx.cfg.probes.move_steps) {
+        mouse::move_to(POINT { x: at.x, y: at.y })?;
+        sleep_ms(ctx.cfg.sim.step_ms);
+        let now = screen::cursor().map_err(|e| e.to_string())?;
+        track.see(Pt { x: now.x, y: now.y });
+    }
     sleep_ms(ctx.cfg.probes.settle_ms);
-    let last = assist.live().last_outside;
-    assist.stop()?;
-    Ok((last.ok_or("the hook saw no point outside the face")?, rest))
+    let at = track
+        .last()
+        .ok_or("the pointer never left the stand-in face: the document window is too short")?;
+    let root = win::root_at(POINT { x: at.x, y: at.y });
+    on_document(root, doc.app.hwnd, win::describe)?;
+    let sp = ui.scroller(at);
+    let (rest, offset) = (uia::centre(&f), g6track::offset(&r, at));
+    Ok(Aim {
+        at,
+        rest,
+        sp,
+        offset,
+    })
 }
 
 /// Scrolls once and compares the window's picture and UIA percent before and after.
@@ -108,19 +143,34 @@ fn noise(ctx: &Ctx, doc: &Doc) -> Result<Option<f64>, String> {
     ))
 }
 
-/// Every route in every direction at the target, after the noise baseline.
-fn drive(ctx: &Ctx, uia: &Uia, doc: &Doc) -> Result<(Vec<Try>, Pt, Option<f64>), String> {
+/// What one G6 run gave: every try, the target's offset in the window, whether it had a scroll pattern, and a still
+/// window's picture change.
+struct Driven {
+    tries: Vec<Try>,
+    offset: [i32; 2],
+    pattern: bool,
+    still: Option<f64>,
+}
+
+/// Every route in every direction at the target, after the noise baseline; UI Automation's only when it can scroll
+/// there.
+fn drive(ctx: &Ctx, ui: &Uia, doc: &Doc) -> Result<Driven, String> {
     probe::front(ctx, &doc.app)?;
-    let at = target(ctx, doc)?;
+    let aim = target(ctx, ui, doc)?;
     let still = noise(ctx, doc)?;
-    let sp = uia.scroller(at.0);
     let mut tries = Vec::new();
-    for route in Route::ALL {
+    for route in routes(aim.sp.is_some()) {
         for dir in Dir::ALL {
-            tries.push(try_one(ctx, doc, (route, dir), at, sp.as_ref())?);
+            let at = (aim.at, aim.rest);
+            tries.push(try_one(ctx, doc, (route, dir), at, aim.sp.as_ref())?);
         }
     }
-    Ok((tries, at.0, still))
+    Ok(Driven {
+        tries,
+        offset: aim.offset,
+        pattern: aim.sp.is_some(),
+        still,
+    })
 }
 
 /// The directions each route scrolled; passes when some route scrolled both down and up.
@@ -160,9 +210,11 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         )?,
     };
     say!("G6 {name}: {}", win::describe(doc.app.hwnd));
-    let ((tries, at, still), notes) = probe::run_on(ctx, doc, |d| drive(ctx, &uia, d))?;
-    let (pass, worked) = summary(&tries);
-    let lines: Vec<Value> = tries
+    let (driven, notes) = probe::run_on(ctx, doc, |d| drive(ctx, &uia, d))?;
+    let (pass, worked) = summary(&driven.tries);
+    let (offset, pattern, still) = (driven.offset, driven.pattern, driven.still);
+    let lines: Vec<Value> = driven
+        .tries
         .iter()
         .map(|t| {
             json!({ "route": t.route.name(), "dir": t.dir.name(), "moved": t.moved,
@@ -171,7 +223,8 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         .collect();
     say!("G6 {name}: pass {pass}; worked {worked}; noise {still:?}");
     Ok(json!({
-        "gate": "G6", "app": name, "pass": pass, "worked": worked, "target": [at.x, at.y],
+        "gate": "G6", "app": name, "pass": pass, "worked": worked, "target_offset": offset,
+        "scroll_pattern": pattern,
         "noise": still, "tries": lines, "clean_up": notes,
     }))
 }
@@ -202,5 +255,26 @@ mod tests {
         assert_eq!(worked["post"], json!(["down"]));
         let both = [t(Route::Uia, Dir::Down, true), t(Route::Uia, Dir::Up, true)];
         assert!(summary(&both).0);
+    }
+
+    #[test]
+    fn a_point_on_the_document_with_no_scroll_pattern_still_tries_post_and_send() {
+        assert_eq!(routes(true), Route::ALL);
+        assert_eq!(routes(false), [Route::Post, Route::Send]);
+    }
+
+    #[test]
+    fn a_point_off_the_document_fails_naming_what_is_there() {
+        let (doc, other) = (
+            HWND(std::ptr::without_provenance_mut(1)),
+            HWND(std::ptr::without_provenance_mut(2)),
+        );
+        assert_eq!(on_document(doc, doc, |_| String::new()), Ok(()));
+        let e =
+            on_document(other, doc, |_| "the taskbar".to_string()).expect_err("off the document");
+        assert!(
+            e.contains("not on the document") && e.contains("the taskbar"),
+            "{e}"
+        );
     }
 }

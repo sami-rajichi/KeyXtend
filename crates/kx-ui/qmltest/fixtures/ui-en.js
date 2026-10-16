@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "Holding",
   "banner.more": "{$more} more notices",
   "bar.bigger": "Bigger",
   "bar.bubble": "Show the keyboard",
@@ -133,10 +134,14 @@ var texts = {
   "module.kernel": "KeyXtend",
   "module.keyboard": "Keyboard",
   "module.layouts": "Keyboard layouts",
+  "module.mouse": "Mouse assist",
   "module.ui": "Appearance",
   "notice.keys-not-sent": "Some keys did not reach the app in front. Check what was typed.",
   "notice.lang-not-switched": "The app in front could not switch the language.",
   "notice.module-failed": "{$module} stopped after an error. Everything else still works.",
+  "notice.mouse-hook-failed": "Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.",
+  "notice.mouse-reset": "Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.",
+  "notice.mouse-stopped": "Mouse assist stopped after an error. Restart KeyXtend to use it again.",
   "notice.settings-defaults": "No settings file could be used, so the default settings are in use.",
   "notice.settings-locked": "Another program is using the settings file. Default settings are in use, and nothing is saved.",
   "notice.settings-newer": "The {$module} settings come from a newer version. They are kept, and the defaults are used for now.",
@@ -155,8 +160,11 @@ var texts = {
   "theme.dolch": "Modern Dolch",
   "theme.et66": "ET66",
   "theme.native": "Native Adaptive",
+  "tip.grab": "Press to pick up, move, then click to drop",
   "tip.later": "Coming in a later version",
+  "tip.mouse-off": "Mouse assist is off",
   "tip.one-lang": "Only one keyboard language is installed",
+  "tip.rclick": "Hold still to right-click; short clicks stay normal",
   "tray.quit": "Quit",
   "tray.show": "Show keyboard",
   "window.bubble": "KeyXtend keyboard (minimised)",
@@ -164,6 +172,7 @@ var texts = {
   "window.list": "Keyboard languages",
   "window.menu": "KeyXtend menu",
   "window.notice": "KeyXtend notice",
+  "window.pointer": "Pointer helper",
   "window.tip": "KeyXtend tip"
 };
 var more = [
@@ -181,3 +190,16 @@ var more = [
   "11 more notices",
   "12 more notices"
 ];
+var assist = {
+  "area": null,
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "mode": null,
+  "point": null,
+  "pointerBase": 32,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

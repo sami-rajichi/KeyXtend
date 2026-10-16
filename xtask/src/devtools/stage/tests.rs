@@ -1,4 +1,5 @@
 use super::*;
+use crate::config::ConfigError;
 use crate::test_support::{TempDir, stage_config as config, stage_json};
 
 /// The error `validate` gives after `change` is applied to the test settings.
@@ -89,6 +90,14 @@ fn the_qmake_variable_and_qt_version_must_be_named() {
     assert_eq!(
         invalid(|c| c.qt_version = " ".to_string()),
         Err(ConfigError::EmptyValue("qt_version"))
+    );
+}
+
+#[test]
+fn the_gate_flag_must_be_named() {
+    assert_eq!(
+        invalid(|c| c.gate_flag = " ".to_string()),
+        Err(ConfigError::EmptyValue("gate_flag"))
     );
 }
 

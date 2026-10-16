@@ -3,6 +3,9 @@ use kx_module_api::parse_as;
 use kx_theme::contrast::{MAX_CONTRAST, WCAG_AA};
 use toml::{Table, Value};
 
+mod pool;
+mod sound;
+
 /// The defaults with `key` set to `value`.
 fn with(key: &str, value: impl Into<Value>) -> Table {
     let mut t: Table = SPEC.defaults.parse().unwrap();

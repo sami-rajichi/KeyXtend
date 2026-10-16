@@ -40,10 +40,13 @@ impl Hub {
         view.map_or_else(|| NULL.to_owned(), |v| json(&v))
     }
 
-    /// Takes a new system look, as the watch reports it from any thread.
+    /// Takes a new system look, as the watch reports it from any thread; a new pointer size wakes the overlay too.
     pub fn set_sys(&self, sys: SysLook) {
-        self.lock().sys = sys;
+        let before = std::mem::replace(&mut self.lock().sys, sys);
         self.wake(Wake::Look);
+        if before.pointer_px != sys.pointer_px {
+            self.pointer_sized();
+        }
     }
 
     /// Follows the system look until the guard drops; the watch holds the hub weakly.

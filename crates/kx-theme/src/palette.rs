@@ -154,6 +154,9 @@ pub struct Palette {
     pub key_shadow: Vec<Shadow>,
     /// Layers under the keyboard and panels.
     pub window_shadow: Vec<Shadow>,
+    /// Layers under the mode badge, set from `[common] badge_shadow`, as every theme shares it.
+    #[serde(skip_deserializing, default)]
+    pub badge_shadow: Vec<Shadow>,
     /// Skirt colours; only sculpted caps have them.
     #[serde(default)]
     pub skirt: Option<Skirt>,

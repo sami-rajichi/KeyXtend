@@ -5,6 +5,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use serde::Serialize;
+use serde_json::{Value, json};
+
 use crate::win::{poll_until, sleep_ms};
 
 /// Every run appends its JSON line here, inside the out folder.
@@ -46,6 +49,12 @@ macro_rules! say {
     };
 }
 pub(crate) use say;
+
+/// `r` for a result line: its value, or its error.
+pub fn shown<T: Serialize>(r: &Result<T, String>) -> Value {
+    r.as_ref()
+        .map_or_else(|e| json!({ "error": e }), |v| json!(v))
+}
 
 /// Creates the out folder and returns it as a plain absolute path.
 pub fn out_dir(dir: &Path) -> Result<PathBuf, String> {
@@ -107,18 +116,18 @@ pub fn save_result(out: &Path, line: &str) -> Result<(), String> {
 pub const PARTIAL: &str = "partial";
 
 /// A `pass` value: false when what ran failed, `PARTIAL` when it held but the gate was not `whole`, else true.
-pub fn pass(ok: bool, whole: bool) -> serde_json::Value {
+pub fn pass(ok: bool, whole: bool) -> Value {
     match (ok, whole) {
-        (false, _) => serde_json::json!(false),
-        (true, false) => serde_json::json!(PARTIAL),
-        (true, true) => serde_json::json!(true),
+        (false, _) => json!(false),
+        (true, false) => json!(PARTIAL),
+        (true, true) => json!(true),
     }
 }
 
 /// True when result line `v` broke off or has a verdict other than a pass, so kx-gates exits with a failure.
-pub fn failed(v: &serde_json::Value) -> bool {
+pub fn failed(v: &Value) -> bool {
     let pass = v.get("pass");
-    v.get("error").is_some() || pass.is_some_and(|p| p != &serde_json::Value::Bool(true))
+    v.get("error").is_some() || pass.is_some_and(|p| p != &Value::Bool(true))
 }
 
 #[cfg(test)]
@@ -133,7 +142,6 @@ mod tests {
 
     #[test]
     fn a_result_fails_on_an_error_or_a_verdict_that_did_not_pass() {
-        use serde_json::json;
         assert!(failed(&json!({ "gate": "G26", "error": "no keyboard" })));
         assert!(failed(&json!({ "gate": "G26", "pass": false })));
         assert!(!failed(&json!({ "gate": "G26", "pass": true })));
@@ -148,8 +156,14 @@ mod tests {
     }
 
     #[test]
+    fn a_result_part_shows_its_value_or_its_error() {
+        assert_eq!(shown(&Ok::<u8, String>(3)), json!(3));
+        let cut = Err::<u8, String>("cut".to_string());
+        assert_eq!(shown(&cut), json!({ "error": "cut" }));
+    }
+
+    #[test]
     fn a_verdict_is_partial_only_when_what_ran_held_and_part_did_not_run() {
-        use serde_json::json;
         assert_eq!(pass(true, true), json!(true));
         assert_eq!(pass(true, false), json!(PARTIAL));
         assert_eq!(pass(false, true), json!(false));

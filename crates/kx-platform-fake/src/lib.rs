@@ -1,6 +1,6 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, recording
-//! fakes of the input, layout and UI ports (the tray and the memory port too), and of the layouts service. Only tests,
-//! tools and test-only crates use it.
+//! fakes of the input, layout and UI ports (the tray, the memory port and the speaker too), of the mouse hook and of
+//! the layouts service. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
@@ -12,6 +12,8 @@ mod layout_file;
 mod layouts;
 mod look;
 mod memory;
+mod pointer;
+mod sound;
 mod tray;
 mod ui;
 
@@ -23,6 +25,8 @@ pub use layout_file::{FILE_EXT, LayoutFile, LayoutFileError, golden_dir};
 pub use layouts::{Ask, FakeLayouts};
 pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use memory::FakeMemory;
+pub use pointer::FakePointerHook;
+pub use sound::{FakeSpeaker, Prepared};
 pub use tray::FakeTray;
 pub use ui::{FakeBackdrop, FakeScreens, FakeWindowGuard, GuardCall};
 

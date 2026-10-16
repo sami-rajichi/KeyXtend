@@ -10,7 +10,7 @@ use windows::Win32::System::Threading::GetCurrentProcessId;
 
 use kx_platform_windows::screen;
 
-use crate::hold::Pt;
+use crate::pt::Pt;
 use crate::uia::{self, Pill, Uia};
 
 /// Characters read to tell a selection from a bare caret; the text itself is dropped at once.

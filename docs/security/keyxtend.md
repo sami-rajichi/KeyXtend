@@ -1,9 +1,9 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-14
 - **Status:** Reviewed
-- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
+- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -24,7 +24,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Command line | At most one argument, `--show` or `--quit`; anything else, a non-Unicode argument or any Qt option (`-platform`, `-qmljsdebugger`), stops the app before Qt starts, so Qt only ever sees a checked argument | One argument | Property test |
+| Command line | At most one argument, `--show` or `--quit`; anything else, a non-Unicode argument or any Qt option (`-platform`, `-qmljsdebugger`), stops the app before Qt starts, so Qt only ever sees a checked argument. Only the gate-only build also takes `--sim-input`, alone or before `--show` (see Gate-only input) | One argument, two in the gate-only build | Property test |
 | A later copy's Show or Quit (the command window, see `kx-platform-windows.md`) | Only the adapter's fixed codes reach the app; until the hub exists they wait in order, then go to `Hub::command` | Tries stop at `[ui] send_tries`, `send_wait_ms` apart, each bounded by kx-ui's settings check | Unit tests with a fake instance |
 | `[ui] send_tries`, `send_wait_ms` in a later copy | `kx_settings::peek` reads the file with the settings' size cap and never repairs or writes it; `peek_section` reads the `[ui]` section as the store does: migrated, a bad value back to its default, and the defaults for a newer version or any fault | `MAX_FILE_BYTES` | Unit tests |
 | `[kernel] log_level`, `log_max_mb` | Checked by the kernel's settings; the kernel's defaults open the log when they did not load | As the kernel's note | Property tests (kernel) |
@@ -32,28 +32,38 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 | Libraries named without a folder | The uiAccess build: `SetDefaultDllDirectories` limits them to the app's folder and System32 first thing in `main`. The exe's own imports load before `main`, by Windows' standard order (see Elevation) | N/A | A test that a copy in the working folder stops loading; the stage check of every import |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** a later copy speaks only through the adapter's command window, which acts on its fixed codes. A same-user program that holds `Local\KeyXtend.Running` without a command window makes the next copy stop with "another copy runs but did not answer", after its tries; it never starts a second keyboard. Each try claims again first, so a copy that quits meanwhile leaves the session to the new one.
-- **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag.
+- **Spoofing:** a later copy speaks only through the adapter's command window, which acts on its fixed codes.
+  - A same-user program that holds `Local\KeyXtend.Running` without a command window makes the next copy stop with "another copy runs but did not answer", after its tries; it never starts a second keyboard. Each try claims again first, so a copy that quits meanwhile leaves the session to the new one.
+- **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag, or, in the gate-only build only, `--sim-input` alone or before `--show`.
 - **Logging / repudiation:**
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
-  - The panic hook replaces Rust's default one and logs only the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
+  - The panic hook replaces Rust's default one. It first calls the adapter's `release_now`, so a panic during a Grab carry never leaves a button down (`tests/quiet.rs` checks it lets go before it logs).
+  - Only then does it log the file, line and column, never the payload, which could hold typed text; until the log is set up it also writes the place to standard error.
+  - The hook lets go and keeps running, so a panic the kernel catches never ends mouse assist. `release_now` waits at most the adapter's `RELEASE_WAIT`, and returns at once on the hook's own thread, where the callback's own recovery lets go.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
-- **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004). Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
+- **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004), and tidy D7 refuses kx-theme's `files` feature, its asset and WAV readers, in the app's normal tree, so the uiAccess app links no media parser.
+  - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
   - Quit ends the request queue; the kernel's thread stops the modules, then ends the UI even if stopping panics (a drop guard). After Qt's loop, `drain::stop` removes the tray icon and joins the thread, whether it was running, already asked to quit, or ended in a panic.
   - The tray icon goes when the app ends or a panic unwinds. A panic inside a Qt callback aborts the process, and a killed process leaves the icon until the pointer passes over it, as Windows does for any app.
   - `--quit` with no copy running starts nothing and exits at once.
   - A same-user program that squats the running mutex can keep KeyXtend from starting (Accepted).
 - **Elevation:** a uiAccess process can drive elevated windows, so nothing another program of the user controls may load code into it.
-  - One cfg, `kx_ui_access`, which `build.rs` sets together with the manifest's uiAccess, turns on the pinning below and hides the console, so they cannot drift apart; a test reads the built exe's manifest and subsystem.
+  - One cfg, `kx_ui_access`, which `build.rs` sets together with the manifest's uiAccess, turns on the pinning below, so they cannot drift apart. A second, `kx_no_console`, hides the console in every release build, the gate-only one too, and so holds the first; tests read the built exe's manifest and subsystem.
   - The uiAccess build calls `SetDefaultDllDirectories(APPLICATION_DIR | SYSTEM32)` first in `main`, so a library named later without a folder never comes from the working folder or `PATH`.
   - The exe's own imports (Qt's DLLs, the MSVC runtime) load and set up before `main`, by Windows' standard order, which includes the working folder and `PATH`. The stage check holds each import in the stage or System32, and shipping the runtime is P14's (`docs/items/P14.md`).
-  - Every build clears Qt's variables before Qt starts, through `qunsetenv`, by the names in the C runtime's narrow copy of the environment, which Qt's byte reads use; `qunsetenv` clears each from the wide copy, which Qt's text reads use, too. The narrow copy converts names with the ANSI code page's best fit, so a Win32 name such as `ＱＴ_PLUGIN_PATH` reads there as `QT_PLUGIN_PATH`; Rust's `remove_var` changes only the Win32 copy and is unsafe in edition 2024, which the app forbids. Clearing them also keeps a global `QT_SCALE_FACTOR` from skewing the keyboard's DPI layout.
+  - Every build clears Qt's variables before Qt starts, through `qunsetenv`, by the names in the C runtime's narrow copy of the environment, which Qt's byte reads use; `qunsetenv` clears each from the wide copy, which Qt's text reads use, too.
+  - The narrow copy converts names with the ANSI code page's best fit, so a Win32 name such as `ＱＴ_PLUGIN_PATH` reads there as `QT_PLUGIN_PATH`; Rust's `remove_var` changes only the Win32 copy and is unsafe in edition 2024, which the app forbids. Clearing them also keeps a global `QT_SCALE_FACTOR` from skewing the keyboard's DPI layout.
   - The manifest also names the UTF-8 code page (`activeCodePage`, Windows 10 1903 and later), so in the app that copy holds each name exactly and none narrows to a Qt one; the walk over narrow names still covers a Windows that ignores it. A test reads both from the built exe.
   - The clearing runs on the main thread after the adapter's threads start: Windows locks both environments, and no thread of the app writes them.
   - The uiAccess build pins Qt's plugin folders to the app's folder, and the QML imports to the compiled-in modules and the app's `qml` folder; each module's plugin still loads from beside its `qmldir`. Debug builds use the installed Qt.
   - The manifest asks for uiAccess only in release, with `asInvoker`, PerMonitorV2 and the UTF-8 code page; the linker writes no import library or exports file (`/NOIMPLIB /NOEXP`). The app's code forbids `unsafe`; the hardening calls live in `kx-platform-windows` and in a `kx-ui` bridge.
+
+## Gate-only input
+- **What:** the `gate-input` feature turns on the adapter's `sim-input` and adds `--sim-input`, with which the mouse engine acts on the gate tool's tagged input instead of the hand's (ADR-0027 decision 3). The run logs one warning that it is a gate build.
+- **Why it never ships:** in the uiAccess app, any program of the session could send that tagged input and steer our clicks into admin windows. The feature is off by default, and nothing in the workspace turns it on.
+- **How it is enforced:** the stage check (`cargo xtask stage`, and `dev-install` on an app folder) refuses a program that holds the flag's text (`[workspace.metadata.stage] gate_flag`, which the app's agree test pins), and `dev-install` refuses to sign any exe that holds it. The gate build's warning logs the flag as a field, which keeps its text whole in a release exe, and a test reads the built exe: only the gate build holds the flag.
 
 ## Findings
 ### Must fix (blocks any signed build)
@@ -71,6 +81,7 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
 - Open (P14): typing under the planted variables, since a test click would move the owner's mouse; nothing loading from them is confirmed above.
 - Open (P14): the MSVC runtime is not staged and loads from System32, where the Visual C++ redistributable puts it. On a PC without it Windows would look in the working folder and `PATH`, so the installer must provide it.
 - Open (P14, before any signed build leaves the development PC): COM may read a per-user registration (`HKCU\Software\Classes\CLSID`) before the machine's for a process that is not elevated, and a uiAccess process is not. On the staged signed build, list the in-process classes it activates (Process Monitor) and check that a planted `HKCU` override for each never loads (`docs/items/P14.md`).
+  - The speaker adds such classes from P4 on: `XAudio2` opens the audio device by COM class activation (the device enumerator) in the uiAccess process at its first sound, and the key sound is on by default.
 - Open (P14): pin the QML disk cache off in the uiAccess build, with Qt's own cache option in `harden_qt` and a stage check that refuses `.qml`, `.js` and `.mjs` files (`docs/items/P14.md`).
 - Open (P14, `kx-release`): a panic inside a dependency logs that dependency's source path as the build machine saw it, which the binary also holds and which can name the builder's account. Release builds trim or remap those paths (`docs/items/P14.md`).
 ### Accepted (with reason)

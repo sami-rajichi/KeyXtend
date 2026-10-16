@@ -18,12 +18,12 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
      - The struct derives serde with `#[serde(deny_unknown_fields)]`, implements `Settings` (`check` holds the range rules) and has **no `Default` values**.
      - `defaults.toml`, beside `Cargo.toml`, is the only place the defaults live: every setting, no `version` key.
    - `src/logic/`: pure state machines and algorithms. No I/O. Time comes from `Clock`.
-   - `tests/`: integration tests against `kx-platform-fake`. Golden files go through `kx_test_support::golden` (`assert_golden`), not `insta`.
+   - `tests/`: integration tests through `kx_test_support::host::FakeHost`, with `kx-platform-fake` services. Golden files go through `kx_test_support::golden` (`assert_golden`), not `insta`.
    - `README.md`: a purpose paragraph, the services used and provided, the capabilities with a one-line reason each, and the settings.
 2. **Wire it up:**
    - add it to the workspace `members`;
    - add a Cargo feature `mod-<name>` in `apps/keyxtend/Cargo.toml` (on by default only if the spec says so);
-   - register the module in `apps/keyxtend/src/modules.rs` behind that feature.
+   - register the module in `picked()` in `apps/keyxtend/src/boot.rs` behind that feature.
 3. **Security note:** copy `docs/security/TEMPLATE.md` to `docs/security/<name>.md` and fill in the capability table now. The threats get filled in later with `kx-security-check`.
 4. **Check** that the ARCHITECTURE.md code map lists the crate; add a line if it does not.
 5. **Run** `cargo xtask tidy` and `cargo test -p kx-mod-<name>`. Both must pass with the empty module.
@@ -31,4 +31,4 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
 
 ## Rules
 - A module never talks to the OS. If it needs something new from the OS, add a **port** (a trait) to `kx-module-api`, implement it in `kx-platform-fake` first (with tests), and only then in `kx-platform-windows`.
-- UI for the module goes in `crates/kx-ui/qml/views/<Name>.qml`, with one cxx-qt bridge object in `crates/kx-ui/src/bridges/`. Its lists are paged, 5 rows per page (ADR-0008).
+- UI for the module goes in `crates/kx-ui/qml/<Name>.qml` (the folder is flat), with one cxx-qt bridge object in `crates/kx-ui/src/bridges/`. Its lists are paged, 5 rows per page (ADR-0008).

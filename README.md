@@ -23,7 +23,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Always on top, never in the way.** It stays above every window, including the Start menu, Search and Task Manager, and types into admin windows. Clicking a key never takes focus from the app you type into (ADR-0003).
 - **Full mouse help with one button.**
   - Hold the button still for 1.5 s to right-click; short clicks and drags keep working.
-  - **Grab** does drag and drop and text selection: hold to grab, move, click to drop.
+  - **Grab** does drag and drop and text selection: click to pick up, move, click to drop.
   - A two-speed **scroll pad** scrolls whatever is under the pointer.
 - **Modifiers that work with the mouse.** One click holds Shift, Ctrl, Alt or Win, as in Windows' On-Screen Keyboard. The next mouse click is sent with it, so Shift+click and Ctrl+click work.
 - **No scrolling, dragging or right-click anywhere in its own UI** (ADR-0008).
@@ -54,12 +54,13 @@ Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab
 
 ## Status
 
-Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, and the keyboard core (P3) types English, French and Arabic; mouse assist (P4) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, and mouse assist (P4) right-clicks and drags with clicks only; the scroll pad (P5) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
 ## Using the keyboard
 
 - **Type** by clicking keys: the text goes to the app you were typing in, which keeps the focus.
-- **Shift, Ctrl, Alt, AltGr and Win** stay held for the next key, then let go; a setting keeps them held until you click them again.
+- **Shift, Ctrl, Alt, AltGr and Win** stay held for the next key or click, then let go; a setting keeps them held until you click them again.
+- **Right-click and Grab** (the side keys): with Right-click on, press and hold the button still on something (1.5 s by default) to right-click it, while short clicks and drags work as usual, and a ring shows the hold. With Grab on, one click picks up what is under the pointer and the next drops it, to move files or select text without dragging; a badge at the pointer shows which mode is on, and a soft sound plays at each step.
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.

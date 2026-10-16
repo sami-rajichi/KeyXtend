@@ -3,7 +3,9 @@
 //! start.
 
 use kx_kernel::{Kernel, KernelError, Policy};
-use kx_module_api::ports::{InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey};
+use kx_module_api::ports::{
+    InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, PointerHook, PointerHookKey,
+};
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
 use kx_ui::{Hub, Request, UiModule, UiPorts};
@@ -20,6 +22,8 @@ pub struct Services {
     pub injector: Arc<dyn InputInjector>,
     /// Reads the OS keyboard layouts.
     pub layouts: Arc<dyn LayoutSource>,
+    /// The mouse hook the mouse module's hold engine runs on.
+    pub pointer: Arc<dyn PointerHook>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -42,6 +46,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_layouts::LayoutsModule));
     #[cfg(feature = "mod-keyboard")]
     list.push(Box::new(kx_mod_keyboard::KeyboardModule::default()));
+    #[cfg(feature = "mod-mouse")]
+    list.push(Box::new(kx_mod_mouse::MouseModule::default()));
     list
 }
 
@@ -60,8 +66,8 @@ pub struct Boot {
     pub hub: Arc<Hub>,
     /// Try again and Quit, which the kernel's thread drains.
     pub requests: Receiver<Request>,
-    /// The hub hears the kernel's notices while this lives.
-    pub heard: Subscription,
+    /// The hub hears the kernel's notices and mouse-assist notes while these live.
+    pub heard: Vec<Subscription>,
 }
 
 impl Boot {
@@ -79,6 +85,7 @@ impl Boot {
         let mut kernel = Kernel::new(platform, policy(&modules));
         kernel.provide_platform::<InputInjectorKey>(services.injector)?;
         kernel.provide_platform::<LayoutSourceKey>(services.layouts)?;
+        kernel.provide_platform::<PointerHookKey>(services.pointer)?;
         for module in modules {
             kernel.add(module)?;
         }

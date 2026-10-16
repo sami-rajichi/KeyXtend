@@ -1,12 +1,14 @@
-//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, and G8's capture
-//! covers its steps through its G2 clicks, as each click now holds the button for `[g2] press_ms`.
+//! Run lengths checked at load (owner, 2026-10-11): each run the mouse guard holds fits its limit, G8's capture covers
+//! its steps through its G2 clicks, and G12's covers every press at its longest.
 #![cfg(windows)]
 
 use std::time::Duration;
 
+use kx_mod_mouse::MouseSettings;
 use serde::Deserialize;
 
 use crate::config::GatesConfig;
+use crate::g5play::{Case, cases};
 use crate::gatecfg::G2;
 
 /// `[fit]`: what a run spends beyond the steps counted here; times in ms.
@@ -30,13 +32,16 @@ fn ms_of(secs: u64) -> u64 {
     u64::try_from(Duration::from_secs(secs).as_millis()).unwrap_or(u64::MAX)
 }
 
-/// The least time G8 holds the mouse: until its `PresentMon` capture ends, then each churn round resting on each tip.
-fn g8_ms(c: &GatesConfig) -> u64 {
+/// The least time G8 holds the mouse: its steps through G2's clicks, then the use step's rest on each of the board's
+/// `keys` and its wait, or its `PresentMon` capture when that ends later; then each churn round resting on each tip.
+fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
     let g = &c.g8;
     let rounds = g.churn_warm_rounds.saturating_add(g.churn_rounds);
     let rests = rounds.saturating_mul(g.churn_tips.len());
     let churn = u64::try_from(rests).map_or(u64::MAX, |n| n.saturating_mul(g.churn_tip_ms));
-    ms_of(g.presentmon_secs).saturating_add(churn)
+    let hovers = u64::try_from(keys).map_or(u64::MAX, |n| n.saturating_mul(g.use_hover_ms));
+    let used = total(&[g8_captured_ms(c), hovers, g.warm_ms]);
+    total(&[ms_of(g.presentmon_secs).max(used), churn])
 }
 
 /// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
@@ -71,6 +76,52 @@ fn check_capture(c: &GatesConfig) -> Result<(), String> {
     Ok(())
 }
 
+/// The sum of `parts`, at most `u64::MAX`.
+fn total(parts: &[u64]) -> u64 {
+    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
+}
+
+/// G12's counted steps from `PresentMon`'s start: its wait, then each press at its longest, `hold_ms` less
+/// `[g12] spare_ms`, with the move before it, the settle after it and a poll's lateness.
+fn g12_ms(c: &GatesConfig, hold_ms: u64) -> u64 {
+    let g = &c.g12;
+    let press = hold_ms.saturating_sub(g.spare_ms);
+    let each = total(&[c.sim.step_ms, press, g.settle_ms, c.timing.poll_ms]);
+    let clicks = u64::from(g.grid[0]).saturating_mul(u64::from(g.grid[1]));
+    clicks
+        .saturating_mul(each)
+        .saturating_add(c.g8.presentmon_wait_ms)
+}
+
+/// The time `rounds` rounds of G5's cases take under a hold of `hold_ms`, counted generously: each case's two steps,
+/// its click or its hold with the margin, its settle, and the hung case's hang.
+fn rounds_ms(c: &GatesConfig, rounds: usize, hold_ms: u64) -> u64 {
+    let (g, s) = (&c.g5, &c.sim);
+    let case = |k: &Case| {
+        let press = if k.long {
+            hold_ms.saturating_add(s.hold_margin_ms)
+        } else {
+            s.click_ms
+        };
+        let hang = if k.hang { g.hang_ms } else { 0 };
+        total(&[s.step_ms, s.step_ms, press, g.settle_ms, hang])
+    };
+    let round = total(&cases(g, 0).iter().map(case).collect::<Vec<_>>());
+    u64::try_from(rounds).map_or(u64::MAX, |n| n.saturating_mul(round))
+}
+
+/// Refuses a G12 capture that would end before its presses, so their frames would go unseen, or a G12 run past the
+/// guard's limit.
+fn check_g12(c: &GatesConfig, hold_ms: u64) -> Result<(), String> {
+    let (need, secs) = (g12_ms(c, hold_ms), c.g12.presentmon_secs);
+    if ms_of(secs) < need {
+        return Err(format!(
+            "g12.presentmon_secs ({secs} s) ends before G12's presses end, {need} ms in: raise it"
+        ));
+    }
+    held_fits(c, "g12", need)
+}
+
 /// Refuses a run of `gate` that holds the mouse `ms` and, with `[fit] guard_headroom_ms`, passes the guard's limit, as
 /// the guard would stop it midway; with the guard off, nothing is held.
 fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
@@ -92,98 +143,20 @@ pub fn clicks_fit(c: &GatesConfig, gate: &str, clicks: usize) -> Result<(), Stri
     held_fits(c, gate, clicks_ms(&c.g2, clicks))
 }
 
-/// Refuses a guarded run of the settings that would pass the guard's limit, and a G8 capture that would end before its
-/// G2 clicks.
+/// Refuses a guarded run of the settings that would pass the guard's limit, and a G8 or G12 capture that would end
+/// before its steps; G5's and G12's holds are the mouse module's defaults.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
+    let hold_ms = MouseSettings::from_defaults()
+        .map(|m| u64::from(m.hold_ms))
+        .map_err(|e| format!("the mouse defaults: {e}"))?;
     check_capture(c)?;
+    check_g12(c, hold_ms)?;
     clicks_fit(c, "g2", c.g2.clicks)?;
     clicks_fit(c, "g4", c.g4.clicks)?;
-    held_fits(c, "g8", g8_ms(c))
+    held_fits(c, "g5", rounds_ms(c, c.g5.rounds, hold_ms))?;
+    held_fits(c, "g8 hook", rounds_ms(c, c.g8_hook.rounds, hold_ms))?;
+    held_fits(c, "g8", g8_ms(c, crate::board::ids()?.len()))
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_module_api::MS_PER_S;
-
-    use super::*;
-    use crate::config::load;
-
-    #[test]
-    fn a_click_run_takes_each_hold_and_gap() {
-        let g2 = load().expect("loads").g2;
-        let each = g2.press_ms + g2.click_gap_ms;
-        assert_eq!(clicks_ms(&g2, 1000), 1000 * each);
-        assert_eq!(clicks_ms(&g2, 0), 0);
-    }
-
-    #[test]
-    fn the_shipped_guarded_runs_fit_the_guards_limit() {
-        let c = load().expect("loads");
-        assert_eq!(check(&c), Ok(()));
-        let g2 = clicks_ms(&c.g2, c.g2.clicks) + c.fit.guard_headroom_ms;
-        assert!(g2 <= c.mouse_guard.limit_ms, "G2's {g2} ms");
-    }
-
-    /// The shipped settings with `change` made.
-    fn with(change: impl FnOnce(&mut GatesConfig)) -> GatesConfig {
-        let mut c = load().expect("loads");
-        change(&mut c);
-        c
-    }
-
-    #[test]
-    fn a_click_run_or_g8_that_would_pass_the_guards_limit_is_refused() {
-        let past = |c: &GatesConfig| {
-            let each = c.g2.press_ms + c.g2.click_gap_ms;
-            usize::try_from(c.mouse_guard.limit_ms / each).expect("fits")
-        };
-        let g2 = with(|c| c.g2.clicks = past(c));
-        let e = check(&g2).expect_err("G2 runs too long");
-        assert!(e.contains("g2"), "{e}");
-        let g4 = with(|c| c.g4.clicks = past(c));
-        assert!(check(&g4).expect_err("G4 too").contains("g4"));
-        let g8 = with(|c| c.g8.presentmon_secs = c.mouse_guard.limit_ms / u64::from(MS_PER_S));
-        assert!(check(&g8).expect_err("G8 too").contains("g8"));
-    }
-
-    #[test]
-    fn g8s_capture_covers_its_steps_through_its_g2_clicks() {
-        let c = load().expect("loads");
-        let need = g8_captured_ms(&c) + c.fit.capture_headroom_ms;
-        assert!(ms_of(c.g8.presentmon_secs) >= need, "{need} ms to cover");
-        assert!(
-            g8_captured_ms(&c) > clicks_ms(&c.g2, c.g8.clicks),
-            "the clicks are counted"
-        );
-        let more = with(|c| c.g8.clicks *= 10);
-        let e = check(&more).expect_err("the capture would end before the clicks");
-        assert!(e.contains("presentmon_secs"), "{e}");
-    }
-
-    #[test]
-    fn a_click_count_past_the_guards_limit_is_refused_for_its_gate() {
-        let c = load().expect("loads");
-        assert_eq!(clicks_fit(&c, "g4", c.g4.clicks), Ok(()));
-        let each = c.g2.press_ms + c.g2.click_gap_ms;
-        let past = usize::try_from(c.mouse_guard.limit_ms / each).expect("fits");
-        let e = clicks_fit(&c, "g2", past).expect_err("too long");
-        assert!(e.contains("g2"), "{e}");
-        let off = with(|c| c.mouse_guard.on = false);
-        assert_eq!(clicks_fit(&off, "g2", past), Ok(()), "nothing is held");
-    }
-
-    #[test]
-    fn churn_rounds_past_any_count_are_refused_without_a_panic() {
-        let c = with(|c| (c.g8.churn_warm_rounds, c.g8.churn_rounds) = (usize::MAX, 1));
-        assert!(check(&c).expect_err("G8 too long").contains("g8"));
-    }
-
-    #[test]
-    fn with_the_guard_off_nothing_is_cut_short() {
-        let c = with(|c| {
-            c.mouse_guard.on = false;
-            c.g2.clicks = usize::MAX;
-        });
-        assert_eq!(check(&c), Ok(()));
-    }
-}
+mod tests;

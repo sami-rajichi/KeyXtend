@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -75,6 +75,9 @@ banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
 banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
+# Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
+# WAV files, which the uiAccess app never does (ADR-0004).
+build_only_features = { kx-theme = ["files"] }
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
 # Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.
@@ -192,3 +195,13 @@ network = { lib = "Qt6Network.dll", by = ["Qt6Qml.dll", "Qt6Quick.dll"] }
 api_sets = ["api-ms-", "ext-ms-"]
 # Windows' system folder, under the folder `devtools.shell_root_env` names; an import found there resolves.
 system_dir = "System32"
+# The flag only the app's gate-only build (`gate-input`) takes; the check refuses a program holding its text. The app's agree test pins it.
+gate_flag = "--sim-input"
+
+[workspace.metadata.sounds]
+# The sound recipes, variant jitter and resampler that `cargo xtask sounds` reads, under the workspace root.
+recipes = "assets/sounds/recipes.toml"
+# The sound tokens whose `[format]` the tool writes in and kx-ui's build checks against, under the workspace root.
+format = "crates/kx-theme/tokens/sounds.toml"
+# Folder, under the workspace root, that `cargo xtask sounds render` writes to unless given `--out`.
+out_dir = "target/sounds"

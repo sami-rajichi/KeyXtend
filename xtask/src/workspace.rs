@@ -3,7 +3,7 @@
 mod raw;
 mod resolve;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -41,6 +41,8 @@ pub(crate) struct Dependency {
     pub name: String,
     /// How the package uses it.
     pub kind: DependencyKind,
+    /// The features the declaration turns on in it.
+    pub features: Vec<String>,
 }
 
 /// One build target of a package: its kinds (`lib`, `bin`, `test`, ...) and root source file.
@@ -67,6 +69,8 @@ pub(crate) struct Package {
     pub targets: Vec<Target>,
     /// The features the resolve turns on for it; none for a package outside the resolve.
     pub features: Vec<String>,
+    /// The features its manifest declares, each with what it turns on.
+    pub declared: BTreeMap<String, Vec<String>>,
 }
 
 /// A resolved dependency edge: another package id, with the kind it's used as.
@@ -227,6 +231,7 @@ pub(crate) fn config_error(err: ConfigError) -> LoadError {
 fn into_package(raw: raw::RawPackage, features: &mut HashMap<String, Vec<String>>) -> Package {
     Package {
         features: features.remove(&raw.id).unwrap_or_default(),
+        declared: raw.features,
         id: raw.id,
         name: raw.name,
         manifest_path: PathBuf::from(raw.manifest_path),
@@ -236,6 +241,7 @@ fn into_package(raw: raw::RawPackage, features: &mut HashMap<String, Vec<String>
             .map(|d| Dependency {
                 name: d.name,
                 kind: DependencyKind::from_raw(d.kind.as_deref()),
+                features: d.features,
             })
             .collect(),
         targets: raw

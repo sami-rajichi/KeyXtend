@@ -8,6 +8,30 @@ fn character_ids_name_their_scan_code() {
     assert_eq!(char_id(Scan::new(0xE035)), "c-0xE035");
     assert!(Role::Char.sends() && Role::Latch(Latch::Win).sends());
     assert!(!Role::Lang.sends() && !Role::Later.sends());
+    assert!(!Role::Assist(Assist::RClick).sends());
+}
+
+#[test]
+fn right_click_and_grab_flip_mouse_assist_and_the_other_side_keys_come_later() {
+    let s = BoardSpec::shipped().unwrap();
+    let role = |id: &str| s.side.iter().find(|k| k.id == id).unwrap().role;
+    assert_eq!(role("rclick"), Role::Assist(Assist::RClick));
+    assert_eq!(role("grab"), Role::Assist(Assist::Grab));
+    let rest: Vec<_> = s
+        .side
+        .iter()
+        .filter(|k| !matches!(k.role, Role::Assist(_)))
+        .collect();
+    assert_eq!(rest.len(), 7);
+    assert!(rest.iter().all(|k| k.role == Role::Later));
+    assert_eq!(Toggle::from(Assist::RClick), Toggle::RightClick);
+    assert_eq!(Toggle::from(Assist::Grab), Toggle::Grab);
+}
+
+#[test]
+fn an_unknown_mouse_assist_mode_is_refused() {
+    let text = BOARD.replace("assist = \"grab\"", "assist = \"scroll\"");
+    assert!(matches!(BoardSpec::read(&text), Err(BoardError::Parse(_))));
 }
 
 /// Each character key's id, by its scan code.

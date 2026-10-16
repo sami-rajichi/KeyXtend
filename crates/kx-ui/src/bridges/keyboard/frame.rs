@@ -1,5 +1,5 @@
-//! The keyboard window's press frame: drawn at once before the key acts (`press_frame = "now"`), and the frame log's
-//! marks around the key's action (`frame_log`), which hold no key.
+//! The keyboard window's press frame: drawn at once before the key acts (`press_frame = "now"`), the frame log's
+//! marks around the key's action (`frame_log`), which hold no key, and the key sound after the key went out.
 
 use super::qobject;
 use crate::bridges::frames;
@@ -23,12 +23,9 @@ impl qobject::Keyboard {
         frames::mark(Mark::End);
     }
 
-    /// Does key `action` and answers what to redraw, as `run` does, with the frame log's mark once the key went out.
+    /// Does a tap or a key's first press and answers what to redraw, as `run` does, with the frame log's mark once
+    /// the key went out, then the key sound.
     pub(super) fn sent(&self, action: FaceAction) -> QString {
-        self.redraw(|h| {
-            let redraw = h.act(action);
-            frames::mark(Mark::Sent);
-            redraw
-        })
+        self.redraw(|h| h.sent(action, || frames::mark(Mark::Sent)))
     }
 }

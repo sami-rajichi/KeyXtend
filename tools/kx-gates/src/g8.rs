@@ -1,12 +1,15 @@
 //! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, folder size, key highlight,
-//! click to character, a bus publish, `PresentMon`'s dropped frames and memory growth under pop-up churn against
-//! them, and times resizes.
-//! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`); it clicks, so only with the owner's yes.
+//! click to character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
+//! use against them, and times resizes.
+//! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
+//! layout in front (`g8lang`); it clicks, so only with the owner's yes.
+//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`).
 #![cfg(windows)]
 
 use std::path::Path;
 use std::time::{Instant, SystemTime};
 
+use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
 use spike_core::weak::{Caps, Job};
@@ -16,19 +19,20 @@ use crate::apps::Ctx;
 use crate::budget;
 use crate::busbench::{self, BusTimes};
 use crate::g8churn;
-use crate::g8frames::{self, Recorder};
+use crate::g8frames::{self, Capture, Recorder};
+use crate::g8lang::{self, WinTarget};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
-use crate::g8start::{self, Started, log_span};
+use crate::g8start::{self, Started, broke, log_span};
 use crate::g8type::Expect;
 use crate::g8ui::Spot;
-use crate::out::say;
+use crate::out::{say, shown};
 use crate::presentmon::Frames;
 use crate::proc::{self, Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, g2raw, mouseguard, out};
-use crate::{g8lit, g8size, g8type, g8ui};
+use crate::{close, g2, g2raw, g8hook, mouseguard, out};
+use crate::{g8lit, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -39,7 +43,7 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
 /// In `weak` mode, the job from `spike.toml [voice.weak]` and the CPU time it allows in whole cores; else neither.
-fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
+pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
     if !weak {
         return Ok((None, None));
     }
@@ -78,12 +82,13 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 }
 
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
-/// memory, idle, folder, presses, resizes and G2; then `PresentMon`'s frames once its capture ends, and only then the
-/// churn, whose theme switches never count.
+/// memory, idle, folder, presses, resizes, G2 and the memory after use, before any theme round (owner, 2026-10-16);
+/// then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never count.
+/// `hold` runs after the presses and after G2, each of which closed its target-window.
 fn measure(
     ctx: &Ctx,
     s: &Started,
-    program: &Path,
+    (program, hold): (&Path, Hold),
     (since, rec): (SystemTime, Option<&Recorder>),
 ) -> Result<(Measured, Result<Frames, String>), String> {
     let g = &ctx.cfg.g8;
@@ -96,10 +101,13 @@ fn measure(
     let size_mb = proc::folder_mb(folder)?;
     let spot = Spot::of(&kb, &g.press_key)?;
     let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
+    hold()?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
-    let frames = g8frames::frames(ctx, program, since, rec);
+    hold()?;
+    let used = g8use::run(ctx, &s.process);
+    let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
     let churn = g8churn::run(ctx, &s.process)?;
     let m = Measured {
         log,
@@ -112,6 +120,7 @@ fn measure(
         g2,
         ran_us,
         churn,
+        used,
     };
     Ok((m, frames))
 }
@@ -126,12 +135,6 @@ fn bench(ctx: &Ctx, job: Option<Job>) -> Result<BusTimes, String> {
         std::mem::forget(job);
     }
     busbench::time(ctx.cfg.g8.subscribers, ctx.cfg.g8.publishes)
-}
-
-/// `r` for the result line: its value, or its error.
-fn shown<T: serde::Serialize>(r: &Result<T, String>) -> Value {
-    r.as_ref()
-        .map_or_else(|e| json!({ "error": e }), |v| json!(v))
 }
 
 /// The losses in `PresentMon`'s `frames` against G8's `spans`, on a screen of `hz`, with times from `origin_us`; and
@@ -189,43 +192,43 @@ fn spans(ctx: &Ctx, m: &Measured) -> Result<Vec<Span>, String> {
     Ok(pressed.chain(clicked).chain(resized).collect())
 }
 
-/// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
-/// and whether the product quit after `quit`.
-fn broke(e: &str, recorder: Option<u32>, secs: u64, quit: Option<&Result<bool, String>>) -> String {
-    let left = recorder.map(|pid| {
-        format!("; PresentMon (pid {pid}) records for up to {secs} s from its start, then stops")
-    });
-    let product = match quit {
-        Some(Ok(true)) => "; the product quit".to_string(),
-        Some(Ok(false)) => "; the product still runs; close it".to_string(),
-        Some(Err(q)) => format!("; the product still runs ({q}); close it"),
-        None => String::new(),
-    };
-    format!("{e}{}{product}", left.unwrap_or_default())
-}
-
-/// Runs G8: `name` is the product, or `weak` for weak mode, and the product must not be running, as G8 times a cold
-/// start; `lit` and `osk` time only the key light (`g8lit`).
+/// Runs G8: `name` is the product, `weak` for weak mode or `arabic` with an Arabic layout in front, and the product
+/// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), and `hook` and
+/// `hook-weak` only the hook (`g8hook`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if let Some(lit) = g8lit::run(ctx, name) {
-        return lit;
+    if let Some(part) = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name)) {
+        return part;
     }
     cold()?;
+    match g8lang::wanted(&WinLayouts, &ctx.cfg.g8, name)? {
+        Some(to) => g8lang::within(&WinTarget::of(ctx), to, |hold| started(ctx, name, hold)),
+        None => started(ctx, name, &|| Ok(())),
+    }
+}
+
+/// What G8 runs after each step that closed its target-window: `g8 arabic` brings its own back to the front.
+type Hold<'a> = &'a dyn Fn() -> Result<(), String>;
+
+/// G8 from its cold start to its result line, in weak mode for `weak`, running `hold` as `measure` says.
+fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
     let weak = name == WEAK;
     let program = ctx.cfg.program(&ctx.cfg.g8.program);
     let (job, cpu_cores) = weak_job(ctx, weak)?;
     let (since, origin_us) = (SystemTime::now(), now_us());
-    let rec = g8frames::record(ctx, &program)?;
+    let rec = g8frames::record(ctx, &Capture::of_g8(&ctx.cfg.g8), &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
-    let s = g8start::start(ctx, &program, job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
+    let s =
+        g8start::start(ctx, &program, &[], job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
     let shown_ms = s.shown_ms();
     say!(
         "G8 {name}: started {} (pid {}); shown after {shown_ms:?} ms",
         program.display(),
         s.process.pid(),
     );
-    let measured = measure(ctx, &s, &program, (since, rec.as_ref()));
-    let quit = close::quit_running(ctx).map(|(_, ended)| ended);
+    let measured = measure(ctx, &s, (&program, hold), (since, rec.as_ref()));
+    let quit = close::quit_running(ctx)
+        .map(|(_, ended)| ended)
+        .map_err(|e| e.why);
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
     let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
@@ -234,14 +237,16 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
     let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();
-    Ok(json!({
+    let mut v = json!({
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
         "parts": parts, "quit": ended,
         "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
-    }))
+    });
+    v[g8use::FIELD] = shown(&m.used);
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -262,6 +267,7 @@ mod tests {
             presented: 1,
             lost: 0,
             p99_ms: None,
+            unread: 0,
             presents: vec![shown],
         });
         let press_end = at_us + 200_000;
@@ -272,24 +278,5 @@ mod tests {
         let (losses, cut) = judged(Ok(spans), ran_us, &frames, hz, (0, press_end));
         assert!(losses.is_ok_and(|l| l.counted.is_empty()));
         assert!(cut.expect("judged").is_some(), "a note only");
-    }
-
-    #[test]
-    fn a_run_that_broke_off_names_the_presentmon_it_left_and_whether_the_product_quit() {
-        let e = broke("no keyboard", Some(4242), 90, Some(&Ok(false)));
-        assert!(e.starts_with("no keyboard"), "{e}");
-        assert!(
-            e.contains("PresentMon (pid 4242)") && e.contains("90 s"),
-            "{e}"
-        );
-        assert!(e.contains("still runs"), "{e}");
-        let quit = broke("no keyboard", None, 90, Some(&Ok(true)));
-        assert!(
-            !quit.contains("PresentMon") && quit.contains("quit"),
-            "{quit}"
-        );
-        let refused = broke("x", None, 90, Some(&Err("no command window".into())));
-        assert!(refused.contains("no command window"), "{refused}");
-        assert_eq!(broke("x", None, 90, None), "x", "nothing left to name");
     }
 }

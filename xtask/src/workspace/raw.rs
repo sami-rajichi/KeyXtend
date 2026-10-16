@@ -3,6 +3,8 @@
 //! Kept separate from the domain model in the parent module: these structs
 //! only describe the wire shape, with no validation or conversion logic.
 
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -29,6 +31,9 @@ pub(super) struct RawPackage {
     pub(super) dependencies: Vec<RawDependency>,
     #[serde(default)]
     pub(super) targets: Vec<RawTarget>,
+    /// The features its manifest declares, each with what it turns on.
+    #[serde(default)]
+    pub(super) features: BTreeMap<String, Vec<String>>,
 }
 
 /// A dependency as declared in a package's manifest.
@@ -37,6 +42,9 @@ pub(super) struct RawDependency {
     pub(super) name: String,
     #[serde(default)]
     pub(super) kind: Option<String>,
+    /// The features the declaration turns on in it.
+    #[serde(default)]
+    pub(super) features: Vec<String>,
 }
 
 /// A build target's kinds and root source file.

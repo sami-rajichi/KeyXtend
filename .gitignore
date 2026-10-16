@@ -1,5 +1,5 @@
 # Build output
-/target/
+target/
 
 # Local tools and generated files
 /.worktrees/

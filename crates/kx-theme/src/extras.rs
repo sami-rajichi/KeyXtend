@@ -1,5 +1,5 @@
 //! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel,
-//! the hold ring, the notice banner, the tray menu and icon, and the language list.
+//! the hold ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
 
 use serde::{Deserialize, Serialize};
 
@@ -215,6 +215,27 @@ pub struct ListShape {
     pub sub_px: f32,
     /// The current row's icon size.
     pub icon_px: f32,
+}
+
+/// The mode badge beside the pointer (mock-up `.badge`); it does not grow with the keyboard, and as a pill it has no
+/// radius token: QML rounds it by half its height.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BadgeShape {
+    /// Padding: top and bottom, sides.
+    pub pad_px: [f32; 2],
+    /// Icon size.
+    pub icon_px: f32,
+    /// Gap between the icon and the text.
+    pub gap_px: f32,
+    /// Text size.
+    pub font_px: f32,
+    /// Text weight.
+    pub weight: u16,
+    /// Where the badge sits from the pointer's tip: right, down.
+    pub offset_px: [f32; 2],
+    /// The least gap it keeps to a screen edge.
+    pub edge_px: f32,
 }
 
 /// The tray icon's drawing: a badge in the theme's badge colours with the glyph on it; not in the mock-up.

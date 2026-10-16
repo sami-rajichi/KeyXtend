@@ -127,6 +127,25 @@ fn a_key_of_a_later_version_must_send_nothing() {
 }
 
 #[test]
+fn a_mouse_assist_key_is_pressed_twice_so_its_mode_comes_back_and_must_send_nothing() {
+    for id in ["rclick", "grab"] {
+        let s = step_of(false, id);
+        let want = (ids(&[id, id]), Expect::Nothing, false);
+        assert_eq!((s.presses, s.expect, s.toggles), want, "{id}");
+    }
+}
+
+#[test]
+fn only_a_mouse_assist_key_puts_its_mode_back_even_after_the_guard_stops() {
+    for id in ["rclick", "grab"] {
+        assert!(step_of(false, id).puts_back, "{id}");
+    }
+    for id in ["esc", "caps", "shift", "mic"] {
+        assert!(!step_of(true, id).puts_back, "{id}");
+    }
+}
+
+#[test]
 fn the_probe_must_be_a_send_key_of_the_board() {
     assert_eq!(probe_scan(&roles(), PROBE), Ok(Scan::new(0x1C)));
     assert!(

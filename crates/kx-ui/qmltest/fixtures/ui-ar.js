@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "قيد الإمساك",
   "banner.more": "{$more} إشعار آخر",
   "bar.bigger": "أكبر",
   "bar.bubble": "إظهار لوحة المفاتيح",
@@ -133,10 +134,14 @@ var texts = {
   "module.kernel": "KeyXtend",
   "module.keyboard": "لوحة المفاتيح",
   "module.layouts": "تخطيطات لوحة المفاتيح",
+  "module.mouse": "مساعد الماوس",
   "module.ui": "المظهر",
   "notice.keys-not-sent": "لم تصل بعض المفاتيح إلى التطبيق النشط. تحقّق مما كُتب.",
   "notice.lang-not-switched": "تعذّر على التطبيق النشط تبديل اللغة.",
   "notice.module-failed": "أدّى خطأ إلى إيقاف {$module}. باقي الميزات تعمل كالمعتاد.",
+  "notice.mouse-hook-failed": "تعذّر تشغيل مساعد الماوس لأن Windows رفض السماح له بمراقبة الماوس. اضغط على المفتاح مرة أخرى.",
+  "notice.mouse-reset": "واجه مساعد الماوس خطأً، فأُوقف تشغيل أوضاعه. اضغط على مفتاح أحد الأوضاع لتشغيله مرة أخرى.",
+  "notice.mouse-stopped": "توقّف مساعد الماوس بسبب خطأ. أعد تشغيل KeyXtend لاستخدامه مرة أخرى.",
   "notice.settings-defaults": "تعذّر استخدام أي ملف إعدادات، لذا تُستخدم الإعدادات الافتراضية.",
   "notice.settings-locked": "يستخدم برنامج آخر ملف الإعدادات. تُستخدم الإعدادات الافتراضية، ولن يُحفظ أي شيء.",
   "notice.settings-newer": "إعدادات {$module} من إصدار أحدث. تم الاحتفاظ بها، وتُستخدم القيم الافتراضية حاليًا.",
@@ -155,8 +160,11 @@ var texts = {
   "theme.dolch": "دولش الحديث",
   "theme.et66": "ET66",
   "theme.native": "الأصلي المتكيّف",
+  "tip.grab": "اضغط للإمساك، ثم حرّك، ثم انقر للإفلات",
   "tip.later": "ستتوفّر هذه الميزة في إصدار لاحق",
+  "tip.mouse-off": "مساعد الماوس متوقّف",
   "tip.one-lang": "لا يوجد سوى لغة واحدة مثبّتة للوحة المفاتيح",
+  "tip.rclick": "اضغط مطوّلًا دون تحريك المؤشر للنقر بالزر الأيمن؛ أما النقرات القصيرة فتبقى عادية",
   "tray.quit": "إنهاء",
   "tray.show": "إظهار لوحة المفاتيح",
   "window.bubble": "لوحة مفاتيح KeyXtend (مصغّرة)",
@@ -164,6 +172,7 @@ var texts = {
   "window.list": "لغات لوحة المفاتيح",
   "window.menu": "قائمة KeyXtend",
   "window.notice": "إشعار KeyXtend",
+  "window.pointer": "مساعد المؤشر",
   "window.tip": "تلميح KeyXtend"
 };
 var more = [
@@ -181,3 +190,16 @@ var more = [
   "11 إشعارًا آخر",
   "12 إشعارًا آخر"
 ];
+var assist = {
+  "area": null,
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "mode": null,
+  "point": null,
+  "pointerBase": 32,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

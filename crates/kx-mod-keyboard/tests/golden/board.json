@@ -1156,8 +1156,8 @@
       "y": 158.0
     },
     {
-      "checkable": false,
-      "dim": true,
+      "checkable": true,
+      "dim": false,
       "h": 31.0,
       "icon": "keys.rclick",
       "id": "rclick",
@@ -1167,14 +1167,14 @@
       "repeat": false,
       "row": 0,
       "side": true,
-      "tip": "tip.later",
+      "tip": null,
       "w": 40.26,
       "x": 543.0,
       "y": 34.0
     },
     {
-      "checkable": false,
-      "dim": true,
+      "checkable": true,
+      "dim": false,
       "h": 31.0,
       "icon": "keys.grab",
       "id": "grab",
@@ -1184,7 +1184,7 @@
       "repeat": false,
       "row": 0,
       "side": true,
-      "tip": "tip.later",
+      "tip": null,
       "w": 40.26,
       "x": 583.26,
       "y": 34.0

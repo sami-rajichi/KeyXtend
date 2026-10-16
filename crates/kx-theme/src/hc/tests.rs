@@ -42,7 +42,7 @@ fn high_contrast_uses_only_system_colours_in_every_theme_and_mode() {
         let p = contrast_palette(base, &HC, t.shape.line.px);
         assert!(p.named().iter().all(|&(_, c)| system(c)), "{p:?}");
         assert_eq!(p.hover.a, 0, "no tints in high contrast");
-        assert!(p.skirt.is_none() && p.window_shadow.is_empty());
+        assert!(p.skirt.is_none() && p.window_shadow.is_empty() && p.badge_shadow.is_empty());
         assert_eq!(p.key_shadow.len(), 1, "one edge per key");
         assert_eq!(p.key_shadow[0].color, Rgba::from(HC.button_text));
     }

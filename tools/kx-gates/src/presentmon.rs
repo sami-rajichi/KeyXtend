@@ -1,5 +1,5 @@
-//! G8's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with its swap
-//! chain, when it was presented on the QPC clock and whether it showed, and the slowest gaps between presents.
+//! G8's and G12's frames from a `PresentMon` 2.x CSV recorded with `--qpc_time_ms`: each present of the product with
+//! its swap chain, when it was presented on the QPC clock and whether it showed, and the slowest gaps between presents.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -54,11 +54,11 @@ pub fn args(program: &str, file: &Path, secs: u64) -> Vec<String> {
     parts.map(String::from).to_vec()
 }
 
-/// How to get the CSV `file` of `program`'s frames over `secs` seconds, for the result line.
-pub fn how(program: &str, file: &Path, secs: u64) -> String {
+/// How `gate` gets its CSV `file` of `program`'s frames over `secs` seconds, for the result line.
+pub fn how(gate: &str, program: &str, file: &Path, secs: u64) -> String {
     format!(
-        "name PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) in [g8] presentmon_exe and G8 \
-         starts it, or start it as administrator just before G8: PresentMon {}",
+        "name PresentMon (Intel, MIT licence; the owner's yes and kx-licence-check first) in [g8] presentmon_exe and \
+         {gate} starts it, or start it as administrator just before {gate}: PresentMon {}",
         command_line(&args(program, file, secs))
     )
 }
@@ -83,6 +83,8 @@ pub struct Frames {
     pub lost: usize,
     /// The 99th percentile of the gaps between presents, in ms.
     pub p99_ms: Option<f64>,
+    /// Rows of the product skipped as unreadable, such as from a copy that restarted under the same name.
+    pub unread: usize,
     /// Every present, in time order.
     #[serde(skip)]
     pub presents: Vec<Present>,
@@ -116,21 +118,14 @@ impl Columns {
         })
     }
 
-    /// The present in row `cells`; an error when it has no CPU start or busy time.
-    fn present(&self, cells: &[&str]) -> Result<Present, String> {
+    /// The present in row `cells`; none when it has no CPU start or busy time.
+    fn present(&self, cells: &[&str]) -> Option<Present> {
         let cell = |i: usize| cells.get(i).copied().unwrap_or_default();
         let ms = |i: usize| cell(i).parse::<f64>().ok().filter(|t| t.is_finite());
-        let at = ms(self.start).zip(ms(self.busy)).map(|(s, b)| s + b);
-        let why = || {
-            format!(
-                "a present has no CPU start or busy time: {}, {}",
-                cell(self.start),
-                cell(self.busy)
-            )
-        };
-        Ok(Present {
+        let at = ms(self.start).zip(ms(self.busy)).map(|(s, b)| s + b)?;
+        Some(Present {
             chain: cell(self.chain).to_string(),
-            at_us: us(at.ok_or_else(why)?),
+            at_us: us(at),
             shown: cell(self.shown) != NOT_SHOWN,
         })
     }
@@ -146,13 +141,13 @@ fn us(ms: f64) -> i64 {
 }
 
 /// The frames of `program` (its file name, any case) in `PresentMon`'s `csv`, after any byte order mark; a last row with
-/// no line end is still being written, so it is left out.
+/// no line end is still being written, so it is left out, and a row without a CPU start or busy time is counted unread.
 pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
     let csv = csv.strip_prefix(BOM).unwrap_or(csv);
     let whole = csv.rfind('\n').map_or(csv, |end| &csv[..=end]);
     let mut lines = whole.lines();
     let cols = Columns::of(lines.next().ok_or("the CSV is empty")?)?;
-    let (mut gaps, mut presents) = (Vec::new(), Vec::new());
+    let (mut gaps, mut presents, mut unread) = (Vec::new(), Vec::new(), 0);
     for line in lines {
         let cells: Vec<&str> = line.split(',').map(str::trim).collect();
         if !cells
@@ -161,7 +156,11 @@ pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
         {
             continue;
         }
-        presents.push(cols.present(&cells)?);
+        let Some(present) = cols.present(&cells) else {
+            unread += 1;
+            continue;
+        };
+        presents.push(present);
         gaps.extend(cells.get(cols.gap).and_then(|g| g.parse::<f64>().ok()));
     }
     presents.sort_by_key(|p| p.at_us);
@@ -170,6 +169,7 @@ pub fn parse(csv: &str, program: &str) -> Result<Frames, String> {
         presented: presents.len(),
         lost: presents.iter().filter(|p| !p.shown).count(),
         p99_ms: percentile(&gaps, P99),
+        unread,
         presents,
     })
 }

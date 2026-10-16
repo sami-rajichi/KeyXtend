@@ -17,7 +17,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{BOOL, PCWSTR, w};
 
-use super::{contrast_on, dark_from, from_colorref};
+use super::{contrast_on, dark_from, from_colorref, pointer_px};
 use crate::com::keep_mta;
 use crate::{langinfo, watch};
 
@@ -25,6 +25,10 @@ use crate::{langinfo, watch};
 const THEME_KEY: PCWSTR = w!(r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
 /// Registry value: 0 means apps use the dark mode.
 const LIGHT_VALUE: PCWSTR = w!("AppsUseLightTheme");
+/// Registry key of the pointer.
+const CURSOR_KEY: PCWSTR = w!(r"Control Panel\Cursors");
+/// Registry value: the pointer's size in pixels at 100 %.
+const SIZE_VALUE: PCWSTR = w!("CursorBaseSize");
 
 /// The Windows system look and display language.
 #[derive(Clone, Copy, Debug, Default)]
@@ -49,10 +53,11 @@ impl SystemLook for WinLook {
 #[must_use]
 pub(crate) fn read() -> SysLook {
     SysLook {
-        dark: dark_from(apps_use_light()),
+        dark: dark_from(dword(THEME_KEY, LIGHT_VALUE)),
         accent: accent(),
         contrast: high_contrast().then(sys_colors),
         anim_off: animations_off(),
+        pointer_px: pointer_px(dword(CURSOR_KEY, SIZE_VALUE)),
     }
 }
 
@@ -65,9 +70,9 @@ pub fn ui_language() -> String {
     langinfo::lang_name(lang).unwrap_or_default()
 }
 
-/// `AppsUseLightTheme`, when it is set.
+/// The user's `REG_DWORD` value `name` under `key`, read only, when it is set.
 #[allow(unsafe_code, reason = "Reads one registry number into a local.")]
-fn apps_use_light() -> Option<u32> {
+fn dword(key: PCWSTR, name: PCWSTR) -> Option<u32> {
     let mut value = 0u32;
     let mut size = u32::try_from(size_of::<u32>()).ok()?;
     let data = Some(std::ptr::from_mut(&mut value).cast());
@@ -75,8 +80,8 @@ fn apps_use_light() -> Option<u32> {
     let r = unsafe {
         RegGetValueW(
             HKEY_CURRENT_USER,
-            THEME_KEY,
-            LIGHT_VALUE,
+            key,
+            name,
             RRF_RT_REG_DWORD,
             None,
             data,
@@ -159,6 +164,12 @@ mod tests {
         let colours = sys_colors();
         let all = [colours.window, colours.window_text, colours.button_text];
         assert!(all.iter().all(|c| c[3] == u8::MAX), "{colours:?}");
+    }
+
+    #[test]
+    fn the_pointer_size_reads_as_one_settings_offers() {
+        let px = WinLook.read().pointer_px;
+        assert!(super::super::POINTER_SIZES.contains(&px), "{px}");
     }
 
     #[test]

@@ -233,9 +233,23 @@ pub fn close(hwnd: HWND) -> Result<(), String> {
         .map_err(|e| format!("WM_CLOSE to {}: {e}", describe(hwnd)))
 }
 
+/// A way to bring a window to the front: `front` or `front_back`.
+pub type Front = fn(HWND, &Timing, &Keys) -> bool;
+
 /// Brings `hwnd` to the front with the Alt-tap trick; true once it is in front.
-#[allow(unsafe_code, reason = "Plain calls on a window handle.")]
 pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
+    front_by(hwnd, t, || crate::keys::combo(&keys.alt))
+}
+
+/// Like `front`, with an Alt tap that still goes out after the mouse guard stopped the gate, for a step that puts
+/// things back.
+pub fn front_back(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
+    front_by(hwnd, t, || crate::keys::restore_combo(&keys.alt))
+}
+
+/// Brings `hwnd` to the front, sending `tap` before each try, as Windows lets a program that just had input do so.
+#[allow(unsafe_code, reason = "Plain calls on a window handle.")]
+fn front_by(hwnd: HWND, t: &Timing, tap: impl Fn() -> Result<(), String>) -> bool {
     for _ in 0..t.front_tries.max(1) {
         if kx_platform_windows::window::foreground() == hwnd {
             return true;
@@ -246,7 +260,7 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
                 let _ = ShowWindow(hwnd, SW_RESTORE);
             }
         }
-        let _ = crate::keys::combo(&keys.alt);
+        let _ = tap();
         sleep_ms(t.alt_settle_ms);
         // SAFETY: plain call; the result is checked through the foreground below.
         let _ = unsafe { SetForegroundWindow(hwnd) };
@@ -256,39 +270,4 @@ pub fn front(hwnd: HWND, t: &Timing, keys: &Keys) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn poll_until_returns_the_first_value_at_once() {
-        let mut calls = 0;
-        let got = poll_until(0, 0, || {
-            calls += 1;
-            Some(7)
-        });
-        assert_eq!((got, calls), (Some(7), 1));
-    }
-
-    #[test]
-    fn a_window_that_does_not_exist_reads_as_nothing() {
-        let none = HWND::default();
-        assert_eq!((title(none), class(none)), (String::new(), String::new()));
-        assert_eq!(program_name(none), None);
-    }
-
-    #[test]
-    fn ms_since_counts_up_from_its_start() {
-        let t = Instant::now();
-        assert!(ms_since(t) <= ms_since(t));
-    }
-
-    #[test]
-    fn poll_until_gives_up_after_the_timeout_without_waiting() {
-        let mut calls = 0;
-        let got = poll_until::<()>(0, u64::MAX, || {
-            calls += 1;
-            None
-        });
-        assert_eq!((got, calls), (None, 1));
-    }
-}
+mod tests;

@@ -1,5 +1,6 @@
-//! Builds the QML module `KeyXtend.Ui`, its bridges and its fonts and icons when the `qt` feature is on (ADR-0013,
-//! ADR-0016). MSVC reads the generated C++ as UTF-8 through `.cargo/config.toml`, so this script holds no unsafe call.
+//! Builds the QML module `KeyXtend.Ui`, its bridges, its fonts and icons, and its checked sounds when the `qt` feature
+//! is on (ADR-0013, ADR-0016). MSVC reads the generated C++ as UTF-8 through `.cargo/config.toml`, so this script holds
+//! no unsafe call.
 
 /// The Qt pin check and the build-kind header, shared with the Quick tests' plugin.
 #[cfg(feature = "qt")]
@@ -16,7 +17,9 @@ fn main() {
 mod qt {
     use super::qtbuild;
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
-    use kx_theme::assets::{Bundled, ICON_EXT, bundle, icon_url};
+    use kx_theme::SOUNDS_PATH;
+    use kx_theme::assets::{Bundle, Bundled, ICON_EXT, SoundFile, bundle, icon_url};
+    use kx_theme::sounds::{Cue, Event, Sounds};
     use std::path::{Path, PathBuf};
 
     /// QML module URI; its files land under `qrc:/qt/qml/<uri as folders>/`.
@@ -70,6 +73,11 @@ mod qt {
         "qml/PressWatch.qml",
         "qml/Act.qml",
         "qml/PressFrame.qml",
+        "qml/KbWakes.qml",
+        "qml/AssistRead.qml",
+        "qml/Overlay.qml",
+        "qml/HoldRing.qml",
+        "qml/Badge.qml",
     ];
     /// QML files only debug builds hold: the memory check's churn.
     const DEBUG_QML: &[&str] = &["qml/Churn.qml"];
@@ -115,14 +123,24 @@ mod qt {
     const QRC_SCHEME: &str = "qrc";
     /// The variable that hands the icons' URL, icon type and font files, as JSON, to the crate.
     const ASSETS_ENV: &str = "KX_UI_ASSETS";
+    /// The Rust file `src/sounds.rs` includes, and the folder of the samples it embeds, under `OUT_DIR`.
+    const SOUNDS_RS: &str = "sounds.rs";
+    const SOUNDS_DIR: &str = "kx-ui-sounds";
+    /// The type of a sample file: raw PCM, its WAV header gone.
+    const PCM_EXT: &str = "pcm";
     /// MSVC switches that stop this crate's test binaries writing an import library for Qt's exported QML
     /// registration, which the linker would announce on every link.
     const NO_IMPORT_LIB: &[&str] = &["/NOIMPLIB", "/NOEXP"];
 
-    /// Compiles the bridges, the QML, the fonts and the icons into the crate, and names their URLs.
+    /// Compiles the bridges, the QML, the fonts, the icons and the sounds into the crate, and names their URLs.
     pub fn build() {
-        let parts = resources().and_then(|(r, f)| Ok((r, f, rhi_headers()?, kind_dir()?)));
-        let (resources, fonts, rhi, kind) = match parts {
+        println!("cargo::rerun-if-changed={ASSETS}");
+        println!("cargo::rerun-if-changed={SOUNDS_PATH}");
+        let parts = bundle(Path::new(ASSETS)).and_then(|b| {
+            embed(&b.sound_tokens, &b.sounds)?;
+            Ok((resources(&b)?, rhi_headers()?, kind_dir()?))
+        });
+        let ((resources, fonts), rhi, kind) = match parts {
             Ok(done) => done,
             Err(e) => {
                 println!("cargo::error={e}");
@@ -143,7 +161,6 @@ mod qt {
             .fold(builder, |b, m| b.qt_module(m))
             .build();
         hand_over(&fonts);
-        println!("cargo::rerun-if-changed={ASSETS}");
         println!("cargo::rerun-if-changed={CPP}");
         if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
             for arg in NO_IMPORT_LIB {
@@ -188,9 +205,8 @@ mod qt {
         Ok(dir)
     }
 
-    /// The icons and fonts `kx_theme::assets::bundle` names, as resources next to the QML files, and the fonts' names.
-    fn resources() -> Result<(QResources, Vec<String>), String> {
-        let b = bundle(Path::new(ASSETS))?;
+    /// The icons and fonts of bundle `b`, as resources next to the QML files, and the fonts' names.
+    fn resources(b: &Bundle) -> Result<(QResources, Vec<String>), String> {
         let names = b.fonts.iter().map(|f| f.name.clone()).collect();
         let files = b.icons.iter().chain(&b.fonts);
         let list: Option<Vec<QResource>> = files.map(aliased).collect();
@@ -204,6 +220,51 @@ mod qt {
         let one = QResource::new().file(&b.file);
         let file = one.get_files().next()?.clone().alias(b.name.clone());
         Some(QResource::new().file(file))
+    }
+
+    /// Writes each sound's checked samples under `OUT_DIR`, and the Rust file that embeds them aligned, with each
+    /// event's clips and balance from `tokens`, the rate and the voices.
+    fn embed(tokens: &Sounds, sounds: &[SoundFile]) -> Result<(), String> {
+        let out = PathBuf::from(std::env::var_os(OUT_ENV).ok_or("cargo set no OUT_DIR")?);
+        std::fs::create_dir_all(out.join(SOUNDS_DIR)).map_err(failed(SOUNDS_DIR))?;
+        let mut clips = Vec::with_capacity(sounds.len());
+        for (i, s) in sounds.iter().enumerate() {
+            let file = format!("{i}.{PCM_EXT}");
+            let samples = format!("{SOUNDS_DIR}/{file} ({})", s.name);
+            std::fs::write(out.join(SOUNDS_DIR).join(&file), &s.samples)
+                .map_err(failed(&samples))?;
+            let bytes =
+                format!("include_bytes!(concat!(env!({OUT_ENV:?}), \"/{SOUNDS_DIR}/{file}\"))");
+            clips.push(format!("    ({:?}, &Aligned(*{bytes})),", s.name));
+        }
+        let event = |(e, c): &(Event, Cue)| {
+            format!("    ({:?}, &{:?}, {:?}),", e.name(), c.files, c.gain_db)
+        };
+        let events: Vec<String> = tokens.cues.iter().map(event).collect();
+        let text = table_rs(&clips, &events, tokens.format.rate, tokens.play.voices);
+        std::fs::write(out.join(SOUNDS_RS), text).map_err(failed(SOUNDS_RS))
+    }
+
+    /// A file error that names the file `at`, under `OUT_DIR`.
+    fn failed(at: &str) -> impl Fn(std::io::Error) -> String + '_ {
+        move |e| format!("{at}: {e}")
+    }
+
+    /// The source of the sound table: the clips and events as rows of Rust, then the rate and voices.
+    fn table_rs(clips: &[String], events: &[String], rate: u32, voices: usize) -> String {
+        let (n_clips, n_events) = (clips.len(), events.len());
+        let (clips, events) = (clips.join("\n"), events.join("\n"));
+        format!(
+            "// Written by kx-ui's build from kx-theme's sounds.toml and the files it names; do not edit.\n\
+             /// Each clip's file name and samples, in the order `sounds.toml` first names them.\n\
+             pub(super) static CLIPS: [(&str, &Aligned<[u8]>); {n_clips}] = [\n{clips}\n];\n\
+             /// Each event's name, its clips' names in turn and its balance in dB.\n\
+             pub(super) static EVENTS: [(&str, &[&str], f64); {n_events}] = [\n{events}\n];\n\
+             /// The clips' rate.\n\
+             pub(super) const RATE: u32 = {rate};\n\
+             /// Voices per clip.\n\
+             pub(super) const VOICES: usize = {voices};\n"
+        )
     }
 
     /// What QML reads from `Ui.assets()`: the URL that serves the icons in their tint, their type and each font's URL.

@@ -78,7 +78,7 @@ pub struct G8 {
     pub presentmon: String,
     /// How long `PresentMon` records, in seconds; long enough to cover G8's run up to the churn.
     pub presentmon_secs: u64,
-    /// The `PresentMon` program G8 starts as administrator; empty when G8 only says how to record.
+    /// The `PresentMon` program G8 and G12 start as administrator; empty when they only say how to record.
     pub presentmon_exe: String,
     /// Wait after starting `PresentMon`, so its start-up does not slow the cold start.
     pub presentmon_wait_ms: u64,
@@ -106,11 +106,21 @@ pub struct G8 {
     pub churn_theme: String,
     /// Wait after each list, bubble or theme press, so the pop-ups have shown or gone.
     pub churn_settle_ms: u64,
+    /// The mouse-assist key whose mode the reading after use turns on, by board id.
+    pub use_mode: String,
+    /// The pointer's rest on each key in the sweep before that reading.
+    pub use_hover_ms: u64,
+    /// Longest wait for the mode key to read on or off after its click.
+    pub use_lit_ms: u64,
+    /// The language whose first installed layout `g8 arabic` puts in front, by ISO 639 code.
+    pub arabic: String,
+    /// Longest wait for target-window to type in a layout G8 asks it for.
+    pub layout_wait_ms: u64,
 }
 
 impl G8 {
-    /// Refuses a zero count or warm-up, a bad budget, a negative slack, a pressed key the board does not have, or a
-    /// churn that churns nothing.
+    /// Refuses a zero count or warm-up, a bad budget, a negative slack, a pressed key the board does not have, a churn
+    /// that churns nothing, or a use step or Arabic run that could pass with nothing used.
     pub fn check(&self) -> Result<(), String> {
         self.check_budgets()?;
         if [self.presses, self.clicks, self.subscribers, self.publishes].contains(&0) {
@@ -138,6 +148,8 @@ impl G8 {
                 self.press_key
             ));
         }
+        crate::g8use::check(self)?;
+        crate::g8lang::check(self)?;
         crate::g8churn::check(self)
     }
 

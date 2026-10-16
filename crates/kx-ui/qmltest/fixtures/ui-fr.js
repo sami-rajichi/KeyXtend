@@ -36,6 +36,7 @@ var lang = {
   }
 };
 var texts = {
+  "badge.holding": "Saisi",
   "banner.more": "{$more} autres notifications",
   "bar.bigger": "Plus grand",
   "bar.bubble": "Afficher le clavier",
@@ -133,10 +134,14 @@ var texts = {
   "module.kernel": "KeyXtend",
   "module.keyboard": "Clavier",
   "module.layouts": "Dispositions de clavier",
+  "module.mouse": "Aide à la souris",
   "module.ui": "Apparence",
   "notice.keys-not-sent": "Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.",
   "notice.lang-not-switched": "L’application au premier plan n’a pas pu changer de langue.",
   "notice.module-failed": "La partie « {$module} » s’est arrêtée après une erreur. Tout le reste fonctionne toujours.",
+  "notice.mouse-hook-failed": "L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.",
+  "notice.mouse-reset": "L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.",
+  "notice.mouse-stopped": "L’aide à la souris s’est arrêtée après une erreur. Redémarrez KeyXtend pour l’utiliser de nouveau.",
   "notice.settings-defaults": "Aucun fichier de paramètres n’était utilisable ; les paramètres par défaut sont utilisés.",
   "notice.settings-locked": "Un autre programme utilise le fichier de paramètres. Les paramètres par défaut sont utilisés et rien n’est enregistré.",
   "notice.settings-newer": "Les paramètres de « {$module} » viennent d’une version plus récente. Ils sont conservés et les valeurs par défaut sont utilisées pour l’instant.",
@@ -155,8 +160,11 @@ var texts = {
   "theme.dolch": "Dolch moderne",
   "theme.et66": "ET66",
   "theme.native": "Natif adaptatif",
+  "tip.grab": "Appuyez pour saisir, déplacez, puis cliquez pour déposer",
   "tip.later": "Disponible dans une version ultérieure",
+  "tip.mouse-off": "L’aide à la souris est désactivée",
   "tip.one-lang": "Une seule langue de clavier est installée",
+  "tip.rclick": "Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux",
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "window.bubble": "Clavier KeyXtend (réduit)",
@@ -164,6 +172,7 @@ var texts = {
   "window.list": "Langues du clavier",
   "window.menu": "Menu de KeyXtend",
   "window.notice": "Notification de KeyXtend",
+  "window.pointer": "Aide au pointeur",
   "window.tip": "Info-bulle de KeyXtend"
 };
 var more = [
@@ -181,3 +190,16 @@ var more = [
   "11 autres notifications",
   "12 autres notifications"
 ];
+var assist = {
+  "area": null,
+  "burst": null,
+  "grab": "off",
+  "live": false,
+  "mode": null,
+  "point": null,
+  "pointerBase": 32,
+  "pointerPx": 32,
+  "rclick": false,
+  "ring": null,
+  "seq": 0
+};

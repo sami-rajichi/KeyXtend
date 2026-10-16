@@ -6,7 +6,7 @@ use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
 
 use crate::config::SpikeConfig;
-use crate::hold::Pt;
+use crate::pt::Pt;
 use crate::selwatch::PillPx;
 use crate::typer::Typer;
 use crate::voicecfg::VoiceConfig;

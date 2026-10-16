@@ -30,7 +30,8 @@ fn parses_each_gate() {
         Some(10)
     );
     assert_eq!(parse(&args("g3 keyxtend")).expect("parses").count, None);
-    assert_eq!(parse(&args("g5 admin")).expect("parses").gate, "g5");
+    assert_eq!(parse(&args("g5 plain")).expect("parses").name, "plain");
+    assert_eq!(parse(&args("g5 admin")).expect("parses").name, "admin");
     let a = parse(&args("assist right --secs 30")).expect("parses");
     assert_eq!((a.name.as_str(), a.count), ("right", Some(30)));
     let a = parse(&args("g4 keyxtend --clicks 50 --seed 3")).expect("parses");
@@ -56,7 +57,7 @@ fn parses_gates_that_take_only_a_name() {
     for probe in [
         "g6 chrome",
         "g7 qt",
-        "g12 qt",
+        "g12 keyxtend",
         "g17 explorer",
         "g18 notepad",
         "g19 core",
@@ -74,6 +75,9 @@ fn parses_gates_that_take_only_a_name() {
         "close keyxtend",
         "g8 keyxtend",
         "g8 weak",
+        "g8 arabic",
+        "g8 hook",
+        "g8 hook-weak",
         "g9 keyxtend",
         "g10 keyxtend",
         "g11 keyxtend",
@@ -122,8 +126,9 @@ const BAD_INPUT: &[&str] = &[
     "g23 qt --seed 2",
     "g24 qt --clicks 3",
     "g7 qt --seed 1",
-    "g12 qt --seed 1",
-    "g12 qt --clicks 5",
+    "g12 keyxtend --seed 1",
+    "g12 keyxtend --clicks 5",
+    "g12 qt",
     "g2 qt",
     "g3 qt",
     "g4 qt --clicks 5",
@@ -162,12 +167,30 @@ fn the_help_names_every_gate_that_takes_only_a_name() {
 
 #[test]
 fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
-    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g12", "g25"] {
-        assert_eq!(mouse(gate), Mouse::Held, "{gate}");
+    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g25"] {
+        assert_eq!(mouse(gate, "x"), Mouse::Held, "{gate}");
+    }
+    for gate in ["g5", "g12", "g17", "g18"] {
+        assert_eq!(
+            mouse(gate, "x"),
+            Mouse::Drives,
+            "{gate} drives the test build"
+        );
     }
     for gate in ["assist", "g13", "g23", "g26", "close", "g99"] {
-        assert_eq!(mouse(gate), Mouse::Free, "{gate}");
+        assert_eq!(mouse(gate, "x"), Mouse::Free, "{gate}");
     }
     let names: std::collections::BTreeSet<_> = GATES.iter().map(|g| g.0).collect();
     assert_eq!(names.len(), GATES.len(), "each gate once");
+}
+
+#[test]
+fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
+    for name in [g8hook::HOOK, g8hook::HOOK_WEAK] {
+        assert_eq!(mouse("g8", name), Mouse::Drives, "g8 {name}");
+        assert_eq!(mouse("g9", name), Mouse::Held, "only G8's");
+    }
+    assert_eq!(mouse("g8", crate::product::NAME), Mouse::Held);
+    assert_eq!(mouse("g8", crate::g8::WEAK), Mouse::Held);
+    assert_eq!(mouse("g8", crate::g8lang::ARABIC), Mouse::Held);
 }

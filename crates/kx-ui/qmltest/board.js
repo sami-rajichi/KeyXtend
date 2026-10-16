@@ -1,7 +1,7 @@
 .pragma library
 .import "fixtures/assets.js" as Assets
-// The shared item search, what the keyboard window hands its keys for a look and a UI language, and the bundled fonts,
-// for kbwin.js and the tests that import this file, so their copies cannot drift.
+// The shared item search, the window's tooltip, what the keyboard window hands its keys for a look and a UI language,
+// and the bundled fonts, for kbwin.js and the tests that import this file, so their copies cannot drift.
 
 // Every item under `item` for which `ok` holds.
 function all(item, ok, found) {
@@ -11,6 +11,11 @@ function all(item, ok, found) {
     for (let i = 0; i < item.children.length; i++)
         all(item.children[i], ok, found);
     return found;
+}
+
+// The tooltip window that window `win` owns, made by its loader.
+function tipOf(win) {
+    return [...win.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && o.hint && o.ms !== undefined);
 }
 
 // The space bar's text as the hub joins `parts`: each layout after the language through `lang.space` in `texts`,

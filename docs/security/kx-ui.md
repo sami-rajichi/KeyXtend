@@ -1,7 +1,7 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-10-11
+- **Last review:** 2026-10-14
 - **Status:** Reviewed
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
@@ -10,7 +10,7 @@
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `InputInjector`. | N/A |
 | `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). The face has no capability gate, so the `ui` module, which holds no capability, types through it (see Should fix). | The `ui` module fails and offers Try again; the rest keeps running. |
-| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`, `Memory`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, the tray icon, and giving the heaps' free pages back after a look change (ADR-0023). | The windows take focus, the look stops following Windows, a hidden keyboard has no way back but a second start, or look changes keep freed memory committed. |
+| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`, `Memory`, `Speaker`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, the tray icon, giving the heaps' free pages back after a look change (ADR-0023), and the key and mouse sounds. | The windows take focus, the look stops following Windows, a hidden keyboard has no way back but a second start, look changes keep freed memory committed, or nothing sounds. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -22,19 +22,24 @@
 | `[ui]` settings | Public | `settings.toml` through the kernel | No | Until changed |
 | The focus token (a window handle) | Public | Memory only | N/A | Until the app quits |
 | The tray picture (our own drawing of the theme badge) and where a tray click happened | Public | Memory only; the adapter keeps the picture while the icon shows | N/A | Until the icon hides |
+| The pointer overlay's state: the pointer, a hold's press point and where it fired | Sensitive (a run of clicks on an on-screen PIN pad shows what was typed) | Memory only, in the hub and in QML while it draws; the `mode` it also names is a mode id, never a point | N/A | The last point only; it goes when every mode is off |
 
-Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes.
+Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes; no line holds a pointer point, and `assist_json` is never logged.
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing or row count outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
+| `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing, row count or volume outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
 | Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
 | The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown, broken or missing tag gives English. Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
+| `AssistNote` events from the bus | A fired hold, a pick-up or a drop plays one compiled-in sound; a hold's start, end, fire and a cancelled carry set or clear the overlay's ring and burst, whose points are kept but never logged | One play per note, a send the speaker's bounded queue drops when full; one ring and one burst kept | No; hub tests cover each kind and capture the logs |
+| `AssistChanged`, `PointerMoved` and `LatchesUsed` events from the bus (the mouse module's thread) | Typed values only; the handler stores and wakes, never blocks, and holds the hub weakly. A point is kept only while a mode is on | At most one `Wake::Assist` waits for QML's read, so a run of moves costs one wake per read; one `Wake::Keys` per mode or latch change while a face is attached, which `detach` ends | No; hub tests, and a property test that a change wakes once and never twice before a read (`tests/hub/assist/props.rs`) |
+| The pointer size (`SystemLook`, `CursorBaseSize`) | The adapter keeps a value Settings offers (32 to 256) and reads anything else as 32 | One number | Unit tests |
 | Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms`, within its range in `settings.rs` | One wake per event | No |
 | Icon ids QML asks the icon provider for (`<rrggbb>/<name>.svg`, `cpp/tint.h`) | The tint must be six hex digits and the name plain ASCII (letters, digits, `-`, `_` and dots, no leading dot) of the icon type, so it only names a file in the compiled-in icons folder; anything else gives a clear image and one warning | One image of the asked size | No; the tint test tries `..`, slashes, a drive, `%` escapes, other types and bad tints |
 | `KX_UI_CHURN` (debug builds only) | Set and not empty, it starts a fixed churn through the app's own calls: a key's tip, the language key, minimise to the bubble and back, then theme, Caps Lock and size changes. The language key is pressed only in the List design, where it opens a list and switches no layout, and Caps Lock changes only on the face (`FlipCaps`), so no key is sent. Release builds have neither the variable, the calls nor `Churn.qml` | One plan: a round of the pop-ups and every theme, 20 Caps Lock and 24 size steps | Unit test, `tst_churn` |
+| The sounds (`sounds`) | Checked at build time by kx-theme's strict reader and compiled in, 2-byte aligned; the app reads no audio file and parses no audio at run time | Fixed at build time | No; tests compare each clip with its file |
 | The grabbed tray picture (QML `QImage`) | A null picture or size is refused; it is scaled to the tray's size and read pixel by pixel into a `TrayImage`, which checks its length | The taskbar's small icon size | Unit tests with pictures made in Rust; the QML load test checks a real grab reaches the tray |
 | System look changes and single-instance commands (adapter threads) | Queued to the Qt thread with cxx-qt's thread queue, never blocking the adapter; a second copy's Show waits until the `Ui` object is ready, and its Quit goes straight to the app's request queue | One wake per change | No |
 
@@ -47,6 +52,8 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
   - Guard tries stop at `guard_tries` per run, and equal notices are merged.
+  - The overlay's bus handlers only store and wake, and its wake is never queued twice before QML reads, so a moving pointer cannot flood the Qt thread (`tests/hub/assist/props.rs`).
+  - A sound is a send to the speaker that never waits. The key sound reads only whether an action is a tap or a press, never its key, and no play logs; `[ui] sound_volume` and `sound_idle_ms` stay within their ranges in `settings.rs`.
   - The heaps' free pages go back once after a look change, or once for back-to-back changes, after every shown window dropped its cached graphics, never at idle; a refused give-back warns once and stops nothing (ADR-0023).
   - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.
   - `tray_hide` on `quitAsked` removes the tray icon for good; a picture drawn later cannot bring it back, so no dead icon stays in the taskbar.
@@ -57,7 +64,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - It reads that copy without the runtime's lock, which is safe on Windows because nothing writes it while `harden_qt` reads it; the only later writes are the adapter pins of a device rebuild, on the GUI thread. With a folder, it and `pin_imports` limit plugins and QML modules to the app's own folders; `cpp/harden.h` calls only Qt's and the C runtime's own functions.
   - After the clear, `pin_adapter` sets one Qt variable, `QT_D3D_ADAPTER_INDEX`, to the number the Windows adapter picked (the lowest-power GPU), on Qt's thread before Qt starts, so no outside value chooses Qt's graphics adapter. A device rebuild picks it again the same way, never from outside input.
   - `pin_drawing` then sets `QSG_RENDER_LOOP=basic` and `QSG_NO_DEPTH_BUFFER=1` (`harden::DRAW_VARS`), so the one shared `QRhi` is used on the GUI thread only; the app shares it only when both read back through Qt's byte read, as Qt Quick reads them, and makes it only on the thread of Qt's app object (ADR-0021).
-  - `pin_timing` then sets three more fixed Qt names, `QT_D3D_MAX_FRAME_LATENCY`, `QT_D3D_NO_VBLANK_THREAD` and `QT_QPA_UPDATE_IDLE_TIME`, and the default swap interval, from the checked `[ui]` settings: whole numbers within their ranges and two flags, never outside text. The three variables default to Qt's own values and the swap interval to 1 (ADR-0026); an outside value of the same name is cleared first.
+  - `pin_timing` then sets four more fixed Qt names, `QT_D3D_MAX_FRAME_LATENCY`, `QT_D3D_NO_VBLANK_THREAD`, `QT_QPA_UPDATE_IDLE_TIME` and `QSG_RENDERER_BUFFER_POOL_LIMIT`, and the default swap interval, from the checked `[ui]` settings: whole numbers within their ranges and two flags, never outside text. The first three default to Qt's own values, the buffer pool to 0 (ADR-0028) and the swap interval to 1 (ADR-0026); an outside value of the same name is cleared first.
   - `Keyboard.drawNow` (`press_frame = "now"`, the default since ADR-0025) sends one update event to our own shown Quick window of that title on the GUI thread, and refuses while that window handles a frame's event or its device records a frame, so no frame starts within another; it reads no key and draws nothing Qt would not draw at its next update.
   - The frame log (`[ui] frame_log`, off by default) logs times only: its watch reads each event's type and a Windows message's id, never a key, a position or text, and the action's marks carry no key id. While on, it logs one info line per frame and per press into the user's log file.
 

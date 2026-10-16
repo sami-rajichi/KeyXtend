@@ -1,0 +1,281 @@
+//! The speaker: a thread of its own owns the audio engine, so `play` only sends a message. The voice choice, the idle
+//! stop, the rebuild-once policy and the port's clip and gain rules are tested everywhere; `win` calls `XAudio2`.
+#![cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "Only the Windows speaker runs this logic; tests cover it everywhere."
+    )
+)]
+
+mod actor;
+mod rig;
+#[cfg(test)]
+mod tests;
+#[cfg(windows)]
+mod win;
+
+use std::ops::RangeInclusive;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+
+use kx_module_api::{Mono, US_PER_S};
+use kx_platform::ui::{Clip, ClipId, SpeakerConfig, level};
+
+use rig::Rig;
+
+#[cfg(any(windows, test))]
+pub(crate) use actor::Actor;
+#[cfg(windows)]
+pub use win::WinSpeaker;
+
+/// A failed audio call, with the system's error code for the log.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Fault {
+    /// The device was lost or changed, so a rebuild may help.
+    Lost(i32),
+    /// Any other failure.
+    Failed(i32),
+}
+
+impl Fault {
+    /// The system's error code.
+    fn code(self) -> i32 {
+        match self {
+            Self::Lost(code) | Self::Failed(code) => code,
+        }
+    }
+}
+
+/// What went wrong; each kind warns once until a play succeeds.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Warn {
+    /// The engine or its voices could not be made, as with no audio device.
+    Open,
+    /// The rebuild after a lost device failed.
+    Rebuild,
+    /// A play failed and was dropped.
+    Play,
+    /// A clip was skipped: it has no bytes, or not whole samples.
+    Bytes,
+    /// A clip was skipped: its sample rate is outside `Clip::RATES` or what the engine takes.
+    Rate,
+}
+
+impl Warn {
+    /// Every kind, each at its `index`.
+    const ALL: [Self; 5] = [
+        Self::Open,
+        Self::Rebuild,
+        Self::Play,
+        Self::Bytes,
+        Self::Rate,
+    ];
+
+    /// This kind's place in `ALL`; the match makes a new kind take a place.
+    const fn index(self) -> usize {
+        match self {
+            Self::Open => 0,
+            Self::Rebuild => 1,
+            Self::Play => 2,
+            Self::Bytes => 3,
+            Self::Rate => 4,
+        }
+    }
+}
+
+/// How many kinds of `Warn` there are.
+const WARNS: usize = Warn::ALL.len();
+
+// Each kind in `ALL` sits at its own index, so no two kinds share a flag.
+const _: () = {
+    let mut i = 0;
+    while i < WARNS {
+        assert!(Warn::ALL[i].index() == i, "Warn::ALL is out of order");
+        i += 1;
+    }
+};
+
+/// What the speaker thread asks of the system: `XAudio2` and the log on Windows, a recorder in tests. Each handle
+/// undoes itself when dropped.
+pub(crate) trait Os {
+    /// The engine; dropping it releases the engine.
+    type Engine;
+    /// The mastering voice; dropping it destroys the voice.
+    type Master;
+    /// A source voice; dropping it destroys the voice.
+    type Voice;
+
+    /// The sample rates a source voice takes.
+    const RATES: RangeInclusive<u32>;
+
+    /// Makes the engine.
+    fn engine(&self) -> Result<Self::Engine, Fault>;
+
+    /// Makes the mastering voice on the default device.
+    fn master(&self, engine: &Self::Engine) -> Result<Self::Master, Fault>;
+
+    /// Makes a source voice for the clips' format at `rate`.
+    fn voice(&self, engine: &Self::Engine, rate: u32) -> Result<Self::Voice, Fault>;
+
+    /// Starts audio processing.
+    fn start(&self, engine: &Self::Engine) -> Result<(), Fault>;
+
+    /// Stops audio processing, so the idle engine costs no processor time.
+    fn stop(&self, engine: &Self::Engine);
+
+    /// Plays `samples` at `gain` on `voice`, which has nothing queued.
+    fn play(&self, voice: &Self::Voice, samples: &'static [u8], gain: f32) -> Result<(), Fault>;
+
+    /// True while `voice` still has samples queued.
+    fn busy(&self, voice: &Self::Voice) -> bool;
+
+    /// Logs `warn`, with the system's error `code` when a call failed.
+    fn warn(&self, warn: Warn, code: Option<i32>);
+}
+
+/// The speaker thread's state: the clips, the engine once a play built it, and the warnings given.
+pub(crate) struct Mixer<O: Os> {
+    /// Declared before `os`, so it drops first: on Windows, COM must outlive the engine.
+    rig: Option<Rig<O>>,
+    os: O,
+    clips: Vec<Clip>,
+    voices: usize,
+    idle: Duration,
+    /// One flag per `Warn` kind, so each warns once until a play succeeds (the hub's `refused` pattern).
+    warned: [AtomicBool; WARNS],
+}
+
+impl<O: Os> Mixer<O> {
+    /// A mixer with no clip, which builds nothing until a play.
+    pub(crate) fn new(os: O) -> Self {
+        Self {
+            rig: None,
+            os,
+            clips: Vec::new(),
+            voices: 0,
+            idle: Duration::ZERO,
+            warned: Default::default(),
+        }
+    }
+
+    /// Keeps the playable `clips` and `config`; the old engine goes, and the next play builds one for them.
+    pub(crate) fn prepare(&mut self, clips: Vec<Clip>, config: SpeakerConfig) {
+        self.rig = None;
+        self.clips = clips.into_iter().filter(|c| self.fits(c)).collect();
+        self.voices = config.voices;
+        self.idle = Duration::from_millis(u64::from(config.idle_ms));
+    }
+
+    /// True if the port and the engine take `clip`; otherwise its kind warns once, and the other clips still play.
+    fn fits(&self, clip: &Clip) -> bool {
+        let warn = if !clip.whole() {
+            Some(Warn::Bytes)
+        } else if !clip.playable() || !O::RATES.contains(&clip.rate) {
+            Some(Warn::Rate)
+        } else {
+            None
+        };
+        warn.inspect(|&w| self.fail(w, None)).is_none()
+    }
+
+    /// Plays clip `id` at `gain`. A lost device rebuilds the engine and retries once; a second failure drops the play.
+    pub(crate) fn play(&mut self, id: ClipId, gain: f32, now: Mono) {
+        let (Some(gain), Some(at)) = (level(gain), self.clips.iter().position(|c| c.id == id))
+        else {
+            return;
+        };
+        if self.rig.is_none() {
+            self.build(Warn::Open);
+        }
+        let Some(rig) = self.rig.as_mut() else {
+            return;
+        };
+        let mut tried = rig.sound(&self.os, at, gain, now);
+        if matches!(tried, Err(Fault::Lost(_))) {
+            self.build(Warn::Rebuild);
+            let Some(rig) = self.rig.as_mut() else {
+                return;
+            };
+            tried = rig.sound(&self.os, at, gain, now);
+        }
+        match tried {
+            Ok(()) => self.played(at, now),
+            Err(fault) => self.fail(Warn::Play, Some(fault.code())),
+        }
+    }
+
+    /// How long the thread may wait before `idle` is due; `None` while the engine is stopped.
+    pub(crate) fn wait(&self, now: Mono) -> Option<Duration> {
+        let stop_at = self.rig.as_ref()?.stop_at?;
+        Some(stop_at.saturating_since(now))
+    }
+
+    /// Stops the engine once the idle time passed after the last sound's end.
+    pub(crate) fn idle(&mut self, now: Mono) {
+        let Some(rig) = self.rig.as_mut() else {
+            return;
+        };
+        if rig.stop_at.is_some_and(|at| now >= at) {
+            self.os.stop(&rig.engine);
+            rig.stop_at = None;
+        }
+    }
+
+    /// Makes the engine afresh once the old one's voices and engine are gone; a failure warns `warn` and leaves none.
+    fn build(&mut self, warn: Warn) {
+        self.rig = None;
+        match Rig::new(&self.os, &self.clips, self.voices) {
+            Ok(rig) => self.rig = Some(rig),
+            Err(fault) => self.fail(warn, Some(fault.code())),
+        }
+    }
+
+    /// Notes clip `at` playing from `now`: the warnings clear, and the engine may stop once it ended and stayed idle.
+    fn played(&mut self, at: usize, now: Mono) {
+        for flag in &self.warned {
+            flag.store(false, Ordering::Relaxed);
+        }
+        let quiet = now.saturating_add(length(&self.clips[at]).saturating_add(self.idle));
+        if let Some(rig) = self.rig.as_mut() {
+            // `None` sorts first, so this keeps the later of the two stops.
+            rig.stop_at = rig.stop_at.max(Some(quiet));
+        }
+    }
+
+    /// Logs `warn` with its error `code`, once until a play succeeds; a kind left out of `Warn::ALL` warns each time.
+    fn fail(&self, warn: Warn, code: Option<i32>) {
+        let flag = self.warned.get(warn.index());
+        if !flag.is_some_and(|f| f.swap(true, Ordering::Relaxed)) {
+            self.os.warn(warn, code);
+        }
+    }
+}
+
+/// The voice a new play takes, and whether it still plays: the first idle one, else the one that started earliest;
+/// `None` with no voice.
+pub(crate) fn pick(voices: impl IntoIterator<Item = (bool, Mono)>) -> Option<(usize, bool)> {
+    let mut earliest: Option<(usize, Mono)> = None;
+    for (i, (busy, started)) in voices.into_iter().enumerate() {
+        if !busy {
+            return Some((i, false));
+        }
+        if earliest.is_none_or(|(_, first)| started < first) {
+            earliest = Some((i, started));
+        }
+    }
+    earliest.map(|(i, _)| (i, true))
+}
+
+/// The bytes of one sample frame across the channels.
+fn frame() -> usize {
+    usize::from(Clip::CHANNELS * Clip::SAMPLE_BYTES)
+}
+
+/// How long `clip` plays.
+fn length(clip: &Clip) -> Duration {
+    let frames = clip.samples.len() / frame();
+    let us = u64::try_from(frames).map_or(u64::MAX, |f| f.saturating_mul(u64::from(US_PER_S)));
+    us.checked_div(u64::from(clip.rate))
+        .map_or(Duration::ZERO, Duration::from_micros)
+}

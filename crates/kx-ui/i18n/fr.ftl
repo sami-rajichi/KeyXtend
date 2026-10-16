@@ -69,6 +69,9 @@ label =
 tip =
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
+    .mouse-off = L’aide à la souris est désactivée
+    .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
+    .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =
@@ -127,9 +130,14 @@ window =
     .menu = Menu de { -app }
     .list = Langues du clavier
     .tip = Info-bulle de { -app }
+    .pointer = Aide au pointeur
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
+
+## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui.
+badge =
+    .holding = Saisi
 
 tray =
     .show = Afficher le clavier
@@ -165,12 +173,16 @@ notice =
     .module-failed = La partie « { $module } » s’est arrêtée après une erreur. Tout le reste fonctionne toujours.
     .keys-not-sent = Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.
     .lang-not-switched = L’application au premier plan n’a pas pu changer de langue.
+    .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
+    .mouse-reset = L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.
+    .mouse-stopped = L’aide à la souris s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
     .kernel = { -app }
     .keyboard = Clavier
     .layouts = Dispositions de clavier
+    .mouse = Aide à la souris
     .ui = Apparence
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.

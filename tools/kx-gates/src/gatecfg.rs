@@ -1,4 +1,4 @@
-//! Settings of the first gates: G1 typing, G2 and G4 clicks, G3 top band, the hold engine run and G5.
+//! Settings of the first gates: G1 typing, G2 and G4 clicks and G3 top band.
 #![cfg(windows)]
 
 use kx_mod_keyboard::KeyboardSettings;
@@ -119,36 +119,6 @@ impl G3 {
 pub struct G4 {
     /// Clicks per run.
     pub clicks: usize,
-}
-
-/// How kx-gates runs the hold engine; the hold itself is `spike.toml [hold]` (spec §5.1).
-#[derive(Debug, Clone, Deserialize)]
-pub struct AssistCfg {
-    /// Longest wait for the hook thread to start or answer, in ms.
-    pub reply_ms: u64,
-    /// How long the owner's hand try runs, in seconds.
-    pub try_secs: u64,
-    /// How often the Grab hand try turns Grab back on after a drop, in ms.
-    pub rearm_ms: u64,
-    /// Most hook timings kept for G5's p99; later calls still run but are not timed.
-    pub hook_samples: usize,
-}
-
-/// G5 hold-engine settings; times in ms, distances in px.
-#[derive(Debug, Clone, Deserialize)]
-pub struct G5 {
-    /// A drag while pressed.
-    pub drag_px: i32,
-    /// How far inside and outside the still radius the wiggle and the short move go.
-    pub still_margin_px: i32,
-    /// How many times the cases run.
-    pub rounds: usize,
-    /// Wait for the target log after each case.
-    pub settle_ms: u64,
-    /// How far a logged point may be from where we pressed.
-    pub point_slack_px: i32,
-    /// Budget for the hook callback's 99th percentile.
-    pub hook_p99_ms: f64,
 }
 
 /// A system surface to open over the keyboard.

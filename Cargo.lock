@@ -453,6 +453,7 @@ dependencies = [
  "kx-kernel",
  "kx-mod-keyboard",
  "kx-mod-layouts",
+ "kx-mod-mouse",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",
@@ -475,6 +476,7 @@ dependencies = [
  "kx-kernel",
  "kx-mod-keyboard",
  "kx-mod-layouts",
+ "kx-mod-mouse",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",
@@ -535,9 +537,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-mouse"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "kx-test-support",
+ "proptest",
+ "serde",
+ "toml",
+ "tracing",
+]
+
+[[package]]
 name = "kx-module-api"
 version = "0.0.0"
 dependencies = [
+ "kx-platform-fake",
  "kx-test-support",
  "proptest",
  "serde",
@@ -576,6 +592,7 @@ dependencies = [
  "kx-test-support",
  "proptest",
  "thiserror 2.0.21",
+ "tracing",
  "windows",
 ]
 
@@ -622,7 +639,6 @@ dependencies = [
  "kx-module-api",
  "kx-settings",
  "serde",
- "serde_json",
  "thiserror 2.0.21",
  "toml",
 ]
@@ -633,6 +649,7 @@ version = "0.0.0"
 dependencies = [
  "kx-platform",
  "kx-test-support",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -1396,9 +1413,11 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 name = "xtask"
 version = "0.0.0"
 dependencies = [
+ "kx-theme",
  "proptest",
  "serde",
  "serde_json",
+ "toml",
 ]
 
 [[package]]

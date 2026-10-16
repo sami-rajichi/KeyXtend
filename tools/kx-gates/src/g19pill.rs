@@ -6,7 +6,7 @@ use std::time::Instant;
 use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
-use spike_core::hold::Pt;
+use spike_core::pt::Pt;
 use spike_core::selwatch::{self, PillPx};
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{HWND, RECT};

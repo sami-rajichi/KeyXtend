@@ -4,7 +4,7 @@ use crate::latch::Latches;
 use crate::panel::LangList;
 use crate::settings::{KeyboardSettings, Modifiers};
 use crate::spec::{BoardSpec, Latch, Nav};
-use kx_module_api::ports::{KeyChars, LangLabel, LayoutId, LayoutTable, Scan};
+use kx_module_api::ports::{AssistChanged, KeyChars, LangLabel, LayoutId, LayoutTable, Scan};
 use std::collections::{BTreeMap, HashSet};
 
 fn spec() -> BoardSpec {
@@ -49,7 +49,7 @@ fn named_keys_carry_translation_and_icon_keys_and_character_keys_none() {
 }
 
 #[test]
-fn side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
+fn later_side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
     let v = board_view(&spec(), &settings(), 1.0);
     let mic = key(&v, "mic");
     assert!(mic.dim && mic.side);
@@ -61,7 +61,7 @@ fn side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
 }
 
 #[test]
-fn only_modifiers_and_caps_lock_are_checkable() {
+fn only_modifiers_caps_lock_and_the_mouse_assist_keys_are_checkable() {
     let v = board_view(&spec(), &settings(), 1.0);
     let checkable: Vec<&str> = v
         .keys
@@ -69,10 +69,8 @@ fn only_modifiers_and_caps_lock_are_checkable() {
         .filter(|k| k.checkable)
         .map(|k| k.id.as_str())
         .collect();
-    assert_eq!(
-        checkable,
-        ["caps", "shift", "rshift", "ctrl", "win", "alt", "altgr"]
-    );
+    let want = ["caps", "shift", "rshift", "ctrl", "win", "alt", "altgr"];
+    assert_eq!(checkable, [want.as_slice(), &["rclick", "grab"]].concat());
 }
 
 #[test]
@@ -161,6 +159,16 @@ fn latched(l: Latch, code: u16) -> Latches {
 }
 
 fn state(latches: &Latches, caps: bool, open: Option<&LangList>) -> StateView {
+    state_of(latches, caps, open, AssistChanged::OFF)
+}
+
+/// The state with the mouse module in state `assist`.
+fn state_of(
+    latches: &Latches,
+    caps: bool,
+    open: Option<&LangList>,
+    assist: AssistChanged,
+) -> StateView {
     let keys = board(&spec(), 0.0, 1.0).keys;
     let table = table();
     let list = [table.label.clone()];
@@ -175,6 +183,7 @@ fn state(latches: &Latches, caps: bool, open: Option<&LangList>) -> StateView {
         open,
         panel_keys: &panel_keys,
         at: None,
+        assist,
     })
 }
 
@@ -232,7 +241,13 @@ fn with_one_layout_the_language_key_says_so_and_no_other_key_does() {
     assert_eq!(s.lang.count, 1, "the case this test is for");
     assert_eq!(s.keys["lang"].tip, Some(LONE_TIP));
     let others = s.keys.iter().filter(|(id, _)| *id != "lang");
-    assert!(others.into_iter().all(|(_, k)| k.tip.is_none()));
+    let mouse =
+        |id: &str, k: &KeyState| ["rclick", "grab"].contains(&id) && k.tip == Some(MOUSE_OFF_TIP);
+    assert!(
+        others
+            .into_iter()
+            .all(|(id, k)| k.tip.is_none() || mouse(id, k))
+    );
 }
 
 #[test]
@@ -268,3 +283,5 @@ fn key_and_state_debug_hide_legends_lights_and_caps() {
         "{shown}"
     );
 }
+
+mod assist;

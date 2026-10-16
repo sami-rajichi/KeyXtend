@@ -9,18 +9,25 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BANNER_MORE, BAR, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE, MODULE,
-    OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT,
-    TRAY_SHOW,
+    BADGE_HOLDING, BANNER_MORE, BAR, DPAD, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN,
+    MODE, MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME,
+    TRAY_QUIT, TRAY_SHOW,
 };
 use std::collections::BTreeSet;
 
 /// Module ids whose names the texts hold today; the app checks the real list (P3 Task 19).
-const MODULES: [&str; 4] = ["kernel", "keyboard", "layouts", "ui"];
+const MODULES: [&str; 5] = ["kernel", "keyboard", "layouts", "mouse", "ui"];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
 /// Keys the keyboard view names beside its board ids.
-const VIEW_KEYS: [&str; 3] = ["key.dpad", "key.empty", "tip.later"];
+const VIEW_KEYS: [&str; 6] = [
+    "key.dpad",
+    "key.empty",
+    "tip.later",
+    "tip.mouse-off",
+    "tip.rclick",
+    "tip.grab",
+];
 /// What starts a Fluent term, a text the files share but code never names.
 const TERM: char = '-';
 
@@ -83,6 +90,7 @@ fn every_notice_and_view_key_has_its_text() {
         PAGE_BACK,
         PAGE_ON,
         MARK_JOIN,
+        BADGE_HOLDING,
     ];
     for t in all() {
         let missing: Vec<&str> = ALL_KEYS

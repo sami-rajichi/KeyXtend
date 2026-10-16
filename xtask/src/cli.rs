@@ -1,6 +1,10 @@
 //! Subcommand parsing for the xtask CLI.
 
+mod sounds;
+
 use std::fmt;
+
+pub(crate) use self::sounds::SoundsAction;
 
 /// Exit code for a successful run.
 pub(crate) const EXIT_SUCCESS: u8 = 0;
@@ -21,13 +25,15 @@ pub(crate) const SUB_DEV_CERT: &str = "dev-cert";
 const SUB_DEV_INSTALL: &str = "dev-install";
 /// Checks the Windows conditions for uiAccess.
 const SUB_CHECK_UIACCESS: &str = "check-uiaccess";
+/// Renders, imports or joins sounds.
+const SUB_SOUNDS: &str = "sounds";
 /// Flag that turns `dev-cert` and `dev-install` into their undo.
 const FLAG_REMOVE: &str = "--remove";
 
 /// Builds the usage line from the subcommand-name constants, so each name is
 /// spelled exactly once.
 fn usage_line() -> String {
-    let forms = [
+    let mut forms = vec![
         SUB_TIDY.to_string(),
         format!("{SUB_DCO} <base> <head>"),
         SUB_LICENCES.to_string(),
@@ -38,6 +44,7 @@ fn usage_line() -> String {
         format!("{SUB_DEV_INSTALL} {FLAG_REMOVE} <name>"),
         format!("{SUB_CHECK_UIACCESS} <exe>"),
     ];
+    forms.extend(sounds::forms(SUB_SOUNDS));
     format!("usage: cargo xtask <{}>", forms.join("|"))
 }
 
@@ -79,6 +86,8 @@ pub(crate) enum Command {
         /// The installed program.
         exe: String,
     },
+    /// Render, import or join sounds.
+    Sounds(SoundsAction),
 }
 
 /// A command-line usage error. Its `Display` is the usage line.
@@ -119,6 +128,7 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, UsageError> {
         [name, exe] if name == SUB_CHECK_UIACCESS => {
             Ok(Command::CheckUiAccess { exe: exe.clone() })
         }
+        [name, rest @ ..] if name == SUB_SOUNDS => sounds::parse(rest).map(Command::Sounds),
         _ => Err(UsageError),
     }
 }
@@ -268,6 +278,7 @@ mod tests {
             SUB_DEV_CERT,
             SUB_DEV_INSTALL,
             SUB_CHECK_UIACCESS,
+            SUB_SOUNDS,
             FLAG_REMOVE,
         ];
         for name in names {

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::capture::{self, Shot};
-use crate::hold::Pt;
+use crate::pt::Pt;
 
 /// Start of every snip file name.
 pub const PREFIX: &str = "snip-";

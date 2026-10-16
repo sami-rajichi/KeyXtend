@@ -10,7 +10,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
 };
 
-use crate::hold::Pt;
+use crate::pt::Pt;
 
 /// "BM", the BMP file signature.
 const MAGIC: &[u8; 2] = b"BM";

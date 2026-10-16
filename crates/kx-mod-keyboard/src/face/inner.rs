@@ -1,5 +1,7 @@
-//! The face's state behind its lock: typing, a held key, size and place, the language key's turn and the open list.
+//! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list and
+//! the mouse module's state.
 
+mod assist;
 mod fit;
 mod held;
 
@@ -16,7 +18,9 @@ use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
-use kx_module_api::ports::{FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen};
+use kx_module_api::ports::{
+    AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen,
+};
 use kx_module_api::{SettingsHandle, keys};
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,6 +45,10 @@ pub(super) struct Inner {
     list: Option<LangList>,
     /// The Caps Lock state the last state view showed, so a press outside the keyboard redraws it.
     shown_caps: Option<bool>,
+    /// The mouse module's state, as the bus last told it.
+    assist: AssistChanged,
+    /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
+    unshown: bool,
     /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
     #[cfg(debug_assertions)]
     caps_flipped: bool,
@@ -68,6 +76,8 @@ impl Inner {
             overhang: 0.0,
             list: None,
             shown_caps: None,
+            assist: AssistChanged::OFF,
+            unshown: false,
             #[cfg(debug_assertions)]
             caps_flipped: false,
         }
@@ -242,6 +252,7 @@ impl Inner {
         self.seen();
         let caps = self.caps();
         self.shown_caps = Some(caps);
+        self.unshown = false;
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();
         state_view(&StateInput {
@@ -254,6 +265,7 @@ impl Inner {
             open: self.list.as_ref(),
             panel_keys,
             at: self.placer.at(),
+            assist: self.assist,
         })
     }
 }

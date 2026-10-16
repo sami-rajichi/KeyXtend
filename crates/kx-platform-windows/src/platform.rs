@@ -3,13 +3,16 @@
 use std::sync::Arc;
 
 use kx_module_api::Clock;
-use kx_module_api::ports::{InputInjector, LayoutSource};
-use kx_platform::ui::{Backdrop, Instance, Memory, Screens, SystemLook, Tray, WindowGuard};
+use kx_module_api::ports::{InputInjector, LayoutSource, PointerHook};
+use kx_platform::ui::{
+    Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
+};
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
+use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinMemory, WinScreens, WinTray, dirs,
+    WinMemory, WinPointerHook, WinScreens, WinSpeaker, WinTray, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -92,6 +95,25 @@ impl WindowsPlatform {
     pub fn memory(&self) -> Arc<dyn Memory> {
         Arc::new(WinMemory)
     }
+
+    /// The speaker: `XAudio2` on a thread of its own, which makes the engine at the first play.
+    #[must_use]
+    pub fn speaker(&self) -> Arc<dyn Speaker> {
+        Arc::new(WinSpeaker::new(self.clock))
+    }
+
+    /// The mouse hook on the hand's input, for the app to register under `PointerHookKey`.
+    #[must_use]
+    pub fn pointer_hook(&self) -> Arc<dyn PointerHook> {
+        Arc::new(WinPointerHook::new(self.clock, Source::Physical))
+    }
+
+    /// The mouse hook on the gate tool's simulated input instead of the hand's; only with the `sim-input` feature.
+    #[cfg(feature = "sim-input")]
+    #[must_use]
+    pub fn sim_pointer_hook(&self) -> Arc<dyn PointerHook> {
+        Arc::new(WinPointerHook::new(self.clock, Source::Simulated))
+    }
 }
 
 impl Platform for WindowsPlatform {
@@ -151,6 +173,22 @@ mod tests {
         let memory = WindowsPlatform::new().unwrap().memory();
         let given = std::thread::spawn(move || memory.decommit()).join();
         assert_eq!(given.ok(), Some(Ok(())));
+    }
+
+    #[test]
+    fn the_speaker_port_takes_asks_on_another_thread_and_drops_without_sound() {
+        use kx_platform::ui::{ClipId, SpeakerConfig};
+        let speaker = WindowsPlatform::new().unwrap().speaker();
+        let config = SpeakerConfig {
+            voices: 1,
+            idle_ms: 1,
+        };
+        // No clip is prepared, so the play builds nothing and needs no audio device; the drop joins the thread.
+        let asked = std::thread::spawn(move || {
+            speaker.prepare(Vec::new(), config);
+            speaker.play(ClipId::new(1), 1.0);
+        });
+        assert!(asked.join().is_ok());
     }
 
     #[test]

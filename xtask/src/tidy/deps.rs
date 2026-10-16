@@ -1,5 +1,7 @@
-//! D1-D6: the dependency-shape rules from `ARCHITECTURE.md`; D5 lives in [`testonly`], D6 in [`features`].
+//! D1-D7: the dependency-shape rules from `ARCHITECTURE.md`; D5 lives in [`testonly`], D6 in [`features`], D7 in
+//! [`build_only`].
 
+pub(crate) mod build_only;
 pub(crate) mod features;
 pub(crate) mod testonly;
 
