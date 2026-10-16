@@ -203,3 +203,44 @@ fn the_target_takes_the_history_before_the_push() {
     let inside = [(800, 1100)];
     assert_eq!(target(&inside, entry, KB, &all, edge), p(900, 1000 - EDGE));
 }
+
+#[test]
+fn the_guard_keeps_the_newest_history_point_outside_else_the_push() {
+    let all = screens();
+    let entry = Point { x: 800, y: 1010 };
+    let kept = Kept::new(&[(800, 1010), (800, 990), (900, 500)], entry, KB, &all);
+    assert_eq!(kept.outside, p(800, 990));
+    assert_eq!(kept.target(&all, EDGE.unsigned_abs()), p(800, 990));
+    let missed = Kept::new(&[(800, 1010)], entry, KB, &all);
+    assert_eq!(missed.outside, None);
+    assert_eq!(
+        missed.target(&all, EDGE.unsigned_abs()),
+        push(800, 1010, KB)
+    );
+    let whole = target(&[(800, 1010)], entry, KB, &all, EDGE.unsigned_abs());
+    assert_eq!(
+        missed.target(&all, EDGE.unsigned_abs()),
+        whole,
+        "as target does"
+    );
+}
+
+#[test]
+fn a_kept_point_on_a_screen_gone_since_falls_back_to_the_push() {
+    let [main, _] = screens();
+    let entry = Point { x: 800, y: 1010 };
+    let kept = Kept::new(&[(800, 1010), (63716, 65216)], entry, KB, &screens());
+    assert_eq!(kept.outside, p(-1820, -320), "on the left screen");
+    let push = pushed_out(entry, KB, &[main], EDGE.unsigned_abs());
+    assert_eq!(kept.target(&[main], EDGE.unsigned_abs()), push);
+}
+
+#[test]
+fn a_kept_entry_hides_every_point_in_debug() {
+    let kept = Kept::new(&[(812, 913)], Point { x: 814, y: 1015 }, KB, &screens());
+    let shown = format!("{kept:?}");
+    for number in ["812", "913", "814", "1015", "1600"] {
+        assert!(!shown.contains(number), "{shown}");
+    }
+    assert!(shown.contains("Kept"), "{shown}");
+}

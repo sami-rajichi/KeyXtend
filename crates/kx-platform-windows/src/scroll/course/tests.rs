@@ -215,3 +215,29 @@ fn a_percent_a_rounding_away_from_its_end_is_at_it() {
     let near = Some((0.0, END_SLACK / 2.0));
     assert_eq!(c.read(&a, Dir::Up, at(0), near), Reach::End);
 }
+
+#[test]
+fn the_next_route_is_the_one_the_turn_takes() {
+    let (c, w) = (Course::new(CONFIG), wheel(THREE, THREE));
+    assert_eq!(c.next_route(&aim(1, true), Dir::Down, w), Route::Send);
+    assert_eq!(c.next_route(&aim(1, false), Dir::Down, w), Route::Post);
+    let no_lines = wheel(0, THREE);
+    assert_eq!(c.next_route(&aim(1, true), Dir::Down, no_lines), Route::Uia);
+    assert_eq!(
+        c.next_route(&aim(1, false), Dir::Left, no_lines),
+        Route::Post,
+        "sideways reads the characters"
+    );
+    let t = tripped();
+    assert_eq!(t.next_route(&aim(1, true), Dir::Down, w), Route::Uia);
+    assert_eq!(
+        t.next_route(&aim(1, false), Dir::Up, w),
+        Route::Uia,
+        "a new way keeps it"
+    );
+    assert_eq!(
+        t.next_route(&aim(2, true), Dir::Down, w),
+        Route::Send,
+        "a new target starts afresh"
+    );
+}

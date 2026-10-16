@@ -190,6 +190,14 @@ impl Course {
         Some(Turn { route, count })
     }
 
+    /// The route the next turn towards `dir` at `aim` takes by `wheel`, without turning, so the caller can tell first
+    /// whether that step can go out.
+    #[must_use]
+    pub fn next_route(&self, aim: &Aim, dir: Dir, wheel: Wheel) -> Route {
+        let tripped = self.tripped && self.on.is_some_and(|(id, _)| id == aim.id);
+        route(aim.on_pointer, !tripped && wheel.per_line(dir).is_some())
+    }
+
     /// Takes UI Automation's percent pair at `aim`, read at `now`, and says how far `dir` can still go. A percent still
     /// for `check_ms` short of the end, after a notch of wheel delta or a UI Automation step sent before the previous
     /// read, trips the target or reads as the end.

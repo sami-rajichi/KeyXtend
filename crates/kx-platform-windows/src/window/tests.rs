@@ -7,12 +7,14 @@
 
 mod calls;
 mod cross;
+mod entries;
 mod owners;
+mod under;
 mod z_order;
 
 use std::cell::{Cell, RefCell};
 
-use kx_platform::ui::{FocusToken, UiError, WindowGuard};
+use kx_platform::ui::{UiError, WindowGuard};
 use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -25,8 +27,7 @@ use windows::core::{PCWSTR, w};
 
 use super::WS_EX_TRANSPARENT as TRANSPARENT;
 use super::guard::{Proc, guard, guarded, next};
-use super::win::{gives_back, token_of, window_of};
-use super::{KEPT, THROUGH, WinGuard, foreground, from_raw, is_ours, own_windows, title};
+use super::{KEPT, THROUGH, WinGuard, from_raw, is_ours, own_windows, title};
 use crate::wide;
 
 /// Class of the test windows.
@@ -280,21 +281,4 @@ fn the_desktop_and_no_window_are_not_ours() {
     // SAFETY: a plain query.
     assert!(!is_ours(unsafe { GetDesktopWindow() }));
     assert!(!is_ours(HWND::default()));
-}
-
-#[test]
-fn a_raw_handle_and_a_focus_token_read_back() {
-    let window = Hidden::new("KeyXtend test: raw");
-    assert_eq!(from_raw(window.0.0.addr().cast_signed()), window.0);
-    let token = FocusToken::new(u64::try_from(window.0.0.addr()).unwrap());
-    assert_eq!(window_of(token), Some(window.0));
-    assert_eq!(token_of(window.0), token);
-}
-
-#[test]
-fn giving_back_is_a_no_op_while_none_of_ours_is_in_front() {
-    let window = Hidden::new("KeyXtend test: give back");
-    assert!(!is_ours(foreground()), "the test program is never in front");
-    assert!(!gives_back(window.0), "none of ours is in front");
-    assert!(!gives_back(HWND::default()), "no window");
 }

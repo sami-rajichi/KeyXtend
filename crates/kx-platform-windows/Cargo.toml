@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, the mouse hook, layouts, windows, the system look, the heaps' free memory and sound."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory and sound."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

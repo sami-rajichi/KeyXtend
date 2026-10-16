@@ -56,6 +56,8 @@ pub use platform::WindowsPlatform;
 #[cfg(windows)]
 pub use screen::WinScreens;
 #[cfg(windows)]
+pub use scroll::WinScroll;
+#[cfg(windows)]
 pub use sound::WinSpeaker;
 #[cfg(windows)]
 pub use sysui::WinLook;

@@ -1,11 +1,13 @@
-//! The guard's own OS calls, one at a time: the kept styles and the click region.
+//! The guard's own OS calls, one at a time: the kept styles, the click region, raw handles and giving the focus back.
 
 use kx_module_api::ports::Rect;
-use kx_platform::ui::UiError;
+use kx_platform::ui::{FocusToken, UiError};
+use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{DeleteObject, HRGN, PtInRegion};
 
 use super::super::guard::add_kept;
-use super::super::win::region;
+use super::super::win::{gives_back, region, token_of, window_of};
+use super::super::{foreground, from_raw, is_ours};
 use super::Hidden;
 
 /// Which of `points` lie in region `all`, which is then deleted.
@@ -79,4 +81,21 @@ fn no_rect_covers_nothing_and_a_far_edge_past_i32_is_refused_not_overflowed() {
         h: 4,
     };
     assert!(matches!(region(&[past]), Err(UiError::Refused(_))));
+}
+
+#[test]
+fn a_raw_handle_and_a_focus_token_read_back() {
+    let window = Hidden::new("KeyXtend test: raw");
+    assert_eq!(from_raw(window.0.0.addr().cast_signed()), window.0);
+    let token = FocusToken::new(u64::try_from(window.0.0.addr()).unwrap());
+    assert_eq!(window_of(token), Some(window.0));
+    assert_eq!(token_of(window.0), token);
+}
+
+#[test]
+fn giving_back_is_a_no_op_while_none_of_ours_is_in_front() {
+    let window = Hidden::new("KeyXtend test: give back");
+    assert!(!is_ours(foreground()), "the test program is never in front");
+    assert!(!gives_back(window.0), "none of ours is in front");
+    assert!(!gives_back(HWND::default()), "no window");
 }

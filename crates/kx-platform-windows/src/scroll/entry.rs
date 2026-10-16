@@ -1,6 +1,9 @@
 //! The point before the keyboard (ADR-0029 decision 4): the newest point of Windows' pointer history outside the
 //! keyboard, else the entry point pushed out past the keyboard's nearest edge. Pure; the guard reads the history.
 
+use std::fmt;
+
+use kx_module_api::Redacted;
 use kx_module_api::ports::{Point, Rect, Screen};
 
 use super::low_word;
@@ -64,6 +67,49 @@ pub fn target(
 ) -> Option<Point> {
     last_outside(history.iter().copied(), keyboard, screens)
         .or_else(|| pushed_out(entry, keyboard, screens, edge_px))
+}
+
+/// What the guard keeps as the pointer enters the keyboard: the newest history point outside it, and what a push needs
+/// when there is none. Its `Debug` hides every point.
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct Kept {
+    /// The newest history point outside the keyboard and on a work area.
+    pub outside: Option<Point>,
+    /// Where the pointer entered.
+    pub entry: Point,
+    /// The keyboard's box then.
+    pub keyboard: Rect,
+}
+
+impl Kept {
+    /// Keeps `history`'s newest point outside `keyboard` and on a work area of `screens`, with the entry for a miss.
+    #[must_use]
+    pub fn new(history: &[(i32, i32)], entry: Point, keyboard: Rect, screens: &[Screen]) -> Self {
+        Self {
+            outside: last_outside(history.iter().copied(), keyboard, screens),
+            entry,
+            keyboard,
+        }
+    }
+
+    /// The point to scroll: the kept one while it is still on a work area of `screens`, else the entry pushed
+    /// `edge_px` out onto one.
+    #[must_use]
+    pub fn target(&self, screens: &[Screen], edge_px: u32) -> Option<Point> {
+        let kept = self.outside.filter(|&p| on_screen(screens, p));
+        kept.or_else(|| pushed_out(self.entry, self.keyboard, screens, edge_px))
+    }
+}
+
+/// Shows only whether a history point was kept.
+impl fmt::Debug for Kept {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Kept")
+            .field("outside", &self.outside.map(Redacted::new))
+            .field("entry", &Redacted::new(self.entry))
+            .field("keyboard", &Redacted::new(self.keyboard))
+            .finish()
+    }
 }
 
 /// True when `p` lies on the work area of one of `screens`.

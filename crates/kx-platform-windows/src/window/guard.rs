@@ -4,14 +4,16 @@
 
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW,
     MA_NOACTIVATE, RemovePropW, STYLESTRUCT, SWP_NOACTIVATE, SetPropW, SetWindowLongPtrW,
-    WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED,
+    WINDOWPOS, WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED,
     WM_WINDOWPOSCHANGING, WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
+use super::entry;
 use super::top::{keep_top, lift, on_this_thread, recheck, recheck_id};
 use super::{KEPT, holds_kept, is_through, kept_ex};
 use crate::{last_refused, refused};
@@ -126,6 +128,7 @@ fn unhook(hwnd: HWND, own: HANDLE) {
         }
     }
     drop_props(hwnd);
+    entry::forget(hwnd);
 }
 
 /// Adds the kept styles, refused when they did not land; the subclass then keeps them against later changes.
@@ -170,8 +173,8 @@ pub(super) fn next(own: HANDLE) -> WNDPROC {
     (!code.is_null()).then(|| unsafe { std::mem::transmute::<*const (), Proc>(code) })
 }
 
-/// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles
-/// and unhooks at the end; the guard's own posted check goes no further.
+/// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles,
+/// watches the pointer's entries and unhooks at the end; the guard's own posted check goes no further.
 #[allow(unsafe_code, reason = "The procedure of our guarded windows.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if recheck_id() == Some(msg) {
@@ -194,6 +197,8 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 style.styleNew = kept_ex(style.styleNew, was_through(hwnd));
             }
         }
+        WM_MOUSEMOVE => entry::moved(hwnd, lparam),
+        WM_MOUSELEAVE => entry::left(hwnd),
         WM_NCDESTROY => unhook(hwnd, own),
         _ => {}
     }

@@ -1,0 +1,237 @@
+//! A hidden test window with scroll bars on a thread of its own: it answers line steps, logs the wheel turns it gets,
+//! and can stop reading messages, as a hung app does. It is never shown and never takes the focus.
+#![allow(
+    unsafe_code,
+    reason = "The tests make, scroll and destroy their own hidden windows."
+)]
+
+use std::sync::mpsc;
+use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
+use std::thread::JoinHandle;
+use std::time::Duration;
+
+use kx_module_api::ports::Rect;
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::System::Threading::GetCurrentThreadId;
+use windows::Win32::UI::Controls::SetScrollInfo;
+use windows::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, GetScrollInfo,
+    MSG, PostMessageW, PostThreadMessageW, RegisterClassW, SB_HORZ, SB_LINEDOWN, SB_LINEUP,
+    SB_VERT, SCROLLBAR_CONSTANTS, SCROLLINFO, SIF_ALL, WINDOW_EX_STYLE, WM_APP, WM_HSCROLL,
+    WM_MOUSEHWHEEL, WM_MOUSEWHEEL, WM_QUIT, WM_VSCROLL, WNDCLASSW, WS_HSCROLL, WS_POPUP,
+    WS_VSCROLL,
+};
+use windows::core::w;
+
+/// How long a test waits for the window's thread; a wait, never a sleep.
+pub const WAIT: Duration = Duration::from_secs(5);
+/// The scroll range: positions 0 to 99 with a page of 10, so 45 is half way.
+const RANGE: (i32, i32, u32) = (0, 99, 10);
+/// Where both bars start: half way.
+const START: i32 = 45;
+/// The message a test posts after others, so it knows they were all handled.
+const FENCE: u32 = WM_APP;
+
+/// One message the window got: its window, the message and its two words.
+pub type Seen = (isize, u32, usize, isize);
+
+/// Keeps the tests that start a UI Automation client apart: clients starting at once in one process can fail their
+/// first lookups (`E_FAIL`), and a client stuck on a window that stopped reading slows the others.
+static CLIENTS: Mutex<()> = Mutex::new(());
+
+/// Holds the UI Automation tests apart until dropped.
+pub fn one_client() -> MutexGuard<'static, ()> {
+    CLIENTS.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Every wheel turn and fence the test windows got, oldest first.
+static LOG: Mutex<Vec<Seen>> = Mutex::new(Vec::new());
+/// Woken at each logged message.
+static LOGGED: Condvar = Condvar::new();
+
+/// The window's procedure: line steps move its bars, and wheel turns and fences are logged.
+unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    match msg {
+        WM_VSCROLL => step(hwnd, SB_VERT, wparam),
+        WM_HSCROLL => step(hwnd, SB_HORZ, wparam),
+        WM_MOUSEWHEEL | WM_MOUSEHWHEEL | FENCE => {
+            let raw = hwnd.0.addr().cast_signed();
+            LOG.lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push((raw, msg, wparam.0, lparam.0));
+            LOGGED.notify_all();
+        }
+        _ => {}
+    }
+    // SAFETY: default handling of a message for the test's own window.
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+}
+
+/// Moves bar `bar` one line up or down, as the line step in `wparam` asks.
+fn step(hwnd: HWND, bar: SCROLLBAR_CONSTANTS, wparam: WPARAM) {
+    let [lo, hi, ..] = wparam.0.to_le_bytes();
+    let code = i32::from(u16::from_le_bytes([lo, hi]));
+    let by = match code {
+        c if c == SB_LINEUP.0 => -1,
+        c if c == SB_LINEDOWN.0 => 1,
+        _ => 0,
+    };
+    let mut info = info(0);
+    // SAFETY: reads and sets the test window's own bar through a local struct.
+    unsafe {
+        let _ = GetScrollInfo(hwnd, bar, &raw mut info);
+        info.nPos += by;
+        SetScrollInfo(hwnd, bar, &raw const info, false);
+    }
+}
+
+/// The bars' info at position `pos`.
+fn info(pos: i32) -> SCROLLINFO {
+    let (min, max, page) = RANGE;
+    SCROLLINFO {
+        cbSize: u32::try_from(size_of::<SCROLLINFO>()).unwrap(),
+        fMask: SIF_ALL,
+        nMin: min,
+        nMax: max,
+        nPage: page,
+        nPos: pos,
+        nTrackPos: 0,
+    }
+}
+
+/// Makes the hidden window at `r`, with both bars half way when it has `bars`.
+fn make(r: Rect, bars: bool) -> HWND {
+    // SAFETY: registers the test class, made again harmlessly, and a window of it that is never shown.
+    unsafe {
+        let module = GetModuleHandleW(None).unwrap();
+        let class = w!("KeyXtend.ScrollTest");
+        let wc = WNDCLASSW {
+            lpfnWndProc: Some(proc),
+            hInstance: module.into(),
+            lpszClassName: class,
+            ..WNDCLASSW::default()
+        };
+        RegisterClassW(&raw const wc);
+        let style = if bars {
+            WS_POPUP | WS_VSCROLL | WS_HSCROLL
+        } else {
+            WS_POPUP
+        };
+        let ex = WINDOW_EX_STYLE::default();
+        let hwnd = CreateWindowExW(
+            ex,
+            class,
+            w!("scroll test"),
+            style,
+            r.x,
+            r.y,
+            r.w,
+            r.h,
+            None,
+            None,
+            Some(module.into()),
+            None,
+        )
+        .unwrap();
+        let half = info(START);
+        for bar in [SB_VERT, SB_HORZ].into_iter().filter(|_| bars) {
+            SetScrollInfo(hwnd, bar, &raw const half, false);
+        }
+        hwnd
+    }
+}
+
+/// The hidden window and its thread; dropping it destroys both.
+pub struct TestWin {
+    raw: isize,
+    thread: u32,
+    join: Option<JoinHandle<()>>,
+    /// Lets a stuck window's thread go on.
+    release: Option<mpsc::Sender<()>>,
+}
+
+impl TestWin {
+    /// The window at `r` with scroll bars, on a thread that reads its messages, or, when `stuck`, stops reading them
+    /// once made.
+    pub fn start(r: Rect, stuck: bool) -> Self {
+        Self::make(r, stuck, true)
+    }
+
+    /// The window at `r` with no scroll bars, on a thread that reads its messages.
+    pub fn plain(r: Rect) -> Self {
+        Self::make(r, false, false)
+    }
+
+    fn make(r: Rect, stuck: bool, bars: bool) -> Self {
+        let (made, ready) = mpsc::channel();
+        let (release, wait) = mpsc::channel::<()>();
+        let join = std::thread::spawn(move || {
+            let hwnd = make(r, bars);
+            // SAFETY: a plain query of this thread's id.
+            let thread = unsafe { GetCurrentThreadId() };
+            made.send((hwnd.0.addr().cast_signed(), thread)).unwrap();
+            if stuck {
+                let _ = wait.recv();
+            }
+            pump();
+            // SAFETY: destroys the window this thread made.
+            let _ = unsafe { DestroyWindow(hwnd) };
+        });
+        let (raw, thread) = ready.recv_timeout(WAIT).unwrap();
+        Self {
+            raw,
+            thread,
+            join: Some(join),
+            release: Some(release),
+        }
+    }
+
+    /// The window.
+    pub fn hwnd(&self) -> HWND {
+        crate::window::from_raw(self.raw)
+    }
+
+    /// The window's raw handle.
+    pub const fn raw(&self) -> isize {
+        self.raw
+    }
+
+    /// The wheel turns the window handled, once every message posted before this call was handled.
+    pub fn wheels(&self) -> Vec<Seen> {
+        // SAFETY: a message with no data to the test's own window.
+        unsafe { PostMessageW(Some(self.hwnd()), FENCE, WPARAM(0), LPARAM(0)) }.unwrap();
+        let fenced = |log: &mut Vec<Seen>| !log.iter().any(|s| s.0 == self.raw && s.1 == FENCE);
+        let log = LOG.lock().unwrap_or_else(PoisonError::into_inner);
+        let (mut log, waited) = LOGGED.wait_timeout_while(log, WAIT, fenced).unwrap();
+        assert!(!waited.timed_out(), "the window handled its messages");
+        let mine = log
+            .iter()
+            .filter(|s| s.0 == self.raw && s.1 != FENCE)
+            .copied()
+            .collect();
+        log.retain(|s| s.0 != self.raw);
+        mine
+    }
+}
+
+impl Drop for TestWin {
+    fn drop(&mut self) {
+        drop(self.release.take());
+        // SAFETY: ends the test window's own thread's loop.
+        let _ = unsafe { PostThreadMessageW(self.thread, WM_QUIT, WPARAM(0), LPARAM(0)) };
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+    }
+}
+
+/// Reads this thread's messages until `WM_QUIT`.
+fn pump() {
+    let mut msg = MSG::default();
+    // SAFETY: the loop of the thread that owns the window; `msg` is a local it fills.
+    while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0 > 0 {
+        // SAFETY: dispatches a message this thread received.
+        unsafe { DispatchMessageW(&raw const msg) };
+    }
+}

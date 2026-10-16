@@ -153,6 +153,26 @@ proptest! {
     }
 
     #[test]
+    fn the_next_route_is_always_the_route_the_turn_takes(
+        setting in setting(),
+        ticks in vec((prop_oneof![9 => Just(1_u64), 1 => Just(2)], any::<bool>(), any::<bool>(), 0.0..=MAX_LINES), 1..=MAX_TICKS),
+    ) {
+        let w = Wheel { notch: NOTCH, lines: setting, chars: setting };
+        let (mut c, mut now) = (Course::new(CONFIG), 0);
+        for (id, on_pointer, read, lines) in ticks {
+            let a = aim(id, on_pointer);
+            if read {
+                c.read(&a, Dir::Down, at(now), pair(Dir::Down, START));
+                now += CONFIG.check_ms;
+            }
+            let next = c.next_route(&a, Dir::Down, w);
+            if let Some(turn) = c.turn(&a, Dir::Down, lines, w) {
+                prop_assert_eq!(turn.route, next);
+            }
+        }
+    }
+
+    #[test]
     fn a_percent_that_moves_at_every_read_never_trips(
         gaps in vec(0..=CONFIG.check_ms, 1..=MAX_READS),
         walk in vec(any::<bool>(), MAX_READS),

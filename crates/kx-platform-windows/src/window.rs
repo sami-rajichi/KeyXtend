@@ -10,6 +10,8 @@
 
 mod band;
 #[cfg(windows)]
+pub(crate) mod entry;
+#[cfg(windows)]
 mod guard;
 #[cfg(test)]
 mod tests;

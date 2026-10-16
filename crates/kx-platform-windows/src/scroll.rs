@@ -1,12 +1,23 @@
 //! Scrolling other apps (ADR-0029): wheel deltas from lines, the route each tick takes, UI Automation's percents, the
 //! fallback to its steps and the point before the keyboard. All pure and tested everywhere; the OS parts call Windows.
 
-use kx_module_api::ports::{Dir, Point, Reach};
+use kx_module_api::ports::{Dir, Point, Reach, Rect};
 
 mod course;
 pub mod entry;
+mod run;
+#[cfg(test)]
+#[cfg(windows)]
+pub(crate) mod testwin;
+#[cfg(windows)]
+mod uia;
+#[cfg(windows)]
+mod win;
 
 pub use course::{Course, MAX_TURN, Turn};
+pub use run::{Desk, Read, Run, Spot, Whose};
+#[cfg(windows)]
+pub use win::WinScroll;
 
 /// `WHEEL_PAGESCROLL` (`UINT_MAX` in `WinUser.h`; the bindings lack it): the wheel setting that scrolls a page a notch.
 pub const PAGE_SCROLL: u32 = u32::MAX;
@@ -105,6 +116,17 @@ pub fn point_lparam(p: Point) -> isize {
     words.cast_signed()
 }
 
+/// A message lParam as a screen or client point: x in the low word, y in the high word, each signed.
+#[must_use]
+pub fn lparam_point(lparam: isize) -> Point {
+    let [x0, x1, y0, y1, ..] = lparam.to_le_bytes();
+    let word = |lo, hi| i32::from(i16::from_le_bytes([lo, hi]));
+    Point {
+        x: word(x0, x1),
+        y: word(y0, y1),
+    }
+}
+
 /// The percent towards `dir` from UI Automation's (horizontal, vertical) pair, a rounding past its range kept in it;
 /// none when that way cannot scroll (-1) or the value is no percent.
 #[must_use]
@@ -127,6 +149,18 @@ pub fn percent_moved(dir: Dir, before: Option<(f64, f64)>, after: Option<(f64, f
         return false;
     };
     if grows(dir) { to > from } else { to < from }
+}
+
+/// The box UI Automation gave (left, top, right, bottom), checked against `whole`, the box around every screen: none
+/// when it is empty, turned inside out, or reaches past `whole` by more than `whole`'s own size.
+#[must_use]
+pub fn area(edges: [i32; 4], whole: Rect) -> Option<Rect> {
+    let [left, top, right, bottom] = edges.map(i64::from);
+    let [d_left, d_top, d_right, d_bottom] = crate::screen::edges(whole).map(i64::from);
+    let (wide, high) = (d_right - d_left, d_bottom - d_top);
+    let near = left >= d_left - wide && top >= d_top - high;
+    let far = right <= d_right + wide && bottom <= d_bottom + high;
+    (right > left && bottom > top && near && far).then(|| crate::screen::rect_of(edges))
 }
 
 /// How far `dir` can still go at percent `pct`: its end at 0 or `FULL` (within `END_SLACK`), unknown without one.

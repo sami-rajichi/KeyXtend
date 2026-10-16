@@ -8,6 +8,8 @@ use super::*;
 use kx_module_api::ports::{Aim, ScrollConfig, TargetId};
 use kx_module_api::{Mono, US_PER_MS};
 
+mod area;
+
 /// Windows' `WHEEL_DELTA`; a Windows test checks it against the bindings.
 pub(super) const NOTCH: u32 = 120;
 /// Windows' default wheel: three lines or characters a notch.
@@ -228,6 +230,15 @@ fn the_end_reads_from_the_percent() {
 fn routes_keep_their_report_names() {
     let names = Route::ALL.map(Route::name);
     assert_eq!(names, ["uia", "post", "send"]);
+}
+
+#[test]
+fn a_point_packed_in_an_lparam_reads_back_signed() {
+    for (x, y) in [(0, 0), (-1, -360), (2559, 1439), (-32768, 32767)] {
+        let p = Point { x, y };
+        assert_eq!(lparam_point(point_lparam(p)), p);
+    }
+    assert_eq!(lparam_point(0x0001_FFFF), Point { x: -1, y: 1 });
 }
 
 #[cfg(windows)]
