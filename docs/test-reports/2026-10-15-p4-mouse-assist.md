@@ -8,7 +8,7 @@
   - `keyxtend` and `kx-gates`, release, signed and installed under `Program Files\KeyXtend-dev`, with uiAccess;
   - the product's test build `--features gate-input` (never signed or installed), which G5, G12, G17, G18 and G8's hook parts drive;
   - `kx-target-window` and the plain `kx-gates`, debug.
-- **Scope:** the P4 gates (G5, G6, G12, G17, G18, G8 with the hook's p99), G10 for the now live Right-click and Grab keys, the hand try, and the plan's manual checks.
+- **Scope:** the P4 gates (G5, G6, G12, G17, G18, G8 with the hook's p99), G10 for the now live Right-click and Grab keys, the hand try, the plan's manual checks, and a final check on the final build.
 
 ## Gates
 
@@ -47,6 +47,10 @@
 | 17 | Clicks, a hold and Grab with all 16 threads busy for 90 s | All behave; the button never stays down | Pass | Hook p99 0.14 ms, max 4.1 ms, lost 0 |
 | 18 | Idle with Right-click on, mouse still | Spec §10 budgets | Fail; owner accepts | Commit 149.4 MB (budget 140) at f1c6d9c, before ADR-0028; see notes 3 and 7 |
 | 19 | Hand try, Right-click and Grab (900 s) | Numbers only | Done | Events 3,666, hook p99 0.11 ms, lost 0, reinstalls 0 |
+| 20 | Final check (2026-10-16): type "hello" into Notepad | The letters appear; Notepad keeps its caret | Pass | The installed aecf605 build, the final product; the owner's own settings |
+| 21 | Right-click on, hold still on the word, then a short click | Ring, sound and menu on the hold; the short click only moves the caret | Pass | |
+| 22 | Grab "Move me.txt" onto a folder | The file moves, with the pick-up and drop sounds | Pass | The file was in the folder afterwards |
+| 23 | Arabic keyboard: the Right-click and Grab tips, and the badge for each mode and while carrying | Every text reads correctly, right to left with joined letters | Pass | First check of the Arabic badge on screen |
 
 ## Notes
 
