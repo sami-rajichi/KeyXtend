@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 05:48 — P5: hiding the keyboard stops the scroll pad
+Closing the keyboard to the tray or minimising it to the bubble while the pad scrolls now stops the scroll, as Stop would, since Stop hides with the keyboard. The hub hears the hide through the mode it keeps and asks the keyboard to stop only when the pad is scrolling, so a still pad hears nothing. The docs now list the hide among the ways a scroll stops.
+
 ## 2026-10-17 02:48 — P5: the entry watch keeps a point only while the scroll module runs
 The keyboard window now asks the guard to watch its entries only while the scroll module is live, and the hub refuses a watch otherwise; when the module stops, `unwatch_entries` drops the marks and forgets the kept point. An entry that passes over our own windows, such as the notice banner, keeps the point in the app the user came from, or the last entry when only our windows lie outside. A UI Automation walk that cannot finish no longer clears the kept box or the held pattern, so the outline does not blink. The entry watch is now a pure state machine with property tests over random runs.
 

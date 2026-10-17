@@ -272,7 +272,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two dots under Stop's square show the current speed.
 - Tapping another direction switches direction at slow speed.
 - The page **glides**: many small steps a second, slow 3 and fast 10 lines a second by default (`[scroll] slow`, `fast`; owner, 2026-10-16).
-- **It also stops** at the end of the content, at any press outside our windows (with mouse assist on, whose hook hears the press), `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes; each of the first two can be switched off.
+- **It also stops** at the end of the content, at any press outside our windows (with mouse assist on, whose hook hears the press), `[scroll] limit_s` (2 minutes) after the last tap on the pad, when the target closes, and when the keyboard hides (Close or Minimise), which takes Stop off the screen; each of the first two can be switched off.
 - A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
 - **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
 - **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.

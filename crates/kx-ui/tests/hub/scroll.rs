@@ -1,5 +1,5 @@
 //! The scroll pad through the hub: the scroll state and the box to outline as one JSON with one wake per read, the
-//! hub's ask at start, the pad's actions, the guard's scroll calls, and no box or point in any log.
+//! hub's ask at start, the pad's actions and the stop on hide, the guard's scroll calls, and no box or point in any log.
 
 mod badge;
 mod pages;
@@ -17,7 +17,7 @@ use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::ui::UiError;
 use kx_platform_fake::GuardCall;
 use kx_test_support::host::FakeCore;
-use kx_ui::{Hub, Wake};
+use kx_ui::{Hub, Mode, Wake};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -152,6 +152,37 @@ fn pad_taps_and_hover_reach_the_keyboard_as_face_actions_and_the_hub_publishes_n
         .map(|(n, _)| n.load(Ordering::SeqCst))
         .sum::<usize>();
     assert_eq!((heard, peeks.load(Ordering::SeqCst)), (0, 0));
+}
+
+/// Hiding the keyboard, to the tray or behind its bubble, takes Stop off the screen, so it asks the keyboard to stop
+/// a glide as Stop does; a still pad, a stopped module or a keyboard already away asks nothing.
+#[test]
+fn hiding_the_keyboard_mid_glide_stops_it_once() {
+    let (rig, face, _host) = Rig::with_face();
+    let (bus, _subs) = listened(&rig);
+    let stops = || {
+        let acts = face.acts();
+        acts.iter()
+            .filter(|a| **a == FaceAction::Pad { dir: None })
+            .count()
+    };
+    bus.publish(&STILL).unwrap();
+    rig.hub.keep_mode(Mode::Away);
+    rig.hub.keep_mode(Mode::Shown);
+    bus.publish(&DOWN).unwrap();
+    rig.hub.keep_mode(Mode::Shown);
+    assert_eq!(stops(), 0, "a still pad, then a shown one");
+    rig.hub.keep_mode(Mode::Away);
+    rig.hub.keep_mode(Mode::Minimised);
+    assert_eq!(stops(), 1, "Minimise hides first, then keeps the bubble");
+    assert_eq!(rig.hub.mode(), Mode::Minimised);
+    rig.hub.keep_mode(Mode::Shown);
+    rig.hub.keep_mode(Mode::Minimised);
+    assert_eq!(stops(), 2, "straight behind the bubble");
+    rig.hub.keep_mode(Mode::Shown);
+    bus.publish(&ScrollChanged::OFF).unwrap();
+    rig.hub.keep_mode(Mode::Away);
+    assert_eq!(stops(), 2, "a stopped module");
 }
 
 #[test]

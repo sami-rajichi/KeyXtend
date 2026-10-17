@@ -3,6 +3,7 @@
 //! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
 use super::{Hub, Request, Wake, Waker, json};
+use kx_module_api::ports::FaceAction;
 use kx_platform::ui::Command;
 use serde::Serialize;
 use std::sync::Arc;
@@ -39,9 +40,13 @@ impl Mode {
 }
 
 impl Hub {
-    /// Keeps how the user left the keyboard, for windows made again.
+    /// Keeps how the user left the keyboard, for windows made again. Hiding it mid-glide takes Stop off the screen, so
+    /// the keyboard stops the glide as Stop does; call it on the Qt thread.
     pub fn keep_mode(&self, mode: Mode) {
-        self.lock().mode = mode;
+        let before = std::mem::replace(&mut self.lock().mode, mode);
+        if before == Mode::Shown && mode != Mode::Shown && self.scrolling() {
+            let _ = self.act(FaceAction::Pad { dir: None });
+        }
     }
 
     /// How the user left the keyboard.

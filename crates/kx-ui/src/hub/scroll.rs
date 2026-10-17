@@ -109,6 +109,11 @@ impl Hub {
         self.badge_scrolled(now);
     }
 
+    /// True while the scroll module glides, as its last state said.
+    pub(super) fn scrolling(&self) -> bool {
+        self.scroll.lock().dir.is_some()
+    }
+
     /// Takes the box to outline, or none; only a live module outlines.
     pub(super) fn scroll_aimed(&self, area: Option<Rect>) {
         self.scroll_change(|s| {
