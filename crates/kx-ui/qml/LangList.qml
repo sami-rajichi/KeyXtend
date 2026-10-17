@@ -7,8 +7,8 @@ import QtQuick
 Window {
     id: box
 
-    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, the list's view (`{rows, hi, page_back,
-    // page_on}`), and rows per page.
+    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, the list's view (`{rows, hi, page,
+    // page_back, page_on}`, its page worked out by the keyboard), and rows per page.
     required property var ui
     required property var lk
     required property var res
@@ -31,8 +31,8 @@ Window {
     readonly property var p: lk.palette
     readonly property real radius: lk.look.window_radius_px * pn.radius_share
     readonly property int per: Math.max(1, rows)
-    readonly property int pages: Math.max(1, Math.ceil(view.rows.length / per))
-    readonly property int at: Math.min(Math.floor(view.hi / per), pages - 1)
+    readonly property int pages: view.page.count
+    readonly property int at: view.page.at
     // This page's rows; with more than one page the last is padded with nulls, so the box keeps its size.
     readonly property var shown: {
         const part = view.rows.slice(at * per, (at + 1) * per);
@@ -114,7 +114,7 @@ Window {
             PageButton {
                 icon: box.lk.icons.page.back
                 name: box.res.tr("page.back")
-                can: box.at > 0 && !!box.view.page_back
+                can: box.view.page.back && !!box.view.page_back
                 onClicked: box.page(box.view.page_back)
             }
             Label {
@@ -133,7 +133,7 @@ Window {
             PageButton {
                 icon: box.lk.icons.page.on
                 name: box.res.tr("page.on")
-                can: box.at < box.pages - 1 && !!box.view.page_on
+                can: box.view.page.on && !!box.view.page_on
                 onClicked: box.page(box.view.page_on)
             }
         }

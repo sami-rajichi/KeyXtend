@@ -45,11 +45,17 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A list view of `n` layouts, the third current, row `hi` highlighted, paged by the board's arrows.
-        function view(n, hi) {
+        // A list view of `n` layouts, the third current, row `hi` highlighted on page `at` of `count` (one by default),
+        // paged by the board's arrows.
+        function view(n, hi, at, count) {
             const row = i => ({ short: "L" + i, name: ["Language " + i, "Layout " + i], rtl: false, arabic: false, current: i === 2, icon: i === 2 ? "lang.current" : null });
             const face = Face.states.list.list;
-            return { rows: [...Array(n).keys()].map(row), hi: hi, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+            const page = paged(at || 0, count || 1);
+            return { rows: [...Array(n).keys()].map(row), hi: hi, page: page, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+        }
+        // Page `at` of `count`, as the keyboard's state holds it.
+        function paged(at, count) {
+            return { at: at, count: count, back: at > 0, on: at < count - 1 };
         }
         function makeList(v, res) {
             const ui = createTemporaryObject(uiC, root);
@@ -72,12 +78,12 @@ Item {
 
         function test_the_list_pages_five_rows_and_shows_the_page_of_the_highlight() {
             compare(En.settings.pageRows, 5, "the [ui] page_rows default");
-            const list = makeList(view(7, 0));
+            const list = makeList(view(7, 0, 0, 2));
             compare(rowsOf(list).map(r => r.Accessible.name), [0, 1, 2, 3, 4].map(i => root.res.space(["L" + i, "Language " + i, "Layout " + i])));
             const number = pageNumber(list);
             verify(number.visible, "a pager with two pages");
             compare(number.text, list.ui.pageText(1, 2));
-            list.view = view(7, 6);
+            list.view = view(7, 6, 1, 2);
             compare(rowsOf(list).length, 2, "the second page");
             compare(slots(list).length, 5, "padded to a whole page, so the box keeps its size");
             compare(slots(list).filter(r => r.hi).map(r => r.place), [6], "the ring on the highlight");
@@ -87,7 +93,7 @@ Item {
         // Arabic flips text only (ADR-0020): the pager stays on the right and each badge before its name.
         function test_the_arabic_ui_keeps_the_lists_places_and_arabic_names_read_right_to_left() {
             const ar = Object.assign({}, root.res, { tr: k => Ar.texts[k] !== undefined ? Ar.texts[k] : k });
-            const v = view(7, 0);
+            const v = view(7, 0, 0, 2);
             v.rows[1] = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
             const list = makeList(v, ar);
             list.open();
@@ -108,7 +114,7 @@ Item {
 
         function test_a_pager_taller_than_its_rows_stays_inside_the_box() {
             const ui = createTemporaryObject(uiC, root);
-            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0), rows: 2, title: "list" });
+            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0, 0, 4), rows: 2, title: "list" });
             list.open();
             waitForRendering(list.contentItem);
             const back = button(list.contentItem, En.texts["page.back"]);
@@ -129,8 +135,21 @@ Item {
             compare([tick.icon, tick.tint], [N.lk.icons.lang.current, Qt.color(N.lk.palette.ring)]);
         }
 
+        // The keyboard works the page out, so the list shows the page it names and dims a button it says cannot turn.
+        function test_the_list_shows_the_page_the_keyboard_works_out() {
+            const v = view(7, 0, 1, 2);
+            v.page.back = false;
+            const list = makeList(v);
+            list.open();
+            waitForRendering(list.contentItem);
+            compare(rowsOf(list).map(r => r.row.short), ["L5", "L6"], "the second page, whatever the highlight");
+            compare(pageNumber(list).text, list.ui.pageText(2, 2));
+            verify(!button(list.contentItem, En.texts["page.back"]).enabled, "the keyboard says no page lies back");
+            list.visible = false;
+        }
+
         function test_a_row_click_picks_it_and_the_page_buttons_send_the_board_keys() {
-            const list = makeList(view(7, 6));
+            const list = makeList(view(7, 6, 1, 2));
             const pick = createTemporaryObject(spyC, root, { target: list, signalName: "pick" });
             const page = createTemporaryObject(spyC, root, { target: list, signalName: "page" });
             list.open();
@@ -180,7 +199,7 @@ Item {
             verify(tall.height > latin.height, "the case this test is for: " + tall.height + " " + latin.height);
             const res = Object.assign({}, root.res, { fam: { latin: root.res.fam.latin, arabic: arabic, mark: arabic, ui: root.res.fam.ui } });
             const row = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
-            const v = { rows: [row], hi: 0, keys: [], page_back: null, page_on: null };
+            const v = { rows: [row], hi: 0, page: paged(0, 1), keys: [], page_back: null, page_on: null };
             const ui = createTemporaryObject(uiC, root);
             const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, title: "list" });
             const slot = slots(list)[0];

@@ -6,7 +6,6 @@ use super::face::done;
 use super::unread::Unread;
 use super::{Hub, Wake, json};
 use kx_module_api::ports::{Dir, Rect, ScrollChanged};
-use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -55,13 +54,19 @@ impl Scroll {
     }
 }
 
-/// The open list as the keyboard's state JSON holds it: its rows, the highlighted one and the page buttons' keys.
+/// The open list as the keyboard's state JSON holds it: which ways its page turns and the page buttons' keys.
 #[derive(Deserialize)]
 struct List {
-    rows: Vec<IgnoredAny>,
-    hi: usize,
+    page: Turns,
     page_back: Option<String>,
     page_on: Option<String>,
+}
+
+/// Which ways the list's page turns, as the keyboard works it out; the hub does no page maths.
+#[derive(Deserialize)]
+struct Turns {
+    back: bool,
+    on: bool,
 }
 
 /// The part of the keyboard's state the page turn reads.
@@ -72,17 +77,13 @@ struct State {
 }
 
 impl List {
-    /// The key of the page button that turns back or on, as the list's own button sends it; none at that end.
-    /// The same page maths lives in `qml/LangList.qml` (`pages`, `at`) and kx-mod-keyboard's `LangList::key`, so change
-    /// all three together.
-    fn button(self, back: bool, rows: usize) -> Option<String> {
-        let per = rows.max(1);
-        let pages = self.rows.len().div_ceil(per).max(1);
-        let at = (self.hi / per).min(pages - 1);
-        match back {
-            true if at > 0 => self.page_back,
-            false if at + 1 < pages => self.page_on,
-            _ => None,
+    /// The key of the page button that turns back or on, as the list's own button sends it; none where the page does
+    /// not turn that way.
+    fn button(self, back: bool) -> Option<String> {
+        if back {
+            self.page.back.then_some(self.page_back).flatten()
+        } else {
+            self.page.on.then_some(self.page_on).flatten()
         }
     }
 }
@@ -137,13 +138,14 @@ impl Hub {
         }
     }
 
-    /// Turns our open list a page back or on, as its own page button does with `[ui] page_rows`; nothing at either
-    /// end or with no list open. A turned page wakes the keyboard to read its state; call it on the Qt thread.
+    /// Turns our open list a page back or on, as its own page button does with `[ui] page_rows`; nothing where its page
+    /// does not turn that way or with no list open. A turned page wakes the keyboard; call it on the Qt thread.
     pub fn turn_page(&self, back: bool) {
         let Some(face) = self.face() else {
             return;
         };
-        let state = match serde_json::from_str::<State>(&face.state_json()) {
+        let rows = self.lock().settings.page_rows;
+        let state = match serde_json::from_str::<State>(&face.state_json(rows)) {
             Ok(state) => state,
             Err(e) => {
                 // The error's text may quote the state, so only its kind is logged.
@@ -151,8 +153,7 @@ impl Hub {
                 return;
             }
         };
-        let rows = self.lock().settings.page_rows;
-        let Some(key) = state.list.and_then(|l| l.button(back, rows)) else {
+        let Some(key) = state.list.and_then(|l| l.button(back)) else {
             return;
         };
         if self.panel_key(&key).state {

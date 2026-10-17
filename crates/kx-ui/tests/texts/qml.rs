@@ -60,7 +60,7 @@ impl KeyboardFace for Speaks {
         Value::Null.to_string()
     }
 
-    fn state_json(&self) -> String {
+    fn state_json(&self, _: usize) -> String {
         Value::Null.to_string()
     }
 

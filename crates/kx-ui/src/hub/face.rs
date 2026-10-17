@@ -45,11 +45,13 @@ impl Hub {
             .map_or_else(|| NULL.to_owned(), |f| f.board_json())
     }
 
-    /// The live state, as the face's JSON; `null` while no face is attached.
+    /// The live state, as the face's JSON with an open list shown `[ui] page_rows` rows to a page; `null` while no
+    /// face is attached.
     #[must_use]
     pub fn state_json(&self) -> String {
+        let rows = self.lock().settings.page_rows;
         self.face()
-            .map_or_else(|| NULL.to_owned(), |f| f.state_json())
+            .map_or_else(|| NULL.to_owned(), |f| f.state_json(rows))
     }
 
     /// Does `action` and says what to redraw; a notice in the face's reply goes to the banner (a failed repeat also to

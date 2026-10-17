@@ -86,7 +86,7 @@ impl KeyboardFace for Face {
         self.board.clone()
     }
 
-    fn state_json(&self) -> String {
+    fn state_json(&self, _: usize) -> String {
         let live = self.lock();
         let mut state = if live.list {
             &self.listing

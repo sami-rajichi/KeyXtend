@@ -7,7 +7,7 @@
 )]
 
 use crate::host::GOLDEN;
-use crate::rig::Rig;
+use crate::rig::{ROWS, Rig};
 use kx_mod_keyboard::legend::is_mark;
 use kx_mod_keyboard::view::EMPTY_NAME;
 use kx_module_api::ports::{BASE_DPI, FaceAction, Rect, Screen};
@@ -56,7 +56,7 @@ fn the_face_reports_its_boards_row_for_the_themes_drawn_check() {
 #[test]
 fn the_english_state_matches_its_golden_file() {
     let r = showing("en-us", None);
-    assert_golden(golden("state-en.json"), &pretty(&r.face.state_json()));
+    assert_golden(golden("state-en.json"), &pretty(&r.face.state_json(ROWS)));
 }
 
 /// Caps Lock on in Windows: the lit lock key the pictures show, over capital legends.
@@ -71,7 +71,10 @@ fn the_english_caps_state_matches_its_golden_file() {
         state["keys"]["c-0x0010"]["main"], "Q",
         "the letters are capitals"
     );
-    assert_golden(golden("state-en-caps.json"), &pretty(&r.face.state_json()));
+    assert_golden(
+        golden("state-en-caps.json"),
+        &pretty(&r.face.state_json(ROWS)),
+    );
 }
 
 #[test]
@@ -83,7 +86,7 @@ fn the_french_state_matches_its_golden_file() {
         state["keys"]["c-0x0056"]["main"], ">",
         "the ISO key, shifted"
     );
-    assert_golden(golden("state-fr.json"), &pretty(&r.face.state_json()));
+    assert_golden(golden("state-fr.json"), &pretty(&r.face.state_json(ROWS)));
 }
 
 #[test]
@@ -100,7 +103,7 @@ fn the_arabic_state_matches_its_golden_file() {
         state["keys"]["c-0x0056"]["main"].is_string(),
         "the ISO key is on the board"
     );
-    assert_golden(golden("state-ar.json"), &pretty(&r.face.state_json()));
+    assert_golden(golden("state-ar.json"), &pretty(&r.face.state_json(ROWS)));
 }
 
 /// The owner's Arabic (102) AZERTY puts shadda and a vowel on `AltGr`, which the latched legends show.
@@ -118,7 +121,10 @@ fn the_arabic_altgr_state_matches_its_golden_file() {
         (&json!(""), &json!(EMPTY_NAME)),
         "ف types nothing"
     );
-    assert_golden(golden("state-ar-altgr.json"), &pretty(&r.face.state_json()));
+    assert_golden(
+        golden("state-ar-altgr.json"),
+        &pretty(&r.face.state_json(ROWS)),
+    );
 }
 
 /// Arabic (102) AZERTY types nothing on س with Shift, so that key shows empty, as Windows' keyboard does.
@@ -131,7 +137,10 @@ fn the_arabic_shift_state_matches_its_golden_file() {
         (&seen["main"], &seen["blank"]),
         (&json!(""), &json!(EMPTY_NAME))
     );
-    assert_golden(golden("state-ar-shift.json"), &pretty(&r.face.state_json()));
+    assert_golden(
+        golden("state-ar-shift.json"),
+        &pretty(&r.face.state_json(ROWS)),
+    );
 }
 
 /// The latches that change what Arabic keys show: none, Shift, `AltGr`, and both.
@@ -178,5 +187,5 @@ fn the_open_list_matches_its_golden_file() {
     .unwrap();
     r.tap("lang").unwrap();
     r.panel("down", 5).unwrap();
-    assert_golden(golden("state-list.json"), &pretty(&r.face.state_json()));
+    assert_golden(golden("state-list.json"), &pretty(&r.face.state_json(ROWS)));
 }

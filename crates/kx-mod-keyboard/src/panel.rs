@@ -31,6 +31,19 @@ pub struct LangList {
     hi: usize,
 }
 
+/// The page that holds the highlight, which the UI shows and its page buttons turn.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Page {
+    /// The page, from 0.
+    pub at: usize,
+    /// How many pages there are, at least one.
+    pub count: usize,
+    /// A page lies before it.
+    pub back: bool,
+    /// A page lies after it.
+    pub on: bool,
+}
+
 impl LangList {
     /// The list opened with row `at` highlighted, the current layout's.
     #[must_use]
@@ -44,6 +57,21 @@ impl LangList {
         self.hi.min(len.saturating_sub(1))
     }
 
+    /// The page that holds the highlight of a list `len` rows long, shown `rows` to a page; a page size of 0 counts
+    /// as 1. It is the only page maths: the UI and the pad read it from the state.
+    #[must_use]
+    pub fn page(&self, rows: usize, len: usize) -> Page {
+        let rows = rows.max(1);
+        let count = len.div_ceil(rows).max(1);
+        let at = self.hi(len) / rows;
+        Page {
+            at,
+            count,
+            back: at > 0,
+            on: at + 1 < count,
+        }
+    }
+
     /// Key `nav` on a list `len` rows long, shown `rows` to a page; a page size of 0 counts as 1.
     /// Up and Down move one row, Left and Right turn to the first row of the page before or after, as the mock-up
     /// pages; each stops at the ends.
@@ -55,13 +83,13 @@ impl LangList {
                 Moved::Stay
             };
         };
-        let (rows, hi) = (rows.max(1), self.hi(len));
-        let page = hi / rows;
+        let (page, hi) = (self.page(rows, len), self.hi(len));
+        let rows = rows.max(1);
         let to = match nav {
             Nav::Up => hi.saturating_sub(1),
             Nav::Down => (hi + 1).min(last),
-            PAGE_BACK => page.saturating_sub(1) * rows,
-            PAGE_ON => (page + 1).min(last / rows) * rows,
+            PAGE_BACK => page.at.saturating_sub(1) * rows,
+            PAGE_ON => (page.at + 1).min(page.count - 1) * rows,
             Nav::Enter => return Moved::Pick(hi),
             Nav::Esc => return Moved::Close,
         };
@@ -97,13 +125,15 @@ pub struct LangRow {
     pub icon: Option<&'static str>,
 }
 
-/// The open language list: every layout in the list's order, which the UI pages, and the highlighted row.
+/// The open language list: every layout in the list's order, the highlighted row and the page that shows.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ListView {
-    /// Every layout; the UI shows the page holding `hi`, padded to whole pages.
+    /// Every layout; the UI shows the rows of `page`, padded to whole pages.
     pub rows: Vec<LangRow>,
     /// The highlighted row.
     pub hi: usize,
+    /// The page that holds `hi`, at the UI's page size.
+    pub page: Page,
     /// The board keys the UI sends as `panel_key` while the list is open.
     pub keys: Vec<String>,
     /// The board key that turns back a page, which the list's page button sends; `None` when the board has none.
@@ -112,13 +142,14 @@ pub struct ListView {
     pub page_on: Option<String>,
 }
 
-/// The list `open` over `labels`, with layout `cur` shown now and the board keys `keys` driving it.
+/// The list `open` over `labels`, with layout `cur` shown now, the board keys `keys` driving it and `rows` to a page.
 #[must_use]
 pub fn list_view(
     open: &LangList,
     labels: &[LangLabel],
     cur: LayoutId,
     keys: &[(String, Nav)],
+    rows: usize,
 ) -> ListView {
     let key_of = |nav: Nav| {
         keys.iter()
@@ -139,6 +170,7 @@ pub fn list_view(
     ListView {
         rows: labels.iter().map(row).collect(),
         hi: open.hi(labels.len()),
+        page: open.page(rows, labels.len()),
         keys: keys.iter().map(|(id, _)| id.clone()).collect(),
         page_back: key_of(PAGE_BACK),
         page_on: key_of(PAGE_ON),

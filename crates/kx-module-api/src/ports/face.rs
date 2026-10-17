@@ -160,8 +160,9 @@ pub trait KeyboardFace: Send + Sync {
     /// The board to draw, as JSON: the size, and each key's box, names and whether it is dimmed.
     fn board_json(&self) -> String;
 
-    /// The live state, as JSON: legends, lights, the language key, an open panel and the window's place.
-    fn state_json(&self) -> String;
+    /// The live state, as JSON: legends, lights, the language key, an open panel shown `rows` rows to a page
+    /// (`[ui] page_rows`) and the window's place.
+    fn state_json(&self, rows: usize) -> String;
 
     /// The language of the layout shown, as `LangLabel::iso`; it only reads, so any thread may ask.
     fn lang(&self) -> String;

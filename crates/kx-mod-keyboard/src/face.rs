@@ -239,8 +239,8 @@ impl KeyboardFace for Face {
         json(&board_view(&self.spec, &settings, size))
     }
 
-    fn state_json(&self) -> String {
-        json(&self.lock().state(&self.keys, &self.nav_keys))
+    fn state_json(&self, rows: usize) -> String {
+        json(&self.lock().state(&self.keys, &self.nav_keys, rows))
     }
 
     fn lang(&self) -> String {

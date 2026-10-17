@@ -182,6 +182,7 @@ fn state_of(
         list: &list,
         turn: 0,
         open,
+        rows: 1,
         panel_keys: &panel_keys,
         at: None,
         assist,

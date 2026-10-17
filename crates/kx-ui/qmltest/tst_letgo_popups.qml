@@ -71,7 +71,8 @@ Item {
         function test_a_list_row_and_a_page_button_act_once_after_a_slip_onto_another() {
             const face = Face.states.list.list;
             const row = i => ({ short: "L" + i, name: ["Language " + i, "Layout " + i], rtl: false, arabic: false, current: false, icon: null });
-            const view = { rows: [...Array(7).keys()].map(row), hi: 0, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+            const first = { at: 0, count: 2, back: false, on: true };
+            const view = { rows: [...Array(7).keys()].map(row), hi: 0, page: first, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
             const list = createTemporaryObject(listC, root, { ui: createTemporaryObject(uiC, root), lk: N.lk, res: root.res, s: 1, view: view, rows: En.settings.pageRows, title: "list" });
             Pointer.through([list]);
             const [pick, page] = [spy(list, "pick"), spy(list, "page")];

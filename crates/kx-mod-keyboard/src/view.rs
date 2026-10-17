@@ -188,6 +188,8 @@ pub struct StateInput<'a> {
     pub turn: i8,
     /// The language list, while open.
     pub open: Option<&'a LangList>,
+    /// Rows per page of the open list, as the UI shows it.
+    pub rows: usize,
     /// The board keys that drive an open list, with what each does.
     pub panel_keys: &'a [(String, Nav)],
     /// Where the window goes.
@@ -211,7 +213,9 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
     StateView {
         keys: keys.collect(),
         lang: lang_view(i.list, cur, i.turn),
-        list: i.open.map(|l| list_view(l, i.list, cur.id, i.panel_keys)),
+        list: i
+            .open
+            .map(|l| list_view(l, i.list, cur.id, i.panel_keys, i.rows)),
         at: i.at,
         dpad: pad_state(i.scroll),
     }

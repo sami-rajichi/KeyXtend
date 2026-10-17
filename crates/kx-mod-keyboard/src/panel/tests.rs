@@ -11,6 +11,9 @@ const ALL: [Nav; 6] = [
     Nav::Esc,
 ];
 
+/// Five rows to a page, as `[ui] page_rows` is by default.
+const ROWS: usize = 5;
+
 /// A list of seven rows opened on row `at`, as the mock-up's clipboard sample pages them.
 fn seven(at: usize) -> (LangList, usize) {
     (LangList::open(at), 7)
@@ -84,6 +87,56 @@ fn a_list_that_shrank_keeps_the_highlight_on_its_last_row() {
     assert_eq!(l.hi(0), 0);
 }
 
+/// The page that holds row `at` of seven, at `rows` rows to a page.
+fn page_of(at: usize, rows: usize) -> Page {
+    let (l, len) = seven(at);
+    l.page(rows, len)
+}
+
+#[test]
+fn the_page_holds_the_highlight_and_says_which_ways_it_turns() {
+    let first = Page {
+        at: 0,
+        count: 2,
+        back: false,
+        on: true,
+    };
+    assert_eq!(page_of(2, ROWS), first);
+    let last = Page {
+        at: 1,
+        back: true,
+        on: false,
+        ..first
+    };
+    assert_eq!(page_of(6, ROWS), last);
+    let middle = Page {
+        at: 1,
+        count: 3,
+        back: true,
+        on: true,
+    };
+    assert_eq!(page_of(3, 3), middle);
+}
+
+#[test]
+fn an_empty_list_a_zero_or_a_huge_page_size_still_make_a_page() {
+    let one = Page {
+        at: 0,
+        count: 1,
+        back: false,
+        on: false,
+    };
+    assert_eq!(LangList::open(0).page(ROWS, 0), one, "an empty list");
+    assert_eq!(page_of(6, usize::MAX), one, "one page holds every row");
+    let row = Page {
+        at: 6,
+        count: 7,
+        back: true,
+        on: false,
+    };
+    assert_eq!(page_of(6, 0), row, "a page size of 0 counts as 1");
+}
+
 #[test]
 fn a_huge_page_size_from_the_ui_never_overflows() {
     let (mut l, len) = seven(6);
@@ -116,11 +169,12 @@ fn label(n: u64, short: &str, rtl: bool) -> LangLabel {
 fn the_view_lists_every_layout_and_ticks_the_current_one() {
     let labels = [label(1, "EN", false), label(2, "ع", true)];
     let keys = [("esc".to_owned(), Nav::Esc)];
-    let v = list_view(&LangList::open(1), &labels, LayoutId::new(2), &keys);
+    let v = list_view(&LangList::open(1), &labels, LayoutId::new(2), &keys, ROWS);
     assert_eq!(
         (v.hi, v.rows.len(), v.keys.clone()),
         (1, 2, vec!["esc".to_owned()])
     );
+    assert_eq!(v.page, LangList::open(1).page(ROWS, 2));
     assert_eq!((v.page_back, v.page_on), (None, None), "no page keys");
     assert_eq!(v.rows[1].icon, Some(CURRENT_ICON));
     assert!(v.rows[1].current && v.rows[1].rtl && v.rows[1].arabic);
@@ -139,6 +193,7 @@ fn the_page_buttons_send_the_board_keys_that_turn_the_page() {
         &[label(1, "EN", false)],
         LayoutId::new(1),
         &keys,
+        ROWS,
     );
     assert_eq!(v.keys, ["up", "left", "right"]);
     assert_eq!(v.page_back.as_deref(), Some("left"));
@@ -153,7 +208,7 @@ fn the_page_keys_are_named_once_for_the_list_and_its_buttons() {
     assert_eq!(l.key(PAGE_BACK, 5, len), Moved::Hi);
     assert_eq!(l.hi(len), 0);
     let keys = [("b".to_owned(), PAGE_BACK), ("o".to_owned(), PAGE_ON)];
-    let v = list_view(&l, &[label(1, "EN", false)], LayoutId::new(1), &keys);
+    let v = list_view(&l, &[label(1, "EN", false)], LayoutId::new(1), &keys, ROWS);
     assert_eq!(
         (v.page_back.as_deref(), v.page_on.as_deref()),
         (Some("b"), Some("o"))
@@ -172,6 +227,8 @@ proptest! {
         for nav in keys {
             let before = l.hi(len);
             let page = |hi: usize| hi / rows.max(1);
+            let shown = l.page(rows, len);
+            prop_assert_eq!(shown.at, page(before));
             match l.key(nav, rows, len) {
                 Moved::Pick(n) => prop_assert_eq!(n, before),
                 Moved::Stay => prop_assert_eq!(l.hi(len), before),
@@ -184,6 +241,9 @@ proptest! {
                 let last = (len - 1) / rows.max(1);
                 let want = if nav == Nav::Left { page(before).saturating_sub(1) } else { (page(before) + 1).min(last) };
                 prop_assert_eq!(page(l.hi(len)), want);
+                let can = if nav == PAGE_BACK { shown.back } else { shown.on };
+                prop_assert_eq!(want != shown.at, can, "the page says which ways it turns");
+                prop_assert_eq!(shown.count, last + 1);
             }
         }
     }

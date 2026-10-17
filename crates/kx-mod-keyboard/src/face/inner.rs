@@ -204,9 +204,14 @@ impl Inner {
         (self.settings.clone(), self.sizer.size())
     }
 
-    /// The state of `keys`, with `panel_keys` driving an open list; a new layout is noted first, so a reader
-    /// in its change event already sees the names' turn.
-    pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[(String, Nav)]) -> StateView {
+    /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
+    /// first, so a reader in its change event already sees the names' turn.
+    pub(super) fn state(
+        &mut self,
+        keys: &[KeyBox],
+        panel_keys: &[(String, Nav)],
+        rows: usize,
+    ) -> StateView {
         self.seen();
         let caps = self.caps();
         self.shown_caps = Some(caps);
@@ -221,6 +226,7 @@ impl Inner {
             list: &list,
             turn: self.turn.turn(),
             open: self.list.as_ref(),
+            rows,
             panel_keys,
             at: self.placer.at(),
             assist: self.assist,

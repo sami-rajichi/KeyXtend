@@ -1,7 +1,7 @@
 //! The language key's three designs as the mock-up moves them, and the List driven by the board's keys.
 
 use crate::host::{GOLDEN, id};
-use crate::rig::{Rig, STATE};
+use crate::rig::{ROWS, Rig, STATE};
 use kx_mod_keyboard::view::LONE_TIP;
 use kx_module_api::keys;
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, Scan, SwitchError};
@@ -189,6 +189,21 @@ fn paging_follows_the_page_size_the_ui_gives() {
     assert_eq!(r.state()["list"]["hi"], 0, "five-row pages hold all three");
 }
 
+/// The UI reads which page shows and which ways it turns, at the page size it gives, so it does no page maths.
+#[test]
+fn the_state_pages_the_list_at_the_size_the_ui_reads_it_with() {
+    let r = list();
+    r.switch("fr-fr");
+    r.tap("lang").unwrap();
+    let page = |rows| r.state_at(rows)["list"]["page"].clone();
+    let one = json!({ "at": 0, "count": 1, "back": false, "on": false });
+    assert_eq!(page(ROWS), one);
+    let first = json!({ "at": 0, "count": 2, "back": false, "on": true });
+    assert_eq!(page(2), first);
+    let middle = json!({ "at": 1, "count": 3, "back": true, "on": true });
+    assert_eq!(page(1), middle);
+}
+
 #[test]
 fn a_panel_key_clicked_as_a_tap_never_reaches_the_app() {
     let r = list();
@@ -227,7 +242,10 @@ fn a_layout_change_listener_reads_the_new_name_with_its_turn() {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let (face, log) = (Arc::downgrade(&r.face), Arc::clone(&seen));
     r.fakes.layouts.on_change(move || {
-        let json = face.upgrade().map(|f| f.state_json()).unwrap_or_default();
+        let json = face
+            .upgrade()
+            .map(|f| f.state_json(ROWS))
+            .unwrap_or_default();
         let lang = serde_json::from_str::<Value>(&json).unwrap()["lang"].clone();
         log.lock()
             .unwrap()
