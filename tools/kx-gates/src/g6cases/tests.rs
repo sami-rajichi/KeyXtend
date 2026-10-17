@@ -134,3 +134,26 @@ fn a_press_stop_is_judged_on_its_run_and_its_still_look_with_their_notes() {
         "it kept going"
     );
 }
+
+#[test]
+fn sideways_runs_where_the_pattern_scrolls_sideways_or_the_page_is_wide_by_make() {
+    for (scrollable, wide) in [(Some(true), false), (Some(true), true), (None, true)] {
+        assert!(unrun(scrollable, wide).is_none(), "{scrollable:?} {wide}");
+    }
+    for scrollable in [Some(false), None] {
+        let skipped = unrun(scrollable, false).expect("not run");
+        assert_eq!(
+            (skipped.name, skipped.ok),
+            (SIDE, None),
+            "Notepad, word wrap on"
+        );
+        assert_eq!(skipped.note["unjudged"], NO_OVERFLOW);
+    }
+    let failed = unrun(Some(false), true).expect("not run");
+    assert_eq!(
+        (failed.name, failed.ok),
+        (SIDE, Some(false)),
+        "never unjudged"
+    );
+    assert_eq!(failed.note[UNSCROLLABLE], NOT_WIDE);
+}

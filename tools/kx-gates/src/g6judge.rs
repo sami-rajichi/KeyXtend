@@ -104,7 +104,7 @@ pub fn ratio_ok(slow: f64, fast: f64, want: f64, slack: f64) -> bool {
     ratio > 0.0 && (ratio - want).abs() <= want * slack
 }
 
-/// True when the sideways cases are judged: the scroll pattern says it scrolls sideways, as the product asks.
+/// True when the scroll pattern says the window scrolls sideways, as the product asks.
 pub fn sideways(scrollable: Option<bool>) -> bool {
     scrollable == Some(true)
 }

@@ -30,6 +30,15 @@ const PRESS: &str = "press_stop";
 const TRIED: &str = "tried";
 /// The note's key for a still look's percents, before and after.
 const PAIRS: &str = "pairs";
+/// The sideways case's name.
+const SIDE: &str = "sideways";
+/// Why sideways is not judged: the scroll pattern says the window does not scroll sideways.
+const NO_OVERFLOW: &str = "no sideways overflow";
+/// Why sideways failed on a page G6 makes wide: its scroll pattern says it does not scroll sideways.
+const NOT_WIDE: &str =
+    "the scroll pattern says this page, made wide by G6, does not scroll sideways";
+/// The note's key for that.
+const UNSCROLLABLE: &str = "unscrollable";
 /// Why the end case is not judged on Explorer: Ctrl+End would not reach its list.
 const NO_FOCUS: &str =
     "UI Automation could not put the focus on Explorer's list, so Ctrl+End would miss it";
@@ -201,11 +210,24 @@ pub fn press_stop(s: &Scene) -> Result<Case, String> {
     Ok(Case::pressed(&going, &after, s.ctx.cfg.g6.min_changed))
 }
 
+/// The sideways case when it does not run: failed where the page is `wide` by make yet its pattern says it cannot
+/// scroll sideways, unjudged where it is not wide and the pattern does not say `scrollable`; none when it runs.
+fn unrun(scrollable: Option<bool>, wide: bool) -> Option<Case> {
+    if g6judge::sideways(scrollable) || (wide && scrollable.is_none()) {
+        return None;
+    }
+    Some(if wide {
+        Case::judged(SIDE, false, json!({ UNSCROLLABLE: NOT_WIDE }))
+    } else {
+        Case::unjudged(SIDE, NO_OVERFLOW)
+    })
+}
+
 /// Right, then left for `[pad] undo_div` times less, each ended by Stop, where the scroll pattern says the window
-/// scrolls sideways; unjudged elsewhere. Without a horizontal percent, the picture judges.
-pub fn sideways(s: &Scene) -> Result<Case, String> {
-    if !g6judge::sideways(s.sideways()) {
-        return Ok(Case::unjudged("sideways", "no sideways overflow"));
+/// scrolls sideways or it is `wide` by make (`unrun`). Without a horizontal percent, the picture judges.
+pub fn sideways(s: &Scene, wide: bool) -> Result<Case, String> {
+    if let Some(case) = unrun(s.sideways(), wide) {
+        return Ok(case);
     }
     let (g, min) = (&s.ctx.cfg.g6, s.ctx.cfg.g6.min_changed);
     let runs = [
@@ -220,7 +242,7 @@ pub fn sideways(s: &Scene) -> Result<Case, String> {
         ok &= look.moved(dir, min);
         shares.push(look.share);
     }
-    Ok(Case::judged("sideways", ok, json!({ "shares": shares })))
+    Ok(Case::judged(SIDE, ok, json!({ "shares": shares })))
 }
 
 /// From the window's end, up for `back_ms` and Stop, then down until the pad stops by itself; the end case and the
