@@ -1,5 +1,5 @@
-//! The keyboard window's scroll pad: its clicks, which sound like a key, and the pointer on it go to the face, which
-//! publishes them on the bus, each answering `{board, state}`.
+//! The keyboard window's scroll pad: its clicks, which sound like a key but leave no frame log mark, and the pointer on
+//! it go to the face, which publishes them on the bus, each answering `{board, state}`.
 
 use super::qobject;
 use crate::bridges::qs;
