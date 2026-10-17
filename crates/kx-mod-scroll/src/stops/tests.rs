@@ -1,4 +1,4 @@
-//! Each stop rule of spec §5.2: the tap's checks, the end, a press, the limit and a lost target.
+//! Each stop rule of spec §5.2: the tap's checks, the end, a press, the limit and a closed target.
 
 use super::*;
 use crate::fixture::{self, settings};
@@ -188,9 +188,9 @@ fn no_limit_never_times_out() {
 }
 
 #[test]
-fn a_closed_or_lost_target_stops_quietly() {
+fn a_closed_target_stops_quietly_and_a_lost_point_does_not() {
     assert_eq!(Halt::failed(ScrollError::Gone), Some(Gone));
-    assert_eq!(Halt::failed(NoTarget), Some(Gone));
+    assert_eq!(Halt::failed(NoTarget), None, "the last target goes on");
 }
 
 #[test]

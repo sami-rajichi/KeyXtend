@@ -1,5 +1,6 @@
 //! A tick while scrolling: every `check_ms` the limit, a fresh aim and the reach ahead, then the owed lines turned on
-//! the latest target. Only Refused never stops it: those lines drop, so nothing piles up.
+//! the latest target. Of the failures, only a closed target stops it: a refused turn's lines drop, so nothing piles
+//! up, and an aim with no point keeps the last target.
 
 use super::Actor;
 use crate::Halt;

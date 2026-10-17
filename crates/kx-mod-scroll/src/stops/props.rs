@@ -171,7 +171,7 @@ fn cause(s: &ScrollSettings, step: Step, since: Duration) -> Option<Halt> {
     match step {
         Step::Read(Reach::End) if s.stop_at_end => Some(Halt::End),
         Step::Press(false) if s.stop_on_press => Some(Halt::Press),
-        Step::Fail(ScrollError::NoTarget | ScrollError::Gone) => Some(Halt::Gone),
+        Step::Fail(ScrollError::Gone) => Some(Halt::Gone),
         Step::Wait(_) if due(s, since) => Some(Halt::Limit),
         _ => None,
     }

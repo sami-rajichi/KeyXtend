@@ -1,4 +1,4 @@
-//! When scrolling stops, and why (spec §5.2): a tap that cannot scroll, the end, a press, the limit, or a lost
+//! When scrolling stops, and why (spec §5.2): a tap that cannot scroll, the end, a press, the limit, or a closed
 //! target. Pure: the actor reads the target and the time, and turns each `Halt` into a notice or a quiet stop.
 
 use std::time::Duration;
@@ -23,7 +23,7 @@ pub enum Halt {
     Press,
     /// The limit after the last pad tap passed.
     Limit,
-    /// The target closed, or was lost, while scrolling.
+    /// The target closed while scrolling.
     Gone,
     /// A refused first aim, tried again, found our own list, which turned a page instead, as at a first tap.
     Paged,
@@ -58,14 +58,15 @@ impl Halt {
         }
     }
 
-    /// Why a failed aim or turn ends a running scroll. `Refused` never does: the actor tries again next tick and drops
-    /// that tick's lines, so nothing piles up, and the limit ends a scroll that stays refused, unless `limit_s` is 0,
-    /// when only the user stops it.
+    /// Why a failed aim or turn ends a running scroll: only a closed target. `Refused` never does: the actor tries again
+    /// next tick and drops that tick's lines, so nothing piles up, and the limit ends a scroll that stays refused,
+    /// unless `limit_s` is 0, when only the user stops it. `NoTarget`, as with the pointer on our banner, keeps the
+    /// last target.
     #[must_use]
     pub const fn failed(err: ScrollError) -> Option<Self> {
         match err {
-            ScrollError::NoTarget | ScrollError::Gone => Some(Self::Gone),
-            ScrollError::Refused => None,
+            ScrollError::Gone => Some(Self::Gone),
+            ScrollError::NoTarget | ScrollError::Refused => None,
         }
     }
 }

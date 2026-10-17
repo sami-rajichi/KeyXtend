@@ -1,4 +1,4 @@
-//! Each way a scroll stops: the third tap, Stop, the end, a press, the limit, a lost target and a turn onto an end.
+//! Each way a scroll stops: the third tap, Stop, the end, a press, the limit, a closed target and a turn onto an end.
 
 use crate::rig::{APP, Rig, after, hidden, state, still, told};
 use kx_mod_scroll::Msg;
@@ -109,24 +109,27 @@ fn a_closed_target_stops_quietly() {
     rig.target.set_turn_error(Some(ScrollError::Gone));
     rig.tick_at(rig.ticks(1));
     assert_eq!(rig.take(), stopped(), "at a turn");
-    for err in [ScrollError::Gone, ScrollError::NoTarget] {
+    let mut rig = Rig::new();
+    rig.scrolling(Down);
+    rig.target.push_aim(Err(ScrollError::Gone));
+    rig.tick_at(rig.checks(1));
+    assert_eq!(rig.take(), stopped(), "at a check");
+}
+
+/// A refused aim, or one with no point, as with the pointer resting on our banner, keeps gliding the last target.
+#[test]
+fn a_refused_or_pointless_aim_at_a_check_keeps_the_target() {
+    for err in [ScrollError::Refused, ScrollError::NoTarget] {
         let mut rig = Rig::new();
         rig.scrolling(Down);
         rig.target.push_aim(Err(err));
         rig.tick_at(rig.checks(1));
-        assert_eq!(rig.take(), stopped(), "at a check: {err:?}");
+        assert_eq!(rig.take(), [], "{err:?}");
+        let (check, tick) = (rig.settings.check_ms, rig.settings.tick_ms);
+        rig.tick_at(after(u64::from(check + tick)));
+        let ids: Vec<_> = rig.target.turns().iter().map(|t| t.id).collect();
+        assert_eq!(ids, [APP.id, APP.id], "{err:?}");
     }
-}
-
-#[test]
-fn a_refused_aim_at_a_check_keeps_the_target() {
-    let mut rig = Rig::new();
-    rig.scrolling(Down);
-    rig.target.push_aim(Err(ScrollError::Refused));
-    rig.tick_at(rig.checks(1));
-    assert_eq!(rig.take(), []);
-    let ids: Vec<_> = rig.target.turns().iter().map(|t| t.id).collect();
-    assert_eq!(ids, [APP.id]);
 }
 
 #[test]
