@@ -3,30 +3,39 @@
 use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
-/// The D-pad's hub inset sits on both sides, so half the pad or more leaves no hub (DPad.qml `hubR`).
-const HUB_BELOW: f32 = 0.5;
+/// The D-pad's hub and Stop insets sit on both sides, so half the pad or more leaves no disc (DPad.qml `hubR`, Stop.qml
+/// margins).
+const INSET_BELOW: f32 = 0.5;
 
 impl Shape {
     /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark, dot
     /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit Cycle
-    /// dot no larger than the others and a D-pad hub of half the pad or more, naming the size.
+    /// dot no larger than the others, a D-pad hub or Stop inset of half the pad or more and a Stop wider than the hub,
+    /// naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
         self.check_dots()?;
         self.check_shares()?;
-        self.check_hub()
+        self.check_insets()
     }
 
-    /// The D-pad's hub must keep a size, so its inset stays below `HUB_BELOW`.
-    fn check_hub(&self) -> Result<(), String> {
-        let hub = self.dpad.hub;
-        if hub < HUB_BELOW {
-            return Ok(());
+    /// The D-pad's hub and Stop must keep a size, so each inset stays below `INSET_BELOW`, and Stop sits inside the hub.
+    /// Shares are checked first, so neither is NaN here.
+    fn check_insets(&self) -> Result<(), String> {
+        let (hub, stop) = (self.dpad.hub, self.dpad.stop);
+        let insets = [("dpad.hub", hub), ("dpad.stop", stop)];
+        if let Some((n, v)) = insets.iter().find(|(_, v)| *v >= INSET_BELOW) {
+            return Err(format!(
+                "shape: {n} {v} must be below {INSET_BELOW}, so it keeps a size"
+            ));
         }
-        Err(format!(
-            "shape: dpad.hub {hub} must be below {HUB_BELOW}, so the hub keeps a size"
-        ))
+        if stop < hub {
+            return Err(format!(
+                "shape: dpad.stop {stop} must be dpad.hub {hub} or more, so Stop sits inside the hub"
+            ));
+        }
+        Ok(())
     }
 
     /// Cycle's lit dot must be larger than an unlit one, which is how it stands out.

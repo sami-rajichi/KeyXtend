@@ -117,7 +117,29 @@ fn a_hub_inset_of_half_the_pad_or_more_is_refused() {
         assert!(e.contains("shape: dpad.hub"), "{hub}: {e}");
     }
     let wide = in_section("dpad", "hub = 0.34", "hub = 0.49");
+    let wide = wide.replacen("stop = 0.36", "stop = 0.49", 1);
     assert!(parse(&wide).is_ok(), "a thin ring still leaves a hub");
+}
+
+#[test]
+fn a_stop_inset_of_half_the_pad_or_more_is_refused() {
+    // Stop.qml insets Stop as DPad.qml insets the hub, so half the pad leaves no Stop.
+    for stop in ["0.5", "0.7"] {
+        let bad = in_section("dpad", "stop = 0.36", &format!("stop = {stop}"));
+        let e = parse(&bad).expect_err(stop);
+        assert!(e.contains("shape: dpad.stop "), "{stop}: {e}");
+    }
+}
+
+#[test]
+fn a_stop_wider_than_the_hub_is_refused() {
+    let wide = in_section("dpad", "stop = 0.36", "stop = 0.2");
+    let e = parse(&wide).expect_err("Stop past the hub");
+    assert!(e.contains("shape: dpad.stop 0.2"), "{e}");
+    let same = in_section("dpad", "stop = 0.36", "stop = 0.34");
+    assert!(parse(&same).is_ok(), "Stop may fill the hub");
+    let d = load().expect("shape.toml loads").dpad;
+    assert!(d.hub <= d.stop, "the shipped Stop sits inside the hub");
 }
 
 #[test]

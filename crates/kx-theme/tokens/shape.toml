@@ -78,7 +78,8 @@ icon_share = 0.7
 
 [dpad]
 # D-pad: gap between arrows, arrow icon, where each arrow sits across the ring from the hub's edge (0) to the pad's edge (1),
-# hub (below 0.5, or no hub is left) and Stop insets (shares of the pad), Stop icon; the grid's 45 degree turn is set in code.
+# hub and Stop insets (shares of the pad, each below 0.5 or no disc is left, Stop's at least the hub's so it sits inside),
+# Stop icon; the grid's 45 degree turn is set in code.
 # A reach of 0.5 centres each arrow in its quarter, as the iPod click wheel's labels (owner, 2026-10-16).
 gap_px = 2.0
 icon_px = 15.0
