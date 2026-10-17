@@ -14,6 +14,13 @@
 - The outline shows while the pointer is on the pad and while scrolling; our lists turn one page per tap.
 - Arrows centred in the ring (B); speed dots inside Stop; every feature built once for all platforms.
 
+## Owner decisions (2026-10-17)
+- G8's memory over budget is accepted for P5; P13's memory work takes it.
+- The speeds stay at 3 and 10 lines a second.
+- The aim stays wheel-like, at the last point outside the keyboard; aiming where the pointer rested is a P5 idea.
+- On the empty desktop the pad stays lit and moves nothing until Stop, the limit or a press, as Windows cannot tell it has nothing to scroll.
+- A second click on Win with nothing used between sends Win alone, so Start opens (spec §4.4, b3dfadb); only Win does this, as Alt alone opens menu bars.
+
 ## Design notes
 - **Ports (`kx-module-api/src/ports/scroll.rs`):** `Dir` (up, down, left, right), `ScrollConfig`, `Aim` (point, on the pointer, box, ours, target id), `Reach` (more, end, unknown), `ScrollError`, `ScrollTarget` (`open(config)` gives a `ScrollRun`), `ScrollRun` (`aim`, `turn(aim, dir, lines)`, `reach`; drop closes), `ScrollTargetKey` with the new capability `Scroll`.
 - **Bus events (same file):** `ScrollTap`, `ScrollStop`, `ScrollPeek` (pointer on the pad or off), `ScrollChanged` (live, direction, fast), `ScrollAimed` (the box to outline, or none), `ScrollPage` (back or on, to our open list). In `ports/assist.rs`: `PointerPressed` (ours or not), ungated; it carries no point.
@@ -99,7 +106,7 @@
 ## Edge cases
 1. Tap, tap, tap; another direction mid-scroll goes slow; Stop at either speed.
 2. The pointer never left the keyboard since the start: a notice, nothing scrolls.
-3. Nothing scrollable there, or already at the end: a notice, and it stops.
+3. Already at the end that way: a notice, and it stops. "Nothing to scroll there" shows for a closed window or an end both ways. Windows reads a window with no `ScrollPattern` as unknown, so the pad glides there until Stop, the limit or a press.
 4. The end is reached: it stops; with `stop_at_end` off it runs to the limit.
 5. A press outside our windows stops it; a press on the pad does not; `stop_on_press` off keeps it going.
 6. The limit counts from the last pad tap; 0 means none.
