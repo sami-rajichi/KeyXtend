@@ -71,7 +71,7 @@ pub struct Boot {
     pub hub: Arc<Hub>,
     /// Try again and Quit, which the kernel's thread drains.
     pub requests: Receiver<Request>,
-    /// The hub hears the kernel's notices and mouse-assist notes while these live.
+    /// The hub hears the kernel's notices, mouse-assist and scroll events while these live.
     pub heard: Vec<Subscription>,
 }
 
