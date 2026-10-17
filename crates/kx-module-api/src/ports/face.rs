@@ -115,7 +115,8 @@ pub enum FaceAction {
     },
     /// Qt took the press away, or the keyboard hid: the repeat stops and nothing more types.
     Leave,
-    /// A click on the scroll pad: an arrow, or Stop when `dir` is none.
+    /// A click on the scroll pad: an arrow, or Stop when `dir` is none. The hub also sends it as Stop when the keyboard
+    /// hides while the pad scrolls, as Stop goes off the screen with it.
     Pad {
         /// The arrow; none for the Stop button.
         dir: Option<Dir>,
