@@ -156,7 +156,8 @@ fn pad_taps_and_hover_reach_the_keyboard_as_face_actions_and_the_hub_publishes_n
 
 #[test]
 fn the_keyboard_watches_entries_until_unwatched_and_each_outline_edge_lies_under_it() {
-    let rig = Rig::new();
+    let (rig, bus, _subs) = heard();
+    bus.publish(&STILL).unwrap();
     assert!(rig.hub.watch_entries("kb"));
     assert!(rig.hub.lay_under("edge", "kb"));
     rig.hub.unwatch_entries("kb");
@@ -180,6 +181,24 @@ fn the_keyboard_watches_entries_until_unwatched_and_each_outline_edge_lies_under
         assert!(!rig.hub.lay_under("edge", "kb"));
     });
     assert_eq!(warned.len(), 2, "{warned:?}");
+}
+
+/// QML asks only while the scroll module runs; the hub refuses too, quietly, and never asks the guard.
+#[test]
+fn no_entry_is_watched_while_the_scroll_module_is_not_live() {
+    let (rig, bus, _subs) = heard();
+    let lines = lines_of(|| {
+        assert!(!rig.hub.watch_entries("kb"), "before it speaks");
+        bus.publish(&STILL).unwrap();
+        bus.publish(&ScrollChanged::OFF).unwrap();
+        assert!(!rig.hub.watch_entries("kb"), "once it stops");
+    });
+    assert!(lines.is_empty(), "{lines:?}");
+    let asked = rig.guard.calls();
+    let watched = asked
+        .iter()
+        .any(|c| matches!(c, GuardCall::WatchEntries(_)));
+    assert!(!watched, "{asked:?}");
 }
 
 #[test]

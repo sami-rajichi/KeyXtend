@@ -1,6 +1,6 @@
 //! The scroll pad's side of the hub: the scroll state and the box to outline as one JSON, our open list's page turns,
-//! and the guard's two scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll` waits for QML's read,
-//! and nothing here logs a box.
+//! and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll` waits for QML's read, and
+//! nothing here logs a box or a point.
 
 use super::face::done;
 use super::unread::Unread;
@@ -141,11 +141,10 @@ impl Hub {
     /// Turns our open list a page back or on, as its own page button does with `[ui] page_rows`; nothing where its page
     /// does not turn that way or with no list open. A turned page wakes the keyboard; call it on the Qt thread.
     pub fn turn_page(&self, back: bool) {
-        let Some(face) = self.face() else {
+        if self.face().is_none() {
             return;
-        };
-        let rows = self.lock().settings.page_rows;
-        let state = match serde_json::from_str::<State>(&face.state_json(rows)) {
+        }
+        let state = match serde_json::from_str::<State>(&self.state_json()) {
             Ok(state) => state,
             Err(e) => {
                 // The error's text may quote the state, so only its kind is logged.
@@ -161,12 +160,23 @@ impl Hub {
         }
     }
 
-    /// From now on keeps the last point the pointer had outside our window `title` each time it enters it, for the
-    /// scroll target; false while it does not show or when refused. Call it on the UI thread.
+    /// Until `unwatch_entries`, keeps the last point the pointer had outside our window `title` each time it enters it,
+    /// for the scroll target; false while the scroll module is not live, while the window does not show or when
+    /// refused. Call it on the UI thread.
     #[must_use]
     pub fn watch_entries(&self, title: &str) -> bool {
+        // QML asks only while the module runs; this check keeps that rule (ADR-0029) if it ever asks out of turn.
+        if !self.scroll.lock().live {
+            return false;
+        }
         let result = self.ports.guard.watch_entries(title);
         done(result, "the keyboard's entries will not be watched")
+    }
+
+    /// Stops keeping the pointer's last point outside our windows titled `title`, shown or not, and forgets the point
+    /// kept; `watch_entries` starts again. Call it on the UI thread.
+    pub fn unwatch_entries(&self, title: &str) {
+        self.ports.guard.unwatch_entries(title);
     }
 
     /// Puts our windows titled `title` just under our window `under`, as the outline goes under the keyboard; false

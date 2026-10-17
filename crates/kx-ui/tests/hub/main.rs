@@ -48,8 +48,8 @@ struct FakeFace {
     reply: Mutex<Option<Result<FaceReply, FaceError>>>,
     lang: Mutex<String>,
     state: Mutex<Option<String>>,
-    /// The page size the last state read asked for.
-    rows: Mutex<Option<usize>>,
+    /// The page size each state read asked for, oldest first.
+    rows: Mutex<Vec<usize>>,
 }
 
 impl FakeFace {
@@ -76,9 +76,9 @@ impl FakeFace {
         *self.state.lock().unwrap_or_else(PoisonError::into_inner) = Some(json);
     }
 
-    /// The page size the last state read asked for, none before the first.
-    fn rows(&self) -> Option<usize> {
-        *self.rows.lock().unwrap_or_else(PoisonError::into_inner)
+    /// The page size each state read asked for since the last call.
+    fn reads(&self) -> Vec<usize> {
+        std::mem::take(&mut *self.rows.lock().unwrap_or_else(PoisonError::into_inner))
     }
 }
 
@@ -88,7 +88,10 @@ impl KeyboardFace for FakeFace {
     }
 
     fn state_json(&self, rows: usize) -> String {
-        *self.rows.lock().unwrap_or_else(PoisonError::into_inner) = Some(rows);
+        self.rows
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(rows);
         let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         state.clone().unwrap_or_else(|| r#"{"state":1}"#.to_owned())
     }

@@ -3,12 +3,14 @@
 //! open; the hub does no page maths.
 
 use super::listened;
+use crate::logs::warnings_of;
 use crate::{FakeFace, Rig, provide};
 use kx_module_api::ports::{FaceAction, FaceReply, KeyId, ScrollPage};
 use kx_module_api::{Module, ModuleCx};
 use kx_test_support::host::FakeHost;
 use kx_ui::{MANIFEST, UiModule, Wake};
-use serde_json::json;
+use serde_json::{Value, json};
+use std::path::Path;
 use std::sync::Arc;
 
 /// The board keys that turn the list back and on, as the face names them.
@@ -16,6 +18,8 @@ const BACK: &str = "left";
 const ON: &str = "right";
 /// Both page keys, as the shipped board has them.
 const KEYS: [Option<&str>; 2] = [Some(BACK), Some(ON)];
+/// The keyboard's golden state with the list open, from this crate.
+const GOLDEN_LIST: &str = "../kx-mod-keyboard/tests/golden/state-list.json";
 
 /// A face state with the list open, whose page turns `back` and `on` as the face says, and the page keys `keys`.
 fn listing(back: bool, on: bool, keys: [Option<&str>; 2]) -> String {
@@ -79,11 +83,33 @@ fn the_page_size_comes_from_the_ui_settings() {
     let mut module = UiModule::new(Arc::clone(&rig.hub));
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
     face.set_state(listing(false, true, KEYS));
+    face.reads();
     rig.hub.turn_page(false);
-    assert_eq!(face.rows(), Some(rows), "the page turn reads the state");
+    assert_eq!(face.reads(), [rows], "the page turn reads the state once");
     assert_eq!(face.acts(), [button(ON, rows)]);
     let _ = rig.hub.state_json();
-    assert_eq!(face.rows(), Some(rows), "QML reads it at that size too");
+    assert_eq!(face.reads(), [rows], "QML reads it at that size too");
+}
+
+/// The keyboard's own golden list, with its page and every other field, reads as the hub expects.
+#[test]
+fn the_keyboards_golden_list_reads_and_its_page_turns() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_LIST);
+    let mut state: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let list = &state["list"];
+    assert_eq!(list["page"]["count"], 1, "the golden list fits one page");
+    let on = list["page_on"].as_str().unwrap().to_owned();
+    let (rig, face, _host) = Rig::with_face();
+    face.set_state(state.to_string());
+    let warned = warnings_of(|| {
+        rig.hub.turn_page(true);
+        rig.hub.turn_page(false);
+    });
+    assert!(warned.is_empty() && face.acts().is_empty(), "{warned:?}");
+    state["list"]["page"]["on"] = true.into();
+    face.set_state(state.to_string());
+    rig.hub.turn_page(false);
+    assert_eq!(face.acts(), [button(&on, rows())]);
 }
 
 /// The page buttons dim at either end, as the face's page says, so neither end turns.

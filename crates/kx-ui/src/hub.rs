@@ -5,7 +5,6 @@
 mod app;
 mod assist;
 mod bus;
-mod entries;
 mod face;
 mod fonts;
 mod look;
