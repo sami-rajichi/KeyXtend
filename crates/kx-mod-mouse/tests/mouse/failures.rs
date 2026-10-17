@@ -2,15 +2,13 @@
 //! engine the hook gave up is in `reset`.
 
 use crate::logs::{Fields, MESSAGE, lines_of};
-use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown, told};
+use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, down, moved, shown, told};
 use kx_mod_mouse::{ESC, ID, Msg, STOPPED_LINE};
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
+use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Toggle};
 use kx_module_api::{SettingsError, WriteError, keys};
 use tracing::Level;
 
-/// The OS error code a refused hook carries.
-const CODE: i32 = 1428;
 /// Stats whose numbers appear nowhere else.
 const STATS: HookStats = HookStats {
     events: 101,
@@ -23,8 +21,6 @@ const STATS: HookStats = HookStats {
     passed_inside: 8,
 };
 
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
 /// The field that names a refused write's kind.
 const KIND: &str = "kind";
 /// A value a refusal's text quotes, which no log line may show.

@@ -1,18 +1,13 @@
 //! An engine the hook gave up: the modes turn off for this session, so one tap on a mode key starts afresh, and held
 //! latches get one fresh run at once, once until the user acts again; a late word from an older run changes nothing.
 
-use crate::rig::{A, Heard, Rig, T0, T1, down, shown, told, up};
+use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
 use kx_mod_mouse::Msg;
 use kx_module_api::keys;
 use kx_module_api::ports::Button::Left;
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::PointerAct::{Down, KeyDown, KeyUp, Up};
-use kx_module_api::ports::{HookError, Scan, Toggle};
-
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
-/// The OS error code a refused hook carries.
-const CODE: i32 = 1428;
+use kx_module_api::ports::{HookError, Toggle};
 
 /// A rig whose hook runs only for a latched Shift, with what it said so far taken.
 fn latched() -> Rig {

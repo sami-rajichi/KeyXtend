@@ -1,15 +1,13 @@
 //! The actor over the fake hook: the hook runs only while needed, the modes follow spec §5.1, and the engine's notes
 //! reach the bus.
 
-use crate::rig::{A, B, C, Heard, RCLICK, Rig, T0, T1, T2, down, due, moved, shown, up};
+use crate::rig::{A, B, C, Heard, RCLICK, Rig, SHIFT, T0, T1, T2, down, due, moved, shown, up};
 use kx_mod_mouse::{MAX_LATCHES, MouseSettings, Msg};
 use kx_module_api::ports::GrabState::{Armed, Carrying, Off};
 use kx_module_api::ports::{
     AssistNote, Button, PointerAct, PointerEvent, PointerMoved, Scan, Toggle,
 };
 
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
 /// The first of the made-up modifier codes that fill every latch.
 const MOD_BASE: u16 = 0x70;
 

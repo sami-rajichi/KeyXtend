@@ -47,7 +47,7 @@ struct Live {
 /// The mouse module's runtime: one per start, on its own thread.
 #[allow(
     clippy::struct_excessive_bools,
-    reason = "Each flag is one fact kept between messages: Right-click saved and shown, a failing start, a spent restart."
+    reason = "Each flag is one fact kept between messages: Right-click saved and shown, the pad scrolling, a failing start, a spent restart."
 )]
 pub struct Actor {
     hook: Arc<dyn PointerHook>,

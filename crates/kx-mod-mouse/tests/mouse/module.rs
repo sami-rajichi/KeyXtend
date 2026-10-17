@@ -2,11 +2,11 @@
 //! over the bus.
 
 use crate::logs::{MESSAGE, Planned, lines_of};
-use crate::rig::{RCLICK, T0};
+use crate::rig::{RCLICK, SHIFT, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, Dir, GrabState, HookConfig, HookError, HookRun,
-    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, Scan, ScrollAsk,
+    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, ScrollAsk,
     ScrollChanged, Toggle,
 };
 use kx_module_api::{
@@ -22,8 +22,6 @@ use tracing::Level;
 
 /// The longest a threaded test waits for the actor; it never sleeps.
 const WAIT: Duration = Duration::from_secs(10);
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
 
 /// A hook that never starts.
 struct Idle;

@@ -2,33 +2,18 @@
 //! press is told, so a press outside our windows can stop the scroll; the modes work as before.
 
 use crate::logs::lines_of;
-use crate::rig::{A, B, DPI, Heard, Rig, T0, T1, T2, down, due, moved, shown, told, up};
+use crate::rig::{
+    A, B, CODE, Heard, Rig, SHIFT, T0, T1, T2, down, due, moved, ours, shown, told, up,
+};
 use kx_mod_mouse::Msg;
 use kx_module_api::keys;
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{
-    AssistNote, Button, HookError, Point, PointerEvent, PointerMoved, PointerPressed, Scan, Toggle,
-};
+use kx_module_api::ports::{AssistNote, HookError, PointerMoved, PointerPressed, Toggle};
 use tracing::Level;
-
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
-/// The OS error code a refused hook carries.
-const CODE: i32 = 1428;
 
 /// A press told on the bus.
 fn pressed(ours: bool) -> Heard {
     Heard::Pressed(PointerPressed { ours })
-}
-
-/// A left press on one of our windows at `at`.
-fn ours(at: Point) -> PointerEvent {
-    PointerEvent::Down {
-        button: Button::Left,
-        at,
-        ours: true,
-        dpi: DPI,
-    }
 }
 
 /// A started rig that scrolls, with the command settled and what it said so far taken.
