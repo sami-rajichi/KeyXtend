@@ -12,6 +12,9 @@ use place::{Mark, height, spans, under};
 /// The one pair allowed below its minimum (owner, 2026-10-02): the Carousel's side names, faded as decoration.
 pub const EXCEPTION: &str = "Carousel side names";
 
+/// Stop's unlit speed dot, read against the lit one beside it.
+const SPEED_DOT: &str = "D-pad unlit speed dot by a lit one";
+
 /// Windows 11's plain window colours, light then dark (Mica's base): what a system backdrop shows behind the plate.
 pub const WINDOWS: [Rgba; 2] = [
     Rgba {
@@ -216,18 +219,34 @@ fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     }
 }
 
-/// The D-pad's icons on their flat arrows, tinted as DPad.qml tints them, and Stop's.
+/// The D-pad's icons on their flat arrows, tinted as DPad.qml tints them, Stop's, and its unlit speed dot against a
+/// lit one; a pressed arrow takes the keys' press shade and, in high contrast, their press text.
 fn dpad(v: &LookView, out: &mut Vec<Drawn>) {
     let (d, p) = (&v.dpad, &v.palette);
     for (name, ink, face) in [
         ("D-pad arrow", d.ink, d.face),
         ("D-pad lit arrow", d.on_ink, d.on),
     ] {
-        let bgs = [face, p.hover.on(face), v.common.press.on(face)];
+        let bgs = [face, p.hover.on(face)];
         out.push(worst(name, ink, 1.0, &bgs, WCAG_SHAPES));
+        let (pressed, bg) = (p.press_ink.unwrap_or(ink), p.press.on(face));
+        out.push(worst(
+            &format!("{name}, press"),
+            pressed,
+            1.0,
+            &[bg],
+            WCAG_SHAPES,
+        ));
     }
     let stop = worst("D-pad Stop", d.stop_ink, 1.0, &[d.stop], WCAG_SHAPES);
     out.push(stop);
+    // The faded dot is the ink, so high contrast's system-pair check leaves it out as it does the other faded marks.
+    out.push(Drawn {
+        name: SPEED_DOT.to_owned(),
+        ink: d.stop_ink.over(d.stop, v.shape.dpad.dot_off),
+        bg: d.stop_ink,
+        min: WCAG_SHAPES,
+    });
 }
 
 #[cfg(test)]

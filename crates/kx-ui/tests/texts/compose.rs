@@ -3,7 +3,7 @@
 use crate::{CONTROLS, all, items, lang};
 use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
-use kx_ui::i18n::keys::LIST_JOIN;
+use kx_ui::i18n::keys::{BADGE_JOIN, LIST_JOIN};
 
 /// Line breaks a quoted TOML key may hold: LF, CR, NEL, and the line and paragraph separators.
 const BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
@@ -75,6 +75,14 @@ fn each_language_joins_a_list_its_own_way() {
     assert_eq!(lang("fr").list(&three, 0), "a, b, c");
     // A Latin name next to the Arabic "و" keeps its place in the Arabic order; after "،" it would not (owner).
     assert_eq!(lang("ar").list(&three, 0), "a و b و c");
+}
+
+#[test]
+fn the_badge_joins_its_parts_with_each_languages_comma() {
+    assert_eq!(lang("en").text(BADGE_JOIN), ", ");
+    assert_eq!(lang("fr").text(BADGE_JOIN), ", ");
+    // Its parts are Arabic words, so they take the Arabic comma, never a detached "و".
+    assert_eq!(lang("ar").text(BADGE_JOIN), "\u{60c} ");
 }
 
 #[test]

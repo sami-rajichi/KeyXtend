@@ -1,16 +1,18 @@
 //! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list and
-//! the mouse module's state.
+//! the mouse and scroll modules' states.
 
 mod assist;
 mod fit;
 mod held;
+mod list;
+mod pad;
 
 pub(super) use held::Went;
 
 use super::STATE;
 use crate::geom::{Area, KeyBox};
-use crate::langkey::{LangClick, Turn, click};
-use crate::panel::{LangList, Moved};
+use crate::langkey::Turn;
+use crate::panel::LangList;
 use crate::place::Placer;
 use crate::repeat::Repeat;
 use crate::run::{Ports, Typing};
@@ -18,10 +20,11 @@ use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
+use kx_module_api::SettingsHandle;
 use kx_module_api::ports::{
     AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen,
+    ScrollChanged,
 };
-use kx_module_api::{SettingsHandle, keys};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -47,6 +50,12 @@ pub(super) struct Inner {
     shown_caps: Option<bool>,
     /// The mouse module's state, as the bus last told it.
     assist: AssistChanged,
+    /// The scroll module's state, as the bus last told it.
+    scroll: ScrollChanged,
+    /// The pointer is on the scroll pad.
+    hover: bool,
+    /// Counts the scroll module's live runs, so a module that started again hears the pointer anew.
+    run: u64,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
     /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
@@ -77,6 +86,9 @@ impl Inner {
             list: None,
             shown_caps: None,
             assist: AssistChanged::OFF,
+            scroll: ScrollChanged::OFF,
+            hover: false,
+            run: 0,
             unshown: false,
             #[cfg(debug_assertions)]
             caps_flipped: false,
@@ -135,63 +147,7 @@ impl Inner {
         self.ports.layouts.list().iter().map(|l| l.id).collect()
     }
 
-    /// A click on the language key: a step asks the app to switch, which a later refresh sees. With one layout
-    /// installed it does nothing, except close a list that is still open.
-    pub(super) fn lang(&mut self, back: bool) -> FaceReply {
-        let count = self.ports.layouts.list().len();
-        match click(self.settings.lang_key, back, count, self.list.is_some()) {
-            LangClick::Still => FaceReply::default(),
-            LangClick::Step(by) => match self.ports.layouts.step(by) {
-                Ok(()) => {
-                    if self.settings.lang_key == LangKey::Carousel {
-                        self.turn.asked(by);
-                    }
-                    FaceReply::default()
-                }
-                Err(_) => notice(keys::LANG_NOT_SWITCHED, FaceReply::default()),
-            },
-            LangClick::List => {
-                let now = self.ports.layouts.current().label.id;
-                let at = self.ids().iter().position(|&id| id == now);
-                self.list = match self.list {
-                    Some(_) => None,
-                    None => Some(LangList::open(at.unwrap_or_default())),
-                };
-                STATE
-            }
-        }
-    }
-
-    /// Key `nav` for the open list, at `rows` rows per page; with no list open it does nothing.
-    pub(super) fn panel(&mut self, nav: Nav, rows: usize) -> Result<FaceReply, FaceError> {
-        let len = self.ports.layouts.list().len();
-        let Some(list) = self.list.as_mut() else {
-            return Ok(FaceReply::default());
-        };
-        match list.key(nav, rows, len) {
-            Moved::Stay => Ok(FaceReply::default()),
-            Moved::Hi => Ok(STATE),
-            Moved::Close => {
-                self.list = None;
-                Ok(STATE)
-            }
-            Moved::Pick(at) => self.pick(at),
-        }
-    }
-
-    /// Picks the layout at `index` of the list and closes it.
-    fn pick(&mut self, index: usize) -> Result<FaceReply, FaceError> {
-        let list = self.ports.layouts.list();
-        let label = list.get(index).ok_or(FaceError::NoChoice(index))?;
-        self.list = None;
-        self.turn.clear();
-        Ok(match self.ports.layouts.pick(label.id) {
-            Ok(()) => STATE,
-            Err(_) => notice(keys::LANG_NOT_SWITCHED, STATE),
-        })
-    }
-
-    /// The size, place and pick actions; the face does taps, held keys, relabels and panel keys itself.
+    /// The size, place and pick actions; the face does taps, held keys, relabels, panel keys and the pad itself.
     pub(super) fn act(&mut self, action: FaceAction) -> Result<FaceReply, FaceError> {
         match action {
             FaceAction::Smaller => self.resized(Sizer::smaller),
@@ -219,7 +175,9 @@ impl Inner {
             | FaceAction::Press { .. }
             | FaceAction::Tick
             | FaceAction::LetGo { .. }
-            | FaceAction::Leave => Ok(FaceReply::default()),
+            | FaceAction::Leave
+            | FaceAction::Pad { .. }
+            | FaceAction::PadHover { .. } => Ok(FaceReply::default()),
             #[cfg(debug_assertions)]
             FaceAction::FlipCaps => {
                 self.caps_flipped = !self.caps_flipped;
@@ -246,9 +204,14 @@ impl Inner {
         (self.settings.clone(), self.sizer.size())
     }
 
-    /// The state of `keys`, with `panel_keys` driving an open list; a new layout is noted first, so a reader
-    /// in its change event already sees the names' turn.
-    pub(super) fn state(&mut self, keys: &[KeyBox], panel_keys: &[(String, Nav)]) -> StateView {
+    /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
+    /// first, so a reader in its change event already sees the names' turn.
+    pub(super) fn state(
+        &mut self,
+        keys: &[KeyBox],
+        panel_keys: &[(String, Nav)],
+        rows: usize,
+    ) -> StateView {
         self.seen();
         let caps = self.caps();
         self.shown_caps = Some(caps);
@@ -263,9 +226,11 @@ impl Inner {
             list: &list,
             turn: self.turn.turn(),
             open: self.list.as_ref(),
+            rows,
             panel_keys,
             at: self.placer.at(),
             assist: self.assist,
+            scroll: self.scroll,
         })
     }
 }

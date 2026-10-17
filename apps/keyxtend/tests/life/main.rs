@@ -1,6 +1,7 @@
 //! The app from start to stop over the fake platform, without Qt: every module starts and types, Quit stops them and
-//! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, and
-//! the language shown always matches the legends.
+//! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, the
+//! language shown always matches the legends, the pointer hook and the scroll target reach only their own modules,
+//! and the pad scrolls.
 
 #![allow(
     clippy::unwrap_used,
@@ -11,7 +12,9 @@
 mod fakes;
 mod lang;
 mod rig;
+mod scroll;
 mod second;
+mod ships;
 mod stop;
 
 use keyxtend::boot::{Boot, modules};
@@ -26,10 +29,11 @@ use rig::{Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 4] = [
+const SHIPPED: [ModuleId; 5] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
+    kx_mod_scroll::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -38,7 +42,7 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_the_layouts_keyboard_mouse_and_ui_modules() {
+fn the_app_ships_the_layouts_keyboard_mouse_scroll_and_ui_modules() {
     let boot = Rig::new().load();
     let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);
@@ -119,8 +123,9 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     let text = std::fs::read_to_string(&files.log).unwrap();
     assert!(text.contains("try again was refused"), "{text}");
     assert!(text.contains("keyboard"), "it names the module: {text}");
-    // The mouse module's state comes from its own thread, at start and at stop, with the overlay's and keys' wakes.
-    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys);
+    // The mouse and scroll modules' states come from their own threads, at start and at stop, with the overlay's,
+    // keys' and scroll's wakes.
+    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys | Wake::Scroll);
     let seen: Vec<Wake> = wakes.lock().unwrap().iter().filter(own).copied().collect();
     let order = [Wake::Settings, Wake::End];
     assert_eq!(seen, order, "the modules stop, then the UI ends");
@@ -128,7 +133,7 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     assert_eq!(
         last,
         Some(Wake::End),
-        "the mouse module told its stop first"
+        "the mouse and scroll modules told their stops first"
     );
     assert_eq!(hub.board_json(), NULL, "Quit stopped the modules");
 }

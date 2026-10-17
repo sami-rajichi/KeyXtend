@@ -23,13 +23,14 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The assist events, in the order `gates_are_inject_input_for_toggles_and_latches_only` checks.
-fn assist() -> [(&'static str, Option<Capability>); 8] {
+fn assist() -> [(&'static str, Option<Capability>); 9] {
     [
         row::<AssistToggle>(),
         row::<AssistChanged>(),
         row::<AssistAsk>(),
         row::<AssistNote>(),
         row::<PointerMoved>(),
+        row::<PointerPressed>(),
         row::<LatchesChanged>(),
         row::<LatchesUsed>(),
         row::<LatchesAsk>(),
@@ -60,7 +61,7 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
 #[test]
 fn gates_are_inject_input_for_toggles_and_latches_only() {
     let gates = assist().map(|r| r.1);
-    let want = [INJECT, None, None, None, None, INJECT, INJECT, INJECT];
+    let want = [INJECT, None, None, None, None, None, INJECT, INJECT, INJECT];
     assert_eq!(gates, want);
 }
 
@@ -102,6 +103,13 @@ fn a_pointer_move_hides_its_point() {
     let text = format!("{:?}", PointerMoved { at: AT });
     hides(&text, &AT_TEXT);
     assert_eq!(text, format!("PointerMoved {{ at: {REDACTED_MARKER} }}"));
+}
+
+#[test]
+fn a_press_is_named_and_shows_only_whether_it_was_ours() {
+    assert_eq!(PointerPressed::NAME, "pointer-pressed");
+    let text = format!("{:?}", PointerPressed { ours: true });
+    assert_eq!(text, "PointerPressed { ours: true }");
 }
 
 #[test]

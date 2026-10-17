@@ -10,6 +10,9 @@ pub const FILE: &str = "kx-target-window.toml";
 /// Windows' hung-window mark, in ms: an app that reads no message for this long counts as hung, and Windows swaps in
 /// its ghost window (`IsHungAppWindow`).
 pub const HUNG_MARK_MS: u64 = 5_000;
+/// The most characters a user can type in an edit box before `EM_LIMITTEXT` raises it (Microsoft's `EM_LIMITTEXT`
+/// docs); the fill stays within it, so typing into a filled box still works.
+pub const TYPE_MAX: usize = 32_767;
 
 /// The window's settings.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -36,6 +39,14 @@ pub struct TargetConfig {
     pub layout_arg: String,
     /// Longest a gate's hang message makes the window sleep, in ms.
     pub hang_max_ms: u64,
+    /// Command-line switch that fills the box with long numbered lines, unwrapped, so it scrolls both ways.
+    pub fill_arg: String,
+    /// Lines the fill switch puts in the box.
+    pub fill_lines: u32,
+    /// Characters in each of those lines.
+    pub fill_cols: u32,
+    /// Command-line switch that makes the window DPI-unaware, as an old app is.
+    pub unaware_arg: String,
 }
 
 /// Why the settings could not be loaded; each message names the file.
@@ -65,8 +76,9 @@ pub enum ConfigError {
         /// The key.
         key: &'static str,
     },
-    /// The password and layout switches are the same text, so every `--layout` run would be a password box.
-    #[error("{}: password_arg and layout_arg must differ", .file.display())]
+    /// Two switches are the same text, so one would always turn on the other, such as every `--layout` run being a
+    /// password box.
+    #[error("{}: password_arg, layout_arg, fill_arg and unaware_arg must all differ", .file.display())]
     SameSwitch {
         /// The settings file.
         file: PathBuf,
@@ -74,6 +86,12 @@ pub enum ConfigError {
     /// The hang cap reaches Windows' hung-window mark, so a gate's hang would ghost the window.
     #[error("{}: hang_max_ms must stay below Windows' {HUNG_MARK_MS} ms hung-window mark", .file.display())]
     HangPastHungMark {
+        /// The settings file.
+        file: PathBuf,
+    },
+    /// The fill holds more characters than a user can type in the box, so typing into it would stop.
+    #[error("{}: fill_lines times fill_cols plus line ends must stay within {TYPE_MAX} characters", .file.display())]
+    FillTooLong {
         /// The settings file.
         file: PathBuf,
     },
@@ -90,7 +108,8 @@ pub enum ConfigError {
 /// Parses and checks the settings in `text`, which came from `file`; a relative log path starts at `file`'s folder.
 ///
 /// # Errors
-/// [`ConfigError::Parse`] for bad TOML or keys; [`ConfigError::Empty`] or [`ConfigError::NotPositive`] for bad values.
+/// [`ConfigError::Parse`] for bad TOML or keys; [`ConfigError::Empty`], [`ConfigError::SameSwitch`],
+/// [`ConfigError::HangPastHungMark`], [`ConfigError::NotPositive`] or [`ConfigError::FillTooLong`] for bad values.
 pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     let mut cfg: TargetConfig = toml::from_str(text).map_err(|source| ConfigError::Parse {
         file: file.to_path_buf(),
@@ -102,9 +121,48 @@ pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     Ok(cfg)
 }
 
-/// Refuses an empty title, log, font, name or switch, one text for both switches, a hang cap at Windows' hung-window
-/// mark, and a size that is not above zero.
+/// Refuses an empty title, log, font, name or switch, two switches with one text, a hang cap at Windows' hung-window
+/// mark, a size that is not above zero, and a fill too long to type into.
 fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
+    let file = file.to_path_buf();
+    if let Some(key) = empty_key(cfg) {
+        return Err(ConfigError::Empty { file, key });
+    }
+    let switches = [
+        &cfg.password_arg,
+        &cfg.layout_arg,
+        &cfg.fill_arg,
+        &cfg.unaware_arg,
+    ];
+    let twice = switches
+        .iter()
+        .enumerate()
+        .any(|(i, s)| switches[..i].contains(s));
+    if twice {
+        return Err(ConfigError::SameSwitch { file });
+    }
+    if cfg.hang_max_ms >= HUNG_MARK_MS {
+        return Err(ConfigError::HangPastHungMark { file });
+    }
+    let sizes = [
+        ("font_px", i64::from(cfg.font_px)),
+        ("width_px", i64::from(cfg.width_px)),
+        ("height_px", i64::from(cfg.height_px)),
+        ("fill_lines", i64::from(cfg.fill_lines)),
+        ("fill_cols", i64::from(cfg.fill_cols)),
+    ];
+    if let Some(&(key, _)) = sizes.iter().find(|(_, v)| *v <= 0) {
+        return Err(ConfigError::NotPositive { file, key });
+    }
+    let each = u64::from(cfg.fill_cols) + crate::fill::LINE_END.len() as u64;
+    if u64::from(cfg.fill_lines) * each > TYPE_MAX as u64 {
+        return Err(ConfigError::FillTooLong { file });
+    }
+    Ok(())
+}
+
+/// The first text key whose value is empty.
+fn empty_key(cfg: &TargetConfig) -> Option<&'static str> {
     let texts = [
         ("title", cfg.title.is_empty()),
         ("log", cfg.log.as_os_str().is_empty()),
@@ -112,35 +170,10 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
         ("edit_name", cfg.edit_name.is_empty()),
         ("password_arg", cfg.password_arg.is_empty()),
         ("layout_arg", cfg.layout_arg.is_empty()),
+        ("fill_arg", cfg.fill_arg.is_empty()),
+        ("unaware_arg", cfg.unaware_arg.is_empty()),
     ];
-    if let Some((key, _)) = texts.iter().find(|(_, empty)| *empty) {
-        return Err(ConfigError::Empty {
-            file: file.to_path_buf(),
-            key,
-        });
-    }
-    if cfg.password_arg == cfg.layout_arg {
-        return Err(ConfigError::SameSwitch {
-            file: file.to_path_buf(),
-        });
-    }
-    if cfg.hang_max_ms >= HUNG_MARK_MS {
-        return Err(ConfigError::HangPastHungMark {
-            file: file.to_path_buf(),
-        });
-    }
-    let sizes = [
-        ("font_px", cfg.font_px),
-        ("width_px", cfg.width_px),
-        ("height_px", cfg.height_px),
-    ];
-    if let Some((key, _)) = sizes.iter().find(|(_, v)| *v <= 0) {
-        return Err(ConfigError::NotPositive {
-            file: file.to_path_buf(),
-            key,
-        });
-    }
-    Ok(())
+    texts.iter().find(|(_, empty)| *empty).map(|(key, _)| *key)
 }
 
 /// The settings file `name` to read: beside the exe when `beside_exists`, else in `crate_dir`.

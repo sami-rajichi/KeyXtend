@@ -1,5 +1,5 @@
-//! G8's verdict: what it measured, set against each spec §10 budget it owns, its churn and its reading after use
-//! included.
+//! G8's verdict: what it measured, set against each spec §10 budget it owns, its churn and its readings after use and
+//! after a scroll included.
 #![cfg(windows)]
 
 use serde_json::Value;
@@ -8,6 +8,7 @@ use crate::budget::{self, Part};
 use crate::g2;
 use crate::g8cfg::G8;
 use crate::g8churn::{self, Churn};
+use crate::g8scroll::{self, Scrolled};
 use crate::g8size::Resize;
 use crate::g8ui::Presses;
 use crate::g8use::{self, Used};
@@ -39,6 +40,10 @@ pub struct Measured {
     pub churn: Churn,
     /// Private memory after use (ADR-0028), or why it was not read.
     pub used: Result<Used, String>,
+    /// Private memory after a scroll, or why it was not read.
+    pub scrolled: Result<Scrolled, String>,
+    /// What the scroll's target-window left open when it closed.
+    pub scroll_left: Vec<String>,
 }
 
 /// What G8 measured outside the product.
@@ -51,8 +56,8 @@ pub struct Outside {
     pub dropped: Option<f64>,
 }
 
-/// The budgets of spec §10 against a start shown after `shown_ms` and what G8 measured, the memory both cold and
-/// after use.
+/// The budgets of spec §10 against a start shown after `shown_ms` and what G8 measured, the memory cold, after use and
+/// after a scroll.
 pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outside) -> Vec<Part> {
     let start = if weak { g.weak_start_ms } else { g.start_ms };
     let char_p99 = m.g2["latency_ms"]["p99"]
@@ -60,12 +65,15 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         .filter(|_| g2::typed_intact(&m.g2));
     let [lit_p50, lit_worst] = highlight(g, &m.presses, o.hz);
     let [used_memory, used_commit] = g8use::parts(g, m.used.as_ref().ok());
+    let [scrolled_memory, scrolled_commit] = g8scroll::parts(g, m.scrolled.as_ref().ok());
     let mut all = vec![
         Part::at_most("start_ms", shown_ms, start),
         Part::at_most("memory_mb", Some(m.memory.working_mb), g.memory_mb),
         Part::at_most("commit_mb", Some(m.memory.commit_mb), g.commit_mb),
         used_memory,
         used_commit,
+        scrolled_memory,
+        scrolled_commit,
         Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
         Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
         lit_p50,
@@ -108,8 +116,8 @@ pub fn met(ended: bool, presses: &Presses, parts: &[Part]) -> bool {
     ended && presses.typed_ok && budget::all_pass(parts)
 }
 
-/// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode or when not every churn
-/// pop-up showed; else false.
+/// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode, when not every churn
+/// pop-up showed or when the churn left its scroll out; else false.
 pub fn verdict(weak: bool, churn: &Churn, met: bool) -> Value {
     out::pass(met, !weak && churn.whole())
 }

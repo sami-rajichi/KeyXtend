@@ -1,5 +1,5 @@
-//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, the memory's after use, and when a run
-//! passes.
+//! Tests of G8's verdict: each spec §10 budget's part, the key light's two, the memory's after use and after a scroll,
+//! and when a run passes.
 
 use serde_json::json;
 
@@ -40,6 +40,8 @@ fn sample() -> (G8, Measured, Outside) {
         ran_us: 0,
         churn,
         used: Ok(g8use::read_as(still)),
+        scrolled: Ok(g8scroll::read_as(still)),
+        scroll_left: Vec::new(),
     };
     let o = Outside {
         hz: Some(165.0),
@@ -60,8 +62,22 @@ fn a_run_within_every_budget_passes() {
     assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
     assert_eq!(
         parts.len(),
-        14,
-        "one part per spec §10 budget G8 owns, two for the key light and two for the memory after use"
+        16,
+        "one part per spec §10 budget G8 owns, two for the key light, two for the memory after use and two after a \
+         scroll"
+    );
+}
+
+#[test]
+fn a_reading_after_a_scroll_that_was_not_taken_fails_both_its_parts_and_the_run() {
+    let (g, mut m, o) = sample();
+    m.presses.typed_ok = true;
+    m.scrolled = Err("the scroll pad has no box".into());
+    let parts = parts(&g, Some(420.0), &m, false, &o);
+    assert_eq!(failed(&parts), [g8scroll::MEMORY, g8scroll::COMMIT]);
+    assert_eq!(
+        verdict(false, &m.churn, met(true, &m.presses, &parts)),
+        json!(false)
     );
 }
 
@@ -205,7 +221,7 @@ fn an_idle_animation_or_a_lost_character_fails_its_part() {
 }
 
 #[test]
-fn weak_mode_or_a_churn_short_of_pop_ups_meeting_every_budget_is_partial_and_a_miss_fails() {
+fn weak_mode_a_control_churn_or_missed_pop_ups_are_partial_and_a_miss_fails() {
     let (_, m, _) = sample();
     let whole = &m.churn;
     let no_list = Churn {
@@ -224,6 +240,15 @@ fn weak_mode_or_a_churn_short_of_pop_ups_meeting_every_budget_is_partial_and_a_m
     );
     assert_eq!(verdict(true, whole, true), json!(out::PARTIAL));
     assert_eq!(verdict(false, &no_bubble, true), json!(out::PARTIAL));
+    let control = Churn {
+        scrolling: false,
+        ..whole.clone()
+    };
+    assert_eq!(
+        verdict(false, &control, true),
+        json!(out::PARTIAL),
+        "a control churn left the scroll out"
+    );
     assert_eq!(verdict(true, whole, false), json!(false));
     assert_eq!(verdict(false, whole, false), json!(false));
 }

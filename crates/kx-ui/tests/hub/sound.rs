@@ -1,9 +1,9 @@
 //! The key and mouse sounds through the hub: each event's takes in turn at its gain under the `[ui]` switches and
-//! volume, after a key's frame mark, and never on a repeat, a top-bar button or a list key.
+//! volume, after a key's frame mark and on a pad tap, and never on a repeat, a top-bar button or a list key.
 
 use crate::{FakeFace, Rig};
 use kx_module_api::Bus;
-use kx_module_api::ports::{AssistNote, FaceAction, FaceReply, KeyId, Point};
+use kx_module_api::ports::{AssistNote, Dir, FaceAction, FaceReply, KeyId, Point};
 use kx_platform::ui::{ClipId, SpeakerConfig};
 use kx_test_support::host::{FakeCore, FakeHost};
 use kx_theme::sounds::Event;
@@ -161,6 +161,20 @@ fn a_held_key_sounds_once_at_its_press_and_never_on_its_ticks() {
     rig.hub.act(FaceAction::LetGo { id });
     rig.hub.act(FaceAction::Leave);
     assert_plays(&rig.speaker.take_plays(), &first_of([Event::Key]));
+}
+
+#[test]
+fn a_tap_on_a_pad_arrow_or_stop_sounds_like_a_key_and_the_pointer_on_it_does_not() {
+    let (rig, face, _host) = Rig::with_face();
+    for dir in [Some(Dir::Up), None] {
+        rig.hub.sent(FaceAction::Pad { dir }, || {});
+    }
+    for on in [true, false] {
+        rig.hub.sent(FaceAction::PadHover { on }, || {});
+    }
+    assert_eq!(face.acts().len(), 4, "each reached the face");
+    let volume = defaults().sound_volume;
+    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 2, volume));
 }
 
 #[test]

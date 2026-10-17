@@ -27,6 +27,15 @@ pub enum UiError {
     Refused(i32),
 }
 
+/// What a request to watch a window's entries found.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Watched {
+    /// The guard watches the window's entries now.
+    Held,
+    /// The window shows, but the guard does not hold it yet.
+    Unguarded,
+}
+
 /// Another copy of the app already runs in this user session.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 #[error("another copy is running")]
@@ -72,6 +81,33 @@ pub trait WindowGuard: Send + Sync {
     /// # Errors
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.
     fn lift_alone(&self, title: &str) -> Result<(), UiError>;
+
+    /// Until `unwatch_entries`, each time the pointer enters our guarded window titled `title`, keeps the last point it
+    /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread. `Unguarded` while the
+    /// window shows but the guard does not hold it yet; the caller asks again after a later guard try.
+    ///
+    /// # Errors
+    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError>;
+
+    /// Stops the entry watch on our windows titled `title`, shown or not, and forgets the point it kept, as the scroll
+    /// module stops; a call for the UI thread.
+    fn unwatch_entries(&self, title: &str);
+
+    /// Puts our shown windows titled `title` just under our window titled `under`, never activating them, as the
+    /// outline goes just under the keyboard; a call for the UI thread.
+    ///
+    /// # Errors
+    /// `NoWindow` while either is not shown, `Refused` when the OS says no.
+    fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError>;
+
+    /// Marks our shown window titled `title` as one that pages, as an open list does (ADR-0029). While a marked window
+    /// shows, every platform's scroll target aims at it whatever point it kept, so a pad tap turns its page, and it
+    /// passes over our other windows. The mark goes with the window; a call for the UI thread, as the window opens.
+    ///
+    /// # Errors
+    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
+    fn mark_pages(&self, title: &str) -> Result<(), UiError>;
 
     /// Notes the window that has the focus now.
     fn remember(&self) -> FocusToken;
@@ -252,48 +288,4 @@ pub trait Instance: Send + Sync {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    #[test]
-    fn a_watch_guard_stops_once_when_dropped() {
-        let stops = Arc::new(AtomicUsize::new(0));
-        let count = Arc::clone(&stops);
-        let guard = WatchGuard::new(move || {
-            count.fetch_add(1, Ordering::SeqCst);
-        });
-        assert_eq!(stops.load(Ordering::SeqCst), 0);
-        drop(guard);
-        assert_eq!(stops.load(Ordering::SeqCst), 1);
-    }
-
-    /// Compiles only for types a `Send + Sync` service may hold.
-    fn shared<T: Send + Sync>() {}
-
-    #[test]
-    fn a_watch_guard_can_live_in_a_shared_service() {
-        shared::<WatchGuard>();
-    }
-
-    #[test]
-    fn a_focus_token_keeps_its_raw_value() {
-        assert_eq!(FocusToken::new(u64::MAX).raw(), u64::MAX);
-    }
-
-    #[test]
-    fn the_default_look_is_light_with_nothing_set_and_the_usual_pointer() {
-        let look = SysLook::default();
-        assert!(!look.dark && !look.anim_off);
-        assert!(look.accent.is_none() && look.contrast.is_none());
-        assert_eq!(look.pointer_px, SysLook::POINTER_PX);
-        assert_eq!(SysLook::POINTER_PX, 32, "Windows' default pointer size");
-    }
-
-    #[test]
-    fn errors_say_what_happened() {
-        assert!(Running.to_string().contains("running"));
-        assert!(UiError::Refused(5).to_string().contains('5'));
-    }
-}
+mod tests;

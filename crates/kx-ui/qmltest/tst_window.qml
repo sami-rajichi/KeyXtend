@@ -102,7 +102,7 @@ Item {
                 const tip = win.st.keys[k.id].tip;
                 compare(keyed(win, k.id).Accessible.description, k.dim ? later : tip ? En.texts[tip] : "", k.id);
             }
-            compare(named(win, En.texts["key.dpad"]).Accessible.description, later, "the D-pad");
+            compare(named(win, En.texts["key.dpad"]).Accessible.description, En.texts[win.st.dpad.tip], "the D-pad");
         }
 
         function test_every_text_is_drawn_in_grayscale() {
@@ -179,15 +179,15 @@ Item {
             win.visible = false;
         }
 
-        function test_a_dimmed_key_and_the_dpad_tip_say_their_name_then_when_they_come() {
+        function test_a_dimmed_key_and_the_dpad_tip_say_their_name_then_why_they_are_dim() {
             const win = make();
             win.visible = true;
             waitForRendering(win.contentItem);
             const tip = Board.tipOf(win);
-            const said = [[keyed(win, "mic"), "key.mic"], [named(win, En.texts["key.dpad"]), "key.dpad"]];
-            for (const [it, name] of said) {
+            const said = [[keyed(win, "mic"), "key.mic", "tip.later"], [named(win, En.texts["key.dpad"]), "key.dpad", win.st.dpad.tip]];
+            for (const [it, name, why] of said) {
                 mouseMove(it, it.width / 2, it.height / 2);
-                compare(tip.name, En.texts[name] + "\n" + En.texts["tip.later"]);
+                compare(tip.name, En.texts[name] + "\n" + En.texts[why]);
             }
             win.visible = false;
         }

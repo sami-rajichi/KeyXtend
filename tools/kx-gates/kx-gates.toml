@@ -186,7 +186,8 @@ clicks = 200
 # Known text for the selection and modifier cases (G17, G18); plain ASCII, so every app shows it alike.
 text = "Hold still to grab, move, then click once to drop the selection here."
 page_title = "KeyXtend probe page"
-# The scroll documents (G6): lines, characters per line, and files in the Explorer folder.
+# The scroll documents (G6): lines, characters per line, and rows of files in the Explorer folder past the rows G6's
+# cases run down, at least a screen of them; G6 multiplies the rows by the files a row shows.
 scroll_lines = 300
 scroll_cols = 300
 scroll_files = 80
@@ -214,18 +215,6 @@ history_settle_ms = 1500
 forget_min_chars = 4
 # History entries longer than this, in characters, are never read.
 forget_max_chars = 200
-
-[g6]
-# One wheel notch (WHEEL_DELTA), and notches or UIA small steps per scroll.
-wheel_delta = 120
-notches = 3
-# The stand-in face, in px: a square this big, centred under the document, its top face_overlap_px above the window's
-# lower edge, as the keyboard sits over a document's lower part; the last point outside it, where G6 scrolls, then lies
-# in the document's body, clear of a status bar or a sideways scroll bar.
-face_px = 120
-face_overlap_px = 160
-# A window picture counts as changed when more than this share of its pixels changed.
-min_changed = 0.02
 
 [edit_keys]
 # Shortcuts the stage-1b probes press: Ctrl+Home, Ctrl+End, Home, Shift+End, Down, Ctrl+V, Ctrl+Z.

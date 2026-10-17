@@ -1,5 +1,5 @@
 //! Keeps our guarded windows in the topmost band: a window lifted back brings its guarded owners and the windows they
-//! own back too, each above its owner. It runs on the windows' own thread, from the guard's procedure.
+//! own back too, each above its owner. It runs on the windows' own thread, which also lifts or lays named ones here.
 
 use std::cell::{Cell, RefCell};
 use std::sync::OnceLock;
@@ -16,7 +16,7 @@ use windows::core::{PCWSTR, w};
 
 use super::band::{dropped, family, is_top, to_lift};
 use super::guard::{ex_of, guarded};
-use super::win::top_level;
+use super::win::{own_titled, own_windows, title, top_level};
 use crate::refused;
 
 /// The name of the message the guard posts to check a window again after the window has answered the move.
@@ -80,6 +80,14 @@ pub(super) fn front(hwnd: HWND) -> Result<(), UiError> {
     to_top(hwnd, SWP_NOOWNERZORDER)
 }
 
+/// Puts our window just under `above` in the z-order, without moving or activating it; its owner stays where it is.
+#[allow(unsafe_code, reason = "Changes our own window's z-order.")]
+pub(super) fn below(hwnd: HWND, above: HWND) -> Result<(), UiError> {
+    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+    // SAFETY: our own live window; no move, no size and no activation.
+    unsafe { SetWindowPos(hwnd, Some(above), 0, 0, 0, 0, flags) }.map_err(|e| refused(&e))
+}
+
 /// Puts our window at the top of the topmost band with the `extra` flags, without moving or activating it.
 #[allow(unsafe_code, reason = "Changes our own window's z-order.")]
 fn to_top(hwnd: HWND, extra: SET_WINDOW_POS_FLAGS) -> Result<(), UiError> {
@@ -139,4 +147,43 @@ pub(super) fn keep_top(hwnd: HWND) {
         let _ = front(w);
     }
     LIFTING.with_borrow_mut(|l| l.retain(|w| !chain.contains(w)));
+}
+
+/// Lifts our shown windows titled `title_is` alone to the top of the topmost band, never activating them and leaving
+/// their owners where they are: the guard may have lifted a banner or the list after a tip's owner.
+///
+/// # Errors
+/// `NoWindow` while none shows, `Refused` when Windows says no.
+pub(super) fn lift_alone(title_is: &str) -> Result<(), UiError> {
+    shown_titled(title_is)?
+        .into_iter()
+        .rev()
+        .try_for_each(front)
+}
+
+/// Puts our shown windows titled `title_is` just under our window titled `under`, in their order, never activating them
+/// and leaving their owners where they are.
+///
+/// # Errors
+/// `NoWindow` while either is not shown, `Refused` when Windows says no.
+pub(super) fn lay_under(title_is: &str, under: &str) -> Result<(), UiError> {
+    let above = own_titled(under).ok_or(UiError::NoWindow)?;
+    let named = shown_titled(title_is)?;
+    named.into_iter().rev().try_for_each(|w| below(w, above))
+}
+
+/// Our shown windows titled `title_is`, front first.
+///
+/// # Errors
+/// `NoWindow` while none shows.
+fn shown_titled(title_is: &str) -> Result<Vec<HWND>, UiError> {
+    let named: Vec<HWND> = own_windows()
+        .into_iter()
+        .filter(|&w| title(w) == title_is)
+        .collect();
+    if named.is_empty() {
+        Err(UiError::NoWindow)
+    } else {
+        Ok(named)
+    }
 }

@@ -1,6 +1,6 @@
 //! The hooks' callbacks: each reads what Windows passes, asks the host, and passes the event on unless the engine
 //! drops a mouse event. No panic crosses into Windows, with no host every event passes, and a busy host is inside our
-//! own send, so our echo goes to the inbox it lent.
+//! own send, so our echo goes to the inbox it lent and the user's event is counted there.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -14,7 +14,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use super::lend::hear;
 use super::with_host;
 use crate::hook::Mark;
-use crate::hook::accept::sent_scan;
+use crate::hook::accept::{key_act, kind, sent_scan};
 
 /// Tells Windows to drop the event.
 const SWALLOW: LRESULT = LRESULT(1);
@@ -67,7 +67,9 @@ fn mouse(msg: u32, info: &MSLLHOOKSTRUCT) -> bool {
         extra: info.dwExtraInfo,
         time: info.time,
     };
-    let answer = ask(mark.extra, || with_host(|h| h.mouse(msg, at, mark)));
+    let answer = ask(mark, kind(msg).is_some(), || {
+        with_host(|h| h.mouse(msg, at, mark))
+    });
     answer.is_some_and(|dropped| dropped)
 }
 
@@ -79,18 +81,18 @@ fn key(msg: u32, info: &KBDLLHOOKSTRUCT) {
         time: info.time,
     };
     let scan = sent_scan(info.scanCode, info.flags.contains(LLKHF_EXTENDED));
-    let _ = ask(mark.extra, || {
+    let _ = ask(mark, key_act(msg, scan).is_some(), || {
         with_host(|h| h.key(msg, info.vkCode, scan, mark))
     });
 }
 
 /// Runs the host's `call` so that no panic crosses into Windows, which would end the program. When the host does not
-/// answer, the id of our echo tagged `extra` goes to the inbox our send lent, if any.
-fn ask<T>(extra: usize, call: impl FnOnce() -> Option<T>) -> Option<T> {
+/// answer, the event with `mark` goes to the inbox our send lent, if any; `read` says the host would read it.
+fn ask<T>(mark: Mark, read: bool, call: impl FnOnce() -> Option<T>) -> Option<T> {
     let run = || {
         let answer = call();
         if answer.is_none() {
-            hear(extra);
+            hear(mark, read);
         }
         answer
     };
@@ -105,10 +107,11 @@ fn msg_id(wparam: WPARAM) -> u32 {
 #[cfg(test)]
 mod tests {
     use windows::Win32::Foundation::POINT;
-    use windows::Win32::UI::WindowsAndMessaging::{WM_KEYDOWN, WM_MOUSEMOVE};
+    use windows::Win32::UI::WindowsAndMessaging::{WM_KEYDOWN, WM_MOUSEMOVE, WM_MOUSEWHEEL};
 
     use super::super::lend::with_inbox;
     use super::*;
+    use crate::hook::Source;
     use crate::hook::inbox::Inbox;
     use crate::keys::replay_tag;
 
@@ -128,15 +131,21 @@ mod tests {
             dwExtraInfo: replay_tag(4),
             ..KBDLLHOOKSTRUCT::default()
         };
-        let mut inbox = Inbox::new(ACTS);
+        let mut inbox = Inbox::new(ACTS, Source::Physical);
         with_inbox(&mut inbox, || {
             assert!(!mouse(WM_MOUSEMOVE, &ours), "our echo passes");
             key(WM_KEYDOWN, &our_key);
             let hand = MSLLHOOKSTRUCT::default();
             assert!(!mouse(WM_MOUSEMOVE, &hand), "the hand's event passes");
+            assert!(!mouse(WM_MOUSEWHEEL, &hand), "a wheel passes");
             key(WM_KEYDOWN, &KBDLLHOOKSTRUCT::default());
         });
         let ids: Vec<_> = inbox.drain().collect();
         assert_eq!(ids, [3, 4], "untagged events keep nothing");
+        assert_eq!(
+            inbox.take_passed(),
+            2,
+            "the hand's move and key, not its wheel"
+        );
     }
 }

@@ -2,15 +2,13 @@
 //! engine the hook gave up is in `reset`.
 
 use crate::logs::{Fields, MESSAGE, lines_of};
-use crate::rig::{A, B, Heard, Rig, T0, T1, down, moved, shown, told};
+use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, down, moved, shown, told};
 use kx_mod_mouse::{ESC, ID, Msg, STOPPED_LINE};
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Scan, Toggle};
+use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Toggle};
 use kx_module_api::{SettingsError, WriteError, keys};
 use tracing::Level;
 
-/// The OS error code a refused hook carries.
-const CODE: i32 = 1428;
 /// Stats whose numbers appear nowhere else.
 const STATS: HookStats = HookStats {
     events: 101,
@@ -20,10 +18,9 @@ const STATS: HookStats = HookStats {
     reinstalls: 5,
     send_errors: 6,
     lost_echoes: 7,
+    passed_inside: 8,
 };
 
-/// Left Shift.
-const SHIFT: Scan = Scan::new(0x2A);
 /// The field that names a refused write's kind.
 const KIND: &str = "kind";
 /// A value a refusal's text quotes, which no log line may show.
@@ -60,7 +57,12 @@ fn a_saved_right_click_the_hook_refuses_starts_off_and_says_why() {
         let mut rig = Rig::saved_rclick();
         rig.hook.fail_next(HookError::Thread);
         rig.begin();
-        let told = [hook_failed(), shown(false, Off), Heard::AskLatches];
+        let told = [
+            hook_failed(),
+            shown(false, Off),
+            Heard::AskLatches,
+            Heard::AskScroll,
+        ];
         assert_eq!(rig.take(), told, "the user expects Right-click on");
         assert!(
             rig.host.sink.writes().is_empty(),
@@ -214,6 +216,7 @@ fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
         ("reinstalls", STATS.reinstalls.into()),
         ("send_errors", STATS.send_errors.into()),
         ("lost_echoes", STATS.lost_echoes.into()),
+        ("passed_inside", STATS.passed_inside.into()),
     ];
     let mut want: Vec<_> = numbers.map(|(k, v)| (k, v.to_string())).to_vec();
     want.push((MESSAGE, STOPPED_LINE.to_owned()));

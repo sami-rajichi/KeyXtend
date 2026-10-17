@@ -80,9 +80,10 @@ Item {
             for (const id of Object.keys(N.lk.icons.dpad))
                 compare(find(pad, o => o.Accessible.id === "dpad." + id).Accessible.name, En.texts["dpad." + id], id);
             compare(pad.Accessible.id, box.name, "the pad");
-            const dim = createTemporaryObject(padC, root, { box: Face.board.dpad, lk: N.lk, res: root.res, s: 1 });
+            const off = Object.assign({}, Face.board.dpad, Face.states.en.dpad);
+            const dim = createTemporaryObject(padC, root, { box: off, lk: N.lk, res: root.res, s: 1 });
             compare(dim.Accessible.role, Accessible.Button);
-            compare(dim.Accessible.description, En.texts["tip.later"]);
+            compare(dim.Accessible.description, En.texts["tip.scroll-off"]);
             verify(!find(dim, o => o !== dim && o.Accessible.role === Accessible.Button && !o.Accessible.ignored && o.visible), "no arrow on its own");
         }
     }

@@ -42,6 +42,8 @@ capabilities! {
     ScreenCapture => "screen-capture",
     /// Read and write the secret store.
     SecretStore => "secret-store",
+    /// Scroll other apps' windows.
+    Scroll => "scroll",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -75,5 +77,11 @@ mod tests {
         let caps: HashSet<_> = Capability::ALL.iter().collect();
         assert_eq!(caps.len(), Capability::ALL.len());
         assert!(caps.contains(&Capability::SecretStore));
+    }
+
+    #[test]
+    fn scroll_is_its_own_capability() {
+        assert!(Capability::ALL.contains(&Capability::Scroll));
+        assert_eq!(Capability::Scroll.name(), "scroll");
     }
 }

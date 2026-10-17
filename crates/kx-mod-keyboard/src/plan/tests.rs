@@ -18,6 +18,7 @@ const CTRL: Scan = Scan::new(0x1D);
 const ALTGR: Scan = Scan::new(0xE038);
 const CAPS: Scan = Scan::new(0x3A);
 const LEFT: Scan = Scan::new(0xE04B);
+const WIN: Scan = Scan::new(0xE05B);
 
 /// A made-up layout: q, a dead ^ with no Shift or `AltGr` character, and e with € on `AltGr` when `altgr`.
 fn keys(altgr: bool) -> BTreeMap<Scan, KeyChars> {
@@ -98,8 +99,17 @@ fn named_keys_send_latch_tap_caps_or_ask_the_face() {
         g.plan(Role::Send, Some(ESC)),
         send(Route::Tap(ESC), Wait::End)
     );
-    let shift = g.plan(Role::Latch(Latch::Shift), Some(RSHIFT));
-    assert_eq!(shift, Plan::Latch(Latch::Shift, RSHIFT));
+    let shift = LatchRole::of(Latch::Shift);
+    assert_eq!(
+        g.plan(Role::Latch(shift), Some(RSHIFT)),
+        Plan::Latch(shift, RSHIFT)
+    );
+    let win = LatchRole {
+        lone: true,
+        ..LatchRole::of(Latch::Win)
+    };
+    let lone = g.plan(Role::Latch(win), Some(WIN));
+    assert_eq!(lone, Plan::Latch(win, WIN), "the flag goes with the plan");
     assert_eq!(g.plan(Role::Caps, Some(CAPS)), Plan::Caps(CAPS));
     assert_eq!(g.plan(Role::Lang, None), Plan::Lang);
     assert_eq!(g.plan(Role::Later, None), Plan::Later);
@@ -262,7 +272,7 @@ fn a_route_never_shows_its_keys_or_text() {
 fn a_plan_never_shows_a_scan_code() {
     let plans = [
         Plan::Caps(CAPS),
-        Plan::Latch(Latch::Shift, SHIFT),
+        Plan::Latch(LatchRole::of(Latch::Shift), SHIFT),
         send(Route::Tap(Q), Wait::Start),
     ];
     let shown = format!("{plans:?}");

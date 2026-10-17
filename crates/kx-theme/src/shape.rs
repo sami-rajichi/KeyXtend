@@ -10,7 +10,7 @@ use crate::extras::{
 mod check;
 mod whole;
 
-pub use whole::{BackdropShape, DimShape, LineShape, OutlineShape};
+pub use whole::{BackdropShape, DimShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -139,6 +139,15 @@ pub struct ListKeyShape {
     pub icon_share: f32,
 }
 
+/// The D-pad's one grid turn, in degrees: it sets the arrows on the axes, where another turn puts "up" on a diagonal and
+/// overlaps the boxes readers find the arrows by.
+const DPAD_TURN: f32 = 45.0;
+
+/// `DPAD_TURN`, for serde.
+const fn dpad_turn() -> f32 {
+    DPAD_TURN
+}
+
 /// The D-pad (`.dpad`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -147,16 +156,23 @@ pub struct DpadShape {
     pub gap_px: f32,
     /// Arrow icon size.
     pub icon_px: f32,
-    /// Arrow icon padding, as a share of the pad.
-    pub icon_pad: f32,
+    /// Where each arrow sits across the ring of arrows, from the hub's edge (0) to the pad's edge (1).
+    pub reach: f32,
     /// Hub inset, as a share of the pad.
     pub hub: f32,
     /// Stop button inset, as a share of the pad.
     pub stop: f32,
     /// Stop icon size.
     pub stop_icon_px: f32,
-    /// Turn of the arrow grid, in degrees.
+    /// Turn of the arrow grid, in degrees: `DPAD_TURN`, set here and never read from the file.
+    #[serde(skip_deserializing, default = "dpad_turn")]
     pub turn_deg: f32,
+    /// Stop's speed dots under its icon: diameter.
+    pub dot_px: f32,
+    /// Gap between the dots, and between them and the icon.
+    pub dot_gap_px: f32,
+    /// Opacity of a dot whose speed is not on.
+    pub dot_off: f32,
 }
 
 /// Pointer feedback (`.down`) and the move ring.
@@ -225,8 +241,8 @@ pub struct Shape {
     pub tip: TipShape,
     /// The resize corner, the bubble and the test strip.
     pub extra: ExtraShape,
-    /// Hairline borders.
-    pub line: LineShape,
+    /// Hairline borders: panel and tooltip edges, the corner's rim and dividers.
+    pub line: WidthShape,
     /// The Copy pill.
     pub pill: PillShape,
     /// The caption bar.
@@ -241,8 +257,10 @@ pub struct Shape {
     pub badge: BadgeShape,
     /// Keys that come in a later version.
     pub dim: DimShape,
-    /// The hover outline in high contrast.
-    pub hc_outline: OutlineShape,
+    /// The hover outline in high contrast, drawn in Highlight inside the key.
+    pub hc_outline: WidthShape,
+    /// The outline around the scroll pad's target, drawn inside its box by four thin windows.
+    pub outline: WidthShape,
     /// The plate over a system backdrop.
     pub backdrop: BackdropShape,
     /// The notice banner.

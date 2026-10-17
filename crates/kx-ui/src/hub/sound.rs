@@ -59,10 +59,13 @@ impl Hub {
         }
     }
 
-    /// Does a key's `action`, calls `mark` once the key went out, then plays the key sound for a tap or a key's
-    /// first press; a held key's repeat never sounds.
+    /// Does a key's `action`, calls `mark` once the key went out, then plays the key sound for a tap, a key's first
+    /// press or a tap on the scroll pad; a held key's repeat never sounds.
     pub fn sent(&self, action: FaceAction, mark: impl FnOnce()) -> Redraw {
-        let pressed = matches!(action, FaceAction::Tap { .. } | FaceAction::Press { .. });
+        let pressed = matches!(
+            action,
+            FaceAction::Tap { .. } | FaceAction::Press { .. } | FaceAction::Pad { .. }
+        );
         let redraw = self.act(action);
         mark();
         if pressed {

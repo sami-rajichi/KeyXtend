@@ -6,12 +6,14 @@ use std::sync::PoisonError;
 
 use kx_module_api::ports::{Button, Point, PointerAct, Scan};
 
-use super::super::fake::{Call, Fake, Plan};
+use super::super::fake::{Fake, Plan, World};
 use super::super::{CTRL, ESC, KEY_DOWN, KEY_UP, MOUSE_KEPT, Rig, SHIFT, VK_ESC, mouse_msg, rig};
 use super::{End, Ev, Fate, Gesture};
 use crate::hook::host::Host;
 use crate::hook::{Mark, Source};
 use crate::keys::replay_tag;
+
+mod sends;
 
 /// The row the hand's events lie on; each takes a new column, so its point names it.
 const HAND_Y: i32 = 1;
@@ -72,9 +74,9 @@ impl Sim {
         self.rig.plan()
     }
 
-    /// The OS takes this many acts of each batch, or all.
-    pub(super) fn takes(&self, n: Option<usize>) {
-        self.rig.world.takes.set(n);
+    /// The fake OS's world, for its knobs.
+    pub(super) fn world(&self) -> &World {
+        &self.rig.world
     }
 
     /// The hand's gesture enters the stream now.
@@ -129,7 +131,7 @@ impl Sim {
     pub(super) fn end(mut self) -> End {
         self.slip = None;
         self.drain();
-        self.takes(None);
+        self.rig.world.takes.set(None);
         self.call(Host::turn);
         self.drain();
         let settled = self.apps.len();
@@ -253,42 +255,6 @@ impl Sim {
                 fate
             };
         }
-    }
-
-    /// Takes the host's OS calls: the taken part of each batch joins the stream, or reaches the apps when our hooks heard
-    /// it inside the send, a slipped gesture lands after it, and the hooks go in or out.
-    fn collect(&mut self) {
-        for call in self.rig.world.take() {
-            match call {
-                Call::Send(acts) => {
-                    let (takes, len) = (self.rig.world.takes.get(), acts.len());
-                    let took = takes.map_or(len, |n| n.min(len));
-                    let fate = if took < len { Fate::Cut } else { Fate::Kept };
-                    for (i, act) in acts.iter().enumerate() {
-                        self.mark(*act, if i < took { fate } else { Fate::Lost });
-                    }
-                    let ours: Vec<_> = self.rig.world.ids.borrow_mut().drain(..took).collect();
-                    let sent = ours.into_iter().map(|(act, id)| Ev {
-                        act,
-                        ours: true,
-                        id,
-                        unseen: false,
-                    });
-                    if self.rig.world.inside.get() {
-                        self.apps.extend(sent);
-                    } else {
-                        self.stream.extend(sent);
-                    }
-                    if let Some(g) = self.slip.take() {
-                        self.gesture(g);
-                    }
-                }
-                Call::Hook => self.hooked = true,
-                Call::Unhook => self.hooked = false,
-                Call::Arm(_) | Call::Wake => {}
-            }
-        }
-        self.grew |= self.rig.host.room() != self.room;
     }
 }
 

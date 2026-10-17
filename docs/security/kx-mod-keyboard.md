@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14 (mouse-assist keys)
+- **Last review:** 2026-10-16 (scroll pad)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -34,7 +34,8 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 | Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
 | Held-key actions from the UI: `press`, `tick`, `let_go`, `leave` (spec §4.6) | A pressed or let-go key must be on the board (`UnknownKey`, which changes nothing); a press types once, a tick types only while a key is held and a repeat is due, and a late tick types once; a let-go types nothing | One repeat per `repeat_every_ms` (33 ms or more) | Property tests (`Repeat` runs; face runs of presses, ticks, let-gos and leaves) |
-| Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go, and `AssistChanged` only lights or dims (`dim`) two keys | — | Thread runs (latches told newest last); both start orders, one with the mouse module already running (`a_mouse_module_already_running_lights_the_keys_at_start`) |
+| Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go or stop a lone Win press, and `AssistChanged` only lights or dims (`dim`) two keys | — | Thread runs (latches told newest last); both start orders, one with the mouse module already running (`a_mouse_module_already_running_lights_the_keys_at_start`) |
+| Bus events from the scroll module: `ScrollChanged` (P5) | Plain flags and a direction, ungated like the pad's own `ScrollTap`, `ScrollStop`, `ScrollPeek` and `ScrollAsk`. A forged `ScrollChanged` only lights or dims the pad, and the pad's clicks still need the user | — | Both start orders, one with the scroll module already running (`a_scroll_module_already_running_lights_the_pad_at_start`); a module that answers a tap at once (no deadlock) |
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)
@@ -49,6 +50,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
   - A held key repeats at most once a beat, and a late tick types once and never catches up, so a slow frame cannot flood the app.
 - **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. The face service itself has no capability gate (see Should fix).
 - **Stuck repeat:** a burst ends on let-go wherever the pointer is, when Qt takes the press away or the keyboard hides or stops (the UI sends `leave`), when the list opens, when a repeat is stale, empty or fails, on the next click (a burst left open, as after a window rebuilt for a lost graphics device), and on a restart. A face property run shows that no tick types and no latch stays down after a let-go or leave, and the UI's hold timer runs only while the face says it holds a key, on a shown keyboard with no list open.
+- **Lone press:** a `lone` latch (Win) sends its key alone only on the user's own second click with nothing used since the first; refused whole it stays latched, and taken in part it lets go, so it never goes twice. It holds no other latch, and they then let go as after any key, so in `release` none rides into Start.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier. During a burst the latches stay latched, not pressed, and let go when it ends.
 
 ## Findings

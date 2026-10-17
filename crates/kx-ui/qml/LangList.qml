@@ -1,14 +1,15 @@
 // The List design's language list (mock-up .langs and .lg-it): one page of layouts with the highlighted row ringed and
 // the current one ticked, and a pager beside it when there is more than one page, never a scroll bar (ADR-0008).
-// The board's arrows, Enter and Esc drive it through the keyboard; it never takes focus (ADR-0013).
+// The board's arrows, Enter and Esc drive it through the keyboard, and the scroll pad pages it; it never takes focus
+// (ADR-0013).
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Window {
     id: box
 
-    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, the list's view (`{rows, hi, page_back,
-    // page_on}`), and rows per page.
+    // The app's Ui object, the look, fonts, icons and texts, the keyboard size, the list's view (`{rows, hi, page,
+    // page_back, page_on}`, its page worked out by the keyboard), and rows per page.
     required property var ui
     required property var lk
     required property var res
@@ -31,8 +32,8 @@ Window {
     readonly property var p: lk.palette
     readonly property real radius: lk.look.window_radius_px * pn.radius_share
     readonly property int per: Math.max(1, rows)
-    readonly property int pages: Math.max(1, Math.ceil(view.rows.length / per))
-    readonly property int at: Math.min(Math.floor(view.hi / per), pages - 1)
+    readonly property int pages: view.page.count
+    readonly property int at: view.page.at
     // This page's rows; with more than one page the last is padded with nulls, so the box keeps its size.
     readonly property var shown: {
         const part = view.rows.slice(at * per, (at + 1) * per);
@@ -47,10 +48,19 @@ Window {
     readonly property real rowH: Math.max(sh.badge_px[1] * s, nameH + subLine.implicitHeight) + 2 * sh.row_pad_px[0] * s
     readonly property real pagerW: pages > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
 
-    // Shows the list, popping in (mock-up popIn).
+    // The list holds the page mark, so the scroll pad pages it while it shows (ADR-0029); the mark goes with the window.
+    property bool paged: false
+
+    // Shows the list, popping in (mock-up popIn), and asks for the page mark at once.
     function open() {
         visible = true;
+        mark();
         popIn.restart();
+    }
+    // Asks for the page mark while the list shows: as it opens, then at each guard try until it holds.
+    function mark() {
+        if (visible && !paged)
+            paged = ui.markPages(title);
     }
 
 
@@ -114,7 +124,7 @@ Window {
             PageButton {
                 icon: box.lk.icons.page.back
                 name: box.res.tr("page.back")
-                can: box.at > 0 && !!box.view.page_back
+                can: box.view.page.back && !!box.view.page_back
                 onClicked: box.page(box.view.page_back)
             }
             Label {
@@ -133,7 +143,7 @@ Window {
             PageButton {
                 icon: box.lk.icons.page.on
                 name: box.res.tr("page.on")
-                can: box.at < box.pages - 1 && !!box.view.page_on
+                can: box.view.page.on && !!box.view.page_on
                 onClicked: box.page(box.view.page_on)
             }
         }

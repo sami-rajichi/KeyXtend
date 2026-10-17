@@ -1,0 +1,202 @@
+//! The entry watch on hidden windows of the test thread: the guard keeps the newest history point outside the watched
+//! window, once per entry. The history, the pointer's place and the capture come from the test; none moves the pointer.
+
+use std::sync::{Mutex, PoisonError};
+
+use kx_module_api::ports::{Point, Rect};
+use kx_platform::ui::{Screens, UiError, Watched, WindowGuard};
+use windows::Win32::Foundation::{LPARAM, WPARAM};
+use windows::Win32::UI::Controls::WM_MOUSELEAVE;
+use windows::Win32::UI::WindowsAndMessaging::{
+    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetWindowPos, WM_MOUSEMOVE,
+};
+
+use super::super::entry::{enter, kept, mark, mark_with, watched};
+use super::super::guard::guard;
+use super::{Hidden, WinGuard};
+use crate::WinScreens;
+use crate::scroll::point_lparam;
+
+mod leaves;
+
+/// Keeps these tests apart: the kept entry is one per process.
+pub(super) static ENTRIES: Mutex<()> = Mutex::new(());
+
+/// A box on the main screen's work area, 100 pixels in from its corner.
+pub(super) fn spot_on_main() -> Rect {
+    let main = WinScreens
+        .work_areas()
+        .into_iter()
+        .find(|s| s.primary)
+        .unwrap();
+    Rect {
+        x: main.rect.x + 100,
+        y: main.rect.y + 100,
+        w: 300,
+        h: 200,
+    }
+}
+
+/// Moves and sizes the hidden `window` to `r`, never showing or activating it.
+#[allow(unsafe_code, reason = "Moves the test's own hidden window.")]
+pub(super) fn place(window: &Hidden, r: Rect) {
+    let flags = SWP_NOZORDER | SWP_NOACTIVATE;
+    // SAFETY: a move of the test's own hidden window.
+    unsafe { SetWindowPos(window.0, None, r.x, r.y, r.w, r.h, flags) }.unwrap();
+}
+
+/// Tells `window` the pointer moved to its client point `p`, as Windows does.
+#[allow(unsafe_code, reason = "Sends a message to the test's own window.")]
+fn move_to(window: &Hidden, p: Point) {
+    let at = LPARAM(point_lparam(p));
+    // SAFETY: the message carries no pointer.
+    unsafe { SendMessageW(window.0, WM_MOUSEMOVE, Some(WPARAM(0)), Some(at)) };
+}
+
+/// Tells `window` the pointer left it, as Windows does.
+#[allow(unsafe_code, reason = "Sends a message to the test's own window.")]
+fn leave(window: &Hidden) {
+    // SAFETY: the message carries no pointer.
+    unsafe { SendMessageW(window.0, WM_MOUSELEAVE, None, None) };
+}
+
+#[test]
+fn the_guard_keeps_the_newest_history_point_outside_its_window() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let (window, kb) = (Hidden::new("KeyXtend test: keyboard"), spot_on_main());
+    place(&window, kb);
+    let entry = Point {
+        x: kb.x + 10,
+        y: kb.y + 1,
+    };
+    let before = Point {
+        x: kb.x + 10,
+        y: kb.y - 3,
+    };
+    let history = vec![(entry.x, entry.y), (kb.x + 10, kb.y), (before.x, before.y)];
+    let history = |from| {
+        assert_eq!(from, entry, "the history starts at the entry");
+        history
+    };
+    enter(window.0, entry, history, |_| false);
+    let kept = kept().unwrap();
+    assert_eq!(
+        (kept.outside, kept.entry, kept.keyboard),
+        (Some(before), entry, kb)
+    );
+}
+
+#[test]
+fn a_watched_window_keeps_one_entry_until_the_pointer_leaves_it() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let (window, kb) = (Hidden::new("KeyXtend test: watched"), spot_on_main());
+    place(&window, kb);
+    guard(window.0).unwrap();
+    assert_eq!(mark(window.0), Ok(Watched::Held));
+    assert!(watched(window.0));
+    let screen = |x, y| Point {
+        x: kb.x + x,
+        y: kb.y + y,
+    };
+    move_to(&window, Point { x: 5, y: 6 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)));
+    move_to(&window, Point { x: 7, y: 8 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)), "still inside");
+    leave(&window);
+    move_to(&window, Point { x: 9, y: 10 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
+    assert_eq!(kept().map(|k| k.keyboard), Some(kb));
+}
+
+#[test]
+fn an_unwatched_window_keeps_nothing_and_a_hidden_one_cannot_be_watched() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let (watched_one, plain) = (
+        Hidden::new("KeyXtend test: noted"),
+        Hidden::new("KeyXtend test: unwatched"),
+    );
+    guard(watched_one.0).unwrap();
+    assert_eq!(mark(watched_one.0), Ok(Watched::Held));
+    move_to(&watched_one, Point { x: 1, y: 1 });
+    let was = kept();
+    guard(plain.0).unwrap();
+    move_to(&plain, Point { x: 2, y: 2 });
+    assert_eq!(kept(), was, "only the watched window counts");
+    assert!(!watched(plain.0));
+    let hidden = WinGuard.watch_entries("KeyXtend test: unwatched");
+    assert_eq!(hidden, Err(UiError::NoWindow));
+}
+
+/// A hidden guarded window at `kb`, watched with the pointer `on` it or not.
+fn watched_at(title: &str, kb: Rect, on: bool) -> Hidden {
+    let window = Hidden::new(title);
+    place(&window, kb);
+    guard(window.0).unwrap();
+    mark_with(window.0, on).unwrap();
+    window
+}
+
+#[test]
+fn the_kept_entry_goes_with_the_watched_window() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let window = watched_at("KeyXtend test: going", spot_on_main(), false);
+    move_to(&window, Point { x: 1, y: 1 });
+    assert!(kept().is_some());
+    drop(window);
+    assert_eq!(kept(), None);
+}
+
+/// A watch asked before the guard's first try is no refusal: a later try asks again.
+#[test]
+fn a_window_the_guard_does_not_hold_yet_is_unguarded_and_not_watched() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let plain = Hidden::new("KeyXtend test: not guarded");
+    assert_eq!(mark(plain.0), Ok(Watched::Unguarded));
+    assert!(!watched(plain.0));
+    assert!(matches!(
+        mark_with(plain.0, false),
+        Err(UiError::Refused(_))
+    ));
+    guard(plain.0).unwrap();
+    assert_eq!(mark(plain.0), Ok(Watched::Held), "once the guard holds it");
+    assert!(watched(plain.0));
+}
+
+/// The banner sits beside the keyboard, so the pointer may come back to the keyboard from it: the guard passes over it.
+#[test]
+fn an_entry_passes_over_our_windows_and_keeps_the_last_when_only_they_lie_outside() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let (window, kb) = (Hidden::new("KeyXtend test: back from ours"), spot_on_main());
+    place(&window, kb);
+    let entry = Point {
+        x: kb.x + 10,
+        y: kb.y + 1,
+    };
+    let above = |up: i32| move |_| vec![(entry.x, entry.y), (entry.x, kb.y - up)];
+    enter(window.0, entry, above(3), |_| false);
+    let last = kept();
+    enter(window.0, entry, above(5), |_| true);
+    assert_eq!(kept(), last, "only our window outside");
+    let via = move |_| vec![(entry.x, entry.y), (entry.x, kb.y - 5), (entry.x, kb.y - 7)];
+    enter(window.0, entry, via, |p| p.y == kb.y - 5);
+    let outside = kept().and_then(|k| k.outside);
+    assert_eq!(outside.map(|p| p.y), Some(kb.y - 7), "the app before ours");
+}
+
+/// The scroll module stopped: the keyboard, shown or not, keeps no entry until it is watched again.
+#[test]
+fn unwatching_drops_the_marks_and_the_kept_entry() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let title = "KeyXtend test: unwatched";
+    let window = watched_at(title, spot_on_main(), false);
+    move_to(&window, Point { x: 1, y: 1 });
+    assert!(kept().is_some());
+    WinGuard.unwatch_entries(title);
+    assert!(!watched(window.0));
+    assert_eq!(kept(), None, "the kept point is forgotten");
+    move_to(&window, Point { x: 2, y: 2 });
+    assert_eq!(kept(), None, "no entry once unwatched");
+    mark_with(window.0, false).unwrap();
+    move_to(&window, Point { x: 3, y: 3 });
+    assert!(kept().is_some(), "watched again");
+}

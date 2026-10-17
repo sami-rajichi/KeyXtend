@@ -1,5 +1,6 @@
-// The D-pad: four arrows cut from a disc and turned, a hub, and Stop while scrolling. Each arrow is its own button;
-// while it comes in a later version it is drawn dimmed and is one button that says so.
+// The D-pad: four arrows cut from a disc and turned, each centred in its quarter of the ring as the iPod click wheel's
+// labels, a hub, and Stop with its speed dots while scrolling. Each arrow is its own button; while the scroll module is
+// off the pad is dimmed and is one button that says so.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Shapes
@@ -7,21 +8,29 @@ import QtQuick.Shapes
 Item {
     id: pad
 
-    // Its cell, name and tip (board JSON), the look, fonts, icons and texts, and size.
+    // Its cell and name (board JSON) with its dim, tip, way and speed (state JSON), the look, fonts, icons and texts,
+    // and size.
     required property var box
     required property var lk
     required property var res
     required property real s
 
-    // The arrow that is scrolling, by index (up, right, left, down); -1 for none.
-    property int dir: -1
-
     // The pointer came onto an arrow or Stop (its name) or left it (empty).
     signal tip(string name, Item at)
+    // An arrow was tapped, by its `icons.toml [dpad]` id, or Stop, as empty.
+    signal tapped(string dir)
+    // The pointer came onto the pad or left it, also by the window hiding with the pointer there.
+    signal hovered(bool on)
 
     readonly property bool dim: !!box.dim
     readonly property string name: res.tr(box.name)
-    readonly property string later: dim && box.tip ? res.tr(box.tip) : ""
+    // Why it is dimmed, the scroll-off tip, else empty.
+    readonly property string off: dim && box.tip ? res.tr(box.tip) : ""
+    // The arrow scrolling by its id, empty while still, and its speed, as the badge words it.
+    readonly property string dir: box.dir || ""
+    readonly property int pace: box.fast ? 1 : 0
+    readonly property var speeds: ["badge.slow", "badge.fast"]
+    readonly property string speed: dir !== "" ? res.tr(speeds[pace]) : ""
     readonly property var d: lk.dpad
     readonly property var p: lk.palette
     readonly property var sh: lk.shape.dpad
@@ -29,6 +38,13 @@ Item {
     readonly property real r: width / 2
     readonly property real g: sh.gap_px * s / 2
     readonly property real h: Math.sqrt(Math.max(0, r * r - g * g))
+    // The hub's radius, and how far out each arrow's icon sits: `reach` of the way across the ring of arrows.
+    readonly property real hubR: r * (1 - 2 * sh.hub)
+    readonly property real out: hubR + sh.reach * (r - hubR)
+    // Each arrow's upright box for readers, around its icon: half its depth along its way, as far as the nearer of the
+    // hub's edge and the pad's, and half its width across, so the four boxes meet without overlap.
+    readonly property real deep: Math.min(out - hubR, r - out)
+    readonly property real wide: out - deep
     // Each arrow's `icons.toml [dpad]` id and quarter, as signs of x and y around the centre before the turn.
     readonly property var arrows: [
         { id: "up", q: [-1, -1] },
@@ -39,6 +55,10 @@ Item {
     readonly property string stopId: "stop"
     // The pad sits half a gap inside its cell, like a key.
     readonly property real inset: lk.look.gap_px * s / 2
+    // The pointer is on the disc of a shown pad, and what the keyboard was last told.
+    readonly property bool shown: !!Window.window && Window.window.visible
+    readonly property bool over: shown && hover.hovered && Math.hypot(hover.point.position.x - r, hover.point.position.y - r) < r
+    property bool told: false
 
     x: box.x + inset
     y: box.y + inset
@@ -48,8 +68,23 @@ Item {
     Accessible.role: dim ? Accessible.Button : Accessible.Grouping
     Accessible.name: name
     Accessible.id: box.name
-    Accessible.description: later
+    Accessible.description: off
 
+    // Told once the event's changes settled, so moving between arrows, gaps and the hub tells nothing.
+    onOverChanged: Qt.callLater(pad.tell)
+    // A pad made again, as for a new board, leaves no pointer told on the old one.
+    Component.onDestruction: if (told) hovered(false)
+    function tell() {
+        if (over === told)
+            return;
+        told = over;
+        hovered(over);
+    }
+
+    // It watches the pointer without taking it, so the arrows under it still hover.
+    HoverHandler {
+        id: hover
+    }
     Repeater {
         model: pad.lk.palette.key_shadow.filter(l => !l.inset)
         delegate: Shade {
@@ -77,23 +112,20 @@ Item {
             delegate: Shape {
                 id: arrow
                 required property var modelData
-                required property int index
                 readonly property var q: modelData.q
                 readonly property string name: pad.res.dpad(modelData.id)
-                readonly property bool lit: pad.dir === index
+                readonly property bool lit: pad.dir === modelData.id
                 // Colours ease like the keys' (mock-up .dp transition).
                 property color base: pad.dim ? pad.p.dim : lit ? pad.d.on : pad.d.face
                 property color ink: pad.dim ? pad.p.dim_ink : lit ? pad.d.on_ink : pad.d.ink
-                readonly property real cell: pad.r - pad.g
+                // Pressed, it takes the keys' press shade, and in high contrast their press text, at once (Key.qml).
+                readonly property color fill: hit.pressed ? Qt.tint(base, pad.p.press) : hit.containsMouse ? Qt.tint(base, pad.p.hover) : base
+                readonly property color drawn: hit.pressed && pad.p.press_ink ? pad.p.press_ink : ink
                 readonly property real icon: pad.sh.icon_px * pad.s
-                readonly property real reach: pad.r - pad.sh.icon_pad * cell - icon / 2
                 anchors.fill: parent
                 containsMode: Shape.FillContains
-                Accessible.role: Accessible.Button
-                Accessible.name: name
-                Accessible.id: pad.res.uid("dpad", modelData.id)
-                Accessible.ignored: pad.dim
-                Accessible.onPressAction: if (!pad.dim) pad.dir = arrow.lit ? -1 : arrow.index
+                // Readers find the arrow by its upright box below, as a turned item's box is the whole pad's.
+                Accessible.ignored: true
 
                 Behavior on base {
                     ColourTween {
@@ -110,8 +142,7 @@ Item {
                 ShapePath {
                     strokeWidth: pad.lk.contrast && hit.containsMouse ? pad.lk.shape.hc_outline.px : -1
                     strokeColor: pad.lk.hover_line
-                    fillColor: hit.pressed ? Qt.tint(arrow.base, pad.lk.common.press)
-                        : hit.containsMouse ? Qt.tint(arrow.base, pad.lk.palette.hover) : arrow.base
+                    fillColor: arrow.fill
                     startX: pad.r + arrow.q[0] * pad.g
                     startY: pad.r + arrow.q[1] * pad.g
                     PathLine {
@@ -130,16 +161,35 @@ Item {
                         y: pad.r + arrow.q[1] * pad.g
                     }
                 }
+                // On its quarter's middle line, `out` from the centre.
                 Icon {
                     id: glyph
-                    x: pad.r + arrow.q[0] * arrow.reach - width / 2
-                    y: pad.r + arrow.q[1] * arrow.reach - height / 2
+                    x: pad.r + arrow.q[0] * pad.out * Math.SQRT1_2 - width / 2
+                    y: pad.r + arrow.q[1] * pad.out * Math.SQRT1_2 - height / 2
                     rotation: -pad.sh.turn_deg
                     icon: pad.lk.icons.dpad[arrow.modelData.id]
                     base: pad.res.icons
                     ext: pad.res.ext
                     px: arrow.icon
-                    tint: arrow.ink
+                    tint: arrow.drawn
+                }
+                // The arrow for readers and voice control: an upright box centred on its icon, its depth along the
+                // arrow's way on screen after the turn.
+                Item {
+                    readonly property real way: Math.atan2(arrow.q[1], arrow.q[0]) + pad.sh.turn_deg * Math.PI / 180
+                    readonly property real along: Math.abs(Math.cos(way))
+                    readonly property real down: Math.abs(Math.sin(way))
+                    x: glyph.x + (glyph.width - width) / 2
+                    y: glyph.y + (glyph.height - height) / 2
+                    width: 2 * (along * pad.deep + down * pad.wide)
+                    height: 2 * (down * pad.deep + along * pad.wide)
+                    rotation: -pad.sh.turn_deg
+                    Accessible.role: Accessible.Button
+                    Accessible.name: arrow.name
+                    Accessible.id: pad.res.uid("dpad", arrow.modelData.id)
+                    Accessible.description: arrow.lit ? pad.speed : ""
+                    Accessible.ignored: pad.dim
+                    Accessible.onPressAction: if (!pad.dim) pad.tapped(arrow.modelData.id)
                 }
                 // It acts at let-go, wherever the pointer went (ADR-0024).
                 Act {
@@ -151,7 +201,7 @@ Item {
                     onContainsMouseChanged: pad.tip(containsMouse ? arrow.name : "", glyph)
                     onActed: {
                         pad.tip("", null);
-                        pad.dir = arrow.lit ? -1 : arrow.index;
+                        pad.tapped(arrow.modelData.id);
                     }
                 }
             }
@@ -180,7 +230,7 @@ Item {
             }
         }
     }
-    // A dimmed pad shows its name and when it comes over the whole disc.
+    // A dimmed pad shows its name and why over the whole disc.
     MouseArea {
         visible: pad.dim
         anchors.fill: parent
@@ -190,42 +240,9 @@ Item {
                 return Math.hypot(point.x - pad.r, point.y - pad.r) < pad.r;
             }
         }
-        onContainsMouseChanged: pad.tip(containsMouse ? pad.res.noteTip(pad.name, pad.later) : "", pad)
+        onContainsMouseChanged: pad.tip(containsMouse ? pad.res.noteTip(pad.name, pad.off) : "", pad)
     }
-    // Stop pops in while an arrow scrolls and out after (mock-up .dp-stop); a spring curve overshoots a little.
-    Rectangle {
-        id: stop
-        scale: pad.dir >= 0 ? 1 : 0
-        visible: scale > 0
-        anchors.fill: parent
-        anchors.margins: pad.width * pad.sh.stop
-        radius: width / 2
-        color: pad.d.stop
-        Accessible.role: Accessible.Button
-        Accessible.name: pad.res.dpad(pad.stopId)
-        Accessible.id: pad.res.uid("dpad", pad.stopId)
-        Accessible.onPressAction: pad.dir = -1
-        Behavior on scale {
-            Tween {
-                move: pad.mv.stop
-            }
-        }
-        Icon {
-            anchors.centerIn: parent
-            icon: pad.lk.icons.dpad[pad.stopId]
-            base: pad.res.icons
-            ext: pad.res.ext
-            px: pad.sh.stop_icon_px * pad.s
-            tint: pad.d.stop_ink
-        }
-        Act {
-            anchors.fill: parent
-            hoverEnabled: true
-            onContainsMouseChanged: pad.tip(containsMouse ? stop.Accessible.name : "", stop)
-            onActed: {
-                pad.tip("", null);
-                pad.dir = -1;
-            }
-        }
+    Stop {
+        pad: pad
     }
 }

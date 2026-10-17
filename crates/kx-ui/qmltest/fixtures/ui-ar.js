@@ -36,7 +36,10 @@ var lang = {
   }
 };
 var texts = {
+  "badge.fast": "سريع",
   "badge.holding": "قيد الإمساك",
+  "badge.join": "، ",
+  "badge.slow": "بطيء",
   "banner.more": "{$more} إشعار آخر",
   "bar.bigger": "أكبر",
   "bar.bubble": "إظهار لوحة المفاتيح",
@@ -135,6 +138,7 @@ var texts = {
   "module.keyboard": "لوحة المفاتيح",
   "module.layouts": "تخطيطات لوحة المفاتيح",
   "module.mouse": "مساعد الماوس",
+  "module.scroll": "لوحة التمرير",
   "module.ui": "المظهر",
   "notice.keys-not-sent": "لم تصل بعض المفاتيح إلى التطبيق النشط. تحقّق مما كُتب.",
   "notice.lang-not-switched": "تعذّر على التطبيق النشط تبديل اللغة.",
@@ -142,6 +146,11 @@ var texts = {
   "notice.mouse-hook-failed": "تعذّر تشغيل مساعد الماوس لأن Windows رفض السماح له بمراقبة الماوس. اضغط على المفتاح مرة أخرى.",
   "notice.mouse-reset": "واجه مساعد الماوس خطأً، فأُوقف تشغيل أوضاعه. اضغط على مفتاح أحد الأوضاع لتشغيله مرة أخرى.",
   "notice.mouse-stopped": "توقّف مساعد الماوس بسبب خطأ. أعد تشغيل KeyXtend لاستخدامه مرة أخرى.",
+  "notice.scroll-end": "وصلت إلى النهاية بالفعل.",
+  "notice.scroll-failed": "واجهت لوحة التمرير خطأً. اضغط على سهم للمحاولة مرة أخرى.",
+  "notice.scroll-none": "لا يوجد ما يمكن تمريره هنا.",
+  "notice.scroll-point": "أشِر إلى ما تريد تمريره، ثم اضغط على سهم.",
+  "notice.scroll-stopped": "توقّفت لوحة التمرير بسبب خطأ. أعد تشغيل KeyXtend لاستخدامها مرة أخرى.",
   "notice.settings-defaults": "تعذّر استخدام أي ملف إعدادات، لذا تُستخدم الإعدادات الافتراضية.",
   "notice.settings-locked": "يستخدم برنامج آخر ملف الإعدادات. تُستخدم الإعدادات الافتراضية، ولن يُحفظ أي شيء.",
   "notice.settings-newer": "إعدادات {$module} من إصدار أحدث. تم الاحتفاظ بها، وتُستخدم القيم الافتراضية حاليًا.",
@@ -165,6 +174,7 @@ var texts = {
   "tip.mouse-off": "مساعد الماوس متوقّف",
   "tip.one-lang": "لا يوجد سوى لغة واحدة مثبّتة للوحة المفاتيح",
   "tip.rclick": "اضغط مطوّلًا دون تحريك المؤشر للنقر بالزر الأيمن؛ أما النقرات القصيرة فتبقى عادية",
+  "tip.scroll-off": "لوحة التمرير متوقّفة",
   "tray.quit": "إنهاء",
   "tray.show": "إظهار لوحة المفاتيح",
   "window.bubble": "لوحة مفاتيح KeyXtend (مصغّرة)",
@@ -172,6 +182,7 @@ var texts = {
   "window.list": "لغات لوحة المفاتيح",
   "window.menu": "قائمة KeyXtend",
   "window.notice": "إشعار KeyXtend",
+  "window.outline": "إطار التمرير",
   "window.pointer": "مساعد المؤشر",
   "window.tip": "تلميح KeyXtend"
 };
@@ -201,5 +212,13 @@ var assist = {
   "pointerPx": 32,
   "rclick": false,
   "ring": null,
+  "scroll": null,
   "seq": 0
+};
+var scroll = {
+  "area": null,
+  "dir": null,
+  "fast": false,
+  "live": false,
+  "ours": false
 };

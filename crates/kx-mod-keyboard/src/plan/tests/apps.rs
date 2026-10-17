@@ -18,7 +18,7 @@ fn the_app_in_front_is_asked_only_for_text_and_only_when_key_apps_names_one() {
     assert_eq!(g.asked.get(), 0, "no key apps");
     (g.apps, g.app) = (vec!["notepad.exe".into()], Some("chrome.exe".into()));
     g.plan(Role::Send, Some(ESC));
-    g.plan(Role::Latch(Latch::Shift), Some(SHIFT));
+    g.plan(Role::Latch(LatchRole::of(Latch::Shift)), Some(SHIFT));
     g.char(HAT);
     assert_eq!(g.asked.get(), 0, "no text");
     assert_eq!(g.char(Q), unicode("q"));

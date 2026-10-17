@@ -1,9 +1,12 @@
-//! The hub on the kernel's bus: it hears notices and the mouse module's state, pointer and notes, each through a
-//! handler that holds the hub weakly, and hands every note to the parts that follow one. The keyboard's wake is heard
-//! only while a face is attached, after the face's own handlers.
+//! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, and the scroll module's
+//! state, outline and page turns, each through a handler that holds the hub weakly, then asks the scroll module for its
+//! state. The keyboard's wake is heard only while a face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
-use kx_module_api::ports::{AssistChanged, AssistNote, LatchesUsed, PointerMoved};
+use kx_module_api::ports::{
+    AssistChanged, AssistNote, LatchesUsed, PointerMoved, ScrollAimed, ScrollAsk, ScrollChanged,
+    ScrollPage,
+};
 use kx_module_api::{Bus, Event, EventError, Notice, Subscription};
 use std::sync::{Arc, MutexGuard, PoisonError};
 
@@ -15,23 +18,31 @@ pub(super) struct Heard {
 }
 
 impl Hub {
-    /// Hears every notice and mouse-assist event on `bus` until the subscriptions drop, and keeps `bus` for the
-    /// keyboard's wake; the app calls it before the kernel loads.
+    /// Hears every notice, mouse-assist and scroll event on `bus` until the subscriptions drop, keeps `bus` for the
+    /// keyboard's wake, and asks the scroll module for its state, so any start order works; the app calls it before
+    /// the kernel loads.
     ///
     /// # Errors
-    /// `EventError` when the bus refuses a subscription.
+    /// `EventError` when the bus refuses a subscription or the ask.
     pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Vec<Subscription>, EventError> {
         self.heard().bus = Some(bus.clone());
-        Ok(vec![
+        let heard = vec![
             self.hear(bus, |hub, notice: &Notice| hub.notice(notice.clone()))?,
             self.hear(bus, Self::note)?,
             self.hear(bus, |hub, now: &AssistChanged| hub.assist_changed(*now))?,
             self.hear(bus, |hub, moved: &PointerMoved| hub.pointer_moved(moved.at))?,
-        ])
+            self.hear(bus, |hub, now: &ScrollChanged| hub.scroll_changed(*now))?,
+            self.hear(bus, |hub, aimed: &ScrollAimed| hub.scroll_aimed(*aimed))?,
+            self.hear(bus, |hub, page: &ScrollPage| {
+                hub.wake(Wake::Page { back: page.back });
+            })?,
+        ];
+        bus.publish(&ScrollAsk)?;
+        Ok(heard)
     }
 
-    /// Wakes the keyboard on each mouse mode change and used latch through new handlers. The face that `attach` takes
-    /// started first, so these run after its own and the window reads its new state; the last ones go.
+    /// Wakes the keyboard on each mouse mode change, used latch and scroll change through new handlers. The face that
+    /// `attach` takes started first, so these run after its own and the window reads its new state; the last ones go.
     pub(super) fn hear_keys(self: &Arc<Self>) {
         let Some(bus) = self.heard().bus.clone() else {
             return;
@@ -39,6 +50,7 @@ impl Hub {
         let keys = [
             self.hear(&bus, |hub, _: &AssistChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &LatchesUsed| hub.wake(Wake::Keys)),
+            self.hear(&bus, |hub, _: &ScrollChanged| hub.wake(Wake::Keys)),
         ];
         let keys: Vec<Subscription> = keys
             .into_iter()

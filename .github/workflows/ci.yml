@@ -49,6 +49,11 @@ jobs:
       - run: cargo clippy -p keyxtend --all-targets --features gate-input --locked -- -D warnings
       - run: cargo test -p kx-platform-windows --features sim-input --locked
       - run: cargo test -p keyxtend --features gate-input --locked
+      # The app with the scroll module's feature off, so the scroll module stays optional. The app's life test `ships`
+      # checks that this list is the default features without `mod-scroll`.
+      - run: >-
+          cargo clippy -p keyxtend --all-targets --no-default-features --features mod-keyboard,mod-layouts,mod-mouse
+          --locked -- -D warnings
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
       - run: cargo test -p kx-ui --test texts --locked
@@ -82,9 +87,9 @@ jobs:
     env:
       # Every workspace package sits in exactly one list; the first step fails when a package is missing or extra.
       PACKAGES: >-
-        -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-mod-mouse -p kx-module-api
-        -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support
-        -p kx-theme -p xtask
+        -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-scroll
+        -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window
+        -p kx-test-support -p kx-theme -p xtask
       NO_QT: -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:

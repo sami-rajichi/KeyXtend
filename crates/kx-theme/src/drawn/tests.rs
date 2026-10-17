@@ -9,6 +9,7 @@ use crate::hc::sample::HC;
 use crate::look::Cap;
 use crate::mode::{Mode, ModeChoice};
 use crate::view::{LookChoice, look_view};
+mod pad;
 
 fn themes() -> Themes {
     Themes::shipped().expect("tokens load")

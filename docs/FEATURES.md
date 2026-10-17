@@ -15,8 +15,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P2 | Kernel and module system; moves in the test tools and helpers, with the settings loader and clock as models | Done (2026-09-29) |
 | P3 | Keyboard core: typing EN/FR/AR, modifiers, Native theme, window | Done (v0.1) |
 | P4 | Mouse assist: Right-click hold, Grab, ring and sounds | Done (v0.2) |
-| P5 | Scroll pad | Ready |
-| P6 | Shortcuts layer and Power key | Waiting |
+| P5 | Scroll pad | Done (v0.3) |
+| P6 | Shortcuts layer and Power key | Ready |
 | P7 | Word prediction and emails | Waiting |
 | P8 | Clipboard history | Waiting |
 | P9 | Quick-fill vault | Waiting |

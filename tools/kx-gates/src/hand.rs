@@ -81,7 +81,7 @@ mod tests {
     fn line(at: &str, events: u64) -> String {
         format!(
             "{at}  INFO kx_mod_mouse::actor: {STOPPED_LINE} events={events} p99_us=40 max_us=90 max_wait_ms=3 \
-             reinstalls=0 send_errors=0 lost_echoes=0"
+             reinstalls=0 send_errors=0 lost_echoes=0 passed_inside=0"
         )
     }
 

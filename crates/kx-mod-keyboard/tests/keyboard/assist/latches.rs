@@ -3,7 +3,8 @@
 
 use super::{Bench, Said, scans};
 use crate::rig::STATE;
-use kx_module_api::ports::{FaceAction, FaceReply, LatchesAsk, LatchesChanged, LatchesUsed};
+use kx_module_api::ports::{FaceAction, FaceReply, LatchesAsk, LatchesChanged, LatchesUsed, Scan};
+use kx_platform_fake::Stroke;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -110,6 +111,23 @@ fn latches_used_in_stay_mode_keeps_them_and_tells_nothing() {
     assert!(b.said().is_empty());
     assert_eq!(b.rig.act(FaceAction::Relabel), Ok(FaceReply::default()));
     assert_eq!(b.key("shift")["on"], true);
+}
+
+#[test]
+fn win_clicked_twice_sends_win_alone_unless_a_mouse_click_used_it_between() {
+    let win = Stroke::Tap(Scan::new(0xE05B));
+    let b = stay();
+    b.rig.tap("win").unwrap();
+    b.rig.tap("win").unwrap();
+    assert_eq!(b.rig.fakes.injector.strokes(), [win], "Start opens");
+    let told = [Said::Latches(scans(&[0xE05B])), Said::Latches(Vec::new())];
+    assert_eq!(b.said(), told);
+    b.rig.fakes.injector.clear();
+    b.rig.tap("win").unwrap();
+    b.send(&LatchesUsed);
+    b.rig.tap("win").unwrap();
+    assert!(b.rig.fakes.injector.strokes().is_empty(), "Win+click");
+    assert_eq!(b.key("win")["on"], false);
 }
 
 #[test]

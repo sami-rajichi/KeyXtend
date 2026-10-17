@@ -84,6 +84,12 @@ QtObject {
     function panelKey(id) {
         return note("panelKey " + id);
     }
+    function pad(dir) {
+        return note("pad " + dir);
+    }
+    function padHover(on) {
+        return note("padHover " + on);
+    }
     function relabel() {
         note("relabel");
         return JSON.stringify({ board: false, state: false });

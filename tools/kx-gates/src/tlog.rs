@@ -1,7 +1,9 @@
 //! Reads the target-window log, whose format is in `kx_target_window::log`, after the last start.
 #![cfg(windows)]
 
-use kx_target_window::log::{COMMENT, FOCUS_LOST, KEY, LAYOUT_KEPT, MOUSE, Press, SEP, START};
+use kx_target_window::log::{
+    COMMENT, FOCUS_LOST, KEY, LAYOUT_KEPT, MOUSE, Press, SEP, SIDEWAYS, START, UPRIGHT, WHEEL,
+};
 
 /// Radix of the logged UTF-16 units.
 const HEX: u32 = 16;
@@ -120,6 +122,67 @@ fn key_fields(rest: &str) -> Option<KeyDown> {
     Some(KeyDown { us, vk, scan })
 }
 
+/// One wheel turn the box logged, with the point its message carried.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Wheel {
+    /// QPC time in microseconds.
+    pub us: i64,
+    /// The sideways wheel, not the upright one.
+    pub sideways: bool,
+    /// The turn, signed as Windows signs it.
+    pub delta: i32,
+    /// The point's x, as the message carried it.
+    pub x: i32,
+    /// The point's y, as the message carried it.
+    pub y: i32,
+}
+
+/// The wheel turns logged since the last start; bad lines are skipped.
+pub fn wheels(log: &str) -> Vec<Wheel> {
+    let mut found = Vec::new();
+    for line in log.lines() {
+        if line.starts_with(START) {
+            found.clear();
+        } else if let Some(rest) = line.trim().strip_prefix(WHEEL) {
+            found.extend(wheel_fields(rest));
+        }
+    }
+    found
+}
+
+/// The fields after `# wheel`: µs, axis, delta, x and y.
+fn wheel_fields(rest: &str) -> Option<Wheel> {
+    let mut f = rest.strip_prefix(SEP)?.split(SEP);
+    let us = f.next()?.parse().ok()?;
+    let sideways = match f.next()? {
+        SIDEWAYS => true,
+        UPRIGHT => false,
+        _ => return None,
+    };
+    let delta = f.next()?.parse().ok()?;
+    let (x, y) = (f.next()?.parse().ok()?, f.next()?.parse().ok()?);
+    Some(Wheel {
+        us,
+        sideways,
+        delta,
+        x,
+        y,
+    })
+}
+
+/// When `mark`, such as `# woke`, was logged since the last start, in order; bad lines are skipped.
+pub fn marks(log: &str, mark: &str) -> Vec<i64> {
+    let mut found = Vec::new();
+    for line in log.lines() {
+        if line.starts_with(START) {
+            found.clear();
+        } else if let Some(rest) = line.trim().strip_prefix(mark) {
+            found.extend(rest.strip_prefix(SEP).and_then(|t| t.parse::<i64>().ok()));
+        }
+    }
+    found
+}
+
 /// True when target-window's last run could not put back the layout from before `--layout`.
 pub fn layout_kept(log: &str) -> bool {
     let last = log.rfind(START).map_or(log, |at| &log[at..]);
@@ -140,75 +203,4 @@ pub fn mouse_since(ctx: &crate::apps::Ctx, since: i64) -> Result<Vec<Mouse>, Str
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn keeps_only_units_after_the_last_start() {
-        let log = "# start\t1\n10\t0041\n# start\t20\n30\t0644\n# focus-lost\t30\n31\t0627\n";
-        let units = parse(log);
-        assert_eq!(
-            units,
-            vec![
-                Unit {
-                    us: 30,
-                    unit: 0x0644
-                },
-                Unit {
-                    us: 31,
-                    unit: 0x0627
-                }
-            ]
-        );
-        assert_eq!(decode(&units), "لا");
-    }
-
-    #[test]
-    fn decodes_a_surrogate_pair_and_skips_bad_lines() {
-        let log = "# start\t0\n5\tD83D\nnot a line\n6\tDE00\r\n7\t20AC\n8\tZZZZ\n";
-        let units = parse(log);
-        assert_eq!(units.len(), 3);
-        assert_eq!(decode(&units), "\u{1F600}€");
-    }
-
-    #[test]
-    fn reads_mouse_presses_after_the_last_start() {
-        let log = "# start\t0\n# mouse\tldown\t5\t1\t2\n# start\t10\n\
-                   # mouse\trdown\t20\t-4\t8\n30\t0041\n# mouse\tmenu\t21\t-4\t8\r\n\
-                   # mouse\tzap\t22\t0\t0\n# mouse\tlup\t23\t1\n";
-        let got = mouse(log);
-        let at = |press, us, x, y| Mouse { press, us, x, y };
-        assert_eq!(
-            got,
-            vec![at(Press::RightDown, 20, -4, 8), at(Press::Menu, 21, -4, 8)]
-        );
-    }
-
-    #[test]
-    fn counts_focus_losses_after_the_last_start_from_a_time() {
-        let log = "# start\t0\n# focus-lost\t50\n# start\t100\n# focus-lost\t150\n\
-                   200\t0041\n# focus-lost\t300\r\n# focus-lost\n";
-        assert_eq!(focus_lost(log, 200), 2);
-        assert_eq!(focus_lost(log, 0), 3);
-        assert_eq!(focus_lost("# start\t0\n10\t0041\n", 0), 0);
-    }
-
-    #[test]
-    fn reads_key_presses_after_the_last_start() {
-        let log = "# start\t0\n# key\t5\t0D\t001C\n# start\t10\n\
-                   # key\t20\t26\tE048\r\n30\t0041\n# key\t21\tZZ\t0001\n# key\t22\t1B\n";
-        let at = |us, vk, scan| KeyDown { us, vk, scan };
-        assert_eq!(keys(log), vec![at(20, 0x26, 0xE048)]);
-    }
-
-    #[test]
-    fn a_layout_kept_at_the_last_close_is_seen() {
-        assert!(layout_kept("# start\t0\n10\t0041\n# layout-kept\t20\r\n"));
-        let earlier = "# start\t0\n# layout-kept\t20\n# start\t30\n40\t0041\n";
-        assert!(
-            !layout_kept(earlier),
-            "a run before the last start is not this one"
-        );
-        assert!(!layout_kept(""));
-    }
-}
+mod tests;

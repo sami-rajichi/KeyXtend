@@ -2,9 +2,9 @@
 
 use crate::lock;
 use kx_module_api::ports::{Point, Rect, Screen};
-use kx_platform::ui::{Backdrop, BackdropKind, FocusToken, Screens, UiError, WindowGuard};
+use kx_platform::ui::{Backdrop, BackdropKind, FocusToken, Screens, UiError, Watched, WindowGuard};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 /// Screens with work areas and a pointer the test sets.
 #[derive(Debug, Default)]
@@ -63,6 +63,14 @@ pub enum GuardCall {
     Shape(String, Vec<Rect>),
     /// `lift_alone(title)`.
     LiftAlone(String),
+    /// `watch_entries(title)`.
+    WatchEntries(String),
+    /// `unwatch_entries(title)`.
+    UnwatchEntries(String),
+    /// `lay_under(title, under)`.
+    LayUnder(String, String),
+    /// `mark_pages(title)`.
+    MarkPages(String),
     /// `remember`, with the token it gave.
     Remember(FocusToken),
     /// `give_back(token)`.
@@ -73,6 +81,7 @@ pub enum GuardCall {
 #[derive(Debug, Default)]
 pub struct FakeWindowGuard {
     count: AtomicUsize,
+    unguarded: AtomicBool,
     error: Mutex<Option<UiError>>,
     calls: Mutex<Vec<GuardCall>>,
     last: AtomicU64,
@@ -93,7 +102,13 @@ impl FakeWindowGuard {
         self.count.store(count, Ordering::SeqCst);
     }
 
-    /// Refuses later `guard_own`, `shape` and `lift_alone` calls with `error`, or takes them again with `None`.
+    /// Makes later `watch_entries` calls find the window shown but not guarded yet while `unguarded`.
+    pub fn set_unguarded(&self, unguarded: bool) {
+        self.unguarded.store(unguarded, Ordering::SeqCst);
+    }
+
+    /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries`, `lay_under` and `mark_pages` calls with
+    /// `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<UiError>) {
         *lock(&self.error) = error;
     }
@@ -124,6 +139,28 @@ impl WindowGuard for FakeWindowGuard {
 
     fn lift_alone(&self, title: &str) -> Result<(), UiError> {
         self.record(GuardCall::LiftAlone(title.to_owned()))
+    }
+
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError> {
+        self.record(GuardCall::WatchEntries(title.to_owned()))?;
+        let unguarded = self.unguarded.load(Ordering::SeqCst);
+        Ok(if unguarded {
+            Watched::Unguarded
+        } else {
+            Watched::Held
+        })
+    }
+
+    fn unwatch_entries(&self, title: &str) {
+        lock(&self.calls).push(GuardCall::UnwatchEntries(title.to_owned()));
+    }
+
+    fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
+        self.record(GuardCall::LayUnder(title.to_owned(), under.to_owned()))
+    }
+
+    fn mark_pages(&self, title: &str) -> Result<(), UiError> {
+        self.record(GuardCall::MarkPages(title.to_owned()))
     }
 
     fn remember(&self) -> FocusToken {
@@ -174,101 +211,4 @@ impl Backdrop for FakeBackdrop {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const TITLE: &str = "KeyXtend";
-    /// The window a guard run puts in front.
-    const TOP: &str = "KeyXtend menu";
-
-    fn area() -> Screen {
-        let rect = Rect {
-            x: 0,
-            y: 0,
-            w: 1920,
-            h: 1040,
-        };
-        Screen {
-            rect,
-            dpi: 144,
-            primary: true,
-        }
-    }
-
-    #[test]
-    fn screens_report_what_the_test_set() {
-        let fake = FakeScreens::new(vec![area()], Point { x: 5, y: 6 });
-        assert_eq!(fake.work_areas(), [area()]);
-        assert_eq!(fake.cursor(), Ok(Point { x: 5, y: 6 }));
-        fake.set_cursor(Point { x: 7, y: 8 });
-        fake.set_areas(Vec::new());
-        assert_eq!(fake.cursor(), Ok(Point { x: 7, y: 8 }));
-        assert!(fake.work_areas().is_empty());
-    }
-
-    #[test]
-    fn the_guard_records_every_call_in_order() {
-        let fake = FakeWindowGuard::new(3);
-        let rects = [area().rect];
-        assert_eq!(fake.guard_own(Some(TITLE), Some(TOP)), Ok(3));
-        assert_eq!(fake.shape(TITLE, &rects), Ok(()));
-        assert_eq!(fake.lift_alone(TITLE), Ok(()));
-        let first = fake.remember();
-        let second = fake.remember();
-        assert_ne!(first, second);
-        fake.give_back(first);
-        let want = [
-            GuardCall::GuardOwn(Some(TITLE.into()), Some(TOP.into())),
-            GuardCall::Shape(TITLE.into(), rects.to_vec()),
-            GuardCall::LiftAlone(TITLE.into()),
-            GuardCall::Remember(first),
-            GuardCall::Remember(second),
-            GuardCall::GiveBack(first),
-        ];
-        assert_eq!(fake.calls(), want);
-    }
-
-    #[test]
-    fn the_guard_count_and_errors_follow_the_test_and_every_try_is_recorded() {
-        let fake = FakeWindowGuard::new(0);
-        assert_eq!(fake.guard_own(None, None), Ok(0));
-        fake.set_error(Some(UiError::Refused(5)));
-        assert_eq!(fake.guard_own(None, None), Err(UiError::Refused(5)));
-        assert_eq!(fake.shape(TITLE, &[]), Err(UiError::Refused(5)));
-        assert_eq!(fake.lift_alone(TITLE), Err(UiError::Refused(5)));
-        fake.set_error(None);
-        fake.set_count(2);
-        assert_eq!(fake.guard_own(None, None), Ok(2));
-        let tries = fake
-            .calls()
-            .iter()
-            .filter(|c| **c == GuardCall::GuardOwn(None, None))
-            .count();
-        assert_eq!(tries, 3);
-    }
-
-    #[test]
-    fn the_cursor_can_be_unknown() {
-        let fake = FakeScreens::new(Vec::new(), Point::default());
-        fake.set_cursor_error(Some(UiError::Refused(6)));
-        assert_eq!(fake.cursor(), Err(UiError::Refused(6)));
-        fake.set_cursor_error(None);
-        assert_eq!(fake.cursor(), Ok(Point::default()));
-    }
-
-    #[test]
-    fn a_backdrop_is_recorded_or_refused() {
-        let fake = FakeBackdrop::new();
-        assert_eq!(fake.apply(TITLE, BackdropKind::Mica, true), Ok(()));
-        fake.set_error(Some(UiError::Refused(1)));
-        let refused = fake.apply(TITLE, BackdropKind::Acrylic, false);
-        assert_eq!(refused, Err(UiError::Refused(1)));
-        assert_eq!(fake.applied(), [(TITLE.into(), BackdropKind::Mica, true)]);
-    }
-
-    #[test]
-    fn a_focus_token_is_opaque() {
-        let fake = FakeWindowGuard::new(0);
-        assert_eq!(fake.remember(), FocusToken::new(1));
-    }
-}
+mod tests;

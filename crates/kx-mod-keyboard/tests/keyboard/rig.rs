@@ -26,6 +26,9 @@ pub const STATE: FaceReply = FaceReply {
     holding: false,
 };
 
+/// Rows per page the tests' UI shows, as `[ui] page_rows` does by default.
+pub const ROWS: usize = 5;
+
 /// A redraw of the board alone.
 pub const BOARD: FaceReply = FaceReply {
     board: true,
@@ -171,9 +174,14 @@ impl Rig {
         self.act(FaceAction::Relabel).unwrap()
     }
 
-    /// The state the UI draws.
+    /// The state the UI draws, an open list paged at `ROWS`.
     pub fn state(&self) -> Value {
-        serde_json::from_str(&self.face.state_json()).unwrap()
+        self.state_at(ROWS)
+    }
+
+    /// The state the UI draws, an open list paged at `rows` rows per page.
+    pub fn state_at(&self, rows: usize) -> Value {
+        serde_json::from_str(&self.face.state_json(rows)).unwrap()
     }
 
     /// The board the UI draws.

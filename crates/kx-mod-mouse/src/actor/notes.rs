@@ -4,7 +4,9 @@ use super::Actor;
 use crate::Note;
 use crate::settings::RCLICK_KEY;
 use kx_module_api::Event;
-use kx_module_api::ports::{AssistChanged, AssistNote, GrabState, LatchesUsed, PointerMoved};
+use kx_module_api::ports::{
+    AssistChanged, AssistNote, GrabState, LatchesUsed, PointerMoved, PointerPressed,
+};
 
 impl Actor {
     /// Turns an engine note into its bus event.
@@ -14,6 +16,7 @@ impl Actor {
             Note::State { rclick, grab } => return self.state(rclick, grab),
             Note::Moved { .. } => return self.moved(),
             Note::LatchesUsed => return self.publish(&LatchesUsed),
+            Note::Pressed { ours } => return self.publish(&PointerPressed { ours }),
             Note::HoldStart { at } => AssistNote::HoldStart {
                 at,
                 ring_after_ms: s.ring_after_ms,

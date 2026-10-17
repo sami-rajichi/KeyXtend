@@ -15,12 +15,9 @@ use std::collections::HashSet;
 #[must_use]
 pub fn board_view(spec: &BoardSpec, settings: &KeyboardSettings, size: f64) -> BoardView {
     let b = board(spec, 0.0, size);
-    let dim = spec.dpad.later;
     let dpad = DpadView {
         area: b.dpad,
-        dim,
         name: DPAD_NAME,
-        tip: dim.then_some(LATER_TIP),
     };
     let repeating = if settings.repeat {
         spec.repeating()

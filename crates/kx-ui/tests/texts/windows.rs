@@ -3,13 +3,13 @@
 
 use crate::{all, qml_files};
 use kx_ui::i18n::keys::{
-    CATCH, WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_POINTER,
-    WINDOW_TIP,
+    CATCH, WINDOW_BUBBLE, WINDOW_KEYBOARD, WINDOW_LIST, WINDOW_MENU, WINDOW_NOTICE, WINDOW_OUTLINE,
+    WINDOW_POINTER, WINDOW_TIP,
 };
 use std::collections::BTreeMap;
 
 /// Every window title the UI names; the guard, `shape`, the backdrops, a tip's lift and UI Automation find windows by them.
-pub const TITLES: [&str; 8] = [
+pub const TITLES: [&str; 9] = [
     WINDOW_KEYBOARD,
     WINDOW_BUBBLE,
     WINDOW_NOTICE,
@@ -17,6 +17,7 @@ pub const TITLES: [&str; 8] = [
     WINDOW_LIST,
     WINDOW_TIP,
     WINDOW_POINTER,
+    WINDOW_OUTLINE,
     CATCH,
 ];
 /// What may come before a file's root type: comments, pragmas and imports.

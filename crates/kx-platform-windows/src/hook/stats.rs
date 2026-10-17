@@ -14,6 +14,7 @@ pub(crate) struct Stats {
     reinstalls: AtomicU32,
     send_errors: AtomicU32,
     lost_echoes: AtomicU32,
+    passed_inside: AtomicU32,
     /// Acts dropped for want of room; logged at the stop, as the port has no field for it.
     dropped: AtomicU32,
 }
@@ -28,6 +29,7 @@ impl Stats {
             reinstalls: AtomicU32::new(0),
             send_errors: AtomicU32::new(0),
             lost_echoes: AtomicU32::new(0),
+            passed_inside: AtomicU32::new(0),
             dropped: AtomicU32::new(0),
         }
     }
@@ -58,17 +60,14 @@ impl Stats {
         bump(&self.lost_echoes);
     }
 
+    /// Counts `n` of the user's events heard inside our send, which passed without the host.
+    pub(crate) fn passed_inside(&self, n: u32) {
+        add(&self.passed_inside, n);
+    }
+
     /// Counts `n` acts dropped for want of room: past an engine's `max_acts`, or past the queue's.
     pub(crate) fn drop_acts(&self, n: usize) {
-        if n == 0 {
-            return;
-        }
-        let n = u32::try_from(n).unwrap_or(u32::MAX);
-        let _ = self
-            .dropped
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| {
-                Some(v.saturating_add(n))
-            });
+        add(&self.dropped, u32::try_from(n).unwrap_or(u32::MAX));
     }
 
     /// The acts dropped so far for want of room.
@@ -87,6 +86,7 @@ impl Stats {
             reinstalls: load(&self.reinstalls),
             send_errors: load(&self.send_errors),
             lost_echoes: load(&self.lost_echoes),
+            passed_inside: load(&self.passed_inside),
         }
     }
 }
@@ -99,5 +99,14 @@ impl Default for Stats {
 
 /// Adds one to `n`, stopping at its largest value.
 fn bump(n: &AtomicU32) {
-    let _ = n.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_add(1));
+    add(n, 1);
+}
+
+/// Adds `by` to `n`, stopping at its largest value.
+fn add(n: &AtomicU32, by: u32) {
+    if by > 0 {
+        let _ = n.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| {
+            Some(v.saturating_add(by))
+        });
+    }
 }

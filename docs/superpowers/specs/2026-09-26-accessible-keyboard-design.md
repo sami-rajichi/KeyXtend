@@ -90,7 +90,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 
 - **Wave ring:** during a hold, a ring in the theme's ring colour appears after 150 ms and shrinks into the pointer over the rest of the hold time, whatever hold time the user set. When the hold fires, a burst of 6 dots appears.
 - **Hover:** a key under the pointer turns a little darker in light mode and lighter in dark mode.
-- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on: Right-click, Grab, Holding (a carry), and later the scroll direction and speed (P5) and recording (P11). It hides while the pointer is over one of our windows.
+- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on or, with mouse assist on, while the pad scrolls: Right-click, Grab, Holding (a carry), the scroll direction with "slow" or "fast" beside it (§5.2), and later recording (P11). It hides while the pointer is over one of our windows.
 - **No banner** when Right-click or Grab turns on: the key's light, its tip and the badge show the mode (owner, 2026-10-13).
 - **Sounds**, realistic, soft and never harsh (owner, 2026-10-13):
   - a key-press sound like a real keyboard's on every key of the keyboard, not on the top-bar buttons; a held, repeating key sounds once, at the press;
@@ -105,7 +105,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - **Lists** (clipboard, quick-fill, settings lists) show exactly **5 rows per page**.
 - Every list has large **▲/▼ page buttons** and a "page n of m" indicator. A short last page is padded so paging lands on whole pages.
 - While a panel is open, the keyboard's own keys drive it: **↑/↓** move the highlight, **←/→** switch tabs, **Enter** activates, **Space** ticks, **Esc** closes.
-- The scroll pad can also scroll any list.
+- The scroll pad turns one page of any of our lists per tap (§5.2).
 - No sliders. Every numeric setting uses **−/+ steppers**.
 
 ### 3.4 Scaling and placement
@@ -202,6 +202,7 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - Shift, Ctrl, Alt, Win and AltGr: **one click = held**, shown filled with the LED on. **Click again = released.**
 - **Release after next key** (default): a held modifier releases automatically after the next non-modifier key. Setting **"Stay held"**: it stays down until clicked again.
 - There is no third "lock" state; the owner found it confusing.
+- **Win alone** (owner, 2026-10-17): clicking Win again with nothing used since it latched (no key, Caps Lock, modifier + click, or a latch latched after it) lets go and sends a lone Win press, so Start opens as with a real key; otherwise it only lets go. The lone press goes out without the other latches, which then let go or stay as after any key. A latch key opts in with `lone` in `board.toml`; never Alt, whose lone press opens the app's menu bar.
 - **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift ("Verr. Maj" in French, §3.6).
 - **Modifier + mouse:** while a modifier is held, the next mouse click is sent with that modifier down, so Shift+click extends a selection and Ctrl+click multi-selects. This is essential for one-button users.
 - Keys pressed while one of our panels is open go to that panel (§3.3), not to the target app.
@@ -268,20 +269,41 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 
 ### 5.2 Scroll pad
 
-- A round pad with ▲ ▼ ◀ ▶ (PlayStation-style) and a centre **Stop** button that appears only while scrolling.
-- **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two level dots show the current speed.
+- A round pad with ▲ ▼ ◀ ▶ and a centre **Stop** button that appears only while scrolling. Each arrow sits in the middle of its quarter of the ring, like the iPod click wheel's labels (owner, 2026-10-16).
+- **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two dots under Stop's square show the current speed.
 - Tapping another direction switches direction at slow speed.
-- **Target:** the scrollable thing under the pointer, including long text fields and our own panel lists. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**. The target gets a subtle outline.
-- **Windows mechanism, in priority order** (proven by gate G6, ADR-0013):
-  1. UI Automation `ScrollPattern` on the element at the target point.
-  2. `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` posted to the window at the target point.
-  3. `SendInput` wheel events, when the pointer itself is on the target.
+- The page **glides**: many small steps a second, slow 3 and fast 10 lines a second by default (`[scroll] slow`, `fast`; owner, 2026-10-16).
+- **It also stops** at the end of the content, at any press outside our windows (with mouse assist on, whose hook hears the press), `[scroll] limit_s` (2 minutes) after the last tap on the pad, when the target closes, and when the keyboard hides (Close or Minimise), which takes Stop off the screen; each of the first two can be switched off.
+- A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
+- **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
+- **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.
+- **Our own lists:** while one of our paged lists shows, it is the target, whatever point was kept, and each tap turns one page, with no speeds and no Stop. A glide already running when the list opens keeps its target.
+- **Badge:** with mouse assist on, the pointer badge shows the direction's arrow and "slow" or "fast", beside a Right-click or Grab icon (§3.2).
+- **Every platform** fills one OS-neutral port (`ScrollTarget`); the rules live in `kx-mod-scroll` (ADR-0029).
+- **Windows mechanism** (ADR-0029, which reorders P1's list proven by gate G6, ADR-0013):
+  1. Small `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` deltas posted to the window at the target point, or `SendInput` wheel events while the pointer itself is on the target.
+  2. UI Automation finds the scrollable element, its box and its position, and moves it by `ScrollPattern` steps when the window ignores wheel messages.
+  3. The point before the keyboard comes from Windows' pointer history when the pointer enters the keyboard.
+- **As built in P5** (refines ADR-0029's fallback and end rule; the names are `kx-platform-windows`' `scroll` constants):
+  - A target falls back to `ScrollPattern` steps once its percent has stayed still, short of the end, for `[scroll] check_ms` **and** at least one whole notch of wheel delta went out since it last moved.
+  - Under `ScrollPattern` steps, a percent that stays still for `check_ms` after at least one step reads as the end. This also covers wheel settings of 0 lines or one page, which step by UI Automation from the start.
+  - When those steps read the end at the very percent the wheel stopped at, as Explorer's bottom at 99.991, that was the end, not a window deaf to the wheel: the fallback clears, and the next scroll of that window uses the wheel again.
+  - Both rules count only steps sent before the previous read, so a slow app has a whole read to show them; each therefore comes about 2 × `check_ms` after the percent stops.
+  - A percent within a rounding (`END_SLACK`) of 0 or 100 is at its end, and any percent above 100, as Notepad's 100.005 after Ctrl+End, reads as 100. Only NaN, infinities and values below 0 past a rounding (UI Automation's -1 for "cannot scroll") are refused.
+  - A gap between reads longer than `PAUSE_CHECKS` × `check_ms` + `read_ms` starts the wait afresh.
+  - A busy target, one that left a `WM_NULL` ping unanswered or that Windows calls hung, gets no steps.
+  - A `SendInput` wheel goes out only while Windows gives wheels to the window under the pointer (mouse-position routing) and the pointer is still on the target; otherwise the step is posted.
+  - Our windows that do not page, such as the keyboard and its banner, are passed over, so the kept point is the last one outside them. The UI marks the open list as paging as it opens, and while it shows the pad pages it, even when the pointer crossed the app in the gap above the keyboard; a peek outlines the list window.
+  - A kept point that one of our non-paging windows now covers, as when the banner shows over it, aims at the first other app's window behind ours there. With none, the tap asks the user to point first; it never turns a page silently. UI Automation then reads and steps the element at that point inside the app's own window, never ours.
+  - With the pointer resting on our banner or tray menu, as through Voice Access, there is no target: a check mid-scroll keeps the last target, and a tap asks the user to point first.
+  - A target that closes stops the scroll, even when another window now lies at its point.
+  - UI Automation takes the box and percent from the first element that scrolls along the tapped way's axis, so ▼ over a wide table reads the page around it.
 
 ### 5.3 Overlays
 
 - The ring, burst and mode badge are drawn in **one click-through Qt window** that never takes focus (`Qt.WindowTransparentForInput`, guarded by the Windows adapter).
 - Gate G12 proved it: 200 of 200 clicks under the ring reached the app, at the screen's full rate (ADR-0013).
-- It is made while a mode is on and freed when every mode is off. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
+- It is made while a mode is on or, with mouse assist on, while the pad scrolls, and freed when neither holds. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
 
 ---
 

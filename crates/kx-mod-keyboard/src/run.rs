@@ -6,7 +6,7 @@ mod held;
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
-use crate::spec::{BoardSpec, Role};
+use crate::spec::{BoardSpec, LatchRole, Role};
 use kx_module_api::ports::{
     InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
     Layouts, LayoutsKey, Scan, Toggle,
@@ -143,9 +143,7 @@ impl Typing {
 
     /// A mouse click used the latches (modifier + click): they let go as their mode says. True when any let go.
     pub fn clicked(&mut self) -> bool {
-        let before = self.latches.clone();
-        self.latches.used();
-        self.latches != before
+        self.latches.used()
     }
 
     /// Takes a new `modifiers` mode and `key_apps` list, keeping the latched modifiers and a dead key's wait.
@@ -175,8 +173,8 @@ impl Typing {
         }
         match planned {
             Plan::Send { route, wait } => self.send(io, &route, wait)?,
-            Plan::Caps(key) => io.injector.tap(key)?,
-            Plan::Latch(l, key) => self.latches.toggle(l, key),
+            Plan::Caps(key) => self.caps(io, key)?,
+            Plan::Latch(r, key) => self.latch(io, r, key)?,
             Plan::Lang => return Ok(Tapped::Lang { back }),
             Plan::Assist(which) => return Ok(Tapped::Assist(which)),
             Plan::Later => return Ok(Tapped::Later),
@@ -221,11 +219,39 @@ impl Typing {
         Ok(went?)
     }
 
+    /// Taps Caps Lock `key`; once it reached the app, the latches stay on, used.
+    fn caps(&mut self, io: &Io<'_>, key: Scan) -> Result<(), TapError> {
+        let went = io.injector.tap(key);
+        if reached(went) {
+            self.latches.spend();
+        }
+        Ok(went?)
+    }
+
+    /// A click on the latch key sending `key`: latches `r` or lets it go. A lone latch let go unused first sends
+    /// `key` alone, which uses the other latches as any key does; refused whole, it stays latched.
+    fn latch(&mut self, io: &Io<'_>, r: LatchRole, key: Scan) -> Result<(), TapError> {
+        let lone = r.lone && self.latches.unused(r.latch);
+        let went = if lone { io.injector.tap(key) } else { Ok(()) };
+        if reached(went) {
+            self.latches.toggle(r.latch, key);
+            if lone {
+                self.used();
+            }
+        }
+        Ok(went?)
+    }
+
     /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats.
     fn used(&mut self) {
         match &mut self.burst {
-            Some(went) => *went = true,
-            None => self.latches.used(),
+            Some(went) => {
+                *went = true;
+                self.latches.spend();
+            }
+            None => {
+                self.latches.used();
+            }
         }
     }
 }

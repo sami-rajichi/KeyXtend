@@ -42,10 +42,10 @@ pub struct Bench {
 }
 
 /// Records each `E` on `bus` into `said` as `as_said` makes it.
-fn ear<E: Event>(
+pub fn ear<E: Event, T: Send + 'static>(
     bus: &Bus,
-    said: &Arc<Mutex<Vec<Said>>>,
-    as_said: impl Fn(&E) -> Said + Send + Sync + 'static,
+    said: &Arc<Mutex<Vec<T>>>,
+    as_said: impl Fn(&E) -> T + Send + Sync + 'static,
 ) -> Subscription {
     let said = Arc::clone(said);
     let add = move |e: &E| said.lock().unwrap().push(as_said(e));
@@ -276,10 +276,16 @@ fn a_tap_on_right_click_sends_nothing_to_the_app_and_keeps_the_latches() {
     assert_eq!(b.key("shift")["on"], true);
 }
 
+/// The mouse module may have stopped while the keyboard was down, so its keys dim until its answer lights them again.
 #[test]
-fn a_settings_change_keeps_the_mouse_state() {
+fn a_keyboard_restart_dims_the_mouse_keys_until_the_mouse_module_answers() {
     let mut b = Bench::quiet(None);
     b.mouse(true, true, GrabState::Off);
     b.rig.restart(Some(("lang_key", "cycle".into())));
+    assert!(
+        off(&b.key("rclick")) && off(&b.key("grab")),
+        "no answer yet"
+    );
+    b.mouse(true, true, GrabState::Off);
     assert_eq!(b.key("rclick")["on"], true);
 }

@@ -4,6 +4,8 @@
 
 mod bus;
 mod inner;
+mod outbox;
+mod pad;
 
 pub(crate) use bus::listen;
 
@@ -17,6 +19,7 @@ use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
+use pad::Peeks;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -41,6 +44,8 @@ pub struct Face {
     inner: Mutex<Inner>,
     /// The latched set the bus last heard.
     told: Told,
+    /// What the scroll module last heard of the pointer on the pad.
+    peeks: Peeks,
 }
 
 /// Shows no key, place or typing state.
@@ -69,11 +74,12 @@ impl Face {
             spec,
             inner: Mutex::new(inner),
             told: Told::default(),
+            peeks: Peeks::default(),
         }
     }
 
-    /// Takes new services and settings after a restart, keeping the latches, a dead key's wait, the mouse module's
-    /// state and an open list whose design stays; the start then tells the bus the latches.
+    /// Takes new services and settings after a restart, keeping the latches, a dead key's wait and an open list whose
+    /// design stays; the start then tells the bus the latches and asks the other modules' states anew.
     pub fn renew(&self, ports: Ports, settings: KeyboardSettings, store: SettingsHandle) {
         self.lock().renew(ports, settings, store);
     }
@@ -220,6 +226,8 @@ impl Face {
             FaceAction::Leave => Ok(self.lock().leave()),
             FaceAction::Relabel => Ok(self.refresh()),
             FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
+            FaceAction::Pad { dir } => Ok(self.pad(dir)),
+            FaceAction::PadHover { on } => Ok(self.hover(on)),
             other => self.lock().act(other),
         }
     }
@@ -231,8 +239,8 @@ impl KeyboardFace for Face {
         json(&board_view(&self.spec, &settings, size))
     }
 
-    fn state_json(&self) -> String {
-        json(&self.lock().state(&self.keys, &self.nav_keys))
+    fn state_json(&self, rows: usize) -> String {
+        json(&self.lock().state(&self.keys, &self.nav_keys, rows))
     }
 
     fn lang(&self) -> String {

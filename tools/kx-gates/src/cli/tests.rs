@@ -56,6 +56,8 @@ fn a_click_run_counts_its_option_or_setting_and_refuses_one_past_the_guards_limi
 fn parses_gates_that_take_only_a_name() {
     for probe in [
         "g6 chrome",
+        "g6 hang",
+        "g6 unaware",
         "g7 qt",
         "g12 keyxtend",
         "g17 explorer",
@@ -170,7 +172,7 @@ fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
     for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g25"] {
         assert_eq!(mouse(gate, "x"), Mouse::Held, "{gate}");
     }
-    for gate in ["g5", "g12", "g17", "g18"] {
+    for gate in ["g5", "g6", "g12", "g17", "g18"] {
         assert_eq!(
             mouse(gate, "x"),
             Mouse::Drives,

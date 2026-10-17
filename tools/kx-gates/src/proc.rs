@@ -20,7 +20,7 @@ use crate::win::size32;
 /// `FILETIME` ticks (100 ns) in one millisecond.
 const TICKS_PER_MS: f64 = 10_000.0;
 /// Bytes in one MB, as spec §10 counts memory and size.
-const MB: f64 = 1_000_000.0;
+pub const MB: f64 = 1_000_000.0;
 
 /// A process's private memory, in MB.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]

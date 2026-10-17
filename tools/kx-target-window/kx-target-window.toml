@@ -20,3 +20,10 @@ layout_arg = "--layout"
 # Longest a gate's hang message (G5's hung target) makes the window sleep, in ms; it must stay below Windows' 5 s
 # hung-window mark (checked), so Windows never swaps in its ghost window.
 hang_max_ms = 3000
+# Switch that fills the box with fill_lines numbered lines of fill_cols characters, unwrapped, so it scrolls both ways
+# (G6, G8, G9, G10); the fill is never logged, and it stays short enough to type in (checked).
+fill_arg = "--fill"
+fill_lines = 100
+fill_cols = 120
+# Switch that makes the window DPI-unaware, as an old app is, so Windows scales it and the points it gets (G6's record).
+unaware_arg = "--dpi-unaware"

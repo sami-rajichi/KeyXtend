@@ -1,10 +1,12 @@
-//! The face on the kernel's bus (spec §4.4, §5.1): the side keys ask the mouse module to flip a mode, its state comes
-//! back, and the latched set goes out for modifier + click. Handlers run on the sender's thread, so nothing is sent
-//! while the face's lock is held.
+//! The face on the kernel's bus (spec §4.4, §5.1, §5.2): the side keys ask the mouse module to flip a mode, the
+//! mouse and scroll modules' states come back, and the latched set goes out for modifier + click. Handlers run on the
+//! sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
+use super::outbox::Outbox;
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan, Toggle,
+    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan,
+    ScrollAsk, ScrollChanged, Toggle,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -14,51 +16,23 @@ use std::sync::{Arc, Mutex, PoisonError};
 /// The latched set the bus last heard, so it hears each change once and the newest set last, from any thread.
 #[derive(Default)]
 pub(super) struct Told {
-    /// A thread asks for the set to be checked.
-    due: AtomicBool,
+    /// Requests to check the set, one sending thread at a time.
+    outbox: Outbox,
     /// `LatchesAsk` came, or the module started, so the set goes out even if unchanged.
     again: AtomicBool,
-    /// One thread is sending; the others leave their requests to it.
-    sending: AtomicBool,
     /// The set last sent, which only the sending thread touches.
     last: Mutex<Vec<Scan>>,
 }
 
-/// Clears the `sending` flag when the sending thread stops, even by a panic, so later sets still go out.
-struct Sending<'a>(&'a AtomicBool);
-
-impl Drop for Sending<'_> {
-    fn drop(&mut self) {
-        self.0.store(false, SeqCst);
-    }
-}
-
 impl Face {
-    /// Sends the latched set when it changed since last sent, or always when `again`. One thread sends at a time and
-    /// takes every request made before it stops, so the bus hears the newest set last, and a handler may ask again.
+    /// Sends the latched set when it changed since last sent, or always when `again`, through the outbox, so the bus
+    /// hears the newest set last and a handler may ask again.
     pub(super) fn tell(&self, again: bool) {
         let t = &self.told;
         if again {
             t.again.store(true, SeqCst);
         }
-        t.due.store(true, SeqCst);
-        loop {
-            if t.sending
-                .compare_exchange(false, true, SeqCst, SeqCst)
-                .is_err()
-            {
-                return;
-            }
-            let sending = Sending(&t.sending);
-            while t.due.swap(false, SeqCst) {
-                self.send(t.again.swap(false, SeqCst));
-            }
-            drop(sending);
-            // A request made after the last check but before the stop found the sender busy, so it is ours.
-            if !t.due.load(SeqCst) {
-                return;
-            }
-        }
+        t.outbox.post(|| self.send(t.again.swap(false, SeqCst)));
     }
 
     /// Sends the latched set when it differs from the last one sent, or when `again`; only the sending thread calls it.
@@ -96,10 +70,21 @@ impl Face {
         self.lock().clicked();
         self.tell(false);
     }
+
+    /// Forgets the mouse and scroll modules' states, as either may have stopped unheard while the keyboard was down,
+    /// so their keys and the pad dim until the answers; the next live peek also tells a pointer that left.
+    fn forget(&self) {
+        {
+            let mut inner = self.lock();
+            inner.heard(AssistChanged::OFF);
+            inner.heard_scroll(ScrollChanged::OFF);
+        }
+        self.peek_again();
+    }
 }
 
-/// Hears the mouse module's state and its latch events for `face` until the module stops, then tells the latched set
-/// and asks the mouse module for its state, as either may have missed the other while one was stopped.
+/// Hears the mouse and scroll modules' states and the latch events for `face` until the module stops, then tells the
+/// latched set, forgets both modules' states and asks for them, as each may have missed the other while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -107,8 +92,11 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
+    on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
     face.tell(true);
-    cx.bus().publish(&AssistAsk)
+    face.forget();
+    cx.bus().publish(&AssistAsk)?;
+    cx.bus().publish(&ScrollAsk)
 }
 
 /// Calls `then` with the face for each `E` on the bus, while the face lives.

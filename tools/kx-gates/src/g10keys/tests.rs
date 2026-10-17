@@ -1,10 +1,12 @@
 //! Tests of G10's key plan, over the product's own board.
 
-use kx_mod_keyboard::{LangKey, Role};
+use kx_mod_keyboard::{LangKey, Latch, LatchRole, Role};
 use kx_module_api::ports::Scan;
 
 use super::*;
 use crate::board;
+
+mod unlatch;
 
 /// The key pressed after each modifier, as the shipped settings name it.
 const PROBE: &str = "enter";
@@ -77,11 +79,26 @@ fn a_latch_goes_out_with_the_probe_and_is_let_go_again_when_modifiers_stay() {
 }
 
 #[test]
-fn win_is_latched_and_let_go_with_nothing_sent_since_its_shortcuts_reach_windows() {
-    let win = step_of(false, "win");
-    assert_eq!(win.presses, ids(&["win", "win"]));
-    assert_eq!(win.expect, Expect::Nothing);
-    assert!(win.toggles);
+fn win_is_used_by_another_latch_before_it_lets_go_so_nothing_goes_down() {
+    for stay in [false, true] {
+        let win = step_of(stay, "win");
+        assert_eq!(win.presses, ids(&["win", "shift", "win", "shift"]));
+        assert_eq!(win.expect, Expect::Nothing, "neither a shortcut nor Start");
+        assert!(win.toggles);
+    }
+}
+
+#[test]
+fn a_board_with_no_latch_but_win_has_no_plan() {
+    let win = Role::Latch(LatchRole {
+        lone: true,
+        ..LatchRole::of(Latch::Win)
+    });
+    let roles = [
+        ("win".to_string(), win, Some(Scan::new(0xE05B))),
+        (PROBE.to_string(), Role::Send, Some(Scan::new(0x1C))),
+    ];
+    assert!(plan(&roles, PROBE, false).is_err());
 }
 
 #[test]
@@ -90,11 +107,40 @@ fn a_latch_a_failed_step_left_on_is_pressed_once_more() {
     assert!(shift.left_latched(Some(true)));
     assert!(!shift.left_latched(Some(false)), "already let go");
     assert!(!shift.left_latched(None), "unread: the owner checks it");
-    assert!(step_of(false, "win").left_latched(Some(true)), "Win too");
+    assert!(
+        !step_of(false, "win").left_latched(Some(true)),
+        "Win lets go only by its undo, as a lone press opens Start"
+    );
     assert!(
         !step_of(false, "esc").left_latched(Some(true)),
         "a send key latches nothing"
     );
+}
+
+#[test]
+fn only_wins_step_has_a_spare_and_it_starts_only_with_the_spare_let_go() {
+    for stay in [false, true] {
+        let win = step_of(stay, "win");
+        assert_eq!(win.spare.as_deref(), Some("shift"));
+        assert_eq!(win.ready(Some(false)), Ok(()));
+        assert!(win.ready(Some(true)).is_err(), "Win would go out alone");
+        assert!(win.ready(None).is_err(), "unread: it may be on");
+        let others = steps(stay).into_iter().filter(|s| s.key != "win");
+        for s in others {
+            assert_eq!(s.spare, None, "{}", s.key);
+            assert_eq!(s.ready(Some(true)), Ok(()), "{}", s.key);
+        }
+    }
+}
+
+#[test]
+fn the_owner_checks_the_spare_when_a_failed_step_may_have_left_it_on() {
+    let win = step_of(false, "win");
+    assert_eq!(win.spare_why(true, Some(true)), Some(("shift", MAY_BE_ON)));
+    assert_eq!(win.spare_why(true, None), Some(("shift", MAY_BE_ON)));
+    assert_eq!(win.spare_why(true, Some(false)), None, "let go");
+    assert_eq!(win.spare_why(false, None), None, "passed");
+    assert_eq!(step_of(false, "shift").spare_why(true, None), None);
 }
 
 #[test]

@@ -22,4 +22,8 @@ Connections {
     function onKeysChanged() {
         win.restate();
     }
+    // The scroll module started or stopped, which starts or ends the entry watch; read on the loop's next pass.
+    function onScrollChanged() {
+        Qt.callLater(win.rescroll);
+    }
 }

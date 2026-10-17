@@ -19,14 +19,22 @@ pub(crate) enum Cmd {
     Toggle(Toggle),
     /// Takes the keyboard's latched modifiers.
     Latches(Vec<Scan>),
+    /// The pad starts or stops scrolling.
+    Scroll(bool),
 }
 
 impl Cmd {
+    /// A start for this command tells no one when the hook refuses it: the user aimed no mouse key at the hook.
+    pub(crate) const fn quiet(&self) -> bool {
+        matches!(self, Self::Latches(_) | Self::Scroll(_))
+    }
+
     /// Applies the command to `engine`, which pushes any input to send into `acts`.
     fn apply(self, engine: &mut Engine, acts: &mut Vec<PointerAct>) {
         match self {
             Self::Toggle(which) => engine.toggle(which, acts),
             Self::Latches(held) => engine.set_latches(held),
+            Self::Scroll(on) => engine.set_scrolling(on),
         }
     }
 }

@@ -1,18 +1,20 @@
-//! The `Keyboard` object: the keyboard window's board, state, clicks and held keys through the face, its guard
-//! and shape, the pointer and the bubble's spot. Every call runs on the Qt thread, which runs the relabel and hold
-//! timers too.
+//! The `Keyboard` object: the keyboard window's board, state, clicks, held keys and scroll pad through the face, its
+//! guard and shape, the pointer and the bubble's spot. Every call runs on the Qt thread, which runs the relabel and
+//! hold timers too.
 
 use super::{hub, qs};
 use crate::geom::whole;
 use crate::guard::Run;
-use crate::hub::{Hub, NULL, Redraw, Resize, json};
+use crate::hub::{Hub, NULL, Redraw, Resize};
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
-use kx_module_api::ports::{Corner, FaceAction, KeyId, Point, Rect};
+use kx_module_api::ports::{FaceAction, KeyId, Rect};
 use std::sync::Arc;
 
 mod frame;
 mod held;
+mod pad;
+mod spots;
 mod window;
 
 /// The cxx-qt bridge that makes `Keyboard` a QML type.
@@ -94,6 +96,14 @@ pub mod qobject {
         /// Key `id` goes to the open list.
         #[qinvokable]
         fn panel_key(&self, id: &QString) -> QString;
+
+        /// A click on the scroll pad: arrow `dir` (`up`, `down`, `left` or `right`), or Stop when empty.
+        #[qinvokable]
+        fn pad(&self, dir: &QString) -> QString;
+
+        /// The pointer went onto the scroll pad, or off it.
+        #[qinvokable]
+        fn pad_hover(&self, on: bool) -> QString;
 
         /// The window sits at `x`, `y`, `w` by `h` physical pixels; its resize corner hangs `overhang` Qt units past the
         /// plate at size 1.
@@ -253,23 +263,6 @@ impl qobject::Keyboard {
             h: whole(h),
         };
         self.redraw(|hub| hub.placed(rect, overhang))
-    }
-
-    fn cursor(&self) -> QString {
-        self.with(NULL, |h| json(&h.cursor()))
-    }
-
-    fn bubble_at(&self, x: f64, y: f64, corner: &QString) -> QString {
-        let at = Point {
-            x: whole(x),
-            y: whole(y),
-        };
-        let corner = serde_json::Value::String(corner.to_string());
-        let Ok(corner) = serde_json::from_value::<Corner>(corner) else {
-            tracing::warn!("QML named no bottom corner");
-            return qs(NULL);
-        };
-        self.with(NULL, |h| json(&h.bubble_at(at, corner)))
     }
 
     #[cfg(debug_assertions)]

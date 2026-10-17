@@ -108,7 +108,7 @@ pub(crate) fn sent_scan(code: u32, extended: bool) -> Scan {
 }
 
 /// True when input with these marks stands for the user in `source`.
-fn heard(source: Source, injected: bool, extra: usize) -> bool {
+pub(crate) fn heard(source: Source, injected: bool, extra: usize) -> bool {
     match sim_tag(source) {
         None => !injected,
         Some(tag) => injected && extra == tag,

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use kx_module_api::Clock;
-use kx_module_api::ports::{InputInjector, LayoutSource, PointerHook};
+use kx_module_api::ports::{InputInjector, LayoutSource, PointerHook, ScrollTarget};
 use kx_platform::ui::{
     Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
@@ -12,7 +12,7 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinMemory, WinPointerHook, WinScreens, WinSpeaker, WinTray, dirs,
+    WinMemory, WinPointerHook, WinScreens, WinScroll, WinSpeaker, WinTray, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -100,6 +100,13 @@ impl WindowsPlatform {
     #[must_use]
     pub fn speaker(&self) -> Arc<dyn Speaker> {
         Arc::new(WinSpeaker::new(self.clock))
+    }
+
+    /// The scroll target, for the app to register under `ScrollTargetKey`: each run reads the point the guard keeps
+    /// at the keyboard's entries.
+    #[must_use]
+    pub fn scroll_target(&self) -> Arc<dyn ScrollTarget> {
+        Arc::new(WinScroll::new(self.clock))
     }
 
     /// The mouse hook on the hand's input, for the app to register under `PointerHookKey`.
@@ -224,6 +231,20 @@ mod tests {
             APP_DIR_NAME,
             "the app's own name"
         );
+    }
+
+    #[test]
+    fn the_scroll_target_opens_a_run_on_another_thread_and_drops_it() {
+        use kx_module_api::ports::ScrollConfig;
+        let _one = crate::scroll::testwin::one_client();
+        let target = WindowsPlatform::new().unwrap().scroll_target();
+        let config = ScrollConfig {
+            check_ms: 250,
+            read_ms: 300,
+            edge_px: 8,
+        };
+        let opened = std::thread::spawn(move || target.open(config).map(drop)).join();
+        assert_eq!(opened.ok(), Some(Ok(())));
     }
 
     #[test]

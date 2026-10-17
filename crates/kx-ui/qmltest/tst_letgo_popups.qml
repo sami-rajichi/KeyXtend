@@ -71,7 +71,8 @@ Item {
         function test_a_list_row_and_a_page_button_act_once_after_a_slip_onto_another() {
             const face = Face.states.list.list;
             const row = i => ({ short: "L" + i, name: ["Language " + i, "Layout " + i], rtl: false, arabic: false, current: false, icon: null });
-            const view = { rows: [...Array(7).keys()].map(row), hi: 0, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+            const first = { at: 0, count: 2, back: false, on: true };
+            const view = { rows: [...Array(7).keys()].map(row), hi: 0, page: first, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
             const list = createTemporaryObject(listC, root, { ui: createTemporaryObject(uiC, root), lk: N.lk, res: root.res, s: 1, view: view, rows: En.settings.pageRows, title: "list" });
             Pointer.through([list]);
             const [pick, page] = [spy(list, "pick"), spy(list, "page")];
@@ -137,21 +138,24 @@ Item {
 
         // A working pad, as P5 brings: an arrow slipped off its quarter, or Stop slipped off the pad, acts once.
         function test_a_dpad_arrow_and_stop_act_once_after_a_slip() {
-            const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null });
+            const box = Object.assign({}, Face.board.dpad, { dim: false, tip: null, dir: null, fast: false });
             const pad = createTemporaryObject(padC, root, { box: box, lk: N.lk, res: root.res, s: 1 });
+            const taps = spy(pad, "tapped");
             waitForRendering(pad);
-            const arrow = id => Board.all(pad, o => o.Accessible.id === "dpad." + id)[0];
+            // An arrow's turned shape, which holds its pointer area, or Stop.
+            const arrow = id => Board.all(pad, o => id === "stop" ? o.Accessible.id === "dpad.stop" : o.fill !== undefined && o.modelData !== undefined && o.modelData.id === id)[0];
             const hit = a => Board.all(a, o => o.containsMouse !== undefined)[0];
             const glyph = a => Board.all(a, o => o.icon !== undefined && o.tint !== undefined)[0];
             const up = hit(arrow("up"));
             const start = onto(up, glyph(arrow("up")));
             slip(up, onto(up, glyph(arrow("down"))), start);
-            compare(pad.dir, 0, "up scrolls, down never");
+            compare(taps.signalArguments.map(a => a[0]), ["up"], "up scrolls, down never");
+            pad.box = Object.assign({}, box, { dir: "up" });
             const stop = arrow("stop");
             tryCompare(stop, "scale", 1, 2000, "Stop pops in");
             const area = hit(stop);
             slip(area, Qt.point(-pad.width, area.height / 2));
-            compare(pad.dir, -1, "Stop, once");
+            compare(taps.signalArguments.map(a => a[0]), ["up", ""], "Stop, once");
         }
     }
 }

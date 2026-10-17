@@ -2,7 +2,7 @@
 //! lets go, and the latch key reads off.
 #![cfg(windows)]
 
-use kx_mod_keyboard::{KeyboardSettings, Latch, Modifiers, Role};
+use kx_mod_keyboard::{KeyboardSettings, Latch, LatchRole, Modifiers, Role};
 use serde_json::{Value, json};
 use spike_core::uia::{self, Uia};
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_SHIFT};
@@ -19,9 +19,9 @@ use crate::{clipkeep, winclip};
 /// The apps G18 probes.
 pub const APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Chrome, AppKind::Explorer];
 /// The Shift latch key.
-const SHIFT: Role = Role::Latch(Latch::Shift);
+const SHIFT: Role = Role::Latch(LatchRole::of(Latch::Shift));
 /// The Ctrl latch key.
-const CTRL: Role = Role::Latch(Latch::Ctrl);
+const CTRL: Role = Role::Latch(LatchRole::of(Latch::Ctrl));
 
 /// Refuses a keyboard whose latches stay after a click, as each case checks that its latch lets go.
 fn latches_release(s: &KeyboardSettings) -> Result<(), String> {

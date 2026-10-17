@@ -3,6 +3,7 @@
 
 use kx_mod_mouse::STOPPED_LINE;
 use kx_module_api::US_PER_MS;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -29,6 +30,8 @@ pub struct HookLine {
     pub send_errors: u32,
     /// How many times its own input did not come back through the hook in time.
     pub lost_echoes: u32,
+    /// The user's events heard inside the hook's own send, which passed without it.
+    pub passed_inside: u32,
 }
 
 impl HookLine {
@@ -38,9 +41,9 @@ impl HookLine {
     }
 }
 
-/// The field names, as `HookLine` serialises them.
-fn names() -> Vec<String> {
-    let line = serde_json::to_value(HookLine::default()).unwrap_or_default();
+/// The field names, as `T` serialises them.
+fn names<T: Serialize + Default>() -> Vec<String> {
+    let line = serde_json::to_value(T::default()).unwrap_or_default();
     line.as_object()
         .map(|fields| fields.keys().cloned().collect())
         .unwrap_or_default()
@@ -52,32 +55,50 @@ fn value_of<'a>(line: &'a str, name: &str) -> Option<&'a str> {
     line.split_whitespace().find_map(at)
 }
 
-/// The numbers of `line` when it is a stats line (it holds the mouse module's `STOPPED_LINE`); none for any other line,
-/// and an error naming a field that is missing or not a number.
-pub fn parse(line: &str) -> Result<Option<HookLine>, String> {
-    if !line.contains(STOPPED_LINE) {
+/// The numbers of `line` as `T`'s fields when it holds `marker`; none for any other line, and an error naming a field
+/// that is missing or not a number. Nothing else on the line is kept.
+pub fn numbers<T: Serialize + DeserializeOwned + Default>(
+    line: &str,
+    marker: &str,
+) -> Result<Option<T>, String> {
+    if !line.contains(marker) {
         return Ok(None);
     }
     let mut fields = Map::new();
-    for name in names() {
-        let value = value_of(line, &name).ok_or_else(|| format!("{STOPPED_LINE}: no {name}"))?;
+    for name in names::<T>() {
+        let value = value_of(line, &name).ok_or_else(|| format!("{marker}: no {name}"))?;
         let number: u64 = value
             .parse()
-            .map_err(|_| format!("{STOPPED_LINE}: {name} is not a number"))?;
+            .map_err(|_| format!("{marker}: {name} is not a number"))?;
         fields.insert(name, number.into());
     }
     serde_json::from_value(Value::Object(fields))
         .map(Some)
-        .map_err(|e| format!("{STOPPED_LINE}: {e}"))
+        .map_err(|e| format!("{marker}: {e}"))
+}
+
+/// The numbers of `line` when it is a stats line (it holds the mouse module's `STOPPED_LINE`); none for any other line,
+/// and an error naming a field that is missing or not a number.
+pub fn parse(line: &str) -> Result<Option<HookLine>, String> {
+    numbers(line, STOPPED_LINE)
+}
+
+/// The lines of `log` stamped at or after `since_us` that `read` takes, oldest first.
+pub fn read_since<T>(
+    log: &str,
+    since_us: i64,
+    read: impl Fn(&str) -> Result<Option<T>, String>,
+) -> Result<Vec<T>, String> {
+    let fresh = log
+        .lines()
+        .filter(|l| stamp_us(l).is_some_and(|at| at >= since_us));
+    let parsed: Vec<Option<T>> = fresh.map(read).collect::<Result<_, _>>()?;
+    Ok(parsed.into_iter().flatten().collect())
 }
 
 /// The stats lines of `log` stamped at or after `since_us`, oldest first.
 pub fn since(log: &str, since_us: i64) -> Result<Vec<HookLine>, String> {
-    let fresh = log
-        .lines()
-        .filter(|l| stamp_us(l).is_some_and(|at| at >= since_us));
-    let parsed: Vec<Option<HookLine>> = fresh.map(parse).collect::<Result<_, _>>()?;
-    Ok(parsed.into_iter().flatten().collect())
+    read_since(log, since_us, parse)
 }
 
 /// `lines` as one: the counts add up, and each time is the largest.
@@ -90,6 +111,7 @@ pub fn sum(lines: &[HookLine]) -> HookLine {
         reinstalls: a.reinstalls.saturating_add(b.reinstalls),
         send_errors: a.send_errors.saturating_add(b.send_errors),
         lost_echoes: a.lost_echoes.saturating_add(b.lost_echoes),
+        passed_inside: a.passed_inside.saturating_add(b.passed_inside),
     })
 }
 
@@ -127,10 +149,10 @@ mod tests {
         format!("{at}  INFO kx_mod_mouse::actor: {STOPPED_LINE} {fields}")
     }
 
-    const FIELDS: &str =
-        "events=12 p99_us=40 max_us=90 max_wait_ms=3 reinstalls=0 send_errors=0 lost_echoes=1";
-    const SHUFFLED: &str =
-        "lost_echoes=1 max_us=90 events=12 send_errors=0 p99_us=40 reinstalls=0 max_wait_ms=3";
+    const FIELDS: &str = "events=12 p99_us=40 max_us=90 max_wait_ms=3 reinstalls=0 send_errors=0 \
+                          lost_echoes=1 passed_inside=2";
+    const SHUFFLED: &str = "passed_inside=2 lost_echoes=1 max_us=90 events=12 send_errors=0 \
+                            p99_us=40 reinstalls=0 max_wait_ms=3";
 
     fn sample() -> HookLine {
         HookLine {
@@ -141,12 +163,13 @@ mod tests {
             reinstalls: 0,
             send_errors: 0,
             lost_echoes: 1,
+            passed_inside: 2,
         }
     }
 
     #[test]
     fn the_fields_are_the_ones_the_mouse_module_logs() {
-        let fields = names();
+        let fields = names::<HookLine>();
         assert!(!fields.is_empty());
         for name in fields {
             let logged = format!("{name} = s.{name}");
@@ -190,6 +213,7 @@ mod tests {
             reinstalls: 1,
             send_errors: 2,
             lost_echoes: 3,
+            passed_inside: 5,
         };
         let want = HookLine {
             events: 17,
@@ -199,6 +223,7 @@ mod tests {
             reinstalls: 1,
             send_errors: 2,
             lost_echoes: 4,
+            passed_inside: 7,
         };
         assert_eq!(sum(&[a, b]), want);
         assert_eq!(sum(&[]), HookLine::default());
@@ -213,7 +238,10 @@ mod tests {
 
     #[test]
     fn lost_echoes_pass_at_the_limit_and_fail_over_it_or_with_no_line() {
-        assert!(names().iter().any(|n| n == LOST), "the field it names");
+        assert!(
+            names::<HookLine>().iter().any(|n| n == LOST),
+            "the field it names"
+        );
         let with = |lost_echoes| HookLine {
             lost_echoes,
             ..sample()

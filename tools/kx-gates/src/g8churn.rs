@@ -1,4 +1,4 @@
-//! G8's churn (spec §10, no growth): rounds of key tips, the language list, the bubble and a full theme cycle
+//! G8's churn (spec §10, no growth): rounds of key tips, the language list, the bubble, a full theme cycle and a scroll
 //! (`g8pops`), with private memory read before them and after each one and each of its steps; growth runs from the
 //! first rounds' median to the last rounds'. It runs after `PresentMon`'s capture, so no frame counts.
 #![cfg(windows)]
@@ -10,6 +10,7 @@ use crate::board;
 use crate::budget::Part;
 use crate::g8cfg::G8;
 use crate::g8pops::{self, Plan, Seen};
+use crate::g8scroll::Scroller;
 use crate::g8steps::{self, Step, StepGrowth, read_after, slopes};
 use crate::g8tips::KeyTips;
 #[cfg(test)]
@@ -60,6 +61,12 @@ pub struct Churn {
     pub returns: usize,
     /// Why the list step was skipped: not the List design, or one layout installed.
     pub note: Option<&'static str>,
+    /// Whether each round was to scroll, as `[g8_scroll] churn` says.
+    pub scrolling: bool,
+    /// Rounds whose pad scrolled, as its arrow read a speed.
+    pub scrolls: usize,
+    /// Rounds whose outline showed every edge while it scrolled.
+    pub outlines: usize,
 }
 
 impl Churn {
@@ -85,15 +92,19 @@ impl Churn {
             bubbles: 0,
             returns: 0,
             note: None,
+            scrolling: true,
+            scrolls: 0,
+            outlines: 0,
         }
     }
 
-    /// True when every hover showed a tip and every round showed the bubble, the keyboard again, and the list in the
-    /// List design.
+    /// True when every hover showed a tip and every round showed the bubble, the keyboard again, the list in the List
+    /// design, and a scroll with its outline; a control churn that left the scroll out is never whole.
     pub fn whole(&self) -> bool {
         let every = |n: usize| n == self.rounds;
         let pops = self.tips == self.hovers && every(self.bubbles) && every(self.returns);
-        pops && self.lists.is_none_or(every)
+        let scrolled = self.scrolling && every(self.scrolls) && every(self.outlines);
+        pops && scrolled && self.lists.is_none_or(every)
     }
 }
 
@@ -176,36 +187,39 @@ fn readings(
     Ok((before, each))
 }
 
-/// One measured round with `reader` and `plan`, reading `p`'s memory after each step into a new list of `steps`.
+/// One measured round with `reader`, `plan` and `scroller`, reading `p`'s memory after each step into a new list of
+/// `steps`.
 fn stepped(
-    g: &G8,
-    (reader, plan): (&Reader, &Plan),
+    on: (&G8, &Reader, &Plan),
+    scroller: Option<&Scroller>,
     seen: &mut Seen,
     p: &Process,
     steps: &mut Vec<Vec<(Step, Memory)>>,
 ) -> Result<(), String> {
     let mut now = Vec::new();
-    let done = g8pops::round(g, reader, plan, seen, &mut |s| {
+    let done = g8pops::round(on, scroller, seen, &mut |s| {
         read_after(s, p.memory()).map(|read| now.push(read))
     });
     steps.push(now);
     done
 }
 
-/// Runs `[g8] churn_warm_rounds` unmeasured rounds, then `churn_rounds` measured ones, reading `p`'s memory before
-/// them and after each one and each step. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
-pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
-    let g = &ctx.cfg.g8;
+/// Runs `[g8] churn_warm_rounds` unmeasured rounds, then `churn_rounds` measured ones, each scrolling once with
+/// `scroller` when there is one and `[g8_scroll] churn` is on, reading `p`'s memory before them and after each one and
+/// each step. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
+pub fn run(ctx: &Ctx, p: &Process, scroller: Option<&Scroller>) -> Result<Churn, String> {
+    let (g, scrolling) = (&ctx.cfg.g8, ctx.cfg.g8_scroll.churn);
+    let scroller = scroller.filter(|_| scrolling);
     let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
     mouse::move_to(plan.away)?;
     sleep_ms(g.churn_settle_ms);
     let (mut first, mut warm) = (Seen::default(), Seen::default());
     for r in 0..g.churn_warm_rounds {
         let into = if r == 0 { &mut first } else { &mut warm };
-        g8pops::round(g, &reader, &plan, into, &mut |_| Ok(()))?;
+        g8pops::round((g, &reader, &plan), scroller, into, &mut |_| Ok(()))?;
     }
     let (mut seen, mut steps) = (Seen::default(), Vec::new());
-    let round = || stepped(g, (&reader, &plan), &mut seen, p, &mut steps);
+    let round = || stepped((g, &reader, &plan), scroller, &mut seen, p, &mut steps);
     let (before, per_round) = readings(g.churn_rounds, round, || p.memory())?;
     Ok(Churn {
         step_growth: g8steps::growth(before, &per_round, &steps),
@@ -218,6 +232,9 @@ pub fn run(ctx: &Ctx, p: &Process) -> Result<Churn, String> {
         bubbles: seen.bubbles,
         returns: seen.returns,
         note: plan.skip,
+        scrolling,
+        scrolls: seen.scrolls,
+        outlines: seen.outlines,
         ..Churn::measured(g, before, per_round)
     })
 }
@@ -241,6 +258,8 @@ pub fn whole_of(g: &G8, before: Memory, per_round: Vec<Memory>) -> Churn {
         lists: Some(g.churn_rounds),
         bubbles: g.churn_rounds,
         returns: g.churn_rounds,
+        scrolls: g.churn_rounds,
+        outlines: g.churn_rounds,
         ..Churn::measured(g, before, per_round)
     }
 }

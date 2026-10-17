@@ -1,5 +1,6 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, and the shared fake UI ports; a waker keeps every wake.
+//! captured EN, FR and AR tables, the fake mouse hook and scroll target, and the shared fake UI ports; a waker keeps
+//! every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -7,7 +8,9 @@ use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
 use kx_module_api::ports::Scan;
 use kx_platform::{AppDirs, PORTABLE_DIR};
-use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakeTray};
+use kx_platform_fake::{
+    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakeScrollTarget, FakeTray,
+};
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
@@ -28,6 +31,8 @@ pub struct Rig {
     pub layouts: Arc<FakeLayoutSource>,
     /// Behind the mouse hook.
     pub pointer: Arc<FakePointerHook>,
+    /// Behind the scroll target.
+    pub scroll: Arc<FakeScrollTarget>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
 }
@@ -43,6 +48,7 @@ impl Rig {
             injector: Arc::new(FakeInjector::new()),
             layouts: Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap()),
             pointer: Arc::new(FakePointerHook::new()),
+            scroll: Arc::new(FakeScrollTarget::new()),
             tray: tray(),
         }
     }
@@ -52,19 +58,25 @@ impl Rig {
         Files::new(&self.exe.path().join(PORTABLE_DIR))
     }
 
-    /// The app loaded over the fakes, as `main` loads it over the Windows adapter.
-    pub fn load(&self) -> Boot {
+    /// A fake platform on the rig's folders.
+    pub fn platform(&self) -> Arc<FakePlatform> {
         let dirs = AppDirs {
             exe_dir: self.exe.path().to_path_buf(),
             user_dir: self.user.path().to_path_buf(),
         };
+        Arc::new(FakePlatform::new(dirs))
+    }
+
+    /// The app loaded over the fakes, as `main` loads it over the Windows adapter.
+    pub fn load(&self) -> Boot {
         let services = Services {
             injector: self.injector.clone(),
             layouts: self.layouts.clone(),
             pointer: self.pointer.clone(),
+            scroll: self.scroll.clone(),
         };
         let ports = ports(self.tray.clone());
-        Boot::load(Arc::new(FakePlatform::new(dirs)), services, ports).unwrap()
+        Boot::load(self.platform(), services, ports).unwrap()
     }
 }
 

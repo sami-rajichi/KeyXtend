@@ -180,19 +180,21 @@ fn the_pointer_badge_takes_the_mock_up_sizes() {
     assert_eq!(b.edge_px, 8.0, "placePop's least gap to the edge");
 }
 
-/// The shipped file with `from` replaced by `to` in the `[badge]` section only.
-fn in_badge(from: &str, to: &str) -> String {
+/// The shipped file with `from` replaced by `to` in section `[name]` only.
+fn in_section(name: &str, from: &str, to: &str) -> String {
     let all = text();
-    let (head, tail) = all.split_once("[badge]").expect("a [badge] section");
-    format!("{head}[badge]{}", tail.replacen(from, to, 1))
+    let head = format!("[{name}]");
+    let (before, after) = all.split_once(&head).expect("the section");
+    format!("{before}{head}{}", after.replacen(from, to, 1))
 }
 
 #[test]
 fn an_unknown_or_odd_badge_size_is_refused() {
-    let e = parse(&in_badge("\nicon_px", "\nhue = 1.0\nicon_px")).expect_err("unknown");
+    let badge = |from, to| in_section("badge", from, to);
+    let e = parse(&badge("\nicon_px", "\nhue = 1.0\nicon_px")).expect_err("unknown");
     assert!(e.contains("hue"), "{e}");
     // A pill (mock-up border-radius: 999px): QML rounds it by half its height, so no radius can drift from its size.
-    let pill = in_badge("\nicon_px", "\nradius_px = 9.5\nicon_px");
+    let pill = badge("\nicon_px", "\nradius_px = 9.5\nicon_px");
     let e = parse(&pill).expect_err("no radius token");
     assert!(e.contains("unknown field `radius_px`"), "{e}");
     for (from, to, says) in [
@@ -200,7 +202,7 @@ fn an_unknown_or_odd_badge_size_is_refused() {
         ("edge_px = 8.0", "edge_px = -1.0", "badge.edge_px"),
         ("[16.0, 18.0]", "[16.0, nan]", "badge.offset_px"),
     ] {
-        let e = parse(&in_badge(from, to)).expect_err(to);
+        let e = parse(&badge(from, to)).expect_err(to);
         assert!(e.contains(says), "{to}: {e}");
     }
 }
@@ -276,3 +278,6 @@ fn an_odd_tray_share_or_label_size_is_refused() {
         ),
     ]);
 }
+
+/// The scroll pad's arrows, Stop's speed dots and the target's outline.
+mod pad;

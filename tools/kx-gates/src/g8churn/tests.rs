@@ -209,11 +209,13 @@ fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_c
     };
     assert!(no_list.whole(), "the default Carousel design opens no list");
     let short = full.rounds - 1;
-    let missed: [fn(&mut Churn, usize); 4] = [
+    let missed: [fn(&mut Churn, usize); 6] = [
         |c, n| c.tips = n,
         |c, n| c.lists = Some(n),
         |c, n| c.bubbles = n,
         |c, n| c.returns = n,
+        |c, n| c.scrolls = n,
+        |c, n| c.outlines = n,
     ];
     for (i, miss) in missed.iter().enumerate() {
         let mut c = full.clone();
@@ -223,6 +225,22 @@ fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_c
             "case {i}: a pop-up or the keyboard's return was missed"
         );
     }
+}
+
+#[test]
+fn a_churn_needs_every_scroll_and_a_control_that_left_it_out_is_never_whole() {
+    let full = churn(mem(98.0, 138.0), mem(98.0, 138.0));
+    let unscrolled = Churn {
+        scrolls: 0,
+        outlines: 0,
+        ..full.clone()
+    };
+    assert!(!unscrolled.whole(), "the scroll step was meant to run");
+    let control = Churn {
+        scrolling: false,
+        ..unscrolled
+    };
+    assert!(!control.whole(), "[g8_scroll] churn left the scroll out");
 }
 
 #[test]

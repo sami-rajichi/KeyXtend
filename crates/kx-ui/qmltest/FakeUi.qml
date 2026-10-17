@@ -23,6 +23,12 @@ QtObject {
     property int assistReads: 0
     property var newest: En.assist
     property bool waiting: false
+    // The scroll pad's state and its box to outline (setting it sends `scrollChanged`), how often QML read it, and how
+    // many more entry watch or page mark calls answer that the keyboard does not show or the list is not guarded yet.
+    property var scroll: En.scroll
+    property int scrollReads: 0
+    property int notYet: 0
+    property int unpaged: 0
     // The backdrop answer, and every call so far.
     property bool frosted: false
     property var calls: []
@@ -95,6 +101,31 @@ QtObject {
         assistReads++;
         waiting = false;
         return JSON.stringify(newest);
+    }
+    function scrollJson() {
+        scrollReads++;
+        return JSON.stringify(scroll);
+    }
+    function watchEntries(title) {
+        note("watchEntries " + title);
+        if (notYet <= 0)
+            return true;
+        notYet--;
+        return false;
+    }
+    function unwatchEntries(title) {
+        note("unwatchEntries " + title);
+    }
+    function markPages(title) {
+        note("markPages " + title);
+        if (unpaged <= 0)
+            return true;
+        unpaged--;
+        return false;
+    }
+    function layUnder(title, under) {
+        note("layUnder " + title + " " + under);
+        return true;
     }
     // The bundle as the app holds it: fonts the texts test lays out, and icons the tests' icon plugin serves.
     function assets() {

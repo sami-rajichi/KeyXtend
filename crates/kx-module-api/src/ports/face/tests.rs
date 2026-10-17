@@ -4,7 +4,7 @@ use super::*;
 
 const KEY: &str = "key-q";
 /// The number of `FaceAction` variants, debug builds' `FlipCaps` too; `row` fails to build when one is added.
-const VARIANTS: usize = if cfg!(debug_assertions) { 16 } else { 15 };
+const VARIANTS: usize = if cfg!(debug_assertions) { 18 } else { 17 };
 
 /// Each variant's place in `wire`, by an exhaustive match.
 fn row(action: &FaceAction) -> usize {
@@ -24,8 +24,10 @@ fn row(action: &FaceAction) -> usize {
         FaceAction::Tick => 12,
         FaceAction::LetGo { .. } => 13,
         FaceAction::Leave => 14,
+        FaceAction::Pad { .. } => 15,
+        FaceAction::PadHover { .. } => 16,
         #[cfg(debug_assertions)]
-        FaceAction::FlipCaps => 15,
+        FaceAction::FlipCaps => 17,
     }
 }
 
@@ -58,22 +60,34 @@ fn built() -> [FaceAction; 3] {
     [tap, placed, panel]
 }
 
-/// The press and let-go samples of a held key.
-fn held() -> [FaceAction; 2] {
+/// The held-key, pad and debug actions, which come last, and their JSON.
+fn tail() -> Vec<(FaceAction, &'static str)> {
     let press = FaceAction::Press {
         id: KeyId::new(KEY),
     };
     let let_go = FaceAction::LetGo {
         id: KeyId::new(KEY),
     };
-    [press, let_go]
+    let up = FaceAction::Pad { dir: Some(Dir::Up) };
+    vec![
+        (press, r#"{"act":"press","id":"key-q"}"#),
+        (FaceAction::Tick, r#"{"act":"tick"}"#),
+        (let_go, r#"{"act":"let_go","id":"key-q"}"#),
+        (FaceAction::Leave, r#"{"act":"leave"}"#),
+        (up, r#"{"act":"pad","dir":"up"}"#),
+        (
+            FaceAction::PadHover { on: true },
+            r#"{"act":"pad_hover","on":true}"#,
+        ),
+        #[cfg(debug_assertions)]
+        (FaceAction::FlipCaps, r#"{"act":"flip_caps"}"#),
+    ]
 }
 
 /// Every action and the exact JSON the UI sends for it.
 fn wire() -> Vec<(FaceAction, &'static str)> {
     let [tap, placed, panel] = built();
-    let [press, let_go] = held();
-    vec![
+    let mut table = vec![
         (tap, r#"{"act":"tap","id":"key-q","back":true}"#),
         (FaceAction::Smaller, r#"{"act":"smaller"}"#),
         (FaceAction::Bigger, r#"{"act":"bigger"}"#),
@@ -100,13 +114,9 @@ fn wire() -> Vec<(FaceAction, &'static str)> {
             r#"{"act":"lang_pick","index":1}"#,
         ),
         (panel, r#"{"act":"panel_key","key":"key-q","rows":5}"#),
-        (press, r#"{"act":"press","id":"key-q"}"#),
-        (FaceAction::Tick, r#"{"act":"tick"}"#),
-        (let_go, r#"{"act":"let_go","id":"key-q"}"#),
-        (FaceAction::Leave, r#"{"act":"leave"}"#),
-        #[cfg(debug_assertions)]
-        (FaceAction::FlipCaps, r#"{"act":"flip_caps"}"#),
-    ]
+    ];
+    table.extend(tail());
+    table
 }
 
 #[test]
@@ -202,4 +212,33 @@ fn a_panel_key_carries_the_uis_page_size() {
         panic!("not a panel key");
     };
     assert_eq!(rows, 3);
+}
+
+#[test]
+fn the_pads_stop_has_no_direction() {
+    let stop = FaceAction::Pad { dir: None };
+    let json = r#"{"act":"pad","dir":null}"#;
+    assert_eq!(serde_json::to_string(&stop).unwrap(), json);
+    assert_eq!(serde_json::from_str::<FaceAction>(json).unwrap(), stop);
+    let bare = serde_json::from_str::<FaceAction>(r#"{"act":"pad"}"#).unwrap();
+    assert_eq!(bare, stop, "no direction is Stop");
+    let left = serde_json::from_str::<FaceAction>(r#"{"act":"pad","dir":"left"}"#).unwrap();
+    assert_eq!(
+        left,
+        FaceAction::Pad {
+            dir: Some(Dir::Left)
+        }
+    );
+    assert!(serde_json::from_str::<FaceAction>(r#"{"act":"pad","dir":"top"}"#).is_err());
+}
+
+#[test]
+fn a_pad_hover_needs_on() {
+    let bare = r#"{"act":"pad_hover"}"#;
+    assert!(
+        serde_json::from_str::<FaceAction>(bare).is_err(),
+        "on is needed"
+    );
+    let off = serde_json::from_str::<FaceAction>(r#"{"act":"pad_hover","on":false}"#).unwrap();
+    assert_eq!(off, FaceAction::PadHover { on: false });
 }

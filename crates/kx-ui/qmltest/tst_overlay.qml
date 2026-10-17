@@ -119,19 +119,20 @@ Item {
             }
         }
 
-        // Flipped, it keeps the base offset on the other side, where the pointer's body is not; over the taskbar it also
-        // stays above it.
+        // Flipped, it keeps the base offset on the other side, where the pointer's body is not, and over the taskbar it
+        // stays above it; so does the wide badge, Grab carrying beside the pad's scroll part, at both ratios.
         function test_near_the_right_and_bottom_edges_the_badge_flips_and_stays_in_the_work_area() {
-            const [w, h, e, near] = [4000, 3000 - bar, sh.edge_px, 20];
-            const [ox, oy] = sh.offset_px;
+            const [w, h, e, near, [ox, oy]] = [4000, 3000 - bar, sh.edge_px, 20, sh.offset_px];
+            const wide = { mode: "grab", grab: "carrying", scroll: { dir: "left", fast: true } };
             const spots = [[1000, 800, false, false], [w - near, 800, true, false], [1000, h - near, false, true],
                            [w - near, h - near, true, true], [1000, h + bar / 2, false, true]];
-            for (const [d, grow] of [[1, 1], [1.5, 1], [1.5, 4]]) {
+            for (const [d, grow, look] of [[1, 1, {}], [1.5, 1, {}], [1.5, 4, {}], [1, 1, wide], [1.5, 1, wide]]) {
                 const s = screen(d);
                 for (const [x, y, left, up] of spots) {
-                    const o = overlay(s, state(px(x, y, d), s.area, { pointerPx: En.assist.pointerBase * grow }));
+                    const o = overlay(s, state(px(x, y, d), s.area, Object.assign({ pointerPx: En.assist.pointerBase * grow }, look)));
                     const b = Qt.rect(o.badgeAt.x, o.badgeAt.y, o.badge.width, o.badge.height);
-                    const tag = "ratio " + d + ", grow " + grow + " at " + x + ", " + y;
+                    const tag = "ratio " + d + ", grow " + grow + (look.scroll ? ", wide" : "") + " at " + x + ", " + y;
+                    verify(!look.scroll || (o.badge.scrolling && o.badge.carrying), tag + ": every part shows");
                     const [gx, gy, bottom] = [b.x - x - ox * grow, b.y - y - oy * grow, b.y + b.height];
                     verify(left ? Math.abs(b.x + b.width - (x - ox)) < 0.001 : gx >= -0.001, tag + (left ? ": left" : ": right"));
                     verify(up ? (y > h ? bottom <= y - oy : Math.abs(bottom - (y - oy)) < 0.001) : gy >= -0.001, tag + ": up or down");

@@ -169,8 +169,8 @@ impl<O: Os> Host<O> {
     }
 
     /// Sends the batch, notes what its taken part holds down and where it leaves the pointer, and settles the echoes
-    /// heard inside the send, or that whole part when no hook of ours is in to echo it; a cut batch counts. Input the OS
-    /// took moves Windows' last input time before the hooks see it, so it counts as seen.
+    /// heard inside the send, or that whole part when no hook of ours is in to echo it; a cut batch counts, and so do the
+    /// user's events heard inside. Input the OS took moves Windows' last input time before the hooks see it.
     fn ship(&mut self, now: Mono) -> Sent {
         let total = self.out.len();
         if total == 0 {
@@ -192,6 +192,7 @@ impl<O: Os> Host<O> {
         for id in self.inbox.drain() {
             self.echo.back(id);
         }
+        self.stats.passed_inside(self.inbox.take_passed());
         if took > 0 {
             self.health.saw(self.os.tick());
         }

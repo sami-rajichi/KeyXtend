@@ -1,6 +1,6 @@
 //! G9 window flags survive (roadmap G9, ADR-0013): the guard's flags stay on the keyboard and every guarded window after
 //! an outside topmost drop, style strip and click-through toggle, a hide and show, and a resize, with target-window in
-//! front.
+//! front. Then `g9pad` checks the scroll outline's edge windows.
 #![cfg(windows)]
 
 use std::collections::HashMap;
@@ -9,26 +9,17 @@ use kx_platform_windows::window::{foreground, guarded, is_through, kept_ex};
 use serde::Serialize;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{
-    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
-};
+use windows::Win32::UI::WindowsAndMessaging::{WS_EX_NOACTIVATE, WS_EX_TRANSPARENT};
 
 use crate::apps::{self, Ctx};
 use crate::g8size::{self, Resize, Size, after_grow};
-use crate::g9win::{self, Guard, ex_of, guard_of, owner_of};
+use crate::g9pad;
+use crate::g9win::{self, FLAGS, Guard, ex_of, guard_of, missing, owner_of};
 use crate::keymap::Reader;
 use crate::launch;
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
 
-/// Each flag by name: the guard's three, then the two that make a window click-through.
-const FLAGS: [(&str, u32); 5] = [
-    ("no_activate", WS_EX_NOACTIVATE.0),
-    ("topmost", WS_EX_TOPMOST.0),
-    ("tool_window", WS_EX_TOOLWINDOW.0),
-    ("layered", WS_EX_LAYERED.0),
-    ("transparent", WS_EX_TRANSPARENT.0),
-];
 /// The steps that hide and show the keyboard, and size it; a run that breaks off between them undoes them.
 const HIDE: &str = "hide";
 const SHOW: &str = "show";
@@ -41,12 +32,6 @@ const BACK: [&str; 2] = [SHRINK, GROW_BACK];
 /// The flags a window must keep, by the guard's own rule: its three, and click-through when it had both at first.
 fn wants(first_ex: u32) -> u32 {
     kept_ex(0, is_through(first_ex))
-}
-
-/// The names of the flags in `want` that `ex` lacks.
-fn missing(ex: u32, want: u32) -> Vec<&'static str> {
-    let lacks = |&&(_, bit): &&(&str, u32)| want & bit != 0 && ex & bit == 0;
-    FLAGS.iter().filter(lacks).map(|(name, _)| *name).collect()
 }
 
 /// The names of the flags in `ex` the guard must refuse: click-through on a window that took clicks at first.
@@ -256,7 +241,8 @@ fn undo(ctx: &Ctx, w: &Watch) -> Vec<String> {
 /// Runs G9 on the product, called `name`; it writes the product windows' styles, so only with the owner's yes.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let keyboard = Keyboard::find()?.hwnd;
-    let target = launch::to_front(ctx, launch::start_target(ctx)?)?;
+    let filled = [ctx.target.fill_arg.clone()];
+    let target = launch::to_front(ctx, launch::start_target_with(ctx, &filled)?)?;
     let mut w = Watch {
         first: HashMap::new(),
         written: Vec::new(),
@@ -270,13 +256,15 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let mut not_put_back = undo(ctx, &w);
     let repaired = g9win::repair(&w.first, &w.written);
     not_put_back.extend(repaired.not_put_back);
+    let pad =
+        g9pad::run(ctx, keyboard, &target).unwrap_or_else(|e| json!({ "ok": false, "error": e }));
     let left_open = apps::clean_up(ctx, target);
     let mut names: Vec<&str> = plan(ctx).iter().map(|(step, _)| *step).collect();
     names.extend([GROW, SHRINK]);
-    let pass = ran.is_ok() && passed(&w.seen, &names);
+    let pass = ran.is_ok() && passed(&w.seen, &names) && pad["ok"] == true;
     let mut v = json!({
         "gate": "G9", "keyboard": name, "seen": w.seen, "put_back": repaired.fixed, "not_put_back": not_put_back,
-        "left_open": left_open, "pass": pass,
+        "outline": pad, "left_open": left_open, "pass": pass,
     });
     // Only a run that broke off, or whose size step failed, carries `error`.
     if let Err(e) = ran {

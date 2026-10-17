@@ -1,30 +1,42 @@
 //! Our windows' guard: they stay on top and never take the focus, and clicks may pass through them.
-//! Which styles the guard keeps and in what order it guards are pure and tested everywhere; the OS calls are in `win`.
+//! Which styles the guard keeps, in what order it guards and the entry watch's rules are pure and tested everywhere; the
+//! OS calls are in `win`.
 #![cfg_attr(
     not(windows),
     allow(
         dead_code,
-        reason = "The style and order rules serve only the Windows guard in win."
+        reason = "The style, order and entry rules serve only the Windows guard in win."
     )
 )]
 
 mod band;
 #[cfg(windows)]
+pub(crate) mod entry;
+#[cfg(windows)]
 mod guard;
+#[cfg(windows)]
+mod pages;
+#[cfg(windows)]
+mod prop;
 #[cfg(test)]
 mod tests;
 #[cfg(windows)]
 mod top;
+mod watch;
 #[cfg(windows)]
 mod win;
 
 #[cfg(windows)]
 pub use guard::guarded;
 #[cfg(windows)]
+pub(crate) use pages::{paging, whose};
+#[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
     own_windows, shape, title,
 };
+#[cfg(windows)]
+pub(crate) use win::{on_ours, top_level, window_at};
 
 /// `WS_EX_TOPMOST`: above every window that is not topmost.
 const WS_EX_TOPMOST: u32 = 0x0000_0008;

@@ -1,6 +1,5 @@
-// The language key's Cycle and List designs and the language list over stand-in bridges: the list pages five rows,
-// the board's arrows, Enter and Esc drive it, a row or page button click reaches the keyboard, and Cycle shows one dot
-// per layout.
+// The language key's List design and the language list over stand-in bridges: the list pages five rows, the board's
+// arrows, Enter and Esc drive it, and a row or page button click reaches the keyboard.
 import QtQuick
 import QtTest
 import "../qml"
@@ -31,8 +30,6 @@ Item {
     Component { id: kbC; FakeKeyboard {} }
     Component { id: winC; KbWindow {} }
     Component { id: listC; LangList {} }
-    Component { id: cycleC; LangCycle {} }
-    Component { id: keyC; Key {} }
     Component { id: spyC; SignalSpy {} }
     // Measures text in a given font.
     Component { id: metricsC; FontMetrics {} }
@@ -45,11 +42,17 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A list view of `n` layouts, the third current, row `hi` highlighted, paged by the board's arrows.
-        function view(n, hi) {
+        // A list view of `n` layouts, the third current, row `hi` highlighted on page `at` of `count` (one by default),
+        // paged by the board's arrows.
+        function view(n, hi, at, count) {
             const row = i => ({ short: "L" + i, name: ["Language " + i, "Layout " + i], rtl: false, arabic: false, current: i === 2, icon: i === 2 ? "lang.current" : null });
             const face = Face.states.list.list;
-            return { rows: [...Array(n).keys()].map(row), hi: hi, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+            const page = paged(at || 0, count || 1);
+            return { rows: [...Array(n).keys()].map(row), hi: hi, page: page, keys: face.keys, page_back: face.page_back, page_on: face.page_on };
+        }
+        // Page `at` of `count`, as the keyboard's state holds it.
+        function paged(at, count) {
+            return { at: at, count: count, back: at > 0, on: at < count - 1 };
         }
         function makeList(v, res) {
             const ui = createTemporaryObject(uiC, root);
@@ -72,12 +75,12 @@ Item {
 
         function test_the_list_pages_five_rows_and_shows_the_page_of_the_highlight() {
             compare(En.settings.pageRows, 5, "the [ui] page_rows default");
-            const list = makeList(view(7, 0));
+            const list = makeList(view(7, 0, 0, 2));
             compare(rowsOf(list).map(r => r.Accessible.name), [0, 1, 2, 3, 4].map(i => root.res.space(["L" + i, "Language " + i, "Layout " + i])));
             const number = pageNumber(list);
             verify(number.visible, "a pager with two pages");
             compare(number.text, list.ui.pageText(1, 2));
-            list.view = view(7, 6);
+            list.view = view(7, 6, 1, 2);
             compare(rowsOf(list).length, 2, "the second page");
             compare(slots(list).length, 5, "padded to a whole page, so the box keeps its size");
             compare(slots(list).filter(r => r.hi).map(r => r.place), [6], "the ring on the highlight");
@@ -87,7 +90,7 @@ Item {
         // Arabic flips text only (ADR-0020): the pager stays on the right and each badge before its name.
         function test_the_arabic_ui_keeps_the_lists_places_and_arabic_names_read_right_to_left() {
             const ar = Object.assign({}, root.res, { tr: k => Ar.texts[k] !== undefined ? Ar.texts[k] : k });
-            const v = view(7, 0);
+            const v = view(7, 0, 0, 2);
             v.rows[1] = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
             const list = makeList(v, ar);
             list.open();
@@ -108,7 +111,7 @@ Item {
 
         function test_a_pager_taller_than_its_rows_stays_inside_the_box() {
             const ui = createTemporaryObject(uiC, root);
-            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0), rows: 2, title: "list" });
+            const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: root.res, s: 1, view: view(7, 0, 0, 4), rows: 2, title: "list" });
             list.open();
             waitForRendering(list.contentItem);
             const back = button(list.contentItem, En.texts["page.back"]);
@@ -129,8 +132,21 @@ Item {
             compare([tick.icon, tick.tint], [N.lk.icons.lang.current, Qt.color(N.lk.palette.ring)]);
         }
 
+        // The keyboard works the page out, so the list shows the page it names and dims a button it says cannot turn.
+        function test_the_list_shows_the_page_the_keyboard_works_out() {
+            const v = view(7, 0, 1, 2);
+            v.page.back = false;
+            const list = makeList(v);
+            list.open();
+            waitForRendering(list.contentItem);
+            compare(rowsOf(list).map(r => r.row.short), ["L5", "L6"], "the second page, whatever the highlight");
+            compare(pageNumber(list).text, list.ui.pageText(2, 2));
+            verify(!button(list.contentItem, En.texts["page.back"]).enabled, "the keyboard says no page lies back");
+            list.visible = false;
+        }
+
         function test_a_row_click_picks_it_and_the_page_buttons_send_the_board_keys() {
-            const list = makeList(view(7, 6));
+            const list = makeList(view(7, 6, 1, 2));
             const pick = createTemporaryObject(spyC, root, { target: list, signalName: "pick" });
             const page = createTemporaryObject(spyC, root, { target: list, signalName: "page" });
             list.open();
@@ -180,7 +196,7 @@ Item {
             verify(tall.height > latin.height, "the case this test is for: " + tall.height + " " + latin.height);
             const res = Object.assign({}, root.res, { fam: { latin: root.res.fam.latin, arabic: arabic, mark: arabic, ui: root.res.fam.ui } });
             const row = { short: "ع", name: ["العربية", "Arabic 101"], rtl: true, arabic: true, current: false, icon: null };
-            const v = { rows: [row], hi: 0, keys: [], page_back: null, page_on: null };
+            const v = { rows: [row], hi: 0, page: paged(0, 1), keys: [], page_back: null, page_on: null };
             const ui = createTemporaryObject(uiC, root);
             const list = createTemporaryObject(listC, root, { ui: ui, lk: N.lk, res: res, s: 1, view: v, rows: 5, title: "list" });
             const slot = slots(list)[0];
@@ -227,74 +243,6 @@ Item {
             win.at = Qt.point(win.at.x + 10, win.at.y);
             compare(placed(), before + 1, "placed again as the keyboard moves");
             win.visible = false;
-        }
-
-        function test_the_cycle_design_shows_a_globe_the_name_and_one_dot_per_layout() {
-            const lang = Face.states.en.lang;
-            const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: 40 });
-            const cy = N.lk.shape.lang.cycle;
-            const dots = Board.all(c, o => o.lit !== undefined && o.radius !== undefined);
-            const each = (on, off) => [...Array(lang.count).keys()].map(i => i === lang.at ? on : off);
-            compare(dots.length, lang.count, "one dot per layout");
-            compare(dots.map(d => d.opacity), each(1, cy.dot_off));
-            // An unlit dot keeps 3:1 too, so the current layout's dot stands out by size.
-            compare(dots.map(d => d.width), each(cy.dot_on_px, cy.dot_px));
-            compare(new Set(dots.map(d => d.mapToItem(c, d.width / 2, 0).x)).size, 1, "one column, centred");
-            compare(Board.all(c, o => o.tint !== undefined && o.icon !== undefined)[0].icon, N.lk.icons.lang.cycle);
-            compare(Board.all(c, o => o.text === lang.cur.short).length, 1, "the current name");
-            c.lang = Face.states.ar.lang;
-            compare(Board.all(c, o => o.text === Face.states.ar.lang.cur.short).length, 1, "the next name rises in");
-        }
-
-        function test_many_layouts_wrap_their_dots_inside_the_cap() {
-            const room = 18;
-            const lang = Object.assign({}, Face.states.en.lang, { count: 8, at: 0 });
-            const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: room });
-            const dots = () => Board.all(c, o => o.lit !== undefined && o.radius !== undefined);
-            compare(dots().length, 8);
-            // The key centres the design, so the cap's edges sit half the room above and below its middle.
-            const inside = d => {
-                const y = d.mapToItem(c, 0, 0).y - (c.height - room) / 2;
-                return y >= 0 && y + d.height <= room;
-            };
-            for (let at = 0; at < 8; at++) {
-                c.lang = Object.assign({}, lang, { at: at });
-                tryVerify(() => dots().every(inside), 2000, "every dot inside the cap with " + at + " lit");
-            }
-            verify(new Set(dots().map(d => d.mapToItem(c, d.width / 2, 0).x)).size > 1, "more than one column");
-        }
-
-        // The side names keep the owner's faded decoration (kx-theme's one contrast exception) in their own weight.
-        function test_the_carousel_side_names_take_their_size_fade_and_weight_from_the_tokens() {
-            const kv = Face.board.keys.find(k => k.kind === "lang");
-            const key = createTemporaryObject(keyC, root, { kv: kv, ks: Face.states.en.keys[kv.id], lk: N.lk, lang: Face.states.en.lang, design: "carousel", res: root.res, s: 1 });
-            const sh = N.lk.shape.lang;
-            const names = Board.all(key, o => o.cur !== undefined && o.modelData !== undefined);
-            compare(names.length, 3, "back, current and next");
-            for (const n of names.filter(n => !n.cur)) {
-                compare(n.opacity, sh.side[1]);
-                compare(n.font.pixelSize, sh.side[0]);
-                compare(n.font.weight, sh.side_weight);
-            }
-            compare(names.filter(n => n.cur)[0].font.weight, sh.weight);
-        }
-
-        function test_each_design_draws_the_language_key_its_own_way() {
-            const kv = Face.board.keys.find(k => k.kind === "lang");
-            const lang = Face.states.en.lang;
-            const shows = design => {
-                const key = createTemporaryObject(keyC, root, { kv: kv, ks: Face.states.en.keys[kv.id], lk: N.lk, lang: lang, design: design, res: root.res, s: 1 });
-                const visible = o => {
-                    for (let p = o; p && p !== key; p = p.parent)
-                        if (!p.visible)
-                            return false;
-                    return true;
-                };
-                return Board.all(key, o => o.icon !== undefined && o.tint !== undefined && o.icon.length > 0 && visible(o)).map(o => o.icon);
-            };
-            compare(shows("carousel"), []);
-            compare(shows("cycle"), [N.lk.icons.lang.cycle]);
-            compare(shows("list"), [N.lk.icons.lang.list]);
         }
     }
 }

@@ -4,7 +4,7 @@
 use kx_mod_mouse::{Actor, ID, MANIFEST, MouseSettings, Msg};
 use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
-    PointerHook, PointerMoved, Toggle,
+    PointerHook, PointerMoved, PointerPressed, Scan, ScrollAsk, Toggle,
 };
 use kx_module_api::{
     Bus, Event, ModuleCx, Mono, Notice, NoticeArg, Subscription, US_PER_MS, args, parse_as,
@@ -18,6 +18,10 @@ use std::sync::{Arc, Mutex};
 pub const RCLICK: &str = "rclick";
 /// A screen at 100 % scale.
 pub const DPI: u32 = 96;
+/// Left Shift.
+pub const SHIFT: Scan = Scan::new(0x2A);
+/// The OS error code a refused hook carries.
+pub const CODE: i32 = 1428;
 /// Times the tests feed at, in order.
 pub const T0: Mono = Mono::from_us(1_000);
 pub const T1: Mono = Mono::from_us(2_000);
@@ -33,8 +37,10 @@ pub enum Heard {
     Changed(AssistChanged),
     Note(AssistNote),
     Moved(PointerMoved),
+    Pressed(PointerPressed),
     Used,
     AskLatches,
+    AskScroll,
     Notice(Notice),
 }
 
@@ -60,6 +66,17 @@ pub fn down(at: Point) -> PointerEvent {
         button,
         at,
         ours: false,
+        dpi: DPI,
+    }
+}
+
+/// A left press on one of our windows at `at`.
+pub fn ours(at: Point) -> PointerEvent {
+    let button = Button::Left;
+    PointerEvent::Down {
+        button,
+        at,
+        ours: true,
         dpi: DPI,
     }
 }
@@ -185,6 +202,8 @@ fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
         ear(bus, heard, |e: &PointerMoved| Heard::Moved(*e)),
         ear(bus, heard, |_: &LatchesUsed| Heard::Used),
         ear(bus, heard, |_: &LatchesAsk| Heard::AskLatches),
+        ear(bus, heard, |e: &PointerPressed| Heard::Pressed(*e)),
+        ear(bus, heard, |_: &ScrollAsk| Heard::AskScroll),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.clone())),
     ]
 }

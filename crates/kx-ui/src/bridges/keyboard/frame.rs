@@ -23,9 +23,39 @@ impl qobject::Keyboard {
         frames::mark(Mark::End);
     }
 
-    /// Does a tap or a key's first press and answers what to redraw, as `run` does, with the frame log's mark once
-    /// the key went out, then the key sound.
+    /// Does a tap, a key's first press or a pad tap and answers what to redraw, as `run` does, with the frame log's
+    /// mark once the key went out (`marked`), then the key sound.
     pub(super) fn sent(&self, action: FaceAction) -> QString {
-        self.redraw(|h| h.sent(action, || frames::mark(Mark::Sent)))
+        let mark = marked(&action);
+        self.redraw(|h| h.sent(action, || mark.into_iter().for_each(frames::mark)))
+    }
+}
+
+/// The frame log's mark once `action` went out: none for a pad tap, as Plate opens no press frame around it.
+fn marked(action: &FaceAction) -> Option<Mark> {
+    (!matches!(action, FaceAction::Pad { .. })).then_some(Mark::Sent)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kx_module_api::ports::{Dir, KeyId};
+
+    #[test]
+    fn a_key_marks_sent_and_a_pad_tap_marks_nothing() {
+        let id = || KeyId::new("a".to_owned());
+        let tap = FaceAction::Tap {
+            id: id(),
+            back: false,
+        };
+        assert_eq!(marked(&tap), Some(Mark::Sent), "a tap");
+        assert_eq!(
+            marked(&FaceAction::Press { id: id() }),
+            Some(Mark::Sent),
+            "a first press"
+        );
+        for dir in Dir::ALL.map(Some).into_iter().chain([None]) {
+            assert_eq!(marked(&FaceAction::Pad { dir }), None, "{dir:?}");
+        }
     }
 }

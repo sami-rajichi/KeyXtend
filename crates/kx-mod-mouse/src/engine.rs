@@ -113,6 +113,8 @@ pub struct Engine {
     mods: Vec<Scan>,
     /// `mods` are pressed at the OS.
     mods_down: bool,
+    /// The scroll pad scrolls, so moves and presses are noted.
+    scrolling: bool,
     /// Notes for the module, drained by `take_notes`.
     notes: Vec<Note>,
 }
@@ -134,6 +136,7 @@ impl Engine {
             latches: Vec::new(),
             mods: Vec::with_capacity(MAX_LATCHES),
             mods_down: false,
+            scrolling: false,
             notes: Vec::with_capacity(NOTE_ROOM),
         }
     }
@@ -154,12 +157,13 @@ impl Engine {
         }
     }
 
-    /// The hook is needed: a mode is on, latches are held, a press is held back or awaited, a carry runs, or
-    /// modifiers are still pressed.
+    /// The hook is needed: a mode is on, latches are held, the pad scrolls, a press is held back or awaited, a carry
+    /// runs, or modifiers are still pressed.
     #[must_use]
     pub fn needs_hook(&self) -> bool {
         self.mode != Mode::Off
             || !self.latches.is_empty()
+            || self.scrolling
             || self.mods_down
             || self.state != State::Idle
     }
@@ -235,41 +239,9 @@ impl Engine {
         }
     }
 
-    /// Keeps the last point, and notes a move while a mode is on.
-    fn track(&mut self, event: PointerEvent) {
-        match event {
-            PointerEvent::Down { at, .. } | PointerEvent::Up { at, .. } => self.last = at,
-            PointerEvent::Move { at } => {
-                self.last = at;
-                if self.mode != Mode::Off {
-                    self.note(Note::Moved { at });
-                }
-            }
-            PointerEvent::Esc => {}
-        }
-    }
-
     /// Right-click and Grab as the UI shows them.
     fn view(&self) -> (bool, GrabState) {
         (self.rclick(), self.grab())
-    }
-
-    /// Notes the new state when it differs from `before`.
-    fn note_state(&mut self, before: (bool, GrabState)) {
-        let (rclick, grab) = self.view();
-        if (rclick, grab) != before {
-            self.note(Note::State { rclick, grab });
-        }
-    }
-
-    /// Keeps `note` within the reserved room, so the hot path never allocates; a move replaces a move just before.
-    fn note(&mut self, note: Note) {
-        if let (Note::Moved { .. }, Some(last @ Note::Moved { .. })) = (note, self.notes.last_mut())
-        {
-            *last = note;
-        } else if self.notes.len() < self.notes.capacity() {
-            self.notes.push(note);
-        }
     }
 }
 

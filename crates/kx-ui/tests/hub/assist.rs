@@ -67,7 +67,7 @@ fn hold(ring_after_ms: u32, hold_ms: u32) -> AssistNote {
 fn the_state_starts_off_with_nothing_shown_and_the_usual_pointer() {
     let rig = Rig::new();
     let want = json!({
-        "live": false, "rclick": false, "grab": "off", "mode": null,
+        "live": false, "rclick": false, "grab": "off", "mode": null, "scroll": null,
         "point": null, "ring": null, "burst": null,
         "pointerPx": SysLook::POINTER_PX, "pointerBase": SysLook::POINTER_PX, "area": null, "seq": 0
     });

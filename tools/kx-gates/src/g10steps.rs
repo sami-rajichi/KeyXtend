@@ -71,6 +71,11 @@ impl Desk<'_> {
         self.reader.toggled(self.kb.hwnd, &step.key)
     }
 
+    /// Whether latch key `id` reads as latched now; none when it cannot be read.
+    fn on(&self, id: &str) -> Option<bool> {
+        self.reader.toggled(self.kb.hwnd, id).ok().flatten()
+    }
+
     /// What target-window shows once the step that started at `t0` (µs) has settled.
     fn after(&self, t0: i64) -> Result<After, String> {
         sleep_ms(self.ctx.cfg.g10.step_wait_ms);
@@ -94,6 +99,9 @@ impl Desk<'_> {
 
 /// Runs `step`: its result line, and whether its latch state could not be read.
 fn one(d: &Desk, step: &Step) -> Result<(Value, bool), String> {
+    if let Some(spare) = &step.spare {
+        step.ready(d.reader.toggled(d.kb.hwnd, spare)?)?;
+    }
     let t0 = now_us();
     let (first, rest) = step.presses.split_first().ok_or("a step presses nothing")?;
     d.press(first)?;
@@ -119,14 +127,42 @@ fn one(d: &Desk, step: &Step) -> Result<(Value, bool), String> {
     Ok((v, unread))
 }
 
-/// After a failed `step`, presses its key once more while it reads as latched, so the next step goes out alone; the
-/// latch's state after, `None` when it cannot be read.
-fn let_go(d: &Desk, step: &Step) -> Option<bool> {
-    let on = d.latched(step).ok().flatten();
-    if !step.left_latched(on) || d.restore(&step.key).is_err() {
-        return on;
+/// After a failed `step`, lets its latch go so the next step goes out alone: Win by `g10keys::undo` with its spare, any
+/// other by one more press while it reads as latched; none of these sends a key, so they go out even after the mouse
+/// guard's stop. The key's and the spare's states after, `None` when unread.
+fn let_go(d: &Desk, step: &Step) -> (Option<bool>, Option<bool>) {
+    if let Some(spare) = &step.spare {
+        let keys = (step.key.as_str(), spare.as_str());
+        return g10keys::undo(keys, |id| d.on(id), |id| d.restore(id).is_ok());
     }
-    d.latched(step).ok().flatten()
+    let on = d.on(&step.key);
+    if !step.left_latched(on) || d.restore(&step.key).is_err() {
+        return (on, None);
+    }
+    (d.on(&step.key), None)
+}
+
+/// Runs `step` and, when it failed, lets its latches go: its result line, with each key the owner checks by hand
+/// added to `owner`.
+fn checked(d: &Desk, step: &Step, owner: &mut Vec<Value>) -> Value {
+    let (mut v, unread) = one(d, step)
+        .unwrap_or_else(|e| (json!({ "key": step.key, "ok": false, "error": e }), false));
+    let failed = v["ok"] != true;
+    let (mut after, mut spare) = (None, None);
+    if failed && step.toggles {
+        (after, spare) = let_go(d, step);
+        v["latched_after"] = json!(after);
+        if step.spare.is_some() {
+            v["spare_after"] = json!(spare);
+        }
+    }
+    let why = step
+        .owner_why(unread, failed, after)
+        .map(|why| (step.key.as_str(), why));
+    for (key, why) in why.into_iter().chain(step.spare_why(failed, spare)) {
+        owner.push(json!({ "key": key, "why": why }));
+    }
+    v
 }
 
 /// Carousel or Cycle: target-window steps from its first layout to the next, which G10 then puts back.
@@ -185,21 +221,8 @@ pub fn run(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
         reader,
         layout,
     };
-    let (mut steps, mut owner) = (Vec::new(), Vec::new());
-    for step in &plan {
-        let (mut v, unread) = one(&d, step)
-            .unwrap_or_else(|e| (json!({ "key": step.key, "ok": false, "error": e }), false));
-        let failed = v["ok"] != true;
-        let mut after = None;
-        if failed && step.toggles {
-            after = let_go(&d, step);
-            v["latched_after"] = json!(after);
-        }
-        if let Some(why) = step.owner_why(unread, failed, after) {
-            owner.push(json!({ "key": step.key, "why": why }));
-        }
-        steps.push(v);
-    }
+    let mut owner = Vec::new();
+    let steps: Vec<Value> = plan.iter().map(|s| checked(&d, s, &mut owner)).collect();
     let lang = lang(&d, &settings).unwrap_or_else(|e| json!({ "ok": false, "error": e }));
     let ok = steps.iter().all(|s| s["ok"] == true) && lang["ok"] == true;
     Ok(json!({ "steps": steps, "lang": lang, "owner_checks": owner, "ok": ok }))

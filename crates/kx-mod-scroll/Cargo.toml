@@ -1,0 +1,23 @@
+[package]
+name = "kx-mod-scroll"
+description = "The scroll module: the pad scrolls what the user last pointed at, gliding at two speeds until a stop."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kx-module-api = { path = "../kx-module-api" }
+serde.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true
+toml.workspace = true

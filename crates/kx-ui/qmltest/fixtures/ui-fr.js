@@ -36,7 +36,10 @@ var lang = {
   }
 };
 var texts = {
+  "badge.fast": "rapide",
   "badge.holding": "Saisi",
+  "badge.join": ", ",
+  "badge.slow": "lent",
   "banner.more": "{$more} autres notifications",
   "bar.bigger": "Plus grand",
   "bar.bubble": "Afficher le clavier",
@@ -135,6 +138,7 @@ var texts = {
   "module.keyboard": "Clavier",
   "module.layouts": "Dispositions de clavier",
   "module.mouse": "Aide à la souris",
+  "module.scroll": "Pavé de défilement",
   "module.ui": "Apparence",
   "notice.keys-not-sent": "Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.",
   "notice.lang-not-switched": "L’application au premier plan n’a pas pu changer de langue.",
@@ -142,6 +146,11 @@ var texts = {
   "notice.mouse-hook-failed": "L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.",
   "notice.mouse-reset": "L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.",
   "notice.mouse-stopped": "L’aide à la souris s’est arrêtée après une erreur. Redémarrez KeyXtend pour l’utiliser de nouveau.",
+  "notice.scroll-end": "Déjà à la fin.",
+  "notice.scroll-failed": "Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.",
+  "notice.scroll-none": "Rien à faire défiler ici.",
+  "notice.scroll-point": "Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.",
+  "notice.scroll-stopped": "Le pavé de défilement s’est arrêté après une erreur. Redémarrez KeyXtend pour l’utiliser de nouveau.",
   "notice.settings-defaults": "Aucun fichier de paramètres n’était utilisable ; les paramètres par défaut sont utilisés.",
   "notice.settings-locked": "Un autre programme utilise le fichier de paramètres. Les paramètres par défaut sont utilisés et rien n’est enregistré.",
   "notice.settings-newer": "Les paramètres de « {$module} » viennent d’une version plus récente. Ils sont conservés et les valeurs par défaut sont utilisées pour l’instant.",
@@ -165,6 +174,7 @@ var texts = {
   "tip.mouse-off": "L’aide à la souris est désactivée",
   "tip.one-lang": "Une seule langue de clavier est installée",
   "tip.rclick": "Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux",
+  "tip.scroll-off": "Le pavé de défilement est désactivé",
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "window.bubble": "Clavier KeyXtend (réduit)",
@@ -172,6 +182,7 @@ var texts = {
   "window.list": "Langues du clavier",
   "window.menu": "Menu de KeyXtend",
   "window.notice": "Notification de KeyXtend",
+  "window.outline": "Contour de défilement",
   "window.pointer": "Aide au pointeur",
   "window.tip": "Info-bulle de KeyXtend"
 };
@@ -201,5 +212,13 @@ var assist = {
   "pointerPx": 32,
   "rclick": false,
   "ring": null,
+  "scroll": null,
   "seq": 0
+};
+var scroll = {
+  "area": null,
+  "dir": null,
+  "fast": false,
+  "live": false,
+  "ours": false
 };

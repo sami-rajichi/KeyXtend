@@ -3,7 +3,7 @@
 use std::cell::Cell;
 use std::sync::{Mutex, PoisonError};
 
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetWindowLongPtrW, HWND_BOTTOM, HWND_NOTOPMOST,
     MA_NOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SendMessageW, SetWindowLongPtrW,
@@ -46,9 +46,7 @@ unsafe extern "system" fn deaf(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
     if msg == WM_WINDOWPOSCHANGED {
         return LRESULT(0);
     }
-    let behind = HANDLE(std::ptr::without_provenance_mut(
-        DEAF_BEHIND.get().cast_unsigned(),
-    ));
+    let behind = DEAF_BEHIND.get().cast_unsigned();
     // SAFETY: hands every other message to the guard this subclass replaced, as a subclass must.
     unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
 }

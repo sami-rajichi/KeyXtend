@@ -143,3 +143,21 @@ fn the_notice_and_the_menu_pop_in_as_the_mock_up_does() {
     let bad = text().replacen("menu_scale = 0.96", "menu_scale = 1.5", 1);
     assert!(parse(&bad).expect_err("above 1").contains("menu_scale"));
 }
+
+#[test]
+fn the_scroll_outline_fades_briefly_and_must_be_in_the_file() {
+    assert!(MOVES.contains(&"outline"), "a move the faces play");
+    let m = load().expect("motion.toml loads").full;
+    let ease_out = [0.0, 0.0, 0.58, 1.0, 1.0, 1.0];
+    assert_eq!(
+        m.moves["outline"],
+        Timed {
+            ms: 167,
+            bez: ease_out
+        },
+        "WinUI's ControlFastAnimationDuration, to fade in and to move unseen"
+    );
+    let gone = text().replacen("outline = {", "outlines = {", 1);
+    let e = parse(&gone).expect_err("outline is missing");
+    assert!(e.contains("moves.outline"), "{e}");
+}

@@ -41,6 +41,9 @@ shimmer = { ms = 1000, curve = "linear" }
 burst = { ms = 420, curve = "ease_out" }
 # The mode badge beside the pointer fading in and out; the mock-up shows it at once, so WinUI's ControlFastAnimationDuration.
 badge = { ms = 167, curve = "ease_out" }
+# The scroll pad's target outline fading in, and out and back in to move to a new target; the mock-up shows it at once,
+# so WinUI's ControlFastAnimationDuration.
+outline = { ms = 167, curve = "ease_out" }
 # The notice banner dropping in (.toast toastIn, lines 399-401) and the tray menu opening (.ctx ctxIn, lines 360-361).
 notice = { ms = 200, curve = "ease_out" }
 menu = { ms = 140, curve = "ease_out" }

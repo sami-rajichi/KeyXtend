@@ -1,21 +1,23 @@
 //! The Windows side of the guard: our windows and their titles, the focus, and the shape that takes clicks.
 
-use kx_module_api::ports::Rect;
-use kx_platform::ui::{FocusToken, UiError, WindowGuard};
-use windows::Win32::Foundation::{HWND, LPARAM, RECT};
+use kx_module_api::ports::{Point, Rect};
+use kx_platform::ui::{FocusToken, UiError, Watched, WindowGuard};
+use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
     CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
 };
 use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId,
-    InternalGetWindowText, IsWindow, IsWindowVisible, SetForegroundWindow,
+    EnumWindows, GA_ROOT, GetAncestor, GetForegroundWindow, GetWindowRect,
+    GetWindowThreadProcessId, InternalGetWindowText, IsWindow, IsWindowVisible,
+    SetForegroundWindow, WindowFromPoint,
 };
 use windows::core::BOOL;
 
 use super::guard::guard;
-use super::top::front;
+use super::top::{lay_under, lift_alone};
+use super::{entry, pages};
 use super::{guard_order, ours_by, should_give_back, spared};
 use crate::screen::edges;
 use crate::{failed, refused};
@@ -38,6 +40,22 @@ impl WindowGuard for WinGuard {
 
     fn lift_alone(&self, title: &str) -> Result<(), UiError> {
         lift_alone(title)
+    }
+
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError> {
+        entry::watch_entries(title)
+    }
+
+    fn unwatch_entries(&self, title: &str) {
+        entry::unwatch_entries(title);
+    }
+
+    fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
+        lay_under(title, under)
+    }
+
+    fn mark_pages(&self, title: &str) -> Result<(), UiError> {
+        pages::mark_pages(title)
     }
 
     fn remember(&self) -> FocusToken {
@@ -89,6 +107,26 @@ pub fn is_ours(hwnd: HWND) -> bool {
     ours_by(pid, me, hwnd == console)
 }
 
+/// The window at screen point `p` and its top-level window; both null where there is none.
+#[allow(unsafe_code, reason = "A plain window query.")]
+pub(crate) fn window_at(p: Point) -> (HWND, HWND) {
+    let hwnd = hit(p);
+    // SAFETY: a plain query; null has no top-level window.
+    (hwnd, unsafe { GetAncestor(hwnd, GA_ROOT) })
+}
+
+/// True when the window at screen point `p` is one of ours, such as the banner; one query, cheap enough for the hook.
+pub(crate) fn on_ours(p: Point) -> bool {
+    is_ours(hit(p))
+}
+
+/// The window at screen point `p`; null where there is none.
+#[allow(unsafe_code, reason = "A plain window query.")]
+fn hit(p: Point) -> HWND {
+    // SAFETY: a plain query by value; it sends no message to another thread's window.
+    unsafe { WindowFromPoint(POINT { x: p.x, y: p.y }) }
+}
+
 /// True while `hwnd` is shown.
 #[allow(unsafe_code, reason = "A plain window query.")]
 fn visible(hwnd: HWND) -> bool {
@@ -109,7 +147,7 @@ pub fn own_windows() -> Vec<HWND> {
     unsafe_code,
     reason = "Enumerates top-level windows into a local list."
 )]
-pub(super) fn top_level() -> Vec<HWND> {
+pub(crate) fn top_level() -> Vec<HWND> {
     unsafe extern "system" fn collect(hwnd: HWND, list: LPARAM) -> BOOL {
         let found = std::ptr::with_exposed_provenance_mut::<Vec<HWND>>(list.0.cast_unsigned());
         // SAFETY: `list` is the address of the Vec passed below, alive and not borrowed during the call.
@@ -139,13 +177,13 @@ pub fn title(hwnd: HWND) -> String {
     String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
 
-/// Our visible window titled `title`.
+/// Our visible window titled `title_is`.
 #[must_use]
 pub fn own_titled(title_is: &str) -> Option<HWND> {
     own_windows().into_iter().find(|&w| title(w) == title_is)
 }
 
-/// The box of our visible window titled `title`.
+/// The box of our visible window titled `title_is`.
 ///
 /// # Errors
 /// `NoWindow` while it is not shown, `Refused` when Windows will not say.
@@ -185,23 +223,7 @@ pub(super) fn guard_these(
     Ok(order.len())
 }
 
-/// Lifts our shown windows titled `title` alone to the top of the topmost band, never activating them and leaving
-/// their owners where they are: the guard may have lifted a banner or the list after a tip's owner.
-///
-/// # Errors
-/// `NoWindow` while none shows, `Refused` when Windows says no.
-fn lift_alone(title_is: &str) -> Result<(), UiError> {
-    let named: Vec<HWND> = own_windows()
-        .into_iter()
-        .filter(|&w| title(w) == title_is)
-        .collect();
-    if named.is_empty() {
-        return Err(UiError::NoWindow);
-    }
-    named.into_iter().rev().try_for_each(front)
-}
-
-/// Cuts our window titled `title` to `rects` (physical pixels from its top-left corner), so clicks
+/// Cuts our window titled `title_is` to `rects` (physical pixels from its top-left corner), so clicks
 /// elsewhere reach the app below; Windows also draws nothing outside them.
 ///
 /// # Errors

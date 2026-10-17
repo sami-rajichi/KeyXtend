@@ -1,0 +1,87 @@
+# Settings P5 adds: G6 on the product's test build, the scroll pad's parts, and the scroll steps of G8, G9 and G10.
+# kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
+
+# G6 (roadmap G6): the test build's scroll pad scrolls a long Notepad text, a wide Chrome page and an Explorer list that
+# G6 opens, at the last point outside the keyboard (times in ms, distances in physical px). G6 never turns a wheel
+# itself; the speeds and stops are the test build's own [scroll] settings.
+[g6]
+# The pictures leave out this much at each side of the document and above the keyboard, so the outline's edges, the
+# window frame and the keyboard's own changes never count.
+inset_px = 16
+# A window picture counts as changed when more than this share of its pixels changed (a caret blink stays below it).
+min_changed = 0.02
+# Each speed scrolls for phase_ms while its percent is read every sample_ms; the slopes give the fast ÷ slow ratio.
+phase_ms = 3000
+sample_ms = 200
+# The ratio may be this share off the test build's [scroll] fast ÷ slow; Explorer's grown view size as far off its aim.
+ratio_slack = 0.3
+# Each other direction scrolls this long before it is judged.
+move_ms = 1500
+# A scroll has stopped when two looks this far apart show no percent moving, or, where UI Automation reads no percent,
+# a picture changed no more than min_changed; a moved scroll is judged the same way. Before each such look G6 waits up
+# to still_ms for the percents to read the same twice, sample_ms apart, as a late provider's percent trails its picture.
+still_ms = 800
+# The end case scrolls up from the document's end for back_ms, then down again, and waits up to end_wait_ms for the end.
+back_ms = 2000
+end_wait_ms = 20000
+# Recorded, not judged: G6 takes one ScrollPattern step itself and waits up to lag_wait_ms for the percent to show it.
+lag_wait_ms = 2000
+# Recorded, not judged, on target-window: hang_lead_ms after the tap it sleeps hang_ms (at most kx-target-window.toml's
+# hang_max_ms, checked), and its wheel messages are counted in burst_ms before the hang and right after it wakes.
+hang_ms = 2000
+hang_lead_ms = 1000
+burst_ms = 300
+# A speed's slope rests on at least this many percent reads short of the ends, so one late read cannot tip the ratio.
+slope_reads = 5
+# Explorer's folder grows by the files a row shows, read from its first files; when fewer than two read, it grows by
+# this worst case, small icons across a wide screen.
+max_per_row = 32
+# After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to read the same twice,
+# sample_ms apart, near its size before scaled by the files (its aim), so the extent does not grow mid-phase.
+grow_wait_ms = 5000
+# On Explorer, press-stop clicks inside the column header this far past every column, where UI Automation finds the
+# header or a bare list, pane or group, else the status bar's centre, where it finds the bar or its own text; with no
+# such spot it is skipped, never a pass.
+spot_px = 16
+
+# The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by
+# its direction and Stop by `stop`, both icons.toml [dpad] ids (checked); the pad itself is kx-mod-keyboard's DPAD_NAME.
+[pad]
+group = "dpad"
+stop = "stop"
+# Wait after each pad tap or press before the look; it outlasts each of these motion.toml moves, Stop popping in and
+# out and the outline fading in (checked).
+settle_ms = 500
+moves = ["stop", "outline"]
+# The scrolled window must reach this far under the keyboard's top edge, clear of its status bar and sideways scroll
+# bar; G6, G8, G9 and G10 lay one that does not across the top of the work area, and put it back after (physical px).
+under_px = 160
+# The pointer starts this far above the keyboard's top, on that window, then glides down onto the pad (physical px).
+lead_px = 120
+# A run back the way the one before it came lasts this many times less (G6's left, G10's left), so it never runs
+# back to where that one started, which may be the document's end, and the pad never stops itself mid-case.
+undo_div = 2
+
+# G9's outline steps: idle, the pointer on the pad, then off it on the rest key while it scrolls, then idle again.
+[outline]
+# kx-ui's text that titles the outline's edge windows, in the keyboard's language; G9 knows them by it (checked in EN,
+# FR and AR).
+title = "window.outline"
+# The key the pointer rests on while it scrolls, off the pad, by board id; it is hovered, never clicked.
+rest = "esc"
+# How many edge windows an outline has (kx-ui Outline.qml, checked).
+edges = 4
+
+# G8's scroll steps: target-window, filled with lines, lies under the keyboard; the pointer glides from it onto the pad,
+# the pad's arrow, down and up in turn, is pressed by UI Automation and scrolls for scroll_ms with the outline shown,
+# then Stop, and the pointer leaves the keyboard. Once after use, memory is read [g8] warm_ms later against
+# memory_mb and commit_mb, and each churn round scrolls once more. scroll_ms outlasts [pad] settle_ms (checked).
+[g8_scroll]
+scroll_ms = 2000
+# false leaves the scroll out of each churn round, as a control for the churn's growth; G8 is then partial at best.
+churn = true
+
+# What G8 logs beside its numbers, as the owner runs WSL and Docker during gates on purpose: free RAM, and the memory of
+# these virtual machine processes by program name without .exe (Task Manager's vmmem); only the first of a name reads.
+[host]
+vm = ["vmmemWSL", "vmmem"]

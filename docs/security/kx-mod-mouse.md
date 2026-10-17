@@ -1,9 +1,9 @@
 # Security note: kx-mod-mouse
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14 (P4 final review)
+- **Last review:** 2026-10-17 (P5 docs: the hook while the pad scrolls)
 - **Status:** Reviewed
-- **Scope:** `crates/kx-mod-mouse`: the hold engine, the actor thread that runs it on the pointer hook, and the `[mouse]` settings. It runs inside the uiAccess `keyxtend` process from P4 on, and its engine decides each event on the platform's hook thread (ADR-0027).
+- **Scope:** `crates/kx-mod-mouse`: the hold engine, the actor thread that runs it on the pointer hook, and the `[mouse]` settings. It runs inside the uiAccess `keyxtend` process from P4 on, and its engine decides each event on the platform's hook thread (ADR-0027). From P5 the hook also runs while the scroll pad scrolls (ADR-0029 decision 5).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -19,7 +19,8 @@
 | `[mouse]` settings: Right-click mode, the hold time, the still radius, the ring's delay, and the hook's health and echo times | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
 | Pointer points: each hook event's point, a held-back press, the last point, and the points in the notes and on the bus (`AssistNote`, `PointerMoved`) | Sensitive (a run of clicks on an on-screen PIN pad shows what was typed) | Memory only: an event lives for one engine call, notes wait in a fixed buffer until `settle`, and the latest move waits in one shared word (`Moves`) | No | Until the next event, note or move; the move word keeps the last point until the module stops |
 | Latched modifiers' scan codes: the keyboard's latches (`LatchesChanged`) and a click's own modifiers | Sensitive together with the clicks around them | Memory only: the actor keeps the keyboard's list, and the engine keeps at most `MAX_LATCHES` of it | No | Until the keyboard changes them, or the click's release |
-| The hook's numbers (`HookStats`) | Public (counts and times) | The log, one line per stop (`STOPPED_LINE`) | No | As the log |
+| The hook's numbers (`HookStats`), with `passed_inside`, the user's events heard inside our own send that passed without the host | Public (counts and times) | The log, one line per stop (`STOPPED_LINE`) | No | As the log |
+| Presses heard while the pad scrolls: only whether each landed on our windows (`PointerPressed { ours }`) | Public (no point) | Memory only; published on the bus once per physical press | No | Not kept |
 
 No point or scan code is written to disk or logged. Debug output hides them: `Note`, the engine's `State` and the port's `PointerEvent`, `PointerAct`, `AssistNote` and `PointerMoved` show each one as `Redacted`, `LatchesChanged` shows only a count, and `Msg` and `Cmd` have no `Debug`.
 
@@ -30,20 +31,23 @@ No point or scan code is written to disk or logged. Debug output hides them: `No
 | `AssistToggle` from the keyboard | A mode with nothing to check; sending it needs `InjectInput`. It flips a mode, lets a held-back press through first and cancels a carry | One command per toggle; a `settle` applies every queued command within the room `max_acts` reserves | Runtime test of a burst of toggles |
 | `LatchesChanged` from the keyboard | Sending it needs `InjectInput`. The engine keeps the first `MAX_LATCHES` in order, and a click in progress keeps its own | `MAX_LATCHES` | Engine tests (`a_click_carries_at_most_max_latches_in_their_order`) |
 | `AssistAsk` from any module | No payload; it only publishes the state again | One event per ask | Runtime test of either start order |
+| `ScrollChanged` from the scroll module (ungated) | Only `live` with a way counts as scrolling; a turn or a speed change sends the engine nothing, and a still or stopped pad lets the hook go unless a mode or latch needs it. At start the module asks for it once (`ScrollAsk`) | One command per change of scrolling | Engine and actor property tests with scroll steps (`scrolling_alone_passes_everything_and_notes_each_press_once`, `the_hook_runs_while_needed_and_a_stop_leaves_nothing_down`) |
 | Hook events (`PointerEvent`) from the platform | In the shipped app only the hand's input, plus our keyboard's `TAG` Esc, which only cancels a carry (`kx-platform-windows.md`). Point and time maths saturate, and a DPI of 0 counts as `BASE_DPI` | At most `MAX_ACTS` acts per call; notes within `NOTE_ROOM`, and moves coalesce | Property tests (`engine/props.rs`: random runs, lapses, missed releases) |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** the engine hears only what the hook hands it: the hand's input, and our keyboard's `TAG` Esc, which can only cancel a carry (ADR-0027 decision 3, spec §5.1). Another program's input passes untouched, and the gate-only `--sim-input` build never ships (`keyxtend.md`).
   - Toggle and latch events need `InjectInput`, which the kernel grants only to first-party modules that declare it. A forged `AssistAsk` only sends the state again.
 - **Tampering:** a hand-edited `[mouse]` value is checked and resets alone, so a still press can neither fire at once nor never. A saved `rclick = true` only turns Right-click on at start, which its lit key shows.
-- **Logging / repudiation:** the module logs a refused hook start with its `HookError` (an OS code at most), a given-up engine, a refused `rclick` write by its kind only, and an actor panic. At each stop it logs `STOPPED_LINE` with the hook's numbers only (`the_stopped_line_logs_the_hook_numbers_and_no_point`).
+- **Logging / repudiation:** the module logs a refused hook start with its `HookError` (an OS code at most), a given-up engine, a refused `rclick` write by its kind only, and an actor panic. At each stop it logs `STOPPED_LINE` with the hook's numbers only, `passed_inside` among them (`the_stopped_line_logs_the_hook_numbers_and_no_point`).
   - Debug output hides every point and scan (`a_note_s_debug_hides_its_point`, `a_held_back_press_s_state_hides_its_point_in_debug`, and in `kx-module-api` `events_and_acts_hide_every_point_and_key` and `notes_hide_every_point`).
 - **Information disclosure:** no network, and nothing on disk but `rclick`. `AssistNote` and `PointerMoved` carry click points to any subscriber, with no capability gate (see Accepted).
+  - `PointerPressed` is ungated too, but it carries only whether a press was on our windows, and only while the pad scrolls, so a listener learns that a press happened, never where.
 - **Denial of service:**
   - The engine's step never blocks, logs or allocates: its notes and a click's modifiers have room reserved at the start (`the_hot_path_never_grows_its_buffers`), and one call pushes at most `MAX_ACTS` (`the_worst_call_pushes_exactly_max_acts`).
   - The hook engine's `max_acts` adds `CMD_ACTS` for a `settle`'s commands, as only the first command that lets go of a held or carried press pushes input (`a_settle_that_fires_a_hold_and_takes_a_burst_of_toggles_stays_within_its_room`).
   - Moves coalesce to one in flight at the latest point (`two_moves_before_a_publish_give_one_pointer_moved_at_the_latest_point`), and a huge hold time or a far move never overflows.
-  - The hook runs only while a mode, a latch, a held press or a carry needs it (property `the_hook_runs_while_needed_and_a_stop_leaves_nothing_down`).
+  - The hook runs only while a mode, a latch, a held press, a carry or a scrolling pad needs it (property `the_hook_runs_while_needed_and_a_stop_leaves_nothing_down`).
+  - Scrolling alone passes every event untouched and sends nothing; it only notes moves and presses (`scrolling_alone_passes_everything_and_notes_each_press_once`). A refused start for scrolling warns once per streak and tells no one, like latches.
   - A refused start for a mode key shows `notice.mouse-hook-failed` and the key stays off; one for latches warns once per streak.
 - **Elevation:** with uiAccess the engine's input reaches admin windows, but it only reshapes the hand's own clicks there. It lets a held press through, right-clicks at the press point, picks up and drops for Grab, puts the latches around a click, and sends Esc to cancel a carry.
 - **Stuck input:** every path lets go of the button and the modifiers.
@@ -71,5 +75,6 @@ No point or scan code is written to disk or logged. Debug output hides them: `No
 ### Accepted (with reason)
 - **Points on the bus with no gate:** `AssistNote` and `PointerMoved` carry click points, and neither names a capability, so any module could hear them. Every module is first-party and compiled in, and a new capability would change spec §9.4; P7 decides it with the face's gate (`kx-ui.md`, `docs/items/P7.md`).
 - **Unbounded inboxes:** the actor's inbox and the engine's command queue have no bound. The bus fills them with one message per toggle, latch change or ask from first-party modules, and the hook engine adds at most `NOTE_ROOM` notes and one `Idle` per settle, with moves coalesced to one in flight, and one `Lost` per run.
+- **A forged `ScrollChanged`:** it is ungated, so any module can send one with a way, which keeps the hook running and its presses told, as a mode would, until the scroll module's next change. Every module is first-party, and scrolling alone passes every event untouched.
 - **A forged `TAG` Esc:** another program that tags its Esc as our keyboard's can cancel a carry (`kx-platform-windows.md`). It only lets the item go after an Esc, and the user picks it up again.
 - **An engine that keeps failing:** each mode tap after a reset starts a fresh run, so a repeating fault shows `notice.mouse-reset` each time, and held latches add only one fresh run per tap or latch change. Nothing stays held, as each give-up lets go first.

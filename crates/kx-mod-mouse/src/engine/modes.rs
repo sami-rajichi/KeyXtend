@@ -1,4 +1,4 @@
-//! The commands the module sends between events: the mode toggles, the latches and letting go.
+//! The commands the module sends between events: the mode toggles, the latches, scrolling and letting go.
 
 use super::{Engine, MAX_LATCHES, Mode, Note, State};
 use kx_module_api::ports::{PointerAct, Scan, Toggle};
@@ -39,6 +39,12 @@ impl Engine {
     pub fn set_latches(&mut self, mut latches: Vec<Scan>) {
         latches.truncate(MAX_LATCHES);
         self.latches = latches;
+    }
+
+    /// The pad starts or stops scrolling; while it scrolls the hook stays on, and moves and presses are noted for its
+    /// badge and its stop. Every event still passes as the modes and latches say.
+    pub fn set_scrolling(&mut self, on: bool) {
+        self.scrolling = on;
     }
 
     /// Lets go of everything held, so nothing stays down: a carry is cancelled with Esc first, as `cancel` does, so it

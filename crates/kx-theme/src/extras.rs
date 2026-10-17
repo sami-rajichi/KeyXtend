@@ -236,6 +236,10 @@ pub struct BadgeShape {
     pub offset_px: [f32; 2],
     /// The least gap it keeps to a screen edge.
     pub edge_px: f32,
+    /// The dot between its mode and scroll parts: diameter.
+    pub sep_px: f32,
+    /// That dot's opacity.
+    pub sep_share: f32,
 }
 
 /// The tray icon's drawing: a badge in the theme's badge colours with the glyph on it; not in the mock-up.

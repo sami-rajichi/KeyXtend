@@ -13,10 +13,11 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-keyboard", "mod-layouts", "mod-mouse"]
+default = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-scroll"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
 mod-mouse = ["dep:kx-mod-mouse"]
+mod-scroll = ["dep:kx-mod-scroll"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
 # ships, and `cargo xtask stage` refuses a program that holds the flag.
 gate-input = ["kx-platform-windows/sim-input"]
@@ -26,6 +27,7 @@ kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard", optional = true }
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts", optional = true }
 kx-mod-mouse = { path = "../../crates/kx-mod-mouse", optional = true }
+kx-mod-scroll = { path = "../../crates/kx-mod-scroll", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
 kx-platform = { path = "../../crates/kx-platform" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
@@ -56,4 +58,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-keyboard", "mod-layouts", "mod-mouse"]
+required-features = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-scroll"]

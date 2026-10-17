@@ -1,6 +1,6 @@
-// The pointer overlay inside the app (spec §5.3): made only while the hub names a mode, read once soon after each wake
-// with no frame needed and at most once per `poll_ms`, its badge hidden over each of our windows, whose guard run
-// keeps a shown tip, and its window grown only for a wider badge word as the keyboard's language changes.
+// The pointer overlay inside the app (spec §5.3): made only while the hub names a mode or the pad scrolls, read once
+// soon after each wake with no frame needed and at most once per `poll_ms`, its badge hidden over each of our windows,
+// whose guard run keeps a shown tip, and its window grown only for a wider badge word as the keyboard's language changes.
 import QtQuick
 import QtTest
 import "../qml"
@@ -118,6 +118,19 @@ Item {
             tryVerify(() => a.pointer.item !== null, 2000);
             a.ui.assist = Object.assign({}, on, { mode: null });
             tryCompare(a.pointer, "item", null, 2000, "the hub's mode alone decides");
+        }
+
+        // The pad scrolling with no mode on makes the overlay too, for the badge's arrow and speed, and frees it after.
+        function test_the_overlay_is_made_while_the_pad_scrolls_and_freed_after() {
+            const a = app(), p = beside(a, a.face);
+            const scrolling = Object.assign({}, En.assist, { live: true, point: p, scroll: { dir: "down", fast: false } });
+            a.ui.assist = scrolling;
+            tryVerify(() => a.pointer.item !== null && a.pointer.item.badge.shown, 2000, "made with no mode on");
+            const b = a.pointer.item.badge;
+            compare(b.scroll.dir, "down", "it shows the scroll part");
+            compare(b.Accessible.description, En.texts["badge.slow"], "and its speed");
+            a.ui.assist = Object.assign({}, scrolling, { scroll: null, point: null });
+            tryCompare(a.pointer, "item", null, 2000, "freed once the pad stops");
         }
 
         // With the keyboard away no window of ours draws, yet a wake reads on the event loop's next pass: wait(0) runs

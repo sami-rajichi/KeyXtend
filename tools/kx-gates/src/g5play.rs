@@ -121,7 +121,7 @@ fn case_ok(want: &[Press], got: &[Mouse], p: Pt, dx: i32, slack: i32) -> bool {
 
 /// Asks target-window `target` to sleep `ms`, as a hung app does; it caps the time itself.
 #[allow(unsafe_code, reason = "Posts our own message to our own test window.")]
-fn hang_target(target: HWND, ms: u64) -> Result<(), String> {
+pub fn hang_target(target: HWND, ms: u64) -> Result<(), String> {
     let asked = WPARAM(usize::try_from(ms).unwrap_or(usize::MAX));
     // SAFETY: posting a message to any window handle is allowed; a bad handle only gives an error.
     unsafe { PostMessageW(Some(target), hang::MESSAGE, asked, LPARAM(0)) }

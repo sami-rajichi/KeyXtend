@@ -1,0 +1,247 @@
+//! The scroll pad's side of the hub: the scroll state and the box to outline, ours or not, as one JSON, our open list's
+//! page mark and page turns, and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll`
+//! waits for QML's read, and nothing here logs a box or a point.
+
+use super::face::done;
+use super::unread::Unread;
+use super::{Hub, Wake, json};
+use kx_module_api::ports::{Dir, Rect, ScrollAimed, ScrollChanged};
+use kx_platform::ui::Watched;
+use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, MutexGuard, PoisonError};
+
+/// Why the keyboard's entries are not watched; it asks again at later guard tries.
+const UNWATCHED: &str = "the keyboard's entries are not watched yet";
+
+/// The scroll state as QML reads it.
+#[derive(Copy, Clone, PartialEq, Eq, Serialize)]
+struct Shown {
+    /// The scroll module runs.
+    live: bool,
+    /// The way it scrolls, null while still.
+    dir: Option<Dir>,
+    /// It scrolls at the fast speed.
+    fast: bool,
+    /// The box to outline in physical pixels, null for none; only a live module has one.
+    area: Option<Rect>,
+    /// The box is one of our own windows, so QML outlines it just outside; false with no box.
+    ours: bool,
+}
+
+impl Default for Shown {
+    fn default() -> Self {
+        Self::from(ScrollChanged::OFF)
+    }
+}
+
+/// A module that is not live is still and slow, whatever else its state says.
+impl From<ScrollChanged> for Shown {
+    fn from(now: ScrollChanged) -> Self {
+        let ScrollChanged { live, dir, fast } = if now.live { now } else { ScrollChanged::OFF };
+        Self {
+            live,
+            dir,
+            fast,
+            area: None,
+            ours: false,
+        }
+    }
+}
+
+/// The scroll state, whether a wake waits for QML to read it, and whether the latest guard try ended a live module's run.
+#[derive(Default)]
+pub(super) struct Scroll {
+    shown: Mutex<Shown>,
+    unread: Unread,
+    ended: AtomicBool,
+}
+
+impl Scroll {
+    fn lock(&self) -> MutexGuard<'_, Shown> {
+        self.shown.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// The open list as the keyboard's state JSON holds it: which ways its page turns and the page buttons' keys.
+#[derive(Deserialize)]
+struct List {
+    page: Turns,
+    page_back: Option<String>,
+    page_on: Option<String>,
+}
+
+/// Which ways the list's page turns, as the keyboard works it out; the hub does no page maths.
+#[derive(Deserialize)]
+struct Turns {
+    back: bool,
+    on: bool,
+}
+
+/// The part of the keyboard's state the page turn reads.
+#[derive(Deserialize)]
+struct State {
+    #[serde(default)]
+    list: Option<List>,
+}
+
+impl List {
+    /// The key of the page button that turns back or on, as the list's own button sends it; none where the page does
+    /// not turn that way.
+    fn button(self, back: bool) -> Option<String> {
+        if back {
+            self.page.back.then_some(self.page_back).flatten()
+        } else {
+            self.page.on.then_some(self.page_on).flatten()
+        }
+    }
+}
+
+impl Hub {
+    /// The scroll state and the box to outline as JSON for QML, which lets the next change wake again; it holds a box,
+    /// so never log it.
+    #[must_use]
+    pub fn scroll_json(&self) -> String {
+        self.scroll.unread.read();
+        json(&*self.scroll.lock())
+    }
+
+    /// Takes the scroll module's state for the outline and the badge; a module that stops takes its outline and its last
+    /// guard run's end along.
+    pub(super) fn scroll_changed(&self, now: ScrollChanged) {
+        self.scroll_change(|s| {
+            let (area, ours) = if now.live {
+                (s.area, s.ours)
+            } else {
+                // Under the state's lock, so a guard try that read the module live cannot store its end after this.
+                self.forget_guard_end();
+                (None, false)
+            };
+            *s = Shown {
+                area,
+                ours,
+                ..Shown::from(now)
+            };
+        });
+        self.badge_scrolled(now);
+    }
+
+    /// True while the scroll module glides, as its last state said.
+    pub(super) fn scrolling(&self) -> bool {
+        self.scroll.lock().dir.is_some()
+    }
+
+    /// Takes the box to outline, or none, and whether it is ours; only a live module outlines.
+    pub(super) fn scroll_aimed(&self, aimed: ScrollAimed) {
+        self.scroll_change(|s| {
+            if s.live {
+                s.area = aimed.area;
+                s.ours = aimed.ours && aimed.area.is_some();
+            }
+        });
+    }
+
+    /// Hands a new waker the scroll wake still waiting for a read, as the last waker's QML may never have read it.
+    pub(super) fn rewake_scroll(&self) {
+        if self.scroll.unread.waits() {
+            self.wake(Wake::Scroll);
+        }
+    }
+
+    /// Applies `f`; a change wakes QML unless a wake already waits for its read.
+    fn scroll_change(&self, f: impl FnOnce(&mut Shown)) {
+        let changed = {
+            let mut s = self.scroll.lock();
+            let before = *s;
+            f(&mut s);
+            *s != before
+        };
+        if changed && self.scroll.unread.arm() {
+            self.wake(Wake::Scroll);
+        }
+    }
+
+    /// Marks our window `title` as one that pages, so while it shows a pad tap turns its page whatever point was kept;
+    /// call it on the UI thread. False while it does not show or when refused, so the open list asks as it opens and
+    /// at each guard try until it holds.
+    #[must_use]
+    pub fn mark_pages(&self, title: &str) -> bool {
+        let result = self.ports.guard.mark_pages(title);
+        done(result, "a list will not be paged by the scroll pad")
+    }
+
+    /// Turns our open list a page back or on, as its own page button does with `[ui] page_rows`; nothing where its page
+    /// does not turn that way or with no list open. A turned page wakes the keyboard; call it on the Qt thread.
+    pub fn turn_page(&self, back: bool) {
+        if self.face().is_none() {
+            return;
+        }
+        let state = match serde_json::from_str::<State>(&self.state_json()) {
+            Ok(state) => state,
+            Err(e) => {
+                // The error's text may quote the state, so only its kind is logged.
+                tracing::warn!(kind = ?e.classify(), "the keyboard's state does not read, so no page turns");
+                return;
+            }
+        };
+        let Some(key) = state.list.and_then(|l| l.button(back)) else {
+            return;
+        };
+        if self.panel_key(&key).state {
+            self.wake(Wake::Keys);
+        }
+    }
+
+    /// Until `unwatch_entries`, keeps the last point the pointer had outside our window `title` each time it enters it,
+    /// for the scroll target; false while the scroll module is not live, while the window does not show, while the
+    /// guard does not hold it yet or when refused. Call it on the UI thread.
+    #[must_use]
+    pub fn watch_entries(&self, title: &str) -> bool {
+        // QML asks only while the module runs; this check keeps that rule (ADR-0029) if it ever asks out of turn.
+        if !self.scroll.lock().live {
+            return false;
+        }
+        // QML asks right after each guard try until the watch holds, so the ask after a run's last try is its last.
+        let last = self.scroll.ended.swap(false, Ordering::SeqCst);
+        match self.ports.guard.watch_entries(title) {
+            Ok(Watched::Held) => true,
+            Ok(Watched::Unguarded) => {
+                if last {
+                    tracing::warn!(
+                        "{UNWATCHED}, as the guard run ended without holding the keyboard"
+                    );
+                }
+                false
+            }
+            Err(e) => done(Err(e), UNWATCHED),
+        }
+    }
+
+    /// Notes whether a guard try ended its run; only a run that ends while the scroll module is live counts.
+    pub(super) fn guard_tried(&self, ended: bool) {
+        let shown = self.scroll.lock();
+        self.scroll
+            .ended
+            .store(ended && shown.live, Ordering::SeqCst);
+    }
+
+    /// Forgets the end of the last guard run, as the module stops or the windows are made again.
+    pub(super) fn forget_guard_end(&self) {
+        self.scroll.ended.store(false, Ordering::SeqCst);
+    }
+
+    /// Stops keeping the pointer's last point outside our windows titled `title`, shown or not, and forgets the point
+    /// kept and the end of the module's last guard run; `watch_entries` starts again. Call it on the UI thread.
+    pub fn unwatch_entries(&self, title: &str) {
+        self.forget_guard_end();
+        self.ports.guard.unwatch_entries(title);
+    }
+
+    /// Puts our windows titled `title` just under our window `under`, as the outline goes under the keyboard; false
+    /// while either does not show or when refused. Call it on the UI thread.
+    #[must_use]
+    pub fn lay_under(&self, title: &str, under: &str) -> bool {
+        let result = self.ports.guard.lay_under(title, under);
+        done(result, "a window could not be laid under another")
+    }
+}

@@ -145,6 +145,18 @@ impl fmt::Debug for PointerMoved {
     }
 }
 
+/// A button went down while the hook runs, so the scroll module can stop; it carries no point, so it needs no
+/// capability.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PointerPressed {
+    /// The press landed on one of our own windows.
+    pub ours: bool,
+}
+
+impl Event for PointerPressed {
+    const NAME: &'static str = "pointer-pressed";
+}
+
 /// The keyboard's latched modifiers changed; its `Debug` shows only how many are held.
 #[derive(Clone, PartialEq, Eq)]
 pub struct LatchesChanged {

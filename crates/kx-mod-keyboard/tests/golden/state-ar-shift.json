@@ -1,5 +1,11 @@
 {
   "at": null,
+  "dpad": {
+    "dim": true,
+    "dir": null,
+    "fast": false,
+    "tip": "tip.scroll-off"
+  },
   "keys": {
     "alt": {
       "blank": null,

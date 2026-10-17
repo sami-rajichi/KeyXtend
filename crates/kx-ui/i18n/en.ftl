@@ -70,6 +70,7 @@ tip =
     .later = Coming in a later version
     .one-lang = Only one keyboard language is installed
     .mouse-off = Mouse assist is off
+    .scroll-off = The scroll pad is off
     .rclick = Hold still to right-click; short clicks stay normal
     .grab = Press to pick up, move, then click to drop
 
@@ -131,13 +132,18 @@ window =
     .list = Keyboard languages
     .tip = { -app } tip
     .pointer = Pointer helper
+    .outline = Scroll outline
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
 
-## The mode badge beside the pointer: its word while Grab holds a press down.
+## The mode badge beside the pointer: its word while Grab holds a press down, the scroll pad's speed, and what joins
+## its parts for screen readers.
 badge =
     .holding = Holding
+    .slow = slow
+    .fast = fast
+    .join = {", "}
 
 tray =
     .show = Show keyboard
@@ -176,6 +182,11 @@ notice =
     .mouse-hook-failed = Mouse assist could not start, as Windows refused its mouse watcher. Try the key again.
     .mouse-reset = Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.
     .mouse-stopped = Mouse assist stopped after an error. Restart { -app } to use it again.
+    .scroll-point = Point at what you want to scroll, then tap an arrow.
+    .scroll-none = Nothing to scroll there.
+    .scroll-end = Already at the end.
+    .scroll-failed = The scroll pad hit an error. Tap an arrow to try again.
+    .scroll-stopped = The scroll pad stopped after an error. Restart { -app } to use it again.
 
 ## Module names by module id; an id not listed shows itself.
 module =
@@ -183,6 +194,7 @@ module =
     .keyboard = Keyboard
     .layouts = Keyboard layouts
     .mouse = Mouse assist
+    .scroll = Scroll pad
     .ui = Appearance
 
 ## The language key's designs, by [keyboard] lang_key value.

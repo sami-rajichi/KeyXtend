@@ -4,7 +4,9 @@ use crate::latch::Latches;
 use crate::panel::LangList;
 use crate::settings::{KeyboardSettings, Modifiers};
 use crate::spec::{BoardSpec, Latch, Nav};
-use kx_module_api::ports::{AssistChanged, KeyChars, LangLabel, LayoutId, LayoutTable, Scan};
+use kx_module_api::ports::{
+    AssistChanged, KeyChars, LangLabel, LayoutId, LayoutTable, Scan, ScrollChanged,
+};
 use std::collections::{BTreeMap, HashSet};
 
 fn spec() -> BoardSpec {
@@ -49,13 +51,11 @@ fn named_keys_carry_translation_and_icon_keys_and_character_keys_none() {
 }
 
 #[test]
-fn later_side_keys_and_the_dpad_are_dimmed_and_say_they_come_later() {
+fn later_side_keys_are_dimmed_and_say_they_come_later() {
     let v = board_view(&spec(), &settings(), 1.0);
     let mic = key(&v, "mic");
     assert!(mic.dim && mic.side);
     assert_eq!(mic.tip, Some(LATER_TIP));
-    assert!(v.dpad.dim);
-    assert_eq!((v.dpad.name, v.dpad.tip), (DPAD_NAME, Some(LATER_TIP)));
     let esc = key(&v, "esc");
     assert!(!esc.dim && esc.tip.is_none());
 }
@@ -159,15 +159,16 @@ fn latched(l: Latch, code: u16) -> Latches {
 }
 
 fn state(latches: &Latches, caps: bool, open: Option<&LangList>) -> StateView {
-    state_of(latches, caps, open, AssistChanged::OFF)
+    state_of(latches, caps, open, AssistChanged::OFF, ScrollChanged::OFF)
 }
 
-/// The state with the mouse module in state `assist`.
+/// The state with the mouse module in state `assist` and the scroll module in state `scroll`.
 fn state_of(
     latches: &Latches,
     caps: bool,
     open: Option<&LangList>,
     assist: AssistChanged,
+    scroll: ScrollChanged,
 ) -> StateView {
     let keys = board(&spec(), 0.0, 1.0).keys;
     let table = table();
@@ -181,9 +182,11 @@ fn state_of(
         list: &list,
         turn: 0,
         open,
+        rows: 1,
         panel_keys: &panel_keys,
         at: None,
         assist,
+        scroll,
     })
 }
 
@@ -285,3 +288,4 @@ fn key_and_state_debug_hide_legends_lights_and_caps() {
 }
 
 mod assist;
+mod pad;

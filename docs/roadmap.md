@@ -77,7 +77,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G3 Top band | The signed, Program Files, uiAccess build, started by a standard user, stays above the Start menu, Search and Task Manager |
 | G4 Admin windows | Types into an elevated window (for example an admin PowerShell). Record whether this needs anything beyond uiAccess |
 | G5 Hold engine (core) | With Right-click on, over normal windows by the gate and over an admin window in the owner's hands-on check: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
-| G6 Scroll (core) | Scrolls up, down, left and right in a long Notepad text, a Chrome page, an Explorer list and a Word document, using the last point outside the keyboard as the target |
+| G6 Scroll (core) | Scrolls up and down in a long Notepad text, a Chrome page and an Explorer list, and left and right where the content overflows sideways (always in Chrome), using the last point outside the keyboard as the target. Word was dropped, as its sign-in and subscription windows block every test (owner, 2026-10-16) |
 | G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
 | G8 Budgets | Spec §10 targets on the development PC and in weak mode: after a warm-up, and again after a sweep over every key with a mouse mode on (ADR-0028), at most 100 MB of private working set and 140 MB of private commit, staying flat while tips, the language list and themes come and go (churn, ADR-0021). One run has the Arabic layout in front. Frame times measured with PresentMon; a pressed key lights up within the next frame at the median and one refresh later at worst, as Windows' On-Screen Keyboard (ADR-0025) |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
@@ -168,13 +168,17 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 5 — Scroll pad — v0.3
 
-- `kx-mod-scroll`: the two-speed controller, target tracking and outline; UIA ScrollPattern → posted wheel → SendInput.
+- `kx-mod-scroll`: the two-speed controller, its stops and target tracking, over the OS-neutral `ScrollTarget` port; the outline and badge in `kx-ui`.
+- Windows: small wheel steps posted to the target, or sent while the pointer is on it; UI Automation finds, reads and falls back (ADR-0029).
 - **Edge cases:**
   - the target closes while scrolling;
   - the target is not scrollable;
   - the end of the content is reached;
   - direction switches;
-  - scrolling our own paged lists.
+  - scrolling our own paged lists;
+  - a press outside our windows, and the 2-minute limit;
+  - the target app hangs;
+  - the pointer never left the keyboard since the start.
 
 ## Phase 6 — Shortcuts layer and Power — v0.3
 

@@ -93,7 +93,7 @@ Item {
             return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
         }
         // Every keyboard control with a tip and the tip it shows in texts `t` (spec: hovering any icon button shows its
-        // name): icon keys their name, dimmed keys and the D-pad their name and when they come, a key with a state tip its
+        // name): icon keys their name, dimmed keys their name and when they come, a key or the D-pad with a state tip its
         // name and that tip, and the top bar and the corner their name.
         function tipped(app, t) {
             const face = app.face.contentItem;
@@ -116,7 +116,7 @@ Item {
             }
             out.push({ item: named(face, t.texts["bar.corner"]), says: t.texts["bar.corner"] });
             const pad = Face.board.dpad;
-            out.push({ item: named(face, t.texts[pad.name]), says: later(t.texts[pad.name], pad.tip) });
+            out.push({ item: named(face, t.texts[pad.name]), says: later(t.texts[pad.name], app.face.st.dpad.tip) });
             return out;
         }
         // Moves straight from control to control, as a quick hand does: each tip waits, then shows its text over its

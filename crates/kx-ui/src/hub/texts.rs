@@ -1,9 +1,11 @@
 //! The hub's two text sets (ADR-0020): the keyboard's, which follow the language of the layout in front unless
-//! `[ui] language` pins one, and the system's, which the tray icon and its menu speak.
+//! `[ui] language` pins one, and the system's, which the tray icon and its menu speak; the banner's notices speak the
+//! keyboard's.
 
 use super::{Hub, Live, Shown, Wake, json};
 use crate::i18n::keys::{SIZE, SIZE_NAME, SIZES};
 use crate::{I18n, Lang, os_lang, pick};
+use kx_module_api::Notice;
 use kx_module_api::ports::KeyboardFace;
 use serde::Serialize;
 use std::sync::Arc;
@@ -101,6 +103,26 @@ impl Hub {
             sizes: SIZES.into_iter().map(size).collect(),
             tray: tray.lang().into(),
         })
+    }
+
+    /// Queues `notice` for the banner, unless the same one waits or shows.
+    pub fn notice(&self, notice: Notice) {
+        if self.lock().notices.push(notice) {
+            self.wake(Wake::Notices);
+        }
+    }
+
+    /// The waiting notices in the keyboard's language; the banner shows them from now on.
+    #[must_use]
+    pub fn take_notices(&self) -> Vec<Shown> {
+        let mut live = self.lock();
+        let Live { texts, notices, .. } = &mut *live;
+        notices.take(texts.keyboard())
+    }
+
+    /// OK on shown notice `id`: it closes.
+    pub fn dismiss(&self, id: u64) {
+        let _ = self.lock().notices.close(id);
     }
 
     /// The notices the banner shows, told again in the keyboard's language now.

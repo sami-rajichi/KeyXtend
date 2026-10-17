@@ -1,7 +1,7 @@
 //! The screens: each one's work area without the taskbar, its DPI, and where the pointer is.
 //! Box and DPI maths are pure and tested everywhere; the OS calls are in `win`.
 
-use kx_module_api::ports::{self, BASE_DPI, Rect};
+use kx_module_api::ports::{self, BASE_DPI, Point, Rect};
 
 #[cfg(windows)]
 mod win;
@@ -33,6 +33,13 @@ pub fn rect_of([left, top, right, bottom]: [i32; 4]) -> Rect {
 #[must_use]
 pub fn edges(r: Rect) -> [i32; 4] {
     [r.x, r.y, r.x.saturating_add(r.w), r.y.saturating_add(r.h)]
+}
+
+/// True when `p` lies inside `r`; the far edges are outside, as in a Windows box.
+#[must_use]
+pub fn contains(r: Rect, p: Point) -> bool {
+    let [left, top, right, bottom] = edges(r);
+    (left..right).contains(&p.x) && (top..bottom).contains(&p.y)
 }
 
 /// `dpi`, or the default when Windows gave none.
@@ -89,6 +96,22 @@ mod tests {
             h: 10,
         };
         assert_eq!(edges(far), [i32::MAX; 4], "saturated, never wrapped");
+    }
+
+    #[test]
+    fn a_box_holds_its_near_edges_but_not_its_far_ones() {
+        let r = rect_of([-1920, -200, 0, 880]);
+        let at = |x, y| contains(r, Point { x, y });
+        assert!(
+            at(-1920, -200) && at(-1, 879),
+            "near edges and the last pixel"
+        );
+        assert!(!at(0, 0) && !at(-1, 880), "far edges");
+        assert!(!at(-1921, 0) && !at(-100, -201), "before the near edges");
+        assert!(
+            !contains(rect_of([5, 5, 5, 9]), Point { x: 5, y: 6 }),
+            "empty"
+        );
     }
 
     #[test]

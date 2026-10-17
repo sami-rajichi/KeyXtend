@@ -70,6 +70,7 @@ tip =
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
     .mouse-off = L’aide à la souris est désactivée
+    .scroll-off = Le pavé de défilement est désactivé
     .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
     .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
 
@@ -131,13 +132,18 @@ window =
     .list = Langues du clavier
     .tip = Info-bulle de { -app }
     .pointer = Aide au pointeur
+    .outline = Contour de défilement
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
 
-## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui.
+## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui, la vitesse du pavé de défilement,
+## et ce qui sépare ses parties pour les lecteurs d’écran.
 badge =
     .holding = Saisi
+    .slow = lent
+    .fast = rapide
+    .join = {", "}
 
 tray =
     .show = Afficher le clavier
@@ -176,6 +182,11 @@ notice =
     .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
     .mouse-reset = L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.
     .mouse-stopped = L’aide à la souris s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
+    .scroll-point = Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.
+    .scroll-none = Rien à faire défiler ici.
+    .scroll-end = Déjà à la fin.
+    .scroll-failed = Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.
+    .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
@@ -183,6 +194,7 @@ module =
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
+    .scroll = Pavé de défilement
     .ui = Apparence
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.

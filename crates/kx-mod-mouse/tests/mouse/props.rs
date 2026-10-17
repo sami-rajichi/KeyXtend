@@ -1,5 +1,6 @@
-//! Properties over random toggles, latches, asks and physical input: the hook runs only while a mode, a latch or a
-//! press needs it, the keys show off whenever it does not run, and a stop leaves no key or button down the hand let go.
+//! Properties over random toggles, latches, scrolling, asks and physical input: the hook runs only while a mode, a
+//! latch, scrolling or a press needs it, the keys show off whenever it does not run, and a stop leaves no key or button
+//! down the hand let go.
 
 use crate::rig::{DPI, Heard, Rig, T0};
 use kx_mod_mouse::{MAX_LATCHES, Msg};
@@ -38,6 +39,8 @@ enum Step {
     Toggle(Toggle),
     /// The keyboard's latches change.
     Latch(Vec<Scan>),
+    /// The pad starts or stops scrolling.
+    Scroll(bool),
     /// The keyboard asks for the state.
     Ask,
 }
@@ -51,6 +54,7 @@ fn step() -> impl Strategy<Value = Step> {
         1 => Just(Step::Esc),
         3 => select(vec![Toggle::RightClick, Toggle::Grab]).prop_map(Step::Toggle),
         1 => subsequence(mods.clone(), 0..=mods.len()).prop_map(Step::Latch),
+        1 => any::<bool>().prop_map(Step::Scroll),
         1 => Just(Step::Ask),
     ]
 }
@@ -98,6 +102,7 @@ fn message(step: &Step) -> Option<Msg> {
     match step {
         Step::Toggle(which) => Some(Msg::Toggle(*which)),
         Step::Latch(held) => Some(Msg::Latches(held.clone())),
+        Step::Scroll(on) => Some(Msg::Scroll(*on)),
         Step::Ask => Some(Msg::Ask),
         _ => None,
     }
@@ -176,12 +181,14 @@ proptest! {
         let mut rig = Rig::new();
         rig.begin();
         let (mut hand, mut os) = (Hand { at: START, down: false }, Os::default());
-        let (mut now, mut held) = (T0, false);
+        let (mut now, mut held, mut scrolling) = (T0, false, false);
         let mut state = AssistChanged { live: true, rclick: false, grab: GrabState::Off };
         for (gap, step) in &steps {
             now = Mono::from_us(now.as_us() + gap);
-            if let Step::Latch(keys) = step {
-                held = !keys.is_empty();
+            match step {
+                Step::Latch(keys) => held = !keys.is_empty(),
+                Step::Scroll(on) => scrolling = *on,
+                _ => {}
             }
             run(&mut rig, &mut os, &mut hand, step, now);
             for heard in rig.take() {
@@ -190,10 +197,11 @@ proptest! {
                 }
             }
             let on = state.rclick || state.grab != GrabState::Off;
-            prop_assert!(!(on || held) || rig.hook.running(), "a mode or a latch needs the hook");
+            let wanted = on || held || scrolling;
+            prop_assert!(!wanted || rig.hook.running(), "a mode, a latch or scrolling needs the hook");
             prop_assert!(rig.hook.running() || !on, "the keys show off while no hook runs");
-            let needed = on || held || hand.down;
-            prop_assert!(needed || !rig.hook.running(), "no mode, latch, carry or press needs the hook");
+            let needed = wanted || hand.down;
+            prop_assert!(needed || !rig.hook.running(), "nothing needs the hook");
             prop_assert_eq!(rig.hook.starts() - rig.hook.stops(), usize::from(rig.hook.running()));
         }
         prop_assert!(!rig.send(Msg::Stop));

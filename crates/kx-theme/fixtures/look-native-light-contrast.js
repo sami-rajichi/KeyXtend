@@ -189,11 +189,14 @@ var lk = {
     "dpad": {
       "gap_px": 2.0,
       "icon_px": 15.0,
-      "icon_pad": 0.22,
+      "reach": 0.5,
       "hub": 0.34,
       "stop": 0.36,
       "stop_icon_px": 10.0,
-      "turn_deg": 45.0
+      "turn_deg": 45.0,
+      "dot_px": 3.0,
+      "dot_gap_px": 2.0,
+      "dot_off": 0.3
     },
     "press": {
       "sink_px": 1.0,
@@ -368,12 +371,17 @@ var lk = {
         16.0,
         18.0
       ],
-      "edge_px": 8.0
+      "edge_px": 8.0,
+      "sep_px": 2.0,
+      "sep_share": 0.4
     },
     "dim": {
       "share": 0.4
     },
     "hc_outline": {
+      "px": 2.0
+    },
+    "outline": {
       "px": 2.0
     },
     "backdrop": {
@@ -556,6 +564,17 @@ var lk = {
       },
       "notice": {
         "ms": 200,
+        "bez": [
+          0.0,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "outline": {
+        "ms": 167,
         "bez": [
           0.0,
           0.0,

@@ -1,6 +1,6 @@
 // The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner and the tray
-// menu, each over a click-through shadow window, the pointer overlay and the tray icon's picture. A shadow window owns
-// its window, so Windows keeps the window just above it; owners show first.
+// menu, each over a click-through shadow window, the pointer overlay, the scroll outline and the tray icon's picture. A
+// shadow window owns its window, so Windows keeps the window just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -146,10 +146,10 @@ QtObject {
         paceMs: face.cfg ? face.cfg.pollMs : 0
         now: app.now
     }
-    // The pointer overlay, made while the hub names a mode and freed once it names none; a ring goes with the modes.
+    // The pointer overlay, made while the hub names a mode or the pad's scroll part and freed once it names neither.
     property Loader pointer: Loader {
         readonly property var st: app.assist
-        active: !!face.lk && !!st && !!st.mode
+        active: !!face.lk && !!st && (!!st.mode || !!st.scroll)
         sourceComponent: Overlay {
             lk: face.lk
             res: face.res
@@ -159,6 +159,11 @@ QtObject {
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }
+    }
+    // The scroll pad's outline around its target, its edge windows made only while the hub names a box.
+    property Outline outline: Outline {
+        ui: app.ui
+        face: face
     }
     // Draws the tray icon's picture in the look and hands it to the Ui object.
     property TrayPicture trayPicture: TrayPicture {
@@ -173,7 +178,6 @@ QtObject {
         active: face.ready && plan !== ""
         onActiveChanged: start()
         Component.onCompleted: start()
-
         // Loads the churn the first time it is on, as the keyboard starts or later.
         function start() {
             if (active && source.toString() === "")

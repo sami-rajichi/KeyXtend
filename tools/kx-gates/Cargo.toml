@@ -29,6 +29,8 @@ kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
 # The mouse settings (`SPEC`) the gates read from the product's test build.
 kx-mod-mouse = { path = "../../crates/kx-mod-mouse" }
+# The scroll settings (`SPEC`) and stats line G6 reads from the product's test build.
+kx-mod-scroll = { path = "../../crates/kx-mod-scroll" }
 # The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.

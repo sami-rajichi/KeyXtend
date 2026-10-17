@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 
 use kx_module_api::ports::{Button, InjectError, Point, PointerAct};
 use kx_module_api::{Clock, Mono};
-use windows::Win32::Foundation::{LPARAM, POINT, RECT, WPARAM};
+use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::StationsAndDesktops::{
     CloseDesktop, DESKTOP_CONTROL_FLAGS, DESKTOP_READOBJECTS, OpenInputDesktop,
@@ -27,7 +27,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetSystemMetrics, HHOOK, HOOKPROC, KillTimer, MSG, PM_NOREMOVE, PeekMessageW,
     PostThreadMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SetTimer, SetWindowsHookExW, UnhookWindowsHookEx, WH_KEYBOARD_LL,
-    WH_MOUSE_LL, WINDOWS_HOOK_ID, WindowFromPoint,
+    WH_MOUSE_LL, WINDOWS_HOOK_ID,
 };
 
 use super::procs::{key_proc, mouse_proc};
@@ -38,7 +38,7 @@ use crate::hook::stats::Stats;
 use crate::hook::{Os, inbox::Inbox};
 use crate::inject;
 use crate::screen::dpi_of;
-use crate::window::is_ours;
+use crate::window::on_ours;
 
 /// The hook thread's priority: one step above normal.
 const PRIORITY: THREAD_PRIORITY = THREAD_PRIORITY_ABOVE_NORMAL;
@@ -121,11 +121,8 @@ impl Os for WinOs {
         false
     }
 
-    #[allow(unsafe_code, reason = "A plain window query.")]
     fn ours(&self, at: Point) -> bool {
-        // SAFETY: a plain query by value; it sends no message to another thread's window.
-        let hwnd = unsafe { WindowFromPoint(POINT { x: at.x, y: at.y }) };
-        is_ours(hwnd)
+        on_ours(at)
     }
 
     fn dpi(&self, at: Point) -> u32 {

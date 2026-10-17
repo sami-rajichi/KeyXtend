@@ -1,6 +1,6 @@
 // The pointer overlay (spec §5.3): one click-through window at the pointer that draws the hold ring where a press began
-// and the mode badge beside the pointer. It never takes a click or the focus (ADR-0013), and it keeps one size, as a
-// resize stalls Qt's frames, so a read only moves it.
+// and the badge beside the pointer, with its mode and the scroll pad's part. It never takes a click or the focus
+// (ADR-0013), and it keeps one size, as a resize stalls Qt's frames, so a read only moves it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -167,6 +167,7 @@ Window {
         res: over.res
         mode: over.st.mode || ""
         grab: over.st.grab
+        scroll: over.st.scroll || null
         shown: !!over.at && !over.covered
         x: over.badgeAt.x - over.frame.x
         y: over.badgeAt.y - over.frame.y

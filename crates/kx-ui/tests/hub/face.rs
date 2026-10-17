@@ -248,7 +248,7 @@ impl kx_module_api::ports::KeyboardFace for Echo {
         String::new()
     }
 
-    fn state_json(&self) -> String {
+    fn state_json(&self, _: usize) -> String {
         String::new()
     }
 

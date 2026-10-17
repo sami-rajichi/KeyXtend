@@ -3,18 +3,21 @@
 //! manifest.
 
 use kx_platform::ui::UiError;
-use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{ERROR_INVALID_THREAD_ID, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetPropW, GetWindowLongPtrW,
-    MA_NOACTIVATE, RemovePropW, STYLESTRUCT, SWP_NOACTIVATE, SetPropW, SetWindowLongPtrW,
-    WINDOWPOS, WM_MOUSEACTIVATE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED,
-    WM_WINDOWPOSCHANGING, WNDPROC,
+    CallWindowProcW, DefWindowProcW, GWL_EXSTYLE, GWLP_WNDPROC, GetWindowLongPtrW, MA_NOACTIVATE,
+    STYLESTRUCT, SWP_NOACTIVATE, SetWindowLongPtrW, WINDOWPOS, WM_CAPTURECHANGED, WM_MOUSEACTIVATE,
+    WM_MOUSEMOVE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING,
+    WNDPROC,
 };
 use windows::core::{PCWSTR, w};
 
+use super::prop::{clear, put, value};
 use super::top::{keep_top, lift, on_this_thread, recheck, recheck_id};
 use super::{KEPT, holds_kept, is_through, kept_ex};
-use crate::{last_refused, refused};
+use super::{entry, pages};
+use crate::last_refused;
 
 /// The window property that holds the window's own procedure while the guard is hooked.
 const PROP: PCWSTR = w!("KeyXtend.Guard");
@@ -37,17 +40,13 @@ pub(super) fn guard(hwnd: HWND) -> Result<(), UiError> {
 
 /// True while the guard is hooked on `hwnd`; another program may ask too, as a test tool does.
 #[must_use]
-#[allow(unsafe_code, reason = "A plain window property query.")]
 pub fn guarded(hwnd: HWND) -> bool {
-    // SAFETY: a plain query; a gone window has no property.
-    !unsafe { GetPropW(hwnd, PROP) }.is_invalid()
+    value(hwnd, PROP) != 0
 }
 
 /// True when our window let clicks through as the guard first saw it.
-#[allow(unsafe_code, reason = "A plain window property query.")]
 fn was_through(hwnd: HWND) -> bool {
-    // SAFETY: a plain query; a window without the property gives null.
-    !unsafe { GetPropW(hwnd, THROUGH_PROP) }.is_invalid()
+    value(hwnd, THROUGH_PROP) != 0
 }
 
 /// Our window's extended style; 0 for a gone window.
@@ -85,31 +84,19 @@ fn hook(hwnd: HWND) -> Result<(), UiError> {
     Ok(())
 }
 
-/// Stores the window's own procedure `own` on it, and marks it when it lets clicks through now.
-#[allow(unsafe_code, reason = "Stores two numbers on our own window.")]
+/// Stores the window's own procedure `own` on it, and marks it when it lets clicks through now; `unhook` removes both.
 fn keep_props(hwnd: HWND, own: isize) -> Result<(), UiError> {
-    let keep = HANDLE(std::ptr::without_provenance_mut(own.cast_unsigned()));
-    // SAFETY: stores a number on our own window; `unhook` removes it before the window goes.
-    unsafe { SetPropW(hwnd, PROP, Some(keep)) }.map_err(|e| refused(&e))?;
+    put(hwnd, PROP, own.cast_unsigned())?;
     if !is_through(ex_of(hwnd)) {
         return Ok(());
     }
-    let mark = HANDLE(std::ptr::without_provenance_mut(1));
-    // SAFETY: stores a marker number on our own window; `unhook` removes it too.
-    unsafe { SetPropW(hwnd, THROUGH_PROP, Some(mark)) }.map_err(|e| {
-        drop_props(hwnd);
-        refused(&e)
-    })
+    put(hwnd, THROUGH_PROP, 1).inspect_err(|_| drop_props(hwnd))
 }
 
 /// Removes the guard's properties from our window; a missing one is skipped.
-#[allow(unsafe_code, reason = "Removes our own window's properties.")]
 fn drop_props(hwnd: HWND) {
-    // SAFETY: removes properties the guard set on our own window, once each.
-    unsafe {
-        let _ = RemovePropW(hwnd, PROP);
-        let _ = RemovePropW(hwnd, THROUGH_PROP);
-    }
+    clear(hwnd, PROP);
+    clear(hwnd, THROUGH_PROP);
 }
 
 /// Puts the window's own procedure back, if ours is still in front, and removes the properties.
@@ -117,15 +104,17 @@ fn drop_props(hwnd: HWND) {
     unsafe_code,
     reason = "Restores our own window's procedure as it goes."
 )]
-fn unhook(hwnd: HWND, own: HANDLE) {
+fn unhook(hwnd: HWND, own: usize) {
     // SAFETY: plain query and change on our own window during its last message; another subclass in front stays.
     unsafe {
         if GetWindowLongPtrW(hwnd, GWLP_WNDPROC) == ours() {
             // A refused restore leaves nothing more to try as the window goes.
-            let _ = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, own.0.addr().cast_signed());
+            let _ = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, own.cast_signed());
         }
     }
     drop_props(hwnd);
+    entry::forget(hwnd);
+    pages::forget(hwnd);
 }
 
 /// Adds the kept styles, refused when they did not land; the subclass then keeps them against later changes.
@@ -164,22 +153,21 @@ fn pointee<T>(lparam: LPARAM) -> *mut T {
     unsafe_code,
     reason = "Turns the kept procedure value back into a function pointer."
 )]
-pub(super) fn next(own: HANDLE) -> WNDPROC {
-    let code = std::ptr::with_exposed_provenance::<()>(own.0.addr());
+pub(super) fn next(own: usize) -> WNDPROC {
+    let code = std::ptr::with_exposed_provenance::<()>(own);
     // SAFETY: a non-null pointer the size of a function pointer; only CallWindowProcW uses it.
     (!code.is_null()).then(|| unsafe { std::mem::transmute::<*const (), Proc>(code) })
 }
 
-/// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles
-/// and unhooks at the end; the guard's own posted check goes no further.
+/// Keeps every show and move passive and in the topmost band, answers clicks with no activation, keeps the styles,
+/// watches the pointer's entries and unhooks at the end; the guard's own posted check goes no further.
 #[allow(unsafe_code, reason = "The procedure of our guarded windows.")]
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if recheck_id() == Some(msg) {
         recheck(hwnd);
         return LRESULT(0);
     }
-    // SAFETY: a plain query of our own window's property.
-    let own = unsafe { GetPropW(hwnd, PROP) };
+    let own = value(hwnd, PROP);
     match msg {
         WM_MOUSEACTIVATE => return LRESULT(isize::try_from(MA_NOACTIVATE).unwrap_or_default()),
         WM_WINDOWPOSCHANGING => {
@@ -194,6 +182,9 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 style.styleNew = kept_ex(style.styleNew, was_through(hwnd));
             }
         }
+        WM_MOUSEMOVE => entry::moved(hwnd, lparam),
+        WM_MOUSELEAVE => entry::left(hwnd),
+        WM_CAPTURECHANGED => entry::released(hwnd),
         WM_NCDESTROY => unhook(hwnd, own),
         _ => {}
     }
@@ -226,6 +217,6 @@ mod tests {
 
     #[test]
     fn no_kept_procedure_means_the_default_one() {
-        assert!(next(HANDLE::default()).is_none());
+        assert!(next(0).is_none());
     }
 }
