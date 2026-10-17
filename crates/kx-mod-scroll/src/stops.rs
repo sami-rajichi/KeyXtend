@@ -11,7 +11,8 @@ use kx_module_api::{Mono, keys};
 /// Why scrolling stops, or never starts.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Halt {
-    /// No point is known yet: the pointer never left the keyboard ("point first").
+    /// A tap found no target: no point is known yet, the pointer rests on our window that does not page, or only our
+    /// windows lie at the point kept ("point first").
     NoPoint,
     /// Nothing there moves either way, or the window there closed ("nothing to scroll there").
     Nothing,

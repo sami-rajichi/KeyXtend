@@ -5,7 +5,7 @@
 use super::Actor;
 use crate::Halt;
 use kx_module_api::Mono;
-use kx_module_api::ports::{Dir, ScrollError};
+use kx_module_api::ports::{Aim, Dir, ScrollError};
 
 impl Actor {
     /// One tick at the clock's time; nothing while still.
@@ -68,14 +68,24 @@ impl Actor {
         }
     }
 
-    /// Aims again: a new target or box moves the outline, while our own windows and a refusal keep the last target.
+    /// Aims again: a new target or box moves the outline, while our own windows and a refusal keep the last target. A
+    /// new target where the last one closed is `Gone`: the window now at that point is not what the user pointed at.
     pub(super) fn retarget(&mut self) -> Result<(), ScrollError> {
         match self.find() {
+            Some(Ok(aim)) if !aim.ours && self.closed_under(&aim) => return Err(ScrollError::Gone),
             Some(Ok(aim)) if !aim.ours => self.follow(aim),
             Some(Err(err)) if err != ScrollError::Refused => return Err(err),
             _ => {}
         }
         Ok(())
+    }
+
+    /// True when `aim` names another target than the scroll's, which closed.
+    fn closed_under(&mut self, aim: &Aim) -> bool {
+        let Some(last) = self.scroll.as_ref().and_then(|s| s.aim) else {
+            return false;
+        };
+        last.id != aim.id && self.run.as_mut().is_some_and(|run| !run.alive(&last))
     }
 
     /// Whether the target reached its end towards `dir`.

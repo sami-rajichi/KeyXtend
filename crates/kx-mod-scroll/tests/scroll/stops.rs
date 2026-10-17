@@ -1,6 +1,6 @@
 //! Each way a scroll stops: the third tap, Stop, the end, a press, the limit, a closed target and a turn onto an end.
 
-use crate::rig::{APP, Rig, after, hidden, state, still, told};
+use crate::rig::{APP, OTHER, Rig, after, hidden, state, still, told};
 use kx_mod_scroll::Msg;
 use kx_module_api::MS_PER_S;
 use kx_module_api::keys::{SCROLL_END, SCROLL_NONE, SCROLL_POINT};
@@ -114,6 +114,19 @@ fn a_closed_target_stops_quietly() {
     rig.target.push_aim(Err(ScrollError::Gone));
     rig.tick_at(rig.checks(1));
     assert_eq!(rig.take(), stopped(), "at a check");
+}
+
+/// A target that closes just before a check stops, though another window now lies at its point: that one is not what
+/// the user pointed at.
+#[test]
+fn a_target_that_closed_before_a_check_stops_though_a_window_is_there_now() {
+    let mut rig = Rig::new();
+    rig.scrolling(Down);
+    rig.target.close(APP.id);
+    rig.point(OTHER);
+    rig.tick_at(rig.checks(1));
+    assert_eq!(rig.take(), stopped());
+    assert!(rig.target.turns().iter().all(|t| t.id != OTHER.id));
 }
 
 /// A refused aim, or one with no point, as with the pointer resting on our banner, keeps gliding the last target.
