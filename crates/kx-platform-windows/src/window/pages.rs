@@ -9,7 +9,7 @@ use windows::core::{PCWSTR, w};
 use super::entry::watched;
 use super::guard::guarded;
 use super::prop::{clear, put, value};
-use super::win::{is_ours, own_titled, window_at};
+use super::win::{is_ours, own_titled, own_windows, window_at};
 use crate::failed;
 use crate::scroll::Whose;
 
@@ -51,6 +51,13 @@ pub(super) fn forget(hwnd: HWND) {
 /// app's, whose marks count for nothing.
 pub(crate) fn whose(root: HWND) -> Whose {
     Whose::of(is_ours(root), watched(root), pages(root))
+}
+
+/// Our shown window that pages, front first; none while none shows. While one shows, the scroll target aims at it.
+pub(crate) fn paging() -> Option<HWND> {
+    own_windows()
+        .into_iter()
+        .find(|&w| whose(w) == Whose::Pages)
 }
 
 /// True when the window at screen point `p` is one of ours that does not page, which the scroll target passes over.

@@ -17,6 +17,7 @@ use windows::core::{BOOL, Interface};
 
 use super::{Job, Read, Seek};
 use crate::com::Com;
+use crate::scroll::win::handle;
 
 /// The pattern of what scrolls at a place along one axis (true for sideways), held for the steps that follow a read
 /// there.
@@ -78,9 +79,8 @@ fn element(auto: &IUIAutomation, seek: Seek) -> Option<IUIAutomationElement> {
     let found = match seek {
         // SAFETY: a plain lookup on our live client; a failure gives an error.
         Seek::At(p) => unsafe { auto.ElementFromPoint(POINT { x: p.x, y: p.y }) },
-        // SAFETY: as above, for a test's own window.
-        #[cfg(test)]
-        Seek::Window(raw) => unsafe { auto.ElementFromHandle(crate::window::from_raw(raw)) },
+        // SAFETY: as above, for the target's own window, which may lie under ours or be hidden in a test.
+        Seek::Window(window) => unsafe { auto.ElementFromHandle(handle(window)) },
     };
     found.ok()
 }

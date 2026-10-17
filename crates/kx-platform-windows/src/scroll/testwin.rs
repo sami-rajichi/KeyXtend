@@ -225,6 +225,11 @@ impl TestWin {
         self.raw
     }
 
+    /// The window's raw id, as a scroll target names it.
+    pub fn id(&self) -> u64 {
+        u64::try_from(self.raw.cast_unsigned()).unwrap()
+    }
+
     /// The window's box on the screen.
     pub fn bounds(&self) -> Rect {
         let mut r = RECT::default();

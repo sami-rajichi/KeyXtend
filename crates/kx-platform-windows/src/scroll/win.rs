@@ -26,10 +26,10 @@ mod behind;
 mod pinger;
 
 use super::entry::Kept;
-use super::uia::{Seek, Uia};
-use super::{Desk, Read, Run, Spot, Wheel, Whose, point_lparam, wheel_wparam};
+use super::uia::Uia;
+use super::{Desk, Read, Run, Seek, Spot, Wheel, Whose, point_lparam, wheel_wparam};
 use crate::keys::TAG;
-use crate::window::{entry, from_raw, whose, window_at};
+use crate::window::{entry, from_raw, paging, whose, window_at};
 use crate::{QpcClock, WinScreens, screen};
 use pinger::Pinger;
 
@@ -87,6 +87,12 @@ impl Desk for WinDesk {
         Some(Spot { window, whose })
     }
 
+    fn paging(&self) -> Option<Spot> {
+        let window = id_of(paging()?);
+        let whose = Whose::Pages;
+        Some(Spot { window, whose })
+    }
+
     fn kept(&self) -> Option<Kept> {
         entry::kept()
     }
@@ -123,16 +129,16 @@ impl Desk for WinDesk {
         crate::inject::send(&[wheel_input(dir, delta)]).map_err(|_| ScrollError::Refused)
     }
 
-    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read> {
-        self.uia.read(Seek::At(at), way, cap)
+    fn read(&self, seek: Seek, way: Dir, cap: Duration) -> Option<Read> {
+        self.uia.read(seek, way, cap)
     }
 
     fn idle(&self) -> bool {
         self.uia.idle()
     }
 
-    fn steps(&self, at: Point, dir: Dir, count: u16) -> bool {
-        self.uia.steps(Seek::At(at), dir, count)
+    fn steps(&self, seek: Seek, dir: Dir, count: u16) -> bool {
+        self.uia.steps(seek, dir, count)
     }
 
     fn now(&self) -> Mono {
@@ -146,7 +152,7 @@ fn id_of(hwnd: HWND) -> u64 {
 }
 
 /// The window raw id `window` names.
-fn handle(window: u64) -> HWND {
+pub(super) fn handle(window: u64) -> HWND {
     from_raw(usize::try_from(window).unwrap_or_default().cast_signed())
 }
 

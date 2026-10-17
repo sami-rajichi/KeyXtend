@@ -1,6 +1,7 @@
-//! UI Automation on a COM thread of its own (ADR-0029 decision 3): it finds the first element at a point that scrolls
-//! along a way's axis, reads its box and percents, and takes `ScrollPattern` line steps. A read is waited on for its
-//! cap at most, a step never, and at most one job waits behind the running one, so nothing piles up behind a stuck app.
+//! UI Automation on a COM thread of its own (ADR-0029 decision 3): from a point or a window, it finds the first element
+//! up that scrolls along a way's axis, reads its box and percents, and takes `ScrollPattern` line steps. A read is
+//! waited on for its cap at most, a step never, and at most one job waits behind the running one, so nothing piles up
+//! behind a stuck app.
 
 mod work;
 
@@ -10,9 +11,9 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use kx_module_api::ports::{Dir, Point};
+use kx_module_api::ports::Dir;
 
-use super::Read;
+use super::{Read, Seek};
 
 /// The UI Automation thread's name.
 const THREAD: &str = "kx-scroll-uia";
@@ -21,16 +22,6 @@ const BEHIND: usize = 1;
 
 /// The thread's body: it serves the jobs in its inbox, counting each one done.
 type Body = fn(&Receiver<Job>, &AtomicUsize, u32);
-
-/// Where a job looks: at a screen point, or in tests at a window, which may be hidden.
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub(crate) enum Seek {
-    /// The element at this point.
-    At(Point),
-    /// The element of this window.
-    #[cfg(test)]
-    Window(isize),
-}
 
 /// One job for the thread; each is dropped unstarted after `by`.
 enum Job {

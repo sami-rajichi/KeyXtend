@@ -43,6 +43,7 @@ fn a_reach_on_an_older_target_reads_it_once() {
     let fake = desk();
     let mut r = run(&fake);
     let old = r.aim().unwrap();
+    show_list(&fake, LIST);
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     assert!(r.aim().unwrap().ours);
     r.reach(&old, Dir::Down);

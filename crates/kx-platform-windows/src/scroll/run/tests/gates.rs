@@ -14,6 +14,7 @@ fn each_aim_at_another_apps_window_pings_it_and_ours_never() {
     let mut r = run(&fake);
     r.aim().unwrap();
     r.aim().unwrap();
+    show_list(&fake, LIST);
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     r.aim().unwrap();
     assert_eq!(fake.with(|s| s.pings.clone()), [APP_ID, APP_ID]);
@@ -24,6 +25,7 @@ fn reach_and_each_turn_ping_the_last_target_with_the_pointer_on_our_list() {
     let fake = desk();
     let mut r = run(&fake);
     let aim = r.aim().unwrap();
+    show_list(&fake, LIST);
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     r.reach(&aim, Dir::Down);
     r.turn(&aim, Dir::Down, NOTCH_LINES).unwrap();

@@ -1,5 +1,6 @@
 //! A desk the run tests set up: windows by box, a pointer, the kept entry, hung and closed windows, scripted reads, and a
-//! record of every step, read and clock reading. The first app's window holding a point is the one behind ours.
+//! record of every step, read and clock reading. The first app's window holding a point is the one behind ours, and
+//! our list pages while it is among the windows.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -10,7 +11,7 @@ use kx_module_api::{Mono, US_PER_MS};
 use crate::lock;
 use crate::screen::contains;
 use crate::scroll::entry::Kept;
-use crate::scroll::{Desk, Read, Spot, Wheel, Whose};
+use crate::scroll::{Desk, Read, Seek, Spot, Wheel, Whose};
 
 /// What the desk holds and what the run did to it.
 #[derive(Debug, Default)]
@@ -30,14 +31,14 @@ pub(super) struct State {
     pub wheel_reads: usize,
     /// What each read gives; none is a read that took too long.
     pub read: Option<Read>,
-    /// Each read's point, the way along whose axis it looked, and its cap.
-    pub reads: Vec<(Point, Dir, Duration)>,
+    /// Where each read looked, the way along whose axis, and its cap.
+    pub reads: Vec<(Seek, Dir, Duration)>,
     pub busy: bool,
     pub steps_refused: bool,
     pub post_error: Option<ScrollError>,
     pub sent: Vec<(Dir, i32)>,
     pub posted: Vec<(u64, Point, Dir, i32)>,
-    pub steps: Vec<(Point, Dir, u16)>,
+    pub steps: Vec<(Seek, Dir, u16)>,
     /// Milliseconds the clock moves at each reading.
     pub tick_ms: u32,
     pub clock: u64,
@@ -67,6 +68,11 @@ impl Desk for Fake {
     fn behind(&self, p: Point) -> Option<Spot> {
         let theirs = |w: &&(Rect, Spot)| contains(w.0, p) && w.1.whose == Whose::Theirs;
         self.with(|s| s.windows.iter().find(theirs).map(|w| w.1))
+    }
+
+    fn paging(&self) -> Option<Spot> {
+        let pages = |w: &&(Rect, Spot)| w.1.whose == Whose::Pages;
+        self.with(|s| s.windows.iter().find(pages).map(|w| w.1))
     }
 
     fn kept(&self) -> Option<Kept> {
@@ -112,9 +118,9 @@ impl Desk for Fake {
         Ok(())
     }
 
-    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read> {
+    fn read(&self, seek: Seek, way: Dir, cap: Duration) -> Option<Read> {
         self.with(|s| {
-            s.reads.push((at, way, cap));
+            s.reads.push((seek, way, cap));
             s.read
         })
     }
@@ -123,13 +129,13 @@ impl Desk for Fake {
         self.with(|s| !s.busy)
     }
 
-    fn steps(&self, at: Point, dir: Dir, count: u16) -> bool {
+    fn steps(&self, seek: Seek, dir: Dir, count: u16) -> bool {
         self.with(|s| {
             assert!(!s.busy, "steps only go to a free reader");
             if s.steps_refused {
                 return false;
             }
-            s.steps.push((at, dir, count));
+            s.steps.push((seek, dir, count));
             true
         })
     }

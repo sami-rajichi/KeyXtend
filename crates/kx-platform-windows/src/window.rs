@@ -29,7 +29,7 @@ mod win;
 #[cfg(windows)]
 pub use guard::guarded;
 #[cfg(windows)]
-pub(crate) use pages::whose;
+pub(crate) use pages::{paging, whose};
 #[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,

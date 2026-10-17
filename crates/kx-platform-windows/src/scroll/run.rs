@@ -2,40 +2,21 @@
 //! it can go, with one UI Automation read a check along the latest way's axis. Pure over the `Desk` trait; `win` gives
 //! Windows' desk.
 
-use std::fmt;
 use std::time::Duration;
 
+use kx_module_api::Mono;
 use kx_module_api::ports::{
     Aim, Dir, Point, Reach, Rect, Screen, ScrollConfig, ScrollError, ScrollRun, TargetId,
 };
-use kx_module_api::{Mono, Redacted};
 
 use super::entry::Kept;
 use super::{Course, Route, Wheel, area};
 
+mod look;
 mod spot;
 
+pub use look::{Read, Seek};
 pub use spot::{Spot, Whose};
-
-/// What UI Automation read at a point: the box of the first element there that scrolls along the way asked (left, top,
-/// right, bottom), and its percent pair (horizontal, vertical). Its `Debug` hides the box.
-#[derive(Copy, Clone, PartialEq)]
-pub struct Read {
-    /// The box; none when nothing there scrolls.
-    pub area: Option<[i32; 4]>,
-    /// The percents; none when nothing there scrolls.
-    pub pair: Option<(f64, f64)>,
-}
-
-/// Shows the percents, and only whether there is a box.
-impl fmt::Debug for Read {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Read")
-            .field("area", &self.area.map(Redacted::new))
-            .field("pair", &self.pair)
-            .finish()
-    }
-}
 
 /// The system a run scrolls on: Windows in `win`, a fake in tests.
 pub trait Desk {
@@ -45,6 +26,8 @@ pub trait Desk {
     fn spot(&self, p: Point) -> Option<Spot>;
     /// The first other app's window at `p` in z-order, passing over ours; none when there is none.
     fn behind(&self, p: Point) -> Option<Spot>;
+    /// Our shown window that pages, such as the open list; none while none shows.
+    fn paging(&self) -> Option<Spot>;
     /// What the guard kept when the pointer last entered the keyboard.
     fn kept(&self) -> Option<Kept>;
     /// Every screen's work area.
@@ -69,13 +52,14 @@ pub trait Desk {
     /// # Errors
     /// `Refused` when the system refuses.
     fn send(&self, dir: Dir, delta: i32) -> Result<(), ScrollError>;
-    /// UI Automation's read at `at` of the first element there that scrolls along `way`'s axis, waited on for `cap` at
-    /// most; none when it took longer or the reader is stuck.
-    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read>;
+    /// UI Automation's read from `seek` of the first element up that scrolls along `way`'s axis, waited on for `cap`
+    /// at most; none when it took longer or the reader is stuck.
+    fn read(&self, seek: Seek, way: Dir, cap: Duration) -> Option<Read>;
     /// True while UI Automation is free to take steps now.
     fn idle(&self) -> bool;
-    /// Hands UI Automation `count` line steps towards `dir` at `at`, never waited on; false when they were not taken.
-    fn steps(&self, at: Point, dir: Dir, count: u16) -> bool;
+    /// Hands UI Automation `count` line steps towards `dir` from `seek`, never waited on; false when they were not
+    /// taken.
+    fn steps(&self, seek: Seek, dir: Dir, count: u16) -> bool;
     /// The time now, on the crate's clock.
     fn now(&self) -> Mono;
 }
@@ -121,21 +105,25 @@ impl<D: Desk> Run<D> {
         }
     }
 
-    /// The point to scroll, whether the pointer is on it, and the window there: under the pointer, or the point the
-    /// guard kept while the pointer is on the keyboard. Our window that now covers that point never takes a silent page
-    /// turn: the app's window behind it does, or there is no target.
+    /// The point to scroll, whether the pointer is on it, and the window there: under the pointer, our open list while
+    /// it shows, or the point the guard kept while the pointer is on the keyboard. Our window that now covers that point
+    /// never takes a silent page turn: the app's window behind it does, or there is no target.
     fn locate(&self) -> Result<(Point, bool, Spot), ScrollError> {
         let cursor = self.desk.cursor().ok_or(ScrollError::Refused)?;
         let under = self.desk.spot(cursor).ok_or(ScrollError::Gone)?;
         if !under.whose.passed() {
             return Ok((cursor, true, under));
         }
-        // With no point kept, our window under the pointer can only be the keyboard before its watch holds.
-        let kept = self.desk.kept().ok_or(ScrollError::NoTarget)?;
-        if under.whose == Whose::Ours {
-            // A glide that crosses our banner keeps its target, as the module does for an aim at our windows.
-            return Ok((cursor, true, under));
+        // The list wins whatever point was kept, as the pointer may cross the app between the list and the pad.
+        if let Some(list) = self.desk.paging() {
+            return Ok((cursor, false, list));
         }
+        // Only the keyboard has a point kept for it: our other windows, and the keyboard before its watch holds, have
+        // none, so the user is asked to point first.
+        if under.whose == Whose::Ours {
+            return Err(ScrollError::NoTarget);
+        }
+        let kept = self.desk.kept().ok_or(ScrollError::NoTarget)?;
         let at = kept.target(&self.desk.screens(), self.config.edge_px);
         let at = at.ok_or(ScrollError::NoTarget)?;
         let there = self.desk.spot(at).ok_or(ScrollError::Gone)?;
@@ -167,7 +155,7 @@ impl<D: Desk> Run<D> {
     /// one clock reading.
     fn read(&mut self, id: TargetId, at: Point) -> Option<Read> {
         let cap = Duration::from_millis(u64::from(self.config.read_ms));
-        let read = self.desk.read(at, self.way, cap);
+        let read = self.desk.read(self.seek(id, at), self.way, cap);
         let pair = read.and_then(|r| r.pair);
         self.fresh = Some(Fresh {
             id,
@@ -176,6 +164,16 @@ impl<D: Desk> Run<D> {
             at: self.desk.now(),
         });
         read
+    }
+
+    /// Where UI Automation looks for target `id` at `at`: at the point while the target is the window there, else at
+    /// the target's own window, as when ours now covers the point, so it never reads or steps ours.
+    fn seek(&self, id: TargetId, at: Point) -> Seek {
+        if self.desk.spot(at).is_some_and(|s| s.window == id.get()) {
+            Seek::At(at)
+        } else {
+            Seek::Window(id.get())
+        }
     }
 
     /// True when the next step towards `dir` at `aim` goes by UI Automation, which is busy.
@@ -231,7 +229,7 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         self.fresh = None;
         let delta = turn.delta(dir);
         match turn.route {
-            Route::Uia if self.desk.steps(aim.at, dir, turn.count) => Ok(()),
+            Route::Uia if self.desk.steps(self.seek(aim.id, aim.at), dir, turn.count) => Ok(()),
             Route::Uia => Err(ScrollError::Refused),
             Route::Send if self.wheel.at_pointer && self.under_pointer(window) => {
                 self.desk.send(dir, delta)

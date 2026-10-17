@@ -17,7 +17,7 @@ mod win;
 
 pub use course::{Course, MAX_TURN, Turn};
 pub use ping::Pings;
-pub use run::{Desk, Read, Run, Spot, Whose};
+pub use run::{Desk, Read, Run, Seek, Spot, Whose};
 #[cfg(windows)]
 pub use win::WinScroll;
 

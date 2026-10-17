@@ -1,4 +1,5 @@
-//! The run on a fake desk: one screen with the keyboard, our list and banner, an app and the desktop behind it.
+//! The run on a fake desk: one screen with the keyboard, our banner, an app and the desktop behind it; our list opens
+//! where a test says.
 
 mod aims;
 mod fake;
@@ -83,14 +84,13 @@ const BOX: Rect = Rect {
 /// A whole notch at three lines a notch.
 const NOTCH_LINES: f64 = 3.0;
 
-/// The fake desk: the pointer on the app, the entry kept from `BEFORE`, every read giving `READ`.
+/// The fake desk: the pointer on the app, the entry kept from `BEFORE`, every read giving `READ`, and no list open.
 fn desk() -> Fake {
     let fake = Fake::default();
     fake.with(|s| {
         let spot = |window, whose| Spot { window, whose };
         s.windows = vec![
             (KB, spot(KB_ID, Whose::Keyboard)),
-            (LIST, spot(LIST_ID, Whose::Pages)),
             (BANNER, spot(BANNER_ID, Whose::Ours)),
             (APP, spot(APP_ID, Whose::Theirs)),
             (DESK, spot(DESK_ID, Whose::Theirs)),
@@ -118,14 +118,28 @@ fn run(fake: &Fake) -> Run<Fake> {
     Run::new(fake.clone(), CONFIG)
 }
 
+/// Opens our list at `r` on `fake`, in front of every window.
+fn show_list(fake: &Fake, r: Rect) {
+    let list = Spot {
+        window: LIST_ID,
+        whose: Whose::Pages,
+    };
+    fake.with(|s| s.windows.insert(0, (r, list)));
+}
+
+/// `read_ms` as a cap.
+fn cap() -> Duration {
+    Duration::from_millis(u64::from(CONFIG.read_ms))
+}
+
 #[test]
 fn the_pointer_off_our_windows_aims_at_the_window_under_it() {
     let fake = desk();
     let aim = run(&fake).aim().unwrap();
     assert_eq!((aim.at, aim.on_pointer, aim.ours), (ON_APP, true, false));
     assert_eq!((aim.id, aim.area), (TargetId::new(APP_ID), Some(BOX)));
-    let cap = Duration::from_millis(u64::from(CONFIG.read_ms));
-    assert_eq!(fake.with(|s| s.reads.clone()), [(ON_APP, Dir::Down, cap)]);
+    let reads = fake.with(|s| s.reads.clone());
+    assert_eq!(reads, [(Seek::At(ON_APP), Dir::Down, cap())]);
 }
 
 #[test]
@@ -175,6 +189,7 @@ fn an_unknown_pointer_is_refused_and_no_window_is_gone() {
 #[test]
 fn our_list_under_the_pointer_is_ours_and_gets_no_read_or_step() {
     let fake = desk();
+    show_list(&fake, LIST);
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     let mut r = run(&fake);
     let aim = r.aim().unwrap();
@@ -268,6 +283,7 @@ fn ui_automation_steps_go_only_to_a_free_reader() {
     }
     fake.with(|s| s.busy = false);
     r.turn(&aim, Dir::Right, 2.0).unwrap();
-    assert_eq!(fake.with(|s| s.steps.clone()), [(ON_APP, Dir::Right, 2)]);
+    let steps = fake.with(|s| s.steps.clone());
+    assert_eq!(steps, [(Seek::At(ON_APP), Dir::Right, 2)]);
     assert!(fake.with(|s| s.sent.is_empty() && s.posted.is_empty()));
 }

@@ -10,12 +10,14 @@ use super::*;
 use crate::screen::contains;
 use crate::scroll::lparam_point;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
-use crate::window::is_ours;
+use crate::window::{THROUGH, is_ours, is_through};
 use kx_module_api::ports::{Aim, TargetId};
 use pinger::answered;
 use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_INVALID_WINDOW_HANDLE, ERROR_TIMEOUT};
 use windows::Win32::UI::HiDpi::LogicalToPhysicalPointForPerMonitorDPI;
-use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GA_ROOT, GWL_EXSTYLE, GetAncestor, SetWindowLongPtrW,
+};
 
 /// The test window's box.
 const BOX: Rect = Rect {
@@ -155,14 +157,36 @@ fn the_window_under_the_pointer_is_another_apps() {
     assert!(alive(found.window));
 }
 
+/// The rules on our own hidden windows, with no desktop needed: only a point inside fits the box, a hidden window is
+/// neither shown nor cloaked, so it never fits, and a click-through style reads as such.
+#[test]
+fn a_window_fits_only_shown_holding_the_point_and_taking_clicks() {
+    let win = TestWin::plain(BOX);
+    let hwnd = win.hwnd();
+    let outside = Point {
+        x: BOX.x - 1,
+        y: AT.y,
+    };
+    assert!(behind::holds(hwnd, AT) && !behind::holds(hwnd, outside));
+    assert!(!behind::shown(hwnd) && !behind::cloaked(hwnd));
+    assert!(!behind::fits(hwnd, AT), "hidden");
+    assert!(!is_through(behind::ex_of(hwnd)));
+    let through = isize::try_from(THROUGH).unwrap();
+    // SAFETY: a style change on the test's own window.
+    unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, through) };
+    assert!(is_through(behind::ex_of(hwnd)), "click-through");
+    assert!(!behind::takes(hwnd, AT), "ours");
+}
+
+/// On a desk with a shell, the window found behind ours at the pointer is another app's that fits there.
 #[test]
 fn the_window_behind_ours_is_another_apps_shown_window_at_the_point() {
-    let win = TestWin::start(BOX, false);
-    assert!(!behind::takes(win.hwnd(), AT), "ours, and hidden");
     let Ok(p) = screen::cursor() else {
         return;
     };
-    let found = behind::behind(p).expect("a window is everywhere on the desk");
+    let Some(found) = behind::behind(p) else {
+        return;
+    };
     // SAFETY: a plain query; a gone window has no root.
     let root = unsafe { GetAncestor(found, GA_ROOT) };
     assert!(behind::takes(root, p) && !is_ours(found));

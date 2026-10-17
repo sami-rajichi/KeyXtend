@@ -20,22 +20,27 @@ pub(super) fn behind(p: Point) -> Option<HWND> {
     Some(deepest(top, p))
 }
 
-/// True when top-level window `hwnd` can take the target at `p`: another app's, shown, holding `p`, taking clicks and
-/// not cloaked, as on another virtual desktop. The cheap checks go first.
+/// True when top-level window `hwnd` can take the target at `p`: another app's that fits there.
 pub(super) fn takes(hwnd: HWND, p: Point) -> bool {
-    !is_ours(hwnd) && shown(hwnd) && holds(hwnd, p) && !is_through(ex_of(hwnd)) && !cloaked(hwnd)
+    !is_ours(hwnd) && fits(hwnd, p)
+}
+
+/// True when top-level window `hwnd` shows at `p` and takes clicks there: shown, holding `p`, not click-through and not
+/// cloaked, as on another virtual desktop. The cheap checks go first.
+pub(super) fn fits(hwnd: HWND, p: Point) -> bool {
+    shown(hwnd) && holds(hwnd, p) && !is_through(ex_of(hwnd)) && !cloaked(hwnd)
 }
 
 /// True while `hwnd` is shown.
 #[allow(unsafe_code, reason = "A plain window query.")]
-fn shown(hwnd: HWND) -> bool {
+pub(super) fn shown(hwnd: HWND) -> bool {
     // SAFETY: a plain query; a gone window reads as hidden.
     unsafe { IsWindowVisible(hwnd) }.as_bool()
 }
 
 /// True when the box of `hwnd` holds screen point `p`.
 #[allow(unsafe_code, reason = "A box query into a local.")]
-fn holds(hwnd: HWND, p: Point) -> bool {
+pub(super) fn holds(hwnd: HWND, p: Point) -> bool {
     let mut r = RECT::default();
     // SAFETY: a plain query into a local rect; a gone window refuses it.
     let read = unsafe { GetWindowRect(hwnd, &raw mut r) }.is_ok();
@@ -44,14 +49,14 @@ fn holds(hwnd: HWND, p: Point) -> bool {
 
 /// The extended style of `hwnd`; 0 for a gone window.
 #[allow(unsafe_code, reason = "A plain style query.")]
-fn ex_of(hwnd: HWND) -> u32 {
+pub(super) fn ex_of(hwnd: HWND) -> u32 {
     // SAFETY: a plain query; a gone window gives 0.
     u32::try_from(unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) }).unwrap_or_default()
 }
 
 /// True while the system cloaks `hwnd`, so it does not show though Windows calls it visible.
 #[allow(unsafe_code, reason = "A window attribute read into a local.")]
-fn cloaked(hwnd: HWND) -> bool {
+pub(super) fn cloaked(hwnd: HWND) -> bool {
     let mut value = 0u32;
     let size = u32::try_from(size_of::<u32>()).unwrap_or_default();
     // SAFETY: the call writes one u32 into a local that outlives it; a refusal reads as not cloaked.

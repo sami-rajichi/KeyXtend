@@ -9,7 +9,7 @@ use windows::Win32::Foundation::HWND;
 
 use super::super::entry::{enter, kept, mark_with};
 use super::super::guard::guard;
-use super::super::pages::{mark, whose};
+use super::super::pages::{mark, paging, whose};
 use super::entries::{ENTRIES, place, spot_on_main};
 use super::{Hidden, WinGuard};
 use crate::scroll::Whose;
@@ -30,6 +30,7 @@ fn only_our_guarded_window_takes_the_mark_and_then_pages() {
     let list = guarded_at("KeyXtend test: page list", spot_on_main());
     mark(list.0).unwrap();
     assert_eq!(whose(list.0), Whose::Pages);
+    assert_ne!(paging(), Some(list.0), "only a shown list wins the aim");
     let hidden = WinGuard.mark_pages("KeyXtend test: page list");
     assert_eq!(hidden, Err(UiError::NoWindow), "only a shown window");
     assert_eq!(whose(HWND::default()), Whose::Theirs, "no window");
