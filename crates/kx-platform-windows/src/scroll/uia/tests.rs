@@ -1,10 +1,12 @@
 //! UI Automation on hidden test windows: a read within its cap, steps that move the bars, nothing that scrolls, and a
 //! window that stopped reading its messages, which a read gives up on at its cap.
 
+use super::down::{Tree, View};
 use super::work::{amounts, client, look, step};
 use super::*;
 use crate::com::Com;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
+use crate::scroll::win::handle;
 use kx_module_api::ports::{Point, Rect};
 use windows::Win32::UI::Accessibility::{
     ScrollAmount_NoAmount, ScrollAmount_SmallDecrement, ScrollAmount_SmallIncrement,
@@ -121,6 +123,25 @@ fn each_way_reads_and_steps_the_first_that_scrolls_along_its_axis() {
     assert!(uia.steps(seek, Dir::Left, TENTH));
     let table_pct = uia.read(seek, Dir::Left, cap()).and_then(|r| r.pair);
     assert_eq!(table_pct.map(|p| p.0), Some(40.0), "the table moved");
+}
+
+/// The walk down's real process read: a test window of this process is ours, and the desktop's root is not.
+#[test]
+#[allow(unsafe_code, reason = "Plain UI Automation lookups.")]
+fn the_walk_down_reads_our_own_window_as_ours_and_the_desktop_as_not() {
+    let _one = one_client();
+    let win = TestWin::plain(BOX);
+    let _com = Com::start().unwrap();
+    let auto = client(READ_MS).unwrap();
+    // SAFETY: plain lookups on our live client, for the test's own window and the desktop.
+    let (walker, el, root) = unsafe {
+        let el = auto.ElementFromHandle(handle(win.top_id())).unwrap();
+        let root = auto.GetRootElement().unwrap();
+        (auto.ControlViewWalker().unwrap(), el, root)
+    };
+    let view = View(&walker);
+    assert!(view.ours(&el), "our test window");
+    assert!(!view.ours(&root), "the desktop is drawn by another process");
 }
 
 #[test]

@@ -118,7 +118,8 @@ pub fn lparam_point(lparam: isize) -> Point {
 }
 
 /// The percent towards `dir` from UI Automation's (horizontal, vertical) pair, kept within 0 to `FULL`: a rounding below
-/// 0 reads as 0 and any value above `FULL` as `FULL`. None when that way cannot scroll (-1) or the value is not finite.
+/// 0 reads as 0 and any value above `FULL` as `FULL`. None below 0 past `END_SLACK` (UI Automation's -1, cannot
+/// scroll) or when the value is not finite.
 #[must_use]
 pub fn along(dir: Dir, (h, v): (f64, f64)) -> Option<f64> {
     let pct = if dir.sideways() { h } else { v };

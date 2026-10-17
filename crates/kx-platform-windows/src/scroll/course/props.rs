@@ -177,6 +177,7 @@ proptest! {
         }
     }
 
+    /// Each run ends with full ticks for a trip's check and its steps' check, so every run reads an end.
     #[test]
     fn steps_give_the_wheel_back_only_when_they_end_where_it_stopped(
         tick in TICK_MS,
@@ -185,10 +186,15 @@ proptest! {
         owed in vec(0.0..=MAX_LINES, 1..=MAX_TICKS),
     ) {
         let (mut c, a, w) = (Course::new(CONFIG), aim(1, false), wheel(THREE, THREE));
-        let (mut now, mut pct) = (0, stopped);
-        for lines in owed {
+        let (mut now, mut pct, mut ended) = (0, stopped, false);
+        let tail = usize::try_from(2 * (CONFIG.check_ms.div_ceil(tick) + 2)).unwrap();
+        for lines in owed.into_iter().chain(std::iter::repeat_n(MAX_LINES, tail)) {
             if c.read(&a, Dir::Down, at(now), pair(Dir::Down, pct)) == Reach::End {
                 prop_assert_eq!(c.tripped(), moved, "an end at {} after a trip at {}", pct, stopped);
+                if !moved {
+                    prop_assert_ne!(c.next_route(&a, Dir::Down, w), Route::Uia, "the wheel is back");
+                }
+                ended = true;
             }
             if moved && c.tripped() {
                 pct = stopped + NUDGE;
@@ -196,6 +202,7 @@ proptest! {
             c.turn(&a, Dir::Down, lines, w);
             now += tick;
         }
+        prop_assert!(ended, "the tail reads an end");
     }
 
     #[test]

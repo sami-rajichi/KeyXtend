@@ -5,7 +5,7 @@ use std::cell::Cell;
 
 use kx_module_api::ports::{Point, Rect};
 
-use super::{Tree, deepest};
+use super::{Tree, deepest, mine};
 use crate::screen::contains;
 
 /// The window, its toolbar, its pane, the pane's list and preview, and the list's first item, by number.
@@ -129,4 +129,14 @@ fn the_walk_stops_above_a_node_of_ours() {
         ITEM,
         "ours away from the point changes nothing"
     );
+}
+
+/// A node is ours when its process id is ours, and also when the id cannot be read or is none, so the walk fails closed.
+#[test]
+fn a_node_is_ours_when_its_process_is_ours_or_cannot_be_read() {
+    let own = 7;
+    assert!(mine(Some(7), own));
+    assert!(!mine(Some(8), own), "another process");
+    assert!(mine(None, own), "an id that cannot be read");
+    assert!(mine(Some(-1), own), "an id that is none");
 }

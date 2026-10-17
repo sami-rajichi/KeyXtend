@@ -1,6 +1,7 @@
 //! The fallback to UI Automation's steps and the end they cannot pass: a percent still for `check_ms` short of the end
-//! trips the target after a notch of wheel delta, and reads as the end after a UI Automation step. Only steps sent
-//! before the previous read count, so a target that shows them late is never judged early.
+//! trips the target after a notch of wheel delta, and reads as the end after a UI Automation step, which gives the wheel
+//! back when it is where the wheel stopped. Only steps sent before the previous read count, so a target that shows them
+//! late is never judged early.
 
 use super::*;
 use crate::scroll::tests::{CONFIG, THREE, aim, at, wheel};
@@ -53,7 +54,7 @@ fn the_fallback_waits_for_check_ms_and_a_whole_notch() {
     c.read(&a, Dir::Down, at(CHECK * 3), HALF);
     assert!(c.tripped(), "a whole notch and check_ms");
     let on = c.turn(&aim(1, true), Dir::Down, 1.0, w).map(|t| t.route);
-    assert_eq!(on, Some(Route::Uia), "never the wheel again");
+    assert_eq!(on, Some(Route::Uia), "not the wheel while tripped");
 }
 
 #[test]
@@ -180,7 +181,7 @@ fn still_reads_without_wheel_steps_never_trip() {
 }
 
 #[test]
-fn a_tripped_target_keeps_ui_automation_until_the_target_changes() {
+fn a_tripped_target_keeps_ui_automation_on_a_new_way_but_not_on_a_new_target() {
     let mut c = tripped();
     let w = wheel(THREE, THREE);
     let up = c.turn(&aim(1, false), Dir::Up, 1.0, w).map(|t| t.route);
