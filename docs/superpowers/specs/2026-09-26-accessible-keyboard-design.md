@@ -272,7 +272,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two dots under Stop's square show the current speed.
 - Tapping another direction switches direction at slow speed.
 - The page **glides**: many small steps a second, slow 3 and fast 10 lines a second by default (`[scroll] slow`, `fast`; owner, 2026-10-16).
-- **It also stops** at the end of the content, at any press outside our windows, `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes. Each of the first two can be switched off. A tap with nothing to scroll there, or already at the end, stops at once with a short notice.
+- **It also stops** at the end of the content, at any press outside our windows, `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes. Each of the first two can be switched off. A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
 - **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
 - **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.
 - **Our own lists:** when the target is one of our paged lists, each tap turns one page, with no speeds and no Stop.
@@ -282,12 +282,20 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
   1. Small `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` deltas posted to the window at the target point, or `SendInput` wheel events while the pointer itself is on the target.
   2. UI Automation finds the scrollable element, its box and its position, and moves it by `ScrollPattern` steps when the window ignores wheel messages.
   3. The point before the keyboard comes from Windows' pointer history when the pointer enters the keyboard.
+- **As built in P5** (refines ADR-0029's fallback and end rule; the names are `kx-platform-windows`' `scroll` constants):
+  - A target falls back to `ScrollPattern` steps once its percent has stayed still, short of the end, for `[scroll] check_ms` **and** at least one whole notch of wheel delta went out since it last moved.
+  - Under `ScrollPattern` steps, a percent that stays still for `check_ms` after at least one step reads as the end. This also covers wheel settings of 0 lines or one page, which step by UI Automation from the start.
+  - Both rules count only steps sent before the previous read, so a slow app has a whole read to show them; each therefore comes about 2 × `check_ms` after the percent stops.
+  - A percent within a rounding (`END_SLACK`) of 0 or 100 is at its end.
+  - A gap between reads longer than `PAUSE_CHECKS` × `check_ms` + `read_ms` starts the wait afresh.
+  - A busy target, one that left a `WM_NULL` ping unanswered or that Windows calls hung, gets no steps.
+  - A `SendInput` wheel goes out only while Windows gives wheels to the window under the pointer (mouse-position routing) and the pointer is still on the target; otherwise the step is posted.
 
 ### 5.3 Overlays
 
 - The ring, burst and mode badge are drawn in **one click-through Qt window** that never takes focus (`Qt.WindowTransparentForInput`, guarded by the Windows adapter).
 - Gate G12 proved it: 200 of 200 clicks under the ring reached the app, at the screen's full rate (ADR-0013).
-- It is made while a mode is on and freed when every mode is off. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
+- It is made while a mode is on or the pad scrolls, and freed when neither holds. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
 
 ---
 

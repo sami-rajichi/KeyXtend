@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 01:07 — P5: the docs match the scroll pad as built
+`ARCHITECTURE.md` now maps the scroll module, its port and ungated events, the Windows adapter, the hub's parts and how macOS and Linux would fill the port, and the README tells users how the pad's taps, Stop, stops, outline and `[scroll]` settings work. Spec §5.2 and ADR-0029's row record the as-built fallback and end rules, and the security notes for the app, the UI, the mouse module and the Windows adapter name the new data, inputs and threats. P5's item file keeps two manual-test checks, the certificate note moved to P6, and P13 notes the faded high-contrast dots. CI now also lints the app with the scroll module off.
+
 ## 2026-10-17 00:43 — P5: the gates aimed at the scroll pad
 G6 now drives the test build's pad in Notepad, Chrome and Explorer, never Word, and judges the aim, down and up, sideways where the page overflows, the fast ÷ slow ratio, each stop, the end and press-stop from pictures and UI Automation percents; it records Chrome's end percents and percent lag, the wheel routing, a hung target-window and a DPI-unaware one. G8 reads memory after a scroll, scrolls in every churn round and logs free RAM and the VMs' memory; G9 checks the outline's flags while hovered and scrolling; G10 presses each arrow and Stop. The gates' own wheel routes and `g6track` are deleted, and every new value is in `kx-gates-p5.toml` with its checks.
 

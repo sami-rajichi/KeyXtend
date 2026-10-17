@@ -54,13 +54,20 @@ Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab
 
 ## Status
 
-Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, and mouse assist (P4) right-clicks and drags with clicks only; the scroll pad (P5) is next. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, and mouse assist (P4) right-clicks and drags with clicks only; the scroll pad (P5) is built and in its last checks. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
 ## Using the keyboard
 
 - **Type** by clicking keys: the text goes to the app you were typing in, which keeps the focus.
 - **Shift, Ctrl, Alt, AltGr and Win** stay held for the next key or click, then let go; a setting keeps them held until you click them again.
 - **Right-click and Grab** (the side keys): with Right-click on, press and hold the button still on something (1.5 s by default) to right-click it, while short clicks and drags work as usual, and a ring shows the hold. With Grab on, one click picks up what is under the pointer and the next drops it, to move files or select text without dragging; a badge at the pointer shows which mode is on, and a soft sound plays at each step.
+- **The scroll pad** (the round pad): point at what you want to scroll, come back to the keyboard and tap an arrow.
+  - One tap scrolls slowly that way, a second tap on the same arrow scrolls fast, and a third stops. Another arrow turns that way, slowly.
+  - **Stop** shows in the pad's middle while it scrolls, with one dot lit for slow and two for fast.
+  - It also stops by itself at the end of the page, at a click outside KeyXtend's windows, two minutes after your last tap on the pad, and when the window closes. If there is nothing to scroll there, or it is already at the end, a short notice says so.
+  - A thin outline marks what will scroll while the pointer is on the pad and all the time it scrolls, and the badge at the pointer shows the arrow and "slow" or "fast".
+  - Pointed at one of KeyXtend's own lists, such as the language list, each tap turns one page: ◀ or ▲ back, ▶ or ▼ on.
+  - Its settings are in the `[scroll]` section: `slow = 3` and `fast = 10` lines a second (1 to 60, fast above slow), `limit_s = 120` seconds (0 for no limit, else 10 to 1800), and `stop_at_end` and `stop_on_press`, both `true`. `tick_ms = 16`, `check_ms = 250`, `read_ms = 300` and `edge_px = 8` tune how it finds, reads and moves what it scrolls.
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.

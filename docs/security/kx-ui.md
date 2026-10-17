@@ -1,7 +1,7 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14
+- **Last review:** 2026-10-17 (P5 docs: the scroll pad's state, outline and page turns)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
@@ -10,7 +10,7 @@
 |---|---|---|
 | None declared | The `ui` module only draws; it sends keys through the keyboard's face, never through `InputInjector`. | N/A |
 | `KeyboardFace` service (required) | The board, the live state, every click on a key, and the language of the layout shown, which the keyboard's texts follow (ADR-0020). The face has no capability gate, so the `ui` module, which holds no capability, types through it (see Should fix). | The `ui` module fails and offers Try again; the rest keeps running. |
-| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`, `Memory`, `Speaker`) | No-focus guard, window shape and a tip's lift, screen areas and the pointer, the system look, the backdrop, the tray icon, giving the heaps' free pages back after a look change (ADR-0023), and the key and mouse sounds. | The windows take focus, the look stops following Windows, a hidden keyboard has no way back but a second start, look changes keep freed memory committed, or nothing sounds. |
+| UI ports the app hands in (`WindowGuard`, `Screens`, `SystemLook`, `Backdrop`, `Tray`, `Memory`, `Speaker`) | No-focus guard, window shape and a tip's lift, the keyboard's entry watch and the outline laid under the keyboard (P5), screen areas and the pointer, the system look, the backdrop, the tray icon, giving the heaps' free pages back after a look change (ADR-0023), and the key and mouse sounds. | The windows take focus, the look stops following Windows, a hidden keyboard has no way back but a second start, look changes keep freed memory committed, or nothing sounds. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -22,9 +22,10 @@
 | `[ui]` settings | Public | `settings.toml` through the kernel | No | Until changed |
 | The focus token (a window handle) | Public | Memory only | N/A | Until the app quits |
 | The tray picture (our own drawing of the theme badge) and where a tray click happened | Public | Memory only; the adapter keeps the picture while the icon shows | N/A | Until the icon hides |
-| The pointer overlay's state: the pointer, a hold's press point and where it fired | Sensitive (a run of clicks on an on-screen PIN pad shows what was typed) | Memory only, in the hub and in QML while it draws; the `mode` it also names is a mode id, never a point | N/A | The last point only; it goes when every mode is off |
+| The pointer overlay's state: the pointer, a hold's press point and where it fired | Sensitive (a run of clicks on an on-screen PIN pad shows what was typed) | Memory only, in the hub and in QML while it draws; the `mode` it also names is a mode id, never a point | N/A | The last point only; it goes when every mode is off and the pad is still |
+| The scroll pad's state (live, way, speed) and the target's box to outline (`scroll_json`) | Sensitive (the box shows what the user looks at) | Memory only, in the hub and in QML while the outline draws | N/A | The box goes when the scroll module hides the outline, stops or fails |
 
-Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes; no line holds a pointer point, and `assist_json` is never logged.
+Nothing typed is shown in a notice or logged: key ids, legends and replies never reach `tracing`. Log lines name only `[ui]` keys, counts and OS error codes; no line holds a pointer point or a box, and neither `assist_json` nor `scroll_json` is ever logged (`no_log_line_holds_a_box_or_a_point`).
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -35,6 +36,9 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
 | `AssistNote` events from the bus | A fired hold, a pick-up or a drop plays one compiled-in sound; a hold's start, end, fire and a cancelled carry set or clear the overlay's ring and burst, whose points are kept but never logged | One play per note, a send the speaker's bounded queue drops when full; one ring and one burst kept | No; hub tests cover each kind and capture the logs |
 | `AssistChanged`, `PointerMoved` and `LatchesUsed` events from the bus (the mouse module's thread) | Typed values only; the handler stores and wakes, never blocks, and holds the hub weakly. A point is kept only while a mode is on | At most one `Wake::Assist` waits for QML's read, so a run of moves costs one wake per read; one `Wake::Keys` per mode or latch change while a face is attached, which `detach` ends | No; hub tests, and a property test that a change wakes once and never twice before a read (`tests/hub/assist/props.rs`) |
+| `ScrollChanged` and `ScrollAimed` from the bus (the scroll module's thread, ungated) | Typed values only; the handler stores and wakes, never blocks. A box is kept only while the module is live and `ScrollChanged { live: false }` drops it, so a forged `ScrollAimed` outlines a box only while the module runs, and the outline never takes a click or the focus. The badge's scroll part shows only while the mouse module is live too | At most one `Wake::Scroll` waits for QML's read; one `Wake::Keys` per `ScrollChanged` while a face is attached | No; hub tests, and a property test of one wake per read (`tests/hub/scroll/props.rs`) |
+| `ScrollPage` from the bus (ungated) | It only queues a `Wake::Page`; on the Qt thread the hub reads the open list from the face's state and presses that list's own page key, with `[ui] page_rows`. Nothing turns past either end, with no list or no face, and a state that does not read warns with the error's kind only, never its text | One page key per event | No; hub tests (`tests/hub/scroll/pages.rs`) |
+| Pad calls from QML (`pad`, `padHover`) and the guard's two scroll calls (`watchEntries`, `layUnder`) | An arrow name outside up, down, left, right and "" (Stop) warns and does nothing; the face publishes the pad's events itself. The guard calls name our own window titles; a window not shown yet gives false quietly, and a refusal warns with its `UiError` (an OS code at most), never a title | One action per click or hover change; `watchEntries` until it holds, `layUnder` once per edge set or keyboard show | No; hub and bridge unit tests |
 | The pointer size (`SystemLook`, `CursorBaseSize`) | The adapter keeps a value Settings offers (32 to 256) and reads anything else as 32 | One number | Unit tests |
 | Tray clicks and "clicked elsewhere" (the adapter's thread) | Queued to the Qt thread as a wake, like the look; the hub holds itself weakly there, so the icon never keeps it alive. A click only opens or closes our menu at a spot kept inside the work area; a new front window closes it only after `[ui] tray_grace_ms`, within its range in `settings.rs` | One wake per event | No |
 | Icon ids QML asks the icon provider for (`<rrggbb>/<name>.svg`, `cpp/tint.h`) | The tint must be six hex digits and the name plain ASCII (letters, digits, `-`, `_` and dots, no leading dot) of the icon type, so it only names a file in the compiled-in icons folder; anything else gives a clear image and one warning | One image of the asked size | No; the tint test tries `..`, slashes, a drive, `%` escapes, other types and bad tints |
@@ -52,7 +56,8 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
   - Quit, from the user or a second copy, ends the request queue, so the app's drain thread cannot keep a hidden uiAccess process alive; when that thread is gone, Quit ends the UI itself.
   - Guard tries stop at `guard_tries` per run, and equal notices are merged.
-  - The overlay's bus handlers only store and wake, and its wake is never queued twice before QML reads, so a moving pointer cannot flood the Qt thread (`tests/hub/assist/props.rs`).
+  - The overlay's bus handlers only store and wake, and its wake is never queued twice before QML reads, so a moving pointer cannot flood the Qt thread (`tests/hub/assist/props.rs`). The scroll state's wake works the same way (`tests/hub/scroll/props.rs`).
+  - The scroll outline's four edge windows exist only while the hub names a box, and are freed after it. Each is click-through (`Qt.WindowTransparentForInput`), takes no focus (`Qt.WindowDoesNotAcceptFocus`, never `requestActivate()`), joins the guard's quiet run and lies just under the keyboard (`layUnder`), so it never covers a key or takes a click meant for the app.
   - A sound is a send to the speaker that never waits. The key sound reads only whether an action is a tap or a press, never its key, and no play logs; `[ui] sound_volume` and `sound_idle_ms` stay within their ranges in `settings.rs`.
   - The heaps' free pages go back once after a look change, or once for back-to-back changes, after every shown window dropped its cached graphics, never at idle; a refused give-back warns once and stops nothing (ADR-0023).
   - A second copy's tries to reach the running one stop at `send_tries`, `send_wait_ms` apart; `settings.rs` bounds each timing and count.

@@ -1,14 +1,15 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14
+- **Last review:** 2026-10-17 (P5 docs: the scroll target's grant)
 - **Status:** Reviewed
-- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
+- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
 | Builds the kernel's policy: each shipped module gets exactly what its manifest declares | Only the app knows which modules it ships and vouches for them | A module that needs a grant fails at load and offers Try again |
+| Provides the platform's `ScrollTarget` under `ScrollTargetKey`, gated by `Scroll` (P5, ADR-0029) | Only the scroll module declares `Scroll`, so the target reaches it alone (`the_scroll_target_reaches_only_the_scroll_module`), as the mouse hook reaches only the mouse module | Without the `mod-scroll` feature the target is still provided but no module can reach it, and the pad dims |
 | uiAccess (release manifest only, `asInvoker`) | Stay above the Start menu and type into windows above our integrity level | UIPI drops keys sent to elevated windows, and the keyboard hides under the Start menu |
 
 ## Data handled
@@ -46,6 +47,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
   - Quit ends the request queue; the kernel's thread stops the modules, then ends the UI even if stopping panics (a drop guard). After Qt's loop, `drain::stop` removes the tray icon and joins the thread, whether it was running, already asked to quit, or ended in a panic.
+  - Quitting while the pad scrolls stops the scroll module, which closes its run and hides the outline, and the mouse hook lets go (`quitting_while_scrolling_closes_the_run_hides_the_outline_and_lets_the_hook_go`).
   - The tray icon goes when the app ends or a panic unwinds. A panic inside a Qt callback aborts the process, and a killed process leaves the icon until the pointer passes over it, as Windows does for any app.
   - `--quit` with no copy running starts nothing and exits at once.
   - A same-user program that squats the running mutex can keep KeyXtend from starting (Accepted).

@@ -45,24 +45,26 @@ apps/
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update) (P8)
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer
-                         hook's too: ADR-0027), events, Clock and Mono, settings contract,
-                         notices, Redacted<T>
+                         hook's too: ADR-0027, the scroll target's: ADR-0029), events, Clock
+                         and Mono, settings contract, notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth (P8)
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
-                         (WindowGuard, Screens, SystemLook, Backdrop, Instance, Tray: ADR-0019,
-                         Memory: ADR-0023, Speaker: P4)
+                         (WindowGuard, with the entry watch and `lay_under` from P5, Screens,
+                         SystemLook, Backdrop, Instance, Tray: ADR-0019, Memory: ADR-0023,
+                         Speaker: P4)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
-                         sound
+                         sound, and the scroll target (`scroll`)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service, the UI ports and the speaker);
                          `FakePointerHook` runs an engine on the test's thread, and its `let_go`
-                         and `give_up` act as the real host does; kx-module-api's contract test
-                         uses it too
+                         and `give_up` act as the real host does; `FakeScrollTarget` answers
+                         scripted aims and reaches and records turns; kx-module-api's contract
+                         test uses it too
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
@@ -80,8 +82,10 @@ crates/
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`
-  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4)
-  kx-mod-scroll/        scroll controller (2 speeds, stops, target tracking) over the `ScrollTarget` port (P5)
+  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4); its hook also runs while
+                         the pad scrolls, to tell presses (`PointerPressed`) and move the badge (P5)
+  kx-mod-scroll/        the scroll pad: the tap machine (`pad`), the glide (`glide`), the stop rules
+                         (`stops`) and the actor, over the `ScrollTarget` port; `[scroll]` (P5)
   kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions (P7)
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)
@@ -95,8 +99,9 @@ crates/
 tools/
   kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
                          reads kx-gates.toml and, beside it, kx-gates-p3.toml (the P3
-                         gates, the mouse guard and the run-length checks) and kx-gates-p4.toml
-                         (the test build and P4's gates); uses
+                         gates, the mouse guard and the run-length checks), kx-gates-p4.toml
+                         (the test build and P4's gates) and kx-gates-p5.toml (G6 on the test
+                         build's pad, and the pad's steps in G8, G9 and G10); uses
                          spike-core widely until its gates are
                          aimed at the product; `capture-layouts` writes the fake's golden
                          layout tables from the layouts installed on the PC
@@ -106,7 +111,8 @@ tools/
                          installed layout and puts the previous one back when the window closes
                          while it holds the keyboard (gates bring it to the front first); a
                          failed restore logs `# layout-kept`, and a killed window leaves the
-                         session switched
+                         session switched; `--fill` gives it lines to scroll both ways, and
+                         `--dpi-unaware` makes it an unaware app (P5)
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
                          texts test lays out, and the soft shadows' adopter, so the tests draw as
                          the app does
@@ -193,6 +199,7 @@ pub trait Module: Send + 'static {
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
 - Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
+- Windows also lints the app with the scroll module's feature off, so a module stays optional.
 - Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
 
 ## Cross-cutting patterns
@@ -200,7 +207,7 @@ pub trait Module: Send + 'static {
 - **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
 - **State machines as enums** with explicit transitions, for the keyboard, hold engine, scroll, vault lock and voice session. Time is always injected through a `Clock` trait, so tests are deterministic.
 - **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops. No cycles of bounded channels.
-- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
+- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag, the entry watch's one kept point), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
 - **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
 - **UI hub (`kx-ui`).** QML makes the bridge objects without arguments, so they reach the app's `Hub` through `kx_ui::install`, set once before QML loads (ADR-0018). Adapter threads wake the Qt thread through cxx-qt's queue, never blocking. Try again and Quit go to the app through a request queue it drains on its own thread; Quit, from the user or a second copy, is the last request, and the queue then ends.
@@ -221,11 +228,28 @@ pub trait Module: Send + 'static {
   - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
 - Owned windows (shadows, bubble, tips, pill, caption, ring) are declared inside their owner, so Qt keeps them above it.
+- The scroll outline's four edge windows have no owner (`transientParent: null`) and join the guard's quiet run, so `lay_under` can put them just under the keyboard each time a set shows or the keyboard shows again. They exist only while there is a box.
 - A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner. A shown tip hides as a guard run starts, or the guard would lift its owner with it.
 - A hidden window shows again at its old place, so a pop-up's guard run names it as `top` to land in front.
 - Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
 - Every window draws on one shared graphics device, on the GUI thread (Qt's basic render loop) and without a depth buffer; a lost device, or a window that cannot draw, brings the windows back over the same hub, with the keyboard shown, closed or minimised as the user left it, up to `[ui] device_rebuilds` times, and Qt's loop runs between tries (ADR-0021).
 - Only the shown theme's bundled fonts stay in Qt's font list: the hub loads them from the resources before the QML and again on each theme switch (ADR-0021).
+
+## The scroll pad (P5, ADR-0029)
+
+- **Module.** `kx-mod-scroll` holds every rule on the injected clock: the tap machine (`Pad`), the glide (`Glide`, lines owed per tick, a gap capped at `check_ms`) and the stop rules (`Stops`: the end, a press outside our windows, `limit_s` after the last tap, the target gone).
+  - Its actor, on the `kx-scroll` thread, ticks every `tick_ms` only while scrolling, aims and reads the reach every `check_ms`, and logs one line of counts when it quits.
+- **Port.** `ScrollTarget::open(ScrollConfig)` gives a `ScrollRun`: `aim` (the point, whether the pointer is on it, the box, ours or not, an id), `turn(aim, dir, lines)` and `reach` (more, end or unknown); dropping the run closes it.
+  - `ScrollTargetKey` needs `Scroll`, which only the scroll module declares. The actor opens the run at the first peek or tap and keeps it until the module stops.
+- **Events.** The keyboard sends `ScrollTap`, `ScrollStop` and `ScrollPeek` (the pointer on the pad); the module sends `ScrollChanged` (live, way, speed), `ScrollAimed` (the box, or none) and `ScrollPage` (our open list); `ScrollAsk` asks for the state and box again.
+  - None of them names a capability, nor does the mouse module's `PointerPressed`, which carries no point; steps still go only where the user pointed.
+- **Windows (`kx-platform-windows::scroll`).** A turn is a small wheel delta worked out from the user's wheel settings, posted to the window at the target while the pointer is elsewhere. It is sent by `SendInput` only while the pointer is on the target and Windows routes wheels to the pointer.
+  - UI Automation runs on the run's own COM thread (`kx-scroll-uia`), each read capped by `read_ms`: it finds the first element that scrolls, its box and percents. It takes `ScrollPattern` line steps when the wheel setting is 0 or a page, or when wheel deltas move nothing (`Course`, spec §5.2).
+  - A ping thread (`kx-scroll-ping`) asks the target for a `WM_NULL` answer; a window that leaves one unanswered, or that Windows calls hung, gets no step.
+  - The guard's entry watch (`WindowGuard::watch_entries`) reads `GetMouseMovePointsEx` once as the pointer enters the keyboard and keeps the newest point outside it on a work area. A miss pushes the entry point `edge_px` past the nearest keyboard edge that lands on a screen.
+- **UI (`kx-ui`).** The hub keeps the scroll state and the box (`scroll_json`, one wake per read), adds the badge's scroll part to `assist_json`, wakes the keys on `ScrollChanged`, and turns `ScrollPage` into the open list's page key on the Qt thread with `[ui] page_rows`.
+  - `Outline.qml` makes four click-through edge windows (`Edge.qml`) only while there is a box, and `WindowGuard::lay_under` puts them just under the keyboard.
+- **Other platforms (P15).** macOS fills the same port with `CGEvent` scroll events and Accessibility for boxes, and Linux with XTest or the portal and AT-SPI. Wayland has no global pointer history or posted event, so there it scrolls only what is under the pointer.
 
 ## Platform notes
 
@@ -234,6 +258,6 @@ pub trait Module: Send + 'static {
 | Top-most, no focus | uiAccess + `WS_EX_NOACTIVATE/TOPMOST/TOOLWINDOW` (guarded) | Qt `Tool` windows are non-activating `NSPanel`s | X11: `_NET_WM_STATE_ABOVE`; Wayland: LayerShellQt on KDE/wlroots; **not possible on GNOME Wayland** |
 | Type | `SendInput` Unicode + VK | `CGEventPost` (Accessibility permission) | X11 XTest; Wayland RemoteDesktop portal / libei (asks the user once) |
 | Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
-| Scroll | UIA ScrollPattern → posted wheel → SendInput | `CGEventCreateScrollWheelEvent` | XTest buttons 4–7 / portal |
+| Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |

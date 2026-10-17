@@ -47,13 +47,11 @@ impl Dir {
 /// How the platform finds, reads and moves targets; the module fills it from its settings.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ScrollConfig {
-    /// How long a target may stay still under our steps, short of its end, before the platform tries another way, in
-    /// milliseconds.
+    /// How many ms a target may stay still under our steps, short of its end, before the platform tries another way.
     pub check_ms: u32,
-    /// The longest one read of a target may take, in milliseconds.
+    /// The longest one read of a target may take, in ms.
     pub read_ms: u32,
-    /// How far past the keyboard's nearest edge the target point goes when the pointer's path is unknown, in physical
-    /// pixels.
+    /// How far past the keyboard's edge the target point goes when the pointer's path is unknown, in physical pixels.
     pub edge_px: u32,
 }
 
