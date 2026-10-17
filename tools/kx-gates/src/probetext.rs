@@ -55,10 +55,10 @@ mod tests {
     }
 
     #[test]
-    fn scroll_text_has_numbered_lines_of_the_asked_width() {
+    fn scroll_text_has_numbered_lines_of_the_asked_width_each_on_its_own_letter() {
         let text = scroll_text(3, 12);
         let lines: Vec<&str> = text.lines().collect();
-        assert_eq!(lines, ["0001 abcdefg", "0002 abcdefg", "0003 abcdefg"]);
+        assert_eq!(lines, ["0001 abcdefg", "0002 bcdefgh", "0003 cdefghi"]);
         assert_eq!(scroll_text(1, 2), "00");
     }
 }
