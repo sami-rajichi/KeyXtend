@@ -99,11 +99,11 @@ impl Churn {
     }
 
     /// True when every hover showed a tip and every round showed the bubble, the keyboard again, the list in the List
-    /// design, and, when it was to scroll, a scroll with its outline.
+    /// design, and a scroll with its outline; a control churn that left the scroll out is never whole.
     pub fn whole(&self) -> bool {
         let every = |n: usize| n == self.rounds;
         let pops = self.tips == self.hovers && every(self.bubbles) && every(self.returns);
-        let scrolled = !self.scrolling || (every(self.scrolls) && every(self.outlines));
+        let scrolled = self.scrolling && every(self.scrolls) && every(self.outlines);
         pops && scrolled && self.lists.is_none_or(every)
     }
 }
@@ -205,8 +205,8 @@ fn stepped(
 }
 
 /// Runs `[g8] churn_warm_rounds` unmeasured rounds, then `churn_rounds` measured ones, each scrolling once with
-/// `scroller` when there is one, reading `p`'s memory before them and after each one and each step. The warm-up keeps
-/// each pop-up's first show, a one-time cost, out of the growth.
+/// `scroller` when there is one and `[g8_scroll] churn` is on, reading `p`'s memory before them and after each one and
+/// each step. The warm-up keeps each pop-up's first show, a one-time cost, out of the growth.
 pub fn run(ctx: &Ctx, p: &Process, scroller: Option<&Scroller>) -> Result<Churn, String> {
     let (g, scrolling) = (&ctx.cfg.g8, ctx.cfg.g8_scroll.churn);
     let scroller = scroller.filter(|_| scrolling);

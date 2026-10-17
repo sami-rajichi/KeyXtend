@@ -190,7 +190,8 @@ pub fn up_and_stop(s: &Scene) -> Result<Vec<Case>, String> {
 }
 
 /// Taps down, clicks the window's safe spot outside our windows while the pad still scrolls, then glides back: the
-/// click stopped it. Unjudged, with Stop tapped, when the window shows no safe spot (`Scene::spot`).
+/// click stopped it. Unjudged when the window shows no safe spot (`Scene::spot`); Stop is tapped when the spot turns
+/// unsafe mid-run.
 pub fn press_stop(s: &Scene) -> Result<Case, String> {
     let spot = match s.spot() {
         Ok(spot) => spot,

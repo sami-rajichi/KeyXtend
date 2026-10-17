@@ -221,7 +221,7 @@ fn an_idle_animation_or_a_lost_character_fails_its_part() {
 }
 
 #[test]
-fn weak_mode_or_a_churn_short_of_pop_ups_meeting_every_budget_is_partial_and_a_miss_fails() {
+fn weak_mode_a_control_churn_or_missed_pop_ups_are_partial_and_a_miss_fails() {
     let (_, m, _) = sample();
     let whole = &m.churn;
     let no_list = Churn {
@@ -240,6 +240,15 @@ fn weak_mode_or_a_churn_short_of_pop_ups_meeting_every_budget_is_partial_and_a_m
     );
     assert_eq!(verdict(true, whole, true), json!(out::PARTIAL));
     assert_eq!(verdict(false, &no_bubble, true), json!(out::PARTIAL));
+    let control = Churn {
+        scrolling: false,
+        ..whole.clone()
+    };
+    assert_eq!(
+        verdict(false, &control, true),
+        json!(out::PARTIAL),
+        "a control churn left the scroll out"
+    );
     assert_eq!(verdict(true, whole, false), json!(false));
     assert_eq!(verdict(false, whole, false), json!(false));
 }

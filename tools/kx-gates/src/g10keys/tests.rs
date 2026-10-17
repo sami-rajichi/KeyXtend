@@ -6,6 +6,8 @@ use kx_module_api::ports::Scan;
 use super::*;
 use crate::board;
 
+mod unlatch;
+
 /// The key pressed after each modifier, as the shipped settings name it.
 const PROBE: &str = "enter";
 
@@ -105,11 +107,40 @@ fn a_latch_a_failed_step_left_on_is_pressed_once_more() {
     assert!(shift.left_latched(Some(true)));
     assert!(!shift.left_latched(Some(false)), "already let go");
     assert!(!shift.left_latched(None), "unread: the owner checks it");
-    assert!(step_of(false, "win").left_latched(Some(true)), "Win too");
+    assert!(
+        !step_of(false, "win").left_latched(Some(true)),
+        "Win lets go only by its undo, as a lone press opens Start"
+    );
     assert!(
         !step_of(false, "esc").left_latched(Some(true)),
         "a send key latches nothing"
     );
+}
+
+#[test]
+fn only_wins_step_has_a_spare_and_it_starts_only_with_the_spare_let_go() {
+    for stay in [false, true] {
+        let win = step_of(stay, "win");
+        assert_eq!(win.spare.as_deref(), Some("shift"));
+        assert_eq!(win.ready(Some(false)), Ok(()));
+        assert!(win.ready(Some(true)).is_err(), "Win would go out alone");
+        assert!(win.ready(None).is_err(), "unread: it may be on");
+        let others = steps(stay).into_iter().filter(|s| s.key != "win");
+        for s in others {
+            assert_eq!(s.spare, None, "{}", s.key);
+            assert_eq!(s.ready(Some(true)), Ok(()), "{}", s.key);
+        }
+    }
+}
+
+#[test]
+fn the_owner_checks_the_spare_when_a_failed_step_may_have_left_it_on() {
+    let win = step_of(false, "win");
+    assert_eq!(win.spare_why(true, Some(true)), Some(("shift", MAY_BE_ON)));
+    assert_eq!(win.spare_why(true, None), Some(("shift", MAY_BE_ON)));
+    assert_eq!(win.spare_why(true, Some(false)), None, "let go");
+    assert_eq!(win.spare_why(false, None), None, "passed");
+    assert_eq!(step_of(false, "shift").spare_why(true, None), None);
 }
 
 #[test]

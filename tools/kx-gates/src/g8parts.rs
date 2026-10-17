@@ -116,8 +116,8 @@ pub fn met(ended: bool, presses: &Presses, parts: &[Part]) -> bool {
     ended && presses.typed_ok && budget::all_pass(parts)
 }
 
-/// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode or when not every churn
-/// pop-up showed; else false.
+/// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode, when not every churn
+/// pop-up showed or when the churn left its scroll out; else false.
 pub fn verdict(weak: bool, churn: &Churn, met: bool) -> Value {
     out::pass(met, !weak && churn.whole())
 }
