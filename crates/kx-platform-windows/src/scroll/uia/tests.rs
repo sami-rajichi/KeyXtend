@@ -1,7 +1,7 @@
 //! UI Automation on hidden test windows: a read within its cap, steps that move the bars, nothing that scrolls, and a
 //! window that stopped reading its messages, which a read gives up on at its cap.
 
-use super::work::{amounts, client, step};
+use super::work::{amounts, client, look, step};
 use super::*;
 use crate::com::Com;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
@@ -143,6 +143,22 @@ fn steps_past_their_time_look_nothing_up() {
     let past = Instant::now().checked_sub(SHORT).unwrap();
     step(&auto, (at_b, Dir::Down, TENTH), past, &mut held);
     assert!(held_a(&held), "none past its time");
+}
+
+/// A walk up that cannot finish, as one past its time, reads nothing and keeps the pattern held for steps.
+#[test]
+fn a_walk_that_cannot_finish_reads_nothing_and_keeps_the_held_pattern() {
+    let _one = one_client();
+    let (a, b) = (TestWin::start(BOX, false), TestWin::start(BOX, false));
+    let _com = Com::start().unwrap();
+    let auto = client(READ_MS).unwrap();
+    let (at_a, at_b) = (Seek::Window(a.raw()), Seek::Window(b.raw()));
+    let mut held = None;
+    step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
+    let past = Instant::now().checked_sub(SHORT).unwrap();
+    assert!(look(&auto, at_b, past, &mut held).is_none(), "no read");
+    let held_a = held.as_ref().is_some_and(|(s, _)| *s == at_a);
+    assert!(held_a, "the pattern stays");
 }
 
 #[test]

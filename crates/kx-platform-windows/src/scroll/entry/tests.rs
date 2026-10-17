@@ -236,6 +236,23 @@ fn a_kept_point_on_a_screen_gone_since_falls_back_to_the_push() {
 }
 
 #[test]
+fn an_entry_whose_history_point_is_on_our_window_keeps_the_last_entry() {
+    let (all, entry) = (screens(), Point { x: 800, y: 1010 });
+    let last = Kept::new(&[(800, 1010), (900, 500)], entry, KB, &all);
+    let banner = Kept::new(&[(800, 1010), (700, 990)], entry, KB, &all);
+    let ours = |p: Point| p == Point { x: 700, y: 990 };
+    assert_eq!(banner.after(Some(last), ours), last, "back from our banner");
+    assert_eq!(banner.after(None, ours), banner, "a first entry");
+    assert_eq!(last.after(Some(banner), ours), last, "from another app");
+    let missed = Kept::new(&[(800, 1010)], entry, KB, &all);
+    assert_eq!(
+        missed.after(Some(last), |_| true),
+        missed,
+        "no history point"
+    );
+}
+
+#[test]
 fn a_kept_entry_hides_every_point_in_debug() {
     let kept = Kept::new(&[(812, 913)], Point { x: 814, y: 1015 }, KB, &screens());
     let shown = format!("{kept:?}");

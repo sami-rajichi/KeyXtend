@@ -79,23 +79,31 @@ fn element(auto: &IUIAutomation, seek: Seek) -> Option<IUIAutomationElement> {
     found.ok()
 }
 
-/// The first element from `el` up that scrolls either way, with its pattern; none past the root or `by`.
+/// A walk up the tree that could not finish: it ran past its time, or UI Automation failed a call.
+struct Unfinished;
+
+/// The first element from `el` up that scrolls either way, with its pattern; none when the walk reached the root.
 #[allow(unsafe_code, reason = "Walks up the UI Automation tree.")]
 fn scroller(
     auto: &IUIAutomation,
     mut el: IUIAutomationElement,
     by: Instant,
-) -> Option<(IUIAutomationElement, IUIAutomationScrollPattern)> {
+) -> Result<Option<(IUIAutomationElement, IUIAutomationScrollPattern)>, Unfinished> {
     // SAFETY: a plain call on our live client.
-    let walker = unsafe { auto.ControlViewWalker() }.ok()?;
+    let walker = unsafe { auto.ControlViewWalker() }.map_err(|_| Unfinished)?;
     while Instant::now() <= by {
         if let Some(pattern) = scrolls(&el) {
-            return Some((el, pattern));
+            return Ok(Some((el, pattern)));
         }
-        // SAFETY: a plain call on a live element; the root has no parent, which ends the walk.
-        el = unsafe { walker.GetParentElement(&el) }.ok()?;
+        // SAFETY: a plain call on a live element.
+        el = match unsafe { walker.GetParentElement(&el) } {
+            Ok(parent) => parent,
+            // The root has no parent: the call succeeds and gives none.
+            Err(e) if e.code().is_ok() => return Ok(None),
+            Err(_) => return Err(Unfinished),
+        };
     }
-    None
+    Err(Unfinished)
 }
 
 /// The scroll pattern of `el` when it can scroll either way.
@@ -112,11 +120,11 @@ fn scrolls(el: &IUIAutomationElement) -> Option<IUIAutomationScrollPattern> {
     }
 }
 
-/// The box and percents of what scrolls at `seek`, whose pattern it keeps for steps; an empty read when nothing does,
-/// and none when UI Automation could not look there, as when its call timed out.
+/// The box and percents of what scrolls at `seek`, whose pattern it holds for steps; an empty read when nothing does up
+/// to the root, and none, holding what it held, when UI Automation could not look there or finish the walk in time.
 #[allow(unsafe_code, reason = "Plain UI Automation reads.")]
-fn look(auto: &IUIAutomation, seek: Seek, by: Instant, held: &mut Held) -> Option<Read> {
-    let found = scroller(auto, element(auto, seek)?, by);
+pub(super) fn look(auto: &IUIAutomation, seek: Seek, by: Instant, held: &mut Held) -> Option<Read> {
+    let found = scroller(auto, element(auto, seek)?, by).ok()?;
     *held = found.as_ref().map(|(_, pattern)| (seek, pattern.clone()));
     let Some((el, pattern)) = found else {
         return Some(Read {
@@ -149,7 +157,7 @@ pub(super) fn step(
         return;
     }
     if held.as_ref().is_none_or(|(at, _)| *at != seek) {
-        let found = element(auto, seek).and_then(|el| scroller(auto, el, by));
+        let found = element(auto, seek).and_then(|el| scroller(auto, el, by).ok().flatten());
         *held = found.map(|(_, pattern)| (seek, pattern));
     }
     let Some(pattern) = held.as_ref().map(|(_, p)| p.clone()) else {

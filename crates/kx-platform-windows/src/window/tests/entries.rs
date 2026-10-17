@@ -74,10 +74,11 @@ fn the_guard_keeps_the_newest_history_point_outside_its_window() {
         y: kb.y - 3,
     };
     let history = vec![(entry.x, entry.y), (kb.x + 10, kb.y), (before.x, before.y)];
-    enter(window.0, entry, |from| {
+    let history = |from| {
         assert_eq!(from, entry, "the history starts at the entry");
         history
-    });
+    };
+    enter(window.0, entry, history, |_| false);
     let kept = kept().unwrap();
     assert_eq!(
         (kept.outside, kept.entry, kept.keyboard),
@@ -280,4 +281,24 @@ fn a_leave_without_capture_after_one_under_it_ends_the_entry() {
     see(window.0, Seen::Leave { captured: false });
     move_to(&window, Point { x: 9, y: 10 });
     assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
+}
+
+/// The banner sits beside the keyboard, so the pointer may come back to the keyboard from it.
+#[test]
+fn an_entry_from_our_own_window_keeps_the_last_entry() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let (window, kb) = (Hidden::new("KeyXtend test: back from ours"), spot_on_main());
+    place(&window, kb);
+    let entry = Point {
+        x: kb.x + 10,
+        y: kb.y + 1,
+    };
+    let above = |up: i32| move |_| vec![(entry.x, entry.y), (entry.x, kb.y - up)];
+    enter(window.0, entry, above(3), |_| false);
+    let last = kept();
+    enter(window.0, entry, above(5), |_| true);
+    assert_eq!(kept(), last, "the point on our window is passed over");
+    enter(window.0, entry, above(5), |_| false);
+    let outside = kept().and_then(|k| k.outside);
+    assert_eq!(outside.map(|p| p.y), Some(kb.y - 5), "another app's window");
 }

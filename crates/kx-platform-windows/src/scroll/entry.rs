@@ -92,6 +92,16 @@ impl Kept {
         }
     }
 
+    /// This entry, or `last` when this one's history point lies on one of our windows (`ours`), as when the pointer
+    /// came back from our banner; a first entry, or one with no history point, is kept as it is.
+    #[must_use]
+    pub fn after(self, last: Option<Self>, ours: impl FnOnce(Point) -> bool) -> Self {
+        match (last, self.outside) {
+            (Some(last), Some(p)) if ours(p) => last,
+            _ => self,
+        }
+    }
+
     /// The point to scroll: the kept one while it is still on a work area of `screens`, else the entry pushed
     /// `edge_px` out onto one.
     #[must_use]
