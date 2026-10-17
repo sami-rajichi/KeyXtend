@@ -38,13 +38,16 @@ impl Sim {
         self.grew |= self.rig.host.room() != self.room;
     }
 
-    /// Puts our taken `sent` where Windows does. `SendInput` returns only once its input passed, so with our hooks out
-    /// what waited ahead of it passes first, by our hooks; else it reaches the apps when heard inside, or joins the stream.
+    /// Puts our taken `sent` where Windows does. `SendInput` returns only once its input passed, so with our hooks out,
+    /// or heard inside the send, it reaches the apps at once, after our own input still waiting and before the hand's;
+    /// else it joins the stream.
     fn land(&mut self, sent: Vec<Ev>) {
         if !self.hooked && !sent.is_empty() {
-            self.apps.extend(self.stream.drain(..));
-            self.apps.extend(sent);
-        } else if self.rig.world.inside.get() {
+            let (ours, hand) = self.stream.drain(..).partition(|ev| ev.ours);
+            self.stream = hand;
+            self.apps.extend(ours);
+        }
+        if !self.hooked || self.rig.world.inside.get() {
             self.apps.extend(sent);
         } else {
             self.stream.extend(sent);
