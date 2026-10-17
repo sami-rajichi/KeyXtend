@@ -33,10 +33,19 @@ pub fn last_outside(
     keyboard: Rect,
     screens: &[Screen],
 ) -> Option<Point> {
+    outside(history, keyboard, screens).next()
+}
+
+/// The points of `history`, newest first, outside `keyboard` and on a work area of `screens`.
+fn outside(
+    history: impl IntoIterator<Item = (i32, i32)>,
+    keyboard: Rect,
+    screens: &[Screen],
+) -> impl Iterator<Item = Point> {
     history
         .into_iter()
         .map(|(x, y)| from_history(x, y))
-        .find(|&p| on_screen(screens, p) && !contains(keyboard, p))
+        .filter(move |&p| on_screen(screens, p) && !contains(keyboard, p))
 }
 
 /// `entry` pushed `edge_px` (one pixel at least) past an edge of `keyboard`, trying the nearest edge first; the first
@@ -79,25 +88,45 @@ pub struct Kept {
     pub entry: Point,
     /// The keyboard's box then.
     pub keyboard: Rect,
+    /// Every history point outside the keyboard lay on our windows, so `after` keeps the last entry.
+    ours_only: bool,
 }
 
 impl Kept {
     /// Keeps `history`'s newest point outside `keyboard` and on a work area of `screens`, with the entry for a miss.
     #[must_use]
     pub fn new(history: &[(i32, i32)], entry: Point, keyboard: Rect, screens: &[Screen]) -> Self {
+        Self::past(history, entry, keyboard, screens, |_| false)
+    }
+
+    /// As `new`, passing over the points on our windows (`ours`), such as the banner.
+    #[must_use]
+    pub fn past(
+        history: &[(i32, i32)],
+        entry: Point,
+        keyboard: Rect,
+        screens: &[Screen],
+        ours: impl Fn(Point) -> bool,
+    ) -> Self {
+        let mut seen = false;
+        let theirs = outside(history.iter().copied(), keyboard, screens).find(|&p| {
+            seen = true;
+            !ours(p)
+        });
         Self {
-            outside: last_outside(history.iter().copied(), keyboard, screens),
+            outside: theirs,
             entry,
             keyboard,
+            ours_only: seen && theirs.is_none(),
         }
     }
 
-    /// This entry, or `last` when this one's history point lies on one of our windows (`ours`), as when the pointer
-    /// came back from our banner; a first entry, or one with no history point, is kept as it is.
+    /// This entry, or `last` when every history point outside the keyboard lay on our windows; a history with no point
+    /// outside keeps this entry, which pushes out.
     #[must_use]
-    pub fn after(self, last: Option<Self>, ours: impl FnOnce(Point) -> bool) -> Self {
-        match (last, self.outside) {
-            (Some(last), Some(p)) if ours(p) => last,
+    pub fn after(self, last: Option<Self>) -> Self {
+        match last {
+            Some(last) if self.ours_only => last,
             _ => self,
         }
     }
@@ -118,6 +147,7 @@ impl fmt::Debug for Kept {
             .field("outside", &self.outside.map(Redacted::new))
             .field("entry", &Redacted::new(self.entry))
             .field("keyboard", &Redacted::new(self.keyboard))
+            .field("ours_only", &self.ours_only)
             .finish()
     }
 }

@@ -12,7 +12,8 @@ use proptest::prelude::*;
 const CASES: u32 = 512;
 /// Most ticks in one run.
 const MAX_TICKS: usize = 200;
-/// Most lines one tick turns: the top speed, 60 lines a second, over the longest tick, 100 ms.
+/// The most lines a steady tick turns: the top speed, 60 lines a second, over the longest tick, 100 ms; a tick after
+/// a gap can owe more.
 const MAX_LINES: f64 = 6.0;
 /// Floating sums round, so a drift is judged this much past a whole step.
 const EPS: f64 = 1e-6;

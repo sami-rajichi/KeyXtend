@@ -18,7 +18,7 @@ use windows::core::{PCWSTR, w};
 use super::guard::guarded;
 use super::prop::{clear, put, value};
 use super::watch::{Inside, Seen, step};
-use super::win::{is_ours, own_titled, title, top_level, window_at};
+use super::win::{is_ours, on_ours, own_titled, title, top_level, window_at};
 use crate::screen::{cursor, rect_of};
 use crate::scroll::entry::{Kept, to_history};
 use crate::scroll::lparam_point;
@@ -163,25 +163,20 @@ fn drop_marks(hwnd: HWND) {
     clear(hwnd, INSIDE);
 }
 
-/// Keeps the point before `at`, where the pointer entered `hwnd`, from `history` from `at` back; one on our own
-/// windows (`ours`) keeps the last entry instead (`Kept::after`).
+/// Keeps the point before `at`, where the pointer entered `hwnd`, from `history` from `at` back, passing over our own
+/// windows (`ours`); a history outside the keyboard only on them keeps the last entry (`Kept::after`).
 pub(super) fn enter(
     hwnd: HWND,
     at: Point,
     history: impl FnOnce(Point) -> Vec<(i32, i32)>,
-    ours: impl FnOnce(Point) -> bool,
+    ours: impl Fn(Point) -> bool,
 ) {
     let Some(keyboard) = bounds(hwnd) else {
         return;
     };
     let screens = WinScreens.work_areas();
-    let now = Kept::new(&history(at), at, keyboard, &screens).after(kept(), ours);
+    let now = Kept::past(&history(at), at, keyboard, &screens, ours).after(kept());
     *lock(&KEPT) = Some(now);
-}
-
-/// True when screen point `p` lies on one of our windows that takes clicks, such as the banner.
-fn on_ours(p: Point) -> bool {
-    is_ours(window_at(p).1)
 }
 
 /// Windows' pointer history from `at` back, newest first, as 16-bit display points; empty when `at` is not in it. A

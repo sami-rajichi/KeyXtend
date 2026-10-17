@@ -283,9 +283,9 @@ fn a_leave_without_capture_after_one_under_it_ends_the_entry() {
     assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
 }
 
-/// The banner sits beside the keyboard, so the pointer may come back to the keyboard from it.
+/// The banner sits beside the keyboard, so the pointer may come back to the keyboard from it: the guard passes over it.
 #[test]
-fn an_entry_from_our_own_window_keeps_the_last_entry() {
+fn an_entry_passes_over_our_windows_and_keeps_the_last_when_only_they_lie_outside() {
     let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
     let (window, kb) = (Hidden::new("KeyXtend test: back from ours"), spot_on_main());
     place(&window, kb);
@@ -297,10 +297,11 @@ fn an_entry_from_our_own_window_keeps_the_last_entry() {
     enter(window.0, entry, above(3), |_| false);
     let last = kept();
     enter(window.0, entry, above(5), |_| true);
-    assert_eq!(kept(), last, "the point on our window is passed over");
-    enter(window.0, entry, above(5), |_| false);
+    assert_eq!(kept(), last, "only our window outside");
+    let via = move |_| vec![(entry.x, entry.y), (entry.x, kb.y - 5), (entry.x, kb.y - 7)];
+    enter(window.0, entry, via, |p| p.y == kb.y - 5);
     let outside = kept().and_then(|k| k.outside);
-    assert_eq!(outside.map(|p| p.y), Some(kb.y - 5), "another app's window");
+    assert_eq!(outside.map(|p| p.y), Some(kb.y - 7), "the app before ours");
 }
 
 /// The scroll module stopped: the keyboard, shown or not, keeps no entry until it is watched again.

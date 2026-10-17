@@ -1,5 +1,5 @@
 //! Properties over random screens with dead zones between them: a missed history point is the nearest edge's push
-//! that lands on a work area, never on the keyboard; history words round trip.
+//! that lands on a work area, never on the keyboard; an entry passes over our windows; history words round trip.
 
 use super::*;
 use crate::screen::rect_of;
@@ -16,6 +16,8 @@ const MAX_SCREENS: usize = 3;
 const REACH: i32 = 8;
 /// The largest `edge_px` tried, the setting's top.
 const MAX_EDGE: u32 = 64;
+/// Most history points tried, as Windows keeps 64.
+const MAX_HISTORY: usize = 64;
 
 /// A screen anywhere near the origin.
 fn screen() -> impl Strategy<Value = Screen> {
@@ -83,6 +85,24 @@ proptest! {
             prop_assert!(screens.iter().any(|s| contains(s.rect, at)), "on no screen");
             prop_assert!(!contains(kb, at), "on the keyboard");
         }
+    }
+
+    #[test]
+    fn an_entry_takes_the_newest_point_outside_off_our_windows_else_keeps_the_last(
+        (screens, kb, entry) in desk(),
+        history in vec((-SPAN..SPAN, -SPAN..SPAN, any::<bool>()), 0..MAX_HISTORY),
+    ) {
+        let points: Vec<Point> = history.iter().map(|&(x, y, _)| Point { x, y }).collect();
+        let ours_at: Vec<Point> = history.iter().filter(|h| h.2).map(|&(x, y, _)| Point { x, y }).collect();
+        let ours = |p: Point| ours_at.contains(&p);
+        let words: Vec<(i32, i32)> = points.iter().map(|&p| to_history(p)).collect();
+        let on = |p: Point| screens.iter().any(|s| contains(s.rect, p)) && !contains(kb, p);
+        let outside: Vec<Point> = points.into_iter().filter(|&p| on(p)).collect();
+        let now = Kept::past(&words, entry, kb, &screens, ours);
+        prop_assert_eq!(now.outside, outside.iter().copied().find(|&p| !ours(p)));
+        let last = Kept::new(&[], entry, kb, &screens);
+        let only_ours = !outside.is_empty() && outside.iter().all(|&p| ours(p));
+        prop_assert_eq!(now.after(Some(last)), if only_ours { last } else { now });
     }
 
     #[test]

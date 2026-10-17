@@ -27,12 +27,12 @@ mod win;
 #[cfg(windows)]
 pub use guard::guarded;
 #[cfg(windows)]
-pub(crate) use win::window_at;
-#[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
     own_windows, shape, title,
 };
+#[cfg(windows)]
+pub(crate) use win::{on_ours, window_at};
 
 /// `WS_EX_TOPMOST`: above every window that is not topmost.
 const WS_EX_TOPMOST: u32 = 0x0000_0008;

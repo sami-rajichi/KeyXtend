@@ -235,21 +235,30 @@ fn a_kept_point_on_a_screen_gone_since_falls_back_to_the_push() {
     assert_eq!(kept.target(&[main], EDGE.unsigned_abs()), push);
 }
 
+/// A point on our banner, just above the keyboard.
+fn on_banner(p: Point) -> bool {
+    p == Point { x: 700, y: 990 }
+}
+
 #[test]
-fn an_entry_whose_history_point_is_on_our_window_keeps_the_last_entry() {
+fn an_entry_passes_over_our_windows_to_the_app_before_them() {
     let (all, entry) = (screens(), Point { x: 800, y: 1010 });
     let last = Kept::new(&[(800, 1010), (900, 500)], entry, KB, &all);
-    let banner = Kept::new(&[(800, 1010), (700, 990)], entry, KB, &all);
-    let ours = |p: Point| p == Point { x: 700, y: 990 };
-    assert_eq!(banner.after(Some(last), ours), last, "back from our banner");
-    assert_eq!(banner.after(None, ours), banner, "a first entry");
-    assert_eq!(last.after(Some(banner), ours), last, "from another app");
-    let missed = Kept::new(&[(800, 1010)], entry, KB, &all);
-    assert_eq!(
-        missed.after(Some(last), |_| true),
-        missed,
-        "no history point"
-    );
+    let history = [(800, 1010), (700, 990), (600, 400)];
+    let via = Kept::past(&history, entry, KB, &all, on_banner);
+    assert_eq!(via.outside, p(600, 400), "the app before the banner");
+    assert_eq!(via.after(Some(last)), via);
+}
+
+#[test]
+fn an_entry_from_our_windows_alone_keeps_the_last_and_one_with_nothing_outside_pushes_out() {
+    let (all, entry) = (screens(), Point { x: 800, y: 1010 });
+    let last = Kept::new(&[(800, 1010), (900, 500)], entry, KB, &all);
+    let banner = Kept::past(&[(800, 1010), (700, 990)], entry, KB, &all, on_banner);
+    assert_eq!(banner.after(Some(last)), last, "back from our banner");
+    assert_eq!(banner.after(None).outside, None, "a first entry pushes out");
+    let missed = Kept::past(&[(800, 1010)], entry, KB, &all, |_| true);
+    assert_eq!(missed.after(Some(last)), missed, "nothing outside");
 }
 
 #[test]

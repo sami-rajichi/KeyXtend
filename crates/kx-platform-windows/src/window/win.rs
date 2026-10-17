@@ -104,13 +104,23 @@ pub fn is_ours(hwnd: HWND) -> bool {
 }
 
 /// The window at screen point `p` and its top-level window; both null where there is none.
-#[allow(unsafe_code, reason = "Plain window queries.")]
+#[allow(unsafe_code, reason = "A plain window query.")]
 pub(crate) fn window_at(p: Point) -> (HWND, HWND) {
-    // SAFETY: plain queries; no window there gives null, and null has no top-level window.
-    unsafe {
-        let hwnd = WindowFromPoint(POINT { x: p.x, y: p.y });
-        (hwnd, GetAncestor(hwnd, GA_ROOT))
-    }
+    let hwnd = hit(p);
+    // SAFETY: a plain query; null has no top-level window.
+    (hwnd, unsafe { GetAncestor(hwnd, GA_ROOT) })
+}
+
+/// True when the window at screen point `p` is one of ours, such as the banner; one query, cheap enough for the hook.
+pub(crate) fn on_ours(p: Point) -> bool {
+    is_ours(hit(p))
+}
+
+/// The window at screen point `p`; null where there is none.
+#[allow(unsafe_code, reason = "A plain window query.")]
+fn hit(p: Point) -> HWND {
+    // SAFETY: a plain query by value; it sends no message to another thread's window.
+    unsafe { WindowFromPoint(POINT { x: p.x, y: p.y }) }
 }
 
 /// True while `hwnd` is shown.
