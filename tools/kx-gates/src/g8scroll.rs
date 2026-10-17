@@ -1,6 +1,7 @@
 //! G8's scroll steps (spec §5.2, ADR-0029): the pointer glides from a filled target-window onto the pad, whose arrow,
 //! pressed by UI Automation, scrolls for `[g8_scroll] scroll_ms` with the outline shown, then Stop. Memory is read
-//! once, `[g8] warm_ms` after a scroll, against ADR-0021's idle budget; each churn round scrolls, as `way` turns.
+//! once, `[g8] warm_ms` after a scroll, against ADR-0021's idle budget; each churn round scrolls, as `way` turns, and
+//! `g8rounds` runs them in order.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -25,7 +26,7 @@ pub const MEMORY: &str = "scrolled_memory_mb";
 /// Its part for the private commit.
 pub const COMMIT: &str = "scrolled_commit_mb";
 
-/// One scroll: whether the pad lit, as Stop read a speed, and whether the outline showed all its edges.
+/// One scroll: whether the pad lit, as its arrow read a speed, and whether the outline showed all its edges.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Scroll {
     /// The pad scrolled.
@@ -125,6 +126,11 @@ impl<'a> Scroller<'a> {
         })
     }
 
+    /// The filled target-window it scrolls, which a hold brings back to the front while it is kept.
+    pub fn window(&self) -> &Opened {
+        &self.target
+    }
+
     /// Closes target-window; what was left open.
     pub fn close(self) -> Vec<String> {
         let Self {
@@ -142,29 +148,6 @@ fn way(k: u32) -> Dir {
         Dir::Down
     } else {
         Dir::Up
-    }
-}
-
-/// The reading after a scroll and the scroller that took it, kept for the churn's scrolls.
-pub type Taken<'a> = (Result<Scrolled, String>, Option<Scroller<'a>>);
-
-/// Opens a scroller and reads `p` after one scroll, then runs `hold`, as target-window took the front. A scroller
-/// whose reading failed is closed, so the churn runs without scrolls; so is one whose `hold` failed.
-pub fn taken<'a>(
-    ctx: &'a Ctx<'a>,
-    p: &Process,
-    hold: &dyn Fn() -> Result<(), String>,
-) -> Result<Taken<'a>, String> {
-    let (scrolled, pad) = match Scroller::open(ctx) {
-        Ok(pad) => match pad.reading(p) {
-            Ok(read) => (Ok(read), Some(pad)),
-            Err(e) => (Err(format!("{e}; left open: {:?}", pad.close())), None),
-        },
-        Err(e) => (Err(e), None),
-    };
-    match hold() {
-        Ok(()) => Ok((scrolled, pad)),
-        Err(e) => Err(format!("{e}; left open: {:?}", pad.map(Scroller::close))),
     }
 }
 

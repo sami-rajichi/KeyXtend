@@ -1,9 +1,8 @@
 //! `g8 arabic`: G8 with an Arabic layout in front from before its cold start, and the owner's layout put back after,
 //! even when the run breaks or panics (ADR-0028). Each switch and each read goes through a target-window G8 starts in
-//! front: the keyboard follows the app in front, whose layout may lag the session's, so G8 keeps its own window there.
+//! front: the keyboard follows the app in front, whose layout may lag the session's, so G8 keeps its own window there,
+//! or the one a step keeps, such as the scroller's, which a fresh start would close.
 #![cfg(windows)]
-
-use std::cell::RefCell;
 
 use kx_module_api::ports::{LayoutId, LayoutSource};
 use kx_platform_windows::{WinLayouts, front, layouts};
@@ -12,6 +11,11 @@ use serde_json::{Value, json};
 use crate::apps::{self, Ctx, Opened};
 use crate::g8cfg::G8;
 use crate::{capture, g8use, launch, win};
+
+mod hold;
+
+use hold::Held;
+pub use hold::{Free, Holds};
 
 /// The name that runs G8 with an Arabic layout in front.
 pub const ARABIC: &str = "arabic";
@@ -38,6 +42,8 @@ pub trait Own {
     type Window;
     /// Starts a target-window and brings it to the front with `tap`.
     fn open(&self, tap: Tap) -> Result<Self::Window, String>;
+    /// Brings `w`, already open, back to the front with the plain tap.
+    fn front(&self, w: &Self::Window) -> Result<(), String>;
     /// The layout `w`'s thread types in: the session's, for a window just started.
     fn layout(&self, w: &Self::Window) -> Option<LayoutId>;
     /// Asks `w` for installed layout `id`, as the language hotkey asks, and waits until it types in it.
@@ -69,6 +75,17 @@ impl Own for WinTarget<'_> {
             Tap::PutBack => win::front_back,
         };
         launch::to_front_by(self.ctx, launch::start_target(self.ctx)?, front)
+    }
+
+    fn front(&self, w: &Opened) -> Result<(), String> {
+        if win::front(w.hwnd, &self.ctx.cfg.timing, &self.ctx.cfg.keys) {
+            Ok(())
+        } else {
+            Err(format!(
+                "could not bring {} to the front",
+                win::describe(w.hwnd)
+            ))
+        }
     }
 
     fn layout(&self, w: &Opened) -> Option<LayoutId> {
@@ -186,43 +203,24 @@ fn switched<O: Own>(own: &O, to: LayoutId) -> Result<Back<'_, O>, String> {
     Ok(back)
 }
 
-/// Brings a fresh target-window to the front again after a step closed its own, so the keyboard follows `to` and not
-/// an app whose layout may lag; the layout the app in front showed before. Refused, with that window closed, when the
-/// session no longer types in `to`.
-pub fn hold<O: Own>(own: &O, to: LayoutId) -> Result<Option<LayoutId>, String> {
-    let behind = own.in_front();
-    let w = own.open(Tap::Plain)?;
-    match own.layout(&w) {
-        Some(now) if now == to => Ok(behind),
-        now => {
-            own.close(w);
-            Err(format!(
-                "the session types in layout {} instead of {to}",
-                named(now)
-            ))
-        }
-    }
-}
-
-/// Runs `run` with layout `to` in front and puts the owner's back after, even when it fails; `run` gets the hold to
-/// call after each step that closed its target-window. The result line gains the layout, the session's at the end, the
-/// layout each hold found in front and whether the owner's came back; it passes only when the reading after use and the
+/// Runs `run` with layout `to` in front and puts the owner's back after, even when it fails; `run` gets the holds to
+/// call after each step that took the front. The result line gains the layout, the session's at the end, the layout
+/// each hold found in front and whether the owner's came back; it passes only when the reading after use and the
 /// session at the end were both in `to` and the owner's came back.
 pub fn within<O: Own>(
     own: &O,
     to: LayoutId,
-    run: impl FnOnce(&dyn Fn() -> Result<(), String>) -> Result<Value, String>,
+    run: impl FnOnce(&dyn Holds<O::Window>) -> Result<Value, String>,
 ) -> Result<Value, String> {
     let mut back = switched(own, to)?;
-    let behind = RefCell::new(Vec::new());
-    let again = || hold(own, to).map(|b| behind.borrow_mut().push(b.map(|l| l.to_string())));
-    let got = run(&again);
+    let holds = Held::new(own, to);
+    let got = run(&holds);
     let (end, came) = back.now();
     let mut v = got.map_err(|e| format!("{e}; {}", said(came)))?;
     let held = end == Some(to) && g8use::layout_in(&v) == Some(to.to_string());
     v["layout"] = json!(to.to_string());
     v["layout_end"] = json!(end.map(|l| l.to_string()));
-    v["layout_behind"] = json!(behind.into_inner());
+    v["layout_behind"] = json!(holds.behind());
     v["layout_held"] = json!(held);
     v["layout_back"] = json!(came);
     if !(held && came) {

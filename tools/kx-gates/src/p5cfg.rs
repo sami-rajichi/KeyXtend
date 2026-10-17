@@ -42,8 +42,10 @@ pub struct G6 {
     pub slope_reads: u64,
     /// The files a row Explorer's folder grows by when fewer than two files read: the worst case.
     pub max_per_row: usize,
-    /// Longest wait, after the folder grew, for the vertical percent to read the same twice `sample_ms` apart.
+    /// Longest wait, after the folder grew, for the vertical view size to settle, read every `sample_ms`.
     pub grow_wait_ms: u64,
+    /// How far in from a part's right end a press outside our windows on Explorer lands, in physical px.
+    pub spot_px: i32,
 }
 
 /// The fewest reads any slope needs: a line needs two points; `[g6] slope_reads` asks for more.
@@ -61,8 +63,8 @@ impl G6 {
         if !a_share(self.min_changed) || !a_share(self.ratio_slack) {
             return Err("g6.min_changed and g6.ratio_slack must lie between 0 and 1".to_string());
         }
-        if self.inset_px <= 0 {
-            return Err("g6.inset_px must be above 0".to_string());
+        if self.inset_px <= 0 || self.spot_px <= 0 {
+            return Err("g6.inset_px and g6.spot_px must be above 0".to_string());
         }
         let waits = [
             self.sample_ms,
@@ -121,6 +123,8 @@ pub struct Pad {
     pub stop: String,
     /// Wait after each tap or press before the look, in ms.
     pub settle_ms: u64,
+    /// The `motion.toml` moves each settle must outlast.
+    pub moves: Vec<String>,
     /// How far under the keyboard's top edge the scrolled window must reach, in physical px.
     pub under_px: i32,
     /// How far above the keyboard's top the glide onto the pad starts, on that window, in physical px.
@@ -158,13 +162,30 @@ impl Pad {
         self.part(&self.stop)
     }
 
+    /// Refuses no move, a move `motion` lacks, and a settle shorter than the longest move, as Stop's pop or the
+    /// outline's fade would still run at the look.
+    fn settle_ok(&self, motion: &kx_theme::Motion) -> Result<(), String> {
+        let mut longest = 0;
+        for name in &self.moves {
+            let timed = motion.moves.get(name);
+            let t = timed.ok_or_else(|| format!("pad.moves: {name} is no motion.toml move"))?;
+            longest = longest.max(u64::from(t.ms));
+        }
+        if self.moves.is_empty() || self.settle_ms < longest.max(1) {
+            return Err(format!(
+                "pad.settle_ms must outlast each pad.moves motion.toml move ({longest} ms)"
+            ));
+        }
+        Ok(())
+    }
+
     /// The UI Automation id of the part called `name`.
     fn part(&self, name: &str) -> String {
         format!("{}{SEP}{name}", self.group)
     }
 
-    /// Refuses an empty or dotted group, a Stop id that is no icons.toml `[dpad]` id, no wait, no reach, and a run
-    /// back as long as the one before.
+    /// Refuses an empty or dotted group, a Stop id that is no icons.toml `[dpad]` id, a settle shorter than its moves
+    /// (`settle_ok`), no reach, and a run back as long as the one before.
     pub fn check(&self) -> Result<(), String> {
         if self.under_px <= 0 || self.lead_px <= 0 {
             return Err("pad.under_px and pad.lead_px must be above 0".to_string());
@@ -180,9 +201,7 @@ impl Pad {
                 self.stop
             ));
         }
-        if self.settle_ms == 0 {
-            return Err("pad.settle_ms must be above 0".to_string());
-        }
+        self.settle_ok(&themes.motion.full)?;
         if self.undo_div < 2 {
             return Err(
                 "pad.undo_div must be at least 2, or a run back undoes the one before".to_string(),
@@ -225,7 +244,7 @@ impl Outline {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct G8Scroll {
-    /// How long each scroll runs before Stop, in ms.
+    /// How long each scroll runs before Stop, in ms; longer than `[pad] settle_ms`, the wait before its read.
     pub scroll_ms: u64,
 }
 
@@ -237,25 +256,31 @@ pub struct Host {
     pub vm: Vec<String>,
 }
 
+/// What a performance counter's process name may not hold: a folder, `.exe`, which it drops, and its path's marks.
+const NOT_IN_NAME: [&str; 7] = ["\\", "/", ":", ".exe", "(", ")", "#"];
+
 impl Host {
-    /// Refuses no process and a name that is not a plain program name.
+    /// Refuses no process and a name that is not a plain program name as performance counters name it.
     pub fn check(&self) -> Result<(), String> {
-        let plain = |n: &String| !n.is_empty() && !n.contains(['\\', '/', ':']);
+        let plain = |n: &String| !n.is_empty() && !NOT_IN_NAME.iter().any(|bad| n.contains(bad));
         if self.vm.is_empty() || !self.vm.iter().all(plain) {
-            return Err("host.vm must name programs, without a folder".to_string());
+            return Err(format!(
+                "host.vm must name programs without any of {NOT_IN_NAME:?}"
+            ));
         }
         Ok(())
     }
 }
 
-/// Refuses P5's settings that could pass with nothing checked, and a G6 hang longer than target-window allows.
+/// Refuses P5's settings that could pass with nothing checked, a G8 scroll whose Stop goes out before the pad's settle,
+/// and a G6 hang longer than target-window allows.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
     c.g6.check()?;
     c.pad.check()?;
     c.outline.check()?;
     c.host.check()?;
-    if c.g8_scroll.scroll_ms == 0 {
-        return Err("g8_scroll.scroll_ms must be above 0".to_string());
+    if c.g8_scroll.scroll_ms <= c.pad.settle_ms {
+        return Err("g8_scroll.scroll_ms must outlast pad.settle_ms".to_string());
     }
     let target = kx_target_window::config::load().map_err(|e| e.to_string())?;
     if c.g6.hang_ms > target.hang_max_ms {

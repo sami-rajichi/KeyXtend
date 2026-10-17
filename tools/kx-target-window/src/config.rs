@@ -108,7 +108,8 @@ pub enum ConfigError {
 /// Parses and checks the settings in `text`, which came from `file`; a relative log path starts at `file`'s folder.
 ///
 /// # Errors
-/// [`ConfigError::Parse`] for bad TOML or keys; [`ConfigError::Empty`] or [`ConfigError::NotPositive`] for bad values.
+/// [`ConfigError::Parse`] for bad TOML or keys; [`ConfigError::Empty`], [`ConfigError::SameSwitch`],
+/// [`ConfigError::HangPastHungMark`], [`ConfigError::NotPositive`] or [`ConfigError::FillTooLong`] for bad values.
 pub fn parse(text: &str, file: &Path) -> Result<TargetConfig, ConfigError> {
     let mut cfg: TargetConfig = toml::from_str(text).map_err(|source| ConfigError::Parse {
         file: file.to_path_buf(),

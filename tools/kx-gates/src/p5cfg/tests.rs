@@ -20,8 +20,9 @@ fn the_shipped_settings_pass() {
 
 #[test]
 fn g6_settings_that_check_nothing_are_refused() {
-    let bad: [fn(&mut G6); 22] = [
+    let bad: [fn(&mut G6); 23] = [
         |g| g.inset_px = 0,
+        |g| g.spot_px = 0,
         |g| g.max_per_row = 1,
         |g| g.grow_wait_ms = 0,
         |g| g.grow_wait_ms = g.sample_ms - 1,
@@ -82,7 +83,10 @@ fn pad_ids_join_the_group_and_the_part() {
 
 #[test]
 fn pad_settings_that_name_no_part_are_refused() {
-    let bad: [fn(&mut Pad); 8] = [
+    let bad: [fn(&mut Pad); 11] = [
+        |p| p.settle_ms = 1,
+        |p| p.moves.clear(),
+        |p| p.moves.push("nowhere".into()),
         |p| p.undo_div = 0,
         |p| p.undo_div = 1,
         |p| p.group.clear(),
@@ -97,6 +101,23 @@ fn pad_settings_that_name_no_part_are_refused() {
         f(&mut p);
         assert!(p.check().is_err(), "case {i}");
     }
+}
+
+#[test]
+fn the_pads_settle_outlasts_each_move_it_names_and_the_shipped_ones_name_stop_and_the_outline() {
+    let motion = kx_theme::Themes::shipped().expect("tokens").motion.full;
+    let mut p = load().expect("loads").pad;
+    assert_eq!(
+        p.moves,
+        ["stop", "outline"],
+        "Stop's pop and the outline's fade"
+    );
+    let longest = p.moves.iter().map(|m| motion.moves[m].ms).max();
+    p.settle_ms = u64::from(longest.expect("a move"));
+    assert_eq!(p.check(), Ok(()), "as long as the longest");
+    p.settle_ms -= 1;
+    let e = p.check().expect_err("shorter");
+    assert!(e.contains("motion.toml"), "{e}");
 }
 
 #[test]
@@ -144,11 +165,24 @@ fn the_outline_has_as_many_edges_as_kx_ui_makes() {
 }
 
 #[test]
+fn the_outline_title_is_the_text_kx_ui_titles_its_edges_with() {
+    let title = load().expect("loads").outline.title;
+    let tr = format!("tr(\"{title}\")");
+    assert!(OUTLINE_QML.contains(&tr), "{tr}");
+}
+
+#[test]
 fn g8_scroll_and_host_settings_that_do_nothing_are_refused() {
     let mut c = load().expect("loads");
     c.g8_scroll.scroll_ms = 0;
     assert!(check(&c).is_err(), "no scroll");
-    for vm in [vec![], vec![String::new()], vec![r"C:\vmmem".to_string()]] {
+    c.g8_scroll.scroll_ms = c.pad.settle_ms;
+    let e = check(&c).expect_err("Stop would go out before the pad's settle");
+    assert!(e.contains("settle_ms"), "{e}");
+    let names = ["", r"C:\vmmem", "vmmem.exe", "vmmem#1", "vm(1)", "vm)"];
+    let mut vms: Vec<Vec<String>> = names.iter().map(|n| vec![(*n).to_string()]).collect();
+    vms.push(vec![]);
+    for vm in vms {
         let mut c = load().expect("loads");
         c.host.vm = vm;
         assert!(check(&c).is_err(), "{:?}", c.host.vm);

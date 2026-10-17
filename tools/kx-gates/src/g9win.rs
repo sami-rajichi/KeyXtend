@@ -9,7 +9,8 @@ use serde::Serialize;
 use windows::Win32::Foundation::{ERROR_SUCCESS, GetLastError, HWND, SetLastError, WIN32_ERROR};
 use windows::Win32::UI::WindowsAndMessaging::{
     GW_OWNER, GWL_EXSTYLE, GetWindow, GetWindowLongPtrW, HWND_NOTOPMOST, HWND_TOPMOST,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowLongPtrW, SetWindowPos, WS_EX_TOPMOST,
+    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowLongPtrW, SetWindowPos, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
 };
 
 use kx_platform_windows::window::{KEPT, THROUGH};
@@ -41,6 +42,21 @@ pub fn owner_of(w: HWND) -> Option<String> {
     // SAFETY: a plain query; a window with no owner gives an error.
     let owner = unsafe { GetWindow(w, GW_OWNER) }.ok()?;
     (!owner.is_invalid()).then(|| format!("{:#x}", win::key(owner)))
+}
+
+/// Each flag by name: the guard's three, then the two that make a window click-through.
+pub const FLAGS: [(&str, u32); 5] = [
+    ("no_activate", WS_EX_NOACTIVATE.0),
+    ("topmost", WS_EX_TOPMOST.0),
+    ("tool_window", WS_EX_TOOLWINDOW.0),
+    ("layered", WS_EX_LAYERED.0),
+    ("transparent", WS_EX_TRANSPARENT.0),
+];
+
+/// The names of the flags in `want` that `ex` lacks.
+pub fn missing(ex: u32, want: u32) -> Vec<&'static str> {
+    let lacks = |&&(_, bit): &&(&str, u32)| want & bit != 0 && ex & bit == 0;
+    FLAGS.iter().filter(lacks).map(|(name, _)| *name).collect()
 }
 
 /// A window's extended style.

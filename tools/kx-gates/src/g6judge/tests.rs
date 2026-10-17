@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// The shipped `[g6] min_changed`.
+/// A fixture `min_changed`; the shipped `[g6]` one may differ.
 const MIN: f64 = 0.02;
 /// A document that overflows both ways, near its top left.
 const TOP: Pair = Some((0.0, 0.0));
@@ -29,10 +29,7 @@ fn a_percent_that_reads_judges_the_way_and_a_picture_judges_without_one() {
     let unread = look(Some(0.5), None, None);
     assert!(unread.moved(Dir::Down, MIN) && unread.moved(Dir::Up, MIN));
     assert!(!look(Some(0.01), None, None).moved(Dir::Down, MIN), "noise");
-    assert!(
-        !look(None, None, None).moved(Dir::Down, MIN),
-        "the window moved"
-    );
+    assert!(!look(None, None, None).moved(Dir::Down, MIN), "no picture");
 }
 
 #[test]
@@ -64,7 +61,7 @@ fn still_reads_the_percents_and_the_picture_only_without_them() {
     );
     assert!(look(Some(MIN), None, None).still(MIN), "a blinking caret");
     assert!(!look(Some(0.3), None, None).still(MIN));
-    assert!(!look(None, None, None).still(MIN), "the window moved");
+    assert!(!look(None, None, None).still(MIN), "no picture");
 }
 
 #[test]
@@ -141,6 +138,8 @@ fn the_ratio_must_lie_near_the_test_builds_within_the_slack() {
     assert!(!ratio_ok(3.0, 3.0, want, 0.3), "never went fast");
     assert!(!ratio_ok(3.0, 20.0, want, 0.3));
     assert!(!ratio_ok(0.0, 10.0, want, 0.3), "slow never moved");
+    assert!(!ratio_ok(3.0, -10.0, want, 0.3), "fast ran the other way");
+    assert!(!ratio_ok(-3.0, 10.0, want, 0.3), "slow ran the other way");
 }
 
 #[test]
@@ -159,20 +158,36 @@ fn an_end_reads_at_its_own_way_only() {
 }
 
 #[test]
-fn each_outside_click_stops_it_once_and_the_end_stops_it_too() {
+fn each_outside_click_and_each_stop_tap_stops_it_once_and_the_end_stops_it_too() {
     let line = ScrollLine {
         press: 1,
         end: 1,
         user: 3,
         ..ScrollLine::default()
     };
-    assert!(stops_ok(&line, 1));
+    let made = Stops { clicks: 1, taps: 3 };
+    assert!(stops_ok(&line, made));
+    let as_press = Stops { clicks: 0, ..made };
     assert!(
-        !stops_ok(&line, 0),
+        !stops_ok(&line, as_press),
         "a tap on the pad stopped it as a press"
     );
-    let no_end = ScrollLine { end: 0, ..line };
-    assert!(!stops_ok(&no_end, 1));
+    let missed = Stops { taps: 2, ..made };
+    assert!(!stops_ok(&line, missed), "a stop tap was not counted once");
+    let paged = ScrollLine { user: 4, ..line };
+    assert!(
+        !stops_ok(&paged, made),
+        "a page turn of our list, which G6 never aims at"
+    );
+
+    let other = [
+        ScrollLine { end: 0, ..line },
+        ScrollLine { limit: 1, ..line },
+        ScrollLine { gone: 1, ..line },
+    ];
+    for l in other {
+        assert!(!stops_ok(&l, made), "{l:?}");
+    }
 }
 
 #[test]

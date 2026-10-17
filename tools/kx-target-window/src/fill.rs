@@ -3,8 +3,8 @@
 
 /// Where an edit box breaks a line: it breaks only at CR LF.
 pub const LINE_END: &str = "\r\n";
-/// Digits in each line's number.
-const NUMBER: usize = 4;
+/// Digits in each line's number, and in each of G6's Explorer file names.
+pub const NUMBER: usize = 4;
 /// Letters that fill each line after its number.
 const FILLER: &str = "abcdefghijklmnopqrstuvwxyz";
 

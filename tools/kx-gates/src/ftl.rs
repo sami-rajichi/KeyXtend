@@ -8,7 +8,7 @@ const ATTR: char = '.';
 /// Starts a term's name.
 const TERM: char = '-';
 
-/// Each language's translation file, by its tag; workspace paths from this file.
+/// Each language's translation file, by its tag; workspace paths from this file, all of kx-ui's (checked).
 const FILES: [(&str, &str); 3] = [
     ("en", include_str!("../../../crates/kx-ui/i18n/en.ftl")),
     ("fr", include_str!("../../../crates/kx-ui/i18n/fr.ftl")),
@@ -119,6 +119,24 @@ mod tests {
             text(ar, "window.keyboard").as_deref(),
             Some("لوحة مفاتيح KeyXtend")
         );
+    }
+
+    #[test]
+    fn the_languages_are_exactly_the_files_kx_ui_ships() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/kx-ui/i18n");
+        let entries = std::fs::read_dir(dir).expect("kx-ui's i18n folder");
+        let mut shipped: Vec<String> = entries
+            .map(|e| {
+                e.expect("an entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        shipped.sort();
+        let mut ours: Vec<String> = FILES.iter().map(|(tag, _)| format!("{tag}.ftl")).collect();
+        ours.sort();
+        assert_eq!(shipped, ours);
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! G6's scene: a window laid under the test build's keyboard, the pad on it, and the simulated user's glide, taps and
-//! click. Each look reads the window's picture above the keyboard and UI Automation's percents at the glide's start.
+//! click, which it counts. Each look reads the window's picture above the keyboard and UI Automation's percents at the
+//! glide's start.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -11,9 +12,8 @@ use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 
-use crate::aim;
-use crate::apps::{Ctx, Opened};
-use crate::g6judge::{Look, Pair};
+use crate::apps::{AppKind, Ctx, Opened};
+use crate::g6judge::{Look, Pair, Stops};
 use crate::keymap::Reader;
 use crate::padread::PadRead;
 use crate::pin::{Pinned, pt};
@@ -22,6 +22,7 @@ use crate::scroll::{self, along};
 use crate::simin::{self, Act};
 use crate::simuser;
 use crate::win::{self, sleep_ms};
+use crate::{aim, g6spot};
 
 /// One speed's reads: the look over it, and its percents towards its way in ms since the first read.
 pub struct Phase {
@@ -58,7 +59,7 @@ pub struct Scene<'a> {
     pin: Pinned,
     band: RECT,
     sp: Option<IUIAutomationScrollPattern>,
-    clicks: Cell<u64>,
+    made: Cell<Stops>,
 }
 
 impl<'a> Scene<'a> {
@@ -77,13 +78,22 @@ impl<'a> Scene<'a> {
             pin,
             band,
             sp,
-            clicks: Cell::new(0),
+            made: Cell::new(Stops::default()),
         })
     }
 
     /// The percents UI Automation reads at the glide's start; none without a scroll pattern there.
     pub fn pair(&self) -> Pair {
         self.sp.as_ref().and_then(uia::percent)
+    }
+
+    /// The share of its height the document at the glide's start shows, in percent, which shrinks as it grows; none
+    /// without a scroll pattern there.
+    #[allow(unsafe_code, reason = "A plain property read on a live pattern.")]
+    pub fn view(&self) -> Option<f64> {
+        let sp = self.sp.as_ref()?;
+        // SAFETY: a plain property read on a live pattern; a failure reads as none.
+        unsafe { sp.CurrentVerticalViewSize() }.ok()
     }
 
     /// The scroll pattern at the glide's start, for G6's own step.
@@ -142,20 +152,52 @@ impl<'a> Scene<'a> {
         self.tap(self.pin.pad.arrow(dir))
     }
 
-    /// Taps the hub, where Stop shows while it scrolls, unless the pad stopped itself; true when it tapped.
+    /// Taps the arrow towards `dir` a third time, which stops the pad, and counts that stop.
+    pub fn third(&self, dir: Dir) -> Result<(), String> {
+        self.count(|m| m.taps += 1);
+        self.arrow(dir)
+    }
+
+    /// Taps the hub, where Stop shows while it scrolls, unless the pad stopped itself; true, and counted, when tapped.
     pub fn stop(&self) -> Result<bool, String> {
-        self.read().stop(|_| self.tap(self.pin.pad.centre()))
+        let tapped = self.read().stop(|_| self.tap(self.pin.pad.centre()))?;
+        if tapped {
+            self.count(|m| m.taps += 1);
+        }
+        Ok(tapped)
     }
 
-    /// Clicks the window at the glide's start: a press outside our windows.
-    pub fn click_out(&self) -> Result<(), String> {
-        self.clicks.set(self.clicks.get() + 1);
-        simuser::click(self.ctx, self.app, pt(self.pin.start))
+    /// Where a press outside our windows lands: the glide's start, but on Explorer only a spot UI Automation shows is
+    /// no file or column (`g6spot`); none when Explorer shows no such spot.
+    pub fn spot(&self) -> Option<POINT> {
+        if self.app.kind != AppKind::Explorer {
+            return Some(self.pin.start);
+        }
+        g6spot::find(&self.reader, self.app.hwnd, self.ctx.cfg.g6.spot_px)
     }
 
-    /// How many times it clicked outside our windows.
-    pub fn clicks(&self) -> u64 {
-        self.clicks.get()
+    /// Clicks `p`, from `spot`, once Explorer still shows it safe there: a press outside our windows, counted; false
+    /// when it did not click.
+    pub fn click_out(&self, p: POINT) -> Result<bool, String> {
+        let explorer = self.app.kind == AppKind::Explorer;
+        if explorer && !g6spot::ok_at(&self.reader, self.app.hwnd, p) {
+            return Ok(false);
+        }
+        self.count(|m| m.clicks += 1);
+        simuser::click(self.ctx, self.app, pt(p))?;
+        Ok(true)
+    }
+
+    /// What it did that stops a scroll: its clicks outside our windows and its Stop and third taps.
+    pub fn made(&self) -> Stops {
+        self.made.get()
+    }
+
+    /// Counts one more stop as `add` says.
+    fn count(&self, add: impl FnOnce(&mut Stops)) {
+        let mut m = self.made.get();
+        add(&mut m);
+        self.made.set(m);
     }
 
     /// True when `p` is on the window and the pointer is on the keyboard now.

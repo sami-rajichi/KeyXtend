@@ -4,19 +4,17 @@
 #![cfg(windows)]
 
 use kx_mod_scroll::ScrollSettings;
-use kx_module_api::ports::Dir;
 use serde_json::{Value, json};
 use spike_core::uia::Uia;
 
 use crate::apps::{AppKind, Ctx};
 use crate::g5::RCLICK;
 use crate::g6cases::{self, Case};
-use crate::g6judge::{self, Pair};
+use crate::g6judge::{self, Pair, Stops};
 use crate::g6rows::Grown;
 use crate::g6scene::Scene;
 use crate::out::say;
 use crate::probe::{self, Doc};
-use crate::scroll::along;
 use crate::scrolllog::{self, ScrollLine};
 use crate::testbuild::{Closed, TestBuild};
 use crate::{g6rec, g6rows};
@@ -28,13 +26,13 @@ pub const APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Chrome, AppKind::Expl
 /// `<pre>`, unwrapped.
 const WIDE: [AppKind; 1] = [AppKind::Chrome];
 
-/// What one app's run gave: its cases, its records, and how many clicks it made outside our windows.
+/// What one app's run gave: its cases, its records, and the clicks and taps it made that stop a scroll.
 struct Driven {
     cases: Vec<Case>,
     top: Pair,
     bottom: Pair,
     lag_ms: Option<u64>,
-    clicks: u64,
+    made: Stops,
     /// Explorer's files a row and how the grown folder settled.
     grown: Option<Grown>,
 }
@@ -69,9 +67,8 @@ fn drive(
 ) -> Result<Driven, String> {
     probe::front(ctx, &doc.app)?;
     let s = Scene::new(ctx, uia, &doc.app)?;
-    let vertical = || s.pair().and_then(|p| along(Dir::Down, p));
     let grown = if kind == AppKind::Explorer {
-        Some(g6rows::fill(ctx, uia, doc, speeds, vertical)?)
+        Some(g6rows::fill(ctx, uia, doc, speeds, || s.view())?)
     } else {
         None
     };
@@ -83,13 +80,12 @@ fn drive(
     cases.push(g6cases::sideways(&s, WIDE.contains(&kind))?);
     let (end, bottom) = g6cases::end(&s)?;
     cases.push(end);
-    let clicks = s.clicks();
     Ok(Driven {
         cases,
         top,
         bottom,
         lag_ms,
-        clicks,
+        made: s.made(),
         grown,
     })
 }
@@ -131,7 +127,7 @@ fn report(
 ) -> Value {
     let verdicts: Vec<Option<bool>> = d.cases.iter().map(|c| c.ok).collect();
     let line = counts.as_ref().ok().and_then(Option::as_ref);
-    let stops = line.is_some_and(|l| g6judge::stops_ok(l, d.clicks));
+    let stops = line.is_some_and(|l| g6judge::stops_ok(l, d.made));
     let pass = closed.pass(g6judge::pass(&verdicts) && stops);
     let cases: Vec<Value> = d.cases.iter().map(Case::json).collect();
     let short = g6cases::sizing_faults(&d.cases);
@@ -141,10 +137,47 @@ fn report(
     say!("G6 {name}: pass {pass}; stops {stops}; {}", json!(cases));
     json!({
         "gate": "G6", "app": name, "pass": pass, "cases": cases, "stops_counted": stops,
-        "scroll_stats": line, "scroll_stats_error": counts.as_ref().err(), "outside_clicks": d.clicks,
+        "scroll_stats": line, "scroll_stats_error": counts.as_ref().err(), "outside_clicks": d.made.clicks,
+        "stop_taps": d.made.taps,
         "end_percents": { "top": d.top, "bottom": d.bottom }, "percent_lag_ms": d.lag_ms,
         "routing": g6rec::routing(), "files_per_row": d.grown.and_then(|g| g.per_row),
         "grown_settled": d.grown.and_then(|g| g.settled), "sizing_faults": short, "clean_up": notes,
         "test_build": closed.json(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn settings() -> ScrollSettings {
+        ScrollSettings::from_defaults().expect("the scroll defaults")
+    }
+
+    #[test]
+    fn the_ratio_wanted_is_the_test_builds_fast_over_slow() {
+        let s = ScrollSettings {
+            stop_at_end: true,
+            stop_on_press: true,
+            ..settings()
+        };
+        let want = wanted(&s).expect("both stops on");
+        assert!((want - f64::from(s.fast) / f64::from(s.slow)).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn a_test_build_with_a_judged_stop_off_is_refused() {
+        for (end, press) in [(false, true), (true, false), (false, false)] {
+            let s = ScrollSettings {
+                stop_at_end: end,
+                stop_on_press: press,
+                ..settings()
+            };
+            let e = wanted(&s).expect_err("a stop is off");
+            assert!(
+                e.contains("stop_at_end") && e.contains("stop_on_press"),
+                "{e}"
+            );
+        }
+    }
 }

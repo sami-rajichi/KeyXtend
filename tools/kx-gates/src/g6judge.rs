@@ -15,7 +15,7 @@ pub type Pair = Option<(f64, f64)>;
 /// Two looks at a window some time apart: the share of its picture that changed between them, and its percents.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Look {
-    /// The changed share; none when the window moved or changed size.
+    /// The changed share; none for an empty picture, as the band it shows stays fixed.
     pub share: Option<f64>,
     /// The percents at the first look.
     pub before: Pair,
@@ -89,9 +89,11 @@ pub fn rate(reads: &[(u64, f64)], min_reads: u64) -> Option<f64> {
     (den > 0.0).then(|| num / den * f64::from(MS_PER_S))
 }
 
-/// True when `fast` ÷ `slow` lies within `slack` of `want`, as a share of it; never for a slow rate of nothing.
+/// True when `fast` ÷ `slow` lies within `slack` of `want`, as a share of it; never when the two ran opposite ways or
+/// slow ran not at all.
 pub fn ratio_ok(slow: f64, fast: f64, want: f64, slack: f64) -> bool {
-    slow != 0.0 && ((fast / slow).abs() - want).abs() <= want * slack
+    let ratio = fast / slow;
+    ratio > 0.0 && (ratio - want).abs() <= want * slack
 }
 
 /// True when the document overflows sideways, so its sideways cases are judged: its horizontal percent reads.
@@ -115,10 +117,21 @@ pub fn end_ok(idle: bool, down: &Look, back: &Look, min: f64) -> bool {
     idle && down.moved(Dir::Down, min) && at_end
 }
 
-/// True when the scroll module stopped once for each of G6's `clicks` outside our windows, so a tap on the pad never
-/// stopped it as a press, and at the end at least once.
-pub fn stops_ok(line: &ScrollLine, clicks: u64) -> bool {
-    line.press == clicks && line.end > 0
+/// What G6 did that stops a scroll: its clicks outside our windows, and its Stop and third taps.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Stops {
+    /// Clicks outside our windows.
+    pub clicks: u64,
+    /// Stop and third taps.
+    pub taps: u64,
+}
+
+/// True when the scroll module stopped once for each of G6's clicks and once for each of its taps, so a pad tap never
+/// counted as a press nor a page turn of our list as a user stop, at the end at least once, and never at the limit or
+/// as the target went.
+pub fn stops_ok(line: &ScrollLine, made: Stops) -> bool {
+    let counted = line.press == made.clicks && line.user == made.taps;
+    counted && line.end > 0 && line.limit == 0 && line.gone == 0
 }
 
 /// True when every case judged passed: a case that could not be judged, such as sideways without an overflow, says

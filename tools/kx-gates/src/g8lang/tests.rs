@@ -6,6 +6,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use kx_platform_fake::FakeLayoutSource;
 
+use super::hold::{hold, hold_on};
 use super::*;
 
 /// The owner's layout, US English, and Arabic (102) AZERTY on Arabic (Tunisia), sign-extended.
@@ -21,6 +22,7 @@ struct World {
     taps: RefCell<Vec<Tap>>,
     asked: RefCell<Vec<(usize, LayoutId)>>,
     closed: RefCell<Vec<usize>>,
+    fronted: RefCell<Vec<usize>>,
 }
 
 impl World {
@@ -31,6 +33,7 @@ impl World {
             taps: RefCell::default(),
             asked: RefCell::default(),
             closed: RefCell::default(),
+            fronted: RefCell::default(),
         }
     }
 }
@@ -41,6 +44,11 @@ impl Own for World {
     fn open(&self, tap: Tap) -> Result<usize, String> {
         self.taps.borrow_mut().push(tap);
         Ok(self.taps.borrow().len())
+    }
+
+    fn front(&self, w: &usize) -> Result<(), String> {
+        self.fronted.borrow_mut().push(*w);
+        Ok(())
     }
 
     fn layout(&self, _: &usize) -> Option<LayoutId> {
@@ -86,8 +94,7 @@ fn a_run_that_breaks_puts_the_owners_layout_back_and_says_so() {
 #[test]
 fn a_run_that_panics_still_puts_the_owners_layout_back() {
     let world = World::on(Some(OWNER), &[]);
-    let run =
-        |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> { panic!("a gate bug") };
+    let run = |_: &dyn Holds<usize>| -> Result<Value, String> { panic!("a gate bug") };
     let caught = catch_unwind(AssertUnwindSafe(|| within(&world, AR, run)));
     assert!(caught.is_err(), "the panic goes on");
     assert_eq!(world.session.get(), Some(OWNER));
@@ -97,12 +104,12 @@ fn a_run_that_panics_still_puts_the_owners_layout_back() {
 #[test]
 fn only_the_put_back_brings_its_window_forward_with_the_tap_that_still_goes_after_a_stop() {
     let world = World::on(Some(OWNER), &[]);
-    let v = within(&world, AR, |hold| hold().map(|()| result(AR))).expect("ran");
+    let v = within(&world, AR, |hold| hold.fresh().map(|()| result(AR))).expect("ran");
     assert_eq!(v["layout_back"], json!(true));
     let taps = [Tap::Plain, Tap::Plain, Tap::PutBack];
     assert_eq!(*world.taps.borrow(), taps, "switch, hold, put-back");
     let refused = World::on(Some(OWNER), &[AR]);
-    let never = |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> { panic!("ran") };
+    let never = |_: &dyn Holds<usize>| -> Result<Value, String> { panic!("ran") };
     within(&refused, AR, never).expect_err("stopped");
     assert_eq!(*refused.taps.borrow(), [Tap::Plain, Tap::PutBack]);
 }
@@ -144,7 +151,7 @@ fn a_put_back_that_does_not_take_fails_the_run() {
 #[test]
 fn a_layout_that_never_shows_stops_before_the_run_and_puts_the_owners_back() {
     let world = World::on(Some(OWNER), &[AR]);
-    let never = |_: &dyn Fn() -> Result<(), String>| -> Result<Value, String> {
+    let never = |_: &dyn Holds<usize>| -> Result<Value, String> {
         panic!("ran with the owner's layout in front")
     };
     let e = within(&world, AR, never).expect_err("stopped");
@@ -168,8 +175,8 @@ fn the_switchs_window_stays_for_the_cold_start_and_each_hold_names_the_layout_it
     let world = World::on(Some(OWNER), &[]);
     let v = within(&world, AR, |hold| {
         assert!(world.closed.borrow().is_empty(), "still in front");
-        hold()?;
-        hold()?;
+        hold.fresh()?;
+        hold.fresh()?;
         Ok(result(AR))
     })
     .expect("ran");
@@ -194,6 +201,46 @@ fn a_hold_that_finds_the_session_out_of_the_layout_fails_and_closes_its_window()
         "what the app in front showed"
     );
     assert_eq!(*world.closed.borrow(), [1], "kept in front");
+}
+
+#[test]
+fn a_kept_window_is_the_hold_so_no_window_opens_or_closes_until_the_put_back() {
+    let world = World::on(Some(OWNER), &[]);
+    let kept = 7;
+    let v = within(&world, AR, |hold| {
+        hold.kept(&kept)?;
+        hold.fresh()?;
+        Ok(result(AR))
+    })
+    .expect("ran");
+    assert_eq!(
+        *world.fronted.borrow(),
+        [kept],
+        "brought back, not restarted"
+    );
+    let taps = [Tap::Plain, Tap::Plain, Tap::PutBack];
+    assert_eq!(
+        *world.taps.borrow(),
+        taps,
+        "switch, the fresh hold, put-back"
+    );
+    assert_eq!(*world.closed.borrow(), [3], "only the put-back's");
+    let lagged = OWNER.to_string();
+    assert_eq!(v["layout_behind"], json!([lagged, lagged]));
+}
+
+#[test]
+fn a_kept_window_out_of_the_layout_fails_its_hold_and_stays_open() {
+    let world = World::on(Some(OWNER), &[]);
+    let e = hold_on(&world, &5, AR).expect_err("the session lost it");
+    assert_eq!(
+        e,
+        format!("the session types in layout {OWNER} instead of {AR}")
+    );
+    assert!(world.taps.borrow().is_empty() && world.closed.borrow().is_empty());
+    world.session.set(Some(AR));
+    assert_eq!(hold_on(&world, &5, AR), Ok(Some(OWNER)));
+    assert_eq!(*world.fronted.borrow(), [5, 5]);
 }
 
 #[test]

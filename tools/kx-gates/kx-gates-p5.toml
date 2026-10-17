@@ -2,8 +2,8 @@
 # kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
 
 # G6 (roadmap G6): the test build's scroll pad scrolls a long Notepad text, a wide Chrome page and an Explorer list that
-# G6 opens, at the last point outside the keyboard. G6 never turns a wheel itself; the speeds and stops are the test
-# build's own [scroll] settings. Times in ms, distances in physical px.
+# G6 opens, at the last point outside the keyboard (times in ms, distances in physical px). G6 never turns a wheel
+# itself; the speeds and stops are the test build's own [scroll] settings.
 [g6]
 # The pictures leave out this much at each side of the document and above the keyboard, so the outline's edges, the
 # window frame and the keyboard's own changes never count.
@@ -35,17 +35,22 @@ slope_reads = 5
 # Explorer's folder grows by the files a row shows, read from its first files; when fewer than two read, it grows by
 # this worst case, small icons across a wide screen.
 max_per_row = 32
-# After it grows, the cases wait up to grow_wait_ms for the vertical percent to read the same twice, sample_ms apart,
-# so the list's extent does not grow mid-phase and skew a slope.
+# After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to leave its size before
+# and read the same twice, sample_ms apart, so the list's extent does not grow mid-phase and skew a slope.
 grow_wait_ms = 5000
+# On Explorer, press-stop clicks only where UI Automation finds the column header's empty end or the status bar
+# itself, tried at its centre and this far in from its right end; with no such spot it is skipped, never a pass.
+spot_px = 16
 
 # The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by
 # its direction and Stop by `stop`, both icons.toml [dpad] ids (checked); the pad itself is kx-mod-keyboard's DPAD_NAME.
 [pad]
 group = "dpad"
 stop = "stop"
-# Wait after each pad tap or press before the look; Stop pops in and out with motion.toml's stop move.
+# Wait after each pad tap or press before the look; it outlasts each of these motion.toml moves, Stop popping in and
+# out and the outline fading in (checked).
 settle_ms = 500
+moves = ["stop", "outline"]
 # The scrolled window must reach this far under the keyboard's top edge, clear of its status bar and sideways scroll
 # bar; G6, G8, G9 and G10 lay one that does not across the top of the work area, and put it back after (physical px).
 under_px = 160
@@ -68,11 +73,11 @@ edges = 4
 # G8's scroll steps: target-window, filled with lines, lies under the keyboard; the pointer glides from it onto the pad,
 # the pad's arrow, down and up in turn, is pressed by UI Automation and scrolls for scroll_ms with the outline shown,
 # then Stop, and the pointer leaves the keyboard. Once after use, memory is read [g8] warm_ms later against
-# memory_mb and commit_mb, and each churn round scrolls once more.
+# memory_mb and commit_mb, and each churn round scrolls once more. scroll_ms outlasts [pad] settle_ms (checked).
 [g8_scroll]
 scroll_ms = 2000
 
 # What G8 logs beside its numbers, as the owner runs WSL and Docker during gates on purpose: free RAM, and the memory of
-# these virtual machine processes by program name (Task Manager's vmmem).
+# these virtual machine processes by program name without .exe (Task Manager's vmmem); only the first of a name reads.
 [host]
 vm = ["vmmemWSL", "vmmem"]

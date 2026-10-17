@@ -19,7 +19,7 @@ pub struct ScrollLine {
     pub turns: u64,
     /// Aims and turns the system refused.
     pub refused: u64,
-    /// Stops by Stop or a third tap.
+    /// Stops by Stop, a third tap, or a tap that paged our list.
     pub user: u64,
     /// Taps with no point yet.
     pub no_point: u64,

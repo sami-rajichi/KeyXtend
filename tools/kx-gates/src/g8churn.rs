@@ -61,7 +61,7 @@ pub struct Churn {
     pub returns: usize,
     /// Why the list step was skipped: not the List design, or one layout installed.
     pub note: Option<&'static str>,
-    /// Rounds whose pad scrolled, as Stop read a speed.
+    /// Rounds whose pad scrolled, as its arrow read a speed.
     pub scrolls: usize,
     /// Rounds whose outline showed every edge while it scrolled.
     pub outlines: usize,

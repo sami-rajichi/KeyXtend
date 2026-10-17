@@ -15,15 +15,14 @@ use spike_core::clock::now_us;
 use spike_core::weak::{Caps, Job};
 use windows::Win32::System::Threading::GetCurrentProcess;
 
-use crate::apps::Ctx;
+use crate::apps::{Ctx, Opened};
 use crate::budget;
 use crate::busbench::{self, BusTimes};
-use crate::g8churn;
 use crate::g8frames::{self, Capture, Recorder};
-use crate::g8lang::{self, WinTarget};
+use crate::g8lang::{self, Free, Holds, WinTarget};
 use crate::g8loss::{self, Losses, Span};
 use crate::g8parts::{Measured, Outside, met, parts, verdict};
-use crate::g8scroll::{self, Scroller};
+use crate::g8rounds::{self, WinSteps};
 use crate::g8start::{self, Started, broke, log_span};
 use crate::g8type::Expect;
 use crate::g8ui::Spot;
@@ -86,7 +85,7 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
 /// memory, idle, folder, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
 /// 2026-10-16); then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never
-/// count. `hold` runs after the presses, after G2 and after the scroll, each of which changed the window in front.
+/// count (`g8rounds`). `hold` runs after the presses, after G2 and after the scroll, each of which took the front.
 fn measure(
     ctx: &Ctx,
     s: &Started,
@@ -99,21 +98,17 @@ fn measure(
     let kb = Keyboard::find()?;
     let (memory, memory_at_ms) = warm(ctx, s)?;
     let core_pct = idle(ctx, &s.process)?;
-    let folder = program.parent().ok_or("the program has no folder")?;
-    let size_mb = proc::folder_mb(folder)?;
+    let size_mb = proc::folder_mb(program.parent().ok_or("the program has no folder")?)?;
     let spot = Spot::of(&kb, &g.press_key)?;
     let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
-    hold()?;
+    hold.fresh()?;
     let resizes = g8size::resizes(ctx, kb.hwnd)?;
     let g2 = g2::run(ctx, product::NAME, g.clicks, out::clock_seed())?;
     let ran_us = now_us();
-    hold()?;
+    hold.fresh()?;
     let used = g8use::run(ctx, &s.process);
-    let (scrolled, pad) = g8scroll::taken(ctx, &s.process, hold)?;
-    let frames = g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
-    let churn = g8churn::run(ctx, &s.process, pad.as_ref());
-    let scroll_left = pad.map(Scroller::close).unwrap_or_default();
-    let churn = churn?;
+    let frames = || g8frames::frames(ctx, &Capture::of_g8(g), program, since, rec);
+    let r = g8rounds::run(&WinSteps::of(ctx, &s.process, hold), frames)?;
     let m = Measured {
         log,
         memory,
@@ -124,12 +119,12 @@ fn measure(
         resizes,
         g2,
         ran_us,
-        churn,
+        churn: r.churn?,
         used,
-        scrolled,
-        scroll_left,
+        scrolled: r.scrolled,
+        scroll_left: r.left,
     };
-    Ok((m, frames))
+    Ok((m, r.between))
 }
 
 /// Times the bus in kx-gates, after joining the weak job when given; the job then lives until kx-gates ends, as
@@ -209,12 +204,12 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     cold()?;
     match g8lang::wanted(&WinLayouts, &ctx.cfg.g8, name)? {
         Some(to) => g8lang::within(&WinTarget::of(ctx), to, |hold| started(ctx, name, hold)),
-        None => started(ctx, name, &|| Ok(())),
+        None => started(ctx, name, &Free),
     }
 }
 
-/// What G8 runs after each step that closed its target-window: `g8 arabic` brings its own back to the front.
-type Hold<'a> = &'a dyn Fn() -> Result<(), String>;
+/// What G8 runs after each step that took the front: `g8 arabic` brings its own window back there.
+type Hold<'a> = &'a dyn Holds<Opened>;
 
 /// G8 from its cold start to its result line, in weak mode for `weak`, running `hold` as `measure` says.
 fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {

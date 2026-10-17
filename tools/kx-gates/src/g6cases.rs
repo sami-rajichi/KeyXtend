@@ -16,6 +16,15 @@ use crate::win::{self, sleep_ms};
 const STOPPED_ITSELF: &str = "the pad stopped itself first";
 /// The note's key for such a fault.
 const SIZING: &str = "sizing_fault";
+/// Why Stop failed: the pad stopped itself on the way up, before Stop went out, which no sizing explains.
+const UP_FIRST: &str = "the pad stopped itself on the way up, before Stop";
+/// The note's key for that.
+const EARLY: &str = "stopped_early";
+/// Why press-stop is not judged on Explorer: a click elsewhere could open a file or sort a column.
+const NO_SPOT: &str =
+    "Explorer showed no spot UI Automation reads as no file or column, so G6 did not click";
+/// The press-stop case's name.
+const PRESS: &str = "press_stop";
 
 /// One case's verdict: none when it could not be judged, and its note says why.
 pub struct Case {
@@ -59,6 +68,14 @@ impl Case {
         Self::judged(name, false, json!({ SIZING: STOPPED_ITSELF }))
     }
 
+    /// The Stop case, judged by `still` on `look` when Stop went out, else failed as the pad stopped itself first.
+    fn stopped(look: Option<Look>, min: f64) -> Self {
+        match look {
+            Some(l) => Self::judged("stop", l.still(min), json!({ "share": l.share })),
+            None => Self::judged("stop", false, json!({ EARLY: UP_FIRST })),
+        }
+    }
+
     /// The case's report line.
     pub fn json(&self) -> Value {
         json!({ "case": self.name, "ok": self.ok, "note": self.note })
@@ -86,7 +103,7 @@ pub fn speeds(s: &Scene, want: f64) -> Result<Vec<Case>, String> {
     let third = if s.idle() {
         None
     } else {
-        s.arrow(Dir::Down)?;
+        s.third(Dir::Down)?;
         Some(s.look(g.still_ms)?)
     };
     let min = g.min_changed;
@@ -128,25 +145,31 @@ pub fn up_and_stop(s: &Scene) -> Result<Vec<Case>, String> {
     };
     Ok(vec![
         Case::judged("up", up.moved(Dir::Up, min), json!({ "share": up.share })),
-        Case::stilled("stop", stopped, min),
+        Case::stopped(stopped, min),
     ])
 }
 
-/// Taps down, clicks the window outside our windows while the pad still scrolls, then glides back: the click stopped
-/// it.
+/// Taps down, clicks the window's safe spot outside our windows while the pad still scrolls, then glides back: the
+/// click stopped it. Unjudged, with Stop tapped, when the window shows no safe spot (`Scene::spot`).
 pub fn press_stop(s: &Scene) -> Result<Case, String> {
+    let Some(spot) = s.spot() else {
+        return Ok(Case::unjudged(PRESS, NO_SPOT));
+    };
     let (g, min) = (&s.ctx.cfg.g6, s.ctx.cfg.g6.min_changed);
     s.arrow(Dir::Down)?;
     let going = s.look(g.move_ms)?;
     if s.idle() {
-        return Ok(Case::too_short("press_stop"));
+        return Ok(Case::too_short(PRESS));
     }
-    s.click_out()?;
+    if !s.click_out(spot)? {
+        s.stop()?;
+        return Ok(Case::unjudged(PRESS, NO_SPOT));
+    }
     let after = s.look(g.still_ms)?;
     s.glide_in()?;
     let ok = going.moved(Dir::Down, min) && after.still(min);
     let note = json!({ "going": going.share, "after": after.share });
-    Ok(Case::judged("press_stop", ok, note))
+    Ok(Case::judged(PRESS, ok, note))
 }
 
 /// Right, then left for `[pad] undo_div` times less, each ended by Stop, where the window overflows sideways or is
@@ -196,67 +219,4 @@ pub fn end(s: &Scene) -> Result<(Case, Pair), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A phase whose percent climbs `per_s` a second, read every 200 ms.
-    fn phase(per_s: f64) -> Phase {
-        let reads = (0..10_u32)
-            .map(|i| (u64::from(i) * 200, 10.0 + per_s * f64::from(i) / 5.0))
-            .collect();
-        let look = Look {
-            share: None,
-            before: None,
-            after: None,
-        };
-        Phase { look, reads }
-    }
-
-    #[test]
-    fn the_ratio_is_judged_from_both_slopes_and_left_unjudged_without_one() {
-        let g = crate::config::load().expect("loads").g6;
-        let want = 10.0 / 3.0;
-        let near = ratio(&phase(3.0), &phase(10.0), want, &g);
-        assert_eq!(near.ok, Some(true), "{}", near.note);
-        assert_eq!(ratio(&phase(3.0), &phase(3.0), want, &g).ok, Some(false));
-        let few = Phase {
-            reads: vec![(0, 10.0)],
-            ..phase(3.0)
-        };
-        let unread = ratio(&few, &phase(10.0), want, &g);
-        assert_eq!(unread.ok, None);
-        assert_eq!(unread.json()["case"], "ratio");
-    }
-
-    #[test]
-    fn a_case_the_pad_met_the_end_in_fails_as_a_sizing_fault() {
-        let min = crate::config::load().expect("loads").g6.min_changed;
-        let cases = [
-            Case::stilled("third_tap", None, min),
-            Case::unjudged("sideways", "no sideways overflow"),
-            Case::too_short("press_stop"),
-        ];
-        assert_eq!(cases[0].ok, Some(false), "never passes unjudged");
-        assert_eq!(cases[2].ok, Some(false));
-        assert_eq!(sizing_faults(&cases), ["third_tap", "press_stop"]);
-    }
-
-    #[test]
-    fn a_stop_case_is_judged_on_its_look_and_fails_without_one() {
-        let min = crate::config::load().expect("loads").g6.min_changed;
-        let still = Look {
-            share: Some(0.0),
-            before: None,
-            after: None,
-        };
-        assert_eq!(Case::stilled("stop", Some(still), min).ok, Some(true));
-        let moved = Look {
-            share: Some(0.5),
-            ..still
-        };
-        assert_eq!(Case::stilled("stop", Some(moved), min).ok, Some(false));
-        let gone = Case::stilled("stop", None, min);
-        assert_eq!(gone.ok, Some(false));
-        assert_eq!(gone.note[SIZING], STOPPED_ITSELF);
-    }
-}
+mod tests;

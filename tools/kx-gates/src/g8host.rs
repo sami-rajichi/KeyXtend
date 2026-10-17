@@ -69,7 +69,8 @@ fn free_mb() -> Option<f64> {
     Some(status.ullAvailPhys as f64 / MB)
 }
 
-/// Process `name`'s working set in MB from one read of its performance counter; none when it does not run.
+/// Process `name`'s working set in MB from one read of its performance counter; none when it does not run. Only the
+/// first process of that name reads, as the counter names the others `name#1` and on.
 #[allow(unsafe_code, reason = "Performance counter calls on a query G8 owns.")]
 fn working_mb(name: &str) -> Option<f64> {
     let path = HSTRING::from(counter(name));

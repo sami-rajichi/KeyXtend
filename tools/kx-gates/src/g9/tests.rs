@@ -1,6 +1,7 @@
 //! Tests of G9's flag rule, its size steps and its pass rule on recorded styles.
 
 use kx_platform_windows::window::{KEPT, THROUGH};
+use windows::Win32::UI::WindowsAndMessaging::WS_EX_TOPMOST;
 
 use super::*;
 
