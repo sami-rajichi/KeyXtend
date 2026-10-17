@@ -53,7 +53,7 @@ A release workflow that ships the Qt it installs must pin aqtinstall's Python pa
 ### Accepted (with reason)
 Dependabot commits are exempt from the DCO check, because they are bot-authored and reviewed through their PR.
 
-The DCO exemption matches the commit author *name*, so it could be spoofed. This is accepted while ADR-0006 bars outside code, because the product owner reviews every PR.
+The DCO exemption matches the commit author *name*, so it could be spoofed. This is accepted while ADR-0030 bars outside code, because the product owner reviews every PR.
 
 The `xtask` parsers are not fuzzed. They are developer tools that never ship, so property tests that prove they never panic are enough.
 

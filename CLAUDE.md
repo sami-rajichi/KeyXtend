@@ -68,6 +68,8 @@ This is **KeyXtend**, the eXtended keyboard: an accessible on-screen keyboard, w
 - Take focus from the target app. Every window we own is non-activating, except Settings.
 - Send dictated text, clipboard data or anything else to the network unless the user turned that feature on.
 - Ship API keys, or add telemetry.
+- Merge code from anyone but the owner. Outside pull requests wait until the owner allows them, each with a contributor agreement first (ADR-0030).
+- Put the licence-key check or signing secrets in this repository (ADR-0030).
 
 ## Commands (after Phase 0)
 

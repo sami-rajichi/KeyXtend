@@ -19,13 +19,14 @@ description: Use when preparing a tagged KeyXtend release - version bump, change
    - update `THIRD_PARTY.md` and `licenses/`.
 4. **Build the installer:** installs to Program Files, per-machine, silent-install switch for winget.
 5. **Signing:**
-   - Until SignPath is approved, the release is unsigned. The README explains the SmartScreen warning and how to verify checksums and attestations.
-   - With SignPath: CI submits the build; never sign locally with a release key.
+   - The release needs a paid signature (ADR-0030): Azure Artifact Signing, a certificate authority's certificate or the Microsoft Store. Until one is set up, the release is unsigned, and the README explains the SmartScreen warning and how to verify checksums and attestations.
+   - The signing key never sits in the repository; never sign locally with a release key.
 6. **GitHub Release** (draft first):
    - assets: installer, portable zip, SBOM, `SHA256SUMS`;
    - `actions/attest` build provenance;
    - release notes in plain language (EN; FR and AR if available);
-   - the Qt LGPL notice and where its source is (ADR-0013).
+   - the Qt LGPL notice and where its source is (ADR-0013);
+   - the app's own user licence (ADR-0030), which lets users replace the Qt DLLs and reverse engineer to debug that (LGPL-3.0 §4).
 7. **Ask the product owner** (AskUserQuestion) to approve publishing. Show the draft link and a summary.
 8. **After publishing:**
    - winget manifest PR (`wingetcreate`) and Scoop Extras manifest;

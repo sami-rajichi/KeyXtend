@@ -1,6 +1,8 @@
 # KeyXtend — the eXtended keyboard
 
-A small, fast, open-source on-screen keyboard and mouse helper for people who use a computer with **one pointer button**.
+A small, fast, source-available on-screen keyboard and mouse helper for people who use a computer with **one pointer button**.
+
+Created and owned by [sami-rajichi](https://github.com/sami-rajichi).
 
 ## Who it is for
 
@@ -50,7 +52,7 @@ KeyXtend is in early development; this is what it is being built to do.
 
 macOS and Linux follow v1.0, from the same code. Later features, such as camera head control, voice commands and zoom-to-click, are listed in [FEATURES.md](docs/FEATURES.md).
 
-Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab.html) (download it and open it in a browser).
+The early design mock-up, kept as a record, is [keyboard-style-lab.html](design/keyboard-style-lab.html); its licence notes predate ADR-0030.
 
 ## Status
 
@@ -91,4 +93,4 @@ Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen
 - Changelog: [CHANGELOG.md](CHANGELOG.md) · Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## Licence
-Open source under [GPL-3.0-or-later](LICENSE) (ADR-0006).
+Source-available, all rights reserved: you may read the code and keep a copy to read it, but not use, change or share it without permission ([LICENSE](LICENSE), ADR-0030). Earlier versions keep the licence they were published under.

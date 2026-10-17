@@ -4,7 +4,7 @@ description = "Test tool: the Windows gate runner that drives real apps and prin
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
+license-file.workspace = true
 publish.workspace = true
 repository.workspace = true
 

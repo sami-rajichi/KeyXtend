@@ -11,7 +11,7 @@ description: Use when starting a new feature module (kx-mod-*) or a new platform
 
 ## Steps
 1. **Create** `crates/kx-mod-<name>/` with:
-   - `Cargo.toml`: `version = "0.0.0"`, `publish = false`, `license.workspace = true`. Dependencies: only `kx-module-api` plus pure utility crates (`serde` for the settings). Dev-dependencies: `kx-platform-fake`, `kx-test-support`, `proptest`.
+   - `Cargo.toml`: `version = "0.0.0"`, `publish = false`, `license-file.workspace = true`. Dependencies: only `kx-module-api` plus pure utility crates (`serde` for the settings). Dev-dependencies: `kx-platform-fake`, `kx-test-support`, `proptest`.
    - `src/lib.rs`: `#![forbid(unsafe_code)]`, `#![warn(missing_docs)]`, and a `pub struct <Name>Module` that implements `Module`.
    - `src/manifest.rs`: a `static MANIFEST: Manifest` with `id`, `version: env!("CARGO_PKG_VERSION")`, `requires`, `provides`, the **smallest** `capabilities` list that works, and `settings: Some(&SPEC)`.
    - `src/settings.rs`: the settings struct, and `SPEC`, a `SettingsSpec` with `version: 1`, the embedded `defaults.toml`, the `migrations` list, and `validate: validate_as::<T>` (`T` is the settings struct).

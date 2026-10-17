@@ -252,7 +252,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
   - `actions/attest`;
   - SHA-256 checksums;
   - a GitHub Release.
-- Apply to the SignPath Foundation once v0.x releases exist. Until then: unsigned releases with a clear README.
+- Sign releases with a paid signature, as the free SignPath route needs an open-source licence (ADR-0030): Azure Artifact Signing, a certificate authority or the Microsoft Store. Until then: unsigned releases with a clear README.
 - winget manifest; Scoop Extras.
 
 ## Phase 15+ — macOS, then Linux

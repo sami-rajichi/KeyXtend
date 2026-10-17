@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 20:06 — Licence: view only, all rights reserved (ADR-0030)
+KeyXtend's code is now view only, all rights reserved by the owner: anyone may read it, but no one may use, build, copy, change, share or sell it without written permission. The app will ship under its own user licence, which must let users replace the Qt DLLs. Every crate points at `LICENSE`, GPL leaves `deny.toml`'s allowed list, and every third-party part was checked to allow a closed, sold app. Versions published before keep the GPL, and free SignPath signing gives way to a paid signature in P14.
+
 ## 2026-10-17 19:07 — P5 done: scroll pad (v0.3)
 The scroll pad is done: its arrows glide the window last pointed at, slow then fast, with an outline and a badge, and it stops at the end, at a press, at the limit or when the target goes. G6, G9 and G10 passed on the PC (G10 again on the final build), and so did every hands-on check but two the owner accepted: the desktop and PowerShell ISE stay lit at their end, as they give no position. G8's memory is over (103 MB cold, a churn that grows with each scroll after a theme change), which the owner accepted for P5 and P13 takes. The numbers are in the test report and P13, and the shortcuts layer (P6) is next.
 

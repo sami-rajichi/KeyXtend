@@ -1,7 +1,7 @@
 # 3. The keyboard process itself holds uiAccess
 
 - **Date:** 2026-09-26
-- **Status:** Accepted
+- **Status:** Accepted. Its public-release signing line (SignPath) is superseded by ADR-0030 (2026-10-17).
 
 ## Context
 The product owner's top requirement: the keyboard is **above every window ever**, including the Start menu, Search and Task Manager, and it types into admin windows.

@@ -4,7 +4,7 @@ description = "P1 spike core: UI Automation, pill, Hello fill, snip, voice and t
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [dependencies]
 # The clock, the input and layout ports and the screen boxes moved here in P2 and P3 (ADR-0014).
