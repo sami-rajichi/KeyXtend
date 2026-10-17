@@ -22,7 +22,7 @@ use crate::scroll::{self, along};
 use crate::simin::{self, Act};
 use crate::simuser;
 use crate::win::{self, sleep_ms};
-use crate::{aim, g6spot};
+use crate::{aim, g6spot, g6uia, mouseguard};
 
 /// One speed's reads: the look over it, and its percents towards its way in ms since the first read.
 pub struct Phase {
@@ -158,6 +158,12 @@ impl<'a> Scene<'a> {
         self.arrow(dir)
     }
 
+    /// Taps down for a run to the document's end, which should stop there, and counts that run.
+    pub fn to_end(&self) -> Result<(), String> {
+        self.count(|m| m.ends += 1);
+        self.arrow(Dir::Down)
+    }
+
     /// Taps the hub, where Stop shows while it scrolls, unless the pad stopped itself; true, and counted, when tapped.
     pub fn stop(&self) -> Result<bool, String> {
         let tapped = self.read().stop(|_| self.tap(self.pin.pad.centre()))?;
@@ -188,7 +194,17 @@ impl<'a> Scene<'a> {
         Ok(true)
     }
 
-    /// What it did that stops a scroll: its clicks outside our windows and its Stop and third taps.
+    /// Puts the keyboard focus on Explorer's list by UI Automation, as its column header may hold it after a press;
+    /// true when the focus then lies in the list, and always elsewhere, whose keys reach the document as they are.
+    pub fn focus_list(&self) -> Result<bool, String> {
+        if self.app.kind != AppKind::Explorer {
+            return Ok(true);
+        }
+        mouseguard::allowed()?;
+        Ok(g6uia::focus_at(self.reader.auto(), self.pin.start))
+    }
+
+    /// What it did that stops a scroll: its clicks outside our windows, its Stop and third taps and its runs to the end.
     pub fn made(&self) -> Stops {
         self.made.get()
     }

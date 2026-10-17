@@ -45,13 +45,23 @@ fn same(a: f64, b: f64) -> bool {
     (a - b).abs() <= f64::EPSILON
 }
 
+/// The view size the grown list should show: `before`, read at `had` files, scaled to `want` files, as the size is the
+/// share of the list shown.
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "File counts are far below 2^52."
+)]
+fn grown_size(before: Option<f64>, had: usize, want: usize) -> Option<f64> {
+    before.map(|b| b * had as f64 / want.max(1) as f64)
+}
+
 /// True when the view size has settled after the folder grew: `now` reads as the read before it, which `last` holds
-/// and then takes `now` for, and differs from `before`, read before the files were added, when that read.
-fn settled(before: Option<f64>, last: &Cell<Option<f64>>, now: Option<f64>) -> bool {
+/// and then takes `now` for, and lies within `slack` of `aim`, the grown size, as a share of it, when that is known.
+fn settled(aim: Option<f64>, slack: f64, last: &Cell<Option<f64>>, now: Option<f64>) -> bool {
     let was = last.replace(now);
     let twice = matches!((was, now), (Some(a), Some(b)) if same(a, b));
-    let grew = before.is_none_or(|b| now.is_some_and(|n| !same(n, b)));
-    twice && grew
+    let near = aim.is_none_or(|a| now.is_some_and(|n| (n - a).abs() <= a * slack));
+    twice && near
 }
 
 /// What growing the folder found: the files a row shows, none when fewer than two files read, and whether the
@@ -119,21 +129,21 @@ pub fn fill(
     let had = needed(ctx, 1, speeds);
     let per_row = per_row(&tops(ctx, uia, doc, had));
     let want = needed(ctx, per_row.unwrap_or(g.max_per_row), speeds);
-    let before = view();
+    let aim = grown_size(view(), had, want);
     for i in had + 1..=want {
         let path = doc.path.join(name(&ctx.cfg.probes.scroll_prefix, i));
         std::fs::File::create(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     }
-    let settled = (want > had).then(|| steady(g, before, view));
+    let settled = (want > had).then(|| steady(g, aim, view));
     Ok(Grown { per_row, settled })
 }
 
-/// Waits up to `grow_wait_ms`, reading `view` every `sample_ms` from the start, for it to settle away from `before`;
-/// false when it never did or never read.
-fn steady(g: &G6, before: Option<f64>, view: impl Fn() -> Option<f64>) -> bool {
+/// Waits up to `grow_wait_ms`, reading `view` every `sample_ms` from the start, for it to settle within `ratio_slack`
+/// of `aim`; false when it never did or never read.
+fn steady(g: &G6, aim: Option<f64>, view: impl Fn() -> Option<f64>) -> bool {
     let last = Cell::new(None);
     let held = win::poll_until(g.grow_wait_ms, g.sample_ms, || {
-        settled(before, &last, view()).then_some(())
+        settled(aim, g.ratio_slack, &last, view()).then_some(())
     });
     held.is_some()
 }
@@ -175,22 +185,45 @@ mod tests {
         assert_eq!(per_row(&[10]), None, "the second file never read");
     }
 
-    /// Whether each of `reads` found the view size settled after it read `before`.
-    fn settles(before: Option<f64>, reads: &[Option<f64>]) -> Vec<bool> {
+    /// A fixture `[g6] ratio_slack`.
+    const SLACK: f64 = 0.3;
+    /// A list of 100 files that showed 40 % of itself, grown to 400 files: it should show 10 %.
+    const GROWN: (Option<f64>, usize, usize) = (Some(40.0), 100, 400);
+
+    /// Whether each of `reads` found the view size settled at `aim`.
+    fn settles(aim: Option<f64>, reads: &[Option<f64>]) -> Vec<bool> {
         let last = Cell::new(None);
-        reads.iter().map(|&r| settled(before, &last, r)).collect()
+        reads
+            .iter()
+            .map(|&r| settled(aim, SLACK, &last, r))
+            .collect()
     }
 
     #[test]
-    fn the_view_size_has_settled_once_it_left_the_size_before_and_reads_the_same_twice() {
+    fn the_grown_size_is_the_size_before_scaled_by_the_files() {
+        let (before, had, want) = GROWN;
+        assert_eq!(grown_size(before, had, want), Some(10.0));
+        assert_eq!(grown_size(None, had, want), None, "no size before");
+    }
+
+    #[test]
+    fn the_view_size_has_settled_once_it_reads_the_same_twice_near_the_grown_size() {
+        let aim = grown_size(GROWN.0, GROWN.1, GROWN.2);
         let reads = [Some(40.0), Some(40.0), Some(12.0), Some(9.0), Some(9.0)];
         assert_eq!(
-            settles(Some(40.0), &reads),
+            settles(aim, &reads),
             [false, false, false, false, true],
             "the list had not grown at first"
         );
         let unread = [None, None, Some(9.0), None];
-        assert_eq!(settles(Some(40.0), &unread), [false; 4]);
+        assert_eq!(settles(aim, &unread), [false; 4]);
+    }
+
+    #[test]
+    fn a_pause_between_explorers_batches_is_no_settle() {
+        let aim = grown_size(GROWN.0, GROWN.1, GROWN.2);
+        let reads = [Some(25.0), Some(25.0), Some(10.0), Some(10.0)];
+        assert_eq!(settles(aim, &reads), [false, false, false, true]);
     }
 
     #[test]

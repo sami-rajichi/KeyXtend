@@ -165,7 +165,11 @@ fn each_outside_click_and_each_stop_tap_stops_it_once_and_the_end_stops_it_too()
         user: 3,
         ..ScrollLine::default()
     };
-    let made = Stops { clicks: 1, taps: 3 };
+    let made = Stops {
+        clicks: 1,
+        taps: 3,
+        ends: 1,
+    };
     assert!(stops_ok(&line, made));
     let as_press = Stops { clicks: 0, ..made };
     assert!(
@@ -179,7 +183,6 @@ fn each_outside_click_and_each_stop_tap_stops_it_once_and_the_end_stops_it_too()
         !stops_ok(&paged, made),
         "a page turn of our list, which G6 never aims at"
     );
-
     let other = [
         ScrollLine { end: 0, ..line },
         ScrollLine { limit: 1, ..line },
@@ -188,6 +191,25 @@ fn each_outside_click_and_each_stop_tap_stops_it_once_and_the_end_stops_it_too()
     for l in other {
         assert!(!stops_ok(&l, made), "{l:?}");
     }
+}
+
+#[test]
+fn with_no_run_to_the_end_no_end_stop_is_needed() {
+    let line = ScrollLine {
+        user: 2,
+        ..ScrollLine::default()
+    };
+    let unjudged = Stops {
+        clicks: 0,
+        taps: 2,
+        ends: 0,
+    };
+    assert!(stops_ok(&line, unjudged), "the end case was left unjudged");
+    let ran = Stops {
+        ends: 1,
+        ..unjudged
+    };
+    assert!(!stops_ok(&line, ran), "it ran, so it must stop at the end");
 }
 
 #[test]

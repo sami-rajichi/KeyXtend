@@ -7,12 +7,12 @@ use kx_module_api::ports::LayoutId;
 
 use super::{Own, Tap, named};
 
-/// Nothing when `w` types in `to`, as the session should; else why the hold failed.
+/// Nothing when `w`, in front, types in `to`, as the session should; else why the hold failed.
 fn typed<O: Own>(own: &O, w: &O::Window, to: LayoutId) -> Result<(), String> {
     match own.layout(w) {
         Some(now) if now == to => Ok(()),
         now => Err(format!(
-            "the session types in layout {} instead of {to}",
+            "the window in front types in layout {} instead of {to}",
             named(now)
         )),
     }

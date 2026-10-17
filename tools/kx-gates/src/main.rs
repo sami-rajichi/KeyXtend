@@ -64,6 +64,7 @@ mod g6rec;
 mod g6rows;
 mod g6scene;
 mod g6spot;
+mod g6uia;
 mod g7;
 mod g8;
 mod g8cfg;

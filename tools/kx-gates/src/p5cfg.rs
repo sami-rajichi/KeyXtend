@@ -20,7 +20,7 @@ pub struct G6 {
     pub phase_ms: u64,
     /// How often the percent is read during a speed.
     pub sample_ms: u64,
-    /// How far the fast ÷ slow ratio may be off the test build's, as a share.
+    /// How far the fast ÷ slow ratio may be off the test build's, and Explorer's grown view size off its aim, as a share.
     pub ratio_slack: f64,
     /// How long each other direction scrolls before it is judged.
     pub move_ms: u64,
@@ -42,7 +42,7 @@ pub struct G6 {
     pub slope_reads: u64,
     /// The files a row Explorer's folder grows by when fewer than two files read: the worst case.
     pub max_per_row: usize,
-    /// Longest wait, after the folder grew, for the vertical view size to settle, read every `sample_ms`.
+    /// Longest wait, after the folder grew, for the vertical view size to settle near its aim, read every `sample_ms`.
     pub grow_wait_ms: u64,
     /// How far in from a part's right end a press outside our windows on Explorer lands, in physical px.
     pub spot_px: i32,
@@ -256,13 +256,17 @@ pub struct Host {
     pub vm: Vec<String>,
 }
 
-/// What a performance counter's process name may not hold: a folder, `.exe`, which it drops, and its path's marks.
+/// What a performance counter's process name may not hold, in any case: a folder, `.exe`, which it drops, and its
+/// path's marks.
 const NOT_IN_NAME: [&str; 7] = ["\\", "/", ":", ".exe", "(", ")", "#"];
 
 impl Host {
     /// Refuses no process and a name that is not a plain program name as performance counters name it.
     pub fn check(&self) -> Result<(), String> {
-        let plain = |n: &String| !n.is_empty() && !NOT_IN_NAME.iter().any(|bad| n.contains(bad));
+        let plain = |n: &String| {
+            let lower = n.to_lowercase();
+            !n.is_empty() && !NOT_IN_NAME.iter().any(|bad| lower.contains(bad))
+        };
         if self.vm.is_empty() || !self.vm.iter().all(plain) {
             return Err(format!(
                 "host.vm must name programs without any of {NOT_IN_NAME:?}"

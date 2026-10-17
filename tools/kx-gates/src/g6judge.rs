@@ -117,21 +117,24 @@ pub fn end_ok(idle: bool, down: &Look, back: &Look, min: f64) -> bool {
     idle && down.moved(Dir::Down, min) && at_end
 }
 
-/// What G6 did that stops a scroll: its clicks outside our windows, and its Stop and third taps.
+/// What G6 did that stops a scroll: its clicks outside our windows, its Stop and third taps, and its runs to the end.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Stops {
     /// Clicks outside our windows.
     pub clicks: u64,
     /// Stop and third taps.
     pub taps: u64,
+    /// Runs down that should stop at the document's end.
+    pub ends: u64,
 }
 
 /// True when the scroll module stopped once for each of G6's clicks and once for each of its taps, so a pad tap never
-/// counted as a press nor a page turn of our list as a user stop, at the end at least once, and never at the limit or
-/// as the target went.
+/// counted as a press nor a page turn of our list as a user stop, at the end at least once after a run there, and
+/// never at the limit or as the target went.
 pub fn stops_ok(line: &ScrollLine, made: Stops) -> bool {
     let counted = line.press == made.clicks && line.user == made.taps;
-    counted && line.end > 0 && line.limit == 0 && line.gone == 0
+    let ended = made.ends == 0 || line.end > 0;
+    counted && ended && line.limit == 0 && line.gone == 0
 }
 
 /// True when every case judged passed: a case that could not be judged, such as sideways without an overflow, says

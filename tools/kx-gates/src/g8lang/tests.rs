@@ -191,7 +191,7 @@ fn a_hold_that_finds_the_session_out_of_the_layout_fails_and_closes_its_window()
     let e = hold(&world, AR).expect_err("the session lost it");
     assert_eq!(
         e,
-        format!("the session types in layout {OWNER} instead of {AR}")
+        format!("the window in front types in layout {OWNER} instead of {AR}")
     );
     assert_eq!(*world.closed.borrow(), [1]);
     world.session.set(Some(AR));
@@ -235,7 +235,7 @@ fn a_kept_window_out_of_the_layout_fails_its_hold_and_stays_open() {
     let e = hold_on(&world, &5, AR).expect_err("the session lost it");
     assert_eq!(
         e,
-        format!("the session types in layout {OWNER} instead of {AR}")
+        format!("the window in front types in layout {OWNER} instead of {AR}")
     );
     assert!(world.taps.borrow().is_empty() && world.closed.borrow().is_empty());
     world.session.set(Some(AR));

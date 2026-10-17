@@ -10,7 +10,7 @@ use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationCondition, IUIAutomationElement,
     IUIAutomationElement6, ToggleState_On, TreeScope_Descendants, UIA_AutomationIdPropertyId,
-    UIA_ButtonControlTypeId, UIA_CONTROLTYPE_ID, UIA_ControlTypePropertyId, UIA_InvokePatternId,
+    UIA_ButtonControlTypeId, UIA_ControlTypePropertyId, UIA_InvokePatternId,
     UIA_ToggleToggleStatePropertyId,
 };
 use windows::core::{BSTR, Interface};
@@ -166,32 +166,9 @@ impl Reader {
         unsafe { self.0.ElementFromPoint(p) }.map_err(err)
     }
 
-    /// The control type of the element at screen point `p`; none when UI Automation finds nothing there.
-    #[allow(unsafe_code, reason = "A UI Automation call on a live element.")]
-    pub fn kind_at(&self, p: POINT) -> Option<UIA_CONTROLTYPE_ID> {
-        let el = self.at(p).ok()?;
-        // SAFETY: a plain property read on a live element.
-        unsafe { el.CurrentControlType() }.ok()
-    }
-
-    /// The screen box of the first element of control type `kind` inside window `hwnd`, such as a status bar.
-    #[allow(
-        unsafe_code,
-        reason = "UI Automation calls on objects this client made."
-    )]
-    pub fn box_of(&self, hwnd: HWND, kind: UIA_CONTROLTYPE_ID) -> Option<RECT> {
-        let want = VARIANT::from(kind.0);
-        // SAFETY: plain calls on live UI Automation objects; a missing element gives an error.
-        let el = unsafe {
-            let cond = self
-                .0
-                .CreatePropertyCondition(UIA_ControlTypePropertyId, &want)
-                .ok()?;
-            self.root(hwnd)
-                .ok()?
-                .FindFirst(TreeScope_Descendants, &cond)
-        };
-        uia::rect(&el.ok()?).ok()
+    /// The UI Automation client itself, for a gate's own reads, such as G6's on Explorer (`g6uia`).
+    pub fn auto(&self) -> &IUIAutomation {
+        &self.0
     }
 
     /// The first element with UI Automation id `id` inside window `hwnd`.

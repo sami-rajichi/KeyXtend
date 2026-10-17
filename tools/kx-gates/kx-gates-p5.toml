@@ -13,7 +13,7 @@ min_changed = 0.02
 # Each speed scrolls for phase_ms while its percent is read every sample_ms; the slopes give the fast ÷ slow ratio.
 phase_ms = 3000
 sample_ms = 200
-# The ratio may be this share off the test build's [scroll] fast ÷ slow.
+# The ratio may be this share off the test build's [scroll] fast ÷ slow; Explorer's grown view size as far off its aim.
 ratio_slack = 0.3
 # Each other direction scrolls this long before it is judged.
 move_ms = 1500
@@ -35,8 +35,8 @@ slope_reads = 5
 # Explorer's folder grows by the files a row shows, read from its first files; when fewer than two read, it grows by
 # this worst case, small icons across a wide screen.
 max_per_row = 32
-# After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to leave its size before
-# and read the same twice, sample_ms apart, so the list's extent does not grow mid-phase and skew a slope.
+# After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to read the same twice,
+# sample_ms apart, near its size before scaled by the files (its aim), so the extent does not grow mid-phase.
 grow_wait_ms = 5000
 # On Explorer, press-stop clicks only where UI Automation finds the column header's empty end or the status bar
 # itself, tried at its centre and this far in from its right end; with no such spot it is skipped, never a pass.

@@ -138,7 +138,7 @@ fn report(
     json!({
         "gate": "G6", "app": name, "pass": pass, "cases": cases, "stops_counted": stops,
         "scroll_stats": line, "scroll_stats_error": counts.as_ref().err(), "outside_clicks": d.made.clicks,
-        "stop_taps": d.made.taps,
+        "stop_taps": d.made.taps, "end_runs": d.made.ends,
         "end_percents": { "top": d.top, "bottom": d.bottom }, "percent_lag_ms": d.lag_ms,
         "routing": g6rec::routing(), "files_per_row": d.grown.and_then(|g| g.per_row),
         "grown_settled": d.grown.and_then(|g| g.settled), "sizing_faults": short, "clean_up": notes,

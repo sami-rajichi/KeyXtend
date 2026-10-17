@@ -179,7 +179,15 @@ fn g8_scroll_and_host_settings_that_do_nothing_are_refused() {
     c.g8_scroll.scroll_ms = c.pad.settle_ms;
     let e = check(&c).expect_err("Stop would go out before the pad's settle");
     assert!(e.contains("settle_ms"), "{e}");
-    let names = ["", r"C:\vmmem", "vmmem.exe", "vmmem#1", "vm(1)", "vm)"];
+    let names = [
+        "",
+        r"C:\vmmem",
+        "vmmem.exe",
+        "vmmem.EXE",
+        "vmmem#1",
+        "vm(1)",
+        "vm)",
+    ];
     let mut vms: Vec<Vec<String>> = names.iter().map(|n| vec![(*n).to_string()]).collect();
     vms.push(vec![]);
     for vm in vms {

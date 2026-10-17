@@ -25,6 +25,9 @@ const NO_SPOT: &str =
     "Explorer showed no spot UI Automation reads as no file or column, so G6 did not click";
 /// The press-stop case's name.
 const PRESS: &str = "press_stop";
+/// Why the end case is not judged on Explorer: Ctrl+End would not reach its list.
+const NO_FOCUS: &str =
+    "UI Automation could not put the focus on Explorer's list, so Ctrl+End would miss it";
 
 /// One case's verdict: none when it could not be judged, and its note says why.
 pub struct Case {
@@ -195,10 +198,13 @@ pub fn sideways(s: &Scene, wide: bool) -> Result<Case, String> {
 }
 
 /// From the window's end, up for `back_ms` and Stop, then down until the pad stops by itself; the end case and the
-/// percents read at the end.
+/// percents read at the end. Unjudged, with none read, when the focus cannot reach Explorer's list for Ctrl+End.
 pub fn end(s: &Scene) -> Result<(Case, Pair), String> {
     let (g, t) = (&s.ctx.cfg.g6, &s.ctx.cfg.timing);
     keys_ours(s.app)?;
+    if !s.focus_list()? {
+        return Ok((Case::unjudged("end", NO_FOCUS), None));
+    }
     keys::combo(&s.ctx.cfg.edit_keys.doc_end)?;
     sleep_ms(s.ctx.cfg.probes.settle_ms);
     let bottom = s.snap()?;
@@ -206,7 +212,7 @@ pub fn end(s: &Scene) -> Result<(Case, Pair), String> {
     sleep_ms(g.back_ms);
     s.stop()?;
     let from = s.snap()?;
-    s.arrow(Dir::Down)?;
+    s.to_end()?;
     let idle = win::poll_until(g.end_wait_ms, t.poll_ms, || s.idle().then_some(())).is_some();
     let now = s.snap()?;
     if !idle {
