@@ -88,7 +88,7 @@ impl G6 {
     }
 
     /// Refuses a slope on fewer reads than a line needs or more than a speed reads, a worst case of one file a row,
-    /// and a wait for the grown folder that holds no two reads.
+    /// and a wait for the grown folder or a still look's settle that holds no two reads.
     fn reads_ok(&self) -> Result<(), String> {
         if self.slope_reads < LINE_READS {
             return Err(format!(
@@ -106,8 +106,8 @@ impl G6 {
                 "g6.max_per_row must be above 1, a worst case for an icon view".to_string(),
             );
         }
-        if self.grow_wait_ms < self.sample_ms {
-            return Err("g6.grow_wait_ms must hold two reads sample_ms apart".to_string());
+        if self.grow_wait_ms.min(self.still_ms) < self.sample_ms {
+            return Err("g6.grow_wait_ms and still_ms need two reads sample_ms apart".to_string());
         }
         Ok(())
     }

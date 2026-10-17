@@ -93,6 +93,34 @@ fn the_end_needs_a_stop_by_itself_a_down_leg_that_moved_and_the_end_reached() {
 }
 
 #[test]
+fn the_end_is_back_at_ctrl_ends_bottom_on_the_vertical_axis_only() {
+    let down = look(Some(0.4), Some((-1.0, 90.0)), Some((-1.0, 99.991)));
+    let short_of_full = (-1.0, 99.991);
+    let explorer = look(Some(0.0), Some(short_of_full), Some(short_of_full));
+    assert!(
+        end_ok(true, &down, &explorer, MIN),
+        "its bottom reads 99.991"
+    );
+    let notepad = look(Some(0.23), Some((0.0, 100.0)), Some((0.0, 100.0)));
+    assert!(
+        end_ok(true, &down, &notepad, MIN),
+        "the percent reads, so the picture is not judged"
+    );
+    let aside = look(Some(0.3), Some((0.0, 100.0)), Some((5.0, 100.0)));
+    assert!(end_ok(true, &down, &aside, MIN), "only sideways moved");
+    let above = look(Some(0.0), Some(short_of_full), Some((-1.0, 99.5)));
+    assert!(
+        !end_ok(true, &down, &above, MIN),
+        "it stopped above the bottom"
+    );
+    let half = look(Some(0.0), Some((0.0, 100.0)), None);
+    assert!(
+        end_ok(true, &down, &half, MIN),
+        "one look reads no percent, so the picture"
+    );
+}
+
+#[test]
 fn without_a_percent_the_end_is_the_picture_g6_saw_at_the_end() {
     let down = look(Some(0.4), None, None);
     assert!(end_ok(true, &down, &look(Some(0.0), None, None), MIN));
@@ -143,18 +171,49 @@ fn the_ratio_must_lie_near_the_test_builds_within_the_slack() {
 }
 
 #[test]
-fn sideways_cases_run_only_where_the_document_overflows_sideways() {
-    assert!(sideways(TOP));
-    assert!(!sideways(NO_SIDEWAYS));
-    assert!(!sideways(None));
+fn sideways_is_judged_only_where_the_pattern_says_it_scrolls_sideways() {
+    assert!(sideways(Some(true)));
+    assert!(
+        !sideways(Some(false)),
+        "Notepad with word wrap, though its horizontal percent reads 0"
+    );
+    assert!(!sideways(None), "no scroll pattern");
+}
+
+/// A read of vertical percents `seq` in turn, then its last again.
+fn reads(seq: &[f64]) -> impl FnMut() -> Pair + '_ {
+    let mut at = 0;
+    move || {
+        let v = seq[at.min(seq.len() - 1)];
+        at += 1;
+        Some((0.0, v))
+    }
 }
 
 #[test]
-fn an_end_reads_at_its_own_way_only() {
-    assert!(ended(Dir::Down, Some((0.0, 100.0))));
-    assert!(ended(Dir::Up, TOP) && ended(Dir::Left, TOP));
-    assert!(!ended(Dir::Down, Some((0.0, 99.5))), "short of it");
-    assert!(!ended(Dir::Down, None) && !ended(Dir::Right, NO_SIDEWAYS));
+fn a_percent_is_steady_once_it_reads_the_same_twice_a_sample_apart() {
+    let mut waits = Vec::new();
+    let lag = reads(&[10.0, 11.0, 12.0, 12.0]);
+    assert!(steady(lag, |ms| waits.push(ms), (200, 800)));
+    assert_eq!(waits, [200, 200, 200], "it lagged two reads");
+    waits.clear();
+    assert!(steady(reads(&[5.0]), |ms| waits.push(ms), (200, 800)));
+    assert_eq!(waits, [200], "two reads, a sample apart");
+}
+
+#[test]
+fn a_percent_that_keeps_moving_stops_the_wait_at_its_cap() {
+    let mut waits = Vec::new();
+    let moving = reads(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+    assert!(!steady(moving, |ms| waits.push(ms), (200, 800)));
+    assert_eq!(waits, [200, 200, 200, 200], "never past the cap");
+    waits.clear();
+    let unroomy = steady(reads(&[1.0]), |ms| waits.push(ms), (200, 100));
+    assert!(!unroomy && waits.is_empty(), "no room for a sample");
+    assert!(
+        steady(|| None, |_| {}, (200, 800)),
+        "no pattern reads none twice"
+    );
 }
 
 #[test]

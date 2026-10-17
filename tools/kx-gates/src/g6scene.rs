@@ -11,9 +11,11 @@ use kx_platform_windows::screen;
 use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
+use windows::core::BOOL;
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::g6judge::{Look, Pair, Stops};
+use crate::g6judge::{self, Look, Pair, Stops};
+use crate::g6spot::{Spot, Tried};
 use crate::keymap::Reader;
 use crate::padread::PadRead;
 use crate::pin::{Pinned, pt};
@@ -96,6 +98,16 @@ impl<'a> Scene<'a> {
         unsafe { sp.CurrentVerticalViewSize() }.ok()
     }
 
+    /// True when the scroll pattern at the glide's start says it scrolls sideways; none without a pattern there.
+    #[allow(unsafe_code, reason = "A plain property read on a live pattern.")]
+    pub fn sideways(&self) -> Option<bool> {
+        let sp = self.sp.as_ref()?;
+        // SAFETY: a plain property read on a live pattern; a failure reads as none.
+        unsafe { sp.CurrentHorizontallyScrollable() }
+            .ok()
+            .map(BOOL::as_bool)
+    }
+
     /// The scroll pattern at the glide's start, for G6's own step.
     pub fn scroller(&self) -> Option<&IUIAutomationScrollPattern> {
         self.sp.as_ref()
@@ -113,6 +125,14 @@ impl<'a> Scene<'a> {
     /// A look over `ms`.
     pub fn look(&self, ms: u64) -> Result<Look, String> {
         Ok(self.phase(Dir::Down, ms)?.look)
+    }
+
+    /// The look that shows a stop: once the percents read the same twice `sample_ms` apart, waiting at most `still_ms`
+    /// for a late provider, a look over `still_ms`.
+    pub fn still_look(&self) -> Result<Look, String> {
+        let g = &self.ctx.cfg.g6;
+        g6judge::steady(|| self.pair(), sleep_ms, (g.sample_ms, g.still_ms));
+        self.look(g.still_ms)
     }
 
     /// Reads the percents towards `dir` every `sample_ms` for `ms`, between two pictures.
@@ -174,24 +194,24 @@ impl<'a> Scene<'a> {
     }
 
     /// Where a press outside our windows lands: the glide's start, but on Explorer only a spot UI Automation shows is
-    /// no file or column (`g6spot`); none when Explorer shows no such spot.
-    pub fn spot(&self) -> Option<POINT> {
+    /// no file or column (`g6spot`); else what each spot tried showed.
+    pub fn spot(&self) -> Result<Spot, Vec<Tried>> {
         if self.app.kind != AppKind::Explorer {
-            return Some(self.pin.start);
+            let at = self.pin.start;
+            return Ok(Spot { at, part: None });
         }
         g6spot::find(&self.reader, self.app.hwnd, self.ctx.cfg.g6.spot_px)
     }
 
-    /// Clicks `p`, from `spot`, once Explorer still shows it safe there: a press outside our windows, counted; false
-    /// when it did not click.
-    pub fn click_out(&self, p: POINT) -> Result<bool, String> {
-        let explorer = self.app.kind == AppKind::Explorer;
-        if explorer && !g6spot::ok_at(&self.reader, self.app.hwnd, p) {
-            return Ok(false);
+    /// Clicks `spot`, from `spot()`, once it still shows safe there: a press outside our windows, counted; what UI
+    /// Automation showed when it did not click.
+    pub fn click_out(&self, spot: Spot) -> Result<Option<Tried>, String> {
+        if let Some(refused) = g6spot::check(&self.reader, self.app.hwnd, spot) {
+            return Ok(Some(refused));
         }
         self.count(|m| m.clicks += 1);
-        simuser::click(self.ctx, self.app, pt(p))?;
-        Ok(true)
+        simuser::click(self.ctx, self.app, pt(spot.at))?;
+        Ok(None)
     }
 
     /// Puts the keyboard focus on Explorer's list by UI Automation, as its column header may hold it after a press;

@@ -1,6 +1,9 @@
-//! Tests of G6's cases: the ratio from both slopes, sizing faults, Stop, and the skipped press-stop.
+//! Tests of G6's cases: the ratio from both slopes, sizing faults, Stop, the press-stop and its skip, and the notes.
+
+use windows::Win32::UI::Accessibility::UIA_PaneControlTypeId;
 
 use super::*;
+use crate::g6spot::{Part, Tried};
 
 /// A phase whose percent climbs `per_s` a second, read every 200 ms.
 fn phase(per_s: f64) -> Phase {
@@ -74,9 +77,60 @@ fn a_pad_that_stopped_itself_on_the_way_up_fails_stop_with_its_own_note() {
 }
 
 #[test]
-fn a_press_stop_without_a_safe_spot_is_skipped_with_a_note_and_never_passes() {
-    let skipped = Case::unjudged(PRESS, NO_SPOT);
-    assert_eq!(skipped.ok, None, "not a pass");
-    assert_eq!(skipped.json()["note"]["unjudged"], NO_SPOT);
+fn a_press_stop_without_a_safe_spot_is_skipped_with_each_try_and_never_passes() {
+    let tried = Tried {
+        part: Part::Header,
+        kind: Some(UIA_PaneControlTypeId),
+        class: "DirectUIHWND".to_string(),
+        owner: "[CabinetWClass] of explorer.exe".to_string(),
+    };
+    let skipped = Case::unspotted(std::slice::from_ref(&tried));
+    assert_eq!((skipped.name, skipped.ok), (PRESS, None), "not a pass");
+    let note = skipped.json()["note"].clone();
+    assert_eq!(note["unjudged"], NO_SPOT);
+    assert_eq!(note[TRIED], json!([tried.json()]));
     assert!(sizing_faults(&[skipped]).is_empty());
+}
+
+/// A look whose picture stood still, its percents `before` and `after`.
+fn still(before: (f64, f64), after: (f64, f64)) -> Look {
+    Look {
+        share: Some(0.0),
+        before: Some(before),
+        after: Some(after),
+    }
+}
+
+#[test]
+fn each_still_case_notes_both_looks_percents() {
+    let min = crate::config::load().expect("loads").g6.min_changed;
+    let late = still((0.0, 40.0), (0.0, 40.5));
+    let third = Case::stilled("third_tap", Some(late), min);
+    assert_eq!(third.ok, Some(false), "a late percent still moved");
+    assert_eq!(third.note[PAIRS], json!([[0.0, 40.0], [0.0, 40.5]]));
+    assert_eq!(
+        Case::stopped(Some(late), min).note[PAIRS],
+        third.note[PAIRS]
+    );
+}
+
+#[test]
+fn a_press_stop_is_judged_on_its_run_and_its_still_look_with_their_notes() {
+    let min = crate::config::load().expect("loads").g6.min_changed;
+    let going = Look {
+        share: Some(0.3),
+        before: Some((0.0, 10.0)),
+        after: Some((0.0, 14.0)),
+    };
+    let after = still((0.0, 14.0), (0.0, 14.0));
+    let case = Case::pressed(&going, &after, min);
+    assert_eq!((case.name, case.ok), (PRESS, Some(true)));
+    assert_eq!(case.note["going"], 0.3);
+    assert_eq!(case.note[PAIRS], json!([[0.0, 14.0], [0.0, 14.0]]));
+    let on = still((0.0, 14.0), (0.0, 15.0));
+    assert_eq!(
+        Case::pressed(&going, &on, min).ok,
+        Some(false),
+        "it kept going"
+    );
 }

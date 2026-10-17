@@ -7,6 +7,7 @@ use serde_json::{Value, json};
 
 use crate::g6judge::{self, Look, Pair};
 use crate::g6scene::{Phase, Scene, between};
+use crate::g6spot::Tried;
 use crate::keys;
 use crate::p5cfg::G6;
 use crate::simuser::keys_ours;
@@ -25,6 +26,10 @@ const NO_SPOT: &str =
     "Explorer showed no spot UI Automation reads as no file or column, so G6 did not click";
 /// The press-stop case's name.
 const PRESS: &str = "press_stop";
+/// The note's key for what UI Automation showed at each spot tried.
+const TRIED: &str = "tried";
+/// The note's key for a still look's percents, before and after.
+const PAIRS: &str = "pairs";
 /// Why the end case is not judged on Explorer: Ctrl+End would not reach its list.
 const NO_FOCUS: &str =
     "UI Automation could not put the focus on Explorer's list, so Ctrl+End would miss it";
@@ -61,9 +66,27 @@ impl Case {
     /// A case judged by `still` on `look` when there was one, else failed as the pad stopped itself.
     fn stilled(name: &'static str, look: Option<Look>, min: f64) -> Self {
         match look {
-            Some(l) => Self::judged(name, l.still(min), json!({ "share": l.share })),
+            Some(l) => Self::judged(name, l.still(min), still_note(&l)),
             None => Self::too_short(name),
         }
+    }
+
+    /// The press-stop case left unjudged as no spot tried was safe, with what each `tried` showed.
+    fn unspotted(tried: &[Tried]) -> Self {
+        let tried: Vec<Value> = tried.iter().map(Tried::json).collect();
+        Self {
+            name: PRESS,
+            ok: None,
+            note: json!({ "unjudged": NO_SPOT, TRIED: tried }),
+        }
+    }
+
+    /// The press-stop case: it was `going` down, then stood still `after` the click.
+    fn pressed(going: &Look, after: &Look, min: f64) -> Self {
+        let ok = going.moved(Dir::Down, min) && after.still(min);
+        let pairs = [after.before, after.after];
+        let note = json!({ "going": going.share, "after": after.share, PAIRS: pairs });
+        Self::judged(PRESS, ok, note)
     }
 
     /// A case that failed as the pad met the document's end before it: a sizing fault, never a pass.
@@ -74,7 +97,7 @@ impl Case {
     /// The Stop case, judged by `still` on `look` when Stop went out, else failed as the pad stopped itself first.
     fn stopped(look: Option<Look>, min: f64) -> Self {
         match look {
-            Some(l) => Self::judged("stop", l.still(min), json!({ "share": l.share })),
+            Some(l) => Self::judged("stop", l.still(min), still_note(&l)),
             None => Self::judged("stop", false, json!({ EARLY: UP_FIRST })),
         }
     }
@@ -83,6 +106,11 @@ impl Case {
     pub fn json(&self) -> Value {
         json!({ "case": self.name, "ok": self.ok, "note": self.note })
     }
+}
+
+/// A still look's note: its changed share and its percents before and after.
+fn still_note(l: &Look) -> Value {
+    json!({ "share": l.share, PAIRS: [l.before, l.after] })
 }
 
 /// The names of `cases` that failed as the pad met the document's end first.
@@ -107,7 +135,7 @@ pub fn speeds(s: &Scene, want: f64) -> Result<Vec<Case>, String> {
         None
     } else {
         s.third(Dir::Down)?;
-        Some(s.look(g.still_ms)?)
+        Some(s.still_look()?)
     };
     let min = g.min_changed;
     let down = slow.look.moved(Dir::Down, min) && fast.look.moved(Dir::Down, min);
@@ -142,7 +170,7 @@ pub fn up_and_stop(s: &Scene) -> Result<Vec<Case>, String> {
     s.arrow(Dir::Up)?;
     let up = s.look(g.move_ms)?;
     let stopped = if s.stop()? {
-        Some(s.look(g.still_ms)?)
+        Some(s.still_look()?)
     } else {
         None
     };
@@ -155,30 +183,28 @@ pub fn up_and_stop(s: &Scene) -> Result<Vec<Case>, String> {
 /// Taps down, clicks the window's safe spot outside our windows while the pad still scrolls, then glides back: the
 /// click stopped it. Unjudged, with Stop tapped, when the window shows no safe spot (`Scene::spot`).
 pub fn press_stop(s: &Scene) -> Result<Case, String> {
-    let Some(spot) = s.spot() else {
-        return Ok(Case::unjudged(PRESS, NO_SPOT));
+    let spot = match s.spot() {
+        Ok(spot) => spot,
+        Err(tried) => return Ok(Case::unspotted(&tried)),
     };
-    let (g, min) = (&s.ctx.cfg.g6, s.ctx.cfg.g6.min_changed);
     s.arrow(Dir::Down)?;
-    let going = s.look(g.move_ms)?;
+    let going = s.look(s.ctx.cfg.g6.move_ms)?;
     if s.idle() {
         return Ok(Case::too_short(PRESS));
     }
-    if !s.click_out(spot)? {
+    if let Some(refused) = s.click_out(spot)? {
         s.stop()?;
-        return Ok(Case::unjudged(PRESS, NO_SPOT));
+        return Ok(Case::unspotted(&[refused]));
     }
-    let after = s.look(g.still_ms)?;
+    let after = s.still_look()?;
     s.glide_in()?;
-    let ok = going.moved(Dir::Down, min) && after.still(min);
-    let note = json!({ "going": going.share, "after": after.share });
-    Ok(Case::judged(PRESS, ok, note))
+    Ok(Case::pressed(&going, &after, s.ctx.cfg.g6.min_changed))
 }
 
-/// Right, then left for `[pad] undo_div` times less, each ended by Stop, where the window overflows sideways or is
-/// `wide` by make; unjudged elsewhere. Without a horizontal percent, the picture judges.
-pub fn sideways(s: &Scene, wide: bool) -> Result<Case, String> {
-    if !wide && !g6judge::sideways(s.pair()) {
+/// Right, then left for `[pad] undo_div` times less, each ended by Stop, where the scroll pattern says the window
+/// scrolls sideways; unjudged elsewhere. Without a horizontal percent, the picture judges.
+pub fn sideways(s: &Scene) -> Result<Case, String> {
+    if !g6judge::sideways(s.sideways()) {
         return Ok(Case::unjudged("sideways", "no sideways overflow"));
     }
     let (g, min) = (&s.ctx.cfg.g6, s.ctx.cfg.g6.min_changed);
@@ -220,7 +246,9 @@ pub fn end(s: &Scene) -> Result<(Case, Pair), String> {
     }
     let (down, back) = (between(&from, &now), between(&bottom, &now));
     let ok = g6judge::end_ok(idle, &down, &back, g.min_changed);
-    let note = json!({ "stopped_itself": idle, "down_share": down.share, "end_share": back.share });
+    let note = json!({
+        "stopped_itself": idle, "down_share": down.share, "end_share": back.share, "stopped_pair": now.pair,
+    });
     Ok((Case::judged("end", ok, note), bottom.pair))
 }
 

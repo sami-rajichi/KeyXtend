@@ -18,7 +18,8 @@ ratio_slack = 0.3
 # Each other direction scrolls this long before it is judged.
 move_ms = 1500
 # A scroll has stopped when two looks this far apart show no percent moving, or, where UI Automation reads no percent,
-# a picture changed no more than min_changed; a moved scroll is judged the same way.
+# a picture changed no more than min_changed; a moved scroll is judged the same way. Before each such look G6 waits up
+# to still_ms for the percents to read the same twice, sample_ms apart, as a late provider's percent trails its picture.
 still_ms = 800
 # The end case scrolls up from the document's end for back_ms, then down again, and waits up to end_wait_ms for the end.
 back_ms = 2000
@@ -38,8 +39,9 @@ max_per_row = 32
 # After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to read the same twice,
 # sample_ms apart, near its size before scaled by the files (its aim), so the extent does not grow mid-phase.
 grow_wait_ms = 5000
-# On Explorer, press-stop clicks only where UI Automation finds the column header itself this far past its last
-# column, else the status bar's centre; with no such spot it is skipped, never a pass.
+# On Explorer, press-stop clicks inside the column header this far past every column, where UI Automation finds the
+# header or a bare list, pane or group, else the status bar's centre, where it finds the bar or its own text; with no
+# such spot it is skipped, never a pass.
 spot_px = 16
 
 # The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by

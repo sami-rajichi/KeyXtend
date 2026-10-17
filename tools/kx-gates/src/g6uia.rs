@@ -1,5 +1,5 @@
-//! G6's own UI Automation reads on Explorer: its parts' boxes by control type, the type at a point, and the keyboard
-//! focus put on its list. None of them moves the pointer.
+//! G6's own UI Automation reads on Explorer: its parts' boxes by control type, the types at a point and above it,
+//! and the keyboard focus put on its list. None of them moves the pointer.
 #![cfg(windows)]
 
 use spike_core::uia;
@@ -11,11 +11,45 @@ use windows::Win32::UI::Accessibility::{
 };
 use windows::core::BOOL;
 
-/// The control type of the element at screen point `p`; none when UI Automation finds nothing there.
+/// What UI Automation shows at a point: the control types from the element there up to the root, and its class.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct At {
+    /// The element's control type first, then each parent's.
+    pub chain: Vec<UIA_CONTROLTYPE_ID>,
+    /// True when the walk read every type up to the root.
+    pub whole: bool,
+    /// The element's class name.
+    pub class: String,
+}
+
+/// What UI Automation shows at screen point `p`; an empty chain when it finds nothing there.
 #[allow(unsafe_code, reason = "UI Automation calls on a live client.")]
-pub fn kind_at(auto: &IUIAutomation, p: POINT) -> Option<UIA_CONTROLTYPE_ID> {
-    // SAFETY: plain calls; any point is allowed, and it moves no pointer.
-    unsafe { auto.ElementFromPoint(p).ok()?.CurrentControlType().ok() }
+pub fn chain_at(auto: &IUIAutomation, p: POINT) -> At {
+    let mut at = At::default();
+    // SAFETY: plain calls and property reads; the walk ends where an element has no parent, and it moves no pointer.
+    unsafe {
+        let (Ok(walker), Ok(mut el)) = (auto.ControlViewWalker(), auto.ElementFromPoint(p)) else {
+            return at;
+        };
+        at.class = el
+            .CurrentClassName()
+            .map(|b| b.to_string())
+            .unwrap_or_default();
+        loop {
+            let Ok(kind) = el.CurrentControlType() else {
+                return at;
+            };
+            at.chain.push(kind);
+            el = match walker.GetParentElement(&el) {
+                Ok(parent) => parent,
+                // The root has no parent: the call succeeds and gives none.
+                Err(e) => {
+                    at.whole = e.code().is_ok();
+                    return at;
+                }
+            };
+        }
+    }
 }
 
 /// The screen boxes of every element of control type `kind` inside window `hwnd`, in tree order; none on a failure.

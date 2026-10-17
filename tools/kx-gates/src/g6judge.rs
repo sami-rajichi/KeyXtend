@@ -1,5 +1,5 @@
-//! G6's judging, from numbers only: a picture's changed share and UI Automation's percents tell whether a window moved
-//! or stood still, percent reads give a speed's rate, and the scroll module's counts tell how it stopped.
+//! G6's judging, from numbers only: a picture's changed share and UI Automation's percents tell whether a window moved,
+//! settled or stood still, percent reads give a speed's rate, and the scroll module's counts tell how it stopped.
 #![cfg(windows)]
 
 use kx_module_api::MS_PER_S;
@@ -50,6 +50,14 @@ impl Look {
         !turned
     }
 
+    /// True when no vertical percent moved, up or down.
+    fn level(&self) -> bool {
+        let ways = [Dir::Down, Dir::Up];
+        !ways
+            .into_iter()
+            .any(|d| percent_moved(d, self.before, self.after))
+    }
+
     /// True when both looks read a percent on `dir`'s axis.
     fn reads(&self, dir: Dir) -> bool {
         [self.before, self.after]
@@ -96,21 +104,37 @@ pub fn ratio_ok(slow: f64, fast: f64, want: f64, slack: f64) -> bool {
     ratio > 0.0 && (ratio - want).abs() <= want * slack
 }
 
-/// True when the document overflows sideways, so its sideways cases are judged: its horizontal percent reads.
-pub fn sideways(pair: Pair) -> bool {
-    pair.and_then(|p| along(Dir::Right, p)).is_some()
+/// True when the sideways cases are judged: the scroll pattern says it scrolls sideways, as the product asks.
+pub fn sideways(scrollable: Option<bool>) -> bool {
+    scrollable == Some(true)
 }
 
-/// True when `pair` reads at `dir`'s end.
-pub fn ended(dir: Dir, pair: Pair) -> bool {
-    reach(dir, pair.and_then(|p| along(dir, p))) == Reach::End
+/// Reads `read` every `sample_ms`, after `wait`, until it reads the same twice in a row or `cap_ms` passed; true when
+/// it did.
+pub fn steady(
+    mut read: impl FnMut() -> Pair,
+    mut wait: impl FnMut(u64),
+    (sample_ms, cap_ms): (u64, u64),
+) -> bool {
+    let (sample_ms, mut spent) = (sample_ms.max(1), 0);
+    let mut last = read();
+    while spent + sample_ms <= cap_ms {
+        wait(sample_ms);
+        spent += sample_ms;
+        let now = read();
+        if now == last {
+            return true;
+        }
+        last = now;
+    }
+    false
 }
 
-/// True when the end case passed: the pad stopped by itself, its `down` leg moved, and `back`, from the look at the
-/// end before it to now, shows the end again: by percent where it reads, else by a picture within `min` of it.
+/// True when the end case passed: the pad stopped by itself, its `down` leg moved, and `back`, from Ctrl+End's bottom
+/// to now, shows that bottom again: no vertical percent moved where both read one, else a picture within `min` of it.
 pub fn end_ok(idle: bool, down: &Look, back: &Look, min: f64) -> bool {
     let at_end = if back.reads(Dir::Down) {
-        ended(Dir::Down, back.after)
+        back.level()
     } else {
         back.share.is_some_and(|s| s <= min)
     };

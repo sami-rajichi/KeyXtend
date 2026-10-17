@@ -22,9 +22,6 @@ use crate::{probetext, win};
 
 /// The apps G6 probes; never Word (roadmap G6, owner, 2026-10-16).
 pub const APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Chrome, AppKind::Explorer];
-/// The apps whose document always overflows sideways, so sideways is always judged: Chrome shows the long lines in a
-/// `<pre>`, unwrapped.
-const WIDE: [AppKind; 1] = [AppKind::Chrome];
 
 /// What one app's run gave: its cases, its records, and the clicks and taps it made that stop a scroll.
 struct Driven {
@@ -77,7 +74,7 @@ fn drive(
     let mut cases = g6cases::speeds(&s, want)?;
     cases.extend(g6cases::up_and_stop(&s)?);
     cases.push(g6cases::press_stop(&s)?);
-    cases.push(g6cases::sideways(&s, WIDE.contains(&kind))?);
+    cases.push(g6cases::sideways(&s)?);
     let (end, bottom) = g6cases::end(&s)?;
     cases.push(end);
     Ok(Driven {

@@ -20,7 +20,7 @@ fn the_shipped_settings_pass() {
 
 #[test]
 fn g6_settings_that_check_nothing_are_refused() {
-    let bad: [fn(&mut G6); 23] = [
+    let bad: [fn(&mut G6); 24] = [
         |g| g.inset_px = 0,
         |g| g.spot_px = 0,
         |g| g.max_per_row = 1,
@@ -38,6 +38,7 @@ fn g6_settings_that_check_nothing_are_refused() {
         |g| g.ratio_slack = f64::NAN,
         |g| g.move_ms = 0,
         |g| g.still_ms = 0,
+        |g| g.still_ms = g.sample_ms - 1,
         |g| g.back_ms = 0,
         |g| g.end_wait_ms = 0,
         |g| g.lag_wait_ms = 0,
