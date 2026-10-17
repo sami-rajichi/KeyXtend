@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 09:45 — P5: our open list's outline shows, and last polish before the hands-on test
+A peek or a scroll on our open list now draws the outline just outside the list's box, as the opaque list hid edges laid inside it; `ScrollAimed` and the hub's scroll state say when the box is ours. UI Automation's walk down a covered target never goes into an element of our own process, and its time share is a named constant. The fake scroll target answers `Gone` to turns on a closed window, as Windows does, and the list's mark test checks the calls' order instead of the guard's delay.
+
 ## 2026-10-17 09:07 — P5: a percent past 100 is the end, the wheel comes back at Explorer's bottom, and the watch waits quietly for the guard
 UI Automation's percent above 100, as Notepad's 100.005 after Ctrl+End, now reads as 100 and so the end, instead of as no percent. When the `ScrollPattern` steps end at the percent where the wheel tripped, as Explorer's bottom at 99.991, the trip clears, so later scrolls of that window use the wheel again. A watch asked before the guard holds the keyboard now says "not guarded yet" quietly, and warns once only when a guard run ends with the scroll module live and the watch never held.
 
@@ -15,6 +18,9 @@ UI Automation now goes down a covered target's window to the element at the kept
 
 ## 2026-10-17 07:18 — P5: the open list wins the scroll pad while it shows
 While our open list shows, the pad pages it whatever point was kept, so a pointer that crossed the app in the gap above the keyboard no longer scrolls the app. A target that our window covers is now read and stepped by UI Automation at its own window, never at ours. With the pointer on our banner there is no target: a check mid-scroll keeps the last target, a tap asks the user to point first, and a closed target still stops the scroll.
+
+## 2026-10-17 07:00 — P5: the hook's property sim orders a send made with our hooks out as Windows does
+Two hook property failures came from the test model, not the product: the sim queued a reinstall's batch, sent with our hooks out, behind input that Windows passes first. A send with our hooks out now reaches the apps right after our own waiting input and before the hand's, which reaches the hooks put back (2de63ec, 76eb721). The saved seeds and three named cases keep those runs checked; putting the hooks back before that send is saved as a P4 idea.
 
 ## 2026-10-17 06:31 — P5: the scroll pad aims at our open list again, and never turns a page silently
 The open list asks the guard to mark it as a window that pages, so pointing at it and tapping the pad turns its page again, while the keyboard and the banner are still passed over. A kept point that our window now covers aims at the first other app's window behind ours there, or asks the user to point first; it never sends a page turn that turns nothing. UI Automation now takes the box and percent from the first element that scrolls along the tapped way, so ▼ over a wide table sees the page's end. Four files over 300 lines were split by topic.
