@@ -255,8 +255,8 @@ impl Sim {
         }
     }
 
-    /// Takes the host's OS calls: the taken part of each batch joins the stream, or reaches the apps when our hooks heard
-    /// it inside the send, a slipped gesture lands after it, and the hooks go in or out.
+    /// Takes the host's OS calls: the taken part of each batch lands as Windows puts it, a slipped gesture lands after
+    /// it, and the hooks go in or out.
     fn collect(&mut self) {
         for call in self.rig.world.take() {
             match call {
@@ -274,11 +274,7 @@ impl Sim {
                         id,
                         unseen: false,
                     });
-                    if self.rig.world.inside.get() {
-                        self.apps.extend(sent);
-                    } else {
-                        self.stream.extend(sent);
-                    }
+                    self.land(sent.collect());
                     if let Some(g) = self.slip.take() {
                         self.gesture(g);
                     }
@@ -289,6 +285,19 @@ impl Sim {
             }
         }
         self.grew |= self.rig.host.room() != self.room;
+    }
+
+    /// Puts our taken `sent` where Windows does. `SendInput` returns only once its input passed, so with our hooks out
+    /// what waited ahead of it passes first, by our hooks; else it reaches the apps when heard inside, or joins the stream.
+    fn land(&mut self, sent: Vec<Ev>) {
+        if !self.hooked && !sent.is_empty() {
+            self.apps.extend(self.stream.drain(..));
+            self.apps.extend(sent);
+        } else if self.rig.world.inside.get() {
+            self.apps.extend(sent);
+        } else {
+            self.stream.extend(sent);
+        }
     }
 }
 

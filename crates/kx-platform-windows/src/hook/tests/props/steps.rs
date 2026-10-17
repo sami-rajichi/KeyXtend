@@ -19,7 +19,7 @@ const MIN_STALL_MS: u32 = CFG.echo_ms + 1;
 /// Longest stall: two waits for our echo, so a newer batch's wait can end as lost too.
 const MAX_STALL_MS: u32 = 2 * CFG.echo_ms;
 /// Where the engine's own acts land, off the hand's row.
-const ENGINE_AT: Point = Point { x: -1, y: -1 };
+pub(super) const ENGINE_AT: Point = Point { x: -1, y: -1 };
 
 /// One thing that happens.
 #[derive(Clone, Debug)]
@@ -59,15 +59,15 @@ pub(super) enum Step {
 }
 
 /// What the engine does with each call.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(super) struct Script {
-    drop: bool,
+    pub(super) drop: bool,
     /// Drops only releases, as a carry does.
-    carry: bool,
-    on: Vec<PointerAct>,
-    settle: Vec<PointerAct>,
-    release: Vec<PointerAct>,
-    notes: bool,
+    pub(super) carry: bool,
+    pub(super) on: Vec<PointerAct>,
+    pub(super) settle: Vec<PointerAct>,
+    pub(super) release: Vec<PointerAct>,
+    pub(super) notes: bool,
 }
 
 impl Script {

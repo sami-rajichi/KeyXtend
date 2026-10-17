@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 1bee61d6c9a038493d40572c5e3978b630d54240f546b5ec6e2c8373e7ac8939 # shrinks to steps = [Pass(501), Hand(Flip(Right)), Hand(Flip(Right)), Check, Plan(Script { drop: false, carry: false, on: [], settle: [], release: [Down(Right, ‹redacted›)], notes: false }), Check, Panic(true), Rit, Rit, Slip(Flip(Left))]

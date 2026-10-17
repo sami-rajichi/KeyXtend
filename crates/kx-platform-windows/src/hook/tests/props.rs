@@ -2,6 +2,7 @@
 //! swallowed or heard inside our send, cut sends, missed events and panics, then a stop, all checked on what reached the
 //! apps.
 
+mod cases;
 mod sim;
 mod steps;
 
