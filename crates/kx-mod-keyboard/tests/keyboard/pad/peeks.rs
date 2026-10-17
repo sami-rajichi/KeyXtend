@@ -94,6 +94,19 @@ fn a_quick_restart_while_a_peek_is_held_still_tells_the_new_run() {
     assert_eq!(order, [true, true], "the new run hears it");
 }
 
+/// The scroll module may have restarted unheard while the keyboard was down, so the keyboard's start tells its answer
+/// that the pointer rests on the pad.
+#[test]
+fn a_keyboard_restart_tells_the_scroll_module_the_pointer_again() {
+    let mut p = Pad::quiet(None);
+    p.scroll(true, None, false);
+    p.hover(true);
+    assert_eq!(p.heard(), [Heard::Peek(true)]);
+    p.b.rig.restart(Some(("lang_key", "cycle".into())));
+    p.b.send(&LIVE);
+    assert_eq!(p.heard(), [Heard::Ask, Heard::Peek(true)]);
+}
+
 /// One thing that happens to the pad.
 #[derive(Copy, Clone, Debug)]
 enum Step {

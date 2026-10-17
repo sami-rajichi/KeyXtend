@@ -73,7 +73,8 @@ impl Face {
 }
 
 /// Hears the mouse and scroll modules' states and the latch events for `face` until the module stops, then tells the
-/// latched set and asks both modules for their states, as each may have missed the other while one was stopped.
+/// latched set and asks both modules for their states, as each may have missed the other while one was stopped. The
+/// scroll module may have restarted unheard, so a new run starts and its answer hears the pointer anew.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -83,6 +84,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
     on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
     face.tell(true);
+    face.lock().new_run();
     cx.bus().publish(&AssistAsk)?;
     cx.bus().publish(&ScrollAsk)
 }
