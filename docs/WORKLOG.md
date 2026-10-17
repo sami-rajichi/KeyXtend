@@ -4,8 +4,11 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 08:15 — P5: a covered target is read at its point, and the list is marked and outlined as it opens
+UI Automation now goes down a covered target's window to the element at the kept point, so a pane or list inside it is read and stepped. The open list asks for its page mark as it opens, which also guards it, and a peek outlines the list window. A target that closes just before a check stops the scroll instead of taking the window now at its point.
+
 ## 2026-10-17 07:18 — P5: the open list wins the scroll pad while it shows
-While our open list shows, the pad pages it whatever point was kept, so a pointer that crossed the app in the gap above the keyboard no longer scrolls the app. A target that our window covers is now read and stepped by UI Automation at its own window, never at ours. A tap with the pointer on our banner asks the user to point first, and mid-scroll such an aim keeps the last target, while a closed target still stops the scroll.
+While our open list shows, the pad pages it whatever point was kept, so a pointer that crossed the app in the gap above the keyboard no longer scrolls the app. A target that our window covers is now read and stepped by UI Automation at its own window, never at ours. With the pointer on our banner there is no target: a check mid-scroll keeps the last target, a tap asks the user to point first, and a closed target still stops the scroll.
 
 ## 2026-10-17 06:31 — P5: the scroll pad aims at our open list again, and never turns a page silently
 The open list asks the guard to mark it as a window that pages, so pointing at it and tapping the pad turns its page again, while the keyboard and the banner are still passed over. A kept point that our window now covers aims at the first other app's window behind ours there, or asks the user to point first; it never sends a page turn that turns nothing. UI Automation now takes the box and percent from the first element that scrolls along the tapped way, so ▼ over a wide table sees the page's end. Four files over 300 lines were split by topic.
