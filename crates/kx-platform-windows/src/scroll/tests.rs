@@ -200,18 +200,28 @@ fn bad_percents_are_refused() {
         None,
         "cannot scroll that way"
     );
-    for bad in [f64::NAN, f64::INFINITY, FULL + 0.5, -0.5] {
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.5] {
         assert_eq!(along(Dir::Up, (0.0, bad)), None, "{bad}");
     }
     assert_eq!(along(Dir::Left, (FULL, 0.0)), Some(FULL));
 }
 
 #[test]
-fn a_percent_rounded_just_past_its_range_is_its_end() {
-    let (over, under) = (FULL + END_SLACK / 2.0, -END_SLACK / 2.0);
-    assert_eq!(along(Dir::Down, (0.0, over)), Some(FULL));
+fn a_percent_rounded_just_below_0_is_its_end() {
+    let under = -END_SLACK / 2.0;
     assert_eq!(along(Dir::Right, (under, 0.0)), Some(0.0));
-    assert_eq!(along(Dir::Down, (0.0, FULL + END_SLACK * 2.0)), None);
+    assert_eq!(along(Dir::Right, (-END_SLACK * 2.0, 0.0)), None);
+}
+
+/// Notepad's view at Ctrl+End reads 100.005.
+#[test]
+fn any_percent_above_full_is_full_and_so_the_end() {
+    let notepad = along(Dir::Down, (0.0, 100.005_25));
+    assert_eq!(notepad, Some(FULL));
+    assert_eq!(reach(Dir::Down, notepad), Reach::End);
+    for over in [FULL + END_SLACK / 2.0, FULL + END_SLACK * 2.0, f64::MAX] {
+        assert_eq!(along(Dir::Right, (over, 0.0)), Some(FULL), "{over}");
+    }
 }
 
 #[test]

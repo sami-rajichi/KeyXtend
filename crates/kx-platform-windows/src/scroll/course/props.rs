@@ -1,9 +1,9 @@
 //! Properties over random runs: carried steps never drift by a whole step, a target that moves at each notch or step
-//! is never judged still, even when it shows them a read late, and one that stays still is judged once `check_ms` passed
-//! and its steps had a whole read to show.
+//! is never judged still, even when it shows them a read late, one that stays still is judged once `check_ms` passed
+//! and its steps had a whole read to show, and the steps give the wheel back only when they end where it stopped.
 
 use super::*;
-use crate::scroll::tests::{CONFIG, NOTCH, aim, at, wheel};
+use crate::scroll::tests::{CONFIG, NOTCH, THREE, aim, at, wheel};
 use crate::scroll::{FULL, PAGE_SCROLL};
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -144,6 +144,10 @@ proptest! {
             let reach = c.read(&a, Dir::Down, at(now), pair(Dir::Down, pct));
             let judged = if glides(setting) { c.tripped() } else { reach == Reach::End };
             prop_assert_eq!(judged, due, "at {} ms after {} sent", now, prev);
+            if judged && glides(setting) {
+                // The steps that follow end at this percent and give the wheel back, a property of its own.
+                break;
+            }
             prev = sent;
             let ours = |t: &Turn| !glides(setting) || t.route != Route::Uia;
             if let Some(turn) = c.turn(&a, Dir::Down, lines, w).filter(ours) {
@@ -170,6 +174,27 @@ proptest! {
             if let Some(turn) = c.turn(&a, Dir::Down, lines, w) {
                 prop_assert_eq!(turn.route, next);
             }
+        }
+    }
+
+    #[test]
+    fn steps_give_the_wheel_back_only_when_they_end_where_it_stopped(
+        tick in TICK_MS,
+        stopped in 0.0..START,
+        moved in any::<bool>(),
+        owed in vec(0.0..=MAX_LINES, 1..=MAX_TICKS),
+    ) {
+        let (mut c, a, w) = (Course::new(CONFIG), aim(1, false), wheel(THREE, THREE));
+        let (mut now, mut pct) = (0, stopped);
+        for lines in owed {
+            if c.read(&a, Dir::Down, at(now), pair(Dir::Down, pct)) == Reach::End {
+                prop_assert_eq!(c.tripped(), moved, "an end at {} after a trip at {}", pct, stopped);
+            }
+            if moved && c.tripped() {
+                pct = stopped + NUDGE;
+            }
+            c.turn(&a, Dir::Down, lines, w);
+            now += tick;
         }
     }
 

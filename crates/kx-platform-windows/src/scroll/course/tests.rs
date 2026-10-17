@@ -207,6 +207,55 @@ fn a_percent_still_under_ui_automation_steps_reads_as_the_end() {
     assert_eq!(after, Reach::More, "it moved after all");
 }
 
+/// Explorer's list at its bottom reads 99.991, so the wheel trips there and the steps then read the end there too.
+#[test]
+fn steps_that_end_where_the_wheel_stopped_give_the_wheel_back() {
+    let (a, w, bottom) = (aim(1, true), wheel(THREE, THREE), Some((0.0, 99.991)));
+    let mut c = Course::new(CONFIG);
+    assert_eq!(steps_end_at(&mut c, Dir::Down, bottom, bottom), Reach::End);
+    assert!(
+        !c.tripped(),
+        "that was the end, not a window deaf to the wheel"
+    );
+    assert_eq!(c.next_route(&a, Dir::Down, w), Route::Send);
+    let next = c.turn(&a, Dir::Down, NOTCH_LINES, w).map(|t| t.route);
+    assert_eq!(next, Some(Route::Send), "the next scroll uses the wheel");
+}
+
+#[test]
+fn steps_that_end_elsewhere_or_on_another_way_keep_the_trip() {
+    let mut c = Course::new(CONFIG);
+    let past = Some((0.0, 60.0));
+    assert_eq!(steps_end_at(&mut c, Dir::Down, HALF, past), Reach::End);
+    assert!(c.tripped(), "the steps moved what the wheel could not");
+    let mut c = Course::new(CONFIG);
+    let both = Some((50.0, 50.0));
+    assert_eq!(steps_end_at(&mut c, Dir::Right, both, both), Reach::End);
+    assert!(c.tripped(), "the wheel stopped on the other axis");
+}
+
+/// Trips `c` towards `way` at `stopped`, then steps it down while it reads `then`; the reach of the read that judges
+/// those steps.
+fn steps_end_at(
+    c: &mut Course,
+    way: Dir,
+    stopped: Option<(f64, f64)>,
+    then: Option<(f64, f64)>,
+) -> Reach {
+    let (a, w) = (aim(1, false), wheel(THREE, THREE));
+    c.read(&a, way, at(0), stopped);
+    c.turn(&a, way, NOTCH_LINES, w);
+    c.read(&a, way, at(CHECK), stopped);
+    c.read(&a, way, at(CHECK * 2), stopped);
+    assert!(c.tripped(), "the wheel moved nothing");
+    let mut last = Reach::Unknown;
+    for n in 3..6 {
+        c.turn(&a, Dir::Down, THIRD, w);
+        last = c.read(&a, Dir::Down, at(n * CHECK), then);
+    }
+    last
+}
+
 #[test]
 fn a_percent_a_rounding_away_from_its_end_is_at_it() {
     let (mut c, a) = (Course::new(CONFIG), aim(1, false));

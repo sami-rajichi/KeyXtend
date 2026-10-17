@@ -126,3 +126,26 @@ fn a_read_shows_its_box_and_hides_it_in_debug() {
     let shown = format!("{READ:?}");
     assert!(!shown.contains("990") && shown.contains("50.0"), "{shown}");
 }
+
+/// Explorer's list at its bottom reads 99.991: the wheel trips there, the steps read the end there, and the next scroll
+/// of that window uses the wheel again.
+#[test]
+fn steps_that_end_where_the_wheel_stopped_give_the_wheel_back() {
+    let fake = desk();
+    let bottom = Read {
+        pair: Some((0.0, 99.991)),
+        ..READ
+    };
+    fake.with(|s| (s.read, s.tick_ms) = (Some(bottom), CONFIG.check_ms));
+    let mut r = run(&fake);
+    let aim = r.aim().unwrap();
+    let mut reaches = vec![r.reach(&aim, Dir::Down)];
+    for lines in [NOTCH_LINES, NOTCH_LINES, 1.0, 1.0, 1.0] {
+        r.turn(&aim, Dir::Down, lines).unwrap();
+        reaches.push(r.reach(&aim, Dir::Down));
+    }
+    assert_eq!(reaches.last(), Some(&Reach::End), "{reaches:?}");
+    assert_eq!(fake.with(|s| (s.sent.len(), s.steps.len())), (2, 3));
+    r.turn(&aim, Dir::Down, NOTCH_LINES).unwrap();
+    assert_eq!(fake.with(|s| s.sent.len()), 3, "the wheel again");
+}

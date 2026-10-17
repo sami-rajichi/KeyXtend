@@ -1,5 +1,6 @@
 //! One run's course on its target: the part of a step carried to the next tick, the fallback to UI Automation's steps
-//! when a notch of wheel steps moves nothing, and the end those steps cannot pass.
+//! when a notch of wheel steps moves nothing, and the end those steps cannot pass, which gives the wheel back when it
+//! is where the wheel stopped.
 
 use std::time::Duration;
 
@@ -146,8 +147,9 @@ pub struct Course {
     watch: Watch,
     /// What the latest turn went by; none before the first.
     mode: Option<Mode>,
-    /// The target moves by UI Automation's steps until it changes.
-    tripped: bool,
+    /// The way and percent the wheel stopped at: the target moves by UI Automation's steps until it changes, or until
+    /// those steps read the end there too.
+    trip: Option<(Dir, f64)>,
 }
 
 impl Course {
@@ -168,7 +170,7 @@ impl Course {
             carry: Carry::default(),
             watch: Watch::default(),
             mode: None,
-            tripped: false,
+            trip: None,
         }
     }
 
@@ -176,7 +178,7 @@ impl Course {
     /// owed. Call it only for a step that will really go out, so a hung window's skipped tick never counts.
     pub fn turn(&mut self, aim: &Aim, dir: Dir, lines: f64, wheel: Wheel) -> Option<Turn> {
         self.follow(aim.id, dir);
-        let per_line = wheel.per_line(dir).filter(|_| !self.tripped);
+        let per_line = wheel.per_line(dir).filter(|_| self.trip.is_none());
         let mode = per_line.map_or(Mode::Steps, |_| Mode::Wheel(wheel.notch));
         if self.mode.replace(mode).is_some_and(|was| was != mode) {
             self.watch = Watch::default();
@@ -194,33 +196,42 @@ impl Course {
     /// whether that step can go out.
     #[must_use]
     pub fn next_route(&self, aim: &Aim, dir: Dir, wheel: Wheel) -> Route {
-        let tripped = self.tripped && self.on.is_some_and(|(id, _)| id == aim.id);
+        let tripped = self.trip.is_some() && self.on.is_some_and(|(id, _)| id == aim.id);
         route(aim.on_pointer, !tripped && wheel.per_line(dir).is_some())
     }
 
     /// Takes UI Automation's percent pair at `aim`, read at `now`, and says how far `dir` can still go. A percent still
     /// for `check_ms` short of the end, after a notch of wheel delta or a UI Automation step sent before the previous
-    /// read, trips the target or reads as the end.
+    /// read, trips the target or reads as the end; an end at the way and percent the wheel tripped at clears the trip.
     pub fn read(&mut self, aim: &Aim, dir: Dir, now: Mono, pair: Option<(f64, f64)>) -> Reach {
         self.follow(aim.id, dir);
         let pct = pair.and_then(|p| along(dir, p));
         let reach = reach(dir, pct);
         let short = pct.filter(|_| reach == Reach::More);
         let need = self.mode.map_or(u64::MAX, Mode::need);
-        if !self.watch.still(now, short, need, self.times) {
+        let still = self.watch.still(now, short, need, self.times);
+        let Some(pct) = short.filter(|_| still) else {
             return reach;
-        }
+        };
         if self.mode == Some(Mode::Steps) {
+            // The steps stop where the wheel did: that was the end, not a window deaf to the wheel.
+            if self
+                .trip
+                .is_some_and(|(way, at)| way == dir && at.total_cmp(&pct).is_eq())
+            {
+                self.trip = None;
+            }
             return Reach::End;
         }
-        self.tripped = true;
+        self.trip = Some((dir, pct));
         reach
     }
 
-    /// True once this target moves by UI Automation's steps, until the target changes.
+    /// True once this target moves by UI Automation's steps, until the target changes or those steps end where the
+    /// wheel stopped.
     #[must_use]
     pub const fn tripped(&self) -> bool {
-        self.tripped
+        self.trip.is_some()
     }
 
     /// Moves to target `id` and way `dir`: a new one starts the carry, the watch and the mode afresh, and a new
@@ -230,7 +241,7 @@ impl Course {
             return;
         }
         if self.on.is_none_or(|(was, _)| was != id) {
-            self.tripped = false;
+            self.trip = None;
         }
         self.on = Some((id, dir));
         (self.carry, self.watch, self.mode) = (Carry::default(), Watch::default(), None);
