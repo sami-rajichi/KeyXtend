@@ -1,7 +1,7 @@
 //! G9 on the scroll outline (ADR-0029): no edge window while the pad is idle; while it is hovered and while it scrolls,
 //! exactly `[outline] edges` of them, each click-through, no-activate and topmost, titled from kx-ui's
-//! `window.outline`, and just under the keyboard in the z-order. Target-window, filled, lies under the keyboard and
-//! keeps the front at every look.
+//! `window.outline`, and under the keyboard in the z-order with only our windows between, such as its shadow.
+//! Target-window, filled, lies under the keyboard and keeps the front at every look.
 #![cfg(windows)]
 
 use kx_module_api::ports::Dir;
@@ -27,8 +27,11 @@ struct Seen {
     edges: usize,
     /// Each edge's missing flags, by name.
     missing: Vec<Vec<&'static str>>,
-    /// The edges lay just under the keyboard; true when none showed.
+    /// The edges lay under the keyboard with only ours between; true when none showed.
     under: bool,
+    /// When they did not: the z-order from the first to the last of the keyboard and the edges.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    stack: Vec<String>,
     /// Target-window was still in front.
     front_kept: bool,
     ok: bool,
@@ -56,8 +59,14 @@ impl Desk<'_> {
         let edges = outline::shown(&self.titles);
         let flags = kept_ex(0, true);
         let missing: Vec<_> = edges.iter().map(|&w| missing(ex_of(w), flags)).collect();
-        let under =
-            edges.is_empty() || outline::just_under(&win::top_windows(), self.keyboard, &edges);
+        let (order, ours) = (win::top_windows(), product::shown());
+        let under = edges.is_empty()
+            || outline::just_under(&order, self.keyboard, &edges, |w| ours.contains(&w));
+        let stack = if under {
+            Vec::new()
+        } else {
+            outline::stack(&order, self.keyboard, &edges, win::describe)
+        };
         let front_kept = foreground() == self.target;
         let ok = judged(want, &missing, under, front_kept);
         Seen {
@@ -65,6 +74,7 @@ impl Desk<'_> {
             edges: edges.len(),
             missing,
             under,
+            stack,
             front_kept,
             ok,
         }
