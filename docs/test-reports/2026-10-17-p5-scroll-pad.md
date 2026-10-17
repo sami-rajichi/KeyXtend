@@ -5,10 +5,10 @@
 - **Display:** 1920×1080, 125 % (120 DPI), 144 Hz; Ryzen 7 7735HS with Radeon graphics (Qt draws on it), RTX 4060, 24 GB.
 - **Apps:** Notepad 11.2607.14.0, Chrome 155.0.8059.80, Explorer 10.0.26100.8875, the Settings app 10.0.26100.8875, PowerShell ISE 10.0.26100.8875 (Windows PowerShell 5.1), target-window (debug); PresentMon 2.6.0; Qt 6.11.2.
 - **Builds:**
-  - `keyxtend` (7c97c80; b3dfadb for check 25) and `kx-gates` (7c97c80; 92197a0 for G9's last run; e181156 and its no-scroll copy for the churn A/B), release, signed and installed under `Program Files\KeyXtend-dev`, with uiAccess (`check-uiaccess`: secure folder, trusted signature, uiAccess in the manifest);
+  - `keyxtend` (7c97c80; b3dfadb for check 25; 574a7a6 for G10's last run) and `kx-gates` (7c97c80; 92197a0 for G9's last run; e181156 and its no-scroll copy for the churn A/B; 574a7a6 for G10's last run), release, signed and installed under `Program Files\KeyXtend-dev`, with uiAccess (`check-uiaccess`: secure folder, trusted signature, uiAccess in the manifest);
   - the product's test build `--features gate-input` (7c97c80; 8656554 for G6's hang and unaware records; never signed or installed), which G6 drives;
   - `kx-target-window` and the plain `kx-gates`, debug.
-- **Load:** the owner kept WSL and Docker running on purpose, to see the keyboard on a busy PC: free RAM 6.9–12.8 GB of 23.2, `vmmemWSL` 0.5–1.2 GB (WSL off from 15:39), CPU 6–26 %.
+- **Load:** the owner kept WSL and Docker running on purpose, to see the keyboard on a busy PC: free RAM 6.9–12.8 GB of 23.2, `vmmemWSL` 0.5–1.2 GB (WSL off from 15:39), CPU 6–27 %.
 - **Scope:** the P5 gates (G6 on the test build; G8 with its scroll part, G9 with the outline, G10 with the pad, on the installed build), and the plan's hands-on checks.
 
 ## Gates
@@ -19,7 +19,7 @@
 | 2 | `g6 hang`, `g6 unaware` | A hung target gets no pile of wheels; an unaware window scrolls | Pass | Records at 8656554 (run 1): wheels 119 in the hang, 19 after against 18 before |
 | 3 | `g8 keyxtend`, `weak`, `arabic`, default settings | Spec §10 budgets, with a scroll and its outline | Partial; owner accepts | Start, idle CPU, frames, key light, typing and size pass; memory over; see notes 3 and 4 |
 | 4 | `g9 keyxtend` | Window flags survive; the outline's edges are flagged and lie under the keyboard | Pass | Outline 0 / 4 / 4 / 0 edges idle, hovered, scrolling, stopped; see note 5 |
-| 5 | `g10 keyxtend` | Every key named, pressable and found at its centre; the pad's arrows answer | Pass | 76/76 by point; arrows found and pressed, slow, fast and Stop read back. Ran at 7c97c80, before b3dfadb changed the product's Win and G10's Win step |
+| 5 | `g10 keyxtend` | Every key named, pressable and found at its centre; the pad's arrows answer | Pass | 76/76 by point; arrows found and pressed, slow, fast and Stop read back. Passed at 7c97c80, and again at 574a7a6 after the Win changes, where the Win step latched and let go with no lone Win |
 
 ## Hands-on checks (owner)
 
@@ -36,7 +36,7 @@
 | 9 | The two speeds | 3 and 10 lines a second feel right | Pass | The owner will tune them in Settings later |
 | 10 | Explorer, System32 | The file list glides, speeds up and stops | Pass | See note 6 |
 | 11 | ▼, then minimise the keyboard | The glide stops; the bubble brings it back | Pass | |
-| 12 | The empty desktop, ▼ | Lit, nothing moves until Stop or the limit | Owner accepts | Windows gives no way to tell the desktop has nothing to scroll |
+| 12 | The empty desktop, ▼ | Lit, nothing moves until Stop or the limit | Pass; owner accepts | Windows gives no way to tell the desktop has nothing to scroll |
 | 13 | `limit_s = 10`, ▼ once | Stops by itself after about 10 s | Pass | Test setting, removed after |
 | 14 | `lang_key = "list"`: open the list, ▼ | One page per tap, a frame round the list | Pass | Test setting, removed after |
 | 15 | Arabic layout: the badge | ↓ بطيء, then سريع, joined and right to left | Pass | |
@@ -62,5 +62,5 @@
 7. The owner asked that a second tap on our Windows key, with nothing pressed in between, open Start as a real key does. It was built in this session, and a key or click while Win is latched still makes a shortcut (check 25). In stay mode a key or click uses Win, so the next click only lets go; in release mode they let it go already.
 8. The first G8, G9 and G10 runs were void: with `settings.toml` set aside the product took `settings.previous.toml`, the owner's place at the top of the screen, which left no room above the pad. The gates then ran with both files aside, and the owner's settings were put back after each run. In run 2 the mouse guard stopped G8 at once on a button press, so it gave no data.
 9. The Voice Access check was skipped at the owner's choice; Narrator read each arrow and Stop by name (check 19).
-10. The drag-off entry check (`docs/items/P5.md`) was not run, as the check needs a drag by hand and a tool without uiAccess cannot send input to our windows. The entry watch's tests cover a capture lost off the keyboard.
+10. The drag-off entry check (press a key, drag off the keyboard and let go outside, then enter from another window; the pad must scroll that window) was not run, as the check needs a drag by hand and a tool without uiAccess cannot send input to our windows. The entry watch's tests cover a capture lost off the keyboard.
 11. Gate logs, PresentMon captures and the test files are deleted when P5 is recorded; only these numbers are kept.

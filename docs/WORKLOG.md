@@ -4,6 +4,12 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 19:07 — P5 done: scroll pad (v0.3)
+The scroll pad is done: its arrows glide the window last pointed at, slow then fast, with an outline and a badge, and it stops at the end, at a press, at the limit or when the target goes. G6, G9 and G10 passed on the PC (G10 again on the final build), and so did every hands-on check but two the owner accepted: the desktop and PowerShell ISE stay lit at their end, as they give no position. G8's memory is over (103 MB cold, a churn that grows with each scroll after a theme change), which the owner accepted for P5 and P13 takes. The numbers are in the test report and P13, and the shortcuts layer (P6) is next.
+
+## 2026-10-17 18:44 — P5: the last review pass
+After a lone Win press the other latches let go as their mode says, so in release mode Ctrl, Win, Win opens Start and the next key is plain. G10's undo after a failed Win step latches Shift before it presses Win, so it never opens Start, and a G8 run with the churn's scroll left out is partial at best. UI Automation's walk down stops above a node whose process it cannot read, the fake reads a closed target as Unknown as Windows does, and the hub forgets a guard run's end when the module stops or the windows are made again. New tests show that a window with nothing that scrolls glides quietly until Stop, and that the wide badge stays on screen near the edges.
+
 ## 2026-10-17 17:55 — P5 owner's ask: a second click on Win with nothing between opens Start
 A latch role in `board.toml` can now carry `lone = true`, set on Win only: clicking it again with nothing used since it latched lets go and sends Win alone through the injector, so Start opens as with a real key. Caps Lock or a latch latched meanwhile uses Win, so the second click only lets go; in stay mode a key or a modifier + click uses it too, and in release mode they let it go, so the next click latches it again. Property runs over random clicks check that only that second click sends, never for another latch; a lone press refused whole keeps Win latched. G10's Win step now latches Shift between Win's presses, so it never opens Start.
 
@@ -25,13 +31,13 @@ G6 now judges sideways where the scroll pattern says the window scrolls sideways
 ## 2026-10-17 08:15 — P5: a covered target is read at its point, and the list is marked and outlined as it opens
 UI Automation now goes down a covered target's window to the element at the kept point, so a pane or list inside it is read and stepped. The open list asks for its page mark as it opens, which also guards it, and a peek outlines the list window. A target that closes just before a check stops the scroll instead of taking the window now at its point.
 
-## 2026-10-17 07:18 — P5: the open list wins the scroll pad while it shows
+## 2026-10-17 07:26 — P5: the open list wins the scroll pad while it shows
 While our open list shows, the pad pages it whatever point was kept, so a pointer that crossed the app in the gap above the keyboard no longer scrolls the app. A target that our window covers is now read and stepped by UI Automation at its own window, never at ours. With the pointer on our banner there is no target: a check mid-scroll keeps the last target, a tap asks the user to point first, and a closed target still stops the scroll.
 
 ## 2026-10-17 07:00 — P5: the hook's property sim orders a send made with our hooks out as Windows does
 Two hook property failures came from the test model, not the product: the sim queued a reinstall's batch, sent with our hooks out, behind input that Windows passes first. A send with our hooks out now reaches the apps right after our own waiting input and before the hand's, which reaches the hooks put back (2de63ec, 76eb721). The saved seeds and three named cases keep those runs checked; putting the hooks back before that send is saved as a P4 idea.
 
-## 2026-10-17 06:31 — P5: the scroll pad aims at our open list again, and never turns a page silently
+## 2026-10-17 06:39 — P5: the scroll pad aims at our open list again, and never turns a page silently
 The open list asks the guard to mark it as a window that pages, so pointing at it and tapping the pad turns its page again, while the keyboard and the banner are still passed over. A kept point that our window now covers aims at the first other app's window behind ours there, or asks the user to point first; it never sends a page turn that turns nothing. UI Automation now takes the box and percent from the first element that scrolls along the tapped way, so ▼ over a wide table sees the page's end. Four files over 300 lines were split by topic.
 
 ## 2026-10-17 05:48 — P5: hiding the keyboard stops the scroll pad

@@ -20,6 +20,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - The Windows test tools `kx-gates` and `kx-target-window`, moved in from the toolkit test round.
 - The keyboard core (P3): typing in English, French and Arabic from a no-focus uiAccess window, modifiers, key repeat and act on press, the Native, ET66 and Dolch looks, the bubble and the tray (ADR-0016 to ADR-0026).
 - Mouse assist (P4): a still hold right-clicks, Grab drags and selects with clicks only, Shift or Ctrl + click, a ring and badge at the pointer, soft CC0 sounds, and a mouse hook that reinstalls itself (ADR-0027, ADR-0028).
+- The scroll pad (P5): arrows and Stop that glide the window last pointed at, slow then fast, with its outline, a badge, stops at the end, a press or a limit, our open list paged, and a lone second click on Win that opens Start (ADR-0029).
 
 ### Removed
 - The Slint and Tauri prototype keyboards from the toolkit test round.

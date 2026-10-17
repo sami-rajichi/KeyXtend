@@ -54,7 +54,7 @@ Try the interactive mock-up: [keyboard-style-lab.html](design/keyboard-style-lab
 
 ## Status
 
-Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, and mouse assist (P4) right-clicks and drags with clicks only; the scroll pad (P5) is built and in its last checks. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, mouse assist (P4) right-clicks and drags with clicks only, and the scroll pad (P5) scrolls the window last pointed at with clicks only. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
 ## Using the keyboard
 
