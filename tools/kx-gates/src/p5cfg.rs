@@ -246,6 +246,8 @@ impl Outline {
 pub struct G8Scroll {
     /// How long each scroll runs before Stop, in ms; longer than `[pad] settle_ms`, the wait before its read.
     pub scroll_ms: u64,
+    /// Each churn round scrolls once more; false leaves the scroll out, as a control for the churn's growth.
+    pub churn: bool,
 }
 
 /// `[host]`: what G8 logs of the machine beside its numbers.
@@ -256,8 +258,7 @@ pub struct Host {
     pub vm: Vec<String>,
 }
 
-/// What a performance counter's process name may not hold, in any case: a folder, `.exe`, which it drops, and its
-/// path's marks.
+/// What a performance counter's process name may not hold, in any case: a folder, `.exe` and a path's marks.
 const NOT_IN_NAME: [&str; 7] = ["\\", "/", ":", ".exe", "(", ")", "#"];
 
 impl Host {
@@ -269,15 +270,14 @@ impl Host {
         };
         if self.vm.is_empty() || !self.vm.iter().all(plain) {
             return Err(format!(
-                "host.vm must name programs without any of {NOT_IN_NAME:?}"
+                "host.vm must name plain programs, none of {NOT_IN_NAME:?}"
             ));
         }
         Ok(())
     }
 }
 
-/// Refuses P5's settings that could pass with nothing checked, a G8 scroll whose Stop goes out before the pad's settle,
-/// and a G6 hang longer than target-window allows.
+/// Refuses P5 settings that check nothing, a G8 Stop before the pad's settle, and a G6 hang past target-window's cap.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
     c.g6.check()?;
     c.pad.check()?;

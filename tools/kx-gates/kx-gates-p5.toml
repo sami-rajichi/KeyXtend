@@ -78,6 +78,8 @@ edges = 4
 # memory_mb and commit_mb, and each churn round scrolls once more. scroll_ms outlasts [pad] settle_ms (checked).
 [g8_scroll]
 scroll_ms = 2000
+# false leaves the scroll out of each churn round, as a control for the churn's growth.
+churn = true
 
 # What G8 logs beside its numbers, as the owner runs WSL and Docker during gates on purpose: free RAM, and the memory of
 # these virtual machine processes by program name without .exe (Task Manager's vmmem); only the first of a name reads.

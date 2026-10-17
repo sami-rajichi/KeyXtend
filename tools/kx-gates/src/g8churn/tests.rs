@@ -228,6 +228,22 @@ fn a_churn_is_whole_when_every_pop_up_showed_and_a_design_without_a_list_still_c
 }
 
 #[test]
+fn a_churn_meant_to_scroll_needs_every_scroll_and_one_set_to_skip_it_needs_none() {
+    let full = churn(mem(98.0, 138.0), mem(98.0, 138.0));
+    let unscrolled = Churn {
+        scrolls: 0,
+        outlines: 0,
+        ..full.clone()
+    };
+    assert!(!unscrolled.whole(), "the scroll step was meant to run");
+    let control = Churn {
+        scrolling: false,
+        ..unscrolled
+    };
+    assert!(control.whole(), "[g8_scroll] churn left the scroll out");
+}
+
+#[test]
 fn churn_settings_that_churn_nothing_are_refused() {
     assert_eq!(check(&shipped()), Ok(()));
     let bad: [fn(&mut G8); 8] = [

@@ -61,6 +61,8 @@ pub struct Churn {
     pub returns: usize,
     /// Why the list step was skipped: not the List design, or one layout installed.
     pub note: Option<&'static str>,
+    /// Whether each round was to scroll, as `[g8_scroll] churn` says.
+    pub scrolling: bool,
     /// Rounds whose pad scrolled, as its arrow read a speed.
     pub scrolls: usize,
     /// Rounds whose outline showed every edge while it scrolled.
@@ -90,17 +92,18 @@ impl Churn {
             bubbles: 0,
             returns: 0,
             note: None,
+            scrolling: true,
             scrolls: 0,
             outlines: 0,
         }
     }
 
     /// True when every hover showed a tip and every round showed the bubble, the keyboard again, the list in the List
-    /// design, and a scroll with its outline.
+    /// design, and, when it was to scroll, a scroll with its outline.
     pub fn whole(&self) -> bool {
         let every = |n: usize| n == self.rounds;
         let pops = self.tips == self.hovers && every(self.bubbles) && every(self.returns);
-        let scrolled = every(self.scrolls) && every(self.outlines);
+        let scrolled = !self.scrolling || (every(self.scrolls) && every(self.outlines));
         pops && scrolled && self.lists.is_none_or(every)
     }
 }
@@ -205,7 +208,8 @@ fn stepped(
 /// `scroller` when there is one, reading `p`'s memory before them and after each one and each step. The warm-up keeps
 /// each pop-up's first show, a one-time cost, out of the growth.
 pub fn run(ctx: &Ctx, p: &Process, scroller: Option<&Scroller>) -> Result<Churn, String> {
-    let g = &ctx.cfg.g8;
+    let (g, scrolling) = (&ctx.cfg.g8, ctx.cfg.g8_scroll.churn);
+    let scroller = scroller.filter(|_| scrolling);
     let (plan, reader) = (g8pops::plan(ctx)?, Reader::new()?);
     mouse::move_to(plan.away)?;
     sleep_ms(g.churn_settle_ms);
@@ -228,6 +232,7 @@ pub fn run(ctx: &Ctx, p: &Process, scroller: Option<&Scroller>) -> Result<Churn,
         bubbles: seen.bubbles,
         returns: seen.returns,
         note: plan.skip,
+        scrolling,
         scrolls: seen.scrolls,
         outlines: seen.outlines,
         ..Churn::measured(g, before, per_round)

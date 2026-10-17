@@ -173,6 +173,11 @@ fn the_outline_title_is_the_text_kx_ui_titles_its_edges_with() {
 }
 
 #[test]
+fn the_shipped_churn_scrolls_each_round() {
+    assert!(load().expect("loads").g8_scroll.churn);
+}
+
+#[test]
 fn g8_scroll_and_host_settings_that_do_nothing_are_refused() {
     let mut c = load().expect("loads");
     c.g8_scroll.scroll_ms = 0;
