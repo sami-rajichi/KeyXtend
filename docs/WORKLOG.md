@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 01:42 — P5: G6's Explorer folder grows for the worst case it cannot read
+When fewer than two files read, G6 records the files a row as unknown and grows Explorer's folder by `[g6] max_per_row`, a checked worst case. After any growth it waits up to `[g6] grow_wait_ms` for the vertical percent to read the same twice, so the list's extent stops growing before a slope is measured, and the result records whether it settled.
+
 ## 2026-10-17 01:30 — P5: G6 fails a case the document was too short for
 G6's third tap, Stop and press-stop now fail as a sizing fault, named in its log, when the pad met the document's end first, so they never pass unjudged. Explorer's folder grows by the files a row shows, read from the first files' boxes once the window is laid, and the result records that count. A Stop press that fails while the pad cannot be read keeps its own error first.
 

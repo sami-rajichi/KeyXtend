@@ -20,8 +20,11 @@ fn the_shipped_settings_pass() {
 
 #[test]
 fn g6_settings_that_check_nothing_are_refused() {
-    let bad: [fn(&mut G6); 19] = [
+    let bad: [fn(&mut G6); 22] = [
         |g| g.inset_px = 0,
+        |g| g.max_per_row = 1,
+        |g| g.grow_wait_ms = 0,
+        |g| g.grow_wait_ms = g.sample_ms - 1,
         |g| g.slope_reads = 1,
         |g| g.phase_ms = g.sample_ms * (g.slope_reads - 1),
         |g| g.min_changed = 0.0,

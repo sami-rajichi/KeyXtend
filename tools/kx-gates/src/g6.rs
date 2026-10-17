@@ -4,6 +4,7 @@
 #![cfg(windows)]
 
 use kx_mod_scroll::ScrollSettings;
+use kx_module_api::ports::Dir;
 use serde_json::{Value, json};
 use spike_core::uia::Uia;
 
@@ -11,9 +12,11 @@ use crate::apps::{AppKind, Ctx};
 use crate::g5::RCLICK;
 use crate::g6cases::{self, Case};
 use crate::g6judge::{self, Pair};
+use crate::g6rows::Grown;
 use crate::g6scene::Scene;
 use crate::out::say;
 use crate::probe::{self, Doc};
+use crate::scroll::along;
 use crate::scrolllog::{self, ScrollLine};
 use crate::testbuild::{Closed, TestBuild};
 use crate::{g6rec, g6rows};
@@ -32,8 +35,8 @@ struct Driven {
     bottom: Pair,
     lag_ms: Option<u64>,
     clicks: u64,
-    /// Explorer's files a row, as the laid window showed them.
-    per_row: Option<usize>,
+    /// Explorer's files a row and how the grown folder settled.
+    grown: Option<Grown>,
 }
 
 /// The fast ÷ slow ratio G6 judges against, once the stops it judges are on in the test build's settings.
@@ -66,8 +69,9 @@ fn drive(
 ) -> Result<Driven, String> {
     probe::front(ctx, &doc.app)?;
     let s = Scene::new(ctx, uia, &doc.app)?;
-    let per_row = if kind == AppKind::Explorer {
-        Some(g6rows::fill(ctx, uia, doc, speeds)?)
+    let vertical = || s.pair().and_then(|p| along(Dir::Down, p));
+    let grown = if kind == AppKind::Explorer {
+        Some(g6rows::fill(ctx, uia, doc, speeds, vertical)?)
     } else {
         None
     };
@@ -86,7 +90,7 @@ fn drive(
         bottom,
         lag_ms,
         clicks,
-        per_row,
+        grown,
     })
 }
 
@@ -139,7 +143,8 @@ fn report(
         "gate": "G6", "app": name, "pass": pass, "cases": cases, "stops_counted": stops,
         "scroll_stats": line, "scroll_stats_error": counts.as_ref().err(), "outside_clicks": d.clicks,
         "end_percents": { "top": d.top, "bottom": d.bottom }, "percent_lag_ms": d.lag_ms,
-        "routing": g6rec::routing(), "files_per_row": d.per_row, "sizing_faults": short, "clean_up": notes,
+        "routing": g6rec::routing(), "files_per_row": d.grown.and_then(|g| g.per_row),
+        "grown_settled": d.grown.and_then(|g| g.settled), "sizing_faults": short, "clean_up": notes,
         "test_build": closed.json(),
     })
 }

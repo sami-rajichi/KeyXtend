@@ -40,6 +40,10 @@ pub struct G6 {
     pub burst_ms: u64,
     /// The fewest percent reads short of the ends a speed's slope rests on.
     pub slope_reads: u64,
+    /// The files a row Explorer's folder grows by when fewer than two files read: the worst case.
+    pub max_per_row: usize,
+    /// Longest wait, after the folder grew, for the vertical percent to read the same twice `sample_ms` apart.
+    pub grow_wait_ms: u64,
 }
 
 /// The fewest reads any slope needs: a line needs two points; `[g6] slope_reads` asks for more.
@@ -51,8 +55,8 @@ fn a_share(share: f64) -> bool {
 }
 
 impl G6 {
-    /// Refuses a share outside 0 to 1, an inset or waits not above 0, a slope on fewer reads than a line needs or more
-    /// than a speed reads, and a count before the hang longer than the wait before it.
+    /// Refuses a share outside 0 to 1, an inset or waits not above 0, a count before the hang longer than the wait
+    /// before it, and reads that judge nothing (`reads_ok`).
     pub fn check(&self) -> Result<(), String> {
         if !a_share(self.min_changed) || !a_share(self.ratio_slack) {
             return Err("g6.min_changed and g6.ratio_slack must lie between 0 and 1".to_string());
@@ -73,6 +77,17 @@ impl G6 {
         if waits.contains(&0) {
             return Err("g6's waits must be above 0".to_string());
         }
+        if self.burst_ms > self.hang_lead_ms {
+            return Err(
+                "g6.burst_ms must fit in hang_lead_ms, the count before the hang".to_string(),
+            );
+        }
+        self.reads_ok()
+    }
+
+    /// Refuses a slope on fewer reads than a line needs or more than a speed reads, a worst case of one file a row,
+    /// and a wait for the grown folder that holds no two reads.
+    fn reads_ok(&self) -> Result<(), String> {
         if self.slope_reads < LINE_READS {
             return Err(format!(
                 "g6.slope_reads must be at least {LINE_READS}, as a line needs two points"
@@ -84,10 +99,13 @@ impl G6 {
                     .to_string(),
             );
         }
-        if self.burst_ms > self.hang_lead_ms {
+        if self.max_per_row <= 1 {
             return Err(
-                "g6.burst_ms must fit in hang_lead_ms, the count before the hang".to_string(),
+                "g6.max_per_row must be above 1, a worst case for an icon view".to_string(),
             );
+        }
+        if self.grow_wait_ms < self.sample_ms {
+            return Err("g6.grow_wait_ms must hold two reads sample_ms apart".to_string());
         }
         Ok(())
     }

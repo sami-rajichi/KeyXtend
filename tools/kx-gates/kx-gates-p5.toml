@@ -32,6 +32,12 @@ hang_lead_ms = 1000
 burst_ms = 300
 # A speed's slope rests on at least this many percent reads short of the ends, so one late read cannot tip the ratio.
 slope_reads = 5
+# Explorer's folder grows by the files a row shows, read from its first files; when fewer than two read, it grows by
+# this worst case, small icons across a wide screen.
+max_per_row = 32
+# After it grows, the cases wait up to grow_wait_ms for the vertical percent to read the same twice, sample_ms apart,
+# so the list's extent does not grow mid-phase and skew a slope.
+grow_wait_ms = 5000
 
 # The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by
 # its direction and Stop by `stop`, both icons.toml [dpad] ids (checked); the pad itself is kx-mod-keyboard's DPAD_NAME.

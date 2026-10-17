@@ -2,13 +2,16 @@
 //! several files a row; the files a row shows are read from the first items' boxes once the window is laid.
 #![cfg(windows)]
 
+use std::cell::Cell;
+
 use kx_module_api::MS_PER_S;
+use serde::Serialize;
 use spike_core::uia::{self, Uia};
 
 use crate::apps::Ctx;
 use crate::p5cfg::G6;
 use crate::probe::{self, Doc};
-use crate::win::sleep_ms;
+use crate::win;
 
 /// Files for the folder at `per_row` a row: `spare` rows past the lines the pad runs down at `(slow, fast)` lines a
 /// second through G6's speeds, up and press-stop cases, each tap's `settle_ms` included.
@@ -26,12 +29,29 @@ pub fn files(
     rows.saturating_mul(per_row.max(1))
 }
 
-/// How many files the first row shows, from the items' `tops` in order: those level with the first; at least one.
-pub fn per_row(tops: &[i32]) -> usize {
-    let level = tops.first().map_or(0, |&first| {
-        tops.iter().take_while(|&&top| top == first).count()
-    });
-    level.max(1)
+/// How many files the first row shows, from the items' `tops` in order: those level with the first; none from fewer
+/// than two tops, as one file alone cannot tell.
+pub fn per_row(tops: &[i32]) -> Option<usize> {
+    let [first, _, ..] = tops else {
+        return None;
+    };
+    Some(tops.iter().take_while(|&top| top == first).count())
+}
+
+/// True when `now` reads the same percent as the read before it, which `last` holds and then takes `now` for.
+fn same_twice(last: &Cell<Option<f64>>, now: Option<f64>) -> bool {
+    let before = last.replace(now);
+    matches!((before, now), (Some(a), Some(b)) if (a - b).abs() <= f64::EPSILON)
+}
+
+/// What growing the folder found: the files a row shows, none when fewer than two files read, and whether the
+/// vertical percent then read the same twice in time, none when nothing grew or no percent reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Grown {
+    /// The files a row shows.
+    pub per_row: Option<usize>,
+    /// The list's extent stopped growing within `[g6] grow_wait_ms`.
+    pub settled: Option<bool>,
 }
 
 /// File number `i`'s name, as the folder's files sort in order.
@@ -71,21 +91,42 @@ fn tops(ctx: &Ctx, uia: &Uia, doc: &Doc, n: usize) -> Vec<i32> {
     tops
 }
 
-/// Reads how many files a row of the laid window shows, and adds files until the folder holds enough at that many a
-/// row; the files a row shows.
-pub fn fill(ctx: &Ctx, uia: &Uia, doc: &Doc, speeds: (u32, u32)) -> Result<usize, String> {
-    let (pr, settle) = (&ctx.cfg.probes, ctx.cfg.pad.settle_ms);
-    let had = files(pr.scroll_files, 1, speeds, &ctx.cfg.g6, settle);
-    let row = per_row(&tops(ctx, uia, doc, had));
-    let want = files(pr.scroll_files, row, speeds, &ctx.cfg.g6, settle);
+/// Reads how many files a row of the laid window shows, adds files until the folder holds enough at that many a row,
+/// or at `[g6] max_per_row` when it cannot tell, then waits for the `vertical` percent to settle.
+pub fn fill(
+    ctx: &Ctx,
+    uia: &Uia,
+    doc: &Doc,
+    speeds: (u32, u32),
+    vertical: impl Fn() -> Option<f64>,
+) -> Result<Grown, String> {
+    let (pr, g, settle) = (&ctx.cfg.probes, &ctx.cfg.g6, ctx.cfg.pad.settle_ms);
+    let had = files(pr.scroll_files, 1, speeds, g, settle);
+    let per_row = per_row(&tops(ctx, uia, doc, had));
+    let want = files(
+        pr.scroll_files,
+        per_row.unwrap_or(g.max_per_row),
+        speeds,
+        g,
+        settle,
+    );
     for i in had + 1..=want {
         let path = doc.path.join(name(&pr.scroll_prefix, i));
         std::fs::File::create(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     }
-    if want > had {
-        sleep_ms(pr.settle_ms);
-    }
-    Ok(row)
+    let settled = (want > had).then(|| steady(g, vertical)).flatten();
+    Ok(Grown { per_row, settled })
+}
+
+/// Waits up to `grow_wait_ms` for `vertical` to read the same percent twice, `sample_ms` apart; none when it reads
+/// no percent, as nothing then rests on the extent.
+fn steady(g: &G6, vertical: impl Fn() -> Option<f64>) -> Option<bool> {
+    vertical()?;
+    let last = Cell::new(None);
+    let held = win::poll_until(g.grow_wait_ms, g.sample_ms, || {
+        same_twice(&last, vertical()).then_some(())
+    });
+    Some(held.is_some())
 }
 
 #[cfg(test)]
@@ -114,9 +155,22 @@ mod tests {
 
     #[test]
     fn a_row_holds_the_files_level_with_the_first() {
-        assert_eq!(per_row(&[10, 40]), 1, "a list: one a row");
-        assert_eq!(per_row(&[10, 10, 10, 90]), 3, "an icon view");
-        assert_eq!(per_row(&[10, 10]), 2, "the read stopped on the row");
-        assert_eq!(per_row(&[]), 1, "no item read");
+        assert_eq!(per_row(&[10, 40]), Some(1), "a list: one a row");
+        assert_eq!(per_row(&[10, 10, 10, 90]), Some(3), "an icon view");
+        assert_eq!(per_row(&[10, 10]), Some(2), "the read stopped on the row");
+    }
+
+    #[test]
+    fn fewer_than_two_files_read_leave_the_row_unknown() {
+        assert_eq!(per_row(&[]), None, "no file read");
+        assert_eq!(per_row(&[10]), None, "the second file never read");
+    }
+
+    #[test]
+    fn the_percent_has_settled_once_it_reads_the_same_twice_in_a_row() {
+        let last = Cell::new(None);
+        let reads = [None, Some(10.0), Some(12.0), Some(12.0), None, None];
+        let held: Vec<bool> = reads.into_iter().map(|r| same_twice(&last, r)).collect();
+        assert_eq!(held, [false, false, false, true, false, false]);
     }
 }
