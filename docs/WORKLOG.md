@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 01:22 — P5: the D-pad's arrows for readers and voice control
+Each D-pad arrow now has an upright box around its icon for Narrator and Voice Access, as the turned arrows all reported the whole pad's box. The grid's turn is pinned at 45 degrees, so the arrows stay on the axes and their boxes never overlap.
+
 ## 2026-10-17 01:21 — P5: the scroll gates read an idle pad from its arrows
 Stop leaves UI Automation's tree when the pad is idle, so G6, G8, G9 and G10 now read idle from the four arrows, press Stop only while one reads a speed, and take a pad that stopped itself as no error. No run back undoes the one before: G8 goes down twice then turns, G6 and G10 run left for less than right, and G6 sizes Explorer's folder from the test build's speeds. G10 now judges that each arrow's icon point names that arrow in a box of its own; G6 judges Chrome's sideways by picture when no percent reads, its end case by the down leg and the end it saw, and its slopes on `[g6] slope_reads` reads.
 

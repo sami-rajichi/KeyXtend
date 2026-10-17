@@ -68,3 +68,13 @@ fn an_odd_pad_badge_or_outline_size_is_refused() {
         assert!(e.contains(says), "{to}: {e}");
     }
 }
+
+#[test]
+fn the_turn_stays_45_degrees_so_the_arrows_sit_on_the_axes() {
+    assert_eq!(load().expect("shape.toml loads").dpad.turn_deg, 45.0);
+    for turn in ["0.0", "30.0", "90.0", "nan"] {
+        let bad = in_section("dpad", "turn_deg = 45.0", &format!("turn_deg = {turn}"));
+        let e = parse(&bad).expect_err(turn);
+        assert!(e.contains("dpad.turn_deg"), "{turn}: {e}");
+    }
+}

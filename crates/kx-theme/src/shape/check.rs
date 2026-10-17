@@ -3,15 +3,31 @@
 use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
+/// The D-pad's one grid turn, in degrees: it sets the arrows on the axes, where another turn puts "up" on a diagonal and
+/// overlaps the boxes readers find the arrows by.
+const DPAD_TURN: f32 = 45.0;
+
 impl Shape {
     /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark or dot
-    /// of 0 or less, a panel gap, label padding, mark or dot gap or badge place below 0, and a lit Cycle dot no larger
-    /// than the others, naming the size.
+    /// of 0 or less, a panel gap, label padding, mark or dot gap or badge place below 0, a lit Cycle dot no larger than
+    /// the others and a D-pad turn other than 45 degrees, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
         self.check_dots()?;
+        self.check_turn()?;
         self.check_shares()
+    }
+
+    /// The D-pad's grid turns by `DPAD_TURN` only, so its arrows sit on the axes.
+    fn check_turn(&self) -> Result<(), String> {
+        let turn = self.dpad.turn_deg;
+        if (turn - DPAD_TURN).abs() <= f32::EPSILON {
+            return Ok(());
+        }
+        Err(format!(
+            "shape: dpad.turn_deg {turn} must be {DPAD_TURN}, so the arrows sit on the axes"
+        ))
     }
 
     /// Cycle's lit dot must be larger than an unlit one, which is how it stands out.
