@@ -276,7 +276,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
 - **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
 - **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.
-- **Our own lists:** when the target is one of our paged lists, each tap turns one page, with no speeds and no Stop.
+- **Our own lists:** while one of our paged lists shows, it is the target, whatever point was kept, and each tap turns one page, with no speeds and no Stop.
 - **Badge:** with mouse assist on, the pointer badge shows the direction's arrow and "slow" or "fast", beside a Right-click or Grab icon (§3.2).
 - **Every platform** fills one OS-neutral port (`ScrollTarget`); the rules live in `kx-mod-scroll` (ADR-0029).
 - **Windows mechanism** (ADR-0029, which reorders P1's list proven by gate G6, ADR-0013):
@@ -291,8 +291,9 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
   - A gap between reads longer than `PAUSE_CHECKS` × `check_ms` + `read_ms` starts the wait afresh.
   - A busy target, one that left a `WM_NULL` ping unanswered or that Windows calls hung, gets no steps.
   - A `SendInput` wheel goes out only while Windows gives wheels to the window under the pointer (mouse-position routing) and the pointer is still on the target; otherwise the step is posted.
-  - Our windows that do not page, such as the keyboard and its banner, are passed over, so the kept point is the last one outside them. The UI marks the open list as paging, so a point on it turns the list's page.
-  - A kept point that one of our non-paging windows now covers, as when the banner shows over it, aims at the first other app's window behind ours there. With none, the tap asks the user to point first; it never turns a page silently.
+  - Our windows that do not page, such as the keyboard and its banner, are passed over, so the kept point is the last one outside them. The UI marks the open list as paging, and while it shows the pad pages it, even when the pointer crossed the app in the gap above the keyboard.
+  - A kept point that one of our non-paging windows now covers, as when the banner shows over it, aims at the first other app's window behind ours there. With none, the tap asks the user to point first; it never turns a page silently. UI Automation then reads and steps that app window's own element, never ours.
+  - A tap while the pointer rests on our banner or tray menu, as through Voice Access, also asks the user to point first; mid-scroll, such an aim keeps the last target.
   - UI Automation takes the box and percent from the first element that scrolls along the tapped way's axis, so ▼ over a wide table reads the page around it.
 
 ### 5.3 Overlays
