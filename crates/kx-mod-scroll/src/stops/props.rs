@@ -90,8 +90,9 @@ fn settings() -> impl Strategy<Value = ScrollSettings> {
     })
 }
 
-/// The actor's rules for one step: the halt it meets, if any. Every tap that does not stop aims, and a new way reads
-/// its target's reach: the one found, or a running scroll's when the OS refused the aim.
+/// The actor's rules for one step, taking a running scroll to have a target (`tests/scroll/taps.rs` covers a pending
+/// first aim): the halt it meets, if any. Every tap that does not stop aims, and a new way reads the reach of the
+/// target found, or of the running scroll's when the OS refused the aim.
 fn rule(pad: &mut Pad, stops: &mut Stops, step: Step, now: Mono) -> Option<Halt> {
     let live = pad.scrolling();
     match step {

@@ -13,7 +13,7 @@ pub(super) struct Stats {
     pub(super) turns: u64,
     /// Aims and turns the OS refused.
     pub(super) refused: u64,
-    /// Stops by the Stop button or a third tap.
+    /// Stops by the Stop button, a third tap, or a tap whose retried first aim paged our list.
     user: u64,
     no_point: u64,
     nothing: u64,
@@ -28,7 +28,7 @@ impl Stats {
     /// Counts a stop: by the user for none, else by `halt`'s cause.
     pub(super) fn stopped(&mut self, halt: Option<Halt>) {
         let count = match halt {
-            None => &mut self.user,
+            None | Some(Halt::Paged) => &mut self.user,
             Some(Halt::NoPoint) => &mut self.no_point,
             Some(Halt::Nothing) => &mut self.nothing,
             Some(Halt::AtEnd) => &mut self.at_end,

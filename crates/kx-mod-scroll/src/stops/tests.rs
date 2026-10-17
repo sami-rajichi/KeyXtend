@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::fixture::{self, settings};
-use Halt::{AtEnd, End, Gone, Limit, NoPoint, Nothing, Press};
+use Halt::{AtEnd, End, Gone, Limit, NoPoint, Nothing, Paged, Press};
 use kx_module_api::US_PER_S;
 use kx_module_api::ports::Reach::{More, Unknown};
 use kx_module_api::ports::ScrollError::{NoTarget, Refused};
@@ -41,7 +41,7 @@ fn only_a_tap_that_cannot_scroll_is_told() {
     for (halt, key) in told {
         assert_eq!((halt.told(), halt.key()), (true, Some(key)), "{halt:?}");
     }
-    for halt in [End, Press, Limit, Gone] {
+    for halt in [End, Press, Limit, Gone, Paged] {
         assert_eq!((halt.told(), halt.key()), (false, None), "{halt:?}");
     }
 }

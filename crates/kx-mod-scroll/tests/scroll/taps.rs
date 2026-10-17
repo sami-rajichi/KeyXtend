@@ -158,6 +158,24 @@ fn a_faster_tap_that_finds_the_first_target_runs_the_taps_checks() {
 }
 
 #[test]
+fn a_first_aim_that_finds_our_list_turns_it_a_page_and_stops_quietly() {
+    for (tap, back) in [(None, false), (Some(Down), false), (Some(Up), true)] {
+        let mut rig = refused(true);
+        rig.point(LIST);
+        let at = rig.ticks(1);
+        if let Some(dir) = tap {
+            rig.tap_at(dir, at);
+        } else {
+            rig.tick_at(at);
+        }
+        let want = [Page(ScrollPage { back }), still(), hidden()];
+        assert_eq!(rig.take(), want, "{tap:?}");
+        assert_eq!(rig.actor.wait(), None, "{tap:?}");
+        assert!(rig.target.turns().is_empty());
+    }
+}
+
+#[test]
 fn taps_on_our_list_turn_it_one_page_each() {
     let mut rig = Rig::new();
     rig.begin();

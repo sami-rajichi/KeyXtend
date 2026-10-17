@@ -55,22 +55,16 @@ impl Actor {
     }
 
     /// A tap while scrolling: the same way again goes fast or stops, another way turns slow. The owed lines go the old
-    /// way first, then it aims again, and a new way or a pending first aim runs a first tap's reach check.
+    /// way first, then it aims again.
     fn tap_on(&mut self, dir: Dir, now: Mono) {
         let old = self.pad.dir();
-        let first = self.scroll.as_ref().is_some_and(Scroll::pending);
         let change = self.pad.tap(dir);
         if change == Change::Stopped {
             return self.end(None);
         }
         let halt = self
             .settle(old, now)
-            .or_else(|| self.tap_aim(now))
-            .or_else(|| {
-                (first || change.new_way())
-                    .then(|| self.blocked_here(dir))
-                    .flatten()
-            });
+            .or_else(|| self.tap_aim(dir, change.new_way(), now));
         match halt {
             Some(halt) => self.end(Some(halt)),
             None => self.tell_state(),
@@ -84,17 +78,33 @@ impl Actor {
         self.turn(old?, owed)
     }
 
-    /// Aims at a tap while scrolling, which restarts the check's count; a failure says why, as at a first tap.
-    fn tap_aim(&mut self, now: Mono) -> Option<Halt> {
-        self.scroll.as_mut()?.due = now.saturating_add(self.check_every);
-        Halt::unaimed(self.retarget().err()?)
-    }
-
-    /// A pending first aim at a check: a failure says why, as at a tap, and a target found runs the tap's reach check.
-    pub(super) fn first_aim(&mut self, dir: Dir) -> Option<Halt> {
+    /// Aims at a tap while scrolling, which restarts the check's count. A pending first aim runs the tap's checks;
+    /// else a failure says why, as at a first tap, and a `new_way` checks the reach.
+    fn tap_aim(&mut self, dir: Dir, new_way: bool, now: Mono) -> Option<Halt> {
+        let scroll = self.scroll.as_mut()?;
+        scroll.due = now.saturating_add(self.check_every);
+        if scroll.pending() {
+            return self.first_aim(dir);
+        }
         match self.retarget() {
             Err(err) => Halt::unaimed(err),
-            Ok(()) => self.blocked_here(dir),
+            Ok(()) => new_way.then(|| self.blocked_here(dir)).flatten(),
+        }
+    }
+
+    /// A pending first aim, at a check or a tap: a failure says why, our own list turns a page instead, as at a first
+    /// tap, and another target runs the tap's reach check.
+    pub(super) fn first_aim(&mut self, dir: Dir) -> Option<Halt> {
+        match self.find()? {
+            Ok(aim) if aim.ours => {
+                self.page(dir);
+                Some(Halt::Paged)
+            }
+            Ok(aim) => {
+                self.follow(aim);
+                self.blocked_here(dir)
+            }
+            Err(err) => Halt::unaimed(err),
         }
     }
 

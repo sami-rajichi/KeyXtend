@@ -25,6 +25,8 @@ pub enum Halt {
     Limit,
     /// The target closed, or was lost, while scrolling.
     Gone,
+    /// A refused first aim, tried again, found our own list, which turned a page instead, as at a first tap.
+    Paged,
 }
 
 impl Halt {
@@ -41,7 +43,7 @@ impl Halt {
             Self::NoPoint => Some(keys::SCROLL_POINT),
             Self::Nothing => Some(keys::SCROLL_NONE),
             Self::AtEnd => Some(keys::SCROLL_END),
-            Self::End | Self::Press | Self::Limit | Self::Gone => None,
+            Self::End | Self::Press | Self::Limit | Self::Gone | Self::Paged => None,
         }
     }
 
