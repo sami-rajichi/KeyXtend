@@ -226,7 +226,8 @@ impl Event for ScrollAsk {
     const NAME: &'static str = "scroll-ask";
 }
 
-/// The box the UI outlines, or none to hide the outline; its `Debug` hides the box.
+/// The box the UI outlines, or none to hide the outline; its `Debug` hides the box. Like `PointerMoved`, it carries
+/// the box with no capability gate, as the security note accepts.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct ScrollAimed {
     /// The target's box, in physical pixels.

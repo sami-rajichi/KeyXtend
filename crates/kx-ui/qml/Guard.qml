@@ -1,6 +1,6 @@
 // The window guard's runs for the keyboard window `win` (ADR-0013): each try guards our shown windows, has the keyboard's
-// entries watched once, cuts the keyboard and puts its backdrop on, and a try that finds a window not shown yet tries
-// again after the delay.
+// entries watched while the scroll module runs, cuts the keyboard and puts its backdrop on, and a try that finds a
+// window not shown yet tries again after the delay.
 import QtQuick
 
 Timer {

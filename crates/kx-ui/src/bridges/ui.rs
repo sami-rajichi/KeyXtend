@@ -144,6 +144,10 @@ pub mod qobject {
         #[qinvokable]
         fn watch_entries(&self, title: &QString) -> bool;
 
+        /// Stops keeping that point for window `title` and forgets it, as the scroll module stops.
+        #[qinvokable]
+        fn unwatch_entries(&self, title: &QString);
+
         /// Puts window `title` just under window `under`, as the outline goes under the keyboard; false until shown.
         #[qinvokable]
         fn lay_under(&self, title: &QString, under: &QString) -> bool;

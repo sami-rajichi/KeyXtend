@@ -18,7 +18,7 @@ use windows::core::{PCWSTR, w};
 use super::guard::guarded;
 use super::prop::{clear, put, value};
 use super::watch::{Inside, Seen, step};
-use super::win::{is_ours, own_titled, window_at};
+use super::win::{is_ours, own_titled, title, top_level, window_at};
 use crate::screen::{cursor, rect_of};
 use crate::scroll::entry::{Kept, to_history};
 use crate::scroll::lparam_point;
@@ -42,6 +42,15 @@ static KEPT: Mutex<Option<Kept>> = Mutex::new(None);
 /// `NoWindow` while it is not shown, `Refused` when Windows says no.
 pub(super) fn watch_entries(title: &str) -> Result<(), UiError> {
     mark(own_titled(title).ok_or(UiError::NoWindow)?)
+}
+
+/// Stops watching the entries of our windows titled `title_is`, shown or not, and forgets the entry kept.
+pub(super) fn unwatch_entries(title_is: &str) {
+    let named = top_level()
+        .into_iter()
+        .filter(|&w| is_ours(w) && title(w) == title_is);
+    named.for_each(drop_marks);
+    *lock(&KEPT) = None;
 }
 
 /// Marks our guarded window `hwnd` as the one whose entries the guard watches.
@@ -145,6 +154,11 @@ pub(super) fn forget(hwnd: HWND) {
     if watched(hwnd) {
         *lock(&KEPT) = None;
     }
+    drop_marks(hwnd);
+}
+
+/// Removes the watch's marks from `hwnd`, so the guard no longer watches it.
+fn drop_marks(hwnd: HWND) {
     clear(hwnd, WATCH);
     clear(hwnd, INSIDE);
 }

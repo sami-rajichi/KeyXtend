@@ -73,12 +73,16 @@ pub trait WindowGuard: Send + Sync {
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.
     fn lift_alone(&self, title: &str) -> Result<(), UiError>;
 
-    /// From now on, each time the pointer enters our guarded window titled `title`, keeps the last point it was at
-    /// outside that window, for the scroll target (ADR-0029); a call for the UI thread.
+    /// Until `unwatch_entries`, each time the pointer enters our guarded window titled `title`, keeps the last point it
+    /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread.
     ///
     /// # Errors
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.
     fn watch_entries(&self, title: &str) -> Result<(), UiError>;
+
+    /// Stops the entry watch on our windows titled `title`, shown or not, and forgets the point it kept, as the scroll
+    /// module stops; a call for the UI thread.
+    fn unwatch_entries(&self, title: &str);
 
     /// Puts our shown windows titled `title` just under our window titled `under`, never activating them, as the
     /// outline goes just under the keyboard; a call for the UI thread.

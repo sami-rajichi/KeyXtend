@@ -1,5 +1,5 @@
 //! The scroll pad through the hub: the scroll state and the box to outline as one JSON with one wake per read, the
-//! hub's ask at start, the pad's actions, the guard's two scroll calls, and no box or point in any log.
+//! hub's ask at start, the pad's actions, the guard's scroll calls, and no box or point in any log.
 
 mod badge;
 mod pages;
@@ -155,20 +155,23 @@ fn pad_taps_and_hover_reach_the_keyboard_as_face_actions_and_the_hub_publishes_n
 }
 
 #[test]
-fn the_keyboard_watches_entries_and_each_outline_edge_lies_under_it() {
+fn the_keyboard_watches_entries_until_unwatched_and_each_outline_edge_lies_under_it() {
     let rig = Rig::new();
     assert!(rig.hub.watch_entries("kb"));
     assert!(rig.hub.lay_under("edge", "kb"));
+    rig.hub.unwatch_entries("kb");
     let calls = rig.guard.calls();
     let want = [
         GuardCall::WatchEntries("kb".into()),
         GuardCall::LayUnder("edge".into(), "kb".into()),
+        GuardCall::UnwatchEntries("kb".into()),
     ];
-    assert!(want.iter().all(|c| calls.contains(c)), "{calls:?}");
+    assert!(calls.ends_with(&want), "{calls:?}");
     rig.guard.set_error(Some(UiError::NoWindow));
     let quiet = warnings_of(|| {
         assert!(!rig.hub.watch_entries("kb"), "not shown yet");
         assert!(!rig.hub.lay_under("edge", "kb"));
+        rig.hub.unwatch_entries("kb");
     });
     assert!(quiet.is_empty(), "{quiet:?}");
     rig.guard.set_error(Some(UiError::Refused(2)));

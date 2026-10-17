@@ -112,6 +112,9 @@ QtObject {
         notYet--;
         return false;
     }
+    function unwatchEntries(title) {
+        note("unwatchEntries " + title);
+    }
     function layUnder(title, under) {
         note("layUnder " + title + " " + under);
         return true;

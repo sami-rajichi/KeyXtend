@@ -46,6 +46,10 @@ impl WindowGuard for WinGuard {
         entry::watch_entries(title)
     }
 
+    fn unwatch_entries(&self, title: &str) {
+        entry::unwatch_entries(title);
+    }
+
     fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
         lay_under(title, under)
     }

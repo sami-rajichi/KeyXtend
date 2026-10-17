@@ -1,6 +1,7 @@
 // The scroll pad's outline (spec §5.2, mock-up .scroll-target): four thin click-through edge windows inside the target's
 // box in the ring colour, Highlight in high contrast, made only while the hub names a box and gone after a stop, cut to
-// the screen holding the target, guarded and laid just under the keyboard; and the app's keyboard asks for its entries.
+// the screen holding the target, guarded and laid just under the keyboard; and the app's keyboard has its entries
+// watched while the scroll module runs.
 import QtQuick
 import QtTest
 import "../qml"
@@ -212,27 +213,39 @@ Item {
             verify(s.all.every(e => !e.moving && e.paint.opacity === 1), "never faded");
         }
 
-        // In the app, the outline follows the hub's scroll state, and the keyboard asks once for its entries once shown.
-        function test_the_app_outlines_and_its_keyboard_asks_once_for_its_entries() {
+        // In the app, the outline follows the hub's scroll state, and the keyboard's entries are watched only while the
+        // scroll module runs: asked at each guard try until it takes, and stopped with the module.
+        function test_the_app_outlines_and_its_keyboard_watches_entries_only_while_the_module_runs() {
             const a = createTemporaryObject(appC, root);
             a.ui.notYet = 1;
             tryVerify(() => a.face.visible, 2000, "the keyboard shows");
             Pointer.through([a.face, a.bubble]);
-            const asked = () => a.ui.calls.filter(c => c === "watchEntries " + a.face.title).length;
-            tryVerify(() => asked() === 1, 5000, "asked once the guard holds it");
+            const count = call => a.ui.calls.filter(c => c === call + " " + a.face.title).length;
+            const tries = () => a.keyboard.calls.filter(c => c === "guard").length;
+            const run = () => {
+                const before = tries();
+                a.face.guardRun();
+                tryVerify(() => tries() > before, 5000, "the guard tried again");
+            };
+            tryVerify(() => tries() > 0, 5000, "the guard ran");
+            compare(count("watchEntries"), 0, "not while the module is off");
+            a.ui.scroll = Object.assign({}, En.scroll, { live: true });
+            tryVerify(() => count("watchEntries") === 1, 5000, "asked once the module runs");
             verify(!a.face.watched, "not shown yet");
-            a.face.guardRun();
+            run();
             tryCompare(a.face, "watched", true, 5000, "asked again at the next guard run");
-            const tries = () => a.keyboard.calls.filter(c => c === "guard").length, before = tries();
-            a.face.guardRun();
-            tryVerify(() => tries() > before, 5000, "the guard tried again");
-            compare(asked(), 2, "once it took");
+            run();
+            compare(count("watchEntries"), 2, "once it took");
             a.ui.scroll = Object.assign({}, En.scroll, { live: true, area: { x: 20, y: 20, w: 300, h: 200 } });
             tryCompare(a.outline.edges, "count", 4, 2000);
             tryVerify(() => a.ui.calls.indexOf("layUnder " + En.texts["window.outline"] + " " + a.face.title) >= 0, 2000);
             Pointer.through(edges(a.outline));
             a.ui.scroll = En.scroll;
             tryCompare(a.outline.edges, "count", 0, 2000);
+            tryCompare(a.face, "watched", false, 2000, "the module stopped");
+            compare(count("unwatchEntries"), 1);
+            run();
+            compare(count("watchEntries"), 2, "never while the module is off");
         }
     }
 }

@@ -302,3 +302,21 @@ fn an_entry_from_our_own_window_keeps_the_last_entry() {
     let outside = kept().and_then(|k| k.outside);
     assert_eq!(outside.map(|p| p.y), Some(kb.y - 5), "another app's window");
 }
+
+/// The scroll module stopped: the keyboard, shown or not, keeps no entry until it is watched again.
+#[test]
+fn unwatching_drops_the_marks_and_the_kept_entry() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let title = "KeyXtend test: unwatched";
+    let window = watched_at(title, spot_on_main(), false);
+    move_to(&window, Point { x: 1, y: 1 });
+    assert!(kept().is_some());
+    WinGuard.unwatch_entries(title);
+    assert!(!watched(window.0));
+    assert_eq!(kept(), None, "the kept point is forgotten");
+    move_to(&window, Point { x: 2, y: 2 });
+    assert_eq!(kept(), None, "no entry once unwatched");
+    mark_with(window.0, false).unwrap();
+    move_to(&window, Point { x: 3, y: 3 });
+    assert!(kept().is_some(), "watched again");
+}

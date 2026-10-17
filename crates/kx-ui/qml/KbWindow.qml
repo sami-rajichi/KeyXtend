@@ -34,6 +34,8 @@ Window {
     property alias placed: placing.placed
     // The guard keeps the pointer's last point outside this window at each entry, for the scroll pad's target.
     property bool watched: false
+    // The scroll module runs (`scrollJson`'s `live`); the entries are watched only then.
+    property bool scrolls: false
     // The plate's mover while the plate is drawn, and whether a live resize runs: its shadow then draws nothing.
     readonly property var mover: body.item ? body.item.mover : null
     readonly property bool resizing: !!body.item && body.item.resizing
@@ -86,7 +88,17 @@ Window {
     onBoxesChanged: reshape()
     onBoardChanged: Qt.callLater(() => drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0))
     onVisibleChanged: if (visible) Qt.callLater(shown)
-    Component.onCompleted: drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0)
+    // A running guard asks for the watch at its next try; a stopped module ends it at once.
+    onScrollsChanged: {
+        if (!scrolls)
+            unwatch();
+        else if (!guard.running)
+            watch();
+    }
+    Component.onCompleted: {
+        drawn = running ? Qt.size(board.plate.w, board.plate.h) : Qt.size(0, 0);
+        Qt.callLater(rescroll);
+    }
 
     KbWakes {
         win: win
@@ -216,10 +228,19 @@ Window {
     function guardQuiet() {
         guard.run(null);
     }
-    // Asks once, after a guard try holds this window, for the pointer's entries to be watched (ADR-0029).
+    // While the scroll module runs, asks for the pointer's entries to be watched at each guard try until it holds.
     function watch() {
-        if (!watched && visible)
+        if (scrolls && !watched && visible)
             watched = ui.watchEntries(title);
+    }
+    function unwatch() {
+        ui.unwatchEntries(title);
+        watched = false;
+    }
+    // Reads whether the scroll module runs; only `live` is kept, never the box.
+    function rescroll() {
+        const now = JSON.parse(ui.scrollJson());
+        scrolls = !!now && now.live;
     }
 
     // Where the minimise bubble goes, in Qt units: a bottom corner of this window's screen; null when none is known.

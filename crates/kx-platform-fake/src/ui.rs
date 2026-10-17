@@ -65,6 +65,8 @@ pub enum GuardCall {
     LiftAlone(String),
     /// `watch_entries(title)`.
     WatchEntries(String),
+    /// `unwatch_entries(title)`.
+    UnwatchEntries(String),
     /// `lay_under(title, under)`.
     LayUnder(String, String),
     /// `remember`, with the token it gave.
@@ -133,6 +135,10 @@ impl WindowGuard for FakeWindowGuard {
 
     fn watch_entries(&self, title: &str) -> Result<(), UiError> {
         self.record(GuardCall::WatchEntries(title.to_owned()))
+    }
+
+    fn unwatch_entries(&self, title: &str) {
+        lock(&self.calls).push(GuardCall::UnwatchEntries(title.to_owned()));
     }
 
     fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
@@ -229,6 +235,7 @@ mod tests {
         assert_eq!(fake.shape(TITLE, &rects), Ok(()));
         assert_eq!(fake.lift_alone(TITLE), Ok(()));
         assert_eq!(fake.watch_entries(TITLE), Ok(()));
+        fake.unwatch_entries(TITLE);
         assert_eq!(fake.lay_under(OUTLINE, TITLE), Ok(()));
         let first = fake.remember();
         let second = fake.remember();
@@ -239,6 +246,7 @@ mod tests {
             GuardCall::Shape(TITLE.into(), rects.to_vec()),
             GuardCall::LiftAlone(TITLE.into()),
             GuardCall::WatchEntries(TITLE.into()),
+            GuardCall::UnwatchEntries(TITLE.into()),
             GuardCall::LayUnder(OUTLINE.into(), TITLE.into()),
             GuardCall::Remember(first),
             GuardCall::Remember(second),
