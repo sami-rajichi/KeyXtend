@@ -61,6 +61,7 @@ mod g6;
 mod g6cases;
 mod g6judge;
 mod g6rec;
+mod g6rows;
 mod g6scene;
 mod g7;
 mod g8;

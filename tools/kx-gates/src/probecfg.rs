@@ -14,7 +14,7 @@ pub struct Probes {
     pub scroll_lines: usize,
     /// Characters per line in the scroll documents.
     pub scroll_cols: usize,
-    /// Files in the Explorer scroll folder past the rows G6's cases run down.
+    /// Rows of files in the Explorer scroll folder past the rows G6's cases run down.
     pub scroll_files: usize,
     /// Name start of those files, before their number.
     pub scroll_prefix: String,

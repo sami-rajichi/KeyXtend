@@ -186,8 +186,8 @@ clicks = 200
 # Known text for the selection and modifier cases (G17, G18); plain ASCII, so every app shows it alike.
 text = "Hold still to grab, move, then click once to drop the selection here."
 page_title = "KeyXtend probe page"
-# The scroll documents (G6): lines, characters per line, and files in the Explorer folder past the rows G6's cases run
-# down, at least a screen of them.
+# The scroll documents (G6): lines, characters per line, and rows of files in the Explorer folder past the rows G6's
+# cases run down, at least a screen of them; G6 multiplies the rows by the files a row shows.
 scroll_lines = 300
 scroll_cols = 300
 scroll_files = 80

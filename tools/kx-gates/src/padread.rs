@@ -14,7 +14,7 @@ pub fn idle_of(said: &[String]) -> bool {
 }
 
 /// Presses Stop with `press` unless `idle` reads the pad idle, and true when it pressed; a press that fails as the pad
-/// stopped itself on the way counts as not needed.
+/// stopped itself on the way counts as not needed, and one whose pad cannot be read after keeps its own error first.
 pub fn halted(
     idle: impl Fn() -> Result<bool, String>,
     press: impl FnOnce() -> Result<(), String>,
@@ -25,7 +25,11 @@ pub fn halted(
     let Err(e) = press() else {
         return Ok(true);
     };
-    if idle()? { Ok(false) } else { Err(e) }
+    match idle() {
+        Ok(true) => Ok(false),
+        Ok(false) => Err(e),
+        Err(read) => Err(format!("{e}; the pad could not be read after it: {read}")),
+    }
 }
 
 /// The pad of keyboard window `kb`, read by `reader` with `[pad]`'s ids.
@@ -107,5 +111,23 @@ mod tests {
         );
         let unread = halted(|| Err("no reader".to_string()), || Ok(()));
         assert_eq!(unread, Err("no reader".to_string()));
+    }
+
+    #[test]
+    fn a_failed_press_keeps_its_cause_when_the_pad_cannot_be_read_after() {
+        let reads = Cell::new(0);
+        let then_unread = || {
+            reads.set(reads.get() + 1);
+            if reads.get() > 1 {
+                Err("no reader".to_string())
+            } else {
+                Ok(false)
+            }
+        };
+        let e = halted(then_unread, || Err("no dpad.stop".to_string())).expect_err("fails");
+        assert!(
+            e.starts_with("no dpad.stop") && e.contains("no reader"),
+            "{e}"
+        );
     }
 }

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 01:30 — P5: G6 fails a case the document was too short for
+G6's third tap, Stop and press-stop now fail as a sizing fault, named in its log, when the pad met the document's end first, so they never pass unjudged. Explorer's folder grows by the files a row shows, read from the first files' boxes once the window is laid, and the result records that count. A Stop press that fails while the pad cannot be read keeps its own error first.
+
 ## 2026-10-17 01:22 — P5: the D-pad's arrows for readers and voice control
 Each D-pad arrow now has an upright box around its icon for Narrator and Voice Access, as the turned arrows all reported the whole pad's box. The grid's turn is pinned at 45 degrees, so the arrows stay on the axes and their boxes never overlap.
 

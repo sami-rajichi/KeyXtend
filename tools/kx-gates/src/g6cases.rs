@@ -12,8 +12,10 @@ use crate::p5cfg::G6;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
 
-/// Why a case that needs the pad still scrolling was not judged.
+/// Why a case that needs the pad still scrolling failed: the document was too short for it.
 const STOPPED_ITSELF: &str = "the pad stopped itself first";
+/// The note's key for such a fault.
+const SIZING: &str = "sizing_fault";
 
 /// One case's verdict: none when it could not be judged, and its note says why.
 pub struct Case {
@@ -44,18 +46,32 @@ impl Case {
         }
     }
 
-    /// A case judged by `still` on `look` when there was one, else left unjudged as the pad stopped itself.
+    /// A case judged by `still` on `look` when there was one, else failed as the pad stopped itself.
     fn stilled(name: &'static str, look: Option<Look>, min: f64) -> Self {
         match look {
             Some(l) => Self::judged(name, l.still(min), json!({ "share": l.share })),
-            None => Self::unjudged(name, STOPPED_ITSELF),
+            None => Self::too_short(name),
         }
+    }
+
+    /// A case that failed as the pad met the document's end before it: a sizing fault, never a pass.
+    fn too_short(name: &'static str) -> Self {
+        Self::judged(name, false, json!({ SIZING: STOPPED_ITSELF }))
     }
 
     /// The case's report line.
     pub fn json(&self) -> Value {
         json!({ "case": self.name, "ok": self.ok, "note": self.note })
     }
+}
+
+/// The names of `cases` that failed as the pad met the document's end first.
+pub fn sizing_faults(cases: &[Case]) -> Vec<&'static str> {
+    cases
+        .iter()
+        .filter(|c| c.note.get(SIZING).is_some())
+        .map(|c| c.name)
+        .collect()
 }
 
 /// Glides onto the pad and taps down three times, slow, fast, then stopped: the aim, down, the ratio and the third tap.
@@ -123,7 +139,7 @@ pub fn press_stop(s: &Scene) -> Result<Case, String> {
     s.arrow(Dir::Down)?;
     let going = s.look(g.move_ms)?;
     if s.idle() {
-        return Ok(Case::unjudged("press_stop", STOPPED_ITSELF));
+        return Ok(Case::too_short("press_stop"));
     }
     s.click_out()?;
     let after = s.look(g.still_ms)?;
@@ -213,7 +229,20 @@ mod tests {
     }
 
     #[test]
-    fn a_stop_case_without_a_look_is_left_unjudged_and_one_with_a_look_is_judged() {
+    fn a_case_the_pad_met_the_end_in_fails_as_a_sizing_fault() {
+        let min = crate::config::load().expect("loads").g6.min_changed;
+        let cases = [
+            Case::stilled("third_tap", None, min),
+            Case::unjudged("sideways", "no sideways overflow"),
+            Case::too_short("press_stop"),
+        ];
+        assert_eq!(cases[0].ok, Some(false), "never passes unjudged");
+        assert_eq!(cases[2].ok, Some(false));
+        assert_eq!(sizing_faults(&cases), ["third_tap", "press_stop"]);
+    }
+
+    #[test]
+    fn a_stop_case_is_judged_on_its_look_and_fails_without_one() {
         let min = crate::config::load().expect("loads").g6.min_changed;
         let still = Look {
             share: Some(0.0),
@@ -227,7 +256,7 @@ mod tests {
         };
         assert_eq!(Case::stilled("stop", Some(moved), min).ok, Some(false));
         let gone = Case::stilled("stop", None, min);
-        assert_eq!(gone.ok, None);
-        assert_eq!(gone.note["unjudged"], STOPPED_ITSELF);
+        assert_eq!(gone.ok, Some(false));
+        assert_eq!(gone.note[SIZING], STOPPED_ITSELF);
     }
 }

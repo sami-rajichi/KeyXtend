@@ -4,7 +4,6 @@
 #![cfg(windows)]
 
 use kx_mod_scroll::ScrollSettings;
-use kx_module_api::MS_PER_S;
 use serde_json::{Value, json};
 use spike_core::uia::Uia;
 
@@ -12,13 +11,12 @@ use crate::apps::{AppKind, Ctx};
 use crate::g5::RCLICK;
 use crate::g6cases::{self, Case};
 use crate::g6judge::{self, Pair};
-use crate::g6rec;
 use crate::g6scene::Scene;
 use crate::out::say;
-use crate::p5cfg::G6;
 use crate::probe::{self, Doc};
 use crate::scrolllog::{self, ScrollLine};
 use crate::testbuild::{Closed, TestBuild};
+use crate::{g6rec, g6rows};
 use crate::{probetext, win};
 
 /// The apps G6 probes; never Word (roadmap G6, owner, 2026-10-16).
@@ -34,6 +32,8 @@ struct Driven {
     bottom: Pair,
     lag_ms: Option<u64>,
     clicks: u64,
+    /// Explorer's files a row, as the laid window showed them.
+    per_row: Option<usize>,
 }
 
 /// The fast ÷ slow ratio G6 judges against, once the stops it judges are on in the test build's settings.
@@ -46,29 +46,31 @@ fn wanted(s: &ScrollSettings) -> Result<f64, String> {
     Ok(f64::from(s.fast) / f64::from(s.slow))
 }
 
-/// Opens the app's long document: Explorer's folder, sized for the test build's speeds `s`, else the numbered lines.
-fn open(ctx: &Ctx, kind: AppKind, s: &ScrollSettings) -> Result<Doc, String> {
-    let pr = &ctx.cfg.probes;
+/// Opens the app's long document: Explorer's folder, sized for the test build's `speeds`, else the numbered lines.
+fn open(ctx: &Ctx, kind: AppKind, speeds: (u32, u32)) -> Result<Doc, String> {
     if kind == AppKind::Explorer {
-        let n = files(
-            pr.scroll_files,
-            (s.slow, s.fast),
-            &ctx.cfg.g6,
-            ctx.cfg.pad.settle_ms,
-        );
-        let files: Vec<String> = (1..=n)
-            .map(|i| format!("{}{i:04}", pr.scroll_prefix))
-            .collect();
-        return probe::open_folder(ctx, &files, &[]);
+        return g6rows::open(ctx, speeds);
     }
+    let pr = &ctx.cfg.probes;
     let text = probetext::scroll_text(pr.scroll_lines, pr.scroll_cols);
     probe::open_text(ctx, kind, &text)
 }
 
-/// Every case on `kind`'s document, in order, and the records taken on the way.
-fn drive(ctx: &Ctx, uia: &Uia, (doc, kind): (&Doc, AppKind), want: f64) -> Result<Driven, String> {
+/// Every case on `kind`'s document, in order, with the ratio `want` at the test build's `speeds`, and the records
+/// taken on the way; Explorer's folder grows first to the files a row shows.
+fn drive(
+    ctx: &Ctx,
+    uia: &Uia,
+    (doc, kind): (&Doc, AppKind),
+    (want, speeds): (f64, (u32, u32)),
+) -> Result<Driven, String> {
     probe::front(ctx, &doc.app)?;
     let s = Scene::new(ctx, uia, &doc.app)?;
+    let per_row = if kind == AppKind::Explorer {
+        Some(g6rows::fill(ctx, uia, doc, speeds)?)
+    } else {
+        None
+    };
     let top = s.pair();
     let lag_ms = g6rec::lag(&s)?;
     let mut cases = g6cases::speeds(&s, want)?;
@@ -84,6 +86,7 @@ fn drive(ctx: &Ctx, uia: &Uia, (doc, kind): (&Doc, AppKind), want: f64) -> Resul
         bottom,
         lag_ms,
         clicks,
+        per_row,
     })
 }
 
@@ -105,22 +108,13 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let build = TestBuild::open(ctx, None)?;
     build.set(RCLICK, false)?;
     let (scroll, log) = (build.scroll()?, build.log()?);
-    let want = wanted(&scroll)?;
-    let doc = open(ctx, kind, &scroll)?;
+    let (want, speeds) = (wanted(&scroll)?, (scroll.slow, scroll.fast));
+    let doc = open(ctx, kind, speeds)?;
     say!("G6 {name}: {}", win::describe(doc.app.hwnd));
-    let result = probe::run_on(ctx, doc, |d| drive(ctx, &uia, (d, kind), want));
+    let result = probe::run_on(ctx, doc, |d| drive(ctx, &uia, (d, kind), (want, speeds)));
     let closed = build.close();
     let (driven, notes) = result.map_err(|e| closed.failed(&e, &[]))?;
     Ok(report(name, &driven, &notes, &counts(&log), &closed))
-}
-
-/// Files for Explorer's folder: `spare` past the lines the pad runs down at `(slow, fast)` lines a second through
-/// G6's speeds, up and press-stop cases, each tap's `settle_ms` included, so no case meets the end on the way.
-fn files(spare: usize, (slow, fast): (u32, u32), g: &G6, settle_ms: u64) -> usize {
-    let both = u64::from(slow.saturating_add(fast)).saturating_mul(settle_ms + g.phase_ms);
-    let again = u64::from(slow).saturating_mul(settle_ms + g.move_ms);
-    let lines = both.saturating_add(again).div_ceil(u64::from(MS_PER_S));
-    spare.saturating_add(usize::try_from(lines).unwrap_or(usize::MAX))
 }
 
 /// The app's result line.
@@ -136,26 +130,16 @@ fn report(
     let stops = line.is_some_and(|l| g6judge::stops_ok(l, d.clicks));
     let pass = closed.pass(g6judge::pass(&verdicts) && stops);
     let cases: Vec<Value> = d.cases.iter().map(Case::json).collect();
+    let short = g6cases::sizing_faults(&d.cases);
+    if !short.is_empty() {
+        say!("G6 {name}: sizing fault, the pad met the document's end in {short:?}");
+    }
     say!("G6 {name}: pass {pass}; stops {stops}; {}", json!(cases));
     json!({
         "gate": "G6", "app": name, "pass": pass, "cases": cases, "stops_counted": stops,
         "scroll_stats": line, "scroll_stats_error": counts.as_ref().err(), "outside_clicks": d.clicks,
         "end_percents": { "top": d.top, "bottom": d.bottom }, "percent_lag_ms": d.lag_ms,
-        "routing": g6rec::routing(), "clean_up": notes, "test_build": closed.json(),
+        "routing": g6rec::routing(), "files_per_row": d.per_row, "sizing_faults": short, "clean_up": notes,
+        "test_build": closed.json(),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn explorers_folder_outlasts_every_run_down_before_the_end_case() {
-        let mut g = crate::config::load().expect("loads").g6;
-        (g.phase_ms, g.move_ms) = (3_000, 1_500);
-        let (spare, settle) = (80, 500);
-        // Slow and fast through settle and phase, 13 × 3.5 s, and one more slow run of settle and move, 3 × 2 s.
-        assert_eq!(files(spare, (3, 10), &g, settle), spare + 52);
-        assert_eq!(files(spare, (0, 0), &g, settle), spare, "nothing runs");
-    }
 }

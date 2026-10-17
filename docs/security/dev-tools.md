@@ -68,6 +68,7 @@
   - `kx-gates g6 notepad`, `chrome` and `explorer` drive the test build's scroll pad (P5) on the gate's own scroll text or folder of empty files, never Word.
     - G6 lays that window under the keyboard and puts it back after, then glides the pointer onto the pad with `SIM_TAG` moves. It taps the pad only while the keyboard is on top there.
     - Its only other input is Ctrl+End to the document in front, and clicks on the document's spot outside the keyboard for the press-stop case, only while that app is on top there. It never turns a wheel; it takes one `ScrollPattern` step down and one back up itself to record the percent lag.
+    - For Explorer it reads the first files' boxes by UI Automation to count the files a row shows, and adds empty files to its own folder to match.
     - Its pictures of the document stay in memory, and its result holds shares, percents, counts and the wheel-routing setting, never a point or a box.
   - `kx-gates g6 hang` and `g6 unaware` run the same pad on target-window, started with `--fill` (numbered filler lines) and, for `unaware`, `--dpi-unaware`. `hang` posts G5's capped hang message.
     - target-window logs each wheel message's time, turn and point, and a `HUNG` and `WOKE` line around a hang. G6 keeps only counts and the offset between the point aimed and the point received.
