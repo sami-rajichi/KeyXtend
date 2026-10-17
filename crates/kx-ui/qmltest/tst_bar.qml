@@ -1,5 +1,5 @@
-// The keyboard window's top bar and bubble over stand-in bridges: what their buttons send, one size button per
-// preset, and the ids UI Automation finds them by, as the gates do.
+// The keyboard window's top bar, scroll pad and bubble over stand-in bridges: what their buttons send, one size button
+// per preset, and the ids UI Automation finds them by, as the gates do.
 import QtQuick
 import QtTest
 import "../qml"
@@ -27,10 +27,11 @@ Item {
         function init() {
             failOnWarning(/./);
         }
-        // A keyboard window over fresh stand-ins, laid out and not shown; the real pointer passes through it.
-        function make() {
+        // A keyboard window over fresh stand-ins, its keyboard made with `props`, laid out and not shown; the real
+        // pointer passes through it.
+        function make(props) {
             const ui = createTemporaryObject(uiC, root);
-            const kb = createTemporaryObject(kbC, root);
+            const kb = createTemporaryObject(kbC, root, props || {});
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
             Pointer.through([win]);
@@ -74,6 +75,29 @@ Item {
             verify(win.ui.calls.indexOf("flipMode") >= 0, "the mode flips");
             verify(win.ui.calls.indexOf("stepTheme") >= 0, "the theme steps");
             compare(spy.count, 1, "minimise");
+            win.visible = false;
+        }
+
+        // The scroll pad's taps and the pointer on it reach the keyboard: an arrow by its id, Stop as empty.
+        function test_the_scroll_pad_sends_its_taps_and_the_pointer_on_it() {
+            const dpad = { dim: false, tip: null, dir: "up", fast: false };
+            const win = make({ state: Object.assign({}, Face.states.en, { dpad: dpad }) });
+            win.visible = true;
+            waitForRendering(win.contentItem);
+            const pad = keyed(win, Face.board.dpad.name), stop = keyed(win, "dpad.stop");
+            const hit = item => all(item, o => o.containsMouse !== undefined)[0];
+            const up = all(pad, o => o.fill !== undefined && o.modelData !== undefined && o.modelData.id === "up")[0];
+            const icon = all(up, o => o.icon !== undefined && o.tint !== undefined)[0];
+            const at = icon.mapToItem(hit(up), icon.width / 2, icon.height / 2);
+            const said = () => win.keyboard.calls.filter(c => c.startsWith("pad"));
+            tryCompare(stop, "scale", 1, 2000, "Stop shows while the pad scrolls");
+            mouseMove(hit(up), at.x, at.y);
+            tryVerify(() => said().length === 1, 2000, "the pointer came on");
+            mouseClick(hit(up), at.x, at.y);
+            mouseClick(hit(stop));
+            mouseMove(win.contentItem, 1, 1);
+            tryVerify(() => said().length === 4, 2000, "the pointer left");
+            compare(said(), ["padHover true", "pad up", "pad ", "padHover false"]);
             win.visible = false;
         }
 
