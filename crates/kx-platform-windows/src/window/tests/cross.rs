@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, PoisonError};
 use std::time::Instant;
 
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, DispatchMessageW, GWLP_WNDPROC, HWND_NOTOPMOST, InSendMessage, MSG, PM_REMOVE,
     PeekMessageW, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SetWindowLongPtrW,
@@ -41,9 +41,7 @@ unsafe extern "system" fn stuck(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LP
             pos.flags |= SWP_NOZORDER;
         }
     }
-    let behind = HANDLE(std::ptr::without_provenance_mut(
-        STUCK_BEHIND.get().cast_unsigned(),
-    ));
+    let behind = STUCK_BEHIND.get().cast_unsigned();
     // SAFETY: hands every message to the guard this subclass replaced, as a subclass must.
     unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
 }

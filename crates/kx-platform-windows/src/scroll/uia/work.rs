@@ -18,8 +18,8 @@ use windows::core::{BOOL, Interface};
 use super::{Job, Read, Seek};
 use crate::com::Com;
 
-/// The pattern of what scrolls at a place, kept for the steps that follow a read there.
-pub(super) type Kept = Option<(Seek, IUIAutomationScrollPattern)>;
+/// The pattern of what scrolls at a place, held for the steps that follow a read there.
+pub(super) type Held = Option<(Seek, IUIAutomationScrollPattern)>;
 
 /// Makes the client, then runs each job in turn until the handle drops; a job past its time is dropped unstarted.
 pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32) {
@@ -29,11 +29,11 @@ pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32) {
     let Some(auto) = client(read_ms) else {
         return tracing::warn!("no UI Automation: its client did not start");
     };
-    let mut kept: Kept = None;
+    let mut held: Held = None;
     for job in inbox {
         match job {
             Job::Read { seek, by, reply } => {
-                let read = (Instant::now() <= by).then(|| look(&auto, seek, by, &mut kept));
+                let read = (Instant::now() <= by).then(|| look(&auto, seek, by, &mut held));
                 pending.fetch_sub(1, Ordering::SeqCst);
                 let _ = reply.send(read.flatten());
             }
@@ -43,7 +43,7 @@ pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32) {
                 count,
                 by,
             } => {
-                step(&auto, (seek, dir, count), by, &mut kept);
+                step(&auto, (seek, dir, count), by, &mut held);
                 pending.fetch_sub(1, Ordering::SeqCst);
             }
         }
@@ -115,9 +115,9 @@ fn scrolls(el: &IUIAutomationElement) -> Option<IUIAutomationScrollPattern> {
 /// The box and percents of what scrolls at `seek`, whose pattern it keeps for steps; an empty read when nothing does,
 /// and none when UI Automation could not look there, as when its call timed out.
 #[allow(unsafe_code, reason = "Plain UI Automation reads.")]
-fn look(auto: &IUIAutomation, seek: Seek, by: Instant, kept: &mut Kept) -> Option<Read> {
+fn look(auto: &IUIAutomation, seek: Seek, by: Instant, held: &mut Held) -> Option<Read> {
     let found = scroller(auto, element(auto, seek)?, by);
-    *kept = found.as_ref().map(|(_, pattern)| (seek, pattern.clone()));
+    *held = found.as_ref().map(|(_, pattern)| (seek, pattern.clone()));
     let Some((el, pattern)) = found else {
         return Some(Read {
             area: None,
@@ -136,23 +136,23 @@ fn look(auto: &IUIAutomation, seek: Seek, by: Instant, kept: &mut Kept) -> Optio
     }
 }
 
-/// Takes `count` small steps towards `dir` on what scrolls at `seek`, by the kept pattern there if any; past `by` it
+/// Takes `count` small steps towards `dir` on what scrolls at `seek`, by the held pattern there if any; past `by` it
 /// looks nothing up, and a failed step stops them.
 #[allow(unsafe_code, reason = "UI Automation scroll calls.")]
 pub(super) fn step(
     auto: &IUIAutomation,
     (seek, dir, count): (Seek, Dir, u16),
     by: Instant,
-    kept: &mut Kept,
+    held: &mut Held,
 ) {
     if Instant::now() > by {
         return;
     }
-    if kept.as_ref().is_none_or(|(at, _)| *at != seek) {
+    if held.as_ref().is_none_or(|(at, _)| *at != seek) {
         let found = element(auto, seek).and_then(|el| scroller(auto, el, by));
-        *kept = found.map(|(_, pattern)| (seek, pattern));
+        *held = found.map(|(_, pattern)| (seek, pattern));
     }
-    let Some(pattern) = kept.as_ref().map(|(_, p)| p.clone()) else {
+    let Some(pattern) = held.as_ref().map(|(_, p)| p.clone()) else {
         return;
     };
     let (h, v) = amounts(dir);
@@ -162,7 +162,7 @@ pub(super) fn step(
         }
         // SAFETY: a plain call on a live pattern; a failure stops the steps and drops it.
         if unsafe { pattern.Scroll(h, v) }.is_err() {
-            *kept = None;
+            *held = None;
             break;
         }
     }

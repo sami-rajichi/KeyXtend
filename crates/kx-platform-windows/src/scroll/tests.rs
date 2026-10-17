@@ -229,12 +229,6 @@ fn the_end_reads_from_the_percent() {
 }
 
 #[test]
-fn routes_keep_their_report_names() {
-    let names = Route::ALL.map(Route::name);
-    assert_eq!(names, ["uia", "post", "send"]);
-}
-
-#[test]
 fn a_point_packed_in_an_lparam_reads_back_signed() {
     for (x, y) in [(0, 0), (-1, -360), (2559, 1439), (-32768, 32767)] {
         let p = Point { x, y };

@@ -1,16 +1,17 @@
 //! The Windows side of the guard: our windows and their titles, the focus, and the shape that takes clicks.
 
-use kx_module_api::ports::Rect;
+use kx_module_api::ports::{Point, Rect};
 use kx_platform::ui::{FocusToken, UiError, WindowGuard};
-use windows::Win32::Foundation::{HWND, LPARAM, RECT};
+use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
     CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
 };
 use windows::Win32::System::Console::GetConsoleWindow;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId,
-    InternalGetWindowText, IsWindow, IsWindowVisible, SetForegroundWindow,
+    EnumWindows, GA_ROOT, GetAncestor, GetForegroundWindow, GetWindowRect,
+    GetWindowThreadProcessId, InternalGetWindowText, IsWindow, IsWindowVisible,
+    SetForegroundWindow, WindowFromPoint,
 };
 use windows::core::BOOL;
 
@@ -98,6 +99,16 @@ pub fn is_ours(hwnd: HWND) -> bool {
     ours_by(pid, me, hwnd == console)
 }
 
+/// The window at screen point `p` and its top-level window; both null where there is none.
+#[allow(unsafe_code, reason = "Plain window queries.")]
+pub(crate) fn window_at(p: Point) -> (HWND, HWND) {
+    // SAFETY: plain queries; no window there gives null, and null has no top-level window.
+    unsafe {
+        let hwnd = WindowFromPoint(POINT { x: p.x, y: p.y });
+        (hwnd, GetAncestor(hwnd, GA_ROOT))
+    }
+}
+
 /// True while `hwnd` is shown.
 #[allow(unsafe_code, reason = "A plain window query.")]
 fn visible(hwnd: HWND) -> bool {
@@ -148,13 +159,13 @@ pub fn title(hwnd: HWND) -> String {
     String::from_utf16_lossy(buf.get(..n).unwrap_or_default())
 }
 
-/// Our visible window titled `title`.
+/// Our visible window titled `title_is`.
 #[must_use]
 pub fn own_titled(title_is: &str) -> Option<HWND> {
     own_windows().into_iter().find(|&w| title(w) == title_is)
 }
 
-/// The box of our visible window titled `title`.
+/// The box of our visible window titled `title_is`.
 ///
 /// # Errors
 /// `NoWindow` while it is not shown, `Refused` when Windows will not say.
@@ -194,7 +205,7 @@ pub(super) fn guard_these(
     Ok(order.len())
 }
 
-/// Cuts our window titled `title` to `rects` (physical pixels from its top-left corner), so clicks
+/// Cuts our window titled `title_is` to `rects` (physical pixels from its top-left corner), so clicks
 /// elsewhere reach the app below; Windows also draws nothing outside them.
 ///
 /// # Errors

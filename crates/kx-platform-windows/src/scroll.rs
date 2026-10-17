@@ -67,21 +67,6 @@ pub enum Route {
     Send,
 }
 
-impl Route {
-    /// Every route.
-    pub const ALL: [Self; 3] = [Self::Uia, Self::Post, Self::Send];
-
-    /// Name in a gate report.
-    #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Uia => "uia",
-            Self::Post => "post",
-            Self::Send => "send",
-        }
-    }
-}
-
 /// A tick's route: UI Automation's steps when the wheel cannot glide, else a sent wheel while the pointer is on the
 /// target, else a posted one.
 #[must_use]

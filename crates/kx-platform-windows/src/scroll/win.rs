@@ -15,11 +15,11 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_MOUSE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_WHEEL, MOUSEINPUT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GA_ROOT, GetAncestor, GetSystemMetrics, IsHungAppWindow, IsWindow,
-    MOUSEWHEEL_ROUTING_MOUSE_POS, PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-    SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SPI_GETMOUSEWHEELROUTING, SPI_GETWHEELSCROLLCHARS,
-    SPI_GETWHEELSCROLLLINES, SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
-    SystemParametersInfoW, WHEEL_DELTA, WM_MOUSEHWHEEL, WM_MOUSEWHEEL, WindowFromPoint,
+    GetSystemMetrics, IsHungAppWindow, IsWindow, MOUSEWHEEL_ROUTING_MOUSE_POS, PostMessageW,
+    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
+    SPI_GETMOUSEWHEELROUTING, SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES,
+    SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+    WHEEL_DELTA, WM_MOUSEHWHEEL, WM_MOUSEWHEEL,
 };
 
 mod pinger;
@@ -28,7 +28,7 @@ use super::entry::Kept;
 use super::uia::{Seek, Uia};
 use super::{Desk, Read, Run, Spot, Wheel, Whose, point_lparam, wheel_wparam};
 use crate::keys::TAG;
-use crate::window::{entry, from_raw, is_ours};
+use crate::window::{entry, from_raw, is_ours, window_at};
 use crate::{QpcClock, WinScreens, screen};
 use pinger::Pinger;
 
@@ -144,13 +144,8 @@ fn handle(window: u64) -> HWND {
 }
 
 /// The window at `p` and whose it is: the keyboard the guard watches, another of ours, or another app's.
-#[allow(unsafe_code, reason = "Plain window queries.")]
 fn spot(p: Point) -> Option<Spot> {
-    // SAFETY: plain queries; no window there gives null.
-    let (hwnd, root) = unsafe {
-        let hwnd = WindowFromPoint(POINT { x: p.x, y: p.y });
-        (hwnd, GetAncestor(hwnd, GA_ROOT))
-    };
+    let (hwnd, root) = window_at(p);
     if hwnd.is_invalid() {
         return None;
     }

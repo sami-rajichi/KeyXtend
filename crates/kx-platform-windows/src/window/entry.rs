@@ -6,34 +6,30 @@ use std::sync::Mutex;
 
 use kx_module_api::ports::Point;
 use kx_platform::ui::{Screens, UiError};
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, POINT, RECT};
+use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GMMP_USE_DISPLAY_POINTS, GetCapture, GetMouseMovePointsEx, MOUSEMOVEPOINT, TME_LEAVE,
     TRACKMOUSEEVENT, TrackMouseEvent,
 };
-use windows::Win32::UI::WindowsAndMessaging::{
-    GA_ROOT, GetAncestor, GetPropW, GetWindowRect, RemovePropW, SetPropW, WindowFromPoint,
-};
+use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 use windows::core::{PCWSTR, w};
 
 use super::guard::guarded;
-use super::win::own_titled;
+use super::prop::{clear, put, value};
+use super::watch::{Inside, Seen, step};
+use super::win::{own_titled, window_at};
 use crate::screen::{cursor, rect_of};
 use crate::scroll::entry::{Kept, to_history};
 use crate::scroll::lparam_point;
-use crate::{WinScreens, failed, lock, refused};
+use crate::{WinScreens, failed, lock};
 
 /// The window property that marks the window whose entries the guard watches: the keyboard.
 const WATCH: PCWSTR = w!("KeyXtend.Entries");
-/// The window property set while the pointer is on the watched window.
+/// The window property that holds where the pointer is for the watched window (`Inside::mark`).
 const INSIDE: PCWSTR = w!("KeyXtend.Inside");
 /// What `WATCH` holds.
 const MARK: usize = 1;
-/// What `INSIDE` holds after a move: the next leave under capture may ask again.
-const MOVED: usize = 1;
-/// What `INSIDE` holds once a leave under capture asked again, until the next move.
-const ASKED: usize = 2;
 /// How many points Windows keeps in its pointer history (`GetMouseMovePointsEx`).
 const HISTORY: usize = 64;
 
@@ -53,6 +49,9 @@ pub(super) fn watch_entries(title: &str) -> Result<(), UiError> {
 /// # Errors
 /// `Refused` for a window the guard does not hold, or when Windows says no.
 pub(super) fn mark(hwnd: HWND) -> Result<(), UiError> {
+    if !guarded(hwnd) {
+        return Err(failed());
+    }
     mark_with(hwnd, pointer_on(hwnd))
 }
 
@@ -64,13 +63,8 @@ pub(super) fn mark_with(hwnd: HWND, on: bool) -> Result<(), UiError> {
     if !guarded(hwnd) {
         return Err(failed());
     }
-    put(hwnd, WATCH, MARK).map_err(|e| refused(&e))?;
-    if on {
-        put(hwnd, INSIDE, MOVED).map_err(|e| refused(&e))?;
-        track(hwnd);
-    } else {
-        clear(hwnd, INSIDE);
-    }
+    put(hwnd, WATCH, MARK)?;
+    apply(hwnd, Seen::Mark { on })?;
     Ok(())
 }
 
@@ -87,57 +81,62 @@ pub(crate) fn kept() -> Option<Kept> {
 /// A move on our guarded window `hwnd` at client point `lparam`: the first one since the pointer came in keeps the
 /// point before it, and each asks Windows to say when the pointer leaves.
 pub(super) fn moved(hwnd: HWND, lparam: LPARAM) {
-    if !watched(hwnd) {
-        return;
-    }
-    let was = value(hwnd, INSIDE);
-    if was != MOVED && put(hwnd, INSIDE, MOVED).is_err() {
-        return;
-    }
-    track(hwnd);
-    if was != 0 {
-        return;
-    }
-    if let Some(at) = on_screen(hwnd, lparam) {
+    if see(hwnd, Seen::Move)
+        && let Some(at) = on_screen(hwnd, lparam)
+    {
         enter(hwnd, at, history);
     }
 }
 
-/// Windows says the pointer left our guarded window `hwnd`.
+/// Windows says the pointer left our guarded window `hwnd`, under its capture or not.
 #[allow(unsafe_code, reason = "A plain capture query.")]
 pub(super) fn left(hwnd: HWND) {
-    // SAFETY: a plain query of this thread's capture.
-    left_with(hwnd, unsafe { GetCapture() } == hwnd);
-}
-
-/// A leave of our guarded window `hwnd`, `captured` by it or not: one under capture, as a pressed key gives, asks
-/// again once until the next move, and any other ends the entry.
-pub(super) fn left_with(hwnd: HWND, captured: bool) {
-    if !watched(hwnd) {
-        return;
-    }
-    if !captured {
-        clear(hwnd, INSIDE);
-    } else if value(hwnd, INSIDE) == MOVED && put(hwnd, INSIDE, ASKED).is_ok() {
-        track(hwnd);
+    if watched(hwnd) {
+        // SAFETY: a plain query of this thread's capture.
+        let captured = unsafe { GetCapture() } == hwnd;
+        see(hwnd, Seen::Leave { captured });
     }
 }
 
-/// Our guarded window `hwnd` lost the capture.
+/// Our guarded window `hwnd` lost the capture, with the pointer on it or not.
 pub(super) fn released(hwnd: HWND) {
-    released_with(hwnd, pointer_on(hwnd));
+    if watched(hwnd) {
+        let on = pointer_on(hwnd);
+        see(hwnd, Seen::Lost { on });
+    }
 }
 
-/// A capture of our guarded window `hwnd` ended with the pointer `on` it or not: off it, as after a press dragged
-/// away, no leave is due, so the entry ends; on it, the leave is asked for again.
-pub(super) fn released_with(hwnd: HWND, on: bool) {
-    if !watched(hwnd) {
-        return;
+/// Applies what Windows saw on our window `hwnd` when the guard watches it; true when it makes an entry.
+pub(super) fn see(hwnd: HWND, seen: Seen) -> bool {
+    watched(hwnd) && apply(hwnd, seen) == Ok(true)
+}
+
+/// Takes the watch's step after `seen` on `hwnd`, asking for the next leave when it says; true for an entry.
+///
+/// # Errors
+/// `Refused` when Windows will not keep the new state, which then asks and enters nothing.
+fn apply(hwnd: HWND, seen: Seen) -> Result<bool, UiError> {
+    let now = Inside::from_mark(value(hwnd, INSIDE));
+    let after = step(now, seen);
+    if after.next != now {
+        store(hwnd, after.next)?;
     }
-    if !on {
-        clear(hwnd, INSIDE);
-    } else if value(hwnd, INSIDE) != 0 && put(hwnd, INSIDE, MOVED).is_ok() {
+    if after.track {
         track(hwnd);
+    }
+    Ok(after.entry)
+}
+
+/// Keeps `inside` on our window `hwnd`; `Out` keeps no property.
+///
+/// # Errors
+/// `Refused` when Windows says no.
+fn store(hwnd: HWND, inside: Inside) -> Result<(), UiError> {
+    if inside == Inside::Out {
+        clear(hwnd, INSIDE);
+        Ok(())
+    } else {
+        put(hwnd, INSIDE, inside.mark())
     }
 }
 
@@ -200,14 +199,8 @@ fn bounds(hwnd: HWND) -> Option<kx_module_api::ports::Rect> {
 }
 
 /// True while the pointer is on `hwnd` itself, not on a cut-out part of it or on another window.
-#[allow(unsafe_code, reason = "Plain window queries.")]
 fn pointer_on(hwnd: HWND) -> bool {
-    let Ok(p) = cursor() else {
-        return false;
-    };
-    // SAFETY: plain queries; no window gives null.
-    let root = unsafe { GetAncestor(WindowFromPoint(POINT { x: p.x, y: p.y }), GA_ROOT) };
-    root == hwnd
+    cursor().is_ok_and(|p| window_at(p).1 == hwnd)
 }
 
 /// Asks Windows to post `WM_MOUSELEAVE` to our window `hwnd` when the pointer leaves it.
@@ -221,26 +214,4 @@ fn track(hwnd: HWND) {
     };
     // SAFETY: a local request sized for the call, for our own window; a refusal only misses one leave.
     let _ = unsafe { TrackMouseEvent(&raw mut ask) };
-}
-
-/// The number `hwnd` holds in property `name`; 0 without it.
-#[allow(unsafe_code, reason = "A plain window property query.")]
-fn value(hwnd: HWND, name: PCWSTR) -> usize {
-    // SAFETY: a plain query; a window without the property gives null.
-    unsafe { GetPropW(hwnd, name) }.0.addr()
-}
-
-/// Stores `number`, never 0, in property `name` of our window `hwnd`.
-#[allow(unsafe_code, reason = "Stores a marker number on our own window.")]
-fn put(hwnd: HWND, name: PCWSTR, number: usize) -> windows::core::Result<()> {
-    let mark = HANDLE(std::ptr::without_provenance_mut(number));
-    // SAFETY: stores a number on our own window; `forget` removes it before the window goes.
-    unsafe { SetPropW(hwnd, name, Some(mark)) }
-}
-
-/// Removes property `name` from our window `hwnd`, if it is there.
-#[allow(unsafe_code, reason = "Removes our own window's property.")]
-fn clear(hwnd: HWND, name: PCWSTR) {
-    // SAFETY: removes a property this module set on our own window; a missing one gives an error, which is fine.
-    let _ = unsafe { RemovePropW(hwnd, name) };
 }

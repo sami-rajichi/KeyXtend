@@ -12,8 +12,8 @@ use proptest::prelude::*;
 const CASES: u32 = 512;
 /// Most ticks in one run.
 const MAX_TICKS: usize = 200;
-/// Most lines one tick turns: the top speed, 60 lines a second, over a long tick.
-const MAX_LINES: f64 = 2.0;
+/// Most lines one tick turns: the top speed, 60 lines a second, over the longest tick, 100 ms.
+const MAX_LINES: f64 = 6.0;
 /// Floating sums round, so a drift is judged this much past a whole step.
 const EPS: f64 = 1e-6;
 /// The largest wheel setting tried, in lines a notch.
@@ -25,7 +25,7 @@ const TICK_MS: std::ops::RangeInclusive<u32> = 8..=100;
 /// Where a moving percent starts.
 const START: f64 = 50.0;
 /// How far a percent moves a notch or a step: the most a run sends leaves it short of either end.
-const NUDGE: f64 = 1.0 / 16.0;
+const NUDGE: f64 = 1.0 / 64.0;
 /// Most percent reads in one run; a walk of this many one-point steps from `START` stays short of either end.
 const MAX_READS: usize = 40;
 /// Most ticks between two reads, so some reads come more than `check_ms` apart.

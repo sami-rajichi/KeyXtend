@@ -15,7 +15,7 @@ mod z_order;
 use std::cell::{Cell, RefCell};
 
 use kx_platform::ui::{UiError, WindowGuard};
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_EXSTYLE, GWLP_WNDPROC,
@@ -59,9 +59,7 @@ unsafe extern "system" fn later(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LP
     if msg == WM_NCDESTROY {
         SEEN.with_borrow_mut(|s| s.push("later"));
     }
-    let behind = HANDLE(std::ptr::without_provenance_mut(
-        BEHIND.get().cast_unsigned(),
-    ));
+    let behind = BEHIND.get().cast_unsigned();
     // SAFETY: hands the message to the procedure this subclass replaced, as a subclass must.
     unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
 }

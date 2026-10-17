@@ -149,7 +149,7 @@ pub(super) fn keep_top(hwnd: HWND) {
     LIFTING.with_borrow_mut(|l| l.retain(|w| !chain.contains(w)));
 }
 
-/// Lifts our shown windows titled `title` alone to the top of the topmost band, never activating them and leaving
+/// Lifts our shown windows titled `title_is` alone to the top of the topmost band, never activating them and leaving
 /// their owners where they are: the guard may have lifted a banner or the list after a tip's owner.
 ///
 /// # Errors
@@ -161,7 +161,7 @@ pub(super) fn lift_alone(title_is: &str) -> Result<(), UiError> {
         .try_for_each(front)
 }
 
-/// Puts our shown windows titled `title` just under our window titled `under`, in their order, never activating them
+/// Puts our shown windows titled `title_is` just under our window titled `under`, in their order, never activating them
 /// and leaving their owners where they are.
 ///
 /// # Errors
@@ -172,7 +172,7 @@ pub(super) fn lay_under(title_is: &str, under: &str) -> Result<(), UiError> {
     named.into_iter().rev().try_for_each(|w| below(w, above))
 }
 
-/// Our shown windows titled `title`, front first.
+/// Our shown windows titled `title_is`, front first.
 ///
 /// # Errors
 /// `NoWindow` while none shows.

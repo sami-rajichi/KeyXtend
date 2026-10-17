@@ -12,8 +12,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_CAPTURECHANGED, WM_MOUSEMOVE,
 };
 
-use super::super::entry::{enter, kept, left_with, mark, mark_with, released_with, watched};
+use super::super::entry::{enter, kept, mark, mark_with, see, watched};
 use super::super::guard::guard;
+use super::super::watch::Seen;
 use super::{Hidden, WinGuard};
 use crate::WinScreens;
 use crate::scroll::point_lparam;
@@ -171,7 +172,7 @@ fn a_pointer_already_on_the_window_when_marked_is_no_entry() {
     let was = kept();
     move_to(&window, Point { x: 5, y: 6 });
     assert_eq!(kept(), was, "no entry yet");
-    left_with(window.0, false);
+    see(window.0, Seen::Leave { captured: false });
     move_to(&window, Point { x: 7, y: 8 });
     let entry = Point {
         x: kb.x + 7,
@@ -190,10 +191,10 @@ fn a_leave_under_capture_keeps_the_entry_and_any_other_ends_it() {
         y: kb.y + y,
     };
     move_to(&window, Point { x: 5, y: 6 });
-    left_with(window.0, true);
+    see(window.0, Seen::Leave { captured: true });
     move_to(&window, Point { x: 7, y: 8 });
     assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)), "still inside");
-    left_with(window.0, false);
+    see(window.0, Seen::Leave { captured: false });
     move_to(&window, Point { x: 9, y: 10 });
     assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
 }
@@ -207,9 +208,9 @@ fn each_move_inside_asks_for_the_leave_again_and_a_leave_under_capture_once() {
     assert_eq!(leaves(&window), 1, "the entry asks");
     move_to(&window, Point { x: 2, y: 2 });
     assert_eq!(leaves(&window), 1, "each move asks again");
-    left_with(window.0, true);
+    see(window.0, Seen::Leave { captured: true });
     assert_eq!(leaves(&window), 1, "a leave under capture asks again");
-    left_with(window.0, true);
+    see(window.0, Seen::Leave { captured: true });
     assert_eq!(leaves(&window), 0, "but once until the next move");
 }
 
@@ -242,10 +243,41 @@ fn a_capture_lost_off_the_window_ends_the_entry_and_one_lost_on_it_keeps_it() {
         y: kb.y + y,
     };
     move_to(&window, Point { x: 5, y: 6 });
-    released_with(window.0, true);
+    see(window.0, Seen::Lost { on: true });
     move_to(&window, Point { x: 7, y: 8 });
     assert_eq!(kept().map(|k| k.entry), Some(screen(5, 6)), "still inside");
     lose_capture(&window);
+    move_to(&window, Point { x: 9, y: 10 });
+    assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
+}
+
+#[test]
+fn a_capture_lost_on_the_window_while_out_asks_nothing_and_the_next_move_enters() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = spot_on_main();
+    let window = watched_at("KeyXtend test: lost while out", kb, false);
+    see(window.0, Seen::Lost { on: true });
+    assert_eq!(leaves(&window), 0, "nothing to leave yet");
+    move_to(&window, Point { x: 3, y: 4 });
+    let entry = Point {
+        x: kb.x + 3,
+        y: kb.y + 4,
+    };
+    assert_eq!(kept().map(|k| k.entry), Some(entry));
+}
+
+#[test]
+fn a_leave_without_capture_after_one_under_it_ends_the_entry() {
+    let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
+    let kb = spot_on_main();
+    let window = watched_at("KeyXtend test: asked then left", kb, false);
+    let screen = |x, y| Point {
+        x: kb.x + x,
+        y: kb.y + y,
+    };
+    move_to(&window, Point { x: 5, y: 6 });
+    see(window.0, Seen::Leave { captured: true });
+    see(window.0, Seen::Leave { captured: false });
     move_to(&window, Point { x: 9, y: 10 });
     assert_eq!(kept().map(|k| k.entry), Some(screen(9, 10)), "a new entry");
 }

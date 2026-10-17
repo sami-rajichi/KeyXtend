@@ -136,13 +136,13 @@ fn steps_past_their_time_look_nothing_up() {
     let _com = Com::start().unwrap();
     let auto = client(READ_MS).unwrap();
     let (at_a, at_b) = (Seek::Window(a.raw()), Seek::Window(b.raw()));
-    let mut kept = None;
-    step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut kept);
-    let kept_a = |k: &work::Kept| k.as_ref().is_some_and(|(s, _)| *s == at_a);
-    assert!(kept_a(&kept), "a lookup in time");
+    let mut held = None;
+    step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
+    let held_a = |k: &work::Held| k.as_ref().is_some_and(|(s, _)| *s == at_a);
+    assert!(held_a(&held), "a lookup in time");
     let past = Instant::now().checked_sub(SHORT).unwrap();
-    step(&auto, (at_b, Dir::Down, TENTH), past, &mut kept);
-    assert!(kept_a(&kept), "none past its time");
+    step(&auto, (at_b, Dir::Down, TENTH), past, &mut held);
+    assert!(held_a(&held), "none past its time");
 }
 
 #[test]

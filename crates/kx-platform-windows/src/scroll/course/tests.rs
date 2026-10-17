@@ -18,7 +18,7 @@ const PAUSE_MS: u32 = 60_000;
 const CHECK: u32 = CONFIG.check_ms;
 /// The `[scroll] tick_ms` default.
 const TICK: u32 = 16;
-/// The shortest `[scroll]` times: `check_ms`, `read_ms` and `tick_ms` all at 100.
+/// The shortest `[scroll]` times: `check_ms` and `read_ms` at their minimum, 100.
 const FASTEST: ScrollConfig = ScrollConfig {
     check_ms: 100,
     read_ms: 100,
