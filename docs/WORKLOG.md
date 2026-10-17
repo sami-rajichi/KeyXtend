@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 17:49 — P5 owner's ask: a second click on Win with nothing between opens Start
+A latch role in `board.toml` can now carry `lone = true`, set on Win only: clicking it again with nothing used since it latched lets go and sends Win alone through the injector, so Start opens as with a real key. A key, Caps Lock, a modifier + click or another latch latched meanwhile uses it, so the second click only lets go, in both modes; a lone press refused whole keeps Win latched. Property runs over random clicks check that only that second click sends, and never for another latch. G10's Win step now latches Shift between Win's presses, so it never opens Start.
+
 ## 2026-10-17 09:45 — P5: our open list's outline shows, and last polish before the hands-on test
 A peek or a scroll on our open list now draws the outline just outside the list's box, as the opaque list hid edges laid inside it; `ScrollAimed` and the hub's scroll state say when the box is ours. UI Automation's walk down a covered target never goes into an element of our own process, and its time share is a named constant. The fake scroll target answers `Gone` to turns on a closed window, as Windows does, and the list's mark test checks the calls' order instead of the guard's delay.
 

@@ -1,6 +1,6 @@
 //! Any run of clicks on the board, in both latch modes: "release" lets every latch go after the next key,
-//! "stay" keeps each until it is clicked again, an empty key keeps them, and no key ever holds a modifier that was
-//! not latched.
+//! "stay" keeps each until it is clicked again, an empty key keeps them, no key ever holds a modifier that was
+//! not latched, and only Win, let go with nothing used since it latched, sends itself alone.
 
 use crate::typing::Rig;
 use kx_mod_keyboard::legend::is_empty;
@@ -22,8 +22,8 @@ const ALL: [Latch; 5] = [
 /// What a click on a key does to the latches.
 #[derive(Copy, Clone, Debug)]
 enum Kind {
-    /// Latches or lets go of a modifier, from a key sending this code.
-    Latch(Latch, u16),
+    /// Latches or lets go of a modifier, from a key sending this code; a lone one sends itself when let go unused.
+    Latch(Latch, u16, bool),
     /// Sends one stroke, which uses the latches.
     Key,
     /// A character key with this scan code: one stroke, or nothing while it is empty.
@@ -36,7 +36,7 @@ enum Kind {
 
 /// The keys a run clicks, with what each does.
 fn keys() -> Vec<(String, Kind)> {
-    let latch = |id: &str, l, code| (id.to_owned(), Kind::Latch(l, code));
+    let latch = |id: &str, l, code| (id.to_owned(), Kind::Latch(l, code, l == Latch::Win));
     let chars =
         [0x10, 0x11, 0x1E, 0x1F, 0x2E, 0x02].map(|c| (char_id(Scan::new(c)), Kind::Char(c)));
     let named = ["esc", "space", "left", "bksp", "enter"].map(|id| (id.to_owned(), Kind::Key));
@@ -72,43 +72,72 @@ fn empty(r: &Rig, code: u16) -> bool {
     key.is_some_and(|k| is_empty(k, mods))
 }
 
+/// The latches on, each with its key's code and whether anything used it since it latched.
+type Model = BTreeMap<Latch, (Scan, bool)>;
+
+/// Marks every latch on in the model as used.
+fn spend(model: &mut Model) {
+    for (_, used) in model.values_mut() {
+        *used = true;
+    }
+}
+
+/// A click on a latch key with `code`: what it must send, as the model says, and the model after it.
+fn toggle(model: &mut Model, l: Latch, code: u16, lone: bool) -> Vec<Stroke> {
+    match model.remove(&l) {
+        Some((_, false)) if lone => vec![Stroke::Tap(Scan::new(code))],
+        Some(_) => Vec::new(),
+        None => {
+            spend(model);
+            model.insert(l, (Scan::new(code), false));
+            Vec::new()
+        }
+    }
+}
+
+/// Checks every latch of `r` against the model: on, and unused since it latched.
+fn agrees(r: &Rig, model: &Model) -> Result<(), TestCaseError> {
+    let latches = r.typing.latches();
+    for l in ALL {
+        let on = model.get(&l);
+        prop_assert_eq!(latches.is_on(l), on.is_some(), "{:?}", l);
+        let unused = on.is_some_and(|&(_, used)| !used);
+        prop_assert_eq!(latches.unused(l), unused, "{:?} unused", l);
+    }
+    Ok(())
+}
+
 /// Clicks `picks` of `keys()` on `layout` in `mode`, checking each click against a model of the latches.
 fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseError> {
     let keys = keys();
     let mut r = Rig::new(layout, |s| s.modifiers = mode);
-    let mut model: BTreeMap<Latch, Scan> = BTreeMap::new();
+    let mut model = Model::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
         let quiet = matches!(*kind, Kind::Char(code) if empty(&r, code));
         r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
         let sent = r.sent();
-        let latched: Vec<Scan> = model.values().copied().collect();
+        let latched: Vec<Scan> = model.values().map(|&(key, _)| key).collect();
         prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
         match *kind {
-            Kind::Latch(l, code) => {
-                prop_assert!(sent.is_empty());
-                if model.remove(&l).is_none() {
-                    model.insert(l, Scan::new(code));
-                }
+            Kind::Latch(l, code, lone) => {
+                prop_assert_eq!(sent, toggle(&mut model, l, code, lone), "{}", id);
             }
             Kind::Char(_) if quiet => prop_assert!(sent.is_empty(), "{}: empty", id),
             Kind::Key | Kind::Char(_) => {
                 prop_assert_eq!(sent.len(), 1);
+                spend(&mut model);
                 if mode == Modifiers::Release {
                     model.clear();
                 }
             }
-            Kind::Caps => prop_assert_eq!(sent.len(), 1),
+            Kind::Caps => {
+                prop_assert_eq!(sent.len(), 1);
+                spend(&mut model);
+            }
             Kind::Quiet => prop_assert!(sent.is_empty()),
         }
-        for l in ALL {
-            prop_assert_eq!(
-                r.typing.latches().is_on(l),
-                model.contains_key(&l),
-                "{:?}",
-                l
-            );
-        }
+        agrees(&r, &model)?;
     }
     Ok(())
 }

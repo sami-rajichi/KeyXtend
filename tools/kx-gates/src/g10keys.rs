@@ -85,6 +85,17 @@ pub fn probe_scan(roles: &[(String, Role, Option<Scan>)], probe: &str) -> Result
         .ok_or_else(|| format!("{probe} is no send key of the product's board"))
 }
 
+/// The first latch key but Win, which G10 latches between Win's presses so a lone Win never opens Start.
+fn spare(roles: &[(String, Role, Option<Scan>)]) -> Result<&str, String> {
+    let other = |role: &Role| matches!(role, Role::Latch(r) if r.latch != Latch::Win);
+    let found = roles
+        .iter()
+        .find(|(_, role, sc)| other(role) && sc.is_some());
+    found
+        .map(|(id, ..)| id.as_str())
+        .ok_or_else(|| "the product's board has no latch key but Win".to_string())
+}
+
 /// A step for key `id`, which presses `presses`.
 fn step(id: &str, presses: &[&str], expect: Expect, toggles: bool) -> Step {
     Step {
@@ -96,20 +107,25 @@ fn step(id: &str, presses: &[&str], expect: Expect, toggles: bool) -> Step {
     }
 }
 
-/// The step for key `id` with `role` and scan code `sc`; none for a character key or the language key.
+/// The step for key `id` with `role` and scan code `sc`; none for a character key or the language key. Win's step
+/// latches `spare` between its presses.
 fn step_for(
     id: &str,
     role: Role,
     sc: Option<Scan>,
     probe: (&str, Scan),
+    spare: &str,
     stay: bool,
 ) -> Option<Step> {
     let code = sc.map(Scan::code);
     match (role, code) {
         (Role::Send, Some(c)) => Some(step(id, &[id], Expect::Keys(vec![c]), false)),
         (Role::Caps, Some(c)) => Some(step(id, &[id, id], Expect::Keys(vec![c, c]), false)),
-        // Win's shortcuts reach Windows itself, so it is latched and let go with nothing between.
-        (Role::Latch(Latch::Win), Some(_)) => Some(step(id, &[id, id], Expect::Nothing, true)),
+        // Win's shortcuts reach Windows, and Win let go unused opens Start: `spare` uses it, so nothing goes down.
+        (Role::Latch(r), Some(_)) if r.latch == Latch::Win => {
+            let presses = [id, spare, id, spare];
+            Some(step(id, &presses, Expect::Nothing, true))
+        }
         (Role::Latch(_), Some(c)) => {
             let keys = Expect::Keys(vec![c, probe.1.code()]);
             let presses: &[&str] = if stay {
@@ -129,17 +145,19 @@ fn step_for(
     }
 }
 
-/// The steps for the board's `roles`, in board order: send keys, Caps Lock, the modifiers with `probe` after each,
-/// the mouse-assist keys twice, and the keys of later versions. `stay` is true when modifiers stay latched after a key.
+/// The steps for the board's `roles`, in board order: send keys, Caps Lock, the modifiers with `probe` after each
+/// (Win with another latch), the mouse-assist keys twice, and the keys of later versions. `stay` is true when
+/// modifiers stay latched after a key.
 pub fn plan(
     roles: &[(String, Role, Option<Scan>)],
     probe: &str,
     stay: bool,
 ) -> Result<Vec<Step>, String> {
     let probe = (probe, probe_scan(roles, probe)?);
+    let spare = spare(roles)?;
     let steps = roles
         .iter()
-        .filter_map(|(id, role, sc)| step_for(id, *role, *sc, probe, stay));
+        .filter_map(|(id, role, sc)| step_for(id, *role, *sc, probe, spare, stay));
     Ok(steps.collect())
 }
 

@@ -3,7 +3,7 @@
 
 use crate::latch::Latches;
 use crate::legend::{LegendMods, slot};
-use crate::spec::{Latch, Role};
+use crate::spec::{Latch, LatchRole, Role};
 use kx_module_api::ports::{KeyChars, Scan, Slot, TextRoute, Toggle};
 use kx_module_api::{REDACTED_MARKER, Redacted};
 use std::collections::BTreeMap;
@@ -52,10 +52,10 @@ pub enum Plan {
         /// What it does to a dead key's wait.
         wait: Wait,
     },
-    /// Taps Caps Lock; the latches and a dead key's wait stay.
+    /// Taps Caps Lock; the latches stay, used, and so does a dead key's wait.
     Caps(Scan),
-    /// Latches or lets go of a modifier, from the key that sends the scan code.
-    Latch(Latch, Scan),
+    /// Latches or lets go of a modifier, from the key that sends the scan code; a lone one may send that key alone.
+    Latch(LatchRole, Scan),
     /// The language key: the face steps or opens the list.
     Lang,
     /// A mouse-assist side key: the face asks the mouse module to flip this mode; nothing goes to the app.
@@ -76,7 +76,7 @@ impl fmt::Debug for Plan {
                 .field("wait", wait)
                 .finish(),
             Self::Caps(_) => f.write_str("Caps"),
-            Self::Latch(l, _) => write!(f, "Latch({l:?})"),
+            Self::Latch(r, _) => write!(f, "Latch({:?})", r.latch),
             Self::Lang => f.write_str("Lang"),
             Self::Assist(t) => write!(f, "Assist({t:?})"),
             Self::Later => f.write_str("Later"),
@@ -109,7 +109,7 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Char, Some(sc)) => char_plan(sc, now),
         (Role::Send, Some(sc)) => shortcut(sc, now),
         (Role::Caps, Some(sc)) => Plan::Caps(sc),
-        (Role::Latch(l), Some(sc)) => Plan::Latch(l, sc),
+        (Role::Latch(r), Some(sc)) => Plan::Latch(r, sc),
         (Role::Lang, _) => Plan::Lang,
         (Role::Assist(a), _) => Plan::Assist(a.into()),
         _ => Plan::Later,

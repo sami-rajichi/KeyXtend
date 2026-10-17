@@ -10,6 +10,7 @@ mod held;
 mod host;
 mod lang;
 mod latches;
+mod lone;
 mod module;
 mod pad;
 mod place;

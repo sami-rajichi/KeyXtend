@@ -6,7 +6,7 @@ use super::*;
 fn character_ids_name_their_scan_code() {
     assert_eq!(char_id(Scan::new(0x2C)), "c-0x002C");
     assert_eq!(char_id(Scan::new(0xE035)), "c-0xE035");
-    assert!(Role::Char.sends() && Role::Latch(Latch::Win).sends());
+    assert!(Role::Char.sends() && Role::Latch(LatchRole::of(Latch::Win)).sends());
     assert!(!Role::Lang.sends() && !Role::Later.sends());
     assert!(!Role::Assist(Assist::RClick).sends());
 }

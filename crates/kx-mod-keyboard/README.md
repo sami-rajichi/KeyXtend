@@ -26,7 +26,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `char` | Types the character of the layout shown; only the keys of a `chars` run have it. |
 | `send` | Sends its scan code with the latched modifiers. |
 | `caps` | Sends Caps Lock and lights while it is on. |
-| `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win. |
+| `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win; with `lone = true` (Win only), a second click with nothing used since the first lets go and sends the key alone, so Start opens. |
 | `lang` | Steps through or picks the layouts. |
 | `assist` | Asks the mouse module to flip Right-click (`rclick`) or Grab (`grab`); see "Mouse assist on the bus". |
 | `later` | Nothing: the other side keys come in a later version and are drawn dimmed. |
@@ -53,8 +53,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Any character key sent as a scan code while the app in front has another installed layout | Nothing is sent; `Tapped::Stale`, so the face refreshes the layouts and redraws, and the user clicks again | Kept | Kept |
 | Any other character key | Its text as Unicode, or as key presses in the app's layout (`TextRoute::Keys`) when the app is in `key_apps`; Shift, Caps Lock and `AltGr` are already in the text | Used, none held | None |
 | A `send` key | Tap, or a chord with every latch held | Used | Kept only if the key typed nothing |
-| Caps Lock | Tap | Kept | Kept |
-| A modifier | Nothing; it latches or lets go | Toggled | Kept |
+| Caps Lock | Tap | Kept, used | Kept |
+| A modifier | Nothing, or its key alone for a `lone` latch let go unused; it latches or lets go | Toggled; latching uses those already on | Kept |
 | The language key, a `later` key, a mouse-assist key | Nothing; `Tapped::Lang`, `Tapped::Later` or `Tapped::Assist` for the face | Kept | Kept |
 | An id not on the board | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
 

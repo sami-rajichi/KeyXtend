@@ -250,7 +250,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
         };
     }
     let on = match k.role {
-        Role::Latch(l) => i.latches.is_on(l),
+        Role::Latch(r) => i.latches.is_on(r.latch),
         Role::Caps => i.caps,
         _ => false,
     };

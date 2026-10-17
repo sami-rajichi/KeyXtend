@@ -212,7 +212,8 @@ fn the_shipped_board_gives_each_named_key_its_role() {
         ("win", Latch::Win),
     ];
     for (id, l) in latches {
-        assert_eq!(named(&s, id).role, Role::Latch(l), "{id}");
+        let role = named(&s, id).role;
+        assert!(matches!(role, Role::Latch(r) if r.latch == l), "{id}");
     }
     assert_eq!(
         (named(&s, "caps").role, named(&s, "lang").role),
@@ -265,4 +266,5 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
 }
 
 mod ids;
+mod lone;
 mod repeat;

@@ -49,6 +49,25 @@ pub enum Latch {
     Win,
 }
 
+/// A latch key's role: the modifier it latches and, when `lone`, the lone press of a second click.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LatchRole {
+    /// The modifier.
+    pub latch: Latch,
+    /// A second click with nothing used since the first lets go and sends the key alone, as Win opens Start.
+    #[serde(default)]
+    pub lone: bool,
+}
+
+impl LatchRole {
+    /// A role that latches `latch`, with no lone press.
+    #[must_use]
+    pub const fn of(latch: Latch) -> Self {
+        Self { latch, lone: false }
+    }
+}
+
 /// A mouse-assist mode a side key flips; the mouse module runs it (spec §5.1).
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -78,14 +97,15 @@ pub enum Role {
     Send,
     /// Caps Lock: sends its scan code and lights while Caps Lock is on.
     Caps,
-    /// Latches a modifier.
-    Latch(Latch),
     /// Steps through or picks the layouts.
     Lang,
     /// Asks the mouse module to flip a mode; lit while it is on, dimmed while that module is not running.
     Assist(Assist),
     /// Comes in a later version: drawn dimmed and does nothing.
     Later,
+    /// Latches a modifier; `board.toml` writes it as a table, `{ latch = "win", lone = true }`.
+    #[serde(untagged)]
+    Latch(LatchRole),
 }
 
 impl Role {

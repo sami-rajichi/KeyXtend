@@ -1,6 +1,6 @@
 //! Tests of G10's key plan, over the product's own board.
 
-use kx_mod_keyboard::{LangKey, Role};
+use kx_mod_keyboard::{LangKey, Latch, LatchRole, Role};
 use kx_module_api::ports::Scan;
 
 use super::*;
@@ -77,11 +77,26 @@ fn a_latch_goes_out_with_the_probe_and_is_let_go_again_when_modifiers_stay() {
 }
 
 #[test]
-fn win_is_latched_and_let_go_with_nothing_sent_since_its_shortcuts_reach_windows() {
-    let win = step_of(false, "win");
-    assert_eq!(win.presses, ids(&["win", "win"]));
-    assert_eq!(win.expect, Expect::Nothing);
-    assert!(win.toggles);
+fn win_is_used_by_another_latch_before_it_lets_go_so_nothing_goes_down() {
+    for stay in [false, true] {
+        let win = step_of(stay, "win");
+        assert_eq!(win.presses, ids(&["win", "shift", "win", "shift"]));
+        assert_eq!(win.expect, Expect::Nothing, "neither a shortcut nor Start");
+        assert!(win.toggles);
+    }
+}
+
+#[test]
+fn a_board_with_no_latch_but_win_has_no_plan() {
+    let win = Role::Latch(LatchRole {
+        lone: true,
+        ..LatchRole::of(Latch::Win)
+    });
+    let roles = [
+        ("win".to_string(), win, Some(Scan::new(0xE05B))),
+        (PROBE.to_string(), Role::Send, Some(Scan::new(0x1C))),
+    ];
+    assert!(plan(&roles, PROBE, false).is_err());
 }
 
 #[test]
