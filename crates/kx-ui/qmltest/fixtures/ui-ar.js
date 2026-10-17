@@ -38,6 +38,7 @@ var lang = {
 var texts = {
   "badge.fast": "سريع",
   "badge.holding": "قيد الإمساك",
+  "badge.join": "، ",
   "badge.slow": "بطيء",
   "banner.more": "{$more} إشعار آخر",
   "bar.bigger": "أكبر",

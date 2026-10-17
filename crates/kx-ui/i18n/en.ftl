@@ -137,11 +137,13 @@ window =
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
 
-## The mode badge beside the pointer: its word while Grab holds a press down, and the scroll pad's speed.
+## The mode badge beside the pointer: its word while Grab holds a press down, the scroll pad's speed, and what joins
+## its parts for screen readers.
 badge =
     .holding = Holding
     .slow = slow
     .fast = fast
+    .join = {", "}
 
 tray =
     .show = Show keyboard

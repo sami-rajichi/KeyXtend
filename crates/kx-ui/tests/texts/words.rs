@@ -2,6 +2,7 @@
 
 use crate::files::keys_of;
 use crate::{all, lang};
+use kx_module_api::keys::{SCROLL_FAILED, SCROLL_POINT};
 use kx_ui::find;
 use kx_ui::i18n::keys::{MODULE, THEME};
 
@@ -36,6 +37,10 @@ const NO_BREAK: [char; 2] = ['\u{a0}', '\u{202f}'];
 const GUILLEMETS: [char; 2] = ['«', '»'];
 /// Latin punctuation Arabic text writes as "،", "؛" and "؟".
 const LATIN_ONLY: [char; 3] = [',', ';', '?'];
+/// Windows' French points "sur" a thing: "pointez", and the same with "sur", as bare it means tick off.
+const FR_POINT: [&str; 2] = ["pointez", "pointez sur"];
+/// A French word for a tap that Windows never uses; it says "appuyez sur".
+const FR_NOT_TAP: &str = "touchez";
 
 /// The lines of `ftl` that hold text, not comments.
 fn text_lines(ftl: &str) -> impl Iterator<Item = &str> {
@@ -117,6 +122,19 @@ fn french_spaces_high_punctuation_and_guillemets_with_no_break_spaces() {
             assert!(!needs_before || spaced_before, "{line}");
             assert!(*c != GUILLEMETS[0] || spaced_after, "{line}");
         }
+    }
+}
+
+#[test]
+fn french_points_sur_a_thing_and_taps_with_appuyez_sur() {
+    let fr = lang("fr");
+    let point = "Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.";
+    assert_eq!(fr.text(SCROLL_POINT), point);
+    assert!(fr.text(SCROLL_FAILED).contains("Appuyez sur une flèche"));
+    for line in text_lines(fr.lang().ftl).map(str::to_lowercase) {
+        assert!(!line.contains(FR_NOT_TAP), "{line}");
+        let [point, at] = FR_POINT.map(|w| line.matches(w).count());
+        assert_eq!(point, at, "{line}");
     }
 }
 

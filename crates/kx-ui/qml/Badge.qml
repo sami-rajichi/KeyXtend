@@ -32,12 +32,12 @@ Item {
     height: sh.icon_px + 2 * sh.pad_px[0]
     opacity: shown && (moded || scrolling) ? 1 : 0
 
-    // Readers hear the mode, else the arrow, then the rest joined as a list.
+    // Readers hear the mode, else the arrow, then the rest after the language's comma.
     Accessible.role: Accessible.StaticText
     Accessible.name: moded ? res.tr("label." + mode) : scrolling ? res.dpad(scroll.dir) : ""
     Accessible.description: {
         const rest = [carrying ? holding.text : "", moded && scrolling ? res.dpad(scroll.dir) : "", scrolling ? speed.text : ""];
-        return rest.filter(t => t !== "").join(res.tr("list.join"));
+        return rest.filter(t => t !== "").join(res.tr("badge.join"));
     }
 
     Behavior on opacity {

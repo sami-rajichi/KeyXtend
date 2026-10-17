@@ -112,11 +112,12 @@ Item {
             const wider = Math.max(...["badge.slow", "badge.fast"].map(k => word(b, En, k).implicitWidth));
             fuzzyCompare(b.width - parts[4].implicitWidth + wider, b.widest, 0.01, "the widest it gets, with the wider speed");
             fuzzyCompare(b.widest, widest(b, En), 0.01);
-            const join = En.texts["list.join"];
+            const join = En.texts["badge.join"];
             compare(b.Accessible.description, [En.texts["badge.holding"], b.res.dpad("up"), En.texts["badge.fast"]].join(join));
         }
 
-        // Arabic words read right to left inside their part, and the parts keep their places, as nothing mirrors.
+        // Arabic words read right to left inside their part, the parts keep their places, as nothing mirrors, and readers
+        // hear them after Arabic commas.
         function test_arabic_words_read_right_to_left() {
             tryVerify(() => Board.loaded(root.bundled), 5000, "the bundle is laid out by the texts test");
             const b = badge(Ar, "grab", "carrying", { dir: "left", fast: false });
@@ -127,6 +128,8 @@ Item {
             const letters = Array.from(Ar.texts["badge.slow"]);
             verify(placeOf(slow, letters[0]) > placeOf(slow, letters[letters.length - 1]), "its first letter on the right");
             compare(slow.font.family, Board.resOf(N.lk, Ar).fam.ui);
+            const rest = [Ar.texts["badge.holding"], b.res.dpad("left"), Ar.texts["badge.slow"]];
+            compare(b.Accessible.description, rest.join(Ar.texts["badge.join"]), "readers hear the parts after Arabic commas");
         }
         // Where drawn text `label` lays out `part`: the middle of its pixels on its one line.
         function placeOf(label, part) {

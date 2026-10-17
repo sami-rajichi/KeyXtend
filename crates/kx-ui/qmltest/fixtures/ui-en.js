@@ -38,6 +38,7 @@ var lang = {
 var texts = {
   "badge.fast": "fast",
   "badge.holding": "Holding",
+  "badge.join": ", ",
   "badge.slow": "slow",
   "banner.more": "{$more} more notices",
   "bar.bigger": "Bigger",

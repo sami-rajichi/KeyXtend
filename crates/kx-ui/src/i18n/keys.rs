@@ -58,6 +58,8 @@ pub const BADGE_SLOW: &str = "badge.slow";
 pub const BADGE_FAST: &str = "badge.fast";
 /// The mode badge's word while Grab holds a press down.
 pub const BADGE_HOLDING: &str = "badge.holding";
+/// What joins the badge's parts that readers hear after its name (`Badge.qml`).
+pub const BADGE_JOIN: &str = "badge.join";
 /// How many more notices wait behind the one the banner shows: `$more`.
 pub const BANNER_MORE: &str = "banner.more";
 /// A pager's number: page `$at` of `$count`.

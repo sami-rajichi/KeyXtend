@@ -137,11 +137,13 @@ window =
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
 
-## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui, et la vitesse du pavé de défilement.
+## Le badge de mode près du pointeur : son mot pendant que Saisir maintient un appui, la vitesse du pavé de défilement,
+## et ce qui sépare ses parties pour les lecteurs d’écran.
 badge =
     .holding = Saisi
     .slow = lent
     .fast = rapide
+    .join = {", "}
 
 tray =
     .show = Afficher le clavier
@@ -180,10 +182,10 @@ notice =
     .mouse-hook-failed = L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.
     .mouse-reset = L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.
     .mouse-stopped = L’aide à la souris s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
-    .scroll-point = Pointez ce que vous voulez faire défiler, puis touchez une flèche.
+    .scroll-point = Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.
     .scroll-none = Rien à faire défiler ici.
     .scroll-end = Déjà à la fin.
-    .scroll-failed = Le pavé de défilement a rencontré une erreur. Touchez une flèche pour réessayer.
+    .scroll-failed = Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.
     .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
