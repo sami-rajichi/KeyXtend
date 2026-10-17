@@ -95,6 +95,24 @@ fn a_bad_box_or_nothing_that_scrolls_gives_no_box() {
     assert_eq!((aim.area, r.reach(&aim, Dir::Down)), (None, Reach::Unknown));
 }
 
+/// A live window with nothing that scrolls reads `Unknown` both ways on each axis, never the end, so the module glides
+/// there quietly (`kx-mod-scroll`'s `a_target_unknown_both_ways_glides_quietly_until_a_stop`).
+#[test]
+fn a_live_window_with_nothing_that_scrolls_reads_unknown_both_ways() {
+    let fake = desk();
+    let none = Read {
+        area: None,
+        pair: None,
+    };
+    fake.with(|s| s.read = Some(none));
+    let mut r = run(&fake);
+    let aim = r.aim().unwrap();
+    assert!(r.alive(&aim), "the window lives");
+    for dir in Dir::ALL {
+        assert_eq!(r.reach(&aim, dir), Reach::Unknown, "{dir:?}");
+    }
+}
+
 #[test]
 fn the_wheel_settings_are_read_at_open_and_for_each_new_target() {
     let fake = desk();

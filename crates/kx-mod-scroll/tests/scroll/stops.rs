@@ -1,6 +1,7 @@
 //! Each way a scroll stops: the third tap, Stop, the end, a press, the limit, a closed target and a turn onto an end.
+//! A reach that reads `Unknown` never stops it.
 
-use crate::rig::{APP, OTHER, Rig, after, hidden, state, still, told};
+use crate::rig::{APP, OTHER, Rig, T0, after, hidden, outline, state, still, told};
 use kx_mod_scroll::Msg;
 use kx_module_api::MS_PER_S;
 use kx_module_api::keys::{SCROLL_END, SCROLL_NONE, SCROLL_POINT};
@@ -48,6 +49,32 @@ fn reaching_the_end_stops_quietly_at_the_next_check() {
     rig.tick_at(rig.checks(1));
     assert_eq!(rig.take(), stopped());
     assert_eq!(rig.target.turns().len(), 1, "nothing turns past the end");
+}
+
+/// Windows reads a live window with nothing that scrolls as `Unknown` both ways (`kx-platform-windows`'s
+/// `a_live_window_with_nothing_that_scrolls_reads_unknown_both_ways`): the tap starts, and it glides quietly until a stop.
+#[test]
+fn a_target_unknown_both_ways_glides_quietly_until_a_stop() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.take();
+    rig.point(APP);
+    rig.target.set_reach(Down, Reach::Unknown);
+    rig.target.set_reach(Up, Reach::Unknown);
+    rig.tap_at(Down, T0);
+    assert_eq!(rig.take(), [state(Some(Down), false), outline(APP)]);
+    for n in 1..=3 {
+        rig.tick_at(rig.checks(n));
+    }
+    assert_eq!(rig.take(), [], "no notice and no stop");
+    let read = (rig.target.turns().len(), rig.target.reaches());
+    assert_eq!(
+        read,
+        (3, 4),
+        "a turn at each check, and a reach at the tap and each check"
+    );
+    rig.send(Msg::Stop);
+    assert_eq!(rig.take(), stopped());
 }
 
 #[test]
