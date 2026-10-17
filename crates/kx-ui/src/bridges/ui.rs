@@ -2,6 +2,7 @@
 //! overlay and scroll states and the app's commands. It follows the system look and hears the hub's wakes on the Qt
 //! thread, so make one per app, in the root file.
 
+mod look;
 mod notices;
 mod scroll;
 mod spots;
@@ -260,23 +261,6 @@ impl qobject::Ui {
 
     fn settings_json(&self) -> QString {
         qs(&self.with(NULL.to_owned(), Hub::settings_json))
-    }
-
-    fn look_json(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), Hub::look_json))
-    }
-
-    fn step_theme(&self) -> bool {
-        self.with(false, Hub::step_theme)
-    }
-
-    fn flip_mode(&self) -> bool {
-        self.with(false, Hub::flip_mode)
-    }
-
-    fn backdrop(&self, title: &QString) -> bool {
-        let title = title.to_string();
-        self.with(false, |h| h.backdrop(&title))
     }
 
     fn mode_json(&self) -> QString {

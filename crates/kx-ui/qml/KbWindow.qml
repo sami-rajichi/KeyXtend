@@ -65,7 +65,7 @@ Window {
     // The window's size in Qt units: the plate and the overhang.
     readonly property real wide: ready ? board.plate.w + overhang : 0
     readonly property real high: ready ? board.plate.h + overhang : 0
-    readonly property var res: resources(texts, faces)
+    readonly property var res: kit.resources(ui, lk, tongue, assets, texts, faces)
     // Units and pop-up spots: physical pixels or Qt units on the screen that holds them.
     readonly property Spots spots: Spots {
         win: win
@@ -103,6 +103,9 @@ Window {
     KbWakes {
         win: win
     }
+    KbRes {
+        id: kit
+    }
     // Keeps the size and place above across display scale changes, and places the keyboard again on a new scale.
     Rescale {
         id: rescale
@@ -131,36 +134,6 @@ Window {
         sourceComponent: LangPanel {
             win: win
         }
-    }
-
-    // The fonts, icons and texts (keyboard's and tray's) the parts draw with; `n` and `f` rerun it as they change.
-    function resources(n, f) {
-        const fam = lk ? families(f) : {};
-        return {
-            fam: fam,
-            icons: assets.icons,
-            ext: assets.ext,
-            tr: key => ui.text(key),
-            tray: key => ui.trayText(key),
-            bar: id => ui.nameOf("bar", id),
-            // A control's UI Automation id is its text key, such as `bar.close`, the same in every language.
-            uid: (group, id) => group + "." + id,
-            dpad: id => ui.nameOf("dpad", id),
-            space: parts => ui.space(JSON.stringify(parts)),
-            // A tip with a note, such as when a dimmed button comes: its name, then the note, on two lines.
-            noteTip: (name, note) => name + "\n" + note
-        };
-    }
-    // The Latin, Arabic and mark families (each list's first that Qt has, else its last), and the keyboard's and
-    // tray's.
-    function families(f) {
-        const all = Qt.fontFamilies();
-        const pick = list => list.find(n => all.indexOf(n) >= 0) || list[list.length - 1];
-        const latin = pick(lk.look.latin_fonts);
-        const arabic = pick(lk.look.arabic_fonts);
-        const mark = pick(lk.look.mark_fonts);
-        const of = l => l && l.rtl ? arabic : latin;
-        return { latin: latin, arabic: arabic, mark: mark, ui: of(tongue), tray: of(tongue && tongue.tray) };
     }
 
     // Reads everything again: the settings or face changed.

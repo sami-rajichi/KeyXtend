@@ -29,6 +29,7 @@ mod qt {
         "qml/main.qml",
         "qml/App.qml",
         "qml/KbWindow.qml",
+        "qml/KbRes.qml",
         "qml/Spots.qml",
         "qml/Rescale.qml",
         "qml/Placing.qml",
