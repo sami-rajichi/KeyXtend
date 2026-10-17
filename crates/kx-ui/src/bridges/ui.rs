@@ -153,6 +153,10 @@ pub mod qobject {
         #[qinvokable]
         fn lay_under(&self, title: &QString, under: &QString) -> bool;
 
+        /// Marks window `title` as one the scroll pad pages, as the open list asks; false until shown and guarded.
+        #[qinvokable]
+        fn mark_pages(&self, title: &QString) -> bool;
+
         /// Keeps how the user left the keyboard: away after Close or Minimise, minimised behind the bubble.
         #[qinvokable]
         fn keep_mode(&self, away: bool, minimised: bool);

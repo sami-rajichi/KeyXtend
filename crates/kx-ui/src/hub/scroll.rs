@@ -1,6 +1,6 @@
-//! The scroll pad's side of the hub: the scroll state and the box to outline as one JSON, our open list's page turns,
-//! and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll` waits for QML's read, and
-//! nothing here logs a box or a point.
+//! The scroll pad's side of the hub: the scroll state and the box to outline as one JSON, our open list's page mark and
+//! page turns, and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll` waits for
+//! QML's read, and nothing here logs a box or a point.
 
 use super::face::done;
 use super::unread::Unread;
@@ -141,6 +141,14 @@ impl Hub {
         if changed && self.scroll.unread.arm() {
             self.wake(Wake::Scroll);
         }
+    }
+
+    /// Marks our window `title` as one that pages, so a pad tap aimed at it turns its page where the target passes over
+    /// our other windows; false while it does not show or when refused. The open list asks; call it on the UI thread.
+    #[must_use]
+    pub fn mark_pages(&self, title: &str) -> bool {
+        let result = self.ports.guard.mark_pages(title);
+        done(result, "a list will not be paged by the scroll pad")
     }
 
     /// Turns our open list a page back or on, as its own page button does with `[ui] page_rows`; nothing where its page

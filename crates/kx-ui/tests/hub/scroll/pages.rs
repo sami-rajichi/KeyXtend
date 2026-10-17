@@ -1,12 +1,14 @@
-//! Our open list turns a page when the pad scrolls it: the bus's request waits for the Qt thread, which sends the
-//! list's own page button with `[ui] page_rows` only the ways the face's page says it turns, and nothing with no list
-//! open; the hub does no page maths.
+//! Our open list turns a page when the pad scrolls it: the list asks the guard to mark it as paging, the bus's request
+//! waits for the Qt thread, which sends the list's own page button with `[ui] page_rows` only the ways the face's page
+//! says it turns, and nothing with no list open; the hub does no page maths.
 
 use super::listened;
 use crate::logs::warnings_of;
 use crate::{FakeFace, Rig, provide};
 use kx_module_api::ports::{FaceAction, FaceReply, KeyId, ScrollPage};
 use kx_module_api::{Module, ModuleCx};
+use kx_platform::ui::UiError;
+use kx_platform_fake::GuardCall;
 use kx_test_support::host::FakeHost;
 use kx_ui::{MANIFEST, UiModule, Wake};
 use serde_json::{Value, json};
@@ -47,6 +49,24 @@ fn open(back: bool, on: bool) -> (Rig, Arc<FakeFace>, FakeHost) {
     let (rig, face, host) = Rig::with_face();
     face.set_state(listing(back, on, KEYS));
     (rig, face, host)
+}
+
+/// The list asks at each guard try until the mark holds: quietly while it does not show, with a warning when refused.
+#[test]
+fn the_open_list_asks_the_guard_to_mark_it_as_paging() {
+    let rig = Rig::new();
+    assert!(rig.hub.mark_pages("list"));
+    assert!(
+        rig.guard
+            .calls()
+            .ends_with(&[GuardCall::MarkPages("list".into())])
+    );
+    rig.guard.set_error(Some(UiError::NoWindow));
+    let quiet = warnings_of(|| assert!(!rig.hub.mark_pages("list"), "not shown yet"));
+    assert!(quiet.is_empty(), "{quiet:?}");
+    rig.guard.set_error(Some(UiError::Refused(2)));
+    let warned = warnings_of(|| assert!(!rig.hub.mark_pages("list")));
+    assert_eq!(warned.len(), 1, "{warned:?}");
 }
 
 #[test]

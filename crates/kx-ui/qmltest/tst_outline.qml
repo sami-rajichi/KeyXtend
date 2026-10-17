@@ -1,11 +1,12 @@
 // The scroll pad's outline (spec §5.2, mock-up .scroll-target): four thin click-through edge windows inside the target's
 // box in the ring colour, Highlight in high contrast, made only while the hub names a box and gone after a stop, cut to
 // the screen holding the target, guarded and laid just under the keyboard; and the app's keyboard has its entries
-// watched while the scroll module runs.
+// watched while the scroll module runs, and its open list asks to be marked as paging.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
+import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
 import "pointer.js" as Pointer
 import "../../kx-theme/fixtures/look-native-light.js" as N
@@ -246,6 +247,32 @@ Item {
             compare(count("unwatchEntries"), 1);
             run();
             compare(count("watchEntries"), 2, "never while the module is off");
+        }
+
+        // The app's open list asks for its page mark at each guard try until it holds, the module running or not, so a
+        // pad tap aimed at it turns its page instead of passing over it.
+        function test_the_apps_open_list_asks_for_its_page_mark_until_it_holds() {
+            const a = createTemporaryObject(appC, root);
+            a.ui.unpaged = 1;
+            tryVerify(() => a.face.visible, 2000, "the keyboard shows");
+            Pointer.through([a.face, a.bubble]);
+            const count = () => a.ui.calls.filter(c => c === "markPages " + En.texts["window.list"]).length;
+            const tries = () => a.keyboard.calls.filter(c => c === "guard").length;
+            const run = () => {
+                const before = tries();
+                a.face.guardRun();
+                tryVerify(() => tries() > before, 5000, "the guard tried again");
+            };
+            a.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
+            a.keyboard.state = Face.states.list;
+            a.face.redraw(JSON.stringify({ board: true, state: true }));
+            tryVerify(() => !!a.face.panel && a.face.panel.list.visible, 2000, "the list shows");
+            tryVerify(() => count() === 1, 5000, "asked at the guard's try");
+            verify(!a.face.panel.list.paged, "not guarded yet");
+            run();
+            tryCompare(a.face.panel.list, "paged", true, 5000, "asked again at the next try");
+            run();
+            compare(count(), 2, "once it held");
         }
     }
 }

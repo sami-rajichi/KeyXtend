@@ -1,6 +1,7 @@
 // The List design's language list (mock-up .langs and .lg-it): one page of layouts with the highlighted row ringed and
 // the current one ticked, and a pager beside it when there is more than one page, never a scroll bar (ADR-0008).
-// The board's arrows, Enter and Esc drive it through the keyboard; it never takes focus (ADR-0013).
+// The board's arrows, Enter and Esc drive it through the keyboard, and the scroll pad pages it; it never takes focus
+// (ADR-0013).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -47,10 +48,18 @@ Window {
     readonly property real rowH: Math.max(sh.badge_px[1] * s, nameH + subLine.implicitHeight) + 2 * sh.row_pad_px[0] * s
     readonly property real pagerW: pages > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
 
+    // The guard marks the list as one the scroll pad pages (ADR-0029); the mark goes with the window.
+    property bool paged: false
+
     // Shows the list, popping in (mock-up popIn).
     function open() {
         visible = true;
         popIn.restart();
+    }
+    // Asks for the page mark while the list shows, at each guard try until it holds; the try guards the list first.
+    function mark() {
+        if (visible && !paged)
+            paged = ui.markPages(title);
     }
 
 

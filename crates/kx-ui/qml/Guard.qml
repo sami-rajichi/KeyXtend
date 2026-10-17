@@ -1,6 +1,6 @@
 // The window guard's runs for the keyboard window `win` (ADR-0013): each try guards our shown windows, has the keyboard's
-// entries watched while the scroll module runs, cuts the keyboard and puts its backdrop on, and a try that finds a
-// window not shown yet tries again after the delay.
+// entries watched while the scroll module runs and the open list marked as paging, cuts the keyboard and puts its
+// backdrop on, and a try that finds a window not shown yet tries again after the delay.
 import QtQuick
 
 Timer {
@@ -15,6 +15,8 @@ Timer {
     onTriggered: {
         const again = win.keyboard.guard(top ? top.title : "");
         win.watch();
+        if (win.panel)
+            win.panel.list.mark();
         win.reshape();
         win.frosted = win.ui.backdrop(win.title);
         if (again)
