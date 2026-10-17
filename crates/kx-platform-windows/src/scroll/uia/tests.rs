@@ -42,7 +42,7 @@ fn cap() -> Duration {
 /// The thread once its client has started: the first read at `win` may wait for it.
 fn started(win: &TestWin) -> Uia {
     let uia = Uia::start(READ_MS);
-    let _ = uia.read(Seek::Window(win.id()), Dir::Down, WAIT);
+    let _ = uia.read(win.seek(), Dir::Down, WAIT);
     uia
 }
 
@@ -56,37 +56,27 @@ fn a_read_finds_the_box_and_percents_within_its_cap() {
     let _one = one_client();
     let win = TestWin::start(BOX, false);
     let uia = started(&win);
-    let read = uia
-        .read(Seek::Window(win.id()), Dir::Down, cap())
-        .expect("a read");
+    let read = uia.read(win.seek(), Dir::Down, cap()).expect("a read");
     assert_eq!(read.area, Some(crate::screen::edges(BOX)));
     assert_eq!(read.pair, Some((50.0, 50.0)), "both bars half way");
     assert!(uia.idle(), "nothing left running");
 }
 
-/// A target that another window now covers, as ours may, is read and stepped at its own window, never the one over it.
+/// A seek at a point in a top window reads from that window, as for a target ours covers: down there, the page. A
+/// hidden window shows UI Automation no children, so the walk down to the point is tested on a fake tree in `down`.
 #[test]
-fn a_window_under_another_is_read_and_stepped_at_its_own_element() {
+fn a_seek_at_a_point_in_a_window_reads_from_that_window() {
     let _one = one_client();
-    let under = TestWin::start(BOX, false);
-    let over = TestWin::plain(BOX);
-    let uia = started(&under);
-    let seek = Seek::Window(under.id());
-    let read = uia.read(seek, Dir::Down, cap()).expect("a read");
-    let half = Some((50.0, 50.0));
-    assert_eq!(
-        (read.area, read.pair),
-        (Some(crate::screen::edges(BOX)), half)
-    );
-    let top = uia.read(Seek::Window(over.id()), Dir::Down, cap());
-    assert_eq!(
-        top.map(|r| r.pair),
-        Some(None),
-        "the window over it scrolls nothing"
-    );
-    assert!(uia.steps(seek, Dir::Down, TENTH));
-    let moved = uia.read(seek, Dir::Down, cap()).and_then(|r| r.pair);
-    assert_eq!(moved, Some((50.0, 60.0)));
+    let win = TestWin::split(BOX, TABLE);
+    let uia = started(&win);
+    let table = win.bounds();
+    let mid = Point {
+        x: table.x + table.w / 2,
+        y: table.y + table.h / 2,
+    };
+    let down = uia.read(Seek::Window(win.top_id(), mid), Dir::Down, cap());
+    let page = Some(crate::screen::edges(BOX));
+    assert_eq!(down.map(|r| r.area), Some(page));
 }
 
 #[test]
@@ -94,7 +84,7 @@ fn steps_move_the_bars_and_a_read_behind_them_sees_it() {
     let _one = one_client();
     let win = TestWin::start(BOX, false);
     let uia = started(&win);
-    let seek = Seek::Window(win.id());
+    let seek = win.seek();
     assert!(uia.steps(seek, Dir::Down, TENTH));
     let down = uia.read(seek, Dir::Down, cap()).and_then(|r| r.pair);
     assert_eq!(down, Some((50.0, 60.0)));
@@ -110,7 +100,7 @@ fn each_way_reads_and_steps_the_first_that_scrolls_along_its_axis() {
     let _one = one_client();
     let win = TestWin::split(BOX, TABLE);
     let uia = started(&win);
-    let seek = Seek::Window(win.id());
+    let seek = win.seek();
     let (page, table) = (
         crate::screen::edges(BOX),
         crate::screen::edges(win.bounds()),
@@ -138,9 +128,7 @@ fn a_window_with_nothing_that_scrolls_reads_no_box() {
     let _one = one_client();
     let win = TestWin::plain(BOX);
     let uia = started(&win);
-    let read = uia
-        .read(Seek::Window(win.id()), Dir::Down, cap())
-        .expect("a read");
+    let read = uia.read(win.seek(), Dir::Down, cap()).expect("a read");
     assert_eq!((read.area, read.pair), (None, None));
 }
 
@@ -152,13 +140,10 @@ fn a_window_that_stopped_reading_costs_one_timeout_then_reads_work_again() {
     let (stuck, fine) = (TestWin::start(BOX, true), TestWin::start(BOX, false));
     let uia = Uia::start(READ_MS);
     let started = Instant::now();
-    assert!(
-        uia.read(Seek::Window(stuck.id()), Dir::Down, SHORT)
-            .is_none()
-    );
+    assert!(uia.read(stuck.seek(), Dir::Down, SHORT).is_none());
     assert!(started.elapsed() >= SHORT, "it waited its cap");
     let after = uia
-        .read(Seek::Window(fine.id()), Dir::Down, WAIT)
+        .read(fine.seek(), Dir::Down, WAIT)
         .expect("a read once it timed out");
     assert_eq!(after.area, Some(crate::screen::edges(BOX)));
     assert!(uia.idle(), "nothing piled up");
@@ -207,7 +192,7 @@ fn steps_past_their_time_look_nothing_up() {
     let (a, b) = (TestWin::start(BOX, false), TestWin::start(BOX, false));
     let _com = Com::start().unwrap();
     let auto = client(READ_MS).unwrap();
-    let (at_a, at_b) = (Seek::Window(a.id()), Seek::Window(b.id()));
+    let (at_a, at_b) = (a.seek(), b.seek());
     let mut held = None;
     step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
     let held_a = |k: &work::Held| k.as_ref().is_some_and(|h| h.0 == at_a);
@@ -224,7 +209,7 @@ fn a_walk_that_cannot_finish_reads_nothing_and_keeps_the_held_pattern() {
     let (a, b) = (TestWin::start(BOX, false), TestWin::start(BOX, false));
     let _com = Com::start().unwrap();
     let auto = client(READ_MS).unwrap();
-    let (at_a, at_b) = (Seek::Window(a.id()), Seek::Window(b.id()));
+    let (at_a, at_b) = (a.seek(), b.seek());
     let mut held = None;
     step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
     let past = Instant::now().checked_sub(SHORT).unwrap();

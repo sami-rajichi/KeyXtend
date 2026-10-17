@@ -9,7 +9,7 @@ use kx_module_api::ports::{Dir, Point, Rect, Screen, ScrollError};
 use kx_module_api::{Mono, US_PER_MS};
 
 use crate::lock;
-use crate::screen::contains;
+use crate::screen::{contains, edges};
 use crate::scroll::entry::Kept;
 use crate::scroll::{Desk, Read, Seek, Spot, Wheel, Whose};
 
@@ -68,6 +68,11 @@ impl Desk for Fake {
     fn behind(&self, p: Point) -> Option<Spot> {
         let theirs = |w: &&(Rect, Spot)| contains(w.0, p) && w.1.whose == Whose::Theirs;
         self.with(|s| s.windows.iter().find(theirs).map(|w| w.1))
+    }
+
+    fn bounds(&self, window: u64) -> Option<[i32; 4]> {
+        let named = |w: &&(Rect, Spot)| w.1.window == window;
+        self.with(|s| s.windows.iter().find(named).map(|w| edges(w.0)))
     }
 
     fn paging(&self) -> Option<Spot> {

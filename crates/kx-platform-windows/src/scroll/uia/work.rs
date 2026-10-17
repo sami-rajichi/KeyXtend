@@ -1,5 +1,6 @@
-//! The UI Automation thread's body: the client, the walk up to what scrolls along a way's axis, its reads and its line
-//! steps. Every job counts as done before it answers, so a caller that got its answer finds the thread free.
+//! The UI Automation thread's body: the client, the walk down a window to a point, the walk up to what scrolls along a
+//! way's axis, its reads and its line steps. Every job counts as done before it answers, so a caller that got its
+//! answer finds the thread free.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::Receiver;
@@ -15,6 +16,7 @@ use windows::Win32::UI::Accessibility::{
 };
 use windows::core::{BOOL, Interface};
 
+use super::down::{View, deepest};
 use super::{Job, Read, Seek};
 use crate::com::Com;
 use crate::scroll::win::handle;
@@ -73,16 +75,26 @@ pub(super) fn client(read_ms: u32) -> Option<IUIAutomation> {
     Some(auto)
 }
 
-/// The element `seek` names; none when UI Automation cannot say.
+/// The element `seek` names; none when UI Automation cannot say. In a window, it goes down from the window's element
+/// to the deepest one holding the point, using half the time left before `by`, so the walk up keeps the rest.
 #[allow(unsafe_code, reason = "A UI Automation lookup.")]
-fn element(auto: &IUIAutomation, seek: Seek) -> Option<IUIAutomationElement> {
-    let found = match seek {
+fn element(auto: &IUIAutomation, seek: Seek, by: Instant) -> Option<IUIAutomationElement> {
+    match seek {
         // SAFETY: a plain lookup on our live client; a failure gives an error.
-        Seek::At(p) => unsafe { auto.ElementFromPoint(POINT { x: p.x, y: p.y }) },
-        // SAFETY: as above, for the target's own window, which may lie under ours or be hidden in a test.
-        Seek::Window(window) => unsafe { auto.ElementFromHandle(handle(window)) },
-    };
-    found.ok()
+        Seek::At(p) => unsafe { auto.ElementFromPoint(POINT { x: p.x, y: p.y }) }.ok(),
+        Seek::Window(window, p) => {
+            // SAFETY: as above, for the target's own window, which may lie under ours or be hidden in a test.
+            let top = unsafe { auto.ElementFromHandle(handle(window)) }.ok()?;
+            // SAFETY: a plain call on our live client; without a walker the window's own element stands.
+            let Ok(walker) = (unsafe { auto.ControlViewWalker() }) else {
+                return Some(top);
+            };
+            let now = Instant::now();
+            let half = now.checked_add(by.saturating_duration_since(now) / 2);
+            let late = || Instant::now() > half.unwrap_or(by);
+            Some(deepest(&View(&walker), top, p, late))
+        }
+    }
 }
 
 /// A walk up the tree that could not finish: it ran past its time, or UI Automation failed a call.
@@ -142,7 +154,7 @@ pub(super) fn look(
     held: &mut Held,
 ) -> Option<Read> {
     let sideways = way.sideways();
-    let found = scroller(auto, element(auto, seek)?, sideways, by).ok()?;
+    let found = scroller(auto, element(auto, seek, by)?, sideways, by).ok()?;
     *held = found
         .as_ref()
         .map(|(_, pattern)| (seek, sideways, pattern.clone()));
@@ -178,7 +190,7 @@ pub(super) fn step(
     }
     let sideways = dir.sideways();
     if held.as_ref().is_none_or(|h| (h.0, h.1) != (seek, sideways)) {
-        let found = element(auto, seek).and_then(|el| scroller(auto, el, sideways, by).ok());
+        let found = element(auto, seek, by).and_then(|el| scroller(auto, el, sideways, by).ok());
         *held = found
             .flatten()
             .map(|(_, pattern)| (seek, sideways, pattern));

@@ -1,5 +1,6 @@
 //! The page mark (ADR-0029): our windows that page, as the open list does, which the scroll target takes, while it
-//! passes over our others. The UI names them by title; a mark goes with its window.
+//! passes over our others. The UI names them by title as they open; the guard holds each marked window, so the mark
+//! goes with it.
 
 use kx_module_api::ports::Point;
 use kx_platform::ui::UiError;
@@ -7,7 +8,7 @@ use windows::Win32::Foundation::HWND;
 use windows::core::{PCWSTR, w};
 
 use super::entry::watched;
-use super::guard::guarded;
+use super::guard::{guard, guarded};
 use super::prop::{clear, put, value};
 use super::win::{is_ours, own_titled, own_windows, window_at};
 use crate::failed;
@@ -18,21 +19,24 @@ const PAGES: PCWSTR = w!("KeyXtend.Pages");
 /// What `PAGES` holds.
 const MARK: usize = 1;
 
-/// Marks our shown window titled `title` as one that pages.
+/// Marks our shown window titled `title` as one that pages, guarding it first if the guard does not hold it yet.
 ///
 /// # Errors
-/// `NoWindow` while it is not shown, `Refused` for a window the guard does not hold, or when Windows says no.
+/// `NoWindow` while it is not shown, `Refused` when the guard or Windows says no.
 pub(super) fn mark_pages(title: &str) -> Result<(), UiError> {
     mark(own_titled(title).ok_or(UiError::NoWindow)?)
 }
 
-/// Marks our guarded window `hwnd` as one that pages.
+/// Marks our window `hwnd` as one that pages; the guard holds it first, so its unhook drops the mark as it goes.
 ///
 /// # Errors
-/// `Refused` for a window the guard does not hold, or when Windows says no.
+/// `Refused` for another program's window, or when the guard or Windows says no, as from another thread.
 pub(super) fn mark(hwnd: HWND) -> Result<(), UiError> {
-    if !guarded(hwnd) {
+    if !is_ours(hwnd) {
         return Err(failed());
+    }
+    if !guarded(hwnd) {
+        guard(hwnd)?;
     }
     put(hwnd, PAGES, MARK)
 }

@@ -1,5 +1,5 @@
-//! The page mark on hidden windows of the test thread: only a guarded window takes it, our marked window pages and our
-//! others are passed over, and an entry keeps a point on our list but never one on our banner.
+//! The page mark on hidden windows of the test thread: our window is guarded with its mark, our marked window pages and
+//! our others are passed over, and an entry keeps a point on our list but never one on our banner.
 
 use std::sync::PoisonError;
 
@@ -8,7 +8,7 @@ use kx_platform::ui::{UiError, WindowGuard};
 use windows::Win32::Foundation::HWND;
 
 use super::super::entry::{enter, kept, mark_with};
-use super::super::guard::guard;
+use super::super::guard::{guard, guarded};
 use super::super::pages::{mark, paging, whose};
 use super::entries::{ENTRIES, place, spot_on_main};
 use super::{Hidden, WinGuard};
@@ -22,11 +22,18 @@ fn guarded_at(title: &str, r: Rect) -> Hidden {
     window
 }
 
+/// A window the guard does not hold yet, as a list that just opened, is guarded with its mark, so the mark goes with it.
 #[test]
-fn only_our_guarded_window_takes_the_mark_and_then_pages() {
+fn our_window_takes_the_mark_guarded_first_and_then_pages() {
     let plain = Hidden::new("KeyXtend test: page unguarded");
-    assert!(matches!(mark(plain.0), Err(UiError::Refused(_))));
     assert_eq!(whose(plain.0), Whose::Ours, "not marked");
+    mark(plain.0).unwrap();
+    assert!(guarded(plain.0), "guarded with its mark");
+    assert_eq!(whose(plain.0), Whose::Pages);
+    assert!(
+        matches!(mark(HWND::default()), Err(UiError::Refused(_))),
+        "no window of ours"
+    );
     let list = guarded_at("KeyXtend test: page list", spot_on_main());
     mark(list.0).unwrap();
     assert_eq!(whose(list.0), Whose::Pages);

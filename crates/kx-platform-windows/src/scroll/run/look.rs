@@ -25,14 +25,14 @@ impl fmt::Debug for Read {
     }
 }
 
-/// Where UI Automation starts its walk up to what scrolls: the element at a screen point, or a window's own element,
-/// for a target that another window now covers.
+/// Where UI Automation starts its walk up to what scrolls: the element at a screen point, or, for a target another
+/// window now covers, the deepest element at that point inside the target's own window.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Seek {
     /// The element at this screen point.
     At(Point),
-    /// The element of the window with this raw id.
-    Window(u64),
+    /// The element at this screen point inside the window with this raw id.
+    Window(u64, Point),
 }
 
 /// Shows the window, and only that there is a point.
@@ -40,7 +40,11 @@ impl fmt::Debug for Seek {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::At(p) => f.debug_tuple("At").field(&Redacted::new(p)).finish(),
-            Self::Window(window) => f.debug_tuple("Window").field(window).finish(),
+            Self::Window(window, p) => f
+                .debug_tuple("Window")
+                .field(window)
+                .field(&Redacted::new(p))
+                .finish(),
         }
     }
 }

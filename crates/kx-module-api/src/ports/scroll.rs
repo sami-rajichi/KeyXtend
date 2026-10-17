@@ -115,7 +115,8 @@ pub enum Reach {
 /// Why a target could not be found or moved.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum ScrollError {
-    /// No target point is known yet: the pointer has not left the keyboard.
+    /// No target there: no point is known yet, the pointer rests on one of our windows that does not page, or only
+    /// our windows lie at the point kept.
     #[error("no scroll target is known yet")]
     NoTarget,
     /// The target closed.
@@ -128,10 +129,11 @@ pub enum ScrollError {
 
 /// A running scroll on the platform's side. Dropping it is the only way to close it.
 pub trait ScrollRun: Send {
-    /// Finds the target now: under the pointer, or at its last point outside the keyboard while it is on the keyboard.
+    /// Finds the target now: under the pointer, our open list while it shows, or the last point outside the keyboard
+    /// while the pointer is on the keyboard.
     ///
     /// # Errors
-    /// `NoTarget` when no point is known yet, `Gone` when the window there closed, `Refused` when the OS refuses.
+    /// `NoTarget` when there is no target there, `Gone` when the window there closed, `Refused` when the OS refuses.
     fn aim(&mut self) -> Result<Aim, ScrollError>;
 
     /// Turns the target at `aim` towards `dir` by `lines`, which is finite and at least 0 and may be a fraction; it
@@ -143,6 +145,9 @@ pub trait ScrollRun: Send {
 
     /// Whether the target at `aim` can still move towards `dir`, read within `ScrollConfig::read_ms`.
     fn reach(&mut self, aim: &Aim, dir: Dir) -> Reach;
+
+    /// True while the target at `aim` still exists; it never waits on a hung app.
+    fn alive(&mut self, aim: &Aim) -> bool;
 }
 
 /// Scrolls other apps' windows where the user pointed; the platform provides it.

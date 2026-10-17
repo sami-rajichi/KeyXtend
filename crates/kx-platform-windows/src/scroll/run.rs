@@ -28,6 +28,8 @@ pub trait Desk {
     fn behind(&self, p: Point) -> Option<Spot>;
     /// Our shown window that pages, such as the open list; none while none shows.
     fn paging(&self) -> Option<Spot>;
+    /// The box of `window` (left, top, right, bottom), as the system keeps it, with no UI Automation; none when gone.
+    fn bounds(&self, window: u64) -> Option<[i32; 4]>;
     /// What the guard kept when the pointer last entered the keyboard.
     fn kept(&self) -> Option<Kept>;
     /// Every screen's work area.
@@ -172,7 +174,7 @@ impl<D: Desk> Run<D> {
         if self.desk.spot(at).is_some_and(|s| s.window == id.get()) {
             Seek::At(at)
         } else {
-            Seek::Window(id.get())
+            Seek::Window(id.get(), at)
         }
     }
 
@@ -200,7 +202,15 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         if !ours && self.wheel_for.replace(id) != Some(id) {
             self.wheel = self.desk.wheel();
         }
-        let area = if ours { None } else { self.look(id, at) };
+        let area = match spot.whose {
+            Whose::Theirs => self.look(id, at),
+            // Our list's own box, so a peek outlines what a tap pages.
+            Whose::Pages => self
+                .desk
+                .bounds(id.get())
+                .and_then(|e| area(e, self.desk.whole())),
+            Whose::Keyboard | Whose::Ours => None,
+        };
         Ok(Aim {
             at,
             on_pointer,
@@ -257,6 +267,10 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
             return Reach::Unknown;
         };
         self.course.read(aim, dir, fresh.at, fresh.pair)
+    }
+
+    fn alive(&mut self, aim: &Aim) -> bool {
+        self.desk.alive(aim.id.get())
     }
 }
 

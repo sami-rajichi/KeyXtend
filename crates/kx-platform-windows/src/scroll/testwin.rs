@@ -11,7 +11,7 @@ use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use kx_module_api::ports::Rect;
+use kx_module_api::ports::{Point, Rect};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
@@ -24,6 +24,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WS_HSCROLL, WS_POPUP, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::w;
+
+use super::Seek;
 
 /// How long a test waits for the window's thread; a wait, never a sleep.
 pub const WAIT: Duration = Duration::from_secs(5);
@@ -161,7 +163,10 @@ fn window(r: Rect, style: WINDOW_STYLE, parent: Option<HWND>) -> HWND {
 
 /// The hidden window and its thread; dropping it destroys both.
 pub struct TestWin {
+    /// The window reads look at: the top-level window, or its child.
     raw: isize,
+    /// The top-level window.
+    top: isize,
     thread: u32,
     join: Option<JoinHandle<()>>,
     /// Lets a stuck window's thread go on.
@@ -193,7 +198,8 @@ impl TestWin {
             let (hwnd, seen) = make(r, bars);
             // SAFETY: a plain query of this thread's id.
             let thread = unsafe { GetCurrentThreadId() };
-            made.send((seen.0.addr().cast_signed(), thread)).unwrap();
+            let raw = |h: HWND| h.0.addr().cast_signed();
+            made.send((raw(seen), raw(hwnd), thread)).unwrap();
             if stuck {
                 let _ = wait.recv();
             }
@@ -201,9 +207,10 @@ impl TestWin {
             // SAFETY: destroys the window this thread made.
             let _ = unsafe { DestroyWindow(hwnd) };
         });
-        let (raw, thread) = ready.recv_timeout(WAIT).unwrap();
+        let (raw, top, thread) = ready.recv_timeout(WAIT).unwrap();
         Self {
             raw,
+            top,
             thread,
             join: Some(join),
             release: Some(release),
@@ -228,6 +235,21 @@ impl TestWin {
     /// The window's raw id, as a scroll target names it.
     pub fn id(&self) -> u64 {
         u64::try_from(self.raw.cast_unsigned()).unwrap()
+    }
+
+    /// The top-level window's raw id, which is the window's own but for a split one.
+    pub fn top_id(&self) -> u64 {
+        u64::try_from(self.top.cast_unsigned()).unwrap()
+    }
+
+    /// A seek at the middle of the window, inside it.
+    pub fn seek(&self) -> Seek {
+        let r = self.bounds();
+        let mid = Point {
+            x: r.x + r.w / 2,
+            y: r.y + r.h / 2,
+        };
+        Seek::Window(self.id(), mid)
     }
 
     /// The window's box on the screen.

@@ -149,6 +149,12 @@ fn the_pointer_on_the_keyboard_aims_at_the_kept_point() {
     let aim = run(&fake).aim().unwrap();
     assert_eq!((aim.at, aim.on_pointer, aim.ours), (BEFORE, false, false));
     assert_eq!(aim.id, TargetId::new(APP_ID));
+    let reads = fake.with(|s| s.reads.clone());
+    assert_eq!(
+        reads,
+        [(Seek::At(BEFORE), Dir::Down, cap())],
+        "the app is there"
+    );
 }
 
 #[test]
@@ -193,8 +199,8 @@ fn our_list_under_the_pointer_is_ours_and_gets_no_read_or_step() {
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     let mut r = run(&fake);
     let aim = r.aim().unwrap();
-    assert!(aim.ours && aim.on_pointer && aim.area.is_none());
-    assert_eq!(aim.id, TargetId::new(LIST_ID));
+    assert!(aim.ours && aim.on_pointer);
+    assert_eq!((aim.id, aim.area), (TargetId::new(LIST_ID), Some(LIST)));
     assert_eq!(r.turn(&aim, Dir::Down, NOTCH_LINES), Ok(()));
     assert_eq!(r.reach(&aim, Dir::Down), Reach::Unknown);
     fake.with(|s| {

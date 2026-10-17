@@ -3,6 +3,7 @@
 //! waited on for its cap at most, a step never, and at most one job waits behind the running one, so nothing piles up
 //! behind a stuck app.
 
+mod down;
 mod work;
 
 use std::sync::Arc;

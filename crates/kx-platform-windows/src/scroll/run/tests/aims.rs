@@ -38,9 +38,9 @@ fn passed(fake: &Fake) -> impl Fn(Point) -> bool + '_ {
     |p| fake.spot(p).is_some_and(|s| s.whose.passed())
 }
 
-/// True when `aim` is our list's: ours, off the pointer and with no box, so a tap turns its page.
+/// True when `aim` is our list's: ours and off the pointer, so a tap turns its page.
 fn pages_the_list(aim: &Aim) -> bool {
-    aim.ours && !aim.on_pointer && aim.area.is_none() && aim.id == TargetId::new(LIST_ID)
+    aim.ours && !aim.on_pointer && aim.id == TargetId::new(LIST_ID)
 }
 
 #[test]
@@ -79,6 +79,15 @@ fn our_list_while_it_shows_wins_over_a_point_kept_on_the_app() {
     assert!(fake.with(|s| s.reads.is_empty() && s.pings.is_empty()));
 }
 
+/// The aim at our list carries the list window's box, read with no UI Automation, so a peek outlines what a tap pages.
+#[test]
+fn the_aim_at_our_list_has_its_windows_box() {
+    let fake = desk();
+    show_list(&fake, ABOVE);
+    assert_eq!(from_keyboard(&fake).unwrap().area, Some(ABOVE));
+    assert!(fake.with(|s| s.reads.is_empty()));
+}
+
 #[test]
 fn an_entry_over_our_banner_keeps_the_app_before_it() {
     let fake = desk();
@@ -115,7 +124,7 @@ fn a_covered_target_is_read_and_stepped_at_its_own_window() {
     fake.with(|s| s.cursor = Some(ON_KB));
     let aim = r.aim().unwrap();
     r.turn(&aim, Dir::Down, 2.0).unwrap();
-    let app = Seek::Window(APP_ID);
+    let app = Seek::Window(APP_ID, BEFORE);
     fake.with(|s| {
         assert_eq!(s.reads, [(app, Dir::Down, cap())]);
         assert_eq!(s.steps, [(app, Dir::Down, 2)]);

@@ -9,14 +9,14 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Clock, Mono};
 use kx_platform::ui::Screens;
-use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::UI::HiDpi::PhysicalToLogicalPointForPerMonitorDPI;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_0, INPUT_MOUSE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_WHEEL, MOUSEINPUT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, IsHungAppWindow, IsWindow, MOUSEWHEEL_ROUTING_MOUSE_POS, PostMessageW,
-    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
+    GetSystemMetrics, GetWindowRect, IsHungAppWindow, IsWindow, MOUSEWHEEL_ROUTING_MOUSE_POS,
+    PostMessageW, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
     SPI_GETMOUSEWHEELROUTING, SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES,
     SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
     WHEEL_DELTA, WM_MOUSEHWHEEL, WM_MOUSEWHEEL,
@@ -85,6 +85,10 @@ impl Desk for WinDesk {
         let window = id_of(behind::behind(p)?);
         let whose = Whose::Theirs;
         Some(Spot { window, whose })
+    }
+
+    fn bounds(&self, window: u64) -> Option<[i32; 4]> {
+        bounds(window)
     }
 
     fn paging(&self) -> Option<Spot> {
@@ -166,6 +170,15 @@ fn spot(p: Point) -> Option<Spot> {
     let whose = whose(root);
     let window = id_of(hwnd);
     Some(Spot { window, whose })
+}
+
+/// The box of `window` (left, top, right, bottom); none for a gone window.
+#[allow(unsafe_code, reason = "A box query into a local.")]
+fn bounds(window: u64) -> Option<[i32; 4]> {
+    let mut r = RECT::default();
+    // SAFETY: a plain query into a local rect; a gone window refuses it.
+    unsafe { GetWindowRect(handle(window), &raw mut r) }.ok()?;
+    Some([r.left, r.top, r.right, r.bottom])
 }
 
 /// The box around every screen.

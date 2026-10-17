@@ -93,10 +93,10 @@ pub trait WindowGuard: Send + Sync {
 
     /// Marks our shown window titled `title` as one that pages, as an open list does (ADR-0029). While a marked window
     /// shows, every platform's scroll target aims at it whatever point it kept, so a pad tap turns its page, and it
-    /// passes over our other windows. The mark goes with the window; a call for the UI thread.
+    /// passes over our other windows. The mark goes with the window; a call for the UI thread, as the window opens.
     ///
     /// # Errors
-    /// `NoWindow` while no such window shows, `Refused` when the OS says no, as for a window not guarded yet.
+    /// `NoWindow` while no such window shows, `Refused` when the OS says no.
     fn mark_pages(&self, title: &str) -> Result<(), UiError>;
 
     /// Notes the window that has the focus now.

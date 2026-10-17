@@ -36,6 +36,8 @@ struct Log {
     reach: HashMap<(Option<TargetId>, Dir), Reach>,
     turns: Vec<Turn>,
     turn_error: Option<ScrollError>,
+    /// Targets whose window closed.
+    closed: Vec<TargetId>,
     fail: Option<ScrollError>,
     config: Option<ScrollConfig>,
     opens: usize,
@@ -64,7 +66,8 @@ impl Log {
 }
 
 /// A scroll target the test scripts, shared by its clones: each `aim` takes the next scripted result, the latest
-/// repeating once they run out (`NoTarget` before any), and a reach is as set, `Unknown` by default.
+/// repeating once they run out (`NoTarget` before any), a reach is as set, `Unknown` by default, and a target lives
+/// until closed.
 ///
 /// A turn by lines that are not finite or are below zero is a caller bug and panics.
 #[derive(Clone, Default)]
@@ -97,6 +100,11 @@ impl FakeScrollTarget {
     /// Refuses the next open with `error`.
     pub fn fail_next(&self, error: ScrollError) {
         lock(&self.log).fail = Some(error);
+    }
+
+    /// Closes target `id`'s window: from now on it is not alive.
+    pub fn close(&self, id: TargetId) {
+        lock(&self.log).closed.push(id);
     }
 
     /// Refuses every later turn with `error`, recording none, or takes them again with `None`.
@@ -203,6 +211,10 @@ impl ScrollRun for FakeRun {
 
     fn reach(&mut self, aim: &Aim, dir: Dir) -> Reach {
         lock(&self.log).reach(aim.id, dir)
+    }
+
+    fn alive(&mut self, aim: &Aim) -> bool {
+        !lock(&self.log).closed.contains(&aim.id)
     }
 }
 

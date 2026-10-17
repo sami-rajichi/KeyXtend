@@ -121,6 +121,15 @@ fn a_turn_error_refuses_turns_until_cleared() {
 }
 
 #[test]
+fn a_target_lives_until_its_window_closes() {
+    let target = FakeScrollTarget::new();
+    let mut run = target.open(CONFIG).unwrap();
+    assert!(run.alive(&A) && run.alive(&B));
+    target.close(A.id);
+    assert!(!run.alive(&A) && run.alive(&B));
+}
+
+#[test]
 fn a_dropped_run_closes_and_a_clone_sees_it() {
     let target = FakeScrollTarget::new();
     let handle = target.clone();

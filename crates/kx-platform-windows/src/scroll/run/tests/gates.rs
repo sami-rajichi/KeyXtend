@@ -21,6 +21,16 @@ fn each_aim_at_another_apps_window_pings_it_and_ours_never() {
 }
 
 #[test]
+fn a_target_lives_until_its_window_closes() {
+    let fake = desk();
+    let mut r = run(&fake);
+    let app = r.aim().unwrap();
+    assert!(r.alive(&app));
+    fake.with(|s| s.gone.push(APP_ID));
+    assert!(!r.alive(&app));
+}
+
+#[test]
 fn reach_and_each_turn_ping_the_last_target_with_the_pointer_on_our_list() {
     let fake = desk();
     let mut r = run(&fake);
