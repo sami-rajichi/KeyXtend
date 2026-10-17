@@ -4,6 +4,8 @@
 use super::Face;
 use super::outbox::Outbox;
 use kx_module_api::ports::{Dir, FaceReply, ScrollChanged, ScrollPeek, ScrollStop, ScrollTap};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Mutex, PoisonError};
 
 /// What the scroll module last heard of the pointer on the pad, so it hears each change once and the newest last.
@@ -11,6 +13,8 @@ use std::sync::{Mutex, PoisonError};
 pub(super) struct Peeks {
     /// Requests to check the pointer, one sending thread at a time.
     outbox: Outbox,
+    /// The keyboard started, so the next live send also tells a pointer that left.
+    again: AtomicBool,
     /// What the module last heard, and in which run; only the sending thread touches it.
     heard: Mutex<Peeked>,
 }
@@ -22,6 +26,8 @@ struct Peeked {
     run: u64,
     /// The pointer is on the pad.
     on: bool,
+    /// The last peek sent, whichever run heard it, as a module may run on unheard while the keyboard is down.
+    sent: bool,
 }
 
 impl Face {
@@ -61,8 +67,15 @@ impl Face {
         self.peeks.outbox.post(|| self.send_peek());
     }
 
+    /// Makes the next live send also tell a pointer that left, as the keyboard starts: the scroll module may have run
+    /// on unheard, still thinking the pointer is on the pad.
+    pub(super) fn peek_again(&self) {
+        self.peeks.again.store(true, SeqCst);
+    }
+
     /// Sends the pointer's place when it differs from what this run of the module last heard; a new run has heard
-    /// nothing, even when its stop and start merged into one send, and nothing goes out while the module is off.
+    /// nothing, even when its stop and start merged into one send, and nothing goes out while it is off. The first live
+    /// send after a start also tells a pointer that left, if the last peek sent said it was on.
     fn send_peek(&self) {
         let (live, on, run, bus) = {
             let inner = self.lock();
@@ -78,13 +91,16 @@ impl Face {
             .heard
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
+        let again = live && self.peeks.again.swap(false, SeqCst);
         let known = heard.on && heard.run == run;
+        let send = live && (known != on || (again && heard.sent));
         *heard = Peeked {
             run,
             on: live && on,
+            sent: if send { on } else { heard.sent },
         };
         drop(heard);
-        if live && known != on {
+        if send {
             // As with the clicks, `ScrollPeek` needs no capability.
             let _ = bus.publish(&ScrollPeek { on });
         }

@@ -269,10 +269,13 @@ fn a_scroll_module_that_comes_live_under_the_pointer_hears_it_is_on_the_pad() {
     assert_eq!(p.heard(), [Heard::Peek(false)], "the pointer left first");
 }
 
+/// The scroll module may have stopped while the keyboard was down, so the pad dims until its answer lights it again.
 #[test]
-fn a_settings_change_keeps_the_scroll_state() {
+fn a_keyboard_restart_dims_the_pad_until_the_scroll_module_answers() {
     let mut p = Pad::quiet(None);
     p.scroll(true, Some(Dir::Up), true);
     p.b.rig.restart(Some(("lang_key", "cycle".into())));
+    assert_eq!(p.dpad(), off(), "no answer yet");
+    p.scroll(true, Some(Dir::Up), true);
     assert_eq!(p.dpad(), live(Some("up"), true));
 }

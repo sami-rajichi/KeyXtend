@@ -276,10 +276,16 @@ fn a_tap_on_right_click_sends_nothing_to_the_app_and_keeps_the_latches() {
     assert_eq!(b.key("shift")["on"], true);
 }
 
+/// The mouse module may have stopped while the keyboard was down, so its keys dim until its answer lights them again.
 #[test]
-fn a_settings_change_keeps_the_mouse_state() {
+fn a_keyboard_restart_dims_the_mouse_keys_until_the_mouse_module_answers() {
     let mut b = Bench::quiet(None);
     b.mouse(true, true, GrabState::Off);
     b.rig.restart(Some(("lang_key", "cycle".into())));
+    assert!(
+        off(&b.key("rclick")) && off(&b.key("grab")),
+        "no answer yet"
+    );
+    b.mouse(true, true, GrabState::Off);
     assert_eq!(b.key("rclick")["on"], true);
 }

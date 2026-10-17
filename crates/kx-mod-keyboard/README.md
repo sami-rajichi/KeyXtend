@@ -114,7 +114,7 @@ The keyboard never depends on the mouse module; they talk only through `kx_modul
 
 - **Side keys:** `rclick` and `grab` light from `AssistChanged` (Grab while armed or carrying). Until the mouse module says it is `live`, or after it stops, they are `dim` with `tip.mouse-off`, and a click does nothing.
 - **Toggles:** a live click publishes `AssistToggle`; it sends nothing to the app and keeps the latches.
-- **Start:** the module subscribes, then publishes its latched set and `AssistAsk`, so neither side keeps what it missed while the other was stopped.
+- **Start:** the module subscribes, then publishes its latched set, dims both keys and publishes `AssistAsk`, so neither side keeps what it missed while the other was stopped; the answer lights the keys again.
 - **Latches:** every change of the latched set publishes `LatchesChanged` with `Latches::held`, in its fixed order; `LatchesAsk` publishes it again. `LatchesUsed` (a click used them) lets them go as `modifiers` says, publishing only a change.
 - **Senders:** the sets go out one sender at a time, newest last, from the UI thread or the mouse module's; a thread that finds another sending leaves its request to it.
 - **Redraw:** a change from the bus marks the state unshown, so the next `relabel` answers state until the UI reads it; a click's own changes redraw at once, as before.
@@ -123,10 +123,10 @@ The keyboard never depends on the mouse module; they talk only through `kx_modul
 
 The keyboard never depends on the scroll module either; they talk only through `kx_module_api::ports::scroll` events.
 
-- **State:** the pad follows `ScrollChanged`; a change marks the state unshown, as the mouse module's does. The keyboard asks for it with `ScrollAsk` at start.
+- **State:** the pad follows `ScrollChanged`; a change marks the state unshown, as the mouse module's does. At start the keyboard dims the pad and asks with `ScrollAsk`; the answer's first peek also tells a pointer that left, if the last peek sent said it was on, as the module may have run on unheard.
 - **Clicks and hover:** `pad` and `pad_hover` publish as above; the UI never publishes them itself. A module that comes live while the pointer rests on the pad hears `ScrollPeek` at once, and one that stops forgets it.
 - **One sender:** peeks go out one thread at a time through their own `Outbox` (the latched set has another), each re-reading the pointer and the module's run, so the last peek the module hears is where the pointer is, even after a quick restart.
-- **Our list:** the keyboard ignores `ScrollPage`; `kx-ui`'s hub turns it into the list's own page-button `panel_key`, as only the hub knows `[ui] page_rows`.
+- **Our list:** the keyboard ignores `ScrollPage`; `kx-ui`'s hub turns it into the list's own page-button `panel_key` where the list's `page` says it turns, as only the hub knows `[ui] page_rows`.
 
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.
 

@@ -54,7 +54,7 @@ pub(super) struct Inner {
     scroll: ScrollChanged,
     /// The pointer is on the scroll pad.
     hover: bool,
-    /// Counts the scroll module's live runs and the keyboard's starts, so a restarted module hears the pointer anew.
+    /// Counts the scroll module's live runs, so a module that started again hears the pointer anew.
     run: u64,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,

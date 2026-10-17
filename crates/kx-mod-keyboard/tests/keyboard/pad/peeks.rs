@@ -107,6 +107,20 @@ fn a_keyboard_restart_tells_the_scroll_module_the_pointer_again() {
     assert_eq!(p.heard(), [Heard::Ask, Heard::Peek(true)]);
 }
 
+/// A scroll module that kept running heard the pointer come onto the pad, so it must hear it leave while the keyboard
+/// was down, or the outline stays.
+#[test]
+fn a_pointer_that_left_while_the_keyboard_restarted_is_told() {
+    let mut p = Pad::quiet(None);
+    p.scroll(true, None, false);
+    p.hover(true);
+    assert_eq!(p.heard(), [Heard::Peek(true)]);
+    p.b.rig.restart(Some(("lang_key", "cycle".into())));
+    p.hover(false);
+    p.b.send(&LIVE);
+    assert_eq!(p.heard(), [Heard::Ask, Heard::Peek(false)]);
+}
+
 /// One thing that happens to the pad.
 #[derive(Copy, Clone, Debug)]
 enum Step {
@@ -114,23 +128,27 @@ enum Step {
     Hover(bool),
     /// The scroll module says it runs, or stops.
     Live(bool),
+    /// The keyboard module starts again, and the scroll module keeps running.
+    Restart,
 }
 
 fn step() -> impl Strategy<Value = Step> {
     prop_oneof![
-        any::<bool>().prop_map(Step::Hover),
-        any::<bool>().prop_map(Step::Live)
+        3 => any::<bool>().prop_map(Step::Hover),
+        3 => any::<bool>().prop_map(Step::Live),
+        1 => Just(Step::Restart)
     ]
 }
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(64))]
 
-    /// A module that stops forgets the pointer, so in each run it hears `true` first, then each change once.
+    /// A module that stops forgets the pointer, so in each run it hears `true` first, then each change once; after a
+    /// keyboard restart, the first peek the answer brings may repeat the last.
     #[test]
     fn while_live_the_module_last_heard_where_the_pointer_is(steps in vec(step(), 0..40)) {
-        let p = Pad::quiet(None);
-        let (mut hover, mut live, mut known) = (false, false, false);
+        let mut p = Pad::quiet(None);
+        let (mut hover, mut live, mut known, mut again) = (false, false, false, false);
         for s in steps {
             match s {
                 Step::Hover(on) => {
@@ -142,16 +160,25 @@ proptest! {
                     live = on;
                     known &= on;
                 }
+                Step::Restart => {
+                    p.b.rig.restart(None);
+                    (live, again) = (false, true);
+                }
             }
             for h in p.heard() {
+                if h == Heard::Ask {
+                    prop_assert!(matches!(s, Step::Restart), "an ask only at a start");
+                    continue;
+                }
                 prop_assert!(matches!(h, Heard::Peek(_)), "{h:?}");
                 prop_assert!(live, "a peek while the module is off");
                 let on = h == Heard::Peek(true);
-                prop_assert_ne!(on, known, "the same peek twice in a row");
+                prop_assert!(again || on != known, "the same peek twice in a row");
                 known = on;
             }
             if live {
                 prop_assert_eq!(known, hover, "the module knows where the pointer is");
+                again = false;
             }
         }
     }
