@@ -291,6 +291,9 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
   - A gap between reads longer than `PAUSE_CHECKS` × `check_ms` + `read_ms` starts the wait afresh.
   - A busy target, one that left a `WM_NULL` ping unanswered or that Windows calls hung, gets no steps.
   - A `SendInput` wheel goes out only while Windows gives wheels to the window under the pointer (mouse-position routing) and the pointer is still on the target; otherwise the step is posted.
+  - Our windows that do not page, such as the keyboard and its banner, are passed over, so the kept point is the last one outside them. The UI marks the open list as paging, so a point on it turns the list's page.
+  - A kept point that one of our non-paging windows now covers, as when the banner shows over it, aims at the first other app's window behind ours there. With none, the tap asks the user to point first; it never turns a page silently.
+  - UI Automation takes the box and percent from the first element that scrolls along the tapped way's axis, so ▼ over a wide table reads the page around it.
 
 ### 5.3 Overlays
 

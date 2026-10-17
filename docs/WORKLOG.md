@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 06:31 — P5: the scroll pad aims at our open list again, and never turns a page silently
+The open list asks the guard to mark it as a window that pages, so pointing at it and tapping the pad turns its page again, while the keyboard and the banner are still passed over. A kept point that our window now covers aims at the first other app's window behind ours there, or asks the user to point first; it never sends a page turn that turns nothing. UI Automation now takes the box and percent from the first element that scrolls along the tapped way, so ▼ over a wide table sees the page's end. Four files over 300 lines were split by topic.
+
 ## 2026-10-17 05:48 — P5: hiding the keyboard stops the scroll pad
 Closing the keyboard to the tray or minimising it to the bubble while the pad scrolls now stops the scroll, as Stop would, since Stop hides with the keyboard. The hub hears the hide through the mode it keeps and asks the keyboard to stop only when the pad is scrolling, so a still pad hears nothing. The docs now list the hide among the ways a scroll stops.
 
