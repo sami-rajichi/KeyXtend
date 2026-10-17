@@ -1,5 +1,5 @@
-//! What the app ships: every module's feature is on by default, and each gated platform service reaches only the
-//! module whose manifest declares its capability.
+//! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, and
+//! the pointer hook and the scroll target each reach only the module whose manifest declares their capability.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
@@ -16,6 +16,14 @@ const CARGO: &str = include_str!("../../Cargo.toml");
 const MODULE_FEATURE: &str = "mod-";
 /// The scroll module's feature.
 const SCROLL_FEATURE: &str = "mod-scroll";
+/// The CI workflow, whose scroll-off lint names the app's other features by hand.
+const CI: &str = include_str!("../../../../.github/workflows/ci.yml");
+/// What marks the scroll-off lint's line in `CI`.
+const SCROLL_OFF: &str = "-p keyxtend --all-targets --no-default-features";
+/// The flag before that lint's feature list.
+const FEATURES_FLAG: &str = "--features";
+/// What separates the features in that list.
+const FEATURE_SEP: char = ',';
 /// The probes' version, which nothing reads.
 const VERSION: &str = "0.0.0";
 
@@ -71,18 +79,60 @@ fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> Vec<ModuleId> {
     ids.filter(|&id| gets(id)).collect()
 }
 
+/// The app's `[features]` table.
+fn features() -> toml::Table {
+    let cargo: toml::Table = CARGO.parse().unwrap();
+    cargo["features"].as_table().unwrap().clone()
+}
+
+/// The features `features` turns on by default, sorted.
+fn defaults(features: &toml::Table) -> Vec<&str> {
+    let default = features["default"].as_array().unwrap();
+    let mut on: Vec<&str> = default.iter().filter_map(toml::Value::as_str).collect();
+    on.sort_unstable();
+    on
+}
+
+/// The features each scroll-off lint line in `CI` lists, each list sorted.
+fn scroll_off_lists() -> Vec<Vec<&'static str>> {
+    let lines = CI.lines().filter(|l| l.contains(SCROLL_OFF));
+    let list = |line: &'static str| {
+        let mut words = line.split_whitespace().skip_while(|w| *w != FEATURES_FLAG);
+        let mut listed: Vec<&str> = words
+            .nth(1)
+            .unwrap_or_default()
+            .split(FEATURE_SEP)
+            .collect();
+        listed.sort_unstable();
+        listed
+    };
+    lines.map(list).collect()
+}
+
 #[test]
 fn every_module_feature_is_on_by_default_the_scroll_one_too() {
-    let cargo: toml::Table = CARGO.parse().unwrap();
-    let features = cargo["features"].as_table().unwrap();
-    let default = features["default"].as_array().unwrap();
-    let on = |f: &str| default.iter().any(|d| d.as_str() == Some(f));
-    let picks: Vec<&String> = features
+    let features = features();
+    let on = defaults(&features);
+    let picks: Vec<&str> = features
         .keys()
+        .map(String::as_str)
         .filter(|f| f.starts_with(MODULE_FEATURE))
         .collect();
-    assert!(picks.iter().all(|f| on(f)), "{default:?}");
-    assert!(picks.iter().any(|f| *f == SCROLL_FEATURE), "{picks:?}");
+    assert!(picks.iter().all(|f| on.contains(f)), "{on:?}");
+    assert!(picks.contains(&SCROLL_FEATURE), "{picks:?}");
+}
+
+#[test]
+fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
+    let features = features();
+    let mut want = defaults(&features);
+    want.retain(|f| *f != SCROLL_FEATURE);
+    let lists = scroll_off_lists();
+    assert!(
+        !lists.is_empty(),
+        "ci.yml lints the app with the scroll module off"
+    );
+    assert!(lists.iter().all(|l| *l == want), "{lists:?} != {want:?}");
 }
 
 #[test]
