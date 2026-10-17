@@ -106,6 +106,57 @@ fn a_refused_aim_at_a_tap_starts_and_the_next_tick_aims_again() {
     assert_eq!(rig.target.turns().len(), 1, "it turns at once");
 }
 
+/// A rig whose OS refused the first aim of a tap down, with `stop_at_end` as given and what it published forgotten.
+fn refused(end_stop: bool) -> Rig {
+    let mut rig = Rig::with(|host| host.put("stop_at_end", end_stop.into()));
+    rig.target.push_aim(Err(ScrollError::Refused));
+    rig.tap_at(Down, T0);
+    rig.take();
+    rig
+}
+
+#[test]
+fn a_check_that_finds_the_first_target_runs_the_taps_checks() {
+    for (end_stop, back, key) in [
+        (true, Reach::More, SCROLL_END),
+        (false, Reach::End, SCROLL_NONE),
+    ] {
+        let mut rig = refused(end_stop);
+        rig.point(APP);
+        rig.target.set_reach(Down, Reach::End);
+        rig.target.set_reach(Up, back);
+        let at = rig.ticks(1);
+        rig.tick_at(at);
+        let want = [outline(APP), still(), hidden(), told(key)];
+        assert_eq!(rig.take(), want, "stop_at_end {end_stop}");
+        assert!(rig.target.turns().is_empty(), "nothing glides into the end");
+    }
+}
+
+#[test]
+fn a_check_whose_first_aim_fails_says_why() {
+    for (err, key) in [
+        (ScrollError::NoTarget, SCROLL_POINT),
+        (ScrollError::Gone, SCROLL_NONE),
+    ] {
+        let mut rig = refused(true);
+        rig.target.push_aim(Err(err));
+        let at = rig.ticks(1);
+        rig.tick_at(at);
+        assert_eq!(rig.take(), [still(), hidden(), told(key)], "{err:?}");
+    }
+}
+
+#[test]
+fn a_faster_tap_that_finds_the_first_target_runs_the_taps_checks() {
+    let mut rig = refused(true);
+    rig.point(APP);
+    rig.target.set_reach(Down, Reach::End);
+    rig.tap_at(Down, after(1));
+    let want = [outline(APP), still(), hidden(), told(SCROLL_END)];
+    assert_eq!(rig.take(), want);
+}
+
 #[test]
 fn taps_on_our_list_turn_it_one_page_each() {
     let mut rig = Rig::new();

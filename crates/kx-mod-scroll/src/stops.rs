@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use crate::ScrollSettings;
 use crate::settings::NO_LIMIT;
-use kx_module_api::Mono;
 use kx_module_api::ports::{Reach, ScrollError};
+use kx_module_api::{Mono, keys};
 
 /// Why scrolling stops, or never starts.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -28,13 +28,25 @@ pub enum Halt {
 }
 
 impl Halt {
-    /// The user gets a notice: a tap that cannot scroll says why, and every other stop is quiet.
+    /// The user gets a notice: one with a `key`.
     #[must_use]
     pub const fn told(self) -> bool {
-        matches!(self, Self::NoPoint | Self::Nothing | Self::AtEnd)
+        self.key().is_some()
     }
 
-    /// Why a tap that sets a new way cannot start, when the aim failed; `Refused` is no reason, the actor tries again.
+    /// The notice key: a tap that cannot scroll says why, and every other stop is quiet.
+    #[must_use]
+    pub(crate) const fn key(self) -> Option<&'static str> {
+        match self {
+            Self::NoPoint => Some(keys::SCROLL_POINT),
+            Self::Nothing => Some(keys::SCROLL_NONE),
+            Self::AtEnd => Some(keys::SCROLL_END),
+            Self::End | Self::Press | Self::Limit | Self::Gone => None,
+        }
+    }
+
+    /// Why a tap cannot scroll when its aim fails, then or at the check that retries a refused first aim; `Refused`
+    /// is no reason, the actor tries again.
     #[must_use]
     pub const fn unaimed(err: ScrollError) -> Option<Self> {
         match err {
@@ -45,7 +57,8 @@ impl Halt {
     }
 
     /// Why a failed aim or turn ends a running scroll. `Refused` never does: the actor tries again next tick and drops
-    /// that tick's lines, so nothing piles up, and the limit ends a scroll that stays refused.
+    /// that tick's lines, so nothing piles up, and the limit ends a scroll that stays refused, unless `limit_s` is 0,
+    /// when only the user stops it.
     #[must_use]
     pub const fn failed(err: ScrollError) -> Option<Self> {
         match err {

@@ -41,10 +41,17 @@ pub enum Msg {
 /// A scroll under way: its glide, its target, and when the next check is due.
 struct Scroll {
     glide: Glide,
-    /// The latest target; none until an aim succeeds.
+    /// The latest target; none until an aim succeeds, and never again after.
     aim: Option<Aim>,
     /// When the next aim, reach and limit check is due.
     due: Mono,
+}
+
+impl Scroll {
+    /// The first aim is still pending, as when the OS refused it, so the tap's checks wait for a target.
+    const fn pending(&self) -> bool {
+        self.aim.is_none()
+    }
 }
 
 /// The scroll module's runtime: one per start, on its own thread.

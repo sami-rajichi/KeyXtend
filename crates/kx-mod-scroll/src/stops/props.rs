@@ -2,9 +2,9 @@
 //! cause, and every stop leaves the pad still.
 
 use super::*;
-use crate::Pad;
 use crate::fixture::settings as fixture;
 use crate::settings::{LIMIT_S, NO_LIMIT};
+use crate::{Change, Pad};
 use kx_module_api::US_PER_S;
 use kx_module_api::ports::Dir;
 use proptest::collection::vec;
@@ -90,7 +90,8 @@ fn settings() -> impl Strategy<Value = ScrollSettings> {
     })
 }
 
-/// The actor's rules for one step: the halt it meets, if any.
+/// The actor's rules for one step: the halt it meets, if any. Every tap that does not stop aims, and a new way reads
+/// its target's reach: the one found, or a running scroll's when the OS refused the aim.
 fn rule(pad: &mut Pad, stops: &mut Stops, step: Step, now: Mono) -> Option<Halt> {
     let live = pad.scrolling();
     match step {
@@ -101,10 +102,13 @@ fn rule(pad: &mut Pad, stops: &mut Stops, step: Step, now: Mono) -> Option<Halt>
             back,
         } => {
             stops.tapped(now);
-            if !pad.tap(dir).new_way() {
+            let change = pad.tap(dir);
+            if change == Change::Stopped {
                 return None;
             }
-            aim.map_or_else(|| stops.blocked(ahead, || back), Halt::unaimed)
+            let reads = change.new_way() && (aim.is_none() || live);
+            let blocked = || reads.then(|| stops.blocked(ahead, || back)).flatten();
+            aim.and_then(Halt::unaimed).or_else(blocked)
         }
         Step::Stop => {
             pad.stop();
@@ -127,25 +131,36 @@ fn want(s: &ScrollSettings, before: Pad, step: Step, since: Duration) -> Option<
             aim,
             ahead,
             back,
-        } if after.tap(dir).new_way() => tap_cause(s, aim, ahead, back),
-        Step::Tap { .. } => None,
+        } => {
+            let change = after.tap(dir);
+            // A refused aim keeps a running scroll's target; from still there is none to read yet.
+            let reads = change.new_way() && (aim.is_none() || before.scrolling());
+            if change == Change::Stopped {
+                None
+            } else {
+                tap_cause(s, aim, reads, ahead, back)
+            }
+        }
         _ if before.scrolling() => cause(s, step, since),
         _ => None,
     }
 }
 
-/// The halt a tap that sets a new way allows under `s`, from the aim's error and the reach each way; with
-/// `stop_at_end` off, an end only that way starts, as a feed may load more there.
+/// The halt a tap that does not stop allows under `s`: the aim's error, then the reach each way if the tap `reads` it;
+/// with `stop_at_end` off, an end only that way starts, as a feed may load more there.
 fn tap_cause(
     s: &ScrollSettings,
     aim: Option<ScrollError>,
+    reads: bool,
     ahead: Reach,
     back: Reach,
 ) -> Option<Halt> {
     match (aim, ahead, back) {
         (Some(ScrollError::NoTarget), ..) => Some(Halt::NoPoint),
-        (Some(ScrollError::Gone), ..) | (None, Reach::End, Reach::End) => Some(Halt::Nothing),
-        (None, Reach::End, _) if s.stop_at_end => Some(Halt::AtEnd),
+        (Some(ScrollError::Gone), ..) => Some(Halt::Nothing),
+        _ if !reads => None,
+        (_, Reach::End, Reach::End) => Some(Halt::Nothing),
+        (_, Reach::End, _) if s.stop_at_end => Some(Halt::AtEnd),
         _ => None,
     }
 }

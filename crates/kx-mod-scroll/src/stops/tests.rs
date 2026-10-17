@@ -10,7 +10,7 @@ use std::cell::Cell;
 
 /// The fixture's limit, in seconds.
 fn limit() -> u64 {
-    u64::from(fixture::LIMIT_S)
+    u64::from(fixture::LIMIT)
 }
 
 /// The fixture with `stop_at_end` off, as for a feed that loads more at its end.
@@ -33,11 +33,16 @@ fn unread() -> Reach {
 
 #[test]
 fn only_a_tap_that_cannot_scroll_is_told() {
-    for halt in [NoPoint, Nothing, AtEnd] {
-        assert!(halt.told(), "{halt:?}");
+    let told = [
+        (NoPoint, keys::SCROLL_POINT),
+        (Nothing, keys::SCROLL_NONE),
+        (AtEnd, keys::SCROLL_END),
+    ];
+    for (halt, key) in told {
+        assert_eq!((halt.told(), halt.key()), (true, Some(key)), "{halt:?}");
     }
     for halt in [End, Press, Limit, Gone] {
-        assert!(!halt.told(), "{halt:?}");
+        assert_eq!((halt.told(), halt.key()), (false, None), "{halt:?}");
     }
 }
 

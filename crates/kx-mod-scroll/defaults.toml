@@ -10,7 +10,8 @@ stop_at_end = true
 stop_on_press = true
 # How often the glide steps while scrolling, in ms; always below check_ms.
 tick_ms = 16
-# How many ms a target may stay still under our steps, short of its end, before the platform tries another way.
+# How many ms a target may stay still under our steps, short of its end, before the platform tries another way;
+# it also sets how often a scroll aims again, reads the reach and checks the limit, and the glide's longest gap.
 check_ms = 250
 # The longest one read of a target may take, in ms.
 read_ms = 300

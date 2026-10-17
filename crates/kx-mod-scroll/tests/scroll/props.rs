@@ -1,5 +1,6 @@
-//! Properties over random taps, stops, peeks, presses, asks, pointer moves, reaches, turn errors and waits: the actor
-//! ticks only while it says it scrolls, turns only where the user pointed outside our windows, and leaves nothing.
+//! Properties over random stop settings, taps, stops, peeks, presses, asks, pointer moves, reaches, turn errors and
+//! waits: the actor ticks only while it says it scrolls, turns only where the user pointed outside our windows, and
+//! leaves nothing.
 
 use crate::rig::{APP, EPS, Heard, LIST, OTHER, Rig, T0, hidden};
 use kx_mod_scroll::Msg;
@@ -79,6 +80,21 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
+/// The stops a run draws: `stop_at_end`, `stop_on_press`, and `limit_s` as 0 for none or the defaults' limit.
+fn stops() -> impl Strategy<Value = (bool, bool, u32)> {
+    let limit = Rig::new().settings.limit_s;
+    (any::<bool>(), any::<bool>(), select(vec![0, limit]))
+}
+
+/// A rig on the defaults with the drawn stops.
+fn rig((at_end, on_press, limit): (bool, bool, u32)) -> Rig {
+    Rig::with(|host| {
+        host.put("stop_at_end", at_end.into());
+        host.put("stop_on_press", on_press.into());
+        host.put("limit_s", limit.into());
+    })
+}
+
 /// What the rig heard so far: the latest state and whether the outline shows.
 struct Seen {
     state: ScrollChanged,
@@ -119,9 +135,10 @@ proptest! {
 
     #[test]
     fn it_glides_only_while_it_says_so_and_only_where_the_user_pointed(
+        drawn in stops(),
         steps in vec(step(), 0..=MAX_STEPS),
     ) {
-        let mut rig = Rig::new();
+        let mut rig = rig(drawn);
         rig.begin();
         let mut seen = Seen { state: ScrollChanged::OFF, outlined: false };
         seen.take(rig.take());

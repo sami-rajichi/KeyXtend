@@ -3,7 +3,7 @@
 use super::Actor;
 use crate::{Halt, ID};
 use kx_module_api::ports::{Aim, ScrollAimed};
-use kx_module_api::{Event, Notice, NoticeArg, args, keys};
+use kx_module_api::{Event, Notice, NoticeArg, args};
 
 impl Actor {
     /// Ends the scroll, by the user for none or by `halt`: it tells the state, keeps the outline only while the pointer
@@ -80,19 +80,9 @@ impl Actor {
 
     /// Tells the user why a tap could not scroll; other halts are quiet.
     fn say(&self, halt: Halt) {
-        if let Some(key) = told(halt) {
+        if let Some(key) = halt.key() {
             self.publish(&notice(key));
         }
-    }
-}
-
-/// The notice key of a told halt; none for a quiet one.
-pub(super) const fn told(halt: Halt) -> Option<&'static str> {
-    match halt {
-        Halt::NoPoint => Some(keys::SCROLL_POINT),
-        Halt::Nothing => Some(keys::SCROLL_NONE),
-        Halt::AtEnd => Some(keys::SCROLL_END),
-        Halt::End | Halt::Press | Halt::Limit | Halt::Gone => None,
     }
 }
 
@@ -102,26 +92,5 @@ pub(crate) fn notice(key: &'static str) -> Notice {
         key,
         module: Some(ID),
         args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn exactly_the_told_halts_have_a_notice() {
-        let all = [
-            Halt::NoPoint,
-            Halt::Nothing,
-            Halt::AtEnd,
-            Halt::End,
-            Halt::Press,
-            Halt::Limit,
-            Halt::Gone,
-        ];
-        for halt in all {
-            assert_eq!(told(halt).is_some(), halt.told(), "{halt:?}");
-        }
     }
 }

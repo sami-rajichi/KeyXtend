@@ -28,7 +28,7 @@ The pad's events (`ScrollTap`, `ScrollStop`, `ScrollPeek`, `ScrollAsk`) and the 
 | `stop_at_end` | `true` | Scrolling stops when the target reaches its end. |
 | `stop_on_press` | `true` | Scrolling stops at a press outside our windows. |
 | `tick_ms` | `16` | How often the glide steps while scrolling, in ms; within `TICK_MS`, and always below `check_ms`, so a check spans more than one tick. |
-| `check_ms` | `250` | How many ms a target may stay still under our steps, short of its end, before the platform tries another way; within `CHECK_MS`. |
+| `check_ms` | `250` | How many ms a target may stay still under our steps, short of its end, before the platform tries another way; it also sets how often a scroll aims again, reads the reach and checks the limit, and the glide's longest gap; within `CHECK_MS`. |
 | `read_ms` | `300` | The longest one read of a target may take, in ms; within `READ_MS`. |
 | `edge_px` | `8` | How far past the keyboard's edge the target point goes when the pointer's path is unknown, in physical pixels; within `EDGE_PX`. |
 

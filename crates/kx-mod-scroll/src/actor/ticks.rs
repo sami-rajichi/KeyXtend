@@ -20,17 +20,25 @@ impl Actor {
         }
     }
 
-    /// Every `check_ms`: the limit, then a fresh aim, then the reach ahead; none when no check is due.
+    /// Every `check_ms`: the limit, then a fresh aim, then the reach ahead; none when no check is due. A pending first
+    /// aim runs the tap's checks instead.
     fn check(&mut self, dir: Dir, now: Mono) -> Option<Halt> {
         let scroll = self.scroll.as_mut()?;
         if now < scroll.due {
             return None;
         }
         scroll.due = now.saturating_add(self.check_every);
-        self.stops
-            .timed_out(now)
-            .or_else(|| self.retarget().err().and_then(Halt::failed))
-            .or_else(|| self.reached(dir))
+        let first = scroll.pending();
+        self.stops.timed_out(now).or_else(|| {
+            if first {
+                self.first_aim(dir)
+            } else {
+                self.retarget()
+                    .err()
+                    .and_then(Halt::failed)
+                    .or_else(|| self.reached(dir))
+            }
+        })
     }
 
     /// Turns the lines owed since the last reckoning.

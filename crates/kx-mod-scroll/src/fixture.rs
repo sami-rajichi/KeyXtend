@@ -3,14 +3,14 @@
 use crate::ScrollSettings;
 
 /// The fixture's time limit after the last pad tap, in seconds.
-pub(crate) const LIMIT_S: u32 = 60;
+pub(crate) const LIMIT: u32 = 60;
 
 /// Valid settings with both stops on and every value off its default.
 pub(crate) const fn settings() -> ScrollSettings {
     ScrollSettings {
         slow: 4,
         fast: 12,
-        limit_s: LIMIT_S,
+        limit_s: LIMIT,
         stop_at_end: true,
         stop_on_press: true,
         tick_ms: 20,
