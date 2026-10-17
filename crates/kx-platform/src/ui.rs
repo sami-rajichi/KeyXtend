@@ -91,6 +91,13 @@ pub trait WindowGuard: Send + Sync {
     /// `NoWindow` while either is not shown, `Refused` when the OS says no.
     fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError>;
 
+    /// Marks our shown window titled `title` as one that pages, as an open list does, so the scroll target turns its
+    /// page where it passes over our other windows (ADR-0029); the mark goes with the window. A call for the UI thread.
+    ///
+    /// # Errors
+    /// `NoWindow` while no such window shows, `Refused` when the OS says no, as for a window not guarded yet.
+    fn mark_pages(&self, title: &str) -> Result<(), UiError>;
+
     /// Notes the window that has the focus now.
     fn remember(&self) -> FocusToken;
 

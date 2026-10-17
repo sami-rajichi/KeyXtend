@@ -1,5 +1,6 @@
 //! One scroll run on a desk of windows (ADR-0029): it finds the target, turns it by the course's route and reads how far
-//! it can go, with one UI Automation read a check. Pure over the `Desk` trait; `win` gives Windows' desk.
+//! it can go, with one UI Automation read a check along the latest way's axis. Pure over the `Desk` trait; `win` gives
+//! Windows' desk.
 
 use std::fmt;
 use std::time::Duration;
@@ -12,40 +13,12 @@ use kx_module_api::{Mono, Redacted};
 use super::entry::Kept;
 use super::{Course, Route, Wheel, area};
 
-/// Whose window a point lands on.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Whose {
-    /// The keyboard, whose entries the guard watches.
-    Keyboard,
-    /// Another of our windows, such as an open list.
-    Ours,
-    /// Another app's.
-    Theirs,
-}
+mod spot;
 
-impl Whose {
-    /// Whose a root window is: the keyboard only when it is ours and watched, so another app's mark counts for nothing.
-    #[must_use]
-    pub const fn of(ours: bool, watched: bool) -> Self {
-        match (ours, watched) {
-            (true, true) => Self::Keyboard,
-            (true, false) => Self::Ours,
-            (false, _) => Self::Theirs,
-        }
-    }
-}
+pub use spot::{Spot, Whose};
 
-/// The window at a point: its raw id and whose it is.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Spot {
-    /// The window's raw id.
-    pub window: u64,
-    /// Whose it is.
-    pub whose: Whose,
-}
-
-/// What UI Automation read at a point: the box of the first element there that scrolls (left, top, right, bottom), and
-/// its percent pair (horizontal, vertical). Its `Debug` hides the box.
+/// What UI Automation read at a point: the box of the first element there that scrolls along the way asked (left, top,
+/// right, bottom), and its percent pair (horizontal, vertical). Its `Debug` hides the box.
 #[derive(Copy, Clone, PartialEq)]
 pub struct Read {
     /// The box; none when nothing there scrolls.
@@ -70,6 +43,8 @@ pub trait Desk {
     fn cursor(&self) -> Option<Point>;
     /// The window at `p`; none when there is none.
     fn spot(&self, p: Point) -> Option<Spot>;
+    /// The first other app's window at `p` in z-order, passing over ours; none when there is none.
+    fn behind(&self, p: Point) -> Option<Spot>;
     /// What the guard kept when the pointer last entered the keyboard.
     fn kept(&self) -> Option<Kept>;
     /// Every screen's work area.
@@ -94,8 +69,9 @@ pub trait Desk {
     /// # Errors
     /// `Refused` when the system refuses.
     fn send(&self, dir: Dir, delta: i32) -> Result<(), ScrollError>;
-    /// UI Automation's read at `at`, waited on for `cap` at most; none when it took longer or the reader is stuck.
-    fn read(&self, at: Point, cap: Duration) -> Option<Read>;
+    /// UI Automation's read at `at` of the first element there that scrolls along `way`'s axis, waited on for `cap` at
+    /// most; none when it took longer or the reader is stuck.
+    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read>;
     /// True while UI Automation is free to take steps now.
     fn idle(&self) -> bool;
     /// Hands UI Automation `count` line steps towards `dir` at `at`, never waited on; false when they were not taken.
@@ -104,10 +80,11 @@ pub trait Desk {
     fn now(&self) -> Mono;
 }
 
-/// This check's read of one target: its percents and when they were read.
+/// This check's read of one target along one axis (sideways or not): its percents and when they were read.
 #[derive(Copy, Clone, Debug)]
 struct Fresh {
     id: TargetId,
+    sideways: bool,
     pair: Option<(f64, f64)>,
     at: Mono,
 }
@@ -120,6 +97,8 @@ pub struct Run<D> {
     wheel: Wheel,
     /// The target the wheel settings were last read for.
     wheel_for: Option<TargetId>,
+    /// The way of the latest turn or reach, along whose axis each read looks; down until the first.
+    way: Dir,
     /// This check's read; an aim or a step that goes out clears it.
     fresh: Option<Fresh>,
     /// The latest box of a target, kept while a read of it misses.
@@ -136,23 +115,36 @@ impl<D: Desk> Run<D> {
             course: Course::new(config),
             wheel,
             wheel_for: None,
+            way: Dir::Down,
             fresh: None,
             last: None,
         }
     }
 
     /// The point to scroll, whether the pointer is on it, and the window there: under the pointer, or the point the
-    /// guard kept while the pointer is on the keyboard.
+    /// guard kept while the pointer is on the keyboard. Our window that now covers that point never takes a silent page
+    /// turn: the app's window behind it does, or there is no target.
     fn locate(&self) -> Result<(Point, bool, Spot), ScrollError> {
         let cursor = self.desk.cursor().ok_or(ScrollError::Refused)?;
         let under = self.desk.spot(cursor).ok_or(ScrollError::Gone)?;
-        if under.whose != Whose::Keyboard {
+        if !under.whose.passed() {
             return Ok((cursor, true, under));
         }
+        // With no point kept, our window under the pointer can only be the keyboard before its watch holds.
         let kept = self.desk.kept().ok_or(ScrollError::NoTarget)?;
+        if under.whose == Whose::Ours {
+            // A glide that crosses our banner keeps its target, as the module does for an aim at our windows.
+            return Ok((cursor, true, under));
+        }
         let at = kept.target(&self.desk.screens(), self.config.edge_px);
         let at = at.ok_or(ScrollError::NoTarget)?;
-        Ok((at, false, self.desk.spot(at).ok_or(ScrollError::Gone)?))
+        let there = self.desk.spot(at).ok_or(ScrollError::Gone)?;
+        let there = if there.whose.passed() {
+            self.desk.behind(at).ok_or(ScrollError::NoTarget)?
+        } else {
+            there
+        };
+        Ok((at, false, there))
     }
 
     /// The box of target `id` at `at`, from this check's read; a read that misses, or a busy target, keeps the
@@ -171,13 +163,15 @@ impl<D: Desk> Run<D> {
         area
     }
 
-    /// Reads target `id` at `at` within `read_ms`, and keeps it as this check's read with one clock reading.
+    /// Reads target `id` at `at` along the latest way's axis within `read_ms`, and keeps it as this check's read with
+    /// one clock reading.
     fn read(&mut self, id: TargetId, at: Point) -> Option<Read> {
         let cap = Duration::from_millis(u64::from(self.config.read_ms));
-        let read = self.desk.read(at, cap);
+        let read = self.desk.read(at, self.way, cap);
         let pair = read.and_then(|r| r.pair);
         self.fresh = Some(Fresh {
             id,
+            sideways: self.way.sideways(),
             pair,
             at: self.desk.now(),
         });
@@ -223,6 +217,7 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         if aim.ours {
             return Ok(());
         }
+        self.way = dir;
         if !self.desk.alive(window) {
             return Err(ScrollError::Gone);
         }
@@ -253,7 +248,11 @@ impl<D: Desk + Send> ScrollRun for Run<D> {
         if self.desk.hung(aim.id.get()) {
             return Reach::Unknown;
         }
-        if self.fresh.is_none_or(|f| f.id != aim.id) {
+        self.way = dir;
+        if self
+            .fresh
+            .is_none_or(|f| f.id != aim.id || f.sideways != dir.sideways())
+        {
             self.read(aim.id, aim.at);
         }
         let Some(fresh) = self.fresh else {

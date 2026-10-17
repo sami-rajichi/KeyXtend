@@ -1,5 +1,6 @@
 //! The Windows desk over hidden test windows: a posted turn reaches its window in its own pixels, closed, hung and
-//! silent windows read as such, and a sent turn is one tagged wheel. No test moves the pointer or sends real input.
+//! silent windows read as such, a sent turn is one tagged wheel, and the window behind ours is never ours. No test
+//! moves the pointer or sends real input.
 #![allow(
     unsafe_code,
     reason = "The tests read the union of the input they build."
@@ -9,10 +10,12 @@ use super::*;
 use crate::screen::contains;
 use crate::scroll::lparam_point;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
+use crate::window::is_ours;
 use kx_module_api::ports::{Aim, TargetId};
 use pinger::answered;
 use windows::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_INVALID_WINDOW_HANDLE, ERROR_TIMEOUT};
 use windows::Win32::UI::HiDpi::LogicalToPhysicalPointForPerMonitorDPI;
+use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor};
 
 /// The test window's box.
 const BOX: Rect = Rect {
@@ -150,6 +153,19 @@ fn the_window_under_the_pointer_is_another_apps() {
     let found = spot(p).expect("a window is everywhere on the desk");
     assert_eq!(found.whose, Whose::Theirs, "the tests show no window");
     assert!(alive(found.window));
+}
+
+#[test]
+fn the_window_behind_ours_is_another_apps_shown_window_at_the_point() {
+    let win = TestWin::start(BOX, false);
+    assert!(!behind::takes(win.hwnd(), AT), "ours, and hidden");
+    let Ok(p) = screen::cursor() else {
+        return;
+    };
+    let found = behind::behind(p).expect("a window is everywhere on the desk");
+    // SAFETY: a plain query; a gone window has no root.
+    let root = unsafe { GetAncestor(found, GA_ROOT) };
+    assert!(behind::takes(root, p) && !is_ours(found));
 }
 
 #[test]

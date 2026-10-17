@@ -1,5 +1,5 @@
 //! A desk the run tests set up: windows by box, a pointer, the kept entry, hung and closed windows, scripted reads, and a
-//! record of every step, read and clock reading.
+//! record of every step, read and clock reading. The first app's window holding a point is the one behind ours.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -10,7 +10,7 @@ use kx_module_api::{Mono, US_PER_MS};
 use crate::lock;
 use crate::screen::contains;
 use crate::scroll::entry::Kept;
-use crate::scroll::{Desk, Read, Spot, Wheel};
+use crate::scroll::{Desk, Read, Spot, Wheel, Whose};
 
 /// What the desk holds and what the run did to it.
 #[derive(Debug, Default)]
@@ -30,7 +30,8 @@ pub(super) struct State {
     pub wheel_reads: usize,
     /// What each read gives; none is a read that took too long.
     pub read: Option<Read>,
-    pub reads: Vec<(Point, Duration)>,
+    /// Each read's point, the way along whose axis it looked, and its cap.
+    pub reads: Vec<(Point, Dir, Duration)>,
     pub busy: bool,
     pub steps_refused: bool,
     pub post_error: Option<ScrollError>,
@@ -61,6 +62,11 @@ impl Desk for Fake {
 
     fn spot(&self, p: Point) -> Option<Spot> {
         self.with(|s| s.windows.iter().find(|(r, _)| contains(*r, p)).map(|w| w.1))
+    }
+
+    fn behind(&self, p: Point) -> Option<Spot> {
+        let theirs = |w: &&(Rect, Spot)| contains(w.0, p) && w.1.whose == Whose::Theirs;
+        self.with(|s| s.windows.iter().find(theirs).map(|w| w.1))
     }
 
     fn kept(&self) -> Option<Kept> {
@@ -106,9 +112,9 @@ impl Desk for Fake {
         Ok(())
     }
 
-    fn read(&self, at: Point, cap: Duration) -> Option<Read> {
+    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read> {
         self.with(|s| {
-            s.reads.push((at, cap));
+            s.reads.push((at, way, cap));
             s.read
         })
     }

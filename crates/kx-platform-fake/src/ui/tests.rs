@@ -7,6 +7,8 @@ const TITLE: &str = "KeyXtend";
 const TOP: &str = "KeyXtend menu";
 /// The windows that go just under the keyboard.
 const OUTLINE: &str = "KeyXtend outline";
+/// The open list, which pages.
+const LIST: &str = "KeyXtend list";
 
 fn area() -> Screen {
     let rect = Rect {
@@ -43,6 +45,7 @@ fn the_guard_records_every_call_in_order() {
     assert_eq!(fake.watch_entries(TITLE), Ok(()));
     fake.unwatch_entries(TITLE);
     assert_eq!(fake.lay_under(OUTLINE, TITLE), Ok(()));
+    assert_eq!(fake.mark_pages(LIST), Ok(()));
     let first = fake.remember();
     let second = fake.remember();
     assert_ne!(first, second);
@@ -54,6 +57,7 @@ fn the_guard_records_every_call_in_order() {
         GuardCall::WatchEntries(TITLE.into()),
         GuardCall::UnwatchEntries(TITLE.into()),
         GuardCall::LayUnder(OUTLINE.into(), TITLE.into()),
+        GuardCall::MarkPages(LIST.into()),
         GuardCall::Remember(first),
         GuardCall::Remember(second),
         GuardCall::GiveBack(first),
@@ -71,6 +75,7 @@ fn the_guard_count_and_errors_follow_the_test_and_every_try_is_recorded() {
     assert_eq!(fake.lift_alone(TITLE), Err(UiError::Refused(5)));
     assert_eq!(fake.watch_entries(TITLE), Err(UiError::Refused(5)));
     assert_eq!(fake.lay_under(OUTLINE, TITLE), Err(UiError::Refused(5)));
+    assert_eq!(fake.mark_pages(LIST), Err(UiError::Refused(5)));
     fake.set_error(None);
     fake.set_count(2);
     assert_eq!(fake.guard_own(None, None), Ok(2));

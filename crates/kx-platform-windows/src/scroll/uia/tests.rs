@@ -23,6 +23,13 @@ const READ_MS: u32 = 300;
 const SHORT: Duration = Duration::from_millis(100);
 /// Steps that move a bar of 90 positions by a tenth.
 const TENTH: u16 = 9;
+/// A wide table in the test window's client, as in a long page.
+const TABLE: Rect = Rect {
+    x: 10,
+    y: 10,
+    w: 200,
+    h: 100,
+};
 
 /// A cap no test should reach.
 const LONG_MS: u32 = 1000;
@@ -35,7 +42,7 @@ fn cap() -> Duration {
 /// The thread once its client has started: the first read at `win` may wait for it.
 fn started(win: &TestWin) -> Uia {
     let uia = Uia::start(READ_MS);
-    let _ = uia.read(Seek::Window(win.raw()), WAIT);
+    let _ = uia.read(Seek::Window(win.raw()), Dir::Down, WAIT);
     uia
 }
 
@@ -49,7 +56,9 @@ fn a_read_finds_the_box_and_percents_within_its_cap() {
     let _one = one_client();
     let win = TestWin::start(BOX, false);
     let uia = started(&win);
-    let read = uia.read(Seek::Window(win.raw()), cap()).expect("a read");
+    let read = uia
+        .read(Seek::Window(win.raw()), Dir::Down, cap())
+        .expect("a read");
     assert_eq!(read.area, Some(crate::screen::edges(BOX)));
     assert_eq!(read.pair, Some((50.0, 50.0)), "both bars half way");
     assert!(uia.idle(), "nothing left running");
@@ -62,11 +71,41 @@ fn steps_move_the_bars_and_a_read_behind_them_sees_it() {
     let uia = started(&win);
     let seek = Seek::Window(win.raw());
     assert!(uia.steps(seek, Dir::Down, TENTH));
-    let down = uia.read(seek, cap()).and_then(|r| r.pair);
+    let down = uia.read(seek, Dir::Down, cap()).and_then(|r| r.pair);
     assert_eq!(down, Some((50.0, 60.0)));
     assert!(uia.steps(seek, Dir::Left, TENTH), "free again once read");
-    let left = uia.read(seek, cap()).and_then(|r| r.pair);
+    let left = uia.read(seek, Dir::Left, cap()).and_then(|r| r.pair);
     assert_eq!(left, Some((40.0, 60.0)));
+}
+
+/// Over a wide table in a long page, each way reads and steps the first that scrolls along its axis: down the page,
+/// sideways the table, so down never reads the table's "cannot scroll".
+#[test]
+fn each_way_reads_and_steps_the_first_that_scrolls_along_its_axis() {
+    let _one = one_client();
+    let win = TestWin::split(BOX, TABLE);
+    let uia = started(&win);
+    let seek = Seek::Window(win.raw());
+    let (page, table) = (
+        crate::screen::edges(BOX),
+        crate::screen::edges(win.bounds()),
+    );
+    let down = uia.read(seek, Dir::Down, cap()).expect("a read down");
+    assert_eq!(
+        (down.area, down.pair.map(|p| p.1)),
+        (Some(page), Some(50.0))
+    );
+    let right = uia.read(seek, Dir::Right, cap()).expect("a read sideways");
+    assert_eq!(
+        (right.area, right.pair.map(|p| p.0)),
+        (Some(table), Some(50.0))
+    );
+    assert!(uia.steps(seek, Dir::Down, TENTH));
+    let page_pct = uia.read(seek, Dir::Up, cap()).and_then(|r| r.pair);
+    assert_eq!(page_pct.map(|p| p.1), Some(60.0), "the page moved");
+    assert!(uia.steps(seek, Dir::Left, TENTH));
+    let table_pct = uia.read(seek, Dir::Left, cap()).and_then(|r| r.pair);
+    assert_eq!(table_pct.map(|p| p.0), Some(40.0), "the table moved");
 }
 
 #[test]
@@ -74,7 +113,9 @@ fn a_window_with_nothing_that_scrolls_reads_no_box() {
     let _one = one_client();
     let win = TestWin::plain(BOX);
     let uia = started(&win);
-    let read = uia.read(Seek::Window(win.raw()), cap()).expect("a read");
+    let read = uia
+        .read(Seek::Window(win.raw()), Dir::Down, cap())
+        .expect("a read");
     assert_eq!((read.area, read.pair), (None, None));
 }
 
@@ -86,10 +127,13 @@ fn a_window_that_stopped_reading_costs_one_timeout_then_reads_work_again() {
     let (stuck, fine) = (TestWin::start(BOX, true), TestWin::start(BOX, false));
     let uia = Uia::start(READ_MS);
     let started = Instant::now();
-    assert!(uia.read(Seek::Window(stuck.raw()), SHORT).is_none());
+    assert!(
+        uia.read(Seek::Window(stuck.raw()), Dir::Down, SHORT)
+            .is_none()
+    );
     assert!(started.elapsed() >= SHORT, "it waited its cap");
     let after = uia
-        .read(Seek::Window(fine.raw()), WAIT)
+        .read(Seek::Window(fine.raw()), Dir::Down, WAIT)
         .expect("a read once it timed out");
     assert_eq!(after.area, Some(crate::screen::edges(BOX)));
     assert!(uia.idle(), "nothing piled up");
@@ -108,13 +152,13 @@ fn a_read_waits_behind_one_job_at_most_and_steps_go_only_to_a_free_thread() {
     assert!(!uia.idle() && !uia.steps(seek, Dir::Down, 1));
     let started = Instant::now();
     assert!(
-        uia.read(seek, SHORT).is_none(),
+        uia.read(seek, Dir::Down, SHORT).is_none(),
         "behind the steps, it waits its cap"
     );
     assert!(started.elapsed() >= SHORT);
     let quick = Instant::now();
     assert!(
-        uia.read(seek, WAIT).is_none(),
+        uia.read(seek, Dir::Down, WAIT).is_none(),
         "behind two, it gives up at once"
     );
     assert!(quick.elapsed() < WAIT);
@@ -126,7 +170,10 @@ fn starting_never_waits_for_the_client() {
     let uia = Uia::spawn(LONG_MS, slow);
     assert!(begun.elapsed() < Duration::from_millis(u64::from(LONG_MS)));
     let seek = Seek::At(Point::default());
-    assert!(uia.read(seek, SHORT).is_none(), "it waits its cap at most");
+    assert!(
+        uia.read(seek, Dir::Down, SHORT).is_none(),
+        "it waits its cap at most"
+    );
 }
 
 #[test]
@@ -138,7 +185,7 @@ fn steps_past_their_time_look_nothing_up() {
     let (at_a, at_b) = (Seek::Window(a.raw()), Seek::Window(b.raw()));
     let mut held = None;
     step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
-    let held_a = |k: &work::Held| k.as_ref().is_some_and(|(s, _)| *s == at_a);
+    let held_a = |k: &work::Held| k.as_ref().is_some_and(|h| h.0 == at_a);
     assert!(held_a(&held), "a lookup in time");
     let past = Instant::now().checked_sub(SHORT).unwrap();
     step(&auto, (at_b, Dir::Down, TENTH), past, &mut held);
@@ -156,8 +203,11 @@ fn a_walk_that_cannot_finish_reads_nothing_and_keeps_the_held_pattern() {
     let mut held = None;
     step(&auto, (at_a, Dir::Down, 0), deadline(WAIT), &mut held);
     let past = Instant::now().checked_sub(SHORT).unwrap();
-    assert!(look(&auto, at_b, past, &mut held).is_none(), "no read");
-    let held_a = held.as_ref().is_some_and(|(s, _)| *s == at_a);
+    assert!(
+        look(&auto, (at_b, Dir::Down), past, &mut held).is_none(),
+        "no read"
+    );
+    let held_a = held.as_ref().is_some_and(|h| h.0 == at_a);
     assert!(held_a, "the pattern stays");
 }
 

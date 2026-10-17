@@ -16,9 +16,10 @@ use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
 use windows::core::{PCWSTR, w};
 
 use super::guard::guarded;
+use super::pages::passed_at;
 use super::prop::{clear, put, value};
 use super::watch::{Inside, Seen, step};
-use super::win::{is_ours, on_ours, own_titled, title, top_level, window_at};
+use super::win::{is_ours, own_titled, title, top_level, window_at};
 use crate::screen::{cursor, rect_of};
 use crate::scroll::entry::{Kept, to_history};
 use crate::scroll::lparam_point;
@@ -93,7 +94,7 @@ pub(super) fn moved(hwnd: HWND, lparam: LPARAM) {
     if see(hwnd, Seen::Move)
         && let Some(at) = on_screen(hwnd, lparam)
     {
-        enter(hwnd, at, history, on_ours);
+        enter(hwnd, at, history, passed_at);
     }
 }
 
@@ -163,8 +164,8 @@ fn drop_marks(hwnd: HWND) {
     clear(hwnd, INSIDE);
 }
 
-/// Keeps the point before `at`, where the pointer entered `hwnd`, from `history` from `at` back, passing over our own
-/// windows (`ours`); a history outside the keyboard only on them keeps the last entry (`Kept::after`).
+/// Keeps the point before `at`, where the pointer entered `hwnd`, from `history` from `at` back, passing over our
+/// windows that do not page (`ours`); a history outside the keyboard only on them keeps the last entry (`Kept::after`).
 pub(super) fn enter(
     hwnd: HWND,
     at: Point,

@@ -69,6 +69,8 @@ pub enum GuardCall {
     UnwatchEntries(String),
     /// `lay_under(title, under)`.
     LayUnder(String, String),
+    /// `mark_pages(title)`.
+    MarkPages(String),
     /// `remember`, with the token it gave.
     Remember(FocusToken),
     /// `give_back(token)`.
@@ -99,8 +101,8 @@ impl FakeWindowGuard {
         self.count.store(count, Ordering::SeqCst);
     }
 
-    /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries` and `lay_under` calls with `error`, or takes them
-    /// again with `None`.
+    /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries`, `lay_under` and `mark_pages` calls with
+    /// `error`, or takes them again with `None`.
     pub fn set_error(&self, error: Option<UiError>) {
         *lock(&self.error) = error;
     }
@@ -143,6 +145,10 @@ impl WindowGuard for FakeWindowGuard {
 
     fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
         self.record(GuardCall::LayUnder(title.to_owned(), under.to_owned()))
+    }
+
+    fn mark_pages(&self, title: &str) -> Result<(), UiError> {
+        self.record(GuardCall::MarkPages(title.to_owned()))
     }
 
     fn remember(&self) -> FocusToken {

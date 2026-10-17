@@ -1,5 +1,6 @@
 //! A hidden test window with scroll bars on a thread of its own: it answers line steps, logs the wheel turns it gets,
-//! and can stop reading messages, as a hung app does. It is never shown and never takes the focus.
+//! and can stop reading messages, as a hung app does; or one whose bars split, as a wide table in a long page. It is
+//! never shown and never takes the focus.
 #![allow(
     unsafe_code,
     reason = "The tests make, scroll and destroy their own hidden windows."
@@ -11,16 +12,16 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use kx_module_api::ports::Rect;
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Controls::SetScrollInfo;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, GetScrollInfo,
-    MSG, PostMessageW, PostThreadMessageW, RegisterClassW, SB_HORZ, SB_LINEDOWN, SB_LINEUP,
-    SB_VERT, SCROLLBAR_CONSTANTS, SCROLLINFO, SIF_ALL, WINDOW_EX_STYLE, WM_APP, WM_HSCROLL,
-    WM_MOUSEHWHEEL, WM_MOUSEWHEEL, WM_QUIT, WM_VSCROLL, WNDCLASSW, WS_HSCROLL, WS_POPUP,
-    WS_VSCROLL,
+    GetWindowRect, MSG, PostMessageW, PostThreadMessageW, RegisterClassW, SB_HORZ, SB_LINEDOWN,
+    SB_LINEUP, SB_VERT, SCROLLBAR_CONSTANTS, SCROLLINFO, SIF_ALL, WINDOW_EX_STYLE, WINDOW_STYLE,
+    WM_APP, WM_HSCROLL, WM_MOUSEHWHEEL, WM_MOUSEWHEEL, WM_QUIT, WM_VSCROLL, WNDCLASSW, WS_CHILD,
+    WS_HSCROLL, WS_POPUP, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::w;
 
@@ -100,8 +101,35 @@ fn info(pos: i32) -> SCROLLINFO {
     }
 }
 
-/// Makes the hidden window at `r`, with both bars half way when it has `bars`.
-fn make(r: Rect, bars: bool) -> HWND {
+/// Which bars a test window has: both, none, or up and down only, with a child at a box of its client that scrolls
+/// only sideways.
+#[derive(Copy, Clone)]
+enum Bars {
+    Both,
+    None,
+    Split(Rect),
+}
+
+/// Makes the hidden window at `r` with `bars`, each half way, and gives it and the window reads look at: itself, or its
+/// child.
+fn make(r: Rect, bars: Bars) -> (HWND, HWND) {
+    let style = match bars {
+        Bars::Both => WS_POPUP | WS_VSCROLL | WS_HSCROLL,
+        Bars::None => WS_POPUP,
+        Bars::Split(_) => WS_POPUP | WS_VSCROLL,
+    };
+    let hwnd = window(r, style, None);
+    let Bars::Split(inner) = bars else {
+        return (hwnd, hwnd);
+    };
+    (
+        hwnd,
+        window(inner, WS_CHILD | WS_VISIBLE | WS_HSCROLL, Some(hwnd)),
+    )
+}
+
+/// One window of the test class at `r` (in its parent's client when it has one), its bars from `style` half way.
+fn window(r: Rect, style: WINDOW_STYLE, parent: Option<HWND>) -> HWND {
     // SAFETY: registers the test class, made again harmlessly, and a window of it that is never shown.
     unsafe {
         let module = GetModuleHandleW(None).unwrap();
@@ -113,30 +141,19 @@ fn make(r: Rect, bars: bool) -> HWND {
             ..WNDCLASSW::default()
         };
         RegisterClassW(&raw const wc);
-        let style = if bars {
-            WS_POPUP | WS_VSCROLL | WS_HSCROLL
-        } else {
-            WS_POPUP
-        };
         let ex = WINDOW_EX_STYLE::default();
+        let (x, y, cx, cy) = (r.x, r.y, r.w, r.h);
+        let title = w!("scroll test");
+        let module = Some(module.into());
         let hwnd = CreateWindowExW(
-            ex,
-            class,
-            w!("scroll test"),
-            style,
-            r.x,
-            r.y,
-            r.w,
-            r.h,
-            None,
-            None,
-            Some(module.into()),
-            None,
-        )
-        .unwrap();
+            ex, class, title, style, x, y, cx, cy, parent, None, module, None,
+        );
+        let hwnd = hwnd.unwrap();
         let half = info(START);
-        for bar in [SB_VERT, SB_HORZ].into_iter().filter(|_| bars) {
-            SetScrollInfo(hwnd, bar, &raw const half, false);
+        for (bar, has) in [(SB_VERT, WS_VSCROLL), (SB_HORZ, WS_HSCROLL)] {
+            if style.contains(has) {
+                SetScrollInfo(hwnd, bar, &raw const half, false);
+            }
         }
         hwnd
     }
@@ -155,22 +172,28 @@ impl TestWin {
     /// The window at `r` with scroll bars, on a thread that reads its messages, or, when `stuck`, stops reading them
     /// once made.
     pub fn start(r: Rect, stuck: bool) -> Self {
-        Self::make(r, stuck, true)
+        Self::make(r, stuck, Bars::Both)
     }
 
     /// The window at `r` with no scroll bars, on a thread that reads its messages.
     pub fn plain(r: Rect) -> Self {
-        Self::make(r, false, false)
+        Self::make(r, false, Bars::None)
     }
 
-    fn make(r: Rect, stuck: bool, bars: bool) -> Self {
+    /// The window at `r` that scrolls only up and down, holding at `inner` of its client a child, its `raw`, that
+    /// scrolls only sideways.
+    pub fn split(r: Rect, inner: Rect) -> Self {
+        Self::make(r, false, Bars::Split(inner))
+    }
+
+    fn make(r: Rect, stuck: bool, bars: Bars) -> Self {
         let (made, ready) = mpsc::channel();
         let (release, wait) = mpsc::channel::<()>();
         let join = std::thread::spawn(move || {
-            let hwnd = make(r, bars);
+            let (hwnd, seen) = make(r, bars);
             // SAFETY: a plain query of this thread's id.
             let thread = unsafe { GetCurrentThreadId() };
-            made.send((hwnd.0.addr().cast_signed(), thread)).unwrap();
+            made.send((seen.0.addr().cast_signed(), thread)).unwrap();
             if stuck {
                 let _ = wait.recv();
             }
@@ -200,6 +223,14 @@ impl TestWin {
     /// The window's raw handle.
     pub const fn raw(&self) -> isize {
         self.raw
+    }
+
+    /// The window's box on the screen.
+    pub fn bounds(&self) -> Rect {
+        let mut r = RECT::default();
+        // SAFETY: a box query of the test's own window into a local.
+        unsafe { GetWindowRect(self.hwnd(), &raw mut r) }.unwrap();
+        crate::screen::rect_of([r.left, r.top, r.right, r.bottom])
     }
 
     /// The wheel turns the window handled, once every message posted before this call was handled.

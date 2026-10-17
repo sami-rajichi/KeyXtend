@@ -4,19 +4,37 @@
 use super::*;
 
 #[test]
-fn one_read_a_check_serves_the_aim_and_its_reaches() {
+fn one_read_a_check_serves_the_aim_and_its_reaches_along_one_axis() {
     let fake = desk();
     let mut r = run(&fake);
     let aim = r.aim().unwrap();
     assert_eq!(r.reach(&aim, Dir::Down), Reach::More);
-    assert_eq!(r.reach(&aim, Dir::Left), Reach::End, "nothing left of 0 %");
+    assert_eq!(r.reach(&aim, Dir::Up), Reach::More);
     assert_eq!(fake.with(|s| (s.reads.len(), s.clock_reads)), (1, 1));
+    assert_eq!(r.reach(&aim, Dir::Left), Reach::End, "nothing left of 0 %");
+    assert_eq!(r.reach(&aim, Dir::Right), Reach::More);
+    let ways: Vec<Dir> = fake.with(|s| s.reads.iter().map(|r| r.1).collect());
+    assert_eq!(ways, [Dir::Down, Dir::Left], "the other axis reads once");
     r.turn(&aim, Dir::Down, NOTCH_LINES).unwrap();
     r.reach(&aim, Dir::Down);
+    let counts = fake.with(|s| (s.reads.len(), s.clock_reads));
+    assert_eq!(counts, (3, 3), "a step moved it");
+}
+
+/// Over a wide table in a long page, down reads the page and sideways the table: each read looks along the latest way.
+#[test]
+fn each_read_looks_along_the_latest_ways_axis() {
+    let fake = desk();
+    let mut r = run(&fake);
+    let first = r.aim().unwrap();
+    r.turn(&first, Dir::Right, NOTCH_LINES).unwrap();
+    let aim = r.aim().unwrap();
+    r.reach(&aim, Dir::Left);
+    let ways: Vec<Dir> = fake.with(|s| s.reads.iter().map(|r| r.1).collect());
     assert_eq!(
-        fake.with(|s| (s.reads.len(), s.clock_reads)),
-        (2, 2),
-        "a step moved it"
+        ways,
+        [Dir::Down, Dir::Right],
+        "down at first, then the turn's way"
     );
 }
 

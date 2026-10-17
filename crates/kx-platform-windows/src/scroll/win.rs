@@ -22,13 +22,14 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WHEEL_DELTA, WM_MOUSEHWHEEL, WM_MOUSEWHEEL,
 };
 
+mod behind;
 mod pinger;
 
 use super::entry::Kept;
 use super::uia::{Seek, Uia};
 use super::{Desk, Read, Run, Spot, Wheel, Whose, point_lparam, wheel_wparam};
 use crate::keys::TAG;
-use crate::window::{entry, from_raw, is_ours, window_at};
+use crate::window::{entry, from_raw, whose, window_at};
 use crate::{QpcClock, WinScreens, screen};
 use pinger::Pinger;
 
@@ -80,6 +81,12 @@ impl Desk for WinDesk {
         spot(p)
     }
 
+    fn behind(&self, p: Point) -> Option<Spot> {
+        let window = id_of(behind::behind(p)?);
+        let whose = Whose::Theirs;
+        Some(Spot { window, whose })
+    }
+
     fn kept(&self) -> Option<Kept> {
         entry::kept()
     }
@@ -116,8 +123,8 @@ impl Desk for WinDesk {
         crate::inject::send(&[wheel_input(dir, delta)]).map_err(|_| ScrollError::Refused)
     }
 
-    fn read(&self, at: Point, cap: Duration) -> Option<Read> {
-        self.uia.read(Seek::At(at), cap)
+    fn read(&self, at: Point, way: Dir, cap: Duration) -> Option<Read> {
+        self.uia.read(Seek::At(at), way, cap)
     }
 
     fn idle(&self) -> bool {
@@ -143,13 +150,14 @@ fn handle(window: u64) -> HWND {
     from_raw(usize::try_from(window).unwrap_or_default().cast_signed())
 }
 
-/// The window at `p` and whose it is: the keyboard the guard watches, another of ours, or another app's.
+/// The window at `p` and whose it is: the keyboard the guard watches, another of ours that pages or not, or another
+/// app's.
 fn spot(p: Point) -> Option<Spot> {
     let (hwnd, root) = window_at(p);
     if hwnd.is_invalid() {
         return None;
     }
-    let whose = Whose::of(is_ours(root), entry::watched(root));
+    let whose = whose(root);
     let window = id_of(hwnd);
     Some(Spot { window, whose })
 }

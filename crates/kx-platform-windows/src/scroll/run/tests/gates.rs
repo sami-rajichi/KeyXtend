@@ -1,5 +1,5 @@
 //! What a run holds back: a window that owes a ping, a wheel Windows gives the focus, steps not taken, and another
-//! app's mark.
+//! app's marks.
 
 use super::*;
 
@@ -91,9 +91,22 @@ fn steps_ui_automation_did_not_take_are_refused() {
 }
 
 #[test]
-fn only_our_own_watched_window_is_the_keyboard() {
-    assert_eq!(Whose::of(true, true), Whose::Keyboard);
-    assert_eq!(Whose::of(true, false), Whose::Ours);
-    assert_eq!(Whose::of(false, true), Whose::Theirs, "another app's mark");
-    assert_eq!(Whose::of(false, false), Whose::Theirs);
+fn only_our_own_marked_windows_are_the_keyboard_or_pages() {
+    assert_eq!(Whose::of(true, true, false), Whose::Keyboard);
+    assert_eq!(Whose::of(true, true, true), Whose::Keyboard);
+    assert_eq!(Whose::of(true, false, true), Whose::Pages);
+    assert_eq!(Whose::of(true, false, false), Whose::Ours);
+    for marks in [(true, false), (false, true), (true, true), (false, false)] {
+        assert_eq!(
+            Whose::of(false, marks.0, marks.1),
+            Whose::Theirs,
+            "another app's marks"
+        );
+    }
+    let passed = [Whose::Keyboard, Whose::Ours, Whose::Pages, Whose::Theirs].map(Whose::passed);
+    assert_eq!(
+        passed,
+        [true, true, false, false],
+        "only our windows that do not page"
+    );
 }

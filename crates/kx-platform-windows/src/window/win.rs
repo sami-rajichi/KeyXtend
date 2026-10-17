@@ -15,9 +15,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::BOOL;
 
-use super::entry;
 use super::guard::guard;
 use super::top::{lay_under, lift_alone};
+use super::{entry, pages};
 use super::{guard_order, ours_by, should_give_back, spared};
 use crate::screen::edges;
 use crate::{failed, refused};
@@ -52,6 +52,10 @@ impl WindowGuard for WinGuard {
 
     fn lay_under(&self, title: &str, under: &str) -> Result<(), UiError> {
         lay_under(title, under)
+    }
+
+    fn mark_pages(&self, title: &str) -> Result<(), UiError> {
+        pages::mark_pages(title)
     }
 
     fn remember(&self) -> FocusToken {
@@ -143,7 +147,7 @@ pub fn own_windows() -> Vec<HWND> {
     unsafe_code,
     reason = "Enumerates top-level windows into a local list."
 )]
-pub(super) fn top_level() -> Vec<HWND> {
+pub(crate) fn top_level() -> Vec<HWND> {
     unsafe extern "system" fn collect(hwnd: HWND, list: LPARAM) -> BOOL {
         let found = std::ptr::with_exposed_provenance_mut::<Vec<HWND>>(list.0.cast_unsigned());
         // SAFETY: `list` is the address of the Vec passed below, alive and not borrowed during the call.

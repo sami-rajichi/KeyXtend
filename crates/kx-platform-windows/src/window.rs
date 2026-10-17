@@ -15,6 +15,8 @@ pub(crate) mod entry;
 #[cfg(windows)]
 mod guard;
 #[cfg(windows)]
+mod pages;
+#[cfg(windows)]
 mod prop;
 #[cfg(test)]
 mod tests;
@@ -27,12 +29,14 @@ mod win;
 #[cfg(windows)]
 pub use guard::guarded;
 #[cfg(windows)]
+pub(crate) use pages::whose;
+#[cfg(windows)]
 pub use win::{
     WinGuard, foreground, from_raw, give_back, guard_own, is_ours, own_bounds, own_titled,
     own_windows, shape, title,
 };
 #[cfg(windows)]
-pub(crate) use win::{on_ours, window_at};
+pub(crate) use win::{on_ours, top_level, window_at};
 
 /// `WS_EX_TOPMOST`: above every window that is not topmost.
 const WS_EX_TOPMOST: u32 = 0x0000_0008;

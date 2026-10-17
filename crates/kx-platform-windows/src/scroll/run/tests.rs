@@ -1,5 +1,6 @@
-//! The run on a fake desk: one screen with the keyboard, our list, an app and the desktop behind it.
+//! The run on a fake desk: one screen with the keyboard, our list and banner, an app and the desktop behind it.
 
+mod aims;
 mod fake;
 mod gates;
 mod reads;
@@ -22,6 +23,13 @@ const LIST: Rect = Rect {
     y: 100,
     w: 200,
     h: 300,
+};
+/// Our banner, under the list.
+const BANNER: Rect = Rect {
+    x: 1600,
+    y: 450,
+    w: 200,
+    h: 100,
 };
 /// An app at the top left.
 const APP: Rect = Rect {
@@ -48,6 +56,8 @@ const WORK: Rect = Rect {
 const KB_ID: u64 = 10;
 /// Our list's id.
 const LIST_ID: u64 = 20;
+/// Our banner's id.
+const BANNER_ID: u64 = 25;
 /// The app's id.
 const APP_ID: u64 = 30;
 /// The desktop's id.
@@ -80,7 +90,8 @@ fn desk() -> Fake {
         let spot = |window, whose| Spot { window, whose };
         s.windows = vec![
             (KB, spot(KB_ID, Whose::Keyboard)),
-            (LIST, spot(LIST_ID, Whose::Ours)),
+            (LIST, spot(LIST_ID, Whose::Pages)),
+            (BANNER, spot(BANNER_ID, Whose::Ours)),
             (APP, spot(APP_ID, Whose::Theirs)),
             (DESK, spot(DESK_ID, Whose::Theirs)),
         ];
@@ -114,7 +125,7 @@ fn the_pointer_off_our_windows_aims_at_the_window_under_it() {
     assert_eq!((aim.at, aim.on_pointer, aim.ours), (ON_APP, true, false));
     assert_eq!((aim.id, aim.area), (TargetId::new(APP_ID), Some(BOX)));
     let cap = Duration::from_millis(u64::from(CONFIG.read_ms));
-    assert_eq!(fake.with(|s| s.reads.clone()), [(ON_APP, cap)]);
+    assert_eq!(fake.with(|s| s.reads.clone()), [(ON_APP, Dir::Down, cap)]);
 }
 
 #[test]
@@ -162,7 +173,7 @@ fn an_unknown_pointer_is_refused_and_no_window_is_gone() {
 }
 
 #[test]
-fn our_other_windows_are_ours_and_get_no_read_or_step() {
+fn our_list_under_the_pointer_is_ours_and_gets_no_read_or_step() {
     let fake = desk();
     fake.with(|s| s.cursor = Some(Point { x: 1700, y: 200 }));
     let mut r = run(&fake);

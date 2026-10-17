@@ -13,10 +13,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use super::entry;
 use super::prop::{clear, put, value};
 use super::top::{keep_top, lift, on_this_thread, recheck, recheck_id};
 use super::{KEPT, holds_kept, is_through, kept_ex};
+use super::{entry, pages};
 use crate::last_refused;
 
 /// The window property that holds the window's own procedure while the guard is hooked.
@@ -114,6 +114,7 @@ fn unhook(hwnd: HWND, own: usize) {
     }
     drop_props(hwnd);
     entry::forget(hwnd);
+    pages::forget(hwnd);
 }
 
 /// Adds the kept styles, refused when they did not land; the subclass then keeps them against later changes.

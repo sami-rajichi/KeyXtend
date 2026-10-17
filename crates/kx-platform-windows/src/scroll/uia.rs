@@ -1,6 +1,6 @@
-//! UI Automation on a COM thread of its own (ADR-0029 decision 3): it finds the first element at a point that scrolls,
-//! reads its box and percents, and takes `ScrollPattern` line steps. A read is waited on for its cap at most, a step
-//! never, and at most one job waits behind the running one, so nothing piles up behind a stuck app.
+//! UI Automation on a COM thread of its own (ADR-0029 decision 3): it finds the first element at a point that scrolls
+//! along a way's axis, reads its box and percents, and takes `ScrollPattern` line steps. A read is waited on for its
+//! cap at most, a step never, and at most one job waits behind the running one, so nothing piles up behind a stuck app.
 
 mod work;
 
@@ -34,9 +34,11 @@ pub(crate) enum Seek {
 
 /// One job for the thread; each is dropped unstarted after `by`.
 enum Job {
-    /// Read the box and percents, and answer on `reply`: none when UI Automation could not look there.
+    /// Read the box and percents of what scrolls along `way`'s axis, and answer on `reply`: none when UI Automation
+    /// could not look there.
     Read {
         seek: Seek,
+        way: Dir,
         by: Instant,
         reply: Sender<Option<Read>>,
     },
@@ -78,15 +80,20 @@ impl Uia {
         Self { jobs, pending, cap }
     }
 
-    /// The read at `seek`, waited on for `cap` at most; none when it took longer, UI Automation could not look there,
-    /// or a job is stuck with another waiting behind it.
-    pub(crate) fn read(&self, seek: Seek, cap: Duration) -> Option<Read> {
+    /// The read at `seek` along `way`'s axis, waited on for `cap` at most; none when it took longer, UI Automation
+    /// could not look there, or a job is stuck with another waiting behind it.
+    pub(crate) fn read(&self, seek: Seek, way: Dir, cap: Duration) -> Option<Read> {
         if self.pending.load(Ordering::SeqCst) > BEHIND {
             return None;
         }
         let (reply, answer) = mpsc::channel();
         let by = deadline(cap);
-        self.give(Job::Read { seek, by, reply })?;
+        self.give(Job::Read {
+            seek,
+            way,
+            by,
+            reply,
+        })?;
         answer.recv_timeout(cap).ok().flatten()
     }
 
