@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 09:07 — P5: G6 judges as the first hardware run showed it must
+G6 now judges sideways only where the scroll pattern says the window scrolls sideways, so Notepad with word wrap reads "no sideways overflow", and the end passes when no vertical percent moved since Ctrl+End's bottom, which Explorer reads as 99.991. Before each stop's look it waits for the percents to settle, as Chrome's trail its picture, and those notes keep both percents. On Explorer the press-stop spot also accepts a bare list, pane or group past every column, or the status bar's own text, and a skip names each spot's control type, class and window; target-window's filler lines now start one letter on from the line above.
+
 ## 2026-10-17 08:15 — P5: a covered target is read at its point, and the list is marked and outlined as it opens
 UI Automation now goes down a covered target's window to the element at the kept point, so a pane or list inside it is read and stepped. The open list asks for its page mark as it opens, which also guards it, and a peek outlines the list window. A target that closes just before a check stops the scroll instead of taking the window now at its point.
 
