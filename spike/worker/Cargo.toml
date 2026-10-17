@@ -4,7 +4,7 @@ description = "P1 spike worker: the only process that opens the mic; sends each 
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-license.workspace = true
+license-file.workspace = true
 
 [dependencies]
 spike-core.workspace = true

@@ -1,6 +1,6 @@
 # Sounds
 
-The app's sounds, all CC0 1.0 (text in `CC0-1.0.txt`; each source page's licence field was checked on 2026-10-13), in the shipping format that `[format]` in `crates/kx-theme/tokens/sounds.toml` sets, where each event names its files. `recipes.toml` holds the tool's own candidate recipes, our own work, GPL-3.0-or-later like the code: `cargo xtask sounds render [--out <dir>]` writes them to the folder `[workspace.metadata.sounds]` names in `Cargo.toml`, `sounds import` converts a recording, and `sounds join` mixes two converted files.
+The app's sounds, all CC0 1.0 (text in `CC0-1.0.txt`; each source page's licence field was checked on 2026-10-13), in the shipping format that `[format]` in `crates/kx-theme/tokens/sounds.toml` sets, where each event names its files. `recipes.toml` holds the tool's own candidate recipes, our own work, all rights reserved like the code: `cargo xtask sounds render [--out <dir>]` writes them to the folder `[workspace.metadata.sounds]` names in `Cargo.toml`, `sounds import` converts a recording, and `sounds join` mixes two converted files.
 
 Shipped files, each made with `cargo xtask sounds` from the source's original file:
 

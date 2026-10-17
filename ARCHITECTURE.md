@@ -183,7 +183,8 @@ pub trait Module: Send + 'static {
 4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
 6. No module logs typed text, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
-7. Every new dependency passes `cargo deny check` (licences allowed for GPL-3.0-or-later: see `deny.toml`) and is recorded in `THIRD_PARTY.md` if it ships data, fonts, models or icons.
+7. Every new dependency passes `cargo deny check` (licences that allow a closed, sold app: ADR-0030 and `deny.toml`) and is recorded in `THIRD_PARTY.md` if it ships data, fonts, models or icons.
+   - No outside code is merged, and the licence-key check and signing secrets never enter this repository (ADR-0030).
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.

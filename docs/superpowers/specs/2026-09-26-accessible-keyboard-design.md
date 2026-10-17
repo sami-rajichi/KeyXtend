@@ -27,7 +27,7 @@ Windows' On-Screen Keyboard (osk.exe) is the only tool that stays on top of ever
 
 The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKey solve parts of the mouse problem, but neither covers Arabic or one-button use on Windows.
 
-**Goal:** a small, fast, open-source, cross-platform on-screen keyboard that lets a one-button pointer user do *everything* a keyboard-and-mouse user can do.
+**Goal:** a small, fast, source-available, cross-platform on-screen keyboard that lets a one-button pointer user do *everything* a keyboard-and-mouse user can do.
 
 **Success criteria**
 
@@ -529,7 +529,7 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27. They are numbere
 | # | Decision | Recommended default |
 |---|---|---|
 | D1 | Product name and crate prefix | **Decided:** KeyXtend, crates `kx-*`, binaries `keyxtend.exe` / `keyxtend-worker.exe` |
-| D2 | Licence | **Decided for now:** open source, GPL-3.0-or-later; revisit before v1.0 (ADR-0006) |
+| D2 | Licence | **Decided:** view only, all rights reserved; the app is sold under its own user licence (ADR-0030, superseding ADR-0006) |
 | D3 | Type into admin/elevated windows | **Decided:** yes, like osk.exe; gate G4 showed uiAccess is enough (ADR-0013) |
 | D4 | Vault unlock | OS verification (Windows Hello/PIN), with an optional master password |
 | D5 | Updates | Notify only, never auto-install; the user downloads a signed release |

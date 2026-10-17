@@ -3,7 +3,8 @@
 Thank you for helping! This keyboard exists for people who cannot use a normal keyboard or mouse. Every change must keep it usable with **one left click**.
 
 ## Code contributions (for now)
-We welcome issues, ideas and test reports. Until the long-term licence is final (ADR-0006), we do not merge code from outside the core team.
+We welcome issues and ideas, and test reports from testers who got a build from the owner. The code is all rights reserved (ADR-0030), so we merge only the owner's code; if that changes, each contributor first signs an agreement that gives the owner the rights.
+Building and running the code need the owner's written permission (`LICENSE`); the steps below are for the owner's own work.
 
 ## Before you code
 - Read `ARCHITECTURE.md` and the design spec in `docs/superpowers/specs/`.
@@ -23,11 +24,11 @@ We welcome issues, ideas and test reports. Until the long-term licence is final 
 - No `unsafe` outside `crates/kx-platform-*`, except cxx-qt bridge blocks in `kx-ui/src/bridges/` and the test tools in `tools/` (ADR-0013, ADR-0014).
 - Never log typed text, clipboard data, passwords or transcripts.
 - UI never needs scrolling, dragging or right-click. Lists are paged, 5 rows per page.
-- New dependencies must have a licence compatible with GPL-3.0-or-later (see `deny.toml`). Data, fonts and models go in `THIRD_PARTY.md`.
+- New dependencies must allow a closed, sold app: no GPL or AGPL, LGPL only as a replaceable library (ADR-0030, `deny.toml`). Data, fonts and models go in `THIRD_PARTY.md`.
 
 ## Commits
 - Conventional Commits (`feat(scroll): …`, `fix(keyboard): …`).
-- Every commit is signed off (`git commit -s`) under the Developer Certificate of Origin.
+- Every commit is signed off (`git commit -s`). The sign-off stays as the project's own record and CI check; it grants no open-source licence (ADR-0030).
 
 ## Testing on Windows
 CI cannot test uiAccess, admin windows or real apps. Follow `.claude/skills/kx-windows-manual-test/SKILL.md` and save the report in `docs/test-reports/`.

@@ -10,7 +10,7 @@ targets = [
 ]
 
 [licenses]
-# Exact allow-list from docs/adr/0006-licence-gpl3.md.
+# Licences that allow a closed, sold app (ADR-0030, decision 6).
 allow = [
     "MIT",
     "Apache-2.0",
@@ -23,11 +23,14 @@ allow = [
     "MPL-2.0",
     "CC0-1.0",
     "OFL-1.1",
-    "GPL-3.0-or-later",
 ]
-# LGPL is deliberately not here: ADR-0006 requires a reviewed per-crate exception instead.
+# LGPL is deliberately not here: ADR-0030 allows it only as a reviewed, replaceable library.
 # Don't warn about allow-listed licences no dependency currently uses.
 unused-allowed-license = "allow"
+
+[licenses.private]
+# Our own crates are unpublished and all rights reserved under LICENSE (ADR-0030).
+ignore = true
 
 [advisories]
 # Yanked crates fail the check.

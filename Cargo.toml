@@ -9,7 +9,7 @@ resolver = "3"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.98"
-license = "GPL-3.0-or-later"
+license-file = "LICENSE"
 publish = false
 repository = "https://github.com/sami-rajichi/KeyXtend"
 

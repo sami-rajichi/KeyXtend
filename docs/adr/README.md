@@ -6,10 +6,10 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 |---|---|---|
 | 0001 | [Record architecture decisions](0001-record-architecture-decisions.md) | Accepted |
 | 0002 | [Rust for all code, Slint for all windows](0002-rust-and-slint.md) | Superseded by ADR-0013 |
-| 0003 | [The keyboard process itself holds uiAccess](0003-uiaccess-keyboard-process.md) | Accepted |
+| 0003 | [The keyboard process itself holds uiAccess](0003-uiaccess-keyboard-process.md) | Accepted. Its free-signing line (SignPath) is superseded by ADR-0030. |
 | 0004 | [Untrusted data and network access live in worker processes](0004-worker-processes.md) | Accepted |
 | 0005 | [Micro-kernel with independent "Lego" modules](0005-micro-kernel-modules.md) | Accepted |
-| 0006 | [Licence: GPL-3.0-or-later for the app](0006-licence-gpl3.md) | Accepted for now (2026-09-26). Revisit before v1.0. Slint notes superseded by ADR-0013. |
+| 0006 | [Licence: GPL-3.0-or-later for the app](0006-licence-gpl3.md) | Superseded by ADR-0030 (2026-10-17). Its Slint notes were superseded by ADR-0013. |
 | 0007 | [AI features are local-first and free](0007-local-first-free-ai.md) | Accepted |
 | 0008 | [Every UI works without scrolling, dragging or right-click](0008-paged-no-scroll-ui.md) | Accepted |
 | 0009 | [Characters as Unicode, shortcuts as virtual keys](0009-input-injection-strategy.md) | Accepted. Verified by gate G1 (ADR-0013). |
@@ -33,5 +33,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0027 | [The hold engine decides in the hook, behind a port](0027-the-hold-engine-decides-in-the-hook-behind-a-port.md) | Accepted (2026-10-13). Changes spec §5.1's hook discipline; as built, our keyboard's Esc also reaches the engine, only to cancel a carry, the keyboard hook also reads key releases for the host's record of held input, the health check reinstalls only after two lagging checks in a row, counts our own input as seen and skips while another desktop is in front, and the hand try reads the owner's running copy, not the test build. `REPLAY` sits in the low 32 bits of `dwExtraInfo` beside each act's 16-bit id, as Windows hands a mouse hook only those, and echoes heard inside our own send go to an inbox the host lends that send. |
 | 0028 | [The renderer keeps no spare buffers, and G8 also reads after use](0028-the-renderer-keeps-no-spare-buffers.md) | Accepted (2026-10-15). Adds to ADR-0021's decisions 6 and 7. |
 | 0029 | [The scroll pad glides by wheel steps and reads by UI Automation](0029-the-scroll-pad-glides-by-wheel-steps-and-reads-by-ui-automation.md) | Accepted (2026-10-16). Reorders spec §5.2's Windows routes (from ADR-0013's G6) and adds scrolling to ADR-0027's decision 4; spec §5.2's *As built in P5* refines the fallback, end and send rules. |
+| 0030 | [The code is view only, with all rights reserved](0030-the-code-is-view-only-with-all-rights-reserved.md) | Accepted (2026-10-17). Supersedes ADR-0006 and ADR-0003's free-signing line. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
