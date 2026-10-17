@@ -10,6 +10,8 @@ use kx_platform_fake::{FakePointerHook, FakeScrollTarget};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+mod ci;
+
 /// The app's manifest, whose features pick the modules.
 const CARGO: &str = include_str!("../../Cargo.toml");
 /// How each module's feature begins.
@@ -18,12 +20,8 @@ const MODULE_FEATURE: &str = "mod-";
 const SCROLL_FEATURE: &str = "mod-scroll";
 /// The CI workflow, whose scroll-off lint names the app's other features by hand.
 const CI: &str = include_str!("../../../../.github/workflows/ci.yml");
-/// What marks the scroll-off lint's line in `CI`.
-const SCROLL_OFF: &str = "-p keyxtend --all-targets --no-default-features";
-/// The flag before that lint's feature list.
-const FEATURES_FLAG: &str = "--features";
-/// What separates the features in that list.
-const FEATURE_SEP: char = ',';
+/// The app's package, which that lint builds.
+const APP: &str = env!("CARGO_PKG_NAME");
 /// The probes' version, which nothing reads.
 const VERSION: &str = "0.0.0";
 
@@ -93,22 +91,6 @@ fn defaults(features: &toml::Table) -> Vec<&str> {
     on
 }
 
-/// The features each scroll-off lint line in `CI` lists, each list sorted.
-fn scroll_off_lists() -> Vec<Vec<&'static str>> {
-    let lines = CI.lines().filter(|l| l.contains(SCROLL_OFF));
-    let list = |line: &'static str| {
-        let mut words = line.split_whitespace().skip_while(|w| *w != FEATURES_FLAG);
-        let mut listed: Vec<&str> = words
-            .nth(1)
-            .unwrap_or_default()
-            .split(FEATURE_SEP)
-            .collect();
-        listed.sort_unstable();
-        listed
-    };
-    lines.map(list).collect()
-}
-
 #[test]
 fn every_module_feature_is_on_by_default_the_scroll_one_too() {
     let features = features();
@@ -127,12 +109,15 @@ fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
     let features = features();
     let mut want = defaults(&features);
     want.retain(|f| *f != SCROLL_FEATURE);
-    let lists = scroll_off_lists();
+    let lists = ci::lists(CI, APP);
     assert!(
         !lists.is_empty(),
-        "ci.yml lints the app with the scroll module off"
+        "ci.yml has no step that builds {APP} with its default features off"
     );
-    assert!(lists.iter().all(|l| *l == want), "{lists:?} != {want:?}");
+    let why = "ci.yml's scroll-off step must list the app's default features without";
+    for listed in lists {
+        assert_eq!(listed, want, "{why} {SCROLL_FEATURE}");
+    }
 }
 
 #[test]
