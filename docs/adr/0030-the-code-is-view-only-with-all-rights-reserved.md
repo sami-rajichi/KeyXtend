@@ -25,7 +25,9 @@
    - it adds no right beyond GitHub's terms, and grants no right to the name;
    - versions up to 0b38616 keep the GPL;
    - permission is asked through an issue in the repository.
-3. The app will ship under the owner's own end-user licence (EULA), written before the first release. Like any tester's build before it, it must let users replace the Qt DLLs and allow reverse engineering to debug that change (LGPL-3.0 §4).
+3. The app will ship under the owner's own end-user licence (EULA), written before the first release. The owner wants anyone to download and use the app, crediting the owner as its creator (owner, 2026-10-17).
+   - Like any tester's build before it, the EULA must let users replace the Qt DLLs and allow reverse engineering to debug that change (LGPL-3.0 §4).
+   - The owner may later open pull requests to others, each with a contributor agreement first (decision 5).
 4. Third-party parts keep their own licences. Their notices ship in `licenses/` as `THIRD_PARTY.md` says.
 5. No outside code is merged; if that ever changes, each contributor first signs an agreement that gives the owner the rights (a CLA). The DCO sign-off stays as the project's own record and CI check.
 6. Everything that ships in the app or links into it must allow a closed, sold app:
@@ -67,7 +69,8 @@
 - `LICENSE`: the new text.
 - `Cargo.toml`, every crate's inherited field and `spike/Cargo.toml`: `license-file` points at `LICENSE` in place of the GPL identifier.
 - `deny.toml`: GPL-3.0-or-later leaves the allowed list, and our own unpublished crates are exempt.
-- `README.md`: "source-available" in the first line, the old mock-up link, and the Licence section.
+- `README.md`: "source-available" in the first line, the owner's credit, the old mock-up link, and the Licence section.
+- `CLAUDE.md`'s "Never do this" list: decisions 5 and 7 (owner's yes, 2026-10-17).
 - `CONTRIBUTING.md`: no outside code, an agreement first if that changes, building only with permission, the DCO's role, and decision 6.
 - `.github/ISSUE_TEMPLATE/permission.yml`: a short form for asking permission, as `LICENSE` says.
 - `ARCHITECTURE.md`'s invariants and `docs/security/ci.md` name this ADR. The `kx-licence-check`, `kx-new-module` and `kx-release` skills follow it.

@@ -2,6 +2,8 @@
 
 A small, fast, source-available on-screen keyboard and mouse helper for people who use a computer with **one pointer button**.
 
+Created and owned by [sami-rajichi](https://github.com/sami-rajichi).
+
 ## Who it is for
 
 - People who use a computer with a single pointer button: for example a finger on a mouse or touchpad, a head or eye pointer with a dwell click, or a mouth stick.
