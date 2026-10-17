@@ -49,7 +49,7 @@ jobs:
       - run: cargo clippy -p keyxtend --all-targets --features gate-input --locked -- -D warnings
       - run: cargo test -p kx-platform-windows --features sim-input --locked
       - run: cargo test -p keyxtend --features gate-input --locked
-      # The app with the scroll module's feature off, so each module stays optional.
+      # The app with the scroll module's feature off, so the scroll module stays optional.
       - run: >-
           cargo clippy -p keyxtend --all-targets --no-default-features --features mod-keyboard,mod-layouts,mod-mouse
           --locked -- -D warnings

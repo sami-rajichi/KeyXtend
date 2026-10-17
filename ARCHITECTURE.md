@@ -199,7 +199,7 @@ pub trait Module: Send + 'static {
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
 - Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
-- Windows also lints the app with the scroll module's feature off, so a module stays optional.
+- Windows also lints the app with the scroll module's feature off, so the scroll module stays optional.
 - Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
 
 ## Cross-cutting patterns
@@ -207,7 +207,7 @@ pub trait Module: Send + 'static {
 - **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
 - **State machines as enums** with explicit transitions, for the keyboard, hold engine, scroll, vault lock and voice session. Time is always injected through a `Clock` trait, so tests are deterministic.
 - **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops. No cycles of bounded channels.
-- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag, the entry watch's one kept point), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
+- **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag, the entry watch's one kept entry), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
 - **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
 - **UI hub (`kx-ui`).** QML makes the bridge objects without arguments, so they reach the app's `Hub` through `kx_ui::install`, set once before QML loads (ADR-0018). Adapter threads wake the Qt thread through cxx-qt's queue, never blocking. Try again and Quit go to the app through a request queue it drains on its own thread; Quit, from the user or a second copy, is the last request, and the queue then ends.
@@ -246,7 +246,7 @@ pub trait Module: Send + 'static {
 - **Windows (`kx-platform-windows::scroll`).** A turn is a small wheel delta worked out from the user's wheel settings, posted to the window at the target while the pointer is elsewhere. It is sent by `SendInput` only while the pointer is on the target and Windows routes wheels to the pointer.
   - UI Automation runs on the run's own COM thread (`kx-scroll-uia`), each read capped by `read_ms`: it finds the first element that scrolls, its box and percents. It takes `ScrollPattern` line steps when the wheel setting is 0 or a page, or when wheel deltas move nothing (`Course`, spec §5.2).
   - A ping thread (`kx-scroll-ping`) asks the target for a `WM_NULL` answer; a window that leaves one unanswered, or that Windows calls hung, gets no step.
-  - The guard's entry watch (`WindowGuard::watch_entries`) reads `GetMouseMovePointsEx` once as the pointer enters the keyboard and keeps the newest point outside it on a work area. A miss pushes the entry point `edge_px` past the nearest keyboard edge that lands on a screen.
+  - The guard's entry watch (`WindowGuard::watch_entries`) reads `GetMouseMovePointsEx` once as the pointer enters the keyboard and keeps the newest point outside it on a work area. A miss pushes the entry point `edge_px` past a keyboard edge, nearest first, onto the first work area it lands on.
 - **UI (`kx-ui`).** The hub keeps the scroll state and the box (`scroll_json`, one wake per read), adds the badge's scroll part to `assist_json`, wakes the keys on `ScrollChanged`, and turns `ScrollPage` into the open list's page key on the Qt thread with `[ui] page_rows`.
   - `Outline.qml` makes four click-through edge windows (`Edge.qml`) only while there is a box, and `WindowGuard::lay_under` puts them just under the keyboard.
 - **Other platforms (P15).** macOS fills the same port with `CGEvent` scroll events and Accessibility for boxes, and Linux with XTest or the portal and AT-SPI. Wayland has no global pointer history or posted event, so there it scrolls only what is under the pointer.
