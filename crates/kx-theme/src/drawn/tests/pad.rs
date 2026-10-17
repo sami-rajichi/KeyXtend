@@ -34,13 +34,26 @@ fn a_pressed_arrow_sits_on_the_keys_press_shade_and_takes_their_press_text() {
 }
 
 #[test]
-fn a_lit_speed_dot_stands_out_from_an_unlit_one_in_every_look() {
+fn an_unlit_speed_dot_is_drawn_against_a_lit_one_in_every_look() {
     let t = themes();
     // High contrast fades it too, as Cycle's dots, since a hollow ring that small reads as filled.
     for (at, v) in every_view(&t) {
         let (d, share) = (&v.dpad, v.shape.dpad.dot_off);
-        let unlit = d.stop_ink.over(d.stop, share);
-        let ratio = contrast(d.stop_ink, unlit);
-        assert!(ratio >= WCAG_SHAPES, "{at}: {ratio:.2}:1");
+        let all = drawn(&v, TEST_ROW_PX);
+        let dot = all.iter().find(|x| x.name == SPEED_DOT);
+        let dot = dot.unwrap_or_else(|| panic!("{at}: {SPEED_DOT} is drawn"));
+        let pair = (d.stop_ink.over(d.stop, share), d.stop_ink, WCAG_SHAPES);
+        assert_eq!((dot.ink, dot.bg, dot.min), pair, "{at}");
     }
+}
+
+#[test]
+fn a_speed_dot_faded_too_little_is_named() {
+    let t = themes();
+    let (_, v) = views(&t, &SysLook::default()).swap_remove(0);
+    let mut shape = v.shape.clone();
+    shape.dpad.dot_off = 1.0;
+    let v = LookView { shape: &shape, ..v };
+    let low = low(&v, TEST_ROW_PX);
+    assert!(low.iter().any(|l| l.starts_with(SPEED_DOT)), "{low:?}");
 }

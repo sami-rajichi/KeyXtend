@@ -10,7 +10,7 @@ use crate::extras::{
 mod check;
 mod whole;
 
-pub use whole::{BackdropShape, DimShape, LineShape, OutlineShape, TargetShape};
+pub use whole::{BackdropShape, DimShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -139,6 +139,15 @@ pub struct ListKeyShape {
     pub icon_share: f32,
 }
 
+/// The D-pad's one grid turn, in degrees: it sets the arrows on the axes, where another turn puts "up" on a diagonal and
+/// overlaps the boxes readers find the arrows by.
+const DPAD_TURN: f32 = 45.0;
+
+/// `DPAD_TURN`, for serde.
+const fn dpad_turn() -> f32 {
+    DPAD_TURN
+}
+
 /// The D-pad (`.dpad`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -155,7 +164,8 @@ pub struct DpadShape {
     pub stop: f32,
     /// Stop icon size.
     pub stop_icon_px: f32,
-    /// Turn of the arrow grid, in degrees.
+    /// Turn of the arrow grid, in degrees: `DPAD_TURN`, set here and never read from the file.
+    #[serde(skip_deserializing, default = "dpad_turn")]
     pub turn_deg: f32,
     /// Stop's speed dots under its icon: diameter.
     pub dot_px: f32,
@@ -231,8 +241,8 @@ pub struct Shape {
     pub tip: TipShape,
     /// The resize corner, the bubble and the test strip.
     pub extra: ExtraShape,
-    /// Hairline borders.
-    pub line: LineShape,
+    /// Hairline borders: panel and tooltip edges, the corner's rim and dividers.
+    pub line: WidthShape,
     /// The Copy pill.
     pub pill: PillShape,
     /// The caption bar.
@@ -247,10 +257,10 @@ pub struct Shape {
     pub badge: BadgeShape,
     /// Keys that come in a later version.
     pub dim: DimShape,
-    /// The hover outline in high contrast.
-    pub hc_outline: OutlineShape,
-    /// The outline around the scroll pad's target.
-    pub outline: TargetShape,
+    /// The hover outline in high contrast, drawn in Highlight inside the key.
+    pub hc_outline: WidthShape,
+    /// The outline around the scroll pad's target, drawn inside its box by four thin windows.
+    pub outline: WidthShape,
     /// The plate over a system backdrop.
     pub backdrop: BackdropShape,
     /// The notice banner.

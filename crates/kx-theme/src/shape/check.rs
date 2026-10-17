@@ -3,30 +3,29 @@
 use super::Shape;
 use crate::theme::{FONT_WEIGHTS, outside_unit};
 
-/// The D-pad's one grid turn, in degrees: it sets the arrows on the axes, where another turn puts "up" on a diagonal and
-/// overlaps the boxes readers find the arrows by.
-const DPAD_TURN: f32 = 45.0;
+/// The D-pad's hub inset sits on both sides, so half the pad or more leaves no hub (DPad.qml `hubR`).
+const HUB_BELOW: f32 = 0.5;
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark or dot
-    /// of 0 or less, a panel gap, label padding, mark or dot gap or badge place below 0, a lit Cycle dot no larger than
-    /// the others and a D-pad turn other than 45 degrees, naming the size.
+    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark, dot
+    /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit Cycle
+    /// dot no larger than the others and a D-pad hub of half the pad or more, naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
         self.check_dots()?;
-        self.check_turn()?;
-        self.check_shares()
+        self.check_shares()?;
+        self.check_hub()
     }
 
-    /// The D-pad's grid turns by `DPAD_TURN` only, so its arrows sit on the axes.
-    fn check_turn(&self) -> Result<(), String> {
-        let turn = self.dpad.turn_deg;
-        if (turn - DPAD_TURN).abs() <= f32::EPSILON {
+    /// The D-pad's hub must keep a size, so its inset stays below `HUB_BELOW`.
+    fn check_hub(&self) -> Result<(), String> {
+        let hub = self.dpad.hub;
+        if hub < HUB_BELOW {
             return Ok(());
         }
         Err(format!(
-            "shape: dpad.turn_deg {turn} must be {DPAD_TURN}, so the arrows sit on the axes"
+            "shape: dpad.hub {hub} must be below {HUB_BELOW}, so the hub keeps a size"
         ))
     }
 
@@ -70,9 +69,9 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outlines, the smallest label, the mark's and the dots' sizes must be above 0, and the
-    /// panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the speed dots'
-    /// gap 0 or more, all finite.
+    /// The shimmer span, the outlines, the smallest label, the mark's, the dots' and the D-pad's icon sizes must be
+    /// above 0, and the panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the
+    /// D-pad's gaps 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -81,6 +80,8 @@ impl Shape {
             ("bar.mark_px", self.bar.mark_px[0]),
             ("bar.mark_px", self.bar.mark_px[1]),
             ("dpad.dot_px", self.dpad.dot_px),
+            ("dpad.icon_px", self.dpad.icon_px),
+            ("dpad.stop_icon_px", self.dpad.stop_icon_px),
             ("badge.sep_px", self.badge.sep_px),
             ("outline.px", self.outline.px),
         ];
@@ -95,6 +96,7 @@ impl Shape {
             ("bar.mark_px", self.bar.mark_px[2]),
             ("badge.edge_px", self.badge.edge_px),
             ("dpad.dot_gap_px", self.dpad.dot_gap_px),
+            ("dpad.gap_px", self.dpad.gap_px),
         ]);
         match zero_up.find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
             Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),

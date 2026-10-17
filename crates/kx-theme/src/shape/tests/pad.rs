@@ -2,14 +2,6 @@
 
 use super::*;
 
-/// The shipped file with `from` replaced by `to` in section `[name]` only.
-fn in_section(name: &str, from: &str, to: &str) -> String {
-    let all = text();
-    let head = format!("[{name}]");
-    let (before, after) = all.split_once(&head).expect("the section");
-    format!("{before}{head}{}", after.replacen(from, to, 1))
-}
-
 #[test]
 fn the_arrows_sit_across_the_ring_and_stop_holds_the_speed_dots() {
     let d = load().expect("shape.toml loads").dpad;
@@ -43,9 +35,20 @@ fn the_old_icon_padding_is_gone() {
     assert!(e.contains("unknown field `icon_pad`"), "{e}");
 }
 
+/// A section, a token line as shipped, a bad value for it, and the name the error must give.
+type BadIn = (&'static str, &'static str, &'static str, &'static str);
+
+/// Each `BadIn` token is refused with its name.
+fn refused_in(cases: &[BadIn]) {
+    for (section, from, to, says) in cases {
+        let e = parse(&in_section(section, from, to)).expect_err(to);
+        assert!(e.contains(says), "{to}: {e}");
+    }
+}
+
 #[test]
 fn an_odd_pad_badge_or_outline_size_is_refused() {
-    for (section, from, to, says) in [
+    refused_in(&[
         ("dpad", "reach = 0.5", "reach = 1.5", "dpad.reach"),
         ("dpad", "dot_off = 0.3", "dot_off = -0.1", "dpad.dot_off"),
         ("dpad", "dot_px = 3.0", "dot_px = 0.0", "dpad.dot_px"),
@@ -62,19 +65,69 @@ fn an_odd_pad_badge_or_outline_size_is_refused() {
             "badge.sep_share",
         ),
         ("badge", "sep_px = 2.0", "sep_px = 0.0", "badge.sep_px"),
-        ("outline", "px = 2.0", "px = nan", "outline.px"),
-    ] {
-        let e = parse(&in_section(section, from, to)).expect_err(to);
-        assert!(e.contains(says), "{to}: {e}");
-    }
+        ("outline", "px = 2.0", "px = nan", "shape: outline.px"),
+    ]);
 }
 
 #[test]
-fn the_turn_stays_45_degrees_so_the_arrows_sit_on_the_axes() {
-    assert_eq!(load().expect("shape.toml loads").dpad.turn_deg, 45.0);
-    for turn in ["0.0", "30.0", "90.0", "nan"] {
-        let bad = in_section("dpad", "turn_deg = 45.0", &format!("turn_deg = {turn}"));
-        let e = parse(&bad).expect_err(turn);
-        assert!(e.contains("dpad.turn_deg"), "{turn}: {e}");
+fn a_pad_gap_below_0_is_refused() {
+    refused_in(&[
+        (
+            "dpad",
+            "gap_px = 2.0",
+            "gap_px = -1.0",
+            "shape: dpad.gap_px",
+        ),
+        ("dpad", "gap_px = 2.0", "gap_px = nan", "shape: dpad.gap_px"),
+    ]);
+    let touching = in_section("dpad", "gap_px = 2.0", "gap_px = 0.0");
+    assert!(parse(&touching).is_ok(), "arrows may touch");
+}
+
+#[test]
+fn a_pad_icon_of_0_or_less_is_refused() {
+    refused_in(&[
+        (
+            "dpad",
+            "icon_px = 15.0",
+            "icon_px = 0.0",
+            "shape: dpad.icon_px",
+        ),
+        (
+            "dpad",
+            "stop_icon_px = 10.0",
+            "stop_icon_px = -1.0",
+            "shape: dpad.stop_icon_px",
+        ),
+        (
+            "dpad",
+            "stop_icon_px = 10.0",
+            "stop_icon_px = inf",
+            "shape: dpad.stop_icon_px",
+        ),
+    ]);
+}
+
+#[test]
+fn a_hub_inset_of_half_the_pad_or_more_is_refused() {
+    // DPad.qml draws the hub r(1 - 2 hub) wide, so half the pad leaves none.
+    for hub in ["0.5", "0.7"] {
+        let bad = in_section("dpad", "hub = 0.34", &format!("hub = {hub}"));
+        let e = parse(&bad).expect_err(hub);
+        assert!(e.contains("shape: dpad.hub"), "{hub}: {e}");
     }
+    let wide = in_section("dpad", "hub = 0.34", "hub = 0.49");
+    assert!(parse(&wide).is_ok(), "a thin ring still leaves a hub");
+}
+
+#[test]
+fn the_turn_is_set_in_code_and_still_reaches_qml_and_the_gates() {
+    let s = load().expect("shape.toml loads");
+    assert_eq!(s.dpad.turn_deg, 45.0, "the arrows sit on the axes");
+    let json = serde_json::to_value(&s.dpad).expect("the shape is JSON");
+    assert_eq!(json["turn_deg"], 45.0, "DPad.qml reads it");
+    assert!(!text().contains("turn_deg"), "written once, in code");
+    let set = in_section("dpad", "\nreach", "\nturn_deg = 30.0\nreach");
+    let e = parse(&set).expect_err("not a token");
+    assert!(e.contains("unknown field `turn_deg`"), "{e}");
 }
