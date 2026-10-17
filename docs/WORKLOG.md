@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 09:07 — P5: a percent past 100 is the end, the wheel comes back at Explorer's bottom, and the watch waits quietly for the guard
+UI Automation's percent above 100, as Notepad's 100.005 after Ctrl+End, now reads as 100 and so the end, instead of as no percent. When the `ScrollPattern` steps end at the percent where the wheel tripped, as Explorer's bottom at 99.991, the trip clears, so later scrolls of that window use the wheel again. A watch asked before the guard holds the keyboard now says "not guarded yet" quietly, and warns once only when a guard run ends with the scroll module live and the watch never held.
+
 ## 2026-10-17 09:07 — P5: G6 judges as the first hardware run showed it must
 G6 now judges sideways only where the scroll pattern says the window scrolls sideways, so Notepad with word wrap reads "no sideways overflow", and the end passes when no vertical percent moved since Ctrl+End's bottom, which Explorer reads as 99.991. Before each stop's look it waits for the percents to settle, as Chrome's trail its picture, and those notes keep both percents. On Explorer the press-stop spot also accepts a bare list, pane or group past every column, or the status bar's own text, and a skip names each spot's control type, class and window; target-window's filler lines now start one letter on from the line above.
 

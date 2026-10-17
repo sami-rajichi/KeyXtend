@@ -114,7 +114,7 @@
 15. Any start order; a quit or restart while scrolling leaves no outline and releases the hook.
 16. Right-click or Grab on while scrolling: a hold still right-clicks, and its press stops the scroll.
 17. The badge near a screen edge; the outline of a target partly off-screen or under the keyboard.
-18. A provider's bad box (empty, huge, negative) or bad percent (NaN, out of range) is refused.
+18. A provider's bad box (empty, huge, negative) or bad percent (NaN, infinite, below 0) is refused; one above 100 reads as 100 (G6 run 1).
 
 ## Security
 - Capabilities: `Scroll` (new: the scroll module only; the platform provides it); the mouse module's `PointerHook` unchanged.

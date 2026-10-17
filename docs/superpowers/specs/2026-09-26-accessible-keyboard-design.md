@@ -286,8 +286,9 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **As built in P5** (refines ADR-0029's fallback and end rule; the names are `kx-platform-windows`' `scroll` constants):
   - A target falls back to `ScrollPattern` steps once its percent has stayed still, short of the end, for `[scroll] check_ms` **and** at least one whole notch of wheel delta went out since it last moved.
   - Under `ScrollPattern` steps, a percent that stays still for `check_ms` after at least one step reads as the end. This also covers wheel settings of 0 lines or one page, which step by UI Automation from the start.
+  - When those steps read the end at the very percent the wheel stopped at, as Explorer's bottom at 99.991, that was the end, not a window deaf to the wheel: the fallback clears, and the next scroll of that window uses the wheel again.
   - Both rules count only steps sent before the previous read, so a slow app has a whole read to show them; each therefore comes about 2 × `check_ms` after the percent stops.
-  - A percent within a rounding (`END_SLACK`) of 0 or 100 is at its end.
+  - A percent within a rounding (`END_SLACK`) of 0 or 100 is at its end, and any percent above 100, as Notepad's 100.005 after Ctrl+End, reads as 100. Only NaN, infinities and values below 0 past a rounding (UI Automation's -1 for "cannot scroll") are refused.
   - A gap between reads longer than `PAUSE_CHECKS` × `check_ms` + `read_ms` starts the wait afresh.
   - A busy target, one that left a `WM_NULL` ping unanswered or that Windows calls hung, gets no steps.
   - A `SendInput` wheel goes out only while Windows gives wheels to the window under the pointer (mouse-position routing) and the pointer is still on the target; otherwise the step is posted.
