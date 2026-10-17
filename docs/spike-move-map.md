@@ -69,7 +69,7 @@ Only gates `g1`–`g4` and `g25`'s language part are aimed at the product in P3;
 | Phase | Spike | Product |
 |---|---|---|
 | P5 Scroll | `tools/kx-gates` `scroll.rs` routes (post, send, `act`), `g6track.rs`, `mouse::wheel` and `kx-gates.toml` `[g6]` | `kx-mod-scroll` logic, `kx-platform-windows` routes. The gates' copies are deleted; `scroll.rs` keeps the picture and one `ScrollPattern` step for G6's lag record |
-| P5 Scroll | Gates `g6` (with `g6cases`, `g6judge`, `g6rec`, `g6scene`), and the scroll steps of `g8`, `g9`, `g10` (`g8scroll`, `g9pad`, `g10pad`) | G6 drives the test build's pad, never Word; G8, G9 and G10 the product app's. Their settings are in `kx-gates-p5.toml` |
+| P5 Scroll | Gates `g6` (with `g6cases`, `g6judge`, `g6rec`, `g6rows`, `g6scene`, `g6spot`, `g6uia`), and the scroll steps of `g8`, `g9`, `g10` (`g8scroll`, `g9pad`, `g10pad`) | G6 drives the test build's pad, never Word; G8, G9 and G10 the product app's. Their settings are in `kx-gates-p5.toml` |
 | P6 Shortcuts | Gate `g25` shortcut part | `kx-mod-keyboard` shortcuts layer, OS shortcut table in `kx-platform-windows` |
 | P6 Shortcuts | `core/src/langkey.rs` G25 helpers (`installed`, `layout_of`, `ask`, `step_from`), which G10 shares | Gate `g25`'s own code in `tools/kx-gates`, over `kx-platform-windows` |
 | P7 Prediction | `core/src/{uia,uia/act,uia/read}.rs` (UIA client, password flag) | `kx-platform-windows` UIA; the password intercept event in `kx-module-api`; gate `g21` |

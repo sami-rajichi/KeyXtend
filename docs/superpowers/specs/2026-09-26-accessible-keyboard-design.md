@@ -90,7 +90,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 
 - **Wave ring:** during a hold, a ring in the theme's ring colour appears after 150 ms and shrinks into the pointer over the rest of the hold time, whatever hold time the user set. When the hold fires, a burst of 6 dots appears.
 - **Hover:** a key under the pointer turns a little darker in light mode and lighter in dark mode.
-- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on: Right-click, Grab, Holding (a carry), the scroll direction with "slow" or "fast" beside them (§5.2), and later recording (P11). It hides while the pointer is over one of our windows.
+- **Mode badge** beside the pointer, clear of the pointer's own size, while a mode is on or, with mouse assist on, while the pad scrolls: Right-click, Grab, Holding (a carry), the scroll direction with "slow" or "fast" beside it (§5.2), and later recording (P11). It hides while the pointer is over one of our windows.
 - **No banner** when Right-click or Grab turns on: the key's light, its tip and the badge show the mode (owner, 2026-10-13).
 - **Sounds**, realistic, soft and never harsh (owner, 2026-10-13):
   - a key-press sound like a real keyboard's on every key of the keyboard, not on the top-bar buttons; a held, repeating key sounds once, at the press;
@@ -272,11 +272,12 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 - **Tap a direction = slow. Tap it again = fast. Third tap = stop** (decided in round 6). There are **two speeds only**, and two dots under Stop's square show the current speed.
 - Tapping another direction switches direction at slow speed.
 - The page **glides**: many small steps a second, slow 3 and fast 10 lines a second by default (`[scroll] slow`, `fast`; owner, 2026-10-16).
-- **It also stops** at the end of the content, at any press outside our windows, `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes. Each of the first two can be switched off. A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
+- **It also stops** at the end of the content, at any press outside our windows (with mouse assist on, whose hook hears the press), `[scroll] limit_s` (2 minutes) after the last tap on the pad, and when the target closes; each of the first two can be switched off.
+- A tap with nothing to scroll there, or already at the end, stops at once with a short notice; with `stop_at_end` off, a tap at the end scrolls on with no notice, as a feed may load more.
 - **Target:** the scrollable thing under the pointer, including long text fields. While the pointer is on the keyboard, the target is the **last point the pointer was at outside the keyboard**; moving the pointer onto something else while it scrolls makes that the target.
 - **Outline:** a thin outline in the theme's ring colour (Highlight in high contrast) marks the target while the pointer is on the pad and all the time it scrolls.
 - **Our own lists:** when the target is one of our paged lists, each tap turns one page, with no speeds and no Stop.
-- **Badge:** the pointer badge shows the direction's arrow and "slow" or "fast", beside a Right-click or Grab icon (§3.2).
+- **Badge:** with mouse assist on, the pointer badge shows the direction's arrow and "slow" or "fast", beside a Right-click or Grab icon (§3.2).
 - **Every platform** fills one OS-neutral port (`ScrollTarget`); the rules live in `kx-mod-scroll` (ADR-0029).
 - **Windows mechanism** (ADR-0029, which reorders P1's list proven by gate G6, ADR-0013):
   1. Small `WM_MOUSEWHEEL`/`WM_MOUSEHWHEEL` deltas posted to the window at the target point, or `SendInput` wheel events while the pointer itself is on the target.
@@ -295,7 +296,7 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 
 - The ring, burst and mode badge are drawn in **one click-through Qt window** that never takes focus (`Qt.WindowTransparentForInput`, guarded by the Windows adapter).
 - Gate G12 proved it: 200 of 200 clicks under the ring reached the app, at the screen's full rate (ADR-0013).
-- It is made while a mode is on or the pad scrolls, and freed when neither holds. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
+- It is made while a mode is on or, with mouse assist on, while the pad scrolls, and freed when neither holds. It is updated only while something is animating, and it follows the pointer only when the pointer moves, with no timer, so a still pointer costs nothing.
 
 ---
 

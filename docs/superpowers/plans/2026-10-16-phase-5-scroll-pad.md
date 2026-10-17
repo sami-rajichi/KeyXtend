@@ -16,7 +16,7 @@
 
 ## Design notes
 - **Ports (`kx-module-api/src/ports/scroll.rs`):** `Dir` (up, down, left, right), `ScrollConfig`, `Aim` (point, on the pointer, box, ours, target id), `Reach` (more, end, unknown), `ScrollError`, `ScrollTarget` (`open(config)` gives a `ScrollRun`), `ScrollRun` (`aim`, `turn(aim, dir, lines)`, `reach`; drop closes), `ScrollTargetKey` with the new capability `Scroll`.
-- **Bus events (same file):** `ScrollTap`, `ScrollStop`, `ScrollPeek` (pointer on the pad or off), `ScrollChanged` (live, direction, fast), `ScrollAimed` (the box to outline, or none), `ScrollPage` (back or on, to our open list). In `ports/assist.rs`: `PointerPressed` (ours or not), gated by `PointerHook`.
+- **Bus events (same file):** `ScrollTap`, `ScrollStop`, `ScrollPeek` (pointer on the pad or off), `ScrollChanged` (live, direction, fast), `ScrollAimed` (the box to outline, or none), `ScrollPage` (back or on, to our open list). In `ports/assist.rs`: `PointerPressed` (ours or not), ungated; it carries no point.
 - **`FaceAction::Pad`** (a direction or Stop) and `FaceAction::PadHover` in `ports/face.rs`.
 - **`kx-mod-scroll`:** `pad.rs` (the tap machine), `glide.rs` (lines owed per tick, remainders kept), `stops.rs` (end, press, limit, gone), `actor.rs` (ticks only while scrolling, on the injected clock), `settings.rs`, `manifest.rs` (requires `ScrollTargetKey`; capability `Scroll`).
 - **Settings `[scroll]`:** `slow = 3`, `fast = 10` (lines a second, 1–60, fast above slow), `limit_s = 120` (0 = none, else 10–1800), `stop_at_end = true`, `stop_on_press = true`, `tick_ms = 16` (8–100), `check_ms = 250` (100–2000), `read_ms = 300` (100–2000), `edge_px = 8` (2–64).

@@ -38,8 +38,8 @@ max_per_row = 32
 # After it grows, the cases wait up to grow_wait_ms for UI Automation's vertical view size to read the same twice,
 # sample_ms apart, near its size before scaled by the files (its aim), so the extent does not grow mid-phase.
 grow_wait_ms = 5000
-# On Explorer, press-stop clicks only where UI Automation finds the column header's empty end or the status bar
-# itself, tried at its centre and this far in from its right end; with no such spot it is skipped, never a pass.
+# On Explorer, press-stop clicks only where UI Automation finds the column header itself this far past its last
+# column, else the status bar's centre; with no such spot it is skipped, never a pass.
 spot_px = 16
 
 # The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by

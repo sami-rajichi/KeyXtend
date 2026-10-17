@@ -4,6 +4,24 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 02:48 — P5: the entry watch keeps a point only while the scroll module runs
+The keyboard window now asks the guard to watch its entries only while the scroll module is live, and the hub refuses a watch otherwise; when the module stops, `unwatch_entries` drops the marks and forgets the kept point. An entry that passes over our own windows, such as the notice banner, keeps the point in the app the user came from, or the last entry when only our windows lie outside. A UI Automation walk that cannot finish no longer clears the kept box or the held pattern, so the outline does not blink. The entry watch is now a pure state machine with property tests over random runs.
+
+## 2026-10-17 02:43 — P5: a keyboard restart dims the pad until its modules answer
+A keyboard restart now dims the pad and the mouse keys until the scroll and mouse modules answer, so nothing stays lit for a module that stopped meanwhile. A pointer that came onto the pad or left it during the restart still reaches the scroll module, which may have restarted unheard. The keyboard also works out the language list's page, which the hub and the list read, so that maths lives in one place.
+
+## 2026-10-17 02:42 — P5: G6 presses Explorer safely and G8 arabic keeps its scroller
+G6's press-stop on Explorer now clicks only where UI Automation shows the column header past its last column (`[g6] spot_px`) or the status bar, never a file or a column that sorts, and leaves the case unjudged when none shows. Before Ctrl+End it gives Explorer's list the keyboard focus by UI Automation, and after growing the folder it waits for the view size to settle near its aim. In `g8 arabic`, a kept scroller's own target-window is now the hold, so the hold no longer closes it mid-run; the pad's settle must outlast the theme moves `[pad] moves` names, and G9 checks that target-window stays in front.
+
+## 2026-10-17 02:10 — P5: a refused first aim runs the tap's checks
+When the OS refused a tap's first aim, the check that later finds the target now runs that tap's checks, so an end, nothing to scroll or no point says why instead of gliding into nothing until the limit. A retried first aim that finds our own list turns it one page and stops quietly, as a first tap does. The halts that get a notice are listed once, and the actor's property test now draws the stop switches and the limit from their full range.
+
+## 2026-10-17 02:07 — P5: the theme checks the scroll pad's sizes
+The pad's 45° turn is now written once in code and still reaches QML and the gates, and the line, high-contrast outline and outline widths share one type. The check now refuses a pad icon of 0 or less, a negative gap, a hub of half the pad or more, and a Stop inset that would spill past the hub. The unlit speed dot is now a drawn pair against the lit one, so the accent check sees it.
+
+## 2026-10-17 02:05 — P5: French points "sur" and the badge reads with each language's comma
+The French notices now say "Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.", as Windows' French does, since a bare "pointez" means tick off, and "appuyez sur" replaces "touchez". The badge's reader text joins its parts with the new `badge.join`, ", " in English and French and "، " in Arabic, so Arabic no longer hears a detached "و". A texts test fails any French line with "touchez" or a bare "pointez".
+
 ## 2026-10-17 01:42 — P5: G6's Explorer folder grows for the worst case it cannot read
 When fewer than two files read, G6 records the files a row as unknown and grows Explorer's folder by `[g6] max_per_row`, a checked worst case. After any growth it waits up to `[g6] grow_wait_ms` for the vertical percent to read the same twice, so the list's extent stops growing before a slope is measured, and the result records whether it settled.
 

@@ -44,7 +44,7 @@ pub struct G6 {
     pub max_per_row: usize,
     /// Longest wait, after the folder grew, for the vertical view size to settle near its aim, read every `sample_ms`.
     pub grow_wait_ms: u64,
-    /// How far in from a part's right end a press outside our windows on Explorer lands, in physical px.
+    /// How far past the column header's last column a press outside our windows on Explorer lands, in physical px.
     pub spot_px: i32,
 }
 

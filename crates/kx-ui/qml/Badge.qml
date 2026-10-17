@@ -32,7 +32,7 @@ Item {
     height: sh.icon_px + 2 * sh.pad_px[0]
     opacity: shown && (moded || scrolling) ? 1 : 0
 
-    // Readers hear the mode, else the arrow, then the rest after the language's comma.
+    // Readers hear the mode, else the arrow, then the rest, joined by the language's comma (`badge.join`).
     Accessible.role: Accessible.StaticText
     Accessible.name: moded ? res.tr("label." + mode) : scrolling ? res.dpad(scroll.dir) : ""
     Accessible.description: {

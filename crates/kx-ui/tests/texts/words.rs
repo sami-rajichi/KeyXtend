@@ -37,7 +37,7 @@ const NO_BREAK: [char; 2] = ['\u{a0}', '\u{202f}'];
 const GUILLEMETS: [char; 2] = ['«', '»'];
 /// Latin punctuation Arabic text writes as "،", "؛" and "؟".
 const LATIN_ONLY: [char; 3] = [',', ';', '?'];
-/// Windows' French points "sur" a thing: "pointez", and the same with "sur", as bare it means tick off.
+/// Windows' French says "pointez sur"; a bare "pointez" means tick off.
 const FR_POINT: [&str; 2] = ["pointez", "pointez sur"];
 /// A French word for a tap that Windows never uses; it says "appuyez sur".
 const FR_NOT_TAP: &str = "touchez";
@@ -133,8 +133,8 @@ fn french_points_sur_a_thing_and_taps_with_appuyez_sur() {
     assert!(fr.text(SCROLL_FAILED).contains("Appuyez sur une flèche"));
     for line in text_lines(fr.lang().ftl).map(str::to_lowercase) {
         assert!(!line.contains(FR_NOT_TAP), "{line}");
-        let [point, at] = FR_POINT.map(|w| line.matches(w).count());
-        assert_eq!(point, at, "{line}");
+        let [bare, with_sur] = FR_POINT.map(|w| line.matches(w).count());
+        assert_eq!(bare, with_sur, "{line}");
     }
 }
 

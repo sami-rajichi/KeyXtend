@@ -24,7 +24,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Full mouse help with one button.**
   - Hold the button still for 1.5 s to right-click; short clicks and drags keep working.
   - **Grab** does drag and drop and text selection: click to pick up, move, click to drop.
-  - A two-speed **scroll pad** scrolls whatever is under the pointer.
+  - A two-speed **scroll pad** scrolls what you last pointed at.
 - **Modifiers that work with the mouse.** One click holds Shift, Ctrl, Alt or Win, as in Windows' On-Screen Keyboard. The next mouse click is sent with it, so Shift+click and Ctrl+click work.
 - **No scrolling, dragging or right-click anywhere in its own UI** (ADR-0008).
   - Lists are paged, five rows at a time, and numbers use −/+ steppers instead of sliders.
@@ -64,8 +64,8 @@ Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen
 - **The scroll pad** (the round pad): point at what you want to scroll, come back to the keyboard and tap an arrow.
   - One tap scrolls slowly that way, a second tap on the same arrow scrolls fast, and a third stops. Another arrow turns that way, slowly.
   - **Stop** shows in the pad's middle while it scrolls, with one dot lit for slow and two for fast.
-  - It also stops by itself at the end of the page, at a click outside KeyXtend's windows, two minutes after your last tap on the pad, and when the window closes. If there is nothing to scroll there, or it is already at the end, a short notice says so.
-  - A thin outline marks what will scroll while the pointer is on the pad and all the time it scrolls, and the badge at the pointer shows the arrow and "slow" or "fast".
+  - It also stops by itself at the end of the page, at a click outside KeyXtend's windows (with mouse assist on), two minutes after your last tap on the pad, and when the window closes. If there is nothing to scroll there, or it is already at the end, a short notice says so.
+  - A thin outline marks what will scroll while the pointer is on the pad and all the time it scrolls, and, with mouse assist on, the badge at the pointer shows the arrow and "slow" or "fast".
   - Pointed at one of KeyXtend's own lists, such as the language list, each tap turns one page: ◀ or ▲ back, ▶ or ▼ on.
   - Its settings are in the `[scroll]` section: `slow = 3` and `fast = 10` lines a second (1 to 60, fast above slow), `limit_s = 120` seconds (0 for no limit, else 10 to 1800), and `stop_at_end` and `stop_on_press`, both `true`. Four more tune how it finds, reads and moves what it scrolls; see [kx-mod-scroll's README](crates/kx-mod-scroll/README.md).
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
