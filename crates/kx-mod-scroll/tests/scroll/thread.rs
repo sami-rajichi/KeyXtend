@@ -116,11 +116,11 @@ fn a_peek_opens_the_run_and_the_stop_closes_it_and_hides_the_outline() {
     target.push_aim(Ok(APP));
     let (mut run, (_ear, aimed)) = Live::start(Arc::new(target.clone()), hear::<ScrollAimed>);
     run.send(&ScrollPeek { on: true });
-    assert_eq!(aimed.recv_timeout(WAIT), Ok(ScrollAimed { area: APP.area }));
+    assert_eq!(aimed.recv_timeout(WAIT), Ok(ScrollAimed::from(APP)));
     assert_eq!((target.running(), target.opens()), (true, 1));
     run.stop();
     assert_eq!((target.running(), target.closes()), (false, 1));
-    assert_eq!(aimed.try_recv(), Ok(ScrollAimed { area: None }));
+    assert_eq!(aimed.try_recv(), Ok(ScrollAimed::NONE));
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn an_actor_that_panics_says_at_once_the_module_is_off_and_is_logged_once() {
         run.send(&ScrollPeek { on: true });
         let off = Ok(ScrollChanged::OFF);
         assert_eq!(told.recv_timeout(WAIT), off, "the pad dims now");
-        assert_eq!(aimed.recv_timeout(WAIT), Ok(ScrollAimed { area: None }));
+        assert_eq!(aimed.recv_timeout(WAIT), Ok(ScrollAimed::NONE));
         let key = notes.recv_timeout(WAIT).map(|n| n.key);
         assert_eq!(key, Ok(keys::SCROLL_STOPPED), "the user hears why");
         run.stop();

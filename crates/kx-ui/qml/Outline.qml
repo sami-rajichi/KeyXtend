@@ -1,6 +1,7 @@
 // The scroll pad's outline around its target (spec §5.2, mock-up .scroll-target): four thin click-through edge windows
-// inside the target's box, cut to the screen holding most of it, made only while the hub names a box, guarded and laid
-// just under the keyboard. One window over the whole target would cost megabytes of buffers (ADR-0029).
+// inside the target's box, or just outside our own list's, cut to the screen holding most of it, made only while the
+// hub names a box, guarded and laid just under the keyboard. One window over the whole target would cost megabytes of
+// buffers (ADR-0029).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -15,6 +16,8 @@ QtObject {
     property var st: null
     // The box to outline in Qt units, null for none.
     readonly property var box: st && st.area && face.lk && face.spots ? cut(st.area) : null
+    // The box the edges lie inside: our own window's grows by an edge each way, as our opaque list lies over the edges.
+    readonly property var ring: box && st.ours ? Qt.rect(box.x - px, box.y - px, box.width + 2 * px, box.height + 2 * px) : box
     // The ring colour, or Highlight in high contrast, as a key under the pointer is outlined there.
     readonly property color colour: face.lk ? (face.lk.contrast ? face.lk.hover_line : face.lk.palette.ring) : "transparent"
     readonly property real px: face.lk ? face.lk.shape.outline.px : 0
@@ -63,9 +66,9 @@ QtObject {
         face.guardQuiet();
         ui.layUnder(title, face.title);
     }
-    // Side `side` of the outline, inside the box, in Qt units.
+    // Side `side` of the outline, inside the ring, in Qt units.
     function edge(side) {
-        const b = box || Qt.rect(0, 0, 0, 0);
+        const b = ring || Qt.rect(0, 0, 0, 0);
         const tall = Math.max(0, b.height - 2 * px);
         const sides = {
             top: Qt.rect(b.x, b.y, b.width, px),

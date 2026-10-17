@@ -237,17 +237,38 @@ impl Event for ScrollAsk {
 pub struct ScrollAimed {
     /// The target's box, in physical pixels.
     pub area: Option<Rect>,
+    /// The box is one of our own windows, such as an open list, which an outline inside it would lie under.
+    pub ours: bool,
+}
+
+impl ScrollAimed {
+    /// No outline.
+    pub const NONE: Self = Self {
+        area: None,
+        ours: false,
+    };
+}
+
+/// The outline of `aim`: its box, and whether it is ours.
+impl From<Aim> for ScrollAimed {
+    fn from(aim: Aim) -> Self {
+        Self {
+            area: aim.area,
+            ours: aim.ours,
+        }
+    }
 }
 
 impl Event for ScrollAimed {
     const NAME: &'static str = "scroll-aimed";
 }
 
-/// Shows only whether there is a box.
+/// Shows whether there is a box, and whether it is ours.
 impl fmt::Debug for ScrollAimed {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ScrollAimed")
             .field("area", &self.area.map(Redacted::new))
+            .field("ours", &self.ours)
             .finish()
     }
 }

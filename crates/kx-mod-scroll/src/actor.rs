@@ -9,7 +9,7 @@ mod ticks;
 
 use crate::{Glide, GlideCfg, Pad, ScrollSettings, Stops};
 use kx_module_api::ports::{
-    Aim, Dir, Rect, ScrollAimed, ScrollChanged, ScrollConfig, ScrollError, ScrollRun, ScrollTarget,
+    Aim, Dir, ScrollAimed, ScrollChanged, ScrollConfig, ScrollError, ScrollRun, ScrollTarget,
     TargetId,
 };
 use kx_module_api::{Bus, Clock, Mono};
@@ -77,8 +77,8 @@ pub struct Actor {
     scroll: Option<Scroll>,
     /// The pointer is on the pad.
     peek: bool,
-    /// The target and box the outline shows; none while it is hidden.
-    shown: Option<(TargetId, Option<Rect>)>,
+    /// The target and the outline it shows; none while it is hidden.
+    shown: Option<(TargetId, ScrollAimed)>,
     stats: Stats,
 }
 
@@ -176,7 +176,7 @@ impl Actor {
         self.run = None;
         self.shown = None;
         self.publish(&ScrollChanged::OFF);
-        self.publish(&ScrollAimed { area: None });
+        self.publish(&ScrollAimed::NONE);
         self.stats.log();
     }
 

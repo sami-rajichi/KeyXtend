@@ -83,14 +83,14 @@ pub fn still() -> Heard {
     state(None, false)
 }
 
-/// The outline on `aim`'s box.
+/// The outline on `aim`'s box, saying whether it is ours.
 pub fn outline(aim: Aim) -> Heard {
-    Heard::Aimed(ScrollAimed { area: aim.area })
+    Heard::Aimed(ScrollAimed::from(aim))
 }
 
 /// The outline hidden.
 pub fn hidden() -> Heard {
-    Heard::Aimed(ScrollAimed { area: None })
+    Heard::Aimed(ScrollAimed::NONE)
 }
 
 /// The scroll module's notice `key`.

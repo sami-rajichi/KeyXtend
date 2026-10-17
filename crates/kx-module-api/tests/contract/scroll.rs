@@ -97,7 +97,7 @@ fn the_pads_events_pass_on_a_bus_with_no_grants() {
     assert_eq!(bus.publish(&ScrollPeek { on: true }), Ok(()));
     assert_eq!(bus.publish(&ScrollPage { back: true }), Ok(()));
     assert_eq!(bus.publish(&ScrollChanged::OFF), Ok(()));
-    assert_eq!(bus.publish(&ScrollAimed { area: AIM.area }), Ok(()));
+    assert_eq!(bus.publish(&ScrollAimed::from(AIM)), Ok(()));
     assert_eq!(bus.publish(&ScrollAsk), Ok(()));
 }
 

@@ -1,7 +1,7 @@
 // The scroll pad's outline (spec §5.2, mock-up .scroll-target): four thin click-through edge windows inside the target's
-// box in the ring colour, Highlight in high contrast, made only while the hub names a box and gone after a stop, cut to
-// the screen holding the target, guarded and laid just under the keyboard; and the app's keyboard has its entries
-// watched while the scroll module runs, and its open list asks to be marked as paging.
+// box, or just outside our own list's, in the ring colour, Highlight in high contrast, made only while the hub names a
+// box and gone after a stop, cut to the screen holding the target, guarded and laid just under the keyboard; and the
+// app's keyboard has its entries watched while the scroll module runs, and its open list asks to be marked as paging.
 import QtQuick
 import QtTest
 import "../qml"
@@ -82,9 +82,9 @@ Item {
             tryCompare(ui, "scrollReads", 1, 2000, "read once at start");
             return { o: o, ui: ui, face: face };
         }
-        // The hub names box `area` (physical pixels, or null) while the module is live.
-        function aim(t, area) {
-            t.ui.scroll = Object.assign({}, En.scroll, { live: !!area, area: area });
+        // The hub names box `area` (physical pixels, or null), ours or not, while the module is live.
+        function aim(t, area, ours) {
+            t.ui.scroll = Object.assign({}, En.scroll, { live: !!area, area: area, ours: !!ours });
         }
         // The shown edge windows, the real pointer passing through them.
         function edges(o) {
@@ -141,6 +141,23 @@ Item {
                     verify(Qt.colorEqual(e.paint.color, N.lk.palette.ring), "the ring colour");
                     tryCompare(e.paint, "opacity", 1, 2000, "faded in");
                 }
+            }
+        }
+
+        // Our own open list is opaque and lies over the edges, so its outline goes just outside its box, still
+        // click-through, never focused and laid under the keyboard; another app's box is outlined inside again.
+        function test_our_own_window_is_outlined_just_outside_its_box() {
+            for (const d of [1, 1.5]) {
+                const t = make([{ d: d }]);
+                const area = { x: 150 * d, y: 120 * d, w: 600 * d, h: 450 * d };
+                aim(t, area, true);
+                tryCompare(t.o.edges, "count", 4, 2000);
+                compare(boxes(t.o), frame(150 - px, 120 - px, 600 + 2 * px, 450 + 2 * px), "just outside at " + d);
+                const shut = Qt.WindowDoesNotAcceptFocus | Qt.WindowTransparentForInput;
+                verify(edges(t.o).every(e => (e.flags & shut) === shut && e.transientParent === null), "click-through, owned by none");
+                tryVerify(() => t.ui.calls.indexOf("layUnder " + En.texts["window.outline"] + " " + t.face.title) >= 0, 2000);
+                aim(t, area, false);
+                tryVerify(() => at(t.o, 150, 120, 600, 450), 2000, "inside another app's box at " + d);
             }
         }
 
@@ -263,15 +280,18 @@ Item {
                 a.face.guardRun();
                 tryVerify(() => tries() > before, 5000, "the guard tried again");
             };
+            // Each guard try that finds the list shown joins the calls log, so their order shows which asked first.
+            const shown = () => !!a.face.panel && a.face.panel.list.visible;
+            a.keyboard.guarding.connect(() => shown() && a.ui.note("guard"));
             a.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
             a.keyboard.state = Face.states.list;
             a.face.redraw(JSON.stringify({ board: true, state: true }));
-            tryVerify(() => !!a.face.panel && a.face.panel.list.visible, 2000, "the list shows");
-            const opened = tries();
-            compare(count(), 1, "asked as it opened, before the guard's try");
-            verify(!a.face.panel.list.paged, "not held yet");
-            tryVerify(() => tries() > opened, 5000, "the guard tried");
+            tryVerify(shown, 2000, "the list shows");
+            tryVerify(() => a.ui.calls.indexOf("guard") >= 0, 5000, "the guard tried with the list shown");
+            const mark = a.ui.calls.indexOf("markPages " + En.texts["window.list"]);
+            verify(mark >= 0 && mark < a.ui.calls.indexOf("guard"), "asked as it opened, before the guard's try");
             tryCompare(a.face.panel.list, "paged", true, 5000, "asked again at the try");
+            compare(count(), 2, "refused as it opened, held at the try");
             run();
             compare(count(), 2, "once it held");
         }

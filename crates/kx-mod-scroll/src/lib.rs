@@ -96,7 +96,7 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
         // None of these events needs a capability, so none can be refused.
         let _ = bus.publish(&ScrollChanged::OFF);
-        let _ = bus.publish(&ScrollAimed { area: None });
+        let _ = bus.publish(&ScrollAimed::NONE);
         let _ = bus.publish(&actor::notice(keys::SCROLL_STOPPED));
         resume_unwind(panic);
     }

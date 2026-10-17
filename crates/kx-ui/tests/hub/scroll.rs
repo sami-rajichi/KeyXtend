@@ -49,7 +49,15 @@ pub fn scroll(rig: &Rig) -> Value {
 
 /// The JSON for the scroll module off, with no outline.
 fn off() -> Value {
-    json!({ "live": false, "dir": null, "fast": false, "area": null })
+    json!({ "live": false, "dir": null, "fast": false, "area": null, "ours": false })
+}
+
+/// The outline on `BOX`, which is ours or another app's.
+fn on_box(ours: bool) -> ScrollAimed {
+    ScrollAimed {
+        area: Some(BOX),
+        ours,
+    }
 }
 
 /// Counts every `E` on `bus` until the subscription drops.
@@ -81,16 +89,16 @@ fn listening_asks_the_scroll_module_for_its_state_once() {
 fn a_scroll_change_and_its_box_reach_qml_with_one_wake() {
     let (rig, bus, _subs) = heard();
     bus.publish(&DOWN).unwrap();
-    bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+    bus.publish(&on_box(false)).unwrap();
     assert_eq!(woke(&rig, Wake::Scroll), 1, "one wake until QML reads");
-    let want = json!({ "live": true, "dir": "down", "fast": false, "area": BOX });
+    let want = json!({ "live": true, "dir": "down", "fast": false, "area": BOX, "ours": false });
     assert_eq!(scroll(&rig), want);
     let fast = ScrollChanged { fast: true, ..DOWN };
     bus.publish(&fast).unwrap();
     assert_eq!(woke(&rig, Wake::Scroll), 1, "the read let it wake again");
     assert_eq!(scroll(&rig)["fast"], true);
     bus.publish(&fast).unwrap();
-    bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+    bus.publish(&on_box(false)).unwrap();
     assert_eq!(woke(&rig, Wake::Scroll), 0, "no change, no wake");
 }
 
@@ -98,17 +106,40 @@ fn a_scroll_change_and_its_box_reach_qml_with_one_wake() {
 #[test]
 fn the_outline_shows_only_while_the_module_runs_and_goes_when_it_stops() {
     let (rig, bus, _subs) = heard();
-    bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+    bus.publish(&on_box(false)).unwrap();
     assert_eq!(woke(&rig, Wake::Scroll), 0, "not live yet");
     assert_eq!(scroll(&rig), off());
     bus.publish(&STILL).unwrap();
-    bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+    bus.publish(&on_box(false)).unwrap();
     assert_eq!(scroll(&rig)["area"], json!(BOX));
-    bus.publish(&ScrollAimed { area: None }).unwrap();
+    bus.publish(&ScrollAimed::NONE).unwrap();
     assert_eq!(scroll(&rig)["area"], Value::Null);
-    bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+    bus.publish(&on_box(false)).unwrap();
     bus.publish(&ScrollChanged::OFF).unwrap();
     assert_eq!(scroll(&rig), off(), "a stopped module leaves no outline");
+}
+
+/// Our own list's box says so, so QML outlines it just outside; no box is ours, and a stop leaves none.
+#[test]
+fn an_outline_of_our_own_window_says_so_until_it_goes() {
+    let (rig, bus, _subs) = heard();
+    bus.publish(&STILL).unwrap();
+    bus.publish(&on_box(true)).unwrap();
+    let want = json!({ "live": true, "dir": null, "fast": false, "area": BOX, "ours": true });
+    assert_eq!(scroll(&rig), want);
+    rig.wakes();
+    bus.publish(&on_box(false)).unwrap();
+    assert_eq!(woke(&rig, Wake::Scroll), 1, "another app's box wakes");
+    assert_eq!(scroll(&rig)["ours"], false);
+    let none = ScrollAimed {
+        ours: true,
+        ..ScrollAimed::NONE
+    };
+    bus.publish(&none).unwrap();
+    assert_eq!(scroll(&rig)["ours"], false, "no box is ours");
+    bus.publish(&on_box(true)).unwrap();
+    bus.publish(&ScrollChanged::OFF).unwrap();
+    assert_eq!(scroll(&rig), off(), "a stop leaves no outline");
 }
 
 #[test]
@@ -246,7 +277,7 @@ fn no_log_line_holds_a_box_or_a_point() {
         })
         .unwrap();
         bus.publish(&DOWN).unwrap();
-        bus.publish(&ScrollAimed { area: Some(BOX) }).unwrap();
+        bus.publish(&on_box(false)).unwrap();
         bus.publish(&at).unwrap();
         let _ = (scroll(&rig), rig.hub.assist_json());
         bus.publish(&ScrollChanged::OFF).unwrap();

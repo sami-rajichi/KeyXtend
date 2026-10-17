@@ -32,7 +32,7 @@ impl Hub {
             self.hear(bus, |hub, now: &AssistChanged| hub.assist_changed(*now))?,
             self.hear(bus, |hub, moved: &PointerMoved| hub.pointer_moved(moved.at))?,
             self.hear(bus, |hub, now: &ScrollChanged| hub.scroll_changed(*now))?,
-            self.hear(bus, |hub, aimed: &ScrollAimed| hub.scroll_aimed(aimed.area))?,
+            self.hear(bus, |hub, aimed: &ScrollAimed| hub.scroll_aimed(*aimed))?,
             self.hear(bus, |hub, page: &ScrollPage| {
                 hub.wake(Wake::Page { back: page.back });
             })?,

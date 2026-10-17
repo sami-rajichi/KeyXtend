@@ -219,5 +219,6 @@ var scroll = {
   "area": null,
   "dir": null,
   "fast": false,
-  "live": false
+  "live": false,
+  "ours": false
 };

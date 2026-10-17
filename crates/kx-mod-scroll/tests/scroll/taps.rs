@@ -5,10 +5,10 @@ use crate::rig::{APP, LIST, Rig, T0, after, hidden, outline, state, still, told}
 use kx_mod_scroll::Msg;
 use kx_module_api::keys::{SCROLL_END, SCROLL_FAILED, SCROLL_NONE, SCROLL_POINT};
 use kx_module_api::ports::Dir::{Down, Left, Right, Up};
-use kx_module_api::ports::{Reach, ScrollError, ScrollPage};
+use kx_module_api::ports::{Reach, ScrollAimed, ScrollError, ScrollPage};
 use tracing::Level;
 
-use crate::rig::Heard::Page;
+use crate::rig::Heard::{Aimed, Page};
 
 #[test]
 fn the_start_says_it_is_live_and_still() {
@@ -213,6 +213,23 @@ fn a_peek_outlines_the_target_without_scrolling() {
         "kept"
     );
     assert!(rig.target.turns().is_empty());
+}
+
+/// A peek at our open list outlines it as ours, so the UI draws around it, and a late ask says so again.
+#[test]
+fn a_peek_at_our_list_outlines_it_as_ours_and_an_ask_says_so_again() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.take();
+    rig.point(LIST);
+    rig.send(Msg::Peek(true));
+    let ours = Aimed(ScrollAimed {
+        area: LIST.area,
+        ours: true,
+    });
+    assert_eq!(rig.take(), std::slice::from_ref(&ours));
+    rig.send(Msg::Ask);
+    assert_eq!(rig.take(), [still(), ours]);
 }
 
 #[test]

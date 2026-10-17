@@ -1,5 +1,5 @@
-//! Properties of the scroll state over random scroll changes, boxes and QML reads: it matches a model in which a module
-//! that is not live is still with no outline, and changes after a read send one `Wake::Scroll`, never two.
+//! Properties of the scroll state over random scroll changes, boxes ours or not and QML reads: it matches a model in
+//! which a module that is not live is still with no outline, and changes after a read send one `Wake::Scroll`, never two.
 
 use super::scroll;
 use crate::assist::{heard, woke};
@@ -22,8 +22,8 @@ const REACH: i32 = 3;
 enum Step {
     /// The scroll module's state.
     Changed(ScrollChanged),
-    /// The box to outline, or none.
-    Aimed(Option<Rect>),
+    /// The box to outline, or none, and whether it is ours.
+    Aimed(ScrollAimed),
     /// QML reads the state.
     Read,
 }
@@ -42,7 +42,7 @@ fn step() -> impl Strategy<Value = Step> {
         2 => (any::<bool>(), dir(), any::<bool>()).prop_map(|(live, dir, fast)| {
             Step::Changed(ScrollChanged { live, dir, fast })
         }),
-        3 => area().prop_map(Step::Aimed),
+        3 => (area(), any::<bool>()).prop_map(|(area, ours)| Step::Aimed(ScrollAimed { area, ours })),
         2 => Just(Step::Read),
     ]
 }
@@ -52,6 +52,7 @@ fn step() -> impl Strategy<Value = Step> {
 struct Model {
     now: Option<ScrollChanged>,
     area: Option<Rect>,
+    ours: bool,
 }
 
 impl Model {
@@ -60,17 +61,19 @@ impl Model {
             Step::Changed(now) => {
                 self.now = Some(*now);
                 if !now.live {
-                    self.area = None;
+                    (self.area, self.ours) = (None, false);
                 }
             }
-            Step::Aimed(area) if self.now.is_some_and(|n| n.live) => self.area = *area,
+            Step::Aimed(aimed) if self.now.is_some_and(|n| n.live) => {
+                (self.area, self.ours) = (aimed.area, aimed.ours && aimed.area.is_some());
+            }
             Step::Aimed(_) | Step::Read => {}
         }
     }
 
     fn json(&self) -> Value {
         let now = self.now.filter(|n| n.live).unwrap_or(ScrollChanged::OFF);
-        json!({ "live": now.live, "dir": now.dir, "fast": now.fast, "area": self.area })
+        json!({ "live": now.live, "dir": now.dir, "fast": now.fast, "area": self.area, "ours": self.ours })
     }
 }
 
@@ -88,7 +91,7 @@ proptest! {
         for step in steps.iter().chain(&[Step::Read]) {
             match step {
                 Step::Changed(now) => bus.publish(now).unwrap(),
-                Step::Aimed(area) => bus.publish(&ScrollAimed { area: *area }).unwrap(),
+                Step::Aimed(aimed) => bus.publish(aimed).unwrap(),
                 Step::Read => {}
             }
             let before = model.json();

@@ -1,11 +1,11 @@
-//! The scroll pad's side of the hub: the scroll state and the box to outline as one JSON, our open list's page mark and
-//! page turns, and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll` waits for
-//! QML's read, and nothing here logs a box or a point.
+//! The scroll pad's side of the hub: the scroll state and the box to outline, ours or not, as one JSON, our open list's
+//! page mark and page turns, and the guard's scroll calls. A bus call only stores and wakes, at most one `Wake::Scroll`
+//! waits for QML's read, and nothing here logs a box or a point.
 
 use super::face::done;
 use super::unread::Unread;
 use super::{Hub, Wake, json};
-use kx_module_api::ports::{Dir, Rect, ScrollChanged};
+use kx_module_api::ports::{Dir, Rect, ScrollAimed, ScrollChanged};
 use kx_platform::ui::Watched;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -25,6 +25,8 @@ struct Shown {
     fast: bool,
     /// The box to outline in physical pixels, null for none; only a live module has one.
     area: Option<Rect>,
+    /// The box is one of our own windows, so QML outlines it just outside; false with no box.
+    ours: bool,
 }
 
 impl Default for Shown {
@@ -42,6 +44,7 @@ impl From<ScrollChanged> for Shown {
             dir,
             fast,
             area: None,
+            ours: false,
         }
     }
 }
@@ -106,9 +109,14 @@ impl Hub {
     /// Takes the scroll module's state for the outline and the badge; a module that stops takes its outline along.
     pub(super) fn scroll_changed(&self, now: ScrollChanged) {
         self.scroll_change(|s| {
-            let area = s.area.filter(|_| now.live);
+            let (area, ours) = if now.live {
+                (s.area, s.ours)
+            } else {
+                (None, false)
+            };
             *s = Shown {
                 area,
+                ours,
                 ..Shown::from(now)
             };
         });
@@ -120,11 +128,12 @@ impl Hub {
         self.scroll.lock().dir.is_some()
     }
 
-    /// Takes the box to outline, or none; only a live module outlines.
-    pub(super) fn scroll_aimed(&self, area: Option<Rect>) {
+    /// Takes the box to outline, or none, and whether it is ours; only a live module outlines.
+    pub(super) fn scroll_aimed(&self, aimed: ScrollAimed) {
         self.scroll_change(|s| {
             if s.live {
-                s.area = area;
+                s.area = aimed.area;
+                s.ours = aimed.ours && aimed.area.is_some();
             }
         });
     }
@@ -149,9 +158,9 @@ impl Hub {
         }
     }
 
-    /// Marks our window `title` as one that pages: while it shows, a pad tap turns its page whatever point was kept.
-    /// False while it does not show or when refused; the open list asks as it opens and at each guard try until it
-    /// holds. Call it on the UI thread.
+    /// Marks our window `title` as one that pages, so while it shows a pad tap turns its page whatever point was kept;
+    /// call it on the UI thread. False while it does not show or when refused, so the open list asks as it opens and
+    /// at each guard try until it holds.
     #[must_use]
     pub fn mark_pages(&self, title: &str) -> bool {
         let result = self.ports.guard.mark_pages(title);

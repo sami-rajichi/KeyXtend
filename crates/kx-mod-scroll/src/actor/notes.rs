@@ -27,26 +27,27 @@ impl Actor {
         self.say(halt);
     }
 
-    /// Takes `aim` as the scroll's target, and moves the outline when the target or its box changed.
+    /// Takes `aim` as the scroll's target, and moves the outline when the target or its outline changed.
     pub(super) fn follow(&mut self, aim: Aim) {
         if let Some(scroll) = &mut self.scroll {
             scroll.aim = Some(aim);
         }
-        if self.shown != Some((aim.id, aim.area)) {
+        if self.shown != Some((aim.id, aim.into())) {
             self.outline(aim);
         }
     }
 
-    /// Outlines `aim`'s box.
+    /// Outlines `aim`'s box, saying whether it is ours.
     pub(super) fn outline(&mut self, aim: Aim) {
-        self.shown = Some((aim.id, aim.area));
-        self.publish(&ScrollAimed { area: aim.area });
+        let aimed = ScrollAimed::from(aim);
+        self.shown = Some((aim.id, aimed));
+        self.publish(&aimed);
     }
 
     /// Hides the outline.
     pub(super) fn hide(&mut self) {
         self.shown = None;
-        self.publish(&ScrollAimed { area: None });
+        self.publish(&ScrollAimed::NONE);
     }
 
     /// The pointer went onto the pad or off it: while still, the outline shows what a tap would scroll, or hides.
@@ -64,8 +65,8 @@ impl Actor {
     /// Tells the state and the outline again, for a module or the UI that started later.
     pub(super) fn ask(&self) {
         self.tell_state();
-        let area = self.shown.and_then(|(_, area)| area);
-        self.publish(&ScrollAimed { area });
+        let aimed = self.shown.map_or(ScrollAimed::NONE, |(_, aimed)| aimed);
+        self.publish(&aimed);
     }
 
     /// Publishes the live state.

@@ -130,7 +130,7 @@ fn a_dir_is_written_in_lower_case() {
 fn aims_and_outlines_hide_every_point_and_box() {
     let texts = [
         format!("{:?}", aim()),
-        format!("{:?}", ScrollAimed { area: Some(AREA) }),
+        format!("{:?}", ScrollAimed::from(aim())),
     ];
     for text in texts {
         assert!(text.contains(REDACTED_MARKER), "{text}");
@@ -147,9 +147,28 @@ fn an_aim_still_shows_its_flags_and_id() {
         "Aim {{ at: {r}, on_pointer: true, area: Some({r}), ours: false, id: TargetId(7) }}"
     );
     assert_eq!(format!("{:?}", aim()), want);
-    let none = ScrollAimed { area: None };
-    assert_eq!(format!("{none:?}"), "ScrollAimed { area: None }");
+    let none = ScrollAimed::NONE;
+    assert_eq!(
+        format!("{none:?}"),
+        "ScrollAimed { area: None, ours: false }"
+    );
     assert_eq!(TargetId::new(7).get(), 7);
+}
+
+/// The outline of an aim takes its box and whether it is ours; none outlines nothing.
+#[test]
+fn an_outline_takes_its_aims_box_and_whether_it_is_ours() {
+    let theirs = ScrollAimed::from(aim());
+    assert_eq!((theirs.area, theirs.ours), (Some(AREA), false));
+    let list = ScrollAimed::from(Aim {
+        ours: true,
+        ..aim()
+    });
+    assert_eq!((list.area, list.ours), (Some(AREA), true));
+    assert_eq!(
+        (ScrollAimed::NONE.area, ScrollAimed::NONE.ours),
+        (None, false)
+    );
 }
 
 #[test]

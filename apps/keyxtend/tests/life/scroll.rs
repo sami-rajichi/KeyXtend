@@ -94,9 +94,8 @@ fn quitting_while_scrolling_closes_the_run_hides_the_outline_and_lets_the_hook_g
     assert_eq!(run, (false, 1, 1), "the one run closed");
     assert_eq!(told.try_iter().last(), Some(ScrollChanged::OFF));
     let boxes: Vec<ScrollAimed> = aimed.try_iter().collect();
-    let outline = |area| ScrollAimed { area };
-    assert!(boxes.contains(&outline(APP.area)), "it outlined");
-    assert_eq!(boxes.last(), Some(&outline(None)), "no outline left");
+    assert!(boxes.contains(&ScrollAimed::from(APP)), "it outlined");
+    assert_eq!(boxes.last(), Some(&ScrollAimed::NONE), "no outline left");
     let hook = &rig.pointer;
     let held = (hook.running(), hook.starts(), hook.stops());
     assert_eq!(held, (false, 1, 1), "the hook ran; the quit let go");
