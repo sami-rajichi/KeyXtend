@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-16
+- **Last review:** 2026-10-17
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -67,12 +67,13 @@
     - G12's frame rate counts each ring's quiet time before its first frame, past `[g12] show_ms`, and after its last, so a ring that stalls fails.
   - `kx-gates g6 notepad`, `chrome` and `explorer` drive the test build's scroll pad (P5) on the gate's own scroll text or folder of empty files, never Word.
     - G6 lays that window under the keyboard and puts it back after, then glides the pointer onto the pad with `SIM_TAG` moves. It taps the pad only while the keyboard is on top there.
-    - Its only other input is Ctrl+End to the document in front, and clicks on the document's spot outside the keyboard for the press-stop case, only while that app is on top there. It never turns a wheel; it takes one `ScrollPattern` step itself to record the percent lag.
+    - Its only other input is Ctrl+End to the document in front, and clicks on the document's spot outside the keyboard for the press-stop case, only while that app is on top there. It never turns a wheel; it takes one `ScrollPattern` step down and one back up itself to record the percent lag.
     - Its pictures of the document stay in memory, and its result holds shares, percents, counts and the wheel-routing setting, never a point or a box.
   - `kx-gates g6 hang` and `g6 unaware` run the same pad on target-window, started with `--fill` (numbered filler lines) and, for `unaware`, `--dpi-unaware`. `hang` posts G5's capped hang message.
     - target-window logs each wheel message's time, turn and point, and a `HUNG` and `WOKE` line around a hang. G6 keeps only counts and the offset between the point aimed and the point received.
   - G8, G9 and G10 add the scroll pad on the product app, pressed by UI Automation with the real pointer moved but never clicked; each lays a filled target-window under the keyboard and closes it after.
-    - G8 reads memory once after a scroll and scrolls once per churn round, and its result logs the machine's free RAM and its VMs' working sets (`[host] vm`, by PDH counter name, no process handle). G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language. G10 presses each arrow and Stop, and puts Stop back after a failed step.
+    - Each presses Stop only while an arrow reads a speed, as Stop leaves UI Automation's tree when the pad is idle, and no run back undoes the one before, so no case meets the document's end.
+    - G8 reads memory once after a scroll and scrolls once per churn round, and its result logs the machine's free RAM and its VMs' working sets (`[host] vm`, by PDH counter name, no process handle). G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language. G10 presses each arrow and Stop, puts Stop back after a failed step, and asks UI Automation which element is at each arrow's icon without moving the pointer.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap gets Quit.

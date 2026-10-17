@@ -5,7 +5,7 @@
 use kx_module_api::MS_PER_S;
 use kx_module_api::ports::{Dir, Reach};
 
-use crate::p5cfg::SLOPE_READS;
+use crate::p5cfg::LINE_READS;
 use crate::scroll::{along, percent_moved, reach};
 use crate::scrolllog::ScrollLine;
 
@@ -27,26 +27,34 @@ impl Look {
     /// True when the window scrolled towards `dir`: by its percent where both looks read that way, else by more than
     /// `min` of its picture changing.
     pub fn moved(&self, dir: Dir, min: f64) -> bool {
-        let reads = [self.before, self.after]
-            .iter()
-            .all(|p| p.and_then(|p| along(dir, p)).is_some());
-        if reads {
+        if self.reads(dir) {
             percent_moved(dir, self.before, self.after)
         } else {
             self.share.is_some_and(|s| s > min)
         }
     }
 
-    /// True when the window stood still: no percent moved where both looks read one, else at most `min` of its picture
-    /// changed.
+    /// True when the window stood still: no percent moved on an axis both looks read, else, with no such axis, at
+    /// most `min` of its picture changed.
     pub fn still(&self, min: f64) -> bool {
-        if self.before.is_some() && self.after.is_some() {
-            let turned = Dir::ALL
-                .into_iter()
-                .any(|d| percent_moved(d, self.before, self.after));
-            return !turned;
+        let read: Vec<Dir> = [Dir::Down, Dir::Right]
+            .into_iter()
+            .filter(|&d| self.reads(d))
+            .collect();
+        if read.is_empty() {
+            return self.share.is_some_and(|s| s <= min);
         }
-        self.share.is_some_and(|s| s <= min)
+        let turned = Dir::ALL
+            .into_iter()
+            .any(|d| percent_moved(d, self.before, self.after));
+        !turned
+    }
+
+    /// True when both looks read a percent on `dir`'s axis.
+    fn reads(&self, dir: Dir) -> bool {
+        [self.before, self.after]
+            .iter()
+            .all(|p| p.and_then(|p| along(dir, p)).is_some())
     }
 }
 
@@ -58,18 +66,18 @@ fn inside(p: f64) -> bool {
 }
 
 /// A speed's rate, in percent a second, from `reads` of (ms, percent towards its way) taken while it scrolled: the
-/// least-squares slope of the reads short of either end; none from fewer than `SLOPE_READS` of them.
+/// least-squares slope of the reads short of either end; none from fewer than `min_reads` of them.
 #[allow(
     clippy::cast_precision_loss,
     reason = "Times and counts are far below 2^52."
 )]
-pub fn rate(reads: &[(u64, f64)]) -> Option<f64> {
+pub fn rate(reads: &[(u64, f64)], min_reads: u64) -> Option<f64> {
     let inner: Vec<(f64, f64)> = reads
         .iter()
         .filter(|(_, p)| inside(*p))
         .map(|&(ms, p)| (ms as f64, p))
         .collect();
-    if (inner.len() as u64) < SLOPE_READS {
+    if (inner.len() as u64) < min_reads.max(LINE_READS) {
         return None;
     }
     let n = inner.len() as f64;
@@ -94,6 +102,17 @@ pub fn sideways(pair: Pair) -> bool {
 /// True when `pair` reads at `dir`'s end.
 pub fn ended(dir: Dir, pair: Pair) -> bool {
     reach(dir, pair.and_then(|p| along(dir, p))) == Reach::End
+}
+
+/// True when the end case passed: the pad stopped by itself, its `down` leg moved, and `back`, from the look at the
+/// end before it to now, shows the end again: by percent where it reads, else by a picture within `min` of it.
+pub fn end_ok(idle: bool, down: &Look, back: &Look, min: f64) -> bool {
+    let at_end = if back.reads(Dir::Down) {
+        ended(Dir::Down, back.after)
+    } else {
+        back.share.is_some_and(|s| s <= min)
+    };
+    idle && down.moved(Dir::Down, min) && at_end
 }
 
 /// True when the scroll module stopped once for each of G6's `clicks` outside our windows, so a tap on the pad never

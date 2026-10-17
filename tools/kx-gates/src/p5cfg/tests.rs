@@ -20,8 +20,10 @@ fn the_shipped_settings_pass() {
 
 #[test]
 fn g6_settings_that_check_nothing_are_refused() {
-    let bad: [fn(&mut G6); 17] = [
+    let bad: [fn(&mut G6); 19] = [
         |g| g.inset_px = 0,
+        |g| g.slope_reads = 1,
+        |g| g.phase_ms = g.sample_ms * (g.slope_reads - 1),
         |g| g.min_changed = 0.0,
         |g| g.min_changed = 1.0,
         |g| g.min_changed = f64::NAN,
@@ -67,11 +69,19 @@ fn pad_ids_join_the_group_and_the_part() {
     assert_eq!(pad.stop_id(), "dpad.stop");
     let reach = pad.reach();
     assert_eq!((reach.under_px, reach.lead_px), (pad.under_px, pad.lead_px));
+    let run = 1_000;
+    assert_eq!(pad.undone(run) * u64::from(pad.undo_div), run);
+    assert!(
+        pad.undone(run) < run,
+        "a run back never undoes the run before it"
+    );
 }
 
 #[test]
 fn pad_settings_that_name_no_part_are_refused() {
-    let bad: [fn(&mut Pad); 6] = [
+    let bad: [fn(&mut Pad); 8] = [
+        |p| p.undo_div = 0,
+        |p| p.undo_div = 1,
         |p| p.group.clear(),
         |p| p.group = "d.pad".into(),
         |p| p.stop = "halt".into(),
@@ -90,10 +100,10 @@ fn pad_settings_that_name_no_part_are_refused() {
 fn the_pad_ids_are_the_ones_kx_ui_gives_its_arrows_and_stop() {
     let pad = load().expect("loads").pad;
     let group = format!("res.uid(\"{}\", ", pad.group);
-    assert!(
-        DPAD_QML.contains(&format!("{group}modelData.id)")),
-        "arrows"
-    );
+    let arrows = DPAD_QML
+        .lines()
+        .any(|l| l.contains(&group) && l.trim_end().ends_with("modelData.id)"));
+    assert!(arrows, "arrows");
     assert!(STOP_QML.contains(&format!("{group}pad.stopId)")), "Stop");
     assert!(DPAD_QML.contains(&format!("stopId: \"{}\"", pad.stop)));
     assert!(KB_QML.contains(&format!("group + \"{SEP}\" + id")), "uid");

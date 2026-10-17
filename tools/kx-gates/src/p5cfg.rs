@@ -38,10 +38,12 @@ pub struct G6 {
     pub hang_lead_ms: u64,
     /// The span its wheel messages are counted in, before the hang and after it wakes.
     pub burst_ms: u64,
+    /// The fewest percent reads short of the ends a speed's slope rests on.
+    pub slope_reads: u64,
 }
 
-/// The fewest percent reads a slope rests on.
-pub const SLOPE_READS: u64 = 2;
+/// The fewest reads any slope needs: a line needs two points; `[g6] slope_reads` asks for more.
+pub const LINE_READS: u64 = 2;
 
 /// True when `share` lies strictly between 0 and 1.
 fn a_share(share: f64) -> bool {
@@ -49,8 +51,8 @@ fn a_share(share: f64) -> bool {
 }
 
 impl G6 {
-    /// Refuses a share outside 0 to 1, an inset or waits not above 0, a speed read too short for a slope, and a count
-    /// before the hang longer than the wait before it.
+    /// Refuses a share outside 0 to 1, an inset or waits not above 0, a slope on fewer reads than a line needs or more
+    /// than a speed reads, and a count before the hang longer than the wait before it.
     pub fn check(&self) -> Result<(), String> {
         if !a_share(self.min_changed) || !a_share(self.ratio_slack) {
             return Err("g6.min_changed and g6.ratio_slack must lie between 0 and 1".to_string());
@@ -71,10 +73,16 @@ impl G6 {
         if waits.contains(&0) {
             return Err("g6's waits must be above 0".to_string());
         }
-        if self.phase_ms < self.sample_ms.saturating_mul(SLOPE_READS) {
+        if self.slope_reads < LINE_READS {
             return Err(format!(
-                "g6.phase_ms must hold at least {SLOPE_READS} reads of sample_ms, or no slope is measured"
+                "g6.slope_reads must be at least {LINE_READS}, as a line needs two points"
             ));
+        }
+        if self.phase_ms < self.sample_ms.saturating_mul(self.slope_reads) {
+            return Err(
+                "g6.phase_ms must hold slope_reads reads of sample_ms, or no slope is measured"
+                    .to_string(),
+            );
         }
         if self.burst_ms > self.hang_lead_ms {
             return Err(
@@ -99,6 +107,8 @@ pub struct Pad {
     pub under_px: i32,
     /// How far above the keyboard's top the glide onto the pad starts, on that window, in physical px.
     pub lead_px: i32,
+    /// A run back the way the run before it came lasts this many times less, so it never meets that run's start.
+    pub undo_div: u32,
 }
 
 /// What kx-ui puts between a part's group and its id (`KbWindow.qml` `uid`).
@@ -120,6 +130,11 @@ impl Pad {
         }
     }
 
+    /// How long a run back lasts after a run of `ms`.
+    pub fn undone(&self, ms: u64) -> u64 {
+        ms / u64::from(self.undo_div.max(1))
+    }
+
     /// The UI Automation id of Stop.
     pub fn stop_id(&self) -> String {
         self.part(&self.stop)
@@ -130,7 +145,8 @@ impl Pad {
         format!("{}{SEP}{name}", self.group)
     }
 
-    /// Refuses an empty or dotted group, a Stop id that is no icons.toml `[dpad]` id, no wait and no reach.
+    /// Refuses an empty or dotted group, a Stop id that is no icons.toml `[dpad]` id, no wait, no reach, and a run
+    /// back as long as the one before.
     pub fn check(&self) -> Result<(), String> {
         if self.under_px <= 0 || self.lead_px <= 0 {
             return Err("pad.under_px and pad.lead_px must be above 0".to_string());
@@ -148,6 +164,11 @@ impl Pad {
         }
         if self.settle_ms == 0 {
             return Err("pad.settle_ms must be above 0".to_string());
+        }
+        if self.undo_div < 2 {
+            return Err(
+                "pad.undo_div must be at least 2, or a run back undoes the one before".to_string(),
+            );
         }
         Ok(())
     }

@@ -1,5 +1,5 @@
 //! The scroll pad on screen: where each arrow and Stop take a tap, from the pad's box and kx-theme's `[dpad]` shape, as
-//! kx-ui's DPad.qml draws them. Only the arrow's middle takes a tap, as its box is the whole turned pad.
+//! kx-ui's DPad.qml draws them. An arrow's tap point is its icon's centre, inside the upright box readers find it by.
 #![cfg(windows)]
 
 use kx_module_api::ports::Dir;

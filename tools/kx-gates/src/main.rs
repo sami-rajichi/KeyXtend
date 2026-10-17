@@ -101,6 +101,7 @@ mod p3cfg;
 mod p4cfg;
 mod p5cfg;
 mod padgeom;
+mod padread;
 mod pin;
 mod presentmon;
 mod probe;

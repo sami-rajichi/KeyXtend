@@ -30,6 +30,8 @@ lag_wait_ms = 2000
 hang_ms = 2000
 hang_lead_ms = 1000
 burst_ms = 300
+# A speed's slope rests on at least this many percent reads short of the ends, so one late read cannot tip the ratio.
+slope_reads = 5
 
 # The scroll pad's parts by UI Automation id: kx-ui's DPad.qml and Stop.qml name each part `<group>.<id>`, an arrow by
 # its direction and Stop by `stop`, both icons.toml [dpad] ids (checked); the pad itself is kx-mod-keyboard's DPAD_NAME.
@@ -43,6 +45,9 @@ settle_ms = 500
 under_px = 160
 # The pointer starts this far above the keyboard's top, on that window, then glides down onto the pad (physical px).
 lead_px = 120
+# A run back the way the one before it came lasts this many times less (G6's left, G10's left), so it never runs
+# back to where that one started, which may be the document's end, and the pad never stops itself mid-case.
+undo_div = 2
 
 # G9's outline steps: idle, the pointer on the pad, then off it on the rest key while it scrolls, then idle again.
 [outline]

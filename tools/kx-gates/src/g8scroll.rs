@@ -1,6 +1,6 @@
 //! G8's scroll steps (spec §5.2, ADR-0029): the pointer glides from a filled target-window onto the pad, whose arrow,
 //! pressed by UI Automation, scrolls for `[g8_scroll] scroll_ms` with the outline shown, then Stop. Memory is read
-//! once, `[g8] warm_ms` after a scroll, against ADR-0021's idle budget; each churn round scrolls, each way in turn.
+//! once, `[g8] warm_ms` after a scroll, against ADR-0021's idle budget; each churn round scrolls, as `way` turns.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -13,6 +13,7 @@ use crate::budget::Part;
 use crate::g8cfg::G8;
 use crate::g8host::{self, Host};
 use crate::keymap::Reader;
+use crate::padread::PadRead;
 use crate::pin::Pinned;
 use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
@@ -63,12 +64,13 @@ pub struct Scroller<'a> {
     keyboard: Keyboard,
     reader: Reader,
     titles: Vec<String>,
-    down: Cell<bool>,
+    runs: Cell<u32>,
 }
 
 impl<'a> Scroller<'a> {
     /// Starts a filled target-window and lays it under the keyboard; closed again when the laying fails.
     pub fn open(ctx: &'a Ctx<'a>) -> Result<Self, String> {
+        let (reader, titles) = (Reader::new()?, outline::titles(ctx)?);
         let filled = [ctx.target.fill_arg.clone()];
         let target = launch::start_target_with(ctx, &filled)?;
         let laid = Keyboard::find().and_then(|kb| Ok((Pinned::new(ctx, kb.hwnd, &target)?, kb)));
@@ -81,31 +83,34 @@ impl<'a> Scroller<'a> {
             target,
             pin,
             keyboard,
-            reader: Reader::new()?,
-            titles: outline::titles(ctx)?,
-            down: Cell::new(true),
+            reader,
+            titles,
+            runs: Cell::new(0),
         })
     }
 
-    /// Glides onto the pad, presses an arrow, down and up in turn, and reads the pad and the outline after the pad's
-    /// settle; Stop goes out after `scroll_ms`, also after a failed read, then the pointer leaves the keyboard.
+    /// Glides onto the pad, presses its arrow the way `way` gives, and reads the arrow and the outline after the
+    /// pad's settle; Stop goes out after `scroll_ms` unless the pad stopped itself, also after a failed read, then
+    /// the pointer leaves the keyboard.
     pub fn once(&self) -> Result<Scroll, String> {
         let (ctx, pad) = (self.ctx, &self.ctx.cfg.pad);
-        let dir = if self.down.replace(!self.down.get()) {
-            Dir::Down
-        } else {
-            Dir::Up
-        };
-        self.pin.glide_in(ctx, mouse::move_to)?;
+        let dir = way(self.runs.replace(self.runs.get().saturating_add(1)));
+        self.pin.glide_in(ctx, &self.target, mouse::move_to)?;
         product::invoke(&self.reader, &pad.arrow(dir))?;
         sleep_ms(pad.settle_ms);
-        let lit = self.reader.described(self.keyboard.hwnd, &pad.stop_id());
+        let read = PadRead {
+            reader: &self.reader,
+            kb: self.keyboard.hwnd,
+            pad,
+        };
+        let lit = read.said(dir);
         let outlined = outline::shown(&self.titles).len() == ctx.cfg.outline.edges;
         sleep_ms(ctx.cfg.g8_scroll.scroll_ms.saturating_sub(pad.settle_ms));
-        product::restore(&self.reader, &pad.stop_id())?;
+        let stopped = read.stop(|id| product::restore(&self.reader, id));
         sleep_ms(pad.settle_ms);
         mouse::move_to(self.pin.start)?;
         let lit = !lit?.is_empty();
+        stopped?;
         Ok(Scroll { lit, outlined })
     }
 
@@ -127,6 +132,16 @@ impl<'a> Scroller<'a> {
         } = self;
         drop(pin);
         apps::clean_up(ctx, target)
+    }
+}
+
+/// Which way scroll number `k` goes: down twice, then up and down in turn, so the window stays one to two runs below
+/// its top and no run ends where one began, at the top.
+fn way(k: u32) -> Dir {
+    if k < 2 || k % 2 == 1 {
+        Dir::Down
+    } else {
+        Dir::Up
     }
 }
 
@@ -196,6 +211,18 @@ mod tests {
             .map(|p| p.name)
             .collect();
         assert_eq!(failed, [COMMIT]);
+    }
+
+    #[test]
+    fn the_scrolls_go_down_twice_then_turn_so_none_runs_back_to_the_top() {
+        let ways: Vec<Dir> = (0..6).map(way).collect();
+        let (d, u) = (Dir::Down, Dir::Up);
+        assert_eq!(ways, [d, d, u, d, u, d]);
+        let mut at = 0;
+        for k in 0..60 {
+            at += if way(k) == d { 1 } else { -1 };
+            assert!((1..=2).contains(&at), "run {k} ends {at} runs down");
+        }
     }
 
     #[test]

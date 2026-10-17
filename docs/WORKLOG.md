@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-17 01:21 — P5: the scroll gates read an idle pad from its arrows
+Stop leaves UI Automation's tree when the pad is idle, so G6, G8, G9 and G10 now read idle from the four arrows, press Stop only while one reads a speed, and take a pad that stopped itself as no error. No run back undoes the one before: G8 goes down twice then turns, G6 and G10 run left for less than right, and G6 sizes Explorer's folder from the test build's speeds. G10 now judges that each arrow's icon point names that arrow in a box of its own; G6 judges Chrome's sideways by picture when no percent reads, its end case by the down leg and the end it saw, and its slopes on `[g6] slope_reads` reads.
+
 ## 2026-10-17 01:07 — P5: the docs match the scroll pad as built
 `ARCHITECTURE.md` now maps the scroll module, its port and ungated events, the Windows adapter, the hub's parts and how macOS and Linux would fill the port, and the README tells users how the pad's taps, Stop, stops, outline and `[scroll]` settings work. Spec §5.2 and ADR-0029's row record the as-built fallback and end rules, and the security notes for the app, the UI, the mouse module and the Windows adapter name the new data, inputs and threats. P5's item file keeps two manual-test checks, the certificate note moved to P6, and P13 notes the faded high-contrast dots. CI now also lints the app with the scroll module off.
 

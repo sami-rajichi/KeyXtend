@@ -8,6 +8,10 @@ const MIN: f64 = 0.02;
 const TOP: Pair = Some((0.0, 0.0));
 /// One that UI Automation cannot scroll sideways (-1).
 const NO_SIDEWAYS: Pair = Some((-1.0, 40.0));
+/// One that UI Automation can scroll neither way (-1, -1).
+const NO_SCROLL: Pair = Some((-1.0, -1.0));
+/// A slope from two reads, as the old floor took.
+const TWO: u64 = 2;
 
 fn look(share: Option<f64>, before: Pair, after: Pair) -> Look {
     Look {
@@ -64,17 +68,69 @@ fn still_reads_the_percents_and_the_picture_only_without_them() {
 }
 
 #[test]
+fn still_falls_back_to_the_picture_when_no_axis_reads_a_percent() {
+    assert!(
+        !look(Some(0.3), NO_SCROLL, NO_SCROLL).still(MIN),
+        "the picture moved"
+    );
+    assert!(look(Some(0.0), NO_SCROLL, NO_SCROLL).still(MIN));
+    assert!(
+        look(Some(0.3), NO_SIDEWAYS, NO_SIDEWAYS).still(MIN),
+        "the vertical percent reads, and it stood"
+    );
+}
+
+#[test]
+fn the_end_needs_a_stop_by_itself_a_down_leg_that_moved_and_the_end_reached() {
+    let down = look(Some(0.4), Some((0.0, 90.0)), Some((0.0, 100.0)));
+    let back = look(Some(0.0), Some((0.0, 100.0)), Some((0.0, 100.0)));
+    assert!(end_ok(true, &down, &back, MIN));
+    assert!(!end_ok(false, &down, &back, MIN), "it never stopped itself");
+    let flat = look(Some(0.0), Some((0.0, 90.0)), Some((0.0, 90.0)));
+    assert!(!end_ok(true, &flat, &back, MIN), "the down leg never moved");
+    let short = look(Some(0.2), Some((0.0, 100.0)), Some((0.0, 90.0)));
+    assert!(
+        !end_ok(true, &down, &short, MIN),
+        "it stopped short of the end"
+    );
+}
+
+#[test]
+fn without_a_percent_the_end_is_the_picture_g6_saw_at_the_end() {
+    let down = look(Some(0.4), None, None);
+    assert!(end_ok(true, &down, &look(Some(0.0), None, None), MIN));
+    assert!(
+        !end_ok(true, &down, &look(Some(0.3), None, None), MIN),
+        "the picture differs from the end's"
+    );
+    assert!(!end_ok(true, &down, &look(None, None, None), MIN));
+}
+
+#[test]
 fn a_rate_is_the_slope_of_the_reads_short_of_the_ends_in_percent_a_second() {
     let steady = [(0, 10.0), (200, 11.0), (400, 12.0), (600, 13.0)];
-    let r = rate(&steady).expect("a rate");
+    let r = rate(&steady, TWO).expect("a rate");
     assert!((r - 5.0).abs() < 1e-9, "{r}");
     let pinned = [(0, 0.0), (200, 0.0), (400, 2.0), (600, 4.0), (800, 100.0)];
-    let r = rate(&pinned).expect("from the two inner reads");
+    let r = rate(&pinned, TWO).expect("from the two inner reads");
     assert!((r - 10.0).abs() < 1e-9, "{r}");
     let up = [(0, 50.0), (500, 45.0)];
-    assert!(rate(&up).expect("a rate") < 0.0, "upward reads fall");
-    assert_eq!(rate(&[(0, 0.0), (200, 3.0)]), None, "one inner read");
-    assert_eq!(rate(&[(5, 3.0), (5, 4.0)]), None, "no time between them");
+    assert!(rate(&up, TWO).expect("a rate") < 0.0, "upward reads fall");
+    assert_eq!(rate(&[(0, 0.0), (200, 3.0)], TWO), None, "one inner read");
+    assert_eq!(
+        rate(&[(5, 3.0), (5, 4.0)], TWO),
+        None,
+        "no time between them"
+    );
+}
+
+#[test]
+fn a_rate_needs_the_reads_the_settings_ask_for() {
+    let shipped = crate::config::load().expect("loads").g6.slope_reads;
+    let four = [(0, 10.0), (200, 11.0), (400, 12.0), (600, 13.0)];
+    assert!(rate(&four, 4).is_some());
+    assert_eq!(rate(&four, 5), None, "one read short");
+    assert!(shipped > TWO, "a slope from two reads is not stable");
 }
 
 #[test]

@@ -15,11 +15,12 @@ use crate::aim;
 use crate::apps::{Ctx, Opened};
 use crate::g6judge::{Look, Pair};
 use crate::keymap::Reader;
+use crate::padread::PadRead;
 use crate::pin::{Pinned, pt};
 use crate::product::Keyboard;
 use crate::scroll::{self, along};
 use crate::simin::{self, Act};
-use crate::simuser::{self, guard};
+use crate::simuser;
 use crate::win::{self, sleep_ms};
 
 /// One speed's reads: the look over it, and its percents towards its way in ms since the first read.
@@ -28,6 +29,22 @@ pub struct Phase {
     pub look: Look,
     /// (ms, percent) while it scrolled.
     pub reads: Vec<(u64, f64)>,
+}
+
+/// One look's half: the window's picture above the keyboard and its percents.
+pub struct Snap {
+    pic: Vec<u8>,
+    /// The percents.
+    pub pair: Pair,
+}
+
+/// The look from snap `a` to snap `b`.
+pub fn between(a: &Snap, b: &Snap) -> Look {
+    Look {
+        share: scroll::changed_share(&a.pic, &b.pic),
+        before: a.pair,
+        after: b.pair,
+    }
 }
 
 /// A window under the keyboard and the pad that scrolls it.
@@ -74,9 +91,13 @@ impl<'a> Scene<'a> {
         self.sp.as_ref()
     }
 
-    /// The window's picture above the keyboard.
-    fn picture(&self) -> Result<Vec<u8>, String> {
-        scroll::picture(self.band, self.ctx.spike.tools.shot_cap())
+    /// The window's picture above the keyboard, and its percents.
+    pub fn snap(&self) -> Result<Snap, String> {
+        let pic = scroll::picture(self.band, self.ctx.spike.tools.shot_cap())?;
+        Ok(Snap {
+            pic,
+            pair: self.pair(),
+        })
     }
 
     /// A look over `ms`.
@@ -86,7 +107,7 @@ impl<'a> Scene<'a> {
 
     /// Reads the percents towards `dir` every `sample_ms` for `ms`, between two pictures.
     pub fn phase(&self, dir: Dir, ms: u64) -> Result<Phase, String> {
-        let (pic, before) = (self.picture()?, self.pair());
+        let first = self.snap()?;
         let began = Instant::now();
         let mut reads = Vec::new();
         while win::ms_since(began) < ms {
@@ -95,21 +116,14 @@ impl<'a> Scene<'a> {
                 reads.push((win::ms_since(began), p));
             }
         }
-        let (pic2, after) = (self.picture()?, self.pair());
-        let share = scroll::changed_share(&pic, &pic2);
-        let look = Look {
-            share,
-            before,
-            after,
-        };
+        let look = between(&first, &self.snap()?);
         Ok(Phase { look, reads })
     }
 
     /// Glides from the start onto the pad's hub as the simulated user; the glide's last point outside the keyboard.
     pub fn glide_in(&self) -> Result<POINT, String> {
-        guard(self.app, &[pt(self.pin.start)])?;
         let mover = |p: POINT| simin::as_user(&[Act::Move(pt(p))]);
-        self.pin.glide_in(self.ctx, mover)
+        self.pin.glide_in(self.ctx, self.app, mover)
     }
 
     /// A tap at `p` once the keyboard is the window there, then the pad's settle.
@@ -128,9 +142,9 @@ impl<'a> Scene<'a> {
         self.tap(self.pin.pad.arrow(dir))
     }
 
-    /// Taps the hub, where Stop shows while it scrolls.
-    pub fn stop(&self) -> Result<(), String> {
-        self.tap(self.pin.pad.centre())
+    /// Taps the hub, where Stop shows while it scrolls, unless the pad stopped itself; true when it tapped.
+    pub fn stop(&self) -> Result<bool, String> {
+        self.read().stop(|_| self.tap(self.pin.pad.centre()))
     }
 
     /// Clicks the window at the glide's start: a press outside our windows.
@@ -150,11 +164,17 @@ impl<'a> Scene<'a> {
         win::root_at(p) == self.app.hwnd && now.is_ok_and(|c| win::root_at(c) == self.kb.hwnd)
     }
 
-    /// True when the pad stands still: Stop, which reads its speed while it scrolls, reads none.
+    /// The test build's pad as UI Automation reads it.
+    fn read(&self) -> PadRead<'_> {
+        PadRead {
+            reader: &self.reader,
+            kb: self.kb.hwnd,
+            pad: &self.ctx.cfg.pad,
+        }
+    }
+
+    /// True when the pad stands still: no arrow reads a speed.
     pub fn idle(&self) -> bool {
-        let stop = self.ctx.cfg.pad.stop_id();
-        self.reader
-            .described(self.kb.hwnd, &stop)
-            .is_ok_and(|d| d.is_empty())
+        self.read().idle().unwrap_or(false)
     }
 }

@@ -52,13 +52,15 @@ impl Pinned {
         })
     }
 
-    /// Glides from the start onto the pad's hub with `mover`, then waits the pad's settle; the glide's last point
-    /// outside the keyboard, where the pad scrolls.
+    /// Glides from the start onto the pad's hub with `mover` once `app` is still the window at the start, then waits
+    /// the pad's settle; the glide's last point outside the keyboard, where the pad scrolls.
     pub fn glide_in(
         &self,
         ctx: &Ctx,
+        app: &Opened,
         mover: impl Fn(POINT) -> Result<(), String>,
     ) -> Result<POINT, String> {
+        guard(app, &[pt(self.start)])?;
         let points = aim::glide(self.start, self.pad.centre(), ctx.cfg.probes.move_steps);
         aim::walk(&points, ctx.cfg.sim.step_ms, mover)?;
         sleep_ms(ctx.cfg.pad.settle_ms);

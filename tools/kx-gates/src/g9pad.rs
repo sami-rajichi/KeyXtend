@@ -13,6 +13,7 @@ use crate::apps::{Ctx, Opened};
 use crate::g9::missing;
 use crate::g9win::ex_of;
 use crate::keymap::Reader;
+use crate::padread::PadRead;
 use crate::pin::Pinned;
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
@@ -73,7 +74,7 @@ impl Desk<'_> {
 }
 
 /// Runs G9's outline part on the keyboard window `keyboard` with `target` laid under it; Stop is pressed whatever
-/// happens, and the pointer leaves the keyboard after.
+/// happens unless the pad is idle, and the pointer leaves the keyboard after.
 pub fn run(ctx: &Ctx, keyboard: HWND, target: &Opened) -> Result<Value, String> {
     let desk = Desk {
         ctx,
@@ -84,10 +85,15 @@ pub fn run(ctx: &Ctx, keyboard: HWND, target: &Opened) -> Result<Value, String> 
     let pin = Pinned::new(ctx, keyboard, target)?;
     mouse::move_to(pin.start)?;
     let mut seen = vec![desk.look("idle", 0)];
-    pin.glide_in(ctx, mouse::move_to)?;
+    pin.glide_in(ctx, target, mouse::move_to)?;
     seen.push(desk.look("hovered", edges));
     let scrolled = desk.scrolling(&reader);
-    let stopped = product::restore(&reader, &ctx.cfg.pad.stop_id());
+    let read = PadRead {
+        reader: &reader,
+        kb: keyboard,
+        pad: &ctx.cfg.pad,
+    };
+    let stopped = read.stop(|id| product::restore(&reader, id));
     seen.extend(scrolled.as_ref().ok().cloned());
     seen.push(desk.look("stopped", 0));
     mouse::move_to(pin.start)?;
