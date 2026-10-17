@@ -2,9 +2,9 @@
 
 use crate::lock;
 use kx_module_api::ports::{Point, Rect, Screen};
-use kx_platform::ui::{Backdrop, BackdropKind, FocusToken, Screens, UiError, WindowGuard};
+use kx_platform::ui::{Backdrop, BackdropKind, FocusToken, Screens, UiError, Watched, WindowGuard};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 /// Screens with work areas and a pointer the test sets.
 #[derive(Debug, Default)]
@@ -81,6 +81,7 @@ pub enum GuardCall {
 #[derive(Debug, Default)]
 pub struct FakeWindowGuard {
     count: AtomicUsize,
+    unguarded: AtomicBool,
     error: Mutex<Option<UiError>>,
     calls: Mutex<Vec<GuardCall>>,
     last: AtomicU64,
@@ -99,6 +100,11 @@ impl FakeWindowGuard {
     /// Sets how many windows later `guard_own` calls report.
     pub fn set_count(&self, count: usize) {
         self.count.store(count, Ordering::SeqCst);
+    }
+
+    /// Makes later `watch_entries` calls find the window shown but not guarded yet while `unguarded`.
+    pub fn set_unguarded(&self, unguarded: bool) {
+        self.unguarded.store(unguarded, Ordering::SeqCst);
     }
 
     /// Refuses later `guard_own`, `shape`, `lift_alone`, `watch_entries`, `lay_under` and `mark_pages` calls with
@@ -135,8 +141,14 @@ impl WindowGuard for FakeWindowGuard {
         self.record(GuardCall::LiftAlone(title.to_owned()))
     }
 
-    fn watch_entries(&self, title: &str) -> Result<(), UiError> {
-        self.record(GuardCall::WatchEntries(title.to_owned()))
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError> {
+        self.record(GuardCall::WatchEntries(title.to_owned()))?;
+        let unguarded = self.unguarded.load(Ordering::SeqCst);
+        Ok(if unguarded {
+            Watched::Unguarded
+        } else {
+            Watched::Held
+        })
     }
 
     fn unwatch_entries(&self, title: &str) {

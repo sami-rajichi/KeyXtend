@@ -27,6 +27,15 @@ pub enum UiError {
     Refused(i32),
 }
 
+/// What a request to watch a window's entries found.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Watched {
+    /// The guard watches the window's entries now.
+    Held,
+    /// The window shows, but the guard does not hold it yet.
+    Unguarded,
+}
+
 /// Another copy of the app already runs in this user session.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 #[error("another copy is running")]
@@ -74,11 +83,12 @@ pub trait WindowGuard: Send + Sync {
     fn lift_alone(&self, title: &str) -> Result<(), UiError>;
 
     /// Until `unwatch_entries`, each time the pointer enters our guarded window titled `title`, keeps the last point it
-    /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread.
+    /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread. `Unguarded` while the
+    /// window shows but the guard does not hold it yet, so a later guard try asks again.
     ///
     /// # Errors
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.
-    fn watch_entries(&self, title: &str) -> Result<(), UiError>;
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError>;
 
     /// Stops the entry watch on our windows titled `title`, shown or not, and forgets the point it kept, as the scroll
     /// module stops; a call for the UI thread.

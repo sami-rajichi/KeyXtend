@@ -4,7 +4,7 @@
 use std::sync::{Mutex, PoisonError};
 
 use kx_module_api::ports::{Point, Rect};
-use kx_platform::ui::{Screens, UiError, WindowGuard};
+use kx_platform::ui::{Screens, UiError, Watched, WindowGuard};
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -92,7 +92,7 @@ fn a_watched_window_keeps_one_entry_until_the_pointer_leaves_it() {
     let (window, kb) = (Hidden::new("KeyXtend test: watched"), spot_on_main());
     place(&window, kb);
     guard(window.0).unwrap();
-    mark(window.0).unwrap();
+    assert_eq!(mark(window.0), Ok(Watched::Held));
     assert!(watched(window.0));
     let screen = |x, y| Point {
         x: kb.x + x,
@@ -116,7 +116,7 @@ fn an_unwatched_window_keeps_nothing_and_a_hidden_one_cannot_be_watched() {
         Hidden::new("KeyXtend test: unwatched"),
     );
     guard(watched_one.0).unwrap();
-    mark(watched_one.0).unwrap();
+    assert_eq!(mark(watched_one.0), Ok(Watched::Held));
     move_to(&watched_one, Point { x: 1, y: 1 });
     let was = kept();
     guard(plain.0).unwrap();
@@ -146,12 +146,20 @@ fn the_kept_entry_goes_with_the_watched_window() {
     assert_eq!(kept(), None);
 }
 
+/// A watch asked before the guard's first try is no refusal: a later try asks again.
 #[test]
-fn only_a_guarded_window_can_be_watched() {
+fn a_window_the_guard_does_not_hold_yet_is_unguarded_and_not_watched() {
     let _e = ENTRIES.lock().unwrap_or_else(PoisonError::into_inner);
     let plain = Hidden::new("KeyXtend test: not guarded");
-    assert!(matches!(mark(plain.0), Err(UiError::Refused(_))));
+    assert_eq!(mark(plain.0), Ok(Watched::Unguarded));
     assert!(!watched(plain.0));
+    assert!(matches!(
+        mark_with(plain.0, false),
+        Err(UiError::Refused(_))
+    ));
+    guard(plain.0).unwrap();
+    assert_eq!(mark(plain.0), Ok(Watched::Held), "once the guard holds it");
+    assert!(watched(plain.0));
 }
 
 /// The banner sits beside the keyboard, so the pointer may come back to the keyboard from it: the guard passes over it.

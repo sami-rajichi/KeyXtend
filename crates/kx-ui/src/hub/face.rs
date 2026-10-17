@@ -169,11 +169,13 @@ impl Hub {
     }
 
     /// Guard try number `attempt` (from 1), with the window titled `top` landing in front: true to try again after
-    /// `[ui] guard_delay_ms`; once done, the focus goes back to the app the user had in front. Call it on the UI thread.
+    /// `[ui] guard_delay_ms`; once done, the focus goes back to the app the user had in front, and the entry watch asked
+    /// next is the run's last. Call it on the UI thread.
     pub fn guard(&self, attempt: u32, top: Option<&str>) -> bool {
         let tries = self.lock().settings.guard_tries;
         let result = self.ports.guard.guard_own(None, top);
         let next = guard::next(&result, attempt, tries);
+        self.guard_tried(next == Next::Done);
         match (&result, next) {
             (_, Next::Again) => return true,
             (Ok(0), Next::Done) => tracing::warn!(tries, "no window to guard"),

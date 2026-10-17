@@ -42,7 +42,7 @@ fn the_guard_records_every_call_in_order() {
     assert_eq!(fake.guard_own(Some(TITLE), Some(TOP)), Ok(3));
     assert_eq!(fake.shape(TITLE, &rects), Ok(()));
     assert_eq!(fake.lift_alone(TITLE), Ok(()));
-    assert_eq!(fake.watch_entries(TITLE), Ok(()));
+    assert_eq!(fake.watch_entries(TITLE), Ok(Watched::Held));
     fake.unwatch_entries(TITLE);
     assert_eq!(fake.lay_under(OUTLINE, TITLE), Ok(()));
     assert_eq!(fake.mark_pages(LIST), Ok(()));
@@ -85,6 +85,23 @@ fn the_guard_count_and_errors_follow_the_test_and_every_try_is_recorded() {
         .filter(|c| **c == GuardCall::GuardOwn(None, None))
         .count();
     assert_eq!(tries, 3);
+}
+
+#[test]
+fn a_watch_finds_the_window_unguarded_while_the_test_says_and_is_still_recorded() {
+    let fake = FakeWindowGuard::new(0);
+    fake.set_unguarded(true);
+    assert_eq!(fake.watch_entries(TITLE), Ok(Watched::Unguarded));
+    fake.set_error(Some(UiError::Refused(4)));
+    assert_eq!(
+        fake.watch_entries(TITLE),
+        Err(UiError::Refused(4)),
+        "a refusal first"
+    );
+    fake.set_error(None);
+    fake.set_unguarded(false);
+    assert_eq!(fake.watch_entries(TITLE), Ok(Watched::Held));
+    assert_eq!(fake.calls(), vec![GuardCall::WatchEntries(TITLE.into()); 3]);
 }
 
 #[test]

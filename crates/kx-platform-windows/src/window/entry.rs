@@ -5,7 +5,7 @@
 use std::sync::Mutex;
 
 use kx_module_api::ports::Point;
-use kx_platform::ui::{Screens, UiError};
+use kx_platform::ui::{Screens, UiError, Watched};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -37,11 +37,11 @@ const HISTORY: usize = 64;
 /// What the guard kept at the latest entry; one keyboard per process.
 static KEPT: Mutex<Option<Kept>> = Mutex::new(None);
 
-/// Watches the entries of our shown window titled `title`.
+/// Watches the entries of our shown window titled `title`; `Unguarded` while the guard does not hold it yet.
 ///
 /// # Errors
 /// `NoWindow` while it is not shown, `Refused` when Windows says no.
-pub(super) fn watch_entries(title: &str) -> Result<(), UiError> {
+pub(super) fn watch_entries(title: &str) -> Result<Watched, UiError> {
     mark(own_titled(title).ok_or(UiError::NoWindow)?)
 }
 
@@ -54,15 +54,16 @@ pub(super) fn unwatch_entries(title_is: &str) {
     *lock(&KEPT) = None;
 }
 
-/// Marks our guarded window `hwnd` as the one whose entries the guard watches.
+/// Marks our guarded window `hwnd` as the one whose entries the guard watches; `Unguarded`, marking nothing, while the
+/// guard does not hold it yet.
 ///
 /// # Errors
-/// `Refused` for a window the guard does not hold, or when Windows says no.
-pub(super) fn mark(hwnd: HWND) -> Result<(), UiError> {
+/// `Refused` when Windows says no.
+pub(super) fn mark(hwnd: HWND) -> Result<Watched, UiError> {
     if !guarded(hwnd) {
-        return Err(failed());
+        return Ok(Watched::Unguarded);
     }
-    mark_with(hwnd, pointer_on(hwnd))
+    mark_with(hwnd, pointer_on(hwnd)).map(|()| Watched::Held)
 }
 
 /// Marks our guarded window `hwnd` with the pointer `on` it or not: a pointer already there makes no entry.

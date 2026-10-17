@@ -4,6 +4,7 @@
 mod badge;
 mod pages;
 mod props;
+mod watch;
 
 use crate::Rig;
 use crate::app::keeper;

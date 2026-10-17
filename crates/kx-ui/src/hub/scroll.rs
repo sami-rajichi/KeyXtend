@@ -6,8 +6,13 @@ use super::face::done;
 use super::unread::Unread;
 use super::{Hub, Wake, json};
 use kx_module_api::ports::{Dir, Rect, ScrollChanged};
+use kx_platform::ui::Watched;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
+
+/// Why the keyboard's entries are not watched.
+const UNWATCHED: &str = "the keyboard's entries will not be watched";
 
 /// The scroll state as QML reads it.
 #[derive(Copy, Clone, PartialEq, Eq, Serialize)]
@@ -41,11 +46,12 @@ impl From<ScrollChanged> for Shown {
     }
 }
 
-/// The scroll state, and whether a wake waits for QML to read it.
+/// The scroll state, whether a wake waits for QML to read it, and whether the latest guard try ended a live module's run.
 #[derive(Default)]
 pub(super) struct Scroll {
     shown: Mutex<Shown>,
     unread: Unread,
+    ended: AtomicBool,
 }
 
 impl Scroll {
@@ -175,21 +181,40 @@ impl Hub {
     }
 
     /// Until `unwatch_entries`, keeps the last point the pointer had outside our window `title` each time it enters it,
-    /// for the scroll target; false while the scroll module is not live, while the window does not show or when
-    /// refused. Call it on the UI thread.
+    /// for the scroll target; false while the scroll module is not live, while the window does not show, while the
+    /// guard does not hold it yet or when refused. Call it on the UI thread.
     #[must_use]
     pub fn watch_entries(&self, title: &str) -> bool {
         // QML asks only while the module runs; this check keeps that rule (ADR-0029) if it ever asks out of turn.
         if !self.scroll.lock().live {
             return false;
         }
-        let result = self.ports.guard.watch_entries(title);
-        done(result, "the keyboard's entries will not be watched")
+        // QML asks right after each guard try until the watch holds, so the ask after a run's last try is its last.
+        let last = self.scroll.ended.swap(false, Ordering::SeqCst);
+        match self.ports.guard.watch_entries(title) {
+            Ok(Watched::Held) => true,
+            Ok(Watched::Unguarded) => {
+                if last {
+                    tracing::warn!(
+                        "{UNWATCHED}, as the guard run ended without holding the keyboard"
+                    );
+                }
+                false
+            }
+            Err(e) => done(Err(e), UNWATCHED),
+        }
+    }
+
+    /// Notes whether a guard try ended its run; only a run that ends while the scroll module is live counts.
+    pub(super) fn guard_tried(&self, ended: bool) {
+        let live = self.scroll.lock().live;
+        self.scroll.ended.store(ended && live, Ordering::SeqCst);
     }
 
     /// Stops keeping the pointer's last point outside our windows titled `title`, shown or not, and forgets the point
-    /// kept; `watch_entries` starts again. Call it on the UI thread.
+    /// kept and the end of the module's last guard run; `watch_entries` starts again. Call it on the UI thread.
     pub fn unwatch_entries(&self, title: &str) {
+        self.scroll.ended.store(false, Ordering::SeqCst);
         self.ports.guard.unwatch_entries(title);
     }
 

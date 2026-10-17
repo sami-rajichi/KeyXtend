@@ -1,7 +1,7 @@
 //! The Windows side of the guard: our windows and their titles, the focus, and the shape that takes clicks.
 
 use kx_module_api::ports::{Point, Rect};
-use kx_platform::ui::{FocusToken, UiError, WindowGuard};
+use kx_platform::ui::{FocusToken, UiError, Watched, WindowGuard};
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, RECT};
 use windows::Win32::Graphics::Gdi::{
     CombineRgn, CreateRectRgn, DeleteObject, HRGN, RGN_ERROR, RGN_OR, SetWindowRgn,
@@ -42,7 +42,7 @@ impl WindowGuard for WinGuard {
         lift_alone(title)
     }
 
-    fn watch_entries(&self, title: &str) -> Result<(), UiError> {
+    fn watch_entries(&self, title: &str) -> Result<Watched, UiError> {
         entry::watch_entries(title)
     }
 
