@@ -41,6 +41,10 @@ Item {
     // The hub's radius, and how far out each arrow's icon sits: `reach` of the way across the ring of arrows.
     readonly property real hubR: r * (1 - 2 * sh.hub)
     readonly property real out: hubR + sh.reach * (r - hubR)
+    // Each arrow's upright box for readers, around its icon: half its depth along its way, as far as the nearer of the
+    // hub's edge and the pad's, and half its width across, so the four boxes meet without overlap.
+    readonly property real deep: Math.min(out - hubR, r - out)
+    readonly property real wide: out - deep
     // Each arrow's `icons.toml [dpad]` id and quarter, as signs of x and y around the centre before the turn.
     readonly property var arrows: [
         { id: "up", q: [-1, -1] },
@@ -120,12 +124,8 @@ Item {
                 readonly property real icon: pad.sh.icon_px * pad.s
                 anchors.fill: parent
                 containsMode: Shape.FillContains
-                Accessible.role: Accessible.Button
-                Accessible.name: name
-                Accessible.id: pad.res.uid("dpad", modelData.id)
-                Accessible.description: lit ? pad.speed : ""
-                Accessible.ignored: pad.dim
-                Accessible.onPressAction: if (!pad.dim) pad.tapped(modelData.id)
+                // Readers find the arrow by its upright box below, as a turned item's box is the whole pad's.
+                Accessible.ignored: true
 
                 Behavior on base {
                     ColourTween {
@@ -172,6 +172,24 @@ Item {
                     ext: pad.res.ext
                     px: arrow.icon
                     tint: arrow.drawn
+                }
+                // The arrow for readers and voice control: an upright box centred on its icon, its depth along the
+                // arrow's way on screen after the turn.
+                Item {
+                    readonly property real way: Math.atan2(arrow.q[1], arrow.q[0]) + pad.sh.turn_deg * Math.PI / 180
+                    readonly property real along: Math.abs(Math.cos(way))
+                    readonly property real down: Math.abs(Math.sin(way))
+                    x: glyph.x + (glyph.width - width) / 2
+                    y: glyph.y + (glyph.height - height) / 2
+                    width: 2 * (along * pad.deep + down * pad.wide)
+                    height: 2 * (down * pad.deep + along * pad.wide)
+                    rotation: -pad.sh.turn_deg
+                    Accessible.role: Accessible.Button
+                    Accessible.name: arrow.name
+                    Accessible.id: pad.res.uid("dpad", arrow.modelData.id)
+                    Accessible.description: arrow.lit ? pad.speed : ""
+                    Accessible.ignored: pad.dim
+                    Accessible.onPressAction: if (!pad.dim) pad.tapped(arrow.modelData.id)
                 }
                 // It acts at let-go, wherever the pointer went (ADR-0024).
                 Act {

@@ -55,8 +55,11 @@ Item {
             waitForRendering(p);
             return p;
         }
-        // Arrow or Stop `id`, its icon and its pointer area.
+        // Arrow `id`'s turned shape or Stop, the item readers and voice control find for it, its icon and its pointer area.
         function arrow(p, id) {
+            return id === "stop" ? named(p, id) : Board.all(p, o => o.fill !== undefined && o.modelData !== undefined && o.modelData.id === id)[0];
+        }
+        function named(p, id) {
             return Board.all(p, o => o.Accessible.id === "dpad." + id)[0];
         }
         function glyph(a) {
@@ -87,6 +90,39 @@ Item {
                 fuzzyCompare(c.x, r + ways[id][0] * want, 0.01, id + " across");
                 fuzzyCompare(c.y, r + ways[id][1] * want, 0.01, id + " down");
             }
+        }
+
+        // The box UI Automation reports for `item`: its upright bounds in `p`, as Qt maps a turned item.
+        function boxOf(item, p) {
+            const at = [[0, 0], [item.width, 0], [0, item.height], [item.width, item.height]].map(c => item.mapToItem(p, c[0], c[1]));
+            const [xs, ys] = [at.map(q => q.x), at.map(q => q.y)];
+            return { x: Math.min(...xs), y: Math.min(...ys), r: Math.max(...xs), b: Math.max(...ys) };
+        }
+        function overlap(a, b) {
+            return Math.max(0, Math.min(a.r, b.r) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.y, b.y));
+        }
+
+        // Readers and voice control find an item by its upright box (ElementFromPoint), and a turned arrow's would be the
+        // whole pad's, so each arrow has its own box around its icon, apart from the others'.
+        function test_each_arrow_has_its_own_upright_box_around_its_icon_data() {
+            return [Face.sizeMin, 1, Face.sizeMax].map(s => ({ tag: "at " + s, s: s }));
+        }
+        function test_each_arrow_has_its_own_upright_box_around_its_icon(row) {
+            const p = pad(N.lk, row.s, { dir: "up" }), ids = Object.keys(ways);
+            tryCompare(arrow(p, "stop"), "scale", 1, 2000);
+            const boxes = ids.map(id => boxOf(named(p, id), p));
+            const found = Board.all(p, o => o !== p && o.visible && o.Accessible.id !== "" && !o.Accessible.ignored);
+            ids.forEach((id, i) => {
+                const g = glyph(arrow(p, id)), c = middle(g, p), b = boxes[i];
+                fuzzyCompare((b.x + b.r) / 2, c.x, 0.01, id + " centred across");
+                fuzzyCompare((b.y + b.b) / 2, c.y, 0.01, id + " centred down");
+                verify(b.r - b.x > g.width && b.b - b.y > g.height, id + " holds its icon");
+                for (let j = i + 1; j < ids.length; j++)
+                    verify(overlap(b, boxes[j]) < 1e-6, id + " and " + ids[j] + " apart");
+                const at = found.filter(o => { const k = boxOf(o, p); return c.x > k.x && c.x < k.r && c.y > k.y && c.y < k.b; });
+                compare(at.map(o => o.Accessible.id), ["dpad." + id], "its icon's middle finds it");
+            });
+            verify(ids.every(id => arrow(p, id).Accessible.ignored), "the turned shapes are not read");
         }
 
         // Stop shows the speed under its square: one lit dot for slow and both for fast, unlit ones faded.
@@ -172,11 +208,11 @@ Item {
             verify(Qt.colorEqual(up.base, N.lk.dpad.face), "still until the state says");
             p.box = Object.assign({}, p.box, { dir: "up" });
             tryVerify(() => Qt.colorEqual(up.base, N.lk.dpad.on), 2000, "lit by the state");
-            compare(up.Accessible.description, En.texts["badge.slow"], "readers hear its speed");
+            compare(named(p, "up").Accessible.description, En.texts["badge.slow"], "readers hear its speed");
             const stop = arrow(p, "stop");
             tryCompare(stop, "scale", 1, 2000);
             mouseClick(hit(stop));
-            arrow(p, "right").Accessible.pressAction();
+            named(p, "right").Accessible.pressAction();
             compare(taps.signalArguments.map(a => a[0]), ["up", "", "right"], "Stop is empty, readers press too");
         }
 
@@ -184,7 +220,7 @@ Item {
         function test_a_dimmed_pad_takes_no_tap() {
             const p = pad(N.lk, 1, Face.states.en.dpad), taps = spy(p, "tapped"), up = arrow(p, "up");
             mouseClick(hit(up), middle(glyph(up), hit(up)).x, middle(glyph(up), hit(up)).y);
-            up.Accessible.pressAction();
+            named(p, "up").Accessible.pressAction();
             compare(taps.count, 0);
             compare(p.off, En.texts["tip.scroll-off"]);
             verify(Qt.colorEqual(up.base, N.lk.palette.dim), "dimmed");

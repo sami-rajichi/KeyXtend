@@ -141,7 +141,8 @@ Item {
             const pad = createTemporaryObject(padC, root, { box: box, lk: N.lk, res: root.res, s: 1 });
             const taps = spy(pad, "tapped");
             waitForRendering(pad);
-            const arrow = id => Board.all(pad, o => o.Accessible.id === "dpad." + id)[0];
+            // An arrow's turned shape, which holds its pointer area, or Stop.
+            const arrow = id => Board.all(pad, o => id === "stop" ? o.Accessible.id === "dpad.stop" : o.fill !== undefined && o.modelData !== undefined && o.modelData.id === id)[0];
             const hit = a => Board.all(a, o => o.containsMouse !== undefined)[0];
             const glyph = a => Board.all(a, o => o.icon !== undefined && o.tint !== undefined)[0];
             const up = hit(arrow("up"));
