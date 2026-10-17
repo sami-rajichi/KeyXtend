@@ -3,7 +3,7 @@
 //! leaves nothing.
 
 use crate::rig::{APP, EPS, Heard, LIST, OTHER, Rig, T0, hidden};
-use kx_mod_scroll::Msg;
+use kx_mod_scroll::{LIMIT_S, Msg, NO_LIMIT};
 use kx_module_api::Mono;
 use kx_module_api::ports::{Aim, Dir, Reach, ScrollChanged, ScrollError};
 use proptest::collection::vec;
@@ -17,7 +17,7 @@ const CASES: u32 = 512;
 const MAX_STEPS: usize = 80;
 /// How many checks the longest short wait spans, so checks happen.
 const SHORT_CHECKS: u64 = 2;
-/// How many limits the longest long wait spans, so some runs time out.
+/// How many of the longest limits the longest long wait spans, so some runs time out.
 const LONG_LIMITS: u64 = 2;
 
 /// One thing that happens to the actor.
@@ -57,13 +57,12 @@ fn msg() -> impl Strategy<Value = Msg> {
     ]
 }
 
-/// The longest short and long waits in µs, from the rig's `check_ms` and `limit_s`.
+/// The longest short and long waits in µs, from the rig's `check_ms` and the longest limit.
 fn waits() -> (u64, u64) {
-    let s = Rig::new().settings;
-    let check = Duration::from_millis(s.check_ms.into());
-    let limit = Duration::from_secs(s.limit_s.into());
+    let check = Duration::from_millis(Rig::new().settings.check_ms.into());
+    let longest = Duration::from_secs((*LIMIT_S.end()).into());
     let us = |d: Duration| u64::try_from(d.as_micros()).unwrap();
-    (SHORT_CHECKS * us(check), LONG_LIMITS * us(limit))
+    (SHORT_CHECKS * us(check), LONG_LIMITS * us(longest))
 }
 
 fn step() -> impl Strategy<Value = Step> {
@@ -80,10 +79,10 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
-/// The stops a run draws: `stop_at_end`, `stop_on_press`, and `limit_s` as 0 for none or the defaults' limit.
+/// The stops a run draws: `stop_at_end`, `stop_on_press`, and `limit_s` as none or any valid limit.
 fn stops() -> impl Strategy<Value = (bool, bool, u32)> {
-    let limit = Rig::new().settings.limit_s;
-    (any::<bool>(), any::<bool>(), select(vec![0, limit]))
+    let limit = prop_oneof![Just(NO_LIMIT), LIMIT_S];
+    (any::<bool>(), any::<bool>(), limit)
 }
 
 /// A rig on the defaults with the drawn stops.

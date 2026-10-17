@@ -32,7 +32,8 @@ pub enum Change {
 }
 
 impl Change {
-    /// The tap set a new way, so the tap's checks run (`Halt::unaimed`, `Stops::blocked`).
+    /// The tap set a new way, so the actor reads the reach that way (`Stops::blocked`); every tap but a stop aims
+    /// (`Halt::unaimed`).
     #[must_use]
     pub const fn new_way(self) -> bool {
         matches!(self, Self::Began | Self::Turned)

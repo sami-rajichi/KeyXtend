@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 /// Either speed, in lines a second.
 pub(crate) const SPEED: RangeInclusive<u32> = 1..=60;
 /// The time limit after the last pad tap, in seconds, when there is one.
-pub(crate) const LIMIT_S: RangeInclusive<u32> = 10..=1_800;
+pub const LIMIT_S: RangeInclusive<u32> = 10..=1_800;
 /// The `limit_s` that means no limit.
-pub(crate) const NO_LIMIT: u32 = 0;
+pub const NO_LIMIT: u32 = 0;
 /// The glide's step period, in ms.
 pub(crate) const TICK_MS: RangeInclusive<u32> = 8..=100;
 /// How long a target may stay still before the platform tries another way, in ms.

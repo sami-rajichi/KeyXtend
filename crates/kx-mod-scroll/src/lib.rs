@@ -18,6 +18,9 @@ pub use glide::{Glide, GlideCfg};
 pub use manifest::{ID, MANIFEST};
 pub use pad::{Change, Pad};
 pub use settings::{SPEC, ScrollSettings};
+// For the crate's own integration tests only, so they draw any valid limit.
+#[doc(hidden)]
+pub use settings::{LIMIT_S, NO_LIMIT};
 pub use stops::{Halt, Stops};
 
 use kx_module_api::ports::{
