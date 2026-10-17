@@ -67,7 +67,7 @@ impl Log {
 
 /// A scroll target the test scripts, shared by its clones: each `aim` takes the next scripted result, the latest
 /// repeating once they run out (`NoTarget` before any), a reach is as set, `Unknown` by default, and a target lives
-/// until closed.
+/// and turns until closed.
 ///
 /// A turn by lines that are not finite or are below zero is a caller bug and panics.
 #[derive(Clone, Default)]
@@ -102,7 +102,7 @@ impl FakeScrollTarget {
         lock(&self.log).fail = Some(error);
     }
 
-    /// Closes target `id`'s window: from now on it is not alive.
+    /// Closes target `id`'s window: from now on it is not alive and its turns are `Gone`, recording none.
     pub fn close(&self, id: TargetId) {
         lock(&self.log).closed.push(id);
     }
@@ -198,6 +198,9 @@ impl ScrollRun for FakeRun {
     fn turn(&mut self, aim: &Aim, dir: Dir, lines: f64) -> Result<(), ScrollError> {
         assert!(lines.is_finite() && lines >= 0.0, "{BAD_LINES}: {lines}");
         let mut log = lock(&self.log);
+        if log.closed.contains(&aim.id) {
+            return Err(ScrollError::Gone);
+        }
         if let Some(error) = log.turn_error {
             return Err(error);
         }

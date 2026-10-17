@@ -129,6 +129,25 @@ fn a_target_lives_until_its_window_closes() {
     assert!(!run.alive(&A) && run.alive(&B));
 }
 
+/// A closed window's later turns are `Gone`, as on Windows, and are not recorded; other targets still turn.
+#[test]
+fn a_closed_targets_later_turns_are_gone() {
+    let target = FakeScrollTarget::new();
+    let mut run = target.open(CONFIG).unwrap();
+    target.close(A.id);
+    assert_eq!(run.turn(&A, Dir::Down, 1.0), Err(ScrollError::Gone));
+    target.set_turn_error(Some(ScrollError::Refused));
+    assert_eq!(
+        run.turn(&A, Dir::Down, 1.0),
+        Err(ScrollError::Gone),
+        "gone wins"
+    );
+    target.set_turn_error(None);
+    assert_eq!(run.turn(&B, Dir::Up, 1.0), Ok(()));
+    let ids: Vec<TargetId> = target.turns().iter().map(|t| t.id).collect();
+    assert_eq!(ids, [B.id], "only the live target's turn");
+}
+
 #[test]
 fn a_dropped_run_closes_and_a_clone_sees_it() {
     let target = FakeScrollTarget::new();
