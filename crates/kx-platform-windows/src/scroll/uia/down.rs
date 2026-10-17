@@ -1,5 +1,6 @@
 //! The walk down a window to a point (ADR-0029): for a target our window covers, UI Automation goes down from the
-//! target window's element to the deepest one holding the point, as `ElementFromPoint` would without ours over it.
+//! target window's element to the deepest one holding the point, as `ElementFromPoint` would without ours over it, and
+//! never into a node of our own process.
 
 use kx_module_api::ports::Point;
 use windows::Win32::UI::Accessibility::{IUIAutomationElement, IUIAutomationTreeWalker};
@@ -16,10 +17,12 @@ pub(super) trait Tree {
     fn next(&self, node: &Self::Node) -> Option<Self::Node>;
     /// True when the box of `node` holds screen point `p`.
     fn holds(&self, node: &Self::Node, p: Point) -> bool;
+    /// True when our own process draws `node`; false when the tree cannot say.
+    fn ours(&self, node: &Self::Node) -> bool;
 }
 
 /// The deepest node down from `top` whose box holds `p`, taking the first such child at each level: `top` when no
-/// child holds it, and as deep as it got once `late` says the time is up.
+/// child holds it, and as deep as it got once `late` says the time is up or the child holding it is ours.
 pub(super) fn deepest<T: Tree>(
     tree: &T,
     top: T::Node,
@@ -33,6 +36,9 @@ pub(super) fn deepest<T: Tree>(
             break;
         }
         next = if tree.holds(&node, p) {
+            if tree.ours(&node) {
+                break;
+            }
             let below = tree.first(&node);
             at = node;
             below
@@ -64,6 +70,12 @@ impl Tree for View<'_> {
         // SAFETY: a plain property read on a live element; a failed read holds nothing.
         let edges = unsafe { node.CurrentBoundingRectangle() };
         edges.is_ok_and(|r| contains(rect_of([r.left, r.top, r.right, r.bottom]), p))
+    }
+
+    fn ours(&self, node: &IUIAutomationElement) -> bool {
+        // SAFETY: as above, for the node's process id.
+        let pid = unsafe { node.CurrentProcessId() };
+        pid.is_ok_and(|id| u32::try_from(id).is_ok_and(|id| id == std::process::id()))
     }
 }
 

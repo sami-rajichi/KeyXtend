@@ -17,7 +17,7 @@ use windows::Win32::UI::Accessibility::{
 use windows::core::{BOOL, Interface};
 
 use super::down::{View, deepest};
-use super::{Job, Read, Seek};
+use super::{DOWN_SHARE, Job, Read, Seek};
 use crate::com::Com;
 use crate::scroll::win::handle;
 
@@ -76,7 +76,7 @@ pub(super) fn client(read_ms: u32) -> Option<IUIAutomation> {
 }
 
 /// The element `seek` names; none when UI Automation cannot say. In a window, it goes down from the window's element
-/// to the deepest one holding the point, using half the time left before `by`, so the walk up keeps the rest.
+/// to the deepest one holding the point within its share of the time left before `by` (`DOWN_SHARE`).
 #[allow(unsafe_code, reason = "A UI Automation lookup.")]
 fn element(auto: &IUIAutomation, seek: Seek, by: Instant) -> Option<IUIAutomationElement> {
     match seek {
@@ -90,8 +90,8 @@ fn element(auto: &IUIAutomation, seek: Seek, by: Instant) -> Option<IUIAutomatio
                 return Some(top);
             };
             let now = Instant::now();
-            let half = now.checked_add(by.saturating_duration_since(now) / 2);
-            let late = || Instant::now() > half.unwrap_or(by);
+            let down_by = now.checked_add(by.saturating_duration_since(now) / DOWN_SHARE);
+            let late = || Instant::now() > down_by.unwrap_or(by);
             Some(deepest(&View(&walker), top, p, late))
         }
     }

@@ -20,6 +20,9 @@ use super::{Read, Seek};
 const THREAD: &str = "kx-scroll-uia";
 /// How many jobs a read may wait behind: the running one.
 const BEHIND: usize = 1;
+/// The walk down to a point gets the time left divided by this, and the walk up keeps the rest. The time is checked
+/// only between UI Automation calls, so one call can run past it.
+const DOWN_SHARE: u32 = 2;
 
 /// The thread's body: it serves the jobs in its inbox, counting each one done.
 type Body = fn(&Receiver<Job>, &AtomicUsize, u32);

@@ -1,5 +1,5 @@
 //! The walk down on a fake tree, a window holding a toolbar and a pane with a list and a preview: each level takes
-//! the first child holding the point, a leaf or a point no child holds ends it, and so does the time.
+//! the first child holding the point, a leaf or a point no child holds ends it, and so do the time and a node of ours.
 
 use std::cell::Cell;
 
@@ -60,8 +60,8 @@ const PREVIEW: usize = 4;
 /// The list's first item.
 const ITEM: usize = 5;
 
-/// The fake tree.
-struct Fake;
+/// The fake tree, with the nodes our own process draws.
+struct Fake(&'static [usize]);
 
 impl Tree for Fake {
     type Node = usize;
@@ -79,11 +79,15 @@ impl Tree for Fake {
     fn holds(&self, node: &usize, p: Point) -> bool {
         contains(BOXES[*node], p)
     }
+
+    fn ours(&self, node: &usize) -> bool {
+        self.0.contains(node)
+    }
 }
 
 /// Where the walk down from the window ends at `(x, y)`, with time to spare.
 fn down_to(x: i32, y: i32) -> usize {
-    deepest(&Fake, WINDOW, Point { x, y }, || false)
+    deepest(&Fake(&[]), WINDOW, Point { x, y }, || false)
 }
 
 #[test]
@@ -109,6 +113,20 @@ fn the_walk_ends_as_deep_as_it_got_once_the_time_is_up() {
         checks.set(checks.get() + 1);
         checks.get() > 2
     };
-    let at = deepest(&Fake, WINDOW, Point { x: 25, y: 15 }, late);
+    let at = deepest(&Fake(&[]), WINDOW, Point { x: 25, y: 15 }, late);
     assert_eq!(at, PANE, "the toolbar, then the pane, then time");
+}
+
+/// A node of our own process holding the point ends the walk above it, so the target is never read inside our window.
+#[test]
+fn the_walk_stops_above_a_node_of_ours() {
+    let p = Point { x: 25, y: 15 };
+    let down = |ours| deepest(&Fake(ours), WINDOW, p, || false);
+    assert_eq!(down(&[LIST]), PANE, "our list in their pane");
+    assert_eq!(down(&[ITEM]), LIST, "our item in their list");
+    assert_eq!(
+        down(&[PREVIEW]),
+        ITEM,
+        "ours away from the point changes nothing"
+    );
 }
