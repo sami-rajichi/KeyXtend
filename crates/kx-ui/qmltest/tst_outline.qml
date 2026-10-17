@@ -249,8 +249,8 @@ Item {
             compare(count("watchEntries"), 2, "never while the module is off");
         }
 
-        // The app's open list asks for its page mark at each guard try until it holds, the module running or not, so a
-        // pad tap aimed at it turns its page instead of passing over it.
+        // The app's open list asks for its page mark as it opens, then at each guard try until it holds, the module
+        // running or not, so a pad tap at once turns its page instead of passing over it.
         function test_the_apps_open_list_asks_for_its_page_mark_until_it_holds() {
             const a = createTemporaryObject(appC, root);
             a.ui.unpaged = 1;
@@ -267,10 +267,11 @@ Item {
             a.keyboard.state = Face.states.list;
             a.face.redraw(JSON.stringify({ board: true, state: true }));
             tryVerify(() => !!a.face.panel && a.face.panel.list.visible, 2000, "the list shows");
-            tryVerify(() => count() === 1, 5000, "asked at the guard's try");
-            verify(!a.face.panel.list.paged, "not guarded yet");
-            run();
-            tryCompare(a.face.panel.list, "paged", true, 5000, "asked again at the next try");
+            const opened = tries();
+            compare(count(), 1, "asked as it opened, before the guard's try");
+            verify(!a.face.panel.list.paged, "not held yet");
+            tryVerify(() => tries() > opened, 5000, "the guard tried");
+            tryCompare(a.face.panel.list, "paged", true, 5000, "asked again at the try");
             run();
             compare(count(), 2, "once it held");
         }

@@ -143,8 +143,9 @@ impl Hub {
         }
     }
 
-    /// Marks our window `title` as one that pages, so a pad tap aimed at it turns its page where the target passes over
-    /// our other windows; false while it does not show or when refused. The open list asks; call it on the UI thread.
+    /// Marks our window `title` as one that pages: while it shows, a pad tap turns its page whatever point was kept.
+    /// False while it does not show or when refused; the open list asks as it opens and at each guard try until it
+    /// holds. Call it on the UI thread.
     #[must_use]
     pub fn mark_pages(&self, title: &str) -> bool {
         let result = self.ports.guard.mark_pages(title);
