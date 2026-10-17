@@ -84,8 +84,9 @@ impl Hub {
     }
 
     /// Lets the waker go before the windows are made again: `Show` and `End` wait for the next `Ui` object, and an `End`
-    /// already sent goes to it again, as the last one may not have run it.
+    /// already sent goes to it again, as the last one may not have run it. The new keyboard's guard run starts afresh.
     pub fn drop_waker(&self) {
+        self.forget_guard_end();
         let mut live = self.lock();
         live.waker = None;
         if live.ended && !live.pending.contains(&Wake::End) {

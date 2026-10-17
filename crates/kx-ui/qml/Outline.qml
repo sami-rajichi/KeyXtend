@@ -17,6 +17,7 @@ QtObject {
     // The box to outline in Qt units, null for none.
     readonly property var box: st && st.area && face.lk && face.spots ? cut(st.area) : null
     // The box the edges lie inside: our own window's grows by an edge each way, as our opaque list lies over the edges.
+    // It is not cut again, as our list stays inside the work area; at worst one edge lies just past its screen's side.
     readonly property var ring: box && st.ours ? Qt.rect(box.x - px, box.y - px, box.width + 2 * px, box.height + 2 * px) : box
     // The ring colour, or Highlight in high contrast, as a key under the pointer is outlined there.
     readonly property color colour: face.lk ? (face.lk.contrast ? face.lk.hover_line : face.lk.palette.ring) : "transparent"

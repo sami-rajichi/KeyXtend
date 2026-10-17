@@ -42,6 +42,44 @@ fn a_guard_run_that_ends_with_the_watch_never_held_warns_once() {
     assert_eq!(warned.len(), 1, "{warned:?}");
 }
 
+/// A run that ends while the keyboard is away is never asked after; the next run's first try forgets it, so an ask
+/// between that run's tries stays quiet.
+#[test]
+fn a_run_end_nobody_asked_after_is_forgotten_at_the_next_runs_first_try() {
+    let (rig, bus, _subs) = heard();
+    bus.publish(&STILL).unwrap();
+    rig.guard.set_unguarded(true);
+    rig.guard.set_count(1);
+    let quiet = warnings_of(|| {
+        assert!(!rig.hub.guard(1, None), "the run ends, and nobody asks");
+        rig.guard.set_count(0);
+        assert!(rig.hub.guard(1, None), "the next run tries again");
+        assert!(!rig.hub.watch_entries(KB), "between its tries");
+    });
+    assert!(quiet.is_empty(), "{quiet:?}");
+}
+
+/// The windows made again, or the module stopped, forget the last run's end, so a new keyboard's ask before its own
+/// run is quiet without QML's unwatch.
+#[test]
+fn a_rebuild_or_a_module_stop_forgets_the_last_runs_end() {
+    for rebuild in [true, false] {
+        let (rig, bus, _subs) = heard();
+        bus.publish(&STILL).unwrap();
+        rig.guard.set_unguarded(true);
+        rig.guard.set_count(1);
+        assert!(!rig.hub.guard(1, None), "the run ends, and nobody asks");
+        if rebuild {
+            rig.hub.drop_waker();
+        } else {
+            bus.publish(&ScrollChanged::OFF).unwrap();
+            bus.publish(&STILL).unwrap();
+        }
+        let quiet = warnings_of(|| assert!(!rig.hub.watch_entries(KB)));
+        assert!(quiet.is_empty(), "rebuild {rebuild}: {quiet:?}");
+    }
+}
+
 /// A run that ended with the module off or before it stopped, or a keyboard not shown, never warns; a refusal still
 /// does at once.
 #[test]

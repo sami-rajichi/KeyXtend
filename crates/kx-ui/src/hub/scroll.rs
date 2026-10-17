@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-/// Why the keyboard's entries are not watched.
-const UNWATCHED: &str = "the keyboard's entries will not be watched";
+/// Why the keyboard's entries are not watched; it asks again at later guard tries.
+const UNWATCHED: &str = "the keyboard's entries are not watched yet";
 
 /// The scroll state as QML reads it.
 #[derive(Copy, Clone, PartialEq, Eq, Serialize)]
@@ -106,12 +106,15 @@ impl Hub {
         json(&*self.scroll.lock())
     }
 
-    /// Takes the scroll module's state for the outline and the badge; a module that stops takes its outline along.
+    /// Takes the scroll module's state for the outline and the badge; a module that stops takes its outline and its last
+    /// guard run's end along.
     pub(super) fn scroll_changed(&self, now: ScrollChanged) {
         self.scroll_change(|s| {
             let (area, ours) = if now.live {
                 (s.area, s.ours)
             } else {
+                // Under the state's lock, so a guard try that read the module live cannot store its end after this.
+                self.forget_guard_end();
                 (None, false)
             };
             *s = Shown {
@@ -216,14 +219,21 @@ impl Hub {
 
     /// Notes whether a guard try ended its run; only a run that ends while the scroll module is live counts.
     pub(super) fn guard_tried(&self, ended: bool) {
-        let live = self.scroll.lock().live;
-        self.scroll.ended.store(ended && live, Ordering::SeqCst);
+        let shown = self.scroll.lock();
+        self.scroll
+            .ended
+            .store(ended && shown.live, Ordering::SeqCst);
+    }
+
+    /// Forgets the end of the last guard run, as the module stops or the windows are made again.
+    pub(super) fn forget_guard_end(&self) {
+        self.scroll.ended.store(false, Ordering::SeqCst);
     }
 
     /// Stops keeping the pointer's last point outside our windows titled `title`, shown or not, and forgets the point
     /// kept and the end of the module's last guard run; `watch_entries` starts again. Call it on the UI thread.
     pub fn unwatch_entries(&self, title: &str) {
-        self.scroll.ended.store(false, Ordering::SeqCst);
+        self.forget_guard_end();
         self.ports.guard.unwatch_entries(title);
     }
 
