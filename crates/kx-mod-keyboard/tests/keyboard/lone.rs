@@ -1,12 +1,13 @@
 //! The lone Win press (owner, 2026-10-17): a second click on Win with nothing used since the first lets go and sends
 //! Win alone, so Start opens; a key, Caps Lock, a mouse click or another latch between lets it go quietly.
 
-use crate::typing::{Rig, chord, tap};
+use crate::typing::{Rig, chord, tap, unicode};
 use kx_mod_keyboard::{Latch, Modifiers, TapError, Tapped};
 use kx_module_api::ports::InjectError;
 
 const WIN: u16 = 0xE05B;
 const SHIFT: u16 = 0x2A;
+const CTRL: u16 = 0x1D;
 const E: u16 = 0x12;
 const S: u16 = 0x1F;
 const CAPS: u16 = 0x3A;
@@ -85,13 +86,23 @@ fn win_shift_s_goes_out_as_one_shortcut() {
 }
 
 #[test]
-fn a_latch_on_before_win_does_not_use_it() {
-    let mut r = rig(Modifiers::Stay);
-    for id in ["shift", "win", "win"] {
-        r.tap(id).unwrap();
+fn a_latch_on_before_win_lets_go_after_the_lone_press_as_its_mode_says() {
+    for mode in MODES {
+        let mut r = rig(mode);
+        for id in ["ctrl", "win", "win"] {
+            r.tap(id).unwrap();
+        }
+        assert_eq!(r.sent(), [tap(WIN)], "Win alone, without Ctrl");
+        let stay = mode == Modifiers::Stay;
+        assert_eq!(r.typing.latches().is_on(Latch::Ctrl), stay, "{mode:?}");
+        r.char(E).unwrap();
+        let next = if stay {
+            chord(&[CTRL], E)
+        } else {
+            unicode("e")
+        };
+        assert_eq!(r.sent(), [next], "{mode:?}: the key after it");
     }
-    assert_eq!(r.sent(), [tap(WIN)], "Win alone, nothing after it");
-    assert!(r.typing.latches().is_on(Latch::Shift), "Shift stays");
 }
 
 #[test]

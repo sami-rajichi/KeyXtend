@@ -202,7 +202,7 @@ Each shortcut maps to the platform's combination, for example Ctrl+C on Windows 
 - Shift, Ctrl, Alt, Win and AltGr: **one click = held**, shown filled with the LED on. **Click again = released.**
 - **Release after next key** (default): a held modifier releases automatically after the next non-modifier key. Setting **"Stay held"**: it stays down until clicked again.
 - There is no third "lock" state; the owner found it confusing.
-- **Win alone** (owner, 2026-10-17): clicking Win again with nothing used since it latched (no key, modifier + click or other latch) lets go and sends a lone Win press, so Start opens as with a real key; otherwise it only lets go. A latch key opts in with `lone` in `board.toml`; never Alt, whose lone press opens the app's menu bar.
+- **Win alone** (owner, 2026-10-17): clicking Win again with nothing used since it latched (no key, Caps Lock, modifier + click, or a latch latched after it) lets go and sends a lone Win press, so Start opens as with a real key; otherwise it only lets go. The lone press goes out without the other latches, which then let go or stay as after any key. A latch key opts in with `lone` in `board.toml`; never Alt, whose lone press opens the app's menu bar.
 - **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift ("Verr. Maj" in French, §3.6).
 - **Modifier + mouse:** while a modifier is held, the next mouse click is sent with that modifier down, so Shift+click extends a selection and Ctrl+click multi-selects. This is essential for one-button users.
 - Keys pressed while one of our panels is open go to that panel (§3.3), not to the target app.

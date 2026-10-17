@@ -26,7 +26,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `char` | Types the character of the layout shown; only the keys of a `chars` run have it. |
 | `send` | Sends its scan code with the latched modifiers. |
 | `caps` | Sends Caps Lock and lights while it is on. |
-| `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win; with `lone = true` (Win only), a second click with nothing used since the first lets go and sends the key alone, so Start opens. |
+| `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win; with `lone = true` (Win only), a second click while it is unspent lets go and sends the key alone, so Start opens. |
 | `lang` | Steps through or picks the layouts. |
 | `assist` | Asks the mouse module to flip Right-click (`rclick`) or Grab (`grab`); see "Mouse assist on the bus". |
 | `later` | Nothing: the other side keys come in a later version and are drawn dimmed. |
@@ -53,12 +53,12 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Any character key sent as a scan code while the app in front has another installed layout | Nothing is sent; `Tapped::Stale`, so the face refreshes the layouts and redraws, and the user clicks again | Kept | Kept |
 | Any other character key | Its text as Unicode, or as key presses in the app's layout (`TextRoute::Keys`) when the app is in `key_apps`; Shift, Caps Lock and `AltGr` are already in the text | Used, none held | None |
 | A `send` key | Tap, or a chord with every latch held | Used | Kept only if the key typed nothing |
-| Caps Lock | Tap | Kept, used | Kept |
-| A modifier | Nothing, or its key alone for a `lone` latch let go unused; it latches or lets go | Toggled; latching uses those already on | Kept |
+| Caps Lock | Tap | Kept, spent | Kept |
+| A modifier | Nothing, or its key alone for a `lone` latch let go unspent; it latches or lets go | Toggled; latching spends those already on, and a lone press uses them without holding them | Kept |
 | The language key, a `later` key, a mouse-assist key | Nothing; `Tapped::Lang`, `Tapped::Later` or `Tapped::Assist` for the face | Kept | Kept |
 | An id not on the board | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
 
-"Used" means `release` lets every latch go and `stay` keeps them; `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows. Caps Lock that types nothing falls back to the same state without it; Shift or `AltGr` never fall back, so such a key shows no main or second legend and types nothing (`is_empty`, one rule for the plan and the view). A Ctrl, Alt, Win or Right Alt latch makes no key empty, as its click sends the shortcut. A key whose base is an Arabic letter shows no `AltGr` corner, which would crowd the letter; it shows its `AltGr` character when `AltGr` is latched. A layout cell holds only visible text: the adapter reads a control or U+0000 as empty.
+"Used" means `release` lets every latch go and `stay` keeps them, spent. "Spent" keeps a latch on, but Win no longer sends itself alone. `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows. Caps Lock that types nothing falls back to the same state without it; Shift or `AltGr` never fall back, so such a key shows no main or second legend and types nothing (`is_empty`, one rule for the plan and the view). A Ctrl, Alt, Win or Right Alt latch makes no key empty, as its click sends the shortcut. A key whose base is an Arabic letter shows no `AltGr` corner, which would crowd the letter; it shows its `AltGr` character when `AltGr` is latched. A layout cell holds only visible text: the adapter reads a control or U+0000 as empty.
 
 ## The face
 
@@ -157,8 +157,8 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
-- `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `held`, `used`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
+- `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `unused`, `held`, `used`, `spend`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.

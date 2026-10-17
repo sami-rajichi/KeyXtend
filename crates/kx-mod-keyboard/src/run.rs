@@ -229,12 +229,15 @@ impl Typing {
     }
 
     /// A click on the latch key sending `key`: latches `r` or lets it go. A lone latch let go unused first sends
-    /// `key` alone; refused whole, it stays latched.
+    /// `key` alone, which uses the other latches as any key does; refused whole, it stays latched.
     fn latch(&mut self, io: &Io<'_>, r: LatchRole, key: Scan) -> Result<(), TapError> {
         let lone = r.lone && self.latches.unused(r.latch);
         let went = if lone { io.injector.tap(key) } else { Ok(()) };
         if reached(went) {
             self.latches.toggle(r.latch, key);
+            if lone {
+                self.used();
+            }
         }
         Ok(went?)
     }

@@ -1,6 +1,6 @@
-//! Any run of clicks on the board, in both latch modes: "release" lets every latch go after the next key,
-//! "stay" keeps each until it is clicked again, an empty key keeps them, no key ever holds a modifier that was
-//! not latched, and only Win, let go with nothing used since it latched, sends itself alone.
+//! Any run of key and mouse clicks, in both latch modes: "release" lets every latch go after the next key or click,
+//! "stay" keeps each until it is clicked again, and an empty key keeps them. No key holds a modifier that was not
+//! latched, and only Win, let go with nothing used since it latched, sends itself alone.
 
 use crate::typing::Rig;
 use kx_mod_keyboard::legend::is_empty;
@@ -32,9 +32,11 @@ enum Kind {
     Caps,
     /// Sends nothing.
     Quiet,
+    /// A mouse click with the latches held (modifier + click), which uses them.
+    Click,
 }
 
-/// The keys a run clicks, with what each does.
+/// The keys a run clicks, and the mouse, with what each does.
 fn keys() -> Vec<(String, Kind)> {
     let latch = |id: &str, l, code| (id.to_owned(), Kind::Latch(l, code, l == Latch::Win));
     let chars =
@@ -50,6 +52,7 @@ fn keys() -> Vec<(String, Kind)> {
         ("caps".to_owned(), Kind::Caps),
         ("lang".to_owned(), Kind::Quiet),
         ("mic".to_owned(), Kind::Quiet),
+        ("mouse".to_owned(), Kind::Click),
     ];
     all.extend(chars);
     all.extend(named);
@@ -82,10 +85,22 @@ fn spend(model: &mut Model) {
     }
 }
 
+/// Something went out that uses the latches: each is used, and `release` lets them all go.
+fn used(model: &mut Model, release: bool) {
+    spend(model);
+    if release {
+        model.clear();
+    }
+}
+
 /// A click on a latch key with `code`: what it must send, as the model says, and the model after it.
-fn toggle(model: &mut Model, l: Latch, code: u16, lone: bool) -> Vec<Stroke> {
+/// A lone press uses the other latches as any key does, but goes out without them.
+fn toggle(model: &mut Model, l: Latch, code: u16, lone: bool, release: bool) -> Vec<Stroke> {
     match model.remove(&l) {
-        Some((_, false)) if lone => vec![Stroke::Tap(Scan::new(code))],
+        Some((_, false)) if lone => {
+            used(model, release);
+            vec![Stroke::Tap(Scan::new(code))]
+        }
         Some(_) => Vec::new(),
         None => {
             spend(model);
@@ -107,29 +122,42 @@ fn agrees(r: &Rig, model: &Model) -> Result<(), TestCaseError> {
     Ok(())
 }
 
+/// Clicks key `id`, or the mouse for `Kind::Click`: what went out, and for the mouse whether any latch let go.
+fn click(r: &mut Rig, id: &str, kind: Kind) -> Result<(Vec<Stroke>, Option<bool>), TestCaseError> {
+    let freed = if matches!(kind, Kind::Click) {
+        Some(r.typing.clicked())
+    } else {
+        r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
+        None
+    };
+    Ok((r.sent(), freed))
+}
+
 /// Clicks `picks` of `keys()` on `layout` in `mode`, checking each click against a model of the latches.
 fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseError> {
     let keys = keys();
+    let release = mode == Modifiers::Release;
     let mut r = Rig::new(layout, |s| s.modifiers = mode);
     let mut model = Model::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
         let quiet = matches!(*kind, Kind::Char(code) if empty(&r, code));
-        r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
-        let sent = r.sent();
+        let (sent, freed) = click(&mut r, id, *kind)?;
         let latched: Vec<Scan> = model.values().map(|&(key, _)| key).collect();
         prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
         match *kind {
             Kind::Latch(l, code, lone) => {
-                prop_assert_eq!(sent, toggle(&mut model, l, code, lone), "{}", id);
+                prop_assert_eq!(sent, toggle(&mut model, l, code, lone, release), "{}", id);
             }
             Kind::Char(_) if quiet => prop_assert!(sent.is_empty(), "{}: empty", id),
             Kind::Key | Kind::Char(_) => {
                 prop_assert_eq!(sent.len(), 1);
-                spend(&mut model);
-                if mode == Modifiers::Release {
-                    model.clear();
-                }
+                used(&mut model, release);
+            }
+            Kind::Click => {
+                prop_assert!(sent.is_empty(), "a mouse click sends no key");
+                prop_assert_eq!(freed, Some(release && !model.is_empty()));
+                used(&mut model, release);
             }
             Kind::Caps => {
                 prop_assert_eq!(sent.len(), 1);
