@@ -148,6 +148,20 @@ fn a_closed_targets_later_turns_are_gone() {
     assert_eq!(ids, [B.id], "only the live target's turn");
 }
 
+/// A closed window reads `Unknown` whatever was set, as Windows' read of a dead handle misses; the read still counts.
+#[test]
+fn a_closed_targets_reach_is_unknown() {
+    let target = FakeScrollTarget::new();
+    let mut run = target.open(CONFIG).unwrap();
+    target.set_reach(Dir::Down, Reach::End);
+    target.set_reach_for(A.id, Dir::Up, Reach::More);
+    target.close(A.id);
+    assert_eq!(run.reach(&A, Dir::Down), Reach::Unknown);
+    assert_eq!(run.reach(&A, Dir::Up), Reach::Unknown);
+    assert_eq!(run.reach(&B, Dir::Down), Reach::End, "a live one keeps it");
+    assert_eq!(target.reaches(), 3);
+}
+
 #[test]
 fn a_dropped_run_closes_and_a_clone_sees_it() {
     let target = FakeScrollTarget::new();

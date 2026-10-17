@@ -47,7 +47,8 @@ impl Dir {
 /// How the platform finds, reads and moves targets; the module fills it from its settings.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ScrollConfig {
-    /// How many ms a target may stay still under our steps, short of its end, before the platform tries another way.
+    /// How many ms a target may stay still under our steps, short of its end, before the platform tries another way,
+    /// or, on that way, reads it as the end.
     pub check_ms: u32,
     /// The longest one read of a target may take, in ms.
     pub read_ms: u32,

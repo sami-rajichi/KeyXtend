@@ -84,7 +84,7 @@ pub trait WindowGuard: Send + Sync {
 
     /// Until `unwatch_entries`, each time the pointer enters our guarded window titled `title`, keeps the last point it
     /// was at outside that window, for the scroll target (ADR-0029); a call for the UI thread. `Unguarded` while the
-    /// window shows but the guard does not hold it yet, so a later guard try asks again.
+    /// window shows but the guard does not hold it yet; the caller asks again after a later guard try.
     ///
     /// # Errors
     /// `NoWindow` while no such window shows, `Refused` when the OS says no.

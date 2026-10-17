@@ -56,9 +56,12 @@ impl Log {
         self.last.unwrap_or(Err(ScrollError::NoTarget))
     }
 
-    /// The target's own reach that way, else the way's, else `Unknown`.
+    /// `Unknown` for a closed target, else its own reach that way, else the way's, else `Unknown`.
     fn reach(&mut self, id: TargetId, dir: Dir) -> Reach {
         self.read += 1;
+        if self.closed.contains(&id) {
+            return Reach::Unknown;
+        }
         let own = self.reach.get(&(Some(id), dir));
         let any = || self.reach.get(&(None, dir));
         own.or_else(any).copied().unwrap_or(Reach::Unknown)
@@ -66,8 +69,8 @@ impl Log {
 }
 
 /// A scroll target the test scripts, shared by its clones: each `aim` takes the next scripted result, the latest
-/// repeating once they run out (`NoTarget` before any), a reach is as set, `Unknown` by default, and a target lives
-/// and turns until closed.
+/// repeating once they run out (`NoTarget` before any), a reach is as set, `Unknown` by default, and a target lives,
+/// turns and reads until closed.
 ///
 /// A turn by lines that are not finite or are below zero is a caller bug and panics.
 #[derive(Clone, Default)]
@@ -102,7 +105,8 @@ impl FakeScrollTarget {
         lock(&self.log).fail = Some(error);
     }
 
-    /// Closes target `id`'s window: from now on it is not alive and its turns are `Gone`, recording none.
+    /// Closes target `id`'s window: from now on it is not alive, its turns are `Gone`, recording none, and its reach
+    /// is `Unknown`, as Windows' read of a dead window misses.
     pub fn close(&self, id: TargetId) {
         lock(&self.log).closed.push(id);
     }
