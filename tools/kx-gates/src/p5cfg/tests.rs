@@ -8,8 +8,8 @@ use crate::config::load;
 const DPAD_QML: &str = include_str!("../../../../crates/kx-ui/qml/DPad.qml");
 /// Stop and its id.
 const STOP_QML: &str = include_str!("../../../../crates/kx-ui/qml/Stop.qml");
-/// The keyboard window, whose `uid` joins a group and an id.
-const KB_QML: &str = include_str!("../../../../crates/kx-ui/qml/KbWindow.qml");
+/// The keyboard window's kit, whose `uid` joins a group and an id.
+const KIT_QML: &str = include_str!("../../../../crates/kx-ui/qml/KbRes.qml");
 /// The outline and its edge windows.
 const OUTLINE_QML: &str = include_str!("../../../../crates/kx-ui/qml/Outline.qml");
 
@@ -130,7 +130,7 @@ fn the_pad_ids_are_the_ones_kx_ui_gives_its_arrows_and_stop() {
     assert!(arrows, "arrows");
     assert!(STOP_QML.contains(&format!("{group}pad.stopId)")), "Stop");
     assert!(DPAD_QML.contains(&format!("stopId: \"{}\"", pad.stop)));
-    assert!(KB_QML.contains(&format!("group + \"{SEP}\" + id")), "uid");
+    assert!(KIT_QML.contains(&format!("group + \"{SEP}\" + id")), "uid");
     for dir in Dir::ALL {
         let id = pad.arrow(dir);
         let part = id.strip_prefix(&format!("{}{SEP}", pad.group));
