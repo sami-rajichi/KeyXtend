@@ -153,7 +153,7 @@ Window {
         if (st && next)
             st = Object.assign({}, next, { keys: Object.assign({}, st.keys, next.keys) });
         board = JSON.parse(keyboard.boardJson());
-        restate();
+        restate(next);
     }
     // The keyboard's language changed: only its texts are read again, and a tip in the last language closes (Tip).
     function retext() {
@@ -168,9 +168,10 @@ Window {
         if (visible)
             frosted = ui.backdrop(title);
     }
-    // Reads the legends, lights and place again; the window goes where the keyboard says, unless it is moving.
-    function restate() {
-        st = JSON.parse(keyboard.stateJson());
+    // Reads the legends, lights and place again, or takes `next`, a state just read; the window goes where the keyboard
+    // says, unless it is moving.
+    function restate(next) {
+        st = next !== undefined ? next : JSON.parse(keyboard.stateJson());
         if (st && st.at && !(mover && mover.busy))
             moveTo(st.at);
     }

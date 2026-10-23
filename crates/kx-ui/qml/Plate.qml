@@ -1,6 +1,5 @@
-// The keyboard window's body: the plate with its top bar, keys, D-pad and resize corner, and the mover over it all.
-// The window loads it only once the settings, look, board and state have all read. While the shortcuts layer shows,
-// its cells take the side block and the pad hides; each cell new to the side block swaps in (Swap).
+// The keyboard window's body, loaded once everything has read: the plate with its top bar, main keys, side block,
+// D-pad and resize corner, and the mover over it all. The shortcuts layer takes the side block and hides the pad.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -22,6 +21,9 @@ Item {
     readonly property color plateColour: lk.palette.plate
     // The shortcuts layer shows; the pad swaps back in when it goes.
     readonly property bool layered: !!board.layer
+    // The board's main keys, then its side block, which a flip of the shortcuts layer alone makes again.
+    readonly property var mains: board.keys.filter(k => !k.side)
+    readonly property var sides: board.keys.filter(k => k.side)
 
     onLayeredChanged: if (!layered) padSwap.play()
 
@@ -75,41 +77,15 @@ Item {
             onClose: body.win.putAway()
             onTip: (name, at) => body.win.hint(name, at)
         }
-        // A count, not the list: a new size then moves the keys instead of making them all again.
-        Repeater {
-            model: body.board.keys.length
-            delegate: Key {
-                id: cell
-                required property int index
-                // It is swapping in now.
-                readonly property bool swapping: swap.running
-                kv: body.board.keys[index]
-                ks: kv ? body.st.keys[kv.id] : null
-                lk: body.lk
-                lang: body.st.lang
-                paging: body.st.layer
-                design: body.board.lang_key
-                res: body.res
-                s: body.s
-                transform: Translate {
-                    id: lift
-                }
-                Component.onCompleted: if (body.fresh(kv)) swap.play()
-                onKvChanged: if (body.fresh(kv)) swap.play()
-                onHit: back => body.win.presses.tap(kv.id, back)
-                onHeld: body.win.presses.hold(kv.id)
-                onLetGo: body.win.presses.letGo(kv.id)
-                onLost: body.win.presses.leave()
-                onTip: (name, at) => body.win.hint(name, at)
-
-                Swap {
-                    id: swap
-                    target: cell
-                    shift: lift
-                    lk: body.lk
-                    s: body.s
-                }
-            }
+        KeyBlock {
+            anchors.fill: parent
+            plate: body
+            keys: body.mains
+        }
+        KeyBlock {
+            anchors.fill: parent
+            plate: body
+            keys: body.sides
         }
         DPad {
             id: pad
@@ -119,7 +95,7 @@ Item {
             box: Object.assign({}, body.board.dpad, body.st.dpad)
             visible: !body.layered
             transform: Translate {
-                id: padLift
+                id: padRise
             }
             lk: body.lk
             res: body.res
@@ -131,7 +107,7 @@ Item {
             Swap {
                 id: padSwap
                 target: pad
-                shift: padLift
+                shift: padRise
                 lk: body.lk
                 s: body.s
             }

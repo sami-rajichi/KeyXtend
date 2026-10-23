@@ -39,6 +39,7 @@ mod qt {
         "qml/TopBar.qml",
         "qml/Chip.qml",
         "qml/Key.qml",
+        "qml/KeyBlock.qml",
         "qml/KeyText.qml",
         "qml/CharLegends.qml",
         "qml/SpaceText.qml",

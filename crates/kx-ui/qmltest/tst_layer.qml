@@ -78,6 +78,10 @@ Item {
             compare(hits.length, 1, id);
             return hits[0];
         }
+        // The keys the window draws, in the order readers meet them.
+        function keys(win) {
+            return Board.all(win.contentItem, o => o.kv !== undefined && o.later !== undefined);
+        }
         // The shortcut cells the board draws now.
         function cells(win) {
             return win.board.keys.filter(k => k.side && k.icon_only);
@@ -189,6 +193,39 @@ Item {
             win.redraw(JSON.stringify({ board: true }));
             compare(dots(win).length, 0, "none on a key it does not mark");
             compare(shown(keyed(win, "layer-next")).icons, [win.lk.icons.layer.next], "its chevron alone");
+        }
+
+        function test_a_flip_makes_only_the_side_block_again_and_keeps_the_reading_order() {
+            const win = make("main");
+            const esc = keyed(win, "esc");
+            for (const page of ["layer-1", "main"]) {
+                turn(win, page);
+                verify(keyed(win, "esc") === esc, "the main keys stay on " + page);
+                compare(keys(win).map(k => k.Accessible.id), win.board.keys.map(k => k.id), "the board's order on " + page);
+            }
+        }
+
+        function test_a_page_with_as_many_keys_turns_its_cells_from_icons_to_text_and_back() {
+            const win = make("layer-1");
+            // Page 1 less a cell has as many keys as page 3, so its keys stay and change their faces.
+            const page = Face.layers["layer-1"];
+            const like = Object.assign({}, page, { keys: page.keys.filter(k => k.id !== "sc-emoji") });
+            compare(like.keys.length, Face.layers["layer-3"].keys.length);
+            win.keyboard.board = like;
+            win.redraw(JSON.stringify({ board: true }));
+            const kept = keys(win);
+            turn(win, "layer-3");
+            verify(keys(win).every((k, i) => k === kept[i]), "the same keys");
+            const f5 = keyed(win, "sc-f5");
+            compare(shown(f5), { texts: [En.texts["shortcut.f5"]], icons: [] });
+            const label = Board.all(f5, o => o.renderType !== undefined && o.text === En.texts["shortcut.f5"])[0];
+            fuzzyCompare(label.mapToItem(f5, label.width / 2, 0).x, f5.width / 2, 0.5, "its label centred");
+            win.keyboard.board = like;
+            win.keyboard.state = Face.states["layer-1"];
+            win.redraw(JSON.stringify({ board: true }));
+            const copy = keyed(win, "sc-copy");
+            compare(shown(copy), { texts: [], icons: [win.lk.icons.shortcuts.copy] }, "an icon again");
+            compare(copy.Accessible.name, En.texts["shortcut.copy"]);
         }
 
         function test_the_pad_hides_while_the_layer_shows() {
