@@ -21,7 +21,8 @@ impl Inner {
     pub(in crate::face) fn press(&mut self, id: &str) -> Went {
         let ended = self.ended().state;
         let table = self.ports.layouts.current();
-        let io = self.ports.io(&table);
+        let cells = self.layer.cells();
+        let io = self.ports.io(&table, &cells);
         let may = self.settings.repeat && self.list.is_none();
         let repeats = may && self.typing.repeats(&io, id);
         if repeats {
@@ -45,7 +46,8 @@ impl Inner {
         let id = self.repeat.tick(self.ports.clock.now())?;
         self.typing.hold();
         let table = self.ports.layouts.current();
-        let io = self.ports.io(&table);
+        let cells = self.layer.cells();
+        let io = self.ports.io(&table, &cells);
         let tapped = self.typing.tap(&io, &id, false);
         let on = matches!(tapped, Ok(Tapped::Done)) && self.typing.repeats(&io, &id);
         let ended = !on && self.ended().state;

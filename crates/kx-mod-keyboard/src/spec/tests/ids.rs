@@ -12,17 +12,18 @@ fn character_ids_name_their_scan_code() {
 }
 
 #[test]
-fn right_click_and_grab_flip_mouse_assist_and_the_other_side_keys_come_later() {
+fn side_keys_flip_mouse_assist_show_the_layer_ask_for_power_or_come_later() {
     let s = BoardSpec::shipped().unwrap();
     let role = |id: &str| s.side.iter().find(|k| k.id == id).unwrap().role;
     assert_eq!(role("rclick"), Role::Assist(Assist::RClick));
     assert_eq!(role("grab"), Role::Assist(Assist::Grab));
-    let rest: Vec<_> = s
-        .side
-        .iter()
-        .filter(|k| !matches!(k.role, Role::Assist(_)))
-        .collect();
-    assert_eq!(rest.len(), 7);
+    assert_eq!(
+        (role("shortcuts"), role("power")),
+        (Role::Layer, Role::Power)
+    );
+    let now = |r: Role| matches!(r, Role::Assist(_) | Role::Layer | Role::Power);
+    let rest: Vec<_> = s.side.iter().filter(|k| !now(k.role)).collect();
+    assert_eq!(rest.len(), 5);
     assert!(rest.iter().all(|k| k.role == Role::Later));
     assert_eq!(Toggle::from(Assist::RClick), Toggle::RightClick);
     assert_eq!(Toggle::from(Assist::Grab), Toggle::Grab);

@@ -45,8 +45,9 @@ apps/
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update) (P8)
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer
-                         hook's too: ADR-0027, the scroll target's: ADR-0029), events, Clock
-                         and Mono, settings contract, notices, Redacted<T>
+                         hook's too: ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated
+                         by `InjectInput`, and `PowerDialog`, by `Capability::Power`: ADR-0031),
+                         events, Clock and Mono, settings contract, notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
@@ -56,19 +57,26 @@ crates/
                          SystemLook, Backdrop, Instance, Tray: ADR-0019, Memory: ADR-0023,
                          Speaker: P4)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
-                         sound, and the scroll target (`scroll`)
+                         sound, the scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the
+                         `shortcuts.toml` and `keynames.toml` tables) and the power dialog (`WinPower`)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
                          golden layout tables, a layouts service, the UI ports and the speaker);
                          `FakePointerHook` runs an engine on the test's thread, and its `let_go`
                          and `give_up` act as the real host does; `FakeScrollTarget` answers
-                         scripted aims and reaches and records turns; kx-module-api's contract
-                         test uses it too
+                         scripted aims and reaches and records turns; `FakeShortcuts` lists
+                         scripted shortcuts and records sends with their held keys,
+                         `FakePowerDialog` counts opens or fails on cue, and the fake layout
+                         source's `types_any` follows a held Ctrl as Windows does (P6);
+                         kx-module-api's contract test uses it too
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
-                         language, the tray's in the system's (ADR-0020)
+                         language, the tray's in the system's (ADR-0020); the `keysTip` and `keysText` bridge
+                         calls name a shortcut's keys in the keyboard's language, `layerPageText` the layer's
+                         page for readers, and `PageDots.qml` draws the page dots the Next key and the Cycle
+                         design share (P6)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view,
                          WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
                          the high-contrast palette, and the strict reader kx-ui's build checks sounds with; no
@@ -78,7 +86,10 @@ crates/
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
                          the face (board and state JSON, clicks, and the board's row height,
                          `row_px`, for the theme's contrast check) and the language key's
-                         Carousel, Cycle and List; `[keyboard]` settings. Shortcuts (P6)
+                         Carousel, Cycle and List; `[keyboard]` settings. The side roles
+                         `layer` (the Shortcuts key) and `power` (asks the power module over
+                         the bus), the layer's generated `shortcut` and `next` cells, the pure
+                         `layer.rs` (pages, cells, Next) and the `shortcut_pages` setting (P6)
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`
@@ -86,13 +97,15 @@ crates/
                          the pad scrolls, to tell presses (`PointerPressed`) and move the badge (P5)
   kx-mod-scroll/        the scroll pad: the tap machine (`pad`), the glide (`glide`), the stop rules
                          (`stops`) and the actor, over the `ScrollTarget` port; `[scroll]` (P5)
+  kx-mod-power/         the Power key's module: an actor that opens the system's own power dialog over
+                         the `PowerDialog` port at each click, each open on a short thread of its own,
+                         and tells the keyboard whether it runs; no settings (P6)
   kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions (P7)
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)
   kx-mod-selection/     selection helper (P10)
   kx-mod-voice/         voice UI + worker client (engine lives in the worker) (P11)
   kx-mod-snip/          capture overlay, editor, OCR client (P12)
-  kx-mod-power/         power dialog (P6)
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20 (P8)
   kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests; it
                          depends on kx-settings, whose key names its fake settings sink checks as the store does
@@ -158,7 +171,7 @@ pub trait Module: Send + 'static {
   - `Kernel::retry` (Try again) moves `Failed → Starting`, and restarts the features that wait on it.
   - Switching a module off stops the active modules that need it, then the module itself, which ends `Stopped`. From `Pending` or `Failed` the module is skipped, with no failure notice.
   - Switching it on moves `Stopped → Starting`. A module that waits for a switched-off module stays `Stopped`, with no notice.
-- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`.
+- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`, `Shortcuts` and `PowerDialog` (ADR-0031).
   - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused, and only the kernel builds a module's `Grants`.
   - A provider must itself hold the capability that gates its service.
 - **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
@@ -265,3 +278,4 @@ pub trait Module: Send + 'static {
 | Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
+| Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |

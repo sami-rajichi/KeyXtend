@@ -1,4 +1,4 @@
-//! Sizes that apply across the look: line widths, dimmed keys and the plate over a backdrop.
+//! Sizes that apply across the look: line widths, dimmed keys, the plate over a backdrop and the dots two keys share.
 
 use serde::{Deserialize, Serialize};
 
@@ -24,4 +24,20 @@ pub struct DimShape {
 pub struct BackdropShape {
     /// The share of its colour the plate keeps.
     pub plate: f32,
+}
+
+/// One dot per layout on the language key's Cycle design, and per page under the Next key (`.dots`).
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DotsShape {
+    /// Diameter.
+    pub px: f32,
+    /// The lit dot's diameter, larger so it stands out from the unlit ones.
+    pub on_px: f32,
+    /// Gap between dots.
+    pub gap_px: f32,
+    /// Opacity of a dot whose layout or page is not shown.
+    pub off: f32,
+    /// Where the Next key's dots start in its chevron's box, as a share of the box from its top.
+    pub next_at: f32,
 }

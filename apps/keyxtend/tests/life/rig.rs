@@ -1,23 +1,29 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook and scroll target, and the shared fake UI ports; a waker keeps
-//! every wake.
+//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts and power dialog, and the shared fake
+//! UI ports; a waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
 use kx_module_api::ports::Scan;
+use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakeScrollTarget, FakeTray,
+    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
+    FakeScrollTarget, FakeShortcuts, FakeTray,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
+use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// The captured layout tables: English, French AZERTY and Arabic (102) AZERTY.
 const GOLDEN: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
+/// The longest a test waits for a module's thread; it never sleeps.
+pub const WAIT: Duration = Duration::from_secs(10);
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {
@@ -33,6 +39,10 @@ pub struct Rig {
     pub pointer: Arc<FakePointerHook>,
     /// Behind the scroll target.
     pub scroll: Arc<FakeScrollTarget>,
+    /// Behind the shortcuts, knowing none until a test sets them.
+    pub shortcuts: Arc<FakeShortcuts>,
+    /// Behind the power dialog, which counts its opens.
+    pub power: Arc<FakePowerDialog>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
 }
@@ -49,6 +59,8 @@ impl Rig {
             layouts: Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap()),
             pointer: Arc::new(FakePointerHook::new()),
             scroll: Arc::new(FakeScrollTarget::new()),
+            shortcuts: Arc::new(FakeShortcuts::new()),
+            power: Arc::new(FakePowerDialog::new()),
             tray: tray(),
         }
     }
@@ -74,10 +86,21 @@ impl Rig {
             layouts: self.layouts.clone(),
             pointer: self.pointer.clone(),
             scroll: self.scroll.clone(),
+            shortcuts: self.shortcuts.clone(),
+            power: self.power.clone(),
         };
         let ports = ports(self.tray.clone());
         Boot::load(self.platform(), services, ports).unwrap()
     }
+}
+
+/// Sends every `E` published on `bus` to the returned channel.
+pub fn hear<E: Event + Clone>(bus: &Bus) -> (Subscription, Receiver<E>) {
+    let (tx, rx) = mpsc::channel();
+    let ear = bus.subscribe(move |e: &E| {
+        let _ = tx.send(e.clone());
+    });
+    (ear.unwrap(), rx)
 }
 
 /// Every wake the hub hands the UI, oldest first.

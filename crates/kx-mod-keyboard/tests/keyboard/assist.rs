@@ -123,20 +123,17 @@ fn off(k: &Value) -> bool {
 }
 
 #[test]
-fn the_board_makes_both_keys_checkable_and_never_dims_them_and_the_other_side_keys_come_later() {
+fn the_board_makes_both_keys_checkable_and_never_dims_them_and_the_later_side_keys_come_later() {
     let b = Bench::quiet(None);
     let board = b.rig.board();
     let keys = board["keys"].as_array().unwrap();
     for k in keys.iter().filter(|k| k["side"] == true) {
         let assist = k["id"] == "rclick" || k["id"] == "grab";
-        assert_eq!(k["checkable"], assist, "{}", k["id"]);
-        assert_eq!(k["dim"], !assist, "{}", k["id"]);
+        let live = assist || k["id"] == "shortcuts" || k["id"] == "power";
+        assert_eq!(k["checkable"], live && k["id"] != "power", "{}", k["id"]);
+        assert_eq!(k["dim"], !live, "{}", k["id"]);
         assert_eq!(k["repeat"], false, "{}", k["id"]);
-        let tip = if assist {
-            Value::Null
-        } else {
-            LATER_TIP.into()
-        };
+        let tip = if live { Value::Null } else { LATER_TIP.into() };
         assert_eq!(k["tip"], tip, "{}", k["id"]);
     }
 }

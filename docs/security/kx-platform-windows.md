@@ -1,14 +1,14 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-17 (P5 review: the scroll target's data and logs, and the entry watch's kept point and its end)
+- **Last review:** 2026-10-23 (P6 security check: the shortcut tables and sends, the session lock, and the power dialog's shell object on an apartment thread)
 - **Status:** Reviewed
-- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard, its entry watch and window queries (`window`), the scroll target (`scroll`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), the heaps' free pages after a look change (`memory`), the mouse and keyboard hooks that host the hold engine (`hook`), and the speaker on `XAudio2` (`sound`). It runs inside the uiAccess `keyxtend` process.
+- **Scope:** `crates/kx-platform-windows`: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check, where libraries load from (`dll`), input injection (`inject`, `strokes`, `keys`), shortcuts (`shortcut`), the power dialog (`power`), layout reading and the switch request (`layouts`, `langinfo`), the app in front (`front`), the window guard, its entry watch and window queries (`window`), the scroll target (`scroll`), screens (`screen`), the system look and its watcher (`sysui`, `watch`), DWM backdrops (`backdrop`), the graphics adapter the UI draws on (`gpu`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), the heaps' free pages after a look change (`memory`), the mouse and keyboard hooks that host the hold engine (`hook`), and the speaker on `XAudio2` (`sound`). It runs inside the uiAccess `keyxtend` process.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's and layout source's service keys need `InjectInput`. | N/A |
+| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's, layout source's and shortcuts' service keys need `InjectInput`, and the power dialog's needs `Power`. | N/A |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -17,6 +17,7 @@
 | Clock readings | Public | Memory only | N/A | Not kept |
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
 | Typed text and the keys it becomes | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted` text and key events for one send; not zeroised (see Accepted) | N/A | Dropped after the send |
+| A shortcut's key events: each step's keys from the table, with the latched scans held around each step (`shortcut`) | Public alone (fixed by the table); the latches are Sensitive together with the clicks around them | Memory only, for one send | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
 | Installed layouts, their language facts and what each key types | Public (the same for every user of that layout; not typed text) | Memory only; returned to the caller | N/A | Not kept |
 | Caps Lock state and the layout of the app in front | Public | Memory only | N/A | Not kept |
@@ -36,10 +37,14 @@
 | `current_exe` (program path) | A path with no folder is refused (`NoExeDir`), so the portable `data` check never runs in the working folder | N/A | No |
 | `QueryPerformanceFrequency` / `QueryPerformanceCounter` | Frequency failure refused at start-up; tick maths in 128 bits, clamped, negative and zero values handled (property tests) | N/A | Property tests |
 | `CoInitializeEx` result | Success pairs one `CoUninitialize` on the same thread (`Com` is not `Send`); another thread mode is accepted and never undone | N/A | No |
+| `Shell.Application` and `ShutdownWindows` (`power`) | Each open starts an apartment-threaded `Com` on its calling thread, makes the object in-process and releases it before COM stops; no shell object reads as `Unavailable` and a refused call as `Failed`, never a panic | One object and one COM start per open | Fake-OS tests of the rule; a real test only makes the object |
 | Our own process token (`TokenUIAccess`) | Reads 4 bytes (`size_of::<u32>()`) into a `u32`; any failure reads as "no uiAccess" | Fixed size | No |
 | `SendInput` count | Clamped to the batch length; a batch too long for a `u32` is not sent | One batch per call | Property test of the release rule |
 | `VkKeyScanExW` answer | Only no modifier, Shift, Ctrl+Alt (`AltGr`) or Shift+Ctrl+Alt is typed, and anything else is `Unmappable` before a key is sent; `AltGr` goes as a physical one does, left Ctrl then right Alt with the extended flag. `ToUnicodeEx` (the layout source's reader, no state change) must confirm the key types the character under the current Caps Lock, in that Shift state or the other; a dead key must give the character as its own, and Space follows it | Fixed size | Unit tests of every bit; fake-layout tests; a real AZERTY test |
 | `MapVirtualKeyExW` scan code | Only its low byte and prefix byte are read | Fixed size | Unit tests |
+| The compiled-in `shortcuts.toml` and `keynames.toml` (`shortcut`) | Adapter tables built into the app, never user input: the settings name only ids. Parsed once and strictly: unknown fields, bad ids or names, empty steps, names with no virtual key and repeated ids are refused; a test proves the shipped pair parses, so the empty fallback never runs | Fixed at build time | Unit tests of each refusal; a property test that no text panics the parser |
+| A shortcut's layout and keys: `GetKeyboardLayout` (the app in front's, else the calling thread's own) and `MapVirtualKeyExW` (`shortcut::plan`) | Plain queries that send no message; each step's keys are the table's virtual keys with the scan code that layout gives, the latched scans join each step once (`once_each`), and the batch goes tagged `TAG` like the injector's | One batch per click, at most the table's steps | Unit tests over a fake OS (AZERTY, latches, chains, a refused send); a property test that every plan is balanced and presses each key once (`shortcut/tests/props.rs`); real-layout tests that plan and never send |
+| `LockWorkStation` (`shortcut::win`, Lock PC only) | Only its success is read; a refusal is `ShortcutError::Failed`, which the keyboard shows as the keys-not-sent notice. It only starts the lock and returns | One call per click | A test plans the call; none makes it |
 | `GetKeyboardLayoutList` | Asked for the count first, then filled into a buffer of that count, so there is no cap; the copy is cut to what Windows wrote | Windows' own count | Fake-OS tests (40 layouts, a list that shrinks) |
 | `ToUnicodeEx` / `MapVirtualKeyExW` | Called only for an installed layout or the layout of the app in front; flag `0x4` leaves every keyboard state as it is; the count is clamped to a 32-unit buffer and its sign read as a dead key; controls read as empty | 32 UTF-16 units per key | Unit and property tests of the answer reader |
 | Registry `HKLM\...\Keyboard Layouts` (`Layout Text`, `Layout Id`) | Read-only key, `REG_SZ` values only, into a 128-unit buffer; the size Windows writes back is clamped and cut at the first null; `Layout Id` must be hex; the key is closed once | 128 UTF-16 units per value; the variant search ends at the first enumeration error | Unit and property tests of the text, id and key-name readers |
@@ -81,7 +86,8 @@
 ## Threats (STRIDE-lite)
 - **Spoofing:** a shell or parent process could set `LOCALAPPDATA` or `TEMP` to aim our data elsewhere. Mitigation: the folder comes from the known-folder API, not the environment.
 - **Tampering:** our own injected input could loop back through our own hooks (P4) and be acted on twice. Mitigation: every event carries `keys::TAG` (the keyboard) or `keys::REPLAY` (the hold engine, with each act's id in its low 16 bits) in `dwExtraInfo`, and our hooks never act on either, except our keyboard's `TAG` Esc, which only cancels a carry; the tags are pinned by a test.
-- **Logging / repudiation:** `PlatformError` never holds a path, `InjectError` holds only counts and `UiError` at most an OS error code. The injector, the layout source and the window, look, tray and memory parts log nothing; `Kept` and `Read` hide their points and boxes in debug output.
+- **Logging / repudiation:** `PlatformError` never holds a path, `InjectError` holds only counts and `UiError` at most an OS error code. The injector, the layout source and the shortcut, power, window, look, tray and memory parts log nothing; `Kept` and `Read` hide their points and boxes in debug output.
+  - `ShortcutError` and `PowerError` hold only counts or a fixed kind. `TableError::Parse` holds TOML's message about our own compiled-in tables and is never logged, as a table that does not parse leaves the list empty.
   - The scroll part logs only a fixed warning, with the start error at most, when a run's UI Automation (its thread, COM or client) or ping thread does not start; never a point, a box, a percent or a title.
   - The pointer hook logs only counts, never a point or a key (a panic in its callback: see Accepted), and the speaker logs only a warning kind, an HRESULT or a wait in ms, never a clip.
   - The debug output of key events, decoded keys, the hook's records (`Held`, `Queue`) and a batch's `Input` never shows a key, a unit or a point (`the_records_and_a_batch_hide_every_point_and_key_in_debug`).
@@ -138,9 +144,13 @@
 - **Elevation (libraries):** `dll::pin` limits libraries named without a folder to the app's folder and System32, so the working folder and `PATH` can no longer lend one to the uiAccess process. It does not cover the libraries the exe imports, which load before `main`; those must sit beside the exe.
   - The speaker loads `xaudio2_9.dll` itself, from System32 only, at the first play, so it is never an import. `XAudio2` then opens the audio device by COM class activation (the device enumerator) in the uiAccess process, where COM may read a per-user `HKCU` registration first, so P14's Process Monitor check covers its classes (`keyxtend.md`, `docs/items/P14.md`).
 - **Elevation (focus):** `give_back` moves the focus only from one of our windows to another app's live window. The adapter never asks for the focus for our own windows (ADR-0013); only the spike and the test tools keep such a request.
+- **Elevation (shortcuts):** a send names an id, never keys, so it sends only what the compiled-in table holds, with the latched scans pressed once around each step. Every step goes in one `SendInput` batch, and every held key is let go after a partial send.
+  - Lock PC calls `LockWorkStation`, never an injected Win+L, which Windows ignores. Tests only plan events, never send them or lock the session.
+- **Elevation (power):** the `Power`-gated port only asks `ShutdownWindows` to show Windows' own Shut Down Windows dialog, where the user picks or cancels; no code confirms it, and no test opens it.
+  - The shell object (`Shell.Application`) is made in-process (`CLSCTX_INPROC_SERVER`) on the open's own apartment thread and released before COM stops there (`power/win.rs:21-25`), so its class registration loads code into the uiAccess process (see Should fix).
 - **Elevation:** injection runs only on a module's call through the `InjectInput`-gated port.
   - The Keys route types exactly the text or sends nothing, checked exactly only on the golden layouts, where dead keys are known (see Should fix). Ctrl-only and Alt-only answers are refused, a line feed is typed as Enter, not Ctrl+Enter, and every key is checked against the layout before the send.
-  - Every `unsafe` block is scoped and has a `// SAFETY:` comment. It touches only locals, our own token, handles we close, Windows-allocated strings freed once, the message structs Windows passes our window procedure, the event structs it passes our hook callbacks, the procedure kept in our window's property (see Accepted), or, in the speaker, the `XAudio2` library it loads from System32 and never frees, the factory pointer cast to its declared signature, the engine and voices we made and our static samples.
+  - Every `unsafe` block is scoped and has a `// SAFETY:` comment. It touches only locals, our own token, handles we close, Windows-allocated strings freed once, the message structs Windows passes our window procedure, the event structs it passes our hook callbacks, the procedure kept in our window's property (see Accepted), the shell object `power` makes and releases on the open's own thread, plain calls with no pointer (`LockWorkStation`, `GetKeyboardLayout`), or, in the speaker, the `XAudio2` library it loads from System32 and never frees, the factory pointer cast to its declared signature, the engine and voices we made and our static samples.
 
 ## Findings
 ### Must fix (blocks Definition of Done)
@@ -158,6 +168,8 @@ Uncapped lift-backs (P13): the guard lifts a dropped window back every time, so 
 A stale focus token (P13): `give_back` checks only that the noted window lives, and the token is taken once at start, so hours later a reused handle could get the focus (`docs/items/P13.md`).
 
 Text of any length (P7): `InputInjector::text` builds two inputs per UTF-16 unit in one batch, whatever the length. P3 sends one key's text, at most 32 units; cap it from the settings schema before P7 types words (`docs/items/P7.md`).
+
+The power dialog's COM class (P14): each Power click makes `Shell.Application` in-process in the uiAccess process, so P14's check that no per-user `HKCU` class registration loads there must cover it too (`keyxtend.md`, `docs/items/P14.md`).
 
 Done (P3, ed424ef): the tray's class reader sliced its buffer by Windows' count inside a callback, where a panic would abort the uiAccess process. It now reads with `get`, as the other readers do.
 

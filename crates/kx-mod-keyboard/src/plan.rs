@@ -2,9 +2,10 @@
 //! the key after one and shortcuts as scan codes, so the app's own layout adds accents and runs shortcuts.
 
 use crate::latch::Latches;
+use crate::layer::LayerKey;
 use crate::legend::{LegendMods, slot};
 use crate::spec::{Latch, LatchRole, Role};
-use kx_module_api::ports::{KeyChars, Scan, Slot, TextRoute, Toggle};
+use kx_module_api::ports::{KeyChars, Scan, ShortcutId, Slot, TextRoute, Toggle};
 use kx_module_api::{REDACTED_MARKER, Redacted};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -60,13 +61,22 @@ pub enum Plan {
     Lang,
     /// A mouse-assist side key: the face asks the mouse module to flip this mode; nothing goes to the app.
     Assist(Toggle),
+    /// The Shortcuts key: the face shows or hides the layer; nothing goes to the app.
+    Layer,
+    /// The Power key: the face asks the power module for the dialog; nothing goes to the app.
+    Power,
+    /// A layer cell: the platform sends the shortcut with every latch held; then the latches let go as after any key,
+    /// and a dead key's wait ends.
+    Shortcut(ShortcutId),
+    /// The layer's Next key: the face turns the page.
+    Next,
     /// A key from a later version, or one without the code its role needs: nothing.
     Later,
     /// A character key that types nothing with the latched Shift or `AltGr`: nothing, and the latches and wait stay.
     Empty,
 }
 
-/// Shows no scan code, not even of Caps Lock or a modifier, as the rule for logs asks.
+/// Shows no scan code, not even of Caps Lock or a modifier, and no shortcut id, as the rule for logs asks.
 impl fmt::Debug for Plan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -79,6 +89,10 @@ impl fmt::Debug for Plan {
             Self::Latch(r, _) => write!(f, "Latch({:?})", r.latch),
             Self::Lang => f.write_str("Lang"),
             Self::Assist(t) => write!(f, "Assist({t:?})"),
+            Self::Layer => f.write_str("Layer"),
+            Self::Power => f.write_str("Power"),
+            Self::Shortcut(_) => f.write_str("Shortcut"),
+            Self::Next => f.write_str("Next"),
             Self::Later => f.write_str("Later"),
             Self::Empty => f.write_str("Empty"),
         }
@@ -112,7 +126,18 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Latch(r), Some(sc)) => Plan::Latch(r, sc),
         (Role::Lang, _) => Plan::Lang,
         (Role::Assist(a), _) => Plan::Assist(a.into()),
+        (Role::Layer, _) => Plan::Layer,
+        (Role::Power, _) => Plan::Power,
         _ => Plan::Later,
+    }
+}
+
+/// What a click on the layer's key `key` does: a shortcut cell sends its id, and Next turns the page.
+#[must_use]
+pub fn layer_plan(key: &LayerKey) -> Plan {
+    match key {
+        LayerKey::Shortcut(id) => Plan::Shortcut(id.clone()),
+        LayerKey::Next => Plan::Next,
     }
 }
 

@@ -76,6 +76,18 @@ pub mod qobject {
         #[qinvokable]
         fn page_text(&self, at: i32, count: i32) -> QString;
 
+        /// What readers hear after the Next key's name: the shortcuts layer's page `page` of `pages`, both from 1.
+        #[qinvokable]
+        fn layer_page_text(&self, page: i32, pages: i32) -> QString;
+
+        /// A shortcut's tip: the text of name key `name_key` and the keys of `steps`, a JSON list of key-name lists.
+        #[qinvokable]
+        fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString;
+
+        /// A shortcut's keys alone, such as `Ctrl+A, Ctrl+C`, from `steps`, a JSON list of key-name lists.
+        #[qinvokable]
+        fn keys_text(&self, steps: &QString) -> QString;
+
         /// The tray picture's side in pixels.
         #[qinvokable]
         fn tray_px(&self) -> i32;

@@ -5,6 +5,7 @@ use crate::spec::Assist;
 use std::cell::Cell;
 
 mod apps;
+mod layer;
 
 const ESC: Scan = Scan::new(0x01);
 const Q: Scan = Scan::new(0x10);

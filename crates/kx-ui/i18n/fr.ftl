@@ -4,7 +4,7 @@
 ## Le nom du produit, écrit une fois et repris par les textes ci-dessous.
 -app = KeyXtend
 
-## Touches nommées, par identifiant de board.toml, puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
+## Touches nommées, par identifiant de board.toml, la touche Page suivante des raccourcis et la page que les lecteurs d’écran annoncent après elle ($page sur $pages), puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
 key =
     .esc = Échap
     .bksp = Retour arrière
@@ -35,6 +35,8 @@ key =
     .settings = Paramètres
     .power = Marche/Arrêt
     .dpad = Pavé de défilement
+    .layer-next = Page suivante
+    .layer-page = Page { $page } sur { $pages }
     .empty = Touche vide
 
 ## Le mot court sur la touche, ou sous son icône en grande taille, comme sur les claviers français.
@@ -64,15 +66,70 @@ label =
     .snip = Capture
     .fill = Remplir
     .settings = Paramètres
-    .power = Arrêt
+    .power = Marche/Arrêt
 
+## Ce qu’une touche dit après son nom. .keys est l’info-bulle d’un raccourci, son $name puis les $keys qu’il envoie.
 tip =
+    .keys = { $name } ({ $keys })
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
     .mouse-off = L’aide à la souris est désactivée
     .scroll-off = Le pavé de défilement est désactivé
+    .no-shortcuts = Aucun raccourci n’est choisi
+    .power-off = La touche Marche/Arrêt est désactivée
     .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
     .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
+
+## Le nom des raccourcis pour les info-bulles et les lecteurs d’écran, par identifiant.
+shortcut =
+    .copy = Copier
+    .paste = Coller
+    .cut = Couper
+    .select-all = Sélectionner tout
+    .undo = Annuler
+    .redo = Rétablir
+    .copy-all = Copier tout
+    .cut-all = Couper tout
+    .delete-all = Supprimer tout
+    .find = Rechercher
+    .save = Enregistrer
+    .print = Imprimer
+    .emoji = Emoji
+    .switch-app = Basculer entre les applications
+    .show-desktop = Afficher le Bureau
+    .file-explorer = Explorateur de fichiers
+    .lock-pc = Verrouiller le PC
+    .task-manager = Gestionnaire des tâches
+    .close-window = Fermer la fenêtre
+    .new-tab = Nouvel onglet
+    .close-tab = Fermer l’onglet
+    .reopen-tab = Rouvrir l’onglet fermé
+    .refresh = Actualiser
+    .zoom-in = Zoom avant
+    .zoom-out = Zoom arrière
+    .f1 = F1
+    .f2 = F2
+    .f3 = F3
+    .f4 = F4
+    .f5 = F5
+    .f6 = F6
+    .f7 = F7
+    .f8 = F8
+    .f9 = F9
+    .f10 = F10
+    .f11 = F11
+    .f12 = F12
+
+## Les touches que nomme l’info-bulle d’un raccourci quand aucune étiquette ne le fait, comme sur les claviers. Lettres, chiffres et F1 à F24 s’écrivent tels quels.
+keyname =
+    .period = .
+    .numplus = Num +
+    .numminus = Num -
+
+## L’info-bulle d’un raccourci, ce qui relie les touches pressées ensemble, puis ce qui relie ses étapes.
+combo =
+    .join = +
+    .then = {", "}
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =
@@ -187,6 +244,8 @@ notice =
     .scroll-end = Déjà à la fin.
     .scroll-failed = Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.
     .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
+    .power-failed = La fenêtre Marche/Arrêt du système n’a pas pu s’ouvrir.
+    .power-stopped = La touche Marche/Arrêt s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
@@ -194,6 +253,7 @@ module =
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
+    .power = Touche Marche/Arrêt
     .scroll = Pavé de défilement
     .ui = Apparence
 

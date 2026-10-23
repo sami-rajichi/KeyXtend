@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use kx_module_api::Clock;
-use kx_module_api::ports::{InputInjector, LayoutSource, PointerHook, ScrollTarget};
+use kx_module_api::ports::{
+    InputInjector, LayoutSource, PointerHook, PowerDialog, ScrollTarget, Shortcuts,
+};
 use kx_platform::ui::{
     Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
@@ -12,7 +14,8 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinLayouts, WinLook,
-    WinMemory, WinPointerHook, WinScreens, WinScroll, WinSpeaker, WinTray, dirs,
+    WinMemory, WinPointerHook, WinPower, WinScreens, WinScroll, WinShortcuts, WinSpeaker, WinTray,
+    dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -52,6 +55,18 @@ impl WindowsPlatform {
     #[must_use]
     pub fn layouts(&self) -> Arc<dyn LayoutSource> {
         Arc::new(WinLayouts)
+    }
+
+    /// The shortcuts service, for the app to register under `ShortcutsKey`.
+    #[must_use]
+    pub fn shortcuts(&self) -> Arc<dyn Shortcuts> {
+        Arc::new(WinShortcuts)
+    }
+
+    /// The system's power dialog, for the app to register under `PowerDialogKey`.
+    #[must_use]
+    pub fn power_dialog(&self) -> Arc<dyn PowerDialog> {
+        Arc::new(WinPower)
     }
 
     /// The window guard, for the UI to call on the thread that owns our windows.
@@ -245,6 +260,23 @@ mod tests {
         };
         let opened = std::thread::spawn(move || target.open(config).map(drop)).join();
         assert_eq!(opened.ok(), Some(Ok(())));
+    }
+
+    #[test]
+    fn the_shortcuts_port_lists_the_table_on_another_thread_without_sending() {
+        let shortcuts = WindowsPlatform::new().unwrap().shortcuts();
+        let known = std::thread::spawn(move || shortcuts.known())
+            .join()
+            .unwrap();
+        assert_eq!(known, WinShortcuts.known());
+        assert!(known.iter().any(|i| i.id.as_str() == "copy"));
+    }
+
+    #[test]
+    fn the_power_dialog_port_moves_to_another_thread_without_opening() {
+        // Never `open`: that would show the dialog on the owner's screen.
+        let dialog = WindowsPlatform::new().unwrap().power_dialog();
+        assert!(std::thread::spawn(move || drop(dialog)).join().is_ok());
     }
 
     #[test]

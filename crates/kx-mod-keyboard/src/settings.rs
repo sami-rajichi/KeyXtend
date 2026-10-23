@@ -1,10 +1,13 @@
-//! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place and the bubble corner.
+//! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place, the bubble corner and the
+//! shortcut pages.
 
 pub use kx_module_api::ports::Corner;
 
+use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
-use kx_module_api::ports::{MAX_PRESETS, Point};
+use crate::spec::BoardSpec;
+use kx_module_api::ports::{MAX_PRESETS, Point, ShortcutId};
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +23,9 @@ pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
 /// The largest `size_max` the settings take, so a hand-edited size cannot open the keyboard far past every screen.
 pub(crate) const SIZE_CEILING: f64 = 4.0;
+/// The most shortcut pages: the Next key shows one dot per page, and they must fit one line inside its cap in every
+/// theme, which the app's `agree` test checks.
+pub const MAX_PAGES: usize = 6;
 
 /// Why a size was refused: it is not a finite number.
 const NOT_A_NUMBER: &str = "sizes must be numbers";
@@ -34,6 +40,15 @@ const BAD_PRESETS: &str =
 const BAD_SIZE: &str = "size must be between size_min and size_max";
 /// Why an app name was refused.
 const BLANK_APP: &str = "key_apps: an app name is blank";
+/// Why the shortcut pages were refused: too many.
+const BAD_PAGE_COUNT: &str = "shortcut_pages: more pages than the Next key's dots show";
+/// Why a shortcut page was refused: it is empty.
+const BAD_EMPTY_PAGE: &str = "shortcut_pages: a page is empty";
+/// Why a shortcut page was refused: the side block has no room for it.
+const BAD_FULL_PAGE: &str =
+    "shortcut_pages: a page holds more shortcuts than the side block has cells";
+/// Why the shortcut pages were refused: an id comes twice.
+const BAD_TWICE: &str = "shortcut_pages: a shortcut is listed twice";
 
 /// How the kernel reads the `[keyboard]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -101,6 +116,8 @@ pub struct KeyboardSettings {
     pub placed: bool,
     /// The bubble's corner.
     pub bubble_corner: Corner,
+    /// The shortcuts layer's pages in order, by shortcut id.
+    pub shortcut_pages: Vec<Vec<ShortcutId>>,
 }
 
 impl KeyboardSettings {
@@ -137,7 +154,7 @@ impl Settings for KeyboardSettings {
         if self.key_apps.iter().any(|a| a.trim().is_empty()) {
             return Err(invalid(BLANK_APP));
         }
-        Ok(())
+        self.check_pages().map_err(invalid)
     }
 }
 
@@ -163,6 +180,29 @@ impl KeyboardSettings {
         }
         if !within(&self.size) {
             return Err(BAD_SIZE);
+        }
+        Ok(())
+    }
+
+    /// At most `MAX_PAGES` pages, none empty or past the layer's room on the shipped board, and no id twice.
+    /// A board that does not read has no room, though its own check stops the module first.
+    fn check_pages(&self) -> Result<(), &'static str> {
+        let pages = &self.shortcut_pages;
+        if pages.len() > MAX_PAGES {
+            return Err(BAD_PAGE_COUNT);
+        }
+        let room = BoardSpec::shipped().map_or(0, |b| b.layer_grid().capacity(pages.len()));
+        let mut seen = HashSet::new();
+        for page in pages {
+            if page.is_empty() {
+                return Err(BAD_EMPTY_PAGE);
+            }
+            if page.len() > room {
+                return Err(BAD_FULL_PAGE);
+            }
+            if !page.iter().all(|id| seen.insert(id)) {
+                return Err(BAD_TWICE);
+            }
         }
         Ok(())
     }

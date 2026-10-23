@@ -21,9 +21,14 @@ impl Inner {
         self.scroll.live
     }
 
-    /// Notes the pointer on the pad or off it.
+    /// True while the pad scrolls, so its Stop shows.
+    pub(in crate::face) fn scrolling(&self) -> bool {
+        self.scroll.live && self.scroll.dir.is_some()
+    }
+
+    /// Notes the pointer on the pad or off it; while the layer hides the pad, the pointer is never on it.
     pub(in crate::face) fn hovered(&mut self, on: bool) {
-        self.hover = on;
+        self.hover = on && !self.layered();
     }
 
     /// True while the pointer is on the pad.

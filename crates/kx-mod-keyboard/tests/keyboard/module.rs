@@ -10,7 +10,7 @@ use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{BoardSpec, ID, KeyboardModule, KeyboardSettings, Ports, Tapped, Typing};
 use kx_module_api::Capability::InjectInput;
 use kx_module_api::ports::{
-    InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, TextRoute,
+    InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, ShortcutsKey, TextRoute,
 };
 use kx_module_api::{
     Module, ModuleCx, ModuleError, Redacted, ServiceError, ServiceKey, SettingsError,
@@ -59,6 +59,15 @@ fn without_the_layouts_service_it_fails_to_start() {
 }
 
 #[test]
+fn without_the_shortcuts_service_it_fails_to_start() {
+    let mut host = fake(None);
+    store(&mut host, Some(ShortcutsKey::ID));
+    host.granted = vec![InjectInput];
+    let missing = ServiceError::Missing(ShortcutsKey::ID);
+    assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
+}
+
+#[test]
 fn bad_settings_stop_the_start() {
     let mut host = fake(Some(("size", 9.0.into())));
     assert!(matches!(
@@ -86,13 +95,16 @@ fn a_tap_through_the_kernels_ports_types_in_the_layout_shown() {
     let mut typing = Typing::new(&BoardSpec::shipped().unwrap(), &settings);
     let q = char_id(Scan::new(0x10));
     let table = ports.layouts.current();
-    assert_eq!(typing.tap(&ports.io(&table), &q, false), Ok(Tapped::Done));
+    assert_eq!(
+        typing.tap(&ports.io(&table, &[]), &q, false),
+        Ok(Tapped::Done)
+    );
     let ids: Vec<_> = ports.layouts.list().iter().map(|l| l.id).collect();
     let (en, fr) = (ids[0], ids[1]);
     assert_eq!(table.label.id, en);
     assert!(fakes.layouts.show(fr));
     let table = ports.layouts.current();
-    typing.tap(&ports.io(&table), &q, false).unwrap();
+    typing.tap(&ports.io(&table, &[]), &q, false).unwrap();
     let text = |t: &str| Stroke::Text(Redacted::new(t.into()), TextRoute::Unicode);
     assert_eq!(fakes.injector.strokes(), [text("q"), text("a")], "AZERTY");
 }

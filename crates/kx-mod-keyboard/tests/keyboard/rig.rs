@@ -37,6 +37,14 @@ pub const BOARD: FaceReply = FaceReply {
     holding: false,
 };
 
+/// A redraw of the board and the state.
+pub const BOTH: FaceReply = FaceReply {
+    board: true,
+    state: true,
+    notice: None,
+    holding: false,
+};
+
 /// The face still holds the pressed key, so the beat goes on, with nothing to redraw.
 pub const HOLDING: FaceReply = FaceReply {
     board: false,

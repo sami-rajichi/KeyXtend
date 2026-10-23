@@ -96,7 +96,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
 | G23 Quick-fill | Windows Hello opens from the no-focus keyboard; after Yes, test User and Password values are typed into a login page; after Cancel nothing is typed |
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
-| G25 Language and shortcuts (core) | The language key also switches the target app's input language; Ctrl+C/V/Z, Win+V and Alt+Tab work from the keyboard |
+| G25 Language and shortcuts (core) | The language key also switches the target app's input language; the shortcuts layer's Copy, Paste, Undo, Copy all and Switch app, Win+V and the Power key's dialog (always cancelled) work from the keyboard |
 | G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact. The Japanese IME part (key presses produce 日本) moved to F16 |
 
 **Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, and the spike code (ADR-0014). **Deleted:** screenshots, logs, scratch scripts and virtual PCs. The owner decides when the test certificate and the Program Files test install go.
@@ -182,7 +182,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 6 — Shortcuts layer and Power — v0.3
 
-- 15 shortcuts mapped per OS; Win+V routing (setting); the Power dialog.
+- The shortcuts layer: 37 shortcuts on pages the user arranges, mapped per OS (ADR-0031); the Power dialog. Win+V routing moved to P8 (owner, 2026-10-23).
 
 ## Phase 7 — Word prediction — v0.4
 
@@ -193,7 +193,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 8 — Clipboard history — v0.5
 
 - `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
-- The encrypted store, retention, exclusion formats, the paged panel, multi-paste, and pasting files and images.
+- The encrypted store, retention, exclusion formats, the paged panel, multi-paste, pasting files and images, and Win+V routing (a setting, moved from P6).
 - **Edge cases:**
   - a 200 MB image;
   - 10,000 entries;

@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::capability::is_kebab;
-use crate::ports::LayoutChanged;
+use crate::ports::{LayoutChanged, PowerAsk, PowerAsked, PowerChanged};
 use crate::{ModuleStateChanged, Notice, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
 
@@ -51,6 +51,9 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
         ModuleStateChanged::NAME,
         SettingsChanged::NAME,
         LayoutChanged::NAME,
+        PowerAsked::NAME,
+        PowerChanged::NAME,
+        PowerAsk::NAME,
     ];
     let names: Vec<_> = assist().iter().map(|r| r.0).chain(older).collect();
     assert!(names.iter().all(|n| is_kebab(n)), "{names:?}");

@@ -36,10 +36,10 @@ fn the_old_icon_padding_is_gone() {
 }
 
 /// A section, a token line as shipped, a bad value for it, and the name the error must give.
-type BadIn = (&'static str, &'static str, &'static str, &'static str);
+pub(super) type BadIn = (&'static str, &'static str, &'static str, &'static str);
 
 /// Each `BadIn` token is refused with its name.
-fn refused_in(cases: &[BadIn]) {
+pub(super) fn refused_in(cases: &[BadIn]) {
     for (section, from, to, says) in cases {
         let e = parse(&in_section(section, from, to)).expect_err(to);
         assert!(e.contains(says), "{to}: {e}");

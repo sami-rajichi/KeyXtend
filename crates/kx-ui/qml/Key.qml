@@ -1,5 +1,6 @@
 // One key: its shadows, cap, inner shading, legends or icon, LED and pointer feedback. Readers hear its name and a note,
-// also in its tip: when a dimmed key, which never presses, comes, or that the language key has only one language.
+// also in its tip: when a dimmed key, which never presses, comes, that the language key has only one language, or the
+// keys a shortcut sends.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -15,6 +16,8 @@ Item {
     required property string design
     required property var res
     required property real s
+    // The shortcuts layer's place (state JSON `layer`), whose page dots the Next key shows; null where none is drawn.
+    property var paging: null
 
     // A click, at the press (ADR-0024); `back` is the language key's left part.
     signal hit(bool back)
@@ -60,9 +63,11 @@ Item {
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
     readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
-    // What readers hear after its name, also in its tip: when a dimmed key comes, else the state's tip, such as a lone
-    // language key's.
-    readonly property string note: later || (ks && ks.tip ? res.tr(ks.tip) : "")
+    // What readers hear after its name, also in its tip: when a dimmed key comes, the state's tip, such as a lone
+    // language key's, or the shortcuts layer's page on the key that shows its dots.
+    readonly property string note: later || (ks && ks.tip ? res.tr(ks.tip) : "") || (kv.dots && paging ? res.layerPage(paging) : "")
+    // A shortcut's keys, which its tip shows after its name; an F-key that shows its text has none.
+    readonly property string keys: kv.icon_only && icon ? res.keysText(kv.steps) : ""
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
     // The recording glow runs.
@@ -84,7 +89,7 @@ Item {
     Accessible.name: key.name
     // UI Automation's id is the board id, which never changes with the language, the size or the top bar.
     Accessible.id: key.kv.id
-    Accessible.description: key.note
+    Accessible.description: key.note || key.keys
     Accessible.checkable: !!kv.checkable
     Accessible.checked: key.on
     Accessible.onPressAction: if (!key.dim) key.hit(false)
@@ -97,6 +102,15 @@ Item {
         if (st.blank)
             return res.tr(st.blank);
         return st.marks.length > 0 ? st.marks.map(m => res.tr(m)).join(res.tr("mark.join")) : st.name;
+    }
+    // What its tip says: the name and note; a shortcut's name and the keys it sends, or its name alone on an F-key that
+    // shows text; an icon's name; else nothing, as its label shows its name.
+    function says() {
+        if (note)
+            return res.noteTip(name, note);
+        if (kv.icon_only && icon)
+            return res.keysTip(kv.name, kv.steps);
+        return icon || kv.icon_only ? name : "";
     }
     // The file name `icons.toml` gives for `path`, such as `keys.bksp`, or empty.
     function iconOf(path) {
@@ -222,7 +236,14 @@ Item {
         }
         Inset {
             anchors.fill: parent
-            key: key
+            layers: key.p.key_shadow.filter(l => l.inset)
+            cap: key.look.cap
+            topColour: key.capColour
+            skirt: key.capSkirt
+            radius: key.radius
+            s: key.s
+            pressed: key.down
+            sink: key.sink
         }
         Hover {
             lk: key.lk
@@ -237,6 +258,7 @@ Item {
             lk: key.lk
             lang: key.lang
             design: key.design
+            paging: key.paging
             res: key.res
             s: key.s
             ink: key.pressInk || key.ink
@@ -260,7 +282,7 @@ Item {
         hoverEnabled: true
         atPress: true
         onContainsMouseChanged: {
-            const says = key.note ? key.res.noteTip(key.name, key.note) : key.icon ? key.name : "";
+            const says = key.says();
             if (containsMouse && says)
                 key.tip(says, key);
             else if (!containsMouse && key.tipped)

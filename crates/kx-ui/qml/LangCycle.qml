@@ -1,5 +1,5 @@
 // The language key's Cycle design (mock-up .cyc and .dots): a globe, the current layout's short name, which rises in
-// when it changes, and one dot per layout with the current one lit and larger. A click always steps on one layout.
+// when it changes, and one dot per layout with the current one lit and larger (PageDots). A click always steps on one.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -18,11 +18,6 @@ Row {
     readonly property var cy: sh.cycle
     readonly property bool ar: lang.cur.arabic
     readonly property string cur: lang.cur.short
-    readonly property real dot: cy.dot_px * s
-    readonly property real dotOn: cy.dot_on_px * s
-    readonly property real dotGap: cy.dot_gap_px * s
-    // Dots per column, with room for the larger lit dot, so many layouts wrap into more columns inside the cap.
-    readonly property int perColumn: Math.max(1, Math.floor((room - (dotOn - dot) + dotGap) / (dot + dotGap)))
 
     spacing: sh.icon_gap_px * s
     onCurChanged: rise.restart()
@@ -48,32 +43,16 @@ Row {
             id: lift
         }
     }
-    // One dot per layout in cells of one size; the current one is lit, opaque and larger, as an unlit one keeps 3:1.
-    Grid {
+    // One dot per layout in a column, wrapping into more columns inside the cap.
+    PageDots {
         anchors.verticalCenter: parent.verticalCenter
         flow: Grid.TopToBottom
-        rows: Math.min(cyc.perColumn, Math.max(1, cyc.lang.count))
-        spacing: cyc.dotGap
-        Repeater {
-            model: cyc.lang.count
-            delegate: Item {
-                id: cell
-                required property int index
-                width: cyc.dot
-                height: cyc.dot
-                Rectangle {
-                    readonly property bool lit: cell.index === cyc.lang.at
-                    // Exactly centred, so the larger lit dot stays in line with the column.
-                    anchors.centerIn: parent
-                    anchors.alignWhenCentered: false
-                    width: lit ? cyc.dotOn : cyc.dot
-                    height: width
-                    radius: width / 2
-                    color: cyc.ink
-                    opacity: lit ? 1 : cyc.cy.dot_off
-                }
-            }
-        }
+        count: cyc.lang.count
+        at: cyc.lang.at
+        lk: cyc.lk
+        s: cyc.s
+        ink: cyc.ink
+        room: cyc.room
     }
 
     // The new name rises in (mock-up langIn).

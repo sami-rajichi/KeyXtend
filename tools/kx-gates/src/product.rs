@@ -12,7 +12,7 @@ use kx_settings::{Files, peek, peek_section};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::keymap::{KeyMap, Reader};
-use crate::{apps, board, mouseguard, win};
+use crate::{apps, board, mouse, mouseguard, win};
 
 /// The product's name on the command line; its program is this name and the system's program suffix.
 pub const NAME: &str = "keyxtend";
@@ -167,6 +167,11 @@ impl Keyboard {
         let at = self.at(id)?;
         clear(at, win::root_at(at), &self.hwnd)
             .map_err(|top| format!("{} covers the key to click", win::describe(top)))
+    }
+
+    /// Clicks key `id` with the real pointer, refused unless the keyboard is the window on top there.
+    pub fn click(&self, id: &str) -> Result<(), String> {
+        mouse::click_at(self.top_at(id)?)
     }
 }
 

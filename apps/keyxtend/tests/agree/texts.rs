@@ -1,20 +1,24 @@
-//! Every name, label and tip the face draws, every mark it names, every module the app ships and the kernel, and
-//! every language-key design has its text in English, French and Arabic; every mark it names is one the theme's mark
-//! fonts are checked to draw.
+//! Every name, label and tip the face draws, with the shortcuts layer hidden or on any page, every text a shortcut's
+//! tip is made of, every mark it names, every module the app ships and the kernel, and every language-key design has
+//! its text in English, French and Arabic; every mark it names is one the theme's mark fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
-use crate::{board, designs};
+use crate::{designs, pages, views};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
-use kx_mod_keyboard::view::{EMPTY_NAME, LONE_TIP, SCROLL_OFF_TIP};
+use kx_mod_keyboard::spec::NEXT_ID;
+use kx_mod_keyboard::view::{
+    EMPTY_NAME, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
+    SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
+};
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
-use kx_ui::i18n::keys::{LANG_KEY, MODULE};
+use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, LAYER_PAGE, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
 
 /// The keys of `wanted` some shipped language has no text for, with that language's tag.
-fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
+pub(crate) fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
     let langs = LANGS.iter().map(|l| (l.tag, I18n::new(l)));
     let gaps = langs.flat_map(|(tag, t)| {
         let absent: Vec<&String> = wanted.iter().filter(|k| !t.has(k)).collect();
@@ -25,21 +29,36 @@ fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
 
 #[test]
 fn every_name_label_and_tip_the_face_draws_has_its_text() {
-    let fixed = [LONE_TIP, EMPTY_NAME, SCROLL_OFF_TIP];
+    let fixed = [
+        LONE_TIP,
+        EMPTY_NAME,
+        SCROLL_OFF_TIP,
+        NO_SHORTCUTS_TIP,
+        POWER_OFF_TIP,
+        KEYS_TIP,
+        COMBO_JOIN,
+        COMBO_THEN,
+        LAYER_PAGE,
+    ];
     let mut wanted: BTreeSet<String> = fixed.map(str::to_owned).into();
-    for design in designs() {
-        let view = board(design);
+    for view in designs().into_iter().flat_map(views) {
         for k in &view.keys {
             let tip = k.tip.map(str::to_owned);
             wanted.extend([k.name.clone(), k.label.clone(), tip].into_iter().flatten());
         }
         wanted.insert(view.dpad.name.to_owned());
     }
-    assert!(
-        wanted.len() > LANGS.len(),
-        "the board names its keys: {wanted:?}"
-    );
+    let named = wanted
+        .iter()
+        .filter(|k| k.starts_with(SHORTCUT_NAME_PREFIX));
+    assert_eq!(named.count(), pages().concat().len(), "every shortcut");
+    assert!(wanted.contains(&format!("{NAME_PREFIX}{NEXT_ID}")), "Next");
     assert_eq!(missing(&wanted), Vec::new());
+}
+
+#[test]
+fn a_shortcuts_tip_reads_key_labels_from_the_group_the_board_names_them_in() {
+    assert_eq!(format!("{LABEL}."), LABEL_PREFIX);
 }
 
 #[test]

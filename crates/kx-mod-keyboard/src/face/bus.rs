@@ -1,12 +1,12 @@
-//! The face on the kernel's bus (spec §4.4, §5.1, §5.2): the side keys ask the mouse module to flip a mode, the
-//! mouse and scroll modules' states come back, and the latched set goes out for modifier + click. Handlers run on the
-//! sender's thread, so nothing is sent while the face's lock is held.
+//! The face on the kernel's bus (spec §4.4, §5.1, §5.2, §8.5): the side keys ask the mouse module to flip a mode and
+//! the power module for its dialog, the mouse, scroll and power modules' states come back, and the latched set goes
+//! out for modifier + click. Handlers run on the sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
 use super::outbox::Outbox;
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, Scan,
-    ScrollAsk, ScrollChanged, Toggle,
+    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, PowerAsk,
+    PowerAsked, PowerChanged, Scan, ScrollAsk, ScrollChanged, Toggle,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -65,26 +65,40 @@ impl Face {
         }
     }
 
+    /// A click on the Power key: asks the power module for the system's dialog while it runs, else does nothing.
+    pub(super) fn power(&self) {
+        let bus = {
+            let inner = self.lock();
+            inner.powers().then(|| inner.bus())
+        };
+        if let Some(bus) = bus {
+            // The power events need no capability, so none is refused.
+            let _ = bus.publish(&PowerAsked);
+        }
+    }
+
     /// A mouse click used the latches: they let go as their mode says, and the bus hears it.
     fn used(&self) {
         self.lock().clicked();
         self.tell(false);
     }
 
-    /// Forgets the mouse and scroll modules' states, as either may have stopped unheard while the keyboard was down,
-    /// so their keys and the pad dim until the answers; the next live peek also tells a pointer that left.
+    /// Forgets the mouse, scroll and power modules' states, as each may have stopped unheard while the keyboard was
+    /// down, so their keys and the pad dim until the answers; the next live peek also tells a pointer that left.
     fn forget(&self) {
         {
             let mut inner = self.lock();
             inner.heard(AssistChanged::OFF);
             inner.heard_scroll(ScrollChanged::OFF);
+            inner.heard_power(PowerChanged::OFF);
         }
         self.peek_again();
     }
 }
 
-/// Hears the mouse and scroll modules' states and the latch events for `face` until the module stops, then tells the
-/// latched set, forgets both modules' states and asks for them, as each may have missed the other while it was down.
+/// Hears the mouse, scroll and power modules' states and the latch events for `face` until the module stops, then
+/// tells the latched set, forgets the three modules' states and asks for them, as each may have missed the others while
+/// it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need.
@@ -93,10 +107,12 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
     on(cx, face, |f, _: &LatchesAsk| f.tell(true))?;
     on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
+    on(cx, face, |f, e: &PowerChanged| f.lock().heard_power(*e))?;
     face.tell(true);
     face.forget();
     cx.bus().publish(&AssistAsk)?;
-    cx.bus().publish(&ScrollAsk)
+    cx.bus().publish(&ScrollAsk)?;
+    cx.bus().publish(&PowerAsk)
 }
 
 /// Calls `then` with the face for each `E` on the bus, while the face lives.

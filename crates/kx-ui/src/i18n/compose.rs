@@ -1,8 +1,10 @@
 //! Texts built from parts: a notice with its arguments, a list with "and N more", the space bar, the banner's count
-//! and a pager's number.
+//! and a pager's or the shortcuts layer's page.
 
 use super::I18n;
-use super::keys::{BANNER_MORE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, PAGE_OF, SPACE};
+use super::keys::{
+    BANNER_MORE, LAYER_PAGE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, PAGE_OF, SPACE,
+};
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::{Notice, NoticeArg, args, is_hidden};
 
@@ -16,6 +18,10 @@ const LAYOUT_VAR: &str = "layout";
 const AT_VAR: &str = "at";
 /// `page.of`'s variable for how many pages there are.
 const COUNT_VAR: &str = "count";
+/// `key.layer-page`'s variable for the page shown.
+const PAGE_VAR: &str = "page";
+/// `key.layer-page`'s variable for how many pages there are.
+const PAGES_VAR: &str = "pages";
 /// The variable that plural forms select on.
 const FORM_VAR: &str = "form";
 /// Past this, a count takes the plural form of its last two digits.
@@ -89,6 +95,15 @@ impl I18n {
         values.set(AT_VAR, count(at));
         values.set(COUNT_VAR, count(pages));
         self.format(PAGE_OF, Some(&values))
+    }
+
+    /// What readers hear after the Next key's name: the shortcuts layer's page `page` of `pages`, both from 1.
+    #[must_use]
+    pub fn layer_page(&self, page: usize, pages: usize) -> String {
+        let mut values = FluentArgs::new();
+        values.set(PAGE_VAR, count(page));
+        values.set(PAGES_VAR, count(pages));
+        self.format(LAYER_PAGE, Some(&values))
     }
 
     /// The space bar's text from `parts`, the OS's names: the language, then the layout when known. Each loses its

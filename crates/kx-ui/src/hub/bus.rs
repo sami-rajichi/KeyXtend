@@ -1,11 +1,12 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, and the scroll module's
 //! state, outline and page turns, each through a handler that holds the hub weakly, then asks the scroll module for its
-//! state. The keyboard's wake is heard only while a face is attached, after the face's own handlers.
+//! state. The keyboard's wake, power changes included, is heard only while a face is attached, after the face's own
+//! handlers.
 
 use super::{Hub, Wake, sound};
 use kx_module_api::ports::{
-    AssistChanged, AssistNote, LatchesUsed, PointerMoved, ScrollAimed, ScrollAsk, ScrollChanged,
-    ScrollPage,
+    AssistChanged, AssistNote, LatchesUsed, PointerMoved, PowerChanged, ScrollAimed, ScrollAsk,
+    ScrollChanged, ScrollPage,
 };
 use kx_module_api::{Bus, Event, EventError, Notice, Subscription};
 use std::sync::{Arc, MutexGuard, PoisonError};
@@ -41,8 +42,9 @@ impl Hub {
         Ok(heard)
     }
 
-    /// Wakes the keyboard on each mouse mode change, used latch and scroll change through new handlers. The face that
-    /// `attach` takes started first, so these run after its own and the window reads its new state; the last ones go.
+    /// Wakes the keyboard on each mouse mode change, used latch, scroll change and power change through new handlers.
+    /// The face that `attach` takes started first, so these run after its own and the window reads its new state; the
+    /// last ones go.
     pub(super) fn hear_keys(self: &Arc<Self>) {
         let Some(bus) = self.heard().bus.clone() else {
             return;
@@ -51,6 +53,7 @@ impl Hub {
             self.hear(&bus, |hub, _: &AssistChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &LatchesUsed| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &ScrollChanged| hub.wake(Wake::Keys)),
+            self.hear(&bus, |hub, _: &PowerChanged| hub.wake(Wake::Keys)),
         ];
         let keys: Vec<Subscription> = keys
             .into_iter()

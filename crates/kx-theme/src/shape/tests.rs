@@ -144,12 +144,6 @@ fn the_language_key_designs_dimmed_keys_and_the_outline_take_the_mock_up_sizes()
     let s = load().expect("shape.toml loads");
     let c = &s.lang.cycle;
     assert_eq!((c.icon_px, c.icon_share), (12.0, 0.75), ".cyc .i");
-    assert_eq!((c.dot_px, c.dot_gap_px), (3.0, 2.0), ".dots");
-    assert!(
-        c.dot_off > 0.3,
-        "raised from the mock-up's .3 to keep 3:1 (drawn)"
-    );
-    assert!(c.dot_on_px > c.dot_px, "the lit dot stands out by size");
     assert_eq!(
         (s.lang.list.icon_px, s.lang.list.icon_share),
         (11.0, 0.7),
@@ -233,7 +227,6 @@ fn an_odd_weight_or_share_in_a_p3_part_is_refused() {
         ),
         ("\nshare = 0.4", "\nshare = 1.5", "dim.share"),
         ("icon_share = 0.8", "icon_share = -0.1", "menu.icon_share"),
-        ("dot_off = 0.72", "dot_off = nan", "lang.cycle.dot_off"),
         ("\npx = 2.0", "\npx = 0.0", "hc_outline.px"),
         ("plate = 0.88", "plate = 1.2", "backdrop.plate"),
         ("weight = 400", "weight = 1000", "bar.weight"),
@@ -265,7 +258,6 @@ fn an_odd_tray_share_or_label_size_is_refused() {
             "legend.label_pad_px",
         ),
         ("icon_gap_px = 3.0", "icon_gap_px = nan", "lang.icon_gap_px"),
-        ("dot_on_px = 4.5", "dot_on_px = 3.0", "lang.cycle.dot_on_px"),
         (
             "mark_px = [10.0, 2.0, 2.0]",
             "mark_px = [10.0, 0.0, 2.0]",
@@ -279,5 +271,7 @@ fn an_odd_tray_share_or_label_size_is_refused() {
     ]);
 }
 
+/// The dots the language key's Cycle design and the Next key share.
+mod dots;
 /// The scroll pad's arrows, Stop's speed dots and the target's outline.
 mod pad;

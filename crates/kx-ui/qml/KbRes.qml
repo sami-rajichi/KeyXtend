@@ -19,7 +19,13 @@ QtObject {
             dpad: id => ui.nameOf("dpad", id),
             space: parts => ui.space(JSON.stringify(parts)),
             // A tip with a note, such as when a dimmed button comes: its name, then the note, on two lines.
-            noteTip: (name, note) => name + "\n" + note
+            noteTip: (name, note) => name + "\n" + note,
+            // A shortcut's tip by its name key and steps (board JSON): its name and keys, as `tip.keys` orders them.
+            keysTip: (name, steps) => ui.keysTip(name, JSON.stringify(steps)),
+            // The keys alone, such as `Ctrl+A, Ctrl+C`, which readers hear after a shortcut's name.
+            keysText: steps => ui.keysText(JSON.stringify(steps)),
+            // The shortcuts layer's page for readers, from its place in the state (`page` from 0, `pages`).
+            layerPage: place => ui.layerPageText(place.page + 1, place.pages)
         };
     }
     // The Latin, Arabic and mark families (each list's first that Qt has, else its last), and the keyboard's and

@@ -1,4 +1,4 @@
-mod fake;
+pub(crate) mod fake;
 
 use fake::{Fake, VK_A, VK_LCONTROL, VK_RMENU};
 

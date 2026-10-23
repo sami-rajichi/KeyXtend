@@ -1,6 +1,7 @@
 //! The UI's texts: Fluent files compiled in, the language choice, and lookups that fall back to English (ADR-0017).
 //! A key `group.name` in code is message `group`, attribute `name`, since Fluent ids cannot hold dots.
 
+mod combo;
 mod compose;
 pub mod keys;
 

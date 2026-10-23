@@ -1,4 +1,5 @@
-//! A recording fake of the injector's OS calls: a French AZERTY layout with Caps Lock and dead keys.
+//! A recording fake of the injector's OS calls: a French AZERTY layout with Caps Lock and dead keys in front, and US
+//! QWERTY as the keyboard's own.
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
@@ -8,8 +9,10 @@ use crate::keys::{self, VK_SHIFT, VK_SPACE};
 use crate::strokes::KeyEvent;
 use kx_module_api::ports::LayoutId;
 
-/// The layout the fake reports in front; lookups in any other layout fail the test.
+/// The layout the fake reports in front; lookups in any other layout but `OWN` fail the test.
 pub const FRONT: LayoutId = LayoutId::new(0x040C_040C);
+/// The keyboard thread's own layout, US QWERTY; only `scan_of` reads it.
+pub const OWN: LayoutId = LayoutId::new(0x0409_0409);
 /// `VK_A`, `VK_0`, `VK_1`, `VK_7`, `VK_RETURN` and `VK_OEM_6` (the dead `^` key on AZERTY).
 pub const VK_A: u16 = 0x41;
 pub const VK_0: u16 = 0x30;
@@ -51,8 +54,8 @@ const TYPES: [(u16, bool, bool, bool, char, bool); 10] = [
 ];
 
 /// `MapVirtualKeyExW` scan codes: Shift, left Ctrl, right Alt (prefixed), A (the Q place), 0, 1, 7, Enter, the dead
-/// key and Space.
-const SCANS: [(u16, u32); 10] = [
+/// key and Space; then the shortcut keys, AZERTY's Z and W swapped with A and Q, and Delete as its number pad code.
+const SCANS: [(u16, u32); 44] = [
     (VK_SHIFT, 0x2A),
     (VK_LCONTROL, 0x1D),
     (VK_RMENU, 0xE038),
@@ -63,7 +66,43 @@ const SCANS: [(u16, u32); 10] = [
     (VK_RETURN, 0x1C),
     (VK_DEAD, 0x1A),
     (VK_SPACE, 0x39),
+    (0x11, 0x1D),   // VK_CONTROL
+    (0x12, 0x38),   // VK_MENU
+    (0x5B, 0xE05B), // VK_LWIN
+    (0x09, 0x0F),   // VK_TAB
+    (0x1B, 0x01),   // VK_ESCAPE
+    (0x2E, 0x53),   // VK_DELETE
+    (0xBE, 0x33),   // VK_OEM_PERIOD
+    (0x6B, 0x4E),   // VK_ADD
+    (0x6D, 0x4A),   // VK_SUBTRACT
+    (0x43, 0x2E),   // C
+    (0x44, 0x20),   // D
+    (0x45, 0x12),   // E
+    (0x46, 0x21),   // F
+    (0x4C, 0x26),   // L
+    (0x50, 0x19),   // P
+    (0x53, 0x1F),   // S
+    (0x54, 0x14),   // T
+    (0x56, 0x2F),   // V
+    (0x57, 0x2C),   // W
+    (0x58, 0x2D),   // X
+    (0x59, 0x15),   // Y
+    (0x5A, 0x11),   // Z
+    (0x70, 0x3B),   // F1
+    (0x71, 0x3C),   // F2
+    (0x72, 0x3D),   // F3
+    (0x73, 0x3E),   // F4
+    (0x74, 0x3F),   // F5
+    (0x75, 0x40),   // F6
+    (0x76, 0x41),   // F7
+    (0x77, 0x42),   // F8
+    (0x78, 0x43),   // F9
+    (0x79, 0x44),   // F10
+    (0x7A, 0x57),   // F11
+    (0x7B, 0x58),   // F12
 ];
+/// Where US QWERTY puts the keys the shortcut tests read that AZERTY moves: A.
+const OWN_SCANS: [(u16, u32); 1] = [(VK_A, 0x1E)];
 
 /// Records each batch; each send takes at most the next of `takes`, or all once they run out.
 #[derive(Default)]
@@ -104,6 +143,10 @@ impl Os for Fake {
         (!self.away).then_some(FRONT)
     }
 
+    fn own_layout(&self) -> LayoutId {
+        OWN
+    }
+
     fn key_scan(&self, unit: u16, layout: LayoutId) -> i16 {
         assert_eq!(layout, FRONT);
         let hit = KEYMAP
@@ -113,8 +156,10 @@ impl Os for Fake {
     }
 
     fn scan_of(&self, vk: u16, layout: LayoutId) -> u32 {
-        assert_eq!(layout, FRONT);
-        SCANS.iter().find(|(v, _)| *v == vk).map_or(0, |&(_, s)| s)
+        assert!(layout == FRONT || layout == OWN, "{layout}");
+        let own = OWN_SCANS.iter().filter(|_| layout == OWN);
+        let hit = own.chain(&SCANS).find(|(v, _)| *v == vk);
+        hit.map_or(0, |&(_, s)| s)
     }
 
     fn caps_on(&self) -> bool {

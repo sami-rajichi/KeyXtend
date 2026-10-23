@@ -35,15 +35,27 @@ fn ids(ids: &[&str]) -> Vec<String> {
 }
 
 #[test]
-fn every_key_but_the_character_keys_and_the_language_key_gets_a_step() {
+fn every_key_but_the_character_keys_the_language_key_and_the_power_key_gets_a_step() {
     let want: Vec<String> = roles()
         .into_iter()
-        .filter(|(_, r, _)| !matches!(r, Role::Char | Role::Lang))
+        .filter(|(_, r, _)| !matches!(r, Role::Char | Role::Lang | Role::Power))
         .map(|(id, ..)| id)
         .collect();
     let got: Vec<String> = steps(false).into_iter().map(|s| s.key).collect();
     assert_eq!(got, want);
-    assert!(got.contains(&"power".to_string()) && got.contains(&"right".to_string()));
+    assert!(got.contains(&"shortcuts".to_string()) && got.contains(&"right".to_string()));
+    assert!(
+        !got.contains(&"power".to_string()),
+        "it would open the shut-down dialog"
+    );
+}
+
+#[test]
+fn the_shortcuts_key_shows_the_layer_and_hides_it_again_sending_nothing() {
+    let layer = step_of(false, "shortcuts");
+    assert_eq!(layer.presses, ids(&["shortcuts", "shortcuts"]));
+    assert_eq!(layer.expect, Expect::Nothing);
+    assert!(layer.puts_back && !layer.toggles && layer.spare.is_none());
 }
 
 #[test]
@@ -182,8 +194,8 @@ fn a_mouse_assist_key_is_pressed_twice_so_its_mode_comes_back_and_must_send_noth
 }
 
 #[test]
-fn only_a_mouse_assist_key_puts_its_mode_back_even_after_the_guard_stops() {
-    for id in ["rclick", "grab"] {
+fn only_the_mouse_assist_and_shortcuts_keys_put_their_mode_back_even_after_the_guard_stops() {
+    for id in ["rclick", "grab", "shortcuts"] {
         assert!(step_of(false, id).puts_back, "{id}");
     }
     for id in ["esc", "caps", "shift", "mic"] {

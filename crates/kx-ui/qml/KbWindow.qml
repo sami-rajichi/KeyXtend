@@ -16,6 +16,8 @@ Window {
     property var lk: JSON.parse(ui.lookJson())
     property var board: JSON.parse(keyboard.boardJson())
     property var st: JSON.parse(keyboard.stateJson())
+    // The side cells' ids on the board before it was last read, so only cells new to the side block swap in (Plate).
+    property var sideWas: null
     // The icon folder and type, compiled into the app.
     readonly property var assets: JSON.parse(ui.assets())
     // Bumped on each settings or language change, so every text is looked up again in the new language.
@@ -141,8 +143,17 @@ Window {
         cfg = JSON.parse(ui.settingsJson());
         retext();
         relook();
+        reboard();
+    }
+    // Reads the board and the state again; the new state reaches the keys drawn now first, so each key keeps a state
+    // while the shortcuts layer changes the side cells.
+    function reboard() {
+        sideWas = board ? board.keys.filter(k => k.side).map(k => k.id) : null;
+        const next = JSON.parse(keyboard.stateJson());
+        if (st && next)
+            st = Object.assign({}, next, { keys: Object.assign({}, st.keys, next.keys) });
         board = JSON.parse(keyboard.boardJson());
-        restate();
+        restate(next);
     }
     // The keyboard's language changed: only its texts are read again, and a tip in the last language closes (Tip).
     function retext() {
@@ -157,9 +168,10 @@ Window {
         if (visible)
             frosted = ui.backdrop(title);
     }
-    // Reads the legends, lights and place again; the window goes where the keyboard says, unless it is moving.
-    function restate() {
-        st = JSON.parse(keyboard.stateJson());
+    // Reads the legends, lights and place again, or takes `next`, a state just read; the window goes where the keyboard
+    // says, unless it is moving.
+    function restate(next) {
+        st = next !== undefined ? next : JSON.parse(keyboard.stateJson());
         if (st && st.at && !(mover && mover.busy))
             moveTo(st.at);
     }
@@ -167,8 +179,8 @@ Window {
     function redraw(json, always) {
         const r = JSON.parse(json) || {};
         if (r.board)
-            board = JSON.parse(keyboard.boardJson());
-        if (always || r.state || r.board)
+            reboard();
+        else if (always || r.state)
             restate();
         return r;
     }

@@ -1,9 +1,14 @@
 //! Any run of clicks on French AZERTY with its dead keys (`^` and `AltGr` `~`): the dead-key wait starts on a dead
-//! key, ends on a key that types, is kept only by a key that types nothing, and an empty key, a latch or Caps Lock
-//! leaves it.
-//! Every Unicode send is the key's legend without its dotted circle, so a key types what it shows.
+//! key, ends on a key that types (Ctrl and a letter too), is kept only by a key that types nothing (Ctrl and a digit
+//! too), and an empty key, a latch or Caps Lock leaves it. Every Unicode send is the key's legend without its dotted
+//! circle, so a key types what it shows.
 
-use crate::typing::Rig;
+#![allow(
+    clippy::unwrap_used,
+    reason = "these fixtures run only in tests, where a failed setup should fail the test"
+)]
+
+use crate::typing::{Rig, chord, tap};
 use kx_mod_keyboard::legend::{legend, slot};
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{LegendMods, Modifiers};
@@ -15,6 +20,11 @@ use proptest::prelude::*;
 const LAYOUT: &str = "fr-fr";
 /// What a legend draws under a mark that has no letter before it.
 const DOTTED_CIRCLE: char = '\u{25CC}';
+/// The French dead `^`, left Ctrl, and the keys of virtual keys A and 1 on AZERTY.
+const HAT: u16 = 0x1A;
+const CTRL: u16 = 0x1D;
+const A: u16 = 0x10;
+const ONE: u16 = 0x02;
 
 /// What a click on a key is.
 #[derive(Copy, Clone, Debug)]
@@ -141,4 +151,32 @@ proptest! {
     fn the_dead_key_wait_and_each_text_follow_the_model(p in picks(), stay in any::<bool>()) {
         run(if stay { Modifiers::Stay } else { Modifiers::Release }, &p)?;
     }
+}
+
+/// Clicks the dead `^`, latches Ctrl and clicks `key`; true while the wait still holds after it.
+fn ctrl_after_a_dead_key(key: u16) -> bool {
+    let mut r = Rig::new(LAYOUT, |_| ());
+    r.char(HAT).unwrap();
+    assert!(r.typing.waiting(), "the ^ waits");
+    r.tap("ctrl").unwrap();
+    r.char(key).unwrap();
+    assert_eq!(
+        r.sent(),
+        [tap(HAT), chord(&[CTRL], key)],
+        "a shortcut by scan code"
+    );
+    r.typing.waiting()
+}
+
+#[test]
+fn a_dead_key_waits_then_ctrl_and_a_letter_end_the_wait() {
+    assert!(
+        !ctrl_after_a_dead_key(A),
+        "Ctrl+A types a control character"
+    );
+}
+
+#[test]
+fn a_dead_key_waits_then_ctrl_and_a_digit_keep_it() {
+    assert!(ctrl_after_a_dead_key(ONE), "Ctrl+1 types nothing");
 }

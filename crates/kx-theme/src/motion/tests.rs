@@ -145,6 +145,28 @@ fn the_notice_and_the_menu_pop_in_as_the_mock_up_does() {
 }
 
 #[test]
+fn the_shortcuts_layers_swap_pops_in_as_a_panel_and_must_be_in_the_file() {
+    assert!(MOVES.contains(&"layer"), "a move the faces play");
+    let m = load().expect("motion.toml loads");
+    let swift = [0.2, 0.8, 0.2, 1.0, 1.0, 1.0];
+    assert_eq!(
+        m.full.moves["layer"],
+        Timed {
+            ms: 180,
+            bez: swift
+        },
+        ".pop popIn .18s, as the new cells pop in"
+    );
+    assert_eq!(
+        m.reduced.moves["layer"].ms, 0,
+        "no swap with reduced motion"
+    );
+    let gone = text().replacen("layer = {", "layers = {", 1);
+    let e = parse(&gone).expect_err("layer is missing");
+    assert!(e.contains("moves.layer"), "{e}");
+}
+
+#[test]
 fn the_scroll_outline_fades_briefly_and_must_be_in_the_file() {
     assert!(MOVES.contains(&"outline"), "a move the faces play");
     let m = load().expect("motion.toml loads").full;

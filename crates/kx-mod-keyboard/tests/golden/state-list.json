@@ -1438,7 +1438,7 @@
       "third": "",
       "third_ar": false,
       "third_mark": false,
-      "tip": null
+      "tip": "tip.power-off"
     },
     "rclick": {
       "blank": null,
@@ -1552,7 +1552,7 @@
     },
     "shortcuts": {
       "blank": null,
-      "dim": true,
+      "dim": false,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1560,9 +1560,9 @@
       "name": "",
       "on": false,
       "paint": {
-        "fill": "dim",
-        "ink": "dim_ink",
-        "skirt": "dim"
+        "fill": "key_act",
+        "ink": "legend_act",
+        "skirt": "key_mod"
       },
       "second": "",
       "second_ar": false,
@@ -1706,6 +1706,11 @@
       "French (Legacy, AZERTY)"
     ],
     "turn": 0
+  },
+  "layer": {
+    "page": 0,
+    "pages": 3,
+    "shown": false
   },
   "list": {
     "hi": 2,

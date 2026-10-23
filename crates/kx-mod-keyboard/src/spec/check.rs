@@ -5,7 +5,8 @@ use std::collections::HashSet;
 
 impl BoardSpec {
     /// Refuses sizes that are not numbers above 0, rows that do not span the main block, a D-pad off the side grid,
-    /// side keys off the grid, on the D-pad or sharing a cell, an id used twice, and a role that does not fit its key.
+    /// side keys off the grid, on the D-pad or sharing a cell, an id used twice, a role that does not fit its key,
+    /// and a shortcuts layer that does not fit the side grid.
     ///
     /// # Errors
     /// The first broken rule.
@@ -15,7 +16,8 @@ impl BoardSpec {
         self.check_dpad()?;
         self.check_side()?;
         self.check_ids()?;
-        self.check_roles()
+        self.check_roles()?;
+        self.check_layer()
     }
 
     /// Refuses a length that is not a number above 0 (a gap or pad may be 0), and empty grid counts.
@@ -68,7 +70,7 @@ impl BoardSpec {
     }
 
     /// True when side cell (`col`, `row`) is on the side grid.
-    fn on_grid(&self, col: u16, row: u16) -> bool {
+    pub(super) fn on_grid(&self, col: u16, row: u16) -> bool {
         let rows = self.rows.len();
         (1..=self.side_columns).contains(&col) && row >= 1 && usize::from(row) <= rows
     }
@@ -110,17 +112,23 @@ impl BoardSpec {
         Ok(())
     }
 
-    /// Refuses a named or side key whose role is `char`, a key that sends a scan code when its role sends none, or the
-    /// reverse, and a key that repeats but is not `send`.
+    /// Refuses a named or side key whose role is `char` or one only the layer generates, a main-row key that shows the
+    /// layer or asks for the power dialog, a key that sends a scan code when its role sends none, or the reverse, and a
+    /// key that repeats but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
         let named = self.rows.iter().flatten().filter_map(|i| match i {
-            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some(), k.repeat)),
+            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some(), k.repeat, false)),
             RowItem::Chars(_) => None,
         });
-        let side = self.side.iter().map(|s| (&s.id, s.role, false, false));
-        for (id, role, has_code, repeat) in named.chain(side) {
+        let side = self
+            .side
+            .iter()
+            .map(|s| (&s.id, s.role, false, false, true));
+        for (id, role, has_code, repeat, on_side) in named.chain(side) {
             let stray = repeat && role != Role::Send;
-            if role == Role::Char || role.sends() != has_code || stray {
+            let made = matches!(role, Role::Char | Role::Shortcut | Role::Next);
+            let side_only = !on_side && matches!(role, Role::Layer | Role::Power);
+            if made || side_only || role.sends() != has_code || stray {
                 return Err(BoardError::Role(id.clone()));
             }
         }

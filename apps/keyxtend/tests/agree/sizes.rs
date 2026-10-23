@@ -7,7 +7,7 @@ use kx_settings::{Files, Store};
 use kx_test_support::tempdir::TempDir;
 
 /// The keyboard's settings and the load's notices, from a settings file whose `[keyboard]` section holds `lines`.
-fn load(lines: &str) -> (KeyboardSettings, Vec<Notice>) {
+pub(crate) fn load(lines: &str) -> (KeyboardSettings, Vec<Notice>) {
     let dir = TempDir::new("agree-sizes").unwrap();
     let files = Files::new(dir.path());
     std::fs::write(&files.settings, format!("[keyboard]\n{lines}")).unwrap();

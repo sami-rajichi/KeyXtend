@@ -1,6 +1,6 @@
 // The keyboard's language over the stand-in Ui and Keyboard, as the root wires the app (ADR-0020): a new layout
 // language switches every text on and around the keyboard at once and moves nothing, Arabic keeps the English key
-// words and flips text only, and the tray keeps the system's language.
+// words and flips text only, the tray keeps the system's language, and the stand-in names a shortcut's keys.
 import QtQuick
 import QtTest
 import "../qml"
@@ -26,6 +26,12 @@ Item {
             ui: FakeUi {}
             keyboard: FakeKeyboard {}
         }
+    }
+
+    // The stand-in Ui alone, for the texts it composes.
+    Component {
+        id: uiC
+        FakeUi {}
     }
 
     TestCase {
@@ -143,6 +149,30 @@ Item {
             compare(places(app, keys), was, "nothing moves");
             const msg = all(app.notice.contentItem, o => o.text === Ar.texts[noticeKey] && o.wrapMode !== undefined)[0];
             compare(msg.effectiveHorizontalAlignment, Text.AlignRight, "the banner reads right to left");
+        }
+
+        // The stand-in names a shortcut's keys as the hub's texts test pins them, in each language.
+        function test_the_stand_in_names_a_shortcuts_keys_as_the_hub_does() {
+            const ui = createTemporaryObject(uiC, root);
+            const copyAll = '[["ctrl","a"],["ctrl","c"]]';
+            compare(ui.keysTip("shortcut.copy-all", copyAll), "Copy all (Ctrl+A, Ctrl+C)");
+            compare(ui.keysText(copyAll), "Ctrl+A, Ctrl+C", "the keys alone");
+            ui.texts = Fr.texts;
+            compare(ui.keysTip("shortcut.reopen-tab", '[["ctrl","shift","t"]]'), "Rouvrir l’onglet fermé (Ctrl+Maj+T)");
+            ui.texts = Ar.texts;
+            compare(ui.keysTip("shortcut.copy-all", copyAll), "(Ctrl+A، Ctrl+C) نسخ الكل", "Arabic puts the keys first");
+            compare(ui.keysText(copyAll), "Ctrl+A، Ctrl+C");
+            compare(ui.keysTip("shortcut.copy", "[]"), Ar.texts["shortcut.copy"], "no keys: the name alone");
+        }
+
+        // The stand-in says the shortcuts layer's page as the hub's texts test pins it, in each language.
+        function test_the_stand_in_says_the_layers_page_as_the_hub_does() {
+            const ui = createTemporaryObject(uiC, root);
+            const said = [[En, "Page 2 of 3"], [Fr, "Page 2 sur 3"], [Ar, "الصفحة 2 من 3"]];
+            for (const [t, want] of said) {
+                ui.texts = t.texts;
+                compare(ui.layerPageText(2, 3), want);
+            }
         }
 
         // Native, Dolch, ET66, then Native again (ADR-0021): after each switch, as the hub loads the theme's fonts and

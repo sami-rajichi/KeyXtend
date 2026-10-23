@@ -76,6 +76,14 @@ pub struct NoticeIcons {
     pub icon: String,
 }
 
+/// The shortcuts layer's own keys.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct LayerIcons {
+    /// The Next key, with its page dots under it.
+    pub next: String,
+}
+
 /// The tray icon's drawing and its menu's items.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -94,6 +102,10 @@ pub struct TrayIcons {
 pub struct Icons {
     /// Named keys by board id; a key not listed shows a text label.
     pub keys: BTreeMap<String, String>,
+    /// The shortcuts layer's keys by shortcut id; a shortcut not listed shows its name.
+    pub shortcuts: BTreeMap<String, String>,
+    /// The shortcuts layer's Next key.
+    pub layer: LayerIcons,
     /// The top bar, the resize corner and the bubble.
     pub bar: BarIcons,
     /// The D-pad.
@@ -109,7 +121,7 @@ pub struct Icons {
 }
 
 impl Icons {
-    /// Every name with where it is used, such as `bar.theme`.
+    /// Every name with where it is used, such as `bar.theme` or `shortcuts.copy`.
     fn named(&self) -> Vec<(String, &str)> {
         let (b, d, l, t) = (&self.bar, &self.dpad, &self.lang, &self.tray);
         let fixed = [
@@ -131,6 +143,7 @@ impl Icons {
             ("lang.cycle", &l.cycle),
             ("lang.list", &l.list),
             ("lang.current", &l.current),
+            ("layer.next", &self.layer.next),
             ("page.back", &self.page.back),
             ("page.on", &self.page.on),
             ("notice.icon", &self.notice.icon),
@@ -138,14 +151,13 @@ impl Icons {
             ("tray.show", &t.show),
             ("tray.quit", &t.quit),
         ];
-        let keys = self
-            .keys
-            .iter()
-            .map(|(k, v)| (format!("keys.{k}"), v.as_str()));
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
-        keys.chain(fixed).collect()
+        let keys = by_id("keys", &self.keys);
+        keys.chain(by_id("shortcuts", &self.shortcuts))
+            .chain(fixed)
+            .collect()
     }
 
     /// Every icon name, once for each place that shows it.
@@ -153,6 +165,15 @@ impl Icons {
     pub fn names(&self) -> Vec<&str> {
         self.named().into_iter().map(|(_, n)| n).collect()
     }
+}
+
+/// Each name in `m` by its id, with where it is used: `group.id`.
+fn by_id<'a>(
+    group: &'static str,
+    m: &'a BTreeMap<String, String>,
+) -> impl Iterator<Item = (String, &'a str)> {
+    m.iter()
+        .map(move |(k, v)| (format!("{group}.{k}"), v.as_str()))
 }
 
 /// True for a plain file name: lower-case ASCII letters, digits and `-`, never empty.
@@ -175,61 +196,4 @@ pub(crate) fn parse(text: &str) -> Result<Icons, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn text() -> String {
-        crate::ICONS.to_string()
-    }
-
-    #[test]
-    fn the_icons_load_with_the_theme_button_on_the_palette() {
-        let i = parse(crate::ICONS).expect("icons.toml loads");
-        assert_eq!(i.bar.theme, "palette", "the theme button");
-        assert_eq!(
-            (i.bar.mode.as_str(), i.bar.mode_on.as_str()),
-            ("moon", "sun")
-        );
-        assert_eq!(i.keys["win"], "win-logo", "our own drawing");
-        assert_eq!(i.keys["enter"], "corner-down-left", "mock-up keyInner");
-        assert_eq!(
-            (i.lang.cycle.as_str(), i.lang.list.as_str()),
-            ("globe", "chevron-up")
-        );
-        assert_eq!(i.lang.current, "check", "the list's current row");
-        assert_eq!(i.dpad.stop, "square");
-        assert_eq!(
-            (i.page.back.as_str(), i.page.on.as_str()),
-            ("chevron-up", "chevron-down")
-        );
-        assert_eq!(i.notice.icon, "keyboard");
-        assert_eq!(
-            (i.tray.show.as_str(), i.tray.quit.as_str()),
-            ("keyboard", "power")
-        );
-        assert!(i.names().contains(&"palette"));
-    }
-
-    #[test]
-    fn a_name_that_is_not_a_plain_file_name_is_refused() {
-        for bad in ["../x", "Palette", "", "a b", "x.svg"] {
-            let t = text().replacen("theme = \"palette\"", &format!("theme = {bad:?}"), 1);
-            let e = parse(&t).expect_err(bad);
-            assert!(e.contains("bar.theme"), "{bad}: {e}");
-        }
-    }
-
-    #[test]
-    fn a_bad_tray_or_page_name_is_refused_with_where_it_is_used() {
-        let t = text().replacen("quit = \"power\"", "quit = \"Power\"", 1);
-        assert!(parse(&t).expect_err("a capital").contains("tray.quit"));
-        let t = text().replacen("on = \"chevron-down\"", "on = \"../x\"", 1);
-        assert!(parse(&t).expect_err("a path").contains("page.on"));
-    }
-
-    #[test]
-    fn a_misspelt_or_missing_button_is_refused() {
-        let typo = text().replacen("theme = \"palette\"", "theem = \"palette\"", 1);
-        assert!(parse(&typo).expect_err("a typo").contains("theem"));
-    }
-}
+mod tests;

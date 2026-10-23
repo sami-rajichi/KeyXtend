@@ -15,6 +15,15 @@ pub const EXCEPTION: &str = "Carousel side names";
 /// Stop's unlit speed dot, read against the lit one beside it.
 const SPEED_DOT: &str = "D-pad unlit speed dot by a lit one";
 
+/// The language key's unlit dot on its Cycle design.
+const CYCLE_DOT: &str = "Cycle unlit dot";
+/// The Next key's unlit dot, under its chevron.
+const NEXT_DOT: &str = "Next unlit dot";
+/// The Next key's chevron over its dots, which reads as text does (spec §4).
+const NEXT_CHEVRON: &str = "Next chevron";
+/// A shortcut's icon on the shortcuts layer, alone on its cell, so it reads as text does (spec §4).
+const SHORTCUT_ICON: &str = "Shortcut icon";
+
 /// Windows 11's plain window colours, light then dark (Mica's base): what a system backdrop shows behind the plate.
 pub const WINDOWS: [Rgba; 2] = [
     Rgba {
@@ -60,7 +69,7 @@ impl Drawn {
 }
 
 /// Every pair view `v` draws on a keyboard whose rows are `row_px` high at size 1: legends on caps, the language
-/// key's marks, the D-pad, the plate and the panels.
+/// key's and the shortcuts layer's marks, the D-pad, the plate and the panels.
 #[must_use]
 pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     let (mut out, h) = (Vec::new(), height(v, row_px));
@@ -191,12 +200,22 @@ fn keys(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     }
 }
 
-/// The language key's faded marks in `legend_mod` on a key `h` high: Cycle's unlit dots and globe, List's chevron,
-/// Carousel's side names.
+/// The fill and skirt of the key whose ink is `ink`, from its `KEYS` row; clear when no row has it, which fails.
+fn fill_of(v: &LookView, ink: &str) -> Fill {
+    let row = KEYS.iter().find(|k| k.0 == ink);
+    let clear = Fill {
+        top: Rgba::CLEAR,
+        skirt: Rgba::CLEAR,
+    };
+    row.map_or(clear, |&(_, top, skirt, _)| fill(v, top, skirt))
+}
+
+/// The marks on a key `h` high: the language key's in `legend_mod` (Cycle's unlit dots and globe, List's chevron,
+/// Carousel's side names), and the shortcuts layer's in `legend_act` (a shortcut's icon, Next's chevron and unlit dots).
 fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
-    let (l, f) = (&v.shape.lang, fill(v, "key_mod", "key_mod"));
-    let marks = [
-        ("Cycle unlit dot", l.cycle.dot_off, Mark::Dots, WCAG_SHAPES),
+    let (l, off) = (&v.shape.lang, v.shape.dots.off);
+    let lang = [
+        (CYCLE_DOT, off, Mark::Dots, WCAG_SHAPES),
         ("Cycle globe", l.cycle.icon_share, Mark::Globe, WCAG_SHAPES),
         (
             "List chevron",
@@ -206,16 +225,23 @@ fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
         ),
         (EXCEPTION, l.side[1], Mark::Side, WCAG_AA),
     ];
-    for (name, share, mark, min) in marks {
-        let ink = v.palette.legend_mod;
-        let l = Legend {
-            name,
-            ink,
-            share,
-            mark,
-            min,
-        };
-        out.extend(on_cap(v, h, &l, f));
+    let layer = [
+        (SHORTCUT_ICON, 1.0, Mark::Icon, WCAG_AA),
+        (NEXT_CHEVRON, 1.0, Mark::Next, WCAG_AA),
+        (NEXT_DOT, off, Mark::Pages, WCAG_SHAPES),
+    ];
+    for (ink, marks) in [("legend_mod", &lang[..]), ("legend_act", &layer[..])] {
+        let (ink, f) = (token(v, ink), fill_of(v, ink));
+        for &(name, share, mark, min) in marks {
+            let l = Legend {
+                name,
+                ink,
+                share,
+                mark,
+                min,
+            };
+            out.extend(on_cap(v, h, &l, f));
+        }
     }
 }
 

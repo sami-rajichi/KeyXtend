@@ -21,6 +21,8 @@ use crate::strokes::{self, Key, KeyEvent};
 mod win;
 
 #[cfg(windows)]
+pub(crate) use win::Win32;
+#[cfg(windows)]
 pub use win::{WinInjector, input, send, send_keys, vk_key};
 
 /// The OS calls the injector makes: Win32 on Windows, a recorder in tests.
@@ -30,6 +32,9 @@ pub(crate) trait Os {
 
     /// The layout of the window with the keyboard in the app in front; `None` with no app in front.
     fn layout(&self) -> Option<LayoutId>;
+
+    /// The calling thread's own layout, the keyboard's: shortcuts map their keys with it when no app is in front.
+    fn own_layout(&self) -> LayoutId;
 
     /// `VkKeyScanExW`: the key and shift state that type UTF-16 unit `unit` in `layout`.
     fn key_scan(&self, unit: u16, layout: LayoutId) -> i16;
@@ -202,4 +207,4 @@ fn line_breaks(text: &str) -> impl Iterator<Item = char> + '_ {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

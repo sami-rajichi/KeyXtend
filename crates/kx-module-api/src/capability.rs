@@ -44,6 +44,8 @@ capabilities! {
     SecretStore => "secret-store",
     /// Scroll other apps' windows.
     Scroll => "scroll",
+    /// Open the system's power dialog.
+    Power => "power",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -83,5 +85,11 @@ mod tests {
     fn scroll_is_its_own_capability() {
         assert!(Capability::ALL.contains(&Capability::Scroll));
         assert_eq!(Capability::Scroll.name(), "scroll");
+    }
+
+    #[test]
+    fn power_is_its_own_capability() {
+        assert!(Capability::ALL.contains(&Capability::Power));
+        assert_eq!(Capability::Power.name(), "power");
     }
 }

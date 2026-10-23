@@ -23,8 +23,11 @@ dpad = { cell = [1, 2, 2, 4], units = 2.44 }
 # and runs of one-unit character keys by scan code.
 rows = [
     # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
-    # "lang", { assist = "rclick" | "grab" } (flips a mouse-assist mode, spec §5.1), or "later" (dimmed, coming in a
-    # later version). `repeat` makes a "send" key repeat while held (spec §4.6); character keys always do.
+    # "lang", { assist = "rclick" | "grab" } (flips a mouse-assist mode, spec §5.1), "layer" (shows or hides the
+    # shortcuts layer, spec §4.2) and "power" (asks for the system's power dialog, spec §8.5), both side keys only, or
+    # "later" (dimmed, coming in a later version); "shortcut" and "next" are only for the layer's own keys.
+    #
+    # `repeat` makes a "send" key repeat while held (spec §4.6); character keys always do.
     # `lone = true` in a latch role makes a second click with nothing used since the first let go and send the key
     # alone, so Win opens Start (spec §4.4); never on Alt, whose lone press opens the app's menu bar.
     [
@@ -65,16 +68,21 @@ rows = [
     ],
 ]
 
-# Side keys by column and row (1-based). Right-click and Grab flip mouse assist; the others come in a later version
-# (owner, 2026-09-29), so they are dimmed for now.
+# Side keys by column and row (1-based). Right-click and Grab flip mouse assist, Shortcuts shows the layer and Power asks
+# for the power dialog; the others come in a later version (owner, 2026-09-29), so they are dimmed for now.
 side = [
     { id = "rclick", col = 1, row = 1, role = { assist = "rclick" } },
     { id = "grab", col = 2, row = 1, role = { assist = "grab" } },
-    { id = "shortcuts", col = 3, row = 1, role = "later" },
+    { id = "shortcuts", col = 3, row = 1, role = "layer" },
     { id = "mic", col = 3, row = 2, role = "later" },
     { id = "clip", col = 3, row = 3, role = "later" },
     { id = "snip", col = 3, row = 4, role = "later" },
     { id = "fill", col = 1, row = 5, role = "later" },
     { id = "settings", col = 2, row = 5, role = "later" },
-    { id = "power", col = 3, row = 5, role = "later" },
+    { id = "power", col = 3, row = 5, role = "power" },
 ]
+
+# The shortcuts layer fills every side cell but the Shortcuts key's, in reading order (spec §4.2).
+# With more than one page, side cell `next` (column, row, 1-based) holds the Next key.
+[layer]
+next = [3, 5]

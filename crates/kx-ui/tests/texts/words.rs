@@ -139,6 +139,12 @@ fn french_points_sur_a_thing_and_taps_with_appuyez_sur() {
 }
 
 #[test]
+fn french_names_switch_app_with_windows_own_term() {
+    let fr = lang("fr").text("shortcut.switch-app");
+    assert_eq!(fr, "Basculer entre les applications");
+}
+
+#[test]
 fn arabic_uses_arabic_punctuation() {
     let ar = find("ar").expect("Arabic");
     for line in text_lines(ar.ftl) {

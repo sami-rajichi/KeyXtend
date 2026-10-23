@@ -85,14 +85,14 @@ Item {
             verify(named(win, En.texts["key.dpad"]), "the D-pad");
         }
 
-        function test_only_latches_caps_and_the_mouse_modes_are_checkable() {
+        function test_only_latches_caps_the_mouse_modes_and_the_shortcuts_key_are_checkable() {
             const win = make();
             const checkable = buttons(win).filter(o => o.Accessible.checkable).map(o => o.Accessible.id).sort();
             const latches = Face.board.keys.filter(k => k.checkable).map(k => k.id).sort();
             compare(checkable, latches);
             verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
             const side = Face.board.keys.filter(k => k.side && k.checkable).map(k => k.id).sort();
-            compare(side, ["grab", "rclick"], "Right-click and Grab are the side keys that turn on");
+            compare(side, ["grab", "rclick", "shortcuts"], "Right-click, Grab and Shortcuts are the side keys that turn on");
         }
 
         function test_dimmed_keys_announce_coming_in_a_later_version_and_others_their_state_tip() {

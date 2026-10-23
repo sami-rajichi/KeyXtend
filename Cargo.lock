@@ -454,6 +454,7 @@ dependencies = [
  "kx-mod-keyboard",
  "kx-mod-layouts",
  "kx-mod-mouse",
+ "kx-mod-power",
  "kx-mod-scroll",
  "kx-module-api",
  "kx-platform",
@@ -552,6 +553,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-mod-power"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "kx-test-support",
+ "proptest",
+ "tracing",
+]
+
+[[package]]
 name = "kx-mod-scroll"
 version = "0.0.0"
 dependencies = [
@@ -606,7 +618,9 @@ dependencies = [
  "kx-platform",
  "kx-test-support",
  "proptest",
+ "serde",
  "thiserror 2.0.21",
+ "toml",
  "tracing",
  "windows",
 ]

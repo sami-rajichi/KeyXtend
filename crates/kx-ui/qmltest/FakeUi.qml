@@ -181,6 +181,24 @@ QtObject {
     function pageText(at, count) {
         return text("page.of").replace("{$at}", at).replace("{$count}", count);
     }
+    // The same for the shortcuts layer's page, which readers hear after the Next key's name.
+    function layerPageText(page, pages) {
+        return text("key.layer-page").replace("{$page}", page).replace("{$pages}", pages);
+    }
+    // Names a shortcut's keys as the hub does: a key's label, else its `keyname` text, else its name in upper case.
+    function keysText(steps) {
+        const named = n => ["label.", "keyname."].map(g => said.texts[g + n]).find(t => t !== undefined);
+        const shown = n => named(n) !== undefined ? named(n) : n.toUpperCase();
+        const each = JSON.parse(steps).filter(s => s.length > 0).map(s => s.map(shown).join(text("combo.join")));
+        return each.join(text("combo.then"));
+    }
+    // A shortcut's tip as the hub makes it: its name and keys in `tip.keys`, or the name alone when it has no keys.
+    function keysTip(nameKey, steps) {
+        const [name, keys] = [text(nameKey), keysText(steps)];
+        if (keys.length === 0)
+            return name;
+        return text("tip.keys").replace("{$name}", () => name).replace("{$keys}", () => keys);
+    }
     function trayPx() {
         return trayPixels;
     }

@@ -164,6 +164,9 @@ impl Os for Win32 {
 }
 
 #[cfg(test)]
+mod held;
+
+#[cfg(test)]
 mod tests {
     use std::sync::Arc;
 

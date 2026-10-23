@@ -6,7 +6,6 @@ use kx_mod_keyboard::{KeyboardSettings, Modifiers, Nav, Role};
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::langkey;
 
 use crate::apps::{Ctx, Opened};
 use crate::g10keys::{self, LangWant, Step};
@@ -14,7 +13,7 @@ use crate::keymap::Reader;
 use crate::mouseguard;
 use crate::product::{self, Keyboard};
 use crate::win::{poll_until, sleep_ms};
-use crate::{board, g25, tlog};
+use crate::{board, g25, langs, tlog};
 
 /// Where G10 presses: the keyboard, target-window in front, and the layout target-window had at the start.
 struct Desk<'a> {
@@ -86,7 +85,7 @@ impl Desk<'_> {
             downs: downs.map(|k| k.scan).collect(),
             lost: tlog::focus_lost(&log, t0),
             front: foreground() == self.target.hwnd,
-            same_layout: langkey::layout_of(self.target.hwnd) == self.layout,
+            same_layout: langs::layout_of(self.target.hwnd) == self.layout,
         })
     }
 
@@ -170,7 +169,7 @@ fn stepped(d: &Desk) -> bool {
     let Some(start) = d.layout else {
         return false;
     };
-    let next = langkey::step_from(&langkey::installed(), start, 1);
+    let next = langs::step_from(&langs::installed(), start, 1);
     let stepped = next.is_some_and(|n| g25::shows(d.ctx, d.target, n));
     let back = g25::switch_to(d.ctx, d.target, start);
     stepped && back
@@ -188,7 +187,7 @@ fn listed(d: &Desk, before: usize) -> Result<bool, String> {
 /// The language key's step, done last: it does what `settings` and the installed layouts say, and no key reaches
 /// target-window.
 fn lang(d: &Desk, settings: &KeyboardSettings) -> Result<Value, String> {
-    let want = g10keys::lang_want(settings.lang_key, langkey::installed().len());
+    let want = g10keys::lang_want(settings.lang_key, langs::installed().len());
     let key = board::id_of(Role::Lang)?;
     let (t0, before) = (now_us(), product::shown().len());
     d.press(&key)?;
@@ -212,7 +211,7 @@ pub fn run(ctx: &Ctx, kb: &Keyboard, target: &Opened) -> Result<Value, String> {
     let settings = product::keyboard()?;
     let stay = settings.modifiers == Modifiers::Stay;
     let plan = g10keys::plan(&board::roles()?, &ctx.cfg.g10.probe, stay)?;
-    let layout = langkey::layout_of(target.hwnd);
+    let layout = langs::layout_of(target.hwnd);
     let reader = Reader::new()?;
     let d = Desk {
         ctx,

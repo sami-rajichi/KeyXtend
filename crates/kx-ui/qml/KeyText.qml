@@ -19,6 +19,8 @@ Loader {
     // A named key's icon file, else its translated label.
     required property string icon
     required property string label
+    // The shortcuts layer's place, whose page dots the Next key shows (Key).
+    property var paging: null
 
     readonly property var look: lk.look
     readonly property var lg: lk.shape.legend

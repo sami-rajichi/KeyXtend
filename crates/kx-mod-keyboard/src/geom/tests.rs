@@ -153,6 +153,22 @@ fn side_keys_sit_in_their_cells_right_of_the_main_block() {
 }
 
 #[test]
+fn a_side_cells_area_is_the_cell_its_side_key_takes_at_any_size() {
+    let s = spec();
+    for size in [1.0, 1.5] {
+        let b = board(&s, 0.0, size);
+        for k in &s.side {
+            let key = b.keys.iter().find(|b| b.id == k.id).unwrap();
+            let cell = SideCell {
+                col: k.col,
+                row: k.row,
+            };
+            assert_eq!(side_area(&s, cell, size), key.cell, "{} at {size}", k.id);
+        }
+    }
+}
+
+#[test]
 fn a_broken_board_never_panics() {
     let mut s = spec();
     s.columns_per_unit = 0;

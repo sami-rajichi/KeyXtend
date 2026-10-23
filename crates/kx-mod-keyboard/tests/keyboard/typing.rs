@@ -6,19 +6,24 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-use kx_mod_keyboard::spec::char_id;
+use kx_mod_keyboard::spec::{SideCell, char_id};
 use kx_mod_keyboard::{
-    BoardSpec, Io, KeyboardSettings, Latch, Modifiers, TapError, Tapped, Typing,
+    BoardSpec, Io, KeyboardSettings, Latch, LayerCell, LayerKey, Modifiers, TapError, Tapped,
+    Typing,
 };
 use kx_module_api::Redacted;
-use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute, Toggle};
-use kx_platform_fake::{FakeInjector, FakeLayoutSource, LayoutFile, Stroke};
+use kx_module_api::ports::{InjectError, LayoutTable, Scan, ShortcutId, TextRoute, Toggle};
+use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeShortcuts, LayoutFile, Stroke};
+
+/// The side cell of a lone shortcut: typing reads only its key.
+const CELL: SideCell = SideCell { col: 1, row: 1 };
 
 /// One layout's fakes and a typing state on the shipped board.
 pub struct Rig {
     pub injector: FakeInjector,
     pub source: FakeLayoutSource,
     pub table: LayoutTable,
+    pub shortcuts: FakeShortcuts,
     pub typing: Typing,
 }
 
@@ -31,16 +36,31 @@ impl Rig {
             injector: FakeInjector::new(),
             source: FakeLayoutSource::golden(&[layout]).unwrap(),
             table: LayoutTable::from(&LayoutFile::golden(layout).unwrap()),
+            shortcuts: FakeShortcuts::new(),
             typing: Typing::new(&BoardSpec::shipped().unwrap(), &settings),
         }
     }
 
     /// A click on key `id`.
     pub fn tap(&mut self, id: &str) -> Result<Tapped, TapError> {
+        self.tap_on(&[], id)
+    }
+
+    /// A click on the layer's cell for shortcut `id`, as if the layer drew it alone.
+    pub fn shortcut(&mut self, id: &ShortcutId) -> Result<Tapped, TapError> {
+        let key = LayerKey::Shortcut(id.clone());
+        let cell = LayerCell { cell: CELL, key };
+        self.tap_on(std::slice::from_ref(&cell), &cell.key.id())
+    }
+
+    /// A click on key `id` while the layer draws `layer`.
+    fn tap_on(&mut self, layer: &[LayerCell], id: &str) -> Result<Tapped, TapError> {
         let io = Io {
             injector: &self.injector,
             source: &self.source,
             table: &self.table,
+            shortcuts: &self.shortcuts,
+            layer,
         };
         self.typing.tap(&io, id, false)
     }
@@ -216,6 +236,8 @@ fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
         injector: &r.injector,
         source: &r.source,
         table: &r.table,
+        shortcuts: &r.shortcuts,
+        layer: &[],
     };
     assert_eq!(
         r.typing.tap(&io, "lang", true),
@@ -223,7 +245,14 @@ fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
     );
     assert_eq!(r.tap("mic"), Ok(Tapped::Later));
     assert_eq!(r.tap("rclick"), Ok(Tapped::Assist(Toggle::RightClick)));
+    assert_eq!(r.tap("shortcuts"), Ok(Tapped::Layer));
+    assert_eq!(r.tap("power"), Ok(Tapped::Power));
     assert_eq!(r.tap("no-such-key"), Err(TapError::UnknownKey));
+    assert_eq!(
+        r.tap("sc-copy"),
+        Err(TapError::UnknownKey),
+        "no layer drawn"
+    );
     assert!(r.sent().is_empty());
 }
 

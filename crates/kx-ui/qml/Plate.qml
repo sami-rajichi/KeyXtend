@@ -1,5 +1,5 @@
-// The keyboard window's body: the plate with its top bar, keys, D-pad and resize corner, and the mover over it all.
-// The window loads it only once the settings, look, board and state have all read.
+// The keyboard window's body, loaded once everything has read: the plate with its top bar, main keys, side block,
+// D-pad and resize corner, and the mover over it all. The shortcuts layer takes the side block and hides the pad.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -19,6 +19,18 @@ Item {
     readonly property var res: win.res
     readonly property real s: win.s
     readonly property color plateColour: lk.palette.plate
+    // The shortcuts layer shows; the pad swaps back in when it goes.
+    readonly property bool layered: !!board.layer
+    // The board's main keys, then its side block, which a flip of the shortcuts layer alone makes again.
+    readonly property var mains: board.keys.filter(k => !k.side)
+    readonly property var sides: board.keys.filter(k => k.side)
+
+    onLayeredChanged: if (!layered) padSwap.play()
+
+    // Board key `kv` is a side cell new to the side block since the board was last read; none is on the first board.
+    function fresh(kv) {
+        return !!kv && !!win.sideWas && kv.side && win.sideWas.indexOf(kv.id) < 0;
+    }
 
     Item {
         id: plate
@@ -65,34 +77,40 @@ Item {
             onClose: body.win.putAway()
             onTip: (name, at) => body.win.hint(name, at)
         }
-        // A count, not the list: a new size then moves the keys instead of making them all again.
-        Repeater {
-            model: body.board.keys.length
-            delegate: Key {
-                required property int index
-                kv: body.board.keys[index]
-                ks: body.st.keys[kv.id]
-                lk: body.lk
-                lang: body.st.lang
-                design: body.board.lang_key
-                res: body.res
-                s: body.s
-                onHit: back => body.win.presses.tap(kv.id, back)
-                onHeld: body.win.presses.hold(kv.id)
-                onLetGo: body.win.presses.letGo(kv.id)
-                onLost: body.win.presses.leave()
-                onTip: (name, at) => body.win.hint(name, at)
-            }
+        KeyBlock {
+            anchors.fill: parent
+            plate: body
+            keys: body.mains
+        }
+        KeyBlock {
+            anchors.fill: parent
+            plate: body
+            keys: body.sides
         }
         DPad {
+            id: pad
+            // It is swapping back in now.
+            readonly property bool swapping: padSwap.running
             // Its box and name come with the board; whether it works, and how it scrolls, with the state.
             box: Object.assign({}, body.board.dpad, body.st.dpad)
+            visible: !body.layered
+            transform: Translate {
+                id: padRise
+            }
             lk: body.lk
             res: body.res
             s: body.s
             onTip: (name, at) => body.win.hint(name, at)
             onTapped: dir => body.win.redraw(body.win.keyboard.pad(dir))
             onHovered: on => body.win.redraw(body.win.keyboard.padHover(on))
+
+            Swap {
+                id: padSwap
+                target: pad
+                shift: padRise
+                lk: body.lk
+                s: body.s
+            }
         }
         Corner {
             x: parent.width - width / 2

@@ -8,7 +8,9 @@ mod input;
 mod layout;
 mod layouts;
 mod pointer;
+mod power;
 mod scroll;
+mod shortcut;
 
 pub use assist::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, GrabState, LatchesAsk, LatchesChanged,
@@ -26,9 +28,13 @@ pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
     PointerEvent, PointerHook, PointerHookKey,
 };
+pub use power::{PowerAsk, PowerAsked, PowerChanged, PowerDialog, PowerDialogKey, PowerError};
 pub use scroll::{
     Aim, Dir, Reach, ScrollAimed, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError, ScrollPage,
     ScrollPeek, ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
+};
+pub use shortcut::{
+    KeyName, MAX_ID_LEN, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
 };
 
 use crate::Redacted;

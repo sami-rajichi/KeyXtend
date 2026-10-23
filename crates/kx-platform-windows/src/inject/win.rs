@@ -4,9 +4,9 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, InputInjector, LayoutId, LayoutSource, Scan, TextRoute};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    HKL, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_EXTENDEDKEY,
-    KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE, MAPVK_VK_TO_VSC_EX, MapVirtualKeyExW,
-    SendInput, VIRTUAL_KEY, VkKeyScanExW,
+    GetKeyboardLayout, HKL, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
+    MAPVK_VK_TO_VSC_EX, MapVirtualKeyExW, SendInput, VIRTUAL_KEY, VkKeyScanExW,
 };
 
 use super::{Os, chord_events, deliver, type_text};
@@ -37,8 +37,8 @@ impl InputInjector for WinInjector {
     }
 }
 
-/// The Win32 calls behind `WinInjector`.
-struct Win32;
+/// The Win32 calls behind `WinInjector` and the shortcuts service.
+pub(crate) struct Win32;
 
 impl Os for Win32 {
     fn send(&self, events: &[KeyEvent]) -> usize {
@@ -47,6 +47,12 @@ impl Os for Win32 {
 
     fn layout(&self) -> Option<LayoutId> {
         WinLayouts.foreground()
+    }
+
+    #[allow(unsafe_code, reason = "A plain query of this thread's layout.")]
+    fn own_layout(&self) -> LayoutId {
+        // SAFETY: a plain query; thread 0 means the calling thread.
+        layouts::id(unsafe { GetKeyboardLayout(0) })
     }
 
     #[allow(unsafe_code, reason = "A plain layout-table lookup.")]

@@ -1,6 +1,6 @@
 # kx-mod-keyboard
 
-The keyboard module: the board the user clicks, its size and its place on the screen, typing with sticky modifiers, the language key, and the face the UI draws. It talks to the OS only through ports, so it builds and tests on every system.
+The keyboard module: the board the user clicks, its size and its place on the screen, typing with sticky modifiers, the language key, the shortcuts layer, and the face the UI draws. It talks to the OS only through ports, so it builds and tests on every system.
 
 ## Services
 
@@ -9,17 +9,20 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `InputInjector` | needs | Sends each click's keys or text to the app in front, and names that app for `key_apps`. |
 | `LayoutSource` | needs | Says whether Caps Lock is on, and whether a key typed anything while a dead key waits. |
 | `Layouts` | needs | Its current table says what each key types in the layout shown. |
+| `Shortcuts` | needs | Names the shortcuts the platform knows, with their steps, and sends the layer's shortcuts with the latched modifiers held. |
 | `KeyboardFace` | provides | The board and state JSON the UI draws, the board's row the theme's drawn check measures caps by, and each click it forwards; see "The face". |
 
 ## Capabilities
 
 | Capability | Why |
 |---|---|
-| `InjectInput` | It gates all three services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector`. |
+| `InjectInput` | It gates all four services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector` and `Shortcuts`. |
 
 ## The board
 
 `board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; the `kx-ui` translations (`i18n/*.ftl`) and `kx-theme` (`tokens/icons.toml`) give them by key id. A key's `nav` says what it does in an open list. A `send` key with `repeat = true` repeats while held (Backspace, Delete, Enter, Space and the arrows), as every character key does; `BoardSpec::repeating` lists them, and any other key with the flag is refused.
+
+`[layer]` places the shortcuts layer (spec §4.2): it fills every side cell but the `layer` key's in reading order, and with more than one page `next` (column, row) holds the Next key, so a page holds 13 shortcuts, or 14 alone. `BoardSpec::layer_grid` gives those cells and that room. The layer's keys are generated: `sc-` and the shortcut id (`shortcut_key_id`, such as `sc-copy-all`) and `layer-next` (`NEXT_ID`); a board id in either form is refused, as is a second `layer` key or a Next cell off the side grid or on that key.
 
 | Role | A click |
 |---|---|
@@ -29,6 +32,9 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win; with `lone = true` (Win only), a second click while it is unspent lets go and sends the key alone, so Start opens. |
 | `lang` | Steps through or picks the layouts. |
 | `assist` | Asks the mouse module to flip Right-click (`rclick`) or Grab (`grab`); see "Mouse assist on the bus". |
+| `layer` | Shows or hides the shortcuts layer (the Shortcuts key). |
+| `power` | Asks the power module for the system's power dialog (the Power key); see "The Power key on the bus". |
+| `shortcut`, `next` | A shortcut, or the Next page key; only the layer's generated keys have them, and the file may not use them. |
 | `later` | Nothing: the other side keys come in a later version and are drawn dimmed. |
 
 ## Geometry, size and place
@@ -55,8 +61,9 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | A `send` key | Tap, or a chord with every latch held | Used | Kept only if the key typed nothing |
 | Caps Lock | Tap | Kept, spent | Kept |
 | A modifier | Nothing, or its key alone for a `lone` latch let go unspent; it latches or lets go | Toggled; latching spends those already on, and a lone press uses them without holding them | Kept |
-| The language key, a `later` key, a mouse-assist key | Nothing; `Tapped::Lang`, `Tapped::Later` or `Tapped::Assist` for the face | Kept | Kept |
-| An id not on the board | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
+| A shortcut on the layer | `Shortcuts::send` with every latch held, never repeated | Used, as after any key; a lone-ready Win is used, so it never goes out alone | Ends |
+| The language key, a `later` key, a mouse-assist key, the Shortcuts, Power or Next key | Nothing; `Tapped::Lang`, `Later`, `Assist`, `Layer`, `Power` or `Next` for the face | Kept | Kept |
+| An id neither on the board nor drawn by the layer now | Nothing; `TapError::UnknownKey`, which the face answers as `FaceError::UnknownKey` | Kept | Kept |
 
 "Used" means `release` lets every latch go and `stay` keeps them, spent. "Spent" keeps a latch on, but Win no longer sends itself alone. `Typing::update` takes a new `modifiers` or `key_apps` and keeps what is latched. `key_apps` names match the app's file name without case; every UWP app reports `ApplicationFrameHost.exe`. A send refused whole changes nothing. One the system took in part moves the latches and the wait as if it all went, returns the error for a notice and is never retried. Legends come from the same table and latches (`legend`, `LegendMods::of`), so a key types what it shows. Caps Lock that types nothing falls back to the same state without it; Shift or `AltGr` never fall back, so such a key shows no main or second legend and types nothing (`is_empty`, one rule for the plan and the view). A Ctrl, Alt, Win or Right Alt latch makes no key empty, as its click sends the shortcut. A key whose base is an Arabic letter shows no `AltGr` corner, which would crowd the letter; it shows its `AltGr` character when `AltGr` is latched. A layout cell holds only visible text: the adapter reads a control or U+0000 as empty.
 
@@ -67,17 +74,19 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 `board_json()` changes only with the size or the settings, such as the language key's design or key repeat:
 
 - `size`, `preset`, `presets`, `relabel_ms`, `repeat_delay_ms`, `repeat_every_ms`, `lang_key`, `bubble_corner`, and the `plate`, `bar` and `dpad` boxes (`x y w h`, logical pixels); `dpad` also has its `name`, `key.dpad`.
-- `keys`, each `id kind row side x y w h icon label name checkable dim tip repeat`. The box is the key's cell; the UI draws the cap half the theme's `gap_px` (times the size) inside it. `repeat` marks a key that repeats while held, so the UI sends `press` and `let_go` for it; with `repeat` off in the settings, no key has it.
-- `icon` is an `icons.toml` key (`keys.<id>`, `lang.cycle`, `lang.list`); the UI shows `label` when the theme has no such icon. `name`, `label` and `tip` are translation keys (`key.<id>`, `label.<id>`, `tip.later`).
-- A `later` key comes with `dim: true` and the tip "Coming in a later version". `checkable` marks the latches, Caps Lock and the mouse-assist keys.
+- `keys`, each `id kind row side x y w h icon label name icon_only dots steps checkable dim tip repeat`. The box is the key's cell; the UI draws the cap half the theme's `gap_px` (times the size) inside it. `repeat` marks a key that repeats while held, so the UI sends `press` and `let_go` for it; with `repeat` off in the settings, no key has it. `dots` marks the key that shows the shortcuts layer's page dots under its icon: the Next key.
+- `icon` is an `icons.toml` key (`keys.<id>`, `lang.cycle`, `lang.list`, `shortcuts.<id>`, `layer.next`); the UI shows `label` when the theme has no such icon. `name`, `label` and `tip` are translation keys (`key.<id>`, `label.<id>`, `tip.later`).
+- A `later` key comes with `dim: true` and the tip "Coming in a later version". `checkable` marks the latches, Caps Lock, the mouse-assist keys and the Shortcuts key.
+- `layer` is true while the shortcuts layer shows: the UI hides the pad, and the side keys but the Shortcuts key give way to the layer's keys in their cells. A shortcut key (`sc-<id>`, kind `act`) has `icon` `shortcuts.<id>`, `label` and `name` `shortcut.<id>`, `icon_only` true and `steps`, each step's key names with the tapped key last; Next (`layer-next`) has `icon` `layer.next` and `name` `key.layer-next`. Every other key has `icon_only` false and no `steps`.
 
 `state_json(rows)` changes as keys are used; `rows` is the UI's page size (`[ui] page_rows`):
 
-- `keys` by id: `main second third main_ar second_ar third_ar main_mark second_mark third_mark name marks blank on dim paint tip`. Marks with no letter before them sit on a dotted circle (◌) in every legend and in `name`; `*_mark` flags such a legend, which the UI draws in the theme's mark font. `marks` names the harakat a key types by translation key (`mark.fatha`), for readers, and `blank` is `key.empty` while an empty key shows nothing; `dim` is true while the key does nothing: a later key, or a mouse-assist key while the mouse module is not live; `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` paint for such a key). `tip` is a translation key the key says after its name: `tip.one-lang` on the language key while one layout, or none, is installed, and `tip.rclick`, `tip.grab` or `tip.mouse-off` on the mouse-assist keys.
+- `keys` by id: `main second third main_ar second_ar third_ar main_mark second_mark third_mark name marks blank on dim paint tip`. Marks with no letter before them sit on a dotted circle (◌) in every legend and in `name`; `*_mark` flags such a legend, which the UI draws in the theme's mark font. `marks` names the harakat a key types by translation key (`mark.fatha`), for readers, and `blank` is `key.empty` while an empty key shows nothing; `dim` is true while the key does nothing: a later key, or a mouse-assist key while the mouse module is not live; `paint` names the `fill`, `ink` and `skirt` palette tokens (`dim` paint for such a key). `tip` is a translation key the key says after its name: `tip.one-lang` on the language key while one layout, or none, is installed, and `tip.rclick`, `tip.grab` or `tip.mouse-off` on the mouse-assist keys, `tip.no-shortcuts` on a dimmed Shortcuts key (no page to show) and `tip.power-off` on the Power key while the power module is not live. The Shortcuts key is `on` while the layer shows.
 - `lang`: `prev`, `cur` and `next` as `{short rtl arabic}` (null when the neighbour is the current layout), `at` and `count` for the Cycle's dots, the space bar's `space` parts, and `turn` (-1, 0 or 1) for the Carousel's slide.
 - `list`: null, or `{rows, hi, page, keys, page_back, page_on}` while the List is open; each row is `{short name rtl arabic current icon}`, and the current row's `icon` is `lang.current`. `page` is `{at count back on}`: the page holding `hi` from 0, how many pages, and whether one lies before or after it; `LangList::page` is the only page maths, so the UI and its page turns read it. `page_back` and `page_on` name the board keys with the moves `PAGE_BACK` and `PAGE_ON` (null when the board has none), which the list's page buttons send as `panel_key`; the UI dims a button when `page` says no page lies that way.
 - `at`: null, or where the window goes in physical pixels.
 - `dpad`: `{dim tip dir fast}`. While the scroll module is not live it is `dim` with `tip.scroll-off`, `dir` null and `fast` false; while live, `tip` is null, `dir` is the way it scrolls (`up`, `down`, `left`, `right`, or null while still) and `fast` its speed.
+- `layer`: `{shown page pages}`: whether the layer shows, its page from 0 and how many pages there are; the layer's keys are in `keys` only while it shows.
 
 `lang()` names the language of the layout shown (`LangLabel::iso`), which the UI's keyboard texts follow (ADR-0020); it only reads, so any thread may ask.
 
@@ -85,15 +94,15 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 | Action | Does | Reply |
 |---|---|---|
-| `tap {id, back}` | Types, latches, or clicks the language key; a burst left open ends first, so its latches never ride on the click | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, a mouse-assist key (it publishes `AssistToggle` while the mouse module is live), or a list key while the list is open. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. |
-| `press {id}` | The pointer went down on a key (spec §4.6): it types now, as `tap` with the front part. It holds, with the latches kept down until its burst ends, when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it, it is not a dead key (`Typing::repeats`) and it typed; else it acts once. While the list is open, a key that drives it waits for `panel_key` | As `tap`, with `holding` when it holds. `UnknownKey` off the board, which changes nothing. |
+| `tap {id, back}` | Types, latches, or clicks the language key; a burst left open ends first, so its latches never ride on the click | State after typing, a latch or a List click. Nothing for a Carousel or Cycle step (the switch redraws on `relabel`), a later-version key, a mouse-assist key (it publishes `AssistToggle` while the mouse module is live), the Power key (it publishes `PowerAsked` while the power module is live), a dimmed Shortcuts key, or a list key while the list is open. Board and state when the Shortcuts key shows or hides the layer (showing it stops the pad's scroll) or Next turns its page. A failed send adds `notice.keys-not-sent`, and a refused step `notice.lang-not-switched`. A stale click sends nothing, refreshes the layouts once and redraws; the user clicks again. `UnknownKey`, changing nothing, for a side key the layer hides. |
+| `press {id}` | The pointer went down on a key (spec §4.6): it types now, as `tap` with the front part. It holds, with the latches kept down until its burst ends, when `repeat` is on, no list is open, no Ctrl, Alt or Win (or `AltGr` acting as Right Alt) acts on it, it is not a dead key (`Typing::repeats`) and it typed; else it acts once. While the list is open, a key that drives it waits for `panel_key` | As `tap`, with `holding` when it holds. `UnknownKey` off the board or on a side key the layer hides, which changes nothing. |
 | `tick` | The hold timer: types the held key at `repeat_delay_ms`, then once every `repeat_every_ms`, with the latches kept down (`Typing::hold`); a late tick types once. A repeat that is stale, empty, fails, or turns into a shortcut or dead key ends the burst | `holding` while the key is still held, due or not. A repeat that went out redraws the state only when its burst ended, as the latches stay latched until then; else as a tap: a stale refresh, or `notice.keys-not-sent` once. |
-| `let_go {id}` | The pointer let go, wherever it is: the key typed at the press, so nothing more types, and the burst's latches let go (`Typing::release`); a let-go of a key not held changes nothing | State when a burst ended. `UnknownKey` off the board, which changes nothing. |
+| `let_go {id}` | The pointer let go, wherever it is: the key typed at the press, so nothing more types, and the burst's latches let go (`Typing::release`); a let-go of a key not held changes nothing | State when a burst ended. `UnknownKey` off the board or on a side key the layer hides, which changes nothing. |
 | `leave` | Qt took the press away, or the keyboard hid: the burst ends and nothing more types | State when a burst ended. |
 | `relabel` | Refreshes the layouts | State when the layout changed, Caps Lock changed outside the keyboard, or the bus changed what the state shows since it was last read. |
 | `panel_key {key, rows}` | Drives the open list with a board key that has a `nav`, at `rows` rows per page (`[ui] page_rows`) | State when it moved. |
-| `pad {dir}` | An arrow publishes `ScrollTap`, and Stop (`dir` null) `ScrollStop`, while the scroll module is live; else nothing | Nothing; the module's answer redraws on `relabel`. |
-| `pad_hover {on}` | The pointer went onto the pad or off it: each change publishes `ScrollPeek` while the scroll module is live | Nothing. |
+| `pad {dir}` | An arrow publishes `ScrollTap`, and Stop (`dir` null) `ScrollStop`, while the scroll module is live; else nothing | Nothing; the module's answer redraws on `relabel`. `UnknownKey` while the layer hides the pad. |
+| `pad_hover {on}` | The pointer went onto the pad or off it: each change publishes `ScrollPeek` while the scroll module is live; showing the layer moves it off, and a hover on the hidden pad counts as off | Nothing. |
 | `lang_pick {index}` | Picks a list row and closes the list | State; `NoChoice` past the list. |
 | `smaller`, `bigger`, `preset`, `resize_begin`, `resize_at`, `resize_end` | Sizes the keyboard within the room on its screen; the size is saved in one write | Board, and state when the window moved to stay on its screen; `notice.settings-unsaved` when it could not be saved. |
 | `placed {rect, screens}` | Fits the window and its size to the screens the UI reports; a move is saved | Board when the size had to fit its screen, state when the place changed. |
@@ -106,7 +115,7 @@ The language key has three designs, by `lang_key`:
 
 With one layout installed, a click asks no step and opens no list in any design, but still closes a list left open, and the key says so through its state's `tip`. A step or pick the app refuses shows `notice.lang-not-switched`. Steps and the Carousel's neighbours wrap with `kx_module_api::ports::step_to`, the rule `Layouts::step` uses.
 
-The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift or `AltGr` latched, and the open list. `KX_BLESS=1` rewrites them after a deliberate change; the `kx-ui` QML test fixtures are made from them.
+The golden files in `tests/golden/` pin both JSONs for EN, FR, AR, AR with Shift or `AltGr` latched, the open list, and the layer on its first and last page. `KX_BLESS=1` rewrites them after a deliberate change; the `kx-ui` QML test fixtures are made from them.
 
 ## Mouse assist on the bus
 
@@ -128,6 +137,10 @@ The keyboard never depends on the scroll module either; they talk only through `
 - **One sender:** peeks go out one thread at a time through their own `Outbox` (the latched set has another), each re-reading the pointer and the module's run, so the last peek the module hears is where the pointer is, even after a quick restart.
 - **Our list:** the keyboard ignores `ScrollPage`; `kx-ui`'s hub turns it into the list's own page-button `panel_key` where the list's `page` says it turns, as only the hub knows `[ui] page_rows`.
 
+## The Power key on the bus
+
+The keyboard never depends on the power module; they talk only through `kx_module_api::ports::power` events. The Power key follows `PowerChanged`, which marks the state unshown; at start the keyboard dims it and asks with `PowerAsk`, and when it stops it forgets the answer. A live click publishes `PowerAsked`; it sends nothing to the app and keeps the latches.
+
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.
 
 ## Settings (`[keyboard]`, version 1)
@@ -147,23 +160,26 @@ Handlers run on the sender's thread and take the face's lock briefly; nothing is
 | `key_apps` | `["scrcpy.exe"]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. scrcpy reads letters only as key presses. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |
+| `shortcut_pages` | the owner's three pages (spec §4.2) | The shortcuts layer's pages, by shortcut id: at most `MAX_PAGES` in `settings.rs` (so the Next key's dots fit one line inside its cap), none empty or past the layer's room, no id twice; an empty list is allowed. |
 
 Every size is a finite number. The defaults live only in `defaults.toml`. The module writes `size`, `x`, `y` and `placed` only through its own settings handle, and only when they change.
 
 ## Public API
 
-- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `Modifiers`, `LangKey`, `Corner`.
+- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `MAX_PAGES` (the most shortcut pages the setting holds), `Modifiers`, `LangKey`, `Corner`.
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
-- `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`.
+- `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `NO_SHORTCUTS_TIP`, `POWER_OFF_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`; for the layer `with_layer`, `LayerState`, `SHORTCUT_ICON_PREFIX`, `SHORTCUT_NAME_PREFIX`, `NEXT_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`, and for the shortcuts layer `LayerSpec`, `SideCell`, `LayerGrid` (`cells`, `capacity`, `next`; from `BoardSpec::layer_grid`), `BoardSpec::layer_hides` (whether the layer hides a side key), `shortcut_key_id`, `NEXT_ID`.
+- `layer`: `Layer` (`new`, `renew`, `toggle`, `next_page`, `shown`, `any`, `page_count`, `page`, `cells`), the pure shortcuts layer over the setting's pages, the platform's known ids and the board's `LayerGrid`; `LayerCell` and `LayerKey` (`id`, `role`). It drops unknown ids, repeats and empty pages, keeps its page while hidden, and its debug output hides the ids.
+- A new shortcut also needs its line in `tests/keyboard/known.rs`, which the app's agree test pins to the Windows table, and, with an icon, a place on the default pages.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `unused`, `held`, `used`, `spend`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
-- `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
+- `plan`: `plan`, `layer_plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io`, `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
-- `geom`: `board`, `Board`, `KeyBox`, `Area`.
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
+- `geom`: `board`, `side_area`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.
 

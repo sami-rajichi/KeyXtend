@@ -6,6 +6,7 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod layer;
 mod peeks;
 
 use crate::assist::{Bench, ear};
