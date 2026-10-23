@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-17
+- **Last review:** 2026-10-23 (P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -85,7 +85,9 @@
     - Its own keys are Ctrl+End, Ctrl+S, Esc, and the Alt tap of `probe::front`, which brings Notepad back before each part and after Power. `[g25] esc` must be the Esc key alone, or the config check refuses it.
     - Esc goes out only while the window it closes is in front, or Notepad for the panel, and for Switch app only once the switcher's own wait ran out; so it never reaches another app.
     - It puts the layer back on the page it showed first, shown or hidden as it found it, hides it around Power, whose key it covers, then puts it back the same way, and lets Win go without a lone press, as G10 does, so Start never opens.
+    - It clicks a layer key by its UI Automation id, at the place read once that key's page shows, and only its own Next turns pages (`g25layer.rs` `turn_to`, `press`). So it never clicks Lock PC or Close window, though Lock PC takes Select all's cell on the default page 2.
     - Power opens the system's Shut Down Windows dialog, which G25 always cancels with Esc, only while that dialog (`[g25] power_class` of `power_program`) is in front. It never sends Enter or clicks OK, and never the Alt tap while any window of that class shows, whatever its program; a dialog not in front, or still open, is left for the owner, and the result says so, as it does when no watched window showed in time.
+    - The config check refuses an `esc` other than the lone Esc key and an empty class or program (`featcfg.rs` `check_g25`), and unit tests pin the Esc and Alt rules (`g25wins.rs`, `g25watch.rs`).
     - It keeps the owner's clipboard and removes its copies from Windows clipboard history after; its result names windows by class and program only, never a title.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
@@ -131,5 +133,9 @@ A same-user attacker who can edit files in the repo can already act as the owner
 `-ExecutionPolicy Bypass` applies only to the one PowerShell process that runs our scripts; it changes no system setting.
 
 The overlap check compares path text, so a short 8.3 name for the install folder slips past it. The worst case is losing that test install, which `dev-install` recreates.
+
+G25 opens the real power dialog on the owner's PC, as the product must be checked there. Only Esc or the owner closes it, and a dialog that never comes to the front stays open for the owner, so a gate never confirms a shut-down.
+
+G25 reads the owner's own `shortcut_pages` to find each key's page. A page the owner arranged changes only where the keys sit, as G25 still clicks each one by its id.
 
 The mouse guard's lost-hook check misses a hook lost within the last `alive_ms` before a gate ends, and a late count of an earlier batch can hide one lost batch until the next. Waiting at every gate's end, or sending input only to check, would slow every run or move the owner's pointer.

@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (shortcuts layer and Power key)
+- **Last review:** 2026-10-23 (P6 security check: the shortcuts layer, its sends and the Power key)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -49,9 +49,12 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 - **Denial of service:**
   - A size or time of zero or not-a-number is refused, so nothing divides by zero or spins; a relabel time or size past its ceiling is refused, so the labels never stall and the keyboard never opens far off every screen.
   - A stale click is never replayed, so a lagging table cannot loop.
-  - A click holds the face's lock while it sends, but no OS call on that path sends a message to another window, so a hung app cannot stall a click.
+  - A click holds the face's lock while it sends, but no OS call on that path sends a message to another window, so a hung app cannot stall a click. A shortcut's path is the same: plain layout queries, `SendInput`, or `LockWorkStation`, which only starts the lock and returns.
   - A held key repeats at most once a beat, and a late tick types once and never catches up, so a slow frame cannot flood the app.
-- **Elevation:** input goes only through the `InputInjector` and `Shortcuts` ports, and only for a click on a board key or a layer cell, or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. A shortcut cell sends only its id and the latched scans to the `Shortcuts` port, once per click, and the platform's compiled-in table picks the keys; a held one never repeats. The face service itself has no capability gate (see Should fix).
+- **Elevation:** input goes only through the `InputInjector` and `Shortcuts` ports, and only for a click on a board key or a layer cell, or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. A shortcut cell sends only its id and the latched scans to the `Shortcuts` port, once per click, and the platform's compiled-in table picks the keys; a held one never repeats (`holding_a_shortcut_cell_never_repeats`). The face service itself has no capability gate (see Should fix).
+  - A layer key acts only while the layer draws it (`run/layer.rs:22-25`), and the board refuses ids kept for the layer (`BoardError::Reserved`), so a stale click on a turned page or a hidden layer is `UnknownKey`.
+  - The Next key keeps one cell, and the Shortcuts key its own, so a double click on either never lands on a shortcut such as Lock PC.
+  - Power publishes `PowerAsked` only while the power module says it is live (`face/bus.rs:69-78`); it sends nothing to the app and keeps the latches.
 - **Stuck repeat:** a burst ends on let-go wherever the pointer is, when Qt takes the press away or the keyboard hides or stops (the UI sends `leave`), when the list opens, when a repeat is stale, empty or fails, on the next click (a burst left open, as after a window rebuilt for a lost graphics device), and on a restart. A face property run shows that no tick types and no latch stays down after a let-go or leave, and the UI's hold timer runs only while the face says it holds a key, on a shown keyboard with no list open.
 - **Lone press:** a `lone` latch (Win) sends its key alone only on the user's own second click with nothing used since the first; refused whole it stays latched, and taken in part it lets go, so it never goes twice. It holds no other latch, and they then let go as after any key, so in `release` none rides into Start.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch, and the platform sends a shortcut's keys, every step, in one batch too (`kx-platform-windows.md`). A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier. During a burst the latches stay latched, not pressed, and let go when it ends.
@@ -70,3 +73,6 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
 - **The dead-key wait is a guess:** a dead key used up elsewhere leaves the wait set. The next character then goes as a key press, which the stale check keeps equal to its legend.
 - **No cap on a burst:** a held key repeats for as long as it is held, as the owner wants, and every way the press ends stops it.
 - **A burst follows a focus change:** if another window comes to the front mid-burst, the repeats go to it, as a physical key does.
+- **Power's cell under the layer:** while the layer shows, Power's cell holds Next, or a single page's 14th shortcut. A click meant for Power then turns the page or sends that shortcut, whose icon shows there while the Shortcuts key is lit.
+- **Lock PC asks nothing:** it locks at once, as Win+L does. KeyXtend cannot type on the lock screen, so signing back in with a password takes Windows' own on-screen keyboard from the sign-in screen's Accessibility button.
+- **Shortcuts reach elevated windows:** with uiAccess, Close window or Task Manager act on an admin window in front, as a physical key would; each needs the user's click on its cell.

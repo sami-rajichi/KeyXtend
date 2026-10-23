@@ -1,7 +1,7 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (P6: the power dialog's grant)
+- **Last review:** 2026-10-23 (P6 security check: the shortcuts and power dialog grants, and the shell class the Power key adds to P14's COM check)
 - **Status:** Reviewed
 - **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
@@ -46,6 +46,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The hook lets go and keeps running, so a panic the kernel catches never ends mouse assist. `release_now` waits at most the adapter's `RELEASE_WAIT`, and returns at once on the hook's own thread, where the callback's own recovery lets go.
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004), and tidy D7 refuses kx-theme's `files` feature, its asset and WAV readers, in the app's normal tree, so the uiAccess app links no media parser.
+  - P6 added no outside crate: `kx-mod-power` is the lock file's one new package, and the adapter's new `serde` and `toml` were already in the app's tree.
   - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
   - Quit ends the request queue; the kernel's thread stops the modules, then ends the UI even if stopping panics (a drop guard). After Qt's loop, `drain::stop` removes the tray icon and joins the thread, whether it was running, already asked to quit, or ended in a panic.
@@ -86,6 +87,7 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
 - Open (P14): the MSVC runtime is not staged and loads from System32, where the Visual C++ redistributable puts it. On a PC without it Windows would look in the working folder and `PATH`, so the installer must provide it.
 - Open (P14, before any signed build leaves the development PC): COM may read a per-user registration (`HKCU\Software\Classes\CLSID`) before the machine's for a process that is not elevated, and a uiAccess process is not. On the staged signed build, list the in-process classes it activates (Process Monitor) and check that a planted `HKCU` override for each never loads (`docs/items/P14.md`).
   - The speaker adds such classes from P4 on: `XAudio2` opens the audio device by COM class activation (the device enumerator) in the uiAccess process at its first sound, and the key sound is on by default.
+  - The Power key adds one from P6 on: each click makes `Shell.Application` in-process (`CLSCTX_INPROC_SERVER`) on a short apartment thread of the uiAccess process, so the trace clicks Power too (`kx-platform-windows.md`).
 - Open (P14): pin the QML disk cache off in the uiAccess build, with Qt's own cache option in `harden_qt` and a stage check that refuses `.qml`, `.js` and `.mjs` files (`docs/items/P14.md`).
 - Open (P14, `kx-release`): a panic inside a dependency logs that dependency's source path as the build machine saw it, which the binary also holds and which can name the builder's account. Release builds trim or remap those paths (`docs/items/P14.md`).
 ### Accepted (with reason)

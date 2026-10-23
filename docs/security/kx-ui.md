@@ -1,7 +1,7 @@
 # Security note: kx-ui
 
 - **Owner:** product owner
-- **Last review:** 2026-10-17 (P5 review: the scroll pad's state, outline, page turns and entry watch)
+- **Last review:** 2026-10-23 (P6 security check: the shortcut tips' steps from QML, the Next key's page text and the Power key's wake)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-ui`: the texts, the `[ui]` settings, the `ui` module and its hub, and the QML module `KeyXtend.Ui` with its cxx-qt bridges. It runs inside the uiAccess `keyxtend` process, with the bridges on the Qt GUI thread.
 
@@ -31,8 +31,8 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
 | `[ui]` values from `settings.toml` | `deny_unknown_fields`; the check refuses an unknown theme or language, a contrast below `MIN_CONTRAST`, and a timing, row count or volume outside its range; the kernel then resets that key alone | Ranges in `settings.rs` | No; tests cover each rule |
-| Calls from QML (key ids, list places, box JSON, corners, reals) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0 | Bounded by the board | No |
-| `keysTip` from QML: a shortcut's name key and its steps as JSON (P6) | The steps parse as lists of `KeyName`, whose form check takes only short lower-case names; a list that does not read warns with a fixed line and gives the name alone. Each key reads from the translations (`label`, `keyname`), as itself for a letter, digit or F-key, or in upper case, so a tip holds only translations and the step list, never typed text | One tip per call | Property test: any steps give a tip that starts with the name, with no panic (`tests/texts/combo.rs`) |
+| Calls from QML (key ids, list places, box JSON, corners, reals, the Next key's page numbers) | Box JSON is parsed with `deny_unknown_fields`; a bad one warns and does nothing; a negative place is past every list; reals saturate to whole pixels, NaN is 0; a negative page number reads as 0 and only fills the Next key's spoken text | Bounded by the board | No |
+| `keysTip` and `keysText` from QML: a shortcut's name key and its steps as JSON (P6) | Both read the steps through one parser (`steps_of`, `bridges/ui/texts.rs:67-73`): lists of `KeyName`, whose form check takes only lower-case names of at most `MAX_ID_LEN` bytes. A list that does not read warns with a fixed line and gives no keys, so the tip is the name alone. Each key reads from the translations (`label`, `keyname`), as itself for a letter, digit or F-key, or in upper case, so a tip holds only translations and the step list, never typed text | One tip or key text per call; the JSON's length has no cap (see Accepted) | Property test: any steps give a tip that holds both the name and the keys, in the order the language's `tip.keys` gives (Arabic puts the keys first), with no panic (`tests/texts/combo.rs`); `steps_of` itself has no test (see Should fix) |
 | The layout's language code (`KeyboardFace::lang`, from the OS) and the system's language (`SystemLook::ui_language`) | Only matched against `LANGS` by Fluent's language matching; an unknown, broken or missing tag gives English. Never a path, never logged, never shown | One text set built per switch | Unit tests cover odd tags |
 | `Notice` events from the bus | Arguments are typed (text, count, list); lists are bounded by the settings store (`MAX_NAMED_KEYS`, `MAX_KEY_CHARS`) and counted past that | Duplicates show once | No |
 | `AssistNote` events from the bus | A fired hold, a pick-up or a drop plays one compiled-in sound; a hold's start, end, fire and a cancelled carry set or clear the overlay's ring and burst, whose points are kept but never logged | One play per note, a send the speaker's bounded queue drops when full; one ring and one burst kept | No; hub tests cover each kind and capture the logs |
@@ -53,6 +53,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - **Spoofing:** the QML files, the bundled fonts and the icons are compiled into the binary as Qt resources, so a file swapped on disk cannot change a window. The hub adds a theme's fonts to Qt's font list only from those resources, never from a user path (ADR-0021). Native's Segoe UI and Qt's glyph fallback come from Windows' font stack (`keyxtend.md`, Accepted). Every text is drawn as plain text, so a translation or a layout name cannot add rich text or links. The objects QML makes reach only the hub the app installed once.
 - **Tampering:** a hand-edited `[ui]` value that fails the check never reaches the look or the timers; only that key goes back to its default.
 - **Logging / repudiation:** errors name setting keys, OS codes and counts, never key ids or text (`Redacted<T>` is not needed because nothing sensitive is logged). A refused icon names its id, which holds only our own icon name and tint.
+  - Steps from QML that do not read log one fixed line, never the JSON or a key name (`bridges/ui/texts.rs:70`).
 - **Information disclosure:** notice arguments are bounded setting names and counts, with no bidi marks around them (ADR-0022). List items, text arguments and the OS names on the space bar and in the language list lose their control characters, line breaks and bidi controls first (`kx_module_api::is_hidden`), so a crafted setting key or layout name can neither split a text nor turn it around.
 - **Denial of service:**
   - The hub never holds its lock during a face, port or waker call, so an adapter thread cannot deadlock the Qt thread.
@@ -80,6 +81,7 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - None.
 ### Should fix (tracked issue)
 - **The face has no capability gate (P7):** `KeyboardFaceKey` carries none, while `FaceAction::Tap` types keys, so any module that requires the face could type. P7 decides between a dedicated capability and a read-only face before another module requires it (`docs/items/P7.md`).
+- **Steps from QML have no test of their own (P6):** `steps_of` (`bridges/ui/texts.rs:67-73`) is pinned only through the Qt Quick tests' good steps. Add a unit test there that bad JSON, a wrong shape, a bad or over-long name and deep nesting each give no keys and no panic.
 - Done (P3, 4cfa0c8 and 553fa82): a plain `Text` reads markup, and notice arguments carry setting keys from the user-writable file, so rich text could have made the uiAccess process load an image. `tests/texts/markup.rs` now fails on any QML text element that does not read plain text.
 ### Accepted (with reason)
 - The request queue to the app (Try again, Quit) has no bound: only the user's clicks and a second copy's Quit fill it, one request each, and Quit ends it.
@@ -87,3 +89,4 @@ Nothing typed is shown in a notice or logged: key ids, legends and replies never
 - Qt's own messages go to the debugger channel, which a program of the session can read, never to the log file, also for a category the user-writable `qtlogging.ini` turns on. Our windows hold no typed text, and the click positions such logs could show are what that program's mouse hook sees anyway.
 - `harden_qt` warns and carries on when a Qt-prefixed name stays set. Qt reads only short fixed names, which `qunsetenv` always clears, so a name left over is never one Qt reads.
 - The frame log's press lines keep each press's time, so the gaps between them show the typing rhythm, which can hint at what was typed. The log needs those times to match presses with frames; it is off by default, and its setting says to keep it off while typing anything private (P3 review, 2026-10-12).
+- The steps JSON from QML has no length cap: only our compiled-in QML calls `keysTip` and `keysText`, with the board's own steps from the platform's table. `serde_json` reads any text without a panic and stops at its nesting limit.

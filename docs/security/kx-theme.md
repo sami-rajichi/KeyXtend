@@ -1,7 +1,7 @@
 # Security note: kx-theme
 
 - **Owner:** product owner
-- **Last review:** 2026-10-14
+- **Last review:** 2026-10-23 (P6 security check: the shortcuts layer's icons)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-theme`, a library with no Qt and no module of its own; the `ui` module in the uiAccess `keyxtend` process calls it from P3 on.
 
@@ -31,6 +31,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 ## Threats (STRIDE-lite)
 - **Spoofing:** no IPC or network.
 - **Tampering:** a token file swapped on disk changes nothing, since the tokens are compiled in. Icon names are plain file names (lower-case letters, digits and `-`), so a name can never point outside the icon folder when `kx-ui` builds its resource path, and sound names are the same plus `.wav`.
+  - P6's `[shortcuts]` and `[layer]` names take the same check (`icons.rs` `named`). Its 22 new Lucide SVGs are unmodified shapes with no link, image, script or style reference, and ship compiled in as Qt resources.
 - **Logging / repudiation:** the crate never logs; its errors name only token files and tokens.
 - **Information disclosure:** the system look is not sensitive.
 - **Denial of service:** loading is a fixed, small parse at start-up; the look view and the drawn check are pure and bounded by the token count.
