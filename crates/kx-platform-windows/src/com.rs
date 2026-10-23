@@ -1,4 +1,4 @@
-//! COM start-up for one thread, for UI Automation and the Windows Runtime.
+//! COM start-up for one thread, for UI Automation, the Windows Runtime and the shell's power dialog.
 
 use std::marker::PhantomData;
 use std::sync::OnceLock;
@@ -68,10 +68,10 @@ pub(crate) fn keep_mta() -> bool {
 }
 
 impl Drop for Com {
-    #[allow(unsafe_code, reason = "COM shut-down that pairs `start`.")]
+    #[allow(unsafe_code, reason = "COM shut-down that pairs `begin`.")]
     fn drop(&mut self) {
         if self.started {
-            // SAFETY: pairs the successful CoInitializeEx in `start`, on the same thread.
+            // SAFETY: pairs the successful CoInitializeEx in `begin`, on the same thread.
             unsafe { CoUninitialize() };
         }
     }

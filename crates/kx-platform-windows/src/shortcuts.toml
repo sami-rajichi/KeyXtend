@@ -1,4 +1,4 @@
-# Each shortcut id with its steps, sent in order. A step names keys from `keynames.toml`: the last is tapped and the
+# Each shortcut id with its steps, sent in order; a step names keys from `keynames.toml`, the last tapped and the
 # others held in order. `call = "lock"` means Windows does it with an OS call; its steps still name the keys for the tip.
 shortcuts = [
     { id = "copy", steps = [["ctrl", "c"]] },
