@@ -25,8 +25,8 @@ rows = [
     # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
     # "lang", { assist = "rclick" | "grab" } (flips a mouse-assist mode, spec §5.1), "layer" (shows or hides the
     # shortcuts layer, spec §4.2) and "power" (asks for the system's power dialog, spec §8.5), both side keys only, or
-    # "later" (dimmed, coming in a later version). The layer's own keys take "shortcut" and "next", which this file may
-    # not use.
+    # "later" (dimmed, coming in a later version); "shortcut" and "next" are only for the layer's own keys.
+    #
     # `repeat` makes a "send" key repeat while held (spec §4.6); character keys always do.
     # `lone = true` in a latch role makes a second click with nothing used since the first let go and send the key
     # alone, so Win opens Start (spec §4.4); never on Alt, whose lone press opens the app's menu bar.

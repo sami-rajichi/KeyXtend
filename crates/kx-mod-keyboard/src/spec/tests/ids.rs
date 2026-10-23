@@ -12,7 +12,7 @@ fn character_ids_name_their_scan_code() {
 }
 
 #[test]
-fn right_click_and_grab_flip_mouse_assist_and_the_other_side_keys_come_later() {
+fn side_keys_flip_mouse_assist_show_the_layer_ask_for_power_or_come_later() {
     let s = BoardSpec::shipped().unwrap();
     let role = |id: &str| s.side.iter().find(|k| k.id == id).unwrap().role;
     assert_eq!(role("rclick"), Role::Assist(Assist::RClick));

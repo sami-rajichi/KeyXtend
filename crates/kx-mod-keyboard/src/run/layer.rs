@@ -7,7 +7,7 @@ use kx_module_api::ports::{ShortcutError, ShortcutId};
 
 impl Typing {
     /// Sends shortcut `id` with every latched key held around each step; once any of it reached the app, the latches
-    /// are used and a dead key's wait ends, as the platform's keys type in the app's own layout.
+    /// are used. A shortcut always ends a dead key's wait, even one that types nothing such as F5 (P6 edge case 9).
     pub(super) fn shortcut(&mut self, io: &Io<'_>, id: &ShortcutId) -> Result<(), TapError> {
         let went = io.shortcuts.send(id, &self.latches.held(&[]));
         if reached(went) {

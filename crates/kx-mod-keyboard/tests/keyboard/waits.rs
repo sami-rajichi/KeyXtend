@@ -1,7 +1,7 @@
 //! Any run of clicks on French AZERTY with its dead keys (`^` and `AltGr` `~`): the dead-key wait starts on a dead
-//! key, ends on a key that types, is kept only by a key that types nothing, and an empty key, a latch or Caps Lock
-//! leaves it. Ctrl and a letter type a control character, so they end the wait, and Ctrl and a digit keep it.
-//! Every Unicode send is the key's legend without its dotted circle, so a key types what it shows.
+//! key, ends on a key that types (Ctrl and a letter too), is kept only by a key that types nothing (Ctrl and a digit
+//! too), and an empty key, a latch or Caps Lock leaves it. Every Unicode send is the key's legend without its dotted
+//! circle, so a key types what it shows.
 
 #![allow(
     clippy::unwrap_used,

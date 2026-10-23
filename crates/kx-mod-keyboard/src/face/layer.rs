@@ -1,6 +1,6 @@
-//! The Shortcuts key on the face (spec §4.2): it shows or hides the layer, and showing it while the pad scrolls stops
-//! the pad, whose Stop leaves the screen, and ends the pointer's hover on it. While it shows, the side keys it hides
-//! are no keys. As in `bus.rs`, nothing is sent while the face's lock is held.
+//! The Shortcuts key on the face (spec §4.2): it shows or hides the layer, whose hidden side keys are then no keys,
+//! and showing it while the pad scrolls stops the pad, whose Stop leaves the screen, and ends the pointer's hover on
+//! it. As in `bus.rs`, nothing is sent while the face's lock is held.
 
 use super::inner::Inner;
 use super::{Face, REDRAW};
