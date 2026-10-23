@@ -5,4 +5,6 @@ mod cx;
 mod gate;
 mod handle;
 mod pointer;
+mod power;
 mod scroll;
+mod shortcut;

@@ -74,9 +74,11 @@ pub mod keys {
     pub const SCROLL_FAILED: &str = "notice.scroll-failed";
     /// The scroll module stopped after an error; it comes back when the app restarts.
     pub const SCROLL_STOPPED: &str = "notice.scroll-stopped";
+    /// The system's power dialog did not open.
+    pub const POWER_FAILED: &str = "notice.power-failed";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 17] = [
+    pub const ALL_KEYS: [&str; 18] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -94,6 +96,7 @@ pub mod keys {
         SCROLL_END,
         SCROLL_FAILED,
         SCROLL_STOPPED,
+        POWER_FAILED,
     ];
 }
 
@@ -150,6 +153,12 @@ mod tests {
         let unique: HashSet<_> = ALL_KEYS.iter().collect();
         assert_eq!(unique.len(), ALL_KEYS.len());
         assert!(ALL_KEYS.iter().all(|k| k.starts_with("notice.")));
+    }
+
+    #[test]
+    fn the_power_notice_is_listed() {
+        assert_eq!(keys::POWER_FAILED, "notice.power-failed");
+        assert!(ALL_KEYS.contains(&keys::POWER_FAILED));
     }
 
     #[test]

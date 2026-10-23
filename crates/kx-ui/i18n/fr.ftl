@@ -187,6 +187,7 @@ notice =
     .scroll-end = Déjà à la fin.
     .scroll-failed = Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.
     .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
+    .power-failed = La fenêtre Marche/Arrêt du système n’a pas pu s’ouvrir.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =

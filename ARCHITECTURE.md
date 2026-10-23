@@ -63,8 +63,9 @@ crates/
                          golden layout tables, a layouts service, the UI ports and the speaker);
                          `FakePointerHook` runs an engine on the test's thread, and its `let_go`
                          and `give_up` act as the real host does; `FakeScrollTarget` answers
-                         scripted aims and reaches and records turns; kx-module-api's contract
-                         test uses it too
+                         scripted aims and reaches and records turns; `FakeShortcuts` records
+                         sends with their held keys and `FakePowerDialog` counts opens (P6);
+                         kx-module-api's contract test uses it too
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's

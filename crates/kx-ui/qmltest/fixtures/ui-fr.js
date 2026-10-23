@@ -146,6 +146,7 @@ var texts = {
   "notice.mouse-hook-failed": "L’aide à la souris n’a pas pu démarrer, car Windows a refusé qu’elle surveille la souris. Appuyez de nouveau sur la touche.",
   "notice.mouse-reset": "L’aide à la souris a rencontré une erreur ; ses modes ont donc été désactivés. Appuyez sur une touche de mode pour la relancer.",
   "notice.mouse-stopped": "L’aide à la souris s’est arrêtée après une erreur. Redémarrez KeyXtend pour l’utiliser de nouveau.",
+  "notice.power-failed": "La fenêtre Marche/Arrêt du système n’a pas pu s’ouvrir.",
   "notice.scroll-end": "Déjà à la fin.",
   "notice.scroll-failed": "Le pavé de défilement a rencontré une erreur. Appuyez sur une flèche pour réessayer.",
   "notice.scroll-none": "Rien à faire défiler ici.",
