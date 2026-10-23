@@ -1,6 +1,6 @@
-// A named key's face, made of only what it shows: an icon, a label, or both side by side; their names show as tooltips
-// instead of text. Anchors centre an icon on whole pixels, so it draws crisp; a label centres exactly, as that rounding
-// can push a fitted label past its room.
+// A named key's face, made of only what it shows: an icon, a label, both side by side, or the layer's Next chevron with
+// its page dots; their names show as tooltips instead of text. Anchors centre an icon on whole pixels, so it draws
+// crisp; a label centres exactly, as that rounding can push a fitted label past its room.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -22,6 +22,8 @@ Item {
     readonly property real gap: host.lg.gap_px * host.s
     // The face never clips.
     readonly property bool clips: false
+    // The shortcuts layer's Next key, by the face's id for it, shows one dot per page under its chevron.
+    readonly property bool paged: host.kv.id === "layer-next" && !!host.paging && !!icon
 
     // What the key shows, centred as one row.
     Loader {
@@ -32,7 +34,7 @@ Item {
         anchors.horizontalCenterOffset: shift
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: -n.host.lift
-        sourceComponent: n.label ? (n.icon ? bothC : labelC) : n.icon ? iconC : null
+        sourceComponent: n.paged ? pagedC : n.label ? (n.icon ? bothC : labelC) : n.icon ? iconC : null
         // A label's exact x; an icon's anchor holds x instead, so nothing is restored when a label goes.
         Binding on x {
             when: !!n.label
@@ -62,6 +64,26 @@ Item {
             text: n.label
             font.pixelSize: n.host.look.mod_legend_px * n.host.s
             color: n.host.ink
+        }
+    }
+    // The chevron with the page dots one gap under it, centred together as kx-theme's drawn check places them.
+    Component {
+        id: pagedC
+        Column {
+            spacing: n.host.lk.shape.dots.gap_px * n.host.s
+            Loader {
+                anchors.horizontalCenter: parent.horizontalCenter
+                sourceComponent: iconC
+            }
+            PageDots {
+                anchors.horizontalCenter: parent.horizontalCenter
+                count: n.host.paging.pages
+                at: n.host.paging.page
+                lk: n.host.lk
+                s: n.host.s
+                ink: n.host.ink
+                room: n.labelRoom
+            }
         }
     }
     // Both side by side, which no key on today's boards shows.

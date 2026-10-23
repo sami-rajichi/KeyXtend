@@ -46,6 +46,7 @@ mod qt {
         "qml/LangFace.qml",
         "qml/Legend.qml",
         "qml/Rise.qml",
+        "qml/Swap.qml",
         "qml/CapFace.qml",
         "qml/Inset.qml",
         "qml/Led.qml",

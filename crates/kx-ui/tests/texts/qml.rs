@@ -22,8 +22,12 @@ use std::sync::Arc;
 const DIR: &str = "qmltest/fixtures";
 /// The keyboard's golden files, which pin the face's JSON.
 const FACE: &str = "../kx-mod-keyboard/tests/golden";
-/// The face's states the tests draw, by golden file name.
-const STATES: [&str; 7] = ["en", "fr", "ar", "ar-shift", "ar-altgr", "list", "en-caps"];
+/// The face's states the tests draw, by golden file name: the usual side keys', then the shortcuts layer's.
+const STATES: [&str; 9] = [
+    "en", "fr", "ar", "ar-shift", "ar-altgr", "list", "en-caps", "layer-1", "layer-3",
+];
+/// The shortcuts layer's boards the tests draw, on its first and last pages, by golden file name after `board-`.
+const LAYERS: [&str; 2] = ["layer-1", "layer-3"];
 /// The UI languages the tests draw.
 const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// Where the bundled files and the icon plugin are laid out, from this crate; the Qt Quick tests read them from there.
@@ -149,21 +153,27 @@ fn golden(name: &str) -> Value {
     serde_json::from_str(&text).expect("golden JSON")
 }
 
-/// The board and every state the tests draw, one line each, as the keyboard's own golden files show them in full, and
-/// the smallest and largest sizes the keyboard allows and its size step.
-fn face() -> String {
-    let states: Map<String, Value> = STATES
+/// The golden files `{prefix}{name}` for each of `names`, by name.
+fn goldens(prefix: &str, names: &[&str]) -> Value {
+    let all: Map<String, Value> = names
         .iter()
-        .map(|s| ((*s).to_owned(), golden(&format!("state-{s}"))))
+        .map(|s| ((*s).to_owned(), golden(&format!("{prefix}{s}"))))
         .collect();
-    let states = Value::Object(states);
+    Value::Object(all)
+}
+
+/// The board, the layer's boards and every state the tests draw, one line each, as the keyboard's own golden files show
+/// them in full, and the smallest and largest sizes the keyboard allows and its size step.
+fn face() -> String {
+    let states = goldens("state-", &STATES);
     let size = |key: &str| {
         let v = crate::keyboard_defaults()[key].clone();
         serde_json::to_value(v).expect("a size")
     };
     format!(
-        "{HEAD}{}{}{}{}{}",
+        "{HEAD}{}{}{}{}{}{}",
         var("board", &golden("board"), false),
+        var("layers", &goldens("board-", &LAYERS), false),
         var("states", &states, false),
         var("sizeMin", &size("size_min"), false),
         var("sizeMax", &size("size_max"), false),

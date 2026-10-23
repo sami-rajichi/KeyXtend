@@ -1,6 +1,6 @@
-// Every key label in each theme, language and size: set in the theme's font and inside its cap, as the keyboard window
-// lays it out over stand-in bridges fed from the face's golden files, the hub's texts and the real look; and each theme's
-// font metrics, which the drawn check places legends by.
+// Every key label in each theme, language and size, on the usual board and the shortcuts layer's F-key page: set in the
+// theme's font and inside its cap, as the keyboard window lays it out over stand-in bridges fed from the face's golden
+// files, the hub's texts and the real look; and each theme's font metrics, which the drawn check places legends by.
 import QtQuick
 import QtTest
 import "../qml"
@@ -35,9 +35,9 @@ Item {
             failOnWarning(/./);
         }
         // A keyboard window over fresh stand-ins, laid out and not shown; the real pointer passes through it.
-        function make(props) {
+        function make(props, kbProps) {
             const ui = createTemporaryObject(uiC, root, props || {});
-            const kb = createTemporaryObject(kbC, root);
+            const kb = createTemporaryObject(kbC, root, kbProps || {});
             const win = createTemporaryObject(winC, root, { ui: ui, keyboard: kb });
             verify(win, "the window is made");
             Pointer.through([win]);
@@ -52,10 +52,9 @@ Item {
                 all(item.children[i], ok, found);
             return found;
         }
-        // The face's board at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
-        function scaled(size) {
-            const box = b => Object.assign({}, b, { x: b.x * size, y: b.y * size, w: b.w * size, h: b.h * size });
-            const b = Face.board;
+        // Board `b` at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
+        function scaled(size, b) {
+            const box = r => Object.assign({}, r, { x: r.x * size, y: r.y * size, w: r.w * size, h: r.h * size });
             return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
         }
 
@@ -70,7 +69,8 @@ Item {
             const grid = Array.from({ length: steps + 1 }, (_, i) => Face.sizeMin + i * Face.sizeStep);
             const sizes = [...new Set(grid.concat(Face.board.presets))];
             for (const t of [En, Fr, Ar])
-                labelsFit(row.lk, t, sizes);
+                for (const page of [null, "layer-3"])
+                    labelsFit(row.lk, t, sizes, page);
         }
         // The drawn check places each legend by its theme's font metrics (kx-theme look.rs), so they are the font's own.
         function test_the_drawn_checks_font_metrics_are_the_fonts_own_data() {
@@ -100,17 +100,21 @@ Item {
             return [left - more, left + face.width + more];
         }
         // Each label in look `lk` and texts `t`, at every size in `sizes`, is set in the theme's font and fits; one
-        // hidden window takes each size in turn, and the keyboard moves the same keys.
-        function labelsFit(lk, t, sizes) {
-            const win = make({ settings: t.settings, lang: t.lang, texts: t.texts, look: lk });
+        // hidden window takes each size in turn, and the keyboard moves the same keys. With `page`, it shows that page of
+        // the shortcuts layer.
+        function labelsFit(lk, t, sizes, page) {
+            const board = page ? Face.layers[page] : Face.board;
+            const kb = page ? { board: board, state: Face.states[page] } : {};
+            const win = make({ settings: t.settings, lang: t.lang, texts: t.texts, look: lk }, kb);
             const font = lk.look.latin_fonts[0];
-            const where = font + " " + t.lang.tag + " ";
+            const where = font + " " + t.lang.tag + " " + (page || "") + " ";
             const keys = all(win.contentItem, o => o.kv !== undefined && o.later !== undefined && o.label.length > 0);
             verify(keys.length > 0, where + "labels");
+            verify(!page || keys.some(k => k.kv.side), where + "the layer's F keys among them");
             const labels = keys.map(k => all(k, o => o.text === k.label && o.fontInfo !== undefined && o.visible)[0]);
             tryVerify(() => labels.every(l => l.fontInfo.family === font), 5000, where + "in " + labels[0].fontInfo.family);
             for (const size of sizes) {
-                win.board = scaled(size);
+                win.board = scaled(size, board);
                 keys.forEach((k, i) => fits(k, labels[i], lk, size, t !== Fr, where + size.toFixed(2) + ": " + k.label));
             }
         }
