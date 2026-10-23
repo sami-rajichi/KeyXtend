@@ -182,7 +182,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 6 — Shortcuts layer and Power — v0.3
 
-- 15 shortcuts mapped per OS; Win+V routing (setting); the Power dialog.
+- The shortcuts layer: 37 shortcuts on pages the user arranges, mapped per OS (ADR-0031); the Power dialog. Win+V routing moved to P8 (owner, 2026-10-23).
 
 ## Phase 7 — Word prediction — v0.4
 
@@ -193,7 +193,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 8 — Clipboard history — v0.5
 
 - `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
-- The encrypted store, retention, exclusion formats, the paged panel, multi-paste, and pasting files and images.
+- The encrypted store, retention, exclusion formats, the paged panel, multi-paste, pasting files and images, and Win+V routing (a setting, moved from P6).
 - **Edge cases:**
   - a 200 MB image;
   - 10,000 entries;
