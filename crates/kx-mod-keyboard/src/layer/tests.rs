@@ -2,11 +2,10 @@ use super::*;
 use crate::KeyboardSettings;
 use crate::spec::BoardSpec;
 
-/// The shipped board's layer grid with its Shortcuts key given the `layer` role, and that key's cell.
+/// The shipped board's layer grid, and the cell of its Shortcuts key, which shows the layer.
 pub(super) fn board() -> (LayerGrid, SideCell) {
-    let mut s = BoardSpec::shipped().unwrap();
-    let key = s.side.iter_mut().find(|k| k.id == "shortcuts").unwrap();
-    key.role = Role::Layer;
+    let s = BoardSpec::shipped().unwrap();
+    let key = s.side.iter().find(|k| k.role == Role::Layer).unwrap();
     let cell = SideCell {
         col: key.col,
         row: key.row,

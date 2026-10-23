@@ -7,11 +7,15 @@ use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
-use kx_mod_keyboard::view::{EMPTY_NAME, LONE_TIP, SCROLL_OFF_TIP};
+use kx_mod_keyboard::view::{
+    EMPTY_NAME, LONE_TIP, NO_SHORTCUTS_TIP, POWER_OFF_TIP, SCROLL_OFF_TIP, with_layer,
+};
+use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey, Layer, SPEC};
+use kx_module_api::ports::ShortcutId;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 /// The keys of `wanted` some shipped language has no text for, with that language's tag.
 fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
@@ -25,7 +29,13 @@ fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
 
 #[test]
 fn every_name_label_and_tip_the_face_draws_has_its_text() {
-    let fixed = [LONE_TIP, EMPTY_NAME, SCROLL_OFF_TIP];
+    let fixed = [
+        LONE_TIP,
+        EMPTY_NAME,
+        SCROLL_OFF_TIP,
+        NO_SHORTCUTS_TIP,
+        POWER_OFF_TIP,
+    ];
     let mut wanted: BTreeSet<String> = fixed.map(str::to_owned).into();
     for design in designs() {
         let view = board(design);
@@ -38,6 +48,31 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
     assert!(
         wanted.len() > LANGS.len(),
         "the board names its keys: {wanted:?}"
+    );
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
+#[test]
+fn every_name_and_label_on_every_default_shortcut_page_has_its_text() {
+    let spec = BoardSpec::shipped().unwrap();
+    let pages = SPEC
+        .defaults_as::<KeyboardSettings>()
+        .unwrap()
+        .shortcut_pages;
+    let known: HashSet<ShortcutId> = pages.iter().flatten().cloned().collect();
+    let mut layer = Layer::new(spec.layer_grid(), &pages, &known);
+    layer.toggle();
+    let mut wanted = BTreeSet::new();
+    for _ in &pages {
+        let mut view = board(LangKey::Carousel);
+        with_layer(&mut view, &spec, &layer, &[]);
+        let side = view.keys.into_iter().filter(|k| k.side);
+        wanted.extend(side.flat_map(|k| [k.name, k.label]).flatten());
+        layer.next_page();
+    }
+    assert!(
+        wanted.len() > known.len(),
+        "every shortcut and Next: {wanted:?}"
     );
     assert_eq!(missing(&wanted), Vec::new());
 }

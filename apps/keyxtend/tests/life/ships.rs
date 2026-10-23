@@ -1,10 +1,14 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, and
-//! the pointer hook and the scroll target each reach only the module whose manifest declares their capability.
+//! the pointer hook and the scroll target each reach only the module whose manifest declares their capability, and the
+//! shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
 use kx_kernel::Kernel;
-use kx_module_api::ports::{PointerHook, PointerHookKey, ScrollTarget, ScrollTargetKey};
+use kx_module_api::ports::{
+    FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, ScrollTarget, ScrollTargetKey,
+    ShortcutId, ShortcutInfo, Step,
+};
 use kx_module_api::{Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey};
 use kx_platform_fake::{FakePointerHook, FakeScrollTarget};
 use std::marker::PhantomData;
@@ -132,4 +136,29 @@ fn the_mouse_hook_still_reaches_only_the_mouse_module() {
     let hook: Arc<dyn PointerHook> = Arc::new(FakePointerHook::new());
     let got = reached::<PointerHookKey>(&Rig::new(), &hook);
     assert_eq!(got, [kx_mod_mouse::ID]);
+}
+
+#[test]
+fn the_shortcuts_reach_the_keyboard_whose_layer_sends_them() {
+    let rig = Rig::new();
+    let copy = ShortcutId::new("copy").unwrap();
+    let name = |n: &str| KeyName::new(n).unwrap();
+    let steps = vec![Step {
+        held: vec![name("ctrl")],
+        key: name("c"),
+    }];
+    let info = ShortcutInfo {
+        id: copy.clone(),
+        steps,
+    };
+    rig.shortcuts.set_known(vec![info]);
+    let mut boot = rig.load();
+    boot.start().unwrap();
+    for id in ["shortcuts", "sc-copy"] {
+        let _ = boot.hub.act(FaceAction::Tap {
+            id: KeyId::new(id),
+            back: false,
+        });
+    }
+    assert_eq!(rig.shortcuts.sent(), [(copy, Vec::new())]);
 }

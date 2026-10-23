@@ -6,14 +6,17 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+use crate::known;
 use kx_mod_keyboard::{KeyboardSettings, MANIFEST};
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable, Layouts,
-    LayoutsKey,
+    LayoutsKey, Shortcuts, ShortcutsKey,
 };
 use kx_module_api::{Capability, Mono, ServiceId, ServiceKey};
 use kx_module_api::{is_arabic, parse_as};
-use kx_platform_fake::{FakeClock, FakeInjector, FakeLayoutSource, FakeLayouts, LayoutFile};
+use kx_platform_fake::{
+    FakeClock, FakeInjector, FakeLayoutSource, FakeLayouts, FakeShortcuts, LayoutFile,
+};
 pub use kx_test_support::host::FakeHost;
 use std::any::Any;
 use std::sync::Arc;
@@ -65,7 +68,7 @@ pub fn labelled(names: &[&str]) -> FakeLayouts {
     FakeLayouts::new(names.iter().map(|n| table(n)).collect())
 }
 
-/// The fakes behind the three typing services.
+/// The fakes behind the four typing services.
 #[derive(Clone)]
 pub struct Fakes {
     /// Behind the input injector.
@@ -74,6 +77,8 @@ pub struct Fakes {
     pub source: Arc<FakeLayoutSource>,
     /// Behind the layouts service.
     pub layouts: Arc<FakeLayouts>,
+    /// Behind the shortcuts service; it knows every shortcut of the Windows table.
+    pub shortcuts: FakeShortcuts,
     /// The kernel's clock, which moves only when a test says so.
     pub clock: FakeClock,
 }
@@ -81,10 +86,13 @@ pub struct Fakes {
 impl Fakes {
     /// The fakes over the golden tables `names`, the first in front and shown.
     pub fn golden(names: &[&str]) -> Self {
+        let shortcuts = FakeShortcuts::new();
+        shortcuts.set_known(known::all());
         Self {
             injector: Arc::new(FakeInjector::new()),
             source: Arc::new(FakeLayoutSource::golden(names).unwrap()),
             layouts: Arc::new(labelled(names)),
+            shortcuts,
             clock: FakeClock::new(Mono::default()),
         }
     }
@@ -95,10 +103,12 @@ impl Fakes {
         let injector: Arc<dyn InputInjector> = self.injector.clone();
         let source: Arc<dyn LayoutSource> = self.source.clone();
         let layouts: Arc<dyn Layouts> = self.layouts.clone();
-        let stored: [(ServiceId, Box<dyn Any + Send + Sync>); 3] = [
+        let shortcuts: Arc<dyn Shortcuts> = Arc::new(self.shortcuts.clone());
+        let stored: [(ServiceId, Box<dyn Any + Send + Sync>); 4] = [
             (InputInjectorKey::ID, Box::new(injector)),
             (LayoutSourceKey::ID, Box::new(source)),
             (LayoutsKey::ID, Box::new(layouts)),
+            (ShortcutsKey::ID, Box::new(shortcuts)),
         ];
         for (id, service) in stored {
             if leave != Some(id) {

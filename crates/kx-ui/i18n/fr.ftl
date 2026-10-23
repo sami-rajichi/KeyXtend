@@ -4,7 +4,7 @@
 ## Le nom du produit, écrit une fois et repris par les textes ci-dessous.
 -app = KeyXtend
 
-## Touches nommées, par identifiant de board.toml, puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
+## Touches nommées, par identifiant de board.toml, la touche Page suivante des raccourcis, puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
 key =
     .esc = Échap
     .bksp = Retour arrière
@@ -35,6 +35,7 @@ key =
     .settings = Paramètres
     .power = Marche/Arrêt
     .dpad = Pavé de défilement
+    .layer-next = Page suivante
     .empty = Touche vide
 
 ## Le mot court sur la touche, ou sous son icône en grande taille, comme sur les claviers français.
@@ -64,15 +65,57 @@ label =
     .snip = Capture
     .fill = Remplir
     .settings = Paramètres
-    .power = Arrêt
+    .power = Marche/Arrêt
 
 tip =
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
     .mouse-off = L’aide à la souris est désactivée
     .scroll-off = Le pavé de défilement est désactivé
+    .no-shortcuts = Aucun raccourci n’est choisi
+    .power-off = La touche Marche/Arrêt est désactivée
     .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
     .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
+
+## Le nom des raccourcis pour les info-bulles et les lecteurs d’écran, par identifiant.
+shortcut =
+    .copy = Copier
+    .paste = Coller
+    .cut = Couper
+    .select-all = Sélectionner tout
+    .undo = Annuler
+    .redo = Rétablir
+    .copy-all = Copier tout
+    .cut-all = Couper tout
+    .delete-all = Supprimer tout
+    .find = Rechercher
+    .save = Enregistrer
+    .print = Imprimer
+    .emoji = Emoji
+    .switch-app = Changer d’application
+    .show-desktop = Afficher le Bureau
+    .file-explorer = Explorateur de fichiers
+    .lock-pc = Verrouiller le PC
+    .task-manager = Gestionnaire des tâches
+    .close-window = Fermer la fenêtre
+    .new-tab = Nouvel onglet
+    .close-tab = Fermer l’onglet
+    .reopen-tab = Rouvrir l’onglet fermé
+    .refresh = Actualiser
+    .zoom-in = Zoom avant
+    .zoom-out = Zoom arrière
+    .f1 = F1
+    .f2 = F2
+    .f3 = F3
+    .f4 = F4
+    .f5 = F5
+    .f6 = F6
+    .f7 = F7
+    .f8 = F8
+    .f9 = F9
+    .f10 = F10
+    .f11 = F11
+    .f12 = F12
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =

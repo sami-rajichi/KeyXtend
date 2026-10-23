@@ -1,17 +1,20 @@
-//! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list and
-//! the mouse and scroll modules' states.
+//! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list, the
+//! shortcuts layer and the mouse, scroll and power modules' states.
 
 mod assist;
 mod fit;
 mod held;
+mod layer;
 mod list;
 mod pad;
+mod power;
 
 pub(super) use held::Went;
 
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::Turn;
+use crate::layer::Layer;
 use crate::panel::LangList;
 use crate::place::Placer;
 use crate::repeat::Repeat;
@@ -22,8 +25,8 @@ use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
 use kx_module_api::SettingsHandle;
 use kx_module_api::ports::{
-    AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, Screen,
-    ScrollChanged,
+    AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, PowerChanged,
+    Screen, ScrollChanged, ShortcutInfo,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -56,6 +59,12 @@ pub(super) struct Inner {
     hover: bool,
     /// Counts the scroll module's live runs, so a module that started again hears the pointer anew.
     run: u64,
+    /// The shortcuts layer, which is never saved.
+    layer: Layer,
+    /// The shortcuts the platform knows, with the steps the layer's tips name.
+    known: Vec<ShortcutInfo>,
+    /// The power module's state, as the bus last told it.
+    power: PowerChanged,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
     /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
@@ -64,7 +73,7 @@ pub(super) struct Inner {
 }
 
 impl Inner {
-    /// Nothing latched, no list open, at the saved size; placed once the UI reports its screens.
+    /// Nothing latched, no list open and the layer hidden, at the saved size; placed once the UI reports its screens.
     pub(super) fn new(
         spec: &BoardSpec,
         plate: Area,
@@ -72,6 +81,7 @@ impl Inner {
         settings: KeyboardSettings,
         store: SettingsHandle,
     ) -> Self {
+        let (layer, known) = layer::hidden(spec, &ports, &settings);
         Self {
             typing: Typing::new(spec, &settings),
             repeat: timed(&settings),
@@ -89,14 +99,17 @@ impl Inner {
             scroll: ScrollChanged::OFF,
             hover: false,
             run: 0,
+            layer,
+            known,
+            power: PowerChanged::OFF,
             unshown: false,
             #[cfg(debug_assertions)]
             caps_flipped: false,
         }
     }
 
-    /// New services and settings; the latches and wait stay, the size and place come from the settings again. A held
-    /// key is dropped, and its burst ends.
+    /// New services and settings; the latches, wait and layer stay, the size and place come from the settings again. A
+    /// held key is dropped, and its burst ends.
     pub(super) fn renew(
         &mut self,
         ports: Ports,
@@ -115,6 +128,7 @@ impl Inner {
             self.list = None;
         }
         self.turn = Turn::new(ports.layouts.current().label.id);
+        self.relayer(&ports, &settings);
         self.ports = ports;
         self.settings = settings;
     }
@@ -128,7 +142,8 @@ impl Inner {
     pub(super) fn tap(&mut self, id: &str, back: bool) -> Went {
         let ended = self.ended().state;
         let table = self.ports.layouts.current();
-        let tapped = self.typing.tap(&self.ports.io(&table), id, back);
+        let cells = self.layer.cells();
+        let tapped = self.typing.tap(&self.ports.io(&table, &cells), id, back);
         Went { tapped, ended }
     }
 
@@ -199,11 +214,6 @@ impl Inner {
         on
     }
 
-    /// The settings and the size, which the board is drawn from.
-    pub(super) fn sizing(&self) -> (KeyboardSettings, f64) {
-        (self.settings.clone(), self.sizer.size())
-    }
-
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
     /// first, so a reader in its change event already sees the names' turn.
     pub(super) fn state(
@@ -231,6 +241,8 @@ impl Inner {
             at: self.placer.at(),
             assist: self.assist,
             scroll: self.scroll,
+            layer: &self.layer,
+            power: self.power,
         })
     }
 }

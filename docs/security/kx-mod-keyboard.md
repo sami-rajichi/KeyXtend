@@ -1,41 +1,43 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-16 (scroll pad)
+- **Last review:** 2026-10-23 (shortcuts layer and Power key)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| `InjectInput` | It gates the three services typing needs: `InputInjector` (send keys and text, name the app in front), `LayoutSource` (Caps Lock, whether a key types) and `Layouts` (the table shown). It also gates the bus events `AssistToggle`, `LatchesChanged`, `LatchesUsed` and `LatchesAsk`. | The module does not start. |
+| `InjectInput` | It gates the four services typing needs: `InputInjector` (send keys and text, name the app in front), `LayoutSource` (Caps Lock, whether a key types), `Layouts` (the table shown) and `Shortcuts` (the layer's shortcuts, with the latches held). It also gates the bus events `AssistToggle`, `LatchesChanged`, `LatchesUsed` and `LatchesAsk`. | The module does not start. |
 
 - Besides its settings, the module writes only its own `size`, `x`, `y` and `placed`.
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
-| `[keyboard]` settings: size, place, modifiers mode, language-key style, key repeat, bubble corner, `key_apps` | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
+| `[keyboard]` settings: size, place, modifiers mode, language-key style, key repeat, bubble corner, `key_apps`, shortcut pages | Public | `settings.toml` (only the user's changes) | No | Until the user changes them |
 | The board: rows, widths, scan codes, roles | Public | Compiled into the app (`board.toml`) | No | The build |
 | The text of each click, built from the layout table | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted<String>`, until the injector takes it; not zeroised (`kx-platform-windows.md`) | No | One click |
 | Typing state: the latched modifiers and the dead-key wait | Sensitive together with the clicks around it (the latches alone show on screen and to screen readers) | Memory only; kept across a module restart | No | Until a click lets go of it, or the app quits |
 | The app in front's file name, for `key_apps` | Sensitive (shows what the user runs) | Memory only | No | One click |
+| The shortcuts layer: shown or not, its page, and the shortcut ids the platform knows | Public (on screen) | Memory only; the page is kept across a restart | No | Until the app quits |
 | The latched set on the bus (`LatchesChanged`), for modifier + click | Sensitive together with the clicks around it | Memory only; heard only by modules granted `InjectInput`; its debug output shows only a count | No | Until the next change |
 | The held key's id and its next repeat time | Sensitive together with the clicks around it | Memory only (`Repeat`) | No | Until the pointer lets go or leaves, the keyboard hides, the list opens, a repeat fails, is stale or types nothing, the next press, or a restart |
 
-Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text and legends (`Route`, `Plan`, `Legend`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
+Typed text never leaves the click that makes it: it is not stored, logged or sent anywhere but the injector. Debug output hides scan codes, text, legends and shortcut ids (`Route`, `Plan`, `Legend`, `Layer`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite; `size_min` and `size_max` within `SIZE_FLOOR` (0.8, where key cells on the 31 px row stay at least 24 px apart, WCAG 2.2 SC 2.5.8 through its spacing exception) and `SIZE_CEILING` (4.0); `size` and the rising presets inside `size_min..=size_max`, the step above 0 and no wider than that range; `relabel_ms` from 50 to 10,000 ms (`RELABEL_MS`); `repeat_delay_ms` from 300 to 3,000 ms and `repeat_every_ms` from 33 to 1,000 ms (`REPEAT_DELAY_MS`, `REPEAT_EVERY_MS`); no blank app names | Checked at load: a refused value goes back to its default with the `settings-reset` notice. The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
+| `[keyboard]` settings | `deny_unknown_fields`; choices by name; sizes finite; `size_min` and `size_max` within `SIZE_FLOOR` (0.8, where key cells on the 31 px row stay at least 24 px apart, WCAG 2.2 SC 2.5.8 through its spacing exception) and `SIZE_CEILING` (4.0); `size` and the rising presets inside `size_min..=size_max`, the step above 0 and no wider than that range; `relabel_ms` from 50 to 10,000 ms (`RELABEL_MS`); `repeat_delay_ms` from 300 to 3,000 ms and `repeat_every_ms` from 33 to 1,000 ms (`REPEAT_DELAY_MS`, `REPEAT_EVERY_MS`); no blank app names; shortcut pages of well-formed ids, at most `MAX_PAGES`, none empty or past the layer's room, no id twice, and an id the platform lacks skipped at start | Checked at load: a refused value goes back to its default with the `settings-reset` notice. The kernel caps the settings file (`MAX_FILE_BYTES`) | No |
 | `board.toml` | Compiled in, never read from disk; `deny_unknown_fields`, rows span the grid, whole columns, unique ids, roles fit; a broken board stops the module with an error, never a panic | Fixed at build time | Property tests |
 | Screens, pointer points and the resize corner's overhang from the UI | Integer maths saturates; a place off every screen goes home; a zero or odd DPI or screen never panics; an overhang below 0 or not a finite number counts as none | — | Property tests |
-| Key ids from the UI | Looked up on the board; an unknown id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
+| Key ids from the UI | Looked up on the board, or among the layer's keys while it shows them; an unknown or hidden id is `UnknownKey`, never a panic | — | Property tests (runs of clicks) |
 | Face actions from the UI: panel keys, rows per page, list and preset indexes | A panel key must have a `nav` on the board; zero rows count as one; an index past its list is `NoChoice`; while the list is open its keys are never typed | — | Property tests (list moves) |
 | Held-key actions from the UI: `press`, `tick`, `let_go`, `leave` (spec §4.6) | A pressed or let-go key must be on the board (`UnknownKey`, which changes nothing); a press types once, a tick types only while a key is held and a repeat is due, and a late tick types once; a let-go types nothing | One repeat per `repeat_every_ms` (33 ms or more) | Property tests (`Repeat` runs; face runs of presses, ticks, let-gos and leaves) |
 | Bus events from the mouse module: `AssistChanged`, `LatchesUsed`, `LatchesAsk` | Plain flags with no payload to check; the latch events need `InjectInput` to send. A forged `LatchesUsed` can only let latches go or stop a lone Win press, and `AssistChanged` only lights or dims (`dim`) two keys | — | Thread runs (latches told newest last); both start orders, one with the mouse module already running (`a_mouse_module_already_running_lights_the_keys_at_start`) |
 | Bus events from the scroll module: `ScrollChanged` (P5) | Plain flags and a direction, ungated like the pad's own `ScrollTap`, `ScrollStop`, `ScrollPeek` and `ScrollAsk`. A forged `ScrollChanged` only lights or dims the pad, and the pad's clicks still need the user | — | Both start orders, one with the scroll module already running (`a_scroll_module_already_running_lights_the_pad_at_start`); a module that answers a tap at once (no deadlock) |
+| Bus events from the power module: `PowerChanged` (P6) | A plain flag, ungated like `PowerAsk` and the keyboard's own `PowerAsked`. A forged `PowerChanged` only lights or dims the Power key; `PowerAsked` goes out only on the user's click while the power module is live, and the system's dialog asks the user again | — | Both start orders, one with the power module already running (`a_power_module_already_running_lights_the_key_at_start`) |
 | Layout tables, Caps Lock and the app name from the ports | Read as data; a missing key goes as its scan code, with every latch held; while the shown table lags the app in front, a scan-code click sends nothing, the face refreshes the layouts once, and the user clicks again | One click | Golden-table tests; a property run of the dead-key wait |
 
 ## Threats (STRIDE-lite)
@@ -48,7 +50,7 @@ Typed text never leaves the click that makes it: it is not stored, logged or sen
   - A stale click is never replayed, so a lagging table cannot loop.
   - A click holds the face's lock while it sends, but no OS call on that path sends a message to another window, so a hung app cannot stall a click.
   - A held key repeats at most once a beat, and a late tick types once and never catches up, so a slow frame cannot flood the app.
-- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. The face service itself has no capability gate (see Should fix).
+- **Elevation:** input goes only through the `InputInjector` port, and only for a click on a board key or a board key held down; nothing types on its own. With Ctrl, Alt or Win latched (or `AltGr` acting as Right Alt), or on a dead key, a held key types once, so a shortcut such as Ctrl+W never fires many times. A layer shortcut goes only through the `Shortcuts` port, once per click, and a held one never repeats. The face service itself has no capability gate (see Should fix).
 - **Stuck repeat:** a burst ends on let-go wherever the pointer is, when Qt takes the press away or the keyboard hides or stops (the UI sends `leave`), when the list opens, when a repeat is stale, empty or fails, on the next click (a burst left open, as after a window rebuilt for a lost graphics device), and on a restart. A face property run shows that no tick types and no latch stays down after a let-go or leave, and the UI's hold timer runs only while the face says it holds a key, on a shown keyboard with no list open.
 - **Lone press:** a `lone` latch (Win) sends its key alone only on the user's own second click with nothing used since the first; refused whole it stays latched, and taken in part it lets go, so it never goes twice. It holds no other latch, and they then let go as after any key, so in `release` none rides into Start.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch. A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier. During a burst the latches stay latched, not pressed, and let go when it ends.

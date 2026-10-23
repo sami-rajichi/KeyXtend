@@ -1,7 +1,7 @@
 //! The app from start to stop over the fake platform, without Qt: every module starts and types, Quit stops them and
 //! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, the
 //! language shown always matches the legends, the pointer hook and the scroll target reach only their own modules,
-//! and the pad scrolls.
+//! the shortcuts reach the keyboard's layer, and the pad scrolls.
 
 #![allow(
     clippy::unwrap_used,

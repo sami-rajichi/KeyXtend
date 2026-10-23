@@ -1,18 +1,25 @@
-//! What the keyboard module declares: typing needs the injector, the layout source and the layouts service,
-//! and it provides the `KeyboardFace` the UI draws.
+//! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
+//! shortcuts, and it provides the `KeyboardFace` the UI draws.
 
 use crate::settings::SPEC;
-use kx_module_api::ports::{InputInjectorKey, KeyboardFaceKey, LayoutSourceKey, LayoutsKey};
+use kx_module_api::ports::{
+    InputInjectorKey, KeyboardFaceKey, LayoutSourceKey, LayoutsKey, ShortcutsKey,
+};
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("keyboard");
 
-/// The module's manifest: `InjectInput` gates all three services it needs.
+/// The module's manifest: `InjectInput` gates all four services it needs.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
-    requires: &[InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID],
+    requires: &[
+        InputInjectorKey::ID,
+        LayoutSourceKey::ID,
+        LayoutsKey::ID,
+        ShortcutsKey::ID,
+    ],
     provides: &[KeyboardFaceKey::ID],
     capabilities: &[Capability::InjectInput],
     settings: Some(&SPEC),
@@ -23,8 +30,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_types_through_the_injector_and_reads_the_layout_source_and_the_layouts() {
-        let want = [InputInjectorKey::ID, LayoutSourceKey::ID, LayoutsKey::ID];
+    fn it_types_through_the_injector_the_layouts_and_the_shortcuts() {
+        let want = [
+            InputInjectorKey::ID,
+            LayoutSourceKey::ID,
+            LayoutsKey::ID,
+            ShortcutsKey::ID,
+        ];
         assert_eq!(MANIFEST.requires, want);
     }
 
@@ -35,12 +47,13 @@ mod tests {
     }
 
     #[test]
-    fn it_needs_only_inject_input_the_gate_of_all_three() {
+    fn it_needs_only_inject_input_the_gate_of_all_four() {
         assert_eq!(MANIFEST.capabilities, [Capability::InjectInput]);
         let gates = [
             InputInjectorKey::CAPABILITY,
             LayoutSourceKey::CAPABILITY,
             LayoutsKey::CAPABILITY,
+            ShortcutsKey::CAPABILITY,
         ];
         assert!(gates.iter().all(|&c| c == Some(Capability::InjectInput)));
     }

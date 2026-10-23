@@ -9,6 +9,7 @@
 use crate::host::GOLDEN;
 use crate::rig::{ROWS, Rig};
 use kx_mod_keyboard::legend::is_mark;
+use kx_mod_keyboard::spec::NEXT_ID;
 use kx_mod_keyboard::view::EMPTY_NAME;
 use kx_module_api::ports::{BASE_DPI, FaceAction, Rect, Screen};
 use kx_test_support::golden::assert_golden;
@@ -188,4 +189,29 @@ fn the_open_list_matches_its_golden_file() {
     r.tap("lang").unwrap();
     r.panel("down", 5).unwrap();
     assert_golden(golden("state-list.json"), &pretty(&r.face.state_json(ROWS)));
+}
+
+/// The shortcuts layer shown on the owner's page `page`, from 1: its board and state.
+fn layer_matches_its_golden_files(page: usize) {
+    let r = showing("en-us", None);
+    r.tap("shortcuts").unwrap();
+    for _ in 1..page {
+        r.tap(NEXT_ID).unwrap();
+    }
+    let layer = json!({"shown": true, "page": page - 1, "pages": 3});
+    assert_eq!(r.state()["layer"], layer);
+    let board = format!("board-layer-{page}.json");
+    assert_golden(golden(&board), &pretty(&r.face.board_json()));
+    let state = format!("state-layer-{page}.json");
+    assert_golden(golden(&state), &pretty(&r.face.state_json(ROWS)));
+}
+
+#[test]
+fn the_layer_on_its_first_page_matches_its_golden_files() {
+    layer_matches_its_golden_files(1);
+}
+
+#[test]
+fn the_layer_on_its_last_page_matches_its_golden_files() {
+    layer_matches_its_golden_files(3);
 }

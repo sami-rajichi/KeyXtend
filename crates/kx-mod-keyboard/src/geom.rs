@@ -1,6 +1,6 @@
 //! The board at any size: every key's cell and cap, the D-pad and the top bar, in logical pixels.
 
-use crate::spec::{BoardSpec, KeyKind, Role, RowKey, SideSpec};
+use crate::spec::{BoardSpec, KeyKind, Role, RowKey, SideCell, SideSpec};
 use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
 
@@ -185,6 +185,12 @@ fn side_cell(s: &BoardSpec, f: &Frame, col: u16, row: u16) -> Area {
         w: f.side_w,
         h: s.row_px,
     }
+}
+
+/// Side cell `c` at `size`, as the board lays out its side keys; the shortcuts layer draws its keys there.
+#[must_use]
+pub fn side_area(spec: &BoardSpec, c: SideCell, size: f64) -> Area {
+    side_cell(spec, &Frame::of(spec), c.col, c.row).scale(size)
 }
 
 /// The side block's keys at size 1.

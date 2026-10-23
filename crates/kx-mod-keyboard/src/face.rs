@@ -4,6 +4,7 @@
 
 mod bus;
 mod inner;
+mod layer;
 mod outbox;
 mod pad;
 
@@ -14,7 +15,6 @@ use crate::panel::navs;
 use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
-use crate::view::board_view;
 use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
@@ -30,6 +30,12 @@ const STATE: FaceReply = FaceReply {
     state: true,
     notice: None,
     holding: false,
+};
+
+/// A reply that redraws the board and the state, as the shortcuts layer swaps the side keys.
+const REDRAW: FaceReply = FaceReply {
+    board: true,
+    ..STATE
 };
 
 /// The keyboard as the UI sees it: the typing state, size, place and language key behind one lock.
@@ -153,9 +159,10 @@ impl Face {
         Ok(self.lock().let_go(id))
     }
 
-    /// Refuses a key that is not on the board, changing nothing, since the UI redraws nothing on an error.
+    /// Refuses a key that is neither on the board nor drawn by the layer now, changing nothing, since the UI redraws
+    /// nothing on an error.
     fn known(&self, id: &str) -> Result<(), FaceError> {
-        if self.keys.iter().any(|k| k.id == id) {
+        if self.keys.iter().any(|k| k.id == id) || self.lock().drawn(id) {
             Ok(())
         } else {
             Err(FaceError::UnknownKey)
@@ -180,12 +187,18 @@ impl Face {
                 self.toggle(which);
                 Ok(FaceReply::default())
             }
+            Ok(Tapped::Power) => {
+                self.power();
+                Ok(FaceReply::default())
+            }
+            Ok(Tapped::Layer) => Ok(self.flip()),
+            Ok(Tapped::Next) => Ok(self.lock().next_page()),
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),
             Ok(Tapped::Stale) => Ok(FaceReply {
                 state: true,
                 ..self.refresh()
             }),
-            Err(TapError::Inject(_)) => Ok(FaceReply {
+            Err(TapError::Inject(_) | TapError::Shortcut(_)) => Ok(FaceReply {
                 notice: Some(keys::KEYS_NOT_SENT),
                 ..STATE
             }),
@@ -235,8 +248,7 @@ impl Face {
 
 impl KeyboardFace for Face {
     fn board_json(&self) -> String {
-        let (settings, size) = self.lock().sizing();
-        json(&board_view(&self.spec, &settings, size))
+        json(&self.lock().board(&self.spec))
     }
 
     fn state_json(&self, rows: usize) -> String {

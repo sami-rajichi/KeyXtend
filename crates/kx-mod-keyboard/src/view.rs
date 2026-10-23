@@ -1,25 +1,34 @@
-//! What the UI draws, as the face's JSON: the board (boxes, names, dimmed keys and the size), which changes with
-//! the size, and the state (legends, lights, the language key, the list, the place and the pad), which changes as
-//! keys are used.
+//! What the UI draws, as the face's JSON: the board (boxes, names, dimmed keys, the size and the shortcuts layer's
+//! keys), which changes with the size and the layer, and the state (legends, lights, the language key, the list, the
+//! place, the pad and the layer's page), which changes as keys are used.
 
 mod assist;
 mod board;
+mod layer;
 mod pad;
 mod paint;
+mod power;
 
 pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP};
 pub use board::board_view;
+pub use layer::{
+    LayerState, NEXT_ICON, NO_SHORTCUTS_TIP, SHORTCUT_ICON_PREFIX, SHORTCUT_NAME_PREFIX, with_layer,
+};
 pub use pad::{PadState, SCROLL_OFF_TIP, pad_state};
 pub use paint::{DIM, Paint, paint};
+pub use power::POWER_OFF_TIP;
 
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
+use crate::layer::Layer;
 use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typed};
 use crate::panel::{LangList, ListView, list_view};
 use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
-use kx_module_api::ports::{AssistChanged, LangLabel, LayoutTable, Point, ScrollChanged};
+use kx_module_api::ports::{
+    AssistChanged, KeyName, LangLabel, LayoutTable, Point, PowerChanged, ScrollChanged,
+};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -67,6 +76,8 @@ pub struct KeyView {
     pub label: Option<String>,
     /// Its name for screen readers and tips, by translation key; a character key's comes with the state.
     pub name: Option<String>,
+    /// It shows its icon alone, never the label under it; the label stands in only when the look has no such icon.
+    pub icon_only: bool,
     /// It latches, locks or turns a mode on, so screen readers hear it as checkable.
     pub checkable: bool,
     /// It comes in a later version: drawn dimmed and does nothing.
@@ -75,6 +86,8 @@ pub struct KeyView {
     pub tip: Option<&'static str>,
     /// It repeats while held (spec §4.6), so the UI sends its press and let-go instead of a click.
     pub repeat: bool,
+    /// A shortcut's steps for its tip, in order: each step's key names, the tapped key last; none for other keys.
+    pub steps: Vec<Vec<KeyName>>,
 }
 
 /// The D-pad's round face; whether it works, and how it scrolls, come with the state.
@@ -112,7 +125,9 @@ pub struct BoardView {
     pub bar: Area,
     /// The D-pad.
     pub dpad: DpadView,
-    /// Every key: main rows left to right, then the side block.
+    /// The shortcuts layer shows: its keys stand in the side block but the Shortcuts key's cell, and the pad hides.
+    pub layer: bool,
+    /// Every key: main rows left to right, then the side block, or the Shortcuts key and the layer's keys.
     pub keys: Vec<KeyView>,
 }
 
@@ -130,19 +145,20 @@ pub struct KeyState {
     pub blank: Option<&'static str>,
     /// Latched, or Caps Lock while it is on.
     pub on: bool,
-    /// It does nothing now: a later key, or a mouse-assist key while the mouse module is not running.
+    /// It does nothing now: a later key, a mouse-assist or Power key while its module is not running, or the
+    /// Shortcuts key with nothing to show.
     pub dim: bool,
     /// Its colours now, by palette token.
     pub paint: Paint,
     /// What it says after its name now, by translation key, shown in its tip: the language key's `LONE_TIP`, or a
-    /// mouse-assist key's.
+    /// side key's.
     pub tip: Option<&'static str>,
 }
 
 /// Everything that changes as keys are used.
 #[derive(Clone, Default, PartialEq, Eq, Serialize)]
 pub struct StateView {
-    /// Each key's state, by id.
+    /// Each key's state, by id, the layer's keys too while it shows.
     pub keys: BTreeMap<String, KeyState>,
     /// The language key and the space bar.
     pub lang: LangView,
@@ -152,6 +168,8 @@ pub struct StateView {
     pub at: Option<Point>,
     /// The scroll pad.
     pub dpad: PadState,
+    /// The shortcuts layer and its page.
+    pub layer: LayerState,
 }
 
 /// Shows no field: its legends and lights tell the latches and Caps Lock, as `Latches` hides them.
@@ -198,9 +216,13 @@ pub struct StateInput<'a> {
     pub assist: AssistChanged,
     /// The scroll module's state, as the bus last told it.
     pub scroll: ScrollChanged,
+    /// The shortcuts layer.
+    pub layer: &'a Layer,
+    /// The power module's state, as the bus last told it.
+    pub power: PowerChanged,
 }
 
-/// Every key's state, the language key, the list, the place and the pad.
+/// Every key's state, the language key, the list, the place, the pad and the layer.
 #[must_use]
 pub fn state_view(i: &StateInput<'_>) -> StateView {
     let mods = LegendMods::of(i.latches, i.caps, &i.table.keys);
@@ -211,13 +233,14 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
         .map(|k| (k.id.clone(), key_state(i, k, mods, rtl)));
     let cur = &i.table.label;
     StateView {
-        keys: keys.collect(),
+        keys: keys.chain(layer::cell_states(i.layer)).collect(),
         lang: lang_view(i.list, cur, i.turn),
         list: i
             .open
             .map(|l| list_view(l, i.list, cur.id, i.panel_keys, i.rows)),
         at: i.at,
         dpad: pad_state(i.scroll),
+        layer: layer::layer_state(i.layer),
     }
 }
 
@@ -233,6 +256,8 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             };
         }
         Role::Assist(a) => return assist::assist_state(i.assist, a, k.kind),
+        Role::Layer => return layer::layer_key(i.layer, k.kind),
+        Role::Power => return power::power_key(i.power, k.kind),
         _ => {}
     }
     let chars = k.sc.filter(|_| k.role == Role::Char);

@@ -1,6 +1,6 @@
-//! G10's key plan (roadmap G10): a step for every key but the character keys and the language key, pressed as a
-//! screen reader presses, with what target-window must log. Each step leaves the keyboard, the window and the layout
-//! as it found them.
+//! G10's key plan (roadmap G10): a step for every key but the character keys, the language key and the Power key,
+//! pressed as a screen reader presses, with what target-window must log. Each step leaves the keyboard, the window
+//! and the layout as it found them.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{LangKey, Latch, Role};
@@ -159,19 +159,21 @@ fn step_for(
             };
             Some(step(id, presses, keys, true))
         }
-        // A mouse-assist key flips its mode and back; its light follows the mouse module's answer, so it is not read.
-        (Role::Assist(_), _) => Some(Step {
+        // A mouse-assist key flips its mode and back, its light following the mouse module's answer, so it is not
+        // read; the Shortcuts key shows the layer and hides it again. Nothing goes out.
+        (Role::Assist(_) | Role::Layer, _) => Some(Step {
             puts_back: true,
             ..step(id, &[id, id], Expect::Nothing, false)
         }),
         (Role::Later, _) => Some(step(id, &[id], Expect::Nothing, false)),
+        // The Power key is never pressed: with the power module running, it opens the system's shut-down dialog.
         _ => None,
     }
 }
 
 /// The steps for the board's `roles`, in board order: send keys, Caps Lock, the modifiers with `probe` after each
-/// (Win with another latch), the mouse-assist keys twice, and the keys of later versions. `stay` is true when
-/// modifiers stay latched after a key.
+/// (Win with another latch), the mouse-assist keys and the Shortcuts key twice, and the keys of later versions.
+/// `stay` is true when modifiers stay latched after a key.
 pub fn plan(
     roles: &[(String, Role, Option<Scan>)],
     probe: &str,

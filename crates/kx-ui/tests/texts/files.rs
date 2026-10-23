@@ -22,12 +22,15 @@ const MODULES: [&str; 7] = [
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
 /// Keys the keyboard view names beside its board ids.
-const VIEW_KEYS: [&str; 7] = [
+const VIEW_KEYS: [&str; 10] = [
     "key.dpad",
     "key.empty",
+    "key.layer-next",
     "tip.later",
     "tip.mouse-off",
     "tip.scroll-off",
+    "tip.no-shortcuts",
+    "tip.power-off",
     "tip.rclick",
     "tip.grab",
 ];

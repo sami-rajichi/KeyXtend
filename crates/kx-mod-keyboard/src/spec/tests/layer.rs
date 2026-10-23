@@ -8,10 +8,10 @@ fn side_mut<'a>(s: &'a mut BoardSpec, id: &str) -> &'a mut SideSpec {
     s.side.iter_mut().find(|k| k.id == id).unwrap()
 }
 
-/// The shipped board with its Shortcuts key given the `layer` role.
-fn with_layer() -> BoardSpec {
+/// The shipped board with no key that shows the layer.
+fn without_layer() -> BoardSpec {
     let mut s = spec();
-    side_mut(&mut s, "shortcuts").role = Role::Layer;
+    side_mut(&mut s, "shortcuts").role = Role::Later;
     s
 }
 
@@ -45,7 +45,7 @@ fn the_next_key_sits_in_the_bottom_right_side_cell() {
 
 #[test]
 fn a_page_holds_13_shortcuts_or_14_when_it_is_the_only_one() {
-    let s = with_layer();
+    let s = spec();
     assert_eq!(s.check(), Ok(()));
     let g = s.layer_grid();
     assert_eq!((s.side_columns, s.rows.len()), (3, 5), "today's side grid");
@@ -55,7 +55,7 @@ fn a_page_holds_13_shortcuts_or_14_when_it_is_the_only_one() {
 
 #[test]
 fn the_cells_run_in_reading_order_less_the_layer_key_and_then_next() {
-    let s = with_layer();
+    let s = spec();
     let g = s.layer_grid();
     let layer = cell_of(&s, "shortcuts");
     let alone: Vec<SideCell> = reading(&s).into_iter().filter(|c| *c != layer).collect();
@@ -67,7 +67,7 @@ fn the_cells_run_in_reading_order_less_the_layer_key_and_then_next() {
 
 #[test]
 fn without_a_layer_key_every_side_cell_is_the_layers() {
-    let s = spec();
+    let s = without_layer();
     assert_eq!(s.layer_grid().cells(1), reading(&s));
 }
 
@@ -78,14 +78,14 @@ fn next_must_sit_on_the_side_grid() {
         s.layer.next = next;
         assert_eq!(s.check(), Err(BoardError::Next), "{next:?}");
     }
-    let mut s = with_layer();
+    let mut s = spec();
     s.layer.next = [1, 2];
     assert_eq!(s.check(), Ok(()), "the layer covers the D-pad too");
 }
 
 #[test]
 fn next_may_not_take_the_layer_keys_cell() {
-    let mut s = with_layer();
+    let mut s = spec();
     let layer = cell_of(&s, "shortcuts");
     s.layer.next = [layer.col, layer.row];
     assert_eq!(s.check(), Err(BoardError::Next));
@@ -93,7 +93,7 @@ fn next_may_not_take_the_layer_keys_cell() {
 
 #[test]
 fn only_one_side_key_shows_the_layer() {
-    let mut s = with_layer();
+    let mut s = spec();
     side_mut(&mut s, "mic").role = Role::Layer;
     assert_eq!(s.check(), Err(BoardError::Role("mic".into())));
 }
@@ -122,16 +122,25 @@ fn the_generated_roles_are_refused_in_the_file() {
 }
 
 #[test]
-fn the_layer_and_power_roles_read_from_the_file() {
-    let text = BOARD.replace(MIC, &MIC.replace("later", "layer")).replace(
-        "id = \"power\", col = 3, row = 5, role = \"later\"",
-        "id = \"power\", col = 3, row = 5, role = \"power\"",
-    );
-    let s = BoardSpec::read(&text).unwrap();
-    let role = |id: &str| s.side.iter().find(|k| k.id == id).unwrap().role;
-    assert_eq!((role("mic"), role("power")), (Role::Layer, Role::Power));
+fn the_shipped_board_has_one_layer_key_and_one_power_key() {
+    let s = spec();
+    let with = |r: Role| -> Vec<&str> {
+        let keys = s.side.iter().filter(|k| k.role == r);
+        keys.map(|k| k.id.as_str()).collect()
+    };
+    assert_eq!(with(Role::Layer), ["shortcuts"]);
+    assert_eq!(with(Role::Power), ["power"]);
     let none = [Role::Layer, Role::Power, Role::Shortcut, Role::Next];
     assert!(none.iter().all(|r| !r.sends()), "no scan code of their own");
+}
+
+#[test]
+fn the_layer_and_power_roles_belong_to_the_side_block() {
+    for role in [Role::Layer, Role::Power] {
+        let mut s = spec();
+        named_mut(&mut s, "lang").role = role;
+        assert_eq!(s.check(), Err(BoardError::Role("lang".into())), "{role:?}");
+    }
 }
 
 #[test]
@@ -160,7 +169,7 @@ fn board_ids_keep_clear_of_the_generated_ids() {
 proptest! {
     #[test]
     fn any_side_key_may_show_the_layer_and_its_cell_is_never_filled(pick in 0usize..9, pages in 0usize..10) {
-        let mut s = spec();
+        let mut s = without_layer();
         let at = pick % s.side.len();
         let layer = SideCell { col: s.side[at].col, row: s.side[at].row };
         prop_assume!([layer.col, layer.row] != s.layer.next);

@@ -1,5 +1,5 @@
-//! The board as the UI draws it at one size: each key's cell, names and icon, which keys are dimmed or repeat, and
-//! the rules and times the UI reads with it.
+//! The board as the UI draws it at one size, with the shortcuts layer hidden: each key's cell, names and icon, which
+//! keys are dimmed or repeat, and the rules and times the UI reads with it.
 
 use super::{
     BoardView, CYCLE_ICON, DPAD_NAME, DpadView, ICON_PREFIX, KeyView, LABEL_PREFIX, LATER_TIP,
@@ -37,6 +37,7 @@ pub fn board_view(spec: &BoardSpec, settings: &KeyboardSettings, size: f64) -> B
         plate: b.plate,
         bar: b.bar,
         dpad,
+        layer: false,
         keys: b.keys.iter().map(key).collect(),
     }
 }
@@ -60,10 +61,15 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
         icon,
         label,
         name,
-        checkable: matches!(k.role, Role::Latch(_) | Role::Caps | Role::Assist(_)),
+        icon_only: false,
+        checkable: matches!(
+            k.role,
+            Role::Latch(_) | Role::Caps | Role::Assist(_) | Role::Layer
+        ),
         dim,
         tip: dim.then_some(LATER_TIP),
         repeat,
+        steps: Vec::new(),
     }
 }
 

@@ -28,7 +28,8 @@ y = 0
 placed = false
 # The bottom corner of the keyboard's screen where the minimise bubble goes: "right" or "left".
 bubble_corner = "right"
-# The shortcuts layer's pages in order, by shortcut id; ids the system lacks and pages left empty are skipped.
+# The shortcuts layer's pages in order, by shortcut id. Ids the platform lacks are skipped, with any page they leave
+# empty; a page written empty here is refused.
 shortcut_pages = [
     [
         "copy", "paste", "cut", "select-all", "undo", "redo", "copy-all", "cut-all", "delete-all", "find", "save",

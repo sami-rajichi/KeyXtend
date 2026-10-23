@@ -1,31 +1,33 @@
-//! Running a tap: the key's plan from the board, the layout shown, Caps Lock and the app in front,
-//! sent through the injector; the latches and a dead key's wait follow what went out.
+//! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
+//! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out.
 
 mod held;
+mod layer;
+mod ports;
+
+pub use ports::{Io, Ports};
 
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, LatchRole, Role};
-use kx_module_api::ports::{
-    InjectError, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable,
-    Layouts, LayoutsKey, Scan, Toggle,
-};
-use kx_module_api::{Bus, Clock, ModuleCx, ServiceError};
+use kx_module_api::ports::{InjectError, Scan, ShortcutError, Toggle};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::sync::Arc;
 use thiserror::Error;
 
 /// Why a tap sent nothing, or not all of it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum TapError {
-    /// The board has no such key.
+    /// The board has no such key, and the layer draws none now.
     #[error("the board has no such key")]
     UnknownKey,
     /// The keys or text did not all reach the app.
     #[error(transparent)]
     Inject(#[from] InjectError),
+    /// The shortcut did not all reach the app.
+    #[error(transparent)]
+    Shortcut(#[from] ShortcutError),
 }
 
 /// What a tap did, for the face to follow up.
@@ -40,6 +42,12 @@ pub enum Tapped {
     },
     /// A mouse-assist side key: nothing was sent and the latches stay; the face asks the mouse module to flip this.
     Assist(Toggle),
+    /// The Shortcuts key: nothing was sent and the latches stay; the face shows or hides the layer.
+    Layer,
+    /// The Power key: nothing was sent and the latches stay; the face asks the power module for the dialog.
+    Power,
+    /// The layer's Next key: nothing was sent and the latches stay; the face turns the page.
+    Next,
     /// A key from a later version: nothing happened.
     Later,
     /// A character key that types nothing with the latched Shift or `AltGr`: nothing happened.
@@ -47,58 +55,6 @@ pub enum Tapped {
     /// The app in front has another layout than the one shown, and this key's result depends on it: nothing
     /// was sent. The face refreshes the layouts, which read the same layout source, and redraws.
     Stale,
-}
-
-/// The ports one tap goes through, and the layout table the keyboard shows.
-#[derive(Clone, Copy)]
-pub struct Io<'a> {
-    /// Sends keys and text to the app in front, and names that app.
-    pub injector: &'a dyn InputInjector,
-    /// Says whether Caps Lock is on and whether a key types anything.
-    pub source: &'a dyn LayoutSource,
-    /// What each key types in the layout shown.
-    pub table: &'a LayoutTable,
-}
-
-/// The services typing needs, as the kernel hands them out, the kernel's clock and its bus.
-#[derive(Clone)]
-pub struct Ports {
-    /// The input injector.
-    pub injector: Arc<dyn InputInjector>,
-    /// The layout source.
-    pub source: Arc<dyn LayoutSource>,
-    /// The layouts service, whose current table the keyboard shows.
-    pub layouts: Arc<dyn Layouts>,
-    /// The kernel's clock, which times a held key's repeats.
-    pub clock: Arc<dyn Clock>,
-    /// The kernel's bus, limited to the module's grants, which carries mouse assist's events.
-    pub bus: Bus,
-}
-
-impl Ports {
-    /// The three services, the clock and the bus from the kernel.
-    ///
-    /// # Errors
-    /// The `ServiceError` of the first service the module cannot have.
-    pub fn from_cx(cx: &ModuleCx<'_>) -> Result<Self, ServiceError> {
-        Ok(Self {
-            injector: cx.service::<InputInjectorKey>()?,
-            source: cx.service::<LayoutSourceKey>()?,
-            layouts: cx.service::<LayoutsKey>()?,
-            clock: cx.clock(),
-            bus: cx.bus(),
-        })
-    }
-
-    /// The ports of one tap, with `table`, the current table of `layouts`.
-    #[must_use]
-    pub fn io<'a>(&'a self, table: &'a LayoutTable) -> Io<'a> {
-        Io {
-            injector: &*self.injector,
-            source: &*self.source,
-            table,
-        }
-    }
 }
 
 /// The typing state: the latched modifiers and a dead key's wait, over the board's keys and `key_apps`.
@@ -158,25 +114,36 @@ impl Typing {
         self.dead
     }
 
-    /// A click on key `id`, on the language key's back part when `back`: sends its plan through `io`.
-    /// A character key sent as a scan code sends nothing while the app in front has another layout (`Stale`).
+    /// A click on key `id`, a board key or a layer key drawn now, on the language key's back part when `back`: sends
+    /// its plan through `io`. A character key sent as a scan code sends nothing while the app in front has another
+    /// layout (`Stale`).
     ///
     /// # Errors
-    /// `UnknownKey` for an id not on the board, or `Inject` when the keys or text did not all reach the app.
-    /// A send refused whole changes nothing; one taken in part moves the state as if it all went, never retried.
+    /// `UnknownKey` for an id on neither, `Inject` when the keys or text did not all reach the app, or `Shortcut` when
+    /// the shortcut did not. A send refused whole changes nothing; one taken in part moves the state as if it all went,
+    /// never retried.
     pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, TapError> {
-        let &(role, sc) = self.keys.get(id).ok_or(TapError::UnknownKey)?;
-        let app = || io.injector.target_app();
-        let planned = plan(role, sc, &self.now(io, &self.apps, &app));
-        if keyed(role, &planned) && stale(io) {
-            return Ok(Tapped::Stale);
-        }
+        let planned = match self.keys.get(id) {
+            Some(&(role, sc)) => {
+                let app = || io.injector.target_app();
+                let planned = plan(role, sc, &self.now(io, &self.apps, &app));
+                if keyed(role, &planned) && stale(io) {
+                    return Ok(Tapped::Stale);
+                }
+                planned
+            }
+            None => layer::planned(io, id).ok_or(TapError::UnknownKey)?,
+        };
         match planned {
             Plan::Send { route, wait } => self.send(io, &route, wait)?,
             Plan::Caps(key) => self.caps(io, key)?,
             Plan::Latch(r, key) => self.latch(io, r, key)?,
+            Plan::Shortcut(id) => self.shortcut(io, &id)?,
             Plan::Lang => return Ok(Tapped::Lang { back }),
             Plan::Assist(which) => return Ok(Tapped::Assist(which)),
+            Plan::Layer => return Ok(Tapped::Layer),
+            Plan::Power => return Ok(Tapped::Power),
+            Plan::Next => return Ok(Tapped::Next),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),
         }

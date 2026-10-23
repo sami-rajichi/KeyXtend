@@ -12,13 +12,14 @@ use kx_mod_keyboard::{
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute, Toggle};
-use kx_platform_fake::{FakeInjector, FakeLayoutSource, LayoutFile, Stroke};
+use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeShortcuts, LayoutFile, Stroke};
 
 /// One layout's fakes and a typing state on the shipped board.
 pub struct Rig {
     pub injector: FakeInjector,
     pub source: FakeLayoutSource,
     pub table: LayoutTable,
+    pub shortcuts: FakeShortcuts,
     pub typing: Typing,
 }
 
@@ -31,6 +32,7 @@ impl Rig {
             injector: FakeInjector::new(),
             source: FakeLayoutSource::golden(&[layout]).unwrap(),
             table: LayoutTable::from(&LayoutFile::golden(layout).unwrap()),
+            shortcuts: FakeShortcuts::new(),
             typing: Typing::new(&BoardSpec::shipped().unwrap(), &settings),
         }
     }
@@ -41,6 +43,8 @@ impl Rig {
             injector: &self.injector,
             source: &self.source,
             table: &self.table,
+            shortcuts: &self.shortcuts,
+            layer: &[],
         };
         self.typing.tap(&io, id, false)
     }
@@ -216,6 +220,8 @@ fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
         injector: &r.injector,
         source: &r.source,
         table: &r.table,
+        shortcuts: &r.shortcuts,
+        layer: &[],
     };
     assert_eq!(
         r.typing.tap(&io, "lang", true),
@@ -223,7 +229,14 @@ fn the_language_key_later_keys_and_mouse_assist_keys_send_nothing() {
     );
     assert_eq!(r.tap("mic"), Ok(Tapped::Later));
     assert_eq!(r.tap("rclick"), Ok(Tapped::Assist(Toggle::RightClick)));
+    assert_eq!(r.tap("shortcuts"), Ok(Tapped::Layer));
+    assert_eq!(r.tap("power"), Ok(Tapped::Power));
     assert_eq!(r.tap("no-such-key"), Err(TapError::UnknownKey));
+    assert_eq!(
+        r.tap("sc-copy"),
+        Err(TapError::UnknownKey),
+        "no layer drawn"
+    );
     assert!(r.sent().is_empty());
 }
 

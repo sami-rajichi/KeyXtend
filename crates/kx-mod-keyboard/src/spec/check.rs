@@ -112,18 +112,23 @@ impl BoardSpec {
         Ok(())
     }
 
-    /// Refuses a named or side key whose role is `char` or one only the layer generates, a key that sends a scan code
-    /// when its role sends none, or the reverse, and a key that repeats but is not `send`.
+    /// Refuses a named or side key whose role is `char` or one only the layer generates, a main-row key that shows the
+    /// layer or asks for the power dialog, a key that sends a scan code when its role sends none, or the reverse, and a
+    /// key that repeats but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
         let named = self.rows.iter().flatten().filter_map(|i| match i {
-            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some(), k.repeat)),
+            RowItem::Key(k) => Some((&k.id, k.role, k.sc.is_some(), k.repeat, false)),
             RowItem::Chars(_) => None,
         });
-        let side = self.side.iter().map(|s| (&s.id, s.role, false, false));
-        for (id, role, has_code, repeat) in named.chain(side) {
+        let side = self
+            .side
+            .iter()
+            .map(|s| (&s.id, s.role, false, false, true));
+        for (id, role, has_code, repeat, on_side) in named.chain(side) {
             let stray = repeat && role != Role::Send;
             let made = matches!(role, Role::Char | Role::Shortcut | Role::Next);
-            if made || role.sends() != has_code || stray {
+            let side_only = !on_side && matches!(role, Role::Layer | Role::Power);
+            if made || side_only || role.sends() != has_code || stray {
                 return Err(BoardError::Role(id.clone()));
             }
         }

@@ -79,7 +79,8 @@ crates/
                          typing: sticky modifiers, legends and each click's route (ADR-0009);
                          the face (board and state JSON, clicks, and the board's row height,
                          `row_px`, for the theme's contrast check) and the language key's
-                         Carousel, Cycle and List; `[keyboard]` settings. Shortcuts (P6)
+                         Carousel, Cycle and List; `[keyboard]` settings. The shortcuts layer
+                         and the Power key (P6)
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
                          shown layout's table (keys from `scans.toml`), the list in the OS order,
                          step and pick; short names in `[layouts]`

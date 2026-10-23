@@ -4,7 +4,7 @@
 ## The product's name, written once and shared by the texts below.
 -app = KeyXtend
 
-## Named keys by board.toml id, then .empty for a character key that types nothing now: the name that tips and screen readers use.
+## Named keys by board.toml id, the shortcuts layer's Next key, then .empty for a character key that types nothing now: the name that tips and screen readers use.
 key =
     .esc = Escape
     .bksp = Backspace
@@ -35,6 +35,7 @@ key =
     .settings = Settings
     .power = Power
     .dpad = Scroll pad
+    .layer-next = Next page
     .empty = Empty key
 
 ## The short word on a key, or under its icon at large sizes, as real keyboards print it.
@@ -71,8 +72,50 @@ tip =
     .one-lang = Only one keyboard language is installed
     .mouse-off = Mouse assist is off
     .scroll-off = The scroll pad is off
+    .no-shortcuts = No shortcuts are chosen
+    .power-off = The power key is off
     .rclick = Hold still to right-click; short clicks stay normal
     .grab = Press to pick up, move, then click to drop
+
+## The shortcuts' names for tips and screen readers, by id.
+shortcut =
+    .copy = Copy
+    .paste = Paste
+    .cut = Cut
+    .select-all = Select all
+    .undo = Undo
+    .redo = Redo
+    .copy-all = Copy all
+    .cut-all = Cut all
+    .delete-all = Delete all
+    .find = Find
+    .save = Save
+    .print = Print
+    .emoji = Emoji
+    .switch-app = Switch app
+    .show-desktop = Show desktop
+    .file-explorer = File Explorer
+    .lock-pc = Lock PC
+    .task-manager = Task Manager
+    .close-window = Close window
+    .new-tab = New tab
+    .close-tab = Close tab
+    .reopen-tab = Reopen closed tab
+    .refresh = Refresh
+    .zoom-in = Zoom in
+    .zoom-out = Zoom out
+    .f1 = F1
+    .f2 = F2
+    .f3 = F3
+    .f4 = F4
+    .f5 = F5
+    .f6 = F6
+    .f7 = F7
+    .f8 = F8
+    .f9 = F9
+    .f10 = F10
+    .f11 = F11
+    .f12 = F12
 
 ## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
 mark =
