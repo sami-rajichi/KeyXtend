@@ -95,10 +95,13 @@ impl Face {
     }
 
     /// A click on key `id`; while the list is open, a key that drives it does nothing here, as the UI sends it
-    /// as `panel_key`, so it never reaches the app.
+    /// as `panel_key`, so it never reaches the app. A side key the layer hides is no key.
     fn tap(&self, id: &str, back: bool) -> Result<FaceReply, FaceError> {
         let went = {
             let mut inner = self.lock();
+            if self.hides(&inner, id) {
+                return Err(FaceError::UnknownKey);
+            }
             if inner.listing() && self.navs.contains_key(id) {
                 return Ok(FaceReply::default());
             }
@@ -159,10 +162,12 @@ impl Face {
         Ok(self.lock().let_go(id))
     }
 
-    /// Refuses a key that is neither on the board nor drawn by the layer now, changing nothing, since the UI redraws
-    /// nothing on an error.
+    /// Refuses a key that is neither on the board nor drawn by the layer now, or that the layer hides, changing
+    /// nothing, since the UI redraws nothing on an error.
     fn known(&self, id: &str) -> Result<(), FaceError> {
-        if self.keys.iter().any(|k| k.id == id) || self.lock().drawn(id) {
+        let inner = self.lock();
+        let board = self.keys.iter().any(|k| k.id == id) && !self.hides(&inner, id);
+        if board || inner.drawn(id) {
             Ok(())
         } else {
             Err(FaceError::UnknownKey)
@@ -239,7 +244,7 @@ impl Face {
             FaceAction::Leave => Ok(self.lock().leave()),
             FaceAction::Relabel => Ok(self.refresh()),
             FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
-            FaceAction::Pad { dir } => Ok(self.pad(dir)),
+            FaceAction::Pad { dir } => self.pad(dir),
             FaceAction::PadHover { on } => Ok(self.hover(on)),
             other => self.lock().act(other),
         }

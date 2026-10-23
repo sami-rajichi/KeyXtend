@@ -3,7 +3,9 @@
 
 use super::Face;
 use super::outbox::Outbox;
-use kx_module_api::ports::{Dir, FaceReply, ScrollChanged, ScrollPeek, ScrollStop, ScrollTap};
+use kx_module_api::ports::{
+    Dir, FaceError, FaceReply, ScrollChanged, ScrollPeek, ScrollStop, ScrollTap,
+};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::{Mutex, PoisonError};
@@ -32,21 +34,24 @@ struct Peeked {
 
 impl Face {
     /// A click on an arrow, or on Stop when `dir` is none: asks the scroll module while it runs, else does nothing.
-    /// Nothing redraws now; the module's answer does.
-    pub(super) fn pad(&self, dir: Option<Dir>) -> FaceReply {
+    /// Nothing redraws now; the module's answer does. While the layer hides the pad, it is no key.
+    pub(super) fn pad(&self, dir: Option<Dir>) -> Result<FaceReply, FaceError> {
         let bus = {
             let inner = self.lock();
+            if inner.layered() {
+                return Err(FaceError::UnknownKey);
+            }
             inner.scrolls().then(|| inner.bus())
         };
         let Some(bus) = bus else {
-            return FaceReply::default();
+            return Ok(FaceReply::default());
         };
         // The pad's events need no capability, so none is refused.
         let _ = match dir {
             Some(dir) => bus.publish(&ScrollTap { dir }),
             None => bus.publish(&ScrollStop),
         };
-        FaceReply::default()
+        Ok(FaceReply::default())
     }
 
     /// The pointer went onto the pad or off it.
@@ -63,7 +68,7 @@ impl Face {
     }
 
     /// Tells the scroll module where the pointer is, through the outbox, so the last peek it hears is the newest.
-    fn peek(&self) {
+    pub(super) fn peek(&self) {
         self.peeks.outbox.post(|| self.send_peek());
     }
 

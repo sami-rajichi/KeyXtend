@@ -30,11 +30,13 @@ impl Inner {
             .renew(&settings.shortcut_pages, &ids(&self.known));
     }
 
-    /// Shows or hides the layer; false, changing nothing, when it has nothing to show.
+    /// Shows or hides the layer; false, changing nothing, when it has nothing to show. Showing it hides the pad, so a
+    /// pointer resting there is off it.
     pub(in crate::face) fn flip(&mut self) -> bool {
         let any = self.layer.any();
         if any {
             self.layer.toggle();
+            self.hovered(false);
         }
         any
     }

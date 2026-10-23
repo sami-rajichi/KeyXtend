@@ -1,7 +1,9 @@
-//! Any run of key and mouse clicks, in both latch modes: "release" lets every latch go after the next key or click,
-//! "stay" keeps each until it is clicked again, and an empty key keeps them. No key holds a modifier that was not
-//! latched, and only Win, let go with nothing used since it latched, sends itself alone.
+//! Any run of key, shortcut and mouse clicks, in both latch modes: "release" lets every latch go after the next key,
+//! shortcut or click, "stay" keeps each until it is clicked again, and an empty key keeps them. No key holds a modifier
+//! that was not latched, a shortcut holds exactly the latched ones, and only Win, let go with nothing used since it
+//! latched, sends itself alone.
 
+use crate::known::{only, sid};
 use crate::typing::Rig;
 use kx_mod_keyboard::legend::is_empty;
 use kx_mod_keyboard::spec::char_id;
@@ -10,6 +12,9 @@ use kx_module_api::ports::{LayoutSource, Scan};
 use kx_platform_fake::Stroke;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
+
+/// The shortcut a run clicks on the layer.
+const SHORTCUT: &str = "copy";
 
 const ALL: [Latch; 5] = [
     Latch::Shift,
@@ -34,6 +39,8 @@ enum Kind {
     Quiet,
     /// A mouse click with the latches held (modifier + click), which uses them.
     Click,
+    /// The layer's shortcut cell: the platform sends it with every latch held, which uses them.
+    Shortcut,
 }
 
 /// The keys a run clicks, and the mouse, with what each does.
@@ -53,6 +60,7 @@ fn keys() -> Vec<(String, Kind)> {
         ("lang".to_owned(), Kind::Quiet),
         ("mic".to_owned(), Kind::Quiet),
         ("mouse".to_owned(), Kind::Click),
+        (SHORTCUT.to_owned(), Kind::Shortcut),
     ];
     all.extend(chars);
     all.extend(named);
@@ -122,15 +130,32 @@ fn agrees(r: &Rig, model: &Model) -> Result<(), TestCaseError> {
     Ok(())
 }
 
-/// Clicks key `id`, or the mouse for `Kind::Click`: what went out, and for the mouse whether any latch let go.
+/// Clicks key `id`, the mouse for `Kind::Click` or shortcut `id` for `Kind::Shortcut`: the keys typed, and for the
+/// mouse whether any latch let go.
 fn click(r: &mut Rig, id: &str, kind: Kind) -> Result<(Vec<Stroke>, Option<bool>), TestCaseError> {
-    let freed = if matches!(kind, Kind::Click) {
-        Some(r.typing.clicked())
-    } else {
-        r.tap(id).map_err(|e| TestCaseError::fail(e.to_string()))?;
-        None
+    let failed = |e: kx_mod_keyboard::TapError| TestCaseError::fail(e.to_string());
+    let freed = match kind {
+        Kind::Click => Some(r.typing.clicked()),
+        Kind::Shortcut => {
+            r.shortcut(&sid(id)).map_err(failed)?;
+            None
+        }
+        _ => {
+            r.tap(id).map_err(failed)?;
+            None
+        }
     };
     Ok((r.sent(), freed))
+}
+
+/// The keys the platform held around the one shortcut sent since the last look, sorted.
+fn shortcut_held(r: &Rig) -> Result<Vec<Scan>, TestCaseError> {
+    let sent = r.shortcuts.sent();
+    r.shortcuts.clear();
+    prop_assert_eq!(sent.len(), 1, "one send per click");
+    let mut held = sent[0].1.clone();
+    held.sort_unstable();
+    Ok(held)
 }
 
 /// Clicks `picks` of `keys()` on `layout` in `mode`, checking each click against a model of the latches.
@@ -138,34 +163,53 @@ fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseErr
     let keys = keys();
     let release = mode == Modifiers::Release;
     let mut r = Rig::new(layout, |s| s.modifiers = mode);
+    r.shortcuts.set_known(only(&[SHORTCUT]));
     let mut model = Model::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
-        let quiet = matches!(*kind, Kind::Char(code) if empty(&r, code));
-        let (sent, freed) = click(&mut r, id, *kind)?;
-        let latched: Vec<Scan> = model.values().map(|&(key, _)| key).collect();
-        prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
-        match *kind {
-            Kind::Latch(l, code, lone) => {
-                prop_assert_eq!(sent, toggle(&mut model, l, code, lone, release), "{}", id);
-            }
-            Kind::Char(_) if quiet => prop_assert!(sent.is_empty(), "{}: empty", id),
-            Kind::Key | Kind::Char(_) => {
-                prop_assert_eq!(sent.len(), 1);
-                used(&mut model, release);
-            }
-            Kind::Click => {
-                prop_assert!(sent.is_empty(), "a mouse click sends no key");
-                prop_assert_eq!(freed, Some(release && !model.is_empty()));
-                used(&mut model, release);
-            }
-            Kind::Caps => {
-                prop_assert_eq!(sent.len(), 1);
-                spend(&mut model);
-            }
-            Kind::Quiet => prop_assert!(sent.is_empty()),
-        }
+        check(&mut r, &mut model, id, *kind, release)?;
         agrees(&r, &model)?;
+    }
+    Ok(())
+}
+
+/// Clicks `id` of `kind`, checks what went out against `model`, then moves the model as the click does.
+fn check(
+    r: &mut Rig,
+    model: &mut Model,
+    id: &str,
+    kind: Kind,
+    release: bool,
+) -> Result<(), TestCaseError> {
+    let quiet = matches!(kind, Kind::Char(code) if empty(r, code));
+    let (sent, freed) = click(r, id, kind)?;
+    let mut latched: Vec<Scan> = model.values().map(|&(key, _)| key).collect();
+    latched.sort_unstable();
+    prop_assert!(held(&sent).iter().all(|k| latched.contains(k)), "{}", id);
+    match kind {
+        Kind::Latch(l, code, lone) => {
+            prop_assert_eq!(sent, toggle(model, l, code, lone, release), "{}", id);
+        }
+        Kind::Char(_) if quiet => prop_assert!(sent.is_empty(), "{}: empty", id),
+        Kind::Key | Kind::Char(_) => {
+            prop_assert_eq!(sent.len(), 1);
+            used(model, release);
+        }
+        Kind::Click => {
+            prop_assert!(sent.is_empty(), "a mouse click sends no key");
+            prop_assert_eq!(freed, Some(release && !model.is_empty()));
+            used(model, release);
+        }
+        Kind::Caps => {
+            prop_assert_eq!(sent.len(), 1);
+            spend(model);
+        }
+        Kind::Shortcut => {
+            prop_assert!(sent.is_empty(), "the platform sends it, not the injector");
+            prop_assert_eq!(shortcut_held(r)?, latched, "every latch held, once");
+            used(model, release);
+        }
+        Kind::Quiet => prop_assert!(sent.is_empty()),
     }
     Ok(())
 }

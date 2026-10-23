@@ -6,13 +6,17 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-use kx_mod_keyboard::spec::char_id;
+use kx_mod_keyboard::spec::{SideCell, char_id};
 use kx_mod_keyboard::{
-    BoardSpec, Io, KeyboardSettings, Latch, Modifiers, TapError, Tapped, Typing,
+    BoardSpec, Io, KeyboardSettings, Latch, LayerCell, LayerKey, Modifiers, TapError, Tapped,
+    Typing,
 };
 use kx_module_api::Redacted;
-use kx_module_api::ports::{InjectError, LayoutTable, Scan, TextRoute, Toggle};
+use kx_module_api::ports::{InjectError, LayoutTable, Scan, ShortcutId, TextRoute, Toggle};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeShortcuts, LayoutFile, Stroke};
+
+/// The side cell of a lone shortcut: typing reads only its key.
+const CELL: SideCell = SideCell { col: 1, row: 1 };
 
 /// One layout's fakes and a typing state on the shipped board.
 pub struct Rig {
@@ -39,12 +43,24 @@ impl Rig {
 
     /// A click on key `id`.
     pub fn tap(&mut self, id: &str) -> Result<Tapped, TapError> {
+        self.tap_on(&[], id)
+    }
+
+    /// A click on the layer's cell for shortcut `id`, as if the layer drew it alone.
+    pub fn shortcut(&mut self, id: &ShortcutId) -> Result<Tapped, TapError> {
+        let key = LayerKey::Shortcut(id.clone());
+        let cell = LayerCell { cell: CELL, key };
+        self.tap_on(std::slice::from_ref(&cell), &cell.key.id())
+    }
+
+    /// A click on key `id` while the layer draws `layer`.
+    fn tap_on(&mut self, layer: &[LayerCell], id: &str) -> Result<Tapped, TapError> {
         let io = Io {
             injector: &self.injector,
             source: &self.source,
             table: &self.table,
             shortcuts: &self.shortcuts,
-            layer: &[],
+            layer,
         };
         self.typing.tap(&io, id, false)
     }

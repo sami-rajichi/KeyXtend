@@ -1,11 +1,13 @@
 //! The shortcuts layer from the keyboard's side (spec §4.2): the Shortcuts key shows and hides it, Next turns its
-//! pages, a settings change keeps it, and showing it stops the pad; its cells' sends are in `sends`.
+//! pages, a settings change keeps it, and showing it stops the pad; its cells' sends are in `sends`, and the keys it
+//! hides in `hides`.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod hides;
 mod sends;
 
 use crate::assist::{Bench, Said, ear};
