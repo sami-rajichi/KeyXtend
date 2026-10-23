@@ -56,12 +56,18 @@ fn the_unlit_dot_is_checked_on_both_keys_that_draw_dots() {
     }
 }
 
+/// The Next key's icon `CHEVRON_INK_END` measures.
+const CHEVRON: &str = "chevron-right";
 /// Where Lucide's chevron-right ends its ink, round stroke included: 19 of its 24 units.
 const CHEVRON_INK_END: f32 = 19.0 / 24.0;
 
 #[test]
 fn the_next_chevron_sits_as_the_side_icons_do_and_its_dots_clear_its_ink_inside_the_cap() {
     let t = themes();
+    assert_eq!(
+        t.icons.layer.next, CHEVRON,
+        "the icon whose ink end is measured"
+    );
     for (at, v) in views(&t, &SysLook::default()) {
         let h = height(&v, TEST_ROW_PX);
         let (d, icon) = (&v.shape.dots, v.shape.legend.icon_px[1]);

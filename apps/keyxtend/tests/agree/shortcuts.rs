@@ -1,6 +1,10 @@
 //! The shortcuts agree with the Windows table, which alone lists them: every id on the default pages has a Windows
-//! entry, every id Windows knows has its name in English, French and Arabic, and every key name it sends reads in all
-//! three as keyboards print it.
+//! entry, every id Windows knows has its name in English, French and Arabic, every key name it sends reads in all
+//! three as keyboards print it, and the keyboard tests' copy of the table is the table.
+
+// The keyboard module's tests copy the table, as they cannot see the Windows adapter.
+#[path = "../../../../crates/kx-mod-keyboard/tests/keyboard/known.rs"]
+mod known;
 
 use crate::texts::missing;
 use kx_mod_keyboard::view::SHORTCUT_NAME_PREFIX;
@@ -48,6 +52,11 @@ fn every_id_windows_knows_has_its_name_in_every_language() {
     let wanted: BTreeSet<String> = names.collect();
     assert!(!wanted.is_empty(), "the Windows table");
     assert_eq!(missing(&wanted), Vec::new());
+}
+
+#[test]
+fn the_keyboard_tests_copy_of_the_table_is_the_windows_table() {
+    assert_eq!(known::all(), windows());
 }
 
 #[test]

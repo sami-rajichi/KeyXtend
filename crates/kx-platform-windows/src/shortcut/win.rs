@@ -53,23 +53,56 @@ mod tests {
     /// A's scan code on QWERTY and on French AZERTY.
     const QWERTY_A: u32 = 0x1E;
     const AZERTY_A: u32 = 0x10;
+    /// `VK_ADD`, `VK_SUBTRACT` and `VK_OEM_PERIOD`, as `keynames.toml` maps `numplus`, `numminus` and `period`.
+    const VK_ADD: u16 = 0x6B;
+    const VK_SUBTRACT: u16 = 0x6D;
+    const VK_PERIOD: u16 = 0xBE;
+    /// The number pad's + and − scan codes, the same on every layout.
+    const NUM_PLUS: u32 = 0x4E;
+    const NUM_MINUS: u32 = 0x4A;
+
+    /// The key shortcut `id` sends for virtual key `vk` in `layout`, and the scan code `layout` maps `vk` to.
+    fn sent(layout: LayoutId, id: &str, vk: u16) -> (Option<Key>, u32) {
+        let id = ShortcutId::new(id).unwrap();
+        let Ok(Plan::Keys(events)) = plan_in(&Win32, layout, table(), &id, &[]) else {
+            panic!("{layout}: no keys planned for {}", id.as_str());
+        };
+        let key = events
+            .iter()
+            .map(|e| e.key)
+            .find(|k| matches!(k, Key::Vk { vk: v, .. } if *v == vk));
+        (key, Win32.scan_of(vk, layout))
+    }
 
     #[test]
     fn select_alls_a_goes_as_the_key_each_installed_layout_maps_it_to() {
-        let select_all = ShortcutId::new("select-all").unwrap();
         for layout in WinLayouts.installed() {
-            let Ok(Plan::Keys(events)) = plan_in(&Win32, layout, table(), &select_all, &[]) else {
-                panic!("{layout}: no keys planned");
-            };
-            let mapped = Win32.scan_of(VK_A, layout);
-            let a = events
-                .iter()
-                .find(|e| matches!(e.key, Key::Vk { vk: VK_A, .. }));
-            assert_eq!(a.map(|e| e.key), Some(Key::vk(VK_A, mapped)), "{layout}");
+            let (a, mapped) = sent(layout, "select-all", VK_A);
+            assert_eq!(a, Some(Key::vk(VK_A, mapped)), "{layout}");
             if layout == FRENCH {
                 assert_eq!(mapped, AZERTY_A, "{layout}");
             } else if QWERTY_LANGS.contains(&(layout.get() & PRIMARY)) {
                 assert_eq!(mapped, QWERTY_A, "{layout}");
+            }
+        }
+    }
+
+    #[test]
+    fn zoom_and_emoji_keys_go_as_each_installed_layout_maps_them() {
+        let keys = [
+            ("zoom-in", VK_ADD, Some(NUM_PLUS)),
+            ("zoom-out", VK_SUBTRACT, Some(NUM_MINUS)),
+            ("emoji", VK_PERIOD, None),
+        ];
+        for layout in WinLayouts.installed() {
+            for (id, vk, pad) in keys {
+                let (key, mapped) = sent(layout, id, vk);
+                assert_eq!(key, Some(Key::vk(vk, mapped)), "{layout}: {id}");
+                assert_ne!(mapped, 0, "{layout}: {id}'s key is on the layout");
+                assert!(
+                    pad.is_none_or(|p| p == mapped),
+                    "{layout}: {id} on the number pad"
+                );
             }
         }
     }

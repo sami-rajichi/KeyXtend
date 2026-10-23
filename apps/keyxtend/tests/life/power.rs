@@ -1,28 +1,15 @@
 //! The Power key over the whole app: with the keyboard and the power module running, a click opens the fake dialog
 //! once; with the power module switched off, the key is dimmed and nothing opens (plan edge case 12).
 
-use crate::rig::Rig;
+use crate::rig::{Rig, WAIT, hear};
 use keyxtend::boot::Boot;
 use kx_mod_keyboard::view::POWER_OFF_TIP;
+use kx_module_api::ModuleState;
 use kx_module_api::ports::{FaceAction, KeyId, PowerAsk, PowerAsked, PowerChanged};
-use kx_module_api::{Bus, Event, ModuleState, Subscription};
 use serde_json::Value;
-use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 
-/// The longest a test waits for a module's thread; it never sleeps.
-const WAIT: Duration = Duration::from_secs(10);
 /// The Power key.
 const KEY: &str = "power";
-
-/// Sends every `E` published on `bus` to the returned channel.
-fn hear<E: Event + Clone>(bus: &Bus) -> (Subscription, Receiver<E>) {
-    let (tx, rx) = mpsc::channel();
-    let ear = bus.subscribe(move |e: &E| {
-        let _ = tx.send(e.clone());
-    });
-    (ear.unwrap(), rx)
-}
 
 /// A click on the Power key.
 fn click(boot: &Boot) {

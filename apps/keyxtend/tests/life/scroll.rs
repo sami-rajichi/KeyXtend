@@ -1,20 +1,17 @@
 //! The scroll pad over the whole app: an arrow scrolls what the fake target aims at with the user's `[scroll]` values,
 //! and quitting while it scrolls closes the run, hides the outline and lets the mouse hook go (edge case 15).
 
-use crate::rig::Rig;
+use crate::rig::{Rig, WAIT, hear};
 use keyxtend::boot::Boot;
 use keyxtend::drain;
 use kx_mod_scroll::ScrollSettings;
+use kx_module_api::Subscription;
 use kx_module_api::ports::{
     Aim, Dir, FaceAction, Point, Rect, ScrollAimed, ScrollAsk, ScrollChanged, TargetId,
 };
-use kx_module_api::{Bus, Event, Subscription};
 use std::sync::Arc;
-use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
+use std::sync::mpsc::Receiver;
 
-/// The longest a test waits for a module's thread; it never sleeps.
-const WAIT: Duration = Duration::from_secs(10);
 /// The way the pad scrolls.
 const DOWN: Dir = Dir::Down;
 
@@ -39,15 +36,6 @@ struct Scrolling {
     aimed: Receiver<ScrollAimed>,
     /// The ears stay on the bus while these live.
     _ears: [Subscription; 2],
-}
-
-/// Sends every `E` published on `bus` to the returned channel.
-fn hear<E: Event + Clone>(bus: &Bus) -> (Subscription, Receiver<E>) {
-    let (tx, rx) = mpsc::channel();
-    let ear = bus.subscribe(move |e: &E| {
-        let _ = tx.send(e.clone());
-    });
-    (ear.unwrap(), rx)
 }
 
 /// Waits for a scroll state that `want` takes; the ones before it go.

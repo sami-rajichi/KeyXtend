@@ -2,10 +2,8 @@
 //! module hears so once, as when the pointer moves off.
 
 use super::{Heard, Pad};
+use crate::layer::KEY;
 use kx_module_api::ports::FaceReply;
-
-/// The Shortcuts key.
-const KEY: &str = "shortcuts";
 
 #[test]
 fn showing_the_layer_under_the_pointer_ends_the_pads_hover_once() {

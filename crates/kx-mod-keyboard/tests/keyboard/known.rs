@@ -1,4 +1,5 @@
 //! The shortcuts the tests' platform knows, as the Windows table lists them: each step's key names, the last tapped.
+//! The app's `agree` test keeps this copy equal to the table.
 
 #![allow(
     clippy::unwrap_used,
