@@ -1,7 +1,7 @@
 //! The module's actor thread over the bus: it says it is live, opens the dialog off its own thread, never waits on an
 //! open at a stop, tells nothing after it, and says at once that it is off when an open panics.
 
-use crate::rig::{LIVE, failed};
+use crate::rig::{LIVE, failed, stopped};
 use kx_mod_power::{MANIFEST, PowerModule};
 use kx_module_api::ports::{
     PowerAsk, PowerAsked, PowerChanged, PowerDialog, PowerDialogKey, PowerError,
@@ -18,6 +18,8 @@ use std::time::Duration;
 
 /// The longest a threaded test waits for the module; it never sleeps.
 const WAIT: Duration = Duration::from_secs(10);
+/// How long a held open waits for the test's answer: well past `WAIT`, so a test under load still answers first.
+const GIVE_UP: Duration = WAIT.saturating_mul(6);
 
 /// The payload of a panic a test plans; the panic hook prints nothing for it.
 struct Planned;
@@ -32,7 +34,7 @@ impl PowerDialog for Broken {
 }
 
 /// A dialog whose open says it began, then waits for the answer the test gives; it says when it is dropped. An open
-/// gives up after `WAIT`, so a module that waits on it fails its test instead of hanging it.
+/// gives up after `GIVE_UP`, so a module that waits on it fails its test instead of hanging it.
 struct Held {
     began: Sender<()>,
     answer: Mutex<Receiver<Result<(), PowerError>>>,
@@ -42,7 +44,7 @@ struct Held {
 impl PowerDialog for Held {
     fn open(&self) -> Result<(), PowerError> {
         let _ = self.began.send(());
-        let answer = self.answer.lock().unwrap().recv_timeout(WAIT);
+        let answer = self.answer.lock().unwrap().recv_timeout(GIVE_UP);
         answer.unwrap_or(Err(PowerError::Failed))
     }
 }
@@ -218,7 +220,12 @@ fn an_open_that_panics_says_at_once_the_module_is_off() {
         Ok(PowerChanged::OFF),
         "the key dims now"
     );
+    assert_eq!(
+        notes.recv_timeout(WAIT),
+        Ok(stopped()),
+        "the user hears why"
+    );
     run.stop();
     assert!(told.try_recv().is_err(), "said once");
-    assert!(notes.try_recv().is_err(), "no notice");
+    assert!(notes.try_recv().is_err(), "told once");
 }

@@ -1,7 +1,7 @@
 # Security note: kx-mod-power
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (P6 Task C: the module's first version)
+- **Last review:** 2026-10-23 (P6 final fixes: the `notice.power-stopped` notice after a panic)
 - **Status:** Draft
 - **Scope:** `crates/kx-mod-power`: the manifest, the actor on its `kx-power` thread, and the short `kx-power-open` thread each click opens the dialog on. It runs inside the uiAccess `keyxtend` process and reaches the OS only through the `PowerDialog` port (ADR-0031).
 
@@ -18,6 +18,7 @@
 |---|---|---|---|---|
 | The module's state (`PowerChanged { live }`) | Public | Memory only, one bus event | No | Not kept |
 | An open's failure (`PowerError`: `Unavailable` or `Failed`) and the `notice.power-failed` notice | Public | Memory only; the warning holds the error's fixed text | No | Not kept |
+| The `notice.power-stopped` notice after a panic | Public | Memory only, one bus event | No | Not kept |
 
 The module handles no typed text, no point, no key and no user data.
 
@@ -33,9 +34,9 @@ The module handles no typed text, no point, no key and no user data.
 - **Logging / repudiation:** the module logs three fixed lines and nothing else: a failed open with `PowerError`'s fixed text (`actor.rs:76`), an open's thread that did not start (`actor.rs:101`), and a panicked actor (`lib.rs:72`).
 - **Information disclosure:** no network, nothing on disk, and nothing user-made to disclose.
 - **Denial of service:**
-  - A flood of `PowerAsked` only opens the same dialog again: each click starts one short thread that ends when the port returns (`lib.rs:89-94`).
+  - A flood of `PowerAsked` only opens the same dialog again: each click starts one short thread that ends when the port returns (`lib.rs:90-95`).
   - A dialog call that does not return holds only its own thread: the actor goes on answering, and a stop or the app's quit never waits on it (`a_stop_never_waits_on_an_open_and_a_late_answer_tells_nothing`). An answer after the stop goes to an inbox nobody reads, so it publishes nothing (`actor.rs:98`).
-  - A panic in an open or in the actor says at once that the module is off, so the key dims (`lib.rs:80-86`; `an_open_that_panics_says_at_once_the_module_is_off`).
+  - A panic in an open or in the actor says at once that the module is off, so the key dims, and `notice.power-stopped` says to restart (`lib.rs:80-87`; `an_open_that_panics_says_at_once_the_module_is_off`).
 - **Elevation:** with uiAccess, the port could reach the shell above our integrity level, which is why `PowerDialogKey` needs `Power`, held only by this module. The module calls only `PowerDialog::open`, which shows Windows' own Shut Down Windows dialog (`kx-platform-windows.md`); no code path shuts down, restarts or confirms, and no test opens the real dialog.
 
 ## Findings

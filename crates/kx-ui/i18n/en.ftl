@@ -245,6 +245,7 @@ notice =
     .scroll-failed = The scroll pad hit an error. Tap an arrow to try again.
     .scroll-stopped = The scroll pad stopped after an error. Restart { -app } to use it again.
     .power-failed = The system's power dialog could not open.
+    .power-stopped = The power key stopped after an error. Restart { -app } to use it again.
 
 ## Module names by module id; an id not listed shows itself.
 module =

@@ -16,7 +16,7 @@ It provides no service; it talks to the keyboard and the UI over the bus (`kx_mo
 |---|---|
 | `Power` | It gates the power dialog; only this module holds it. |
 
-The events it hears (`PowerAsked`, `PowerAsk`) and sends (`PowerChanged`, the `notice.power-failed` notice) need no capability.
+The events it hears (`PowerAsked`, `PowerAsk`) and sends (`PowerChanged`, and the `notice.power-failed` and `notice.power-stopped` notices) need no capability.
 
 ## Settings
 

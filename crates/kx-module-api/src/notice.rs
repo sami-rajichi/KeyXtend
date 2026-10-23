@@ -76,9 +76,11 @@ pub mod keys {
     pub const SCROLL_STOPPED: &str = "notice.scroll-stopped";
     /// The system's power dialog did not open.
     pub const POWER_FAILED: &str = "notice.power-failed";
+    /// The power module stopped after an error; it comes back when the app restarts.
+    pub const POWER_STOPPED: &str = "notice.power-stopped";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 18] = [
+    pub const ALL_KEYS: [&str; 19] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -97,6 +99,7 @@ pub mod keys {
         SCROLL_FAILED,
         SCROLL_STOPPED,
         POWER_FAILED,
+        POWER_STOPPED,
     ];
 }
 
@@ -156,9 +159,11 @@ mod tests {
     }
 
     #[test]
-    fn the_power_notice_is_listed() {
+    fn the_power_notices_are_listed() {
         assert_eq!(keys::POWER_FAILED, "notice.power-failed");
+        assert_eq!(keys::POWER_STOPPED, "notice.power-stopped");
         assert!(ALL_KEYS.contains(&keys::POWER_FAILED));
+        assert!(ALL_KEYS.contains(&keys::POWER_STOPPED));
     }
 
     #[test]

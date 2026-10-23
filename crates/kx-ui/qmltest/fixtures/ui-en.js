@@ -155,6 +155,7 @@ var texts = {
   "notice.mouse-reset": "Mouse assist hit an error, so its modes turned off. Tap a mode key to start it again.",
   "notice.mouse-stopped": "Mouse assist stopped after an error. Restart KeyXtend to use it again.",
   "notice.power-failed": "The system's power dialog could not open.",
+  "notice.power-stopped": "The power key stopped after an error. Restart KeyXtend to use it again.",
   "notice.scroll-end": "Already at the end.",
   "notice.scroll-failed": "The scroll pad hit an error. Tap an arrow to try again.",
   "notice.scroll-none": "Nothing to scroll there.",

@@ -12,13 +12,23 @@ use std::sync::{Arc, Mutex};
 /// The module's state while it runs.
 pub const LIVE: PowerChanged = PowerChanged { live: true };
 
-/// The notice that the dialog did not open, naming the module.
-pub fn failed() -> Notice {
+/// The module's notice `key`, naming the module.
+fn notice(key: &'static str) -> Notice {
     Notice {
-        key: keys::POWER_FAILED,
+        key,
         module: Some(ID),
         args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
+}
+
+/// The notice that the dialog did not open.
+pub fn failed() -> Notice {
+    notice(keys::POWER_FAILED)
+}
+
+/// The notice that the module stopped after a panic, until the app restarts.
+pub fn stopped() -> Notice {
+    notice(keys::POWER_STOPPED)
 }
 
 /// One event the actor published.

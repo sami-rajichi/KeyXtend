@@ -110,15 +110,20 @@ impl Actor {
 
     /// Tells the user that the dialog did not open.
     fn say(&self) {
-        self.publish(&Notice {
-            key: keys::POWER_FAILED,
-            module: Some(ID),
-            args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-        });
+        self.publish(&notice(keys::POWER_FAILED));
     }
 
     /// Publishes `event`; none of the actor's events needs a capability.
     fn publish<E: Event>(&self, event: &E) {
         let _ = self.bus.publish(event);
+    }
+}
+
+/// The module's notice `key`, naming the module.
+pub(crate) fn notice(key: &'static str) -> Notice {
+    Notice {
+        key,
+        module: Some(ID),
+        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
 }

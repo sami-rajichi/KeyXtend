@@ -11,7 +11,7 @@ pub use actor::{Actor, Job, Msg, Spawn};
 pub use manifest::{ID, MANIFEST};
 
 use kx_module_api::ports::{PowerAsk, PowerAsked, PowerChanged, PowerDialogKey};
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError};
+use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -75,12 +75,13 @@ impl PowerModule {
     }
 }
 
-/// The actor's thread. A panic there says at once that the module is off, so the Power key dims; then `halt` logs
-/// it.
+/// The actor's thread. A panic there says at once that the module is off, so the Power key dims, and tells the user
+/// to restart; then `halt` logs it.
 fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
-        // `PowerChanged` needs no capability, so it cannot be refused.
+        // Neither event needs a capability, so neither can be refused.
         let _ = bus.publish(&PowerChanged::OFF);
+        let _ = bus.publish(&actor::notice(keys::POWER_STOPPED));
         resume_unwind(panic);
     }
 }
