@@ -3,14 +3,15 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-23 (P6: the power dialog's grant)
 - **Status:** Reviewed
-- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the power dialog it hands the power module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
+- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
 | Builds the kernel's policy: each shipped module gets exactly what its manifest declares | Only the app knows which modules it ships and vouches for them | A module that needs a grant fails at load and offers Try again |
 | Provides the platform's `ScrollTarget` under `ScrollTargetKey`, gated by `Scroll` (P5, ADR-0029) | Only the scroll module declares `Scroll`, so the target reaches it alone (`the_scroll_target_reaches_only_the_scroll_module`), as the mouse hook reaches only the mouse module | Without the `mod-scroll` feature the target is still provided but no module can reach it, and the pad dims |
-| Provides the platform's `PowerDialog` under `PowerDialogKey`, gated by `Power` (P6, ADR-0031) | Only the power module declares `Power`, so the dialog reaches it alone (`the_power_dialog_reaches_only_the_power_module`); the keyboard only asks over the bus | Without the `mod-power` feature, or with `power` in `[kernel] disabled`, the dialog is still provided but no module can reach it, and the Power key dims |
+| Provides the platform's `Shortcuts` under `ShortcutsKey`, gated by `InjectInput` (P6, ADR-0031) | Only the keyboard requires it, for the shortcuts layer (`the_shortcuts_reach_the_keyboard_whose_layer_sends_them`); a module must also hold `InjectInput` to reach it | The keyboard does not start |
+| Provides the platform's `PowerDialog` under `PowerDialogKey`, gated by `Power` (P6, ADR-0031) | Only the power module declares `Power`, so the dialog reaches it alone (`the_power_dialog_reaches_only_the_power_module`); the keyboard only asks over the bus. `mod-power` is a default feature (`every_module_feature_is_on_by_default_the_scroll_and_power_ones_too`) | Without the `mod-power` feature, or with `power` in `[kernel] disabled`, the dialog is still provided but no module can reach it, and the Power key dims |
 | uiAccess (release manifest only, `asInvoker`) | Stay above the Start menu and type into windows above our integrity level | UIPI drops keys sent to elevated windows, and the keyboard hides under the Start menu |
 
 ## Data handled
