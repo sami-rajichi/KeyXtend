@@ -17,6 +17,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.esc",
       "icon_only": false,
@@ -36,6 +37,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -55,6 +57,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -74,6 +77,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -93,6 +97,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -112,6 +117,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -131,6 +137,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -150,6 +157,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -169,6 +177,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -188,6 +197,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -207,6 +217,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -226,6 +237,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -245,6 +257,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -264,6 +277,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -283,6 +297,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.bksp",
       "icon_only": false,
@@ -302,6 +317,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.tab",
       "icon_only": false,
@@ -321,6 +337,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -340,6 +357,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -359,6 +377,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -378,6 +397,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -397,6 +417,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -416,6 +437,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -435,6 +457,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -454,6 +477,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -473,6 +497,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -492,6 +517,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -511,6 +537,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -530,6 +557,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -549,6 +577,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -568,6 +597,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.del",
       "icon_only": false,
@@ -587,6 +617,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.caps",
       "icon_only": false,
@@ -606,6 +637,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -625,6 +657,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -644,6 +677,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -663,6 +697,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -682,6 +717,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -701,6 +737,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -720,6 +757,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -739,6 +777,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -758,6 +797,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -777,6 +817,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -796,6 +837,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -815,6 +857,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.enter",
       "icon_only": false,
@@ -834,6 +877,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.shift",
       "icon_only": false,
@@ -853,6 +897,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -872,6 +917,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -891,6 +937,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -910,6 +957,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -929,6 +977,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -948,6 +997,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -967,6 +1017,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -986,6 +1037,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1005,6 +1057,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1024,6 +1077,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1043,6 +1097,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1062,6 +1117,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.rshift",
       "icon_only": false,
@@ -1081,6 +1137,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.up",
       "icon_only": false,
@@ -1100,6 +1157,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.menu",
       "icon_only": false,
@@ -1119,6 +1177,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.ctrl",
       "icon_only": false,
@@ -1138,6 +1197,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.win",
       "icon_only": false,
@@ -1157,6 +1217,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.alt",
       "icon_only": false,
@@ -1176,6 +1237,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1195,6 +1257,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": null,
       "icon_only": false,
@@ -1214,6 +1277,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.altgr",
       "icon_only": false,
@@ -1233,6 +1297,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.left",
       "icon_only": false,
@@ -1252,6 +1317,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.down",
       "icon_only": false,
@@ -1271,6 +1337,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.right",
       "icon_only": false,
@@ -1290,6 +1357,7 @@
     {
       "checkable": true,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "keys.shortcuts",
       "icon_only": false,
@@ -1309,6 +1377,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.copy",
       "icon_only": true,
@@ -1333,6 +1402,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.paste",
       "icon_only": true,
@@ -1357,6 +1427,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.cut",
       "icon_only": true,
@@ -1381,6 +1452,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.select-all",
       "icon_only": true,
@@ -1405,6 +1477,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.undo",
       "icon_only": true,
@@ -1429,6 +1502,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.redo",
       "icon_only": true,
@@ -1453,6 +1527,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.copy-all",
       "icon_only": true,
@@ -1481,6 +1556,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.cut-all",
       "icon_only": true,
@@ -1509,6 +1585,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.delete-all",
       "icon_only": true,
@@ -1536,6 +1613,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.find",
       "icon_only": true,
@@ -1560,6 +1638,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.save",
       "icon_only": true,
@@ -1584,6 +1663,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.print",
       "icon_only": true,
@@ -1608,6 +1688,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": false,
       "h": 31.0,
       "icon": "shortcuts.emoji",
       "icon_only": true,
@@ -1632,6 +1713,7 @@
     {
       "checkable": false,
       "dim": false,
+      "dots": true,
       "h": 31.0,
       "icon": "layer.next",
       "icon_only": false,

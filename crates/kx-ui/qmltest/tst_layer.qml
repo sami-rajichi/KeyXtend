@@ -173,6 +173,17 @@ Item {
             compare(lit(), [true, false, false], "back to the first page");
         }
 
+        function test_the_dots_show_only_where_the_board_marks_them() {
+            const win = make("layer-1");
+            verify(dots(win).length > 0, "on the Next key, which the board marks");
+            const page = Face.layers["layer-1"];
+            const keys = page.keys.map(k => k.dots ? Object.assign({}, k, { dots: false }) : k);
+            win.keyboard.board = Object.assign({}, page, { keys: keys });
+            win.redraw(JSON.stringify({ board: true }));
+            compare(dots(win).length, 0, "none on a key it does not mark");
+            compare(shown(keyed(win, "layer-next")).icons, [win.lk.icons.layer.next], "its chevron alone");
+        }
+
         function test_the_pad_hides_while_the_layer_shows() {
             const win = make("main");
             verify(pad(win).visible, "the usual side block");

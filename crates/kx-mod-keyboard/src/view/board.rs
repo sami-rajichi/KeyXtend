@@ -62,6 +62,7 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
         label,
         name,
         icon_only: false,
+        dots: false,
         checkable: matches!(
             k.role,
             Role::Latch(_) | Role::Caps | Role::Assist(_) | Role::Layer

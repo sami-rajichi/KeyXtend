@@ -57,6 +57,7 @@ fn cell_view(spec: &BoardSpec, size: f64, c: &LayerCell, known: &[ShortcutInfo])
         label: None,
         name: None,
         icon_only: false,
+        dots: false,
         checkable: false,
         dim: false,
         tip: None,
@@ -78,6 +79,7 @@ fn cell_view(spec: &BoardSpec, size: f64, c: &LayerCell, known: &[ShortcutInfo])
         LayerKey::Next => KeyView {
             icon: Some(NEXT_ICON.to_owned()),
             name: Some(format!("{NAME_PREFIX}{NEXT_ID}")),
+            dots: true,
             ..base
         },
     }

@@ -109,12 +109,19 @@ fn a_shortcut_key_shows_its_icon_alone_and_names_its_steps() {
 }
 
 #[test]
-fn the_next_key_has_its_icon_and_name_and_no_steps() {
+fn the_next_key_has_its_icon_name_and_page_dots_and_no_steps() {
     let v = layered(&shown(), &known(), 1.0);
     let next = key(&v, NEXT_ID);
     assert_eq!(next.icon.as_deref(), Some(NEXT_ICON));
     assert_eq!(next.name.as_deref(), Some("key.layer-next"));
     assert!(next.label.is_none() && !next.icon_only && next.steps.is_empty());
+    let dotted: Vec<&str> = v
+        .keys
+        .iter()
+        .filter(|k| k.dots)
+        .map(|k| k.id.as_str())
+        .collect();
+    assert_eq!(dotted, [NEXT_ID], "only Next shows the page dots");
 }
 
 #[test]

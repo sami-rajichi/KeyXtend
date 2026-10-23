@@ -78,6 +78,8 @@ pub struct KeyView {
     pub name: Option<String>,
     /// It shows its icon alone, never the label under it; the label stands in only when the look has no such icon.
     pub icon_only: bool,
+    /// It shows the shortcuts layer's page dots under its icon: the Next key.
+    pub dots: bool,
     /// It latches, locks or turns a mode on, so screen readers hear it as checkable.
     pub checkable: bool,
     /// It comes in a later version: drawn dimmed and does nothing.

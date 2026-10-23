@@ -22,8 +22,8 @@ Item {
     readonly property real gap: host.lg.gap_px * host.s
     // The face never clips.
     readonly property bool clips: false
-    // The shortcuts layer's Next key, by the face's id for it, shows one dot per page under its chevron.
-    readonly property bool paged: host.kv.id === "layer-next" && !!host.paging && !!icon
+    // A key the board marks, the shortcuts layer's Next key, shows one dot per page under its chevron.
+    readonly property bool paged: !!host.kv.dots && !!host.paging && !!icon
 
     // What the key shows, centred as one row.
     Loader {

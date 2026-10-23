@@ -59,7 +59,11 @@ fn only_modifiers_caps_lock_the_mouse_assist_keys_and_the_shortcuts_key_are_chec
 fn the_hidden_layer_leaves_the_board_as_it_is_and_no_key_names_steps() {
     let v = board_view(&spec(), &settings(), 1.0);
     assert!(!v.layer);
-    assert!(v.keys.iter().all(|k| !k.icon_only && k.steps.is_empty()));
+    assert!(
+        v.keys
+            .iter()
+            .all(|k| !k.icon_only && !k.dots && k.steps.is_empty())
+    );
     for id in ["shortcuts", "power"] {
         let k = key(&v, id);
         assert!(
