@@ -38,9 +38,15 @@ pub(crate) fn part(result: Result<Value, String>) -> Value {
     result.unwrap_or_else(|e| json!({ "error": e, "ok": false }))
 }
 
+/// Brings Notepad back to the front, refused while a window of the power dialog's class shows, which the front's Alt
+/// taps could reach.
+pub(crate) fn front(ctx: &Ctx, app: &Opened) -> Result<(), String> {
+    g25wins::no_dialog(ctx).and_then(|()| probe::front(ctx, app))
+}
+
 /// `part` once Notepad is back in front; a part Notepad cannot come back for is skipped with that error.
 fn fronted(ctx: &Ctx, app: &Opened, run: impl FnOnce() -> Result<Value, String>) -> Value {
-    part(probe::front(ctx, app).and_then(|()| run()))
+    part(front(ctx, app).and_then(|()| run()))
 }
 
 /// How long a product key G25 clicks gets to read on or off: G25's switch wait.
@@ -153,10 +159,9 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
 /// Every part in turn on Notepad, which comes back to the front before each, else the part is skipped; a part's error
 /// fails that part only. Power goes last, alone on screen.
 fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    probe::front(ctx, app)?;
+    front(ctx, app)?;
     let layouts = layouts(ctx, app);
-    let layer =
-        probe::front(ctx, app).and_then(|()| clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app)));
+    let layer = front(ctx, app).and_then(|()| clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app)));
     let (shortcuts, switch_app) = layer.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
     let window = fronted(ctx, app, || g25wins::clip_window(ctx, app));
     let power = fronted(ctx, app, || g25wins::power(ctx, app));

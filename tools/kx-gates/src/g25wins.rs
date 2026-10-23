@@ -13,10 +13,10 @@ use crate::keymap::Reader;
 use crate::modekey::ModeKey;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
-use crate::{board, g10keys, g25, keys, probe, win};
+use crate::{board, g10keys, g25, keys, win};
 
-/// Why G25 refuses to start, or to click Power, while a window of the power dialog's class already shows.
-const ALREADY_OPEN: &str = "a power dialog is already open: the owner closes it first";
+/// What the refusal names as the program of a window whose program does not read.
+const UNREAD: &str = "a program that does not read";
 /// The result's note when a window of the power dialog's class stays open, so the owner closes it.
 const LEFT_OPEN: &str = "a window of the power dialog's class is still open: the owner closes it";
 /// The result's note when no watched window showed in time, as one of a class `[g25]` lacks, or a late one, may show.
@@ -91,16 +91,26 @@ pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value
     Ok(result)
 }
 
-/// Ok unless one of the windows `seen` has one of the dialog's `classes`, whatever its program, old or new: G25's Alt
-/// taps would reach it, so G25 refuses with why.
-pub fn none_open(seen: &[Facts], classes: &[String]) -> Result<(), String> {
-    if seen.iter().any(|f| picked(f, classes, None)) {
-        return Err(ALREADY_OPEN.to_owned());
-    }
-    Ok(())
+/// Why G25 refuses while window `f` shows, by its class and program, never its title.
+fn already_open(f: &Facts) -> String {
+    let program = f.program.as_deref().unwrap_or(UNREAD);
+    format!(
+        "a `{}` window of {program} is open, which G25's Alt taps could reach: the owner closes it first",
+        f.class
+    )
 }
 
-/// `none_open` on the windows shown now, before G25 starts and before its Power click.
+/// Ok unless one of the windows `seen` has one of the dialog's `classes`, whatever its program, old or new; else why
+/// G25 refuses, naming the first such window.
+pub fn none_open(seen: &[Facts], classes: &[String]) -> Result<(), String> {
+    match seen.iter().find(|f| picked(f, classes, None)) {
+        Some(f) => Err(already_open(f)),
+        None => Ok(()),
+    }
+}
+
+/// `none_open` on the windows shown now, before G25 starts, before each Alt tap that brings Notepad back and before
+/// its Power click.
 pub fn no_dialog(ctx: &Ctx) -> Result<(), String> {
     none_open(
         &g25watch::seen(),
@@ -181,7 +191,11 @@ fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     kb.click(&id)?;
     let mut result = g25::part(closes(ctx, app, &watch, EscTo::Watched));
     if alt_ok(&watch.shown(), &any.shown()) {
-        result["back"] = json!(probe::front(ctx, app).is_ok());
+        let back = g25::front(ctx, app);
+        result["back"] = json!(back.is_ok());
+        if let Err(e) = back {
+            result["back_error"] = json!(e);
+        }
     } else {
         result["left_open"] = json!(LEFT_OPEN);
     }
@@ -200,18 +214,19 @@ mod tests {
     }
 
     #[test]
-    fn g25_refuses_to_start_while_any_window_of_the_dialogs_class_shows() {
+    fn g25_refuses_while_any_window_of_the_dialogs_class_shows_and_names_its_class_and_program() {
         let class = ["#32770".to_owned()];
         assert_eq!(none_open(&[], &class), Ok(()));
         let notepad = facts("Notepad", Some("notepad.exe"));
         assert_eq!(none_open(std::slice::from_ref(&notepad), &class), Ok(()));
-        for open in [
-            facts("#32770", Some("explorer.exe")),
-            facts("#32770", None),
-            facts("#32770", Some("notepad.exe")),
+        for (open, program) in [
+            (facts("#32770", Some("explorer.exe")), "explorer.exe"),
+            (facts("#32770", None), UNREAD),
+            (facts("#32770", Some("notepad.exe")), "notepad.exe"),
         ] {
-            let why = none_open(&[notepad.clone(), open.clone()], &class);
-            assert_eq!(why, Err(ALREADY_OPEN.to_owned()), "{open:?}");
+            let why = none_open(&[notepad.clone(), open.clone()], &class).unwrap_err();
+            assert!(why.contains("`#32770`") && why.contains(program), "{why}");
+            assert!(why.contains("Alt taps could reach"), "{why}");
         }
     }
 
