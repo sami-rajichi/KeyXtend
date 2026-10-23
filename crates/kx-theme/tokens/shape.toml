@@ -60,21 +60,24 @@ back_share = 0.3333
 icon_gap_px = 3.0
 
 [lang.cycle]
-# The Cycle design (mock-up .cyc and .dots, lines 230-235): globe icon size and opacity, one dot per layout (diameter, gap),
-# and an unlit dot's opacity; the lit dot is opaque.
+# The Cycle design (mock-up .cyc, lines 230-231): globe icon size and opacity; its dots are [dots].
 icon_px = 12.0
 icon_share = 0.75
-dot_px = 3.0
-# An unlit dot keeps 3:1, so the lit one stands out by size instead (mock-up .dots i.on is opaque only).
-dot_on_px = 4.5
-dot_gap_px = 2.0
-# 2026-10-02: an unlit dot still counts the layouts, so it keeps 3:1 where it sits on every cap (mock-up .3).
-dot_off = 0.72
 
 [lang.list]
 # The List design (mock-up .lst, lines 237-238): the chevron's size and opacity beside the current name.
 icon_px = 11.0
 icon_share = 0.7
+
+[dots]
+# One dot per layout on the Cycle design and per page under the shortcuts layer's Next key (mock-up .dots, lines 233-235):
+# diameter, the lit dot's diameter, gap, and an unlit dot's opacity; the lit dot is opaque.
+px = 3.0
+# An unlit dot keeps 3:1, so the lit one stands out by size instead (mock-up .dots i.on is opaque only).
+on_px = 4.5
+gap_px = 2.0
+# 2026-10-02: an unlit dot still counts the layouts or pages, so it keeps 3:1 where it sits on every cap (mock-up .3).
+off = 0.72
 
 [dpad]
 # D-pad: gap between arrows, arrow icon, where each arrow sits across the ring from the hub's edge (0) to the pad's edge (1),

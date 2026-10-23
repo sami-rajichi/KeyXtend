@@ -66,6 +66,7 @@ mod qt {
         "qml/ColourTween.qml",
         "qml/PopIn.qml",
         "qml/LangCycle.qml",
+        "qml/PageDots.qml",
         "qml/LangList.qml",
         "qml/LangPanel.qml",
         "qml/LangRow.qml",

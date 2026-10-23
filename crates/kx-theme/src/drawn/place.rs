@@ -26,6 +26,10 @@ pub(super) enum Mark {
     Chevron,
     /// Carousel's side names.
     Side,
+    /// The Next key's chevron, raised to make room for its dots.
+    Next,
+    /// The Next key's row of dots under its chevron.
+    Pages,
 }
 
 /// The cap's height at size 1: the keyboard's row, `row_px`, less the gap between keys.
@@ -73,15 +77,21 @@ fn square(mid: f32, px: f32) -> Span {
     [mid - px / 2.0, mid + px / 2.0]
 }
 
-/// The tallest column of Cycle's dots that fits a cap `h` high with room for the larger lit dot (LangCycle.qml
-/// `perColumn`).
+/// The tallest column of Cycle's dots that fits a cap `h` high with room for the larger lit dot (PageDots.qml
+/// `perLine`).
 fn column(v: &LookView, h: f32) -> f32 {
-    let c = &v.shape.lang.cycle;
-    let room = h - (c.dot_on_px - c.dot_px);
-    let dots = ((room + c.dot_gap_px) / (c.dot_px + c.dot_gap_px))
-        .floor()
-        .max(1.0);
-    dots * c.dot_px + (dots - 1.0) * c.dot_gap_px
+    let d = &v.shape.dots;
+    let room = h - (d.on_px - d.px);
+    let dots = ((room + d.gap_px) / (d.px + d.gap_px)).floor().max(1.0);
+    dots * d.px + (dots - 1.0) * d.gap_px
+}
+
+/// The Next key's side-key chevron and its row of dots one gap under it, centred together on `mid` (NamedFace.qml).
+fn next(v: &LookView, mid: f32) -> [Span; 2] {
+    let (icon, d) = (v.shape.legend.icon_px[1], &v.shape.dots);
+    let top = mid - (icon + d.gap_px + d.px) / 2.0;
+    let dots = top + icon + d.gap_px;
+    [[top, top + icon], [dots, dots + d.px]]
 }
 
 /// Where `mark` sits on a cap `h` high: one span for each place or size it may take.
@@ -115,6 +125,8 @@ pub(super) fn spans(v: &LookView, h: f32, mark: Mark) -> Vec<Span> {
         Mark::Globe => vec![square(mid, lang.cycle.icon_px)],
         Mark::Chevron => vec![square(mid, lang.list.icon_px)],
         Mark::Side => vec![centred(v, mid, lang.side[0])],
+        Mark::Next => vec![next(v, mid)[0]],
+        Mark::Pages => vec![next(v, mid)[1]],
     }
 }
 

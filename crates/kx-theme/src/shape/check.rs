@@ -9,8 +9,8 @@ const INSET_BELOW: f32 = 0.5;
 
 impl Shape {
     /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark, dot
-    /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit Cycle
-    /// dot no larger than the others, a D-pad hub or Stop inset of half the pad or more and a Stop wider than the hub,
+    /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit dot
+    /// no larger than the others, a D-pad hub or Stop inset of half the pad or more and a Stop wider than the hub,
     /// naming the size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
@@ -38,16 +38,13 @@ impl Shape {
         Ok(())
     }
 
-    /// Cycle's lit dot must be larger than an unlit one, which is how it stands out.
+    /// The lit dot must be larger than an unlit one, which is how it stands out.
     fn check_dots(&self) -> Result<(), String> {
-        let c = &self.lang.cycle;
-        if c.dot_on_px > c.dot_px {
+        let (on, px) = (self.dots.on_px, self.dots.px);
+        if on > px {
             return Ok(());
         }
-        let (on, off) = (c.dot_on_px, c.dot_px);
-        Err(format!(
-            "shape: lang.cycle.dot_on_px {on} must be above dot_px {off}"
-        ))
+        Err(format!("shape: dots.on_px {on} must be above px {px}"))
     }
 
     /// Font weights must be 100 to 900.
@@ -88,6 +85,7 @@ impl Shape {
             ("legend.label_min_px", self.legend.label_min_px),
             ("bar.mark_px", self.bar.mark_px[0]),
             ("bar.mark_px", self.bar.mark_px[1]),
+            ("dots.px", self.dots.px),
             ("dpad.dot_px", self.dpad.dot_px),
             ("dpad.icon_px", self.dpad.icon_px),
             ("dpad.stop_icon_px", self.dpad.stop_icon_px),
@@ -104,6 +102,7 @@ impl Shape {
             ("lang.icon_gap_px", self.lang.icon_gap_px),
             ("bar.mark_px", self.bar.mark_px[2]),
             ("badge.edge_px", self.badge.edge_px),
+            ("dots.gap_px", self.dots.gap_px),
             ("dpad.dot_gap_px", self.dpad.dot_gap_px),
             ("dpad.gap_px", self.dpad.gap_px),
         ]);
@@ -130,7 +129,7 @@ impl Shape {
             ("panel.off_share", self.panel.off_share),
             ("ring.core_share", self.ring.core_share),
             ("lang.cycle.icon_share", self.lang.cycle.icon_share),
-            ("lang.cycle.dot_off", self.lang.cycle.dot_off),
+            ("dots.off", self.dots.off),
             ("lang.list.icon_share", self.lang.list.icon_share),
             ("dim.share", self.dim.share),
             ("notice.radius_share", self.notice.radius_share),

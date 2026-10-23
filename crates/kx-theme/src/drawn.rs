@@ -15,6 +15,12 @@ pub const EXCEPTION: &str = "Carousel side names";
 /// Stop's unlit speed dot, read against the lit one beside it.
 const SPEED_DOT: &str = "D-pad unlit speed dot by a lit one";
 
+/// The unlit dot on each key that draws dots: the language key's Cycle design and the Next key.
+const CYCLE_DOT: &str = "Cycle unlit dot";
+const NEXT_DOT: &str = "Next unlit dot";
+/// The Next key's chevron over its dots.
+const NEXT_CHEVRON: &str = "Next chevron";
+
 /// Windows 11's plain window colours, light then dark (Mica's base): what a system backdrop shows behind the plate.
 pub const WINDOWS: [Rgba; 2] = [
     Rgba {
@@ -191,12 +197,12 @@ fn keys(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     }
 }
 
-/// The language key's faded marks in `legend_mod` on a key `h` high: Cycle's unlit dots and globe, List's chevron,
-/// Carousel's side names.
+/// The dotted keys' marks on a key `h` high: the language key's in `legend_mod` (Cycle's unlit dots and globe, List's
+/// chevron, Carousel's side names), and the Next key's in `legend_act` (its chevron and unlit dots).
 fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
-    let (l, f) = (&v.shape.lang, fill(v, "key_mod", "key_mod"));
-    let marks = [
-        ("Cycle unlit dot", l.cycle.dot_off, Mark::Dots, WCAG_SHAPES),
+    let (l, off) = (&v.shape.lang, v.shape.dots.off);
+    let lang = [
+        (CYCLE_DOT, off, Mark::Dots, WCAG_SHAPES),
         ("Cycle globe", l.cycle.icon_share, Mark::Globe, WCAG_SHAPES),
         (
             "List chevron",
@@ -206,16 +212,26 @@ fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
         ),
         (EXCEPTION, l.side[1], Mark::Side, WCAG_AA),
     ];
-    for (name, share, mark, min) in marks {
-        let ink = v.palette.legend_mod;
-        let l = Legend {
-            name,
-            ink,
-            share,
-            mark,
-            min,
-        };
-        out.extend(on_cap(v, h, &l, f));
+    let next = [
+        (NEXT_CHEVRON, 1.0, Mark::Next, WCAG_SHAPES),
+        (NEXT_DOT, off, Mark::Pages, WCAG_SHAPES),
+    ];
+    let keys = [
+        ("legend_mod", "key_mod", "key_mod", &lang[..]),
+        ("legend_act", "key_act", "key_mod", &next[..]),
+    ];
+    for (ink, top, skirt, marks) in keys {
+        let (ink, f) = (token(v, ink), fill(v, top, skirt));
+        for &(name, share, mark, min) in marks {
+            let l = Legend {
+                name,
+                ink,
+                share,
+                mark,
+                min,
+            };
+            out.extend(on_cap(v, h, &l, f));
+        }
     }
 }
 

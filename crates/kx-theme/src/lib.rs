@@ -26,7 +26,9 @@ mod view;
 pub use accent::{accent_fill, with_accent};
 pub use common::Common;
 pub use hc::{contrast_common, contrast_palette, hover_line};
-pub use icons::{BarIcons, DpadIcons, Icons, LangIcons, NoticeIcons, PageIcons, TrayIcons};
+pub use icons::{
+    BarIcons, DpadIcons, Icons, LangIcons, LayerIcons, NoticeIcons, PageIcons, TrayIcons,
+};
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use mode::{Mode, ModeChoice, mode_for};
 pub use motion::{Amounts, MOVES, Motion, Motions, Timed};

@@ -209,16 +209,18 @@ var lk = {
       "icon_gap_px": 3.0,
       "cycle": {
         "icon_px": 12.0,
-        "icon_share": 0.75,
-        "dot_px": 3.0,
-        "dot_on_px": 4.5,
-        "dot_gap_px": 2.0,
-        "dot_off": 0.72
+        "icon_share": 0.75
       },
       "list": {
         "icon_px": 11.0,
         "icon_share": 0.7
       }
+    },
+    "dots": {
+      "px": 3.0,
+      "on_px": 4.5,
+      "gap_px": 2.0,
+      "off": 0.72
     },
     "dpad": {
       "gap_px": 2.0,
@@ -563,6 +565,17 @@ var lk = {
           1.0
         ]
       },
+      "layer": {
+        "ms": 0,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
       "led": {
         "ms": 0,
         "bez": [
@@ -752,6 +765,36 @@ var lk = {
       "tab": "arrow-right-to-line",
       "up": "chevron-up",
       "win": "win-logo"
+    },
+    "shortcuts": {
+      "close-tab": "x",
+      "close-window": "square-x",
+      "copy": "copy",
+      "copy-all": "clipboard-copy",
+      "cut": "scissors",
+      "cut-all": "square-scissors",
+      "delete-all": "eraser",
+      "emoji": "smile",
+      "file-explorer": "folder-open",
+      "find": "search",
+      "lock-pc": "lock",
+      "new-tab": "plus",
+      "paste": "clipboard-paste",
+      "print": "printer",
+      "redo": "redo-2",
+      "refresh": "refresh-cw",
+      "reopen-tab": "history",
+      "save": "save",
+      "select-all": "text-select",
+      "show-desktop": "monitor-down",
+      "switch-app": "arrow-left-right",
+      "task-manager": "activity",
+      "undo": "undo-2",
+      "zoom-in": "a-arrow-up",
+      "zoom-out": "a-arrow-down"
+    },
+    "layer": {
+      "next": "chevron-right"
     },
     "bar": {
       "grip": "grip-horizontal",

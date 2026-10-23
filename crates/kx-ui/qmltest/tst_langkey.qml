@@ -40,13 +40,13 @@ Item {
         function test_the_cycle_design_shows_a_globe_the_name_and_one_dot_per_layout() {
             const lang = Face.states.en.lang;
             const c = createTemporaryObject(cycleC, root, { lang: lang, lk: N.lk, res: root.res, s: 1, ink: "black", room: 40 });
-            const cy = N.lk.shape.lang.cycle;
+            const sh = N.lk.shape.dots;
             const dots = Board.all(c, o => o.lit !== undefined && o.radius !== undefined);
             const each = (on, off) => [...Array(lang.count).keys()].map(i => i === lang.at ? on : off);
             compare(dots.length, lang.count, "one dot per layout");
-            compare(dots.map(d => d.opacity), each(1, cy.dot_off));
+            compare(dots.map(d => d.opacity), each(1, sh.off));
             // An unlit dot keeps 3:1 too, so the current layout's dot stands out by size.
-            compare(dots.map(d => d.width), each(cy.dot_on_px, cy.dot_px));
+            compare(dots.map(d => d.width), each(sh.on_px, sh.px));
             compare(new Set(dots.map(d => d.mapToItem(c, d.width / 2, 0).x)).size, 1, "one column, centred");
             compare(Board.all(c, o => o.tint !== undefined && o.icon !== undefined)[0].icon, N.lk.icons.lang.cycle);
             compare(Board.all(c, o => o.text === lang.cur.short).length, 1, "the current name");

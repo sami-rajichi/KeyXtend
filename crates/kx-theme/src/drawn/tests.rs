@@ -9,6 +9,7 @@ use crate::hc::sample::HC;
 use crate::look::Cap;
 use crate::mode::{Mode, ModeChoice};
 use crate::view::{LookChoice, look_view};
+mod layer;
 mod pad;
 
 fn themes() -> Themes {
@@ -178,18 +179,6 @@ fn a_legend_is_measured_where_it_sits_on_the_lit_top_not_at_its_brightest_end() 
         centre > luminance(v.palette.key),
         "and still on the lit part"
     );
-}
-
-#[test]
-fn a_named_keys_label_is_text_and_its_icon_a_mark() {
-    let t = themes();
-    for (at, v) in views(&t, &SysLook::default()) {
-        let all = drawn(&v, TEST_ROW_PX);
-        let min = |n: &str| all.iter().find(|d| d.name == n).map(|d| d.min);
-        assert_eq!(min("legend_mod on key_mod, rest"), Some(WCAG_AA), "{at}");
-        let icon = min("legend_mod icon on key_mod, rest");
-        assert_eq!(icon, Some(WCAG_SHAPES), "{at}");
-    }
 }
 
 #[test]

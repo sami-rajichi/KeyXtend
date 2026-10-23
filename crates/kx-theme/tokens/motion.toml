@@ -35,6 +35,9 @@ stop = { ms = 220, curve = "spring" }
 pill = { ms = 180, curve = "ease_out" }
 caption = { ms = 200, curve = "ease_out" }
 panel = { ms = 180, curve = "swift" }
+# The side block's swap to or from the shortcuts layer: each new cell fades in and rises amount.pop_rise_px into place, as
+# a panel pops in (.pop popIn .18s; the mock-up swaps at once).
+layer = { ms = 180, curve = "swift" }
 # One pass of the shimmer while the words are on their way (.shimmer).
 shimmer = { ms = 1000, curve = "linear" }
 # The burst when a hold fires (.burst .b-ring, .b-dot).

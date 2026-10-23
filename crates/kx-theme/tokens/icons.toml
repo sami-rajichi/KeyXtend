@@ -25,6 +25,46 @@ fill = "key-round"
 settings = "settings-2"
 power = "power"
 
+# The shortcuts layer's keys by shortcut id (owner, 2026-10-23; mock-up sideShortcuts); F1 to F12 show their name.
+[shortcuts]
+# Copy, Paste, Cut and Select all.
+copy = "copy"
+paste = "clipboard-paste"
+cut = "scissors"
+select-all = "text-select"
+# Undo and Redo.
+undo = "undo-2"
+redo = "redo-2"
+# The chains: Select all then Copy, Cut or Delete.
+copy-all = "clipboard-copy"
+cut-all = "square-scissors"
+delete-all = "eraser"
+# Find, Save, Print and the emoji panel.
+find = "search"
+save = "save"
+print = "printer"
+emoji = "smile"
+# Switch app keeps the system switcher open; Show desktop and File Explorer.
+switch-app = "arrow-left-right"
+show-desktop = "monitor-down"
+file-explorer = "folder-open"
+# Lock PC, Task Manager and Close window.
+lock-pc = "lock"
+task-manager = "activity"
+close-window = "square-x"
+# Tabs: new, close and reopen the last closed one.
+new-tab = "plus"
+close-tab = "x"
+reopen-tab = "history"
+# Refresh, and zoom in and out.
+refresh = "refresh-cw"
+zoom-in = "a-arrow-up"
+zoom-out = "a-arrow-down"
+
+# The shortcuts layer's Next key: a chevron, with one dot per page under it.
+[layer]
+next = "chevron-right"
+
 # The top bar: move, the light or dark switch (mode_on while dark), the theme button, the size lenses, minimise (the
 # plain minus, as Windows draws it) and close; then the resize corner and the bubble.
 [bar]

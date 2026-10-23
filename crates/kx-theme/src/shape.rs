@@ -10,7 +10,7 @@ use crate::extras::{
 mod check;
 mod whole;
 
-pub use whole::{BackdropShape, DimShape, WidthShape};
+pub use whole::{BackdropShape, DimShape, DotsShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -111,7 +111,7 @@ pub struct LangShape {
     pub list: ListKeyShape,
 }
 
-/// The language key's Cycle design (`.cyc`, `.dots`): the globe, the name, and one dot per layout.
+/// The language key's Cycle design (`.cyc`): the globe and the name, beside its dots (`Shape::dots`).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CycleShape {
@@ -119,14 +119,6 @@ pub struct CycleShape {
     pub icon_px: f32,
     /// Globe icon opacity.
     pub icon_share: f32,
-    /// Dot diameter.
-    pub dot_px: f32,
-    /// The lit dot's diameter, larger so it stands out from the unlit ones.
-    pub dot_on_px: f32,
-    /// Gap between dots.
-    pub dot_gap_px: f32,
-    /// Opacity of a dot whose layout is not shown.
-    pub dot_off: f32,
 }
 
 /// The language key's List design (`.lst`): the name and a chevron that opens the list.
@@ -233,6 +225,8 @@ pub struct Shape {
     pub led: LedShape,
     /// The language key.
     pub lang: LangShape,
+    /// One dot per layout on the Cycle design and per page under the Next key.
+    pub dots: DotsShape,
     /// The D-pad.
     pub dpad: DpadShape,
     /// Pointer feedback.

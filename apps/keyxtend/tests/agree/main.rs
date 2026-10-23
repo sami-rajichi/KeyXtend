@@ -23,8 +23,10 @@ mod sizes;
 mod stage;
 mod texts;
 
-use kx_mod_keyboard::view::{BoardView, board_view};
-use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey};
+use kx_mod_keyboard::view::{BoardView, board_view, with_layer};
+use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey, Layer, SPEC};
+use kx_module_api::ports::ShortcutId;
+use std::collections::HashSet;
 
 /// Every design of the language key.
 fn designs() -> [LangKey; 3] {
@@ -38,7 +40,31 @@ fn designs() -> [LangKey; 3] {
 /// The shipped board at its default size, with the language key in `design`.
 fn board(design: LangKey) -> BoardView {
     let spec = BoardSpec::shipped().unwrap();
-    let mut settings: KeyboardSettings = kx_mod_keyboard::SPEC.defaults_as().unwrap();
+    let mut settings: KeyboardSettings = SPEC.defaults_as().unwrap();
     settings.lang_key = design;
     board_view(&spec, &settings, settings.size)
+}
+
+/// The owner's shortcut pages, the default.
+fn pages() -> Vec<Vec<ShortcutId>> {
+    SPEC.defaults_as::<KeyboardSettings>()
+        .unwrap()
+        .shortcut_pages
+}
+
+/// The board with the language key in `design`: the layer hidden, then shown on each of its pages.
+fn views(design: LangKey) -> Vec<BoardView> {
+    let spec = BoardSpec::shipped().unwrap();
+    let pages = pages();
+    let known: HashSet<ShortcutId> = pages.iter().flatten().cloned().collect();
+    let mut layer = Layer::new(spec.layer_grid(), &pages, &known);
+    let mut views = vec![board(design)];
+    layer.toggle();
+    for _ in &pages {
+        let mut view = board(design);
+        with_layer(&mut view, &spec, &layer, &[]);
+        views.push(view);
+        layer.next_page();
+    }
+    views
 }

@@ -3,21 +3,19 @@
 //! its text in English, French and Arabic; every mark it names is one the theme's mark fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
-use crate::{board, designs};
+use crate::{designs, pages, views};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
 use kx_mod_keyboard::spec::NEXT_ID;
 use kx_mod_keyboard::view::{
-    BoardView, EMPTY_NAME, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
-    SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX, with_layer,
+    EMPTY_NAME, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
+    SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
-use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey, Layer, SPEC};
-use kx_module_api::ports::ShortcutId;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 
 /// The keys of `wanted` some shipped language has no text for, with that language's tag.
 pub(crate) fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
@@ -27,30 +25,6 @@ pub(crate) fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)>
         absent.into_iter().map(move |k| (tag, k))
     });
     gaps.collect()
-}
-
-/// The owner's shortcut pages, the default.
-fn pages() -> Vec<Vec<ShortcutId>> {
-    SPEC.defaults_as::<KeyboardSettings>()
-        .unwrap()
-        .shortcut_pages
-}
-
-/// The board with the language key in `design`: the layer hidden, then shown on each of its pages.
-fn views(design: LangKey) -> Vec<BoardView> {
-    let spec = BoardSpec::shipped().unwrap();
-    let pages = pages();
-    let known: HashSet<ShortcutId> = pages.iter().flatten().cloned().collect();
-    let mut layer = Layer::new(spec.layer_grid(), &pages, &known);
-    let mut views = vec![board(design)];
-    layer.toggle();
-    for _ in &pages {
-        let mut view = board(design);
-        with_layer(&mut view, &spec, &layer, &[]);
-        views.push(view);
-        layer.next_page();
-    }
-    views
 }
 
 #[test]
