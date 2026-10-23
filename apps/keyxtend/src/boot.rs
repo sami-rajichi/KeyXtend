@@ -5,7 +5,7 @@
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, PointerHook, PointerHookKey,
-    ScrollTarget, ScrollTargetKey,
+    ScrollTarget, ScrollTargetKey, Shortcuts, ShortcutsKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -27,6 +27,8 @@ pub struct Services {
     pub pointer: Arc<dyn PointerHook>,
     /// Scrolls what the user pointed at, for the scroll module.
     pub scroll: Arc<dyn ScrollTarget>,
+    /// Sends the system shortcuts, for the keyboard's shortcuts layer.
+    pub shortcuts: Arc<dyn Shortcuts>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -92,6 +94,7 @@ impl Boot {
         kernel.provide_platform::<LayoutSourceKey>(services.layouts)?;
         kernel.provide_platform::<PointerHookKey>(services.pointer)?;
         kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
+        kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;
         for module in modules {
             kernel.add(module)?;
         }

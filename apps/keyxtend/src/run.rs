@@ -108,6 +108,7 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError
         layouts: platform.layouts(),
         pointer: pointer(platform, input),
         scroll: platform.scroll_target(),
+        shortcuts: platform.shortcuts(),
     };
     Boot::load(platform.clone(), services, ports(platform))
 }
