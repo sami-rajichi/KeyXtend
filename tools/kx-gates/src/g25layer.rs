@@ -1,5 +1,5 @@
 //! G25's shortcuts layer on the product: its keys clicked in Notepad, each checked on the clipboard, the saved file or
-//! the task switcher; then the layer goes back to the page it showed first and hides, so it is left as found.
+//! the task switcher; then the layer goes back to the page it showed first, shown or hidden as it was.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -10,12 +10,13 @@ use kx_module_api::ports::ShortcutId;
 use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
-use crate::g25wins::{self, Watch};
+use crate::g25::{self, part};
+use crate::g25wins::{self, EscTo, Watch};
 use crate::modekey::ModeKey;
 use crate::product::{self, Keyboard};
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clip, cliptext, g25, keys, readback};
+use crate::{board, clip, cliptext, keys, readback};
 
 /// Selects all of Notepad's text.
 const SELECT_ALL: &str = "select-all";
@@ -54,11 +55,6 @@ fn turns(from: usize, to: usize, count: usize) -> usize {
         return 0;
     }
     (to % count + count - from % count) % count
-}
-
-/// A part's result, or its error as a failed result.
-fn part(result: Result<Value, String>) -> Value {
-    result.unwrap_or_else(|e| json!({ "error": e, "ok": false }))
 }
 
 /// The layer as G25 drives it: Notepad, each page's key ids as the product draws them, and the page shown now.
@@ -151,7 +147,7 @@ impl Desk<'_> {
     fn switch_app(&self) -> Result<Value, String> {
         let watch = Watch::start(&self.ctx.cfg.g25.switcher_classes, None);
         self.press(SWITCH_APP)?;
-        g25wins::closes(self.ctx, self.app, &watch, true)
+        g25wins::closes(self.ctx, self.app, &watch, EscTo::WatchedFirst)
     }
 
     /// Both parts from the page the layer shows first, then back to that page: their results, the first saying
@@ -167,11 +163,12 @@ impl Desk<'_> {
     }
 }
 
-/// Shows the layer, runs its parts and hides it on the page it showed first, whatever happened: the `shortcuts` and
-/// `switch_app` results.
+/// Shows the layer, runs its parts, then puts it back on the page it showed first and shown or hidden as it was,
+/// whatever happened: the `shortcuts` and `switch_app` results.
 pub fn run(ctx: &Ctx, app: &Opened) -> Result<(Value, Value), String> {
     let pages = board::layer_pages(&product::keyboard()?.shortcut_pages)?;
     let (layer, wait) = (ModeKey::of(Role::Layer)?, g25::wait(ctx));
+    let was = layer.on()?;
     let desk = Desk {
         ctx,
         app,
@@ -179,12 +176,12 @@ pub fn run(ctx: &Ctx, app: &Opened) -> Result<(Value, Value), String> {
         at: Cell::new(0),
     };
     let driven = layer.set(true, wait).and_then(|()| desk.drive());
-    let hidden = layer.put_back(false, wait);
+    let back = layer.put_back(was, wait);
     let (mut shortcuts, switch) = driven.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
-    shortcuts["layer_hidden"] = json!(hidden.is_ok());
-    shortcuts["ok"] = json!(shortcuts["ok"] == true && hidden.is_ok());
-    if let Err(e) = hidden {
-        shortcuts["hide_error"] = json!(e);
+    shortcuts["layer_as_found"] = json!(back.is_ok());
+    shortcuts["ok"] = json!(shortcuts["ok"] == true && back.is_ok());
+    if let Err(e) = back {
+        shortcuts["layer_error"] = json!(e);
     }
     Ok((shortcuts, switch))
 }

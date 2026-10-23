@@ -33,6 +33,16 @@ pub(crate) fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
     win::poll_until(g.switch_wait_ms, t.poll_ms, || f().then_some(())).is_some()
 }
 
+/// A part's result, or its error as a failed result, so one part's error never hides the others.
+pub(crate) fn part(result: Result<Value, String>) -> Value {
+    result.unwrap_or_else(|e| json!({ "error": e, "ok": false }))
+}
+
+/// `part` once Notepad is back in front; a part Notepad cannot come back for is skipped with that error.
+fn fronted(ctx: &Ctx, app: &Opened, run: impl FnOnce() -> Result<Value, String>) -> Value {
+    part(probe::front(ctx, app).and_then(|()| run()))
+}
+
 /// How long a product key G25 clicks gets to read on or off: G25's switch wait.
 pub(crate) fn wait(ctx: &Ctx) -> Wait {
     Wait {
@@ -140,16 +150,16 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     })
 }
 
-/// Every part in turn on Notepad, which comes back to the front before each; Power goes last, alone on screen.
+/// Every part in turn on Notepad, which comes back to the front before each, else the part is skipped; a part's error
+/// fails that part only. Power goes last, alone on screen.
 fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     probe::front(ctx, app)?;
     let layouts = layouts(ctx, app);
-    probe::front(ctx, app)?;
-    let (shortcuts, switch_app) = clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app))?;
-    probe::front(ctx, app)?;
-    let window = g25wins::clip_window(ctx, app)?;
-    probe::front(ctx, app)?;
-    let power = g25wins::power(ctx, app)?;
+    let layer =
+        probe::front(ctx, app).and_then(|()| clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app)));
+    let (shortcuts, switch_app) = layer.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
+    let window = fronted(ctx, app, || g25wins::clip_window(ctx, app));
+    let power = fronted(ctx, app, || g25wins::power(ctx, app));
     let parts = [&layouts, &shortcuts, &switch_app, &window, &power];
     let pass = parts.iter().all(|p| p["ok"] == true);
     Ok(json!({

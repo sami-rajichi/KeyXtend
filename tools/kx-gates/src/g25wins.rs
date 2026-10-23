@@ -14,10 +14,13 @@ use crate::keymap::Reader;
 use crate::modekey::ModeKey;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
-use crate::{board, g10keys, g25, keys, win};
+use crate::{board, g10keys, g25, keys, probe, win};
 
 /// The result's note when the power dialog stays open, so the owner cancels it.
 const LEFT_OPEN: &str = "the power dialog is still open: the owner cancels it";
+/// The result's note when no watched window showed in time, as one of a class `[g25]` lacks, or a late one, may show.
+const UNSEEN: &str =
+    "no watched window showed in time: one that shows later is left for the owner to close";
 
 /// What G25 reads of a window: its class and program, never its title, which may be private.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +55,33 @@ pub fn picked(facts: &Facts, classes: &[String], program: Option<&str>) -> bool 
 /// True when Esc may go out: the window in `front` is one of `shown`, or `app` when it may take Esc.
 pub fn esc_ok<W: PartialEq>(front: &W, shown: &[W], app: Option<&W>) -> bool {
     shown.contains(front) || app == Some(front)
+}
+
+/// Which window in front may take G25's Esc, besides a watched one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EscTo {
+    /// A watched window only: the power dialog.
+    Watched,
+    /// A watched window or Notepad: the clipboard panel, which never takes the front.
+    WatchedOrApp,
+    /// A watched window, and Notepad only once the wait for one in front ran out: the switcher, which takes it late.
+    WatchedFirst,
+}
+
+impl EscTo {
+    /// Whether Notepad may take Esc, given whether the wait for a watched window in front `ran_out`.
+    pub fn app_takes(self, ran_out: bool) -> bool {
+        match self {
+            Self::Watched => false,
+            Self::WatchedOrApp => true,
+            Self::WatchedFirst => ran_out,
+        }
+    }
+
+    /// Whether Notepad must be back in front once the watched windows closed.
+    pub fn app_back(self) -> bool {
+        self != Self::Watched
+    }
 }
 
 /// The windows of one kind a person sees that they did not see when the watch started.
@@ -89,12 +119,14 @@ fn about(w: HWND) -> Value {
     json!({ "class": win::class(w), "program": win::program_name(w) })
 }
 
-/// Waits for `watch`'s windows, sends Esc only while one of them, or Notepad when `app_esc`, is in front, then waits
-/// for them to close, with Notepad back in front when `app_esc`.
-pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, app_esc: bool) -> Result<Value, String> {
+/// Waits for `watch`'s windows, sends Esc only while one of them, or Notepad as `to` allows, is in front, then waits
+/// for them to close, with Notepad back in front when `to` needs it.
+pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value, String> {
     let opened = g25::until(ctx, || !watch.shown().is_empty());
     let found: Vec<Value> = watch.shown().into_iter().map(about).collect();
-    let takes = app_esc.then_some(app.hwnd);
+    let first = to == EscTo::WatchedFirst;
+    let own = opened && first && g25::until(ctx, || esc_ok(&foreground(), &watch.shown(), None));
+    let takes = to.app_takes(!own).then_some(app.hwnd);
     let safe = opened
         && g25::until(ctx, || {
             esc_ok(&foreground(), &watch.shown(), takes.as_ref())
@@ -103,12 +135,19 @@ pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, app_esc: bool) -> Result<V
     if safe {
         keys::combo(&ctx.cfg.g25.esc)?;
     }
-    let back = || !app_esc || foreground() == app.hwnd;
+    let back = || !to.app_back() || foreground() == app.hwnd;
     let closed = safe && g25::until(ctx, || watch.shown().is_empty() && back());
-    Ok(json!({
+    let mut result = json!({
         "opened": opened, "windows": found, "esc_sent": safe, "front_at_esc": at_esc, "closed": closed,
         "ok": opened && closed,
-    }))
+    });
+    if first {
+        result["came_to_front"] = json!(own);
+    }
+    if !opened {
+        result["note"] = json!(UNSEEN);
+    }
+    Ok(result)
 }
 
 /// Lets the Win latch go without a lone press, as G10 does: Shift latches over it first. Win's state after, if read.
@@ -133,7 +172,7 @@ pub fn clip_window(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     let typed = latched
         .and_then(|()| keys_ours(app))
         .and_then(|()| win_key.keyboard.click(&v));
-    let shown = typed.and_then(|()| closes(ctx, app, &watch, true));
+    let shown = typed.and_then(|()| closes(ctx, app, &watch, EscTo::WatchedOrApp));
     let let_go = let_go(&win_id).is_ok_and(|after| after == Some(false));
     let mut result = shown?;
     result["win_let_go"] = json!(let_go);
@@ -142,16 +181,18 @@ pub fn clip_window(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
 }
 
 /// The product's Power key opens the power dialog, which Esc cancels only while it is in front; nothing confirms it,
-/// and a dialog that stays open is left for the owner.
+/// and a dialog that stays open is left for the owner. Once none shows, Notepad comes back, so clean-up closes it.
 pub fn power(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     let g = &ctx.cfg.g25;
     let (kb, id) = (Keyboard::find()?, board::id_of(Role::Power)?);
     let watch = Watch::start(std::slice::from_ref(&g.power_class), Some(&g.power_program));
     keys_ours(app)?;
     kb.click(&id)?;
-    let closed = closes(ctx, app, &watch, false);
-    let mut result = closed.unwrap_or_else(|e| json!({ "error": e, "ok": false }));
-    if !watch.shown().is_empty() {
+    let mut result = g25::part(closes(ctx, app, &watch, EscTo::Watched));
+    if watch.shown().is_empty() {
+        // Best effort, and never while the dialog shows, as its Alt tap would reach the dialog.
+        result["back"] = json!(probe::front(ctx, app).is_ok());
+    } else {
         result["left_open"] = json!(LEFT_OPEN);
     }
     Ok(result)
@@ -209,6 +250,31 @@ mod tests {
             &class,
             shell
         ));
+    }
+
+    #[test]
+    fn notepad_takes_esc_for_the_panel_and_for_the_switcher_only_once_its_wait_ran_out() {
+        assert!(
+            !EscTo::Watched.app_takes(false) && !EscTo::Watched.app_takes(true),
+            "the power dialog"
+        );
+        assert!(
+            EscTo::WatchedOrApp.app_takes(false),
+            "the panel never takes the front"
+        );
+        assert!(
+            !EscTo::WatchedFirst.app_takes(false),
+            "the switcher came to the front"
+        );
+        assert!(
+            EscTo::WatchedFirst.app_takes(true),
+            "it never did: today's rule"
+        );
+        assert!(
+            !EscTo::Watched.app_back()
+                && EscTo::WatchedFirst.app_back()
+                && EscTo::WatchedOrApp.app_back()
+        );
     }
 
     #[test]

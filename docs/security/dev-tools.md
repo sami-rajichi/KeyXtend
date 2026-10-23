@@ -82,9 +82,10 @@
     - G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language, with target-window still in front. When the edges are not under the keyboard it records the windows between by class and program only, never a title.
     - G10 presses each arrow and Stop, puts Stop back after a failed step, and asks UI Automation which element is at each arrow's icon without moving the pointer.
   - `kx-gates g25` clicks the product's keys in its own Notepad file: the language key, the shortcuts layer's Select all, Copy, Paste, Undo, Copy all and Switch app, then Win and V, then Power, each only while the keyboard is on top there.
-    - Its own keys are Ctrl+End, Ctrl+S and Esc. Esc goes out only while the task switcher, the clipboard panel or Notepad is in front, so it never reaches another app.
-    - It puts the layer back on the page it showed first and hides it, and lets Win go without a lone press, as G10 does, so Start never opens.
-    - Power opens the system's Shut Down Windows dialog, which G25 always cancels with Esc, only while that dialog (`[g25] power_class` of `power_program`) is in front. It never sends Enter or clicks OK; a dialog not in front, or still open, is left for the owner, and the result says so.
+    - Its own keys are Ctrl+End, Ctrl+S, Esc, and the Alt tap of `probe::front`, which brings Notepad back before each part and after Power. `[g25] esc` must be the Esc key alone, or the config check refuses it.
+    - Esc goes out only while the clipboard panel or Notepad is in front, or for Switch app while the task switcher is, Notepad only once the switcher's own wait ran out; so it never reaches another app.
+    - It puts the layer back on the page it showed first, shown or hidden as it found it, and lets Win go without a lone press, as G10 does, so Start never opens.
+    - Power opens the system's Shut Down Windows dialog, which G25 always cancels with Esc, only while that dialog (`[g25] power_class` of `power_program`) is in front. It never sends Enter or clicks OK, and never the Alt tap while the dialog shows; a dialog not in front, or still open, is left for the owner, and the result says so, as it does when no watched window showed in time.
     - It keeps the owner's clipboard and removes its copies from Windows clipboard history after; its result names windows by class and program only, never a title.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.

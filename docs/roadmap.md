@@ -96,7 +96,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
 | G23 Quick-fill | Windows Hello opens from the no-focus keyboard; after Yes, test User and Password values are typed into a login page; after Cancel nothing is typed |
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
-| G25 Language and shortcuts (core) | The language key also switches the target app's input language; Ctrl+C/V/Z, Win+V and Alt+Tab work from the keyboard |
+| G25 Language and shortcuts (core) | The language key also switches the target app's input language; the shortcuts layer's Copy, Paste, Undo, Copy all and Switch app, Win+V and the Power key's dialog (always cancelled) work from the keyboard |
 | G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact. The Japanese IME part (key presses produce 日本) moved to F16 |
 
 **Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, and the spike code (ADR-0014). **Deleted:** screenshots, logs, scratch scripts and virtual PCs. The owner decides when the test certificate and the Program Files test install go.

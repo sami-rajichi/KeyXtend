@@ -4,6 +4,7 @@
 
 use kx_mod_keyboard::legend::is_mark;
 use serde::Deserialize;
+use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
 
 use crate::board;
 use crate::config::GatesConfig;
@@ -54,20 +55,18 @@ fn check_g7(g: &G7) -> Result<(), String> {
     Ok(())
 }
 
-/// Refuses a G25 run that could miss a window or send Esc to another: an empty class, program or Esc, or a V that is
-/// no character key of the product's board.
+/// Refuses a G25 run that could miss a window or press another key: an empty class or program, an `esc` other than
+/// the lone Esc key, which the power dialog gets, or a V that is no character key of the product's board.
 fn check_g25(g: &G25) -> Result<(), String> {
     let empty = |list: &[String]| list.is_empty() || list.iter().any(String::is_empty);
     let names = [&g.power_class, &g.power_program];
-    if empty(&g.panel_classes)
-        || empty(&g.switcher_classes)
-        || names.iter().any(|n| n.is_empty())
-        || g.esc.is_empty()
-    {
+    if empty(&g.panel_classes) || empty(&g.switcher_classes) || names.iter().any(|n| n.is_empty()) {
         return Err(
-            "g25 needs panel and switcher classes, the power dialog's class and program, and Esc"
-                .into(),
+            "g25 needs panel and switcher classes, and the power dialog's class and program".into(),
         );
+    }
+    if g.esc != [VK_ESCAPE.0] {
+        return Err("g25.esc must be the Esc key alone, as the power dialog gets it".into());
     }
     board::char_key(g.v_scan)
         .map(drop)
@@ -216,6 +215,8 @@ pub struct G25 {
 
 #[cfg(test)]
 mod tests {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{VK_F4, VK_MENU, VK_RETURN};
+
     use super::*;
 
     #[test]
@@ -254,7 +255,7 @@ mod tests {
     #[test]
     fn check_refuses_a_g25_that_could_miss_its_window_or_close_another() {
         let good = crate::config::load().expect("kx-gates.toml loads");
-        let bad: [fn(&mut G25); 9] = [
+        let bad: [fn(&mut G25); 12] = [
             |g| g.switcher_classes.clear(),
             |g| g.switcher_classes.push(String::new()),
             |g| g.panel_classes.clear(),
@@ -262,6 +263,9 @@ mod tests {
             |g| g.power_class.clear(),
             |g| g.power_program.clear(),
             |g| g.esc.clear(),
+            |g| g.esc = vec![VK_RETURN.0],
+            |g| g.esc = vec![VK_MENU.0, VK_F4.0],
+            |g| g.esc.push(VK_RETURN.0),
             |g| g.v_scan = 0x01,
             |g| g.v_scan = 0xFFFF,
         ];
