@@ -80,7 +80,7 @@ pub mod qobject {
         #[qinvokable]
         fn layer_page_text(&self, page: i32, pages: i32) -> QString;
 
-        /// A shortcut's tip: the text of name key `name_key`, then the keys of `steps`, a JSON list of key-name lists.
+        /// A shortcut's tip: the text of name key `name_key` and the keys of `steps`, a JSON list of key-name lists.
         #[qinvokable]
         fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString;
 

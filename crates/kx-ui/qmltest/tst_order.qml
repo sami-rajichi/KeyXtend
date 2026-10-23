@@ -1,6 +1,7 @@
-// Texts without bidi marks read in their UI's order (ADR-0022): the space bar puts the language first, and a reset
-// notice names its settings in order, before the count. Text items give no character places, so a twin of the drawn
-// text, with the part to find as a link, shows through `linkAt` where Qt lays that part out.
+// Texts without bidi marks read in their UI's order (ADR-0022): the space bar puts the language first, a reset notice
+// names its settings in order, before the count, and a shortcut's tip keeps its keys in order after its name. Text
+// items give no character places, so a twin of the drawn text, with the part to find as a link, shows through `linkAt`
+// where Qt lays that part out.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtTest
@@ -53,6 +54,17 @@ Item {
             font.pixelSize: lk.shape.notice.font_px * root.s
         }
     }
+    // A shortcut's tip as the tip window draws it: one line in the UI font, at the tip's size and weight.
+    Component {
+        id: tipC
+        Label {
+            required property var lk
+            required property var res
+            font.family: res.fam.ui
+            font.pixelSize: lk.shape.tip.font_px
+            font.weight: lk.shape.tip.weight
+        }
+    }
     // A twin of a drawn text with one part as a link, so `linkAt` finds where Qt lays that part out.
     Component {
         id: twinC
@@ -79,11 +91,17 @@ Item {
         function escaped(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\u00a0/g, "&nbsp;");
         }
-        // Where drawn text `label` lays out `part`: the first line holding it and the middle of its pixels there.
+        // Where drawn text `label` lays out `part`, the first time it holds it: as `placeAt`.
         function placeOf(label, part) {
             const at = label.text.indexOf(part);
             verify(at >= 0, JSON.stringify(part) + " is drawn");
-            const [head, tail] = [label.text.slice(0, at), label.text.slice(at + part.length)];
+            return placeAt(label, at, part.length);
+        }
+        // Where drawn text `label` lays out its `len` characters from `at`: the first line holding them and the middle
+        // of their pixels there.
+        function placeAt(label, at, len) {
+            const part = label.text.slice(at, at + len);
+            const [head, tail] = [label.text.slice(0, at), label.text.slice(at + len)];
             const linked = escaped(head) + "<a href=\"part\">" + escaped(part) + "</a>" + escaped(tail);
             const twin = createTemporaryObject(twinC, root, { text: linked, font: label.font, width: label.width, wrapMode: label.wrapMode });
             compare(twin.lineCount, label.lineCount, "the twin breaks its lines as the drawn text does");
@@ -141,6 +159,25 @@ Item {
             const count = placeOf(label, e.more);
             verify(before(first, second, row.ui.lang.rtl), "the settings read in their order");
             verify(before(second, count, row.ui.lang.rtl), "the settings read before the count");
+        }
+
+        function test_a_shortcuts_tip_reads_its_keys_left_to_right_after_its_name_data() {
+            return rows((t, tag) => Order.texts[tag].tips.map(e => ({ tag: e.keys, entry: e })));
+        }
+        // Each key and mark reads left to right, as keyboards print them, and the name reads first in its UI: Arabic
+        // starts on the keys, so the line runs left to right with the name on their right.
+        function test_a_shortcuts_tip_reads_its_keys_left_to_right_after_its_name(row) {
+            const e = row.entry;
+            const label = createTemporaryObject(tipC, root, { lk: row.lk, res: Board.resOf(row.lk, row.ui), text: e.text });
+            const from = e.text.indexOf(e.keys);
+            verify(from >= 0, "the tip holds its keys");
+            const marks = [...e.keys].map((c, i) => ({ c: c, at: from + i })).filter(m => m.c.trim().length > 0);
+            const keys = marks.map(m => placeAt(label, m.at, 1));
+            for (let i = 1; i < keys.length; i++)
+                verify(before(keys[i - 1], keys[i], false), marks[i - 1].c + " reads before " + marks[i].c);
+            const rtl = row.ui.lang.rtl;
+            const edge = rtl ? keys[keys.length - 1] : keys[0];
+            verify(before(placeOf(label, e.name), edge, rtl), "the name reads first");
         }
     }
 }

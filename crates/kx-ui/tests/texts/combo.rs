@@ -12,6 +12,19 @@ const COPY_ALL: [&[&str]; 2] = [&["ctrl", "a"], &["ctrl", "c"]];
 const REOPEN_TAB: [&[&str]; 1] = [&["ctrl", "shift", "t"]];
 /// Delete all's steps on Windows.
 const DELETE_ALL: [&[&str]; 2] = [&["ctrl", "a"], &["del"]];
+/// Emoji's, Zoom in's and Zoom out's steps on Windows, which end on a period or a sign.
+const EMOJI: [&[&str]; 1] = [&["win", "period"]];
+const ZOOM_IN: [&[&str]; 1] = [&["ctrl", "numplus"]];
+const ZOOM_OUT: [&[&str]; 1] = [&["ctrl", "numminus"]];
+
+/// The tips the Quick reading-order test draws, by name key and steps: each ends on a period or a sign, or holds
+/// Arabic's comma, which a right-to-left line would move.
+pub const ORDERED: [(&str, &[&[&str]]); 4] = [
+    ("shortcut.emoji", &EMOJI),
+    ("shortcut.zoom-in", &ZOOM_IN),
+    ("shortcut.zoom-out", &ZOOM_OUT),
+    ("shortcut.copy-all", &COPY_ALL),
+];
 
 /// Key name `name`.
 fn key(name: &str) -> KeyName {
@@ -19,7 +32,7 @@ fn key(name: &str) -> KeyName {
 }
 
 /// `steps` as key names.
-fn steps(steps: &[&[&str]]) -> Vec<Vec<KeyName>> {
+pub fn steps(steps: &[&[&str]]) -> Vec<Vec<KeyName>> {
     steps
         .iter()
         .map(|s| s.iter().map(|n| key(n)).collect())
@@ -45,10 +58,13 @@ fn french_names_delete_suppr() {
 }
 
 #[test]
-fn arabic_joins_the_steps_with_its_comma() {
-    let tip = lang("ar").keys_tip("shortcut.copy-all", &steps(&COPY_ALL));
-    assert_eq!(tip, "نسخ الكل (Ctrl+A، Ctrl+C)");
-    assert_eq!(lang("ar").text(COMBO_THEN), "\u{60c} ");
+fn arabic_puts_the_keys_first_and_joins_the_steps_with_its_comma() {
+    let ar = lang("ar");
+    let tip = ar.keys_tip("shortcut.copy-all", &steps(&COPY_ALL));
+    assert_eq!(tip, "(Ctrl+A، Ctrl+C) نسخ الكل");
+    let emoji = ar.keys_tip("shortcut.emoji", &steps(&EMOJI));
+    assert_eq!(emoji, "(Win+.) الرموز التعبيرية");
+    assert_eq!(ar.text(COMBO_THEN), "\u{60c} ");
 }
 
 #[test]
@@ -115,7 +131,8 @@ proptest! {
             names.iter().map(|s| s.iter().map(|n| key(n)).collect()).collect();
         for t in all() {
             let tip = t.keys_tip("shortcut.copy", &steps);
-            prop_assert!(tip.starts_with(&t.text("shortcut.copy")), "{}", tip);
+            let (name, keys) = (t.text("shortcut.copy"), t.keys(&steps));
+            prop_assert!(tip.contains(&name) && tip.contains(&keys), "{}", tip);
         }
     }
 }

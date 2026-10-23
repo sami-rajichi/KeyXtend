@@ -216,7 +216,7 @@ var texts = {
   "theme.et66": "ET66",
   "theme.native": "الأصلي المتكيّف",
   "tip.grab": "اضغط للإمساك، ثم حرّك، ثم انقر للإفلات",
-  "tip.keys": "{$name} ({$keys})",
+  "tip.keys": "({$keys}) {$name}",
   "tip.later": "ستتوفّر هذه الميزة في إصدار لاحق",
   "tip.mouse-off": "مساعد الماوس متوقّف",
   "tip.no-shortcuts": "لم يُختَر أي اختصار",

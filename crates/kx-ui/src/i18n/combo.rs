@@ -1,4 +1,4 @@
-//! A shortcut's tip in this language: its name, then its keys as keyboards print them, step by step.
+//! A shortcut's tip in this language: its name and its keys as keyboards print them, in the order `tip.keys` gives.
 
 use super::keys::{COMBO_JOIN, COMBO_THEN, KEYNAME, KEYS_TIP, LABEL};
 use super::{I18n, find_in, join};
@@ -39,8 +39,8 @@ impl I18n {
         steps.join(&self.text(COMBO_THEN))
     }
 
-    /// A shortcut's tip: the text of its name key `name`, then the keys of its `steps`; the name alone when it has no
-    /// keys.
+    /// A shortcut's tip: the text of its name key `name` and the keys of its `steps`, as `tip.keys` orders them; the
+    /// name alone when it has no keys.
     #[must_use]
     pub fn keys_tip(&self, name: &str, steps: &[Vec<KeyName>]) -> String {
         let (name, keys) = (self.text(name), self.keys(steps));

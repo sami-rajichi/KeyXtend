@@ -1,6 +1,7 @@
 //! Every text the hub fills in for QML holds no bidi control, which could make Qt search every font (ADR-0022), QML
 //! draws OS names only through the hub's cleaning, and the filled texts the Quick reading-order test draws.
 
+use crate::combo;
 use crate::files::keys_of;
 use crate::markup::code;
 use crate::qml::spaces;
@@ -105,8 +106,18 @@ fn count_words(t: &I18n, names: &[String], more: usize) -> String {
     words.trim().to_owned()
 }
 
+/// Shortcut tips whose keys a right-to-left line could move, each with its name and keys apart.
+fn tips(t: &I18n) -> Vec<Value> {
+    let tip = |(key, steps): &(&str, &[&[&str]])| {
+        let steps = combo::steps(steps);
+        let (name, keys) = (t.text(key), t.keys(&steps));
+        json!({ "name": name, "keys": keys, "text": t.keys_tip(key, &steps) })
+    };
+    combo::ORDERED.iter().map(tip).collect()
+}
+
 /// The texts the Quick reading-order test draws, per language tag: each space-bar text with its parts and face state,
-/// and a reset notice naming settings and leaving some out.
+/// a reset notice naming settings and leaving some out, and shortcut tips.
 pub fn order() -> Value {
     let mut by_lang = serde_json::Map::new();
     for l in &LANGS {
@@ -119,7 +130,11 @@ pub fn order() -> Value {
         let reset = notice(&t, SETTINGS_RESET, UNKNOWN, &names, LEFT_OUT);
         let more = count_words(&t, &names, LEFT_OUT);
         let reset = json!({ "names": names, "more": more, "text": reset });
-        by_lang.insert(l.tag.to_owned(), json!({ "spaces": space, "reset": reset }));
+        let tips = tips(&t);
+        by_lang.insert(
+            l.tag.to_owned(),
+            json!({ "spaces": space, "reset": reset, "tips": tips }),
+        );
     }
     Value::Object(by_lang)
 }

@@ -35,6 +35,28 @@ var texts = {
         "state": "ar",
         "text": "العربية · Arabic (102) AZERTY"
       }
+    ],
+    "tips": [
+      {
+        "keys": "Win+.",
+        "name": "الرموز التعبيرية",
+        "text": "(Win+.) الرموز التعبيرية"
+      },
+      {
+        "keys": "Ctrl+Num +",
+        "name": "تكبير",
+        "text": "(Ctrl+Num +) تكبير"
+      },
+      {
+        "keys": "Ctrl+Num -",
+        "name": "تصغير",
+        "text": "(Ctrl+Num -) تصغير"
+      },
+      {
+        "keys": "Ctrl+A، Ctrl+C",
+        "name": "نسخ الكل",
+        "text": "(Ctrl+A، Ctrl+C) نسخ الكل"
+      }
     ]
   },
   "en": {
@@ -71,6 +93,28 @@ var texts = {
         "state": "ar",
         "text": "العربية · Arabic (102) AZERTY"
       }
+    ],
+    "tips": [
+      {
+        "keys": "Win+.",
+        "name": "Emoji",
+        "text": "Emoji (Win+.)"
+      },
+      {
+        "keys": "Ctrl+Num +",
+        "name": "Zoom in",
+        "text": "Zoom in (Ctrl+Num +)"
+      },
+      {
+        "keys": "Ctrl+Num -",
+        "name": "Zoom out",
+        "text": "Zoom out (Ctrl+Num -)"
+      },
+      {
+        "keys": "Ctrl+A, Ctrl+C",
+        "name": "Copy all",
+        "text": "Copy all (Ctrl+A, Ctrl+C)"
+      }
     ]
   },
   "fr": {
@@ -106,6 +150,28 @@ var texts = {
         ],
         "state": "ar",
         "text": "العربية · Arabic (102) AZERTY"
+      }
+    ],
+    "tips": [
+      {
+        "keys": "Win+.",
+        "name": "Emoji",
+        "text": "Emoji (Win+.)"
+      },
+      {
+        "keys": "Ctrl+Num +",
+        "name": "Zoom avant",
+        "text": "Zoom avant (Ctrl+Num +)"
+      },
+      {
+        "keys": "Ctrl+Num -",
+        "name": "Zoom arrière",
+        "text": "Zoom arrière (Ctrl+Num -)"
+      },
+      {
+        "keys": "Ctrl+A, Ctrl+C",
+        "name": "Copier tout",
+        "text": "Copier tout (Ctrl+A, Ctrl+C)"
       }
     ]
   }

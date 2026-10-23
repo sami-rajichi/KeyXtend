@@ -201,7 +201,7 @@ var texts = {
   "shortcut.save": "Enregistrer",
   "shortcut.select-all": "Sélectionner tout",
   "shortcut.show-desktop": "Afficher le Bureau",
-  "shortcut.switch-app": "Changer d’application",
+  "shortcut.switch-app": "Basculer entre les applications",
   "shortcut.task-manager": "Gestionnaire des tâches",
   "shortcut.undo": "Annuler",
   "shortcut.zoom-in": "Zoom avant",

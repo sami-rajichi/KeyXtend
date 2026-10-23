@@ -159,7 +159,7 @@ Item {
             ui.texts = Fr.texts;
             compare(ui.keysTip("shortcut.reopen-tab", '[["ctrl","shift","t"]]'), "Rouvrir l’onglet fermé (Ctrl+Maj+T)");
             ui.texts = Ar.texts;
-            compare(ui.keysTip("shortcut.copy-all", copyAll), "نسخ الكل (Ctrl+A، Ctrl+C)");
+            compare(ui.keysTip("shortcut.copy-all", copyAll), "(Ctrl+A، Ctrl+C) نسخ الكل", "Arabic puts the keys first");
             compare(ui.keysTip("shortcut.copy", "[]"), Ar.texts["shortcut.copy"], "no keys: the name alone");
         }
 
