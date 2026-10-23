@@ -22,6 +22,8 @@ QtObject {
             noteTip: (name, note) => name + "\n" + note,
             // A shortcut's tip by its name key and steps (board JSON): its name and keys, as `tip.keys` orders them.
             keysTip: (name, steps) => ui.keysTip(name, JSON.stringify(steps)),
+            // The keys alone, such as `Ctrl+A, Ctrl+C`, which readers hear after a shortcut's name.
+            keysText: steps => ui.keysText(JSON.stringify(steps)),
             // The shortcuts layer's page for readers, from its place in the state (`page` from 0, `pages`).
             layerPage: place => ui.layerPageText(place.page + 1, place.pages)
         };

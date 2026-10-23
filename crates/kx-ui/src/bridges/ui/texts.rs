@@ -53,12 +53,21 @@ impl qobject::Ui {
     }
 
     pub(super) fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString {
-        let key = name_key.to_string();
-        let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(&steps.to_string());
-        let steps = steps.unwrap_or_else(|_| {
-            tracing::warn!("QML sent shortcut steps that do not read");
-            Vec::new()
-        });
+        let (key, steps) = (name_key.to_string(), steps_of(steps));
         qs(&self.with(key.clone(), |h| h.i18n().keys_tip(&key, &steps)))
     }
+
+    pub(super) fn keys_text(&self, steps: &QString) -> QString {
+        let steps = steps_of(steps);
+        qs(&self.with(String::new(), |h| h.i18n().keys(&steps)))
+    }
+}
+
+/// A shortcut's steps from QML's JSON; none when they do not read.
+fn steps_of(steps: &QString) -> Vec<Vec<KeyName>> {
+    let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(&steps.to_string());
+    steps.unwrap_or_else(|_| {
+        tracing::warn!("QML sent shortcut steps that do not read");
+        Vec::new()
+    })
 }

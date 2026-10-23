@@ -84,6 +84,10 @@ pub mod qobject {
         #[qinvokable]
         fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString;
 
+        /// A shortcut's keys alone, such as `Ctrl+A, Ctrl+C`, from `steps`, a JSON list of key-name lists.
+        #[qinvokable]
+        fn keys_text(&self, steps: &QString) -> QString;
+
         /// The tray picture's side in pixels.
         #[qinvokable]
         fn tray_px(&self) -> i32;

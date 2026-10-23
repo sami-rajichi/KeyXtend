@@ -153,10 +153,13 @@ Item {
             verify(tip.name.indexOf(En.texts["label.ctrl"]) > 0, "it names Ctrl: " + tip.name);
             verify(tip.name.startsWith(En.texts["shortcut.copy-all"]), "after the name: " + tip.name);
             compare(key.Accessible.name, En.texts["shortcut.copy-all"], "readers hear the name");
+            compare(key.Accessible.description, win.ui.keysText(JSON.stringify(kv.steps)), "then the keys the tip shows");
+            compare(key.Accessible.description, "Ctrl+A, Ctrl+C");
             turn(win, "layer-3");
             const f5 = keyed(win, "sc-f5");
             mouseMove(f5, f5.width / 2, f5.height / 2);
             compare(tip.name, En.texts["shortcut.f5"], "its name alone, not F5 (F5)");
+            compare(f5.Accessible.description, "", "its name, as its tip, says it all");
         }
 
         function test_the_dots_light_the_page_and_next_wraps_them_back_to_the_first() {
