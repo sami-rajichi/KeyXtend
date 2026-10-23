@@ -1,9 +1,11 @@
-//! `Ui`'s texts: the keyboard's, in the language of the layout in front, and the tray's, in the system's (ADR-0020).
+//! `Ui`'s texts: the keyboard's, in the language of the layout in front, shortcut tips among them, and the tray's, in
+//! the system's (ADR-0020).
 
 use super::qobject;
 use crate::bridges::qs;
 use crate::hub::{Hub, NULL};
 use cxx_qt_lib::QString;
+use kx_module_api::ports::KeyName;
 
 impl qobject::Ui {
     pub(super) fn lang_json(&self) -> QString {
@@ -42,5 +44,15 @@ impl qobject::Ui {
         let (at, count) = (usize::try_from(at), usize::try_from(count));
         let (at, count) = (at.unwrap_or_default(), count.unwrap_or_default());
         qs(&self.with(String::new(), |h| h.i18n().page(at, count)))
+    }
+
+    pub(super) fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString {
+        let key = name_key.to_string();
+        let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(&steps.to_string());
+        let steps = steps.unwrap_or_else(|_| {
+            tracing::warn!("QML sent shortcut steps that do not read");
+            Vec::new()
+        });
+        qs(&self.with(key.clone(), |h| h.i18n().keys_tip(&key, &steps)))
     }
 }

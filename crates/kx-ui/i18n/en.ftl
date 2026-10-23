@@ -67,7 +67,9 @@ label =
     .settings = Settings
     .power = Power
 
+## What a key says after its name; .keys is a shortcut's tip, its $name and then the $keys it sends.
 tip =
+    .keys = { $name } ({ $keys })
     .later = Coming in a later version
     .one-lang = Only one keyboard language is installed
     .mouse-off = Mouse assist is off
@@ -116,6 +118,17 @@ shortcut =
     .f10 = F10
     .f11 = F11
     .f12 = F12
+
+## Keys a shortcut's tip names when no key label does, as keyboards print them; letters, digits and F1 to F24 show as themselves.
+keyname =
+    .period = .
+    .numplus = Num +
+    .numminus = Num -
+
+## A shortcut's tip: what joins the keys pressed together, then what joins its steps.
+combo =
+    .join = +
+    .then = {", "}
 
 ## Arabic marks by name, which screen readers say for a key that types them; .join links marks typed together.
 mark =

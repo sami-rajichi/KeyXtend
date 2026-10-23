@@ -72,3 +72,13 @@ pub const PAGE_ON: &str = "page.on";
 pub const CATCH: &str = "catch";
 /// What links the names of Arabic marks typed together, which readers hear for a mark key (`Key.qml`).
 pub const MARK_JOIN: &str = "mark.join";
+/// The words keys print, by board id; a shortcut's tip names a key by its label first.
+pub const LABEL: &str = "label";
+/// Key names a shortcut's tip shows when no label names them, by key name, such as `keyname.numplus`.
+pub const KEYNAME: &str = "keyname";
+/// What joins the keys of one step in a shortcut's tip: `+`.
+pub const COMBO_JOIN: &str = "combo.join";
+/// What joins the steps of a shortcut's tip.
+pub const COMBO_THEN: &str = "combo.then";
+/// A shortcut's tip: its `$name`, then the `$keys` it sends.
+pub const KEYS_TIP: &str = "tip.keys";

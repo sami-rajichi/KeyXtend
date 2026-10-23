@@ -1,5 +1,6 @@
-//! The shipped English, French and Arabic files: the same keys, every text the UI names, plurals and punctuation, the
-//! QML test fixtures made from them, the window titles and flags the guard relies on, and plain-text QML.
+//! The shipped English, French and Arabic files: the same keys, every text the UI names, plurals and punctuation,
+//! shortcut tips, the QML test fixtures made from them, the window titles and flags the guard relies on, and plain-text
+//! QML.
 
 #![allow(
     clippy::expect_used,
@@ -8,6 +9,7 @@
 
 #[path = "../shared/board.rs"]
 mod board;
+mod combo;
 mod compose;
 mod files;
 mod filled;

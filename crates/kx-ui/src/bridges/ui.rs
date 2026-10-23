@@ -76,6 +76,10 @@ pub mod qobject {
         #[qinvokable]
         fn page_text(&self, at: i32, count: i32) -> QString;
 
+        /// A shortcut's tip: the text of name key `name_key`, then the keys of `steps`, a JSON list of key-name lists.
+        #[qinvokable]
+        fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString;
+
         /// The tray picture's side in pixels.
         #[qinvokable]
         fn tray_px(&self) -> i32;

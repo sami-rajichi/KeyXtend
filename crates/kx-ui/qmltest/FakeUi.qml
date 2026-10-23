@@ -181,6 +181,17 @@ QtObject {
     function pageText(at, count) {
         return text("page.of").replace("{$at}", at).replace("{$count}", count);
     }
+    // Names a shortcut's keys as the hub does: a key's label, else its `keyname` text, else its name in upper case.
+    function keysTip(nameKey, steps) {
+        const named = n => ["label.", "keyname."].map(g => said.texts[g + n]).find(t => t !== undefined);
+        const shown = n => named(n) !== undefined ? named(n) : n.toUpperCase();
+        const each = JSON.parse(steps).filter(s => s.length > 0).map(s => s.map(shown).join(text("combo.join")));
+        const name = text(nameKey);
+        if (each.length === 0)
+            return name;
+        const keys = each.join(text("combo.then"));
+        return text("tip.keys").replace("{$name}", () => name).replace("{$keys}", () => keys);
+    }
     function trayPx() {
         return trayPixels;
     }

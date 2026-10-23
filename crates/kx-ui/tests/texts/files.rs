@@ -9,9 +9,9 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BADGE_FAST, BADGE_HOLDING, BADGE_JOIN, BADGE_SLOW, BANNER_MORE, BAR, DPAD, LANG_KEY,
-    LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE, MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON,
-    RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW,
+    BADGE_FAST, BADGE_HOLDING, BADGE_JOIN, BADGE_SLOW, BANNER_MORE, BAR, COMBO_JOIN, COMBO_THEN,
+    DPAD, KEYS_TIP, LANG_KEY, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE, MODULE, OK,
+    PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW,
 };
 use std::collections::BTreeSet;
 
@@ -100,6 +100,9 @@ fn every_notice_and_view_key_has_its_text() {
         BADGE_JOIN,
         BADGE_SLOW,
         BADGE_FAST,
+        COMBO_JOIN,
+        COMBO_THEN,
+        KEYS_TIP,
     ];
     for t in all() {
         let missing: Vec<&str> = ALL_KEYS

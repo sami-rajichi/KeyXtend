@@ -1,7 +1,8 @@
-//! What only the app sees, since it alone depends on every crate: the board, the modules and the language key's
-//! designs have their texts in every language, the board's icons resolve, every paint names tokens each theme has,
-//! every character key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a
-//! rule go back to their default, and the stage puts Qt's QML where the app pins it.
+//! What only the app sees, since it alone depends on every crate: the board, the shortcuts layer, the modules and the
+//! language key's designs have their texts in every language, the shortcuts agree with the Windows table, the board's
+//! icons resolve, every paint names tokens each theme has, every character key has its scan code in the layouts
+//! table, a size, a buffer pool or the shortcut pages past a rule go back to their default, and the stage puts Qt's
+//! QML where the app pins it.
 
 #![allow(
     clippy::unwrap_used,
@@ -15,6 +16,9 @@ mod pages;
 mod paint;
 mod pool;
 mod scans;
+// The Windows adapter serves its shortcut table on Windows only.
+#[cfg(windows)]
+mod shortcuts;
 mod sizes;
 mod stage;
 mod texts;

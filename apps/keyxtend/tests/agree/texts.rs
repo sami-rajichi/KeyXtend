@@ -1,30 +1,56 @@
-//! Every name, label and tip the face draws, every mark it names, every module the app ships and the kernel, and
-//! every language-key design has its text in English, French and Arabic; every mark it names is one the theme's mark
-//! fonts are checked to draw.
+//! Every name, label and tip the face draws, with the shortcuts layer hidden or on any page, every text a shortcut's
+//! tip is made of, every mark it names, every module the app ships and the kernel, and every language-key design has
+//! its text in English, French and Arabic; every mark it names is one the theme's mark fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
 use crate::{board, designs};
 use keyxtend::boot::modules;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
+use kx_mod_keyboard::spec::NEXT_ID;
 use kx_mod_keyboard::view::{
-    EMPTY_NAME, LONE_TIP, NO_SHORTCUTS_TIP, POWER_OFF_TIP, SCROLL_OFF_TIP, with_layer,
+    BoardView, EMPTY_NAME, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
+    SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX, with_layer,
 };
 use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey, Layer, SPEC};
 use kx_module_api::ports::ShortcutId;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
-use kx_ui::i18n::keys::{LANG_KEY, MODULE};
+use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::{BTreeSet, HashSet};
 
 /// The keys of `wanted` some shipped language has no text for, with that language's tag.
-fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
+pub(crate) fn missing(wanted: &BTreeSet<String>) -> Vec<(&'static str, &String)> {
     let langs = LANGS.iter().map(|l| (l.tag, I18n::new(l)));
     let gaps = langs.flat_map(|(tag, t)| {
         let absent: Vec<&String> = wanted.iter().filter(|k| !t.has(k)).collect();
         absent.into_iter().map(move |k| (tag, k))
     });
     gaps.collect()
+}
+
+/// The owner's shortcut pages, the default.
+fn pages() -> Vec<Vec<ShortcutId>> {
+    SPEC.defaults_as::<KeyboardSettings>()
+        .unwrap()
+        .shortcut_pages
+}
+
+/// The board with the language key in `design`: the layer hidden, then shown on each of its pages.
+fn views(design: LangKey) -> Vec<BoardView> {
+    let spec = BoardSpec::shipped().unwrap();
+    let pages = pages();
+    let known: HashSet<ShortcutId> = pages.iter().flatten().cloned().collect();
+    let mut layer = Layer::new(spec.layer_grid(), &pages, &known);
+    let mut views = vec![board(design)];
+    layer.toggle();
+    for _ in &pages {
+        let mut view = board(design);
+        with_layer(&mut view, &spec, &layer, &[]);
+        views.push(view);
+        layer.next_page();
+    }
+    views
 }
 
 #[test]
@@ -35,46 +61,29 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
         SCROLL_OFF_TIP,
         NO_SHORTCUTS_TIP,
         POWER_OFF_TIP,
+        KEYS_TIP,
+        COMBO_JOIN,
+        COMBO_THEN,
     ];
     let mut wanted: BTreeSet<String> = fixed.map(str::to_owned).into();
-    for design in designs() {
-        let view = board(design);
+    for view in designs().into_iter().flat_map(views) {
         for k in &view.keys {
             let tip = k.tip.map(str::to_owned);
             wanted.extend([k.name.clone(), k.label.clone(), tip].into_iter().flatten());
         }
         wanted.insert(view.dpad.name.to_owned());
     }
-    assert!(
-        wanted.len() > LANGS.len(),
-        "the board names its keys: {wanted:?}"
-    );
+    let named = wanted
+        .iter()
+        .filter(|k| k.starts_with(SHORTCUT_NAME_PREFIX));
+    assert_eq!(named.count(), pages().concat().len(), "every shortcut");
+    assert!(wanted.contains(&format!("{NAME_PREFIX}{NEXT_ID}")), "Next");
     assert_eq!(missing(&wanted), Vec::new());
 }
 
 #[test]
-fn every_name_and_label_on_every_default_shortcut_page_has_its_text() {
-    let spec = BoardSpec::shipped().unwrap();
-    let pages = SPEC
-        .defaults_as::<KeyboardSettings>()
-        .unwrap()
-        .shortcut_pages;
-    let known: HashSet<ShortcutId> = pages.iter().flatten().cloned().collect();
-    let mut layer = Layer::new(spec.layer_grid(), &pages, &known);
-    layer.toggle();
-    let mut wanted = BTreeSet::new();
-    for _ in &pages {
-        let mut view = board(LangKey::Carousel);
-        with_layer(&mut view, &spec, &layer, &[]);
-        let side = view.keys.into_iter().filter(|k| k.side);
-        wanted.extend(side.flat_map(|k| [k.name, k.label]).flatten());
-        layer.next_page();
-    }
-    assert!(
-        wanted.len() > known.len(),
-        "every shortcut and Next: {wanted:?}"
-    );
-    assert_eq!(missing(&wanted), Vec::new());
+fn a_shortcuts_tip_reads_key_labels_from_the_group_the_board_names_them_in() {
+    assert_eq!(format!("{LABEL}."), LABEL_PREFIX);
 }
 
 #[test]

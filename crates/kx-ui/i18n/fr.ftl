@@ -67,7 +67,9 @@ label =
     .settings = Paramètres
     .power = Marche/Arrêt
 
+## Ce qu’une touche dit après son nom. .keys est l’info-bulle d’un raccourci, son $name puis les $keys qu’il envoie.
 tip =
+    .keys = { $name } ({ $keys })
     .later = Disponible dans une version ultérieure
     .one-lang = Une seule langue de clavier est installée
     .mouse-off = L’aide à la souris est désactivée
@@ -116,6 +118,17 @@ shortcut =
     .f10 = F10
     .f11 = F11
     .f12 = F12
+
+## Les touches que nomme l’info-bulle d’un raccourci quand aucune étiquette ne le fait, comme sur les claviers. Lettres, chiffres et F1 à F24 s’écrivent tels quels.
+keyname =
+    .period = .
+    .numplus = Num +
+    .numminus = Num -
+
+## L’info-bulle d’un raccourci, ce qui relie les touches pressées ensemble, puis ce qui relie ses étapes.
+combo =
+    .join = +
+    .then = {", "}
 
 ## Les signes arabes par leur nom, que disent les lecteurs d’écran ; .join relie ceux tapés ensemble.
 mark =
