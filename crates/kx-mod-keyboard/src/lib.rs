@@ -1,5 +1,6 @@
 //! The keyboard module: the board and its geometry, the keyboard's size and place, typing with sticky
-//! modifiers, the language key and the `KeyboardFace` the UI draws. It talks to the OS only through ports.
+//! modifiers, the language key, the shortcuts layer and the `KeyboardFace` the UI draws. It talks to the OS only
+//! through ports.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -8,6 +9,7 @@ pub mod face;
 pub mod geom;
 pub mod langkey;
 pub mod latch;
+pub mod layer;
 pub mod legend;
 mod manifest;
 pub mod panel;
@@ -24,6 +26,7 @@ pub use face::Face;
 pub use geom::{Area, Board, KeyBox, board};
 pub use langkey::{LangClick, LangName, LangView, Turn};
 pub use latch::Latches;
+pub use layer::{Layer, LayerCell, LayerKey};
 pub use legend::{Legend, LegendMods};
 pub use manifest::{ID, MANIFEST};
 pub use panel::{LangList, LangRow, ListView, Moved};
