@@ -11,7 +11,8 @@ use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
 use crate::g25::{self, part};
-use crate::g25wins::{self, EscTo, Watch};
+use crate::g25watch::Watch;
+use crate::g25wins::{self, EscTo};
 use crate::modekey::ModeKey;
 use crate::product::{self, Keyboard};
 use crate::simuser::keys_ours;

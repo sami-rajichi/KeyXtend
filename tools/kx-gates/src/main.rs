@@ -51,6 +51,7 @@ mod g23;
 mod g24;
 mod g25;
 mod g25layer;
+mod g25watch;
 mod g25wins;
 mod g26;
 mod g2hand;
