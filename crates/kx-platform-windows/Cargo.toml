@@ -19,7 +19,10 @@ sim-input = []
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
+# The compiled-in shortcut and key-name tables.
+serde.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 # The pointer hook and the speaker log counts, error codes and waits only.
 tracing.workspace = true
 
@@ -28,7 +31,8 @@ tracing.workspace = true
 # The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops, DXGI ranks the
 # graphics adapters by power, the heap calls give free pages back (`System_Memory`, `System_SystemServices`), the
 # mouse hook reads the tick count (`System_SystemInformation`) and tests the input desktop
-# (`System_StationsAndDesktops`), and the speaker plays through XAudio2.
+# (`System_StationsAndDesktops`), the speaker plays through XAudio2, and the Lock PC shortcut locks the session
+# (`System_Shutdown`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -45,6 +49,7 @@ windows = { workspace = true, features = [
     "Win32_System_Memory",
     "Win32_System_Performance",
     "Win32_System_Registry",
+    "Win32_System_Shutdown",
     "Win32_System_SystemInformation",
     "Win32_System_StationsAndDesktops",
     "Win32_System_SystemServices",

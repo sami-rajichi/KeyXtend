@@ -27,6 +27,7 @@ pub mod memory;
 mod platform;
 pub mod screen;
 pub mod scroll;
+pub mod shortcut;
 pub mod sound;
 pub mod strokes;
 pub mod sysui;
@@ -57,6 +58,8 @@ pub use platform::WindowsPlatform;
 pub use screen::WinScreens;
 #[cfg(windows)]
 pub use scroll::WinScroll;
+#[cfg(windows)]
+pub use shortcut::WinShortcuts;
 #[cfg(windows)]
 pub use sound::WinSpeaker;
 #[cfg(windows)]
