@@ -69,7 +69,7 @@ impl Drawn {
 }
 
 /// Every pair view `v` draws on a keyboard whose rows are `row_px` high at size 1: legends on caps, the language
-/// key's marks, the D-pad, the plate and the panels.
+/// key's and the shortcuts layer's marks, the D-pad, the plate and the panels.
 #[must_use]
 pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     let (mut out, h) = (Vec::new(), height(v, row_px));
@@ -200,6 +200,16 @@ fn keys(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     }
 }
 
+/// The fill and skirt of the key whose ink is `ink`, from its `KEYS` row; clear when no row has it, which fails.
+fn fill_of(v: &LookView, ink: &str) -> Fill {
+    let row = KEYS.iter().find(|k| k.0 == ink);
+    let clear = Fill {
+        top: Rgba::CLEAR,
+        skirt: Rgba::CLEAR,
+    };
+    row.map_or(clear, |&(_, top, skirt, _)| fill(v, top, skirt))
+}
+
 /// The marks on a key `h` high: the language key's in `legend_mod` (Cycle's unlit dots and globe, List's chevron,
 /// Carousel's side names), and the shortcuts layer's in `legend_act` (a shortcut's icon, Next's chevron and unlit dots).
 fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
@@ -220,12 +230,8 @@ fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
         (NEXT_CHEVRON, 1.0, Mark::Next, WCAG_AA),
         (NEXT_DOT, off, Mark::Pages, WCAG_SHAPES),
     ];
-    let keys = [
-        ("legend_mod", "key_mod", "key_mod", &lang[..]),
-        ("legend_act", "key_act", "key_mod", &layer[..]),
-    ];
-    for (ink, top, skirt, marks) in keys {
-        let (ink, f) = (token(v, ink), fill(v, top, skirt));
+    for (ink, marks) in [("legend_mod", &lang[..]), ("legend_act", &layer[..])] {
+        let (ink, f) = (token(v, ink), fill_of(v, ink));
         for &(name, share, mark, min) in marks {
             let l = Legend {
                 name,

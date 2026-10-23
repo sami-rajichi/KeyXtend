@@ -104,3 +104,16 @@ fn an_unlit_dot_faded_too_far_is_named_on_both_keys() {
         assert!(low.iter().any(|l| l.starts_with(name)), "{name}: {low:?}");
     }
 }
+
+#[test]
+fn the_marks_take_the_fill_and_skirt_of_their_inks_keys_row() {
+    let t = themes();
+    for (at, v) in views(&t, &SysLook::default()) {
+        for (ink, top, skirt, _) in KEYS {
+            let (got, want) = (fill_of(&v, ink), fill(&v, top, skirt));
+            assert_eq!((got.top, got.skirt), (want.top, want.skirt), "{at}: {ink}");
+        }
+        let none = fill_of(&v, "no-such-ink");
+        assert_eq!((none.top, none.skirt), (Rgba::CLEAR, Rgba::CLEAR), "{at}");
+    }
+}
