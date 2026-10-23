@@ -79,6 +79,14 @@ impl BoardSpec {
         }
     }
 
+    /// True when side key `id` hides while the layer shows: every side key but the one that shows the layer.
+    #[must_use]
+    pub fn layer_hides(&self, id: &str) -> bool {
+        self.side
+            .iter()
+            .any(|s| s.id == id && s.role != Role::Layer)
+    }
+
     /// The side key that shows the layer, if any.
     fn layer_key(&self) -> Option<&SideSpec> {
         self.side.iter().find(|s| s.role == Role::Layer)

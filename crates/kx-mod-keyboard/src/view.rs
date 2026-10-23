@@ -249,18 +249,8 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
 /// Key `k`'s legends, light, paint and tip with the legend modifiers `mods` on a layout written right to left when
 /// `rtl`; the language key says so when one layout, or none, is installed.
 fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> KeyState {
-    match k.role {
-        Role::Later => {
-            return KeyState {
-                dim: true,
-                paint: DIM,
-                ..KeyState::default()
-            };
-        }
-        Role::Assist(a) => return assist::assist_state(i.assist, a, k.kind),
-        Role::Layer => return layer::layer_key(i.layer, k.kind),
-        Role::Power => return power::power_key(i.power, k.kind),
-        _ => {}
+    if let Some(state) = role_state(i, k) {
+        return state;
     }
     let chars = k.sc.filter(|_| k.role == Role::Char);
     if let Some(c) = chars.and_then(|sc| i.table.keys.get(&sc)) {
@@ -287,6 +277,21 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
         paint: paint(k.kind, on),
         tip: still.then_some(LONE_TIP),
         ..KeyState::default()
+    }
+}
+
+/// Key `k`'s state when its role alone sets it: a later key, a mouse mode, the Shortcuts key or the Power key.
+fn role_state(i: &StateInput<'_>, k: &KeyBox) -> Option<KeyState> {
+    match k.role {
+        Role::Later => Some(KeyState {
+            dim: true,
+            paint: DIM,
+            ..KeyState::default()
+        }),
+        Role::Assist(a) => Some(assist::assist_state(i.assist, a, k.kind)),
+        Role::Layer => Some(layer::layer_key(i.layer, k.kind)),
+        Role::Power => Some(power::power_key(i.power, k.kind)),
+        _ => None,
     }
 }
 

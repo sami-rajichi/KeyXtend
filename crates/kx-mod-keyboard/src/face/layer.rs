@@ -4,7 +4,6 @@
 
 use super::inner::Inner;
 use super::{Face, REDRAW};
-use crate::spec::Role;
 use kx_module_api::ports::{FaceReply, ScrollStop};
 
 impl Face {
@@ -31,7 +30,6 @@ impl Face {
 
     /// True while the layer shows and hides side key `id`: every side key but the Shortcuts key.
     pub(super) fn hides(&self, inner: &Inner, id: &str) -> bool {
-        let hidden = |role: Role| role != Role::Layer;
-        inner.layered() && self.spec.side.iter().any(|s| s.id == id && hidden(s.role))
+        inner.layered() && self.spec.layer_hides(id)
     }
 }

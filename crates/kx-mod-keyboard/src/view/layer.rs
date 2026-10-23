@@ -5,7 +5,7 @@
 use super::{BoardView, DIM, KeyState, KeyView, NAME_PREFIX, paint};
 use crate::geom::side_area;
 use crate::layer::{Layer, LayerCell, LayerKey};
-use crate::spec::{BoardSpec, KeyKind, NEXT_ID, Role};
+use crate::spec::{BoardSpec, KeyKind, NEXT_ID};
 use kx_module_api::ports::{KeyName, ShortcutId, ShortcutInfo, Step};
 use serde::Serialize;
 
@@ -35,9 +35,7 @@ pub fn with_layer(view: &mut BoardView, spec: &BoardSpec, layer: &Layer, known: 
     if !layer.shown() {
         return;
     }
-    let key = spec.side.iter().find(|s| s.role == Role::Layer);
-    let key = key.map(|s| s.id.as_str());
-    view.keys.retain(|k| !k.side || Some(k.id.as_str()) == key);
+    view.keys.retain(|k| !(k.side && spec.layer_hides(&k.id)));
     let size = view.size;
     let cells = layer.cells();
     let drawn = cells.iter().map(|c| cell_view(spec, size, c, known));

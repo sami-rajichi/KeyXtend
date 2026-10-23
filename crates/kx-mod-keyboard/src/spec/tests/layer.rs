@@ -72,6 +72,23 @@ fn without_a_layer_key_every_side_cell_is_the_layers() {
 }
 
 #[test]
+fn the_layer_hides_every_side_key_but_its_own_and_no_main_key() {
+    let s = spec();
+    let hidden: Vec<&str> = s
+        .side
+        .iter()
+        .map(|k| k.id.as_str())
+        .filter(|id| s.layer_hides(id))
+        .collect();
+    assert_eq!(hidden.len(), s.side.len() - 1, "{hidden:?}");
+    assert!(!s.layer_hides("shortcuts") && !s.layer_hides("esc") && !s.layer_hides(NEXT_ID));
+    assert!(
+        without_layer().layer_hides("shortcuts"),
+        "a key that shows no layer hides"
+    );
+}
+
+#[test]
 fn next_must_sit_on_the_side_grid() {
     for next in [[0, 5], [4, 5], [3, 0], [3, 6]] {
         let mut s = spec();
