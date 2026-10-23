@@ -56,7 +56,17 @@ The early design mock-up, kept as a record, is [keyboard-style-lab.html](design/
 
 ## Status
 
-Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen) and the kernel and settings (P2) are done, the keyboard core (P3) types English, French and Arabic, mouse assist (P4) right-clicks and drags with clicks only, and the scroll pad (P5) scrolls the window last pointed at with clicks only. The shortcuts layer and the Power key (P6) are done too: one click sends a common shortcut, such as Copy all or Switch app, or opens the system's power dialog. The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
+Early development. Done so far:
+
+- P0: the foundation.
+- P1: the UI toolkit test round; Qt was chosen.
+- P2: the kernel and the settings.
+- P3: the keyboard core, which types English, French and Arabic.
+- P4: mouse assist, which right-clicks and drags with clicks only.
+- P5: the scroll pad, which scrolls the window last pointed at with clicks only.
+- P6: the shortcuts layer and the Power key: one click sends a common shortcut, such as Copy all or Switch app, or opens the system's power dialog.
+
+The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
 ## Using the keyboard
 
@@ -77,7 +87,7 @@ Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen
   - A Shift, Ctrl, Alt, AltGr or Win clicked before a shortcut joins it (Lock PC goes alone), then lets go as after any key: Shift, then New tab, sends Ctrl+Shift+T.
   - Opening the layer stops the scroll pad, which hides until the layer closes; Right-click and Grab stay as they were.
   - The `[keyboard] shortcut_pages` setting lists the pages by shortcut id: editing first, then Windows, tabs and zoom, then F1 to F12. A page holds 13 shortcuts, or 14 when it is the only one, with at most 6 pages, and an id Windows does not know is skipped; the Settings window will arrange the pages (P13).
-- **The Power key** opens Windows' own power dialog, where you choose what to do or cancel; KeyXtend never shuts down by itself. The key dims, with a tip, while the power module is off, and a notice says so when the dialog cannot open.
+- **The Power key** opens Windows' own power dialog, where you choose what to do or cancel; KeyXtend never shuts down by itself. It dims, with a tip, when the Power key is switched off, and a notice says so when the dialog cannot open.
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.

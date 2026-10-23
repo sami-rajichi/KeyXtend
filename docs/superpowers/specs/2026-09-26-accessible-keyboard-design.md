@@ -173,20 +173,21 @@ The **shortcuts layer** (owner, 2026-10-23):
 
 - The Shortcuts key swaps the rest of the side block for one-click shortcuts. It stays in its place, lit like a latched modifier, and a second click brings the usual side keys back; there is no Back key.
 - The layer stays up after a shortcut, so Select all and then Copy need no trip back.
-- Shortcut keys show an icon. Their tip gives the name and the keys sent, such as "Copy all (Ctrl+A, Ctrl+C)", in the keyboard's language. F1–F12 show as text, like real keys.
+- Shortcut keys show an icon. Their tip gives the name and the keys sent, such as "Copy all (Ctrl+A, Ctrl+C)", in the keyboard's language.
+- F1–F12 show as text, like real keys.
 - A shortcut can be a short chain of steps: Copy all is Ctrl+A, then Ctrl+C.
 - **Pages:** the user arranges the shortcuts on pages, like a phone's home screen (`[keyboard] shortcut_pages`, edited in the Settings window from P13).
   - With more than one page, the bottom-right cell is a Next key with one dot per page, the current one lit, as the language key's Cycle design. After the last page it goes back to the first.
-  - A page holds 13 shortcuts, or 14 when it is the only page.
+  - A page holds 13 shortcuts, or 14 when it is the only page, and there are at most 6 pages, as many dots as the Next key fits.
 - **Starting set:**
   - page 1: Copy, Paste, Cut, Select all, Undo, Redo, Copy all, Cut all, Delete all, Find, Save, Print, Emoji;
   - page 2: Switch app, Show desktop, File Explorer, Lock PC, Task Manager, Close window, New tab, Close tab, Reopen tab, Refresh, Zoom in, Zoom out;
   - page 3: F1–F12.
 - Users show, hide and order these; they cannot make new ones. New shortcuts come from the owner in updates.
-- Latched Shift, Ctrl, Alt or Win join every step, as on a real keyboard (Shift + New tab reopens a closed tab), then let go as after any key. Shortcut keys never repeat while held.
+- Every latched modifier, AltGr too, joins each step, as on a real keyboard (Shift + New tab reopens a closed tab), then lets go as after any key; Lock PC goes alone. Shortcut keys never repeat while held.
 - **Switch app** opens the system's switcher and keeps it open, so one click shows every window and the user clicks one: Ctrl+Alt+Tab on Windows, Mission Control on macOS, the Activities view on GNOME.
 - Opening the layer stops the scroll pad, since its Stop leaves the screen. Right-click and Grab keep their mode, which the badge shows.
-- **Every platform** (ADR-0031): the keyboard knows a shortcut only by what it does. Each platform adapter's table gives its keys, such as Ctrl+C on Windows and Linux and ⌘C on macOS, or an OS call where keys cannot do it. A shortcut a platform lacks is hidden there.
+- **Every platform** (ADR-0031): the keyboard knows a shortcut only by what it does. Each platform adapter's table gives its keys, such as Ctrl+C on Windows and Linux and ⌘C on macOS, or an OS call where keys cannot do it; a shortcut a platform lacks is hidden there.
 
 ### 4.3 Languages and layouts
 
