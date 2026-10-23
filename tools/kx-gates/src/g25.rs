@@ -168,9 +168,11 @@ fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     }))
 }
 
-/// Runs G25 on `name`; its copied text leaves Windows clipboard history even when the run fails.
+/// Runs G25 on `name`, refused while a window of the power dialog's class shows; its copied text leaves Windows
+/// clipboard history even when the run fails.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
+    g25wins::no_dialog(ctx)?;
     let (g, since) = (&ctx.cfg.g25, winclip::now());
     let doc = probe::open_text(ctx, kind, &g.text)?;
     let result = probe::run_on(ctx, doc, |doc| drive(ctx, &doc.app));

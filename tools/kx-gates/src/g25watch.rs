@@ -1,5 +1,5 @@
 //! G25's watch on system windows: the windows of one kind that show after the watch starts, each picked from plain
-//! window facts.
+//! window facts, and the facts of every window shown now.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -36,6 +36,11 @@ pub fn picked(facts: &Facts, classes: &[String], program: Option<&str>) -> bool 
             .is_some_and(|f| apps::same_program(f, p))
     };
     classes.contains(&facts.class) && program.is_none_or(from)
+}
+
+/// The facts of every window a person sees now, old or new.
+pub fn seen() -> Vec<Facts> {
+    win::seen_windows().into_iter().map(Facts::of).collect()
 }
 
 /// The windows of one kind a person sees that they did not see when the watch started.

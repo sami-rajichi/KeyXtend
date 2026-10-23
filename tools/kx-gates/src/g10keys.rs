@@ -131,8 +131,8 @@ fn step(id: &str, presses: &[&str], expect: Expect, toggles: bool) -> Step {
     }
 }
 
-/// The step for key `id` with `role` and scan code `sc`; none for a character key or the language key. Win's step
-/// latches `spare` between its presses.
+/// The step for key `id` with `role` and scan code `sc`; none for a character key, the language key or the Power key.
+/// Win's step latches `spare` between its presses.
 fn step_for(
     id: &str,
     role: Role,

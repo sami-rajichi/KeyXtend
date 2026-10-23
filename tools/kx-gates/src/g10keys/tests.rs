@@ -194,8 +194,8 @@ fn a_mouse_assist_key_is_pressed_twice_so_its_mode_comes_back_and_must_send_noth
 }
 
 #[test]
-fn only_a_mouse_assist_key_puts_its_mode_back_even_after_the_guard_stops() {
-    for id in ["rclick", "grab"] {
+fn only_the_mouse_assist_and_shortcuts_keys_put_their_mode_back_even_after_the_guard_stops() {
+    for id in ["rclick", "grab", "shortcuts"] {
         assert!(step_of(false, id).puts_back, "{id}");
     }
     for id in ["esc", "caps", "shift", "mic"] {

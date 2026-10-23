@@ -8,13 +8,15 @@ use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{Ctx, Opened};
-use crate::g25watch::Watch;
+use crate::g25watch::{self, Facts, Watch, picked};
 use crate::keymap::Reader;
 use crate::modekey::ModeKey;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::{board, g10keys, g25, keys, probe, win};
 
+/// Why G25 refuses to start, or to click Power, while a window of the power dialog's class already shows.
+const ALREADY_OPEN: &str = "a power dialog is already open: the owner closes it first";
 /// The result's note when a window of the power dialog's class stays open, so the owner closes it.
 const LEFT_OPEN: &str = "a window of the power dialog's class is still open: the owner closes it";
 /// The result's note when no watched window showed in time, as one of a class `[g25]` lacks, or a late one, may show.
@@ -89,8 +91,31 @@ pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value
     Ok(result)
 }
 
-/// Lets the Win latch go without a lone press, as G10 does: Shift latches over it first. Win's state after, if read.
-fn let_go(win_id: &str) -> Result<Option<bool>, String> {
+/// Ok unless one of the windows `seen` has one of the dialog's `classes`, whatever its program, old or new: G25's Alt
+/// taps would reach it, so G25 refuses with why.
+pub fn none_open(seen: &[Facts], classes: &[String]) -> Result<(), String> {
+    if seen.iter().any(|f| picked(f, classes, None)) {
+        return Err(ALREADY_OPEN.to_owned());
+    }
+    Ok(())
+}
+
+/// `none_open` on the windows shown now, before G25 starts and before its Power click.
+pub fn no_dialog(ctx: &Ctx) -> Result<(), String> {
+    none_open(
+        &g25watch::seen(),
+        std::slice::from_ref(&ctx.cfg.g25.power_class),
+    )
+}
+
+/// True when both latches `after` the undo, Win's and its spare Shift's, read as let go.
+pub fn both_let_go(after: (Option<bool>, Option<bool>)) -> bool {
+    after == (Some(false), Some(false))
+}
+
+/// Lets the Win latch go without a lone press, as G10 does: Shift latches over it first. Win's and Shift's states
+/// after, each if read.
+fn let_go(win_id: &str) -> Result<(Option<bool>, Option<bool>), String> {
     let (spare, reader, kb) = (
         board::latch_id(Latch::Shift)?,
         Reader::new()?,
@@ -98,10 +123,11 @@ fn let_go(win_id: &str) -> Result<Option<bool>, String> {
     );
     let read = |id: &str| reader.toggled(kb.hwnd, id).ok().flatten();
     let press = |id: &str| reader.restore(kb.hwnd, id).is_ok();
-    Ok(g10keys::undo((win_id, &spare), read, press).0)
+    Ok(g10keys::undo((win_id, &spare), read, press))
 }
 
-/// The product's Win and V keys show the clipboard panel, which Esc closes; Win is let go after, whatever happened.
+/// The product's Win and V keys show the clipboard panel, which Esc closes; Win and its spare Shift are let go after,
+/// whatever happened, and the part passes only once both read as let go.
 pub fn clip_window(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     let g = &ctx.cfg.g25;
     let (win_id, v) = (board::latch_id(Latch::Win)?, board::char_key(g.v_scan)?);
@@ -112,10 +138,11 @@ pub fn clip_window(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
         .and_then(|()| keys_ours(app))
         .and_then(|()| win_key.keyboard.click(&v));
     let shown = typed.and_then(|()| closes(ctx, app, &watch, EscTo::WatchedOrApp));
-    let let_go = let_go(&win_id).is_ok_and(|after| after == Some(false));
+    let after = let_go(&win_id).unwrap_or((None, None));
     let mut result = shown?;
-    result["win_let_go"] = json!(let_go);
-    result["ok"] = json!(result["ok"] == true && let_go);
+    result["win_let_go"] = json!(after.0 == Some(false));
+    result["shift_let_go"] = json!(after.1 == Some(false));
+    result["ok"] = json!(result["ok"] == true && both_let_go(after));
     Ok(result)
 }
 
@@ -139,9 +166,11 @@ pub fn power(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     Ok(result)
 }
 
-/// The product's Power key opens the power dialog, which Esc cancels only while it is in front; nothing confirms it,
-/// and a dialog that stays open is left for the owner. Once no window of its class shows, Notepad comes back.
+/// The product's Power key, never clicked while a window of the dialog's class shows, opens the power dialog, which
+/// Esc cancels only while it is in front; nothing confirms it, and one that stays open is left for the owner. Once no
+/// window of its class shows, Notepad comes back.
 fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
+    no_dialog(ctx)?;
     let g = &ctx.cfg.g25;
     let (kb, id) = (Keyboard::find()?, board::id_of(Role::Power)?);
     let class = std::slice::from_ref(&g.power_class);
@@ -162,6 +191,41 @@ fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn facts(class: &str, program: Option<&str>) -> Facts {
+        Facts {
+            class: class.into(),
+            program: program.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn g25_refuses_to_start_while_any_window_of_the_dialogs_class_shows() {
+        let class = ["#32770".to_owned()];
+        assert_eq!(none_open(&[], &class), Ok(()));
+        let notepad = facts("Notepad", Some("notepad.exe"));
+        assert_eq!(none_open(std::slice::from_ref(&notepad), &class), Ok(()));
+        for open in [
+            facts("#32770", Some("explorer.exe")),
+            facts("#32770", None),
+            facts("#32770", Some("notepad.exe")),
+        ] {
+            let why = none_open(&[notepad.clone(), open.clone()], &class);
+            assert_eq!(why, Err(ALREADY_OPEN.to_owned()), "{open:?}");
+        }
+    }
+
+    #[test]
+    fn the_panel_passes_only_once_win_and_its_spare_shift_both_read_let_go() {
+        assert!(both_let_go((Some(false), Some(false))));
+        assert!(
+            !both_let_go((Some(false), Some(true))),
+            "Shift still latched"
+        );
+        assert!(!both_let_go((Some(true), Some(false))), "Win still latched");
+        assert!(!both_let_go((Some(false), None)), "Shift did not read");
+        assert!(!both_let_go((None, Some(false))), "Win did not read");
+    }
 
     #[test]
     fn alt_goes_out_after_power_only_while_no_window_of_the_dialogs_class_shows() {
