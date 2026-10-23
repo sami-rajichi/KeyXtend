@@ -195,6 +195,7 @@ module =
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
+    .power = Touche Marche/Arrêt
     .scroll = Pavé de défilement
     .ui = Apparence
 

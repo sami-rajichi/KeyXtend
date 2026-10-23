@@ -87,13 +87,13 @@ crates/
                          the pad scrolls, to tell presses (`PointerPressed`) and move the badge (P5)
   kx-mod-scroll/        the scroll pad: the tap machine (`pad`), the glide (`glide`), the stop rules
                          (`stops`) and the actor, over the `ScrollTarget` port; `[scroll]` (P5)
+  kx-mod-power/         the Power key: the system's own power dialog, over the `PowerDialog` port (P6)
   kx-mod-predict/       prefix trie, unigram/bigram counts, learner, email suggestions (P7)
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)
   kx-mod-selection/     selection helper (P10)
   kx-mod-voice/         voice UI + worker client (engine lives in the worker) (P11)
   kx-mod-snip/          capture overlay, editor, OCR client (P12)
-  kx-mod-power/         power dialog (P6)
   kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20 (P8)
   kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests; it
                          depends on kx-settings, whose key names its fake settings sink checks as the store does

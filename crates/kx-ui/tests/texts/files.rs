@@ -16,7 +16,9 @@ use kx_ui::i18n::keys::{
 use std::collections::BTreeSet;
 
 /// Module ids whose names the texts hold today; the app checks the real list (P3 Task 19).
-const MODULES: [&str; 6] = ["kernel", "keyboard", "layouts", "mouse", "scroll", "ui"];
+const MODULES: [&str; 7] = [
+    "kernel", "keyboard", "layouts", "mouse", "power", "scroll", "ui",
+];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
 /// Keys the keyboard view names beside its board ids.

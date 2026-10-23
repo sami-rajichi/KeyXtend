@@ -195,6 +195,7 @@ module =
     .keyboard = Keyboard
     .layouts = Keyboard layouts
     .mouse = Mouse assist
+    .power = Power key
     .scroll = Scroll pad
     .ui = Appearance
 
