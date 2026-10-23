@@ -1,16 +1,16 @@
-//! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, and
-//! the pointer hook and the scroll target each reach only the module whose manifest declares their capability, and the
-//! shortcuts reach the keyboard's layer.
+//! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
+//! pointer hook, the scroll target and the power dialog each reach only the module whose manifest declares their
+//! capability, and the shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
 use kx_kernel::Kernel;
 use kx_module_api::ports::{
-    FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, ScrollTarget, ScrollTargetKey,
-    ShortcutId, ShortcutInfo, Step,
+    FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
+    ScrollTarget, ScrollTargetKey, ShortcutId, ShortcutInfo, Step,
 };
 use kx_module_api::{Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey};
-use kx_platform_fake::{FakePointerHook, FakeScrollTarget};
+use kx_platform_fake::{FakePointerHook, FakePowerDialog, FakeScrollTarget};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -22,6 +22,8 @@ const CARGO: &str = include_str!("../../Cargo.toml");
 const MODULE_FEATURE: &str = "mod-";
 /// The scroll module's feature.
 const SCROLL_FEATURE: &str = "mod-scroll";
+/// The power module's feature.
+const POWER_FEATURE: &str = "mod-power";
 /// The CI workflow, whose scroll-off lint names the app's other features by hand.
 const CI: &str = include_str!("../../../../.github/workflows/ci.yml");
 /// The app's package, which that lint builds.
@@ -96,7 +98,7 @@ fn defaults(features: &toml::Table) -> Vec<&str> {
 }
 
 #[test]
-fn every_module_feature_is_on_by_default_the_scroll_one_too() {
+fn every_module_feature_is_on_by_default_the_scroll_and_power_ones_too() {
     let features = features();
     let on = defaults(&features);
     let picks: Vec<&str> = features
@@ -106,6 +108,7 @@ fn every_module_feature_is_on_by_default_the_scroll_one_too() {
         .collect();
     assert!(picks.iter().all(|f| on.contains(f)), "{on:?}");
     assert!(picks.contains(&SCROLL_FEATURE), "{picks:?}");
+    assert!(picks.contains(&POWER_FEATURE), "{picks:?}");
 }
 
 #[test]
@@ -129,6 +132,13 @@ fn the_scroll_target_reaches_only_the_scroll_module() {
     let target: Arc<dyn ScrollTarget> = Arc::new(FakeScrollTarget::new());
     let got = reached::<ScrollTargetKey>(&Rig::new(), &target);
     assert_eq!(got, [kx_mod_scroll::ID]);
+}
+
+#[test]
+fn the_power_dialog_reaches_only_the_power_module() {
+    let dialog: Arc<dyn PowerDialog> = Arc::new(FakePowerDialog::new());
+    let got = reached::<PowerDialogKey>(&Rig::new(), &dialog);
+    assert_eq!(got, [kx_mod_power::ID]);
 }
 
 #[test]

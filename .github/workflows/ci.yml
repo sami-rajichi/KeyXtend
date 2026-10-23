@@ -52,8 +52,8 @@ jobs:
       # The app with the scroll module's feature off, so the scroll module stays optional. The app's life test `ships`
       # checks that this list is the default features without `mod-scroll`.
       - run: >-
-          cargo clippy -p keyxtend --all-targets --no-default-features --features mod-keyboard,mod-layouts,mod-mouse
-          --locked -- -D warnings
+          cargo clippy -p keyxtend --all-targets --no-default-features
+          --features mod-keyboard,mod-layouts,mod-mouse,mod-power --locked -- -D warnings
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
       - run: cargo test -p kx-ui --test texts --locked

@@ -1,7 +1,12 @@
-//! The fake power dialog: opens counted, a set error refused until cleared, and clones that share the count.
+//! The fake power dialog: opens counted, a set error refused until cleared, clones that share the count, and a waiter
+//! woken by an open on another thread.
 
 use super::*;
 use std::sync::Arc;
+use std::time::Duration;
+
+/// The longest a test waits for the other thread; it never sleeps.
+const WAIT: Duration = Duration::from_secs(10);
 
 #[test]
 fn each_open_is_counted() {
@@ -34,4 +39,19 @@ fn clones_share_the_count_and_serve_as_the_port_from_another_thread() {
         .unwrap()
         .unwrap();
     assert_eq!(fake.opened(), 1);
+}
+
+#[test]
+fn a_waiter_wakes_when_another_thread_opens_and_says_when_none_came() {
+    let fake = FakePowerDialog::new();
+    assert!(!fake.wait_opened(1, Duration::ZERO), "nothing opened yet");
+    let port: Arc<dyn PowerDialog> = Arc::new(fake.clone());
+    let opener = std::thread::spawn(move || port.open());
+    assert!(fake.wait_opened(1, WAIT));
+    opener.join().unwrap().unwrap();
+    assert!(
+        fake.wait_opened(1, Duration::ZERO),
+        "an open already counted"
+    );
+    assert!(!fake.wait_opened(2, Duration::ZERO));
 }

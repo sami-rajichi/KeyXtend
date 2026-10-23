@@ -5,7 +5,7 @@
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, PointerHook, PointerHookKey,
-    ScrollTarget, ScrollTargetKey, Shortcuts, ShortcutsKey,
+    PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey, Shortcuts, ShortcutsKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -29,6 +29,8 @@ pub struct Services {
     pub scroll: Arc<dyn ScrollTarget>,
     /// Sends the system shortcuts, for the keyboard's shortcuts layer.
     pub shortcuts: Arc<dyn Shortcuts>,
+    /// Opens the system's power dialog, for the power module.
+    pub power: Arc<dyn PowerDialog>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -55,6 +57,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_mouse::MouseModule::default()));
     #[cfg(feature = "mod-scroll")]
     list.push(Box::new(kx_mod_scroll::ScrollModule::default()));
+    #[cfg(feature = "mod-power")]
+    list.push(Box::new(kx_mod_power::PowerModule::default()));
     list
 }
 
@@ -95,6 +99,7 @@ impl Boot {
         kernel.provide_platform::<PointerHookKey>(services.pointer)?;
         kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
         kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;
+        kernel.provide_platform::<PowerDialogKey>(services.power)?;
         for module in modules {
             kernel.add(module)?;
         }

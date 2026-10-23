@@ -454,6 +454,7 @@ dependencies = [
  "kx-mod-keyboard",
  "kx-mod-layouts",
  "kx-mod-mouse",
+ "kx-mod-power",
  "kx-mod-scroll",
  "kx-module-api",
  "kx-platform",

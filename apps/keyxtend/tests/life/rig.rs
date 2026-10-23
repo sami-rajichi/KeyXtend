@@ -1,6 +1,6 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, scroll target and shortcuts, and the shared fake UI ports; a
-//! waker keeps every wake.
+//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts and power dialog, and the shared fake
+//! UI ports; a waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -9,8 +9,8 @@ use kx_mod_keyboard::spec::RowKey;
 use kx_module_api::ports::Scan;
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakeScrollTarget, FakeShortcuts,
-    FakeTray,
+    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
+    FakeScrollTarget, FakeShortcuts, FakeTray,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -36,6 +36,8 @@ pub struct Rig {
     pub scroll: Arc<FakeScrollTarget>,
     /// Behind the shortcuts, knowing none until a test sets them.
     pub shortcuts: Arc<FakeShortcuts>,
+    /// Behind the power dialog, which counts its opens.
+    pub power: Arc<FakePowerDialog>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
 }
@@ -53,6 +55,7 @@ impl Rig {
             pointer: Arc::new(FakePointerHook::new()),
             scroll: Arc::new(FakeScrollTarget::new()),
             shortcuts: Arc::new(FakeShortcuts::new()),
+            power: Arc::new(FakePowerDialog::new()),
             tray: tray(),
         }
     }
@@ -79,6 +82,7 @@ impl Rig {
             pointer: self.pointer.clone(),
             scroll: self.scroll.clone(),
             shortcuts: self.shortcuts.clone(),
+            power: self.power.clone(),
         };
         let ports = ports(self.tray.clone());
         Boot::load(self.platform(), services, ports).unwrap()
