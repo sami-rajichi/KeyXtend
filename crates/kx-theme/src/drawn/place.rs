@@ -26,9 +26,9 @@ pub(super) enum Mark {
     Chevron,
     /// Carousel's side names.
     Side,
-    /// The Next key's chevron, raised to make room for its dots.
+    /// The Next key's chevron, where every side icon sits.
     Next,
-    /// The Next key's row of dots under its chevron.
+    /// The Next key's row of dots, in and under its chevron's box.
     Pages,
 }
 
@@ -86,12 +86,13 @@ fn column(v: &LookView, h: f32) -> f32 {
     dots * d.px + (dots - 1.0) * d.gap_px
 }
 
-/// The Next key's side-key chevron and its row of dots one gap under it, centred together on `mid` (NamedFace.qml).
+/// The Next key's chevron, centred on `mid` as every side icon is, and its row of unlit dots from `[dots] next_at` of
+/// the chevron's box down (NamedFace.qml).
 fn next(v: &LookView, mid: f32) -> [Span; 2] {
     let (icon, d) = (v.shape.legend.icon_px[1], &v.shape.dots);
-    let top = mid - (icon + d.gap_px + d.px) / 2.0;
-    let dots = top + icon + d.gap_px;
-    [[top, top + icon], [dots, dots + d.px]]
+    let chevron = square(mid, icon);
+    let dots = chevron[0] + icon * d.next_at;
+    [chevron, [dots, dots + d.px]]
 }
 
 /// Where `mark` sits on a cap `h` high: one span for each place or size it may take.

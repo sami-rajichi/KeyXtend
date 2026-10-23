@@ -122,7 +122,7 @@ pub struct Icons {
 
 impl Icons {
     /// Every name with where it is used, such as `bar.theme` or `shortcuts.copy`.
-    fn named<'a>(&'a self) -> Vec<(String, &'a str)> {
+    fn named(&self) -> Vec<(String, &str)> {
         let (b, d, l, t) = (&self.bar, &self.dpad, &self.lang, &self.tray);
         let fixed = [
             ("bar.grip", &b.grip),
@@ -151,10 +151,6 @@ impl Icons {
             ("tray.show", &t.show),
             ("tray.quit", &t.quit),
         ];
-        let by_id = |group: &'static str, m: &'a BTreeMap<String, String>| {
-            m.iter()
-                .map(move |(k, v)| (format!("{group}.{k}"), v.as_str()))
-        };
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
@@ -169,6 +165,15 @@ impl Icons {
     pub fn names(&self) -> Vec<&str> {
         self.named().into_iter().map(|(_, n)| n).collect()
     }
+}
+
+/// Each name in `m` by its id, with where it is used: `group.id`.
+fn by_id<'a>(
+    group: &'static str,
+    m: &'a BTreeMap<String, String>,
+) -> impl Iterator<Item = (String, &'a str)> {
+    m.iter()
+        .map(move |(k, v)| (format!("{group}.{k}"), v.as_str()))
 }
 
 /// True for a plain file name: lower-case ASCII letters, digits and `-`, never empty.

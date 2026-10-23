@@ -231,7 +231,8 @@ var lk = {
       "px": 3.0,
       "on_px": 4.5,
       "gap_px": 2.0,
-      "off": 0.72
+      "off": 0.72,
+      "next_at": 0.875
     },
     "dpad": {
       "gap_px": 2.0,

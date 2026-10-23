@@ -1,5 +1,6 @@
-//! Named keys and the shortcuts layer as drawn: a label is text and an icon a mark, the layer's icons and F-key labels
-//! read at 4.5:1 on their keys, the Next key's dots sit under its chevron, and the unlit dot is checked on both keys.
+//! Named keys and the shortcuts layer as drawn: a label is text and an icon a mark, but the layer's icons, F-key labels
+//! and Next chevron read at 4.5:1, the chevron sits as side icons do with its dots under its ink, and both keys' unlit
+//! dots are checked.
 
 use super::*;
 
@@ -26,26 +27,14 @@ fn rows<'a>(all: &'a [Drawn], names: &[&str], at: &str) -> Vec<&'a Drawn> {
 }
 
 #[test]
-fn the_layers_cells_read_at_4_5_to_1_and_the_next_keys_chevron_at_3_to_1() {
+fn the_layers_icons_f_key_labels_and_next_chevron_are_rows_held_to_4_5_to_1() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
         let all = drawn(&v, TEST_ROW_PX);
-        // A shortcut's icon and an F-key's label, in legend_act on key_act, read as text does.
-        for d in rows(
-            &all,
-            &["legend_act on key_act", "legend_act icon on key_act"],
-            &at,
-        ) {
-            assert!(
-                d.ratio() >= WCAG_AA,
-                "{at}: {} is {:.2}:1",
-                d.name,
-                d.ratio()
-            );
-        }
-        // The chevron rises to make room for its dots, so it is checked where it sits, as a shape (WCAG 1.4.11).
-        for d in rows(&all, &[NEXT_CHEVRON], &at) {
-            assert!((d.min - WCAG_SHAPES).abs() < f32::EPSILON, "{at}");
+        // An F-key's label, a shortcut's icon and the chevron, in legend_act on key_act, read as text does (spec §4).
+        let held = ["legend_act on key_act", SHORTCUT_ICON, NEXT_CHEVRON];
+        for d in rows(&all, &held, &at) {
+            assert!((d.min - WCAG_AA).abs() < f32::EPSILON, "{at}: {}", d.name);
             assert!(d.ratio() >= d.min, "{at}: {} is {:.2}:1", d.name, d.ratio());
         }
     }
@@ -67,23 +56,33 @@ fn the_unlit_dot_is_checked_on_both_keys_that_draw_dots() {
     }
 }
 
+/// Where Lucide's chevron-right ends its ink, round stroke included: 19 of its 24 units.
+const CHEVRON_INK_END: f32 = 19.0 / 24.0;
+
 #[test]
-fn the_next_keys_dots_sit_under_its_chevron_inside_the_cap() {
+fn the_next_chevron_sits_as_the_side_icons_do_and_its_dots_clear_its_ink_inside_the_cap() {
     let t = themes();
     for (at, v) in views(&t, &SysLook::default()) {
         let h = height(&v, TEST_ROW_PX);
-        let (chevron, dots) = (spans(&v, h, Mark::Next), spans(&v, h, Mark::Pages));
-        let ([up, down], [top, bottom]) = (chevron[0], dots[0]);
-        let gap = v.shape.dots.gap_px;
+        let (d, icon) = (&v.shape.dots, v.shape.legend.icon_px[1]);
+        let (chevron, side) = (spans(&v, h, Mark::Next)[0], spans(&v, h, Mark::Icon)[1]);
+        let same = chevron
+            .iter()
+            .zip(side)
+            .all(|(a, b)| (a - b).abs() < f32::EPSILON);
         assert!(
-            (top - down - gap).abs() < f32::EPSILON,
-            "{at}: one gap under it"
+            same,
+            "{at}: {chevron:?} is not where side icons sit, {side:?}"
         );
-        assert!(
-            (bottom - top - v.shape.dots.px).abs() < f32::EPSILON,
-            "{at}"
-        );
-        assert!(up >= 0.0 && bottom <= h, "{at}: inside the cap");
+        let row = spans(&v, h, Mark::Pages)[0];
+        let from = chevron[0] + icon * d.next_at;
+        assert!((row[0] - from).abs() < 1e-4, "{at}: from next_at down");
+        assert!((row[1] - row[0] - d.px).abs() < 1e-4, "{at}: an unlit dot");
+        let grow = (d.on_px - d.px) / 2.0;
+        let lit = [row[0] - grow, row[1] + grow];
+        let ink = chevron[0] + icon * CHEVRON_INK_END;
+        assert!(lit[0] >= ink, "{at}: the lit dot clears the chevron's ink");
+        assert!(lit[1] <= h, "{at}: inside the cap");
     }
 }
 

@@ -26,6 +26,12 @@ fn an_odd_dot_is_refused_by_name() {
     refused_in(&[
         ("dots", "off = 0.72", "off = nan", "shape: dots.off"),
         ("dots", "off = 0.72", "off = 1.5", "shape: dots.off"),
+        (
+            "dots",
+            "next_at = 0.875",
+            "next_at = 1.2",
+            "shape: dots.next_at",
+        ),
         ("dots", "on_px = 4.5", "on_px = 3.0", "shape: dots.on_px"),
         ("dots", "\npx = 3.0", "\npx = 0.0", "shape: dots.px"),
         (

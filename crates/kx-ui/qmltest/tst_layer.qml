@@ -165,6 +165,13 @@ Item {
             const next = keyed(win, "layer-next");
             compare(next.Accessible.name, En.texts["key.layer-next"], "readers hear its name");
             compare(shown(next), { texts: [], icons: [win.lk.icons.layer.next] }, "a chevron and no numbers");
+            // The chevron sits where every side icon does, and its dots start next_at of its box down.
+            const glyph = k => Board.all(k, o => o.tint !== undefined && o.icon !== undefined && o.icon.length > 0)[0];
+            const inKey = k => glyph(k).mapToItem(k, 0, 0);
+            const [chevron, icon] = [inKey(next), inKey(keyed(win, "sc-copy"))];
+            compare([chevron.x, chevron.y], [icon.x, icon.y], "where every side icon sits");
+            const row = dots(win)[0].parent.parent.mapToItem(glyph(next), 0, 0);
+            fuzzyCompare(row.y, glyph(next).height * sh.next_at, 0.01, "the dots from next_at of its box down");
             turn(win, "layer-3");
             compare(lit(), [false, false, true], "the last page");
             serve(win, "layer-1");

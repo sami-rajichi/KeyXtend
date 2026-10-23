@@ -130,6 +130,7 @@ impl Shape {
             ("ring.core_share", self.ring.core_share),
             ("lang.cycle.icon_share", self.lang.cycle.icon_share),
             ("dots.off", self.dots.off),
+            ("dots.next_at", self.dots.next_at),
             ("lang.list.icon_share", self.lang.list.icon_share),
             ("dim.share", self.dim.share),
             ("notice.radius_share", self.notice.radius_share),

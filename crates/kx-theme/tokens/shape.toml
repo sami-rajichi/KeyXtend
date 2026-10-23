@@ -78,6 +78,9 @@ on_px = 4.5
 gap_px = 2.0
 # 2026-10-02: an unlit dot still counts the layouts or pages, so it keeps 3:1 where it sits on every cap (mock-up .3).
 off = 0.72
+# Where the Next key's dots start in its chevron's box, as a share of it: two units under chevron-right's ink, which
+# ends at 19 of its 24 units, so the chevron sits as every side icon does and the larger lit dot clears it.
+next_at = 0.875
 
 [dpad]
 # D-pad: gap between arrows, arrow icon, where each arrow sits across the ring from the hub's edge (0) to the pad's edge (1),

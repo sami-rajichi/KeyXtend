@@ -34,8 +34,10 @@ pub struct DotsShape {
     pub px: f32,
     /// The lit dot's diameter, larger so it stands out from the unlit ones.
     pub on_px: f32,
-    /// Gap between dots, and between them and the icon beside them.
+    /// Gap between dots.
     pub gap_px: f32,
     /// Opacity of a dot whose layout or page is not shown.
     pub off: f32,
+    /// Where the Next key's dots start in its chevron's box, as a share of the box from its top.
+    pub next_at: f32,
 }

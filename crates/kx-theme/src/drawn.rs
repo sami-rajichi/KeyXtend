@@ -15,11 +15,14 @@ pub const EXCEPTION: &str = "Carousel side names";
 /// Stop's unlit speed dot, read against the lit one beside it.
 const SPEED_DOT: &str = "D-pad unlit speed dot by a lit one";
 
-/// The unlit dot on each key that draws dots: the language key's Cycle design and the Next key.
+/// The language key's unlit dot on its Cycle design.
 const CYCLE_DOT: &str = "Cycle unlit dot";
+/// The Next key's unlit dot, under its chevron.
 const NEXT_DOT: &str = "Next unlit dot";
-/// The Next key's chevron over its dots.
+/// The Next key's chevron over its dots, which reads as text does (spec §4).
 const NEXT_CHEVRON: &str = "Next chevron";
+/// A shortcut's icon on the shortcuts layer, alone on its cell, so it reads as text does (spec §4).
+const SHORTCUT_ICON: &str = "Shortcut icon";
 
 /// Windows 11's plain window colours, light then dark (Mica's base): what a system backdrop shows behind the plate.
 pub const WINDOWS: [Rgba; 2] = [
@@ -197,8 +200,8 @@ fn keys(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     }
 }
 
-/// The dotted keys' marks on a key `h` high: the language key's in `legend_mod` (Cycle's unlit dots and globe, List's
-/// chevron, Carousel's side names), and the Next key's in `legend_act` (its chevron and unlit dots).
+/// The marks on a key `h` high: the language key's in `legend_mod` (Cycle's unlit dots and globe, List's chevron,
+/// Carousel's side names), and the shortcuts layer's in `legend_act` (a shortcut's icon, Next's chevron and unlit dots).
 fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
     let (l, off) = (&v.shape.lang, v.shape.dots.off);
     let lang = [
@@ -212,13 +215,14 @@ fn marks(v: &LookView, h: f32, out: &mut Vec<Drawn>) {
         ),
         (EXCEPTION, l.side[1], Mark::Side, WCAG_AA),
     ];
-    let next = [
-        (NEXT_CHEVRON, 1.0, Mark::Next, WCAG_SHAPES),
+    let layer = [
+        (SHORTCUT_ICON, 1.0, Mark::Icon, WCAG_AA),
+        (NEXT_CHEVRON, 1.0, Mark::Next, WCAG_AA),
         (NEXT_DOT, off, Mark::Pages, WCAG_SHAPES),
     ];
     let keys = [
         ("legend_mod", "key_mod", "key_mod", &lang[..]),
-        ("legend_act", "key_act", "key_mod", &next[..]),
+        ("legend_act", "key_act", "key_mod", &layer[..]),
     ];
     for (ink, top, skirt, marks) in keys {
         let (ink, f) = (token(v, ink), fill(v, top, skirt));

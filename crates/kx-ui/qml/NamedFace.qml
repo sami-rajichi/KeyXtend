@@ -66,17 +66,19 @@ Item {
             color: n.host.ink
         }
     }
-    // The chevron with the page dots one gap under it, centred together as kx-theme's drawn check places them.
+    // The chevron where every side icon sits, and its page dots from `[dots] next_at` of its box down, past it if they
+    // must, as kx-theme's drawn check places them.
     Component {
         id: pagedC
-        Column {
-            spacing: n.host.lk.shape.dots.gap_px * n.host.s
+        Item {
+            width: n.iconPx
+            height: n.iconPx
             Loader {
-                anchors.horizontalCenter: parent.horizontalCenter
                 sourceComponent: iconC
             }
             PageDots {
                 anchors.horizontalCenter: parent.horizontalCenter
+                y: n.iconPx * n.host.lk.shape.dots.next_at
                 count: n.host.paging.pages
                 at: n.host.paging.page
                 lk: n.host.lk
