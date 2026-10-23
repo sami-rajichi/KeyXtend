@@ -62,9 +62,9 @@ Item {
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
     readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
-    // What readers hear after its name, also in its tip: when a dimmed key comes, else the state's tip, such as a lone
-    // language key's.
-    readonly property string note: later || (ks && ks.tip ? res.tr(ks.tip) : "")
+    // What readers hear after its name, also in its tip: when a dimmed key comes, the state's tip, such as a lone
+    // language key's, or the shortcuts layer's page on the key that shows its dots.
+    readonly property string note: later || (ks && ks.tip ? res.tr(ks.tip) : "") || (kv.dots && paging ? res.layerPage(paging) : "")
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
     // The recording glow runs.

@@ -163,6 +163,16 @@ Item {
             compare(ui.keysTip("shortcut.copy", "[]"), Ar.texts["shortcut.copy"], "no keys: the name alone");
         }
 
+        // The stand-in says the shortcuts layer's page as the hub's texts test pins it, in each language.
+        function test_the_stand_in_says_the_layers_page_as_the_hub_does() {
+            const ui = createTemporaryObject(uiC, root);
+            const said = [[En, "Page 2 of 3"], [Fr, "Page 2 sur 3"], [Ar, "الصفحة 2 من 3"]];
+            for (const [t, want] of said) {
+                ui.texts = t.texts;
+                compare(ui.layerPageText(2, 3), want);
+            }
+        }
+
         // Native, Dolch, ET66, then Native again (ADR-0021): after each switch, as the hub loads the theme's fonts and
         // then gives its look, Arabic draws in that theme's first Arabic family.
         function test_arabic_draws_in_each_themes_font_after_each_switch() {

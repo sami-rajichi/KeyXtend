@@ -55,7 +55,12 @@ fn notice(t: &I18n, key: &'static str, module: &str, names: &[String], more: usi
 /// Lists, banner counts and page numbers at each plural form.
 fn counted(t: &I18n) -> Vec<String> {
     let names = setting_names();
-    let each = |n: usize| [t.list(&names, n), t.list(&[], n), t.more(n), t.page(1, n)];
+    let each = |n: usize| {
+        let paged = [t.page(1, n), t.layer_page(1, n)];
+        [t.list(&names, n), t.list(&[], n), t.more(n)]
+            .into_iter()
+            .chain(paged)
+    };
     COUNTS.iter().flat_map(|n| each(*n)).collect()
 }
 

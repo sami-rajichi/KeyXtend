@@ -77,6 +77,7 @@ var texts = {
   "key.grab": "Saisir : glisser-déposer, sélectionner du texte",
   "key.lang": "Langue",
   "key.layer-next": "Page suivante",
+  "key.layer-page": "Page {$page} sur {$pages}",
   "key.left": "Flèche gauche",
   "key.menu": "Touche Menu",
   "key.mic": "Saisie vocale",

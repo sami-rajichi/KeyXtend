@@ -77,6 +77,7 @@ var texts = {
   "key.grab": "Grab: drag and drop, select text",
   "key.lang": "Language",
   "key.layer-next": "Next page",
+  "key.layer-page": "Page {$page} of {$pages}",
   "key.left": "Left arrow",
   "key.menu": "Menu key",
   "key.mic": "Voice typing",

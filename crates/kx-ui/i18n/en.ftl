@@ -4,7 +4,7 @@
 ## The product's name, written once and shared by the texts below.
 -app = KeyXtend
 
-## Named keys by board.toml id, the shortcuts layer's Next key, then .empty for a character key that types nothing now: the name that tips and screen readers use.
+## Named keys by board.toml id, the shortcuts layer's Next key and the page readers hear after it ($page of $pages), then .empty for a character key that types nothing now: the name that tips and screen readers use.
 key =
     .esc = Escape
     .bksp = Backspace
@@ -36,6 +36,7 @@ key =
     .power = Power
     .dpad = Scroll pad
     .layer-next = Next page
+    .layer-page = Page { $page } of { $pages }
     .empty = Empty key
 
 ## The short word on a key, or under its icon at large sizes, as real keyboards print it.

@@ -82,3 +82,5 @@ pub const COMBO_JOIN: &str = "combo.join";
 pub const COMBO_THEN: &str = "combo.then";
 /// A shortcut's tip: its `$name`, then the `$keys` it sends.
 pub const KEYS_TIP: &str = "tip.keys";
+/// What readers hear after the Next key's name: the shortcuts layer's page `$page` of `$pages`.
+pub const LAYER_PAGE: &str = "key.layer-page";

@@ -4,7 +4,7 @@
 ## Le nom du produit, écrit une fois et repris par les textes ci-dessous.
 -app = KeyXtend
 
-## Touches nommées, par identifiant de board.toml, la touche Page suivante des raccourcis, puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
+## Touches nommées, par identifiant de board.toml, la touche Page suivante des raccourcis et la page que les lecteurs d’écran annoncent après elle ($page sur $pages), puis .empty pour une touche qui ne tape rien : le nom des info-bulles et des lecteurs d’écran.
 key =
     .esc = Échap
     .bksp = Retour arrière
@@ -36,6 +36,7 @@ key =
     .power = Marche/Arrêt
     .dpad = Pavé de défilement
     .layer-next = Page suivante
+    .layer-page = Page { $page } sur { $pages }
     .empty = Touche vide
 
 ## Le mot court sur la touche, ou sous son icône en grande taille, comme sur les claviers français.

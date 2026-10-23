@@ -135,3 +135,15 @@ fn a_page_number_names_its_page_and_the_count() {
         assert_eq!(lang(tag).page(2, 3), want, "{tag}");
     }
 }
+
+#[test]
+fn the_layers_page_names_its_page_and_the_count_for_readers() {
+    let cases = [
+        ("en", "Page 2 of 3"),
+        ("fr", "Page 2 sur 3"),
+        ("ar", "الصفحة 2 من 3"),
+    ];
+    for (tag, want) in cases {
+        assert_eq!(lang(tag).layer_page(2, 3), want, "{tag}");
+    }
+}

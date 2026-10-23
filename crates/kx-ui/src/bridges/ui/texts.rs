@@ -46,6 +46,12 @@ impl qobject::Ui {
         qs(&self.with(String::new(), |h| h.i18n().page(at, count)))
     }
 
+    pub(super) fn layer_page_text(&self, page: i32, pages: i32) -> QString {
+        let (page, pages) = (usize::try_from(page), usize::try_from(pages));
+        let (page, pages) = (page.unwrap_or_default(), pages.unwrap_or_default());
+        qs(&self.with(String::new(), |h| h.i18n().layer_page(page, pages)))
+    }
+
     pub(super) fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString {
         let key = name_key.to_string();
         let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(&steps.to_string());

@@ -176,8 +176,13 @@ Item {
             compare([chevron.x, chevron.y], [icon.x, icon.y], "where every side icon sits");
             const row = dots(win)[0].parent.parent.mapToItem(glyph(next), 0, 0);
             fuzzyCompare(row.y, glyph(next).height * sh.next_at, 0.01, "the dots from next_at of its box down");
+            // Readers hear the page after its name, as its tip shows it.
+            compare(next.Accessible.description, "Page 1 of 3", "readers hear the page");
+            mouseMove(next, next.width / 2, next.height / 2);
+            compare(Board.tipOf(win).name, En.texts["key.layer-next"] + "\nPage 1 of 3");
             turn(win, "layer-3");
             compare(lit(), [false, false, true], "the last page");
+            compare(keyed(win, "layer-next").Accessible.description, "Page 3 of 3");
             serve(win, "layer-1");
             click(win, keyed(win, "layer-next"));
             verify(win.keyboard.calls.indexOf("tap layer-next false") >= 0, "Next reached the keyboard");

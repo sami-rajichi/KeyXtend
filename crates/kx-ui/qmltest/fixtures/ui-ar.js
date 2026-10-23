@@ -77,6 +77,7 @@ var texts = {
   "key.grab": "إمساك: السحب والإفلات وتحديد النص",
   "key.lang": "اللغة",
   "key.layer-next": "الصفحة التالية",
+  "key.layer-page": "الصفحة {$page} من {$pages}",
   "key.left": "سهم لليسار",
   "key.menu": "مفتاح القائمة",
   "key.mic": "الكتابة الصوتية",

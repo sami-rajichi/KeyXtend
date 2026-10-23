@@ -13,7 +13,7 @@ use kx_mod_keyboard::view::{
     SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
-use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, MODULE};
+use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, LAYER_PAGE, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
 
@@ -38,6 +38,7 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
         KEYS_TIP,
         COMBO_JOIN,
         COMBO_THEN,
+        LAYER_PAGE,
     ];
     let mut wanted: BTreeSet<String> = fixed.map(str::to_owned).into();
     for view in designs().into_iter().flat_map(views) {
