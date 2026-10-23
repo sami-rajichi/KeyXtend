@@ -74,7 +74,7 @@ Early development. The foundation (P0), the UI toolkit test round (P1, Qt chosen
   - Click Shortcuts and the side keys turn into shortcuts; the key lights up like a held Shift, and a second click brings the side keys back. The layer stays open after each shortcut, and KeyXtend always starts on the usual side keys.
   - Each shortcut shows its icon (F1 to F12 show their names), and its tip names it and the keys it sends, such as "Copy all (Ctrl+A, Ctrl+C)".
   - **Next**, in the bottom-right corner, turns the page, from the last back to the first. Its dots show which page is open, and its tip and screen readers say "Page 1 of 3".
-  - A latched Shift, Ctrl, Alt, AltGr or Win joins the shortcut, then lets go as after any key: Shift, then New tab, sends Ctrl+Shift+T.
+  - A Shift, Ctrl, Alt, AltGr or Win clicked before a shortcut joins it (Lock PC goes alone), then lets go as after any key: Shift, then New tab, sends Ctrl+Shift+T.
   - Opening the layer stops the scroll pad, which hides until the layer closes; Right-click and Grab stay as they were.
   - The `[keyboard] shortcut_pages` setting lists the pages by shortcut id: editing first, then Windows, tabs and zoom, then F1 to F12. A page holds 13 shortcuts, or 14 when it is the only one, with at most 6 pages, and an id Windows does not know is skipped; the Settings window will arrange the pages (P13).
 - **The Power key** opens Windows' own power dialog, where you choose what to do or cancel; KeyXtend never shuts down by itself. The key dims, with a tip, while the power module is off, and a notice says so when the dialog cannot open.

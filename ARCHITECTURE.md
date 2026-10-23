@@ -277,3 +277,4 @@ pub trait Module: Send + 'static {
 | Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
+| Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |

@@ -126,8 +126,8 @@ impl LayoutSource for FakeLayoutSource {
         self.caps.load(Ordering::SeqCst)
     }
 
-    /// A control or a key with any character types, as `ToUnicodeEx` reads the captured tables with Win, Shift or Alt
-    /// held too; with Ctrl and no Alt held, only controls and letter keys type.
+    /// As `ToUnicodeEx` reads the captured tables, a control or a key with any character types, except that with Ctrl
+    /// and no Alt held only controls and letter keys do.
     fn types_any(&self, layout: LayoutId, key: Scan, held: &[Scan]) -> bool {
         let any = |k: &KeyChars| Slot::ALL.iter().any(|&s| !k.get(s).is_empty());
         let chars: fn(&KeyChars) -> bool = if ctrl_only(held) { is_letter } else { any };

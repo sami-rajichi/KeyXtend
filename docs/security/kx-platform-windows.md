@@ -17,7 +17,7 @@
 | Clock readings | Public | Memory only | N/A | Not kept |
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
 | Typed text and the keys it becomes | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted` text and key events for one send; not zeroised (see Accepted) | N/A | Dropped after the send |
-| A shortcut's key events: the latched scans, then each step's keys from the table (`shortcut`) | Public alone (fixed by the table); the latches are Sensitive together with the clicks around them | Memory only, for one send | N/A | Dropped after the send |
+| A shortcut's key events: each step's keys from the table, with the latched scans held around each step (`shortcut`) | Public alone (fixed by the table); the latches are Sensitive together with the clicks around them | Memory only, for one send | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
 | Installed layouts, their language facts and what each key types | Public (the same for every user of that layout; not typed text) | Memory only; returned to the caller | N/A | Not kept |
 | Caps Lock state and the layout of the app in front | Public | Memory only | N/A | Not kept |

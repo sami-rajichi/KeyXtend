@@ -97,7 +97,7 @@ pub enum ShortcutError {
     Refused {
         /// Events the OS took.
         sent: usize,
-        /// Events that were sent.
+        /// Events the whole shortcut has.
         total: usize,
     },
     /// An OS call, such as the session lock, failed.
