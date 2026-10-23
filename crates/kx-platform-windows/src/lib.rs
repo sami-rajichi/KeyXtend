@@ -25,6 +25,7 @@ pub mod layouts;
 pub mod memory;
 #[cfg(windows)]
 mod platform;
+pub mod power;
 pub mod screen;
 pub mod scroll;
 pub mod shortcut;
@@ -54,6 +55,8 @@ pub use layouts::WinLayouts;
 pub use memory::WinMemory;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
+#[cfg(windows)]
+pub use power::WinPower;
 #[cfg(windows)]
 pub use screen::WinScreens;
 #[cfg(windows)]
