@@ -17,7 +17,7 @@ use crate::g22cfg::{self, G22, Sentence};
 use crate::simuser::keys_ours;
 use crate::win::{self, ms_since, sleep_ms};
 use crate::winfind;
-use crate::{g22bench, g22type, g25, probe, readback, wer};
+use crate::{g22bench, g22type, g25, langs, probe, readback, wer};
 
 /// Name that runs the bench instead of a face.
 pub const BENCH: &str = "bench";
@@ -132,7 +132,7 @@ fn one(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened, s: &Sentence) -> Result
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
     let uia = Uia::new()?;
     probe::front(ctx, app)?;
-    let start = langkey::layout_of(app.hwnd);
+    let start = langs::layout_of(app.hwnd);
     let list = &ctx.cfg.g22.sentences;
     let mut all = Vec::new();
     for (i, s) in list.iter().enumerate() {

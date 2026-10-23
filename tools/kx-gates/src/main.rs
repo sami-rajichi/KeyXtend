@@ -94,6 +94,7 @@ mod hand;
 mod hooklog;
 mod keymap;
 mod keys;
+mod langs;
 mod launch;
 mod launchterm;
 mod modekey;

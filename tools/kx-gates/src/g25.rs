@@ -4,13 +4,10 @@
 use std::collections::HashSet;
 
 use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
-use kx_module_api::ports::{LayoutId, LayoutSource};
-use kx_platform_windows::WinLayouts;
 use kx_platform_windows::langinfo::lang_id;
 use kx_platform_windows::window::foreground;
 use kx_theme::Themes;
 use serde_json::{Value, json};
-use spike_core::langkey;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -19,7 +16,7 @@ use crate::mouse::round_px;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clip, clipkeep, cliptext, keys, probe, product, readback, winclip};
+use crate::{board, clip, clipkeep, cliptext, keys, langs, probe, product, readback, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -28,8 +25,7 @@ const LIST_SKIP: &str = "the List design opens a list on a click";
 
 /// A layout's language id in hex, such as `0409` for English (US); the handle keeps its sign extension.
 fn lang(layout: isize) -> String {
-    let raw = u64::try_from(layout.cast_unsigned()).unwrap_or_default();
-    format!("{:04X}", lang_id(LayoutId::new(raw)))
+    format!("{:04X}", lang_id(langs::id(layout)))
 }
 
 /// Waits until `f` holds, up to G25's switch wait.
@@ -40,18 +36,18 @@ fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
 
 /// True once the app's focus shows `layout`.
 pub(crate) fn shows(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
-    until(ctx, || langkey::layout_of(app.hwnd) == Some(layout))
+    until(ctx, || langs::layout_of(app.hwnd) == Some(layout))
 }
 
 /// Asks the app's focus for `layout`; true once it shows it within G25's switch wait.
 pub(crate) fn switch_to(ctx: &Ctx, app: &Opened, layout: isize) -> bool {
-    langkey::ask(app.hwnd, layout).is_ok() && shows(ctx, app, layout)
+    langs::ask(app.hwnd, layout).is_ok() && shows(ctx, app, layout)
 }
 
 /// The layout one step on from the app's own, as the product steps; `None` when the app's focus has none.
 fn next(app: &Opened) -> Option<isize> {
-    let cur = langkey::layout_of(app.hwnd)?;
-    langkey::step_from(&langkey::installed(), cur, 1)
+    let cur = langs::layout_of(app.hwnd)?;
+    langs::step_from(&langs::installed(), cur, 1)
 }
 
 /// Why design `design` cannot be stepped by a click, if it cannot.
@@ -116,10 +112,10 @@ fn step(ctx: &Ctx, app: &Opened, key: &LangButton) -> Value {
 
 /// Clicks the language key once per installed layout, so the list wraps; the first layout is always put back.
 fn layouts(ctx: &Ctx, app: &Opened) -> Value {
-    let Some(start) = langkey::layout_of(app.hwnd) else {
+    let Some(start) = langs::layout_of(app.hwnd) else {
         return json!({ "error": "no layout for the app's focus", "ok": false });
     };
-    let count = WinLayouts.installed().len();
+    let count = langs::installed().len();
     if count < 2 {
         return json!({ "from": lang(start), "skipped": "needs two layouts", "ok": false });
     }
@@ -128,7 +124,7 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
         Err(why) => return why,
     };
     let steps: Vec<Value> = (0..count).map(|_| step(ctx, app, &key)).collect();
-    let wrapped = langkey::layout_of(app.hwnd) == Some(start);
+    let wrapped = langs::layout_of(app.hwnd) == Some(start);
     let restored = wrapped || switch_to(ctx, app, start);
     let all = steps.iter().all(|s| s["ok"] == true);
     json!({
