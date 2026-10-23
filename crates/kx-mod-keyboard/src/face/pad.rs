@@ -34,7 +34,7 @@ struct Peeked {
 
 impl Face {
     /// A click on an arrow, or on Stop when `dir` is none: asks the scroll module while it runs, else does nothing.
-    /// Nothing redraws now, as the module's answer does; while the layer hides the pad, it is no key.
+    /// The module's answer redraws, not this click; while the layer hides the pad, it is no key.
     pub(super) fn pad(&self, dir: Option<Dir>) -> Result<FaceReply, FaceError> {
         let bus = {
             let inner = self.lock();
