@@ -1,11 +1,14 @@
-//! The board as `board.toml` writes it: grid sizes, main rows, side keys and the D-pad, checked when read.
+//! The board as `board.toml` writes it: grid sizes, main rows, side keys, the D-pad and the shortcuts layer,
+//! checked when read.
 
 mod check;
 mod error;
 mod keys;
+mod layer;
 
 pub use error::BoardError;
 pub use keys::{RowKey, char_id};
+pub use layer::{LayerGrid, LayerSpec, NEXT_ID, SideCell, shortcut_key_id};
 
 use kx_module_api::ports::{Scan, Toggle};
 use serde::{Deserialize, Serialize};
@@ -103,6 +106,14 @@ pub enum Role {
     Assist(Assist),
     /// Comes in a later version: drawn dimmed and does nothing.
     Later,
+    /// The Shortcuts key: a click shows or hides the shortcuts layer.
+    Layer,
+    /// The Power key: a click asks for the system's power dialog.
+    Power,
+    /// A shortcut on the layer; only the layer's generated cells have it.
+    Shortcut,
+    /// The layer's Next page key; only the layer's generated cell has it.
+    Next,
     /// Latches a modifier; `board.toml` writes it as a table, `{ latch = "win", lone = true }`.
     #[serde(untagged)]
     Latch(LatchRole),
@@ -229,6 +240,8 @@ pub struct BoardSpec {
     pub rows: Vec<Vec<RowItem>>,
     /// Side keys.
     pub side: Vec<SideSpec>,
+    /// The shortcuts layer.
+    pub layer: LayerSpec,
 }
 
 impl BoardSpec {

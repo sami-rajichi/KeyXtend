@@ -37,6 +37,12 @@ pub enum BoardError {
     /// A key's role does not fit where it is or its scan code.
     #[error("key {0} has a role that does not fit it")]
     Role(String),
+    /// The layer's Next cell is off the side grid or on the Shortcuts key.
+    #[error("the layer's Next cell must sit on the side grid, off the Shortcuts key")]
+    Next,
+    /// A board id takes the form of an id the layer generates.
+    #[error("key id {0} is kept for the shortcuts layer")]
+    Reserved(String),
 }
 
 impl BoardError {
@@ -52,6 +58,8 @@ impl BoardError {
             Self::Side(_) => "a side key is off the grid or in a taken cell",
             Self::Twice(_) => "a board key id is used twice",
             Self::Role(_) => "a board key's role does not fit it",
+            Self::Next => "the layer's Next cell is off the side grid or on the Shortcuts key",
+            Self::Reserved(_) => "a board key id is kept for the shortcuts layer",
         }
     }
 }

@@ -1,7 +1,7 @@
 //! What only the app sees, since it alone depends on every crate: the board, the modules and the language key's
 //! designs have their texts in every language, the board's icons resolve, every paint names tokens each theme has,
-//! every character key has its scan code in the layouts table, a size or a buffer pool past a hard bound goes back to
-//! its default, and the stage puts Qt's QML where the app pins it.
+//! every character key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a
+//! rule go back to their default, and the stage puts Qt's QML where the app pins it.
 
 #![allow(
     clippy::unwrap_used,
@@ -11,6 +11,7 @@
 #[path = "../common/fakes.rs"]
 mod fakes;
 mod icons;
+mod pages;
 mod paint;
 mod pool;
 mod scans;

@@ -28,3 +28,15 @@ y = 0
 placed = false
 # The bottom corner of the keyboard's screen where the minimise bubble goes: "right" or "left".
 bubble_corner = "right"
+# The shortcuts layer's pages in order, by shortcut id; ids the system lacks and pages left empty are skipped.
+shortcut_pages = [
+    [
+        "copy", "paste", "cut", "select-all", "undo", "redo", "copy-all", "cut-all", "delete-all", "find", "save",
+        "print", "emoji",
+    ],
+    [
+        "switch-app", "show-desktop", "file-explorer", "lock-pc", "task-manager", "close-window", "new-tab",
+        "close-tab", "reopen-tab", "refresh", "zoom-in", "zoom-out",
+    ],
+    ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"],
+]

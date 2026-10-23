@@ -21,6 +21,8 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 
 `board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; the `kx-ui` translations (`i18n/*.ftl`) and `kx-theme` (`tokens/icons.toml`) give them by key id. A key's `nav` says what it does in an open list. A `send` key with `repeat = true` repeats while held (Backspace, Delete, Enter, Space and the arrows), as every character key does; `BoardSpec::repeating` lists them, and any other key with the flag is refused.
 
+`[layer]` places the shortcuts layer (spec §4.2): it fills every side cell but the `layer` key's in reading order, and with more than one page `next` (column, row) holds the Next key, so a page holds 13 shortcuts, or 14 alone. `BoardSpec::layer_grid` gives those cells and that room. The layer's keys are generated: `sc-` and the shortcut id (`shortcut_key_id`, such as `sc-copy-all`) and `layer-next` (`NEXT_ID`); a board id in either form is refused, as is a second `layer` key or a Next cell off the side grid or on that key.
+
 | Role | A click |
 |---|---|
 | `char` | Types the character of the layout shown; only the keys of a `chars` run have it. |
@@ -29,6 +31,9 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `latch` | Latches Shift, Ctrl, Alt, `AltGr` or Win; with `lone = true` (Win only), a second click while it is unspent lets go and sends the key alone, so Start opens. |
 | `lang` | Steps through or picks the layouts. |
 | `assist` | Asks the mouse module to flip Right-click (`rclick`) or Grab (`grab`); see "Mouse assist on the bus". |
+| `layer` | Shows or hides the shortcuts layer (the Shortcuts key). |
+| `power` | Asks for the system's power dialog (the Power key). |
+| `shortcut`, `next` | A shortcut, or the Next page key; only the layer's generated keys have them, and the file may not use them. |
 | `later` | Nothing: the other side keys come in a later version and are drawn dimmed. |
 
 ## Geometry, size and place
@@ -147,6 +152,7 @@ Handlers run on the sender's thread and take the face's lock briefly; nothing is
 | `key_apps` | `["scrcpy.exe"]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. scrcpy reads letters only as key presses. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |
+| `shortcut_pages` | the owner's three pages (spec §4.2) | The shortcuts layer's pages, by shortcut id: at most `MAX_PAGES` in `settings.rs` (so the Next key's dots stay readable), none empty or past the layer's room, no id twice; an empty list is allowed. |
 
 Every size is a finite number. The defaults live only in `defaults.toml`. The module writes `size`, `x`, `y` and `placed` only through its own settings handle, and only when they change.
 
@@ -157,7 +163,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`, and for the shortcuts layer `LayerSpec`, `SideCell`, `LayerGrid` (`cells`, `capacity`, `next`; from `BoardSpec::layer_grid`), `shortcut_key_id`, `NEXT_ID`.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `unused`, `held`, `used`, `spend`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.

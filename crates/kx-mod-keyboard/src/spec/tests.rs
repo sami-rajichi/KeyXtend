@@ -255,6 +255,8 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
         BoardError::Side(String::new()),
         BoardError::Twice(String::new()),
         BoardError::Role(String::new()),
+        BoardError::Next,
+        BoardError::Reserved(String::new()),
     ];
     let kinds: std::collections::HashSet<&str> = all.iter().map(BoardError::kind).collect();
     assert_eq!(kinds.len(), all.len(), "each kind names its rule");
@@ -266,5 +268,6 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
 }
 
 mod ids;
+mod layer;
 mod lone;
 mod repeat;
