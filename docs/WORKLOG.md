@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-23 11:21 — P6: the shortcuts and power ports, their fakes, and held keys in the fake layout
+`kx-module-api` now has the `Shortcuts` port (ids such as `copy-all`, sent with the latched keys held, gated by `InjectInput`) and the `PowerDialog` port behind the new `Power` capability, with the ungated `PowerAsked`, `PowerChanged` and `PowerAsk` events and the `notice.power-failed` text in EN, FR and AR. Ids and key names refuse a bad form and never show in logs. The fakes record sends and count opens, and the fake layout source now honours held keys: with Ctrl a letter key types and a digit key does not, so a dead key then Ctrl+1 keeps its wait. A Windows test checks those facts on each installed layout and showed `ToUnicodeEx` ignores Win, so Win changes nothing in the fake either.
+
 ## 2026-10-17 20:06 — Licence: view only, all rights reserved (ADR-0030)
 KeyXtend's code is now view only, all rights reserved by the owner: anyone may read it, but no one may use, build, copy, change, share or sell it without written permission. The app will ship under its own user licence, which must let users replace the Qt DLLs. Every crate points at `LICENSE`, GPL leaves `deny.toml`'s allowed list, and every third-party part was checked to allow a closed, sold app. Versions published before keep the GPL, and free SignPath signing gives way to a paid signature in P14.
 
