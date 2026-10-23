@@ -192,6 +192,7 @@ QtObject {
         const each = JSON.parse(steps).filter(s => s.length > 0).map(s => s.map(shown).join(text("combo.join")));
         return each.join(text("combo.then"));
     }
+    // A shortcut's tip as the hub makes it: its name and keys in `tip.keys`, or the name alone when it has no keys.
     function keysTip(nameKey, steps) {
         const [name, keys] = [text(nameKey), keysText(steps)];
         if (keys.length === 0)

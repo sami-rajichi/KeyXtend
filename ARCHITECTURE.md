@@ -73,9 +73,10 @@ crates/
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
-                         language, the tray's in the system's (ADR-0020); the `keysTip` bridge call names a
-                         shortcut's keys in the keyboard's language, and `PageDots.qml` draws the page dots
-                         the Next key and the Cycle design share (P6)
+                         language, the tray's in the system's (ADR-0020); the `keysTip` and `keysText` bridge
+                         calls name a shortcut's keys in the keyboard's language, `layerPageText` the layer's
+                         page for readers, and `PageDots.qml` draws the page dots the Next key and the Cycle
+                         design share (P6)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view,
                          WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
                          the high-contrast palette, and the strict reader kx-ui's build checks sounds with; no

@@ -53,21 +53,64 @@ impl qobject::Ui {
     }
 
     pub(super) fn keys_tip(&self, name_key: &QString, steps: &QString) -> QString {
-        let (key, steps) = (name_key.to_string(), steps_of(steps));
+        let (key, steps) = (name_key.to_string(), steps_of(&steps.to_string()));
         qs(&self.with(key.clone(), |h| h.i18n().keys_tip(&key, &steps)))
     }
 
     pub(super) fn keys_text(&self, steps: &QString) -> QString {
-        let steps = steps_of(steps);
+        let steps = steps_of(&steps.to_string());
         qs(&self.with(String::new(), |h| h.i18n().keys(&steps)))
     }
 }
 
-/// A shortcut's steps from QML's JSON; none when they do not read.
-fn steps_of(steps: &QString) -> Vec<Vec<KeyName>> {
-    let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(&steps.to_string());
+/// A shortcut's steps from QML's JSON `json`; none when it does not read, as a key name of a bad form or length.
+fn steps_of(json: &str) -> Vec<Vec<KeyName>> {
+    let steps = serde_json::from_str::<Vec<Vec<KeyName>>>(json);
     steps.unwrap_or_else(|_| {
         tracing::warn!("QML sent shortcut steps that do not read");
         Vec::new()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kx_module_api::ports::MAX_ID_LEN;
+
+    /// `names` as key names.
+    fn step(names: &[&str]) -> Vec<KeyName> {
+        names.iter().map(|n| KeyName::new(n).unwrap()).collect()
+    }
+
+    #[test]
+    fn a_shortcuts_steps_read_from_qmls_json() {
+        let read = steps_of(r#"[["ctrl", "a"], ["ctrl", "c"]]"#);
+        assert_eq!(read, vec![step(&["ctrl", "a"]), step(&["ctrl", "c"])]);
+        assert!(steps_of("[]").is_empty());
+    }
+
+    #[test]
+    fn steps_that_do_not_read_give_no_keys_and_no_panic() {
+        let long = format!(r#"[["{}"]]"#, "a".repeat(MAX_ID_LEN + 1));
+        let deep = format!("{}{}", "[".repeat(100_000), "]".repeat(100_000));
+        let bad = [
+            "oops",
+            "",
+            r#"{"steps": [["ctrl"]]}"#,
+            r#"["ctrl", "c"]"#,
+            "[[1, 2]]",
+            r#"[["Ctrl", "c"]]"#,
+            r#"[["ctrl", "-c"]]"#,
+            r#"[["ctrl", "c d"]]"#,
+            &long,
+            &deep,
+        ];
+        for json in bad {
+            assert!(
+                steps_of(json).is_empty(),
+                "{}",
+                json.get(..40).unwrap_or(json)
+            );
+        }
+    }
 }
