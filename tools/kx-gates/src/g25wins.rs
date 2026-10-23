@@ -8,15 +8,13 @@ use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
 
 use crate::apps::{Ctx, Opened};
-use crate::g25watch::{self, Facts, Watch, picked};
+use crate::g25watch::{self, Watch};
 use crate::keymap::Reader;
 use crate::modekey::ModeKey;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::{board, g10keys, g25, keys, win};
 
-/// What the refusal names as the program of a window whose program does not read.
-const UNREAD: &str = "a program that does not read";
 /// The result's note when a window of the power dialog's class stays open, so the owner closes it.
 const LEFT_OPEN: &str = "a window of the power dialog's class is still open: the owner closes it";
 /// The result's note when no watched window showed in time, as one of a class `[g25]` lacks, or a late one, may show.
@@ -49,9 +47,15 @@ impl EscTo {
         }
     }
 
-    /// Whether Notepad must be back in front once the watched windows closed.
+    /// Whether Notepad must come back to the front by itself once the watched windows closed: after the panel only.
     pub fn app_back(self) -> bool {
-        self != Self::Watched
+        self == Self::WatchedOrApp
+    }
+
+    /// Whether G25 brings Notepad back itself once the watched windows closed: after the switcher, whose hidden window
+    /// Windows leaves in front.
+    pub fn fetches_app(self) -> bool {
+        self == Self::WatchedFirst
     }
 }
 
@@ -60,8 +64,18 @@ fn about(w: HWND) -> Value {
     json!({ "class": win::class(w), "program": win::program_name(w) })
 }
 
+/// Brings Notepad back with G25's front step, recorded as `back` and any error as `back_error`; true once it is back.
+fn fetch(ctx: &Ctx, app: &Opened, result: &mut Value) -> bool {
+    let back = g25::front(ctx, app);
+    result["back"] = json!(back.is_ok());
+    if let Err(e) = &back {
+        result["back_error"] = json!(e);
+    }
+    back.is_ok()
+}
+
 /// Waits for `watch`'s windows, sends Esc only while one of them, or Notepad as `to` allows, is in front, then waits
-/// for them to close, with Notepad back in front when `to` needs it.
+/// for them to close; Notepad must then come back by itself, or G25 brings it back, as `to` says.
 pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value, String> {
     let opened = g25::until(ctx, || !watch.shown().is_empty());
     let found: Vec<Value> = watch.shown().into_iter().map(about).collect();
@@ -85,34 +99,20 @@ pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value
     if first {
         result["came_to_front"] = json!(own);
     }
+    if closed && to.fetches_app() {
+        let fetched = fetch(ctx, app, &mut result);
+        result["ok"] = json!(opened && closed && fetched);
+    }
     if !opened {
         result["note"] = json!(UNSEEN);
     }
     Ok(result)
 }
 
-/// Why G25 refuses while window `f` shows, by its class and program, never its title.
-fn already_open(f: &Facts) -> String {
-    let program = f.program.as_deref().unwrap_or(UNREAD);
-    format!(
-        "a `{}` window of {program} is open, which G25's Alt taps could reach: the owner closes it first",
-        f.class
-    )
-}
-
-/// Ok unless one of the windows `seen` has one of the dialog's `classes`, whatever its program, old or new; else why
-/// G25 refuses, naming the first such window.
-pub fn none_open(seen: &[Facts], classes: &[String]) -> Result<(), String> {
-    match seen.iter().find(|f| picked(f, classes, None)) {
-        Some(f) => Err(already_open(f)),
-        None => Ok(()),
-    }
-}
-
 /// `none_open` on the windows shown now, before G25 starts, before each Alt tap that brings Notepad back and before
 /// its Power click.
 pub fn no_dialog(ctx: &Ctx) -> Result<(), String> {
-    none_open(
+    g25watch::none_open(
         &g25watch::seen(),
         std::slice::from_ref(&ctx.cfg.g25.power_class),
     )
@@ -191,11 +191,7 @@ fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     kb.click(&id)?;
     let mut result = g25::part(closes(ctx, app, &watch, EscTo::Watched));
     if alt_ok(&watch.shown(), &any.shown()) {
-        let back = g25::front(ctx, app);
-        result["back"] = json!(back.is_ok());
-        if let Err(e) = back {
-            result["back_error"] = json!(e);
-        }
+        fetch(ctx, app, &mut result);
     } else {
         result["left_open"] = json!(LEFT_OPEN);
     }
@@ -205,30 +201,6 @@ fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn facts(class: &str, program: Option<&str>) -> Facts {
-        Facts {
-            class: class.into(),
-            program: program.map(Into::into),
-        }
-    }
-
-    #[test]
-    fn g25_refuses_while_any_window_of_the_dialogs_class_shows_and_names_its_class_and_program() {
-        let class = ["#32770".to_owned()];
-        assert_eq!(none_open(&[], &class), Ok(()));
-        let notepad = facts("Notepad", Some("notepad.exe"));
-        assert_eq!(none_open(std::slice::from_ref(&notepad), &class), Ok(()));
-        for (open, program) in [
-            (facts("#32770", Some("explorer.exe")), "explorer.exe"),
-            (facts("#32770", None), UNREAD),
-            (facts("#32770", Some("notepad.exe")), "notepad.exe"),
-        ] {
-            let why = none_open(&[notepad.clone(), open.clone()], &class).unwrap_err();
-            assert!(why.contains("`#32770`") && why.contains(program), "{why}");
-            assert!(why.contains("Alt taps could reach"), "{why}");
-        }
-    }
 
     #[test]
     fn the_panel_passes_only_once_win_and_its_spare_shift_both_read_let_go() {
@@ -271,10 +243,24 @@ mod tests {
             EscTo::WatchedFirst.app_takes(true),
             "it never did: today's rule"
         );
+    }
+
+    #[test]
+    fn g25_fetches_notepad_back_after_the_switcher_and_waits_for_it_after_the_panel() {
+        let first = EscTo::WatchedFirst;
         assert!(
-            !EscTo::Watched.app_back()
-                && EscTo::WatchedFirst.app_back()
-                && EscTo::WatchedOrApp.app_back()
+            first.fetches_app() && !first.app_back(),
+            "Windows leaves the switcher's hidden window in front"
+        );
+        let panel = EscTo::WatchedOrApp;
+        assert!(
+            panel.app_back() && !panel.fetches_app(),
+            "the panel gives the front back"
+        );
+        let power = EscTo::Watched;
+        assert!(
+            !power.app_back() && !power.fetches_app(),
+            "Power fetches it after its class check"
         );
     }
 

@@ -144,7 +144,7 @@ impl Desk<'_> {
         Ok(json!({ "copy": copy, "paste": paste, "undo": undo, "copy_all": copy_all, "ok": ok }))
     }
 
-    /// Switch app shows the task switcher, which Esc closes with Notepad back in front.
+    /// Switch app shows the task switcher, which Esc closes; G25 then brings Notepad back to the front.
     fn switch_app(&self) -> Result<Value, String> {
         let watch = Watch::start(&self.ctx.cfg.g25.switcher_classes, None);
         self.press(SWITCH_APP)?;

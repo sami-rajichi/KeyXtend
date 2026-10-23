@@ -1,5 +1,5 @@
 //! G25's watch on system windows: the windows of one kind that show after the watch starts, each picked from plain
-//! window facts, and the facts of every window shown now.
+//! window facts, and the facts of every window shown now, with G25's refusal while one has the dialog's class.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -7,6 +7,9 @@ use std::collections::HashSet;
 use windows::Win32::Foundation::HWND;
 
 use crate::{apps, win};
+
+/// What the refusal names as the program of a window whose program does not read.
+const UNREAD: &str = "a program that does not read";
 
 /// What G25 reads of a window: its class and program, never its title, which may be private.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,6 +44,24 @@ pub fn picked(facts: &Facts, classes: &[String], program: Option<&str>) -> bool 
 /// The facts of every window a person sees now, old or new.
 pub fn seen() -> Vec<Facts> {
     win::seen_windows().into_iter().map(Facts::of).collect()
+}
+
+/// Why G25 refuses while window `f` shows, by its class and program, never its title.
+fn already_open(f: &Facts) -> String {
+    let program = f.program.as_deref().unwrap_or(UNREAD);
+    format!(
+        "a `{}` window of {program} is open, which G25's Alt taps could reach: the owner closes it first",
+        f.class
+    )
+}
+
+/// Ok unless one of the windows `seen` has one of the dialog's `classes`, whatever its program, old or new; else why
+/// G25 refuses, naming the first such window.
+pub fn none_open(seen: &[Facts], classes: &[String]) -> Result<(), String> {
+    match seen.iter().find(|f| picked(f, classes, None)) {
+        Some(f) => Err(already_open(f)),
+        None => Ok(()),
+    }
 }
 
 /// The windows of one kind a person sees that they did not see when the watch started.
@@ -129,5 +150,22 @@ mod tests {
             &class,
             shell
         ));
+    }
+
+    #[test]
+    fn g25_refuses_while_any_window_of_the_dialogs_class_shows_and_names_its_class_and_program() {
+        let class = list(&["#32770"]);
+        assert_eq!(none_open(&[], &class), Ok(()));
+        let notepad = facts("Notepad", Some("notepad.exe"));
+        assert_eq!(none_open(std::slice::from_ref(&notepad), &class), Ok(()));
+        for (open, program) in [
+            (facts("#32770", Some("explorer.exe")), "explorer.exe"),
+            (facts("#32770", None), UNREAD),
+            (facts("#32770", Some("notepad.exe")), "notepad.exe"),
+        ] {
+            let why = none_open(&[notepad.clone(), open.clone()], &class).unwrap_err();
+            assert!(why.contains("`#32770`") && why.contains(program), "{why}");
+            assert!(why.contains("Alt taps could reach"), "{why}");
+        }
     }
 }
