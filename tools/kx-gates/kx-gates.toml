@@ -217,14 +217,13 @@ forget_min_chars = 4
 forget_max_chars = 200
 
 [edit_keys]
-# Shortcuts the stage-1b probes press: Ctrl+Home, Ctrl+End, Home, Shift+End, Down, Ctrl+V, Ctrl+Z.
+# Shortcuts the stage-1b probes press: Ctrl+Home, Ctrl+End, Home, Shift+End, Down, Ctrl+V.
 doc_start = [0x11, 0x24]
 doc_end = [0x11, 0x23]
 line_start = [0x24]
 select_line = [0x10, 0x23]
 next_line = [0x28]
 paste = [0x11, 0x56]
-undo = [0x11, 0x5A]
 
 [g19]
 # One line each in English, French and Arabic; each is selected to its end and read back through UI Automation.
@@ -288,14 +287,20 @@ taskbar_class = "Shell_TrayWnd"
 [g25]
 # Copied and pasted in Notepad; also the prefix removed from Windows clipboard history after.
 text = "kx-keys-alpha"
-# Longest wait for a layout change or a window switch, in ms.
+# Longest wait for a layout change, a window to show or close, or the shortcuts layer to flip or turn, in ms.
 switch_wait_ms = 2000
 # Windows that appear while the Win+V panel is open (its window never takes the foreground).
 panel_classes = ["Shell_LightDismissOverlay", "ApplicationFrameWindow"]
-# Win+V, Esc, Alt+Tab.
-win_v = [0x5B, 0x56]
+# The product's key clicked after its Win key for that panel: V's scan code on the English, French and Arabic layouts.
+v_scan = 0x2F
+# Esc, which closes the switcher and the panel and cancels the power dialog; G25 never sends Enter.
 esc = [0x1B]
-alt_tab = [0x12, 0x09]
+# The task switcher that Switch app (Ctrl+Alt+Tab) keeps open: Windows 11's, Windows 10's, then the classic one.
+switcher_classes = ["XamlExplorerHostIslandWindow", "MultitaskingViewFrame", "TaskSwitcherWnd"]
+# The class of the "Shut Down Windows" dialog that Power opens: the standard dialog class.
+power_class = "#32770"
+# The program that shows that dialog: the shell, as `Shell.Application` asks its taskbar for it.
+power_program = "explorer.exe"
 
 [capture]
 # `capture-layouts` writes one golden table per language, from the first installed layout of each. The keys it reads

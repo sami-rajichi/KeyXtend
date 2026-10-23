@@ -5,12 +5,14 @@
 use kx_mod_keyboard::legend::is_mark;
 use serde::Deserialize;
 
+use crate::board;
 use crate::config::GatesConfig;
 use crate::g22cfg::plain_name;
 
 /// Refuses probe settings that could pick the wrong copy, clean up the owner's copies or pass with nothing checked.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
     check_g7(&c.g7)?;
+    check_g25(&c.g25)?;
     let g = &c.g20;
     if !(1..=g.copies).contains(&g.paste_back) {
         return Err(format!("g20.paste_back must be 1 to {}", g.copies));
@@ -52,6 +54,26 @@ fn check_g7(g: &G7) -> Result<(), String> {
     Ok(())
 }
 
+/// Refuses a G25 run that could miss a window or send Esc to another: an empty class, program or Esc, or a V that is
+/// no character key of the product's board.
+fn check_g25(g: &G25) -> Result<(), String> {
+    let empty = |list: &[String]| list.is_empty() || list.iter().any(String::is_empty);
+    let names = [&g.power_class, &g.power_program];
+    if empty(&g.panel_classes)
+        || empty(&g.switcher_classes)
+        || names.iter().any(|n| n.is_empty())
+        || g.esc.is_empty()
+    {
+        return Err(
+            "g25 needs panel and switcher classes, the power dialog's class and program, and Esc"
+                .into(),
+        );
+    }
+    board::char_key(g.v_scan)
+        .map(drop)
+        .map_err(|e| format!("g25.v_scan: {e}"))
+}
+
 /// Editing shortcuts the probes press: virtual-key combos, pressed in order.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EditKeys {
@@ -67,8 +89,6 @@ pub struct EditKeys {
     pub next_line: Vec<u16>,
     /// Paste.
     pub paste: Vec<u16>,
-    /// Undo.
-    pub undo: Vec<u16>,
 }
 
 /// Selection read-back probe.
@@ -178,16 +198,20 @@ pub struct G24 {
 pub struct G25 {
     /// Notepad's text, copied and pasted; it is also the history clean-up prefix.
     pub text: String,
-    /// Longest wait for a layout change or a window switch, in ms.
+    /// Longest wait for a layout change, a window to show or close, or the shortcuts layer to flip or turn, in ms.
     pub switch_wait_ms: u64,
     /// Classes of the windows that show while the Windows clipboard panel is open (adapter table).
     pub panel_classes: Vec<String>,
-    /// Opens the Windows clipboard window.
-    pub win_v: Vec<u16>,
-    /// Closes it.
+    /// The scan code of the product's character key clicked after its Win key to open that panel: V's.
+    pub v_scan: u16,
+    /// Closes the switcher and the panel, and cancels the power dialog.
     pub esc: Vec<u16>,
-    /// Switches to the previous window.
-    pub alt_tab: Vec<u16>,
+    /// Classes of the task switcher's window, which Switch app keeps open (adapter table).
+    pub switcher_classes: Vec<String>,
+    /// Class of the power dialog's window (adapter table).
+    pub power_class: String,
+    /// Program that shows the power dialog (adapter table).
+    pub power_program: String,
 }
 
 #[cfg(test)]
@@ -224,6 +248,28 @@ mod tests {
             let mut c = good.clone();
             spoil(&mut c);
             assert!(check(&c).is_err(), "case {i} passed");
+        }
+    }
+
+    #[test]
+    fn check_refuses_a_g25_that_could_miss_its_window_or_close_another() {
+        let good = crate::config::load().expect("kx-gates.toml loads");
+        let bad: [fn(&mut G25); 9] = [
+            |g| g.switcher_classes.clear(),
+            |g| g.switcher_classes.push(String::new()),
+            |g| g.panel_classes.clear(),
+            |g| g.panel_classes[0].clear(),
+            |g| g.power_class.clear(),
+            |g| g.power_program.clear(),
+            |g| g.esc.clear(),
+            |g| g.v_scan = 0x01,
+            |g| g.v_scan = 0xFFFF,
+        ];
+        for (i, spoil) in bad.iter().enumerate() {
+            let mut c = good.clone();
+            spoil(&mut c.g25);
+            let e = check(&c).expect_err(&format!("case {i} passed"));
+            assert!(e.starts_with("g25"), "case {i}: {e}");
         }
     }
 }

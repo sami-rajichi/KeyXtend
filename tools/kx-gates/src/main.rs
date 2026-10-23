@@ -50,6 +50,8 @@ mod g22type;
 mod g23;
 mod g24;
 mod g25;
+mod g25layer;
+mod g25wins;
 mod g26;
 mod g2hand;
 mod g2raw;

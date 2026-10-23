@@ -1,22 +1,21 @@
-//! G25: the product's language key cycles the layouts of the app in front, and the common shortcuts work.
+//! G25 on the product in Notepad: its language key cycles Notepad's layouts, its shortcuts layer's keys work, its Win
+//! and V keys open the clipboard panel, and its Power key opens the power dialog, which G25 only ever cancels.
 #![cfg(windows)]
-
-use std::collections::HashSet;
 
 use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
 use kx_platform_windows::langinfo::lang_id;
-use kx_platform_windows::window::foreground;
 use kx_theme::Themes;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::click_on;
+use crate::modekey::Wait;
 use crate::mouse::round_px;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clip, clipkeep, cliptext, keys, langs, probe, product, readback, winclip};
+use crate::{board, clipkeep, g25layer, g25wins, langs, probe, product, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -29,9 +28,17 @@ fn lang(layout: isize) -> String {
 }
 
 /// Waits until `f` holds, up to G25's switch wait.
-fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
+pub(crate) fn until(ctx: &Ctx, f: impl Fn() -> bool) -> bool {
     let (g, t) = (&ctx.cfg.g25, &ctx.cfg.timing);
     win::poll_until(g.switch_wait_ms, t.poll_ms, || f().then_some(())).is_some()
+}
+
+/// How long a product key G25 clicks gets to read on or off: G25's switch wait.
+pub(crate) fn wait(ctx: &Ctx) -> Wait {
+    Wait {
+        lit_ms: ctx.cfg.g25.switch_wait_ms,
+        poll_ms: ctx.cfg.timing.poll_ms,
+    }
 }
 
 /// True once the app's focus shows `layout`.
@@ -133,102 +140,21 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     })
 }
 
-/// Ctrl+A and Ctrl+C, Ctrl+End and Ctrl+V, then Ctrl+Z; each checked on the clipboard or the saved file.
-fn shortcuts(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    let (g, k, ek, t) = (
-        &ctx.cfg.g25,
-        &ctx.cfg.keys,
-        &ctx.cfg.edit_keys,
-        &ctx.cfg.timing,
-    );
-    keys_ours(app)?;
-    keys::combo(&k.select_all)?;
-    sleep_ms(t.key_settle_ms);
-    let before = clip::sequence();
-    keys_ours(app)?;
-    keys::combo(&k.copy)?;
-    let changed = clip::wait_change(before, t.read_wait_ms, t.poll_ms);
-    let text = cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?;
-    let copy = changed && text.as_deref() == Some(g.text.as_str());
-    keys_ours(app)?;
-    keys::combo(&ek.doc_end)?;
-    keys::combo(&ek.paste)?;
-    sleep_ms(ctx.cfg.probes.settle_ms);
-    let twice = g.text.repeat(2);
-    let paste = readback::saved_until(ctx, app, |s| s.trim_end() == twice)?;
-    keys_ours(app)?;
-    keys::combo(&ek.undo)?;
-    sleep_ms(ctx.cfg.probes.settle_ms);
-    let undo = readback::saved_until(ctx, app, |s| s.trim_end() == g.text)?;
-    Ok(json!({ "copy": copy, "paste": paste, "undo": undo, "ok": copy && paste && undo }))
-}
-
-/// A window's class and program file name; never its title, which may be private.
-fn about(w: HWND) -> Value {
-    json!({ "class": win::class(w), "program": win::program_name(w) })
-}
-
-/// Win+V shows the Windows clipboard panel, and Esc closes it; Windows ignores an injected Win+V without uiAccess.
-fn clip_window(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    let g = &ctx.cfg.g25;
-    keys_ours(app)?;
-    let before: HashSet<isize> = win::seen_windows().into_iter().map(win::key).collect();
-    // The panel's windows exist all the time; they only stop being cloaked while it shows.
-    let shown = || -> Vec<HWND> {
-        let panel =
-            |w: &HWND| !before.contains(&win::key(*w)) && g.panel_classes.contains(&win::class(*w));
-        win::seen_windows().into_iter().filter(panel).collect()
-    };
-    keys::slow_combo(&g.win_v, ctx.cfg.timing.key_settle_ms)?;
-    let opened = until(ctx, || !shown().is_empty());
-    let new: Vec<Value> = shown().into_iter().map(about).collect();
-    // Esc is sent only while our window or the panel is in front, so it never reaches another app.
-    let safe = until(ctx, || {
-        let f = foreground();
-        f == app.hwnd || shown().contains(&f)
-    });
-    let at_esc = about(foreground());
-    if safe {
-        keys::combo(&g.esc)?;
-    }
-    let closed = safe && until(ctx, || foreground() == app.hwnd && shown().is_empty());
-    let ok = opened && closed;
-    Ok(json!({
-        "opened": opened, "panel": new, "esc_sent": safe, "front_at_esc": at_esc,
-        "closed": closed, "ok": ok,
-    }))
-}
-
-/// Alt+Tab moves our window away, and Alt+Tab again brings it back; nothing is clicked.
-fn alt_tab(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    let g = &ctx.cfg.g25;
-    keys_ours(app)?;
-    keys::combo(&g.alt_tab)?;
-    let away = until(ctx, || foreground() != app.hwnd);
-    let other = about(foreground());
-    sleep_ms(ctx.cfg.timing.key_settle_ms);
-    keys::combo(&g.alt_tab)?;
-    let back = until(ctx, || foreground() == app.hwnd);
-    if !back {
-        let _ = probe::front(ctx, app);
-    }
-    Ok(json!({ "away": away, "other": other, "back": back, "ok": away && back }))
-}
-
-/// Every part in turn on Notepad.
+/// Every part in turn on Notepad, which comes back to the front before each; Power goes last, alone on screen.
 fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     probe::front(ctx, app)?;
     let layouts = layouts(ctx, app);
-    let shortcuts = clipkeep::keep(ctx.cfg, || shortcuts(ctx, app))?;
-    let window = clip_window(ctx, app)?;
     probe::front(ctx, app)?;
-    let tab = alt_tab(ctx, app)?;
-    let pass = [&layouts, &shortcuts, &window, &tab]
-        .iter()
-        .all(|p| p["ok"] == true);
+    let (shortcuts, switch_app) = clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app))?;
+    probe::front(ctx, app)?;
+    let window = g25wins::clip_window(ctx, app)?;
+    probe::front(ctx, app)?;
+    let power = g25wins::power(ctx, app)?;
+    let parts = [&layouts, &shortcuts, &switch_app, &window, &power];
+    let pass = parts.iter().all(|p| p["ok"] == true);
     Ok(json!({
-        "gate": "G25", "app": app.kind.name(), "pass": pass,
-        "layouts": layouts, "shortcuts": shortcuts, "clipboard_window": window, "alt_tab": tab,
+        "gate": "G25", "app": app.kind.name(), "pass": pass, "layouts": layouts, "shortcuts": shortcuts,
+        "switch_app": switch_app, "clipboard_window": window, "power": power,
     }))
 }
 

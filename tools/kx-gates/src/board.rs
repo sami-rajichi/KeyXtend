@@ -1,9 +1,13 @@
-//! The product's board as kx-mod-keyboard ships it: its keys' ids, its character keys and its language key.
+//! The product's board as kx-mod-keyboard ships it: its keys' ids, its character keys, its language key and the
+//! shortcuts layer's pages.
 #![cfg(windows)]
 
+use std::collections::HashSet;
+
 use kx_mod_keyboard::spec::{RowKey, char_id};
-use kx_mod_keyboard::{BoardSpec, Nav, Role};
-use kx_module_api::ports::Scan;
+use kx_mod_keyboard::{BoardSpec, Latch, Layer, Nav, Role};
+use kx_module_api::ports::{Scan, ShortcutId, Shortcuts};
+use kx_platform_windows::WinShortcuts;
 
 /// The board compiled into the product.
 fn shipped() -> Result<BoardSpec, String> {
@@ -46,8 +50,44 @@ pub fn id_of(role: Role) -> Result<String, String> {
         .ok_or_else(|| format!("the product's board has no {role:?} key"))
 }
 
+/// The id of the first key that latches `latch`, whether or not a second click sends it alone.
+pub fn latch_id(latch: Latch) -> Result<String, String> {
+    let roles = shipped()?.roles();
+    let found = roles
+        .into_iter()
+        .find(|(_, r, _)| matches!(r, Role::Latch(l) if l.latch == latch));
+    found
+        .map(|(id, ..)| id)
+        .ok_or_else(|| format!("the product's board has no {latch:?} key"))
+}
+
+/// The id of the character key with scan code `code`.
+pub fn char_key(code: u16) -> Result<String, String> {
+    let found = char_keys()?.into_iter().find(|(sc, _)| sc.code() == code);
+    found
+        .map(|(_, id)| id)
+        .ok_or_else(|| format!("the product's board has no character key {code:#06X}"))
+}
+
+/// Each page's key ids in reading order, Next last, as the product draws its `shortcut_pages` setting `pages` on
+/// Windows.
+pub fn layer_pages(pages: &[Vec<ShortcutId>]) -> Result<Vec<Vec<String>>, String> {
+    let known: HashSet<ShortcutId> = WinShortcuts.known().into_iter().map(|s| s.id).collect();
+    let mut layer = Layer::new(shipped()?.layer_grid(), pages, &known);
+    layer.toggle();
+    let mut all = Vec::new();
+    for _ in 0..layer.page_count() {
+        all.push(layer.cells().into_iter().map(|c| c.key.id()).collect());
+        layer.next_page();
+    }
+    Ok(all)
+}
+
 #[cfg(test)]
 mod tests {
+    use kx_mod_keyboard::KeyboardSettings;
+    use kx_mod_keyboard::spec::NEXT_ID;
+
     use super::*;
 
     #[test]
@@ -73,6 +113,33 @@ mod tests {
             roles
                 .iter()
                 .any(|(id, r, _)| id == "caps" && *r == Role::Caps)
+        );
+    }
+
+    #[test]
+    fn the_win_latch_and_a_character_key_come_from_the_board() {
+        assert_eq!(latch_id(Latch::Win).expect("one Win key"), "win");
+        assert_eq!(latch_id(Latch::Shift).expect("a Shift key"), "shift");
+        assert_eq!(char_key(0x2F).expect("V's place"), "c-0x002F");
+        assert!(char_key(0x01).is_err(), "Esc is a named key");
+        assert!(char_key(0xFFFF).is_err());
+    }
+
+    #[test]
+    fn the_layer_pages_are_the_products_with_next_last() {
+        let defaults = KeyboardSettings::from_defaults().expect("defaults");
+        let pages = layer_pages(&defaults.shortcut_pages).expect("the board reads");
+        assert_eq!(pages.len(), defaults.shortcut_pages.len());
+        assert!(
+            pages
+                .iter()
+                .all(|p| p.last().map(String::as_str) == Some(NEXT_ID))
+        );
+        assert!(pages[0].contains(&"sc-select-all".to_string()));
+        assert!(pages[1].contains(&"sc-switch-app".to_string()));
+        assert!(
+            layer_pages(&[]).expect("reads").is_empty(),
+            "nothing to show"
         );
     }
 

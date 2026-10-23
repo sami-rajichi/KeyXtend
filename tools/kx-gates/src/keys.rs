@@ -17,7 +17,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT,
 };
 
-use crate::win::{self, sleep_ms};
+use crate::win;
 use crate::{mouse, mouseguard};
 
 /// Mouse flags that press a button.
@@ -213,20 +213,6 @@ pub fn combo(vks: &[u16]) -> Result<(), String> {
 /// Like `combo`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
 pub fn restore_combo(vks: &[u16]) -> Result<(), String> {
     send_keys(&presses(vks)).map_err(|e| e.to_string())
-}
-
-/// Like `combo`, with a pause of `gap_ms` after each press and release, for shell shortcuts.
-pub fn slow_combo(vks: &[u16], gap_ms: u64) -> Result<(), String> {
-    mouseguard::allowed()?;
-    let events = presses(vks);
-    for (at, event) in events.iter().enumerate() {
-        if let Err(e) = send_keys(std::slice::from_ref(event)) {
-            let _ = send_keys(&strokes::releases(&events[..at]));
-            return Err(e.to_string());
-        }
-        sleep_ms(gap_ms);
-    }
-    Ok(())
 }
 
 #[cfg(test)]
