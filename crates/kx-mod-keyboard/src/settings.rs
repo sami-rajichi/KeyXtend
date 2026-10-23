@@ -23,8 +23,9 @@ pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
 /// The largest `size_max` the settings take, so a hand-edited size cannot open the keyboard far past every screen.
 pub(crate) const SIZE_CEILING: f64 = 4.0;
-/// The most shortcut pages: the Next key shows one dot per page, and the dots must stay readable.
-pub(crate) const MAX_PAGES: usize = 8;
+/// The most shortcut pages: the Next key shows one dot per page, and they must fit one line inside its cap in every
+/// theme, which the app's `agree` test checks.
+pub const MAX_PAGES: usize = 6;
 
 /// Why a size was refused: it is not a finite number.
 const NOT_A_NUMBER: &str = "sizes must be numbers";

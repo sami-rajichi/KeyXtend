@@ -1,14 +1,15 @@
 //! What only the app sees, since it alone depends on every crate: the board, the shortcuts layer, the modules and the
 //! language key's designs have their texts in every language, the shortcuts agree with the Windows table, the board's
-//! icons resolve, every paint names tokens each theme has, every character key has its scan code in the layouts
-//! table, a size, a buffer pool or the shortcut pages past a rule go back to their default, and the stage puts Qt's
-//! QML where the app pins it.
+//! icons resolve, every paint names tokens each theme has, the Next key holds the most pages' dots, every character
+//! key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a rule go back to
+//! their default, and the stage puts Qt's QML where the app pins it.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod dots;
 #[path = "../common/fakes.rs"]
 mod fakes;
 mod icons;
