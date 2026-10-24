@@ -66,7 +66,7 @@ impl Tally {
 pub(crate) struct Facts {
     /// Words dropped for not being in the list's main script.
     pub(crate) script: Tally,
-    /// Rejected tokens whose elision the dictionary accepts.
+    /// Tokens whose elision the dictionary accepts, which take it as their one form.
     pub(crate) elisions: Tally,
     /// Stems joined from two tokens.
     pub(crate) joins: Tally,
@@ -157,7 +157,8 @@ fn main_script(entries: Vec<Entry>, rules: &Rules, dropped: &mut Tally) -> Vec<(
     ours
 }
 
-/// The candidate of one token, counting it in `elisions` when only its elision is accepted.
+/// The candidate of one token; a token whose elision the dictionary accepts is that elision, never its bare piece,
+/// and is counted in `elisions`.
 fn cand(
     rank: usize,
     entry: Entry,
@@ -165,10 +166,11 @@ fn cand(
     rules: &Rules,
     elisions: &mut Tally,
 ) -> Cand {
-    let forms = dict.map_or_else(|| vec![entry.word.clone()], |d| d.forms(&entry.word));
+    let mut forms = dict.map_or_else(|| vec![entry.word.clone()], |d| d.forms(&entry.word));
     let elided = format!("{}{}", entry.word, rules.apostrophe);
-    if forms.first().is_some_and(|f| *f == elided) {
+    if forms.contains(&elided) {
         elisions.add(rules.show, || format!("{} → {elided}", entry.word));
+        forms = vec![elided];
     }
     let fate = if forms.is_empty() {
         Fate::Rejected

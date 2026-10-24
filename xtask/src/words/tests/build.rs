@@ -175,7 +175,7 @@ fn the_built_pack_opens_and_its_chains_follow_the_text() {
     );
     assert_eq!(next(&pack, &["le", "chat"]), ["est", "dort"]);
     assert_eq!(
-        next(&pack, &["l", "homme"]),
+        next(&pack, &["l'", "homme"]),
         ["est", "dort"],
         "L' splits off"
     );

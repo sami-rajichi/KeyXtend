@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use super::super::fixture::AFF;
 use super::super::text::{KeyCounts, TextCounts};
-use super::super::wordfreq::{bucket_of, bucket_of_share, freq, share};
+use super::super::wordfreq::{bucket_of_share, freq, share};
 use super::{build_with, dict, spellings, word};
 
 /// One fold key's counts: the key, how often it stands alone, and each spelling's count.
@@ -37,24 +37,17 @@ fn text(total: u64, keys: &[Key<'_>]) -> TextCounts {
 fn without_text_the_dictionary_form_wins_and_no_piece_goes() {
     let dict = dict(AFF, &["i", "I", "s", "l", "l'"]);
     let list = build_with(&[("i", 150), ("s", 160), ("l", 170)], Some(&dict), None);
-    assert_eq!(spellings(&list), ["i", "s", "l"]);
+    assert_eq!(spellings(&list), ["i", "s", "l'"], "l takes its elision");
     assert!(!list.text && list.text_facts.twins.count == 0 && list.text_facts.pieces.count == 0);
 }
 
 #[test]
 fn a_twin_seen_often_away_from_sentence_starts_wins() {
-    let dict = dict(AFF, &["i", "I", "l", "l'"]);
-    let counts = text(
-        1_000,
-        &[
-            ("i", 900, &[("I", 100), ("i", 5)]),
-            ("l'", 0, &[("l'", 50)]),
-        ],
-    );
-    let list = build_with(&[("i", 150), ("l", 170)], Some(&dict), Some(&counts));
-    let l = bucket_of(50, 1_000).unwrap();
-    assert_eq!(list.words, [word("l'", l, false), word("I", 150, true)]);
-    assert_eq!(list.text_facts.twins.first, ["i → I", "l → l'"]);
+    let dict = dict(AFF, &["i", "I"]);
+    let counts = text(1_000, &[("i", 900, &[("I", 100), ("i", 5)])]);
+    let list = build_with(&[("i", 150)], Some(&dict), Some(&counts));
+    assert_eq!(list.words, [word("I", 150, true)]);
+    assert_eq!(list.text_facts.twins.first, ["i → I"]);
 }
 
 #[test]
@@ -76,24 +69,47 @@ fn a_twin_seen_exactly_the_minimum_wins() {
 }
 
 #[test]
-fn a_case_twin_needs_its_ratio_but_an_elided_twin_only_needs_more() {
-    let dict = dict(AFF, &["bill", "Bill", "t", "t'"]);
-    let keys: [Key<'_>; 3] = [
-        ("bill", 988, &[("Bill", 507), ("bill", 481)]),
-        ("t'", 3_924, &[("t'", 3_924)]),
-        ("t", 3_627, &[("t", 3_627)]),
-    ];
-    let list = build_with(
-        &[("bill", 300), ("t", 200)],
-        Some(&dict),
-        Some(&text(1_000_000, &keys)),
-    );
+fn a_case_twin_needs_its_ratio() {
+    let dict = dict(AFF, &["bill", "Bill"]);
+    let keys: [Key<'_>; 1] = [("bill", 988, &[("Bill", 507), ("bill", 481)])];
+    let list = build_with(&[("bill", 300)], Some(&dict), Some(&text(1_000_000, &keys)));
     assert_eq!(
         spellings(&list),
-        ["t'", "bill"],
+        ["bill"],
         "Bill is not seen 10 times more than bill"
     );
-    assert_eq!(list.text_facts.twins.first, ["t → t'"]);
+    assert_eq!(list.text_facts.twins.count, 0);
+}
+
+#[test]
+fn an_elision_is_never_a_piece_and_keeps_wordfreqs_frequency() {
+    let dict = dict(AFF, &["à", "t", "t'", "jusqu", "jusqu'", "jusqu'à"]);
+    let keys: [Key<'_>; 3] = [
+        ("a", 90_000, &[("à", 90_000)]),
+        ("t", 3_627, &[("t", 3_627)]),
+        ("jusqu'a", 0, &[("jusqu'à", 3_718)]),
+    ];
+    let words = [("à", 160), ("t", 300), ("jusqu", 350)];
+    let list = build_with(&words, Some(&dict), Some(&text(1_000_000, &keys)));
+    let find = |s: &str| list.words.iter().find(|w| w.spelling == s);
+    assert_eq!(
+        find("jusqu'"),
+        Some(&word("jusqu'", 350, false)),
+        "jusqu'à is counted whole, so jusqu' is never seen alone"
+    );
+    assert_eq!(
+        find("t'"),
+        Some(&word("t'", 300, false)),
+        "the bare t is seen alone, t' never"
+    );
+    assert!(find("jusqu'à").is_some() && find("jusqu").is_none() && find("t").is_none());
+    assert_eq!(list.facts.elisions.first, ["t → t'", "jusqu → jusqu'"]);
+    let facts = &list.text_facts;
+    assert_eq!(
+        (facts.pieces.count, facts.unseen.count, facts.twins.count),
+        (0, 0, 0),
+        "{facts:?}"
+    );
 }
 
 #[test]
@@ -108,11 +124,10 @@ fn a_spelling_with_the_apostrophe_is_never_a_piece() {
     );
     let words = [("l", 140), ("aujourd", 400), ("hui", 410)];
     let list = build_with(&words, Some(&dict), Some(&counts));
-    let l = bucket_of(500, 1_000_000_000).unwrap();
     assert_eq!(
         list.words,
-        [word("aujourd'hui", 410, false), word("l'", l, false)],
-        "both stand alone 0 times; the elision keeps its text share, aujourd'hui takes all of hui's"
+        [word("l'", 140, false), word("aujourd'hui", 410, false)],
+        "both stand alone 0 times; the elision keeps wordfreq's frequency, aujourd'hui takes all of hui's"
     );
     assert_eq!(list.text_facts.pieces.count, 0);
 }

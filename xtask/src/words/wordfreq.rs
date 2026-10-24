@@ -9,7 +9,7 @@ use flate2::read::GzDecoder;
 use kx_mod_predict::pack::layout::STEPS_PER_ZIPF;
 use rmpv::Value;
 
-use super::{WordsError, float, io_error};
+use super::{WordsError, io_error};
 
 /// The header key naming the format.
 const FORMAT_KEY: &str = "format";
@@ -101,14 +101,6 @@ pub(crate) fn scaled(bucket: u32, steps: u32) -> u8 {
 /// The share of all words that a word of `bucket` takes: 10 to the power of minus its centibels.
 pub(crate) fn share(bucket: u32) -> f64 {
     10f64.powf(-f64::from(bucket) / f64::from(CB_PER_ZIPF))
-}
-
-/// The bucket of a word seen `count` times in `total` tokens, its share in centibels; `None` when it was never seen.
-pub(crate) fn bucket_of(count: u64, total: u64) -> Option<u32> {
-    if total < count {
-        return None;
-    }
-    bucket_of_share(float(count) / float(total))
 }
 
 /// The bucket of a word taking `share` of all words; `None` for no share or one past all words.
