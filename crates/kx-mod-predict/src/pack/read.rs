@@ -97,7 +97,7 @@ impl<'a> Pack<'a> {
             .unwrap_or_default()
     }
 
-    /// Word `id`'s wordfreq frequency bucket; 0 for an unknown id.
+    /// Word `id`'s frequency byte, Zipf × `STEPS_PER_ZIPF`; 0 for an unknown id.
     #[must_use]
     pub fn freq(&self, id: WordId) -> u8 {
         self.index(id)

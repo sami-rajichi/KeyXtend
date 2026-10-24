@@ -6,6 +6,7 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 
 use flate2::read::GzDecoder;
+use kx_mod_predict::pack::layout::STEPS_PER_ZIPF;
 use rmpv::Value;
 
 use super::{WordsError, io_error};
@@ -23,7 +24,7 @@ const CB_PER_ZIPF: u32 = 100;
 /// wordfreq's Zipf value is this plus log10 of the frequency, so Zipf 0 is a frequency of 10^-9.
 const ZIPF_OFFSET: u32 = 9;
 /// The centibels of Zipf 0: a bucket's Zipf is this less the bucket, over `CB_PER_ZIPF`.
-const ZIPF_TOP_CB: u32 = ZIPF_OFFSET * CB_PER_ZIPF;
+pub(crate) const ZIPF_TOP_CB: u32 = ZIPF_OFFSET * CB_PER_ZIPF;
 
 /// One word of a list, with its bucket.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,8 +87,18 @@ fn is_header(value: &Value) -> bool {
         && get(VERSION_KEY).and_then(Value::as_u64) == Some(VERSION)
 }
 
-/// The frequency byte of `bucket`: its Zipf value times `steps_per_zipf`, clamped to a byte.
-pub(crate) fn freq(bucket: u32, steps_per_zipf: u32) -> u8 {
+/// The frequency byte of `bucket`: its Zipf value times the pack's `STEPS_PER_ZIPF`.
+pub(crate) fn freq(bucket: u32) -> u8 {
+    scaled(bucket, STEPS_PER_ZIPF)
+}
+
+/// The Zipf value of `bucket` times `steps`, clamped to a byte.
+pub(crate) fn scaled(bucket: u32, steps: u32) -> u8 {
     let above_floor = ZIPF_TOP_CB.saturating_sub(bucket);
-    u8::try_from(above_floor.saturating_mul(steps_per_zipf) / CB_PER_ZIPF).unwrap_or(u8::MAX)
+    u8::try_from(above_floor.saturating_mul(steps) / CB_PER_ZIPF).unwrap_or(u8::MAX)
+}
+
+/// The share of all words that a word of `bucket` takes: 10^(−bucket/100).
+pub(crate) fn share(bucket: u32) -> f64 {
+    10f64.powf(-f64::from(bucket) / f64::from(CB_PER_ZIPF))
 }

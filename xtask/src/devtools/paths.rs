@@ -12,8 +12,8 @@ const DEVICES: [&str; 4] = ["CON", "PRN", "AUX", "NUL"];
 const NUMBERED: [&str; 2] = ["COM", "LPT"];
 /// The digits Windows accepts after a numbered device prefix, superscripts included.
 const DEVICE_DIGITS: &str = "123456789¹²³";
-/// Separator of the relative folders in the settings.
-const SETTINGS_SEP: char = '/';
+/// Separator of the relative paths in the settings and in `words.toml`.
+pub(crate) const SEP: char = '/';
 /// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
 pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
 
@@ -50,13 +50,12 @@ fn is_device(name: &str) -> bool {
 
 /// True if `rel` is a relative, `/`-separated path of plain names.
 pub(crate) fn is_relative_plain(rel: &str) -> bool {
-    rel.split(SETTINGS_SEP).all(is_plain_name)
+    rel.split(SEP).all(is_plain_name)
 }
 
 /// `base` joined with each part of the `/`-separated settings path `rel`.
 pub(crate) fn join_rel(base: PathBuf, rel: &str) -> PathBuf {
-    rel.split(SETTINGS_SEP)
-        .fold(base, |acc, part| acc.join(part))
+    rel.split(SEP).fold(base, |acc, part| acc.join(part))
 }
 
 /// True if `path` lies strictly inside `dir`, ignoring letter case.

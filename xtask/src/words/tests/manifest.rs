@@ -13,14 +13,12 @@ fn the_project_manifest_parses_with_every_language_file() {
         assert_eq!(plan.max_words, max);
         assert!(plan.dict.is_some(), "{iso} has a dictionary");
     }
-    assert_eq!(manifest.plan("fr").unwrap().elisions.len(), 9);
-    assert!(manifest.plan("ar").unwrap().hamza.is_some());
     let de = manifest.plan("de").unwrap();
     assert_eq!(
         (de.list.as_str(), de.max_words),
         ("wordfreq/small_de.msgpack.gz", 60_000)
     );
-    assert!(de.dict.is_none() && de.hamza.is_none());
+    assert!(de.dict.is_none());
 }
 
 #[test]
@@ -96,10 +94,7 @@ fn a_bad_language_is_refused() {
         ("[lang.fr]", "[lang.toolongcode]"),
         ("small_{iso}", "small_de"),
         ("max_words = 2", "max_words = 0"),
-        (
-            "[lang.fr]",
-            "[lang.fr]\nhamza = { bare = \"ا\", marked = [\"ا\"] }",
-        ),
+        ("max_words = 5", "max_words = 5\nelisions = [\"l\"]"),
     ];
     for (from, to) in swaps {
         assert!(text.contains(from), "{from}");
@@ -108,5 +103,48 @@ fn a_bad_language_is_refused() {
             matches!(result, Err(WordsError::Manifest(_))),
             "{to} was accepted"
         );
+    }
+}
+
+#[test]
+fn a_rule_threshold_out_of_range_is_refused() {
+    let text = fixture::manifest_text("");
+    let swaps = [
+        ("max_gap_cb = 100", "max_gap_cb = 0"),
+        ("max_gap_cb = 100", "max_gap_cb = 901"),
+        ("main_script_share = 0.9", "main_script_share = 0.5"),
+        ("main_script_share = 0.9", "main_script_share = 1.1"),
+        ("min_case_seen = 20", "min_case_seen = 0"),
+        ("piece_ratio = 20.0", "piece_ratio = 1.0"),
+        ("piece_ratio = 20.0", "piece_ratio = inf"),
+        ("piece_min_expected = 100.0", "piece_min_expected = 0.0"),
+        ("piece_min_expected = 100.0", "piece_min_expected = nan"),
+        ("coverage_top = 3", "coverage_top = 0"),
+        ("show = 2", "show = 0"),
+        (r#"part = "part""#, r#"part = """#),
+        (r#"part = "part""#, r#"part = "a/b""#),
+        ("https://example.invalid", "http://example.invalid"),
+    ];
+    for (from, to) in swaps {
+        assert!(text.contains(from), "{from}");
+        let result = Manifest::parse(&text.replacen(from, to, 1));
+        assert!(
+            matches!(result, Err(WordsError::Manifest(_))),
+            "{to} was accepted"
+        );
+    }
+}
+
+#[test]
+fn the_edges_of_each_range_are_accepted() {
+    let text = fixture::manifest_text("");
+    let swaps = [
+        ("max_gap_cb = 100", "max_gap_cb = 900"),
+        ("main_script_share = 0.9", "main_script_share = 1.0"),
+        ("min_case_seen = 20", "min_case_seen = 1"),
+    ];
+    for (from, to) in swaps {
+        let result = Manifest::parse(&text.replacen(from, to, 1));
+        assert!(result.is_ok(), "{to} was refused: {result:?}");
     }
 }

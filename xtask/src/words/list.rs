@@ -1,13 +1,14 @@
-//! One language's word list: wordfreq's entries cleaned, elided, checked against the dictionary, merged by the hamza
-//! rule and cut to the most frequent; with the coverage line that shows the dictionary's gaps.
+//! The second stage of a word list: twins and pieces from real text when there is some, then the cut to the most
+//! frequent; with the report lines that show what every rule did.
 
 use std::cmp::Reverse;
 use std::collections::HashMap;
 
-use super::dict::{Dict, Verdict};
-use super::manifest::{Plan, Rules};
-use super::wordfreq::{self, Entry};
-use super::{clean, hamza};
+use super::cands::{Cand, Candidates, Facts, Fate, Tally};
+use super::float;
+use super::manifest::Rules;
+use super::text::TextCounts;
+use super::wordfreq::{freq, share};
 use crate::text::plural;
 
 /// The noun the report counts.
@@ -44,145 +45,139 @@ pub(crate) struct WordList {
     pub(crate) read: usize,
     /// The coverage line's numbers, for a language with a dictionary.
     pub(crate) coverage: Option<Coverage>,
-    /// Each word the hamza rule dropped, with a word it went to.
-    pub(crate) merged: Vec<(String, String)>,
+    /// What the source rules did.
+    pub(crate) facts: Facts,
+    /// Tokens whose twin spelling won in the text.
+    pub(crate) twins: Tally,
+    /// Words dropped as tokenizer pieces.
+    pub(crate) pieces: Tally,
+    /// True when text counts were given.
+    pub(crate) text: bool,
 }
 
-/// A token that passed the token rules, before the hamza rule and the cut.
-#[derive(Debug)]
-pub(crate) struct Cand {
+/// A kept candidate with the spelling it takes.
+struct Kept {
     /// Its spelling.
-    pub(crate) spelling: String,
-    /// Its frequency byte.
-    pub(crate) freq: u8,
-    /// True when the dictionary wants its capital.
-    pub(crate) capital: bool,
-    /// True when the dictionary accepts it, or it is an elision.
-    pub(crate) kept: bool,
-    /// True when the hamza rule dropped it.
-    pub(crate) merged: bool,
+    spelling: String,
     /// Its wordfreq bucket.
-    pub(crate) bucket: u32,
+    bucket: u32,
     /// Its place in wordfreq's list.
-    pub(crate) rank: usize,
+    rank: usize,
 }
 
-/// The word list of `entries`, as `plan` and `rules` say, checked against `dict` when there is one.
-pub(crate) fn build(
-    entries: Vec<Entry>,
-    plan: &Plan<'_>,
-    dict: Option<&Dict>,
-    rules: &Rules,
-) -> WordList {
-    let read = entries.len();
-    let mut cands = candidates(entries, plan, dict, rules);
-    let places = plan
-        .hamza
-        .map(|h| hamza::merge(&mut cands, h))
-        .unwrap_or_default();
-    let spelling = |i: usize| cands.get(i).map(|c| c.spelling.clone()).unwrap_or_default();
-    let merged = places
-        .iter()
-        .map(|&(from, to)| (spelling(from), spelling(to)))
-        .collect();
-    let coverage = dict.map(|_| coverage(&cands, rules));
-    WordList {
-        words: survivors(cands, plan.max_words),
-        read,
-        coverage,
-        merged,
-    }
-}
-
-/// Every entry that passes the token rules, elided and with the dictionary's verdict.
-fn candidates(
-    entries: Vec<Entry>,
-    plan: &Plan<'_>,
-    dict: Option<&Dict>,
-    rules: &Rules,
-) -> Vec<Cand> {
-    let mut cands = Vec::new();
-    for (rank, entry) in entries.into_iter().enumerate() {
-        let elided = clean::elide(&entry.word, plan.elisions, rules.apostrophe);
-        let exempt = elided.is_some();
-        let word = elided.unwrap_or(entry.word);
-        if !clean::keeps(&word, &rules.drop_chars) {
+/// The finished list of `cands`: with `text`, twins pick their spelling and pieces go; without it, neither runs.
+pub(crate) fn finish(cands: Candidates, text: Option<&TextCounts>, rules: &Rules) -> WordList {
+    let coverage = cands.checked.then(|| coverage(&cands.cands, rules));
+    let (mut twins, mut pieces) = (Tally::default(), Tally::default());
+    let mut kept = Vec::new();
+    for cand in cands.cands.iter().filter(|c| c.fate == Fate::Kept) {
+        let Some(spelling) = spelling(cand, text, rules, &mut twins) else {
+            continue;
+        };
+        if text.is_some_and(|t| is_piece(&spelling, cand.bucket, t, rules)) {
+            pieces.add(rules.show, || spelling);
             continue;
         }
-        let verdict = match dict {
-            Some(dict) if !exempt => dict.check(&word),
-            _ => Verdict::Plain,
-        };
-        let (spelling, capital, kept) = match verdict {
-            Verdict::Plain => (word, false, true),
-            Verdict::Capital(capital) => (capital, true, true),
-            Verdict::Rejected => (word, false, false),
-        };
-        let freq = wordfreq::freq(entry.bucket, rules.steps_per_zipf);
-        cands.push(Cand {
+        let (bucket, rank) = (cand.bucket, cand.rank);
+        kept.push(Kept {
             spelling,
-            freq,
-            capital,
-            kept,
-            merged: false,
-            bucket: entry.bucket,
+            bucket,
             rank,
         });
     }
-    cands
-}
-
-/// The words among wordfreq's `coverage_top` most frequent that the dictionary rejected; a word the hamza rule
-/// merged is not a gap, as its frequency went to its hamza form.
-fn coverage(cands: &[Cand], rules: &Rules) -> Coverage {
-    let rejected: Vec<&str> = cands
-        .iter()
-        .take_while(|c| c.rank < rules.coverage_top)
-        .filter(|c| !c.kept && !c.merged)
-        .map(|c| c.spelling.as_str())
-        .collect();
-    Coverage {
-        rejected: rejected.len(),
-        top: rules.coverage_top,
-        first: rejected
-            .iter()
-            .take(rules.coverage_show)
-            .map(ToString::to_string)
-            .collect(),
+    WordList {
+        words: survivors(kept, cands.max_words),
+        read: cands.read,
+        coverage,
+        facts: cands.facts,
+        twins,
+        pieces,
+        text: text.is_some(),
     }
 }
 
-/// The kept words, each spelling once with its highest frequency, most frequent first and cut to `max_words`.
-fn survivors(cands: Vec<Cand>, max_words: usize) -> Vec<Word> {
-    let mut words: Vec<Word> = Vec::new();
+/// The spelling `cand` takes: its form seen most in `text` away from sentence starts, once seen `min_case_seen`
+/// times; otherwise its own form.
+fn spelling(
+    cand: &Cand,
+    text: Option<&TextCounts>,
+    rules: &Rules,
+    twins: &mut Tally,
+) -> Option<String> {
+    let own = cand.forms.first()?;
+    let Some(text) = text.filter(|_| cand.forms.len() > 1) else {
+        return Some(own.clone());
+    };
+    let mut best = (own, text.seen(own));
+    for form in cand.forms.iter().skip(1) {
+        let seen = text.seen(form);
+        if seen > best.1 {
+            best = (form, seen);
+        }
+    }
+    let (form, seen) = best;
+    if seen < rules.min_case_seen || form == own {
+        return Some(own.clone());
+    }
+    twins.add(rules.show, || format!("{} → {form}", cand.word));
+    Some(form.clone())
+}
+
+/// True when `spelling` stands alone in `text` under 1 / `piece_ratio` of what its bucket predicts, judged only
+/// when that prediction is at least `piece_min_expected`.
+fn is_piece(spelling: &str, bucket: u32, text: &TextCounts, rules: &Rules) -> bool {
+    let expected = share(bucket) * float(text.total);
+    expected >= rules.piece_min_expected
+        && float(text.alone(spelling)) < expected / rules.piece_ratio
+}
+
+/// The words among wordfreq's `coverage_top` most frequent that the dictionary rejected; a merged, joined or prefix
+/// token is no gap, as its frequency went elsewhere or it is no word.
+fn coverage(cands: &[Cand], rules: &Rules) -> Coverage {
+    let mut gaps = Tally::default();
+    let top = cands
+        .iter()
+        .filter(|c| c.rank < rules.coverage_top && c.fate == Fate::Rejected);
+    for cand in top {
+        gaps.add(rules.show, || cand.word.clone());
+    }
+    Coverage {
+        rejected: gaps.count,
+        top: rules.coverage_top,
+        first: gaps.first,
+    }
+}
+
+/// Each spelling once with its lowest bucket, most frequent first and cut to `max_words`; words of one frequency
+/// byte keep wordfreq's order.
+fn survivors(kept: Vec<Kept>, max_words: usize) -> Vec<Word> {
+    let mut words: Vec<Kept> = Vec::new();
     let mut index: HashMap<String, usize> = HashMap::new();
-    for cand in cands.into_iter().filter(|c| c.kept && !c.merged) {
-        if let Some(word) = index.get(&cand.spelling).and_then(|&i| words.get_mut(i)) {
-            word.freq = word.freq.max(cand.freq);
-            word.capital |= cand.capital;
+    for word in kept {
+        if let Some(seen) = index.get(&word.spelling).and_then(|&i| words.get_mut(i)) {
+            seen.bucket = seen.bucket.min(word.bucket);
+            seen.rank = seen.rank.min(word.rank);
             continue;
         }
-        index.insert(cand.spelling.clone(), words.len());
-        words.push(Word {
-            spelling: cand.spelling,
-            freq: cand.freq,
-            capital: cand.capital,
-        });
+        index.insert(word.spelling.clone(), words.len());
+        words.push(word);
     }
-    // A stable sort keeps wordfreq's order between words of one frequency.
-    words.sort_by_key(|w| Reverse(w.freq));
+    words.sort_by_key(|w| (Reverse(freq(w.bucket)), w.rank));
     words.truncate(max_words);
-    words
+    let word = |w: Kept| Word {
+        capital: w.spelling.chars().next().is_some_and(char::is_uppercase),
+        freq: freq(w.bucket),
+        spelling: w.spelling,
+    };
+    words.into_iter().map(word).collect()
 }
 
-/// The lines `words list` prints for `iso`: the counts, the coverage line and the hamza line.
-pub(crate) fn report(iso: &str, list: &WordList, rules: &Rules) -> Vec<String> {
+/// The lines `words list` prints for `iso`: the counts, the coverage line, one line per rule that did something,
+/// and a note when no text was given to a checked list.
+pub(crate) fn report(iso: &str, list: &WordList) -> Vec<String> {
     let caps = list.words.iter().filter(|w| w.capital).count();
-    let freqs = list.words.iter().map(|w| w.freq);
-    let (low, high) = (
-        freqs.clone().min().unwrap_or_default(),
-        freqs.max().unwrap_or_default(),
-    );
+    let low = list.words.iter().map(|w| w.freq).min().unwrap_or_default();
+    let high = list.words.iter().map(|w| w.freq).max().unwrap_or_default();
     let kept = list.words.len();
     let mut lines = vec![format!(
         "{iso}: {kept} {} kept ({caps} capitalised, frequency {low}..={high}) of {} in wordfreq",
@@ -198,20 +193,37 @@ pub(crate) fn report(iso: &str, list: &WordList, rules: &Rules) -> Vec<String> {
             c.first.join(", ")
         ));
     }
-    if !list.merged.is_empty() {
-        let first: Vec<String> = list
-            .merged
-            .iter()
-            .take(rules.coverage_show)
-            .map(|(from, to)| format!("{from} → {to}"))
-            .collect();
-        let count = list.merged.len();
-        lines.push(format!(
-            "hamza {iso}: {count} {} merged; first {}: {}",
-            plural(count, WORD),
-            first.len(),
-            first.join(", ")
-        ));
+    lines.extend(rule_lines(iso, list));
+    if list.coverage.is_some() && !list.text {
+        lines.push(format!("text {iso}: none, so twins and pieces are skipped"));
     }
     lines
+}
+
+/// One report line per rule that changed or dropped a word: how many, then the first ones.
+fn rule_lines(iso: &str, list: &WordList) -> Vec<String> {
+    let f = &list.facts;
+    let rules = [
+        ("script", &f.script),
+        ("elisions", &f.elisions),
+        ("joins", &f.joins),
+        ("merged", &f.merged),
+        ("prefixes", &f.prefixes),
+        ("twins", &list.twins),
+        ("pieces", &list.pieces),
+    ];
+    let line = |(name, tally): &(&str, &Tally)| {
+        let (count, first) = (tally.count, &tally.first);
+        let noun = plural(count, WORD);
+        let shown = first.join(", ");
+        format!(
+            "{name} {iso}: {count} {noun}; first {}: {shown}",
+            first.len()
+        )
+    };
+    rules
+        .iter()
+        .filter(|(_, t)| t.count > 0)
+        .map(line)
+        .collect()
 }

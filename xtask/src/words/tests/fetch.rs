@@ -38,7 +38,7 @@ fn run(
 /// Runs `fetch` and fails if it tries to download anything.
 fn run_offline(manifest: &Manifest, dir: &Path) -> (Result<(), WordsError>, Vec<String>) {
     let mut calls = Vec::new();
-    let out = run(manifest, dir, &mut |url, _| {
+    let out = run(manifest, dir, &mut |url, _, _| {
         calls.push(url.to_string());
         Err(WordsError::Download(url.to_string()))
     });
@@ -96,8 +96,8 @@ fn a_missing_file_is_downloaded_to_a_part_file_then_renamed() {
     let target = join_rel(dir.path().to_path_buf(), "d/abc.txt");
     std::fs::remove_file(&target).unwrap();
     let mut urls = Vec::new();
-    let (result, lines) = run(&manifest, dir.path(), &mut |url, out| {
-        urls.push((url.to_string(), out.to_path_buf()));
+    let (result, lines) = run(&manifest, dir.path(), &mut |url, size, out| {
+        urls.push((url.to_string(), size, out.to_path_buf()));
         std::fs::write(out, b"abc").map_err(|e| WordsError::Io(e.to_string()))
     });
     assert_eq!(result, Ok(()));
@@ -106,6 +106,7 @@ fn a_missing_file_is_downloaded_to_a_part_file_then_renamed() {
         urls,
         [(
             "https://example.invalid/data/x/abc.txt".to_string(),
+            3,
             part.clone()
         )]
     );
@@ -124,7 +125,7 @@ fn a_wrong_download_is_refused_and_removed() {
     all_abc(dir.path(), &manifest);
     let target = join_rel(dir.path().to_path_buf(), "d/abc.txt");
     std::fs::remove_file(&target).unwrap();
-    let (result, _) = run(&manifest, dir.path(), &mut |_, out| {
+    let (result, _) = run(&manifest, dir.path(), &mut |_, _, out| {
         std::fs::write(out, b"xyz").map_err(|e| WordsError::Io(e.to_string()))
     });
     let Err(WordsError::Bad(bad)) = result else {
@@ -182,7 +183,7 @@ fn a_failed_download_names_the_file_and_leaves_no_part_file() {
     all_abc(dir.path(), &manifest);
     let target = join_rel(dir.path().to_path_buf(), "d/abc.txt");
     std::fs::remove_file(&target).unwrap();
-    let (result, _) = run(&manifest, dir.path(), &mut |url, out| {
+    let (result, _) = run(&manifest, dir.path(), &mut |url, _, out| {
         std::fs::write(out, b"ab").unwrap();
         Err(WordsError::Download(format!("{url}: curl ended with 22")))
     });
@@ -190,4 +191,62 @@ fn a_failed_download_names_the_file_and_leaves_no_part_file() {
         "d/abc.txt: download failed: https://example.invalid/data/x/abc.txt: curl ended with 22";
     assert_eq!(result, Err(WordsError::Bad(vec![why.to_string()])));
     assert!(!PathBuf::from(format!("{}.part", target.display())).exists());
+}
+
+#[test]
+fn a_failed_rename_names_the_file_and_leaves_no_part_file() {
+    let manifest = fixture::manifest_with(&abc_source()).unwrap();
+    let dir = TempDir::new("words-rename");
+    all_abc(dir.path(), &manifest);
+    let target = join_rel(dir.path().to_path_buf(), "d/abc.txt");
+    std::fs::remove_file(&target).unwrap();
+    let (result, lines) = run(&manifest, dir.path(), &mut |_, _, out| {
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(out, b"abc").map_err(|e| WordsError::Io(e.to_string()))
+    });
+    let Err(WordsError::Bad(bad)) = result else {
+        panic!("a failed rename passed: {lines:?}");
+    };
+    assert_eq!(bad.len(), 1);
+    assert!(bad[0].starts_with("d/abc.txt: file error: "), "{bad:?}");
+    assert!(!PathBuf::from(format!("{}.part", target.display())).exists());
+}
+
+#[test]
+fn a_folder_where_a_file_belongs_is_bad() {
+    let manifest = fixture::manifest_with(&abc_source()).unwrap();
+    let dir = TempDir::new("words-folder");
+    all_abc(dir.path(), &manifest);
+    let target = join_rel(dir.path().to_path_buf(), "d/abc.txt");
+    std::fs::remove_file(&target).unwrap();
+    std::fs::create_dir(&target).unwrap();
+    let (result, _) = run_offline(&manifest, dir.path());
+    let expected = vec!["d/abc.txt: a folder, not a file".to_string()];
+    assert_eq!(result, Err(WordsError::Bad(expected)));
+}
+
+#[test]
+fn a_file_that_cannot_be_read_is_bad_and_the_others_are_still_checked() {
+    // A name over every OS's 255-character limit fails with an error other than "not found".
+    let long = format!("d/{}.txt", "a".repeat(300));
+    let blocked = format!(
+        r#""{long}" = {{ base = "test", sha256 = "{}", size = 3 }}"#,
+        fixture::ABC_SHA256
+    );
+    let manifest = fixture::manifest_with(&format!("{}\n{blocked}", abc_source())).unwrap();
+    let dir = TempDir::new("words-unreadable");
+    for rel in manifest.sources.keys().filter(|r| **r != long) {
+        write(dir.path(), rel, b"abc");
+    }
+    let (result, lines) = run_offline(&manifest, dir.path());
+    let Err(WordsError::Bad(bad)) = result else {
+        panic!("an unreadable file passed: {lines:?}");
+    };
+    assert_eq!(bad.len(), 1);
+    assert!(
+        bad[0].starts_with(&format!("{long}: file error: ")),
+        "{bad:?}"
+    );
+    let ok = lines.iter().filter(|l| l.starts_with("ok")).count();
+    assert_eq!(ok, manifest.sources.len() - 1, "{lines:?}");
 }

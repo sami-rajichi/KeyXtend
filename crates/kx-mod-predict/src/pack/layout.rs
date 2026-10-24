@@ -52,8 +52,10 @@ pub const LEXICON: u8 = 1;
 /// The `Words` section: `word count + 1` u32 offsets into the UTF-8 text that follows them. Word `i` spans offsets
 /// `i` to `i + 1`.
 pub const WORDS: u8 = 2;
-/// The `Freq` section: one byte per word, its wordfreq frequency bucket.
+/// The `Freq` section: one byte per word, its frequency: Zipf × `STEPS_PER_ZIPF`, higher is more frequent.
 pub const FREQ: u8 = 3;
+/// A frequency byte is the word's Zipf value (wordfreq's scale, 9 + log10 of its frequency) times this.
+pub const STEPS_PER_ZIPF: u32 = 25;
 /// The `Flags` section: one byte per word, `CAPITAL` or zero.
 pub const FLAGS: u8 = 4;
 /// The kind of chain section `n` is this plus `n`. Its contexts of `n − 1` ids are sorted, so a search halves them.

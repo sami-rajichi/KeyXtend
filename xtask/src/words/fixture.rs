@@ -47,14 +47,18 @@ pub(crate) fn dic(words: &[&str]) -> String {
     text
 }
 
-/// The project's cleaning rules, with a coverage line over the top 3 words that prints 2.
+/// The project's rules, with a coverage line over the top 3 words and report lines that print 2.
 pub(crate) fn rules() -> Rules {
     Rules {
         drop_chars: vec!['@', '/', '.'],
         apostrophe: '\'',
-        steps_per_zipf: 25,
+        max_gap_cb: 100,
+        main_script_share: 0.9,
+        min_case_seen: 20,
+        piece_ratio: 20.0,
+        piece_min_expected: 100.0,
         coverage_top: 3,
-        coverage_show: 2,
+        show: 2,
     }
 }
 
@@ -74,15 +78,22 @@ pub(crate) fn manifest_text(sources: &str) -> String {
 [rules]
 drop_chars = ["@", "/", "."]
 apostrophe = "'"
-steps_per_zipf = 25
+max_gap_cb = 100
+main_script_share = 0.9
+min_case_seen = 20
+piece_ratio = 20.0
+piece_min_expected = 100.0
 coverage_top = 3
-coverage_show = 2
+show = 2
 
 [fetch]
 root_env = "KX_TEST_NO_SUCH_VAR"
 curl = "curl.exe"
 fallback = "kx-test-no-such-curl"
-args = ["--output"]
+args = ["-q", "--fail"]
+size_flag = "--max-filesize"
+out_flag = "--output"
+url_flag = "--url"
 part = "part"
 
 [small]
@@ -94,7 +105,6 @@ list = "w/large_fr.gz"
 aff = "d/fr.aff"
 dic = "d/fr.dic"
 max_words = 5
-elisions = ["l", "qu"]
 
 [bases]
 test = "https://example.invalid/data/"
@@ -112,3 +122,9 @@ test = "https://example.invalid/data/"
 pub(crate) fn abc_source() -> String {
     format!(r#""d/abc.txt" = {{ base = "test", dir = "x/", sha256 = "{ABC_SHA256}", size = 3 }}"#)
 }
+
+/// An affix file with one prefix, `ال`, under flag `A`.
+pub(crate) const AFF_AL: &str = "SET UTF-8\nPFX A Y 1\nPFX A 0 ال .\n";
+
+/// An affix file with one suffix, `انا`, under flag `B`: Arabic suffixes are often words too.
+pub(crate) const AFF_ANA: &str = "SET UTF-8\nSFX B Y 1\nSFX B 0 انا .\n";

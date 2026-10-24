@@ -1,4 +1,6 @@
-//! The manifest `words.toml`: every source file with its hash, the cleaning rules and each language's files.
+//! The manifest `words.toml`: every source file with its hash, the rules' thresholds and each language's files.
+
+mod check;
 
 use std::collections::BTreeMap;
 
@@ -6,14 +8,12 @@ use kx_mod_predict::pack::layout::fits_iso;
 use serde::Deserialize;
 
 use super::WordsError;
-use crate::devtools::paths::is_relative_plain;
+use crate::devtools::paths::SEP;
 
 /// The placeholder for the language code in the small lists' path.
 const ISO_SLOT: &str = "{iso}";
 /// A SHA-256 is 32 bytes, written as two lowercase hex digits each.
 pub(crate) const HASH_HEX: usize = 64;
-/// The separator of the manifest's paths.
-const SEP: char = '/';
 
 /// The whole manifest.
 #[derive(Debug, Deserialize)]
@@ -33,34 +33,48 @@ pub(crate) struct Manifest {
     pub(crate) sources: BTreeMap<String, Source>,
 }
 
-/// How words are cleaned and reported.
+/// How words are cleaned and reported: every threshold the word facts use.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Rules {
     /// A word holding one of these is dropped.
     pub(crate) drop_chars: Vec<char>,
-    /// The apostrophe an elided word takes back.
+    /// The apostrophe of elided and joined words.
     pub(crate) apostrophe: char,
-    /// Frequency bytes per Zipf unit.
-    pub(crate) steps_per_zipf: u32,
+    /// A rejected word merges only into a fold twin at most this many centibels rarer.
+    pub(crate) max_gap_cb: u32,
+    /// The share of a list's words that makes a script the list's own.
+    pub(crate) main_script_share: f64,
+    /// How often text must show a twin spelling away from sentence starts before it wins.
+    pub(crate) min_case_seen: u64,
+    /// A word standing alone this many times less often than wordfreq predicts is a piece.
+    pub(crate) piece_ratio: f64,
+    /// The fewest expected sightings in the text for a word to be judged a piece.
+    pub(crate) piece_min_expected: f64,
     /// How many of the most frequent words the coverage line checks.
     pub(crate) coverage_top: usize,
-    /// How many rejected words it prints.
-    pub(crate) coverage_show: usize,
+    /// How many words every report line prints.
+    pub(crate) show: usize,
 }
 
-/// How a missing source is downloaded with the system's curl.
+/// How a missing source is downloaded with curl.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct FetchConfig {
-    /// Env var naming the folder that holds curl.
+    /// Env var naming the folder that holds the system's curl.
     pub(crate) root_env: String,
     /// curl, under that folder.
     pub(crate) curl: String,
-    /// The program run where the env var is unset.
+    /// The program run when that curl is not there, found on the PATH.
     pub(crate) fallback: String,
-    /// curl's arguments before the output file and the URL.
+    /// curl's first arguments.
     pub(crate) args: Vec<String>,
+    /// The flag before the file's size limit.
+    pub(crate) size_flag: String,
+    /// The flag before the output file.
+    pub(crate) out_flag: String,
+    /// The flag before the URL.
+    pub(crate) url_flag: String,
     /// The extension of a download before its check.
     pub(crate) part: String,
 }
@@ -87,23 +101,6 @@ struct Lang {
     dic: String,
     /// The most words kept.
     max_words: usize,
-    /// The tokens that take back their apostrophe.
-    #[serde(default)]
-    elisions: Vec<String>,
-    /// The hamza rule, for Arabic.
-    hamza: Option<Hamza>,
-}
-
-/// The alef forms of the hamza rule.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Hamza {
-    /// The bare alef.
-    pub(crate) bare: char,
-    /// The alef forms with a hamza or a madda.
-    pub(crate) marked: Vec<char>,
-    /// A hamza form more than this many centibels rarer than the bare word takes nothing from it.
-    pub(crate) max_gap_cb: u32,
 }
 
 /// One source file.
@@ -149,16 +146,14 @@ pub(crate) struct Plan<'a> {
     pub(crate) dict: Option<DictFiles<'a>>,
     /// The most words kept.
     pub(crate) max_words: usize,
-    /// The tokens that take back their apostrophe.
-    pub(crate) elisions: &'a [String],
-    /// The hamza rule, if any.
-    pub(crate) hamza: Option<&'a Hamza>,
 }
 
 impl Manifest {
     /// Parses and checks a manifest.
     pub(crate) fn parse(text: &str) -> Result<Self, WordsError> {
         let manifest: Self = toml::from_str(text).map_err(|e| bad(&e.to_string()))?;
+        check::rules(&manifest.rules)?;
+        check::fetch(&manifest.fetch)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
         Ok(manifest)
@@ -175,8 +170,6 @@ impl Manifest {
                 list: lang.list.clone(),
                 dict: Some(dict),
                 max_words: lang.max_words,
-                elisions: &lang.elisions,
-                hamza: lang.hamza.as_ref(),
             });
         }
         let list = self.small.list.replace(ISO_SLOT, iso);
@@ -187,8 +180,6 @@ impl Manifest {
             list,
             dict: None,
             max_words: self.small.max_words,
-            elisions: &[],
-            hamza: None,
         })
     }
 
@@ -204,20 +195,11 @@ impl Manifest {
         Some(Origin::Url(format!("{base}{dir}{name}")))
     }
 
-    /// Refuses a source with a bad path, hash or origin.
+    /// Refuses a non-https base, and a source with a bad path, hash or origin.
     fn check_sources(&self) -> Result<(), WordsError> {
+        check::bases(self.bases.values())?;
         for (rel, source) in &self.sources {
-            let hex = |c: char| c.is_ascii_digit() || ('a'..='f').contains(&c);
-            if !is_relative_plain(rel) {
-                return Err(bad(&format!(
-                    "{rel:?} is not a relative path of plain names"
-                )));
-            }
-            if source.sha256.len() != HASH_HEX || !source.sha256.chars().all(hex) {
-                return Err(bad(&format!(
-                    "{rel}: the SHA-256 is not {HASH_HEX} lowercase hex digits"
-                )));
-            }
+            check::source_path(rel, &source.sha256)?;
             let downloaded = source
                 .base
                 .as_ref()
@@ -238,7 +220,7 @@ impl Manifest {
         self.sources.get(rel).is_some_and(|s| s.base.is_some())
     }
 
-    /// Refuses a language whose files are not sources, or whose limits or rules are empty.
+    /// Refuses a language whose files are not sources, or whose limit is zero.
     fn check_langs(&self) -> Result<(), WordsError> {
         if !self.small.list.contains(ISO_SLOT) || self.small.max_words == 0 {
             return Err(bad(&format!(
@@ -248,13 +230,9 @@ impl Manifest {
         for (iso, lang) in &self.lang {
             let files = [&lang.list, &lang.aff, &lang.dic];
             let known = files.iter().all(|f| self.sources.contains_key(*f));
-            let hamza_ok = lang
-                .hamza
-                .as_ref()
-                .is_none_or(|h| !h.marked.is_empty() && !h.marked.contains(&h.bare));
-            if !fits_iso(iso.as_bytes()) || !known || lang.max_words == 0 || !hamza_ok {
+            if !fits_iso(iso.as_bytes()) || !known || lang.max_words == 0 {
                 return Err(bad(&format!(
-                    "[lang.{iso}] needs a pack code, known files, some max_words and a valid hamza rule"
+                    "[lang.{iso}] needs a pack code, known files and some max_words"
                 )));
             }
         }

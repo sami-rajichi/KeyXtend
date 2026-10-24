@@ -1,4 +1,4 @@
-//! The token rules: which wordfreq tokens may become words, and French elisions taking back their apostrophe.
+//! The token rules: which wordfreq tokens may become words.
 
 use kx_mod_predict::pack::layout::fits_spelling;
 
@@ -13,12 +13,4 @@ pub(crate) fn keeps(word: &str, drop_chars: &[char]) -> bool {
             .chars()
             .any(|c| c.is_numeric() || drop_chars.contains(&c))
         && script::single(word)
-}
-
-/// `word` with `apostrophe` added when it is one of `elisions`: `l` becomes `l'`.
-pub(crate) fn elide(word: &str, elisions: &[String], apostrophe: char) -> Option<String> {
-    elisions
-        .iter()
-        .any(|e| e == word)
-        .then(|| format!("{word}{apostrophe}"))
 }

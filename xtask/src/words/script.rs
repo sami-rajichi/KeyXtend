@@ -1,8 +1,13 @@
-//! Which script a letter belongs to, so a word mixing scripts (Latin inside Arabic, Cyrillic inside Latin) is dropped.
+//! Which script a letter belongs to: a word mixing scripts is dropped, and a list mostly in one script drops the
+//! words of the others.
+
+use std::collections::HashMap;
+
+use super::float;
 
 /// A writing system, as far as the word lists need to tell them apart.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Script {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum Script {
     /// Joins any script: modifier letters and combining marks.
     Common,
     /// Latin, with its extensions (Vietnamese included).
@@ -95,4 +100,24 @@ pub(crate) fn single(word: &str) -> bool {
         .filter(|s| *s != Script::Common);
     let first = scripts.next();
     scripts.all(|s| Some(s) == first)
+}
+
+/// The script of `word`: that of its first letter not joining any script; `None` when it has none.
+pub(crate) fn of(word: &str) -> Option<Script> {
+    word.chars()
+        .filter(|c| c.is_alphabetic())
+        .map(script)
+        .find(|s| *s != Script::Common)
+}
+
+/// The script holding at least `share` of the words with a script in `scripts`, if one does.
+pub(crate) fn main(scripts: impl Iterator<Item = Option<Script>>, share: f64) -> Option<Script> {
+    let mut counts: HashMap<Script, u64> = HashMap::new();
+    let mut total = 0;
+    for script in scripts.flatten() {
+        *counts.entry(script).or_default() += 1;
+        total += 1;
+    }
+    let (top, count) = counts.into_iter().max_by_key(|(_, n)| *n)?;
+    (float(count) >= share * float(total)).then_some(top)
 }

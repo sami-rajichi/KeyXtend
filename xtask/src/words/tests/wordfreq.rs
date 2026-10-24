@@ -4,7 +4,7 @@ use proptest::prelude::*;
 use rmpv::Value;
 
 use super::super::fixture;
-use super::super::wordfreq::{Entry, decode, freq};
+use super::super::wordfreq::{Entry, decode, freq, scaled, share};
 
 fn entry(word: &str, bucket: u32) -> Entry {
     Entry {
@@ -55,13 +55,20 @@ fn refuses_what_is_not_a_gzipped_list_of_word_lists() {
 }
 
 #[test]
-fn the_frequency_byte_is_the_zipf_value_times_the_steps() {
-    assert_eq!(freq(0, 25), 225);
-    assert_eq!(freq(100, 25), 200);
-    assert_eq!(freq(104, 25), 199);
-    assert_eq!(freq(900, 25), 0);
-    assert_eq!(freq(1000, 25), 0);
-    assert_eq!(freq(0, 30), u8::MAX, "a value over a byte is clamped");
+fn the_frequency_byte_is_the_zipf_value_times_the_packs_steps() {
+    assert_eq!(freq(0), 225, "a frequency of 1 fits a byte");
+    assert_eq!(freq(100), 200);
+    assert_eq!(freq(104), 199);
+    assert_eq!(freq(900), 0);
+    assert_eq!(freq(1000), 0);
+    assert_eq!(scaled(0, 30), u8::MAX, "a value over a byte is clamped");
+}
+
+#[test]
+fn a_bucket_gives_its_share_of_all_words() {
+    assert!((share(0) - 1.0).abs() < 1e-12);
+    assert!((share(200) - 0.01).abs() < 1e-12);
+    assert!((share(150) - 10f64.powf(-1.5)).abs() < 1e-12);
 }
 
 proptest! {
@@ -79,6 +86,6 @@ proptest! {
     #[test]
     fn a_rarer_bucket_never_has_a_higher_byte(a in 0_u32..2000, b in 0_u32..2000, steps in 1_u32..40) {
         let (rare, common) = (a.max(b), a.min(b));
-        prop_assert!(freq(rare, steps) <= freq(common, steps));
+        prop_assert!(scaled(rare, steps) <= scaled(common, steps));
     }
 }

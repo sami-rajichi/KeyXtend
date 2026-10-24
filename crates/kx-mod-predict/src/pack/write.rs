@@ -55,7 +55,7 @@ struct Word {
     spelling: String,
     /// Its folded key.
     key: String,
-    /// Its frequency bucket.
+    /// Its frequency byte.
     freq: u8,
     /// True when it is always capitalised.
     capital: bool,
