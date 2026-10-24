@@ -1,8 +1,11 @@
-//! The kind table and the kind rules: each rule, the shipped table, bad tables, and the cut at the read cap.
+//! The kind table and the kind rules: each rule, the shipped table, bad tables, and the cut at the read cap; the
+//! rules over any facts are in `props`.
 
 use super::*;
 use kx_module_api::ports::FieldKind;
-use proptest::prelude::*;
+use std::cell::Cell;
+
+mod props;
 
 /// UI Automation's Edit, Document and Button control types.
 const EDIT: i32 = 50004;
@@ -37,9 +40,19 @@ fn plain(control: i32) -> Facts {
     }
 }
 
-/// The kind of `facts` under the small table.
+/// The kind of `facts` under the small table, its read-only probe saying no.
 fn kind_of(facts: &Facts) -> FieldKind {
-    kind(facts, &small())
+    kind(facts, &small(), || false)
+}
+
+/// The kind of `facts` under the small table with a probe that says `fixed`, and how often it was asked.
+fn probed(facts: &Facts, fixed: bool) -> (FieldKind, usize) {
+    let asked = Cell::new(0);
+    let got = kind(facts, &small(), || {
+        asked.set(asked.get() + 1);
+        fixed
+    });
+    (got, asked.get())
 }
 
 #[test]
@@ -66,13 +79,17 @@ fn a_table_that_does_not_parse_makes_every_box_unknown_but_a_password_box() {
         ..plain(BUTTON + 1)
     };
     for facts in [plain(EDIT), plain(DOCUMENT), plain(BUTTON), custom] {
-        assert_eq!(kind(&facts, &closed), FieldKind::Unknown, "{facts:?}");
+        assert_eq!(
+            kind(&facts, &closed, || false),
+            FieldKind::Unknown,
+            "{facts:?}"
+        );
     }
     let secret = Facts {
         password: Some(true),
         ..plain(EDIT)
     };
-    assert_eq!(kind(&secret, &closed), FieldKind::Password);
+    assert_eq!(kind(&secret, &closed, || false), FieldKind::Password);
 }
 
 #[test]
@@ -166,14 +183,35 @@ fn an_opaque_class_from_the_table_is_unknown_on_the_box_or_its_window() {
 }
 
 #[test]
-fn a_read_only_box_is_unknown() {
+fn a_text_box_whose_value_or_caret_range_says_read_only_is_unknown() {
     for control in [EDIT, DOCUMENT] {
-        let facts = Facts {
+        let fixed = Facts {
             read_only: true,
             ..plain(control)
         };
-        assert_eq!(kind_of(&facts), FieldKind::Unknown, "{control}");
+        assert_eq!(probed(&fixed, false), (FieldKind::Unknown, 0), "{control}");
+        assert_eq!(probed(&plain(control), true), (FieldKind::Unknown, 1));
+        assert_eq!(probed(&plain(control), false), (FieldKind::Text, 1));
     }
+}
+
+#[test]
+fn read_only_leaves_a_link_or_a_list_no_box_and_the_probe_unasked() {
+    let link = Facts {
+        read_only: true,
+        ..plain(BUTTON)
+    };
+    assert_eq!(probed(&link, true), (FieldKind::None, 0));
+    let secret = Facts {
+        password: Some(true),
+        ..plain(EDIT)
+    };
+    assert_eq!(probed(&secret, true), (FieldKind::Password, 0));
+    let unread = Facts {
+        password: None,
+        ..plain(EDIT)
+    };
+    assert_eq!(probed(&unread, false), (FieldKind::Unknown, 0));
 }
 
 #[test]
@@ -214,43 +252,4 @@ fn the_table_numbers_are_windows_own() {
     let types = [UIA_EditControlTypeId.0, UIA_DocumentControlTypeId.0];
     assert_eq!(table.text_controls(), types);
     assert_eq!([EDIT, DOCUMENT], types);
-}
-
-/// Any facts: a few control types, both flags and unreadable ones, and classes from every list.
-fn any_facts() -> impl Strategy<Value = Facts> {
-    let class = prop::sample::select(vec!["", "Edit", "Static", "ConsoleWindowClass"]);
-    (
-        prop::option::of(prop::sample::select(vec![EDIT, DOCUMENT, BUTTON])),
-        prop::option::of(any::<bool>()),
-        (class.clone(), any::<u32>(), class),
-        (any::<bool>(), any::<bool>()),
-    )
-        .prop_map(
-            |(control, password, (class, style, top), (editable, read_only))| Facts {
-                control,
-                password,
-                class: class.to_owned(),
-                style,
-                top: top.to_owned(),
-                editable,
-                read_only,
-            },
-        )
-}
-
-proptest! {
-    #[test]
-    fn a_box_is_text_only_when_every_fact_was_read_and_says_so(facts in any_facts()) {
-        let table = small();
-        let got = kind(&facts, &table);
-        if facts.password == Some(true) {
-            prop_assert_eq!(got, FieldKind::Password);
-        }
-        if got == FieldKind::Text {
-            prop_assert!(facts.control.is_some() && facts.password == Some(false));
-            prop_assert!(!table.hides(&facts.class, facts.style));
-            prop_assert!(!table.opaque(&facts.class) && !table.opaque(&facts.top));
-            prop_assert!(!facts.read_only);
-        }
-    }
 }

@@ -48,9 +48,13 @@ pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
     }
 }
 
-/// The kind of box `el` is.
+/// The kind of box `el` is; only a would-be text box gets its caret's range asked whether it is read-only.
 pub(super) fn kind_of(el: &IUIAutomationElement) -> FieldKind {
-    kind(&facts(el), table())
+    kind(
+        &facts(el),
+        table(),
+        || matches!(caret_of(el), Ok(Some(range)) if read_only_range(&range)),
+    )
 }
 
 /// The top-level window `hwnd` sits in.
@@ -60,8 +64,8 @@ fn root(hwnd: HWND) -> HWND {
     unsafe { GetAncestor(hwnd, GA_ROOT) }
 }
 
-/// Whether `el` is editable (a writable value pattern or a text pattern answers) and whether it says it is read-only
-/// (its value pattern, or its text's `IsReadOnly` attribute).
+/// Whether `el` is editable (a writable value pattern or a text pattern answers) and whether its value pattern says
+/// it is read-only.
 #[allow(unsafe_code, reason = "Plain UI Automation pattern reads.")]
 fn patterns(el: &IUIAutomationElement) -> (bool, bool) {
     // SAFETY: plain pattern and property reads on a live element; a failure reads as no.
@@ -69,21 +73,16 @@ fn patterns(el: &IUIAutomationElement) -> (bool, bool) {
         let value = el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId);
         let fixed = value.and_then(|v| v.CurrentIsReadOnly()).ok();
         let text = el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId);
-        (fixed.map(BOOL::as_bool), text.ok())
+        (fixed.map(BOOL::as_bool), text.is_ok())
     };
-    let text_fixed = text.as_ref().is_some_and(read_only_text);
-    let editable = fixed == Some(false) || text.is_some();
-    (editable, fixed == Some(true) || text_fixed)
+    (fixed == Some(false) || text, fixed == Some(true))
 }
 
-/// Whether the whole text of `text` says it is read-only; a mixed or missing answer says no.
+/// Whether the text of `range` says it is read-only; a mixed or missing answer says no.
 #[allow(unsafe_code, reason = "A UI Automation text attribute read.")]
-fn read_only_text(text: &IUIAutomationTextPattern) -> bool {
-    // SAFETY: plain calls on a live pattern and the range it hands us; no text is read.
-    let attr = unsafe {
-        text.DocumentRange()
-            .and_then(|range| range.GetAttributeValue(UIA_IsReadOnlyAttributeId))
-    };
+fn read_only_range(range: &IUIAutomationTextRange) -> bool {
+    // SAFETY: a plain call on a live range; no text is read.
+    let attr = unsafe { range.GetAttributeValue(UIA_IsReadOnlyAttributeId) };
     attr.is_ok_and(|v| v.vt() == VT_BOOL && bool::try_from(&v).unwrap_or(false))
 }
 
@@ -157,16 +156,28 @@ pub(super) fn ends_with(
     Ok(tail(&caret, TextUnit_Character, back, by)?.map(|t| t.ends_with(want)))
 }
 
-/// The caret of `el`, from `TextPattern2` or else the first selection; `None` unless `el` is a text box with one.
-#[allow(unsafe_code, reason = "Plain UI Automation pattern calls.")]
+/// The caret of text box `el`; `None` unless `el` is a text box with one. The kind check fetches it once.
 fn text_caret(
     el: &IUIAutomationElement,
     by: Instant,
 ) -> Result<Option<IUIAutomationTextRange>, FieldError> {
-    if kind_of(el) != FieldKind::Text {
+    let mut caret = None;
+    let kind = kind(&facts(el), table(), || {
+        let got = caret_of(el);
+        let fixed = matches!(&got, Ok(Some(range)) if read_only_range(range));
+        caret = Some(got);
+        fixed
+    });
+    if kind != FieldKind::Text {
         return Ok(None);
     }
     late(by)?;
+    caret.unwrap_or_else(|| caret_of(el))
+}
+
+/// The caret of `el`, from `TextPattern2` or else the first selection; `None` when it has none.
+#[allow(unsafe_code, reason = "Plain UI Automation pattern calls.")]
+fn caret_of(el: &IUIAutomationElement) -> Result<Option<IUIAutomationTextRange>, FieldError> {
     text_call();
     // SAFETY: plain pattern calls on a live element; `active` is a local that outlives the call.
     unsafe {

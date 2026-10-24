@@ -1,5 +1,6 @@
 //! UI Automation on hidden test edit boxes: their kinds and ids, the words before the caret in Latin and Arabic,
-//! password and read-only boxes that are never read, the read cap, and focus in our own process.
+//! password and read-only boxes that are never read, the caret range's read-only answer, the read cap, and focus in
+//! our own process.
 
 use super::*;
 use crate::field::run::{Job, Shared, spawn};
@@ -116,6 +117,19 @@ fn a_read_only_box_is_unknown_and_never_read() {
     assert!(facts(&fixed).read_only);
     assert_eq!(kind_of(&fixed), FieldKind::Unknown);
     assert_eq!(before_cursor(&fixed, 2, far()), Ok(None));
+}
+
+#[test]
+fn the_caret_range_alone_tells_a_read_only_text() {
+    let _one = one_client();
+    let (_com, auto) = started();
+    let (fixed_box, plain_box) = (
+        TestEdit::start(LATIN, ES_READONLY),
+        TestEdit::start(LATIN, 0),
+    );
+    let range = |edit: &TestEdit| caret_of(&edit.element(&auto)).unwrap().unwrap();
+    assert!(read_only_range(&range(&fixed_box)));
+    assert!(!read_only_range(&range(&plain_box)));
 }
 
 /// What a run told a stale `Text` reads from the box with raw handle `raw`, and how many text calls its thread made;

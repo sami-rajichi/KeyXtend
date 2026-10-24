@@ -19,13 +19,14 @@ pub(crate) struct Facts {
     pub(crate) top: String,
     /// Whether a writable value pattern or a text pattern answers.
     pub(crate) editable: bool,
-    /// Whether its value pattern or its text says it is read-only, as a web page or a PDF is.
+    /// Whether its value pattern says it is read-only.
     pub(crate) read_only: bool,
 }
 
 /// The kind `facts` tell under `table`: a password box by UIA or the edit style first, then unknown when the table is
-/// closed, a fact could not be read, the window hides its boxes or the text is read-only, then text, else no box.
-pub(crate) fn kind(facts: &Facts, table: &Table) -> FieldKind {
+/// closed, a fact could not be read or the window hides its boxes, then text, else no box. A text box that says it is
+/// read-only, by its facts or else by `probe` (asked for nothing else), is unknown.
+pub(crate) fn kind(facts: &Facts, table: &Table, probe: impl FnOnce() -> bool) -> FieldKind {
     if facts.password == Some(true) || table.hides(&facts.class, facts.style) {
         return FieldKind::Password;
     }
@@ -36,12 +37,15 @@ pub(crate) fn kind(facts: &Facts, table: &Table) -> FieldKind {
         return FieldKind::Unknown;
     };
     let hidden = table.opaque(&facts.class) || table.opaque(&facts.top);
-    if facts.password.is_none() || hidden || facts.read_only {
+    if facts.password.is_none() || hidden {
         return FieldKind::Unknown;
     }
-    if table.holds_text(control) || facts.editable {
-        FieldKind::Text
+    if !table.holds_text(control) && !facts.editable {
+        return FieldKind::None;
+    }
+    if facts.read_only || probe() {
+        FieldKind::Unknown
     } else {
-        FieldKind::None
+        FieldKind::Text
     }
 }

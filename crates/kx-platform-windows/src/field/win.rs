@@ -39,7 +39,8 @@ fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, read_ms: u32) {
     };
     let focus = handler(Arc::clone(shared));
     // SAFETY: registers our live handler on our own client.
-    if unsafe { auto.AddFocusChangedEventHandler(None, &focus) }.is_err() {
+    if let Err(e) = unsafe { auto.AddFocusChangedEventHandler(None, &focus) } {
+        tracing::warn!(code = %e.code(), "UI Automation refused the field watch's focus handler");
         return shared.fail("the focus handler was refused");
     }
     let start = focused(&auto).ok();
