@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-24 01:51 — P7: typed-text events, field, pack and sealed ports, and the `KeyboardUi` gate
+`kx-module-api` now has the shared types word prediction needs (ADR-0033): `Typed`, `TypeWord`, `Suggested` and the other typed-text events need `ReadFocusedText` and print every text redacted, while `PressesWanted` carries nothing and is open. Three new ports follow: `FieldWatch` tells the focused box's kind and reads a few words before its cursor (behind `ReadFocusedText`), `WordPacks` opens each language's seed with no gate, and `SealedStore` keeps blobs with checked names sealed (behind `SecretStore`). The new `KeyboardUi` capability gates the keyboard face, the mouse module's notes and its pointer moves, so the ui, keyboard and mouse modules declare it. Nothing uses the new events or ports yet.
+
 ## 2026-10-23 23:07 — P6 done: shortcuts layer and Power key (v0.3)
 The Shortcuts key swaps the side keys for 37 shortcuts on up to 6 pages the user arranges, named by meaning and sent by each platform's own table (ADR-0031); latched keys join each step, and the tips and screen readers name the keys in English, French and Arabic. The Power key opens Windows' own Shut Down Windows dialog through the new power module, which never confirms it. G25 and G10 passed on the PC once G25 brought Notepad back after Windows' switcher closed, and every hands-on check passed, Lock PC included. The numbers are in the test report, Win+V routing moved to P8, and word prediction (P7) is next.
 

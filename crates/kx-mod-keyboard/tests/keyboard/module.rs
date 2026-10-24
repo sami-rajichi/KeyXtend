@@ -8,15 +8,18 @@
 use crate::host::{FakeHost, fake, store};
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{BoardSpec, ID, KeyboardModule, KeyboardSettings, Ports, Tapped, Typing};
-use kx_module_api::Capability::InjectInput;
+use kx_module_api::Capability::{InjectInput, KeyboardUi};
 use kx_module_api::ports::{
     InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, ShortcutsKey, TextRoute,
 };
 use kx_module_api::{
-    Module, ModuleCx, ModuleError, Redacted, ServiceError, ServiceKey, SettingsError,
+    Capability, Module, ModuleCx, ModuleError, Redacted, ServiceError, ServiceKey, SettingsError,
 };
 use kx_platform_fake::Stroke;
 use std::sync::Arc;
+
+/// Both capabilities the module declares.
+const BOTH: [Capability; 2] = [InjectInput, KeyboardUi];
 
 fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
     KeyboardModule::default().start(&mut ModuleCx::new(host))
@@ -26,19 +29,29 @@ fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
 fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
     let mut host = fake(None);
     store(&mut host, None);
-    host.granted = vec![InjectInput];
+    host.granted = BOTH.to_vec();
     assert_eq!(start(&mut host), Ok(()));
 }
 
 #[test]
-fn it_provides_the_face_which_needs_no_capability() {
+fn it_provides_the_face_behind_keyboard_ui() {
+    let mut host = fake(None);
+    store(&mut host, None);
+    host.granted = BOTH.to_vec();
+    start(&mut host).unwrap();
+    let (gate, service) = &host.services[&KeyboardFaceKey::ID];
+    assert_eq!(*gate, Some(KeyboardUi));
+    assert!(service.downcast_ref::<Arc<dyn KeyboardFace>>().is_some());
+}
+
+#[test]
+fn without_keyboard_ui_it_cannot_offer_the_face() {
     let mut host = fake(None);
     store(&mut host, None);
     host.granted = vec![InjectInput];
-    start(&mut host).unwrap();
-    let (gate, service) = &host.services[&KeyboardFaceKey::ID];
-    assert_eq!(*gate, None);
-    assert!(service.downcast_ref::<Arc<dyn KeyboardFace>>().is_some());
+    let refused = ServiceError::NotGranted(KeyboardFaceKey::ID, KeyboardUi);
+    assert_eq!(start(&mut host), Err(ModuleError::Service(refused)));
+    assert!(!host.services.contains_key(&KeyboardFaceKey::ID));
 }
 
 #[test]
@@ -53,7 +66,7 @@ fn without_inject_input_it_cannot_reach_the_injector() {
 fn without_the_layouts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(LayoutsKey::ID));
-    host.granted = vec![InjectInput];
+    host.granted = BOTH.to_vec();
     let missing = ServiceError::Missing(LayoutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -62,7 +75,7 @@ fn without_the_layouts_service_it_fails_to_start() {
 fn without_the_shortcuts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(ShortcutsKey::ID));
-    host.granted = vec![InjectInput];
+    host.granted = BOTH.to_vec();
     let missing = ServiceError::Missing(ShortcutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -89,7 +102,7 @@ fn its_handle_writes_its_own_section() {
 fn a_tap_through_the_kernels_ports_types_in_the_layout_shown() {
     let mut host = fake(None);
     let fakes = store(&mut host, None);
-    host.granted = vec![InjectInput];
+    host.granted = BOTH.to_vec();
     let ports = Ports::from_cx(&ModuleCx::new(&mut host)).unwrap();
     let settings = KeyboardSettings::from_defaults().unwrap();
     let mut typing = Typing::new(&BoardSpec::shipped().unwrap(), &settings);

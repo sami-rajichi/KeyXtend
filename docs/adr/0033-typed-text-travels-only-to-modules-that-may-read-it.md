@@ -18,7 +18,7 @@ Decided with the approval of P7's plan on 2026-10-24.
 
 1. **`ReadFocusedText` gates typed text.** `Typed` (what the keyboard typed), `TypeWord` (a request to erase and type a word), `Suggested` (the chips), `ChipPicked` and `WordsAsk` all name it. The keyboard, the ui module and the prediction module declare it.
 2. **The keyboard stays the only typist.** Prediction never holds `InjectInput`: it sends `TypeWord`, and the keyboard types it through the app's route, its latches, its dead-key rules and its `text_cap`.
-3. **`KeyboardUi` gates the face and the pointer notes.** A new capability, held only by the ui module, gates `KeyboardFaceKey`, `AssistNote` and `PointerMoved`.
+3. **`KeyboardUi` gates the face and the pointer notes.** A new capability gates `KeyboardFaceKey`, `AssistNote` and `PointerMoved`. The ui module holds it to use them, and only their sources hold it too: the keyboard, which provides the face, and the mouse module, which sends the notes.
 4. **A field service, not an intercept chain.** `FieldWatch`, gated by `ReadFocusedText`, tells the focused box's kind (text, password, unknown or none) and reads at most N words before the cursor. Each module that needs it asks it, so no ordering between modules matters.
 5. **`FlipCaps` goes.** The memory check's churn turns Caps over through a debug wrapper of the layout source in the composition root and redraws with `relabel()`.
 

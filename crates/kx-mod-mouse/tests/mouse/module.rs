@@ -71,7 +71,11 @@ fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
 }
 
 /// Everything the manifest declares.
-const ALL: [Capability; 2] = [Capability::PointerHook, Capability::InjectInput];
+const ALL: [Capability; 3] = [
+    Capability::PointerHook,
+    Capability::InjectInput,
+    Capability::KeyboardUi,
+];
 
 #[test]
 fn it_starts_on_the_defaults_with_the_hook_granted() {

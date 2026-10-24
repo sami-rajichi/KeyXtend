@@ -1,6 +1,6 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
 //! pointer hook, the scroll target and the power dialog each reach only the module whose manifest declares their
-//! capability, and the shortcuts reach the keyboard's layer.
+//! capability, `KeyboardUi` goes only to the ui and its sources, and the shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
@@ -9,7 +9,9 @@ use kx_module_api::ports::{
     FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
     ScrollTarget, ScrollTargetKey, ShortcutId, ShortcutInfo, Step,
 };
-use kx_module_api::{Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey};
+use kx_module_api::{
+    Capability, Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey,
+};
 use kx_platform_fake::{FakePointerHook, FakePowerDialog, FakeScrollTarget};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -146,6 +148,22 @@ fn the_mouse_hook_still_reaches_only_the_mouse_module() {
     let hook: Arc<dyn PointerHook> = Arc::new(FakePointerHook::new());
     let got = reached::<PointerHookKey>(&Rig::new(), &hook);
     assert_eq!(got, [kx_mod_mouse::ID]);
+}
+
+#[test]
+fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
+    let shipped = modules(&Rig::new().load().hub);
+    let holders: Vec<_> = shipped
+        .iter()
+        .map(|m| m.manifest())
+        .filter(|m| m.capabilities.contains(&Capability::KeyboardUi))
+        .map(|m| m.id)
+        .collect();
+    let want = [kx_mod_keyboard::ID, kx_mod_mouse::ID, kx_ui::ID];
+    assert_eq!(
+        holders, want,
+        "ADR-0033: the ui, the face's provider and the notes' sender"
+    );
 }
 
 #[test]

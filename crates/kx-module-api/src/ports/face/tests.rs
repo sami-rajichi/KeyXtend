@@ -195,9 +195,9 @@ fn a_reply_redraws_nothing_by_default() {
 }
 
 #[test]
-fn the_face_needs_no_capability() {
+fn the_face_needs_keyboard_ui() {
     assert_eq!(KeyboardFaceKey::ID.as_str(), "keyboard-face");
-    assert_eq!(KeyboardFaceKey::CAPABILITY, None);
+    assert_eq!(KeyboardFaceKey::CAPABILITY, Some(Capability::KeyboardUi));
 }
 
 #[test]

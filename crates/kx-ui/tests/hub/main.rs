@@ -246,9 +246,10 @@ impl Rig {
     }
 }
 
-/// Stores `face` in `host` as the keyboard face service.
+/// Stores `face` in `host` as the keyboard face service, behind its gate, and grants the gate as the kernel would.
 fn provide(host: &mut FakeHost, face: Arc<FakeFace>) {
     let face: Arc<dyn KeyboardFace> = face;
-    host.services
-        .insert(KeyboardFaceKey::ID, (None, Box::new(face)));
+    let stored = (KeyboardFaceKey::CAPABILITY, Box::new(face) as _);
+    host.services.insert(KeyboardFaceKey::ID, stored);
+    host.granted.extend(KeyboardFaceKey::CAPABILITY);
 }

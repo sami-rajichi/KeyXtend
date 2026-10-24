@@ -7,8 +7,7 @@
 )]
 
 use crate::host::{FakeHost, Fakes, fake, id};
-use kx_mod_keyboard::KeyboardModule;
-use kx_module_api::Capability::InjectInput;
+use kx_mod_keyboard::{KeyboardModule, MANIFEST};
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey,
 };
@@ -86,7 +85,7 @@ fn start(
     let mut host = fake(change);
     host.core = Arc::clone(core);
     fakes.store(&mut host, None);
-    host.granted = vec![InjectInput];
+    host.granted = MANIFEST.capabilities.to_vec();
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
     let (_, service) = &host.services[&KeyboardFaceKey::ID];
     let face = service.downcast_ref::<Arc<dyn KeyboardFace>>().unwrap();

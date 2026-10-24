@@ -1,5 +1,5 @@
 //! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
-//! shortcuts, and it provides the `KeyboardFace` the UI draws.
+//! shortcuts, and it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`.
 
 use crate::settings::SPEC;
 use kx_module_api::ports::{
@@ -10,7 +10,7 @@ use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("keyboard");
 
-/// The module's manifest: `InjectInput` gates all four services it needs.
+/// The module's manifest: `InjectInput` gates all four services it needs, and `KeyboardUi` the face it provides.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -21,7 +21,7 @@ pub static MANIFEST: Manifest = Manifest {
         ShortcutsKey::ID,
     ],
     provides: &[KeyboardFaceKey::ID],
-    capabilities: &[Capability::InjectInput],
+    capabilities: &[Capability::InjectInput, Capability::KeyboardUi],
     settings: Some(&SPEC),
 };
 
@@ -41,14 +41,15 @@ mod tests {
     }
 
     #[test]
-    fn it_provides_the_face_which_needs_no_capability() {
+    fn it_provides_the_face_behind_keyboard_ui() {
         assert_eq!(MANIFEST.provides, [KeyboardFaceKey::ID]);
-        assert_eq!(KeyboardFaceKey::CAPABILITY, None);
+        assert_eq!(KeyboardFaceKey::CAPABILITY, Some(Capability::KeyboardUi));
     }
 
     #[test]
-    fn it_needs_only_inject_input_the_gate_of_all_four() {
-        assert_eq!(MANIFEST.capabilities, [Capability::InjectInput]);
+    fn it_holds_inject_input_for_all_four_and_keyboard_ui_for_the_face() {
+        let want = [Capability::InjectInput, Capability::KeyboardUi];
+        assert_eq!(MANIFEST.capabilities, want);
         let gates = [
             InputInjectorKey::CAPABILITY,
             LayoutSourceKey::CAPABILITY,

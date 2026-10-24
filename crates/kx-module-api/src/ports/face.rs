@@ -178,13 +178,13 @@ pub trait KeyboardFace: Send + Sync {
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError>;
 }
 
-/// The keyboard face service; it needs no capability.
+/// The keyboard face service; it needs `KeyboardUi`, as its actions type keys (ADR-0033).
 pub struct KeyboardFaceKey;
 
 impl ServiceKey for KeyboardFaceKey {
     type Api = dyn KeyboardFace;
     const ID: ServiceId = ServiceId::new("keyboard-face");
-    const CAPABILITY: Option<Capability> = None;
+    const CAPABILITY: Option<Capability> = Some(Capability::KeyboardUi);
 }
 
 #[cfg(test)]
