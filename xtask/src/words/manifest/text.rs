@@ -98,10 +98,12 @@ pub(crate) struct Credits {
     pub(crate) wordfreq: Section,
     /// The notice of `SCOWLv2`, the English dictionary.
     pub(crate) scowl: Section,
+    /// The works wordfreq is built on, whose SUBTLEX authors its licence says to credit.
+    pub(crate) citations: Section,
 }
 
 /// A part of a source file copied word for word: from the line that starts with `from` to the first later line that
-/// starts with `to`, that line left out.
+/// starts with `to`, that line left out, or to the file's end.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Section {
@@ -109,8 +111,8 @@ pub(crate) struct Section {
     pub(crate) file: String,
     /// How its first line starts.
     pub(crate) from: String,
-    /// How the line after its last starts.
-    pub(crate) to: String,
+    /// How the line after its last starts; without it the part runs to the file's end.
+    pub(crate) to: Option<String>,
 }
 
 impl LangText {

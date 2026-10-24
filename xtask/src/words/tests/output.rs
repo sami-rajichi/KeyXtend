@@ -1,8 +1,9 @@
 //! What `words build` writes and checks: every source before any language, the download budget, the packs a past
 //! run left, and the credits with their authors.
 
-use super::super::WordsError;
 use super::super::build::{self, Paths};
+use super::super::manifest::Section;
+use super::super::{WordsError, credits, out};
 use super::build::{NO_SKEW, built, manifest, paths};
 use crate::test_support::TempDir;
 
@@ -69,6 +70,8 @@ fn the_credits_copy_the_licence_sections_and_name_every_source() {
     let lines = [
         "## License",
         "Shared under CC BY-SA.",
+        "## Citations",
+        "- SUBTLEX-UK.",
         "Copyright 2000 by Kevin.",
         "language editions fr, from the Wikimedia search-index dump of data, in these files:",
     ];
@@ -97,4 +100,78 @@ fn the_credits_copy_the_licence_sections_and_name_every_source() {
         "cy is held back, - is no one, dee only repeats ann"
     );
     assert_eq!(read("LICENSE.txt"), "Shared alike.\nSee the credits.\n");
+}
+
+#[test]
+fn a_stray_pack_in_another_case_leaves_the_fresh_one_written_and_measured() {
+    let dir = TempDir::new("words-build");
+    let (result, said) = run_with(&dir, |p| {
+        std::fs::create_dir_all(&p.out).unwrap();
+        std::fs::write(p.out.join("FR.KXW"), vec![7_u8; 5_000]).unwrap();
+    });
+    result.unwrap();
+    let out = paths(&dir).out;
+    let fresh = std::fs::read(out.join("fr.kxw")).unwrap();
+    assert!(kx_mod_predict::Pack::parse(&fresh).is_ok(), "{said:?}");
+    let names = std::fs::read_dir(&out)
+        .unwrap()
+        .map(|e| e.unwrap().file_name());
+    let fr = names.filter(|n| n.eq_ignore_ascii_case("fr.kxw")).count();
+    let download = said.last().unwrap();
+    assert!(
+        fr == 1 && download.starts_with("download: 5 files, "),
+        "{said:?}"
+    );
+}
+
+#[test]
+fn a_name_in_another_case_is_the_written_pack_unless_both_are_listed() {
+    let listed = |names: &[&str]| names.iter().map(ToString::to_string).collect::<Vec<_>>();
+    let one = listed(&["FR.kxw", "xx.kxw"]);
+    assert_eq!(
+        out::stale(&one, &["fr.kxw"]),
+        ["xx.kxw"],
+        "a folder that ignores case kept the old name"
+    );
+    let both = listed(&["FR.kxw", "fr.kxw"]);
+    assert_eq!(
+        out::stale(&both, &["fr.kxw"]),
+        ["FR.kxw"],
+        "a folder that minds case holds two files"
+    );
+}
+
+#[test]
+fn a_section_without_an_end_runs_to_the_files_end_and_a_missing_mark_is_refused() {
+    let dir = TempDir::new("words-copy");
+    let path = dir.path().join("README.md");
+    std::fs::write(
+        &path,
+        "# w\n## Cite\n- SUBTLEX-UK.\n  <https://x.invalid>\n\n",
+    )
+    .unwrap();
+    let section = |from: &str, to: Option<&str>| Section {
+        file: String::new(),
+        from: from.to_string(),
+        to: to.map(str::to_string),
+    };
+    let copy = |s: &Section| credits::copy(&path, s);
+    let cite = "## Cite\n- SUBTLEX-UK.\n  <https://x.invalid>";
+    assert_eq!(copy(&section("## Cite", None)).unwrap(), cite);
+    assert_eq!(copy(&section("# w", Some("## "))).unwrap(), "# w");
+    for missing in [section("## Nope", None), section("# w", Some("## Nope"))] {
+        let refused = copy(&missing);
+        assert!(
+            matches!(&refused, Err(WordsError::Io(why)) if why.ends_with("\"## Nope\"")),
+            "{refused:?}"
+        );
+    }
+}
+
+#[test]
+fn each_source_is_checked_once_though_two_credit_sections_share_it() {
+    let dir = TempDir::new("words-build");
+    let all = credits::sources(&manifest(&paths(&dir).src, NO_SKEW));
+    let readme = all.iter().filter(|f| *f == "w/README.md").count();
+    assert_eq!(readme, 1, "{all:?}");
 }

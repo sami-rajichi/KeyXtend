@@ -58,16 +58,31 @@ pub(crate) fn write(
         let path = out.join(name);
         std::fs::write(&path, bytes).map_err(|e| io_error(&path, &e))?;
     }
-    for name in packs_in(out)? {
-        if !files.iter().any(|(written, _)| *written == name) {
-            let path = out.join(&name);
-            std::fs::remove_file(&path).map_err(|e| io_error(&path, &e))?;
-            say(&format!(
-                "stale: removed {name}, which this run did not build"
-            ));
-        }
+    let written: Vec<&str> = files.iter().map(|(name, _)| name.as_str()).collect();
+    for name in stale(&packs_in(out)?, &written) {
+        let path = out.join(name);
+        std::fs::remove_file(&path).map_err(|e| io_error(&path, &e))?;
+        say(&format!(
+            "stale: removed {name}, which this run did not build"
+        ));
     }
     Ok(())
+}
+
+/// The `listed` packs no `written` name names. A name that differs only in case is the written file where the folder
+/// ignores case (Windows, APFS), so it stays unless the written name is listed beside it.
+pub(crate) fn stale<'a>(listed: &'a [String], written: &[&str]) -> Vec<&'a str> {
+    let is_listed = |w: &&str| listed.iter().any(|l| l == w);
+    let names = |l: &str| {
+        written
+            .iter()
+            .any(|w| *w == l || (w.eq_ignore_ascii_case(l) && !is_listed(w)))
+    };
+    listed
+        .iter()
+        .map(String::as_str)
+        .filter(|l| !names(l))
+        .collect()
 }
 
 /// The raw and deflated sizes of every pack file in `out` and of the other files `named`.
@@ -93,7 +108,8 @@ fn packs_in(out: &Path) -> Result<Vec<String>, WordsError> {
     let mut names = Vec::new();
     for entry in entries {
         let path = entry.map_err(|e| io_error(out, &e))?.path();
-        let is_pack = path.extension().is_some_and(|x| x == PACK_EXT) && path.is_file();
+        let ext = path.extension().and_then(|x| x.to_str());
+        let is_pack = ext.is_some_and(|x| x.eq_ignore_ascii_case(PACK_EXT)) && path.is_file();
         if let (true, Some(name)) = (is_pack, path.file_name().and_then(|n| n.to_str())) {
             names.push(name.to_string());
         }

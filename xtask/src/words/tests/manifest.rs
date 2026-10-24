@@ -157,6 +157,7 @@ const OUT_OF_RANGE: &[(&str, &str)] = &[
     (r#"["Shared alike.", "See the credits."]"#, "[]"),
     (r#"file = "d/fr.aff""#, r#"file = "d/nope.aff""#),
     (r#"to = "B" }"#, r#"to = "" }"#),
+    (r#"from = "C" }"#, r#"from = "" }"#),
     ("sentence_ends = [\".\", \"?\"]", "sentence_ends = []"),
     ("max_seen_sentences = 1000", "max_seen_sentences = 0"),
     ("skew_ratio = 10.0", "skew_ratio = 0.9"),

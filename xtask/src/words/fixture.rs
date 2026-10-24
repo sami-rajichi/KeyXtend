@@ -104,6 +104,7 @@ licence = "LICENSE.txt"
 licence_text = ["Shared alike.", "See the credits."]
 wordfreq = { file = "d/fr.aff", from = "A", to = "B" }
 scowl = { file = "d/fr.dic", from = "A", to = "B" }
+citations = { file = "d/fr.aff", from = "C" }
 "#;
 
 /// The fixture manifest's `[fetch]` table.

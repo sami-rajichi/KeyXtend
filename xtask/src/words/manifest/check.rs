@@ -9,7 +9,9 @@ use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
 use super::text::PER_MILLE;
-use super::{Credits, FetchConfig, HASH_HEX, LangText, Packs, Rules, Source, TextRules, bad};
+use super::{
+    Credits, FetchConfig, HASH_HEX, LangText, Packs, Rules, Section, Source, TextRules, bad,
+};
 use crate::devtools::paths::{is_plain_name, is_relative_plain};
 
 /// The only scheme a base may use, so a download can never fall back to plain HTTP.
@@ -99,10 +101,11 @@ pub(super) fn credits(
     sources: &BTreeMap<String, Source>,
 ) -> Result<(), WordsError> {
     let names = [&credits.file, &credits.authors, &credits.licence];
-    let sections = [&credits.wordfreq, &credits.scowl];
+    let sections = [&credits.wordfreq, &credits.scowl, &credits.citations];
+    let marked = |s: &Section| !s.from.is_empty() && s.to.as_ref().is_none_or(|t| !t.is_empty());
     let sound = sections
         .iter()
-        .all(|s| sources.contains_key(&s.file) && !s.from.is_empty() && !s.to.is_empty());
+        .all(|s| sources.contains_key(&s.file) && marked(s));
     if names.iter().all(|n| is_plain_name(n)) && !credits.licence_text.is_empty() && sound {
         Ok(())
     } else {

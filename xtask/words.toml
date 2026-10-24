@@ -83,6 +83,8 @@ licence_text = [
 wordfreq = { file = "wordfreq/README.md", from = "## License", to = "## " }
 # SCOWLv2's full notice, copied word for word from its heading to the build line.
 scowl = { file = "dict/en/unzipped/README_en_US.txt", from = "COPYRIGHT, SOURCES, and CREDITS:", to = "Build Date:" }
+# The works wordfreq is built on, whose SUBTLEX authors its licence says to credit: from the heading to the file's end.
+citations = { file = "wordfreq/README.md", from = "## Citations to work that wordfreq is built on" }
 
 [fetch]
 # Env var naming the Windows folder, so the system's own curl runs there.

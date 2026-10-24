@@ -14,6 +14,11 @@ wordfreq's licence section, copied word for word from its README, {wordfreq_read
 
 {wordfreq_licence}
 
+As that licence asks, the SUBTLEX authors are credited here, with the other works wordfreq is built on, copied word
+for word from the same README:
+
+{wordfreq_citations}
+
 
 == Word chains: Wikipedia ==
 

@@ -75,6 +75,10 @@ pub(super) fn manifest(src: &Path, skew: &str) -> Manifest {
         .replace(
             r#"file = "d/fr.dic", from = "A", to = "B""#,
             r#"file = "d/README.txt", from = "COPYRIGHT", to = "Build""#,
+        )
+        .replace(
+            r#"file = "d/fr.aff", from = "C""#,
+            r###"file = "w/README.md", from = "## Citations""###,
         );
     let lang = r#"
 [lang.fr.text]
@@ -112,7 +116,7 @@ fn files() -> Vec<(&'static str, Vec<u8>)> {
         ),
         (
             "w/README.md",
-            b"# wordfreq\n\n## License\n\nShared under CC BY-SA.\n\n## Next\n".to_vec(),
+            b"# wordfreq\n\n## License\n\nShared under CC BY-SA.\n\n## Next\n\n## Citations\n\n- SUBTLEX-UK.\n\n".to_vec(),
         ),
         (
             "d/README.txt",

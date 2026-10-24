@@ -19,14 +19,18 @@ const BULLET: &str = "- ";
 /// Parts the items of an inline list.
 const LIST_SEP: &str = ", ";
 
-/// Every source file the build reads: each language's files, then the two the credits copy from.
+/// Every source file the build reads, each once: each language's files, then those the credits copy from.
 pub(crate) fn sources(manifest: &Manifest) -> Vec<String> {
     let files = Files::of(manifest);
     let mut all = files.lists;
     let read = [files.dictionaries, files.tatoeba, files.wiki].concat();
     all.extend(read.into_iter().map(str::to_string));
     let c = &manifest.credits;
-    all.extend([c.wordfreq.file.clone(), c.scowl.file.clone()]);
+    for file in [&c.wordfreq.file, &c.scowl.file, &c.citations.file] {
+        if !all.contains(file) {
+            all.push(file.clone());
+        }
+    }
     all
 }
 
@@ -46,6 +50,7 @@ pub(crate) fn files(
         ("wordfreq_files", list(manifest, &files.lists)),
         ("wordfreq_readme", url(manifest, &c.wordfreq.file)),
         ("wordfreq_licence", section(&c.wordfreq)?),
+        ("wordfreq_citations", section(&c.citations)?),
         ("wiki_files", list(manifest, &files.wiki)),
         ("wiki_editions", files.editions.join(LIST_SEP)),
         ("wiki_dumps", dumps(manifest, &files.wiki)),
@@ -138,20 +143,20 @@ fn list(manifest: &Manifest, files: &[impl AsRef<str>]) -> String {
         .join("\n")
 }
 
-/// The lines of the file at `path` that `section` names, word for word, without trailing blank lines.
-fn copy(path: &Path, section: &Section) -> Result<String, WordsError> {
+/// The lines of the file at `path` that `section` names, word for word, without trailing blank lines; a mark no
+/// line starts with is refused.
+pub(crate) fn copy(path: &Path, section: &Section) -> Result<String, WordsError> {
     let text = std::fs::read_to_string(path).map_err(|e| io_error(path, &e))?;
-    let mut lines = text.lines().skip_while(|l| !l.starts_with(&section.from));
-    let first = lines.next().ok_or_else(|| {
-        WordsError::Io(format!(
-            "{}: no line starts with {:?}",
-            path.display(),
-            section.from
-        ))
-    })?;
-    let mut kept: Vec<&str> = std::iter::once(first)
-        .chain(lines.take_while(|l| !l.starts_with(&section.to)))
-        .collect();
+    let missing =
+        |mark: &str| WordsError::Io(format!("{}: no line starts with {mark:?}", path.display()));
+    let start = (text.lines().position(|l| l.starts_with(&section.from)))
+        .ok_or_else(|| missing(&section.from))?;
+    let mut kept: Vec<&str> = text.lines().skip(start).collect();
+    if let Some(to) = &section.to {
+        let end = (kept.iter().skip(1).position(|l| l.starts_with(to.as_str())))
+            .ok_or_else(|| missing(to))?;
+        kept.truncate(end + 1);
+    }
     while kept.last().is_some_and(|l| l.trim().is_empty()) {
         kept.pop();
     }
