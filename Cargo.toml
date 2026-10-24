@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-crypto", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "crates/kx-crypto", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -83,7 +83,7 @@ banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreame
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
 # WAV files, which the uiAccess app never does (ADR-0004).
-build_only_features = { kx-theme = ["files"] }
+build_only_features = { kx-mod-predict = ["build"], kx-theme = ["files"] }
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
 # Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.

@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use kx_crypto::RESERVED_NAMES;
-use kx_module_api::ports::PackError;
+use kx_module_api::ports::{PACK_EXT, PackError};
 
 #[cfg(windows)]
 mod win;
@@ -19,8 +19,6 @@ mod win;
 #[cfg(windows)]
 pub use win::WinWordPacks;
 
-/// The extension of a pack file, after its language's code.
-pub const PACK_EXT: &str = "kxw";
 /// The shortest language code a pack is named after (ISO 639-1).
 pub const MIN_ISO_LEN: usize = 2;
 /// The longest language code a pack is named after (ISO 639-2 and 639-3).

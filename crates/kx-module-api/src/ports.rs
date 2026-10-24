@@ -32,7 +32,7 @@ pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
-pub use packs::{PackError, PackView, WordPacks, WordPacksKey};
+pub use packs::{PACK_EXT, PackError, PackView, WordPacks, WordPacksKey};
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
     PointerEvent, PointerHook, PointerHookKey,

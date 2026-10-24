@@ -1,0 +1,130 @@
+# Folding for loose matching (spec §6 "Matching", ADR-0032 decision 5): `fold.rs` lower-cases a word, then drops
+# each `drop` character and replaces each `map` key. Keys are lower case, as folding lower-cases first.
+
+# Latin-1 Supplement and Latin Extended-A, after Lucene's ASCIIFoldingFilter: accents go, ligatures spell out.
+[latin]
+# İ lower-cases to i and this combining dot above, so the dot goes.
+drop = ["\u0307"]
+
+[latin.map]
+"ß" = "ss"
+"à" = "a"
+"á" = "a"
+"â" = "a"
+"ã" = "a"
+"ä" = "a"
+"å" = "a"
+"æ" = "ae"
+"ç" = "c"
+"è" = "e"
+"é" = "e"
+"ê" = "e"
+"ë" = "e"
+"ì" = "i"
+"í" = "i"
+"î" = "i"
+"ï" = "i"
+"ð" = "d"
+"ñ" = "n"
+"ò" = "o"
+"ó" = "o"
+"ô" = "o"
+"õ" = "o"
+"ö" = "o"
+"ø" = "o"
+"ù" = "u"
+"ú" = "u"
+"û" = "u"
+"ü" = "u"
+"ý" = "y"
+"þ" = "th"
+"ÿ" = "y"
+"ā" = "a"
+"ă" = "a"
+"ą" = "a"
+"ć" = "c"
+"ĉ" = "c"
+"ċ" = "c"
+"č" = "c"
+"ď" = "d"
+"đ" = "d"
+"ē" = "e"
+"ĕ" = "e"
+"ė" = "e"
+"ę" = "e"
+"ě" = "e"
+"ĝ" = "g"
+"ğ" = "g"
+"ġ" = "g"
+"ģ" = "g"
+"ĥ" = "h"
+"ħ" = "h"
+"ĩ" = "i"
+"ī" = "i"
+"ĭ" = "i"
+"į" = "i"
+"ı" = "i"
+"ĳ" = "ij"
+"ĵ" = "j"
+"ķ" = "k"
+"ĸ" = "q"
+"ĺ" = "l"
+"ļ" = "l"
+"ľ" = "l"
+"ŀ" = "l"
+"ł" = "l"
+"ń" = "n"
+"ņ" = "n"
+"ň" = "n"
+# Lucene spells it 'n; the apostrophe is left out, so the key stays letters.
+"ŉ" = "n"
+"ŋ" = "n"
+"ō" = "o"
+"ŏ" = "o"
+"ő" = "o"
+"œ" = "oe"
+"ŕ" = "r"
+"ŗ" = "r"
+"ř" = "r"
+"ś" = "s"
+"ŝ" = "s"
+"ş" = "s"
+"š" = "s"
+"ţ" = "t"
+"ť" = "t"
+"ŧ" = "t"
+"ũ" = "u"
+"ū" = "u"
+"ŭ" = "u"
+"ů" = "u"
+"ű" = "u"
+"ų" = "u"
+"ŵ" = "w"
+"ŷ" = "y"
+"ź" = "z"
+"ż" = "z"
+"ž" = "z"
+"ſ" = "s"
+
+# Arabic: harakat, the superscript alef and tatweel go; the hamza and wasla alef forms fold to bare alef, and alef
+# maksura to ya. Ta marbuta, hamza on waw or ya, and every other letter stay.
+[arabic]
+drop = [
+    "\u064B", # fathatan
+    "\u064C", # dammatan
+    "\u064D", # kasratan
+    "\u064E", # fatha
+    "\u064F", # damma
+    "\u0650", # kasra
+    "\u0651", # shadda
+    "\u0652", # sukun
+    "\u0670", # superscript alef
+    "\u0640", # tatweel
+]
+
+[arabic.map]
+"\u0623" = "\u0627" # alef with hamza above to alef
+"\u0625" = "\u0627" # alef with hamza below to alef
+"\u0622" = "\u0627" # alef with madda to alef
+"\u0671" = "\u0627" # alef wasla to alef
+"\u0649" = "\u064A" # alef maksura to ya

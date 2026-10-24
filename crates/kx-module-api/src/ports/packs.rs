@@ -4,6 +4,9 @@
 use crate::{Capability, ServiceId, ServiceKey};
 use thiserror::Error;
 
+/// The extension of a pack file, after its language's code: `fr.kxw`.
+pub const PACK_EXT: &str = "kxw";
+
 /// One open pack's bytes, read-only; dropping it closes the pack.
 pub trait PackView: Send + Sync {
     /// The whole pack.

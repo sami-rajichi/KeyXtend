@@ -1,0 +1,27 @@
+[package]
+name = "kx-mod-predict"
+description = "Word prediction: folding for loose matching, and the word-pack file format read straight from disk."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# The pack writer, for `cargo xtask words` and the tests only: the app reads packs and never writes one, so
+# `cargo xtask tidy` refuses this feature in its tree.
+build = []
+
+[dependencies]
+# The lexicon of each word pack: an FST map from folded keys to runs of word ids (ADR-0032).
+fst = "0.4.7"
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
