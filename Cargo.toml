@@ -67,6 +67,8 @@ skip_dirs = ["target"]
 app_dir = "apps"
 # Packages whose manifest is under this folder are test tools, which never ship.
 tool_dir = "tools"
+# The build tool, which never ships; like the test tools, it may depend on a module (kx-mod-predict's pack writer).
+build_tool = "xtask"
 # Crate-name prefix for feature modules.
 module_prefix = "kx-mod-"
 # Crate-name prefix for platform adapters.

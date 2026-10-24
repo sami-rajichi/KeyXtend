@@ -15,6 +15,7 @@ mod sounds;
 mod test_support;
 mod text;
 mod tidy;
+mod words;
 mod workspace;
 
 use std::ffi::OsString;
@@ -54,6 +55,7 @@ fn run(command: &cli::Command) -> ExitCode {
             devtools::check::run(exe).map_or_else(fail, exit_for)
         }
         cli::Command::Sounds(action) => finish(run_sounds(action)),
+        cli::Command::Words(action) => finish(run_words(action)),
     }
 }
 
@@ -79,6 +81,14 @@ fn run_sounds(action: &cli::SoundsAction) -> Result<(), sounds::SoundError> {
             output,
             at_ms,
         } => sounds::join(first, second, output, *at_ms),
+    }
+}
+
+/// Runs one `cargo xtask words` action.
+fn run_words(action: &cli::WordsAction) -> Result<(), words::WordsError> {
+    match action {
+        cli::WordsAction::Fetch { src } => words::fetch(src),
+        cli::WordsAction::List { iso, src } => words::list(iso, src),
     }
 }
 

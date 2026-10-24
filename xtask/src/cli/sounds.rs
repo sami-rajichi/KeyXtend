@@ -1,6 +1,6 @@
 //! Parsing of `cargo xtask sounds render|import|join`.
 
-use super::UsageError;
+use super::{UsageError, is_path};
 
 /// Renders every recipe to WAV files.
 const RENDER: &str = "render";
@@ -16,8 +16,6 @@ const FLAG_START_MS: &str = "--start-ms";
 const FLAG_LEN_MS: &str = "--len-ms";
 /// Flag giving where `join`'s second file starts, in ms after the first.
 const FLAG_AT_MS: &str = "--at-ms";
-/// Prefix of every flag; a path argument never starts with it.
-const FLAG_PREFIX: &str = "--";
 
 /// What `cargo xtask sounds` does.
 #[derive(Debug, PartialEq, Eq)]
@@ -88,11 +86,6 @@ pub(super) fn parse(args: &[String]) -> Result<SoundsAction, UsageError> {
         }
         _ => Err(UsageError),
     }
-}
-
-/// True if `arg` can be a path: it is not empty and is not a flag.
-fn is_path(arg: &str) -> bool {
-    !arg.is_empty() && !arg.starts_with(FLAG_PREFIX)
 }
 
 /// A whole number of milliseconds, or a usage error.

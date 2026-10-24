@@ -78,6 +78,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
         skip_dirs: vec!["target".to_string()],
         app_dir: "apps".to_string(),
         tool_dir: "tools".to_string(),
+        build_tool: "xtask".to_string(),
         module_prefix: "kx-mod-".to_string(),
         platform_prefix: "kx-platform-".to_string(),
         module_allowed: vec!["kx-module-api".to_string()],

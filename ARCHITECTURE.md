@@ -139,7 +139,8 @@ xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off c
                          dist (stub until P14), stage (the release app with its Qt files),
                          dev-cert / dev-install / check-uiaccess (uiAccess test builds),
                          sounds (recipes, import, join; format and RIFF walker from kx-theme),
-                         sign (P14), sbom (P14)
+                         words (P7: source hashes in `words.toml`, wordfreq lists checked against the
+                         Hunspell dictionaries; packs from kx-mod-predict's writer), sign (P14), sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs
@@ -193,7 +194,7 @@ pub trait Module: Send + 'static {
 ## Invariants (enforced by `cargo xtask tidy` in CI)
 
 1. `kx-mod-*` crates depend only on `kx-module-api` and pure utility crates. They never depend on each other, on `kx-kernel`, or on any `kx-platform-*`.
-2. Only `apps/*` choose platform adapters and modules.
+2. Only `apps/*` choose platform adapters and modules. The never-shipped test tools in `tools/` may use both, and `xtask` (`build_tool`) may use a module: `cargo xtask words` writes the packs with kx-mod-predict's writer (tidy D2).
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
    - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
    - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`. Tidy enforces this for `tools/` and for `kx-ui`, where rule F3 refuses `unsafe` outside `src/bridges/` and any block without a `// SAFETY:` comment.

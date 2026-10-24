@@ -28,6 +28,11 @@ allow = [
 # Don't warn about allow-listed licences no dependency currently uses.
 unused-allowed-license = "allow"
 
+# build-only (xtask words), owner 2026-10-24
+[[licenses.exceptions]]
+crate = "libbz2-rs-sys"
+allow = ["bzip2-1.0.6"]
+
 [licenses.private]
 # Our own crates are unpublished and all rights reserved under LICENSE (ADR-0030).
 ignore = true

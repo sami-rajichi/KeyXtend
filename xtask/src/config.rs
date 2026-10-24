@@ -23,6 +23,8 @@ pub(crate) struct TidyConfig {
     pub app_dir: String,
     /// Packages whose manifest is under this folder are test tools, which never ship.
     pub tool_dir: String,
+    /// The build tool, which never ships; like the test tools, it may depend on a module, but not on a platform adapter.
+    pub build_tool: String,
     /// Crate-name prefix for feature modules.
     pub module_prefix: String,
     /// Crate-name prefix for platform adapters.
@@ -71,6 +73,7 @@ impl TidyConfig {
             return Err(ConfigError::EmptyValue("tool_dir"));
         }
         let texts = [
+            ("build_tool", &self.build_tool),
             ("deny_attr", &self.deny_attr),
             ("bridge_crate", &self.bridge_crate),
             ("bridge_dir", &self.bridge_dir),
