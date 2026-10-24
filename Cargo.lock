@@ -733,6 +733,7 @@ dependencies = [
 name = "kx-platform-windows"
 version = "0.0.0"
 dependencies = [
+ "kx-crypto",
  "kx-module-api",
  "kx-platform",
  "kx-test-support",

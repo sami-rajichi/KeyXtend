@@ -14,6 +14,8 @@ pub mod dll;
 pub mod front;
 pub mod gpu;
 #[cfg(windows)]
+pub mod guard_key;
+#[cfg(windows)]
 mod hidden;
 pub mod hook;
 pub mod inject;
@@ -23,6 +25,7 @@ pub mod langinfo;
 pub mod layouts;
 #[cfg(windows)]
 pub mod memory;
+pub mod packs;
 #[cfg(windows)]
 mod platform;
 pub mod power;
@@ -44,6 +47,8 @@ pub use backdrop::WinBackdrop;
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
+pub use guard_key::WinKeyGuard;
+#[cfg(windows)]
 pub use hook::{WinPointerHook, release_now};
 #[cfg(windows)]
 pub use inject::WinInjector;
@@ -53,6 +58,8 @@ pub use instance::WinInstance;
 pub use layouts::WinLayouts;
 #[cfg(windows)]
 pub use memory::WinMemory;
+#[cfg(windows)]
+pub use packs::WinWordPacks;
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 #[cfg(windows)]
