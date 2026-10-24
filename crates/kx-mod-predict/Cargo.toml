@@ -17,6 +17,8 @@ workspace = true
 build = []
 
 [dependencies]
+# The packs port's file limits (`MAX_PACK_BYTES`), shared with the platform that maps the packs.
+kx-module-api = { path = "../kx-module-api" }
 # The lexicon of each word pack: an FST map from folded keys to runs of word ids (ADR-0032).
 fst = "0.4.7"
 serde.workspace = true

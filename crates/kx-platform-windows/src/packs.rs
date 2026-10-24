@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use kx_crypto::RESERVED_NAMES;
-use kx_module_api::ports::{PACK_EXT, PackError};
+use kx_module_api::ports::{MAX_PACK_BYTES, PACK_EXT, PackError};
 
 #[cfg(windows)]
 mod win;
@@ -23,8 +23,6 @@ pub use win::WinWordPacks;
 pub const MIN_ISO_LEN: usize = 2;
 /// The longest language code a pack is named after (ISO 639-2 and 639-3).
 pub const MAX_ISO_LEN: usize = 3;
-/// The largest pack that is mapped, 64 MiB.
-pub const MAX_PACK_BYTES: u64 = 64 * 1024 * 1024;
 
 /// The file name of `iso`'s pack; `None` unless `iso` is 2–3 lowercase ASCII letters and no Windows device name
 /// (`RESERVED_NAMES`), so no path can leave a folder.

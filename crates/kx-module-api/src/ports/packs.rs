@@ -6,6 +6,8 @@ use thiserror::Error;
 
 /// The extension of a pack file, after its language's code: `fr.kxw`.
 pub const PACK_EXT: &str = "kxw";
+/// The largest pack a platform maps and a writer makes, 64 MiB.
+pub const MAX_PACK_BYTES: u64 = 64 * 1024 * 1024;
 
 /// One open pack's bytes, read-only; dropping it closes the pack.
 pub trait PackView: Send + Sync {

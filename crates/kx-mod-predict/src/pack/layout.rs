@@ -3,6 +3,8 @@
 
 use std::mem::size_of;
 
+use kx_module_api::ports::MAX_PACK_BYTES;
+
 /// The first bytes of every pack.
 pub const MAGIC: [u8; 4] = *b"KXW1";
 /// The format version this crate reads and writes.
@@ -143,4 +145,10 @@ pub fn id_at(bytes: &[u8], at: usize) -> Option<u32> {
 #[must_use]
 pub fn usize_at(bytes: &[u8], at: usize) -> Option<usize> {
     usize::try_from(u32_at(bytes, at)?).ok()
+}
+
+/// True when a pack of `len` bytes is one a platform maps: at most `MAX_PACK_BYTES`.
+#[must_use]
+pub fn fits_pack(len: usize) -> bool {
+    u64::try_from(len).is_ok_and(|len| len <= MAX_PACK_BYTES)
 }

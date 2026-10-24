@@ -4,7 +4,9 @@ use std::collections::BTreeMap;
 
 use fst::MapBuilder;
 
-use super::super::layout::{ENTRY_LEN, ID_BYTES, MAGIC, MAX_ISO, RUN_SHIFT, SCORE_SHIFT, VERSION};
+use super::super::layout::{
+    ENTRY_LEN, HEAD_LEN, ID_BYTES, MAGIC, MAX_ISO, RUN_SHIFT, SCORE_SHIFT, VERSION, fits_pack,
+};
 use super::super::{Flags, WordId};
 use super::{Word, WriteError};
 
@@ -84,11 +86,32 @@ pub(super) fn chains(table: &Table) -> Result<Vec<u8>, WriteError> {
     Ok(out)
 }
 
-/// The whole pack: `header`, the section table, then each of `sections` as (kind, bytes) in order.
+/// The whole pack: `header`, the section table, then each of `sections` as (kind, bytes) in order; `TooBig` past
+/// the largest pack a platform maps.
 pub(super) fn assemble(
     header: &Header<'_>,
     sections: &[(u8, Vec<u8>)],
 ) -> Result<Vec<u8>, WriteError> {
+    let count = u8::try_from(sections.len()).map_err(|_| WriteError::TooBig)?;
+    let mut out = head(header, count)?;
+    let mut at = HEAD_LEN + sections.len() * ENTRY_LEN;
+    for (kind, body) in sections {
+        out.push(*kind);
+        put_u32(&mut out, at)?;
+        put_u32(&mut out, body.len())?;
+        at += body.len();
+    }
+    for (_, body) in sections {
+        out.extend_from_slice(body);
+    }
+    if !fits_pack(out.len()) {
+        return Err(WriteError::TooBig);
+    }
+    Ok(out)
+}
+
+/// The header's bytes, field by field; `Header` unless they end at `HEAD_LEN`, where the `AT_*` places say.
+fn head(header: &Header<'_>, sections: u8) -> Result<Vec<u8>, WriteError> {
     let mut out = MAGIC.to_vec();
     out.extend_from_slice(&VERSION.to_le_bytes());
     let mut iso = [0; MAX_ISO];
@@ -100,17 +123,9 @@ pub(super) fn assemble(
     out.extend_from_slice(&iso);
     out.push(header.flags.to_byte());
     out.extend_from_slice(&header.words.to_le_bytes());
-    out.extend_from_slice(&[header.max_chain, header.followers]);
-    out.push(u8::try_from(sections.len()).map_err(|_| WriteError::TooBig)?);
-    let mut at = out.len() + sections.len() * ENTRY_LEN;
-    for (kind, body) in sections {
-        out.push(*kind);
-        put_u32(&mut out, at)?;
-        put_u32(&mut out, body.len())?;
-        at += body.len();
-    }
-    for (_, body) in sections {
-        out.extend_from_slice(body);
+    out.extend_from_slice(&[header.max_chain, header.followers, sections]);
+    if out.len() != HEAD_LEN {
+        return Err(WriteError::Header);
     }
     Ok(out)
 }

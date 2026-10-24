@@ -3,6 +3,7 @@
 
 use std::hint::black_box;
 
+use kx_module_api::ports::MAX_PACK_BYTES;
 use proptest::prelude::*;
 
 use super::layout::{AT_VERSION, MAGIC, VERSION};
@@ -97,6 +98,13 @@ fn flags_round_trip_and_unknown_flags_are_refused() {
         }
     }
     assert_eq!(Flags::from_byte(!layout::KNOWN_FLAGS), None);
+}
+
+#[test]
+fn a_pack_fits_up_to_the_largest_size_a_platform_maps() {
+    let largest = usize::try_from(MAX_PACK_BYTES).unwrap();
+    assert!(layout::fits_pack(largest));
+    assert!(!layout::fits_pack(largest + 1));
 }
 
 proptest! {

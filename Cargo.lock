@@ -693,6 +693,7 @@ name = "kx-mod-predict"
 version = "0.0.0"
 dependencies = [
  "fst",
+ "kx-module-api",
  "proptest",
  "serde",
  "thiserror 2.0.21",

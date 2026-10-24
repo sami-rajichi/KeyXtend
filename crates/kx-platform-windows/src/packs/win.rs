@@ -147,8 +147,7 @@ mod tests {
     use kx_test_support::tempdir::TempDir;
 
     use super::*;
-    use crate::packs::MAX_PACK_BYTES;
-    use kx_module_api::ports::PACK_EXT;
+    use kx_module_api::ports::{MAX_PACK_BYTES, PACK_EXT};
     use windows::Win32::System::Memory::{MEM_MAPPED, MEMORY_BASIC_INFORMATION, VirtualQuery};
 
     /// A pack's length in the tests: more than one page, and not a whole number of them.

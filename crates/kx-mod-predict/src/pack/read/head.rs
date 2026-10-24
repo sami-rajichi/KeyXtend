@@ -122,13 +122,17 @@ impl Head {
     }
 }
 
-/// The language code: 1 to `MAX_ISO` printable ASCII bytes.
+/// The language code: 1 to `MAX_ISO` printable ASCII bytes, and only zeros after it in its field.
 fn iso(bytes: &[u8]) -> Result<String, PackFormatError> {
     let out = PackFormatError::OutOfBounds;
     let len = usize::from(u8_at(bytes, AT_ISO_LEN).ok_or(out)?);
     let field = bytes.get(AT_ISO..AT_ISO + MAX_ISO).ok_or(out)?;
-    let code = field.get(..len).filter(|code| fits_iso(code));
-    let code = code.ok_or(PackFormatError::BadHeader)?;
+    let (code, padding) = field
+        .split_at_checked(len)
+        .ok_or(PackFormatError::BadHeader)?;
+    if !fits_iso(code) || padding.iter().any(|&b| b != 0) {
+        return Err(PackFormatError::BadHeader);
+    }
     String::from_utf8(code.to_vec()).map_err(|_| PackFormatError::BadHeader)
 }
 

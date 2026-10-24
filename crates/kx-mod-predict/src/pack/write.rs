@@ -38,9 +38,12 @@ pub enum WriteError {
     /// The `chains` flag disagrees with the chains added.
     #[error("the chains flag disagrees with the chains added")]
     ChainsFlag,
-    /// More words than the ids can name, or sections too big for their offsets.
-    #[error("the pack is too big for its ids or offsets")]
+    /// More words than the ids can name, sections too big for their offsets, or a pack over `MAX_PACK_BYTES`.
+    #[error("the pack is too big for its ids, its offsets or the largest mapped pack")]
     TooBig,
+    /// The header written does not end where `layout` says; a bug, never the data.
+    #[error("the pack header does not match its layout")]
+    Header,
     /// The `fst` builder refused the lexicon.
     #[error("the lexicon could not be built: {0}")]
     Lexicon(String),
@@ -162,8 +165,8 @@ impl PackWriter {
     /// The pack's bytes.
     ///
     /// # Errors
-    /// `ChainsFlag` when the flags disagree with the chains added; `TooBig` or `Lexicon` when the pack cannot be laid
-    /// out.
+    /// `ChainsFlag` when the flags disagree with the chains added; `TooBig` past the id, offset or
+    /// `MAX_PACK_BYTES` limits; `Lexicon` or `Header` when the pack cannot be laid out.
     pub fn finish(self) -> Result<Vec<u8>, WriteError> {
         if self.flags.chains == self.chains.is_empty() {
             return Err(WriteError::ChainsFlag);

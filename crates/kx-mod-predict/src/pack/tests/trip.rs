@@ -10,7 +10,7 @@ const ISO: &str = "fr";
 /// Followers kept per context; the sample gives `the` three, so the lowest goes.
 const FOLLOWERS: u8 = 2;
 /// The sample's words: spelling, frequency bucket and whether it is always capitalised.
-pub(super) const WORDS: &[(&str, u8, bool)] = &[
+const WORDS: &[Word] = &[
     ("école", 200, false),
     ("économie", 150, false),
     ("à", 250, false),
@@ -26,7 +26,7 @@ pub(super) const WORDS: &[(&str, u8, bool)] = &[
     ("المدرسة", 150, false),
 ];
 /// The sample's chains: the words before, the next word and its score.
-const CHAINS: &[(&[&str], &str, u8)] = &[
+const CHAINS: &[Chain] = &[
     (&["the"], "London", 90),
     (&["the"], "école", 20),
     (&["the"], "a", 50),
@@ -35,20 +35,41 @@ const CHAINS: &[(&[&str], &str, u8)] = &[
     (&["أنا", "على"], "المدرسة", 77),
 ];
 
+/// A word as the sample lists it.
+type Word = (&'static str, u8, bool);
+/// A chain as the sample lists it.
+type Chain = (&'static [&'static str], &'static str, u8);
+
 /// The sample pack's bytes.
 pub(super) fn sample() -> Vec<u8> {
+    written(WORDS.iter(), CHAINS.iter())
+}
+
+/// The bytes of a pack holding `words`, then `chains`, added in the order given.
+fn written<'w>(
+    words: impl Iterator<Item = &'w Word>,
+    chains: impl Iterator<Item = &'w Chain>,
+) -> Vec<u8> {
     let flags = Flags {
         checked: true,
         chains: true,
     };
     let mut writer = PackWriter::new(ISO, flags, FOLLOWERS).unwrap();
-    for (spelling, freq, capital) in WORDS {
+    for (spelling, freq, capital) in words {
         writer.add_word(spelling, *freq, *capital).unwrap();
     }
-    for (context, next, score) in CHAINS {
+    for (context, next, score) in chains {
         writer.add_chain(context, next, *score).unwrap();
     }
     writer.finish().unwrap()
+}
+
+#[test]
+fn the_same_words_and_chains_in_another_order_give_the_same_bytes() {
+    assert_eq!(written(WORDS.iter().rev(), CHAINS.iter().rev()), sample());
+    let half = WORDS.len() / 2;
+    let turned = WORDS[half..].iter().chain(&WORDS[..half]);
+    assert_eq!(written(turned, CHAINS.iter().rev()), sample());
 }
 
 /// The id of `spelling` in `pack`, found through its folded key's run.

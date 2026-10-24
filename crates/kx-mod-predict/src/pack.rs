@@ -60,7 +60,7 @@ pub enum PackFormatError {
     /// A section is unknown, repeated, missing, or does not fit what the header says.
     #[error("a word pack section is unknown, repeated, missing or malformed")]
     BadSection,
-    /// The language code or a spelling is not valid text.
+    /// A spelling is not valid UTF-8.
     #[error("a word pack spelling is not valid UTF-8")]
     BadUtf8,
 }

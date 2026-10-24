@@ -10,6 +10,14 @@ const CASES: u32 = 1_024;
 const LATIN_1_LETTERS: u32 = 0x00C0;
 /// The last code point of Latin Extended-A, `ſ`.
 const EXTENDED_A_END: u32 = 0x017F;
+/// The first combining diacritic, the grave accent.
+const COMBINING_FIRST: u32 = 0x0300;
+/// The last combining diacritic of its block.
+const COMBINING_LAST: u32 = 0x036F;
+/// The Greek capitals, `Α` to `Ω`.
+const GREEK_CAPITALS: (char, char) = ('\u{0391}', '\u{03A9}');
+/// The Greek small letters, `α` to `ω`, final sigma included.
+const GREEK_SMALL: (char, char) = ('\u{03B1}', '\u{03C9}');
 
 /// Asserts that each `(word, folded)` pair folds as given.
 fn folds(pairs: &[(&str, &str)]) {
@@ -71,6 +79,41 @@ fn latin_without_accents_changes_only_case() {
         ("Don't", "don't"),
         ("LONDON", "london"),
     ]);
+}
+
+#[test]
+fn decomposed_accents_fold_as_precomposed_ones_do() {
+    assert_eq!(fold("e\u{0301}cole"), fold("école"));
+    assert_eq!(fold("E\u{0301}COLE"), "ecole");
+    folds(&[
+        ("Noe\u{0308}l", "noel"),
+        ("c\u{0327}a", "ca"),
+        ("ho\u{0302}tel", "hotel"),
+        ("a\u{0300}", "a"),
+    ]);
+}
+
+#[test]
+fn every_combining_diacritic_drops() {
+    let marks = (COMBINING_FIRST..=COMBINING_LAST).filter_map(char::from_u32);
+    for mark in marks {
+        assert_eq!(fold(&format!("e{mark}")), "e", "U+{:04X}", u32::from(mark));
+    }
+}
+
+#[test]
+fn greek_final_sigma_folds_to_sigma() {
+    assert_eq!(fold("ΟΔΥΣ"), "οδυσ");
+    assert!(fold("οδυσσευς").starts_with(&fold("ΟΔΥΣ")));
+    assert_eq!(fold("λόγος"), fold("λόγοσ"));
+}
+
+#[test]
+fn arabic_madda_and_hamza_marks_stay() {
+    for mark in ['\u{0653}', '\u{0654}', '\u{0655}'] {
+        let word = format!("ا{mark}");
+        assert_eq!(fold(&word), word, "U+{:04X}", u32::from(mark));
+    }
 }
 
 #[test]
@@ -193,8 +236,24 @@ fn word() -> impl Strategy<Value = String> {
     prop::collection::vec(pick, 0..12).prop_map(|cs| cs.into_iter().collect())
 }
 
+/// A Greek word of capitals and small letters, so sigma meets every position.
+fn greek() -> impl Strategy<Value = String> {
+    let (capitals, small) = (GREEK_CAPITALS, GREEK_SMALL);
+    let letter = prop_oneof![
+        prop::char::range(capitals.0, capitals.1),
+        prop::char::range(small.0, small.1),
+    ];
+    prop::collection::vec(letter, 0..10).prop_map(|cs| cs.into_iter().collect())
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
+
+    #[test]
+    fn a_greek_word_folds_to_a_prefix_of_its_longer_forms(start in greek(), rest in greek()) {
+        let longer = fold(&format!("{start}{rest}"));
+        prop_assert!(longer.starts_with(&fold(&start)), "{} then {}", start, rest);
+    }
 
     #[test]
     fn folding_twice_equals_folding_once(word in word()) {

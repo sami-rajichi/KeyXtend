@@ -54,6 +54,7 @@ fn a_bad_header_field_is_refused() {
     let long = u8::try_from(MAX_ISO + 1).unwrap();
     assert_eq!(edited(|b| b[AT_ISO_LEN] = long), bad);
     assert_eq!(edited(|b| b[AT_ISO] = b' '), bad);
+    assert_eq!(edited(|b| b[AT_ISO + MAX_ISO - 1] = b'x'), bad, "padding");
     assert_eq!(edited(|b| b[AT_MAX_CHAIN] = 0), bad);
     assert_eq!(edited(|b| b[AT_MAX_CHAIN] = MAX_CHAIN + 1), bad);
     assert_eq!(edited(|b| b[AT_FOLLOWERS] = 0), bad);
