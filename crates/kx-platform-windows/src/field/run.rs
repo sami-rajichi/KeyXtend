@@ -36,25 +36,72 @@ pub(super) enum Job {
     },
 }
 
-/// What the focus handler and the run share: the box told last, and the callback until the run drops.
+/// The box told last, how many focus changes were told, and whether the watch failed to start.
+struct State {
+    last: FieldChange,
+    count: u64,
+    dead: bool,
+}
+
+/// What the focus handler and the run share: the state, and the callback until the run drops.
 pub(super) struct Shared {
-    last: Mutex<FieldChange>,
+    state: Mutex<State>,
     tell: Mutex<Option<Tell>>,
 }
 
 impl Shared {
-    /// Keeps `change` as the box with focus and tells it; once the run has dropped it does neither.
+    /// Keeps `change` as the box with focus and tells it; a dead watch or a dropped run does neither.
     pub(super) fn told(&self, change: FieldChange) {
+        self.tell_if(change, |_| true);
+    }
+
+    /// Like `told`, unless a focus change was told already, so the start-up look never overwrites a newer event.
+    pub(super) fn first(&self, change: FieldChange) {
+        self.tell_if(change, |state| state.count == 0);
+    }
+
+    /// Marks the watch dead after the step `why` failed at start-up: it logs and tells `Unknown` once, and no read
+    /// runs from then on.
+    pub(super) fn fail(&self, why: &'static str) {
         let tell = lock(&self.tell);
+        let mut state = lock(&self.state);
+        if state.dead {
+            return;
+        }
+        tracing::warn!(cause = why, "no field watch: every box reads as unknown");
+        state.dead = true;
+        state.last.kind = FieldKind::Unknown;
+        let change = state.last;
+        drop(state);
         if let Some(tell) = tell.as_ref() {
-            *lock(&self.last) = change;
             tell(change);
         }
     }
 
-    /// The kind of the box told last.
+    /// Keeps and tells `change` when the watch lives, the run holds the callback, and `when` agrees.
+    fn tell_if(&self, change: FieldChange, when: impl FnOnce(&State) -> bool) {
+        let tell = lock(&self.tell);
+        let Some(tell) = tell.as_ref() else {
+            return;
+        };
+        let mut state = lock(&self.state);
+        if state.dead || !when(&state) {
+            return;
+        }
+        state.last = change;
+        state.count = state.count.saturating_add(1);
+        drop(state);
+        tell(change);
+    }
+
+    /// The kind of the box told last; `Unknown` once the watch is dead.
     pub(super) fn kind(&self) -> FieldKind {
-        lock(&self.last).kind
+        lock(&self.state).last.kind
+    }
+
+    /// Whether the watch failed to start.
+    fn dead(&self) -> bool {
+        lock(&self.state).dead
     }
 
     /// Lets go of the callback, so nothing is told or kept from now on.
@@ -80,8 +127,13 @@ where
         kind: FieldKind::None,
         box_id: 0,
     };
+    let state = State {
+        last: none,
+        count: 0,
+        dead: false,
+    };
     let shared = Arc::new(Shared {
-        last: Mutex::new(none),
+        state: Mutex::new(state),
         tell: Mutex::new(Some(tell)),
     });
     let (jobs, inbox) = mpsc::channel();
@@ -132,6 +184,9 @@ impl FieldRun for Run {
     }
 
     fn before_cursor(&mut self, max_words: u8) -> Result<Option<Redacted<String>>, FieldError> {
+        if self.shared.dead() {
+            return Err(FieldError::Unavailable);
+        }
         if !self.readable() {
             return Ok(None);
         }

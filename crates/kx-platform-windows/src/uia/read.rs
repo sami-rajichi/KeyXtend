@@ -12,7 +12,7 @@ use windows::core::BOOL;
 
 use super::rects::{rects_of, vector};
 use super::{UiaError, call};
-use crate::field;
+use crate::field::{self, READ_CAP};
 
 /// Longest Win32 window class name, in UTF-16 units.
 const CLASS_MAX: usize = 256;
@@ -94,7 +94,7 @@ pub fn percent(sp: &IUIAutomationScrollPattern) -> Option<(f64, f64)> {
     }
 }
 
-/// The value of a text field; `None` for a password box, whose value is never read.
+/// The value of a text field; `None` for a password box, whose value is never read, and for one past `READ_CAP`.
 #[must_use]
 #[allow(unsafe_code, reason = "Plain UI Automation reads.")]
 pub fn value(el: &IUIAutomationElement) -> Option<String> {
@@ -104,7 +104,8 @@ pub fn value(el: &IUIAutomationElement) -> Option<String> {
     // SAFETY: plain pattern and property reads on a live element.
     unsafe {
         let v: IUIAutomationValuePattern = el.GetCurrentPatternAs(UIA_ValuePatternId).ok()?;
-        v.CurrentValue().ok().map(|b| b.to_string())
+        let value = v.CurrentValue().ok()?;
+        (value.len() <= READ_CAP).then(|| value.to_string())
     }
 }
 

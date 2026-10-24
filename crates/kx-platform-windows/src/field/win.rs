@@ -32,18 +32,19 @@ impl FieldWatch for WinFieldWatch {
 )]
 fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, read_ms: u32) {
     let Ok(_com) = Com::start() else {
-        return tracing::warn!("no field watch: COM did not start");
+        return shared.fail("COM did not start");
     };
     let Some(auto) = client(read_ms) else {
-        return tracing::warn!("no field watch: UI Automation did not start");
+        return shared.fail("UI Automation did not start");
     };
     let focus = handler(Arc::clone(shared));
     // SAFETY: registers our live handler on our own client.
-    if let Err(e) = unsafe { auto.AddFocusChangedEventHandler(None, &focus) } {
-        return tracing::warn!(error = %e, "no field watch: the focus handler was refused");
+    if unsafe { auto.AddFocusChangedEventHandler(None, &focus) }.is_err() {
+        return shared.fail("the focus handler was refused");
     }
-    if let Ok(el) = focused(&auto) {
-        seen(shared, &el, process::id());
+    let start = focused(&auto).ok();
+    if let Some(change) = start.and_then(|el| change_of(&el, process::id())) {
+        shared.first(change);
     }
     for job in inbox {
         serve(&auto, job);
@@ -86,13 +87,10 @@ fn on_focus<T>(
     read(&el)
 }
 
-/// Tells `shared` the kind and id of box `el`, unless it shows in process `me`, whose focus keeps the last box.
-pub(super) fn seen(shared: &Shared, el: &IUIAutomationElement, me: u32) {
-    if pid(el) == me {
-        return;
-    }
-    shared.told(FieldChange {
+/// The kind and id of box `el`; `None` when it shows in process `me`, whose focus keeps the last box.
+pub(super) fn change_of(el: &IUIAutomationElement, me: u32) -> Option<FieldChange> {
+    (pid(el) != me).then(|| FieldChange {
         kind: kind_of(el),
         box_id: box_id(el),
-    });
+    })
 }

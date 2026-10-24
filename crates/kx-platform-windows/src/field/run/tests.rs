@@ -19,13 +19,21 @@ fn started<B>(read_ms: u32, body: B) -> (Box<dyn FieldRun>, Arc<Shared>, Heard)
 where
     B: FnOnce(&Receiver<Job>) + Send + 'static,
 {
+    with_shared(read_ms, move |inbox, _| body(inbox))
+}
+
+/// Like `started`, with a body that also gets the shared box.
+fn with_shared<B>(read_ms: u32, body: B) -> (Box<dyn FieldRun>, Arc<Shared>, Heard)
+where
+    B: FnOnce(&Receiver<Job>, &Arc<Shared>) + Send + 'static,
+{
     let heard = Heard::default();
     let log = Arc::clone(&heard);
     let tell: Tell = Box::new(move |change| lock(&log).push(change));
     let (give, got) = mpsc::channel();
     let body = move |inbox: &Receiver<Job>, shared: &Arc<Shared>, _: u32| {
         let _ = give.send(Arc::clone(shared));
-        body(inbox);
+        body(inbox, shared);
     };
     let run = spawn(FieldConfig { read_ms }, tell, body).unwrap();
     (run, got.recv_timeout(WAIT).unwrap(), heard)
@@ -140,4 +148,31 @@ fn the_watch_thread_has_its_name() {
         let _ = name.send(thread::current().name().map(str::to_owned));
     });
     assert_eq!(got.recv_timeout(WAIT), Ok(Some(THREAD.to_owned())));
+}
+
+#[test]
+fn a_watch_that_failed_to_start_tells_unknown_once_and_reads_nothing() {
+    let (failed, done) = mpsc::channel();
+    let (mut run, shared, heard) = with_shared(LONG_MS, move |_, shared| {
+        shared.fail("COM did not start");
+        shared.fail("again");
+        let _ = failed.send(());
+    });
+    assert_eq!(done.recv_timeout(WAIT), Ok(()));
+    shared.told(change(FieldKind::Text, 9));
+    assert_eq!(run.kind(), FieldKind::Unknown);
+    assert_eq!(*lock(&heard), [change(FieldKind::Unknown, 0)]);
+    assert_eq!(read(run.as_mut(), 2), Err(FieldError::Unavailable));
+    assert_eq!(ends(run.as_mut()), None);
+}
+
+#[test]
+fn the_start_up_look_never_overwrites_a_newer_focus_change() {
+    let (_run, shared, heard) = started(LONG_MS, answers);
+    shared.first(change(FieldKind::Text, 1));
+    shared.told(change(FieldKind::Password, 2));
+    shared.first(change(FieldKind::Text, 3));
+    let told = [change(FieldKind::Text, 1), change(FieldKind::Password, 2)];
+    assert_eq!(*lock(&heard), told);
+    assert_eq!(shared.kind(), FieldKind::Password);
 }

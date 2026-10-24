@@ -18,7 +18,7 @@ use windows::Win32::UI::Accessibility::{
 use windows::core::{Ref, implement};
 
 use super::run::Shared;
-use super::win::seen;
+use super::win::change_of;
 
 /// The handler's object: the shared box it tells.
 #[implement(IUIAutomationFocusChangedEventHandler)]
@@ -38,7 +38,12 @@ impl IUIAutomationFocusChangedEventHandler_Impl for Focus_Impl {
         sender: Ref<IUIAutomationElement>,
     ) -> windows::core::Result<()> {
         if let Some(el) = sender.as_ref() {
-            let told = catch_unwind(AssertUnwindSafe(|| seen(&self.shared, el, process::id())));
+            let tell = || {
+                if let Some(change) = change_of(el, process::id()) {
+                    self.shared.told(change);
+                }
+            };
+            let told = catch_unwind(AssertUnwindSafe(tell));
             if told.is_err() {
                 tracing::warn!("the field watch's callback panicked");
             }

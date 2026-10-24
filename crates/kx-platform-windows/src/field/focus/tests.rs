@@ -72,7 +72,7 @@ fn no_element_or_one_of_our_own_tells_nothing() {
     let (_com, auto) = started();
     let (run, shared, heard) = shared();
     let focus = handler(shared);
-    let own = TestEdit::start("ours", false);
+    let own = TestEdit::start("ours", 0);
     // SAFETY: plain calls on our live handler, with no element and then a live one.
     unsafe {
         assert!(focus.HandleFocusChangedEvent(None).is_ok());

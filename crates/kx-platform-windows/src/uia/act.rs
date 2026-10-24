@@ -6,7 +6,8 @@ use windows::Win32::UI::Accessibility::{
     TextPatternRangeEndpoint_Start, UIA_InvokePatternId,
 };
 
-use super::{UiaError, call};
+use super::{UiaError, call, cap};
+use crate::field::READ_CAP;
 
 /// Presses button `el`, as a screen reader would.
 ///
@@ -51,10 +52,10 @@ pub fn scroll(
     Ok(())
 }
 
-/// Where the caret is in `tp`'s text, in UTF-16 units from the start.
+/// Where the caret is in `tp`'s text, in UTF-16 units from the start; the text before it is read up to `READ_CAP`.
 ///
 /// # Errors
-/// `UiaError::Call` when UI Automation cannot read the selection or the text.
+/// `UiaError::Call` when UI Automation cannot read the selection or the text, `TooLong` past the cap.
 #[allow(unsafe_code, reason = "Plain UI Automation text range calls.")]
 pub fn caret(tp: &IUIAutomationTextPattern) -> Result<usize, UiaError> {
     let err = call("caret");
@@ -73,7 +74,10 @@ pub fn caret(tp: &IUIAutomationTextPattern) -> Result<usize, UiaError> {
                 TextPatternRangeEndpoint_Start,
             )
             .map_err(&err)?;
-        let text = before.GetText(-1).map_err(&err)?;
-        Ok(text.to_string().encode_utf16().count())
+        let text = before.GetText(cap(1)).map_err(&err)?;
+        if text.len() > READ_CAP {
+            return Err(UiaError::TooLong("caret"));
+        }
+        Ok(text.len())
     }
 }

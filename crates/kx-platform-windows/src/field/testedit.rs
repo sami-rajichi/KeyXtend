@@ -14,8 +14,8 @@ use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 use windows::Win32::UI::Controls::EM_SETSEL;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DestroyWindow, DispatchMessageW, ES_AUTOHSCROLL, ES_PASSWORD, GetMessageW,
-    MSG, PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_POPUP,
+    CreateWindowExW, DestroyWindow, DispatchMessageW, ES_AUTOHSCROLL, GetMessageW, MSG,
+    PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
@@ -36,12 +36,12 @@ pub(super) struct TestEdit {
 }
 
 impl TestEdit {
-    /// A box holding `text`, its caret at the end; a password box when `password`.
-    pub(super) fn start(text: &str, password: bool) -> Self {
+    /// A box holding `text`, its caret at the end, with the edit style bits `style` (`ES_PASSWORD`, `ES_READONLY`).
+    pub(super) fn start(text: &str, style: i32) -> Self {
         let (made, ready) = mpsc::channel();
         let text = crate::wide(text);
         let join = thread::spawn(move || {
-            let hwnd = make(&text, password);
+            let hwnd = make(&text, style);
             // SAFETY: a plain query of this thread's id.
             let thread = unsafe { GetCurrentThreadId() };
             made.send((hwnd.0.addr().cast_signed(), thread)).unwrap();
@@ -64,9 +64,12 @@ impl TestEdit {
 
     /// The box's element in `auto`.
     pub(super) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
-        let hwnd = crate::window::from_raw(self.hwnd);
-        // SAFETY: a plain lookup on a live client, for the test's own window.
-        unsafe { auto.ElementFromHandle(hwnd) }.unwrap()
+        element(auto, self.hwnd)
+    }
+
+    /// The box's raw handle, for a thread that makes its own client.
+    pub(super) fn raw(&self) -> isize {
+        self.hwnd
     }
 }
 
@@ -80,9 +83,16 @@ impl Drop for TestEdit {
     }
 }
 
-/// Makes the hidden edit box holding `text` (with its ending null) and puts the caret at its end.
-fn make(text: &[u16], password: bool) -> HWND {
-    let bits = ES_AUTOHSCROLL | if password { ES_PASSWORD } else { 0 };
+/// The element of the test box with raw handle `raw` in `auto`.
+pub(super) fn element(auto: &IUIAutomation, raw: isize) -> IUIAutomationElement {
+    let hwnd = crate::window::from_raw(raw);
+    // SAFETY: a plain lookup on a live client, for the test's own window.
+    unsafe { auto.ElementFromHandle(hwnd) }.unwrap()
+}
+
+/// Makes the hidden edit box holding `text` (with its ending null), with `style` added, and puts the caret at its end.
+fn make(text: &[u16], style: i32) -> HWND {
+    let bits = ES_AUTOHSCROLL | style;
     let style = WS_POPUP | WINDOW_STYLE(bits.cast_unsigned());
     let (x, y, cx, cy) = BOX;
     let ex = WINDOW_EX_STYLE::default();

@@ -6,17 +6,18 @@ use std::time::Instant;
 
 use kx_module_api::ports::{FieldError, FieldKind, last_words};
 use windows::Win32::Foundation::HWND;
+use windows::Win32::System::Variant::VT_BOOL;
 use windows::Win32::UI::Accessibility::{
     IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern, IUIAutomationTextPattern2,
     IUIAutomationTextRange, IUIAutomationValuePattern, TextPatternRangeEndpoint_End,
     TextPatternRangeEndpoint_Start, TextUnit, TextUnit_Character, TextUnit_Word, UIA_E_TIMEOUT,
-    UIA_TextPattern2Id, UIA_TextPatternId, UIA_ValuePatternId,
+    UIA_IsReadOnlyAttributeId, UIA_TextPattern2Id, UIA_TextPatternId, UIA_ValuePatternId,
 };
 use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor};
 use windows::core::BOOL;
 
 use super::{Facts, READ_CAP, after_first, kind, table};
-use crate::uia::{class_of, style_of, vector};
+use crate::uia::{cap, class_of, style_of, vector};
 use crate::window::foreground;
 
 /// What UI Automation and Win32 tell about `el`; a part that cannot be read reads as unknown. Never its text.
@@ -30,6 +31,7 @@ pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
             el.CurrentNativeWindowHandle().unwrap_or_default(),
         )
     };
+    let (editable, read_only) = patterns(el);
     let top = if hwnd.is_invalid() {
         foreground()
     } else {
@@ -41,7 +43,8 @@ pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
         class: class_of(hwnd),
         style: style_of(hwnd),
         top: class_of(top),
-        editable: editable(el),
+        editable,
+        read_only,
     }
 }
 
@@ -57,20 +60,43 @@ fn root(hwnd: HWND) -> HWND {
     unsafe { GetAncestor(hwnd, GA_ROOT) }
 }
 
-/// Whether a writable value pattern or a text pattern answers on `el`.
+/// Whether `el` is editable (a writable value pattern or a text pattern answers) and whether it says it is read-only
+/// (its value pattern, or its text's `IsReadOnly` attribute).
 #[allow(unsafe_code, reason = "Plain UI Automation pattern reads.")]
-fn editable(el: &IUIAutomationElement) -> bool {
+fn patterns(el: &IUIAutomationElement) -> (bool, bool) {
     // SAFETY: plain pattern and property reads on a live element; a failure reads as no.
-    unsafe {
+    let (fixed, text) = unsafe {
         let value = el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId);
-        let writable = value
-            .and_then(|v| v.CurrentIsReadOnly())
-            .is_ok_and(|read_only| !read_only.as_bool());
-        writable
-            || el
-                .GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId)
-                .is_ok()
-    }
+        let fixed = value.and_then(|v| v.CurrentIsReadOnly()).ok();
+        let text = el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId);
+        (fixed.map(BOOL::as_bool), text.ok())
+    };
+    let text_fixed = text.as_ref().is_some_and(read_only_text);
+    let editable = fixed == Some(false) || text.is_some();
+    (editable, fixed == Some(true) || text_fixed)
+}
+
+/// Whether the whole text of `text` says it is read-only; a mixed or missing answer says no.
+#[allow(unsafe_code, reason = "A UI Automation text attribute read.")]
+fn read_only_text(text: &IUIAutomationTextPattern) -> bool {
+    // SAFETY: plain calls on a live pattern and the range it hands us; no text is read.
+    let attr = unsafe {
+        text.DocumentRange()
+            .and_then(|range| range.GetAttributeValue(UIA_IsReadOnlyAttributeId))
+    };
+    attr.is_ok_and(|v| v.vt() == VT_BOOL && bool::try_from(&v).unwrap_or(false))
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many calls this thread made into a box's caret or words, for the tests that prove a closed box gets none.
+    pub(super) static TEXT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Counts one call into a box's caret or words, in tests.
+fn text_call() {
+    #[cfg(test)]
+    TEXT_CALLS.with(|n| n.set(n.get() + 1));
 }
 
 /// A hash of `el`'s runtime id, which names it while it lives; 0 when UI Automation gives none.
@@ -141,6 +167,7 @@ fn text_caret(
         return Ok(None);
     }
     late(by)?;
+    text_call();
     // SAFETY: plain pattern calls on a live element; `active` is a local that outlives the call.
     unsafe {
         if let Ok(text) = el.GetCurrentPatternAs::<IUIAutomationTextPattern2>(UIA_TextPattern2Id) {
@@ -169,6 +196,7 @@ fn tail(
     by: Instant,
 ) -> Result<Option<String>, FieldError> {
     late(by)?;
+    text_call();
     // SAFETY: plain calls on live ranges; only our own copy of the caret's range moves.
     let text = unsafe {
         let range = caret.Clone().map_err(failed)?;
@@ -183,11 +211,6 @@ fn tail(
         range.GetText(cap(1)).map_err(failed)?
     };
     Ok((text.len() <= READ_CAP).then(|| text.to_string()))
-}
-
-/// `READ_CAP` plus `more`, as UI Automation takes a length.
-fn cap(more: usize) -> i32 {
-    i32::try_from(READ_CAP + more).unwrap_or(i32::MAX)
 }
 
 /// `TimedOut` once `by` has passed.

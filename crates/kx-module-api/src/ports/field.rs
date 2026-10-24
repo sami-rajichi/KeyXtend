@@ -65,7 +65,8 @@ pub trait FieldRun: Send {
 
 /// Watches the focused box in other apps; the platform provides it.
 pub trait FieldWatch: Send + Sync {
-    /// Starts a watch as `cfg` says; `tell` hears each focus change, on any thread.
+    /// Starts a watch as `cfg` says; `tell` hears each focus change, on any thread. It runs under the run's lock, so a
+    /// caller must not drop the run while holding a lock that its `tell` also takes.
     ///
     /// # Errors
     /// `Unavailable` when the platform cannot watch, `Refused` when the OS refuses.

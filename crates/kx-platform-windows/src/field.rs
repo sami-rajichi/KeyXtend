@@ -36,8 +36,16 @@ const TABLE: &str = include_str!("field.toml");
 /// The longest text one read takes before the caret, in UTF-16 units; a longer one is cut to whole words.
 pub const READ_CAP: usize = 1024;
 
-/// The shipped table, parsed once; tests prove it parses, so the empty fallback never runs.
-static SHIPPED: LazyLock<Table> = LazyLock::new(|| Table::parse(TABLE).unwrap_or_default());
+/// The shipped table, parsed once; tests prove it parses, so the closed fallback never runs.
+static SHIPPED: LazyLock<Table> = LazyLock::new(|| shipped(TABLE));
+
+/// The table in `text`; when it does not parse, a closed one, under which every box is unknown.
+fn shipped(text: &str) -> Table {
+    Table::parse(text).unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "every box reads as unknown");
+        Table::closed()
+    })
+}
 
 /// The shipped kind table.
 pub(crate) fn table() -> &'static Table {
@@ -56,7 +64,7 @@ pub(crate) enum TableError {
 }
 
 /// The kind table: Windows' numbers and class names for telling a box's kind.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Table {
     /// UI Automation control types that hold editable text.
@@ -67,9 +75,28 @@ pub(crate) struct Table {
     edit_classes: Vec<String>,
     /// Window classes that hide their boxes from UI Automation.
     opaque_classes: Vec<String>,
+    /// Set only on the fallback for a table that does not parse.
+    #[serde(skip)]
+    closed: bool,
 }
 
 impl Table {
+    /// A table that tells no box but by UI Automation's password flag, so every other box is unknown.
+    pub(crate) fn closed() -> Self {
+        Self {
+            text_controls: Vec::new(),
+            password_style: 0,
+            edit_classes: Vec::new(),
+            opaque_classes: Vec::new(),
+            closed: true,
+        }
+    }
+
+    /// Whether this is the fallback under which every box is unknown.
+    pub(crate) fn is_closed(&self) -> bool {
+        self.closed
+    }
+
     /// Reads and checks the table in `text`.
     pub(crate) fn parse(text: &str) -> Result<Self, TableError> {
         let table: Self = toml::from_str(text).map_err(|e| TableError::Parse(e.to_string()))?;

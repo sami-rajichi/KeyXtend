@@ -33,6 +33,7 @@ fn plain(control: i32) -> Facts {
         style: 0,
         top: String::from("Chrome_WidgetWin_1"),
         editable: false,
+        read_only: false,
     }
 }
 
@@ -53,6 +54,25 @@ fn the_shipped_table_parses_with_every_list_filled() {
         table().holds_text(EDIT),
         "the shared copy is the shipped one"
     );
+}
+
+#[test]
+fn a_table_that_does_not_parse_makes_every_box_unknown_but_a_password_box() {
+    assert!(!shipped(TABLE).is_closed());
+    let closed = shipped("not a table");
+    assert!(closed.is_closed());
+    let custom = Facts {
+        editable: true,
+        ..plain(BUTTON + 1)
+    };
+    for facts in [plain(EDIT), plain(DOCUMENT), plain(BUTTON), custom] {
+        assert_eq!(kind(&facts, &closed), FieldKind::Unknown, "{facts:?}");
+    }
+    let secret = Facts {
+        password: Some(true),
+        ..plain(EDIT)
+    };
+    assert_eq!(kind(&secret, &closed), FieldKind::Password);
 }
 
 #[test]
@@ -146,6 +166,17 @@ fn an_opaque_class_from_the_table_is_unknown_on_the_box_or_its_window() {
 }
 
 #[test]
+fn a_read_only_box_is_unknown() {
+    for control in [EDIT, DOCUMENT] {
+        let facts = Facts {
+            read_only: true,
+            ..plain(control)
+        };
+        assert_eq!(kind_of(&facts), FieldKind::Unknown, "{control}");
+    }
+}
+
+#[test]
 fn edit_and_document_types_and_editable_patterns_are_text() {
     assert_eq!(kind_of(&plain(EDIT)), FieldKind::Text);
     assert_eq!(kind_of(&plain(DOCUMENT)), FieldKind::Text);
@@ -192,16 +223,19 @@ fn any_facts() -> impl Strategy<Value = Facts> {
         prop::option::of(prop::sample::select(vec![EDIT, DOCUMENT, BUTTON])),
         prop::option::of(any::<bool>()),
         (class.clone(), any::<u32>(), class),
-        any::<bool>(),
+        (any::<bool>(), any::<bool>()),
     )
-        .prop_map(|(control, password, (class, style, top), editable)| Facts {
-            control,
-            password,
-            class: class.to_owned(),
-            style,
-            top: top.to_owned(),
-            editable,
-        })
+        .prop_map(
+            |(control, password, (class, style, top), (editable, read_only))| Facts {
+                control,
+                password,
+                class: class.to_owned(),
+                style,
+                top: top.to_owned(),
+                editable,
+                read_only,
+            },
+        )
 }
 
 proptest! {
@@ -216,6 +250,7 @@ proptest! {
             prop_assert!(facts.control.is_some() && facts.password == Some(false));
             prop_assert!(!table.hides(&facts.class, facts.style));
             prop_assert!(!table.opaque(&facts.class) && !table.opaque(&facts.top));
+            prop_assert!(!facts.read_only);
         }
     }
 }

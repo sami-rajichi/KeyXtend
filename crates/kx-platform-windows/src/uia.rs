@@ -51,11 +51,19 @@ pub enum UiaError {
     /// A call gave nothing to work with.
     #[error("UI Automation {0}: none")]
     Empty(&'static str),
+    /// A text was longer than the read cap, so it was not read.
+    #[error("UI Automation {0}: longer than the read cap")]
+    TooLong(&'static str),
 }
 
 /// Names a failed call `what`, for `map_err`.
 pub(crate) fn call(what: &'static str) -> impl Fn(windows::core::Error) -> UiaError {
     move |source| UiaError::Call { what, source }
+}
+
+/// `READ_CAP` plus `more`, as UI Automation takes a length.
+pub(crate) fn cap(more: usize) -> i32 {
+    i32::try_from(crate::field::READ_CAP + more).unwrap_or(i32::MAX)
 }
 
 /// The system's client, with its connection and call timeouts at `read_ms`; none when it does not start.
