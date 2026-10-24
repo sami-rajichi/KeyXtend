@@ -39,11 +39,18 @@ fn a_language_without_a_pack_opens_none() {
 #[test]
 fn a_code_no_platform_could_name_has_no_pack() {
     let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
     for iso in ["EN", "../en", "con"] {
-        packs.add(iso, EN.to_vec());
         assert_eq!(read(&packs, iso), Ok(None), "{iso}");
         assert_eq!(packs.opens(iso), 1, "{iso}");
     }
+}
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "names no pack file")]
+fn adding_a_code_no_platform_could_name_stops_a_debug_test() {
+    FakeWordPacks::new().add("EN", EN.to_vec());
 }
 
 #[test]

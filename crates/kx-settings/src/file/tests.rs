@@ -8,9 +8,6 @@ const GOOD: &str = "[keyboard]\nversion = 1\nsize = 3\n";
 const OLDER: &str = "[keyboard]\nversion = 1\nsize = 2\n";
 const BAD_TOML: &[u8] = b"[keyboard\nsize = = 3\n";
 const NOT_UTF8: &[u8] = &[0xff, 0xfe, 0xfd, b'=', 0x80];
-/// The Windows share flag that lets others read a file but not delete or rename it.
-#[cfg(windows)]
-const SHARE_READ: u32 = 1;
 
 /// A user name that a save error text must never show.
 const ACCOUNT_NAME: &str = "account-name";
@@ -263,12 +260,13 @@ fn keeping_the_previous_copy_leaves_the_settings_file_in_place() {
 #[test]
 fn a_failed_replace_leaves_the_good_settings_file_and_its_copy() {
     use std::os::windows::fs::OpenOptionsExt;
+    use windows::Win32::Storage::FileSystem::FILE_SHARE_READ;
     let (_dir, files) = setup("locked");
     save(&files, OLDER).unwrap();
     // Sharing reads but not deletes, so nothing can be renamed over the open file.
     let open = fs::OpenOptions::new()
         .read(true)
-        .share_mode(SHARE_READ)
+        .share_mode(FILE_SHARE_READ.0)
         .open(&files.settings)
         .unwrap();
     let err = save(&files, GOOD).unwrap_err();

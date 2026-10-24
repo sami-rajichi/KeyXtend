@@ -22,7 +22,8 @@ pub trait Probe {
     fn change(&self, el: &Self::El) -> FieldChange;
 }
 
-/// What an adapter reads on the watch's thread, each read by its deadline `by`; it never logs what it reads.
+/// What an adapter reads on the watch's thread, each read by its deadline `by`, never logging what it reads. Each read
+/// checks `el`'s kind afresh before any text call, and a password or unknown box gives `None`.
 pub trait Reader: Probe {
     /// The element with the keyboard focus, in any app.
     ///

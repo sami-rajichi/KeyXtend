@@ -5,21 +5,22 @@ use std::path::{Path, PathBuf};
 
 use kx_module_api::ports::{MAX_PACK_BYTES, PackError, PackView, WordPacks, pack_file};
 
-/// The OS side of word packs: open a pack file with writers kept out, then map it read-only.
+/// The OS side of word packs: open a pack file, then give a view whose bytes stay unchanged while it lives
+/// (`PackView::bytes`).
 pub trait PackDisk: Send + Sync {
     /// One open pack file.
     type File;
     /// One mapped pack.
     type View: PackView + 'static;
 
-    /// The plain file at `path`, opened for reading with writers kept out, and its length; `Ok(None)` when none is
-    /// there.
+    /// The plain file at `path`, opened for reading, and its length; `Ok(None)` when none is there.
     ///
     /// # Errors
     /// `Unreadable` when it is no plain file or cannot be opened.
     fn open(&self, path: &Path) -> Result<Option<(Self::File, u64)>, PackError>;
 
-    /// The first `len` bytes of `file`, mapped read-only.
+    /// A view of the first `len` bytes of `file` that stay unchanged while it lives, by a map that keeps writers out
+    /// or a copy.
     ///
     /// # Errors
     /// `Unreadable` when the OS refuses the map.

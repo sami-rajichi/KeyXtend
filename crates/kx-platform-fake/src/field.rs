@@ -5,6 +5,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch, last_words,
 };
+use kx_platform::field::after_first;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -60,7 +61,7 @@ struct Shared {
 }
 
 /// A field watch shared by its clones: focus starts on no box, and only a text box is read, the scripted text cut to the
-/// asked words.
+/// read cap and the asked words.
 ///
 /// The scripted text and `ends_with` answer stay across focus changes; a read failure lasts only for its box.
 #[derive(Clone, Default)]
@@ -172,13 +173,30 @@ impl FieldWatch for FakeFieldWatch {
         drop(log);
         *lock(&self.shared.tell) = Some(tell);
         let shared = Arc::clone(&self.shared);
-        Ok(Box::new(FakeRun { shared }))
+        let chars = usize::from(cfg.read_chars);
+        Ok(Box::new(FakeRun { shared, chars }))
     }
+}
+
+/// The end of `text` one read of at most `chars` characters takes: all of it when it fits, else its last `chars`
+/// characters without the first word they may split, as on the real adapter.
+fn capped(text: &str, chars: usize) -> &str {
+    let skip = text.chars().count().saturating_sub(chars);
+    if skip == 0 {
+        return text;
+    }
+    let at = text
+        .char_indices()
+        .nth(skip)
+        .map_or(text.len(), |(at, _)| at);
+    after_first(&text[at..])
 }
 
 /// A live fake watch; dropping it stops the watch and its tells.
 struct FakeRun {
     shared: Arc<Shared>,
+    /// The watch's read cap, in characters.
+    chars: usize,
 }
 
 impl FieldRun for FakeRun {
@@ -195,14 +213,15 @@ impl FieldRun for FakeRun {
         if let Some(error) = log.read_fail {
             return Err(error);
         }
-        let text = log.before.as_deref();
+        let text = log.before.as_deref().map(|t| capped(t, self.chars));
         Ok(text.map(|t| Redacted::new(last_words(t, max_words).to_owned())))
     }
 
-    fn ends_with(&mut self, _text: &Redacted<String>) -> Option<bool> {
+    fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
         let mut log = lock(&self.shared.log);
         log.ends_calls += 1;
-        let read = log.readable() && log.read_fail.is_none();
+        let fits = text.expose().chars().count() <= self.chars;
+        let read = log.readable() && log.read_fail.is_none() && fits;
         log.ends.filter(|_| read)
     }
 }

@@ -4,10 +4,10 @@
 use super::*;
 use std::thread::{self, ThreadId};
 
-/// Test values; the real ones come from the predict module's settings.
+/// Test values, whose read cap holds every scripted text; the real ones come from the predict module's settings.
 const CONFIG: FieldConfig = FieldConfig {
     read_ms: 1,
-    read_chars: 1,
+    read_chars: 64,
 };
 
 /// What a box holds before its cursor, ending mid-word.
@@ -18,11 +18,24 @@ type Heard = Arc<Mutex<Vec<(FieldChange, ThreadId)>>>;
 
 /// A started watch whose `tell` records each change.
 fn watched(fake: &FakeFieldWatch) -> (Box<dyn FieldRun>, Heard) {
+    watched_with(fake, CONFIG)
+}
+
+/// Like `watched`, with `cfg`.
+fn watched_with(fake: &FakeFieldWatch, cfg: FieldConfig) -> (Box<dyn FieldRun>, Heard) {
     let heard = Heard::default();
     let log = Arc::clone(&heard);
     let tell = move |change| log.lock().unwrap().push((change, thread::current().id()));
-    let run = fake.watch(CONFIG, Box::new(tell));
+    let run = fake.watch(cfg, Box::new(tell));
     (run.ok().unwrap(), heard)
+}
+
+/// `CONFIG` with a read cap of `read_chars`.
+fn capped(read_chars: u16) -> FieldConfig {
+    FieldConfig {
+        read_chars,
+        ..CONFIG
+    }
 }
 
 /// The text a run reads before the cursor, unwrapped.
@@ -86,6 +99,38 @@ fn words_before_the_cursor_are_cut_to_the_last_n() {
     assert_eq!(read(run.as_mut(), 5), Ok(Some("I like ".to_owned())));
     fake.set_before(Some("أنا أحب القراءة"));
     assert_eq!(read(run.as_mut(), 2), Ok(Some("أحب القراءة".to_owned())));
+}
+
+#[test]
+fn a_text_past_the_read_cap_keeps_only_the_whole_words_inside_it() {
+    let fake = FakeFieldWatch::new();
+    fake.focus(FieldKind::Text);
+    fake.set_before(Some(TEXT));
+    fake.set_ends(Some(true));
+    let read_with = |chars, max_words| {
+        let (mut run, _) = watched_with(&fake, capped(chars));
+        read(run.as_mut(), max_words)
+    };
+    assert_eq!(
+        read_with(6, 2),
+        Ok(Some("ap".to_owned())),
+        "a split word goes"
+    );
+    assert_eq!(
+        read_with(8, 2),
+        Ok(Some("like ap".to_owned())),
+        "a cut between words"
+    );
+    let whole = u16::try_from(TEXT.chars().count()).unwrap();
+    assert_eq!(read_with(whole, 9), Ok(Some(TEXT.to_owned())));
+    fake.set_before(Some("أنا أحب القراءة"));
+    assert_eq!(read_with(9, 2), Ok(Some("القراءة".to_owned())));
+    let (mut short, _) = watched_with(&fake, capped(1));
+    assert_eq!(
+        ends(short.as_mut()),
+        None,
+        "the asked end is longer than the cap"
+    );
 }
 
 #[test]

@@ -31,8 +31,12 @@ impl FakeWordPacks {
     }
 
     /// Makes `bytes` the pack of language `iso`, in place of any before; open views keep their bytes.
+    ///
+    /// A code that names no pack file (`pack_file`) is a test's mistake, so a debug build stops on it.
     pub fn add(&self, iso: &str, bytes: Vec<u8>) {
-        if let Some(file) = pack_file(iso) {
+        let file = pack_file(iso);
+        debug_assert!(file.is_some(), "{iso:?} names no pack file");
+        if let Some(file) = file {
             lock(&self.log).packs.insert(file, bytes.into());
         }
     }
