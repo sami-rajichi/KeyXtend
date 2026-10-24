@@ -9,9 +9,10 @@ use windows::Win32::Foundation::RECT;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 
 use kx_platform_windows::screen;
+use kx_platform_windows::uia::{self, Uia};
 
+use crate::geom::{self, Pill};
 use crate::pt::Pt;
-use crate::uia::{self, Pill, Uia};
 
 /// Characters read to tell a selection from a bare caret; the text itself is dropped at once.
 const PEEK_CHARS: usize = 1;
@@ -35,7 +36,7 @@ fn hides(ours: bool, password: bool) -> bool {
 
 /// Where the pill goes next to the selection `boxes`, or `None` when there is no room or no selection.
 pub fn place(boxes: &[RECT], screen: &RECT, pill: Pill) -> Option<Pt> {
-    uia::anchor(boxes, screen, pill)
+    geom::anchor(boxes, screen, pill)
 }
 
 /// What the face does with its pill on one tick.
@@ -77,7 +78,7 @@ impl Watch {
         std::thread::spawn(move || {
             let uia = match Uia::new() {
                 Ok(u) => u,
-                Err(e) => return drop(ready.send(Err(e))),
+                Err(e) => return drop(ready.send(Err(e.to_string()))),
             };
             let _ = ready.send(Ok(()));
             // SAFETY: a plain query.

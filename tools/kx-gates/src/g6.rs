@@ -4,8 +4,8 @@
 #![cfg(windows)]
 
 use kx_mod_scroll::ScrollSettings;
+use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
-use spike_core::uia::Uia;
 
 use crate::apps::{AppKind, Ctx};
 use crate::g5::RCLICK;
@@ -104,7 +104,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         return g6rec::run(ctx, name);
     }
     let kind = probe::kind_of(name, &APPS)?;
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let build = TestBuild::open(ctx, None)?;
     build.set(RCLICK, false)?;
     let (scroll, log) = (build.scroll()?, build.log()?);

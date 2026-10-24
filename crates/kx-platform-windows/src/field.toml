@@ -1,0 +1,35 @@
+# How the focused box's kind is told on Windows: UI Automation's control types, the edit style bit and window classes.
+# Each number names its constant in UIAutomationClient.h or WinUser.h; class names compare without case.
+
+# Control types that hold editable text.
+text_controls = [
+    50004, # UIA_EditControlTypeId
+    50030, # UIA_DocumentControlTypeId
+]
+
+# The edit style bit that hides what is typed.
+password_style = 0x0020 # ES_PASSWORD
+
+# Base window classes whose password style bit means a password box.
+edit_classes = ["Edit", "RichEdit20A", "RichEdit20W", "RichEdit50W", "RichEdit60W"]
+
+# Window classes that hide their boxes from UI Automation, checked on the box's window and its top-level window.
+opaque_classes = [
+    # Remote desktops: Remote Desktop Connection, its input window (also in Hyper-V's VM window), Citrix.
+    "TscShellContainerClass",
+    "IHWindowClass",
+    "Transparent Windows Client",
+    # Virtual machines: VMware Workstation and Player.
+    "VMUIFrame",
+    "VMPlayerFrame",
+    # Terminal hosts, whose password prompts look like any other text: the console, Windows Terminal, PuTTY, mintty.
+    "ConsoleWindowClass",
+    "CASCADIA_HOSTING_WINDOW_CLASS",
+    "PuTTY",
+    "mintty",
+    # Game engines: Unity, Unreal, SDL and GLFW.
+    "UnityWndClass",
+    "UnrealWindow",
+    "SDL_app",
+    "GLFW30",
+]

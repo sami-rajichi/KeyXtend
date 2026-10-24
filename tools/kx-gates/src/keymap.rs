@@ -3,7 +3,7 @@
 #![cfg(windows)]
 
 use kx_platform_windows::com::Com;
-use spike_core::uia;
+use kx_platform_windows::uia;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::System::Variant::{VARIANT, VT_I4};
@@ -125,7 +125,7 @@ impl Reader {
 
     /// Like `invoke`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
     pub fn restore(&self, hwnd: HWND, id: &str) -> Result<(), String> {
-        uia::invoke(&self.find(hwnd, id)?)
+        uia::invoke(&self.find(hwnd, id)?).map_err(|e| e.to_string())
     }
 
     /// Whether the button with id `id` inside window `hwnd` reads as on, as a screen reader reads a latched key;
@@ -141,7 +141,7 @@ impl Reader {
 
     /// The screen box of the element with id `id` inside window `hwnd`, such as the pad, which is no button.
     pub fn rect(&self, hwnd: HWND, id: &str) -> Result<RECT, String> {
-        uia::rect(&self.find(hwnd, id)?)
+        uia::rect(&self.find(hwnd, id)?).map_err(|e| e.to_string())
     }
 
     /// What a screen reader reads as the description of the element with id `id` inside window `hwnd`.
@@ -225,7 +225,7 @@ fn texts_of(el: &IUIAutomationElement) -> (Option<String>, Option<String>) {
 /// Presses element `el` as a screen reader does, unless the mouse guard stopped the gate; `uia::invoke` puts back.
 pub fn press(el: &IUIAutomationElement) -> Result<(), String> {
     mouseguard::allowed()?;
-    uia::invoke(el)
+    uia::invoke(el).map_err(|e| e.to_string())
 }
 
 /// A UI Automation error as text.

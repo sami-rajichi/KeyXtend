@@ -2,9 +2,10 @@
 #![cfg(windows)]
 
 use kx_platform_windows::screen::{self, work_area};
+use kx_platform_windows::uia::{self, Sel, Uia};
 use serde_json::{Value, json};
+use spike_core::geom;
 use spike_core::selwatch::PillPx;
-use spike_core::uia::{self, Sel, Uia};
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::probe::{self, Doc};
@@ -52,7 +53,7 @@ pub(crate) fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String
 fn why(uia: &Uia, max: usize, pid: u32) -> String {
     let f = match uia.focused() {
         Ok(f) => f,
-        Err(e) => return e,
+        Err(e) => return e.to_string(),
     };
     let who = uia::kind(&f);
     if uia::pid(&f) != pid {
@@ -79,7 +80,7 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
     let pill = PillPx(ctx.spike.tools.pill_px).at(screen::dpi_of(&first));
     let pill = work_area(&first)
         .ok()
-        .and_then(|screen| uia::anchor(&sel.boxes, &screen, pill));
+        .and_then(|screen| geom::anchor(&sel.boxes, &screen, pill));
     let ok = text == want && pill.is_some();
     let shown = if text == want {
         json!(text)
@@ -91,7 +92,7 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
 
 /// Checks every line in `app`, and that the clipboard never changed.
 fn check_all(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let seq = clip::sequence();
     let lines: Vec<Value> = (ctx.cfg.g19.lines.iter().enumerate())
         .map(|(i, want)| check_line(ctx, &uia, app, i, want))
@@ -118,12 +119,16 @@ fn open_chrome(ctx: &Ctx, text: &str) -> Result<Doc, String> {
 
 /// Clicks Chrome's text box so the keys go into it.
 fn focus_box(ctx: &Ctx, app: &Opened) -> Result<(), String> {
-    let (t, uia) = (&ctx.cfg.timing, Uia::new()?);
+    let (t, uia) = (&ctx.cfg.timing, Uia::new().map_err(|e| e.to_string())?);
     let el = win::poll_until(t.read_wait_ms, t.poll_ms, || {
         uia.named(app.hwnd, &ctx.cfg.g19.box_name)
     })
     .ok_or("no text box through UI Automation")?;
-    simuser::click(ctx, app, uia::centre(&uia::rect(&el)?))
+    simuser::click(
+        ctx,
+        app,
+        geom::centre(&uia::rect(&el).map_err(|e| e.to_string())?),
+    )
 }
 
 /// One app's run: open, check every line, close.

@@ -4,7 +4,8 @@
 #![cfg(windows)]
 
 use kx_module_api::ports::Dir;
-use spike_core::{capture, uia};
+use kx_platform_windows::uia;
+use spike_core::capture;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::Accessibility::{
     IUIAutomationScrollPattern, ScrollAmount, ScrollAmount_NoAmount, ScrollAmount_SmallDecrement,
@@ -36,7 +37,7 @@ fn amounts(dir: Dir) -> (ScrollAmount, ScrollAmount) {
 /// One `ScrollPattern` small step of `sp` towards `dir`, as the product's fallback takes.
 pub fn step(sp: &IUIAutomationScrollPattern, dir: Dir) -> Result<(), String> {
     let (h, v) = amounts(dir);
-    uia::scroll(sp, h, v, 1)
+    uia::scroll(sp, h, v, 1).map_err(|e| e.to_string())
 }
 
 /// The pixels of screen box `r` as the screen shows them, if they fit in `cap` bytes.

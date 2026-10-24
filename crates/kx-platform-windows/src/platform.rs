@@ -6,7 +6,8 @@ use std::sync::Arc;
 use kx_crypto::KeyGuard;
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    InputInjector, LayoutSource, PointerHook, PowerDialog, ScrollTarget, Shortcuts, WordPacks,
+    FieldWatch, InputInjector, LayoutSource, PointerHook, PowerDialog, ScrollTarget, Shortcuts,
+    WordPacks,
 };
 use kx_platform::ui::{
     Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
@@ -15,9 +16,9 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::hook::Source;
 use crate::{
-    PlatformError, QpcClock, WinBackdrop, WinGuard, WinInjector, WinInstance, WinKeyGuard,
-    WinLayouts, WinLook, WinMemory, WinPointerHook, WinPower, WinScreens, WinScroll, WinShortcuts,
-    WinSpeaker, WinTray, WinWordPacks, dirs,
+    PlatformError, QpcClock, WinBackdrop, WinFieldWatch, WinGuard, WinInjector, WinInstance,
+    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPointerHook, WinPower, WinScreens, WinScroll,
+    WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -81,6 +82,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn word_packs(&self, dirs: Vec<PathBuf>) -> Arc<dyn WordPacks> {
         Arc::new(WinWordPacks::new(dirs))
+    }
+
+    /// The focused-box watch over UI Automation, for the app to register under `FieldWatchKey`.
+    #[must_use]
+    pub fn field_watch(&self) -> Arc<dyn FieldWatch> {
+        Arc::new(WinFieldWatch)
     }
 
     /// The window guard, for the UI to call on the thread that owns our windows.

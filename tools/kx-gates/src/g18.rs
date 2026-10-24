@@ -3,8 +3,8 @@
 #![cfg(windows)]
 
 use kx_mod_keyboard::{KeyboardSettings, Latch, LatchRole, Modifiers, Role};
+use kx_platform_windows::uia::{self, Uia};
 use serde_json::{Value, json};
-use spike_core::uia::{self, Uia};
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_SHIFT};
 
 use crate::apps::{AppKind, Ctx};
@@ -61,6 +61,7 @@ fn ctrl(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, Str
     simuser::click(ctx, app, pb)?;
     let latch_off = build.reads(CTRL, false).is_ok();
     let both = uia::selected(&a).and_then(|x| Ok(x && uia::selected(&b)?));
+    let both = both.map_err(|e| e.to_string());
     let ok = both.as_ref().is_ok_and(|&s| s);
     let note = json!({ "both_selected": both.map_or_else(|e| json!(e), |s| json!(s)) });
     Ok(line(("ctrl_click", VK_CONTROL.0), ok, latch_off, &note))
@@ -80,7 +81,7 @@ fn drive(ctx: &Ctx, uia: &Uia, build: &TestBuild, doc: &Doc) -> Result<Value, St
 /// did and the test build quit.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let pr = &ctx.cfg.probes;
     let build = TestBuild::open(ctx, None)?;
     latches_release(&build.keyboard()?)?;

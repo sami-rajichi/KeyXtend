@@ -1,6 +1,6 @@
 [package]
 name = "spike-core"
-description = "P1 spike core: UI Automation, pill, Hello fill, snip, voice and the gates' face facts."
+description = "P1 spike core: pill, Hello fill, snip, voice and the gates' face facts."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
@@ -13,20 +13,18 @@ kx-module-api = { path = "../../crates/kx-module-api" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard" }
 # The UI port errors the screen spots use (P3).
 kx-platform = { path = "../../crates/kx-platform" }
-# COM, folders, input, layouts, the window guard and screens moved here in P3 (ADR-0014).
+# COM, folders, input, layouts, the window guard and screens moved here in P3, and the UI Automation client in P7
+# (ADR-0014).
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
 windows-future.workspace = true
-# UI Automation for the pill and probes, Windows Hello for quick-fill and job objects for the voice server.
+# Windows Hello for quick-fill and job objects for the voice server.
 windows = { workspace = true, features = [
     "Foundation",
     "Security_Credentials_UI",
     "Win32_System_Com",
     "Win32_System_JobObjects",
-    "Win32_System_Ole",
-    "Win32_System_Variant",
     "Win32_System_WinRT",
-    "Win32_UI_Accessibility",
 ] }

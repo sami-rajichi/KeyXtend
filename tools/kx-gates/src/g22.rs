@@ -4,11 +4,11 @@
 use std::time::{Duration, Instant};
 
 use kx_module_api::MS_PER_S;
+use kx_platform_windows::uia::Uia;
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::langkey;
-use spike_core::uia::Uia;
 use spike_core::voicecfg::VoiceConfig;
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -130,7 +130,7 @@ fn one(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened, s: &Sentence) -> Result
 
 /// Every sentence in order, then the starting layout back; Notepad is saved at the end, so closing it asks nothing.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     probe::front(ctx, app)?;
     let start = langs::layout_of(app.hwnd);
     let list = &ctx.cfg.g22.sentences;

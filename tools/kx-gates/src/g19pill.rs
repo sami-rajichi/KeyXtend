@@ -4,11 +4,12 @@
 use std::time::Instant;
 
 use kx_platform_windows::screen::{self, work_area};
+use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
+use spike_core::geom;
 use spike_core::pt::Pt;
 use spike_core::selwatch::{self, PillPx};
-use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -72,7 +73,7 @@ fn select_quietly(uia: &Uia, app: &Opened, i: usize) -> Result<(), String> {
 fn copy_via(ctx: &Ctx, pill: HWND, at: &RECT, want: &str) -> Result<bool, String> {
     let t = &ctx.cfg.timing;
     let before = clip::sequence();
-    facetools::click_on(pill, facetools::at(uia::centre(at)))?;
+    facetools::click_on(pill, facetools::at(geom::centre(at)))?;
     if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
         return Ok(false);
     }
@@ -85,7 +86,7 @@ fn click_elsewhere(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<(), String> {
     let doc = uia
         .text(app.hwnd)
         .ok_or("no text document through UI Automation")?;
-    let r = uia::rect(&doc)?;
+    let r = uia::rect(&doc).map_err(|e| e.to_string())?;
     let inset = screen::physical(ctx.spike.keyboard.key_px, screen::dpi_of(&r));
     let p = Pt {
         x: r.left.saturating_add(inset),
@@ -130,7 +131,7 @@ fn one(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened, i: usize) -> Result<Val
 
 /// Every line in turn; a line that fails early is reported and the next one still runs.
 fn all(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Vec<Value>, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     probe::front(ctx, app)?;
     let n = ctx.cfg.g19.lines.len();
     Ok((0..n)

@@ -1,8 +1,9 @@
 //! G21: after a click into a field, the focused element says whether it is a password box.
 #![cfg(windows)]
 
+use kx_platform_windows::uia::{self, Uia};
 use serde_json::{Value, json};
-use spike_core::uia::{self, Uia};
+use spike_core::geom;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::{launch, probe, simuser, win};
@@ -37,7 +38,11 @@ pub(crate) fn click_field(ctx: &Ctx, uia: &Uia, app: &Opened, name: &str) -> Res
     let t = &ctx.cfg.timing;
     let el = win::poll_until(t.read_wait_ms, t.poll_ms, || uia.named(app.hwnd, name))
         .ok_or_else(|| format!("no field {name} through UI Automation"))?;
-    simuser::click(ctx, app, uia::centre(&uia::rect(&el)?))
+    simuser::click(
+        ctx,
+        app,
+        geom::centre(&uia::rect(&el).map_err(|e| e.to_string())?),
+    )
 }
 
 /// Clicks the web field called `name` and reads the password flag of the element that took the focus.
@@ -56,7 +61,7 @@ fn chrome(ctx: &Ctx) -> Result<Value, String> {
     let body = input(ctx, &g.user_name, "text", "") + &input(ctx, &g.pass_name, "password", "");
     let doc = probe::open_page(ctx, &body)?;
     let (fields, notes) = probe::run_on(ctx, doc, |doc| {
-        let uia = Uia::new()?;
+        let uia = Uia::new().map_err(|e| e.to_string())?;
         probe::front(ctx, &doc.app)?;
         let cases = [(g.user_name.as_str(), false), (g.pass_name.as_str(), true)];
         Ok(cases.map(|(n, want)| field(n, want, web_field(ctx, &uia, &doc.app, n))))
@@ -77,9 +82,9 @@ fn win32_box(ctx: &Ctx, password: bool) -> (Result<bool, String>, Vec<String>) {
         Err(e) => return (Err(e), Vec::new()),
     };
     let got = (|| {
-        let uia = Uia::new()?;
+        let uia = Uia::new().map_err(|e| e.to_string())?;
         probe::front(ctx, &app)?;
-        simuser::click(ctx, &app, uia::centre(&win::rect(app.hwnd)?))?;
+        simuser::click(ctx, &app, geom::centre(&win::rect(app.hwnd)?))?;
         let edit = ctx
             .cfg
             .app(AppKind::Target.name())?
@@ -89,7 +94,7 @@ fn win32_box(ctx: &Ctx, password: bool) -> (Result<bool, String>, Vec<String>) {
         if win::class(win::focus(app.hwnd)) != edit {
             return Err(format!("the {edit} box did not take the focus"));
         }
-        Ok(uia::is_password(&uia.focused()?))
+        Ok(uia::is_password(&uia.focused().map_err(|e| e.to_string())?))
     })();
     (got, apps::clean_up(ctx, app))
 }

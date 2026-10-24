@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use kx_module_api::ports::Dir;
 use kx_platform_windows::screen;
-use spike_core::uia::{self, Uia};
+use kx_platform_windows::uia::{self, Uia};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::UI::Accessibility::IUIAutomationScrollPattern;
 use windows::core::BOOL;
@@ -71,7 +71,7 @@ impl<'a> Scene<'a> {
         let pin = Pinned::new(ctx, kb.hwnd, app)?;
         let band = aim::band(pin.win, pin.kb, ctx.cfg.g6.inset_px);
         let band = band.ok_or("nothing shows above the keyboard")?;
-        let sp = uia.scroller(pt(pin.start));
+        let sp = uia.scroller(pin.start);
         Ok(Self {
             ctx,
             app,

@@ -4,11 +4,11 @@
 
 use std::time::Instant;
 
+use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::hello;
-use spike_core::uia::{self, Uia};
 
 use crate::apps::{Ctx, Opened};
 use crate::facetools::FaceWin;
@@ -159,7 +159,7 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
 
 /// With Hello: the owner confirms, cancels, then confirms again, as `ORDER` says. Without it: nothing may be typed.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     probe::front(ctx, app)?;
     if !hello::available()? {
         let r = refused(ctx, &uia, fw, app)?;

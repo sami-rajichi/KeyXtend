@@ -9,7 +9,7 @@ use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::capture::{self, Shot};
 use spike_core::config::ToolButton;
-use spike_core::{snip, uia};
+use spike_core::{geom, snip};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::UI::WindowsAndMessaging::FindWindowW;
 use windows::core::HSTRING;
@@ -74,7 +74,7 @@ fn cover_points(ctx: &Ctx, fw: &FaceWin) -> Result<[POINT; 2], String> {
         x: fw.face.origin.x + cw / 2,
         y: fw.face.origin.y + ch / 2,
     };
-    Ok([face, facetools::at(uia::centre(&win::rect(bar)?))])
+    Ok([face, facetools::at(geom::centre(&win::rect(bar)?))])
 }
 
 /// What the snip gave: whether the overlay covered the face and the taskbar, how soon after the click, the saved picture, and whether it closed.
@@ -157,7 +157,7 @@ fn tidy(ctx: &Ctx, since: SystemTime) -> Vec<String> {
     let mut notes = Vec::new();
     if let Some(over) = facetools::shown(&ctx.spike.tools.overlay_title) {
         // The same spot twice cancels; after one corner it saves instead, and that file goes below.
-        let spot = facetools::at(uia::centre(&win::rect(over).unwrap_or_default()));
+        let spot = facetools::at(geom::centre(&win::rect(over).unwrap_or_default()));
         for _ in 0..2 {
             let _ = facetools::click_on(over, spot);
             sleep_ms(ctx.cfg.timing.key_settle_ms);

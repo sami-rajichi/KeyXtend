@@ -1,11 +1,9 @@
-//! Pure box maths for UI Automation results: line boxes, points on a line, and the pill anchor.
+//! Pure box maths for the pill (P10): points on a line, a box's centre and the pill anchor. Line boxes from UI
+//! Automation moved to `kx_platform_windows::uia` (P7).
 
 use windows::Win32::Foundation::RECT;
 
 use crate::pt::Pt;
-
-/// Numbers per box from `GetBoundingRectangles`: left, top, width, height.
-const BOX: usize = 4;
 
 /// The size of the selection pill and its gap from the text, in physical pixels.
 #[derive(Clone, Copy, Debug)]
@@ -36,21 +34,6 @@ pub fn anchor(boxes: &[RECT], screen: &RECT, pill: Pill) -> Option<Pt> {
         x: x.min(screen.right.saturating_sub(pill.w)).max(screen.left),
         y: y.min(screen.bottom.saturating_sub(pill.h)).max(screen.top),
     })
-}
-
-/// Boxes from `left, top, width, height` groups; empty, non-finite and partial groups are dropped.
-pub fn rects_of(v: &[f64]) -> Vec<RECT> {
-    v.as_chunks::<BOX>()
-        .0
-        .iter()
-        .filter(|b| b.iter().all(|n| n.is_finite()) && b[2] > 0.0 && b[3] > 0.0)
-        .map(|b| RECT {
-            left: b[0].round() as i32,
-            top: b[1].round() as i32,
-            right: (b[0] + b[2]).round() as i32,
-            bottom: (b[1] + b[3]).round() as i32,
-        })
-        .collect()
 }
 
 /// The middle of `a` and `b`, which always fits.
@@ -89,13 +72,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn line_boxes_come_from_groups_of_four_and_skip_empty_ones() {
-        let v = [10.0, 20.0, 100.4, 18.6, 5.0, 5.0, 0.0, 10.0, 1.0, 2.0];
-        assert_eq!(rects_of(&v), [r(10, 20, 110, 39)]);
-        assert!(rects_of(&[]).is_empty());
-    }
-
     const SCREEN: RECT = RECT {
         left: 0,
         top: 0,
@@ -129,12 +105,6 @@ mod tests {
     }
 
     #[test]
-    fn boxes_that_are_not_finite_are_dropped() {
-        assert!(rects_of(&[f64::INFINITY, 0.0, 10.0, 10.0]).is_empty());
-        assert!(rects_of(&[0.0, f64::NAN, 10.0, 10.0]).is_empty());
-    }
-
-    #[test]
     fn huge_boxes_from_another_app_never_overflow() {
         let huge = r(i32::MAX - 1, i32::MAX - 1, i32::MAX, i32::MAX);
         assert_eq!(
@@ -151,7 +121,6 @@ mod tests {
         let low = r(i32::MIN, i32::MIN, i32::MIN + 1, i32::MIN + 1);
         assert_eq!(anchor(&[low], &SCREEN, PILL), Some(Pt { x: 0, y: 0 }));
         let _ = line_points(&huge, i32::MAX);
-        assert_eq!(rects_of(&[1e12, 0.0, 1e12, 10.0])[0].right, i32::MAX);
     }
 
     #[test]

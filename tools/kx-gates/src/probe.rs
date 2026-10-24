@@ -11,7 +11,8 @@ use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::simuser::{self, guard, keys_ours};
 use crate::win::{self, sleep_ms};
 use crate::{clip, cliptext, keys, launch, out, probetext, winclip};
-use spike_core::uia::{self, Uia};
+use kx_platform_windows::uia::{self, Uia};
+use spike_core::geom;
 
 /// Word's probe app, which opens a prepared file.
 const WORD_FILE: &str = "word_file";
@@ -215,7 +216,7 @@ pub fn text_points(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<(Pt, Pt), Strin
         uia::lines(&uia.text(app.hwnd)?).ok()?.into_iter().next()
     })
     .ok_or("no text line through UI Automation")?;
-    let (start, mid) = uia::line_points(&line, ctx.cfg.probes.inset_px);
+    let (start, mid) = geom::line_points(&line, ctx.cfg.probes.inset_px);
     guard(app, &[start, mid])?;
     Ok((start, mid))
 }
@@ -230,7 +231,7 @@ pub fn item(
     let t = &ctx.cfg.timing;
     let found = win::poll_until(t.read_wait_ms, t.poll_ms, || {
         let it = uia.item(app.hwnd, name)?;
-        let p = uia.grip(&it, name).ok()?;
+        let p = geom::centre(&uia.grip(&it, name).ok()?);
         Some((it, p))
     })
     .ok_or_else(|| format!("no item {name} through UI Automation"))?;

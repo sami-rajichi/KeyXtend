@@ -11,6 +11,7 @@ pub mod com;
 pub mod dirs;
 #[cfg(windows)]
 pub mod dll;
+pub mod field;
 pub mod front;
 pub mod gpu;
 #[cfg(windows)]
@@ -37,6 +38,8 @@ pub mod strokes;
 pub mod sysui;
 pub mod tray;
 #[cfg(windows)]
+pub mod uia;
+#[cfg(windows)]
 pub mod uiaccess;
 pub mod watch;
 pub mod window;
@@ -46,6 +49,8 @@ pub use backdrop::WinBackdrop;
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
+#[cfg(windows)]
+pub use field::WinFieldWatch;
 #[cfg(windows)]
 pub use guard_key::WinKeyGuard;
 #[cfg(windows)]
@@ -98,6 +103,12 @@ fn last_refused() -> kx_platform::ui::UiError {
 #[cfg(windows)]
 fn failed() -> kx_platform::ui::UiError {
     kx_platform::ui::UiError::Refused(windows::Win32::Foundation::E_FAIL.0)
+}
+
+/// `cap` from now, or now when the clock cannot go that far.
+fn deadline(cap: std::time::Duration) -> std::time::Instant {
+    let now = std::time::Instant::now();
+    now.checked_add(cap).unwrap_or(now)
 }
 
 /// Locks `m`, taking the value even when a panicking thread poisoned it.
