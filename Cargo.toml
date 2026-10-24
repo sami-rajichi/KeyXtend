@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "crates/kx-crypto", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -40,6 +40,10 @@ embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
 fluent-langneg = "0.13.1"
 unic-langid = "0.9.6"
+# Sealed files (ADR-0010): RustCrypto's AEAD, OS randomness and wiping secrets from memory.
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["zeroize"] }
+getrandom = "0.4.3"
+zeroize = "1.9.1"
 # Qt through cxx-qt, pinned: every upgrade is reviewed (ADR-0013).
 cxx = "1.0.202"
 cxx-qt = "=0.10.0"

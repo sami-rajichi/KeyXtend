@@ -1,0 +1,30 @@
+//! The OS guard of the data key: the platform wraps the key so only this user on this PC unwraps it.
+
+use thiserror::Error;
+use zeroize::Zeroizing;
+
+/// Why the guard could not wrap or unwrap the key.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
+pub enum GuardError {
+    /// The system's key service cannot be reached.
+    #[error("the system key service is unavailable")]
+    Unavailable,
+    /// The system's key service declined, for example for a key from another user.
+    #[error("the system key service refused the key")]
+    Refused,
+}
+
+/// Wraps the data key with the OS key (DPAPI on Windows); the platform implements it.
+pub trait KeyGuard: Send + Sync {
+    /// The wrapped form of `key`, safe to keep in a file.
+    ///
+    /// # Errors
+    /// `Unavailable` without the key service, `Refused` when it declines.
+    fn wrap(&self, key: &[u8]) -> Result<Vec<u8>, GuardError>;
+
+    /// The key that `wrap` turned into `wrapped`.
+    ///
+    /// # Errors
+    /// `Unavailable` without the key service, `Refused` when `wrapped` is not this user's.
+    fn unwrap(&self, wrapped: &[u8]) -> Result<Zeroizing<Vec<u8>>, GuardError>;
+}

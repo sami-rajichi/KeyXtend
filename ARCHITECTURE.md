@@ -106,7 +106,8 @@ crates/
   kx-mod-selection/     selection helper (P10)
   kx-mod-voice/         voice UI + worker client (engine lives in the worker) (P11)
   kx-mod-snip/          capture overlay, editor, OCR client (P12)
-  kx-crypto/            data-key handling (DPAPI/Keychain/Secret Service port) + XChaCha20 (P8)
+  kx-crypto/            sealed files: XChaCha20-Poly1305 under a data key the `KeyGuard` port wraps
+                         (DPAPI/Keychain/Secret Service); `SealedFiles` backs the `SealedStore` port (P7)
   kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests; it
                          depends on kx-settings, whose key names its fake settings sink checks as the store does
 tools/
