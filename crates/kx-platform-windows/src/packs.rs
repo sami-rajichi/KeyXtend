@@ -10,6 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
+use kx_crypto::RESERVED_NAMES;
 use kx_module_api::ports::PackError;
 
 #[cfg(windows)]
@@ -27,10 +28,12 @@ pub const MAX_ISO_LEN: usize = 3;
 /// The largest pack that is mapped, 64 MiB.
 pub const MAX_PACK_BYTES: u64 = 64 * 1024 * 1024;
 
-/// The file name of `iso`'s pack; `None` unless `iso` is 2–3 lowercase ASCII letters, so no path can escape a folder.
+/// The file name of `iso`'s pack; `None` unless `iso` is 2–3 lowercase ASCII letters and no Windows device name
+/// (`RESERVED_NAMES`), so no path can leave a folder.
 pub(crate) fn file_name(iso: &str) -> Option<String> {
     let fits = (MIN_ISO_LEN..=MAX_ISO_LEN).contains(&iso.len());
-    (fits && iso.bytes().all(|b| b.is_ascii_lowercase())).then(|| format!("{iso}.{PACK_EXT}"))
+    let letters = iso.bytes().all(|b| b.is_ascii_lowercase());
+    (fits && letters && !RESERVED_NAMES.contains(&iso)).then(|| format!("{iso}.{PACK_EXT}"))
 }
 
 /// A pack file's `len` as its view's length; `Unreadable` when the file is empty or over `MAX_PACK_BYTES`.

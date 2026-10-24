@@ -148,6 +148,7 @@ mod tests {
 
     use super::*;
     use crate::packs::{MAX_PACK_BYTES, PACK_EXT};
+    use windows::Win32::System::Memory::{MEM_MAPPED, MEMORY_BASIC_INFORMATION, VirtualQuery};
 
     /// A pack's length in the tests: more than one page, and not a whole number of them.
     const LEN: usize = 10_000;
@@ -207,9 +208,31 @@ mod tests {
             write(&inner, iso, &sample());
         }
         let packs = WinWordPacks::new(vec![inner]);
-        for iso in ["../x", "EN", "e", "engl"] {
+        for iso in ["../x", "EN", "e", "engl", "con", "nul"] {
             assert!(packs.open(iso).unwrap().is_none(), "{iso}");
         }
+    }
+
+    /// What Windows says of the memory region that holds `at`.
+    #[allow(unsafe_code, reason = "Asks Windows about our own memory.")]
+    fn region_of(at: *const u8) -> MEMORY_BASIC_INFORMATION {
+        let mut info = MEMORY_BASIC_INFORMATION::default();
+        let size = size_of_val(&info);
+        // SAFETY: `info` is ours and its exact size goes with it; the query only reads the page tables.
+        let wrote = unsafe { VirtualQuery(Some(at.cast()), std::ptr::from_mut(&mut info), size) };
+        assert_eq!(wrote, size, "Windows describes the region");
+        info
+    }
+
+    #[test]
+    fn the_view_is_a_read_only_file_map_never_copy_on_write() {
+        let (_dir, inner) = packs_dir();
+        write(&inner, "en", &sample());
+        let view = WinWordPacks::new(vec![inner]).open("en").unwrap().unwrap();
+        let region = region_of(view.bytes().as_ptr());
+        assert_eq!(region.Protect, PAGE_READONLY, "not PAGE_WRITECOPY");
+        assert_eq!(region.Type, MEM_MAPPED);
+        assert!(region.RegionSize >= LEN, "the whole pack is one region");
     }
 
     #[test]

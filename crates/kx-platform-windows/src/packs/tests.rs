@@ -63,7 +63,7 @@ fn a_code_of_two_or_three_lowercase_letters_names_its_pack() {
 fn any_other_code_names_no_pack() {
     let bad = [
         "", "e", "engl", "EN", "En", "../x", "..", "e1", "é", "ع", "e n", "en\0", "en.", "a/b",
-        "a\\b",
+        "a\\b", "con", "prn", "aux", "nul", "CON", "com1", "lpt1",
     ];
     for iso in bad {
         assert_eq!(file_name(iso), None, "{iso:?}");
@@ -73,7 +73,7 @@ fn any_other_code_names_no_pack() {
 #[test]
 fn a_bad_code_never_reaches_the_disk() {
     let disk = Disk::default();
-    for iso in ["../x", "EN", "e", "engl"] {
+    for iso in ["../x", "EN", "e", "engl", "con", "nul"] {
         assert_eq!(find(&disk, &[folder("a")], iso), Ok(None));
     }
     assert!(disk.asked.borrow().is_empty());
@@ -129,11 +129,17 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
     #[test]
-    fn only_short_lowercase_codes_name_a_pack_and_the_name_stays_in_its_folder(
-        iso in prop_oneof!["[a-z]{2,3}", "[a-zA-Z./\\\\:]{0,5}", "\\PC{0,5}"],
+    fn only_short_lowercase_codes_that_name_no_device_name_a_pack_in_its_folder(
+        iso in prop_oneof![
+            "[a-z]{2,3}",
+            "[a-zA-Z./\\\\:]{0,5}",
+            "\\PC{0,5}",
+            prop::sample::select(RESERVED_NAMES).prop_map(str::to_owned),
+        ],
     ) {
         let good = (MIN_ISO_LEN..=MAX_ISO_LEN).contains(&iso.len())
-            && iso.bytes().all(|b| b.is_ascii_lowercase());
+            && iso.bytes().all(|b| b.is_ascii_lowercase())
+            && !RESERVED_NAMES.contains(&iso.as_str());
         let name = file_name(&iso);
         prop_assert_eq!(name.is_some(), good);
         if let Some(name) = name {
