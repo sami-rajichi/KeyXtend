@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 
+use kx_mod_predict::split::Splitter;
+
 use super::super::WordsError;
 use super::super::cands::candidates;
 use super::super::download::{check, deflated};
@@ -12,7 +14,6 @@ use super::super::list::{self, WordList};
 use super::super::manifest::Packs;
 use super::super::report::report;
 use super::super::skew::Shares;
-use super::super::split::Splitter;
 use super::super::vocab::Vocab;
 use super::super::wordfreq::share;
 use super::{entries, plan, spellings};

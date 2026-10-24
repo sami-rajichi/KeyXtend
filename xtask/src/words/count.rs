@@ -6,9 +6,9 @@ use std::collections::{HashMap, HashSet};
 use std::hash::{DefaultHasher, Hasher};
 
 use kx_mod_predict::pack::layout::MAX_CHAIN;
+use kx_mod_predict::split::{Splitter, Token};
 
 use super::manifest::TextRules;
-use super::split::{Splitter, Token};
 use super::text::TextCounts;
 use super::vocab::Vocab;
 

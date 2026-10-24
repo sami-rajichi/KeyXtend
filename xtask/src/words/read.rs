@@ -6,12 +6,13 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
+use kx_mod_predict::split::Splitter;
+
 use super::build::Paths;
 use super::cands::{Candidates, Tally};
 use super::count::Counter;
 use super::manifest::{LangText, Manifest, Tatoeba};
 use super::skew::Shares;
-use super::split::Splitter;
 use super::vocab::Vocab;
 use super::{WordsError, io_error, tatoeba, wiki};
 use crate::devtools::paths::join_rel;

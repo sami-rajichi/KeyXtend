@@ -23,7 +23,6 @@ mod read;
 mod report;
 mod script;
 mod skew;
-mod split;
 mod tatoeba;
 #[cfg(test)]
 mod tests;

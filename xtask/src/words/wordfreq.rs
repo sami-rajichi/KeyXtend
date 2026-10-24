@@ -6,7 +6,7 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 
 use flate2::read::GzDecoder;
-use kx_mod_predict::pack::layout::STEPS_PER_ZIPF;
+use kx_mod_predict::pack::layout::{STEPS_PER_ZIPF, ZIPF_OFFSET};
 use rmpv::Value;
 
 use super::{WordsError, io_error};
@@ -21,8 +21,6 @@ const VERSION_KEY: &str = "version";
 const VERSION: u64 = 1;
 /// Centibels per power of ten, so per Zipf unit.
 const CB_PER_ZIPF: u32 = 100;
-/// wordfreq's Zipf value is this plus log10 of the frequency, so Zipf 0 is a frequency of 10^-9.
-const ZIPF_OFFSET: u32 = 9;
 /// The centibels of Zipf 0: a bucket's Zipf is this less the bucket, over `CB_PER_ZIPF`.
 pub(crate) const ZIPF_TOP_CB: u32 = ZIPF_OFFSET * CB_PER_ZIPF;
 

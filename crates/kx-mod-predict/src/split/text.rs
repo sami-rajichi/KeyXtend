@@ -1,34 +1,31 @@
-//! Splits text the way the word lists spell it: sentences end at the manifest's marks, a word is a run of letters
-//! and marks joined by apostrophes, and a word the list knows whole stays whole (`quelqu'un`). Else an apostrophe
-//! splits at an elision the list knows (`l'homme`) or anywhere (`Muiriel's`); a chain runs only across spaces and
-//! elisions.
+//! Sentences and their words for the pack builder (feature `build`): sentences end at the manifest's marks, and a
+//! chain runs only across spaces and elisions.
 
 use std::borrow::Cow;
 
-use kx_mod_predict::fold::is_apostrophe;
-
-use super::script;
+use super::{spans, split_word};
+use crate::fold::is_apostrophe;
 
 /// One word of a sentence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Token<'a> {
-    /// Its text, with the list's apostrophe.
-    pub(crate) text: &'a str,
+pub struct Token<'a> {
+    /// Its text, with the packs' apostrophe.
+    pub text: &'a str,
     /// True for the sentence's first word.
-    pub(crate) first: bool,
+    pub first: bool,
     /// True when no hyphen, mark or split apostrophe glues it to a neighbour.
-    pub(crate) alone: bool,
+    pub alone: bool,
     /// True when a chain may run into it from the word before: only spaces or an elision part them.
-    pub(crate) joined: bool,
+    pub joined: bool,
 }
 
-/// How text splits: where sentences end, and the apostrophe the lists spell.
+/// How text splits: where sentences end, and the apostrophe the packs spell.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct Splitter<'a> {
+pub struct Splitter<'a> {
     /// The characters that end a sentence.
-    pub(crate) ends: &'a [char],
+    pub ends: &'a [char],
     /// The apostrophe every form of it becomes.
-    pub(crate) apostrophe: char,
+    pub apostrophe: char,
 }
 
 /// One word of a sentence before its apostrophes are split, with what parts it from its neighbours.
@@ -53,8 +50,9 @@ struct Edges {
 }
 
 impl Splitter<'_> {
-    /// `text` with every apostrophe form made the list's own; borrowed when it holds none.
-    pub(crate) fn normalise<'t>(&self, text: &'t str) -> Cow<'t, str> {
+    /// `text` with every apostrophe form made the packs' own; borrowed when it holds none.
+    #[must_use]
+    pub fn normalise<'t>(&self, text: &'t str) -> Cow<'t, str> {
         let other = |c: char| c != self.apostrophe && is_apostrophe(c);
         if !text.chars().any(other) {
             return Cow::Borrowed(text);
@@ -65,7 +63,7 @@ impl Splitter<'_> {
 
     /// The sentences of a normalised `text`: an end mark ends one only before a space or the text's end, so `U.S.`
     /// and `3.14` stay inside theirs.
-    pub(crate) fn sentences<'t>(&self, text: &'t str) -> impl Iterator<Item = &'t str> {
+    pub fn sentences<'t>(&self, text: &'t str) -> impl Iterator<Item = &'t str> {
         let mut chars = text.char_indices().peekable();
         let (mut from, mut done) = (0, false);
         std::iter::from_fn(move || {
@@ -84,7 +82,7 @@ impl Splitter<'_> {
     }
 
     /// Calls `each` with every word of `sentence`, splitting its apostrophes where `knows` says.
-    pub(crate) fn words(
+    pub fn words(
         &self,
         sentence: &str,
         knows: &dyn Fn(&str) -> bool,
@@ -110,66 +108,10 @@ impl Splitter<'_> {
                 joined: k > 0 && before.chars().all(char::is_whitespace),
             };
             pieces.clear();
-            split(raw.text, self.apostrophe, knows, &mut pieces);
+            split_word(raw.text, self.apostrophe, knows, &mut pieces);
             emit(&raw, &pieces, each);
         }
     }
-}
-
-/// The byte spans of the words of `sentence`: runs of letters, digits and marks, with each apostrophe that follows
-/// one of them.
-fn spans(sentence: &str, apostrophe: char) -> Vec<(usize, usize)> {
-    let mut out = Vec::new();
-    let mut start = None;
-    let mut after_letter = false;
-    for (at, c) in sentence.char_indices() {
-        if is_letter(c) {
-            start.get_or_insert(at);
-            after_letter = true;
-        } else if c == apostrophe && after_letter {
-            after_letter = false;
-        } else {
-            if let Some(from) = start.take() {
-                out.push((from, at));
-            }
-            after_letter = false;
-        }
-    }
-    if let Some(from) = start {
-        out.push((from, sentence.len()));
-    }
-    out
-}
-
-/// True when `c` belongs inside a word: a letter, a digit, or a mark that joins any script.
-fn is_letter(c: char) -> bool {
-    !c.is_whitespace() && (c.is_alphanumeric() || script::joins_any(c))
-}
-
-/// Splits `word` at its apostrophes into `out`, each piece with true when an elision follows it: a whole word the
-/// list knows stays (`quelqu'un`), then an elision it knows comes off (`l'`), else the apostrophe goes.
-fn split<'w>(
-    word: &'w str,
-    apostrophe: char,
-    knows: &dyn Fn(&str) -> bool,
-    out: &mut Vec<(&'w str, bool)>,
-) {
-    let mut rest = word;
-    while let Some(at) = rest.find(apostrophe) {
-        let (elided, tail) = rest.split_at(at + apostrophe.len_utf8());
-        if knows(rest) {
-            break;
-        } else if knows(elided) {
-            out.push((elided, true));
-        } else {
-            out.push((rest.get(..at).unwrap_or_default(), false));
-        }
-        rest = tail;
-        if rest.is_empty() {
-            return;
-        }
-    }
-    out.push((rest, false));
 }
 
 /// Gives `each` the tokens of `raw`'s `pieces`, with what parts each from its neighbours.

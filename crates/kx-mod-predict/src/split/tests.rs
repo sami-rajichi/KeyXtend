@@ -1,6 +1,6 @@
 //! The tokenizer: sentences, words, elisions, whole stems, and what parts each word from the next.
 
-use super::super::split::{Splitter, Token};
+use super::{Splitter, Token};
 
 /// The project's sentence ends.
 const ENDS: [char; 7] = ['.', '!', '?', '\u{061F}', '\u{2026}', '\n', '\r'];

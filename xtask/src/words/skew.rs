@@ -3,10 +3,11 @@
 
 use std::collections::HashMap;
 
+use kx_mod_predict::split::Splitter;
+
 use super::cands::{Cand, Tally};
 use super::count::Repeats;
 use super::float;
-use super::split::Splitter;
 use super::vocab::Vocab;
 use super::wordfreq::share;
 
