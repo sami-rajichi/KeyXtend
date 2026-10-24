@@ -82,7 +82,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - **Resize** the same way with the corner handle. There is no Esc to undo: Esc belongs to the app, so Settings has "Reset size" (owner, 2026-09-28).
 - **Minimise** puts a bubble in a bottom corner of the keyboard's screen, above the taskbar, wherever the keyboard was: right by default, left as a setting (`[keyboard] bubble_corner`), never the top (owner, 2026-09-28).
 - **Remembers its state:** size, position, theme, mode and every setting survive a restart or shutdown. A saved place on a screen that is gone brings the keyboard back to the bottom centre of the main screen.
-- **Top bar:** grip, suggestion chips (P7), light/dark toggle (sun/moon), a theme button (a trial; P13 decides), size buttons (lens −/+ and S/M/L), minimise-to-bubble (−), close-to-tray (×).
+- **Top bar:** grip, word chips and their menu button (P7, §6), light/dark toggle (sun/moon), a theme button (a trial; P13 decides), size buttons (lens −/+ and S/M/L), minimise-to-bubble (−), close-to-tray (×).
 - **Tray and one copy:** × hides the keyboard; the tray icon's menu shows it again or quits. One copy runs per user session: starting it again shows the keyboard, and `keyxtend --quit` ends it.
 - **Fade when idle** was dropped (owner, 2026-09-28): minimise-to-bubble does the job better.
 
@@ -320,23 +320,50 @@ Carrying ──next click──▶ swallow it, inject left up there ──▶ Id
 
 ## 6. Word prediction
 
-- Up to 4 chips in the top bar. Tapping a chip replaces the current word and adds a space.
-- **Engine:** our own small Rust engine.
-  - A prefix trie with unigram and bigram counts per language.
-  - Seeded from **wordfreq** lists (data licence CC-BY-SA-4.0, shipped as separate data files with attribution).
-  - It learns from what the user types.
-  - No neural model in v1.
+Decided with the owner on 2026-10-24, from the research report on keyboard prediction engines (ADR-0032). Every number below is a `[predict]` setting.
+
+- **Chips:** the word chips sit in the top bar, between the grip and the buttons, as in Windows' touch keyboard; there is no extra row.
+  - As many chips as fit, up to `chips` (5 by default, 3–7); the best guess comes first. Hiding top-bar buttons later (P13) leaves room for more.
+  - Tapping a chip replaces the word being typed with the chip's word, in its correct spelling, and adds a space. Before any letter, the chips guess the next word.
+- **Engine:** our own Rust engine, of the kind the big keyboards still run underneath (Gboard's decoder in 2024).
+  - Per language, a word list finishes the word, and counts of word chains (n-grams) guess the next one from the last N words (`context_words`, 2 by default, 1–4). A context it has never seen falls back to fewer words.
+  - Seeded from wordfreq (word frequencies) and from Wikipedia and Tatoeba (word chains), shipped as separate data files with their credits (CC BY-SA 4.0, CC BY 2.0 FR).
+  - Full packs for English, French and Arabic; word lists only for wordfreq's other languages; any other layout language starts empty and learns.
+  - Seed words are kept only where an open spelling dictionary (the Hunspell lists of LibreOffice and Firefox, licence-checked) knows them, and they take its capitals: `london` becomes `London`, `i` becomes `I`. Languages without such a dictionary keep wordfreq's words.
+  - The packs are built once from capped downloads (about 6.5 GB on the development PC) and kept in the repository.
+  - The packs are read straight from disk (memory-mapped): about 20 MB of the download. Only the language in front is loaded, about 2 MB of private memory, measured by the memory gate (G8) before it ships.
+  - No neural model and no Windows prediction API in v1; Microsoft documents that API as Japanese-only. A small neural re-ranker may come later, where our own measurements show the word chains fall short.
+- **Language:** prediction follows the layout in front and suggests only that language's words.
+- **Matching:** letters match loosely, but the correct spelling is always typed.
+  - French ignores accents: `ecole` finds `école`.
+  - Arabic ignores harakat and tatweel, and folds أ إ آ ٱ to ا and ى to ي: `ان` finds `أن`.
+  - Capitals follow what was typed, except a word the dictionary always capitalises.
+- **Knowing the word:** the keyboard follows its own key clicks.
+  - A space, Enter, Tab, an arrow, a shortcut, a click in the app or a new text box ends the word.
+  - After a click or a new box, it reads only the N words before the cursor through UI Automation, where the app allows it: never more, never in a password box, never logged.
+- **Learning:**
+  - A word, and the chain it ends, counts when the word ends or a chip is picked.
+  - A new word is suggested only from its second use, so a one-off typo never comes back.
+  - A word typed in an informal spelling of a known word counts toward the correct form: typing `انا` teaches `أنا`.
+  - Per language it keeps at most 10,000 words and 30,000 chains of each length. When full, the least recently used go first, and entries unused for 300 days are dropped.
+  - Learned words weigh more than the seed as the user types more.
+  - Stored encrypted in the data folder, one file per language (§9.1).
+- **Never learned:** anything in a password box or in a box whose kind Windows cannot tell (games, remote desktops; the chips still help there), words with digits, and web addresses; emails go only to the email list below.
+- **Punctuation and numbers are left to the user** (owner, 2026-10-24): no chips for them, and a chip's space stays before any punctuation.
 - **Emails:**
-  - Typing `@` suggests domains (gmail.com, outlook.com, hotmail.com, yahoo.com, icloud.com).
-  - Typing the start of a saved email suggests it. Saved emails come from the Quick-fill vault; the chip shows a key icon.
-- **Hold-to-fill** (round 5 idea):
-  - holding **@** for 1.5 s lists saved emails above the field;
-  - holding **P** for 1.5 s lists saved passwords (vault must be unlocked).
-- **Privacy:**
-  - Nothing is learned in password fields. They are detected through UI Automation `IsPassword`.
-  - The user can remove a learned word.
-  - The learned data is stored locally and encrypted (§9.1).
-- **Optional:** the Windows `TextPredictionGenerator` API, but only where testing shows it works for the language. Its Arabic and French support is unverified.
+  - After one `@`, the chips show the domains in `domains` (gmail.com, outlook.com, hotmail.com, yahoo.com, icloud.com).
+  - Typing the start of a known email shows it as a chip with an @ icon.
+  - Typing `@@` with the keyboard shows the known emails as chips, and picking one replaces the `@@`. Only an `@@` the keyboard has just typed counts. With more emails than fit, a "More" chip opens a paged list (5 rows per page).
+  - Known emails are the ones typed with the keyboard, encrypted and removable; the vault (P9) adds its saved emails with a key icon.
+  - An email chip adds no space.
+- **Password boxes** (UI Automation `IsPassword`, with the Win32 password style as a fallback): no chips and no learning; the chip lane shows a lock and a short note.
+  - Filling passwords belongs to the vault (P9).
+  - Holding a key no longer fills anything: @ and P repeat like every letter (§4.6, owner, 2026-10-24).
+- **Controls:** a small menu button at the end of the chip lane opens a panel with three rows.
+  - **Forget a word:** tap it, then tap a chip; the word is forgotten and an Undo chip takes its place until the next key. A forgotten built-in word stays hidden until the user types it twice again.
+  - **Pause learning** and **Prediction off**, each a switch that stays as set. With prediction off, the lane is empty and the menu button stays.
+  - The Settings window (P13) adds a paged list of learned words.
+- **Target:** a meter types held-back test sentences and counts the key presses the chips save. With 5 chips, English and French must save at least 40% (studies report 42–60%). Arabic is measured and reported but does not block, since no study has a number for it. The owner's hands-on check has the last word.
 
 ---
 

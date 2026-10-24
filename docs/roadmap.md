@@ -186,13 +186,14 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 7 — Word prediction — v0.4
 
-- `kx-mod-predict`: trie + n-gram, wordfreq seed data (CC-BY-SA, separate files), the learner, `@` domains, saved emails, hold-@ and hold-P.
-- Password-field detection with UIA `IsPassword` (intercept event).
-- **Edge cases:** mixed scripts in one word, an RTL caret, a very long token, learning off in password fields, "forget word".
+- `kx-mod-predict` (spec §6, ADR-0032): word lists and word chains (n-grams) seeded from wordfreq, Wikipedia and Tatoeba (separate files), the learner, `@` domains, `@@` emails, the chips and their menu.
+- `kx-crypto`, now with its first user here (moved from P8, owner, 2026-10-24): the learned words are encrypted.
+- Password-field detection with UIA `IsPassword`, and the few words before the cursor read through UIA.
+- **Edge cases:** mixed scripts in one word, an RTL caret, a very long token, learning off in password fields, "forget word", a click in the middle of a word, an `@@` already in the text, a layout switch mid-word, a chip picked while Ctrl is latched, a damaged learned-words file.
 
 ## Phase 8 — Clipboard history — v0.5
 
-- `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
+- `kx-mod-clipboard` plus the `media` worker (thumbnails), over `kx-crypto` (built in P7).
 - The encrypted store, retention, exclusion formats, the paged panel, multi-paste, pasting files and images, and Win+V routing (a setting, moved from P6).
 - **Edge cases:**
   - a 200 MB image;
@@ -208,7 +209,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
   - Hello unavailable (fall back to the master password);
   - a corrupt file;
   - a wrong import format;
-  - a locked vault during hold-P;
+  - a locked vault when a password box asks for a fill;
   - filling while the focus changes.
 
 ## Phase 10 — Selection helper — v0.6

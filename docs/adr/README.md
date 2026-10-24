@@ -35,5 +35,7 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0029 | [The scroll pad glides by wheel steps and reads by UI Automation](0029-the-scroll-pad-glides-by-wheel-steps-and-reads-by-ui-automation.md) | Accepted (2026-10-16). Reorders spec §5.2's Windows routes (from ADR-0013's G6) and adds scrolling to ADR-0027's decision 4; spec §5.2's *As built in P5* refines the fallback, end and send rules. |
 | 0030 | [The code is view only, with all rights reserved](0030-the-code-is-view-only-with-all-rights-reserved.md) | Accepted (2026-10-17). Supersedes ADR-0006 and ADR-0003's free-signing line. |
 | 0031 | [Shortcuts are named by meaning, and each platform sends them](0031-shortcuts-are-named-by-meaning-and-each-platform-sends-them.md) | Accepted (2026-10-23). Widens spec §4.2's shortcuts layer and gives §8.5's Power key its port. |
+| 0032 | [Word prediction is a learning n-gram engine of our own](0032-word-prediction-is-a-learning-n-gram-engine.md) | Accepted (2026-10-24). Widens spec §6's engine (any N, Wikipedia and Tatoeba seeds, dictionary-checked words) and moves `kx-crypto` to P7. |
+| 0033 | [Typed text travels only to modules that may read it](0033-typed-text-travels-only-to-modules-that-may-read-it.md) | Accepted (2026-10-24). Gates the face and the pointer notes, and replaces ARCHITECTURE.md's password intercept example with a field service. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
