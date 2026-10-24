@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use super::manifest::{Manifest, Origin, Section};
-use super::{WordsError, fetch, io_error};
+use super::{WordsError, io_error};
 use crate::devtools::paths::join_rel;
 
 /// The credits template, compiled in.
@@ -16,20 +16,28 @@ const OPEN: char = '{';
 const CLOSE: char = '}';
 /// Starts each line of a file list.
 const BULLET: &str = "- ";
+/// Parts the items of an inline list.
+const LIST_SEP: &str = ", ";
 
-/// The credits, the authors and the licence as named files, reading the licence sections under `src`; `authors`
-/// are the usernames of the Tatoeba sentences counted.
+/// Every source file the build reads: each language's files, then the two the credits copy from.
+pub(crate) fn sources(manifest: &Manifest) -> Vec<String> {
+    let files = Files::of(manifest);
+    let mut all = files.lists;
+    let read = [files.dictionaries, files.tatoeba, files.wiki].concat();
+    all.extend(read.into_iter().map(str::to_string));
+    let c = &manifest.credits;
+    all.extend([c.wordfreq.file.clone(), c.scowl.file.clone()]);
+    all
+}
+
+/// The credits, the authors and the licence as named files, reading the licence sections under `src` (checked by
+/// `sources`); `authors` are the usernames of the Tatoeba sentences counted.
 pub(crate) fn files(
     manifest: &Manifest,
     src: &Path,
     authors: &BTreeSet<String>,
 ) -> Result<Vec<(String, Vec<u8>)>, WordsError> {
     let c = &manifest.credits;
-    fetch::verify(
-        manifest,
-        src,
-        &[c.wordfreq.file.as_str(), c.scowl.file.as_str()],
-    )?;
     let section = |s: &Section| copy(&join_rel(src.to_path_buf(), &s.file), s);
     let files = Files::of(manifest);
     let values = BTreeMap::from([
@@ -39,6 +47,8 @@ pub(crate) fn files(
         ("wordfreq_readme", url(manifest, &c.wordfreq.file)),
         ("wordfreq_licence", section(&c.wordfreq)?),
         ("wiki_files", list(manifest, &files.wiki)),
+        ("wiki_editions", files.editions.join(LIST_SEP)),
+        ("wiki_dumps", dumps(manifest, &files.wiki)),
         ("tatoeba_files", list(manifest, &files.tatoeba)),
         ("dictionary_files", list(manifest, &files.dictionaries)),
         ("scowl_notice", section(&c.scowl)?),
@@ -66,6 +76,8 @@ struct Files<'a> {
     tatoeba: Vec<&'a str>,
     /// The dictionaries' files.
     dictionaries: Vec<&'a str>,
+    /// The codes of the languages whose Wikipedia text was read.
+    editions: Vec<String>,
 }
 
 impl<'a> Files<'a> {
@@ -86,11 +98,12 @@ impl<'a> Files<'a> {
             files
                 .tatoeba
                 .extend(text.tatoeba.iter().map(|t| t.file.as_str()));
-            files.wiki.extend(
-                text.wiki
-                    .iter()
-                    .flat_map(|w| w.files.iter().map(String::as_str)),
-            );
+            let wiki = text.wiki.iter().flat_map(|w| w.files.iter());
+            let before = files.wiki.len();
+            files.wiki.extend(wiki.map(String::as_str));
+            if files.wiki.len() > before {
+                files.editions.push(iso);
+            }
         }
         files
     }
@@ -103,6 +116,14 @@ fn url(manifest: &Manifest, rel: &str) -> String {
         Some(Origin::Zip(zip)) => url(manifest, zip),
         None => rel.to_string(),
     }
+}
+
+/// The distinct base folders the Wikipedia `files` come from, which name their dumps' dates.
+fn dumps(manifest: &Manifest, files: &[&str]) -> String {
+    let mut seen = BTreeSet::new();
+    let folders = files.iter().filter_map(|f| manifest.base_folder(f));
+    let distinct: Vec<&str> = folders.filter(|d| seen.insert(*d)).collect();
+    distinct.join(LIST_SEP)
 }
 
 /// One line per distinct URL of `files`, in order.

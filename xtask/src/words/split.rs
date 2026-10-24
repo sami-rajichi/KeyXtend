@@ -1,6 +1,7 @@
 //! Splits text the way the word lists spell it: sentences end at the manifest's marks, a word is a run of letters
-//! and marks joined by apostrophes, and an apostrophe splits a word at an elision the list knows (`l'homme`), or
-//! wherever the list does not know the whole (`Muiriel's`). A chain runs only across spaces and elisions.
+//! and marks joined by apostrophes, and a word the list knows whole stays whole (`quelqu'un`). Else an apostrophe
+//! splits at an elision the list knows (`l'homme`) or anywhere (`Muiriel's`); a chain runs only across spaces and
+//! elisions.
 
 use std::borrow::Cow;
 
@@ -145,8 +146,8 @@ fn is_letter(c: char) -> bool {
     !c.is_whitespace() && (c.is_alphanumeric() || script::joins_any(c))
 }
 
-/// Splits `word` at its apostrophes into `out`, each piece with true when an elision follows it: an elision the list
-/// knows comes off first (`l'`), then a whole word the list knows stays (`aujourd'hui`), else the apostrophe goes.
+/// Splits `word` at its apostrophes into `out`, each piece with true when an elision follows it: a whole word the
+/// list knows stays (`quelqu'un`), then an elision it knows comes off (`l'`), else the apostrophe goes.
 fn split<'w>(
     word: &'w str,
     apostrophe: char,
@@ -156,10 +157,10 @@ fn split<'w>(
     let mut rest = word;
     while let Some(at) = rest.find(apostrophe) {
         let (elided, tail) = rest.split_at(at + apostrophe.len_utf8());
-        if knows(elided) {
-            out.push((elided, true));
-        } else if knows(rest) {
+        if knows(rest) {
             break;
+        } else if knows(elided) {
+            out.push((elided, true));
         } else {
             out.push((rest.get(..at).unwrap_or_default(), false));
         }

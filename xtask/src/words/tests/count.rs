@@ -132,8 +132,11 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
 fn a_repeated_sentence_counts_once_for_words_and_chains() {
     let (vocab, rules) = (vocab(), rules());
     let mut counter = Counter::new(&vocab, 5, &rules, '\'');
-    counter.add("The cat sat. The cat, sat? the cat sat.", 1, false);
-    counter.add("The cat sat.", 1, false);
+    assert!(counter.add("The cat sat. The cat, sat? the cat sat.", 1, false));
+    assert!(
+        !counter.add("The cat sat.", 1, false),
+        "a repeat counts nothing"
+    );
     let got = counter.finish();
     assert_eq!(chain(&got, &[0, 1]), 2.0, "the lower-case the is no repeat");
     assert_eq!((got.text.total, got.seen.get(1)), (6, Some(&2)));

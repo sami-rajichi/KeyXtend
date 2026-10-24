@@ -59,11 +59,23 @@ fn a_known_elision_comes_off_and_the_chain_runs_through_it() {
 }
 
 #[test]
-fn a_whole_stem_the_list_knows_stays_whole_unless_an_elision_starts_it() {
+fn a_whole_word_the_list_knows_stays_whole_before_any_elision() {
     let known = ["qu'", "aujourd'hui", "don't", "l'", "jeu", "l'jeu"];
     let got = words("qu'aujourd'hui don't l'jeu", &known);
     let all: Vec<&str> = got.iter().flat_map(|s| texts(s)).collect();
-    assert_eq!(all, ["qu'", "aujourd'hui", "don't", "l'", "jeu"]);
+    assert_eq!(all, ["qu'", "aujourd'hui", "don't", "l'jeu"]);
+}
+
+#[test]
+fn quelqu_un_stays_whole_though_its_elision_is_known() {
+    let known = ["quelqu'", "quelqu'un", "un", "jusqu'", "à"];
+    let got = words("Quelqu'un jusqu'à", &known);
+    let expected = vec![
+        w("Quelqu'un", true, true, false),
+        w("jusqu'", false, true, true),
+        w("à", false, true, true),
+    ];
+    assert_eq!(got, [expected]);
 }
 
 #[test]

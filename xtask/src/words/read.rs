@@ -13,7 +13,7 @@ use super::manifest::{LangText, Manifest, Tatoeba};
 use super::skew::Shares;
 use super::split::Splitter;
 use super::vocab::Vocab;
-use super::{WordsError, fetch, io_error, tatoeba, wiki};
+use super::{WordsError, io_error, tatoeba, wiki};
 use crate::devtools::paths::join_rel;
 
 /// Wikipedia's weight: the unit that Tatoeba's weight is counted in.
@@ -34,7 +34,7 @@ pub(crate) struct Read {
     pub(crate) skewed: Tally,
 }
 
-/// Counts `iso`'s text into `counter`, adding the authors of the Tatoeba sentences counted.
+/// Counts `iso`'s text into `counter` from the checked sources, adding the authors of the Tatoeba sentences counted.
 pub(crate) fn text(
     manifest: &Manifest,
     iso: &str,
@@ -44,8 +44,6 @@ pub(crate) fn text(
     counter: &mut Counter<'_>,
     authors: &mut BTreeSet<String>,
 ) -> Result<Read, WordsError> {
-    let files: Vec<&str> = text.files().collect();
-    fetch::verify(manifest, &paths.src, &files)?;
     let mut read = Read::default();
     if let Some(tatoeba) = &text.tatoeba {
         let t = &manifest.text;
@@ -66,7 +64,9 @@ pub(crate) fn text(
     for file in text.wiki.iter().flat_map(|w| w.files.iter()) {
         let cap = text.wiki.as_ref().map_or(0, |w| w.max_bytes);
         let left = cap.saturating_sub(read.wiki_bytes);
-        let mut each = |doc: &str| counter.add(doc, WIKI_WEIGHT, false);
+        let mut each = |doc: &str| {
+            counter.add(doc, WIKI_WEIGHT, false);
+        };
         read.wiki_bytes += wiki::read(source(&paths.src, file)?, left, &mut each)
             .map_err(|why| bad(file, &why))?;
     }
@@ -95,8 +95,8 @@ fn tatoeba_counted(
             failed = failed.take().or_else(|| writeln!(held, "{}", e.text).err());
             return;
         }
-        counter.add(e.text, t.tatoeba_weight, true);
-        if e.user != t.null {
+        let added = counter.add(e.text, t.tatoeba_weight, true);
+        if added && e.user != t.null {
             authors.insert(e.user.to_string());
         }
     };

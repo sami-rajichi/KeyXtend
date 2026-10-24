@@ -102,10 +102,11 @@ fn word_seen(seen: &[u64], of_cand: &[Option<u32>]) -> Vec<u64> {
     words
 }
 
-/// The chains on the list's words, sorted by length then words, those holding a word the list dropped left out.
+/// The chains on the list's words, sorted by length then words, those holding a word the list dropped left out;
+/// chains sharing words add up in the order of their candidates, so a build always sums alike.
 fn on_words(table: HashMap<ChainKey, f32>, of_cand: &[Option<u32>]) -> Vec<(ChainKey, f64)> {
     let word = |cand: u32| of_cand.get(usize::try_from(cand).ok()?).copied().flatten();
-    let mut chains: Vec<(ChainKey, f64)> = Vec::with_capacity(table.len());
+    let mut chains: Vec<(ChainKey, ChainKey, f64)> = Vec::with_capacity(table.len());
     for (key, count) in table {
         let mut out = [NONE; KEY_LEN];
         let mapped = key
@@ -117,18 +118,18 @@ fn on_words(table: HashMap<ChainKey, f32>, of_cand: &[Option<u32>]) -> Vec<(Chai
             ok && *slot != NONE
         });
         if whole {
-            chains.push((out, f64::from(count)));
+            chains.push((out, key, f64::from(count)));
         }
     }
-    chains.sort_unstable_by_key(|(key, _)| (len(key), *key));
+    chains.sort_unstable_by_key(|(out, key, _)| (len(out), *out, *key));
     chains.dedup_by(|b, a| {
         let same = a.0 == b.0;
         if same {
-            a.1 += b.1;
+            a.2 += b.2;
         }
         same
     });
-    chains
+    chains.into_iter().map(|(out, _, n)| (out, n)).collect()
 }
 
 /// The contexts of the sorted `chains`, each with its best `keep` followers scored against how often the context

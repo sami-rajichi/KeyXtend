@@ -9,11 +9,12 @@ use kx_mod_predict::pack::layout::{
     record_len, u8_at, usize_at,
 };
 
-use super::super::build::write_pack;
+use super::super::WordsError;
 use super::super::cands::Facts;
 use super::super::chains::{Context, Picked, pick, top};
 use super::super::count::{ChainKey, KEY_LEN, NONE};
 use super::super::list::{TextFacts, Word, WordList};
+use super::super::out::write_pack;
 
 /// The chain key of places `ids`.
 fn key(ids: &[u32]) -> ChainKey {
@@ -138,6 +139,33 @@ fn the_written_pack_reads_back_its_followers_and_its_chain_sections_fit_the_budg
         chain_bytes(&bytes)
     );
     assert_eq!(chain_bytes(&bytes), picked.bytes);
+}
+
+#[test]
+fn a_chain_on_a_place_past_the_list_is_refused_not_shortened() {
+    let (chains, seen) = sample();
+    let of_cand = [Some(0), Some(1), Some(2), Some(7)];
+    let picked = pick(chains, &seen, &of_cand, 3, usize::MAX, 3);
+    let list = WordList {
+        words: vec![
+            Word {
+                spelling: "the".into(),
+                freq: 100,
+                capital: false,
+            };
+            4
+        ],
+        read: 4,
+        coverage: None,
+        facts: Facts::default(),
+        text_facts: TextFacts::default(),
+        of_cand: of_cand.to_vec(),
+        text: true,
+        covers: 1.0,
+        cut: (0, usize::MAX),
+    };
+    let refused = write_pack("en", &list, &picked, 3);
+    assert!(matches!(refused, Err(WordsError::Pack(why)) if why.contains("place 7")));
 }
 
 /// The bytes of a pack's chain sections, from its section table.

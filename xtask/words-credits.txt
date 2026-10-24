@@ -17,14 +17,13 @@ wordfreq's licence section, copied word for word from its README, {wordfreq_read
 
 == Word chains: Wikipedia ==
 
-Some word chains were counted in the text of Wikipedia, the free encyclopedia (https://www.wikipedia.org), from
-these files of the Wikimedia search-index dump:
+Some word chains were counted in the text of Wikipedia, the free encyclopedia (https://www.wikipedia.org): its
+language editions {wiki_editions}, from the Wikimedia search-index dump of {wiki_dumps}, in these files:
 {wiki_files}
 
 Wikipedia's text is shared under the Creative Commons Attribution-ShareAlike 4.0 licence,
 https://creativecommons.org/licenses/by-sa/4.0/. Each article's authors are listed in its page history, for
-example https://en.wikipedia.org/w/index.php?title=Keyboard&action=history; the language edition is the start of
-each file's name above.
+example https://en.wikipedia.org/w/index.php?title=Keyboard&action=history.
 
 
 == Word chains: Tatoeba ==

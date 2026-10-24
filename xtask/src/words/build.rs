@@ -1,10 +1,9 @@
-//! `words build`: for each language, its Tatoeba and Wikipedia text is counted, the list is finished with those
-//! counts, the chains are picked and the pack is written; then the credits, and every file once the download fits.
+//! `words build`: once every source checks out, each language's text is counted, its list finished and its chains
+//! picked into a pack; then the credits, all written once the download fits, and packs a past run left are removed.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use kx_mod_predict::{Flags, PackWriter};
 use kx_module_api::ports::pack_file;
 
 use super::cands::Candidates;
@@ -15,7 +14,7 @@ use super::manifest::{LangText, Manifest};
 use super::read::{self, Read};
 use super::report::{report, tally_line};
 use super::vocab::Vocab;
-use super::{WordsError, candidates, credits, download, io_error};
+use super::{WordsError, candidates, credits, download, fetch, out};
 use crate::devtools::paths::BYTES_PER_KB;
 
 /// Where `build` reads and writes.
@@ -29,38 +28,40 @@ pub(crate) struct Paths {
     pub(crate) held: PathBuf,
 }
 
-/// One file to write: its name, its bytes and their deflated size.
-type File = (String, Vec<u8>, usize);
-
-/// Builds every language's pack and the credits, saying one line per fact, then writes them into `paths.out` once
-/// their deflated total fits the download budget.
+/// Checks every source, builds every language's pack and the credits, saying one line per fact, and writes them
+/// into `paths.out` once their deflated total fits the download budget; the folder is then measured again.
 pub(crate) fn run(
     manifest: &Manifest,
     paths: &Paths,
     say: &mut dyn FnMut(&str),
 ) -> Result<(), WordsError> {
+    let sources = credits::sources(manifest);
+    let rels: Vec<&str> = sources.iter().map(String::as_str).collect();
+    fetch::verify(manifest, &paths.src, &rels)?;
     let level = manifest.packs.level;
     let mut authors = BTreeSet::new();
-    let mut files: Vec<File> = Vec::new();
+    let (mut files, mut sizes) = (Vec::new(), Vec::new());
     for iso in manifest.isos() {
         let (pack, deflated, lines) = lang(manifest, &iso, paths, &mut authors)?;
         for line in &lines {
             say(line);
         }
         let name = pack_file(&iso).ok_or_else(|| WordsError::Lang(iso.clone()))?;
-        files.push((name, pack, deflated));
+        sizes.push((pack.len(), deflated));
+        files.push((name, pack));
     }
-    for (name, bytes) in credits::files(manifest, &paths.src, &authors)? {
-        let deflated = download::deflated(&bytes, level)?;
-        files.push((name, bytes, deflated));
+    let credits = credits::files(manifest, &paths.src, &authors)?;
+    for (_, bytes) in &credits {
+        sizes.push((bytes.len(), download::deflated(bytes, level)?));
     }
-    let sizes: Vec<(usize, usize)> = files.iter().map(|f| (f.1.len(), f.2)).collect();
-    say(&download::check(&sizes, &manifest.packs)?);
-    std::fs::create_dir_all(&paths.out).map_err(|e| io_error(&paths.out, &e))?;
-    for (name, bytes, _) in files {
-        let path = paths.out.join(name);
-        std::fs::write(&path, bytes).map_err(|e| io_error(&path, &e))?;
-    }
+    download::check(&sizes, &manifest.packs)?;
+    let named: Vec<String> = credits.iter().map(|c| c.0.clone()).collect();
+    files.extend(credits);
+    out::write(&paths.out, &files, say)?;
+    say(&download::check(
+        &out::measure(&paths.out, &named, level)?,
+        &manifest.packs,
+    )?);
     Ok(())
 }
 
@@ -81,7 +82,7 @@ fn lang(
         ),
         Some(text) => counted(manifest, iso, text, cands, paths, authors)?,
     };
-    let pack = write_pack(iso, &list, &picked, manifest.text.followers)?;
+    let pack = out::write_pack(iso, &list, &picked, manifest.text.followers)?;
     let deflated = download::deflated(&pack, manifest.packs.level)?;
     let mut lines = report(iso, &list);
     lines.extend(text);
@@ -118,10 +119,11 @@ fn counted(
     let found = counter.finish();
     let mut lines = text_lines(iso, &read, &found);
     let list = list::finish(cands, Some(&found.text), rules)?;
-    let budget = usize::try_from(text.chain_budget_kb * BYTES_PER_KB).unwrap_or(usize::MAX);
+    let budget = text.chain_budget_kb.saturating_mul(BYTES_PER_KB);
+    let budget = usize::try_from(budget).unwrap_or(usize::MAX);
     let (table, seen) = (found.chains.table, &found.seen);
     let picked = chains::pick(table, seen, &list.of_cand, t.followers, budget, t.max_chain);
-    lines.push(top_line(iso, &list, &picked, manifest));
+    lines.push(top_line(iso, &list, &picked, manifest)?);
     Ok((list, picked, lines))
 }
 
@@ -149,52 +151,21 @@ fn text_lines(iso: &str, read: &Read, counted: &Counted) -> Vec<String> {
 }
 
 /// The line naming the most seen one-word contexts of `iso` with their first followers.
-fn top_line(iso: &str, list: &WordList, picked: &Picked, manifest: &Manifest) -> String {
-    let t = &manifest.text;
-    let spelling = |w: u32| {
-        let word = usize::try_from(w).ok().and_then(|w| list.words.get(w));
-        word.map_or("", |w| w.spelling.as_str())
-    };
-    let shown: Vec<String> = chains::top(picked, t.report_contexts, t.report_followers)
-        .into_iter()
-        .map(|(context, next)| {
-            let next: Vec<&str> = next.into_iter().map(spelling).collect();
-            format!("{} → {}", spelling(context), next.join(", "))
-        })
-        .collect();
-    format!("top {iso}: {}", shown.join("; "))
-}
-
-/// The pack of `iso`'s `list` and `picked` chains, keeping `followers` per context.
-pub(crate) fn write_pack(
+fn top_line(
     iso: &str,
     list: &WordList,
     picked: &Picked,
-    followers: u8,
-) -> Result<Vec<u8>, WordsError> {
-    let flags = Flags {
-        checked: list.coverage.is_some(),
-        chains: !picked.contexts.is_empty(),
-    };
-    let refused = |e: kx_mod_predict::WriteError| WordsError::Pack(format!("{iso}: {e}"));
-    let mut writer = PackWriter::new(iso, flags, followers).map_err(refused)?;
-    for word in &list.words {
-        writer
-            .add_word(&word.spelling, word.freq, word.capital)
-            .map_err(refused)?;
+    manifest: &Manifest,
+) -> Result<String, WordsError> {
+    let t = &manifest.text;
+    let spelling = |w: u32| out::spelling(iso, list, w);
+    let mut shown = Vec::new();
+    for (context, next) in chains::top(picked, t.report_contexts, t.report_followers) {
+        let next = next
+            .into_iter()
+            .map(spelling)
+            .collect::<Result<Vec<_>, _>>()?;
+        shown.push(format!("{} → {}", spelling(context)?, next.join(", ")));
     }
-    let spelling = |w: u32| {
-        usize::try_from(w)
-            .ok()
-            .and_then(|w| list.words.get(w))
-            .map(|w| w.spelling.as_str())
-    };
-    for context in &picked.contexts {
-        let words: Vec<&str> = context.words.iter().filter_map(|&w| spelling(w)).collect();
-        for &(next, score) in &context.followers {
-            let next = spelling(next).unwrap_or_default();
-            writer.add_chain(&words, next, score).map_err(refused)?;
-        }
-    }
-    writer.finish().map_err(refused)
+    Ok(format!("top {iso}: {}", shown.join("; ")))
 }

@@ -2,6 +2,7 @@
 //! text, and the credits.
 
 mod check;
+mod origin;
 mod text;
 
 use std::collections::BTreeMap;
@@ -10,10 +11,10 @@ use kx_mod_predict::fold;
 use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
 
+pub(crate) use self::origin::Origin;
 pub(crate) use self::text::{Credits, LangText, PER_MILLE, Packs, Section, Tatoeba, TextRules};
 
 use super::WordsError;
-use crate::devtools::paths::SEP;
 
 /// The placeholder for the language code in the small lists' path.
 const ISO_SLOT: &str = "{iso}";
@@ -139,15 +140,6 @@ pub(crate) struct Source {
     pub(crate) size: u64,
 }
 
-/// Where a source comes from.
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Origin<'a> {
-    /// Downloaded from this URL.
-    Url(String),
-    /// Unzipped from this source.
-    Zip(&'a str),
-}
-
 /// A language's dictionary files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DictFiles<'a> {
@@ -228,18 +220,6 @@ impl Manifest {
             words_budget_kb: self.small.words_budget_kb,
             text: None,
         })
-    }
-
-    /// Where the source `rel` comes from; `None` for a path that is not a source.
-    pub(crate) fn origin(&self, rel: &str) -> Option<Origin<'_>> {
-        let source = self.sources.get(rel)?;
-        if let Some(zip) = &source.zip {
-            return Some(Origin::Zip(zip));
-        }
-        let base = self.bases.get(source.base.as_ref()?)?;
-        let name = rel.rsplit(SEP).next()?;
-        let dir = source.dir.as_deref().unwrap_or_default();
-        Some(Origin::Url(format!("{base}{dir}{name}")))
     }
 
     /// Refuses a non-https base, and a source with a bad path, hash or origin.

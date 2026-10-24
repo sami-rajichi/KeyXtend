@@ -183,7 +183,7 @@ fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
         ("don't", 0, &[("don't", 5_000)]),
         ("can't", 0, &[("can't", 10_000)]),
         ("it's", 0, &[("it's", 1)]),
-        ("t", 5_000, &[]),
+        ("t", 1_000, &[("t", 5_000)]),
         ("can", 20_000, &[]),
         ("it", 9_000, &[]),
     ];
@@ -193,7 +193,7 @@ fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
     assert_eq!(
         (dont, cant),
         (360, 330),
-        "5000 and 10000 of t's 5000 + 15000 uses"
+        "5000 and 10000 of t's 5000 sightings and its 15000 joined"
     );
     let find = |s: &str| list.words.iter().find(|w| w.spelling == s);
     assert_eq!(find("don't"), Some(&word("don't", dont, false)));
@@ -210,6 +210,10 @@ fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
         "{stems:?}: it's keeps its own"
     );
     assert_eq!(list.text_facts.pieces.first, ["don 0/5000"]);
+    assert!(
+        list.covers < 1.0,
+        "the stems' shares are no wordfreq tokens'"
+    );
 }
 
 #[test]

@@ -72,8 +72,8 @@ impl<'a> Judge<'a> {
     }
 
     /// The bucket of the stem `spelling` of `bucket`, `None` when the text never shows it. A wordfreq token keeps its
-    /// own; with a right piece (`hui` of a joined `aujourd'hui`) it takes its share of the piece's wordfreq share, as
-    /// wordfreq split it there; an elision takes its text share.
+    /// own; with a right piece (`s` of `vent's`) it takes its share of every sighting of the piece, alone or glued
+    /// to any word, as wordfreq counted them; an elision takes its text share.
     pub(crate) fn stem_bucket(&self, spelling: &str, bucket: u32, apostrophe: char) -> Option<u32> {
         let seen = self.text.count(spelling);
         if seen == 0 || self.tokens.contains_key(&spelling.to_lowercase()) {
@@ -88,7 +88,7 @@ impl<'a> Judge<'a> {
             return bucket_of(seen, self.text.total);
         };
         let ending = self.ending.get(&right).copied().unwrap_or_default();
-        let uses = (self.text.alone(&right) + ending).max(seen);
+        let uses = (self.text.count(&right) + ending).max(seen);
         bucket_of_share(share(piece) * float(seen) / float(uses))
     }
 }

@@ -18,6 +18,7 @@ mod judge;
 mod list;
 mod manifest;
 mod merge;
+mod out;
 mod read;
 mod report;
 mod script;

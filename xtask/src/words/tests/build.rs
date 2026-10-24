@@ -1,5 +1,5 @@
 //! `words build` end to end on tiny sources in a temp folder: the packs open with `kx_mod_predict`'s reader, the
-//! chains follow the text, held-back sentences stay out, and the credits name every source.
+//! chains follow the text, and held-back sentences stay out.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -7,7 +7,6 @@ use std::path::Path;
 use kx_mod_predict::Pack;
 use sha2::{Digest, Sha256};
 
-use super::super::WordsError;
 use super::super::build::{self, Paths};
 use super::super::fixture::text::{tatoeba, wiki};
 use super::super::fixture::{self, AFF, dic};
@@ -19,7 +18,7 @@ use crate::test_support::TempDir;
 /// Bucket of the fixture's most frequent word; the others follow one by one.
 const TOP: usize = 200;
 /// A skew ratio no word of the fixture's Tatoeba reaches.
-const NO_SKEW: &str = "1000.0";
+pub(super) const NO_SKEW: &str = "1000.0";
 
 /// A wordfreq list holding `words` from bucket `TOP` on.
 fn list(words: &[&str]) -> Vec<u8> {
@@ -60,7 +59,7 @@ fn ids() -> (Vec<String>, String) {
 
 /// The fixture manifest with real French files, French text, a German small list and credit sections, written
 /// under `src`, Tatoeba's words scaled past `skew` times their wordfreq share.
-fn manifest(src: &Path, skew: &str) -> Manifest {
+pub(super) fn manifest(src: &Path, skew: &str) -> Manifest {
     let lines = sources(src, &files());
     let text = fixture::manifest_text("")
         .lines()
@@ -94,9 +93,9 @@ fn files() -> Vec<(&'static str, Vec<u8>)> {
     let sentences = [
         (n[0].as_str(), "Le chat dort.", "ann"),
         (n[1].as_str(), "L'homme est ici.", "bob"),
-        (n[2].as_str(), "Le chat est ici.", "ann"),
+        (n[2].as_str(), "Le chat est ici.", "-"),
         (held_id.as_str(), "Le chat dort ici.", "cy"),
-        (n[3].as_str(), "Le chat dort.", "-"),
+        (n[3].as_str(), "Le chat dort.", "dee"),
     ];
     vec![
         ("w/large_fr.gz", list(&words)),
@@ -123,7 +122,7 @@ fn files() -> Vec<(&'static str, Vec<u8>)> {
 }
 
 /// The fixture's folders under `dir`.
-fn paths(dir: &TempDir) -> Paths {
+pub(super) fn paths(dir: &TempDir) -> Paths {
     let at = |name: &str| dir.path().join(name);
     Paths {
         src: at("src"),
@@ -143,7 +142,7 @@ fn built_with(skew: &str) -> (TempDir, Vec<String>) {
 }
 
 /// Builds the fixture with no Tatoeba word scaled.
-fn built() -> (TempDir, Vec<String>) {
+pub(super) fn built() -> (TempDir, Vec<String>) {
     built_with(NO_SKEW)
 }
 
@@ -209,17 +208,6 @@ fn tatoebas_overused_words_end_fewer_chains_and_wikipedia_is_not_scaled() {
 }
 
 #[test]
-fn a_build_over_the_download_budget_writes_nothing() {
-    let dir = TempDir::new("words-build");
-    let paths = paths(&dir);
-    let mut manifest = manifest(&paths.src, NO_SKEW);
-    manifest.packs.download_kb = 1;
-    let refused = build::run(&manifest, &paths, &mut |_| {});
-    assert!(matches!(refused, Err(WordsError::Pack(why)) if why.ends_with("the build is refused")));
-    assert!(!paths.out.exists());
-}
-
-#[test]
 fn held_back_sentences_go_to_their_file_and_are_never_counted() {
     let (dir, _) = built();
     let held = std::fs::read_to_string(dir.path().join("held").join("fr.txt")).unwrap();
@@ -244,42 +232,4 @@ fn a_language_without_text_gets_a_pack_without_chains() {
             .any(|l| l.starts_with("pack de: 2 words, 0 contexts")),
         "{said:?}"
     );
-}
-
-#[test]
-fn the_credits_copy_the_licence_sections_and_name_every_source() {
-    let (dir, _) = built();
-    let out = dir.path().join("out");
-    let read = |name: &str| std::fs::read_to_string(out.join(name)).unwrap();
-    let credits = read("CREDITS.txt");
-    for line in [
-        "## License",
-        "Shared under CC BY-SA.",
-        "Copyright 2000 by Kevin.",
-    ] {
-        assert!(credits.contains(line), "{line} missing");
-    }
-    assert!(!credits.contains("## Next") && !credits.contains("Build Date"));
-    for rel in [
-        "w/README.md",
-        "w/large_fr.gz",
-        "w/small_de.gz",
-        "t/fra.tsv.bz2",
-        "k/frwiki.json.bz2",
-        "d/fr.aff",
-        "d/fr.dic",
-    ] {
-        let name = rel.rsplit('/').next().unwrap();
-        assert!(
-            credits.contains(&format!("https://example.invalid/data/{name}")),
-            "{rel} missing"
-        );
-    }
-    assert!(!credits.contains('{'), "every placeholder is filled");
-    assert_eq!(
-        read("AUTHORS.txt"),
-        "ann\nbob\n",
-        "cy is held back, - is no one"
-    );
-    assert_eq!(read("LICENSE.txt"), "Shared alike.\nSee the credits.\n");
 }

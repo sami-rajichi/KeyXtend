@@ -188,19 +188,22 @@ impl<'a> Counter<'a> {
     }
 
     /// Counts every sentence of `text` seen for the first time, each sighting `weight` times, its chains scaled by
-    /// the candidates' factors when `scaled`.
-    pub(crate) fn add(&mut self, text: &str, weight: u32, scaled: bool) {
+    /// the candidates' factors when `scaled`; true when any word counted.
+    pub(crate) fn add(&mut self, text: &str, weight: u32, scaled: bool) -> bool {
         let text = self.split.normalise(text);
         let (split, vocab) = (self.split, self.vocab);
         let knows = |t: &str| vocab.knows(t);
         let mut run: Vec<u32> = Vec::with_capacity(KEY_LEN);
+        let mut counted = false;
         for sentence in split.sentences(&text) {
             if self.repeats.first(sentence) {
                 split.words(sentence, &knows, &mut |token| {
+                    counted = true;
                     self.token(token, weight, scaled, &mut run);
                 });
             }
         }
+        counted
     }
 
     /// Counts one token and the chains it ends; `run` holds the candidates of the chain so far, and a sentence's first

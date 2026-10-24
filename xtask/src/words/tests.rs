@@ -8,6 +8,7 @@ mod curl;
 mod fetch;
 mod manifest;
 mod merge;
+mod output;
 mod script;
 mod split;
 mod text;

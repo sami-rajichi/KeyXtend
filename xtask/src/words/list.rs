@@ -2,7 +2,7 @@
 //! words, and the rarest go until the pack without its chains fits the words budget.
 
 use std::cmp::Reverse;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::cands::{Cand, Candidates, Facts, Fate, Tally};
 use super::judge::{self, Judge};
@@ -100,7 +100,6 @@ pub(crate) fn finish(
     let fits = fit::fitting(&cands.iso, &all, cands.words_budget)?;
     let cut = kept.len() - fits;
     kept.truncate(fits);
-    let covered: f64 = kept.iter().map(|k| share(k.bucket)).sum();
     let gone = |w: &Option<u32>| {
         w.and_then(|w| usize::try_from(w).ok())
             .is_some_and(|w| w >= fits)
@@ -109,6 +108,7 @@ pub(crate) fn finish(
         .iter_mut()
         .filter(|w| gone(w))
         .for_each(|w| *w = None);
+    let covers = covered(&cands, &of_cand) / cands.mass.max(f64::MIN_POSITIVE);
     Ok(WordList {
         words: kept.iter().map(word).collect(),
         read: cands.read,
@@ -117,9 +117,20 @@ pub(crate) fn finish(
         text_facts: facts,
         of_cand,
         text: text.is_some(),
-        covers: covered / cands.mass.max(f64::MIN_POSITIVE),
+        covers,
         cut: (cut, cands.words_budget),
     })
+}
+
+/// The wordfreq share of the tokens whose candidates made the list, each token once, so it never passes the list's.
+fn covered(cands: &Candidates, of_cand: &[Option<u32>]) -> f64 {
+    let mut seen = HashSet::new();
+    let listed = (cands.cands.iter().zip(of_cand)).filter(|(_, w)| w.is_some());
+    let tokens = listed.filter_map(|(c, _)| Some((c.word.as_str(), *cands.tokens.get(&c.word)?)));
+    tokens
+        .filter(|(t, _)| seen.insert(*t))
+        .map(|(_, b)| share(b))
+        .sum()
 }
 
 /// Candidate `i` with its spelling and bucket, or `None` when the text shows a piece or never shows its stem.
