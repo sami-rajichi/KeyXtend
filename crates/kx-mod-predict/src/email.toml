@@ -1,0 +1,14 @@
+# The characters an email token holds besides letters, digits and marks, after the WHATWG HTML standard's "valid
+# e-mail address" (§4.10.5.1.5): a local part, the at sign, then domain labels parted by dots; and the `@@` that lists
+# known emails. `email.rs` reads it.
+
+# The one sign between the local part and the domain.
+at = "@"
+# How many at signs typed in a row list every known email (the spec's `@@`).
+at_run = 2
+# The local part's marks: the dot and the commonest `atext` marks (first.last, first_last, first-last, name+tag).
+local = [".", "_", "-", "+"]
+# The mark between a domain's labels.
+label = "."
+# The marks inside a label, never at its start or end.
+inner = ["-"]

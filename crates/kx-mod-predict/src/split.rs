@@ -2,6 +2,9 @@
 //! run of letters, digits and marks joined by apostrophes, and an apostrophe keeps a known whole word (`quelqu'un`),
 //! else splits at a known elision (`l'homme`) or anywhere (`Muiriel's`).
 
+use std::borrow::Cow;
+
+use crate::fold::is_apostrophe;
 use crate::script;
 
 #[cfg(feature = "build")]
@@ -9,6 +12,17 @@ mod text;
 
 #[cfg(feature = "build")]
 pub use text::{Splitter, Token};
+
+/// `text` with every apostrophe form made `apostrophe`; borrowed when it holds none.
+#[must_use]
+pub fn normalise(text: &str, apostrophe: char) -> Cow<'_, str> {
+    let other = |c: char| c != apostrophe && is_apostrophe(c);
+    if !text.chars().any(other) {
+        return Cow::Borrowed(text);
+    }
+    let swap = |c: char| if other(c) { apostrophe } else { c };
+    Cow::Owned(text.chars().map(swap).collect())
+}
 
 /// True when `c` belongs inside a word: a letter, a digit, or a mark that joins any script.
 #[must_use]
@@ -68,5 +82,5 @@ pub fn split_word<'w>(
     out.push((rest, false));
 }
 
-#[cfg(all(test, feature = "build"))]
+#[cfg(test)]
 mod tests;

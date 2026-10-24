@@ -3,8 +3,7 @@
 
 use std::borrow::Cow;
 
-use super::{spans, split_word};
-use crate::fold::is_apostrophe;
+use super::{normalise, spans, split_word};
 
 /// One word of a sentence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,12 +52,7 @@ impl Splitter<'_> {
     /// `text` with every apostrophe form made the packs' own; borrowed when it holds none.
     #[must_use]
     pub fn normalise<'t>(&self, text: &'t str) -> Cow<'t, str> {
-        let other = |c: char| c != self.apostrophe && is_apostrophe(c);
-        if !text.chars().any(other) {
-            return Cow::Borrowed(text);
-        }
-        let swap = |c: char| if other(c) { self.apostrophe } else { c };
-        Cow::Owned(text.chars().map(swap).collect())
+        normalise(text, self.apostrophe)
     }
 
     /// The sentences of a normalised `text`: an end mark ends one only before a space or the text's end, so `U.S.`

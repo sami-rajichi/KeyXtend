@@ -1,5 +1,7 @@
 //! The tokenizer: sentences, words, elisions, whole stems, and what parts each word from the next.
 
+#![cfg(feature = "build")]
+
 use super::{Splitter, Token};
 
 /// The project's sentence ends.

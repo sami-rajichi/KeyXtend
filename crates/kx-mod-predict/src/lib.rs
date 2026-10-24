@@ -4,10 +4,13 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod email;
 pub mod fold;
 pub mod pack;
+pub mod score;
 pub mod script;
 pub mod split;
+pub mod track;
 
 pub use fold::fold;
 pub use pack::{Flags, Pack, PackFormatError, WordId};
