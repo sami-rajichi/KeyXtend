@@ -1,0 +1,294 @@
+Credits for the word packs in this folder
+
+KeyXtend's word packs (<language code>.kxw) were built by `cargo xtask words build` from the sources below. They are
+adaptations of these works and are shared under CC BY-SA 4.0, as LICENSE.txt says.
+
+
+== Word lists and frequencies: wordfreq ==
+
+The words and their frequencies come from wordfreq by Robyn Speer (https://github.com/rspeer/wordfreq), from these
+files:
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/large_ar.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/large_en.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/large_fr.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_bg.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_bn.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ca.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_cs.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_da.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_de.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_el.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_es.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_fa.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_fi.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_fil.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_he.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_hi.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_hu.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_id.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_is.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_it.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ja.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ko.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_lt.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_lv.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_mk.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ms.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_nb.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_nl.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_pl.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_pt.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ro.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ru.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_sh.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_sk.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_sl.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_sv.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ta.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_tr.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_uk.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_ur.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_vi.msgpack.gz
+- https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/wordfreq/data/small_zh.msgpack.gz
+
+wordfreq's licence section, copied word for word from its README, https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/README.md:
+
+## License
+
+`wordfreq` is freely redistributable under the Apache license (see
+`LICENSE.txt`), and it includes data files that may be
+redistributed under a Creative Commons Attribution-ShareAlike 4.0
+license (<https://creativecommons.org/licenses/by-sa/4.0/>).
+
+`wordfreq` contains data extracted from Google Books Ngrams
+(<http://books.google.com/ngrams>) and Google Books Syntactic Ngrams
+(<http://commondatastorage.googleapis.com/books/syntactic-ngrams/index.html>).
+The terms of use of this data are:
+
+    Ngram Viewer graphs and data may be freely used for any purpose, although
+    acknowledgement of Google Books Ngram Viewer as the source, and inclusion
+    of a link to http://books.google.com/ngrams, would be appreciated.
+
+`wordfreq` also contains data derived from the following Creative Commons-licensed
+sources:
+
+- The Leeds Internet Corpus, from the University of Leeds Centre for Translation
+  Studies (<http://corpus.leeds.ac.uk/list.html>)
+
+- Wikipedia, the free encyclopedia (<http://www.wikipedia.org>)
+
+- ParaCrawl, a multilingual Web crawl (<https://paracrawl.eu>)
+
+It contains data from OPUS OpenSubtitles 2018
+(<http://opus.nlpl.eu/OpenSubtitles.php>), whose data originates from the
+OpenSubtitles project (<http://www.opensubtitles.org/>) and may be used with
+attribution to OpenSubtitles.
+
+It contains data from various SUBTLEX word lists: SUBTLEX-US, SUBTLEX-UK,
+SUBTLEX-CH, SUBTLEX-DE, and SUBTLEX-NL, created by Marc Brysbaert et al.
+(see citations below) and available at
+<http://crr.ugent.be/programs-data/subtitle-frequencies>.
+
+I (Robyn Speer) have obtained permission by e-mail from Marc Brysbaert to
+distribute these wordlists in wordfreq, to be used for any purpose, not just
+for academic use, under these conditions:
+
+- Wordfreq and code derived from it must credit the SUBTLEX authors.
+- It must remain clear that SUBTLEX is freely available data.
+
+These terms are similar to the Creative Commons Attribution-ShareAlike license.
+
+Some additional data was collected by a custom application that watches the
+streaming Twitter API, in accordance with Twitter's Developer Agreement &
+Policy. This software gives statistics about words that are commonly used on
+Twitter; it does not display or republish any Twitter content.
+
+As that licence asks, the SUBTLEX authors are credited here, with the other works wordfreq is built on, copied word
+for word from the same README:
+
+## Citations to work that wordfreq is built on
+
+- Bojar, O., Chatterjee, R., Federmann, C., Haddow, B., Huck, M., Hokamp, C.,
+  Koehn, P., Logacheva, V., Monz, C., Negri, M., Post, M., Scarton, C.,
+  Specia, L., & Turchi, M. (2015). Findings of the 2015 Workshop on Statistical
+  Machine Translation.
+  <http://www.statmt.org/wmt15/results.html>
+
+- Brysbaert, M. & New, B. (2009). Moving beyond Kucera and Francis: A Critical
+  Evaluation of Current Word Frequency Norms and the Introduction of a New and
+  Improved Word Frequency Measure for American English. Behavior Research
+  Methods, 41 (4), 977-990.
+  <http://sites.google.com/site/borisnew/pub/BrysbaertNew2009.pdf>
+
+- Brysbaert, M., Buchmeier, M., Conrad, M., Jacobs, A.M., Bölte, J., & Böhl, A.
+  (2011). The word frequency effect: A review of recent developments and
+  implications for the choice of frequency estimates in German. Experimental
+  Psychology, 58, 412-424.
+
+- Cai, Q., & Brysbaert, M. (2010). SUBTLEX-CH: Chinese word and character
+  frequencies based on film subtitles. PLoS One, 5(6), e10729.
+  <http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0010729>
+
+- Davis, M. (2012). Unicode text segmentation. Unicode Standard Annex, 29.
+  <http://unicode.org/reports/tr29/>
+
+- Halácsy, P., Kornai, A., Németh, L., Rung, A., Szakadát, I., & Trón, V.
+  (2004). Creating open language resources for Hungarian. In Proceedings of the
+  4th international conference on Language Resources and Evaluation (LREC2004).
+  <http://mokk.bme.hu/resources/webcorpus/>
+
+- Keuleers, E., Brysbaert, M. & New, B. (2010). SUBTLEX-NL: A new frequency
+  measure for Dutch words based on film subtitles. Behavior Research Methods,
+  42(3), 643-650.
+  <http://crr.ugent.be/papers/SUBTLEX-NL_BRM.pdf>
+
+- Kudo, T. (2005). Mecab: Yet another part-of-speech and morphological
+  analyzer.
+  <http://mecab.sourceforge.net/>
+
+- Lin, Y., Michel, J.-B., Aiden, E. L., Orwant, J., Brockman, W., and Petrov,
+  S. (2012). Syntactic annotations for the Google Books Ngram Corpus.
+  Proceedings of the ACL 2012 system demonstrations, 169-174.
+  <http://aclweb.org/anthology/P12-3029>
+
+- Lison, P. and Tiedemann, J. (2016). OpenSubtitles2016: Extracting Large
+  Parallel Corpora from Movie and TV Subtitles. In Proceedings of the 10th
+  International Conference on Language Resources and Evaluation (LREC 2016).
+  <http://stp.lingfil.uu.se/~joerg/paper/opensubs2016.pdf>
+
+- Ortiz Suárez, P. J., Sagot, B., and Romary, L. (2019). Asynchronous pipelines
+  for processing huge corpora on medium to low resource infrastructures. In
+  Proceedings of the Workshop on Challenges in the Management of Large Corpora
+  (CMLC-7) 2019.
+  <https://oscar-corpus.com/publication/2019/clmc7/asynchronous/>
+
+- ParaCrawl (2018). Provision of Web-Scale Parallel Corpora for Official
+  European Languages. <https://paracrawl.eu/>
+
+- van Heuven, W. J., Mandera, P., Keuleers, E., & Brysbaert, M. (2014).
+  SUBTLEX-UK: A new and improved word frequency database for British English.
+  The Quarterly Journal of Experimental Psychology, 67(6), 1176-1190.
+  <http://www.tandfonline.com/doi/pdf/10.1080/17470218.2013.850521>
+
+
+== Word chains: Wikipedia ==
+
+Some word chains were counted in the text of Wikipedia, the free encyclopedia (https://www.wikipedia.org): its
+language editions ar, en, fr, from the Wikimedia search-index dump of 20261018, in these files:
+- https://dumps.wikimedia.org/other/cirrus_search_index/20261018/index_name=arwiki_content/arwiki_content-20261018-00000.json.bz2
+- https://dumps.wikimedia.org/other/cirrus_search_index/20261018/index_name=arwiki_content/arwiki_content-20261018-00001.json.bz2
+- https://dumps.wikimedia.org/other/cirrus_search_index/20261018/index_name=arwiki_content/arwiki_content-20261018-00002.json.bz2
+- https://dumps.wikimedia.org/other/cirrus_search_index/20261018/index_name=enwiki_content/enwiki_content-20261018-00000.json.bz2
+- https://dumps.wikimedia.org/other/cirrus_search_index/20261018/index_name=frwiki_content/frwiki_content-20261018-00000.json.bz2
+
+Wikipedia's text is shared under the Creative Commons Attribution-ShareAlike 4.0 licence,
+https://creativecommons.org/licenses/by-sa/4.0/. Each article's authors are listed in its page history, for
+example https://en.wikipedia.org/w/index.php?title=Keyboard&action=history.
+
+
+== Word chains: Tatoeba ==
+
+Some word chains were counted in sentences from Tatoeba (https://tatoeba.org) by the Tatoeba contributors, shared
+under the Creative Commons Attribution 2.0 France licence, https://creativecommons.org/licenses/by/2.0/fr/. The
+contributors whose sentences were counted are listed in TATOEBA-AUTHORS.txt. The files:
+- https://downloads.tatoeba.org/exports/per_language/ara/ara_sentences_detailed.tsv.bz2
+- https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences_detailed.tsv.bz2
+- https://downloads.tatoeba.org/exports/per_language/fra/fra_sentences_detailed.tsv.bz2
+
+
+== Spelling dictionaries, used only while building ==
+
+These dictionaries chose which words the lists keep, and their capitals; none of their files ships. The files:
+- https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/ar/ar.aff
+- https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/ar/ar.dic
+- https://github.com/en-wl/wordlist/releases/download/rel-2026.02.25/hunspell-en_US-2026.02.25.zip
+- https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/fr_FR/dictionaries/fr.aff
+- https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/fr_FR/dictionaries/fr.dic
+
+The SCOWLv2 en_US Hunspell dictionary, by Kevin Atkinson and contributors, https://wordlist.aspell.net. Its
+notice, copied word for word from its README:
+
+COPYRIGHT, SOURCES, and CREDITS:
+
+The English dictionaries come directly from SCOWL and is thus under
+the same copyright terms as SCOWL.  The affix file is a heavily
+modified version of the original english.aff file, which was
+released as part of Geoff Kuenning's Ispell and as such is covered by
+his BSD license.
+
+Copyright 2000-2026 by Kevin Atkinson
+
+Permission to use, copy, modify, distribute, and sell any part of SCOWLv2, or
+word lists created from it, is hereby granted without fee, provided that the
+above copyright notice appears in all copies and that both the above
+copyright notice and this notice appear in supporting documentation.  Kevin
+Atkinson makes no representations about the suitability of this database for
+any purpose.  It is provided "as is" without express or implied warranty.
+
+SCOWL is derived from many sources, most of which are in the Public Domain.
+Data from the Corpus of Contemporary American English (COCA) was also used.
+
+All data from COCA comes from 3-gram data that is not freely available;
+however, the usage is within the rights given by the NDA that was signed when
+purchasing the data.  More information on COCA is available at
+https://www.english-corpora.org/coca/.
+
+The primary source of words for SCOWL comes from 12dicts and ENABLE2K.  Both
+are in the Public Domain, but Alan Beale <biljir@pobox.com> deserves special
+credit as he is the author of 12dicts and a major contributor to ENABLE2K.  In
+addition, he gave me an incredible amount of feedback and created a number of
+special lists in order to help improve the overall quality of SCOWL.
+
+The initial information for Australian English comes from Benjamin Titze:
+
+  Copyright 2016 by Benjamin Titze
+
+  Permission to use, copy, modify, distribute and sell this array, the
+  associated software, and its documentation for any purpose is hereby
+  granted without fee, provided that the above copyright notice appears
+  in all copies and that both that copyright notice and this permission
+  notice appear in supporting documentation. Benjamin Titze makes no
+  representations about the suitability of this array for any
+  purpose. It is provided "as is" without express or implied warranty.
+
+Affix file Copyright:
+
+  Copyright 1993, Geoff Kuenning, Granada Hills, CA
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+  3. All modifications to the source code must be clearly marked as
+     such.  Binary redistributions based on modified source code
+     must be clearly marked as modified versions in the documentation
+     and/or other materials provided with the distribution.
+  (clause 4 removed with permission from Geoff Kuenning)
+  5. The name of Geoff Kuenning may not be used to endorse or promote
+     products derived from this software without specific prior
+     written permission.
+
+  THIS SOFTWARE IS PROVIDED BY GEOFF KUENNING AND CONTRIBUTORS ``AS IS'' AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED.  IN NO EVENT SHALL GEOFF KUENNING OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+  OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+  SUCH DAMAGE.
+
+Grammalecte's French dictionary, by Olivier R. and contributors, https://grammalecte.net, under the Mozilla Public
+License 2.0, https://mozilla.org/MPL/2.0/.
+
+Hunspell-ar, the Arabic dictionary of the Ayaspell project, by Mohamed Kebdani and contributors,
+http://ayaspell.sourceforge.net/, offered under the GPL 2.0, the LGPL 2.1 or the MPL 1.1 or later, and used here
+under the Mozilla Public License 2.0, https://mozilla.org/MPL/2.0/.
