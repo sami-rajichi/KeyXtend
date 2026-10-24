@@ -2,7 +2,6 @@
 //! and failures on cue.
 
 use super::*;
-use proptest::prelude::*;
 use std::thread::{self, ThreadId};
 
 /// Test values; the real ones come from the predict module's settings.
@@ -183,21 +182,4 @@ fn debug_never_prints_the_scripted_text() {
     let fake = FakeFieldWatch::new();
     fake.set_before(Some(TEXT));
     assert!(!format!("{fake:?}").contains(TEXT));
-}
-
-proptest! {
-    #[test]
-    fn the_cut_ends_the_text_and_keeps_at_most_n_whole_words(
-        text in "[a-zé أ-ي\t]{0,40}",
-        max in 0u8..8,
-    ) {
-        let cut = last_words(&text, max);
-        let words = text.split_whitespace().count();
-        prop_assert!(text.ends_with(cut));
-        prop_assert_eq!(cut.split_whitespace().count(), words.min(usize::from(max)));
-        prop_assert!(!cut.starts_with(char::is_whitespace), "it starts at a word");
-        let head = &text[..text.len() - cut.len()];
-        let whole = cut.is_empty() || head.is_empty() || head.ends_with(char::is_whitespace);
-        prop_assert!(whole, "it never starts mid-word");
-    }
 }

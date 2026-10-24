@@ -76,6 +76,23 @@ pub trait FieldWatch: Send + Sync {
     ) -> Result<Box<dyn FieldRun>, FieldError>;
 }
 
+/// The end of `text` from the start of its last `max` words, with what follows them; empty when it keeps none.
+/// Every field watch cuts with it, so the fake and the platforms agree.
+#[must_use]
+pub fn last_words(text: &str, max: u8) -> &str {
+    let mut starts = Vec::new();
+    let mut gap = true;
+    for (at, c) in text.char_indices() {
+        if gap && !c.is_whitespace() {
+            starts.push(at);
+        }
+        gap = c.is_whitespace();
+    }
+    let skip = starts.len().saturating_sub(usize::from(max));
+    let from = starts.get(skip).copied().unwrap_or(text.len());
+    &text[from..]
+}
+
 /// The field watch service; it needs `ReadFocusedText`.
 pub struct FieldWatchKey;
 

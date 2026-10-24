@@ -26,6 +26,7 @@ pub use face::{
 };
 pub use field::{
     FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch, FieldWatchKey,
+    last_words,
 };
 pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};

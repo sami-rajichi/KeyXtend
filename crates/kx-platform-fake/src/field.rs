@@ -2,7 +2,9 @@
 
 use crate::lock;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch};
+use kx_module_api::ports::{
+    FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch, last_words,
+};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -216,21 +218,6 @@ impl Drop for FakeRun {
             drop(gone);
         }
     }
-}
-
-/// The end of `text` from the start of its last `max` words, with what follows them; empty when it keeps none.
-fn last_words(text: &str, max: u8) -> &str {
-    let mut starts = Vec::new();
-    let mut gap = true;
-    for (at, c) in text.char_indices() {
-        if gap && !c.is_whitespace() {
-            starts.push(at);
-        }
-        gap = c.is_whitespace();
-    }
-    let skip = starts.len().saturating_sub(usize::from(max));
-    let from = starts.get(skip).copied().unwrap_or(text.len());
-    &text[from..]
 }
 
 #[cfg(test)]
