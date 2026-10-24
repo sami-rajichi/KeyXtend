@@ -16,7 +16,8 @@ pub use manifest::{ID, MANIFEST};
 pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey, ScrollChanged,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesChanged, PointerHookKey,
+    PointerMoved, ScrollChanged,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
@@ -44,6 +45,9 @@ impl Module for MouseModule {
         self.halt();
         let settings = cx.settings::<MouseSettings>()?;
         let hook = cx.service::<PointerHookKey>()?;
+        // The notes and moves it only sends need `KeyboardUi`; without it the start fails, as the keyboard's does.
+        cx.bus().check::<AssistNote>()?;
+        cx.bus().check::<PointerMoved>()?;
         let (tx, inbox) = mpsc::channel();
         relay(cx, &tx, |e: &AssistToggle| Msg::Toggle(e.which))?;
         relay(cx, &tx, |_: &AssistAsk| Msg::Ask)?;
