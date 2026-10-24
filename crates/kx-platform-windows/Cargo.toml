@@ -67,6 +67,8 @@ windows = { workspace = true, features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+# The `implement` macro behind the field watch's focus handler names this crate.
+windows-core.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }

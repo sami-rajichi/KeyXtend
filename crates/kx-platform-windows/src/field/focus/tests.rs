@@ -1,4 +1,4 @@
-//! The hand-made focus handler: the interfaces it answers, its count freeing it, and calls that tell nothing for no
+//! The focus handler: the interfaces it answers, its last reference freeing it, and calls that tell nothing for no
 //! element or for our own.
 
 use super::*;
@@ -9,6 +9,8 @@ use crate::scroll::testwin::{WAIT, one_client};
 use kx_module_api::ports::{FieldChange, FieldConfig, FieldKind, FieldRun};
 use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver};
+use windows::Win32::Foundation::E_NOINTERFACE;
+use windows::core::{IUnknown, Interface};
 
 /// What a test's run heard.
 type Heard = Arc<Mutex<Vec<FieldChange>>>;

@@ -36,6 +36,8 @@ toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }
 windows = "0.62.2"
+# windows-rs's `implement` macro writes `windows_core` paths, so the crate that uses it names it too; same release.
+windows-core = "0.62.2"
 embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
 fluent-langneg = "0.13.1"
