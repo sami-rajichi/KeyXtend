@@ -124,10 +124,12 @@ fn spelling(
 }
 
 /// True when `spelling` stands alone in `text` under 1 / `piece_ratio` of what its bucket predicts, judged only
-/// when that prediction is at least `piece_min_expected`.
+/// when that prediction is at least `piece_min_expected`. A spelling with the apostrophe (`l'`, `aujourd'hui`) is
+/// never a piece: it rarely stands alone by nature, and the pieces sought (`s`, `t`, `ll`) are bare.
 fn is_piece(spelling: &str, bucket: u32, text: &TextCounts, rules: &Rules) -> bool {
     let expected = share(bucket) * float(text.total);
-    expected >= rules.piece_min_expected
+    !spelling.contains(rules.apostrophe)
+        && expected >= rules.piece_min_expected
         && float(text.alone(spelling)) < expected / rules.piece_ratio
 }
 

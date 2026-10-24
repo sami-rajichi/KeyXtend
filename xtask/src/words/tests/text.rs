@@ -60,6 +60,32 @@ fn a_twin_seen_too_rarely_leaves_the_dictionary_form() {
 }
 
 #[test]
+fn a_twin_seen_exactly_the_minimum_wins() {
+    let dict = dict(AFF, &["may", "May"]);
+    let counts = text(1_000, &[("may", 900, &[("May", 20), ("may", 3)])]);
+    let list = build_with(&[("may", 300)], Some(&dict), Some(&counts));
+    assert_eq!(list.words, [word("May", 300, true)]);
+    assert_eq!(list.twins.first, ["may → May"]);
+}
+
+#[test]
+fn a_spelling_with_the_apostrophe_is_never_a_piece() {
+    let dict = dict(AFF, &["l", "l'", "s", "aujourd'hui"]);
+    let counts = text(
+        1_000_000_000,
+        &[("l'", 0, &[("l'", 500)]), ("s", 1_000, &[])],
+    );
+    let words = [("l", 140), ("s", 150), ("aujourd", 400), ("hui", 410)];
+    let list = build_with(&words, Some(&dict), Some(&counts));
+    assert_eq!(
+        spellings(&list),
+        ["l'", "aujourd'hui"],
+        "both stand alone 0 times"
+    );
+    assert_eq!(list.pieces.first, ["s"]);
+}
+
+#[test]
 fn a_word_standing_alone_far_less_than_wordfreq_says_is_a_piece() {
     let dict = dict(AFF, &["s", "the", "rare"]);
     let counts = text(1_000_000, &[("s", 1_000, &[]), ("the", 40_000, &[])]);

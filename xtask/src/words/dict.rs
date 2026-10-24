@@ -8,7 +8,7 @@ use spellbook::Dictionary;
 
 use super::{WordsError, io_error};
 
-/// The affix-file keyword of a prefix line; suffixes are left out, as Arabic ones (`Ø§ÙØ§`, `Ø§Ù`) are words too.
+/// The affix-file keyword of a prefix line; suffixes are left out, as Arabic ones (`انا`, `ان`) are words too.
 const PREFIX_KEY: &str = "PFX";
 /// The cross-product marks of an affix header line (`PFX A Y 1`).
 const CROSS: [&str; 2] = ["Y", "N"];

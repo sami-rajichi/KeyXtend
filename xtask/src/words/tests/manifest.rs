@@ -22,6 +22,25 @@ fn the_project_manifest_parses_with_every_language_file() {
 }
 
 #[test]
+fn the_project_manifest_hardens_curl() {
+    let fetch = Manifest::parse(MANIFEST).unwrap().fetch;
+    assert_eq!(
+        fetch.args.first().map(String::as_str),
+        Some("-q"),
+        "no curl config file is read"
+    );
+    let has = |flag: &str| {
+        fetch
+            .args
+            .windows(2)
+            .any(|w| w[0] == flag && w[1] == "=https")
+    };
+    assert!(has("--proto") && has("--proto-redir"), "{:?}", fetch.args);
+    let flags = [&fetch.size_flag, &fetch.out_flag, &fetch.url_flag];
+    assert_eq!(flags, ["--max-filesize", "--output", "--url"]);
+}
+
+#[test]
 fn the_project_manifest_gives_each_source_its_origin() {
     let manifest = Manifest::parse(MANIFEST).unwrap();
     let wordfreq = "https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1";
