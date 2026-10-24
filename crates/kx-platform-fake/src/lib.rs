@@ -1,11 +1,12 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, recording
 //! fakes of the input, layout and UI ports (the tray, the memory port and the speaker too), of the mouse hook, of the
-//! scroll target, of the shortcuts, of the power dialog and of the layouts service. Only tests, tools and test-only
-//! crates use it.
+//! scroll target, of the shortcuts, of the power dialog, of the layouts service, of the field watch, of the word packs
+//! and of the sealed store. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
 mod clock;
+mod field;
 mod input;
 mod instance;
 mod layout;
@@ -13,15 +14,18 @@ mod layout_file;
 mod layouts;
 mod look;
 mod memory;
+mod packs;
 mod pointer;
 mod power;
 mod scroll;
+mod sealed;
 mod shortcut;
 mod sound;
 mod tray;
 mod ui;
 
 pub use clock::FakeClock;
+pub use field::FakeFieldWatch;
 pub use input::{FakeInjector, Stroke};
 pub use instance::FakeInstance;
 pub use layout::FakeLayoutSource;
@@ -29,9 +33,11 @@ pub use layout_file::{FILE_EXT, LayoutFile, LayoutFileError, golden_dir};
 pub use layouts::{Ask, FakeLayouts};
 pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use memory::FakeMemory;
+pub use packs::FakeWordPacks;
 pub use pointer::FakePointerHook;
 pub use power::FakePowerDialog;
 pub use scroll::{FakeScrollTarget, Turn};
+pub use sealed::FakeSealedStore;
 pub use shortcut::FakeShortcuts;
 pub use sound::{FakeSpeaker, Prepared};
 pub use tray::FakeTray;
