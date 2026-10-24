@@ -1,0 +1,53 @@
+Credits for the word packs in this folder
+
+KeyXtend's word packs (<language code>.kxw) were built by `cargo xtask words build` from the sources below. They are
+adaptations of these works and are shared under CC BY-SA 4.0, as {licence} says.
+
+
+== Word lists and frequencies: wordfreq ==
+
+The words and their frequencies come from wordfreq by Robyn Speer (https://github.com/rspeer/wordfreq), from these
+files:
+{wordfreq_files}
+
+wordfreq's licence section, copied word for word from its README, {wordfreq_readme}:
+
+{wordfreq_licence}
+
+
+== Word chains: Wikipedia ==
+
+Some word chains were counted in the text of Wikipedia, the free encyclopedia (https://www.wikipedia.org), from
+these files of the Wikimedia search-index dump:
+{wiki_files}
+
+Wikipedia's text is shared under the Creative Commons Attribution-ShareAlike 4.0 licence,
+https://creativecommons.org/licenses/by-sa/4.0/. Each article's authors are listed in its page history, for
+example https://en.wikipedia.org/w/index.php?title=Keyboard&action=history; the language edition is the start of
+each file's name above.
+
+
+== Word chains: Tatoeba ==
+
+Some word chains were counted in sentences from Tatoeba (https://tatoeba.org) by the Tatoeba contributors, shared
+under the Creative Commons Attribution 2.0 France licence, https://creativecommons.org/licenses/by/2.0/fr/. The
+contributors whose sentences were counted are listed in {authors}. The files:
+{tatoeba_files}
+
+
+== Spelling dictionaries, used only while building ==
+
+These dictionaries chose which words the lists keep, and their capitals; none of their files ships. The files:
+{dictionary_files}
+
+The SCOWLv2 en_US Hunspell dictionary, by Kevin Atkinson and contributors, https://wordlist.aspell.net. Its
+notice, copied word for word from its README:
+
+{scowl_notice}
+
+Grammalecte's French dictionary, by Olivier R. and contributors, https://grammalecte.net, under the Mozilla Public
+License 2.0, https://mozilla.org/MPL/2.0/.
+
+Hunspell-ar, the Arabic dictionary of the Ayaspell project, by Mohamed Kebdani and contributors,
+http://ayaspell.sourceforge.net/, offered under the GPL 2.0, the LGPL 2.1 or the MPL 1.1 or later, and used here
+under the Mozilla Public License 2.0, https://mozilla.org/MPL/2.0/.

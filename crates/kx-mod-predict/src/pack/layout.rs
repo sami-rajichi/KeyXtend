@@ -91,6 +91,9 @@ pub const START_LEN: usize = size_of::<u32>();
 pub const FOLLOWER_LEN: usize = size_of::<u32>();
 /// Where a follower's score sits.
 pub const SCORE_SHIFT: u32 = ID_BITS;
+/// A follower's score is this plus `STEPS_PER_ZIPF` times the log10 of its chance after its context, clamped to a
+/// byte: a sure follower scores this, and each step down is the same ratio as one frequency step.
+pub const SCORE_CERTAIN: u8 = u8::MAX;
 /// A follower's id bits.
 pub const ID_MASK: u32 = (1 << ID_BITS) - 1;
 

@@ -89,6 +89,7 @@ fn run_words(action: &cli::WordsAction) -> Result<(), words::WordsError> {
     match action {
         cli::WordsAction::Fetch { src } => words::fetch(src),
         cli::WordsAction::List { iso, src } => words::list(iso, src),
+        cli::WordsAction::Build { src, out } => words::build(src, out.as_deref()),
     }
 }
 

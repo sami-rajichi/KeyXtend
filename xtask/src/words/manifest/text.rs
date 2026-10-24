@@ -1,0 +1,108 @@
+//! The manifest's text tables: how Tatoeba and Wikipedia are read and counted into word chains, each language's
+//! text sources, and the credits written beside the packs.
+
+use serde::Deserialize;
+
+/// A share per mille is out of this many.
+pub(crate) const PER_MILLE: u64 = 1_000;
+
+/// How text is read and counted: the `[text]` table.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TextRules {
+    /// A sentence ends at each of these characters when a space or the text's end follows.
+    pub(crate) sentence_ends: Vec<char>,
+    /// The shortest chain counted, in words.
+    pub(crate) min_chain: u8,
+    /// The longest chain counted, in words.
+    pub(crate) max_chain: u8,
+    /// How many times a Tatoeba count weighs a Wikipedia one.
+    pub(crate) tatoeba_weight: u32,
+    /// How many Tatoeba sentences per thousand are held back for the meter.
+    pub(crate) held_back_per_mille: u64,
+    /// The most chains counted at once before the rarest go.
+    pub(crate) max_live_chains: usize,
+    /// The next words kept per context.
+    pub(crate) followers: u8,
+    /// What Tatoeba writes for an empty field.
+    pub(crate) null: String,
+    /// The folder, under cargo's target folder, that the held-back sentences go to.
+    pub(crate) held: String,
+    /// The folder, under the workspace root, that the packs go to unless `--out` names another.
+    pub(crate) out: String,
+}
+
+/// One language's text: `[lang.<iso>.text]`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct LangText {
+    /// The most bytes, in KB, its chain sections may take.
+    pub(crate) chain_budget_kb: u64,
+    /// Its Tatoeba sentences, if any.
+    pub(crate) tatoeba: Option<Tatoeba>,
+    /// Its Wikipedia dump files, if any.
+    pub(crate) wiki: Option<Wiki>,
+}
+
+/// One language's Tatoeba file.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Tatoeba {
+    /// The source file.
+    pub(crate) file: String,
+    /// The most lines read from it.
+    pub(crate) max_sentences: u64,
+}
+
+/// One language's Wikipedia dump files.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Wiki {
+    /// The source files, read in order.
+    pub(crate) files: Vec<String>,
+    /// The most bytes of article text read from them together.
+    pub(crate) max_bytes: u64,
+}
+
+/// The files written beside the packs: the `[credits]` table.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Credits {
+    /// The credits file's name.
+    pub(crate) file: String,
+    /// The Tatoeba authors file's name.
+    pub(crate) authors: String,
+    /// The licence file's name.
+    pub(crate) licence: String,
+    /// The licence file's lines.
+    pub(crate) licence_text: Vec<String>,
+    /// wordfreq's licence section.
+    pub(crate) wordfreq: Section,
+    /// The notice of `SCOWLv2`, the English dictionary.
+    pub(crate) scowl: Section,
+}
+
+/// A part of a source file copied word for word: from the line that starts with `from` to the first later line that
+/// starts with `to`, that line left out.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Section {
+    /// The source file.
+    pub(crate) file: String,
+    /// How its first line starts.
+    pub(crate) from: String,
+    /// How the line after its last starts.
+    pub(crate) to: String,
+}
+
+impl LangText {
+    /// Every source file this language's text reads.
+    pub(crate) fn files(&self) -> impl Iterator<Item = &str> {
+        let tatoeba = self.tatoeba.iter().map(|t| t.file.as_str());
+        let wiki = self
+            .wiki
+            .iter()
+            .flat_map(|w| w.files.iter().map(String::as_str));
+        tatoeba.chain(wiki)
+    }
+}

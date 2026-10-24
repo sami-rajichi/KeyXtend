@@ -29,7 +29,7 @@ const SUB_DEV_INSTALL: &str = "dev-install";
 const SUB_CHECK_UIACCESS: &str = "check-uiaccess";
 /// Renders, imports or joins sounds.
 const SUB_SOUNDS: &str = "sounds";
-/// Checks the word sources and lists the cleaned words.
+/// Checks the word sources, lists the cleaned words and builds the word packs.
 const SUB_WORDS: &str = "words";
 /// Flag that turns `dev-cert` and `dev-install` into their undo.
 const FLAG_REMOVE: &str = "--remove";
@@ -95,7 +95,7 @@ pub(crate) enum Command {
     },
     /// Render, import or join sounds.
     Sounds(SoundsAction),
-    /// Check the word sources, or list one language's words.
+    /// Check the word sources, list one language's words, or build the packs.
     Words(WordsAction),
 }
 

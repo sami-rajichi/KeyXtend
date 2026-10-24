@@ -47,6 +47,8 @@ Everything we ship or bundle that we did not write ourselves. Updated by the `kx
 | whisper.cpp Windows build (`whisper-server`) | b5130 (v1.9.4) | MIT; the bundle also has `SDL2.dll` (Zlib) | https://github.com/ggml-org/whisper.cpp | Local speech server in the voice worker (tested in G22) | P11 decides: shipped or downloaded |
 | cpal | 0.18.2 | Apache-2.0 | https://github.com/RustAudio/cpal | Microphone in the voice worker (tested in G22) | yes, built into the worker (P11) |
 | wordfreq data | commit `912caf64` | CC-BY-SA-4.0 (data) | https://github.com/rspeer/wordfreq | Prediction seed lists | yes, separate files |
+| Wikipedia text (search-index content dumps, en, fr, ar) | dump `20261018` | CC-BY-SA-4.0 | https://dumps.wikimedia.org/other/cirrus_search_index/ | Word chains in the prediction packs, counted by `cargo xtask words build` | only as counts inside the packs, credited in their `CREDITS.txt` |
+| Tatoeba sentences (eng, fra, ara) | per-language export, hashes in `xtask/words.toml` | CC-BY-2.0-FR | https://tatoeba.org | Word chains in the prediction packs, and the held-back sentences the meter types | only as counts inside the packs, with `TATOEBA-AUTHORS.txt`; the sentences never ship |
 | Tesseract + tessdata_fast | – | Apache-2.0 | https://github.com/tesseract-ocr | OCR fallback | on demand |
 | Inno Setup | 7.x (planned, P14) | Inno Setup License (zlib-style) | https://jrsoftware.org/isinfo.php | Windows installer | installer stub only |
 | Contributor Covenant | 3.0 | CC BY-SA 4.0 | https://www.contributor-covenant.org/ | `CODE_OF_CONDUCT.md` | no |

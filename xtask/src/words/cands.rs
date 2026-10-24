@@ -1,7 +1,8 @@
 //! The first stage of a word list: wordfreq's tokens through the token rules and the main-script filter, each with
-//! the forms the dictionary accepts; then joins, prefixes and fold merges, all read from the sources.
+//! the forms the dictionary accepts; then joins, prefixes, fold merges and the stems text may add, all read from the
+//! sources.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::dict::Dict;
 use super::manifest::{Plan, Rules};
@@ -21,6 +22,8 @@ pub(crate) enum Fate {
     Blocked,
     /// Rejected, and the left piece of a stem joined by an apostrophe.
     Joined,
+    /// A dictionary stem whose two pieces are tokens (`don't`), kept only when text gives its frequency.
+    Stem,
 }
 
 /// One token of wordfreq's list, or one joined stem.
@@ -83,6 +86,8 @@ pub(crate) struct Candidates {
     pub(crate) max_words: usize,
     /// True when a dictionary checked the tokens.
     pub(crate) checked: bool,
+    /// Every token of wordfreq's list, so a spelling's pieces can be checked.
+    pub(crate) tokens: HashSet<String>,
     /// What the source rules did.
     pub(crate) facts: Facts,
 }
@@ -95,21 +100,23 @@ pub(crate) fn candidates(
     rules: &Rules,
 ) -> Candidates {
     let read = entries.len();
+    let tokens = entries.iter().map(|e| e.word.clone()).collect();
     let mut facts = Facts::default();
-    let tokens = main_script(entries, rules, &mut facts.script);
-    let mut cands: Vec<Cand> = tokens
+    let mut cands: Vec<Cand> = main_script(entries, rules, &mut facts.script)
         .into_iter()
         .map(|(rank, entry)| cand(rank, entry, dict, rules, &mut facts.elisions))
         .collect();
     if let Some(dict) = dict {
         join(&mut cands, dict, rules.show, &mut facts.joins);
         merge::merge(&mut cands, dict, rules, &mut facts);
+        stems(&mut cands, dict, &tokens);
     }
     Candidates {
         cands,
         read,
         max_words: plan.max_words,
         checked: dict.is_some(),
+        tokens,
         facts,
     }
 }
@@ -196,6 +203,39 @@ fn join(cands: &mut Vec<Cand>, dict: &Dict, show: usize, joins: &mut Tally) {
             bucket,
             rank,
             fate: Fate::Kept,
+        });
+    }
+}
+
+/// Adds each stem of `dict` whose two pieces are tokens and that no candidate spells yet, as a `Stem` that only text
+/// keeps; it takes the rarer piece's bucket and the left piece's place.
+fn stems(cands: &mut Vec<Cand>, dict: &Dict, tokens: &HashSet<String>) {
+    let spelt: HashSet<String> = cands.iter().map(|c| c.word.to_lowercase()).collect();
+    let place: HashMap<&str, (u32, usize)> = cands
+        .iter()
+        .map(|c| (c.word.as_str(), (c.bucket, c.rank)))
+        .collect();
+    let mut found = Vec::new();
+    for (stem, left, right) in dict.joins() {
+        let (left, right) = (left.to_lowercase(), right.to_lowercase());
+        if spelt.contains(&stem.to_lowercase())
+            || !tokens.contains(&left)
+            || !tokens.contains(&right)
+        {
+            continue;
+        }
+        let (Some(l), Some(r)) = (place.get(left.as_str()), place.get(right.as_str())) else {
+            continue;
+        };
+        found.push((stem.to_string(), l.0.max(r.0), l.1));
+    }
+    for (stem, bucket, rank) in found {
+        cands.push(Cand {
+            word: stem.clone(),
+            forms: vec![stem],
+            bucket,
+            rank,
+            fate: Fate::Stem,
         });
     }
 }

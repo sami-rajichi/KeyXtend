@@ -1,4 +1,4 @@
-//! Folding in French, English and Arabic, the shipped table's soundness, and folding twice changing nothing.
+//! Folding in French, English and Arabic, the apostrophe, the table's soundness, and folding twice changing nothing.
 
 use proptest::prelude::*;
 
@@ -171,8 +171,8 @@ fn ta_marbuta_hamza_on_a_seat_and_other_letters_stay() {
 #[test]
 fn the_shipped_table_parses_and_maps_nothing_to_itself() {
     let folds = Folds::parse(TABLE).unwrap();
-    assert!(!folds.0.is_empty());
-    for (c, to) in &folds.0 {
+    assert!(!folds.map.is_empty());
+    for (c, to) in &folds.map {
         assert_ne!(
             to.as_deref(),
             Some(c.to_string().as_str()),
@@ -225,9 +225,40 @@ fn a_broken_table_is_refused() {
     }
 }
 
+#[test]
+fn the_typographic_apostrophe_folds_to_the_plain_one() {
+    assert_eq!(fold("l\u{2019}homme"), "l'homme");
+    assert_eq!(fold("Don\u{2019}t"), fold("don't"));
+    assert_eq!(apostrophe(), Some('\''));
+    assert!(is_apostrophe('\'') && is_apostrophe('\u{2019}'));
+    for other in ['a', '-', '`', '\u{2018}', '\u{02BC}'] {
+        assert!(!is_apostrophe(other), "U+{:04X}", u32::from(other));
+    }
+}
+
+#[test]
+fn the_apostrophe_section_folds_every_form_to_one_character() {
+    let one = Folds::parse("[apostrophe.map]\n\"\u{2019}\" = \"'\"\n\"\u{02BC}\" = \"'\"").unwrap();
+    assert_eq!(one.apostrophe, Some('\''));
+    let none = Folds::parse("[a.map]\n\"é\" = \"e\"").unwrap();
+    assert_eq!(none.apostrophe, None);
+    for bad in [
+        "[apostrophe.map]\n\"\u{2019}\" = \"'\"\n\"\u{02BC}\" = \"`\"",
+        "[apostrophe.map]\n\"\u{2019}\" = \"''\"",
+        "[apostrophe]\ndrop = [\"\u{2019}\"]",
+        "[apostrophe]\nmap = {}",
+    ] {
+        assert_eq!(
+            Folds::parse(bad).unwrap_err(),
+            FoldTableError::Apostrophe,
+            "{bad}"
+        );
+    }
+}
+
 /// A word mixing the table's characters with any others, so folding meets both.
 fn word() -> impl Strategy<Value = String> {
-    let listed: Vec<char> = Folds::parse(TABLE).unwrap().0.into_keys().collect();
+    let listed: Vec<char> = Folds::parse(TABLE).unwrap().map.into_keys().collect();
     let pick = prop_oneof![
         prop::sample::select(listed),
         any::<char>(),

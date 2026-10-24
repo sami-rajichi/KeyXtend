@@ -16,6 +16,8 @@ const DEVICE_DIGITS: &str = "123456789¹²³";
 pub(crate) const SEP: char = '/';
 /// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
 pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
+/// Bytes in one KB, counted the same way: 10³.
+pub(crate) const BYTES_PER_KB: u64 = 1_000;
 
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {

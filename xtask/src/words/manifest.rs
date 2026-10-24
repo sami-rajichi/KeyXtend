@@ -1,11 +1,16 @@
-//! The manifest `words.toml`: every source file with its hash, the rules' thresholds and each language's files.
+//! The manifest `words.toml`: every source file with its hash, the rules' thresholds, each language's files and
+//! text, and the credits.
 
 mod check;
+mod text;
 
 use std::collections::BTreeMap;
 
+use kx_mod_predict::fold;
 use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
+
+pub(crate) use self::text::{Credits, LangText, PER_MILLE, Section, TextRules};
 
 use super::WordsError;
 use crate::devtools::paths::SEP;
@@ -23,6 +28,10 @@ pub(crate) struct Manifest {
     pub(crate) rules: Rules,
     /// How a missing source is downloaded.
     pub(crate) fetch: FetchConfig,
+    /// How text is read and counted into word chains.
+    pub(crate) text: TextRules,
+    /// The files written beside the packs.
+    pub(crate) credits: Credits,
     /// The languages with only a small list.
     small: Small,
     /// The languages with a full list and a dictionary, by code.
@@ -39,7 +48,8 @@ pub(crate) struct Manifest {
 pub(crate) struct Rules {
     /// A word holding one of these is dropped.
     pub(crate) drop_chars: Vec<char>,
-    /// The apostrophe of elided and joined words.
+    /// The apostrophe of elided and joined words, from the fold table, never from `words.toml`.
+    #[serde(skip)]
     pub(crate) apostrophe: char,
     /// A rejected word merges only into a fold twin at most this many centibels rarer.
     pub(crate) max_gap_cb: u32,
@@ -47,10 +57,12 @@ pub(crate) struct Rules {
     pub(crate) main_script_share: f64,
     /// How often text must show a twin spelling away from sentence starts before it wins.
     pub(crate) min_case_seen: u64,
-    /// A word standing alone this many times less often than wordfreq predicts is a piece.
+    /// How many times more often a twin differing only in case must be seen than the word's own spelling.
+    pub(crate) twin_ratio: f64,
+    /// A word is a piece when its apostrophe words are seen this many times more often than it stands alone.
     pub(crate) piece_ratio: f64,
-    /// The fewest expected sightings in the text for a word to be judged a piece.
-    pub(crate) piece_min_expected: f64,
+    /// The fewest sightings of a word's apostrophe words for it to be judged a piece.
+    pub(crate) piece_min_seen: u64,
     /// How many of the most frequent words the coverage line checks.
     pub(crate) coverage_top: usize,
     /// How many words every report line prints.
@@ -101,6 +113,8 @@ struct Lang {
     dic: String,
     /// The most words kept.
     max_words: usize,
+    /// Its text for word chains, if any.
+    text: Option<LangText>,
 }
 
 /// One source file.
@@ -146,17 +160,33 @@ pub(crate) struct Plan<'a> {
     pub(crate) dict: Option<DictFiles<'a>>,
     /// The most words kept.
     pub(crate) max_words: usize,
+    /// Its text for word chains, if any.
+    pub(crate) text: Option<&'a LangText>,
 }
 
 impl Manifest {
     /// Parses and checks a manifest.
     pub(crate) fn parse(text: &str) -> Result<Self, WordsError> {
-        let manifest: Self = toml::from_str(text).map_err(|e| bad(&e.to_string()))?;
+        let mut manifest: Self = toml::from_str(text).map_err(|e| bad(&e.to_string()))?;
+        manifest.rules.apostrophe =
+            fold::apostrophe().ok_or_else(|| bad("the fold table names no apostrophe"))?;
         check::rules(&manifest.rules)?;
         check::fetch(&manifest.fetch)?;
+        check::text(&manifest.text)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
+        check::credits(&manifest.credits, &manifest.sources)?;
         Ok(manifest)
+    }
+
+    /// Every language a pack is built for: the full ones, then each other one with a small list, by code.
+    pub(crate) fn isos(&self) -> Vec<String> {
+        let (head, tail) = self.small.list.split_once(ISO_SLOT).unwrap_or_default();
+        let small = self.sources.keys().filter_map(|rel| {
+            let iso = rel.strip_prefix(head)?.strip_suffix(tail)?;
+            (fits_iso(iso) && !self.lang.contains_key(iso)).then(|| iso.to_string())
+        });
+        self.lang.keys().cloned().chain(small).collect()
     }
 
     /// The plan for `iso`: its full list and dictionary, or its small list.
@@ -170,6 +200,7 @@ impl Manifest {
                 list: lang.list.clone(),
                 dict: Some(dict),
                 max_words: lang.max_words,
+                text: lang.text.as_ref(),
             });
         }
         let list = self.small.list.replace(ISO_SLOT, iso);
@@ -180,6 +211,7 @@ impl Manifest {
             list,
             dict: None,
             max_words: self.small.max_words,
+            text: None,
         })
     }
 
@@ -228,11 +260,13 @@ impl Manifest {
             )));
         }
         for (iso, lang) in &self.lang {
-            let files = [&lang.list, &lang.aff, &lang.dic];
+            let mut files = vec![lang.list.as_str(), &lang.aff, &lang.dic];
+            files.extend(lang.text.iter().flat_map(LangText::files));
             let known = files.iter().all(|f| self.sources.contains_key(*f));
-            if !fits_iso(iso) || !known || lang.max_words == 0 {
+            let text_ok = lang.text.as_ref().is_none_or(check::lang_text);
+            if !fits_iso(iso) || !known || lang.max_words == 0 || !text_ok {
                 return Err(bad(&format!(
-                    "[lang.{iso}] needs a pack code, known files and some max_words"
+                    "[lang.{iso}] needs a pack code, known files, some max_words and sound text limits"
                 )));
             }
         }

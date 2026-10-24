@@ -1,8 +1,13 @@
-//! The `words` subcommand: checks the downloaded sources and turns wordfreq's lists into cleaned, dictionary-checked
-//! word lists (spec §6, ADR-0032 decision 3). It never ships; it builds data files.
+//! The `words` subcommand: checks the downloaded sources, turns wordfreq's lists into cleaned, dictionary-checked
+//! word lists, counts word chains in Tatoeba and Wikipedia, and writes the packs with their credits (spec §6,
+//! ADR-0032 decisions 1–3). It never ships; it builds data files.
 
+mod build;
 mod cands;
+mod chains;
 mod clean;
+mod count;
+mod credits;
 mod dict;
 mod fetch;
 #[cfg(test)]
@@ -10,10 +15,15 @@ mod fixture;
 mod list;
 mod manifest;
 mod merge;
+mod report;
 mod script;
+mod split;
+mod tatoeba;
 #[cfg(test)]
 mod tests;
 mod text;
+mod vocab;
+mod wiki;
 mod wordfreq;
 
 use std::fmt;
@@ -23,6 +33,7 @@ use self::cands::Candidates;
 use self::dict::Dict;
 use self::manifest::Manifest;
 use crate::devtools::paths::join_rel;
+use crate::workspace;
 
 /// The manifest, compiled in: sources, hashes and rules.
 const MANIFEST: &str = include_str!("../words.toml");
@@ -44,6 +55,10 @@ pub(crate) enum WordsError {
     Download(String),
     /// These source files failed their check.
     Bad(Vec<String>),
+    /// A pack could not be written.
+    Pack(String),
+    /// The workspace could not be found.
+    Workspace(String),
 }
 
 impl fmt::Display for WordsError {
@@ -56,6 +71,8 @@ impl fmt::Display for WordsError {
             Self::Lang(iso) => write!(f, "no word list is known for {iso:?}"),
             Self::Download(why) => write!(f, "download failed: {why}"),
             Self::Bad(files) => write!(f, "these files failed their check: {}", files.join("; ")),
+            Self::Pack(why) => write!(f, "pack: {why}"),
+            Self::Workspace(why) => write!(f, "workspace: {why}"),
         }
     }
 }
@@ -78,10 +95,27 @@ pub(crate) fn list(iso: &str, src: &str) -> Result<(), WordsError> {
     let manifest = Manifest::parse(MANIFEST)?;
     let cands = candidates(&manifest, iso, Path::new(src))?;
     let words = list::finish(cands, None, &manifest.rules);
-    for line in list::report(iso, &words) {
+    for line in report::report(iso, &words) {
         println!("{line}");
     }
     Ok(())
+}
+
+/// Runs `cargo xtask words build`: builds every language's pack and the credits into `out`, by default the
+/// manifest's folder under the workspace root; the held-back sentences go under cargo's target folder.
+pub(crate) fn build(src: &str, out: Option<&str>) -> Result<(), WordsError> {
+    let manifest = Manifest::parse(MANIFEST)?;
+    let lost = |e: workspace::LoadError| WordsError::Workspace(e.to_string());
+    let json = workspace::metadata_json().map_err(lost)?;
+    let root = workspace::root(&json).map_err(lost)?;
+    let target = workspace::target_dir(&json).map_err(lost)?;
+    let out = out.map_or_else(|| join_rel(root, &manifest.text.out), PathBuf::from);
+    let paths = build::Paths {
+        src: PathBuf::from(src),
+        out,
+        held: join_rel(target, &manifest.text.held),
+    };
+    build::run(&manifest, &paths, &mut |line| println!("{line}"))
 }
 
 /// The candidates of `iso` from the files under `src`, after checking their hashes; text rules come after.

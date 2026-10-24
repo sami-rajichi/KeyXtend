@@ -1,10 +1,14 @@
 //! Tiny fixtures for the `words` tests, built in memory: wordfreq lists, dictionaries, rules and manifests.
 
+pub(crate) mod text;
+
 use std::io::Write;
 
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use rmpv::Value;
+
+use kx_mod_predict::fold;
 
 use super::manifest::{Manifest, Rules};
 
@@ -51,12 +55,13 @@ pub(crate) fn dic(words: &[&str]) -> String {
 pub(crate) fn rules() -> Rules {
     Rules {
         drop_chars: vec!['@', '/', '.'],
-        apostrophe: '\'',
+        apostrophe: fold::apostrophe().unwrap(),
         max_gap_cb: 100,
         main_script_share: 0.9,
         min_case_seen: 20,
+        twin_ratio: 10.0,
         piece_ratio: 20.0,
-        piece_min_expected: 100.0,
+        piece_min_seen: 100,
         coverage_top: 3,
         show: 2,
     }
@@ -71,21 +76,44 @@ pub(crate) fn manifest_with(sources: &str) -> Result<Manifest, super::WordsError
     Manifest::parse(&manifest_text(sources))
 }
 
+/// The `[text]` and `[credits]` tables of the fixture manifest; the credit sections read the fixture's French files.
+pub(crate) const TEXT: &str = r#"[text]
+sentence_ends = [".", "?"]
+min_chain = 2
+max_chain = 3
+tatoeba_weight = 4
+held_back_per_mille = 20
+max_live_chains = 100
+followers = 2
+null = "-"
+held = "held"
+out = "out"
+
+[credits]
+file = "CREDITS.txt"
+authors = "AUTHORS.txt"
+licence = "LICENSE.txt"
+licence_text = ["Shared alike.", "See the credits."]
+wordfreq = { file = "d/fr.aff", from = "A", to = "B" }
+scowl = { file = "d/fr.dic", from = "A", to = "B" }
+"#;
+
 /// The text of [`manifest_with`].
 pub(crate) fn manifest_text(sources: &str) -> String {
     format!(
         r#"
 [rules]
 drop_chars = ["@", "/", "."]
-apostrophe = "'"
 max_gap_cb = 100
 main_script_share = 0.9
 min_case_seen = 20
+twin_ratio = 10.0
 piece_ratio = 20.0
-piece_min_expected = 100.0
+piece_min_seen = 100
 coverage_top = 3
 show = 2
 
+{TEXT}
 [fetch]
 root_env = "KX_TEST_NO_SUCH_VAR"
 curl = "curl.exe"

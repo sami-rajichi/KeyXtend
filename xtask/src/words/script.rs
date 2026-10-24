@@ -91,6 +91,11 @@ fn script(c: char) -> Script {
         .map_or(Script::Other, |(_, _, script)| *script)
 }
 
+/// True when `c` is a combining mark or a modifier letter, which join a word of any script.
+pub(crate) fn joins_any(c: char) -> bool {
+    script(c) == Script::Common
+}
+
 /// True when every letter of `word` is of one script, not counting the ones that join any script.
 pub(crate) fn single(word: &str) -> bool {
     let mut scripts = word

@@ -1,8 +1,14 @@
-//! The manifest's value checks: each threshold in its range, a safe fetch setup, https bases and sound source paths.
+//! The manifest's value checks: each threshold in its range, a safe fetch setup, https bases, sound source paths,
+//! text limits and credits.
+
+use std::collections::BTreeMap;
+
+use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 
 use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
-use super::{FetchConfig, HASH_HEX, Rules, bad};
+use super::text::PER_MILLE;
+use super::{Credits, FetchConfig, HASH_HEX, LangText, Rules, Source, TextRules, bad};
 use crate::devtools::paths::{is_plain_name, is_relative_plain};
 
 /// The only scheme a base may use, so a download can never fall back to plain HTTP.
@@ -18,19 +24,71 @@ pub(super) fn rules(rules: &Rules) -> Result<(), WordsError> {
         ("main_script_share", share > MIN_SHARE && share <= 1.0),
         ("min_case_seen", rules.min_case_seen > 0),
         (
+            "twin_ratio",
+            rules.twin_ratio.is_finite() && rules.twin_ratio >= 1.0,
+        ),
+        (
             "piece_ratio",
             rules.piece_ratio.is_finite() && rules.piece_ratio > 1.0,
         ),
-        (
-            "piece_min_expected",
-            rules.piece_min_expected.is_finite() && rules.piece_min_expected > 0.0,
-        ),
+        ("piece_min_seen", rules.piece_min_seen > 0),
         ("coverage_top", rules.coverage_top > 0),
         ("show", rules.show > 0),
     ];
     match checks.iter().find(|(_, ok)| !ok) {
         Some((name, _)) => Err(bad(&format!("[rules] {name} is out of its range"))),
         None => Ok(()),
+    }
+}
+
+/// Refuses text rules out of their ranges: chains the pack cannot hold, a zero weight, cap or follower count, a
+/// held-back share of a thousand or more, and folders that are not plain relative paths.
+pub(super) fn text(text: &TextRules) -> Result<(), WordsError> {
+    let chains = MIN_CHAIN <= text.min_chain && text.min_chain <= text.max_chain;
+    let checks = [
+        ("sentence_ends", !text.sentence_ends.is_empty()),
+        ("min_chain", chains && text.max_chain <= MAX_CHAIN),
+        ("tatoeba_weight", text.tatoeba_weight > 0),
+        ("held_back_per_mille", text.held_back_per_mille < PER_MILLE),
+        ("max_live_chains", text.max_live_chains > 0),
+        ("followers", text.followers > 0),
+        ("null", !text.null.is_empty()),
+        ("held", is_relative_plain(&text.held)),
+        ("out", is_relative_plain(&text.out)),
+    ];
+    match checks.iter().find(|(_, ok)| !ok) {
+        Some((name, _)) => Err(bad(&format!("[text] {name} is out of its range"))),
+        None => Ok(()),
+    }
+}
+
+/// True when a language's text names a source and every limit is above zero.
+pub(super) fn lang_text(text: &LangText) -> bool {
+    let tatoeba = text.tatoeba.as_ref().is_none_or(|t| t.max_sentences > 0);
+    let wiki = text
+        .wiki
+        .as_ref()
+        .is_none_or(|w| !w.files.is_empty() && w.max_bytes > 0);
+    let some = text.tatoeba.is_some() || text.wiki.is_some();
+    text.chain_budget_kb > 0 && tatoeba && wiki && some
+}
+
+/// Refuses credit file names that are not plain, an empty licence, and sections of unknown files or empty marks.
+pub(super) fn credits(
+    credits: &Credits,
+    sources: &BTreeMap<String, Source>,
+) -> Result<(), WordsError> {
+    let names = [&credits.file, &credits.authors, &credits.licence];
+    let sections = [&credits.wordfreq, &credits.scowl];
+    let sound = sections
+        .iter()
+        .all(|s| sources.contains_key(&s.file) && !s.from.is_empty() && !s.to.is_empty());
+    if names.iter().all(|n| is_plain_name(n)) && !credits.licence_text.is_empty() && sound {
+        Ok(())
+    } else {
+        Err(bad(
+            "[credits] needs plain file names, a licence text and sections of known sources",
+        ))
     }
 }
 

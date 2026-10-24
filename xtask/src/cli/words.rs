@@ -1,4 +1,4 @@
-//! Parsing of `cargo xtask words fetch|list`.
+//! Parsing of `cargo xtask words fetch|list|build`.
 
 use super::{UsageError, is_path};
 
@@ -6,8 +6,12 @@ use super::{UsageError, is_path};
 const FETCH: &str = "fetch";
 /// Prints one language's word counts and coverage line.
 const LIST: &str = "list";
+/// Builds every pack and its credits.
+const BUILD: &str = "build";
 /// Flag naming the source folder; it is always given, never assumed.
 const FLAG_SRC: &str = "--src";
+/// Flag naming the folder the packs go to, instead of the manifest's.
+const FLAG_OUT: &str = "--out";
 
 /// What `cargo xtask words` does.
 #[derive(Debug, PartialEq, Eq)]
@@ -24,13 +28,21 @@ pub(crate) enum WordsAction {
         /// The source folder.
         src: String,
     },
+    /// Build every pack from the sources under `src` into `out`, or the manifest's folder.
+    Build {
+        /// The source folder.
+        src: String,
+        /// The folder the packs go to.
+        out: Option<String>,
+    },
 }
 
 /// The usage forms of the `words` subcommand, named `sub`.
-pub(super) fn forms(sub: &str) -> [String; 2] {
+pub(super) fn forms(sub: &str) -> [String; 3] {
     [
         format!("{sub} {FETCH} {FLAG_SRC} <dir>"),
         format!("{sub} {LIST} <iso> {FLAG_SRC} <dir>"),
+        format!("{sub} {BUILD} {FLAG_SRC} <dir> [{FLAG_OUT} <dir>]"),
     ]
 }
 
@@ -46,6 +58,17 @@ pub(super) fn parse(args: &[String]) -> Result<WordsAction, UsageError> {
             Ok(WordsAction::List {
                 iso: iso.clone(),
                 src: src.clone(),
+            })
+        }
+        [action, flag, src, rest @ ..] if action == BUILD && flag == FLAG_SRC && is_path(src) => {
+            let out = match rest {
+                [] => None,
+                [flag, out] if flag == FLAG_OUT && is_path(out) => Some(out.clone()),
+                _ => return Err(UsageError),
+            };
+            Ok(WordsAction::Build {
+                src: src.clone(),
+                out,
             })
         }
         _ => Err(UsageError),
@@ -77,6 +100,24 @@ mod tests {
     }
 
     #[test]
+    fn build_parses_with_its_source_and_an_optional_out_folder() {
+        assert_eq!(
+            parse_all(&args(&["words", "build", "--src", "w"])),
+            Ok(Command::Words(WordsAction::Build {
+                src: "w".into(),
+                out: None
+            }))
+        );
+        assert_eq!(
+            parse_all(&args(&["words", "build", "--src", "w", "--out", "o"])),
+            Ok(Command::Words(WordsAction::Build {
+                src: "w".into(),
+                out: Some("o".into())
+            }))
+        );
+    }
+
+    #[test]
     fn a_missing_source_folder_or_a_bad_flag_is_a_usage_error() {
         for bad in [
             &["words"][..],
@@ -87,7 +128,12 @@ mod tests {
             &["words", "list", "en"],
             &["words", "list", "--src", "w"],
             &["words", "list", "en", "--src", "w", "x"],
-            &["words", "build", "--src", "w"],
+            &["words", "build"],
+            &["words", "build", "--out", "o"],
+            &["words", "build", "--src", "w", "--out"],
+            &["words", "build", "--src", "w", "--out", "--src"],
+            &["words", "build", "--src", "w", "--src", "o"],
+            &["words", "build", "--src", "w", "o"],
         ] {
             assert_eq!(parse_all(&args(bad)), Err(UsageError), "{bad:?}");
         }

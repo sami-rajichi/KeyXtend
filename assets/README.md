@@ -25,4 +25,8 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 - `sounds/card-down.wav`: the drop sound, from "Playing Card Sounds" by BMacZero (https://opengameart.org/node/118338).
 - `sounds/recipes.toml`: KeyXtend's own candidate recipes, all rights reserved like the code; the shipping format is in kx-theme's `tokens/sounds.toml`.
 
+## Word packs
+
+- `words/`: the word packs (`<iso>.kxw`) that `cargo xtask words build` writes, shared under CC BY-SA 4.0 as `words/LICENSE.txt` says, with every source credited in `words/CREDITS.txt`; they ship as separate files beside the program.
+
 Add a font, icon or sound only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

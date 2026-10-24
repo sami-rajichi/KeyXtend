@@ -213,3 +213,11 @@ recipes = "assets/sounds/recipes.toml"
 format = "crates/kx-theme/tokens/sounds.toml"
 # Folder, under the workspace root, that `cargo xtask sounds render` writes to unless given `--out`.
 out_dir = "target/sounds"
+
+# `cargo xtask words` decompresses gigabytes of bzip2 text and checks every word with Hunspell, so these two run
+# optimised in dev builds too. The full pack build still runs best in release, about six times faster.
+[profile.dev.package.libbz2-rs-sys]
+opt-level = 3
+
+[profile.dev.package.spellbook]
+opt-level = 3

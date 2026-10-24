@@ -1,10 +1,14 @@
 //! Tests of the word lists on tiny fixtures built in memory; nothing is downloaded.
 
+mod build;
+mod chains;
+mod count;
 mod curl;
 mod fetch;
 mod manifest;
 mod merge;
 mod script;
+mod split;
 mod text;
 mod wordfreq;
 
@@ -14,6 +18,7 @@ use super::dict::Dict;
 use super::fixture::{self, AFF, dic};
 use super::list::{self, Word, WordList};
 use super::manifest::Plan;
+use super::report::report;
 use super::text::TextCounts;
 use super::wordfreq::{Entry, freq};
 
@@ -30,6 +35,7 @@ fn plan(max_words: usize) -> Plan<'static> {
         list: String::new(),
         dict: None,
         max_words,
+        text: None,
     }
 }
 
@@ -187,12 +193,12 @@ fn coverage_counts_the_rejected_among_the_most_frequent() {
 #[test]
 fn the_report_prints_one_line_per_rule() {
     let list = build(&[("انا", 200), ("أنا", 300), ("zz", 310)], &["أنا"]);
-    let lines = list::report("ar", &list);
+    let lines = report("ar", &list);
     let starts = [
         "ar: 1 word kept (0 capitalised",
         "coverage ar: the dictionary rejected 1 of the 3 most frequent words; first 1: zz",
         "merged ar: 1 word; first 1: انا → أنا",
-        "text ar: none, so twins and pieces are skipped",
+        "text ar: none, so twins, pieces and stems are skipped",
     ];
     assert_eq!(lines.len(), starts.len(), "{lines:?}");
     for (line, start) in lines.iter().zip(starts) {

@@ -9,7 +9,7 @@ use flate2::read::GzDecoder;
 use kx_mod_predict::pack::layout::STEPS_PER_ZIPF;
 use rmpv::Value;
 
-use super::{WordsError, io_error};
+use super::{WordsError, float, io_error};
 
 /// The header key naming the format.
 const FORMAT_KEY: &str = "format";
@@ -98,7 +98,21 @@ pub(crate) fn scaled(bucket: u32, steps: u32) -> u8 {
     u8::try_from(above_floor.saturating_mul(steps) / CB_PER_ZIPF).unwrap_or(u8::MAX)
 }
 
-/// The share of all words that a word of `bucket` takes: 10^(−bucket/100).
-pub(crate) fn share(bucket: u32) -> f64 {
-    10f64.powf(-f64::from(bucket) / f64::from(CB_PER_ZIPF))
+/// The bucket of a word seen `count` times in `total` tokens, its share in centibels; `None` when it was never seen.
+pub(crate) fn bucket_of(count: u64, total: u64) -> Option<u32> {
+    if count == 0 || total < count {
+        return None;
+    }
+    let cb = -f64::from(CB_PER_ZIPF) * (float(count) / float(total)).log10();
+    Some(whole(cb))
+}
+
+/// `x` rounded to a whole number of centibels, at least 0.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "A share of at least one token in 2^64 is under 2000 centibels, and it is clamped at 0."
+)]
+fn whole(x: f64) -> u32 {
+    x.round().max(0.0) as u32
 }

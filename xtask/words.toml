@@ -1,29 +1,73 @@
 # Sources and rules for `cargo xtask words`: every downloaded file with its hash, and the thresholds of the rules.
-# Every word fact comes from the sources themselves; the source folder is always given with `--src`.
+# Every word fact comes from the sources themselves; the source folder is always given with `--src`. The apostrophe
+# comes from kx-mod-predict's fold table, so the build and the tracker split words alike.
 
 [rules]
 # A word holding any of these is dropped: web addresses, emails and paths.
 drop_chars = ["@", "/", "."]
-# The apostrophe of elided and joined words, as French keyboards type it.
-apostrophe = "'"
 # A rejected word merges only into a fold twin at most this many centibels rarer: 100 is 10 times, so a stray
 # rare form (ألذى beside الذى) never takes a common word's frequency.
 max_gap_cb = 100
 # A list with this share of its words in one script drops the others' words: 0.9 drops stray foreign words but
 # leaves a list split between two scripts whole.
 main_script_share = 0.9
-# A twin spelling must be seen this often away from sentence starts before it wins: 20 to nothing is past chance.
+# A twin spelling must be seen this often standing alone away from sentence starts before it wins: 20 to nothing is
+# past chance.
 min_case_seen = 20
-# A word standing alone this many times less often than wordfreq predicts is a tokenizer piece: real words differ
-# by a few times between corpora, pieces by hundreds.
+# A twin differing only in case must be seen this many times more often than the word's own spelling: Wikipedia
+# writes Bill, King and Federal in names about as often as the words, but March, China and I far more.
+twin_ratio = 10.0
+# A word is a tokenizer piece when the apostrophe words holding it are seen this many times more often than it
+# stands alone: `ll` of `I'll`. The report shows each piece as its alone/joined counts.
 piece_ratio = 20.0
-# Pieces are judged only when the text should show the word this often: under 5 sightings where 100 are expected
-# is not chance.
-piece_min_expected = 100.0
+# Pieces are judged only when their apostrophe words are seen this often: under 5 alone where 100 are joined is
+# not chance.
+piece_min_seen = 100
 # The coverage line checks this many of wordfreq's most frequent words against the dictionary.
 coverage_top = 10000
 # Every report line prints this many words.
 show = 30
+
+# How Tatoeba and Wikipedia text is read and counted into word chains, for each `[lang.<iso>.text]`. Each language's
+# `max_sentences` and `max_bytes` bound a run: a release build counts about 1 MB of Wikipedia a second, and Arabic,
+# with little Tatoeba, reads more Wikipedia.
+[text]
+# A sentence ends at each of these when a space or the text's end follows, so `U.S.` and `3.14` stay whole; a chain
+# never runs past one.
+sentence_ends = [".", "!", "?", "؟", "…", "\n", "\r"]
+# The shortest and longest chains counted, in words: a word and the one or two before it.
+min_chain = 2
+max_chain = 3
+# A Tatoeba count weighs this many Wikipedia ones: its everyday sentences are closer to what people type.
+tatoeba_weight = 4
+# This many Tatoeba sentences in a thousand are held back for the meter, picked by a hash of their id.
+held_back_per_mille = 20
+# The most chains counted at once; past it the rarest go (lossy counting), so memory stays near 0.4 GB.
+max_live_chains = 12000000
+# The next words kept per context, best first.
+followers = 8
+# What Tatoeba writes for an empty field.
+null = '\N'
+# The held-back sentences go to `<iso>.txt` here, under cargo's target folder, so they are never committed.
+held = "words/held"
+# The packs and their credits go here, under the workspace root, unless `--out` names another folder.
+out = "assets/words"
+
+# The files written beside the packs; every fixed sentence of `CREDITS.txt` is in `words-credits.txt`.
+[credits]
+file = "CREDITS.txt"
+authors = "TATOEBA-AUTHORS.txt"
+licence = "LICENSE.txt"
+# The lines of `LICENSE.txt`: two sentences.
+licence_text = [
+    "The word packs in this folder (*.kxw) are adaptations of the works credited in CREDITS.txt, shared under the",
+    "Creative Commons Attribution-ShareAlike 4.0 International licence: https://creativecommons.org/licenses/by-sa/4.0/legalcode",
+    "The credits of every source, with its own licence, are in CREDITS.txt.",
+]
+# wordfreq's licence section, copied word for word from its heading to the next heading.
+wordfreq = { file = "wordfreq/README.md", from = "## License", to = "## " }
+# SCOWLv2's full notice, copied word for word from its heading to the build line.
+scowl = { file = "dict/en/unzipped/README_en_US.txt", from = "COPYRIGHT, SOURCES, and CREDITS:", to = "Build Date:" }
 
 [fetch]
 # Env var naming the Windows folder, so the system's own curl runs there.
@@ -55,17 +99,36 @@ aff = "dict/en/unzipped/en_US.aff"
 dic = "dict/en/unzipped/en_US.dic"
 max_words = 150000
 
+[lang.en.text]
+chain_budget_kb = 3000
+tatoeba = { file = "tatoeba/eng_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = ["wiki/enwiki_content-20261018-00000.json.bz2"], max_bytes = 300000000 }
+
 [lang.fr]
 list = "wordfreq/large_fr.msgpack.gz"
 aff = "dict/fr/fr.aff"
 dic = "dict/fr/fr.dic"
 max_words = 150000
 
+[lang.fr.text]
+chain_budget_kb = 3000
+tatoeba = { file = "tatoeba/fra_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = ["wiki/frwiki_content-20261018-00000.json.bz2"], max_bytes = 300000000 }
+
 [lang.ar]
 list = "wordfreq/large_ar.msgpack.gz"
 aff = "dict/ar/ar.aff"
 dic = "dict/ar/ar.dic"
 max_words = 250000
+
+[lang.ar.text]
+chain_budget_kb = 4000
+tatoeba = { file = "tatoeba/ara_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = [
+    "wiki/arwiki_content-20261018-00000.json.bz2",
+    "wiki/arwiki_content-20261018-00001.json.bz2",
+    "wiki/arwiki_content-20261018-00002.json.bz2",
+], max_bytes = 1000000000 }
 
 # Where each source comes from: its base, then its folder under that base, then its file name.
 [bases]

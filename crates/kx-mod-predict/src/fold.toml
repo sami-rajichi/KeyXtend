@@ -145,6 +145,11 @@ drop = [
 "\u0671" = "\u0627" # alef wasla to alef
 "\u0649" = "\u064A" # alef maksura to ya
 
+# The apostrophe: the typographic one that phones and word processors type folds to the plain one that elided and
+# joined words keep (l'homme, don't), so the build tool and the tracker split and match words alike.
+[apostrophe.map]
+"’" = "'" # right single quotation mark to apostrophe
+
 # Greek: final sigma folds to sigma, so a word typed so far finds its longer forms.
 [greek.map]
 "\u03C2" = "\u03C3" # final sigma to sigma

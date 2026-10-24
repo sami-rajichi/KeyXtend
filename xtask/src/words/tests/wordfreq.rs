@@ -4,7 +4,7 @@ use proptest::prelude::*;
 use rmpv::Value;
 
 use super::super::fixture;
-use super::super::wordfreq::{Entry, decode, freq, scaled, share};
+use super::super::wordfreq::{Entry, bucket_of, decode, freq, scaled};
 
 fn entry(word: &str, bucket: u32) -> Entry {
     Entry {
@@ -65,10 +65,12 @@ fn the_frequency_byte_is_the_zipf_value_times_the_packs_steps() {
 }
 
 #[test]
-fn a_bucket_gives_its_share_of_all_words() {
-    assert!((share(0) - 1.0).abs() < 1e-12);
-    assert!((share(200) - 0.01).abs() < 1e-12);
-    assert!((share(150) - 10f64.powf(-1.5)).abs() < 1e-12);
+fn a_count_in_a_total_gives_its_bucket() {
+    assert_eq!(bucket_of(1, 100), Some(200));
+    assert_eq!(bucket_of(5_000, 1_000_000), Some(230));
+    assert_eq!(bucket_of(10, 10), Some(0));
+    assert_eq!(bucket_of(0, 10), None, "never seen");
+    assert_eq!(bucket_of(11, 10), None, "more than the total");
 }
 
 proptest! {
