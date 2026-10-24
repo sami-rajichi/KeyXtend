@@ -76,7 +76,9 @@ fn confirmed(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, 
     let prompt = within(ctx, || prompt_up(ctx));
     let typed = within(ctx, || {
         let el = uia.named(app.hwnd, &g.user_name);
-        el.and_then(|e| uia::value(&e)).as_deref() == Some(want.as_str())
+        el.and_then(|e| uia::value(&e, want.encode_utf16().count()))
+            .as_deref()
+            == Some(want.as_str())
     });
     let back = foreground() == app.hwnd;
     let ok = prompt.is_some() && typed.is_some() && back;
@@ -143,9 +145,11 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
     let g = &ctx.cfg.g21;
     ask(ctx, uia, fw, app, &g.user_name, ToolButton::FillUser)?;
     let prompt_user = prompt_within_refuse(ctx);
+    // A field holding more than the test user's name fails as one that holds it does.
+    let most = ctx.spike.tools.test_user.encode_utf16().count();
     let user = uia
         .named(app.hwnd, &g.user_name)
-        .and_then(|e| uia::value(&e));
+        .and_then(|e| uia::value(&e, most));
     ask(ctx, uia, fw, app, &g.pass_name, ToolButton::FillPassword)?;
     let prompt_pass = prompt_within_refuse(ctx);
     let len = length_in(&win::title(app.hwnd), &ctx.cfg.g23.length_mark);

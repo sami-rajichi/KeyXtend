@@ -17,8 +17,8 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinFieldWatch, WinGuard, WinInjector, WinInstance,
-    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPointerHook, WinPower, WinScreens, WinScroll,
-    WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
+    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPackDisk, WinPointerHook, WinPower, WinScreens,
+    WinScroll, WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -81,7 +81,7 @@ impl WindowsPlatform {
     /// The word packs in `dirs`, the first folder first, for the app to register under `WordPacksKey`.
     #[must_use]
     pub fn word_packs(&self, dirs: Vec<PathBuf>) -> Arc<dyn WordPacks> {
-        Arc::new(WinWordPacks::new(dirs))
+        Arc::new(WinWordPacks::new(WinPackDisk, dirs))
     }
 
     /// The focused-box watch over UI Automation, for the app to register under `FieldWatchKey`.

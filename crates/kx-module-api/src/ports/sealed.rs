@@ -8,12 +8,18 @@ use thiserror::Error;
 pub const MIN_BLOB_LEN: usize = 1;
 /// The longest blob name, in bytes.
 pub const MAX_BLOB_LEN: usize = 32;
+/// Names some supported OS refuses as file names (Windows keeps them for devices, even with an extension); no data
+/// is named after one, so data moves between systems.
+pub const RESERVED_NAMES: &[&str] = &[
+    "con", "prn", "aux", "nul", "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
+    "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+];
 
 /// Why a blob could not be named, loaded or saved.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum SealedError {
-    /// The name is not lower-case letters, digits and dashes within the length limits.
-    #[error("the blob name is not lower-case letters, digits and dashes within the length limits")]
+    /// The name is not lower-case letters, digits and dashes within the length limits, or names a device.
+    #[error("the blob name has another character or length, or names a device")]
     BadName,
     /// The blob would not open, and the adapter has set its file aside.
     #[error("the sealed blob was damaged and set aside")]
@@ -26,7 +32,8 @@ pub enum SealedError {
     Io,
 }
 
-/// A checked blob name, such as `predict-en`: `MIN_BLOB_LEN` to `MAX_BLOB_LEN` of `a-z`, `0-9` and `-`.
+/// A checked blob name, such as `predict-en`: `MIN_BLOB_LEN` to `MAX_BLOB_LEN` of `a-z`, `0-9` and `-`, and no
+/// device name (`RESERVED_NAMES`). Every store relies on it, so they all refuse the same names.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlobName(String);
 
@@ -34,11 +41,11 @@ impl BlobName {
     /// Checks and wraps `text`.
     ///
     /// # Errors
-    /// `BadName` when `text` has another character or length.
+    /// `BadName` when `text` has another character or length, or is a device name.
     pub fn new(text: &str) -> Result<Self, SealedError> {
         let plain = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-';
         let sized = (MIN_BLOB_LEN..=MAX_BLOB_LEN).contains(&text.len());
-        if sized && text.bytes().all(plain) {
+        if sized && text.bytes().all(plain) && !RESERVED_NAMES.contains(&text) {
             Ok(Self(text.to_owned()))
         } else {
             Err(SealedError::BadName)

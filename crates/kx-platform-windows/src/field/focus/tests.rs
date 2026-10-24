@@ -2,11 +2,11 @@
 //! element or for our own.
 
 use super::*;
-use crate::field::run::spawn;
-use crate::field::testedit::{LONG_MS, TestEdit, started};
+use crate::field::testedit::{CONFIG, TestEdit, started};
 use crate::lock;
 use crate::scroll::testwin::{WAIT, one_client};
-use kx_module_api::ports::{FieldChange, FieldConfig, FieldKind, FieldRun};
+use kx_module_api::ports::{FieldChange, FieldKind, FieldRun};
+use kx_platform::field::spawn;
 use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver};
 use windows::Win32::Foundation::E_NOINTERFACE;
@@ -25,7 +25,7 @@ fn shared() -> (Box<dyn FieldRun>, Arc<Shared>, Heard) {
         for _job in inbox {}
     };
     let tell = Box::new(move |change| lock(&log).push(change));
-    let run = spawn(FieldConfig { read_ms: LONG_MS }, tell, body).unwrap();
+    let run = spawn(CONFIG, tell, body).unwrap();
     (run, got.recv_timeout(WAIT).unwrap(), heard)
 }
 

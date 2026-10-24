@@ -3,23 +3,24 @@
 
 use std::mem::size_of;
 
-use kx_module_api::ports::MAX_PACK_BYTES;
+use kx_module_api::ports::{MAX_ISO_LEN, MAX_PACK_BYTES};
 
 /// The first bytes of every pack.
 pub const MAGIC: [u8; 4] = *b"KXW1";
 /// The format version this crate reads and writes.
 pub const VERSION: u16 = 1;
-/// The longest language code, in ASCII bytes; its field always has this many bytes, zero-padded.
-pub const MAX_ISO: usize = 8;
+/// The language code's field, in bytes: the code that `fits_iso` takes, then zeros.
+pub const ISO_FIELD: usize = 8;
+const _: () = assert!(MAX_ISO_LEN <= ISO_FIELD, "the longest code fits its field");
 
 /// The header's version field (u16), after the magic.
 pub const AT_VERSION: usize = MAGIC.len();
 /// The language code's length (u8).
 pub const AT_ISO_LEN: usize = AT_VERSION + size_of::<u16>();
-/// The language code, `MAX_ISO` bytes.
+/// The language code, `ISO_FIELD` bytes.
 pub const AT_ISO: usize = AT_ISO_LEN + size_of::<u8>();
 /// The pack's flags (u8): `CHECKED` and `CHAINS`.
-pub const AT_FLAGS: usize = AT_ISO + MAX_ISO;
+pub const AT_FLAGS: usize = AT_ISO + ISO_FIELD;
 /// The word count (u32).
 pub const AT_WORDS: usize = AT_FLAGS + size_of::<u8>();
 /// The highest chain length (u8); `NO_CHAINS` when the pack has none.
@@ -97,12 +98,6 @@ pub const ID_MASK: u32 = (1 << ID_BITS) - 1;
 #[must_use]
 pub fn record_len(n: u8) -> usize {
     usize::from(n).saturating_sub(1) * ID_BYTES + START_LEN
-}
-
-/// True when `code` is a language code a pack may carry: 1 to `MAX_ISO` printable ASCII bytes.
-#[must_use]
-pub fn fits_iso(code: &[u8]) -> bool {
-    (1..=MAX_ISO).contains(&code.len()) && code.iter().all(u8::is_ascii_graphic)
 }
 
 /// True when a spelling of `len` UTF-8 bytes fits a pack: 1 to `MAX_SPELLING`.

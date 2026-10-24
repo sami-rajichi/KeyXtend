@@ -150,6 +150,26 @@ fn debug_never_shows_a_typed_or_suggested_text() {
 }
 
 #[test]
+fn erase_counts_characters_not_utf16_units() {
+    assert_eq!(TypeWord::erase_of("ap"), Some(2));
+    assert_eq!(TypeWord::erase_of(SECRETS[1]), Some(5), "Arabic letters");
+    let face = "a\u{1F600}";
+    assert_eq!(face.encode_utf16().count(), 3);
+    assert_eq!(
+        TypeWord::erase_of(face),
+        Some(2),
+        "one press per surrogate pair"
+    );
+    assert_eq!(
+        TypeWord::erase_of("e\u{301}"),
+        Some(2),
+        "a combining accent counts"
+    );
+    let long = "a".repeat(usize::from(u16::MAX) + 1);
+    assert_eq!(TypeWord::erase_of(&long), None);
+}
+
+#[test]
 fn a_type_word_still_shows_its_round_and_erase() {
     let word = TypeWord {
         round: 7,

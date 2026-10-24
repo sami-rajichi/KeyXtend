@@ -61,9 +61,9 @@ pub(crate) fn call(what: &'static str) -> impl Fn(windows::core::Error) -> UiaEr
     move |source| UiaError::Call { what, source }
 }
 
-/// `READ_CAP` plus `more`, as UI Automation takes a length.
-pub(crate) fn cap(more: usize) -> i32 {
-    i32::try_from(crate::field::READ_CAP + more).unwrap_or(i32::MAX)
+/// `units` as UI Automation takes a length or a count, at most `i32::MAX`.
+pub(crate) fn span(units: usize) -> i32 {
+    i32::try_from(units).unwrap_or(i32::MAX)
 }
 
 /// The system's client, with its connection and call timeouts at `read_ms`; none when it does not start.

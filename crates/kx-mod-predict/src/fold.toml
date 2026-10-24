@@ -3,7 +3,7 @@
 
 # Latin-1 Supplement and Latin Extended-A, after Lucene's ASCIIFoldingFilter: accents go, ligatures spell out.
 [latin]
-# Combining diacritics go, so decomposed text from UI Automation folds as precomposed text does. Among them,
+# Combining diacritics go, so decomposed text from accessibility APIs folds as precomposed text does. Among them,
 # U+0307 going makes İ, which lower-cases to i and that dot, fold to i.
 drop = [
     "\u0300", "\u0301", "\u0302", "\u0303", "\u0304", "\u0305", "\u0306", "\u0307",

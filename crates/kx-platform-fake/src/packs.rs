@@ -1,7 +1,7 @@
 //! Fake word packs: the test adds each language's bytes, and the fake counts the opens.
 
 use crate::lock;
-use kx_module_api::ports::{PackError, PackView, WordPacks};
+use kx_module_api::ports::{PackError, PackView, WordPacks, pack_file};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -9,12 +9,15 @@ use std::sync::{Arc, Mutex};
 /// What the opens did, and what the test set for them.
 #[derive(Default)]
 struct Log {
+    /// Each pack's bytes, by its file name, as a platform finds it.
     packs: BTreeMap<String, Arc<[u8]>>,
     fail: bool,
     opens: BTreeMap<String, usize>,
 }
 
 /// Word packs shared by their clones: each open gives a view over the bytes added for its language, or `None`.
+///
+/// A language code that names no pack file (`pack_file`) never has a pack, as on every platform.
 #[derive(Clone, Default)]
 pub struct FakeWordPacks {
     log: Arc<Mutex<Log>>,
@@ -29,7 +32,9 @@ impl FakeWordPacks {
 
     /// Makes `bytes` the pack of language `iso`, in place of any before; open views keep their bytes.
     pub fn add(&self, iso: &str, bytes: Vec<u8>) {
-        lock(&self.log).packs.insert(iso.to_owned(), bytes.into());
+        if let Some(file) = pack_file(iso) {
+            lock(&self.log).packs.insert(file, bytes.into());
+        }
     }
 
     /// Refuses the next open, whatever its language, with `Unreadable`.
@@ -48,7 +53,7 @@ impl fmt::Debug for FakeWordPacks {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let log = lock(&self.log);
         f.debug_struct("FakeWordPacks")
-            .field("languages", &log.packs.keys().collect::<Vec<_>>())
+            .field("files", &log.packs.keys().collect::<Vec<_>>())
             .field("opens", &log.opens)
             .finish_non_exhaustive()
     }
@@ -61,8 +66,8 @@ impl WordPacks for FakeWordPacks {
         if std::mem::take(&mut log.fail) {
             return Err(PackError::Unreadable);
         }
-        let pack = log.packs.get(iso).map(|bytes| FakePack(Arc::clone(bytes)));
-        Ok(pack.map(|p| Box::new(p) as Box<dyn PackView>))
+        let found = pack_file(iso).and_then(|file| log.packs.get(&file).map(Arc::clone));
+        Ok(found.map(|bytes| Box::new(FakePack(bytes)) as Box<dyn PackView>))
     }
 }
 

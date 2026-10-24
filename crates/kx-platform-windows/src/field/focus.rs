@@ -8,27 +8,28 @@
 )]
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::process;
 use std::sync::Arc;
 
+use kx_platform::field::Shared;
 use windows::Win32::UI::Accessibility::{
     IUIAutomationElement, IUIAutomationFocusChangedEventHandler,
     IUIAutomationFocusChangedEventHandler_Impl,
 };
 use windows::core::{Ref, implement};
 
-use super::run::Shared;
-use super::win::change_of;
+use super::win::WinProbe;
 
-/// The handler's object: the shared box it tells.
+/// The handler's object: the shared box it tells, and the probe that says whose element took the focus.
 #[implement(IUIAutomationFocusChangedEventHandler)]
 struct Focus {
     shared: Arc<Shared>,
+    probe: WinProbe,
 }
 
 /// A focus handler that tells `shared`.
 pub(super) fn handler(shared: Arc<Shared>) -> IUIAutomationFocusChangedEventHandler {
-    Focus { shared }.into()
+    let probe = WinProbe::new();
+    Focus { shared, probe }.into()
 }
 
 impl IUIAutomationFocusChangedEventHandler_Impl for Focus_Impl {
@@ -38,11 +39,7 @@ impl IUIAutomationFocusChangedEventHandler_Impl for Focus_Impl {
         sender: Ref<IUIAutomationElement>,
     ) -> windows::core::Result<()> {
         if let Some(el) = sender.as_ref() {
-            let tell = || {
-                if let Some(change) = change_of(el, process::id()) {
-                    self.shared.told(change);
-                }
-            };
+            let tell = || self.shared.moved(&self.probe, el);
             let told = catch_unwind(AssertUnwindSafe(tell));
             if told.is_err() {
                 tracing::warn!("the field watch's callback panicked");

@@ -14,9 +14,11 @@ pub enum GuardError {
     Refused,
 }
 
-/// Wraps the data key with the OS key (DPAPI on Windows); the platform implements it.
+/// Wraps the data key with the OS key (DPAPI, Keychain or Secret Service); the platform implements it and never shows a
+/// prompt.
 pub trait KeyGuard: Send + Sync {
-    /// The wrapped form of `key`, safe to keep in a file.
+    /// The wrapped form of `key`, safe to keep in a file; it may be an opaque handle where the OS keeps the key itself,
+    /// as Keychain and libsecret do.
     ///
     /// # Errors
     /// `Unavailable` without the key service, `Refused` when it declines.

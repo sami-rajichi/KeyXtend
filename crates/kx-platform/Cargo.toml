@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform"
-description = "The platform ports: what an OS adapter hands the kernel and the UI, and the data folder rule."
+description = "The platform ports: what an OS adapter hands the kernel and the UI, the data folder rule, and the neutral pack and field-watch rules."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,8 @@ workspace = true
 [dependencies]
 kx-module-api = { path = "../kx-module-api" }
 thiserror.workspace = true
+# The field watch logs why it stopped, never what it read.
+tracing.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }

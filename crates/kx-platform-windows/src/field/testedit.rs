@@ -19,6 +19,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
+use kx_module_api::ports::FieldConfig;
+
 use crate::com::Com;
 use crate::scroll::testwin::WAIT;
 use crate::uia::client;
@@ -27,6 +29,13 @@ use crate::uia::client;
 const BOX: (i32, i32, i32, i32) = (40, 40, 600, 40);
 /// A `read_ms` no test read reaches.
 pub(super) const LONG_MS: u32 = 5000;
+/// A `read_chars` that holds every test box's text.
+pub(super) const CHARS: u16 = 256;
+/// A watch config no test read reaches.
+pub(super) const CONFIG: FieldConfig = FieldConfig {
+    read_ms: LONG_MS,
+    read_chars: CHARS,
+};
 
 /// A hidden edit box on a thread of its own; dropping it destroys both.
 pub(super) struct TestEdit {

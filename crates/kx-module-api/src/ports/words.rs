@@ -36,7 +36,7 @@ pub struct TypingMode {
     pub shift: bool,
     /// Caps Lock is on.
     pub caps: bool,
-    /// Ctrl, Alt or Win is latched.
+    /// Ctrl, Alt or the system key (Win, Cmd or Super) is latched.
     pub shortcut: bool,
 }
 
@@ -45,15 +45,24 @@ impl Event for TypingMode {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// To the keyboard: erase `erase` UTF-16 units the keyboard typed, then type `text`.
+/// To the keyboard: erase `erase` characters the keyboard typed, then type `text`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeWord {
     /// The round of the lane the word came from.
     pub round: u32,
-    /// How many UTF-16 units to erase first.
+    /// How many characters (Unicode scalars) to erase first; each platform's injector turns them into Backspace
+    /// presses, one per character, as one press removes a whole surrogate pair.
     pub erase: u16,
     /// What to type then.
     pub text: Redacted<String>,
+}
+
+impl TypeWord {
+    /// How many characters `typed` holds, as `erase` counts them; `None` past `u16::MAX`.
+    #[must_use]
+    pub fn erase_of(typed: &str) -> Option<u16> {
+        u16::try_from(typed.chars().count()).ok()
+    }
 }
 
 impl Event for TypeWord {

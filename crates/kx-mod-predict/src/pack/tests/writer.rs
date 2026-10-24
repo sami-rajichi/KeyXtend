@@ -1,6 +1,8 @@
 //! The writer: what it refuses, how it merges repeats, and a pack of words without chains.
 
-use super::super::layout::{MAX_CHAIN, MAX_ISO, MAX_SPELLING};
+use kx_module_api::ports::{MAX_ISO_LEN, RESERVED_NAMES};
+
+use super::super::layout::{MAX_CHAIN, MAX_SPELLING};
 use super::super::*;
 use super::trip::id;
 
@@ -30,8 +32,9 @@ fn writer(flags: Flags, words: &[&str]) -> PackWriter {
 
 #[test]
 fn a_bad_language_code_is_refused() {
-    let long = "x".repeat(MAX_ISO + 1);
-    for iso in ["", "e n", "é", long.as_str()] {
+    let long = "x".repeat(MAX_ISO_LEN + 1);
+    let device = RESERVED_NAMES[0];
+    for iso in ["", "e n", "é", "EN", "../x", device, long.as_str()] {
         assert_eq!(
             PackWriter::new(iso, LIST, FOLLOWERS).unwrap_err(),
             WriteError::BadIso,

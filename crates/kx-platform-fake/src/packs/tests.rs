@@ -37,6 +37,16 @@ fn a_language_without_a_pack_opens_none() {
 }
 
 #[test]
+fn a_code_no_platform_could_name_has_no_pack() {
+    let packs = FakeWordPacks::new();
+    for iso in ["EN", "../en", "con"] {
+        packs.add(iso, EN.to_vec());
+        assert_eq!(read(&packs, iso), Ok(None), "{iso}");
+        assert_eq!(packs.opens(iso), 1, "{iso}");
+    }
+}
+
+#[test]
 fn a_scripted_failure_refuses_the_next_open_only() {
     let packs = FakeWordPacks::new();
     packs.add("en", EN.to_vec());

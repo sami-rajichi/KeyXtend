@@ -1,5 +1,5 @@
 //! The Windows field watch: a thread with COM in the multithreaded apartment, a UI Automation client whose calls end at
-//! `read_ms`, and a focus handler that tells each box's kind. Focus in our own process keeps the last box.
+//! `read_ms`, and a focus handler. The run and its rules are `kx_platform::field`'s; this side only reads elements.
 
 use std::process;
 use std::sync::Arc;
@@ -7,11 +7,11 @@ use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
 use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldRun, FieldWatch};
+use kx_platform::field::{Job, Probe, Reader, Shared, Tell, serve, spawn};
 use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 
 use super::focus::handler;
-use super::run::{Job, Shared, Tell, spawn};
-use super::uia::{before_cursor, box_id, ends_with, focused, kind_of, late};
+use super::uia::{before_cursor, box_id, ends_with, focused, kind_of};
 use crate::com::Com;
 use crate::uia::{client, pid};
 
@@ -25,16 +25,87 @@ impl FieldWatch for WinFieldWatch {
     }
 }
 
+/// Tells whether an element shows in process `me`, and what box it is.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct WinProbe {
+    pub(super) me: u32,
+}
+
+impl WinProbe {
+    /// A probe for our own process.
+    pub(super) fn new() -> Self {
+        Self { me: process::id() }
+    }
+}
+
+impl Probe for WinProbe {
+    type El = IUIAutomationElement;
+
+    fn ours(&self, el: &IUIAutomationElement) -> bool {
+        pid(el) == self.me
+    }
+
+    fn change(&self, el: &IUIAutomationElement) -> FieldChange {
+        FieldChange {
+            kind: kind_of(el),
+            box_id: box_id(el),
+        }
+    }
+}
+
+/// Reads the focused box over UI Automation, never more than `chars` characters at once.
+struct WinReader {
+    auto: IUIAutomation,
+    probe: WinProbe,
+    chars: usize,
+}
+
+impl Probe for WinReader {
+    type El = IUIAutomationElement;
+
+    fn ours(&self, el: &IUIAutomationElement) -> bool {
+        self.probe.ours(el)
+    }
+
+    fn change(&self, el: &IUIAutomationElement) -> FieldChange {
+        self.probe.change(el)
+    }
+}
+
+impl Reader for WinReader {
+    fn focused(&self) -> Result<IUIAutomationElement, FieldError> {
+        focused(&self.auto)
+    }
+
+    fn before_cursor(
+        &self,
+        el: &IUIAutomationElement,
+        max_words: u8,
+        by: Instant,
+    ) -> Result<Option<String>, FieldError> {
+        before_cursor(el, max_words, by, self.chars)
+    }
+
+    fn ends_with(
+        &self,
+        el: &IUIAutomationElement,
+        text: &str,
+        by: Instant,
+    ) -> Result<Option<bool>, FieldError> {
+        ends_with(el, text, by, self.chars)
+    }
+}
+
 /// The watch thread's body: the client and the focus handler, then each read in turn until the run drops.
 #[allow(
     unsafe_code,
     reason = "Adds and removes the UI Automation focus handler."
 )]
-fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, read_ms: u32) {
+fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, cfg: FieldConfig) {
     let Ok(_com) = Com::start() else {
         return shared.fail("COM did not start");
     };
-    let Some(auto) = client(read_ms) else {
+    let Some(auto) = client(cfg.read_ms) else {
         return shared.fail("UI Automation did not start");
     };
     let focus = handler(Arc::clone(shared));
@@ -43,55 +114,20 @@ fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, read_ms: u32) {
         tracing::warn!(code = %e.code(), "UI Automation refused the field watch's focus handler");
         return shared.fail("the focus handler was refused");
     }
-    let start = focused(&auto).ok();
-    if let Some(change) = start.and_then(|el| change_of(&el, process::id())) {
-        shared.first(change);
+    let chars = usize::from(cfg.read_chars);
+    let reader = WinReader {
+        auto,
+        probe: WinProbe::new(),
+        chars,
+    };
+    if let Ok(el) = reader.focused() {
+        shared.first(&reader, &el);
     }
     for job in inbox {
-        serve(&auto, job);
+        serve(&reader, job);
     }
     // SAFETY: removes the handler added above, from the thread that added it.
-    if let Err(e) = unsafe { auto.RemoveFocusChangedEventHandler(&focus) } {
+    if let Err(e) = unsafe { reader.auto.RemoveFocusChangedEventHandler(&focus) } {
         tracing::warn!(error = %e, "the field watch's focus handler was not removed");
     }
-}
-
-/// Answers `job` from the element with focus; one past its time is answered `TimedOut` unstarted.
-fn serve(auto: &IUIAutomation, job: Job) {
-    match job {
-        Job::Before {
-            max_words,
-            by,
-            reply,
-        } => {
-            let read = on_focus(auto, by, |el| before_cursor(el, max_words, by));
-            let _ = reply.send(read);
-        }
-        Job::Ends { text, by, reply } => {
-            let read = on_focus(auto, by, |el| ends_with(el, text.expose(), by));
-            let _ = reply.send(read);
-        }
-    }
-}
-
-/// `read` on the element with focus; `None` when focus is in our own process.
-fn on_focus<T>(
-    auto: &IUIAutomation,
-    by: Instant,
-    read: impl FnOnce(&IUIAutomationElement) -> Result<Option<T>, FieldError>,
-) -> Result<Option<T>, FieldError> {
-    late(by)?;
-    let el = focused(auto)?;
-    if pid(&el) == process::id() {
-        return Ok(None);
-    }
-    read(&el)
-}
-
-/// The kind and id of box `el`; `None` when it shows in process `me`, whose focus keeps the last box.
-pub(super) fn change_of(el: &IUIAutomationElement, me: u32) -> Option<FieldChange> {
-    (pid(el) != me).then(|| FieldChange {
-        kind: kind_of(el),
-        box_id: box_id(el),
-    })
 }

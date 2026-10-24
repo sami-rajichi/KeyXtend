@@ -1,152 +1,114 @@
-//! The pack rules over a fake disk: the code check, the size limit and the folder order.
+//! The Win32 pack disk on real files: whole bytes through a read-only file map, a missing file, unreadable files,
+//! writers and deleters kept out while mapped, and a view that moves between threads.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::fs::{self, OpenOptions};
+use std::path::PathBuf;
 
-use proptest::prelude::*;
+use kx_module_api::ports::{MAX_PACK_BYTES, WordPacks, pack_file};
+use kx_test_support::tempdir::TempDir;
+use windows::Win32::System::Memory::{MEM_MAPPED, MEMORY_BASIC_INFORMATION, VirtualQuery};
 
 use super::*;
 
-/// Random codes tried by the property test.
-const CASES: u32 = 1_024;
-/// The language every folder test looks up.
-const ISO: &str = "en";
+/// A pack's length in the tests: more than one page, and not a whole number of them.
+const LEN: usize = 10_000;
 
-/// A fake disk: each pack file's answer, and every path it was asked for.
-#[derive(Default)]
-struct Disk {
-    files: HashMap<PathBuf, Result<u8, PackError>>,
-    asked: RefCell<Vec<PathBuf>>,
+/// A temp folder for packs, removed at the end.
+fn packs_dir() -> (TempDir, PathBuf) {
+    let dir = TempDir::new("packs").unwrap();
+    let path = dir.path().to_path_buf();
+    (dir, path)
 }
 
-impl Disk {
-    /// A disk holding `ISO`'s pack in each folder of `with`, each answering its place in that list.
-    fn with(with: &[&PathBuf]) -> Self {
-        let files = with
-            .iter()
-            .zip(0..)
-            .map(|(dir, n)| (pack(dir), Ok(n)))
-            .collect();
-        Self {
-            files,
-            asked: RefCell::default(),
-        }
+/// The packs in `dir` alone.
+fn packs(dir: &Path) -> WinWordPacks {
+    WinWordPacks::new(WinPackDisk, vec![dir.to_path_buf()])
+}
+
+/// Writes `bytes` as `iso`'s pack in `dir`, and gives its path.
+fn write(dir: &Path, iso: &str, bytes: &[u8]) -> PathBuf {
+    let path = dir.join(pack_file(iso).unwrap());
+    fs::write(&path, bytes).unwrap();
+    path
+}
+
+/// Bytes that differ from one place to the next.
+fn sample() -> Vec<u8> {
+    (0..LEN).map(|i| u8::try_from(i % 251).unwrap()).collect()
+}
+
+#[test]
+fn a_packs_bytes_come_back_whole_through_the_view() {
+    let (_dir, path) = packs_dir();
+    write(&path, "en", &sample());
+    let view = packs(&path).open("en").unwrap().unwrap();
+    assert_eq!(view.bytes(), sample().as_slice());
+}
+
+#[test]
+fn a_missing_file_or_folder_is_none() {
+    let (_dir, path) = packs_dir();
+    write(&path, "en", &sample());
+    let packs = WinWordPacks::new(WinPackDisk, vec![path.join("missing"), path]);
+    assert!(packs.open("fr").unwrap().is_none());
+}
+
+/// What Windows says of the memory region that holds `at`.
+#[allow(unsafe_code, reason = "Asks Windows about our own memory.")]
+fn region_of(at: *const u8) -> MEMORY_BASIC_INFORMATION {
+    let mut info = MEMORY_BASIC_INFORMATION::default();
+    let size = size_of_val(&info);
+    // SAFETY: `info` is ours and its exact size goes with it; the query only reads the page tables.
+    let wrote = unsafe { VirtualQuery(Some(at.cast()), std::ptr::from_mut(&mut info), size) };
+    assert_eq!(wrote, size, "Windows describes the region");
+    info
+}
+
+#[test]
+fn the_view_is_a_read_only_file_map_never_copy_on_write() {
+    let (_dir, path) = packs_dir();
+    write(&path, "en", &sample());
+    let view = packs(&path).open("en").unwrap().unwrap();
+    let region = region_of(view.bytes().as_ptr());
+    assert_eq!(region.Protect, PAGE_READONLY, "not PAGE_WRITECOPY");
+    assert_eq!(region.Type, MEM_MAPPED);
+    assert!(region.RegionSize >= LEN, "the whole pack is one region");
+}
+
+#[test]
+fn an_empty_pack_a_folder_and_an_oversized_pack_are_unreadable() {
+    let (_dir, path) = packs_dir();
+    write(&path, "en", &[]);
+    fs::create_dir(path.join(pack_file("fr").unwrap())).unwrap();
+    let big = write(&path, "ar", &[]);
+    let file = OpenOptions::new().write(true).open(big).unwrap();
+    file.set_len(MAX_PACK_BYTES + 1).unwrap();
+    drop(file);
+    let packs = packs(&path);
+    for iso in ["en", "fr", "ar"] {
+        assert_eq!(packs.open(iso).err(), Some(PackError::Unreadable), "{iso}");
     }
 }
 
-impl Os for Disk {
-    type View = u8;
-
-    fn map(&self, path: &Path) -> Result<Option<u8>, PackError> {
-        self.asked.borrow_mut().push(path.to_path_buf());
-        self.files.get(path).copied().transpose()
-    }
-}
-
-/// An absolute folder on every system.
-fn folder(name: &str) -> PathBuf {
-    std::env::temp_dir().join(name)
-}
-
-/// `ISO`'s pack file in `dir`.
-fn pack(dir: &Path) -> PathBuf {
-    dir.join(format!("{ISO}.{PACK_EXT}"))
-}
-
 #[test]
-fn a_code_of_two_or_three_lowercase_letters_names_its_pack() {
-    assert_eq!(file_name("en").as_deref(), Some("en.kxw"));
-    assert_eq!(file_name("fil").as_deref(), Some("fil.kxw"));
-}
-
-#[test]
-fn any_other_code_names_no_pack() {
-    let bad = [
-        "", "e", "engl", "EN", "En", "../x", "..", "e1", "é", "ع", "e n", "en\0", "en.", "a/b",
-        "a\\b", "con", "prn", "aux", "nul", "CON", "com1", "lpt1",
-    ];
-    for iso in bad {
-        assert_eq!(file_name(iso), None, "{iso:?}");
-    }
-}
-
-#[test]
-fn a_bad_code_never_reaches_the_disk() {
-    let disk = Disk::default();
-    for iso in ["../x", "EN", "e", "engl", "con", "nul"] {
-        assert_eq!(find(&disk, &[folder("a")], iso), Ok(None));
-    }
-    assert!(disk.asked.borrow().is_empty());
-}
-
-#[test]
-fn the_first_folder_with_the_pack_wins() {
-    let (a, b, c) = (folder("a"), folder("b"), folder("c"));
-    let disk = Disk::with(&[&b, &c]);
-    let dirs = [a.clone(), b.clone(), c];
-    assert_eq!(find(&disk, &dirs, ISO), Ok(Some(0)));
-    assert_eq!(*disk.asked.borrow(), [pack(&a), pack(&b)]);
-}
-
-#[test]
-fn a_missing_language_is_none_after_every_folder() {
-    let disk = Disk::default();
-    let dirs = [folder("a"), folder("b")];
-    assert_eq!(find(&disk, &dirs, ISO), Ok(None));
-    assert_eq!(*disk.asked.borrow(), [pack(&dirs[0]), pack(&dirs[1])]);
-}
-
-#[test]
-fn an_unreadable_pack_stands_over_a_later_folder() {
-    let (a, b) = (folder("a"), folder("b"));
-    let mut disk = Disk::with(&[&b]);
-    disk.files.insert(pack(&a), Err(PackError::Unreadable));
-    assert_eq!(find(&disk, &[a, b], ISO), Err(PackError::Unreadable));
-}
-
-#[test]
-fn a_relative_folder_is_never_tried() {
-    let abs = folder("a");
-    let disk = Disk::with(&[&PathBuf::from("packs"), &abs]);
-    assert_eq!(
-        find(&disk, &[PathBuf::from("packs"), abs.clone()], ISO),
-        Ok(Some(1))
+fn a_mapped_pack_cannot_be_written_or_deleted_until_its_view_drops() {
+    let (_dir, path) = packs_dir();
+    let file = write(&path, "en", &sample());
+    let view = packs(&path).open("en").unwrap().unwrap();
+    assert!(
+        OpenOptions::new().write(true).open(&file).is_err(),
+        "no writer while mapped"
     );
-    assert_eq!(*disk.asked.borrow(), [pack(&abs)]);
+    assert!(fs::remove_file(&file).is_err(), "no delete while mapped");
+    drop(view);
+    fs::remove_file(&file).unwrap();
 }
 
 #[test]
-fn a_pack_is_one_byte_to_64_mebibytes() {
-    assert_eq!(MAX_PACK_BYTES, 67_108_864);
-    assert_eq!(view_len(0), Err(PackError::Unreadable));
-    assert_eq!(view_len(1), Ok(1));
-    assert_eq!(view_len(MAX_PACK_BYTES), Ok(67_108_864));
-    assert_eq!(view_len(MAX_PACK_BYTES + 1), Err(PackError::Unreadable));
-    assert_eq!(view_len(u64::MAX), Err(PackError::Unreadable));
-}
-
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(CASES))]
-
-    #[test]
-    fn only_short_lowercase_codes_that_name_no_device_name_a_pack_in_its_folder(
-        iso in prop_oneof![
-            "[a-z]{2,3}",
-            "[a-zA-Z./\\\\:]{0,5}",
-            "\\PC{0,5}",
-            prop::sample::select(RESERVED_NAMES).prop_map(str::to_owned),
-        ],
-    ) {
-        let good = (MIN_ISO_LEN..=MAX_ISO_LEN).contains(&iso.len())
-            && iso.bytes().all(|b| b.is_ascii_lowercase())
-            && !RESERVED_NAMES.contains(&iso.as_str());
-        let name = file_name(&iso);
-        prop_assert_eq!(name.is_some(), good);
-        if let Some(name) = name {
-            prop_assert_eq!(Path::new(&name).file_stem(), Some(std::ffi::OsStr::new(&iso)));
-            let dir = folder("a");
-            let path = dir.join(&name);
-            prop_assert_eq!(path.parent(), Some(dir.as_path()));
-        }
-    }
+fn the_view_moves_to_another_thread_and_reads_there() {
+    let (_dir, path) = packs_dir();
+    write(&path, "en", &sample());
+    let view = packs(&path).open("en").unwrap().unwrap();
+    let len = std::thread::spawn(move || view.bytes().len()).join();
+    assert_eq!(len.ok(), Some(LEN));
 }

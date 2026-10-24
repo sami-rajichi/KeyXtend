@@ -4,7 +4,7 @@ mod check;
 
 use std::collections::BTreeMap;
 
-use kx_mod_predict::pack::layout::fits_iso;
+use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
 
 use super::WordsError;
@@ -173,7 +173,7 @@ impl Manifest {
             });
         }
         let list = self.small.list.replace(ISO_SLOT, iso);
-        if !fits_iso(iso.as_bytes()) || !self.sources.contains_key(&list) {
+        if !fits_iso(iso) || !self.sources.contains_key(&list) {
             return Err(WordsError::Lang(iso.to_string()));
         }
         Ok(Plan {
@@ -230,7 +230,7 @@ impl Manifest {
         for (iso, lang) in &self.lang {
             let files = [&lang.list, &lang.aff, &lang.dic];
             let known = files.iter().all(|f| self.sources.contains_key(*f));
-            if !fits_iso(iso.as_bytes()) || !known || lang.max_words == 0 {
+            if !fits_iso(iso) || !known || lang.max_words == 0 {
                 return Err(bad(&format!(
                     "[lang.{iso}] needs a pack code, known files and some max_words"
                 )));

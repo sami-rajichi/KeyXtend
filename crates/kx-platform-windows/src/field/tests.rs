@@ -1,5 +1,5 @@
-//! The kind table and the kind rules: each rule, the shipped table, bad tables, and the cut at the read cap; the
-//! rules over any facts are in `props`.
+//! The kind table and the kind rules: each rule, the shipped table and bad tables; the rules over any facts are in
+//! `props`.
 
 use super::*;
 use kx_module_api::ports::FieldKind;
@@ -228,18 +228,6 @@ fn edit_and_document_types_and_editable_patterns_are_text() {
 #[test]
 fn a_button_or_the_desktop_is_no_box() {
     assert_eq!(kind_of(&plain(BUTTON)), FieldKind::None);
-}
-
-#[test]
-fn the_cut_at_the_cap_drops_the_first_word_it_may_have_split() {
-    assert_eq!(after_first("ord two three"), " two three");
-    assert_eq!(
-        after_first(" two three"),
-        " two three",
-        "a cut between words keeps all"
-    );
-    assert_eq!(after_first("word"), "");
-    assert_eq!(after_first("لمة كلمتان"), " كلمتان");
 }
 
 #[cfg(windows)]

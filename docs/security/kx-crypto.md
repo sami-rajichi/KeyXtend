@@ -23,7 +23,7 @@
 |---|---|---|---|
 | Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` (16 MiB) plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file |
 | The key file | The guard unwraps it; anything that is not a 32-byte key is `Locked`, and the file is never deleted or replaced | `MAX_KEY_FILE_BYTES` (64 KiB); a larger file is `Locked` unread | No; tests cover a refused, a short and an oversized key file |
-| Blob names | `BlobName` (a-z, 0-9, `-`, 1–32 bytes), and `RESERVED_NAMES` refuses Windows device names before any file is touched | 32 bytes | No; tests cover every device name |
+| Blob names | `BlobName` (a-z, 0-9, `-`, 1–32 bytes, and no device name from the port's `RESERVED_NAMES`) before any file is touched; `SealedFiles` and the fake store take only a `BlobName`, so both refuse the same names | 32 bytes | Property test of the name form (`kx-module-api`); a test that the fake and the real store keep the same names |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a blob copied or renamed to another blob's name fails authentication, since the name is in the AAD.

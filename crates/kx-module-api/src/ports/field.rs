@@ -31,6 +31,8 @@ pub struct FieldChange {
 pub struct FieldConfig {
     /// The longest one read may take, in ms.
     pub read_ms: u32,
+    /// The longest text one read takes before the cursor, in characters; a longer one is cut to whole words.
+    pub read_chars: u16,
 }
 
 /// Why the box could not be watched or read.

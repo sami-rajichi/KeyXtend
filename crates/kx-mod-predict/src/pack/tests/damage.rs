@@ -8,7 +8,7 @@ use proptest::prelude::*;
 use super::super::layout::{
     AT_FLAGS, AT_FOLLOWERS, AT_ISO, AT_ISO_LEN, AT_MAX_CHAIN, AT_SECTIONS, AT_WORDS,
     CHAIN_AT_TOTAL, CHAINS, CHAINS_BASE, ENTRY_AT_LEN, ENTRY_AT_OFFSET, ENTRY_LEN, HEAD_LEN,
-    KNOWN_FLAGS, LEXICON, MAX_CHAIN, MAX_ISO, MAX_WORDS, MIN_CHAIN, WORDS, u8_at, usize_at,
+    ISO_FIELD, KNOWN_FLAGS, LEXICON, MAX_CHAIN, MAX_WORDS, MIN_CHAIN, WORDS, u8_at, usize_at,
 };
 use super::super::*;
 use super::trip::sample;
@@ -51,10 +51,11 @@ fn a_bad_header_field_is_refused() {
     assert_eq!(edited(|b| b[AT_FLAGS] |= !KNOWN_FLAGS), bad);
     assert_eq!(edited(|b| b[AT_FLAGS] &= !CHAINS), bad, "chains unflagged");
     assert_eq!(edited(|b| b[AT_ISO_LEN] = 0), bad);
-    let long = u8::try_from(MAX_ISO + 1).unwrap();
+    let long = u8::try_from(ISO_FIELD + 1).unwrap();
     assert_eq!(edited(|b| b[AT_ISO_LEN] = long), bad);
     assert_eq!(edited(|b| b[AT_ISO] = b' '), bad);
-    assert_eq!(edited(|b| b[AT_ISO + MAX_ISO - 1] = b'x'), bad, "padding");
+    assert_eq!(edited(|b| b[AT_ISO] = b'F'), bad, "a capital");
+    assert_eq!(edited(|b| b[AT_ISO + ISO_FIELD - 1] = b'x'), bad, "padding");
     assert_eq!(edited(|b| b[AT_MAX_CHAIN] = 0), bad);
     assert_eq!(edited(|b| b[AT_MAX_CHAIN] = MAX_CHAIN + 1), bad);
     assert_eq!(edited(|b| b[AT_FOLLOWERS] = 0), bad);

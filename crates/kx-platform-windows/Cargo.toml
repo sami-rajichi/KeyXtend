@@ -17,7 +17,7 @@ workspace = true
 sim-input = []
 
 [dependencies]
-# The `KeyGuard` trait that DPAPI implements, and Windows' device names that no pack code may be.
+# The `KeyGuard` trait that DPAPI implements.
 kx-crypto = { path = "../kx-crypto" }
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
@@ -34,8 +34,8 @@ tracing.workspace = true
 # graphics adapters by power, the heap calls give free pages back and map the word packs (`System_Memory`,
 # `System_SystemServices`), the mouse hook reads the tick count (`System_SystemInformation`) and tests the input
 # desktop (`System_StationsAndDesktops`), the speaker plays through XAudio2, the Lock PC shortcut locks the session
-# (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), and UI Automation reads arrays and builds
-# conditions (`System_Ole`, `System_Variant`).
+# (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), packs open with read sharing only
+# (`Storage_FileSystem`), and UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -47,6 +47,7 @@ windows = { workspace = true, features = [
     "Win32_Media_Audio_XAudio2",
     "Win32_Security",
     "Win32_Security_Cryptography",
+    "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_LibraryLoader",

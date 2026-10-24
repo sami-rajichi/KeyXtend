@@ -641,6 +641,7 @@ dependencies = [
  "chacha20poly1305",
  "getrandom 0.4.3",
  "kx-module-api",
+ "kx-platform-fake",
  "kx-test-support",
  "proptest",
  "thiserror 2.0.21",
@@ -785,6 +786,7 @@ dependencies = [
  "kx-module-api",
  "kx-test-support",
  "thiserror 2.0.21",
+ "tracing",
 ]
 
 [[package]]
@@ -1723,6 +1725,7 @@ dependencies = [
  "bzip2",
  "flate2",
  "kx-mod-predict",
+ "kx-module-api",
  "kx-theme",
  "proptest",
  "rmpv",

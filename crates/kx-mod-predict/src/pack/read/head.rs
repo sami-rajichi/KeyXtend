@@ -2,11 +2,12 @@
 
 use super::super::layout::{
     AT_FLAGS, AT_FOLLOWERS, AT_ISO, AT_ISO_LEN, AT_MAX_CHAIN, AT_SECTIONS, AT_VERSION, AT_WORDS,
-    CHAINS_BASE, ENTRY_AT_LEN, ENTRY_AT_OFFSET, ENTRY_LEN, FLAGS, FREQ, HEAD_LEN, LEXICON, MAGIC,
-    MAX_CHAIN, MAX_ISO, MAX_WORDS, MIN_CHAIN, NO_CHAINS, VERSION, WORDS, fits_iso, u8_at, u16_at,
+    CHAINS_BASE, ENTRY_AT_LEN, ENTRY_AT_OFFSET, ENTRY_LEN, FLAGS, FREQ, HEAD_LEN, ISO_FIELD,
+    LEXICON, MAGIC, MAX_CHAIN, MAX_WORDS, MIN_CHAIN, NO_CHAINS, VERSION, WORDS, u8_at, u16_at,
     u32_at, usize_at,
 };
 use super::super::{Flags, PackFormatError};
+use kx_module_api::ports::fits_iso;
 
 /// A section's place in the pack, checked to lie inside the file.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -122,18 +123,19 @@ impl Head {
     }
 }
 
-/// The language code: 1 to `MAX_ISO` printable ASCII bytes, and only zeros after it in its field.
+/// The language code: one that `fits_iso` takes, and only zeros after it in its field.
 fn iso(bytes: &[u8]) -> Result<String, PackFormatError> {
     let out = PackFormatError::OutOfBounds;
     let len = usize::from(u8_at(bytes, AT_ISO_LEN).ok_or(out)?);
-    let field = bytes.get(AT_ISO..AT_ISO + MAX_ISO).ok_or(out)?;
+    let field = bytes.get(AT_ISO..AT_ISO + ISO_FIELD).ok_or(out)?;
     let (code, padding) = field
         .split_at_checked(len)
         .ok_or(PackFormatError::BadHeader)?;
+    let code = std::str::from_utf8(code).map_err(|_| PackFormatError::BadHeader)?;
     if !fits_iso(code) || padding.iter().any(|&b| b != 0) {
         return Err(PackFormatError::BadHeader);
     }
-    String::from_utf8(code.to_vec()).map_err(|_| PackFormatError::BadHeader)
+    Ok(code.to_owned())
 }
 
 /// The `count` sections of the table, each inside the file and after the table.

@@ -5,7 +5,10 @@ use super::*;
 use std::thread::{self, ThreadId};
 
 /// Test values; the real ones come from the predict module's settings.
-const CONFIG: FieldConfig = FieldConfig { read_ms: 1 };
+const CONFIG: FieldConfig = FieldConfig {
+    read_ms: 1,
+    read_chars: 1,
+};
 
 /// What a box holds before its cursor, ending mid-word.
 const TEXT: &str = "I really like ap";

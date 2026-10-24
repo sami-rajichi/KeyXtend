@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use kx_module_api::ports::Dir;
 
 use super::{Read, Seek};
-use crate::deadline;
+use kx_platform::deadline;
 
 /// The UI Automation thread's name.
 const THREAD: &str = "kx-scroll-uia";

@@ -4,11 +4,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
+use kx_module_api::ports::{MAX_ISO_LEN, MIN_ISO_LEN, fits_iso};
 use thiserror::Error;
 
 use super::layout::{
-    CAPITAL, CHAINS_BASE, FLAGS, FREQ, LEXICON, MAX_CHAIN, MAX_ISO, MAX_SPELLING, MAX_WORDS,
-    MIN_CHAIN, NO_CHAINS, WORDS, fits_iso, fits_spelling,
+    CAPITAL, CHAINS_BASE, FLAGS, FREQ, LEXICON, MAX_CHAIN, MAX_SPELLING, MAX_WORDS, MIN_CHAIN,
+    NO_CHAINS, WORDS, fits_spelling,
 };
 use super::{Flags, WordId};
 use crate::fold::fold;
@@ -20,8 +21,8 @@ use encode::Header;
 /// Why a pack could not be written.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum WriteError {
-    /// The language code is not 1 to `MAX_ISO` printable ASCII bytes.
-    #[error("a language code is 1 to {MAX_ISO} printable ASCII bytes")]
+    /// The language code fails `fits_iso`.
+    #[error("a language code is {MIN_ISO_LEN} to {MAX_ISO_LEN} lower-case letters, not a device")]
     BadIso,
     /// A spelling is empty, longer than `MAX_SPELLING` bytes, or folds to nothing.
     #[error("a spelling is 1 to {MAX_SPELLING} bytes and keeps a letter once folded")]
@@ -94,7 +95,7 @@ impl PackWriter {
     /// # Errors
     /// `BadIso` for a bad language code; `NoFollowers` when `flags.chains` is set and `followers` is 0.
     pub fn new(iso: &str, flags: Flags, followers: u8) -> Result<Self, WriteError> {
-        if !fits_iso(iso.as_bytes()) {
+        if !fits_iso(iso) {
             return Err(WriteError::BadIso);
         }
         if flags.chains && followers == 0 {

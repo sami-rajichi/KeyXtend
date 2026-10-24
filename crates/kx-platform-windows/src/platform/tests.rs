@@ -163,7 +163,10 @@ fn the_field_watch_starts_on_another_thread_and_drops() {
     use kx_module_api::ports::FieldConfig;
     let _one = crate::scroll::testwin::one_client();
     let watch = WindowsPlatform::new().unwrap().field_watch();
-    let config = FieldConfig { read_ms: 150 };
+    let config = FieldConfig {
+        read_ms: 150,
+        read_chars: 64,
+    };
     // Never a read: the box in front belongs to whoever runs the tests.
     let started = std::thread::spawn(move || watch.watch(config, Box::new(|_| {})).map(drop));
     assert_eq!(started.join().ok(), Some(Ok(())));

@@ -2,26 +2,30 @@
 //! thread, each answered within `read_ms` or given up.
 
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRun};
 
-use crate::{deadline, lock};
+use super::Probe;
+use crate::deadline;
 
 /// The watch thread's name.
-const THREAD: &str = "kx-field-uia";
+const THREAD: &str = "kx-field";
 
 /// The module's callback for each focus change.
-pub(crate) type Tell = Box<dyn Fn(FieldChange) + Send>;
+pub type Tell = Box<dyn Fn(FieldChange) + Send>;
 
 /// Where a read answers: what it read, `None` when the box does not tell.
 pub(super) type Reply<T> = Sender<Result<Option<T>, FieldError>>;
 
-/// One read for the watch's thread; one past `by` is answered `TimedOut` unstarted.
-pub(super) enum Job {
+/// One read for the watch's thread, which hands it to `serve`; one past its deadline is answered `TimedOut` unstarted.
+pub struct Job(pub(super) Ask);
+
+/// What a job asks.
+pub(super) enum Ask {
     /// At most `max_words` words before the caret.
     Before {
         max_words: u8,
@@ -44,25 +48,34 @@ struct State {
 }
 
 /// What the focus handler and the run share: the state, and the callback until the run drops.
-pub(super) struct Shared {
+pub struct Shared {
     state: Mutex<State>,
     tell: Mutex<Option<Tell>>,
 }
 
+/// Locks `m`, taking the value even when a panicking thread poisoned it.
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 impl Shared {
-    /// Keeps `change` as the box with focus and tells it; a dead watch or a dropped run does neither.
-    pub(super) fn told(&self, change: FieldChange) {
-        self.tell_if(change, |_| true);
+    /// Keeps and tells box `el`, which took the focus; focus in our own process keeps the last box.
+    pub fn moved<P: Probe>(&self, probe: &P, el: &P::El) {
+        if !probe.ours(el) {
+            self.told(probe.change(el));
+        }
     }
 
-    /// Like `told`, unless a focus change was told already, so the start-up look never overwrites a newer event.
-    pub(super) fn first(&self, change: FieldChange) {
-        self.tell_if(change, |state| state.count == 0);
+    /// Like `moved`, unless a focus change was told already, so the start-up look never overwrites a newer event.
+    pub fn first<P: Probe>(&self, probe: &P, el: &P::El) {
+        if !probe.ours(el) {
+            self.tell_if(probe.change(el), |state| state.count == 0);
+        }
     }
 
     /// Marks the watch dead after the step `why` failed at start-up: it logs and tells `Unknown` once, and no read
     /// runs from then on.
-    pub(super) fn fail(&self, why: &'static str) {
+    pub fn fail(&self, why: &'static str) {
         let tell = lock(&self.tell);
         let mut state = lock(&self.state);
         if state.dead {
@@ -76,6 +89,16 @@ impl Shared {
         if let Some(tell) = tell.as_ref() {
             tell(change);
         }
+    }
+
+    /// The kind of the box told last; `Unknown` once the watch is dead.
+    pub fn kind(&self) -> FieldKind {
+        lock(&self.state).last.kind
+    }
+
+    /// Keeps `change` as the box with focus and tells it; a dead watch or a dropped run does neither.
+    fn told(&self, change: FieldChange) {
+        self.tell_if(change, |_| true);
     }
 
     /// Keeps and tells `change` when the watch lives, the run holds the callback, and `when` agrees.
@@ -94,11 +117,6 @@ impl Shared {
         tell(change);
     }
 
-    /// The kind of the box told last; `Unknown` once the watch is dead.
-    pub(super) fn kind(&self) -> FieldKind {
-        lock(&self.state).last.kind
-    }
-
     /// Whether the watch failed to start.
     fn dead(&self) -> bool {
         lock(&self.state).dead
@@ -111,17 +129,14 @@ impl Shared {
     }
 }
 
-/// Starts `body` as the watch's thread, never waiting for it: reads queue behind its start, each within its cap.
+/// Starts `body` as the watch's thread with `cfg`, never waiting for it: reads queue behind its start, each within
+/// `read_ms`.
 ///
 /// # Errors
 /// `Unavailable` when the thread does not start.
-pub(super) fn spawn<B>(
-    cfg: FieldConfig,
-    tell: Tell,
-    body: B,
-) -> Result<Box<dyn FieldRun>, FieldError>
+pub fn spawn<B>(cfg: FieldConfig, tell: Tell, body: B) -> Result<Box<dyn FieldRun>, FieldError>
 where
-    B: FnOnce(&Receiver<Job>, &Arc<Shared>, u32) + Send + 'static,
+    B: FnOnce(&Receiver<Job>, &Arc<Shared>, FieldConfig) + Send + 'static,
 {
     let none = FieldChange {
         kind: FieldKind::None,
@@ -138,15 +153,14 @@ where
     });
     let (jobs, inbox) = mpsc::channel();
     let theirs = Arc::clone(&shared);
-    let read_ms = cfg.read_ms;
     let started = thread::Builder::new()
         .name(THREAD.to_owned())
-        .spawn(move || body(&inbox, &theirs, read_ms));
+        .spawn(move || body(&inbox, &theirs, cfg));
     if let Err(e) = started {
         tracing::warn!(error = %e, "no field watch: its thread did not start");
         return Err(FieldError::Unavailable);
     }
-    let cap = Duration::from_millis(u64::from(read_ms));
+    let cap = Duration::from_millis(u64::from(cfg.read_ms));
     Ok(Box::new(Run { shared, jobs, cap }))
 }
 
@@ -159,10 +173,10 @@ struct Run {
 }
 
 impl Run {
-    /// Hands the job `make` builds to the thread and waits for its answer for the cap at most.
-    fn ask<T>(&self, make: impl FnOnce(Reply<T>, Instant) -> Job) -> Result<Option<T>, FieldError> {
+    /// Hands the read `make` builds to the thread and waits for its answer for the cap at most.
+    fn ask<T>(&self, make: impl FnOnce(Reply<T>, Instant) -> Ask) -> Result<Option<T>, FieldError> {
         let (reply, answer) = mpsc::channel();
-        let job = make(reply, deadline(self.cap));
+        let job = Job(make(reply, deadline(self.cap)));
         self.jobs.send(job).map_err(|_| FieldError::Unavailable)?;
         answer.recv_timeout(self.cap).unwrap_or_else(|e| {
             Err(match e {
@@ -190,7 +204,7 @@ impl FieldRun for Run {
         if !self.readable() {
             return Ok(None);
         }
-        let text = self.ask(|reply, by| Job::Before {
+        let text = self.ask(|reply, by| Ask::Before {
             max_words,
             by,
             reply,
@@ -203,7 +217,7 @@ impl FieldRun for Run {
             return None;
         }
         let text = text.clone();
-        self.ask(|reply, by| Job::Ends { text, by, reply })
+        self.ask(|reply, by| Ask::Ends { text, by, reply })
             .ok()
             .flatten()
     }

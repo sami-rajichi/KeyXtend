@@ -34,12 +34,6 @@ pub(crate) const DAMAGED_EXT: &str = "damaged";
 /// The extension a save writes first, before the file takes the old one's place.
 pub(crate) const TEMP_EXT: &str = "tmp";
 
-/// Names Windows keeps for devices, refused as blob names on every system (Microsoft's "Naming Files").
-pub const RESERVED_NAMES: &[&str] = &[
-    "con", "prn", "aux", "nul", "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
-    "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
-];
-
 /// Builds `MARK` from `MAGIC` and `VERSION`, so neither is written twice.
 const fn mark() -> [u8; MAGIC.len() + 1] {
     let mut mark = [VERSION; MAGIC.len() + 1];
@@ -64,11 +58,6 @@ mod tests {
     fn the_cipher_takes_a_32_byte_key_and_a_24_byte_nonce() {
         assert_eq!((KEY_LEN, NONCE_LEN, TAG_LEN), (32, 24, 16));
         assert_eq!(OVERHEAD, 4 + 1 + 24 + 16);
-    }
-
-    #[test]
-    fn the_blob_limit_is_16_mebibytes() {
-        assert_eq!(MAX_BLOB_BYTES, 16_777_216);
     }
 
     #[test]

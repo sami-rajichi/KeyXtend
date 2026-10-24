@@ -1,7 +1,8 @@
 //! `SealedFiles`: the sealed store over one folder, one `<name>.sealed` file per blob, under one data key.
-//! A blob that will not open is renamed to `<name>.damaged`, so `load` reports it once.
+//! A blob that will not open is renamed to `<name>.damaged`, so `load` reports it once; `BlobName` keeps every name
+//! usable as a file name on all systems.
 
-use crate::consts::{DAMAGED_EXT, KEY_FILE, MAX_BLOB_BYTES, OVERHEAD, RESERVED_NAMES, SEALED_EXT};
+use crate::consts::{DAMAGED_EXT, KEY_FILE, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
 use crate::guard::KeyGuard;
 use crate::seal::{open, seal};
 use disk::Read;
@@ -77,15 +78,6 @@ impl SealedFiles {
     }
 }
 
-/// `name` as text, unless Windows keeps it for a device.
-fn checked(name: &BlobName) -> Result<&str, SealedError> {
-    let text = name.as_str();
-    if RESERVED_NAMES.contains(&text) {
-        return Err(SealedError::BadName);
-    }
-    Ok(text)
-}
-
 /// Locks `m`; a panic elsewhere leaves the key valid, so a poisoned lock is still used.
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -93,7 +85,7 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 
 impl SealedStore for SealedFiles {
     fn load(&self, name: &BlobName) -> Result<Option<Vec<u8>>, SealedError> {
-        let name = checked(name)?;
+        let name = name.as_str();
         let mut held = lock(&self.key);
         let path = self.file(name, SEALED_EXT);
         let sealed = match disk::read(&path, MAX_BLOB_BYTES + OVERHEAD) {
@@ -112,7 +104,7 @@ impl SealedStore for SealedFiles {
     }
 
     fn save(&self, name: &BlobName, bytes: &[u8]) -> Result<(), SealedError> {
-        let name = checked(name)?;
+        let name = name.as_str();
         if bytes.len() > MAX_BLOB_BYTES {
             return Err(SealedError::Io);
         }

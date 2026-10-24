@@ -26,6 +26,7 @@ pub mod langinfo;
 pub mod layouts;
 #[cfg(windows)]
 pub mod memory;
+#[cfg(windows)]
 pub mod packs;
 #[cfg(windows)]
 mod platform;
@@ -64,7 +65,7 @@ pub use layouts::WinLayouts;
 #[cfg(windows)]
 pub use memory::WinMemory;
 #[cfg(windows)]
-pub use packs::WinWordPacks;
+pub use packs::{WinPackDisk, WinWordPacks};
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 #[cfg(windows)]
@@ -103,12 +104,6 @@ fn last_refused() -> kx_platform::ui::UiError {
 #[cfg(windows)]
 fn failed() -> kx_platform::ui::UiError {
     kx_platform::ui::UiError::Refused(windows::Win32::Foundation::E_FAIL.0)
-}
-
-/// `cap` from now, or now when the clock cannot go that far.
-fn deadline(cap: std::time::Duration) -> std::time::Instant {
-    let now = std::time::Instant::now();
-    now.checked_add(cap).unwrap_or(now)
 }
 
 /// Locks `m`, taking the value even when a panicking thread poisoned it.

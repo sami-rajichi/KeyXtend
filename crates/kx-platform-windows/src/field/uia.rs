@@ -1,10 +1,11 @@
 //! What the field watch asks UI Automation: an element's facts and box id, and the text before its caret, which only a
-//! text box gives and never past the read cap. Nothing here logs what it reads.
+//! text box gives and never past the read cap in characters. Nothing here logs what it reads.
 
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::time::Instant;
 
 use kx_module_api::ports::{FieldError, FieldKind, last_words};
+use kx_platform::field::{after_first, late};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Variant::VT_BOOL;
 use windows::Win32::UI::Accessibility::{
@@ -16,8 +17,8 @@ use windows::Win32::UI::Accessibility::{
 use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor};
 use windows::core::BOOL;
 
-use super::{Facts, READ_CAP, after_first, kind, table};
-use crate::uia::{cap, class_of, style_of, vector};
+use super::{Facts, kind, table};
+use crate::uia::{class_of, span, style_of, vector};
 use crate::window::foreground;
 
 /// What UI Automation and Win32 tell about `el`; a part that cannot be read reads as unknown. Never its text.
@@ -123,37 +124,41 @@ pub(super) fn focused(auto: &IUIAutomation) -> Result<IUIAutomationElement, Fiel
     unsafe { auto.GetFocusedElement() }.map_err(failed)
 }
 
-/// At most `max_words` words before the caret of text box `el`; `None` when `el` is no text box or has no caret.
+/// At most `max_words` words before the caret of text box `el`, from at most `chars` characters; `None` when `el` is
+/// no text box or has no caret.
 pub(super) fn before_cursor(
     el: &IUIAutomationElement,
     max_words: u8,
     by: Instant,
+    chars: usize,
 ) -> Result<Option<String>, FieldError> {
     let Some(caret) = text_caret(el, by)? else {
         return Ok(None);
     };
     let words = i32::from(max_words) + 1;
-    if let Some(text) = tail(&caret, TextUnit_Word, words, by)? {
+    if let Some(text) = tail(&caret, TextUnit_Word, words, by, chars)? {
         return Ok(Some(last_words(&text, max_words).to_owned()));
     }
-    let text = tail(&caret, TextUnit_Character, cap(0), by)?;
+    let text = tail(&caret, TextUnit_Character, span(chars), by, chars)?;
     Ok(text.map(|t| last_words(after_first(&t), max_words).to_owned()))
 }
 
-/// Whether the text before the caret of text box `el` ends with `want`; `None` when it cannot tell.
+/// Whether the text before the caret of text box `el` ends with `want`; `None` when it cannot tell or `want` is longer
+/// than `chars` characters. It steps back in UTF-16 units, UI Automation's character on Windows.
 pub(super) fn ends_with(
     el: &IUIAutomationElement,
     want: &str,
     by: Instant,
+    chars: usize,
 ) -> Result<Option<bool>, FieldError> {
-    let units = want.encode_utf16().count();
-    let Some(back) = i32::try_from(units).ok().filter(|_| units <= READ_CAP) else {
+    let back = i32::try_from(want.encode_utf16().count());
+    let Some(back) = back.ok().filter(|_| want.chars().count() <= chars) else {
         return Ok(None);
     };
     let Some(caret) = text_caret(el, by)? else {
         return Ok(None);
     };
-    Ok(tail(&caret, TextUnit_Character, back, by)?.map(|t| t.ends_with(want)))
+    Ok(tail(&caret, TextUnit_Character, back, by, chars)?.map(|t| t.ends_with(want)))
 }
 
 /// The caret of text box `el`; `None` unless `el` is a text box with one. The kind check fetches it once.
@@ -198,13 +203,14 @@ fn caret_of(el: &IUIAutomationElement) -> Result<Option<IUIAutomationTextRange>,
     }
 }
 
-/// The text from `back` units of `unit` before the caret up to it; `None` when it is longer than `READ_CAP`.
+/// The text from `back` units of `unit` before the caret up to it; `None` when it is longer than `chars` characters.
 #[allow(unsafe_code, reason = "Plain UI Automation text range calls.")]
 fn tail(
     caret: &IUIAutomationTextRange,
     unit: TextUnit,
     back: i32,
     by: Instant,
+    chars: usize,
 ) -> Result<Option<String>, FieldError> {
     late(by)?;
     text_call();
@@ -219,18 +225,15 @@ fn tail(
             .MoveEndpointByUnit(start, unit, -back)
             .map_err(failed)?;
         late(by)?;
-        range.GetText(cap(1)).map_err(failed)?
+        range.GetText(span(units(chars + 1))).map_err(failed)?
     };
-    Ok((text.len() <= READ_CAP).then(|| text.to_string()))
+    let text = text.to_string();
+    Ok((text.chars().count() <= chars).then_some(text))
 }
 
-/// `TimedOut` once `by` has passed.
-pub(super) fn late(by: Instant) -> Result<(), FieldError> {
-    if Instant::now() > by {
-        Err(FieldError::TimedOut)
-    } else {
-        Ok(())
-    }
+/// The most UTF-16 units, Windows' string unit, that `chars` characters take.
+fn units(chars: usize) -> usize {
+    chars.saturating_mul(char::MAX_LEN_UTF16)
 }
 
 /// A failed UI Automation call as the port's error: its own timeout is `TimedOut`, any other a refusal.

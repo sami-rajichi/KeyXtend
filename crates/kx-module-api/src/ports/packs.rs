@@ -1,6 +1,7 @@
 //! Word packs (ADR-0032): each language's seed, read straight from disk. Packs hold no user data, so the port needs
 //! no capability.
 
+use super::sealed::RESERVED_NAMES;
 use crate::{Capability, ServiceId, ServiceKey};
 use thiserror::Error;
 
@@ -8,10 +9,29 @@ use thiserror::Error;
 pub const PACK_EXT: &str = "kxw";
 /// The largest pack a platform maps and a writer makes, 64 MiB.
 pub const MAX_PACK_BYTES: u64 = 64 * 1024 * 1024;
+/// The shortest language code: ISO 639-1.
+pub const MIN_ISO_LEN: usize = 2;
+/// The longest language code: ISO 639-2 or 639-3, as layouts give a language with no two-letter code.
+pub const MAX_ISO_LEN: usize = 3;
+
+/// True when `iso` is a language code a pack may carry and name its file after: `MIN_ISO_LEN` to `MAX_ISO_LEN`
+/// lower-case ASCII letters, and no device name (`RESERVED_NAMES`).
+#[must_use]
+pub fn fits_iso(iso: &str) -> bool {
+    let sized = (MIN_ISO_LEN..=MAX_ISO_LEN).contains(&iso.len());
+    sized && iso.bytes().all(|b| b.is_ascii_lowercase()) && !RESERVED_NAMES.contains(&iso)
+}
+
+/// The file name of language `iso`'s pack, `<iso>.<PACK_EXT>`; `None` unless `fits_iso`, so no path leaves its folder.
+#[must_use]
+pub fn pack_file(iso: &str) -> Option<String> {
+    fits_iso(iso).then(|| format!("{iso}.{PACK_EXT}"))
+}
 
 /// One open pack's bytes, read-only; dropping it closes the pack.
 pub trait PackView: Send + Sync {
-    /// The whole pack.
+    /// The whole pack, unchanged while the view lives. A system that cannot block writers copies the file, or maps
+    /// only from folders that only the system can write.
     fn bytes(&self) -> &[u8];
 }
 
@@ -25,7 +45,8 @@ pub enum PackError {
 
 /// Opens the shipped word packs; the platform provides it.
 pub trait WordPacks: Send + Sync {
-    /// The pack of language `iso`, as `LangLabel::iso` names it; `Ok(None)` when the language has no pack.
+    /// The pack of language `iso`, as `LangLabel::iso` names it; `Ok(None)` when the language has no pack or `iso`
+    /// fails `fits_iso`.
     ///
     /// # Errors
     /// `Unreadable` when the pack is there but cannot be read.

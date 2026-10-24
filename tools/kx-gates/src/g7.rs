@@ -107,7 +107,9 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
     let _ = win::poll_until(t.focus_wait_ms, t.poll_ms, forward);
     in_front(panel)?;
     keys::text(&g.word)?;
-    let typed = || (uia::value(&field).as_deref() == Some(g.word.as_str())).then_some(());
+    // The field holds the word alone, so no read needs more than its length.
+    let units = g.word.encode_utf16().count();
+    let typed = || (uia::value(&field, units).as_deref() == Some(g.word.as_str())).then_some(());
     let typed_ok = win::poll_until(t.read_wait_ms, t.poll_ms, typed).is_some();
     let tp = uia.text_of(&field).ok_or("the field has no TextPattern")?;
     let mut caret = Vec::new();
@@ -115,7 +117,7 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
         in_front(panel)?;
         keys::combo(&[vk(k).0])?;
         sleep_ms(t.key_settle_ms);
-        caret.push(uia::caret(&tp).map_err(|e| e.to_string())?);
+        caret.push(uia::caret(&tp, units).map_err(|e| e.to_string())?);
     }
     let want = expected(&g.word, &g.keys);
     let pass = typed_ok && caret == want;

@@ -1,11 +1,12 @@
 use super::*;
-use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD, RESERVED_NAMES};
+use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD};
 use crate::guard::GuardError;
 use kx_test_support::tempdir::TempDir;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
 use zeroize::Zeroizing;
 
+mod agree;
 mod keys;
 
 /// A test guard that wraps by reversing the bytes, refuses on cue and counts its calls.
@@ -218,24 +219,4 @@ fn an_oversized_file_is_set_aside_on_load() {
     fs::write(c.file("predict-en", SEALED_EXT), &big).unwrap();
     assert_eq!(c.store.load(&name("predict-en")), Err(SealedError::Damaged));
     assert_eq!(c.names(), ["predict-en.damaged", KEY_FILE]);
-}
-
-#[test]
-fn a_reserved_device_name_is_refused_before_any_file() {
-    let c = case();
-    for text in RESERVED_NAMES {
-        assert_eq!(c.store.save(&name(text), b"x"), Err(SealedError::BadName));
-        assert_eq!(c.store.load(&name(text)), Err(SealedError::BadName));
-    }
-    assert!(!c.dir.exists());
-    assert_eq!(c.guard.calls(), 0);
-}
-
-#[test]
-fn the_reserved_names_cover_every_windows_device() {
-    let numbered = (0..=9).flat_map(|n| [format!("com{n}"), format!("lpt{n}")]);
-    let named = ["con", "prn", "aux", "nul"].map(String::from);
-    for device in named.into_iter().chain(numbered) {
-        assert!(RESERVED_NAMES.contains(&device.as_str()), "{device}");
-    }
 }

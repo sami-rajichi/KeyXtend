@@ -1,6 +1,6 @@
 //! The focused box (ADR-0033): its kind on each focus change, from UI Automation and the table in `field.toml`, and at
-//! most a few words before its caret on ask, never in a password or unknown box. The rules, the table and the run are
-//! pure; `uia` and `win` talk to UI Automation.
+//! most a few words before its caret on ask, never in a password or unknown box. The kind rules and the table are pure;
+//! `uia` and `win` talk to UI Automation, and the run is `kx_platform::field`'s.
 #![cfg_attr(
     not(windows),
     allow(
@@ -12,7 +12,6 @@
 #[cfg(windows)]
 mod focus;
 mod kinds;
-mod run;
 #[cfg(test)]
 #[cfg(windows)]
 mod testedit;
@@ -26,15 +25,13 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use thiserror::Error;
 
+#[cfg(any(windows, test))]
 pub(crate) use kinds::{Facts, kind};
 #[cfg(windows)]
 pub use win::WinFieldWatch;
 
 /// The kind table, compiled in so it is never read from disk.
 const TABLE: &str = include_str!("field.toml");
-
-/// The longest text one read takes before the caret, in UTF-16 units; a longer one is cut to whole words.
-pub const READ_CAP: usize = 1024;
 
 /// The shipped table, parsed once; tests prove it parses, so the closed fallback never runs.
 static SHIPPED: LazyLock<Table> = LazyLock::new(|| shipped(TABLE));
@@ -141,11 +138,6 @@ impl Table {
 /// Whether `class` is in `names`, ignoring case as Windows does; an empty class never is.
 fn listed(names: &[String], class: &str) -> bool {
     !class.is_empty() && names.iter().any(|n| n.eq_ignore_ascii_case(class))
-}
-
-/// `text` after its first word, which a cut at the read cap may have split; empty when it holds one word.
-pub(crate) fn after_first(text: &str) -> &str {
-    text.find(char::is_whitespace).map_or("", |at| &text[at..])
 }
 
 #[cfg(test)]

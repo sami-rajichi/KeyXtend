@@ -19,5 +19,7 @@ thiserror.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
+# The fake sealed store, which must refuse the same blob names as `SealedFiles`.
+kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

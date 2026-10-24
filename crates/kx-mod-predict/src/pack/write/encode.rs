@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use fst::MapBuilder;
 
 use super::super::layout::{
-    ENTRY_LEN, HEAD_LEN, ID_BYTES, MAGIC, MAX_ISO, RUN_SHIFT, SCORE_SHIFT, VERSION, fits_pack,
+    ENTRY_LEN, HEAD_LEN, ID_BYTES, ISO_FIELD, MAGIC, RUN_SHIFT, SCORE_SHIFT, VERSION, fits_pack,
 };
 use super::super::{Flags, WordId};
 use super::{Word, WriteError};
@@ -114,7 +114,7 @@ pub(super) fn assemble(
 fn head(header: &Header<'_>, sections: u8) -> Result<Vec<u8>, WriteError> {
     let mut out = MAGIC.to_vec();
     out.extend_from_slice(&VERSION.to_le_bytes());
-    let mut iso = [0; MAX_ISO];
+    let mut iso = [0; ISO_FIELD];
     let code = header.iso.as_bytes();
     iso.get_mut(..code.len())
         .ok_or(WriteError::BadIso)?

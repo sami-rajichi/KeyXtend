@@ -32,7 +32,10 @@ pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
-pub use packs::{MAX_PACK_BYTES, PACK_EXT, PackError, PackView, WordPacks, WordPacksKey};
+pub use packs::{
+    MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_EXT, PackError, PackView, WordPacks,
+    WordPacksKey, fits_iso, pack_file,
+};
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
     PointerEvent, PointerHook, PointerHookKey,
@@ -42,7 +45,9 @@ pub use scroll::{
     Aim, Dir, Reach, ScrollAimed, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError, ScrollPage,
     ScrollPeek, ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
 };
-pub use sealed::{BlobName, MAX_BLOB_LEN, MIN_BLOB_LEN, SealedError, SealedStore, SealedStoreKey};
+pub use sealed::{
+    BlobName, MAX_BLOB_LEN, MIN_BLOB_LEN, RESERVED_NAMES, SealedError, SealedStore, SealedStoreKey,
+};
 pub use shortcut::{
     KeyName, MAX_ID_LEN, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
 };

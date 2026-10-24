@@ -55,7 +55,10 @@ crates/
   kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
                          (WindowGuard, with the entry watch and `lay_under` from P5, Screens,
                          SystemLook, Backdrop, Instance, Tray: ADR-0019, Memory: ADR-0023,
-                         Speaker: P4)
+                         Speaker: P4); the OS-neutral halves that every adapter shares (P7):
+                         `packs` (folder order, file name, size, over an adapter's `PackDisk`)
+                         and `field` (the watch's run, thread and read deadline, a dead watch,
+                         our own focus keeping the last box, over an adapter's `Probe` and `Reader`)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
                          sound, the scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the
                          `shortcuts.toml` and `keynames.toml` tables) and the power dialog (`WinPower`)

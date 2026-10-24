@@ -20,6 +20,8 @@ toml = { workspace = true }
 bzip2 = "0.6.1"
 flate2 = "1.1.10"
 kx-mod-predict = { path = "../crates/kx-mod-predict", features = ["build"] }
+# The packs port's language-code rule, which the manifest's languages must follow.
+kx-module-api = { path = "../crates/kx-module-api" }
 rmpv = "1.3.1"
 sha2 = "0.11.1"
 spellbook = "0.4.2"

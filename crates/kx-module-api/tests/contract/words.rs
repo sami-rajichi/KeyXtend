@@ -210,7 +210,11 @@ fn a_watch_reached_through_its_gate_tells_the_box_and_reads_before_the_cursor() 
     let told = Arc::new(Mutex::new(Vec::new()));
     let log = Arc::clone(&told);
     let tell = Box::new(move |c: FieldChange| log.lock().unwrap().push(c));
-    let mut run = watch.watch(FieldConfig { read_ms: 1 }, tell).unwrap();
+    let config = FieldConfig {
+        read_ms: 1,
+        read_chars: 1,
+    };
+    let mut run = watch.watch(config, tell).unwrap();
     let change = FieldChange {
         kind: FieldKind::Text,
         box_id: BOX,
