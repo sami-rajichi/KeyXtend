@@ -17,14 +17,13 @@ const CLOSE: char = '}';
 /// Starts each line of a file list.
 const BULLET: &str = "- ";
 
-/// Writes the credits, the authors and the licence into `out`, reading the licence sections under `src`; `authors`
+/// The credits, the authors and the licence as named files, reading the licence sections under `src`; `authors`
 /// are the usernames of the Tatoeba sentences counted.
-pub(crate) fn write(
+pub(crate) fn files(
     manifest: &Manifest,
     src: &Path,
-    out: &Path,
     authors: &BTreeSet<String>,
-) -> Result<(), WordsError> {
+) -> Result<Vec<(String, Vec<u8>)>, WordsError> {
     let c = &manifest.credits;
     fetch::verify(
         manifest,
@@ -46,13 +45,14 @@ pub(crate) fn write(
     ]);
     let mut names: Vec<&str> = authors.iter().map(String::as_str).collect();
     names.push("");
-    let put = |name: &str, text: &str| {
-        let path = out.join(name);
-        std::fs::write(&path, text).map_err(|e| io_error(&path, &e))
-    };
-    put(&c.file, &fill(TEMPLATE, &values)?)?;
-    put(&c.authors, &names.join("\n"))?;
-    put(&c.licence, &format!("{}\n", c.licence_text.join("\n")))
+    Ok(vec![
+        (c.file.clone(), fill(TEMPLATE, &values)?.into_bytes()),
+        (c.authors.clone(), names.join("\n").into_bytes()),
+        (
+            c.licence.clone(),
+            format!("{}\n", c.licence_text.join("\n")).into_bytes(),
+        ),
+    ])
 }
 
 /// The source files the packs come from, by kind.

@@ -98,13 +98,22 @@ pub(crate) fn scaled(bucket: u32, steps: u32) -> u8 {
     u8::try_from(above_floor.saturating_mul(steps) / CB_PER_ZIPF).unwrap_or(u8::MAX)
 }
 
+/// The share of all words that a word of `bucket` takes: 10 to the power of minus its centibels.
+pub(crate) fn share(bucket: u32) -> f64 {
+    10f64.powf(-f64::from(bucket) / f64::from(CB_PER_ZIPF))
+}
+
 /// The bucket of a word seen `count` times in `total` tokens, its share in centibels; `None` when it was never seen.
 pub(crate) fn bucket_of(count: u64, total: u64) -> Option<u32> {
-    if count == 0 || total < count {
+    if total < count {
         return None;
     }
-    let cb = -f64::from(CB_PER_ZIPF) * (float(count) / float(total)).log10();
-    Some(whole(cb))
+    bucket_of_share(float(count) / float(total))
+}
+
+/// The bucket of a word taking `share` of all words; `None` for no share or one past all words.
+pub(crate) fn bucket_of_share(share: f64) -> Option<u32> {
+    (share > 0.0 && share <= 1.0).then(|| whole(-f64::from(CB_PER_ZIPF) * share.log10()))
 }
 
 /// `x` rounded to a whole number of centibels, at least 0.

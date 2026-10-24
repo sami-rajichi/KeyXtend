@@ -11,7 +11,7 @@ use kx_mod_predict::pack::layout::{
 
 use super::super::build::write_pack;
 use super::super::cands::Facts;
-use super::super::chains::{Context, Picked, pick};
+use super::super::chains::{Context, Picked, pick, top};
 use super::super::count::{ChainKey, KEY_LEN, NONE};
 use super::super::list::{TextFacts, Word, WordList};
 
@@ -23,8 +23,11 @@ fn key(ids: &[u32]) -> ChainKey {
 }
 
 /// A chain table from `(places, count)` pairs.
-fn table(chains: &[(&[u32], u32)]) -> HashMap<ChainKey, u32> {
-    chains.iter().map(|(ids, n)| (key(ids), *n)).collect()
+fn table(chains: &[(&[u32], u16)]) -> HashMap<ChainKey, f32> {
+    chains
+        .iter()
+        .map(|(ids, n)| (key(ids), f32::from(*n)))
+        .collect()
 }
 
 /// The followers of `context` in `picked`.
@@ -34,7 +37,7 @@ fn followers<'a>(picked: &'a Picked, context: &[u32]) -> Option<&'a [(u32, u8)]>
 }
 
 /// Four candidates on four words, seen 100, 50, 30 and 20 times, with chains after word 0, word 1 and both.
-fn sample() -> (HashMap<ChainKey, u32>, Vec<u64>) {
+fn sample() -> (HashMap<ChainKey, f32>, Vec<u64>) {
     let chains = table(&[
         (&[0, 1], 50),
         (&[0, 2], 25),
@@ -64,6 +67,14 @@ fn followers_come_best_first_scored_by_their_chance_after_the_context() {
         "20 of the 50 chains 0 1"
     );
     assert_eq!((picked.contexts.len(), picked.chains), (3, 4));
+}
+
+#[test]
+fn the_top_contexts_are_the_most_seen_one_word_ones_with_their_first_followers() {
+    let (chains, seen) = sample();
+    let picked = pick(chains, &seen, &SAME, 2, usize::MAX, 3);
+    assert_eq!(top(&picked, 5, 5), [(0, vec![1, 2]), (1, vec![2])]);
+    assert_eq!(top(&picked, 1, 1), [(0, vec![1])]);
 }
 
 #[test]
@@ -108,6 +119,8 @@ fn the_written_pack_reads_back_its_followers_and_its_chain_sections_fit_the_budg
         text_facts: TextFacts::default(),
         of_cand: SAME.to_vec(),
         text: true,
+        covers: 1.0,
+        cut: (0, usize::MAX),
     };
     let bytes = write_pack("en", &list, &picked, 2).unwrap();
     let pack = Pack::parse(&bytes).unwrap();

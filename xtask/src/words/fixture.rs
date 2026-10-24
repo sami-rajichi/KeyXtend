@@ -76,7 +76,7 @@ pub(crate) fn manifest_with(sources: &str) -> Result<Manifest, super::WordsError
     Manifest::parse(&manifest_text(sources))
 }
 
-/// The `[text]` and `[credits]` tables of the fixture manifest; the credit sections read the fixture's French files.
+/// The `[text]`, `[packs]` and `[credits]` tables of the fixture manifest; the credits read the fixture's French files.
 pub(crate) const TEXT: &str = r#"[text]
 sentence_ends = [".", "?"]
 min_chain = 2
@@ -84,10 +84,18 @@ max_chain = 3
 tatoeba_weight = 4
 held_back_per_mille = 20
 max_live_chains = 100
+max_seen_sentences = 1000
+skew_ratio = 10.0
+report_contexts = 2
+report_followers = 2
 followers = 2
 null = "-"
 held = "held"
 out = "out"
+
+[packs]
+download_kb = 1000
+level = 6
 
 [credits]
 file = "CREDITS.txt"
@@ -96,6 +104,18 @@ licence = "LICENSE.txt"
 licence_text = ["Shared alike.", "See the credits."]
 wordfreq = { file = "d/fr.aff", from = "A", to = "B" }
 scowl = { file = "d/fr.dic", from = "A", to = "B" }
+"#;
+
+/// The fixture manifest's `[fetch]` table.
+const FETCH: &str = r#"[fetch]
+root_env = "KX_TEST_NO_SUCH_VAR"
+curl = "curl.exe"
+fallback = "kx-test-no-such-curl"
+args = ["-q", "--fail"]
+size_flag = "--max-filesize"
+out_flag = "--output"
+url_flag = "--url"
+part = "part"
 "#;
 
 /// The text of [`manifest_with`].
@@ -114,25 +134,18 @@ coverage_top = 3
 show = 2
 
 {TEXT}
-[fetch]
-root_env = "KX_TEST_NO_SUCH_VAR"
-curl = "curl.exe"
-fallback = "kx-test-no-such-curl"
-args = ["-q", "--fail"]
-size_flag = "--max-filesize"
-out_flag = "--output"
-url_flag = "--url"
-part = "part"
-
+{FETCH}
 [small]
 list = "w/small_{{iso}}.gz"
 max_words = 2
+words_budget_kb = 100
 
 [lang.fr]
 list = "w/large_fr.gz"
 aff = "d/fr.aff"
 dic = "d/fr.dic"
 max_words = 5
+words_budget_kb = 200
 
 [bases]
 test = "https://example.invalid/data/"

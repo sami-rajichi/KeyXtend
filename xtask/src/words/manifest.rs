@@ -10,7 +10,7 @@ use kx_mod_predict::fold;
 use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
 
-pub(crate) use self::text::{Credits, LangText, PER_MILLE, Section, TextRules};
+pub(crate) use self::text::{Credits, LangText, PER_MILLE, Packs, Section, Tatoeba, TextRules};
 
 use super::WordsError;
 use crate::devtools::paths::SEP;
@@ -32,6 +32,8 @@ pub(crate) struct Manifest {
     pub(crate) text: TextRules,
     /// The files written beside the packs.
     pub(crate) credits: Credits,
+    /// The packs' download budget.
+    pub(crate) packs: Packs,
     /// The languages with only a small list.
     small: Small,
     /// The languages with a full list and a dictionary, by code.
@@ -97,8 +99,10 @@ pub(crate) struct FetchConfig {
 struct Small {
     /// The list's path, with `ISO_SLOT` for the code.
     list: String,
-    /// The most words kept.
+    /// The most words kept, before the words budget cuts the rarest.
     max_words: usize,
+    /// The most KB each pack may take without its chains.
+    words_budget_kb: u64,
 }
 
 /// A language with a full list and a dictionary.
@@ -111,8 +115,10 @@ struct Lang {
     aff: String,
     /// The Hunspell word file.
     dic: String,
-    /// The most words kept.
+    /// The most words kept, before the words budget cuts the rarest.
     max_words: usize,
+    /// The most KB its pack may take without its chains.
+    words_budget_kb: u64,
     /// Its text for word chains, if any.
     text: Option<LangText>,
 }
@@ -154,12 +160,16 @@ pub(crate) struct DictFiles<'a> {
 /// What building one language's word list needs.
 #[derive(Debug)]
 pub(crate) struct Plan<'a> {
+    /// The language code.
+    pub(crate) iso: String,
     /// The wordfreq list.
     pub(crate) list: String,
     /// The dictionary, if the language has one.
     pub(crate) dict: Option<DictFiles<'a>>,
-    /// The most words kept.
+    /// The most words kept, before the words budget cuts the rarest.
     pub(crate) max_words: usize,
+    /// The most KB its pack may take without its chains.
+    pub(crate) words_budget_kb: u64,
     /// Its text for word chains, if any.
     pub(crate) text: Option<&'a LangText>,
 }
@@ -173,6 +183,7 @@ impl Manifest {
         check::rules(&manifest.rules)?;
         check::fetch(&manifest.fetch)?;
         check::text(&manifest.text)?;
+        check::packs(&manifest.packs)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
         check::credits(&manifest.credits, &manifest.sources)?;
@@ -197,9 +208,11 @@ impl Manifest {
                 dic: &lang.dic,
             };
             return Ok(Plan {
+                iso: iso.to_string(),
                 list: lang.list.clone(),
                 dict: Some(dict),
                 max_words: lang.max_words,
+                words_budget_kb: lang.words_budget_kb,
                 text: lang.text.as_ref(),
             });
         }
@@ -208,9 +221,11 @@ impl Manifest {
             return Err(WordsError::Lang(iso.to_string()));
         }
         Ok(Plan {
+            iso: iso.to_string(),
             list,
             dict: None,
             max_words: self.small.max_words,
+            words_budget_kb: self.small.words_budget_kb,
             text: None,
         })
     }
@@ -254,9 +269,10 @@ impl Manifest {
 
     /// Refuses a language whose files are not sources, or whose limit is zero.
     fn check_langs(&self) -> Result<(), WordsError> {
-        if !self.small.list.contains(ISO_SLOT) || self.small.max_words == 0 {
+        let small = &self.small;
+        if !small.list.contains(ISO_SLOT) || small.max_words == 0 || small.words_budget_kb == 0 {
             return Err(bad(&format!(
-                "[small] needs {ISO_SLOT} in its list and some max_words"
+                "[small] needs {ISO_SLOT} in its list, some max_words and a words budget"
             )));
         }
         for (iso, lang) in &self.lang {
@@ -264,9 +280,10 @@ impl Manifest {
             files.extend(lang.text.iter().flat_map(LangText::files));
             let known = files.iter().all(|f| self.sources.contains_key(*f));
             let text_ok = lang.text.as_ref().is_none_or(check::lang_text);
-            if !fits_iso(iso) || !known || lang.max_words == 0 || !text_ok {
+            let limits = lang.max_words > 0 && lang.words_budget_kb > 0;
+            if !fits_iso(iso) || !known || !limits || !text_ok {
                 return Err(bad(&format!(
-                    "[lang.{iso}] needs a pack code, known files, some max_words and sound text limits"
+                    "[lang.{iso}] needs a pack code, known files, some max_words, a words budget and sound text limits"
                 )));
             }
         }

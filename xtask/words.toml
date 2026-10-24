@@ -18,8 +18,8 @@ min_case_seen = 20
 # writes Bill, King and Federal in names about as often as the words, but March, China and I far more.
 twin_ratio = 10.0
 # A word is a tokenizer piece when the apostrophe words holding it are seen this many times more often than it
-# stands alone: `ll` of `I'll`. The report shows each piece as its alone/joined counts.
-piece_ratio = 20.0
+# stands alone: `ll` of `I'll`. At the set caps the real words reach 26 (haven) and the pieces start at 69 (t).
+piece_ratio = 40.0
 # Pieces are judged only when their apostrophe words are seen this often: under 5 alone where 100 are joined is
 # not chance.
 piece_min_seen = 100
@@ -44,6 +44,15 @@ tatoeba_weight = 4
 held_back_per_mille = 20
 # The most chains counted at once; past it the rarest go (lossy counting), so memory stays near 0.4 GB.
 max_live_chains = 12000000
+# A sentence whose letters were already seen in the language's run counts once, so templated lines (references,
+# navboxes) do not skew chains. This many keys are kept, about 0.15 GB; past it new sentences are not remembered.
+max_seen_sentences = 14000000
+# A word this many times more common in Tatoeba than in wordfreq has the Tatoeba chains it ends scaled down to this
+# ratio: Tatoeba's everyday words reach 24 times (أليس, plaît), its fixed names 33 to 1190 (Mary in French, Layla).
+skew_ratio = 30.0
+# The report shows the followers of this many of the most seen one-word contexts, this many each.
+report_contexts = 10
+report_followers = 4
 # The next words kept per context, best first.
 followers = 8
 # What Tatoeba writes for an empty field.
@@ -52,6 +61,12 @@ null = '\N'
 held = "words/held"
 # The packs and their credits go here, under the workspace root, unless `--out` names another folder.
 out = "assets/words"
+
+# The packs together: every file written must fit this many KB once deflated (spec §6, about 20 MB of the download),
+# measured at zip's default level; a build over it is refused.
+[packs]
+download_kb = 20480
+level = 6
 
 # The files written beside the packs; every fixed sentence of `CREDITS.txt` is in `words-credits.txt`.
 [credits]
@@ -91,13 +106,18 @@ part = "part"
 [small]
 # The list, with `{iso}` for the language code.
 list = "wordfreq/small_{iso}.msgpack.gz"
+# The most words a list keeps, most frequent first; the words budget then cuts the rarest.
 max_words = 60000
+# The most KB a pack may take without its chains; its rarest words go until it fits. 700 keeps the 39 packs near
+# 10.3 MB deflated, so the full packs keep every word and chain.
+words_budget_kb = 700
 
 [lang.en]
 list = "wordfreq/large_en.msgpack.gz"
 aff = "dict/en/unzipped/en_US.aff"
 dic = "dict/en/unzipped/en_US.dic"
 max_words = 150000
+words_budget_kb = 2000
 
 [lang.en.text]
 chain_budget_kb = 3000
@@ -109,6 +129,7 @@ list = "wordfreq/large_fr.msgpack.gz"
 aff = "dict/fr/fr.aff"
 dic = "dict/fr/fr.dic"
 max_words = 150000
+words_budget_kb = 3000
 
 [lang.fr.text]
 chain_budget_kb = 3000
@@ -120,6 +141,7 @@ list = "wordfreq/large_ar.msgpack.gz"
 aff = "dict/ar/ar.aff"
 dic = "dict/ar/ar.dic"
 max_words = 250000
+words_budget_kb = 6000
 
 [lang.ar.text]
 chain_budget_kb = 4000

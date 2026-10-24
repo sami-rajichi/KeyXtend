@@ -7,17 +7,19 @@ use std::path::Path;
 use kx_mod_predict::Pack;
 use sha2::{Digest, Sha256};
 
+use super::super::WordsError;
 use super::super::build::{self, Paths};
 use super::super::fixture::text::{tatoeba, wiki};
 use super::super::fixture::{self, AFF, dic};
 use super::super::manifest::Manifest;
 use super::super::tatoeba::held;
-use super::super::{WordsError, credits};
 use crate::devtools::paths::join_rel;
 use crate::test_support::TempDir;
 
 /// Bucket of the fixture's most frequent word; the others follow one by one.
 const TOP: usize = 200;
+/// A skew ratio no word of the fixture's Tatoeba reaches.
+const NO_SKEW: &str = "1000.0";
 
 /// A wordfreq list holding `words` from bucket `TOP` on.
 fn list(words: &[&str]) -> Vec<u8> {
@@ -57,8 +59,8 @@ fn ids() -> (Vec<String>, String) {
 }
 
 /// The fixture manifest with real French files, French text, a German small list and credit sections, written
-/// under `src`.
-fn manifest(src: &Path) -> Manifest {
+/// under `src`, Tatoeba's words scaled past `skew` times their wordfreq share.
+fn manifest(src: &Path, skew: &str) -> Manifest {
     let lines = sources(src, &files());
     let text = fixture::manifest_text("")
         .lines()
@@ -66,6 +68,7 @@ fn manifest(src: &Path) -> Manifest {
         .collect::<Vec<_>>()
         .join("\n")
         .replace("max_words = 5", "max_words = 50")
+        .replace("skew_ratio = 10.0", &format!("skew_ratio = {skew}"))
         .replace(
             r#"file = "d/fr.aff", from = "A", to = "B""#,
             r###"file = "w/README.md", from = "## License", to = "## ""###,
@@ -106,10 +109,7 @@ fn files() -> Vec<(&'static str, Vec<u8>)> {
         ("t/fra.tsv.bz2", tatoeba(&sentences)),
         (
             "k/frwiki.json.bz2",
-            wiki(&[
-                Some("Le chat dort. L'homme dort."),
-                Some("Le chat est ici."),
-            ]),
+            wiki(&[Some("Le chat dort. L'homme dort."), Some("Le chat est là.")]),
         ),
         (
             "w/README.md",
@@ -122,19 +122,36 @@ fn files() -> Vec<(&'static str, Vec<u8>)> {
     ]
 }
 
-/// Builds the fixture into a temp folder and returns it with the lines said.
-fn built() -> (TempDir, Vec<String>) {
+/// The fixture's folders under `dir`.
+fn paths(dir: &TempDir) -> Paths {
+    let at = |name: &str| dir.path().join(name);
+    Paths {
+        src: at("src"),
+        out: at("out"),
+        held: at("held"),
+    }
+}
+
+/// Builds the fixture into a temp folder, Tatoeba scaled past `skew`, and returns it with the lines said.
+fn built_with(skew: &str) -> (TempDir, Vec<String>) {
     let dir = TempDir::new("words-build");
-    let src = dir.path().join("src");
-    let manifest = manifest(&src);
-    let paths = Paths {
-        src,
-        out: dir.path().join("out"),
-        held: dir.path().join("held"),
-    };
+    let paths = paths(&dir);
+    let manifest = manifest(&paths.src, skew);
     let mut said = Vec::new();
     build::run(&manifest, &paths, &mut |l| said.push(l.to_string())).unwrap();
     (dir, said)
+}
+
+/// Builds the fixture with no Tatoeba word scaled.
+fn built() -> (TempDir, Vec<String>) {
+    built_with(NO_SKEW)
+}
+
+/// The scores of the followers of `word` in `pack`.
+fn scores(pack: &Pack<'_>, word: &str) -> Vec<u8> {
+    pack.followers(&[pack.run(word).start])
+        .map(|(_, s)| s)
+        .collect()
 }
 
 /// The followers of the words `context` in `pack`, best first.
@@ -154,24 +171,52 @@ fn the_built_pack_opens_and_its_chains_follow_the_text() {
     assert_eq!(next(&pack, &["le"]), ["chat"]);
     assert_eq!(
         next(&pack, &["chat"]),
-        ["dort", "est"],
-        "9 against 5, Tatoeba weighing 4"
+        ["est", "dort"],
+        "5 against 4: Tatoeba weighs 4, and its second Le chat dort and Wikipedia's are repeats"
     );
-    assert_eq!(next(&pack, &["le", "chat"]), ["dort", "est"]);
+    assert_eq!(next(&pack, &["le", "chat"]), ["est", "dort"]);
     assert_eq!(
         next(&pack, &["l", "homme"]),
         ["est", "dort"],
         "L' splits off"
     );
-    let scores: Vec<u8> = pack
-        .followers(&[pack.run("chat").start])
-        .map(|(_, s)| s)
-        .collect();
-    assert_eq!(scores, [250, 244], "9 and 5 of the 14 times chat was seen");
-    assert!(
-        said.iter().any(|l| l.starts_with("pack fr: 7 words, ")),
-        "{said:?}"
+    assert_eq!(
+        scores(&pack, "chat"),
+        [249, 246],
+        "5 and 4 of the 9 times chat was seen"
     );
+    for start in [
+        "pack fr: 7 words, ",
+        "repeats fr: 2 of 7 sentences skipped as repeats, 5 remembered",
+    ] {
+        assert!(said.iter().any(|l| l.starts_with(start)), "{said:?}");
+    }
+}
+
+#[test]
+fn tatoebas_overused_words_end_fewer_chains_and_wikipedia_is_not_scaled() {
+    let (dir, said) = built_with("15.0");
+    let bytes = std::fs::read(dir.path().join("out").join("fr.kxw")).unwrap();
+    let pack = Pack::parse(&bytes).unwrap();
+    let skew = "skew fr: 4 words; first 2: ici 21, est 20";
+    assert!(said.iter().any(|l| l == skew), "{said:?}");
+    assert_eq!(
+        next(&pack, &["chat"]),
+        ["dort", "est"],
+        "est takes 2 of 11 Tatoeba tokens, 20 times its share: 4 × 15 / 20.4 + 1 of Wikipedia"
+    );
+    assert_eq!(scores(&pack, "chat"), [246, 246], "4 and 3.94 of 9");
+}
+
+#[test]
+fn a_build_over_the_download_budget_writes_nothing() {
+    let dir = TempDir::new("words-build");
+    let paths = paths(&dir);
+    let mut manifest = manifest(&paths.src, NO_SKEW);
+    manifest.packs.download_kb = 1;
+    let refused = build::run(&manifest, &paths, &mut |_| {});
+    assert!(matches!(refused, Err(WordsError::Pack(why)) if why.ends_with("the build is refused")));
+    assert!(!paths.out.exists());
 }
 
 #[test]
@@ -237,20 +282,4 @@ fn the_credits_copy_the_licence_sections_and_name_every_source() {
         "cy is held back, - is no one"
     );
     assert_eq!(read("LICENSE.txt"), "Shared alike.\nSee the credits.\n");
-}
-
-#[test]
-fn the_template_fills_known_placeholders_only() {
-    let values = std::collections::BTreeMap::from([("a", "x{b}".to_string())]);
-    assert_eq!(
-        credits::fill("1 {a} 2", &values).unwrap(),
-        "1 x{b} 2",
-        "a value is not filled again"
-    );
-    for bad in ["{b}", "{a"] {
-        assert!(
-            matches!(credits::fill(bad, &values), Err(WordsError::Manifest(_))),
-            "{bad}"
-        );
-    }
 }

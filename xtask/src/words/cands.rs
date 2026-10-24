@@ -6,8 +6,9 @@ use std::collections::{HashMap, HashSet};
 
 use super::dict::Dict;
 use super::manifest::{Plan, Rules};
-use super::wordfreq::Entry;
+use super::wordfreq::{Entry, share};
 use super::{clean, merge, script};
+use crate::devtools::paths::BYTES_PER_KB;
 
 /// What became of one token.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,16 +79,22 @@ pub(crate) struct Facts {
 /// The candidates of one language, ready for the text rules and the cut.
 #[derive(Debug)]
 pub(crate) struct Candidates {
+    /// The language code.
+    pub(crate) iso: String,
     /// Every candidate, wordfreq's order first, then the joins.
     pub(crate) cands: Vec<Cand>,
     /// How many entries wordfreq's list held.
     pub(crate) read: usize,
-    /// The most words kept.
+    /// The share of all words those entries take together.
+    pub(crate) mass: f64,
+    /// The most words kept, before the words budget cuts the rarest.
     pub(crate) max_words: usize,
+    /// The most bytes the pack may take without its chains.
+    pub(crate) words_budget: usize,
     /// True when a dictionary checked the tokens.
     pub(crate) checked: bool,
-    /// Every token of wordfreq's list, so a spelling's pieces can be checked.
-    pub(crate) tokens: HashSet<String>,
+    /// Every token of wordfreq's list with its bucket, so a spelling's pieces can be checked and weighed.
+    pub(crate) tokens: HashMap<String, u32>,
     /// What the source rules did.
     pub(crate) facts: Facts,
 }
@@ -100,7 +107,11 @@ pub(crate) fn candidates(
     rules: &Rules,
 ) -> Candidates {
     let read = entries.len();
-    let tokens = entries.iter().map(|e| e.word.clone()).collect();
+    let mass = entries.iter().map(|e| share(e.bucket)).sum();
+    let mut tokens: HashMap<String, u32> = HashMap::new();
+    for entry in &entries {
+        tokens.entry(entry.word.clone()).or_insert(entry.bucket);
+    }
     let mut facts = Facts::default();
     let mut cands: Vec<Cand> = main_script(entries, rules, &mut facts.script)
         .into_iter()
@@ -111,10 +122,14 @@ pub(crate) fn candidates(
         merge::merge(&mut cands, dict, rules, &mut facts);
         stems(&mut cands, dict, &tokens);
     }
+    let budget = plan.words_budget_kb.saturating_mul(BYTES_PER_KB);
     Candidates {
+        iso: plan.iso.clone(),
         cands,
         read,
+        mass,
         max_words: plan.max_words,
+        words_budget: usize::try_from(budget).unwrap_or(usize::MAX),
         checked: dict.is_some(),
         tokens,
         facts,
@@ -209,7 +224,7 @@ fn join(cands: &mut Vec<Cand>, dict: &Dict, show: usize, joins: &mut Tally) {
 
 /// Adds each stem of `dict` whose two pieces are tokens and that no candidate spells yet, as a `Stem` that only text
 /// keeps; it takes the rarer piece's bucket and the left piece's place.
-fn stems(cands: &mut Vec<Cand>, dict: &Dict, tokens: &HashSet<String>) {
+fn stems(cands: &mut Vec<Cand>, dict: &Dict, tokens: &HashMap<String, u32>) {
     let spelt: HashSet<String> = cands.iter().map(|c| c.word.to_lowercase()).collect();
     let place: HashMap<&str, (u32, usize)> = cands
         .iter()
@@ -219,8 +234,8 @@ fn stems(cands: &mut Vec<Cand>, dict: &Dict, tokens: &HashSet<String>) {
     for (stem, left, right) in dict.joins() {
         let (left, right) = (left.to_lowercase(), right.to_lowercase());
         if spelt.contains(&stem.to_lowercase())
-            || !tokens.contains(&left)
-            || !tokens.contains(&right)
+            || !tokens.contains_key(&left)
+            || !tokens.contains_key(&right)
         {
             continue;
         }

@@ -1,5 +1,6 @@
 //! Tests of the word lists on tiny fixtures built in memory; nothing is downloaded.
 
+mod budget;
 mod build;
 mod chains;
 mod count;
@@ -32,9 +33,11 @@ fn entries(words: &[(&str, u32)]) -> Vec<Entry> {
 
 fn plan(max_words: usize) -> Plan<'static> {
     Plan {
+        iso: "fr".to_string(),
         list: String::new(),
         dict: None,
         max_words,
+        words_budget_kb: 1_000,
         text: None,
     }
 }
@@ -46,7 +49,7 @@ fn dict(aff: &str, words: &[&str]) -> Dict {
 fn build_with(words: &[(&str, u32)], dict: Option<&Dict>, text: Option<&TextCounts>) -> WordList {
     let rules = fixture::rules();
     let cands = candidates(entries(words), &plan(100), dict, &rules);
-    list::finish(cands, text, &rules)
+    list::finish(cands, text, &rules).unwrap()
 }
 
 fn build(words: &[(&str, u32)], dict_words: &[&str]) -> WordList {
@@ -169,7 +172,7 @@ fn digits_web_addresses_emails_and_mixed_scripts_are_dropped() {
 fn a_language_without_a_dictionary_keeps_its_clean_words_up_to_max_words() {
     let words = entries(&[("der", 120), ("abc123", 121), ("die", 122), ("das", 123)]);
     let rules = fixture::rules();
-    let list = list::finish(candidates(words, &plan(2), None, &rules), None, &rules);
+    let list = list::finish(candidates(words, &plan(2), None, &rules), None, &rules).unwrap();
     assert_eq!(spellings(&list), ["der", "die"]);
     assert_eq!(list.read, 4);
     assert!(list.coverage.is_none());

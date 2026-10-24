@@ -9,14 +9,19 @@ mod clean;
 mod count;
 mod credits;
 mod dict;
+mod download;
 mod fetch;
+mod fit;
 #[cfg(test)]
 mod fixture;
+mod judge;
 mod list;
 mod manifest;
 mod merge;
+mod read;
 mod report;
 mod script;
+mod skew;
 mod split;
 mod tatoeba;
 #[cfg(test)]
@@ -94,7 +99,7 @@ pub(crate) fn fetch(src: &str) -> Result<(), WordsError> {
 pub(crate) fn list(iso: &str, src: &str) -> Result<(), WordsError> {
     let manifest = Manifest::parse(MANIFEST)?;
     let cands = candidates(&manifest, iso, Path::new(src))?;
-    let words = list::finish(cands, None, &manifest.rules);
+    let words = list::finish(cands, None, &manifest.rules)?;
     for line in report::report(iso, &words) {
         println!("{line}");
     }

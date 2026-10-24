@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use super::super::fixture::AFF;
 use super::super::text::{KeyCounts, TextCounts};
-use super::super::wordfreq::{bucket_of, freq};
+use super::super::wordfreq::{bucket_of, bucket_of_share, freq, share};
 use super::{build_with, dict, spellings, word};
 
 /// One fold key's counts: the key, how often it stands alone, and each spelling's count.
@@ -108,10 +108,11 @@ fn a_spelling_with_the_apostrophe_is_never_a_piece() {
     );
     let words = [("l", 140), ("aujourd", 400), ("hui", 410)];
     let list = build_with(&words, Some(&dict), Some(&counts));
+    let l = bucket_of(500, 1_000_000_000).unwrap();
     assert_eq!(
-        spellings(&list),
-        ["l'", "aujourd'hui"],
-        "both stand alone 0 times"
+        list.words,
+        [word("aujourd'hui", 410, false), word("l'", l, false)],
+        "both stand alone 0 times; the elision keeps its text share, aujourd'hui takes all of hui's"
     );
     assert_eq!(list.text_facts.pieces.count, 0);
 }
@@ -162,21 +163,53 @@ fn counts_are_found_through_the_fold_key() {
     assert_eq!((counts.alone("x"), counts.seen("x")), (0, 0));
 }
 
+/// wordfreq tokens holding `it's` but neither `don't` nor `can't`, which the dictionary joins from their pieces.
+const STEM_WORDS: [(&str, u32); 6] = [
+    ("it", 205),
+    ("it's", 230),
+    ("can", 250),
+    ("don", 440),
+    ("t", 300),
+    ("s", 310),
+];
+
 #[test]
-fn an_apostrophe_word_of_two_tokens_takes_its_frequency_from_the_text() {
-    let dict = dict(AFF, &["don't", "don", "t", "it"]);
-    let counts = text(
-        1_000_000,
-        &[("don't", 0, &[("don't", 5_000)]), ("it", 9_000, &[])],
+fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
+    let dict = dict(
+        AFF,
+        &["don't", "don", "t", "it", "can't", "can", "it's", "s"],
     );
-    let words = [("it", 205), ("don't", 280), ("don", 440), ("t", 357)];
-    let list = build_with(&words, Some(&dict), Some(&counts));
-    let seen = bucket_of(5_000, 1_000_000).unwrap();
-    assert_eq!(seen, 230, "Zipf 9 + log10(5000 / 10^6) is 6.7");
-    assert_eq!(list.words.get(1), Some(&word("don't", seen, false)));
-    let shift = format!("don't {} → {}", freq(280), freq(seen));
-    assert_eq!(list.text_facts.stems.first, [shift]);
-    assert_eq!(list.text_facts.pieces.first, ["don 0/5000", "t 0/5000"]);
+    let keys: [Key<'_>; 6] = [
+        ("don't", 0, &[("don't", 5_000)]),
+        ("can't", 0, &[("can't", 10_000)]),
+        ("it's", 0, &[("it's", 1)]),
+        ("t", 5_000, &[]),
+        ("can", 20_000, &[]),
+        ("it", 9_000, &[]),
+    ];
+    let list = build_with(&STEM_WORDS, Some(&dict), Some(&text(1_000_000, &keys)));
+    let part = |n: f64| bucket_of_share(share(300) * n).unwrap();
+    let (dont, cant) = (part(0.25), part(0.5));
+    assert_eq!(
+        (dont, cant),
+        (360, 330),
+        "5000 and 10000 of t's 5000 + 15000 uses"
+    );
+    let find = |s: &str| list.words.iter().find(|w| w.spelling == s);
+    assert_eq!(find("don't"), Some(&word("don't", dont, false)));
+    assert_eq!(find("can't"), Some(&word("can't", cant, false)));
+    assert_eq!(
+        find("it's"),
+        Some(&word("it's", 230, false)),
+        "a wordfreq token keeps its own"
+    );
+    let shift = format!("can't {} → {}", freq(300), freq(cant));
+    let stems = &list.text_facts.stems;
+    assert!(
+        stems.first.contains(&shift) && stems.count == 2,
+        "{stems:?}: it's keeps its own"
+    );
+    assert_eq!(list.text_facts.pieces.first, ["don 0/5000"]);
 }
 
 #[test]

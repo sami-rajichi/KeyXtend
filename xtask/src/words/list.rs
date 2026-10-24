@@ -1,14 +1,15 @@
-//! The second stage of a word list: with real text, twins pick their spelling, pieces go and apostrophe words take
-//! their frequency from the text; then the cut to the most frequent. Without text, only the cut runs.
+//! The second stage of a word list: with real text, the text rules (`judge`) run; then the cut to the most frequent
+//! words, and the rarest go until the pack without its chains fits the words budget.
 
 use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use super::cands::{Cand, Candidates, Facts, Fate, Tally};
-use super::float;
+use super::judge::{self, Judge};
 use super::manifest::Rules;
 use super::text::TextCounts;
-use super::wordfreq::{bucket_of, freq};
+use super::wordfreq::{freq, share};
+use super::{WordsError, fit};
 
 /// One word of a finished list.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +40,7 @@ pub(crate) struct TextFacts {
     pub(crate) twins: Tally,
     /// Words dropped as tokenizer pieces.
     pub(crate) pieces: Tally,
-    /// Apostrophe words whose frequency came from the text.
+    /// Apostrophe words, no wordfreq token, whose frequency the stem rule changed.
     pub(crate) stems: Tally,
     /// Apostrophe words dropped as never seen in the text.
     pub(crate) unseen: Tally,
@@ -62,16 +63,10 @@ pub(crate) struct WordList {
     pub(crate) of_cand: Vec<Option<u32>>,
     /// True when text counts were given.
     pub(crate) text: bool,
-}
-
-/// What the text rules read: the counts, wordfreq's tokens, and what apostrophe words split into.
-struct Judge<'a> {
-    /// The text's counts.
-    text: &'a TextCounts,
-    /// Every wordfreq token.
-    tokens: &'a HashSet<String>,
-    /// How often the apostrophe forms holding each piece were seen.
-    joined: HashMap<String, u64>,
+    /// The share of wordfreq's frequency mass the kept words take.
+    pub(crate) covers: f64,
+    /// How many words the words budget cut, and the budget in bytes.
+    pub(crate) cut: (usize, usize),
 }
 
 /// A kept candidate with the spelling it takes.
@@ -87,29 +82,44 @@ struct Kept {
 }
 
 /// The finished list of `cands`; the text rules and the `Stem` candidates run only with `text`.
-pub(crate) fn finish(cands: Candidates, text: Option<&TextCounts>, rules: &Rules) -> WordList {
+pub(crate) fn finish(
+    cands: Candidates,
+    text: Option<&TextCounts>,
+    rules: &Rules,
+) -> Result<WordList, WordsError> {
     let coverage = cands.checked.then(|| coverage(&cands.cands, rules));
     let mut facts = TextFacts::default();
-    let judge = text.map(|text| Judge {
-        text,
-        tokens: &cands.tokens,
-        joined: joined(&cands.cands, text, rules.apostrophe),
-    });
+    let judge = text.map(|text| Judge::new(&cands.cands, &cands.tokens, text, rules.apostrophe));
     let wanted = |c: &Cand| c.fate == Fate::Kept || (c.fate == Fate::Stem && text.is_some());
     let kept: Vec<Kept> = (cands.cands.iter().enumerate())
         .filter(|(_, c)| wanted(c))
         .filter_map(|(i, c)| keep(i, c, judge.as_ref(), rules, &mut facts))
         .collect();
-    let (words, of_cand) = survivors(kept, cands.max_words, cands.cands.len());
-    WordList {
-        words,
+    let (mut kept, mut of_cand) = survivors(kept, cands.max_words, cands.cands.len());
+    let all: Vec<Word> = kept.iter().map(word).collect();
+    let fits = fit::fitting(&cands.iso, &all, cands.words_budget)?;
+    let cut = kept.len() - fits;
+    kept.truncate(fits);
+    let covered: f64 = kept.iter().map(|k| share(k.bucket)).sum();
+    let gone = |w: &Option<u32>| {
+        w.and_then(|w| usize::try_from(w).ok())
+            .is_some_and(|w| w >= fits)
+    };
+    of_cand
+        .iter_mut()
+        .filter(|w| gone(w))
+        .for_each(|w| *w = None);
+    Ok(WordList {
+        words: kept.iter().map(word).collect(),
         read: cands.read,
         coverage,
         facts: cands.facts,
         text_facts: facts,
         of_cand,
         text: text.is_some(),
-    }
+        covers: covered / cands.mass.max(f64::MIN_POSITIVE),
+        cut: (cut, cands.words_budget),
+    })
 }
 
 /// Candidate `i` with its spelling and bucket, or `None` when the text shows a piece or never shows its stem.
@@ -120,25 +130,25 @@ fn keep(
     rules: &Rules,
     facts: &mut TextFacts,
 ) -> Option<Kept> {
-    let spelling = spelling(cand, judge.map(|j| j.text), rules, &mut facts.twins)?;
+    let spelling = judge::spelling(cand, judge.map(|j| j.text), rules, &mut facts.twins)?;
     let mut bucket = cand.bucket;
     if let Some(judge) = judge {
-        let text = judge.text;
-        if let Some(joined) = piece(&spelling, judge, rules) {
-            let alone = text.alone(&spelling);
-            facts
-                .pieces
-                .add(rules.show, || format!("{spelling} {alone}/{joined}"));
+        if let Some(joined) = judge.piece(&spelling, rules) {
+            let alone = judge.text.alone(&spelling);
+            let line = format!("{spelling} {alone}/{joined}");
+            facts.pieces.add(rules.show, || line);
             return None;
         }
-        if is_stem(&spelling, judge.tokens, rules.apostrophe) {
-            let Some(seen) = bucket_of(text.count(&spelling), text.total) else {
+        if judge.is_stem(&spelling, rules.apostrophe) {
+            let Some(seen) = judge.stem_bucket(&spelling, bucket, rules.apostrophe) else {
                 facts.unseen.add(rules.show, || spelling);
                 return None;
             };
-            let shift = format!("{spelling} {} → {}", freq(bucket), freq(seen));
-            facts.stems.add(rules.show, || shift);
-            bucket = seen;
+            if seen != bucket {
+                let shift = format!("{spelling} {} → {}", freq(bucket), freq(seen));
+                facts.stems.add(rules.show, || shift);
+                bucket = seen;
+            }
         }
     }
     let rank = cand.rank;
@@ -148,71 +158,6 @@ fn keep(
         rank,
         cand: i,
     })
-}
-
-/// The spelling `cand` takes: its other form seen most standing alone away from sentence starts, once seen
-/// `min_case_seen` times and more than its own form, `twin_ratio` times more for a change of case only.
-fn spelling(
-    cand: &Cand,
-    text: Option<&TextCounts>,
-    rules: &Rules,
-    twins: &mut Tally,
-) -> Option<String> {
-    let own = cand.forms.first()?;
-    let Some(text) = text else {
-        return Some(own.clone());
-    };
-    let others = cand.forms.iter().skip(1).map(|f| (f, text.seen(f)));
-    let Some((form, seen)) = others.min_by_key(|&(_, n)| Reverse(n)) else {
-        return Some(own.clone());
-    };
-    let own_seen = text.seen(own);
-    let case = form.to_lowercase() == own.to_lowercase();
-    let ratio = if case { rules.twin_ratio } else { 1.0 };
-    if seen < rules.min_case_seen || float(seen) <= ratio * float(own_seen) {
-        return Some(own.clone());
-    }
-    twins.add(rules.show, || format!("{} → {form}", cand.word));
-    Some(form.clone())
-}
-
-/// How often the apostrophe words holding `spelling` were seen, when it is a piece: they were seen at least
-/// `piece_min_seen` times and over `piece_ratio` times as often as it stands alone (`ll` of `I'll`).
-fn piece(spelling: &str, judge: &Judge<'_>, rules: &Rules) -> Option<u64> {
-    let lower = spelling.to_lowercase();
-    let joined = judge.joined.get(&lower).copied().unwrap_or_default();
-    let alone = judge.text.alone(spelling);
-    let dwarfed = float(joined) > rules.piece_ratio * float(alone);
-    (joined >= rules.piece_min_seen && dwarfed).then_some(joined)
-}
-
-/// How often the text shows the candidates' apostrophe forms holding each piece, by the piece in lower case: `t`
-/// counts `don't` and `can't`.
-fn joined(cands: &[Cand], text: &TextCounts, apostrophe: char) -> HashMap<String, u64> {
-    let forms: HashSet<&str> = cands
-        .iter()
-        .flat_map(|c| c.forms.iter().map(String::as_str))
-        .filter(|f| f.contains(apostrophe))
-        .collect();
-    let mut joined: HashMap<String, u64> = HashMap::new();
-    for form in forms {
-        let seen = text.count(form);
-        let pieces: HashSet<String> = (form.split(apostrophe))
-            .filter(|p| !p.is_empty())
-            .map(str::to_lowercase)
-            .collect();
-        for piece in pieces {
-            *joined.entry(piece).or_default() += seen;
-        }
-    }
-    joined
-}
-
-/// True when `spelling` holds the apostrophe and each of its pieces is a wordfreq token (`don't`, `l'`), so its
-/// wordfreq frequency mixes in the pieces' and the text's count is the truer one.
-fn is_stem(spelling: &str, tokens: &HashSet<String>, apostrophe: char) -> bool {
-    let mut pieces = spelling.split(apostrophe).filter(|p| !p.is_empty());
-    spelling.contains(apostrophe) && pieces.all(|p| tokens.contains(&p.to_lowercase()))
 }
 
 /// The words among wordfreq's `coverage_top` most frequent that the dictionary rejected; a merged, joined or prefix
@@ -234,7 +179,7 @@ fn coverage(cands: &[Cand], rules: &Rules) -> Coverage {
 
 /// Each spelling once with its lowest bucket, most frequent first and cut to `max_words`, with each of the `cands`
 /// candidates' place in the result; words of one frequency byte keep wordfreq's order.
-fn survivors(kept: Vec<Kept>, max_words: usize, cands: usize) -> (Vec<Word>, Vec<Option<u32>>) {
+fn survivors(kept: Vec<Kept>, max_words: usize, cands: usize) -> (Vec<Kept>, Vec<Option<u32>>) {
     let mut words: Vec<Kept> = Vec::new();
     let mut index: HashMap<String, usize> = HashMap::new();
     let mut owners = Vec::with_capacity(kept.len());
@@ -266,14 +211,14 @@ fn survivors(kept: Vec<Kept>, max_words: usize, cands: usize) -> (Vec<Word>, Vec
             *c = place.get(slot).copied().flatten();
         }
     }
-    (order.into_iter().map(|(_, w)| word(w)).collect(), of_cand)
+    (order.into_iter().map(|(_, w)| w).collect(), of_cand)
 }
 
 /// The finished word of `kept`.
-fn word(kept: Kept) -> Word {
+fn word(kept: &Kept) -> Word {
     Word {
         capital: kept.spelling.chars().next().is_some_and(char::is_uppercase),
         freq: freq(kept.bucket),
-        spelling: kept.spelling,
+        spelling: kept.spelling.clone(),
     }
 }

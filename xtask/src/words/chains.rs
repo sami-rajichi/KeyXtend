@@ -2,7 +2,6 @@
 //! quantised conditional log-probability, each context keeps its best `followers`, and the least seen contexts go
 //! until the chain sections fit the budget.
 
-use std::cmp::Reverse;
 use std::collections::HashMap;
 
 use kx_mod_predict::pack::layout::{
@@ -13,14 +12,14 @@ use super::count::{ChainKey, KEY_LEN, NONE};
 use super::float;
 
 /// One context a pack keeps, by word place in the list.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Context {
     /// The context's words, oldest first.
     pub(crate) words: Vec<u32>,
     /// Its followers with their scores, best first.
     pub(crate) followers: Vec<(u32, u8)>,
     /// How often the context was seen, weighted.
-    strength: u64,
+    strength: f64,
 }
 
 /// The chains a pack keeps.
@@ -37,7 +36,7 @@ pub(crate) struct Picked {
 /// The chains of `table` (by candidate place) on the list's words, given each candidate's sightings in `seen` and
 /// its word in `of_cand`; each context keeps `followers` and all fit in `budget` bytes for chains up to `longest`.
 pub(crate) fn pick(
-    table: HashMap<ChainKey, u32>,
+    table: HashMap<ChainKey, f32>,
     seen: &[u64],
     of_cand: &[Option<u32>],
     followers: u8,
@@ -49,7 +48,10 @@ pub(crate) fn pick(
     let mut contexts = score(&chains, &words, usize::from(followers));
     let overhead = usize::from(longest.saturating_sub(MIN_CHAIN) + 1) * CHAIN_HEAD;
     let mut bytes = overhead + contexts.iter().map(cost).sum::<usize>();
-    contexts.sort_by_key(|c| (c.strength, Reverse(c.words.len())));
+    contexts.sort_by(|a, b| {
+        let weaker = a.strength.total_cmp(&b.strength);
+        weaker.then(b.words.len().cmp(&a.words.len()))
+    });
     let drop = contexts
         .iter()
         .take_while(|c| {
@@ -70,6 +72,19 @@ pub(crate) fn pick(
     }
 }
 
+/// The `n` most seen one-word contexts of `picked`, each with its first `k` followers.
+pub(crate) fn top(picked: &Picked, n: usize, k: usize) -> Vec<(u32, Vec<u32>)> {
+    let mut one: Vec<&Context> = picked
+        .contexts
+        .iter()
+        .filter(|c| c.words.len() == 1)
+        .collect();
+    one.sort_by(|a, b| b.strength.total_cmp(&a.strength));
+    let followers = |c: &Context| c.followers.iter().take(k).map(|f| f.0).collect();
+    let first = |c: &&Context| Some((*c.words.first()?, followers(c)));
+    one.iter().take(n).filter_map(first).collect()
+}
+
 /// How often each word was seen: the sum of its candidates' sightings.
 fn word_seen(seen: &[u64], of_cand: &[Option<u32>]) -> Vec<u64> {
     let mut words: Vec<u64> = Vec::new();
@@ -88,9 +103,9 @@ fn word_seen(seen: &[u64], of_cand: &[Option<u32>]) -> Vec<u64> {
 }
 
 /// The chains on the list's words, sorted by length then words, those holding a word the list dropped left out.
-fn on_words(table: HashMap<ChainKey, u32>, of_cand: &[Option<u32>]) -> Vec<(ChainKey, u64)> {
+fn on_words(table: HashMap<ChainKey, f32>, of_cand: &[Option<u32>]) -> Vec<(ChainKey, f64)> {
     let word = |cand: u32| of_cand.get(usize::try_from(cand).ok()?).copied().flatten();
-    let mut chains: Vec<(ChainKey, u64)> = Vec::with_capacity(table.len());
+    let mut chains: Vec<(ChainKey, f64)> = Vec::with_capacity(table.len());
     for (key, count) in table {
         let mut out = [NONE; KEY_LEN];
         let mapped = key
@@ -102,7 +117,7 @@ fn on_words(table: HashMap<ChainKey, u32>, of_cand: &[Option<u32>]) -> Vec<(Chai
             ok && *slot != NONE
         });
         if whole {
-            chains.push((out, u64::from(count)));
+            chains.push((out, f64::from(count)));
         }
     }
     chains.sort_unstable_by_key(|(key, _)| (len(key), *key));
@@ -118,20 +133,20 @@ fn on_words(table: HashMap<ChainKey, u32>, of_cand: &[Option<u32>]) -> Vec<(Chai
 
 /// The contexts of the sorted `chains`, each with its best `keep` followers scored against how often the context
 /// was seen: `words` for one word, the shorter chain for more.
-fn score(chains: &[(ChainKey, u64)], words: &[u64], keep: usize) -> Vec<Context> {
+fn score(chains: &[(ChainKey, f64)], words: &[u64], keep: usize) -> Vec<Context> {
     let mut contexts = Vec::new();
     for run in chains.chunk_by(|a, b| len(&a.0) == len(&b.0) && context(&a.0) == context(&b.0)) {
         let Some((first, _)) = run.first() else {
             continue;
         };
         let words_of = context(first).to_vec();
-        let total: u64 = run.iter().map(|(_, n)| n).sum();
+        let total: f64 = run.iter().map(|(_, n)| n).sum();
         let strength = seen_context(&words_of, chains, words).max(total);
-        let mut next: Vec<(u32, u64)> = run
+        let mut next: Vec<(u32, f64)> = run
             .iter()
             .filter_map(|(k, n)| Some((last(k)?, *n)))
             .collect();
-        next.sort_by_key(|&(w, n)| (Reverse(n), w));
+        next.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
         next.truncate(keep);
         let followers = next
             .iter()
@@ -147,13 +162,10 @@ fn score(chains: &[(ChainKey, u64)], words: &[u64], keep: usize) -> Vec<Context>
 }
 
 /// How often `context` was seen: its word's sightings for one word, else its own chain's count.
-fn seen_context(context: &[u32], chains: &[(ChainKey, u64)], words: &[u64]) -> u64 {
+fn seen_context(context: &[u32], chains: &[(ChainKey, f64)], words: &[u64]) -> f64 {
     if let [word] = context {
-        return usize::try_from(*word)
-            .ok()
-            .and_then(|w| words.get(w))
-            .copied()
-            .unwrap_or_default();
+        let seen = usize::try_from(*word).ok().and_then(|w| words.get(w));
+        return float(seen.copied().unwrap_or_default());
     }
     let mut key = [NONE; KEY_LEN];
     for (slot, w) in key.iter_mut().zip(context) {
@@ -163,13 +175,13 @@ fn seen_context(context: &[u32], chains: &[(ChainKey, u64)], words: &[u64]) -> u
     found
         .ok()
         .and_then(|i| chains.get(i))
-        .map_or(0, |(_, n)| *n)
+        .map_or(0.0, |(_, n)| *n)
 }
 
 /// The score of a follower seen `count` times after a context seen `context` times: `SCORE_CERTAIN` plus
 /// `STEPS_PER_ZIPF` times the log10 of their ratio, clamped to a byte.
-fn quantise(count: u64, context: u64) -> u8 {
-    let log = (float(count) / float(context.max(1))).log10();
+fn quantise(count: f64, context: f64) -> u8 {
+    let log = (count / context.max(count)).log10();
     let steps = f64::from(STEPS_PER_ZIPF) * log + f64::from(SCORE_CERTAIN);
     byte(steps)
 }

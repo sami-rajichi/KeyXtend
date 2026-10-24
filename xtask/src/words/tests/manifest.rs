@@ -1,8 +1,9 @@
-//! The manifest: the project's own `words.toml`, and the sources and languages a manifest refuses.
+//! The manifest: the project's own `words.toml`, the sources and languages a manifest refuses, and the credits
+//! template.
 
 use super::super::fixture::{self, ABC_SHA256, abc_source};
 use super::super::manifest::{Manifest, Origin};
-use super::super::{MANIFEST, WordsError};
+use super::super::{MANIFEST, WordsError, credits};
 
 #[test]
 fn the_project_manifest_parses_with_every_language_file() {
@@ -157,6 +158,15 @@ const OUT_OF_RANGE: &[(&str, &str)] = &[
     (r#"file = "d/fr.aff""#, r#"file = "d/nope.aff""#),
     (r#"to = "B" }"#, r#"to = "" }"#),
     ("sentence_ends = [\".\", \"?\"]", "sentence_ends = []"),
+    ("max_seen_sentences = 1000", "max_seen_sentences = 0"),
+    ("skew_ratio = 10.0", "skew_ratio = 0.9"),
+    ("skew_ratio = 10.0", "skew_ratio = inf"),
+    ("report_contexts = 2", "report_contexts = 0"),
+    ("report_followers = 2", "report_followers = 0"),
+    ("download_kb = 1000", "download_kb = 0"),
+    ("level = 6", "level = 10"),
+    ("words_budget_kb = 100", "words_budget_kb = 0"),
+    ("words_budget_kb = 200", "words_budget_kb = 0"),
 ];
 
 #[test]
@@ -183,6 +193,9 @@ fn the_edges_of_each_range_are_accepted() {
         ("max_chain = 3", "max_chain = 2"),
         ("max_chain = 3", "max_chain = 5"),
         ("held_back_per_mille = 20", "held_back_per_mille = 999"),
+        ("skew_ratio = 10.0", "skew_ratio = 1.0"),
+        ("level = 6", "level = 9"),
+        ("level = 6", "level = 0"),
     ];
     for (from, to) in swaps {
         let result = Manifest::parse(&text.replacen(from, to, 1));
@@ -199,6 +212,17 @@ fn the_project_manifest_gives_en_fr_and_ar_their_text_and_budget() {
         assert!(text.tatoeba.is_some() && text.wiki.is_some(), "{iso}");
     }
     assert!(manifest.plan("de").unwrap().text.is_none());
+    let budget = |iso: &str| manifest.plan(iso).unwrap().words_budget_kb;
+    let budgets = ["en", "fr", "ar", "de"].map(budget);
+    assert_eq!(
+        budgets,
+        [2000, 3000, 6000, 700],
+        "the full packs keep every word"
+    );
+    assert_eq!(
+        (manifest.packs.download_kb, manifest.packs.level),
+        (20480, 6)
+    );
     let t = &manifest.text;
     let values = (
         t.min_chain,
@@ -245,6 +269,22 @@ fn a_bad_language_text_is_refused() {
         assert!(
             matches!(result, Err(WordsError::Manifest(_))),
             "{lang} was accepted"
+        );
+    }
+}
+
+#[test]
+fn the_template_fills_known_placeholders_only() {
+    let values = std::collections::BTreeMap::from([("a", "x{b}".to_string())]);
+    assert_eq!(
+        credits::fill("1 {a} 2", &values).unwrap(),
+        "1 x{b} 2",
+        "a value is not filled again"
+    );
+    for bad in ["{b}", "{a"] {
+        assert!(
+            matches!(credits::fill(bad, &values), Err(WordsError::Manifest(_))),
+            "{bad}"
         );
     }
 }

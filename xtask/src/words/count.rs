@@ -1,8 +1,9 @@
 //! The text counter: one pass over the text fills the counts the list's text rules read, and counts the chains of
-//! `min_chain` to `max_chain` candidates within a sentence. The chain table stays under `max_live_chains` by lossy
-//! counting: past it, the chains under a rising floor go.
+//! `min_chain` to `max_chain` candidates within a sentence. A sentence whose letters were seen before counts once,
+//! and the chain table stays under `max_live_chains` by lossy counting: past it, the chains under a rising floor go.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::hash::{DefaultHasher, Hasher};
 
 use kx_mod_predict::pack::layout::MAX_CHAIN;
 
@@ -15,6 +16,10 @@ use super::vocab::Vocab;
 pub(crate) const KEY_LEN: usize = MAX_CHAIN as usize;
 /// A chain key's unused places.
 pub(crate) const NONE: u32 = u32::MAX;
+/// The weight of a chain nothing scales.
+const UNSCALED: f32 = 1.0;
+/// How far the floor rises at each prune: one count.
+const FLOOR_STEP: f32 = 1.0;
 
 /// A chain of candidate or word places, `NONE` after its last.
 pub(crate) type ChainKey = [u32; KEY_LEN];
@@ -23,11 +28,11 @@ pub(crate) type ChainKey = [u32; KEY_LEN];
 #[derive(Debug)]
 pub(crate) struct Chains {
     /// Each chain's weighted count.
-    pub(crate) table: HashMap<ChainKey, u32>,
+    pub(crate) table: HashMap<ChainKey, f32>,
     /// The most chains kept at once.
     cap: usize,
     /// Chains counted fewer times than this were dropped at least once.
-    pub(crate) floor: u32,
+    pub(crate) floor: f32,
     /// How often the table was pruned.
     pub(crate) prunes: u32,
 }
@@ -39,22 +44,76 @@ impl Chains {
         Self {
             table,
             cap,
-            floor: 0,
+            floor: 0.0,
             prunes: 0,
         }
     }
 
     /// Counts `key` `weight` more times, pruning when the table passes its cap.
-    pub(crate) fn add(&mut self, key: ChainKey, weight: u32) {
-        let count = self.table.entry(key).or_default();
-        *count = count.saturating_add(weight);
+    pub(crate) fn add(&mut self, key: ChainKey, weight: f32) {
+        *self.table.entry(key).or_default() += weight;
         while self.table.len() > self.cap {
-            self.floor += 1;
+            self.floor += FLOOR_STEP;
             let floor = self.floor;
             self.table.retain(|_, n| *n >= floor);
             self.prunes += 1;
         }
     }
+}
+
+/// The sentences seen so far, by key, so a repeat counts once.
+#[derive(Debug)]
+pub(crate) struct Repeats {
+    /// The keys remembered.
+    keys: HashSet<u64>,
+    /// The most keys remembered; past it new sentences are no longer remembered.
+    cap: usize,
+    /// The sentences skipped as repeats.
+    pub(crate) skipped: u64,
+    /// The sentences read that hold letters.
+    pub(crate) read: u64,
+}
+
+impl Repeats {
+    /// No sentence seen yet, remembering at most `cap`.
+    pub(crate) fn new(cap: usize) -> Self {
+        Self {
+            keys: HashSet::new(),
+            cap,
+            skipped: 0,
+            read: 0,
+        }
+    }
+
+    /// True when `sentence` is seen for the first time; a sentence without letters always is.
+    pub(crate) fn first(&mut self, sentence: &str) -> bool {
+        let Some(key) = key(sentence) else {
+            return true;
+        };
+        self.read += 1;
+        if self.keys.contains(&key) {
+            self.skipped += 1;
+            return false;
+        }
+        if self.keys.len() < self.cap {
+            self.keys.insert(key);
+        }
+        true
+    }
+
+    /// How many keys are remembered.
+    pub(crate) fn kept(&self) -> usize {
+        self.keys.len()
+    }
+}
+
+/// The key of `sentence`: its letters in order, case kept, hashed to 64 bits; `None` when it holds none.
+pub(crate) fn key(sentence: &str) -> Option<u64> {
+    let mut hasher = DefaultHasher::new();
+    let mut letters = sentence.chars().filter(|c| c.is_alphabetic()).peekable();
+    letters.peek()?;
+    letters.for_each(|c| hasher.write_u32(u32::from(c)));
+    Some(hasher.finish())
 }
 
 /// What the text held, as the list and the chain picker need it.
@@ -66,6 +125,8 @@ pub(crate) struct Counted {
     pub(crate) chains: Chains,
     /// How often each candidate was seen.
     pub(crate) seen: Vec<u64>,
+    /// The repeated sentences skipped.
+    pub(crate) repeats: Repeats,
 }
 
 /// Counts words and chains, sentence by sentence.
@@ -88,6 +149,10 @@ pub(crate) struct Counter<'a> {
     seen: Vec<u64>,
     /// The chains.
     chains: Chains,
+    /// The sentences seen.
+    repeats: Repeats,
+    /// Each candidate's factor for the scaled chains it ends.
+    skew: Vec<f32>,
 }
 
 impl<'a> Counter<'a> {
@@ -112,25 +177,35 @@ impl<'a> Counter<'a> {
             form_found: vec![0; forms],
             seen: vec![0; cands],
             chains: Chains::new(rules.max_live_chains),
+            repeats: Repeats::new(rules.max_seen_sentences),
+            skew: Vec::new(),
         }
     }
 
-    /// Counts every sentence of `text`, each sighting `weight` times.
-    pub(crate) fn add(&mut self, text: &str, weight: u32) {
+    /// Sets each candidate's factor for the chains it ends in scaled text; a candidate not named keeps 1.
+    pub(crate) fn scale(&mut self, skew: Vec<f32>) {
+        self.skew = skew;
+    }
+
+    /// Counts every sentence of `text` seen for the first time, each sighting `weight` times, its chains scaled by
+    /// the candidates' factors when `scaled`.
+    pub(crate) fn add(&mut self, text: &str, weight: u32, scaled: bool) {
         let text = self.split.normalise(text);
         let (split, vocab) = (self.split, self.vocab);
         let knows = |t: &str| vocab.knows(t);
         let mut run: Vec<u32> = Vec::with_capacity(KEY_LEN);
         for sentence in split.sentences(&text) {
-            split.words(sentence, &knows, &mut |token| {
-                self.token(token, weight, &mut run);
-            });
+            if self.repeats.first(sentence) {
+                split.words(sentence, &knows, &mut |token| {
+                    self.token(token, weight, scaled, &mut run);
+                });
+            }
         }
     }
 
     /// Counts one token and the chains it ends; `run` holds the candidates of the chain so far, and a sentence's first
     /// word is never joined, so it starts a new one.
-    fn token(&mut self, token: Token<'_>, weight: u32, run: &mut Vec<u32>) {
+    fn token(&mut self, token: Token<'_>, weight: u32, scaled: bool, run: &mut Vec<u32>) {
         let w = u64::from(weight);
         self.total += w;
         let Some(hit) = self.vocab.find(token.text) else {
@@ -157,11 +232,20 @@ impl<'a> Counter<'a> {
             run.remove(0);
         }
         run.push(hit.cand);
-        self.chains_ending(run, weight);
+        let factor = scaled.then(|| self.factor(hit.cand));
+        self.chains_ending(run, weight_of(weight) * factor.unwrap_or(UNSCALED));
+    }
+
+    /// The factor of candidate `cand` for the scaled chains it ends.
+    fn factor(&self, cand: u32) -> f32 {
+        let at = usize::try_from(cand).ok();
+        at.and_then(|i| self.skew.get(i))
+            .copied()
+            .unwrap_or(UNSCALED)
     }
 
     /// Counts each chain of a counted length that ends `run`'s last candidate.
-    fn chains_ending(&mut self, run: &[u32], weight: u32) {
+    fn chains_ending(&mut self, run: &[u32], weight: f32) {
         let (shortest, longest) = self.lengths;
         for n in shortest..=longest.min(run.len()) {
             let mut key = [NONE; KEY_LEN];
@@ -185,6 +269,16 @@ impl<'a> Counter<'a> {
             text,
             chains: self.chains,
             seen: self.seen,
+            repeats: self.repeats,
         }
     }
+}
+
+/// A source's weight as a chain count.
+#[allow(
+    clippy::cast_precision_loss,
+    reason = "Source weights are small whole numbers, exact in an f32."
+)]
+fn weight_of(weight: u32) -> f32 {
+    weight as f32
 }

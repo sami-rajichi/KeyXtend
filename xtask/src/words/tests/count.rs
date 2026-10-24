@@ -1,7 +1,13 @@
 //! The text counter: tokens find their candidates, chains count within a sentence only, the held-back share is
 //! stable and never got, and lossy counting keeps the frequent chains under the cap.
+#![allow(
+    clippy::float_cmp,
+    reason = "The chain counts here are sums of whole numbers and halves, exact in an f32."
+)]
 
-use super::super::count::{ChainKey, Chains, Counted, Counter, KEY_LEN, NONE};
+use super::super::count::{
+    ChainKey, Chains, Counted, Counter, KEY_LEN, NONE, Repeats, key as key_of,
+};
 use super::super::fixture::text::{cand, tatoeba, wiki};
 use super::super::fixture::{TEXT, manifest_with};
 use super::super::manifest::TextRules;
@@ -22,7 +28,7 @@ fn key(ids: &[u32]) -> ChainKey {
 }
 
 /// The count of chain `ids` in `got`.
-fn chain(got: &Counted, ids: &[u32]) -> u32 {
+fn chain(got: &Counted, ids: &[u32]) -> f32 {
     got.chains.table.get(&key(ids)).copied().unwrap_or_default()
 }
 
@@ -66,18 +72,22 @@ fn a_token_finds_its_candidate_by_spelling_lower_case_or_fold_key() {
 fn chains_count_within_a_sentence_and_an_unknown_word_breaks_them() {
     let (vocab, rules) = (vocab(), rules());
     let mut counter = Counter::new(&vocab, 5, &rules, '\'');
-    counter.add("The cat sat. Down the cat zzz sat down", 1);
+    counter.add("The cat sat. Down the cat zzz sat down", 1, false);
     let got = counter.finish();
     let (the, cat, sat, down) = (0, 1, 2, 3);
-    assert_eq!(chain(&got, &[the, cat]), 2);
-    assert_eq!(chain(&got, &[the, cat, sat]), 1);
-    assert_eq!(chain(&got, &[cat, sat]), 1, "zzz breaks the second cat sat");
+    assert_eq!(chain(&got, &[the, cat]), 2.0);
+    assert_eq!(chain(&got, &[the, cat, sat]), 1.0);
+    assert_eq!(
+        chain(&got, &[cat, sat]),
+        1.0,
+        "zzz breaks the second cat sat"
+    );
     assert_eq!(
         chain(&got, &[sat, down]),
-        1,
+        1.0,
         "sat. Down spans two sentences"
     );
-    assert_eq!(chain(&got, &[down, the, cat]), 1);
+    assert_eq!(chain(&got, &[down, the, cat]), 1.0);
     assert_eq!(got.chains.table.len(), 6);
     assert_eq!(got.text.total, 9, "zzz is a token too");
 }
@@ -86,7 +96,7 @@ fn chains_count_within_a_sentence_and_an_unknown_word_breaks_them() {
 fn counts_are_weighted_and_spellings_count_alone_away_from_sentence_starts() {
     let (vocab, rules) = (vocab(), rules());
     let mut counter = Counter::new(&vocab, 5, &rules, '\'');
-    counter.add("I sat. The cat and I, x-I", 4);
+    counter.add("I sat. The cat and I, x-I", 4, false);
     let got = counter.finish();
     let text = &got.text;
     assert_eq!(text.total, 32);
@@ -96,7 +106,7 @@ fn counts_are_weighted_and_spellings_count_alone_away_from_sentence_starts() {
         "the I glued to x counts, but stands alone nowhere"
     );
     assert_eq!(got.seen.first(), Some(&4), "the, at a start, still counts");
-    assert_eq!(chain(&got, &[4, 2]), 4);
+    assert_eq!(chain(&got, &[4, 2]), 4.0);
 }
 
 #[test]
@@ -109,7 +119,7 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
     ];
     let (vocab, rules) = (Vocab::new(&cands), rules());
     let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
-    counter.add("C'est vrai. c'est ç'a", 1);
+    counter.add("C'est vrai. c'est ç'a", 1, false);
     let text = counter.finish().text;
     assert_eq!(
         (text.count("c'"), text.count("ç'")),
@@ -119,18 +129,70 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
 }
 
 #[test]
+fn a_repeated_sentence_counts_once_for_words_and_chains() {
+    let (vocab, rules) = (vocab(), rules());
+    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    counter.add("The cat sat. The cat, sat? the cat sat.", 1, false);
+    counter.add("The cat sat.", 1, false);
+    let got = counter.finish();
+    assert_eq!(chain(&got, &[0, 1]), 2.0, "the lower-case the is no repeat");
+    assert_eq!((got.text.total, got.seen.get(1)), (6, Some(&2)));
+    let r = &got.repeats;
+    assert_eq!((r.skipped, r.read, r.kept()), (2, 4, 2));
+}
+
+#[test]
+fn the_key_is_the_letters_in_order_with_their_case() {
+    assert_eq!(key_of("The cat, sat!"), key_of("Thecatsat"));
+    assert_ne!(key_of("the cat sat"), key_of("The cat sat"));
+    assert_ne!(key_of("cat sat"), key_of("sat cat"));
+    assert_eq!(key_of("قال توم."), key_of("قال، توم"));
+    assert_eq!(key_of("12 ?!"), None);
+}
+
+#[test]
+fn past_the_cap_a_new_sentence_counts_but_is_not_remembered() {
+    let mut repeats = Repeats::new(1);
+    let seen: Vec<bool> = ["a", "a", "b", "b", "1"]
+        .iter()
+        .map(|s| repeats.first(s))
+        .collect();
+    assert_eq!(seen, [true, false, true, true, true]);
+    assert_eq!((repeats.kept(), repeats.skipped), (1, 1));
+}
+
+#[test]
+fn scaled_text_scales_the_chains_its_words_end_and_other_text_does_not() {
+    let (vocab, rules) = (vocab(), rules());
+    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    counter.scale(vec![1.0, 0.5, 1.0, 1.0, 1.0]);
+    counter.add("The cat sat.", 2, true);
+    counter.add("The cat sat down.", 2, false);
+    let got = counter.finish();
+    let (the, cat, sat) = (0, 1, 2);
+    assert_eq!(chain(&got, &[the, cat]), 3.0, "2 × 0.5 + 2");
+    assert_eq!(
+        chain(&got, &[cat, sat]),
+        4.0,
+        "chains ending in sat keep their weight"
+    );
+    assert_eq!(chain(&got, &[the, cat, sat]), 4.0);
+    assert_eq!(got.seen.get(1), Some(&4), "sightings are never scaled");
+}
+
+#[test]
 fn lossy_counting_keeps_the_frequent_chains_under_the_cap() {
     let mut chains = Chains::new(10);
     let frequent = key(&[1, 2]);
     for i in 0..200 {
-        chains.add(key(&[100 + i, 7]), 1);
-        chains.add(frequent, 1);
+        chains.add(key(&[100 + i, 7]), 1.0);
+        chains.add(frequent, 1.0);
         assert!(chains.table.len() <= 10);
     }
-    assert!(chains.prunes > 0 && chains.floor > 0);
+    assert!(chains.prunes > 0 && chains.floor > 0.0);
     assert_eq!(
         chains.table.get(&frequent),
-        Some(&200),
+        Some(&200.0),
         "never dropped, so never undercounted"
     );
 }

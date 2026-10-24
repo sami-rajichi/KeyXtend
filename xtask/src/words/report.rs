@@ -7,6 +7,8 @@ use crate::text::plural;
 
 /// The noun the report counts.
 const WORD: &str = "word";
+/// A share as a percentage.
+const PERCENT: f64 = 100.0;
 
 /// The lines printed for `iso`: the counts, the coverage line, one line per rule that did something, and a note
 /// when no text was given to a checked list.
@@ -14,12 +16,20 @@ pub(crate) fn report(iso: &str, list: &WordList) -> Vec<String> {
     let caps = list.words.iter().filter(|w| w.capital).count();
     let low = list.words.iter().map(|w| w.freq).min().unwrap_or_default();
     let high = list.words.iter().map(|w| w.freq).max().unwrap_or_default();
-    let kept = list.words.len();
+    let (kept, read) = (list.words.len(), list.read);
+    let covers = list.covers * PERCENT;
     let mut lines = vec![format!(
-        "{iso}: {kept} {} kept ({caps} capitalised, frequency {low}..={high}) of {} in wordfreq",
-        plural(kept, WORD),
-        list.read
+        "{iso}: {kept} {} kept ({caps} capitalised, frequency {low}..={high}) of {read} in wordfreq, covering \
+         {covers:.1}% of its frequency mass",
+        plural(kept, WORD)
     )];
+    let (cut, budget) = list.cut;
+    if cut > 0 {
+        lines.push(format!(
+            "budget {iso}: the {cut} rarest {} cut to fit {budget} bytes",
+            plural(cut, WORD)
+        ));
+    }
     if let Some(c) = &list.coverage {
         lines.push(format!(
             "coverage {iso}: the dictionary rejected {} of the {} most frequent words; first {}: {}",
@@ -52,18 +62,23 @@ fn rule_lines(iso: &str, list: &WordList) -> Vec<String> {
         ("stems", &t.stems),
         ("unseen", &t.unseen),
     ];
-    let line = |(name, tally): &(&str, &Tally)| {
-        let (count, first) = (tally.count, &tally.first);
-        let noun = plural(count, WORD);
-        let shown = first.join(", ");
-        format!(
-            "{name} {iso}: {count} {noun}; first {}: {shown}",
-            first.len()
-        )
-    };
     rules
         .iter()
         .filter(|(_, t)| t.count > 0)
-        .map(line)
+        .map(|(name, tally)| tally_line(name, iso, tally))
         .collect()
+}
+
+/// The line of one rule's `tally`: how many words, then the first ones.
+pub(crate) fn tally_line(name: &str, iso: &str, tally: &Tally) -> String {
+    let (count, first) = (tally.count, &tally.first);
+    let noun = plural(count, WORD);
+    if first.is_empty() {
+        return format!("{name} {iso}: {count} {noun}");
+    }
+    let shown = first.join(", ");
+    format!(
+        "{name} {iso}: {count} {noun}; first {}: {shown}",
+        first.len()
+    )
 }

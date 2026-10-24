@@ -3,12 +3,13 @@
 
 use std::collections::BTreeMap;
 
+use flate2::Compression;
 use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 
 use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
 use super::text::PER_MILLE;
-use super::{Credits, FetchConfig, HASH_HEX, LangText, Rules, Source, TextRules, bad};
+use super::{Credits, FetchConfig, HASH_HEX, LangText, Packs, Rules, Source, TextRules, bad};
 use crate::devtools::paths::{is_plain_name, is_relative_plain};
 
 /// The only scheme a base may use, so a download can never fall back to plain HTTP.
@@ -51,6 +52,13 @@ pub(super) fn text(text: &TextRules) -> Result<(), WordsError> {
         ("tatoeba_weight", text.tatoeba_weight > 0),
         ("held_back_per_mille", text.held_back_per_mille < PER_MILLE),
         ("max_live_chains", text.max_live_chains > 0),
+        ("max_seen_sentences", text.max_seen_sentences > 0),
+        (
+            "skew_ratio",
+            text.skew_ratio.is_finite() && text.skew_ratio >= 1.0,
+        ),
+        ("report_contexts", text.report_contexts > 0),
+        ("report_followers", text.report_followers > 0),
         ("followers", text.followers > 0),
         ("null", !text.null.is_empty()),
         ("held", is_relative_plain(&text.held)),
@@ -59,6 +67,18 @@ pub(super) fn text(text: &TextRules) -> Result<(), WordsError> {
     match checks.iter().find(|(_, ok)| !ok) {
         Some((name, _)) => Err(bad(&format!("[text] {name} is out of its range"))),
         None => Ok(()),
+    }
+}
+
+/// Refuses a zero download budget and a deflate level past the best one.
+pub(super) fn packs(packs: &Packs) -> Result<(), WordsError> {
+    let best = Compression::best().level();
+    if packs.download_kb > 0 && packs.level <= best {
+        Ok(())
+    } else {
+        Err(bad(&format!(
+            "[packs] needs a download budget and a level of 0 to {best}"
+        )))
     }
 }
 

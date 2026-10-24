@@ -22,6 +22,14 @@ pub(crate) struct TextRules {
     pub(crate) held_back_per_mille: u64,
     /// The most chains counted at once before the rarest go.
     pub(crate) max_live_chains: usize,
+    /// The most sentence keys remembered to skip repeats; past it new sentences are no longer remembered.
+    pub(crate) max_seen_sentences: usize,
+    /// A word over this many times as common in Tatoeba as in wordfreq has the Tatoeba chains it ends scaled to it.
+    pub(crate) skew_ratio: f64,
+    /// How many of the most seen one-word contexts the report shows.
+    pub(crate) report_contexts: usize,
+    /// How many followers it shows for each.
+    pub(crate) report_followers: usize,
     /// The next words kept per context.
     pub(crate) followers: u8,
     /// What Tatoeba writes for an empty field.
@@ -30,6 +38,16 @@ pub(crate) struct TextRules {
     pub(crate) held: String,
     /// The folder, under the workspace root, that the packs go to unless `--out` names another.
     pub(crate) out: String,
+}
+
+/// The packs together: the `[packs]` table.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Packs {
+    /// The most KB that every file written may take together once deflated, as a download carries them.
+    pub(crate) download_kb: u64,
+    /// The deflate level the download size is measured at.
+    pub(crate) level: u32,
 }
 
 /// One language's text: `[lang.<iso>.text]`.
