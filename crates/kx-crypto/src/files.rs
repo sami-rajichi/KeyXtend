@@ -67,11 +67,13 @@ impl SealedFiles {
         Ok(held.insert(key))
     }
 
-    /// Renames blob `name`'s file to its damaged file, replacing an older one.
-    fn set_aside(&self, name: &str) -> Result<Option<Vec<u8>>, SealedError> {
+    /// Renames blob `name`'s file to its damaged file, replacing an older one; `Damaged`, or `Io` if it stays.
+    fn set_aside(&self, name: &str) -> SealedError {
         let from = self.file(name, SEALED_EXT);
-        fs::rename(from, self.file(name, DAMAGED_EXT)).map_err(|_| SealedError::Io)?;
-        Err(SealedError::Damaged)
+        match fs::rename(from, self.file(name, DAMAGED_EXT)) {
+            Ok(()) => SealedError::Damaged,
+            Err(_) => SealedError::Io,
+        }
     }
 }
 
@@ -96,16 +98,16 @@ impl SealedStore for SealedFiles {
         let path = self.file(name, SEALED_EXT);
         let sealed = match disk::read(&path, MAX_BLOB_BYTES + OVERHEAD) {
             Ok(Read::Missing) => return Ok(None),
-            Ok(Read::TooBig) => return self.set_aside(name),
+            Ok(Read::TooBig) => return Err(self.set_aside(name)),
             Ok(Read::Bytes(bytes)) => bytes,
             Err(_) => return Err(SealedError::Io),
         };
         let Some(key) = self.key_to_open(&mut held)? else {
-            return self.set_aside(name);
+            return Err(self.set_aside(name));
         };
         match open(key, name.as_bytes(), &sealed) {
             Ok(mut plain) => Ok(Some(std::mem::take(&mut *plain))),
-            Err(_) => self.set_aside(name),
+            Err(_) => Err(self.set_aside(name)),
         }
     }
 

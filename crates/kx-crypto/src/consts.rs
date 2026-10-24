@@ -7,14 +7,16 @@ use chacha20poly1305::{AeadCore, KeySizeUser, XChaCha20Poly1305};
 pub(crate) const MAGIC: &[u8; 4] = b"KXSL";
 /// The format version after the magic; any other version is refused.
 pub(crate) const VERSION: u8 = 1;
+/// The magic then the version: the start of every sealed file and of the AAD its tag covers.
+pub(crate) const MARK: [u8; MAGIC.len() + 1] = mark();
 /// The data key's length in bytes, as the cipher takes it.
 pub const KEY_LEN: usize = <<XChaCha20Poly1305 as KeySizeUser>::KeySize as Unsigned>::USIZE;
 /// The nonce's length in bytes, as the cipher takes it.
 pub(crate) const NONCE_LEN: usize = <<XChaCha20Poly1305 as AeadCore>::NonceSize as Unsigned>::USIZE;
 /// The tag's length in bytes, as the cipher makes it.
 pub(crate) const TAG_LEN: usize = <<XChaCha20Poly1305 as AeadCore>::TagSize as Unsigned>::USIZE;
-/// The bytes before the ciphertext: the magic, the version byte and the nonce.
-pub(crate) const HEADER_LEN: usize = MAGIC.len() + 1 + NONCE_LEN;
+/// The bytes before the ciphertext: the mark and the nonce.
+pub(crate) const HEADER_LEN: usize = MARK.len() + NONCE_LEN;
 /// What sealing adds to a blob: the header and the tag.
 pub(crate) const OVERHEAD: usize = HEADER_LEN + TAG_LEN;
 
@@ -38,9 +40,25 @@ pub const RESERVED_NAMES: &[&str] = &[
     "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
+/// Builds `MARK` from `MAGIC` and `VERSION`, so neither is written twice.
+const fn mark() -> [u8; MAGIC.len() + 1] {
+    let mut mark = [VERSION; MAGIC.len() + 1];
+    let mut i = 0;
+    while i < MAGIC.len() {
+        mark[i] = MAGIC[i];
+        i += 1;
+    }
+    mark
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_mark_is_the_magic_then_the_version() {
+        assert_eq!(&MARK, b"KXSL\x01");
+    }
 
     #[test]
     fn the_cipher_takes_a_32_byte_key_and_a_24_byte_nonce() {

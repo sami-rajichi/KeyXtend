@@ -1,9 +1,7 @@
 //! Seal and open one blob: XChaCha20-Poly1305 with a fresh nonce, after a magic and a version byte.
-//! Layout: magic, version, nonce, ciphertext, tag; the AAD binds the blob to its name.
+//! Layout: mark (magic, version), nonce, ciphertext, tag; the tag covers the mark and the blob's name.
 
-use crate::consts::{
-    HEADER_LEN, KEY_LEN, MAGIC, MAX_BLOB_BYTES, NONCE_LEN, OVERHEAD, TAG_LEN, VERSION,
-};
+use crate::consts::{HEADER_LEN, KEY_LEN, MARK, MAX_BLOB_BYTES, NONCE_LEN, OVERHEAD, TAG_LEN};
 use chacha20poly1305::{AeadInOut, Key, KeyInit, Tag, XChaCha20Poly1305, XNonce};
 use thiserror::Error;
 use zeroize::Zeroizing;
@@ -33,6 +31,11 @@ fn cipher(key: &[u8; KEY_LEN]) -> XChaCha20Poly1305 {
     XChaCha20Poly1305::new(<&Key>::from(key))
 }
 
+/// The AAD the tag covers: the mark, then the caller's `aad`, so a file cannot change version under one key.
+fn bound(aad: &[u8]) -> Vec<u8> {
+    [MARK.as_slice(), aad].concat()
+}
+
 /// Seals `plain` under `key`, bound to `aad`, with a fresh random nonce.
 ///
 /// # Errors
@@ -45,14 +48,13 @@ pub fn seal(key: &[u8; KEY_LEN], aad: &[u8], plain: &[u8]) -> Result<Vec<u8>, Cr
     getrandom::fill(&mut nonce).map_err(|_| CryptoError::NoRandom)?;
     // The buffer holds the plain bytes until they are encrypted in place, so it is wiped if that fails.
     let mut out = Zeroizing::new(Vec::with_capacity(OVERHEAD + plain.len()));
-    out.extend_from_slice(MAGIC);
-    out.push(VERSION);
+    out.extend_from_slice(&MARK);
     out.extend_from_slice(&nonce);
     out.extend_from_slice(plain);
     let tag = cipher(key)
         .encrypt_inout_detached(
             <&XNonce>::from(&nonce),
-            aad,
+            &bound(aad),
             (&mut out[HEADER_LEN..]).into(),
         )
         .map_err(|_| CryptoError::TooLarge)?;
@@ -81,14 +83,14 @@ pub fn open(
     let Some((mark, nonce)) = head.split_last_chunk::<NONCE_LEN>() else {
         return Err(CryptoError::TooShort);
     };
-    if mark.split_last() != Some((&VERSION, MAGIC.as_slice())) {
+    if mark != MARK.as_slice() {
         return Err(CryptoError::BadMagic);
     }
     let mut plain = Zeroizing::new(body.to_vec());
     cipher(key)
         .decrypt_inout_detached(
             <&XNonce>::from(nonce),
-            aad,
+            &bound(aad),
             plain.as_mut_slice().into(),
             <&Tag>::from(tag),
         )

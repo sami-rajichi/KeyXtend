@@ -1,4 +1,5 @@
 use super::*;
+use crate::consts::{MAGIC, VERSION};
 
 const KEY: [u8; KEY_LEN] = [7; KEY_LEN];
 const OTHER: [u8; KEY_LEN] = [8; KEY_LEN];
@@ -7,6 +8,52 @@ const PLAIN: &[u8] = b"bonjour \xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7";
 
 fn sealed() -> Vec<u8> {
     seal(&KEY, AAD, PLAIN).unwrap()
+}
+
+/// A file laid out as `seal` lays it out, whose tag covers `tag_aad` as the cipher's AAD.
+fn sealed_under(tag_aad: &[u8]) -> Vec<u8> {
+    let nonce = [9; NONCE_LEN];
+    let mut out = MARK.to_vec();
+    out.extend_from_slice(&nonce);
+    out.extend_from_slice(PLAIN);
+    let body = (&mut out[HEADER_LEN..]).into();
+    let tag = cipher(&KEY)
+        .encrypt_inout_detached(<&XNonce>::from(&nonce), tag_aad, body)
+        .unwrap();
+    out.extend_from_slice(&tag);
+    out
+}
+
+/// The cipher's AAD for `mark` and the blob's AAD: the mark, then the name.
+fn aad_with(mark: &[u8]) -> Vec<u8> {
+    [mark, AAD].concat()
+}
+
+#[test]
+fn the_tag_covers_the_mark_then_the_name() {
+    let opened = open(&KEY, AAD, &sealed_under(&aad_with(&MARK))).unwrap();
+    assert_eq!(opened.as_slice(), PLAIN);
+}
+
+#[test]
+fn a_tag_made_for_another_version_is_refused() {
+    let mut other = MARK;
+    other[MAGIC.len()] = VERSION + 1;
+    let file = sealed_under(&aad_with(&other));
+    assert_eq!(
+        file[..MARK.len()],
+        MARK,
+        "the file itself says this version"
+    );
+    assert_eq!(open(&KEY, AAD, &file), Err(CryptoError::Refused));
+}
+
+#[test]
+fn a_tag_that_skips_the_header_is_refused() {
+    assert_eq!(
+        open(&KEY, AAD, &sealed_under(AAD)),
+        Err(CryptoError::Refused)
+    );
 }
 
 #[test]

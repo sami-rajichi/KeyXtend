@@ -1,6 +1,7 @@
 //! The data key's file: locked guards, lost key files and refused wraps.
 
 use super::*;
+use crate::consts::MAX_KEY_FILE_BYTES;
 
 #[test]
 fn a_locked_guard_gives_locked_and_leaves_every_file() {
@@ -32,6 +33,24 @@ fn a_key_file_the_guard_cannot_read_stays_locked() {
         Err(SealedError::Locked)
     );
     assert_eq!(fs::read(c.key_file()).unwrap(), short);
+}
+
+#[test]
+fn an_oversized_key_file_stays_locked_and_untouched() {
+    let c = case();
+    c.store.save(&name("emails"), b"a@b.c").unwrap();
+    let big = vec![1; MAX_KEY_FILE_BYTES + 1];
+    fs::write(c.key_file(), &big).unwrap();
+    let guard = Mirror::default();
+    let later = c.reopen(&guard);
+    assert_eq!(later.load(&name("emails")), Err(SealedError::Locked));
+    assert_eq!(
+        later.save(&name("emails"), b"new"),
+        Err(SealedError::Locked)
+    );
+    assert_eq!(fs::read(c.key_file()).unwrap(), big);
+    assert!(c.file("emails", SEALED_EXT).is_file());
+    assert_eq!(guard.calls(), 0, "the guard never sees an oversized file");
 }
 
 #[test]
