@@ -36,7 +36,7 @@ const NO_THREAD: &str = "the mouse actor's thread did not start";
 pub struct MouseModule {
     /// The running actor's inbox and thread, from start to stop.
     actor: Option<(Sender<Msg>, JoinHandle<()>)>,
-    /// The reset notice was shown; it outlives each start, so the user hears it once per program run.
+    /// The notice for a quiet-only fault was shown; it outlives each start, so it shows once per program run.
     reset_told: Arc<AtomicBool>,
 }
 

@@ -8,7 +8,7 @@ use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, T2, down, moved, ours, s
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::GrabState::Off;
 use kx_module_api::ports::{
-    AssistChanged, HookError, Point, PointerPressed, PressesAsk, PressesWanted,
+    AssistChanged, HookError, Point, PointerPressed, PressesAsk, PressesWanted, Toggle,
 };
 use kx_module_api::{Bus, Mono, keys};
 use std::sync::mpsc::Receiver;
@@ -18,6 +18,8 @@ use tracing::Level;
 const ON: &str = "on";
 /// A point whose numbers appear nowhere else in the output.
 const SPOT: Point = Point { x: 4817, y: 2963 };
+/// More faults than a run and its one fresh run can take, so a restart loop fails instead of hanging.
+const FAULTS: usize = 3;
 
 /// A press told on the bus.
 fn pressed(ours: bool) -> Heard {
@@ -163,12 +165,35 @@ fn a_fault_at_every_word_tells_the_reset_once_and_never_loops() {
 }
 
 #[test]
+fn a_quiet_fault_leaves_the_notice_for_a_fault_that_turns_right_click_off() {
+    let mut rig = wanted(Rig::new());
+    fault(&mut rig);
+    rig.toggle(Toggle::RightClick);
+    rig.settle(T1);
+    assert_eq!(
+        rig.take().last(),
+        Some(&shown(true, Off)),
+        "Right-click is on"
+    );
+    fault(&mut rig);
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    assert_eq!(
+        rig.take(),
+        reset,
+        "the key went dark, so the user hears why"
+    );
+}
+
+#[test]
 fn a_fault_on_every_run_starts_nothing_more_until_the_user_acts() {
     let mut rig = wanted(Rig::new());
     for _ in 0..3 {
-        while rig.hook.running() {
-            fault(&mut rig);
+        for _ in 0..FAULTS {
+            if rig.hook.running() {
+                fault(&mut rig);
+            }
         }
+        assert!(!rig.hook.running(), "the faults loop");
         next_word(&mut rig, T1);
     }
     assert_eq!(resets(&rig.take()), 1);

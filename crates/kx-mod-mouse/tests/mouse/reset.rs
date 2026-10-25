@@ -1,16 +1,15 @@
 //! An engine the hook gave up: the modes turn off for this session, so one tap on a mode key starts afresh, and held
 //! latches get one fresh run at once, once until the user acts again; a late word from an older run changes nothing.
-//! The user hears the reset once per program run.
+//! The user always hears why a mode or a latch went dark, and once per program run when only quiet needs did.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, CODE, Heard, RCLICK, Rig, SHIFT, T0, T1, down, shown, told, up};
+use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::Button::Left;
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::PointerAct::{Down, KeyDown, KeyUp, Up};
-use kx_module_api::ports::{AssistChanged, HookError, Toggle};
+use kx_module_api::ports::{AssistChanged, HookError, PressesWanted, Toggle};
 use kx_module_api::{Bus, Notice, keys};
-use kx_test_support::host::FakeHost;
 
 /// A rig whose hook runs only for a latched Shift, with what it said so far taken.
 fn latched() -> Rig {
@@ -82,11 +81,10 @@ fn a_fresh_run_for_latches_the_hook_refuses_is_tried_once_and_adds_no_notice() {
 fn a_give_up_that_repeats_restarts_for_latches_once_until_a_latch_changes() {
     let mut rig = latched();
     let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
-    let again = [shown(false, Off)];
-    for want in [&reset[..], &again[..]] {
+    for _ in 0..2 {
         rig.hook.give_up();
         rig.pump();
-        assert_eq!(rig.take(), want, "the notice shows once per program run");
+        assert_eq!(rig.take(), reset, "a held latch always hears why");
     }
     assert!(!rig.hook.running(), "the second give-up starts nothing");
     assert_eq!(rig.hook.starts(), 2, "one fresh run, never a loop");
@@ -129,12 +127,13 @@ fn a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone() {
 }
 
 #[test]
-fn the_reset_notice_shows_once_per_program_run_even_across_module_restarts() {
-    let saved = |host: &mut FakeHost| host.put(RCLICK, true.into());
+fn a_quiet_fault_tells_once_per_program_run_even_across_module_restarts() {
     let listen = |bus: &Bus| (hear::<AssistChanged>(bus), hear::<Notice>(bus));
-    let (mut live, ((_e1, states), (_e2, notices))) = Live::start(saved, listen);
+    let (mut live, ((_e1, states), (_e2, notices))) = Live::start(|_| {}, listen);
     for round in 0..2 {
-        assert_eq!(states.recv_timeout(WAIT), Ok(on(true)), "Right-click runs");
+        assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "live");
+        live.bus.publish(&PressesWanted { on: true }).unwrap();
+        synced(&live, &states);
         live.hook.give_up();
         assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "the fault");
         synced(&live, &states);

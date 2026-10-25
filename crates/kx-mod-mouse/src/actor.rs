@@ -83,13 +83,13 @@ pub struct Actor {
     /// A give-up already restarted; until a run ends well, a mode tap or a change of latches or scrolling, the next one
     /// starts nothing and presses alone start no run, as prediction flips them by itself.
     restarted: bool,
-    /// The reset notice was shown this program run; the module keeps it across its starts.
+    /// The notice for a fault of quiet needs alone was shown this program run; the module keeps it across its starts.
     reset_told: Arc<AtomicBool>,
 }
 
 impl Actor {
     /// An actor with no hook yet; `inbox` sends to its own inbox, for the hook engines it starts, and `reset_told`
-    /// says whether the reset notice was shown this program run.
+    /// says whether the notice for a quiet-only fault was shown this program run.
     #[must_use]
     pub fn new(
         hook: Arc<dyn PointerHook>,
@@ -246,14 +246,16 @@ impl Actor {
     }
 
     /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
-    /// session and the user hears why, once per program run. A quiet need then gets one fresh run at once, and no more
-    /// until a run ends well or the user acts, so a fault that repeats never loops.
+    /// session and the user hears why: always when a mode or a latch goes dark, else once per program run. A quiet need
+    /// then gets one fresh run at once, and no more until a run ends well or the user acts, so a fault never loops.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
         }
         tracing::warn!("mouse hook gave up its engine");
         self.drop_run();
+        // A mode or a latch the user turned on goes dark, so the notice always tells.
+        let seen = self.rclick || self.grab != GrabState::Off || !self.latches.is_empty();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
         let needed = self.scrolling || self.wanted || !self.latches.is_empty();
@@ -262,7 +264,7 @@ impl Actor {
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
         self.tell_state();
-        if !self.reset_told.swap(true, Ordering::Relaxed) {
+        if seen || !self.reset_told.swap(true, Ordering::Relaxed) {
             self.publish(&notice(keys::MOUSE_RESET));
         }
     }
