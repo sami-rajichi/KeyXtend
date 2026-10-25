@@ -5,6 +5,9 @@ use super::sealed::RESERVED_NAMES;
 use crate::{Capability, ServiceId, ServiceKey};
 use thiserror::Error;
 
+mod index;
+pub use index::{IndexError, index_text, read_index};
+
 /// The extension of a pack file, after its language's code: `fr.kxw`.
 pub const PACK_EXT: &str = "kxw";
 /// The largest pack a platform maps and a writer makes, 64 MiB.
@@ -27,6 +30,9 @@ pub fn fits_iso(iso: &str) -> bool {
 pub fn pack_file(iso: &str) -> Option<String> {
     fits_iso(iso).then(|| format!("{iso}.{PACK_EXT}"))
 }
+
+/// The file the build writes beside the packs, naming each language it shipped (`index_text`, `read_index`).
+pub const PACK_INDEX: &str = "packs.txt";
 
 /// One open pack's bytes, read-only; dropping it closes the pack.
 pub trait PackView: Send + Sync {
@@ -51,6 +57,10 @@ pub trait WordPacks: Send + Sync {
     /// # Errors
     /// `Unreadable` when the pack is there but cannot be read.
     fn open(&self, iso: &str) -> Result<Option<Box<dyn PackView>>, PackError>;
+
+    /// True when the build shipped a pack for `iso`, as the index beside the packs lists; false when `iso` fails
+    /// `fits_iso`, or no index reads.
+    fn ships(&self, iso: &str) -> bool;
 }
 
 /// The word packs service; it needs no capability.

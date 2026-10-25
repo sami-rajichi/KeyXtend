@@ -1,7 +1,8 @@
 //! The actor's logs carry counts and error kinds only: never a typed word, a learned word or an email.
 
 use crate::rig::{Rig, plant};
-use kx_mod_predict::STOPPED_LINE;
+use kx_mod_predict::learn::{LearnFormatError, Learner};
+use kx_mod_predict::{PredictSettings, STOPPED_LINE};
 use kx_module_api::ports::{FieldKind, SealedError, WordsAsk};
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
@@ -89,4 +90,27 @@ fn no_log_line_shows_a_typed_word_a_learned_word_or_an_email() {
             assert!(!line.contains(secret), "{line}");
         }
     }
+}
+
+#[test]
+fn a_learner_that_does_not_read_logs_why() {
+    let name = kx_mod_predict::learned_blob("en").unwrap();
+    let damaged = lines_of(|| {
+        let mut rig = Rig::build(|f, _| f.store.plant(&name, b"junk".to_vec()));
+        rig.lang("en");
+    });
+    let why = LearnFormatError::BadMagic.to_string();
+    assert!(damaged.iter().any(|l| l.contains(&why)), "{damaged:?}");
+    let cfg = PredictSettings::from_defaults().unwrap().learn_config();
+    let other = lines_of(|| {
+        let mut rig = Rig::build(|f, _| {
+            let fr = Learner::new("fr", cfg).unwrap();
+            f.store.plant(&name, fr.to_bytes());
+        });
+        rig.lang("en");
+    });
+    assert!(
+        other.iter().any(|l| l.contains("another language")),
+        "{other:?}"
+    );
 }

@@ -1,8 +1,9 @@
-//! Fake word packs: the test adds each language's bytes, and the fake counts the opens.
+//! Fake word packs: the test adds each language's bytes and lists the languages the index names, and the fake counts
+//! the opens.
 
 use crate::lock;
-use kx_module_api::ports::{PackError, PackView, WordPacks, pack_file};
-use std::collections::BTreeMap;
+use kx_module_api::ports::{PackError, PackView, WordPacks, fits_iso, pack_file};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -11,6 +12,8 @@ use std::sync::{Arc, Mutex};
 struct Log {
     /// Each pack's bytes, by its file name, as a platform finds it.
     packs: BTreeMap<String, Arc<[u8]>>,
+    /// The languages the index lists, packs or not.
+    shipped: BTreeSet<String>,
     fail: bool,
     opens: BTreeMap<String, usize>,
 }
@@ -41,6 +44,11 @@ impl FakeWordPacks {
         }
     }
 
+    /// Lists language `iso` in the index, as the build does for each pack it wrote; a pack need not be added.
+    pub fn ship(&self, iso: &str) {
+        lock(&self.log).shipped.insert(iso.to_owned());
+    }
+
     /// Refuses the next open, whatever its language, with `Unreadable`.
     pub fn fail_open(&self) {
         lock(&self.log).fail = true;
@@ -58,6 +66,7 @@ impl fmt::Debug for FakeWordPacks {
         let log = lock(&self.log);
         f.debug_struct("FakeWordPacks")
             .field("files", &log.packs.keys().collect::<Vec<_>>())
+            .field("shipped", &log.shipped)
             .field("opens", &log.opens)
             .finish_non_exhaustive()
     }
@@ -72,6 +81,10 @@ impl WordPacks for FakeWordPacks {
         }
         let found = pack_file(iso).and_then(|file| log.packs.get(&file).map(Arc::clone));
         Ok(found.map(|bytes| Box::new(FakePack(bytes)) as Box<dyn PackView>))
+    }
+
+    fn ships(&self, iso: &str) -> bool {
+        fits_iso(iso) && lock(&self.log).shipped.contains(iso)
     }
 }
 

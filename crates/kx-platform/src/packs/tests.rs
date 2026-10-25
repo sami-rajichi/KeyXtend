@@ -157,3 +157,5 @@ fn the_packs_serve_as_the_port_from_another_thread() {
     let read = std::thread::spawn(move || packs.open(ISO).map(|v| v.map(|v| v.bytes().to_vec())));
     assert_eq!(read.join().unwrap(), Ok(Some(vec![0])));
 }
+
+mod index;

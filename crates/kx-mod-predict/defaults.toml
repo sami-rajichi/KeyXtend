@@ -28,8 +28,6 @@ max_emails = 50
 min_start = 2
 # The domains offered after one @, in order.
 domains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"]
-# The languages whose word pack must ship; a missing one shows a notice.
-full_packs = ["en", "fr", "ar"]
 # The longest one read of the focused box may take, in ms.
 read_ms = 150
 # The longest text one read takes before the cursor, in characters.

@@ -17,15 +17,16 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 
 - **Boxes:** a password box locks the lane and is never followed, read or learned from. An unknown box, or none, gets chips but is never read or learned from. A text box is read for its last words at a new box or a click outside our windows.
 - **Picks:** a tap on an older lane does nothing. A word read from the box is typed only after the box says it still ends with it; otherwise the module reads again.
-- **Menu (`WordsAsk`):** Forget, then a word chip, forgets that word, and an Undo chip shows until the next key. Pause and Off save `learn` and `on` through the module's own settings. The email list opens from More, with the rows the UI shows, and pages by them.
-- **Saving:** each blob saves `save_s` after its first change, and at stop. A damaged blob starts empty with `notice.words-damaged`, a locked store saves nothing that run with `notice.words-locked`, and a missing pack of `full_packs` shows `notice.words-missing` once per language.
+- **Menu (`WordsAsk`):** Forget, then a word chip, forgets that word, and an Undo chip shows until the next key. Pause and Off save `learn` and `on` through the module's own settings. The email list opens from More, with the rows the UI shows, and pages by them; a row past the page does nothing.
+- **Language:** it asks `LayoutAsk` at start and follows each `LayoutChanged`; the layouts module also tells its layout once at its own start, so any start order works.
+- **Saving:** each blob saves `save_s` after its first change, and at stop. A damaged blob starts empty with `notice.words-damaged`, and a locked store saves nothing that run with `notice.words-locked`. A missing or unreadable pack of a language the build shipped, as the pack index lists, shows `notice.words-missing` once per language and run.
 
 ## Services and capabilities
 
 | Service | Direction | Use |
 |---|---|---|
 | `FieldWatch` (`FieldWatchKey`) | needs | The focused box's kind, the words before the cursor, and whether it still ends with a read word. |
-| `WordPacks` (`WordPacksKey`) | needs | Opens the language in front's pack. |
+| `WordPacks` (`WordPacksKey`) | needs | Opens the language in front's pack, and tells whether the build shipped one. |
 | `SealedStore` (`SealedStoreKey`) | needs | Loads and saves the learned words and emails, sealed. |
 
 | Capability | Why |
@@ -54,7 +55,6 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 | `max_emails` | `50` | The known emails kept; within `MAX_EMAILS`. |
 | `min_start` | `2` | The typed characters before a known email is offered; within `MIN_START`. |
 | `domains` | five common domains | The domains offered after one `@`, in order; each a domain, at most the end of `DOMAINS`. |
-| `full_packs` | `en`, `fr`, `ar` | The languages whose missing pack shows a notice. |
 | `read_ms` | `150` | The longest one read of the box may take; within `READ_MS`. |
 | `read_chars` | `1024` | The longest text one read takes; within `READ_CHARS`. |
 | `save_s` | `30` | Seconds from a first unsaved change to its save; within `SAVE_S`. |

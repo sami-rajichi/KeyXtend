@@ -14,6 +14,7 @@ mod fetch;
 mod fit;
 #[cfg(test)]
 mod fixture;
+mod index;
 mod judge;
 mod list;
 mod manifest;
@@ -109,17 +110,38 @@ pub(crate) fn list(iso: &str, src: &str) -> Result<(), WordsError> {
 /// manifest's folder under the workspace root; the held-back sentences go under cargo's target folder.
 pub(crate) fn build(src: &str, out: Option<&str>) -> Result<(), WordsError> {
     let manifest = Manifest::parse(MANIFEST)?;
-    let lost = |e: workspace::LoadError| WordsError::Workspace(e.to_string());
-    let json = workspace::metadata_json().map_err(lost)?;
-    let root = workspace::root(&json).map_err(lost)?;
-    let target = workspace::target_dir(&json).map_err(lost)?;
-    let out = out.map_or_else(|| join_rel(root, &manifest.text.out), PathBuf::from);
+    let json = workspace::metadata_json().map_err(|e| lost(&e))?;
+    let target = workspace::target_dir(&json).map_err(|e| lost(&e))?;
     let paths = build::Paths {
         src: PathBuf::from(src),
-        out,
+        out: packs_dir(&manifest, &json, out)?,
         held: join_rel(target, &manifest.text.held),
     };
     build::run(&manifest, &paths, &mut |line| println!("{line}"))
+}
+
+/// Runs `cargo xtask words index`: rewrites the pack index from the packs in `packs`, by default the manifest's folder.
+pub(crate) fn index(packs: Option<&str>) -> Result<(), WordsError> {
+    let manifest = Manifest::parse(MANIFEST)?;
+    let json = workspace::metadata_json().map_err(|e| lost(&e))?;
+    let dir = packs_dir(&manifest, &json, packs)?;
+    index::run(&dir, &mut |line| println!("{line}"))
+}
+
+/// The packs folder: `given`, else the manifest's folder under the workspace root that `json` names.
+fn packs_dir(manifest: &Manifest, json: &str, given: Option<&str>) -> Result<PathBuf, WordsError> {
+    match given {
+        Some(dir) => Ok(PathBuf::from(dir)),
+        None => Ok(join_rel(
+            workspace::root(json).map_err(|e| lost(&e))?,
+            &manifest.text.out,
+        )),
+    }
+}
+
+/// A workspace that cannot be read, as a words error.
+fn lost(e: &workspace::LoadError) -> WordsError {
+    WordsError::Workspace(e.to_string())
 }
 
 /// The candidates of `iso` from the files under `src`, after checking their hashes; text rules come after.

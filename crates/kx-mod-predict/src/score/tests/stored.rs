@@ -20,13 +20,13 @@ fn a_capitalised_chip_keeps_the_lower_case_spelling_it_was_stored_under() {
     let en = english();
     let shift = TypingMode {
         shift: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     let next = guess(&en, "", shift).unwrap();
     assert_eq!(both(&next), ("Of", "of"));
-    let caps = guess(&en, "TH", PLAIN).unwrap();
+    let caps = guess(&en, "TH", TypingMode::default()).unwrap();
     assert_eq!(both(&caps), ("THE", "the"));
-    let kept = guess(&en, "lo", PLAIN).unwrap();
+    let kept = guess(&en, "lo", TypingMode::default()).unwrap();
     assert_eq!(both(&kept), ("London", "London"));
 }
 
@@ -40,7 +40,7 @@ fn an_elided_chip_stores_the_word_without_its_lead() {
         prefix: Redacted::new("éc".to_owned()),
     });
     let pack = Pack::parse(&fr).unwrap();
-    let found = asked(&pack, &NoLearned, &query, PLAIN);
+    let found = asked(&pack, &NoLearned, &query, TypingMode::default());
     let first = found.first().unwrap();
     assert_eq!(both(first), ("l'école", "école"));
 }

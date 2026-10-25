@@ -138,6 +138,21 @@ fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
     assert_eq!(store.saves(), 1, "the learned word saved at stop");
 }
 
+#[test]
+fn a_layouts_module_that_starts_later_still_brings_the_language() {
+    let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
+    let known = learner("en", &["hello", "help"], SystemDays.today());
+    store.plant(&blob("en"), known.to_bytes());
+    let listen = |bus: &Bus| (hear::<LayoutAsk>(bus), hear::<Suggested>(bus));
+    let (mut run, ((_a, asks), (_l, lanes))) =
+        Live::start(&field, Arc::new(FakeWordPacks::new()), &store, listen);
+    assert_eq!(asks.recv_timeout(WAIT), Ok(LayoutAsk), "nobody answers yet");
+    run.send(&lang("en"));
+    // The later start's own `LayoutChanged` loads the learner, whose words show.
+    lane_of(&lanes, &["hello", "help"]);
+    run.stop();
+}
+
 /// Packs that have none, and panic for French, as a bug on the actor's thread would.
 struct Broken;
 
@@ -145,6 +160,10 @@ impl WordPacks for Broken {
     fn open(&self, iso: &str) -> Result<Option<Box<dyn PackView>>, PackError> {
         assert_ne!(iso, "fr", "a broken pack port");
         Ok(None)
+    }
+
+    fn ships(&self, _: &str) -> bool {
+        false
     }
 }
 

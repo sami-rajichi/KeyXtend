@@ -58,7 +58,10 @@ fn a_pack_this_run_did_not_build_goes_and_the_folder_is_measured() {
     let stale = "stale: removed xx.kxw, which this run did not build";
     assert!(said.iter().any(|l| l == stale), "{said:?}");
     let download = said.last().unwrap();
-    assert!(download.starts_with("download: 5 files, "), "{download}");
+    assert!(
+        download.starts_with("download: 6 files, "),
+        "two packs, three credits files and the index: {download}"
+    );
 }
 
 #[test]
@@ -119,7 +122,7 @@ fn a_stray_pack_in_another_case_leaves_the_fresh_one_written_and_measured() {
     let fr = names.filter(|n| n.eq_ignore_ascii_case("fr.kxw")).count();
     let download = said.last().unwrap();
     assert!(
-        fr == 1 && download.starts_with("download: 5 files, "),
+        fr == 1 && download.starts_with("download: 6 files, "),
         "{said:?}"
     );
 }

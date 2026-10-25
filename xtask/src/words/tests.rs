@@ -6,6 +6,7 @@ mod chains;
 mod count;
 mod curl;
 mod fetch;
+mod index;
 mod manifest;
 mod merge;
 mod output;

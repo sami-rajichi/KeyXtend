@@ -23,12 +23,6 @@ mod stored;
 const FOLLOWERS: u8 = 8;
 /// The chips a test asks for.
 const LIMIT: usize = 5;
-/// No latch.
-const PLAIN: TypingMode = TypingMode {
-    shift: false,
-    caps: false,
-    shortcut: false,
-};
 /// One test word: its spelling, with its capitals, and its frequency byte.
 type Word<'a> = (&'a str, u8);
 /// One test chain: its context, next word and score.
@@ -146,15 +140,20 @@ fn run(bytes: &[u8], learned: &dyn Learned, query: &Query, mode: TypingMode) -> 
 
 /// The first text guessed for `prefix` after `context` with nothing learned.
 fn first(bytes: &[u8], context: &[&str], prefix: &str) -> Option<String> {
-    run(bytes, &NoLearned, &ask(context, prefix), PLAIN)
-        .into_iter()
-        .next()
+    run(
+        bytes,
+        &NoLearned,
+        &ask(context, prefix),
+        TypingMode::default(),
+    )
+    .into_iter()
+    .next()
 }
 
 #[test]
 fn the_after_in_beats_a_rarer_follower_that_is_more_frequent_alone() {
     let en = english();
-    let after_in = run(&en, &NoLearned, &ask(&["in"], ""), PLAIN);
+    let after_in = run(&en, &NoLearned, &ask(&["in"], ""), TypingMode::default());
     let at = |w: &str| after_in.iter().position(|t| t == w);
     assert_eq!(after_in.first().map(String::as_str), Some("the"));
     assert!(
@@ -175,7 +174,12 @@ fn an_unseen_two_word_context_backs_off_to_one_word_then_to_none() {
 
 #[test]
 fn the_backoff_weight_lets_a_follower_beat_a_more_frequent_word() {
-    let after_in = run(&english(), &NoLearned, &ask(&["in"], ""), PLAIN);
+    let after_in = run(
+        &english(),
+        &NoLearned,
+        &ask(&["in"], ""),
+        TypingMode::default(),
+    );
     assert_eq!(
         after_in.get(..3),
         Some(&["the", "walk", "of"].map(str::to_owned)[..])
@@ -185,7 +189,7 @@ fn the_backoff_weight_lets_a_follower_beat_a_more_frequent_word() {
 #[test]
 fn eco_gives_ecole_first_in_its_correct_spelling() {
     let fr = french();
-    let found = run(&fr, &NoLearned, &ask(&[], "eco"), PLAIN);
+    let found = run(&fr, &NoLearned, &ask(&[], "eco"), TypingMode::default());
     assert_eq!(found, ["école", "écoute", "économie", "écologie"]);
 }
 
@@ -193,12 +197,12 @@ fn eco_gives_ecole_first_in_its_correct_spelling() {
 fn an_gives_the_hamza_forms_first_and_they_read_right_to_left() {
     let ar = arabic();
     let pack = Pack::parse(&ar).unwrap();
-    let found = asked(&pack, &NoLearned, &ask(&[], "ان"), PLAIN);
+    let found = asked(&pack, &NoLearned, &ask(&[], "ان"), TypingMode::default());
     assert_eq!(texts(&found), ["أن", "إن", "أنا", "انتظر"]);
     assert!(found.iter().all(|g| g.rtl));
     let bytes = english();
     let en = Pack::parse(&bytes).unwrap();
-    let latin = asked(&en, &NoLearned, &ask(&[], "th"), PLAIN);
+    let latin = asked(&en, &NoLearned, &ask(&[], "th"), TypingMode::default());
     assert!(latin.iter().all(|g| !g.rtl));
 }
 
@@ -217,7 +221,7 @@ fn caps_lock_or_two_typed_capitals_give_all_capitals() {
     let en = english();
     let caps = TypingMode {
         caps: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     let found = run(&en, &NoLearned, &ask(&[], "th"), caps);
     assert!(
@@ -233,7 +237,7 @@ fn shift_with_no_prefix_capitalises_the_next_word_only() {
     let en = english();
     let shift = TypingMode {
         shift: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     let next = run(&en, &NoLearned, &ask(&["in"], ""), shift);
     assert_eq!(next.first().map(String::as_str), Some("The"));
@@ -250,7 +254,7 @@ fn readings_merge_and_each_text_shows_once() {
         lead: Redacted::new("jusqu'".to_owned()),
         prefix: Redacted::new("a".to_owned()),
     });
-    let found = run(&fr, &NoLearned, &query, PLAIN);
+    let found = run(&fr, &NoLearned, &query, TypingMode::default());
     assert_eq!(
         found.iter().filter(|t| *t == "jusqu'à").count(),
         1,
@@ -269,7 +273,7 @@ fn the_limit_holds_and_the_texts_are_distinct() {
             Some(&pack),
             &NoLearned,
             &ask(&[], ""),
-            PLAIN,
+            TypingMode::default(),
             limit,
             &CFG,
         ));

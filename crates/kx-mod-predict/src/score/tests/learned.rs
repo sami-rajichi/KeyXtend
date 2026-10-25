@@ -6,17 +6,17 @@ use super::*;
 fn a_learned_word_not_in_the_seed_appears_only_from_its_second_use() {
     let en = english();
     let once = Fake::default().uses(10).word("thx", 1);
-    assert!(!run(&en, &once, &ask(&[], "th"), PLAIN).contains(&"thx".to_owned()));
+    assert!(!run(&en, &once, &ask(&[], "th"), TypingMode::default()).contains(&"thx".to_owned()));
     let twice = Fake::default().uses(10).word("thx", 2);
-    assert!(run(&en, &twice, &ask(&[], "th"), PLAIN).contains(&"thx".to_owned()));
+    assert!(run(&en, &twice, &ask(&[], "th"), TypingMode::default()).contains(&"thx".to_owned()));
 }
 
 #[test]
 fn a_blocked_seed_word_never_appears() {
     let en = english();
     let blocked = Fake::default().uses(10).word("the", 9).block("the");
-    let typed = run(&en, &blocked, &ask(&[], "th"), PLAIN);
-    let next = run(&en, &blocked, &ask(&["in"], ""), PLAIN);
+    let typed = run(&en, &blocked, &ask(&[], "th"), TypingMode::default());
+    let next = run(&en, &blocked, &ask(&["in"], ""), TypingMode::default());
     assert!(!typed.contains(&"the".to_owned()) && !next.contains(&"the".to_owned()));
     assert_eq!(typed.first().map(String::as_str), Some("they"));
 }
@@ -38,13 +38,13 @@ fn the_learned_weight_grows_with_uses() {
     let early = Fake::default().uses(100).word("thx", 50);
     let late = Fake::default().uses(10_000).word("thx", 5_000);
     assert_eq!(
-        run(&en, &early, &ask(&[], "th"), PLAIN)
+        run(&en, &early, &ask(&[], "th"), TypingMode::default())
             .first()
             .map(String::as_str),
         Some("the")
     );
     assert_eq!(
-        run(&en, &late, &ask(&[], "th"), PLAIN)
+        run(&en, &late, &ask(&[], "th"), TypingMode::default())
             .first()
             .map(String::as_str),
         Some("thx")
@@ -59,7 +59,7 @@ fn learned_chains_guess_the_next_word() {
         .word("in", 20)
         .word("Sami", 10)
         .chain(&["in"], "Sami", 10);
-    let next = run(&en, &learned, &ask(&["in"], ""), PLAIN);
+    let next = run(&en, &learned, &ask(&["in"], ""), TypingMode::default());
     assert!(next.contains(&"Sami".to_owned()), "{next:?}");
 }
 
@@ -75,7 +75,7 @@ fn without_a_pack_the_learned_words_still_guess() {
         None,
         &learned,
         &ask(&[], "sa"),
-        PLAIN,
+        TypingMode::default(),
         LIMIT,
         &CFG,
     ));
@@ -85,10 +85,10 @@ fn without_a_pack_the_learned_words_still_guess() {
 #[test]
 fn learned_uses_lift_a_seed_word() {
     let en = english();
-    let plain = run(&en, &NoLearned, &ask(&[], "th"), PLAIN);
+    let plain = run(&en, &NoLearned, &ask(&[], "th"), TypingMode::default());
     assert_eq!(plain.last().map(String::as_str), Some("theory"));
     let learned = Fake::default().uses(100).word("theory", 50);
-    let lifted = run(&en, &learned, &ask(&[], "th"), PLAIN);
+    let lifted = run(&en, &learned, &ask(&[], "th"), TypingMode::default());
     assert_eq!(
         lifted.get(1).map(String::as_str),
         Some("theory"),

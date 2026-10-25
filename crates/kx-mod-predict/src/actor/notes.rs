@@ -122,10 +122,10 @@ impl Actor {
         }
     }
 
-    /// Tells once per language and run that the language in front's full pack is missing.
+    /// Tells once per language and run that the language in front has no pack though the build shipped one.
     pub(super) fn say_missing(&mut self) {
-        let full = self.settings.full_packs.contains(&self.iso);
-        if full && self.notes.missing.insert(self.iso.clone()) {
+        let shipped = self.ports.packs.ships(&self.iso);
+        if shipped && self.notes.missing.insert(self.iso.clone()) {
             let lang = (args::LANG, NoticeArg::Text(self.iso.clone()));
             self.publish(&notice(keys::WORDS_MISSING, vec![lang]));
         }

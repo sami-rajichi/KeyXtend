@@ -44,7 +44,13 @@ fn the_list_opens_on_its_first_page_and_turns_within_its_pages() {
     assert_eq!(menu.list, Some(List { page: 2, rows: 5 }), "three pages");
     menu.turn(-9, 4, 12);
     assert_eq!(menu.list, Some(List { page: 0, rows: 4 }));
-    assert_eq!(List { page: 2, rows: 4 }.at(1), 9);
+    assert_eq!(List { page: 2, rows: 4 }.at(1), Some(9));
+    assert_eq!(
+        List { page: 2, rows: 4 }.at(3),
+        Some(11),
+        "the page's last row"
+    );
+    assert_eq!(List { page: 0, rows: 4 }.at(4), None, "a row past the page");
     menu.open(0);
     assert_eq!(menu.list.map(|l| l.rows), Some(1), "at least one row");
 }

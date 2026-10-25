@@ -69,16 +69,16 @@ fn guessed(found: &[(String, String)]) -> Vec<&str> {
 
 #[test]
 fn korean_gets_chips_that_type_a_space_after_the_word() {
-    let found = typed(&korean(), "안", PLAIN);
+    let found = typed(&korean(), "안", TypingMode::default());
     let first = ("안녕하세요".to_owned(), "안녕하세요 ".to_owned());
     assert_eq!(found.first(), Some(&first));
-    assert!(!typed(&korean(), "", PLAIN).is_empty());
+    assert!(!typed(&korean(), "", TypingMode::default()).is_empty());
 }
 
 #[test]
 fn chinese_and_japanese_get_no_chips_until_their_input_mode() {
     for bytes in [chinese(), japanese()] {
-        assert!(typed(&bytes, "", PLAIN).is_empty());
+        assert!(typed(&bytes, "", TypingMode::default()).is_empty());
         let pack = Pack::parse(&bytes).unwrap();
         assert!(
             guesses(
@@ -86,24 +86,30 @@ fn chinese_and_japanese_get_no_chips_until_their_input_mode() {
                 Some(&pack),
                 &NoLearned,
                 &ask(&[], ""),
-                PLAIN,
+                TypingMode::default(),
                 LIMIT,
                 &CFG
             )
             .is_empty()
         );
     }
-    assert!(typed(&chinese(), "你", PLAIN).is_empty());
-    assert!(typed(&japanese(), "こ", PLAIN).is_empty());
+    assert!(typed(&chinese(), "你", TypingMode::default()).is_empty());
+    assert!(typed(&japanese(), "こ", TypingMode::default()).is_empty());
 }
 
 #[test]
 fn a_capitalised_turkish_i_keeps_its_dot_and_a_dotless_capital_finds_dotless_words() {
-    assert_eq!(guessed(&typed(&turkish(), "İs", PLAIN)), ["İstanbul"]);
-    assert_eq!(guessed(&typed(&turkish(), "Is", PLAIN)), ["Isı", "Islak"]);
+    assert_eq!(
+        guessed(&typed(&turkish(), "İs", TypingMode::default())),
+        ["İstanbul"]
+    );
+    assert_eq!(
+        guessed(&typed(&turkish(), "Is", TypingMode::default())),
+        ["Isı", "Islak"]
+    );
     let shift = TypingMode {
         shift: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     let next = typed(&turkish(), "", shift);
     assert_eq!(guessed(&next).first(), Some(&"İstanbul"));
@@ -118,7 +124,11 @@ fn a_turkish_context_typed_in_capitals_finds_its_twin_by_turkish_casing() {
         ("kenarı", 110),
     ];
     let chains: [Chain<'_>; 2] = [(&["ırmak"], "kenarı", 240), (&["Irmak"], "Hanım", 240)];
-    let next = typed(&pack("tr", &words, &chains), "IRMAK ", PLAIN);
+    let next = typed(
+        &pack("tr", &words, &chains),
+        "IRMAK ",
+        TypingMode::default(),
+    );
     assert_eq!(
         guessed(&next).first(),
         Some(&"kenarı"),
@@ -136,7 +146,7 @@ fn a_learned_turkish_word_is_found_by_turkish_folding() {
         Some(&pack),
         &learned,
         &ask(&[], "ıl"),
-        PLAIN,
+        TypingMode::default(),
         LIMIT,
         &CFG,
     );
@@ -151,7 +161,15 @@ fn turkish_with_no_pack_folds_by_turkish_casing() {
         .word("ılık", 50)
         .word("iyi", 50);
     let tr = |prefix: &str| {
-        let found = guesses("tr", None, &learned, &ask(&[], prefix), PLAIN, LIMIT, &CFG);
+        let found = guesses(
+            "tr",
+            None,
+            &learned,
+            &ask(&[], prefix),
+            TypingMode::default(),
+            LIMIT,
+            &CFG,
+        );
         texts(&found)
     };
     assert_eq!(tr("ıl"), ["ılık"]);
@@ -167,7 +185,7 @@ fn a_pack_of_another_language_is_ignored() {
         Some(&pack),
         &NoLearned,
         &ask(&[], "is"),
-        PLAIN,
+        TypingMode::default(),
         LIMIT,
         &CFG,
     );
@@ -186,7 +204,7 @@ fn chinese_and_japanese_read_no_list() {
                 Some(&pack),
                 &learned,
                 &query,
-                PLAIN,
+                TypingMode::default(),
                 LIMIT,
                 &CFG,
             );

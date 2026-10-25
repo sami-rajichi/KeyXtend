@@ -85,3 +85,13 @@ fn clones_share_the_packs_and_serve_as_the_port_from_another_thread() {
     assert_eq!(opened.join().unwrap(), Ok(Some(EN.to_vec())));
     assert_eq!(packs.opens("en"), 1);
 }
+
+#[test]
+fn a_language_ships_only_once_the_test_lists_it() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    assert!(!packs.ships("en"), "a pack alone is not in the index");
+    packs.ship("fr");
+    assert!(packs.ships("fr") && !packs.ships("en"));
+    assert!(!packs.ships("FR"), "only a code `fits_iso` takes");
+}

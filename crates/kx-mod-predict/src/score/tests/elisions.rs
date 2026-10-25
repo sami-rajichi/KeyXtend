@@ -21,7 +21,7 @@ fn typed_fr(text: &str) -> (Query, Vec<String>) {
         Some(&pack),
         &NoLearned,
         &query,
-        PLAIN,
+        TypingMode::default(),
         LIMIT,
         &CFG,
     );

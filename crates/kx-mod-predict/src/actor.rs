@@ -35,13 +35,6 @@ pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
 pub use store::{EMAILS_BLOB, emails_blob, learned_blob};
 
-/// No latch, until the keyboard tells its latches.
-const NO_LATCH: TypingMode = TypingMode {
-    shift: false,
-    caps: false,
-    shortcut: false,
-};
-
 /// A message for the actor, from the bus, the box or the module.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Msg {
@@ -158,7 +151,7 @@ impl Actor {
             iso: String::new(),
             rtl: false,
             kind: FieldKind::None,
-            mode: NO_LATCH,
+            mode: TypingMode::default(),
             tracker: Tracker::new(settings.track_config()),
             learner: None,
             emails: Emails::default(),
@@ -205,7 +198,7 @@ impl Actor {
             if flow != Flow::Go {
                 return flow;
             }
-            self.tick(seed);
+            self.tick();
         }
     }
 
@@ -220,10 +213,6 @@ impl Actor {
             Msg::Lang { iso, rtl } => return self.lang(seed, iso, rtl),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
-            Msg::Ask(WordsAsk::Again) => {
-                self.again();
-                false
-            }
             Msg::Ask(ask) => self.ask(seed, ask),
             Msg::Focus(change) => self.focus(seed, change),
             Msg::Quit => {

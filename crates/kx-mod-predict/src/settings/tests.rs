@@ -77,7 +77,6 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
         "icloud.com",
     ];
     assert_eq!(s.domains, domains);
-    assert_eq!(s.full_packs, ["en", "fr", "ar"]);
     assert_eq!((s.read_ms, s.read_chars, s.save_s), (150, 1024, 30));
 }
 
@@ -102,7 +101,7 @@ fn the_shares_take_zero_to_one_and_refuse_past_or_nan() {
 }
 
 #[test]
-fn a_bad_domain_or_language_is_refused_and_an_empty_list_taken() {
+fn a_bad_domain_or_too_many_are_refused_and_an_empty_list_taken() {
     let list = |items: &[&str]| {
         toml::Value::from(items.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>())
     };
@@ -113,9 +112,7 @@ fn a_bad_domain_or_language_is_refused_and_an_empty_list_taken() {
     assert!(refused(&with("domains", list(&["a@b.com"])), "domains"));
     let many = vec!["x.com"; usize::from(*DOMAINS.end()) + 1];
     assert!(refused(&with("domains", list(&many)), "domains"));
-    assert!(refused(&with("full_packs", list(&["EN"])), "full_packs"));
-    assert!(refused(&with("full_packs", list(&["con"])), "full_packs"));
-    assert!(taken(&with("domains", list(&[]))) && taken(&with("full_packs", list(&[]))));
+    assert!(taken(&with("domains", list(&[]))));
 }
 
 #[test]

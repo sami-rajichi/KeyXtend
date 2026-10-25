@@ -31,13 +31,14 @@ impl Actor {
         true
     }
 
-    /// Picks row `row` of the open list's page: its email replaces the typed `@@`, and the list closes.
+    /// Picks row `row` of the open list's page: its email replaces the typed `@@`, and the list closes. A row past the
+    /// page does nothing.
     pub(super) fn list_pick(&mut self, seed: Option<&Pack<'_>>, row: u8) {
-        let Some(list) = self.menu.list else {
+        let Some(at) = self.menu.list.and_then(|list| list.at(row)) else {
             return;
         };
         let ask = self.show.as_ref().and_then(|s| s.emails.clone());
-        let email = self.emails.list().get(list.at(row));
+        let email = self.emails.list().get(at);
         let plan = match (ask, email) {
             (Some(ask @ EmailAsk::All(_)), Some(email)) => ask.plan(email),
             _ => None,

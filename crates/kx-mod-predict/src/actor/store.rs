@@ -100,7 +100,7 @@ impl Actor {
     }
 
     /// Purges on a new day, then saves each blob whose time has come.
-    pub fn tick(&mut self, _seed: Option<&Pack<'_>>) {
+    pub fn tick(&mut self) {
         self.new_day();
         let now = self.ports.clock.now();
         for blob in [Blob::Learned, Blob::Emails] {
@@ -169,11 +169,8 @@ impl Actor {
         let read = bytes.map(|b| Learner::from_bytes(&b, self.learn_cfg));
         let learner = match read {
             Some(Ok(learner)) if learner.iso() == self.iso => Some(learner),
-            Some(_) => {
-                tracing::warn!("learned words not read");
-                self.say_once(keys::WORDS_DAMAGED);
-                None
-            }
+            Some(Ok(_)) => self.unread(&"the file names another language"),
+            Some(Err(error)) => self.unread(&error),
             None => None,
         };
         let mut learner = learner.or_else(|| Learner::new(&self.iso, self.learn_cfg).ok());
@@ -181,6 +178,13 @@ impl Actor {
             learner.reconcile(seed);
         }
         self.learner = learner;
+    }
+
+    /// Logs why the saved learner was not read and tells it once; the language starts empty.
+    fn unread(&mut self, why: &dyn std::fmt::Display) -> Option<Learner> {
+        tracing::warn!(%why, "learned words not read");
+        self.say_once(keys::WORDS_DAMAGED);
+        None
     }
 
     /// The bytes under `name`, or none; a damaged blob tells once, a locked store locks the run, and a blob that

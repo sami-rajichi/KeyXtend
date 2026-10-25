@@ -27,6 +27,6 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 
 ## Word packs
 
-- `words/`: the word packs (`<iso>.kxw`) that `cargo xtask words build` writes, shared under CC BY-SA 4.0 as `words/LICENSE.txt` says, with every source credited in `words/CREDITS.txt`; they ship as separate files beside the program.
+- `words/`: the word packs (`<iso>.kxw`) that `cargo xtask words build` writes, shared under CC BY-SA 4.0 as `words/LICENSE.txt` says, with every source credited in `words/CREDITS.txt`; they ship as separate files beside the program. `words/packs.txt` lists the languages the build shipped (`cargo xtask words index` rewrites it).
 
 Add a font, icon or sound only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

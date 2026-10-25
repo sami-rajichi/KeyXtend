@@ -72,6 +72,10 @@ impl WordPacks for NoPacks {
     fn open(&self, _: &str) -> Result<Option<Box<dyn PackView>>, PackError> {
         Ok(None)
     }
+
+    fn ships(&self, _: &str) -> bool {
+        false
+    }
 }
 
 /// A store whose OS key is unavailable.

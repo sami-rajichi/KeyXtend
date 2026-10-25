@@ -1,9 +1,14 @@
 //! Word packs read straight from disk (ADR-0032): each language's `pack_file` from the first folder that has it, with
 //! the folder order, the name and the size rules every OS shares. An adapter only opens and maps a file (`PackDisk`).
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
-use kx_module_api::ports::{MAX_PACK_BYTES, PackError, PackView, WordPacks, pack_file};
+use kx_module_api::ports::{
+    IndexError, MAX_PACK_BYTES, PACK_INDEX, PackError, PackView, WordPacks, fits_iso, pack_file,
+    read_index,
+};
 
 /// The OS side of word packs: open a pack file, then give a view whose bytes stay unchanged while it lives
 /// (`PackView::bytes`).
@@ -33,13 +38,19 @@ pub trait PackDisk: Send + Sync {
 pub struct DiskPacks<D> {
     disk: D,
     dirs: Vec<PathBuf>,
+    /// The languages the folders' indexes list, read at the first `ships`.
+    shipped: OnceLock<BTreeSet<String>>,
 }
 
 impl<D: PackDisk> DiskPacks<D> {
     /// The packs in `dirs`, looked up in that order on `disk`.
     #[must_use]
     pub fn new(disk: D, dirs: Vec<PathBuf>) -> Self {
-        Self { disk, dirs }
+        Self {
+            disk,
+            dirs,
+            shipped: OnceLock::new(),
+        }
     }
 }
 
@@ -48,6 +59,42 @@ impl<D: PackDisk> WordPacks for DiskPacks<D> {
         let view = find(&self.disk, &self.dirs, iso)?;
         Ok(view.map(|v| Box::new(v) as Box<dyn PackView>))
     }
+
+    fn ships(&self, iso: &str) -> bool {
+        let shipped = self.shipped.get_or_init(|| shipped(&self.disk, &self.dirs));
+        fits_iso(iso) && shipped.contains(iso)
+    }
+}
+
+/// Every language the indexes in `dirs` list; one that does not read is logged and adds nothing, and a relative folder
+/// is never read.
+fn shipped<D: PackDisk>(disk: &D, dirs: &[PathBuf]) -> BTreeSet<String> {
+    let (mut all, mut found) = (BTreeSet::new(), false);
+    for dir in dirs.iter().filter(|d| d.is_absolute()) {
+        match index(disk, &dir.join(PACK_INDEX)) {
+            Ok(None) => {}
+            Ok(Some(isos)) => (all, found) = (&all | &isos, true),
+            Err(error) => {
+                found = true;
+                tracing::warn!(%error, "word pack index not read");
+            }
+        }
+    }
+    if !found {
+        tracing::warn!(error = %IndexError::Missing, "word pack index not read");
+    }
+    all
+}
+
+/// The languages the index at `path` lists; `Ok(None)` when no file is there, and an empty file is unreadable, as a
+/// pack is.
+fn index<D: PackDisk>(disk: &D, path: &Path) -> Result<Option<BTreeSet<String>>, IndexError> {
+    let unreadable = |_| IndexError::Unreadable;
+    let Some((file, len)) = disk.open(path).map_err(unreadable)? else {
+        return Ok(None);
+    };
+    let view = disk.map(file, view_len(len).map_err(unreadable)?);
+    read_index(view.map_err(unreadable)?.bytes()).map(Some)
 }
 
 /// A pack file's `len` as its view's length; `Unreadable` when the file is empty or over `MAX_PACK_BYTES`.

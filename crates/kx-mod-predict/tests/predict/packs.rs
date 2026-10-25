@@ -49,6 +49,9 @@ fn a_learners_stray_merges_into_the_packs_spelling_when_the_pack_loads() {
 #[test]
 fn a_pack_that_does_not_read_or_names_another_language_counts_as_missing() {
     let mut rig = Rig::build(|f, _| {
+        for iso in ["en", "fr"] {
+            f.packs.ship(iso);
+        }
         f.packs.add("en", b"not a pack".to_vec());
         f.packs.add("fr", pack("ar", &["من"]));
     });
@@ -59,7 +62,10 @@ fn a_pack_that_does_not_read_or_names_another_language_counts_as_missing() {
 
 #[test]
 fn a_pack_that_cannot_be_opened_counts_as_missing() {
-    let mut rig = Rig::build(|f, _| f.packs.fail_open());
+    let mut rig = Rig::build(|f, _| {
+        f.packs.ship("fr");
+        f.packs.fail_open();
+    });
     rig.lang("fr");
     assert_eq!(rig.notices(), [keys::WORDS_MISSING]);
 }

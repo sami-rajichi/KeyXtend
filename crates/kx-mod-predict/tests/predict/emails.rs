@@ -65,6 +65,19 @@ fn a_typed_at_at_lists_known_emails_with_more_and_the_list_pages() {
 }
 
 #[test]
+fn a_list_row_past_the_page_types_nothing_and_keeps_the_list() {
+    let mut rig = knowing(&seven());
+    rig.typed("@@");
+    rig.ask(WordsAsk::More { rows: ROWS });
+    rig.ask(WordsAsk::ListPick(ROWS));
+    assert!(
+        rig.typed_words().is_empty(),
+        "the next page's first email is not typed"
+    );
+    assert_eq!(rig.lane().list.map(|l| l.page), Some(0));
+}
+
+#[test]
 fn a_tap_on_the_more_chip_waits_for_the_uis_more_and_cancel_closes_the_list() {
     let mut rig = knowing(&seven());
     rig.typed("@@");

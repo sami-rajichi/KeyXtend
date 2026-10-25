@@ -9,13 +9,6 @@ use crate::score::CFG as SCORE;
 use crate::settings::PredictSettings;
 use crate::track::Tracker;
 
-/// No latch.
-const PLAIN: TypingMode = TypingMode {
-    shift: false,
-    caps: false,
-    shortcut: false,
-};
-
 /// The chips after typing `text`, with `words` learned twice and `known` emails, at most `limit`.
 fn lane(text: &str, words: &[&str], known: &[&str], limit: usize) -> Chips {
     let mut learner = Learner::new("en", CFG).unwrap();
@@ -33,7 +26,7 @@ fn lane(text: &str, words: &[&str], known: &[&str], limit: usize) -> Chips {
         iso: "en",
         seed: None,
         learned: &view,
-        mode: PLAIN,
+        mode: TypingMode::default(),
         score: &SCORE,
         emails: &emails,
         email: &email,

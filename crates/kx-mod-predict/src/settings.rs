@@ -3,7 +3,7 @@
 
 use std::ops::RangeInclusive;
 
-use kx_module_api::ports::{FieldConfig, fits_iso};
+use kx_module_api::ports::FieldConfig;
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
@@ -53,8 +53,6 @@ pub const ON_KEY: &str = "on";
 
 /// Why a domain was refused.
 const BAD_DOMAIN: &str = "domains must each be a domain such as example.com";
-/// Why a language was refused.
-const BAD_LANG: &str = "full_packs must each be a two- or three-letter language code";
 
 /// How the kernel reads the `[predict]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -98,8 +96,6 @@ pub struct PredictSettings {
     pub min_start: usize,
     /// The domains offered after one `@`, in order.
     pub domains: Vec<String>,
-    /// The languages whose pack must ship; a missing one shows a notice.
-    pub full_packs: Vec<String>,
     /// The longest one read of the box may take, in ms.
     pub read_ms: u32,
     /// The longest text one read takes before the cursor, in characters.
@@ -168,22 +164,19 @@ impl PredictSettings {
         }
     }
 
-    /// The domain and language lists' rules.
-    fn check_lists(&self) -> Result<(), SettingsError> {
+    /// The domain list's rules.
+    fn check_domains(&self) -> Result<(), SettingsError> {
         let count = u8::try_from(self.domains.len()).unwrap_or(u8::MAX);
         within("domains", count, &DOMAINS)?;
         if !self.domains.iter().all(|d| is_domain(d)) {
             return Err(SettingsError::Invalid(BAD_DOMAIN.to_owned()));
-        }
-        if !self.full_packs.iter().all(|iso| fits_iso(iso)) {
-            return Err(SettingsError::Invalid(BAD_LANG.to_owned()));
         }
         Ok(())
     }
 }
 
 impl Settings for PredictSettings {
-    /// Each range, then the lists, then what the scorer and the learner refuse, so `guesses` never gets a bad config.
+    /// Each range, then the domains, then what the scorer and the learner refuse, so `guesses` never gets a bad config.
     fn check(&self) -> Result<(), SettingsError> {
         within("chips", self.chips, &CHIPS)?;
         within("context_words", self.context_words, &CONTEXT_WORDS)?;
@@ -200,7 +193,7 @@ impl Settings for PredictSettings {
         within("read_ms", self.read_ms, &READ_MS)?;
         within("read_chars", self.read_chars, &READ_CHARS)?;
         within("save_s", self.save_s, &SAVE_S)?;
-        self.check_lists()?;
+        self.check_domains()?;
         let invalid = |e: &dyn std::fmt::Display| SettingsError::Invalid(e.to_string());
         self.score_config().check().map_err(|e| invalid(&e))?;
         self.learn_config().check().map_err(|e| invalid(&e))

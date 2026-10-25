@@ -31,8 +31,8 @@ impl Event for Typed {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the keyboard: the latches that change what the next key types.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// From the keyboard: the latches that change what the next key types; the default has no latch.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct TypingMode {
     /// Shift is latched.
     pub shift: bool,

@@ -43,7 +43,7 @@ fn a_refused_setting_gives_no_guess() {
         Some(&pack),
         &NoLearned,
         &ask(&[], "th"),
-        PLAIN,
+        TypingMode::default(),
         LIMIT,
         &cfg,
     );

@@ -103,7 +103,7 @@ pub(crate) fn measure(
 }
 
 /// The names of the pack files in `out`, sorted.
-fn packs_in(out: &Path) -> Result<Vec<String>, WordsError> {
+pub(crate) fn packs_in(out: &Path) -> Result<Vec<String>, WordsError> {
     let entries = std::fs::read_dir(out).map_err(|e| io_error(out, &e))?;
     let mut names = Vec::new();
     for entry in entries {

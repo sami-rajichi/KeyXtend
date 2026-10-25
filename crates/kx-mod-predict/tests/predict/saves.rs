@@ -67,14 +67,7 @@ fn a_damaged_blob_starts_empty_and_tells_once() {
     rig.typed("hel");
     assert!(rig.words().is_empty(), "the damaged learner starts empty");
     rig.lang("fr");
-    assert_eq!(
-        rig.notices(),
-        [
-            keys::WORDS_MISSING,
-            keys::WORDS_DAMAGED,
-            keys::WORDS_MISSING
-        ]
-    );
+    assert_eq!(rig.notices(), [keys::WORDS_DAMAGED], "once for the run");
 }
 
 #[test]
@@ -136,7 +129,7 @@ fn a_locked_save_stops_saving_for_the_run() {
     rig.typed("again ");
     rig.stop();
     assert_eq!(rig.fakes.store.saves(), 1);
-    assert_eq!(rig.notices(), [keys::WORDS_MISSING, keys::WORDS_LOCKED]);
+    assert_eq!(rig.notices(), [keys::WORDS_LOCKED]);
 }
 
 #[test]

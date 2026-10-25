@@ -159,7 +159,15 @@ fn time(l: &Learner, pack: &Pack<'_>, context: &[String], prefix: &str) -> Durat
     };
     let view = l.view(Some(pack));
     let start = Instant::now();
-    let found = guesses(pack.iso(), Some(pack), &view, &query, PLAIN, LIMIT, &SCORE);
+    let found = guesses(
+        pack.iso(),
+        Some(pack),
+        &view,
+        &query,
+        TypingMode::default(),
+        LIMIT,
+        &SCORE,
+    );
     let spent = start.elapsed();
     assert_eq!(found.is_empty(), !pack.script().is_none_or(Script::spaced));
     spent

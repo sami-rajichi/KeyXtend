@@ -3,7 +3,7 @@
 //! let go.
 
 use crate::rig::{Heard, Rig, plant};
-use kx_mod_predict::Msg;
+use kx_mod_predict::{Msg, PredictSettings};
 use kx_module_api::ports::{ChipPicked, FieldKind, Lane, Piece, WordsAsk};
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -14,8 +14,14 @@ use std::time::Duration;
 const CASES: u32 = 512;
 /// Most steps in one run.
 const MAX_STEPS: usize = 40;
-/// The longest wait, in seconds, past the default `save_s` so saves happen.
-const MAX_WAIT_S: u64 = 40;
+
+/// The longest wait, in default `save_s` times, so one wait can pass a save.
+const WAIT_SAVES: u64 = 2;
+
+/// The longest wait, in seconds.
+fn max_wait_s() -> u64 {
+    WAIT_SAVES * u64::from(PredictSettings::from_defaults().unwrap().save_s)
+}
 
 /// One thing that happens to the actor.
 #[derive(Clone, Debug)]
@@ -66,7 +72,7 @@ fn step() -> impl Strategy<Value = Step> {
         2 => (0..6_u8, any::<bool>()).prop_map(|(i, old)| Step::Pick(i, old)),
         1 => asks.prop_map(Step::Ask),
         1 => select(vec!["en", "ar"]).prop_map(Step::Lang),
-        1 => (0..=MAX_WAIT_S).prop_map(Step::Wait),
+        1 => (0..=max_wait_s()).prop_map(Step::Wait),
     ]
 }
 

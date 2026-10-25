@@ -90,6 +90,7 @@ fn run_words(action: &cli::WordsAction) -> Result<(), words::WordsError> {
         cli::WordsAction::Fetch { src } => words::fetch(src),
         cli::WordsAction::List { iso, src } => words::list(iso, src),
         cli::WordsAction::Build { src, out } => words::build(src, out.as_deref()),
+        cli::WordsAction::Index { packs } => words::index(packs.as_deref()),
     }
 }
 

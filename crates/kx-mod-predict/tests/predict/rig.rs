@@ -4,7 +4,7 @@
 
 use kx_mod_predict::{Actor, Days, Flow, MANIFEST, Msg, Pack, Ports, PredictSettings};
 use kx_module_api::ports::{
-    ChipKind, ChipPicked, FieldKind, Lane, PackView, Piece, Suggested, TypingMode, WordsAsk,
+    ChipKind, ChipPicked, FieldKind, Lane, PackView, Piece, Suggested, WordsAsk,
 };
 use kx_module_api::{Bus, ModuleCx, Mono, Redacted, Subscription};
 use kx_platform_fake::{FakeClock, FakeFieldWatch, FakeSealedStore, FakeWordPacks};
@@ -18,12 +18,6 @@ use std::time::Duration;
 pub const T0: Mono = Mono::from_us(1_000_000);
 /// Each test's first day number.
 pub const DAY: u32 = 20_000;
-/// No latch.
-pub const PLAIN: TypingMode = TypingMode {
-    shift: false,
-    caps: false,
-    shortcut: false,
-};
 
 mod heard;
 mod stored;
@@ -142,8 +136,7 @@ impl Rig {
 
     /// Runs the actor's timers now, as a wake of its thread would.
     pub fn tick(&mut self) {
-        let pack = parse(self.view.as_deref());
-        self.actor.tick(pack.as_ref());
+        self.actor.tick();
     }
 
     /// How long the thread would wait now before its next tick.

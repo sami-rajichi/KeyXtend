@@ -1,5 +1,6 @@
 //! `words build`: once every source checks out, each language's text is counted, its list finished and its chains
-//! picked into a pack; then the credits, all written once the download fits, and packs a past run left are removed.
+//! picked into a pack; then the credits and the index of the packs, all written once the download fits, and packs a
+//! past run left are removed.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use super::manifest::{LangText, Manifest};
 use super::read::{self, Read};
 use super::report::{report, tally_line};
 use super::vocab::Vocab;
-use super::{WordsError, candidates, credits, download, fetch, out};
+use super::{WordsError, candidates, credits, download, fetch, index, out};
 use crate::devtools::paths::BYTES_PER_KB;
 
 /// Where `build` reads and writes.
@@ -42,16 +43,19 @@ pub(crate) fn run(
     let level = manifest.packs.level;
     let mut authors = BTreeSet::new();
     let (mut files, mut sizes) = (Vec::new(), Vec::new());
-    for iso in manifest.isos() {
-        let (pack, deflated, lines) = lang(manifest, &iso, paths, &mut authors)?;
+    let isos = manifest.isos();
+    for iso in &isos {
+        let (pack, deflated, lines) = lang(manifest, iso, paths, &mut authors)?;
         for line in &lines {
             say(line);
         }
-        let name = pack_file(&iso).ok_or_else(|| WordsError::Lang(iso.clone()))?;
+        let name = pack_file(iso).ok_or_else(|| WordsError::Lang(iso.clone()))?;
         sizes.push((pack.len(), deflated));
         files.push((name, pack));
     }
-    let credits = credits::files(manifest, &paths.src, &authors)?;
+    let mut credits = credits::files(manifest, &paths.src, &authors)?;
+    let listed: Vec<&str> = isos.iter().map(String::as_str).collect();
+    credits.push(index::file(&listed)?);
     for (_, bytes) in &credits {
         sizes.push((bytes.len(), download::deflated(bytes, level)?));
     }

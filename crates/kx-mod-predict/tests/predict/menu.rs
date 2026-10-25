@@ -1,7 +1,7 @@
 //! The menu: Pause and Off are saved through the settings handle without a restart, Forget then Undo restore the word
 //! by its stored spelling, the Undo chip goes at the next key, and Again tells the lane again.
 
-use crate::rig::{PLAIN, Rig, plant, saved};
+use crate::rig::{Rig, plant, saved};
 use kx_mod_predict::score::Learned;
 use kx_mod_predict::{ID, Msg};
 use kx_module_api::ports::{ChipKind, FieldKind, Lane, TypingMode, WordsAsk};
@@ -92,11 +92,11 @@ fn forget_takes_the_stored_spelling_not_the_capitalised_chip() {
     rig.focus(FieldKind::Text);
     let shift = TypingMode {
         shift: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     rig.send(Msg::Mode(shift));
     rig.typed("M");
-    rig.send(Msg::Mode(PLAIN));
+    rig.send(Msg::Mode(TypingMode::default()));
     assert_eq!(rig.words(), ["May"]);
     rig.ask(WordsAsk::Forget);
     rig.pick(0);

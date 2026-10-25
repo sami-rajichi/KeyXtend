@@ -33,8 +33,8 @@ pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
 pub use packs::{
-    MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_EXT, PackError, PackView, WordPacks,
-    WordPacksKey, fits_iso, pack_file,
+    IndexError, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_EXT, PACK_INDEX, PackError,
+    PackView, WordPacks, WordPacksKey, fits_iso, index_text, pack_file, read_index,
 };
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,

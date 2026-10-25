@@ -38,6 +38,10 @@ impl WordPacks for Counted {
         self.most.fetch_max(live, Ordering::SeqCst);
         Ok(Some(Box::new(View(view, Arc::clone(&self.live)))))
     }
+
+    fn ships(&self, iso: &str) -> bool {
+        self.packs.ships(iso)
+    }
 }
 
 /// Each test pack's one word, which the lane shows when its language arrives.

@@ -27,8 +27,7 @@ impl Actor {
         Flow::Switch
     }
 
-    /// Opens the language in front's pack; a missing or unreadable one is told once when the language should have
-    /// it.
+    /// Opens the language in front's pack; a missing or unreadable one is told once when the build shipped it.
     pub fn open(&mut self) -> Option<Box<dyn PackView>> {
         if !fits_iso(&self.iso) {
             return None;

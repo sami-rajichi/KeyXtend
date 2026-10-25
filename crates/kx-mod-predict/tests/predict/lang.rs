@@ -72,8 +72,12 @@ fn only_the_language_in_front_is_opened_once_per_switch() {
 }
 
 #[test]
-fn a_missing_full_pack_is_told_once_per_language_and_other_languages_never() {
-    let mut rig = Rig::new();
+fn a_missing_shipped_pack_is_told_once_per_language_and_an_unlisted_language_never() {
+    let mut rig = Rig::build(|f, _| {
+        for iso in ["en", "fr"] {
+            f.packs.ship(iso);
+        }
+    });
     rig.lang("en");
     rig.lang("de");
     rig.lang("fr");
@@ -86,7 +90,7 @@ fn a_missing_full_pack_is_told_once_per_language_and_other_languages_never() {
 fn the_missing_notice_names_its_language_by_code() {
     use crate::rig::Heard;
     use kx_module_api::{NoticeArg, args};
-    let mut rig = Rig::new();
+    let mut rig = Rig::build(|f, _| f.packs.ship("ar"));
     rig.lang("ar");
     let notes: Vec<_> = rig
         .take()

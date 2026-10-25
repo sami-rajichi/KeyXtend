@@ -76,17 +76,17 @@ fn a_text_box_is_read_for_its_last_words_and_learned_from() {
 
 #[test]
 fn a_shortcut_latch_empties_the_lane_until_it_lets_go() {
-    use crate::rig::PLAIN;
     use kx_mod_predict::Msg;
+    use kx_module_api::ports::TypingMode;
     let mut rig = in_box(FieldKind::Text);
     rig.typed("hel");
-    let ctrl = kx_module_api::ports::TypingMode {
+    let ctrl = TypingMode {
         shortcut: true,
-        ..PLAIN
+        ..TypingMode::default()
     };
     rig.send(Msg::Mode(ctrl));
     assert_eq!(rig.lane().lane, Lane::Empty);
-    rig.send(Msg::Mode(PLAIN));
+    rig.send(Msg::Mode(TypingMode::default()));
     assert!(rig.chips().iter().all(|c| c.1 == ChipKind::Word));
     assert_eq!(rig.words(), ["hello", "help"]);
 }

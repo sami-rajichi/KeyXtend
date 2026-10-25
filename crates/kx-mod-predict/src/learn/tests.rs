@@ -27,12 +27,6 @@ pub(crate) const CFG: LearnConfig = LearnConfig {
     forget_days: 300,
     context_words: 2,
 };
-/// No latch.
-const PLAIN: TypingMode = TypingMode {
-    shift: false,
-    caps: false,
-    shortcut: false,
-};
 /// The chips a test asks for.
 const LIMIT: usize = 5;
 
@@ -74,7 +68,15 @@ fn guessed(l: &Learner, seed: Option<&Pack<'_>>, context: &[&str], prefix: &str)
         word: Redacted::new(prefix.to_owned()),
         readings: vec![reading],
     };
-    let found = guesses(l.iso(), seed, &l.view(seed), &query, PLAIN, LIMIT, &SCORE);
+    let found = guesses(
+        l.iso(),
+        seed,
+        &l.view(seed),
+        &query,
+        TypingMode::default(),
+        LIMIT,
+        &SCORE,
+    );
     found.iter().map(|g| g.text.expose().clone()).collect()
 }
 

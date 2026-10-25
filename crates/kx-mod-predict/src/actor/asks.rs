@@ -7,9 +7,13 @@ use crate::settings::{LEARN_KEY, ON_KEY};
 use kx_module_api::ports::WordsAsk;
 
 impl Actor {
-    /// Does what the tap asks; true, as the lane changes.
+    /// Does what the tap asks; true when the lane changes, false for `Again`, which tells the last lane as it was.
     pub(super) fn ask(&mut self, seed: Option<&Pack<'_>>, ask: WordsAsk) -> bool {
         match ask {
+            WordsAsk::Again => {
+                self.again();
+                return false;
+            }
             WordsAsk::Forget => self.menu.forget(),
             WordsAsk::Cancel => self.menu.cancel(),
             WordsAsk::Pause(paused) => {
@@ -25,7 +29,6 @@ impl Actor {
             }
             WordsAsk::Page { page, rows } => self.menu.turn(page, rows, self.emails.list().len()),
             WordsAsk::ListPick(row) => self.list_pick(seed, row),
-            WordsAsk::Again => {}
         }
         true
     }

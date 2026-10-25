@@ -1,4 +1,4 @@
-//! Parsing of `cargo xtask words fetch|list|build`.
+//! Parsing of `cargo xtask words fetch|list|build|index`.
 
 use super::{UsageError, is_path};
 
@@ -12,6 +12,10 @@ const BUILD: &str = "build";
 const FLAG_SRC: &str = "--src";
 /// Flag naming the folder the packs go to, instead of the manifest's.
 const FLAG_OUT: &str = "--out";
+/// Rewrites the pack index from the packs in a folder.
+const INDEX: &str = "index";
+/// Flag naming the packs folder, instead of the manifest's.
+const FLAG_PACKS: &str = "--packs";
 
 /// What `cargo xtask words` does.
 #[derive(Debug, PartialEq, Eq)]
@@ -35,14 +39,20 @@ pub(crate) enum WordsAction {
         /// The folder the packs go to.
         out: Option<String>,
     },
+    /// Rewrite the pack index from the packs in `packs`, or the manifest's folder.
+    Index {
+        /// The packs folder.
+        packs: Option<String>,
+    },
 }
 
 /// The usage forms of the `words` subcommand, named `sub`.
-pub(super) fn forms(sub: &str) -> [String; 3] {
+pub(super) fn forms(sub: &str) -> [String; 4] {
     [
         format!("{sub} {FETCH} {FLAG_SRC} <dir>"),
         format!("{sub} {LIST} <iso> {FLAG_SRC} <dir>"),
         format!("{sub} {BUILD} {FLAG_SRC} <dir> [{FLAG_OUT} <dir>]"),
+        format!("{sub} {INDEX} [{FLAG_PACKS} <dir>]"),
     ]
 }
 
@@ -69,6 +79,12 @@ pub(super) fn parse(args: &[String]) -> Result<WordsAction, UsageError> {
             Ok(WordsAction::Build {
                 src: src.clone(),
                 out,
+            })
+        }
+        [action] if action == INDEX => Ok(WordsAction::Index { packs: None }),
+        [action, flag, packs] if action == INDEX && flag == FLAG_PACKS && is_path(packs) => {
+            Ok(WordsAction::Index {
+                packs: Some(packs.clone()),
             })
         }
         _ => Err(UsageError),
@@ -134,8 +150,26 @@ mod tests {
             &["words", "build", "--src", "w", "--out", "--src"],
             &["words", "build", "--src", "w", "--src", "o"],
             &["words", "build", "--src", "w", "o"],
+            &["words", "index", "--packs"],
+            &["words", "index", "--src", "w"],
+            &["words", "index", "--packs", "--packs"],
+            &["words", "index", "--packs", "p", "x"],
         ] {
             assert_eq!(parse_all(&args(bad)), Err(UsageError), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn index_parses_with_an_optional_packs_folder() {
+        assert_eq!(
+            parse_all(&args(&["words", "index"])),
+            Ok(Command::Words(WordsAction::Index { packs: None }))
+        );
+        assert_eq!(
+            parse_all(&args(&["words", "index", "--packs", "p"])),
+            Ok(Command::Words(WordsAction::Index {
+                packs: Some("p".into())
+            }))
+        );
     }
 }

@@ -11,9 +11,10 @@ pub(crate) struct List {
 }
 
 impl List {
-    /// The place in the whole list of `row` on the shown page.
-    pub(crate) fn at(self, row: u8) -> usize {
-        usize::from(self.page) * usize::from(self.rows) + usize::from(row)
+    /// The place in the whole list of `row` on the shown page; `None` for a row past the page, which no tap can reach.
+    pub(crate) fn at(self, row: u8) -> Option<usize> {
+        (row < self.rows)
+            .then(|| usize::from(self.page) * usize::from(self.rows) + usize::from(row))
     }
 }
 

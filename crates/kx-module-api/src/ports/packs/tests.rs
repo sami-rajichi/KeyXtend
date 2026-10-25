@@ -74,3 +74,8 @@ proptest! {
         }
     }
 }
+
+#[test]
+fn the_index_is_named_apart_from_every_pack() {
+    assert!(!PACK_INDEX.ends_with(PACK_EXT));
+}
