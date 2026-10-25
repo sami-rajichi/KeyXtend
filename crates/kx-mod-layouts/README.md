@@ -8,8 +8,8 @@ The layouts module: it reads the keyboard layouts installed in the OS and provid
 |---|---|---|
 | `LayoutSource` (`LayoutSourceKey`) | Requires | The installed layouts, the layout of the app in front, what each key types, the language facts, and the switch request. |
 | `Layouts` (`LayoutsKey`) | Provides | `current`, `list`, `refresh`, `step` and `pick`, below. |
-| `LayoutChanged` (event) | Publishes | The keyboard now shows another installed layout, with its language code and direction; sent by `refresh` and `tell`, never by start-up. |
-| `LayoutAsk` (event) | Hears | A module that started late asks for the shown layout; `tell` sends it again, or nothing while none is installed. |
+| `LayoutChanged` (event) | Publishes | The keyboard now shows another installed layout, with its language code and direction; sent once at start, then by `refresh` and `tell`. |
+| `LayoutAsk` (event) | Hears | A module that started later asks for the shown layout; `tell` sends it again, or nothing while none is installed. With the start's own `LayoutChanged`, any start order works. |
 
 ## How it behaves
 

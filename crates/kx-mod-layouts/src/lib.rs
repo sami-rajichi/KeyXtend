@@ -40,6 +40,8 @@ impl Module for LayoutsModule {
         let service = Arc::new(LayoutsService::new(source, settings, scans, cx.bus()));
         let teller = Arc::clone(&service);
         cx.subscribe(move |_: &LayoutAsk| teller.tell())?;
+        // Told once now for modules already listening; a later one asks with `LayoutAsk`, so any start order works.
+        service.tell();
         let service: Arc<dyn Layouts> = service;
         cx.provide::<LayoutsKey>(service)?;
         Ok(())

@@ -1,4 +1,5 @@
-//! Each change tells the language in front, and an ask tells the shown layout again, for a module that started late.
+//! The start tells the shown layout once, each change tells the language in front, and an ask tells it again, so any
+//! module start order works.
 
 #![allow(
     clippy::unwrap_used,
@@ -47,27 +48,33 @@ fn tell_says_the_shown_layout_again_and_nothing_with_none_installed() {
 }
 
 #[test]
-fn an_ask_on_the_bus_tells_the_shown_layout() {
+fn the_start_tells_the_shown_layout_once_and_an_ask_tells_it_again() {
     let mut host = FakeHost::new(&MANIFEST);
     host.granted = MANIFEST.capabilities.to_vec();
     let source: Arc<dyn LayoutSource> = source();
     let stored: Stored = (LayoutSourceKey::CAPABILITY, Box::new(source));
     host.services.insert(LayoutSourceKey::ID, stored);
-    LayoutsModule.start(&mut ModuleCx::new(&mut host)).unwrap();
     let bus = Bus::new(Arc::clone(&host.core));
     let heard = Arc::new(Mutex::new(Vec::new()));
     let keep = Arc::clone(&heard);
     let _ear = bus
-        .subscribe(move |e: &LayoutChanged| keep.lock().unwrap().push(e.id))
+        .subscribe(move |e: &LayoutChanged| keep.lock().unwrap().push(e.clone()))
         .unwrap();
-    assert!(heard.lock().unwrap().is_empty(), "a start tells nothing");
+    LayoutsModule.start(&mut ModuleCx::new(&mut host)).unwrap();
+    let english = LayoutChanged {
+        id: ids()[0],
+        iso: "en".into(),
+        rtl: false,
+    };
+    let told = || heard.lock().unwrap().clone();
+    assert_eq!(
+        told(),
+        std::slice::from_ref(&english),
+        "a start tells it once"
+    );
     bus.publish(&LayoutAsk).unwrap();
-    assert_eq!(*heard.lock().unwrap(), [ids()[0]]);
+    assert_eq!(told(), [english.clone(), english], "an ask tells it again");
     host.held.clear();
     bus.publish(&LayoutAsk).unwrap();
-    assert_eq!(
-        heard.lock().unwrap().len(),
-        1,
-        "a stopped module hears none"
-    );
+    assert_eq!(told().len(), 2, "a stopped module hears none");
 }
