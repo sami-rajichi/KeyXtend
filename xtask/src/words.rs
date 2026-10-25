@@ -157,6 +157,11 @@ pub(crate) fn shipped() -> Result<(String, Vec<String>), WordsError> {
     Ok((manifest.text.out, vec![c.file, c.authors, c.licence]))
 }
 
+/// The deflate level every download budget is measured at (`[packs] level`), the stage's as well as the packs'.
+pub(crate) fn download_level() -> Result<u32, WordsError> {
+    Ok(Manifest::parse(MANIFEST)?.packs.level)
+}
+
 /// The packs folder: `given`, else the manifest's folder under the workspace root that `json` names.
 fn packs_dir(manifest: &Manifest, json: &str, given: Option<&str>) -> Result<PathBuf, WordsError> {
     match given {

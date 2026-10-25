@@ -161,7 +161,8 @@ fn the_stage_check_leaves_the_packs_folder_alone_but_not_the_rest() {
     let stage = stage("words-stage");
     let config = stage_config();
     std::fs::write(stage.path().join(config.program()), "app").unwrap();
-    let run = |s: &Path| check::check(s, &config, |_| Ok(Vec::new()), |_| true);
+    let level = crate::words::download_level().unwrap();
+    let run = |s: &Path| check::check(s, &config, level, |_| Ok(Vec::new()), |_| true);
     assert!(run(stage.path()).is_ok());
     std::fs::write(stage.path().join("extra.txt"), "x").unwrap();
     let extra = StageError::Unplanned("extra.txt".to_string());

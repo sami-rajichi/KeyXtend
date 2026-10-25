@@ -19,6 +19,11 @@ pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
 /// Bytes in one KB, counted the same way: 10³.
 pub(crate) const BYTES_PER_KB: u64 = 1_000;
 
+/// `bytes` in MB of `BYTES_PER_MB`, rounded up, as every size limit counts them.
+pub(crate) fn mb(bytes: u64) -> u64 {
+    bytes.div_ceil(BYTES_PER_MB)
+}
+
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {
     path.to_string_lossy().into_owned()

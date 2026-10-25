@@ -36,7 +36,7 @@ KeyXtend is in early development; this is what it is being built to do.
   - Voice typing runs free on your PC.
   - Clipboard history, the vault, learned words and transcripts are encrypted.
   - No telemetry; nothing leaves the PC unless you turn that feature on.
-- **Light.** Targets: a download of 80 MB or less (without voice models), 80 MB of memory or less when idle, and near-zero CPU while idle.
+- **Light.** Targets: a download of 80 MB or less (without voice models; measured deflated, a conservative stand-in for the installer's LZMA2), 80 MB of memory or less when idle, and near-zero CPU while idle.
 
 ## Features (v1.0, Windows)
 

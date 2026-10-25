@@ -1,21 +1,13 @@
 //! The download budget: every file `words build` writes is measured deflated, as a zip, MSIX or MSI carries it, and
 //! a build over `[packs] download_kb` is refused.
 
-use std::io::Write;
-
-use flate2::Compression;
-use flate2::write::DeflateEncoder;
-
 use super::WordsError;
 use super::manifest::Packs;
 use crate::devtools::paths::BYTES_PER_KB;
 
-/// The bytes of `bytes` deflated at `level`.
+/// The bytes of `bytes` deflated at `level`, by the measure the stage's budget shares (`crate::deflate`).
 pub(crate) fn deflated(bytes: &[u8], level: u32) -> Result<usize, WordsError> {
-    let mut encoder = DeflateEncoder::new(Vec::new(), Compression::new(level));
-    let failed = |e: std::io::Error| WordsError::Io(format!("deflate: {e}"));
-    encoder.write_all(bytes).map_err(failed)?;
-    Ok(encoder.finish().map_err(failed)?.len())
+    crate::deflate::deflated(bytes, level).map_err(|e| WordsError::Io(format!("deflate: {e}")))
 }
 
 /// The line that totals the files' raw and deflated `sizes`, or the refusal when the deflated total passes the budget.

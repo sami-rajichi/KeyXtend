@@ -19,7 +19,7 @@ use kx_module_api::ports::PACK_DIR;
 use self::qt::QtDirs;
 use self::words::Words;
 use super::config::DevSetup;
-use super::{DevError, paths};
+use super::{DevError, install, paths};
 use crate::workspace::{self, LoadError};
 
 /// The section name under `workspace.metadata`.
@@ -110,8 +110,8 @@ fn discard(stage: &Path, err: DevError) -> DevError {
     }
 }
 
-/// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder, then the words
-/// check on its packs folder.
+/// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder and measuring the
+/// download at the words build's level, then holds its installed size to the install's limit and checks its packs.
 pub(crate) fn verify(
     setup: &DevSetup,
     config: &StageConfig,
@@ -119,9 +119,16 @@ pub(crate) fn verify(
     env: impl Fn(&str) -> Option<String>,
 ) -> Result<check::Summary, DevError> {
     let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
-    let summary = check::check(folder, config, pe::read, |lib| system.join(lib).is_file())?;
+    let in_system = |lib: &str| system.join(lib).is_file();
+    let summary = check::check(folder, config, level()?, pe::read, in_system)?;
+    install::fits(summary.bytes, setup.config.install_max_mb)?;
     words::check(folder, &Words::load(&setup.root)?.credits)?;
     Ok(summary)
+}
+
+/// The deflate level every download budget is measured at, from the words manifest.
+fn level() -> Result<u32, DevError> {
+    crate::words::download_level().map_err(|e| DevError::Config(e.to_string()))
 }
 
 /// Loads and validates the stage settings from `cargo metadata` JSON.
@@ -168,16 +175,19 @@ pub(crate) fn run() -> Result<(), DevError> {
     files.extend(words);
     let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);
-    let packs = paths::folder_size(&stage.join(PACK_DIR))?;
-    println!("Word packs: {} MB of it.", check::mb(packs));
+    let packs = stage.join(PACK_DIR);
+    let packs = check::measure(&packs, &paths::files(&packs)?, level()?)?;
+    let (deflated, raw) = (packs.mb(), packs.raw_mb());
+    println!("Word packs: {deflated} MB deflated of it, {raw} MB installed.");
     Ok(())
 }
 
-/// Prints where the stage is, its files and its size against the cap.
+/// Prints where the stage is, its files, and its download against the budget beside its installed size.
 fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check::Summary) {
     let rel = stage.strip_prefix(&setup.root).unwrap_or(stage);
     println!("Staged {}: {} files.", paths::text(rel), summary.files);
-    println!("Size: {} MB of {} MB.", summary.mb(), config.max_mb);
+    let (mb, max, raw) = (summary.mb(), config.max_mb, summary.raw_mb());
+    println!("Download: {mb} MB deflated of the {max} MB budget; {raw} MB installed.");
 }
 
 #[cfg(test)]

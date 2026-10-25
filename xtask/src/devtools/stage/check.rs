@@ -1,6 +1,7 @@
 //! The stage check: no banned plugin, no gate-only build, every import found in the stage or the system folder, the
 //! network library imported only by the listed Qt libraries, no library that nothing imports, no file off the list,
-//! and the size cap. The packs folder is the words check's (`words::check`).
+//! and the download budget: the files deflated, a conservative stand-in for the installer's LZMA2, within `max_mb`.
+//! The packs folder is the words check's (`words::check`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -16,26 +17,30 @@ pub(super) const LIB_EXT: &str = "dll";
 pub(crate) struct Summary {
     /// Files in the stage.
     pub files: usize,
-    /// Their total size in bytes.
+    /// Their total size in bytes, as installed.
     pub bytes: u64,
+    /// Their total size deflated, as the download carries them.
+    pub deflated: u64,
 }
 
 impl Summary {
-    /// The size in MB, rounded up.
+    /// The download size in MB, rounded up: the figure the budget counts.
     pub(crate) fn mb(&self) -> u64 {
-        mb(self.bytes)
+        paths::mb(self.deflated)
+    }
+
+    /// The installed size in MB, rounded up.
+    pub(crate) fn raw_mb(&self) -> u64 {
+        paths::mb(self.bytes)
     }
 }
 
-/// `bytes` in MB, rounded up.
-pub(crate) fn mb(bytes: u64) -> u64 {
-    bytes.div_ceil(paths::BYTES_PER_MB)
-}
-
-/// Checks `stage`; `read` gives a file's imported library names and `in_system` says whether Windows has a library.
+/// Checks `stage`, measuring its download deflated at `level`; `read` gives a file's imported library names and
+/// `in_system` says whether Windows has a library.
 pub(crate) fn check(
     stage: &Path,
     config: &StageConfig,
+    level: u32,
     read: impl Fn(&Path) -> Result<Vec<String>, DevError>,
     in_system: impl Fn(&str) -> bool,
 ) -> Result<Summary, DevError> {
@@ -58,18 +63,30 @@ pub(crate) fn check(
         return Err(StageError::Unused(paths::text(unused.1)).into());
     }
     refuse_unplanned(&files, &planned(config))?;
-    let bytes = paths::folder_size(stage)?;
-    let summary = Summary {
-        files: files.len(),
-        bytes,
-    };
+    let summary = measure(stage, &files, level)?;
     if summary.mb() > config.max_mb {
-        return Err(DevError::TooBig {
-            mb: summary.mb(),
-            max: config.max_mb,
-        });
+        let (mb, max) = (summary.mb(), config.max_mb);
+        return Err(StageError::OverBudget { mb, max }.into());
     }
     Ok(summary)
+}
+
+/// The count, installed bytes and deflated bytes of the stage-relative `files` in `stage`, each deflated at `level`.
+pub(crate) fn measure(stage: &Path, files: &[PathBuf], level: u32) -> Result<Summary, DevError> {
+    let (mut bytes, mut deflated) = (0, 0);
+    for file in files {
+        let path = stage.join(file);
+        let read = std::fs::read(&path)
+            .map_err(|e| DevError::Io(format!("{}: {e}", paths::text(&path))))?;
+        bytes += read.len();
+        deflated += crate::deflate::deflated(&read, level)?;
+    }
+    let total = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
+    Ok(Summary {
+        files: files.len(),
+        bytes: total(bytes),
+        deflated: total(deflated),
+    })
 }
 
 /// Fails on the first file with a `banned` folder anywhere in its path, in any letter case.

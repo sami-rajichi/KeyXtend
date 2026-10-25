@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+mod budget;
 mod gate;
 mod listed;
 
@@ -12,6 +13,11 @@ use crate::test_support::{TempDir, make_dir_link, stage_config};
 const SYSTEM: [&str; 2] = ["kernel32.dll", "vcruntime140.dll"];
 /// The app's program in the fake stages.
 const PROGRAM: &str = "keyxtend.exe";
+
+/// The deflate level the stage's download is measured at, from the words manifest.
+fn level() -> u32 {
+    crate::words::download_level().unwrap()
+}
 
 /// The test settings, with the app named so its program is [`PROGRAM`] on every system.
 fn settings() -> StageConfig {
@@ -51,7 +57,8 @@ impl Fake {
     /// The stage check over this folder, with `config`.
     fn check_with(&self, config: &StageConfig) -> Result<Summary, DevError> {
         let in_system = |lib: &str| SYSTEM.contains(&lib.to_lowercase().as_str());
-        check(self.dir.path(), config, |p| Ok(self.read(p)), in_system)
+        let read = |p: &Path| Ok(self.read(p));
+        check(self.dir.path(), config, level(), read, in_system)
     }
 
     /// The stage check over this folder, with the test settings.
@@ -130,7 +137,8 @@ fn a_network_library_only_the_listed_libraries_import_passes() {
             &["VCRUNTIME140.dll", "api-ms-win-crt-heap-l1-1-0.dll"],
         ),
     ]);
-    assert_eq!(stage.check(), Ok(Summary { files: 5, bytes: 0 }));
+    let summary = stage.check().unwrap();
+    assert_eq!((summary.files, summary.bytes), (5, 0));
 }
 
 #[test]
@@ -175,12 +183,8 @@ fn an_import_found_nowhere_is_refused() {
 fn an_import_with_a_folder_never_resolves() {
     for lib in ["../kernel32.dll", "sub\\kernel32.dll", "C:kernel32.dll"] {
         let stage = Fake::new(&[(PROGRAM, &[lib])]);
-        let found = check(
-            stage.dir.path(),
-            &settings(),
-            |p| Ok(stage.read(p)),
-            |_| true,
-        );
+        let read = |p: &Path| Ok(stage.read(p));
+        let found = check(stage.dir.path(), &settings(), level(), read, |_| true);
         assert!(
             matches!(refusal(found), Some(StageError::Unresolved { .. })),
             "{lib} resolved"
@@ -247,7 +251,7 @@ fn a_stage_without_the_program_is_refused() {
 fn a_file_that_is_not_a_program_fails_the_check() {
     let stage = Fake::new(&[(PROGRAM, &[])]);
     let read = |p: &Path| Err(DevError::Stage(StageError::BadPe(paths::text(p))));
-    let result = check(stage.dir.path(), &settings(), read, |_| true);
+    let result = check(stage.dir.path(), &settings(), level(), read, |_| true);
     assert!(matches!(refusal(result), Some(StageError::BadPe(_))));
 }
 
@@ -257,41 +261,4 @@ fn a_link_in_the_stage_is_refused() {
     let outside = TempDir::new("stage-outside");
     make_dir_link(&stage.dir.path().join("plugins"), outside.path());
     assert!(matches!(stage.check(), Err(DevError::Link(_))));
-}
-
-#[test]
-fn a_stage_over_the_cap_is_refused() {
-    let stage = Fake::new(&[(PROGRAM, &[])]);
-    let size = usize::try_from(paths::BYTES_PER_MB).unwrap() + 1;
-    std::fs::write(stage.dir.path().join(PROGRAM), vec![0u8; size]).unwrap();
-    let mut config = settings();
-    config.max_mb = 1;
-    assert_eq!(
-        stage.check_with(&config),
-        Err(DevError::TooBig { mb: 2, max: 1 })
-    );
-    config.max_mb = 2;
-    assert!(stage.check_with(&config).is_ok());
-}
-
-#[test]
-fn the_summary_counts_files_and_bytes() {
-    let stage = Fake::new(&[(PROGRAM, &[]), ("qml/QtQuick/qmldir", &[])]);
-    std::fs::write(stage.dir.path().join(PROGRAM), [0u8; 7]).unwrap();
-    assert_eq!(stage.check(), Ok(Summary { files: 2, bytes: 7 }));
-}
-
-#[test]
-fn a_megabyte_is_a_million_bytes_as_spec_10_and_g8_count() {
-    let mb = |bytes| Summary { files: 1, bytes }.mb();
-    assert_eq!((mb(1_000_000), mb(1_000_001)), (1, 2));
-}
-
-#[test]
-fn the_summary_rounds_megabytes_up() {
-    let summary = Summary {
-        files: 1,
-        bytes: paths::BYTES_PER_MB + 1,
-    };
-    assert_eq!(summary.mb(), 2);
 }

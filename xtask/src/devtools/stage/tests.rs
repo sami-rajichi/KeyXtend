@@ -257,14 +257,21 @@ fn fill_case(label: &str) -> (TempDir, PathBuf, [Copy; 1]) {
     (dir, stage, files)
 }
 
+/// A summary of `files` files of `bytes` bytes each way.
+fn summary(files: usize, bytes: u64) -> check::Summary {
+    let deflated = bytes;
+    check::Summary {
+        files,
+        bytes,
+        deflated,
+    }
+}
+
 #[test]
 fn a_passing_stage_stays() {
     let (_dir, stage, files) = fill_case("fill-pass");
-    let summary = check::Summary { files: 1, bytes: 3 };
-    let done = fill(&stage, &files, |_| {
-        Ok(check::Summary { files: 1, bytes: 3 })
-    });
-    assert_eq!(done, Ok(summary));
+    let done = fill(&stage, &files, |_| Ok(summary(1, 3)));
+    assert_eq!(done, Ok(summary(1, 3)));
     assert!(stage.join("a.dll").is_file());
 }
 
@@ -286,10 +293,7 @@ fn a_failed_copy_leaves_no_stage() {
         from,
         to: PathBuf::from("missing.dll"),
     }];
-    let err = fill(&stage, &files, |_| {
-        Ok(check::Summary { files: 0, bytes: 0 })
-    })
-    .unwrap_err();
+    let err = fill(&stage, &files, |_| Ok(summary(0, 0))).unwrap_err();
     assert!(matches!(err, DevError::StageRemoved(_)), "{err}");
     assert!(!stage.exists());
 }

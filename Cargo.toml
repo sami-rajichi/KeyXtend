@@ -180,7 +180,9 @@ profile_env = "USERPROFILE"
 app = "keyxtend"
 # Folder, under the workspace root, holding the stage; the app's own folder in it is emptied first.
 out_dir = "target/stage"
-# Largest stage, in MB of 10⁶ bytes: the download budget (ADR-0012). G8's `size_mb` must match; a kx-gates test checks.
+# The download budget (ADR-0012), in MB of 10⁶ bytes: the staged files deflated at words.toml's `[packs] level`, a
+# conservative stand-in for the installer's LZMA2; the installed size answers to `install_max_mb`. G8's `size_mb` must
+# match; a kx-gates test checks.
 max_mb = 80
 # Env var naming Qt's qmake; Qt's folders come from `qmake -query`, so the stage takes the Qt the app was built with.
 qmake_env = "QMAKE"
@@ -222,4 +224,8 @@ out_dir = "target/sounds"
 opt-level = 3
 
 [profile.dev.package.spellbook]
+opt-level = 3
+
+# The stage deflates every staged file to measure the download, about 95 MB, so the deflater runs optimised too.
+[profile.dev.package.miniz_oxide]
 opt-level = 3

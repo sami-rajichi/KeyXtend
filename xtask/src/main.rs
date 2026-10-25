@@ -7,6 +7,7 @@ mod cargo;
 mod cli;
 mod config;
 mod dco;
+mod deflate;
 mod devtools;
 mod dist;
 mod licences;
