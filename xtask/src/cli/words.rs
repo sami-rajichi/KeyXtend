@@ -1,6 +1,10 @@
-//! Parsing of `cargo xtask words fetch|list|build|index`.
+//! Parsing of `cargo xtask words fetch|list|build|index|meter`.
+
+mod meter;
 
 use super::{UsageError, is_path};
+
+pub(crate) use self::meter::MeterArgs;
 
 /// Checks every source file, downloading the missing ones.
 const FETCH: &str = "fetch";
@@ -16,6 +20,8 @@ const FLAG_OUT: &str = "--out";
 const INDEX: &str = "index";
 /// Flag naming the packs folder, instead of the manifest's.
 const FLAG_PACKS: &str = "--packs";
+/// Types the held-back sentences with and without chips, or times the scorer.
+const METER: &str = "meter";
 
 /// What `cargo xtask words` does.
 #[derive(Debug, PartialEq, Eq)]
@@ -44,15 +50,18 @@ pub(crate) enum WordsAction {
         /// The packs folder.
         packs: Option<String>,
     },
+    /// Count the presses the chips save on the held-back sentences, or time the scorer.
+    Meter(MeterArgs),
 }
 
 /// The usage forms of the `words` subcommand, named `sub`.
-pub(super) fn forms(sub: &str) -> [String; 4] {
+pub(super) fn forms(sub: &str) -> [String; 5] {
     [
         format!("{sub} {FETCH} {FLAG_SRC} <dir>"),
         format!("{sub} {LIST} <iso> {FLAG_SRC} <dir>"),
         format!("{sub} {BUILD} {FLAG_SRC} <dir> [{FLAG_OUT} <dir>]"),
         format!("{sub} {INDEX} [{FLAG_PACKS} <dir>]"),
+        meter::form(&format!("{sub} {METER}")),
     ]
 }
 
@@ -87,6 +96,7 @@ pub(super) fn parse(args: &[String]) -> Result<WordsAction, UsageError> {
                 packs: Some(packs.clone()),
             })
         }
+        [action, rest @ ..] if action == METER => meter::parse(rest).map(WordsAction::Meter),
         _ => Err(UsageError),
     }
 }

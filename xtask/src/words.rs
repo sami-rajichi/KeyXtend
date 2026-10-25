@@ -19,6 +19,7 @@ mod judge;
 mod list;
 mod manifest;
 mod merge;
+mod meter;
 mod out;
 mod read;
 mod report;
@@ -33,6 +34,8 @@ mod wordfreq;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
+
+pub(crate) use self::meter::Opts as MeterOpts;
 
 use self::cands::Candidates;
 use self::dict::Dict;
@@ -64,6 +67,8 @@ pub(crate) enum WordsError {
     Pack(String),
     /// The workspace could not be found.
     Workspace(String),
+    /// The meter could not run, or a gate language saved too little.
+    Meter(String),
 }
 
 impl fmt::Display for WordsError {
@@ -78,6 +83,7 @@ impl fmt::Display for WordsError {
             Self::Bad(files) => write!(f, "these files failed their check: {}", files.join("; ")),
             Self::Pack(why) => write!(f, "pack: {why}"),
             Self::Workspace(why) => write!(f, "workspace: {why}"),
+            Self::Meter(why) => write!(f, "meter: {why}"),
         }
     }
 }
@@ -126,6 +132,21 @@ pub(crate) fn index(packs: Option<&str>) -> Result<(), WordsError> {
     let json = workspace::metadata_json().map_err(|e| lost(&e))?;
     let dir = packs_dir(&manifest, &json, packs)?;
     index::run(&dir, &mut |line| println!("{line}"))
+}
+
+/// Runs `cargo xtask words meter`: counts the presses the chips save on the held-back sentences, or times the scorer,
+/// over the manifest's packs and the build's held folder unless `opts` names others.
+pub(crate) fn meter(opts: &MeterOpts<'_>) -> Result<(), WordsError> {
+    let manifest = Manifest::parse(MANIFEST)?;
+    let json = workspace::metadata_json().map_err(|e| lost(&e))?;
+    let target = workspace::target_dir(&json).map_err(|e| lost(&e))?;
+    let held = (opts.held).map_or_else(|| join_rel(target, &manifest.text.held), PathBuf::from);
+    let paths = meter::Paths {
+        packs: packs_dir(&manifest, &json, opts.packs)?,
+        held,
+    };
+    let mut say = |line: &str| println!("{line}");
+    meter::run(&manifest.meter, opts, &paths, &mut say)
 }
 
 /// The packs folder: `given`, else the manifest's folder under the workspace root that `json` names.

@@ -5,6 +5,8 @@ use serde::Deserialize;
 
 /// A share per mille is out of this many.
 pub(crate) const PER_MILLE: u64 = 1_000;
+/// A share in percent is out of this many.
+pub(crate) const PERCENT: u32 = 100;
 
 /// How text is read and counted: the `[text]` table.
 #[derive(Debug, Deserialize)]
@@ -48,6 +50,26 @@ pub(crate) struct Packs {
     pub(crate) download_kb: u64,
     /// The deflate level the download size is measured at.
     pub(crate) level: u32,
+}
+
+/// The meter's rules: the `[meter]` table.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct MeterRules {
+    /// The languages that must save `min_saved_pct` of the presses with the seed alone.
+    pub(crate) gate: Vec<String>,
+    /// The least share of presses, in percent, a gate language must save.
+    pub(crate) min_saved_pct: u32,
+    /// The most held-back sentences typed per language.
+    pub(crate) max_sentences: usize,
+    /// The percentiles of the time per guess that are printed, lowest first.
+    pub(crate) percentiles: Vec<u32>,
+    /// The longest the highest percentile of a `--speed` query kind may take, in microseconds.
+    pub(crate) ceiling_us: u64,
+    /// The words `--speed` learns to fill its learner.
+    pub(crate) speed_learns: usize,
+    /// The queries `--speed` times of each kind.
+    pub(crate) speed_samples: usize,
 }
 
 /// One language's text: `[lang.<iso>.text]`.

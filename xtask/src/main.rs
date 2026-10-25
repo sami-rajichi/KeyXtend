@@ -91,6 +91,13 @@ fn run_words(action: &cli::WordsAction) -> Result<(), words::WordsError> {
         cli::WordsAction::List { iso, src } => words::list(iso, src),
         cli::WordsAction::Build { src, out } => words::build(src, out.as_deref()),
         cli::WordsAction::Index { packs } => words::index(packs.as_deref()),
+        cli::WordsAction::Meter(args) => words::meter(&words::MeterOpts {
+            packs: args.packs.as_deref(),
+            held: args.held.as_deref(),
+            chips: args.chips,
+            lang: args.lang.as_deref(),
+            speed: args.speed,
+        }),
     }
 }
 

@@ -5,12 +5,14 @@ use std::collections::BTreeMap;
 
 use flate2::Compression;
 use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
+use kx_module_api::ports::fits_iso;
 
 use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
-use super::text::PER_MILLE;
+use super::text::{PER_MILLE, PERCENT};
 use super::{
-    Credits, FetchConfig, HASH_HEX, LangText, Packs, Rules, Section, Source, TextRules, bad,
+    Credits, FetchConfig, HASH_HEX, LangText, MeterRules, Packs, Rules, Section, Source, TextRules,
+    bad,
 };
 use crate::devtools::paths::{is_plain_name, is_relative_plain};
 
@@ -68,6 +70,29 @@ pub(super) fn text(text: &TextRules) -> Result<(), WordsError> {
     ];
     match checks.iter().find(|(_, ok)| !ok) {
         Some((name, _)) => Err(bad(&format!("[text] {name} is out of its range"))),
+        None => Ok(()),
+    }
+}
+
+/// Refuses a gate code no pack could carry, a share past a whole, a zero cap, and percentiles that are not rising
+/// within a whole.
+pub(super) fn meter(meter: &MeterRules) -> Result<(), WordsError> {
+    let rising = (meter.percentiles.windows(2)).all(|w| matches!(w, [a, b] if a < b));
+    let within = |p: &u32| (1..=PERCENT).contains(p);
+    let checks = [
+        ("gate", meter.gate.iter().all(|iso| fits_iso(iso))),
+        ("min_saved_pct", meter.min_saved_pct <= PERCENT),
+        ("max_sentences", meter.max_sentences > 0),
+        (
+            "percentiles",
+            !meter.percentiles.is_empty() && rising && meter.percentiles.iter().all(within),
+        ),
+        ("ceiling_us", meter.ceiling_us > 0),
+        ("speed_learns", meter.speed_learns > 0),
+        ("speed_samples", meter.speed_samples > 0),
+    ];
+    match checks.iter().find(|(_, ok)| !ok) {
+        Some((name, _)) => Err(bad(&format!("[meter] {name} is out of its range"))),
         None => Ok(()),
     }
 }

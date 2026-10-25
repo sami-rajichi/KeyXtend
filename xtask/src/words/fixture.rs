@@ -76,7 +76,8 @@ pub(crate) fn manifest_with(sources: &str) -> Result<Manifest, super::WordsError
     Manifest::parse(&manifest_text(sources))
 }
 
-/// The `[text]`, `[packs]` and `[credits]` tables of the fixture manifest; the credits read the fixture's French files.
+/// The `[text]`, `[packs]`, `[meter]` and `[credits]` tables of the fixture manifest; the credits read the fixture's
+/// French files.
 pub(crate) const TEXT: &str = r#"[text]
 sentence_ends = [".", "?"]
 min_chain = 2
@@ -96,6 +97,15 @@ out = "out"
 [packs]
 download_kb = 1000
 level = 6
+
+[meter]
+gate = ["en"]
+min_saved_pct = 40
+max_sentences = 2
+percentiles = [50, 99]
+ceiling_us = 10000
+speed_learns = 10
+speed_samples = 2
 
 [credits]
 file = "CREDITS.txt"

@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use kx_mod_predict::split::Splitter;
 
@@ -74,6 +74,11 @@ pub(crate) fn text(
     Ok(read)
 }
 
+/// The file in the held folder `dir` that holds `iso`'s held-back sentences, one per line.
+pub(crate) fn held_file(dir: &Path, iso: &str) -> PathBuf {
+    dir.join(format!("{iso}.{HELD_EXT}"))
+}
+
 /// Counts `iso`'s Tatoeba sentences, scaled, writing the held-back ones into the held folder.
 fn tatoeba_counted(
     manifest: &Manifest,
@@ -86,7 +91,7 @@ fn tatoeba_counted(
 ) -> Result<(), WordsError> {
     let t = &manifest.text;
     std::fs::create_dir_all(&paths.held).map_err(|e| io_error(&paths.held, &e))?;
-    let held_path = paths.held.join(format!("{iso}.{HELD_EXT}"));
+    let held_path = held_file(&paths.held, iso);
     let held_file = File::create(&held_path).map_err(|e| io_error(&held_path, &e))?;
     let mut held = BufWriter::new(held_file);
     let mut failed = None;

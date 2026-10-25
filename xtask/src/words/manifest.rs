@@ -12,7 +12,9 @@ use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
 
 pub(crate) use self::origin::Origin;
-pub(crate) use self::text::{Credits, LangText, PER_MILLE, Packs, Section, Tatoeba, TextRules};
+pub(crate) use self::text::{
+    Credits, LangText, MeterRules, PER_MILLE, PERCENT, Packs, Section, Tatoeba, TextRules,
+};
 
 use super::WordsError;
 
@@ -35,6 +37,8 @@ pub(crate) struct Manifest {
     pub(crate) credits: Credits,
     /// The packs' download budget.
     pub(crate) packs: Packs,
+    /// How the meter types the held-back sentences and judges the packs.
+    pub(crate) meter: MeterRules,
     /// The languages with only a small list.
     small: Small,
     /// The languages with a full list and a dictionary, by code.
@@ -176,6 +180,7 @@ impl Manifest {
         check::fetch(&manifest.fetch)?;
         check::text(&manifest.text)?;
         check::packs(&manifest.packs)?;
+        check::meter(&manifest.meter)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
         check::credits(&manifest.credits, &manifest.sources)?;

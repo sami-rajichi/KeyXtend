@@ -68,6 +68,21 @@ out = "assets/words"
 download_kb = 20480
 level = 6
 
+# The meter (`cargo xtask words meter`) types the held-back sentences with and without chips (spec §6 "Target").
+[meter]
+# These languages must save this share of the presses, in percent, with the seed alone; the others are reported only.
+gate = ["en", "fr"]
+min_saved_pct = 40
+# The most held-back sentences typed per language, so a run is bounded.
+max_sentences = 2000
+# The percentiles of the time per guess that each line prints.
+percentiles = [50, 99]
+# `--speed` fails when a query kind's highest percentile takes longer than this, in microseconds: the 10 ms ceiling.
+ceiling_us = 10000
+# `--speed` fills a learner past its caps with this many words, then times this many queries of each kind.
+speed_learns = 60000
+speed_samples = 1000
+
 # The files written beside the packs; every fixed sentence of `CREDITS.txt` is in `words-credits.txt`.
 [credits]
 file = "CREDITS.txt"
