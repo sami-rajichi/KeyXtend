@@ -1,0 +1,215 @@
+//! The learner's byte form, little-endian: a magic, a version, the language code, then the words, the chain tables
+//! and the blocklist, and nothing else. Task 12 seals it; reading checks every length against what is left.
+
+use std::str;
+
+use super::chains::Chains;
+use super::clean::{CLEAN_AT_TENTHS, TENTHS};
+use super::forget::{Blocked, Mark};
+use super::table::{Id, Word, Words};
+use super::{LearnConfig, LearnFormatError, Learner};
+use crate::pack::layout::{MAX_CHAIN, MIN_CHAIN};
+
+/// The first bytes of every learned file.
+pub const MAGIC: [u8; 4] = *b"KXL1";
+/// The format version this crate reads and writes.
+pub const VERSION: u16 = 1;
+/// The longest spelling, in UTF-8 bytes, as its length is one byte.
+pub(super) const MAX_TEXT: usize = u8::MAX as usize;
+/// The most chain tables a byte form holds: one per length from `MIN_CHAIN` to `MAX_CHAIN`.
+const MAX_TABLES: u8 = MAX_CHAIN - MIN_CHAIN + 1;
+/// The most `max_chains` a learner takes: at its peak, a table's length still fits the byte form's u32.
+pub const MAX_CHAINS: usize = u32::MAX as usize / CLEAN_AT_TENTHS * TENTHS;
+
+impl Learner {
+    /// The learner's byte form, which `from_bytes` reads back equal; every spelling fits `MAX_TEXT`.
+    #[must_use]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = MAGIC.to_vec();
+        out.extend(VERSION.to_le_bytes());
+        put_text(&mut out, &self.iso);
+        put_len(&mut out, self.words.len());
+        for (id, word) in self.words.iter() {
+            out.extend(id.to_le_bytes());
+            put_text(&mut out, &word.text);
+            put_use(&mut out, word.count, word.day);
+        }
+        out.push(u8::try_from(self.chains.len()).unwrap_or(MAX_TABLES));
+        for table in &self.chains {
+            put_len(&mut out, table.len());
+            for at in 0..table.len() {
+                let (key, count, day) = table.entry(at);
+                for id in key {
+                    out.extend(id.to_le_bytes());
+                }
+                put_use(&mut out, count, day);
+            }
+        }
+        put_len(&mut out, self.blocked.len());
+        for (text, mark) in self.blocked.iter() {
+            put_text(&mut out, text);
+            put_use(&mut out, mark.uses, mark.day);
+        }
+        out
+    }
+
+    /// The learner in `bytes`, with `cfg`: tables the settings do not keep are left out, and caps lowered since are
+    /// cleaned down to.
+    ///
+    /// # Errors
+    /// `LearnFormatError` says what is wrong when `bytes` is not a sound byte form of this version.
+    pub fn from_bytes(bytes: &[u8], cfg: LearnConfig) -> Result<Self, LearnFormatError> {
+        let mut r = Reader { bytes };
+        if r.array()? != MAGIC {
+            return Err(LearnFormatError::BadMagic);
+        }
+        let version = r.u16()?;
+        if version != VERSION {
+            return Err(LearnFormatError::BadVersion(version));
+        }
+        let iso = r.text().map_err(|e| match e {
+            LearnFormatError::Truncated => e,
+            _ => LearnFormatError::BadIso,
+        })?;
+        let mut learner = Self::new(iso, cfg)?;
+        learner.words = read_words(&mut r, &learner)?;
+        read_chains(&mut r, &mut learner)?;
+        learner.blocked = read_blocked(&mut r, &learner.words)?;
+        if !r.bytes.is_empty() {
+            return Err(LearnFormatError::BadEntry);
+        }
+        learner.clean();
+        Ok(learner)
+    }
+}
+
+/// The words, each under its id; `BadEntry` when two share an id or a spelling.
+fn read_words(r: &mut Reader<'_>, learner: &Learner) -> Result<Words, LearnFormatError> {
+    let mut words = Vec::new();
+    for _ in 0..r.u32()? {
+        let id = r.u16()?;
+        let text = r.text()?.into();
+        let (count, day) = r.counted()?;
+        words.push((id, Word { text, count, day }));
+    }
+    let (cap, casing) = (learner.cfg.max_words, learner.casing());
+    Words::load(cap, casing, words).ok_or(LearnFormatError::BadEntry)
+}
+
+/// The chain tables into `learner`, keeping those its settings hold; `BadEntry` for too many tables, or a chain
+/// out of order or naming a missing word.
+fn read_chains(r: &mut Reader<'_>, learner: &mut Learner) -> Result<(), LearnFormatError> {
+    let tables = r.u8()?;
+    if tables > MAX_TABLES {
+        return Err(LearnFormatError::BadEntry);
+    }
+    let widths = (MIN_CHAIN..).take(usize::from(tables)).map(usize::from);
+    for (at, width) in widths.enumerate() {
+        let mut table = Chains::new(width, learner.cfg.max_chains);
+        for _ in 0..r.u32()? {
+            let key = (0..width)
+                .map(|_| r.u16())
+                .collect::<Result<Vec<Id>, _>>()?;
+            let (count, day) = r.counted()?;
+            let known = key.iter().all(|&id| learner.words.get(id).is_some());
+            if !known || !table.push(&key, count, day) {
+                return Err(LearnFormatError::BadEntry);
+            }
+        }
+        if let Some(slot) = learner.chains.get_mut(at) {
+            *slot = table;
+        }
+    }
+    Ok(())
+}
+
+/// The blocklist; `BadEntry` when out of order, or for a word also in `words`.
+fn read_blocked(r: &mut Reader<'_>, words: &Words) -> Result<Blocked, LearnFormatError> {
+    let mut blocked = Blocked::default();
+    let mut last = None;
+    for _ in 0..r.u32()? {
+        let text = r.text()?;
+        let mark = Mark {
+            uses: r.u16()?,
+            day: r.u32()?,
+        };
+        if last.is_some_and(|l| l >= text) || words.find(text).is_some() {
+            return Err(LearnFormatError::BadEntry);
+        }
+        blocked.put(text.into(), mark);
+        last = Some(text);
+    }
+    Ok(blocked)
+}
+
+/// Appends `text` after its one-byte length.
+fn put_text(out: &mut Vec<u8>, text: &str) {
+    out.push(u8::try_from(text.len()).unwrap_or(u8::MAX));
+    out.extend(text.as_bytes());
+}
+
+/// Appends a count of entries; the caps keep it within a u32.
+fn put_len(out: &mut Vec<u8>, len: usize) {
+    out.extend(u32::try_from(len).unwrap_or(u32::MAX).to_le_bytes());
+}
+
+/// Appends an entry's count and last-used day.
+fn put_use(out: &mut Vec<u8>, count: u16, day: u32) {
+    out.extend(count.to_le_bytes());
+    out.extend(day.to_le_bytes());
+}
+
+/// Reads the byte form front to back; every read checks what is left.
+struct Reader<'b> {
+    /// The bytes not read yet.
+    bytes: &'b [u8],
+}
+
+impl<'b> Reader<'b> {
+    /// The next `n` bytes; `Truncated` past the end.
+    fn take(&mut self, n: usize) -> Result<&'b [u8], LearnFormatError> {
+        let (head, tail) = (self.bytes.split_at_checked(n)).ok_or(LearnFormatError::Truncated)?;
+        self.bytes = tail;
+        Ok(head)
+    }
+
+    /// The next `N` bytes.
+    fn array<const N: usize>(&mut self) -> Result<[u8; N], LearnFormatError> {
+        self.take(N)?
+            .try_into()
+            .map_err(|_| LearnFormatError::Truncated)
+    }
+
+    /// The next u8.
+    fn u8(&mut self) -> Result<u8, LearnFormatError> {
+        self.array().map(u8::from_le_bytes)
+    }
+
+    /// The next little-endian u16.
+    fn u16(&mut self) -> Result<u16, LearnFormatError> {
+        self.array().map(u16::from_le_bytes)
+    }
+
+    /// The next little-endian u32.
+    fn u32(&mut self) -> Result<u32, LearnFormatError> {
+        self.array().map(u32::from_le_bytes)
+    }
+
+    /// The next text after its one-byte length; `BadEntry` when empty or not UTF-8.
+    fn text(&mut self) -> Result<&'b str, LearnFormatError> {
+        let len = usize::from(self.u8()?);
+        let text = str::from_utf8(self.take(len)?).map_err(|_| LearnFormatError::BadEntry)?;
+        Some(text)
+            .filter(|t| !t.is_empty())
+            .ok_or(LearnFormatError::BadEntry)
+    }
+
+    /// The next count and last-used day; `BadEntry` for a count of 0, as an entry holds at least one use.
+    fn counted(&mut self) -> Result<(u16, u32), LearnFormatError> {
+        let (count, day) = (self.u16()?, self.u32()?);
+        if count == 0 {
+            return Err(LearnFormatError::BadEntry);
+        }
+        Ok((count, day))
+    }
+}
