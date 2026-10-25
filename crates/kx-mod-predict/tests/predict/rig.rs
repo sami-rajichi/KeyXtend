@@ -144,11 +144,17 @@ impl Rig {
         self.actor.wait()
     }
 
-    /// The keyboard now shows language `iso`.
+    /// The keyboard now shows language `iso`, named by its code.
     pub fn lang(&mut self, iso: &str) -> Flow {
+        self.named(iso, iso)
+    }
+
+    /// The keyboard now shows language `iso`, which the OS names `name`.
+    pub fn named(&mut self, iso: &str, name: &str) -> Flow {
         let rtl = false;
         self.send(Msg::Lang {
             iso: iso.to_owned(),
+            name: name.to_owned(),
             rtl,
         })
     }

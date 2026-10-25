@@ -18,12 +18,13 @@ fn arabic() -> LayoutChanged {
     LayoutChanged {
         id: ids()[2],
         iso: "ar".into(),
+        name: "العربية".into(),
         rtl: true,
     }
 }
 
 #[test]
-fn a_change_tells_the_language_and_its_direction() {
+fn a_change_tells_the_language_its_name_and_its_direction() {
     let fake = source();
     let (layouts, heard) = service(&fake);
     assert_eq!(layouts.pick(ids()[2]), Ok(()));
@@ -37,7 +38,8 @@ fn tell_says_the_shown_layout_again_and_nothing_with_none_installed() {
     let (layouts, heard) = service(&fake);
     layouts.tell();
     let english = LayoutChanged::from(&layouts.current().label);
-    assert_eq!((english.iso.as_str(), english.rtl), ("en", false));
+    let told = (english.iso.as_str(), english.name.as_str(), english.rtl);
+    assert_eq!(told, ("en", "English", false));
     assert_eq!(heard.changes(), [english]);
     for id in ids() {
         fake.remove(id);
@@ -64,6 +66,7 @@ fn the_start_tells_the_shown_layout_once_and_an_ask_tells_it_again() {
     let english = LayoutChanged {
         id: ids()[0],
         iso: "en".into(),
+        name: "English".into(),
         rtl: false,
     };
     let told = || heard.lock().unwrap().clone();

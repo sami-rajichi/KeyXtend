@@ -7,9 +7,17 @@ use crate::pack::Pack;
 use kx_module_api::ports::{PackView, fits_iso};
 
 impl Actor {
-    /// The keyboard shows a layout in `iso`: the word ends unlearned, and a new language saves the old learner.
-    pub(super) fn lang(&mut self, seed: Option<&Pack<'_>>, iso: String, rtl: bool) -> Flow {
+    /// The keyboard shows a layout in `iso`, named `name`: the word ends unlearned, and a new language saves the old
+    /// learner.
+    pub(super) fn lang(
+        &mut self,
+        seed: Option<&Pack<'_>>,
+        iso: String,
+        name: String,
+        rtl: bool,
+    ) -> Flow {
         self.rtl = rtl;
+        self.lang_name = name;
         self.menu.key();
         self.pending = false;
         let told = self.tracker.reset();

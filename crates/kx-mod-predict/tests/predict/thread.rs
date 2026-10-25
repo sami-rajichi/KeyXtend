@@ -10,7 +10,7 @@ use kx_module_api::ports::{
     TypeWord, Typed, WordPacks, WordPacksKey,
 };
 use kx_module_api::{
-    Bus, Event, Module, ModuleCx, Notice, Redacted, ServiceKey, Subscription, keys,
+    Bus, Event, Module, ModuleCx, Notice, NoticeArg, Redacted, ServiceKey, Subscription, args, keys,
 };
 use kx_platform_fake::{FakeFieldWatch, FakeSealedStore, FakeWordPacks};
 use kx_test_support::host::{FakeHost, Stored};
@@ -87,14 +87,20 @@ fn lane_of(lanes: &Receiver<Suggested>, want: &[&str]) -> Suggested {
     }
 }
 
-/// The language in front is `iso`.
-fn lang(iso: &str) -> LayoutChanged {
+/// The language in front is `iso`, which the OS names `name`.
+fn named(iso: &str, name: &str) -> LayoutChanged {
     let (id, rtl) = (LayoutId::default(), false);
     LayoutChanged {
         id,
         iso: iso.to_owned(),
+        name: name.to_owned(),
         rtl,
     }
+}
+
+/// The language in front is `iso`, named by its code.
+fn lang(iso: &str) -> LayoutChanged {
+    named(iso, iso)
 }
 
 #[test]
@@ -216,6 +222,21 @@ fn a_panic_on_the_thread_empties_the_lane_lets_presses_go_and_tells_the_user() {
     assert_eq!(wanted, [false], "presses let go");
     let last = lanes.try_iter().last().map(|l| l.lane);
     assert_eq!(last, Some(Lane::Empty), "the chips went");
+    run.stop();
+}
+
+#[test]
+fn a_missing_pack_is_told_by_the_name_the_layouts_gave() {
+    let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
+    let packs = FakeWordPacks::new();
+    packs.ship("ar");
+    let listen = |bus: &Bus| hear::<Notice>(bus);
+    let (mut run, (_n, notices)) = Live::start(&field, Arc::new(packs), &store, listen);
+    run.send(&named("ar", "العربية"));
+    let told = notices.recv_timeout(WAIT).unwrap();
+    assert_eq!(told.key, keys::WORDS_MISSING);
+    let lang = told.args.iter().find(|a| a.0 == args::LANG);
+    assert_eq!(lang.map(|a| &a.1), Some(&NoticeArg::Text("العربية".into())));
     run.stop();
 }
 

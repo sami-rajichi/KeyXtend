@@ -87,11 +87,11 @@ fn a_missing_shipped_pack_is_told_once_per_language_and_an_unlisted_language_nev
 }
 
 #[test]
-fn the_missing_notice_names_its_language_by_code() {
+fn the_missing_notice_names_its_language_as_the_layouts_did() {
     use crate::rig::Heard;
     use kx_module_api::{NoticeArg, args};
     let mut rig = Rig::build(|f, _| f.packs.ship("ar"));
-    rig.lang("ar");
+    rig.named("ar", "العربية");
     let notes: Vec<_> = rig
         .take()
         .into_iter()
@@ -105,7 +105,7 @@ fn the_missing_notice_names_its_language_by_code() {
         .and_then(|n| n.args.iter().find(|a| a.0 == args::LANG));
     assert_eq!(
         lang.map(|a| a.1.clone()),
-        Some(NoticeArg::Text("ar".to_owned()))
+        Some(NoticeArg::Text("العربية".to_owned()))
     );
 }
 

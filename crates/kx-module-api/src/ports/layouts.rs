@@ -91,15 +91,19 @@ pub struct LayoutChanged {
     pub id: LayoutId,
     /// Its language, as `LangLabel::iso` names it; empty when unknown.
     pub iso: String,
+    /// Its language's name for the user: the OS's own name the space bar shows, else the language key's short name.
+    pub name: String,
     /// Its language is written right to left.
     pub rtl: bool,
 }
 
 impl From<&LangLabel> for LayoutChanged {
     fn from(label: &LangLabel) -> Self {
+        let named = label.name.first().filter(|n| !n.is_empty());
         Self {
             id: label.id,
             iso: label.iso.clone(),
+            name: named.unwrap_or(&label.short).clone(),
             rtl: label.rtl,
         }
     }

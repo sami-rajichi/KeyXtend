@@ -32,7 +32,7 @@ pub mod args {
     pub const KEYS: &str = "keys";
     /// How many items the notice's list leaves out; absent when it names them all.
     pub const MORE: &str = "more";
-    /// A language, as its ISO 639 code.
+    /// A language, by the name the layouts give it.
     pub const LANG: &str = "lang";
 }
 

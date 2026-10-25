@@ -127,11 +127,12 @@ impl Actor {
         }
     }
 
-    /// Tells once per language and run that the language in front has no pack though the build shipped one.
+    /// Tells once per language and run, by the language's name, that the language in front has no pack though the build
+    /// shipped one.
     pub(super) fn say_missing(&mut self) {
         let shipped = self.ports.packs.ships(&self.iso);
         if shipped && self.notes.missing.insert(self.iso.clone()) {
-            let lang = (args::LANG, NoticeArg::Text(self.iso.clone()));
+            let lang = (args::LANG, NoticeArg::Text(self.lang_name.clone()));
             self.publish(&notice(keys::WORDS_MISSING, vec![lang]));
         }
     }

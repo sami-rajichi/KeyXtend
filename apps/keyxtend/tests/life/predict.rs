@@ -11,24 +11,24 @@ use kx_mod_layouts::{LayoutsModule, LayoutsSettings, label};
 use kx_mod_predict::PredictModule;
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
-    FieldWatchKey, LayoutSource, LayoutSourceKey, PACK_DIR, PACK_INDEX, SealedStoreKey,
-    WordPacksKey,
+    FieldWatchKey, LayoutChanged, LayoutSource, LayoutSourceKey, PACK_DIR, PACK_INDEX,
+    SealedStoreKey, WordPacksKey,
 };
 use kx_module_api::{Module, Notice, NoticeArg, args, keys};
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 
-/// The language of the layout in front, as layouts names it.
-fn front_iso(rig: &Rig) -> String {
+/// The layout in front, as layouts tells it: its language's code and name.
+fn front(rig: &Rig) -> LayoutChanged {
     let short = LayoutsSettings::from_defaults().unwrap().short;
     let id = rig.layouts.foreground().unwrap();
-    label(id, &rig.layouts.facts(id), &short).iso
+    LayoutChanged::from(&label(id, &rig.layouts.facts(id), &short))
 }
 
-/// True once predict tells that `iso`, which the build shipped, has no pack: it opened that language.
-fn told_missing(notices: &Receiver<Notice>, iso: &str) -> bool {
-    let lang = (args::LANG, NoticeArg::Text(iso.to_owned()));
+/// True once predict tells, by `front`'s name, that its language, which the build shipped, has no pack: it opened it.
+fn told_missing(notices: &Receiver<Notice>, front: &LayoutChanged) -> bool {
+    let lang = (args::LANG, NoticeArg::Text(front.name.clone()));
     let missing = |n: &Notice| n.key == keys::WORDS_MISSING && n.args.contains(&lang);
     while let Ok(notice) = notices.recv_timeout(WAIT) {
         if missing(&notice) {
@@ -63,14 +63,14 @@ fn kernel(rig: &Rig, modules: Vec<Box<dyn Module>>) -> Kernel {
 #[test]
 fn predict_starts_with_the_box_watch_and_the_sealed_store_and_quit_ends_its_watch() {
     let rig = Rig::new();
-    let iso = front_iso(&rig);
-    rig.packs.ship(&iso);
+    let shown = front(&rig);
+    rig.packs.ship(&shown.iso);
     let mut boot = rig.load();
     let (_ear, notices) = hear::<Notice>(&boot.kernel.bus());
     boot.start().unwrap();
     assert_eq!(boot.kernel.state(kx_mod_predict::ID), Some(Active));
     assert!(rig.field.watching(), "it watches the box");
-    assert!(told_missing(&notices, &iso), "it opened {iso}");
+    assert!(told_missing(&notices, &shown), "it opened {}", shown.iso);
     assert!(rig.sealed.loads() > 0, "it read the sealed store");
     let Boot {
         kernel,
@@ -94,16 +94,20 @@ fn predict_opens_the_language_in_front_whether_it_starts_before_or_after_layouts
             modules.reverse();
         }
         let rig = Rig::new();
-        let iso = front_iso(&rig);
-        rig.packs.ship(&iso);
+        let shown = front(&rig);
+        rig.packs.ship(&shown.iso);
         let mut kernel = kernel(&rig, modules);
         let (_ear, notices) = hear::<Notice>(&kernel.bus());
         kernel.start().unwrap();
         let why = format!("predict first: {predict_first}");
-        assert!(told_missing(&notices, &iso), "{why}: it opened {iso}");
+        assert!(
+            told_missing(&notices, &shown),
+            "{why}: it opened {}",
+            shown.iso
+        );
         // Dropping the kernel stops every module, so a late second open is counted too.
         drop(kernel);
-        assert_eq!(rig.packs.opens(&iso), 1, "{why}: once");
+        assert_eq!(rig.packs.opens(&shown.iso), 1, "{why}: once");
     }
 }
 
@@ -118,7 +122,7 @@ fn with_predict_switched_off_nothing_watches_the_box_or_opens_a_pack() {
     let keyboard = boot.kernel.state(kx_mod_keyboard::ID);
     assert_eq!(keyboard, Some(Active), "the others run");
     assert_eq!(rig.field.watches(), 0, "no box watch");
-    assert_eq!(rig.packs.opens(&front_iso(&rig)), 0, "no pack");
+    assert_eq!(rig.packs.opens(&front(&rig).iso), 0, "no pack");
     assert_eq!(rig.sealed.loads(), 0, "no sealed file");
     let thread = drain::spawn(boot.kernel, Arc::clone(&boot.hub), boot.requests).unwrap();
     assert!(boot.hub.quit(), "Quit still reaches the kernel's thread");

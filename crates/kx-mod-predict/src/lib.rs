@@ -71,6 +71,7 @@ impl Module for PredictModule {
         relay(cx, &tx, |e: &TypingMode| Msg::Mode(*e))?;
         relay(cx, &tx, |e: &LayoutChanged| Msg::Lang {
             iso: e.iso.clone(),
+            name: e.name.clone(),
             rtl: e.rtl,
         })?;
         relay(cx, &tx, |e: &PointerPressed| Msg::Pressed(e.ours))?;

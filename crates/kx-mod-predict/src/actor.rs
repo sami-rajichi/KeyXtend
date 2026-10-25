@@ -46,6 +46,8 @@ pub enum Msg {
     Lang {
         /// The language, as `LangLabel::iso` names it.
         iso: String,
+        /// Its name for the user, as `LayoutChanged::name` gives it.
+        name: String,
         /// It is written right to left.
         rtl: bool,
     },
@@ -117,8 +119,9 @@ pub struct Actor {
     score: ScoreConfig,
     learn_cfg: LearnConfig,
     email_cfg: EmailConfig,
-    /// The language in front, and whether it reads right to left.
+    /// The language in front, its name for notices, and whether it reads right to left.
     iso: String,
+    lang_name: String,
     rtl: bool,
     kind: FieldKind,
     mode: TypingMode,
@@ -151,6 +154,7 @@ impl Actor {
             learn_cfg: settings.learn_config(),
             email_cfg: settings.email_config(),
             iso: String::new(),
+            lang_name: String::new(),
             rtl: false,
             kind: FieldKind::None,
             mode: TypingMode::default(),
@@ -212,7 +216,7 @@ impl Actor {
                 self.mode = mode;
                 true
             }
-            Msg::Lang { iso, rtl } => return self.lang(seed, iso, rtl),
+            Msg::Lang { iso, name, rtl } => return self.lang(seed, iso, name, rtl),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
             Msg::Ask(ask) => self.ask(seed, ask),

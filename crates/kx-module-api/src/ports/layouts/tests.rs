@@ -47,15 +47,25 @@ fn layout_changed_is_open_to_every_module() {
 }
 
 #[test]
-fn a_change_carries_the_labels_language_and_direction() {
+fn a_change_carries_the_labels_language_its_name_and_direction() {
     let label = table().label;
     let change = LayoutChanged::from(&label);
     let want = LayoutChanged {
         id: AR,
         iso: "ar".into(),
+        name: "العربية".into(),
         rtl: true,
     };
     assert_eq!(change, want);
+}
+
+#[test]
+fn a_language_the_os_does_not_name_takes_the_language_keys_short_name() {
+    let mut label = table().label;
+    for name in [Vec::new(), vec![String::new(), "101".into()]] {
+        label.name = name;
+        assert_eq!(LayoutChanged::from(&label).name, "ع");
+    }
 }
 
 #[test]
